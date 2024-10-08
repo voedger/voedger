@@ -219,9 +219,9 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 				AppConfigs:         cfgs,
 				StatelessResources: statelessResources,
 				WASMConfig:         iextengine.WASMFactoryConfig{},
-			}))
+			}, "", imetrics.Provide()))
 	require.NoError(err)
-	appParts.DeployApp(test.appQName, nil, appDef, test.totalPartitions, test.appEngines, -1)
+	appParts.DeployApp(test.appQName, nil, appDef, test.totalPartitions, test.appEngines, 1)
 	appParts.DeployAppPartitions(test.appQName, []istructs.PartitionID{test.partition})
 
 	// create stub for cdoc.sys.WorkspaceDescriptor to make query processor work

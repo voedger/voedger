@@ -11,45 +11,18 @@ linters:
     - misspell
     - errcheck
     - bidichk
-
-# First stage linters
-    - asciicheck      # Checks that all code identifiers does not have non-ASCII symbols in the name
-    - durationcheck   # Check for two durations multiplied together
-    - gochecknoinits  # Checks that no init functions are present in Go code.
-
-# Second stage linters
-    - unconvert    # Remove unnecessary type conversions.
-    - predeclared  # Find code that shadows one of Go's predeclared identifiers.
-    - mirror       # Reports wrong mirror patterns of bytes/strings usage.
-#    - nilerr       # Finds the code that returns nil even if it checks that the error is not nil.
-    - testifylint  # Checks usage of github.com/stretchr/testify.
-
-
-# Third stage linters
-#------------------------------------
+    - asciicheck
+    - durationcheck
+    - gochecknoinits
+    - unconvert
+    - predeclared
+    - mirror
+    - testifylint
     - prealloc
-    - perfsprint
     - nilnil
     - gocritic
     - errorlint
     - goconst
-#------------------------------------
-
-# For the future:
-#------------------------------------
-#    - testpackage
-#    - nonamedreturns
-#    - noctx
-#?    - nestif
-#    - musttag
-#    - makezero
-#    - inamedparam
-#    - goerr113
-#    - godox       #- searches FixMe,TODO in code
-#    - forbidigo
-#    - exhaustruct
-#    - unparam
-#------------------------------------
   fast: true
 linters-settings:
   gosec:
@@ -58,16 +31,16 @@ linters-settings:
       - G601
       - G602
   staticcheck:
-    checks: [ "all", "-SA1019"]
+    checks: ["all", "-SA1019"]
   stylecheck:
-    checks: [ "all", "-ST1003", "-ST1023" ]
+    checks: ["all", "-ST1003", "-ST1023"]
   unparam:
     check-exported: true
   misspell:
     ignore-words:
       - untill
   revive:
-  # see https://github.com/mgechev/revive#available-rules for details.
+    # see https://github.com/mgechev/revive#available-rules for details.
     ignore-generated-header: true
     severity: warning
     rules:
@@ -109,12 +82,12 @@ linters-settings:
     ignore-tests: true
 issues:
   exclude:
-   - underscore
-   - underscores
+    - underscore
+    - underscores
   exclude-rules:
-   - path: _test.go
-     linters:
-       - revive
-       - gosec
-       - errcheck
-       - forcetypeassert
+    - path: _test.go
+      linters:
+        - revive
+        - gosec
+        - errcheck
+        - forcetypeassert

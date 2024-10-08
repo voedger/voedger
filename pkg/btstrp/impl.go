@@ -10,7 +10,6 @@ import (
 	"net/url"
 
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/apps/sys/clusterapp"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
@@ -19,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/vvm/builtin/clusterapp"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 )
 

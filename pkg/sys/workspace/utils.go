@@ -44,14 +44,19 @@ func GetNextWSID(ctx context.Context, appStructs istructs.IAppStructs, clusterID
 		if nextBaseWSID != istructs.FirstBaseUserWSID {
 			panic(">1 records in view NextBaseWSID")
 		}
-		nextBaseWSID = istructs.WSID(value.AsInt64(fldNextBaseWSID))
+		nextWSIDInt64 := value.AsInt64(fldNextBaseWSID)
+		if nextWSIDInt64 > istructs.MaxAllowedWSID {
+			// notest
+			panic("too many WSIDs")
+		}
+		nextBaseWSID = istructs.WSID(nextWSIDInt64) // nolint G115
 		return nil
 	})
 	if err != nil {
 		return 0, err
 	}
 	vb := vr.NewValueBuilder(QNameViewNextBaseWSID)
-	vb.PutInt64(fldNextBaseWSID, int64(nextBaseWSID+1))
+	vb.PutInt64(fldNextBaseWSID, int64(nextBaseWSID+1)) // nolint G115: WSID got by NewWSID can not cause data loss on casting to int64
 	if err := vr.Put(istructs.NullWSID, kb, vb); err != nil {
 		return 0, err
 	}

@@ -56,7 +56,7 @@ func loggerError(args ...interface{}) {
 }
 
 func printLogLine(logLevel logger.TLogLevel, line string) {
-	line = fmt.Sprintf("\r%s", line)
+	line = "\r" + line
 	if logFile != nil {
 		mutex.Lock()
 		fmt.Fprintln(logFile, line)

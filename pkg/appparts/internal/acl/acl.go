@@ -75,7 +75,7 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 	}
 
 	result := false
-	app.ACL(func(rule appdef.IACLRule) bool {
+	for rule := range app.ACL {
 		if slices.Contains(rule.Ops(), op) {
 			if rule.Resources().On().Contains(res) {
 				if roles.Contains(rule.Principal().QName()) {
@@ -115,8 +115,7 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 				}
 			}
 		}
-		return true
-	})
+	}
 
 	if str != nil {
 		if result {

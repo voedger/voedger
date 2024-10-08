@@ -118,7 +118,14 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 		update.offset = istructs.Offset(update.EntityID)
 		switch update.QName {
 		case plog:
-			update.partitionID = istructs.PartitionID(wsid)
+			numPartitionsDeployed, err := update.appParts.AppPartsCount(update.AppQName)
+			if err != nil {
+				return update, err
+			}
+			if wsid >= istructs.IDType(numPartitionsDeployed) {
+				return update, fmt.Errorf("provided partno %d is out of %d declared by app %s", wsid, numPartitionsDeployed, update.AppQName)
+			}
+			update.partitionID = istructs.PartitionID(wsid) // nolint G115 checked above
 		case wlog:
 			update.wsid = istructs.WSID(wsid)
 		}

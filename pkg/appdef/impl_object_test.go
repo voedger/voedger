@@ -74,10 +74,9 @@ func Test_AppDef_AddObject(t *testing.T) {
 
 	t.Run("must be ok to enumerate objects", func(t *testing.T) {
 		var objects []QName
-		app.Objects(func(obj IObject) bool {
+		for obj := range app.Objects {
 			objects = append(objects, obj.QName())
-			return true
-		})
+		}
 		require.Len(objects, 2)
 		require.Equal(childName, objects[0])
 		require.Equal(rootName, objects[1])

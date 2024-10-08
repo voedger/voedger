@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 
 	bytespool "github.com/valyala/bytebufferpool"
 
@@ -707,6 +708,10 @@ func (o *objectType) allChildren(cb func(*objectType)) {
 
 // Builds object with children recursive
 func (o *objectType) build() (err error) {
+	if len(o.child) > math.MaxUint16 {
+		// because len(o.child) will be stored as uint16, see [storeObject]
+		return validateErrorf(ECode_TooManyChilds, "childs number must not be more than %d", math.MaxUint16)
+	}
 	return o.forEach(func(c *objectType) error {
 		return c.rowType.build()
 	})

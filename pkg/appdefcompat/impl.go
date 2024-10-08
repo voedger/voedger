@@ -217,23 +217,21 @@ func buildWorkspaceNode(parentNode *CompatibilityTreeNode, item appdef.IWorkspac
 
 func buildTypesNode(parentNode *CompatibilityTreeNode, item appdef.IWithTypes, qNamesOnly bool) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameTypes, nil)
-	item.Types(func(t appdef.IType) bool {
+	for t := range item.Types {
 		if qNamesOnly {
 			node.Props = append(node.Props, buildQNameNode(node, t, t.QName().String(), true))
 		} else {
 			node.Props = append(node.Props, buildTreeNode(node, t))
 		}
-		return true
-	})
+	}
 	return
 }
 
 func buildPackagesNode(parentNode *CompatibilityTreeNode, item appdef.IAppDef) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNamePackages, nil)
-	item.Packages(func(localName, fullPath string) bool {
+	for localName, fullPath := range item.Packages {
 		node.Props = append(node.Props, newNode(node, fullPath, localName))
-		return true
-	})
+	}
 	return
 }
 

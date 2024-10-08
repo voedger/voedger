@@ -43,11 +43,10 @@ func ExampleIAppDefBuilder_AddJob() {
 	{
 		job := app.Job(jobName)
 		fmt.Println(job, ":")
-		job.States().Enum(func(s appdef.IStorage) bool {
+		for s := range job.States().Enum {
 			fmt.Println(" - crone:", job.CronSchedule())
 			fmt.Println(" - state:", s, s.Comment())
-			return true
-		})
+		}
 
 		fmt.Println(app.Job(appdef.NewQName("test", "unknown")))
 	}
@@ -55,11 +54,10 @@ func ExampleIAppDefBuilder_AddJob() {
 	// How to enum all jobs in AppDef
 	{
 		cnt := 0
-		app.Jobs(func(j appdef.IJob) bool {
+		for j := range app.Jobs {
 			cnt++
 			fmt.Println(cnt, j)
-			return true
-		})
+		}
 	}
 
 	// Output:

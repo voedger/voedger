@@ -52,7 +52,7 @@ type IHTTPProcessor interface {
 
 	// ErrUnknownApplication
 	//--	UndeployAllAppPartitions(app appdef.AppQName)
-	DeployApp(app appdef.AppQName, numPartitions uint, numAppWS uint) (err error)
+	DeployApp(app appdef.AppQName, numPartitions istructs.NumAppPartitions, numAppWS istructs.NumAppWorkspaces) (err error)
 	UndeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID) (err error)
 	UndeployApp(app appdef.AppQName) (err error)
 }

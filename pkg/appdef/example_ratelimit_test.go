@@ -36,11 +36,10 @@ func ExampleIAppDefBuilder_AddRate() {
 	{
 		fmt.Println("enum rates:")
 		cnt := 0
-		app.Rates(func(r appdef.IRate) bool {
+		for r := range app.Rates {
 			cnt++
 			fmt.Println("-", cnt, r, fmt.Sprintf("%d per %v per %v", r.Count(), r.Period(), r.Scopes()))
-			return true
-		})
+		}
 		fmt.Println("overall:", cnt)
 	}
 
@@ -48,11 +47,10 @@ func ExampleIAppDefBuilder_AddRate() {
 	{
 		fmt.Println("enum limits:")
 		cnt := 0
-		app.Limits(func(l appdef.ILimit) bool {
+		for l := range app.Limits {
 			cnt++
 			fmt.Println("-", cnt, l, fmt.Sprintf("on %v with %v", l.On(), l.Rate()))
-			return true
-		})
+		}
 		fmt.Println("overall:", cnt)
 	}
 

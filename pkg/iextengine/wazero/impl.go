@@ -3,6 +3,7 @@
     @author Michael Saigachenko
 */
 
+// nolint G115
 package iextenginewazero
 
 import (
@@ -22,6 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
+	"github.com/voedger/voedger/pkg/processors"
 	safe "github.com/voedger/voedger/pkg/state/isafestateapi"
 	"github.com/voedger/voedger/pkg/state/safestate"
 )
@@ -86,6 +88,8 @@ type allocatedBuf struct {
 
 type extensionEngineFactory struct {
 	wasmConfig iextengine.WASMFactoryConfig
+	vvmName    processors.VVMName
+	imetrics   imetrics.IMetrics
 }
 
 func newLimitedWriter(limit int) limitedWriter {
@@ -101,17 +105,17 @@ func (w *limitedWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func (f extensionEngineFactory) New(ctx context.Context, app appdef.AppQName, packages []iextengine.ExtensionModule, config *iextengine.ExtEngineConfig, numEngines int) (engines []iextengine.IExtensionEngine, err error) {
-	for i := 0; i < numEngines; i++ {
+func (f extensionEngineFactory) New(ctx context.Context, app appdef.AppQName, packages []iextengine.ExtensionModule, config *iextengine.ExtEngineConfig, numEngines uint) (engines []iextengine.IExtensionEngine, err error) {
+	for i := uint(0); i < numEngines; i++ {
 		engine := &wazeroExtEngine{
 			app:                app,
 			modules:            make(map[string]*wazeroExtPkg),
 			config:             config,
 			compile:            f.wasmConfig.Compile,
-			invocationsTotal:   f.wasmConfig.InvocationsTotal,
-			invocationsSeconds: f.wasmConfig.InvocationsSeconds,
-			errorsTotal:        f.wasmConfig.ErrorsTotal,
-			recoversTotal:      f.wasmConfig.RecoversTotal,
+			invocationsTotal:   f.imetrics.AppMetricAddr(metric_voedger_pee_invocations_total, string(f.vvmName), app),
+			invocationsSeconds: f.imetrics.AppMetricAddr(metric_voedger_pee_invocations_seconds, string(f.vvmName), app),
+			errorsTotal:        f.imetrics.AppMetricAddr(metric_voedger_pee_errors_total, string(f.vvmName), app),
+			recoversTotal:      f.imetrics.AppMetricAddr(metric_voedger_pee_recovers_total, string(f.vvmName), app),
 			autoRecover:        true,
 		}
 		err = engine.init(ctx)
@@ -141,7 +145,7 @@ func (f extensionEngineFactory) New(ctx context.Context, app appdef.AppQName, pa
 				}
 			}
 		} else {
-			return nil, fmt.Errorf("unsupported URL: " + pkg.ModuleUrl.String())
+			return nil, errors.New("unsupported URL: " + pkg.ModuleUrl.String())
 		}
 	}
 	return engines, nil
@@ -175,7 +179,7 @@ func (f *wazeroExtEngine) init(ctx context.Context) error {
 	const memoryLimitCoef = 1.7
 	memoryLimit := memPages * iextengine.MemoryPageSize
 	limit := math.Trunc(float64(WasmPreallocatedBufferSize) * float64(memoryLimitCoef))
-	if uint32(memoryLimit) <= uint32(limit) {
+	if uint32(memoryLimit) <= uint32(limit) { // nolint G115 memoryLimit is max maxMemoryPages, limit is WasmPreallocatedBufferSize*1.7
 		return fmt.Errorf("the minimum limit of memory is: %.1f bytes, requested limit is: %.1f", limit, float32(memoryLimit))
 	}
 
@@ -658,7 +662,7 @@ func (f *wazeroExtEngine) allocBuf(size uint32) (addr uint32, err error) {
 	if err != nil {
 		return 0, err
 	}
-	addr = uint32(res[0])
+	addr = uint32(res[0]) // nolint G115
 	f.pkg.allocatedBufs = append(f.pkg.allocatedBufs, &allocatedBuf{
 		addr: addr,
 		offs: 0,

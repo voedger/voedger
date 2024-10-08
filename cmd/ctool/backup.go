@@ -156,8 +156,7 @@ func newExpireType(str string) (*expireType, error) {
 	return expire, nil
 }
 
-// nolint
-func validateBackupCronCmd(cmd *cmdType, cluster *clusterType) error {
+func validateBackupCronCmd(cmd *cmdType, _ *clusterType) error {
 
 	if len(cmd.Args) != 2 {
 		return ErrInvalidNumberOfArguments
@@ -301,7 +300,7 @@ func backupNode(cmd *cobra.Command, args []string) error {
 func newBackupFolderName() string {
 	t := time.Now()
 	formattedDate := t.Format("20060102150405")
-	return filepath.Join(backupFolder, fmt.Sprintf("%s-backup", formattedDate))
+	return filepath.Join(backupFolder, formattedDate+"-backup")
 }
 
 func backupNow(cmd *cobra.Command, args []string) error {

@@ -227,39 +227,37 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(eventsCount, proj.Events().Len())
 
 	stateCount := 0
-	proj.States().Enum(func(storage appdef.IStorage) bool {
+	for s := range proj.States().Enum {
 		stateCount++
 		switch stateCount {
 		case 1:
-			require.Equal(appdef.NewQName("sys", "AppSecret"), storage.Name())
-			require.Empty(storage.Names())
+			require.Equal(appdef.NewQName("sys", "AppSecret"), s.Name())
+			require.Empty(s.Names())
 		case 2:
-			require.Equal(appdef.NewQName("sys", "Http"), storage.Name())
-			require.Empty(storage.Names())
+			require.Equal(appdef.NewQName("sys", "Http"), s.Name())
+			require.Empty(s.Names())
 		default:
-			require.Fail("unexpected state", "state: %v", storage)
+			require.Fail("unexpected state", "state: %v", s)
 		}
-		return true
-	})
+	}
 	require.Equal(2, stateCount)
 	require.Equal(stateCount, proj.States().Len())
 
 	intentsCount := 0
-	proj.Intents().Enum(func(storage appdef.IStorage) bool {
+	for i := range proj.Intents().Enum {
 		intentsCount++
 		switch intentsCount {
 		case 1:
-			require.Equal(appdef.NewQName("sys", "View"), storage.Name())
-			require.Len(storage.Names(), 4)
-			require.Equal(appdef.NewQName("main", "ActiveTablePlansView"), storage.Names()[0])
-			require.Equal(appdef.NewQName("main", "DashboardView"), storage.Names()[1])
-			require.Equal(appdef.NewQName("main", "NotificationsHistory"), storage.Names()[2])
-			require.Equal(appdef.NewQName("main", "XZReports"), storage.Names()[3])
+			require.Equal(appdef.NewQName("sys", "View"), i.Name())
+			require.Len(i.Names(), 4)
+			require.Equal(appdef.NewQName("main", "ActiveTablePlansView"), i.Names()[0])
+			require.Equal(appdef.NewQName("main", "DashboardView"), i.Names()[1])
+			require.Equal(appdef.NewQName("main", "NotificationsHistory"), i.Names()[2])
+			require.Equal(appdef.NewQName("main", "XZReports"), i.Names()[3])
 		default:
-			require.Fail("unexpected intent", "intent: %v", storage)
+			require.Fail("unexpected intent", "intent: %v", i)
 		}
-		return true
-	})
+	}
 	require.Equal(1, intentsCount)
 	require.Equal(intentsCount, proj.Intents().Len())
 
@@ -268,20 +266,19 @@ func Test_BasicUsage(t *testing.T) {
 		require.EqualValues(`1 0 * * *`, job1.CronSchedule())
 		t.Run("Job states", func(t *testing.T) {
 			stateCount := 0
-			proj.States().Enum(func(storage appdef.IStorage) bool {
+			for s := range proj.States().Enum {
 				stateCount++
 				switch stateCount {
 				case 1:
-					require.Equal(appdef.NewQName("sys", "AppSecret"), storage.Name())
-					require.Empty(storage.Names())
+					require.Equal(appdef.NewQName("sys", "AppSecret"), s.Name())
+					require.Empty(s.Names())
 				case 2:
-					require.Equal(appdef.NewQName("sys", "Http"), storage.Name())
-					require.Empty(storage.Names())
+					require.Equal(appdef.NewQName("sys", "Http"), s.Name())
+					require.Empty(s.Names())
 				default:
-					require.Fail("unexpected state", "storage: %v", storage.Name())
+					require.Fail("unexpected state", "storage: %v", s.Name())
 				}
-				return true
-			})
+			}
 			require.Equal(2, stateCount)
 		})
 
@@ -2285,14 +2282,14 @@ func Test_Constraints(t *testing.T) {
 func Test_Grants(t *testing.T) {
 	require := assertions(t)
 
-	require.AppSchemaError(`
+	t.Run("Basic", func(t *testing.T) {
+		require.AppSchemaError(`
 	APPLICATION app1();
 	ROLE role1;
 	WORKSPACE ws1 (
 		GRANT ALL ON TABLE Fake TO app1;
 		GRANT INSERT ON COMMAND Fake TO role1;
 		GRANT SELECT ON QUERY Fake TO role1;
-		GRANT INSERT ON WORKSPACE Fake TO role1;
 		TABLE Tbl INHERITS CDoc();
 		GRANT ALL(FakeCol) ON TABLE Tbl TO role1;
 		GRANT INSERT,UPDATE(FakeCol) ON TABLE Tbl TO role1;
@@ -2310,16 +2307,104 @@ func Test_Grants(t *testing.T) {
 		GRANT SELECT ON ALL VIEWS WITH TAG x TO role1;
 	);
 	`, "file.vsql:5:30: undefined role: app1",
-		"file.vsql:5:22: undefined table: Fake",
-		"file.vsql:6:27: undefined command: Fake",
-		"file.vsql:7:25: undefined query: Fake",
-		"file.vsql:8:29: undefined workspace: Fake",
-		"file.vsql:10:13: undefined field FakeCol",
-		"file.vsql:11:23: undefined field FakeCol",
-		"file.vsql:12:41: undefined tag: x",
-		"file.vsql:22:24: undefined view: Fake",
-		"file.vsql:23:38: undefined tag: x",
-	)
+			"file.vsql:5:22: undefined table: Fake",
+			"file.vsql:6:27: undefined command: Fake",
+			"file.vsql:7:25: undefined query: Fake",
+			"file.vsql:9:13: undefined field FakeCol",
+			"file.vsql:10:23: undefined field FakeCol",
+			"file.vsql:11:41: undefined tag: x",
+			"file.vsql:21:24: undefined view: Fake",
+			"file.vsql:22:38: undefined tag: x",
+		)
+	})
+
+	t.Run("GRANT follows REVOKE in WORKSPACE", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test();
+			ROLE role1;
+			TABLE Table1 INHERITS CDoc(
+				Field1 int32
+			);
+			WORKSPACE AppWorkspaceWS (
+				USE TABLE Table1;
+				REVOKE ALL ON TABLE Table1 FROM role1;
+				GRANT ALL ON TABLE Table1 TO role1;
+				
+			);`, "file.vsql:9:5: GRANT follows REVOKE in the same container")
+	})
+
+}
+
+func Test_Grants_Inherit(t *testing.T) {
+	require := assertions(t)
+
+	t.Run("GRANT ALL does not include resources from inherited workspaces", func(t *testing.T) {
+		schema, err := require.AppSchema(`APPLICATION test();
+			ROLE role1;
+			ABSTRACT WORKSPACE BaseWs (
+				TABLE Table1 INHERITS CDoc();
+			);
+			WORKSPACE AppWorkspaceWS INHERITS BaseWs (
+				TABLE Table2 INHERITS CDoc();
+				GRANT INSERT ON ALL TABLES TO role1;
+			);`)
+		require.NoError(err)
+		builder := appdef.New()
+		err = BuildAppDefs(schema, builder)
+		require.NoError(err)
+
+		app, err := builder.Build()
+		require.NoError(err)
+		var numACLs int
+
+		// table
+		app.ACL(func(i appdef.IACLRule) bool {
+			require.Len(i.Ops(), 1)
+			require.Equal(appdef.OperationKind_Insert, i.Ops()[0])
+			require.Equal(appdef.PolicyKind_Allow, i.Policy())
+			require.Len(i.Resources().On(), 1)
+			require.Equal("pkg.Table2", i.Resources().On()[0].String())
+			require.Equal("pkg.role1", i.Principal().QName().String())
+			numACLs++
+			return true
+		})
+		require.Equal(1, numACLs)
+	})
+
+	t.Run("GRANT ALL * WITH TAG includes resources from inherited workspaces", func(t *testing.T) {
+		schema, err := require.AppSchema(`APPLICATION test();
+			ROLE role1;
+			TAG tag1;
+			ABSTRACT WORKSPACE BaseWs (
+				TABLE Table1 INHERITS CDoc() WITH Tags=(tag1);
+			);
+			WORKSPACE AppWorkspaceWS INHERITS BaseWs (
+				TABLE Table2 INHERITS CDoc() WITH Tags=(tag1);
+				GRANT INSERT ON ALL TABLES WITH TAG tag1 TO role1;
+			);`)
+		require.NoError(err)
+		builder := appdef.New()
+		err = BuildAppDefs(schema, builder)
+		require.NoError(err)
+
+		app, err := builder.Build()
+		require.NoError(err)
+		var numACLs int
+
+		// table
+		app.ACL(func(i appdef.IACLRule) bool {
+			require.Len(i.Ops(), 1)
+			require.Equal(appdef.OperationKind_Insert, i.Ops()[0])
+			require.Equal(appdef.PolicyKind_Allow, i.Policy())
+			require.Len(i.Resources().On(), 2)
+			require.Equal("pkg.Table1", i.Resources().On()[0].String())
+			require.Equal("pkg.Table2", i.Resources().On()[1].String())
+			require.Equal("pkg.role1", i.Principal().QName().String())
+			numACLs++
+			return true
+		})
+		require.Equal(1, numACLs)
+	})
+
 }
 
 func Test_UndefinedType(t *testing.T) {

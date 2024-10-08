@@ -1,19 +1,20 @@
 /*
- * Copyright (c) 2022-present unTill Pro, Ltd.
+ * Copyright (c) 2024-present unTill Software Development Group B.V.
+ * @author Denis Gribanov
  */
 
-package apps
+package voedger
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
-	"github.com/voedger/voedger/pkg/goutils/logger"
-
-	sysmonitor "github.com/voedger/voedger/pkg/apps/sys.monitor"
+	sysmonitor "github.com/voedger/voedger/cmd/voedger/sys.monitor"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/cas"
@@ -54,7 +55,7 @@ func NewAppStorageFactory(params CLIParams) (istorage.IAppStorageFactory, error)
 	case storageTypeMem:
 		return mem.Provide(), nil
 	default:
-		return nil, fmt.Errorf("unable to define replication strategy")
+		return nil, errors.New("unable to define replication strategy")
 	}
 	return cas.Provide(casParams)
 }
@@ -83,7 +84,7 @@ func NewSysRouterRequestHandler(_ context.Context, sender ibus.ISender, request 
 			}
 			rs.Close(nil)
 		default:
-			coreutils.ReplyBadRequest(sender, fmt.Sprintf("unknown func: %s", request.Resource))
+			coreutils.ReplyBadRequest(sender, "unknown func: "+request.Resource)
 		}
 	}()
 }

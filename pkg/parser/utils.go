@@ -119,6 +119,10 @@ func getCurrentWorkspace(ictx *iterateCtx) *WorkspaceStmt {
 	var ic *iterateCtx = ictx
 	var ws *WorkspaceStmt = nil
 	for ic != nil {
+		if _, isWorkspace := ic.collection.(*AlterWorkspaceStmt); isWorkspace {
+			ws = ic.collection.(*AlterWorkspaceStmt).alteredWorkspace
+			break
+		}
 		if _, isWorkspace := ic.collection.(*WorkspaceStmt); isWorkspace {
 			ws = ic.collection.(*WorkspaceStmt)
 			break
@@ -217,7 +221,7 @@ func iteratePackage(pkg *PackageSchemaAST, ctx *basicContext, callback func(stmt
 }
 
 func iteratePackageStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *QueryStmt |
-	*WorkspaceStmt | *AlterWorkspaceStmt | *ProjectorStmt | *JobStmt | *RateStmt](pkg *PackageSchemaAST, ctx *basicContext, callback func(stmt stmtType, ctx *iterateCtx)) {
+	*WorkspaceStmt | *AlterWorkspaceStmt | *ProjectorStmt | *JobStmt | *RateStmt | *GrantStmt | *RevokeStmt | *RoleStmt](pkg *PackageSchemaAST, ctx *basicContext, callback func(stmt stmtType, ctx *iterateCtx)) {
 	iteratePackage(pkg, ctx, func(stmt interface{}, ctx *iterateCtx) {
 		if s, ok := stmt.(stmtType); ok {
 			callback(s, ctx)

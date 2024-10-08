@@ -7,13 +7,13 @@ package vvm
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
+	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
 )
 
-func (ab VVMAppsBuilder) Add(appQName appdef.AppQName, builder apps.AppBuilder) {
+func (ab VVMAppsBuilder) Add(appQName appdef.AppQName, builder builtinapps.Builder) {
 	if _, ok := ab[appQName]; ok {
 		panic(appQName.String() + " builder already added")
 	}
@@ -36,7 +36,7 @@ func buildAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) 
 	return parser.BuildAppDefs(appSchemaAST, adf)
 }
 
-func (ab VVMAppsBuilder) BuildAppsArtefacts(apis apps.APIs, emptyCfgs AppConfigsTypeEmpty,
+func (ab VVMAppsBuilder) BuildAppsArtefacts(apis builtinapps.APIs, emptyCfgs AppConfigsTypeEmpty,
 	appsEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) (builtinAppsArtefacts BuiltInAppsArtefacts, err error) {
 	builtinAppsArtefacts.AppConfigsType = istructsmem.AppConfigsType(emptyCfgs)
 	for appQName, appBuilder := range ab {
