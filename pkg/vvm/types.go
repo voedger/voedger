@@ -14,7 +14,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
-	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -35,6 +34,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	"github.com/voedger/voedger/pkg/sys/workspace"
+	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
 )
 
@@ -112,11 +112,11 @@ type PostDocDesc struct {
 	IsSingleton bool
 }
 
-type VVMAppsBuilder map[appdef.AppQName]apps.AppBuilder
+type VVMAppsBuilder map[appdef.AppQName]builtinapps.Builder
 
 type VVM struct {
 	ServicePipeline
-	apps.APIs
+	builtinapps.APIs
 	appparts.IAppPartitions
 	AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort

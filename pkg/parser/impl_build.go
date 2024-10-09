@@ -42,8 +42,10 @@ func (c *buildContext) build() error {
 		c.commands,
 		c.projectors,
 		c.jobs,
+		c.roles,
 		c.queries,
 		c.workspaces,
+		c.grantsAndRevokes,
 		c.packages,
 	}
 	for _, step := range steps {
@@ -58,9 +60,6 @@ func (c *buildContext) build() error {
 func supported(stmt interface{}) bool {
 	// FIXME: this must be empty in the end
 	if _, ok := stmt.(*TagStmt); ok {
-		return false
-	}
-	if _, ok := stmt.(*RoleStmt); ok {
 		return false
 	}
 	if _, ok := stmt.(*RateStmt); ok {
@@ -119,7 +118,7 @@ func (c *buildContext) workspaces() error {
 		if wb.w.Descriptor != nil {
 			wb.bld.SetDescriptor(wb.pkg.NewQName(wb.w.Descriptor.Name))
 		}
-		for _, qn := range wb.w.qNames {
+		for qn := range wb.w.nodes {
 			wb.bld.AddType(qn)
 		}
 	}
@@ -140,6 +139,67 @@ func (c *buildContext) types() error {
 			c.addComments(typ, c.defCtx().defBuilder.(appdef.ICommentsBuilder))
 			c.addTableItems(typ.Items, ictx)
 			c.popDef()
+		})
+	}
+	return nil
+}
+
+func (c *buildContext) roles() error {
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(role *RoleStmt, ictx *iterateCtx) {
+			rb := c.builder.AddRole(schema.NewQName(role.Name))
+			c.addComments(role, rb)
+		})
+	}
+	return nil
+
+}
+
+func (c *buildContext) grantsAndRevokes() error {
+	grants := func(stmts []WorkspaceStatement) {
+		for _, s := range stmts {
+			if s.Grant != nil && len(s.Grant.on) > 0 {
+				comments := s.Grant.GetComments()
+				if (s.Grant.AllTablesWithTag != nil && s.Grant.AllTablesWithTag.All) ||
+					(s.Grant.Table != nil && s.Grant.Table.All != nil) ||
+					(s.Grant.AllTables != nil && s.Grant.AllTables.All) {
+					c.builder.GrantAll(s.Grant.on, s.Grant.role, comments...)
+					continue
+				}
+				c.builder.Grant(s.Grant.ops, s.Grant.on, s.Grant.columns, s.Grant.role, comments...)
+			}
+		}
+	}
+	revokes := func(stmts []WorkspaceStatement) {
+		for _, s := range stmts {
+			if s.Revoke != nil && len(s.Revoke.on) > 0 {
+				comments := s.Revoke.GetComments()
+				if (s.Revoke.AllTablesWithTag != nil && s.Revoke.AllTablesWithTag.All) ||
+					(s.Revoke.Table != nil && s.Revoke.Table.All != nil) ||
+					(s.Revoke.AllTables != nil && s.Revoke.AllTables.All) {
+					c.builder.RevokeAll(s.Revoke.on, s.Revoke.role, comments...)
+					continue
+				}
+				c.builder.Revoke(s.Revoke.ops, s.Revoke.on, s.Revoke.columns, s.Revoke.role, comments...)
+			}
+		}
+	}
+	handleWorkspace := func(stmts []WorkspaceStatement) {
+		grants(stmts)
+		revokes(stmts)
+	}
+
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(w *WorkspaceStmt, ictx *iterateCtx) {
+			for _, inheritedWs := range w.inheritedWorkspaces {
+				handleWorkspace(inheritedWs.Statements)
+			}
+			handleWorkspace(w.Statements)
+		})
+	}
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(w *AlterWorkspaceStmt, ictx *iterateCtx) {
+			handleWorkspace(w.Statements)
 		})
 	}
 	return nil

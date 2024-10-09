@@ -17,7 +17,7 @@ import (
 var schemaFS embed.FS
 
 const (
-	ClusterAppFQN           = "github.com/voedger/voedger/pkg/apps/sys/clusterapp"
+	ClusterAppFQN           = "github.com/voedger/voedger/pkg/vvm/builtin/clusterapp"
 	ClusterAppNumPartitions = istructs.NumAppPartitions(1)
 	ClusterAppNumAppWS      = istructs.NumAppWorkspaces(1)
 )

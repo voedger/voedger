@@ -11,7 +11,7 @@ package main
 import (
 	"github.com/google/wire"
 
-	"github.com/voedger/voedger/pkg/apps"
+	voedger "github.com/voedger/voedger/cmd/voedger/voedgerimpl"
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/ihttpimpl"
@@ -19,17 +19,17 @@ import (
 	"github.com/voedger/voedger/pkg/istorage/provider"
 )
 
-func wireServer(httpCliParams ihttp.CLIParams, appsCliParams apps.CLIParams) (WiredServer, func(), error) {
+func wireServer(httpCliParams ihttp.CLIParams, appsCliParams voedger.CLIParams) (WiredServer, func(), error) {
 	panic(
 		wire.Build(
 			ihttpimpl.NewProcessor,
 			ihttpctl.NewHTTPProcessorController,
 			ihttp.NewIRouterStorage,
-			apps.NewStaticEmbeddedResources,
-			apps.NewRedirectionRoutes,
-			apps.NewDefaultRedirectionRoute,
-			apps.NewAppStorageFactory,
-			apps.NewAppRequestHandlers,
+			voedger.NewStaticEmbeddedResources,
+			voedger.NewRedirectionRoutes,
+			voedger.NewDefaultRedirectionRoute,
+			voedger.NewAppStorageFactory,
+			voedger.NewAppRequestHandlers,
 			provideAppStorageProvider,
 			wire.FieldsOf(&httpCliParams, "AcmeDomains"),
 			wire.Struct(new(WiredServer), "*"),

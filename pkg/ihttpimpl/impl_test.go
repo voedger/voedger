@@ -27,8 +27,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
+	voedger "github.com/voedger/voedger/cmd/voedger/voedgerimpl"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/ihttpctl"
@@ -100,7 +100,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 			_ = testApp.processor.UndeployApp(testAppQName)
 		}()
 
-		err = testApp.processor.DeployAppPartition(testAppQName, 4, apps.NewSysRouterRequestHandler)
+		err = testApp.processor.DeployAppPartition(testAppQName, 4, voedger.NewSysRouterRequestHandler)
 		require.NoError(err)
 
 		defer func() {
@@ -134,7 +134,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 			_ = testApp.processor.UndeployApp(testAppQName)
 		}()
 
-		err = testApp.processor.DeployAppPartition(testAppQName, 4, apps.NewSysRouterRequestHandler)
+		err = testApp.processor.DeployAppPartition(testAppQName, 4, voedger.NewSysRouterRequestHandler)
 		require.NoError(err)
 
 		defer func() {
@@ -223,7 +223,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 			_ = testApp.processor.UndeployApp(testAppQName)
 		}()
 
-		err = testApp.processor.DeployAppPartition(testAppQName, 0, apps.NewSysRouterRequestHandler)
+		err = testApp.processor.DeployAppPartition(testAppQName, 0, voedger.NewSysRouterRequestHandler)
 		require.NoError(err)
 
 		err = testApp.processor.UndeployAppPartition(testAppQName, 1)
@@ -242,7 +242,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 			_ = testApp.processor.UndeployApp(testAppQName)
 		}()
 
-		err = testApp.processor.DeployAppPartition(testAppQName, 3, apps.NewSysRouterRequestHandler)
+		err = testApp.processor.DeployAppPartition(testAppQName, 3, voedger.NewSysRouterRequestHandler)
 		require.ErrorIs(err, ErrAppPartNoOutOfRange)
 	})
 
@@ -253,7 +253,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		err := testApp.processor.DeployApp(testAppQName, 2, 1)
 		require.NoError(err)
 
-		err = testApp.processor.DeployAppPartition(testAppQName, 0, apps.NewSysRouterRequestHandler)
+		err = testApp.processor.DeployAppPartition(testAppQName, 0, voedger.NewSysRouterRequestHandler)
 		require.NoError(err)
 
 		err = testApp.processor.UndeployApp(testAppQName)

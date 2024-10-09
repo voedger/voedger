@@ -40,6 +40,7 @@ var ErrOnlyInsertForOdocOrORecord = errors.New("only INSERT allowed for ODoc or 
 var ErrPackageWithSameNameAlreadyIncludedInApp = errors.New("package with the same name already included in application")
 var ErrStorageDeclaredOnlyInSys = errors.New("storages are only declared in sys package")
 var ErrPkgFolderNotFound = errors.New("pkg folder not found")
+var ErrGrantFollowsRevoke = errors.New("GRANT follows REVOKE in the same container")
 
 func ErrLocalPackageNameRedeclared(localPkgName, newLocalPkgName string) error {
 	return fmt.Errorf("local package name %s was redeclared as %s", localPkgName, newLocalPkgName)

@@ -9,13 +9,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	"github.com/voedger/voedger/pkg/sys/sysprovide"
+	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -91,31 +91,31 @@ var (
 	MockCmdExec func(input string, args istructs.ExecCommandArgs) error
 )
 
-func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
+func ProvideApp2(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
 	sysPackageFS := sysprovide.Provide(cfg)
 	app2PackageFS := parser.PackageFS{
 		Path: app2PkgPath,
 		FS:   SchemaTestApp2FS,
 	}
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app2PkgName, "testCmd"), istructsmem.NullCommandExec))
-	ep.AddNamed(apps.EPIsDeviceAllowedFunc, func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
+	ep.AddNamed(builtinapps.EPIsDeviceAllowedFunc, func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
 		// simulate we could not work in any non-profile WS
 		return false, err
 	})
-	return apps.BuiltInAppDef{
+	return builtinapps.Def{
 		AppQName:                istructs.AppQName_test1_app2,
 		Packages:                []parser.PackageFS{sysPackageFS, app2PackageFS},
 		AppDeploymentDescriptor: TestAppDeploymentDescriptor,
 	}
 }
 
-func ProvideApp2WithJob(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
+func ProvideApp2WithJob(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
 	sysPackageFS := sysprovide.Provide(cfg)
 	app2PackageFS := parser.PackageFS{
 		Path: app2PkgPath,
 		FS:   SchemaTestApp2WithJobFS,
 	}
-	ep.AddNamed(apps.EPIsDeviceAllowedFunc, func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
+	ep.AddNamed(builtinapps.EPIsDeviceAllowedFunc, func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
 		// simulate we could not work in any non-profile WS
 		return false, err
 	})
@@ -125,14 +125,14 @@ func ProvideApp2WithJob(apis apps.APIs, cfg *istructsmem.AppConfigType, ep exten
 			return errors.New("Job1_builtin works!!!!!!!!!!!!!! ")
 		},
 	})
-	return apps.BuiltInAppDef{
+	return builtinapps.Def{
 		AppQName:                istructs.AppQName_test1_app2,
 		Packages:                []parser.PackageFS{sysPackageFS, app2PackageFS},
 		AppDeploymentDescriptor: TestAppDeploymentDescriptor,
 	}
 }
 
-func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
+func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
 	// sys package
 	sysPackageFS := sysprovide.Provide(cfg)
 
@@ -287,7 +287,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 		Path: App1PkgPath,
 		FS:   SchemaTestApp1FS,
 	}
-	return apps.BuiltInAppDef{
+	return builtinapps.Def{
 		AppQName:                istructs.AppQName_test1_app1,
 		Packages:                []parser.PackageFS{sysPackageFS, app1PackageFS},
 		AppDeploymentDescriptor: TestAppDeploymentDescriptor,

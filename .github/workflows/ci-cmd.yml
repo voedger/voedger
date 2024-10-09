@@ -5,15 +5,15 @@ on:
     branches:
       - main
     paths:
-      - 'cmd/**'
+      - "cmd/**"
 
 jobs:
   call-workflow-ci-cmd-ctool:
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
-    with: 
-      test_folder: 'cmd/ctool/'
-      ignore_copyright: 'pkg/apps/sys.monitor/site.main'
-      short_test: 'true'
+    with:
+      test_folder: "cmd/ctool/"
+      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
+      short_test: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
@@ -21,10 +21,10 @@ jobs:
   call-workflow-ci-cmd-edger:
     needs: call-workflow-ci-cmd-ctool
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
-    with: 
-      test_folder: 'cmd/edger/'
-      ignore_copyright: 'pkg/apps/sys.monitor/site.main'
-      short_test: 'true'
+    with:
+      test_folder: "cmd/edger/"
+      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
+      short_test: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
@@ -32,10 +32,10 @@ jobs:
   call-workflow-ci-cmd-vpm:
     needs: call-workflow-ci-cmd-edger
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
-    with: 
-      test_folder: 'cmd/vpm/'
-      ignore_copyright: 'pkg/apps/sys.monitor/site.main'
-      short_test: 'true'
+    with:
+      test_folder: "cmd/vpm/"
+      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
+      short_test: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
@@ -43,10 +43,10 @@ jobs:
   call-workflow-ci-cmd-voedger:
     needs: call-workflow-ci-cmd-vpm
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
-    with: 
-      test_folder: 'cmd/voedger/'
-      ignore_copyright: 'pkg/apps/sys.monitor/site.main'
-      short_test: 'true'
+    with:
+      test_folder: "cmd/voedger/"
+      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
+      short_test: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
@@ -60,4 +60,3 @@ jobs:
       dockerpassword: ${{ secrets.DOCKER_PASSWORD }}
       personaltoken: ${{ secrets.PERSONAL_TOKEN }}
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-

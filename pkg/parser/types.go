@@ -41,6 +41,15 @@ type PackageFS struct {
 	FS   coreutils.IReadFS
 }
 
+type statementNode struct {
+	Pkg  *PackageSchemaAST
+	Stmt INamedStatement
+}
+
+func (s *statementNode) qName() appdef.QName {
+	return s.Pkg.NewQName(Ident(s.Stmt.GetName()))
+}
+
 type Ident string
 
 func (b *Ident) Capture(values []string) error {
@@ -133,7 +142,8 @@ type WorkspaceStatement struct {
 	Type      *TypeStmt               `parser:"| @@"`
 	Limit     *LimitStmt              `parser:"| @@"`
 	// Sequence  *sequenceStmt  `parser:"| @@"`
-	Grant *GrantStmt `parser:"| @@"`
+	Grant  *GrantStmt  `parser:"| @@"`
+	Revoke *RevokeStmt `parser:"| @@"`
 
 	stmt interface{}
 }
@@ -220,12 +230,26 @@ type WorkspaceStmt struct {
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 
 	// filled on the analysis stage
-	qNames []appdef.QName
+	nodes               map[appdef.QName]workspaceNode
+	inheritedWorkspaces []*WorkspaceStmt
+}
+
+type workspaceNode struct {
+	workspace *WorkspaceStmt
+	node      statementNode
+}
+
+func (s *WorkspaceStmt) registerNode(qn appdef.QName, node statementNode, ws *WorkspaceStmt) {
+	wsNode := workspaceNode{workspace: ws, node: node}
+	if s.nodes == nil {
+		s.nodes = make(map[appdef.QName]workspaceNode)
+	}
+	s.nodes[qn] = wsNode
 }
 
 func (s *WorkspaceStmt) containsQName(qName appdef.QName) bool {
-	for i := 0; i < len(s.qNames); i++ {
-		if s.qNames[i] == qName {
+	for k := range s.nodes {
+		if k == qName {
 			return true
 		}
 	}
@@ -533,14 +557,20 @@ type UseTableStmt struct {
 	AllTables bool        `parser:"(@'*'"`
 	TableName *Identifier `parser:"| @@)"`
 
-	qNames []appdef.QName // filled on the analysis stage
+	qNames map[appdef.QName]statementNode // filled on the analysis stage
+}
+
+func (s *UseTableStmt) registerQName(qn appdef.QName, stmt statementNode) {
+	if s.qNames == nil {
+		s.qNames = make(map[appdef.QName]statementNode)
+	}
+	s.qNames[qn] = stmt
 }
 
 type UseWorkspaceStmt struct {
 	Statement
-	Workspace Identifier `parser:"'USE' 'WORKSPACE' @@"`
-
-	qName appdef.QName // filled on the analysis stage
+	Workspace Identifier     `parser:"'USE' 'WORKSPACE' @@"`
+	useWs     *statementNode // filled on the analysis stage
 }
 
 /*type sequenceStmt struct {
@@ -615,7 +645,7 @@ type GrantTableAction struct {
 	Columns []Identifier `parser:"( '(' @@ (',' @@)* ')' )?"`
 }
 
-type GrantAllTablesWithTagAction struct {
+type GrantAllTablesAction struct {
 	Pos    lexer.Position
 	Select bool `parser:"@'SELECT'"`
 	Insert bool `parser:"| @'INSERT'"`
@@ -629,32 +659,67 @@ type GrantTableAll struct {
 }
 
 type GrantTableActions struct {
-	Pos      lexer.Position
-	GrantAll *GrantTableAll     `parser:"(@@ | "`
-	Items    []GrantTableAction `parser:"(@@ (',' @@)*))"`
+	Pos   lexer.Position
+	All   *GrantTableAll     `parser:"(@@ | "`
+	Items []GrantTableAction `parser:"(@@ (',' @@)*))"`
+	Table DefQName           `parser:"ONTABLE @@"`
 }
 
 type GrantAllTablesWithTagActions struct {
-	Pos      lexer.Position
-	GrantAll bool                          `parser:"@'ALL' | "`
-	Items    []GrantAllTablesWithTagAction `parser:"(@@ (',' @@)*)"`
+	Pos   lexer.Position
+	All   bool                   `parser:"( @'ALL' | "`
+	Items []GrantAllTablesAction `parser:"(@@ (',' @@)*) )"`
+	Tag   DefQName               `parser:"ONALLTABLESWITHTAG @@"`
+}
+
+type GrantAllTables struct {
+	Pos   lexer.Position
+	All   bool                   `parser:"( @'ALL' | "`
+	Items []GrantAllTablesAction `parser:"(@@ (',' @@)*) )"`
+	Tag   DefQName               `parser:"ONALLTABLES"`
+}
+
+type GrantView struct {
+	Pos        lexer.Position
+	AllColumns bool         `parser:"(@SELECTONVIEW | "`
+	Columns    []Identifier `parser:"( SELECT '(' @@ (',' @@)* ')' ONVIEW))"`
+	View       DefQName     `parser:"@@"`
+}
+
+type GrantOrRevoke struct {
+	Command              *DefQName                     `parser:"( (INSERTONCOMMAND @@)"`
+	AllCommandsWithTag   *DefQName                     `parser:"  | (INSERTONALLCOMMANDSWITHTAG @@)"`
+	Query                *DefQName                     `parser:"  | (SELECTONQUERY @@)"`
+	AllQueriesWithTag    *DefQName                     `parser:"  | (SELECTONALLQUERIESWITHTAG @@)"`
+	AllViewsWithTag      *DefQName                     `parser:"  | (SELECTONALLVIEWSWITHTAG @@)"`
+	Workspace            *DefQName                     `parser:"  | (INSERTONWORKSPACE @@)"`
+	AllWorkspacesWithTag *DefQName                     `parser:"  | (INSERTONALLWORKSPACESWITHTAG @@)"`
+	View                 *GrantView                    `parser:"  | @@"`
+	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"  | @@"`
+	Table                *GrantTableActions            `parser:"  | @@"`
+	AllCommands          bool                          `parser:"  | @INSERTONALLCOMMANDS"`
+	AllQueries           bool                          `parser:"  | @SELECTONALLQUERIES"`
+	AllViews             bool                          `parser:"  | @SELECTONALLVIEWS"`
+	AllTables            *GrantAllTables               `parser:"  | @@ )"`
+
+	/* filled on the analysis stage */
+	role    appdef.QName
+	on      []appdef.QName
+	ops     []appdef.OperationKind
+	columns []appdef.FieldName
 }
 
 type GrantStmt struct {
 	Statement
-	Command              bool                          `parser:"'GRANT' ( @INSERTONCOMMAND"`
-	AllCommandsWithTag   bool                          `parser:"| @INSERTONALLCOMMANDSWITHTAG"`
-	Query                bool                          `parser:"| @SELECTONQUERY"`
-	AllQueriesWithTag    bool                          `parser:"| @SELECTONALLQUERIESWITHTAG"`
-	View                 bool                          `parser:"| @SELECTONVIEW"`
-	AllViewsWithTag      bool                          `parser:"| @SELECTONALLVIEWSWITHTAG"`
-	Workspace            bool                          `parser:"| @INSERTONWORKSPACE"`
-	AllWorkspacesWithTag bool                          `parser:"| @INSERTONALLWORKSPACESWITHTAG"`
-	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"| (@@ ONALLTABLESWITHTAG)"`
-	Table                *GrantTableActions            `parser:"| (@@ ONTABLE) )"`
-
-	On DefQName `parser:"@@"`
+	Revoke bool `parser:"'GRANT'"`
+	GrantOrRevoke
 	To DefQName `parser:"'TO' @@"`
+}
+type RevokeStmt struct {
+	Statement
+	Revoke bool `parser:"'REVOKE'"`
+	GrantOrRevoke
+	From DefQName `parser:"'FROM' @@"`
 }
 
 type StorageStmt struct {
@@ -838,6 +903,7 @@ type ViewStmt struct {
 	Name     Ident          `parser:"'VIEW' @Ident"`
 	Items    []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	ResultOf DefQName       `parser:"'AS' 'RESULT' 'OF' @@"`
+	With     []WithItem     `parser:"('WITH' @@ (',' @@)* )?"`
 	pkRef    *PrimaryKeyExpr
 }
 

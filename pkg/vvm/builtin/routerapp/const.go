@@ -3,7 +3,7 @@
  * @author Denis Gribanov
  */
 
-package blobberapp
+package routerapp
 
 import (
 	"embed"
@@ -12,10 +12,10 @@ import (
 )
 
 //go:embed schema.vsql
-var blobberSchemaFS embed.FS
+var routerAppSchemaFS embed.FS
 
-const BlobberAppFQN = "github.com/voedger/voedger/pkg/apps/sys/blobberapp"
+const RouterAppFQN = "github.com/voedger/voedger/pkg/vvm/builtin/routerapp"
 
 const DefDeploymentPartsCount = 10
 
-var DefDeploymentEnginePoolSize = appparts.PoolSize(10, 10, 10, 1)
+var DefDeploymentEnginePoolSize = appparts.PoolSize(0, 0, 10, 1)

@@ -16,11 +16,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/apps/sys/clusterapp"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	it "github.com/voedger/voedger/pkg/vit"
+	"github.com/voedger/voedger/pkg/vvm/builtin/clusterapp"
 )
 
 func TestVSqlUpdate_BasicUsage_UpdateTable(t *testing.T) {
