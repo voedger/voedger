@@ -139,7 +139,7 @@ type anyType struct {
 	name QName
 }
 
-func newAnyType(name QName) *anyType { return &anyType{nullComment{}, name} }
+func newAnyType(name QName) IType { return &anyType{nullComment{}, name} }
 
 func (t anyType) App() IAppDef   { return nil }
 func (t anyType) IsSystem() bool { return true }

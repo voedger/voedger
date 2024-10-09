@@ -752,7 +752,7 @@ func testTestEvent(t *testing.T, value istructs.IDbEvent, pLogOffs, wLogOffs ist
 	}
 
 	var cnt int
-	value.CUDs(func(rec istructs.ICUDRow) {
+	for rec := range value.CUDs {
 		require.True(rec.IsNew())
 		if rec.QName() == test.tablePhotos {
 			testPhotoRow(t, rec)
@@ -762,7 +762,7 @@ func testTestEvent(t *testing.T, value istructs.IDbEvent, pLogOffs, wLogOffs ist
 			require.Equal(test.remarkValue, rec.AsString(test.remarkIdent))
 		}
 		cnt++
-	})
+	}
 	require.Equal(2, cnt)
 }
 

@@ -287,7 +287,7 @@ func (ev *eventType) ArgumentObject() istructs.IObject {
 }
 
 // istructs.IAbstractEvent.CUDs
-func (ev *eventType) CUDs(cb func(rec istructs.ICUDRow)) {
+func (ev *eventType) CUDs(cb func(rec istructs.ICUDRow) bool) {
 	ev.cud.enumRecs(cb)
 }
 
@@ -447,13 +447,17 @@ func (cud *cudType) empty() bool {
 }
 
 // enumRecs: enumerates changes as IRecords
-func (cud *cudType) enumRecs(cb func(rec istructs.ICUDRow)) {
+func (cud *cudType) enumRecs(cb func(rec istructs.ICUDRow) bool) {
 	for _, rec := range cud.creates {
-		cb(rec)
+		if !cb(rec) {
+			return
+		}
 	}
 
 	for _, rec := range cud.updates {
-		cb(&rec.changes)
+		if !cb(&rec.changes) {
+			return
+		}
 	}
 }
 

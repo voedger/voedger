@@ -153,9 +153,9 @@ func CUDsToMap(event istructs.IDbEvent, appDef appdef.IAppDef, optFuncs ...CUDsO
 	for _, f := range optFuncs {
 		f(&opts)
 	}
-	event.CUDs(func(rec istructs.ICUDRow) {
+	for rec := range event.CUDs {
 		if opts.filter != nil && !opts.filter(rec.QName()) {
-			return
+			continue
 		}
 		cudData := make(map[string]interface{})
 		cudData["sys.ID"] = rec.ID()
@@ -163,7 +163,7 @@ func CUDsToMap(event istructs.IDbEvent, appDef appdef.IAppDef, optFuncs ...CUDsO
 		cudData["IsNew"] = rec.IsNew()
 		cudData["fields"] = FieldsToMap(rec, appDef, opts.mapperOpts...)
 		cuds = append(cuds, cudData)
-	})
+	}
 	return cuds
 }
 

@@ -7,7 +7,6 @@
 package collection
 
 import (
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/sys"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -65,10 +64,11 @@ var collectionProjector = istructs.Projector{
 		}
 
 		keyBuildersAndIDs := []kbAndID{}
-		err = iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+
+		for rec := range event.CUDs {
 			kind := s.AppStructs().AppDef().Type(rec.QName()).Kind()
 			if kind != appdef.TypeKind_CDoc && kind != appdef.TypeKind_CRecord {
-				return nil
+				continue
 			}
 			kb, err := is.state.KeyBuilder(sys.Storage_Record, appdef.NullQName)
 			if err != nil {
@@ -81,11 +81,6 @@ var collectionProjector = istructs.Projector{
 				id:               rec.ID(),
 				isNew:            rec.IsNew(),
 			})
-			return nil
-		})
-		if err != nil {
-			// notest
-			return err
 		}
 
 		keyBuilders := make([]istructs.IStateKeyBuilder, len(keyBuildersAndIDs))

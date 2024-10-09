@@ -24,11 +24,11 @@ import (
 )
 
 func applyUniques(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
-	return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+	for rec := range event.CUDs {
 		appDef := st.AppStructs().AppDef()
 		iUniques, ok := appDef.Type(rec.QName()).(appdef.IUniques)
 		if !ok {
-			return nil
+			continue
 		}
 		for _, unique := range iUniques.Uniques() {
 			if err := handleCUD(rec, st, intents, unique.Fields(), unique.Name()); err != nil {
@@ -37,10 +37,12 @@ func applyUniques(event istructs.IPLogEvent, st istructs.IState, intents istruct
 		}
 		if iUniques.UniqueField() != nil {
 			uniqueQName := rec.QName()
-			return handleCUD(rec, st, intents, []appdef.IField{iUniques.UniqueField()}, uniqueQName)
+			if err := handleCUD(rec, st, intents, []appdef.IField{iUniques.UniqueField()}, uniqueQName); err != nil {
+				return err
+			}
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
 func handleCUD(cud istructs.ICUDRow, st istructs.IState, intents istructs.IIntents, uniqueFields []appdef.IField, uniqueQName appdef.QName) error {
@@ -318,11 +320,11 @@ func validateCUD(cudRec istructs.ICUDRow, appStructs istructs.IAppStructs, wsid 
 func eventUniqueValidator(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
 	//                    cudQName       uniqueQName  unique-key-bytes
 	uniquesState := map[appdef.QName]map[appdef.QName]map[string]*uniqueViewRecord{}
-	return iterate.ForEachError(rawEvent.CUDs, func(cudRec istructs.ICUDRow) (err error) {
 
+	for cudRec := range rawEvent.CUDs {
 		cudUniques, ok := appStructs.AppDef().Type(cudRec.QName()).(appdef.IUniques)
 		if !ok {
-			return nil
+			continue
 		}
 		for _, unique := range cudUniques.Uniques() {
 			if err := validateCUD(cudRec, appStructs, wsid, unique.Fields(), unique.Name(), uniquesState); err != nil {
@@ -335,8 +337,8 @@ func eventUniqueValidator(ctx context.Context, rawEvent istructs.IRawEvent, appS
 				return err
 			}
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
 func conflict(docQName appdef.QName, conflictingWithID istructs.RecordID, uniqueQName appdef.QName) error {

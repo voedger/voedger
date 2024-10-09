@@ -430,7 +430,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 
 			t.Run("test PLog event CUDs", func(t *testing.T) {
 				cudCount := 0
-				event.CUDs(func(rec istructs.ICUDRow) {
+				for rec := range event.CUDs {
 					if rec.QName() == test.tablePhotos {
 						require.False(rec.IsNew())
 						require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
@@ -441,7 +441,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 						require.Equal(changedRems, rec.AsString(test.remarkIdent))
 					}
 					cudCount++
-				})
+				}
 				require.Equal(2, cudCount)
 			})
 		}
@@ -565,14 +565,14 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			defer pLogEvent.Release()
 
 			checked := false
-			pLogEvent.CUDs(func(rec istructs.ICUDRow) {
+			for rec := range pLogEvent.CUDs {
 				if rec.QName() == test.tablePhotos {
 					require.False(rec.IsNew())
 					require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
 					require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
 					checked = true
 				}
-			})
+			}
 
 			require.True(checked)
 
@@ -707,14 +707,14 @@ func testDbEvent(t *testing.T, event istructs.IDbEvent) {
 	t.Run("test DBEvent CUDs", func(t *testing.T) {
 		var cuds []istructs.IRowReader
 		cnt := 0
-		event.CUDs(func(row istructs.ICUDRow) {
+		for row := range event.CUDs {
 			cuds = append(cuds, row)
 			if cnt == 0 {
 				require.True(row.IsNew())
 				require.Equal(test.tablePhotos, row.QName())
 			}
 			cnt++
-		})
+		}
 		require.Equal(2, cnt)
 		require.Len(cuds, 2)
 		testPhotoRow(t, cuds[0])
@@ -1312,13 +1312,13 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 		t.Run("newly created singleton CDoc must be ok", func(t *testing.T) {
 			recCnt := 0
-			pLogEvent.CUDs(func(rec istructs.ICUDRow) {
+			for rec := range pLogEvent.CUDs {
 				require.Equal(docName, rec.QName())
 				require.Equal(docID, rec.ID())
 				require.True(rec.IsNew())
 				require.Equal(int64(8), rec.AsInt64("option"))
 				recCnt++
-			})
+			}
 			require.Equal(1, recCnt)
 		})
 
@@ -1443,13 +1443,13 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 		t.Run("updated singleton CDoc must be ok", func(t *testing.T) {
 			recCnt := 0
-			pLogEvent.CUDs(func(rec istructs.ICUDRow) {
+			for rec := range pLogEvent.CUDs {
 				require.Equal(docName, rec.QName())
 				require.Equal(docID, rec.ID())
 				require.False(rec.IsNew())
 				require.Equal(int64(888), rec.AsInt64("option"))
 				recCnt++
-			})
+			}
 			require.Equal(1, recCnt)
 		})
 

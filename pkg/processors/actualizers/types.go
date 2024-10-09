@@ -72,7 +72,7 @@ func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames m
 		}
 	}
 
-	triggered, _ := iterate.FindFirst(event.CUDs, func(rec istructs.ICUDRow) bool {
+	for rec := range event.CUDs {
 		triggeringKinds, ok := triggeringQNames[rec.QName()]
 		if !ok {
 			recType := appDef.Type(rec.QName())
@@ -95,25 +95,22 @@ func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames m
 				}
 			case appdef.ProjectorEventKind_Activate:
 				if !rec.IsNew() {
-					activated, _, _ := iterate.FindFirstMap(rec.ModifiedFields, func(fieldName appdef.FieldName, newValue interface{}) bool {
+					if activated, _, _ := iterate.FindFirstMap(rec.ModifiedFields, func(fieldName appdef.FieldName, newValue interface{}) bool {
 						return fieldName == appdef.SystemField_IsActive && newValue.(bool)
-					})
-					if activated {
+					}); activated {
 						return true
 					}
 				}
 			case appdef.ProjectorEventKind_Deactivate:
 				if !rec.IsNew() {
-					deactivated, _, _ := iterate.FindFirstMap(rec.ModifiedFields, func(fieldName appdef.FieldName, newValue interface{}) bool {
+					if deactivated, _, _ := iterate.FindFirstMap(rec.ModifiedFields, func(fieldName appdef.FieldName, newValue interface{}) bool {
 						return fieldName == appdef.SystemField_IsActive && !newValue.(bool)
-					})
-					if deactivated {
+					}); deactivated {
 						return true
 					}
 				}
 			}
 		}
-		return false
-	})
-	return triggered
+	}
+	return false
 }

@@ -72,12 +72,15 @@ func recordsRegistryProjector(event istructs.IPLogEvent, st istructs.IState, int
 			return err
 		}
 	}
-	return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+	for rec := range event.CUDs {
 		if !rec.IsNew() {
-			return nil
+			continue
 		}
-		return writeObjectToRegistry(rec, appDef, st, intents, event.WLogOffset())
-	})
+		if err := writeObjectToRegistry(rec, appDef, st, intents, event.WLogOffset()); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func writeObjectToRegistry(root istructs.IRowReader, appDef appdef.IAppDef, st istructs.IState, intents istructs.IIntents, wLogOffsetToStore istructs.Offset) error {

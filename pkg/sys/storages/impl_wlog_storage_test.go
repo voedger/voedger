@@ -43,7 +43,7 @@ func (e *mockWLogEvent) ArgumentObject() istructs.IObject {
 	return e.Called().Get(0).(istructs.IObject)
 }
 func (e *mockWLogEvent) Bytes() []byte { return e.Called().Get(0).([]byte) }
-func (e *mockWLogEvent) CUDs(cb func(rec istructs.ICUDRow)) {
+func (e *mockWLogEvent) CUDs(cb func(rec istructs.ICUDRow) bool) {
 	e.Called(cb)
 }
 func (e *mockWLogEvent) RegisteredAt() istructs.UnixMilli {
