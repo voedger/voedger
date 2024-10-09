@@ -126,7 +126,7 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		require := require.New(t)
 		event := new(mockWLogEvent)
 		event.On("CUDs", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(rec istructs.ICUDRow))
+			cb := args.Get(0).(func(rec istructs.ICUDRow) bool)
 			cb(new(mockCUDRow))
 		})
 		events := &mockEvents{}

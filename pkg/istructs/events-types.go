@@ -53,7 +53,7 @@ type IAbstractEvent interface {
 
 	ArgumentObject() IObject
 
-	CUDs(func(rec ICUDRow) bool)
+	CUDs(func(ICUDRow) bool)
 
 	RegisteredAt() UnixMilli
 	Synced() bool
