@@ -636,7 +636,10 @@ func testCommandsTree(t *testing.T, cmd istructs.IObject) {
 		require.Len(names, 1)
 		require.Equal(test.basketIdent, names[0])
 
-		cmd.Children(test.basketIdent, func(c istructs.IObject) { basket = c })
+		for c := range cmd.Children(test.basketIdent) {
+			basket = c
+			break
+		}
 		require.NotNil(basket)
 
 		require.Equal(cmd.AsRecord().ID(), basket.AsRecord().Parent())
@@ -650,8 +653,9 @@ func testCommandsTree(t *testing.T, cmd istructs.IObject) {
 		require.Equal(test.goodIdent, names[0])
 
 		var goods []istructs.IObject
-		basket.Children(test.goodIdent, func(g istructs.IObject) { goods = append(goods, g) })
-		require.NotNil(goods)
+		for g := range basket.Children(test.goodIdent) {
+			goods = append(goods, g)
+		}
 		require.Len(goods, test.goodCount)
 
 		for i := 0; i < test.goodCount; i++ {
@@ -1992,16 +1996,19 @@ func Test_ObjectMask(t *testing.T) {
 	require.Equal([]byte(nil), value.AsBytes(test.photoIdent))
 
 	var basket istructs.IObject
-	value.Children(test.basketIdent, func(c istructs.IObject) { basket = c })
+	for c := range value.Children(test.basketIdent) {
+		basket = c
+		break
+	}
 	require.NotNil(basket)
 
 	var cnt int
-	basket.Children(test.goodIdent, func(c istructs.IObject) {
+	for c := range basket.Children(test.goodIdent) {
 		require.Equal(maskString, c.AsString(test.nameIdent))
 		require.Equal(int64(0), c.AsInt64(test.codeIdent))
 		require.Equal(float64(0), c.AsFloat64(test.weightIdent))
 		cnt++
-	})
+	}
 
 	require.Equal(test.goodCount, cnt)
 }
@@ -2050,10 +2057,10 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 				require.EqualValues(1, o.AsInt32("int32"))
 				require.Equal(3, func() int {
 					cnt := 0
-					o.Children("child", func(c istructs.IObject) {
+					for c := range o.Children("child") {
 						cnt++
 						require.EqualValues(cnt, c.AsInt64("int64"))
-					})
+					}
 					return cnt
 				}())
 			}},

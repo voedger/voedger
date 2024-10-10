@@ -93,8 +93,9 @@ func (m *MockObject) AsRecordID(name appdef.FieldName) istructs.RecordID {
 func (m *MockObject) RecordIDs(includeNulls bool, cb func(appdef.FieldName, istructs.RecordID)) {
 	m.Called(includeNulls, cb)
 }
-func (m *MockObject) Children(container string, cb func(istructs.IObject)) {
-	m.Called(container, cb)
+func (m *MockObject) Children(container ...string) func(func(istructs.IObject) bool) {
+	args := m.Called(container)
+	return args.Get(0).(func(func(istructs.IObject) bool))
 }
 
 type MockState struct {

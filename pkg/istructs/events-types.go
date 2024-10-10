@@ -146,10 +146,10 @@ type IObject interface {
 
 	QName() appdef.QName
 
-	// Children in given container
+	// Returns iterator for children in given containers
 	//
-	// if container is empty string then enums all children
-	Children(container string, cb func(IObject))
+	// if no containers specified then iterate all children
+	Children(container ...string) func(func(IObject) bool)
 
 	// First level qname-s
 	Containers(func(string))

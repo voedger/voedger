@@ -859,10 +859,18 @@ func (o *objectType) ChildBuilder(containerName string) istructs.IObjectBuilder 
 }
 
 // istructs.IObject.Children
-func (o *objectType) Children(container string, cb func(c istructs.IObject)) {
-	for _, c := range o.child {
-		if (container == "") || (container == c.Container()) {
-			cb(c)
+func (o *objectType) Children(container ...string) func(func(istructs.IObject) bool) {
+	c := make(map[string]bool, len(container))
+	for _, cont := range container {
+		c[cont] = true
+	}
+	return func(cb func(istructs.IObject) bool) {
+		for _, child := range o.child {
+			if len(c) == 0 || c[child.Container()] {
+				if !cb(child) {
+					break
+				}
+			}
 		}
 	}
 }

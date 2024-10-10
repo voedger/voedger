@@ -82,7 +82,7 @@ type NullObject struct{ NullRowReader }
 func NewNullObject() IObject { return &NullObject{} }
 
 func (*NullObject) QName() appdef.QName                         { return appdef.NullQName }
-func (*NullObject) Children(container string, cb func(IObject)) {}
+func (*NullObject) Children(...string) func(func(IObject) bool) { return func(func(IObject) bool) {} }
 func (*NullObject) Containers(func(string))                     {}
 func (no *NullObject) AsRecord() IRecord                        { return no }
 func (no *NullObject) FieldNames(func(string))                  {}

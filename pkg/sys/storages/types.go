@@ -234,12 +234,13 @@ func (v *objectArrayContainerValue) GetAsQName(int) appdef.QName { panic(ErrNotS
 func (v *objectArrayContainerValue) GetAsBool(int) bool          { panic(ErrNotSupported) }
 func (v *objectArrayContainerValue) GetAsValue(i int) (result istructs.IStateValue) {
 	index := 0
-	v.object.Children(v.container, func(o istructs.IObject) {
+	for o := range v.object.Children(v.container) {
 		if index == i {
 			result = &ObjectStateValue{object: o}
+			break
 		}
 		index++
-	})
+	}
 	if result == nil {
 		panic(errIndexOutOfBounds(i))
 	}
@@ -247,9 +248,9 @@ func (v *objectArrayContainerValue) GetAsValue(i int) (result istructs.IStateVal
 }
 func (v *objectArrayContainerValue) Length() int {
 	var result int
-	v.object.Children(v.container, func(i istructs.IObject) {
+	for range v.object.Children(v.container) {
 		result++
-	})
+	}
 	return result
 }
 

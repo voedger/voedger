@@ -54,11 +54,19 @@ func (me *collectionObject) addRawRecord(rec istructs.IRecord) {
 }
 
 // Children in given container
-func (me *collectionObject) Children(container string, cb func(istructs.IObject)) {
-	for i := range me.children {
-		c := me.children[i]
-		if (container == "") || (c.Container() == container) {
-			cb(c)
+func (me *collectionObject) Children(container ...string) func(func(istructs.IObject) bool) {
+	cc := make(map[string]bool)
+	for _, c := range container {
+		cc[c] = true
+	}
+	return func(cb func(istructs.IObject) bool) {
+		for i := range me.children {
+			c := me.children[i]
+			if len(cc) == 0 || cc[c.Container()] {
+				if !cb(c) {
+					break
+				}
+			}
 		}
 	}
 }

@@ -93,13 +93,15 @@ func writeObjectToRegistry(root istructs.IRowReader, appDef appdef.IAppDef, st i
 		return nil
 	}
 	return iterate.ForEachError(object.Containers, func(container string) (err error) {
-		return iterate.ForEachError1Arg(object.Children, container, func(child istructs.IObject) error {
+		for child := range object.Children(container) {
 			elType := appDef.Type(child.QName())
-			if elType.Kind() != appdef.TypeKind_ODoc && elType.Kind() != appdef.TypeKind_ORecord {
-				return nil
+			if elType.Kind() == appdef.TypeKind_ODoc || elType.Kind() == appdef.TypeKind_ORecord {
+				if err := writeObjectToRegistry(child, appDef, st, intents, wLogOffsetToStore); err != nil {
+					return err
+				}
 			}
-			return writeObjectToRegistry(child, appDef, st, intents, wLogOffsetToStore)
-		})
+		}
+		return nil
 	})
 }
 

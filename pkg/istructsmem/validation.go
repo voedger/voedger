@@ -268,7 +268,9 @@ func validateObject(o *objectType) (err error) {
 	// validate occurrences
 	for _, cont := range t.Containers() {
 		occurs := appdef.Occurs(0)
-		o.Children(cont.Name(), func(istructs.IObject) { occurs++ })
+		for range o.Children(cont.Name()) {
+			occurs++
+		}
 		if occurs < cont.MinOccurs() {
 			err = errors.Join(err,
 				// ODoc «test.document» container «child» has not enough occurrences (0, minimum 1)

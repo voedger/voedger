@@ -652,17 +652,20 @@ func testTestObject(t *testing.T, value istructs.IObject) {
 	require.Equal(test.photoValue, value.AsBytes(test.photoIdent))
 
 	var basket istructs.IObject
-	value.Children(test.basketIdent, func(c istructs.IObject) { basket = c })
+	for c := range value.Children(test.basketIdent) {
+		basket = c
+		break
+	}
 	require.NotNil(basket)
 
 	var cnt int
-	basket.Children(test.goodIdent, func(c istructs.IObject) {
+	for c := range basket.Children(test.goodIdent) {
 		require.NotEqual(istructs.NullRecordID, c.AsRecordID(test.saleIdent))
 		require.Equal(test.goodNames[cnt], c.AsString(test.nameIdent))
 		require.Equal(test.goodCodes[cnt], c.AsInt64(test.codeIdent))
 		require.Equal(test.goodWeights[cnt], c.AsFloat64(test.weightIdent))
 		cnt++
-	})
+	}
 
 	require.Equal(test.goodCount, cnt)
 }
