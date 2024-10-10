@@ -196,3 +196,9 @@ func WithSecret(name string, value []byte) vitConfigOptFunc {
 		vpc.secrets[name] = value
 	}
 }
+
+func WithVVMLaunchOnly() vitOptFunc {
+	return func(vit *VIT) {
+		
+	}
+}

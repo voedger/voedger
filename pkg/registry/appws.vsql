@@ -97,4 +97,9 @@ ALTER WORKSPACE AppWorkspaceWS (
 		SYNC PROJECTOR ProjectorLoginIdx AFTER INSERT ON Login INTENTS(View(LoginIdx));
 		PROJECTOR InvokeCreateWorkspaceID_registry AFTER INSERT ON(Login);
 	);
+
+	GRANT ALL ON ALL TABLES WITH TAG WithoutAuthTag TO Anyone;
+	GRANT SELECT ON ALL QUERIES WITH TAG WithoutAuthTag TO sys.Anyone;
+	GRANT INSERT ON ALL COMMANDS WITH TAG WithoutAuthTag TO sys.Anyone;
+	GRANT SELECT ON ALL VIEWS WITH TAG WithoutAuthTag TO sys.Anyone;
 );

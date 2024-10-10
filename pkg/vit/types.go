@@ -34,6 +34,7 @@ type VIT struct {
 	emailCaptor          emailCaptor
 	httpClient           coreutils.IHTTPClient
 	mockTime             coreutils.IMockTime
+	vvmOnly              bool
 }
 
 type VITConfig struct {

@@ -14,13 +14,32 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/registry"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	it "github.com/voedger/voedger/pkg/vit"
 )
+
+func TestBug(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVITVVMOnly(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	appPart, err := vit.IAppPartitions.Borrow(istructs.AppQName_sys_registry, 1, appparts.ProcessorKind_Command)
+	require.NoError(err)
+	defer appPart.Release()
+	ok, _, err := appPart.IsOperationAllowed(
+		appdef.OperationKind_Execute,
+		appdef.NewQName(registry.RegistryPackage, "CreateLogin"),
+		nil,
+		[]appdef.QName{appdef.NewQName(appdef.SysPackage, "Anyone")},
+	)
+	require.NoError(err)
+	require.True(ok)
+}
 
 func TestBasicUsage_InitiateDeactivateWorkspace(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
