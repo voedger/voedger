@@ -34,7 +34,7 @@ func (m *MockCUDRow) FieldNames(cb func(appdef.FieldName)) { m.Called(cb) }
 func (m *MockCUDRow) IsNew() bool                          { return m.Called().Get(0).(bool) }
 func (m *MockCUDRow) QName() appdef.QName                  { return m.Called().Get(0).(appdef.QName) }
 func (m *MockCUDRow) ID() istructs.RecordID                { return m.Called().Get(0).(istructs.RecordID) }
-func (m *MockCUDRow) ModifiedFields(cb func(fieldName appdef.FieldName, newValue interface{})) {
+func (m *MockCUDRow) ModifiedFields(cb func(appdef.FieldName, interface{}) bool) {
 	m.Called(cb)
 }
 func (m *MockCUDRow) AsRecordID(name appdef.FieldName) istructs.RecordID {

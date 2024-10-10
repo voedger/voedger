@@ -12,7 +12,6 @@ import (
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -95,18 +94,18 @@ func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames m
 				}
 			case appdef.ProjectorEventKind_Activate:
 				if !rec.IsNew() {
-					if activated, _, _ := iterate.FindFirstMap(rec.ModifiedFields, func(fieldName appdef.FieldName, newValue interface{}) bool {
-						return fieldName == appdef.SystemField_IsActive && newValue.(bool)
-					}); activated {
-						return true
+					for fieldName, newValue := range rec.ModifiedFields {
+						if fieldName == appdef.SystemField_IsActive && newValue.(bool) {
+							return true
+						}
 					}
 				}
 			case appdef.ProjectorEventKind_Deactivate:
 				if !rec.IsNew() {
-					if deactivated, _, _ := iterate.FindFirstMap(rec.ModifiedFields, func(fieldName appdef.FieldName, newValue interface{}) bool {
-						return fieldName == appdef.SystemField_IsActive && !newValue.(bool)
-					}); deactivated {
-						return true
+					for fieldName, newValue := range rec.ModifiedFields {
+						if fieldName == appdef.SystemField_IsActive && !newValue.(bool) {
+							return true
+						}
 					}
 				}
 			}

@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/sys"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -284,34 +283,29 @@ func validateCUD(cudRec istructs.ICUDRow, appStructs istructs.IAppStructs, wsid 
 		// update
 		// unique view record exists because all unique fields are required.
 		// let's deny to update unique fields and handle IsActive state
-		err := iterate.ForEachError2Values(cudRec.ModifiedFields, func(cudModifiedFieldName appdef.FieldName, newValue interface{}) error {
+		for cudModifiedFieldName, newValue := range cudRec.ModifiedFields {
 			for _, uniqueField := range uniqueFields {
 				if uniqueField.Name() == cudModifiedFieldName {
 					return fmt.Errorf("%v: unique field «%s» can not be changed: %w", cudQName, uniqueField.Name(), ErrUniqueFieldUpdateDeny)
 				}
 			}
-			if cudModifiedFieldName != appdef.SystemField_IsActive {
-				return nil
-			}
-			// we're updating IsActive field here.
-			isActivating := newValue.(bool)
-			if isActivating {
-				if uniqueViewRecord.refRecordID == istructs.NullRecordID {
-					// doc rec for this combination does not exist or is inactive (no matter for this cudRec or any other rec),
-					// we're activating now -> set current unique combination ref to the cudRec
-					uniqueViewRecord.refRecordID = cudRec.ID()
-				} else if uniqueViewRecord.refRecordID != cudRec.ID() {
-					// we're activating, doc rec for this combination exists, it is active and it is the another rec (not the one we're updating by the current CUD) -> deny
-					return conflict(cudQName, uniqueViewRecord.refRecordID, uniqueQName)
+			if cudModifiedFieldName == appdef.SystemField_IsActive {
+				// we're updating IsActive field here.
+				if newValue.(bool) {
+					// activating
+					if uniqueViewRecord.refRecordID == istructs.NullRecordID {
+						// doc rec for this combination does not exist or is inactive (no matter for this cudRec or any other rec),
+						// we're activating now -> set current unique combination ref to the cudRec
+						uniqueViewRecord.refRecordID = cudRec.ID()
+					} else if uniqueViewRecord.refRecordID != cudRec.ID() {
+						// we're activating, doc rec for this combination exists, it is active and it is the another rec (not the one we're updating by the current CUD) -> deny
+						return conflict(cudQName, uniqueViewRecord.refRecordID, uniqueQName)
+					}
+				} else {
+					// deactivating
+					uniqueViewRecord.refRecordID = istructs.NullRecordID
 				}
-			} else {
-				// deactivating
-				uniqueViewRecord.refRecordID = istructs.NullRecordID
 			}
-			return nil
-		})
-		if err != nil {
-			return err
 		}
 	}
 	return nil

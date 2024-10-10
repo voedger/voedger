@@ -55,9 +55,11 @@ func (o *TestObject) ID() istructs.RecordID     { return o.Id }
 func (o *TestObject) QName() appdef.QName       { return o.Name }
 func (o *TestObject) Parent() istructs.RecordID { return o.Parent_ }
 func (o *TestObject) IsNew() bool               { return o.IsNew_ }
-func (o *TestObject) ModifiedFields(cb func(string, interface{})) {
+func (o *TestObject) ModifiedFields(cb func(string, interface{}) bool) {
 	for name, value := range o.Data {
-		cb(name, value)
+		if !cb(name, value) {
+			break
+		}
 	}
 }
 func (o *TestObject) AsRecord() istructs.IRecord { return o }

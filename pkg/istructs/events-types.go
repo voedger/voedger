@@ -69,7 +69,7 @@ type ICUDRow interface {
 	IsNew() bool
 	QName() appdef.QName
 	ID() RecordID
-	ModifiedFields(cb func(fieldName appdef.FieldName, newValue interface{}))
+	ModifiedFields(func(appdef.FieldName, interface{}) bool)
 }
 
 type IIDGenerator interface {
