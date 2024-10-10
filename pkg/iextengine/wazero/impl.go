@@ -8,6 +8,7 @@ package iextenginewazero
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"math"
@@ -322,7 +323,7 @@ func (f *wazeroExtEngine) initModule(ctx context.Context, pkgName string, wasmda
 	ePkg := &wazeroExtPkg{}
 
 	ePkg.stdout = newLimitedWriter(maxStdErrSize)
-	ePkg.moduleCfg = wazero.NewModuleConfig().WithName("wasm").WithStdout(&ePkg.stdout).WithSysWalltime()
+	ePkg.moduleCfg = wazero.NewModuleConfig().WithName("wasm").WithStdout(&ePkg.stdout).WithSysWalltime().WithRandSource(rand.Reader)
 
 	if f.compile {
 		ePkg.compiled, err = f.rtm.CompileModule(ctx, wasmdata)
