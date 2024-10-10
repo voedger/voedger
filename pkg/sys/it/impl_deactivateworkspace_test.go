@@ -41,6 +41,57 @@ func TestBug(t *testing.T) {
 	require.True(ok)
 }
 
+func TestBug2(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVITVVMOnly(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	appPart, err := vit.IAppPartitions.Borrow(istructs.AppQName_sys_registry, 1, appparts.ProcessorKind_Command)
+	require.NoError(err)
+	defer appPart.Release()
+
+	t.Run("GRANT SELECT ON ALL QUERIES WITH TAG WithoutAuthTag TO sys.Anyone: OperationKind_Select does not work", func(t *testing.T) {
+		_, _, err := appPart.IsOperationAllowed(
+			appdef.OperationKind_Select,
+			appdef.NewQName(registry.RegistryPackage, "IssuePrincipalToken"),
+			nil,
+			[]appdef.QName{appdef.NewQName(appdef.SysPackage, "Anyone")},
+		)
+		require.Error(err)
+	})
+
+	t.Run("GRANT SELECT ON ALL QUERIES WITH TAG WithoutAuthTag TO sys.Anyone: OperationKind_Execute works", func(t *testing.T) {
+		ok, _, err := appPart.IsOperationAllowed(
+			appdef.OperationKind_Execute,
+			appdef.NewQName(registry.RegistryPackage, "IssuePrincipalToken"),
+			nil,
+			[]appdef.QName{appdef.NewQName(appdef.SysPackage, "Anyone")},
+		)
+		require.NoError(err)
+		require.True(ok)
+	})
+
+	t.Run("GRANT INSERT ON ALL COMMANDS WITH TAG WithoutAuthTag TO sys.Anyone: OperationKind_Execute works", func(t *testing.T) {
+		ok, _, err := appPart.IsOperationAllowed(
+			appdef.OperationKind_Execute,
+			appdef.NewQName(registry.RegistryPackage, "CreateLogin"),
+			nil,
+			[]appdef.QName{appdef.NewQName(appdef.SysPackage, "Anyone")},
+		)
+		require.NoError(err)
+		require.True(ok)
+	})
+
+	t.Run("GRANT INSERT ON ALL COMMANDS WITH TAG WithoutAuthTag TO sys.Anyone: OperationKind_Insert doe not work", func(t *testing.T) {
+		_, _, err := appPart.IsOperationAllowed(
+			appdef.OperationKind_Insert,
+			appdef.NewQName(registry.RegistryPackage, "CreateLogin"),
+			nil,
+			[]appdef.QName{appdef.NewQName(appdef.SysPackage, "Anyone")},
+		)
+		require.Error(err)
+	})
+}
+
 func TestBasicUsage_InitiateDeactivateWorkspace(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
