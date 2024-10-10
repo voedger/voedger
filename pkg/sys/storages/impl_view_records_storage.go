@@ -12,6 +12,7 @@ import (
 	"reflect"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
@@ -175,7 +176,11 @@ type viewKeyBuilder struct {
 
 func (b *viewKeyBuilder) PutInt64(name string, value int64) {
 	if name == sys.Storage_View_Field_WSID {
-		b.wsid = istructs.WSID(value)
+		wsid, err := coreutils.Int64ToWSID(value)
+		if err != nil {
+			panic(err)
+		}
+		b.wsid = wsid
 		return
 	}
 	b.IKeyBuilder.PutInt64(name, value)
@@ -238,10 +243,14 @@ func (b *viewValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
 
 func (b *viewValueBuilder) PutInt64(name string, value int64) {
 	if name == state.ColOffset {
-		b.offset = istructs.Offset(value)
+		b.offset = istructs.Offset(value) // nolint G115
 	}
 	if b.fc.isViewInt64FieldRecordID(b.entity, name) {
-		b.IValueBuilder.PutRecordID(name, istructs.RecordID(value))
+		recID, err := coreutils.Int64ToRecordID(value)
+		if err != nil {
+			panic(err)
+		}
+		b.IValueBuilder.PutRecordID(name, recID)
 	} else {
 		b.IValueBuilder.PutInt64(name, value)
 	}

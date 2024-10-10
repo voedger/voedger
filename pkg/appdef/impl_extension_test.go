@@ -65,10 +65,9 @@ func Test_AppDefExtensions(t *testing.T) {
 
 	t.Run("Should be ok to enumerate extensions", func(t *testing.T) {
 		var extNames []QName
-		app.Extensions(func(ex IExtension) bool {
+		for ex := range app.Extensions {
 			extNames = append(extNames, ex.QName())
-			return true
-		})
+		}
 		require.Len(extNames, 3)
 		require.Equal([]QName{cmdName, prjName, qrName}, extNames)
 	})

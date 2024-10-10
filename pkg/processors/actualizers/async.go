@@ -97,12 +97,10 @@ func (a *asyncActualizer) Run(ctx context.Context) {
 	for ctx.Err() == nil {
 		if err = a.init(ctx); err == nil {
 			logger.Trace(a.name, "started")
-			if err = a.keepReading(); err != nil {
-				a.conf.LogError(a.name, err)
-			}
+			err = a.keepReading()
 		}
-		a.finit() // even execute if a.init has failed
-		if ctx.Err() == nil && err != nil {
+		a.finit() // execute even if a.init() has failed
+		if err != nil {
 			a.conf.LogError(a.name, err)
 			select {
 			case <-ctx.Done():
@@ -160,14 +158,13 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		if ss.Len() > 2 {
 			return true
 		}
-		found := false
-		ss.Enum(
-			func(storage appdef.IStorage) bool {
-				n := storage.Name()
-				found = n != sys.Storage_View && n != sys.Storage_Record
-				return !found
-			})
-		return found
+		for storage := range ss.Enum {
+			n := storage.Name()
+			if n != sys.Storage_View && n != sys.Storage_Record {
+				return true
+			}
+		}
+		return false
 	}
 
 	// https://github.com/voedger/voedger/issues/1048
@@ -478,7 +475,7 @@ func (p *asyncProjector) isProjectorDefined() (bool, error) {
 		return false, err
 	}
 	skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
-	skbCDocWorkspaceDescriptor.PutInt64(state.Field_WSID, int64(p.event.Workspace()))
+	skbCDocWorkspaceDescriptor.PutInt64(state.Field_WSID, int64(p.event.Workspace())) // nolint G115
 	svCDocWorkspaceDescriptor, err := p.state.MustExist(skbCDocWorkspaceDescriptor)
 	if err != nil {
 		// notest
@@ -538,7 +535,7 @@ func (p *asyncProjector) savePosition() error {
 	if e != nil {
 		return e
 	}
-	value.PutInt64(offsetFld, int64(p.pLogOffset))
+	value.PutInt64(offsetFld, int64(p.pLogOffset)) // nolint G115
 	return nil
 }
 func (p *asyncProjector) flush() (err error) {
@@ -603,5 +600,5 @@ func ActualizerOffset(appStructs istructs.IAppStructs, partition istructs.Partit
 	if err != nil {
 		return istructs.NullOffset, err
 	}
-	return istructs.Offset(value.AsInt64(offsetFld)), err
+	return istructs.Offset(value.AsInt64(offsetFld)), err // nolint G115
 }

@@ -10,7 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/voedger/voedger/pkg/apps"
+	voedger "github.com/voedger/voedger/cmd/voedger/voedgerimpl"
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/iservices"
 	"github.com/voedger/voedger/pkg/iservicesctl"
@@ -18,7 +18,7 @@ import (
 
 func newServerCmd() *cobra.Command {
 	var httpCLIParams ihttp.CLIParams
-	var appsCLIParams apps.CLIParams
+	var appsCLIParams voedger.CLIParams
 	serverCmd := &cobra.Command{
 		Use:   "server",
 		Short: "Start server",

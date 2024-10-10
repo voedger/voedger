@@ -51,7 +51,7 @@ type blobBaseMessage struct {
 	wsid        istructs.WSID
 	appQName    appdef.AppQName
 	header      map[string][]string
-	blobMaxSize BLOBMaxSizeType
+	blobMaxSize iblobstorage.BLOBMaxSizeType
 }
 
 type blobMessage struct {
@@ -69,7 +69,7 @@ func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails blobReadDetails
 	// request to VVM to check the principalToken
 	req := ibus.Request{
 		Method:   ibus.HTTPMethodPOST,
-		WSID:     int64(bbm.wsid),
+		WSID:     bbm.wsid,
 		AppQName: bbm.appQName.String(),
 		Resource: "q.sys.DownloadBLOBAuthnz",
 		Header:   bbm.header,
@@ -114,9 +114,9 @@ func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails blobReadDetails
 	}
 }
 
-func writeBLOB(ctx context.Context, wsid int64, appQName string, header map[string][]string, resp http.ResponseWriter,
+func writeBLOB(ctx context.Context, wsid istructs.WSID, appQName string, header map[string][]string, resp http.ResponseWriter,
 	blobName, blobMimeType string, blobStorage iblobstorage.IBLOBStorage, body io.ReadCloser,
-	blobMaxSize int64, bus ibus.IBus, busTimeout time.Duration) (blobID int64) {
+	blobMaxSize iblobstorage.BLOBMaxSizeType, bus ibus.IBus, busTimeout time.Duration) (blobID istructs.RecordID) {
 	// request VVM for check the principalToken and get a blobID
 	req := ibus.Request{
 		Method:   ibus.HTTPMethodPOST,
@@ -143,12 +143,12 @@ func writeBLOB(ctx context.Context, wsid int64, appQName string, header map[stri
 	}
 	newIDs := cmdResp["NewIDs"].(map[string]interface{})
 
-	blobID = int64(newIDs["1"].(float64))
+	blobID = istructs.RecordID(newIDs["1"].(float64))
 	// write the BLOB
 	key := iblobstorage.KeyType{
 		AppID: istructs.ClusterAppID_sys_blobber,
-		WSID:  istructs.WSID(wsid),
-		ID:    istructs.RecordID(blobID),
+		WSID:  wsid,
+		ID:    blobID,
 	}
 	descr := iblobstorage.DescrType{
 		Name:     blobName,
@@ -214,12 +214,12 @@ func blobWriteMessageHandlerMultipart(bbm blobBaseMessage, blobStorage iblobstor
 			contentType = coreutils.ApplicationXBinary
 		}
 		part.Header[coreutils.Authorization] = bbm.header[coreutils.Authorization] // add auth header for c.sys.*BLOBHelper
-		blobID := writeBLOB(bbm.req.Context(), int64(bbm.wsid), bbm.appQName.String(), part.Header, bbm.resp,
-			params["name"], contentType, blobStorage, part, int64(bbm.blobMaxSize), bus, busTimeout)
+		blobID := writeBLOB(bbm.req.Context(), bbm.wsid, bbm.appQName.String(), part.Header, bbm.resp,
+			params["name"], contentType, blobStorage, part, bbm.blobMaxSize, bus, busTimeout)
 		if blobID == 0 {
 			return // request handled
 		}
-		blobIDs = append(blobIDs, utils.IntToString(blobID))
+		blobIDs = append(blobIDs, utils.UintToString(blobID))
 		partNum++
 	}
 	WriteTextResponse(bbm.resp, strings.Join(blobIDs, ","), http.StatusOK)
@@ -229,11 +229,10 @@ func blobWriteMessageHandlerSingle(bbm blobBaseMessage, blobWriteDetails blobWri
 	bus ibus.IBus, busTimeout time.Duration) {
 	defer close(bbm.doneChan)
 
-	blobID := writeBLOB(bbm.req.Context(), int64(bbm.wsid), bbm.appQName.String(), header, bbm.resp, blobWriteDetails.name,
-		blobWriteDetails.mimeType, blobStorage, bbm.req.Body, int64(bbm.blobMaxSize), bus, busTimeout)
+	blobID := writeBLOB(bbm.req.Context(), bbm.wsid, bbm.appQName.String(), header, bbm.resp, blobWriteDetails.name,
+		blobWriteDetails.mimeType, blobStorage, bbm.req.Body, bbm.blobMaxSize, bus, busTimeout)
 	if blobID > 0 {
-		utils.IntToString(blobID)
-		WriteTextResponse(bbm.resp, utils.IntToString(blobID), http.StatusOK)
+		WriteTextResponse(bbm.resp, utils.UintToString(blobID), http.StatusOK)
 	}
 }
 
@@ -259,7 +258,7 @@ func blobMessageHandler(vvmCtx context.Context, sc iprocbus.ServiceChannel, blob
 
 func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Request, details interface{}) {
 	vars := mux.Vars(req)
-	wsid, err := strconv.ParseInt(vars[WSID], parseInt64Base, parseInt64Bits)
+	wsid, err := strconv.ParseUint(vars[WSID], utils.DecimalBase, utils.BitSize64)
 	if err != nil {
 		// notest: checked by router url rule
 		panic(err)
@@ -301,7 +300,7 @@ func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Req
 func (s *httpService) blobReadRequestHandler() http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
-		blobID, err := strconv.ParseInt(vars[blobID], parseInt64Base, parseInt64Bits)
+		blobID, err := strconv.ParseUint(vars[blobID], utils.DecimalBase, utils.BitSize64)
 		if err != nil {
 			// notest: checked by router url rule
 			panic(err)

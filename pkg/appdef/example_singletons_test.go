@@ -40,11 +40,10 @@ func ExampleIAppDef_Singletons() {
 	// how to inspect builded AppDef with singletons
 	{
 		cnt := 0
-		app.Singletons(func(s appdef.ISingleton) bool {
+		for s := range app.Singletons {
 			cnt++
 			fmt.Printf("%d. %v\n", cnt, s)
-			return true
-		})
+		}
 
 		fmt.Printf("Overall %d singletons\n", cnt)
 	}

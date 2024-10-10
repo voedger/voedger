@@ -9,7 +9,7 @@ assignees: ''
 
 ## Motivation
 
-I'm always frustrated when ... (a clear and concise description of the "pain" you want to solve).
+A clear and concise description of the "pain" you want to solve (e.g. "I'm frustrated when...")
 
 ## Functional design
 

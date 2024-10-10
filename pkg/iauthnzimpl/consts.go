@@ -111,6 +111,13 @@ var (
 	qNameQryFiscalizationResultStatus               = appdef.NewQName(fiscalcloudPackage, "FiscalizationResultStatus")
 	qNameCmdCreateExport                            = appdef.NewQName(fiscalcloudPackage, "CreateExport")
 	qNameQryExportStatus                            = appdef.NewQName(fiscalcloudPackage, "ExportStatus")
+	qNameQryGetUPInvoices                           = appdef.NewQName(airPackage, "GetUPInvoices")
+	qNameQryGetUPPayoutTransfers                    = appdef.NewQName(airPackage, "GetUPPayoutTransfers")
+	qNameQryGetAllUPInvoices                        = appdef.NewQName(airPackage, "GetAllUPInvoices")
+	qNameQryGetAllUPPayoutTransfers                 = appdef.NewQName(airPackage, "GetAllUPPayoutTransfers")
+	qNameQryGetDailyUPReports                       = appdef.NewQName(airPackage, "GetDailyUPReports")
+	qNameQryGetUPVATTransfers                       = appdef.NewQName(airPackage, "GetUPVATTransfers")
+	qNameQryGetUPBeneficiaryVATDebts                = appdef.NewQName(airPackage, "GetUPBeneficiaryVATDebts")
 
 	// Air roles
 	qNameRoleResellersAdmin            = appdef.NewQName(airPackage, "ResellersAdmin")

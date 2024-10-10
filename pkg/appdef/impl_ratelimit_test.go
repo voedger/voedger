@@ -32,7 +32,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 
 	t.Run("should be ok to enum rates", func(t *testing.T) {
 		cnt := 0
-		app.Rates(func(r IRate) bool {
+		for r := range app.Rates {
 			cnt++
 			switch cnt {
 			case 1:
@@ -44,14 +44,13 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 			default:
 				require.FailNow("unexpected rate", "rate: %v", r)
 			}
-			return true
-		})
+		}
 		require.Equal(1, cnt)
 	})
 
 	t.Run("should be ok to enum limits", func(t *testing.T) {
 		cnt := 0
-		app.Limits(func(l ILimit) bool {
+		for l := range app.Limits {
 			cnt++
 			switch cnt {
 			case 1:
@@ -62,8 +61,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 			default:
 				require.FailNow("unexpected limit", "limit: %v", l)
 			}
-			return true
-		})
+		}
 	})
 
 	t.Run("should be ok to find rates and limits", func(t *testing.T) {

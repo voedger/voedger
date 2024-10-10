@@ -52,11 +52,10 @@ func ExampleIAppDefBuilder_AddRole() {
 	// how to enum roles
 	{
 		cnt := 0
-		app.Roles(func(r appdef.IRole) bool {
+		for r := range app.Roles {
 			cnt++
 			fmt.Println(cnt, r)
-			return true
-		})
+		}
 		fmt.Println("overall:", cnt)
 	}
 
@@ -64,19 +63,27 @@ func ExampleIAppDefBuilder_AddRole() {
 	{
 		reader := app.Role(readerRoleName)
 		fmt.Println(reader, ":")
-		reader.ACL(func(r appdef.IACLRule) bool { fmt.Println("-", r); return true })
+		for r := range reader.ACL {
+			fmt.Println("-", r)
+		}
 
 		writer := app.Role(writerRoleName)
 		fmt.Println(writer, ":")
-		writer.ACL(func(r appdef.IACLRule) bool { fmt.Println("-", r); return true })
+		for r := range writer.ACL {
+			fmt.Println("-", r)
+		}
 
 		adm := app.Role(admRoleName)
 		fmt.Println(adm, ":")
-		adm.ACL(func(r appdef.IACLRule) bool { fmt.Println("-", r); return true })
+		for r := range adm.ACL {
+			fmt.Println("-", r)
+		}
 
 		intruder := app.Role(intruderRoleName)
 		fmt.Println(intruder, ":")
-		intruder.ACL(func(r appdef.IACLRule) bool { fmt.Println("-", r); return true })
+		for r := range intruder.ACL {
+			fmt.Println("-", r)
+		}
 	}
 
 	// Output:

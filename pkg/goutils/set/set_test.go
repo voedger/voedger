@@ -16,7 +16,7 @@ func TestEmpty(t *testing.T) {
 	require := require.New(t)
 	require.Zero(Empty[byte]().Len())
 	require.Empty(Empty[byte]().AsArray())
-	require.EqualValues(Empty[byte]().String(), `[]`)
+	require.EqualValues(`[]`, Empty[byte]().String())
 	v, ok := Empty[byte]().First()
 	require.False(ok)
 	require.Zero(v)

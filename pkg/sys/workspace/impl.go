@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/sys"
@@ -152,7 +153,7 @@ func execCmdCreateWorkspaceID(args istructs.ExecCommandArgs) (err error) {
 	cdocWorkspaceID.PutString(authnz.Field_WSKindInitializationData, args.ArgumentObject.AsString(authnz.Field_WSKindInitializationData))
 	cdocWorkspaceID.PutString(field_TemplateName, args.ArgumentObject.AsString(field_TemplateName))
 	cdocWorkspaceID.PutString(Field_TemplateParams, args.ArgumentObject.AsString(Field_TemplateParams))
-	cdocWorkspaceID.PutInt64(authnz.Field_WSID, int64(newWSID))
+	cdocWorkspaceID.PutInt64(authnz.Field_WSID, int64(newWSID)) // nolint G115: safe to cast WSID
 
 	return
 }
@@ -218,6 +219,7 @@ func invokeCreateWorkspaceProjector(federation federation.IFederation, tokensAPI
 			}
 			if _, err = federation.Func(createWSCmdURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
 				logger.Error("aproj.sys.InvokeCreateWorkspace: c.sys.CreateWorkspace failed: " + err.Error())
+				// nolint G115 ownerWSID came from WSID so its highest but is always 0 -> no data loss possible
 				return updateOwnerErr(istructs.WSID(ownerWSID), istructs.RecordID(ownerID), ownerApp, ownerQName, istructs.NullWSID, err, systemPrincipalToken, federation)
 			}
 			return nil
@@ -247,7 +249,7 @@ func execCmdCreateWorkspace(time coreutils.ITime) istructsmem.ExecCommandClosure
 				return nil
 			}
 			// validate wsKindInitializationData
-			if err := json.Unmarshal([]byte(wsKindInitializationDataStr), &wsKindInitializationData); err != nil {
+			if err := coreutils.JSONUnmarshal([]byte(wsKindInitializationDataStr), &wsKindInitializationData); err != nil {
 				return fmt.Errorf("failed to unmarshal workspace initialization data: %w", err)
 			}
 			if err := validateWSKindInitializationData(as, wsKindInitializationData, wsKindType); err != nil {
@@ -275,7 +277,7 @@ func execCmdCreateWorkspace(time coreutils.ITime) istructsmem.ExecCommandClosure
 		cdocWSDesc.PutString(authnz.Field_WSKindInitializationData, wsKindInitializationDataStr)
 		cdocWSDesc.PutString(field_TemplateName, args.ArgumentObject.AsString(field_TemplateName))
 		cdocWSDesc.PutString(Field_TemplateParams, args.ArgumentObject.AsString(Field_TemplateParams))
-		cdocWSDesc.PutInt64(authnz.Field_WSID, int64(newWSID))
+		cdocWSDesc.PutInt64(authnz.Field_WSID, int64(newWSID)) // nolint G115: safe to cast WSID to int64, highest bit is 0 always
 		cdocWSDesc.PutInt64(authnz.Field_CreatedAtMs, time.Now().UnixMilli())
 		cdocWSDesc.PutInt32(authnz.Field_Status, int32(authnz.WorkspaceStatus_Active))
 		if e != nil {
@@ -366,6 +368,7 @@ func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IF
 			if len(createErrorStr) > 0 {
 				wsError = errors.New(createErrorStr)
 				info("have new.createError, will just updateOwner():", createErrorStr)
+				// nolint G115: highest bit of newWSID is always 0 -> safe to cast to WSID
 				ownerUpdated = updateOwner(istructs.WSID(rec.AsInt64(Field_OwnerWSID)), istructs.RecordID(rec.AsInt64(Field_OwnerID)), ownerApp, rec.AsString(Field_OwnerQName2),
 					istructs.WSID(newWSID), wsError, systemPrincipalToken_OwnerApp, federation)
 				return nil
@@ -387,7 +390,7 @@ func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IF
 
 				wsKind := wsDescr.AsQName(authnz.Field_WSKind)
 				ep := eps[s.App()]
-				if wsError = buildWorkspace(wsDescr.AsString(field_TemplateName), ep, wsKind, federation, newWSID,
+				if wsError = buildWorkspace(wsDescr.AsString(field_TemplateName), ep, wsKind, federation, istructs.WSID(newWSID), // nolint G115
 					targetAppQName, newWSName, systemPrincipalToken_TargetApp); wsError != nil {
 					wsError = fmt.Errorf("workspace %s building: %w", wsDescr.AsString(field_TemplateName), wsError)
 				}
@@ -419,9 +422,11 @@ func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IF
 			}
 
 			if wsError == nil && wsPostInitFunc != nil {
+				// nolint G115
 				wsError = wsPostInitFunc(targetAppQName, wsDescr.AsQName(authnz.Field_WSKind), istructs.WSID(newWSID), federation, systemPrincipalToken_TargetApp)
 			}
 
+			// nolint G115
 			ownerUpdated = updateOwner(istructs.WSID(rec.AsInt64(Field_OwnerWSID)), istructs.RecordID(rec.AsInt64(Field_OwnerID)), ownerApp, rec.AsString(Field_OwnerQName2),
 				istructs.WSID(newWSID), wsError, systemPrincipalToken_OwnerApp, federation)
 			return nil
@@ -454,7 +459,7 @@ func updateOwner(ownerWSID istructs.WSID, ownerID istructs.RecordID, ownerApp st
 	return updateOwnerErr == nil
 }
 
-func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[int64]map[string]struct{}, wsTemplateFS coreutils.EmbedFS) (blobs []coreutils.BLOBWorkspaceTemplateField, err error) {
+func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID]map[string]struct{}, wsTemplateFS coreutils.EmbedFS) (blobs []coreutils.BLOBWorkspaceTemplateField, err error) {
 	for _, ent := range fsEntries {
 		switch ent.Name() {
 		case "data.json", "provide.go":
@@ -464,7 +469,7 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[int64]map[string]
 				return nil, fmt.Errorf("wrong blob file name format: %s", ent.Name())
 			}
 			recordIDStr := ent.Name()[:underscorePos]
-			recordID, err := strconv.Atoi(recordIDStr)
+			recordID, err := strconv.ParseUint(recordIDStr, utils.DecimalBase, utils.BitSize64)
 			if err != nil {
 				return nil, fmt.Errorf("wrong recordID in blob %s: %w", ent.Name(), err)
 			}
@@ -472,10 +477,10 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[int64]map[string]
 			if len(fieldName) == 0 {
 				return nil, fmt.Errorf("no fieldName in blob %s", ent.Name())
 			}
-			fieldNames, ok := blobIDs[int64(recordID)]
+			fieldNames, ok := blobIDs[istructs.RecordID(recordID)]
 			if !ok {
 				fieldNames = map[string]struct{}{}
-				blobIDs[int64(recordID)] = fieldNames
+				blobIDs[istructs.RecordID(recordID)] = fieldNames
 			}
 			if _, exists := fieldNames[fieldName]; exists {
 				return nil, fmt.Errorf("recordID %d: blob for field %s is met again: %s", recordID, fieldName, ent.Name())
@@ -499,8 +504,8 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[int64]map[string]
 	return blobs, nil
 }
 
-func checkOrphanedBLOBs(blobIDs map[int64]map[string]struct{}, workspaceData []map[string]interface{}) error {
-	orphanedBLOBRecordIDs := map[int64]struct{}{}
+func checkOrphanedBLOBs(blobIDs map[istructs.RecordID]map[string]struct{}, workspaceData []map[string]interface{}) error {
+	orphanedBLOBRecordIDs := map[istructs.RecordID]struct{}{}
 	for blobRecID := range blobIDs {
 		orphanedBLOBRecordIDs[blobRecID] = struct{}{}
 	}
@@ -510,7 +515,12 @@ func checkOrphanedBLOBs(blobIDs map[int64]map[string]struct{}, workspaceData []m
 		if !ok {
 			return errors.New("record with missing sys.ID field is met")
 		}
-		recID := int64(recIDIntf.(float64))
+		recIDJSONNumber := recIDIntf.(json.Number)
+		clarifiedRecIDIntf, err := coreutils.ClarifyJSONNumber(recIDJSONNumber, appdef.DataKind_RecordID)
+		if err != nil {
+			return fmt.Errorf("wrong blobID %s is met in workspace data: %w", recIDJSONNumber.String(), err)
+		}
+		recID := clarifiedRecIDIntf.(istructs.RecordID)
 		blobFields, ok := blobIDs[recID]
 		if !ok {
 			continue
@@ -553,13 +563,13 @@ func ValidateTemplate(wsTemplateName string, ep extensionpoints.IExtensionPoint,
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read data.json: %w", err)
 	}
-	if err := json.Unmarshal(dataBytes, &wsData); err != nil {
+	if err := coreutils.JSONUnmarshal(dataBytes, &wsData); err != nil {
 		return nil, nil, fmt.Errorf("failed to unmarshal data.json: %w", err)
 	}
 
 	// check blob entries
 	//          newBLOBID   fieldName
-	blobIDs := map[int64]map[string]struct{}{}
+	blobIDs := map[istructs.RecordID]map[string]struct{}{}
 	wsBLOBs, err = parseWSTemplateBLOBs(fsEntries, blobIDs, wsTemplateFS)
 	if err != nil {
 		return nil, nil, err

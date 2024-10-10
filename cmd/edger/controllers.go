@@ -106,7 +106,7 @@ func buildDockerArgs(command, projectName string, filter map[string]string, args
 	allArgs = make([]string, 0)
 	allArgs = append(allArgs, command)
 	allArgs = append(allArgs, args...)
-	allArgs = append(allArgs, "-f", fmt.Sprintf("name=%s", projectName))
+	allArgs = append(allArgs, "-f", "name="+projectName)
 	for k, v := range filter {
 		allArgs = append(allArgs, "-f", fmt.Sprintf("%s=%s", k, v))
 	}

@@ -52,7 +52,7 @@ type jobContextValue struct {
 
 func (v *jobContextValue) AsInt64(name string) int64 {
 	if name == sys.Storage_JobContext_Field_Workspace {
-		return int64(v.wsid)
+		return int64(v.wsid) // nolint G115
 	}
 	if name == sys.Storage_JobContext_Field_UnixTime {
 		return v.unixTime

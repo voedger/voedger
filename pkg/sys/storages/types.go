@@ -6,6 +6,7 @@ package storages
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -28,7 +29,7 @@ func (b *baseKeyBuilder) Entity() appdef.QName {
 }
 func (b *baseKeyBuilder) String() string {
 	if b.entity == appdef.NullQName {
-		return fmt.Sprintf("storage:%s", b.Storage().String())
+		return "storage:" + b.Storage().String()
 	}
 	return fmt.Sprintf("storage:%s, entity:%s", b.Storage(), b.entity.String())
 }
@@ -67,7 +68,7 @@ func (b *baseKeyBuilder) PutBool(name appdef.FieldName, value bool) {
 func (b *baseKeyBuilder) PutRecordID(name appdef.FieldName, value istructs.RecordID) {
 	panic(errRecordIDFieldUndefined(name))
 }
-func (b *baseKeyBuilder) PutNumber(name appdef.FieldName, value float64) {
+func (b *baseKeyBuilder) PutNumber(name appdef.FieldName, value json.Number) {
 	panic(errNumberFieldUndefined(name))
 }
 func (b *baseKeyBuilder) PutChars(name appdef.FieldName, value string) {
@@ -108,7 +109,7 @@ func (b *baseValueBuilder) PutFloat64(name string, value float64) {
 func (b *baseValueBuilder) PutQName(name string, value appdef.QName) {
 	panic(errQNameFieldUndefined(name))
 }
-func (b *baseValueBuilder) PutNumber(name string, value float64) {
+func (b *baseValueBuilder) PutNumber(name string, value json.Number) {
 	panic(errNumberFieldUndefined(name))
 }
 func (b *baseValueBuilder) PutRecordID(name string, value istructs.RecordID) {

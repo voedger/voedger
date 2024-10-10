@@ -18,7 +18,7 @@ type Server interface {
 }
 
 type server struct {
-	port     int
+	port     int32
 	messages map[credentials]chan Message
 	server   *smtp.Server
 }
@@ -36,7 +36,7 @@ func (s *server) Login(_ *smtp.ConnectionState, username, password string) (smtp
 func (s *server) AnonymousLogin(_ *smtp.ConnectionState) (smtp.Session, error) {
 	panic("anonymous login not allowed")
 }
-func (s *server) Port() int32 { return int32(s.port) }
+func (s *server) Port() int32 { return s.port }
 func (s *server) Messages(username, password string) chan Message {
 	return s.messages[credentials{
 		username: username,

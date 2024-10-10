@@ -317,6 +317,9 @@ var defaultACL = ACL{
 				qNameQryCreateTap2PaySession,
 				// https://dev.untill.com/projects/#!693712
 				qNameCmdSaveTap2PayPayment,
+				// https://dev.untill.com/projects/#!710217
+				qNameQryGetUPInvoices,
+				qNameQryGetUPPayoutTransfers,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
@@ -402,6 +405,14 @@ var defaultACL = ACL{
 			qNamesPattern: []appdef.QName{
 				qNameQryGetAllUPPayouts,
 				qNameQryGetUPLocationInvoiceParties,
+				// https://dev.untill.com/projects/#!710217
+				qNameQryGetAllUPInvoices,
+				qNameQryGetAllUPPayoutTransfers,
+				// https://dev.untill.com/projects/#!711418
+				qNameQryGetDailyUPReports,
+				// https://dev.untill.com/projects/#!710982
+				qNameQryGetUPVATTransfers,
+				qNameQryGetUPBeneficiaryVATDebts,
 			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsManager}}},
 		},

@@ -4,7 +4,11 @@
 
 package ibus
 
-import "context"
+import (
+	"context"
+
+	"github.com/voedger/voedger/pkg/istructs"
+)
 
 // HTTPMethod s.e.
 // see const.go/HTTPMethodGET...
@@ -16,10 +20,10 @@ type Request struct {
 
 	QueueID string
 
-	// Always 0 for non-party queues
-	WSID int64
+	WSID istructs.WSID
+
 	// Calculated by bus using WSID and queue parameters
-	PartitionNumber int
+	PartitionID istructs.PartitionID
 
 	Header map[string][]string `json:",omitempty"`
 

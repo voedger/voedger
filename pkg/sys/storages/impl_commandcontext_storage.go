@@ -61,9 +61,9 @@ type cmdContextValue struct {
 func (v *cmdContextValue) AsInt64(name string) int64 {
 	switch name {
 	case sys.Storage_CommandContext_Field_Workspace:
-		return int64(v.wsid)
+		return int64(v.wsid) // nolint G115
 	case sys.Storage_CommandContext_Field_WLogOffset:
-		return int64(v.wlogOffset)
+		return int64(v.wlogOffset) // nolint G115
 	}
 	return v.baseStateValue.AsInt64(name)
 }

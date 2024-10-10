@@ -89,15 +89,14 @@ func (pa *PartitionActualizers) Deploy(vvmCtx context.Context, appDef appdef.IAp
 	}
 
 	pa.mx.RLock()
-	appDef.Projectors(func(prj appdef.IProjector) bool {
+	for prj := range appDef.Projectors {
 		if !prj.Sync() {
 			name := prj.QName()
 			if _, exists := pa.rt[name]; !exists {
 				start(name)
 			}
 		}
-		return true
-	})
+	}
 	pa.mx.RUnlock()
 	startWG.Wait() // wait for all new actualizers to start
 }

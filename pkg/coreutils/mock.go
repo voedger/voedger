@@ -9,6 +9,8 @@
 package coreutils
 
 import (
+	"encoding/json"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -192,7 +194,7 @@ func (m *MockStateKeyBuilder) PutBool(name appdef.FieldName, value bool) {
 func (m *MockStateKeyBuilder) PutRecordID(name appdef.FieldName, value istructs.RecordID) {
 	m.Called(name, value)
 }
-func (m *MockStateKeyBuilder) PutNumber(name appdef.FieldName, value float64) {
+func (m *MockStateKeyBuilder) PutNumber(name appdef.FieldName, value json.Number) {
 	m.Called(name, value)
 }
 func (m *MockStateKeyBuilder) PutChars(name appdef.FieldName, value string) {
@@ -359,7 +361,7 @@ func (m *MockStateValueBuilder) PutBool(name appdef.FieldName, value bool) {
 func (m *MockStateValueBuilder) PutRecordID(name appdef.FieldName, value istructs.RecordID) {
 	m.Called(name, value)
 }
-func (m *MockStateValueBuilder) PutNumber(name appdef.FieldName, value float64) {
+func (m *MockStateValueBuilder) PutNumber(name appdef.FieldName, value json.Number) {
 	m.Called(name, value)
 }
 func (m *MockStateValueBuilder) PutChars(name appdef.FieldName, value string) {

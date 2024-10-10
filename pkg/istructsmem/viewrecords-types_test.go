@@ -7,6 +7,7 @@ package istructsmem
 import (
 	"context"
 	"encoding/base64"
+	gojson "encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -85,7 +86,7 @@ func Test_KeyType(t *testing.T) {
 		kb.PutQName("pk_qname", istructs.QNameForError)
 		kb.PutBool("pk_bool", true)
 		kb.PutRecordID("pk_recID", istructs.RecordID(5555555))
-		kb.PutNumber("pk_number", 1.23456789)
+		kb.PutNumber("pk_number", gojson.Number("1.23456789"))
 
 		kb.PutInt32("cc_int32", 6666666)
 		kb.PutInt64("cc_int64", 777777777777)
@@ -94,7 +95,7 @@ func Test_KeyType(t *testing.T) {
 		kb.PutQName("cc_qname", viewName)
 		kb.PutBool("cc_bool", true)
 		kb.PutRecordID("cc_recID", istructs.RecordID(314159265358))
-		kb.PutNumber("cc_number", -9.87654321)
+		kb.PutNumber("cc_number", gojson.Number("-9.87654321"))
 		kb.PutChars("cc_bytes", base64.StdEncoding.EncodeToString([]byte(`naked 🔫`)))
 	})
 
@@ -866,10 +867,10 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 	t.Run("should be ok to put view record via PutJSON", func(t *testing.T) {
 		json := make(map[appdef.FieldName]any)
 		json[appdef.SystemField_QName] = viewName
-		json["pk1"] = float64(1)
-		json["cc1"] = float64(2)
+		json["pk1"] = gojson.Number("1")
+		json["cc1"] = gojson.Number("2")
 		json["cc2"] = "test sort"
-		json["v1"] = float64(3)
+		json["v1"] = gojson.Number("3")
 		json["v2"] = "naked 🔫"
 
 		err := app.ViewRecords().PutJSON(33, json)
@@ -932,13 +933,13 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 			require.ErrorIs(err, ErrWrongFieldType)
 			require.ErrorContains(err, "pk1")
 
-			json["pk1"] = float64(1)
+			json["pk1"] = gojson.Number("1")
 			err = app.ViewRecords().PutJSON(1, json)
 			require.ErrorIs(err, ErrFieldIsEmpty)
 			require.ErrorContains(err, "cc1")
 
-			json["pk1"] = float64(1)
-			json["cc1"] = float64(2)
+			json["pk1"] = gojson.Number("1")
+			json["cc1"] = gojson.Number("2")
 			err = app.ViewRecords().PutJSON(1, json)
 			require.ErrorIs(err, ErrFieldIsEmpty)
 			require.ErrorContains(err, "cc2")
@@ -947,8 +948,8 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 		t.Run("should be error if value errors", func(t *testing.T) {
 			json := make(map[appdef.FieldName]any)
 			json[appdef.SystemField_QName] = viewName
-			json["pk1"] = float64(1)
-			json["cc1"] = float64(2)
+			json["pk1"] = gojson.Number("1")
+			json["cc1"] = gojson.Number("2")
 			json["cc2"] = `test sort`
 
 			json["unknownField"] = `value`

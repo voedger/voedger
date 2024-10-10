@@ -87,9 +87,9 @@ func TestBasicUsage_SectionedResponse(t *testing.T) {
 	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		require.Equal("test body SectionedResponse", string(request.Body))
 		require.Equal(ibus.HTTPMethodPOST, request.Method)
-		require.Equal(0, request.PartitionNumber)
+		require.Equal(istructs.PartitionID(0), request.PartitionID)
 
-		require.Equal(testWSID, istructs.WSID(request.WSID))
+		require.Equal(testWSID, request.WSID)
 		require.Equal("somefunc_SectionedResponse", request.Resource)
 		require.Empty(request.Attachments)
 		require.Equal(map[string][]string{

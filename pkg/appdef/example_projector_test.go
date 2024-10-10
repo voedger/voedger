@@ -61,14 +61,12 @@ func ExampleIAppDefBuilder_AddProjector() {
 		if prj.WantErrors() {
 			fmt.Println(" - want sys.error events")
 		}
-		prj.States().Enum(func(s appdef.IStorage) bool {
+		for s := range prj.States().Enum {
 			fmt.Println(" - state:", s, s.Comment())
-			return true
-		})
-		prj.Intents().Enum(func(s appdef.IStorage) bool {
-			fmt.Println(" - intent:", s, s.Comment())
-			return true
-		})
+		}
+		for i := range prj.Intents().Enum {
+			fmt.Println(" - intent:", i, i.Comment())
+		}
 
 		fmt.Println(app.Projector(appdef.NewQName("test", "unknown")))
 	}
@@ -76,11 +74,10 @@ func ExampleIAppDefBuilder_AddProjector() {
 	// How to enum all projectors in AppDef
 	{
 		cnt := 0
-		app.Projectors(func(prj appdef.IProjector) bool {
+		for prj := range app.Projectors {
 			cnt++
 			fmt.Println(cnt, prj)
-			return true
-		})
+		}
 	}
 
 	// Output:

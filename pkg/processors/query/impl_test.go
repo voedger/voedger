@@ -7,6 +7,7 @@ package queryprocessor
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"net/http"
 	"sync"
@@ -327,7 +328,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 				AppConfigs:         cfgs,
 				StatelessResources: statelessResources,
 				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
-			}))
+			}, "", imetrics.Provide()))
 	require.NoError(err)
 	appParts.DeployApp(appName, nil, appDef, partCount, appEngines, cfg.NumAppWorkspaces())
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
@@ -475,7 +476,7 @@ func Test_epsilon(t *testing.T) {
 		return args
 	}
 	t.Run("Should return epsilon", func(t *testing.T) {
-		epsilon, err := epsilon(args(options(math.E)))
+		epsilon, err := epsilon(args(options(json.Number(fmt.Sprint(math.E)))))
 
 		require.Equal(t, math.E, epsilon)
 		require.NoError(t, err)

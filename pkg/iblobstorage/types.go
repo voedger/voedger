@@ -10,7 +10,7 @@ type BLOBState struct {
 	Descr      DescrType
 	StartedAt  istructs.UnixMilli
 	FinishedAt istructs.UnixMilli
-	Size       int64
+	Size       uint64
 	// Status must be above BLOBStatus_Unknown
 	Status BLOBStatus
 	// Not empty if error happened during upload
@@ -35,3 +35,5 @@ const (
 	BLOBStatus_InProcess
 	BLOBStatus_Completed
 )
+
+type BLOBMaxSizeType uint64

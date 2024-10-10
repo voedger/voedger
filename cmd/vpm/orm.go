@@ -92,7 +92,7 @@ func getPkgAppDefObjs(
 		HeaderFileContent: headerContent,
 	}
 
-	appDef.Packages(func(localName, fullPath string) bool {
+	for localName, fullPath := range appDef.Packages {
 		if fullPath == packagePath {
 			currentPkgLocalName = localName
 		}
@@ -101,16 +101,15 @@ func getPkgAppDefObjs(
 			FullPath:          fullPath,
 			HeaderFileContent: headerContent,
 		}
-		return true
-	})
+	}
 	iTypeObjsOfWS = make(map[appdef.QName][]appdef.IType, len(pkgInfos))
 
-	collectITypeObjs := func(iWorkspace appdef.IWorkspace) func(iTypeObj appdef.IType) bool {
-		return func(iTypeObj appdef.IType) bool {
+	collectITypeObjs := func(iWorkspace appdef.IWorkspace) func(iTypeObj appdef.IType) {
+		return func(iTypeObj appdef.IType) {
 			// skip abstract types
 			if iAbstract, ok := iTypeObj.(appdef.IWithAbstract); ok {
 				if iAbstract.Abstract() {
-					return true
+					return
 				}
 			}
 
@@ -119,22 +118,21 @@ func getPkgAppDefObjs(
 				if _, ok := iTypeObjsOfWS[iWorkspace.QName()]; !ok {
 					iTypeObjsOfWS[iWorkspace.QName()] = make([]appdef.IType, 0)
 				}
-
 				iTypeObjsOfWS[iWorkspace.QName()] = append(iTypeObjsOfWS[iWorkspace.QName()], iTypeObj)
 				uniqueObjects = append(uniqueObjects, qName.String())
 			}
-			return true
 		}
 	}
 
 	// gather objects from the current package
-	appDef.Workspaces(func(workspace appdef.IWorkspace) bool {
+	for workspace := range appDef.Workspaces {
 		// add workspace itself to the list of objects as well
-		_ = collectITypeObjs(workspace)(workspace)
+		collectITypeObjs(workspace)(workspace)
 		// then add all types of the workspace
-		workspace.Types(collectITypeObjs(workspace))
-		return true
-	})
+		for typ := range workspace.Types {
+			collectITypeObjs(workspace)(typ)
+		}
+	}
 
 	return
 }
@@ -276,8 +274,8 @@ func newFieldItem(tableData ormTableItem, field appdef.IField) ormField {
 		Table:         tableData,
 		Type:          getFieldType(field),
 		Name:          normalizeName(field.Name()),
-		GetMethodName: fmt.Sprintf("Get_%s", name),
-		SetMethodName: fmt.Sprintf("Set_%s", name),
+		GetMethodName: "Get_" + name,
+		SetMethodName: "Set_" + name,
 	}
 }
 
@@ -357,8 +355,8 @@ func processITypeObj(
 					Table:         tableData,
 					Type:          "Container",
 					Name:          normalizeName(containerName),
-					GetMethodName: fmt.Sprintf("Get_%s", containerName),
-					SetMethodName: fmt.Sprintf("Set_%s", containerName),
+					GetMethodName: "Get_" + containerName,
+					SetMethodName: "Set_" + containerName,
 				})
 			}
 		}

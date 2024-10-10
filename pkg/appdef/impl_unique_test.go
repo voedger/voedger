@@ -135,7 +135,7 @@ func Test_def_AddUnique(t *testing.T) {
 			for i := 0; i < MaxTypeUniqueCount; i++ {
 				n := fmt.Sprintf("f_%#x", i)
 				rec.AddField(n, DataKind_int32, false)
-				rec.AddUnique(NewQName("test", fmt.Sprintf("rec$uniques$%s", n)), []FieldName{n})
+				rec.AddUnique(NewQName("test", "rec$uniques$"+n), []FieldName{n})
 			}
 			rec.AddField("lastStraw", DataKind_int32, false)
 			require.Panics(func() { rec.AddUnique(NewQName("test", "rec$uniques$lastStraw"), []FieldName{"lastStraw"}) },

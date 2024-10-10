@@ -195,7 +195,7 @@ type httpValue struct {
 }
 
 func (v *httpValue) AsBytes(string) []byte { return v.body }
-func (v *httpValue) AsInt32(string) int32  { return int32(v.statusCode) }
+func (v *httpValue) AsInt32(string) int32  { return int32(v.statusCode) } // nolint G115
 func (v *httpValue) AsString(name string) string {
 	if name == sys.Storage_Http_Field_Header {
 		var res strings.Builder

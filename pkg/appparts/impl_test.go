@@ -8,7 +8,6 @@ package appparts
 import (
 	"context"
 	"errors"
-	"sync"
 	"testing"
 	"time"
 
@@ -27,13 +26,9 @@ import (
 
 type mockRunner struct {
 	appParts IAppPartitions
-	wg       sync.WaitGroup
 }
 
 func (mr *mockRunner) newAndRun(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, kind ProcessorKind) {
-	mr.wg.Add(1)
-	defer mr.wg.Done()
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -58,11 +53,6 @@ func (mr *mockRunner) setAppPartitions(ap IAppPartitions) {
 	mr.appParts = ap
 }
 
-func (mr *mockRunner) wait() {
-	// the context should be stopped. Here we just wait for processors to finish
-	mr.wg.Wait()
-}
-
 type mockActualizerRunner struct {
 	mock.Mock
 	mockRunner
@@ -85,7 +75,7 @@ type mockSchedulerRunner struct {
 	ISchedulerRunner
 }
 
-func (sr *mockSchedulerRunner) NewAndRun(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, wsIdx int, wsid istructs.WSID, job appdef.QName) {
+func (sr *mockSchedulerRunner) NewAndRun(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, wsIdx istructs.AppWorkspaceNumber, wsid istructs.WSID, job appdef.QName) {
 	sr.Called(ctx, app, partID, wsIdx, wsid, job)
 	sr.mockRunner.newAndRun(ctx, app, partID, ProcessorKind_Scheduler)
 }
@@ -250,24 +240,11 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 		}
 	})
 
-	t.Run("stop vvm from context, wait processors finished, check metrics", func(t *testing.T) {
+	t.Run("stop vvm from context, wait processors finished, check whatsRun", func(t *testing.T) {
 		stop()
 
-		wg := sync.WaitGroup{}
-		wg.Add(1)
-		go func() {
-			mockActualizers.wait()
-			wg.Done()
-		}()
-
-		wg.Add(1)
-		go func() {
-			mockSchedulers.wait()
-			wg.Done()
-		}()
-
-		wg.Wait()
-
-		require.Empty(whatsRun())
+		for len(whatsRun()) > 0 {
+			time.Sleep(time.Millisecond)
+		}
 	})
 }

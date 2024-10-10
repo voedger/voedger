@@ -17,14 +17,14 @@ import (
 )
 
 // Run is a function that runs scheduler for the specified job.
-type Run func(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, wsIdx int, wsID istructs.WSID, job appdef.QName)
+type Run func(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, wsIdx istructs.AppWorkspaceNumber, wsID istructs.WSID, job appdef.QName)
 
 // PartitionSchedulers manages schedulers deployment for the specified application partition.
 type PartitionSchedulers struct {
 	mx                    sync.RWMutex
 	appQName              appdef.AppQName
 	partitionID           istructs.PartitionID
-	appWSNumbers          map[istructs.WSID]int
+	appWSNumbers          map[istructs.WSID]istructs.AppWorkspaceNumber
 	jobsInAppWSIDRuntimes map[appdef.QName]map[istructs.WSID]*runtime
 }
 
@@ -83,7 +83,7 @@ func (ps *PartitionSchedulers) Deploy(vvmCtx context.Context, appDef appdef.IApp
 				ps.jobsInAppWSIDRuntimes[jobQName][appWSID] = rt
 				ps.mx.Unlock()
 
-				go func(appWSNumber int, appWSID istructs.WSID) {
+				go func(appWSNumber istructs.AppWorkspaceNumber, appWSID istructs.WSID) {
 					rt.state.Store(1) // started
 
 					run(ctx, ps.appQName, ps.partitionID, appWSNumber, appWSID, jobQName)
@@ -107,13 +107,12 @@ func (ps *PartitionSchedulers) Deploy(vvmCtx context.Context, appDef appdef.IApp
 	}
 
 	ps.mx.RLock()
-	appDef.Jobs(func(job appdef.IJob) bool {
+	for job := range appDef.Jobs {
 		jobQName := job.QName()
 		if _, exists := ps.jobsInAppWSIDRuntimes[jobQName]; !exists {
 			start(jobQName)
 		}
-		return true
-	})
+	}
 	ps.mx.RUnlock()
 	startWG.Wait() // wait for all new schedulers to start
 }

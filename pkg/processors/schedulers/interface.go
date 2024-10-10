@@ -50,7 +50,7 @@ type SchedulerConfig struct {
 
 	AppQName  appdef.AppQName
 	Workspace istructs.WSID
-	WSIdx     int
+	AppWSIdx  istructs.AppWorkspaceNumber
 	Partition istructs.PartitionID // ?
 }
 
