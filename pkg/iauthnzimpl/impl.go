@@ -24,6 +24,10 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 			})
 		}
 	}()
+	principals = append(principals, iauthnz.Principal{
+		Kind:  iauthnz.PrincipalKind_Role,
+		QName: appdef.NewQName(appdef.SysPackage, "Anyone"),
+	})
 	if len(req.Token) == 0 {
 		principals = append(principals, iauthnz.Principal{
 			Kind: iauthnz.PrincipalKind_User,

@@ -238,7 +238,20 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				return err
 			}
 			if !ok {
-				return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
+				roles := []appdef.QName{}
+				for _, prn := range qw.principals {
+					if prn.Kind != iauthnz.PrincipalKind_Role {
+						continue
+					}
+					roles = append(roles, prn.QName)
+				}
+				ok, _, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, qw.msg.QName(), nil, roles)
+				if err != nil {
+					return err
+				}
+				if !ok {
+					return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
+				}
 			}
 			return nil
 		}),
@@ -525,9 +538,9 @@ type outputRow struct {
 func (r *outputRow) Set(alias string, value interface{}) {
 	r.values[r.keyToIdx[alias]] = value
 }
-func (r *outputRow) Values() []interface{}               { return r.values }
-func (r *outputRow) Value(alias string) interface{}      { return r.values[r.keyToIdx[alias]] }
-func (r *outputRow) MarshalJSON() ([]byte, error)        { return json.Marshal(r.values) }
+func (r *outputRow) Values() []interface{}          { return r.values }
+func (r *outputRow) Value(alias string) interface{} { return r.values[r.keyToIdx[alias]] }
+func (r *outputRow) MarshalJSON() ([]byte, error)   { return json.Marshal(r.values) }
 
 func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, qw *queryWork) (execQueryArgs istructs.ExecQueryArgs, err error) {
 	args, _, err := data.AsObject("args")

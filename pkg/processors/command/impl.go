@@ -367,7 +367,20 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkp
 		return err
 	}
 	if !ok {
-		return coreutils.NewHTTPErrorf(http.StatusForbidden)
+		roles := []appdef.QName{}
+		for _, prn := range cmd.principals {
+			if prn.Kind != iauthnz.PrincipalKind_Role {
+				continue
+			}
+			roles = append(roles, prn.QName)
+		}
+		ok, _, err := cmd.appPart.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, roles)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return coreutils.NewHTTPErrorf(http.StatusForbidden)
+		}
 	}
 	return nil
 }

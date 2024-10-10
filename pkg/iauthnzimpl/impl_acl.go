@@ -33,32 +33,32 @@ func (acl ACL) IsAllowed(principals []iauthnz.Principal, req iauthnz.AuthzReques
 }
 
 var defaultACL = ACL{
-	{
-		desc: "null auth policy",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameCmdLinkDeviceToRestaurant,
-				qNameQryIssuePrincipalToken,
-				qNameCmdCreateLogin,
-				qNameQryEcho,
-				qNameQryGRCount,
-				qNameCmdResetPasswordByEmail,
-				qNameQryInitiateResetPasswordByEmail,
-				qNameQryIssueVerifiedValueTokenForResetPassword,
-				qNameCmdChangePassword,
-				qNameQryModules,
-				// https://dev.untill.com/projects/#!688808
-				qNameQryGetDigitalReceipt,
-				// https://dev.untill.com/projects/#!688808
-				qNameQrySendReceiptByEmail,
-				// https://dev.untill.com/projects/#!698913
-				qNameQryQueryResellerInfo,
-				// https://dev.untill.com/projects/#!700365
-				qNameQryGetResellers,
-			},
-		},
-		policy: ACPolicy_Allow,
-	},
+	// {
+	// 	desc: "null auth policy",
+	// 	pattern: PatternType{
+	// 		qNamesPattern: []appdef.QName{
+	// 			qNameCmdLinkDeviceToRestaurant,
+	// 			qNameQryIssuePrincipalToken,
+	// 			qNameCmdCreateLogin,
+	// 			qNameQryEcho,
+	// 			qNameQryGRCount,
+	// 			qNameCmdResetPasswordByEmail,
+	// 			qNameQryInitiateResetPasswordByEmail,
+	// 			qNameQryIssueVerifiedValueTokenForResetPassword,
+	// 			qNameCmdChangePassword,
+	// 			qNameQryModules,
+	// 			// https://dev.untill.com/projects/#!688808
+	// 			qNameQryGetDigitalReceipt,
+	// 			// https://dev.untill.com/projects/#!688808
+	// 			qNameQrySendReceiptByEmail,
+	// 			// https://dev.untill.com/projects/#!698913
+	// 			qNameQryQueryResellerInfo,
+	// 			// https://dev.untill.com/projects/#!700365
+	// 			qNameQryGetResellers,
+	// 		},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
 	{
 		desc: "allowed to sys.Guest login, i.e. without principal token at all",
 		pattern: PatternType{

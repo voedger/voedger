@@ -338,9 +338,9 @@ ABSTRACT WORKSPACE Workspace (
 
 		COMMAND CUD();
 		COMMAND Init(); -- Deprecated: use c.sys.CUD instead. Kept for backward compatibility only
-		QUERY Echo(EchoParams) RETURNS EchoResult;
-		QUERY GRCount RETURNS GRCountResult;
-		QUERY Modules RETURNS ModulesResult;
+		QUERY Echo(EchoParams) RETURNS EchoResult WITH Tags=(WithoutAuthTag);
+		QUERY GRCount RETURNS GRCountResult WITH Tags=(WithoutAuthTag);
+		QUERY Modules RETURNS ModulesResult WITH Tags=(WithoutAuthTag);
 		COMMAND RenameQName(RenameQNameParams);
 		SYNC PROJECTOR RecordsRegistryProjector
 			AFTER INSERT ON (CRecord, WRecord) OR
@@ -415,4 +415,20 @@ ABSTRACT WORKSPACE Workspace (
 		SYNC PROJECTOR ProjectorWorkspaceIDIdx AFTER INSERT ON (WorkspaceID) INTENTS(View(WorkspaceIDIdx));
 		SYNC PROJECTOR ProjectorChildWorkspaceIdx AFTER INSERT ON (ChildWorkspace) INTENTS(View(ChildWorkspaceIdx));
 	);
+
+	TAG WithoutAuthTag;
+	ROLE Anyone;
+
+	GRANT ALL ON ALL TABLES WITH TAG WithoutAuthTag TO Anyone;
+
+	-- now, looks bad
+	GRANT SELECT ON ALL QUERIES WITH TAG WithoutAuthTag TO Anyone;
+	GRANT INSERT ON ALL COMMANDS WITH TAG WithoutAuthTag TO Anyone;
+
+	-- better
+	-- GRANT EXECUTE ON ALL QUERIES WITH TAG WithoutAuthTag TO Anyone;
+	-- GRANT SELECT ON ALL TABLES WITH TAG WithoutAuthTag TO Anyone;
+	-- GRANT EXECUTE ON ALL COMMANDS WITH TAG WithoutAuthTag TO Anyone;
+
+	GRANT SELECT ON ALL VIEWS WITH TAG WithoutAuthTag TO Anyone;
 );
