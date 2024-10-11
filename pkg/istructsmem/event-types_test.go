@@ -631,8 +631,9 @@ func testCommandsTree(t *testing.T, cmd istructs.IObject) {
 
 	t.Run("test basket", func(t *testing.T) {
 		var names []string
-		cmd.Containers(
-			func(name string) { names = append(names, name) })
+		for name := range cmd.Containers {
+			names = append(names, name)
+		}
 		require.Len(names, 1)
 		require.Equal(test.basketIdent, names[0])
 
@@ -647,8 +648,9 @@ func testCommandsTree(t *testing.T, cmd istructs.IObject) {
 
 	t.Run("test goods", func(t *testing.T) {
 		var names []string
-		basket.Containers(
-			func(name string) { names = append(names, name) })
+		for name := range basket.Containers {
+			names = append(names, name)
+		}
 		require.Len(names, 1)
 		require.Equal(test.goodIdent, names[0])
 

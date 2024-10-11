@@ -13,7 +13,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
@@ -92,7 +91,7 @@ func writeObjectToRegistry(root istructs.IRowReader, appDef appdef.IAppDef, st i
 	if !ok {
 		return nil
 	}
-	return iterate.ForEachError(object.Containers, func(container string) (err error) {
+	for container := range object.Containers {
 		for child := range object.Children(container) {
 			elType := appDef.Type(child.QName())
 			if elType.Kind() == appdef.TypeKind_ODoc || elType.Kind() == appdef.TypeKind_ORecord {
@@ -101,8 +100,8 @@ func writeObjectToRegistry(root istructs.IRowReader, appDef appdef.IAppDef, st i
 				}
 			}
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
 func writeRegistry(st istructs.IState, intents istructs.IIntents, idToStore istructs.RecordID, wLogOffsetToStore istructs.Offset, qNameToStore appdef.QName) error {

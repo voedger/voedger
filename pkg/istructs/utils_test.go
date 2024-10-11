@@ -191,7 +191,8 @@ func TestNullObject(t *testing.T) {
 
 	// Should not be called
 	{
-		null.Containers(nil)
+		for range null.Containers {
+		}
 		for range null.Children(appdef.NullName) {
 		}
 		null.RecordIDs(true, nil)

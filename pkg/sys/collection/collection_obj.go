@@ -72,14 +72,16 @@ func (me *collectionObject) Children(container ...string) func(func(istructs.IOb
 }
 
 // First level qname-s
-func (me *collectionObject) Containers(cb func(container string)) {
+func (me *collectionObject) Containers(cb func(string) bool) {
 	iterated := make(map[string]bool)
 	for i := range me.children {
 		c := me.children[i]
 		cont := c.Container()
 		if _, ok := iterated[cont]; !ok {
 			iterated[cont] = true
-			cb(cont)
+			if !cb(cont) {
+				break
+			}
 		}
 	}
 }

@@ -85,7 +85,7 @@ func (m *MockObject) AsQName(name appdef.FieldName) appdef.QName {
 func (m *MockObject) AsBool(name appdef.FieldName) bool    { return m.Called(name).Get(0).(bool) }
 func (m *MockObject) QName() appdef.QName                  { return m.Called().Get(0).(appdef.QName) }
 func (m *MockObject) AsRecord() istructs.IRecord           { return m.Called().Get(0).(istructs.IRecord) }
-func (m *MockObject) Containers(cb func(container string)) { m.Called(cb) }
+func (m *MockObject) Containers(cb func(string) bool)      { m.Called(cb) }
 func (m *MockObject) FieldNames(cb func(appdef.FieldName)) { m.Called(cb) }
 func (m *MockObject) AsRecordID(name appdef.FieldName) istructs.RecordID {
 	return m.Called(name).Get(0).(istructs.RecordID)

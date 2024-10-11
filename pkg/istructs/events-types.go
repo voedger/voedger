@@ -152,7 +152,7 @@ type IObject interface {
 	Children(container ...string) func(func(IObject) bool)
 
 	// First level qname-s
-	Containers(func(string))
+	Containers(func(string) bool)
 
 	// Does NOT panic if it is not actually IRecord
 	// Just a wrapper which uses consts.SystemField*

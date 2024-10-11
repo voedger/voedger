@@ -202,14 +202,14 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work pipeline.IWorkp
 func updateIDGeneratorFromO(root istructs.IObject, types appdef.IWithTypes, idGen istructs.IIDGenerator) {
 	// new IDs only here because update is not allowed for ODocs in Args
 	idGen.UpdateOnSync(root.AsRecordID(appdef.SystemField_ID), types.Type(root.QName()))
-	root.Containers(func(container string) {
+	for container := range root.Containers {
 		// order of containers here is the order in the schema
 		// but order in the request could be different
 		// that is not a problem because for ODocs/ORecords ID generator will bump next ID only if syncID is actually next
 		for c := range root.Children(container) {
 			updateIDGeneratorFromO(c, types, idGen)
 		}
-	})
+	}
 }
 
 func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPartition, error) {

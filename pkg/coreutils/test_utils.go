@@ -140,9 +140,11 @@ func (o *TestObject) FieldNames(cb func(name string)) {
 		cb(name)
 	}
 }
-func (o *TestObject) Containers(cb func(container string)) {
+func (o *TestObject) Containers(cb func(string) bool) {
 	for containerName := range o.Containers_ {
-		cb(containerName)
+		if !cb(containerName) {
+			break
+		}
 	}
 }
 

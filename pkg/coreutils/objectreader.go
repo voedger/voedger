@@ -115,15 +115,13 @@ func ObjectToMap(obj istructs.IObject, appDef appdef.IAppDef, opts ...MapperOpt)
 		return map[string]interface{}{}
 	}
 	res = FieldsToMap(obj, appDef, opts...)
-	obj.Containers(func(container string) {
-		var childMap map[string]interface{}
+	for container := range obj.Containers {
 		cont := []map[string]interface{}{}
 		for c := range obj.Children(container) {
-			childMap = ObjectToMap(c, appDef, opts...)
-			cont = append(cont, childMap)
+			cont = append(cont, ObjectToMap(c, appDef, opts...))
 		}
 		res[container] = cont
-	})
+	}
 	return res
 }
 

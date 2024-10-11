@@ -107,7 +107,7 @@ func convert(doc istructs.IObject, appDef appdef.IAppDef, refs map[istructs.Reco
 		}
 		return true
 	}))
-	doc.Containers(func(container string) {
+	for container := range doc.Containers {
 		list := make([]interface{}, 0)
 		for c := range doc.Children(container) {
 			var childObj map[string]interface{}
@@ -117,10 +117,8 @@ func convert(doc istructs.IObject, appDef appdef.IAppDef, refs map[istructs.Reco
 			}
 			list = append(list, childObj)
 		}
-		if container != "" {
-			obj[container] = list
-		}
-	})
+		obj[container] = list
+	}
 
 	return obj, nil
 }

@@ -876,14 +876,16 @@ func (o *objectType) Children(container ...string) func(func(istructs.IObject) b
 }
 
 // istructs.IObject.Containers
-func (o *objectType) Containers(cb func(container string)) {
+func (o *objectType) Containers(cb func(string) bool) {
 	duplicates := make(map[string]bool, len(o.child))
 	for _, c := range o.child {
 		name := c.Container()
 		if duplicates[name] {
 			continue
 		}
-		cb(name)
+		if !cb(name) {
+			break
+		}
 		duplicates[name] = true
 	}
 }

@@ -206,12 +206,12 @@ func (v *ObjectStateValue) RecordIDs(includeNulls bool, cb func(string, istructs
 }
 func (v *ObjectStateValue) FieldNames(cb func(string)) { v.object.FieldNames(cb) }
 func (v *ObjectStateValue) AsValue(name string) (result istructs.IStateValue) {
-	v.object.Containers(func(name string) {
-		result = &objectArrayContainerValue{
-			object:    v.object,
-			container: name,
+	for n := range v.object.Containers {
+		if n == name {
+			result = &objectArrayContainerValue{object: v.object, container: name}
+			break
 		}
-	})
+	}
 	if result == nil {
 		panic(errValueFieldUndefined(name))
 	}
