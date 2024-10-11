@@ -143,19 +143,19 @@ func Test_KeyType(t *testing.T) {
 			require.Equal(view.Key().FieldCount(), cnt)
 		})
 
-		t.Run("IKey.RecordIDs() must be ok", func(t *testing.T) {
+		t.Run("should be ok to enum all ids with IKey.RecordIDs()", func(t *testing.T) {
 			cnt := 0
-			k.RecordIDs(true, func(n string, v istructs.RecordID) {
+			for n, id := range k.RecordIDs(true) {
 				switch n {
 				case "pk_recID":
-					require.EqualValues(5555555, v)
+					require.EqualValues(5555555, id)
 				case "cc_recID":
-					require.EqualValues(314159265358, v)
+					require.EqualValues(314159265358, id)
 				default:
-					require.Fail("unknown RecordID field passed in callback from IKey.RecordIDs()", "fieldName: %q", n)
+					require.Fail("unexpected field in range IKey.RecordIDs()", "fieldName: %q", n)
 				}
 				cnt++
-			})
+			}
 			require.Equal(2, cnt)
 		})
 	}

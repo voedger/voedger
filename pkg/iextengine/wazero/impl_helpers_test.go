@@ -335,7 +335,9 @@ func (v *mockValue) AsValue(name string) istructs.IStateValue {
 	}
 	panic("unsupported value stored under key: " + name)
 }
-func (v *mockValue) RecordIDs(includeNulls bool, cb func(name string, value istructs.RecordID)) {}
+func (v *mockValue) RecordIDs(bool) func(func(string, istructs.RecordID) bool) {
+	return func(func(name string, value istructs.RecordID) bool) {}
+}
 func (v *mockValue) FieldNames(cb func(fieldName string)) {
 	v.TestObject.FieldNames(cb)
 }

@@ -497,15 +497,15 @@ func (cud *cudType) regenerateIDsPlan(generator istructs.IIDGenerator) (newIDs n
 func regenerateIDsInRecord(rec *recordType, newIDs newIDsPlanType) (err error) {
 	changes := false
 
-	rec.RecordIDs(false, func(name string, value istructs.RecordID) {
+	for name, value := range rec.RecordIDs(false) {
 		if !value.IsRaw() {
-			return
+			continue
 		}
 		if id, ok := newIDs[value]; ok {
 			rec.PutRecordID(name, id)
 			changes = true
 		}
-	})
+	}
 	if changes {
 		// rebuild record to apply changes to dyno-buffer
 		err = rec.build()
@@ -517,15 +517,15 @@ func regenerateIDsInRecord(rec *recordType, newIDs newIDsPlanType) (err error) {
 func regenerateIDsInUpdateRecord(rec *updateRecType, newIDs newIDsPlanType) (err error) {
 	changes := false
 
-	rec.changes.RecordIDs(false, func(name string, value istructs.RecordID) {
+	for name, value := range rec.changes.RecordIDs(false) {
 		if !value.IsRaw() {
-			return
+			continue
 		}
 		if id, ok := newIDs[value]; ok {
 			rec.changes.PutRecordID(name, id)
 			changes = true
 		}
-	})
+	}
 
 	if changes {
 		// rebuild record (changes and result) to apply changes to dyno-buffer
@@ -785,12 +785,12 @@ func (o *objectType) regenerateIDs(generator istructs.IIDGenerator) (err error) 
 			}
 
 			changes := false
-			c.RecordIDs(false, func(name string, id istructs.RecordID) {
+			for name, id := range c.RecordIDs(false) {
 				if id.IsRaw() {
 					c.PutRecordID(name, newIDs[id])
 					changes = true
 				}
-			})
+			}
 			if changes {
 				// rebuild object to apply changes in dyno-buffer
 				err = c.build()

@@ -532,9 +532,19 @@ func (key *keyType) PutString(name appdef.FieldName, value string) {
 }
 
 // istructs.IRowReader.RecordIDs
-func (key *keyType) RecordIDs(includeNulls bool, cb func(appdef.FieldName, istructs.RecordID)) {
-	key.partRow.RecordIDs(includeNulls, cb)
-	key.ccolsRow.RecordIDs(includeNulls, cb)
+func (key *keyType) RecordIDs(includeNulls bool) func(cb func(appdef.FieldName, istructs.RecordID) bool) {
+	return func(cb func(appdef.FieldName, istructs.RecordID) bool) {
+		for n, id := range key.partRow.RecordIDs(includeNulls) {
+			if !cb(n, id) {
+				return
+			}
+		}
+		for n, id := range key.ccolsRow.RecordIDs(includeNulls) {
+			if !cb(n, id) {
+				return
+			}
+		}
+	}
 }
 
 // istructs.IKeyBuilder.ToBytes

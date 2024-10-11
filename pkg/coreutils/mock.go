@@ -40,8 +40,8 @@ func (m *MockCUDRow) ModifiedFields(cb func(appdef.FieldName, interface{}) bool)
 func (m *MockCUDRow) AsRecordID(name appdef.FieldName) istructs.RecordID {
 	return m.Called(name).Get(0).(istructs.RecordID)
 }
-func (m *MockCUDRow) RecordIDs(includeNulls bool, cb func(appdef.FieldName, istructs.RecordID)) {
-	m.Called(includeNulls, cb)
+func (m *MockCUDRow) RecordIDs(includeNulls bool) func(func(appdef.FieldName, istructs.RecordID) bool) {
+	return m.Called(includeNulls).Get(0).(func(func(appdef.FieldName, istructs.RecordID) bool))
 }
 
 type MockPLogEvent struct {
@@ -90,8 +90,8 @@ func (m *MockObject) FieldNames(cb func(appdef.FieldName)) { m.Called(cb) }
 func (m *MockObject) AsRecordID(name appdef.FieldName) istructs.RecordID {
 	return m.Called(name).Get(0).(istructs.RecordID)
 }
-func (m *MockObject) RecordIDs(includeNulls bool, cb func(appdef.FieldName, istructs.RecordID)) {
-	m.Called(includeNulls, cb)
+func (m *MockObject) RecordIDs(includeNulls bool) func(func(appdef.FieldName, istructs.RecordID) bool) {
+	return m.Called(includeNulls).Get(0).(func(func(appdef.FieldName, istructs.RecordID) bool))
 }
 func (m *MockObject) Children(container ...string) func(func(istructs.IObject) bool) {
 	args := m.Called(container)
@@ -269,8 +269,8 @@ func (m *MockStateValue) AsRecordID(name appdef.FieldName) istructs.RecordID {
 	args := m.Called(name)
 	return args.Get(0).(istructs.RecordID)
 }
-func (m *MockStateValue) RecordIDs(includeNulls bool, cb func(appdef.FieldName, istructs.RecordID)) {
-	m.Called(includeNulls, cb)
+func (m *MockStateValue) RecordIDs(includeNulls bool) func(func(appdef.FieldName, istructs.RecordID) bool) {
+	return m.Called(includeNulls).Get(0).(func(func(appdef.FieldName, istructs.RecordID) bool))
 }
 func (m *MockStateValue) FieldNames(cb func(appdef.FieldName)) {
 	m.Called(cb)
@@ -433,8 +433,8 @@ func (m *MockKey) FieldNames(cb func(appdef.FieldName)) { m.Called(cb) }
 func (m *MockKey) AsRecordID(name appdef.FieldName) istructs.RecordID {
 	return m.Called(name).Get(0).(istructs.RecordID)
 }
-func (m *MockKey) RecordIDs(includeNulls bool, cb func(appdef.FieldName, istructs.RecordID)) {
-	m.Called(includeNulls, cb)
+func (m *MockKey) RecordIDs(includeNulls bool) func(func(appdef.FieldName, istructs.RecordID) bool) {
+	return m.Called(includeNulls).Get(0).(func(func(appdef.FieldName, istructs.RecordID) bool))
 }
 
 type MockIntents struct {

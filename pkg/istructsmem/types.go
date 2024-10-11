@@ -982,12 +982,16 @@ func (row *rowType) QName() appdef.QName {
 }
 
 // istructs.IRowReader.RecordIDs
-func (row *rowType) RecordIDs(includeNulls bool, cb func(appdef.FieldName, istructs.RecordID)) {
-	for _, fld := range row.fields.Fields() {
-		if fld.DataKind() == appdef.DataKind_RecordID {
-			id := row.AsRecordID(fld.Name())
-			if (id != istructs.NullRecordID) || includeNulls {
-				cb(fld.Name(), id)
+func (row *rowType) RecordIDs(includeNulls bool) func(cb func(appdef.FieldName, istructs.RecordID) bool) {
+	return func(cb func(appdef.FieldName, istructs.RecordID) bool) {
+		for _, fld := range row.fields.Fields() {
+			if fld.DataKind() == appdef.DataKind_RecordID {
+				id := row.AsRecordID(fld.Name())
+				if (id != istructs.NullRecordID) || includeNulls {
+					if !cb(fld.Name(), id) {
+						break
+					}
+				}
 			}
 		}
 	}

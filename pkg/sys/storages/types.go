@@ -135,19 +135,21 @@ func (v *baseStateValue) AsValue(name string) istructs.IStateValue {
 func (v *baseStateValue) AsRecordID(name string) istructs.RecordID {
 	panic(errRecordIDFieldUndefined(name))
 }
-func (v *baseStateValue) AsRecord(name string) istructs.IRecord           { panic(errNotImplemented) }
-func (v *baseStateValue) AsEvent(name string) istructs.IDbEvent           { panic(errNotImplemented) }
-func (v *baseStateValue) RecordIDs(bool, func(string, istructs.RecordID)) { panic(errNotImplemented) }
-func (v *baseStateValue) FieldNames(func(string))                         { panic(errNotImplemented) }
-func (v *baseStateValue) Length() int                                     { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsString(int) string                          { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsBytes(int) []byte                           { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsInt32(int) int32                            { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsInt64(int) int64                            { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsFloat32(int) float32                        { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsFloat64(int) float64                        { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsQName(int) appdef.QName                     { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsBool(int) bool                              { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) AsRecord(name string) istructs.IRecord { panic(errNotImplemented) }
+func (v *baseStateValue) AsEvent(name string) istructs.IDbEvent { panic(errNotImplemented) }
+func (v *baseStateValue) RecordIDs(bool) func(func(string, istructs.RecordID) bool) {
+	panic(errNotImplemented)
+}
+func (v *baseStateValue) FieldNames(func(string))     { panic(errNotImplemented) }
+func (v *baseStateValue) Length() int                 { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsString(int) string      { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsBytes(int) []byte       { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsInt32(int) int32        { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsInt64(int) int64        { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsFloat32(int) float32    { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsFloat64(int) float64    { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsQName(int) appdef.QName { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsBool(int) bool          { panic(errCurrentValueIsNotAnArray) }
 func (v *baseStateValue) GetAsValue(int) istructs.IStateValue {
 	panic(errFieldByIndexIsNotAnObjectOrArray)
 }
@@ -201,8 +203,8 @@ func (v *ObjectStateValue) AsBool(name string) bool          { return v.object.A
 func (v *ObjectStateValue) AsRecordID(name string) istructs.RecordID {
 	return v.object.AsRecordID(name)
 }
-func (v *ObjectStateValue) RecordIDs(includeNulls bool, cb func(string, istructs.RecordID)) {
-	v.object.RecordIDs(includeNulls, cb)
+func (v *ObjectStateValue) RecordIDs(includeNulls bool) func(func(string, istructs.RecordID) bool) {
+	return v.object.RecordIDs(includeNulls)
 }
 func (v *ObjectStateValue) FieldNames(cb func(string)) { v.object.FieldNames(cb) }
 func (v *ObjectStateValue) AsValue(name string) (result istructs.IStateValue) {
@@ -344,7 +346,9 @@ func (v *jsonValue) AsRecordID(name string) istructs.RecordID {
 	}
 	panic(errRecordIDFieldUndefined(name))
 }
-func (v *jsonValue) RecordIDs(includeNulls bool, cb func(string, istructs.RecordID)) {}
+func (v *jsonValue) RecordIDs(bool) func(func(string, istructs.RecordID) bool) {
+	return func(cb func(string, istructs.RecordID) bool) {}
+}
 func (v *jsonValue) FieldNames(cb func(string)) {
 	for name := range v.json {
 		cb(name)

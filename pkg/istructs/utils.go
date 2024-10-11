@@ -65,16 +65,18 @@ func (id RecordID) BaseRecordID() RecordID {
 // Implements IRowReader
 type NullRowReader struct{}
 
-func (*NullRowReader) AsInt32(name string) int32                                         { return 0 }
-func (*NullRowReader) AsInt64(name string) int64                                         { return 0 }
-func (*NullRowReader) AsFloat32(name string) float32                                     { return 0 }
-func (*NullRowReader) AsFloat64(name string) float64                                     { return 0 }
-func (*NullRowReader) AsBytes(name string) []byte                                        { return nil }
-func (*NullRowReader) AsString(name string) string                                       { return "" }
-func (*NullRowReader) AsRecordID(name string) RecordID                                   { return NullRecordID }
-func (*NullRowReader) AsQName(name string) appdef.QName                                  { return appdef.NullQName }
-func (*NullRowReader) AsBool(name string) bool                                           { return false }
-func (*NullRowReader) RecordIDs(includeNulls bool, cb func(name string, value RecordID)) {}
+func (*NullRowReader) AsInt32(name string) int32        { return 0 }
+func (*NullRowReader) AsInt64(name string) int64        { return 0 }
+func (*NullRowReader) AsFloat32(name string) float32    { return 0 }
+func (*NullRowReader) AsFloat64(name string) float64    { return 0 }
+func (*NullRowReader) AsBytes(name string) []byte       { return nil }
+func (*NullRowReader) AsString(name string) string      { return "" }
+func (*NullRowReader) AsRecordID(name string) RecordID  { return NullRecordID }
+func (*NullRowReader) AsQName(name string) appdef.QName { return appdef.NullQName }
+func (*NullRowReader) AsBool(name string) bool          { return false }
+func (*NullRowReader) RecordIDs(bool) func(func(string, RecordID) bool) {
+	return func(func(string, RecordID) bool) {}
+}
 
 // Implements IObject
 type NullObject struct{ NullRowReader }
