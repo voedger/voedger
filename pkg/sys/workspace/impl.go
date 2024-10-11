@@ -17,7 +17,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/sys"
 
@@ -35,10 +34,10 @@ import (
 // triggered by CDoc<ChildWorkspace> (not a singleton)
 // targetApp/userProfileWSID
 func invokeCreateWorkspaceIDProjector(federation federation.IFederation, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
+		for rec := range event.CUDs {
 			if rec.QName() != authnz.QNameCDocChildWorkspace || !rec.IsNew() {
-				return nil
+				continue
 			}
 			ownerWSID := event.Workspace()
 			wsName := rec.AsString(authnz.Field_WSName)
@@ -49,9 +48,12 @@ func invokeCreateWorkspaceIDProjector(federation federation.IFederation, tokensA
 			targetApp := appQName.String()
 			targetClusterID := istructs.CurrentClusterID() // TODO: on https://github.com/voedger/voedger/commit/1e7ce3f2c546e9bf1332edb31a5beed5954bc476 was NullClusetrID!
 			wsidToCallCreateWSIDAt := coreutils.GetPseudoWSID(ownerWSID, wsName, targetClusterID)
-			return ApplyInvokeCreateWorkspaceID(federation, appQName, tokensAPI, wsName, wsKind, wsidToCallCreateWSIDAt, targetApp,
-				templateName, templateParams, rec, ownerWSID)
-		})
+			if err := ApplyInvokeCreateWorkspaceID(federation, appQName, tokensAPI, wsName, wsKind, wsidToCallCreateWSIDAt, targetApp,
+				templateName, templateParams, rec, ownerWSID); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 }
 
@@ -161,15 +163,15 @@ func execCmdCreateWorkspaceID(args istructs.ExecCommandArgs) (err error) {
 // sp.sys.WorkspaceIDIdx
 // triggered by cdoc.sys.WorkspaceID
 // targetApp/appWS
-func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
+	for rec := range event.CUDs {
 		if rec.QName() != QNameCDocWorkspaceID || !rec.IsNew() { // skip on update cdoc.sys.WorkspaceID on e.g. deactivate workspace
-			return nil
+			continue
 		}
 		kb, err := s.KeyBuilder(sys.Storage_View, QNameViewWorkspaceIDIdx)
 		if err != nil {
 			// notest
-			return nil
+			continue // why not return error ?
 		}
 		ownerWSID := rec.AsInt64(Field_OwnerWSID)
 		wsName := rec.AsString(authnz.Field_WSName)
@@ -179,22 +181,22 @@ func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, inten
 		wsIdxVB, err := intents.NewValue(kb)
 		if err != nil {
 			// notest
-			return nil
+			continue // why not return error ?
 		}
 		wsIdxVB.PutInt64(authnz.Field_WSID, wsid)
 		wsIdxVB.PutRecordID(field_IDOfCDocWorkspaceID, rec.ID())
-		return nil
-	})
+	}
+	return nil
 }
 
 // Projector<A, InvokeCreateWorkspace>
 // triggered by CDoc<WorkspaceID>
 // targetApp/appWS
 func invokeCreateWorkspaceProjector(federation federation.IFederation, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
+		for rec := range event.CUDs {
 			if rec.QName() != QNameCDocWorkspaceID || !rec.IsNew() { // skip on update cdoc.sys.WorkspaceID on e.g. deactivate workspace
-				return nil
+				continue
 			}
 
 			newWSID := rec.AsInt64(authnz.Field_WSID)
@@ -220,10 +222,12 @@ func invokeCreateWorkspaceProjector(federation federation.IFederation, tokensAPI
 			if _, err = federation.Func(createWSCmdURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
 				logger.Error("aproj.sys.InvokeCreateWorkspace: c.sys.CreateWorkspace failed: " + err.Error())
 				// nolint G115 ownerWSID came from WSID so its highest but is always 0 -> no data loss possible
-				return updateOwnerErr(istructs.WSID(ownerWSID), istructs.RecordID(ownerID), ownerApp, ownerQName, istructs.NullWSID, err, systemPrincipalToken, federation)
+				if err := updateOwnerErr(istructs.WSID(ownerWSID), istructs.RecordID(ownerID), ownerApp, ownerQName, istructs.NullWSID, err, systemPrincipalToken, federation); err != nil {
+					return err
+				}
 			}
-			return nil
-		})
+		}
+		return nil
 	}
 }
 
@@ -304,18 +308,18 @@ func execCmdCreateWorkspace(time coreutils.ITime) istructsmem.ExecCommandClosure
 // triggered by CDoc<WorkspaceDescriptor>
 func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IFederation, eps map[appdef.AppQName]extensionpoints.IExtensionPoint,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
+		for rec := range event.CUDs {
 			if rec.QName() != authnz.QNameCDocWorkspaceDescriptor {
-				return nil
+				continue
 			}
 			if rec.AsQName(authnz.Field_WSKind) == authnz.QNameCDoc_WorkspaceKind_AppWorkspace {
 				// AppWS -> self-initialized already
-				return nil
+				continue
 			}
 			// If updated return. We do NOT react on update since we update record from projector
 			if !rec.IsNew() {
-				return nil
+				continue
 			}
 			ownerUpdated := false
 			wsDescr := rec
@@ -371,7 +375,7 @@ func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IF
 				// nolint G115: highest bit of newWSID is always 0 -> safe to cast to WSID
 				ownerUpdated = updateOwner(istructs.WSID(rec.AsInt64(Field_OwnerWSID)), istructs.RecordID(rec.AsInt64(Field_OwnerID)), ownerApp, rec.AsString(Field_OwnerQName2),
 					istructs.WSID(newWSID), wsError, systemPrincipalToken_OwnerApp, federation)
-				return nil
+				continue
 			}
 
 			updateWSDescrURL := fmt.Sprintf("api/%s/%d/c.sys.CUD", targetAppQName.String(), event.Workspace())
@@ -385,7 +389,7 @@ func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IF
 
 				if _, err := federation.Func(updateWSDescrURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken_TargetApp), coreutils.WithDiscardResponse()); err != nil {
 					er("failed to update initStartedAtMs:", err)
-					return nil
+					continue
 				}
 
 				wsKind := wsDescr.AsQName(authnz.Field_WSKind)
@@ -403,7 +407,7 @@ func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IF
 					wsDescr.ID(), authnz.QNameCDocWorkspaceDescriptor, Field_InitError, wsErrStr, Field_InitCompletedAtMs, time.Now().UnixMilli())
 				if _, err = federation.Func(updateWSDescrURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken_TargetApp), coreutils.WithDiscardResponse()); err != nil {
 					er("failed to update initError+initCompletedAtMs:", err)
-					return nil
+					continue
 				}
 			} else if wsDescr.AsInt64(Field_InitCompletedAtMs) == 0 {
 				info("initCompletedAtMs = 0. WS data init was interrupted")
@@ -412,7 +416,7 @@ func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IF
 					authnz.QNameCDocWorkspaceDescriptor, Field_InitError, wsError.Error(), Field_InitCompletedAtMs, time.Now().UnixMilli())
 				if _, err = federation.Func(updateWSDescrURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken_TargetApp), coreutils.WithDiscardResponse()); err != nil {
 					er("failed to update initError+initCompletedAtMs:", err)
-					return nil
+					continue
 				}
 			} else { // initCompletedAtMs > 0
 				info("initStartedAtMs > 0 && initCompletedAtMs > 0")
@@ -429,8 +433,8 @@ func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IF
 			// nolint G115
 			ownerUpdated = updateOwner(istructs.WSID(rec.AsInt64(Field_OwnerWSID)), istructs.RecordID(rec.AsInt64(Field_OwnerID)), ownerApp, rec.AsString(Field_OwnerQName2),
 				istructs.WSID(newWSID), wsError, systemPrincipalToken_OwnerApp, federation)
-			return nil
-		})
+		}
+		return nil
 	}
 }
 

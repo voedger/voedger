@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/sys"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -24,11 +23,11 @@ import (
 )
 
 func applyUniques(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
-	return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+	for rec := range event.CUDs {
 		appDef := st.AppStructs().AppDef()
 		iUniques, ok := appDef.Type(rec.QName()).(appdef.IUniques)
 		if !ok {
-			return nil
+			continue
 		}
 		for _, unique := range iUniques.Uniques() {
 			if err := handleCUD(rec, st, intents, unique.Fields(), unique.Name()); err != nil {
@@ -37,10 +36,12 @@ func applyUniques(event istructs.IPLogEvent, st istructs.IState, intents istruct
 		}
 		if iUniques.UniqueField() != nil {
 			uniqueQName := rec.QName()
-			return handleCUD(rec, st, intents, []appdef.IField{iUniques.UniqueField()}, uniqueQName)
+			if err := handleCUD(rec, st, intents, []appdef.IField{iUniques.UniqueField()}, uniqueQName); err != nil {
+				return err
+			}
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
 func handleCUD(cud istructs.ICUDRow, st istructs.IState, intents istructs.IIntents, uniqueFields []appdef.IField, uniqueQName appdef.QName) error {
@@ -282,34 +283,29 @@ func validateCUD(cudRec istructs.ICUDRow, appStructs istructs.IAppStructs, wsid 
 		// update
 		// unique view record exists because all unique fields are required.
 		// let's deny to update unique fields and handle IsActive state
-		err := iterate.ForEachError2Values(cudRec.ModifiedFields, func(cudModifiedFieldName appdef.FieldName, newValue interface{}) error {
+		for cudModifiedFieldName, newValue := range cudRec.ModifiedFields {
 			for _, uniqueField := range uniqueFields {
 				if uniqueField.Name() == cudModifiedFieldName {
 					return fmt.Errorf("%v: unique field «%s» can not be changed: %w", cudQName, uniqueField.Name(), ErrUniqueFieldUpdateDeny)
 				}
 			}
-			if cudModifiedFieldName != appdef.SystemField_IsActive {
-				return nil
-			}
-			// we're updating IsActive field here.
-			isActivating := newValue.(bool)
-			if isActivating {
-				if uniqueViewRecord.refRecordID == istructs.NullRecordID {
-					// doc rec for this combination does not exist or is inactive (no matter for this cudRec or any other rec),
-					// we're activating now -> set current unique combination ref to the cudRec
-					uniqueViewRecord.refRecordID = cudRec.ID()
-				} else if uniqueViewRecord.refRecordID != cudRec.ID() {
-					// we're activating, doc rec for this combination exists, it is active and it is the another rec (not the one we're updating by the current CUD) -> deny
-					return conflict(cudQName, uniqueViewRecord.refRecordID, uniqueQName)
+			if cudModifiedFieldName == appdef.SystemField_IsActive {
+				// we're updating IsActive field here.
+				if newValue.(bool) {
+					// activating
+					if uniqueViewRecord.refRecordID == istructs.NullRecordID {
+						// doc rec for this combination does not exist or is inactive (no matter for this cudRec or any other rec),
+						// we're activating now -> set current unique combination ref to the cudRec
+						uniqueViewRecord.refRecordID = cudRec.ID()
+					} else if uniqueViewRecord.refRecordID != cudRec.ID() {
+						// we're activating, doc rec for this combination exists, it is active and it is the another rec (not the one we're updating by the current CUD) -> deny
+						return conflict(cudQName, uniqueViewRecord.refRecordID, uniqueQName)
+					}
+				} else {
+					// deactivating
+					uniqueViewRecord.refRecordID = istructs.NullRecordID
 				}
-			} else {
-				// deactivating
-				uniqueViewRecord.refRecordID = istructs.NullRecordID
 			}
-			return nil
-		})
-		if err != nil {
-			return err
 		}
 	}
 	return nil
@@ -318,11 +314,11 @@ func validateCUD(cudRec istructs.ICUDRow, appStructs istructs.IAppStructs, wsid 
 func eventUniqueValidator(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
 	//                    cudQName       uniqueQName  unique-key-bytes
 	uniquesState := map[appdef.QName]map[appdef.QName]map[string]*uniqueViewRecord{}
-	return iterate.ForEachError(rawEvent.CUDs, func(cudRec istructs.ICUDRow) (err error) {
 
+	for cudRec := range rawEvent.CUDs {
 		cudUniques, ok := appStructs.AppDef().Type(cudRec.QName()).(appdef.IUniques)
 		if !ok {
-			return nil
+			continue
 		}
 		for _, unique := range cudUniques.Uniques() {
 			if err := validateCUD(cudRec, appStructs, wsid, unique.Fields(), unique.Name(), uniquesState); err != nil {
@@ -335,8 +331,8 @@ func eventUniqueValidator(ctx context.Context, rawEvent istructs.IRawEvent, appS
 				return err
 			}
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
 func conflict(docQName appdef.QName, conflictingWithID istructs.RecordID, uniqueQName appdef.QName) error {

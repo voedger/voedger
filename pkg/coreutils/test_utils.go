@@ -55,9 +55,11 @@ func (o *TestObject) ID() istructs.RecordID     { return o.Id }
 func (o *TestObject) QName() appdef.QName       { return o.Name }
 func (o *TestObject) Parent() istructs.RecordID { return o.Parent_ }
 func (o *TestObject) IsNew() bool               { return o.IsNew_ }
-func (o *TestObject) ModifiedFields(cb func(string, interface{})) {
+func (o *TestObject) ModifiedFields(cb func(string, interface{}) bool) {
 	for name, value := range o.Data {
-		cb(name, value)
+		if !cb(name, value) {
+			break
+		}
 	}
 }
 func (o *TestObject) AsRecord() istructs.IRecord { return o }
@@ -116,31 +118,35 @@ func (o *TestObject) AsRecordID(name string) istructs.RecordID {
 	}
 	return istructs.NullRecordID
 }
-func (o *TestObject) Children(container string, cb func(istructs.IObject)) {
-	iterate := func(cc []*TestObject) {
-		for _, c := range cc {
-			cb(c)
-		}
+func (o *TestObject) Children(container ...string) func(func(istructs.IObject) bool) {
+	cc := make(map[string]bool)
+	for _, c := range container {
+		cc[c] = true
 	}
-
-	if container == "" {
-		for _, cc := range o.Containers_ {
-			iterate(cc)
-		}
-	} else {
-		if cc, ok := o.Containers_[container]; ok {
-			iterate(cc)
+	return func(cb func(istructs.IObject) bool) {
+		for c, children := range o.Containers_ {
+			if len(cc) == 0 || cc[c] {
+				for _, child := range children {
+					if !cb(child) {
+						break
+					}
+				}
+			}
 		}
 	}
 }
-func (o *TestObject) FieldNames(cb func(name string)) {
+func (o *TestObject) FieldNames(cb func(name string) bool) {
 	for name := range o.Data {
-		cb(name)
+		if !cb(name) {
+			break
+		}
 	}
 }
-func (o *TestObject) Containers(cb func(container string)) {
+func (o *TestObject) Containers(cb func(string) bool) {
 	for containerName := range o.Containers_ {
-		cb(containerName)
+		if !cb(containerName) {
+			break
+		}
 	}
 }
 

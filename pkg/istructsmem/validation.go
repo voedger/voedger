@@ -165,27 +165,26 @@ func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]appdef.QName)
 	}
 
 	checkRefs := func(rec *recordType) (err error) {
-		rec.RecordIDs(false,
-			func(name string, id istructs.RecordID) {
-				target, ok := ids[id]
-				if !ok {
-					if id.IsRaw() {
-						err = errors.Join(err,
-							// WRecord «WRec: test.WRecord» field «Ref» refers to unknown record ID «7»
-							validateErrorf(ECode_InvalidRefRecordID, errUnknownIDRef, rec, name, id, ErrRecordIDNotFound))
-					}
-					return
+		for name, id := range rec.RecordIDs(false) {
+			target, ok := ids[id]
+			if !ok {
+				if id.IsRaw() {
+					err = errors.Join(err,
+						// WRecord «WRec: test.WRecord» field «Ref» refers to unknown record ID «7»
+						validateErrorf(ECode_InvalidRefRecordID, errUnknownIDRef, rec, name, id, ErrRecordIDNotFound))
 				}
-				fld := rec.fieldDef(name)
-				if ref, ok := fld.(appdef.IRefField); ok {
-					if !ref.Ref(target) {
-						err = errors.Join(err,
-							// WRecord «WRec: test.WRecord» field «Ref» refers to record ID «1» that has unavailable target QName «test.WDocument»
-							validateErrorf(ECode_InvalidRefRecordID, errUnavailableTargetRef, rec, name, id, target, ErrWrongRecordID))
-						return
-					}
+				continue
+			}
+			fld := rec.fieldDef(name)
+			if ref, ok := fld.(appdef.IRefField); ok {
+				if !ref.Ref(target) {
+					err = errors.Join(err,
+						// WRecord «WRec: test.WRecord» field «Ref» refers to record ID «1» that has unavailable target QName «test.WDocument»
+						validateErrorf(ECode_InvalidRefRecordID, errUnavailableTargetRef, rec, name, id, target, ErrWrongRecordID))
+					continue
 				}
-			})
+			}
+		}
 		return err
 	}
 
@@ -268,7 +267,9 @@ func validateObject(o *objectType) (err error) {
 	// validate occurrences
 	for _, cont := range t.Containers() {
 		occurs := appdef.Occurs(0)
-		o.Children(cont.Name(), func(istructs.IObject) { occurs++ })
+		for range o.Children(cont.Name()) {
+			occurs++
+		}
 		if occurs < cont.MinOccurs() {
 			err = errors.Join(err,
 				// ODoc «test.document» container «child» has not enough occurrences (0, minimum 1)

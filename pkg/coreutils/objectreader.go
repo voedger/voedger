@@ -97,9 +97,9 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 
 	if fields, ok := t.(appdef.IFields); ok {
 		if opts.nonNilsOnly {
-			obj.FieldNames(func(fieldName appdef.FieldName) {
+			for fieldName := range obj.FieldNames {
 				proceedField(fieldName, fields.Field(fieldName).DataKind())
-			})
+			}
 		} else {
 			for _, f := range fields.Fields() {
 				proceedField(f.Name(), f.DataKind())
@@ -115,16 +115,13 @@ func ObjectToMap(obj istructs.IObject, appDef appdef.IAppDef, opts ...MapperOpt)
 		return map[string]interface{}{}
 	}
 	res = FieldsToMap(obj, appDef, opts...)
-	obj.Containers(func(container string) {
-		var childMap map[string]interface{}
+	for container := range obj.Containers {
 		cont := []map[string]interface{}{}
-		obj.Children(container, func(c istructs.IObject) {
-
-			childMap = ObjectToMap(c, appDef, opts...)
-			cont = append(cont, childMap)
-		})
+		for c := range obj.Children(container) {
+			cont = append(cont, ObjectToMap(c, appDef, opts...))
+		}
 		res[container] = cont
-	})
+	}
 	return res
 }
 
@@ -153,9 +150,9 @@ func CUDsToMap(event istructs.IDbEvent, appDef appdef.IAppDef, optFuncs ...CUDsO
 	for _, f := range optFuncs {
 		f(&opts)
 	}
-	event.CUDs(func(rec istructs.ICUDRow) {
+	for rec := range event.CUDs {
 		if opts.filter != nil && !opts.filter(rec.QName()) {
-			return
+			continue
 		}
 		cudData := make(map[string]interface{})
 		cudData["sys.ID"] = rec.ID()
@@ -163,7 +160,7 @@ func CUDsToMap(event istructs.IDbEvent, appDef appdef.IAppDef, optFuncs ...CUDsO
 		cudData["IsNew"] = rec.IsNew()
 		cudData["fields"] = FieldsToMap(rec, appDef, opts.mapperOpts...)
 		cuds = append(cuds, cudData)
-	})
+	}
 	return cuds
 }
 

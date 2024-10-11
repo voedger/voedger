@@ -13,7 +13,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
@@ -72,12 +71,15 @@ func recordsRegistryProjector(event istructs.IPLogEvent, st istructs.IState, int
 			return err
 		}
 	}
-	return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+	for rec := range event.CUDs {
 		if !rec.IsNew() {
-			return nil
+			continue
 		}
-		return writeObjectToRegistry(rec, appDef, st, intents, event.WLogOffset())
-	})
+		if err := writeObjectToRegistry(rec, appDef, st, intents, event.WLogOffset()); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func writeObjectToRegistry(root istructs.IRowReader, appDef appdef.IAppDef, st istructs.IState, intents istructs.IIntents, wLogOffsetToStore istructs.Offset) error {
@@ -89,15 +91,17 @@ func writeObjectToRegistry(root istructs.IRowReader, appDef appdef.IAppDef, st i
 	if !ok {
 		return nil
 	}
-	return iterate.ForEachError(object.Containers, func(container string) (err error) {
-		return iterate.ForEachError1Arg(object.Children, container, func(child istructs.IObject) error {
+	for container := range object.Containers {
+		for child := range object.Children(container) {
 			elType := appDef.Type(child.QName())
-			if elType.Kind() != appdef.TypeKind_ODoc && elType.Kind() != appdef.TypeKind_ORecord {
-				return nil
+			if elType.Kind() == appdef.TypeKind_ODoc || elType.Kind() == appdef.TypeKind_ORecord {
+				if err := writeObjectToRegistry(child, appDef, st, intents, wLogOffsetToStore); err != nil {
+					return err
+				}
 			}
-			return writeObjectToRegistry(child, appDef, st, intents, wLogOffsetToStore)
-		})
-	})
+		}
+	}
+	return nil
 }
 
 func writeRegistry(st istructs.IState, intents istructs.IIntents, idToStore istructs.RecordID, wLogOffsetToStore istructs.Offset, qNameToStore appdef.QName) error {

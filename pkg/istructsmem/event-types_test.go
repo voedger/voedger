@@ -430,7 +430,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 
 			t.Run("test PLog event CUDs", func(t *testing.T) {
 				cudCount := 0
-				event.CUDs(func(rec istructs.ICUDRow) {
+				for rec := range event.CUDs {
 					if rec.QName() == test.tablePhotos {
 						require.False(rec.IsNew())
 						require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
@@ -441,7 +441,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 						require.Equal(changedRems, rec.AsString(test.remarkIdent))
 					}
 					cudCount++
-				})
+				}
 				require.Equal(2, cudCount)
 			})
 		}
@@ -565,14 +565,14 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			defer pLogEvent.Release()
 
 			checked := false
-			pLogEvent.CUDs(func(rec istructs.ICUDRow) {
+			for rec := range pLogEvent.CUDs {
 				if rec.QName() == test.tablePhotos {
 					require.False(rec.IsNew())
 					require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
 					require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
 					checked = true
 				}
-			})
+			}
 
 			require.True(checked)
 
@@ -631,12 +631,16 @@ func testCommandsTree(t *testing.T, cmd istructs.IObject) {
 
 	t.Run("test basket", func(t *testing.T) {
 		var names []string
-		cmd.Containers(
-			func(name string) { names = append(names, name) })
+		for name := range cmd.Containers {
+			names = append(names, name)
+		}
 		require.Len(names, 1)
 		require.Equal(test.basketIdent, names[0])
 
-		cmd.Children(test.basketIdent, func(c istructs.IObject) { basket = c })
+		for c := range cmd.Children(test.basketIdent) {
+			basket = c
+			break
+		}
 		require.NotNil(basket)
 
 		require.Equal(cmd.AsRecord().ID(), basket.AsRecord().Parent())
@@ -644,14 +648,16 @@ func testCommandsTree(t *testing.T, cmd istructs.IObject) {
 
 	t.Run("test goods", func(t *testing.T) {
 		var names []string
-		basket.Containers(
-			func(name string) { names = append(names, name) })
+		for name := range basket.Containers {
+			names = append(names, name)
+		}
 		require.Len(names, 1)
 		require.Equal(test.goodIdent, names[0])
 
 		var goods []istructs.IObject
-		basket.Children(test.goodIdent, func(g istructs.IObject) { goods = append(goods, g) })
-		require.NotNil(goods)
+		for g := range basket.Children(test.goodIdent) {
+			goods = append(goods, g)
+		}
 		require.Len(goods, test.goodCount)
 
 		for i := 0; i < test.goodCount; i++ {
@@ -670,12 +676,11 @@ func testUnloggedObject(t *testing.T, cmd istructs.IObject) {
 	test := test()
 
 	hasPassword := false
-	cmd.FieldNames(func(fieldName string) {
-		if fieldName == test.passwordIdent {
-			hasPassword = true
+	for fieldName := range cmd.FieldNames {
+		if hasPassword = fieldName == test.passwordIdent; hasPassword {
+			break
 		}
-	})
-
+	}
 	require.True(hasPassword)
 
 	require.Equal(maskString, cmd.AsString(test.passwordIdent))
@@ -707,14 +712,14 @@ func testDbEvent(t *testing.T, event istructs.IDbEvent) {
 	t.Run("test DBEvent CUDs", func(t *testing.T) {
 		var cuds []istructs.IRowReader
 		cnt := 0
-		event.CUDs(func(row istructs.ICUDRow) {
+		for row := range event.CUDs {
 			cuds = append(cuds, row)
 			if cnt == 0 {
 				require.True(row.IsNew())
 				require.Equal(test.tablePhotos, row.QName())
 			}
 			cnt++
-		})
+		}
 		require.Equal(2, cnt)
 		require.Len(cuds, 2)
 		testPhotoRow(t, cuds[0])
@@ -1312,13 +1317,13 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 		t.Run("newly created singleton CDoc must be ok", func(t *testing.T) {
 			recCnt := 0
-			pLogEvent.CUDs(func(rec istructs.ICUDRow) {
+			for rec := range pLogEvent.CUDs {
 				require.Equal(docName, rec.QName())
 				require.Equal(docID, rec.ID())
 				require.True(rec.IsNew())
 				require.Equal(int64(8), rec.AsInt64("option"))
 				recCnt++
-			})
+			}
 			require.Equal(1, recCnt)
 		})
 
@@ -1443,13 +1448,13 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 		t.Run("updated singleton CDoc must be ok", func(t *testing.T) {
 			recCnt := 0
-			pLogEvent.CUDs(func(rec istructs.ICUDRow) {
+			for rec := range pLogEvent.CUDs {
 				require.Equal(docName, rec.QName())
 				require.Equal(docID, rec.ID())
 				require.False(rec.IsNew())
 				require.Equal(int64(888), rec.AsInt64("option"))
 				recCnt++
-			})
+			}
 			require.Equal(1, recCnt)
 		})
 
@@ -1992,16 +1997,19 @@ func Test_ObjectMask(t *testing.T) {
 	require.Equal([]byte(nil), value.AsBytes(test.photoIdent))
 
 	var basket istructs.IObject
-	value.Children(test.basketIdent, func(c istructs.IObject) { basket = c })
+	for c := range value.Children(test.basketIdent) {
+		basket = c
+		break
+	}
 	require.NotNil(basket)
 
 	var cnt int
-	basket.Children(test.goodIdent, func(c istructs.IObject) {
+	for c := range basket.Children(test.goodIdent) {
 		require.Equal(maskString, c.AsString(test.nameIdent))
 		require.Equal(int64(0), c.AsInt64(test.codeIdent))
 		require.Equal(float64(0), c.AsFloat64(test.weightIdent))
 		cnt++
-	})
+	}
 
 	require.Equal(test.goodCount, cnt)
 }
@@ -2050,10 +2058,10 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 				require.EqualValues(1, o.AsInt32("int32"))
 				require.Equal(3, func() int {
 					cnt := 0
-					o.Children("child", func(c istructs.IObject) {
+					for c := range o.Children("child") {
 						cnt++
 						require.EqualValues(cnt, c.AsInt64("int64"))
-					})
+					}
 					return cnt
 				}())
 			}},

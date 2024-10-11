@@ -422,9 +422,9 @@ func TestModifiedFields(t *testing.T) {
 
 	t.Run("no modifications", func(t *testing.T) {
 		rec := newRecord(test.AppCfg)
-		rec.ModifiedFields(func(fieldName appdef.FieldName, newValue interface{}) {
+		for _, _ = range rec.ModifiedFields {
 			t.Fail()
-		})
+		}
 	})
 	t.Run("has modifications", func(t *testing.T) {
 		rec := newRecord(test.AppCfg)
@@ -433,14 +433,24 @@ func TestModifiedFields(t *testing.T) {
 		rec.PutBool(appdef.SystemField_IsActive, false) // should be mentioned on ModifiedFields()
 		require.NoError(rec.build())
 		actualModifications := map[appdef.FieldName]bool{}
-		rec.ModifiedFields(func(fieldName appdef.FieldName, newValue interface{}) {
+		for fieldName, _ := range rec.ModifiedFields {
 			actualModifications[fieldName] = true
-		})
+		}
 		expectedModifications := map[appdef.FieldName]bool{
 			"int32":                     true,
 			appdef.SystemField_IsActive: true,
 		}
 		require.Equal(expectedModifications, actualModifications)
+
+		t.Run("iterator ModifiedFields() should by breakable", func(t *testing.T) {
+			f := []appdef.FieldName{}
+			for fn, _ := range rec.ModifiedFields {
+				f = append(f, fn)
+				break
+			}
+			require.Len(f, 1)
+			require.Equal(appdef.SystemField_IsActive, f[0])
+		})
 	})
 
 }
