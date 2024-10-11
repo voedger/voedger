@@ -417,9 +417,17 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 }
 
 // istructs.IRowReader.FieldNames
-func (key *keyType) FieldNames(cb func(appdef.FieldName)) {
-	key.partRow.FieldNames(cb)
-	key.ccolsRow.FieldNames(cb)
+func (key *keyType) FieldNames(cb func(appdef.FieldName) bool) {
+	for f := range key.partRow.FieldNames {
+		if !cb(f) {
+			return
+		}
+	}
+	for f := range key.ccolsRow.FieldNames {
+		if !cb(f) {
+			return
+		}
+	}
 }
 
 // istructs.IKeyBuilder.PartitionKey

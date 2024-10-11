@@ -714,29 +714,38 @@ func (row *rowType) Container() string {
 }
 
 // istructs.IRowReader.FieldNames
-func (row *rowType) FieldNames(cb func(appdef.FieldName)) {
+func (row *rowType) FieldNames(cb func(appdef.FieldName) bool) {
 	// system fields
 	if row.fieldDef(appdef.SystemField_QName) != nil {
-		cb(appdef.SystemField_QName)
+		if !cb(appdef.SystemField_QName) {
+			return
+		}
 	}
 	if row.id != istructs.NullRecordID {
-		cb(appdef.SystemField_ID)
+		if !cb(appdef.SystemField_ID) {
+			return
+		}
 	}
 	if row.parentID != istructs.NullRecordID {
-		cb(appdef.SystemField_ParentID)
+		if !cb(appdef.SystemField_ParentID) {
+			return
+		}
 	}
 	if row.container != "" {
-		cb(appdef.SystemField_Container)
+		if !cb(appdef.SystemField_Container) {
+			return
+		}
 	}
 	if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_IsActive); exists {
-		cb(appdef.SystemField_IsActive)
+		if !cb(appdef.SystemField_IsActive) {
+			return
+		}
 	}
 
 	// user fields
 	row.dyB.IterateFields(nil,
 		func(name string, _ interface{}) bool {
-			cb(name)
-			return true
+			return cb(name)
 		})
 }
 

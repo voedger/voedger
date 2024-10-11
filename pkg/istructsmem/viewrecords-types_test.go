@@ -132,13 +132,13 @@ func Test_KeyType(t *testing.T) {
 		require.EqualValues(-9.87654321, k.AsFloat64("cc_number"))
 		require.EqualValues(`naked 🔫`, k.AsBytes("cc_bytes"))
 
-		t.Run("IKey.FieldNames() must be ok", func(t *testing.T) {
+		t.Run("should be ok to enum IKey.FieldNames", func(t *testing.T) {
 			view := appCfg.AppDef.View(viewName)
 			cnt := 0
-			k.FieldNames(func(n string) {
+			for n := range k.FieldNames {
 				require.NotNil(view.Key().Field(n), "unknown field name passed in callback from IKey.FieldNames(): %q", n)
 				cnt++
-			})
+			}
 			require.Positive(cnt)
 			require.Equal(view.Key().FieldCount(), cnt)
 		})

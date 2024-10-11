@@ -647,12 +647,9 @@ func Test_rowType_FieldNames(t *testing.T) {
 
 	t.Run("new [or null] row must have hot fields", func(t *testing.T) {
 		row := makeRow(test.AppCfg)
-
-		cnt := 0
-		row.FieldNames(func(fieldName appdef.FieldName) {
-			cnt++
-		})
-		require.Zero(cnt)
+		for fieldName := range row.FieldNames {
+			require.Fail("unexpected field", "name: «%s»", fieldName)
+		}
 	})
 
 	t.Run("new test row must have only QName field", func(t *testing.T) {
@@ -660,10 +657,10 @@ func Test_rowType_FieldNames(t *testing.T) {
 		row.setQName(test.testRow)
 
 		cnt := 0
-		row.FieldNames(func(fieldName appdef.FieldName) {
+		for fieldName := range row.FieldNames {
 			require.Equal(appdef.SystemField_QName, fieldName)
 			cnt++
-		})
+		}
 		require.Equal(1, cnt)
 	})
 
@@ -672,12 +669,12 @@ func Test_rowType_FieldNames(t *testing.T) {
 
 		cnt := 0
 		names := make(map[appdef.FieldName]bool)
-		row.FieldNames(func(fieldName appdef.FieldName) {
+		for fieldName := range row.FieldNames {
 			require.False(names[fieldName])
 			names[fieldName] = true
 			cnt++
-		})
-		require.Equal(11, cnt) // QName + ten user fields for simple types
+		}
+		require.Equal(11, cnt) // sys.QName + ten user fields for simple types
 	})
 
 	t.Run("should be ok iterate with filled system fields", func(t *testing.T) {
@@ -686,7 +683,7 @@ func Test_rowType_FieldNames(t *testing.T) {
 		rec.PutString(appdef.SystemField_Container, "rec")
 
 		sys := make(map[appdef.FieldName]interface{})
-		rec.FieldNames(func(fieldName appdef.FieldName) {
+		for fieldName := range rec.FieldNames {
 			if appdef.IsSysField(fieldName) {
 				switch rec.fieldDef(fieldName).DataKind() {
 				case appdef.DataKind_QName:
@@ -701,7 +698,7 @@ func Test_rowType_FieldNames(t *testing.T) {
 					require.Fail("unexpected system field", "field name: «%s»", fieldName)
 				}
 			}
-		})
+		}
 		require.Len(sys, 5)
 		require.EqualValues(test.testCRec, sys[appdef.SystemField_QName])
 		require.EqualValues(7, sys[appdef.SystemField_ID])

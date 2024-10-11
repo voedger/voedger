@@ -200,7 +200,9 @@ func TestNullObject(t *testing.T) {
 		for range null.RecordIDs(true) {
 			require.Fail("null.RecordIDs should be empty")
 		}
-		null.FieldNames(nil)
+		for range null.FieldNames {
+			require.Fail("null.FieldNames should be empty")
+		}
 	}
 
 	t.Run("IRecord fields", func(t *testing.T) {

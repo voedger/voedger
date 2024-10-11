@@ -135,9 +135,11 @@ func (o *TestObject) Children(container ...string) func(func(istructs.IObject) b
 		}
 	}
 }
-func (o *TestObject) FieldNames(cb func(name string)) {
+func (o *TestObject) FieldNames(cb func(name string) bool) {
 	for name := range o.Data {
-		cb(name)
+		if !cb(name) {
+			break
+		}
 	}
 }
 func (o *TestObject) Containers(cb func(string) bool) {
