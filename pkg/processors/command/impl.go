@@ -14,7 +14,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"golang.org/x/exp/maps"
@@ -203,14 +202,14 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work pipeline.IWorkp
 func updateIDGeneratorFromO(root istructs.IObject, types appdef.IWithTypes, idGen istructs.IIDGenerator) {
 	// new IDs only here because update is not allowed for ODocs in Args
 	idGen.UpdateOnSync(root.AsRecordID(appdef.SystemField_ID), types.Type(root.QName()))
-	root.Containers(func(container string) {
+	for container := range root.Containers {
 		// order of containers here is the order in the schema
 		// but order in the request could be different
 		// that is not a problem because for ODocs/ORecords ID generator will bump next ID only if syncID is actually next
-		root.Children(container, func(c istructs.IObject) {
+		for c := range root.Children(container) {
 			updateIDGeneratorFromO(c, types, idGen)
-		})
-	})
+		}
+	}
 }
 
 func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPartition, error) {
@@ -222,12 +221,12 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 	cb := func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		ws := ap.getWorkspace(event.Workspace())
 
-		event.CUDs(func(rec istructs.ICUDRow) {
+		for rec := range event.CUDs {
 			if rec.IsNew() {
 				t := cmd.appStructs.AppDef().Type(rec.QName())
 				ws.idGenerator.UpdateOnSync(rec.ID(), t)
 			}
-		})
+		}
 		ao := event.ArgumentObject()
 		if cmd.appStructs.AppDef().Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
 			updateIDGeneratorFromO(ao, cmd.appStructs.AppDef(), ws.idGenerator)
@@ -516,16 +515,12 @@ func (cmdProc *cmdProc) eventValidators(ctx context.Context, work pipeline.IWork
 func (cmdProc *cmdProc) cudsValidators(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	for _, appCUDValidator := range cmd.appStructs.CUDValidators() {
-		err = iterate.ForEachError(cmd.rawEvent.CUDs, func(rec istructs.ICUDRow) error {
+		for rec := range cmd.rawEvent.CUDs {
 			if appCUDValidator.Match(rec, cmd.cmdMes.WSID(), cmd.cmdMes.QName()) {
 				if err := appCUDValidator.Validate(ctx, cmd.appStructs, rec, cmd.cmdMes.WSID(), cmd.cmdMes.QName()); err != nil {
 					return coreutils.WrapSysError(err, http.StatusForbidden)
 				}
 			}
-			return nil
-		})
-		if err != nil {
-			return err
 		}
 	}
 	return nil
@@ -537,13 +532,13 @@ func (cmdProc *cmdProc) validateCUDsQNames(ctx context.Context, work pipeline.IW
 		// dummy or c.sys.CreateWorkspace
 		return nil
 	}
-	return iterate.ForEachError(cmd.rawEvent.CUDs, func(cud istructs.ICUDRow) error {
+	for cud := range cmd.rawEvent.CUDs {
 		if cmd.iWorkspace.Type(cud.QName()) == appdef.NullType {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Errorf("doc %s mentioned in resulting CUDs does not exist in the workspace %s",
 				cud.QName(), cmd.wsDesc.AsQName(authnz.Field_WSKind)))
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
 func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {

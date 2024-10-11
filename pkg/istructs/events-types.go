@@ -53,7 +53,7 @@ type IAbstractEvent interface {
 
 	ArgumentObject() IObject
 
-	CUDs(cb func(rec ICUDRow))
+	CUDs(func(ICUDRow) bool)
 
 	RegisteredAt() UnixMilli
 	Synced() bool
@@ -69,7 +69,7 @@ type ICUDRow interface {
 	IsNew() bool
 	QName() appdef.QName
 	ID() RecordID
-	ModifiedFields(cb func(fieldName appdef.FieldName, newValue interface{}))
+	ModifiedFields(func(appdef.FieldName, interface{}) bool)
 }
 
 type IIDGenerator interface {
@@ -146,13 +146,13 @@ type IObject interface {
 
 	QName() appdef.QName
 
-	// Children in given container
+	// Returns iterator for children in given containers
 	//
-	// if container is empty string then enums all children
-	Children(container string, cb func(IObject))
+	// if no containers specified then iterate all children
+	Children(container ...string) func(func(IObject) bool)
 
 	// First level qname-s
-	Containers(func(string))
+	Containers(func(string) bool)
 
 	// Does NOT panic if it is not actually IRecord
 	// Just a wrapper which uses consts.SystemField*

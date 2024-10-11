@@ -39,7 +39,7 @@ func (o ResultFieldsOperator) DoAsync(ctx context.Context, work pipeline.IWorkpi
 		}
 		var findElements func(parent istructs.IObject, pathEntries []string, pathEntryIndex int)
 		findElements = func(parent istructs.IObject, pathEntries []string, pathEntryIndex int) {
-			parent.Children(pathEntries[pathEntryIndex], func(c istructs.IObject) {
+			for c := range parent.Children(pathEntries[pathEntryIndex]) {
 				if pathEntryIndex == len(pathEntries)-1 {
 					err = o.fillRow(ctx, outputRow, element, c, o.fieldsDefs.get(c.QName()))
 					if err != nil {
@@ -48,7 +48,7 @@ func (o ResultFieldsOperator) DoAsync(ctx context.Context, work pipeline.IWorkpi
 				} else {
 					findElements(c, pathEntries, pathEntryIndex+1)
 				}
-			})
+			}
 		}
 		findElements(object, element.Path().AsArray(), 0)
 	}

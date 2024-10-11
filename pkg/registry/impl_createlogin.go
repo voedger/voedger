@@ -12,7 +12,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -87,9 +86,9 @@ func execCmdCreateLogin(args istructs.ExecCommandArgs) (err error) {
 
 // sys/registry, appWorkspace, triggered by CDoc<Login>
 var projectorLoginIdx = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+	for rec := range event.CUDs {
 		if rec.QName() != QNameCDocLogin {
-			return nil
+			continue
 		}
 		kb, err := s.KeyBuilder(sys.Storage_View, QNameViewLoginIdx)
 		if err != nil {
@@ -103,6 +102,6 @@ var projectorLoginIdx = func(event istructs.IPLogEvent, s istructs.IState, inten
 			return err
 		}
 		vb.PutInt64(field_CDocLoginID, int64(rec.AsRecordID(appdef.SystemField_ID)))
-		return nil
-	})
+	}
+	return nil
 }
