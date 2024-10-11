@@ -5,9 +5,11 @@
 package smtptest
 
 import (
+	"errors"
 	"io"
 	"strings"
 
+	"github.com/emersion/go-sasl"
 	"github.com/emersion/go-smtp"
 )
 
@@ -23,19 +25,27 @@ type server struct {
 	server   *smtp.Server
 }
 
-func (s *server) Login(_ *smtp.ConnectionState, username, password string) (smtp.Session, error) {
-	ch, ok := s.messages[credentials{
-		username: username,
-		password: password,
-	}]
-	if !ok {
-		return nil, errUnauthorized
-	}
-	return &session{ch: ch}, nil
+func (s *session) AuthMechanisms() []string {
+	return []string{sasl.Plain}
 }
-func (s *server) AnonymousLogin(_ *smtp.ConnectionState) (smtp.Session, error) {
-	panic("anonymous login not allowed")
+
+func (s *session) Auth(mech string) (sasl.Server, error) {
+	return sasl.NewPlainServer(func(identity, username, password string) error {
+		if identity != "" && identity != username {
+			return errors.New("invalid identity")
+		}
+		ch, ok := s.server.messages[credentials{
+			username: username,
+			password: password,
+		}]
+		if !ok {
+			return errUnauthorized
+		}
+		s.ch = ch
+		return nil
+	}), nil
 }
+
 func (s *server) Port() int32 { return s.port }
 func (s *server) Messages(username, password string) chan Message {
 	return s.messages[credentials{
@@ -59,6 +69,7 @@ type session struct {
 	ch         chan Message
 	recipients []string
 	data       string
+	server     *server
 }
 
 func (s *session) Reset() {}
@@ -66,8 +77,8 @@ func (s *session) Logout() error {
 	s.ch <- s.message()
 	return nil
 }
-func (s *session) Mail(_ string, _ smtp.MailOptions) error { return nil }
-func (s *session) Rcpt(to string) error {
+func (s *session) Mail(_ string, _ *smtp.MailOptions) error { return nil }
+func (s *session) Rcpt(to string, _ *smtp.RcptOptions) error {
 	s.recipients = append(s.recipients, to)
 	return nil
 }
@@ -152,4 +163,8 @@ func WithCredentials(username, password string) Option {
 			password: password,
 		}] = make(chan Message, defaultMessagesChannelSize)
 	}
+}
+
+type backend struct {
+	server *server
 }
