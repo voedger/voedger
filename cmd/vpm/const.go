@@ -58,6 +58,311 @@ func CommandContext() Value_CommandContext {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
 	return Value_CommandContext{tv: exttinygo.MustGetValue(kb)}
 }
+
+type ITypeODoc interface {
+	QName() exttinygo.QName
+	IAmODoc()
+}
+
+type ITypeCDoc interface {
+	QName() exttinygo.QName
+	IAmCDoc()
+}
+
+type ITypeCRecord interface {
+	QName() exttinygo.QName
+	IAmCRecord()
+}
+
+type ITypeWDoc interface {
+	QName() exttinygo.QName
+	IAmWDoc()
+}
+
+type ITypeWRecord interface {
+	QName() exttinygo.QName
+	IAmWRecord()
+}
+
+type Value_sys_ODoc struct{
+	v exttinygo.TValue 
+}
+
+func (o Value_sys_ODoc) QName() exttinygo.QName {
+	return o.v.AsQName("sys.QName")
+}
+
+func (o Value_sys_ODoc) AsQName() exttinygo.QName {
+	return o.v.AsQName("sys.QName")
+}
+
+func (o Value_sys_ODoc) Get_sys_ID() ID {
+	return ID(o.v.AsInt64("sys.ID"))
+}
+
+func (o Value_sys_ODoc) AsInt64(name string) int64 {
+	return o.v.AsInt64(name)
+}
+
+func (o Value_sys_ODoc) AsInt32(name string) int32 {
+	return o.v.AsInt32(name)
+}
+
+func (o Value_sys_ODoc) AsFloat32(name string) float32 {
+	return o.v.AsFloat32(name)
+}
+
+func (o Value_sys_ODoc) AsFloat64(name string) float64 {
+	return o.v.AsFloat64(name)
+}
+
+func (o Value_sys_ODoc) AsString(name string) string {
+	return o.v.AsString(name)
+}
+
+func (o Value_sys_ODoc) AsBytes(name string) []byte {
+	return o.v.AsBytes(name)
+}
+
+func (o Value_sys_ODoc) AsBool(name string) bool {
+	return o.v.AsBool(name)
+}
+
+func (o Value_sys_ODoc) AsValue(name string) exttinygo.TValue {
+	return o.v.AsValue(name)
+}
+
+func (o Value_sys_ODoc) Len() int {
+	return o.v.Len()
+}
+
+func (o Value_sys_ODoc) Is(iODoc ITypeODoc) bool {
+	return o.QName() == iODoc.QName()
+}
+
+type Value_sys_CDoc struct{
+	v exttinygo.TValue 
+}
+
+func (c Value_sys_CDoc) QName() exttinygo.QName {
+	return c.v.AsQName("sys.QName")
+}
+
+func (c Value_sys_CDoc) AsQName() exttinygo.QName {
+	return c.v.AsQName("sys.QName")
+}
+
+func (c Value_sys_CDoc) Get_sys_ID() ID {
+	return ID(c.v.AsInt64("sys.ID"))
+}
+
+func (c Value_sys_CDoc) AsInt64(name string) int64 {
+	return c.v.AsInt64(name)
+}
+
+func (c Value_sys_CDoc) AsInt32(name string) int32 {
+	return c.v.AsInt32(name)
+}
+
+func (c Value_sys_CDoc) AsFloat32(name string) float32 {
+	return c.v.AsFloat32(name)
+}
+
+func (c Value_sys_CDoc) AsFloat64(name string) float64 {
+	return c.v.AsFloat64(name)
+}
+
+func (c Value_sys_CDoc) AsString(name string) string {
+	return c.v.AsString(name)
+}
+
+func (c Value_sys_CDoc) AsBytes(name string) []byte {
+	return c.v.AsBytes(name)
+}
+
+func (c Value_sys_CDoc) AsBool(name string) bool {
+	return c.v.AsBool(name)
+}
+
+func (c Value_sys_CDoc) AsValue(name string) exttinygo.TValue {
+	return c.v.AsValue(name)
+}
+
+func (c Value_sys_CDoc) Len() int {
+	return c.v.Len()
+}
+
+func (c Value_sys_CDoc) Is(iCDoc ITypeCDoc) bool {
+	return c.QName() == iCDoc.QName()
+}
+
+type Value_sys_WDoc struct{
+	v exttinygo.TValue 
+}
+
+func (w Value_sys_WDoc) QName() exttinygo.QName {
+	return w.v.AsQName("sys.QName")
+}
+
+func (w Value_sys_WDoc) AsQName() exttinygo.QName {
+	return w.v.AsQName("sys.QName")
+}
+
+func (w Value_sys_WDoc) Get_sys_ID() ID {
+	return ID(w.v.AsInt64("sys.ID"))
+}
+
+func (w Value_sys_WDoc) AsInt64(name string) int64 {
+	return w.v.AsInt64(name)
+}
+
+func (w Value_sys_WDoc) AsInt32(name string) int32 {
+	return w.v.AsInt32(name)
+}
+
+func (w Value_sys_WDoc) AsFloat32(name string) float32 {
+	return w.v.AsFloat32(name)
+}
+
+func (w Value_sys_WDoc) AsFloat64(name string) float64 {
+	return w.v.AsFloat64(name)
+}
+
+func (w Value_sys_WDoc) AsString(name string) string {
+	return w.v.AsString(name)
+}
+
+func (w Value_sys_WDoc) AsBytes(name string) []byte {
+	return w.v.AsBytes(name)
+}
+
+func (w Value_sys_WDoc) AsBool(name string) bool {
+	return w.v.AsBool(name)
+}
+
+func (w Value_sys_WDoc) AsValue(name string) exttinygo.TValue {
+	return w.v.AsValue(name)
+}
+
+func (w Value_sys_WDoc) Len() int {
+	return w.v.Len()
+}
+
+func (w Value_sys_WDoc) Is(iWDoc ITypeWDoc) bool {
+	return w.QName() == iWDoc.QName()
+}
+
+type Value_sys_CRecord struct{
+	v exttinygo.TValue 
+}
+
+func (cr Value_sys_CRecord) QName() exttinygo.QName {
+	return cr.v.AsQName("sys.QName")
+}
+
+func (cr Value_sys_CRecord) AsQName() exttinygo.QName {
+	return cr.v.AsQName("sys.QName")
+}
+
+func (cr Value_sys_CRecord) Get_sys_ID() ID {
+	return ID(cr.v.AsInt64("sys.ID"))
+}
+
+func (cr Value_sys_CRecord) AsInt64(name string) int64 {
+	return cr.v.AsInt64(name)
+}
+
+func (cr Value_sys_CRecord) AsInt32(name string) int32 {
+	return cr.v.AsInt32(name)
+}
+
+func (cr Value_sys_CRecord) AsFloat32(name string) float32 {
+	return cr.v.AsFloat32(name)
+}
+
+func (cr Value_sys_CRecord) AsFloat64(name string) float64 {
+	return cr.v.AsFloat64(name)
+}
+
+func (cr Value_sys_CRecord) AsString(name string) string {
+	return cr.v.AsString(name)
+}
+
+func (cr Value_sys_CRecord) AsBytes(name string) []byte {
+	return cr.v.AsBytes(name)
+}
+
+func (cr Value_sys_CRecord) AsBool(name string) bool {
+	return cr.v.AsBool(name)
+}
+
+func (cr Value_sys_CRecord) AsValue(name string) exttinygo.TValue {
+	return cr.v.AsValue(name)
+}
+
+func (cr Value_sys_CRecord) Len() int {
+	return cr.v.Len()
+}
+
+func (cr Value_sys_CRecord) Is(iCRecord ITypeCRecord) bool {
+	return cr.QName() == iCRecord.QName()
+}
+
+type Value_sys_WRecord struct{
+	v exttinygo.TValue 
+}
+
+func (wr Value_sys_WRecord) QName() exttinygo.QName {
+	return wr.v.AsQName("sys.QName")
+}
+
+func (wr Value_sys_WRecord) AsQName() exttinygo.QName {
+	return wr.v.AsQName("sys.QName")
+}
+
+func (wr Value_sys_WRecord) Get_sys_ID() ID {
+	return ID(wr.v.AsInt64("sys.ID"))
+}
+
+func (wr Value_sys_WRecord) AsInt64(name string) int64 {
+	return wr.v.AsInt64(name)
+}
+
+func (wr Value_sys_WRecord) AsInt32(name string) int32 {
+	return wr.v.AsInt32(name)
+}
+
+func (wr Value_sys_WRecord) AsFloat32(name string) float32 {
+	return wr.v.AsFloat32(name)
+}
+
+func (wr Value_sys_WRecord) AsFloat64(name string) float64 {
+	return wr.v.AsFloat64(name)
+}
+
+func (wr Value_sys_WRecord) AsString(name string) string {
+	return wr.v.AsString(name)
+}
+
+func (wr Value_sys_WRecord) AsBytes(name string) []byte {
+	return wr.v.AsBytes(name)
+}
+
+func (wr Value_sys_WRecord) AsBool(name string) bool {
+	return wr.v.AsBool(name)
+}
+
+func (wr Value_sys_WRecord) AsValue(name string) exttinygo.TValue {
+	return wr.v.AsValue(name)
+}
+
+func (wr Value_sys_WRecord) Len() int {
+	return wr.v.Len()
+}
+
+func (wr Value_sys_WRecord) Is(iWRecord ITypeWRecord) bool {
+	return wr.QName() == iWRecord.QName()
+}
 `
 	gitignoreFileContent = `*
 `

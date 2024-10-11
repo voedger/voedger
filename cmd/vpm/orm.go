@@ -154,12 +154,12 @@ func generateOrmFiles(pkgData map[ormPackageInfo][]interface{}, dir string) erro
 		ormFiles = append(ormFiles, ormFilePath)
 	}
 
-	// generate sys.go file
-	sysFilePath := filepath.Join(dir, "sys.go")
+	// generate utils.go file
+	utilsFilePath := filepath.Join(dir, "utils.go")
 
-	ormFiles = append(ormFiles, sysFilePath)
-	if err := os.WriteFile(sysFilePath, []byte(sysContent), coreutils.FileMode_rw_rw_rw_); err != nil {
-		return fmt.Errorf(errInGeneratingOrmFileFormat, sysFilePath, err)
+	ormFiles = append(ormFiles, utilsFilePath)
+	if err := os.WriteFile(utilsFilePath, []byte(sysContent), coreutils.FileMode_rw_rw_rw_); err != nil {
+		return fmt.Errorf(errInGeneratingOrmFileFormat, utilsFilePath, err)
 	}
 
 	// generate .gitignore file

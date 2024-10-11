@@ -15,6 +15,14 @@ func (r {{.Type}}_{{.Package.Name}}_{{.Name}}) Descriptor() string {
 {{end}}
 
 {{if (eq .Type "WDoc")}}
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) IAmWDoc() {
+	return
+}
+
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) QName() exttinygo.QName {
+	return exttinygo.QName{FullPkgName: v.PkgPath(), Entity: v.Entity()}
+}
+
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
 	kb.PutInt64(FieldName_ID, int64(id))
@@ -92,6 +100,14 @@ func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Update() Intent_{{.Type}}_{
 {{end}}
 
 {{if (eq .Type "CDoc")}}
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) IAmCDoc() {
+	return
+}
+
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) QName() exttinygo.QName {
+	return exttinygo.QName{FullPkgName: v.PkgPath(), Entity: v.Entity()}
+}
+
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) MustGet(id ID) Value_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
 	kb.PutInt64(FieldName_ID, int64(id))
@@ -128,6 +144,14 @@ func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Update() Intent_{{.Type}}_{
 {{end}}
 
 {{if (eq .Type "ODoc")}}
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) IAmODoc() {
+	return
+}
+
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) QName() exttinygo.QName {
+	return exttinygo.QName{FullPkgName: v.PkgPath(), Entity: v.Entity()}
+}
+
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
 	kb.PutInt64(FieldName_ID, int64(id))
@@ -275,14 +299,16 @@ func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Cmd_{{.Name}}
 
 {{if (doesTriggerOnCUD .)}}
 
-func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Cuds_{{.Package.Name}}_{{.Name}}() iter.Seq[Value_{{.Type}}_{{.Package.Name}}_{{.Name}}] {
+func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) CUDs_{{.Package.Name}}_{{.Name}}() iter.Seq[Value_{{.Type}}_{{.Package.Name}}_{{.Name}}] {
 	return func(yield func(Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) bool) {
 		cudsValue := p.event.AsValue("CUDs")
 		for i := 0; i < cudsValue.Len(); i++ {
 			cudValue := cudsValue.GetAsValue(i)
 			cudQName := cudValue.AsQName("QName")
-			if cudQName.FullPkgName != Package_{{.EventItem.Package.Name}}.{{.EventItem.Type}}_{{.EventItem.Name}}.PkgPath() || cudQName.Entity != Package_{{.EventItem.Package.Name}}.{{.EventItem.Type}}_{{.EventItem.Name}}.Entity() {
-				yield(Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: cudValue})
+			if cudQName.FullPkgName == Package_{{.EventItem.Package.Name}}.{{.EventItem.Type}}_{{.EventItem.Name}}.PkgPath() && cudQName.Entity == Package_{{.EventItem.Package.Name}}.{{.EventItem.Type}}_{{.EventItem.Name}}.Entity() {
+				if !yield(Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: cudValue}) {
+					return
+				}
 			}
 		}
 	}

@@ -78,7 +78,7 @@ func ProjectorFillPbillDates() {
 
 func ProjectorNewAbcItem() {
 	projector := orm.Package_air.Projector_NewAbcItem()
-	for cud := range projector.Cuds_air_Abc() {
+	for cud := range projector.CUDs_air_Abc() {
 		fmt.Println(cud.Get_Field1())
 	}
 }

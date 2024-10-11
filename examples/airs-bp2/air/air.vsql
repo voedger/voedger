@@ -53,5 +53,6 @@ WORKSPACE RestaurantWS (
         PROJECTOR FillPbillDates AFTER EXECUTE WITH PARAM ON (untill.pbill, untill.orders) INTENTS(View(PbillDates));
         -- CUD
         PROJECTOR NewAbcItem AFTER INSERT ON (Abc);
+        -- PROJECTOR NewPBill AFTER INSERT ON (untill.pbill); -- TODO: new case
     );
 )
