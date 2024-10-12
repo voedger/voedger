@@ -97,6 +97,10 @@ func newLimitedWriter(limit int) limitedWriter {
 	return limitedWriter{limit: limit}
 }
 
+func (w *limitedWriter) Reset() {
+	w.buf = w.buf[:0]
+}
+
 func (w *limitedWriter) Write(p []byte) (n int, err error) {
 	if len(w.buf)+len(p) > w.limit {
 		w.buf = append(w.buf, p[:w.limit-len(w.buf)]...)
@@ -415,6 +419,8 @@ func (f *wazeroExtEngine) invoke(ctx context.Context, extension appdef.FullQName
 	for i := range f.pkg.allocatedBufs {
 		f.pkg.allocatedBufs[i].offs = 0 // reuse pre-allocated memory
 	}
+
+	f.pkg.stdout.Reset()
 
 	begin := time.Now()
 
