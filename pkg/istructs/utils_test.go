@@ -191,10 +191,18 @@ func TestNullObject(t *testing.T) {
 
 	// Should not be called
 	{
-		null.Containers(nil)
-		null.Children(appdef.NullName, nil)
-		null.RecordIDs(true, nil)
-		null.FieldNames(nil)
+		for range null.Containers {
+			require.Fail("null.Containers should be empty")
+		}
+		for range null.Children(appdef.NullName) {
+			require.Fail("null.Children should be empty")
+		}
+		for range null.RecordIDs(true) {
+			require.Fail("null.RecordIDs should be empty")
+		}
+		for range null.FieldNames {
+			require.Fail("null.FieldNames should be empty")
+		}
 	}
 
 	t.Run("IRecord fields", func(t *testing.T) {

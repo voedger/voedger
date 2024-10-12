@@ -410,6 +410,9 @@ var defaultACL = ACL{
 				qNameQryGetAllUPPayoutTransfers,
 				// https://dev.untill.com/projects/#!711418
 				qNameQryGetDailyUPReports,
+				// https://dev.untill.com/projects/#!710982
+				qNameQryGetUPVATTransfers,
+				qNameQryGetUPBeneficiaryVATDebts,
 			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsManager}}},
 		},

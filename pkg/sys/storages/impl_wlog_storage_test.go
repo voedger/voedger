@@ -43,7 +43,7 @@ func (e *mockWLogEvent) ArgumentObject() istructs.IObject {
 	return e.Called().Get(0).(istructs.IObject)
 }
 func (e *mockWLogEvent) Bytes() []byte { return e.Called().Get(0).([]byte) }
-func (e *mockWLogEvent) CUDs(cb func(rec istructs.ICUDRow)) {
+func (e *mockWLogEvent) CUDs(cb func(rec istructs.ICUDRow) bool) {
 	e.Called(cb)
 }
 func (e *mockWLogEvent) RegisteredAt() istructs.UnixMilli {
@@ -126,7 +126,7 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		require := require.New(t)
 		event := new(mockWLogEvent)
 		event.On("CUDs", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(rec istructs.ICUDRow))
+			cb := args.Get(0).(func(rec istructs.ICUDRow) bool)
 			cb(new(mockCUDRow))
 		})
 		events := &mockEvents{}

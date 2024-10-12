@@ -306,7 +306,9 @@ func Test_NewAppStructs(t *testing.T) {
 			require.Equal(id, str.ClusterAppID())
 			require.Equal(wsCount, str.NumAppWorkspaces())
 
-			str.Resources().Resources(func(resName appdef.QName) { require.Fail("unexpected resource", resName) })
+			for resName := range str.Resources().Resources {
+				require.Fail("unexpected resource", resName)
+			}
 			require.Empty(str.SyncProjectors())
 			require.Empty(str.AsyncProjectors())
 			require.Empty(str.CUDValidators())

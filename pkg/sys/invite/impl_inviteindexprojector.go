@@ -5,7 +5,6 @@
 package invite
 
 import (
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
 )
@@ -18,9 +17,9 @@ func syncProjectorInviteIndex() istructs.Projector {
 }
 
 var inviteIndexProjector = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+	for rec := range event.CUDs {
 		if rec.QName() != qNameCDocInvite {
-			return nil
+			continue
 		}
 
 		skbViewInviteIndex, err := s.KeyBuilder(sys.Storage_View, qNameViewInviteIndex)
@@ -36,7 +35,6 @@ var inviteIndexProjector = func(event istructs.IPLogEvent, s istructs.IState, in
 		}
 
 		svViewInviteIndex.PutRecordID(field_InviteID, rec.ID())
-
-		return nil
-	})
+	}
+	return nil
 }

@@ -66,9 +66,9 @@ func (v *eventValue) AsEvent(string) istructs.IDbEvent { return v.event }
 func (v *eventValue) AsValue(name string) istructs.IStateValue {
 	if name == sys.Storage_Event_Field_CUDs {
 		sv := &cudsValue{}
-		v.event.CUDs(func(rec istructs.ICUDRow) {
+		for rec := range v.event.CUDs {
 			sv.cuds = append(sv.cuds, rec)
-		})
+		}
 		return sv
 	}
 	if name == sys.Storage_Event_Field_Error {

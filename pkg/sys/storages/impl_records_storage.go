@@ -320,6 +320,4 @@ func (v *recordsValue) AsRecordID(name string) istructs.RecordID {
 	return v.record.AsRecordID(name)
 }
 func (v *recordsValue) AsRecord(string) (record istructs.IRecord) { return v.record }
-func (v *recordsValue) FieldNames(cb func(fieldName string)) {
-	v.record.FieldNames(cb)
-}
+func (v *recordsValue) FieldNames(cb func(fieldName string) bool) { v.record.FieldNames(cb) }

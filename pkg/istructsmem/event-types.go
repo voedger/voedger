@@ -287,7 +287,7 @@ func (ev *eventType) ArgumentObject() istructs.IObject {
 }
 
 // istructs.IAbstractEvent.CUDs
-func (ev *eventType) CUDs(cb func(rec istructs.ICUDRow)) {
+func (ev *eventType) CUDs(cb func(rec istructs.ICUDRow) bool) {
 	ev.cud.enumRecs(cb)
 }
 
@@ -447,13 +447,17 @@ func (cud *cudType) empty() bool {
 }
 
 // enumRecs: enumerates changes as IRecords
-func (cud *cudType) enumRecs(cb func(rec istructs.ICUDRow)) {
+func (cud *cudType) enumRecs(cb func(rec istructs.ICUDRow) bool) {
 	for _, rec := range cud.creates {
-		cb(rec)
+		if !cb(rec) {
+			return
+		}
 	}
 
 	for _, rec := range cud.updates {
-		cb(&rec.changes)
+		if !cb(&rec.changes) {
+			return
+		}
 	}
 }
 
@@ -493,15 +497,15 @@ func (cud *cudType) regenerateIDsPlan(generator istructs.IIDGenerator) (newIDs n
 func regenerateIDsInRecord(rec *recordType, newIDs newIDsPlanType) (err error) {
 	changes := false
 
-	rec.RecordIDs(false, func(name string, value istructs.RecordID) {
+	for name, value := range rec.RecordIDs(false) {
 		if !value.IsRaw() {
-			return
+			continue
 		}
 		if id, ok := newIDs[value]; ok {
 			rec.PutRecordID(name, id)
 			changes = true
 		}
-	})
+	}
 	if changes {
 		// rebuild record to apply changes to dyno-buffer
 		err = rec.build()
@@ -513,15 +517,15 @@ func regenerateIDsInRecord(rec *recordType, newIDs newIDsPlanType) (err error) {
 func regenerateIDsInUpdateRecord(rec *updateRecType, newIDs newIDsPlanType) (err error) {
 	changes := false
 
-	rec.changes.RecordIDs(false, func(name string, value istructs.RecordID) {
+	for name, value := range rec.changes.RecordIDs(false) {
 		if !value.IsRaw() {
-			return
+			continue
 		}
 		if id, ok := newIDs[value]; ok {
 			rec.changes.PutRecordID(name, id)
 			changes = true
 		}
-	})
+	}
 
 	if changes {
 		// rebuild record (changes and result) to apply changes to dyno-buffer
@@ -781,12 +785,12 @@ func (o *objectType) regenerateIDs(generator istructs.IIDGenerator) (err error) 
 			}
 
 			changes := false
-			c.RecordIDs(false, func(name string, id istructs.RecordID) {
+			for name, id := range c.RecordIDs(false) {
 				if id.IsRaw() {
 					c.PutRecordID(name, newIDs[id])
 					changes = true
 				}
-			})
+			}
 			if changes {
 				// rebuild object to apply changes in dyno-buffer
 				err = c.build()
@@ -855,23 +859,33 @@ func (o *objectType) ChildBuilder(containerName string) istructs.IObjectBuilder 
 }
 
 // istructs.IObject.Children
-func (o *objectType) Children(container string, cb func(c istructs.IObject)) {
-	for _, c := range o.child {
-		if (container == "") || (container == c.Container()) {
-			cb(c)
+func (o *objectType) Children(container ...string) func(func(istructs.IObject) bool) {
+	c := make(map[string]bool, len(container))
+	for _, cont := range container {
+		c[cont] = true
+	}
+	return func(cb func(istructs.IObject) bool) {
+		for _, child := range o.child {
+			if len(c) == 0 || c[child.Container()] {
+				if !cb(child) {
+					break
+				}
+			}
 		}
 	}
 }
 
 // istructs.IObject.Containers
-func (o *objectType) Containers(cb func(container string)) {
+func (o *objectType) Containers(cb func(string) bool) {
 	duplicates := make(map[string]bool, len(o.child))
 	for _, c := range o.child {
 		name := c.Container()
 		if duplicates[name] {
 			continue
 		}
-		cb(name)
+		if !cb(name) {
+			break
+		}
 		duplicates[name] = true
 	}
 }

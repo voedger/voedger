@@ -247,7 +247,7 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 		if err := resolveInCtx(*grant.AllCommandsWithTag, c, func(tag *TagStmt, tagPkg *PackageSchemaAST) error {
 			grant.ops = append(grant.ops, appdef.OperationKind_Execute)
 			iterateWorkspaceStmts(c, false, func(cmd *CommandStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
-				if hasTags(cmd.With, tag, tagPkg, c) {
+				if hasTags(cmd.With, tag, c) {
 					grant.on = append(grant.on, schema.NewQName(cmd.Name))
 				}
 			})
@@ -270,7 +270,7 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 		if err := resolveInCtx(*grant.AllQueriesWithTag, c, func(tag *TagStmt, tagPkg *PackageSchemaAST) error {
 			grant.ops = append(grant.ops, appdef.OperationKind_Execute)
 			iterateWorkspaceStmts(c, false, func(query *QueryStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
-				if hasTags(query.With, tag, tagPkg, c) {
+				if hasTags(query.With, tag, c) {
 					grant.on = append(grant.on, schema.NewQName(query.Name))
 				}
 			})
@@ -293,7 +293,7 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 		if err := resolveInCtx(*grant.AllViewsWithTag, c, func(tag *TagStmt, tagPkg *PackageSchemaAST) error {
 			grant.ops = append(grant.ops, appdef.OperationKind_Select)
 			iterateWorkspaceStmts(c, false, func(view *ViewStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
-				if hasTags(view.With, tag, tagPkg, c) {
+				if hasTags(view.With, tag, c) {
 					grant.on = append(grant.on, schema.NewQName(view.Name))
 				}
 			})
@@ -324,7 +324,7 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 				}
 			}
 			iterateWorkspaceStmts(c, false, func(tbl *TableStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
-				if hasTags(tbl.With, tag, tagPkg, c) {
+				if hasTags(tbl.With, tag, c) {
 					grant.on = append(grant.on, schema.NewQName(tbl.Name))
 				}
 			})
@@ -403,12 +403,12 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 
 }
 
-func hasTags(with []WithItem, tag *TagStmt, tagPkg *PackageSchemaAST, c *iterateCtx) bool {
+func hasTags(with []WithItem, tag *TagStmt, c *iterateCtx) bool {
 	for _, w := range with {
 		for _, t := range w.Tags {
 			if t.Name == tag.Name {
-				pkg, _ := findPackage(t.Package, c)
-				if pkg == tagPkg {
+				withTag, _, err := lookupInCtx[*TagStmt](t, c)
+				if err == nil && withTag == tag {
 					return true
 				}
 			}
