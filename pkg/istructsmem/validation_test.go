@@ -301,10 +301,10 @@ func Test_ValidEventArgs(t *testing.T) {
 					d, err := doc.Build()
 					require.NoError(err)
 					cnt := 0
-					d.Children("child", func(c istructs.IObject) {
+					for c := range d.Children("child") {
 						cnt++
 						require.EqualValues(1, c.AsRecordID(appdef.SystemField_ParentID))
-					})
+					}
 					require.Equal(1, cnt)
 				})
 			})

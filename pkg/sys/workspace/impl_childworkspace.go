@@ -11,7 +11,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -68,10 +67,10 @@ func execCmdInitChildWorkspace(args istructs.ExecCommandArgs) (err error) {
 	return err
 }
 
-var childWorkspaceIdxProjector = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+var childWorkspaceIdxProjector = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
+	for rec := range event.CUDs {
 		if rec.QName() != authnz.QNameCDocChildWorkspace || !rec.IsNew() {
-			return nil
+			continue
 		}
 
 		kb, err := s.KeyBuilder(sys.Storage_View, QNameViewChildWorkspaceIdx)
@@ -87,8 +86,8 @@ var childWorkspaceIdxProjector = func(event istructs.IPLogEvent, s istructs.ISta
 			return err
 		}
 		vb.PutInt64(Field_ChildWorkspaceID, int64(rec.ID()))
-		return nil
-	})
+	}
+	return nil
 }
 
 // targetApp/parentWSID/q.sys.QueryChildWorkspaceByName

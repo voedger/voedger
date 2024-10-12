@@ -74,7 +74,6 @@ func (sr *implIStatelessResources) AddProjectors(path string, projectors ...istr
 	sr.projectors[path] = append(sr.projectors[path], projectors...)
 }
 
-
 // Implements istructs.IResources
 type Resources map[appdef.QName]istructs.IResource
 
@@ -97,9 +96,11 @@ func (res Resources) QueryResource(name appdef.QName) istructs.IResource {
 }
 
 // Enumerates all application resources
-func (res Resources) Resources(enum func(appdef.QName)) {
+func (res Resources) Resources(enum func(appdef.QName) bool) {
 	for n := range res {
-		enum(n)
+		if !enum(n) {
+			break
+		}
 	}
 }
 

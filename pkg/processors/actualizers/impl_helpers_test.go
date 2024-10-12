@@ -39,7 +39,7 @@ func (e *plogEventMock) SaveCUDs() (err error)                { return nil }
 func (e *plogEventMock) Release()                             {}
 func (e *plogEventMock) Error() istructs.IEventError          { return nil }
 func (e *plogEventMock) QName() appdef.QName                  { return testQName }
-func (e *plogEventMock) CUDs(func(rec istructs.ICUDRow))      {}
+func (e *plogEventMock) CUDs(func(rec istructs.ICUDRow) bool) {}
 func (e *plogEventMock) RegisteredAt() istructs.UnixMilli     { return 0 }
 func (e *plogEventMock) Synced() bool                         { return false }
 func (e *plogEventMock) DeviceID() istructs.ConnectedDeviceID { return 0 }

@@ -107,21 +107,18 @@ func convert(doc istructs.IObject, appDef appdef.IAppDef, refs map[istructs.Reco
 		}
 		return true
 	}))
-	doc.Containers(func(container string) {
+	for container := range doc.Containers {
 		list := make([]interface{}, 0)
-		doc.Children(container, func(c istructs.IObject) {
+		for c := range doc.Children(container) {
 			var childObj map[string]interface{}
-			if err == nil {
-				childObj, err = convert(c.(*collectionObject), appDef, refs, doc.AsRecord().ID())
-				if err == nil {
-					list = append(list, childObj)
-				}
+			childObj, err = convert(c.(*collectionObject), appDef, refs, doc.AsRecord().ID())
+			if err != nil {
+				break
 			}
-		})
-		if container != "" {
-			obj[container] = list
+			list = append(list, childObj)
 		}
-	})
+		obj[container] = list
+	}
 
 	return obj, nil
 }

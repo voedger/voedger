@@ -29,19 +29,19 @@ func (m *MockCUDRow) AsString(name appdef.FieldName) string   { return m.Called(
 func (m *MockCUDRow) AsQName(name appdef.FieldName) appdef.QName {
 	return m.Called(name).Get(0).(appdef.QName)
 }
-func (m *MockCUDRow) AsBool(name appdef.FieldName) bool    { return m.Called(name).Get(0).(bool) }
-func (m *MockCUDRow) FieldNames(cb func(appdef.FieldName)) { m.Called(cb) }
-func (m *MockCUDRow) IsNew() bool                          { return m.Called().Get(0).(bool) }
-func (m *MockCUDRow) QName() appdef.QName                  { return m.Called().Get(0).(appdef.QName) }
-func (m *MockCUDRow) ID() istructs.RecordID                { return m.Called().Get(0).(istructs.RecordID) }
-func (m *MockCUDRow) ModifiedFields(cb func(fieldName appdef.FieldName, newValue interface{})) {
+func (m *MockCUDRow) AsBool(name appdef.FieldName) bool         { return m.Called(name).Get(0).(bool) }
+func (m *MockCUDRow) FieldNames(cb func(appdef.FieldName) bool) { m.Called(cb) }
+func (m *MockCUDRow) IsNew() bool                               { return m.Called().Get(0).(bool) }
+func (m *MockCUDRow) QName() appdef.QName                       { return m.Called().Get(0).(appdef.QName) }
+func (m *MockCUDRow) ID() istructs.RecordID                     { return m.Called().Get(0).(istructs.RecordID) }
+func (m *MockCUDRow) ModifiedFields(cb func(appdef.FieldName, interface{}) bool) {
 	m.Called(cb)
 }
 func (m *MockCUDRow) AsRecordID(name appdef.FieldName) istructs.RecordID {
 	return m.Called(name).Get(0).(istructs.RecordID)
 }
-func (m *MockCUDRow) RecordIDs(includeNulls bool, cb func(appdef.FieldName, istructs.RecordID)) {
-	m.Called(includeNulls, cb)
+func (m *MockCUDRow) RecordIDs(includeNulls bool) func(func(appdef.FieldName, istructs.RecordID) bool) {
+	return m.Called(includeNulls).Get(0).(func(func(appdef.FieldName, istructs.RecordID) bool))
 }
 
 type MockPLogEvent struct {
@@ -52,7 +52,7 @@ func (m *MockPLogEvent) ArgumentObject() istructs.IObject {
 	return m.Called().Get(0).(istructs.IObject)
 }
 func (m *MockPLogEvent) Bytes() []byte { return m.Called().Get(0).([]byte) }
-func (m *MockPLogEvent) CUDs(cb func(rec istructs.ICUDRow)) {
+func (m *MockPLogEvent) CUDs(cb func(rec istructs.ICUDRow) bool) {
 	m.Called(cb)
 }
 func (m *MockPLogEvent) RegisteredAt() istructs.UnixMilli {
@@ -82,19 +82,20 @@ func (m *MockObject) AsString(name appdef.FieldName) string   { return m.Called(
 func (m *MockObject) AsQName(name appdef.FieldName) appdef.QName {
 	return m.Called(name).Get(0).(appdef.QName)
 }
-func (m *MockObject) AsBool(name appdef.FieldName) bool    { return m.Called(name).Get(0).(bool) }
-func (m *MockObject) QName() appdef.QName                  { return m.Called().Get(0).(appdef.QName) }
-func (m *MockObject) AsRecord() istructs.IRecord           { return m.Called().Get(0).(istructs.IRecord) }
-func (m *MockObject) Containers(cb func(container string)) { m.Called(cb) }
-func (m *MockObject) FieldNames(cb func(appdef.FieldName)) { m.Called(cb) }
+func (m *MockObject) AsBool(name appdef.FieldName) bool         { return m.Called(name).Get(0).(bool) }
+func (m *MockObject) QName() appdef.QName                       { return m.Called().Get(0).(appdef.QName) }
+func (m *MockObject) AsRecord() istructs.IRecord                { return m.Called().Get(0).(istructs.IRecord) }
+func (m *MockObject) Containers(cb func(string) bool)           { m.Called(cb) }
+func (m *MockObject) FieldNames(cb func(appdef.FieldName) bool) { m.Called(cb) }
 func (m *MockObject) AsRecordID(name appdef.FieldName) istructs.RecordID {
 	return m.Called(name).Get(0).(istructs.RecordID)
 }
-func (m *MockObject) RecordIDs(includeNulls bool, cb func(appdef.FieldName, istructs.RecordID)) {
-	m.Called(includeNulls, cb)
+func (m *MockObject) RecordIDs(includeNulls bool) func(func(appdef.FieldName, istructs.RecordID) bool) {
+	return m.Called(includeNulls).Get(0).(func(func(appdef.FieldName, istructs.RecordID) bool))
 }
-func (m *MockObject) Children(container string, cb func(istructs.IObject)) {
-	m.Called(container, cb)
+func (m *MockObject) Children(container ...string) func(func(istructs.IObject) bool) {
+	args := m.Called(container)
+	return args.Get(0).(func(func(istructs.IObject) bool))
 }
 
 type MockState struct {
@@ -232,99 +233,51 @@ type MockStateValue struct {
 	mock.Mock
 }
 
-func (m *MockStateValue) AsInt32(name appdef.FieldName) int32 {
-	args := m.Called(name)
-	return args.Get(0).(int32)
-}
-func (m *MockStateValue) AsInt64(name appdef.FieldName) int64 {
-	args := m.Called(name)
-	return args.Get(0).(int64)
-}
+func (m *MockStateValue) AsInt32(name appdef.FieldName) int32 { return m.Called(name).Get(0).(int32) }
+func (m *MockStateValue) AsInt64(name appdef.FieldName) int64 { return m.Called(name).Get(0).(int64) }
 func (m *MockStateValue) AsFloat32(name appdef.FieldName) float32 {
-	args := m.Called(name)
-	return args.Get(0).(float32)
+	return m.Called(name).Get(0).(float32)
 }
 func (m *MockStateValue) AsFloat64(name appdef.FieldName) float64 {
-	args := m.Called(name)
-	return args.Get(0).(float64)
+	return m.Called(name).Get(0).(float64)
 }
-func (m *MockStateValue) AsBytes(name appdef.FieldName) []byte {
-	args := m.Called(name)
-	return args.Get(0).([]byte)
-}
+func (m *MockStateValue) AsBytes(name appdef.FieldName) []byte { return m.Called(name).Get(0).([]byte) }
 func (m *MockStateValue) AsString(name appdef.FieldName) string {
-	args := m.Called(name)
-	return args.Get(0).(string)
+	return m.Called(name).Get(0).(string)
 }
 func (m *MockStateValue) AsQName(name appdef.FieldName) appdef.QName {
-	args := m.Called(name)
-	return args.Get(0).(appdef.QName)
+	return m.Called(name).Get(0).(appdef.QName)
 }
-func (m *MockStateValue) AsBool(name appdef.FieldName) bool {
-	args := m.Called(name)
-	return args.Get(0).(bool)
-}
+func (m *MockStateValue) AsBool(name appdef.FieldName) bool { return m.Called(name).Get(0).(bool) }
 func (m *MockStateValue) AsRecordID(name appdef.FieldName) istructs.RecordID {
-	args := m.Called(name)
-	return args.Get(0).(istructs.RecordID)
+	return m.Called(name).Get(0).(istructs.RecordID)
 }
-func (m *MockStateValue) RecordIDs(includeNulls bool, cb func(appdef.FieldName, istructs.RecordID)) {
-	m.Called(includeNulls, cb)
+func (m *MockStateValue) RecordIDs(includeNulls bool) func(func(appdef.FieldName, istructs.RecordID) bool) {
+	return m.Called(includeNulls).Get(0).(func(func(appdef.FieldName, istructs.RecordID) bool))
 }
-func (m *MockStateValue) FieldNames(cb func(appdef.FieldName)) {
-	m.Called(cb)
-}
+func (m *MockStateValue) FieldNames(cb func(appdef.FieldName) bool) { m.Called(cb) }
 func (m *MockStateValue) AsRecord(name appdef.FieldName) istructs.IRecord {
-	args := m.Called(name)
-	return args.Get(0).(istructs.IRecord)
+	return m.Called(name).Get(0).(istructs.IRecord)
 }
 func (m *MockStateValue) AsEvent(name appdef.FieldName) istructs.IDbEvent {
-	args := m.Called(name)
-	return args.Get(0).(istructs.IDbEvent)
+	return m.Called(name).Get(0).(istructs.IDbEvent)
 }
 func (m *MockStateValue) AsValue(name string) istructs.IStateValue {
-	args := m.Called(name)
-	return args.Get(0).(istructs.IStateValue)
+	return m.Called(name).Get(0).(istructs.IStateValue)
 }
-func (m *MockStateValue) Length() int {
-	args := m.Called()
-	return args.Int(0)
-}
-func (m *MockStateValue) GetAsString(index int) string {
-	args := m.Called(index)
-	return args.Get(0).(string)
-}
-func (m *MockStateValue) GetAsBytes(index int) []byte {
-	args := m.Called(index)
-	return args.Get(0).([]byte)
-}
-func (m *MockStateValue) GetAsInt32(index int) int32 {
-	args := m.Called(index)
-	return args.Get(0).(int32)
-}
-func (m *MockStateValue) GetAsInt64(index int) int64 {
-	args := m.Called(index)
-	return args.Get(0).(int64)
-}
-func (m *MockStateValue) GetAsFloat32(index int) float32 {
-	args := m.Called(index)
-	return args.Get(0).(float32)
-}
-func (m *MockStateValue) GetAsFloat64(index int) float64 {
-	args := m.Called(index)
-	return args.Get(0).(float64)
-}
+func (m *MockStateValue) Length() int                    { return m.Called().Int(0) }
+func (m *MockStateValue) GetAsString(index int) string   { return m.Called(index).Get(0).(string) }
+func (m *MockStateValue) GetAsBytes(index int) []byte    { return m.Called(index).Get(0).([]byte) }
+func (m *MockStateValue) GetAsInt32(index int) int32     { return m.Called(index).Get(0).(int32) }
+func (m *MockStateValue) GetAsInt64(index int) int64     { return m.Called(index).Get(0).(int64) }
+func (m *MockStateValue) GetAsFloat32(index int) float32 { return m.Called(index).Get(0).(float32) }
+func (m *MockStateValue) GetAsFloat64(index int) float64 { return m.Called(index).Get(0).(float64) }
 func (m *MockStateValue) GetAsQName(index int) appdef.QName {
-	args := m.Called(index)
-	return args.Get(0).(appdef.QName)
+	return m.Called(index).Get(0).(appdef.QName)
 }
-func (m *MockStateValue) GetAsBool(index int) bool {
-	args := m.Called(index)
-	return args.Get(0).(bool)
-}
+func (m *MockStateValue) GetAsBool(index int) bool { return m.Called(index).Get(0).(bool) }
 func (m *MockStateValue) GetAsValue(index int) istructs.IStateValue {
-	args := m.Called(index)
-	return args.Get(0).(istructs.IStateValue)
+	return m.Called(index).Get(0).(istructs.IStateValue)
 }
 
 type MockStateValueBuilder struct {
@@ -393,14 +346,14 @@ type MockRawEvent struct {
 	mock.Mock
 }
 
-func (m *MockRawEvent) QName() appdef.QName                { return m.Called().Get(0).(appdef.QName) }
-func (m *MockRawEvent) ArgumentObject() istructs.IObject   { return m.Called().Get(0).(istructs.IObject) }
-func (m *MockRawEvent) CUDs(cb func(rec istructs.ICUDRow)) { m.Called(cb) }
-func (m *MockRawEvent) SyncedAt() istructs.UnixMilli       { return m.Called().Get(0).(istructs.UnixMilli) }
-func (m *MockRawEvent) Synced() bool                       { return m.Called().Bool(0) }
-func (m *MockRawEvent) PLogOffset() istructs.Offset        { return m.Called().Get(0).(istructs.Offset) }
-func (m *MockRawEvent) Workspace() istructs.WSID           { return m.Called().Get(0).(istructs.WSID) }
-func (m *MockRawEvent) WLogOffset() istructs.Offset        { return m.Called().Get(0).(istructs.Offset) }
+func (m *MockRawEvent) QName() appdef.QName                     { return m.Called().Get(0).(appdef.QName) }
+func (m *MockRawEvent) ArgumentObject() istructs.IObject        { return m.Called().Get(0).(istructs.IObject) }
+func (m *MockRawEvent) CUDs(cb func(rec istructs.ICUDRow) bool) { m.Called(cb) }
+func (m *MockRawEvent) SyncedAt() istructs.UnixMilli            { return m.Called().Get(0).(istructs.UnixMilli) }
+func (m *MockRawEvent) Synced() bool                            { return m.Called().Bool(0) }
+func (m *MockRawEvent) PLogOffset() istructs.Offset             { return m.Called().Get(0).(istructs.Offset) }
+func (m *MockRawEvent) Workspace() istructs.WSID                { return m.Called().Get(0).(istructs.WSID) }
+func (m *MockRawEvent) WLogOffset() istructs.Offset             { return m.Called().Get(0).(istructs.Offset) }
 func (m *MockRawEvent) RegisteredAt() istructs.UnixMilli {
 	return m.Called().Get(0).(istructs.UnixMilli)
 }
@@ -427,13 +380,13 @@ func (m *MockKey) AsString(name appdef.FieldName) string   { return m.Called(nam
 func (m *MockKey) AsQName(name appdef.FieldName) appdef.QName {
 	return m.Called(name).Get(0).(appdef.QName)
 }
-func (m *MockKey) AsBool(name appdef.FieldName) bool    { return m.Called(name).Get(0).(bool) }
-func (m *MockKey) FieldNames(cb func(appdef.FieldName)) { m.Called(cb) }
+func (m *MockKey) AsBool(name appdef.FieldName) bool         { return m.Called(name).Get(0).(bool) }
+func (m *MockKey) FieldNames(cb func(appdef.FieldName) bool) { m.Called(cb) }
 func (m *MockKey) AsRecordID(name appdef.FieldName) istructs.RecordID {
 	return m.Called(name).Get(0).(istructs.RecordID)
 }
-func (m *MockKey) RecordIDs(includeNulls bool, cb func(appdef.FieldName, istructs.RecordID)) {
-	m.Called(includeNulls, cb)
+func (m *MockKey) RecordIDs(includeNulls bool) func(func(appdef.FieldName, istructs.RecordID) bool) {
+	return m.Called(includeNulls).Get(0).(func(func(appdef.FieldName, istructs.RecordID) bool))
 }
 
 type MockIntents struct {
