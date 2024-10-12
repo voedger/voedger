@@ -134,18 +134,22 @@ func getCurrentWorkspace(ictx *iterateCtx) *WorkspaceStmt {
 
 func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *RateStmt | *TagStmt | *ProjectorStmt | *JobStmt |
 	*WorkspaceStmt | *ViewStmt | *StorageStmt | *LimitStmt | *QueryStmt | *RoleStmt | *WsDescriptorStmt | *DeclareStmt](fn DefQName, ictx *iterateCtx) (stmtType, *PackageSchemaAST, error) {
-	schema, err := getTargetSchema(fn, ictx)
+	stmtSchema, err := getTargetSchema(fn, ictx)
+	lookingUpInSchema := stmtSchema
+
 	if err != nil {
 		return nil, nil, err
 	}
 
 	var item stmtType
+	var schema *PackageSchemaAST = nil
 	var lookupCallback func(stmt interface{})
 	lookupCallback = func(stmt interface{}) {
 		if f, ok := stmt.(stmtType); ok && item == nil {
 			named := any(f).(INamedStatement)
 			if named.GetName() == string(fn.Name) {
 				item = f
+				schema = lookingUpInSchema
 			}
 		}
 		if collection, ok := stmt.(IStatementCollection); ok && item == nil {
@@ -170,7 +174,8 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 			var value interface{} = item
 			if _, ok := value.(*WorkspaceStmt); !ok { //  when looking for something else than a workspace, look in the inherited workspaces
 				for _, dq := range ws.Inherits {
-					err := resolveInCtx[*WorkspaceStmt](dq, ictx, func(f *WorkspaceStmt, schema *PackageSchemaAST) error {
+					err := resolveInCtx[*WorkspaceStmt](dq, ictx, func(f *WorkspaceStmt, wSchema *PackageSchemaAST) error {
+						lookingUpInSchema = wSchema
 						f.Iterate(lookupCallback)
 						return nil
 					})
@@ -184,6 +189,7 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 						return nil, nil, err
 					}
 					if sysWorkspace != nil {
+						lookingUpInSchema = ictx.app.Packages[appdef.SysPackage]
 						sysWorkspace.Iterate(lookupCallback)
 					}
 				}
@@ -193,19 +199,20 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 
 	// Look in the package
 	if item == nil {
-		schema.Ast.Iterate(lookupCallback)
+		lookingUpInSchema = stmtSchema
+		lookingUpInSchema.Ast.Iterate(lookupCallback)
 	}
 
 	// Look in the sys package
 	if item == nil && maybeSysPkg(fn.Package) { // Look in sys pkg
-		schema = ictx.app.Packages[appdef.SysPackage]
-		if schema == nil {
+		lookingUpInSchema = ictx.app.Packages[appdef.SysPackage]
+		if lookingUpInSchema == nil {
 			return nil, nil, ErrCouldNotImport(appdef.SysPackage)
 		}
 		iterPkg := func(coll IStatementCollection) {
 			coll.Iterate(lookupCallback)
 		}
-		iterPkg(schema.Ast)
+		iterPkg(lookingUpInSchema.Ast)
 	}
 	return item, schema, nil
 }
