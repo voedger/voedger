@@ -417,7 +417,11 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TAG WithoutAuthTag;
-	ROLE Anyone;
+	TAG AllowedForGuestTag;
+
+	ROLE Anyone; -- assigned in any case regardless of whether the token is provided or not
+	ROLE Guest;  -- assigned if the token is not provided
+	ROLE WorkspaceOwner; -- assigned if the user owns the current workspace
 
 	GRANT ALL ON ALL TABLES WITH TAG WithoutAuthTag TO Anyone;
 
@@ -431,4 +435,13 @@ ABSTRACT WORKSPACE Workspace (
 	-- GRANT EXECUTE ON ALL COMMANDS WITH TAG WithoutAuthTag TO Anyone;
 
 	GRANT SELECT ON ALL VIEWS WITH TAG WithoutAuthTag TO Anyone;
+
+
+	-- everything is allowed to WorkspaceOwner
+	GRANT ALL ON ALL TABLES TO WorkspaceOwner;
+	GRANT SELECT ON ALL QUERIES TO WorkspaceOwner;
+	GRANT INSERT ON ALL COMMANDS TO WorkspaceOwner;
+	GRANT SELECT ON ALL VIEWS TO WorkspaceOwner;
+
+	-- deny all on few QNames from all
 );
