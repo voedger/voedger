@@ -8,10 +8,12 @@ package actualizers
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -36,7 +38,12 @@ func (s *asyncActualizerContextState) error() error {
 	return s.err
 }
 
-func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames map[appdef.QName][]appdef.ProjectorEventKind, appDef appdef.IAppDef) bool {
+func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames map[appdef.QName][]appdef.ProjectorEventKind, appDef appdef.IAppDef, projQName appdef.QName) (ok bool) {
+	defer func() {
+		if ok && logger.IsVerbose() {
+			logger.Verbose(fmt.Sprintf("projector %s is acceptable to event %s", projQName, event.QName()))
+		}
+	}()
 	switch event.QName() {
 	case istructs.QNameForError:
 		return wantErrors
