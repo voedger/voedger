@@ -162,6 +162,8 @@ type VVMConfig struct {
 	FederationURL *url.URL
 
 	// used in tests only
+	// normally is empty in VIT. coretuils.IsTest -> UUID is added to the keyspace name at istorage/provider/Provide()
+	// need to e.g. test VVM restart preserving storage
 	KeyspaceNameSuffix string
 }
 
