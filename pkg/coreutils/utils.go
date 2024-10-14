@@ -13,7 +13,6 @@ import (
 	"strings"
 	"syscall"
 	"testing"
-	"time"
 
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -23,16 +22,6 @@ func IsBlank(str string) bool {
 	return len(strings.TrimSpace(str)) == 0
 }
 
-// https://github.com/golang/go/issues/27169
-func ResetTimer(t *time.Timer, timeout time.Duration) {
-	if !t.Stop() {
-		select {
-		case <-t.C:
-		default:
-		}
-	}
-	t.Reset(timeout)
-}
 func IsTest() bool {
 	return testing.Testing() || IsDebug()
 }
