@@ -2332,6 +2332,40 @@ func Test_Grants(t *testing.T) {
 			);`, "file.vsql:9:5: GRANT follows REVOKE in the same container")
 	})
 
+	t.Run("GRANT to Tag declared in sys workspace", func(t *testing.T) {
+		schema, err := require.AppSchema(`APPLICATION test();
+			WORKSPACE AppWorkspaceWS (
+				EXTENSION ENGINE BUILTIN (
+					COMMAND CreateLogin1() WITH Tags=(WithoutAuthTag);
+					COMMAND CreateLogin2() WITH Tags=(sys.WithoutAuthTag);
+				);				
+				GRANT INSERT ON ALL COMMANDS WITH TAG WithoutAuthTag TO sys.Anyone;
+			);
+		`)
+		require.NoError(err)
+		builder := appdef.New()
+		err = BuildAppDefs(schema, builder)
+		require.NoError(err)
+
+		app, err := builder.Build()
+		require.NoError(err)
+		var numACLs int
+
+		// table
+		app.ACL(func(i appdef.IACLRule) bool {
+			require.Len(i.Ops(), 1)
+			require.Equal(appdef.OperationKind_Execute, i.Ops()[0])
+			require.Equal(appdef.PolicyKind_Allow, i.Policy())
+			require.Len(i.Resources().On(), 2)
+			require.Equal("pkg.CreateLogin1", i.Resources().On()[0].String())
+			require.Equal("pkg.CreateLogin2", i.Resources().On()[1].String())
+			require.Equal("sys.Anyone", i.Principal().QName().String())
+			numACLs++
+			return true
+		})
+		require.Equal(1, numACLs)
+	})
+
 }
 
 func Test_Grants_Inherit(t *testing.T) {

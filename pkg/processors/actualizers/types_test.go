@@ -27,14 +27,16 @@ func TestProjector_isAcceptable(t *testing.T) {
 		event.On("QName").Return(eventQName)
 		event.On("ArgumentObject").Return(&coreutils.TestObject{Name: eventArgsQName})
 		event.On("CUDs", mock.Anything).Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(cb istructs.ICUDRow))
+			cb := args.Get(0).(func(cb istructs.ICUDRow) bool)
 			for cudQName, cud := range cuds {
 				cudRow := &coreutils.TestObject{
 					Name:   cudQName,
 					Data:   cud.data,
 					IsNew_: cud.isNew,
 				}
-				cb(cudRow)
+				if !cb(cudRow) {
+					break
+				}
 			}
 		})
 		return event
@@ -330,7 +332,7 @@ func TestProjector_isAcceptable(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			for _, event := range test.events {
-				require.Equal(test.want, isAcceptable(event, test.wantErrors, test.triggeringQNames, appDef))
+				require.Equal(test.want, isAcceptable(event, test.wantErrors, test.triggeringQNames, appDef, appdef.NewQName(appdef.SysPackage, "testProj")))
 			}
 		})
 	}
@@ -343,14 +345,16 @@ func TestProjector_isAcceptableGlobalDocs(t *testing.T) {
 		event.On("QName").Return(eventQName)
 		event.On("ArgumentObject").Return(&coreutils.TestObject{Name: eventArgsQName})
 		event.On("CUDs", mock.Anything).Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(cb istructs.ICUDRow))
+			cb := args.Get(0).(func(cb istructs.ICUDRow) bool)
 			for cudQName, cud := range cuds {
 				cudRow := &coreutils.TestObject{
 					Name:   cudQName,
 					Data:   cud.data,
 					IsNew_: cud.isNew,
 				}
-				cb(cudRow)
+				if !cb(cudRow) {
+					break
+				}
 			}
 		})
 		return event
@@ -443,7 +447,7 @@ func TestProjector_isAcceptableGlobalDocs(t *testing.T) {
 				})
 				require.Equal(want, isAcceptable(event, false, map[appdef.QName][]appdef.ProjectorEventKind{
 					globalQName: {appdef.ProjectorEventKind_Insert},
-				}, appDef), fmt.Sprintf("global %s, cud %s", globalQName, eventCUDQName))
+				}, appDef, appdef.NewQName(appdef.SysPackage, "testProj")), fmt.Sprintf("global %s, cud %s", globalQName, eventCUDQName))
 			}
 		}
 	}

@@ -209,7 +209,7 @@ type IResources interface {
 	QueryResource(resource appdef.QName) (r IResource)
 
 	// Enumerates all application resources
-	Resources(func(resName appdef.QName))
+	Resources(func(appdef.QName) bool)
 }
 
 // Same as itokens.ITokens but works for App specified in IAppTokensFactory

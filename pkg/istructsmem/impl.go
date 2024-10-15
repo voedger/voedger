@@ -228,7 +228,7 @@ func (app *appStructsType) DescribePackageNames() (names []string) {
 	return names
 }
 
-// istructs.IAppStructs.DescribePoackage: Describe package content
+// istructs.IAppStructs.DescribePackage: Describe package content
 func (app *appStructsType) DescribePackage(name string) interface{} {
 	return app.describe().Packages[name]
 }

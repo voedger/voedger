@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/extensionpoints"
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -222,10 +221,10 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 	cfg.AddSyncProjectors(
 		istructs.Projector{
 			Name: appdef.NewQName(app1PkgName, "ApplyCategoryIdx"),
-			Func: func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
-				return iterate.ForEachError(event.CUDs, func(cud istructs.ICUDRow) error {
+			Func: func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) error {
+				for cud := range event.CUDs {
 					if cud.QName() != QNameApp1_CDocCategory {
-						return nil
+						continue
 					}
 					kb, err := st.KeyBuilder(sys.Storage_View, qNameViewCategoryIdx)
 					if err != nil {
@@ -239,8 +238,8 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 					}
 					b.PutInt32("Val", 42)
 					b.PutString("Name", cud.AsString("name"))
-					return nil
-				})
+				}
+				return nil
 			},
 		},
 	)

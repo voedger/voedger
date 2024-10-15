@@ -705,6 +705,6 @@ type mockResources struct {
 	mock.Mock
 }
 
-func (r *mockResources) Resources(cb func(appdef.QName)) {
+func (r *mockResources) Resources(cb func(appdef.QName) bool) {
 	r.Called(cb)
 }
