@@ -5,7 +5,6 @@
 package invite
 
 import (
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
 )
@@ -18,9 +17,9 @@ func syncProjectorJoinedWorkspaceIndex() istructs.Projector {
 }
 
 var joinedWorkspaceIndexProjector = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+	for rec := range event.CUDs {
 		if rec.QName() != QNameCDocJoinedWorkspace {
-			return nil
+			continue
 		}
 
 		skbViewJoinedWorkspaceIndex, err := s.KeyBuilder(sys.Storage_View, QNameViewJoinedWorkspaceIndex)
@@ -36,7 +35,6 @@ var joinedWorkspaceIndexProjector = func(event istructs.IPLogEvent, s istructs.I
 		}
 
 		svbViewJoinedWorkspaceIndex.PutRecordID(field_JoinedWorkspaceID, rec.ID())
-
-		return nil
-	})
+	}
+	return nil
 }

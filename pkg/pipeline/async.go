@@ -6,8 +6,6 @@ package pipeline
 
 import (
 	"time"
-
-	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 func puller_async(wo *WiredOperator) {
@@ -44,7 +42,7 @@ func puller_async(wo *WiredOperator) {
 					wo.Stdout <- outWork
 				}
 				if timerTicked && wo.FlushInterval > 0 {
-					coreutils.ResetTimer(timer, wo.FlushInterval)
+					timer.Reset(wo.FlushInterval)
 					timerTicked = false
 				}
 			}

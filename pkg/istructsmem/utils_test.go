@@ -147,11 +147,11 @@ func TestObjectFillAndGet(t *testing.T) {
 		require.Equal(test.testCDoc, o.AsQName("QName"))
 		require.True(o.AsBool("bool"))
 		count := 0
-		o.Children("record", func(c istructs.IObject) {
+		for c := range o.Children("record") {
 			require.Equal(istructs.RecordID(8), c.AsRecordID("sys.ID"))
 			require.Equal(int32(6), c.AsInt32("int32"))
 			count++
-		})
+		}
 		require.Equal(1, count)
 	})
 

@@ -344,10 +344,10 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 
 		require.Equal(1, func() int {
 			cnt := 0
-			o.Children("child", func(c istructs.IObject) {
+			for c := range o.Children("child") {
 				cnt++
 				require.EqualValues(2, c.AsInt64("int"))
-			})
+			}
 			return cnt
 		}())
 	})

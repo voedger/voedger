@@ -495,6 +495,22 @@ func Test_HandlePanics(t *testing.T) {
 	}
 }
 
+func Test_ResetStdout(t *testing.T) {
+	const testResetStdout = "TestPanic"
+	require := require.New(t)
+	ctx := context.Background()
+	moduleUrl := testModuleURL("./_testdata/panics/pkg.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{testResetStdout}, iextengine.ExtEngineConfig{}, false)
+	require.NoError(err)
+	defer extEngine.Close(ctx)
+	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, testResetStdout), extIO)
+	require.ErrorContains(err, "world")
+	error1 := err.Error()
+	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, testResetStdout), extIO)
+	require.ErrorContains(err, "world")
+	require.Equal(error1, err.Error())
+}
+
 func Test_QueryValue(t *testing.T) {
 	const testQueryValue = "testQueryValue"
 

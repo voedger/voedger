@@ -8,11 +8,12 @@ package actualizers
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/goutils/iterate"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -37,7 +38,12 @@ func (s *asyncActualizerContextState) error() error {
 	return s.err
 }
 
-func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames map[appdef.QName][]appdef.ProjectorEventKind, appDef appdef.IAppDef) bool {
+func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames map[appdef.QName][]appdef.ProjectorEventKind, appDef appdef.IAppDef, projQName appdef.QName) (ok bool) {
+	defer func() {
+		if ok && logger.IsVerbose() {
+			logger.Verbose(fmt.Sprintf("projector %s is acceptable to event %s", projQName, event.QName()))
+		}
+	}()
 	switch event.QName() {
 	case istructs.QNameForError:
 		return wantErrors
@@ -72,7 +78,7 @@ func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames m
 		}
 	}
 
-	triggered, _ := iterate.FindFirst(event.CUDs, func(rec istructs.ICUDRow) bool {
+	for rec := range event.CUDs {
 		triggeringKinds, ok := triggeringQNames[rec.QName()]
 		if !ok {
 			recType := appDef.Type(rec.QName())
@@ -95,25 +101,22 @@ func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames m
 				}
 			case appdef.ProjectorEventKind_Activate:
 				if !rec.IsNew() {
-					activated, _, _ := iterate.FindFirstMap(rec.ModifiedFields, func(fieldName appdef.FieldName, newValue interface{}) bool {
-						return fieldName == appdef.SystemField_IsActive && newValue.(bool)
-					})
-					if activated {
-						return true
+					for fieldName, newValue := range rec.ModifiedFields {
+						if fieldName == appdef.SystemField_IsActive && newValue.(bool) {
+							return true
+						}
 					}
 				}
 			case appdef.ProjectorEventKind_Deactivate:
 				if !rec.IsNew() {
-					deactivated, _, _ := iterate.FindFirstMap(rec.ModifiedFields, func(fieldName appdef.FieldName, newValue interface{}) bool {
-						return fieldName == appdef.SystemField_IsActive && !newValue.(bool)
-					})
-					if deactivated {
-						return true
+					for fieldName, newValue := range rec.ModifiedFields {
+						if fieldName == appdef.SystemField_IsActive && !newValue.(bool) {
+							return true
+						}
 					}
 				}
 			}
 		}
-		return false
-	})
-	return triggered
+	}
+	return false
 }

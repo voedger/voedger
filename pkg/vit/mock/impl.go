@@ -26,9 +26,9 @@ type PLogEvent struct {
 	mock.Mock
 }
 
-func (e *PLogEvent) ArgumentObject() istructs.IObject { return e.Called().Get(0).(istructs.IObject) }
-func (e *PLogEvent) CUDs(cb func(istructs.ICUDRow))   { e.Called(cb) }
-func (e *PLogEvent) Workspace() istructs.WSID         { return e.Called().Get(0).(istructs.WSID) }
+func (e *PLogEvent) ArgumentObject() istructs.IObject    { return e.Called().Get(0).(istructs.IObject) }
+func (e *PLogEvent) CUDs(cb func(istructs.ICUDRow) bool) { e.Called(cb) }
+func (e *PLogEvent) Workspace() istructs.WSID            { return e.Called().Get(0).(istructs.WSID) }
 
 type State struct {
 	istructs.IState
@@ -130,10 +130,13 @@ type Object struct {
 	mock.Mock
 }
 
-func (o *Object) AsInt32(name string) int32                            { return o.Called(name).Get(0).(int32) }
-func (o *Object) AsInt64(name string) int64                            { return o.Called(name).Get(0).(int64) }
-func (o *Object) AsString(name string) string                          { return o.Called(name).String(0) }
-func (o *Object) Children(container string, cb func(istructs.IObject)) { o.Called(container, cb) }
+func (o *Object) AsInt32(name string) int32   { return o.Called(name).Get(0).(int32) }
+func (o *Object) AsInt64(name string) int64   { return o.Called(name).Get(0).(int64) }
+func (o *Object) AsString(name string) string { return o.Called(name).String(0) }
+func (o *Object) Children(container ...string) func(func(istructs.IObject) bool) {
+	args := o.Called(container)
+	return args.Get(0).(func(func(istructs.IObject) bool))
+}
 
 type Record struct {
 	istructs.IRecord

@@ -652,17 +652,20 @@ func testTestObject(t *testing.T, value istructs.IObject) {
 	require.Equal(test.photoValue, value.AsBytes(test.photoIdent))
 
 	var basket istructs.IObject
-	value.Children(test.basketIdent, func(c istructs.IObject) { basket = c })
+	for c := range value.Children(test.basketIdent) {
+		basket = c
+		break
+	}
 	require.NotNil(basket)
 
 	var cnt int
-	basket.Children(test.goodIdent, func(c istructs.IObject) {
+	for c := range basket.Children(test.goodIdent) {
 		require.NotEqual(istructs.NullRecordID, c.AsRecordID(test.saleIdent))
 		require.Equal(test.goodNames[cnt], c.AsString(test.nameIdent))
 		require.Equal(test.goodCodes[cnt], c.AsInt64(test.codeIdent))
 		require.Equal(test.goodWeights[cnt], c.AsFloat64(test.weightIdent))
 		cnt++
-	})
+	}
 
 	require.Equal(test.goodCount, cnt)
 }
@@ -752,7 +755,7 @@ func testTestEvent(t *testing.T, value istructs.IDbEvent, pLogOffs, wLogOffs ist
 	}
 
 	var cnt int
-	value.CUDs(func(rec istructs.ICUDRow) {
+	for rec := range value.CUDs {
 		require.True(rec.IsNew())
 		if rec.QName() == test.tablePhotos {
 			testPhotoRow(t, rec)
@@ -762,7 +765,7 @@ func testTestEvent(t *testing.T, value istructs.IDbEvent, pLogOffs, wLogOffs ist
 			require.Equal(test.remarkValue, rec.AsString(test.remarkIdent))
 		}
 		cnt++
-	})
+	}
 	require.Equal(2, cnt)
 }
 

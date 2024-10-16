@@ -131,7 +131,7 @@ func writeProjectors(cfg *istructsmem.AppConfigType, appFuncs iextengine.BuiltIn
 }
 
 func writeFuncs(cfg *istructsmem.AppConfigType, appFuncs iextengine.BuiltInExtFuncs) {
-	cfg.Resources.Resources(func(qName appdef.QName) {
+	for qName := range cfg.Resources.Resources {
 		ires := cfg.Resources.QueryResource(qName)
 		var fn iextengine.BuiltInExtFunc
 		switch resource := ires.(type) {
@@ -159,5 +159,5 @@ func writeFuncs(cfg *istructsmem.AppConfigType, appFuncs iextengine.BuiltInExtFu
 		}
 		extName := extName(qName, cfg)
 		appFuncs[extName] = fn
-	})
+	}
 }

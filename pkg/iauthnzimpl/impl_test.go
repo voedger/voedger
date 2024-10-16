@@ -1065,12 +1065,12 @@ type implIRecord struct {
 	qName appdef.QName
 }
 
-func (r *implIRecord) QName() appdef.QName                          { return r.qName }
-func (r *implIRecord) ID() istructs.RecordID                        { return r.AsRecordID(appdef.SystemField_ID) }
-func (implIRecord) Parent() istructs.RecordID                       { panic("") }
-func (implIRecord) Container() string                               { panic("") }
-func (implIRecord) RecordIDs(bool, func(string, istructs.RecordID)) { panic("") }
-func (r *implIRecord) FieldNames(cb func(fieldName string))         { r.TestObject.FieldNames(cb) }
+func (r *implIRecord) QName() appdef.QName                                    { return r.qName }
+func (r *implIRecord) ID() istructs.RecordID                                  { return r.AsRecordID(appdef.SystemField_ID) }
+func (implIRecord) Parent() istructs.RecordID                                 { panic("") }
+func (implIRecord) Container() string                                         { panic("") }
+func (implIRecord) RecordIDs(bool) func(func(string, istructs.RecordID) bool) { panic("") }
+func (r *implIRecord) FieldNames(cb func(fieldName string) bool)              { r.TestObject.FieldNames(cb) }
 
 type implIViewRecords struct {
 	records *implIRecords

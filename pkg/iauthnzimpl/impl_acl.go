@@ -319,7 +319,6 @@ var defaultACL = ACL{
 				qNameCmdSaveTap2PayPayment,
 				// https://dev.untill.com/projects/#!710217
 				qNameQryGetUPInvoices,
-				qNameQryGetUPPayoutTransfers,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
@@ -367,6 +366,8 @@ var defaultACL = ACL{
 				qNameQryGetUPLocationRates,
 				// https://dev.untill.com/projects/#!685179
 				qNameQryUpdateShopperStatement,
+				// https://dev.untill.com/projects/#!710217
+				qNameQryGetUPPayoutTransfers,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
@@ -410,6 +411,9 @@ var defaultACL = ACL{
 				qNameQryGetAllUPPayoutTransfers,
 				// https://dev.untill.com/projects/#!711418
 				qNameQryGetDailyUPReports,
+				// https://dev.untill.com/projects/#!710982
+				qNameQryGetUPVATTransfers,
+				qNameQryGetUPBeneficiaryVATDebts,
 			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsManager}}},
 		},
