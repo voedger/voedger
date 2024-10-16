@@ -9,7 +9,7 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
-	"go/format"
+	"golang.org/x/tools/imports"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -18,7 +18,6 @@ import (
 	"text/template"
 
 	"github.com/spf13/cobra"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/compile"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -192,7 +191,7 @@ func formatOrmFiles(ormFiles []string) error {
 			return err
 		}
 
-		formattedContent, err := format.Source(ormFileContent)
+		formattedContent, err := imports.Process("", ormFileContent, nil)
 		if err != nil {
 			return err
 		}
@@ -518,7 +517,6 @@ func fillInTemplate(templateName string, ormPkgData ormPackage) ([]byte, error) 
 		"doesExecuteWithParam":  doesExecuteWithParam,
 		"isExecutableWithParam": isExecutableWithParam,
 		"hasEventItemName":      hasEventItemName,
-		"hasGeneralProjector":   hasGeneralProjector,
 	}).ParseFS(ormTemplates, "*")
 
 	if err != nil {

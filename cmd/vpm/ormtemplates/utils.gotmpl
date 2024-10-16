@@ -35,23 +35,23 @@ type Event struct{}
 type Value_CommandContext struct{ tv exttinygo.TValue }
 
 var qNames = map[string][]exttinygo.QName{
-    "ODoc": []exttinygo.QName{
+    "ODoc": {
         {{range .Items}}{{if (eq .Type "ODoc")}}{FullPkgName: "{{.PkgPath}}", Entity: "{{.Name}}"},
         {{end}}{{end}}
     },
-    "CDoc": []exttinygo.QName{
+    "CDoc": {
         {{range .Items}}{{if (eq .Type "CDoc")}}{FullPkgName: "{{.PkgPath}}", Entity: "{{.Name}}"},
         {{end}}{{end}}
     },
-    "WDoc": []exttinygo.QName{
+    "WDoc": {
         {{range .Items}}{{if (eq .Type "WDoc")}}{FullPkgName: "{{.PkgPath}}", Entity: "{{.Name}}"},
         {{end}}{{end}}
     },
-    "CRecord": []exttinygo.QName{
+    "CRecord": {
         {{range .Items}}{{if (eq .Type "CRecord")}}{FullPkgName: "{{.PkgPath}}", Entity: "{{.Name}}"},
         {{end}}{{end}}
     },
-    "WRecord": []exttinygo.QName{
+    "WRecord": {
         {{range .Items}}{{if (eq .Type "WRecord")}}{FullPkgName: "{{.PkgPath}}", Entity: "{{.Name}}"},
         {{end}}{{end}}
     },

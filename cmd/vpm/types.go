@@ -132,21 +132,6 @@ func hasEventItemName(p ormProjector, name string) bool {
 	return false
 }
 
-// hasGeneralProjector checks if the package has general projector which triggers on ODoc, WDoc, CDoc, WRecord, CRecord
-func hasGeneralProjector(p ormPackage) bool {
-	for _, item := range p.Items {
-		if ormProj, ok := item.(ormProjector); ok {
-			for _, item := range ormProj.On {
-				if item.Name == "ODoc" || item.Name == "WDoc" || item.Name == "CDoc" || item.Name == "WRecord" || item.Name == "CRecord" {
-					return true
-				}
-			}
-		}
-	}
-
-	return false
-}
-
 func doesExecuteOn(p ormProjectorEventItem) bool {
 	return slices.Contains(p.Kinds, appdef.ProjectorEventKind_Execute)
 }
