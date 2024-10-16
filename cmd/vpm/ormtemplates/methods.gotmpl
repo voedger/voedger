@@ -272,6 +272,7 @@ func (c {{.Type}}_{{.Package.Name}}_{{.Name}}) Result({{range .ResultObjectField
 
 {{if (doesExecuteOn .)}}
 
+{{if not .SkipGeneration}}
 type Cmd_{{.Projector.Package.Name}}_{{.Name}} struct {
 	qname string
 	event exttinygo.TValue
@@ -286,6 +287,7 @@ func (c Cmd_{{.Projector.Package.Name}}_{{.Name}}) Arg() (Value_{{.EventItem.Arg
 
 	return Value_{{.EventItem.ArgumentObject.Type}}_{{.EventItem.ArgumentObject.Package.Name}}_{{.EventItem.ArgumentObject.Name}}{tv: c.event}, true
 }
+{{end}}
 {{end}}
 
 func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Cmd_{{.Name}}() Cmd_{{.Projector.Package.Name}}_{{.Name}} {
@@ -305,7 +307,7 @@ func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) CUDs_{{.Packa
 		for i := 0; i < cudsValue.Len(); i++ {
 			cudValue := cudsValue.GetAsValue(i)
 			cudQName := cudValue.AsQName("QName")
-			if cudQName.FullPkgName == Package_{{.EventItem.Package.Name}}.{{.EventItem.Type}}_{{.EventItem.Name}}.PkgPath() && cudQName.Entity == Package_{{.EventItem.Package.Name}}.{{.EventItem.Type}}_{{.EventItem.Name}}.Entity() {
+			if cudQName.FullPkgName == Package_{{.Package.Name}}.{{.Type}}_{{.Name}}.PkgPath() && cudQName.Entity == Package_{{.Package.Name}}.{{.Type}}_{{.Name}}.Entity() {
 				if !yield(Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: cudValue}) {
 					return
 				}
@@ -318,13 +320,13 @@ func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) CUDs_{{.Packa
 
 {{if (doesExecuteWithParam .)}}
 
-func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Arg_{{.Package.Name}}_{{.Name}}() (Value_{{.EventItem.Type}}_{{.EventItem.Package.Name}}_{{.EventItem.Name}}, bool) {
+func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Arg_{{.Package.Name}}_{{.Name}}() (Value_{{.Type}}_{{.Package.Name}}_{{.Name}}, bool) {
 	qname := p.event.AsQName("QName")
-	if qname.FullPkgName != Package_{{.EventItem.Package.Name}}.{{.EventItem.Type}}_{{.EventItem.Name}}.PkgPath() || qname.Entity != Package_{{.EventItem.Package.Name}}.{{.EventItem.Type}}_{{.EventItem.Name}}.Entity() {
-		return Value_{{.EventItem.Type}}_{{.EventItem.Package.Name}}_{{.EventItem.Name}}{}, false
+	if qname.FullPkgName != Package_{{.Package.Name}}.{{.Type}}_{{.Name}}.PkgPath() || qname.Entity != Package_{{.Package.Name}}.{{.Type}}_{{.Name}}.Entity() {
+		return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{}, false
 	}
 
-	return Value_{{.EventItem.Type}}_{{.EventItem.Package.Name}}_{{.EventItem.Name}}{tv: p.event}, true
+	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: p.event}, true
 }
 
 {{end}}

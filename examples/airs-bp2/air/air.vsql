@@ -53,6 +53,9 @@ WORKSPACE RestaurantWS (
         PROJECTOR FillPbillDates AFTER EXECUTE WITH PARAM ON (untill.pbill, untill.orders) INTENTS(View(PbillDates));
         -- CUD
         PROJECTOR NewAbcItem AFTER INSERT ON (Abc);
-        -- PROJECTOR NewPBill AFTER INSERT ON (untill.pbill); -- TODO: new case
+        --PROJECTOR ProjectorWLogDates AFTER INSERT OR UPDATE ON (CRecord, WRecord) OR AFTER EXECUTE WITH PARAM ON ODoc INTENTS(View(WLogDates)) INCLUDING ERRORS;
+        PROJECTOR ProjectorODoc AFTER EXECUTE WITH PARAM ON ODoc;
+        PROJECTOR ProjectorWRecord AFTER INSERT OR UPDATE ON (WRecord);
+        --PROJECTOR ProjectorCDoc AFTER INSERT OR UPDATE ON (CDoc);
     );
 )

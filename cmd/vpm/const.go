@@ -54,6 +54,24 @@ func (t *Type) QName() FQName {
 type Event struct{}
 type Value_CommandContext struct{ tv exttinygo.TValue }
 
+var qNames = map[string][]exttinygo.QName{
+	"ODoc": []exttinygo.QName{
+		{FullPkgName: "sdsd", Entity: "ODoc"},
+	},
+	"CDoc": []exttinygo.QName{
+		{FullPkgName: "sdsd", Entity: "ODoc"},
+	},
+	"WDoc": []exttinygo.QName{
+		{FullPkgName: "sdsd", Entity: "ODoc"},
+	},
+	"CRecord": []exttinygo.QName{
+		{FullPkgName: "sdsd", Entity: "ODoc"},
+	},
+	"WRecord": []exttinygo.QName{
+		{FullPkgName: "sdsd", Entity: "ODoc"},
+	},
+}
+
 func CommandContext() Value_CommandContext {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
 	return Value_CommandContext{tv: exttinygo.MustGetValue(kb)}
@@ -362,6 +380,56 @@ func (wr Value_sys_WRecord) Len() int {
 
 func (wr Value_sys_WRecord) Is(iWRecord ITypeWRecord) bool {
 	return wr.QName() == iWRecord.QName()
+}
+
+func IsODoc(v exttinygo.QName) bool {
+	for _, v := range qNames["ODoc"] {
+		if v == v {
+			return true
+		}
+	}
+
+	return false
+}
+
+func IsWDoc(v exttinygo.QName) bool {
+	for _, v := range qNames["WDoc"] {
+		if v == v {
+			return true
+		}
+	}
+
+	return false
+}
+
+func IsCDoc(v exttinygo.QName) bool {
+	for _, v := range qNames["CDoc"] {
+		if v == v {
+			return true
+		}
+	}
+
+	return false
+}
+
+func IsWRecord(v exttinygo.QName) bool {
+	for _, v := range qNames["WRecord"] {
+		if v == v {
+			return true
+		}
+	}
+
+	return false
+}
+
+func IsCRecord(v exttinygo.QName) bool {
+	for _, v := range qNames["CRecord"] {
+		if v == v {
+			return true
+		}
+	}
+
+	return false
 }
 `
 	gitignoreFileContent = `*

@@ -7,8 +7,8 @@
 package orm
 
 import (
-	"iter"
-
+	{{if (hasGeneralProjector .)}} "iter"
+    {{end}}
 	"github.com/voedger/voedger/pkg/exttinygo"
 )
 

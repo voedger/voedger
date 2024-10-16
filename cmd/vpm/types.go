@@ -42,7 +42,7 @@ type ormPackageInfo struct {
 
 type ormPackage struct {
 	ormPackageInfo
-	Items []interface{}
+	Items []any
 }
 
 type ormPackageItem struct {
@@ -72,9 +72,10 @@ type ormProjector struct {
 
 type ormProjectorEventItem struct {
 	ormPackageItem
-	EventItem any
-	Kinds     []appdef.ProjectorEventKind
-	Projector ormProjector
+	EventItem      any
+	Kinds          []appdef.ProjectorEventKind
+	Projector      ormProjector
+	SkipGeneration bool
 }
 
 type ormCommand struct {
@@ -119,6 +120,31 @@ func isExecutableWithParam(p ormProjector) bool {
 
 func doesExecuteWithParam(p ormProjectorEventItem) bool {
 	return slices.Contains(p.Kinds, appdef.ProjectorEventKind_ExecuteWithParam)
+}
+
+func hasEventItemName(p ormProjector, name string) bool {
+	for _, item := range p.On {
+		if item.Name == name {
+			return true
+		}
+	}
+
+	return false
+}
+
+// hasGeneralProjector checks if the package has general projector which triggers on ODoc, WDoc, CDoc, WRecord, CRecord
+func hasGeneralProjector(p ormPackage) bool {
+	for _, item := range p.Items {
+		if ormProj, ok := item.(ormProjector); ok {
+			for _, item := range ormProj.On {
+				if item.Name == "ODoc" || item.Name == "WDoc" || item.Name == "CDoc" || item.Name == "WRecord" || item.Name == "CRecord" {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }
 
 func doesExecuteOn(p ormProjectorEventItem) bool {

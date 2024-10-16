@@ -52,11 +52,86 @@ func (pkg TPackage_{{.Package.Name}}) Projector_{{.Name}}() Projector_{{.Package
     }
 }
 
-{{/*{{if (isExecutableWithParam .)}}*/}}
-{{/*func (p Projector_{{.Package.Name}}_{{.Name}}) Event() ProjectorEvent_{{.Package.Name}}_{{.Name}} {*/}}
-{{/*return p.event*/}}
-{{/*}*/}}
-{{/*{{end}}*/}}
+
+{{if (hasEventItemName . "CDoc")}}
+func (p Projector_{{.Package.Name}}_{{.Name}}) CUDs_CDoc() iter.Seq[Value_sys_CDoc] {
+    return func(yield func(Value_sys_CDoc) bool) {
+        cudsValue := p.event.AsValue("CUDs")
+        for i := 0; i < cudsValue.Len(); i++ {
+            cudValue := cudsValue.GetAsValue(i)
+            cudQName := cudValue.AsQName("QName")
+            if IsCDoc(cudQName) {
+                if !yield(Value_sys_CDoc{v: cudValue}) {
+                    return
+                }
+            }
+        }
+    }
+}
+{{end}}
+
+{{if (hasEventItemName . "WDoc")}}
+func (p Projector_{{.Package.Name}}_{{.Name}}) CUDs_WDoc() iter.Seq[Value_sys_WDoc] {
+    return func(yield func(Value_sys_WDoc) bool) {
+        cudsValue := p.event.AsValue("CUDs")
+        for i := 0; i < cudsValue.Len(); i++ {
+            cudValue := cudsValue.GetAsValue(i)
+            cudQName := cudValue.AsQName("QName")
+            if IsWDoc(cudQName) {
+                if !yield(Value_sys_WDoc{v: cudValue}) {
+                    return
+                }
+            }
+        }
+    }
+}
+{{end}}
+
+{{if (hasEventItemName . "CRecord")}}
+func (p Projector_{{.Package.Name}}_{{.Name}}) CUDs_CRecord() iter.Seq[Value_sys_CRecord] {
+    return func(yield func(Value_sys_CRecord) bool) {
+        cudsValue := p.event.AsValue("CUDs")
+        for i := 0; i < cudsValue.Len(); i++ {
+            cudValue := cudsValue.GetAsValue(i)
+            cudQName := cudValue.AsQName("QName")
+            if IsCRecord(cudQName) {
+                if !yield(Value_sys_CRecord{v: cudValue}) {
+                    return
+                }
+            }
+        }
+    }
+}
+{{end}}
+
+{{if (hasEventItemName . "WRecord")}}
+func (p Projector_{{.Package.Name}}_{{.Name}}) CUDs_WRecord() iter.Seq[Value_sys_WRecord] {
+    return func(yield func(Value_sys_WRecord) bool) {
+        cudsValue := p.event.AsValue("CUDs")
+        for i := 0; i < cudsValue.Len(); i++ {
+            cudValue := cudsValue.GetAsValue(i)
+            cudQName := cudValue.AsQName("QName")
+            if IsWRecord(cudQName) {
+                if !yield(Value_sys_WRecord{v: cudValue}) {
+                    return
+                }
+            }
+        }
+    }
+}
+{{end}}
+
+{{if (hasEventItemName . "ODoc")}}
+func (p Projector_{{.Package.Name}}_{{.Name}}) ODoc() (Value_sys_ODoc, bool) {
+    qname := p.event.AsQName("QName")
+    if !IsODoc(qname) {
+        return Value_sys_ODoc{}, false
+    }
+
+    return Value_sys_ODoc{v: p.event}, true
+}
+{{end}}
+
 
 {{end}}
 
