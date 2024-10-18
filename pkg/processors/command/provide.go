@@ -29,14 +29,12 @@ type workspace struct {
 }
 
 type cmdProc struct {
-	pNumber       istructs.PartitionID
-	appPartition  *appPartition
-	appPartitions map[appdef.AppQName]*appPartition
-	n10nBroker    in10n.IN10nBroker
-	time          coreutils.ITime
-	authenticator iauthnz.IAuthenticator
-	authorizer    iauthnz.IAuthorizer
-	storeOp       pipeline.ISyncOperator
+	appsPartitions map[appdef.AppQName]map[istructs.PartitionID]*appPartition
+	n10nBroker     in10n.IN10nBroker
+	time           coreutils.ITime
+	authenticator  iauthnz.IAuthenticator
+	authorizer     iauthnz.IAuthorizer
+	storeOp        pipeline.ISyncOperator
 }
 
 type appPartition struct {
@@ -48,18 +46,17 @@ type appPartition struct {
 func ProvideServiceFactory(appParts appparts.IAppPartitions, tm coreutils.ITime,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm processors.VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
 	secretReader isecrets.ISecretReader) ServiceFactory {
-	return func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService {
+	return func(commandsChannel CommandChannel) pipeline.IService {
 		cmdProc := &cmdProc{
-			pNumber:       partitionID,
-			appPartitions: map[appdef.AppQName]*appPartition{},
-			n10nBroker:    n10nBroker,
-			time:          tm,
-			authenticator: authenticator,
-			authorizer:    authorizer,
+			appsPartitions: map[appdef.AppQName]map[istructs.PartitionID]*appPartition{},
+			n10nBroker:     n10nBroker,
+			time:           tm,
+			authenticator:  authenticator,
+			authorizer:     authorizer,
 		}
 
 		return pipeline.NewService(func(vvmCtx context.Context) {
-			hsp := newHostStateProvider(vvmCtx, partitionID, secretReader)
+			hsp := newHostStateProvider(vvmCtx, secretReader)
 			cmdProc.storeOp = pipeline.NewSyncPipeline(vvmCtx, "store",
 				pipeline.WireFunc("applyRecords", func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 					// sync apply records
@@ -162,12 +159,12 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm coreutils.ITime,
 						sendResponse(cmd, cmdHandlingErr)
 						if cmd.appPartitionRestartScheduled {
 							logger.Info(fmt.Sprintf("partition %d will be restarted due of an error on writing to Log: %s", cmd.cmdMes.PartitionID(), cmdHandlingErr))
-							delete(cmdProc.appPartitions, cmd.cmdMes.AppQName())
+							delete(cmdProc.appsPartitions, cmd.cmdMes.AppQName())
 						}
 					}()
 					metrics.IncreaseApp(CommandsSeconds, string(vvm), cmdMes.AppQName(), time.Since(start).Seconds())
 				case <-vvmCtx.Done():
-					cmdProc.appPartitions = map[appdef.AppQName]*appPartition{} // clear appPartitions to test recovery
+					cmdProc.appsPartitions = map[appdef.AppQName]map[istructs.PartitionID]*appPartition{} // clear appPartitions to test recovery
 					return
 				}
 			}
