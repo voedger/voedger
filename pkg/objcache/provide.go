@@ -16,7 +16,7 @@ import lru "github.com/hashicorp/golang-lru/v2"
 func New[K comparable, V any](size int) ICache[K, V] {
 	var err error
 	c := &cache[K, V]{}
-	c.lru, err = lru.NewWithEvict[K, V](size, c.evicted)
+	c.lru, err = lru.NewWithEvict(size, c.evicted)
 	if err != nil {
 		// notest
 		panic(err)
