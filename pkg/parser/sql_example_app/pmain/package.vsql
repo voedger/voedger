@@ -282,6 +282,9 @@ WORKSPACE MyWorkspace (
 	LIMIT BackofficeLimit ON TAG BackofficeTag WITH RATE BackofficeRate; -- Limit on anything with tag
 
     -- GRANTs
+    -- Roles
+    GRANT Admin TO LocationManager;
+
     -- ALL COMMANDS/QUERIES/TABLES/VIEWS - all resources in the workspace
     GRANT ALL ON ALL TABLES TO Admin;
     GRANT SELECT,INSERT,UPDATE ON ALL TABLES TO Admin; -- equivalent to GRANT ALL ON ALL TABLES TO Admin;
@@ -305,7 +308,6 @@ WORKSPACE MyWorkspace (
     GRANT SELECT(Year) ON VIEW XZReports TO LocationUser;
 
     -- REVOKEs
-
     -- ALL COMMANDS/QUERIES/TABLES/VIEWS - all resources in the workspace    
     REVOKE ALL ON ALL TABLES FROM LocationGuest;
     REVOKE INSERT,UPDATE,SELECT ON ALL TABLES FROM LocationGuest; -- equivalent to REVOKE ALL ON ALL TABLES FROM LocationGuest;
