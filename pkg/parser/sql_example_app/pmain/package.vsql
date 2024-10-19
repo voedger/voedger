@@ -285,20 +285,20 @@ WORKSPACE MyWorkspace (
     -- ALL COMMANDS/QUERIES/TABLES/VIEWS - all resources in the workspace
     GRANT ALL ON ALL TABLES TO Admin;
     GRANT SELECT,INSERT,UPDATE ON ALL TABLES TO Admin; -- equivalent to GRANT ALL ON ALL TABLES TO Admin;
-    GRANT SELECT ON ALL QUERIES TO Admin;
-    GRANT INSERT ON ALL COMMANDS TO Admin;
+    GRANT EXECUTE ON ALL QUERIES TO Admin;
+    GRANT EXECUTE ON ALL COMMANDS TO Admin;
     GRANT SELECT ON ALL VIEWS TO Admin;
 
     -- ALL * WITH TAG - includes all statements in current or inherited workspaces
     GRANT ALL ON ALL TABLES WITH TAG BackofficeTag TO LocationManager;
     GRANT INSERT,UPDATE,SELECT ON ALL TABLES WITH TAG BackofficeTag TO LocationManager; -- equivalent to GRANT ALL ON ALL TABLES WITH TAG BackofficeTag TO LocationManager;
-    GRANT SELECT ON ALL QUERIES WITH TAG PosTag TO main.LocationUser;
-    GRANT INSERT ON ALL COMMANDS WITH TAG PosTag TO main.LocationUser;
+    GRANT EXECUTE ON ALL QUERIES WITH TAG PosTag TO main.LocationUser;
+    GRANT EXECUTE ON ALL COMMANDS WITH TAG PosTag TO main.LocationUser;
     GRANT SELECT ON ALL VIEWS WITH TAG PosTag TO LocationUser;
     
     -- SPECIFIC STATEMENTS
-    GRANT INSERT ON COMMAND NewOrder TO LocationUser;
-    GRANT SELECT ON QUERY Query1 TO LocationUser;
+    GRANT EXECUTE ON COMMAND NewOrder TO LocationUser;
+    GRANT EXECUTE ON QUERY Query1 TO LocationUser;
     GRANT SELECT ON TABLE untill.Prices TO LocationUser;
     GRANT SELECT(Price) ON TABLE untill.Prices TO LocationUser;
     GRANT SELECT ON VIEW XZReports TO LocationUser;
@@ -309,22 +309,22 @@ WORKSPACE MyWorkspace (
     -- ALL COMMANDS/QUERIES/TABLES/VIEWS - all resources in the workspace    
     REVOKE ALL ON ALL TABLES FROM LocationGuest;
     REVOKE INSERT,UPDATE,SELECT ON ALL TABLES FROM LocationGuest; -- equivalent to REVOKE ALL ON ALL TABLES FROM LocationGuest;
-    REVOKE SELECT ON ALL QUERIES FROM LocationGuest;
-    REVOKE INSERT ON ALL COMMANDS FROM LocationGuest;
+    REVOKE EXECUTE ON ALL QUERIES FROM LocationGuest;
+    REVOKE EXECUTE ON ALL COMMANDS FROM LocationGuest;
     REVOKE SELECT ON ALL VIEWS FROM LocationGuest;
     
 
     -- ALL * WITH TAG - includes all statements in current or inherited workspaces
     REVOKE ALL ON ALL TABLES WITH TAG BackofficeTag FROM LocationGuest;    
     REVOKE INSERT,UPDATE,SELECT ON ALL TABLES WITH TAG BackofficeTag FROM LocationGuest; -- equivalent to REVOKE ALL ON ALL TABLES WITH TAG BackofficeTag FROM LocationGuest;
-    REVOKE SELECT ON ALL QUERIES WITH TAG PosTag FROM LocationGuest;
-    REVOKE INSERT ON ALL COMMANDS WITH TAG PosTag FROM LocationGuest;
+    REVOKE EXECUTE ON ALL QUERIES WITH TAG PosTag FROM LocationGuest;
+    REVOKE EXECUTE ON ALL COMMANDS WITH TAG PosTag FROM LocationGuest;
     REVOKE SELECT ON ALL VIEWS WITH TAG PosTag FROM LocationGuest;
     
     
     -- SPECIFIC STATEMENTS
-    REVOKE INSERT ON COMMAND NewOrder FROM LocationGuest;
-    REVOKE SELECT ON QUERY Query1 FROM LocationGuest;
+    REVOKE EXECUTE ON COMMAND NewOrder FROM LocationGuest;
+    REVOKE EXECUTE ON QUERY Query1 FROM LocationGuest;
     REVOKE SELECT ON TABLE untill.Prices FROM LocationGuest;
     REVOKE SELECT(Price) ON TABLE untill.Prices FROM LocationGuest;
     REVOKE SELECT ON VIEW XZReports FROM LocationGuest;
