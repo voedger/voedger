@@ -172,6 +172,7 @@ func (p *appPartitionRT) borrow(proc ProcessorKind) (*borrowedPartition, error) 
 	b := newBorrowedPartition(p)
 
 	if err := b.borrow(proc); err != nil {
+		b.Release()
 		return nil, err
 	}
 

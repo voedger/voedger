@@ -24,13 +24,6 @@ func getNextStartTime(cronSchedule string, startTimeTolerance time.Duration, now
 
 func resetTimer(timer *time.Timer, d time.Duration) {
 	logger.Verbose(fmt.Sprintf("resetTimer. Start after: %v", d))
-	if !timer.Stop() {
-		select {
-		case <-timer.C:
-		default:
-			timer.Stop()
-		}
-	}
-	logger.Verbose("timer restarted!")
 	timer.Reset(d)
+	logger.Verbose("timer restarted!")
 }
