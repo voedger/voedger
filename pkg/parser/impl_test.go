@@ -2367,6 +2367,39 @@ func Test_Grants(t *testing.T) {
 		require.Equal(2, numACLs)
 	})
 
+	t.Run("GRANT Role", func(t *testing.T) {
+		schema, err := require.AppSchema(`APPLICATION test();
+			ABSTRACT WORKSPACE BaseWs (
+				ROLE admin;
+			);
+			WORKSPACE Workspace1 INHERITS BaseWs (
+				ROLE mgr;
+				GRANT admin TO mgr;
+			);
+		`)
+		require.NoError(err)
+		builder := appdef.New()
+		err = BuildAppDefs(schema, builder)
+		require.NoError(err)
+
+		app, err := builder.Build()
+		require.NoError(err)
+		var numACLs int
+
+		// table
+		app.ACL(func(i appdef.IACLRule) bool {
+			require.Len(i.Ops(), 1)
+			require.Equal(appdef.OperationKind_Inherits, i.Ops()[0])
+			require.Equal(appdef.PolicyKind_Allow, i.Policy())
+			require.Len(i.Resources().On(), 1)
+			require.Equal("pkg.admin", i.Resources().On()[0].String())
+			require.Equal("pkg.mgr", i.Principal().QName().String())
+			numACLs++
+			return true
+		})
+		require.Equal(1, numACLs)
+	})
+
 }
 
 func Test_Grants_Inherit(t *testing.T) {
