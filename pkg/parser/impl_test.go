@@ -2288,12 +2288,12 @@ func Test_Grants(t *testing.T) {
 	ROLE role1;
 	WORKSPACE ws1 (
 		GRANT ALL ON TABLE Fake TO app1;
-		GRANT INSERT ON COMMAND Fake TO role1;
-		GRANT SELECT ON QUERY Fake TO role1;
+		GRANT EXECUTE ON COMMAND Fake TO role1;
+		GRANT EXECUTE ON QUERY Fake TO role1;
 		TABLE Tbl INHERITS CDoc();
 		GRANT ALL(FakeCol) ON TABLE Tbl TO role1;
 		GRANT INSERT,UPDATE(FakeCol) ON TABLE Tbl TO role1;
-		GRANT INSERT ON ALL COMMANDS WITH TAG x TO role1;
+		GRANT EXECUTE ON ALL COMMANDS WITH TAG x TO role1;
 		TABLE Nested1 INHERITS CRecord();
 		TABLE Tbl2 INHERITS CDoc(
 			ref1 ref(Tbl),
@@ -2308,11 +2308,11 @@ func Test_Grants(t *testing.T) {
 	);
 	`, "file.vsql:5:30: undefined role: app1",
 			"file.vsql:5:22: undefined table: Fake",
-			"file.vsql:6:27: undefined command: Fake",
-			"file.vsql:7:25: undefined query: Fake",
+			"file.vsql:6:28: undefined command: Fake",
+			"file.vsql:7:26: undefined query: Fake",
 			"file.vsql:9:13: undefined field FakeCol",
 			"file.vsql:10:23: undefined field FakeCol",
-			"file.vsql:11:41: undefined tag: x",
+			"file.vsql:11:42: undefined tag: x",
 			"file.vsql:21:24: undefined view: Fake",
 			"file.vsql:22:38: undefined tag: x",
 		)
@@ -2339,7 +2339,7 @@ func Test_Grants(t *testing.T) {
 					COMMAND CreateLogin1() WITH Tags=(WithoutAuthTag);
 					COMMAND CreateLogin2() WITH Tags=(sys.WithoutAuthTag);
 				);				
-				GRANT INSERT ON ALL COMMANDS WITH TAG WithoutAuthTag TO sys.Anyone;
+				GRANT EXECUTE ON ALL COMMANDS WITH TAG WithoutAuthTag TO sys.Anyone;
 			);
 		`)
 		require.NoError(err)
