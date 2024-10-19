@@ -700,10 +700,11 @@ type GrantOrRevoke struct {
 	AllCommands          bool                          `parser:"  | @EXECUTEONALLCOMMANDS"`
 	AllQueries           bool                          `parser:"  | @EXECUTEONALLQUERIES"`
 	AllViews             bool                          `parser:"  | @SELECTONALLVIEWS"`
-	AllTables            *GrantAllTables               `parser:"  | @@ )"`
+	AllTables            *GrantAllTables               `parser:"  | @@"`
+	Role                 *DefQName                     `parser:"  | @@)"`
 
 	/* filled on the analysis stage */
-	role    appdef.QName
+	toRole  appdef.QName
 	on      []appdef.QName
 	ops     []appdef.OperationKind
 	columns []appdef.FieldName
