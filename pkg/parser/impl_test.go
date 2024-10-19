@@ -2339,7 +2339,8 @@ func Test_Grants(t *testing.T) {
 					COMMAND CreateLogin1() WITH Tags=(WithoutAuthTag);
 					COMMAND CreateLogin2() WITH Tags=(sys.WithoutAuthTag);
 				);				
-				GRANT EXECUTE ON ALL COMMANDS WITH TAG WithoutAuthTag TO sys.Anyone;
+				GRANT EXECUTE ON ALL COMMANDS WITH TAG sys.WithoutAuthTag TO sys.Anyone;
+				GRANT EXECUTE ON ALL COMMANDS WITH TAG WithoutAuthTag TO Anyone;
 			);
 		`)
 		require.NoError(err)
@@ -2363,7 +2364,7 @@ func Test_Grants(t *testing.T) {
 			numACLs++
 			return true
 		})
-		require.Equal(1, numACLs)
+		require.Equal(2, numACLs)
 	})
 
 }
