@@ -183,23 +183,22 @@ func (s *appStorageType) PutBatch(items []istorage.BatchItem) (err error) {
 func scanViewQuery(ctx context.Context, q *gocql.Query, cb istorage.ReadCallback) (err error) {
 	q.Consistency(gocql.Quorum)
 	scanner := q.Iter().Scanner()
-	sc := scannerCloser(scanner)
 	for scanner.Next() {
 		clustCols := make([]byte, 0)
 		viewRecord := make([]byte, 0)
 		err = scanner.Scan(&clustCols, &viewRecord)
 		if err != nil {
-			return sc(err)
+			return scannerCloser(scanner, err)
 		}
 		err = cb(clustCols, viewRecord)
 		if err != nil {
-			return sc(err)
+			return scannerCloser(scanner, err)
 		}
 		if ctx.Err() != nil {
 			return nil // TCK contract
 		}
 	}
-	return sc(nil)
+	return scannerCloser(scanner, err)
 }
 
 func (s *appStorageType) Read(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
@@ -266,14 +265,15 @@ func (s *appStorageType) GetBatch(pKey []byte, items []istorage.GetBatchItem) (e
 		Consistency(gocql.Quorum).
 		Iter().
 		Scanner()
-	sc := scannerCloser(scanner)
 
+	ccols := make([]byte, 0)
+	value := make([]byte, 0)
 	for scanner.Next() {
-		ccols := make([]byte, 0)
-		value := make([]byte, 0)
+		ccols = ccols[:0]
+		value = value[:0]
 		err = scanner.Scan(&ccols, &value)
 		if err != nil {
-			return sc(err)
+			return scannerCloser(scanner, err)
 		}
 		ii, ok := ccToIdx[string(ccols)]
 		if ok {
@@ -284,18 +284,9 @@ func (s *appStorageType) GetBatch(pKey []byte, items []istorage.GetBatchItem) (e
 		}
 	}
 
-	return sc(nil)
+	return scannerCloser(scanner, nil)
 }
 
-func scannerCloser(scanner gocql.Scanner) func(error) error {
-	return func(err error) error {
-		if scannerErr := scanner.Err(); scannerErr != nil {
-			if err != nil {
-				err = fmt.Errorf("%s %w", err.Error(), scannerErr)
-			} else {
-				err = scannerErr
-			}
-		}
-		return err
-	}
+func scannerCloser(scanner gocql.Scanner, err error) error {
+	return errors.Join(err, scanner.Err())
 }
