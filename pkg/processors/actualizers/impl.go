@@ -22,9 +22,6 @@ func syncActualizerFactory(conf SyncActualizerConf, projectors istructs.Projecto
 	if conf.IntentsLimit == 0 {
 		conf.IntentsLimit = defaultIntentsLimit
 	}
-	if conf.WorkToEvent == nil {
-		conf.WorkToEvent = func(work interface{}) istructs.IPLogEvent { return work.(istructs.IPLogEvent) }
-	}
 	service := &eventService{}
 	ss := make([]state.IHostState, 0, len(projectors))
 	bb := make([]pipeline.ForkOperatorOptionFunc, 0, len(projectors))
@@ -36,7 +33,7 @@ func syncActualizerFactory(conf SyncActualizerConf, projectors istructs.Projecto
 	h := &syncErrorHandler{ss: ss}
 	return pipeline.NewSyncPipeline(conf.Ctx, "PartitionSyncActualizer",
 		pipeline.WireFunc("Update event", func(_ context.Context, work pipeline.IWorkpiece) (err error) {
-			service.event = conf.WorkToEvent(work)
+			service.event = work.(interface{ Event() istructs.IPLogEvent }).Event()
 			return nil
 		}),
 		pipeline.WireFunc("Update IAppStructs", func(_ context.Context, work pipeline.IWorkpiece) (err error) {

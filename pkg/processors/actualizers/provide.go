@@ -46,9 +46,6 @@ func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, se
 			Ctx:          context.Background(), // it is needed for sync pipeline and GMP believes it is enough
 			SecretReader: secretReader,
 			Partition:    partitionID,
-			WorkToEvent: func(work interface{}) istructs.IPLogEvent {
-				return work.(interface{ Event() istructs.IPLogEvent }).Event()
-			},
 			N10nFunc: func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {
 				n10nBroker.Update(in10n.ProjectionKey{
 					App:        appStructs.AppQName(),

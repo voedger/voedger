@@ -76,16 +76,12 @@ type SyncActualizerConf struct {
 	Ctx          context.Context
 	SecretReader isecrets.ISecretReader
 	Partition    istructs.PartitionID
-	// Fork responsible for cloning work
-	WorkToEvent WorkToEventFunc
 	//IntentsLimit top limit per event, default value is 100
 	IntentsLimit int
 	N10nFunc     state.N10nFunc
 }
 
 type ViewTypeBuilder func(builder appdef.IViewBuilder)
-
-type WorkToEventFunc func(work interface{}) istructs.IPLogEvent
 
 // SyncActualizerFactory returns the Operator<SyncActualizer>
 // Workpiece is ...?
