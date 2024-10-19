@@ -44,7 +44,6 @@ func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, se
 		}
 		conf := SyncActualizerConf{
 			Ctx:          context.Background(), // it is needed for sync pipeline and GMP believes it is enough
-			AppStructs:   func() istructs.IAppStructs { return appStructs },
 			SecretReader: secretReader,
 			Partition:    partitionID,
 			WorkToEvent: func(work interface{}) istructs.IPLogEvent {

@@ -37,7 +37,11 @@ func syncActualizerFactory(conf SyncActualizerConf, projectors istructs.Projecto
 	return pipeline.NewSyncPipeline(conf.Ctx, "PartitionSyncActualizer",
 		pipeline.WireFunc("Update event", func(_ context.Context, work pipeline.IWorkpiece) (err error) {
 			service.event = conf.WorkToEvent(work)
-			return err
+			return nil
+		}),
+		pipeline.WireFunc("Update IAppStructs", func(_ context.Context, work pipeline.IWorkpiece) (err error) {
+			service.appStructs = work.(interface{ AppPartition() appparts.IAppPartition }).AppPartition().AppStructs()
+			return nil
 		}),
 		pipeline.WireSyncOperator("SyncActualizer", pipeline.ForkOperator(pipeline.ForkSame, bb[0], bb[1:]...)),
 		pipeline.WireFunc("IntentsApplier", func(_ context.Context, _ pipeline.IWorkpiece) (err error) {
@@ -56,7 +60,7 @@ func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, servic
 	pipelineName := fmt.Sprintf("[%d] %s", conf.Partition, projector.Name)
 	s = stateprovide.ProvideSyncActualizerStateFactory()(
 		conf.Ctx,
-		conf.AppStructs,
+		service.getIAppStructs,
 		state.SimplePartitionIDFunc(conf.Partition),
 		service.getWSID,
 		conf.N10nFunc,
@@ -104,12 +108,15 @@ func (h *syncErrorHandler) OnErr(err error, _ interface{}, _ pipeline.IWorkpiece
 }
 
 type eventService struct {
-	event istructs.IPLogEvent
+	event      istructs.IPLogEvent
+	appStructs istructs.IAppStructs
 }
 
 func (s *eventService) getWSID() istructs.WSID { return s.event.Workspace() }
 
 func (s *eventService) getEvent() istructs.IPLogEvent { return s.event }
+
+func (s *eventService) getIAppStructs() istructs.IAppStructs { return s.appStructs }
 
 func provideViewDefImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc ViewTypeBuilder) {
 	builder := appDef.AddView(qname)

@@ -74,7 +74,6 @@ type AsyncActualizerMetrics interface {
 
 type SyncActualizerConf struct {
 	Ctx          context.Context
-	AppStructs   state.AppStructsFunc
 	SecretReader isecrets.ISecretReader
 	Partition    istructs.PartitionID
 	// Fork responsible for cloning work
