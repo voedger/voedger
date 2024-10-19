@@ -34,11 +34,11 @@ func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, se
 	n10nBroker in10n.IN10nBroker, statelessResources istructsmem.IStatelessResources) func(appStructs istructs.IAppStructs, partitionID istructs.PartitionID) pipeline.ISyncOperator {
 	return func(appStructs istructs.IAppStructs, partitionID istructs.PartitionID) pipeline.ISyncOperator {
 		projectors := maps.Clone(appStructs.SyncProjectors())
-		statelessResources.Projectors(func(path string, projector istructs.Projector) {
+		for _, projector := range statelessResources.Projectors {
 			if appStructs.AppDef().Projector(projector.Name).Sync() {
 				projectors[projector.Name] = projector
 			}
-		})
+		}
 		if len(projectors) == 0 {
 			return &pipeline.NOOP{}
 		}

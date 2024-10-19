@@ -8,6 +8,7 @@ package iextenginewazero
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"math"
@@ -94,6 +95,10 @@ type extensionEngineFactory struct {
 
 func newLimitedWriter(limit int) limitedWriter {
 	return limitedWriter{limit: limit}
+}
+
+func (w *limitedWriter) Reset() {
+	w.buf = w.buf[:0]
 }
 
 func (w *limitedWriter) Write(p []byte) (n int, err error) {
@@ -322,7 +327,7 @@ func (f *wazeroExtEngine) initModule(ctx context.Context, pkgName string, wasmda
 	ePkg := &wazeroExtPkg{}
 
 	ePkg.stdout = newLimitedWriter(maxStdErrSize)
-	ePkg.moduleCfg = wazero.NewModuleConfig().WithName("wasm").WithStdout(&ePkg.stdout).WithSysWalltime()
+	ePkg.moduleCfg = wazero.NewModuleConfig().WithName("wasm").WithStdout(&ePkg.stdout).WithSysWalltime().WithRandSource(rand.Reader)
 
 	if f.compile {
 		ePkg.compiled, err = f.rtm.CompileModule(ctx, wasmdata)
@@ -414,6 +419,8 @@ func (f *wazeroExtEngine) invoke(ctx context.Context, extension appdef.FullQName
 	for i := range f.pkg.allocatedBufs {
 		f.pkg.allocatedBufs[i].offs = 0 // reuse pre-allocated memory
 	}
+
+	f.pkg.stdout.Reset()
 
 	begin := time.Now()
 

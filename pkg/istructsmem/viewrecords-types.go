@@ -417,9 +417,17 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 }
 
 // istructs.IRowReader.FieldNames
-func (key *keyType) FieldNames(cb func(appdef.FieldName)) {
-	key.partRow.FieldNames(cb)
-	key.ccolsRow.FieldNames(cb)
+func (key *keyType) FieldNames(cb func(appdef.FieldName) bool) {
+	for f := range key.partRow.FieldNames {
+		if !cb(f) {
+			return
+		}
+	}
+	for f := range key.ccolsRow.FieldNames {
+		if !cb(f) {
+			return
+		}
+	}
 }
 
 // istructs.IKeyBuilder.PartitionKey
@@ -532,9 +540,19 @@ func (key *keyType) PutString(name appdef.FieldName, value string) {
 }
 
 // istructs.IRowReader.RecordIDs
-func (key *keyType) RecordIDs(includeNulls bool, cb func(appdef.FieldName, istructs.RecordID)) {
-	key.partRow.RecordIDs(includeNulls, cb)
-	key.ccolsRow.RecordIDs(includeNulls, cb)
+func (key *keyType) RecordIDs(includeNulls bool) func(cb func(appdef.FieldName, istructs.RecordID) bool) {
+	return func(cb func(appdef.FieldName, istructs.RecordID) bool) {
+		for n, id := range key.partRow.RecordIDs(includeNulls) {
+			if !cb(n, id) {
+				return
+			}
+		}
+		for n, id := range key.ccolsRow.RecordIDs(includeNulls) {
+			if !cb(n, id) {
+				return
+			}
+		}
+	}
 }
 
 // istructs.IKeyBuilder.ToBytes

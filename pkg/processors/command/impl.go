@@ -14,7 +14,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"golang.org/x/exp/maps"
@@ -131,14 +130,19 @@ func (ap *appPartition) getWorkspace(wsid istructs.WSID) *workspace {
 
 func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	ap, ok := cmdProc.appPartitions[cmd.cmdMes.AppQName()]
+	appPartitions, ok := cmdProc.appsPartitions[cmd.cmdMes.AppQName()]
 	if !ok {
-		if ap, err = cmdProc.recovery(ctx, cmd); err != nil {
-			return fmt.Errorf("partition %d recovery failed: %w", cmdProc.pNumber, err)
-		}
-		cmdProc.appPartitions[cmd.cmdMes.AppQName()] = ap
+		appPartitions = map[istructs.PartitionID]*appPartition{}
+		cmdProc.appsPartitions[cmd.cmdMes.AppQName()] = appPartitions
 	}
-	cmdProc.appPartition = ap
+	appPartition, ok := appPartitions[cmd.cmdMes.PartitionID()]
+	if !ok {
+		if appPartition, err = cmdProc.recovery(ctx, cmd); err != nil {
+			return fmt.Errorf("partition %d recovery failed: %w", cmd.cmdMes.PartitionID(), err)
+		}
+		appPartitions[cmd.cmdMes.PartitionID()] = appPartition
+	}
+	cmd.appPartition = appPartition
 	return nil
 }
 
@@ -191,7 +195,8 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work pipeline.IWorkp
 	}
 
 	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(),
-		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.eca.CommandPrepareArgs, cmd.workspace.NextWLogOffset, cmd.argsObject, cmd.unloggedArgsObject)
+		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.eca.CommandPrepareArgs, cmd.workspace.NextWLogOffset,
+		cmd.argsObject, cmd.unloggedArgsObject, cmd.cmdMes.PartitionID())
 	hs.ClearIntents()
 
 	cmd.eca.State = hs
@@ -203,14 +208,14 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work pipeline.IWorkp
 func updateIDGeneratorFromO(root istructs.IObject, types appdef.IWithTypes, idGen istructs.IIDGenerator) {
 	// new IDs only here because update is not allowed for ODocs in Args
 	idGen.UpdateOnSync(root.AsRecordID(appdef.SystemField_ID), types.Type(root.QName()))
-	root.Containers(func(container string) {
+	for container := range root.Containers {
 		// order of containers here is the order in the schema
 		// but order in the request could be different
 		// that is not a problem because for ODocs/ORecords ID generator will bump next ID only if syncID is actually next
-		root.Children(container, func(c istructs.IObject) {
+		for c := range root.Children(container) {
 			updateIDGeneratorFromO(c, types, idGen)
-		})
-	})
+		}
+	}
 }
 
 func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPartition, error) {
@@ -222,12 +227,12 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 	cb := func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		ws := ap.getWorkspace(event.Workspace())
 
-		event.CUDs(func(rec istructs.ICUDRow) {
+		for rec := range event.CUDs {
 			if rec.IsNew() {
 				t := cmd.appStructs.AppDef().Type(rec.QName())
 				ws.idGenerator.UpdateOnSync(rec.ID(), t)
 			}
-		})
+		}
 		ao := event.ArgumentObject()
 		if cmd.appStructs.AppDef().Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
 			updateIDGeneratorFromO(ao, cmd.appStructs.AppDef(), ws.idGenerator)
@@ -241,7 +246,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		return nil
 	}
 
-	if err := cmd.appStructs.Events().ReadPLog(ctx, cmdProc.pNumber, istructs.FirstOffset, istructs.ReadToTheEnd, cb); err != nil {
+	if err := cmd.appStructs.Events().ReadPLog(ctx, cmd.cmdMes.PartitionID(), istructs.FirstOffset, istructs.ReadToTheEnd, cb); err != nil {
 		return nil, err
 	}
 
@@ -263,7 +268,8 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		// notest
 		return nil, err
 	}
-	logger.Info(fmt.Sprintf(`app "%s" partition %d recovered: nextPLogOffset %d, workspaces: %s`, cmd.cmdMes.AppQName(), cmdProc.pNumber, ap.nextPLogOffset, string(worskapcesJSON)))
+	logger.Info(fmt.Sprintf(`app "%s" partition %d recovered: nextPLogOffset %d, workspaces: %s`, cmd.cmdMes.AppQName(), cmd.cmdMes.PartitionID(),
+		ap.nextPLogOffset, string(worskapcesJSON)))
 	return ap, nil
 }
 
@@ -281,7 +287,7 @@ func (cmdProc *cmdProc) putPLog(_ context.Context, work pipeline.IWorkpiece) (er
 	if cmd.pLogEvent, err = cmd.appStructs.Events().PutPlog(cmd.rawEvent, nil, cmd.idGenerator); err != nil {
 		cmd.appPartitionRestartScheduled = true
 	} else {
-		cmdProc.appPartition.nextPLogOffset++
+		cmd.appPartition.nextPLogOffset++
 	}
 	return
 }
@@ -386,7 +392,7 @@ func unmarshalRequestBody(_ context.Context, work pipeline.IWorkpiece) (err erro
 
 func (cmdProc *cmdProc) getWorkspace(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	cmd.workspace = cmdProc.appPartition.getWorkspace(cmd.cmdMes.WSID())
+	cmd.workspace = cmd.appPartition.getWorkspace(cmd.cmdMes.WSID())
 	return nil
 }
 
@@ -397,7 +403,7 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work pipeline.IWor
 		Workspace:         cmd.cmdMes.WSID(),
 		QName:             cmd.cmdMes.QName(),
 		RegisteredAt:      istructs.UnixMilli(cmdProc.time.Now().UnixMilli()),
-		PLogOffset:        cmdProc.appPartition.nextPLogOffset,
+		PLogOffset:        cmd.appPartition.nextPLogOffset,
 		WLogOffset:        cmd.workspace.NextWLogOffset,
 	}
 
@@ -516,16 +522,12 @@ func (cmdProc *cmdProc) eventValidators(ctx context.Context, work pipeline.IWork
 func (cmdProc *cmdProc) cudsValidators(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	for _, appCUDValidator := range cmd.appStructs.CUDValidators() {
-		err = iterate.ForEachError(cmd.rawEvent.CUDs, func(rec istructs.ICUDRow) error {
+		for rec := range cmd.rawEvent.CUDs {
 			if appCUDValidator.Match(rec, cmd.cmdMes.WSID(), cmd.cmdMes.QName()) {
 				if err := appCUDValidator.Validate(ctx, cmd.appStructs, rec, cmd.cmdMes.WSID(), cmd.cmdMes.QName()); err != nil {
 					return coreutils.WrapSysError(err, http.StatusForbidden)
 				}
 			}
-			return nil
-		})
-		if err != nil {
-			return err
 		}
 	}
 	return nil
@@ -537,13 +539,13 @@ func (cmdProc *cmdProc) validateCUDsQNames(ctx context.Context, work pipeline.IW
 		// dummy or c.sys.CreateWorkspace
 		return nil
 	}
-	return iterate.ForEachError(cmd.rawEvent.CUDs, func(cud istructs.ICUDRow) error {
+	for cud := range cmd.rawEvent.CUDs {
 		if cmd.iWorkspace.Type(cud.QName()) == appdef.NullType {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Errorf("doc %s mentioned in resulting CUDs does not exist in the workspace %s",
 				cud.QName(), cmd.wsDesc.AsQName(authnz.Field_WSKind)))
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
 func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
@@ -709,9 +711,9 @@ func (cmdProc *cmdProc) n10n(_ context.Context, work pipeline.IWorkpiece) (err e
 	cmdProc.n10nBroker.Update(in10n.ProjectionKey{
 		App:        cmd.cmdMes.AppQName(),
 		Projection: actualizers.PLogUpdatesQName,
-		WS:         istructs.WSID(cmdProc.pNumber),
+		WS:         istructs.WSID(cmd.cmdMes.PartitionID()),
 	}, cmd.rawEvent.PLogOffset())
-	logger.Verbose("updated plog event on offset ", cmd.rawEvent.PLogOffset(), ", pnumber ", cmdProc.pNumber)
+	logger.Verbose("updated plog event on offset ", cmd.rawEvent.PLogOffset(), ", pnumber ", cmd.cmdMes.PartitionID())
 	return nil
 }
 

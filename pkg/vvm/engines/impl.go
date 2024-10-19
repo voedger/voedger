@@ -18,7 +18,7 @@ import (
 func provideStatelessFuncs(statelessResources istructsmem.IStatelessResources) iextengine.BuiltInExtFuncs {
 	funcs := iextengine.BuiltInExtFuncs{}
 
-	statelessResources.Commands(func(path string, cmd istructs.ICommandFunction) {
+	for path, cmd := range statelessResources.Commands {
 		fn := func(_ context.Context, io iextengine.IExtensionIO) error {
 			execArgs := istructs.ExecCommandArgs{
 				CommandPrepareArgs: io.CommandPrepareArgs(),
@@ -29,9 +29,9 @@ func provideStatelessFuncs(statelessResources istructsmem.IStatelessResources) i
 		}
 		fullQName := appdef.NewFullQName(path, cmd.QName().Entity())
 		funcs[fullQName] = fn
-	})
+	}
 
-	statelessResources.Queries(func(path string, qry istructs.IQueryFunction) {
+	for path, qry := range statelessResources.Queries {
 		fn := func(ctx context.Context, io iextengine.IExtensionIO) error {
 			return qry.Exec(
 				ctx,
@@ -45,14 +45,14 @@ func provideStatelessFuncs(statelessResources istructsmem.IStatelessResources) i
 		}
 		fullQName := appdef.NewFullQName(path, qry.QName().Entity())
 		funcs[fullQName] = fn
-	})
+	}
 
-	statelessResources.Projectors(func(path string, projector istructs.Projector) {
+	for path, projector := range statelessResources.Projectors {
 		fullQName := appdef.NewFullQName(path, projector.Name.Entity())
 		funcs[fullQName] = func(_ context.Context, io iextengine.IExtensionIO) error {
 			return projector.Func(io.PLogEvent(), io, io)
 		}
-	})
+	}
 
 	return funcs
 }
@@ -131,7 +131,7 @@ func writeProjectors(cfg *istructsmem.AppConfigType, appFuncs iextengine.BuiltIn
 }
 
 func writeFuncs(cfg *istructsmem.AppConfigType, appFuncs iextengine.BuiltInExtFuncs) {
-	cfg.Resources.Resources(func(qName appdef.QName) {
+	for qName := range cfg.Resources.Resources {
 		ires := cfg.Resources.QueryResource(qName)
 		var fn iextengine.BuiltInExtFunc
 		switch resource := ires.(type) {
@@ -159,5 +159,5 @@ func writeFuncs(cfg *istructsmem.AppConfigType, appFuncs iextengine.BuiltInExtFu
 		}
 		extName := extName(qName, cfg)
 		appFuncs[extName] = fn
-	})
+	}
 }

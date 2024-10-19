@@ -77,14 +77,12 @@ func TestResourceEnumerator(t *testing.T) {
 		require.NoError(err)
 	})
 
-	t.Run("enumerate all resources", func(t *testing.T) {
+	t.Run("should be ok to enumerate all resources", func(t *testing.T) {
 		cnt := 0
-		app.Resources().Resources(
-			func(resName appdef.QName) {
-				cnt++
-				require.NotNil(app.Resources().QueryResource(resName))
-			})
-
+		for resName := range app.Resources().Resources {
+			cnt++
+			require.NotNil(app.Resources().QueryResource(resName))
+		}
 		require.EqualValues(4, cnt)
 	})
 }
