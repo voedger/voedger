@@ -35,6 +35,23 @@ func (ws *workspace) Descriptor() QName {
 	return NullQName
 }
 
+func (ws *workspace) Data(name QName) IData {
+	if t := ws.typeByKind(name, TypeKind_Data); t != nil {
+		return t.(IData)
+	}
+	return nil
+}
+
+func (ws *workspace) DataTypes(cb func(IData) bool) {
+	for t := range ws.Types {
+		if d, ok := t.(IData); ok {
+			if !cb(d) {
+				break
+			}
+		}
+	}
+}
+
 func (ws *workspace) Type(name QName) IType {
 	if t := ws.TypeByName(name); t != nil {
 		return t
@@ -49,15 +66,8 @@ func (ws *workspace) TypeByName(name QName) IType {
 	return nil
 }
 
-func (ws *workspace) Validate() error {
-	if (ws.desc != nil) && ws.desc.Abstract() && !ws.Abstract() {
-		return ErrIncompatible("%v should be abstract because descriptor %v is abstract", ws, ws.desc)
-	}
-	return nil
-}
-
 func (ws *workspace) Types(cb func(IType) bool) {
-	if ws.typesOrdered == nil {
+	if len(ws.typesOrdered) != len(ws.types) {
 		ws.typesOrdered = make([]interface{}, 0, len(ws.types))
 		for _, t := range ws.types {
 			ws.typesOrdered = append(ws.typesOrdered, t)
@@ -73,6 +83,13 @@ func (ws *workspace) Types(cb func(IType) bool) {
 	}
 }
 
+func (ws *workspace) Validate() error {
+	if (ws.desc != nil) && ws.desc.Abstract() && !ws.Abstract() {
+		return ErrIncompatible("%v should be abstract because descriptor %v is abstract", ws, ws.desc)
+	}
+	return nil
+}
+
 func (ws *workspace) addType(name QName) {
 	t := ws.app.TypeByName(name)
 	if t == nil {
@@ -80,7 +97,14 @@ func (ws *workspace) addType(name QName) {
 	}
 
 	ws.types[name] = t
-	ws.typesOrdered = nil
+}
+
+func (ws *workspace) addData(name QName, kind DataKind, ancestor QName, constraints ...IConstraint) IDataBuilder {
+	d := newData(ws.app, name, kind, ancestor)
+	d.addConstraints(constraints...)
+	ws.app.appendType(d)
+	ws.types[name] = d
+	return newDataBuilder(d)
 }
 
 func (ws *workspace) setDescriptor(q QName) {
@@ -108,6 +132,16 @@ func (ws *workspace) setDescriptor(q QName) {
 	ws.app.wsDesc[q] = ws
 }
 
+// Returns type by name and kind. If type is not found then returns nil.
+func (ws *workspace) typeByKind(name QName, kind TypeKind) interface{} {
+	if t, ok := ws.types[name]; ok {
+		if t.(IType).Kind() == kind {
+			return t
+		}
+	}
+	return nil
+}
+
 // # Implements:
 //   - IWorkspaceBuilder
 type workspaceBuilder struct {
@@ -122,6 +156,10 @@ func newWorkspaceBuilder(workspace *workspace) *workspaceBuilder {
 		withAbstractBuilder: makeWithAbstractBuilder(&workspace.withAbstract),
 		workspace:           workspace,
 	}
+}
+
+func (wb *workspaceBuilder) AddData(name QName, kind DataKind, ancestor QName, constraints ...IConstraint) IDataBuilder {
+	return wb.workspace.addData(name, kind, ancestor, constraints...)
 }
 
 func (wb *workspaceBuilder) AddType(name QName) IWorkspaceBuilder {

@@ -929,18 +929,20 @@ func Test_CharsFieldRestricts(t *testing.T) {
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
-	t.Run("must be ok to build application", func(t *testing.T) {
+	t.Run("should be ok to build application", func(t *testing.T) {
+		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
 		s100Data := appdef.NewQName("test", "s100")
 		emailData := appdef.NewQName("test", "email")
 		mimeData := appdef.NewQName("test", "mime")
 
-		adb.AddData(s100Data, appdef.DataKind_string, appdef.NullQName,
+		ws.AddData(s100Data, appdef.DataKind_string, appdef.NullQName,
 			appdef.MinLen(1), appdef.MaxLen(100)).SetComment("string 1..100")
 
-		_ = adb.AddData(emailData, appdef.DataKind_string, s100Data,
+		_ = ws.AddData(emailData, appdef.DataKind_string, s100Data,
 			appdef.MinLen(6), appdef.Pattern(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`))
 
-		_ = adb.AddData(mimeData, appdef.DataKind_bytes, appdef.NullQName,
+		_ = ws.AddData(mimeData, appdef.DataKind_bytes, appdef.NullQName,
 			appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`))
 
 		adb.AddObject(objName).

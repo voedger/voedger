@@ -26,6 +26,8 @@ type (
 		appName          appdef.AppQName
 		pkgName, pkgPath string
 
+		wsName appdef.QName
+
 		AppConfigs AppConfigsType
 		AppCfg     *AppConfigType
 		AppDef     appdef.IAppDef
@@ -146,6 +148,8 @@ var testData = testDataType{
 	pkgName: "test",
 	pkgPath: "test.com/test",
 
+	wsName: appdef.NewQName("test", "workspace"),
+
 	eventRawBytes:      []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0},
 	partition:          55,
 	plogOfs:            10000,
@@ -240,11 +244,13 @@ func test() *testDataType {
 		adb := appdef.New()
 		adb.AddPackage(testData.pkgName, testData.pkgPath)
 
+		ws := adb.AddWorkspace(testData.wsName)
+
 		{
-			identData := adb.AddData(testData.dataIdent, appdef.DataKind_string, appdef.NullQName)
+			identData := ws.AddData(testData.dataIdent, appdef.DataKind_string, appdef.NullQName)
 			identData.AddConstraints(appdef.MinLen(1), appdef.MaxLen(50)).SetComment("string from 1 to 50 runes")
 
-			photoData := adb.AddData(testData.dataPhoto, appdef.DataKind_bytes, appdef.NullQName)
+			photoData := ws.AddData(testData.dataPhoto, appdef.DataKind_bytes, appdef.NullQName)
 			photoData.AddConstraints(appdef.MaxLen(1024)).SetComment("up to 1Kb")
 
 			saleParams := adb.AddODoc(testData.saleCmdDocName)
