@@ -24,7 +24,7 @@ import (
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
-type ServiceFactory func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService
+type ServiceFactory func(commandsChannel CommandChannel) pipeline.IService
 type CommandChannel iprocbus.ServiceChannel
 type OperatorSyncActualizer pipeline.ISyncOperator
 type SyncActualizerFactory func(vvmCtx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator
@@ -66,6 +66,7 @@ type cmdWorkpiece struct {
 	reb                          istructs.IRawEventBuilder
 	rawEvent                     istructs.IRawEvent
 	pLogEvent                    istructs.IPLogEvent
+	appPartition                 *appPartition
 	workspace                    *workspace
 	idGenerator                  *implIDGenerator
 	eca                          istructs.ExecCommandArgs
@@ -126,11 +127,12 @@ type hostStateProvider struct {
 	wlogOffset       istructs.Offset
 	args             istructs.IObject
 	unloggedArgs     istructs.IObject
+	partitionID      istructs.PartitionID
 }
 
-func newHostStateProvider(ctx context.Context, pid istructs.PartitionID, secretReader isecrets.ISecretReader) *hostStateProvider {
+func newHostStateProvider(ctx context.Context, secretReader isecrets.ISecretReader) *hostStateProvider {
 	p := &hostStateProvider{}
-	p.state = stateprovide.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, state.SimplePartitionIDFunc(pid),
+	p.state = stateprovide.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, p.getPartititonID,
 		p.getWSID, secretReader, p.getCUD, p.getPrincipals, p.getToken, actualizers.DefaultIntentsLimit,
 		p.getCmdResultBuilder, p.getCmdPrepareArgs, p.getArgs, p.getUnloggedArgs, p.getWLogOffset)
 	return p
@@ -148,9 +150,10 @@ func (p *hostStateProvider) getCmdPrepareArgs() istructs.CommandPrepareArgs { re
 func (p *hostStateProvider) getWLogOffset() istructs.Offset                 { return p.wlogOffset }
 func (p *hostStateProvider) getArgs() istructs.IObject                      { return p.args }
 func (p *hostStateProvider) getUnloggedArgs() istructs.IObject              { return p.unloggedArgs }
+func (p *hostStateProvider) getPartititonID() istructs.PartitionID          { return p.partitionID }
 func (p *hostStateProvider) get(appStructs istructs.IAppStructs, wsid istructs.WSID, cud istructs.ICUD, principals []iauthnz.Principal, token string,
 	cmdResultBuilder istructs.IObjectBuilder, cmdPrepareArgs istructs.CommandPrepareArgs, wlogOffset istructs.Offset, args istructs.IObject,
-	unloggedArgs istructs.IObject) state.IHostState {
+	unloggedArgs istructs.IObject, partitionID istructs.PartitionID) state.IHostState {
 	p.as = appStructs
 	p.wsid = wsid
 	p.cud = cud
@@ -161,5 +164,6 @@ func (p *hostStateProvider) get(appStructs istructs.IAppStructs, wsid istructs.W
 	p.wlogOffset = wlogOffset
 	p.args = args
 	p.unloggedArgs = unloggedArgs
+	p.partitionID = partitionID
 	return p.state
 }
