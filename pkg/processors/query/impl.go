@@ -20,7 +20,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -313,9 +312,12 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			if iResource.Kind() != istructs.ResourceKind_null {
 				iQueryFunc = iResource.(istructs.IQueryFunction)
 			} else {
-				_, _, iQueryFunc = iterate.FindFirstMap(statelessResources.Queries, func(path string, qry istructs.IQueryFunction) bool {
-					return qry.QName() == qw.msg.QName()
-				})
+				for _, qry := range statelessResources.Queries {
+					if qry.QName() == qw.msg.QName() {
+						iQueryFunc = qry
+						break
+					}
+				}
 			}
 			qNameResultType := iQueryFunc.ResultType(qw.execQueryArgs.PrepareArgs)
 			qw.resultType = qw.iWorkspace.Type(qNameResultType)
@@ -525,9 +527,9 @@ type outputRow struct {
 func (r *outputRow) Set(alias string, value interface{}) {
 	r.values[r.keyToIdx[alias]] = value
 }
-func (r *outputRow) Values() []interface{}               { return r.values }
-func (r *outputRow) Value(alias string) interface{}      { return r.values[r.keyToIdx[alias]] }
-func (r *outputRow) MarshalJSON() ([]byte, error)        { return json.Marshal(r.values) }
+func (r *outputRow) Values() []interface{}          { return r.values }
+func (r *outputRow) Value(alias string) interface{} { return r.values[r.keyToIdx[alias]] }
+func (r *outputRow) MarshalJSON() ([]byte, error)   { return json.Marshal(r.values) }
 
 func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, qw *queryWork) (execQueryArgs istructs.ExecQueryArgs, err error) {
 	args, _, err := data.AsObject("args")

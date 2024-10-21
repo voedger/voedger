@@ -152,7 +152,7 @@ func iterateWorkspaceStmts[stmtType INamedStatement](ctx *iterateCtx, onlyCurren
 	}
 }
 
-func resolveInCurrentWs[stmtType *CommandStmt | *QueryStmt | *ViewStmt | *TableStmt](qn DefQName, ctx *iterateCtx) (result stmtType, pkg *PackageSchemaAST, err error) {
+func resolveInCurrentWs[stmtType *CommandStmt | *QueryStmt | *ViewStmt | *TableStmt | *RoleStmt](qn DefQName, ctx *iterateCtx) (result stmtType, pkg *PackageSchemaAST, err error) {
 	err = resolveInCtx(qn, ctx, func(f stmtType, p *PackageSchemaAST) error {
 		currentWs := getCurrentWorkspace(ctx)
 		for _, n := range currentWs.nodes {
@@ -170,13 +170,24 @@ func resolveInCurrentWs[stmtType *CommandStmt | *QueryStmt | *ViewStmt | *TableS
 func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx) {
 	// To
 	err := resolveInCtx(toOrFrom, c, func(f *RoleStmt, pkg *PackageSchemaAST) error {
-		grant.role = pkg.NewQName(f.Name)
+		grant.toRole = pkg.NewQName(f.Name)
 		return nil
 	})
 	if err != nil {
 		c.stmtErr(&toOrFrom.Pos, err)
 	}
-
+	// Role
+	if grant.Role != nil {
+		role, pkg, err := resolveInCurrentWs[*RoleStmt](*grant.Role, c)
+		if err != nil {
+			c.stmtErr(&grant.Role.Pos, err)
+		} else if role != nil {
+			grant.on = append(grant.on, pkg.NewQName(role.Name))
+			grant.ops = append(grant.ops, appdef.OperationKind_Inherits)
+		} else {
+			c.stmtErr(&grant.Role.Pos, ErrUndefinedRole(*grant.Role))
+		}
+	}
 	// INSERT ON COMMAND
 	if grant.Command != nil {
 		cmd, pkg, err := resolveInCurrentWs[*CommandStmt](*grant.Command, c)

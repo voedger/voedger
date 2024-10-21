@@ -22,9 +22,6 @@ func syncActualizerFactory(conf SyncActualizerConf, projectors istructs.Projecto
 	if conf.IntentsLimit == 0 {
 		conf.IntentsLimit = defaultIntentsLimit
 	}
-	if conf.WorkToEvent == nil {
-		conf.WorkToEvent = func(work interface{}) istructs.IPLogEvent { return work.(istructs.IPLogEvent) }
-	}
 	service := &eventService{}
 	ss := make([]state.IHostState, 0, len(projectors))
 	bb := make([]pipeline.ForkOperatorOptionFunc, 0, len(projectors))
@@ -36,8 +33,12 @@ func syncActualizerFactory(conf SyncActualizerConf, projectors istructs.Projecto
 	h := &syncErrorHandler{ss: ss}
 	return pipeline.NewSyncPipeline(conf.Ctx, "PartitionSyncActualizer",
 		pipeline.WireFunc("Update event", func(_ context.Context, work pipeline.IWorkpiece) (err error) {
-			service.event = conf.WorkToEvent(work)
-			return err
+			service.event = work.(interface{ Event() istructs.IPLogEvent }).Event()
+			return nil
+		}),
+		pipeline.WireFunc("Update IAppStructs", func(_ context.Context, work pipeline.IWorkpiece) (err error) {
+			service.appStructs = work.(interface{ AppPartition() appparts.IAppPartition }).AppPartition().AppStructs()
+			return nil
 		}),
 		pipeline.WireSyncOperator("SyncActualizer", pipeline.ForkOperator(pipeline.ForkSame, bb[0], bb[1:]...)),
 		pipeline.WireFunc("IntentsApplier", func(_ context.Context, _ pipeline.IWorkpiece) (err error) {
@@ -56,7 +57,7 @@ func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, servic
 	pipelineName := fmt.Sprintf("[%d] %s", conf.Partition, projector.Name)
 	s = stateprovide.ProvideSyncActualizerStateFactory()(
 		conf.Ctx,
-		conf.AppStructs,
+		service.getIAppStructs,
 		state.SimplePartitionIDFunc(conf.Partition),
 		service.getWSID,
 		conf.N10nFunc,
@@ -70,7 +71,7 @@ func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, servic
 				appDef := appPart.AppStructs().AppDef()
 				prj := appDef.Projector(projector.Name)
 				event := s.PLogEvent()
-				if !isAcceptable(event, prj.WantErrors(), prj.Events().Map(), appDef) {
+				if !isAcceptable(event, prj.WantErrors(), prj.Events().Map(), appDef, prj.QName()) {
 					return nil
 				}
 				return appPart.Invoke(ctx, projector.Name, s, s)
@@ -104,12 +105,15 @@ func (h *syncErrorHandler) OnErr(err error, _ interface{}, _ pipeline.IWorkpiece
 }
 
 type eventService struct {
-	event istructs.IPLogEvent
+	event      istructs.IPLogEvent
+	appStructs istructs.IAppStructs
 }
 
 func (s *eventService) getWSID() istructs.WSID { return s.event.Workspace() }
 
 func (s *eventService) getEvent() istructs.IPLogEvent { return s.event }
+
+func (s *eventService) getIAppStructs() istructs.IAppStructs { return s.appStructs }
 
 func provideViewDefImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc ViewTypeBuilder) {
 	builder := appDef.AddView(qname)

@@ -687,23 +687,24 @@ type GrantView struct {
 }
 
 type GrantOrRevoke struct {
-	Command              *DefQName                     `parser:"( (INSERTONCOMMAND @@)"`
-	AllCommandsWithTag   *DefQName                     `parser:"  | (INSERTONALLCOMMANDSWITHTAG @@)"`
-	Query                *DefQName                     `parser:"  | (SELECTONQUERY @@)"`
-	AllQueriesWithTag    *DefQName                     `parser:"  | (SELECTONALLQUERIESWITHTAG @@)"`
+	Command              *DefQName                     `parser:"( (EXECUTEONCOMMAND @@)"`
+	AllCommandsWithTag   *DefQName                     `parser:"  | (EXECUTEONALLCOMMANDSWITHTAG @@)"`
+	Query                *DefQName                     `parser:"  | (EXECUTEONQUERY @@)"`
+	AllQueriesWithTag    *DefQName                     `parser:"  | (EXECUTEONALLQUERIESWITHTAG @@)"`
 	AllViewsWithTag      *DefQName                     `parser:"  | (SELECTONALLVIEWSWITHTAG @@)"`
 	Workspace            *DefQName                     `parser:"  | (INSERTONWORKSPACE @@)"`
 	AllWorkspacesWithTag *DefQName                     `parser:"  | (INSERTONALLWORKSPACESWITHTAG @@)"`
 	View                 *GrantView                    `parser:"  | @@"`
 	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"  | @@"`
 	Table                *GrantTableActions            `parser:"  | @@"`
-	AllCommands          bool                          `parser:"  | @INSERTONALLCOMMANDS"`
-	AllQueries           bool                          `parser:"  | @SELECTONALLQUERIES"`
+	AllCommands          bool                          `parser:"  | @EXECUTEONALLCOMMANDS"`
+	AllQueries           bool                          `parser:"  | @EXECUTEONALLQUERIES"`
 	AllViews             bool                          `parser:"  | @SELECTONALLVIEWS"`
-	AllTables            *GrantAllTables               `parser:"  | @@ )"`
+	AllTables            *GrantAllTables               `parser:"  | @@"`
+	Role                 *DefQName                     `parser:"  | @@)"`
 
 	/* filled on the analysis stage */
-	role    appdef.QName
+	toRole  appdef.QName
 	on      []appdef.QName
 	ops     []appdef.OperationKind
 	columns []appdef.FieldName
