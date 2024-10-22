@@ -86,14 +86,14 @@ func GetSubjectIdxViewKeyBuilder(login string, s istructs.IState) (istructs.ISta
 }
 
 // checks cdoc.sys.SubjectIdx existence by login as cdoc.sys.Invite.EMail and as token.Login
-func SubjectExistByBothLogins(login string, st istructs.IState) (ok bool, actualLogin string, _ error) {
-	subjectExists, err := SubjectExistsByLogin(login, st) // for backward compatibility
+func SubjectExistByBothLogins(login string, st istructs.IState) (ok bool, actualLogin string, existingSubjectID istructs.RecordID, _ error) {
+	subjectExists, exisingSubjectID, err := SubjectExistsByLogin(login, st) // for backward compatibility
 	if err != nil {
-		return false, "", err
+		return false, "", 0, err
 	}
 	skbPrincipal, err := st.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
 	if err != nil {
-		return false, "", err
+		return false, "", 0, err
 	}
 	svPrincipal, err := st.MustExist(skbPrincipal)
 	if err != nil {
@@ -101,19 +101,28 @@ func SubjectExistByBothLogins(login string, st istructs.IState) (ok bool, actual
 	}
 	actualLogin = svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name)
 	if !subjectExists {
-		subjectExists, err = SubjectExistsByLogin(actualLogin, st)
+		subjectExists, exisingSubjectID, err = SubjectExistsByLogin(actualLogin, st)
 		if err != nil {
-			return false, "", err
+			return false, "", 0, err
 		}
 	}
-	return subjectExists, actualLogin, nil
+	return subjectExists, actualLogin, exisingSubjectID, nil
 
 }
 
-func SubjectExistsByLogin(login string, state istructs.IState) (ok bool, _ error) {
+func SubjectExistsByLogin(login string, state istructs.IState) (ok bool, existingSubjectID istructs.RecordID, _ error) {
 	skbViewSubjectsIdx, err := GetSubjectIdxViewKeyBuilder(login, state)
-	if err == nil {
-		_, ok, err = state.CanExist(skbViewSubjectsIdx)
+	if err != nil {
+		// notest
+		return false, 0, err
 	}
-	return ok, err
+	val, ok, err := state.CanExist(skbViewSubjectsIdx)
+	if err != nil {
+		// notest
+		return false, 0, err
+	}
+	if ok {
+		existingSubjectID = val.AsRecordID("SubjectID")
+	}
+	return ok, existingSubjectID, nil
 }
