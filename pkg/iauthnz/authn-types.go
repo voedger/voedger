@@ -62,6 +62,15 @@ var (
 
 	// asssigned automatically if has e.g. RoleResellersAdmin or RoleUntillPaymentsReseller
 	QNameRoleWorkspaceAdmin = appdef.NewQName(appdef.SysPackage, "RoleWorkspaceAdmin")
+
+	// assigned if a valid token is provided
+	QNameRoleAuthenticated = appdef.NewQName(appdef.SysPackage, "Authenticated")
+
+	// assigned regardles of wether token is rpvided or not
+	QNameRoleAnyone = appdef.NewQName(appdef.SysPackage, "Anyone")
+
+	// assigned if a token is not provided
+	QNameRoleGuest = appdef.NewQName(appdef.SysPackage, "Guest")
 )
 
 var SysRoles = []appdef.QName{

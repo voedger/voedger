@@ -69,13 +69,13 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Allow,
 	},
-	{
-		desc: "everything is allowed to WorkspaceOwner",
-		pattern: PatternType{
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},
-		},
-		policy: ACPolicy_Allow,
-	},
+	// {
+	// 	desc: "everything is allowed to WorkspaceOwner",
+	// 	pattern: PatternType{
+	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
 	{
 		desc: "deny all on few QNames from all",
 		pattern: PatternType{
@@ -83,18 +83,18 @@ var defaultACL = ACL{
 				qNameCmdStoreSubscriptionProfile, qNameCmdUpdateSubscription,
 
 				qNameCDocSubscriptionProfile, qNameCDocUnTillOrders, qNameCDocUnTillPBill,
-				qNameTestDeniedCmd, qNameTestDeniedCDoc, qNameCDocLogin, qNameCDocChildWorkspace, qNameTestDeniedQry,
+				/*qNameTestDeniedCmd, */ /*qNameTestDeniedCDoc*/ /*, qNameCDocLogin, qNameCDocChildWorkspace*/ /*, qNameTestDeniedQry,*/
 
 				qNameCDocWorkspaceKindUser,
 				qNameCDocWorkspaceKindDevice,
 				qNameCDocWorkspaceKindRestaurant,
 				qNameCDocWorkspaceKindAppWorkspace,
-				qNameCmdSendEmailVerificationCode,
+				/*qNameCmdSendEmailVerificationCode,
 
 				qNameQryDescribePackage,
 				qNameQryDescribePackageNames,
 
-				qNameCmdVSqlUpdate,
+				qNameCmdVSqlUpdate,*/
 			},
 		},
 		policy: ACPolicy_Deny,
@@ -146,38 +146,38 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Allow,
 	},
-	{
-		// GRANT SELECT q.sys.DescribePackage* TO ROLE ProfileUser
-		desc: "q.sys.DescribePackage* is allowed to be called in profile only",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameQryDescribePackage,
-				qNameQryDescribePackageNames,
-			},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleProfileOwner}}},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
-		desc: "c.sys.InitiateJoinWorkspace is allowed for authenticated users",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameCmdInitiateJoinWorkspace,
-			},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User}}},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
-		desc: "c.sys.InitiateLeaveWorkspace is allowed for authenticated users",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameCmdInitiateLeaveWorkspace,
-			},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User}}},
-		},
-		policy: ACPolicy_Allow,
-	},
+	// {
+	// 	// GRANT SELECT q.sys.DescribePackage* TO ROLE ProfileUser
+	// 	desc: "q.sys.DescribePackage* is allowed to be called in profile only",
+	// 	pattern: PatternType{
+	// 		qNamesPattern: []appdef.QName{
+	// 			qNameQryDescribePackage,
+	// 			qNameQryDescribePackageNames,
+	// 		},
+	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleProfileOwner}}},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
+	// {
+	// 	desc: "c.sys.InitiateJoinWorkspace is allowed for authenticated users",
+	// 	pattern: PatternType{
+	// 		qNamesPattern: []appdef.QName{
+	// 			qNameCmdInitiateJoinWorkspace,
+	// 		},
+	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User}}},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
+	// {
+	// 	desc: "c.sys.InitiateLeaveWorkspace is allowed for authenticated users",
+	// 	pattern: PatternType{
+	// 		qNamesPattern: []appdef.QName{
+	// 			qNameCmdInitiateLeaveWorkspace,
+	// 		},
+	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User}}},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
 	{
 		// WorkspaceAdmin role asssigned automatically if has e.g. RoleResellersAdmin or RoleUntillPaymentsReseller
 		desc: "allow few reseller-related commands to WorkspaceAdmin",

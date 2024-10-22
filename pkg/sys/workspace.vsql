@@ -308,7 +308,7 @@ ABSTRACT WORKSPACE Workspace (
 		WSClusterID int32 NOT NULL,
 		WSID int64,           -- to be updated afterwards
 		WSError varchar(1024) -- to be updated afterwards
-	);
+	) WITH Tags=(ReadOnlyTag);
 
 	TYPE InitChildWorkspaceParams (
 		WSName text NOT NULL,
@@ -361,10 +361,10 @@ ABSTRACT WORKSPACE Workspace (
 		-- invite
 
 		COMMAND InitiateInvitationByEMail(InitiateInvitationByEMailParams);
-		COMMAND InitiateJoinWorkspace(InitiateJoinWorkspaceParams);
+		COMMAND InitiateJoinWorkspace(InitiateJoinWorkspaceParams) WITH Tags=(AllowedForAuthenticatedTag);
 		COMMAND InitiateUpdateInviteRoles(InitiateUpdateInviteRolesParams);
 		COMMAND InitiateCancelAcceptedInvite(InitiateCancelAcceptedInviteParams);
-		COMMAND InitiateLeaveWorkspace;
+		COMMAND InitiateLeaveWorkspace WITH Tags=(AllowedForAuthenticatedTag);
 		COMMAND CancelSentInvite(CancelSentInviteParams);
 		COMMAND CreateJoinedWorkspace(CreateJoinedWorkspaceParams);
 		COMMAND UpdateJoinedWorkspaceRoles(UpdateJoinedWorkspaceRolesParams);
@@ -418,30 +418,39 @@ ABSTRACT WORKSPACE Workspace (
 
 	TAG WithoutAuthTag;
 	TAG AllowedForGuestTag;
-
-	ROLE Anyone; -- assigned in any case regardless of whether the token is provided or not
-	ROLE Guest;  -- assigned if the token is not provided
-	ROLE WorkspaceOwner; -- assigned if the user owns the current workspace
-
-	GRANT ALL ON ALL TABLES WITH TAG WithoutAuthTag TO Anyone;
-
-	-- now, looks bad
-	GRANT SELECT ON ALL QUERIES WITH TAG WithoutAuthTag TO Anyone;  -- keep SELECT
-	GRANT INSERT ON ALL COMMANDS WITH TAG WithoutAuthTag TO Anyone; -- make EXECUTE
-
-	-- better
-	-- GRANT EXECUTE ON ALL QUERIES WITH TAG WithoutAuthTag TO Anyone;
-	-- GRANT EXECUTE ON ALL COMMANDS WITH TAG WithoutAuthTag TO Anyone;
-	-- GRANT SELECT ON ALL TABLES WITH TAG WithoutAuthTag TO Anyone;
-
-	GRANT SELECT ON ALL VIEWS WITH TAG WithoutAuthTag TO Anyone;
+	TAG DenyForAllTag;
+	TAG ReadOnlyTag;
+	TAG AllowedForAuthenticatedTag;
 
 
-	-- everything is allowed to WorkspaceOwner
-	GRANT ALL ON ALL TABLES TO WorkspaceOwner;
-	GRANT SELECT ON ALL QUERIES TO WorkspaceOwner;
-	GRANT INSERT ON ALL COMMANDS TO WorkspaceOwner;
-	GRANT SELECT ON ALL VIEWS TO WorkspaceOwner;
+	-- naming windows-like
+	ROLE Everyone; -- assigned in any case regardless of whether the token is provided or not
+	ROLE Anonymous;  -- assigned if the token is not provided
+	ROLE AuthenticatedUser; -- assigned if a valid token is provided
+	ROLE System; -- assigned -> everything is allowed, ACL checking skipped
+	ROLE ProfileOwner; -- assigned if the user or device works in its profile
+	ROLE WorkspaceDevice; -- assigned if the device MAY in a workspace that is owned by its profile
+	ROLE WorkspaceOwner; -- assigned if user works in a workspace that is owned by his profile
 
-	-- deny all on few QNames from all
+	-- profile owner is workspace owner
+	GRANT RoleWorkspaceOwner TO RoleProfileOwner;
+	GRANT RoleWorkspaceOwner TO RoleWorkspaceDevice;
+
+	-- null auth policy
+	GRANT ALL ON ALL TABLES WITH TAG WithoutAuthTag TO Everyone;
+	GRANT EXECUTE ON ALL QUERIES WITH TAG WithoutAuthTag TO Everyone;
+	GRANT EXECUTE ON ALL COMMANDS WITH TAG WithoutAuthTag TO Everyone;
+	GRANT SELECT ON ALL VIEWS WITH TAG WithoutAuthTag TO Everyone;
+
+	-- everything is allowed to RoleWorkspaceOwner
+	GRANT ALL ON ALL TABLES TO RoleWorkspaceOwner;
+	GRANT EXECUTE ON ALL QUERIES TO RoleWorkspaceOwner;
+	GRANT EXECUTE ON ALL COMMANDS TO RoleWorkspaceOwner;
+	GRANT SELECT ON ALL VIEWS TO RoleWorkspaceOwner;
+
+	GRANT EXECUTE ON ALL COMMANDS WITH TAG AllowedForAuthenticatedTag TO Authenticated;
+
+	-- deny all for few resource from all
+	REVOKE EXECUTE ON ALL COMMANDS WITH TAG DenyForAllTag FROM Anyone;
+
 );

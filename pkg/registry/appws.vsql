@@ -12,7 +12,7 @@ ALTER WORKSPACE AppWorkspaceWS (
 		WSID int64,                                     -- to be written after workspace init
 		WSError varchar(1024),                          -- to be written after workspace init
 		WSKindInitializationData varchar(1024) NOT NULL
-	);
+	) WITH Tags=(ReadOnlyTag);
 
 	TYPE CreateLoginParams (
 		Login text NOT NULL,
@@ -88,9 +88,9 @@ ALTER WORKSPACE AppWorkspaceWS (
 	) AS RESULT OF ProjectorLoginIdx;
 
 	EXTENSION ENGINE BUILTIN (
-		COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) WITH Tags=(WithoutAuthTag);
 		COMMAND ChangePassword (ChangePasswordParams, UNLOGGED ChangePasswordUnloggedParams) WITH Tags=(WithoutAuthTag);
 		COMMAND ResetPasswordByEmail (ResetPasswordByEmailParams, UNLOGGED ResetPasswordByEmailUnloggedParams) WITH Tags=(WithoutAuthTag);
+		COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) WITH Tags=(WithoutAuthTag);
 		QUERY IssuePrincipalToken (IssuePrincipalTokenParams) RETURNS IssuePrincipalTokenResult WITH Tags=(WithoutAuthTag);
 		QUERY InitiateResetPasswordByEmail (InitiateResetPasswordByEmailParams) RETURNS InitiateResetPasswordByEmailResult WITH Tags=(WithoutAuthTag);
 		QUERY IssueVerifiedValueTokenForResetPassword (IssueVerifiedValueTokenForResetPasswordParams) RETURNS IssueVerifiedValueTokenForResetPasswordResult WITH Tags=(WithoutAuthTag);
@@ -99,7 +99,7 @@ ALTER WORKSPACE AppWorkspaceWS (
 	);
 
 	GRANT ALL ON ALL TABLES WITH TAG WithoutAuthTag TO sys.Anyone;
-	GRANT SELECT ON ALL QUERIES WITH TAG WithoutAuthTag TO sys.Anyone;
-	GRANT INSERT ON ALL COMMANDS WITH TAG WithoutAuthTag TO sys.Anyone;
+	GRANT EXECUTE ON ALL QUERIES WITH TAG WithoutAuthTag TO sys.Anyone;
+	GRANT EXECUTE ON ALL COMMANDS WITH TAG WithoutAuthTag TO sys.Anyone;
 	GRANT SELECT ON ALL VIEWS WITH TAG WithoutAuthTag TO sys.Anyone;
 );

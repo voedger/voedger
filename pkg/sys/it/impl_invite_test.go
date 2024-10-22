@@ -41,7 +41,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	updateRolesEmailTemplate := "text:" + invite.EmailTemplatePlaceholder_Roles
 	updateRolesEmailSubject := "your roles are updated"
 	expireDatetime := vit.Now().UnixMilli()
-	updatedRoles := "updated.Roles"
+	updatedRoles := "app1pkg.Updated"
 
 	email1 := fmt.Sprintf("testinvite_basicusage_%d@123.com", vit.NextNumber())
 	email2 := fmt.Sprintf("testinvite_basicusage_%d@123.com", vit.NextNumber())

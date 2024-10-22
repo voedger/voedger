@@ -542,6 +542,15 @@ ALTERABLE WORKSPACE test_wsWS (
 		Str1 varchar NOT NULL
 	);
 
+	TABLE TestDeniedCDoc INHERITS CDoc (
+		Fld1 int32
+	) WITH Tags=(DenyForAllTag);
+
+	TABLE TestCDocWithDeniedFields INHERITS CDoc (
+		Fld1 int32,
+		DeniedFld2 int32
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult;
 		QUERY MockQry(MockQryParams) RETURNS MockQryResult;
@@ -550,6 +559,9 @@ ALTERABLE WORKSPACE test_wsWS (
 		COMMAND RatedCmd(RatedCmdParams);
 		COMMAND MockCmd(MockCmdParams);
 		COMMAND TestCmd(TestCmdParams) RETURNS TestCmdResult;
+
+		COMMAND TestDeniedCmd WITH Tags=(DenyForAllTag);
+		QUERY TestDeniedQuery() RETURNS TestCmdResult WITH Tags=(DenyForAllTag);
 
 		COMMAND CmdODocOne(odoc1);
 		COMMAND CmdODocTwo(odoc2, UNLOGGED odoc2);
@@ -561,4 +573,22 @@ ALTERABLE WORKSPACE test_wsWS (
 		COMMAND CmdWithResponseIntent(WithResponseIntentParams);
 		QUERY QryWithResponseIntent(WithResponseIntentParams) RETURNS QryWithResponseIntentResult;
 	);
+
+
+	ROLE Updated; -- need for invite tests
+
+	GRANT ALL ON ALL TABLES TO RoleWorkspaceOwner;
+	GRANT EXECUTE ON ALL QUERIES TO RoleWorkspaceOwner;
+	GRANT EXECUTE ON ALL COMMANDS TO RoleWorkspaceOwner;
+	GRANT SELECT ON ALL VIEWS TO RoleWorkspaceOwner;
+
+	GRANT RoleWorkspaceOwner TO RoleProfileOwner;
+	GRANT RoleWorkspaceOwner TO RoleWorkspaceDevice;
+
+	REVOKE ALL ON ALL TABLES WITH TAG DenyForAllTag FROM Anyone;
+	REVOKE EXECUTE ON ALL COMMANDS WITH TAG DenyForAllTag FROM Anyone;
+	REVOKE EXECUTE ON ALL QUERIES WITH TAG DenyForAllTag FROM Anyone;
+	REVOKE SELECT ON ALL VIEWS WITH TAG DenyForAllTag FROM Anyone;
+
+
 );

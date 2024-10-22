@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -244,7 +245,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 					}
 					roles = append(roles, prn.QName)
 				}
-				ok, _, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, qw.msg.QName(), nil, roles)
+				ok, _, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, roles)
 				if err != nil {
 					return err
 				}
@@ -343,7 +344,12 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			qw.queryParams, err = newQueryParams(qw.requestData, NewElement, NewFilter, NewOrderBy, newFieldsKinds(qw.resultType))
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
-		operator("authorize result", func(ctx context.Context, qw *queryWork) (err error) {
+		operator("authorize sys.Any result", func(ctx context.Context, qw *queryWork) (err error) {
+			if qw.iQuery.Result() != appdef.AnyType {
+				// will authorize result only if result is sys.Any
+				// otherwise each field is considered as allowed if EXECUTE ON QUERY is allowed
+				return nil
+			}
 			req := iauthnz.AuthzRequest{
 				OperationKind: iauthnz.OperationKind_SELECT,
 				Resource:      qw.msg.QName(),
@@ -361,7 +367,25 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				return err
 			}
 			if !ok {
-				return coreutils.NewSysError(http.StatusForbidden)
+				roles := []appdef.QName{}
+				for _, prn := range qw.principals {
+					if prn.Kind != iauthnz.PrincipalKind_Role {
+						continue
+					}
+					roles = append(roles, prn.QName)
+				}
+				ok, allowedFields, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, qw.resultType.QName(), req.Fields, roles)
+				if err != nil {
+					return err
+				}
+				if !ok {
+					return coreutils.NewSysError(http.StatusForbidden)
+				}
+				for _, reqField := range req.Fields {
+					if !slices.Contains(allowedFields, reqField) {
+						return coreutils.NewSysError(http.StatusForbidden)
+					}
+				}
 			}
 			return nil
 		}),

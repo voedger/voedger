@@ -46,6 +46,12 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		return nil, principalPayload, err
 	}
 
+	principals = append(principals, iauthnz.Principal{
+		Kind:  iauthnz.PrincipalKind_Role,
+		WSID:  req.RequestWSID,
+		QName: iauthnz.QNameRoleAuthenticated,
+	})
+
 	if principalPayload.IsAPIToken {
 		for _, role := range principalPayload.Roles {
 			if role.WSID != req.RequestWSID {

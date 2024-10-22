@@ -54,7 +54,20 @@ ALTERABLE WORKSPACE UserProfileWS INHERITS ProfileWS (
 		QUERY DescribePackage(DescribePackageParams) RETURNS DescribePackageResult;
 		QUERY InitiateEmailVerification(InitiateEmailVerificationParams) RETURNS InitialEmailVerificationResult;
 		QUERY IssueVerifiedValueToken(IssueVerifiedValueTokenParams) RETURNS IssueVerifiedValueTokenResult;
-		COMMAND SendEmailVerificationCode(SendEmailVerificationParams);
+		COMMAND SendEmailVerificationCode(SendEmailVerificationParams) WITH Tags=(DenyForAllTag);
 		PROJECTOR ApplySendEmailVerificationCode AFTER EXECUTE ON (SendEmailVerificationCode) STATE(AppSecret) INTENTS(SendMail);
 	);
+
+	GRANT ALL ON ALL TABLES TO RoleWorkspaceOwner;
+	GRANT EXECUTE ON ALL QUERIES TO RoleWorkspaceOwner;
+	GRANT EXECUTE ON ALL COMMANDS TO RoleWorkspaceOwner;
+	GRANT SELECT ON ALL VIEWS TO RoleWorkspaceOwner;
+
+	GRANT RoleWorkspaceOwner TO RoleProfileOwner;
+	GRANT RoleWorkspaceOwner TO RoleWorkspaceDevice;
+
+	REVOKE ALL ON ALL TABLES WITH TAG DenyForAllTag FROM Anyone;
+	REVOKE EXECUTE ON ALL COMMANDS WITH TAG DenyForAllTag FROM Anyone;
+	REVOKE EXECUTE ON ALL QUERIES WITH TAG DenyForAllTag FROM Anyone;
+	REVOKE SELECT ON ALL VIEWS WITH TAG DenyForAllTag FROM Anyone;
 );

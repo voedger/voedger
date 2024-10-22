@@ -27,6 +27,6 @@ ALTER WORKSPACE AppWorkspaceWS (
 
 	EXTENSION ENGINE BUILTIN (
 		COMMAND DeployApp(AppDeploymentDescriptor);
-		COMMAND VSqlUpdate(VSqlUpdateParams) RETURNS VSqlUpdateResult;
+		COMMAND VSqlUpdate(VSqlUpdateParams) RETURNS VSqlUpdateResult WITH Tags=(DenyForAllTag);
 	);
 );

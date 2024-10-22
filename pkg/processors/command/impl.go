@@ -692,7 +692,20 @@ func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work pipeline.IWorkpiec
 			return parsedCUD.xPath.Error(err)
 		}
 		if !ok {
-			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
+			roles := []appdef.QName{}
+			for _, prn := range cmd.principals {
+				if prn.Kind != iauthnz.PrincipalKind_Role {
+					continue
+				}
+				roles = append(roles, prn.QName)
+			}
+			ok, _, err := cmd.appPart.IsOperationAllowed(appdef.OperationKind_Insert, parsedCUD.qName, req.Fields, roles)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
+			}
 		}
 	}
 	return
