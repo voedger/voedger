@@ -398,10 +398,12 @@ func TestValidateRefFields(t *testing.T) {
 	adb := New()
 	adb.AddPackage("test", "test.com/test")
 
-	doc := adb.AddCDoc(NewQName("test", "doc"))
+	ws := adb.AddWorkspace(NewQName("test", "workspace"))
+
+	doc := ws.AddCDoc(NewQName("test", "doc"))
 	doc.AddRefField("f1", true, NewQName("test", "rec"))
 
-	rec := adb.AddCRecord(NewQName("test", "rec"))
+	rec := ws.AddCRecord(NewQName("test", "rec"))
 	rec.AddRefField("f1", true, NewQName("test", "rec"))
 
 	t.Run("must be ok if all reference field is valid", func(t *testing.T) {

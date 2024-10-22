@@ -13,6 +13,7 @@ type IWorkspace interface {
 	IWithTypes
 	IWithDataTypes
 	IWithGDocs
+	IWithCDocs
 
 	// Workspace descriptor document.
 	// See [#466](https://github.com/voedger/voedger/issues/466)
@@ -29,6 +30,7 @@ type IWorkspaceBuilder interface {
 	IDataTypesBuilder
 
 	IGDocsBuilder
+	ICDocsBuilder
 
 	// Adds (includes) type to workspace. Type must be defined for application before.
 	//

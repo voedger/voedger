@@ -28,6 +28,40 @@ func newWorkspace(app *appDef, name QName) *workspace {
 	return ws
 }
 
+func (ws *workspace) CDoc(name QName) ICDoc {
+	if t := ws.typeByKind(name, TypeKind_CDoc); t != nil {
+		return t.(ICDoc)
+	}
+	return nil
+}
+
+func (ws *workspace) CDocs(cb func(ICDoc) bool) {
+	for t := range ws.Types {
+		if d, ok := t.(ICDoc); ok {
+			if !cb(d) {
+				break
+			}
+		}
+	}
+}
+
+func (ws *workspace) CRecord(name QName) ICRecord {
+	if t := ws.typeByKind(name, TypeKind_CRecord); t != nil {
+		return t.(ICRecord)
+	}
+	return nil
+}
+
+func (ws *workspace) CRecords(cb func(ICRecord) bool) {
+	for t := range ws.Types {
+		if r, ok := t.(ICRecord); ok {
+			if !cb(r) {
+				break
+			}
+		}
+	}
+}
+
 func (ws *workspace) Descriptor() QName {
 	if ws.desc != nil {
 		return ws.desc.QName()
@@ -134,6 +168,18 @@ func (ws *workspace) addType(name QName) {
 	ws.types[name] = t
 }
 
+func (ws *workspace) addCDoc(name QName) ICDocBuilder {
+	d := newCDoc(ws.app, name)
+	ws.types[name] = d
+	return newCDocBuilder(d)
+}
+
+func (ws *workspace) addCRecord(name QName) ICRecordBuilder {
+	r := newCRecord(ws.app, name)
+	ws.types[name] = r
+	return newCRecordBuilder(r)
+}
+
 func (ws *workspace) addData(name QName, kind DataKind, ancestor QName, constraints ...IConstraint) IDataBuilder {
 	d := newData(ws.app, name, kind, ancestor)
 	d.addConstraints(constraints...)
@@ -207,6 +253,14 @@ func newWorkspaceBuilder(workspace *workspace) *workspaceBuilder {
 
 func (wb *workspaceBuilder) AddData(name QName, kind DataKind, ancestor QName, constraints ...IConstraint) IDataBuilder {
 	return wb.workspace.addData(name, kind, ancestor, constraints...)
+}
+
+func (wb *workspaceBuilder) AddCDoc(name QName) ICDocBuilder {
+	return wb.workspace.addCDoc(name)
+}
+
+func (wb *workspaceBuilder) AddCRecord(name QName) ICRecordBuilder {
+	return wb.workspace.addCRecord(name)
 }
 
 func (wb *workspaceBuilder) AddGDoc(name QName) IGDocBuilder {

@@ -28,11 +28,10 @@ func ExampleIAppDefBuilder_AddRole() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		doc := adb.AddCDoc(docName)
-		doc.AddField("field1", appdef.DataKind_int32, true)
-
 		ws := adb.AddWorkspace(wsName)
-		ws.AddType(docName)
+
+		doc := ws.AddCDoc(docName)
+		doc.AddField("field1", appdef.DataKind_int32, true)
 
 		reader := adb.AddRole(readerRoleName)
 		reader.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName}, []appdef.FieldName{"field1"}, "grant select on doc.field1")

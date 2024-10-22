@@ -22,7 +22,9 @@ func Test_def_AddUnique(t *testing.T) {
 	adb := New()
 	adb.AddPackage("test", "test.com/test")
 
-	doc := adb.AddCDoc(qName)
+	ws := adb.AddWorkspace(NewQName("test", "workspace"))
+
+	doc := ws.AddCDoc(qName)
 	require.NotNil(doc)
 
 	doc.
@@ -101,7 +103,8 @@ func Test_def_AddUnique(t *testing.T) {
 		t.Run("panics if too many fields", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-			rec := adb.AddCRecord(NewQName("test", "rec"))
+			ws := adb.AddWorkspace(NewQName("test", "workspace"))
+			rec := ws.AddCRecord(NewQName("test", "rec"))
 			fldNames := []FieldName{}
 			for i := 0; i <= MaxTypeUniqueFieldsCount; i++ {
 				n := fmt.Sprintf("f_%#x", i)
@@ -131,7 +134,8 @@ func Test_def_AddUnique(t *testing.T) {
 		t.Run("panics if too many uniques", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-			rec := adb.AddCRecord(NewQName("test", "rec"))
+			ws := adb.AddWorkspace(NewQName("test", "workspace"))
+			rec := ws.AddCRecord(NewQName("test", "rec"))
 			for i := 0; i < MaxTypeUniqueCount; i++ {
 				n := fmt.Sprintf("f_%#x", i)
 				rec.AddField(n, DataKind_int32, false)
@@ -153,7 +157,9 @@ func Test_type_UniqueField(t *testing.T) {
 	adb := New()
 	adb.AddPackage("test", "test.com/test")
 
-	doc := adb.AddCDoc(qName)
+	ws := adb.AddWorkspace(NewQName("test", "workspace"))
+
+	doc := ws.AddCDoc(qName)
 	require.NotNil(doc)
 
 	doc.

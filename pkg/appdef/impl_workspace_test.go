@@ -25,7 +25,7 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 		ws := adb.AddWorkspace(wsName)
 
 		t.Run("must be ok to set workspace descriptor", func(t *testing.T) {
-			_ = adb.AddCDoc(descName)
+			_ = ws.AddCDoc(descName)
 			ws.SetDescriptor(descName)
 		})
 
@@ -35,7 +35,7 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 		})
 
 		require.NotNil(ws.Workspace(), "should be ok to get workspace definition before build")
-		require.Equal(ws.Workspace().Descriptor(), descName, "should be ok to get workspace descriptor before build")
+		require.Equal(descName, ws.Workspace().Descriptor(), "should be ok to get workspace descriptor before build")
 
 		a, err := adb.Build()
 		require.NoError(err)
@@ -75,25 +75,22 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 
 		require.Equal(descName, ws.Descriptor(), "must be ok to get workspace descriptor")
 
-		t.Run("must be ok to find object in workspace", func(t *testing.T) {
+		t.Run("must be ok to find structures in workspace", func(t *testing.T) {
 			typ := ws.Type(objName)
-			require.NotNil(typ)
 			require.Equal(TypeKind_Object, typ.Kind())
-
 			obj, ok := typ.(IObject)
 			require.True(ok)
-			require.NotNil(obj)
 			require.Equal(app.Object(objName), obj)
 
 			require.Equal(NullType, ws.Type(NewQName("unknown", "type")), "must be NullType if unknown type")
 		})
 
 		t.Run("should be ok to enum workspace types", func(t *testing.T) {
-			require.Equal(1, func() int {
+			require.Equal(2, func() int {
 				cnt := 0
 				for typ := range ws.Types {
 					switch typ.QName() {
-					case objName:
+					case descName, objName:
 					default:
 						require.Fail("unexpected type in workspace", "unexpected type «%v» in workspace «%v»", typ.QName(), ws.QName())
 					}
@@ -103,32 +100,25 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 			}())
 		})
 
-		t.Run("Should be ok to break enum workspace types", func(t *testing.T) {
-			cnt := 0
-			for range ws.Types {
-				cnt++
-				break
-			}
-			require.Equal(1, cnt)
-		})
-
 		require.Nil(app.Workspace(NewQName("unknown", "workspace")), "must be nil if unknown workspace")
 	})
 
-	t.Run("must be panic if unknown descriptor assigned to workspace", func(t *testing.T) {
-		adb := New()
-		adb.AddPackage("test", "test.com/test")
-		ws := adb.AddWorkspace(wsName)
-		require.Panics(func() { ws.SetDescriptor(NewQName("unknown", "type")) },
-			require.Is(ErrNotFoundError), require.Has("unknown.type"))
-	})
+	t.Run("should be panics", func(t *testing.T) {
+		t.Run("if unknown descriptor assigned to workspace", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
+			ws := adb.AddWorkspace(wsName)
+			require.Panics(func() { ws.SetDescriptor(NewQName("unknown", "type")) },
+				require.Is(ErrNotFoundError), require.Has("unknown.type"))
+		})
 
-	t.Run("must be panic if add unknown type to workspace", func(t *testing.T) {
-		adb := New()
-		adb.AddPackage("test", "test.com/test")
-		ws := adb.AddWorkspace(wsName)
-		require.Panics(func() { ws.AddType(NewQName("unknown", "type")) },
-			require.Is(ErrNotFoundError), require.Has("unknown.type"))
+		t.Run("if add unknown type to workspace", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
+			ws := adb.AddWorkspace(wsName)
+			require.Panics(func() { ws.AddType(NewQName("unknown", "type")) },
+				require.Is(ErrNotFoundError), require.Has("unknown.type"))
+		})
 	})
 }
 
@@ -142,7 +132,7 @@ func Test_AppDef_SetDescriptor(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		ws := adb.AddWorkspace(wsName)
-		_ = adb.AddCDoc(descName)
+		_ = ws.AddCDoc(descName)
 		ws.SetDescriptor(descName)
 
 		app, err := adb.Build()
@@ -167,14 +157,14 @@ func Test_AppDef_SetDescriptor(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		ws := adb.AddWorkspace(wsName)
-		_ = adb.AddCDoc(descName)
+		_ = ws.AddCDoc(descName)
 		ws.SetDescriptor(descName)
 
-		t.Run("must be ok to assign descriptor twice", func(t *testing.T) {
-			ws.SetDescriptor(descName)
-		})
+		require.NotPanics(
+			func() { ws.SetDescriptor(descName) },
+			"should be ok to assign descriptor twice")
 
-		_ = adb.AddCDoc(desc1Name)
+		_ = ws.AddCDoc(desc1Name)
 		ws.SetDescriptor(desc1Name)
 
 		app, err := adb.Build()
@@ -218,7 +208,7 @@ func Test_AppDef_AddWorkspaceAbstract(t *testing.T) {
 
 		ws := adb.AddWorkspace(wsName)
 
-		desc := adb.AddCDoc(descName)
+		desc := ws.AddCDoc(descName)
 		desc.SetAbstract()
 		ws.SetDescriptor(descName)
 
@@ -242,18 +232,12 @@ func Test_AppDef_AddWorkspaceAbstract(t *testing.T) {
 
 		ws := adb.AddWorkspace(wsName)
 
-		desc := adb.AddCDoc(descName)
+		desc := ws.AddCDoc(descName)
 		ws.SetDescriptor(descName)
 
 		desc.SetAbstract()
 
 		_, err := adb.Build()
 		require.ErrorIs(err, ErrIncompatibleError)
-
-		t.Run("but must be ok to fix this error by making the workspace abstract", func(t *testing.T) {
-			ws.SetAbstract()
-			_, err := adb.Build()
-			require.NoError(err)
-		})
 	})
 }

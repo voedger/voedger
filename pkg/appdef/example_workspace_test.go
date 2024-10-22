@@ -21,25 +21,24 @@ func ExampleIWorkspace() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		adb.AddCDoc(descName).
+		ws := adb.AddWorkspace(wsName)
+
+		ws.AddCDoc(descName).
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 
-		adb.AddCRecord(recName).
-			AddField("r1", appdef.DataKind_int64, true).
-			AddField("r2", appdef.DataKind_string, false)
+		ws.SetDescriptor(descName)
 
-		cDoc := adb.AddCDoc(docName)
+		cDoc := ws.AddCDoc(docName)
 		cDoc.
 			AddField("d1", appdef.DataKind_int64, true).
 			AddField("d2", appdef.DataKind_string, false)
 		cDoc.
 			AddContainer("rec", recName, 0, 100)
 
-		adb.AddWorkspace(wsName).
-			SetDescriptor(descName).
-			AddType(recName).
-			AddType(docName)
+		ws.AddCRecord(recName).
+			AddField("r1", appdef.DataKind_int64, true).
+			AddField("r2", appdef.DataKind_string, false)
 
 		app = adb.MustBuild()
 	}
@@ -82,9 +81,10 @@ func ExampleIWorkspace() {
 	// overall: 1
 	// workspace "test.ws": TypeKind_Workspace
 	// workspace "test.ws" descriptor is "test.desc"
+	// - Type: "test.desc", kind: TypeKind_CDoc
 	// - Type: "test.doc", kind: TypeKind_CDoc
 	// - Type: "test.rec", kind: TypeKind_CRecord
-	// types count: 2
+	// types count: 3
 	//
 	// founded by descriptor "test.desc": Workspace «test.ws»
 }

@@ -40,9 +40,11 @@ func Test_validateLimitNames(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
+		ws := adb.AddWorkspace(NewQName("test", "workspace"))
+
 		_ = adb.AddCommand(cmdName)
 		_ = adb.AddQuery(queryName)
-		_ = adb.AddCDoc(docName)
+		_ = ws.AddCDoc(docName)
 
 		_ = adb.AddRole(roleName)
 

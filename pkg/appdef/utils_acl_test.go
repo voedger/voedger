@@ -67,7 +67,7 @@ func Test_validateACLResourceNames(t *testing.T) {
 		ws := adb.AddWorkspace(NewQName("test", "ws"))
 
 		_ = ws.AddGDoc(gdoc)
-		_ = adb.AddCDoc(cdoc)
+		_ = ws.AddCDoc(cdoc)
 		_ = adb.AddCommand(cmd)
 		_ = adb.AddQuery(query)
 		_ = adb.AddRole(role)

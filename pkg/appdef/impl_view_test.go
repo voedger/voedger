@@ -27,7 +27,7 @@ func TestAddView(t *testing.T) {
 	_ = ws.AddData(digsData, DataKind_string, NullQName, Pattern(`^\d+$`, "only digits allowed"))
 
 	docName := NewQName("test", "doc")
-	_ = adb.AddCDoc(docName)
+	_ = ws.AddCDoc(docName)
 	ws.AddType(docName)
 
 	kbName := NewQName("test", "KB")

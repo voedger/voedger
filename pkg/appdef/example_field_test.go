@@ -96,7 +96,7 @@ func ExampleIFieldsBuilder_AddDataField() {
 		month := ws.AddData(monthName, appdef.DataKind_int32, appdef.NullQName, appdef.MinExcl(0), appdef.MaxIncl(12))
 		month.SetComment("Month number, left-open range (0-12]")
 
-		doc := adb.AddCDoc(docName)
+		doc := ws.AddCDoc(docName)
 		doc.
 			AddDataField("code", dig10name, true).
 			SetFieldComment("code", "Code is string containing 10 digits").
@@ -157,7 +157,9 @@ func ExampleIFieldsBuilder_SetFieldVerify() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		doc := adb.AddCDoc(docName)
+		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		doc := ws.AddCDoc(docName)
 		doc.
 			AddField("pin", appdef.DataKind_string, true, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\d+$`)).
 			SetFieldComment("pin", "Secret four digits pin code").

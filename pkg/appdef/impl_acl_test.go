@@ -37,9 +37,8 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 
 		ws := adb.AddWorkspace(wsName)
 
-		doc := adb.AddCDoc(docName)
+		doc := ws.AddCDoc(docName)
 		doc.AddField("field1", DataKind_int32, true)
-		ws.AddType(docName)
 
 		view := adb.AddView(viewName)
 		view.Key().PartKey().AddField("pk_1", DataKind_int32)
@@ -135,13 +134,14 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 		docName := NewQName("test", "doc")
 
 		cmdName := NewQName("test", "cmd")
+
+		ws := adb.AddWorkspace(wsName)
+
 		_ = adb.AddCommand(cmdName)
 
 		readerRoleName := NewQName("test", "readerRole")
 
-		_ = adb.AddWorkspace(wsName)
-
-		doc := adb.AddCDoc(docName)
+		doc := ws.AddCDoc(docName)
 		doc.AddField("field1", DataKind_int32, true)
 
 		t.Run("should be panic if unknown principal", func(t *testing.T) {
@@ -226,7 +226,9 @@ func Test_AppDef_GrantWithFields(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		doc := adb.AddCDoc(docName)
+		ws := adb.AddWorkspace(NewQName("test", "workspace"))
+
+		doc := ws.AddCDoc(docName)
 		doc.AddField("field1", DataKind_int32, true)
 
 		_ = adb.AddRole(readerRoleName)

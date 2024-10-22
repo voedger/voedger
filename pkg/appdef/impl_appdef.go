@@ -530,19 +530,9 @@ func (app *appDef) WorkspaceByDescriptor(name QName) IWorkspace {
 	return app.wsDesc[name]
 }
 
-func (app *appDef) addCDoc(name QName) ICDocBuilder {
-	cDoc := newCDoc(app, name)
-	return newCDocBuilder(cDoc)
-}
-
 func (app *appDef) addCommand(name QName) ICommandBuilder {
 	cmd := newCommand(app, name)
 	return newCommandBuilder(cmd)
-}
-
-func (app *appDef) addCRecord(name QName) ICRecordBuilder {
-	cRec := newCRecord(app, name)
-	return newCRecordBuilder(cRec)
 }
 
 func (app *appDef) addJob(name QName) IJobBuilder {
@@ -709,11 +699,7 @@ func newAppDefBuilder(app *appDef) *appDefBuilder {
 	}
 }
 
-func (ab *appDefBuilder) AddCDoc(name QName) ICDocBuilder { return ab.app.addCDoc(name) }
-
 func (ab *appDefBuilder) AddCommand(name QName) ICommandBuilder { return ab.app.addCommand(name) }
-
-func (ab *appDefBuilder) AddCRecord(name QName) ICRecordBuilder { return ab.app.addCRecord(name) }
 
 func (ab *appDefBuilder) AddJob(name QName) IJobBuilder { return ab.app.addJob(name) }
 

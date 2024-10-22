@@ -23,8 +23,10 @@ func ExampleIView() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
+		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
 		docName := appdef.NewQName("test", "doc")
-		_ = adb.AddCDoc(docName)
+		_ = ws.AddCDoc(docName)
 
 		view := adb.AddView(viewName)
 		view.SetComment("view comment")

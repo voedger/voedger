@@ -103,12 +103,12 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 	ws.AddGRecord(NewQName("test", "GRecord1"))
 	ws.AddGRecord(NewQName("test", "GRecord2"))
 
-	adb.AddCDoc(NewQName("test", "CDoc1")).
+	ws.AddCDoc(NewQName("test", "CDoc1")).
 		SetSingleton()
-	adb.AddCDoc(NewQName("test", "CDoc2")).
+	ws.AddCDoc(NewQName("test", "CDoc2")).
 		SetSingleton()
-	adb.AddCRecord(NewQName("test", "CRecord1"))
-	adb.AddCRecord(NewQName("test", "CRecord2"))
+	ws.AddCRecord(NewQName("test", "CRecord1"))
+	ws.AddCRecord(NewQName("test", "CRecord2"))
 
 	adb.AddWDoc(NewQName("test", "WDoc1")).
 		SetSingleton()
@@ -185,8 +185,11 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 		testBreakable(t, "IAppDef.GRecords", app.GRecords)
 		testBreakable(t, "IWorkspace.GRecords", ws.GRecords)
 
-		testBreakable(t, "CDocs", app.CDocs)
-		testBreakable(t, "CRecords", app.CRecords)
+		testBreakable(t, "IAppDef.CDocs", app.CDocs)
+		testBreakable(t, "IWorkspace.CDocs", ws.CDocs)
+		testBreakable(t, "IAppDef.CRecords", app.CRecords)
+		testBreakable(t, "IWorkspace.CRecords", ws.CRecords)
+
 		testBreakable(t, "WDocs", app.WDocs)
 		testBreakable(t, "WRecords", app.WRecords)
 		testBreakable(t, "Singletons", app.Singletons)

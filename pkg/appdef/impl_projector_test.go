@@ -35,9 +35,11 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		adb.AddCRecord(recName).SetComment("record 1 is trigger for projector")
-		_ = adb.AddCRecord(rec2Name)
-		adb.AddCDoc(docName).SetComment("doc is state for projector")
+		ws := adb.AddWorkspace(NewQName("test", "workspace"))
+
+		ws.AddCRecord(recName).SetComment("record 1 is trigger for projector")
+		_ = ws.AddCRecord(rec2Name)
+		ws.AddCDoc(docName).SetComment("doc is state for projector")
 
 		v := adb.AddView(viewName)
 		v.Key().PartKey().AddDataField("id", SysData_RecordID)
@@ -236,7 +238,9 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		_ = adb.AddCRecord(recName)
+		ws := adb.AddWorkspace(NewQName("test", "workspace"))
+
+		_ = ws.AddCRecord(recName)
 		prj := adb.AddProjector(prjName)
 		prj.
 			SetEngine(ExtensionEngineKind_WASM).
@@ -287,7 +291,9 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
 
-			adb.AddCRecord(recName)
+			ws := adb.AddWorkspace(NewQName("test", "workspace"))
+
+			ws.AddCRecord(recName)
 			prj := adb.AddProjector(prjName)
 			prj.SetName("customExtensionName")
 			prj.Events().
@@ -299,7 +305,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		})
 	})
 
-	t.Run("common panics while build projector", func(t *testing.T) {
+	t.Run("should be panics", func(t *testing.T) {
 		adb := New()
 		require.Panics(func() { adb.AddProjector(NullQName) },
 			require.Is(ErrMissedError))
@@ -307,21 +313,21 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			require.Is(ErrInvalidError), require.Has("naked.🔫"))
 
 		adb.AddPackage("test", "test.com/test")
-		t.Run("panic if type with name already exists", func(t *testing.T) {
+		t.Run("if type with name already exists", func(t *testing.T) {
 			testName := NewQName("test", "dupe")
 			adb.AddObject(testName)
 			require.Panics(func() { adb.AddProjector(testName) },
 				require.Is(ErrAlreadyExistsError), require.Has(testName))
 		})
 
-		t.Run("panic if extension name is invalid", func(t *testing.T) {
+		t.Run("if extension name is invalid", func(t *testing.T) {
 			prj := adb.AddProjector(NewQName("test", "projector"))
 			require.Panics(func() { prj.SetName("naked 🔫") },
 				require.Is(ErrInvalidError), require.Has("naked 🔫"))
 		})
 	})
 
-	t.Run("panics while build states", func(t *testing.T) {
+	t.Run("should be panics while build states", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
@@ -337,7 +343,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			require.Is(ErrNotFoundError), require.Has("unknown.storage"))
 	})
 
-	t.Run("panics while build intents", func(t *testing.T) {
+	t.Run("should be panics while build intents", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
@@ -353,9 +359,11 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			require.Is(ErrNotFoundError), require.Has("unknown.storage"))
 	})
 
-	t.Run("panic while build events", func(t *testing.T) {
+	t.Run("should be panics while build events", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
+
+		ws := adb.AddWorkspace(NewQName("test", "workspace"))
 
 		prj := adb.AddProjector(NewQName("test", "projector"))
 
@@ -369,7 +377,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			require.Is(ErrNotFoundError), require.Has("test.unknown"))
 
 		t.Run("panic if event is incompatible with type", func(t *testing.T) {
-			_ = adb.AddCRecord(recName)
+			_ = ws.AddCRecord(recName)
 			_ = adb.AddObject(objName)
 			_ = adb.AddCommand(cmdName).SetParam(objName)
 

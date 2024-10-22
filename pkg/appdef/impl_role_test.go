@@ -37,7 +37,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 
 		ws := adb.AddWorkspace(wsName)
 
-		doc := adb.AddCDoc(docName)
+		doc := ws.AddCDoc(docName)
 		doc.AddField("field1", DataKind_int32, true)
 		ws.AddType(docName)
 

@@ -15,6 +15,8 @@ func TestBasicUsage(t *testing.T) {
 	adb := New()
 	adb.AddPackage("test", "test.com/test")
 
+	ws := adb.AddWorkspace(NewQName("test", "workspace"))
+
 	saleParamsDoc := adb.AddODoc(NewQName("test", "Sale"))
 	saleParamsDoc.
 		AddField("Buyer", DataKind_string, true, MaxLen(100)).
@@ -39,7 +41,7 @@ func TestBasicUsage(t *testing.T) {
 		AddField("password", DataKind_string, true)
 
 	docName := NewQName("test", "photos")
-	photosDoc := adb.AddCDoc(docName)
+	photosDoc := ws.AddCDoc(docName)
 	photosDoc.
 		AddField("Buyer", DataKind_string, true, MaxLen(100)).
 		AddField("Age", DataKind_int32, false).

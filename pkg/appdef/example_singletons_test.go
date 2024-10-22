@@ -22,7 +22,9 @@ func ExampleIAppDef_Singletons() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		cDoc := adb.AddCDoc(cDocName)
+		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		cDoc := ws.AddCDoc(cDocName)
 		cDoc.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)

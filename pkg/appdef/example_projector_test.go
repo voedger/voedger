@@ -27,8 +27,10 @@ func ExampleIAppDefBuilder_AddProjector() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		adb.AddCRecord(recName).SetComment("record is trigger for projector")
-		adb.AddCDoc(docName).SetComment("doc is state for projector")
+		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		ws.AddCRecord(recName).SetComment("record is trigger for projector")
+		ws.AddCDoc(docName).SetComment("doc is state for projector")
 
 		v := adb.AddView(viewName)
 		v.Key().PartKey().AddDataField("id", appdef.SysData_RecordID)
