@@ -18,31 +18,31 @@ erDiagram
     %% Relationships
 
     VVM ||--|{ DeployedApplication : "1+"
-    VVM ||--|{ SEEInstance : "1+"
-    SEEInstance ||--||SEEType : ""
-    SEEType ||--|| "iextsee.ISEEVvmFactory" : ""
-    "iextsee.ISEEVvmFactory" ||--|{ "iextsee.ISEEAppVerFactory" : "creates"
+    VVM ||--|{ SSEInstance : "1+"
+    SSEInstance ||--||SSEType : ""
+    SSEType ||--|| "iextsee.ISSEVvmFactory" : ""
+    "iextsee.ISSEVvmFactory" ||--|{ "iextsee.ISSEAppVerFactory" : "creates"
 
     DeployedApplication ||--|{ Version : "1+"
-    Version ||--|| "iextsee.ISEEAppVerFactory": ""
+    Version ||--|| "iextsee.ISSEAppVerFactory": ""
 
 
-    "iextsee.ISEEVvmFactory" ||--|| "iextsee.Config" : "has"
-    "iextsee.Config" ||--|| "iextsee.ISEELogger" : "has"
+    "iextsee.ISSEVvmFactory" ||--|| "iextsee.Config" : "has"
+    "iextsee.Config" ||--|| "iextsee.ISSELogger" : "has"
 
-    "iextsee.ISEEAppVerFactory" ||--|{ "iextsee.IPartitionSEEFactory" : "creates"
-    "iextsee.IPartitionSEEFactory" ||--|{ "iextsee.ISEE" : "creates"
+    "iextsee.ISSEAppVerFactory" ||--|{ "iextsee.IPartitionSSEFactory" : "creates"
+    "iextsee.IPartitionSSEFactory" ||--|{ "iextsee.ISSE" : "creates"
 
 
     DeployedApplication ||--|{ AppPartition : "1+"
 
-    AppPartition ||--|{ "iextsee.IPartitionSEEFactory" : "1 active"
+    AppPartition ||--|{ "iextsee.IPartitionSSEFactory" : "1 active"
 
     AppPartition ||--o{ Workspace : "0+"
 
     Workspace ||--o{ "State" : "0+"
 
-    State ||--|| "iextsee.ISEE" : "1"
+    State ||--|| "iextsee.ISSE" : "1"
 
     QueryState ||--|| State : "is"
     CommandState  ||--|| State : "is"

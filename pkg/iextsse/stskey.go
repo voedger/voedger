@@ -1,4 +1,4 @@
-package iextsts
+package iextsse
 
 import (
 	"fmt"

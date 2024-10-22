@@ -5,8 +5,8 @@
 
 package goplugin
 
-import "github.com/voedger/voedger/pkg/iextsts"
+import "github.com/voedger/voedger/pkg/iextsse"
 
-func New() iextsts.ISTSEngine {
+func New() iextsse.ISTSEngine {
 	return nil
 }

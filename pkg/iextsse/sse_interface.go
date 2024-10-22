@@ -3,7 +3,7 @@
  * @author Maxim Geraskin
  */
 
-package iextsts
+package iextsse
 
 import (
 	"context"

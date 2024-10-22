@@ -5,7 +5,7 @@
 
 package builtin
 
-import iextsts "github.com/voedger/voedger/pkg/iextsts"
+import iextsse "github.com/voedger/voedger/pkg/iextsse"
 
 type LRUCache struct {
 	// MaxSize in bytes
@@ -16,6 +16,6 @@ type Param struct {
 	LRUCaches map[string]LRUCache
 }
 
-func New() iextsts.ISTSEngine {
+func New() iextsse.ISTSEngine {
 	return nil
 }
