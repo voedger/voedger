@@ -92,10 +92,16 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 
 	adb := New()
 
-	adb.AddGDoc(NewQName("test", "GDoc1"))
-	adb.AddGDoc(NewQName("test", "GDoc2"))
-	adb.AddGRecord(NewQName("test", "GRecord1"))
-	adb.AddGRecord(NewQName("test", "GRecord2"))
+	wsName := NewQName("test", "workspace")
+	ws := adb.AddWorkspace(wsName)
+
+	ws.AddData(NewQName("test", "Data1"), DataKind_int64, NullQName)
+	ws.AddData(NewQName("test", "Data2"), DataKind_string, NullQName)
+
+	ws.AddGDoc(NewQName("test", "GDoc1"))
+	ws.AddGDoc(NewQName("test", "GDoc2"))
+	ws.AddGRecord(NewQName("test", "GRecord1"))
+	ws.AddGRecord(NewQName("test", "GRecord2"))
 
 	adb.AddCDoc(NewQName("test", "CDoc1")).
 		SetSingleton()
@@ -163,11 +169,22 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 	require.NotNil(app)
 
 	t.Run("range enumeration should be breakable", func(t *testing.T) {
-		testBreakable(t, "Types", app.Types)
+		ws := app.Workspace(wsName)
+
+		testBreakable(t, "IAppDef.Types", app.Types)
+		testBreakable(t, "IWorkspace.Types", ws.Types)
+
 		testBreakable(t, "Structures", app.Structures)
 		testBreakable(t, "Records", app.Records)
-		testBreakable(t, "GDocs", app.GDocs)
-		testBreakable(t, "GRecords", app.GRecords)
+
+		testBreakable(t, "IAppDef.DataTypes", app.DataTypes)
+		testBreakable(t, "IWorkspace.DataTypes", ws.DataTypes)
+
+		testBreakable(t, "IAppDef.GDocs", app.GDocs)
+		testBreakable(t, "IWorkspace.GDocs", ws.GDocs)
+		testBreakable(t, "IAppDef.GRecords", app.GRecords)
+		testBreakable(t, "IWorkspace.GRecords", ws.GRecords)
+
 		testBreakable(t, "CDocs", app.CDocs)
 		testBreakable(t, "CRecords", app.CRecords)
 		testBreakable(t, "WDocs", app.WDocs)

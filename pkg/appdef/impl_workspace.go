@@ -52,6 +52,40 @@ func (ws *workspace) DataTypes(cb func(IData) bool) {
 	}
 }
 
+func (ws *workspace) GDoc(name QName) IGDoc {
+	if t := ws.typeByKind(name, TypeKind_GDoc); t != nil {
+		return t.(IGDoc)
+	}
+	return nil
+}
+
+func (ws *workspace) GDocs(cb func(IGDoc) bool) {
+	for t := range ws.Types {
+		if d, ok := t.(IGDoc); ok {
+			if !cb(d) {
+				break
+			}
+		}
+	}
+}
+
+func (ws *workspace) GRecord(name QName) IGRecord {
+	if t := ws.typeByKind(name, TypeKind_GRecord); t != nil {
+		return t.(IGRecord)
+	}
+	return nil
+}
+
+func (ws *workspace) GRecords(cb func(IGRecord) bool) {
+	for t := range ws.Types {
+		if r, ok := t.(IGRecord); ok {
+			if !cb(r) {
+				break
+			}
+		}
+	}
+}
+
 func (ws *workspace) Type(name QName) IType {
 	if t := ws.TypeByName(name); t != nil {
 		return t
@@ -90,6 +124,7 @@ func (ws *workspace) Validate() error {
 	return nil
 }
 
+// TODO: should be deprecated. All types should be added by specific methods.
 func (ws *workspace) addType(name QName) {
 	t := ws.app.TypeByName(name)
 	if t == nil {
@@ -105,6 +140,18 @@ func (ws *workspace) addData(name QName, kind DataKind, ancestor QName, constrai
 	ws.app.appendType(d)
 	ws.types[name] = d
 	return newDataBuilder(d)
+}
+
+func (ws *workspace) addGDoc(name QName) IGDocBuilder {
+	gDoc := newGDoc(ws.app, name)
+	ws.types[name] = gDoc
+	return newGDocBuilder(gDoc)
+}
+
+func (ws *workspace) addGRecord(name QName) IGRecordBuilder {
+	gRec := newGRecord(ws.app, name)
+	ws.types[name] = gRec
+	return newGRecordBuilder(gRec)
 }
 
 func (ws *workspace) setDescriptor(q QName) {
@@ -162,6 +209,15 @@ func (wb *workspaceBuilder) AddData(name QName, kind DataKind, ancestor QName, c
 	return wb.workspace.addData(name, kind, ancestor, constraints...)
 }
 
+func (wb *workspaceBuilder) AddGDoc(name QName) IGDocBuilder {
+	return wb.workspace.addGDoc(name)
+}
+
+func (wb *workspaceBuilder) AddGRecord(name QName) IGRecordBuilder {
+	return wb.workspace.addGRecord(name)
+}
+
+// TODO: should be deprecated. All types should be added by specific methods.
 func (wb *workspaceBuilder) AddType(name QName) IWorkspaceBuilder {
 	wb.workspace.addType(name)
 	return wb

@@ -545,16 +545,6 @@ func (app *appDef) addCRecord(name QName) ICRecordBuilder {
 	return newCRecordBuilder(cRec)
 }
 
-func (app *appDef) addGDoc(name QName) IGDocBuilder {
-	gDoc := newGDoc(app, name)
-	return newGDocBuilder(gDoc)
-}
-
-func (app *appDef) addGRecord(name QName) IGRecordBuilder {
-	gRec := newGRecord(app, name)
-	return newGRecordBuilder(gRec)
-}
-
 func (app *appDef) addJob(name QName) IJobBuilder {
 	j := newJob(app, name)
 	return newJobBuilder(j)
@@ -724,10 +714,6 @@ func (ab *appDefBuilder) AddCDoc(name QName) ICDocBuilder { return ab.app.addCDo
 func (ab *appDefBuilder) AddCommand(name QName) ICommandBuilder { return ab.app.addCommand(name) }
 
 func (ab *appDefBuilder) AddCRecord(name QName) ICRecordBuilder { return ab.app.addCRecord(name) }
-
-func (ab *appDefBuilder) AddGDoc(name QName) IGDocBuilder { return ab.app.addGDoc(name) }
-
-func (ab *appDefBuilder) AddGRecord(name QName) IGRecordBuilder { return ab.app.addGRecord(name) }
 
 func (ab *appDefBuilder) AddJob(name QName) IJobBuilder { return ab.app.addJob(name) }
 

@@ -61,17 +61,16 @@ func Test_validateACLResourceNames(t *testing.T) {
 	cmd := NewQName("test", "cmd")
 	query := NewQName("test", "query")
 	role := NewQName("test", "role")
-	ws := NewQName("test", "ws")
 
 	app := func() IAppDef {
 		adb := New()
+		ws := adb.AddWorkspace(NewQName("test", "ws"))
 
+		_ = ws.AddGDoc(gdoc)
 		_ = adb.AddCDoc(cdoc)
-		_ = adb.AddGDoc(gdoc)
 		_ = adb.AddCommand(cmd)
 		_ = adb.AddQuery(query)
 		_ = adb.AddRole(role)
-		_ = adb.AddWorkspace(ws)
 
 		return adb.MustBuild()
 	}()
@@ -85,7 +84,7 @@ func Test_validateACLResourceNames(t *testing.T) {
 		{"error: empty names", []QName{}, nil, ErrMissedError},
 		{"error: unknown name", []QName{NewQName("test", "unknown")}, nil, ErrNotFoundError},
 
-		{"ok: test.cdoc + test.gdoc", []QName{cdoc, gdoc}, QNamesFrom(cdoc, gdoc), nil},
+		{"ok: test.gdoc + test.cdoc", []QName{gdoc, cdoc}, QNamesFrom(gdoc, cdoc), nil},
 
 		{"ok: test.cmd + test.query", []QName{cmd, query}, QNamesFrom(cmd, query), nil},
 
