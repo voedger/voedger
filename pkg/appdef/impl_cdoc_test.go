@@ -19,7 +19,7 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 
 	var app IAppDef
 
-	t.Run("must be ok to add document", func(t *testing.T) {
+	t.Run("should be ok to add document", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 

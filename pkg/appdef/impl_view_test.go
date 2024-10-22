@@ -37,11 +37,11 @@ func TestAddView(t *testing.T) {
 	vb := adb.AddView(viewName)
 	ws.AddType(viewName)
 
-	t.Run("must be ok to build view", func(t *testing.T) {
+	t.Run("should be ok to build view", func(t *testing.T) {
 
 		vb.SetComment("test view")
 
-		t.Run("must be ok to add partition key fields", func(t *testing.T) {
+		t.Run("should be ok to add partition key fields", func(t *testing.T) {
 			vb.Key().PartKey().AddDataField("pkF1", numName)
 			vb.Key().PartKey().AddField("pkF2", DataKind_bool)
 
@@ -67,7 +67,7 @@ func TestAddView(t *testing.T) {
 			})
 		})
 
-		t.Run("must be ok to add clustering columns fields", func(t *testing.T) {
+		t.Run("should be ok to add clustering columns fields", func(t *testing.T) {
 			vb.Key().ClustCols().AddField("ccF1", DataKind_int64)
 			vb.Key().ClustCols().AddRefField("ccF2", docName)
 
@@ -84,7 +84,7 @@ func TestAddView(t *testing.T) {
 			})
 		})
 
-		t.Run("must be ok to add value fields", func(t *testing.T) {
+		t.Run("should be ok to add value fields", func(t *testing.T) {
 			vb.Value().
 				AddField("valF1", DataKind_bool, true).
 				AddDataField("valF2", digsData, false, MaxLen(100)).SetFieldComment("valF2", "up to 100 digits")
@@ -95,7 +95,7 @@ func TestAddView(t *testing.T) {
 	require.NoError(err)
 	view := app.View(viewName)
 
-	t.Run("must be ok to read view", func(t *testing.T) {
+	t.Run("should be ok to read view", func(t *testing.T) {
 		require.Equal("test view", view.Comment())
 		require.Equal(viewName, view.QName())
 		require.Equal(TypeKind_ViewRecord, view.Kind())
@@ -151,7 +151,7 @@ func TestAddView(t *testing.T) {
 		}
 		require.Equal(view.FieldCount(), cnt)
 
-		t.Run("must be ok to read view full key", func(t *testing.T) {
+		t.Run("should be ok to read view full key", func(t *testing.T) {
 			key := view.Key()
 			require.Equal(4, key.FieldCount())
 			cnt := 0
@@ -178,7 +178,7 @@ func TestAddView(t *testing.T) {
 			require.Equal(key.FieldCount(), cnt)
 		})
 
-		t.Run("must be ok to read view partition key", func(t *testing.T) {
+		t.Run("should be ok to read view partition key", func(t *testing.T) {
 			pk := view.Key().PartKey()
 			require.Equal(2, pk.FieldCount())
 			cnt := 0
@@ -200,7 +200,7 @@ func TestAddView(t *testing.T) {
 			require.NotPanics(func() { pk.isPartKey() })
 		})
 
-		t.Run("must be ok to read view clustering columns", func(t *testing.T) {
+		t.Run("should be ok to read view clustering columns", func(t *testing.T) {
 			cc := view.Key().ClustCols()
 			require.Equal(2, cc.FieldCount())
 			cnt := 0
@@ -221,7 +221,7 @@ func TestAddView(t *testing.T) {
 			require.NotPanics(func() { cc.isClustCols() })
 		})
 
-		t.Run("must be ok to read view value", func(t *testing.T) {
+		t.Run("should be ok to read view value", func(t *testing.T) {
 			val := view.Value()
 			require.Equal(3, val.FieldCount())
 			cnt := 0
@@ -244,7 +244,7 @@ func TestAddView(t *testing.T) {
 			require.NotPanics(func() { val.isViewValue() })
 		})
 
-		t.Run("must be ok to cast Type() as IView", func(t *testing.T) {
+		t.Run("should be ok to cast Type() as IView", func(t *testing.T) {
 			typ := app.Type(viewName)
 			require.NotNil(typ)
 			require.Equal(TypeKind_ViewRecord, typ.Kind())
@@ -256,7 +256,7 @@ func TestAddView(t *testing.T) {
 
 		require.Nil(app.View(NewQName("test", "unknown")), "find unknown view must return nil")
 
-		t.Run("must be nil if not view", func(t *testing.T) {
+		t.Run("should be nil if not view", func(t *testing.T) {
 			require.Nil(app.View(docName))
 
 			typ := app.Type(docName)
@@ -267,7 +267,7 @@ func TestAddView(t *testing.T) {
 		})
 	})
 
-	t.Run("must be ok to add fields to view after app build", func(t *testing.T) {
+	t.Run("should be ok to add fields to view after app build", func(t *testing.T) {
 		vb.Key().PartKey().
 			AddRefField("pkF3", docName).
 			SetFieldComment("pkF3", "test comment")
@@ -362,14 +362,14 @@ func TestViewValidate(t *testing.T) {
 	v := adb.AddView(viewName)
 	require.NotNil(v)
 
-	t.Run("must be error if no pkey fields", func(t *testing.T) {
+	t.Run("should be error if no pkey fields", func(t *testing.T) {
 		_, err := adb.Build()
 		require.ErrorIs(err, ErrMissedError)
 	})
 
 	v.Key().PartKey().AddField("pk1", DataKind_bool)
 
-	t.Run("must be error if no ccols fields", func(t *testing.T) {
+	t.Run("should be error if no ccols fields", func(t *testing.T) {
 		_, err := adb.Build()
 		require.ErrorIs(err, ErrMissedError)
 	})

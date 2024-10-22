@@ -27,7 +27,7 @@ func Test_type_AddContainer(t *testing.T) {
 	childName := NewQName("test", "child")
 	_ = adb.AddObject(childName)
 
-	t.Run("must be ok to add container", func(t *testing.T) {
+	t.Run("should be ok to add container", func(t *testing.T) {
 		root.AddContainer("c1", childName, 1, Occurs_Unbounded)
 
 		app, err := adb.Build()
@@ -126,7 +126,7 @@ func TestValidateContainer(t *testing.T) {
 	doc := ws.AddCDoc(NewQName("test", "doc"))
 	doc.AddContainer("rec", NewQName("test", "rec"), 0, Occurs_Unbounded)
 
-	t.Run("must be error if container type not found", func(t *testing.T) {
+	t.Run("should be error if container type not found", func(t *testing.T) {
 		_, err := adb.Build()
 		require.Error(err, require.Is(ErrNotFoundError), require.Has("test.rec"))
 	})
@@ -135,13 +135,13 @@ func TestValidateContainer(t *testing.T) {
 	_, err := adb.Build()
 	require.NoError(err)
 
-	t.Run("must be ok container recurse", func(t *testing.T) {
+	t.Run("should be ok container recurse", func(t *testing.T) {
 		rec.AddContainer("rec", NewQName("test", "rec"), 0, Occurs_Unbounded)
 		_, err := adb.Build()
 		require.NoError(err)
 	})
 
-	t.Run("must be ok container sub recurse", func(t *testing.T) {
+	t.Run("should be ok container sub recurse", func(t *testing.T) {
 		rec.AddContainer("rec1", NewQName("test", "rec1"), 0, Occurs_Unbounded)
 		rec1 := ws.AddCRecord(NewQName("test", "rec1"))
 		rec1.AddContainer("rec", NewQName("test", "rec"), 0, Occurs_Unbounded)
@@ -149,7 +149,7 @@ func TestValidateContainer(t *testing.T) {
 		require.NoError(err)
 	})
 
-	t.Run("must be error if container kind is incompatible", func(t *testing.T) {
+	t.Run("should be error if container kind is incompatible", func(t *testing.T) {
 		doc.AddContainer("obj", NewQName("test", "obj"), 0, 1)
 		_ = adb.AddObject(NewQName("test", "obj"))
 		_, err := adb.Build()

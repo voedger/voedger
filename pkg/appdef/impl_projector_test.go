@@ -31,7 +31,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 	prjName := NewQName("test", "projector")
 
-	t.Run("must be ok to add projector", func(t *testing.T) {
+	t.Run("should be ok to add projector", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
@@ -66,7 +66,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		prj.Intents().
 			Add(sysViews, viewName).SetComment(sysViews, "view is intent for projector")
 
-		t.Run("must be ok to build", func(t *testing.T) {
+		t.Run("should be ok to build", func(t *testing.T) {
 			a, err := adb.Build()
 			require.NoError(err)
 			require.NotNil(a)
@@ -77,7 +77,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 	require.NotNil(app)
 
-	t.Run("must be ok to find builded projector", func(t *testing.T) {
+	t.Run("should be ok to find builded projector", func(t *testing.T) {
 		typ := app.Type(prjName)
 		require.Equal(TypeKind_Projector, typ.Kind())
 
@@ -93,7 +93,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		require.Equal(ExtensionEngineKind_BuiltIn, prj.Engine())
 		require.True(prj.Sync())
 
-		t.Run("must be ok enum events", func(t *testing.T) {
+		t.Run("should be ok enum events", func(t *testing.T) {
 			require.EqualValues(3, prj.Events().Len())
 
 			cnt := 0
@@ -121,7 +121,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			})
 			require.Equal(3, cnt)
 
-			t.Run("must be ok obtain events map", func(t *testing.T) {
+			t.Run("should be ok obtain events map", func(t *testing.T) {
 				events := prj.Events().Map()
 				require.Len(events, 3)
 				require.Contains(events, cmdName)
@@ -132,7 +132,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 				require.EqualValues(ProjectorEventKind_AnyChanges, events[recName])
 			})
 
-			t.Run("must be ok to get event by name", func(t *testing.T) {
+			t.Run("should be ok to get event by name", func(t *testing.T) {
 				event := prj.Events().Event(cmdName)
 				require.NotNil(event)
 				require.Equal(cmdName, event.On().QName())
@@ -144,7 +144,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 		require.True(prj.WantErrors())
 
-		t.Run("must be ok enum states", func(t *testing.T) {
+		t.Run("should be ok enum states", func(t *testing.T) {
 			cnt := 0
 			for s := range prj.States().Enum {
 				cnt++
@@ -162,7 +162,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			require.Equal(2, cnt)
 			require.Equal(cnt, prj.States().Len())
 
-			t.Run("must be ok to get states as map", func(t *testing.T) {
+			t.Run("should be ok to get states as map", func(t *testing.T) {
 				states := prj.States().Map()
 				require.Len(states, 2)
 				require.Contains(states, sysRecords)
@@ -171,7 +171,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 				require.Empty(states[sysWLog])
 			})
 
-			t.Run("must be ok to get state by name", func(t *testing.T) {
+			t.Run("should be ok to get state by name", func(t *testing.T) {
 				state := prj.States().Storage(sysRecords)
 				require.NotNil(state)
 				require.Equal(sysRecords, state.Name())
@@ -181,7 +181,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			})
 		})
 
-		t.Run("must be ok enum intents", func(t *testing.T) {
+		t.Run("should be ok enum intents", func(t *testing.T) {
 			cnt := 0
 			for i := range prj.Intents().Enum {
 				cnt++
@@ -197,14 +197,14 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			require.Equal(1, cnt)
 			require.Equal(cnt, prj.Intents().Len())
 
-			t.Run("must be ok to get intents as map", func(t *testing.T) {
+			t.Run("should be ok to get intents as map", func(t *testing.T) {
 				intents := prj.Intents().Map()
 				require.Len(intents, 1)
 				require.Contains(intents, sysViews)
 				require.EqualValues(QNames{viewName}, intents[sysViews])
 			})
 
-			t.Run("must be ok to get intent by name", func(t *testing.T) {
+			t.Run("should be ok to get intent by name", func(t *testing.T) {
 				intent := prj.Intents().Storage(sysViews)
 				require.NotNil(intent)
 				require.Equal(sysViews, intent.Name())
@@ -215,7 +215,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		})
 	})
 
-	t.Run("must be ok to enum projectors", func(t *testing.T) {
+	t.Run("should be ok to enum projectors", func(t *testing.T) {
 		cnt := 0
 		for p := range app.Projectors {
 			cnt++
@@ -257,7 +257,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		require.Equal("customExtensionName", p.Name())
 		require.Equal(ExtensionEngineKind_WASM, p.Engine())
 
-		t.Run("must be ok enum events", func(t *testing.T) {
+		t.Run("should be ok enum events", func(t *testing.T) {
 			require.EqualValues(1, p.Events().Len())
 			cnt := 0
 			p.Events().Enum(func(e IProjectorEvent) {

@@ -183,7 +183,7 @@ func Test_type_UniqueField(t *testing.T) {
 		require.True(fld.Required())
 	})
 
-	t.Run("must be ok to clear unique field", func(t *testing.T) {
+	t.Run("should be ok to clear unique field", func(t *testing.T) {
 		doc.SetUniqueField("")
 
 		app, err := adb.Build()
@@ -239,13 +239,13 @@ func Test_subSet(t *testing.T) {
 		require.True(subSet([]bool{}, []bool{true, false}))
 	})
 
-	t.Run("must be true", func(t *testing.T) {
+	t.Run("should be true", func(t *testing.T) {
 		require.True(subSet([]int{1}, []int{1}))
 		require.True(subSet([]string{"a"}, []string{"a", "b"}))
 		require.True(subSet([]int{1, 2, 3}, []int{0, 1, 2, 3, 4}))
 	})
 
-	t.Run("must be false", func(t *testing.T) {
+	t.Run("should be false", func(t *testing.T) {
 		require.False(subSet([]int{1}, []int{}))
 		require.False(subSet([]string{"a"}, []string{"b", "c"}))
 		require.False(subSet([]int{1, 2, 3}, []int{0, 2, 4, 6, 8}))
@@ -265,13 +265,13 @@ func Test_overlaps(t *testing.T) {
 		require.True(overlaps([]bool{true, false}, []bool{}))
 	})
 
-	t.Run("must be true", func(t *testing.T) {
+	t.Run("should be true", func(t *testing.T) {
 		require.True(overlaps([]int{1}, []int{1}))
 		require.True(overlaps([]string{"a"}, []string{"a", "b"}))
 		require.True(overlaps([]int{0, 1, 2, 3, 4}, []int{1, 2, 3}))
 	})
 
-	t.Run("must be false", func(t *testing.T) {
+	t.Run("should be false", func(t *testing.T) {
 		require.False(overlaps([]int{1}, []int{2}))
 		require.False(overlaps([]string{"a"}, []string{"b", "c"}))
 		require.False(overlaps([]int{1, 2, 3}, []int{7, 0, 3, 2, 0, -1}))
