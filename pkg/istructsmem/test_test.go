@@ -285,7 +285,7 @@ func test() *testDataType {
 		}
 
 		{
-			rec := adb.AddCDoc(testData.tablePhotos)
+			rec := ws.AddCDoc(testData.tablePhotos)
 			rec.
 				AddDataField(testData.buyerIdent, testData.dataIdent, true).
 				AddField(testData.ageIdent, appdef.DataKind_int32, false).
@@ -297,7 +297,7 @@ func test() *testDataType {
 			rec.
 				AddContainer(testData.remarkIdent, testData.tablePhotoRems, 0, appdef.Occurs_Unbounded)
 
-			recChild := adb.AddCRecord(testData.tablePhotoRems)
+			recChild := ws.AddCRecord(testData.tablePhotoRems)
 			recChild.
 				AddField(testData.photoIdent, appdef.DataKind_RecordID, true).
 				AddField(testData.remarkIdent, appdef.DataKind_string, true).
@@ -305,7 +305,7 @@ func test() *testDataType {
 		}
 
 		{
-			abstractDoc := adb.AddCDoc(testData.abstractCDoc)
+			abstractDoc := ws.AddCDoc(testData.abstractCDoc)
 			abstractDoc.SetComment("abstract test cdoc")
 			abstractDoc.SetAbstract()
 			abstractDoc.
@@ -345,7 +345,7 @@ func test() *testDataType {
 		}
 
 		{
-			cDoc := adb.AddCDoc(testData.testCDoc)
+			cDoc := ws.AddCDoc(testData.testCDoc)
 			cDoc.
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).
@@ -360,7 +360,7 @@ func test() *testDataType {
 			cDoc.
 				AddContainer("record", testData.testCRec, 0, appdef.Occurs_Unbounded)
 
-			cRec := adb.AddCRecord(testData.testCRec)
+			cRec := ws.AddCRecord(testData.testCRec)
 			cRec.
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).

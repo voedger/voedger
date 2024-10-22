@@ -43,7 +43,8 @@ func TestQNames(t *testing.T) {
 		func() appdef.IAppDef {
 			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
-			adb.AddCDoc(defName)
+			ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+			ws.AddCDoc(defName)
 			appDef, err := adb.Build()
 			require.NoError(err)
 			return appDef
@@ -92,7 +93,8 @@ func TestQNames(t *testing.T) {
 				func() appdef.IAppDef {
 					adb := appdef.New()
 					adb.AddPackage("test", "test.com/test")
-					adb.AddCDoc(defName)
+					ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+					ws.AddCDoc(defName)
 					appDef, err := adb.Build()
 					require.NoError(err)
 					return appDef

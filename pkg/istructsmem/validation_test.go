@@ -320,6 +320,8 @@ func Test_ValidSysCudEvent(t *testing.T) {
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
+	wsName := appdef.NewQName("test", "workspace")
+
 	docName := appdef.NewQName("test", "document")
 	rec1Name := appdef.NewQName("test", "record1")
 	rec2Name := appdef.NewQName("test", "record2")
@@ -327,7 +329,8 @@ func Test_ValidSysCudEvent(t *testing.T) {
 	objName := appdef.NewQName("test", "object")
 
 	t.Run("must be ok to build test application", func(t *testing.T) {
-		doc := adb.AddCDoc(docName)
+		ws := adb.AddWorkspace(wsName)
+		doc := ws.AddCDoc(docName)
 		doc.
 			AddField("RequiredField", appdef.DataKind_int32, true).
 			AddRefField("RefField", false, rec1Name)
@@ -335,8 +338,8 @@ func Test_ValidSysCudEvent(t *testing.T) {
 			AddContainer("child", rec1Name, 0, appdef.Occurs_Unbounded).
 			AddContainer("child2", rec2Name, 0, appdef.Occurs_Unbounded)
 
-		_ = adb.AddCRecord(rec1Name)
-		_ = adb.AddCRecord(rec2Name)
+		_ = ws.AddCRecord(rec1Name)
+		_ = ws.AddCRecord(rec2Name)
 
 		obj := adb.AddObject(objName)
 		obj.AddContainer("objChild", objName, 0, appdef.Occurs_Unbounded)

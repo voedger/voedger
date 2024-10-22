@@ -38,6 +38,7 @@ func TestBasicUsage(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
+		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
 		saleParamsName := appdef.NewQName("test", "SaleParams")
 		saleSecureParamsName := appdef.NewQName("test", "saleSecureArgs")
@@ -65,7 +66,7 @@ func TestBasicUsage(t *testing.T) {
 		saleSecureParamsObj.
 			AddField("password", appdef.DataKind_string, true)
 
-		photosDoc := adb.AddCDoc(appdef.NewQName("test", "photos"))
+		photosDoc := ws.AddCDoc(appdef.NewQName("test", "photos"))
 		photosDoc.
 			AddField("Buyer", appdef.DataKind_string, true).
 			AddField("Age", appdef.DataKind_int32, false).
@@ -476,6 +477,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		adb.AddPackage("structs", "test.com/structs")
 		adb.AddPackage("functions", "test.com/functions")
 
+		wsQName := appdef.NewQName("test", "workspace")
 		docQName := appdef.NewQName("structs", "CDoc")
 		recQName := appdef.NewQName("structs", "CRec")
 		viewQName := appdef.NewQName("structs", "View")
@@ -483,10 +485,12 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		queryQName := appdef.NewQName("functions", "query")
 		argQName := appdef.NewQName("structs", "Arg")
 
-		rec := adb.AddCRecord(recQName)
+		ws := adb.AddWorkspace(wsQName)
+
+		rec := ws.AddCRecord(recQName)
 		rec.AddField("int", appdef.DataKind_int64, false)
 
-		doc := adb.AddCDoc(docQName)
+		doc := ws.AddCDoc(docQName)
 		doc.AddField("str", appdef.DataKind_string, true)
 		doc.AddField("fld", appdef.DataKind_int32, true)
 		doc.SetUniqueField("fld")

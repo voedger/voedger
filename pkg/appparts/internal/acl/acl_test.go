@@ -29,7 +29,9 @@ func Test_IsOperationAllowed(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		doc := adb.AddCDoc(docName)
+		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		doc := ws.AddCDoc(docName)
 		doc.
 			AddField("field1", appdef.DataKind_int32, true).
 			AddField("hiddenField", appdef.DataKind_int32, false).

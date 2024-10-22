@@ -40,7 +40,7 @@ func Example() {
 		s := ws.AddData(strName, appdef.DataKind_string, appdef.NullQName)
 		s.AddConstraints(appdef.MinLen(1), appdef.MaxLen(100), appdef.Pattern(`^\w+$`, "only word characters allowed"))
 
-		doc := adb.AddCDoc(docName)
+		doc := ws.AddCDoc(docName)
 		doc.SetSingleton()
 		doc.
 			AddField("f1", appdef.DataKind_int64, true).
@@ -52,7 +52,7 @@ func Example() {
 		doc.AddUnique(appdef.UniqueQName(docName, "unique1"), []appdef.FieldName{"f1", "f2"})
 		doc.SetComment(`comment 1`, `comment 2`)
 
-		rec := adb.AddCRecord(recName)
+		rec := ws.AddCRecord(recName)
 		rec.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false).
@@ -132,7 +132,7 @@ func Example() {
 			"disable writer to update test.doc")
 		writer.GrantAll([]appdef.QName{cmdName, queryName}, "allow writer to execute all test functions")
 
-		adb.AddCDoc(wsDescName).SetSingleton()
+		ws.AddCDoc(wsDescName).SetSingleton()
 		ws.SetDescriptor(wsDescName).
 			AddType(docName).
 			AddType(recName).
@@ -579,13 +579,16 @@ func Example() {
 	//             "test.cmd",
 	//             "test.doc",
 	//             "test.job",
+	//             "test.number",
 	//             "test.obj",
 	//             "test.projector",
 	//             "test.query",
 	//             "test.reader",
 	//             "test.rec",
+	//             "test.string",
 	//             "test.view",
-	//             "test.writer"
+	//             "test.writer",
+	//             "test.wsDesc"
 	//           ]
 	//         }
 	//       }

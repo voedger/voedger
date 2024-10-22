@@ -27,7 +27,7 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 
 	appName, appID := istructs.AppQName_test1_app1, istructs.ClusterAppID_test1_app1
 
-	t.Run("must be ok to add config for known builtin app", func(t *testing.T) {
+	t.Run("should be ok to add config for known builtin app", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
@@ -40,9 +40,11 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 		_, storageProvider := teststore.New(appName)
 		appStructs := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		t.Run("must be ok to change appDef after add config", func(t *testing.T) {
+		t.Run("should be ok to change appDef after add config", func(t *testing.T) {
+			wsName := appdef.NewQName("test", "workspace")
+			ws := adb.AddWorkspace(wsName)
 			docName := appdef.NewQName("test", "doc")
-			doc := adb.AddCDoc(docName)
+			doc := ws.AddCDoc(docName)
 			doc.AddField("field", appdef.DataKind_int64, true)
 			doc.SetSingleton()
 			appStr, err := appStructs.BuiltIn(appName)
@@ -70,7 +72,7 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 		require.Equal(istructs.NumAppWorkspaces(42), as.NumAppWorkspaces())
 	})
 
-	t.Run("must be error to make invalid changes in appDef after add config", func(t *testing.T) {
+	t.Run("should be error to make invalid changes in appDef after add config", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
@@ -88,27 +90,29 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 		require.ErrorIs(err, appdef.ErrNotFoundError)
 	})
 
-	t.Run("must be panic to add config for unknown builtin app", func(t *testing.T) {
-		cfgs := make(AppConfigsType)
-		appName := appdef.NewAppQName("unknown", "unknown")
-		require.Panics(func() {
-			cfgs.AddBuiltInAppConfig(appName, appdef.New()).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-		}, require.Is(istructs.ErrAppNotFound), require.Has(appName))
-	})
+	t.Run("should be panics", func(t *testing.T) {
+		t.Run("if add config for unknown builtin app", func(t *testing.T) {
+			cfgs := make(AppConfigsType)
+			appName := appdef.NewAppQName("unknown", "unknown")
+			require.Panics(func() {
+				cfgs.AddBuiltInAppConfig(appName, appdef.New()).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+			}, require.Is(istructs.ErrAppNotFound), require.Has(appName))
+		})
 
-	t.Run("must be panic to add config with invalid appDef", func(t *testing.T) {
-		cfgs := make(AppConfigsType)
+		t.Run("if add config with invalid appDef", func(t *testing.T) {
+			cfgs := make(AppConfigsType)
 
-		require.Panics(func() {
-			_ = cfgs.AddBuiltInAppConfig(appName,
-				func() appdef.IAppDefBuilder {
-					adb := appdef.New()
-					adb.AddPackage("test", "test.com/test")
-					adb.AddObject(appdef.NewQName("test", "obj")).
-						AddContainer("unknown", appdef.NewQName("test", "unknown"), 0, 1) // <- error here: reference to unknown element type
-					return adb
-				}())
-		}, require.Is(appdef.ErrNotFoundError), require.Has(appName), require.Has("test.unknown"))
+			require.Panics(func() {
+				_ = cfgs.AddBuiltInAppConfig(appName,
+					func() appdef.IAppDefBuilder {
+						adb := appdef.New()
+						adb.AddPackage("test", "test.com/test")
+						adb.AddObject(appdef.NewQName("test", "obj")).
+							AddContainer("unknown", appdef.NewQName("test", "unknown"), 0, 1) // <- error here: reference to unknown element type
+						return adb
+					}())
+			}, require.Is(appdef.ErrNotFoundError), require.Has(appName), require.Has("test.unknown"))
+		})
 	})
 }
 
@@ -172,17 +176,19 @@ func TestErrorsAppConfigsType(t *testing.T) {
 
 	appName := istructs.AppQName_test1_app1
 
+	wsName := appdef.NewQName("test", "workspace")
 	docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
 
 	appDef := func() appdef.IAppDefBuilder {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
-		doc := adb.AddCDoc(docName)
+		ws := adb.AddWorkspace(wsName)
+		doc := ws.AddCDoc(docName)
 		doc.SetSingleton()
 		doc.AddField("f1", appdef.DataKind_string, true)
 		doc.AddContainer("rec", recName, 0, 1)
 		doc.AddUnique(appdef.UniqueQName(docName, "f1"), []appdef.FieldName{"f1"})
-		adb.AddCRecord(recName)
+		ws.AddCRecord(recName)
 		return adb
 	}()
 
