@@ -6,9 +6,11 @@
 package router
 
 import (
+	"io"
 	"log"
 	"net/http"
 	"runtime/debug"
+	"strings"
 
 	"github.com/voedger/voedger/pkg/coreutils"
 )
@@ -36,4 +38,15 @@ func writeResponse(w http.ResponseWriter, data string) bool {
 
 func writeUnauthorized(rw http.ResponseWriter) {
 	WriteTextResponse(rw, "not authorized", http.StatusUnauthorized)
+}
+
+type filteringWriter struct {
+	w io.Writer
+}
+
+func (fw *filteringWriter) Write(p []byte) (n int, err error) {
+	if strings.Contains(string(p), "TLS handshake error") {
+		return len(p), nil
+	}
+	return fw.w.Write(p)
 }
