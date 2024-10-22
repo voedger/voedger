@@ -83,15 +83,17 @@ func ExampleIFieldsBuilder_AddDataField() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
+		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
 		str10name := appdef.NewQName("test", "str10")
-		str10 := adb.AddData(str10name, appdef.DataKind_string, appdef.NullQName, appdef.MinLen(10), appdef.MaxLen(10))
+		str10 := ws.AddData(str10name, appdef.DataKind_string, appdef.NullQName, appdef.MinLen(10), appdef.MaxLen(10))
 		str10.SetComment("String with 10 characters exact")
 
 		dig10name := appdef.NewQName("test", "dig10")
-		_ = adb.AddData(dig10name, appdef.DataKind_string, str10name, appdef.Pattern(`^\d+$`, "only digits"))
+		_ = ws.AddData(dig10name, appdef.DataKind_string, str10name, appdef.Pattern(`^\d+$`, "only digits"))
 
 		monthName := appdef.NewQName("test", "month")
-		month := adb.AddData(monthName, appdef.DataKind_int32, appdef.NullQName, appdef.MinExcl(0), appdef.MaxIncl(12))
+		month := ws.AddData(monthName, appdef.DataKind_int32, appdef.NullQName, appdef.MinExcl(0), appdef.MaxIncl(12))
 		month.SetComment("Month number, left-open range (0-12]")
 
 		doc := adb.AddCDoc(docName)
@@ -100,6 +102,8 @@ func ExampleIFieldsBuilder_AddDataField() {
 			SetFieldComment("code", "Code is string containing 10 digits").
 			AddDataField("month", monthName, true).
 			SetFieldComment("month", "Month number natural up to 12")
+
+		ws.AddType(docName)
 
 		app = adb.MustBuild()
 	}

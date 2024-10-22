@@ -9,7 +9,9 @@ package appdef
 type IWorkspace interface {
 	IType
 	IWithAbstract
+
 	IWithTypes
+	IWithDataTypes
 
 	// Workspace descriptor document.
 	// See [#466](https://github.com/voedger/voedger/issues/466)
@@ -22,6 +24,8 @@ type IWorkspace interface {
 type IWorkspaceBuilder interface {
 	ITypeBuilder
 	IWithAbstractBuilder
+
+	IDataTypesBuilder
 
 	// Adds (includes) type to workspace. Type must be defined for application before.
 	//

@@ -545,13 +545,6 @@ func (app *appDef) addCRecord(name QName) ICRecordBuilder {
 	return newCRecordBuilder(cRec)
 }
 
-func (app *appDef) addData(name QName, kind DataKind, ancestor QName, constraints ...IConstraint) IDataBuilder {
-	d := newData(app, name, kind, ancestor)
-	d.addConstraints(constraints...)
-	app.appendType(d)
-	return newDataBuilder(d)
-}
-
 func (app *appDef) addGDoc(name QName) IGDocBuilder {
 	gDoc := newGDoc(app, name)
 	return newGDocBuilder(gDoc)
@@ -731,10 +724,6 @@ func (ab *appDefBuilder) AddCDoc(name QName) ICDocBuilder { return ab.app.addCDo
 func (ab *appDefBuilder) AddCommand(name QName) ICommandBuilder { return ab.app.addCommand(name) }
 
 func (ab *appDefBuilder) AddCRecord(name QName) ICRecordBuilder { return ab.app.addCRecord(name) }
-
-func (ab *appDefBuilder) AddData(name QName, kind DataKind, ancestor QName, constraints ...IConstraint) IDataBuilder {
-	return ab.app.addData(name, kind, ancestor, constraints...)
-}
 
 func (ab *appDefBuilder) AddGDoc(name QName) IGDocBuilder { return ab.app.addGDoc(name) }
 

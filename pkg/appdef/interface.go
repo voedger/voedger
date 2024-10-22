@@ -13,7 +13,9 @@ type IAppDef interface {
 	IWithWorkspaces
 
 	IWithTypes
+
 	IWithDataTypes
+	IWithSysDataTypes
 
 	IWithStructures
 	IWithRecords
@@ -45,8 +47,6 @@ type IAppDefBuilder interface {
 
 	IPackagesBuilder
 	IWorkspacesBuilder
-
-	IDataTypesBuilder
 
 	IGDocsBuilder
 	ICDocsBuilder

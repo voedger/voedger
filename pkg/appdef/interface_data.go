@@ -75,7 +75,10 @@ type IWithDataTypes interface {
 	//
 	// Data types are enumerated in alphabetical order by QName.
 	DataTypes(func(IData) bool)
+}
 
+// System data types interface.
+type IWithSysDataTypes interface {
 	// Returns system data type (sys.int32, sys.float654, etc.) by data kind.
 	//
 	// Returns nil if not found.

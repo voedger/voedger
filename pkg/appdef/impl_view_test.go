@@ -18,20 +18,24 @@ func TestAddView(t *testing.T) {
 	adb := New()
 	adb.AddPackage("test", "test.com/test")
 
+	ws := adb.AddWorkspace(NewQName("test", "workspace"))
+
 	numName := NewQName("test", "natural")
-	_ = adb.AddData(numName, DataKind_int64, NullQName, MinExcl(0))
+	_ = ws.AddData(numName, DataKind_int64, NullQName, MinExcl(0))
 
 	digsData := NewQName("test", "digs")
-	_ = adb.AddData(digsData, DataKind_string, NullQName, Pattern(`^\d+$`, "only digits allowed"))
+	_ = ws.AddData(digsData, DataKind_string, NullQName, Pattern(`^\d+$`, "only digits allowed"))
 
 	docName := NewQName("test", "doc")
 	_ = adb.AddCDoc(docName)
+	ws.AddType(docName)
 
 	kbName := NewQName("test", "KB")
-	_ = adb.AddData(kbName, DataKind_bytes, NullQName, MinLen(1), MaxLen(1024, "up to 1 KB"))
+	_ = ws.AddData(kbName, DataKind_bytes, NullQName, MinLen(1), MaxLen(1024, "up to 1 KB"))
 
 	viewName := NewQName("test", "view")
 	vb := adb.AddView(viewName)
+	ws.AddType(viewName)
 
 	t.Run("must be ok to build view", func(t *testing.T) {
 

@@ -23,6 +23,9 @@ func Example() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test/path")
 
+		wsName, wsDescName := appdef.NewQName("test", "ws"), appdef.NewQName("test", "wsDesc")
+		ws := adb.AddWorkspace(wsName)
+
 		numName := appdef.NewQName("test", "number")
 		strName := appdef.NewQName("test", "string")
 
@@ -31,10 +34,10 @@ func Example() {
 
 		docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
 
-		n := adb.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinIncl(1))
+		n := ws.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinIncl(1))
 		n.SetComment("natural (positive) integer")
 
-		s := adb.AddData(strName, appdef.DataKind_string, appdef.NullQName)
+		s := ws.AddData(strName, appdef.DataKind_string, appdef.NullQName)
 		s.AddConstraints(appdef.MinLen(1), appdef.MaxLen(100), appdef.Pattern(`^\w+$`, "only word characters allowed"))
 
 		doc := adb.AddCDoc(docName)
@@ -129,10 +132,8 @@ func Example() {
 			"disable writer to update test.doc")
 		writer.GrantAll([]appdef.QName{cmdName, queryName}, "allow writer to execute all test functions")
 
-		wsName, wsDescName := appdef.NewQName("test", "ws"), appdef.NewQName("test", "wsDesc")
 		adb.AddCDoc(wsDescName).SetSingleton()
-		adb.AddWorkspace(wsName).
-			SetDescriptor(wsDescName).
+		ws.SetDescriptor(wsDescName).
 			AddType(docName).
 			AddType(recName).
 			AddType(viewName).
