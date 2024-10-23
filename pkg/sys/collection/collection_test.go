@@ -41,7 +41,6 @@ import (
 )
 
 var cocaColaDocID istructs.RecordID
-var qNameTestWSKind = appdef.NewQName(appdef.SysPackage, "test_ws")
 
 const maxPrepareQueries = 10
 
@@ -57,15 +56,16 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	statelessResources = istructsmem.NewStatelessResources()
 	cfg := cfgs.AddBuiltInAppConfig(test.appQName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+
+	adb.AddPackage("test", "test.org/test")
+	wsb := wsdescutil.AddWorkspaceDef(adb)
+
 	{
-
-		adb.AddPackage("test", "test.org/test")
-
 		// this should be done in tests only. Runtime -> the projector is defined in sys.vsql already
-		adb.AddCDoc(istructs.QNameCDoc)
+		wsb.AddCDoc(istructs.QNameCDoc)
 		adb.AddODoc(istructs.QNameODoc)
 		adb.AddWDoc(istructs.QNameWDoc)
-		adb.AddCRecord(istructs.QNameCRecord)
+		wsb.AddCRecord(istructs.QNameCRecord)
 		adb.AddORecord(istructs.QNameORecord)
 		adb.AddWRecord(istructs.QNameWRecord)
 
@@ -111,17 +111,13 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		adb.AddQuery(qNameQueryState).
 			SetParam(qNameStateParams).
 			SetResult(qNameStateResult)
-
-		wsdescutil.AddWorkspaceDescriptorStubDef(adb)
-
-		adb.AddCDoc(qNameTestWSKind).SetSingleton()
 	}
 	{ // "modify" function
 		adb.AddCommand(test.modifyCmdName)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(test.modifyCmdName, istructsmem.NullCommandExec))
 	}
 	{ // CDoc: articles
-		articles := adb.AddCDoc(test.tableArticles)
+		articles := wsb.AddCDoc(test.tableArticles)
 		articles.
 			AddField(test.articleNameIdent, appdef.DataKind_string, true).
 			AddField(test.articleNumberIdent, appdef.DataKind_int32, false).
@@ -130,26 +126,26 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 			AddContainer(test.tableArticlePrices.Entity(), test.tableArticlePrices, appdef.Occurs(0), appdef.Occurs(100))
 	}
 	{ // CDoc: departments
-		departments := adb.AddCDoc(test.tableDepartments)
+		departments := wsb.AddCDoc(test.tableDepartments)
 		departments.
 			AddField(test.depNameIdent, appdef.DataKind_string, true).
 			AddField(test.depNumberIdent, appdef.DataKind_int32, false)
 	}
 	{ // CDoc: periods
-		periods := adb.AddCDoc(test.tablePeriods)
+		periods := wsb.AddCDoc(test.tablePeriods)
 		periods.
 			AddField(test.periodNameIdent, appdef.DataKind_string, true).
 			AddField(test.periodNumberIdent, appdef.DataKind_int32, false)
 	}
 	{ // CDoc: prices
-		prices := adb.AddCDoc(test.tablePrices)
+		prices := wsb.AddCDoc(test.tablePrices)
 		prices.
 			AddField(test.priceNameIdent, appdef.DataKind_string, true).
 			AddField(test.priceNumberIdent, appdef.DataKind_int32, false)
 	}
 
 	{ // CDoc: article prices
-		articlesPrices := adb.AddCRecord(test.tableArticlePrices)
+		articlesPrices := wsb.AddCRecord(test.tableArticlePrices)
 		articlesPrices.
 			AddField(test.articlePricesPriceIdIdent, appdef.DataKind_RecordID, true).
 			AddField(test.articlePricesPriceIdent, appdef.DataKind_float32, true)
@@ -158,14 +154,14 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	}
 
 	{ // CDoc: article price exceptions
-		articlesPricesExceptions := adb.AddCRecord(test.tableArticlePriceExceptions)
+		articlesPricesExceptions := wsb.AddCRecord(test.tableArticlePriceExceptions)
 		articlesPricesExceptions.
 			AddField(test.articlePriceExceptionsPeriodIdIdent, appdef.DataKind_RecordID, true).
 			AddField(test.articlePriceExceptionsPriceIdent, appdef.DataKind_float32, true)
 	}
 
 	// kept here to keep local tests working without sql
-	actualizers.ProvideViewDef(adb, QNameCollectionView, func(b appdef.IViewBuilder) {
+	actualizers.ProvideViewDef(adb, wsb, QNameCollectionView, func(b appdef.IViewBuilder) {
 		b.Key().PartKey().AddField(Field_PartKey, appdef.DataKind_int32)
 		b.Key().ClustCols().
 			AddField(Field_DocQName, appdef.DataKind_QName).
@@ -178,19 +174,17 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 
 	{
 		// Workspace
-		wsBuilder := adb.AddWorkspace(appdef.NewQName(appdef.SysPackage, "test_wsWS"))
-		wsBuilder.SetDescriptor(qNameTestWSKind)
-		wsBuilder.AddType(qNameQueryCollection)
-		wsBuilder.AddType(qNameQueryGetCDoc)
-		wsBuilder.AddType(qNameQueryState)
-		wsBuilder.AddType(test.modifyCmdName)
-		wsBuilder.AddType(test.tableArticles)
-		wsBuilder.AddType(test.tableDepartments)
-		wsBuilder.AddType(test.tablePeriods)
-		wsBuilder.AddType(test.tablePrices)
-		wsBuilder.AddType(test.tableArticlePrices)
-		wsBuilder.AddType(test.tableArticlePriceExceptions)
-		wsBuilder.AddType(QNameCollectionView)
+		wsb.AddType(qNameQueryCollection)
+		wsb.AddType(qNameQueryGetCDoc)
+		wsb.AddType(qNameQueryState)
+		wsb.AddType(test.modifyCmdName)
+		wsb.AddType(test.tableArticles)
+		wsb.AddType(test.tableDepartments)
+		wsb.AddType(test.tablePeriods)
+		wsb.AddType(test.tablePrices)
+		wsb.AddType(test.tableArticlePrices)
+		wsb.AddType(test.tableArticlePriceExceptions)
+		wsb.AddType(QNameCollectionView)
 	}
 
 	// TODO: remove it after https://github.com/voedger/voedger/issues/56
@@ -227,7 +221,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	// create stub for cdoc.sys.WorkspaceDescriptor to make query processor work
 	as, err := appStructsProvider.BuiltIn(test.appQName)
 	require.NoError(err)
-	err = wsdescutil.CreateCDocWorkspaceDescriptorStub(as, test.partition, test.workspace, qNameTestWSKind, 1, 1)
+	err = wsdescutil.CreateCDocWorkspaceDescriptorStub(as, test.partition, test.workspace, wsdescutil.TestWsDescName, 1, 1)
 	require.NoError(err)
 
 	cleanup = func() {

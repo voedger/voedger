@@ -57,16 +57,20 @@ func TestBasicUsage(t *testing.T) {
 	testCmdQNameParams := appdef.NewQName(appdef.SysPackage, "TestParams")
 	// schema of unlogged parameters of the test command
 	testCmdQNameParamsUnlogged := appdef.NewQName(appdef.SysPackage, "TestParamsUnlogged")
-	prepareAppDef := func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
-		pars := appDef.AddObject(testCmdQNameParams)
+	prepareAppDef := func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
+		pars := adb.AddObject(testCmdQNameParams)
 		pars.AddField("Text", appdef.DataKind_string, true)
+		wsb.AddType(testCmdQNameParams)
 
-		unloggedPars := appDef.AddObject(testCmdQNameParamsUnlogged)
+		unloggedPars := adb.AddObject(testCmdQNameParamsUnlogged)
 		unloggedPars.AddField("Password", appdef.DataKind_string, true)
+		wsb.AddType(testCmdQNameParamsUnlogged)
 
-		appDef.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
-		appDef.AddCRecord(testCRecord)
-		appDef.AddCommand(testCmdQName).SetUnloggedParam(testCmdQNameParamsUnlogged).SetParam(testCmdQNameParams)
+		wsb.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
+		wsb.AddCRecord(testCRecord)
+
+		adb.AddCommand(testCmdQName).SetUnloggedParam(testCmdQNameParamsUnlogged).SetParam(testCmdQNameParams)
+		wsb.AddType(testCmdQName)
 
 		// the test command itself
 		testExec := func(args istructs.ExecCommandArgs) (err error) {
@@ -181,11 +185,13 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
 	testErr := errors.New("test error")
 	counter := 0
-	app := setUp(t, func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
-		appDef.AddCRecord(testCRecord)
-		appDef.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
-		appDef.AddWDoc(testWDoc)
-		appDef.AddCommand(cudQName)
+	app := setUp(t, func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
+		wsb.AddCRecord(testCRecord)
+		wsb.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
+		adb.AddWDoc(testWDoc)
+		wsb.AddType(testWDoc)
+		adb.AddCommand(cudQName)
+		wsb.AddType(cudQName)
 
 		failingProjQName := appdef.NewQName(appdef.SysPackage, "Failer")
 		cfg.AddSyncProjectors(
@@ -199,7 +205,8 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 					return nil
 				},
 			})
-		appDef.AddProjector(failingProjQName).SetSync(true).Events().Add(cudQName, appdef.ProjectorEventKind_Execute)
+		adb.AddProjector(failingProjQName).SetSync(true).Events().Add(cudQName, appdef.ProjectorEventKind_Execute)
+		wsb.AddType(failingProjQName)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
@@ -230,11 +237,13 @@ func TestRecovery(t *testing.T) {
 	require := require.New(t)
 
 	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
-	app := setUp(t, func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
-		appDef.AddCRecord(testCRecord)
-		appDef.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
-		appDef.AddWDoc(testWDoc)
-		appDef.AddCommand(cudQName)
+	app := setUp(t, func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
+		wsb.AddCRecord(testCRecord)
+		wsb.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
+		adb.AddWDoc(testWDoc)
+		wsb.AddType(testWDoc)
+		adb.AddCommand(cudQName)
+		wsb.AddType(cudQName)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
@@ -290,9 +299,10 @@ func TestCUDUpdate(t *testing.T) {
 	testQName := appdef.NewQName("test", "test")
 
 	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
-	app := setUp(t, func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
-		appDef.AddCDoc(testQName).AddField("IntFld", appdef.DataKind_int32, false)
-		appDef.AddCommand(cudQName)
+	app := setUp(t, func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
+		wsb.AddCDoc(testQName).AddField("IntFld", appdef.DataKind_int32, false)
+		adb.AddCommand(cudQName)
+		wsb.AddType(cudQName)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
@@ -345,9 +355,10 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 	testQName := appdef.NewQName("test", "test")
 
 	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
-	app := setUp(t, func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
-		appDef.AddCDoc(testQName)
-		appDef.AddCommand(cudQName)
+	app := setUp(t, func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
+		wsb.AddCDoc(testQName)
+		adb.AddCommand(cudQName)
+		wsb.AddType(cudQName)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
@@ -398,14 +409,18 @@ func TestErrors(t *testing.T) {
 	testCmdQNameParamsUnlogged := appdef.NewQName(appdef.SysPackage, "TestParamsUnlogged")
 
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
-	app := setUp(t, func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
-		appDef.AddObject(testCmdQNameParams).
+	app := setUp(t, func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
+		adb.AddObject(testCmdQNameParams).
 			AddField("Text", appdef.DataKind_string, true)
+		wsb.AddType(testCmdQNameParams)
 
-		appDef.AddObject(testCmdQNameParamsUnlogged).
+		adb.AddObject(testCmdQNameParamsUnlogged).
 			AddField("Password", appdef.DataKind_string, true)
+		wsb.AddType(testCmdQNameParamsUnlogged)
 
-		appDef.AddCommand(testCmdQName).SetUnloggedParam(testCmdQNameParamsUnlogged).SetParam(testCmdQNameParams)
+		adb.AddCommand(testCmdQName).SetUnloggedParam(testCmdQNameParamsUnlogged).SetParam(testCmdQNameParams)
+		wsb.AddType(testCmdQName)
+
 		cfg.Resources.Add(istructsmem.NewCommandFunction(testCmdQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
@@ -470,11 +485,14 @@ func TestAuthnz(t *testing.T) {
 
 	qNameAllowedCmd := appdef.NewQName(appdef.SysPackage, "TestAllowedCmd")
 	qNameDeniedCmd := appdef.NewQName(appdef.SysPackage, "TestDeniedCmd") // the same in core/iauthnzimpl
-	app := setUp(t, func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
-		appDef.AddCDoc(qNameTestDeniedCDoc)
-		appDef.AddCommand(qNameAllowedCmd)
-		appDef.AddCommand(qNameDeniedCmd)
-		appDef.AddCommand(istructs.QNameCommandCUD)
+	app := setUp(t, func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
+		wsb.AddCDoc(qNameTestDeniedCDoc)
+		adb.AddCommand(qNameAllowedCmd)
+		wsb.AddType(qNameAllowedCmd)
+		adb.AddCommand(qNameDeniedCmd)
+		wsb.AddType(qNameDeniedCmd)
+		adb.AddCommand(istructs.QNameCommandCUD)
+		wsb.AddType(istructs.QNameCommandCUD)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(qNameAllowedCmd, istructsmem.NullCommandExec))
 		cfg.Resources.Add(istructsmem.NewCommandFunction(qNameDeniedCmd, istructsmem.NullCommandExec))
 		cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, istructsmem.NullCommandExec))
@@ -550,8 +568,9 @@ func TestBasicUsage_FuncWithRawArg(t *testing.T) {
 	require := require.New(t)
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
 	ch := make(chan interface{})
-	app := setUp(t, func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
-		appDef.AddCommand(testCmdQName).SetParam(istructs.QNameRaw)
+	app := setUp(t, func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
+		adb.AddCommand(testCmdQName).SetParam(istructs.QNameRaw)
+		wsb.AddType(testCmdQName)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(testCmdQName, func(args istructs.ExecCommandArgs) (err error) {
 			require.EqualValues("custom content", args.ArgumentObject.AsString(processors.Field_RawObject_Body))
 			close(ch)
@@ -583,9 +602,11 @@ func TestRateLimit(t *testing.T) {
 	parsQName := appdef.NewQName(appdef.SysPackage, "Params")
 
 	app := setUp(t,
-		func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
-			appDef.AddObject(parsQName)
-			appDef.AddCommand(qName).SetParam(parsQName)
+		func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
+			adb.AddObject(parsQName)
+			wsb.AddType(parsQName)
+			adb.AddCommand(qName).SetParam(parsQName)
+			wsb.AddType(qName)
 			cfg.Resources.Add(istructsmem.NewCommandFunction(qName, istructsmem.NullCommandExec))
 
 			cfg.FunctionRateLimits.AddWorkspaceLimit(qName, istructs.RateLimit{
@@ -660,7 +681,7 @@ var (
 	testAppPartCount istructs.NumAppPartitions = 1
 )
 
-func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType)) testApp {
+func setUp(t *testing.T, prepare func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType)) testApp {
 	require := require.New(t)
 	// command processor is a IService working through CommandChannel(iprocbus.ServiceChannel). Let's prepare that channel
 	serviceChannel := make(CommandChannel)
@@ -674,15 +695,22 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 
 	// build application
 	adb := appdef.New()
+	adb.AddPackage("test", "test.com/test")
+
+	qNameTestWS, qNameTestWSKind := appdef.NewQName(appdef.SysPackage, "TestWS"), appdef.NewQName(appdef.SysPackage, "TestWSKind")
+	wsb := adb.AddWorkspace(qNameTestWS)
+	wsb.AddCDoc(qNameTestWSKind).SetSingleton()
+	wsb.SetDescriptor(qNameTestWSKind)
+
+	wsdescutil.AddWorkspaceDescriptorStubDef(wsb)
+
 	adb.AddObject(istructs.QNameRaw).AddField(processors.Field_RawObject_Body, appdef.DataKind_string, true, appdef.MaxLen(appdef.MaxFieldLength))
-	wsdescutil.AddWorkspaceDescriptorStubDef(adb)
-	qNameTestWSKind := appdef.NewQName(appdef.SysPackage, "TestWSKind")
-	adb.AddCDoc(qNameTestWSKind).SetSingleton()
+
 	statelessResources := istructsmem.NewStatelessResources()
 	cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_untill_airs_bp, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	if prepare != nil {
-		prepare(adb, cfg)
+		prepare(adb, wsb, cfg)
 	}
 
 	appDef, err := adb.Build()

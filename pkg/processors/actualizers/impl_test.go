@@ -10,12 +10,14 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
+	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
@@ -59,16 +61,15 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 
 	appParts, appStructs, start, stop := deployTestApp(
 		istructs.AppQName_test1_app1, 1, false,
-		func(appDef appdef.IAppDefBuilder) {
-			appDef.AddPackage("test", "test.com/test")
-			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
-			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
-			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
-			appDef.AddProjector(decrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
-			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
-			ws.AddType(incProjectionView)
-			ws.AddType(decProjectionView)
+		testWorkspace, testWorkspaceDescriptor,
+		func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
+			ProvideViewDef(adb, wsb, incProjectionView, buildProjectionView)
+			ProvideViewDef(adb, wsb, decProjectionView, buildProjectionView)
+			adb.AddCommand(testQName)
+			adb.AddProjector(incrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			adb.AddProjector(decrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			wsb.AddType(incProjectionView)
+			wsb.AddType(decProjectionView)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.AddSyncProjectors(testIncrementor, testDecrementor)
@@ -76,8 +77,8 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 		},
 		&BasicAsyncActualizerConfig{})
 
-	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
-	createWS(appStructs, istructs.WSID(1002), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
+	createWS(appStructs, istructs.WSID(1001), testWorkspace, testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
+	createWS(appStructs, istructs.WSID(1002), testWorkspace, testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 
 	appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{1})
 
@@ -179,7 +180,7 @@ var buildProjectionView = func(view appdef.IViewBuilder) {
 }
 
 type (
-	appDefCallback func(appDef appdef.IAppDefBuilder)
+	appDefCallback func(appdef.IAppDefBuilder, appdef.IWorkspaceBuilder)
 	appCfgCallback func(cfg *istructsmem.AppConfigType)
 )
 
@@ -187,6 +188,7 @@ func deployTestApp(
 	appName appdef.AppQName,
 	appPartsCount istructs.NumAppPartitions,
 	cachedStorage bool,
+	wsKind, wsDescriptorKind appdef.QName,
 	prepareAppDef appDefCallback,
 	prepareAppCfg appCfgCallback,
 	actualizerCfg *BasicAsyncActualizerConfig,
@@ -199,6 +201,8 @@ func deployTestApp(
 		appName,
 		appPartsCount,
 		cachedStorage,
+		wsKind,
+		wsDescriptorKind,
 		prepareAppDef,
 		prepareAppCfg,
 		actualizerCfg,
@@ -210,6 +214,7 @@ func deployTestAppEx(
 	appName appdef.AppQName,
 	appPartsCount istructs.NumAppPartitions,
 	cachedStorage bool,
+	wsKind, wsDescriptorKind appdef.QName,
 	prepareAppDef appDefCallback,
 	prepareAppCfg appCfgCallback,
 	actualizerCfg *BasicAsyncActualizerConfig,
@@ -219,14 +224,24 @@ func deployTestAppEx(
 	appStructs istructs.IAppStructs,
 	start, stop func(),
 ) {
-	appDefBuilder := appdef.New()
+	adb := appdef.New()
+	adb.AddPackage("test", "test.com/test")
+
+	wsb := adb.AddWorkspace(wsKind)
+	descr := wsb.AddCDoc(wsDescriptorKind)
+	descr.AddField(authnz.Field_WSKind, appdef.DataKind_QName, true)
+	descr.SetSingleton()
+	wsb.SetDescriptor(wsDescriptorKind)
+
+	wsdescutil.AddWorkspaceDescriptorStubDef(wsb)
+
 	if prepareAppDef != nil {
-		prepareAppDef(appDefBuilder)
+		prepareAppDef(adb, wsb)
 	}
-	appDefBuilder.AddCommand(newWorkspaceCmd)
+	adb.AddCommand(newWorkspaceCmd)
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddBuiltInAppConfig(appName, appDefBuilder)
+	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	statelessResources := istructsmem.NewStatelessResources()
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	if prepareAppCfg != nil {
@@ -234,11 +249,7 @@ func deployTestAppEx(
 		cfg.Resources.Add(istructsmem.NewCommandFunction(newWorkspaceCmd, istructsmem.NullCommandExec))
 	}
 
-	wsDescr := appDefBuilder.AddCDoc(authnz.QNameCDocWorkspaceDescriptor)
-	wsDescr.AddField(authnz.Field_WSKind, appdef.DataKind_QName, true)
-	wsDescr.SetSingleton()
-
-	appDef, err := appDefBuilder.Build()
+	appDef, err := adb.Build()
 	if err != nil {
 		panic(err)
 	}
@@ -346,15 +357,8 @@ func deployTestAppEx(
 	return appParts, actualizers, appStructs, start, stop
 }
 
-func addWS(appDef appdef.IAppDefBuilder, wsKind, wsDescriptorKind appdef.QName) appdef.IWorkspaceBuilder {
-	descr := appDef.AddCDoc(wsDescriptorKind)
-	descr.AddField("WSKind", appdef.DataKind_QName, true)
-	ws := appDef.AddWorkspace(wsKind)
-	ws.SetDescriptor(wsDescriptorKind)
-	return ws
-}
-
-func createWS(appStructs istructs.IAppStructs, ws istructs.WSID, wsDescriptorKind appdef.QName, partition istructs.PartitionID, offset istructs.Offset) {
+func createWS(appStructs istructs.IAppStructs, ws istructs.WSID, wsKind, wsDescriptorKind appdef.QName, partition istructs.PartitionID, offset istructs.Offset) {
+	now := time.Now()
 	// Create workspace
 	rebWs := appStructs.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
 		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
@@ -366,7 +370,10 @@ func createWS(appStructs istructs.IAppStructs, ws istructs.WSID, wsDescriptorKin
 	})
 	cud := rebWs.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)
 	cud.PutRecordID(appdef.SystemField_ID, 1)
-	cud.PutQName("WSKind", wsDescriptorKind)
+	cud.PutQName(authnz.Field_WSKind, wsDescriptorKind)
+	cud.PutInt32("Status", int32(authnz.WorkspaceStatus_Active))
+	cud.PutInt64("InitCompletedAtMs", now.UnixMilli())
+	cud.PutString(authnz.Field_WSName, wsKind.Entity())
 	rawWsEvent, err := rebWs.BuildRawEvent()
 	if err != nil {
 		panic(err)
@@ -383,16 +390,15 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 
 	appParts, appStructs, start, stop := deployTestApp(
 		istructs.AppQName_test1_app1, 1, false,
-		func(appDef appdef.IAppDefBuilder) {
-			appDef.AddPackage("test", "test.com/test")
-			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
-			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
-			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
-			appDef.AddProjector(decrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
-			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
-			ws.AddType(incProjectionView)
-			ws.AddType(decProjectionView)
+		testWorkspace, testWorkspaceDescriptor,
+		func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
+			ProvideViewDef(adb, wsb, incProjectionView, buildProjectionView)
+			ProvideViewDef(adb, wsb, decProjectionView, buildProjectionView)
+			adb.AddCommand(testQName)
+			adb.AddProjector(incrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			adb.AddProjector(decrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			wsb.AddType(incProjectionView)
+			wsb.AddType(decProjectionView)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.AddSyncProjectors(testIncrementor, testDecrementor)
@@ -400,9 +406,9 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 		},
 		&BasicAsyncActualizerConfig{})
 
-	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
-	createWS(appStructs, istructs.WSID(1002), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
-	createWS(appStructs, istructs.WSID(1099), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
+	createWS(appStructs, istructs.WSID(1001), testWorkspace, testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
+	createWS(appStructs, istructs.WSID(1002), testWorkspace, testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
+	createWS(appStructs, istructs.WSID(1099), testWorkspace, testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 
 	appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{1})
 
