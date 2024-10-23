@@ -41,6 +41,7 @@ import (
 )
 
 var cocaColaDocID istructs.RecordID
+var qNameTestWSKind = appdef.NewQName(appdef.SysPackage, "test_ws")
 
 const maxPrepareQueries = 10
 
@@ -58,9 +59,13 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	adb.AddPackage("test", "test.org/test")
-	wsb := wsdescutil.AddWorkspaceDef(adb)
+	wsb := adb.AddWorkspace(appdef.NewQName(appdef.SysPackage, "test_wsWS"))
 
 	{
+		wsb.AddCDoc(qNameTestWSKind).SetSingleton()
+		wsb.SetDescriptor(qNameTestWSKind)
+		wsdescutil.AddWorkspaceDescriptorStubDef(wsb)
+
 		// this should be done in tests only. Runtime -> the projector is defined in sys.vsql already
 		wsb.AddCDoc(istructs.QNameCDoc)
 		adb.AddODoc(istructs.QNameODoc)

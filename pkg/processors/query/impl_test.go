@@ -174,13 +174,13 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	adb.AddPackage(pkgBo, pkgBoPath)
 
 	wsb := adb.AddWorkspace(qNameTestWS)
-	adb.AddCDoc(qNameTestWSDescriptor)
+	wsb.AddCDoc(qNameTestWSDescriptor)
 	wsb.SetDescriptor(qNameTestWSDescriptor)
 
 	adb.AddObject(qNameFindArticlesByModificationTimeStampRangeParams).
 		AddField("from", appdef.DataKind_int64, false).
 		AddField("till", appdef.DataKind_int64, false)
-	adb.AddCDoc(qNameDepartment).
+	wsb.AddCDoc(qNameDepartment).
 		AddField("name", appdef.DataKind_string, true)
 	adb.AddObject(qNameArticle).
 		AddField("sys.ID", appdef.DataKind_RecordID, true).
@@ -188,7 +188,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 		AddField("id_department", appdef.DataKind_int64, true)
 
 	// simplified cdoc.sys.WorkspaceDescriptor
-	wsDescBuilder := adb.AddCDoc(authnz.QNameCDocWorkspaceDescriptor)
+	wsDescBuilder := wsb.AddCDoc(authnz.QNameCDocWorkspaceDescriptor)
 	wsDescBuilder.
 		AddField(authnz.Field_WSKind, appdef.DataKind_QName, false).
 		AddField(authnz.Field_Status, appdef.DataKind_int32, false)

@@ -17,24 +17,23 @@ import (
 )
 
 func createAppDef() appdef.IAppDef {
-	appDef := appdef.New()
-	appDef.AddObject(testRecordQName1).
-		AddField("number", appdef.DataKind_int64, false)
-	appDef.AddObject(testRecordQName2).
-		AddField("age", appdef.DataKind_int64, false).
-		AddField("ref", appdef.DataKind_RecordID, false)
-	wsDesc := appDef.AddCDoc(testWSDescriptorQName)
+	adb := appdef.New()
+
+	ws := adb.AddWorkspace(testWSQName)
+	wsDesc := ws.AddCDoc(testWSDescriptorQName)
 	wsDesc.AddField(field_WSKind, appdef.DataKind_bytes, false)
-	ws := appDef.AddWorkspace(testWSQName)
-	ws.AddType(testRecordQName1)
-	ws.AddType(testRecordQName2)
+	wsDesc.SetSingleton()
 	ws.SetDescriptor(testWSDescriptorQName)
 
-	app, err := appDef.Build()
-	if err != nil {
-		panic(err)
-	}
-	return app
+	adb.AddObject(testRecordQName1).
+		AddField("number", appdef.DataKind_int64, false)
+	ws.AddType(testRecordQName1)
+	adb.AddObject(testRecordQName2).
+		AddField("age", appdef.DataKind_int64, false).
+		AddField("ref", appdef.DataKind_RecordID, false)
+	ws.AddType(testRecordQName2)
+
+	return adb.MustBuild()
 }
 
 func TestRecordsStorage_GetBatch(t *testing.T) {
