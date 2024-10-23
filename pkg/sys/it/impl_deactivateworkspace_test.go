@@ -24,23 +24,6 @@ import (
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
-func TestBug(t *testing.T) {
-	require := require.New(t)
-	vit := it.NewVITVVMOnly(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-	appPart, err := vit.IAppPartitions.Borrow(istructs.AppQName_sys_registry, 1, appparts.ProcessorKind_Command)
-	require.NoError(err)
-	defer appPart.Release()
-	ok, _, err := appPart.IsOperationAllowed(
-		appdef.OperationKind_Execute,
-		appdef.NewQName(registry.RegistryPackage, "CreateLogin"),
-		nil,
-		[]appdef.QName{appdef.NewQName(appdef.SysPackage, "Anyone")},
-	)
-	require.NoError(err)
-	require.True(ok)
-}
-
 func TestBug2(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVITVVMOnly(t, &it.SharedConfig_App1)
@@ -54,7 +37,7 @@ func TestBug2(t *testing.T) {
 			appdef.OperationKind_Select,
 			appdef.NewQName(registry.RegistryPackage, "IssuePrincipalToken"),
 			nil,
-			[]appdef.QName{appdef.NewQName(appdef.SysPackage, "Anyone")},
+			[]appdef.QName{iauthnz.QNameRoleEveryone},
 		)
 		require.Error(err)
 	})
@@ -64,7 +47,7 @@ func TestBug2(t *testing.T) {
 			appdef.OperationKind_Execute,
 			appdef.NewQName(registry.RegistryPackage, "IssuePrincipalToken"),
 			nil,
-			[]appdef.QName{appdef.NewQName(appdef.SysPackage, "Anyone")},
+			[]appdef.QName{iauthnz.QNameRoleEveryone},
 		)
 		require.NoError(err)
 		require.True(ok)
@@ -75,7 +58,7 @@ func TestBug2(t *testing.T) {
 			appdef.OperationKind_Execute,
 			appdef.NewQName(registry.RegistryPackage, "CreateLogin"),
 			nil,
-			[]appdef.QName{appdef.NewQName(appdef.SysPackage, "Anyone")},
+			[]appdef.QName{iauthnz.QNameRoleEveryone},
 		)
 		require.NoError(err)
 		require.True(ok)
@@ -86,7 +69,7 @@ func TestBug2(t *testing.T) {
 			appdef.OperationKind_Insert,
 			appdef.NewQName(registry.RegistryPackage, "CreateLogin"),
 			nil,
-			[]appdef.QName{appdef.NewQName(appdef.SysPackage, "Anyone")},
+			[]appdef.QName{iauthnz.QNameRoleEveryone},
 		)
 		require.Error(err)
 	})

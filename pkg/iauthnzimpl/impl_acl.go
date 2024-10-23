@@ -85,10 +85,11 @@ var defaultACL = ACL{
 				qNameCDocSubscriptionProfile, qNameCDocUnTillOrders, qNameCDocUnTillPBill,
 				/*qNameTestDeniedCmd, */ /*qNameTestDeniedCDoc*/ /*, qNameCDocLogin, qNameCDocChildWorkspace*/ /*, qNameTestDeniedQry,*/
 
+				/* not denied, not necessary to deny:
 				qNameCDocWorkspaceKindUser,
 				qNameCDocWorkspaceKindDevice,
 				qNameCDocWorkspaceKindRestaurant,
-				qNameCDocWorkspaceKindAppWorkspace,
+				qNameCDocWorkspaceKindAppWorkspace,*/
 				/*qNameCmdSendEmailVerificationCode,
 
 				qNameQryDescribePackage,
@@ -107,7 +108,7 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Deny,
 	},
-	{
+	/*{
 		desc: "update only is allowed for CDoc<$wsKind> for WorkspaceOwner",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
@@ -122,7 +123,7 @@ var defaultACL = ACL{
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},
 		},
 		policy: ACPolicy_Allow,
-	},
+	},*/
 	{
 		// DENY ALL FROM LOGIN 'untillchargebeeagent'
 		desc: "deny all from 'untillchargebeeagent' login",

@@ -26,7 +26,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 	}()
 	principals = append(principals, iauthnz.Principal{
 		Kind:  iauthnz.PrincipalKind_Role,
-		QName: appdef.NewQName(appdef.SysPackage, "Anyone"),
+		QName: iauthnz.QNameRoleEveryone,
 	})
 	if len(req.Token) == 0 {
 		principals = append(principals, iauthnz.Principal{
@@ -49,7 +49,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 	principals = append(principals, iauthnz.Principal{
 		Kind:  iauthnz.PrincipalKind_Role,
 		WSID:  req.RequestWSID,
-		QName: iauthnz.QNameRoleAuthenticated,
+		QName: iauthnz.QNameRoleAuthenticatedUser,
 	})
 
 	if principalPayload.IsAPIToken {

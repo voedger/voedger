@@ -98,8 +98,8 @@ ALTER WORKSPACE AppWorkspaceWS (
 		PROJECTOR InvokeCreateWorkspaceID_registry AFTER INSERT ON(Login);
 	);
 
-	GRANT ALL ON ALL TABLES WITH TAG WithoutAuthTag TO sys.Anyone;
-	GRANT EXECUTE ON ALL QUERIES WITH TAG WithoutAuthTag TO sys.Anyone;
-	GRANT EXECUTE ON ALL COMMANDS WITH TAG WithoutAuthTag TO sys.Anyone;
-	GRANT SELECT ON ALL VIEWS WITH TAG WithoutAuthTag TO sys.Anyone;
+	GRANT ALL ON ALL TABLES WITH TAG WithoutAuthTag TO sys.Everyone;
+	GRANT EXECUTE ON ALL QUERIES WITH TAG WithoutAuthTag TO sys.Everyone;
+	GRANT EXECUTE ON ALL COMMANDS WITH TAG WithoutAuthTag TO sys.Everyone;
+	GRANT SELECT ON ALL VIEWS WITH TAG WithoutAuthTag TO sys.Everyone;
 );

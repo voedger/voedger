@@ -424,17 +424,18 @@ ABSTRACT WORKSPACE Workspace (
 
 
 	-- naming windows-like
-	ROLE Everyone; -- assigned in any case regardless of whether the token is provided or not
+	ROLE Everyone; -- assigned in any case regardless of whether the token is provided or not. Named like in Windows
 	ROLE Anonymous;  -- assigned if the token is not provided
-	ROLE AuthenticatedUser; -- assigned if a valid token is provided
+	ROLE AuthenticatedUser; -- assigned if a valid token is provided. Named like in Windows
 	ROLE System; -- assigned -> everything is allowed, ACL checking skipped
 	ROLE ProfileOwner; -- assigned if the user or device works in its profile
 	ROLE WorkspaceDevice; -- assigned if the device MAY in a workspace that is owned by its profile
 	ROLE WorkspaceOwner; -- assigned if user works in a workspace that is owned by his profile
+	ROLE ClusterAdmin; -- TODO: not used for now
 
 	-- profile owner is workspace owner
-	GRANT RoleWorkspaceOwner TO RoleProfileOwner;
-	GRANT RoleWorkspaceOwner TO RoleWorkspaceDevice;
+	GRANT WorkspaceOwner TO ProfileOwner;
+	GRANT WorkspaceOwner TO WorkspaceDevice;
 
 	-- null auth policy
 	GRANT ALL ON ALL TABLES WITH TAG WithoutAuthTag TO Everyone;
@@ -442,15 +443,15 @@ ABSTRACT WORKSPACE Workspace (
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG WithoutAuthTag TO Everyone;
 	GRANT SELECT ON ALL VIEWS WITH TAG WithoutAuthTag TO Everyone;
 
-	-- everything is allowed to RoleWorkspaceOwner
-	GRANT ALL ON ALL TABLES TO RoleWorkspaceOwner;
-	GRANT EXECUTE ON ALL QUERIES TO RoleWorkspaceOwner;
-	GRANT EXECUTE ON ALL COMMANDS TO RoleWorkspaceOwner;
-	GRANT SELECT ON ALL VIEWS TO RoleWorkspaceOwner;
+	-- everything is allowed to WorkspaceOwner
+	GRANT ALL ON ALL TABLES TO WorkspaceOwner;
+	GRANT EXECUTE ON ALL QUERIES TO WorkspaceOwner;
+	GRANT EXECUTE ON ALL COMMANDS TO WorkspaceOwner;
+	GRANT SELECT ON ALL VIEWS TO WorkspaceOwner;
 
-	GRANT EXECUTE ON ALL COMMANDS WITH TAG AllowedForAuthenticatedTag TO Authenticated;
+	GRANT EXECUTE ON ALL COMMANDS WITH TAG AllowedForAuthenticatedTag TO AuthenticatedUser;
 
 	-- deny all for few resource from all
-	REVOKE EXECUTE ON ALL COMMANDS WITH TAG DenyForAllTag FROM Anyone;
+	REVOKE EXECUTE ON ALL COMMANDS WITH TAG DenyForAllTag FROM Everyone;
 
 );

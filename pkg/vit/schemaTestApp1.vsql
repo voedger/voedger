@@ -577,18 +577,18 @@ ALTERABLE WORKSPACE test_wsWS (
 
 	ROLE Updated; -- need for invite tests
 
-	GRANT ALL ON ALL TABLES TO RoleWorkspaceOwner;
-	GRANT EXECUTE ON ALL QUERIES TO RoleWorkspaceOwner;
-	GRANT EXECUTE ON ALL COMMANDS TO RoleWorkspaceOwner;
-	GRANT SELECT ON ALL VIEWS TO RoleWorkspaceOwner;
+	GRANT ALL ON ALL TABLES TO WorkspaceOwner;
+	GRANT EXECUTE ON ALL QUERIES TO WorkspaceOwner;
+	GRANT EXECUTE ON ALL COMMANDS TO WorkspaceOwner;
+	GRANT SELECT ON ALL VIEWS TO WorkspaceOwner;
 
-	GRANT RoleWorkspaceOwner TO RoleProfileOwner;
-	GRANT RoleWorkspaceOwner TO RoleWorkspaceDevice;
+	GRANT WorkspaceOwner TO ProfileOwner;
+	GRANT WorkspaceOwner TO WorkspaceDevice;
 
-	REVOKE ALL ON ALL TABLES WITH TAG DenyForAllTag FROM Anyone;
-	REVOKE EXECUTE ON ALL COMMANDS WITH TAG DenyForAllTag FROM Anyone;
-	REVOKE EXECUTE ON ALL QUERIES WITH TAG DenyForAllTag FROM Anyone;
-	REVOKE SELECT ON ALL VIEWS WITH TAG DenyForAllTag FROM Anyone;
+	REVOKE ALL ON ALL TABLES WITH TAG DenyForAllTag FROM Everyone;
+	REVOKE EXECUTE ON ALL COMMANDS WITH TAG DenyForAllTag FROM Everyone;
+	REVOKE EXECUTE ON ALL QUERIES WITH TAG DenyForAllTag FROM Everyone;
+	REVOKE SELECT ON ALL VIEWS WITH TAG DenyForAllTag FROM Everyone;
 
 
 );

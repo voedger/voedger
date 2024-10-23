@@ -26,7 +26,7 @@ ALTER WORKSPACE AppWorkspaceWS (
 	);
 
 	EXTENSION ENGINE BUILTIN (
-		COMMAND DeployApp(AppDeploymentDescriptor);
+		COMMAND DeployApp(AppDeploymentDescriptor); -- TODO: make be allowed for role sys.ClusterAdmin only
 		COMMAND VSqlUpdate(VSqlUpdateParams) RETURNS VSqlUpdateResult WITH Tags=(DenyForAllTag);
 	);
 );
