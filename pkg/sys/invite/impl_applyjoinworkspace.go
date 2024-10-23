@@ -10,6 +10,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -39,20 +40,26 @@ func applyJoinWorkspace(time coreutils.ITime, federation federation.IFederation,
 		}
 
 		login := svCDocInvite.AsString(Field_Login)
-		subjectExists, err := SubjectExistsByLogin(login, s) // for backward compatibility
-		if err == nil && !subjectExists {
-			actualLogin := svCDocInvite.AsString(field_ActualLogin)
-			subjectExists, err = SubjectExistsByLogin(actualLogin, s)
+		subjectExistsByActualLogin := false
+		subjectExistsByLogin, existingSubjectID, err := SubjectExistsByLogin(login, s) // for backward compatibility
+		if err == nil && !subjectExistsByLogin {
+			login = svCDocInvite.AsString(field_ActualLogin)
+			subjectExistsByActualLogin, existingSubjectID, err = SubjectExistsByLogin(login, s)
 		}
 		if err != nil {
 			// notest
 			return err
 		}
 
-		if subjectExists {
+		if subjectExistsByLogin || subjectExistsByActualLogin {
 			// cdoc.sys.Subject exists by login -> skip
 			// see https://github.com/voedger/voedger/issues/1107
 			// && svCDocInvite.AsInt32(field_State) == State_Joined -> insert cdoc.sys.Subject with an existing login -> unique violation -> the projector stuck
+			fieldName := "cdoc.sys.Invite.Login"
+			if subjectExistsByActualLogin {
+				fieldName = "cdoc.sys.Invite.ActualLogin"
+			}
+			logger.Info(fmt.Sprintf(`skip aproj.sys.ApplyJoinWorkspace because cdoc.sys.SubjectID.%d exists already by %s "%s"`, existingSubjectID, fieldName, login))
 			return nil
 		}
 
