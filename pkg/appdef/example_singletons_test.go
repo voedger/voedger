@@ -30,7 +30,7 @@ func ExampleIAppDef_Singletons() {
 			AddField("f2", appdef.DataKind_string, false)
 		cDoc.SetSingleton()
 
-		wDoc := adb.AddWDoc(wDocName)
+		wDoc := ws.AddWDoc(wDocName)
 		wDoc.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)

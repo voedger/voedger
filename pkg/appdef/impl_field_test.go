@@ -264,7 +264,9 @@ func Test_AddRefField(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		doc := adb.AddWDoc(docName)
+		wsb := adb.AddWorkspace(NewQName("test", "workspace"))
+
+		doc := wsb.AddWDoc(docName)
 		require.NotNil(doc)
 
 		doc.
@@ -336,7 +338,8 @@ func Test_AddRefField(t *testing.T) {
 	t.Run("should be panic if empty field name", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
-		doc := adb.AddWDoc(docName)
+		wsb := adb.AddWorkspace(NewQName("test", "workspace"))
+		doc := wsb.AddWDoc(docName)
 		require.Panics(func() { doc.AddRefField("", false) },
 			require.Is(ErrMissedError))
 	})

@@ -158,6 +158,40 @@ func (ws *workspace) Validate() error {
 	return nil
 }
 
+func (ws *workspace) WDoc(name QName) IWDoc {
+	if t := ws.typeByKind(name, TypeKind_WDoc); t != nil {
+		return t.(IWDoc)
+	}
+	return nil
+}
+
+func (ws *workspace) WDocs(cb func(IWDoc) bool) {
+	for t := range ws.Types {
+		if d, ok := t.(IWDoc); ok {
+			if !cb(d) {
+				break
+			}
+		}
+	}
+}
+
+func (ws *workspace) WRecord(name QName) IWRecord {
+	if t := ws.typeByKind(name, TypeKind_WRecord); t != nil {
+		return t.(IWRecord)
+	}
+	return nil
+}
+
+func (ws *workspace) WRecords(cb func(IWRecord) bool) {
+	for t := range ws.Types {
+		if r, ok := t.(IWRecord); ok {
+			if !cb(r) {
+				break
+			}
+		}
+	}
+}
+
 // TODO: should be deprecated. All types should be added by specific methods.
 func (ws *workspace) addType(name QName) {
 	t := ws.app.TypeByName(name)
@@ -189,15 +223,27 @@ func (ws *workspace) addData(name QName, kind DataKind, ancestor QName, constrai
 }
 
 func (ws *workspace) addGDoc(name QName) IGDocBuilder {
-	gDoc := newGDoc(ws.app, name)
-	ws.types[name] = gDoc
-	return newGDocBuilder(gDoc)
+	d := newGDoc(ws.app, name)
+	ws.types[name] = d
+	return newGDocBuilder(d)
 }
 
 func (ws *workspace) addGRecord(name QName) IGRecordBuilder {
-	gRec := newGRecord(ws.app, name)
-	ws.types[name] = gRec
-	return newGRecordBuilder(gRec)
+	r := newGRecord(ws.app, name)
+	ws.types[name] = r
+	return newGRecordBuilder(r)
+}
+
+func (ws *workspace) addWDoc(name QName) IWDocBuilder {
+	d := newWDoc(ws.app, name)
+	ws.types[name] = d
+	return newWDocBuilder(d)
+}
+
+func (ws *workspace) addWRecord(name QName) IWRecordBuilder {
+	r := newWRecord(ws.app, name)
+	ws.types[name] = r
+	return newWRecordBuilder(r)
 }
 
 func (ws *workspace) setDescriptor(q QName) {
@@ -275,6 +321,14 @@ func (wb *workspaceBuilder) AddGRecord(name QName) IGRecordBuilder {
 func (wb *workspaceBuilder) AddType(name QName) IWorkspaceBuilder {
 	wb.workspace.addType(name)
 	return wb
+}
+
+func (wb *workspaceBuilder) AddWDoc(name QName) IWDocBuilder {
+	return wb.workspace.addWDoc(name)
+}
+
+func (wb *workspaceBuilder) AddWRecord(name QName) IWRecordBuilder {
+	return wb.workspace.addWRecord(name)
 }
 
 func (wb *workspaceBuilder) SetDescriptor(q QName) IWorkspaceBuilder {
