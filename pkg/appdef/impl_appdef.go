@@ -587,16 +587,6 @@ func (app *appDef) addView(name QName) IViewBuilder {
 	return newViewBuilder(view)
 }
 
-func (app *appDef) addWDoc(name QName) IWDocBuilder {
-	wDoc := newWDoc(app, name)
-	return newWDocBuilder(wDoc)
-}
-
-func (app *appDef) addWRecord(name QName) IWRecordBuilder {
-	wRec := newWRecord(app, name)
-	return newWRecordBuilder(wRec)
-}
-
 func (app *appDef) addWorkspace(name QName) IWorkspaceBuilder {
 	ws := newWorkspace(app, name)
 	return newWorkspaceBuilder(ws)
@@ -729,10 +719,6 @@ func (ab *appDefBuilder) AddRate(name QName, count RateCount, period RatePeriod,
 func (ab *appDefBuilder) AddRole(name QName) IRoleBuilder { return ab.app.addRole(name) }
 
 func (ab *appDefBuilder) AddView(name QName) IViewBuilder { return ab.app.addView(name) }
-
-func (ab *appDefBuilder) AddWDoc(name QName) IWDocBuilder { return ab.app.addWDoc(name) }
-
-func (ab *appDefBuilder) AddWRecord(name QName) IWRecordBuilder { return ab.app.addWRecord(name) }
 
 func (ab *appDefBuilder) AddWorkspace(name QName) IWorkspaceBuilder { return ab.app.addWorkspace(name) }
 
