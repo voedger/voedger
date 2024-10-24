@@ -39,7 +39,7 @@ import (
 )
 
 func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state istructs.IState, params IQueryParams,
-	resultMeta appdef.IType, rs IResultSenderClosable, metrics IMetrics) pipeline.IAsyncPipeline {
+	resultMeta appdef.IType, rs IResultSenderClosable, metrics IMetrics, errCh chan<- error) pipeline.IAsyncPipeline {
 	operators := make([]*pipeline.WiredOperator, 0)
 	if resultMeta == nil {
 		// happens when the query has no result, e.g. q.air.UpdateSubscriptionDetails
@@ -86,6 +86,7 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 	operators = append(operators, pipeline.WireAsyncOperator("Send to bus", &SendToBusOperator{
 		rs:      rs,
 		metrics: metrics,
+		errCh:   errCh,
 	}))
 	return pipeline.NewAsyncPipeline(ctx, "Rows processor", operators[0], operators[1:]...)
 }
@@ -129,6 +130,13 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 					if qwork.rowsProcessor != nil {
 						// wait until all rows are sent
 						qwork.rowsProcessor.Close()
+					}
+					select {
+					case rowsProcErr := <-qwork.rowsProcessorErrCh:
+						if err == nil {
+							err = rowsProcErr
+						}
+					default:
 					}
 					err = coreutils.WrapSysError(err, http.StatusInternalServerError)
 					rs.Close(err)
@@ -358,7 +366,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				qw.metrics.Increase(buildSeconds, time.Since(now).Seconds())
 			}()
 			qw.rowsProcessor = ProvideRowsProcessorFactory()(qw.msg.RequestCtx(), qw.appStructs.AppDef(),
-				qw.state, qw.queryParams, qw.resultType, qw.rs, qw.metrics)
+				qw.state, qw.queryParams, qw.resultType, qw.rs, qw.metrics, qw.rowsProcessorErrCh)
 			return nil
 		}),
 	}
@@ -371,22 +379,23 @@ type queryWork struct {
 	rs       IResultSenderClosable
 	appParts appparts.IAppPartitions
 	// work
-	requestData       map[string]interface{}
-	state             state.IHostState
-	queryParams       IQueryParams
-	appPart           appparts.IAppPartition
-	appStructs        istructs.IAppStructs
-	resultType        appdef.IType
-	execQueryArgs     istructs.ExecQueryArgs
-	maxPrepareQueries int
-	rowsProcessor     pipeline.IAsyncPipeline
-	metrics           IMetrics
-	principals        []iauthnz.Principal
-	principalPayload  payloads.PrincipalPayload
-	secretReader      isecrets.ISecretReader
-	iWorkspace        appdef.IWorkspace
-	iQuery            appdef.IQuery
-	wsDesc            istructs.IRecord
+	requestData        map[string]interface{}
+	state              state.IHostState
+	queryParams        IQueryParams
+	appPart            appparts.IAppPartition
+	appStructs         istructs.IAppStructs
+	resultType         appdef.IType
+	execQueryArgs      istructs.ExecQueryArgs
+	maxPrepareQueries  int
+	rowsProcessor      pipeline.IAsyncPipeline
+	rowsProcessorErrCh chan error // will contain the first error from rowProcessor if any. The rest of errors in rowsProcessor will be just logged
+	metrics            IMetrics
+	principals         []iauthnz.Principal
+	principalPayload   payloads.PrincipalPayload
+	secretReader       isecrets.ISecretReader
+	iWorkspace         appdef.IWorkspace
+	iQuery             appdef.IQuery
+	wsDesc             istructs.IRecord
 	// queryExec         func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error
 	callbackFunc istructs.ExecQueryCallback
 }
@@ -394,13 +403,14 @@ type queryWork struct {
 func newQueryWork(msg IQueryMessage, rs IResultSenderClosable, appParts appparts.IAppPartitions,
 	maxPrepareQueries int, metrics *queryProcessorMetrics, secretReader isecrets.ISecretReader) *queryWork {
 	return &queryWork{
-		msg:               msg,
-		rs:                rs,
-		appParts:          appParts,
-		requestData:       make(map[string]interface{}),
-		maxPrepareQueries: maxPrepareQueries,
-		metrics:           metrics,
-		secretReader:      secretReader,
+		msg:                msg,
+		rs:                 rs,
+		appParts:           appParts,
+		requestData:        make(map[string]interface{}),
+		maxPrepareQueries:  maxPrepareQueries,
+		metrics:            metrics,
+		secretReader:       secretReader,
+		rowsProcessorErrCh: make(chan error, 1),
 	}
 }
 

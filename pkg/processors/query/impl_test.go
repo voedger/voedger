@@ -147,7 +147,8 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		},
 		close: func(err error) {},
 	}
-	processor := ProvideRowsProcessorFactory()(context.Background(), appDef, s, params, resultMeta, rs, &testMetrics{})
+	rowsProcessorErrCh := make(chan error, 1)
+	processor := ProvideRowsProcessorFactory()(context.Background(), appDef, s, params, resultMeta, rs, &testMetrics{}, rowsProcessorErrCh)
 
 	require.NoError(processor.SendAsync(work(1, "Cola", 10)))
 	require.NoError(processor.SendAsync(work(3, "White wine", 20)))
@@ -156,6 +157,11 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	processor.Close()
 
 	require.Equal(`[[[3,"White wine","Alcohol drinks"]]]`, result)
+	select {
+	case err := <-rowsProcessorErrCh:
+		t.Fatal(err)
+	default:
+	}
 }
 
 func deployTestAppWithSecretToken(require *require.Assertions,
@@ -442,7 +448,8 @@ func TestRawMode(t *testing.T) {
 		},
 		close: func(err error) {},
 	}
-	processor := ProvideRowsProcessorFactory()(context.Background(), appDef, &mockState{}, queryParams{}, resultMeta, rs, &testMetrics{})
+	rowsProcessorErrCh := make(chan error, 1)
+	processor := ProvideRowsProcessorFactory()(context.Background(), appDef, &mockState{}, queryParams{}, resultMeta, rs, &testMetrics{}, rowsProcessorErrCh)
 
 	require.NoError(processor.SendAsync(rowsWorkpiece{
 		object: &coreutils.TestObject{
@@ -456,6 +463,11 @@ func TestRawMode(t *testing.T) {
 		},
 	}))
 	processor.Close()
+	select {
+	case err := <-rowsProcessorErrCh:
+		t.Fatal(err)
+	default:
+	}
 
 	require.Equal(`[[["[accepted]"]]]`, result)
 }
