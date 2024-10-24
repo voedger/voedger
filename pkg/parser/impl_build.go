@@ -745,29 +745,30 @@ func (c *defBuildContext) checkName(name string) error {
 }
 
 func (c *buildContext) pushDef(qname appdef.QName, kind appdef.TypeKind, ictx *iterateCtx) {
-	var wsb appdef.IWorkspaceBuilder
-	if ws := getCurrentWorkspace(ictx); ws != nil {
-		if n := Ident(ws.GetName()); n != "" {
-			wsb = c.wsBuilders[ictx.pkg.NewQName(n)]
+	wsb := func() appdef.IWorkspaceBuilder {
+		if ws := getCurrentWorkspace(ictx); ws != nil {
+			if n := Ident(ws.GetName()); n != "" {
+				return c.wsBuilders[ictx.pkg.NewQName(n)]
+			}
 		}
-	} else {
-		panic(fmt.Errorf("unable to resolve current workspace for %s", qname))
+		// no workspace for CDoc «test.cdoc»
+		panic(fmt.Errorf("no workspace for %s «%s»", kind.TrimString(), qname))
 	}
 
 	var builder interface{}
 	switch kind {
 	case appdef.TypeKind_CDoc:
-		builder = wsb.AddCDoc(qname)
+		builder = wsb().AddCDoc(qname)
 	case appdef.TypeKind_CRecord:
-		builder = wsb.AddCRecord(qname)
+		builder = wsb().AddCRecord(qname)
 	case appdef.TypeKind_ODoc:
 		builder = c.adb.AddODoc(qname)
 	case appdef.TypeKind_ORecord:
 		builder = c.adb.AddORecord(qname)
 	case appdef.TypeKind_WDoc:
-		builder = c.adb.AddWDoc(qname)
+		builder = wsb().AddWDoc(qname)
 	case appdef.TypeKind_WRecord:
-		builder = c.adb.AddWRecord(qname)
+		builder = wsb().AddWRecord(qname)
 	case appdef.TypeKind_Object:
 		builder = c.adb.AddObject(qname)
 	case appdef.TypeKind_ViewRecord:

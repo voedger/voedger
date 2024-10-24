@@ -552,6 +552,8 @@ func Test_ValidCommandEvent(t *testing.T) {
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
+	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
 	cmdName := appdef.NewQName("test", "command")
 
 	oDocName := appdef.NewQName("test", "ODocument")
@@ -562,7 +564,7 @@ func Test_ValidCommandEvent(t *testing.T) {
 		oDoc := adb.AddODoc(oDocName)
 		oDoc.AddRefField("RefField", false)
 
-		wDoc := adb.AddWDoc(wDocName)
+		wDoc := wsb.AddWDoc(wDocName)
 		wDoc.AddRefField("RefField", false, oDocName)
 
 		adb.AddCommand(cmdName).SetParam(oDocName).SetResult(wDocName)

@@ -18,11 +18,11 @@ func TestIDGenerator(t *testing.T) {
 	require := require.New(t)
 
 	adb := appdef.New()
-	ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
-	ws.AddCDoc(istructs.QNameCDoc)
-	ws.AddCRecord(istructs.QNameCRecord)
-	adb.AddWDoc(istructs.QNameWDoc)
+	wsb.AddCDoc(istructs.QNameCDoc)
+	wsb.AddCRecord(istructs.QNameCRecord)
+	wsb.AddWDoc(istructs.QNameWDoc)
 	appDef, err := adb.Build()
 	require.NoError(err)
 

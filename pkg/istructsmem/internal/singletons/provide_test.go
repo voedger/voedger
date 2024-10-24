@@ -111,16 +111,16 @@ func Test_SingletonsGetID(t *testing.T) {
 
 			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
-			ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
 			{
-				doc := ws.AddCDoc(cDocName)
+				doc := wsb.AddCDoc(cDocName)
 				doc.SetSingleton()
 				doc.AddField("f1", appdef.DataKind_QName, true)
 			}
 
 			{
-				doc := adb.AddWDoc(wDocName)
+				doc := wsb.AddWDoc(wDocName)
 				doc.SetSingleton()
 				doc.AddField("f1", appdef.DataKind_QName, true)
 			}

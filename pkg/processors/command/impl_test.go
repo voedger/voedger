@@ -188,7 +188,7 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 	app := setUp(t, func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
 		wsb.AddCRecord(testCRecord)
 		wsb.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
-		adb.AddWDoc(testWDoc)
+		wsb.AddWDoc(testWDoc)
 		wsb.AddType(testWDoc)
 		adb.AddCommand(cudQName)
 		wsb.AddType(cudQName)
@@ -240,7 +240,7 @@ func TestRecovery(t *testing.T) {
 	app := setUp(t, func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
 		wsb.AddCRecord(testCRecord)
 		wsb.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
-		adb.AddWDoc(testWDoc)
+		wsb.AddWDoc(testWDoc)
 		wsb.AddType(testWDoc)
 		adb.AddCommand(cudQName)
 		wsb.AddType(cudQName)
