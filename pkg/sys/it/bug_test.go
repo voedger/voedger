@@ -7,6 +7,7 @@ package sys_it
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"testing"
@@ -105,4 +106,21 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs_(t *testing.T) {
 	}
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	vit.PostWS(ws, "c.app1pkg.MockCmd", `{"args":{"Input":"Str"}}`, coreutils.Expect409()).Println()
+}
+
+// https://github.com/voedger/voedger/issues/2759
+func TestWrongFieldReferencedByRefField(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.cdoc1"}}]}`
+	cdoc1ID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.cdoc2","field2": %d}}]}`, cdoc1ID)
+	vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+	body = `{"args":{"Schema":"app1pkg.cdoc2"},"elements":[{"fields": ["field2","sys.ID"], "refs":[["field2","unexistingFieldInTargetDoc"]]}]}`
+	vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("ref field field2 references to table app1pkg.cdoc1 that does not contain field unexistingFieldInTargetDoc"))
 }
