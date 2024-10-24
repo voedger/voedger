@@ -96,12 +96,6 @@ func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err
 		},
 		ProcessorChannel_Query,
 	)
-	vvmCfg.Quotas = in10n.Quotas{
-		Channels:                int(DefaultQuotasChannelsFactor * vvmCfg.NumCommandProcessors),
-		ChannelsPerSubject:      DefaultQuotasChannelsPerSubject,
-		Subscriptions:           int(DefaultQuotasSubscriptionsFactor * vvmCfg.NumCommandProcessors),
-		SubscriptionsPerSubject: DefaultQuotasSubscriptionsPerSubject,
-	}
 	voedgerVM.VVM, voedgerVM.vvmCleanup, err = ProvideCluster(ctx, vvmCfg, vvmIdx)
 	if err != nil {
 		return nil, err
@@ -191,12 +185,12 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideAppsExtensionPoints,
 		provideStatelessResources,
 		provideSidecarApps,
+		provideN10NQuotas,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
 			"NumQueryProcessors",
 			"Time",
-			"Quotas",
 			"BlobberServiceChannels",
 			"BLOBMaxSize",
 			"Name",
@@ -209,6 +203,15 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"SecretsReader",
 		),
 	))
+}
+
+func provideN10NQuotas(vvmCfg *VVMConfig) in10n.Quotas {
+	return in10n.Quotas{
+		Channels:                int(DefaultQuotasChannelsFactor * vvmCfg.NumCommandProcessors),
+		ChannelsPerSubject:      DefaultQuotasChannelsPerSubject,
+		Subscriptions:           int(DefaultQuotasSubscriptionsFactor * vvmCfg.NumCommandProcessors),
+		SubscriptionsPerSubject: DefaultQuotasSubscriptionsPerSubject,
+	}
 }
 
 func provideSchedulerRunner(cfg schedulers.BasicSchedulerConfig) appparts.ISchedulerRunner {
