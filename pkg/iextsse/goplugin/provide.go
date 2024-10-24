@@ -7,6 +7,6 @@ package goplugin
 
 import "github.com/voedger/voedger/pkg/iextsse"
 
-func New() iextsse.ISTSEngine {
+func New() iextsse.ISSEVvmFactory {
 	return nil
 }

@@ -4,46 +4,62 @@ see: State Storage Extension Engines
 
 - [server/storage-extensions.md](https://github.com/voedger/voedger-internals/blob/main/server/storage-extensions.md)
 
-## Use cases
-
-- Handle communication using proprietary SCADA protocol
-- Handle communication using proprietary SCADA protocol
-
 ## Key components
 
 ```mermaid
 erDiagram
     %% Entities
 
+
+    AppPartition["apparts.appPartitionRT"]
+    ISSEVvmFactory["iextsee.ISSEVvmFactory"]
+
+    %% It is here for better layout
+    ISSEVvmFactory ||--|| "iextsee.Config" : "receives"
+
+    ISSEAppVerFactory["iextsee.ISSEAppVerFactory"]
+    ISSEPartitionFactory["iextsee.ISSEPartitionFactory"]
+    ISSEStateStorage["iextsee.ISSEStateStorage"]
+
+    App["apparts.appRT"]
+
+    "iextsee.Config" {
+        Logger ISSELogger
+    }
+    
+    ProjectorState
+
     %% Relationships
 
-    VVM ||--|{ DeployedApplication : "1+"
+    VVM ||--|{ App : "1+"
     VVM ||--|{ SSEInstance : "1+"
-    SSEInstance ||--||SSEType : ""
-    SSEType ||--|| "iextsee.ISSEVvmFactory" : ""
-    "iextsee.ISSEVvmFactory" ||--|{ "iextsee.ISSEAppVerFactory" : "creates"
+    SSEInstance ||--||SSEType : "one per"
+    SSEType ||--|| ISSEVvmFactory: ""
 
-    DeployedApplication ||--|{ Version : "1+"
-    Version ||--|| "iextsee.ISSEAppVerFactory": ""
-
-
-    "iextsee.ISSEVvmFactory" ||--|| "iextsee.Config" : "has"
-    "iextsee.Config" ||--|| "iextsee.ISSELogger" : "has"
-
-    "iextsee.ISSEAppVerFactory" ||--|{ "iextsee.IPartitionSSEFactory" : "creates"
-    "iextsee.IPartitionSSEFactory" ||--|{ "iextsee.ISSE" : "creates"
+    ISSEVvmFactory ||--|{ ISSEAppVerFactory : "creates"
+    ISSEAppVerFactory ||--|{ ISSEPartitionFactory : "creates"
 
 
-    DeployedApplication ||--|{ AppPartition : "1+"
+    App ||--|| AppVersion : "1 current"
+    App ||--o{ AppVersion : "0+ active"
+    App ||--o{ AppPartition : ""
 
-    AppPartition ||--|{ "iextsee.IPartitionSSEFactory" : "1 active"
+    AppPartition ||--o{ AppPartitionVersion : "0+ active"
+    AppPartition ||--|| AppPartitionVersion : "1 current"
+
+    AppVersion ||--|| ISSEAppVerFactory: ""
+
+
+    ISSEPartitionFactory ||--o{ ISSEStateStorage : "creates"
 
     AppPartition ||--o{ Workspace : "0+"
 
-    Workspace ||--o{ "State" : "0+"
+    Workspace ||--o{ "State" : ""
 
-    State ||--|| "iextsee.ISSE" : "1"
+    State ||--|| ISSEStateStorage : "1"
 
     QueryState ||--|| State : "is"
     CommandState  ||--|| State : "is"
+    AppPartitionVersion ||--|| ISSEPartitionFactory : ""
+    ProjectorState ||--|| State : is
 ```

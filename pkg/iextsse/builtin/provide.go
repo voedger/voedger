@@ -16,6 +16,6 @@ type Param struct {
 	LRUCaches map[string]LRUCache
 }
 
-func New() iextsse.ISTSEngine {
+func New() iextsse.ISSEVvmFactory {
 	return nil
 }

@@ -10,20 +10,20 @@ import (
 )
 
 // ************************************************************
-// `STS` stands for `State Storage Engine`.
+// `SSE` stands for `State Storage Extension`.
 
 // Shall be created once per VVM
-type ISTSEngine interface {
+type ISSEVvmFactory interface {
 
 	// Shall be called once per storageModulePath, it effectively means that it is called once per [application, version].
-	NewAppFactory(storageModulePath string, version string) (ISTSAppFactory, error)
+	NewAppFactory(storageModulePath string, version string) (ISSEAppVerFactory, error)
 }
 
 type Config struct {
-	Logger ISTSLogger
+	Logger ISSELogger
 }
 
-type ISTSLogger interface {
+type ISSELogger interface {
 	Error(args ...interface{})
 	Warning(args ...interface{})
 	Info(args ...interface{})
@@ -31,11 +31,12 @@ type ISTSLogger interface {
 }
 
 // Use: VersionConfigPtr <load VersionConfig from json> SetConfig {NewPartitionFactory}
-type ISTSAppFactory interface {
+type ISSEAppVerFactory interface {
+	// Released when there are no more partitions for the application version.
 	IReleasable
 
 	// nil means "no settings".
-	// VersionConfigPtr shall be loaded from json prior calling SetConfig.
+	// VersionConfigPtr shall be loaded from a json config  (if the config exists) prior calling SetConfig.
 	VersionConfigPtr() *any
 
 	// Shall be called once prior any call to the NewPartitionFactory() and after the VersionConfigPtr() result is loaded.
@@ -43,54 +44,55 @@ type ISTSAppFactory interface {
 
 	// NewPartitionFactory is called once per partition per application version.
 	// Existing is nil for the first partition.
-	NewPartitionFactory(partitionID int, existing ISTSPartitionFactory) ISTSPartitionFactory
+	NewPartitionFactory(partitionID PartitionID, existing ISSEPartitionFactory) ISSEPartitionFactory
 }
 
-type ISTSPartitionFactory interface {
+type ISSEPartitionFactory interface {
+	// Released when the partition factory is not the current factory and there are no more active StateStorage-s for the partition factory.
 	IReleasable
 
 	// Shall be called when a new state storage extension instance is needed (e.g. for every command/query processing)
-	NewStateInstance(WSID uint64) ISTSStateInstance
+	NewStateStorage(WSID uint64) ISSEStateStorage
 }
 
 // ************************************************************
-// ISTS* interfaces
+// ISSE* interfaces
 
-// Will be type-asserted to ISTSWith* interfaces.
-type ISTSStateInstance interface {
+// Will be type-asserted to ISSEWith* interfaces.
+type ISSEStateStorage interface {
 	IReleasable
 }
 
-type ISTSWithGet interface {
+type ISSEWithGet interface {
 	// Must return within one second.
-	Get(ctx context.Context, key ISTSKey) (v ISTSRow, ok bool, err error)
+	Get(ctx context.Context, key ISSEKey) (v ISSERow, ok bool, err error)
 }
 
-type ISTSWithPut interface {
+type ISSEWithPut interface {
 	// Shall return within one second.
-	Put(ctx context.Context, key ISTSKey, value ISTSRow) error
+	Put(ctx context.Context, key ISSEKey, value ISSERow) error
 }
 
-// type ISTSWithRead interface {
+// type ISSEWithRead interface {
 // 	// key can be a partial key (filled from left to right).
 // 	// go 1.23
-// 	Read(ctx context.Context, key ISTSKey, cb func(ISTSRow) bool) error
+// 	Read(ctx context.Context, key ISSEKey, cb func(ISSERow) bool) error
 // }
 
 // ************************************************************
 
 // As* methods panic if the requested type is not compatible with the value or the value is missing.
-type ISTSKey interface {
+type ISSEKey interface {
 	Namespace() string
 	Name() string
 	AsInt64(name string) (value int64)
 	AsString(name string) (value string)
 }
 
-// ISTSRow is a read-only interface.
+// ISSERow is a read-only interface.
 // As* methods panics if the requested type is not compatible with the value or the `name` parameter is invalid.
 // If the `name` is valid, but the value is missing, As* methods returns a zero value.
-type ISTSRow interface {
+type ISSERow interface {
 	IReleasable
 
 	// Basic types
@@ -104,8 +106,8 @@ type ISTSRow interface {
 
 	// Composite types
 
-	AsValue(name string) ISTSRow
-	AsValueIdx(idx int) ISTSRow
+	AsValue(name string) ISSERow
+	AsValueIdx(idx int) ISSERow
 	// Len returns the number of elements that can be accessed by AsValueIdx.
 	Len() int
 }
