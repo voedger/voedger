@@ -15,6 +15,7 @@ type IWorkspace interface {
 	IWithGDocs
 	IWithCDocs
 	IWithWDocs
+	IWithSingletons
 
 	// Workspace descriptor document.
 	// See [#466](https://github.com/voedger/voedger/issues/466)

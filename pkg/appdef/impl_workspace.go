@@ -120,6 +120,27 @@ func (ws *workspace) GRecords(cb func(IGRecord) bool) {
 	}
 }
 
+func (ws *workspace) Singleton(name QName) ISingleton {
+	if t := ws.TypeByName(name); t != nil {
+		if s, ok := t.(ISingleton); ok {
+			return s
+		}
+	}
+	return nil
+}
+
+func (ws *workspace) Singletons(cb func(ISingleton) bool) {
+	for t := range ws.Types {
+		if s, ok := t.(ISingleton); ok {
+			if s.Singleton() {
+				if !cb(s) {
+					break
+				}
+			}
+		}
+	}
+}
+
 func (ws *workspace) Type(name QName) IType {
 	if t := ws.TypeByName(name); t != nil {
 		return t

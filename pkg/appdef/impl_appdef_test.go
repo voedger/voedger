@@ -28,17 +28,17 @@ func TestNew(t *testing.T) {
 
 	require.Equal(adb.AppDef(), app, "should be ok get AppDef after build")
 
-	t.Run("must ok to read sys package", func(t *testing.T) {
+	t.Run("should be ok to read sys package", func(t *testing.T) {
 		require.Equal([]string{SysPackage}, app.PackageLocalNames())
 		require.Equal(SysPackagePath, app.PackageFullPath(SysPackage))
 	})
 
-	t.Run("must ok to read sys types", func(t *testing.T) {
+	t.Run("should be ok to read sys types", func(t *testing.T) {
 		require.Equal(NullType, app.TypeByName(NullQName))
 		require.Equal(AnyType, app.TypeByName(QNameANY))
 	})
 
-	t.Run("must ok to read sys data types", func(t *testing.T) {
+	t.Run("should be ok to read sys data types", func(t *testing.T) {
 		require.Equal(SysData_RecordID, app.Data(SysData_RecordID).QName())
 		require.Equal(SysData_String, app.Data(SysData_String).QName())
 		require.Equal(SysData_bytes, app.Data(SysData_bytes).QName())
@@ -76,18 +76,22 @@ func Test_NullAppDef(t *testing.T) {
 	})
 }
 
-func testBreakable[T any](t *testing.T, name string, seq iter.Seq[T]) {
-	cnt := 0
-	for range seq {
-		cnt++
-		break
-	}
-	if cnt != 1 {
-		t.Errorf("range by %s should be breakable", name)
+func testBreakable[T any](t *testing.T, name string, seq ...iter.Seq[T]) {
+	for i, s := range seq {
+		t.Run(fmt.Sprintf("%s[%d]", name, i), func(t *testing.T) {
+			cnt := 0
+			for range s {
+				cnt++
+				break
+			}
+			if cnt != 1 {
+				t.Errorf("got %d iterations, expected 1", i)
+			}
+		})
 	}
 }
 
-func Test_AppDef_EnumerationBreakable(t *testing.T) {
+func Test_EnumsBreakable(t *testing.T) {
 	require := require.New(t)
 
 	adb := New()
@@ -168,34 +172,27 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 	app := adb.MustBuild()
 	require.NotNil(app)
 
-	t.Run("range enumeration should be breakable", func(t *testing.T) {
+	t.Run("should be breakable", func(t *testing.T) {
 		ws := app.Workspace(wsName)
 
-		testBreakable(t, "IAppDef.Types", app.Types)
-		testBreakable(t, "IWorkspace.Types", ws.Types)
+		testBreakable(t, "Types", app.Types, ws.Types)
 
 		testBreakable(t, "Structures", app.Structures)
 		testBreakable(t, "Records", app.Records)
 
-		testBreakable(t, "IAppDef.DataTypes", app.DataTypes)
-		testBreakable(t, "IWorkspace.DataTypes", ws.DataTypes)
+		testBreakable(t, "DataTypes", app.DataTypes, ws.DataTypes)
 
-		testBreakable(t, "IAppDef.GDocs", app.GDocs)
-		testBreakable(t, "IWorkspace.GDocs", ws.GDocs)
-		testBreakable(t, "IAppDef.GRecords", app.GRecords)
-		testBreakable(t, "IWorkspace.GRecords", ws.GRecords)
+		testBreakable(t, "GDocs", app.GDocs, ws.GDocs)
+		testBreakable(t, "GRecords", app.GRecords, ws.GRecords)
 
-		testBreakable(t, "IAppDef.CDocs", app.CDocs)
-		testBreakable(t, "IWorkspace.CDocs", ws.CDocs)
-		testBreakable(t, "IAppDef.CRecords", app.CRecords)
-		testBreakable(t, "IWorkspace.CRecords", ws.CRecords)
+		testBreakable(t, "CDocs", app.CDocs, ws.CDocs)
+		testBreakable(t, "CRecords", app.CRecords, ws.CRecords)
 
-		testBreakable(t, "IAppDef.WDocs", app.WDocs)
-		testBreakable(t, "IWorkspace.WDocs", ws.WDocs)
-		testBreakable(t, "IAppDef.WRecords", app.WRecords)
-		testBreakable(t, "IWorkspace.WRecords", ws.WRecords)
+		testBreakable(t, "WDocs", app.WDocs, ws.WDocs)
+		testBreakable(t, "WRecords", app.WRecords, ws.WRecords)
 
-		testBreakable(t, "Singletons", app.Singletons)
+		testBreakable(t, "Singletons", app.Singletons, ws.Singletons)
+
 		testBreakable(t, "ODocs", app.ODocs)
 		testBreakable(t, "ORecords", app.ORecords)
 		testBreakable(t, "Objects", app.Objects)
