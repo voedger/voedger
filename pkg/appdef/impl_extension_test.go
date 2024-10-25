@@ -55,7 +55,7 @@ func Test_AppDefExtensions(t *testing.T) {
 		prj.Intents().
 			Add(sysViews, viewName)
 
-		v := adb.AddView(viewName)
+		v := wsb.AddView(viewName)
 		v.Key().PartKey().AddField("pk", DataKind_int64)
 		v.Key().ClustCols().AddField("cc", DataKind_string)
 		v.Value().AddField("f1", DataKind_int64, true)

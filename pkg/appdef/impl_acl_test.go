@@ -35,22 +35,21 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
 
-		doc := ws.AddCDoc(docName)
+		doc := wsb.AddCDoc(docName)
 		doc.AddField("field1", DataKind_int32, true)
 
-		view := adb.AddView(viewName)
+		view := wsb.AddView(viewName)
 		view.Key().PartKey().AddField("pk_1", DataKind_int32)
 		view.Key().ClustCols().AddField("cc_1", DataKind_string)
 		view.Value().AddField("vf_1", DataKind_string, false)
-		ws.AddType(viewName)
 
 		_ = adb.AddCommand(cmdName)
-		ws.AddType(cmdName)
+		wsb.AddType(cmdName)
 
 		_ = adb.AddQuery(queryName)
-		ws.AddType(queryName)
+		wsb.AddType(queryName)
 
 		_ = adb.AddRole(readerRoleName)
 		adb.Grant([]OperationKind{OperationKind_Select}, []QName{docName, viewName}, []FieldName{"field1"}, readerRoleName, "grant select from doc & view to reader")

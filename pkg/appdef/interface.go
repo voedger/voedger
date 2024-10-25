@@ -20,10 +20,11 @@ type IAppDef interface {
 	IWithGDocs
 	IWithCDocs
 	IWithWDocs
-	IWithSingletons
 	IWithODocs
-	IWithRecords
 	IWithObjects
+
+	IWithRecords
+	IWithSingletons
 	IWithStructures
 
 	IWithViews
@@ -47,8 +48,6 @@ type IAppDefBuilder interface {
 
 	IPackagesBuilder
 	IWorkspacesBuilder
-
-	IViewsBuilder
 
 	ICommandsBuilder
 	IQueriesBuilder

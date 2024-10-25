@@ -130,7 +130,7 @@ func Test_EnumsBreakable(t *testing.T) {
 	wsb.AddObject(NewQName("test", "Object2"))
 
 	for i := 1; i <= 2; i++ {
-		v := adb.AddView(NewQName("test", fmt.Sprintf("View%d", i)))
+		v := wsb.AddView(NewQName("test", fmt.Sprintf("View%d", i)))
 		v.Key().PartKey().AddField("pkf", DataKind_int64)
 		v.Key().ClustCols().AddField("ccf", DataKind_string)
 		v.Value().AddField("vf", DataKind_bytes, false)
@@ -199,7 +199,8 @@ func Test_EnumsBreakable(t *testing.T) {
 
 		testBreakable(t, "Structures", app.Structures, ws.Structures)
 
-		testBreakable(t, "View", app.Views)
+		testBreakable(t, "View", app.Views, ws.Views)
+
 		testBreakable(t, "Extensions", app.Extensions)
 		testBreakable(t, "Functions", app.Functions)
 		testBreakable(t, "Commands", app.Commands)
@@ -222,7 +223,7 @@ func Test_appDefBuilder_MustBuild(t *testing.T) {
 
 	t.Run("should panic if errors in builder", func(t *testing.T) {
 		adb := New()
-		adb.AddView(NewQName("test", "emptyView"))
+		adb.AddWorkspace(NewQName("test", "workspace")).AddView(NewQName("test", "emptyView"))
 
 		require.Panics(func() { _ = adb.MustBuild() },
 			require.Is(ErrMissedError),

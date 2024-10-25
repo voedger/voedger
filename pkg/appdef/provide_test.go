@@ -49,7 +49,7 @@ func TestBasicUsage(t *testing.T) {
 		AddField("isHuman", DataKind_bool, false).
 		AddField("Photo", DataKind_bytes, false)
 
-	buyerView := adb.AddView(NewQName("test", "viewBuyerByHeight"))
+	buyerView := wsb.AddView(NewQName("test", "viewBuyerByHeight"))
 	buyerView.Key().PartKey().AddField("Height", DataKind_float32)
 	buyerView.Key().ClustCols().AddField("Buyer", DataKind_string, MaxLen(100))
 	buyerView.Value().AddRefField("BuyerID", true, docName)

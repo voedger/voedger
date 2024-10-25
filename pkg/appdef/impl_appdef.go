@@ -567,11 +567,6 @@ func (app *appDef) addRole(name QName) IRoleBuilder {
 	return newRoleBuilder(role)
 }
 
-func (app *appDef) addView(name QName) IViewBuilder {
-	view := newView(app, name)
-	return newViewBuilder(view)
-}
-
 func (app *appDef) addWorkspace(name QName) IWorkspaceBuilder {
 	ws := newWorkspace(app, name)
 	return newWorkspaceBuilder(ws)
@@ -697,8 +692,6 @@ func (ab *appDefBuilder) AddRate(name QName, count RateCount, period RatePeriod,
 
 func (ab *appDefBuilder) AddRole(name QName) IRoleBuilder { return ab.app.addRole(name) }
 
-func (ab *appDefBuilder) AddView(name QName) IViewBuilder { return ab.app.addView(name) }
-
 func (ab *appDefBuilder) AddWorkspace(name QName) IWorkspaceBuilder { return ab.app.addWorkspace(name) }
 
 func (ab appDefBuilder) AppDef() IAppDef { return ab.app }
@@ -715,15 +708,17 @@ func (ab *appDefBuilder) Build() (IAppDef, error) {
 }
 
 func (ab *appDefBuilder) addHardcodedDefinitions() {
-	viewProjectionOffsets := ab.AddView(NewQName(SysPackage, "projectionOffsets"))
-	viewProjectionOffsets.Key().PartKey().AddField("partition", DataKind_int32)
-	viewProjectionOffsets.Key().ClustCols().AddField("projector", DataKind_QName)
-	viewProjectionOffsets.Value().AddField("offset", DataKind_int64, true)
+	// TODO: move to `parser` or to `sys\workspace` package
+	//
+	// viewProjectionOffsets := ab.AddView(NewQName(SysPackage, "projectionOffsets"))
+	// viewProjectionOffsets.Key().PartKey().AddField("partition", DataKind_int32)
+	// viewProjectionOffsets.Key().ClustCols().AddField("projector", DataKind_QName)
+	// viewProjectionOffsets.Value().AddField("offset", DataKind_int64, true)
 
-	viewNextBaseWSID := ab.AddView(NewQName(SysPackage, "NextBaseWSID"))
-	viewNextBaseWSID.Key().PartKey().AddField("dummy1", DataKind_int32)
-	viewNextBaseWSID.Key().ClustCols().AddField("dummy2", DataKind_int32)
-	viewNextBaseWSID.Value().AddField("NextBaseWSID", DataKind_int64, true)
+	// viewNextBaseWSID := ab.AddView(NewQName(SysPackage, "NextBaseWSID"))
+	// viewNextBaseWSID.Key().PartKey().AddField("dummy1", DataKind_int32)
+	// viewNextBaseWSID.Key().ClustCols().AddField("dummy2", DataKind_int32)
+	// viewNextBaseWSID.Value().AddField("NextBaseWSID", DataKind_int64, true)
 }
 
 func (ab *appDefBuilder) Grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) IACLBuilder {

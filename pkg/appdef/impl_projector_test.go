@@ -43,7 +43,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		_ = wsb.AddCRecord(rec2Name)
 		wsb.AddCDoc(docName).SetComment("doc is state for projector")
 
-		v := adb.AddView(viewName)
+		v := wsb.AddView(viewName)
 		v.Key().PartKey().AddDataField("id", SysData_RecordID)
 		v.Key().ClustCols().AddDataField("name", SysData_String)
 		v.Value().AddDataField("data", SysData_bytes, false, MaxLen(1024))

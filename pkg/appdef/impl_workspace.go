@@ -268,6 +268,23 @@ func (ws *workspace) Validate() error {
 	return nil
 }
 
+func (ws *workspace) View(name QName) IView {
+	if t := ws.typeByKind(name, TypeKind_ViewRecord); t != nil {
+		return t.(IView)
+	}
+	return nil
+}
+
+func (ws *workspace) Views(cb func(IView) bool) {
+	for t := range ws.Types {
+		if v, ok := t.(IView); ok {
+			if !cb(v) {
+				break
+			}
+		}
+	}
+}
+
 func (ws *workspace) WDoc(name QName) IWDoc {
 	if t := ws.typeByKind(name, TypeKind_WDoc); t != nil {
 		return t.(IWDoc)
@@ -360,6 +377,12 @@ func (ws *workspace) addType(name QName) {
 	}
 
 	ws.types[name] = t
+}
+
+func (ws *workspace) addView(name QName) IViewBuilder {
+	v := newView(ws.app, name)
+	ws.types[name] = v
+	return newViewBuilder(v)
 }
 
 func (ws *workspace) addWDoc(name QName) IWDocBuilder {
@@ -461,6 +484,10 @@ func (wb *workspaceBuilder) AddORecord(name QName) IORecordBuilder {
 func (wb *workspaceBuilder) AddType(name QName) IWorkspaceBuilder {
 	wb.workspace.addType(name)
 	return wb
+}
+
+func (wb *workspaceBuilder) AddView(name QName) IViewBuilder {
+	return wb.workspace.addView(name)
 }
 
 func (wb *workspaceBuilder) AddWDoc(name QName) IWDocBuilder {
