@@ -6,20 +6,38 @@
 package iextsse
 
 import (
-	"context"
+	"net/url"
 )
 
 // ************************************************************
 // `SSE` stands for `State Storage Extension`.
 
-// Shall be created once per VVM
+// Shall be created once per VVM per VvmFactory type
 type ISSEVvmFactory interface {
 
-	// Shall be called once per storageModulePath, it effectively means that it is called once per [application, version].
-	NewAppFactory(storageModulePath string, version string) (ISSEAppVerFactory, error)
+	// storageModuleURL shall be valid until the factory is released.
+	NewAppFactory(storageModuleURL url.URL) (ISSEAppVerFactory, error)
 }
 
-type Config struct {
+// Use: VersionConfigPtr <load VersionConfig from json> SetConfig {NewPartitionFactory}
+type ISSEAppVerFactory interface {
+	// Released when there are no more partitions for the application version.
+	IReleasable
+
+	// nil means "no config".
+	// ConfigPtr shall be loaded from a json config  (if the config exists) prior calling SetConfig.
+	ConfigPtr() *any
+
+	// Shall be called once prior any call to the NewPartitionFactory() and after the ConfigPtr() result is loaded.
+	ApplyConfigs(cfg *SSECommonConfig) error
+
+	// NewPartitionFactory is called once per partition per application version.
+	// Existing is one of the active factories for the partition.
+	// Existing is nil if this is the first factory for the partition.
+	NewPartitionFactory(partitionID PartitionID, existing ISSEPartitionFactory) ISSEPartitionFactory
+}
+
+type SSECommonConfig struct {
 	Logger ISSELogger
 }
 
@@ -28,23 +46,6 @@ type ISSELogger interface {
 	Warning(args ...interface{})
 	Info(args ...interface{})
 	Verbose(args ...interface{})
-}
-
-// Use: VersionConfigPtr <load VersionConfig from json> SetConfig {NewPartitionFactory}
-type ISSEAppVerFactory interface {
-	// Released when there are no more partitions for the application version.
-	IReleasable
-
-	// nil means "no settings".
-	// VersionConfigPtr shall be loaded from a json config  (if the config exists) prior calling SetConfig.
-	VersionConfigPtr() *any
-
-	// Shall be called once prior any call to the NewPartitionFactory() and after the VersionConfigPtr() result is loaded.
-	SetConfig(cfg *Config) error
-
-	// NewPartitionFactory is called once per partition per application version.
-	// Existing is nil for the first partition.
-	NewPartitionFactory(partitionID PartitionID, existing ISSEPartitionFactory) ISSEPartitionFactory
 }
 
 type ISSEPartitionFactory interface {
@@ -58,41 +59,50 @@ type ISSEPartitionFactory interface {
 // ************************************************************
 // ISSE* interfaces
 
-// Will be type-asserted to ISSEWith* interfaces.
+// Will be type-asserted to ISSEStateStorageWith* interfaces.
 type ISSEStateStorage interface {
 	IReleasable
 }
 
-type ISSEWithGet interface {
-	// Must return within one second.
-	Get(ctx context.Context, key ISSEKey) (v ISSERow, ok bool, err error)
+type ISSEStateStorageWithGet interface {
+	// Must return within 4 seconds.
+	Get(key ISSEKey) (v ISSEValue, ok bool, err error)
 }
 
-type ISSEWithPut interface {
-	// Shall return within one second.
-	Put(ctx context.Context, key ISSEKey, value ISSERow) error
+type ISSEStateStorageWithInsert interface {
+	DummyWithInsert()
 }
 
-// type ISSEWithRead interface {
-// 	// key can be a partial key (filled from left to right).
-// 	// go 1.23
-// 	Read(ctx context.Context, key ISSEKey, cb func(ISSERow) bool) error
-// }
+type ISSEStateStorageWithUpdate interface {
+	DummyWithUpdate()
+}
+
+type ISSEStateStorageWithApplyBatch interface {
+	// Must return within 4 seconds.
+	ApplyBatch(items []ISSEApplyBatchItem) (err error)
+}
+
+type ISSEApplyBatchItem struct {
+	Key   ISSEKey
+	Value ISSEValue
+	IsNew bool
+}
 
 // ************************************************************
 
-// As* methods panic if the requested type is not compatible with the value or the value is missing.
+// As* methods panic if the requested type is not compatible with the value
+// If value is missing, As* methods return a zero value and false.
 type ISSEKey interface {
 	Namespace() string
 	Name() string
-	AsInt64(name string) (value int64)
-	AsString(name string) (value string)
+	AsInt64(name string) (value int64, ok bool)
+	AsString(name string) (value string, ok bool)
 }
 
-// ISSERow is a read-only interface.
+// ISSEValue is a read-only interface.
 // As* methods panics if the requested type is not compatible with the value or the `name` parameter is invalid.
 // If the `name` is valid, but the value is missing, As* methods returns a zero value.
-type ISSERow interface {
+type ISSEValue interface {
 	IReleasable
 
 	// Basic types
@@ -106,8 +116,8 @@ type ISSERow interface {
 
 	// Composite types
 
-	AsValue(name string) ISSERow
-	AsValueIdx(idx int) ISSERow
+	AsValue(name string) ISSEValue
+	AsValueIdx(idx int) ISSEValue
 	// Len returns the number of elements that can be accessed by AsValueIdx.
 	Len() int
 }
