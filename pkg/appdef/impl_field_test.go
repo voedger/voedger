@@ -355,7 +355,9 @@ func Test_UserFields(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		doc := adb.AddODoc(docName)
+		wsb := adb.AddWorkspace(NewQName("test", "workspace"))
+
+		doc := wsb.AddODoc(docName)
 		require.NotNil(doc)
 
 		doc.

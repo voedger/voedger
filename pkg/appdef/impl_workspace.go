@@ -120,6 +120,40 @@ func (ws *workspace) GRecords(cb func(IGRecord) bool) {
 	}
 }
 
+func (ws *workspace) ODoc(name QName) IODoc {
+	if t := ws.typeByKind(name, TypeKind_ODoc); t != nil {
+		return t.(IODoc)
+	}
+	return nil
+}
+
+func (ws *workspace) ODocs(cb func(IODoc) bool) {
+	for t := range ws.Types {
+		if d, ok := t.(IODoc); ok {
+			if !cb(d) {
+				break
+			}
+		}
+	}
+}
+
+func (ws *workspace) ORecord(name QName) IORecord {
+	if t := ws.typeByKind(name, TypeKind_ORecord); t != nil {
+		return t.(IORecord)
+	}
+	return nil
+}
+
+func (ws *workspace) ORecords(cb func(IORecord) bool) {
+	for t := range ws.Types {
+		if r, ok := t.(IORecord); ok {
+			if !cb(r) {
+				break
+			}
+		}
+	}
+}
+
 func (ws *workspace) Singleton(name QName) ISingleton {
 	if t := ws.TypeByName(name); t != nil {
 		if s, ok := t.(ISingleton); ok {
@@ -255,6 +289,18 @@ func (ws *workspace) addGRecord(name QName) IGRecordBuilder {
 	return newGRecordBuilder(r)
 }
 
+func (ws *workspace) addODoc(name QName) IODocBuilder {
+	d := newODoc(ws.app, name)
+	ws.types[name] = d
+	return newODocBuilder(d)
+}
+
+func (ws *workspace) addORecord(name QName) IORecordBuilder {
+	r := newORecord(ws.app, name)
+	ws.types[name] = r
+	return newORecordBuilder(r)
+}
+
 func (ws *workspace) addWDoc(name QName) IWDocBuilder {
 	d := newWDoc(ws.app, name)
 	ws.types[name] = d
@@ -336,6 +382,14 @@ func (wb *workspaceBuilder) AddGDoc(name QName) IGDocBuilder {
 
 func (wb *workspaceBuilder) AddGRecord(name QName) IGRecordBuilder {
 	return wb.workspace.addGRecord(name)
+}
+
+func (wb *workspaceBuilder) AddODoc(name QName) IODocBuilder {
+	return wb.workspace.addODoc(name)
+}
+
+func (wb *workspaceBuilder) AddORecord(name QName) IORecordBuilder {
+	return wb.workspace.addORecord(name)
 }
 
 // TODO: should be deprecated. All types should be added by specific methods.

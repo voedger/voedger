@@ -549,16 +549,6 @@ func (app *appDef) addObject(name QName) IObjectBuilder {
 	return newObjectBuilder(obj)
 }
 
-func (app *appDef) addODoc(name QName) IODocBuilder {
-	oDoc := newODoc(app, name)
-	return newODocBuilder(oDoc)
-}
-
-func (app *appDef) addORecord(name QName) IORecordBuilder {
-	oRec := newORecord(app, name)
-	return newORecordBuilder(oRec)
-}
-
 func (app *appDef) addPackage(localName, path string) {
 	app.packages.add(localName, path)
 }
@@ -698,10 +688,6 @@ func (ab *appDefBuilder) AddLimit(name QName, on []QName, rate QName, comment ..
 }
 
 func (ab *appDefBuilder) AddObject(name QName) IObjectBuilder { return ab.app.addObject(name) }
-
-func (ab *appDefBuilder) AddODoc(name QName) IODocBuilder { return ab.app.addODoc(name) }
-
-func (ab *appDefBuilder) AddORecord(name QName) IORecordBuilder { return ab.app.addORecord(name) }
 
 func (ab *appDefBuilder) AddPackage(localName, path string) IAppDefBuilder {
 	ab.app.addPackage(localName, path)

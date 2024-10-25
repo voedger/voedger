@@ -48,7 +48,6 @@ type IAppDefBuilder interface {
 	IPackagesBuilder
 	IWorkspacesBuilder
 
-	IODocsBuilder
 	IObjectsBuilder
 
 	IViewsBuilder

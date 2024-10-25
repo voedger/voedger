@@ -14,6 +14,7 @@ import (
 func ExampleIAppDef_Singletons() {
 
 	var app appdef.IAppDef
+	wsName := appdef.NewQName("test", "workspace")
 	cDocName := appdef.NewQName("test", "cdoc")
 	wDocName := appdef.NewQName("test", "wdoc")
 
@@ -22,15 +23,15 @@ func ExampleIAppDef_Singletons() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb := adb.AddWorkspace(wsName)
 
-		cDoc := ws.AddCDoc(cDocName)
+		cDoc := wsb.AddCDoc(cDocName)
 		cDoc.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 		cDoc.SetSingleton()
 
-		wDoc := ws.AddWDoc(wDocName)
+		wDoc := wsb.AddWDoc(wDocName)
 		wDoc.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
@@ -55,12 +56,22 @@ func ExampleIAppDef_Singletons() {
 		fmt.Println(app.Singleton(cDocName))
 		fmt.Println(app.Singleton(wDocName))
 		fmt.Println(app.Singleton(appdef.NewQName("test", "unknown")))
+
+		ws := app.Workspace(wsName)
+		fmt.Println(ws)
+		fmt.Println(ws.Singleton(cDocName))
+		fmt.Println(ws.Singleton(wDocName))
+		fmt.Println(ws.Singleton(appdef.NewQName("test", "unknown")))
 	}
 
 	// Output:
 	// 1. CDoc «test.cdoc»
 	// 2. WDoc «test.wdoc»
 	// Overall 2 singletons
+	// CDoc «test.cdoc»
+	// WDoc «test.wdoc»
+	// <nil>
+	// Workspace «test.workspace»
 	// CDoc «test.cdoc»
 	// WDoc «test.wdoc»
 	// <nil>

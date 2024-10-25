@@ -97,34 +97,34 @@ func Test_EnumsBreakable(t *testing.T) {
 	adb := New()
 
 	wsName := NewQName("test", "workspace")
-	ws := adb.AddWorkspace(wsName)
+	wsb := adb.AddWorkspace(wsName)
 
-	ws.AddData(NewQName("test", "Data1"), DataKind_int64, NullQName)
-	ws.AddData(NewQName("test", "Data2"), DataKind_string, NullQName)
+	wsb.AddData(NewQName("test", "Data1"), DataKind_int64, NullQName)
+	wsb.AddData(NewQName("test", "Data2"), DataKind_string, NullQName)
 
-	ws.AddGDoc(NewQName("test", "GDoc1"))
-	ws.AddGDoc(NewQName("test", "GDoc2"))
-	ws.AddGRecord(NewQName("test", "GRecord1"))
-	ws.AddGRecord(NewQName("test", "GRecord2"))
+	wsb.AddGDoc(NewQName("test", "GDoc1"))
+	wsb.AddGDoc(NewQName("test", "GDoc2"))
+	wsb.AddGRecord(NewQName("test", "GRecord1"))
+	wsb.AddGRecord(NewQName("test", "GRecord2"))
 
-	ws.AddCDoc(NewQName("test", "CDoc1")).
+	wsb.AddCDoc(NewQName("test", "CDoc1")).
 		SetSingleton()
-	ws.AddCDoc(NewQName("test", "CDoc2")).
+	wsb.AddCDoc(NewQName("test", "CDoc2")).
 		SetSingleton()
-	ws.AddCRecord(NewQName("test", "CRecord1"))
-	ws.AddCRecord(NewQName("test", "CRecord2"))
+	wsb.AddCRecord(NewQName("test", "CRecord1"))
+	wsb.AddCRecord(NewQName("test", "CRecord2"))
 
-	ws.AddWDoc(NewQName("test", "WDoc1")).
+	wsb.AddWDoc(NewQName("test", "WDoc1")).
 		SetSingleton()
-	ws.AddWDoc(NewQName("test", "WDoc2")).
+	wsb.AddWDoc(NewQName("test", "WDoc2")).
 		SetSingleton()
-	ws.AddWRecord(NewQName("test", "WRecord1"))
-	ws.AddWRecord(NewQName("test", "WRecord2"))
+	wsb.AddWRecord(NewQName("test", "WRecord1"))
+	wsb.AddWRecord(NewQName("test", "WRecord2"))
 
-	adb.AddODoc(NewQName("test", "ODoc1"))
-	adb.AddODoc(NewQName("test", "ODoc2"))
-	adb.AddORecord(NewQName("test", "ORecord1"))
-	adb.AddORecord(NewQName("test", "ORecord2"))
+	wsb.AddODoc(NewQName("test", "ODoc1"))
+	wsb.AddODoc(NewQName("test", "ODoc2"))
+	wsb.AddORecord(NewQName("test", "ORecord1"))
+	wsb.AddORecord(NewQName("test", "ORecord2"))
 
 	adb.AddObject(NewQName("test", "Object1"))
 	adb.AddObject(NewQName("test", "Object2"))
@@ -193,8 +193,9 @@ func Test_EnumsBreakable(t *testing.T) {
 
 		testBreakable(t, "Singletons", app.Singletons, ws.Singletons)
 
-		testBreakable(t, "ODocs", app.ODocs)
-		testBreakable(t, "ORecords", app.ORecords)
+		testBreakable(t, "ODocs", app.ODocs, ws.ODocs)
+		testBreakable(t, "ORecords", app.ORecords, ws.ORecords)
+
 		testBreakable(t, "Objects", app.Objects)
 		testBreakable(t, "View", app.Views)
 		testBreakable(t, "Extensions", app.Extensions)
