@@ -349,17 +349,19 @@ func Test_Refs_NestedTables(t *testing.T) {
 	require := require.New(t)
 
 	fs, err := ParseFile("file1.vsql", `APPLICATION test();
-	TABLE table1 INHERITS CDoc (
-		items TABLE inner1 (
-			table1 ref,
-			ref1 ref(table3),
-			urg_number int32
-		)
-	);
-	TABLE table2 INHERITS CRecord (
-	);
-	TABLE table3 INHERITS CDoc (
-		items table2
+	WORKSPACE MyWorkspace(
+		TABLE table1 INHERITS CDoc (
+			items TABLE inner1 (
+				table1 ref,
+				ref1 ref(table3),
+				urg_number int32
+			)
+		);
+		TABLE table2 INHERITS CRecord (
+		);
+		TABLE table3 INHERITS CDoc (
+			items table2
+		);
 	);
 	`)
 	require.NoError(err)
@@ -387,11 +389,13 @@ func Test_CircularReferencesTables(t *testing.T) {
 	require := require.New(t)
 	// Tables
 	fs, err := ParseFile("file1.vsql", `APPLICATION test();
-	ABSTRACT TABLE table2 INHERITS table2 ();
-	ABSTRACT TABLE table3 INHERITS table3 ();
-	ABSTRACT TABLE table4 INHERITS table5 ();
-	ABSTRACT TABLE table5 INHERITS table6 ();
-	ABSTRACT TABLE table6 INHERITS table4 ();
+	WORKSPACE MyWorkspace(
+		ABSTRACT TABLE table2 INHERITS table2 ();
+		ABSTRACT TABLE table3 INHERITS table3 ();
+		ABSTRACT TABLE table4 INHERITS table5 ();
+		ABSTRACT TABLE table5 INHERITS table6 ();
+		ABSTRACT TABLE table6 INHERITS table4 ();
+	);
 	`)
 	require.NoError(err)
 	pkg, err := BuildPackageSchema("pkg/test", []*FileSchemaAST{fs})
@@ -402,11 +406,11 @@ func Test_CircularReferencesTables(t *testing.T) {
 		pkg,
 	})
 	require.EqualError(err, strings.Join([]string{
-		"file1.vsql:2:2: circular reference in INHERITS",
-		"file1.vsql:3:2: circular reference in INHERITS",
-		"file1.vsql:4:2: circular reference in INHERITS",
-		"file1.vsql:5:2: circular reference in INHERITS",
-		"file1.vsql:6:2: circular reference in INHERITS",
+		"file1.vsql:3:3: circular reference in INHERITS",
+		"file1.vsql:4:3: circular reference in INHERITS",
+		"file1.vsql:5:3: circular reference in INHERITS",
+		"file1.vsql:6:3: circular reference in INHERITS",
+		"file1.vsql:7:3: circular reference in INHERITS",
 	}, "\n"))
 }
 
@@ -416,11 +420,11 @@ func Test_CircularReferencesWorkspaces(t *testing.T) {
 	fs, err := ParseFile("file1.vsql", `APPLICATION test();
 	ABSTRACT WORKSPACE w1();
 		ABSTRACT WORKSPACE w2 INHERITS w1,w2(
-		TABLE table4 INHERITS CDoc();
-	);
-	ABSTRACT WORKSPACE w3 INHERITS w4();
-	ABSTRACT WORKSPACE w4 INHERITS w5();
-	ABSTRACT WORKSPACE w5 INHERITS w3();
+			TABLE table4 INHERITS CDoc();
+		);
+		ABSTRACT WORKSPACE w3 INHERITS w4();
+		ABSTRACT WORKSPACE w4 INHERITS w5();
+		ABSTRACT WORKSPACE w5 INHERITS w3();
 	`)
 	require.NoError(err)
 	pkg, err := BuildPackageSchema("pkg/test", []*FileSchemaAST{fs})
@@ -432,9 +436,9 @@ func Test_CircularReferencesWorkspaces(t *testing.T) {
 	})
 	require.EqualError(err, strings.Join([]string{
 		"file1.vsql:3:37: circular reference in INHERITS",
-		"file1.vsql:6:33: circular reference in INHERITS",
-		"file1.vsql:7:33: circular reference in INHERITS",
-		"file1.vsql:8:33: circular reference in INHERITS",
+		"file1.vsql:6:34: circular reference in INHERITS",
+		"file1.vsql:7:34: circular reference in INHERITS",
+		"file1.vsql:8:34: circular reference in INHERITS",
 	}, "\n"))
 }
 
@@ -496,50 +500,6 @@ func Test_Workspace_Defs(t *testing.T) {
 
 	require.Equal(appdef.TypeKind_Workspace, wsProfile.Type(appdef.NewQName("pkg1", "MyWorkspace")).Kind())
 	require.Nil(wsProfile.TypeByName(appdef.NewQName("pkg1", "MyWorkspace2")))
-}
-
-func Test_Workspace_Defs2(t *testing.T) {
-	require := require.New(t)
-	fs, err := ParseFile("file1.vsql", `IMPORT SCHEMA 'test/pkg2';
-		APPLICATION test(
-			USE pkg2;
-		);
-		WORKSPACE w(
-			USE TABLE pkg2.*;
-		);
-	`)
-	require.NoError(err)
-	pkg, err := BuildPackageSchema("test/pkg1", []*FileSchemaAST{fs})
-	require.NoError(err)
-
-	fs2, err := ParseFile("file2.vsql", `
-		TABLE order INHERITS ODoc (
-			order_item TABLE order_item (
-				b ref
-			)
-		);
-	`)
-	require.NoError(err)
-	pkg2, err := BuildPackageSchema("test/pkg2", []*FileSchemaAST{fs2})
-	require.NoError(err)
-
-	packages, err := BuildAppSchema([]*PackageSchemaAST{
-		getSysPackageAST(),
-		pkg,
-		pkg2,
-	})
-	require.NoError(err)
-
-	builder := appdef.New()
-	require.NoError(BuildAppDefs(packages, builder))
-
-	app, err := builder.Build()
-	require.NoError(err)
-
-	ws := app.Workspace(appdef.NewQName("pkg1", "w"))
-
-	require.Equal(appdef.TypeKind_ODoc, ws.Type(appdef.NewQName("pkg2", "order")).Kind())
-	require.Equal(appdef.TypeKind_ORecord, ws.Type(appdef.NewQName("pkg2", "order_item")).Kind())
 }
 
 func Test_Workspace_Defs3(t *testing.T) {
@@ -631,24 +591,26 @@ func Test_DupFieldsInTypes(t *testing.T) {
 	require := require.New(t)
 
 	fs, err := ParseFile("file1.vsql", `APPLICATION test();
-	TYPE RootType (
-		Id int32
-	);
-	TYPE BaseType(
-		RootType,
-		baseField int
-	);
-	TYPE BaseType2 (
-		someField int
-	);
-	TYPE MyType(
-		BaseType,
-		BaseType2,
-		field varchar,
-		field varchar,
-		baseField varchar,
-		someField int,
-		Id varchar
+	WORKSPACE MyWorkspace(
+		TYPE RootType (
+			Id int32
+		);
+		TYPE BaseType(
+			RootType,
+			baseField int
+		);
+		TYPE BaseType2 (
+			someField int
+		);
+		TYPE MyType(
+			BaseType,
+			BaseType2,
+			field varchar,
+			field varchar,
+			baseField varchar,
+			someField int,
+			Id varchar
+		)
 	)
 	`)
 	require.NoError(err)
@@ -663,10 +625,10 @@ func Test_DupFieldsInTypes(t *testing.T) {
 
 	err = BuildAppDefs(packages, appdef.New())
 	require.EqualError(err, strings.Join([]string{
-		"file1.vsql:16:3: redefinition of field",
-		"file1.vsql:17:3: redefinition of baseField",
-		"file1.vsql:18:3: redefinition of someField",
-		"file1.vsql:19:3: redefinition of Id",
+		"file1.vsql:17:4: redefinition of field",
+		"file1.vsql:18:4: redefinition of baseField",
+		"file1.vsql:19:4: redefinition of someField",
+		"file1.vsql:20:4: redefinition of Id",
 	}, "\n"))
 
 }
@@ -674,13 +636,13 @@ func Test_DupFieldsInTypes(t *testing.T) {
 func Test_Varchar(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("file1.vsql", fmt.Sprintf(`APPLICATION test();
+	fs, err := ParseFile("file1.vsql", fmt.Sprintf(`APPLICATION test(); WORKSPACE MyWorkspace(
 	TYPE RootType (
 		Oversize varchar(%d)
 	);
 	TYPE CDoc1 (
 		Oversize varchar(%d)
-	);
+	););
 	`, uint32(appdef.MaxFieldLength)+1, uint32(appdef.MaxFieldLength)+1))
 	require.NoError(err)
 	pkg, err := BuildPackageSchema("pkg/test", []*FileSchemaAST{fs})
@@ -700,7 +662,7 @@ func Test_Varchar(t *testing.T) {
 func Test_DupFieldsInTables(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("file1.vsql", `APPLICATION test();
+	fs, err := ParseFile("file1.vsql", `APPLICATION test(); WORKSPACE MyWorkspace(
 	TYPE RootType (
 		Kind int32
 	);
@@ -726,7 +688,7 @@ func Test_DupFieldsInTables(t *testing.T) {
 		Kind int,			-- duplicated in the first OF (2nd level)
 		Name int,			-- duplicated in the inherited table
 		ID varchar
-	)
+))
 	`)
 	require.NoError(err)
 	pkg, err := BuildPackageSchema("pkg/test", []*FileSchemaAST{fs})
@@ -752,7 +714,9 @@ func Test_DupFieldsInTables(t *testing.T) {
 func Test_AbstractTables(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("file1.vsql", `APPLICATION test();
+	fs, err := ParseFile("file1.vsql", `APPLICATION test(); 
+	
+	WORKSPACE MyWorkspace1(
 	TABLE ByBaseTable INHERITS CDoc (
 		Name varchar
 	);
@@ -766,8 +730,7 @@ func Test_AbstractTables(t *testing.T) {
 	ABSTRACT TABLE AbstractTable INHERITS CDoc(
 	);
 
-	WORKSPACE MyWorkspace1(
-		EXTENSION ENGINE BUILTIN (
+	EXTENSION ENGINE BUILTIN (
 
 			PROJECTOR proj1
             AFTER INSERT ON AbstractTable 	-- NOT ALLOWED (projector refers to abstract table)
@@ -785,7 +748,6 @@ func Test_AbstractTables(t *testing.T) {
 		TABLE My2 INHERITS CRecord(
 			nested AbstractTable			-- NOT ALLOWED
 		);
-		USE TABLE AbstractTable;			-- NOT ALLOWED
 		TABLE My3 INHERITS CRecord(
 			f int,
 			items ABSTRACT TABLE Nested()	-- NOT ALLOWED
@@ -801,14 +763,13 @@ func Test_AbstractTables(t *testing.T) {
 		pkg,
 	})
 	require.EqualError(err, strings.Join([]string{
-		"file1.vsql:5:25: base table must be abstract",
-		"file1.vsql:19:29: projector refers to abstract table AbstractTable",
-		"file1.vsql:24:21: projector refers to abstract table AbstractTable",
-		"file1.vsql:28:10: projector refers to abstract table AbstractTable",
-		"file1.vsql:32:11: nested abstract table AbstractTable",
-		"file1.vsql:34:13: use of abstract table AbstractTable",
+		"file1.vsql:7:25: base table must be abstract",
+		"file1.vsql:20:29: projector refers to abstract table AbstractTable",
+		"file1.vsql:25:21: projector refers to abstract table AbstractTable",
+		"file1.vsql:29:10: projector refers to abstract table AbstractTable",
+		"file1.vsql:33:11: nested abstract table AbstractTable",
 		"file1.vsql:37:4: nested abstract table Nested",
-		"file1.vsql:9:10: reference to abstract table AbstractTable",
+		"file1.vsql:11:10: reference to abstract table AbstractTable",
 	}, "\n"))
 
 }
@@ -817,10 +778,10 @@ func Test_AbstractTables2(t *testing.T) {
 	require := require.New(t)
 
 	fs, err := ParseFile("file1.vsql", `APPLICATION test();
-	ABSTRACT TABLE AbstractTable INHERITS CDoc(
-	);
-
 	WORKSPACE MyWorkspace1(
+		ABSTRACT TABLE AbstractTable INHERITS CDoc(
+		);
+
 		TABLE My2 INHERITS CRecord(
 			nested AbstractTable			-- NOT ALLOWED
 		);
@@ -869,11 +830,11 @@ func Test_WorkspaceDescriptors(t *testing.T) {
 func Test_PanicUnknownFieldType(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("file1.vsql", `APPLICATION test();
+	fs, err := ParseFile("file1.vsql", `APPLICATION test(); WORKSPACE MyWorkspace(
 	TABLE MyTable INHERITS CDoc (
 		Name asdasd,
 		Code varchar
-	);
+	))
 	`)
 	require.NoError(err)
 	pkg, err := BuildPackageSchema("test/pkg", []*FileSchemaAST{fs})
@@ -892,7 +853,7 @@ func Test_PanicUnknownFieldType(t *testing.T) {
 func Test_Expressions(t *testing.T) {
 	require := require.New(t)
 
-	_, err := ParseFile("file1.vsql", `
+	_, err := ParseFile("file1.vsql", `WORKSPACE MyWorkspace(
 	TABLE MyTable(
 		Int1 varchar DEFAULT 1 CHECK(Int1 > Int2),
 		Int1 int DEFAULT 1 CHECK(Text != 'asd'),
@@ -901,7 +862,7 @@ func Test_Expressions(t *testing.T) {
 		Int1 int DEFAULT 1 CHECK(SomeFunc('a', TextField) AND BoolField=FALSE),
 
 		CHECK(MyRowValidator(this))
-	)
+))
 	`)
 	require.NoError(err)
 
@@ -916,12 +877,12 @@ func Test_Duplicates(t *testing.T) {
 		FUNCTION MyTableValidator(TableRow) RETURNS string;
 		FUNCTION MyFunc2() RETURNS void;
 	);
-	TABLE Rec1 INHERITS CRecord();
 	`)
 	require.NoError(err)
 
 	ast2, err := ParseFile("file2.vsql", `
 	WORKSPACE ChildWorkspace (
+		TABLE Rec1 INHERITS CRecord();
 		TAG MyFunc2; -- redeclared
 		EXTENSION ENGINE BUILTIN (
 			FUNCTION MyFunc3() RETURNS void;
@@ -942,9 +903,9 @@ func Test_Duplicates(t *testing.T) {
 
 	require.EqualError(err, strings.Join([]string{
 		"file1.vsql:4:3: redefinition of MyTableValidator",
-		"file2.vsql:3:3: redefinition of MyFunc2",
-		"file2.vsql:9:4: redefinition of MyFunc4",
-		"file2.vsql:13:12: redefinition of Rec1",
+		"file2.vsql:4:3: redefinition of MyFunc2",
+		"file2.vsql:10:4: redefinition of MyFunc4",
+		"file2.vsql:14:12: redefinition of Rec1",
 	}, "\n"))
 
 }
@@ -1423,13 +1384,13 @@ func Test_AbstractWorkspace(t *testing.T) {
 func Test_UniqueFields(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("example.vsql", `APPLICATION test();
+	fs, err := ParseFile("example.vsql", `APPLICATION test(); WORKSPACE MyWorkspace(
 	TABLE MyTable INHERITS CDoc (
 		Int1 int32,
 		Int2 int32 NOT NULL,
 		UNIQUEFIELD Int1,
 		UNIQUEFIELD Int2
-	)
+))
 	`)
 	require.NoError(err)
 
@@ -1460,13 +1421,13 @@ func Test_UniqueFields(t *testing.T) {
 func Test_NestedTables(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("example.vsql", `APPLICATION test();
+	fs, err := ParseFile("example.vsql", `APPLICATION test(); WORKSPACE MyWorkspace(
 	TABLE NestedTable INHERITS CRecord (
 		ItemName varchar,
 		DeepNested TABLE DeepNestedTable (
 			ItemName varchar
 		)
-	);
+	))
 	`)
 	require.NoError(err)
 
@@ -1494,11 +1455,11 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 	t.Run("Should return error because CDoc references to ODoc", func(t *testing.T) {
 		require := require.New(t)
 
-		fs, err := ParseFile("example.vsql", `APPLICATION test();
+		fs, err := ParseFile("example.vsql", `APPLICATION test(); WORKSPACE MyWorkspace(
 		TABLE OTable INHERITS ODoc ();
 		TABLE CTable INHERITS CDoc (
 			OTableRef ref(OTable)
-		);
+		))
 		`)
 		require.NoError(err)
 
@@ -1513,7 +1474,7 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 
 		appBld := appdef.New()
 		err = BuildAppDefs(packages, appBld)
-
+		require.Error(err)
 		require.Contains(err.Error(), "table test.CTable can not reference to table test.OTable")
 	})
 }
@@ -1521,10 +1482,10 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 func Test_1KStringField(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("example.vsql", `APPLICATION test();
+	fs, err := ParseFile("example.vsql", `APPLICATION test(); WORKSPACE MyWorkspace(
 	TABLE MyTable INHERITS CDoc (
 		KB varchar(1024)
-	)
+))
 	`)
 	require.NoError(err)
 
@@ -1562,11 +1523,11 @@ func Test_1KStringField(t *testing.T) {
 func Test_ReferenceToNoTable(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("example.vsql", `APPLICATION test();
+	fs, err := ParseFile("example.vsql", `APPLICATION test(); WORKSPACE MyWorkspace(
 	ROLE Admin;
 	TABLE CTable INHERITS CDoc (
 		RefField ref(Admin)
-	);
+	));
 	`)
 	require.NoError(err)
 
@@ -1629,60 +1590,6 @@ func Test_VRestaurantBasic(t *testing.T) {
 	view := app.View(appdef.NewQName("vrestaurant", "SalesPerDay"))
 	require.NotNil(view)
 	require.Equal(appdef.TypeKind_ViewRecord, view.Kind())
-}
-
-func Test_AppSchema(t *testing.T) {
-	require := require.New(t)
-
-	fs, err := ParseFile("example1.vsql", `
-	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg2' AS air1;
-	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg3' AS air2;
-	APPLICATION test(
-		USE air1;
-		USE air2;
-	);
-	TABLE MyTable INHERITS CDoc ();
-	`)
-	require.NoError(err)
-	pkg1, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg1", []*FileSchemaAST{fs})
-	require.NoError(err)
-
-	fs, err = ParseFile("example2.vsql", `
-	TABLE MyTable INHERITS CDoc ();
-	`)
-	require.NoError(err)
-	pkg2, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
-	require.NoError(err)
-
-	fs, err = ParseFile("example3.vsql", `
-	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg2' AS air1;
-	WORKSPACE myWorkspace (
-		USE TABLE air1.MyTable;
-	);
-	`)
-	require.NoError(err)
-	pkg3, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg3", []*FileSchemaAST{fs})
-	require.NoError(err)
-
-	appSchema, err := BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), pkg1, pkg2, pkg3})
-	require.NoError(err)
-
-	builder := appdef.New()
-	err = BuildAppDefs(appSchema, builder)
-	require.NoError(err)
-
-	app, err := builder.Build()
-	require.NoError(err)
-
-	cdoc := app.CDoc(appdef.NewQName("pkg1", "MyTable"))
-	require.NotNil(cdoc)
-
-	cdoc = app.CDoc(appdef.NewQName("air1", "MyTable"))
-	require.NotNil(cdoc)
-
-	ws := app.Workspace(appdef.NewQName("air2", "myWorkspace"))
-	require.NotNil(ws)
-	require.NotNil(ws.Type(appdef.NewQName("air1", "MyTable")))
 }
 
 func Test_AppSchemaErrors(t *testing.T) {
@@ -1766,48 +1673,6 @@ func Test_AppIn2Schemas(t *testing.T) {
 	require.ErrorContains(err, "redefinition of application")
 }
 
-func Test_Scope(t *testing.T) {
-	require := require.New(t)
-
-	// *****  main
-	fs, err := ParseFile("example1.vsql", `
-	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg1' AS p1;
-	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg2';
-	APPLICATION test(
-		USE pkg1;
-		USE pkg2;
-	);
-	`)
-	require.NoError(err)
-	main, err := BuildPackageSchema("github.com/untillpro/airsbp3/main", []*FileSchemaAST{fs})
-	require.NoError(err)
-
-	// *****  pkg1
-	fs, err = ParseFile("example2.vsql", `
-	WORKSPACE myWorkspace1 (
-		TABLE MyTable INHERITS CDoc ();
-	);
-	`)
-	require.NoError(err)
-	pkg1, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg1", []*FileSchemaAST{fs})
-	require.NoError(err)
-
-	// *****  pkg2
-	fs, err = ParseFile("example3.vsql", `
-	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg1' AS p1;
-	WORKSPACE myWorkspace2 (
-		USE TABLE p1.MyTable;
-	);
-	`)
-	require.NoError(err)
-	pkg2, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
-	require.NoError(err)
-
-	_, err = BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), main, pkg1, pkg2})
-	require.EqualError(err, "example3.vsql:4:16: undefined table: p1.MyTable")
-
-}
-
 func Test_Scope_TableRefs(t *testing.T) {
 	require := require.New(t)
 
@@ -1824,8 +1689,8 @@ func Test_Scope_TableRefs(t *testing.T) {
 
 	// *****  pkg1
 	fs, err = ParseFile("example2.vsql", `
-	TABLE PkgTable INHERITS CRecord();
 	WORKSPACE myWorkspace1 (
+		TABLE PkgTable INHERITS CRecord();
 		TABLE MyTable INHERITS CDoc (
 			Items TABLE MyInnerTable()
 		);
@@ -1850,10 +1715,9 @@ func Test_Scope_TableRefs(t *testing.T) {
 	require.NoError(err)
 	_, err = BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), main, pkg1})
 	require.EqualError(err, strings.Join([]string{
-		"example2.vsql:10:11: table PkgTable not included into workspace",
 		"example2.vsql:16:11: undefined table: MyTable",
 		"example2.vsql:17:11: undefined table: MyTable2",
-		"example2.vsql:18:11: table PkgTable not included into workspace",
+		"example2.vsql:18:11: undefined table: PkgTable",
 		"example2.vsql:19:11: undefined table: MyInnerTable",
 	}, "\n"))
 
@@ -1909,129 +1773,6 @@ func Test_Alter_Workspace_In_Package(t *testing.T) {
 	require.NoError(err)
 }
 
-func Test_UseTableErrors(t *testing.T) {
-	require := require.New(t)
-
-	fs, err := ParseFile("main.vsql", `
-	IMPORT SCHEMA 'org/pkg1';
-	APPLICATION test(
-		USE pkg1;
-	);
-	WORKSPACE Ws(
-		USE TABLE pkg1.Pkg1Table3;  -- bad, declared in workspace
-		USE TABLE pkg2.*;  			-- bad, package not found
-		USE WORKSPACE ws1;			-- bad, workspace not found
-	)
-	`)
-	require.NoError(err)
-	pkg, err := BuildPackageSchema("test/main", []*FileSchemaAST{fs})
-	require.NoError(err)
-
-	// pkg1
-	fs1, err := ParseFile("file1.vsql", `
-	WORKSPACE Ws(
-		TABLE Pkg1Table3 INHERITS CDoc();
-	)
-	`)
-	require.NoError(err)
-	pkg1, err := BuildPackageSchema("org/pkg1", []*FileSchemaAST{fs1})
-	require.NoError(err)
-
-	_, err = BuildAppSchema([]*PackageSchemaAST{
-		getSysPackageAST(),
-		pkg,
-		pkg1,
-	})
-
-	require.EqualError(err, strings.Join([]string{
-		"main.vsql:7:18: undefined table: pkg1.Pkg1Table3",
-		"main.vsql:8:13: pkg2 undefined",
-		"main.vsql:9:17: undefined workspace: main.ws1",
-	}, "\n"))
-}
-
-func Test_UseTables(t *testing.T) {
-	require := require.New(t)
-
-	fs, err := ParseFile("main.vsql", `
-	IMPORT SCHEMA 'org/pkg1';
-	IMPORT SCHEMA 'org/pkg2';
-	APPLICATION test(
-		USE pkg1;
-		USE pkg2;
-	);
-	TABLE TestTable1 INHERITS CDoc();
-	TABLE TestTable2 INHERITS CDoc();
-
-	WORKSPACE Ws(
-		USE TABLE *;				-- good, import all tables declared on current package level
-		USE TABLE pkg1.*;			-- good, import all tables from specified package
-		USE TABLE pkg2.Pkg2Table1;	-- good, import specified table
-	)
-	`)
-	require.NoError(err)
-	pkg, err := BuildPackageSchema("test/main", []*FileSchemaAST{fs})
-	require.NoError(err)
-
-	// pkg1
-	fs1, err := ParseFile("file1.vsql", `
-	TABLE Pkg1Table1 INHERITS CDoc();
-	TABLE Pkg1Table2 INHERITS CDoc();
-
-	WORKSPACE Ws(
-		TABLE Pkg1Table3 INHERITS CDoc();
-	)
-	`)
-	require.NoError(err)
-	pkg1, err := BuildPackageSchema("org/pkg1", []*FileSchemaAST{fs1})
-	require.NoError(err)
-
-	// pkg2
-	fs2, err := ParseFile("file2.vsql", `
-	TABLE Pkg2Table1 INHERITS CDoc();
-	TABLE Pkg2Table2 INHERITS CDoc();
-
-	WORKSPACE Ws(
-		TABLE Pkg2Table3 INHERITS CDoc();
-	)
-	`)
-	require.NoError(err)
-	pkg2, err := BuildPackageSchema("org/pkg2", []*FileSchemaAST{fs2})
-	require.NoError(err)
-
-	schema, err := BuildAppSchema([]*PackageSchemaAST{
-		getSysPackageAST(),
-		pkg,
-		pkg1,
-		pkg2,
-	})
-
-	require.NoError(err)
-
-	builder := appdef.New()
-	err = BuildAppDefs(schema, builder)
-	require.NoError(err)
-
-	app, err := builder.Build()
-	require.NoError(err)
-
-	ws := app.Workspace(appdef.NewQName("main", "Ws"))
-	require.NotNil(ws)
-
-	require.NotEqual(appdef.TypeKind_null, ws.Type(appdef.NewQName("main", "TestTable1")).Kind())
-	require.NotEqual(appdef.TypeKind_null, ws.Type(appdef.NewQName("main", "TestTable2")).Kind())
-	require.NotEqual(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg1", "Pkg1Table1")).Kind())
-	require.NotEqual(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg1", "Pkg1Table2")).Kind())
-	require.Equal(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg1", "Pkg1Table3")).Kind())
-	require.NotEqual(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table1")).Kind())
-	require.Equal(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table2")).Kind())
-	require.Equal(appdef.TypeKind_null, ws.Type(appdef.NewQName("pkg2", "Pkg2Table3")).Kind())
-
-	_, err = builder.Build()
-	require.NoError(err)
-
-}
-
 func Test_Storages(t *testing.T) {
 	require := require.New(t)
 	fs, err := ParseFile("example2.vsql", `APPLICATION test1();
@@ -2068,20 +1809,18 @@ func Test_OdocCmdArgs(t *testing.T) {
 	require := require.New(t)
 	pkgApp1 := buildPackage(`
 
-	APPLICATION registry(
-	);
-
-	TABLE TableODoc INHERITS ODoc (
-		orecord1 TABLE orecord1(
-			orecord2 TABLE orecord2()
-		)
-	);
-
+	APPLICATION registry(); 
 	WORKSPACE Workspace1 (
+		TABLE TableODoc INHERITS ODoc (
+			orecord1 TABLE orecord1(
+				orecord2 TABLE orecord2()
+			)
+		);
 		EXTENSION ENGINE BUILTIN (
 			COMMAND CmdODoc1(TableODoc) RETURNS TableODoc;
 		)
 	);
+	
 
 	`)
 
@@ -2117,27 +1856,25 @@ func Test_TypeContainers(t *testing.T) {
 	require := require.New(t)
 	pkgApp1 := buildPackage(`
 
-APPLICATION registry(
-);
-
-TYPE Person (
-	Name 	varchar,
-	Age 	int32
-);
-
-TYPE Item (
-	Name 	varchar,
-	Price 	currency
-);
-
-TYPE Deal (
-	side1 		Person NOT NULL,	-- collection 1..1
-	side2 		Person				-- collection 0..1
---	items 		Item[] NOT NULL,	-- (not yet supported by kernel) collection 1..* (up to maxNestedTableContainerOccurrences = 100)
---	discounts 	Item[3]				-- (not yet supported by kernel) collection 0..3 (one-based numbering convention for arrays, similarly to PostgreSQL)
-);
+APPLICATION registry();
 
 WORKSPACE Workspace1 (
+	TYPE Person (
+		Name 	varchar,
+		Age 	int32
+	);
+
+	TYPE Item (
+		Name 	varchar,
+		Price 	currency
+	);
+
+	TYPE Deal (
+		side1 		Person NOT NULL,	-- collection 1..1
+		side2 		Person				-- collection 0..1
+	--	items 		Item[] NOT NULL,	-- (not yet supported by kernel) collection 1..* (up to maxNestedTableContainerOccurrences = 100)
+	--	discounts 	Item[3]				-- (not yet supported by kernel) collection 0..3 (one-based numbering convention for arrays, similarly to PostgreSQL)
+	);
 	EXTENSION ENGINE BUILTIN (
 		COMMAND CmdDeal(Deal) RETURNS Deal;
 	)
@@ -2180,11 +1917,9 @@ func Test_EmptyType(t *testing.T) {
 	require := require.New(t)
 	pkgApp1 := buildPackage(`
 
-APPLICATION registry(
-);
-
-TYPE EmptyType (
-);
+APPLICATION registry(); WORKSPACE Workspace1 (
+	TYPE EmptyType ();
+)
 	`)
 
 	schema, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
@@ -2205,8 +1940,8 @@ func Test_EmptyType1(t *testing.T) {
 	require := require.New(t)
 	pkgApp1 := buildPackage(`
 
-APPLICATION registry(
-);
+APPLICATION registry(); WORKSPACE Workspace1 (
+
 
 TYPE SomeType (
 	t int321
@@ -2214,7 +1949,7 @@ TYPE SomeType (
 
 TABLE SomeTable INHERITS CDoc (
 	t int321
-)
+))
 	`)
 
 	_, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
@@ -2227,8 +1962,8 @@ TABLE SomeTable INHERITS CDoc (
 
 func Test_ODocUnknown(t *testing.T) {
 	require := require.New(t)
-	pkgApp1 := buildPackage(`APPLICATION registry();
-TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL );
+	pkgApp1 := buildPackage(`APPLICATION registry(); WORKSPACE Workspace1 (
+TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL ));
 `)
 
 	_, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
@@ -2254,28 +1989,28 @@ func Test_Constraints(t *testing.T) {
 	require := assertions(t)
 
 	require.AppSchemaError(`
-	APPLICATION app1();
+	APPLICATION app1(); WORKSPACE ws1 (
 	TABLE SomeTable INHERITS CDoc (
 		t1 int32,
 		t2 int32,
 		CONSTRAINT c1 UNIQUE(t1),
 		CONSTRAINT c1 UNIQUE(t2)
-	)`, "file.vsql:7:3: redefinition of c1")
+	))`, "file.vsql:7:3: redefinition of c1")
 
 	require.AppSchemaError(`
-	APPLICATION app1();
+	APPLICATION app1(); WORKSPACE ws1 (
 	TABLE SomeTable INHERITS CDoc (
 		UNIQUEFIELD UnknownField
-	)`, "file.vsql:4:3: undefined field UnknownField")
+	))`, "file.vsql:4:3: undefined field UnknownField")
 
 	require.AppSchemaError(`
-	APPLICATION app1();
+	APPLICATION app1(); WORKSPACE ws1 (
 	TABLE SomeTable INHERITS CDoc (
 		t1 int32,
 		t2 int32,
 		CONSTRAINT c1 UNIQUE(t1),
 		CONSTRAINT c2 UNIQUE(t2, t1)
-	)`, "file.vsql:7:3: field t1 already in unique constraint")
+	))`, "file.vsql:7:3: field t1 already in unique constraint")
 
 }
 
@@ -2319,13 +2054,13 @@ func Test_Grants(t *testing.T) {
 	})
 
 	t.Run("GRANT follows REVOKE in WORKSPACE", func(t *testing.T) {
-		require.AppSchemaError(`APPLICATION test();
+		require.AppSchemaError(`APPLICATION test(); 
 			ROLE role1;
-			TABLE Table1 INHERITS CDoc(
-				Field1 int32
-			);
 			WORKSPACE AppWorkspaceWS (
-				USE TABLE Table1;
+
+				TABLE Table1 INHERITS CDoc(
+					Field1 int32
+				);
 				REVOKE ALL ON TABLE Table1 FROM role1;
 				GRANT ALL ON TABLE Table1 TO role1;
 				
@@ -2478,10 +2213,10 @@ func Test_Grants_Inherit(t *testing.T) {
 func Test_UndefinedType(t *testing.T) {
 	require := assertions(t)
 
-	require.AppSchemaError(`APPLICATION app1();
+	require.AppSchemaError(`APPLICATION app1(); WORKSPACE w (
 TABLE MyTable2 INHERITS ODoc (
 MyField int23 NOT NULL
-);
+))
 	`, "file.vsql:3:9: undefined data type or table: int23",
 	)
 }
@@ -2602,30 +2337,6 @@ func Test_Identifiers(t *testing.T) {
 
 func Test_RefsWorkspaces(t *testing.T) {
 	require := assertions(t)
-
-	require.AppSchemaError(`APPLICATION test();
-	TABLE t1 INHERITS WDoc();
-	WORKSPACE w2 (
-		TABLE tab2 INHERITS WDoc(
-			f ref(t1) -- error, t1 is not in the workspace
-		);
-		TYPE typ2(
-			f ref(t1) -- error, t1 is not in the workspace
-		);
-		VIEW test(
-			f ref(t1), -- error, t1 is not in the workspace
-			PRIMARY KEY(f)
-		) AS RESULT OF Proj1;
-
-		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
-			COMMAND Orders()
-		);
-
-	);`,
-		"file.vsql:5:10: table t1 not included into workspace",
-		"file.vsql:8:10: table t1 not included into workspace",
-		"file.vsql:11:10: table t1 not included into workspace")
 
 	require.NoAppSchemaError(`APPLICATION test();
 	WORKSPACE w2 (
@@ -2795,7 +2506,7 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 
 func Test_UniquesFromFieldsets(t *testing.T) {
 	require := assertions(t)
-	schema, err := require.AppSchema(`APPLICATION test();
+	schema, err := require.AppSchema(`APPLICATION test(); WORKSPACE w (
 	TYPE fieldset (
 		f1 int32
 	);
@@ -2804,7 +2515,7 @@ func Test_UniquesFromFieldsets(t *testing.T) {
 		f2 int32,
 		UNIQUE(f1)
 	);
-`)
+)`)
 	require.NoError(err)
 	require.NoError(BuildAppDefs(schema, appdef.New()))
 }

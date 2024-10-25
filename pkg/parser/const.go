@@ -5,9 +5,7 @@
 
 package parser
 
-import (
-	"github.com/voedger/voedger/pkg/appdef"
-)
+import "github.com/voedger/voedger/pkg/appdef"
 
 const (
 	nameCDOC       = "CDoc"

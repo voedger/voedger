@@ -2,12 +2,12 @@
 * Copyright (c) 2023-present unTill Pro, Ltd.
 */
 
-TABLE Prices INHERITS CDoc(
-    Price float
-);
+ABSTRACT WORKSPACE UntillAWorkspace (
+    TABLE Prices INHERITS CDoc(
+        Price float
+    );
 
-TABLE Promotions INHERITS CDoc(
-    Discount float
+    TABLE Promotions INHERITS CDoc(
+        Discount float
+    );
 );
-
-ABSTRACT WORKSPACE UntillAWorkspace ();

@@ -8,15 +8,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/alecthomas/participle/v2/lexer"
-
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
 type buildContext struct {
 	basicContext
 	adb              appdef.IAppDefBuilder
-	wsb              appdef.IWorkspaceBuilder
 	wsBuilders       map[appdef.QName]appdef.IWorkspaceBuilder
 	defs             []defBuildContext
 	variableResolver IVariableResolver
@@ -148,9 +145,9 @@ func (c *buildContext) addComments(s IStatement, builder appdef.ICommentsBuilder
 func (c *buildContext) types() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(typ *TypeStmt, ictx *iterateCtx) {
-			c.pushDef(schema.NewQName(typ.Name), appdef.TypeKind_Object, ictx)
+			c.pushDef(schema.NewQName(typ.Name), appdef.TypeKind_Object, typ.workspace)
 			c.addComments(typ, c.defCtx().defBuilder.(appdef.ICommentsBuilder))
-			c.addTableItems(typ.Items, ictx)
+			c.addTableItems(schema, typ.Items)
 			c.popDef()
 		})
 	}
@@ -304,7 +301,7 @@ func (c *buildContext) projectors() error {
 func (c *buildContext) views() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(view *ViewStmt, ictx *iterateCtx) {
-			c.pushDef(schema.NewQName(view.Name), appdef.TypeKind_ViewRecord, ictx)
+			c.pushDef(schema.NewQName(view.Name), appdef.TypeKind_ViewRecord, view.workspace)
 			vb := func() appdef.IViewBuilder {
 				return c.defCtx().defBuilder.(appdef.IViewBuilder)
 			}
@@ -459,7 +456,7 @@ func (c *buildContext) queries() error {
 func (c *buildContext) tables() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(table *TableStmt, ictx *iterateCtx) {
-			c.table(schema, table, ictx)
+			c.table(schema, table)
 		})
 		iteratePackageStmt(schema, &c.basicContext, func(w *WorkspaceStmt, ictx *iterateCtx) {
 			c.workspaceDescriptor(w, ictx)
@@ -468,16 +465,11 @@ func (c *buildContext) tables() error {
 	return errors.Join(c.errs...)
 }
 
-func (c *buildContext) fillTable(table *TableStmt, ictx *iterateCtx) {
-	if table.Inherits != nil {
-		if err := resolveInCtx(*table.Inherits, ictx, func(t *TableStmt, schema *PackageSchemaAST) error {
-			c.fillTable(t, ictx)
-			return nil
-		}); err != nil {
-			c.stmtErr(&table.Pos, err)
-		}
+func (c *buildContext) fillTable(schema *PackageSchemaAST, table *TableStmt) {
+	if table.inherits.table != nil {
+		c.fillTable(schema, table.inherits.table)
 	}
-	c.addTableItems(table.Items, ictx)
+	c.addTableItems(schema, table.Items)
 }
 
 func (c *buildContext) workspaceDescriptor(w *WorkspaceStmt, ictx *iterateCtx) {
@@ -486,22 +478,22 @@ func (c *buildContext) workspaceDescriptor(w *WorkspaceStmt, ictx *iterateCtx) {
 		if c.isExists(qname, appdef.TypeKind_CDoc) {
 			return
 		}
-		c.pushDef(qname, appdef.TypeKind_CDoc, ictx)
+		c.pushDef(qname, appdef.TypeKind_CDoc, w.Descriptor.workspace)
 		c.addComments(w.Descriptor, c.defCtx().defBuilder.(appdef.ICommentsBuilder))
-		c.addTableItems(w.Descriptor.Items, ictx)
+		c.addTableItems(ictx.pkg, w.Descriptor.Items)
 		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
 		c.popDef()
 	}
 }
 
-func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt, ictx *iterateCtx) {
+func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt) {
 	qname := schema.NewQName(table.Name)
 	if c.isExists(qname, table.tableTypeKind) {
 		return
 	}
-	c.pushDef(qname, table.tableTypeKind, ictx)
+	c.pushDef(qname, table.tableTypeKind, table.workspace)
 	c.addComments(table, c.defCtx().defBuilder.(appdef.ICommentsBuilder))
-	c.fillTable(table, ictx)
+	c.fillTable(schema, table)
 	if table.singleton {
 		c.defCtx().defBuilder.(appdef.ISingletonBuilder).SetSingleton()
 	}
@@ -511,30 +503,19 @@ func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt, ictx *i
 	c.popDef()
 }
 
-func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr, ictx *iterateCtx) {
+func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr) {
 	if err := c.defCtx().checkName(string(refField.Name)); err != nil {
 		c.stmtErr(&refField.Pos, err)
 		return
 	}
-	refs := make([]appdef.QName, 0)
-	errors := false
-	for i := range refField.RefDocs {
-
-		err := resolveInCtx(refField.RefDocs[i], ictx, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
-			if e := c.checkReference(pkg, tbl); e != nil {
-				return e
-			}
-			refs = append(refs, appdef.NewQName(pkg.Name, string(refField.RefDocs[i].Name)))
-			return nil
-		})
-		if err != nil {
+	for _, refTable := range refField.refTables {
+		if err := c.checkReference(refTable.pkg, refTable.table); err != nil {
 			c.stmtErr(&refField.Pos, err)
-			errors = true
-			continue
+			return
 		}
 	}
-	if !errors {
-		c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddRefField(string(refField.Name), refField.NotNull, refs...)
+	if len(refField.refQNames) > 0 {
+		c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddRefField(string(refField.Name), refField.NotNull, refField.refQNames...)
 	}
 }
 
@@ -597,7 +578,7 @@ func (c *buildContext) addObjectFieldToType(field *FieldExpr) {
 	c.defCtx().defBuilder.(appdef.IObjectBuilder).AddContainer(string(field.Name), field.Type.qName, minOccur, maxOccur)
 }
 
-func (c *buildContext) addTableFieldToTable(field *FieldExpr, ictx *iterateCtx) {
+func (c *buildContext) addTableFieldToTable(field *FieldExpr) {
 	// Record?
 
 	appDef := c.adb.AppDef()
@@ -607,7 +588,7 @@ func (c *buildContext) addTableFieldToTable(field *FieldExpr, ictx *iterateCtx) 
 	orec := appDef.ORecord(field.Type.qName)
 
 	if wrec == nil && orec == nil && crec == nil { // not yet built
-		c.table(field.Type.tablePkg, field.Type.tableStmt, ictx)
+		c.table(field.Type.tablePkg, field.Type.tableStmt)
 		wrec = appDef.WRecord(field.Type.qName)
 		crec = appDef.CRecord(field.Type.qName)
 		orec = appDef.ORecord(field.Type.qName)
@@ -631,14 +612,14 @@ func (c *buildContext) addTableFieldToTable(field *FieldExpr, ictx *iterateCtx) 
 	}
 }
 
-func (c *buildContext) addFieldToDef(field *FieldExpr, ictx *iterateCtx) {
+func (c *buildContext) addFieldToDef(field *FieldExpr) {
 	if field.Type.DataType != nil {
 		c.addDataTypeField(field)
 	} else {
 		if c.defCtx().kind == appdef.TypeKind_Object {
 			c.addObjectFieldToType(field)
 		} else {
-			c.addTableFieldToTable(field, ictx)
+			c.addTableFieldToTable(field)
 		}
 	}
 }
@@ -666,7 +647,7 @@ func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 	}
 }
 
-func (c *buildContext) addNestedTableToDef(nested *NestedTableStmt, ictx *iterateCtx) {
+func (c *buildContext) addNestedTableToDef(schema *PackageSchemaAST, nested *NestedTableStmt) {
 	nestedTable := &nested.Table
 	if nestedTable.tableTypeKind == appdef.TypeKind_null {
 		c.stmtErr(&nestedTable.Pos, ErrUndefinedTableKind)
@@ -679,17 +660,17 @@ func (c *buildContext) addNestedTableToDef(nested *NestedTableStmt, ictx *iterat
 		return
 	}
 
-	contQName := ictx.pkg.NewQName(nestedTable.Name)
+	contQName := schema.NewQName(nestedTable.Name)
 	if !c.isExists(contQName, nestedTable.tableTypeKind) {
-		c.pushDef(contQName, nestedTable.tableTypeKind, ictx)
-		c.addTableItems(nestedTable.Items, ictx)
+		c.pushDef(contQName, nestedTable.tableTypeKind, nestedTable.workspace)
+		c.addTableItems(schema, nestedTable.Items)
 		c.popDef()
 	}
 
 	c.defCtx().defBuilder.(appdef.IContainersBuilder).AddContainer(containerName, contQName, 0, maxNestedTableContainerOccurrences)
 
 }
-func (c *buildContext) addTableItems(items []TableItemExpr, ictx *iterateCtx) {
+func (c *buildContext) addTableItems(schema *PackageSchemaAST, items []TableItemExpr) {
 
 	func() {
 		// generate unique names if empty
@@ -707,25 +688,16 @@ func (c *buildContext) addTableItems(items []TableItemExpr, ictx *iterateCtx) {
 
 	for _, item := range items {
 		if item.RefField != nil {
-			c.addFieldRefToDef(item.RefField, ictx)
+			c.addFieldRefToDef(item.RefField)
 		} else if item.Field != nil {
-			c.addFieldToDef(item.Field, ictx)
+			c.addFieldToDef(item.Field)
 		} else if item.Constraint != nil {
 			c.addConstraintToDef(item.Constraint)
 		} else if item.NestedTable != nil {
-			c.addNestedTableToDef(item.NestedTable, ictx)
+			c.addNestedTableToDef(schema, item.NestedTable)
 		} else if item.FieldSet != nil {
-			c.addFieldsOf(&item.FieldSet.Pos, item.FieldSet.Type, ictx)
+			c.addTableItems(schema, item.FieldSet.typ.Items)
 		}
-	}
-}
-
-func (c *buildContext) addFieldsOf(pos *lexer.Position, of DefQName, ictx *iterateCtx) {
-	if err := resolveInCtx(of, ictx, func(t *TypeStmt, schema *PackageSchemaAST) error {
-		c.addTableItems(t.Items, ictx)
-		return nil
-	}); err != nil {
-		c.stmtErr(pos, err)
 	}
 }
 
@@ -744,15 +716,14 @@ func (c *defBuildContext) checkName(name string) error {
 	return nil
 }
 
-func (c *buildContext) pushDef(qname appdef.QName, kind appdef.TypeKind, ictx *iterateCtx) {
-	var wsb appdef.IWorkspaceBuilder
-	if ws := getCurrentWorkspace(ictx); ws != nil {
-		if n := Ident(ws.GetName()); n != "" {
-			wsb = c.wsBuilders[ictx.pkg.NewQName(n)]
-		}
-	} else {
-		panic(fmt.Errorf("unable to resolve current workspace for %s", qname))
+func (c *buildContext) pushDef(qname appdef.QName, kind appdef.TypeKind, currentWorkspace workspaceAddr) {
+
+	if currentWorkspace.workspace == nil {
+		panic("currentWorkspace is nil")
 	}
+
+	wsQname := currentWorkspace.pkg.NewQName(currentWorkspace.workspace.Name)
+	wsb := c.wsBuilders[wsQname]
 
 	var builder interface{}
 	switch kind {
@@ -818,14 +789,7 @@ func (c *buildContext) checkReference(pkg *PackageSchemaAST, table *TableStmt) e
 
 	refTableType := appDef.TypeByName(appdef.NewQName(pkg.Name, string(table.Name)))
 	if refTableType == nil {
-		tableCtx := &iterateCtx{
-			basicContext: &c.basicContext,
-			collection:   pkg.Ast,
-			pkg:          pkg,
-			parent:       nil,
-		}
-
-		c.table(pkg, table, tableCtx)
+		c.table(pkg, table)
 		refTableType = appDef.TypeByName(appdef.NewQName(pkg.Name, string(table.Name)))
 	}
 

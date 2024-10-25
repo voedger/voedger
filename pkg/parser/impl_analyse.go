@@ -80,8 +80,6 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 				analyseType(v, ictx)
 			case *ViewStmt:
 				analyseView(v, ictx)
-			case *UseTableStmt:
-				analyseUseTable(v, ictx)
 			case *UseWorkspaceStmt:
 				analyseUseWorkspace(v, ictx)
 			case *StorageStmt:
@@ -142,8 +140,8 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 
 func iterateWorkspaceStmts[stmtType INamedStatement](ctx *iterateCtx, onlyCurrentWs bool, callback func(stmt stmtType, schema *PackageSchemaAST, ctx *iterateCtx)) {
 	currentWs := getCurrentWorkspace(ctx)
-	for _, stmt := range currentWs.nodes {
-		if onlyCurrentWs && currentWs != stmt.workspace {
+	for _, stmt := range currentWs.workspace.nodes {
+		if onlyCurrentWs && currentWs.workspace != stmt.workspace {
 			continue
 		}
 		if s, ok := stmt.node.Stmt.(stmtType); ok {
@@ -155,7 +153,7 @@ func iterateWorkspaceStmts[stmtType INamedStatement](ctx *iterateCtx, onlyCurren
 func resolveInCurrentWs[stmtType *CommandStmt | *QueryStmt | *ViewStmt | *TableStmt | *RoleStmt](qn DefQName, ctx *iterateCtx) (result stmtType, pkg *PackageSchemaAST, err error) {
 	err = resolveInCtx(qn, ctx, func(f stmtType, p *PackageSchemaAST) error {
 		currentWs := getCurrentWorkspace(ctx)
-		for _, n := range currentWs.nodes {
+		for _, n := range currentWs.workspace.nodes {
 			if n.node.Stmt.GetName() == string(qn.Name) && n.node.Pkg == p {
 				result = f
 				pkg = n.node.Pkg
@@ -436,57 +434,6 @@ func analyseRevoke(revoke *RevokeStmt, c *iterateCtx) {
 	analyseGrantOrRevoke(revoke.From, &revoke.GrantOrRevoke, c)
 }
 
-func analyseUseTable(u *UseTableStmt, c *iterateCtx) {
-
-	var pkg *PackageSchemaAST
-	var pkgName Ident = ""
-	var err error
-
-	if u.Package != nil {
-		pkg, err = findPackage(u.Package.Value, c)
-		if err != nil {
-			c.stmtErr(&u.Package.Pos, err)
-			return
-		}
-		pkgName = u.Package.Value
-	}
-
-	if u.AllTables {
-		var iter func(tbl *TableStmt)
-		iter = func(tbl *TableStmt) {
-			if !tbl.Abstract {
-				u.registerQName(pkg.NewQName(tbl.Name), statementNode{Pkg: pkg, Stmt: tbl})
-			}
-			for _, item := range tbl.Items {
-				if item.NestedTable != nil {
-					iter(&item.NestedTable.Table)
-				}
-			}
-
-		}
-		if pkg == nil {
-			pkg = c.pkg
-		}
-		for _, stmt := range pkg.Ast.Statements {
-			if stmt.Table != nil {
-				iter(stmt.Table)
-			}
-		}
-	} else {
-		defQName := DefQName{Package: pkgName, Name: u.TableName.Value}
-		err = resolveInCtx(defQName, c, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
-			if tbl.Abstract {
-				return ErrUseOfAbstractTable(defQName.String())
-			}
-			u.registerQName(pkg.NewQName(tbl.Name), statementNode{Pkg: pkg, Stmt: tbl})
-			return nil
-		})
-		if err != nil {
-			c.stmtErr(&u.TableName.Pos, err)
-		}
-	}
-}
-
 func analyseUseWorkspace(u *UseWorkspaceStmt, c *iterateCtx) {
 	resolveFunc := func(f *WorkspaceStmt, pkg *PackageSchemaAST) error {
 		if f.Abstract {
@@ -692,6 +639,11 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 		return
 	}
 
+	view.workspace = getCurrentWorkspace(c)
+	if view.workspace.workspace == nil || view.workspace.pkg == nil {
+		panic("workspace not found for view " + view.Name)
+	}
+
 }
 
 func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
@@ -844,11 +796,11 @@ func checkIntents(intents []StateStorage, c *iterateCtx, scope checkScopeFunc) {
 
 func preAnalyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 	resolveFunc := func(w *WorkspaceStmt, schema *PackageSchemaAST) error {
+		u.alteredWorkspace = w
+		u.alteredWorkspacePkg = schema
 		if !w.Alterable && schema != c.pkg {
 			return ErrWorkspaceIsNotAlterable(u.Name.String())
 		}
-		u.alteredWorkspace = w
-		u.alteredWorkspacePkg = schema
 		return nil
 	}
 	err := resolveInCtx(u.Name, c, resolveFunc)
@@ -984,16 +936,20 @@ func analyseTable(v *TableStmt, c *iterateCtx) {
 	analyseFieldSets(v.Items, c)
 	analyseFields(v.Items, c, true)
 	if v.Inherits != nil {
-		resolvedFunc := func(f *TableStmt, _ *PackageSchemaAST) error {
+		resolvedFunc := func(f *TableStmt, p *PackageSchemaAST) error {
 			if !f.Abstract {
 				return ErrBaseTableMustBeAbstract
 			}
+			v.inherits = tableAddr{f, p}
 			return nil
 		}
 		if err := resolveInCtx(*v.Inherits, c, resolvedFunc); err != nil {
 			c.stmtErr(&v.Inherits.Pos, err)
 		}
-
+	}
+	v.workspace = getCurrentWorkspace(c)
+	if v.workspace.workspace == nil || v.workspace.pkg == nil {
+		panic("workspace not found for table " + v.Name)
 	}
 }
 
@@ -1005,17 +961,16 @@ func analyseType(v *TypeStmt, c *iterateCtx) {
 	}
 	analyseFieldSets(v.Items, c)
 	analyseFields(v.Items, c, false)
+	v.workspace = getCurrentWorkspace(c)
+	if v.workspace.workspace == nil || v.workspace.pkg == nil {
+		panic("workspace not found for type " + v.Name)
+	}
 }
 
 func useStmtInWs(wsctx *wsCtx, stmtPackage *PackageSchemaAST, stmt interface{}) {
 	if named, ok := stmt.(INamedStatement); ok {
 		if supported(stmt) {
 			wsctx.ws.registerNode(stmtPackage.NewQName(Ident(named.GetName())), statementNode{Pkg: stmtPackage, Stmt: named}, wsctx.ws)
-		}
-	}
-	if useTable, ok := stmt.(*UseTableStmt); ok {
-		for utQname, ut := range useTable.qNames {
-			wsctx.ws.registerNode(utQname, ut, wsctx.ws)
 		}
 	}
 	if useWorkspace, ok := stmt.(*UseWorkspaceStmt); ok {
@@ -1081,6 +1036,7 @@ func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 		analyseNestedTables(v.Descriptor.Items, appdef.TypeKind_CDoc, wc)
 		analyseFields(v.Descriptor.Items, wc, true)
 		analyseFieldSets(v.Descriptor.Items, wc)
+		v.Descriptor.workspace = workspaceAddr{v, c.pkg}
 	}
 
 	// find all included QNames
@@ -1218,6 +1174,7 @@ func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c
 					return
 				}
 			}
+			nestedTable.workspace = getCurrentWorkspace(c)
 			analyseNestedTables(nestedTable.Items, rootTableKind, c)
 		}
 	}
@@ -1227,7 +1184,10 @@ func analyseFieldSets(items []TableItemExpr, c *iterateCtx) {
 	for i := range items {
 		item := items[i]
 		if item.FieldSet != nil {
-			if err := resolveInCtx(item.FieldSet.Type, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
+			if err := resolveInCtx(item.FieldSet.Type, c, func(t *TypeStmt, _ *PackageSchemaAST) error {
+				item.FieldSet.typ = t
+				return nil
+			}); err != nil {
 				c.stmtErr(&item.FieldSet.Type.Pos, err)
 				continue
 			}
@@ -1371,13 +1331,15 @@ func analyseRefFields(items []TableItemExpr, c *iterateCtx) {
 					if f.Abstract {
 						return ErrReferenceToAbstractTable(rf.RefDocs[i].String())
 					}
+					refQname := tblPkg.NewQName(f.Name)
 					ws := getCurrentWorkspace(c)
-					if ws != nil {
-						refQname := tblPkg.NewQName(f.Name)
-						if !ws.containsQName(refQname) {
+					if ws.workspace != nil {
+						if !ws.workspace.containsQName(refQname) {
 							return ErrReferenceToTableNotInWorkspace(rf.RefDocs[i].String())
 						}
 					}
+					rf.refQNames = append(rf.refQNames, refQname)
+					rf.refTables = append(rf.refTables, tableAddr{f, tblPkg})
 					return nil
 				}); err != nil {
 					c.stmtErr(&rf.RefDocs[i].Pos, err)
@@ -1403,9 +1365,9 @@ func analyseViewRefFields(items []ViewItemExpr, c *iterateCtx) {
 						return ErrReferenceToAbstractTable(rf.RefDocs[i].String())
 					}
 					ws := getCurrentWorkspace(c)
-					if ws != nil {
+					if ws.workspace != nil {
 						refQname := tblPkg.NewQName(f.Name)
-						if !ws.containsQName(refQname) {
+						if !ws.workspace.containsQName(refQname) {
 							return ErrReferenceToTableNotInWorkspace(rf.RefDocs[i].String())
 						}
 					}

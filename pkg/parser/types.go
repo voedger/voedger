@@ -117,8 +117,6 @@ type RootStatement struct {
 	ExtEngine      *RootExtEngineStmt  `parser:"| @@"`
 	Workspace      *WorkspaceStmt      `parser:"| @@"`
 	AlterWorkspace *AlterWorkspaceStmt `parser:"| @@"`
-	Table          *TableStmt          `parser:"| @@"`
-	Type           *TypeStmt           `parser:"| @@"`
 	Application    *ApplicationStmt    `parser:"| @@"`
 	Declare        *DeclareStmt        `parser:"| @@"`
 	// Sequence  *sequenceStmt  `parser:"| @@"`
@@ -130,7 +128,6 @@ type WorkspaceStatement struct {
 	// Only allowed in workspace
 	Rate         *RateStmt         `parser:"@@"`
 	View         *ViewStmt         `parser:"| @@"`
-	UseTable     *UseTableStmt     `parser:"| @@"`
 	UseWorkspace *UseWorkspaceStmt `parser:"| @@"`
 
 	// Also allowed in workspace
@@ -292,17 +289,19 @@ func (s *AlterWorkspaceStmt) Iterate(callback func(stmt interface{})) {
 
 type TypeStmt struct {
 	Statement
-	Name  Ident           `parser:"'TYPE' @Ident "`
-	Items []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	Name      Ident           `parser:"'TYPE' @Ident "`
+	Items     []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	workspace workspaceAddr   // filled on the analysis stage
 }
 
 func (s TypeStmt) GetName() string { return string(s.Name) }
 
 type WsDescriptorStmt struct {
 	Statement
-	Name  Ident           `parser:"@Ident?"`
-	Items []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
-	_     int             `parser:"';'"`
+	Name      Ident           `parser:"@Ident?"`
+	Items     []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	_         int             `parser:"';'"`
+	workspace workspaceAddr   // filled on the analysis stage
 }
 
 func (s WsDescriptorStmt) GetName() string { return string(s.Name) }
@@ -549,23 +548,6 @@ type TagStmt struct {
 }
 
 func (s TagStmt) GetName() string { return string(s.Name) }
-
-type UseTableStmt struct {
-	Statement
-
-	Package   *Identifier `parser:"'USE' 'TABLE' (@@ '.')?"`
-	AllTables bool        `parser:"(@'*'"`
-	TableName *Identifier `parser:"| @@)"`
-
-	qNames map[appdef.QName]statementNode // filled on the analysis stage
-}
-
-func (s *UseTableStmt) registerQName(qn appdef.QName, stmt statementNode) {
-	if s.qNames == nil {
-		s.qNames = make(map[appdef.QName]statementNode)
-	}
-	s.qNames[qn] = stmt
-}
 
 type UseWorkspaceStmt struct {
 	Statement
@@ -814,14 +796,27 @@ type NamedParam struct {
 	Type DataTypeOrDef `parser:"@@"`
 }
 
+type workspaceAddr struct {
+	workspace *WorkspaceStmt
+	pkg       *PackageSchemaAST
+}
+
+type tableAddr struct {
+	table *TableStmt
+	pkg   *PackageSchemaAST
+}
+
 type TableStmt struct {
 	Statement
-	Abstract      bool            `parser:"@'ABSTRACT'?'TABLE'"`
-	Name          Ident           `parser:"@Ident"`
-	Inherits      *DefQName       `parser:"('INHERITS' @@)?"`
-	Items         []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
-	With          []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
-	tableTypeKind appdef.TypeKind // filled on the analysis stage
+	Abstract bool            `parser:"@'ABSTRACT'?'TABLE'"`
+	Name     Ident           `parser:"@Ident"`
+	Inherits *DefQName       `parser:"('INHERITS' @@)?"`
+	Items    []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	With     []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	// filled on the analysis stage
+	tableTypeKind appdef.TypeKind
+	workspace     workspaceAddr
+	inherits      tableAddr
 	singleton     bool
 }
 
@@ -844,6 +839,8 @@ type NestedTableStmt struct {
 type FieldSetItem struct {
 	Pos  lexer.Position
 	Type DefQName `parser:"@@"`
+	// filled on the analysis stage
+	typ *TypeStmt
 }
 
 type TableItemExpr struct {
@@ -879,6 +876,9 @@ type RefFieldExpr struct {
 	Name    Ident      `parser:"@Ident"`
 	RefDocs []DefQName `parser:"'ref' ('(' @@ (',' @@)* ')')?"`
 	NotNull bool       `parser:"@(NOTNULL)?"`
+	// filled on the analysis stage
+	refQNames []appdef.QName
+	refTables []tableAddr
 }
 
 type CheckRegExp struct {
@@ -901,11 +901,12 @@ type FieldExpr struct {
 
 type ViewStmt struct {
 	Statement
-	Name     Ident          `parser:"'VIEW' @Ident"`
-	Items    []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
-	ResultOf DefQName       `parser:"'AS' 'RESULT' 'OF' @@"`
-	With     []WithItem     `parser:"('WITH' @@ (',' @@)* )?"`
-	pkRef    *PrimaryKeyExpr
+	Name      Ident          `parser:"'VIEW' @Ident"`
+	Items     []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	ResultOf  DefQName       `parser:"'AS' 'RESULT' 'OF' @@"`
+	With      []WithItem     `parser:"('WITH' @@ (',' @@)* )?"`
+	pkRef     *PrimaryKeyExpr
+	workspace workspaceAddr // filled on the analysis stage
 }
 
 func (s *ViewStmt) Iterate(callback func(stmt interface{})) {
