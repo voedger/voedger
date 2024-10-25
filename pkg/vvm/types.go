@@ -18,7 +18,6 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iblobstorage"
-	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iprocbusmem"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -137,7 +136,6 @@ type VVMConfig struct {
 	RoutesRewrite              map[string]string
 	RouteDomains               map[string]string
 	BusTimeout                 BusTimeout
-	Quotas                     in10n.Quotas
 	StorageFactory             func() (provider istorage.IAppStorageFactory, err error)
 	BlobberServiceChannels     router.BlobberServiceChannels
 	BLOBMaxSize                iblobstorage.BLOBMaxSizeType
