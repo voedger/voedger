@@ -751,7 +751,7 @@ func (c *buildContext) pushDef(qname appdef.QName, kind appdef.TypeKind, ictx *i
 				return c.wsBuilders[ictx.pkg.NewQName(n)]
 			}
 		}
-		// no workspace for CDoc «test.cdoc»
+		// no workspace for Object «test.object»
 		panic(fmt.Errorf("no workspace for %s «%s»", kind.TrimString(), qname))
 	}
 
@@ -770,7 +770,7 @@ func (c *buildContext) pushDef(qname appdef.QName, kind appdef.TypeKind, ictx *i
 	case appdef.TypeKind_WRecord:
 		builder = wsb().AddWRecord(qname)
 	case appdef.TypeKind_Object:
-		builder = c.adb.AddObject(qname)
+		builder = wsb().AddObject(qname)
 	case appdef.TypeKind_ViewRecord:
 		builder = c.adb.AddView(qname)
 	default:

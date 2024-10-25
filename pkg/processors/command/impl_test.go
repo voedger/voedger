@@ -58,13 +58,11 @@ func TestBasicUsage(t *testing.T) {
 	// schema of unlogged parameters of the test command
 	testCmdQNameParamsUnlogged := appdef.NewQName(appdef.SysPackage, "TestParamsUnlogged")
 	prepareAppDef := func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
-		pars := adb.AddObject(testCmdQNameParams)
+		pars := wsb.AddObject(testCmdQNameParams)
 		pars.AddField("Text", appdef.DataKind_string, true)
-		wsb.AddType(testCmdQNameParams)
 
-		unloggedPars := adb.AddObject(testCmdQNameParamsUnlogged)
+		unloggedPars := wsb.AddObject(testCmdQNameParamsUnlogged)
 		unloggedPars.AddField("Password", appdef.DataKind_string, true)
-		wsb.AddType(testCmdQNameParamsUnlogged)
 
 		wsb.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
 		wsb.AddCRecord(testCRecord)
@@ -410,13 +408,11 @@ func TestErrors(t *testing.T) {
 
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
 	app := setUp(t, func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
-		adb.AddObject(testCmdQNameParams).
+		wsb.AddObject(testCmdQNameParams).
 			AddField("Text", appdef.DataKind_string, true)
-		wsb.AddType(testCmdQNameParams)
 
-		adb.AddObject(testCmdQNameParamsUnlogged).
+		wsb.AddObject(testCmdQNameParamsUnlogged).
 			AddField("Password", appdef.DataKind_string, true)
-		wsb.AddType(testCmdQNameParamsUnlogged)
 
 		adb.AddCommand(testCmdQName).SetUnloggedParam(testCmdQNameParamsUnlogged).SetParam(testCmdQNameParams)
 		wsb.AddType(testCmdQName)
@@ -603,8 +599,7 @@ func TestRateLimit(t *testing.T) {
 
 	app := setUp(t,
 		func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
-			adb.AddObject(parsQName)
-			wsb.AddType(parsQName)
+			wsb.AddObject(parsQName)
 			adb.AddCommand(qName).SetParam(parsQName)
 			wsb.AddType(qName)
 			cfg.Resources.Add(istructsmem.NewCommandFunction(qName, istructsmem.NullCommandExec))
@@ -704,7 +699,7 @@ func setUp(t *testing.T, prepare func(adb appdef.IAppDefBuilder, wsb appdef.IWor
 
 	wsdescutil.AddWorkspaceDescriptorStubDef(wsb)
 
-	adb.AddObject(istructs.QNameRaw).AddField(processors.Field_RawObject_Body, appdef.DataKind_string, true, appdef.MaxLen(appdef.MaxFieldLength))
+	wsb.AddObject(istructs.QNameRaw).AddField(processors.Field_RawObject_Body, appdef.DataKind_string, true, appdef.MaxLen(appdef.MaxFieldLength))
 
 	statelessResources := istructsmem.NewStatelessResources()
 	cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_untill_airs_bp, adb)
