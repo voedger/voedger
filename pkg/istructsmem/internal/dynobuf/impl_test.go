@@ -16,7 +16,7 @@ import (
 func TestDynoBufSchemes(t *testing.T) {
 	require := require.New(t)
 
-	var appDef appdef.IAppDef
+	var app appdef.IAppDef
 
 	t.Run("should be ok to build application", func(t *testing.T) {
 		adb := appdef.New()
@@ -55,21 +55,21 @@ func TestDynoBufSchemes(t *testing.T) {
 		grandChild.
 			AddField("recIDField", appdef.DataKind_RecordID, false)
 
-		view := adb.AddView(appdef.NewQName("test", "view"))
+		view := wsb.AddView(appdef.NewQName("test", "view"))
 		view.Key().PartKey().AddField("pk1", appdef.DataKind_int64)
 		view.Key().ClustCols().AddField("cc1", appdef.DataKind_string, appdef.MaxLen(100))
 		view.Value().AddRefField("val1", true)
 
-		sch, err := adb.Build()
+		a, err := adb.Build()
 		require.NoError(err)
 
-		appDef = sch
+		app = a
 	})
 
 	schemes := newSchemes()
 	require.NotNil(schemes)
 
-	schemes.Prepare(appDef)
+	schemes.Prepare(app)
 
 	checkScheme := func(name appdef.QName, fields appdef.IFields, dynoScheme *dynobuffers.Scheme) {
 		require.NotNil(dynoScheme, "dynobuffer scheme for «%v» not found", name)
@@ -91,7 +91,7 @@ func TestDynoBufSchemes(t *testing.T) {
 		}
 	}
 
-	for typ := range appDef.Types {
+	for typ := range app.Types {
 		name := typ.QName()
 		if view, ok := typ.(appdef.IView); ok {
 			checkScheme(name, view.Key().PartKey(), schemes.ViewPartKeyScheme(name))

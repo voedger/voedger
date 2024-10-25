@@ -195,7 +195,8 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
-		view := adb.AddView(appdef.NewQName("test", "viewDrinks"))
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		view := wsb.AddView(appdef.NewQName("test", "viewDrinks"))
 		view.Key().PartKey().AddField("partitionKey1", appdef.DataKind_int64)
 		view.Key().ClustCols().
 			AddField("clusteringColumn1", appdef.DataKind_int64).
@@ -501,7 +502,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 
 		doc.AddContainer("rec", recQName, 0, appdef.Occurs_Unbounded)
 
-		view := adb.AddView(viewQName)
+		view := wsb.AddView(viewQName)
 		view.Key().PartKey().AddField("int", appdef.DataKind_int64)
 		view.Key().ClustCols().AddField("str", appdef.DataKind_string, appdef.MaxLen(100))
 		view.Value().AddField("bool", appdef.DataKind_bool, false)

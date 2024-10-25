@@ -63,7 +63,7 @@ func Example() {
 			AddUnique(appdef.UniqueQName(recName, "uniq1"), []appdef.FieldName{"f1"})
 
 		viewName := appdef.NewQName("test", "view")
-		view := adb.AddView(viewName)
+		view := wsb.AddView(viewName)
 		view.Key().PartKey().
 			AddField("pk_1", appdef.DataKind_int64)
 		view.Key().ClustCols().

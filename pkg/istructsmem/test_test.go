@@ -375,7 +375,7 @@ func test() *testDataType {
 		}
 
 		{
-			view := adb.AddView(testData.testViewRecord.name)
+			view := wsb.AddView(testData.testViewRecord.name)
 			view.Key().PartKey().
 				AddField(testData.testViewRecord.partFields.partition, appdef.DataKind_int32).
 				AddField(testData.testViewRecord.partFields.workspace, appdef.DataKind_int64)

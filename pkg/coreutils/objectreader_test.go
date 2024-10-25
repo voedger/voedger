@@ -40,7 +40,7 @@ var (
 		simpleObj := wsb.AddObject(testQNameSimple)
 		simpleObj.AddField("int32", appdef.DataKind_int32, false)
 
-		view := adb.AddView(testQNameView)
+		view := wsb.AddView(testQNameView)
 		view.Key().PartKey().AddField("pk", appdef.DataKind_int64)
 		view.Key().ClustCols().AddField("cc", appdef.DataKind_string)
 		iValueFields := map[string]appdef.DataKind{}
@@ -51,8 +51,6 @@ var (
 		for n, k := range iValueFields {
 			view.Value().AddField(n, k, false)
 		}
-
-		wsb.AddType(testQNameView)
 
 		app, err := adb.Build()
 		require.NoError(t, err)
