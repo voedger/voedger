@@ -85,7 +85,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		qNameCollectionParams := appdef.NewQName(appdef.SysPackage, "CollectionParams")
 
 		// will add func definitions to AppDef manually because local test does not use sql. In runtime these definitions will come from sys.vsql
-		adb.AddObject(qNameCollectionParams).
+		wsb.AddObject(qNameCollectionParams).
 			AddField(field_Schema, appdef.DataKind_string, true).
 			AddField(field_ID, appdef.DataKind_RecordID, false)
 
@@ -94,11 +94,11 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 			SetResult(appdef.QNameANY)
 
 		qNameGetCDocParams := appdef.NewQName(appdef.SysPackage, "GetCDocParams")
-		adb.AddObject(qNameGetCDocParams).
+		wsb.AddObject(qNameGetCDocParams).
 			AddField(field_ID, appdef.DataKind_int64, true)
 
 		qNameGetCDocResult := appdef.NewQName(appdef.SysPackage, "GetCDocResult")
-		adb.AddObject(qNameGetCDocResult).
+		wsb.AddObject(qNameGetCDocResult).
 			AddField("Result", appdef.DataKind_string, true)
 
 		adb.AddQuery(qNameQueryGetCDoc).
@@ -106,11 +106,11 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 			SetResult(qNameGetCDocResult)
 
 		qNameStateParams := appdef.NewQName(appdef.SysPackage, "StateParams")
-		adb.AddObject(qNameStateParams).
+		wsb.AddObject(qNameStateParams).
 			AddField(field_After, appdef.DataKind_int64, true)
 
 		qNameStateResult := appdef.NewQName(appdef.SysPackage, "StateResult")
-		adb.AddObject(qNameStateResult).
+		wsb.AddObject(qNameStateResult).
 			AddField(field_State, appdef.DataKind_string, true)
 
 		adb.AddQuery(qNameQueryState).
