@@ -53,7 +53,7 @@ func TestResourceEnumerator(t *testing.T) {
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddField("String", appdef.DataKind_string, false)
 
-			obj := adb.AddObject(oObjName)
+			obj := wsb.AddObject(oObjName)
 			obj.
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddField("String", appdef.DataKind_string, false)

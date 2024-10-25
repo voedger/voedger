@@ -29,8 +29,9 @@ func Test_BasicUsage(t *testing.T) {
 	testName := "test"
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
+	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
-	adb.AddObject(appdef.NewQName("test", "obj")).
+	wsb.AddObject(appdef.NewQName("test", "obj")).
 		AddContainer(testName, appdef.NewQName("test", "obj"), 0, appdef.Occurs_Unbounded)
 	appDef, err := adb.Build()
 	if err != nil {
@@ -52,7 +53,7 @@ func Test_BasicUsage(t *testing.T) {
 		require.NoError(err)
 		require.Equal(testName, n)
 
-		t.Run("must be able to load early stored names", func(t *testing.T) {
+		t.Run("load early stored names", func(t *testing.T) {
 			otherVersions := vers.New()
 			if err := otherVersions.Prepare(storage); err != nil {
 				panic(err)

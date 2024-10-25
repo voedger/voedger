@@ -24,7 +24,7 @@ func Example() {
 		adb.AddPackage("test", "test/path")
 
 		wsName, wsDescName := appdef.NewQName("test", "ws"), appdef.NewQName("test", "wsDesc")
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
 
 		numName := appdef.NewQName("test", "number")
 		strName := appdef.NewQName("test", "string")
@@ -34,13 +34,13 @@ func Example() {
 
 		docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
 
-		n := ws.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinIncl(1))
+		n := wsb.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinIncl(1))
 		n.SetComment("natural (positive) integer")
 
-		s := ws.AddData(strName, appdef.DataKind_string, appdef.NullQName)
+		s := wsb.AddData(strName, appdef.DataKind_string, appdef.NullQName)
 		s.AddConstraints(appdef.MinLen(1), appdef.MaxLen(100), appdef.Pattern(`^\w+$`, "only word characters allowed"))
 
-		doc := ws.AddCDoc(docName)
+		doc := wsb.AddCDoc(docName)
 		doc.SetSingleton()
 		doc.
 			AddField("f1", appdef.DataKind_int64, true).
@@ -52,7 +52,7 @@ func Example() {
 		doc.AddUnique(appdef.UniqueQName(docName, "unique1"), []appdef.FieldName{"f1", "f2"})
 		doc.SetComment(`comment 1`, `comment 2`)
 
-		rec := ws.AddCRecord(recName)
+		rec := wsb.AddCRecord(recName)
 		rec.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false).
@@ -73,7 +73,7 @@ func Example() {
 			AddRefField("vv_1", true, docName)
 
 		objName := appdef.NewQName("test", "obj")
-		obj := adb.AddObject(objName)
+		obj := wsb.AddObject(objName)
 		obj.AddField("f1", appdef.DataKind_string, true)
 
 		cmdName := appdef.NewQName("test", "cmd")
@@ -132,8 +132,8 @@ func Example() {
 			"disable writer to update test.doc")
 		writer.GrantAll([]appdef.QName{cmdName, queryName}, "allow writer to execute all test functions")
 
-		ws.AddCDoc(wsDescName).SetSingleton()
-		ws.SetDescriptor(wsDescName).
+		wsb.AddCDoc(wsDescName).SetSingleton()
+		wsb.SetDescriptor(wsDescName).
 			AddType(docName).
 			AddType(recName).
 			AddType(viewName).

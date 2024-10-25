@@ -33,7 +33,7 @@ func Test_KeyType(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		t.Run("must be ok to build view", func(t *testing.T) {
+		t.Run("should be ok to build view", func(t *testing.T) {
 			view := adb.AddView(viewName)
 			view.Key().PartKey().
 				AddField("pk_int32", appdef.DataKind_int32).
@@ -162,7 +162,7 @@ func Test_KeyType(t *testing.T) {
 
 	t.Run("key must supports IKey interface", func(t *testing.T) { testIKey(t, key) })
 
-	t.Run("must be ok to load/store key to bytes", func(t *testing.T) {
+	t.Run("should be ok to load/store key to bytes", func(t *testing.T) {
 		p, c := key.storeToBytes(0)
 		require.NotEmpty(p)
 		require.NotEmpty(c)
@@ -200,7 +200,7 @@ func TestCore_ViewRecords(t *testing.T) {
 
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
-		t.Run("must be ok to build application", func(t *testing.T) {
+		t.Run("should be ok to build application", func(t *testing.T) {
 			view := adb.AddView(appdef.NewQName("test", "viewDrinks"))
 			view.Key().PartKey().
 				AddField("partitionKey1", appdef.DataKind_int64)
@@ -237,7 +237,7 @@ func TestCore_ViewRecords(t *testing.T) {
 	require.NoError(err)
 	viewRecords := app.ViewRecords()
 
-	t.Run("must be ok put records one-by-one", func(t *testing.T) {
+	t.Run("should be ok put records one-by-one", func(t *testing.T) {
 		entries := []entryType{
 			newEntry(viewRecords, 1, 100, true, "soda", 1, "Cola"),
 			newEntry(viewRecords, 1, 100, true, "soda", 2, "Cola light"), // dupe, must override previous name
@@ -284,7 +284,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		require.Equal("Cola light", val_name)
 	})
 
-	t.Run("must be ok batch put", func(t *testing.T) {
+	t.Run("should be ok batch put", func(t *testing.T) {
 		entries := []entryType{
 			newEntry(viewRecords, 3, 200, true, "food", 1, "Meat"),
 			newEntry(viewRecords, 3, 300, true, "food", 1, "Bread"),
@@ -845,7 +845,7 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
-		t.Run("must be ok to build application", func(t *testing.T) {
+		t.Run("should be ok to build application", func(t *testing.T) {
 			view := adb.AddView(appdef.MustParseQName(viewName))
 			view.Key().PartKey().
 				AddField("pk1", appdef.DataKind_int64)
@@ -975,7 +975,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
-	t.Run("must be ok to build application", func(t *testing.T) {
+	t.Run("should be ok to build application", func(t *testing.T) {
 		v := adb.AddView(viewName)
 		v.Key().PartKey().
 			AddField("pf_int32", appdef.DataKind_int32).
@@ -1115,7 +1115,8 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
-		t.Run("must be ok to build application", func(t *testing.T) {
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		t.Run("should be ok to build application", func(t *testing.T) {
 			v := adb.AddView(appdef.NewQName("test", "viewDrinks"))
 			v.Key().PartKey().
 				AddField("partitionKey1", appdef.DataKind_int64)
@@ -1127,7 +1128,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 				AddField("name", appdef.DataKind_string, true).
 				AddField("active", appdef.DataKind_bool, true)
 
-			_ = adb.AddObject(appdef.NewQName("test", "obj1"))
+			_ = wsb.AddObject(appdef.NewQName("test", "obj1"))
 		})
 
 		cfgs := make(AppConfigsType, 1)
@@ -1159,7 +1160,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 	//
 	// Fetch single record
 	//
-	t.Run("Test read single item", func(t *testing.T) {
+	t.Run("should be ok to read single item", func(t *testing.T) {
 		kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", int64(1))
 		kb.PutQName("clusteringColumn1", appdef.NewQName("test", "obj1"))
@@ -1193,7 +1194,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
-	t.Run("must be ok to build application", func(t *testing.T) {
+	t.Run("should be ok to build application", func(t *testing.T) {
 		v := adb.AddView(championshipsView)
 		v.Key().PartKey().
 			AddField("Year", appdef.DataKind_int32)
@@ -1281,7 +1282,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		{2027, "Гандбол", "Германия", "Берлин", ""},
 	}
 
-	t.Run("Put view records to test", func(t *testing.T) {
+	t.Run("should be ok to put view records", func(t *testing.T) {
 		batch := make([]istructs.ViewKV, 0)
 		for _, c := range championships {
 			kv := istructs.ViewKV{}
@@ -1308,7 +1309,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		require.NoError(err)
 	})
 
-	t.Run("must ok to read all recs by batch", func(t *testing.T) {
+	t.Run("should be ok to read all recs by batch", func(t *testing.T) {
 		batch := make([]istructs.ViewRecordGetBatchItem, 0)
 		for _, c := range championships {
 			kv := istructs.ViewRecordGetBatchItem{}
@@ -1344,7 +1345,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		}
 	})
 
-	t.Run("must ok to read few records from one view", func(t *testing.T) {
+	t.Run("should be ok to read few records from one view", func(t *testing.T) {
 		batch := make([]istructs.ViewRecordGetBatchItem, 3)
 		batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
 		batch[0].Key.PutInt32("Year", 1962)
@@ -1369,95 +1370,98 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		require.Equal(appdef.NullQName, batch[2].Value.AsQName(appdef.SystemField_QName))
 	})
 
-	t.Run("must fail to read if maximum batch size exceeds", func(t *testing.T) {
-		batch := make([]istructs.ViewRecordGetBatchItem, maxGetBatchRecordCount+1)
-		for i := 0; i < len(batch); i++ {
-			batch[i].Key = app.ViewRecords().KeyBuilder(championsView)
-			batch[i].Key.PutInt32("Year", int32(i))
-			batch[i].Key.PutString("Sport", "Шашки")
-		}
-		err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-		require.ErrorIs(err, ErrMaxGetBatchRecordCountExceeds)
+	t.Run("should be error", func(t *testing.T) {
+
+		t.Run("if maximum batch size exceeds", func(t *testing.T) {
+			batch := make([]istructs.ViewRecordGetBatchItem, maxGetBatchRecordCount+1)
+			for i := 0; i < len(batch); i++ {
+				batch[i].Key = app.ViewRecords().KeyBuilder(championsView)
+				batch[i].Key.PutInt32("Year", int32(i))
+				batch[i].Key.PutString("Sport", "Шашки")
+			}
+			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
+			require.ErrorIs(err, ErrMaxGetBatchRecordCountExceeds)
+		})
+
+		t.Run("if key build error", func(t *testing.T) {
+			batch := make([]istructs.ViewRecordGetBatchItem, 3)
+			batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
+			batch[0].Key.PutInt64("Year", 1962) // error here
+			batch[0].Key.PutString("Sport", "Волейбол")
+
+			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
+			require.ErrorIs(err, ErrWrongFieldType)
+		})
+
+		t.Run("if key is not valid", func(t *testing.T) {
+			batch := make([]istructs.ViewRecordGetBatchItem, 3)
+			batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
+			batch[0].Key.PutInt32("Year", 1962)
+			// batch[0].Key.PutString("Sport", "Волейбол") // error here
+
+			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
+			require.ErrorIs(err, ErrFieldIsEmpty)
+		})
+
+		t.Run("if storage GetBatch failed", func(t *testing.T) {
+			testError := errors.New("test error")
+
+			batch := make([]istructs.ViewRecordGetBatchItem, 1)
+			batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
+			batch[0].Key.PutInt32("Year", 1962)
+			batch[0].Key.PutString("Sport", "Волейбол")
+
+			storage.ScheduleGetError(testError, nil, []byte("Волейбол")) // error here
+
+			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
+			require.ErrorIs(err, testError)
+		})
+
+		t.Run("if GetBatch returns damaged data", func(t *testing.T) {
+			batch := make([]istructs.ViewRecordGetBatchItem, 1)
+			batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
+			batch[0].Key.PutInt32("Year", 1962)
+			batch[0].Key.PutString("Sport", "Волейбол")
+
+			storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, []byte("Волейбол"))
+
+			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
+			require.ErrorIs(err, ErrUnknownCodec)
+		})
 	})
 
-	t.Run("must fail to read if some key build error", func(t *testing.T) {
-		batch := make([]istructs.ViewRecordGetBatchItem, 3)
-		batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
-		batch[0].Key.PutInt64("Year", 1962) // error here
-		batch[0].Key.PutString("Sport", "Волейбол")
-
-		err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-		require.ErrorIs(err, ErrWrongFieldType)
-	})
-
-	t.Run("must fail to read if some key is not valid", func(t *testing.T) {
-		batch := make([]istructs.ViewRecordGetBatchItem, 3)
-		batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
-		batch[0].Key.PutInt32("Year", 1962)
-		// batch[0].Key.PutString("Sport", "Волейбол") // error here
-
-		err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-		require.ErrorIs(err, ErrFieldIsEmpty)
-	})
-
-	t.Run("must fail to read if storage GetBatch failed", func(t *testing.T) {
-		testError := errors.New("test error")
-
-		batch := make([]istructs.ViewRecordGetBatchItem, 1)
-		batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
-		batch[0].Key.PutInt32("Year", 1962)
-		batch[0].Key.PutString("Sport", "Волейбол")
-
-		storage.ScheduleGetError(testError, nil, []byte("Волейбол")) // error here
-
-		err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-		require.ErrorIs(err, testError)
-	})
-
-	t.Run("must fail to read if storage GetBatch returns damaged data", func(t *testing.T) {
-		batch := make([]istructs.ViewRecordGetBatchItem, 1)
-		batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
-		batch[0].Key.PutInt32("Year", 1962)
-		batch[0].Key.PutString("Sport", "Волейбол")
-
-		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, []byte("Волейбол"))
-
-		err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-		require.ErrorIs(err, ErrUnknownCodec)
-	})
-
-	t.Run("Check IKeyBuilder.Equals", func(t *testing.T) {
+	t.Run("IKeyBuilder.Equals should be", func(t *testing.T) {
 		k1 := app.ViewRecords().KeyBuilder(championsView)
 		k1.PutInt32("Year", 1962)
 		k1.PutString("Sport", "Волейбол")
 
-		require.True(k1.Equals(k1), "KeyBuilder must be equals to itself")
+		require.True(k1.Equals(k1), "equals to itself")
 
-		require.False(k1.Equals(nil), "KeyBuilder must not be equals to nil")
+		require.False(k1.Equals(nil), "not equals to nil")
 
 		k2 := app.ViewRecords().KeyBuilder(championsView)
 		k2.PutInt32("Year", 1962)
 		k2.PutString("Sport", "Волейбол")
 
-		require.True(k1.Equals(k2), "KeyBuilder must be equals if same name and fields")
-		require.True(k2.Equals(k1), "KeyBuilder must be equals if same name and fields")
+		require.True(k1.Equals(k2), "equals if same name and fields")
+		require.True(k2.Equals(k1), "equals if same name and fields")
 
 		k2.PutString("Sport", "Гандбол")
-		require.False(k1.Equals(k2), "KeyBuilder must not be equals if different clustering fields")
-		require.False(k2.Equals(k1), "KeyBuilder must not be equals if different clustering fields")
+		require.False(k1.Equals(k2), "not equals if different clustering fields")
+		require.False(k2.Equals(k1), "not equals if different clustering fields")
 
 		k3 := app.ViewRecords().KeyBuilder(championsView)
 		k3.PutInt32("Year", 1966)
 		k3.PutString("Sport", "Волейбол")
 
-		require.False(k1.Equals(k3), "KeyBuilder must not be equals if different partition fields")
-		require.False(k3.Equals(k1), "KeyBuilder must not be equals if different partition fields")
+		require.False(k1.Equals(k3), "not equals if different partition fields")
+		require.False(k3.Equals(k1), "not equals if different partition fields")
 
 		k4 := app.ViewRecords().KeyBuilder(championshipsView)
 		k4.PutInt32("Year", 1962)
 		k4.PutString("Sport", "Волейбол")
 
-		require.False(k1.Equals(k4), "KeyBuilder must not be equals if different QNames")
+		require.False(k1.Equals(k4), "not be equals if different QNames")
 	})
 }
 
@@ -1470,7 +1474,7 @@ func Test_ViewRecordStructure(t *testing.T) {
 
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
-	t.Run("must be ok to build application", func(t *testing.T) {
+	t.Run("should be ok to build application", func(t *testing.T) {
 		v := adb.AddView(viewName)
 		v.Key().PartKey().
 			AddField("ValueDateYear", appdef.DataKind_int32)

@@ -48,7 +48,7 @@ func Test_ValidEventArgs(t *testing.T) {
 		rec2 := wsb.AddORecord(rec2Name)
 		rec2.AddRefField("RequiredRefField", true, rec2Name)
 
-		obj := adb.AddObject(objName)
+		obj := wsb.AddObject(objName)
 		obj.AddContainer("objChild", objName, 0, appdef.Occurs_Unbounded)
 	})
 
@@ -331,8 +331,8 @@ func Test_ValidSysCudEvent(t *testing.T) {
 	objName := appdef.NewQName("test", "object")
 
 	t.Run("should be ok to build test application", func(t *testing.T) {
-		ws := adb.AddWorkspace(wsName)
-		doc := ws.AddCDoc(docName)
+		wsb := adb.AddWorkspace(wsName)
+		doc := wsb.AddCDoc(docName)
 		doc.
 			AddField("RequiredField", appdef.DataKind_int32, true).
 			AddRefField("RefField", false, rec1Name)
@@ -340,10 +340,10 @@ func Test_ValidSysCudEvent(t *testing.T) {
 			AddContainer("child", rec1Name, 0, appdef.Occurs_Unbounded).
 			AddContainer("child2", rec2Name, 0, appdef.Occurs_Unbounded)
 
-		_ = ws.AddCRecord(rec1Name)
-		_ = ws.AddCRecord(rec2Name)
+		_ = wsb.AddCRecord(rec1Name)
+		_ = wsb.AddCRecord(rec2Name)
 
-		obj := adb.AddObject(objName)
+		obj := wsb.AddObject(objName)
 		obj.AddContainer("objChild", objName, 0, appdef.Occurs_Unbounded)
 	})
 
@@ -763,8 +763,10 @@ func Test_VerifiedFields(t *testing.T) {
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
+	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
 	t.Run("should be ok to build application", func(t *testing.T) {
-		adb.AddObject(objName).
+		wsb.AddObject(objName).
 			AddField("int32", appdef.DataKind_int32, true).
 			AddField("email", appdef.DataKind_string, false).
 			SetFieldVerify("email", appdef.VerificationKind_EMail).
@@ -934,9 +936,9 @@ func Test_CharsFieldRestricts(t *testing.T) {
 	objName := appdef.NewQName("test", "obj")
 
 	adb := appdef.New()
-	adb.AddPackage("test", "test.com/test")
 
 	t.Run("should be ok to build application", func(t *testing.T) {
+		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
 		s100Data := appdef.NewQName("test", "s100")
@@ -952,7 +954,7 @@ func Test_CharsFieldRestricts(t *testing.T) {
 		_ = wsb.AddData(mimeData, appdef.DataKind_bytes, appdef.NullQName,
 			appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`))
 
-		adb.AddObject(objName).
+		wsb.AddObject(objName).
 			AddDataField("email", emailData, true).
 			AddDataField("mime", mimeData, false)
 	})

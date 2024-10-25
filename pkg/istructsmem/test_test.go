@@ -274,11 +274,11 @@ func test() *testDataType {
 				AddField(testData.codeIdent, appdef.DataKind_int64, true).
 				AddField(testData.weightIdent, appdef.DataKind_float64, false)
 
-			saleSecureParams := adb.AddObject(testData.saleSecureParsName)
+			saleSecureParams := wsb.AddObject(testData.saleSecureParsName)
 			saleSecureParams.
 				AddField(testData.passwordIdent, appdef.DataKind_string, true)
 
-			photoParams := adb.AddObject(testData.queryPhotoFunctionParamsName)
+			photoParams := wsb.AddObject(testData.queryPhotoFunctionParamsName)
 			photoParams.
 				AddField(testData.buyerIdent, appdef.DataKind_string, true, appdef.MinLen(1), appdef.MaxLen(50)).
 				AddField(testData.photoRawIdent, appdef.DataKind_bytes, false, appdef.MaxLen(appdef.MaxFieldLength))
@@ -313,7 +313,7 @@ func test() *testDataType {
 		}
 
 		{
-			row := adb.AddObject(testData.testRow)
+			row := wsb.AddObject(testData.testRow)
 			row.
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).
@@ -329,7 +329,7 @@ func test() *testDataType {
 		}
 
 		{
-			obj := adb.AddObject(testData.testObj)
+			obj := wsb.AddObject(testData.testObj)
 			obj.
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).

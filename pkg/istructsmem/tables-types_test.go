@@ -223,7 +223,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		testRecsIsEqual(t, rec1, rec2)
 	})
 
-	t.Run("must be ok to read data stored with previous codec versions", func(t *testing.T) {
+	t.Run("should be ok to read data stored with previous codec versions", func(t *testing.T) {
 		store_codec_RawDynoBuffer := func(row *recordType) (out []byte) {
 			buf := new(bytes.Buffer)
 			_ = binary.Write(buf, binary.BigEndian, codec_RawDynoBuffer)
@@ -371,9 +371,9 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		t.Run("must be ok to build new ver of application", func(t *testing.T) {
-			ws := adb.AddWorkspace(testData.wsName)
-			newCDoc := ws.AddCDoc(test.testCDoc)
+		t.Run("should be ok to build new ver of application", func(t *testing.T) {
+			wsb := adb.AddWorkspace(testData.wsName)
+			newCDoc := wsb.AddCDoc(test.testCDoc)
 
 			oldCDoc := rec1.appCfg.AppDef.CDoc(test.testCDoc)
 			for _, f := range oldCDoc.Fields() {
@@ -381,7 +381,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 					newCDoc.AddField(newFieldName(f.Name()), f.DataKind(), f.Required())
 				}
 			}
-			adb.AddObject(test.tablePhotos) // for reading QName_1 field value
+			wsb.AddObject(test.tablePhotos) // for reading QName_1 field value
 		})
 
 		newConfig := newBuiltInAppConfig(test.AppCfg.Name, adb)
