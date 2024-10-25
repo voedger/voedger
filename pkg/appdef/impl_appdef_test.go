@@ -177,9 +177,6 @@ func Test_EnumsBreakable(t *testing.T) {
 
 		testBreakable(t, "Types", app.Types, ws.Types)
 
-		testBreakable(t, "Structures", app.Structures)
-		testBreakable(t, "Records", app.Records)
-
 		testBreakable(t, "DataTypes", app.DataTypes, ws.DataTypes)
 
 		testBreakable(t, "GDocs", app.GDocs, ws.GDocs)
@@ -196,7 +193,11 @@ func Test_EnumsBreakable(t *testing.T) {
 		testBreakable(t, "ODocs", app.ODocs, ws.ODocs)
 		testBreakable(t, "ORecords", app.ORecords, ws.ORecords)
 
+		testBreakable(t, "Records", app.Records, ws.Records)
+
 		testBreakable(t, "Objects", app.Objects, ws.Objects)
+
+		testBreakable(t, "Structures", app.Structures, ws.Structures)
 
 		testBreakable(t, "View", app.Views)
 		testBreakable(t, "Extensions", app.Extensions)

@@ -17,14 +17,14 @@ type IAppDef interface {
 	IWithDataTypes
 	IWithSysDataTypes
 
-	IWithStructures
-	IWithRecords
 	IWithGDocs
 	IWithCDocs
 	IWithWDocs
 	IWithSingletons
 	IWithODocs
+	IWithRecords
 	IWithObjects
+	IWithStructures
 
 	IWithViews
 

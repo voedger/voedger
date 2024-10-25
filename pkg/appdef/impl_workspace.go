@@ -171,6 +171,25 @@ func (ws *workspace) ORecords(cb func(IORecord) bool) {
 	}
 }
 
+func (ws *workspace) Record(name QName) IRecord {
+	if t := ws.TypeByName(name); t != nil {
+		if r, ok := t.(IRecord); ok {
+			return r
+		}
+	}
+	return nil
+}
+
+func (ws *workspace) Records(cb func(IRecord) bool) {
+	for t := range ws.Types {
+		if r, ok := t.(IRecord); ok {
+			if !cb(r) {
+				break
+			}
+		}
+	}
+}
+
 func (ws *workspace) Singleton(name QName) ISingleton {
 	if t := ws.TypeByName(name); t != nil {
 		if s, ok := t.(ISingleton); ok {
@@ -187,6 +206,25 @@ func (ws *workspace) Singletons(cb func(ISingleton) bool) {
 				if !cb(s) {
 					break
 				}
+			}
+		}
+	}
+}
+
+func (ws *workspace) Structure(name QName) IStructure {
+	if t := ws.TypeByName(name); t != nil {
+		if s, ok := t.(IStructure); ok {
+			return s
+		}
+	}
+	return nil
+}
+
+func (ws *workspace) Structures(cb func(IStructure) bool) {
+	for t := range ws.Types {
+		if r, ok := t.(IStructure); ok {
+			if !cb(r) {
+				break
 			}
 		}
 	}
