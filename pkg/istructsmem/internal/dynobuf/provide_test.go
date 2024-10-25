@@ -21,19 +21,20 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 
 	schemes.Prepare(
 		func() appdef.IAppDef {
-			app := appdef.New()
-			app.AddODoc(docName).
+			adb := appdef.New()
+			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+			wsb.AddODoc(docName).
 				AddField("f1", appdef.DataKind_int32, true).
 				AddField("f2", appdef.DataKind_QName, false).
 				AddField("f3", appdef.DataKind_string, false).
 				AddField("f4", appdef.DataKind_bytes, false)
 
-			v := app.AddView(viewName)
+			v := adb.AddView(viewName)
 			v.Key().PartKey().AddField("pkF1", appdef.DataKind_int32)
 			v.Key().ClustCols().AddField("ccF1", appdef.DataKind_string, appdef.MaxLen(100))
 			v.Value().AddField("valF1", appdef.DataKind_Event, true)
 
-			a, _ := app.Build()
+			a, _ := adb.Build()
 			return a
 		}())
 

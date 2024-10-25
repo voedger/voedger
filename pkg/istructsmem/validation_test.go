@@ -26,14 +26,16 @@ func Test_ValidEventArgs(t *testing.T) {
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
+	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
 	docName := appdef.NewQName("test", "document")
 	rec1Name := appdef.NewQName("test", "record1")
 	rec2Name := appdef.NewQName("test", "record2")
 
 	objName := appdef.NewQName("test", "object")
 
-	t.Run("must be ok to build test application", func(t *testing.T) {
-		doc := adb.AddODoc(docName)
+	t.Run("should be ok to build test application", func(t *testing.T) {
+		doc := wsb.AddODoc(docName)
 		doc.
 			AddField("RequiredField", appdef.DataKind_int32, true).
 			AddRefField("RefField", false, rec1Name)
@@ -41,9 +43,9 @@ func Test_ValidEventArgs(t *testing.T) {
 			AddContainer("child", rec1Name, 1, 1).
 			AddContainer("child2", rec2Name, 0, appdef.Occurs_Unbounded)
 
-		_ = adb.AddORecord(rec1Name)
+		_ = wsb.AddORecord(rec1Name)
 
-		rec2 := adb.AddORecord(rec2Name)
+		rec2 := wsb.AddORecord(rec2Name)
 		rec2.AddRefField("RequiredRefField", true, rec2Name)
 
 		obj := adb.AddObject(objName)
@@ -285,7 +287,7 @@ func Test_ValidEventArgs(t *testing.T) {
 				require.ErrorContains(err, "ODoc «test.document» child[0] ORecord «child: test.record1» has wrong parent id «2», expected «1»")
 			})
 
-			t.Run("must ok if parent ID if omitted", func(t *testing.T) {
+			t.Run("should ok if parent ID if omitted", func(t *testing.T) {
 				e := oDocEvent(false)
 				doc := e.ArgumentObjectBuilder()
 				doc.PutRecordID(appdef.SystemField_ID, 1)
@@ -328,7 +330,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 
 	objName := appdef.NewQName("test", "object")
 
-	t.Run("must be ok to build test application", func(t *testing.T) {
+	t.Run("should be ok to build test application", func(t *testing.T) {
 		ws := adb.AddWorkspace(wsName)
 		doc := ws.AddCDoc(docName)
 		doc.
@@ -401,7 +403,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 		require.ErrorIs(err, ErrCUDsMissed)
 	})
 
-	t.Run("must error if empty CUD QName", func(t *testing.T) {
+	t.Run("should be error if empty CUD QName", func(t *testing.T) {
 		e := cudRawEvent(false)
 		_ = e.CUDBuilder().Create(appdef.NullQName) // <- error here
 		_, err := e.BuildRawEvent()
@@ -409,7 +411,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 		require.ErrorContains(err, "null row")
 	})
 
-	t.Run("must error if wrong CUD type kind", func(t *testing.T) {
+	t.Run("should be error if wrong CUD type kind", func(t *testing.T) {
 		e := cudRawEvent(false)
 		_ = e.CUDBuilder().Create(objName) // <- error here
 		_, err := e.BuildRawEvent()
@@ -419,7 +421,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 
 	t.Run("test raw IDs in CUD.Create", func(t *testing.T) {
 
-		t.Run("must require for new raw event", func(t *testing.T) {
+		t.Run("should require for new raw event", func(t *testing.T) {
 			e := cudRawEvent(false)
 			rec := e.CUDBuilder().Create(docName)
 			rec.PutRecordID(appdef.SystemField_ID, 123456789012345) // <- error here
@@ -438,7 +440,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 		})
 	})
 
-	t.Run("must error if raw id in CUD.Update", func(t *testing.T) {
+	t.Run("should be error if raw id in CUD.Update", func(t *testing.T) {
 		e := cudRawEvent(false)
 		_ = e.CUDBuilder().Update(testDocRec(1)) // <- error here
 		_, err := e.BuildRawEvent()
@@ -446,7 +448,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 		require.ErrorContains(err, "unexpectedly uses raw record ID «1»")
 	})
 
-	t.Run("must error if ID duplication", func(t *testing.T) {
+	t.Run("should be error if ID duplication", func(t *testing.T) {
 
 		t.Run("raw ID duplication", func(t *testing.T) {
 			e := cudRawEvent(false)
@@ -481,9 +483,9 @@ func Test_ValidSysCudEvent(t *testing.T) {
 
 	})
 
-	t.Run("must error if invalid ID refs", func(t *testing.T) {
+	t.Run("should be error if invalid ID refs", func(t *testing.T) {
 
-		t.Run("must error if unknown ID refs", func(t *testing.T) {
+		t.Run("should be error if unknown ID refs", func(t *testing.T) {
 			e := cudRawEvent(false)
 			d := e.CUDBuilder().Create(docName)
 			d.PutRecordID(appdef.SystemField_ID, 1)
@@ -495,7 +497,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 			require.ErrorContains(err, "unknown record ID «7»")
 		})
 
-		t.Run("must error if ID refs to invalid QName", func(t *testing.T) {
+		t.Run("should be error if ID refs to invalid QName", func(t *testing.T) {
 			e := cudRawEvent(false)
 			d := e.CUDBuilder().Create(docName)
 			d.PutRecordID(appdef.SystemField_ID, 1)
@@ -507,9 +509,9 @@ func Test_ValidSysCudEvent(t *testing.T) {
 			require.ErrorContains(err, "refers to record ID «1» that has unavailable target QName «test.document»")
 		})
 
-		t.Run("must error if sys.Parent / sys.Container causes invalid hierarchy", func(t *testing.T) {
+		t.Run("should be error if sys.Parent / sys.Container causes invalid hierarchy", func(t *testing.T) {
 
-			t.Run("must error if container unknown for specified ParentID", func(t *testing.T) {
+			t.Run("should be error if container unknown for specified ParentID", func(t *testing.T) {
 				e := cudRawEvent(false)
 				d := e.CUDBuilder().Create(docName)
 				d.PutRecordID(appdef.SystemField_ID, 1)
@@ -525,7 +527,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 				require.ErrorContains(err, "has no container «objChild»")
 			})
 
-			t.Run("must error if specified container has another QName", func(t *testing.T) {
+			t.Run("should be error if specified container has another QName", func(t *testing.T) {
 				e := cudRawEvent(false)
 				d := e.CUDBuilder().Create(docName)
 				d.PutRecordID(appdef.SystemField_ID, 1)
@@ -555,13 +557,11 @@ func Test_ValidCommandEvent(t *testing.T) {
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
 	cmdName := appdef.NewQName("test", "command")
-
 	oDocName := appdef.NewQName("test", "ODocument")
-
 	wDocName := appdef.NewQName("test", "WDocument")
 
-	t.Run("must be ok to build test application", func(t *testing.T) {
-		oDoc := adb.AddODoc(oDocName)
+	t.Run("should be ok to build test application", func(t *testing.T) {
+		oDoc := wsb.AddODoc(oDocName)
 		oDoc.AddRefField("RefField", false)
 
 		wDoc := wsb.AddWDoc(wDocName)
@@ -612,7 +612,7 @@ func Test_ValidCommandEvent(t *testing.T) {
 		return b
 	}
 
-	t.Run("must be ok to ref from result to argument", func(t *testing.T) {
+	t.Run("should be ok to ref from result to argument", func(t *testing.T) {
 		e := eventBuilder(false)
 		obj := e.ArgumentObjectBuilder()
 		obj.PutRecordID(appdef.SystemField_ID, 1)
@@ -624,7 +624,7 @@ func Test_ValidCommandEvent(t *testing.T) {
 		require.NoError(err)
 	})
 
-	t.Run("must error if repeatedly uses record ID", func(t *testing.T) {
+	t.Run("should be error if repeatedly uses record ID", func(t *testing.T) {
 
 		t.Run("repeated raw record ID in new event", func(t *testing.T) {
 			e := eventBuilder(false)
@@ -651,9 +651,9 @@ func Test_ValidCommandEvent(t *testing.T) {
 		})
 	})
 
-	t.Run("must error if invalid references", func(t *testing.T) {
+	t.Run("should be error if invalid references", func(t *testing.T) {
 
-		t.Run("must error to ref from argument to result", func(t *testing.T) {
+		t.Run("should be error to ref from argument to result", func(t *testing.T) {
 			e := eventBuilder(false)
 			obj := e.ArgumentObjectBuilder()
 			obj.PutRecordID(appdef.SystemField_ID, 1)
@@ -678,14 +678,16 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
+	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
 	docName := appdef.NewQName("test", "document")
 	recName := appdef.NewQName("test", "record")
 
-	t.Run("must be ok to build test application", func(t *testing.T) {
-		oDoc := adb.AddODoc(docName)
+	t.Run("should be ok to build test application", func(t *testing.T) {
+		oDoc := wsb.AddODoc(docName)
 		oDoc.AddField("RequiredField", appdef.DataKind_string, true)
 		oDoc.AddContainer("child", recName, 0, appdef.Occurs_Unbounded)
-		_ = adb.AddORecord(recName)
+		_ = wsb.AddORecord(recName)
 	})
 
 	cfgs := make(AppConfigsType, 1)
@@ -713,7 +715,7 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 			})
 	}
 
-	t.Run("must error if required field is empty", func(t *testing.T) {
+	t.Run("should be error if required field is empty", func(t *testing.T) {
 		b := eventBuilder()
 		d := b.ArgumentObjectBuilder()
 		_, err := d.Build()
@@ -721,7 +723,7 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 		require.ErrorContains(err, "ODoc «test.document» misses required field «RequiredField»")
 	})
 
-	t.Run("must error if builder has empty type name", func(t *testing.T) {
+	t.Run("should be error if builder has empty type name", func(t *testing.T) {
 		b := eventBuilder()
 		d := b.ArgumentObjectBuilder()
 		d.(*objectType).clear()
@@ -730,7 +732,7 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 		require.ErrorContains(err, "empty type name")
 	})
 
-	t.Run("must error if builder has wrong type name", func(t *testing.T) {
+	t.Run("should be error if builder has wrong type name", func(t *testing.T) {
 		b := eventBuilder()
 		d := b.ArgumentObjectBuilder()
 		d.(*objectType).clear()
@@ -740,7 +742,7 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 		require.ErrorContains(err, "wrong type ORecord «test.record»")
 	})
 
-	t.Run("must error if builder has errors in IDs", func(t *testing.T) {
+	t.Run("should be error if builder has errors in IDs", func(t *testing.T) {
 		b := eventBuilder()
 		d := b.ArgumentObjectBuilder()
 		d.PutRecordID(appdef.SystemField_ID, 1)
@@ -761,7 +763,7 @@ func Test_VerifiedFields(t *testing.T) {
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
-	t.Run("must be ok to build application", func(t *testing.T) {
+	t.Run("should be ok to build application", func(t *testing.T) {
 		adb.AddObject(objName).
 			AddField("int32", appdef.DataKind_int32, true).
 			AddField("email", appdef.DataKind_string, false).
@@ -935,19 +937,19 @@ func Test_CharsFieldRestricts(t *testing.T) {
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("should be ok to build application", func(t *testing.T) {
-		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
 		s100Data := appdef.NewQName("test", "s100")
 		emailData := appdef.NewQName("test", "email")
 		mimeData := appdef.NewQName("test", "mime")
 
-		ws.AddData(s100Data, appdef.DataKind_string, appdef.NullQName,
+		wsb.AddData(s100Data, appdef.DataKind_string, appdef.NullQName,
 			appdef.MinLen(1), appdef.MaxLen(100)).SetComment("string 1..100")
 
-		_ = ws.AddData(emailData, appdef.DataKind_string, s100Data,
+		_ = wsb.AddData(emailData, appdef.DataKind_string, s100Data,
 			appdef.MinLen(6), appdef.Pattern(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`))
 
-		_ = ws.AddData(mimeData, appdef.DataKind_bytes, appdef.NullQName,
+		_ = wsb.AddData(mimeData, appdef.DataKind_bytes, appdef.NullQName,
 			appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`))
 
 		adb.AddObject(objName).
@@ -965,7 +967,7 @@ func Test_CharsFieldRestricts(t *testing.T) {
 
 	t.Run("test constraints", func(t *testing.T) {
 
-		t.Run("must be ok check good value", func(t *testing.T) {
+		t.Run("should be ok check good value", func(t *testing.T) {
 			row := makeObject(cfg, objName, nil)
 			row.PutString("email", `test@test.io`)
 			row.PutBytes("mime", []byte(`abcd`))
@@ -974,7 +976,7 @@ func Test_CharsFieldRestricts(t *testing.T) {
 			require.NoError(err)
 		})
 
-		t.Run("must be error if length constraint violated", func(t *testing.T) {
+		t.Run("should be error if length constraint violated", func(t *testing.T) {
 			row := makeObject(cfg, objName, nil)
 			row.PutString("email", strings.Repeat("a", 97)+".com") // 97 + 4 = 101 : too long
 			row.PutBytes("mime", []byte(`abc`))                    // 3 < 4 : too short
@@ -985,7 +987,7 @@ func Test_CharsFieldRestricts(t *testing.T) {
 			require.ErrorContains(err, "bytes-field «mime» data constraint «MinLen: 4»")
 		})
 
-		t.Run("must be error if pattern restricted", func(t *testing.T) {
+		t.Run("should be error if pattern restricted", func(t *testing.T) {
 			row := makeObject(cfg, objName, nil)
 			row.PutString("email", "naked@🔫.error")
 			row.PutBytes("mime", []byte(`++++`))

@@ -29,6 +29,7 @@ func TestResourceEnumerator(t *testing.T) {
 		cfg *AppConfigType
 		app istructs.IAppStructs
 
+		wsName       appdef.QName = appdef.NewQName("test", "workspace")
 		cmdCreateDoc appdef.QName = appdef.NewQName("test", "CreateDoc")
 		oDocName     appdef.QName = appdef.NewQName("test", "ODoc")
 
@@ -44,8 +45,10 @@ func TestResourceEnumerator(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
+		wsb := adb.AddWorkspace(wsName)
+
 		t.Run("must be ok to build application", func(t *testing.T) {
-			doc := adb.AddODoc(oDocName)
+			doc := wsb.AddODoc(oDocName)
 			doc.
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddField("String", appdef.DataKind_string, false)

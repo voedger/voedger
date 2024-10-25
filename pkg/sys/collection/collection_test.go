@@ -68,10 +68,10 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 
 		// this should be done in tests only. Runtime -> the projector is defined in sys.vsql already
 		wsb.AddCDoc(istructs.QNameCDoc)
-		adb.AddODoc(istructs.QNameODoc)
+		wsb.AddODoc(istructs.QNameODoc)
 		wsb.AddWDoc(istructs.QNameWDoc)
 		wsb.AddCRecord(istructs.QNameCRecord)
-		adb.AddORecord(istructs.QNameORecord)
+		wsb.AddORecord(istructs.QNameORecord)
 		wsb.AddWRecord(istructs.QNameWRecord)
 
 		prj := adb.AddProjector(QNameProjectorCollection)

@@ -762,9 +762,9 @@ func (c *buildContext) pushDef(qname appdef.QName, kind appdef.TypeKind, ictx *i
 	case appdef.TypeKind_CRecord:
 		builder = wsb().AddCRecord(qname)
 	case appdef.TypeKind_ODoc:
-		builder = c.adb.AddODoc(qname)
+		builder = wsb().AddODoc(qname)
 	case appdef.TypeKind_ORecord:
-		builder = c.adb.AddORecord(qname)
+		builder = wsb().AddORecord(qname)
 	case appdef.TypeKind_WDoc:
 		builder = wsb().AddWDoc(qname)
 	case appdef.TypeKind_WRecord:

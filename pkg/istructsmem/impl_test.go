@@ -38,12 +38,12 @@ func TestBasicUsage(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
-		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
 		saleParamsName := appdef.NewQName("test", "SaleParams")
 		saleSecureParamsName := appdef.NewQName("test", "saleSecureArgs")
 
-		saleParamsDoc := adb.AddODoc(saleParamsName)
+		saleParamsDoc := wsb.AddODoc(saleParamsName)
 		saleParamsDoc.
 			AddField("Buyer", appdef.DataKind_string, true).
 			AddField("Age", appdef.DataKind_int32, false).
@@ -53,10 +53,10 @@ func TestBasicUsage(t *testing.T) {
 		saleParamsDoc.
 			AddContainer("Basket", appdef.NewQName("test", "Basket"), 1, 1)
 
-		basketRec := adb.AddORecord(appdef.NewQName("test", "Basket"))
+		basketRec := wsb.AddORecord(appdef.NewQName("test", "Basket"))
 		basketRec.AddContainer("Good", appdef.NewQName("test", "Good"), 0, appdef.Occurs_Unbounded)
 
-		goodRec := adb.AddORecord(appdef.NewQName("test", "Good"))
+		goodRec := wsb.AddORecord(appdef.NewQName("test", "Good"))
 		goodRec.
 			AddField("Name", appdef.DataKind_string, true).
 			AddField("Code", appdef.DataKind_int64, true).
@@ -66,7 +66,7 @@ func TestBasicUsage(t *testing.T) {
 		saleSecureParamsObj.
 			AddField("password", appdef.DataKind_string, true)
 
-		photosDoc := ws.AddCDoc(appdef.NewQName("test", "photos"))
+		photosDoc := wsb.AddCDoc(appdef.NewQName("test", "photos"))
 		photosDoc.
 			AddField("Buyer", appdef.DataKind_string, true).
 			AddField("Age", appdef.DataKind_int32, false).
