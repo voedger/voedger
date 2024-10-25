@@ -18,6 +18,8 @@ func Test_AppDefExtensions(t *testing.T) {
 
 	var app IAppDef
 
+	wsName := NewQName("test", "workspace")
+
 	cmdName := NewQName("test", "cmd")
 	qrName := NewQName("test", "query")
 	prjName := NewQName("test", "projector")
@@ -30,6 +32,11 @@ func Test_AppDefExtensions(t *testing.T) {
 	t.Run("Should be ok to build application with extensions", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
+
+		wsb := adb.AddWorkspace(wsName)
+
+		_ = wsb.AddObject(parName)
+		_ = wsb.AddObject(resName)
 
 		cmd := adb.AddCommand(cmdName)
 		cmd.SetEngine(ExtensionEngineKind_WASM)
@@ -48,9 +55,6 @@ func Test_AppDefExtensions(t *testing.T) {
 		prj.Intents().
 			Add(sysViews, viewName)
 
-		_ = adb.AddObject(parName)
-		_ = adb.AddObject(resName)
-
 		v := adb.AddView(viewName)
 		v.Key().PartKey().AddField("pk", DataKind_int64)
 		v.Key().ClustCols().AddField("cc", DataKind_string)
@@ -63,7 +67,7 @@ func Test_AppDefExtensions(t *testing.T) {
 		require.NotNil(app)
 	})
 
-	t.Run("Should be ok to enumerate extensions", func(t *testing.T) {
+	t.Run("should be ok to enumerate extensions", func(t *testing.T) {
 		var extNames []QName
 		for ex := range app.Extensions {
 			extNames = append(extNames, ex.QName())
@@ -72,7 +76,7 @@ func Test_AppDefExtensions(t *testing.T) {
 		require.Equal([]QName{cmdName, prjName, qrName}, extNames)
 	})
 
-	t.Run("Should be ok to find extension by name", func(t *testing.T) {
+	t.Run("should be ok to find extension by name", func(t *testing.T) {
 		ext := app.Extension(cmdName)
 		require.NotNil(ext)
 		require.Equal(cmdName, ext.QName())

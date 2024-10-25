@@ -120,44 +120,44 @@ func Test_AppDef_AddData(t *testing.T) {
 	t.Run("should be panics", func(t *testing.T) {
 
 		t.Run("if data type name missed", func(t *testing.T) {
-			ws := New().AddWorkspace(NewQName("test", "workspace"))
+			wsb := New().AddWorkspace(wsName)
 			require.Panics(func() {
-				ws.AddData(NullQName, DataKind_int64, NullQName)
+				wsb.AddData(NullQName, DataKind_int64, NullQName)
 			}, require.Is(ErrMissedError))
 		})
 
 		t.Run("if invalid data type name", func(t *testing.T) {
-			ws := New().AddWorkspace(NewQName("test", "workspace"))
+			wsb := New().AddWorkspace(wsName)
 			require.Panics(func() {
-				ws.AddData(NewQName("naked", "🔫"), DataKind_QName, NullQName)
+				wsb.AddData(NewQName("naked", "🔫"), DataKind_QName, NullQName)
 			}, require.Is(ErrInvalidError), require.Has("naked.🔫"))
 		})
 
 		t.Run("if type with name already exists", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-			adb.AddObject(intName)
-			ws := adb.AddWorkspace(NewQName("test", "workspace"))
+			wsb := adb.AddWorkspace(wsName)
+			wsb.AddObject(intName)
 			require.Panics(func() {
-				ws.AddData(intName, DataKind_int64, NullQName)
+				wsb.AddData(intName, DataKind_int64, NullQName)
 			}, require.Is(ErrAlreadyExistsError), require.Has(intName.String()))
 		})
 
 		t.Run("if sys data to inherits from not found", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-			ws := adb.AddWorkspace(NewQName("test", "workspace"))
+			wsb := adb.AddWorkspace(wsName)
 			require.Panics(func() {
-				ws.AddData(strName, DataKind_null, NullQName)
+				wsb.AddData(strName, DataKind_null, NullQName)
 			}, require.Is(ErrNotFoundError), require.Has("null"))
 		})
 
 		t.Run("if ancestor not found", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-			ws := adb.AddWorkspace(NewQName("test", "workspace"))
+			wsb := adb.AddWorkspace(wsName)
 			require.Panics(func() {
-				ws.AddData(strName, DataKind_string,
+				wsb.AddData(strName, DataKind_string,
 					NewQName("test", "unknown"), // <- error here
 				)
 			}, require.Is(ErrNotFoundError), require.Has("test.unknown"))
@@ -167,10 +167,10 @@ func Test_AppDef_AddData(t *testing.T) {
 			objName := NewQName("test", "object")
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-			_ = adb.AddObject(objName)
-			ws := adb.AddWorkspace(NewQName("test", "workspace"))
+			wsb := adb.AddWorkspace(wsName)
+			_ = wsb.AddObject(objName)
 			require.Panics(func() {
-				ws.AddData(intName, DataKind_int64,
+				wsb.AddData(intName, DataKind_int64,
 					objName, // <- error here
 				)
 			}, require.Is(ErrNotFoundError), require.Has(objName.String()))
@@ -179,20 +179,20 @@ func Test_AppDef_AddData(t *testing.T) {
 		t.Run("if ancestor has different kind", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-			ws := adb.AddWorkspace(NewQName("test", "workspace"))
-			_ = ws.AddData(strName, DataKind_string, NullQName)
+			wsb := adb.AddWorkspace(wsName)
+			_ = wsb.AddData(strName, DataKind_string, NullQName)
 			require.Panics(func() {
-				ws.AddData(intName, DataKind_int64, strName)
+				wsb.AddData(intName, DataKind_int64, strName)
 			}, require.Is(ErrInvalidError), require.Has(strName.String()))
 		})
 
 		t.Run("if incompatible constraints", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-			ws := adb.AddWorkspace(NewQName("test", "workspace"))
-			require.Panics(func() { _ = ws.AddData(strName, DataKind_string, NullQName, MinIncl(1)) },
+			wsb := adb.AddWorkspace(wsName)
+			require.Panics(func() { _ = wsb.AddData(strName, DataKind_string, NullQName, MinIncl(1)) },
 				require.Is(ErrIncompatibleError), require.Has("MinIncl"))
-			require.Panics(func() { _ = ws.AddData(intName, DataKind_float64, NullQName, MaxLen(100)) },
+			require.Panics(func() { _ = wsb.AddData(intName, DataKind_float64, NullQName, MaxLen(100)) },
 				require.Is(ErrIncompatibleError), require.Has("MaxLen"))
 		})
 	})
@@ -514,8 +514,8 @@ func Test_data_AddConstraint(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-			ws := adb.AddWorkspace(NewQName("test", "workspace"))
-			d := ws.AddData(NewQName("test", "test"), tt.args.da, NullQName)
+			wsb := adb.AddWorkspace(NewQName("test", "workspace"))
+			d := wsb.AddData(NewQName("test", "test"), tt.args.da, NullQName)
 			if tt.wantPanic {
 				if tt.e == nil {
 					require.Panics(func() { d.AddConstraints(NewConstraint(tt.args.ck, tt.args.cv)) })

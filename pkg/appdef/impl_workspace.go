@@ -120,6 +120,23 @@ func (ws *workspace) GRecords(cb func(IGRecord) bool) {
 	}
 }
 
+func (ws *workspace) Object(name QName) IObject {
+	if t := ws.typeByKind(name, TypeKind_Object); t != nil {
+		return t.(IObject)
+	}
+	return nil
+}
+
+func (ws *workspace) Objects(cb func(IObject) bool) {
+	for t := range ws.Types {
+		if o, ok := t.(IObject); ok {
+			if !cb(o) {
+				break
+			}
+		}
+	}
+}
+
 func (ws *workspace) ODoc(name QName) IODoc {
 	if t := ws.typeByKind(name, TypeKind_ODoc); t != nil {
 		return t.(IODoc)
@@ -247,16 +264,6 @@ func (ws *workspace) WRecords(cb func(IWRecord) bool) {
 	}
 }
 
-// TODO: should be deprecated. All types should be added by specific methods.
-func (ws *workspace) addType(name QName) {
-	t := ws.app.TypeByName(name)
-	if t == nil {
-		panic(ErrTypeNotFound(name))
-	}
-
-	ws.types[name] = t
-}
-
 func (ws *workspace) addCDoc(name QName) ICDocBuilder {
 	d := newCDoc(ws.app, name)
 	ws.types[name] = d
@@ -289,6 +296,12 @@ func (ws *workspace) addGRecord(name QName) IGRecordBuilder {
 	return newGRecordBuilder(r)
 }
 
+func (ws *workspace) addObject(name QName) IObjectBuilder {
+	o := newObject(ws.app, name)
+	ws.types[name] = o
+	return newObjectBuilder(o)
+}
+
 func (ws *workspace) addODoc(name QName) IODocBuilder {
 	d := newODoc(ws.app, name)
 	ws.types[name] = d
@@ -299,6 +312,16 @@ func (ws *workspace) addORecord(name QName) IORecordBuilder {
 	r := newORecord(ws.app, name)
 	ws.types[name] = r
 	return newORecordBuilder(r)
+}
+
+// TODO: should be deprecated. All types should be added by specific methods.
+func (ws *workspace) addType(name QName) {
+	t := ws.app.TypeByName(name)
+	if t == nil {
+		panic(ErrTypeNotFound(name))
+	}
+
+	ws.types[name] = t
 }
 
 func (ws *workspace) addWDoc(name QName) IWDocBuilder {
@@ -382,6 +405,10 @@ func (wb *workspaceBuilder) AddGDoc(name QName) IGDocBuilder {
 
 func (wb *workspaceBuilder) AddGRecord(name QName) IGRecordBuilder {
 	return wb.workspace.addGRecord(name)
+}
+
+func (wb *workspaceBuilder) AddObject(name QName) IObjectBuilder {
+	return wb.workspace.addObject(name)
 }
 
 func (wb *workspaceBuilder) AddODoc(name QName) IODocBuilder {

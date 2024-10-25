@@ -15,6 +15,8 @@ func ExampleIAppDefBuilder_AddCommand() {
 
 	var app appdef.IAppDef
 
+	wsName := appdef.NewQName("test", "workspace")
+
 	cmdName := appdef.NewQName("test", "cmd")
 	parName := appdef.NewQName("test", "param")
 	unlName := appdef.NewQName("test", "secure")
@@ -25,6 +27,8 @@ func ExampleIAppDefBuilder_AddCommand() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
+		wsb := adb.AddWorkspace(wsName)
+
 		cmd := adb.AddCommand(cmdName)
 		cmd.SetEngine(appdef.ExtensionEngineKind_WASM)
 		cmd.
@@ -32,9 +36,9 @@ func ExampleIAppDefBuilder_AddCommand() {
 			SetResult(resName)
 		cmd.SetUnloggedParam(unlName)
 
-		_ = adb.AddObject(parName)
-		_ = adb.AddObject(unlName)
-		_ = adb.AddObject(resName)
+		_ = wsb.AddObject(parName)
+		_ = wsb.AddObject(unlName)
+		_ = wsb.AddObject(resName)
 
 		app = adb.MustBuild()
 	}

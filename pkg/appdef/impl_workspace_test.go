@@ -22,20 +22,20 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
 
 		t.Run("should be ok to set workspace descriptor", func(t *testing.T) {
-			_ = ws.AddCDoc(descName)
-			ws.SetDescriptor(descName)
+			_ = wsb.AddCDoc(descName)
+			wsb.SetDescriptor(descName)
 		})
 
 		t.Run("should be ok to add some object to workspace", func(t *testing.T) {
-			_ = adb.AddObject(objName)
-			ws.AddType(objName)
+			_ = wsb.AddObject(objName)
+			wsb.AddType(objName)
 		})
 
-		require.NotNil(ws.Workspace(), "should be ok to get workspace definition before build")
-		require.Equal(descName, ws.Workspace().Descriptor(), "should be ok to get workspace descriptor before build")
+		require.NotNil(wsb.Workspace(), "should be ok to get workspace definition before build")
+		require.Equal(descName, wsb.Workspace().Descriptor(), "should be ok to get workspace descriptor before build")
 
 		a, err := adb.Build()
 		require.NoError(err)

@@ -544,11 +544,6 @@ func (app *appDef) addLimit(name QName, on []QName, rate QName, comment ...strin
 	_ = newLimit(app, name, on, rate, comment...)
 }
 
-func (app *appDef) addObject(name QName) IObjectBuilder {
-	obj := newObject(app, name)
-	return newObjectBuilder(obj)
-}
-
 func (app *appDef) addPackage(localName, path string) {
 	app.packages.add(localName, path)
 }
@@ -686,8 +681,6 @@ func (ab *appDefBuilder) AddJob(name QName) IJobBuilder { return ab.app.addJob(n
 func (ab *appDefBuilder) AddLimit(name QName, on []QName, rate QName, comment ...string) {
 	ab.app.addLimit(name, on, rate, comment...)
 }
-
-func (ab *appDefBuilder) AddObject(name QName) IObjectBuilder { return ab.app.addObject(name) }
 
 func (ab *appDefBuilder) AddPackage(localName, path string) IAppDefBuilder {
 	ab.app.addPackage(localName, path)

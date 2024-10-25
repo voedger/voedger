@@ -36,7 +36,7 @@ func TestBasicUsage(t *testing.T) {
 		AddField("Code", DataKind_int64, true).
 		AddField("Weight", DataKind_float64, false)
 
-	saleSecureParamsObj := adb.AddObject(NewQName("test", "saleSecureArgs"))
+	saleSecureParamsObj := wsb.AddObject(NewQName("test", "saleSecureArgs"))
 	saleSecureParamsObj.
 		AddField("password", DataKind_string, true)
 
@@ -55,7 +55,7 @@ func TestBasicUsage(t *testing.T) {
 	buyerView.Value().AddRefField("BuyerID", true, docName)
 
 	buyerObjName := NewQName("test", "buyer")
-	buyerObj := adb.AddObject(buyerObjName)
+	buyerObj := wsb.AddObject(buyerObjName)
 	buyerObj.
 		AddField("Name", DataKind_string, true).
 		AddField("Age", DataKind_int32, false).

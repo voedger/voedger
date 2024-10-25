@@ -126,8 +126,8 @@ func Test_EnumsBreakable(t *testing.T) {
 	wsb.AddORecord(NewQName("test", "ORecord1"))
 	wsb.AddORecord(NewQName("test", "ORecord2"))
 
-	adb.AddObject(NewQName("test", "Object1"))
-	adb.AddObject(NewQName("test", "Object2"))
+	wsb.AddObject(NewQName("test", "Object1"))
+	wsb.AddObject(NewQName("test", "Object2"))
 
 	for i := 1; i <= 2; i++ {
 		v := adb.AddView(NewQName("test", fmt.Sprintf("View%d", i)))
@@ -196,7 +196,8 @@ func Test_EnumsBreakable(t *testing.T) {
 		testBreakable(t, "ODocs", app.ODocs, ws.ODocs)
 		testBreakable(t, "ORecords", app.ORecords, ws.ORecords)
 
-		testBreakable(t, "Objects", app.Objects)
+		testBreakable(t, "Objects", app.Objects, ws.Objects)
+
 		testBreakable(t, "View", app.Views)
 		testBreakable(t, "Extensions", app.Extensions)
 		testBreakable(t, "Functions", app.Functions)
