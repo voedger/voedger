@@ -772,7 +772,7 @@ func (c *buildContext) pushDef(qname appdef.QName, kind appdef.TypeKind, ictx *i
 	case appdef.TypeKind_Object:
 		builder = wsb().AddObject(qname)
 	case appdef.TypeKind_ViewRecord:
-		builder = c.adb.AddView(qname)
+		builder = wsb().AddView(qname)
 	default:
 		panic(fmt.Sprintf("unsupported def kind %d", kind))
 	}
