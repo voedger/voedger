@@ -18,17 +18,17 @@ type view struct {
 	value  *viewValue
 }
 
-func newView(app *appDef, name QName) *view {
+func newView(app *appDef, ws *workspace, name QName) *view {
 	v := &view{
-		typ: makeType(app, name, TypeKind_ViewRecord),
+		typ: makeType(app, ws, name, TypeKind_ViewRecord),
 	}
 
-	v.fields = makeFields(app, TypeKind_ViewRecord)
+	v.fields = makeFields(app, ws, TypeKind_ViewRecord)
 	v.fields.makeSysFields()
 	v.key = newViewKey(v)
 	v.value = newViewValue(v)
 
-	app.appendType(v)
+	ws.appendType(v)
 
 	return v
 }
@@ -83,7 +83,7 @@ type viewKey struct {
 func newViewKey(view *view) *viewKey {
 	key := &viewKey{
 		view:   view,
-		fields: makeFields(view.typ.app, TypeKind_ViewRecord),
+		fields: makeFields(view.typ.app, view.typ.ws, TypeKind_ViewRecord),
 		pkey:   newViewPartKey(view),
 		ccols:  newViewClustCols(view),
 	}
@@ -137,7 +137,7 @@ type viewPartKey struct {
 func newViewPartKey(v *view) *viewPartKey {
 	pKey := &viewPartKey{
 		view:   v,
-		fields: makeFields(v.typ.app, TypeKind_ViewRecord),
+		fields: makeFields(v.typ.app, v.typ.ws, TypeKind_ViewRecord),
 	}
 	return pKey
 }
@@ -231,7 +231,7 @@ type viewClustCols struct {
 func newViewClustCols(v *view) *viewClustCols {
 	cc := &viewClustCols{
 		view:   v,
-		fields: makeFields(v.typ.app, TypeKind_ViewRecord),
+		fields: makeFields(v.typ.app, v.typ.ws, TypeKind_ViewRecord),
 	}
 	return cc
 }
@@ -333,7 +333,7 @@ type viewValue struct {
 func newViewValue(v *view) *viewValue {
 	val := &viewValue{
 		view:   v,
-		fields: makeFields(v.typ.app, TypeKind_ViewRecord),
+		fields: makeFields(v.typ.app, v.typ.ws, TypeKind_ViewRecord),
 	}
 	val.fields.makeSysFields()
 	return val

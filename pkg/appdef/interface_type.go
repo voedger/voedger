@@ -75,8 +75,11 @@ const (
 type IType interface {
 	IWithComments
 
-	// Parent cache
+	// Application
 	App() IAppDef
+
+	// Workspace
+	Workspace() IWorkspace
 
 	// Type qualified name.
 	QName() QName

@@ -48,21 +48,13 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 		for ws := range app.Workspaces {
 			cnt++
 			switch ws.QName() {
+			case SysWorkspaceQName:
 			case wsName:
 			default:
 				require.Fail("unexpected workspace", "unexpected workspace «%v»", ws.QName())
 			}
 		}
-		require.Equal(1, cnt)
-	})
-
-	t.Run("should be breakable enum workspaces", func(t *testing.T) {
-		cnt := 0
-		for range app.Workspaces {
-			cnt++
-			break
-		}
-		require.Equal(1, cnt)
+		require.Equal(1+1, cnt) // system ws + test ws
 	})
 
 	t.Run("should be ok to find workspace", func(t *testing.T) {

@@ -22,7 +22,7 @@ type data struct {
 }
 
 // Creates and returns new data type.
-func newData(app *appDef, name QName, kind DataKind, anc QName) *data {
+func newData(app *appDef, ws *workspace, name QName, kind DataKind, anc QName) *data {
 	var ancestor IData
 	if anc == NullQName {
 		ancestor = app.SysData(kind)
@@ -39,7 +39,7 @@ func newData(app *appDef, name QName, kind DataKind, anc QName) *data {
 		}
 	}
 	d := &data{
-		typ:         makeType(app, name, TypeKind_Data),
+		typ:         makeType(app, ws, name, TypeKind_Data),
 		dataKind:    ancestor.DataKind(),
 		ancestor:    ancestor,
 		constraints: make(map[ConstraintKind]IConstraint),
@@ -48,8 +48,8 @@ func newData(app *appDef, name QName, kind DataKind, anc QName) *data {
 }
 
 // Creates and returns new anonymous data type with specified constraints.
-func newAnonymousData(app *appDef, kind DataKind, anc QName, constraints ...IConstraint) *data {
-	d := newData(app, NullQName, kind, anc)
+func newAnonymousData(app *appDef, ws *workspace, kind DataKind, anc QName, constraints ...IConstraint) *data {
+	d := newData(app, ws, NullQName, kind, anc)
 	d.addConstraints(constraints...)
 	return d
 }
@@ -163,12 +163,12 @@ var (
 )
 
 // Creates and returns new system type by data kind.
-func newSysData(app *appDef, kind DataKind) *data {
+func newSysData(app *appDef, ws *workspace, kind DataKind) *data {
 	d := &data{
-		typ:      makeType(app, SysDataName(kind), TypeKind_Data),
+		typ:      makeType(app, ws, SysDataName(kind), TypeKind_Data),
 		dataKind: kind,
 	}
-	app.appendType(d)
+	ws.appendType(d)
 	return d
 }
 

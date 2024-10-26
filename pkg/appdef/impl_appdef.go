@@ -15,6 +15,7 @@ import (
 type appDef struct {
 	comment
 	packages     *packages
+	sysWS        *workspace
 	acl          []*aclRule // adding order should be saved
 	types        map[QName]interface{}
 	typesOrdered []interface{}
@@ -531,17 +532,17 @@ func (app *appDef) WorkspaceByDescriptor(name QName) IWorkspace {
 }
 
 func (app *appDef) addCommand(name QName) ICommandBuilder {
-	cmd := newCommand(app, name)
+	cmd := newCommand(app, app.sysWS, name)
 	return newCommandBuilder(cmd)
 }
 
 func (app *appDef) addJob(name QName) IJobBuilder {
-	j := newJob(app, name)
+	j := newJob(app, app.sysWS, name)
 	return newJobBuilder(j)
 }
 
 func (app *appDef) addLimit(name QName, on []QName, rate QName, comment ...string) {
-	_ = newLimit(app, name, on, rate, comment...)
+	_ = newLimit(app, app.sysWS, name, on, rate, comment...)
 }
 
 func (app *appDef) addPackage(localName, path string) {
@@ -549,21 +550,21 @@ func (app *appDef) addPackage(localName, path string) {
 }
 
 func (app *appDef) addProjector(name QName) IProjectorBuilder {
-	projector := newProjector(app, name)
+	projector := newProjector(app, app.sysWS, name)
 	return newProjectorBuilder(projector)
 }
 
 func (app *appDef) addQuery(name QName) IQueryBuilder {
-	q := newQuery(app, name)
+	q := newQuery(app, app.sysWS, name)
 	return newQueryBuilder(q)
 }
 
 func (app *appDef) addRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) {
-	_ = newRate(app, name, count, period, scopes, comment...)
+	_ = newRate(app, app.sysWS, name, count, period, scopes, comment...)
 }
 
 func (app *appDef) addRole(name QName) IRoleBuilder {
-	role := newRole(app, name)
+	role := newRole(app, app.sysWS, name)
 	return newRoleBuilder(role)
 }
 
@@ -618,13 +619,19 @@ func (app *appDef) grantAll(resources []QName, toRole QName, comment ...string) 
 // Should be called after appDef is created.
 func (app *appDef) makeSysPackage() {
 	app.packages.add(SysPackage, SysPackagePath)
+	app.makeSysWorkspace()
+}
+
+// Makes system workspace.
+func (app *appDef) makeSysWorkspace() {
+	app.sysWS = newWorkspace(app, SysWorkspaceQName)
 	app.makeSysDataTypes()
 }
 
 // Makes system data types.
 func (app *appDef) makeSysDataTypes() {
 	for k := DataKind_null + 1; k < DataKind_FakeLast; k++ {
-		_ = newSysData(app, k)
+		_ = newSysData(app, app.sysWS, k)
 	}
 }
 

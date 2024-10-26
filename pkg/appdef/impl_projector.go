@@ -23,12 +23,12 @@ type projector struct {
 	events    *events
 }
 
-func newProjector(app *appDef, name QName) *projector {
+func newProjector(app *appDef, ws *workspace, name QName) *projector {
 	prj := &projector{
-		extension: makeExtension(app, name, TypeKind_Projector),
+		extension: makeExtension(app, ws, name, TypeKind_Projector),
 		events:    newProjectorEvents(app),
 	}
-	app.appendType(prj)
+	ws.appendType(prj)
 	return prj
 }
 
