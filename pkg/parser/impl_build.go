@@ -718,12 +718,13 @@ func (c *defBuildContext) checkName(name string) error {
 
 func (c *buildContext) pushDef(qname appdef.QName, kind appdef.TypeKind, currentWorkspace workspaceAddr) {
 
-	if currentWorkspace.workspace == nil {
-		panic("currentWorkspace is nil")
+	wsb := func() appdef.IWorkspaceBuilder {
+		if currentWorkspace.workspace == nil {
+			panic("currentWorkspace is nil")
+		}
+		wsQname := currentWorkspace.pkg.NewQName(currentWorkspace.workspace.Name)
+		return c.wsBuilders[wsQname]
 	}
-
-	wsQname := currentWorkspace.pkg.NewQName(currentWorkspace.workspace.Name)
-	wsb := c.wsBuilders[wsQname]
 
 	var builder interface{}
 	switch kind {
@@ -742,7 +743,7 @@ func (c *buildContext) pushDef(qname appdef.QName, kind appdef.TypeKind, current
 	case appdef.TypeKind_Object:
 		builder = wsb().AddObject(qname)
 	case appdef.TypeKind_ViewRecord:
-		builder = c.adb.AddView(qname)
+		builder = wsb().AddView(qname)
 	default:
 		panic(fmt.Sprintf("unsupported def kind %d", kind))
 	}
