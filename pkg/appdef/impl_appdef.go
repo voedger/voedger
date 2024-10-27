@@ -544,21 +544,6 @@ func (app *appDef) addLimit(name QName, on []QName, rate QName, comment ...strin
 	_ = newLimit(app, name, on, rate, comment...)
 }
 
-func (app *appDef) addObject(name QName) IObjectBuilder {
-	obj := newObject(app, name)
-	return newObjectBuilder(obj)
-}
-
-func (app *appDef) addODoc(name QName) IODocBuilder {
-	oDoc := newODoc(app, name)
-	return newODocBuilder(oDoc)
-}
-
-func (app *appDef) addORecord(name QName) IORecordBuilder {
-	oRec := newORecord(app, name)
-	return newORecordBuilder(oRec)
-}
-
 func (app *appDef) addPackage(localName, path string) {
 	app.packages.add(localName, path)
 }
@@ -580,21 +565,6 @@ func (app *appDef) addRate(name QName, count RateCount, period RatePeriod, scope
 func (app *appDef) addRole(name QName) IRoleBuilder {
 	role := newRole(app, name)
 	return newRoleBuilder(role)
-}
-
-func (app *appDef) addView(name QName) IViewBuilder {
-	view := newView(app, name)
-	return newViewBuilder(view)
-}
-
-func (app *appDef) addWDoc(name QName) IWDocBuilder {
-	wDoc := newWDoc(app, name)
-	return newWDocBuilder(wDoc)
-}
-
-func (app *appDef) addWRecord(name QName) IWRecordBuilder {
-	wRec := newWRecord(app, name)
-	return newWRecordBuilder(wRec)
 }
 
 func (app *appDef) addWorkspace(name QName) IWorkspaceBuilder {
@@ -707,12 +677,6 @@ func (ab *appDefBuilder) AddLimit(name QName, on []QName, rate QName, comment ..
 	ab.app.addLimit(name, on, rate, comment...)
 }
 
-func (ab *appDefBuilder) AddObject(name QName) IObjectBuilder { return ab.app.addObject(name) }
-
-func (ab *appDefBuilder) AddODoc(name QName) IODocBuilder { return ab.app.addODoc(name) }
-
-func (ab *appDefBuilder) AddORecord(name QName) IORecordBuilder { return ab.app.addORecord(name) }
-
 func (ab *appDefBuilder) AddPackage(localName, path string) IAppDefBuilder {
 	ab.app.addPackage(localName, path)
 	return ab
@@ -727,12 +691,6 @@ func (ab *appDefBuilder) AddRate(name QName, count RateCount, period RatePeriod,
 }
 
 func (ab *appDefBuilder) AddRole(name QName) IRoleBuilder { return ab.app.addRole(name) }
-
-func (ab *appDefBuilder) AddView(name QName) IViewBuilder { return ab.app.addView(name) }
-
-func (ab *appDefBuilder) AddWDoc(name QName) IWDocBuilder { return ab.app.addWDoc(name) }
-
-func (ab *appDefBuilder) AddWRecord(name QName) IWRecordBuilder { return ab.app.addWRecord(name) }
 
 func (ab *appDefBuilder) AddWorkspace(name QName) IWorkspaceBuilder { return ab.app.addWorkspace(name) }
 
@@ -750,15 +708,17 @@ func (ab *appDefBuilder) Build() (IAppDef, error) {
 }
 
 func (ab *appDefBuilder) addHardcodedDefinitions() {
-	viewProjectionOffsets := ab.AddView(NewQName(SysPackage, "projectionOffsets"))
-	viewProjectionOffsets.Key().PartKey().AddField("partition", DataKind_int32)
-	viewProjectionOffsets.Key().ClustCols().AddField("projector", DataKind_QName)
-	viewProjectionOffsets.Value().AddField("offset", DataKind_int64, true)
+	// TODO: move to `parser` or to `sys\workspace` package
+	//
+	// viewProjectionOffsets := ab.AddView(NewQName(SysPackage, "projectionOffsets"))
+	// viewProjectionOffsets.Key().PartKey().AddField("partition", DataKind_int32)
+	// viewProjectionOffsets.Key().ClustCols().AddField("projector", DataKind_QName)
+	// viewProjectionOffsets.Value().AddField("offset", DataKind_int64, true)
 
-	viewNextBaseWSID := ab.AddView(NewQName(SysPackage, "NextBaseWSID"))
-	viewNextBaseWSID.Key().PartKey().AddField("dummy1", DataKind_int32)
-	viewNextBaseWSID.Key().ClustCols().AddField("dummy2", DataKind_int32)
-	viewNextBaseWSID.Value().AddField("NextBaseWSID", DataKind_int64, true)
+	// viewNextBaseWSID := ab.AddView(NewQName(SysPackage, "NextBaseWSID"))
+	// viewNextBaseWSID.Key().PartKey().AddField("dummy1", DataKind_int32)
+	// viewNextBaseWSID.Key().ClustCols().AddField("dummy2", DataKind_int32)
+	// viewNextBaseWSID.Value().AddField("NextBaseWSID", DataKind_int64, true)
 }
 
 func (ab *appDefBuilder) Grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) IACLBuilder {

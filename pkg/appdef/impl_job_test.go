@@ -25,7 +25,9 @@ func Test_AppDef_AddJob(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		v := adb.AddView(viewName)
+		wsb := adb.AddWorkspace(NewQName("test", "workspace"))
+
+		v := wsb.AddView(viewName)
 		v.Key().PartKey().AddDataField("id", SysData_RecordID)
 		v.Key().ClustCols().AddDataField("name", SysData_String)
 		v.Value().AddDataField("data", SysData_bytes, false, MaxLen(1024))
@@ -136,8 +138,8 @@ func Test_AppDef_AddJob(t *testing.T) {
 		require.Equal(cronSchedule, j.CronSchedule())
 	})
 
-	t.Run("job validation errors", func(t *testing.T) {
-		t.Run("should be error if unknown names in states", func(t *testing.T) {
+	t.Run("should be validation error", func(t *testing.T) {
+		t.Run("if unknown names in states", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
 
@@ -148,7 +150,7 @@ func Test_AppDef_AddJob(t *testing.T) {
 			require.Error(err, require.Is(ErrNotFoundError), require.Has("test.unknown"))
 		})
 
-		t.Run("should be error if no cron string", func(t *testing.T) {
+		t.Run("if no cron string", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
 
@@ -157,7 +159,7 @@ func Test_AppDef_AddJob(t *testing.T) {
 			require.Error(err, require.Has(job))
 		})
 
-		t.Run("should be error if invalid cron string", func(t *testing.T) {
+		t.Run("if invalid cron string", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
 
@@ -167,11 +169,13 @@ func Test_AppDef_AddJob(t *testing.T) {
 			require.Error(err, require.Has(job), require.Has("naked 🔫"))
 		})
 
-		t.Run("should be error if with intents", func(t *testing.T) {
+		t.Run("if wrong intents", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
 
-			v := adb.AddView(viewName)
+			wsb := adb.AddWorkspace(NewQName("test", "workspace"))
+
+			v := wsb.AddView(viewName)
 			v.Key().PartKey().AddDataField("id", SysData_RecordID)
 			v.Key().ClustCols().AddDataField("name", SysData_String)
 			v.Value().AddDataField("data", SysData_bytes, false, MaxLen(1024))
@@ -186,43 +190,45 @@ func Test_AppDef_AddJob(t *testing.T) {
 		})
 	})
 
-	t.Run("common panics while build job", func(t *testing.T) {
+	t.Run("should be panics", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
+
+		wsb := adb.AddWorkspace(NewQName("test", "workspace"))
 
 		require.Panics(func() { adb.AddJob(NullQName) },
 			require.Is(ErrMissedError))
 		require.Panics(func() { adb.AddJob(NewQName("naked", "🔫")) },
 			require.Is(ErrInvalidError), require.Has("naked.🔫"))
 
-		t.Run("panic if type with name already exists", func(t *testing.T) {
+		t.Run("if type with name already exists", func(t *testing.T) {
 			testName := NewQName("test", "dupe")
-			adb.AddObject(testName)
+			wsb.AddObject(testName)
 			require.Panics(func() { adb.AddJob(testName) },
 				require.Is(ErrAlreadyExistsError), require.Has(testName))
 		})
 
-		t.Run("panic if extension name is invalid", func(t *testing.T) {
+		t.Run("if extension name is invalid", func(t *testing.T) {
 			job := adb.AddJob(jobName)
 			require.Panics(func() { job.SetName("naked 🔫") },
 				require.Is(ErrInvalidError), require.Has("naked 🔫"))
 		})
-	})
 
-	t.Run("panics while build states", func(t *testing.T) {
-		adb := New()
-		adb.AddPackage("test", "test.com/test")
+		t.Run("if invalid states", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
 
-		job := adb.AddJob(jobName)
+			job := adb.AddJob(jobName)
 
-		require.Panics(func() { job.States().Add(NullQName) },
-			require.Is(ErrMissedError))
-		require.Panics(func() { job.States().Add(NewQName("naked", "🔫")) },
-			require.Is(ErrInvalidError), require.Has("naked.🔫"))
-		require.Panics(func() { job.States().Add(sysViews, NewQName("naked", "🔫")) },
-			require.Is(ErrInvalidError), require.Has("🔫"))
-		require.Panics(func() { job.States().SetComment(NewQName("unknown", "storage"), "comment") },
-			require.Is(ErrNotFoundError), require.Has("unknown.storage"))
+			require.Panics(func() { job.States().Add(NullQName) },
+				require.Is(ErrMissedError))
+			require.Panics(func() { job.States().Add(NewQName("naked", "🔫")) },
+				require.Is(ErrInvalidError), require.Has("naked.🔫"))
+			require.Panics(func() { job.States().Add(sysViews, NewQName("naked", "🔫")) },
+				require.Is(ErrInvalidError), require.Has("🔫"))
+			require.Panics(func() { job.States().SetComment(NewQName("unknown", "storage"), "comment") },
+				require.Is(ErrNotFoundError), require.Has("unknown.storage"))
+		})
 	})
 
 }

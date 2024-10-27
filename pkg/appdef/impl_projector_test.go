@@ -17,6 +17,8 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 	var app IAppDef
 
+	wsName := NewQName("test", "workspace")
+
 	// storages
 	sysRecords, sysViews, sysWLog := NewQName(SysPackage, "records"), NewQName(SysPackage, "views"), NewQName(SysPackage, "WLog")
 
@@ -35,19 +37,19 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(NewQName("test", "workspace"))
+		wsb := adb.AddWorkspace(wsName)
 
-		ws.AddCRecord(recName).SetComment("record 1 is trigger for projector")
-		_ = ws.AddCRecord(rec2Name)
-		ws.AddCDoc(docName).SetComment("doc is state for projector")
+		wsb.AddCRecord(recName).SetComment("record 1 is trigger for projector")
+		_ = wsb.AddCRecord(rec2Name)
+		wsb.AddCDoc(docName).SetComment("doc is state for projector")
 
-		v := adb.AddView(viewName)
+		v := wsb.AddView(viewName)
 		v.Key().PartKey().AddDataField("id", SysData_RecordID)
 		v.Key().ClustCols().AddDataField("name", SysData_String)
 		v.Value().AddDataField("data", SysData_bytes, false, MaxLen(1024))
 		v.SetComment("view is intent for projector")
 
-		_ = adb.AddObject(objName)
+		_ = wsb.AddObject(objName)
 		adb.AddCommand(cmdName).SetParam(objName)
 
 		prj := adb.AddProjector(prjName)
@@ -230,7 +232,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		require.Equal(1, cnt)
 	})
 
-	t.Run("check nil returns", func(t *testing.T) {
+	t.Run("should be nil if unknown", func(t *testing.T) {
 		require.Nil(app.Projector(NewQName("test", "unknown")))
 	})
 
@@ -238,9 +240,9 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(NewQName("test", "workspace"))
+		wsb := adb.AddWorkspace(wsName)
 
-		_ = ws.AddCRecord(recName)
+		_ = wsb.AddCRecord(recName)
 		prj := adb.AddProjector(prjName)
 		prj.
 			SetEngine(ExtensionEngineKind_WASM).
@@ -277,8 +279,8 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		require.False(p.WantErrors())
 	})
 
-	t.Run("projector validation errors", func(t *testing.T) {
-		t.Run("should be error if empty events", func(t *testing.T) {
+	t.Run("should be validation error", func(t *testing.T) {
+		t.Run("if empty events", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
 
@@ -287,13 +289,13 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			require.Error(err, require.Is(ErrMissedError), require.Has(prj))
 		})
 
-		t.Run("should be error if unknown names in states", func(t *testing.T) {
+		t.Run("if unknown names in states", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
 
-			ws := adb.AddWorkspace(NewQName("test", "workspace"))
+			wsb := adb.AddWorkspace(wsName)
 
-			ws.AddCRecord(recName)
+			wsb.AddCRecord(recName)
 			prj := adb.AddProjector(prjName)
 			prj.SetName("customExtensionName")
 			prj.Events().
@@ -307,6 +309,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 	t.Run("should be panics", func(t *testing.T) {
 		adb := New()
+		wsb := adb.AddWorkspace(wsName)
 		require.Panics(func() { adb.AddProjector(NullQName) },
 			require.Is(ErrMissedError))
 		require.Panics(func() { adb.AddProjector(NewQName("naked", "🔫")) },
@@ -315,80 +318,80 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 		t.Run("if type with name already exists", func(t *testing.T) {
 			testName := NewQName("test", "dupe")
-			adb.AddObject(testName)
+			wsb.AddObject(testName)
 			require.Panics(func() { adb.AddProjector(testName) },
 				require.Is(ErrAlreadyExistsError), require.Has(testName))
 		})
 
 		t.Run("if extension name is invalid", func(t *testing.T) {
-			prj := adb.AddProjector(NewQName("test", "projector"))
+			prj := adb.AddProjector(prjName)
 			require.Panics(func() { prj.SetName("naked 🔫") },
 				require.Is(ErrInvalidError), require.Has("naked 🔫"))
 		})
-	})
 
-	t.Run("should be panics while build states", func(t *testing.T) {
-		adb := New()
-		adb.AddPackage("test", "test.com/test")
+		t.Run("if invalid states", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
 
-		prj := adb.AddProjector(NewQName("test", "projector"))
+			prj := adb.AddProjector(prjName)
 
-		require.Panics(func() { prj.States().Add(NullQName) },
-			require.Is(ErrMissedError))
-		require.Panics(func() { prj.States().Add(NewQName("naked", "🔫")) },
-			require.Is(ErrInvalidError), require.Has("naked.🔫"))
-		require.Panics(func() { prj.States().Add(sysRecords, NewQName("naked", "🔫")) },
-			require.Is(ErrInvalidError), require.Has("🔫"))
-		require.Panics(func() { prj.States().SetComment(NewQName("unknown", "storage"), "comment") },
-			require.Is(ErrNotFoundError), require.Has("unknown.storage"))
-	})
+			require.Panics(func() { prj.States().Add(NullQName) },
+				require.Is(ErrMissedError))
+			require.Panics(func() { prj.States().Add(NewQName("naked", "🔫")) },
+				require.Is(ErrInvalidError), require.Has("naked.🔫"))
+			require.Panics(func() { prj.States().Add(sysRecords, NewQName("naked", "🔫")) },
+				require.Is(ErrInvalidError), require.Has("🔫"))
+			require.Panics(func() { prj.States().SetComment(NewQName("unknown", "storage"), "comment") },
+				require.Is(ErrNotFoundError), require.Has("unknown.storage"))
+		})
 
-	t.Run("should be panics while build intents", func(t *testing.T) {
-		adb := New()
-		adb.AddPackage("test", "test.com/test")
+		t.Run("if invalid intents", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
 
-		prj := adb.AddProjector(NewQName("test", "projector"))
+			prj := adb.AddProjector(prjName)
 
-		require.Panics(func() { prj.Intents().Add(NullQName) },
-			require.Is(ErrMissedError))
-		require.Panics(func() { prj.Intents().Add(NewQName("naked", "🔫")) },
-			require.Is(ErrInvalidError), require.Has("naked.🔫"))
-		require.Panics(func() { prj.Intents().Add(sysRecords, NewQName("naked", "🔫")) },
-			require.Is(ErrInvalidError), require.Has("🔫"))
-		require.Panics(func() { prj.Intents().SetComment(NewQName("unknown", "storage"), "comment") },
-			require.Is(ErrNotFoundError), require.Has("unknown.storage"))
-	})
+			require.Panics(func() { prj.Intents().Add(NullQName) },
+				require.Is(ErrMissedError))
+			require.Panics(func() { prj.Intents().Add(NewQName("naked", "🔫")) },
+				require.Is(ErrInvalidError), require.Has("naked.🔫"))
+			require.Panics(func() { prj.Intents().Add(sysRecords, NewQName("naked", "🔫")) },
+				require.Is(ErrInvalidError), require.Has("🔫"))
+			require.Panics(func() { prj.Intents().SetComment(NewQName("unknown", "storage"), "comment") },
+				require.Is(ErrNotFoundError), require.Has("unknown.storage"))
+		})
 
-	t.Run("should be panics while build events", func(t *testing.T) {
-		adb := New()
-		adb.AddPackage("test", "test.com/test")
+		t.Run("if invalid events", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(NewQName("test", "workspace"))
+			wsb := adb.AddWorkspace(wsName)
 
-		prj := adb.AddProjector(NewQName("test", "projector"))
+			prj := adb.AddProjector(prjName)
 
-		require.Panics(func() { prj.Events().Add(NullQName) },
-			require.Is(ErrMissedError))
-		require.Panics(func() { prj.Events().Add(NewQName("test", "unknown")) },
-			require.Is(ErrNotFoundError), require.Has("test.unknown"))
-		require.Panics(func() { prj.Events().Add(QNameANY) },
-			require.Is(ErrUnsupportedError), require.Has("ANY"))
-		require.Panics(func() { prj.Events().SetComment(NewQName("test", "unknown"), "comment") },
-			require.Is(ErrNotFoundError), require.Has("test.unknown"))
+			require.Panics(func() { prj.Events().Add(NullQName) },
+				require.Is(ErrMissedError))
+			require.Panics(func() { prj.Events().Add(NewQName("test", "unknown")) },
+				require.Is(ErrNotFoundError), require.Has("test.unknown"))
+			require.Panics(func() { prj.Events().Add(QNameANY) },
+				require.Is(ErrUnsupportedError), require.Has("ANY"))
+			require.Panics(func() { prj.Events().SetComment(NewQName("test", "unknown"), "comment") },
+				require.Is(ErrNotFoundError), require.Has("test.unknown"))
 
-		t.Run("panic if event is incompatible with type", func(t *testing.T) {
-			_ = ws.AddCRecord(recName)
-			_ = adb.AddObject(objName)
-			_ = adb.AddCommand(cmdName).SetParam(objName)
+			t.Run("if event incompatible with type", func(t *testing.T) {
+				_ = wsb.AddCRecord(recName)
+				_ = wsb.AddObject(objName)
+				_ = adb.AddCommand(cmdName).SetParam(objName)
 
-			require.Panics(func() { prj.Events().Add(prjName, ProjectorEventKind_Execute) },
-				require.Is(ErrIncompatibleError), require.Has("Execute"))
-			require.Panics(func() { prj.Events().Add(recName, ProjectorEventKind_Execute) },
-				require.Is(ErrIncompatibleError), require.Has("Execute"))
-			require.Panics(func() { prj.Events().Add(objName, ProjectorEventKind_Update) },
-				require.Is(ErrIncompatibleError), require.Has("Update"))
-			require.Panics(func() { prj.Events().Add(cmdName, ProjectorEventKind_ExecuteWithParam) },
-				require.Is(ErrIncompatibleError), require.Has("ExecuteWith"))
+				require.Panics(func() { prj.Events().Add(prjName, ProjectorEventKind_Execute) },
+					require.Is(ErrIncompatibleError), require.Has("Execute"))
+				require.Panics(func() { prj.Events().Add(recName, ProjectorEventKind_Execute) },
+					require.Is(ErrIncompatibleError), require.Has("Execute"))
+				require.Panics(func() { prj.Events().Add(objName, ProjectorEventKind_Update) },
+					require.Is(ErrIncompatibleError), require.Has("Update"))
+				require.Panics(func() { prj.Events().Add(cmdName, ProjectorEventKind_ExecuteWithParam) },
+					require.Is(ErrIncompatibleError), require.Has("ExecuteWith"))
+			})
 		})
 	})
 }

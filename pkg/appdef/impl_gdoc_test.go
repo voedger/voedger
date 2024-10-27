@@ -19,7 +19,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 	wsName := NewQName("test", "workspace")
 	docName, recName := NewQName("test", "doc"), NewQName("test", "rec")
 
-	t.Run("must be ok to add document", func(t *testing.T) {
+	t.Run("should be ok to add document", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
@@ -27,28 +27,28 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 		doc := ws.AddGDoc(docName)
 
-		t.Run("must be ok to add doc fields", func(t *testing.T) {
+		t.Run("should be ok to add doc fields", func(t *testing.T) {
 			doc.
 				AddField("f1", DataKind_int64, true).
 				AddField("f2", DataKind_string, false)
 		})
 
-		t.Run("must be ok to add child", func(t *testing.T) {
+		t.Run("should be ok to add child", func(t *testing.T) {
 			rec := ws.AddGRecord(recName)
 			doc.AddContainer("rec", recName, 0, Occurs_Unbounded)
 
-			t.Run("must be ok to add rec fields", func(t *testing.T) {
+			t.Run("should be ok to add rec fields", func(t *testing.T) {
 				rec.
 					AddField("f1", DataKind_int64, true).
 					AddField("f2", DataKind_string, false)
 			})
 		})
 
-		t.Run("must be ok to make doc abstract", func(t *testing.T) {
+		t.Run("should be ok to make doc abstract", func(t *testing.T) {
 			doc.SetAbstract()
 		})
 
-		t.Run("must be ok to build", func(t *testing.T) {
+		t.Run("should be ok to build", func(t *testing.T) {
 			a, err := adb.Build()
 			require.NoError(err)
 			require.NotNil(a)
@@ -63,7 +63,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 	testWithGDoc := func(tested IWithGDocs) {
 
-		t.Run("must be ok to find builded doc", func(t *testing.T) {
+		t.Run("should be ok to find builded doc", func(t *testing.T) {
 			doc := tested.GDoc(docName)
 			require.Equal(TypeKind_GDoc, doc.Kind())
 			require.Equal(app.Type(docName), doc)
@@ -84,7 +84,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 			require.Equal(recName, doc.Container("rec").QName())
 			require.Equal(TypeKind_GRecord, doc.Container("rec").Type().Kind())
 
-			t.Run("must be ok to find builded record", func(t *testing.T) {
+			t.Run("should be ok to find builded record", func(t *testing.T) {
 				rec := tested.GRecord(recName)
 				require.Equal(TypeKind_GRecord, rec.Kind())
 				require.Equal(app.Type(recName), rec)

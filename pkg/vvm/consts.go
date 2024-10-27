@@ -16,7 +16,7 @@ import (
 const (
 	DefaultNumCommandProcessors          istructs.NumCommandProcessors = 10
 	DefaultNumQueryProcessors            istructs.NumQueryProcessors   = 10  // <=0 -> 1 query processor will exist anyway
-	DefaultQuotasChannelsFactor                                        = 100 // Quotas.Channels will be NumCommandProcessors * DefaultQuotasFactor
+	DefaultQuotasChannelsFactor                                        = 1000 // Quotas.Channels will be NumCommandProcessors * DefaultQuotasChannelsFactor
 	DefaultQuotasChannelsPerSubject                                    = 50
 	DefaultQuotasSubscriptionsFactor                                   = 1000 // Quotas.Subscriptions will be NumCommandProcessors * DefaultQuotasSubscriptionsFactor
 	DefaultQuotasSubscriptionsPerSubject                               = 100

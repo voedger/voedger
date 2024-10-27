@@ -79,7 +79,9 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 
 		cfgs.AddBuiltInAppConfig(appName, adb).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-		adb.AddObject(appdef.NewQName("test", "obj")).
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		wsb.AddObject(appdef.NewQName("test", "obj")).
 			AddContainer("unknown", appdef.NewQName("test", "unknown"), 0, 1) // <- error here: reference to unknown element type
 
 		_, storageProvider := teststore.New(appName)
@@ -107,7 +109,8 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 					func() appdef.IAppDefBuilder {
 						adb := appdef.New()
 						adb.AddPackage("test", "test.com/test")
-						adb.AddObject(appdef.NewQName("test", "obj")).
+						wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+						wsb.AddObject(appdef.NewQName("test", "obj")).
 							AddContainer("unknown", appdef.NewQName("test", "unknown"), 0, 1) // <- error here: reference to unknown element type
 						return adb
 					}())

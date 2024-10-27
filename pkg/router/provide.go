@@ -7,12 +7,12 @@ package router
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/crypto/acme/autocert"
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
@@ -63,22 +63,15 @@ func Provide(vvmCtx context.Context, rp RouterParams, aBusTimeout time.Duration,
 	}
 
 	// handle Lets Encrypt callback over 80 port - only port 80 allowed
+	filteringLogger := log.New(&filteringWriter{log.Default().Writer()}, log.Default().Prefix(), log.Default().Flags())
 	acmeService := &acmeService{
 		Server: http.Server{
 			Addr:         ":80",
 			ReadTimeout:  DefaultACMEServerReadTimeout,
 			WriteTimeout: DefaultACMEServerWriteTimeout,
 			Handler:      crtMgr.HTTPHandler(nil),
+			ErrorLog:     filteringLogger,
 		},
-	}
-	acmeServiceHadler := crtMgr.HTTPHandler(nil)
-	if logger.IsVerbose() {
-		acmeService.Handler = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-			logger.Verbose("acme server request:", r.Method, r.Host, r.RemoteAddr, r.RequestURI, r.URL.String())
-			acmeServiceHadler.ServeHTTP(rw, r)
-		})
-	} else {
-		acmeService.Handler = acmeServiceHadler
 	}
 	return httpsService, acmeService, adminSrv
 }

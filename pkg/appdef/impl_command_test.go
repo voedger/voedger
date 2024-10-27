@@ -15,15 +15,18 @@ func Test_AppDef_AddCommand(t *testing.T) {
 	require := require.New(t)
 
 	var app IAppDef
+	wsName := NewQName("test", "workspace")
 	cmdName, parName, unlName, resName := NewQName("test", "cmd"), NewQName("test", "par"), NewQName("test", "unl"), NewQName("test", "res")
 
 	t.Run("must be ok to add command", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		_ = adb.AddObject(parName)
-		_ = adb.AddObject(unlName)
-		_ = adb.AddObject(resName)
+		wsb := adb.AddWorkspace(wsName)
+
+		_ = wsb.AddObject(parName)
+		_ = wsb.AddObject(unlName)
+		_ = wsb.AddObject(resName)
 
 		cmd := adb.AddCommand(cmdName)
 
@@ -107,7 +110,8 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		testName := NewQName("test", "dupe")
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
-		adb.AddObject(testName)
+		wsb := adb.AddWorkspace(NewQName("test", "workspace"))
+		wsb.AddObject(testName)
 		require.Panics(func() { adb.AddCommand(testName) },
 			require.Is(ErrAlreadyExistsError),
 			require.Has(testName.String()))
@@ -147,38 +151,36 @@ func Test_CommandValidate(t *testing.T) {
 
 	adb := New()
 	adb.AddPackage("test", "test.com/test")
+	wsb := adb.AddWorkspace(NewQName("test", "workspace"))
 	obj := NewQName("test", "obj")
-	_ = adb.AddObject(obj)
-	bad := NewQName("test", "workspace")
-	_ = adb.AddWorkspace(bad)
+	_ = wsb.AddObject(obj)
+	bad := NewQName("test", "job")
+	adb.AddJob(bad).SetCronSchedule("@hourly")
 	unknown := NewQName("test", "unknown")
 
 	cmd := adb.AddCommand(NewQName("test", "cmd"))
 
-	t.Run("errors in parameter", func(t *testing.T) {
-		t.Run("must error if parameter name is unknown", func(t *testing.T) {
+	t.Run("should be errors", func(t *testing.T) {
+		t.Run("if parameter name is unknown", func(t *testing.T) {
 			cmd.SetParam(unknown)
 			_, err := adb.Build()
 			require.Error(err, require.Is(ErrNotFoundError), require.Has(unknown))
 		})
 
-		t.Run("must error if deprecated parameter type", func(t *testing.T) {
+		t.Run("if deprecated parameter type", func(t *testing.T) {
 			cmd.SetParam(bad)
 			_, err := adb.Build()
 			require.Error(err, require.Is(ErrInvalidError), require.Has(bad))
 		})
 
 		cmd.SetParam(obj)
-	})
-
-	t.Run("errors in unlogged parameter", func(t *testing.T) {
-		t.Run("must error if unlogged parameter name is unknown", func(t *testing.T) {
+		t.Run("if unlogged parameter name is unknown", func(t *testing.T) {
 			cmd.SetUnloggedParam(unknown)
 			_, err := adb.Build()
 			require.Error(err, require.Is(ErrNotFoundError), require.Has(unknown))
 		})
 
-		t.Run("must error if deprecated unlogged parameter type", func(t *testing.T) {
+		t.Run("if deprecated unlogged parameter type", func(t *testing.T) {
 			cmd.SetUnloggedParam(bad)
 			_, err := adb.Build()
 			require.Error(err, require.Is(ErrInvalidError), require.Has(bad))
@@ -187,14 +189,14 @@ func Test_CommandValidate(t *testing.T) {
 		cmd.SetUnloggedParam(obj)
 	})
 
-	t.Run("errors in result", func(t *testing.T) {
-		t.Run("must error if result object name is unknown", func(t *testing.T) {
+	t.Run("should be errors in result", func(t *testing.T) {
+		t.Run("if result object name is unknown", func(t *testing.T) {
 			cmd.SetResult(unknown)
 			_, err := adb.Build()
 			require.Error(err, require.Is(ErrNotFoundError), require.Has(unknown))
 		})
 
-		t.Run("must error if deprecated unlogged parameter type", func(t *testing.T) {
+		t.Run("if deprecated unlogged parameter type", func(t *testing.T) {
 			cmd.SetResult(bad)
 			_, err := adb.Build()
 			require.Error(err, require.Is(ErrInvalidError), require.Has(bad))

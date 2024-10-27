@@ -6,6 +6,7 @@ package queryprocessor
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -14,6 +15,7 @@ import (
 func TestSendToBusOperator_DoAsync(t *testing.T) {
 	require := require.New(t)
 	counter := 0
+	errCh := make(chan error, 1)
 	operator := SendToBusOperator{
 		rs: testResultSenderClosable{
 			sendElement: func(name string, element interface{}) (err error) {
@@ -25,6 +27,7 @@ func TestSendToBusOperator_DoAsync(t *testing.T) {
 			},
 		},
 		metrics: &testMetrics{},
+		errCh:   errCh,
 	}
 	work := rowsWorkpiece{outputRow: &testOutputRow{values: []interface{}{"hello world"}}}
 
@@ -34,4 +37,29 @@ func TestSendToBusOperator_DoAsync(t *testing.T) {
 	require.Equal(work, outWork)
 	require.NoError(err)
 	require.Equal(1, counter)
+}
+
+func TestSendToBusOperator_OnError(t *testing.T) {
+	require := require.New(t)
+	errCh := make(chan error, 1)
+	testError := errors.New("test error")
+	operator := SendToBusOperator{
+		rs: testResultSenderClosable{
+			sendElement: func(name string, element interface{}) (err error) {
+				return testError
+			},
+			startArraySection: func(sectionType string, path []string) {},
+		},
+		metrics: &testMetrics{},
+		errCh:   errCh,
+	}
+
+	operator.OnError(context.Background(), testError)
+
+	select {
+	case err := <-errCh:
+		require.ErrorIs(testError, err)
+	default:
+		t.Fail()
+	}
 }

@@ -15,6 +15,8 @@ func ExampleIAppDefBuilder_AddQuery() {
 
 	var app appdef.IAppDef
 
+	wsName := appdef.NewQName("test", "workspace")
+
 	qryName := appdef.NewQName("test", "query")
 	parName := appdef.NewQName("test", "param")
 	resName := appdef.NewQName("test", "res")
@@ -24,14 +26,16 @@ func ExampleIAppDefBuilder_AddQuery() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
+		wsb := adb.AddWorkspace(wsName)
+
 		qry := adb.AddQuery(qryName)
 		qry.SetEngine(appdef.ExtensionEngineKind_WASM)
 		qry.
 			SetParam(parName).
 			SetResult(resName)
 
-		_ = adb.AddObject(parName)
-		_ = adb.AddObject(resName)
+		_ = wsb.AddObject(parName)
+		_ = wsb.AddObject(resName)
 
 		app = adb.MustBuild()
 	}

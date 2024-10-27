@@ -15,6 +15,8 @@ func ExampleIAppDef_Functions() {
 
 	var app appdef.IAppDef
 
+	wsName := appdef.NewQName("test", "workspace")
+
 	cmdName := appdef.NewQName("test", "cmd")
 	parName := appdef.NewQName("test", "param")
 	resName := appdef.NewQName("test", "res")
@@ -25,6 +27,8 @@ func ExampleIAppDef_Functions() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
+		wsb := adb.AddWorkspace(wsName)
+
 		cmd := adb.AddCommand(cmdName)
 		cmd.SetEngine(appdef.ExtensionEngineKind_WASM)
 		cmd.
@@ -34,8 +38,8 @@ func ExampleIAppDef_Functions() {
 		query := adb.AddQuery(queryName)
 		query.SetResult(resName)
 
-		_ = adb.AddObject(parName)
-		_ = adb.AddObject(resName)
+		_ = wsb.AddObject(parName)
+		_ = wsb.AddObject(resName)
 
 		app = adb.MustBuild()
 	}

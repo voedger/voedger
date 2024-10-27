@@ -80,11 +80,12 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		appDef     appdef.IAppDef
 		resultMeta appdef.IObject
 	)
-	t.Run(" should be ok to build appDef and resultMeta", func(t *testing.T) {
+	t.Run("should be ok to build appDef and resultMeta", func(t *testing.T) {
 		adb := appdef.New()
-		adb.AddObject(qNamePosDepartment).
+		wsb := adb.AddWorkspace(qNameTestWS)
+		wsb.AddObject(qNamePosDepartment).
 			AddField("name", appdef.DataKind_string, false)
-		resBld := adb.AddObject(qNamePosDepartmentResult)
+		resBld := wsb.AddObject(qNamePosDepartmentResult)
 		resBld.
 			AddField("id", appdef.DataKind_int64, true).
 			AddField("name", appdef.DataKind_string, false)
@@ -147,7 +148,8 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		},
 		close: func(err error) {},
 	}
-	processor := ProvideRowsProcessorFactory()(context.Background(), appDef, s, params, resultMeta, rs, &testMetrics{})
+	rowsProcessorErrCh := make(chan error, 1)
+	processor := ProvideRowsProcessorFactory()(context.Background(), appDef, s, params, resultMeta, rs, &testMetrics{}, rowsProcessorErrCh)
 
 	require.NoError(processor.SendAsync(work(1, "Cola", 10)))
 	require.NoError(processor.SendAsync(work(3, "White wine", 20)))
@@ -156,6 +158,11 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	processor.Close()
 
 	require.Equal(`[[[3,"White wine","Alcohol drinks"]]]`, result)
+	select {
+	case err := <-rowsProcessorErrCh:
+		t.Fatal(err)
+	default:
+	}
 }
 
 func deployTestAppWithSecretToken(require *require.Assertions,
@@ -177,12 +184,12 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	wsb.AddCDoc(qNameTestWSDescriptor)
 	wsb.SetDescriptor(qNameTestWSDescriptor)
 
-	adb.AddObject(qNameFindArticlesByModificationTimeStampRangeParams).
+	wsb.AddObject(qNameFindArticlesByModificationTimeStampRangeParams).
 		AddField("from", appdef.DataKind_int64, false).
 		AddField("till", appdef.DataKind_int64, false)
 	wsb.AddCDoc(qNameDepartment).
 		AddField("name", appdef.DataKind_string, true)
-	adb.AddObject(qNameArticle).
+	wsb.AddObject(qNameArticle).
 		AddField("sys.ID", appdef.DataKind_RecordID, true).
 		AddField("name", appdef.DataKind_string, true).
 		AddField("id_department", appdef.DataKind_int64, true)
@@ -195,14 +202,12 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	wsDescBuilder.SetSingleton()
 
 	adb.AddQuery(qNameFunction).SetParam(qNameFindArticlesByModificationTimeStampRangeParams).SetResult(appdef.NewQName("bo", "Article"))
-	adb.AddCommand(istructs.QNameCommandCUD)
-	adb.AddQuery(qNameQryDenied)
-	wsb.AddType(qNameDepartment)
-	wsb.AddType(qNameArticle)
-	wsb.AddType(qNameArticle)
-	wsb.AddType(authnz.QNameCDocWorkspaceDescriptor)
 	wsb.AddType(qNameFunction)
+
+	adb.AddCommand(istructs.QNameCommandCUD)
 	wsb.AddType(istructs.QNameCommandCUD)
+
+	adb.AddQuery(qNameQryDenied)
 	wsb.AddType(qNameQryDenied)
 
 	if prepareAppDef != nil {
@@ -422,9 +427,10 @@ func TestRawMode(t *testing.T) {
 		appDef     appdef.IAppDef
 		resultMeta appdef.IObject
 	)
-	t.Run(" should be ok to build appDef and resultMeta", func(t *testing.T) {
+	t.Run("should be ok to build appDef and resultMeta", func(t *testing.T) {
 		adb := appdef.New()
-		adb.AddObject(istructs.QNameRaw)
+		wsb := adb.AddWorkspace(qNameTestWS)
+		wsb.AddObject(istructs.QNameRaw)
 		app, err := adb.Build()
 		require.NoError(err)
 
@@ -442,7 +448,8 @@ func TestRawMode(t *testing.T) {
 		},
 		close: func(err error) {},
 	}
-	processor := ProvideRowsProcessorFactory()(context.Background(), appDef, &mockState{}, queryParams{}, resultMeta, rs, &testMetrics{})
+	rowsProcessorErrCh := make(chan error, 1)
+	processor := ProvideRowsProcessorFactory()(context.Background(), appDef, &mockState{}, queryParams{}, resultMeta, rs, &testMetrics{}, rowsProcessorErrCh)
 
 	require.NoError(processor.SendAsync(rowsWorkpiece{
 		object: &coreutils.TestObject{
@@ -456,6 +463,11 @@ func TestRawMode(t *testing.T) {
 		},
 	}))
 	processor.Close()
+	select {
+	case err := <-rowsProcessorErrCh:
+		t.Fatal(err)
+	default:
+	}
 
 	require.Equal(`[[["[accepted]"]]]`, result)
 }
@@ -1113,8 +1125,8 @@ func TestRateLimiter(t *testing.T) {
 	qName := appdef.NewQName(appdef.SysPackage, "myFunc")
 	appParts, cleanAppParts, appTokens, statelessResources := deployTestAppWithSecretToken(require,
 		func(appDef appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
-			appDef.AddObject(qNameMyFuncParams)
-			appDef.AddObject(qNameMyFuncResults).
+			wsb.AddObject(qNameMyFuncParams)
+			wsb.AddObject(qNameMyFuncResults).
 				AddField("fld", appdef.DataKind_string, false)
 			qry := appDef.AddQuery(qName)
 			qry.SetParam(qNameMyFuncParams).SetResult(qNameMyFuncResults)

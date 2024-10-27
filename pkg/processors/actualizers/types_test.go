@@ -43,11 +43,14 @@ func TestProjector_isAcceptable(t *testing.T) {
 	}
 	qNameDoc1 := appdef.NewQName("my", "doc1")
 	qNameDoc2 := appdef.NewQName("my", "doc2")
+
 	adb := appdef.New()
+	wsb := adb.AddWorkspace(appdef.NewQName(appdef.SysPackage, "workspace"))
 	qNameODoc := appdef.NewQName(appdef.SysPackage, "oDoc")
-	adb.AddODoc(qNameODoc)
+	wsb.AddODoc(qNameODoc)
 	appDef, err := adb.Build()
 	require.NoError(err)
+
 	tests := []struct {
 		name             string
 		triggeringQNames map[appdef.QName][]appdef.ProjectorEventKind
@@ -368,11 +371,11 @@ func TestProjector_isAcceptableGlobalDocs(t *testing.T) {
 	qNameWRecord := appdef.NewQName(appdef.SysPackage, "wRecord")
 	qNameORecord := appdef.NewQName(appdef.SysPackage, "oRecord")
 	wsb.AddCDoc(qNameCDoc)
-	adb.AddWDoc(qNameWDoc)
-	adb.AddODoc(qNameODoc)
+	wsb.AddWDoc(qNameWDoc)
+	wsb.AddODoc(qNameODoc)
 	wsb.AddCRecord(qNameCRecord)
-	adb.AddWRecord(qNameWRecord)
-	adb.AddORecord(qNameORecord)
+	wsb.AddWRecord(qNameWRecord)
+	wsb.AddORecord(qNameORecord)
 	appDef, err := adb.Build()
 	require.NoError(err)
 

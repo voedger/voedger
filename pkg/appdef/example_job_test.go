@@ -24,7 +24,9 @@ func ExampleIAppDefBuilder_AddJob() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		v := adb.AddView(viewName)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		v := wsb.AddView(viewName)
 		v.Key().PartKey().AddDataField("id", appdef.SysData_RecordID)
 		v.Key().ClustCols().AddDataField("name", appdef.SysData_String)
 		v.Value().AddDataField("data", appdef.SysData_bytes, false, appdef.MaxLen(1024))

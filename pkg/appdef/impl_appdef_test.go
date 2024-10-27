@@ -28,17 +28,17 @@ func TestNew(t *testing.T) {
 
 	require.Equal(adb.AppDef(), app, "should be ok get AppDef after build")
 
-	t.Run("must ok to read sys package", func(t *testing.T) {
+	t.Run("should be ok to read sys package", func(t *testing.T) {
 		require.Equal([]string{SysPackage}, app.PackageLocalNames())
 		require.Equal(SysPackagePath, app.PackageFullPath(SysPackage))
 	})
 
-	t.Run("must ok to read sys types", func(t *testing.T) {
+	t.Run("should be ok to read sys types", func(t *testing.T) {
 		require.Equal(NullType, app.TypeByName(NullQName))
 		require.Equal(AnyType, app.TypeByName(QNameANY))
 	})
 
-	t.Run("must ok to read sys data types", func(t *testing.T) {
+	t.Run("should be ok to read sys data types", func(t *testing.T) {
 		require.Equal(SysData_RecordID, app.Data(SysData_RecordID).QName())
 		require.Equal(SysData_String, app.Data(SysData_String).QName())
 		require.Equal(SysData_bytes, app.Data(SysData_bytes).QName())
@@ -76,57 +76,61 @@ func Test_NullAppDef(t *testing.T) {
 	})
 }
 
-func testBreakable[T any](t *testing.T, name string, seq iter.Seq[T]) {
-	cnt := 0
-	for range seq {
-		cnt++
-		break
-	}
-	if cnt != 1 {
-		t.Errorf("range by %s should be breakable", name)
+func testBreakable[T any](t *testing.T, name string, seq ...iter.Seq[T]) {
+	for i, s := range seq {
+		t.Run(fmt.Sprintf("%s[%d]", name, i), func(t *testing.T) {
+			cnt := 0
+			for range s {
+				cnt++
+				break
+			}
+			if cnt != 1 {
+				t.Errorf("got %d iterations, expected 1", i)
+			}
+		})
 	}
 }
 
-func Test_AppDef_EnumerationBreakable(t *testing.T) {
+func Test_EnumsBreakable(t *testing.T) {
 	require := require.New(t)
 
 	adb := New()
 
 	wsName := NewQName("test", "workspace")
-	ws := adb.AddWorkspace(wsName)
+	wsb := adb.AddWorkspace(wsName)
 
-	ws.AddData(NewQName("test", "Data1"), DataKind_int64, NullQName)
-	ws.AddData(NewQName("test", "Data2"), DataKind_string, NullQName)
+	wsb.AddData(NewQName("test", "Data1"), DataKind_int64, NullQName)
+	wsb.AddData(NewQName("test", "Data2"), DataKind_string, NullQName)
 
-	ws.AddGDoc(NewQName("test", "GDoc1"))
-	ws.AddGDoc(NewQName("test", "GDoc2"))
-	ws.AddGRecord(NewQName("test", "GRecord1"))
-	ws.AddGRecord(NewQName("test", "GRecord2"))
+	wsb.AddGDoc(NewQName("test", "GDoc1"))
+	wsb.AddGDoc(NewQName("test", "GDoc2"))
+	wsb.AddGRecord(NewQName("test", "GRecord1"))
+	wsb.AddGRecord(NewQName("test", "GRecord2"))
 
-	ws.AddCDoc(NewQName("test", "CDoc1")).
+	wsb.AddCDoc(NewQName("test", "CDoc1")).
 		SetSingleton()
-	ws.AddCDoc(NewQName("test", "CDoc2")).
+	wsb.AddCDoc(NewQName("test", "CDoc2")).
 		SetSingleton()
-	ws.AddCRecord(NewQName("test", "CRecord1"))
-	ws.AddCRecord(NewQName("test", "CRecord2"))
+	wsb.AddCRecord(NewQName("test", "CRecord1"))
+	wsb.AddCRecord(NewQName("test", "CRecord2"))
 
-	adb.AddWDoc(NewQName("test", "WDoc1")).
+	wsb.AddWDoc(NewQName("test", "WDoc1")).
 		SetSingleton()
-	adb.AddWDoc(NewQName("test", "WDoc2")).
+	wsb.AddWDoc(NewQName("test", "WDoc2")).
 		SetSingleton()
-	adb.AddWRecord(NewQName("test", "WRecord1"))
-	adb.AddWRecord(NewQName("test", "WRecord2"))
+	wsb.AddWRecord(NewQName("test", "WRecord1"))
+	wsb.AddWRecord(NewQName("test", "WRecord2"))
 
-	adb.AddODoc(NewQName("test", "ODoc1"))
-	adb.AddODoc(NewQName("test", "ODoc2"))
-	adb.AddORecord(NewQName("test", "ORecord1"))
-	adb.AddORecord(NewQName("test", "ORecord2"))
+	wsb.AddODoc(NewQName("test", "ODoc1"))
+	wsb.AddODoc(NewQName("test", "ODoc2"))
+	wsb.AddORecord(NewQName("test", "ORecord1"))
+	wsb.AddORecord(NewQName("test", "ORecord2"))
 
-	adb.AddObject(NewQName("test", "Object1"))
-	adb.AddObject(NewQName("test", "Object2"))
+	wsb.AddObject(NewQName("test", "Object1"))
+	wsb.AddObject(NewQName("test", "Object2"))
 
 	for i := 1; i <= 2; i++ {
-		v := adb.AddView(NewQName("test", fmt.Sprintf("View%d", i)))
+		v := wsb.AddView(NewQName("test", fmt.Sprintf("View%d", i)))
 		v.Key().PartKey().AddField("pkf", DataKind_int64)
 		v.Key().ClustCols().AddField("ccf", DataKind_string)
 		v.Value().AddField("vf", DataKind_bytes, false)
@@ -168,35 +172,35 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 	app := adb.MustBuild()
 	require.NotNil(app)
 
-	t.Run("range enumeration should be breakable", func(t *testing.T) {
+	t.Run("should be breakable", func(t *testing.T) {
 		ws := app.Workspace(wsName)
 
-		testBreakable(t, "IAppDef.Types", app.Types)
-		testBreakable(t, "IWorkspace.Types", ws.Types)
+		testBreakable(t, "Types", app.Types, ws.Types)
 
-		testBreakable(t, "Structures", app.Structures)
-		testBreakable(t, "Records", app.Records)
+		testBreakable(t, "DataTypes", app.DataTypes, ws.DataTypes)
 
-		testBreakable(t, "IAppDef.DataTypes", app.DataTypes)
-		testBreakable(t, "IWorkspace.DataTypes", ws.DataTypes)
+		testBreakable(t, "GDocs", app.GDocs, ws.GDocs)
+		testBreakable(t, "GRecords", app.GRecords, ws.GRecords)
 
-		testBreakable(t, "IAppDef.GDocs", app.GDocs)
-		testBreakable(t, "IWorkspace.GDocs", ws.GDocs)
-		testBreakable(t, "IAppDef.GRecords", app.GRecords)
-		testBreakable(t, "IWorkspace.GRecords", ws.GRecords)
+		testBreakable(t, "CDocs", app.CDocs, ws.CDocs)
+		testBreakable(t, "CRecords", app.CRecords, ws.CRecords)
 
-		testBreakable(t, "IAppDef.CDocs", app.CDocs)
-		testBreakable(t, "IWorkspace.CDocs", ws.CDocs)
-		testBreakable(t, "IAppDef.CRecords", app.CRecords)
-		testBreakable(t, "IWorkspace.CRecords", ws.CRecords)
+		testBreakable(t, "WDocs", app.WDocs, ws.WDocs)
+		testBreakable(t, "WRecords", app.WRecords, ws.WRecords)
 
-		testBreakable(t, "WDocs", app.WDocs)
-		testBreakable(t, "WRecords", app.WRecords)
-		testBreakable(t, "Singletons", app.Singletons)
-		testBreakable(t, "ODocs", app.ODocs)
-		testBreakable(t, "ORecords", app.ORecords)
-		testBreakable(t, "Objects", app.Objects)
-		testBreakable(t, "View", app.Views)
+		testBreakable(t, "Singletons", app.Singletons, ws.Singletons)
+
+		testBreakable(t, "ODocs", app.ODocs, ws.ODocs)
+		testBreakable(t, "ORecords", app.ORecords, ws.ORecords)
+
+		testBreakable(t, "Records", app.Records, ws.Records)
+
+		testBreakable(t, "Objects", app.Objects, ws.Objects)
+
+		testBreakable(t, "Structures", app.Structures, ws.Structures)
+
+		testBreakable(t, "View", app.Views, ws.Views)
+
 		testBreakable(t, "Extensions", app.Extensions)
 		testBreakable(t, "Functions", app.Functions)
 		testBreakable(t, "Commands", app.Commands)
@@ -219,7 +223,7 @@ func Test_appDefBuilder_MustBuild(t *testing.T) {
 
 	t.Run("should panic if errors in builder", func(t *testing.T) {
 		adb := New()
-		adb.AddView(NewQName("test", "emptyView"))
+		adb.AddWorkspace(NewQName("test", "workspace")).AddView(NewQName("test", "emptyView"))
 
 		require.Panics(func() { _ = adb.MustBuild() },
 			require.Is(ErrMissedError),

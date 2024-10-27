@@ -17,14 +17,15 @@ type IAppDef interface {
 	IWithDataTypes
 	IWithSysDataTypes
 
-	IWithStructures
-	IWithRecords
 	IWithGDocs
 	IWithCDocs
 	IWithWDocs
-	IWithSingletons
 	IWithODocs
 	IWithObjects
+
+	IWithRecords
+	IWithSingletons
+	IWithStructures
 
 	IWithViews
 
@@ -47,12 +48,6 @@ type IAppDefBuilder interface {
 
 	IPackagesBuilder
 	IWorkspacesBuilder
-
-	IWDocsBuilder
-	IODocsBuilder
-	IObjectsBuilder
-
-	IViewsBuilder
 
 	ICommandsBuilder
 	IQueriesBuilder

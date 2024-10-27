@@ -23,7 +23,9 @@ func ExampleIFieldsBuilder_AddField() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		doc := adb.AddODoc(docName)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		doc := wsb.AddODoc(docName)
 		doc.
 			AddField("code", appdef.DataKind_string, true, appdef.MinLen(1), appdef.MaxLen(4), appdef.Pattern(`^\d+$`)).
 			SetFieldComment("code", "Code is string containing from one to four digits").

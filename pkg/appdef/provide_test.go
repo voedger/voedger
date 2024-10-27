@@ -15,9 +15,9 @@ func TestBasicUsage(t *testing.T) {
 	adb := New()
 	adb.AddPackage("test", "test.com/test")
 
-	ws := adb.AddWorkspace(NewQName("test", "workspace"))
+	wsb := adb.AddWorkspace(NewQName("test", "workspace"))
 
-	saleParamsDoc := adb.AddODoc(NewQName("test", "Sale"))
+	saleParamsDoc := wsb.AddODoc(NewQName("test", "Sale"))
 	saleParamsDoc.
 		AddField("Buyer", DataKind_string, true, MaxLen(100)).
 		AddField("Age", DataKind_int32, false).
@@ -27,21 +27,21 @@ func TestBasicUsage(t *testing.T) {
 	saleParamsDoc.
 		AddContainer("Basket", NewQName("test", "Basket"), 1, 1)
 
-	basketRec := adb.AddORecord(NewQName("test", "Basket"))
+	basketRec := wsb.AddORecord(NewQName("test", "Basket"))
 	basketRec.AddContainer("Good", NewQName("test", "Good"), 0, Occurs_Unbounded)
 
-	goodRec := adb.AddORecord(NewQName("test", "Good"))
+	goodRec := wsb.AddORecord(NewQName("test", "Good"))
 	goodRec.
 		AddField("Name", DataKind_string, true).
 		AddField("Code", DataKind_int64, true).
 		AddField("Weight", DataKind_float64, false)
 
-	saleSecureParamsObj := adb.AddObject(NewQName("test", "saleSecureArgs"))
+	saleSecureParamsObj := wsb.AddObject(NewQName("test", "saleSecureArgs"))
 	saleSecureParamsObj.
 		AddField("password", DataKind_string, true)
 
 	docName := NewQName("test", "photos")
-	photosDoc := ws.AddCDoc(docName)
+	photosDoc := wsb.AddCDoc(docName)
 	photosDoc.
 		AddField("Buyer", DataKind_string, true, MaxLen(100)).
 		AddField("Age", DataKind_int32, false).
@@ -49,13 +49,13 @@ func TestBasicUsage(t *testing.T) {
 		AddField("isHuman", DataKind_bool, false).
 		AddField("Photo", DataKind_bytes, false)
 
-	buyerView := adb.AddView(NewQName("test", "viewBuyerByHeight"))
+	buyerView := wsb.AddView(NewQName("test", "viewBuyerByHeight"))
 	buyerView.Key().PartKey().AddField("Height", DataKind_float32)
 	buyerView.Key().ClustCols().AddField("Buyer", DataKind_string, MaxLen(100))
 	buyerView.Value().AddRefField("BuyerID", true, docName)
 
 	buyerObjName := NewQName("test", "buyer")
-	buyerObj := adb.AddObject(buyerObjName)
+	buyerObj := wsb.AddObject(buyerObjName)
 	buyerObj.
 		AddField("Name", DataKind_string, true).
 		AddField("Age", DataKind_int32, false).
@@ -71,5 +71,4 @@ func TestBasicUsage(t *testing.T) {
 		require.NoError(err)
 		require.NotNil(appDef)
 	})
-
 }

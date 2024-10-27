@@ -22,26 +22,26 @@ func ExampleIAppDef_Structures() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
-		doc := ws.AddCDoc(docName)
+		doc := wsb.AddCDoc(docName)
 		doc.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 		doc.AddContainer("rec", recName, 0, appdef.Occurs_Unbounded)
 
-		rec := ws.AddCRecord(recName)
+		rec := wsb.AddCRecord(recName)
 		rec.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 
-		obj := adb.AddObject(objName)
+		obj := wsb.AddObject(objName)
 		obj.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 		obj.AddContainer("child", childName, 0, appdef.Occurs_Unbounded)
 
-		child := adb.AddObject(childName)
+		child := wsb.AddObject(childName)
 		child.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)

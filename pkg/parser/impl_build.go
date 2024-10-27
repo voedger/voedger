@@ -728,19 +728,19 @@ func (c *buildContext) pushDef(qname appdef.QName, kind appdef.TypeKind, current
 	var builder interface{}
 	switch kind {
 	case appdef.TypeKind_CDoc:
-		builder = wsb.AddCDoc(qname)
+		builder = wsb().AddCDoc(qname)
 	case appdef.TypeKind_CRecord:
-		builder = wsb.AddCRecord(qname)
+		builder = wsb().AddCRecord(qname)
 	case appdef.TypeKind_ODoc:
-		builder = c.adb.AddODoc(qname)
+		builder = wsb().AddODoc(qname)
 	case appdef.TypeKind_ORecord:
-		builder = c.adb.AddORecord(qname)
+		builder = wsb().AddORecord(qname)
 	case appdef.TypeKind_WDoc:
-		builder = c.adb.AddWDoc(qname)
+		builder = wsb().AddWDoc(qname)
 	case appdef.TypeKind_WRecord:
-		builder = c.adb.AddWRecord(qname)
+		builder = wsb().AddWRecord(qname)
 	case appdef.TypeKind_Object:
-		builder = c.adb.AddObject(qname)
+		builder = wsb().AddObject(qname)
 	case appdef.TypeKind_ViewRecord:
 		builder = c.adb.AddView(qname)
 	default:
