@@ -97,6 +97,7 @@ func IsSysField(n FieldName) bool {
 //   - IFields
 type fields struct {
 	app           *appDef
+	ws            *workspace
 	typeKind      TypeKind
 	fields        map[FieldName]interface{}
 	fieldsOrdered []IField
@@ -104,9 +105,10 @@ type fields struct {
 }
 
 // Makes new fields instance
-func makeFields(app *appDef, typeKind TypeKind) fields {
+func makeFields(app *appDef, ws *workspace, typeKind TypeKind) fields {
 	ff := fields{
 		app:           app,
+		ws:            ws,
 		typeKind:      typeKind,
 		fields:        make(map[FieldName]interface{}),
 		fieldsOrdered: make([]IField, 0),
@@ -160,7 +162,7 @@ func (ff *fields) addDataField(name FieldName, data QName, required bool, constr
 		panic(ErrTypeNotFound(data))
 	}
 	if len(constraints) > 0 {
-		d = newAnonymousData(ff.app, d.DataKind(), data, constraints...)
+		d = newAnonymousData(ff.app, ff.ws, d.DataKind(), data, constraints...)
 	}
 	f := newField(name, d, required)
 	ff.appendField(name, f)
@@ -172,7 +174,7 @@ func (ff *fields) addField(name FieldName, kind DataKind, required bool, constra
 		panic(ErrNotFound("system data type for data kind «%s»", kind.TrimString()))
 	}
 	if len(constraints) > 0 {
-		d = newAnonymousData(ff.app, d.DataKind(), d.QName(), constraints...)
+		d = newAnonymousData(ff.app, ff.ws, d.DataKind(), d.QName(), constraints...)
 	}
 	f := newField(name, d, required)
 	ff.appendField(name, f)

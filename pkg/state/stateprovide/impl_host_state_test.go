@@ -83,14 +83,12 @@ func mockedHostStateStructs() istructs.IAppStructs {
 	wsDesc.AddField(authnz.Field_WSKind, appdef.DataKind_bytes, false)
 	wsb.SetDescriptor(testWSDescriptorQName)
 
-	view := adb.AddView(testViewRecordQName1)
+	view := wsb.AddView(testViewRecordQName1)
 	view.Key().PartKey().AddField("pkFld", appdef.DataKind_int64)
 	view.Key().ClustCols().AddField("ccFld", appdef.DataKind_string)
 	view.Value().
 		AddField("vFld", appdef.DataKind_int64, false).
 		AddField(state.ColOffset, appdef.DataKind_int64, false)
-
-	wsb.AddType(testViewRecordQName1)
 
 	app := adb.MustBuild()
 

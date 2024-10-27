@@ -21,7 +21,7 @@ type workspace struct {
 
 func newWorkspace(app *appDef, name QName) *workspace {
 	ws := &workspace{
-		typ:   makeType(app, name, TypeKind_Workspace),
+		typ:   makeType(app, nil, name, TypeKind_Workspace),
 		types: make(map[QName]interface{}),
 	}
 	app.appendType(ws)
@@ -320,52 +320,44 @@ func (ws *workspace) WRecords(cb func(IWRecord) bool) {
 }
 
 func (ws *workspace) addCDoc(name QName) ICDocBuilder {
-	d := newCDoc(ws.app, name)
-	ws.types[name] = d
+	d := newCDoc(ws.app, ws, name)
 	return newCDocBuilder(d)
 }
 
 func (ws *workspace) addCRecord(name QName) ICRecordBuilder {
-	r := newCRecord(ws.app, name)
-	ws.types[name] = r
+	r := newCRecord(ws.app, ws, name)
 	return newCRecordBuilder(r)
 }
 
 func (ws *workspace) addData(name QName, kind DataKind, ancestor QName, constraints ...IConstraint) IDataBuilder {
-	d := newData(ws.app, name, kind, ancestor)
+	d := newData(ws.app, ws, name, kind, ancestor)
 	d.addConstraints(constraints...)
-	ws.app.appendType(d)
-	ws.types[name] = d
+	ws.appendType(d)
 	return newDataBuilder(d)
 }
 
 func (ws *workspace) addGDoc(name QName) IGDocBuilder {
-	d := newGDoc(ws.app, name)
-	ws.types[name] = d
+	d := newGDoc(ws.app, ws, name)
 	return newGDocBuilder(d)
 }
 
 func (ws *workspace) addGRecord(name QName) IGRecordBuilder {
-	r := newGRecord(ws.app, name)
-	ws.types[name] = r
+	r := newGRecord(ws.app, ws, name)
 	return newGRecordBuilder(r)
 }
 
 func (ws *workspace) addObject(name QName) IObjectBuilder {
-	o := newObject(ws.app, name)
-	ws.types[name] = o
+	o := newObject(ws.app, ws, name)
 	return newObjectBuilder(o)
 }
 
 func (ws *workspace) addODoc(name QName) IODocBuilder {
-	d := newODoc(ws.app, name)
-	ws.types[name] = d
+	d := newODoc(ws.app, ws, name)
 	return newODocBuilder(d)
 }
 
 func (ws *workspace) addORecord(name QName) IORecordBuilder {
-	r := newORecord(ws.app, name)
-	ws.types[name] = r
+	r := newORecord(ws.app, ws, name)
 	return newORecordBuilder(r)
 }
 
@@ -380,21 +372,30 @@ func (ws *workspace) addType(name QName) {
 }
 
 func (ws *workspace) addView(name QName) IViewBuilder {
-	v := newView(ws.app, name)
-	ws.types[name] = v
+	v := newView(ws.app, ws, name)
 	return newViewBuilder(v)
 }
 
 func (ws *workspace) addWDoc(name QName) IWDocBuilder {
-	d := newWDoc(ws.app, name)
-	ws.types[name] = d
+	d := newWDoc(ws.app, ws, name)
 	return newWDocBuilder(d)
 }
 
 func (ws *workspace) addWRecord(name QName) IWRecordBuilder {
-	r := newWRecord(ws.app, name)
-	ws.types[name] = r
+	r := newWRecord(ws.app, ws, name)
 	return newWRecordBuilder(r)
+}
+
+func (ws *workspace) appendType(t interface{}) {
+	ws.app.appendType(t)
+
+	typ := t.(IType)
+	name := typ.QName()
+
+	// do not check the validity or uniqueness of the name; this was checked by `*application.appendType (t)`
+
+	ws.types[name] = t
+	ws.typesOrdered = nil
 }
 
 func (ws *workspace) setDescriptor(q QName) {

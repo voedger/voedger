@@ -77,8 +77,9 @@ func ExampleIWorkspace() {
 	}
 
 	// Output:
-	// 1 Workspace «test.ws»
-	// overall: 1
+	// 1 Workspace «sys.Workspace»
+	// 2 Workspace «test.ws»
+	// overall: 2
 	// workspace "test.ws": TypeKind_Workspace
 	// workspace "test.ws" descriptor is "test.desc"
 	// - Type: "test.desc", kind: TypeKind_CDoc

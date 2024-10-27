@@ -115,10 +115,9 @@ func (s *eventService) getEvent() istructs.IPLogEvent { return s.event }
 
 func (s *eventService) getIAppStructs() istructs.IAppStructs { return s.appStructs }
 
-func provideViewDefImpl(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder, qname appdef.QName, buildFunc ViewTypeBuilder) {
-	builder := adb.AddView(qname)
+func provideViewDefImpl(_ appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder, qname appdef.QName, buildFunc ViewTypeBuilder) {
+	builder := wsb.AddView(qname)
 	if buildFunc != nil {
 		buildFunc(builder)
 	}
-	wsb.AddType(qname)
 }

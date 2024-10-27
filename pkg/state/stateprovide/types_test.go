@@ -99,17 +99,15 @@ func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
 	wsDesc.AddField(authnz.Field_WSKind, appdef.DataKind_bytes, false)
 	wsb.SetDescriptor(testWSDescriptorQName)
 
-	view := adb.AddView(testViewRecordQName1)
+	view := wsb.AddView(testViewRecordQName1)
 	view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
 	view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
 	view.Value().AddField("vk", appdef.DataKind_string, false)
-	wsb.AddType(testViewRecordQName1)
 
-	view = adb.AddView(testViewRecordQName2)
+	view = wsb.AddView(testViewRecordQName2)
 	view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
 	view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
 	view.Value().AddField("vk", appdef.DataKind_string, false)
-	wsb.AddType(testViewRecordQName2)
 
 	app, err := adb.Build()
 	require.NoError(t, err)

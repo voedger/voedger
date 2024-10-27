@@ -16,9 +16,9 @@ type rate struct {
 	scopes set.Set[RateScope]
 }
 
-func newRate(app *appDef, name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) *rate {
+func newRate(app *appDef, ws *workspace, name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) *rate {
 	r := &rate{
-		typ:    makeType(app, name, TypeKind_Rate),
+		typ:    makeType(app, ws, name, TypeKind_Rate),
 		count:  count,
 		period: period,
 		scopes: set.From(scopes...),
@@ -27,7 +27,7 @@ func newRate(app *appDef, name QName, count RateCount, period RatePeriod, scopes
 		r.scopes.Set(DefaultRateScopes...)
 	}
 	r.typ.comment.setComment(comment...)
-	app.appendType(r)
+	ws.appendType(r)
 	return r
 }
 
@@ -51,12 +51,12 @@ type limit struct {
 	rate IRate
 }
 
-func newLimit(app *appDef, name QName, on []QName, rate QName, comment ...string) *limit {
+func newLimit(app *appDef, ws *workspace, name QName, on []QName, rate QName, comment ...string) *limit {
 	if rate == NullQName {
 		panic(ErrMissed("rate name"))
 	}
 	l := &limit{
-		typ:  makeType(app, name, TypeKind_Limit),
+		typ:  makeType(app, ws, name, TypeKind_Limit),
 		on:   on,
 		rate: app.Rate(rate),
 	}
@@ -67,7 +67,7 @@ func newLimit(app *appDef, name QName, on []QName, rate QName, comment ...string
 		panic(ErrNotFound("rate «%v»", rate))
 	}
 	l.typ.comment.setComment(comment...)
-	app.appendType(l)
+	ws.appendType(l)
 	return l
 }
 
