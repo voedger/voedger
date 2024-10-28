@@ -73,6 +73,7 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 			obj, ok := typ.(IObject)
 			require.True(ok)
 			require.Equal(app.Object(objName), obj)
+			require.Equal(ws, obj.Workspace())
 
 			require.Equal(NullType, ws.Type(NewQName("unknown", "type")), "must be NullType if unknown type")
 		})
@@ -111,6 +112,42 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 			require.Panics(func() { ws.AddType(NewQName("unknown", "type")) },
 				require.Is(ErrNotFoundError), require.Has("unknown.type"))
 		})
+	})
+}
+
+func Test_AppDef_AlterWorkspace(t *testing.T) {
+	require := require.New(t)
+
+	wsName := NewQName("test", "ws")
+	objName := NewQName("test", "object")
+
+	var adb IAppDefBuilder
+
+	t.Run("should be ok to add workspace", func(t *testing.T) {
+		adb = New()
+		adb.AddPackage("test", "test.com/test")
+
+		_ = adb.AddWorkspace(wsName)
+	})
+
+	t.Run("should be ok to alter workspace", func(t *testing.T) {
+		wsb := adb.AlterWorkspace(wsName)
+		_ = wsb.AddObject(objName)
+	})
+
+	t.Run("should be panic to alter unknown workspace", func(t *testing.T) {
+		require.Panics(func() { _ = adb.AlterWorkspace(NewQName("test", "unknown")) })
+		require.Panics(func() { _ = adb.AlterWorkspace(objName) })
+	})
+
+	t.Run("should be ok to build altered workspace", func(t *testing.T) {
+		app, err := adb.Build()
+		require.NoError(err)
+
+		ws := app.Workspace(wsName)
+		require.NotNil(ws, "should be ok to find workspace in app")
+
+		require.NotNil(ws.Object(objName), "should be ok to find object in workspace")
 	})
 }
 

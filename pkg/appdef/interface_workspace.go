@@ -94,4 +94,10 @@ type IWorkspacesBuilder interface {
 	//   - if name is invalid,
 	//   - if type with name already exists.
 	AddWorkspace(QName) IWorkspaceBuilder
+
+	// Returns builder for altering existing workspace.
+	//
+	// # Panics:
+	//	 - if workspace with name does not exist.
+	AlterWorkspace(QName) IWorkspaceBuilder
 }

@@ -20,6 +20,7 @@ func Test_NullType(t *testing.T) {
 	require.Empty(NullType.CommentLines())
 
 	require.Nil(NullType.App())
+	require.Nil(NullType.Workspace())
 	require.Equal(NullQName, NullType.QName())
 	require.Equal(TypeKind_null, NullType.Kind())
 	require.False(NullType.IsSystem())
@@ -34,6 +35,7 @@ func Test_AnyTypes(t *testing.T) {
 	require.Empty(AnyType.CommentLines())
 
 	require.Nil(AnyType.App())
+	require.Nil(AnyType.Workspace())
 	require.Equal(QNameANY, AnyType.QName())
 	require.Equal(TypeKind_Any, AnyType.Kind())
 	require.True(AnyType.IsSystem())

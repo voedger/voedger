@@ -228,11 +228,13 @@ func Test_appDef_makeSysDataTypes(t *testing.T) {
 	require.NoError(err)
 
 	t.Run("must be ok to get system data types", func(t *testing.T) {
+		sysWS := app.Workspace(SysWorkspaceQName)
 		for k := DataKind_null + 1; k < DataKind_FakeLast; k++ {
 			d := app.SysData(k)
 			require.NotNil(d)
 			require.Equal(SysDataName(k), d.QName())
 			require.Equal(TypeKind_Data, d.Kind())
+			require.Equal(d.Workspace(), sysWS)
 			require.True(d.IsSystem())
 			require.Equal(k, d.DataKind())
 			require.Nil(d.Ancestor())

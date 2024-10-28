@@ -573,6 +573,14 @@ func (app *appDef) addWorkspace(name QName) IWorkspaceBuilder {
 	return newWorkspaceBuilder(ws)
 }
 
+func (app *appDef) alterWorkspace(name QName) IWorkspaceBuilder {
+	w := app.Workspace(name)
+	if w == nil {
+		panic(ErrNotFound("workspace «%v»", name))
+	}
+	return newWorkspaceBuilder(w.(*workspace))
+}
+
 func (app *appDef) appendACL(p *aclRule) {
 	app.acl = append(app.acl, p)
 }
@@ -700,6 +708,10 @@ func (ab *appDefBuilder) AddRate(name QName, count RateCount, period RatePeriod,
 func (ab *appDefBuilder) AddRole(name QName) IRoleBuilder { return ab.app.addRole(name) }
 
 func (ab *appDefBuilder) AddWorkspace(name QName) IWorkspaceBuilder { return ab.app.addWorkspace(name) }
+
+func (ab *appDefBuilder) AlterWorkspace(name QName) IWorkspaceBuilder {
+	return ab.app.alterWorkspace(name)
+}
 
 func (ab appDefBuilder) AppDef() IAppDef { return ab.app }
 
