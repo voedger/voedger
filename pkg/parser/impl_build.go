@@ -75,11 +75,11 @@ func supported(stmt interface{}) bool {
 func (c *buildContext) prepareWSBuilders() {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(w *WorkspaceStmt, ictx *iterateCtx) {
-			switch qname := schema.NewQName(w.Name); qname {
+			switch ws := schema.NewQName(w.Name); ws {
 			case appdef.SysWorkspaceQName:
-				c.wsBuilders[qname] = c.adb.AlterWorkspace(qname)
+				c.wsBuilders[ws] = c.adb.AlterWorkspace(ws)
 			default:
-				c.wsBuilders[qname] = c.adb.AddWorkspace(qname)
+				c.wsBuilders[ws] = c.adb.AddWorkspace(ws)
 			}
 		})
 	}
