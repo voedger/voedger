@@ -362,31 +362,25 @@ func (cmdProc *cmdProc) authenticate(_ context.Context, work pipeline.IWorkpiece
 	return
 }
 
+func getPrincipalsRoles(_ context.Context, work pipeline.IWorkpiece) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	for _, prn := range cmd.principals {
+		if prn.Kind != iauthnz.PrincipalKind_Role {
+			continue
+		}
+		cmd.roles = append(cmd.roles, prn.QName)
+	}
+	return nil
+}
+
 func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	req := iauthnz.AuthzRequest{
-		OperationKind: iauthnz.OperationKind_EXECUTE,
-		Resource:      cmd.cmdMes.QName(),
-	}
-	ok, err := cmdProc.authorizer.Authorize(cmd.appStructs, cmd.principals, req)
+	ok, _, err := cmd.appPart.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles)
 	if err != nil {
 		return err
 	}
 	if !ok {
-		roles := []appdef.QName{}
-		for _, prn := range cmd.principals {
-			if prn.Kind != iauthnz.PrincipalKind_Role {
-				continue
-			}
-			roles = append(roles, prn.QName)
-		}
-		ok, _, err := cmd.appPart.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, roles)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return coreutils.NewHTTPErrorf(http.StatusForbidden)
-		}
+		return coreutils.NewHTTPErrorf(http.StatusForbidden)
 	}
 	return nil
 }
@@ -682,31 +676,32 @@ func checkIsActiveInCUDs(_ context.Context, work pipeline.IWorkpiece) (err error
 func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	for _, parsedCUD := range cmd.parsedCUDs {
-		req := iauthnz.AuthzRequest{
-			OperationKind: parsedCUD.opKind,
-			Resource:      parsedCUD.qName,
-			Fields:        maps.Keys(parsedCUD.fields),
-		}
-		ok, err := cmdProc.authorizer.Authorize(cmd.appStructs, cmd.principals, req)
+		// req := iauthnz.AuthzRequest{
+		// 	OperationKind: parsedCUD.opKind,
+		// 	Resource:      parsedCUD.qName,
+		// 	Fields:        maps.Keys(parsedCUD.fields),
+		// }
+		// ok, err := cmdProc.authorizer.Authorize(cmd.appStructs, cmd.principals, req)
+		// if err != nil {
+		// 	return parsedCUD.xPath.Error(err)
+		// }
+		// if !ok {
+		// roles := []appdef.QName{}
+		// for _, prn := range cmd.principals {
+		// 	if prn.Kind != iauthnz.PrincipalKind_Role {
+		// 		continue
+		// 	}
+		// 	roles = append(roles, prn.QName)
+		// }
+		fields := maps.Keys(parsedCUD.fields)
+		ok, _, err := cmd.appPart.IsOperationAllowed(appdef.OperationKind_Insert, parsedCUD.qName, fields, cmd.roles)
 		if err != nil {
-			return parsedCUD.xPath.Error(err)
+			return err
 		}
 		if !ok {
-			roles := []appdef.QName{}
-			for _, prn := range cmd.principals {
-				if prn.Kind != iauthnz.PrincipalKind_Role {
-					continue
-				}
-				roles = append(roles, prn.QName)
-			}
-			ok, _, err := cmd.appPart.IsOperationAllowed(appdef.OperationKind_Insert, parsedCUD.qName, req.Fields, roles)
-			if err != nil {
-				return err
-			}
-			if !ok {
-				return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
-			}
+			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
 		}
+		// }
 	}
 	return
 }

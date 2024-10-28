@@ -74,6 +74,7 @@ type cmdWorkpiece struct {
 	syncProjectorsStart          time.Time
 	principals                   []iauthnz.Principal
 	principalPayload             payloads.PrincipalPayload
+	roles                        []appdef.QName
 	parsedCUDs                   []parsedCUD
 	wsDesc                       istructs.IRecord
 	hostStateProvider            *hostStateProvider

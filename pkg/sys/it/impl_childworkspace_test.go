@@ -149,14 +149,15 @@ func TestForeignAuthorization(t *testing.T) {
 		// issue an API token
 		as, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_test1_app1)
 		require.NoError(err)
-		apiToken, err := iauthnzimpl.IssueAPIToken(as.AppTokens(), time.Hour, []appdef.QName{appdef.NewQName("air", "SubscriptionReseller")}, childWS.WSID, payloads.PrincipalPayload{
-			Login:       parentWS.Owner.Name,
-			SubjectKind: istructs.SubjectKind_User,
-			ProfileWSID: parentWS.Owner.ProfileWSID,
-		})
+		apiToken, err := iauthnzimpl.IssueAPIToken(as.AppTokens(), time.Hour, []appdef.QName{appdef.NewQName("app1pkg", "SpecialAPITokenRole")},
+			childWS.WSID, payloads.PrincipalPayload{
+				Login:       parentWS.Owner.Name,
+				SubjectKind: istructs.SubjectKind_User,
+				ProfileWSID: parentWS.Owner.ProfileWSID,
+			})
 		require.NoError(err)
 
-		// API token has role.air.SubscriptionReseller, q.sys.Collection is allowed for that role according to the current ACL -> the request should be successful
+		// API token has role.app1pkg.SpecialAPITokenRole, q.sys.Collection is allowed for that role according to grants in vsql -> the request should be successful
 		vit.PostWS(childWS, "q.sys.Collection", body, coreutils.WithAuthorizeBy(apiToken))
 	})
 }

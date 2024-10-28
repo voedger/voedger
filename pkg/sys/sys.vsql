@@ -29,6 +29,11 @@ ABSTRACT WORKSPACE ProfileWS (
 	EXTENSION ENGINE BUILTIN (
 		QUERY RefreshPrincipalToken RETURNS RefreshPrincipalTokenResult;
 	);
+
+	GRANT ALL ON ALL TABLES TO WorkspaceOwner;
+	GRANT EXECUTE ON ALL QUERIES TO WorkspaceOwner;
+	GRANT EXECUTE ON ALL COMMANDS TO WorkspaceOwner;
+	GRANT SELECT ON ALL VIEWS TO WorkspaceOwner;
 );
 
 ALTERABLE WORKSPACE DeviceProfileWS INHERITS ProfileWS (
@@ -266,7 +271,7 @@ EXTENSION ENGINE BUILTIN (
 
 	STORAGE Logger(
 		/*
-		Key: 
+		Key:
 			LogLevel int32
 		Value
 			Message text

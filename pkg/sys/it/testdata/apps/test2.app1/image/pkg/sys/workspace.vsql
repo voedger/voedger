@@ -438,12 +438,15 @@ ABSTRACT WORKSPACE Workspace (
 	GRANT WorkspaceOwner TO WorkspaceDevice;
 
 	-- null auth policy
+	-- сделать только явное GRANT\REVOKE
+	-- область вилимости тэга - ws
 	GRANT ALL ON ALL TABLES WITH TAG WithoutAuthTag TO Everyone;
 	GRANT EXECUTE ON ALL QUERIES WITH TAG WithoutAuthTag TO Everyone;
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG WithoutAuthTag TO Everyone;
 	GRANT SELECT ON ALL VIEWS WITH TAG WithoutAuthTag TO Everyone;
 
 	-- everything is allowed to WorkspaceOwner
+
 	GRANT ALL ON ALL TABLES TO WorkspaceOwner;
 	GRANT EXECUTE ON ALL QUERIES TO WorkspaceOwner;
 	GRANT EXECUTE ON ALL COMMANDS TO WorkspaceOwner;

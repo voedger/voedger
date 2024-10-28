@@ -197,6 +197,15 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			return nil
 		}),
+		operator("get principals roles", func(ctx context.Context, qw *queryWork) (err error) {
+			for _, prn := range qw.principals {
+				if prn.Kind != iauthnz.PrincipalKind_Role {
+					continue
+				}
+				qw.roles = append(qw.roles, prn.QName)
+			}
+			return nil
+		}),
 		operator("check workspace active", func(ctx context.Context, qw *queryWork) (err error) {
 			for _, prn := range qw.principals {
 				if prn.Kind == iauthnz.PrincipalKind_Role && prn.QName == iauthnz.QNameRoleSystem && prn.WSID == qw.msg.WSID() {
@@ -237,30 +246,30 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
-			req := iauthnz.AuthzRequest{
-				OperationKind: iauthnz.OperationKind_EXECUTE,
-				Resource:      qw.msg.QName(),
-			}
-			ok, err := authz.Authorize(qw.appStructs, qw.principals, req)
+			// req := iauthnz.AuthzRequest{
+			// 	OperationKind: iauthnz.OperationKind_EXECUTE,
+			// 	Resource:      qw.msg.QName(),
+			// }
+			// ok, err := authz.Authorize(qw.appStructs, qw.principals, req)
+			// if err != nil {
+			// 	return err
+			// }
+			// if !ok {
+			// 	roles := []appdef.QName{}
+			// 	for _, prn := range qw.principals {
+			// 		if prn.Kind != iauthnz.PrincipalKind_Role {
+			// 			continue
+			// 		}
+			// 		roles = append(roles, prn.QName)
+			// 	}
+			ok, _, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
 			if err != nil {
 				return err
 			}
 			if !ok {
-				roles := []appdef.QName{}
-				for _, prn := range qw.principals {
-					if prn.Kind != iauthnz.PrincipalKind_Role {
-						continue
-					}
-					roles = append(roles, prn.QName)
-				}
-				ok, _, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, roles)
-				if err != nil {
-					return err
-				}
-				if !ok {
-					return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
-				}
+				return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
 			}
+			// }
 			return nil
 		}),
 		operator("unmarshal request", func(ctx context.Context, qw *queryWork) (err error) {
@@ -358,41 +367,22 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				// otherwise each field is considered as allowed if EXECUTE ON QUERY is allowed
 				return nil
 			}
-			req := iauthnz.AuthzRequest{
-				OperationKind: iauthnz.OperationKind_SELECT,
-				Resource:      qw.msg.QName(),
-			}
+			requestedfields := []string{}
 			for _, elem := range qw.queryParams.Elements() {
 				for _, resultField := range elem.ResultFields() {
-					req.Fields = append(req.Fields, resultField.Field())
+					requestedfields = append(requestedfields, resultField.Field())
 				}
 			}
-			if len(req.Fields) == 0 {
-				return nil
-			}
-			ok, err := authz.Authorize(qw.appStructs, qw.principals, req)
+			ok, allowedFields, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, qw.resultType.QName(), requestedfields, qw.roles)
 			if err != nil {
 				return err
 			}
 			if !ok {
-				roles := []appdef.QName{}
-				for _, prn := range qw.principals {
-					if prn.Kind != iauthnz.PrincipalKind_Role {
-						continue
-					}
-					roles = append(roles, prn.QName)
-				}
-				ok, allowedFields, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, qw.resultType.QName(), req.Fields, roles)
-				if err != nil {
-					return err
-				}
-				if !ok {
+				return coreutils.NewSysError(http.StatusForbidden)
+			}
+			for _, requestedField := range requestedfields {
+				if !slices.Contains(allowedFields, requestedField) {
 					return coreutils.NewSysError(http.StatusForbidden)
-				}
-				for _, reqField := range req.Fields {
-					if !slices.Contains(allowedFields, reqField) {
-						return coreutils.NewSysError(http.StatusForbidden)
-					}
 				}
 			}
 			return nil
@@ -429,6 +419,7 @@ type queryWork struct {
 	metrics            IMetrics
 	principals         []iauthnz.Principal
 	principalPayload   payloads.PrincipalPayload
+	roles              []appdef.QName
 	secretReader       isecrets.ISecretReader
 	iWorkspace         appdef.IWorkspace
 	iQuery             appdef.IQuery

@@ -577,18 +577,18 @@ ALTERABLE WORKSPACE test_wsWS (
 
 	ROLE Updated; -- need for invite tests
 
+	-- need to test foreign auth using APIToken
+	ROLE SpecialAPITokenRole;
+	GRANT EXECUTE ON QUERY sys.Collection TO SpecialAPITokenRole;
+	GRANT SELECT ON TABLE articles TO SpecialAPITokenRole;
+
 	GRANT ALL ON ALL TABLES TO WorkspaceOwner;
 	GRANT EXECUTE ON ALL QUERIES TO WorkspaceOwner;
 	GRANT EXECUTE ON ALL COMMANDS TO WorkspaceOwner;
 	GRANT SELECT ON ALL VIEWS TO WorkspaceOwner;
 
-	GRANT WorkspaceOwner TO ProfileOwner;
-	GRANT WorkspaceOwner TO WorkspaceDevice;
-
 	REVOKE ALL ON ALL TABLES WITH TAG DenyForAllTag FROM Everyone;
 	REVOKE EXECUTE ON ALL COMMANDS WITH TAG DenyForAllTag FROM Everyone;
 	REVOKE EXECUTE ON ALL QUERIES WITH TAG DenyForAllTag FROM Everyone;
 	REVOKE SELECT ON ALL VIEWS WITH TAG DenyForAllTag FROM Everyone;
-
-
 );

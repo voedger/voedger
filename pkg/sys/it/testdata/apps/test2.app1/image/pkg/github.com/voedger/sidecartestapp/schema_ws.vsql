@@ -18,4 +18,9 @@ WORKSPACE test2app1WS (
 		COMMAND TestCmdEcho(TestEchoRequest) RETURNS TestEchoResult;
 		JOB Job1_sidecar '* * * * *';
 	);
+
+	GRANT ALL ON ALL TABLES TO WorkspaceOwner;
+	GRANT EXECUTE ON ALL QUERIES TO WorkspaceOwner;
+	GRANT EXECUTE ON ALL COMMANDS TO WorkspaceOwner;
+	GRANT SELECT ON ALL VIEWS TO WorkspaceOwner;
 );
