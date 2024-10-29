@@ -431,7 +431,7 @@ ABSTRACT WORKSPACE Workspace (
 	ROLE ProfileOwner; -- assigned if the user or device works in its profile
 	ROLE WorkspaceDevice; -- assigned if the device MAY in a workspace that is owned by its profile
 	ROLE WorkspaceOwner; -- assigned if user works in a workspace that is owned by his profile
-	ROLE ClusterAdmin; -- TODO: not used for now
+	ROLE ClusterAdmin; -- TODO: not used for now. Going to allow exec c.cluster.DeployApp to this role
 
 	-- profile owner is workspace owner
 	GRANT WorkspaceOwner TO ProfileOwner;
