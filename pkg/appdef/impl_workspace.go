@@ -14,18 +14,33 @@ import (
 type workspace struct {
 	typ
 	withAbstract
-	types        map[QName]interface{}
-	typesOrdered []interface{}
-	desc         ICDoc
+	ancestors        map[QName]IWorkspace
+	ancestorsOrdered QNames
+	types            map[QName]interface{}
+	typesOrdered     []interface{}
+	desc             ICDoc
 }
 
 func newWorkspace(app *appDef, name QName) *workspace {
 	ws := &workspace{
-		typ:   makeType(app, nil, name, TypeKind_Workspace),
-		types: make(map[QName]interface{}),
+		typ:       makeType(app, nil, name, TypeKind_Workspace),
+		ancestors: make(map[QName]IWorkspace),
+		types:     make(map[QName]interface{}),
 	}
+
+	if name != SysWorkspaceQName {
+		ws.ancestors[SysWorkspaceQName] = app.Workspace(SysWorkspaceQName)
+	}
+
 	app.appendType(ws)
 	return ws
+}
+
+func (ws *workspace) Ancestors() []QName {
+	if len(ws.ancestorsOrdered) != len(ws.ancestors) {
+		ws.ancestorsOrdered = QNamesFromMap(ws.ancestors)
+	}
+	return ws.ancestorsOrdered
 }
 
 func (ws *workspace) CDoc(name QName) ICDoc {
@@ -118,6 +133,20 @@ func (ws *workspace) GRecords(cb func(IGRecord) bool) {
 			}
 		}
 	}
+}
+
+func (ws *workspace) Inherits(anc QName) bool {
+	switch anc {
+	case SysWorkspaceQName, ws.QName():
+		return true
+	default:
+		for _, a := range ws.ancestors {
+			if a.Inherits(anc) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (ws *workspace) Object(name QName) IObject {
@@ -240,6 +269,11 @@ func (ws *workspace) Type(name QName) IType {
 func (ws *workspace) TypeByName(name QName) IType {
 	if t, ok := ws.types[name]; ok {
 		return t.(IType)
+	}
+	for _, a := range ws.ancestors {
+		if t := a.TypeByName(name); t != nil {
+			return t
+		}
 	}
 	return nil
 }
@@ -398,6 +432,27 @@ func (ws *workspace) appendType(t interface{}) {
 	ws.typesOrdered = nil
 }
 
+func (ws *workspace) setAncestors(name QName, names ...QName) {
+	add := func(n QName) {
+		anc := ws.app.Workspace(n)
+		if anc == nil {
+			panic(ErrNotFound("Workspace «%v»", n))
+		}
+		if anc.Inherits(ws.QName()) {
+			panic(ErrUnsupported("Circular inheritance is not allowed. Workspace «%v» inherits from «%v»", n, ws))
+		}
+		ws.ancestors[n] = anc
+	}
+
+	clear(ws.ancestors)
+	ws.ancestorsOrdered = nil
+
+	add(name)
+	for _, n := range names {
+		add(n)
+	}
+}
+
 func (ws *workspace) setDescriptor(q QName) {
 	old := ws.Descriptor()
 	if old == q {
@@ -425,10 +480,8 @@ func (ws *workspace) setDescriptor(q QName) {
 
 // Returns type by name and kind. If type is not found then returns nil.
 func (ws *workspace) typeByKind(name QName, kind TypeKind) interface{} {
-	if t, ok := ws.types[name]; ok {
-		if t.(IType).Kind() == kind {
-			return t
-		}
+	if t := ws.Type(name); t.Kind() == kind {
+		return t
 	}
 	return nil
 }
@@ -497,6 +550,11 @@ func (wb *workspaceBuilder) AddWDoc(name QName) IWDocBuilder {
 
 func (wb *workspaceBuilder) AddWRecord(name QName) IWRecordBuilder {
 	return wb.workspace.addWRecord(name)
+}
+
+func (wb *workspaceBuilder) SetAncestors(name QName, names ...QName) IWorkspaceBuilder {
+	wb.workspace.setAncestors(name, names...)
+	return wb
 }
 
 func (wb *workspaceBuilder) SetDescriptor(q QName) IWorkspaceBuilder {

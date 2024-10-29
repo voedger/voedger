@@ -6,6 +6,8 @@
 package appdef
 
 import (
+	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
@@ -268,5 +270,194 @@ func Test_AppDef_AddWorkspaceAbstract(t *testing.T) {
 
 		_, err := adb.Build()
 		require.ErrorIs(err, ErrIncompatibleError)
+	})
+}
+
+func Test_WorkspaceInheritance(t *testing.T) {
+	const wsCount = 8
+
+	//                 +<-- test.ws0 <-- test.ws1 <-- test.ws2
+	//                 |
+	// sys.Workspace <-+
+	//                 |                + <-- test.ws4 <-- test.ws6 <--+
+	//                 +<-- test.ws3 <--+                              + <-- test.ws7
+	//                                  + <-- test.ws5 <---------------+
+
+	require := require.New(t)
+
+	wsName := func(idx int) QName { return NewQName("test", fmt.Sprintf("ws%d", idx)) }
+	objName := func(idx int) QName { return NewQName("test", fmt.Sprintf("obj%d", idx)) }
+
+	testADB := func() IAppDefBuilder {
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+
+		newWS := func(idx int, anc []int) {
+			ws := adb.AddWorkspace(wsName(idx))
+			if len(anc) > 0 {
+				ancNames := make([]QName, len(anc), len(anc))
+				for i, a := range anc {
+					ancNames[i] = wsName(a)
+				}
+				ws.SetAncestors(ancNames[0], ancNames[1:]...)
+			}
+			_ = ws.AddObject(objName(idx))
+		}
+
+		newWS(0, nil)
+		newWS(1, []int{0})
+		newWS(2, []int{1})
+
+		newWS(3, nil)
+		newWS(4, []int{3})
+		newWS(5, []int{3})
+		newWS(6, []int{4})
+		newWS(7, []int{5, 6})
+
+		return adb
+	}
+
+	var app IAppDef
+
+	t.Run("should be ok to add workspaces with inheritance", func(t *testing.T) {
+		adb := testADB()
+		a, err := adb.Build()
+		require.NoError(err)
+		app = a
+	})
+
+	t.Run("should be ok to read ancestors", func(t *testing.T) {
+		tests := []struct {
+			ws  int
+			anc []int
+		}{
+			{0, []int{}},
+			{1, []int{0}},
+			{2, []int{1}},
+			{3, []int{}},
+			{4, []int{3}},
+			{5, []int{3}},
+			{6, []int{4}},
+			{7, []int{5, 6}},
+		}
+		for _, test := range tests {
+			ws := app.Workspace(wsName(test.ws))
+
+			want := make([]QName, len(test.anc), len(test.anc))
+			for i, a := range test.anc {
+				want[i] = wsName(a)
+			}
+			if len(want) == 0 {
+				want = []QName{SysWorkspaceQName}
+			}
+
+			got := ws.Ancestors()
+
+			require.EqualValues(want, got, "unexpected ancestors for «%v»: want %v, got: %v", ws, want, got)
+		}
+	})
+
+	t.Run("should be ok to check inheritance", func(t *testing.T) {
+		tests := []struct {
+			ws       int
+			inherits []int
+		}{
+			{0, []int{0}},
+			{1, []int{0, 1}},
+			{2, []int{0, 1, 2}},
+
+			{3, []int{3}},
+			{4, []int{3, 4}},
+			{5, []int{3, 5}},
+			{6, []int{3, 4, 6}},
+			{7, []int{3, 4, 5, 6, 7}},
+		}
+		for _, test := range tests {
+			ws := app.Workspace(wsName(test.ws))
+			for a := 0; a < wsCount; a++ {
+				want := slices.Contains(test.inherits, a)
+				got := ws.Inherits(wsName(a))
+				require.Equal(want, got, "unexpected inheritance for «%v» from «%v»: want %v, got: %v", ws, wsName(a), want, got)
+			}
+			require.True(ws.Inherits(ws.QName()), "any workspace should inherit from itself")
+			require.True(ws.Inherits(SysWorkspaceQName), "any workspace should inherit from sys.Workspace")
+		}
+	})
+
+	t.Run("should be ok to find types in descendants", func(t *testing.T) {
+		tests := []struct {
+			ws      int
+			objects []int
+		}{
+			{0, []int{0}},
+			{1, []int{0, 1}},
+			{2, []int{0, 1, 2}},
+
+			{3, []int{3}},
+			{4, []int{3, 4}},
+			{5, []int{3, 5}},
+			{6, []int{3, 4, 6}},
+			{7, []int{3, 4, 5, 6, 7}},
+		}
+		for _, test := range tests {
+			ws := app.Workspace(wsName(test.ws))
+			for o := 0; o < wsCount; o++ {
+				want := slices.Contains(test.objects, o)
+				obj := ws.Object(objName(o))
+				got := obj != nil
+				require.Equal(want, got, "unexpected %v.Object(%v) != nil result: want %v, got: %v", ws, objName(o), want, got)
+				if got {
+					require.True(ws.Inherits(obj.Workspace().QName()),
+						"any type from workspace should be owned by this workspace or by its ancestors")
+				}
+			}
+			require.NotNil(ws.Type(SysData_int32), "should be ok to find system type in workspace")
+		}
+	})
+
+	t.Run("should be panics", func(t *testing.T) {
+		t.Run("if ancestor workspace is not found", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
+
+			ws := adb.AddWorkspace(wsName(0))
+			unknown := NewQName("test", "unknown")
+			require.Panics(func() { ws.SetAncestors(unknown) },
+				require.Is(ErrNotFoundError), require.Has(unknown))
+		})
+
+		t.Run("if circular inheritance detected", func(t *testing.T) {
+			tests := []struct {
+				ws        int
+				circulars []int
+			}{
+				{0, []int{0, 1, 2}},
+				{1, []int{1, 2}},
+				{2, []int{2}},
+
+				{3, []int{3, 4, 5, 6, 7}},
+				{4, []int{4, 6, 7}},
+				{5, []int{5, 7}},
+				{6, []int{6, 7}},
+				{7, []int{7}},
+			}
+
+			for _, test := range tests {
+				for a := 0; a < wsCount; a++ {
+					anc := wsName(a)
+
+					adb := testADB()
+					ws := adb.AlterWorkspace(wsName(test.ws))
+
+					if slices.Contains(test.circulars, a) {
+						require.Panics(func() { ws.SetAncestors(anc) },
+							require.Is(ErrUnsupportedError), require.Has("Circular inheritance"), require.Has(anc), require.Has(wsName(test.ws)))
+					} else {
+						require.NotPanics(func() { ws.SetAncestors(anc) },
+							"unexpected panics while set ancestors for «%v» from «%v»", wsName(test.ws), anc)
+					}
+				}
+			}
+		})
 	})
 }

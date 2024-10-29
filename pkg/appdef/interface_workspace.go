@@ -25,12 +25,27 @@ type IWorkspace interface {
 
 	IWithViews
 
+	// Returns names of ancestors workspaces.
+	//
+	// Ancestors are enumerated in alphabetic order.
+	// Only direct ancestors are returned.
+	// Workspace `sys.Workspace` is default ancestor used then no other ancestor is specified.
+	Ancestors() []QName
+
 	// Workspace descriptor document.
 	// See [#466](https://github.com/voedger/voedger/issues/466)
 	//
 	// Descriptor is CDoc document.
 	// If the Descriptor is an abstract document, the workspace must also be abstract.
 	Descriptor() QName
+
+	// Returns is workspace inherits from specified workspace.
+	//
+	// Returns true:
+	// 	- if the workspace itself has the specified name or
+	// 	- if one of the direct ancestors has the specified name or
+	// 	- if one of the ancestors of the ancestors (recursively) has the specified name.
+	Inherits(QName) bool
 }
 
 type IWorkspaceBuilder interface {
@@ -53,6 +68,17 @@ type IWorkspaceBuilder interface {
 	//	- if name is empty
 	//	- if name is not defined for application
 	AddType(QName) IWorkspaceBuilder
+
+	// Sets workspace ancestors.
+	//
+	// Ancestors are used to inherit types from other workspaces.
+	// Circular inheritance is not allowed.
+	// If no ancestors are set, workspace inherits types from `sys.Workspace`.
+	//
+	// # Panics:
+	//	- if ancestor workspace is not found,
+	//	- if ancestor workspace inherits from this workspace.
+	SetAncestors(QName, ...QName) IWorkspaceBuilder
 
 	// Sets descriptor.
 	//
