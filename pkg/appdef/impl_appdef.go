@@ -636,13 +636,15 @@ func (app *appDef) makeSysWorkspace() {
 
 	app.makeSysDataTypes()
 
-	// TODO: move this code to sys.vsql
+	app.makeSysStructures()
+
+	// TODO: move this code to sys.vsql (for projectors)
 	viewProjectionOffsets := app.sysWS.addView(NewQName(SysPackage, "projectionOffsets"))
 	viewProjectionOffsets.Key().PartKey().AddField("partition", DataKind_int32)
 	viewProjectionOffsets.Key().ClustCols().AddField("projector", DataKind_QName)
 	viewProjectionOffsets.Value().AddField("offset", DataKind_int64, true)
 
-	// TODO: move this code to ~suitable.vsql
+	// TODO: move this code to sys.vsql (for child workspaces)
 	viewNextBaseWSID := app.sysWS.addView(NewQName(SysPackage, "NextBaseWSID"))
 	viewNextBaseWSID.Key().PartKey().AddField("dummy1", DataKind_int32)
 	viewNextBaseWSID.Key().ClustCols().AddField("dummy2", DataKind_int32)
@@ -654,6 +656,10 @@ func (app *appDef) makeSysDataTypes() {
 	for k := DataKind_null + 1; k < DataKind_FakeLast; k++ {
 		_ = newSysData(app, app.sysWS, k)
 	}
+}
+
+func (app *appDef) makeSysStructures() {
+
 }
 
 func (app *appDef) revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) {
