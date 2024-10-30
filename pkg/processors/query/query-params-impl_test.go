@@ -59,7 +59,7 @@ func TestWrongTypes(t *testing.T) {
 		{
 			name: "Elements must be an array",
 			body: `{"elements":{}}`,
-			err:  "elements: field 'elements' must be an array of objects: field type mismatch",
+			err:  `elements: field "elements" must be an array of objects: field type mismatch`,
 		},
 		{
 			name: "Element must be an object",
@@ -69,12 +69,12 @@ func TestWrongTypes(t *testing.T) {
 		{
 			name: "Element path is wrong",
 			body: `{"elements":[{"path":45}]}`,
-			err:  "elements: element: field 'path' must be a string: field type mismatch",
+			err:  `elements: element: field "path" must be a string: field type mismatch`,
 		},
 		{
 			name: "Element fields must be an array",
 			body: `{"elements":[{"fields":{}}]}`,
-			err:  "elements: element: field 'fields' must be an array of objects: field type mismatch",
+			err:  `elements: element: field "fields" must be an array of objects: field type mismatch`,
 		},
 		{
 			name: "Element fields must be a string or an array of strings",
@@ -84,37 +84,37 @@ func TestWrongTypes(t *testing.T) {
 		{
 			name: "Element refs must be an array",
 			body: `{"elements":[{"refs":{}}]}`,
-			err:  "elements: element: field 'refs' must be an array of objects: field type mismatch",
+			err:  `elements: element: field "refs" must be an array of objects: field type mismatch`,
 		},
 		{
 			name: "Ref field parameters length must be 2",
 			body: `{"elements":[{"refs":[[]]}]}`,
-			err:  "elements: element: field 'ref' parameters length must be 2 but got 0",
+			err:  `elements: element: field 'ref' parameters length must be 2 but got 0`,
 		},
 		{
 			name: "Ref field parameters type must be a string",
 			body: `{"elements":[{"refs":[["id",1]]}]}`,
-			err:  "elements: element: field 'ref' parameter must a string: wrong type",
+			err:  `elements: element: field 'ref' parameter must a string: wrong type`,
 		},
 		{
 			name: "Ref field parameters type must be a string",
 			body: `{"elements":[{"refs":[[1,1]]}]}`,
-			err:  "elements: element: field 'ref' parameter must a string",
+			err:  `elements: element: field 'ref' parameter must a string`,
 		},
 		{
 			name: "Filters must be an array",
 			body: `{"filters":{}}`,
-			err:  "filters: field 'filters' must be an array of objects: field type mismatch",
+			err:  `filters: field "filters" must be an array of objects: field type mismatch`,
 		},
 		{
 			name: "Filter args not found",
 			body: `{"filters":[{}]}`,
-			err:  "filters: filter: field 'args' must be present: not found",
+			err:  `filters: filter: field 'args' must be present: not found`,
 		},
 		{
 			name: "Filter expr not found",
 			body: `{"filters":[{"args":{}}]}`,
-			err:  "filters: filter: field 'expr' missing: fields are missed",
+			err:  `filters: filter: field "expr" missing: fields are missed`,
 		},
 		{
 			name: "Filter expr is unknown",
@@ -124,7 +124,7 @@ func TestWrongTypes(t *testing.T) {
 		{
 			name: "Filter field must be present",
 			body: `{"filters":[{"expr":"eq","args":{}}]}`,
-			err:  "filters: 'eq' filter: field 'field' missing: fields are missed",
+			err:  `filters: 'eq' filter: field "field" missing: fields are missed`,
 		},
 		{
 			name: "Filter value must be present",
@@ -139,12 +139,12 @@ func TestWrongTypes(t *testing.T) {
 		{
 			name: "Equals filter options must be an object",
 			body: `{"filters":[{"expr":"eq","args":{"field":"id","value":1,"options":[]}}]}`,
-			err:  "filters: 'eq' filter: field 'options' must be an object: field type mismatch",
+			err:  `filters: 'eq' filter: field "options" must be an object: field type mismatch`,
 		},
 		{
 			name: "Equals filter epsilon must be a float64",
 			body: `{"filters":[{"expr":"eq","args":{"field":"id","value":1,"options":{"epsilon":"wrong"}}}]}`,
-			err:  "filters: 'eq' filter: field 'epsilon' must be json.Number: field type mismatch",
+			err:  `filters: 'eq' filter: field "epsilon" must be json.Number: field type mismatch`,
 		},
 		{
 			name: "Not equals filter wrong args",
@@ -154,7 +154,7 @@ func TestWrongTypes(t *testing.T) {
 		{
 			name: "Not equals filter epsilon must be a float64",
 			body: `{"filters":[{"expr":"notEq","args":{"field":"id","value":1,"options":{"epsilon":"wrong"}}}]}`,
-			err:  "filters: 'notEq' filter: field 'epsilon' must be json.Number: field type mismatch",
+			err:  `filters: 'notEq' filter: field "epsilon" must be json.Number: field type mismatch`,
 		},
 		{
 			name: "Greater filter wrong args",
@@ -169,7 +169,7 @@ func TestWrongTypes(t *testing.T) {
 		{
 			name: "And filter wrong args",
 			body: `{"filters":[{"expr":"and","args":""}]}`,
-			err:  "filters: 'and' filter: field 'args' must be an array: wrong type",
+			err:  "filters: 'and' filter: field 'args' must be an array of objects: wrong type",
 		},
 		{
 			name: "And filter wrong member",
@@ -184,7 +184,7 @@ func TestWrongTypes(t *testing.T) {
 		{
 			name: "Or filter wrong args",
 			body: `{"filters":[{"expr":"or","args":""}]}`,
-			err:  "filters: 'or' filter: field 'args' must be an array: wrong type",
+			err:  "filters: 'or' filter: field 'args' must be an array of objects: wrong type",
 		},
 		{
 			name: "Or filter wrong member",
@@ -214,27 +214,27 @@ func TestWrongTypes(t *testing.T) {
 		{
 			name: "OrderBy must be an array",
 			body: `{"orderBy":{}}`,
-			err:  "orderBy: field 'orderBy' must be an array of objects: field type mismatch",
+			err:  `orderBy: field "orderBy" must be an array of objects: field type mismatch`,
 		},
 		{
 			name: "OrderBy field not found",
 			body: `{"orderBy":[{}]}`,
-			err:  "orderBy: orderBy: field 'field' missing: fields are missed",
+			err:  `orderBy: orderBy: field "field" missing: fields are missed`,
 		},
 		{
 			name: "OrderBy desc must be a boolean",
 			body: `{"orderBy":[{"field":"","desc":"wrong"}]}`,
-			err:  "orderBy: orderBy: field 'desc' must be a boolean: field type mismatch",
+			err:  `orderBy: orderBy: field "desc" must be a boolean: field type mismatch`,
 		},
 		{
 			name: "Count must be a int64",
 			body: `{"count":{}}`,
-			err:  "field 'count' must be json.Number: field type mismatch",
+			err:  `field "count" must be json.Number: field type mismatch`,
 		},
 		{
 			name: "StartFrom must be a int64",
 			body: `{"startFrom":{}}`,
-			err:  "field 'startFrom' must be json.Number: field type mismatch",
+			err:  `field "startFrom" must be json.Number: field type mismatch`,
 		},
 		{
 			name: "Root element fields must be present in result fields",
@@ -279,7 +279,7 @@ func TestWrongTypes(t *testing.T) {
 			qm := NewQueryMessage(context.Background(), appName, partID, wsID, nil, []byte(test.body), qNameFunction, "", sysToken)
 			serviceChannel <- qm
 			err := <-errs
-			require.Contains(err.Error(), test.err)
+			require.Contains(err.Error(), test.err, test.name)
 		})
 	}
 	cancel()
