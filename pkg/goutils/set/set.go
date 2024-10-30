@@ -16,7 +16,8 @@ import (
 //
 // V must be uint8.
 type Set[V ~uint8] struct {
-	bitmap [4]uint64 // bit set flag
+	bitmap   [4]uint64 // bit set flag
+	readOnly bool
 }
 
 // Makes new empty Set of specified value type. Same as `Set[V]{}`.
@@ -65,6 +66,7 @@ func (s Set[V]) AsBytes() []byte {
 
 // Clears specified elements from set.
 func (s *Set[V]) Clear(values ...V) {
+	s.checkRO()
 	for _, v := range values {
 		s.bitmap[v/uintSize] &^= 1 << (v % uintSize)
 	}
@@ -72,6 +74,7 @@ func (s *Set[V]) Clear(values ...V) {
 
 // Clears all elements from Set.
 func (s *Set[V]) ClearAll() {
+	s.checkRO()
 	for i := range s.bitmap {
 		s.bitmap[i] = 0
 	}
@@ -109,7 +112,7 @@ func (s Set[V]) ContainsAny(values ...V) bool {
 }
 
 // Enumerate calls visit for each value in Set.
-func (s Set[V]) Enumerate(visit func(V)) {
+func (s Set[V]) Enumerate(visit func(V) bool) {
 	for i, b := range s.bitmap {
 		if b == 0 {
 			continue
@@ -118,7 +121,9 @@ func (s Set[V]) Enumerate(visit func(V)) {
 		h := uintSize - bits.LeadingZeros64(b)
 		for v := l; v < h; v++ {
 			if b&(1<<v) != 0 {
-				visit(V(i*uintSize + v))
+				if !visit(V(i*uintSize + v)) {
+					return
+				}
 			}
 		}
 	}
@@ -150,6 +155,7 @@ func (s Set[V]) Len() int {
 
 // Sets specified values to Set.
 func (s *Set[V]) Set(values ...V) {
+	s.checkRO()
 	for _, v := range values {
 		s.bitmap[v/uintSize] |= 1 << (v % uintSize)
 	}
@@ -157,9 +163,16 @@ func (s *Set[V]) Set(values ...V) {
 
 // Sets range of value to Set. Inclusive start, exclusive end.
 func (s *Set[V]) SetRange(start, end V) {
+	s.checkRO()
 	for k := start; k < end; k++ {
 		s.Set(k)
 	}
+}
+
+// Mark set readonly. This operation is irreversible.
+// Useful to protect set from modification, then set used as immutable constant.
+func (s *Set[V]) SetReadOnly() {
+	s.readOnly = true
 }
 
 // Renders Set in human-readable form, without `ValueTypeName_` prefixes,
@@ -189,6 +202,12 @@ func (s Set[V]) String() string {
 	}
 
 	return fmt.Sprintf("[%v]", strings.Join(ss, " "))
+}
+
+func (s Set[V]) checkRO() {
+	if s.readOnly {
+		panic("set is read-only")
+	}
 }
 
 const uintSize = bits.UintSize

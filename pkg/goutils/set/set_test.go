@@ -209,10 +209,21 @@ func TestSet_Enum(t *testing.T) {
 	set := From[uint8](0, 1, 2, 3, 126, 127, 128, 129, 253, 254, 255)
 
 	var sum int
-	set.Enumerate(func(v uint8) {
+	for v := range set.Enumerate {
 		sum += int(v)
-	})
+	}
 	require.EqualValues(1278, sum)
+
+	t.Run("should be breakable", func(t *testing.T) {
+		var sum int
+		for v := range set.Enumerate {
+			sum += int(v)
+			if v > 128 {
+				break
+			}
+		}
+		require.EqualValues(0+1+2+3+126+127+128+129, sum)
+	})
 }
 
 func TestSet_First(t *testing.T) {
@@ -302,4 +313,18 @@ func TestSet_String(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_SetReadOnly(t *testing.T) {
+	require := require.New(t)
+
+	s := From[byte](0, 1, 2, 3)
+	s.SetReadOnly()
+
+	t.Run("should panics if", func(t *testing.T) {
+		require.Panics(func() { s.Clear(1) }, "Clear")
+		require.Panics(func() { s.ClearAll() }, "ClearAll")
+		require.Panics(func() { s.Set(1) }, "Set")
+		require.Panics(func() { s.SetRange(1, 3) }, "SetRange")
+	})
 }
