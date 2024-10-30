@@ -727,7 +727,11 @@ func (c *buildContext) pushDef(qname appdef.QName, kind appdef.TypeKind, current
 			panic("currentWorkspace is nil")
 		}
 		wsQname := currentWorkspace.pkg.NewQName(currentWorkspace.workspace.Name)
-		return c.wsBuilders[wsQname]
+		b, ok := c.wsBuilders[wsQname]
+		if !ok {
+			panic(fmt.Sprintf("workspace builder «%v» for %s «%v» not found", wsQname, kind.TrimString(), qname))
+		}
+		return b
 	}
 
 	var builder interface{}
