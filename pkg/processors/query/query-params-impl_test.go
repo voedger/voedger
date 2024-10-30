@@ -169,7 +169,7 @@ func TestWrongTypes(t *testing.T) {
 		{
 			name: "And filter wrong args",
 			body: `{"filters":[{"expr":"and","args":""}]}`,
-			err:  "filters: 'and' filter: field 'args' must be an array: wrong type",
+			err:  "filters: 'and' filter: field 'args' must be an array of objects: wrong type",
 		},
 		{
 			name: "And filter wrong member",
@@ -184,7 +184,7 @@ func TestWrongTypes(t *testing.T) {
 		{
 			name: "Or filter wrong args",
 			body: `{"filters":[{"expr":"or","args":""}]}`,
-			err:  "filters: 'or' filter: field 'args' must be an array: wrong type",
+			err:  "filters: 'or' filter: field 'args' must be an array of objects: wrong type",
 		},
 		{
 			name: "Or filter wrong member",

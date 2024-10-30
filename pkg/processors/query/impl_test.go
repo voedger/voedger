@@ -480,7 +480,7 @@ func Test_epsilon(t *testing.T) {
 		}
 		return options
 	}
-	args := func(options map[string]interface{}) interface{} {
+	args := func(options map[string]interface{}) coreutils.MapObject {
 		args := make(map[string]interface{})
 		if options != nil {
 			args["options"] = options
