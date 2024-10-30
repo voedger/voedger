@@ -50,6 +50,9 @@ func ExampleIView() {
 	{
 		cnt := 0
 		for v := range app.Views {
+			if v.IsSystem() {
+				continue
+			}
 			cnt++
 			fmt.Println(cnt, v)
 		}

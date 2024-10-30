@@ -633,7 +633,20 @@ func (app *appDef) makeSysPackage() {
 // Makes system workspace.
 func (app *appDef) makeSysWorkspace() {
 	app.sysWS = newWorkspace(app, SysWorkspaceQName)
+
 	app.makeSysDataTypes()
+
+	// TODO: move this code to sys.vsql
+	viewProjectionOffsets := app.sysWS.addView(NewQName(SysPackage, "projectionOffsets"))
+	viewProjectionOffsets.Key().PartKey().AddField("partition", DataKind_int32)
+	viewProjectionOffsets.Key().ClustCols().AddField("projector", DataKind_QName)
+	viewProjectionOffsets.Value().AddField("offset", DataKind_int64, true)
+
+	// TODO: move this code to ~suitable.vsql
+	viewNextBaseWSID := app.sysWS.addView(NewQName(SysPackage, "NextBaseWSID"))
+	viewNextBaseWSID.Key().PartKey().AddField("dummy1", DataKind_int32)
+	viewNextBaseWSID.Key().ClustCols().AddField("dummy2", DataKind_int32)
+	viewNextBaseWSID.Value().AddField("NextBaseWSID", DataKind_int64, true)
 }
 
 // Makes system data types.
