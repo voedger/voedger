@@ -123,7 +123,7 @@ func getCurrentWorkspace(ictx *iterateCtx) workspaceAddr {
 	for ic != nil {
 		if _, isWorkspace := ic.collection.(*AlterWorkspaceStmt); isWorkspace {
 			ws = ic.collection.(*AlterWorkspaceStmt).alteredWorkspace
-			pkg = ic.pkg
+			pkg = ic.collection.(*AlterWorkspaceStmt).alteredWorkspacePkg
 			break
 		}
 		if _, isWorkspace := ic.collection.(*WorkspaceStmt); isWorkspace {

@@ -598,22 +598,28 @@ func Test_Alter_Workspace(t *testing.T) {
 			);
 		`)
 
-		_, err := BuildAppSchema([]*PackageSchemaAST{
+		schema, err := BuildAppSchema([]*PackageSchemaAST{
 			getSysPackageAST(),
 			pkg0,
 			pkg1,
 			pkg2,
 		})
 		require.NoError(err)
+		builder := appdef.New()
+		err = BuildAppDefs(schema, builder)
+		require.NoError(err)
 	})
 	t.Run("Alter workspace in sys package", func(t *testing.T) {
-		_, err := require.AppSchema(`APPLICATION SomeApp();
+		schema, err := require.AppSchema(`APPLICATION SomeApp();
 		ALTER WORKSPACE AppWorkspaceWS (
-			TABLE SomeTable INHERITS CDoc(
-				ChildWorkspaceID ref(sys.ChildWorkspace)
+			TYPE SomeType (
+				field int32
 			);
 		)
 		`)
+		require.NoError(err)
+		builder := appdef.New()
+		err = BuildAppDefs(schema, builder)
 		require.NoError(err)
 	})
 }
