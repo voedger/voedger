@@ -2,19 +2,21 @@
 
 -- note: this schema is for tests only. Voedger sys package uses copy of this schema
 
-ABSTRACT TABLE CRecord();
-ABSTRACT TABLE WRecord();
-ABSTRACT TABLE ORecord();
-ABSTRACT TABLE CDoc INHERITS CRecord();
-ABSTRACT TABLE ODoc INHERITS ORecord();
-ABSTRACT TABLE WDoc INHERITS WRecord();
-ABSTRACT TABLE Singleton INHERITS CDoc();
-ABSTRACT WORKSPACE Workspace ();
-ALTERABLE WORKSPACE Profile();
+ABSTRACT WORKSPACE Workspace (
+    ABSTRACT TABLE CRecord();
+    ABSTRACT TABLE WRecord();
+    ABSTRACT TABLE ORecord();
+    ABSTRACT TABLE CDoc INHERITS CRecord();
+    ABSTRACT TABLE ODoc INHERITS ORecord();
+    ABSTRACT TABLE WDoc INHERITS WRecord();
+    ABSTRACT TABLE Singleton INHERITS CDoc();
 
-TYPE Raw(
-    Body   varchar(65535)
+    TYPE Raw(
+        Body   varchar(65535)
+    );
 );
+
+ALTERABLE WORKSPACE Profile();
 
 EXTENSION ENGINE BUILTIN (
 
