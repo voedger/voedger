@@ -18,7 +18,7 @@ const (
 	nameWRecord    = "WRecord"
 )
 
-const rootWorkspaceName = "Workspace"
+const rootWorkspaceName = appdef.SysWorkspaceName // "Workspace"
 
 const ExportedAppsFile = "apps.yaml"
 const ExportedPkgFolder = "pkg"
