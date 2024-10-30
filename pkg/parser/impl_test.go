@@ -325,19 +325,20 @@ func (require *ParserAssertions) NoAppSchemaError(sql string) {
 	require.NoError(err)
 }
 
+func (require *ParserAssertions) PkgSchema(filename, pkg, sql string) *PackageSchemaAST {
+	ast, err := ParseFile(filename, sql)
+	require.NoError(err)
+	p, err := BuildPackageSchema(pkg, []*FileSchemaAST{ast})
+	require.NoError(err)
+	return p
+}
+
 func (require *ParserAssertions) AppSchema(sql string) (*AppSchemaAST, error) {
-	ast, err := ParseFile("file.vsql", sql)
-	require.NoError(err)
-
-	pkg, err := BuildPackageSchema("github.com/company/pkg", []*FileSchemaAST{ast})
-	require.NoError(err)
-
-	schema, err := BuildAppSchema([]*PackageSchemaAST{
+	pkg := require.PkgSchema("file.vsql", "github.com/company/pkg", sql)
+	return BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),
 		pkg,
 	})
-
-	return schema, err
 }
 
 func assertions(t *testing.T) *ParserAssertions {
@@ -543,48 +544,78 @@ func Test_Workspace_Defs3(t *testing.T) {
 
 func Test_Alter_Workspace(t *testing.T) {
 
-	require := require.New(t)
+	require := assertions(t)
 
-	fs0, err := ParseFile("file0.vsql", `
-	IMPORT SCHEMA 'org/pkg1';
-	IMPORT SCHEMA 'org/pkg2';
-	APPLICATION test(
-		USE pkg1;
-		USE pkg2;
-	);
-	`)
-	require.NoError(err)
-	pkg0, err := BuildPackageSchema("org/main", []*FileSchemaAST{fs0})
-	require.NoError(err)
-
-	fs1, err := ParseFile("file1.vsql", `
-		ABSTRACT WORKSPACE AWorkspace(
-			TABLE table1 INHERITS CDoc (a ref);
+	t.Run("Try alter non-alterable workspace", func(t *testing.T) {
+		pkg0 := require.PkgSchema("file0.vsql", "org/main", `
+		IMPORT SCHEMA 'org/pkg1';
+		IMPORT SCHEMA 'org/pkg2';
+		APPLICATION test(
+			USE pkg1;
+			USE pkg2;
 		);
-	`)
-	require.NoError(err)
-	pkg1, err := BuildPackageSchema("org/pkg1", []*FileSchemaAST{fs1})
-	require.NoError(err)
+		`)
+		pkg1 := require.PkgSchema("file1.vsql", "org/pkg1", `
+			ABSTRACT WORKSPACE AWorkspace(
+				TABLE table1 INHERITS CDoc (a ref);
+			);
+		`)
+		pkg2 := require.PkgSchema("file2.vsql", "org/pkg2", `
+			IMPORT SCHEMA 'org/pkg1'
+			ALTER WORKSPACE pkg1.AWorkspace(
+				TABLE table2 INHERITS CDoc (a ref);
+			);
+		`)
 
-	fs2, err := ParseFile("file2.vsql", `
-		IMPORT SCHEMA 'org/pkg1'
-		ALTER WORKSPACE pkg1.AWorkspace(
-			TABLE table2 INHERITS CDoc (a ref);
-		);
-	`)
-	require.NoError(err)
-	pkg2, err := BuildPackageSchema("org/pkg2", []*FileSchemaAST{fs2})
-	require.NoError(err)
-
-	_, err = BuildAppSchema([]*PackageSchemaAST{
-		getSysPackageAST(),
-		pkg0,
-		pkg1,
-		pkg2,
+		_, err := BuildAppSchema([]*PackageSchemaAST{
+			getSysPackageAST(),
+			pkg0,
+			pkg1,
+			pkg2,
+		})
+		require.EqualError(err, strings.Join([]string{
+			"file2.vsql:3:20: workspace pkg1.AWorkspace is not alterable",
+		}, "\n"))
 	})
-	require.EqualError(err, strings.Join([]string{
-		"file2.vsql:3:19: workspace pkg1.AWorkspace is not alterable",
-	}, "\n"))
+
+	t.Run("Alter workspace in a different package", func(t *testing.T) {
+		pkg0 := require.PkgSchema("file0.vsql", "org/main", `
+		IMPORT SCHEMA 'org/pkg1';
+		IMPORT SCHEMA 'org/pkg2';
+		APPLICATION test(
+			USE pkg1;
+			USE pkg2;
+		);
+		`)
+		pkg1 := require.PkgSchema("file1.vsql", "org/pkg1", `
+			ALTERABLE WORKSPACE AWorkspace(
+			);
+		`)
+		pkg2 := require.PkgSchema("file2.vsql", "org/pkg2", `
+			IMPORT SCHEMA 'org/pkg1'
+			ALTER WORKSPACE pkg1.AWorkspace(
+				TABLE table2 INHERITS CDoc (a ref);
+			);
+		`)
+
+		_, err := BuildAppSchema([]*PackageSchemaAST{
+			getSysPackageAST(),
+			pkg0,
+			pkg1,
+			pkg2,
+		})
+		require.NoError(err)
+	})
+	t.Run("Alter workspace in sys package", func(t *testing.T) {
+		_, err := require.AppSchema(`APPLICATION SomeApp();
+		ALTER WORKSPACE AppWorkspaceWS (
+			TABLE SomeTable INHERITS CDoc(
+				ChildWorkspaceID ref(sys.ChildWorkspace)
+			);
+		)
+		`)
+		require.NoError(err)
+	})
 }
 
 func Test_DupFieldsInTypes(t *testing.T) {
