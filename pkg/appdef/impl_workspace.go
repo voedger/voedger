@@ -36,11 +36,18 @@ func newWorkspace(app *appDef, name QName) *workspace {
 	return ws
 }
 
-func (ws *workspace) Ancestors() []QName {
+func (ws *workspace) Ancestors(recurse bool) []QName {
 	if len(ws.ancestorsOrdered) != len(ws.ancestors) {
 		ws.ancestorsOrdered = QNamesFromMap(ws.ancestors)
 	}
-	return ws.ancestorsOrdered
+
+	res := ws.ancestorsOrdered
+	if recurse {
+		for _, a := range ws.ancestors {
+			res.Add(a.Ancestors(true)...)
+		}
+	}
+	return res
 }
 
 func (ws *workspace) CDoc(name QName) ICDoc {

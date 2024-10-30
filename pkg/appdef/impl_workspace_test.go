@@ -276,12 +276,12 @@ func Test_AppDef_AddWorkspaceAbstract(t *testing.T) {
 func Test_WorkspaceInheritance(t *testing.T) {
 	const wsCount = 8
 
-	//                 +<-- test.ws0 <-- test.ws1 <-- test.ws2
-	//                 |
-	// sys.Workspace <-+
-	//                 |                + <-- test.ws4 <-- test.ws6 <--+
-	//                 +<-- test.ws3 <--+                              + <-- test.ws7
-	//                                  + <-- test.ws5 <---------------+
+	//                  ┌─── test.ws0 ◄─ test.ws1 ◄─ test.ws2
+	//                  │
+	// sys.Workspace ◄──┤
+	//                  |                ┌─── test.ws4 ◄── test.ws6 ◄──┐
+	//                  └─── test.ws3 ◄──┤                             ├─── test.ws7
+	//                                   └─—— test.ws5 ◄───────────────┘
 
 	require := require.New(t)
 
@@ -328,32 +328,42 @@ func Test_WorkspaceInheritance(t *testing.T) {
 
 	t.Run("should be ok to read ancestors", func(t *testing.T) {
 		tests := []struct {
-			ws  int
-			anc []int
+			ws   int
+			anc  []int
+			ancR []int
 		}{
-			{0, []int{}},
-			{1, []int{0}},
-			{2, []int{1}},
-			{3, []int{}},
-			{4, []int{3}},
-			{5, []int{3}},
-			{6, []int{4}},
-			{7, []int{5, 6}},
+			{0, []int{}, []int{}},
+			{1, []int{0}, []int{0}},
+			{2, []int{1}, []int{0, 1}},
+			{3, []int{}, []int{}},
+			{4, []int{3}, []int{3}},
+			{5, []int{3}, []int{3}},
+			{6, []int{4}, []int{3, 4}},
+			{7, []int{5, 6}, []int{3, 4, 5, 6}},
 		}
 		for _, test := range tests {
 			ws := app.Workspace(wsName(test.ws))
 
-			want := make([]QName, len(test.anc), len(test.anc))
-			for i, a := range test.anc {
-				want[i] = wsName(a)
-			}
-			if len(want) == 0 {
-				want = []QName{SysWorkspaceQName}
-			}
+			t.Run("direct ancestors", func(t *testing.T) {
+				want := make([]QName, len(test.anc), len(test.anc))
+				for i, a := range test.anc {
+					want[i] = wsName(a)
+				}
+				if len(want) == 0 {
+					want = []QName{SysWorkspaceQName}
+				}
+				got := ws.Ancestors(false)
+				require.EqualValues(want, got, "unexpected direct ancestors for «%v»: want %v, got: %v", ws, want, got)
+			})
 
-			got := ws.Ancestors()
-
-			require.EqualValues(want, got, "unexpected ancestors for «%v»: want %v, got: %v", ws, want, got)
+			t.Run("ancestors recursively", func(t *testing.T) {
+				want := QNamesFrom(SysWorkspaceQName)
+				for _, a := range test.ancR {
+					want.Add(wsName(a))
+				}
+				got := ws.Ancestors(true)
+				require.EqualValues(want, got, "unexpected recursive ancestors for «%v»: want %v, got: %v", ws, want, got)
+			})
 		}
 	})
 
@@ -381,6 +391,15 @@ func Test_WorkspaceInheritance(t *testing.T) {
 			}
 			require.True(ws.Inherits(ws.QName()), "any workspace should inherit from itself")
 			require.True(ws.Inherits(SysWorkspaceQName), "any workspace should inherit from sys.Workspace")
+		}
+	})
+
+	t.Run("should be correspondence between Ancestors() and Inherits()", func(t *testing.T) {
+		for idx := 0; idx < wsCount; idx++ {
+			ws := app.Workspace(wsName(idx))
+			for _, a := range ws.Ancestors(true) {
+				require.True(ws.Inherits(a), "%v.Inherits(%v) returns false for ancestor workspace %v", ws, a, a)
+			}
 		}
 	})
 
@@ -424,6 +443,8 @@ func Test_WorkspaceInheritance(t *testing.T) {
 			unknown := NewQName("test", "unknown")
 			require.Panics(func() { ws.SetAncestors(unknown) },
 				require.Is(ErrNotFoundError), require.Has(unknown))
+			require.Panics(func() { ws.SetAncestors(SysData_QName) },
+				require.Is(ErrNotFoundError), require.Has(SysData_QName))
 		})
 
 		t.Run("if circular inheritance detected", func(t *testing.T) {

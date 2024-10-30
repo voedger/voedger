@@ -28,9 +28,9 @@ type IWorkspace interface {
 	// Returns names of ancestors workspaces.
 	//
 	// Ancestors are enumerated in alphabetic order.
-	// Only direct ancestors are returned.
+	// Only direct ancestors are returned if no recurse specified.
 	// Workspace `sys.Workspace` is default ancestor used then no other ancestor is specified.
-	Ancestors() []QName
+	Ancestors(recurse bool) []QName
 
 	// Workspace descriptor document.
 	// See [#466](https://github.com/voedger/voedger/issues/466)
