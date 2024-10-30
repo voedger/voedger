@@ -42,6 +42,29 @@ func TestFrom(t *testing.T) {
 	}
 }
 
+func TestSet_All(t *testing.T) {
+	require := require.New(t)
+
+	set := From[uint8](0, 1, 2, 3, 126, 127, 128, 129, 253, 254, 255)
+
+	var sum int
+	for v := range set.All {
+		sum += int(v)
+	}
+	require.EqualValues(1278, sum)
+
+	t.Run("should be breakable", func(t *testing.T) {
+		var sum int
+		for v := range set.All {
+			sum += int(v)
+			if v > 128 {
+				break
+			}
+		}
+		require.EqualValues(0+1+2+3+126+127+128+129, sum)
+	})
+}
+
 func TestSet_AsArray(t *testing.T) {
 	require := require.New(t)
 
@@ -83,6 +106,29 @@ func TestSet_AsBytes(t *testing.T) {
 			require.EqualValues(tt.want, got, "SetFrom(%v).AsBytes() = %v, want %v", tt.set, got, tt.want)
 		})
 	}
+}
+
+func TestSet_Backward(t *testing.T) {
+	require := require.New(t)
+
+	set := From[uint8](0, 1, 2, 3, 126, 127, 128, 129, 253, 254, 255)
+	result := make([]int, 0, set.Len())
+	for v := range set.Backward {
+		result = append(result, int(v))
+	}
+	require.EqualValues([]int{255, 254, 253, 129, 128, 127, 126, 3, 2, 1, 0}, result)
+
+	t.Run("should be breakable", func(t *testing.T) {
+		set := From[uint8](0, 1, 2, 3, 129, 253, 254, 255)
+		result := make([]int, 0, set.Len())
+		for v := range set.Backward {
+			result = append(result, int(v))
+			if v < 128 {
+				break
+			}
+		}
+		require.EqualValues([]int{255, 254, 253, 129, 3}, result)
+	})
 }
 
 func TestSet_Clear(t *testing.T) {
@@ -201,29 +247,6 @@ func TestSet_ContainsAny(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestSet_Enum(t *testing.T) {
-	require := require.New(t)
-
-	set := From[uint8](0, 1, 2, 3, 126, 127, 128, 129, 253, 254, 255)
-
-	var sum int
-	for v := range set.Enumerate {
-		sum += int(v)
-	}
-	require.EqualValues(1278, sum)
-
-	t.Run("should be breakable", func(t *testing.T) {
-		var sum int
-		for v := range set.Enumerate {
-			sum += int(v)
-			if v > 128 {
-				break
-			}
-		}
-		require.EqualValues(0+1+2+3+126+127+128+129, sum)
-	})
 }
 
 func TestSet_First(t *testing.T) {

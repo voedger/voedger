@@ -185,7 +185,7 @@ func ExampleSet_Enumerate() {
 	s := set.From(Month_jan, Month_feb, Month_mar)
 
 	// Enumerate values from Set.
-	for v := range s.Enumerate {
+	for v := range s.All {
 		fmt.Println(v)
 	}
 

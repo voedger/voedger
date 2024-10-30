@@ -32,6 +32,24 @@ func From[V ~uint8](values ...V) Set[V] {
 	return s
 }
 
+// All calls visit for each value in Set.
+func (s Set[V]) All(visit func(V) bool) {
+	for i, b := range s.bitmap {
+		if b == 0 {
+			continue
+		}
+		l := bits.TrailingZeros64(b)
+		h := uintSize - bits.LeadingZeros64(b)
+		for v := l; v < h; v++ {
+			if b&(1<<v) != 0 {
+				if !visit(V(i*uintSize + v)) {
+					return
+				}
+			}
+		}
+	}
+}
+
 // Represents Set as array.
 //
 // If Set is empty, returns nil.
@@ -62,6 +80,25 @@ func (s Set[V]) AsBytes() []byte {
 		binary.BigEndian.PutUint64(buf[ofs-i*8:], s.bitmap[i])
 	}
 	return buf
+}
+
+// Backward calls visit for each value in Set in backward order.
+func (s Set[V]) Backward(visit func(V) bool) {
+	for i := len(s.bitmap) - 1; i >= 0; i-- {
+		b := s.bitmap[i]
+		if b == 0 {
+			continue
+		}
+		h := uintSize - bits.LeadingZeros64(b)
+		l := bits.TrailingZeros64(b)
+		for v := h - 1; v >= l; v-- {
+			if b&(1<<v) != 0 {
+				if !visit(V(i*uintSize + v)) {
+					return
+				}
+			}
+		}
+	}
 }
 
 // Clears specified elements from set.
@@ -109,24 +146,6 @@ func (s Set[V]) ContainsAny(values ...V) bool {
 		}
 	}
 	return len(values) == 0
-}
-
-// Enumerate calls visit for each value in Set.
-func (s Set[V]) Enumerate(visit func(V) bool) {
-	for i, b := range s.bitmap {
-		if b == 0 {
-			continue
-		}
-		l := bits.TrailingZeros64(b)
-		h := uintSize - bits.LeadingZeros64(b)
-		for v := l; v < h; v++ {
-			if b&(1<<v) != 0 {
-				if !visit(V(i*uintSize + v)) {
-					return
-				}
-			}
-		}
-	}
 }
 
 // Returns is Set filled and first value set.
