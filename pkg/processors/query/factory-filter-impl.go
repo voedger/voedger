@@ -11,41 +11,62 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
+var filterFactories = map[string]func(string, interface{}, coreutils.MapObject) (IFilter, error){
+	filterKind_Eq:    newEqualsFilter,
+	filterKind_NotEq: newNotEqualsFilter,
+	filterKind_Gt:    newGreaterFilter,
+	filterKind_Lt:    newLessFilter,
+}
+
 func NewFilter(data coreutils.MapObject) (IFilter, error) {
-	args, ok := data["args"]
+	argsIntf, ok := data["args"]
 	if !ok {
 		return nil, fmt.Errorf("filter: field 'args' must be present: %w", ErrNotFound)
 	}
-	expr, err := data.AsStringRequired("expr")
+	filterKind, err := data.AsStringRequired("expr")
 	if err != nil {
 		return nil, fmt.Errorf("filter: %w", err)
 	}
-	switch expr {
-	case filterKind_Eq:
-		return newEqualsFilter(args)
-	case filterKind_NotEq:
-		return newNotEqualsFilter(args)
-	case filterKind_Gt:
-		return newGreaterFilter(args)
-	case filterKind_Lt:
-		return newLessFilter(args)
-	case filterKind_And:
-		return newAndFilter(args)
-	case filterKind_Or:
-		return newOrFilter(args)
+
+	switch filterKind {
+	case filterKind_Eq, filterKind_NotEq, filterKind_Gt, filterKind_Lt:
+		filterFactory := filterFactories[filterKind]
+		argsMI, ok := argsIntf.(map[string]interface{})
+		if !ok {
+			return nil, filterErr(filterKind, fmt.Errorf("field 'args' must be an object: %w", ErrWrongType))
+		}
+		args := coreutils.MapObject(argsMI)
+		field, err := args.AsStringRequired("field")
+		if err != nil {
+			return nil, filterErr(filterKind, err)
+		}
+		value, ok := args["value"]
+		if !ok {
+			return nil, filterErr(filterKind, fmt.Errorf("field 'value' must be present: %w", ErrNotFound))
+		}
+		iFilter, err := filterFactory(field, value, args)
+		if err != nil {
+			err = filterErr(filterKind, err)
+		}
+		return iFilter, err
+	case filterKind_And, filterKind_Or:
+		operands, ok := argsIntf.([]interface{})
+		if !ok {
+			return nil, filterErr(filterKind, fmt.Errorf("field 'args' must be an array of objects: %w", ErrWrongType))
+		}
+		if filterKind == filterKind_And {
+			return newAndFilter(operands)
+		}
+		return newOrFilter(operands)
 	default:
-		return nil, fmt.Errorf("filter: expr: filter '%s' is unknown: %w", expr, ErrWrongType)
+		return nil, fmt.Errorf("filter: expr: filter '%s' is unknown: %w", filterKind, ErrWrongType)
 	}
 }
 
-func newEqualsFilter(args interface{}) (IFilter, error) {
-	field, value, err := generalArgs(args)
-	if err != nil {
-		return nil, filterErr(filterKind_Eq, err)
-	}
+func newEqualsFilter(field string, value interface{}, args coreutils.MapObject) (IFilter, error) {
 	epsilon, err := epsilon(args)
 	if err != nil {
-		return nil, filterErr(filterKind_Eq, err)
+		return nil, err
 	}
 	return &EqualsFilter{
 		field:   field,
@@ -54,14 +75,10 @@ func newEqualsFilter(args interface{}) (IFilter, error) {
 	}, nil
 }
 
-func newNotEqualsFilter(args interface{}) (IFilter, error) {
-	field, value, err := generalArgs(args)
-	if err != nil {
-		return nil, filterErr(filterKind_NotEq, err)
-	}
+func newNotEqualsFilter(field string, value interface{}, args coreutils.MapObject) (IFilter, error) {
 	epsilon, err := epsilon(args)
 	if err != nil {
-		return nil, filterErr(filterKind_NotEq, err)
+		return nil, err
 	}
 	return &NotEqualsFilter{
 		field:   field,
@@ -70,33 +87,21 @@ func newNotEqualsFilter(args interface{}) (IFilter, error) {
 	}, nil
 }
 
-func newGreaterFilter(args interface{}) (IFilter, error) {
-	field, value, err := generalArgs(args)
-	if err != nil {
-		return nil, filterErr(filterKind_Gt, err)
-	}
+func newGreaterFilter(field string, value interface{}, _ coreutils.MapObject) (IFilter, error) {
 	return &GreaterFilter{
 		field: field,
 		value: value,
 	}, nil
 }
 
-func newLessFilter(args interface{}) (IFilter, error) {
-	field, value, err := generalArgs(args)
-	if err != nil {
-		return nil, filterErr(filterKind_Lt, err)
-	}
+func newLessFilter(field string, value interface{}, _ coreutils.MapObject) (IFilter, error) {
 	return &LessFilter{
 		field: field,
 		value: value,
 	}, nil
 }
 
-func newAndFilter(args interface{}) (IFilter, error) {
-	operands, ok := args.([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("'%s' filter: field 'args' must be an array: %w", filterKind_And, ErrWrongType)
-	}
+func newAndFilter(operands []interface{}) (IFilter, error) {
 	andFilter := &AndFilter{make([]IFilter, len(operands))}
 	for i, operandIntf := range operands {
 		operand, ok := operandIntf.(map[string]interface{})
@@ -112,11 +117,7 @@ func newAndFilter(args interface{}) (IFilter, error) {
 	return andFilter, nil
 }
 
-func newOrFilter(args interface{}) (IFilter, error) {
-	operands, ok := args.([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("'%s' filter: field 'args' must be an array: %w", filterKind_Or, ErrWrongType)
-	}
+func newOrFilter(operands []interface{}) (IFilter, error) {
 	orFilter := &OrFilter{make([]IFilter, len(operands))}
 	for i, operandIntf := range operands {
 		operand, ok := operandIntf.(map[string]interface{})
@@ -136,27 +137,8 @@ func filterErr(filterKind string, err error) error {
 	return fmt.Errorf("'%s' filter: %w", filterKind, err)
 }
 
-func generalArgs(args interface{}) (string, interface{}, error) {
-	data, ok := args.(map[string]interface{})
-	if !ok {
-		return "", nil, fmt.Errorf("field 'args' must be an object: %w", ErrWrongType)
-	}
-	mapObject := coreutils.MapObject(data)
-	field, err := mapObject.AsStringRequired("field")
-	if err != nil {
-		return "", nil, err
-	}
-	value, ok := data["value"]
-	if !ok {
-		return "", nil, fmt.Errorf("field 'value' must be present: %w", ErrNotFound)
-	}
-	return field, value, nil
-}
-
-func epsilon(args interface{}) (float64, error) {
-	data := args.(map[string]interface{}) // type is already checked by generalArgs()
-	mapObject := coreutils.MapObject(data)
-	options, _, err := mapObject.AsObject("options")
+func epsilon(args coreutils.MapObject) (float64, error) {
+	options, _, err := args.AsObject("options")
 	if err != nil {
 		return 0.0, err
 	}

@@ -22,6 +22,7 @@ import (
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iextengine"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/processors"
@@ -54,6 +55,7 @@ type wazeroExtPkg struct {
 
 	allocatedBufs []*allocatedBuf
 	stdout        limitedWriter
+	pkgName       string
 	//	memBackup     *api.MemoryBackup
 	//	recoverMem    []byte
 }
@@ -359,6 +361,7 @@ func (f *wazeroExtEngine) initModule(ctx context.Context, pkgName string, wasmda
 		return errors.New("unsupported WASM version")
 	}
 
+	ePkg.pkgName = pkgName
 	f.modules[pkgName] = ePkg
 
 	return nil
@@ -381,6 +384,9 @@ func (f *wazeroExtEngine) Close(ctx context.Context) {
 func (f *wazeroExtEngine) recover(ctx context.Context) {
 	if err := f.resetModule(ctx, f.pkg); err != nil {
 		panic(err)
+	}
+	if logger.IsInfo() {
+		logger.Info(fmt.Sprintf("%s/%s wazero engine recovered", f.app.String(), f.pkg.pkgName))
 	}
 }
 
