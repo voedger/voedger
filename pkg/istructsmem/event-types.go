@@ -899,8 +899,6 @@ func (o *objectType) FillFromJSON(data map[string]any) {
 			o.PutFloat64(n, fv)
 		case istructs.RecordID:
 			o.PutRecordID(n, fv)
-		// case int:
-		// 	o.PutNumber(n, float64(fv))
 		case int32:
 			o.PutInt32(n, fv)
 		case int64:
@@ -928,7 +926,7 @@ func (o *objectType) FillFromJSON(data map[string]any) {
 				c.FillFromJSON(childData)
 			}
 		default:
-			o.collectErrorf("%w: %#T", ErrWrongType, v)
+			o.collectErrorf(`%w %#T for field "%s" with value %v`, ErrWrongType, v, n, v)
 		}
 	}
 }

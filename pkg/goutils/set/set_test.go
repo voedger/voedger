@@ -6,6 +6,7 @@
 package set
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -40,6 +41,29 @@ func TestFrom(t *testing.T) {
 			require.Equal(tt.want, tt.set.String(), "SetFrom(%v).String() = %v, want %v", tt.set, tt.set.String(), tt.want)
 		})
 	}
+}
+
+func TestSet_All(t *testing.T) {
+	require := require.New(t)
+
+	set := From[uint8](0, 1, 2, 3, 126, 127, 128, 129, 253, 254, 255)
+
+	var sum int
+	for v := range set.All {
+		sum += int(v)
+	}
+	require.EqualValues(1278, sum)
+
+	t.Run("should be breakable", func(t *testing.T) {
+		var sum int
+		for v := range set.All {
+			sum += int(v)
+			if v > 128 {
+				break
+			}
+		}
+		require.EqualValues(0+1+2+3+126+127+128+129, sum)
+	})
 }
 
 func TestSet_AsArray(t *testing.T) {
@@ -83,6 +107,75 @@ func TestSet_AsBytes(t *testing.T) {
 			require.EqualValues(tt.want, got, "SetFrom(%v).AsBytes() = %v, want %v", tt.set, got, tt.want)
 		})
 	}
+}
+
+func TestSet_Backward(t *testing.T) {
+	require := require.New(t)
+
+	set := From[uint8](0, 1, 2, 3, 126, 127, 128, 129, 253, 254, 255)
+	set.SetReadOnly()
+	result := make([]int, 0, set.Len())
+	for v := range set.Backward {
+		result = append(result, int(v))
+	}
+	require.EqualValues([]int{255, 254, 253, 129, 128, 127, 126, 3, 2, 1, 0}, result)
+
+	t.Run("should be breakable", func(t *testing.T) {
+		set := From[uint8](0, 1, 2, 3, 129, 253, 254, 255)
+		result := make([]int, 0, set.Len())
+		for v := range set.Backward {
+			result = append(result, int(v))
+			if v < 128 {
+				break
+			}
+		}
+		require.EqualValues([]int{255, 254, 253, 129, 3}, result)
+	})
+}
+
+func TestSet_Chunk(t *testing.T) {
+	require := require.New(t)
+
+	type byteSet = Set[byte]
+	set := From[uint8](0, 1, 2, 3, 126, 127, 128, 129, 253, 254, 255)
+	set.SetReadOnly()
+	i := 0
+	for v := range set.Chunk(3) {
+		switch i {
+		case 0:
+			require.EqualValues(From(byte(0), 1, 2), v)
+		case 1:
+			require.EqualValues(From(byte(3), 126, 127), v)
+		case 2:
+			require.EqualValues(From(byte(128), 129, 253), v)
+		case 3:
+			require.EqualValues(From(byte(254), 255), v)
+		default:
+			require.Fail("unexpected chunk", "chunk %d: %v", i, v)
+		}
+		i++
+	}
+
+	t.Run("should be breakable", func(t *testing.T) {
+		i := 0
+		for v := range set.Chunk(3) {
+			i++
+			require.EqualValues(From(byte(0), 1, 2), v)
+			break
+		}
+		require.Equal(1, i)
+	})
+
+	for range Empty[byte]().Chunk(1) {
+		require.Fail("should be no visits for empty set")
+	}
+
+	t.Run("should be panics if n < 1", func(t *testing.T) {
+		require.Panics(func() {
+			for range set.Chunk(0) {
+			}
+		})
+	})
 }
 
 func TestSet_Clear(t *testing.T) {
@@ -203,18 +296,6 @@ func TestSet_ContainsAny(t *testing.T) {
 	}
 }
 
-func TestSet_Enum(t *testing.T) {
-	require := require.New(t)
-
-	set := From[uint8](0, 1, 2, 3, 126, 127, 128, 129, 253, 254, 255)
-
-	var sum int
-	set.Enumerate(func(v uint8) {
-		sum += int(v)
-	})
-	require.EqualValues(1278, sum)
-}
-
 func TestSet_First(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -285,21 +366,42 @@ func TestSet_SetRange(t *testing.T) {
 	}
 }
 
+type TestByte byte
+
+func (b TestByte) TrimString() string {
+	return fmt.Sprintf("%#02x", b)
+}
+
 func TestSet_String(t *testing.T) {
 	tests := []struct {
 		name string
-		set  Set[byte]
+		set  any
 		want string
 	}{
 		{"empty", Set[byte]{}, "[]"},
 		{"one", From[byte](100), "[100]"},
 		{"many", From[byte](0, 3, 63, 65, 127, 129, 191, 193, 253, 255), "[0 3 63 65 127 129 191 193 253 255]"},
+		{"with TrimString", From[TestByte](0, 1, 3, 63, 65, 127, 129, 191, 193, 253, 255), "[0x00 0x01 0x03 0x3f 0x41 0x7f 0x81 0xbf 0xc1 0xfd 0xff]"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.set.String(); got != tt.want {
+			if got := fmt.Sprint(tt.set); got != tt.want {
 				t.Errorf("Set(%v).String() = %v, want %v", tt.set, got, tt.want)
 			}
 		})
 	}
+}
+
+func Test_SetReadOnly(t *testing.T) {
+	require := require.New(t)
+
+	s := From[byte](0, 1, 2, 3)
+	s.SetReadOnly()
+
+	t.Run("should panics if", func(t *testing.T) {
+		require.Panics(func() { s.Clear(1) }, "Clear")
+		require.Panics(func() { s.ClearAll() }, "ClearAll")
+		require.Panics(func() { s.Set(1) }, "Set")
+		require.Panics(func() { s.SetRange(1, 3) }, "SetRange")
+	})
 }
