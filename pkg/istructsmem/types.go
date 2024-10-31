@@ -852,7 +852,7 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 			// happens e.g. on IRowWriter.PutJSON() after read from the storage
 			row.PutBytes(n, fv)
 		default:
-			row.collectErrorf("%w: %#T", ErrWrongType, v)
+			row.collectErrorf(`%w %#T for field "%s" with value %v`, ErrWrongType, v, n, v)
 		}
 	}
 }
