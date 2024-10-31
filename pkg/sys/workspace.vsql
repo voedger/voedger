@@ -433,9 +433,9 @@ ABSTRACT WORKSPACE Workspace (
 	ROLE WorkspaceOwner; -- assigned if user works in a workspace that is owned by his profile
 	ROLE ClusterAdmin; -- TODO: not used for now. Going to allow exec c.cluster.DeployApp to this role
 
-	-- profile owner is workspace owner
-	GRANT WorkspaceOwner TO ProfileOwner;
-	GRANT WorkspaceOwner TO WorkspaceDevice;
+			-- profile owner is workspace owner
+	GRANT WorkspaceOwner TO ProfileOwner; -- inherited
+	GRANT WorkspaceOwner TO WorkspaceDevice; -- inherited
 
 	-- null auth policy
 	-- сделать только явное GRANT\REVOKE
@@ -447,7 +447,7 @@ ABSTRACT WORKSPACE Workspace (
 
 	-- everything is allowed to WorkspaceOwner
 
-	GRANT ALL ON ALL TABLES TO WorkspaceOwner;
+	GRANT ALL ON ALL TABLES TO WorkspaceOwner; -- not inherited because all
 	GRANT EXECUTE ON ALL QUERIES TO WorkspaceOwner;
 	GRANT EXECUTE ON ALL COMMANDS TO WorkspaceOwner;
 	GRANT SELECT ON ALL VIEWS TO WorkspaceOwner;

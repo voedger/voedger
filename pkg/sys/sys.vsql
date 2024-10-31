@@ -30,7 +30,7 @@ ABSTRACT WORKSPACE ProfileWS (
 		QUERY RefreshPrincipalToken RETURNS RefreshPrincipalTokenResult;
 	);
 
-	GRANT ALL ON ALL TABLES TO WorkspaceOwner;
+	GRANT ALL ON ALL TABLES TO WorkspaceOwner; -- ok to write in each workspace because I should know what is WorkpapceOwner
 	GRANT EXECUTE ON ALL QUERIES TO WorkspaceOwner;
 	GRANT EXECUTE ON ALL COMMANDS TO WorkspaceOwner;
 	GRANT SELECT ON ALL VIEWS TO WorkspaceOwner;
