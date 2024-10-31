@@ -518,9 +518,7 @@ func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr) {
 			return
 		}
 	}
-	if len(refField.refQNames) > 0 {
-		c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddRefField(string(refField.Name), refField.NotNull, refField.refQNames...)
-	}
+	c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddRefField(string(refField.Name), refField.NotNull, refField.refQNames...)
 }
 
 func (c *buildContext) addDataTypeField(field *FieldExpr) {
