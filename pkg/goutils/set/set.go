@@ -54,17 +54,8 @@ func (s Set[V]) All(visit func(V) bool) {
 //
 // If Set is empty, returns nil.
 func (s Set[V]) AsArray() (a []V) {
-	for i, b := range s.bitmap {
-		if b == 0 {
-			continue
-		}
-		l := bits.TrailingZeros64(b)
-		h := uintSize - bits.LeadingZeros64(b)
-		for v := l; v < h; v++ {
-			if b&(1<<v) != 0 {
-				a = append(a, V(i*uintSize+v))
-			}
-		}
+	for v := range s.All {
+		a = append(a, v)
 	}
 	return a
 }
@@ -97,6 +88,33 @@ func (s Set[V]) Backward(visit func(V) bool) {
 					return
 				}
 			}
+		}
+	}
+}
+
+// Chunk returns an iterator over consecutive sub-sets of up to n elements of s.
+// All but the last sub-set will have length n.
+// If s is empty, the sequence is empty: there is no empty sets in the sequence.
+//
+// # Panics:
+//   - if n is less than 1.
+func (s Set[V]) Chunk(n int) func(visit func(Set[V]) bool) {
+	return func(visit func(Set[V]) bool) {
+		if n < 1 {
+			panic("chunk size should be positive")
+		}
+		chunk := Empty[V]()
+		for v := range s.All {
+			chunk.Set(v)
+			if chunk.Len() == n {
+				if !visit(chunk) {
+					return
+				}
+				chunk.ClearAll()
+			}
+		}
+		if chunk.Len() > 0 {
+			visit(chunk)
 		}
 	}
 }
@@ -151,15 +169,9 @@ func (s Set[V]) ContainsAny(values ...V) bool {
 // Returns is Set filled and first value set.
 // If Set is empty, returns false and zero value.
 func (s Set[V]) First() (V, bool) {
-	for i, b := range s.bitmap {
-		if b == 0 {
-			continue
-		}
-		if l := bits.TrailingZeros64(b); l < uintSize {
-			return V(i*uintSize + l), true
-		}
+	for v := range s.All {
+		return v, true
 	}
-
 	return V(0), false
 }
 
@@ -207,17 +219,8 @@ func (s Set[V]) String() string {
 
 	ss := make([]string, 0, s.Len())
 
-	for i, b := range s.bitmap {
-		if b == 0 {
-			continue
-		}
-		l := bits.TrailingZeros64(b)
-		h := uintSize - bits.LeadingZeros64(b)
-		for v := l; v < h; v++ {
-			if b&(1<<v) != 0 {
-				ss = append(ss, say(V(i*uintSize+v)))
-			}
-		}
+	for v := range s.All {
+		ss = append(ss, say(v))
 	}
 
 	return fmt.Sprintf("[%v]", strings.Join(ss, " "))
