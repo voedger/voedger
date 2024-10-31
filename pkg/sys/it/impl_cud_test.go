@@ -437,12 +437,23 @@ func TestEraseString(t *testing.T) {
 	idAnyAirTablePlan := vit.GetAny("app1pkg.air_table_plan", ws)
 
 	body := fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"name":""}}]}`, idAnyAirTablePlan)
-	vit.PostWS(ws, "c.sys.CUD", body)
+	offs := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
 
 	body = fmt.Sprintf(`{"args":{"Schema":"app1pkg.air_table_plan"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, idAnyAirTablePlan)
 	resp := vit.PostWS(ws, "q.sys.Collection", body)
 
 	require.Equal(t, "", resp.SectionRow()[0].(string))
+
+	body = fmt.Sprintf(`{"args":{"Query":"select * from sys.wlog where offset = %d"},"elements":[{"fields":["Result"]}]}`, offs)
+	resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
+	for i := 0; i < resp.Len(); i++ {
+		// log.Println(resp.SectionRow(i)[0].(string))
+		m := map[string]interface{}{}
+		require.NoError(t, json.Unmarshal([]byte(resp.SectionRow(i)[0].(string)), &m))
+		b, err := json.MarshalIndent(&m, ",", "\t")
+		require.NoError(t, err)
+		log.Println(string(b))
+	}
 }
 
 func TestEraseString1(t *testing.T) {
