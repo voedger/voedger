@@ -139,13 +139,26 @@ func getCurrentWorkspace(ictx *iterateCtx) workspaceAddr {
 func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *RateStmt | *TagStmt | *ProjectorStmt | *JobStmt |
 	*WorkspaceStmt | *ViewStmt | *StorageStmt | *LimitStmt | *QueryStmt | *RoleStmt | *WsDescriptorStmt | *DeclareStmt](fn DefQName, ictx *iterateCtx) (stmtType, *PackageSchemaAST, error) {
 	stmtSchema, err := getTargetSchema(fn, ictx)
+
+	var item stmtType
+	var value interface{} = item
+	lookInOtherPackages := true
+
+	switch value.(type) {
+	case *TagStmt:
+		lookInOtherPackages = false
+	}
+
+	if stmtSchema != ictx.pkg && !lookInOtherPackages {
+		return nil, nil, nil // do not look tags in other packages
+	}
+
 	lookingUpInSchema := stmtSchema
 
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var item stmtType
 	var schema *PackageSchemaAST = nil
 	var lookupCallback func(stmt interface{})
 	lookupCallback = func(stmt interface{}) {
@@ -189,6 +202,9 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 					for _, dq := range iws.Inherits {
 						err := resolveInCtx[*WorkspaceStmt](dq, ictx, func(f *WorkspaceStmt, wSchema *PackageSchemaAST) error {
 							lookingUpInSchema = wSchema
+							if !lookInOtherPackages && wSchema != ictx.pkg {
+								return nil // do not look tags in other packages
+							}
 							lookInInherted(f)
 							if item != nil {
 								return nil
@@ -208,7 +224,7 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 					return nil, nil, err
 				}
 
-				if item == nil {
+				if item == nil && lookInOtherPackages {
 					sysWorkspace, err := lookupInSysPackage(ictx.basicContext, DefQName{Package: appdef.SysPackage, Name: rootWorkspaceName})
 					if err != nil {
 						return nil, nil, err
@@ -229,7 +245,7 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 	}
 
 	// Look in the sys package
-	if item == nil && maybeSysPkg(fn.Package) { // Look in sys pkg
+	if item == nil && maybeSysPkg(fn.Package) && lookInOtherPackages { // Look in sys pkg
 		lookingUpInSchema = ictx.app.Packages[appdef.SysPackage]
 		if lookingUpInSchema == nil {
 			return nil, nil, ErrCouldNotImport(appdef.SysPackage)
