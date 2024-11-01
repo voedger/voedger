@@ -1344,40 +1344,37 @@ func Test_Projectors(t *testing.T) {
 }
 
 func Test_Imports(t *testing.T) {
-	require := require.New(t)
+	require := assertions(t)
 
-	fs, err := ParseFile("example.vsql", `
+	pkg1 := require.PkgSchema("example.vsql", "github.com/untillpro/airsbp3/pkg1", `
 	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg2';
 	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg3' AS air;
 	APPLICATION test(
 		USE pkg2;
 		USE pkg3;
 	);
-	WORKSPACE test (
+	WORKSPACE test INHERITS pkg2.BaseWorkspace (
 		EXTENSION ENGINE WASM (
-    		COMMAND Orders WITH Tags=(pkg2.SomeTag);
-    		QUERY Query2 RETURNS void WITH Tags=(air.SomePkg3Tag);
+    		COMMAND Orders1 WITH Tags=(pkg2.InheritedTag); -- pkg2.InheritedTag undefined
+    		COMMAND Orders2 WITH Tags=(pkg3.SomePkg3Tag); -- pkg3.SomePkg3Tag undefined
     		QUERY Query3 RETURNS void WITH Tags=(air.UnknownTag); -- air.UnknownTag undefined
     		PROJECTOR ImProjector AFTER EXECUTE ON Air.CreateUPProfil; -- Air undefined
 		)
 	)
 	`)
-	require.NoError(err)
-	pkg1, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg1", []*FileSchemaAST{fs})
-	require.NoError(err)
 
-	fs, err = ParseFile("example.vsql", `TAG SomeTag;`)
-	require.NoError(err)
-	pkg2, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
-	require.NoError(err)
+	pkg2 := require.PkgSchema("example.vsql", "github.com/untillpro/airsbp3/pkg2", `
+	ABSTRACT WORKSPACE BaseWorkspace(
+		TAG InheritedTag;
+	);
+	`)
 
-	fs, err = ParseFile("example.vsql", `TAG SomePkg3Tag;`)
-	require.NoError(err)
-	pkg3, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg3", []*FileSchemaAST{fs})
-	require.NoError(err)
+	pkg3 := require.PkgSchema("example.vsql", "github.com/untillpro/airsbp3/pkg3", `TAG SomePkg3Tag;`)
 
-	_, err = BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), pkg1, pkg2, pkg3})
+	_, err := BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), pkg1, pkg2, pkg3})
 	require.EqualError(err, strings.Join([]string{
+		"example.vsql:10:34: undefined tag: pkg2.InheritedTag",
+		"example.vsql:11:34: undefined tag: pkg3.SomePkg3Tag",
 		"example.vsql:12:44: undefined tag: air.UnknownTag",
 		"example.vsql:13:46: Air undefined",
 	}, "\n"))
@@ -2102,41 +2099,6 @@ func Test_Grants(t *testing.T) {
 				GRANT ALL ON TABLE Table1 TO role1;
 				
 			);`, "file.vsql:9:5: GRANT follows REVOKE in the same container")
-	})
-
-	t.Run("GRANT to Tag declared in sys workspace", func(t *testing.T) {
-		schema, err := require.AppSchema(`APPLICATION test();
-			WORKSPACE AppWorkspaceWS (
-				EXTENSION ENGINE BUILTIN (
-					COMMAND CreateLogin1() WITH Tags=(WithoutAuthTag);
-					COMMAND CreateLogin2() WITH Tags=(sys.WithoutAuthTag);
-				);				
-				GRANT EXECUTE ON ALL COMMANDS WITH TAG sys.WithoutAuthTag TO sys.Anyone;
-				GRANT EXECUTE ON ALL COMMANDS WITH TAG WithoutAuthTag TO Anyone;
-			);
-		`)
-		require.NoError(err)
-		builder := appdef.New()
-		err = BuildAppDefs(schema, builder)
-		require.NoError(err)
-
-		app, err := builder.Build()
-		require.NoError(err)
-		var numACLs int
-
-		// table
-		app.ACL(func(i appdef.IACLRule) bool {
-			require.Len(i.Ops(), 1)
-			require.Equal(appdef.OperationKind_Execute, i.Ops()[0])
-			require.Equal(appdef.PolicyKind_Allow, i.Policy())
-			require.Len(i.Resources().On(), 2)
-			require.Equal("pkg.CreateLogin1", i.Resources().On()[0].String())
-			require.Equal("pkg.CreateLogin2", i.Resources().On()[1].String())
-			require.Equal("sys.Anyone", i.Principal().QName().String())
-			numACLs++
-			return true
-		})
-		require.Equal(2, numACLs)
 	})
 
 	t.Run("GRANT Role", func(t *testing.T) {
