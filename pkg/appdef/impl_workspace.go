@@ -67,6 +67,23 @@ func (ws *workspace) CDocs(cb func(ICDoc) bool) {
 	}
 }
 
+func (ws *workspace) Command(name QName) ICommand {
+	if t := ws.typeByKind(name, TypeKind_Command); t != nil {
+		return t.(ICommand)
+	}
+	return nil
+}
+
+func (ws *workspace) Commands(cb func(ICommand) bool) {
+	for t := range ws.Types {
+		if r, ok := t.(ICommand); ok {
+			if !cb(r) {
+				break
+			}
+		}
+	}
+}
+
 func (ws *workspace) CRecord(name QName) ICRecord {
 	if t := ws.typeByKind(name, TypeKind_CRecord); t != nil {
 		return t.(ICRecord)
@@ -200,6 +217,23 @@ func (ws *workspace) ORecord(name QName) IORecord {
 func (ws *workspace) ORecords(cb func(IORecord) bool) {
 	for t := range ws.Types {
 		if r, ok := t.(IORecord); ok {
+			if !cb(r) {
+				break
+			}
+		}
+	}
+}
+
+func (ws *workspace) Query(name QName) IQuery {
+	if t := ws.typeByKind(name, TypeKind_Query); t != nil {
+		return t.(IQuery)
+	}
+	return nil
+}
+
+func (ws *workspace) Queries(cb func(IQuery) bool) {
+	for t := range ws.Types {
+		if r, ok := t.(IQuery); ok {
 			if !cb(r) {
 				break
 			}
@@ -365,6 +399,11 @@ func (ws *workspace) addCDoc(name QName) ICDocBuilder {
 	return newCDocBuilder(d)
 }
 
+func (ws *workspace) addCommand(name QName) ICommandBuilder {
+	c := newCommand(ws.app, ws, name)
+	return newCommandBuilder(c)
+}
+
 func (ws *workspace) addCRecord(name QName) ICRecordBuilder {
 	r := newCRecord(ws.app, ws, name)
 	return newCRecordBuilder(r)
@@ -400,6 +439,11 @@ func (ws *workspace) addODoc(name QName) IODocBuilder {
 func (ws *workspace) addORecord(name QName) IORecordBuilder {
 	r := newORecord(ws.app, ws, name)
 	return newORecordBuilder(r)
+}
+
+func (ws *workspace) addQuery(name QName) IQueryBuilder {
+	q := newQuery(ws.app, ws, name)
+	return newQueryBuilder(q)
 }
 
 // TODO: should be deprecated. All types should be added by specific methods.
@@ -517,6 +561,10 @@ func (wb *workspaceBuilder) AddCDoc(name QName) ICDocBuilder {
 	return wb.workspace.addCDoc(name)
 }
 
+func (wb *workspaceBuilder) AddCommand(name QName) ICommandBuilder {
+	return wb.workspace.addCommand(name)
+}
+
 func (wb *workspaceBuilder) AddCRecord(name QName) ICRecordBuilder {
 	return wb.workspace.addCRecord(name)
 }
@@ -539,6 +587,10 @@ func (wb *workspaceBuilder) AddODoc(name QName) IODocBuilder {
 
 func (wb *workspaceBuilder) AddORecord(name QName) IORecordBuilder {
 	return wb.workspace.addORecord(name)
+}
+
+func (wb *workspaceBuilder) AddQuery(name QName) IQueryBuilder {
+	return wb.workspace.addQuery(name)
 }
 
 // TODO: should be deprecated. All types should be added by specific methods.

@@ -25,6 +25,9 @@ type IWorkspace interface {
 
 	IWithViews
 
+	IWithCommands
+	IWithQueries
+
 	// Returns names of ancestors workspaces.
 	//
 	// Ancestors are enumerated in alphabetic order.
@@ -61,6 +64,9 @@ type IWorkspaceBuilder interface {
 	IObjectsBuilder
 
 	IViewsBuilder
+
+	ICommandsBuilder
+	IQueriesBuilder
 
 	// Adds (includes) type to workspace. Type must be defined for application before.
 	//

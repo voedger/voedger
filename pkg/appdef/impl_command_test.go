@@ -28,7 +28,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		_ = wsb.AddObject(unlName)
 		_ = wsb.AddObject(resName)
 
-		cmd := adb.AddCommand(cmdName)
+		cmd := wsb.AddCommand(cmdName)
 
 		t.Run("must be ok to assign cmd parameter and result", func(t *testing.T) {
 			cmd.SetEngine(ExtensionEngineKind_BuiltIn)
@@ -61,6 +61,8 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		require.Equal(TypeKind_Command, cmd.Kind())
 		require.Equal(cmdName.Entity(), cmd.Name())
 		require.Equal(c, cmd)
+
+		require.Equal(wsName, cmd.Workspace().QName())
 
 		require.Equal(ExtensionEngineKind_BuiltIn, cmd.Engine())
 
@@ -95,13 +97,15 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 	t.Run("panic if name is empty", func(t *testing.T) {
 		adb := New()
-		require.Panics(func() { adb.AddCommand(NullQName) },
+		wsb := adb.AddWorkspace(wsName)
+		require.Panics(func() { wsb.AddCommand(NullQName) },
 			require.Is(ErrMissedError))
 	})
 
 	t.Run("panic if name is invalid", func(t *testing.T) {
 		adb := New()
-		require.Panics(func() { adb.AddCommand(NewQName("naked", "🔫")) },
+		wsb := adb.AddWorkspace(wsName)
+		require.Panics(func() { wsb.AddCommand(NewQName("naked", "🔫")) },
 			require.Is(ErrInvalidError),
 			require.Has("naked.🔫"))
 	})
@@ -110,9 +114,9 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		testName := NewQName("test", "dupe")
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
-		wsb := adb.AddWorkspace(NewQName("test", "workspace"))
+		wsb := adb.AddWorkspace(wsName)
 		wsb.AddObject(testName)
-		require.Panics(func() { adb.AddCommand(testName) },
+		require.Panics(func() { wsb.AddCommand(testName) },
 			require.Is(ErrAlreadyExistsError),
 			require.Has(testName.String()))
 	})
@@ -120,7 +124,8 @@ func Test_AppDef_AddCommand(t *testing.T) {
 	t.Run("panic if extension name is empty", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
-		cmd := adb.AddCommand(NewQName("test", "cmd"))
+		wsb := adb.AddWorkspace(wsName)
+		cmd := wsb.AddCommand(cmdName)
 		require.Panics(func() { cmd.SetName("") },
 			require.Is(ErrMissedError),
 			require.Has("test.cmd"))
@@ -129,7 +134,8 @@ func Test_AppDef_AddCommand(t *testing.T) {
 	t.Run("panic if extension name is invalid", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
-		cmd := adb.AddCommand(NewQName("test", "cmd"))
+		wsb := adb.AddWorkspace(wsName)
+		cmd := wsb.AddCommand(cmdName)
 		require.Panics(func() { cmd.SetName("naked 🔫") },
 			require.Is(ErrInvalidError),
 			require.Has("naked 🔫"))
@@ -138,7 +144,8 @@ func Test_AppDef_AddCommand(t *testing.T) {
 	t.Run("panic if extension kind is invalid", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
-		cmd := adb.AddCommand(NewQName("test", "cmd"))
+		wsb := adb.AddWorkspace(wsName)
+		cmd := wsb.AddCommand(cmdName)
 		require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_null) },
 			require.Is(ErrOutOfBoundsError))
 		require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_Count) },
@@ -158,7 +165,7 @@ func Test_CommandValidate(t *testing.T) {
 	adb.AddJob(bad).SetCronSchedule("@hourly")
 	unknown := NewQName("test", "unknown")
 
-	cmd := adb.AddCommand(NewQName("test", "cmd"))
+	cmd := wsb.AddCommand(NewQName("test", "cmd"))
 
 	t.Run("should be errors", func(t *testing.T) {
 		t.Run("if parameter name is unknown", func(t *testing.T) {

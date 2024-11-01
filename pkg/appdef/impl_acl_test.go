@@ -45,10 +45,10 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 		view.Key().ClustCols().AddField("cc_1", DataKind_string)
 		view.Value().AddField("vf_1", DataKind_string, false)
 
-		_ = adb.AddCommand(cmdName)
+		_ = wsb.AddCommand(cmdName)
 		wsb.AddType(cmdName)
 
-		_ = adb.AddQuery(queryName)
+		_ = wsb.AddQuery(queryName)
 		wsb.AddType(queryName)
 
 		_ = adb.AddRole(readerRoleName)
@@ -134,13 +134,13 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 
 		cmdName := NewQName("test", "cmd")
 
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
 
-		_ = adb.AddCommand(cmdName)
+		_ = wsb.AddCommand(cmdName)
 
 		readerRoleName := NewQName("test", "readerRole")
 
-		doc := ws.AddCDoc(docName)
+		doc := wsb.AddCDoc(docName)
 		doc.AddField("field1", DataKind_int32, true)
 
 		t.Run("should be panic if unknown principal", func(t *testing.T) {

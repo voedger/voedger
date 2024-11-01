@@ -45,10 +45,10 @@ func Test_AppDef_AddRole(t *testing.T) {
 		view.Key().ClustCols().AddField("cc_1", DataKind_string)
 		view.Value().AddField("vf_1", DataKind_string, false)
 
-		_ = adb.AddCommand(cmdName)
+		_ = wsb.AddCommand(cmdName)
 		wsb.AddType(cmdName)
 
-		_ = adb.AddQuery(queryName)
+		_ = wsb.AddQuery(queryName)
 		wsb.AddType(queryName)
 
 		reader := adb.AddRole(readerRoleName)

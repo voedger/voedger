@@ -531,11 +531,6 @@ func (app *appDef) WorkspaceByDescriptor(name QName) IWorkspace {
 	return app.wsDesc[name]
 }
 
-func (app *appDef) addCommand(name QName) ICommandBuilder {
-	cmd := newCommand(app, app.sysWS, name)
-	return newCommandBuilder(cmd)
-}
-
 func (app *appDef) addJob(name QName) IJobBuilder {
 	j := newJob(app, app.sysWS, name)
 	return newJobBuilder(j)
@@ -552,11 +547,6 @@ func (app *appDef) addPackage(localName, path string) {
 func (app *appDef) addProjector(name QName) IProjectorBuilder {
 	projector := newProjector(app, app.sysWS, name)
 	return newProjectorBuilder(projector)
-}
-
-func (app *appDef) addQuery(name QName) IQueryBuilder {
-	q := newQuery(app, app.sysWS, name)
-	return newQueryBuilder(q)
 }
 
 func (app *appDef) addRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) {
@@ -703,8 +693,6 @@ func newAppDefBuilder(app *appDef) *appDefBuilder {
 	}
 }
 
-func (ab *appDefBuilder) AddCommand(name QName) ICommandBuilder { return ab.app.addCommand(name) }
-
 func (ab *appDefBuilder) AddJob(name QName) IJobBuilder { return ab.app.addJob(name) }
 
 func (ab *appDefBuilder) AddLimit(name QName, on []QName, rate QName, comment ...string) {
@@ -717,8 +705,6 @@ func (ab *appDefBuilder) AddPackage(localName, path string) IAppDefBuilder {
 }
 
 func (ab *appDefBuilder) AddProjector(name QName) IProjectorBuilder { return ab.app.addProjector(name) }
-
-func (ab *appDefBuilder) AddQuery(name QName) IQueryBuilder { return ab.app.addQuery(name) }
 
 func (ab *appDefBuilder) AddRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) {
 	ab.app.addRate(name, count, period, scopes, comment...)

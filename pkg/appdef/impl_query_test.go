@@ -15,18 +15,19 @@ func Test_AppDef_AddQuery(t *testing.T) {
 	require := require.New(t)
 
 	var app IAppDef
+	wsName := NewQName("test", "workspace")
 	queryName, parName, resName := NewQName("test", "query"), NewQName("test", "param"), NewQName("test", "res")
 
 	t.Run("should be ok to add query", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		wsb := adb.AddWorkspace(NewQName("test", "workspace"))
+		wsb := adb.AddWorkspace(wsName)
 
 		_ = wsb.AddObject(parName)
 		_ = wsb.AddObject(resName)
 
-		query := adb.AddQuery(queryName)
+		query := wsb.AddQuery(queryName)
 
 		t.Run("should be ok to assign query params and result", func(t *testing.T) {
 			query.
@@ -86,28 +87,29 @@ func Test_AppDef_AddQuery(t *testing.T) {
 
 	t.Run("should be panics ", func(t *testing.T) {
 		require.Panics(func() {
-			New().AddQuery(NullQName)
+			New().AddWorkspace(wsName).AddQuery(NullQName)
 		}, require.Is(ErrMissedError))
 
 		require.Panics(func() {
-			New().AddQuery(NewQName("naked", "🔫"))
+			New().AddWorkspace(wsName).AddQuery(NewQName("naked", "🔫"))
 		}, require.Is(ErrInvalidError), require.Has("naked.🔫"))
 
 		t.Run("if type with name already exists", func(t *testing.T) {
 			testName := NewQName("test", "dupe")
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-			wsb := adb.AddWorkspace(NewQName("test", "workspace"))
+			wsb := adb.AddWorkspace(wsName)
 			wsb.AddObject(testName)
 			require.Panics(func() {
-				adb.AddQuery(testName)
+				wsb.AddQuery(testName)
 			}, require.Is(ErrAlreadyExistsError), require.Has(testName))
 		})
 
 		t.Run("if extension name is empty", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-			query := adb.AddQuery(NewQName("test", "query"))
+			wsb := adb.AddWorkspace(wsName)
+			query := wsb.AddQuery(queryName)
 			require.Panics(func() {
 				query.SetName("")
 			}, require.Is(ErrMissedError))
@@ -116,7 +118,8 @@ func Test_AppDef_AddQuery(t *testing.T) {
 		t.Run("if extension name is invalid", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-			query := adb.AddQuery(NewQName("test", "query"))
+			wsb := adb.AddWorkspace(wsName)
+			query := wsb.AddQuery(queryName)
 			require.Panics(func() {
 				query.SetName("naked 🔫")
 			}, require.Is(ErrInvalidError), require.Has("🔫"))
@@ -132,7 +135,7 @@ func Test_QueryValidate(t *testing.T) {
 
 	wsb := adb.AddWorkspace(NewQName("test", "workspace"))
 
-	query := adb.AddQuery(NewQName("test", "query"))
+	query := wsb.AddQuery(NewQName("test", "query"))
 
 	t.Run("should be error if parameter name is unknown", func(t *testing.T) {
 		par := NewQName("test", "param")
@@ -160,13 +163,16 @@ func Test_AppDef_AddQueryWithAnyResult(t *testing.T) {
 	require := require.New(t)
 
 	var app IAppDef
+	wsName := NewQName("test", "workspace")
 	queryName := NewQName("test", "query")
 
 	t.Run("should be ok to add query with any result", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		query := adb.AddQuery(queryName)
+		wsb := adb.AddWorkspace(wsName)
+
+		query := wsb.AddQuery(queryName)
 		query.
 			SetResult(QNameANY)
 
@@ -185,5 +191,6 @@ func Test_AppDef_AddQueryWithAnyResult(t *testing.T) {
 		require.Equal(AnyType, query.Result())
 		require.Equal(QNameANY, query.Result().QName())
 		require.Equal(TypeKind_Any, query.Result().Kind())
+		require.Equal(wsName, query.Workspace().QName())
 	})
 }

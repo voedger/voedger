@@ -50,7 +50,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		v.SetComment("view is intent for projector")
 
 		_ = wsb.AddObject(objName)
-		adb.AddCommand(cmdName).SetParam(objName)
+		wsb.AddCommand(cmdName).SetParam(objName)
 
 		prj := adb.AddProjector(prjName)
 
@@ -381,7 +381,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			t.Run("if event incompatible with type", func(t *testing.T) {
 				_ = wsb.AddCRecord(recName)
 				_ = wsb.AddObject(objName)
-				_ = adb.AddCommand(cmdName).SetParam(objName)
+				_ = wsb.AddCommand(cmdName).SetParam(objName)
 
 				require.Panics(func() { prj.Events().Add(prjName, ProjectorEventKind_Execute) },
 					require.Is(ErrIncompatibleError), require.Has("Execute"))

@@ -29,7 +29,7 @@ func ExampleIAppDefBuilder_AddCommand() {
 
 		wsb := adb.AddWorkspace(wsName)
 
-		cmd := adb.AddCommand(cmdName)
+		cmd := wsb.AddCommand(cmdName)
 		cmd.SetEngine(appdef.ExtensionEngineKind_WASM)
 		cmd.
 			SetParam(parName).

@@ -61,7 +61,7 @@ func TestBasicUsage(t *testing.T) {
 		AddField("Age", DataKind_int32, false).
 		AddField("isHuman", DataKind_bool, false)
 
-	newBuyerCmd := adb.AddCommand(NewQName("test", "cmdNewBuyer"))
+	newBuyerCmd := wsb.AddCommand(NewQName("test", "cmdNewBuyer"))
 	newBuyerCmd.SetParam(buyerObjName)
 
 	appDef, err := adb.Build()

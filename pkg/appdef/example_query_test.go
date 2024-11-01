@@ -28,7 +28,7 @@ func ExampleIAppDefBuilder_AddQuery() {
 
 		wsb := adb.AddWorkspace(wsName)
 
-		qry := adb.AddQuery(qryName)
+		qry := wsb.AddQuery(qryName)
 		qry.SetEngine(appdef.ExtensionEngineKind_WASM)
 		qry.
 			SetParam(parName).

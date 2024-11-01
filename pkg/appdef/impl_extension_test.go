@@ -38,13 +38,13 @@ func Test_AppDefExtensions(t *testing.T) {
 		_ = wsb.AddObject(parName)
 		_ = wsb.AddObject(resName)
 
-		cmd := adb.AddCommand(cmdName)
+		cmd := wsb.AddCommand(cmdName)
 		cmd.SetEngine(ExtensionEngineKind_WASM)
 		cmd.
 			SetParam(parName).
 			SetResult(resName)
 
-		qry := adb.AddQuery(qrName)
+		qry := wsb.AddQuery(qrName)
 		qry.
 			SetParam(parName).
 			SetResult(QNameANY)

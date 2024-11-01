@@ -49,8 +49,6 @@ type IAppDefBuilder interface {
 	IPackagesBuilder
 	IWorkspacesBuilder
 
-	ICommandsBuilder
-	IQueriesBuilder
 	IProjectorsBuilder
 	IJobsBuilder
 

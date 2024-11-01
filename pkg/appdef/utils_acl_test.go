@@ -64,12 +64,12 @@ func Test_validateACLResourceNames(t *testing.T) {
 
 	app := func() IAppDef {
 		adb := New()
-		ws := adb.AddWorkspace(NewQName("test", "ws"))
+		wsb := adb.AddWorkspace(NewQName("test", "ws"))
 
-		_ = ws.AddGDoc(gdoc)
-		_ = ws.AddCDoc(cdoc)
-		_ = adb.AddCommand(cmd)
-		_ = adb.AddQuery(query)
+		_ = wsb.AddGDoc(gdoc)
+		_ = wsb.AddCDoc(cdoc)
+		_ = wsb.AddCommand(cmd)
+		_ = wsb.AddQuery(query)
 		_ = adb.AddRole(role)
 
 		return adb.MustBuild()

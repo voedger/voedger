@@ -29,13 +29,13 @@ func ExampleIAppDef_Functions() {
 
 		wsb := adb.AddWorkspace(wsName)
 
-		cmd := adb.AddCommand(cmdName)
+		cmd := wsb.AddCommand(cmdName)
 		cmd.SetEngine(appdef.ExtensionEngineKind_WASM)
 		cmd.
 			SetParam(parName).
 			SetResult(resName)
 
-		query := adb.AddQuery(queryName)
+		query := wsb.AddQuery(queryName)
 		query.SetResult(resName)
 
 		_ = wsb.AddObject(parName)
