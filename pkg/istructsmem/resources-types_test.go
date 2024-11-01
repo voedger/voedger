@@ -58,10 +58,10 @@ func TestResourceEnumerator(t *testing.T) {
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddField("String", appdef.DataKind_string, false)
 
-			adb.AddCommand(cmdCreateDoc).SetParam(oDocName)
-			adb.AddCommand(cmdCreateObj).SetParam(oObjName)
-			adb.AddCommand(cmdCreateObjUnlogged).SetUnloggedParam(oObjName)
-			adb.AddCommand(cmdCUD)
+			wsb.AddCommand(cmdCreateDoc).SetParam(oDocName)
+			wsb.AddCommand(cmdCreateObj).SetParam(oObjName)
+			wsb.AddCommand(cmdCreateObjUnlogged).SetUnloggedParam(oObjName)
+			wsb.AddCommand(cmdCUD)
 		})
 
 		cfgs := make(AppConfigsType, 1)

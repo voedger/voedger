@@ -75,7 +75,7 @@ func TestBasicUsage(t *testing.T) {
 			AddField("Photo", appdef.DataKind_bytes, false)
 
 		qNameCmdTestSale := appdef.NewQName("test", "Sale")
-		adb.AddCommand(qNameCmdTestSale).
+		wsb.AddCommand(qNameCmdTestSale).
 			SetUnloggedParam(saleSecureParamsName).
 			SetParam(saleParamsName)
 
@@ -510,10 +510,10 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		arg := wsb.AddObject(argQName)
 		arg.AddField("bool", appdef.DataKind_bool, false)
 
-		adb.AddCommand(cmdQName).
+		wsb.AddCommand(cmdQName).
 			SetParam(argQName).
 			SetResult(docQName)
-		adb.AddQuery(queryQName).
+		wsb.AddQuery(queryQName).
 			SetParam(argQName).
 			SetResult(appdef.QNameANY)
 

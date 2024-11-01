@@ -393,9 +393,9 @@ func test() *testDataType {
 		}
 
 		{
-			adb.AddCommand(testData.saleCmdName).SetUnloggedParam(testData.saleSecureParsName).SetParam(testData.saleCmdDocName)
-			adb.AddCommand(testData.changeCmdName)
-			adb.AddQuery(testData.queryPhotoFunctionName).SetParam(testData.queryPhotoFunctionParamsName)
+			wsb.AddCommand(testData.saleCmdName).SetUnloggedParam(testData.saleSecureParsName).SetParam(testData.saleCmdDocName)
+			wsb.AddCommand(testData.changeCmdName)
+			wsb.AddQuery(testData.queryPhotoFunctionName).SetParam(testData.queryPhotoFunctionParamsName)
 		}
 
 		return adb

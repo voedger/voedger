@@ -77,13 +77,13 @@ func Example() {
 		obj.AddField("f1", appdef.DataKind_string, true)
 
 		cmdName := appdef.NewQName("test", "cmd")
-		adb.AddCommand(cmdName).
+		wsb.AddCommand(cmdName).
 			SetUnloggedParam(objName).
 			SetParam(objName).
 			SetEngine(appdef.ExtensionEngineKind_WASM)
 
 		queryName := appdef.NewQName("test", "query")
-		adb.AddQuery(queryName).
+		wsb.AddQuery(queryName).
 			SetParam(objName).
 			SetResult(appdef.QNameANY)
 

@@ -567,7 +567,7 @@ func Test_ValidCommandEvent(t *testing.T) {
 		wDoc := wsb.AddWDoc(wDocName)
 		wDoc.AddRefField("RefField", false, oDocName)
 
-		adb.AddCommand(cmdName).SetParam(oDocName).SetResult(wDocName)
+		wsb.AddCommand(cmdName).SetParam(oDocName).SetResult(wDocName)
 	})
 
 	cfgs := make(AppConfigsType, 1)

@@ -89,7 +89,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 			stringFieldValues[stringFieldName] = stringFieldName
 
 		}
-		adb.AddCommand(cmdQName).SetParam(oDocQName)
+		wsb.AddCommand(cmdQName).SetParam(oDocQName)
 		return adb
 	}
 
