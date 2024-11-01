@@ -26,9 +26,11 @@ func TestProcessorKind_compatibleWithExtension(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.test/test")
 
-		adb.AddCommand(cmd).SetParam(appdef.QNameAnyObject)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
-		adb.AddQuery(query).SetResult(appdef.QNameAnyView)
+		wsb.AddCommand(cmd).SetParam(appdef.QNameAnyObject)
+
+		wsb.AddQuery(query).SetResult(appdef.QNameAnyView)
 
 		p1 := adb.AddProjector(syncPrj)
 		p1.SetSync(true)

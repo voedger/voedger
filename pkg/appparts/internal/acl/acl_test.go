@@ -29,18 +29,18 @@ func Test_IsOperationAllowed(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
-		doc := ws.AddCDoc(docName)
+		doc := wsb.AddCDoc(docName)
 		doc.
 			AddField("field1", appdef.DataKind_int32, true).
 			AddField("hiddenField", appdef.DataKind_int32, false).
 			AddField("field3", appdef.DataKind_int32, false)
 
-		qry := adb.AddQuery(queryName)
+		qry := wsb.AddQuery(queryName)
 		qry.SetResult(docName)
 
-		cmd := adb.AddCommand(cmdName)
+		cmd := wsb.AddCommand(cmdName)
 		cmd.SetParam(appdef.QNameANY)
 
 		_ = adb.AddRole(reader)
