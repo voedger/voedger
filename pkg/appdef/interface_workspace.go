@@ -27,6 +27,7 @@ type IWorkspace interface {
 
 	IWithCommands
 	IWithQueries
+	IWithFunctions
 
 	// Returns names of ancestors workspaces.
 	//
