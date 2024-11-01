@@ -89,7 +89,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 			AddField(field_Schema, appdef.DataKind_string, true).
 			AddField(field_ID, appdef.DataKind_RecordID, false)
 
-		adb.AddQuery(qNameQueryCollection).
+		wsb.AddQuery(qNameQueryCollection).
 			SetParam(qNameCollectionParams).
 			SetResult(appdef.QNameANY)
 
@@ -101,7 +101,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		wsb.AddObject(qNameGetCDocResult).
 			AddField("Result", appdef.DataKind_string, true)
 
-		adb.AddQuery(qNameQueryGetCDoc).
+		wsb.AddQuery(qNameQueryGetCDoc).
 			SetParam(qNameGetCDocParams).
 			SetResult(qNameGetCDocResult)
 
@@ -113,12 +113,12 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		wsb.AddObject(qNameStateResult).
 			AddField(field_State, appdef.DataKind_string, true)
 
-		adb.AddQuery(qNameQueryState).
+		wsb.AddQuery(qNameQueryState).
 			SetParam(qNameStateParams).
 			SetResult(qNameStateResult)
 	}
 	{ // "modify" function
-		adb.AddCommand(test.modifyCmdName)
+		wsb.AddCommand(test.modifyCmdName)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(test.modifyCmdName, istructsmem.NullCommandExec))
 	}
 	{ // CDoc: articles
