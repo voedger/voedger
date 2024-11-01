@@ -46,44 +46,50 @@ func Test_AppDef_AddQuery(t *testing.T) {
 
 	require.NotNil(app)
 
-	t.Run("should be ok to find builded query", func(t *testing.T) {
-		typ := app.Type(queryName)
-		require.Equal(TypeKind_Query, typ.Kind())
+	testWithQueries := func(tested IWithQueries) {
+		t.Run("should be ok to find builded query", func(t *testing.T) {
+			typ := tested.(IWithTypes).Type(queryName)
+			require.Equal(TypeKind_Query, typ.Kind())
 
-		q, ok := typ.(IQuery)
-		require.True(ok)
-		require.Equal(TypeKind_Query, q.Kind())
+			q, ok := typ.(IQuery)
+			require.True(ok)
+			require.Equal(TypeKind_Query, q.Kind())
 
-		query := app.Query(queryName)
-		require.Equal(TypeKind_Query, query.Kind())
-		require.Equal(q, query)
-		require.NotPanics(func() { query.isQuery() })
+			query := tested.Query(queryName)
+			require.Equal(TypeKind_Query, query.Kind())
+			require.Equal(wsName, query.Workspace().QName())
+			require.Equal(q, query)
+			require.NotPanics(func() { query.isQuery() })
 
-		require.Equal(queryName.Entity(), query.Name())
-		require.Equal(ExtensionEngineKind_BuiltIn, query.Engine())
+			require.Equal(queryName.Entity(), query.Name())
+			require.Equal(ExtensionEngineKind_BuiltIn, query.Engine())
 
-		require.Equal(parName, query.Param().QName())
-		require.Equal(TypeKind_Object, query.Param().Kind())
+			require.Equal(parName, query.Param().QName())
+			require.Equal(TypeKind_Object, query.Param().Kind())
 
-		require.Equal(resName, query.Result().QName())
-		require.Equal(TypeKind_Object, query.Result().Kind())
-	})
+			require.Equal(resName, query.Result().QName())
+			require.Equal(TypeKind_Object, query.Result().Kind())
+		})
 
-	t.Run("should be ok to enum queries", func(t *testing.T) {
-		cnt := 0
-		for q := range app.Queries {
-			cnt++
-			switch cnt {
-			case 1:
-				require.Equal(queryName, q.QName())
-			default:
-				require.Failf("unexpected query", "query: %v", q)
+		t.Run("should be ok to enum queries", func(t *testing.T) {
+			cnt := 0
+			for q := range tested.Queries {
+				cnt++
+				switch cnt {
+				case 1:
+					require.Equal(queryName, q.QName())
+				default:
+					require.Failf("unexpected query", "query: %v", q)
+				}
 			}
-		}
-		require.Equal(1, cnt)
-	})
+			require.Equal(1, cnt)
+		})
 
-	require.Nil(app.Query(NewQName("test", "unknown")), "should be nil if unknown")
+		require.Nil(tested.Query(NewQName("test", "unknown")), "should be nil if unknown")
+	}
+
+	testWithQueries(app)
+	testWithQueries(app.Workspace(wsName))
 
 	t.Run("should be panics ", func(t *testing.T) {
 		require.Panics(func() {
@@ -192,5 +198,7 @@ func Test_AppDef_AddQueryWithAnyResult(t *testing.T) {
 		require.Equal(QNameANY, query.Result().QName())
 		require.Equal(TypeKind_Any, query.Result().Kind())
 		require.Equal(wsName, query.Workspace().QName())
+
+		require.Equal(query, app.Workspace(wsName).Query(queryName))
 	})
 }

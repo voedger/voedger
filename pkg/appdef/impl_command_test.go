@@ -49,107 +49,115 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 	require.NotNil(app)
 
-	t.Run("must be ok to find builded command", func(t *testing.T) {
-		typ := app.Type(cmdName)
-		require.Equal(TypeKind_Command, typ.Kind())
+	testWithCommands := func(tested IWithCommands) {
 
-		c, ok := typ.(ICommand)
-		require.True(ok)
-		require.Equal(TypeKind_Command, c.Kind())
+		t.Run("must be ok to find builded command", func(t *testing.T) {
+			typ := tested.(IWithTypes).Type(cmdName)
+			require.Equal(TypeKind_Command, typ.Kind())
 
-		cmd := app.Command(cmdName)
-		require.Equal(TypeKind_Command, cmd.Kind())
-		require.Equal(cmdName.Entity(), cmd.Name())
-		require.Equal(c, cmd)
+			c, ok := typ.(ICommand)
+			require.True(ok)
+			require.Equal(TypeKind_Command, c.Kind())
 
-		require.Equal(wsName, cmd.Workspace().QName())
+			cmd := tested.Command(cmdName)
+			require.Equal(TypeKind_Command, cmd.Kind())
+			require.Equal(cmdName.Entity(), cmd.Name())
+			require.Equal(c, cmd)
 
-		require.Equal(ExtensionEngineKind_BuiltIn, cmd.Engine())
+			require.Equal(wsName, cmd.Workspace().QName())
 
-		require.Equal(parName, cmd.Param().QName())
-		require.Equal(TypeKind_Object, cmd.Param().Kind())
+			require.Equal(ExtensionEngineKind_BuiltIn, cmd.Engine())
 
-		require.Equal(unlName, cmd.UnloggedParam().QName())
-		require.Equal(TypeKind_Object, cmd.UnloggedParam().Kind())
+			require.Equal(parName, cmd.Param().QName())
+			require.Equal(TypeKind_Object, cmd.Param().Kind())
 
-		require.Equal(resName, cmd.Result().QName())
-		require.Equal(TypeKind_Object, cmd.Result().Kind())
-	})
+			require.Equal(unlName, cmd.UnloggedParam().QName())
+			require.Equal(TypeKind_Object, cmd.UnloggedParam().Kind())
 
-	t.Run("must be ok to enum commands", func(t *testing.T) {
-		cnt := 0
-		for c := range app.Commands {
-			cnt++
-			switch cnt {
-			case 1:
-				require.Equal(cmdName, c.QName())
-			default:
-				require.Failf("unexpected command", "command: %v", c)
+			require.Equal(resName, cmd.Result().QName())
+			require.Equal(TypeKind_Object, cmd.Result().Kind())
+		})
+
+		t.Run("must be ok to enum commands", func(t *testing.T) {
+			cnt := 0
+			for c := range tested.Commands {
+				cnt++
+				switch cnt {
+				case 1:
+					require.Equal(cmdName, c.QName())
+				default:
+					require.Failf("unexpected command", "command: %v", c)
+				}
 			}
-		}
-		require.Equal(1, cnt)
-	})
+			require.Equal(1, cnt)
+		})
 
-	t.Run("check nil returns", func(t *testing.T) {
-		unknown := NewQName("test", "unknown")
-		require.Nil(app.Command(unknown))
-	})
+		t.Run("check nil returns", func(t *testing.T) {
+			unknown := NewQName("test", "unknown")
+			require.Nil(tested.Command(unknown))
+		})
+	}
 
-	t.Run("panic if name is empty", func(t *testing.T) {
-		adb := New()
-		wsb := adb.AddWorkspace(wsName)
-		require.Panics(func() { wsb.AddCommand(NullQName) },
-			require.Is(ErrMissedError))
-	})
+	testWithCommands(app)
+	testWithCommands(app.Workspace(wsName))
 
-	t.Run("panic if name is invalid", func(t *testing.T) {
-		adb := New()
-		wsb := adb.AddWorkspace(wsName)
-		require.Panics(func() { wsb.AddCommand(NewQName("naked", "🔫")) },
-			require.Is(ErrInvalidError),
-			require.Has("naked.🔫"))
-	})
+	t.Run("should be panics", func(t *testing.T) {
+		t.Run("if name is empty", func(t *testing.T) {
+			adb := New()
+			wsb := adb.AddWorkspace(wsName)
+			require.Panics(func() { wsb.AddCommand(NullQName) },
+				require.Is(ErrMissedError))
+		})
 
-	t.Run("panic if type with name already exists", func(t *testing.T) {
-		testName := NewQName("test", "dupe")
-		adb := New()
-		adb.AddPackage("test", "test.com/test")
-		wsb := adb.AddWorkspace(wsName)
-		wsb.AddObject(testName)
-		require.Panics(func() { wsb.AddCommand(testName) },
-			require.Is(ErrAlreadyExistsError),
-			require.Has(testName.String()))
-	})
+		t.Run("if name is invalid", func(t *testing.T) {
+			adb := New()
+			wsb := adb.AddWorkspace(wsName)
+			require.Panics(func() { wsb.AddCommand(NewQName("naked", "🔫")) },
+				require.Is(ErrInvalidError),
+				require.Has("naked.🔫"))
+		})
 
-	t.Run("panic if extension name is empty", func(t *testing.T) {
-		adb := New()
-		adb.AddPackage("test", "test.com/test")
-		wsb := adb.AddWorkspace(wsName)
-		cmd := wsb.AddCommand(cmdName)
-		require.Panics(func() { cmd.SetName("") },
-			require.Is(ErrMissedError),
-			require.Has("test.cmd"))
-	})
+		t.Run("if type with name already exists", func(t *testing.T) {
+			testName := NewQName("test", "dupe")
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
+			wsb := adb.AddWorkspace(wsName)
+			wsb.AddObject(testName)
+			require.Panics(func() { wsb.AddCommand(testName) },
+				require.Is(ErrAlreadyExistsError),
+				require.Has(testName.String()))
+		})
 
-	t.Run("panic if extension name is invalid", func(t *testing.T) {
-		adb := New()
-		adb.AddPackage("test", "test.com/test")
-		wsb := adb.AddWorkspace(wsName)
-		cmd := wsb.AddCommand(cmdName)
-		require.Panics(func() { cmd.SetName("naked 🔫") },
-			require.Is(ErrInvalidError),
-			require.Has("naked 🔫"))
-	})
+		t.Run("if extension name is empty", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
+			wsb := adb.AddWorkspace(wsName)
+			cmd := wsb.AddCommand(cmdName)
+			require.Panics(func() { cmd.SetName("") },
+				require.Is(ErrMissedError),
+				require.Has("test.cmd"))
+		})
 
-	t.Run("panic if extension kind is invalid", func(t *testing.T) {
-		adb := New()
-		adb.AddPackage("test", "test.com/test")
-		wsb := adb.AddWorkspace(wsName)
-		cmd := wsb.AddCommand(cmdName)
-		require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_null) },
-			require.Is(ErrOutOfBoundsError))
-		require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_Count) },
-			require.Is(ErrOutOfBoundsError))
+		t.Run("if extension name is invalid", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
+			wsb := adb.AddWorkspace(wsName)
+			cmd := wsb.AddCommand(cmdName)
+			require.Panics(func() { cmd.SetName("naked 🔫") },
+				require.Is(ErrInvalidError),
+				require.Has("naked 🔫"))
+		})
+
+		t.Run("if extension kind is invalid", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
+			wsb := adb.AddWorkspace(wsName)
+			cmd := wsb.AddCommand(cmdName)
+			require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_null) },
+				require.Is(ErrOutOfBoundsError))
+			require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_Count) },
+				require.Is(ErrOutOfBoundsError))
+		})
 	})
 }
 
