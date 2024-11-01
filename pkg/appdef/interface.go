@@ -29,10 +29,11 @@ type IAppDef interface {
 
 	IWithViews
 
-	IWithExtensions
-	IWithFunctions
 	IWithCommands
 	IWithQueries
+	IWithFunctions
+
+	IWithExtensions
 	IWithProjectors
 	IWithJobs
 

@@ -125,6 +125,25 @@ func (ws *workspace) DataTypes(cb func(IData) bool) {
 	}
 }
 
+func (ws *workspace) Function(name QName) IFunction {
+	if t := ws.TypeByName(name); t != nil {
+		if f, ok := t.(IFunction); ok {
+			return f
+		}
+	}
+	return nil
+}
+
+func (ws *workspace) Functions(cb func(IFunction) bool) {
+	for t := range ws.Types {
+		if f, ok := t.(IFunction); ok {
+			if !cb(f) {
+				break
+			}
+		}
+	}
+}
+
 func (ws *workspace) GDoc(name QName) IGDoc {
 	if t := ws.typeByKind(name, TypeKind_GDoc); t != nil {
 		return t.(IGDoc)
