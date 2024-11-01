@@ -201,14 +201,9 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 		AddField(authnz.Field_Status, appdef.DataKind_int32, false)
 	wsDescBuilder.SetSingleton()
 
-	adb.AddQuery(qNameFunction).SetParam(qNameFindArticlesByModificationTimeStampRangeParams).SetResult(appdef.NewQName("bo", "Article"))
-	wsb.AddType(qNameFunction)
-
-	adb.AddCommand(istructs.QNameCommandCUD)
-	wsb.AddType(istructs.QNameCommandCUD)
-
-	adb.AddQuery(qNameQryDenied)
-	wsb.AddType(qNameQryDenied)
+	wsb.AddQuery(qNameFunction).SetParam(qNameFindArticlesByModificationTimeStampRangeParams).SetResult(appdef.NewQName("bo", "Article"))
+	wsb.AddCommand(istructs.QNameCommandCUD)
+	wsb.AddQuery(qNameQryDenied)
 
 	if prepareAppDef != nil {
 		prepareAppDef(adb, wsb)
@@ -1124,13 +1119,12 @@ func TestRateLimiter(t *testing.T) {
 	qNameMyFuncResults := appdef.NewQName(appdef.SysPackage, "results")
 	qName := appdef.NewQName(appdef.SysPackage, "myFunc")
 	appParts, cleanAppParts, appTokens, statelessResources := deployTestAppWithSecretToken(require,
-		func(appDef appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
+		func(_ appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
 			wsb.AddObject(qNameMyFuncParams)
 			wsb.AddObject(qNameMyFuncResults).
 				AddField("fld", appdef.DataKind_string, false)
-			qry := appDef.AddQuery(qName)
+			qry := wsb.AddQuery(qName)
 			qry.SetParam(qNameMyFuncParams).SetResult(qNameMyFuncResults)
-			wsb.AddType(qName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			myFunc := istructsmem.NewQueryFunction(qName, istructsmem.NullQueryExec)
