@@ -401,7 +401,18 @@ func (c *buildContext) commands() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(cmd *CommandStmt, ictx *iterateCtx) {
 			qname := schema.NewQName(cmd.Name)
-			b := c.adb.AddCommand(qname)
+
+			wsb := func() appdef.IWorkspaceBuilder {
+				ws := cmd.workspace.qName()
+				b, ok := c.wsBuilders[ws]
+				if !ok {
+					panic(fmt.Sprintf("workspace «%v» builder for command «%v» not found", ws, qname))
+				}
+				return b
+			}()
+
+			b := wsb.AddCommand(qname)
+
 			c.addComments(cmd, b)
 			if cmd.Param != nil {
 				setParam(ictx, cmd.Param, func(qn appdef.QName) { b.SetParam(qn) })
@@ -433,7 +444,18 @@ func (c *buildContext) queries() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(q *QueryStmt, ictx *iterateCtx) {
 			qname := schema.NewQName(q.Name)
-			b := c.adb.AddQuery(qname)
+
+			wsb := func() appdef.IWorkspaceBuilder {
+				ws := q.workspace.qName()
+				b, ok := c.wsBuilders[ws]
+				if !ok {
+					panic(fmt.Sprintf("workspace «%v» builder for query «%v» not found", ws, qname))
+				}
+				return b
+			}()
+
+			b := wsb.AddQuery(qname)
+
 			c.addComments(q, b)
 			if q.Param != nil {
 				setParam(ictx, q.Param, func(qn appdef.QName) { b.SetParam(qn) })
@@ -721,13 +743,10 @@ func (c *defBuildContext) checkName(name string) error {
 func (c *buildContext) pushDef(qname appdef.QName, kind appdef.TypeKind, currentWorkspace workspaceAddr) {
 
 	wsb := func() appdef.IWorkspaceBuilder {
-		if currentWorkspace.workspace == nil {
-			panic("currentWorkspace is nil")
-		}
-		wsQname := currentWorkspace.pkg.NewQName(currentWorkspace.workspace.Name)
-		b, ok := c.wsBuilders[wsQname]
+		ws := currentWorkspace.qName()
+		b, ok := c.wsBuilders[ws]
 		if !ok {
-			panic(fmt.Sprintf("workspace builder «%v» for %s «%v» not found", wsQname, kind.TrimString(), qname))
+			panic(fmt.Sprintf("workspace «%v» builder for %s «%v» not found", ws, kind.TrimString(), qname))
 		}
 		return b
 	}

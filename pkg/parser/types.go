@@ -752,6 +752,7 @@ type CommandStmt struct {
 	Returns       *AnyOrVoidOrDef `parser:"('RETURNS' @@)?"`
 	With          []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 	Engine        EngineType      // Initialized with 1st pass
+	workspace     workspaceAddr   // filled on the analysis stage
 }
 
 func (s *CommandStmt) GetName() string            { return string(s.Name) }
@@ -770,12 +771,13 @@ type AnyOrVoidOrDef struct {
 
 type QueryStmt struct {
 	Statement
-	Name    Ident           `parser:"'QUERY' @Ident"`
-	Param   *AnyOrVoidOrDef `parser:"('(' @@? ')')?"`
-	State   []StateStorage  `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
-	Returns AnyOrVoidOrDef  `parser:"'RETURNS' @@"`
-	With    []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
-	Engine  EngineType      // Initialized with 1st pass
+	Name      Ident           `parser:"'QUERY' @Ident"`
+	Param     *AnyOrVoidOrDef `parser:"('(' @@? ')')?"`
+	State     []StateStorage  `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
+	Returns   AnyOrVoidOrDef  `parser:"'RETURNS' @@"`
+	With      []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	Engine    EngineType      // Initialized with 1st pass
+	workspace workspaceAddr   // filled on the analysis stage
 }
 
 func (s *QueryStmt) GetName() string            { return string(s.Name) }
@@ -799,6 +801,13 @@ type NamedParam struct {
 type workspaceAddr struct {
 	workspace *WorkspaceStmt
 	pkg       *PackageSchemaAST
+}
+
+func (wsa workspaceAddr) qName() appdef.QName {
+	if wsa.workspace == nil {
+		panic("workspace statement is nil")
+	}
+	return wsa.pkg.NewQName(Ident(wsa.workspace.GetName()))
 }
 
 type tableAddr struct {

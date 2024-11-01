@@ -682,6 +682,11 @@ func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
 	analyseWith(&cmd.With, cmd, c)
 	checkState(cmd.State, c, func(sc *StorageScope) bool { return sc.Commands })
 	checkIntents(cmd.Intents, c, func(sc *StorageScope) bool { return sc.Commands })
+
+	cmd.workspace = getCurrentWorkspace(c)
+	if cmd.workspace.workspace == nil || cmd.workspace.pkg == nil {
+		panic("workspace not found for command " + cmd.Name)
+	}
 }
 
 func analyzeQuery(query *QueryStmt, c *iterateCtx) {
@@ -698,6 +703,11 @@ func analyzeQuery(query *QueryStmt, c *iterateCtx) {
 	}
 	analyseWith(&query.With, query, c)
 	checkState(query.State, c, func(sc *StorageScope) bool { return sc.Queries })
+
+	query.workspace = getCurrentWorkspace(c)
+	if query.workspace.workspace == nil || query.workspace.pkg == nil {
+		panic("workspace not found for query " + query.Name)
+	}
 }
 
 func checkStorageEntity(key *StateStorage, f *StorageStmt, c *iterateCtx) error {
