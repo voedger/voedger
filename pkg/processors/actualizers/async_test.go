@@ -66,8 +66,7 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 		func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
 			ProvideViewDef(adb, wsb, incProjectionView, buildProjectionView)
 			ProvideViewDef(adb, wsb, decProjectionView, buildProjectionView)
-			adb.AddCommand(testQName)
-			wsb.AddType(testQName)
+			wsb.AddCommand(testQName)
 			adb.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 			wsb.AddType(incrementorName)
 			adb.AddProjector(decrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
@@ -159,10 +158,8 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 		func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
 			ProvideViewDef(adb, wsb, incProjectionView, buildProjectionView)
 			ProvideViewDef(adb, wsb, decProjectionView, buildProjectionView)
-			adb.AddCommand(testQName)
+			wsb.AddCommand(testQName)
 			adb.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
-			wsb.AddType(incProjectionView)
-			wsb.AddType(decProjectionView)
 			wsb.AddType(incrementorName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
@@ -236,10 +233,8 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 		func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
 			ProvideViewDef(adb, wsb, incProjectionView, buildProjectionView)
 			ProvideViewDef(adb, wsb, decProjectionView, buildProjectionView)
-			adb.AddCommand(testQName)
+			wsb.AddCommand(testQName)
 			adb.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
-			wsb.AddType(incProjectionView)
-			wsb.AddType(decProjectionView)
 			wsb.AddType(incrementorName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
@@ -336,13 +331,11 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 		func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
 			ProvideViewDef(adb, wsb, incProjectionView, buildProjectionView)
 			ProvideViewDef(adb, wsb, decProjectionView, buildProjectionView)
-			adb.AddCommand(testQName)
+			wsb.AddCommand(testQName)
 			// add not-View and not-Record state to make the projector NonBuffered
 			prj := adb.AddProjector(name)
 			prj.Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 			prj.States().Add(sys.Storage_Http)
-			wsb.AddType(incProjectionView)
-			wsb.AddType(decProjectionView)
 			wsb.AddType(name)
 		},
 		func(cfg *istructsmem.AppConfigType) {
@@ -443,10 +436,8 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 		func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
 			ProvideViewDef(adb, wsb, incProjectionView, buildProjectionView)
 			ProvideViewDef(adb, wsb, decProjectionView, buildProjectionView)
-			adb.AddCommand(testQName)
+			wsb.AddCommand(testQName)
 			adb.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
-			wsb.AddType(incProjectionView)
-			wsb.AddType(decProjectionView)
 			wsb.AddType(incrementorName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
@@ -586,10 +577,8 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 			adb.AddPackage("test", "test.com/test")
 			ProvideViewDef(adb, wsb, incProjectionView, buildProjectionView)
 			ProvideViewDef(adb, wsb, decProjectionView, buildProjectionView)
-			adb.AddCommand(testQName)
+			wsb.AddCommand(testQName)
 			adb.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
-			wsb.AddType(incProjectionView)
-			wsb.AddType(decProjectionView)
 			wsb.AddType(incrementorName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
@@ -670,13 +659,11 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 		func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
 			ProvideViewDef(adb, wsb, incProjectionView, buildProjectionView)
 			ProvideViewDef(adb, wsb, decProjectionView, buildProjectionView)
-			adb.AddCommand(testQName)
+			wsb.AddCommand(testQName)
 			// add not-View and not-Record intent to make the projector NonBuffered
 			prj := adb.AddProjector(incrementorName)
 			prj.Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 			prj.Intents().Add(sys.Storage_Http)
-			wsb.AddType(incProjectionView)
-			wsb.AddType(decProjectionView)
 			wsb.AddType(incrementorName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
@@ -794,10 +781,8 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 		appName, totalPartitions, true,
 		testWorkspace, testWorkspaceDescriptor,
 		func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
-			adb.AddCommand(projectorFilter)
-			wsb.AddType(projectorFilter)
-			adb.AddCommand(testQName)
-			wsb.AddType(testQName)
+			wsb.AddCommand(projectorFilter)
+			wsb.AddCommand(testQName)
 			for i := 0; i < projectorsPerPartition; i++ {
 				prj := prjName(i)
 				adb.AddProjector(prj).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
@@ -926,10 +911,8 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 		appName, totalPartitions, true,
 		testWorkspace, testWorkspaceDescriptor,
 		func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
-			adb.AddCommand(projectorFilter)
-			wsb.AddType(projectorFilter)
-			adb.AddCommand(testQName)
-			wsb.AddType(testQName)
+			wsb.AddCommand(projectorFilter)
+			wsb.AddCommand(testQName)
 			for i := 0; i < projectorsPerPartition; i++ {
 				prj := prjName(i)
 				adb.AddProjector(prj).Events().Add(projectorFilter, appdef.ProjectorEventKind_Execute)

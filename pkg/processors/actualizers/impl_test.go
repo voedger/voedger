@@ -65,11 +65,9 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 		func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
 			ProvideViewDef(adb, wsb, incProjectionView, buildProjectionView)
 			ProvideViewDef(adb, wsb, decProjectionView, buildProjectionView)
-			adb.AddCommand(testQName)
+			wsb.AddCommand(testQName)
 			adb.AddProjector(incrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 			adb.AddProjector(decrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
-			wsb.AddType(incProjectionView)
-			wsb.AddType(decProjectionView)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.AddSyncProjectors(testIncrementor, testDecrementor)
@@ -238,7 +236,7 @@ func deployTestAppEx(
 	if prepareAppDef != nil {
 		prepareAppDef(adb, wsb)
 	}
-	adb.AddCommand(newWorkspaceCmd)
+	wsb.AddCommand(newWorkspaceCmd)
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
@@ -394,11 +392,9 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 		func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
 			ProvideViewDef(adb, wsb, incProjectionView, buildProjectionView)
 			ProvideViewDef(adb, wsb, decProjectionView, buildProjectionView)
-			adb.AddCommand(testQName)
+			wsb.AddCommand(testQName)
 			adb.AddProjector(incrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 			adb.AddProjector(decrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
-			wsb.AddType(incProjectionView)
-			wsb.AddType(decProjectionView)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.AddSyncProjectors(testIncrementor, testDecrementor)
