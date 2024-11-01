@@ -63,8 +63,8 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 		istructs.AppQName_test1_app1, 1, false,
 		testWorkspace, testWorkspaceDescriptor,
 		func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
-			ProvideViewDef(adb, wsb, incProjectionView, buildProjectionView)
-			ProvideViewDef(adb, wsb, decProjectionView, buildProjectionView)
+			ProvideViewDef(wsb, incProjectionView, buildProjectionView)
+			ProvideViewDef(wsb, decProjectionView, buildProjectionView)
 			wsb.AddCommand(testQName)
 			adb.AddProjector(incrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 			adb.AddProjector(decrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
@@ -390,8 +390,8 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 		istructs.AppQName_test1_app1, 1, false,
 		testWorkspace, testWorkspaceDescriptor,
 		func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
-			ProvideViewDef(adb, wsb, incProjectionView, buildProjectionView)
-			ProvideViewDef(adb, wsb, decProjectionView, buildProjectionView)
+			ProvideViewDef(wsb, incProjectionView, buildProjectionView)
+			ProvideViewDef(wsb, decProjectionView, buildProjectionView)
 			wsb.AddCommand(testQName)
 			adb.AddProjector(incrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 			adb.AddProjector(decrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)

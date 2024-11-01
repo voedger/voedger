@@ -166,7 +166,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	}
 
 	// kept here to keep local tests working without sql
-	actualizers.ProvideViewDef(adb, wsb, QNameCollectionView, func(b appdef.IViewBuilder) {
+	actualizers.ProvideViewDef(wsb, QNameCollectionView, func(b appdef.IViewBuilder) {
 		b.Key().PartKey().AddField(Field_PartKey, appdef.DataKind_int32)
 		b.Key().ClustCols().
 			AddField(Field_DocQName, appdef.DataKind_QName).
@@ -176,21 +176,6 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 			AddField(Field_Record, appdef.DataKind_Record, true).
 			AddField(state.ColOffset, appdef.DataKind_int64, true)
 	})
-
-	{
-		// Workspace
-		wsb.AddType(qNameQueryCollection)
-		wsb.AddType(qNameQueryGetCDoc)
-		wsb.AddType(qNameQueryState)
-		wsb.AddType(test.modifyCmdName)
-		wsb.AddType(test.tableArticles)
-		wsb.AddType(test.tableDepartments)
-		wsb.AddType(test.tablePeriods)
-		wsb.AddType(test.tablePrices)
-		wsb.AddType(test.tableArticlePrices)
-		wsb.AddType(test.tableArticlePriceExceptions)
-		wsb.AddType(QNameCollectionView)
-	}
 
 	// TODO: remove it after https://github.com/voedger/voedger/issues/56
 	appDef, err := adb.Build()

@@ -26,8 +26,8 @@ func ProvideSyncActualizerFactory() SyncActualizerFactory {
 	return syncActualizerFactory
 }
 
-func ProvideViewDef(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder, qname appdef.QName, buildFunc ViewTypeBuilder) {
-	provideViewDefImpl(adb, wsb, qname, buildFunc)
+func ProvideViewDef(wsb appdef.IWorkspaceBuilder, qname appdef.QName, buildFunc ViewTypeBuilder) {
+	provideViewDefImpl(wsb, qname, buildFunc)
 }
 
 func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, secretReader isecrets.ISecretReader,
