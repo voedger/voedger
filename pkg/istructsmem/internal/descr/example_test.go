@@ -88,7 +88,7 @@ func Example() {
 			SetResult(appdef.QNameANY)
 
 		prjName := appdef.NewQName("test", "projector")
-		prj := adb.AddProjector(prjName)
+		prj := wsb.AddProjector(prjName)
 		prj.
 			SetWantErrors().
 			SetEngine(appdef.ExtensionEngineKind_WASM)
