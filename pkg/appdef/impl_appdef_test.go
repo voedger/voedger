@@ -149,11 +149,11 @@ func Test_EnumsBreakable(t *testing.T) {
 		Events().Add(cmd2Name)
 
 	job1name, job2name := NewQName("test", "Job1"), NewQName("test", "Job2")
-	adb.AddJob(job1name).SetCronSchedule("@every 3s").
+	wsb.AddJob(job1name).SetCronSchedule("@every 3s").
 		States().
 		Add(NewQName("test", "State1"), cmd1Name, cmd2Name).
 		Add(NewQName("test", "State2"))
-	adb.AddJob(job2name).SetCronSchedule("@every 1h")
+	wsb.AddJob(job2name).SetCronSchedule("@every 1h")
 
 	role1Name, role2Name := NewQName("test", "Role1"), NewQName("test", "Role2")
 	adb.AddRole(role1Name).
@@ -208,9 +208,9 @@ func Test_EnumsBreakable(t *testing.T) {
 		testBreakable(t, "Functions", app.Functions, ws.Functions)
 
 		testBreakable(t, "Projectors", app.Projectors, ws.Projectors)
+		testBreakable(t, "Jobs", app.Jobs, ws.Jobs)
 
 		testBreakable(t, "Extensions", app.Extensions)
-		testBreakable(t, "Jobs", app.Jobs)
 		testBreakable(t, "IStorages.Enum", app.Job(job1name).States().Enum)
 		testBreakable(t, "Roles", app.Roles)
 		testBreakable(t, "ACL", app.ACL)

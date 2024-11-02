@@ -170,7 +170,7 @@ func Test_CommandValidate(t *testing.T) {
 	obj := NewQName("test", "obj")
 	_ = wsb.AddObject(obj)
 	bad := NewQName("test", "job")
-	adb.AddJob(bad).SetCronSchedule("@hourly")
+	wsb.AddJob(bad).SetCronSchedule("@hourly")
 	unknown := NewQName("test", "unknown")
 
 	cmd := wsb.AddCommand(NewQName("test", "cmd"))

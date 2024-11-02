@@ -192,6 +192,23 @@ func (ws *workspace) Inherits(anc QName) bool {
 	return false
 }
 
+func (ws *workspace) Job(name QName) IJob {
+	if t := ws.typeByKind(name, TypeKind_Job); t != nil {
+		return t.(IJob)
+	}
+	return nil
+}
+
+func (ws *workspace) Jobs(cb func(IJob) bool) {
+	for t := range ws.Types {
+		if r, ok := t.(IJob); ok {
+			if !cb(r) {
+				break
+			}
+		}
+	}
+}
+
 func (ws *workspace) Object(name QName) IObject {
 	if t := ws.typeByKind(name, TypeKind_Object); t != nil {
 		return t.(IObject)
@@ -462,6 +479,11 @@ func (ws *workspace) addGRecord(name QName) IGRecordBuilder {
 	return newGRecordBuilder(r)
 }
 
+func (ws *workspace) addJob(name QName) IJobBuilder {
+	r := newJob(ws.app, ws, name)
+	return newJobBuilder(r)
+}
+
 func (ws *workspace) addObject(name QName) IObjectBuilder {
 	o := newObject(ws.app, ws, name)
 	return newObjectBuilder(o)
@@ -616,6 +638,10 @@ func (wb *workspaceBuilder) AddGDoc(name QName) IGDocBuilder {
 
 func (wb *workspaceBuilder) AddGRecord(name QName) IGRecordBuilder {
 	return wb.workspace.addGRecord(name)
+}
+
+func (wb *workspaceBuilder) AddJob(name QName) IJobBuilder {
+	return wb.workspace.addJob(name)
 }
 
 func (wb *workspaceBuilder) AddObject(name QName) IObjectBuilder {

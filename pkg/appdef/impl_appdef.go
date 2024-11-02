@@ -531,11 +531,6 @@ func (app *appDef) WorkspaceByDescriptor(name QName) IWorkspace {
 	return app.wsDesc[name]
 }
 
-func (app *appDef) addJob(name QName) IJobBuilder {
-	j := newJob(app, app.sysWS, name)
-	return newJobBuilder(j)
-}
-
 func (app *appDef) addLimit(name QName, on []QName, rate QName, comment ...string) {
 	_ = newLimit(app, app.sysWS, name, on, rate, comment...)
 }
@@ -687,8 +682,6 @@ func newAppDefBuilder(app *appDef) *appDefBuilder {
 		app:            app,
 	}
 }
-
-func (ab *appDefBuilder) AddJob(name QName) IJobBuilder { return ab.app.addJob(name) }
 
 func (ab *appDefBuilder) AddLimit(name QName, on []QName, rate QName, comment ...string) {
 	ab.app.addLimit(name, on, rate, comment...)

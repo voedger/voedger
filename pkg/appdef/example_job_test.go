@@ -32,7 +32,7 @@ func ExampleIAppDefBuilder_AddJob() {
 		v.Value().AddDataField("data", appdef.SysData_bytes, false, appdef.MaxLen(1024))
 		v.SetComment("view is state for job")
 
-		job := adb.AddJob(jobName)
+		job := wsb.AddJob(jobName)
 		job.SetCronSchedule(`@every 2m30s`)
 		job.States().
 			Add(sysViews, viewName).

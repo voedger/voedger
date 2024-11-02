@@ -30,6 +30,7 @@ type IWorkspace interface {
 	IWithFunctions
 
 	IWithProjectors
+	IWithJobs
 
 	// Returns names of ancestors workspaces.
 	//
@@ -72,6 +73,7 @@ type IWorkspaceBuilder interface {
 	IQueriesBuilder
 
 	IProjectorsBuilder
+	IJobsBuilder
 
 	// Adds (includes) type to workspace. Type must be defined for application before.
 	//
