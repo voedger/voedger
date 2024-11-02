@@ -62,12 +62,12 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	appParts, appStructs, start, stop := deployTestApp(
 		istructs.AppQName_test1_app1, 1, false,
 		testWorkspace, testWorkspaceDescriptor,
-		func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
+		func(wsb appdef.IWorkspaceBuilder) {
 			ProvideViewDef(wsb, incProjectionView, buildProjectionView)
 			ProvideViewDef(wsb, decProjectionView, buildProjectionView)
 			wsb.AddCommand(testQName)
-			adb.AddProjector(incrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
-			adb.AddProjector(decrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			wsb.AddProjector(incrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			wsb.AddProjector(decrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.AddSyncProjectors(testIncrementor, testDecrementor)
@@ -178,8 +178,8 @@ var buildProjectionView = func(view appdef.IViewBuilder) {
 }
 
 type (
-	appDefCallback func(appdef.IAppDefBuilder, appdef.IWorkspaceBuilder)
-	appCfgCallback func(cfg *istructsmem.AppConfigType)
+	wsBuildCallback func(appdef.IWorkspaceBuilder)
+	appCfgCallback  func(cfg *istructsmem.AppConfigType)
 )
 
 func deployTestApp(
@@ -187,7 +187,7 @@ func deployTestApp(
 	appPartsCount istructs.NumAppPartitions,
 	cachedStorage bool,
 	wsKind, wsDescriptorKind appdef.QName,
-	prepareAppDef appDefCallback,
+	wsBuild wsBuildCallback,
 	prepareAppCfg appCfgCallback,
 	actualizerCfg *BasicAsyncActualizerConfig,
 ) (
@@ -201,7 +201,7 @@ func deployTestApp(
 		cachedStorage,
 		wsKind,
 		wsDescriptorKind,
-		prepareAppDef,
+		wsBuild,
 		prepareAppCfg,
 		actualizerCfg,
 	)
@@ -213,7 +213,7 @@ func deployTestAppEx(
 	appPartsCount istructs.NumAppPartitions,
 	cachedStorage bool,
 	wsKind, wsDescriptorKind appdef.QName,
-	prepareAppDef appDefCallback,
+	wsBuild wsBuildCallback,
 	prepareAppCfg appCfgCallback,
 	actualizerCfg *BasicAsyncActualizerConfig,
 ) (
@@ -233,8 +233,8 @@ func deployTestAppEx(
 
 	wsdescutil.AddWorkspaceDescriptorStubDef(wsb)
 
-	if prepareAppDef != nil {
-		prepareAppDef(adb, wsb)
+	if wsBuild != nil {
+		wsBuild(wsb)
 	}
 	wsb.AddCommand(newWorkspaceCmd)
 
@@ -389,12 +389,12 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 	appParts, appStructs, start, stop := deployTestApp(
 		istructs.AppQName_test1_app1, 1, false,
 		testWorkspace, testWorkspaceDescriptor,
-		func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
+		func(wsb appdef.IWorkspaceBuilder) {
 			ProvideViewDef(wsb, incProjectionView, buildProjectionView)
 			ProvideViewDef(wsb, decProjectionView, buildProjectionView)
 			wsb.AddCommand(testQName)
-			adb.AddProjector(incrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
-			adb.AddProjector(decrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			wsb.AddProjector(incrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			wsb.AddProjector(decrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.AddSyncProjectors(testIncrementor, testDecrementor)
