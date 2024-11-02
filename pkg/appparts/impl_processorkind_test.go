@@ -44,7 +44,7 @@ func TestProcessorKind_compatibleWithExtension(t *testing.T) {
 		p2.Intents().Add(sys.Storage_View, appdef.QNameAnyView)
 		p2.Events().Add(cmd)
 
-		adb.AddJob(job).SetCronSchedule("@every 1m")
+		wsb.AddJob(job).SetCronSchedule("@every 1m")
 
 		return adb.MustBuild()
 	}()
