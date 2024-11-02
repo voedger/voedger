@@ -74,7 +74,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		wsb.AddORecord(istructs.QNameORecord)
 		wsb.AddWRecord(istructs.QNameWRecord)
 
-		prj := adb.AddProjector(QNameProjectorCollection)
+		prj := wsb.AddProjector(QNameProjectorCollection)
 		prj.SetSync(true).
 			Events().Add(istructs.QNameCRecord, appdef.ProjectorEventKind_Insert, appdef.ProjectorEventKind_Update)
 		prj.Intents().
