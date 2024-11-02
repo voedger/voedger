@@ -32,6 +32,8 @@ type IWorkspace interface {
 	IWithProjectors
 	IWithJobs
 
+	IWithExtensions
+
 	// Returns names of ancestors workspaces.
 	//
 	// Ancestors are enumerated in alphabetic order.

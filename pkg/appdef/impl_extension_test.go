@@ -88,6 +88,7 @@ func Test_AppDefExtensions(t *testing.T) {
 	}
 
 	testWithExtensions(app)
+	testWithExtensions(app.Workspace(wsName))
 }
 
 func TestExtensionEngineKind_MarshalText(t *testing.T) {

@@ -125,6 +125,25 @@ func (ws *workspace) DataTypes(cb func(IData) bool) {
 	}
 }
 
+func (ws *workspace) Extension(name QName) IExtension {
+	if t := ws.TypeByName(name); t != nil {
+		if ex, ok := t.(IExtension); ok {
+			return ex
+		}
+	}
+	return nil
+}
+
+func (ws *workspace) Extensions(cb func(IExtension) bool) {
+	for t := range ws.Types {
+		if ex, ok := t.(IExtension); ok {
+			if !cb(ex) {
+				break
+			}
+		}
+	}
+}
+
 func (ws *workspace) Function(name QName) IFunction {
 	if t := ws.TypeByName(name); t != nil {
 		if f, ok := t.(IFunction); ok {
