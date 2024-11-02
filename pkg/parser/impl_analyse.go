@@ -820,12 +820,12 @@ func preAnalyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 	}
 }
 
-func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
-	for i := range v.Triggers {
-		trigger := &v.Triggers[i]
+func analyseProjector(prj *ProjectorStmt, c *iterateCtx) {
+	for i := range prj.Triggers {
+		trigger := &prj.Triggers[i]
 
 		if trigger.CronSchedule != nil {
-			c.stmtErr(&v.Pos, ErrScheduledProjectorDeprecated)
+			c.stmtErr(&prj.Pos, ErrScheduledProjectorDeprecated)
 		}
 
 		for _, qname := range trigger.QNames {
@@ -896,8 +896,13 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 		}
 	}
 
-	checkState(v.State, c, func(sc *StorageScope) bool { return sc.Projectors })
-	checkIntents(v.Intents, c, func(sc *StorageScope) bool { return sc.Projectors })
+	checkState(prj.State, c, func(sc *StorageScope) bool { return sc.Projectors })
+	checkIntents(prj.Intents, c, func(sc *StorageScope) bool { return sc.Projectors })
+
+	prj.workspace = getCurrentWorkspace(c)
+	if prj.workspace.workspace == nil || prj.workspace.pkg == nil {
+		panic("workspace not found for projector " + prj.Name)
+	}
 }
 
 func analyseJob(j *JobStmt, c *iterateCtx) {

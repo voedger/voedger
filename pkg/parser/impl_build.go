@@ -72,6 +72,18 @@ func supported(stmt interface{}) bool {
 	return true
 }
 
+// Return workspace builder by ws name.
+//
+// # Panics:
+//   - if workspace builder not found.
+func (c buildContext) mustWSBuilder(ws appdef.QName) appdef.IWorkspaceBuilder {
+	wsb, ok := c.wsBuilders[ws]
+	if !ok {
+		panic(fmt.Sprintf("workspace «%v» builder not found", ws))
+	}
+	return wsb
+}
+
 func (c *buildContext) prepareWSBuilders() {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(w *WorkspaceStmt, ictx *iterateCtx) {
@@ -250,7 +262,9 @@ func (c *buildContext) projectors() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(proj *ProjectorStmt, ictx *iterateCtx) {
 			pQname := schema.NewQName(proj.Name)
-			builder := c.adb.AddProjector(pQname)
+
+			wsb := proj.workspace.mustBuilder(c)
+			builder := wsb.AddProjector(pQname)
 			// Triggers
 			for _, trigger := range proj.Triggers {
 				evKinds := make([]appdef.ProjectorEventKind, 0)
@@ -402,15 +416,7 @@ func (c *buildContext) commands() error {
 		iteratePackageStmt(schema, &c.basicContext, func(cmd *CommandStmt, ictx *iterateCtx) {
 			qname := schema.NewQName(cmd.Name)
 
-			wsb := func() appdef.IWorkspaceBuilder {
-				ws := cmd.workspace.qName()
-				b, ok := c.wsBuilders[ws]
-				if !ok {
-					panic(fmt.Sprintf("workspace «%v» builder for command «%v» not found", ws, qname))
-				}
-				return b
-			}()
-
+			wsb := cmd.workspace.mustBuilder(c)
 			b := wsb.AddCommand(qname)
 
 			c.addComments(cmd, b)
@@ -445,15 +451,7 @@ func (c *buildContext) queries() error {
 		iteratePackageStmt(schema, &c.basicContext, func(q *QueryStmt, ictx *iterateCtx) {
 			qname := schema.NewQName(q.Name)
 
-			wsb := func() appdef.IWorkspaceBuilder {
-				ws := q.workspace.qName()
-				b, ok := c.wsBuilders[ws]
-				if !ok {
-					panic(fmt.Sprintf("workspace «%v» builder for query «%v» not found", ws, qname))
-				}
-				return b
-			}()
-
+			wsb := q.workspace.mustBuilder(c)
 			b := wsb.AddQuery(qname)
 
 			c.addComments(q, b)
@@ -742,33 +740,26 @@ func (c *defBuildContext) checkName(name string) error {
 
 func (c *buildContext) pushDef(qname appdef.QName, kind appdef.TypeKind, currentWorkspace workspaceAddr) {
 
-	wsb := func() appdef.IWorkspaceBuilder {
-		ws := currentWorkspace.qName()
-		b, ok := c.wsBuilders[ws]
-		if !ok {
-			panic(fmt.Sprintf("workspace «%v» builder for %s «%v» not found", ws, kind.TrimString(), qname))
-		}
-		return b
-	}
+	wsb := currentWorkspace.mustBuilder(c)
 
 	var builder interface{}
 	switch kind {
 	case appdef.TypeKind_CDoc:
-		builder = wsb().AddCDoc(qname)
+		builder = wsb.AddCDoc(qname)
 	case appdef.TypeKind_CRecord:
-		builder = wsb().AddCRecord(qname)
+		builder = wsb.AddCRecord(qname)
 	case appdef.TypeKind_ODoc:
-		builder = wsb().AddODoc(qname)
+		builder = wsb.AddODoc(qname)
 	case appdef.TypeKind_ORecord:
-		builder = wsb().AddORecord(qname)
+		builder = wsb.AddORecord(qname)
 	case appdef.TypeKind_WDoc:
-		builder = wsb().AddWDoc(qname)
+		builder = wsb.AddWDoc(qname)
 	case appdef.TypeKind_WRecord:
-		builder = wsb().AddWRecord(qname)
+		builder = wsb.AddWRecord(qname)
 	case appdef.TypeKind_Object:
-		builder = wsb().AddObject(qname)
+		builder = wsb.AddObject(qname)
 	case appdef.TypeKind_ViewRecord:
-		builder = wsb().AddView(qname)
+		builder = wsb.AddView(qname)
 	default:
 		panic(fmt.Sprintf("unsupported def kind %d", kind))
 	}

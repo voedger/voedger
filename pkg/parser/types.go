@@ -473,6 +473,7 @@ type ProjectorStmt struct {
 	Intents         []StateStorage     `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
 	IncludingErrors bool               `parser:"@('INCLUDING' 'ERRORS')?"`
 	Engine          EngineType         // Initialized with 1st pass
+	workspace       workspaceAddr      // filled on the analysis stage
 }
 
 func (s *ProjectorStmt) GetName() string            { return string(s.Name) }
@@ -803,6 +804,19 @@ type workspaceAddr struct {
 	pkg       *PackageSchemaAST
 }
 
+// Return workspace builder from specified build context.
+//
+// # Panics:
+//   - if workspace statement is nil
+//   - if workspace builder not found.
+func (wsa workspaceAddr) mustBuilder(ctx *buildContext) appdef.IWorkspaceBuilder {
+	return ctx.mustWSBuilder(wsa.qName())
+}
+
+// Return qualified name of the workspace.
+//
+// # Panics:
+//   - if workspace statement is nil
 func (wsa workspaceAddr) qName() appdef.QName {
 	if wsa.workspace == nil {
 		panic("workspace statement is nil")
