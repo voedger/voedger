@@ -38,7 +38,7 @@ func ExampleIAppDefBuilder_AddProjector() {
 		v.Value().AddDataField("data", appdef.SysData_bytes, false, appdef.MaxLen(1024))
 		v.SetComment("view is intent for projector")
 
-		prj := adb.AddProjector(prjName)
+		prj := wsb.AddProjector(prjName)
 		prj.SetWantErrors()
 		prj.Events().
 			Add(recName, appdef.ProjectorEventKind_AnyChanges...).

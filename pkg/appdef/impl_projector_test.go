@@ -52,7 +52,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		_ = wsb.AddObject(objName)
 		wsb.AddCommand(cmdName).SetParam(objName)
 
-		prj := adb.AddProjector(prjName)
+		prj := wsb.AddProjector(prjName)
 
 		prj.
 			SetSync(true).
@@ -79,162 +79,167 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 	require.NotNil(app)
 
-	t.Run("should be ok to find builded projector", func(t *testing.T) {
-		typ := app.Type(prjName)
-		require.Equal(TypeKind_Projector, typ.Kind())
+	testWithProjectors := func(tested IWithProjectors) {
 
-		p, ok := typ.(IProjector)
-		require.True(ok)
-		require.Equal(TypeKind_Projector, p.Kind())
+		t.Run("should be ok to find builded projector", func(t *testing.T) {
+			typ := tested.(IWithTypes).Type(prjName)
+			require.Equal(TypeKind_Projector, typ.Kind())
 
-		prj := app.Projector(prjName)
-		require.Equal(TypeKind_Projector, prj.Kind())
-		require.Equal(p, prj)
+			p, ok := typ.(IProjector)
+			require.True(ok)
+			require.Equal(TypeKind_Projector, p.Kind())
 
-		require.Equal(prjName.Entity(), prj.Name())
-		require.Equal(ExtensionEngineKind_BuiltIn, prj.Engine())
-		require.True(prj.Sync())
+			prj := tested.Projector(prjName)
+			require.Equal(TypeKind_Projector, prj.Kind())
+			require.Equal(wsName, prj.Workspace().QName())
+			require.Equal(p, prj)
 
-		t.Run("should be ok enum events", func(t *testing.T) {
-			require.EqualValues(3, prj.Events().Len())
+			require.Equal(prjName.Entity(), prj.Name())
+			require.Equal(ExtensionEngineKind_BuiltIn, prj.Engine())
+			require.True(prj.Sync())
 
-			cnt := 0
-			prj.Events().Enum(func(e IProjectorEvent) {
-				cnt++
-				switch cnt {
-				case 1:
-					require.Equal(cmdName, e.On().QName())
-					require.EqualValues([]ProjectorEventKind{ProjectorEventKind_Execute}, e.Kind())
-					require.Contains(e.Comment(), "after execute")
-					require.Contains(e.Comment(), cmdName.String())
-				case 2:
-					require.Equal(objName, e.On().QName())
-					require.EqualValues([]ProjectorEventKind{ProjectorEventKind_ExecuteWithParam}, e.Kind())
-					require.Contains(e.Comment(), "with parameter")
-					require.Contains(e.Comment(), objName.String())
-				case 3:
-					require.Equal(recName, e.On().QName())
-					require.EqualValues(ProjectorEventKind_AnyChanges, e.Kind())
-					require.Contains(e.Comment(), "after change")
-					require.Contains(e.Comment(), recName.String())
-				default:
-					require.Failf("unexpected event", "event: %v", e)
+			t.Run("should be ok enum events", func(t *testing.T) {
+				require.EqualValues(3, prj.Events().Len())
+
+				cnt := 0
+				prj.Events().Enum(func(e IProjectorEvent) {
+					cnt++
+					switch cnt {
+					case 1:
+						require.Equal(cmdName, e.On().QName())
+						require.EqualValues([]ProjectorEventKind{ProjectorEventKind_Execute}, e.Kind())
+						require.Contains(e.Comment(), "after execute")
+						require.Contains(e.Comment(), cmdName.String())
+					case 2:
+						require.Equal(objName, e.On().QName())
+						require.EqualValues([]ProjectorEventKind{ProjectorEventKind_ExecuteWithParam}, e.Kind())
+						require.Contains(e.Comment(), "with parameter")
+						require.Contains(e.Comment(), objName.String())
+					case 3:
+						require.Equal(recName, e.On().QName())
+						require.EqualValues(ProjectorEventKind_AnyChanges, e.Kind())
+						require.Contains(e.Comment(), "after change")
+						require.Contains(e.Comment(), recName.String())
+					default:
+						require.Failf("unexpected event", "event: %v", e)
+					}
+				})
+				require.Equal(3, cnt)
+
+				t.Run("should be ok obtain events map", func(t *testing.T) {
+					events := prj.Events().Map()
+					require.Len(events, 3)
+					require.Contains(events, cmdName)
+					require.EqualValues([]ProjectorEventKind{ProjectorEventKind_Execute}, events[cmdName])
+					require.Contains(events, objName)
+					require.EqualValues([]ProjectorEventKind{ProjectorEventKind_ExecuteWithParam}, events[objName])
+					require.Contains(events, recName)
+					require.EqualValues(ProjectorEventKind_AnyChanges, events[recName])
+				})
+
+				t.Run("should be ok to get event by name", func(t *testing.T) {
+					event := prj.Events().Event(cmdName)
+					require.NotNil(event)
+					require.Equal(cmdName, event.On().QName())
+					require.EqualValues([]ProjectorEventKind{ProjectorEventKind_Execute}, event.Kind())
+
+					require.Nil(prj.Events().Event(NewQName("test", "unknown")), "should be nil for unknown event")
+				})
+			})
+
+			require.True(prj.WantErrors())
+
+			t.Run("should be ok enum states", func(t *testing.T) {
+				cnt := 0
+				for s := range prj.States().Enum {
+					cnt++
+					switch cnt {
+					case 1: // "sys.WLog" < "sys.records" (`W` < `r`)
+						require.Equal(sysWLog, s.Name())
+						require.Empty(s.Names())
+					case 2:
+						require.Equal(sysRecords, s.Name())
+						require.EqualValues(QNames{docName, recName, rec2Name}, s.Names())
+					default:
+						require.Failf("unexpected state", "state: %v", s)
+					}
 				}
+				require.Equal(2, cnt)
+				require.Equal(cnt, prj.States().Len())
+
+				t.Run("should be ok to get states as map", func(t *testing.T) {
+					states := prj.States().Map()
+					require.Len(states, 2)
+					require.Contains(states, sysRecords)
+					require.EqualValues(QNames{docName, recName, rec2Name}, states[sysRecords])
+					require.Contains(states, sysWLog)
+					require.Empty(states[sysWLog])
+				})
+
+				t.Run("should be ok to get state by name", func(t *testing.T) {
+					state := prj.States().Storage(sysRecords)
+					require.NotNil(state)
+					require.Equal(sysRecords, state.Name())
+					require.EqualValues(QNames{docName, recName, rec2Name}, state.Names())
+
+					require.Nil(prj.States().Storage(NewQName("test", "unknown")), "should be nil for unknown state")
+				})
 			})
-			require.Equal(3, cnt)
 
-			t.Run("should be ok obtain events map", func(t *testing.T) {
-				events := prj.Events().Map()
-				require.Len(events, 3)
-				require.Contains(events, cmdName)
-				require.EqualValues([]ProjectorEventKind{ProjectorEventKind_Execute}, events[cmdName])
-				require.Contains(events, objName)
-				require.EqualValues([]ProjectorEventKind{ProjectorEventKind_ExecuteWithParam}, events[objName])
-				require.Contains(events, recName)
-				require.EqualValues(ProjectorEventKind_AnyChanges, events[recName])
-			})
+			t.Run("should be ok enum intents", func(t *testing.T) {
+				cnt := 0
+				for i := range prj.Intents().Enum {
+					cnt++
+					switch cnt {
+					case 1:
+						require.Equal(sysViews, i.Name())
+						require.EqualValues(QNames{viewName}, i.Names())
+						require.Equal("view is intent for projector", i.Comment())
+					default:
+						require.Failf("unexpected intent", "intent: %v", i)
+					}
+				}
+				require.Equal(1, cnt)
+				require.Equal(cnt, prj.Intents().Len())
 
-			t.Run("should be ok to get event by name", func(t *testing.T) {
-				event := prj.Events().Event(cmdName)
-				require.NotNil(event)
-				require.Equal(cmdName, event.On().QName())
-				require.EqualValues([]ProjectorEventKind{ProjectorEventKind_Execute}, event.Kind())
+				t.Run("should be ok to get intents as map", func(t *testing.T) {
+					intents := prj.Intents().Map()
+					require.Len(intents, 1)
+					require.Contains(intents, sysViews)
+					require.EqualValues(QNames{viewName}, intents[sysViews])
+				})
 
-				require.Nil(prj.Events().Event(NewQName("test", "unknown")), "should be nil for unknown event")
+				t.Run("should be ok to get intent by name", func(t *testing.T) {
+					intent := prj.Intents().Storage(sysViews)
+					require.NotNil(intent)
+					require.Equal(sysViews, intent.Name())
+					require.EqualValues(QNames{viewName}, intent.Names())
+
+					require.Nil(prj.Intents().Storage(NewQName("test", "unknown")), "should be nil for unknown intent")
+				})
 			})
 		})
 
-		require.True(prj.WantErrors())
-
-		t.Run("should be ok enum states", func(t *testing.T) {
+		t.Run("should be ok to enum projectors", func(t *testing.T) {
 			cnt := 0
-			for s := range prj.States().Enum {
-				cnt++
-				switch cnt {
-				case 1: // "sys.WLog" < "sys.records" (`W` < `r`)
-					require.Equal(sysWLog, s.Name())
-					require.Empty(s.Names())
-				case 2:
-					require.Equal(sysRecords, s.Name())
-					require.EqualValues(QNames{docName, recName, rec2Name}, s.Names())
-				default:
-					require.Failf("unexpected state", "state: %v", s)
-				}
-			}
-			require.Equal(2, cnt)
-			require.Equal(cnt, prj.States().Len())
-
-			t.Run("should be ok to get states as map", func(t *testing.T) {
-				states := prj.States().Map()
-				require.Len(states, 2)
-				require.Contains(states, sysRecords)
-				require.EqualValues(QNames{docName, recName, rec2Name}, states[sysRecords])
-				require.Contains(states, sysWLog)
-				require.Empty(states[sysWLog])
-			})
-
-			t.Run("should be ok to get state by name", func(t *testing.T) {
-				state := prj.States().Storage(sysRecords)
-				require.NotNil(state)
-				require.Equal(sysRecords, state.Name())
-				require.EqualValues(QNames{docName, recName, rec2Name}, state.Names())
-
-				require.Nil(prj.States().Storage(NewQName("test", "unknown")), "should be nil for unknown state")
-			})
-		})
-
-		t.Run("should be ok enum intents", func(t *testing.T) {
-			cnt := 0
-			for i := range prj.Intents().Enum {
+			for p := range tested.Projectors {
 				cnt++
 				switch cnt {
 				case 1:
-					require.Equal(sysViews, i.Name())
-					require.EqualValues(QNames{viewName}, i.Names())
-					require.Equal("view is intent for projector", i.Comment())
+					require.Equal(TypeKind_Projector, p.Kind())
+					require.Equal(prjName, p.QName())
 				default:
-					require.Failf("unexpected intent", "intent: %v", i)
+					require.Failf("unexpected projector", "projector: %v", p)
 				}
 			}
 			require.Equal(1, cnt)
-			require.Equal(cnt, prj.Intents().Len())
-
-			t.Run("should be ok to get intents as map", func(t *testing.T) {
-				intents := prj.Intents().Map()
-				require.Len(intents, 1)
-				require.Contains(intents, sysViews)
-				require.EqualValues(QNames{viewName}, intents[sysViews])
-			})
-
-			t.Run("should be ok to get intent by name", func(t *testing.T) {
-				intent := prj.Intents().Storage(sysViews)
-				require.NotNil(intent)
-				require.Equal(sysViews, intent.Name())
-				require.EqualValues(QNames{viewName}, intent.Names())
-
-				require.Nil(prj.Intents().Storage(NewQName("test", "unknown")), "should be nil for unknown intent")
-			})
 		})
-	})
 
-	t.Run("should be ok to enum projectors", func(t *testing.T) {
-		cnt := 0
-		for p := range app.Projectors {
-			cnt++
-			switch cnt {
-			case 1:
-				require.Equal(TypeKind_Projector, p.Kind())
-				require.Equal(prjName, p.QName())
-			default:
-				require.Failf("unexpected projector", "projector: %v", p)
-			}
-		}
-		require.Equal(1, cnt)
-	})
+		require.Nil(tested.Projector(NewQName("test", "unknown")), "should be nil if unknown")
+	}
 
-	t.Run("should be nil if unknown", func(t *testing.T) {
-		require.Nil(app.Projector(NewQName("test", "unknown")))
-	})
+	testWithProjectors(app)
+	testWithProjectors(app.Workspace(wsName))
 
 	t.Run("more add projector checks", func(t *testing.T) {
 		adb := New()
@@ -243,7 +248,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		wsb := adb.AddWorkspace(wsName)
 
 		_ = wsb.AddCRecord(recName)
-		prj := adb.AddProjector(prjName)
+		prj := wsb.AddProjector(prjName)
 		prj.
 			SetEngine(ExtensionEngineKind_WASM).
 			SetName("customExtensionName")
@@ -284,7 +289,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
 
-			prj := adb.AddProjector(prjName)
+			prj := adb.AddWorkspace(wsName).AddProjector(prjName)
 			_, err := adb.Build()
 			require.Error(err, require.Is(ErrMissedError), require.Has(prj))
 		})
@@ -296,7 +301,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			wsb := adb.AddWorkspace(wsName)
 
 			wsb.AddCRecord(recName)
-			prj := adb.AddProjector(prjName)
+			prj := wsb.AddProjector(prjName)
 			prj.SetName("customExtensionName")
 			prj.Events().
 				Add(recName, ProjectorEventKind_Insert)
@@ -308,23 +313,31 @@ func Test_AppDef_AddProjector(t *testing.T) {
 	})
 
 	t.Run("should be panics", func(t *testing.T) {
-		adb := New()
-		wsb := adb.AddWorkspace(wsName)
-		require.Panics(func() { adb.AddProjector(NullQName) },
-			require.Is(ErrMissedError))
-		require.Panics(func() { adb.AddProjector(NewQName("naked", "🔫")) },
-			require.Is(ErrInvalidError), require.Has("naked.🔫"))
+		t.Run("if invalid name", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
+			wsb := adb.AddWorkspace(wsName)
+			require.Panics(func() { wsb.AddProjector(NullQName) },
+				require.Is(ErrMissedError))
+			require.Panics(func() { wsb.AddProjector(NewQName("naked", "🔫")) },
+				require.Is(ErrInvalidError), require.Has("naked.🔫"))
+		})
 
-		adb.AddPackage("test", "test.com/test")
 		t.Run("if type with name already exists", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
+			wsb := adb.AddWorkspace(wsName)
 			testName := NewQName("test", "dupe")
 			wsb.AddObject(testName)
-			require.Panics(func() { adb.AddProjector(testName) },
+			require.Panics(func() { wsb.AddProjector(testName) },
 				require.Is(ErrAlreadyExistsError), require.Has(testName))
 		})
 
 		t.Run("if extension name is invalid", func(t *testing.T) {
-			prj := adb.AddProjector(prjName)
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
+			wsb := adb.AddWorkspace(wsName)
+			prj := wsb.AddProjector(prjName)
 			require.Panics(func() { prj.SetName("naked 🔫") },
 				require.Is(ErrInvalidError), require.Has("naked 🔫"))
 		})
@@ -332,9 +345,8 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		t.Run("if invalid states", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-
-			prj := adb.AddProjector(prjName)
-
+			wsb := adb.AddWorkspace(wsName)
+			prj := wsb.AddProjector(prjName)
 			require.Panics(func() { prj.States().Add(NullQName) },
 				require.Is(ErrMissedError))
 			require.Panics(func() { prj.States().Add(NewQName("naked", "🔫")) },
@@ -348,9 +360,8 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		t.Run("if invalid intents", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-
-			prj := adb.AddProjector(prjName)
-
+			wsb := adb.AddWorkspace(wsName)
+			prj := wsb.AddProjector(prjName)
 			require.Panics(func() { prj.Intents().Add(NullQName) },
 				require.Is(ErrMissedError))
 			require.Panics(func() { prj.Intents().Add(NewQName("naked", "🔫")) },
@@ -364,11 +375,8 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		t.Run("if invalid events", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-
 			wsb := adb.AddWorkspace(wsName)
-
-			prj := adb.AddProjector(prjName)
-
+			prj := wsb.AddProjector(prjName)
 			require.Panics(func() { prj.Events().Add(NullQName) },
 				require.Is(ErrMissedError))
 			require.Panics(func() { prj.Events().Add(NewQName("test", "unknown")) },

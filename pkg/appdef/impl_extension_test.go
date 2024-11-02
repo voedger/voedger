@@ -49,7 +49,7 @@ func Test_AppDefExtensions(t *testing.T) {
 			SetParam(parName).
 			SetResult(QNameANY)
 
-		prj := adb.AddProjector(prjName)
+		prj := wsb.AddProjector(prjName)
 		prj.Events().
 			Add(cmdName, ProjectorEventKind_Execute)
 		prj.Intents().
@@ -67,22 +67,27 @@ func Test_AppDefExtensions(t *testing.T) {
 		require.NotNil(app)
 	})
 
-	t.Run("should be ok to enumerate extensions", func(t *testing.T) {
-		var extNames []QName
-		for ex := range app.Extensions {
-			extNames = append(extNames, ex.QName())
-		}
-		require.Len(extNames, 3)
-		require.Equal([]QName{cmdName, prjName, qrName}, extNames)
-	})
+	testWithExtensions := func(tested IWithExtensions) {
+		t.Run("should be ok to enumerate extensions", func(t *testing.T) {
+			var extNames []QName
+			for ex := range tested.Extensions {
+				require.Equal(wsName, ex.Workspace().QName())
+				extNames = append(extNames, ex.QName())
+			}
+			require.Len(extNames, 3)
+			require.Equal([]QName{cmdName, prjName, qrName}, extNames)
+		})
 
-	t.Run("should be ok to find extension by name", func(t *testing.T) {
-		ext := app.Extension(cmdName)
-		require.NotNil(ext)
-		require.Equal(cmdName, ext.QName())
+		t.Run("should be ok to find extension by name", func(t *testing.T) {
+			ext := tested.Extension(cmdName)
+			require.NotNil(ext)
+			require.Equal(cmdName, ext.QName())
+		})
 
-		require.Nil(app.Extension(NewQName("test", "unknown")), "Should be nil if unknown extension")
-	})
+		require.Nil(tested.Extension(NewQName("test", "unknown")), "should be nil if unknown")
+	}
+
+	testWithExtensions(app)
 }
 
 func TestExtensionEngineKind_MarshalText(t *testing.T) {

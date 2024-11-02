@@ -33,9 +33,10 @@ type IAppDef interface {
 	IWithQueries
 	IWithFunctions
 
-	IWithExtensions
 	IWithProjectors
 	IWithJobs
+
+	IWithExtensions
 
 	IWithRoles
 	IWithACL
@@ -50,7 +51,6 @@ type IAppDefBuilder interface {
 	IPackagesBuilder
 	IWorkspacesBuilder
 
-	IProjectorsBuilder
 	IJobsBuilder
 
 	IRolesBuilder

@@ -243,6 +243,23 @@ func (ws *workspace) ORecords(cb func(IORecord) bool) {
 	}
 }
 
+func (ws *workspace) Projector(name QName) IProjector {
+	if t := ws.typeByKind(name, TypeKind_Projector); t != nil {
+		return t.(IProjector)
+	}
+	return nil
+}
+
+func (ws *workspace) Projectors(cb func(IProjector) bool) {
+	for t := range ws.Types {
+		if r, ok := t.(IProjector); ok {
+			if !cb(r) {
+				break
+			}
+		}
+	}
+}
+
 func (ws *workspace) Query(name QName) IQuery {
 	if t := ws.typeByKind(name, TypeKind_Query); t != nil {
 		return t.(IQuery)
@@ -460,6 +477,11 @@ func (ws *workspace) addORecord(name QName) IORecordBuilder {
 	return newORecordBuilder(r)
 }
 
+func (ws *workspace) addProjector(name QName) IProjectorBuilder {
+	p := newProjector(ws.app, ws, name)
+	return newProjectorBuilder(p)
+}
+
 func (ws *workspace) addQuery(name QName) IQueryBuilder {
 	q := newQuery(ws.app, ws, name)
 	return newQueryBuilder(q)
@@ -606,6 +628,10 @@ func (wb *workspaceBuilder) AddODoc(name QName) IODocBuilder {
 
 func (wb *workspaceBuilder) AddORecord(name QName) IORecordBuilder {
 	return wb.workspace.addORecord(name)
+}
+
+func (wb *workspaceBuilder) AddProjector(name QName) IProjectorBuilder {
+	return wb.workspace.addProjector(name)
 }
 
 func (wb *workspaceBuilder) AddQuery(name QName) IQueryBuilder {

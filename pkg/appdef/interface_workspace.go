@@ -29,6 +29,8 @@ type IWorkspace interface {
 	IWithQueries
 	IWithFunctions
 
+	IWithProjectors
+
 	// Returns names of ancestors workspaces.
 	//
 	// Ancestors are enumerated in alphabetic order.
@@ -68,6 +70,8 @@ type IWorkspaceBuilder interface {
 
 	ICommandsBuilder
 	IQueriesBuilder
+
+	IProjectorsBuilder
 
 	// Adds (includes) type to workspace. Type must be defined for application before.
 	//

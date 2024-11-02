@@ -143,9 +143,9 @@ func Test_EnumsBreakable(t *testing.T) {
 	wsb.AddQuery(NewQName("test", "Query1"))
 	wsb.AddQuery(NewQName("test", "Query2"))
 
-	adb.AddProjector(NewQName("test", "Projector1")).
+	wsb.AddProjector(NewQName("test", "Projector1")).
 		Events().Add(cmd1Name)
-	adb.AddProjector(NewQName("test", "Projector2")).
+	wsb.AddProjector(NewQName("test", "Projector2")).
 		Events().Add(cmd2Name)
 
 	job1name, job2name := NewQName("test", "Job1"), NewQName("test", "Job2")
@@ -207,8 +207,9 @@ func Test_EnumsBreakable(t *testing.T) {
 		testBreakable(t, "Queries", app.Queries, ws.Queries)
 		testBreakable(t, "Functions", app.Functions, ws.Functions)
 
+		testBreakable(t, "Projectors", app.Projectors, ws.Projectors)
+
 		testBreakable(t, "Extensions", app.Extensions)
-		testBreakable(t, "Projectors", app.Projectors)
 		testBreakable(t, "Jobs", app.Jobs)
 		testBreakable(t, "IStorages.Enum", app.Job(job1name).States().Enum)
 		testBreakable(t, "Roles", app.Roles)

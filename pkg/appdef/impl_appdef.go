@@ -544,11 +544,6 @@ func (app *appDef) addPackage(localName, path string) {
 	app.packages.add(localName, path)
 }
 
-func (app *appDef) addProjector(name QName) IProjectorBuilder {
-	projector := newProjector(app, app.sysWS, name)
-	return newProjectorBuilder(projector)
-}
-
 func (app *appDef) addRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) {
 	_ = newRate(app, app.sysWS, name, count, period, scopes, comment...)
 }
@@ -703,8 +698,6 @@ func (ab *appDefBuilder) AddPackage(localName, path string) IAppDefBuilder {
 	ab.app.addPackage(localName, path)
 	return ab
 }
-
-func (ab *appDefBuilder) AddProjector(name QName) IProjectorBuilder { return ab.app.addProjector(name) }
 
 func (ab *appDefBuilder) AddRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) {
 	ab.app.addRate(name, count, period, scopes, comment...)
