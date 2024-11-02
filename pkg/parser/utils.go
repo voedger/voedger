@@ -143,10 +143,12 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 	var item stmtType
 	var value interface{} = item
 	lookInOtherPackages := true
+	lookInInheritedWorkspaces := true
 
 	switch value.(type) {
 	case *TagStmt:
 		lookInOtherPackages = false
+		lookInInheritedWorkspaces = false
 	}
 
 	if stmtSchema != ictx.pkg && !lookInOtherPackages {
@@ -189,7 +191,7 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 		ws.workspace.Iterate(lookupCallback)
 		if item == nil {
 			var value interface{} = item
-			if _, ok := value.(*WorkspaceStmt); !ok { //  when looking for something else than a workspace, look in the inherited workspaces
+			if _, ok := value.(*WorkspaceStmt); !ok && lookInInheritedWorkspaces { //  when looking for something else than a workspace, look in the inherited workspaces
 				var lookInInherted func(iws *WorkspaceStmt) error
 				var chain []*WorkspaceStmt
 				lookInInherted = func(iws *WorkspaceStmt) error {

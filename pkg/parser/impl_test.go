@@ -1353,12 +1353,16 @@ func Test_Imports(t *testing.T) {
 		USE pkg2;
 		USE pkg3;
 	);
-	WORKSPACE test INHERITS pkg2.BaseWorkspace (
+	ABSTRACT WORKSPACE base INHERITS pkg2.BaseWorkspace (
+		TAG SomeTag;
+	);
+	WORKSPACE test INHERITS base (
 		EXTENSION ENGINE WASM (
     		COMMAND Orders1 WITH Tags=(pkg2.InheritedTag); -- pkg2.InheritedTag undefined
     		COMMAND Orders2 WITH Tags=(pkg3.SomePkg3Tag); -- pkg3.SomePkg3Tag undefined
     		QUERY Query3 RETURNS void WITH Tags=(air.UnknownTag); -- air.UnknownTag undefined
     		PROJECTOR ImProjector AFTER EXECUTE ON Air.CreateUPProfil; -- Air undefined
+    		COMMAND Orders3 WITH Tags=(SomeTag); -- SomeTag undefined
 		)
 	)
 	`)
@@ -1373,10 +1377,11 @@ func Test_Imports(t *testing.T) {
 
 	_, err := BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), pkg1, pkg2, pkg3})
 	require.EqualError(err, strings.Join([]string{
-		"example.vsql:10:34: undefined tag: pkg2.InheritedTag",
-		"example.vsql:11:34: undefined tag: pkg3.SomePkg3Tag",
-		"example.vsql:12:44: undefined tag: air.UnknownTag",
-		"example.vsql:13:46: Air undefined",
+		"example.vsql:13:34: undefined tag: pkg2.InheritedTag",
+		"example.vsql:14:34: undefined tag: pkg3.SomePkg3Tag",
+		"example.vsql:15:44: undefined tag: air.UnknownTag",
+		"example.vsql:16:46: Air undefined",
+		"example.vsql:17:34: undefined tag: SomeTag",
 	}, "\n"))
 
 }
