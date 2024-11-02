@@ -32,13 +32,13 @@ func TestProcessorKind_compatibleWithExtension(t *testing.T) {
 
 		wsb.AddQuery(query).SetResult(appdef.QNameAnyView)
 
-		p1 := adb.AddProjector(syncPrj)
+		p1 := wsb.AddProjector(syncPrj)
 		p1.SetSync(true)
 		p1.States().Add(sys.Storage_Record, appdef.QNameAnyRecord)
 		p1.Intents().Add(sys.Storage_View, appdef.QNameAnyView)
 		p1.Events().Add(cmd)
 
-		p2 := adb.AddProjector(asyncPrj)
+		p2 := wsb.AddProjector(asyncPrj)
 		p2.SetSync(false)
 		p2.States().Add(sys.Storage_Record, appdef.QNameAnyRecord)
 		p2.Intents().Add(sys.Storage_View, appdef.QNameAnyView)
