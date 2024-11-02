@@ -116,24 +116,15 @@ func lookupInSysPackage[stmtType *WorkspaceStmt](ctx *basicContext, fn DefQName)
 }
 
 func getCurrentWorkspace(ictx *iterateCtx) workspaceAddr {
-	var ic *iterateCtx = ictx
-	var ws *WorkspaceStmt = nil
-	var pkg *PackageSchemaAST = nil
-
-	for ic != nil {
-		if _, isWorkspace := ic.collection.(*AlterWorkspaceStmt); isWorkspace {
-			ws = ic.collection.(*AlterWorkspaceStmt).alteredWorkspace
-			pkg = ic.collection.(*AlterWorkspaceStmt).alteredWorkspacePkg
-			break
+	for ic := ictx; ic != nil; ic = ic.parent {
+		if aws, isWorkspace := ic.collection.(*AlterWorkspaceStmt); isWorkspace {
+			return workspaceAddr{aws.alteredWorkspace, aws.alteredWorkspacePkg}
 		}
-		if _, isWorkspace := ic.collection.(*WorkspaceStmt); isWorkspace {
-			ws = ic.collection.(*WorkspaceStmt)
-			pkg = ic.pkg
-			break
+		if ws, isWorkspace := ic.collection.(*WorkspaceStmt); isWorkspace {
+			return workspaceAddr{ws, ic.pkg}
 		}
-		ic = ic.parent
 	}
-	return workspaceAddr{ws, pkg}
+	return workspaceAddr{}
 }
 
 func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *RateStmt | *TagStmt | *ProjectorStmt | *JobStmt |

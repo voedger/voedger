@@ -235,7 +235,9 @@ func (c *buildContext) jobs() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(job *JobStmt, ictx *iterateCtx) {
 			jQname := schema.NewQName(job.Name)
-			builder := c.adb.AddJob(jQname)
+
+			wsb := job.workspace.mustBuilder(c)
+			builder := wsb.AddJob(jQname)
 			builder.SetCronSchedule(*job.CronSchedule)
 
 			for _, state := range job.State {

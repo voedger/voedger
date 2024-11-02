@@ -522,6 +522,7 @@ type JobStmt struct {
 	State        []StateStorage `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
 	Intents      []StateStorage `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
 	Engine       EngineType     // Initialized with 1st pass
+	workspace    workspaceAddr  // filled on the analysis stage
 }
 
 func (j *JobStmt) GetName() string            { return string(j.Name) }

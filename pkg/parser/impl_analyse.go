@@ -23,6 +23,17 @@ type iterateCtx struct {
 	wsCtxs     map[*WorkspaceStmt]*wsCtx
 }
 
+// Returns the current workspace.
+//
+// # Panics:
+//   - if there is no current workspace.
+func (c *iterateCtx) mustCurrentWorkspace() workspaceAddr {
+	if ws := getCurrentWorkspace(c); (ws.workspace != nil) && (ws.pkg != nil) {
+		return ws
+	}
+	panic("no current workspace")
+}
+
 func (c *iterateCtx) setPkg(pkg *PackageSchemaAST) {
 	c.pkg = pkg
 	c.collection = pkg.Ast
@@ -639,11 +650,7 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 		return
 	}
 
-	view.workspace = getCurrentWorkspace(c)
-	if view.workspace.workspace == nil || view.workspace.pkg == nil {
-		panic("workspace not found for view " + view.Name)
-	}
-
+	view.workspace = c.mustCurrentWorkspace()
 }
 
 func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
@@ -683,10 +690,7 @@ func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
 	checkState(cmd.State, c, func(sc *StorageScope) bool { return sc.Commands })
 	checkIntents(cmd.Intents, c, func(sc *StorageScope) bool { return sc.Commands })
 
-	cmd.workspace = getCurrentWorkspace(c)
-	if cmd.workspace.workspace == nil || cmd.workspace.pkg == nil {
-		panic("workspace not found for command " + cmd.Name)
-	}
+	cmd.workspace = c.mustCurrentWorkspace()
 }
 
 func analyzeQuery(query *QueryStmt, c *iterateCtx) {
@@ -704,10 +708,7 @@ func analyzeQuery(query *QueryStmt, c *iterateCtx) {
 	analyseWith(&query.With, query, c)
 	checkState(query.State, c, func(sc *StorageScope) bool { return sc.Queries })
 
-	query.workspace = getCurrentWorkspace(c)
-	if query.workspace.workspace == nil || query.workspace.pkg == nil {
-		panic("workspace not found for query " + query.Name)
-	}
+	query.workspace = c.mustCurrentWorkspace()
 }
 
 func checkStorageEntity(key *StateStorage, f *StorageStmt, c *iterateCtx) error {
@@ -899,10 +900,7 @@ func analyseProjector(prj *ProjectorStmt, c *iterateCtx) {
 	checkState(prj.State, c, func(sc *StorageScope) bool { return sc.Projectors })
 	checkIntents(prj.Intents, c, func(sc *StorageScope) bool { return sc.Projectors })
 
-	prj.workspace = getCurrentWorkspace(c)
-	if prj.workspace.workspace == nil || prj.workspace.pkg == nil {
-		panic("workspace not found for projector " + prj.Name)
-	}
+	prj.workspace = c.mustCurrentWorkspace()
 }
 
 func analyseJob(j *JobStmt, c *iterateCtx) {
@@ -912,6 +910,8 @@ func analyseJob(j *JobStmt, c *iterateCtx) {
 	}
 	checkState(j.State, c, func(sc *StorageScope) bool { return sc.Jobs })
 	checkIntents(j.Intents, c, func(sc *StorageScope) bool { return sc.Jobs })
+
+	j.workspace = c.mustCurrentWorkspace()
 }
 
 // Note: function may update with argument
@@ -962,10 +962,7 @@ func analyseTable(v *TableStmt, c *iterateCtx) {
 			c.stmtErr(&v.Inherits.Pos, err)
 		}
 	}
-	v.workspace = getCurrentWorkspace(c)
-	if v.workspace.workspace == nil || v.workspace.pkg == nil {
-		panic("workspace not found for table " + v.Name)
-	}
+	v.workspace = c.mustCurrentWorkspace()
 }
 
 func analyseType(v *TypeStmt, c *iterateCtx) {
@@ -976,10 +973,7 @@ func analyseType(v *TypeStmt, c *iterateCtx) {
 	}
 	analyseFieldSets(v.Items, c)
 	analyseFields(v.Items, c, false)
-	v.workspace = getCurrentWorkspace(c)
-	if v.workspace.workspace == nil || v.workspace.pkg == nil {
-		panic("workspace not found for type " + v.Name)
-	}
+	v.workspace = c.mustCurrentWorkspace()
 }
 
 func useStmtInWs(wsctx *wsCtx, stmtPackage *PackageSchemaAST, stmt interface{}) {
