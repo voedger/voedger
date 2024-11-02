@@ -102,7 +102,7 @@ func Example() {
 			Add(sysViews, viewName).SetComment(sysViews, "needs to update «test.view» from «sys.views» storage")
 
 		jobName := appdef.NewQName("test", "job")
-		job := adb.AddJob(jobName)
+		job := wsb.AddJob(jobName)
 		job.SetCronSchedule(`@every 1h30m`)
 		job.SetEngine(appdef.ExtensionEngineKind_WASM)
 		job.States().
@@ -134,14 +134,6 @@ func Example() {
 
 		wsb.AddCDoc(wsDescName).SetSingleton()
 		wsb.SetDescriptor(wsDescName).
-			AddType(docName).
-			AddType(recName).
-			AddType(viewName).
-			AddType(objName).
-			AddType(cmdName).
-			AddType(queryName).
-			AddType(prjName).
-			AddType(jobName).
 			AddType(readerName).
 			AddType(writerName)
 
