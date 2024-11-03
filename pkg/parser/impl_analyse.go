@@ -907,6 +907,14 @@ func analyseProjector(prj *ProjectorStmt, c *iterateCtx) {
 }
 
 func analyseJob(j *JobStmt, c *iterateCtx) {
+	ws := getCurrentWorkspace(c)
+	if ws.workspace == nil {
+		panic("workspace not found for JOB" + j.Name)
+	}
+	if !(ws.workspace.GetName() == nameAppWorkspaceWS && ws.pkg.Name == appdef.SysPackage) {
+		c.stmtErr(&j.Pos, ErrJobMustBeInAppWorkspace)
+	}
+
 	parser := cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
 	if _, e := parser.Parse(*j.CronSchedule); e != nil {
 		c.stmtErr(&j.Pos, ErrInvalidCronSchedule(*j.CronSchedule))
