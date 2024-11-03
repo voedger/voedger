@@ -368,6 +368,9 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 		iterateWorkspaceStmts(c, true, func(tbl *TableStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
 			grant.on = append(grant.on, schema.NewQName(tbl.Name))
 		})
+		iterateWorkspaceStmts(c, true, func(tbl *WsDescriptorStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
+			grant.on = append(grant.on, schema.NewQName(tbl.Name))
+		})
 	}
 
 	// TABLE

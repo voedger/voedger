@@ -2151,6 +2151,7 @@ func Test_Grants_Inherit(t *testing.T) {
 				TABLE Table1 INHERITS CDoc();
 			);
 			WORKSPACE AppWorkspaceWS INHERITS BaseWs (
+				DESCRIPTOR AppWorkspace();
 				TABLE Table2 INHERITS CDoc();
 				GRANT INSERT ON ALL TABLES TO role1;
 			);`)
@@ -2168,8 +2169,8 @@ func Test_Grants_Inherit(t *testing.T) {
 			require.Len(i.Ops(), 1)
 			require.Equal(appdef.OperationKind_Insert, i.Ops()[0])
 			require.Equal(appdef.PolicyKind_Allow, i.Policy())
-			require.Len(i.Resources().On(), 1)
-			require.Equal("pkg.Table2", i.Resources().On()[0].String())
+			require.Len(i.Resources().On(), 2)
+			require.True(i.Resources().On().ContainsAll(appdef.NewQName("pkg", "Table2"), appdef.NewQName("pkg", "AppWorkspace")))
 			require.Equal("pkg.role1", i.Principal().QName().String())
 			numACLs++
 			return true
