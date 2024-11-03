@@ -151,6 +151,35 @@ func Test_TypeKind_Structures(t *testing.T) {
 	}, "should be read-only")
 }
 
+func Test_TypeKind_Singletons(t *testing.T) {
+	require := require.New(t)
+
+	var tests = []struct {
+		name string
+		k    TypeKind
+		want bool
+	}{
+		{"CDoc", TypeKind_CDoc, true},
+		{"WDoc", TypeKind_WDoc, true},
+
+		{"Any", TypeKind_Any, false},
+		{"null", TypeKind_null, false},
+		{"ODoc", TypeKind_ODoc, false},
+		{"view", TypeKind_ViewRecord, false},
+		{"command", TypeKind_Command, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(tt.want, TypeKind_Singletons.Contains(tt.k))
+		})
+	}
+
+	require.Panics(func() {
+		TypeKind_Singletons.Clear(TypeKind_CDoc)
+	}, "should be read-only")
+}
+
 func Test_TypeKind_Functions(t *testing.T) {
 	require := require.New(t)
 
@@ -177,6 +206,36 @@ func Test_TypeKind_Functions(t *testing.T) {
 
 	require.Panics(func() {
 		TypeKind_Functions.Set(TypeKind_Job)
+	}, "should be read-only")
+}
+
+func Test_TypeKind_Extensions(t *testing.T) {
+	require := require.New(t)
+
+	var tests = []struct {
+		name string
+		k    TypeKind
+		want bool
+	}{
+		{"Query", TypeKind_Query, true},
+		{"Command", TypeKind_Command, true},
+		{"Projector", TypeKind_Projector, true},
+		{"Job", TypeKind_Job, true},
+
+		{"Any", TypeKind_Any, false},
+		{"null", TypeKind_null, false},
+		{"count", TypeKind_count, false},
+		{"CDoc", TypeKind_CDoc, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(tt.want, TypeKind_Extensions.Contains(tt.k))
+		})
+	}
+
+	require.Panics(func() {
+		TypeKind_Extensions.ClearAll()
 	}, "should be read-only")
 }
 

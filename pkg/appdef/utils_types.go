@@ -13,10 +13,27 @@ import (
 )
 
 // Returns iterator over types by kind.
+//
+// Types are visit  in alphabetic order.
 func TypesByKind(types IWithTypes, kind TypeKind) func(visit func(IType) bool) {
 	return func(visit func(IType) bool) {
 		for t := range types.Types {
 			if t.Kind() == kind {
+				if !visit(t) {
+					break
+				}
+			}
+		}
+	}
+}
+
+// Returns iterator over types by kinds set.
+//
+// Types are visit  in alphabetic order.
+func TypesByKinds(types IWithTypes, kinds TypeKindSet) func(visit func(IType) bool) {
+	return func(visit func(IType) bool) {
+		for t := range types.Types {
+			if kinds.Contains(t.Kind()) {
 				if !visit(t) {
 					break
 				}

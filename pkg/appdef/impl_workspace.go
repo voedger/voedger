@@ -66,9 +66,9 @@ func (ws *workspace) CDoc(name QName) ICDoc {
 	return nil
 }
 
-func (ws *workspace) CDocs(cb func(ICDoc) bool) {
+func (ws *workspace) CDocs(visit func(ICDoc) bool) {
 	for t := range TypesByKind(ws, TypeKind_CDoc) {
-		if !cb(t.(ICDoc)) {
+		if !visit(t.(ICDoc)) {
 			break
 		}
 	}
@@ -81,9 +81,9 @@ func (ws *workspace) Command(name QName) ICommand {
 	return nil
 }
 
-func (ws *workspace) Commands(cb func(ICommand) bool) {
+func (ws *workspace) Commands(visit func(ICommand) bool) {
 	for t := range TypesByKind(ws, TypeKind_Command) {
-		if !cb(t.(ICommand)) {
+		if !visit(t.(ICommand)) {
 			break
 		}
 	}
@@ -96,9 +96,9 @@ func (ws *workspace) CRecord(name QName) ICRecord {
 	return nil
 }
 
-func (ws *workspace) CRecords(cb func(ICRecord) bool) {
+func (ws *workspace) CRecords(visit func(ICRecord) bool) {
 	for t := range TypesByKind(ws, TypeKind_CRecord) {
-		if !cb(t.(ICRecord)) {
+		if !visit(t.(ICRecord)) {
 			break
 		}
 	}
@@ -118,9 +118,9 @@ func (ws *workspace) Data(name QName) IData {
 	return nil
 }
 
-func (ws *workspace) DataTypes(cb func(IData) bool) {
+func (ws *workspace) DataTypes(visit func(IData) bool) {
 	for t := range TypesByKind(ws, TypeKind_Data) {
-		if !cb(t.(IData)) {
+		if !visit(t.(IData)) {
 			break
 		}
 	}
@@ -135,12 +135,10 @@ func (ws *workspace) Extension(name QName) IExtension {
 	return nil
 }
 
-func (ws *workspace) Extensions(cb func(IExtension) bool) {
-	for t := range ws.Types {
-		if ex, ok := t.(IExtension); ok {
-			if !cb(ex) {
-				break
-			}
+func (ws *workspace) Extensions(visit func(IExtension) bool) {
+	for t := range TypesByKinds(ws, TypeKind_Extensions) {
+		if !visit(t.(IExtension)) {
+			break
 		}
 	}
 }
@@ -154,12 +152,10 @@ func (ws *workspace) Function(name QName) IFunction {
 	return nil
 }
 
-func (ws *workspace) Functions(cb func(IFunction) bool) {
-	for t := range ws.Types {
-		if f, ok := t.(IFunction); ok {
-			if !cb(f) {
-				break
-			}
+func (ws *workspace) Functions(visit func(IFunction) bool) {
+	for t := range TypesByKinds(ws, TypeKind_Functions) {
+		if !visit(t.(IFunction)) {
+			break
 		}
 	}
 }
@@ -171,9 +167,9 @@ func (ws *workspace) GDoc(name QName) IGDoc {
 	return nil
 }
 
-func (ws *workspace) GDocs(cb func(IGDoc) bool) {
+func (ws *workspace) GDocs(visit func(IGDoc) bool) {
 	for t := range TypesByKind(ws, TypeKind_GDoc) {
-		if !cb(t.(IGDoc)) {
+		if !visit(t.(IGDoc)) {
 			break
 		}
 	}
@@ -186,9 +182,9 @@ func (ws *workspace) GRecord(name QName) IGRecord {
 	return nil
 }
 
-func (ws *workspace) GRecords(cb func(IGRecord) bool) {
+func (ws *workspace) GRecords(visit func(IGRecord) bool) {
 	for t := range TypesByKind(ws, TypeKind_GRecord) {
-		if !cb(t.(IGRecord)) {
+		if !visit(t.(IGRecord)) {
 			break
 		}
 	}
@@ -215,9 +211,9 @@ func (ws *workspace) Job(name QName) IJob {
 	return nil
 }
 
-func (ws *workspace) Jobs(cb func(IJob) bool) {
+func (ws *workspace) Jobs(visit func(IJob) bool) {
 	for t := range TypesByKind(ws, TypeKind_Job) {
-		if !cb(t.(IJob)) {
+		if !visit(t.(IJob)) {
 			break
 		}
 	}
@@ -230,9 +226,9 @@ func (ws *workspace) Object(name QName) IObject {
 	return nil
 }
 
-func (ws *workspace) Objects(cb func(IObject) bool) {
+func (ws *workspace) Objects(visit func(IObject) bool) {
 	for t := range TypesByKind(ws, TypeKind_Object) {
-		if !cb(t.(IObject)) {
+		if !visit(t.(IObject)) {
 			break
 		}
 	}
@@ -245,9 +241,9 @@ func (ws *workspace) ODoc(name QName) IODoc {
 	return nil
 }
 
-func (ws *workspace) ODocs(cb func(IODoc) bool) {
+func (ws *workspace) ODocs(visit func(IODoc) bool) {
 	for t := range TypesByKind(ws, TypeKind_ODoc) {
-		if !cb(t.(IODoc)) {
+		if !visit(t.(IODoc)) {
 			break
 		}
 	}
@@ -260,9 +256,9 @@ func (ws *workspace) ORecord(name QName) IORecord {
 	return nil
 }
 
-func (ws *workspace) ORecords(cb func(IORecord) bool) {
+func (ws *workspace) ORecords(visit func(IORecord) bool) {
 	for t := range TypesByKind(ws, TypeKind_ORecord) {
-		if !cb(t.(IORecord)) {
+		if !visit(t.(IORecord)) {
 			break
 		}
 	}
@@ -275,9 +271,9 @@ func (ws *workspace) Projector(name QName) IProjector {
 	return nil
 }
 
-func (ws *workspace) Projectors(cb func(IProjector) bool) {
+func (ws *workspace) Projectors(visit func(IProjector) bool) {
 	for t := range TypesByKind(ws, TypeKind_Projector) {
-		if !cb(t.(IProjector)) {
+		if !visit(t.(IProjector)) {
 			break
 		}
 	}
@@ -290,9 +286,9 @@ func (ws *workspace) Query(name QName) IQuery {
 	return nil
 }
 
-func (ws *workspace) Queries(cb func(IQuery) bool) {
+func (ws *workspace) Queries(visit func(IQuery) bool) {
 	for t := range TypesByKind(ws, TypeKind_Query) {
-		if !cb(t.(IQuery)) {
+		if !visit(t.(IQuery)) {
 			break
 		}
 	}
@@ -307,12 +303,10 @@ func (ws *workspace) Record(name QName) IRecord {
 	return nil
 }
 
-func (ws *workspace) Records(cb func(IRecord) bool) {
-	for t := range ws.Types {
-		if r, ok := t.(IRecord); ok {
-			if !cb(r) {
-				break
-			}
+func (ws *workspace) Records(visit func(IRecord) bool) {
+	for t := range TypesByKinds(ws, TypeKind_Records) {
+		if !visit(t.(IRecord)) {
+			break
 		}
 	}
 }
@@ -324,12 +318,10 @@ func (ws *workspace) Role(name QName) IRole {
 	return nil
 }
 
-func (ws *workspace) Roles(cb func(IRole) bool) {
-	for r := range ws.Types {
-		if r, ok := r.(IRole); ok {
-			if !cb(r) {
-				break
-			}
+func (ws *workspace) Roles(visit func(IRole) bool) {
+	for t := range TypesByKind(ws, TypeKind_Role) {
+		if !visit(t.(IRole)) {
+			break
 		}
 	}
 }
@@ -343,11 +335,11 @@ func (ws *workspace) Singleton(name QName) ISingleton {
 	return nil
 }
 
-func (ws *workspace) Singletons(cb func(ISingleton) bool) {
-	for t := range ws.Types {
+func (ws *workspace) Singletons(visit func(ISingleton) bool) {
+	for t := range TypesByKinds(ws, TypeKind_Singletons) {
 		if s, ok := t.(ISingleton); ok {
 			if s.Singleton() {
-				if !cb(s) {
+				if !visit(s) {
 					break
 				}
 			}
@@ -364,12 +356,10 @@ func (ws *workspace) Structure(name QName) IStructure {
 	return nil
 }
 
-func (ws *workspace) Structures(cb func(IStructure) bool) {
-	for t := range ws.Types {
-		if r, ok := t.(IStructure); ok {
-			if !cb(r) {
-				break
-			}
+func (ws *workspace) Structures(visit func(IStructure) bool) {
+	for t := range TypesByKinds(ws, TypeKind_Structures) {
+		if !visit(t.(IStructure)) {
+			break
 		}
 	}
 }
@@ -393,7 +383,7 @@ func (ws *workspace) TypeByName(name QName) IType {
 	return nil
 }
 
-func (ws *workspace) Types(cb func(IType) bool) {
+func (ws *workspace) Types(visit func(IType) bool) {
 	if len(ws.typesOrdered) != len(ws.types) {
 		ws.typesOrdered = make([]interface{}, 0, len(ws.types))
 		for _, t := range ws.types {
@@ -404,7 +394,7 @@ func (ws *workspace) Types(cb func(IType) bool) {
 		})
 	}
 	for _, t := range ws.typesOrdered {
-		if !cb(t.(IType)) {
+		if !visit(t.(IType)) {
 			break
 		}
 	}
@@ -424,9 +414,9 @@ func (ws *workspace) View(name QName) IView {
 	return nil
 }
 
-func (ws *workspace) Views(cb func(IView) bool) {
+func (ws *workspace) Views(visit func(IView) bool) {
 	for t := range TypesByKind(ws, TypeKind_ViewRecord) {
-		if !cb(t.(IView)) {
+		if !visit(t.(IView)) {
 			break
 		}
 	}
@@ -439,9 +429,9 @@ func (ws *workspace) WDoc(name QName) IWDoc {
 	return nil
 }
 
-func (ws *workspace) WDocs(cb func(IWDoc) bool) {
+func (ws *workspace) WDocs(visit func(IWDoc) bool) {
 	for t := range TypesByKind(ws, TypeKind_WDoc) {
-		if !cb(t.(IWDoc)) {
+		if !visit(t.(IWDoc)) {
 			break
 		}
 	}
@@ -454,9 +444,9 @@ func (ws *workspace) WRecord(name QName) IWRecord {
 	return nil
 }
 
-func (ws *workspace) WRecords(cb func(IWRecord) bool) {
+func (ws *workspace) WRecords(visit func(IWRecord) bool) {
 	for t := range TypesByKind(ws, TypeKind_WRecord) {
-		if !cb(t.(IWRecord)) {
+		if !visit(t.(IWRecord)) {
 			break
 		}
 	}

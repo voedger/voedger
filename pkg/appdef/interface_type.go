@@ -104,10 +104,29 @@ var (
 		return s
 	}()
 
+	TypeKind_Singletons = func() TypeKindSet {
+		s := set.From(
+			TypeKind_CDoc,
+			TypeKind_WDoc,
+		)
+		s.SetReadOnly()
+		return s
+	}()
+
 	TypeKind_Functions = func() TypeKindSet {
 		s := set.From(
-			TypeKind_Query,
 			TypeKind_Command,
+			TypeKind_Query,
+		)
+		s.SetReadOnly()
+		return s
+	}()
+
+	TypeKind_Extensions = func() TypeKindSet {
+		s := set.From(TypeKind_Functions.AsArray()...)
+		s.Set(
+			TypeKind_Projector,
+			TypeKind_Job,
 		)
 		s.SetReadOnly()
 		return s
