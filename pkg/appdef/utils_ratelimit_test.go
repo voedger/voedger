@@ -46,7 +46,7 @@ func Test_validateLimitNames(t *testing.T) {
 		_ = wsb.AddQuery(queryName)
 		_ = wsb.AddCDoc(docName)
 
-		_ = adb.AddRole(roleName)
+		_ = wsb.AddRole(roleName)
 
 		return adb.MustBuild()
 	}()

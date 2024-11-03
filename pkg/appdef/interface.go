@@ -51,9 +51,6 @@ type IAppDefBuilder interface {
 	IPackagesBuilder
 	IWorkspacesBuilder
 
-	IRolesBuilder
-	IACLBuilder
-
 	IRatesBuilder
 	ILimitsBuilder
 

@@ -34,6 +34,9 @@ type IWorkspace interface {
 
 	IWithExtensions
 
+	IWithRoles
+	IWithACL
+
 	// Returns names of ancestors workspaces.
 	//
 	// Ancestors are enumerated in alphabetic order.
@@ -76,6 +79,9 @@ type IWorkspaceBuilder interface {
 
 	IProjectorsBuilder
 	IJobsBuilder
+
+	IRolesBuilder
+	IACLBuilder
 
 	// Adds (includes) type to workspace. Type must be defined for application before.
 	//

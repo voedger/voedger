@@ -70,7 +70,7 @@ func Test_validateACLResourceNames(t *testing.T) {
 		_ = wsb.AddCDoc(cdoc)
 		_ = wsb.AddCommand(cmd)
 		_ = wsb.AddQuery(query)
-		_ = adb.AddRole(role)
+		_ = wsb.AddRole(role)
 
 		return adb.MustBuild()
 	}()

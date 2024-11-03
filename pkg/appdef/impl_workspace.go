@@ -14,6 +14,7 @@ import (
 type workspace struct {
 	typ
 	withAbstract
+	acl              []*aclRule
 	ancestors        map[QName]IWorkspace
 	ancestorsOrdered QNames
 	types            map[QName]interface{}
@@ -34,6 +35,14 @@ func newWorkspace(app *appDef, name QName) *workspace {
 
 	app.appendType(ws)
 	return ws
+}
+
+func (ws workspace) ACL(cb func(IACLRule) bool) {
+	for _, p := range ws.acl {
+		if !cb(p) {
+			break
+		}
+	}
 }
 
 func (ws *workspace) Ancestors(recurse bool) []QName {
@@ -58,11 +67,9 @@ func (ws *workspace) CDoc(name QName) ICDoc {
 }
 
 func (ws *workspace) CDocs(cb func(ICDoc) bool) {
-	for t := range ws.Types {
-		if d, ok := t.(ICDoc); ok {
-			if !cb(d) {
-				break
-			}
+	for t := range TypesByKind(ws, TypeKind_CDoc) {
+		if !cb(t.(ICDoc)) {
+			break
 		}
 	}
 }
@@ -75,11 +82,9 @@ func (ws *workspace) Command(name QName) ICommand {
 }
 
 func (ws *workspace) Commands(cb func(ICommand) bool) {
-	for t := range ws.Types {
-		if r, ok := t.(ICommand); ok {
-			if !cb(r) {
-				break
-			}
+	for t := range TypesByKind(ws, TypeKind_Command) {
+		if !cb(t.(ICommand)) {
+			break
 		}
 	}
 }
@@ -92,11 +97,9 @@ func (ws *workspace) CRecord(name QName) ICRecord {
 }
 
 func (ws *workspace) CRecords(cb func(ICRecord) bool) {
-	for t := range ws.Types {
-		if r, ok := t.(ICRecord); ok {
-			if !cb(r) {
-				break
-			}
+	for t := range TypesByKind(ws, TypeKind_CRecord) {
+		if !cb(t.(ICRecord)) {
+			break
 		}
 	}
 }
@@ -116,11 +119,9 @@ func (ws *workspace) Data(name QName) IData {
 }
 
 func (ws *workspace) DataTypes(cb func(IData) bool) {
-	for t := range ws.Types {
-		if d, ok := t.(IData); ok {
-			if !cb(d) {
-				break
-			}
+	for t := range TypesByKind(ws, TypeKind_Data) {
+		if !cb(t.(IData)) {
+			break
 		}
 	}
 }
@@ -171,11 +172,9 @@ func (ws *workspace) GDoc(name QName) IGDoc {
 }
 
 func (ws *workspace) GDocs(cb func(IGDoc) bool) {
-	for t := range ws.Types {
-		if d, ok := t.(IGDoc); ok {
-			if !cb(d) {
-				break
-			}
+	for t := range TypesByKind(ws, TypeKind_GDoc) {
+		if !cb(t.(IGDoc)) {
+			break
 		}
 	}
 }
@@ -188,11 +187,9 @@ func (ws *workspace) GRecord(name QName) IGRecord {
 }
 
 func (ws *workspace) GRecords(cb func(IGRecord) bool) {
-	for t := range ws.Types {
-		if r, ok := t.(IGRecord); ok {
-			if !cb(r) {
-				break
-			}
+	for t := range TypesByKind(ws, TypeKind_GRecord) {
+		if !cb(t.(IGRecord)) {
+			break
 		}
 	}
 }
@@ -219,11 +216,9 @@ func (ws *workspace) Job(name QName) IJob {
 }
 
 func (ws *workspace) Jobs(cb func(IJob) bool) {
-	for t := range ws.Types {
-		if r, ok := t.(IJob); ok {
-			if !cb(r) {
-				break
-			}
+	for t := range TypesByKind(ws, TypeKind_Job) {
+		if !cb(t.(IJob)) {
+			break
 		}
 	}
 }
@@ -236,11 +231,9 @@ func (ws *workspace) Object(name QName) IObject {
 }
 
 func (ws *workspace) Objects(cb func(IObject) bool) {
-	for t := range ws.Types {
-		if o, ok := t.(IObject); ok {
-			if !cb(o) {
-				break
-			}
+	for t := range TypesByKind(ws, TypeKind_Object) {
+		if !cb(t.(IObject)) {
+			break
 		}
 	}
 }
@@ -253,11 +246,9 @@ func (ws *workspace) ODoc(name QName) IODoc {
 }
 
 func (ws *workspace) ODocs(cb func(IODoc) bool) {
-	for t := range ws.Types {
-		if d, ok := t.(IODoc); ok {
-			if !cb(d) {
-				break
-			}
+	for t := range TypesByKind(ws, TypeKind_ODoc) {
+		if !cb(t.(IODoc)) {
+			break
 		}
 	}
 }
@@ -270,11 +261,9 @@ func (ws *workspace) ORecord(name QName) IORecord {
 }
 
 func (ws *workspace) ORecords(cb func(IORecord) bool) {
-	for t := range ws.Types {
-		if r, ok := t.(IORecord); ok {
-			if !cb(r) {
-				break
-			}
+	for t := range TypesByKind(ws, TypeKind_ORecord) {
+		if !cb(t.(IORecord)) {
+			break
 		}
 	}
 }
@@ -287,11 +276,9 @@ func (ws *workspace) Projector(name QName) IProjector {
 }
 
 func (ws *workspace) Projectors(cb func(IProjector) bool) {
-	for t := range ws.Types {
-		if r, ok := t.(IProjector); ok {
-			if !cb(r) {
-				break
-			}
+	for t := range TypesByKind(ws, TypeKind_Projector) {
+		if !cb(t.(IProjector)) {
+			break
 		}
 	}
 }
@@ -304,11 +291,9 @@ func (ws *workspace) Query(name QName) IQuery {
 }
 
 func (ws *workspace) Queries(cb func(IQuery) bool) {
-	for t := range ws.Types {
-		if r, ok := t.(IQuery); ok {
-			if !cb(r) {
-				break
-			}
+	for t := range TypesByKind(ws, TypeKind_Query) {
+		if !cb(t.(IQuery)) {
+			break
 		}
 	}
 }
@@ -325,6 +310,23 @@ func (ws *workspace) Record(name QName) IRecord {
 func (ws *workspace) Records(cb func(IRecord) bool) {
 	for t := range ws.Types {
 		if r, ok := t.(IRecord); ok {
+			if !cb(r) {
+				break
+			}
+		}
+	}
+}
+
+func (ws *workspace) Role(name QName) IRole {
+	if t := ws.typeByKind(name, TypeKind_Role); t != nil {
+		return t.(IRole)
+	}
+	return nil
+}
+
+func (ws *workspace) Roles(cb func(IRole) bool) {
+	for r := range ws.Types {
+		if r, ok := r.(IRole); ok {
 			if !cb(r) {
 				break
 			}
@@ -423,11 +425,9 @@ func (ws *workspace) View(name QName) IView {
 }
 
 func (ws *workspace) Views(cb func(IView) bool) {
-	for t := range ws.Types {
-		if v, ok := t.(IView); ok {
-			if !cb(v) {
-				break
-			}
+	for t := range TypesByKind(ws, TypeKind_ViewRecord) {
+		if !cb(t.(IView)) {
+			break
 		}
 	}
 }
@@ -440,11 +440,9 @@ func (ws *workspace) WDoc(name QName) IWDoc {
 }
 
 func (ws *workspace) WDocs(cb func(IWDoc) bool) {
-	for t := range ws.Types {
-		if d, ok := t.(IWDoc); ok {
-			if !cb(d) {
-				break
-			}
+	for t := range TypesByKind(ws, TypeKind_WDoc) {
+		if !cb(t.(IWDoc)) {
+			break
 		}
 	}
 }
@@ -457,11 +455,9 @@ func (ws *workspace) WRecord(name QName) IWRecord {
 }
 
 func (ws *workspace) WRecords(cb func(IWRecord) bool) {
-	for t := range ws.Types {
-		if r, ok := t.(IWRecord); ok {
-			if !cb(r) {
-				break
-			}
+	for t := range TypesByKind(ws, TypeKind_WRecord) {
+		if !cb(t.(IWRecord)) {
+			break
 		}
 	}
 }
@@ -528,6 +524,11 @@ func (ws *workspace) addQuery(name QName) IQueryBuilder {
 	return newQueryBuilder(q)
 }
 
+func (ws *workspace) addRole(name QName) IRoleBuilder {
+	role := newRole(ws.app, ws, name)
+	return newRoleBuilder(role)
+}
+
 // TODO: should be deprecated. All types should be added by specific methods.
 func (ws *workspace) addType(name QName) {
 	t := ws.app.TypeByName(name)
@@ -553,6 +554,11 @@ func (ws *workspace) addWRecord(name QName) IWRecordBuilder {
 	return newWRecordBuilder(r)
 }
 
+func (ws *workspace) appendACL(p *aclRule) {
+	ws.acl = append(ws.acl, p)
+	ws.app.appendACL(p)
+}
+
 func (ws *workspace) appendType(t interface{}) {
 	ws.app.appendType(t)
 
@@ -563,6 +569,38 @@ func (ws *workspace) appendType(t interface{}) {
 
 	ws.types[name] = t
 	ws.typesOrdered = nil
+}
+
+func (ws *workspace) grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) {
+	r := ws.Role(toRole)
+	if r == nil {
+		panic(ErrRoleNotFound(toRole))
+	}
+	r.(*role).grant(ops, resources, fields, comment...)
+}
+
+func (ws *workspace) grantAll(resources []QName, toRole QName, comment ...string) {
+	r := ws.Role(toRole)
+	if r == nil {
+		panic(ErrRoleNotFound(toRole))
+	}
+	r.(*role).grantAll(resources, comment...)
+}
+
+func (ws *workspace) revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) {
+	r := ws.Role(fromRole)
+	if r == nil {
+		panic(ErrRoleNotFound(fromRole))
+	}
+	r.(*role).revoke(ops, resources, fields, comment...)
+}
+
+func (ws *workspace) revokeAll(resources []QName, fromRole QName, comment ...string) {
+	r := ws.Role(fromRole)
+	if r == nil {
+		panic(ErrRoleNotFound(fromRole))
+	}
+	r.(*role).revokeAll(resources, comment...)
 }
 
 func (ws *workspace) setAncestors(name QName, names ...QName) {
@@ -679,6 +717,10 @@ func (wb *workspaceBuilder) AddProjector(name QName) IProjectorBuilder {
 	return wb.workspace.addProjector(name)
 }
 
+func (wb *workspaceBuilder) AddRole(name QName) IRoleBuilder {
+	return wb.workspace.addRole(name)
+}
+
 func (wb *workspaceBuilder) AddQuery(name QName) IQueryBuilder {
 	return wb.workspace.addQuery(name)
 }
@@ -699,6 +741,26 @@ func (wb *workspaceBuilder) AddWDoc(name QName) IWDocBuilder {
 
 func (wb *workspaceBuilder) AddWRecord(name QName) IWRecordBuilder {
 	return wb.workspace.addWRecord(name)
+}
+
+func (wb *workspaceBuilder) Grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) IACLBuilder {
+	wb.workspace.grant(ops, resources, fields, toRole, comment...)
+	return wb
+}
+
+func (wb *workspaceBuilder) GrantAll(resources []QName, toRole QName, comment ...string) IACLBuilder {
+	wb.workspace.grantAll(resources, toRole, comment...)
+	return wb
+}
+
+func (wb *workspaceBuilder) Revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) IACLBuilder {
+	wb.workspace.revoke(ops, resources, fields, fromRole, comment...)
+	return wb
+}
+
+func (wb *workspaceBuilder) RevokeAll(resources []QName, fromRole QName, comment ...string) IACLBuilder {
+	wb.workspace.revokeAll(resources, fromRole, comment...)
+	return wb
 }
 
 func (wb *workspaceBuilder) SetAncestors(name QName, names ...QName) IWorkspaceBuilder {

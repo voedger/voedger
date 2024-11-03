@@ -28,21 +28,21 @@ func ExampleIAppDefBuilder_AddRole() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
 
-		doc := ws.AddCDoc(docName)
+		doc := wsb.AddCDoc(docName)
 		doc.AddField("field1", appdef.DataKind_int32, true)
 
-		reader := adb.AddRole(readerRoleName)
+		reader := wsb.AddRole(readerRoleName)
 		reader.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName}, []appdef.FieldName{"field1"}, "grant select on doc.field1")
 
-		writer := adb.AddRole(writerRoleName)
+		writer := wsb.AddRole(writerRoleName)
 		writer.GrantAll([]appdef.QName{docName}, "grant all on test.doc")
 
-		adm := adb.AddRole(admRoleName)
+		adm := wsb.AddRole(admRoleName)
 		adm.GrantAll([]appdef.QName{readerRoleName, writerRoleName}, "grant reader and writer roles to adm")
 
-		intruder := adb.AddRole(intruderRoleName)
+		intruder := wsb.AddRole(intruderRoleName)
 		intruder.RevokeAll([]appdef.QName{docName}, "revoke all on test.doc")
 
 		app = adb.MustBuild()

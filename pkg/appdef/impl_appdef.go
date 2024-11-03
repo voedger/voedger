@@ -543,11 +543,6 @@ func (app *appDef) addRate(name QName, count RateCount, period RatePeriod, scope
 	_ = newRate(app, app.sysWS, name, count, period, scopes, comment...)
 }
 
-func (app *appDef) addRole(name QName) IRoleBuilder {
-	role := newRole(app, app.sysWS, name)
-	return newRoleBuilder(role)
-}
-
 func (app *appDef) addWorkspace(name QName) IWorkspaceBuilder {
 	ws := newWorkspace(app, name)
 	return newWorkspaceBuilder(ws)
@@ -584,22 +579,6 @@ func (app *appDef) build() (err error) {
 		err = errors.Join(err, validateType(t))
 	}
 	return err
-}
-
-func (app *appDef) grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) {
-	r := app.Role(toRole)
-	if r == nil {
-		panic(ErrRoleNotFound(toRole))
-	}
-	r.(*role).grant(ops, resources, fields, comment...)
-}
-
-func (app *appDef) grantAll(resources []QName, toRole QName, comment ...string) {
-	r := app.Role(toRole)
-	if r == nil {
-		panic(ErrRoleNotFound(toRole))
-	}
-	r.(*role).grantAll(resources, comment...)
 }
 
 // Makes system package.
@@ -642,22 +621,6 @@ func (app *appDef) makeSysStructures() {
 
 }
 
-func (app *appDef) revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) {
-	r := app.Role(fromRole)
-	if r == nil {
-		panic(ErrRoleNotFound(fromRole))
-	}
-	r.(*role).revoke(ops, resources, fields, comment...)
-}
-
-func (app *appDef) revokeAll(resources []QName, fromRole QName, comment ...string) {
-	r := app.Role(fromRole)
-	if r == nil {
-		panic(ErrRoleNotFound(fromRole))
-	}
-	r.(*role).revokeAll(resources, comment...)
-}
-
 // Returns type by name and kind. If type is not found then returns nil.
 func (app *appDef) typeByKind(name QName, kind TypeKind) interface{} {
 	if t, ok := app.types[name]; ok {
@@ -672,8 +635,7 @@ func (app *appDef) typeByKind(name QName, kind TypeKind) interface{} {
 //   - IAppDefBuilder
 type appDefBuilder struct {
 	commentBuilder
-	app                       *appDef
-	hardcodedDefinitionsAdded bool
+	app *appDef
 }
 
 func newAppDefBuilder(app *appDef) *appDefBuilder {
@@ -696,8 +658,6 @@ func (ab *appDefBuilder) AddRate(name QName, count RateCount, period RatePeriod,
 	ab.app.addRate(name, count, period, scopes, comment...)
 }
 
-func (ab *appDefBuilder) AddRole(name QName) IRoleBuilder { return ab.app.addRole(name) }
-
 func (ab *appDefBuilder) AddWorkspace(name QName) IWorkspaceBuilder { return ab.app.addWorkspace(name) }
 
 func (ab *appDefBuilder) AlterWorkspace(name QName) IWorkspaceBuilder {
@@ -707,38 +667,10 @@ func (ab *appDefBuilder) AlterWorkspace(name QName) IWorkspaceBuilder {
 func (ab appDefBuilder) AppDef() IAppDef { return ab.app }
 
 func (ab *appDefBuilder) Build() (IAppDef, error) {
-	if !ab.hardcodedDefinitionsAdded {
-		ab.addHardcodedDefinitions()
-		ab.hardcodedDefinitionsAdded = true
-	}
 	if err := ab.app.build(); err != nil {
 		return nil, err
 	}
 	return ab.app, nil
-}
-
-func (ab *appDefBuilder) addHardcodedDefinitions() {
-	// TODO: move to `parser` or to `sys\workspace` package
-	//
-	// viewProjectionOffsets := ab.AddView(NewQName(SysPackage, "projectionOffsets"))
-	// viewProjectionOffsets.Key().PartKey().AddField("partition", DataKind_int32)
-	// viewProjectionOffsets.Key().ClustCols().AddField("projector", DataKind_QName)
-	// viewProjectionOffsets.Value().AddField("offset", DataKind_int64, true)
-
-	// viewNextBaseWSID := ab.AddView(NewQName(SysPackage, "NextBaseWSID"))
-	// viewNextBaseWSID.Key().PartKey().AddField("dummy1", DataKind_int32)
-	// viewNextBaseWSID.Key().ClustCols().AddField("dummy2", DataKind_int32)
-	// viewNextBaseWSID.Value().AddField("NextBaseWSID", DataKind_int64, true)
-}
-
-func (ab *appDefBuilder) Grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) IACLBuilder {
-	ab.app.grant(ops, resources, fields, toRole, comment...)
-	return ab
-}
-
-func (ab *appDefBuilder) GrantAll(resources []QName, toRole QName, comment ...string) IACLBuilder {
-	ab.app.grantAll(resources, toRole, comment...)
-	return ab
 }
 
 func (ab *appDefBuilder) MustBuild() IAppDef {
@@ -746,14 +678,4 @@ func (ab *appDefBuilder) MustBuild() IAppDef {
 		panic(err)
 	}
 	return ab.app
-}
-
-func (ab *appDefBuilder) Revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) IACLBuilder {
-	ab.app.revoke(ops, resources, fields, fromRole, comment...)
-	return ab
-}
-
-func (ab *appDefBuilder) RevokeAll(resources []QName, fromRole QName, comment ...string) IACLBuilder {
-	ab.app.revokeAll(resources, fromRole, comment...)
-	return ab
 }

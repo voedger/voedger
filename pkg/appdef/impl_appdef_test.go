@@ -156,10 +156,10 @@ func Test_EnumsBreakable(t *testing.T) {
 	wsb.AddJob(job2name).SetCronSchedule("@every 1h")
 
 	role1Name, role2Name := NewQName("test", "Role1"), NewQName("test", "Role2")
-	adb.AddRole(role1Name).
+	wsb.AddRole(role1Name).
 		GrantAll([]QName{cmd1Name, cmd2Name}).
 		RevokeAll([]QName{cmd2Name})
-	adb.AddRole(role2Name).
+	wsb.AddRole(role2Name).
 		GrantAll([]QName{cmd1Name, cmd2Name}).
 		RevokeAll([]QName{cmd1Name})
 
@@ -213,8 +213,8 @@ func Test_EnumsBreakable(t *testing.T) {
 
 		testBreakable(t, "Extensions", app.Extensions, ws.Extensions)
 
-		testBreakable(t, "Roles", app.Roles)
-		testBreakable(t, "ACL", app.ACL)
+		testBreakable(t, "Roles", app.Roles, ws.Roles)
+		testBreakable(t, "ACL", app.ACL, ws.ACL)
 		testBreakable(t, "IRole.ACL", app.Role(role1Name).ACL)
 
 		testBreakable(t, "Rates", app.Rates)

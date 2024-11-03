@@ -12,6 +12,19 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
+// Returns iterator over types by kind.
+func TypesByKind(types IWithTypes, kind TypeKind) func(visit func(IType) bool) {
+	return func(visit func(IType) bool) {
+		for t := range types.Types {
+			if t.Kind() == kind {
+				if !visit(t) {
+					break
+				}
+			}
+		}
+	}
+}
+
 // Is specified type kind may be used in child containers.
 func (k TypeKind) ContainerKindAvailable(s TypeKind) bool {
 	return structTypeProps(k).containerKinds.Contains(s)

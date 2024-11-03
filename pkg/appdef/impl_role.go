@@ -42,7 +42,7 @@ func (r *role) AncRoles() (roles []QName) {
 
 func (r *role) appendACL(rule *aclRule) {
 	r.aclRules = append(r.aclRules, rule)
-	r.app.appendACL(rule)
+	r.ws.appendACL(rule)
 }
 
 func (r *role) grant(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) {
