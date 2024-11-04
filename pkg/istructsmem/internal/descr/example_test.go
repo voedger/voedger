@@ -109,7 +109,7 @@ func Example() {
 			Add(sysViews, viewName).SetComment(sysViews, "needs to read «test.view» from «sys.views» storage")
 
 		readerName := appdef.NewQName("test", "reader")
-		reader := adb.AddRole(readerName)
+		reader := wsb.AddRole(readerName)
 		reader.SetComment("read-only role")
 		reader.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Select},
@@ -122,7 +122,7 @@ func Example() {
 		reader.GrantAll([]appdef.QName{queryName}, "allow reader to execute test.query")
 
 		writerName := appdef.NewQName("test", "writer")
-		writer := adb.AddRole(writerName)
+		writer := wsb.AddRole(writerName)
 		writer.SetComment("read-write role")
 		writer.GrantAll([]appdef.QName{docName, recName, viewName}, "allow writer to do anything with test.doc, test.rec and test.view")
 		writer.Revoke(
