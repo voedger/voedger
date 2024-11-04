@@ -43,20 +43,20 @@ func Test_IsOperationAllowed(t *testing.T) {
 		cmd := wsb.AddCommand(cmdName)
 		cmd.SetParam(appdef.QNameANY)
 
-		_ = adb.AddRole(reader)
-		adb.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName}, nil, reader, "grant select doc.* to reader")
-		adb.Revoke([]appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName}, []appdef.FieldName{"hiddenField"}, reader, "revoke select doc.field1 from reader")
-		adb.Grant([]appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{queryName}, nil, reader, "grant execute query to reader")
+		_ = wsb.AddRole(reader)
+		wsb.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName}, nil, reader, "grant select doc.* to reader")
+		wsb.Revoke([]appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName}, []appdef.FieldName{"hiddenField"}, reader, "revoke select doc.field1 from reader")
+		wsb.Grant([]appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{queryName}, nil, reader, "grant execute query to reader")
 
-		_ = adb.AddRole(writer)
-		adb.Grant([]appdef.OperationKind{appdef.OperationKind_Insert}, []appdef.QName{docName}, nil, writer, "grant insert doc.* to writer")
-		adb.Grant([]appdef.OperationKind{appdef.OperationKind_Update}, []appdef.QName{docName}, []appdef.FieldName{"field1", "hiddenField", "field3"}, writer, "grant update doc.field[1,2,3] to writer")
-		adb.Revoke([]appdef.OperationKind{appdef.OperationKind_Update}, []appdef.QName{docName}, []appdef.FieldName{"hiddenField"}, writer, "revoke update doc.hiddenField from writer")
-		adb.Grant([]appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{cmdName}, nil, writer, "grant execute cmd to writer")
+		_ = wsb.AddRole(writer)
+		wsb.Grant([]appdef.OperationKind{appdef.OperationKind_Insert}, []appdef.QName{docName}, nil, writer, "grant insert doc.* to writer")
+		wsb.Grant([]appdef.OperationKind{appdef.OperationKind_Update}, []appdef.QName{docName}, []appdef.FieldName{"field1", "hiddenField", "field3"}, writer, "grant update doc.field[1,2,3] to writer")
+		wsb.Revoke([]appdef.OperationKind{appdef.OperationKind_Update}, []appdef.QName{docName}, []appdef.FieldName{"hiddenField"}, writer, "revoke update doc.hiddenField from writer")
+		wsb.Grant([]appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{cmdName}, nil, writer, "grant execute cmd to writer")
 
-		_ = adb.AddRole(intruder)
-		adb.RevokeAll([]appdef.QName{docName}, intruder, "revoke all access to doc from intruder")
-		adb.RevokeAll([]appdef.QName{queryName, cmdName}, intruder, "revoke all access to functions from intruder")
+		_ = wsb.AddRole(intruder)
+		wsb.RevokeAll([]appdef.QName{docName}, intruder, "revoke all access to doc from intruder")
+		wsb.RevokeAll([]appdef.QName{queryName, cmdName}, intruder, "revoke all access to functions from intruder")
 
 		var err error
 		app, err = adb.Build()
@@ -408,17 +408,19 @@ func TestRecursiveRoleAncestors(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		_ = adb.AddRole(reader)
-		_ = adb.AddRole(writer)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
-		adb.AddRole(worker).Grant(
+		_ = wsb.AddRole(reader)
+		_ = wsb.AddRole(writer)
+
+		wsb.AddRole(worker).Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Inherits},
 			[]appdef.QName{reader, writer}, nil, "grant reader and writer roles to worker")
 
-		adb.AddRole(owner).GrantAll(
+		wsb.AddRole(owner).GrantAll(
 			[]appdef.QName{worker}, "grant worker role to owner")
 
-		adb.AddRole(admin).GrantAll(
+		wsb.AddRole(admin).GrantAll(
 			[]appdef.QName{owner}, "grant owner role to admin")
 
 		app = adb.MustBuild()
