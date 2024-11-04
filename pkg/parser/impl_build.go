@@ -611,13 +611,13 @@ func (c *buildContext) addTableFieldToTable(field *FieldExpr) {
 	appDef := c.adb.AppDef()
 
 	wrec := appDef.WRecord(field.Type.qName)
-	crec := appDef.CRecord(field.Type.qName)
+	crec := appdef.CRecord(appDef, field.Type.qName)
 	orec := appDef.ORecord(field.Type.qName)
 
 	if wrec == nil && orec == nil && crec == nil { // not yet built
 		c.table(field.Type.tablePkg, field.Type.tableStmt)
 		wrec = appDef.WRecord(field.Type.qName)
-		crec = appDef.CRecord(field.Type.qName)
+		crec = appdef.CRecord(appDef, field.Type.qName)
 		orec = appDef.ORecord(field.Type.qName)
 	}
 
@@ -777,22 +777,15 @@ func (c *buildContext) pushDef(qname appdef.QName, kind appdef.TypeKind, current
 }
 
 func (c *buildContext) isExists(qname appdef.QName, kind appdef.TypeKind) (exists bool) {
-	appDef := c.adb.AppDef()
 	switch kind {
-	case appdef.TypeKind_CDoc:
-		return appDef.CDoc(qname) != nil
-	case appdef.TypeKind_CRecord:
-		return appDef.CRecord(qname) != nil
-	case appdef.TypeKind_ODoc:
-		return appDef.ODoc(qname) != nil
-	case appdef.TypeKind_ORecord:
-		return appDef.ORecord(qname) != nil
-	case appdef.TypeKind_WDoc:
-		return appDef.WDoc(qname) != nil
-	case appdef.TypeKind_WRecord:
-		return appDef.WRecord(qname) != nil
-	case appdef.TypeKind_Object:
-		return appDef.Object(qname) != nil
+	case appdef.TypeKind_CDoc,
+		appdef.TypeKind_CRecord,
+		appdef.TypeKind_ODoc,
+		appdef.TypeKind_ORecord,
+		appdef.TypeKind_WDoc,
+		appdef.TypeKind_WRecord,
+		appdef.TypeKind_Object:
+		return appdef.TypeByNameAndKind(c.adb.AppDef(), qname, kind) != nil
 	default:
 		panic(fmt.Sprintf("unsupported type kind %d of %s", kind, qname))
 	}

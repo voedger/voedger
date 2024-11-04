@@ -51,7 +51,7 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 			require.NoError(err)
 			require.NotNil(appStr)
 			t.Run("should be ok to retrieve changed doc from AppStructs", func(t *testing.T) {
-				doc := appStr.AppDef().CDoc(docName)
+				doc := appdef.CDoc(appStr.AppDef(), docName)
 				require.Equal(docName, doc.QName())
 				require.True(doc.Singleton())
 				require.Equal(appdef.DataKind_int64, doc.Field("field").DataKind())
@@ -206,8 +206,8 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		as, err := provider.BuiltIn(appName)
 		require.NoError(err)
 		require.NotNil(as)
-		require.Equal(docName, as.AppDef().CDoc(docName).QName())
-		require.Equal(recName, as.AppDef().CRecord(recName).QName())
+		require.Equal(docName, appdef.CDoc(as.AppDef(), docName).QName())
+		require.Equal(recName, appdef.CRecord(as.AppDef(), recName).QName())
 	})
 
 	t.Run("must be error to provide app structure if error while read versions", func(t *testing.T) {

@@ -42,7 +42,7 @@ func Test_def_AddUnique(t *testing.T) {
 		app, err := adb.Build()
 		require.NoError(err)
 
-		doc := app.CDoc(qName)
+		doc := CDoc(app, qName)
 		require.NotEqual(TypeKind_null, doc.Kind())
 
 		require.Equal(2, doc.UniqueCount())
@@ -171,11 +171,11 @@ func Test_type_UniqueField(t *testing.T) {
 		AddField("eMail", DataKind_string, true)
 	doc.SetUniqueField("eMail")
 
-	t.Run("test is ok", func(t *testing.T) {
+	t.Run("should be ok to build app", func(t *testing.T) {
 		app, err := adb.Build()
 		require.NoError(err)
 
-		d := app.CDoc(qName)
+		d := CDoc(app, qName)
 		require.NotEqual(TypeKind_null, d.Kind())
 
 		fld := d.UniqueField()
@@ -189,7 +189,7 @@ func Test_type_UniqueField(t *testing.T) {
 		app, err := adb.Build()
 		require.NoError(err)
 
-		d := app.CDoc(qName)
+		d := CDoc(app, qName)
 		require.NotEqual(TypeKind_null, d.Kind())
 
 		require.Nil(d.UniqueField())

@@ -14,8 +14,8 @@ import (
 
 // Returns iterator over types by kind.
 //
-// Types are visit  in alphabetic order.
-func TypesByKind(types IWithTypes, kind TypeKind) func(visit func(IType) bool) {
+// Types are visited in alphabetic order.
+func TypesByKind(types ITypes, kind TypeKind) func(func(IType) bool) {
 	return func(visit func(IType) bool) {
 		for t := range types.Types {
 			if t.Kind() == kind {
@@ -29,8 +29,8 @@ func TypesByKind(types IWithTypes, kind TypeKind) func(visit func(IType) bool) {
 
 // Returns iterator over types by kinds set.
 //
-// Types are visit  in alphabetic order.
-func TypesByKinds(types IWithTypes, kinds TypeKindSet) func(visit func(IType) bool) {
+// Types are visited in alphabetic order.
+func TypesByKinds(types ITypes, kinds TypeKindSet) func(func(IType) bool) {
 	return func(visit func(IType) bool) {
 		for t := range types.Types {
 			if kinds.Contains(t.Kind()) {
@@ -45,7 +45,7 @@ func TypesByKinds(types IWithTypes, kinds TypeKindSet) func(visit func(IType) bo
 // Returns type by name.
 //
 // Returns nil if type not found.
-func TypeByName(types IWithTypes, name QName) IType {
+func TypeByName(types IFindType, name QName) IType {
 	if t := types.Type(name); t != NullType {
 		return t
 	}
@@ -55,11 +55,57 @@ func TypeByName(types IWithTypes, name QName) IType {
 // Returns type by name and kind.
 //
 // Returns nil if type not found.
-func TypeByNameAndKind(types IWithTypes, name QName, kind TypeKind) IType {
+func TypeByNameAndKind(types IFindType, name QName, kind TypeKind) IType {
 	if t := types.Type(name); t.Kind() == kind {
 		return t
 	}
 	return nil
+}
+
+// Returns CDoc by name.
+//
+// Returns nil if CDoc not found.
+func CDoc(types IFindType, name QName) ICDoc {
+	if t := TypeByNameAndKind(types, name, TypeKind_CDoc); t != nil {
+		return t.(ICDoc)
+	}
+	return nil
+}
+
+// Returns iterator over CDocs.
+//
+// CDocs are visited in alphabetic order.
+func CDocs(types ITypes) func(func(ICDoc) bool) {
+	return func(visit func(ICDoc) bool) {
+		for t := range TypesByKind(types, TypeKind_CDoc) {
+			if !visit(t.(ICDoc)) {
+				break
+			}
+		}
+	}
+}
+
+// Returns CRecord by name.
+//
+// Returns nil if CRecord not found.
+func CRecord(types IFindType, name QName) ICRecord {
+	if t := TypeByNameAndKind(types, name, TypeKind_CRecord); t != nil {
+		return t.(ICRecord)
+	}
+	return nil
+}
+
+// Returns iterator over CRecords.
+//
+// CRecords are visited in alphabetic order.
+func CRecords(types ITypes) func(func(ICRecord) bool) {
+	return func(visit func(ICRecord) bool) {
+		for t := range TypesByKind(types, TypeKind_CRecord) {
+			if !visit(t.(ICRecord)) {
+				break
+			}
+		}
+	}
 }
 
 // Is specified type kind may be used in child containers.

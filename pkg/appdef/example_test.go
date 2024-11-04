@@ -50,7 +50,7 @@ func Example() {
 		fmt.Printf("%q is CDoc: %v\n", d.QName(), ok && (d.Kind() == appdef.TypeKind_CDoc))
 
 		// how to find CDoc by name
-		doc := app.CDoc(docName)
+		doc := appdef.CDoc(app, docName)
 		fmt.Printf("doc %q: %v. %s\n", doc.QName(), doc.Kind(), d.Comment())
 
 		// how to inspect doc fields

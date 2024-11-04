@@ -253,7 +253,7 @@ func Test_AppDef_AddWorkspaceAbstract(t *testing.T) {
 		ws := app.Workspace(wsName)
 		require.True(ws.Abstract())
 
-		desc := app.CDoc(ws.Descriptor())
+		desc := CDoc(app, ws.Descriptor())
 		require.True(desc.Abstract())
 	})
 

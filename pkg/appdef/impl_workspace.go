@@ -59,21 +59,6 @@ func (ws *workspace) Ancestors(recurse bool) []QName {
 	return res
 }
 
-func (ws *workspace) CDoc(name QName) ICDoc {
-	if t := TypeByNameAndKind(ws, name, TypeKind_CDoc); t != nil {
-		return t.(ICDoc)
-	}
-	return nil
-}
-
-func (ws *workspace) CDocs(visit func(ICDoc) bool) {
-	for t := range TypesByKind(ws, TypeKind_CDoc) {
-		if !visit(t.(ICDoc)) {
-			break
-		}
-	}
-}
-
 func (ws *workspace) Command(name QName) ICommand {
 	if t := TypeByNameAndKind(ws, name, TypeKind_Command); t != nil {
 		return t.(ICommand)
@@ -84,21 +69,6 @@ func (ws *workspace) Command(name QName) ICommand {
 func (ws *workspace) Commands(visit func(ICommand) bool) {
 	for t := range TypesByKind(ws, TypeKind_Command) {
 		if !visit(t.(ICommand)) {
-			break
-		}
-	}
-}
-
-func (ws *workspace) CRecord(name QName) ICRecord {
-	if t := TypeByNameAndKind(ws, name, TypeKind_CRecord); t != nil {
-		return t.(ICRecord)
-	}
-	return nil
-}
-
-func (ws *workspace) CRecords(visit func(ICRecord) bool) {
-	for t := range TypesByKind(ws, TypeKind_CRecord) {
-		if !visit(t.(ICRecord)) {
 			break
 		}
 	}
@@ -622,7 +592,7 @@ func (ws *workspace) setDescriptor(q QName) {
 		return
 	}
 
-	if ws.desc = ws.app.CDoc(q); ws.desc == nil {
+	if ws.desc = CDoc(ws.app, q); ws.desc == nil {
 		panic(ErrNotFound("CDoc «%v»", q))
 	}
 	if ws.desc.Abstract() {

@@ -57,7 +57,7 @@ func Example() {
 
 	report := func(part appparts.IAppPartition) {
 		fmt.Println(part.App(), "partition", part.ID())
-		ver := part.AppStructs().AppDef().CDoc(verInfo)
+		ver := appdef.CDoc(part.AppStructs().AppDef(), verInfo)
 		fmt.Println("-", ver, ver.Comment())
 	}
 

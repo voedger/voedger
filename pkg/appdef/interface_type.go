@@ -155,18 +155,25 @@ type IType interface {
 	IsSystem() bool
 }
 
-// Interface describes the entity with types.
-type IWithTypes interface {
-	// Returns type by name.
-	//
-	// If not found then empty type with TypeKind_null is returned
-	Type(name QName) IType
-
-	// Enumerates all internal types.
-	//
-	// Types are enumerated in alphabetical order of QNames.
-	Types(func(IType) bool)
-}
+// Interfaces describes the entity with types, such as application or workspace.
+type (
+	IFindType interface {
+		// Returns type by name.
+		//
+		// If not found then empty type with TypeKind_null is returned
+		Type(name QName) IType
+	}
+	ITypes interface {
+		// Enumerates types.
+		//
+		// Types are enumerated in alphabetical order of QNames.
+		Types(func(IType) bool)
+	}
+	IWithTypes interface {
+		IFindType
+		ITypes
+	}
+)
 
 type ITypeBuilder interface {
 	ICommentsBuilder

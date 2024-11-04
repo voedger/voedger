@@ -91,6 +91,23 @@ func testBreakable[T any](t *testing.T, name string, seq ...iter.Seq[T]) {
 	}
 }
 
+func testBreakable1[T any](t *testing.T, name string,
+	iter func(ITypes) func(func(T) bool), tested ...ITypes) {
+	for i, s := range tested {
+		t.Run(fmt.Sprintf("%s[%d]", name, i), func(t *testing.T) {
+			cnt := 0
+			for range iter(s) {
+				cnt++
+				break
+			}
+			if cnt != 1 {
+				t.Errorf("got %d iterations, expected 1", i)
+			}
+		})
+	}
+
+}
+
 func Test_EnumsBreakable(t *testing.T) {
 	require := require.New(t)
 
@@ -184,8 +201,11 @@ func Test_EnumsBreakable(t *testing.T) {
 		testBreakable(t, "GDocs", app.GDocs, ws.GDocs)
 		testBreakable(t, "GRecords", app.GRecords, ws.GRecords)
 
-		testBreakable(t, "CDocs", app.CDocs, ws.CDocs)
-		testBreakable(t, "CRecords", app.CRecords, ws.CRecords)
+		testBreakable1(t, "CDocs", CDocs, app, ws)
+		testBreakable1(t, "CRecords", CRecords, app, ws)
+
+		testBreakable(t, "CDocs", CDocs(app), CDocs(ws))
+		testBreakable(t, "CRecords", CRecords(app), CRecords(ws))
 
 		testBreakable(t, "WDocs", app.WDocs, ws.WDocs)
 		testBreakable(t, "WRecords", app.WRecords, ws.WRecords)

@@ -18,7 +18,6 @@ type IAppDef interface {
 	IWithSysDataTypes
 
 	IWithGDocs
-	IWithCDocs
 	IWithWDocs
 	IWithODocs
 	IWithObjects

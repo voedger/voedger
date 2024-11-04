@@ -70,7 +70,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.NoError(err)
 
 	// table
-	cdoc := app.CDoc(appdef.NewQName("main", "TablePlan"))
+	cdoc := appdef.CDoc(app, appdef.NewQName("main", "TablePlan"))
 	require.NotNil(cdoc)
 	require.Equal(appdef.TypeKind_CDoc, cdoc.Kind())
 	require.Equal(appdef.DataKind_int32, cdoc.Field("FState").DataKind())
@@ -130,19 +130,19 @@ func Test_BasicUsage(t *testing.T) {
 	})
 
 	// child table
-	crec := app.CRecord(appdef.NewQName("main", "TablePlanItem"))
+	crec := appdef.CRecord(app, appdef.NewQName("main", "TablePlanItem"))
 	require.NotNil(crec)
 	require.Equal(appdef.TypeKind_CRecord, crec.Kind())
 	require.Equal(appdef.DataKind_int32, crec.Field("TableNo").DataKind())
 
-	crec = app.CRecord(appdef.NewQName("main", "NestedWithName"))
+	crec = appdef.CRecord(app, appdef.NewQName("main", "NestedWithName"))
 	require.NotNil(crec)
 	require.True(crec.Abstract())
 	field := crec.Field("ItemName")
 	require.NotNil(field)
 	require.Equal("Field is added to any table inherited from NestedWithName\nThe current comment is also added to scheme for this field", field.Comment())
 
-	csingleton := app.CDoc(appdef.NewQName("main", "SubscriptionProfile"))
+	csingleton := appdef.CDoc(app, appdef.NewQName("main", "SubscriptionProfile"))
 	require.True(csingleton.Singleton())
 	require.Equal("CSingletones is a configration singleton.\nThese comments are included in the statement definition, but may be overridden with `WITH Comment=...`", csingleton.Comment())
 
@@ -168,17 +168,17 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(4, view.Key().ClustCols().FieldCount())
 
 	// workspace descriptor
-	descr := app.CDoc(appdef.NewQName("main", "MyWorkspaceDescriptor"))
+	descr := appdef.CDoc(app, appdef.NewQName("main", "MyWorkspaceDescriptor"))
 	require.NotNil(descr)
 	require.Equal(appdef.TypeKind_CDoc, descr.Kind())
 	require.Equal(appdef.DataKind_string, descr.Field("Name").DataKind())
 	require.Equal(appdef.DataKind_string, descr.Field("Country").DataKind())
 
 	// fieldsets
-	cdoc = app.CDoc(appdef.NewQName("main", "WsTable"))
+	cdoc = appdef.CDoc(app, appdef.NewQName("main", "WsTable"))
 	require.Equal(appdef.DataKind_string, cdoc.Field("Name").DataKind())
 
-	crec = app.CRecord(appdef.NewQName("main", "Child"))
+	crec = appdef.CRecord(app, appdef.NewQName("main", "Child"))
 	require.Equal(appdef.DataKind_int32, crec.Field("Kind").DataKind())
 
 	// QUERY
@@ -1449,7 +1449,7 @@ func Test_UniqueFields(t *testing.T) {
 	app, err := appBld.Build()
 	require.NoError(err)
 
-	cdoc := app.CDoc(appdef.NewQName("test", "MyTable"))
+	cdoc := appdef.CDoc(app, appdef.NewQName("test", "MyTable"))
 	require.NotNil(cdoc)
 
 	fld := cdoc.UniqueField()
@@ -1486,8 +1486,8 @@ func Test_NestedTables(t *testing.T) {
 	app, err := appBld.Build()
 	require.NoError(err)
 
-	require.NotNil(app.CRecord(appdef.NewQName("test", "NestedTable")))
-	require.NotNil(app.CRecord(appdef.NewQName("test", "DeepNestedTable")))
+	require.NotNil(appdef.CRecord(app, appdef.NewQName("test", "NestedTable")))
+	require.NotNil(appdef.CRecord(app, appdef.NewQName("test", "DeepNestedTable")))
 }
 
 func Test_SemanticAnalysisForReferences(t *testing.T) {
@@ -1544,7 +1544,7 @@ func Test_1KStringField(t *testing.T) {
 	app, err := appBld.Build()
 	require.NoError(err)
 
-	cdoc := app.CDoc(appdef.NewQName("test", "MyTable"))
+	cdoc := appdef.CDoc(app, appdef.NewQName("test", "MyTable"))
 	require.NotNil(cdoc)
 
 	fld := cdoc.Field("KB")

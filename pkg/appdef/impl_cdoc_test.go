@@ -41,29 +41,31 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 		app = a
 	})
 
-	testWithCDocs := func(cDocs IWithCDocs) {
+	testWithCDocs := func(tested IWithTypes) {
 		t.Run("should be ok to find builded doc", func(t *testing.T) {
-			typ := app.Type(docName)
+			typ := tested.Type(docName)
 			require.Equal(TypeKind_CDoc, typ.Kind())
 
-			doc := cDocs.CDoc(docName)
+			doc := CDoc(tested, docName)
 			require.Equal(TypeKind_CDoc, doc.Kind())
 			require.Equal(typ.(ICDoc), doc)
 			require.NotPanics(func() { doc.isCDoc() })
 
+			require.Equal(wsName, doc.Workspace().QName())
 			require.Equal(2, doc.UserFieldCount())
 			require.Equal(DataKind_int64, doc.Field("f1").DataKind())
 
 			require.Equal(TypeKind_CRecord, doc.Container("rec").Type().Kind())
 
 			t.Run("should be ok to find builded record", func(t *testing.T) {
-				typ := app.Type(recName)
+				typ := tested.Type(recName)
 				require.Equal(TypeKind_CRecord, typ.Kind())
 
-				rec := cDocs.CRecord(recName)
+				rec := CRecord(tested, recName)
 				require.Equal(TypeKind_CRecord, rec.Kind())
 				require.Equal(typ.(ICRecord), rec)
 
+				require.Equal(wsName, rec.Workspace().QName())
 				require.Equal(2, rec.UserFieldCount())
 				require.Equal(DataKind_int64, rec.Field("f1").DataKind())
 
@@ -72,19 +74,19 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 		})
 
 		unknownName := NewQName("test", "unknown")
-		require.Nil(cDocs.CDoc(unknownName))
-		require.Nil(cDocs.CRecord(unknownName))
+		require.Nil(CDoc(tested, unknownName))
+		require.Nil(CRecord(tested, unknownName))
 
 		t.Run("should be ok to enumerate docs", func(t *testing.T) {
 			var docs []QName
-			for doc := range cDocs.CDocs {
+			for doc := range CDocs(tested) {
 				docs = append(docs, doc.QName())
 			}
 			require.Len(docs, 1)
 			require.Equal(docName, docs[0])
 			t.Run("should be ok to enumerate recs", func(t *testing.T) {
 				var recs []QName
-				for rec := range cDocs.CRecords {
+				for rec := range CRecords(tested) {
 					recs = append(recs, rec.QName())
 				}
 				require.Len(recs, 1)
@@ -100,6 +102,7 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 func Test_AppDef_AddCDocSingleton(t *testing.T) {
 	require := require.New(t)
 
+	wsName := NewQName("test", "workspace")
 	docName := NewQName("test", "doc")
 
 	var app IAppDef
@@ -108,9 +111,9 @@ func Test_AppDef_AddCDocSingleton(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(NewQName("test", "workspace"))
+		wsb := adb.AddWorkspace(wsName)
 
-		doc := ws.AddCDoc(docName)
+		doc := wsb.AddCDoc(docName)
 		doc.
 			AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_string, false)
@@ -122,14 +125,19 @@ func Test_AppDef_AddCDocSingleton(t *testing.T) {
 		app = a
 	})
 
-	t.Run("should be ok to find builded singleton", func(t *testing.T) {
-		typ := app.Type(docName)
-		require.Equal(TypeKind_CDoc, typ.Kind())
+	testWithSingleton := func(tested IWithTypes) {
+		t.Run("should be ok to find builded singleton", func(t *testing.T) {
+			typ := tested.Type(docName)
+			require.Equal(TypeKind_CDoc, typ.Kind())
 
-		doc := app.CDoc(docName)
-		require.Equal(TypeKind_CDoc, doc.Kind())
-		require.Equal(typ.(ICDoc), doc)
+			doc := CDoc(tested, docName)
+			require.Equal(TypeKind_CDoc, doc.Kind())
+			require.Equal(typ.(ICDoc), doc)
 
-		require.True(doc.Singleton())
-	})
+			require.True(doc.Singleton())
+		})
+	}
+
+	testWithSingleton(app)
+	testWithSingleton(app.Workspace(wsName))
 }

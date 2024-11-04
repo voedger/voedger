@@ -40,21 +40,6 @@ func (app appDef) ACL(cb func(IACLRule) bool) {
 	}
 }
 
-func (app *appDef) CDoc(name QName) (d ICDoc) {
-	if t := TypeByNameAndKind(app, name, TypeKind_CDoc); t != nil {
-		return t.(ICDoc)
-	}
-	return nil
-}
-
-func (app *appDef) CDocs(visit func(ICDoc) bool) {
-	for t := range TypesByKind(app, TypeKind_CDoc) {
-		if !visit(t.(ICDoc)) {
-			break
-		}
-	}
-}
-
 func (app *appDef) Command(name QName) ICommand {
 	if t := TypeByNameAndKind(app, name, TypeKind_Command); t != nil {
 		return t.(ICommand)
@@ -65,21 +50,6 @@ func (app *appDef) Command(name QName) ICommand {
 func (app *appDef) Commands(visit func(ICommand) bool) {
 	for t := range TypesByKind(app, TypeKind_Command) {
 		if !visit(t.(ICommand)) {
-			break
-		}
-	}
-}
-
-func (app *appDef) CRecord(name QName) ICRecord {
-	if t := TypeByNameAndKind(app, name, TypeKind_CRecord); t != nil {
-		return t.(ICRecord)
-	}
-	return nil
-}
-
-func (app *appDef) CRecords(visit func(ICRecord) bool) {
-	for t := range TypesByKind(app, TypeKind_CRecord) {
-		if !visit(t.(ICRecord)) {
 			break
 		}
 	}
