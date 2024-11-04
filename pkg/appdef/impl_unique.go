@@ -112,7 +112,7 @@ func (uu *uniques) addUnique(name QName, fields []FieldName, comment ...string) 
 	}
 
 	if uu.app != nil {
-		if t := uu.app.TypeByName(name); t != nil {
+		if t := TypeByName(uu.app, name); t != nil {
 			panic(ErrAlreadyExists("unique «%v» already used for %v", name, t))
 		}
 	}

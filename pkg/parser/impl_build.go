@@ -809,10 +809,10 @@ func (c *buildContext) defCtx() *defBuildContext {
 func (c *buildContext) checkReference(pkg *PackageSchemaAST, table *TableStmt) error {
 	appDef := c.adb.AppDef()
 
-	refTableType := appDef.TypeByName(appdef.NewQName(pkg.Name, string(table.Name)))
+	refTableType := appdef.TypeByName(appDef, appdef.NewQName(pkg.Name, string(table.Name)))
 	if refTableType == nil {
 		c.table(pkg, table)
-		refTableType = appDef.TypeByName(appdef.NewQName(pkg.Name, string(table.Name)))
+		refTableType = appdef.TypeByName(appDef, appdef.NewQName(pkg.Name, string(table.Name)))
 	}
 
 	if refTableType == nil {

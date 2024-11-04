@@ -37,7 +37,7 @@ func (s *storage) String() string {
 
 func (s storage) validate() (err error) {
 	for _, n := range s.names {
-		if s.app.TypeByName(n) == nil {
+		if TypeByName(s.app, n) == nil {
 			err = errors.Join(err,
 				ErrNotFound("storage «%v» type «%v»", s.QName, n))
 			break

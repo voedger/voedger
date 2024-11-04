@@ -39,7 +39,7 @@ func newContainer(app *appDef, name string, typeName QName, minOccurs, maxOccurs
 
 func (cont *container) Type() IType {
 	if (cont.typ == nil) || (cont.typ.QName() != cont.QName()) {
-		cont.typ = cont.app.TypeByName(cont.QName())
+		cont.typ = TypeByName(cont.app, cont.QName())
 	}
 	return cont.typ
 }
@@ -111,7 +111,7 @@ func (cc *containers) addContainer(name string, contType QName, minOccurs, maxOc
 		panic(ErrOutOfBounds("max occurs should be greater than or equal to min occurs (%v)", minOccurs))
 	}
 
-	if typ := cc.app.TypeByName(contType); typ != nil {
+	if typ := TypeByName(cc.app, contType); typ != nil {
 		if (cc.typeKind != TypeKind_null) && !cc.typeKind.ContainerKindAvailable(typ.Kind()) {
 			panic(ErrInvalid("type «%v» can not to be a child of «%v»", typ, cc.typeKind.TrimString()))
 		}

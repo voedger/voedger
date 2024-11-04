@@ -34,8 +34,8 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("should be ok to read sys types", func(t *testing.T) {
-		require.Equal(NullType, app.TypeByName(NullQName))
-		require.Equal(AnyType, app.TypeByName(QNameANY))
+		require.Equal(NullType, app.Type(NullQName))
+		require.Equal(AnyType, app.Type(QNameANY))
 	})
 
 	t.Run("should be ok to read sys data types", func(t *testing.T) {
@@ -50,7 +50,7 @@ func Test_NullAppDef(t *testing.T) {
 
 	app := NullAppDef
 	require.NotNil(app)
-	require.Equal(NullType, app.TypeByName(NullQName))
+	require.Equal(NullType, app.Type(NullQName))
 
 	t.Run("should be ok to get system data types", func(t *testing.T) {
 		for k := DataKind_null + 1; k < DataKind_FakeLast; k++ {

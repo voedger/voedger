@@ -101,7 +101,7 @@ func (app *appDef) DataTypes(visit func(IData) bool) {
 }
 
 func (app *appDef) Extension(name QName) IExtension {
-	if t := app.TypeByName(name); t != nil {
+	if t := TypeByName(app, name); t != nil {
 		if ex, ok := t.(IExtension); ok {
 			return ex
 		}
@@ -120,7 +120,7 @@ func (app *appDef) Extensions(visit func(IExtension) bool) {
 func (app appDef) FullQName(name QName) FullQName { return app.packages.fullQName(name) }
 
 func (app *appDef) Function(name QName) IFunction {
-	if t := app.TypeByName(name); t != nil {
+	if t := TypeByName(app, name); t != nil {
 		if f, ok := t.(IFunction); ok {
 			return f
 		}
@@ -305,7 +305,7 @@ func (app *appDef) Rates(visit func(IRate) bool) {
 }
 
 func (app *appDef) Record(name QName) IRecord {
-	if t := app.TypeByName(name); t != nil {
+	if t := TypeByName(app, name); t != nil {
 		if r, ok := t.(IRecord); ok {
 			return r
 		}
@@ -337,7 +337,7 @@ func (app *appDef) Roles(visit func(IRole) bool) {
 }
 
 func (app *appDef) Singleton(name QName) ISingleton {
-	if t := app.TypeByName(name); t != nil {
+	if t := TypeByName(app, name); t != nil {
 		if s, ok := t.(ISingleton); ok {
 			return s
 		}
@@ -358,7 +358,7 @@ func (app *appDef) Singletons(visit func(ISingleton) bool) {
 }
 
 func (app *appDef) Structure(name QName) IStructure {
-	if t := app.TypeByName(name); t != nil {
+	if t := TypeByName(app, name); t != nil {
 		if s, ok := t.(IStructure); ok {
 			return s
 		}
@@ -382,13 +382,6 @@ func (app *appDef) SysData(k DataKind) IData {
 }
 
 func (app *appDef) Type(name QName) IType {
-	if t := app.TypeByName(name); t != nil {
-		return t
-	}
-	return NullType
-}
-
-func (app *appDef) TypeByName(name QName) IType {
 	switch name {
 	case NullQName:
 		return NullType
@@ -401,7 +394,8 @@ func (app *appDef) TypeByName(name QName) IType {
 	if t, ok := app.types[name]; ok {
 		return t.(IType)
 	}
-	return nil
+
+	return NullType
 }
 
 func (app *appDef) Types(visit func(IType) bool) {
@@ -520,7 +514,7 @@ func (app *appDef) appendType(t interface{}) {
 	if name == NullQName {
 		panic(ErrMissed("%s type name", typ.Kind().TrimString()))
 	}
-	if app.TypeByName(name) != nil {
+	if TypeByName(app, name) != nil {
 		panic(ErrAlreadyExists("type «%v»", name))
 	}
 

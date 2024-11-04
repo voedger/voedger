@@ -337,7 +337,7 @@ func validateTypeFields(t IType) (err error) {
 		// resolve reference types
 		for _, rf := range ff.RefFields() {
 			for _, n := range rf.Refs() {
-				refType := t.App().TypeByName(n)
+				refType := TypeByName(t.App(), n)
 				if refType == nil {
 					err = errors.Join(err,
 						ErrNotFound("%v reference field «%s» type «%v»", t, rf.Name(), n))

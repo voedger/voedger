@@ -124,7 +124,7 @@ func (ee *events) add(on QName, event ...ProjectorEventKind) {
 		panic(ErrMissed("event name"))
 	}
 
-	t := ee.app.TypeByName(on)
+	t := TypeByName(ee.app, on)
 	if t == nil {
 		panic(ErrTypeNotFound(on))
 	}

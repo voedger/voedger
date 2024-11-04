@@ -162,11 +162,6 @@ type IWithTypes interface {
 	// If not found then empty type with TypeKind_null is returned
 	Type(name QName) IType
 
-	// Returns type by name.
-	//
-	// Returns nil if type not found.
-	TypeByName(name QName) IType
-
 	// Enumerates all internal types.
 	//
 	// Types are enumerated in alphabetical order of QNames.

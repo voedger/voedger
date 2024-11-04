@@ -194,18 +194,18 @@ func (cfg *AppConfigType) validateJobs() error {
 func (cfg *AppConfigType) validateResources() error {
 
 	for qName := range cfg.Resources.Resources {
-		if cfg.AppDef.TypeByName(qName) == nil {
+		if appdef.TypeByName(cfg.AppDef, qName) == nil {
 			return fmt.Errorf("exec of func %s is defined but the func is not defined in SQL", qName)
 		}
 	}
 
 	for _, prj := range cfg.syncProjectors {
-		if cfg.AppDef.TypeByName(prj.Name) == nil {
+		if appdef.TypeByName(cfg.AppDef, prj.Name) == nil {
 			return fmt.Errorf("exec of sync projector %s is defined but the projector is not defined in SQL", prj.Name)
 		}
 	}
 	for _, prj := range cfg.asyncProjectors {
-		if cfg.AppDef.TypeByName(prj.Name) == nil {
+		if appdef.TypeByName(cfg.AppDef, prj.Name) == nil {
 			return fmt.Errorf("exec of async projector %s is defined but the projector is not defined in SQL", prj.Name)
 		}
 	}

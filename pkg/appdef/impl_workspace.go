@@ -127,7 +127,7 @@ func (ws *workspace) DataTypes(visit func(IData) bool) {
 }
 
 func (ws *workspace) Extension(name QName) IExtension {
-	if t := ws.TypeByName(name); t != nil {
+	if t := TypeByName(ws, name); t != nil {
 		if ex, ok := t.(IExtension); ok {
 			return ex
 		}
@@ -144,7 +144,7 @@ func (ws *workspace) Extensions(visit func(IExtension) bool) {
 }
 
 func (ws *workspace) Function(name QName) IFunction {
-	if t := ws.TypeByName(name); t != nil {
+	if t := TypeByName(ws, name); t != nil {
 		if f, ok := t.(IFunction); ok {
 			return f
 		}
@@ -295,7 +295,7 @@ func (ws *workspace) Queries(visit func(IQuery) bool) {
 }
 
 func (ws *workspace) Record(name QName) IRecord {
-	if t := ws.TypeByName(name); t != nil {
+	if t := TypeByName(ws, name); t != nil {
 		if r, ok := t.(IRecord); ok {
 			return r
 		}
@@ -327,7 +327,7 @@ func (ws *workspace) Roles(visit func(IRole) bool) {
 }
 
 func (ws *workspace) Singleton(name QName) ISingleton {
-	if t := ws.TypeByName(name); t != nil {
+	if t := TypeByName(ws, name); t != nil {
 		if s, ok := t.(ISingleton); ok {
 			return s
 		}
@@ -348,7 +348,7 @@ func (ws *workspace) Singletons(visit func(ISingleton) bool) {
 }
 
 func (ws *workspace) Structure(name QName) IStructure {
-	if t := ws.TypeByName(name); t != nil {
+	if t := TypeByName(ws, name); t != nil {
 		if s, ok := t.(IStructure); ok {
 			return s
 		}
@@ -365,22 +365,15 @@ func (ws *workspace) Structures(visit func(IStructure) bool) {
 }
 
 func (ws *workspace) Type(name QName) IType {
-	if t := ws.TypeByName(name); t != nil {
-		return t
-	}
-	return NullType
-}
-
-func (ws *workspace) TypeByName(name QName) IType {
 	if t, ok := ws.types[name]; ok {
 		return t.(IType)
 	}
 	for _, a := range ws.ancestors {
-		if t := a.TypeByName(name); t != nil {
+		if t := a.Type(name); t != NullType {
 			return t
 		}
 	}
-	return nil
+	return NullType
 }
 
 func (ws *workspace) Types(visit func(IType) bool) {
@@ -521,7 +514,7 @@ func (ws *workspace) addRole(name QName) IRoleBuilder {
 
 // TODO: should be deprecated. All types should be added by specific methods.
 func (ws *workspace) addType(name QName) {
-	t := ws.app.TypeByName(name)
+	t := TypeByName(ws.app, name)
 	if t == nil {
 		panic(ErrTypeNotFound(name))
 	}

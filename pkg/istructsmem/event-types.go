@@ -127,8 +127,8 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 			argUnl = cmd.UnloggedParam().QName()
 		}
 	} else {
-		// #!16208: Must be possible to use TypeKind_ODoc as Event.QName
-		if t := ev.appCfg.AppDef.TypeByName(ev.name); (t == nil) || (t.Kind() != appdef.TypeKind_ODoc) {
+		// #!16208: Should be possible to use TypeKind_ODoc as Event.QName
+		if d := ev.appCfg.AppDef.ODoc(ev.name); d == nil {
 			// command function «test.object» not found
 			return arg, argUnl, fmt.Errorf("command function «%v» not found: %w", ev.name, ErrNameNotFound)
 		}

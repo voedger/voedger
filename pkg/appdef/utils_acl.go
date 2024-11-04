@@ -106,7 +106,7 @@ func validateACLResourceNames(tt IWithTypes, names ...QName) (QNames, error) {
 	onType := TypeKind_null
 
 	for _, n := range nn {
-		t := tt.TypeByName(n)
+		t := TypeByName(tt, n)
 		if t == nil {
 			return nil, ErrTypeNotFound(n)
 		}
