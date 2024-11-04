@@ -52,6 +52,16 @@ func TypeByName(types IWithTypes, name QName) IType {
 	return nil
 }
 
+// Returns type by name and kind.
+//
+// Returns nil if type not found.
+func TypeByNameAndKind(types IWithTypes, name QName, kind TypeKind) IType {
+	if t := types.Type(name); t.Kind() == kind {
+		return t
+	}
+	return nil
+}
+
 // Is specified type kind may be used in child containers.
 func (k TypeKind) ContainerKindAvailable(s TypeKind) bool {
 	return structTypeProps(k).containerKinds.Contains(s)

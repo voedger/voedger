@@ -41,7 +41,7 @@ func (app appDef) ACL(cb func(IACLRule) bool) {
 }
 
 func (app *appDef) CDoc(name QName) (d ICDoc) {
-	if t := app.typeByKind(name, TypeKind_CDoc); t != nil {
+	if t := TypeByNameAndKind(app, name, TypeKind_CDoc); t != nil {
 		return t.(ICDoc)
 	}
 	return nil
@@ -56,7 +56,7 @@ func (app *appDef) CDocs(visit func(ICDoc) bool) {
 }
 
 func (app *appDef) Command(name QName) ICommand {
-	if t := app.typeByKind(name, TypeKind_Command); t != nil {
+	if t := TypeByNameAndKind(app, name, TypeKind_Command); t != nil {
 		return t.(ICommand)
 	}
 	return nil
@@ -71,7 +71,7 @@ func (app *appDef) Commands(visit func(ICommand) bool) {
 }
 
 func (app *appDef) CRecord(name QName) ICRecord {
-	if t := app.typeByKind(name, TypeKind_CRecord); t != nil {
+	if t := TypeByNameAndKind(app, name, TypeKind_CRecord); t != nil {
 		return t.(ICRecord)
 	}
 	return nil
@@ -86,7 +86,7 @@ func (app *appDef) CRecords(visit func(ICRecord) bool) {
 }
 
 func (app *appDef) Data(name QName) IData {
-	if t := app.typeByKind(name, TypeKind_Data); t != nil {
+	if t := TypeByNameAndKind(app, name, TypeKind_Data); t != nil {
 		return t.(IData)
 	}
 	return nil
@@ -137,7 +137,7 @@ func (app *appDef) Functions(visit func(IFunction) bool) {
 }
 
 func (app *appDef) GDoc(name QName) IGDoc {
-	if t := app.typeByKind(name, TypeKind_GDoc); t != nil {
+	if t := TypeByNameAndKind(app, name, TypeKind_GDoc); t != nil {
 		return t.(IGDoc)
 	}
 	return nil
@@ -152,7 +152,7 @@ func (app *appDef) GDocs(visit func(IGDoc) bool) {
 }
 
 func (app *appDef) GRecord(name QName) IGRecord {
-	if t := app.typeByKind(name, TypeKind_GRecord); t != nil {
+	if t := TypeByNameAndKind(app, name, TypeKind_GRecord); t != nil {
 		return t.(IGRecord)
 	}
 	return nil
@@ -167,7 +167,7 @@ func (app *appDef) GRecords(visit func(IGRecord) bool) {
 }
 
 func (app *appDef) Job(name QName) IJob {
-	if t := app.typeByKind(name, TypeKind_Job); t != nil {
+	if t := TypeByNameAndKind(app, name, TypeKind_Job); t != nil {
 		return t.(IJob)
 	}
 	return nil
@@ -182,7 +182,7 @@ func (app *appDef) Jobs(visit func(IJob) bool) {
 }
 
 func (app *appDef) Limit(name QName) ILimit {
-	if t := app.typeByKind(name, TypeKind_Limit); t != nil {
+	if t := TypeByNameAndKind(app, name, TypeKind_Limit); t != nil {
 		return t.(ILimit)
 	}
 	return nil
@@ -199,7 +199,7 @@ func (app *appDef) Limits(visit func(ILimit) bool) {
 func (app appDef) LocalQName(name FullQName) QName { return app.packages.localQName(name) }
 
 func (app *appDef) Object(name QName) IObject {
-	if t := app.typeByKind(name, TypeKind_Object); t != nil {
+	if t := TypeByNameAndKind(app, name, TypeKind_Object); t != nil {
 		return t.(IObject)
 	}
 	return nil
@@ -214,7 +214,7 @@ func (app *appDef) Objects(visit func(IObject) bool) {
 }
 
 func (app *appDef) ODoc(name QName) IODoc {
-	if t := app.typeByKind(name, TypeKind_ODoc); t != nil {
+	if t := TypeByNameAndKind(app, name, TypeKind_ODoc); t != nil {
 		return t.(IODoc)
 	}
 	return nil
@@ -229,7 +229,7 @@ func (app *appDef) ODocs(visit func(IODoc) bool) {
 }
 
 func (app *appDef) ORecord(name QName) IORecord {
-	if t := app.typeByKind(name, TypeKind_ORecord); t != nil {
+	if t := TypeByNameAndKind(app, name, TypeKind_ORecord); t != nil {
 		return t.(IORecord)
 	}
 	return nil
@@ -260,7 +260,7 @@ func (app *appDef) Packages(cb func(local, path string) bool) {
 }
 
 func (app *appDef) Projector(name QName) IProjector {
-	if t := app.typeByKind(name, TypeKind_Projector); t != nil {
+	if t := TypeByNameAndKind(app, name, TypeKind_Projector); t != nil {
 		return t.(IProjector)
 	}
 	return nil
@@ -283,14 +283,14 @@ func (app *appDef) Queries(visit func(IQuery) bool) {
 }
 
 func (app *appDef) Query(name QName) IQuery {
-	if t := app.typeByKind(name, TypeKind_Query); t != nil {
+	if t := TypeByNameAndKind(app, name, TypeKind_Query); t != nil {
 		return t.(IQuery)
 	}
 	return nil
 }
 
-func (app appDef) Rate(name QName) IRate {
-	if t := app.typeByKind(name, TypeKind_Rate); t != nil {
+func (app *appDef) Rate(name QName) IRate {
+	if t := TypeByNameAndKind(app, name, TypeKind_Rate); t != nil {
 		return t.(IRate)
 	}
 	return nil
@@ -322,7 +322,7 @@ func (app *appDef) Records(visit func(IRecord) bool) {
 }
 
 func (app *appDef) Role(name QName) IRole {
-	if t := app.typeByKind(name, TypeKind_Role); t != nil {
+	if t := TypeByNameAndKind(app, name, TypeKind_Role); t != nil {
 		return t.(IRole)
 	}
 	return nil
@@ -375,7 +375,7 @@ func (app *appDef) Structures(visit func(IStructure) bool) {
 }
 
 func (app *appDef) SysData(k DataKind) IData {
-	if t := app.typeByKind(SysDataName(k), TypeKind_Data); t != nil {
+	if t := TypeByNameAndKind(app, SysDataName(k), TypeKind_Data); t != nil {
 		return t.(IData)
 	}
 	return nil
@@ -416,7 +416,7 @@ func (app *appDef) Types(visit func(IType) bool) {
 }
 
 func (app *appDef) View(name QName) IView {
-	if t := app.typeByKind(name, TypeKind_ViewRecord); t != nil {
+	if t := TypeByNameAndKind(app, name, TypeKind_ViewRecord); t != nil {
 		return t.(IView)
 	}
 	return nil
@@ -431,7 +431,7 @@ func (app *appDef) Views(visit func(IView) bool) {
 }
 
 func (app *appDef) WDoc(name QName) IWDoc {
-	if t := app.typeByKind(name, TypeKind_WDoc); t != nil {
+	if t := TypeByNameAndKind(app, name, TypeKind_WDoc); t != nil {
 		return t.(IWDoc)
 	}
 	return nil
@@ -446,7 +446,7 @@ func (app *appDef) WDocs(visit func(IWDoc) bool) {
 }
 
 func (app *appDef) WRecord(name QName) IWRecord {
-	if t := app.typeByKind(name, TypeKind_WRecord); t != nil {
+	if t := TypeByNameAndKind(app, name, TypeKind_WRecord); t != nil {
 		return t.(IWRecord)
 	}
 	return nil
@@ -461,7 +461,7 @@ func (app *appDef) WRecords(visit func(IWRecord) bool) {
 }
 
 func (app *appDef) Workspace(name QName) IWorkspace {
-	if t := app.typeByKind(name, TypeKind_Workspace); t != nil {
+	if t := TypeByNameAndKind(app, name, TypeKind_Workspace); t != nil {
 		return t.(IWorkspace)
 	}
 	return nil
@@ -567,16 +567,6 @@ func (app *appDef) makeSysDataTypes() {
 
 func (app *appDef) makeSysStructures() {
 
-}
-
-// Returns type by name and kind. If type is not found then returns nil.
-func (app *appDef) typeByKind(name QName, kind TypeKind) interface{} {
-	if t, ok := app.types[name]; ok {
-		if t.(IType).Kind() == kind {
-			return t
-		}
-	}
-	return nil
 }
 
 // # Implements:

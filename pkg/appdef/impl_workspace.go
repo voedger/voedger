@@ -60,7 +60,7 @@ func (ws *workspace) Ancestors(recurse bool) []QName {
 }
 
 func (ws *workspace) CDoc(name QName) ICDoc {
-	if t := ws.typeByKind(name, TypeKind_CDoc); t != nil {
+	if t := TypeByNameAndKind(ws, name, TypeKind_CDoc); t != nil {
 		return t.(ICDoc)
 	}
 	return nil
@@ -75,7 +75,7 @@ func (ws *workspace) CDocs(visit func(ICDoc) bool) {
 }
 
 func (ws *workspace) Command(name QName) ICommand {
-	if t := ws.typeByKind(name, TypeKind_Command); t != nil {
+	if t := TypeByNameAndKind(ws, name, TypeKind_Command); t != nil {
 		return t.(ICommand)
 	}
 	return nil
@@ -90,7 +90,7 @@ func (ws *workspace) Commands(visit func(ICommand) bool) {
 }
 
 func (ws *workspace) CRecord(name QName) ICRecord {
-	if t := ws.typeByKind(name, TypeKind_CRecord); t != nil {
+	if t := TypeByNameAndKind(ws, name, TypeKind_CRecord); t != nil {
 		return t.(ICRecord)
 	}
 	return nil
@@ -112,7 +112,7 @@ func (ws *workspace) Descriptor() QName {
 }
 
 func (ws *workspace) Data(name QName) IData {
-	if t := ws.typeByKind(name, TypeKind_Data); t != nil {
+	if t := TypeByNameAndKind(ws, name, TypeKind_Data); t != nil {
 		return t.(IData)
 	}
 	return nil
@@ -161,7 +161,7 @@ func (ws *workspace) Functions(visit func(IFunction) bool) {
 }
 
 func (ws *workspace) GDoc(name QName) IGDoc {
-	if t := ws.typeByKind(name, TypeKind_GDoc); t != nil {
+	if t := TypeByNameAndKind(ws, name, TypeKind_GDoc); t != nil {
 		return t.(IGDoc)
 	}
 	return nil
@@ -176,7 +176,7 @@ func (ws *workspace) GDocs(visit func(IGDoc) bool) {
 }
 
 func (ws *workspace) GRecord(name QName) IGRecord {
-	if t := ws.typeByKind(name, TypeKind_GRecord); t != nil {
+	if t := TypeByNameAndKind(ws, name, TypeKind_GRecord); t != nil {
 		return t.(IGRecord)
 	}
 	return nil
@@ -205,7 +205,7 @@ func (ws *workspace) Inherits(anc QName) bool {
 }
 
 func (ws *workspace) Job(name QName) IJob {
-	if t := ws.typeByKind(name, TypeKind_Job); t != nil {
+	if t := TypeByNameAndKind(ws, name, TypeKind_Job); t != nil {
 		return t.(IJob)
 	}
 	return nil
@@ -220,7 +220,7 @@ func (ws *workspace) Jobs(visit func(IJob) bool) {
 }
 
 func (ws *workspace) Object(name QName) IObject {
-	if t := ws.typeByKind(name, TypeKind_Object); t != nil {
+	if t := TypeByNameAndKind(ws, name, TypeKind_Object); t != nil {
 		return t.(IObject)
 	}
 	return nil
@@ -235,7 +235,7 @@ func (ws *workspace) Objects(visit func(IObject) bool) {
 }
 
 func (ws *workspace) ODoc(name QName) IODoc {
-	if t := ws.typeByKind(name, TypeKind_ODoc); t != nil {
+	if t := TypeByNameAndKind(ws, name, TypeKind_ODoc); t != nil {
 		return t.(IODoc)
 	}
 	return nil
@@ -250,7 +250,7 @@ func (ws *workspace) ODocs(visit func(IODoc) bool) {
 }
 
 func (ws *workspace) ORecord(name QName) IORecord {
-	if t := ws.typeByKind(name, TypeKind_ORecord); t != nil {
+	if t := TypeByNameAndKind(ws, name, TypeKind_ORecord); t != nil {
 		return t.(IORecord)
 	}
 	return nil
@@ -265,7 +265,7 @@ func (ws *workspace) ORecords(visit func(IORecord) bool) {
 }
 
 func (ws *workspace) Projector(name QName) IProjector {
-	if t := ws.typeByKind(name, TypeKind_Projector); t != nil {
+	if t := TypeByNameAndKind(ws, name, TypeKind_Projector); t != nil {
 		return t.(IProjector)
 	}
 	return nil
@@ -280,7 +280,7 @@ func (ws *workspace) Projectors(visit func(IProjector) bool) {
 }
 
 func (ws *workspace) Query(name QName) IQuery {
-	if t := ws.typeByKind(name, TypeKind_Query); t != nil {
+	if t := TypeByNameAndKind(ws, name, TypeKind_Query); t != nil {
 		return t.(IQuery)
 	}
 	return nil
@@ -312,7 +312,7 @@ func (ws *workspace) Records(visit func(IRecord) bool) {
 }
 
 func (ws *workspace) Role(name QName) IRole {
-	if t := ws.typeByKind(name, TypeKind_Role); t != nil {
+	if t := TypeByNameAndKind(ws, name, TypeKind_Role); t != nil {
 		return t.(IRole)
 	}
 	return nil
@@ -401,7 +401,7 @@ func (ws *workspace) Validate() error {
 }
 
 func (ws *workspace) View(name QName) IView {
-	if t := ws.typeByKind(name, TypeKind_ViewRecord); t != nil {
+	if t := TypeByNameAndKind(ws, name, TypeKind_ViewRecord); t != nil {
 		return t.(IView)
 	}
 	return nil
@@ -416,7 +416,7 @@ func (ws *workspace) Views(visit func(IView) bool) {
 }
 
 func (ws *workspace) WDoc(name QName) IWDoc {
-	if t := ws.typeByKind(name, TypeKind_WDoc); t != nil {
+	if t := TypeByNameAndKind(ws, name, TypeKind_WDoc); t != nil {
 		return t.(IWDoc)
 	}
 	return nil
@@ -431,7 +431,7 @@ func (ws *workspace) WDocs(visit func(IWDoc) bool) {
 }
 
 func (ws *workspace) WRecord(name QName) IWRecord {
-	if t := ws.typeByKind(name, TypeKind_WRecord); t != nil {
+	if t := TypeByNameAndKind(ws, name, TypeKind_WRecord); t != nil {
 		return t.(IWRecord)
 	}
 	return nil
@@ -630,14 +630,6 @@ func (ws *workspace) setDescriptor(q QName) {
 	}
 
 	ws.app.wsDesc[q] = ws
-}
-
-// Returns type by name and kind. If type is not found then returns nil.
-func (ws *workspace) typeByKind(name QName, kind TypeKind) interface{} {
-	if t := ws.Type(name); t.Kind() == kind {
-		return t
-	}
-	return nil
 }
 
 // # Implements:
