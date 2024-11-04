@@ -418,6 +418,3 @@ WORKSPACE MyWorkspace1 INHERITS AWorkspace, untill.UntillAWorkspace (
 ALTER WORKSPACE sys.Profile(
     USE WORKSPACE MyWorkspace1;
 );
-
--- Declares ROLE
-ROLE UntillPaymentsUser;

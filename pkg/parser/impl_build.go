@@ -173,7 +173,8 @@ func (c *buildContext) types() error {
 func (c *buildContext) roles() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(role *RoleStmt, ictx *iterateCtx) {
-			rb := c.adb.AddRole(schema.NewQName(role.Name))
+			wsb := role.workspace.mustBuilder(c)
+			rb := wsb.AddRole(schema.NewQName(role.Name))
 			c.addComments(role, rb)
 		})
 	}
@@ -185,28 +186,30 @@ func (c *buildContext) grantsAndRevokes() error {
 	grants := func(stmts []WorkspaceStatement) {
 		for _, s := range stmts {
 			if s.Grant != nil && len(s.Grant.on) > 0 {
+				wsb := s.Grant.workspace.mustBuilder(c)
 				comments := s.Grant.GetComments()
 				if (s.Grant.AllTablesWithTag != nil && s.Grant.AllTablesWithTag.All) ||
 					(s.Grant.Table != nil && s.Grant.Table.All != nil) ||
 					(s.Grant.AllTables != nil && s.Grant.AllTables.All) {
-					c.adb.GrantAll(s.Grant.on, s.Grant.toRole, comments...)
+					wsb.GrantAll(s.Grant.on, s.Grant.toRole, comments...)
 					continue
 				}
-				c.adb.Grant(s.Grant.ops, s.Grant.on, s.Grant.columns, s.Grant.toRole, comments...)
+				wsb.Grant(s.Grant.ops, s.Grant.on, s.Grant.columns, s.Grant.toRole, comments...)
 			}
 		}
 	}
 	revokes := func(stmts []WorkspaceStatement) {
 		for _, s := range stmts {
 			if s.Revoke != nil && len(s.Revoke.on) > 0 {
+				wsb := s.Revoke.workspace.mustBuilder(c)
 				comments := s.Revoke.GetComments()
 				if (s.Revoke.AllTablesWithTag != nil && s.Revoke.AllTablesWithTag.All) ||
 					(s.Revoke.Table != nil && s.Revoke.Table.All != nil) ||
 					(s.Revoke.AllTables != nil && s.Revoke.AllTables.All) {
-					c.adb.RevokeAll(s.Revoke.on, s.Revoke.toRole, comments...)
+					wsb.RevokeAll(s.Revoke.on, s.Revoke.toRole, comments...)
 					continue
 				}
-				c.adb.Revoke(s.Revoke.ops, s.Revoke.on, s.Revoke.columns, s.Revoke.toRole, comments...)
+				wsb.Revoke(s.Revoke.ops, s.Revoke.on, s.Revoke.columns, s.Revoke.toRole, comments...)
 			}
 		}
 	}

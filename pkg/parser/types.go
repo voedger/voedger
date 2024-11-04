@@ -539,7 +539,8 @@ func (s TemplateStmt) GetName() string { return string(s.Name) }
 
 type RoleStmt struct {
 	Statement
-	Name Ident `parser:"'ROLE' @Ident"`
+	Name      Ident         `parser:"'ROLE' @Ident"`
+	workspace workspaceAddr // filled on the analysis stage
 }
 
 func (s RoleStmt) GetName() string { return string(s.Name) }
@@ -688,10 +689,11 @@ type GrantOrRevoke struct {
 	Role                 *DefQName                     `parser:"  | @@)"`
 
 	/* filled on the analysis stage */
-	toRole  appdef.QName
-	on      []appdef.QName
-	ops     []appdef.OperationKind
-	columns []appdef.FieldName
+	toRole    appdef.QName
+	on        []appdef.QName
+	ops       []appdef.OperationKind
+	columns   []appdef.FieldName
+	workspace workspaceAddr
 }
 
 type GrantStmt struct {

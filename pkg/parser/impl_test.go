@@ -2059,8 +2059,8 @@ func Test_Grants(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
 		require.AppSchemaError(`
 	APPLICATION app1();
-	ROLE role1;
 	WORKSPACE ws1 (
+		ROLE role1;
 		GRANT ALL ON TABLE Fake TO app1;
 		GRANT EXECUTE ON COMMAND Fake TO role1;
 		GRANT EXECUTE ON QUERY Fake TO role1;
@@ -2094,8 +2094,8 @@ func Test_Grants(t *testing.T) {
 
 	t.Run("GRANT follows REVOKE in WORKSPACE", func(t *testing.T) {
 		require.AppSchemaError(`APPLICATION test(); 
-			ROLE role1;
 			WORKSPACE AppWorkspaceWS (
+				ROLE role1;
 
 				TABLE Table1 INHERITS CDoc(
 					Field1 int32
@@ -2146,8 +2146,8 @@ func Test_Grants_Inherit(t *testing.T) {
 
 	t.Run("GRANT ALL does not include resources from inherited workspaces", func(t *testing.T) {
 		schema, err := require.AppSchema(`APPLICATION test();
-			ROLE role1;
 			ABSTRACT WORKSPACE BaseWs (
+				ROLE role1;
 				TABLE Table1 INHERITS CDoc();
 			);
 			WORKSPACE AppWorkspaceWS INHERITS BaseWs (
@@ -2180,9 +2180,9 @@ func Test_Grants_Inherit(t *testing.T) {
 
 	t.Run("GRANT ALL * WITH TAG includes resources from inherited workspaces", func(t *testing.T) {
 		schema, err := require.AppSchema(`APPLICATION test();
-			ROLE role1;
 			TAG tag1;
 			ABSTRACT WORKSPACE BaseWs (
+				ROLE role1;
 				TABLE Table1 INHERITS CDoc() WITH Tags=(tag1);
 			);
 			WORKSPACE AppWorkspaceWS INHERITS BaseWs (

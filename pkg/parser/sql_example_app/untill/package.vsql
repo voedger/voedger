@@ -10,4 +10,7 @@ ABSTRACT WORKSPACE UntillAWorkspace (
     TABLE Promotions INHERITS CDoc(
         Discount float
     );
+
+    -- Declares ROLE
+    ROLE UntillPaymentsUser;
 );

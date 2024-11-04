@@ -95,6 +95,8 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 				analyseUseWorkspace(v, ictx)
 			case *StorageStmt:
 				analyseStorage(v, ictx)
+			case *RoleStmt:
+				analyseRole(v, ictx)
 			case *RateStmt:
 				analyseRate(v, ictx)
 			case *LimitStmt:
@@ -424,6 +426,7 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 		}
 	}
 
+	grant.workspace = c.mustCurrentWorkspace()
 }
 
 func hasTags(with []WithItem, tag *TagStmt, c *iterateCtx) bool {
@@ -712,6 +715,10 @@ func analyzeQuery(query *QueryStmt, c *iterateCtx) {
 	checkState(query.State, c, func(sc *StorageScope) bool { return sc.Queries })
 
 	query.workspace = c.mustCurrentWorkspace()
+}
+
+func analyseRole(r *RoleStmt, c *iterateCtx) {
+	r.workspace = c.mustCurrentWorkspace()
 }
 
 func checkStorageEntity(key *StateStorage, f *StorageStmt, c *iterateCtx) error {
