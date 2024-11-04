@@ -231,13 +231,6 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
         PROJECTOR RecordsRegistryProjector
             AFTER INSERT OR ACTIVATE OR DEACTIVATE ON (CRecord, WRecord);
 
-        -- Job executed by CRON
-        JOB TestJob1 '1 0 * * *'
-            STATE (Http, AppSecret);
-
-
-        JOB TestJob2 '@every 2m30s';
-
         /*
         Commands can only be declared in workspaces
         Command can have optional argument and/or unlogged argument
@@ -418,3 +411,15 @@ WORKSPACE MyWorkspace1 INHERITS AWorkspace, untill.UntillAWorkspace (
 ALTER WORKSPACE sys.Profile(
     USE WORKSPACE MyWorkspace1;
 );
+
+ALTER WORKSPACE sys.AppWorkspaceWS (
+
+    EXTENSION ENGINE BUILTIN (
+           -- Job executed by CRON
+        JOB TestJob1 '1 0 * * *'
+            STATE (Http, AppSecret);
+
+
+        JOB TestJob2 '@every 2m30s'; 
+    );
+)

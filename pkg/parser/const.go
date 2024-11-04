@@ -16,6 +16,8 @@ const (
 	nameCRecord    = "CRecord"
 	nameORecord    = "ORecord"
 	nameWRecord    = "WRecord"
+
+	nameAppWorkspaceWS = "AppWorkspaceWS"
 )
 
 const rootWorkspaceName = appdef.SysWorkspaceName // "Workspace"
