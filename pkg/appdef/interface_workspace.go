@@ -12,8 +12,6 @@ type IWorkspace interface {
 
 	IWithTypes
 
-	IWithFunctions
-
 	IWithProjectors
 	IWithJobs
 

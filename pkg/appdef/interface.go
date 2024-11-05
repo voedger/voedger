@@ -14,8 +14,6 @@ type IAppDef interface {
 
 	IWithTypes
 
-	IWithFunctions
-
 	IWithProjectors
 	IWithJobs
 

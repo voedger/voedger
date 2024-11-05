@@ -83,23 +83,6 @@ func (ws *workspace) Extensions(visit func(IExtension) bool) {
 	}
 }
 
-func (ws *workspace) Function(name QName) IFunction {
-	if t := TypeByName(ws, name); t != nil {
-		if f, ok := t.(IFunction); ok {
-			return f
-		}
-	}
-	return nil
-}
-
-func (ws *workspace) Functions(visit func(IFunction) bool) {
-	for t := range TypesByKinds(ws, TypeKind_Functions) {
-		if !visit(t.(IFunction)) {
-			break
-		}
-	}
-}
-
 func (ws *workspace) Inherits(anc QName) bool {
 	switch anc {
 	case SysWorkspaceQName, ws.QName():

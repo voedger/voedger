@@ -154,6 +154,31 @@ func DataTypes(types ITypes) func(func(IData) bool) {
 	}
 }
 
+// Returns Function by name.
+//
+// Returns nil if Function not found.
+func Function(types IFindType, name QName) IFunction {
+	if t := TypeByName(types, name); t != nil {
+		if r, ok := t.(IFunction); ok {
+			return r
+		}
+	}
+	return nil
+}
+
+// Returns iterator over Functions.
+//
+// Functions are visited in alphabetic order.
+func Functions(types ITypes) func(func(IFunction) bool) {
+	return func(visit func(IFunction) bool) {
+		for t := range TypesByKinds(types, TypeKind_Functions) {
+			if !visit(t.(IFunction)) {
+				break
+			}
+		}
+	}
+}
+
 // Returns GDoc by name.
 //
 // Returns nil if GDoc not found.

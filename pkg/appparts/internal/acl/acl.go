@@ -52,7 +52,7 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 			}
 		}
 	case appdef.OperationKind_Execute:
-		if app.Function(res) == nil {
+		if appdef.Function(app, res) == nil {
 			return false, nil, appdef.ErrNotFound("function «%q»", res)
 		}
 	default:

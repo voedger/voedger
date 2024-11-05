@@ -59,23 +59,6 @@ func (app *appDef) Extensions(visit func(IExtension) bool) {
 
 func (app appDef) FullQName(name QName) FullQName { return app.packages.fullQName(name) }
 
-func (app *appDef) Function(name QName) IFunction {
-	if t := TypeByName(app, name); t != nil {
-		if f, ok := t.(IFunction); ok {
-			return f
-		}
-	}
-	return nil
-}
-
-func (app *appDef) Functions(visit func(IFunction) bool) {
-	for t := range TypesByKinds(app, TypeKind_Functions) {
-		if !visit(t.(IFunction)) {
-			break
-		}
-	}
-}
-
 func (app *appDef) Job(name QName) IJob {
 	if t := TypeByNameAndKind(app, name, TypeKind_Job); t != nil {
 		return t.(IJob)
