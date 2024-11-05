@@ -187,7 +187,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.TypeKind_Query, q1.Kind())
 
 	// CUD Projector
-	proj := app.Projector(appdef.NewQName("main", "RecordsRegistryProjector"))
+	proj := appdef.Projector(app, appdef.NewQName("main", "RecordsRegistryProjector"))
 	require.NotNil(proj)
 	eventsCount := 0
 	proj.Events().Enum(func(ie appdef.IProjectorEvent) {
@@ -208,7 +208,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(eventsCount, proj.Events().Len())
 
 	// Execute Projector
-	proj = app.Projector(appdef.NewQName("main", "UpdateDashboard"))
+	proj = appdef.Projector(app, appdef.NewQName("main", "UpdateDashboard"))
 	require.NotNil(proj)
 	eventsCount = 0
 	proj.Events().Enum(func(ie appdef.IProjectorEvent) {

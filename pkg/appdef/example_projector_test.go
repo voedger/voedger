@@ -55,7 +55,7 @@ func ExampleIAppDefBuilder_AddProjector() {
 
 	// how to inspect builded AppDef with projector
 	{
-		prj := app.Projector(prjName)
+		prj := appdef.Projector(app, prjName)
 		fmt.Println(prj, ":")
 		prj.Events().Enum(func(e appdef.IProjectorEvent) {
 			fmt.Println(" - event:", e, e.Comment())
@@ -70,13 +70,13 @@ func ExampleIAppDefBuilder_AddProjector() {
 			fmt.Println(" - intent:", i, i.Comment())
 		}
 
-		fmt.Println(app.Projector(appdef.NewQName("test", "unknown")))
+		fmt.Println(appdef.Projector(app, appdef.NewQName("test", "unknown")))
 	}
 
 	// How to enum all projectors in AppDef
 	{
 		cnt := 0
-		for prj := range app.Projectors {
+		for prj := range appdef.Projectors(app) {
 			cnt++
 			fmt.Println(cnt, prj)
 		}

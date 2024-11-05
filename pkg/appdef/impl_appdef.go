@@ -107,21 +107,6 @@ func (app *appDef) Packages(cb func(local, path string) bool) {
 	app.packages.forEach(cb)
 }
 
-func (app *appDef) Projector(name QName) IProjector {
-	if t := TypeByNameAndKind(app, name, TypeKind_Projector); t != nil {
-		return t.(IProjector)
-	}
-	return nil
-}
-
-func (app *appDef) Projectors(visit func(IProjector) bool) {
-	for t := range TypesByKind(app, TypeKind_Projector) {
-		if !visit(t.(IProjector)) {
-			break
-		}
-	}
-}
-
 func (app *appDef) Rate(name QName) IRate {
 	if t := TypeByNameAndKind(app, name, TypeKind_Rate); t != nil {
 		return t.(IRate)

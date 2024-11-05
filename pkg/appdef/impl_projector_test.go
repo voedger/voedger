@@ -79,17 +79,17 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 	require.NotNil(app)
 
-	testWithProjectors := func(tested IWithProjectors) {
+	testWith := func(tested IWithTypes) {
 
 		t.Run("should be ok to find builded projector", func(t *testing.T) {
-			typ := tested.(IWithTypes).Type(prjName)
+			typ := tested.Type(prjName)
 			require.Equal(TypeKind_Projector, typ.Kind())
 
 			p, ok := typ.(IProjector)
 			require.True(ok)
 			require.Equal(TypeKind_Projector, p.Kind())
 
-			prj := tested.Projector(prjName)
+			prj := Projector(tested, prjName)
 			require.Equal(TypeKind_Projector, prj.Kind())
 			require.Equal(wsName, prj.Workspace().QName())
 			require.Equal(p, prj)
@@ -222,7 +222,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 		t.Run("should be ok to enum projectors", func(t *testing.T) {
 			cnt := 0
-			for p := range tested.Projectors {
+			for p := range Projectors(tested) {
 				cnt++
 				switch cnt {
 				case 1:
@@ -235,11 +235,11 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			require.Equal(1, cnt)
 		})
 
-		require.Nil(tested.Projector(NewQName("test", "unknown")), "should be nil if unknown")
+		require.Nil(Projector(tested, NewQName("test", "unknown")), "should be nil if unknown")
 	}
 
-	testWithProjectors(app)
-	testWithProjectors(app.Workspace(wsName))
+	testWith(app)
+	testWith(app.Workspace(wsName))
 
 	t.Run("more add projector checks", func(t *testing.T) {
 		adb := New()
@@ -259,7 +259,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		app, err := adb.Build()
 		require.NoError(err)
 
-		p := app.Projector(prjName)
+		p := Projector(app, prjName)
 
 		require.Equal("customExtensionName", p.Name())
 		require.Equal(ExtensionEngineKind_WASM, p.Engine())

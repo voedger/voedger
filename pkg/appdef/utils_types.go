@@ -294,6 +294,29 @@ func ORecords(types ITypes) func(func(IORecord) bool) {
 	}
 }
 
+// Returns Projector by name.
+//
+// Returns nil if Projector not found.
+func Projector(types IFindType, name QName) IProjector {
+	if t := TypeByNameAndKind(types, name, TypeKind_Projector); t != nil {
+		return t.(IProjector)
+	}
+	return nil
+}
+
+// Returns iterator over Projectors.
+//
+// Projectors are visited in alphabetic order.
+func Projectors(types ITypes) func(func(IProjector) bool) {
+	return func(visit func(IProjector) bool) {
+		for t := range TypesByKind(types, TypeKind_Projector) {
+			if !visit(t.(IProjector)) {
+				break
+			}
+		}
+	}
+}
+
 // Returns Query by name.
 //
 // Returns nil if Query not found.
