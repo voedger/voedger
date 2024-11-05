@@ -108,21 +108,6 @@ func (app *appDef) Limits(visit func(ILimit) bool) {
 
 func (app appDef) LocalQName(name FullQName) QName { return app.packages.localQName(name) }
 
-func (app *appDef) Object(name QName) IObject {
-	if t := TypeByNameAndKind(app, name, TypeKind_Object); t != nil {
-		return t.(IObject)
-	}
-	return nil
-}
-
-func (app *appDef) Objects(visit func(IObject) bool) {
-	for t := range TypesByKind(app, TypeKind_Object) {
-		if !visit(t.(IObject)) {
-			break
-		}
-	}
-}
-
 func (app *appDef) PackageLocalName(path string) string {
 	return app.packages.localNameByPath(path)
 }

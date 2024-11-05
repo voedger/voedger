@@ -129,21 +129,6 @@ func (ws *workspace) Jobs(visit func(IJob) bool) {
 	}
 }
 
-func (ws *workspace) Object(name QName) IObject {
-	if t := TypeByNameAndKind(ws, name, TypeKind_Object); t != nil {
-		return t.(IObject)
-	}
-	return nil
-}
-
-func (ws *workspace) Objects(visit func(IObject) bool) {
-	for t := range TypesByKind(ws, TypeKind_Object) {
-		if !visit(t.(IObject)) {
-			break
-		}
-	}
-}
-
 func (ws *workspace) Projector(name QName) IProjector {
 	if t := TypeByNameAndKind(ws, name, TypeKind_Projector); t != nil {
 		return t.(IProjector)

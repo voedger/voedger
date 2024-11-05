@@ -41,16 +41,18 @@ func Test_AppDef_AddObject(t *testing.T) {
 		app = a
 	})
 
-	testWithObjects := func(tested IWithObjects) {
+	testWith := func(tested IWithTypes) {
 
 		t.Run("should be ok to find builded root object", func(t *testing.T) {
-			typ := tested.(IWithTypes).Type(rootName)
+			typ := tested.Type(rootName)
 			require.Equal(TypeKind_Object, typ.Kind())
 
-			root := tested.Object(rootName)
+			root := Object(tested, rootName)
 			require.Equal(TypeKind_Object, root.Kind())
 			require.Equal(typ.(IObject), root)
 			require.NotPanics(func() { root.isObject() })
+
+			require.Equal(wsName, root.Workspace().QName())
 
 			require.NotNil(root.Field(SystemField_QName))
 
@@ -60,12 +62,14 @@ func Test_AppDef_AddObject(t *testing.T) {
 			require.Equal(TypeKind_Object, root.Container("child").Type().Kind())
 
 			t.Run("should be ok to find builded child object", func(t *testing.T) {
-				typ := tested.(IWithTypes).Type(childName)
+				typ := tested.Type(childName)
 				require.Equal(TypeKind_Object, typ.Kind())
 
-				child := tested.Object(childName)
+				child := Object(tested, childName)
 				require.Equal(TypeKind_Object, child.Kind())
 				require.Equal(typ.(IObject), child)
+
+				require.Equal(wsName, child.Workspace().QName())
 
 				require.NotNil(child.Field(SystemField_QName))
 				require.NotNil(child.Field(SystemField_Container))
@@ -79,7 +83,7 @@ func Test_AppDef_AddObject(t *testing.T) {
 
 		t.Run("should be ok to enumerate objects", func(t *testing.T) {
 			var objects []QName
-			for obj := range app.Objects {
+			for obj := range Objects(app) {
 				objects = append(objects, obj.QName())
 			}
 			require.Len(objects, 2)
@@ -87,9 +91,9 @@ func Test_AppDef_AddObject(t *testing.T) {
 			require.Equal(rootName, objects[1])
 		})
 
-		require.Nil(tested.Object(NewQName("test", "unknown")), "should be nil if unknown")
+		require.Nil(Object(tested, NewQName("test", "unknown")), "should be nil if unknown")
 	}
 
-	testWithObjects(app)
-	testWithObjects(app.Workspace(wsName))
+	testWith(app)
+	testWith(app.Workspace(wsName))
 }

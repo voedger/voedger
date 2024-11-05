@@ -12,8 +12,6 @@ type IWorkspace interface {
 
 	IWithTypes
 
-	IWithObjects
-
 	IWithRecords
 	IWithSingletons
 	IWithStructures

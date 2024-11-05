@@ -200,6 +200,29 @@ func GRecords(types ITypes) func(func(IGRecord) bool) {
 	}
 }
 
+// Returns Object by name.
+//
+// Returns nil if Object not found.
+func Object(types IFindType, name QName) IObject {
+	if t := TypeByNameAndKind(types, name, TypeKind_Object); t != nil {
+		return t.(IObject)
+	}
+	return nil
+}
+
+// Returns iterator over Objects.
+//
+// Objects are visited in alphabetic order.
+func Objects(types ITypes) func(func(IObject) bool) {
+	return func(visit func(IObject) bool) {
+		for t := range TypesByKind(types, TypeKind_Object) {
+			if !visit(t.(IObject)) {
+				break
+			}
+		}
+	}
+}
+
 // Returns ODoc by name.
 //
 // Returns nil if ODoc not found.

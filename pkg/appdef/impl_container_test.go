@@ -33,7 +33,7 @@ func Test_type_AddContainer(t *testing.T) {
 		require.NotNil(app)
 
 		t.Run("should be ok to find builded containder", func(t *testing.T) {
-			r := app.Object(rootName)
+			r := Object(app, rootName)
 			require.NotNil(r)
 
 			require.EqualValues(1, r.ContainerCount())
@@ -58,7 +58,7 @@ func Test_type_AddContainer(t *testing.T) {
 		require.NoError(err)
 
 		t.Run("should be ok to find builded containder", func(t *testing.T) {
-			obj := app.Object(rootName)
+			obj := Object(app, rootName)
 			require.NotNil(obj)
 			require.EqualValues(3, obj.ContainerCount())
 			require.NotNil(obj.Container("c1"))

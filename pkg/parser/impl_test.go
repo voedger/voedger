@@ -153,7 +153,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal("Commands can only be declared in workspaces\nCommand can have optional argument and/or unlogged argument\nCommand can return TYPE", cmd.Comment())
 
 	// type
-	obj := app.Object(appdef.NewQName("main", "SubscriptionEvent"))
+	obj := appdef.Object(app, appdef.NewQName("main", "SubscriptionEvent"))
 	require.Equal(appdef.TypeKind_Object, obj.Kind())
 	require.Equal(appdef.DataKind_string, obj.Field("Origin").DataKind())
 
@@ -1971,7 +1971,7 @@ APPLICATION registry(); WORKSPACE Workspace1 (
 	app, err := builder.Build()
 	require.NoError(err)
 
-	cdoc := app.Object(appdef.NewQName("app1", "EmptyType"))
+	cdoc := appdef.Object(app, appdef.NewQName("app1", "EmptyType"))
 	require.NotNil(cdoc)
 }
 

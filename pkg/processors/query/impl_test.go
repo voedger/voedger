@@ -93,7 +93,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		require.NoError(err)
 
 		appDef = app
-		resultMeta = app.Object(qNamePosDepartmentResult)
+		resultMeta = appdef.Object(app, qNamePosDepartmentResult)
 	})
 
 	params := queryParams{
@@ -430,7 +430,7 @@ func TestRawMode(t *testing.T) {
 		require.NoError(err)
 
 		appDef = app
-		resultMeta = app.Object(istructs.QNameRaw)
+		resultMeta = appdef.Object(app, istructs.QNameRaw)
 	})
 
 	result := ""

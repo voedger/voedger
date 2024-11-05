@@ -197,7 +197,7 @@ func Test_EnumsBreakable(t *testing.T) {
 
 		testBreakable(t, "Records", app.Records, ws.Records)
 
-		testBreakable(t, "Objects", app.Objects, ws.Objects)
+		testBreakable(t, "Objects", Objects(app), Objects(ws))
 
 		testBreakable(t, "Structures", app.Structures, ws.Structures)
 
