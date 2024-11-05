@@ -20,18 +20,6 @@ type IJobBuilder interface {
 	SetCronSchedule(string) IJobBuilder
 }
 
-type IWithJobs interface {
-	// Return job by name.
-	//
-	// Returns nil if not found.
-	Job(QName) IJob
-
-	// Enumerates all jobs.
-	//
-	// Jobs are enumerated in alphabetical order by QName.
-	Jobs(func(IJob) bool)
-}
-
 type IJobsBuilder interface {
 	// Add new job
 	//

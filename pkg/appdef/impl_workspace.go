@@ -97,21 +97,6 @@ func (ws *workspace) Inherits(anc QName) bool {
 	return false
 }
 
-func (ws *workspace) Job(name QName) IJob {
-	if t := TypeByNameAndKind(ws, name, TypeKind_Job); t != nil {
-		return t.(IJob)
-	}
-	return nil
-}
-
-func (ws *workspace) Jobs(visit func(IJob) bool) {
-	for t := range TypesByKind(ws, TypeKind_Job) {
-		if !visit(t.(IJob)) {
-			break
-		}
-	}
-}
-
 func (ws *workspace) Role(name QName) IRole {
 	if t := TypeByNameAndKind(ws, name, TypeKind_Role); t != nil {
 		return t.(IRole)

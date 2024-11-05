@@ -52,17 +52,17 @@ func Test_AppDef_AddJob(t *testing.T) {
 
 	require.NotNil(app)
 
-	testWithJobs := func(tested IWithJobs) {
+	testWith := func(tested IWithTypes) {
 
 		t.Run("should be ok to find builded job", func(t *testing.T) {
-			typ := tested.(IWithTypes).Type(jobName)
+			typ := tested.Type(jobName)
 			require.Equal(TypeKind_Job, typ.Kind())
 
 			j, ok := typ.(IJob)
 			require.True(ok)
 			require.Equal(TypeKind_Job, j.Kind())
 
-			job := tested.Job(jobName)
+			job := Job(tested, jobName)
 			require.Equal(TypeKind_Job, job.Kind())
 			require.Equal(wsName, job.Workspace().QName())
 			require.Equal(j, job)
@@ -107,7 +107,7 @@ func Test_AppDef_AddJob(t *testing.T) {
 
 		t.Run("should be ok to enum jobs", func(t *testing.T) {
 			cnt := 0
-			for j := range tested.Jobs {
+			for j := range Jobs(tested) {
 				cnt++
 				switch cnt {
 				case 1:
@@ -120,11 +120,11 @@ func Test_AppDef_AddJob(t *testing.T) {
 			require.Equal(1, cnt)
 		})
 
-		require.Nil(tested.Job(NewQName("test", "unknown")), "should be nil if unknown")
+		require.Nil(Job(tested, NewQName("test", "unknown")), "should be nil if unknown")
 	}
 
-	testWithJobs(app)
-	testWithJobs(app.Workspace(wsName))
+	testWith(app)
+	testWith(app.Workspace(wsName))
 
 	t.Run("more add job checks", func(t *testing.T) {
 		adb := New()
@@ -139,7 +139,7 @@ func Test_AppDef_AddJob(t *testing.T) {
 		app, err := adb.Build()
 		require.NoError(err)
 
-		j := app.Job(jobName)
+		j := Job(app, jobName)
 
 		require.Equal("customExtensionName", j.Name())
 		require.Equal(ExtensionEngineKind_WASM, j.Engine())

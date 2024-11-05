@@ -262,7 +262,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(intentsCount, proj.Intents().Len())
 
 	t.Run("Jobs", func(t *testing.T) {
-		job1 := app.Job(appdef.NewQName("main", "TestJob1"))
+		job1 := appdef.Job(app, appdef.NewQName("main", "TestJob1"))
 		require.EqualValues(`1 0 * * *`, job1.CronSchedule())
 		t.Run("Job states", func(t *testing.T) {
 			stateCount := 0
@@ -282,7 +282,7 @@ func Test_BasicUsage(t *testing.T) {
 			require.Equal(2, stateCount)
 		})
 
-		job2 := app.Job(appdef.NewQName("main", "TestJob2"))
+		job2 := appdef.Job(app, appdef.NewQName("main", "TestJob2"))
 		require.EqualValues(`@every 2m30s`, job2.CronSchedule())
 	})
 

@@ -225,6 +225,29 @@ func GRecords(types ITypes) func(func(IGRecord) bool) {
 	}
 }
 
+// Returns Job by name.
+//
+// Returns nil if Job not found.
+func Job(types IFindType, name QName) IJob {
+	if t := TypeByNameAndKind(types, name, TypeKind_Job); t != nil {
+		return t.(IJob)
+	}
+	return nil
+}
+
+// Returns iterator over Jobs.
+//
+// Jobs are visited in alphabetic order.
+func Jobs(types ITypes) func(func(IJob) bool) {
+	return func(visit func(IJob) bool) {
+		for t := range TypesByKind(types, TypeKind_Job) {
+			if !visit(t.(IJob)) {
+				break
+			}
+		}
+	}
+}
+
 // Returns Object by name.
 //
 // Returns nil if Object not found.

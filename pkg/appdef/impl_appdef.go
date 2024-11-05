@@ -59,21 +59,6 @@ func (app *appDef) Extensions(visit func(IExtension) bool) {
 
 func (app appDef) FullQName(name QName) FullQName { return app.packages.fullQName(name) }
 
-func (app *appDef) Job(name QName) IJob {
-	if t := TypeByNameAndKind(app, name, TypeKind_Job); t != nil {
-		return t.(IJob)
-	}
-	return nil
-}
-
-func (app *appDef) Jobs(visit func(IJob) bool) {
-	for t := range TypesByKind(app, TypeKind_Job) {
-		if !visit(t.(IJob)) {
-			break
-		}
-	}
-}
-
 func (app *appDef) Limit(name QName) ILimit {
 	if t := TypeByNameAndKind(app, name, TypeKind_Limit); t != nil {
 		return t.(ILimit)
