@@ -159,23 +159,6 @@ func (ws *workspace) Queries(visit func(IQuery) bool) {
 	}
 }
 
-func (ws *workspace) Record(name QName) IRecord {
-	if t := TypeByName(ws, name); t != nil {
-		if r, ok := t.(IRecord); ok {
-			return r
-		}
-	}
-	return nil
-}
-
-func (ws *workspace) Records(visit func(IRecord) bool) {
-	for t := range TypesByKinds(ws, TypeKind_Records) {
-		if !visit(t.(IRecord)) {
-			break
-		}
-	}
-}
-
 func (ws *workspace) Role(name QName) IRole {
 	if t := TypeByNameAndKind(ws, name, TypeKind_Role); t != nil {
 		return t.(IRole)
@@ -186,44 +169,6 @@ func (ws *workspace) Role(name QName) IRole {
 func (ws *workspace) Roles(visit func(IRole) bool) {
 	for t := range TypesByKind(ws, TypeKind_Role) {
 		if !visit(t.(IRole)) {
-			break
-		}
-	}
-}
-
-func (ws *workspace) Singleton(name QName) ISingleton {
-	if t := TypeByName(ws, name); t != nil {
-		if s, ok := t.(ISingleton); ok {
-			return s
-		}
-	}
-	return nil
-}
-
-func (ws *workspace) Singletons(visit func(ISingleton) bool) {
-	for t := range TypesByKinds(ws, TypeKind_Singletons) {
-		if s, ok := t.(ISingleton); ok {
-			if s.Singleton() {
-				if !visit(s) {
-					break
-				}
-			}
-		}
-	}
-}
-
-func (ws *workspace) Structure(name QName) IStructure {
-	if t := TypeByName(ws, name); t != nil {
-		if s, ok := t.(IStructure); ok {
-			return s
-		}
-	}
-	return nil
-}
-
-func (ws *workspace) Structures(visit func(IStructure) bool) {
-	for t := range TypesByKinds(ws, TypeKind_Structures) {
-		if !visit(t.(IStructure)) {
 			break
 		}
 	}

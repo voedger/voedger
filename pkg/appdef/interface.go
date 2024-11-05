@@ -14,10 +14,6 @@ type IAppDef interface {
 
 	IWithTypes
 
-	IWithRecords
-	IWithSingletons
-	IWithStructures
-
 	IWithViews
 
 	IWithQueries

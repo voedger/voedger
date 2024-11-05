@@ -47,14 +47,16 @@ func Test_AppDef_StructuresAndRecords(t *testing.T) {
 		app = a
 	})
 
-	testWithStructures := func(tested IWithStructures) {
+	testWith := func(tested IWithTypes) {
 		t.Run("should be ok to find builded structures", func(t *testing.T) {
 			findStruct := func(n QName, kind TypeKind) {
 				typ := tested.(IWithTypes).Type(n)
 				require.Equal(kind, typ.Kind())
 
-				doc := tested.Structure(n)
+				doc := Structure(tested, n)
 				require.Equal(kind, doc.Kind())
+
+				require.Equal(wsName, doc.Workspace().QName())
 
 				require.Equal(2, doc.UserFieldCount())
 				require.Equal(DataKind_int64, doc.Field("f1").DataKind())
@@ -65,49 +67,46 @@ func Test_AppDef_StructuresAndRecords(t *testing.T) {
 			findStruct(objName, TypeKind_Object)
 		})
 
-		require.Nil(tested.Structure(NewQName("test", "unknown")), "should nil if not found")
+		require.Nil(Structure(tested, NewQName("test", "unknown")), "should nil if not found")
 
 		t.Run("should be ok to enumerate structures", func(t *testing.T) {
 			var str []QName
-			for s := range tested.Structures {
+			for s := range Structures(tested) {
 				str = append(str, s.QName())
 			}
 			require.Equal(str, []QName{docName, objName, recName})
 		})
-	}
 
-	testWithStructures(app)
-	testWithStructures(app.Workspace(wsName))
-
-	testWithRecords := func(tested IWithRecords) {
 		t.Run("should be ok to find builded records", func(t *testing.T) {
 			findRecord := func(n QName, kind TypeKind) {
 				typ := tested.(IWithTypes).Type(n)
 				require.Equal(kind, typ.Kind())
 
-				doc := tested.Record(n)
-				require.Equal(kind, doc.Kind())
+				rec := Record(tested, n)
+				require.Equal(kind, rec.Kind())
 
-				require.Equal(2, doc.UserFieldCount())
-				require.Equal(DataKind_int64, doc.Field("f1").DataKind())
-				require.Equal(DataKind_string, doc.Field("f2").DataKind())
+				require.Equal(wsName, rec.Workspace().QName())
+
+				require.Equal(2, rec.UserFieldCount())
+				require.Equal(DataKind_int64, rec.Field("f1").DataKind())
+				require.Equal(DataKind_string, rec.Field("f2").DataKind())
 			}
 			findRecord(docName, TypeKind_ODoc)
 			findRecord(recName, TypeKind_ORecord)
 		})
 
-		require.Nil(tested.Record(NewQName("test", "unknown")), "should nil if not found")
-		require.Nil(tested.Record(objName), "should nil if not record")
+		require.Nil(Record(tested, NewQName("test", "unknown")), "should nil if not found")
+		require.Nil(Record(tested, objName), "should nil if not record")
 
 		t.Run("should be ok to enumerate records", func(t *testing.T) {
 			var recs []QName
-			for s := range tested.Records {
+			for s := range Records(tested) {
 				recs = append(recs, s.QName())
 			}
 			require.Equal(recs, []QName{docName, recName})
 		})
 	}
 
-	testWithRecords(app)
-	testWithRecords(app.Workspace(wsName))
+	testWith(app)
+	testWith(app.Workspace(wsName))
 }

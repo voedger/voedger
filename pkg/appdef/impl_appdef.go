@@ -169,23 +169,6 @@ func (app *appDef) Rates(visit func(IRate) bool) {
 	}
 }
 
-func (app *appDef) Record(name QName) IRecord {
-	if t := TypeByName(app, name); t != nil {
-		if r, ok := t.(IRecord); ok {
-			return r
-		}
-	}
-	return nil
-}
-
-func (app *appDef) Records(visit func(IRecord) bool) {
-	for t := range TypesByKinds(app, TypeKind_Records) {
-		if !visit(t.(IRecord)) {
-			break
-		}
-	}
-}
-
 func (app *appDef) Role(name QName) IRole {
 	if t := TypeByNameAndKind(app, name, TypeKind_Role); t != nil {
 		return t.(IRole)
@@ -196,44 +179,6 @@ func (app *appDef) Role(name QName) IRole {
 func (app *appDef) Roles(visit func(IRole) bool) {
 	for t := range TypesByKind(app, TypeKind_Role) {
 		if !visit(t.(IRole)) {
-			break
-		}
-	}
-}
-
-func (app *appDef) Singleton(name QName) ISingleton {
-	if t := TypeByName(app, name); t != nil {
-		if s, ok := t.(ISingleton); ok {
-			return s
-		}
-	}
-	return nil
-}
-
-func (app *appDef) Singletons(visit func(ISingleton) bool) {
-	for t := range TypesByKinds(app, TypeKind_Singletons) {
-		if s, ok := t.(ISingleton); ok {
-			if s.Singleton() {
-				if !visit(s) {
-					break
-				}
-			}
-		}
-	}
-}
-
-func (app *appDef) Structure(name QName) IStructure {
-	if t := TypeByName(app, name); t != nil {
-		if s, ok := t.(IStructure); ok {
-			return s
-		}
-	}
-	return nil
-}
-
-func (app *appDef) Structures(visit func(IStructure) bool) {
-	for t := range TypesByKinds(app, TypeKind_Structures) {
-		if !visit(t.(IStructure)) {
 			break
 		}
 	}

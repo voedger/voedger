@@ -148,7 +148,7 @@ func (cts *CommandTestState) getQNameFromFQName(fQName IFullQName) appdef.QName 
 func (cts *CommandTestState) isSingletone(fQName IFullQName) bool {
 	qName := cts.getQNameFromFQName(fQName)
 
-	iSingleton := cts.appDef.Singleton(qName)
+	iSingleton := appdef.Singleton(cts.appDef, qName)
 	return iSingleton != nil && iSingleton.Singleton()
 }
 

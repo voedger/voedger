@@ -53,7 +53,7 @@ func ExampleIAppDef_Structures() {
 	{
 		// how to enum structures
 		cnt := 0
-		for s := range app.Structures {
+		for s := range appdef.Structures(app) {
 			cnt++
 			fmt.Printf("%d. %v\n", cnt, s)
 			fmt.Printf("- user/overall field count: %d/%d\n", s.UserFieldCount(), s.FieldCount())
@@ -62,14 +62,14 @@ func ExampleIAppDef_Structures() {
 		fmt.Printf("Overall %d structures\n", cnt)
 
 		// how to find structure by name
-		fmt.Println(app.Structure(docName))
-		fmt.Println(app.Structure(appdef.NewQName("test", "unknown")))
+		fmt.Println(appdef.Structure(app, docName))
+		fmt.Println(appdef.Structure(app, appdef.NewQName("test", "unknown")))
 	}
 
 	// how to inspect builded AppDef with records
 	{
 		cnt := 0
-		for r := range app.Records {
+		for r := range appdef.Records(app) {
 			cnt++
 			fmt.Printf("%d. %v\n", cnt, r)
 			fmt.Printf("- user/overall field count: %d/%d\n", r.UserFieldCount(), r.FieldCount())
@@ -78,7 +78,7 @@ func ExampleIAppDef_Structures() {
 
 		fmt.Printf("Overall %d records\n", cnt)
 
-		fmt.Println(app.Record(recName), app.Record(appdef.NewQName("test", "unknown")))
+		fmt.Println(appdef.Record(app, recName), appdef.Record(app, appdef.NewQName("test", "unknown")))
 	}
 
 	// Output:

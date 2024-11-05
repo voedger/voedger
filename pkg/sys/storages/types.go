@@ -390,7 +390,7 @@ func newWsTypeValidator(appStructsFunc state.AppStructsFunc) wsTypeVailidator {
 
 func (v *wsTypeVailidator) isStructureInt64FieldRecordID(name appdef.QName, fieldName appdef.FieldName) bool {
 	app := v.appStructsFunc().AppDef()
-	rec := app.Structure(name)
+	rec := appdef.Structure(app, name)
 	field := rec.Field(fieldName)
 	if field == nil {
 		panic(errInt64FieldUndefined(fieldName))

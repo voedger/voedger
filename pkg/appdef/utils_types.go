@@ -269,6 +269,87 @@ func ORecords(types ITypes) func(func(IORecord) bool) {
 	}
 }
 
+// Returns Record by name.
+//
+// Returns nil if Record not found.
+func Record(types IFindType, name QName) IRecord {
+	if t := TypeByName(types, name); t != nil {
+		if r, ok := t.(IRecord); ok {
+			return r
+		}
+	}
+	return nil
+}
+
+// Returns iterator over Records.
+//
+// Records are visited in alphabetic order.
+func Records(types ITypes) func(func(IRecord) bool) {
+	return func(visit func(IRecord) bool) {
+		for t := range TypesByKinds(types, TypeKind_Records) {
+			if !visit(t.(IRecord)) {
+				break
+			}
+		}
+	}
+}
+
+// Returns Singleton by name.
+//
+// Returns nil if Singleton not found.
+func Singleton(types IFindType, name QName) ISingleton {
+	if t := TypeByName(types, name); t != nil {
+		if s, ok := t.(ISingleton); ok {
+			if s.Singleton() {
+				return s
+			}
+		}
+	}
+	return nil
+}
+
+// Returns iterator over Singletons.
+//
+// Singletons are visited in alphabetic order.
+func Singletons(types ITypes) func(func(ISingleton) bool) {
+	return func(visit func(ISingleton) bool) {
+		for t := range TypesByKinds(types, TypeKind_Singletons) {
+			if s, ok := t.(ISingleton); ok {
+				if s.Singleton() {
+					if !visit(s) {
+						break
+					}
+				}
+			}
+		}
+	}
+}
+
+// Returns Structure by name.
+//
+// Returns nil if Structure not found.
+func Structure(types IFindType, name QName) IStructure {
+	if t := TypeByName(types, name); t != nil {
+		if s, ok := t.(IStructure); ok {
+			return s
+		}
+	}
+	return nil
+}
+
+// Returns iterator over Structures.
+//
+// Structures are visited in alphabetic order.
+func Structures(types ITypes) func(func(IStructure) bool) {
+	return func(visit func(IStructure) bool) {
+		for t := range TypesByKinds(types, TypeKind_Structures) {
+			if !visit(t.(IStructure)) {
+				break
+			}
+		}
+	}
+}
+
 // Returns system Data type (sys.int32, sys.float654, etc.) by data kind.
 //
 // Returns nil if not found.

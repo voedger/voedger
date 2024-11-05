@@ -38,11 +38,11 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 	var str appdef.IStructure
 	switch op {
 	case appdef.OperationKind_Insert:
-		if app.Structure(res) == nil {
+		if appdef.Structure(app, res) == nil {
 			return false, nil, appdef.ErrNotFound("structure «%q»", res)
 		}
 	case appdef.OperationKind_Update, appdef.OperationKind_Select:
-		str = app.Structure(res)
+		str = appdef.Structure(app, res)
 		if str == nil {
 			return false, nil, appdef.ErrNotFound("structure «%q»", res)
 		}

@@ -103,6 +103,7 @@ func Test_AppDef_AddCDocSingleton(t *testing.T) {
 	require := require.New(t)
 
 	wsName := NewQName("test", "workspace")
+	stName := NewQName("test", "singleton")
 	docName := NewQName("test", "doc")
 
 	var app IAppDef
@@ -113,11 +114,14 @@ func Test_AppDef_AddCDocSingleton(t *testing.T) {
 
 		wsb := adb.AddWorkspace(wsName)
 
-		doc := wsb.AddCDoc(docName)
-		doc.
+		st := wsb.AddCDoc(stName)
+		st.
 			AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_string, false)
-		doc.SetSingleton()
+		st.SetSingleton()
+
+		_ = wsb.AddCDoc(docName).
+			AddField("f1", DataKind_int64, true)
 
 		a, err := adb.Build()
 		require.NoError(err)
@@ -125,19 +129,31 @@ func Test_AppDef_AddCDocSingleton(t *testing.T) {
 		app = a
 	})
 
-	testWithSingleton := func(tested IWithTypes) {
+	testWith := func(tested IWithTypes) {
 		t.Run("should be ok to find builded singleton", func(t *testing.T) {
-			typ := tested.Type(docName)
+			typ := tested.Type(stName)
 			require.Equal(TypeKind_CDoc, typ.Kind())
 
-			doc := CDoc(tested, docName)
-			require.Equal(TypeKind_CDoc, doc.Kind())
-			require.Equal(typ.(ICDoc), doc)
+			st := CDoc(tested, stName)
+			require.Equal(TypeKind_CDoc, st.Kind())
+			require.Equal(typ.(ICDoc), st)
 
-			require.True(doc.Singleton())
+			require.True(st.Singleton())
 		})
+
+		t.Run("should be ok to enum singleton", func(t *testing.T) {
+			names := QNames{}
+			for st := range Singletons(tested) {
+				names = append(names, st.QName())
+			}
+			require.Len(names, 1)
+			require.Equal(stName, names[0])
+		})
+
+		require.Nil(Singleton(tested, NewQName("test", "unknown")), "should be nil if unknown")
+		require.Nil(Singleton(tested, docName), "should be nil if not singleton")
 	}
 
-	testWithSingleton(app)
-	testWithSingleton(app.Workspace(wsName))
+	testWith(app)
+	testWith(app.Workspace(wsName))
 }

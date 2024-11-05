@@ -43,7 +43,7 @@ func ExampleIAppDef_Singletons() {
 	// how to inspect builded AppDef with singletons
 	{
 		cnt := 0
-		for s := range app.Singletons {
+		for s := range appdef.Singletons(app) {
 			cnt++
 			fmt.Printf("%d. %v\n", cnt, s)
 		}
@@ -53,25 +53,15 @@ func ExampleIAppDef_Singletons() {
 
 	// how to find singleton by name
 	{
-		fmt.Println(app.Singleton(cDocName))
-		fmt.Println(app.Singleton(wDocName))
-		fmt.Println(app.Singleton(appdef.NewQName("test", "unknown")))
-
-		ws := app.Workspace(wsName)
-		fmt.Println(ws)
-		fmt.Println(ws.Singleton(cDocName))
-		fmt.Println(ws.Singleton(wDocName))
-		fmt.Println(ws.Singleton(appdef.NewQName("test", "unknown")))
+		fmt.Println(appdef.Singleton(app, cDocName))
+		fmt.Println(appdef.Singleton(app, wDocName))
+		fmt.Println(appdef.Singleton(app, appdef.NewQName("test", "unknown")))
 	}
 
 	// Output:
 	// 1. CDoc «test.cdoc»
 	// 2. WDoc «test.wdoc»
 	// Overall 2 singletons
-	// CDoc «test.cdoc»
-	// WDoc «test.wdoc»
-	// <nil>
-	// Workspace «test.workspace»
 	// CDoc «test.cdoc»
 	// WDoc «test.wdoc»
 	// <nil>
