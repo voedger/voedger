@@ -210,6 +210,52 @@ func SysData(types IFindType, k DataKind) IData {
 	return nil
 }
 
+// Returns WDoc by name.
+//
+// Returns nil if WDoc not found.
+func WDoc(types IFindType, name QName) IWDoc {
+	if t := TypeByNameAndKind(types, name, TypeKind_WDoc); t != nil {
+		return t.(IWDoc)
+	}
+	return nil
+}
+
+// Returns iterator over WDocs.
+//
+// WDocs are visited in alphabetic order.
+func WDocs(types ITypes) func(func(IWDoc) bool) {
+	return func(visit func(IWDoc) bool) {
+		for t := range TypesByKind(types, TypeKind_WDoc) {
+			if !visit(t.(IWDoc)) {
+				break
+			}
+		}
+	}
+}
+
+// Returns WRecord by name.
+//
+// Returns nil if WRecord not found.
+func WRecord(types IFindType, name QName) IWRecord {
+	if t := TypeByNameAndKind(types, name, TypeKind_WRecord); t != nil {
+		return t.(IWRecord)
+	}
+	return nil
+}
+
+// Returns iterator over WRecords.
+//
+// GRecords are visited in alphabetic order.
+func WRecords(types ITypes) func(func(IWRecord) bool) {
+	return func(visit func(IWRecord) bool) {
+		for t := range TypesByKind(types, TypeKind_WRecord) {
+			if !visit(t.(IWRecord)) {
+				break
+			}
+		}
+	}
+}
+
 // Is specified type kind may be used in child containers.
 func (k TypeKind) ContainerKindAvailable(s TypeKind) bool {
 	return structTypeProps(k).containerKinds.Contains(s)

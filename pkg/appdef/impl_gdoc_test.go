@@ -136,16 +136,6 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 	testWith(app)
 	testWith(app.Workspace(wsName))
 
-	t.Run("check nil returns", func(t *testing.T) {
-		unknown := NewQName("test", "unknown")
-		require.Equal(NullType, app.Type(unknown))
-		require.Nil(app.WDoc(unknown))
-		require.Nil(app.WRecord(unknown))
-		require.Nil(app.ODoc(unknown))
-		require.Nil(app.ORecord(unknown))
-		require.Nil(app.Object(unknown))
-	})
-
 	t.Run("should be panics", func(t *testing.T) {
 
 		t.Run("if no name", func(t *testing.T) {

@@ -610,13 +610,13 @@ func (c *buildContext) addTableFieldToTable(field *FieldExpr) {
 
 	appDef := c.adb.AppDef()
 
-	wrec := appDef.WRecord(field.Type.qName)
+	wrec := appdef.WRecord(appDef, field.Type.qName)
 	crec := appdef.CRecord(appDef, field.Type.qName)
 	orec := appDef.ORecord(field.Type.qName)
 
 	if wrec == nil && orec == nil && crec == nil { // not yet built
 		c.table(field.Type.tablePkg, field.Type.tableStmt)
-		wrec = appDef.WRecord(field.Type.qName)
+		wrec = appdef.WRecord(appDef, field.Type.qName)
 		crec = appdef.CRecord(appDef, field.Type.qName)
 		orec = appDef.ORecord(field.Type.qName)
 	}

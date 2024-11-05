@@ -325,36 +325,6 @@ func (ws *workspace) Views(visit func(IView) bool) {
 	}
 }
 
-func (ws *workspace) WDoc(name QName) IWDoc {
-	if t := TypeByNameAndKind(ws, name, TypeKind_WDoc); t != nil {
-		return t.(IWDoc)
-	}
-	return nil
-}
-
-func (ws *workspace) WDocs(visit func(IWDoc) bool) {
-	for t := range TypesByKind(ws, TypeKind_WDoc) {
-		if !visit(t.(IWDoc)) {
-			break
-		}
-	}
-}
-
-func (ws *workspace) WRecord(name QName) IWRecord {
-	if t := TypeByNameAndKind(ws, name, TypeKind_WRecord); t != nil {
-		return t.(IWRecord)
-	}
-	return nil
-}
-
-func (ws *workspace) WRecords(visit func(IWRecord) bool) {
-	for t := range TypesByKind(ws, TypeKind_WRecord) {
-		if !visit(t.(IWRecord)) {
-			break
-		}
-	}
-}
-
 func (ws *workspace) addCDoc(name QName) ICDocBuilder {
 	d := newCDoc(ws.app, ws, name)
 	return newCDocBuilder(d)

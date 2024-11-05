@@ -333,36 +333,6 @@ func (app *appDef) Views(visit func(IView) bool) {
 	}
 }
 
-func (app *appDef) WDoc(name QName) IWDoc {
-	if t := TypeByNameAndKind(app, name, TypeKind_WDoc); t != nil {
-		return t.(IWDoc)
-	}
-	return nil
-}
-
-func (app *appDef) WDocs(visit func(IWDoc) bool) {
-	for t := range TypesByKind(app, TypeKind_WDoc) {
-		if !visit(t.(IWDoc)) {
-			break
-		}
-	}
-}
-
-func (app *appDef) WRecord(name QName) IWRecord {
-	if t := TypeByNameAndKind(app, name, TypeKind_WRecord); t != nil {
-		return t.(IWRecord)
-	}
-	return nil
-}
-
-func (app *appDef) WRecords(visit func(IWRecord) bool) {
-	for t := range TypesByKind(app, TypeKind_WRecord) {
-		if !visit(t.(IWRecord)) {
-			break
-		}
-	}
-}
-
 func (app *appDef) Workspace(name QName) IWorkspace {
 	if t := TypeByNameAndKind(app, name, TypeKind_Workspace); t != nil {
 		return t.(IWorkspace)

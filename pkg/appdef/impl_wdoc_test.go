@@ -41,15 +41,17 @@ func Test_AppDef_AddWDoc(t *testing.T) {
 		app = a
 	})
 
-	testWithWDoc := func(tested IWithWDocs) {
+	testWith := func(tested IWithTypes) {
 		t.Run("should be ok to find builded doc", func(t *testing.T) {
-			typ := app.Type(docName)
+			typ := tested.Type(docName)
 			require.Equal(TypeKind_WDoc, typ.Kind())
 
-			doc := tested.WDoc(docName)
+			doc := WDoc(tested, docName)
 			require.Equal(TypeKind_WDoc, doc.Kind())
 			require.Equal(typ.(IWDoc), doc)
 			require.NotPanics(func() { doc.isWDoc() })
+
+			require.Equal(wsName, doc.Workspace().QName())
 
 			require.Equal(2, doc.UserFieldCount())
 			require.Equal(DataKind_int64, doc.Field("f1").DataKind())
@@ -60,10 +62,12 @@ func Test_AppDef_AddWDoc(t *testing.T) {
 				typ := app.Type(recName)
 				require.Equal(TypeKind_WRecord, typ.Kind())
 
-				rec := tested.WRecord(recName)
+				rec := WRecord(tested, recName)
 				require.Equal(TypeKind_WRecord, rec.Kind())
 				require.Equal(typ.(IWRecord), rec)
 				require.NotPanics(func() { rec.isWRecord() })
+
+				require.Equal(wsName, rec.Workspace().QName())
 
 				require.Equal(2, rec.UserFieldCount())
 				require.Equal(DataKind_int64, rec.Field("f1").DataKind())
@@ -74,14 +78,14 @@ func Test_AppDef_AddWDoc(t *testing.T) {
 
 		t.Run("should be ok to enumerate docs", func(t *testing.T) {
 			var docs []QName
-			for doc := range tested.WDocs {
+			for doc := range WDocs(tested) {
 				docs = append(docs, doc.QName())
 			}
 			require.Len(docs, 1)
 			require.Equal(docName, docs[0])
 			t.Run("should be ok to enumerate recs", func(t *testing.T) {
 				var recs []QName
-				for rec := range tested.WRecords {
+				for rec := range WRecords(tested) {
 					recs = append(recs, rec.QName())
 				}
 				require.Len(recs, 1)
@@ -91,13 +95,13 @@ func Test_AppDef_AddWDoc(t *testing.T) {
 
 		t.Run("should nil if not found", func(t *testing.T) {
 			unknown := NewQName("test", "unknown")
-			require.Nil(tested.WDoc(unknown))
-			require.Nil(tested.WRecord(unknown))
+			require.Nil(WDoc(tested, unknown))
+			require.Nil(WRecord(tested, unknown))
 		})
 	}
 
-	testWithWDoc(app)
-	testWithWDoc(app.Workspace(wsName))
+	testWith(app)
+	testWith(app.Workspace(wsName))
 }
 
 func Test_AppDef_AddWDocSingleton(t *testing.T) {
@@ -126,12 +130,12 @@ func Test_AppDef_AddWDocSingleton(t *testing.T) {
 		app = a
 	})
 
-	testFind := func(tested IWithWDocs) {
+	testWith := func(tested IFindType) {
 		t.Run("should be ok to find builded singleton", func(t *testing.T) {
-			typ := app.Type(docName)
+			typ := tested.Type(docName)
 			require.Equal(TypeKind_WDoc, typ.Kind())
 
-			doc := tested.WDoc(docName)
+			doc := WDoc(tested, docName)
 			require.Equal(TypeKind_WDoc, doc.Kind())
 			require.Equal(typ.(IWDoc), doc)
 
@@ -139,6 +143,6 @@ func Test_AppDef_AddWDocSingleton(t *testing.T) {
 		})
 	}
 
-	testFind(app)
-	testFind(app.Workspace(wsName))
+	testWith(app)
+	testWith(app.Workspace(wsName))
 }

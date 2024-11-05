@@ -298,7 +298,7 @@ func Test_AddRefField(t *testing.T) {
 	})
 
 	t.Run("should be ok to work with reference fields", func(t *testing.T) {
-		doc := app.WDoc(docName)
+		doc := WDoc(app, docName)
 
 		t.Run("should be ok type cast reference field", func(t *testing.T) {
 			fld := doc.Field("rf1")
