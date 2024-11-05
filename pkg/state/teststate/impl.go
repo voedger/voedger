@@ -175,7 +175,7 @@ func (ts *testState) PutQuery(wsid istructs.WSID, name appdef.FullQName, argb Qu
 
 	if argb != nil {
 		localPkgName := ts.appDef.PackageLocalName(ts.queryName.PkgPath())
-		query := ts.appDef.Query(appdef.NewQName(localPkgName, ts.queryName.Entity()))
+		query := appdef.Query(ts.appDef, appdef.NewQName(localPkgName, ts.queryName.Entity()))
 		if query == nil {
 			panic(fmt.Sprintf("query not found: %v", ts.queryName))
 		}
@@ -275,7 +275,7 @@ func (ts *testState) buildState(processorKind int) {
 	}
 	qryResultBuilderFunc := func() istructs.IObjectBuilder {
 		localPkgName := ts.appDef.PackageLocalName(ts.queryName.PkgPath())
-		query := ts.appDef.Query(appdef.NewQName(localPkgName, ts.queryName.Entity()))
+		query := appdef.Query(ts.appDef, appdef.NewQName(localPkgName, ts.queryName.Entity()))
 		if query == nil {
 			panic(fmt.Sprintf("query not found: %v", ts.queryName))
 		}

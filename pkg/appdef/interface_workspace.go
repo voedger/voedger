@@ -12,7 +12,6 @@ type IWorkspace interface {
 
 	IWithTypes
 
-	IWithQueries
 	IWithFunctions
 
 	IWithProjectors

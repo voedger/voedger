@@ -182,7 +182,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.DataKind_int32, crec.Field("Kind").DataKind())
 
 	// QUERY
-	q1 := app.Query(appdef.NewQName("main", "Query11"))
+	q1 := appdef.Query(app, appdef.NewQName("main", "Query11"))
 	require.NotNil(q1)
 	require.Equal(appdef.TypeKind_Query, q1.Kind())
 

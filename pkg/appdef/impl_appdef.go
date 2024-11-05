@@ -139,21 +139,6 @@ func (app *appDef) Projectors(visit func(IProjector) bool) {
 	}
 }
 
-func (app *appDef) Queries(visit func(IQuery) bool) {
-	for t := range TypesByKind(app, TypeKind_Query) {
-		if !visit(t.(IQuery)) {
-			break
-		}
-	}
-}
-
-func (app *appDef) Query(name QName) IQuery {
-	if t := TypeByNameAndKind(app, name, TypeKind_Query); t != nil {
-		return t.(IQuery)
-	}
-	return nil
-}
-
 func (app *appDef) Rate(name QName) IRate {
 	if t := TypeByNameAndKind(app, name, TypeKind_Rate); t != nil {
 		return t.(IRate)

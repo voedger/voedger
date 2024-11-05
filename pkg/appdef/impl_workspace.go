@@ -144,21 +144,6 @@ func (ws *workspace) Projectors(visit func(IProjector) bool) {
 	}
 }
 
-func (ws *workspace) Query(name QName) IQuery {
-	if t := TypeByNameAndKind(ws, name, TypeKind_Query); t != nil {
-		return t.(IQuery)
-	}
-	return nil
-}
-
-func (ws *workspace) Queries(visit func(IQuery) bool) {
-	for t := range TypesByKind(ws, TypeKind_Query) {
-		if !visit(t.(IQuery)) {
-			break
-		}
-	}
-}
-
 func (ws *workspace) Role(name QName) IRole {
 	if t := TypeByNameAndKind(ws, name, TypeKind_Role); t != nil {
 		return t.(IRole)

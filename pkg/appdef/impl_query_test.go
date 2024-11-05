@@ -46,16 +46,16 @@ func Test_AppDef_AddQuery(t *testing.T) {
 
 	require.NotNil(app)
 
-	testWithQueries := func(tested IWithQueries) {
+	testWith := func(tested IWithTypes) {
 		t.Run("should be ok to find builded query", func(t *testing.T) {
-			typ := tested.(IWithTypes).Type(queryName)
+			typ := tested.Type(queryName)
 			require.Equal(TypeKind_Query, typ.Kind())
 
 			q, ok := typ.(IQuery)
 			require.True(ok)
 			require.Equal(TypeKind_Query, q.Kind())
 
-			query := tested.Query(queryName)
+			query := Query(tested, queryName)
 			require.Equal(TypeKind_Query, query.Kind())
 			require.Equal(wsName, query.Workspace().QName())
 			require.Equal(q, query)
@@ -73,7 +73,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 
 		t.Run("should be ok to enum queries", func(t *testing.T) {
 			cnt := 0
-			for q := range tested.Queries {
+			for q := range Queries(tested) {
 				cnt++
 				switch cnt {
 				case 1:
@@ -85,11 +85,11 @@ func Test_AppDef_AddQuery(t *testing.T) {
 			require.Equal(1, cnt)
 		})
 
-		require.Nil(tested.Query(NewQName("test", "unknown")), "should be nil if unknown")
+		require.Nil(Query(tested, NewQName("test", "unknown")), "should be nil if unknown")
 	}
 
-	testWithQueries(app)
-	testWithQueries(app.Workspace(wsName))
+	testWith(app)
+	testWith(app.Workspace(wsName))
 
 	t.Run("should be panics ", func(t *testing.T) {
 		require.Panics(func() {
@@ -192,13 +192,13 @@ func Test_AppDef_AddQueryWithAnyResult(t *testing.T) {
 	require.NotNil(app)
 
 	t.Run("should be ok to find builded query", func(t *testing.T) {
-		query := app.Query(queryName)
+		query := Query(app, queryName)
 
 		require.Equal(AnyType, query.Result())
 		require.Equal(QNameANY, query.Result().QName())
 		require.Equal(TypeKind_Any, query.Result().Kind())
 		require.Equal(wsName, query.Workspace().QName())
 
-		require.Equal(query, app.Workspace(wsName).Query(queryName))
+		require.Equal(query, Query(app.Workspace(wsName), queryName))
 	})
 }

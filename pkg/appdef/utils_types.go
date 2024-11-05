@@ -269,6 +269,29 @@ func ORecords(types ITypes) func(func(IORecord) bool) {
 	}
 }
 
+// Returns Query by name.
+//
+// Returns nil if Query not found.
+func Query(types IFindType, name QName) IQuery {
+	if t := TypeByNameAndKind(types, name, TypeKind_Query); t != nil {
+		return t.(IQuery)
+	}
+	return nil
+}
+
+// Returns iterator over Queries.
+//
+// Queries are visited in alphabetic order.
+func Queries(types ITypes) func(func(IQuery) bool) {
+	return func(visit func(IQuery) bool) {
+		for t := range TypesByKind(types, TypeKind_Query) {
+			if !visit(t.(IQuery)) {
+				break
+			}
+		}
+	}
+}
+
 // Returns Record by name.
 //
 // Returns nil if Record not found.
