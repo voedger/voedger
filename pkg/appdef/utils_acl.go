@@ -12,6 +12,13 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
+// Returns iterator over ACL rules.
+//
+// ACL Rules are visited in the order they are added.
+func ACL(acl IWithACL) func(func(IACLRule) bool) {
+	return acl.ACL
+}
+
 // Returns "grant" if policy is allow, "revoke" if deny
 func (p PolicyKind) ActionString() string {
 	switch p {

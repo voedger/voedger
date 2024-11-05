@@ -214,8 +214,7 @@ func Test_EnumsBreakable(t *testing.T) {
 		testBreakable(t, "Extensions", Extensions(app), Extensions(ws))
 
 		testBreakable(t, "Roles", Roles(app), Roles(app))
-		testBreakable(t, "ACL", app.ACL, ws.ACL)
-		testBreakable(t, "IRole.ACL", Role(app, role1Name).ACL)
+		testBreakable(t, "ACL", ACL(app), ACL(ws), ACL(Role(app, role1Name)))
 
 		testBreakable(t, "Rates", app.Rates)
 		testBreakable(t, "Limits", app.Limits)
