@@ -40,21 +40,6 @@ func (app appDef) ACL(cb func(IACLRule) bool) {
 	}
 }
 
-func (app *appDef) Data(name QName) IData {
-	if t := TypeByNameAndKind(app, name, TypeKind_Data); t != nil {
-		return t.(IData)
-	}
-	return nil
-}
-
-func (app *appDef) DataTypes(visit func(IData) bool) {
-	for t := range TypesByKind(app, TypeKind_Data) {
-		if !visit(t.(IData)) {
-			break
-		}
-	}
-}
-
 func (app *appDef) Extension(name QName) IExtension {
 	if t := TypeByName(app, name); t != nil {
 		if ex, ok := t.(IExtension); ok {
@@ -327,13 +312,6 @@ func (app *appDef) Structures(visit func(IStructure) bool) {
 			break
 		}
 	}
-}
-
-func (app *appDef) SysData(k DataKind) IData {
-	if t := TypeByNameAndKind(app, SysDataName(k), TypeKind_Data); t != nil {
-		return t.(IData)
-	}
-	return nil
 }
 
 func (app *appDef) Type(name QName) IType {

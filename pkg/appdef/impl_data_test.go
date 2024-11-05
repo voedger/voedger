@@ -49,22 +49,22 @@ func Test_AppDef_AddData(t *testing.T) {
 
 	require.NotNil(app)
 
-	testWithTypes := func(dataTypes IWithDataTypes) {
+	testWith := func(tested IWithTypes) {
 		t.Run("should be ok to find builded data type", func(t *testing.T) {
-			i := dataTypes.Data(intName)
+			i := Data(tested, intName)
 			require.Equal(TypeKind_Data, i.Kind())
 			require.Equal(intName, i.QName())
 			require.Equal(DataKind_int64, i.DataKind())
 			require.False(i.IsSystem())
-			require.Equal(app.SysData(DataKind_int64), i.Ancestor())
+			require.Equal(SysData(app, DataKind_int64), i.Ancestor())
 
-			s := dataTypes.Data(strName)
+			s := Data(tested, strName)
 			require.Equal(TypeKind_Data, s.Kind())
 			require.Equal(strName, s.QName())
 			require.Equal(DataKind_string, s.DataKind())
-			require.Equal(app.SysData(DataKind_string), s.Ancestor())
+			require.Equal(SysData(app, DataKind_string), s.Ancestor())
 
-			tk := dataTypes.Data(tokenName)
+			tk := Data(tested, tokenName)
 			require.Equal(TypeKind_Data, tk.Kind())
 			require.Equal(tokenName, tk.QName())
 			require.Equal(DataKind_string, tk.DataKind())
@@ -92,7 +92,7 @@ func Test_AppDef_AddData(t *testing.T) {
 
 		t.Run("should be ok to enum data types", func(t *testing.T) {
 			cnt := 0
-			for d := range dataTypes.DataTypes {
+			for d := range DataTypes(tested) {
 				if !d.IsSystem() {
 					cnt++
 					require.Equal(TypeKind_Data, d.Kind())
@@ -111,11 +111,11 @@ func Test_AppDef_AddData(t *testing.T) {
 			require.Equal(3, cnt)
 		})
 
-		require.Nil(dataTypes.Data(NewQName("test", "unknown")), "check nil returns")
+		require.Nil(Data(tested, NewQName("test", "unknown")), "check nil returns")
 	}
 
-	testWithTypes(app)
-	testWithTypes(app.Workspace(wsName))
+	testWith(app)
+	testWith(app.Workspace(wsName))
 
 	t.Run("should be panics", func(t *testing.T) {
 
@@ -230,7 +230,7 @@ func Test_appDef_makeSysDataTypes(t *testing.T) {
 	t.Run("must be ok to get system data types", func(t *testing.T) {
 		sysWS := app.Workspace(SysWorkspaceQName)
 		for k := DataKind_null + 1; k < DataKind_FakeLast; k++ {
-			d := app.SysData(k)
+			d := SysData(app, k)
 			require.NotNil(d)
 			require.Equal(SysDataName(k), d.QName())
 			require.Equal(TypeKind_Data, d.Kind())

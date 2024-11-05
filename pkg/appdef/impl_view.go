@@ -143,7 +143,7 @@ func newViewPartKey(v *view) *viewPartKey {
 }
 
 func (pk *viewPartKey) addDataField(name FieldName, dataType QName, constraints ...IConstraint) {
-	d := pk.view.typ.app.Data(dataType)
+	d := Data(pk.view.typ.app, dataType)
 	if d == nil {
 		panic(ErrNotFound("%v partition key field «%s» data type «%v»", pk.view.QName(), name, dataType))
 	}
@@ -237,7 +237,7 @@ func newViewClustCols(v *view) *viewClustCols {
 }
 
 func (cc *viewClustCols) addDataField(name FieldName, dataType QName, constraints ...IConstraint) {
-	d := cc.app.Data(dataType)
+	d := Data(cc.app, dataType)
 	if d == nil {
 		panic(ErrNotFound("%v clustering columns field «%s» data type «%v»", cc.view.QName(), name, dataType))
 	}

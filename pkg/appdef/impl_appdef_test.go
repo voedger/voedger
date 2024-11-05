@@ -39,9 +39,9 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("should be ok to read sys data types", func(t *testing.T) {
-		require.Equal(SysData_RecordID, app.Data(SysData_RecordID).QName())
-		require.Equal(SysData_String, app.Data(SysData_String).QName())
-		require.Equal(SysData_bytes, app.Data(SysData_bytes).QName())
+		require.Equal(SysData_RecordID, Data(app, SysData_RecordID).QName())
+		require.Equal(SysData_String, Data(app, SysData_String).QName())
+		require.Equal(SysData_bytes, Data(app, SysData_bytes).QName())
 	})
 }
 
@@ -54,7 +54,7 @@ func Test_NullAppDef(t *testing.T) {
 
 	t.Run("should be ok to get system data types", func(t *testing.T) {
 		for k := DataKind_null + 1; k < DataKind_FakeLast; k++ {
-			d := app.SysData(k)
+			d := SysData(app, k)
 			require.NotNil(d)
 			require.True(d.IsSystem())
 			require.Equal(SysDataName(k), d.QName())
@@ -179,7 +179,7 @@ func Test_EnumsBreakable(t *testing.T) {
 
 		testBreakable(t, "Types", app.Types, ws.Types)
 
-		testBreakable(t, "DataTypes", app.DataTypes, ws.DataTypes)
+		testBreakable(t, "DataTypes", DataTypes(app), DataTypes(ws))
 
 		testBreakable(t, "GDocs", app.GDocs, ws.GDocs)
 		testBreakable(t, "GRecords", app.GRecords, ws.GRecords)

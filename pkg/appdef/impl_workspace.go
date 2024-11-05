@@ -66,21 +66,6 @@ func (ws *workspace) Descriptor() QName {
 	return NullQName
 }
 
-func (ws *workspace) Data(name QName) IData {
-	if t := TypeByNameAndKind(ws, name, TypeKind_Data); t != nil {
-		return t.(IData)
-	}
-	return nil
-}
-
-func (ws *workspace) DataTypes(visit func(IData) bool) {
-	for t := range TypesByKind(ws, TypeKind_Data) {
-		if !visit(t.(IData)) {
-			break
-		}
-	}
-}
-
 func (ws *workspace) Extension(name QName) IExtension {
 	if t := TypeByName(ws, name); t != nil {
 		if ex, ok := t.(IExtension); ok {

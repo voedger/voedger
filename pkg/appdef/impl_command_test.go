@@ -49,7 +49,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 	require.NotNil(app)
 
-	testWithCommands := func(tested IWithTypes) {
+	testWith := func(tested IWithTypes) {
 
 		t.Run("should be ok to find builded command", func(t *testing.T) {
 			typ := tested.Type(cmdName)
@@ -98,8 +98,8 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		})
 	}
 
-	testWithCommands(app)
-	testWithCommands(app.Workspace(wsName))
+	testWith(app)
+	testWith(app.Workspace(wsName))
 
 	t.Run("should be panics", func(t *testing.T) {
 		t.Run("if name is empty", func(t *testing.T) {

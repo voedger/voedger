@@ -131,6 +131,39 @@ func CRecords(types ITypes) func(func(ICRecord) bool) {
 	}
 }
 
+// Returns Data type by name.
+//
+// Returns nil if Data not found.
+func Data(types IFindType, name QName) IData {
+	if t := TypeByNameAndKind(types, name, TypeKind_Data); t != nil {
+		return t.(IData)
+	}
+	return nil
+}
+
+// Returns iterator over Data types.
+//
+// Data types are visited in alphabetic order.
+func DataTypes(types ITypes) func(func(IData) bool) {
+	return func(visit func(IData) bool) {
+		for t := range TypesByKind(types, TypeKind_Data) {
+			if !visit(t.(IData)) {
+				break
+			}
+		}
+	}
+}
+
+// Returns system Data type (sys.int32, sys.float654, etc.) by data kind.
+//
+// Returns nil if not found.
+func SysData(types IFindType, k DataKind) IData {
+	if t := TypeByNameAndKind(types, SysDataName(k), TypeKind_Data); t != nil {
+		return t.(IData)
+	}
+	return nil
+}
+
 // Is specified type kind may be used in child containers.
 func (k TypeKind) ContainerKindAvailable(s TypeKind) bool {
 	return structTypeProps(k).containerKinds.Contains(s)

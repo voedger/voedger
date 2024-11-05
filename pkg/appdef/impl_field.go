@@ -157,7 +157,7 @@ func (ff *fields) UserFieldCount() int {
 }
 
 func (ff *fields) addDataField(name FieldName, data QName, required bool, constraints ...IConstraint) {
-	d := ff.app.Data(data)
+	d := Data(ff.app, data)
 	if d == nil {
 		panic(ErrTypeNotFound(data))
 	}
@@ -169,7 +169,7 @@ func (ff *fields) addDataField(name FieldName, data QName, required bool, constr
 }
 
 func (ff *fields) addField(name FieldName, kind DataKind, required bool, constraints ...IConstraint) {
-	d := ff.app.SysData(kind)
+	d := SysData(ff.app, kind)
 	if d == nil {
 		panic(ErrNotFound("system data type for data kind «%s»", kind.TrimString()))
 	}
@@ -181,7 +181,7 @@ func (ff *fields) addField(name FieldName, kind DataKind, required bool, constra
 }
 
 func (ff *fields) addRefField(name FieldName, required bool, ref ...QName) {
-	d := ff.app.SysData(DataKind_RecordID)
+	d := SysData(ff.app, DataKind_RecordID)
 	f := newRefField(name, d, required, ref...)
 	ff.appendField(name, f)
 }
