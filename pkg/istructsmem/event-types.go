@@ -118,7 +118,7 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 		return arg, argUnl, nil // #1811 — «sys.Corrupted» command has no arguments objects
 	}
 
-	cmd := ev.appCfg.AppDef.Command(ev.name)
+	cmd := appdef.Command(ev.appCfg.AppDef, ev.name)
 	if cmd != nil {
 		if cmd.Param() != nil {
 			arg = cmd.Param().QName()

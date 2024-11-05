@@ -144,7 +144,7 @@ func (ts *testState) ResultBuilder() istructs.IObjectBuilder {
 		panic("no current event")
 	}
 	qname := ts.event.QName()
-	command := ts.appDef.Command(qname)
+	command := appdef.Command(ts.appDef, qname)
 	if command == nil {
 		panic(fmt.Sprintf("%v is not a command", qname))
 	}

@@ -149,7 +149,7 @@ func Test_BasicUsage(t *testing.T) {
 	wsingletone := app.WDoc(appdef.NewQName("main", "Transaction"))
 	require.True(wsingletone.Singleton())
 
-	cmd := app.Command(appdef.NewQName("main", "NewOrder"))
+	cmd := appdef.Command(app, appdef.NewQName("main", "NewOrder"))
 	require.Equal("Commands can only be declared in workspaces\nCommand can have optional argument and/or unlogged argument\nCommand can return TYPE", cmd.Comment())
 
 	// type
@@ -286,7 +286,7 @@ func Test_BasicUsage(t *testing.T) {
 		require.EqualValues(`@every 2m30s`, job2.CronSchedule())
 	})
 
-	cmd = app.Command(appdef.NewQName("main", "NewOrder2"))
+	cmd = appdef.Command(app, appdef.NewQName("main", "NewOrder2"))
 	require.Equal(1, cmd.States().Len())
 	require.NotNil(cmd.States().Storage(appdef.NewQName("sys", "AppSecret")))
 	require.Equal(1, cmd.States().Len())
@@ -1873,7 +1873,7 @@ func Test_OdocCmdArgs(t *testing.T) {
 	app, err := builder.Build()
 	require.NoError(err)
 
-	cmdOdoc := app.Command(appdef.NewQName("app1", "CmdODoc1"))
+	cmdOdoc := appdef.Command(app, appdef.NewQName("app1", "CmdODoc1"))
 	require.NotNil(cmdOdoc)
 	require.NotNil(cmdOdoc.Param())
 
@@ -1947,7 +1947,7 @@ WORKSPACE Workspace1 (
 	app, err := builder.Build()
 	require.NoError(err)
 
-	cmd := app.Command(appdef.NewQName("app1", "CmdDeal"))
+	cmd := appdef.Command(app, appdef.NewQName("app1", "CmdDeal"))
 	validate(cmd.Param())
 	validate(cmd.Result())
 }
