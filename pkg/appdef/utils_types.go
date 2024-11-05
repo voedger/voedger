@@ -55,21 +55,18 @@ func TypeByName(types IFindType, name QName) IType {
 // Returns type by name and kind.
 //
 // Returns nil if type not found.
-func TypeByNameAndKind(types IFindType, name QName, kind TypeKind) IType {
+func TypeByNameAndKind[T IType](types IFindType, name QName, kind TypeKind) (found T) {
 	if t := types.Type(name); t.Kind() == kind {
-		return t
+		found = t.(T)
 	}
-	return nil
+	return found
 }
 
 // Returns CDoc by name.
 //
 // Returns nil if CDoc not found.
 func CDoc(types IFindType, name QName) ICDoc {
-	if t := TypeByNameAndKind(types, name, TypeKind_CDoc); t != nil {
-		return t.(ICDoc)
-	}
-	return nil
+	return TypeByNameAndKind[ICDoc](types, name, TypeKind_CDoc)
 }
 
 // Returns iterator over CDocs.
@@ -83,10 +80,7 @@ func CDocs(types ITypes) func(func(ICDoc) bool) {
 //
 // Returns nil if Command not found.
 func Command(types IFindType, name QName) ICommand {
-	if t := TypeByNameAndKind(types, name, TypeKind_Command); t != nil {
-		return t.(ICommand)
-	}
-	return nil
+	return TypeByNameAndKind[ICommand](types, name, TypeKind_Command)
 }
 
 // Returns iterator over Commands.
@@ -100,10 +94,7 @@ func Commands(types ITypes) func(func(ICommand) bool) {
 //
 // Returns nil if CRecord not found.
 func CRecord(types IFindType, name QName) ICRecord {
-	if t := TypeByNameAndKind(types, name, TypeKind_CRecord); t != nil {
-		return t.(ICRecord)
-	}
-	return nil
+	return TypeByNameAndKind[ICRecord](types, name, TypeKind_CRecord)
 }
 
 // Returns iterator over CRecords.
@@ -117,10 +108,7 @@ func CRecords(types ITypes) func(func(ICRecord) bool) {
 //
 // Returns nil if Data not found.
 func Data(types IFindType, name QName) IData {
-	if t := TypeByNameAndKind(types, name, TypeKind_Data); t != nil {
-		return t.(IData)
-	}
-	return nil
+	return TypeByNameAndKind[IData](types, name, TypeKind_Data)
 }
 
 // Returns iterator over Data types.
@@ -172,10 +160,7 @@ func Functions(types ITypes) func(func(IFunction) bool) {
 //
 // Returns nil if GDoc not found.
 func GDoc(types IFindType, name QName) IGDoc {
-	if t := TypeByNameAndKind(types, name, TypeKind_GDoc); t != nil {
-		return t.(IGDoc)
-	}
-	return nil
+	return TypeByNameAndKind[IGDoc](types, name, TypeKind_GDoc)
 }
 
 // Returns iterator over GDocs.
@@ -189,10 +174,7 @@ func GDocs(types ITypes) func(func(IGDoc) bool) {
 //
 // Returns nil if GRecord not found.
 func GRecord(types IFindType, name QName) IGRecord {
-	if t := TypeByNameAndKind(types, name, TypeKind_GRecord); t != nil {
-		return t.(IGRecord)
-	}
-	return nil
+	return TypeByNameAndKind[IGRecord](types, name, TypeKind_GRecord)
 }
 
 // Returns iterator over GRecords.
@@ -206,10 +188,7 @@ func GRecords(types ITypes) func(func(IGRecord) bool) {
 //
 // Returns nil if Job not found.
 func Job(types IFindType, name QName) IJob {
-	if t := TypeByNameAndKind(types, name, TypeKind_Job); t != nil {
-		return t.(IJob)
-	}
-	return nil
+	return TypeByNameAndKind[IJob](types, name, TypeKind_Job)
 }
 
 // Returns iterator over Jobs.
@@ -223,10 +202,7 @@ func Jobs(types ITypes) func(func(IJob) bool) {
 //
 // Returns nil if Limit not found.
 func Limit(types IFindType, name QName) ILimit {
-	if t := TypeByNameAndKind(types, name, TypeKind_Limit); t != nil {
-		return t.(ILimit)
-	}
-	return nil
+	return TypeByNameAndKind[ILimit](types, name, TypeKind_Limit)
 }
 
 // Returns iterator over Limits.
@@ -240,10 +216,7 @@ func Limits(types ITypes) func(func(ILimit) bool) {
 //
 // Returns nil if Object not found.
 func Object(types IFindType, name QName) IObject {
-	if t := TypeByNameAndKind(types, name, TypeKind_Object); t != nil {
-		return t.(IObject)
-	}
-	return nil
+	return TypeByNameAndKind[IObject](types, name, TypeKind_Object)
 }
 
 // Returns iterator over Objects.
@@ -257,10 +230,7 @@ func Objects(types ITypes) func(func(IObject) bool) {
 //
 // Returns nil if ODoc not found.
 func ODoc(types IFindType, name QName) IODoc {
-	if t := TypeByNameAndKind(types, name, TypeKind_ODoc); t != nil {
-		return t.(IODoc)
-	}
-	return nil
+	return TypeByNameAndKind[IODoc](types, name, TypeKind_ODoc)
 }
 
 // Returns iterator over ODocs.
@@ -274,10 +244,7 @@ func ODocs(types ITypes) func(func(IODoc) bool) {
 //
 // Returns nil if ORecord not found.
 func ORecord(types IFindType, name QName) IORecord {
-	if t := TypeByNameAndKind(types, name, TypeKind_ORecord); t != nil {
-		return t.(IORecord)
-	}
-	return nil
+	return TypeByNameAndKind[IORecord](types, name, TypeKind_ORecord)
 }
 
 // Returns iterator over ORecords.
@@ -291,10 +258,7 @@ func ORecords(types ITypes) func(func(IORecord) bool) {
 //
 // Returns nil if Projector not found.
 func Projector(types IFindType, name QName) IProjector {
-	if t := TypeByNameAndKind(types, name, TypeKind_Projector); t != nil {
-		return t.(IProjector)
-	}
-	return nil
+	return TypeByNameAndKind[IProjector](types, name, TypeKind_Projector)
 }
 
 // Returns iterator over Projectors.
@@ -308,10 +272,7 @@ func Projectors(types ITypes) func(func(IProjector) bool) {
 //
 // Returns nil if Query not found.
 func Query(types IFindType, name QName) IQuery {
-	if t := TypeByNameAndKind(types, name, TypeKind_Query); t != nil {
-		return t.(IQuery)
-	}
-	return nil
+	return TypeByNameAndKind[IQuery](types, name, TypeKind_Query)
 }
 
 // Returns iterator over Queries.
@@ -325,10 +286,7 @@ func Queries(types ITypes) func(func(IQuery) bool) {
 //
 // Returns nil if Rate not found.
 func Rate(types IFindType, name QName) IRate {
-	if t := TypeByNameAndKind(types, name, TypeKind_Rate); t != nil {
-		return t.(IRate)
-	}
-	return nil
+	return TypeByNameAndKind[IRate](types, name, TypeKind_Rate)
 }
 
 // Returns iterator over Rates.
@@ -361,10 +319,7 @@ func Records(types ITypes) func(func(IRecord) bool) {
 //
 // Returns nil if Role not found.
 func Role(types IFindType, name QName) IRole {
-	if t := TypeByNameAndKind(types, name, TypeKind_Role); t != nil {
-		return t.(IRole)
-	}
-	return nil
+	return TypeByNameAndKind[IRole](types, name, TypeKind_Role)
 }
 
 // Returns iterator over Roles.
@@ -426,20 +381,14 @@ func Structures(types ITypes) func(func(IStructure) bool) {
 //
 // Returns nil if not found.
 func SysData(types IFindType, k DataKind) IData {
-	if t := TypeByNameAndKind(types, SysDataName(k), TypeKind_Data); t != nil {
-		return t.(IData)
-	}
-	return nil
+	return TypeByNameAndKind[IData](types, SysDataName(k), TypeKind_Data)
 }
 
 // Returns View by name.
 //
 // Returns nil if View not found.
 func View(types IFindType, name QName) IView {
-	if t := TypeByNameAndKind(types, name, TypeKind_ViewRecord); t != nil {
-		return t.(IView)
-	}
-	return nil
+	return TypeByNameAndKind[IView](types, name, TypeKind_ViewRecord)
 }
 
 // Returns iterator over Views.
@@ -453,10 +402,7 @@ func Views(types ITypes) func(func(IView) bool) {
 //
 // Returns nil if WDoc not found.
 func WDoc(types IFindType, name QName) IWDoc {
-	if t := TypeByNameAndKind(types, name, TypeKind_WDoc); t != nil {
-		return t.(IWDoc)
-	}
-	return nil
+	return TypeByNameAndKind[IWDoc](types, name, TypeKind_WDoc)
 }
 
 // Returns iterator over WDocs.
@@ -470,10 +416,7 @@ func WDocs(types ITypes) func(func(IWDoc) bool) {
 //
 // Returns nil if WRecord not found.
 func WRecord(types IFindType, name QName) IWRecord {
-	if t := TypeByNameAndKind(types, name, TypeKind_WRecord); t != nil {
-		return t.(IWRecord)
-	}
-	return nil
+	return TypeByNameAndKind[IWRecord](types, name, TypeKind_WRecord)
 }
 
 // Returns iterator over WRecords.

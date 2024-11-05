@@ -95,10 +95,7 @@ func (app *appDef) Types(visit func(IType) bool) {
 }
 
 func (app *appDef) Workspace(name QName) IWorkspace {
-	if t := TypeByNameAndKind(app, name, TypeKind_Workspace); t != nil {
-		return t.(IWorkspace)
-	}
-	return nil
+	return TypeByNameAndKind[IWorkspace](app, name, TypeKind_Workspace)
 }
 
 func (app *appDef) Workspaces(visit func(IWorkspace) bool) {

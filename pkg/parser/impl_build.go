@@ -785,7 +785,7 @@ func (c *buildContext) isExists(qname appdef.QName, kind appdef.TypeKind) (exist
 		appdef.TypeKind_WDoc,
 		appdef.TypeKind_WRecord,
 		appdef.TypeKind_Object:
-		return appdef.TypeByNameAndKind(c.adb.AppDef(), qname, kind) != nil
+		return appdef.TypeByNameAndKind[appdef.IRecord](c.adb.AppDef(), qname, kind) != nil
 	default:
 		panic(fmt.Sprintf("unsupported type kind %d of %s", kind, qname))
 	}
