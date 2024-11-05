@@ -15,11 +15,11 @@ import (
 // Returns iterator over types by kind.
 //
 // Types are visited in alphabetic order.
-func TypesByKind(types ITypes, kind TypeKind) func(func(IType) bool) {
-	return func(visit func(IType) bool) {
+func TypesByKind[T IType](types ITypes, kind TypeKind) func(func(T) bool) {
+	return func(visit func(T) bool) {
 		for t := range types.Types {
 			if t.Kind() == kind {
-				if !visit(t) {
+				if !visit(t.(T)) {
 					break
 				}
 			}
@@ -30,11 +30,11 @@ func TypesByKind(types ITypes, kind TypeKind) func(func(IType) bool) {
 // Returns iterator over types by kinds set.
 //
 // Types are visited in alphabetic order.
-func TypesByKinds(types ITypes, kinds TypeKindSet) func(func(IType) bool) {
-	return func(visit func(IType) bool) {
+func TypesByKinds[T IType](types ITypes, kinds TypeKindSet) func(func(T) bool) {
+	return func(visit func(T) bool) {
 		for t := range types.Types {
 			if kinds.Contains(t.Kind()) {
-				if !visit(t) {
+				if !visit(t.(T)) {
 					break
 				}
 			}
@@ -76,13 +76,7 @@ func CDoc(types IFindType, name QName) ICDoc {
 //
 // CDocs are visited in alphabetic order.
 func CDocs(types ITypes) func(func(ICDoc) bool) {
-	return func(visit func(ICDoc) bool) {
-		for t := range TypesByKind(types, TypeKind_CDoc) {
-			if !visit(t.(ICDoc)) {
-				break
-			}
-		}
-	}
+	return TypesByKind[ICDoc](types, TypeKind_CDoc)
 }
 
 // Returns Command by name.
@@ -99,13 +93,7 @@ func Command(types IFindType, name QName) ICommand {
 //
 // Command are visited in alphabetic order.
 func Commands(types ITypes) func(func(ICommand) bool) {
-	return func(visit func(ICommand) bool) {
-		for t := range TypesByKind(types, TypeKind_Command) {
-			if !visit(t.(ICommand)) {
-				break
-			}
-		}
-	}
+	return TypesByKind[ICommand](types, TypeKind_Command)
 }
 
 // Returns CRecord by name.
@@ -122,13 +110,7 @@ func CRecord(types IFindType, name QName) ICRecord {
 //
 // CRecords are visited in alphabetic order.
 func CRecords(types ITypes) func(func(ICRecord) bool) {
-	return func(visit func(ICRecord) bool) {
-		for t := range TypesByKind(types, TypeKind_CRecord) {
-			if !visit(t.(ICRecord)) {
-				break
-			}
-		}
-	}
+	return TypesByKind[ICRecord](types, TypeKind_CRecord)
 }
 
 // Returns Data type by name.
@@ -145,13 +127,7 @@ func Data(types IFindType, name QName) IData {
 //
 // Data types are visited in alphabetic order.
 func DataTypes(types ITypes) func(func(IData) bool) {
-	return func(visit func(IData) bool) {
-		for t := range TypesByKind(types, TypeKind_Data) {
-			if !visit(t.(IData)) {
-				break
-			}
-		}
-	}
+	return TypesByKind[IData](types, TypeKind_Data)
 }
 
 // Returns Extension by name.
@@ -170,13 +146,7 @@ func Extension(types IFindType, name QName) IExtension {
 //
 // Extensions are visited in alphabetic order.
 func Extensions(types ITypes) func(func(IExtension) bool) {
-	return func(visit func(IExtension) bool) {
-		for t := range TypesByKinds(types, TypeKind_Extensions) {
-			if !visit(t.(IExtension)) {
-				break
-			}
-		}
-	}
+	return TypesByKinds[IExtension](types, TypeKind_Extensions)
 }
 
 // Returns Function by name.
@@ -195,13 +165,7 @@ func Function(types IFindType, name QName) IFunction {
 //
 // Functions are visited in alphabetic order.
 func Functions(types ITypes) func(func(IFunction) bool) {
-	return func(visit func(IFunction) bool) {
-		for t := range TypesByKinds(types, TypeKind_Functions) {
-			if !visit(t.(IFunction)) {
-				break
-			}
-		}
-	}
+	return TypesByKinds[IFunction](types, TypeKind_Functions)
 }
 
 // Returns GDoc by name.
@@ -218,13 +182,7 @@ func GDoc(types IFindType, name QName) IGDoc {
 //
 // GDocs are visited in alphabetic order.
 func GDocs(types ITypes) func(func(IGDoc) bool) {
-	return func(visit func(IGDoc) bool) {
-		for t := range TypesByKind(types, TypeKind_GDoc) {
-			if !visit(t.(IGDoc)) {
-				break
-			}
-		}
-	}
+	return TypesByKind[IGDoc](types, TypeKind_GDoc)
 }
 
 // Returns GRecord by name.
@@ -241,13 +199,7 @@ func GRecord(types IFindType, name QName) IGRecord {
 //
 // GRecords are visited in alphabetic order.
 func GRecords(types ITypes) func(func(IGRecord) bool) {
-	return func(visit func(IGRecord) bool) {
-		for t := range TypesByKind(types, TypeKind_GRecord) {
-			if !visit(t.(IGRecord)) {
-				break
-			}
-		}
-	}
+	return TypesByKind[IGRecord](types, TypeKind_GRecord)
 }
 
 // Returns Job by name.
@@ -264,13 +216,7 @@ func Job(types IFindType, name QName) IJob {
 //
 // Jobs are visited in alphabetic order.
 func Jobs(types ITypes) func(func(IJob) bool) {
-	return func(visit func(IJob) bool) {
-		for t := range TypesByKind(types, TypeKind_Job) {
-			if !visit(t.(IJob)) {
-				break
-			}
-		}
-	}
+	return TypesByKind[IJob](types, TypeKind_Job)
 }
 
 // Returns Limit by name.
@@ -287,13 +233,7 @@ func Limit(types IFindType, name QName) ILimit {
 //
 // Limits are visited in alphabetic order.
 func Limits(types ITypes) func(func(ILimit) bool) {
-	return func(visit func(ILimit) bool) {
-		for t := range TypesByKind(types, TypeKind_Limit) {
-			if !visit(t.(ILimit)) {
-				break
-			}
-		}
-	}
+	return TypesByKind[ILimit](types, TypeKind_Limit)
 }
 
 // Returns Object by name.
@@ -310,13 +250,7 @@ func Object(types IFindType, name QName) IObject {
 //
 // Objects are visited in alphabetic order.
 func Objects(types ITypes) func(func(IObject) bool) {
-	return func(visit func(IObject) bool) {
-		for t := range TypesByKind(types, TypeKind_Object) {
-			if !visit(t.(IObject)) {
-				break
-			}
-		}
-	}
+	return TypesByKind[IObject](types, TypeKind_Object)
 }
 
 // Returns ODoc by name.
@@ -333,13 +267,7 @@ func ODoc(types IFindType, name QName) IODoc {
 //
 // ODocs are visited in alphabetic order.
 func ODocs(types ITypes) func(func(IODoc) bool) {
-	return func(visit func(IODoc) bool) {
-		for t := range TypesByKind(types, TypeKind_ODoc) {
-			if !visit(t.(IODoc)) {
-				break
-			}
-		}
-	}
+	return TypesByKind[IODoc](types, TypeKind_ODoc)
 }
 
 // Returns ORecord by name.
@@ -356,13 +284,7 @@ func ORecord(types IFindType, name QName) IORecord {
 //
 // ORecords are visited in alphabetic order.
 func ORecords(types ITypes) func(func(IORecord) bool) {
-	return func(visit func(IORecord) bool) {
-		for t := range TypesByKind(types, TypeKind_ORecord) {
-			if !visit(t.(IORecord)) {
-				break
-			}
-		}
-	}
+	return TypesByKind[IORecord](types, TypeKind_ORecord)
 }
 
 // Returns Projector by name.
@@ -379,13 +301,7 @@ func Projector(types IFindType, name QName) IProjector {
 //
 // Projectors are visited in alphabetic order.
 func Projectors(types ITypes) func(func(IProjector) bool) {
-	return func(visit func(IProjector) bool) {
-		for t := range TypesByKind(types, TypeKind_Projector) {
-			if !visit(t.(IProjector)) {
-				break
-			}
-		}
-	}
+	return TypesByKind[IProjector](types, TypeKind_Projector)
 }
 
 // Returns Query by name.
@@ -402,13 +318,7 @@ func Query(types IFindType, name QName) IQuery {
 //
 // Queries are visited in alphabetic order.
 func Queries(types ITypes) func(func(IQuery) bool) {
-	return func(visit func(IQuery) bool) {
-		for t := range TypesByKind(types, TypeKind_Query) {
-			if !visit(t.(IQuery)) {
-				break
-			}
-		}
-	}
+	return TypesByKind[IQuery](types, TypeKind_Query)
 }
 
 // Returns Rate by name.
@@ -425,13 +335,7 @@ func Rate(types IFindType, name QName) IRate {
 //
 // Rates are visited in alphabetic order.
 func Rates(types ITypes) func(func(IRate) bool) {
-	return func(visit func(IRate) bool) {
-		for t := range TypesByKind(types, TypeKind_Rate) {
-			if !visit(t.(IRate)) {
-				break
-			}
-		}
-	}
+	return TypesByKind[IRate](types, TypeKind_Rate)
 }
 
 // Returns Record by name.
@@ -450,13 +354,7 @@ func Record(types IFindType, name QName) IRecord {
 //
 // Records are visited in alphabetic order.
 func Records(types ITypes) func(func(IRecord) bool) {
-	return func(visit func(IRecord) bool) {
-		for t := range TypesByKinds(types, TypeKind_Records) {
-			if !visit(t.(IRecord)) {
-				break
-			}
-		}
-	}
+	return TypesByKinds[IRecord](types, TypeKind_Records)
 }
 
 // Returns Role by name.
@@ -473,13 +371,7 @@ func Role(types IFindType, name QName) IRole {
 //
 // Roles are visited in alphabetic order.
 func Roles(types ITypes) func(func(IRole) bool) {
-	return func(visit func(IRole) bool) {
-		for t := range TypesByKind(types, TypeKind_Role) {
-			if !visit(t.(IRole)) {
-				break
-			}
-		}
-	}
+	return TypesByKind[IRole](types, TypeKind_Role)
 }
 
 // Returns Singleton by name.
@@ -501,12 +393,10 @@ func Singleton(types IFindType, name QName) ISingleton {
 // Singletons are visited in alphabetic order.
 func Singletons(types ITypes) func(func(ISingleton) bool) {
 	return func(visit func(ISingleton) bool) {
-		for t := range TypesByKinds(types, TypeKind_Singletons) {
-			if s, ok := t.(ISingleton); ok {
-				if s.Singleton() {
-					if !visit(s) {
-						break
-					}
+		for s := range TypesByKinds[ISingleton](types, TypeKind_Singletons) {
+			if s.Singleton() {
+				if !visit(s) {
+					break
 				}
 			}
 		}
@@ -529,13 +419,7 @@ func Structure(types IFindType, name QName) IStructure {
 //
 // Structures are visited in alphabetic order.
 func Structures(types ITypes) func(func(IStructure) bool) {
-	return func(visit func(IStructure) bool) {
-		for t := range TypesByKinds(types, TypeKind_Structures) {
-			if !visit(t.(IStructure)) {
-				break
-			}
-		}
-	}
+	return TypesByKinds[IStructure](types, TypeKind_Structures)
 }
 
 // Returns system Data type (sys.int32, sys.float654, etc.) by data kind.
@@ -562,13 +446,7 @@ func View(types IFindType, name QName) IView {
 //
 // Views are visited in alphabetic order.
 func Views(types ITypes) func(func(IView) bool) {
-	return func(visit func(IView) bool) {
-		for t := range TypesByKind(types, TypeKind_ViewRecord) {
-			if !visit(t.(IView)) {
-				break
-			}
-		}
-	}
+	return TypesByKind[IView](types, TypeKind_ViewRecord)
 }
 
 // Returns WDoc by name.
@@ -585,13 +463,7 @@ func WDoc(types IFindType, name QName) IWDoc {
 //
 // WDocs are visited in alphabetic order.
 func WDocs(types ITypes) func(func(IWDoc) bool) {
-	return func(visit func(IWDoc) bool) {
-		for t := range TypesByKind(types, TypeKind_WDoc) {
-			if !visit(t.(IWDoc)) {
-				break
-			}
-		}
-	}
+	return TypesByKind[IWDoc](types, TypeKind_WDoc)
 }
 
 // Returns WRecord by name.
@@ -608,13 +480,7 @@ func WRecord(types IFindType, name QName) IWRecord {
 //
 // WRecords are visited in alphabetic order.
 func WRecords(types ITypes) func(func(IWRecord) bool) {
-	return func(visit func(IWRecord) bool) {
-		for t := range TypesByKind(types, TypeKind_WRecord) {
-			if !visit(t.(IWRecord)) {
-				break
-			}
-		}
-	}
+	return TypesByKind[IWRecord](types, TypeKind_WRecord)
 }
 
 // Is specified type kind may be used in child containers.

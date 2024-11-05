@@ -102,11 +102,7 @@ func (app *appDef) Workspace(name QName) IWorkspace {
 }
 
 func (app *appDef) Workspaces(visit func(IWorkspace) bool) {
-	for t := range TypesByKind(app, TypeKind_Workspace) {
-		if !visit(t.(IWorkspace)) {
-			break
-		}
-	}
+	TypesByKind[IWorkspace](app, TypeKind_Workspace)(visit)
 }
 
 func (app *appDef) WorkspaceByDescriptor(name QName) IWorkspace {
