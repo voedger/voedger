@@ -61,7 +61,7 @@ func TestProcessorKind_compatibleWithExtension(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("compatibles for %v", tt.proc), func(t *testing.T) {
 			for _, n := range names {
-				ext := appDef.Extension(n)
+				ext := appdef.Extension(appDef, n)
 				got, _ := tt.proc.compatibleWithExtension(ext)
 				if want := tt.compatibles.Contains(n); got != want {
 					t.Errorf("%v.compatibleWithExtension(%v) = %v, want %v", tt.proc, ext, got, want)

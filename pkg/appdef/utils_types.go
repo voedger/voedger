@@ -154,6 +154,31 @@ func DataTypes(types ITypes) func(func(IData) bool) {
 	}
 }
 
+// Returns Extension by name.
+//
+// Returns nil if Extension not found.
+func Extension(types IFindType, name QName) IExtension {
+	if t := TypeByName(types, name); t != nil {
+		if r, ok := t.(IExtension); ok {
+			return r
+		}
+	}
+	return nil
+}
+
+// Returns iterator over Extensions.
+//
+// Extensions are visited in alphabetic order.
+func Extensions(types ITypes) func(func(IExtension) bool) {
+	return func(visit func(IExtension) bool) {
+		for t := range TypesByKinds(types, TypeKind_Extensions) {
+			if !visit(t.(IExtension)) {
+				break
+			}
+		}
+	}
+}
+
 // Returns Function by name.
 //
 // Returns nil if Function not found.

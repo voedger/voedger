@@ -40,23 +40,6 @@ func (app appDef) ACL(cb func(IACLRule) bool) {
 	}
 }
 
-func (app *appDef) Extension(name QName) IExtension {
-	if t := TypeByName(app, name); t != nil {
-		if ex, ok := t.(IExtension); ok {
-			return ex
-		}
-	}
-	return nil
-}
-
-func (app *appDef) Extensions(visit func(IExtension) bool) {
-	for t := range TypesByKinds(app, TypeKind_Extensions) {
-		if !visit(t.(IExtension)) {
-			break
-		}
-	}
-}
-
 func (app appDef) FullQName(name QName) FullQName { return app.packages.fullQName(name) }
 
 func (app *appDef) Limit(name QName) ILimit {

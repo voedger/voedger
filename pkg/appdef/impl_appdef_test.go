@@ -211,7 +211,7 @@ func Test_EnumsBreakable(t *testing.T) {
 		testBreakable(t, "Jobs", Jobs(app), Jobs(ws))
 		testBreakable(t, "IStorages.Enum", Job(app, job1name).States().Enum)
 
-		testBreakable(t, "Extensions", app.Extensions, ws.Extensions)
+		testBreakable(t, "Extensions", Extensions(app), Extensions(ws))
 
 		testBreakable(t, "Roles", app.Roles, ws.Roles)
 		testBreakable(t, "ACL", app.ACL, ws.ACL)

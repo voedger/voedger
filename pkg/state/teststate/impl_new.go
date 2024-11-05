@@ -197,7 +197,7 @@ func (cts *CommandTestState) buildAppDef(wsPkgPath, wsDescriptorName string) {
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, compileResult.AppDefBuilder)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-	for ext := range cts.appDef.Extensions {
+	for ext := range appdef.Extensions(cts.appDef) {
 		if proj, ok := ext.(appdef.IProjector); ok {
 			if proj.Sync() {
 				cfg.AddSyncProjectors(istructs.Projector{Name: ext.QName()})

@@ -67,10 +67,10 @@ func Test_AppDefExtensions(t *testing.T) {
 		require.NotNil(app)
 	})
 
-	testWithExtensions := func(tested IWithExtensions) {
+	testWith := func(tested IWithTypes) {
 		t.Run("should be ok to enumerate extensions", func(t *testing.T) {
 			var extNames []QName
-			for ex := range tested.Extensions {
+			for ex := range Extensions(tested) {
 				require.Equal(wsName, ex.Workspace().QName())
 				extNames = append(extNames, ex.QName())
 			}
@@ -79,16 +79,16 @@ func Test_AppDefExtensions(t *testing.T) {
 		})
 
 		t.Run("should be ok to find extension by name", func(t *testing.T) {
-			ext := tested.Extension(cmdName)
+			ext := Extension(tested, cmdName)
 			require.NotNil(ext)
 			require.Equal(cmdName, ext.QName())
 		})
 
-		require.Nil(tested.Extension(NewQName("test", "unknown")), "should be nil if unknown")
+		require.Nil(Extension(tested, NewQName("test", "unknown")), "should be nil if unknown")
 	}
 
-	testWithExtensions(app)
-	testWithExtensions(app.Workspace(wsName))
+	testWith(app)
+	testWith(app.Workspace(wsName))
 }
 
 func TestExtensionEngineKind_MarshalText(t *testing.T) {

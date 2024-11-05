@@ -12,8 +12,6 @@ type IWorkspace interface {
 
 	IWithTypes
 
-	IWithExtensions
-
 	IWithRoles
 	IWithACL
 

@@ -66,23 +66,6 @@ func (ws *workspace) Descriptor() QName {
 	return NullQName
 }
 
-func (ws *workspace) Extension(name QName) IExtension {
-	if t := TypeByName(ws, name); t != nil {
-		if ex, ok := t.(IExtension); ok {
-			return ex
-		}
-	}
-	return nil
-}
-
-func (ws *workspace) Extensions(visit func(IExtension) bool) {
-	for t := range TypesByKinds(ws, TypeKind_Extensions) {
-		if !visit(t.(IExtension)) {
-			break
-		}
-	}
-}
-
 func (ws *workspace) Inherits(anc QName) bool {
 	switch anc {
 	case SysWorkspaceQName, ws.QName():

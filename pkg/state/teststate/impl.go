@@ -375,7 +375,7 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-	for ext := range ts.appDef.Extensions {
+	for ext := range appdef.Extensions(ts.appDef) {
 		if ext.QName().Pkg() == PackageName {
 			if proj, ok := ext.(appdef.IProjector); ok {
 				if proj.Sync() {
