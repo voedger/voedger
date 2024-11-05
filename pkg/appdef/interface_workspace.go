@@ -24,7 +24,6 @@ type IWorkspace interface {
 
 	IWithViews
 
-	IWithCommands
 	IWithQueries
 	IWithFunctions
 

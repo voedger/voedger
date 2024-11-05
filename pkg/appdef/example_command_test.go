@@ -46,7 +46,7 @@ func ExampleIAppDefBuilder_AddCommand() {
 	// how to enum commands
 	{
 		cnt := 0
-		for c := range app.Commands {
+		for c := range appdef.Commands(app) {
 			cnt++
 			fmt.Println(cnt, c)
 		}
@@ -55,7 +55,7 @@ func ExampleIAppDefBuilder_AddCommand() {
 
 	// how to inspect builded AppDef with command
 	{
-		cmd := app.Command(cmdName)
+		cmd := appdef.Command(app, cmdName)
 		fmt.Println(cmd, ":")
 		fmt.Println(" - parameter:", cmd.Param())
 		fmt.Println(" - unl.param:", cmd.UnloggedParam())

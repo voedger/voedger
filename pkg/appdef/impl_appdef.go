@@ -40,21 +40,6 @@ func (app appDef) ACL(cb func(IACLRule) bool) {
 	}
 }
 
-func (app *appDef) Command(name QName) ICommand {
-	if t := TypeByNameAndKind(app, name, TypeKind_Command); t != nil {
-		return t.(ICommand)
-	}
-	return nil
-}
-
-func (app *appDef) Commands(visit func(ICommand) bool) {
-	for t := range TypesByKind(app, TypeKind_Command) {
-		if !visit(t.(ICommand)) {
-			break
-		}
-	}
-}
-
 func (app *appDef) Data(name QName) IData {
 	if t := TypeByNameAndKind(app, name, TypeKind_Data); t != nil {
 		return t.(IData)

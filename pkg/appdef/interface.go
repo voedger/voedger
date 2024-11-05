@@ -28,7 +28,6 @@ type IAppDef interface {
 
 	IWithViews
 
-	IWithCommands
 	IWithQueries
 	IWithFunctions
 

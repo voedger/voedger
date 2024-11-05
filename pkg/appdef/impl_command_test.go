@@ -18,7 +18,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 	wsName := NewQName("test", "workspace")
 	cmdName, parName, unlName, resName := NewQName("test", "cmd"), NewQName("test", "par"), NewQName("test", "unl"), NewQName("test", "res")
 
-	t.Run("must be ok to add command", func(t *testing.T) {
+	t.Run("should be ok to add command", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
@@ -30,7 +30,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 		cmd := wsb.AddCommand(cmdName)
 
-		t.Run("must be ok to assign cmd parameter and result", func(t *testing.T) {
+		t.Run("should be ok to assign cmd parameter and result", func(t *testing.T) {
 			cmd.SetEngine(ExtensionEngineKind_BuiltIn)
 			cmd.
 				SetParam(parName).
@@ -38,7 +38,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 			cmd.SetUnloggedParam(unlName)
 		})
 
-		t.Run("must be ok to build", func(t *testing.T) {
+		t.Run("should be ok to build", func(t *testing.T) {
 			a, err := adb.Build()
 			require.NoError(err)
 			require.NotNil(a)
@@ -49,17 +49,17 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 	require.NotNil(app)
 
-	testWithCommands := func(tested IWithCommands) {
+	testWithCommands := func(tested IWithTypes) {
 
-		t.Run("must be ok to find builded command", func(t *testing.T) {
-			typ := tested.(IWithTypes).Type(cmdName)
+		t.Run("should be ok to find builded command", func(t *testing.T) {
+			typ := tested.Type(cmdName)
 			require.Equal(TypeKind_Command, typ.Kind())
 
 			c, ok := typ.(ICommand)
 			require.True(ok)
 			require.Equal(TypeKind_Command, c.Kind())
 
-			cmd := tested.Command(cmdName)
+			cmd := Command(tested, cmdName)
 			require.Equal(TypeKind_Command, cmd.Kind())
 			require.Equal(cmdName.Entity(), cmd.Name())
 			require.Equal(c, cmd)
@@ -78,9 +78,9 @@ func Test_AppDef_AddCommand(t *testing.T) {
 			require.Equal(TypeKind_Object, cmd.Result().Kind())
 		})
 
-		t.Run("must be ok to enum commands", func(t *testing.T) {
+		t.Run("should be ok to enum commands", func(t *testing.T) {
 			cnt := 0
-			for c := range tested.Commands {
+			for c := range Commands(tested) {
 				cnt++
 				switch cnt {
 				case 1:
@@ -94,7 +94,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 		t.Run("check nil returns", func(t *testing.T) {
 			unknown := NewQName("test", "unknown")
-			require.Nil(tested.Command(unknown))
+			require.Nil(Command(tested, unknown))
 		})
 	}
 

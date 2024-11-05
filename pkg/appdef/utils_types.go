@@ -85,6 +85,29 @@ func CDocs(types ITypes) func(func(ICDoc) bool) {
 	}
 }
 
+// Returns Command by name.
+//
+// Returns nil if Command not found.
+func Command(types IFindType, name QName) ICommand {
+	if t := TypeByNameAndKind(types, name, TypeKind_Command); t != nil {
+		return t.(ICommand)
+	}
+	return nil
+}
+
+// Returns iterator over Commands.
+//
+// Command are visited in alphabetic order.
+func Commands(types ITypes) func(func(ICommand) bool) {
+	return func(visit func(ICommand) bool) {
+		for t := range TypesByKind(types, TypeKind_Command) {
+			if !visit(t.(ICommand)) {
+				break
+			}
+		}
+	}
+}
+
 // Returns CRecord by name.
 //
 // Returns nil if CRecord not found.

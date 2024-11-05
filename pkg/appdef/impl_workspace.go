@@ -59,21 +59,6 @@ func (ws *workspace) Ancestors(recurse bool) []QName {
 	return res
 }
 
-func (ws *workspace) Command(name QName) ICommand {
-	if t := TypeByNameAndKind(ws, name, TypeKind_Command); t != nil {
-		return t.(ICommand)
-	}
-	return nil
-}
-
-func (ws *workspace) Commands(visit func(ICommand) bool) {
-	for t := range TypesByKind(ws, TypeKind_Command) {
-		if !visit(t.(ICommand)) {
-			break
-		}
-	}
-}
-
 func (ws *workspace) Descriptor() QName {
 	if ws.desc != nil {
 		return ws.desc.QName()
