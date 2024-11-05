@@ -47,18 +47,6 @@ type IRoleBuilder interface {
 	RevokeAll(resources []QName, comment ...string) IRoleBuilder
 }
 
-type IWithRoles interface {
-	// Returns Role by name.
-	//
-	// Returns nil if not found.
-	Role(QName) IRole
-
-	// Enumerates all roles
-	//
-	// Roles are enumerated in alphabetical order by QName
-	Roles(func(IRole) bool)
-}
-
 type IRolesBuilder interface {
 	// Adds new Role type with specified name.
 	//

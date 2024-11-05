@@ -413,6 +413,29 @@ func Records(types ITypes) func(func(IRecord) bool) {
 	}
 }
 
+// Returns Role by name.
+//
+// Returns nil if Role not found.
+func Role(types IFindType, name QName) IRole {
+	if t := TypeByNameAndKind(types, name, TypeKind_Role); t != nil {
+		return t.(IRole)
+	}
+	return nil
+}
+
+// Returns iterator over Roles.
+//
+// Roles are visited in alphabetic order.
+func Roles(types ITypes) func(func(IRole) bool) {
+	return func(visit func(IRole) bool) {
+		for t := range TypesByKind(types, TypeKind_Role) {
+			if !visit(t.(IRole)) {
+				break
+			}
+		}
+	}
+}
+
 // Returns Singleton by name.
 //
 // Returns nil if Singleton not found.

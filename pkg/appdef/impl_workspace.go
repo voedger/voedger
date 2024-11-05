@@ -80,21 +80,6 @@ func (ws *workspace) Inherits(anc QName) bool {
 	return false
 }
 
-func (ws *workspace) Role(name QName) IRole {
-	if t := TypeByNameAndKind(ws, name, TypeKind_Role); t != nil {
-		return t.(IRole)
-	}
-	return nil
-}
-
-func (ws *workspace) Roles(visit func(IRole) bool) {
-	for t := range TypesByKind(ws, TypeKind_Role) {
-		if !visit(t.(IRole)) {
-			break
-		}
-	}
-}
-
 func (ws *workspace) Type(name QName) IType {
 	if t, ok := ws.types[name]; ok {
 		return t.(IType)
@@ -241,7 +226,7 @@ func (ws *workspace) appendType(t interface{}) {
 }
 
 func (ws *workspace) grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) {
-	r := ws.Role(toRole)
+	r := Role(ws, toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
 	}
@@ -249,7 +234,7 @@ func (ws *workspace) grant(ops []OperationKind, resources []QName, fields []Fiel
 }
 
 func (ws *workspace) grantAll(resources []QName, toRole QName, comment ...string) {
-	r := ws.Role(toRole)
+	r := Role(ws, toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
 	}
@@ -257,7 +242,7 @@ func (ws *workspace) grantAll(resources []QName, toRole QName, comment ...string
 }
 
 func (ws *workspace) revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) {
-	r := ws.Role(fromRole)
+	r := Role(ws, fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}
@@ -265,7 +250,7 @@ func (ws *workspace) revoke(ops []OperationKind, resources []QName, fields []Fie
 }
 
 func (ws *workspace) revokeAll(resources []QName, fromRole QName, comment ...string) {
-	r := ws.Role(fromRole)
+	r := Role(ws, fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}

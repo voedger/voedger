@@ -51,7 +51,7 @@ func ExampleIAppDefBuilder_AddRole() {
 	// how to enum roles
 	{
 		cnt := 0
-		for r := range app.Roles {
+		for r := range appdef.Roles(app) {
 			cnt++
 			fmt.Println(cnt, r)
 		}
@@ -60,25 +60,25 @@ func ExampleIAppDefBuilder_AddRole() {
 
 	// how to inspect builded AppDef with roles
 	{
-		reader := app.Role(readerRoleName)
+		reader := appdef.Role(app, readerRoleName)
 		fmt.Println(reader, ":")
 		for r := range reader.ACL {
 			fmt.Println("-", r)
 		}
 
-		writer := app.Role(writerRoleName)
+		writer := appdef.Role(app, writerRoleName)
 		fmt.Println(writer, ":")
 		for r := range writer.ACL {
 			fmt.Println("-", r)
 		}
 
-		adm := app.Role(admRoleName)
+		adm := appdef.Role(app, admRoleName)
 		fmt.Println(adm, ":")
 		for r := range adm.ACL {
 			fmt.Println("-", r)
 		}
 
-		intruder := app.Role(intruderRoleName)
+		intruder := appdef.Role(app, intruderRoleName)
 		fmt.Println(intruder, ":")
 		for r := range intruder.ACL {
 			fmt.Println("-", r)

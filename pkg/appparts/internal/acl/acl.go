@@ -19,7 +19,7 @@ func RecursiveRoleAncestors(role appdef.IRole) (roles appdef.QNames) {
 	roles.Add(role.QName())
 	app := role.App()
 	for _, r := range role.AncRoles() {
-		roles.Add(RecursiveRoleAncestors(app.Role(r))...)
+		roles.Add(RecursiveRoleAncestors(appdef.Role(app, r))...)
 	}
 	return roles
 }
@@ -67,7 +67,7 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 		return false, nil, appdef.ErrMissed("participants")
 	}
 	for _, r := range roles {
-		role := app.Role(r)
+		role := appdef.Role(app, r)
 		if role == nil {
 			return false, nil, appdef.ErrNotFound("role «%q»", r)
 		}

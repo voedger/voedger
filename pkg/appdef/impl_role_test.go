@@ -80,7 +80,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 		require.NotNil(app)
 	})
 
-	testWithRoles := func(tested IWithRoles) {
+	testWith := func(tested IWithTypes) {
 		t.Run("should be ok to enum roles", func(t *testing.T) {
 			type wantACL []struct {
 				policy PolicyKind
@@ -119,7 +119,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 			}
 
 			rolesCount := 0
-			for r := range tested.Roles {
+			for r := range Roles(tested) {
 				require.Equal(tt[rolesCount].name, r.QName())
 				wantACL := tt[rolesCount].wantACL
 				aclCount := 0
@@ -140,25 +140,25 @@ func Test_AppDef_AddRole(t *testing.T) {
 		})
 
 		t.Run("should be ok to find role", func(t *testing.T) {
-			r := tested.(IWithTypes).Type(workerRoleName)
+			r := tested.Type(workerRoleName)
 			require.Equal(TypeKind_Role, r.Kind())
 
-			role := tested.Role(workerRoleName)
+			role := Role(tested, workerRoleName)
 			require.Equal(r.(IRole), role)
 			require.Equal(workerRoleName, role.QName())
 			require.Equal(wsName, role.Workspace().QName())
 
-			require.Nil(tested.Role(NewQName("test", "unknown")), "should be nil if not found")
+			require.Nil(Role(tested, NewQName("test", "unknown")), "should be nil if not found")
 		})
 
 		t.Run("should be ok to get role inheritance", func(t *testing.T) {
-			roles := tested.Role(workerRoleName).AncRoles()
+			roles := Role(tested, workerRoleName).AncRoles()
 			require.Equal([]QName{readerRoleName, writerRoleName}, roles)
 		})
 	}
 
-	testWithRoles(app)
-	testWithRoles(app.Workspace(wsName))
+	testWith(app)
+	testWith(app.Workspace(wsName))
 }
 
 func Test_AppDef_AddRoleErrors(t *testing.T) {

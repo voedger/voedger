@@ -90,21 +90,6 @@ func (app *appDef) Rates(visit func(IRate) bool) {
 	}
 }
 
-func (app *appDef) Role(name QName) IRole {
-	if t := TypeByNameAndKind(app, name, TypeKind_Role); t != nil {
-		return t.(IRole)
-	}
-	return nil
-}
-
-func (app *appDef) Roles(visit func(IRole) bool) {
-	for t := range TypesByKind(app, TypeKind_Role) {
-		if !visit(t.(IRole)) {
-			break
-		}
-	}
-}
-
 func (app *appDef) Type(name QName) IType {
 	switch name {
 	case NullQName:

@@ -12,7 +12,6 @@ type IWorkspace interface {
 
 	IWithTypes
 
-	IWithRoles
 	IWithACL
 
 	// Returns names of ancestors workspaces.
