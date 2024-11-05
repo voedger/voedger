@@ -100,36 +100,6 @@ func (ws *workspace) Functions(visit func(IFunction) bool) {
 	}
 }
 
-func (ws *workspace) GDoc(name QName) IGDoc {
-	if t := TypeByNameAndKind(ws, name, TypeKind_GDoc); t != nil {
-		return t.(IGDoc)
-	}
-	return nil
-}
-
-func (ws *workspace) GDocs(visit func(IGDoc) bool) {
-	for t := range TypesByKind(ws, TypeKind_GDoc) {
-		if !visit(t.(IGDoc)) {
-			break
-		}
-	}
-}
-
-func (ws *workspace) GRecord(name QName) IGRecord {
-	if t := TypeByNameAndKind(ws, name, TypeKind_GRecord); t != nil {
-		return t.(IGRecord)
-	}
-	return nil
-}
-
-func (ws *workspace) GRecords(visit func(IGRecord) bool) {
-	for t := range TypesByKind(ws, TypeKind_GRecord) {
-		if !visit(t.(IGRecord)) {
-			break
-		}
-	}
-}
-
 func (ws *workspace) Inherits(anc QName) bool {
 	switch anc {
 	case SysWorkspaceQName, ws.QName():

@@ -56,19 +56,21 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 			app = a
 		})
 
-		require.Equal(fmt.Sprint(doc), fmt.Sprint(app.GDoc(docName)))
+		require.Equal(fmt.Sprint(doc), fmt.Sprint(GDoc(app, docName)))
 	})
 
 	require.NotNil(app)
 
-	testWithGDoc := func(tested IWithGDocs) {
+	testWith := func(tested IWithTypes) {
 
 		t.Run("should be ok to find builded doc", func(t *testing.T) {
-			doc := tested.GDoc(docName)
+			doc := GDoc(tested, docName)
 			require.Equal(TypeKind_GDoc, doc.Kind())
-			require.Equal(app.Type(docName), doc)
+			require.Equal(tested.Type(docName), doc)
 			require.NotPanics(func() { doc.isDoc() })
 			require.NotPanics(func() { doc.isGDoc() })
+
+			require.Equal(wsName, doc.Workspace().QName())
 
 			require.NotNil(doc.Field(SystemField_QName))
 			require.Equal(doc.SystemField_QName(), doc.Field(SystemField_QName))
@@ -85,7 +87,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 			require.Equal(TypeKind_GRecord, doc.Container("rec").Type().Kind())
 
 			t.Run("should be ok to find builded record", func(t *testing.T) {
-				rec := tested.GRecord(recName)
+				rec := GRecord(tested, recName)
 				require.Equal(TypeKind_GRecord, rec.Kind())
 				require.Equal(app.Type(recName), rec)
 				require.NotPanics(func() { rec.isGRecord() })
@@ -108,7 +110,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 		t.Run("should be ok to enumerate docs", func(t *testing.T) {
 			var docs []QName
-			for doc := range tested.GDocs {
+			for doc := range GDocs(tested) {
 				docs = append(docs, doc.QName())
 			}
 			require.Len(docs, 1)
@@ -116,7 +118,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 			t.Run("should be ok to enumerate recs", func(t *testing.T) {
 				var recs []QName
-				for rec := range tested.GRecords {
+				for rec := range GRecords(tested) {
 					recs = append(recs, rec.QName())
 				}
 				require.Len(recs, 1)
@@ -126,13 +128,13 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 		t.Run("check nil returns", func(t *testing.T) {
 			unknown := NewQName("test", "unknown")
-			require.Nil(tested.GDoc(unknown))
-			require.Nil(tested.GRecord(unknown))
+			require.Nil(GDoc(tested, unknown))
+			require.Nil(GRecord(tested, unknown))
 		})
 	}
 
-	testWithGDoc(app)
-	testWithGDoc(app.Workspace(wsName))
+	testWith(app)
+	testWith(app.Workspace(wsName))
 
 	t.Run("check nil returns", func(t *testing.T) {
 		unknown := NewQName("test", "unknown")

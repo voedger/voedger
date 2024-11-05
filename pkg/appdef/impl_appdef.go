@@ -76,36 +76,6 @@ func (app *appDef) Functions(visit func(IFunction) bool) {
 	}
 }
 
-func (app *appDef) GDoc(name QName) IGDoc {
-	if t := TypeByNameAndKind(app, name, TypeKind_GDoc); t != nil {
-		return t.(IGDoc)
-	}
-	return nil
-}
-
-func (app *appDef) GDocs(visit func(IGDoc) bool) {
-	for t := range TypesByKind(app, TypeKind_GDoc) {
-		if !visit(t.(IGDoc)) {
-			break
-		}
-	}
-}
-
-func (app *appDef) GRecord(name QName) IGRecord {
-	if t := TypeByNameAndKind(app, name, TypeKind_GRecord); t != nil {
-		return t.(IGRecord)
-	}
-	return nil
-}
-
-func (app *appDef) GRecords(visit func(IGRecord) bool) {
-	for t := range TypesByKind(app, TypeKind_GRecord) {
-		if !visit(t.(IGRecord)) {
-			break
-		}
-	}
-}
-
 func (app *appDef) Job(name QName) IJob {
 	if t := TypeByNameAndKind(app, name, TypeKind_Job); t != nil {
 		return t.(IJob)

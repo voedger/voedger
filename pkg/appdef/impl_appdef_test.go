@@ -181,8 +181,8 @@ func Test_EnumsBreakable(t *testing.T) {
 
 		testBreakable(t, "DataTypes", DataTypes(app), DataTypes(ws))
 
-		testBreakable(t, "GDocs", app.GDocs, ws.GDocs)
-		testBreakable(t, "GRecords", app.GRecords, ws.GRecords)
+		testBreakable(t, "GDocs", GDocs(app), GDocs(ws))
+		testBreakable(t, "GRecords", GRecords(app), GRecords(ws))
 
 		testBreakable(t, "CDocs", CDocs(app), CDocs(ws))
 		testBreakable(t, "CRecords", CRecords(app), CRecords(ws))

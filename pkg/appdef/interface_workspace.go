@@ -12,7 +12,6 @@ type IWorkspace interface {
 
 	IWithTypes
 
-	IWithGDocs
 	IWithWDocs
 	IWithODocs
 	IWithObjects

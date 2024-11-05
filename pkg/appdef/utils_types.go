@@ -154,6 +154,52 @@ func DataTypes(types ITypes) func(func(IData) bool) {
 	}
 }
 
+// Returns GDoc by name.
+//
+// Returns nil if GDoc not found.
+func GDoc(types IFindType, name QName) IGDoc {
+	if t := TypeByNameAndKind(types, name, TypeKind_GDoc); t != nil {
+		return t.(IGDoc)
+	}
+	return nil
+}
+
+// Returns iterator over GDocs.
+//
+// GDocs are visited in alphabetic order.
+func GDocs(types ITypes) func(func(IGDoc) bool) {
+	return func(visit func(IGDoc) bool) {
+		for t := range TypesByKind(types, TypeKind_GDoc) {
+			if !visit(t.(IGDoc)) {
+				break
+			}
+		}
+	}
+}
+
+// Returns GRecord by name.
+//
+// Returns nil if GRecord not found.
+func GRecord(types IFindType, name QName) IGRecord {
+	if t := TypeByNameAndKind(types, name, TypeKind_GRecord); t != nil {
+		return t.(IGRecord)
+	}
+	return nil
+}
+
+// Returns iterator over GRecords.
+//
+// GRecords are visited in alphabetic order.
+func GRecords(types ITypes) func(func(IGRecord) bool) {
+	return func(visit func(IGRecord) bool) {
+		for t := range TypesByKind(types, TypeKind_GRecord) {
+			if !visit(t.(IGRecord)) {
+				break
+			}
+		}
+	}
+}
+
 // Returns system Data type (sys.int32, sys.float654, etc.) by data kind.
 //
 // Returns nil if not found.
