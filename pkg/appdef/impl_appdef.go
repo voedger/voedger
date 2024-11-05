@@ -133,7 +133,7 @@ func (app *appDef) appendType(t interface{}) {
 	if name == NullQName {
 		panic(ErrMissed("%s type name", typ.Kind().TrimString()))
 	}
-	if TypeByName(app, name) != nil {
+	if app.Type(name).Kind() != TypeKind_null {
 		panic(ErrAlreadyExists("type «%v»", name))
 	}
 

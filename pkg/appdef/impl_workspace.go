@@ -193,8 +193,8 @@ func (ws *workspace) addRole(name QName) IRoleBuilder {
 
 // TODO: should be deprecated. All types should be added by specific methods.
 func (ws *workspace) addType(name QName) {
-	t := TypeByName(ws.app, name)
-	if t == nil {
+	t := ws.app.Type(name)
+	if t.Kind() == TypeKind_null {
 		panic(ErrTypeNotFound(name))
 	}
 

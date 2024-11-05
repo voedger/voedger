@@ -337,15 +337,10 @@ func validateTypeFields(t IType) (err error) {
 		// resolve reference types
 		for _, rf := range ff.RefFields() {
 			for _, n := range rf.Refs() {
-				refType := TypeByName(t.App(), n)
+				refType := Record(t.App(), n)
 				if refType == nil {
 					err = errors.Join(err,
-						ErrNotFound("%v reference field «%s» type «%v»", t, rf.Name(), n))
-					continue
-				}
-				if _, ok := refType.(IRecord); !ok {
-					err = errors.Join(err,
-						ErrInvalid("%v reference field «%s» type «%v» is not a record type", t, n, refType))
+						ErrNotFound("%v reference field «%s» to unknown table «%v»", t, rf.Name(), n))
 					continue
 				}
 			}

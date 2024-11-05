@@ -802,10 +802,10 @@ func (c *buildContext) defCtx() *defBuildContext {
 func (c *buildContext) checkReference(pkg *PackageSchemaAST, table *TableStmt) error {
 	appDef := c.adb.AppDef()
 
-	refTableType := appdef.TypeByName(appDef, appdef.NewQName(pkg.Name, string(table.Name)))
+	refTableType := appdef.Structure(appDef, appdef.NewQName(pkg.Name, string(table.Name)))
 	if refTableType == nil {
 		c.table(pkg, table)
-		refTableType = appdef.TypeByName(appDef, appdef.NewQName(pkg.Name, string(table.Name)))
+		refTableType = appdef.Structure(appDef, appdef.NewQName(pkg.Name, string(table.Name)))
 	}
 
 	if refTableType == nil {
@@ -815,7 +815,7 @@ func (c *buildContext) checkReference(pkg *PackageSchemaAST, table *TableStmt) e
 
 	for _, k := range canNotReferenceTo[c.defCtx().kind] {
 		if k == refTableType.Kind() {
-			return fmt.Errorf("table %s can not reference to table %s", c.defCtx().qname, refTableType.QName())
+			return fmt.Errorf("table %s can not reference to %v", c.defCtx().qname, refTableType)
 		}
 	}
 

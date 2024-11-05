@@ -445,7 +445,7 @@ func TestValidateRefFields(t *testing.T) {
 		t.Run("if reference field refs to non referable type", func(t *testing.T) {
 			_ = wsb.AddObject(objName)
 			_, err := adb.Build()
-			require.Error(err, require.Is(ErrInvalidError), require.Has(objName.String()))
+			require.Error(err, require.Is(ErrNotFoundError), require.Has(objName.String()))
 		})
 	})
 }

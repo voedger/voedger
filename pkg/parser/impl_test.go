@@ -1514,7 +1514,7 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 		appBld := appdef.New()
 		err = BuildAppDefs(packages, appBld)
 		require.Error(err)
-		require.Contains(err.Error(), "table test.CTable can not reference to table test.OTable")
+		require.Contains(err.Error(), "table test.CTable can not reference to ODoc «test.OTable»")
 	})
 }
 

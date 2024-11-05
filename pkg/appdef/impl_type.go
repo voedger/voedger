@@ -88,7 +88,10 @@ func (r *typeRef) target(tt IWithTypes) IType {
 		return AnyType
 	}
 	if (r.typ == nil) || (r.typ.QName() != r.name) {
-		r.typ = TypeByName(tt, r.name)
+		r.typ = nil
+		if t := tt.Type(r.name); t.Kind() != TypeKind_null {
+			r.typ = t
+		}
 	}
 	return r.typ
 }

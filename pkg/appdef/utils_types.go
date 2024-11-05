@@ -12,56 +12,6 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
-// Returns iterator over types by kind.
-//
-// Types are visited in alphabetic order.
-func TypesByKind[T IType](types ITypes, kind TypeKind) func(func(T) bool) {
-	return func(visit func(T) bool) {
-		for t := range types.Types {
-			if t.Kind() == kind {
-				if !visit(t.(T)) {
-					break
-				}
-			}
-		}
-	}
-}
-
-// Returns iterator over types by kinds set.
-//
-// Types are visited in alphabetic order.
-func TypesByKinds[T IType](types ITypes, kinds TypeKindSet) func(func(T) bool) {
-	return func(visit func(T) bool) {
-		for t := range types.Types {
-			if kinds.Contains(t.Kind()) {
-				if !visit(t.(T)) {
-					break
-				}
-			}
-		}
-	}
-}
-
-// Returns type by name.
-//
-// Returns nil if type not found.
-func TypeByName(types IFindType, name QName) IType {
-	if t := types.Type(name); t != NullType {
-		return t
-	}
-	return nil
-}
-
-// Returns type by name and kind.
-//
-// Returns nil if type not found.
-func TypeByNameAndKind[T IType](types IFindType, name QName, kind TypeKind) (found T) {
-	if t := types.Type(name); t.Kind() == kind {
-		found = t.(T)
-	}
-	return found
-}
-
 // Returns CDoc by name.
 //
 // Returns nil if CDoc not found.
@@ -122,12 +72,7 @@ func DataTypes(types ITypes) func(func(IData) bool) {
 //
 // Returns nil if Extension not found.
 func Extension(types IFindType, name QName) IExtension {
-	if t := TypeByName(types, name); t != nil {
-		if r, ok := t.(IExtension); ok {
-			return r
-		}
-	}
-	return nil
+	return TypeByName[IExtension](types, name)
 }
 
 // Returns iterator over Extensions.
@@ -141,12 +86,7 @@ func Extensions(types ITypes) func(func(IExtension) bool) {
 //
 // Returns nil if Function not found.
 func Function(types IFindType, name QName) IFunction {
-	if t := TypeByName(types, name); t != nil {
-		if r, ok := t.(IFunction); ok {
-			return r
-		}
-	}
-	return nil
+	return TypeByName[IFunction](types, name)
 }
 
 // Returns iterator over Functions.
@@ -300,12 +240,7 @@ func Rates(types ITypes) func(func(IRate) bool) {
 //
 // Returns nil if Record not found.
 func Record(types IFindType, name QName) IRecord {
-	if t := TypeByName(types, name); t != nil {
-		if r, ok := t.(IRecord); ok {
-			return r
-		}
-	}
-	return nil
+	return TypeByName[IRecord](types, name)
 }
 
 // Returns iterator over Records.
@@ -333,12 +268,8 @@ func Roles(types ITypes) func(func(IRole) bool) {
 //
 // Returns nil if Singleton not found.
 func Singleton(types IFindType, name QName) ISingleton {
-	if t := TypeByName(types, name); t != nil {
-		if s, ok := t.(ISingleton); ok {
-			if s.Singleton() {
-				return s
-			}
-		}
+	if s := TypeByName[ISingleton](types, name); (s != nil) && s.Singleton() {
+		return s
 	}
 	return nil
 }
@@ -362,12 +293,7 @@ func Singletons(types ITypes) func(func(ISingleton) bool) {
 //
 // Returns nil if Structure not found.
 func Structure(types IFindType, name QName) IStructure {
-	if t := TypeByName(types, name); t != nil {
-		if s, ok := t.(IStructure); ok {
-			return s
-		}
-	}
-	return nil
+	return TypeByName[IStructure](types, name)
 }
 
 // Returns iterator over Structures.
@@ -382,6 +308,58 @@ func Structures(types ITypes) func(func(IStructure) bool) {
 // Returns nil if not found.
 func SysData(types IFindType, k DataKind) IData {
 	return TypeByNameAndKind[IData](types, SysDataName(k), TypeKind_Data)
+}
+
+// Returns type by name.
+//
+// Returns nil if type not found.
+func TypeByName[T IType](types IFindType, name QName) (found T) {
+	if t := types.Type(name); t != NullType {
+		if r, ok := t.(T); ok {
+			found = r
+		}
+	}
+	return found
+}
+
+// Returns type by name and kind.
+//
+// Returns nil if type not found.
+func TypeByNameAndKind[T IType](types IFindType, name QName, kind TypeKind) (found T) {
+	if t := types.Type(name); t.Kind() == kind {
+		found = t.(T)
+	}
+	return found
+}
+
+// Returns iterator over types by kind.
+//
+// Types are visited in alphabetic order.
+func TypesByKind[T IType](types ITypes, kind TypeKind) func(func(T) bool) {
+	return func(visit func(T) bool) {
+		for t := range types.Types {
+			if t.Kind() == kind {
+				if !visit(t.(T)) {
+					break
+				}
+			}
+		}
+	}
+}
+
+// Returns iterator over types by kinds set.
+//
+// Types are visited in alphabetic order.
+func TypesByKinds[T IType](types ITypes, kinds TypeKindSet) func(func(T) bool) {
+	return func(visit func(T) bool) {
+		for t := range types.Types {
+			if kinds.Contains(t.Kind()) {
+				if !visit(t.(T)) {
+					break
+				}
+			}
+		}
+	}
 }
 
 // Returns View by name.
