@@ -37,7 +37,7 @@ func ExampleIFieldsBuilder_AddField() {
 
 	// how to inspect fields
 	{
-		doc := app.ODoc(docName)
+		doc := appdef.ODoc(app, docName)
 		fmt.Printf("%v, user field count: %v\n", doc, doc.UserFieldCount())
 
 		cnt := 0

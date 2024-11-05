@@ -144,36 +144,6 @@ func (ws *workspace) Objects(visit func(IObject) bool) {
 	}
 }
 
-func (ws *workspace) ODoc(name QName) IODoc {
-	if t := TypeByNameAndKind(ws, name, TypeKind_ODoc); t != nil {
-		return t.(IODoc)
-	}
-	return nil
-}
-
-func (ws *workspace) ODocs(visit func(IODoc) bool) {
-	for t := range TypesByKind(ws, TypeKind_ODoc) {
-		if !visit(t.(IODoc)) {
-			break
-		}
-	}
-}
-
-func (ws *workspace) ORecord(name QName) IORecord {
-	if t := TypeByNameAndKind(ws, name, TypeKind_ORecord); t != nil {
-		return t.(IORecord)
-	}
-	return nil
-}
-
-func (ws *workspace) ORecords(visit func(IORecord) bool) {
-	for t := range TypesByKind(ws, TypeKind_ORecord) {
-		if !visit(t.(IORecord)) {
-			break
-		}
-	}
-}
-
 func (ws *workspace) Projector(name QName) IProjector {
 	if t := TypeByNameAndKind(ws, name, TypeKind_Projector); t != nil {
 		return t.(IProjector)

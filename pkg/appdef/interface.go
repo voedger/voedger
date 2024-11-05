@@ -14,7 +14,6 @@ type IAppDef interface {
 
 	IWithTypes
 
-	IWithODocs
 	IWithObjects
 
 	IWithRecords

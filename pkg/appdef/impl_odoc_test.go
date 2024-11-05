@@ -41,15 +41,17 @@ func Test_AppDef_AddODoc(t *testing.T) {
 		app = a
 	})
 
-	testWithODocs := func(tested IWithODocs) {
+	testWith := func(tested IWithTypes) {
 		t.Run("should be ok to find builded doc", func(t *testing.T) {
-			typ := app.Type(docName)
+			typ := tested.Type(docName)
 			require.Equal(TypeKind_ODoc, typ.Kind())
 
-			doc := tested.ODoc(docName)
+			doc := ODoc(tested, docName)
 			require.Equal(TypeKind_ODoc, doc.Kind())
 			require.Equal(typ.(IODoc), doc)
 			require.NotPanics(func() { doc.isODoc() })
+
+			require.Equal(wsName, doc.Workspace().QName())
 
 			require.Equal(2, doc.UserFieldCount())
 			require.Equal(DataKind_int64, doc.Field("f1").DataKind())
@@ -60,10 +62,12 @@ func Test_AppDef_AddODoc(t *testing.T) {
 				typ := app.Type(recName)
 				require.Equal(TypeKind_ORecord, typ.Kind())
 
-				rec := tested.ORecord(recName)
+				rec := ORecord(tested, recName)
 				require.Equal(TypeKind_ORecord, rec.Kind())
 				require.Equal(typ.(IORecord), rec)
 				require.NotPanics(func() { rec.isORecord() })
+
+				require.Equal(wsName, rec.Workspace().QName())
 
 				require.Equal(2, rec.UserFieldCount())
 				require.Equal(DataKind_int64, rec.Field("f1").DataKind())
@@ -74,14 +78,14 @@ func Test_AppDef_AddODoc(t *testing.T) {
 
 		t.Run("should be ok to enumerate docs", func(t *testing.T) {
 			var docs []QName
-			for doc := range tested.ODocs {
+			for doc := range ODocs(tested) {
 				docs = append(docs, doc.QName())
 			}
 			require.Len(docs, 1)
 			require.Equal(docName, docs[0])
 			t.Run("should be ok to enumerate recs", func(t *testing.T) {
 				var recs []QName
-				for rec := range tested.ORecords {
+				for rec := range ORecords(tested) {
 					recs = append(recs, rec.QName())
 				}
 				require.Len(recs, 1)
@@ -91,11 +95,11 @@ func Test_AppDef_AddODoc(t *testing.T) {
 
 		t.Run("should nil if not found", func(t *testing.T) {
 			unknown := NewQName("test", "unknown")
-			require.Nil(tested.ODoc(unknown))
-			require.Nil(tested.ORecord(unknown))
+			require.Nil(ODoc(tested, unknown))
+			require.Nil(ORecord(tested, unknown))
 		})
 	}
 
-	testWithODocs(app)
-	testWithODocs(app.Workspace(wsName))
+	testWith(app)
+	testWith(app.Workspace(wsName))
 }

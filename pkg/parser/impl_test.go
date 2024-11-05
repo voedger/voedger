@@ -1884,7 +1884,7 @@ func Test_OdocCmdArgs(t *testing.T) {
 	require.Equal(appdef.Occurs(0), container.MinOccurs())
 	require.Equal(appdef.Occurs(100), container.MaxOccurs())
 
-	orec := app.ORecord(appdef.NewQName("app1", "orecord1"))
+	orec := appdef.ORecord(app, appdef.NewQName("app1", "orecord1"))
 	require.NotNil(orec)
 	require.Equal(1, orec.ContainerCount())
 	require.Equal("orecord2", orec.Container("orecord2").Name())

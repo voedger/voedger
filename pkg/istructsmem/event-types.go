@@ -128,7 +128,7 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 		}
 	} else {
 		// #!16208: Should be possible to use TypeKind_ODoc as Event.QName
-		if d := ev.appCfg.AppDef.ODoc(ev.name); d == nil {
+		if d := appdef.ODoc(ev.appCfg.AppDef, ev.name); d == nil {
 			// command function «test.object» not found
 			return arg, argUnl, fmt.Errorf("command function «%v» not found: %w", ev.name, ErrNameNotFound)
 		}

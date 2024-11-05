@@ -123,36 +123,6 @@ func (app *appDef) Objects(visit func(IObject) bool) {
 	}
 }
 
-func (app *appDef) ODoc(name QName) IODoc {
-	if t := TypeByNameAndKind(app, name, TypeKind_ODoc); t != nil {
-		return t.(IODoc)
-	}
-	return nil
-}
-
-func (app *appDef) ODocs(visit func(IODoc) bool) {
-	for t := range TypesByKind(app, TypeKind_ODoc) {
-		if !visit(t.(IODoc)) {
-			break
-		}
-	}
-}
-
-func (app *appDef) ORecord(name QName) IORecord {
-	if t := TypeByNameAndKind(app, name, TypeKind_ORecord); t != nil {
-		return t.(IORecord)
-	}
-	return nil
-}
-
-func (app *appDef) ORecords(visit func(IORecord) bool) {
-	for t := range TypesByKind(app, TypeKind_ORecord) {
-		if !visit(t.(IORecord)) {
-			break
-		}
-	}
-}
-
 func (app *appDef) PackageLocalName(path string) string {
 	return app.packages.localNameByPath(path)
 }

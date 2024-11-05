@@ -200,6 +200,52 @@ func GRecords(types ITypes) func(func(IGRecord) bool) {
 	}
 }
 
+// Returns ODoc by name.
+//
+// Returns nil if ODoc not found.
+func ODoc(types IFindType, name QName) IODoc {
+	if t := TypeByNameAndKind(types, name, TypeKind_ODoc); t != nil {
+		return t.(IODoc)
+	}
+	return nil
+}
+
+// Returns iterator over ODocs.
+//
+// ODocs are visited in alphabetic order.
+func ODocs(types ITypes) func(func(IODoc) bool) {
+	return func(visit func(IODoc) bool) {
+		for t := range TypesByKind(types, TypeKind_ODoc) {
+			if !visit(t.(IODoc)) {
+				break
+			}
+		}
+	}
+}
+
+// Returns ORecord by name.
+//
+// Returns nil if ORecord not found.
+func ORecord(types IFindType, name QName) IORecord {
+	if t := TypeByNameAndKind(types, name, TypeKind_ORecord); t != nil {
+		return t.(IORecord)
+	}
+	return nil
+}
+
+// Returns iterator over ORecords.
+//
+// ORecords are visited in alphabetic order.
+func ORecords(types ITypes) func(func(IORecord) bool) {
+	return func(visit func(IORecord) bool) {
+		for t := range TypesByKind(types, TypeKind_ORecord) {
+			if !visit(t.(IORecord)) {
+				break
+			}
+		}
+	}
+}
+
 // Returns system Data type (sys.int32, sys.float654, etc.) by data kind.
 //
 // Returns nil if not found.
@@ -245,7 +291,7 @@ func WRecord(types IFindType, name QName) IWRecord {
 
 // Returns iterator over WRecords.
 //
-// GRecords are visited in alphabetic order.
+// WRecords are visited in alphabetic order.
 func WRecords(types ITypes) func(func(IWRecord) bool) {
 	return func(visit func(IWRecord) bool) {
 		for t := range TypesByKind(types, TypeKind_WRecord) {

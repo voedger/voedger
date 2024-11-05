@@ -389,7 +389,7 @@ func Test_UserFields(t *testing.T) {
 	})
 
 	t.Run("should be ok to enumerate user fields", func(t *testing.T) {
-		doc := app.ODoc(docName)
+		doc := ODoc(app, docName)
 		require.Equal(3, doc.UserFieldCount())
 
 		require.Equal(doc.UserFieldCount(), func() int {
