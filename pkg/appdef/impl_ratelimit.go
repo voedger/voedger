@@ -55,13 +55,13 @@ func newLimit(app *appDef, ws *workspace, name QName, on []QName, rate QName, co
 	if rate == NullQName {
 		panic(ErrMissed("rate name"))
 	}
+	if len(on) == 0 {
+		panic(ErrMissed("limit objects names"))
+	}
 	l := &limit{
 		typ:  makeType(app, ws, name, TypeKind_Limit),
 		on:   on,
-		rate: app.Rate(rate),
-	}
-	if len(l.on) == 0 {
-		panic(ErrMissed("limit objects names"))
+		rate: Rate(app, rate),
 	}
 	if l.rate == nil {
 		panic(ErrNotFound("rate «%v»", rate))

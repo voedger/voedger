@@ -153,6 +153,10 @@ func (ws *workspace) addJob(name QName) IJobBuilder {
 	return newJobBuilder(r)
 }
 
+func (ws *workspace) addLimit(name QName, on []QName, rate QName, comment ...string) {
+	_ = newLimit(ws.app, ws, name, on, rate, comment...)
+}
+
 func (ws *workspace) addObject(name QName) IObjectBuilder {
 	o := newObject(ws.app, ws, name)
 	return newObjectBuilder(o)
@@ -176,6 +180,10 @@ func (ws *workspace) addProjector(name QName) IProjectorBuilder {
 func (ws *workspace) addQuery(name QName) IQueryBuilder {
 	q := newQuery(ws.app, ws, name)
 	return newQueryBuilder(q)
+}
+
+func (ws *workspace) addRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) {
+	_ = newRate(ws.app, ws, name, count, period, scopes, comment...)
 }
 
 func (ws *workspace) addRole(name QName) IRoleBuilder {
@@ -347,6 +355,10 @@ func (wb *workspaceBuilder) AddJob(name QName) IJobBuilder {
 	return wb.workspace.addJob(name)
 }
 
+func (wb *workspaceBuilder) AddLimit(name QName, on []QName, rate QName, comment ...string) {
+	wb.workspace.addLimit(name, on, rate, comment...)
+}
+
 func (wb *workspaceBuilder) AddObject(name QName) IObjectBuilder {
 	return wb.workspace.addObject(name)
 }
@@ -361,6 +373,10 @@ func (wb *workspaceBuilder) AddORecord(name QName) IORecordBuilder {
 
 func (wb *workspaceBuilder) AddProjector(name QName) IProjectorBuilder {
 	return wb.workspace.addProjector(name)
+}
+
+func (wb *workspaceBuilder) AddRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) {
+	wb.workspace.addRate(name, count, period, scopes, comment...)
 }
 
 func (wb *workspaceBuilder) AddRole(name QName) IRoleBuilder {

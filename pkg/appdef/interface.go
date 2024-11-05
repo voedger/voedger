@@ -15,9 +15,6 @@ type IAppDef interface {
 	IWithTypes
 
 	IWithACL
-
-	IWithRates
-	IWithLimits
 }
 
 type IAppDefBuilder interface {
@@ -25,9 +22,6 @@ type IAppDefBuilder interface {
 
 	IPackagesBuilder
 	IWorkspacesBuilder
-
-	IRatesBuilder
-	ILimitsBuilder
 
 	// Returns application definition while building.
 	//

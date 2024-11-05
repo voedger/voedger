@@ -18,6 +18,7 @@ func ExampleIAppDefBuilder_AddRate() {
 
 	// RATE test.rate 10 PER HOUR PER APP PARTITION PER IP
 
+	wsName := appdef.NewQName("test", "workspace")
 	rateName := appdef.NewQName("test", "rate")
 	limitName := appdef.NewQName("test", "limit")
 
@@ -26,8 +27,10 @@ func ExampleIAppDefBuilder_AddRate() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		adb.AddRate(rateName, 10, time.Hour, []appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, "10 times per hour per partition per IP")
-		adb.AddLimit(limitName, []appdef.QName{appdef.QNameAnyFunction}, rateName, "limit all commands and queries execution with test.rate")
+		wsb := adb.AddWorkspace(wsName)
+
+		wsb.AddRate(rateName, 10, time.Hour, []appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, "10 times per hour per partition per IP")
+		wsb.AddLimit(limitName, []appdef.QName{appdef.QNameAnyFunction}, rateName, "limit all commands and queries execution with test.rate")
 
 		app = adb.MustBuild()
 	}
@@ -36,7 +39,7 @@ func ExampleIAppDefBuilder_AddRate() {
 	{
 		fmt.Println("enum rates:")
 		cnt := 0
-		for r := range app.Rates {
+		for r := range appdef.Rates(app) {
 			cnt++
 			fmt.Println("-", cnt, r, fmt.Sprintf("%d per %v per %v", r.Count(), r.Period(), r.Scopes()))
 		}
@@ -47,7 +50,7 @@ func ExampleIAppDefBuilder_AddRate() {
 	{
 		fmt.Println("enum limits:")
 		cnt := 0
-		for l := range app.Limits {
+		for l := range appdef.Limits(app) {
 			cnt++
 			fmt.Println("-", cnt, l, fmt.Sprintf("on %v with %v", l.On(), l.Rate()))
 		}
@@ -57,11 +60,11 @@ func ExampleIAppDefBuilder_AddRate() {
 	// how to find rates and limits
 	{
 		fmt.Println("find rate:")
-		rate := app.Rate(rateName)
+		rate := appdef.Rate(app, rateName)
 		fmt.Println("-", rate, ":", rate.Comment())
 
 		fmt.Println("find limit:")
-		limit := app.Limit(limitName)
+		limit := appdef.Limit(app, limitName)
 		fmt.Println("-", limit, ":", limit.Comment())
 	}
 

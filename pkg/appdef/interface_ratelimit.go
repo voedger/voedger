@@ -38,18 +38,6 @@ type IRate interface {
 	Scopes() []RateScope
 }
 
-type IWithRates interface {
-	// Returns Rate by name.
-	//
-	// Returns nil if not found.
-	Rate(QName) IRate
-
-	// Enumerates all rates
-	//
-	// Rates are enumerated in alphabetical order by QName
-	Rates(func(IRate) bool)
-}
-
 type IRatesBuilder interface {
 	// Adds new Rate type with specified name.
 	//
@@ -67,18 +55,6 @@ type ILimit interface {
 	IType
 	On() QNames
 	Rate() IRate
-}
-
-type IWithLimits interface {
-	// Returns Limit by name.
-	//
-	// Returns nil if not found.
-	Limit(QName) ILimit
-
-	// Enumerates all limits
-	//
-	// Limits are enumerated in alphabetical order by QName
-	Limits(func(ILimit) bool)
 }
 
 type ILimitsBuilder interface {

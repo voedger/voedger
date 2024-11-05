@@ -42,21 +42,6 @@ func (app appDef) ACL(cb func(IACLRule) bool) {
 
 func (app appDef) FullQName(name QName) FullQName { return app.packages.fullQName(name) }
 
-func (app *appDef) Limit(name QName) ILimit {
-	if t := TypeByNameAndKind(app, name, TypeKind_Limit); t != nil {
-		return t.(ILimit)
-	}
-	return nil
-}
-
-func (app *appDef) Limits(visit func(ILimit) bool) {
-	for t := range TypesByKind(app, TypeKind_Limit) {
-		if !visit(t.(ILimit)) {
-			break
-		}
-	}
-}
-
 func (app appDef) LocalQName(name FullQName) QName { return app.packages.localQName(name) }
 
 func (app *appDef) PackageLocalName(path string) string {
@@ -73,21 +58,6 @@ func (app *appDef) PackageLocalNames() []string {
 
 func (app *appDef) Packages(cb func(local, path string) bool) {
 	app.packages.forEach(cb)
-}
-
-func (app *appDef) Rate(name QName) IRate {
-	if t := TypeByNameAndKind(app, name, TypeKind_Rate); t != nil {
-		return t.(IRate)
-	}
-	return nil
-}
-
-func (app *appDef) Rates(visit func(IRate) bool) {
-	for t := range TypesByKind(app, TypeKind_Rate) {
-		if !visit(t.(IRate)) {
-			break
-		}
-	}
 }
 
 func (app *appDef) Type(name QName) IType {
@@ -143,16 +113,8 @@ func (app *appDef) WorkspaceByDescriptor(name QName) IWorkspace {
 	return app.wsDesc[name]
 }
 
-func (app *appDef) addLimit(name QName, on []QName, rate QName, comment ...string) {
-	_ = newLimit(app, app.sysWS, name, on, rate, comment...)
-}
-
 func (app *appDef) addPackage(localName, path string) {
 	app.packages.add(localName, path)
-}
-
-func (app *appDef) addRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) {
-	_ = newRate(app, app.sysWS, name, count, period, scopes, comment...)
 }
 
 func (app *appDef) addWorkspace(name QName) IWorkspaceBuilder {
@@ -247,17 +209,9 @@ func newAppDefBuilder(app *appDef) *appDefBuilder {
 	}
 }
 
-func (ab *appDefBuilder) AddLimit(name QName, on []QName, rate QName, comment ...string) {
-	ab.app.addLimit(name, on, rate, comment...)
-}
-
 func (ab *appDefBuilder) AddPackage(localName, path string) IAppDefBuilder {
 	ab.app.addPackage(localName, path)
 	return ab
-}
-
-func (ab *appDefBuilder) AddRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) {
-	ab.app.addRate(name, count, period, scopes, comment...)
 }
 
 func (ab *appDefBuilder) AddWorkspace(name QName) IWorkspaceBuilder { return ab.app.addWorkspace(name) }

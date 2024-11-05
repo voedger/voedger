@@ -60,6 +60,9 @@ type IWorkspaceBuilder interface {
 	IRolesBuilder
 	IACLBuilder
 
+	IRatesBuilder
+	ILimitsBuilder
+
 	// Adds (includes) type to workspace. Type must be defined for application before.
 	//
 	// # Panics:

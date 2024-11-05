@@ -164,10 +164,10 @@ func Test_EnumsBreakable(t *testing.T) {
 		RevokeAll([]QName{cmd1Name})
 
 	rate1Name, rate2Name := NewQName("test", "Rate1"), NewQName("test", "Rate2")
-	adb.AddRate(rate1Name, 1, time.Second, []RateScope{RateScope_AppPartition})
-	adb.AddRate(rate2Name, 2, 2*time.Second, []RateScope{RateScope_IP})
-	adb.AddLimit(NewQName("test", "Limit1"), []QName{cmd1Name}, rate1Name)
-	adb.AddLimit(NewQName("test", "Limit2"), []QName{cmd2Name}, rate2Name)
+	wsb.AddRate(rate1Name, 1, time.Second, []RateScope{RateScope_AppPartition})
+	wsb.AddRate(rate2Name, 2, 2*time.Second, []RateScope{RateScope_IP})
+	wsb.AddLimit(NewQName("test", "Limit1"), []QName{cmd1Name}, rate1Name)
+	wsb.AddLimit(NewQName("test", "Limit2"), []QName{cmd2Name}, rate2Name)
 
 	app := adb.MustBuild()
 	require.NotNil(app)
@@ -216,8 +216,8 @@ func Test_EnumsBreakable(t *testing.T) {
 		testBreakable(t, "Roles", Roles(app), Roles(app))
 		testBreakable(t, "ACL", ACL(app), ACL(ws), ACL(Role(app, role1Name)))
 
-		testBreakable(t, "Rates", app.Rates)
-		testBreakable(t, "Limits", app.Limits)
+		testBreakable(t, "Rates", Rates(app), Rates(ws))
+		testBreakable(t, "Limits", Limits(app), Limits(ws))
 	})
 }
 

@@ -273,6 +273,29 @@ func Jobs(types ITypes) func(func(IJob) bool) {
 	}
 }
 
+// Returns Limit by name.
+//
+// Returns nil if Limit not found.
+func Limit(types IFindType, name QName) ILimit {
+	if t := TypeByNameAndKind(types, name, TypeKind_Limit); t != nil {
+		return t.(ILimit)
+	}
+	return nil
+}
+
+// Returns iterator over Limits.
+//
+// Limits are visited in alphabetic order.
+func Limits(types ITypes) func(func(ILimit) bool) {
+	return func(visit func(ILimit) bool) {
+		for t := range TypesByKind(types, TypeKind_Limit) {
+			if !visit(t.(ILimit)) {
+				break
+			}
+		}
+	}
+}
+
 // Returns Object by name.
 //
 // Returns nil if Object not found.
@@ -382,6 +405,29 @@ func Queries(types ITypes) func(func(IQuery) bool) {
 	return func(visit func(IQuery) bool) {
 		for t := range TypesByKind(types, TypeKind_Query) {
 			if !visit(t.(IQuery)) {
+				break
+			}
+		}
+	}
+}
+
+// Returns Rate by name.
+//
+// Returns nil if Rate not found.
+func Rate(types IFindType, name QName) IRate {
+	if t := TypeByNameAndKind(types, name, TypeKind_Rate); t != nil {
+		return t.(IRate)
+	}
+	return nil
+}
+
+// Returns iterator over Rates.
+//
+// Rates are visited in alphabetic order.
+func Rates(types ITypes) func(func(IRate) bool) {
+	return func(visit func(IRate) bool) {
+		for t := range TypesByKind(types, TypeKind_Rate) {
+			if !visit(t.(IRate)) {
 				break
 			}
 		}
