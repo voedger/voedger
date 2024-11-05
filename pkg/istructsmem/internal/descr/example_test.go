@@ -133,9 +133,7 @@ func Example() {
 		writer.GrantAll([]appdef.QName{cmdName, queryName}, "allow writer to execute all test functions")
 
 		wsb.AddCDoc(wsDescName).SetSingleton()
-		wsb.SetDescriptor(wsDescName).
-			AddType(readerName).
-			AddType(writerName)
+		wsb.SetDescriptor(wsDescName)
 
 		app, err := adb.Build()
 		if err != nil {

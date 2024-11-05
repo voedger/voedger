@@ -144,6 +144,14 @@ func (c *buildContext) workspaces() error {
 		if wb.w.Descriptor != nil {
 			wb.bld.SetDescriptor(wb.pkg.NewQName(wb.w.Descriptor.Name))
 		}
+
+		// TODO:
+		// if wb.w.inheritedWorkspaces != nil {
+		// 	for qn := range wb.w.inheritedWorkspaces {
+		// 		wb.bld.SetAncestors(qn)
+		// 	}
+		// }
+
 		for qn := range wb.w.nodes {
 			wb.bld.AddType(qn)
 		}

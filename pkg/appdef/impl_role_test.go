@@ -46,10 +46,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 		view.Value().AddField("vf_1", DataKind_string, false)
 
 		_ = wsb.AddCommand(cmdName)
-		wsb.AddType(cmdName)
-
 		_ = wsb.AddQuery(queryName)
-		wsb.AddType(queryName)
 
 		reader := wsb.AddRole(readerRoleName)
 		reader.Grant([]OperationKind{OperationKind_Select}, []QName{docName, viewName}, []FieldName{"field1"}, "grant select from doc & view to reader")

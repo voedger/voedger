@@ -31,7 +31,6 @@ func TestAddView(t *testing.T) {
 
 	docName := NewQName("test", "doc")
 	_ = wsb.AddCDoc(docName)
-	wsb.AddType(docName)
 
 	kbName := NewQName("test", "KB")
 	_ = wsb.AddData(kbName, DataKind_bytes, NullQName, MinLen(1), MaxLen(1024, "up to 1 KB"))

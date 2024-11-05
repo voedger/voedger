@@ -46,10 +46,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 		view.Value().AddField("vf_1", DataKind_string, false)
 
 		_ = wsb.AddCommand(cmdName)
-		wsb.AddType(cmdName)
-
 		_ = wsb.AddQuery(queryName)
-		wsb.AddType(queryName)
 
 		_ = wsb.AddRole(readerRoleName)
 		wsb.Grant([]OperationKind{OperationKind_Select}, []QName{docName, viewName}, []FieldName{"field1"}, readerRoleName, "grant select from doc & view to reader")
