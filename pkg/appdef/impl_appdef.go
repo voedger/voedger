@@ -218,21 +218,6 @@ func (app *appDef) Types(visit func(IType) bool) {
 	}
 }
 
-func (app *appDef) View(name QName) IView {
-	if t := TypeByNameAndKind(app, name, TypeKind_ViewRecord); t != nil {
-		return t.(IView)
-	}
-	return nil
-}
-
-func (app *appDef) Views(visit func(IView) bool) {
-	for t := range TypesByKind(app, TypeKind_ViewRecord) {
-		if !visit(t.(IView)) {
-			break
-		}
-	}
-}
-
 func (app *appDef) Workspace(name QName) IWorkspace {
 	if t := TypeByNameAndKind(app, name, TypeKind_Workspace); t != nil {
 		return t.(IWorkspace)

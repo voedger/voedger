@@ -210,21 +210,6 @@ func (ws *workspace) Validate() error {
 	return nil
 }
 
-func (ws *workspace) View(name QName) IView {
-	if t := TypeByNameAndKind(ws, name, TypeKind_ViewRecord); t != nil {
-		return t.(IView)
-	}
-	return nil
-}
-
-func (ws *workspace) Views(visit func(IView) bool) {
-	for t := range TypesByKind(ws, TypeKind_ViewRecord) {
-		if !visit(t.(IView)) {
-			break
-		}
-	}
-}
-
 func (ws *workspace) addCDoc(name QName) ICDocBuilder {
 	d := newCDoc(ws.app, ws, name)
 	return newCDocBuilder(d)

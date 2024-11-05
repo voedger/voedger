@@ -98,8 +98,8 @@ func TestAddView(t *testing.T) {
 		app = a
 	})
 
-	testWithViews_1 := func(tested IWithViews) {
-		view := tested.View(viewName)
+	testWith_1 := func(tested IWithTypes) {
+		view := View(tested, viewName)
 
 		t.Run("should be ok to read view", func(t *testing.T) {
 			require.Equal("test view", view.Comment())
@@ -260,10 +260,10 @@ func TestAddView(t *testing.T) {
 				require.Equal(v, view)
 			})
 
-			require.Nil(tested.View(NewQName("test", "unknown")), "should be nil if unknown view")
+			require.Nil(View(tested, NewQName("test", "unknown")), "should be nil if unknown view")
 
 			t.Run("should be nil if not view", func(t *testing.T) {
-				require.Nil(tested.View(docName))
+				require.Nil(View(tested, docName))
 
 				typ := tested.(IWithTypes).Type(docName)
 				require.NotNil(typ)
@@ -272,10 +272,21 @@ func TestAddView(t *testing.T) {
 				require.Nil(v)
 			})
 		})
+
+		t.Run("should be ok to enum views", func(t *testing.T) {
+			names := QNames{}
+			for v := range Views(tested) {
+				if !v.IsSystem() {
+					names.Add(v.QName())
+				}
+			}
+			require.Len(names, 1)
+			require.Contains(names, viewName)
+		})
 	}
 
-	testWithViews_1(app)
-	testWithViews_1(app.Workspace(wsName))
+	testWith_1(app)
+	testWith_1(app.Workspace(wsName))
 
 	t.Run("should be ok to add fields to view after app build", func(t *testing.T) {
 		vb.Key().PartKey().
@@ -305,8 +316,8 @@ func TestAddView(t *testing.T) {
 		app = a
 	})
 
-	testWithViews_2 := func(tested IWithViews) {
-		view := tested.View(viewName)
+	testWith_2 := func(tested IWithTypes) {
+		view := View(tested, viewName)
 
 		require.Equal(3, view.Key().PartKey().FieldCount())
 		require.Equal(3, view.Key().ClustCols().FieldCount())
@@ -366,8 +377,8 @@ func TestAddView(t *testing.T) {
 		require.Equal(view.Value().UserFieldCount()+1, cnt)
 	}
 
-	testWithViews_2(app)
-	testWithViews_2(app.Workspace(wsName))
+	testWith_2(app)
+	testWith_2(app.Workspace(wsName))
 }
 
 func TestViewValidate(t *testing.T) {

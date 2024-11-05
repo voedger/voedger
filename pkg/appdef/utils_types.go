@@ -360,6 +360,29 @@ func SysData(types IFindType, k DataKind) IData {
 	return nil
 }
 
+// Returns View by name.
+//
+// Returns nil if View not found.
+func View(types IFindType, name QName) IView {
+	if t := TypeByNameAndKind(types, name, TypeKind_ViewRecord); t != nil {
+		return t.(IView)
+	}
+	return nil
+}
+
+// Returns iterator over Views.
+//
+// Views are visited in alphabetic order.
+func Views(types ITypes) func(func(IView) bool) {
+	return func(visit func(IView) bool) {
+		for t := range TypesByKind(types, TypeKind_ViewRecord) {
+			if !visit(t.(IView)) {
+				break
+			}
+		}
+	}
+}
+
 // Returns WDoc by name.
 //
 // Returns nil if WDoc not found.

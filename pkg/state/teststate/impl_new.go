@@ -155,8 +155,7 @@ func (cts *CommandTestState) isSingletone(fQName IFullQName) bool {
 func (cts *CommandTestState) isView(fQName IFullQName) bool {
 	qName := cts.getQNameFromFQName(fQName)
 
-	iView := cts.appDef.View(qName)
-	return iView != nil
+	return appdef.View(cts.appDef, qName) != nil
 }
 
 func (cts *CommandTestState) putArgument() {

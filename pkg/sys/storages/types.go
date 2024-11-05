@@ -400,8 +400,8 @@ func (v *wsTypeVailidator) isStructureInt64FieldRecordID(name appdef.QName, fiel
 
 func (v *wsTypeVailidator) isViewInt64FieldRecordID(name appdef.QName, fieldName appdef.FieldName) bool {
 	app := v.appStructsFunc().AppDef()
-	rec := app.View(name)
-	field := rec.Field(fieldName)
+	view := appdef.View(app, name)
+	field := view.Field(fieldName)
 	if field == nil {
 		panic(errInt64FieldUndefined(fieldName))
 	}
