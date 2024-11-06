@@ -223,16 +223,6 @@ func (ws *workspace) addRole(name QName) IRoleBuilder {
 	return newRoleBuilder(role)
 }
 
-// TODO: should be deprecated. All types should be added by specific methods.
-func (ws *workspace) addType(name QName) {
-	t := ws.app.Type(name)
-	if t.Kind() == TypeKind_null {
-		panic(ErrTypeNotFound(name))
-	}
-
-	ws.types[name] = t
-}
-
 func (ws *workspace) addView(name QName) IViewBuilder {
 	v := newView(ws.app, ws, name)
 	return newViewBuilder(v)
@@ -437,12 +427,6 @@ func (wb *workspaceBuilder) AddRole(name QName) IRoleBuilder {
 
 func (wb *workspaceBuilder) AddQuery(name QName) IQueryBuilder {
 	return wb.workspace.addQuery(name)
-}
-
-// TODO: should be deprecated. All types should be added by specific methods.
-func (wb *workspaceBuilder) AddType(name QName) IWorkspaceBuilder {
-	wb.workspace.addType(name)
-	return wb
 }
 
 func (wb *workspaceBuilder) AddView(name QName) IViewBuilder {

@@ -33,7 +33,6 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 
 		t.Run("should be ok to add some object to workspace", func(t *testing.T) {
 			_ = wsb.AddObject(objName)
-			wsb.AddType(objName)
 		})
 
 		require.NotNil(wsb.Workspace(), "should be ok to get workspace definition before build")
@@ -106,14 +105,6 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 			adb.AddPackage("test", "test.com/test")
 			ws := adb.AddWorkspace(wsName)
 			require.Panics(func() { ws.SetDescriptor(NewQName("unknown", "type")) },
-				require.Is(ErrNotFoundError), require.Has("unknown.type"))
-		})
-
-		t.Run("if add unknown type to workspace", func(t *testing.T) {
-			adb := New()
-			adb.AddPackage("test", "test.com/test")
-			ws := adb.AddWorkspace(wsName)
-			require.Panics(func() { ws.AddType(NewQName("unknown", "type")) },
 				require.Is(ErrNotFoundError), require.Has("unknown.type"))
 		})
 	})
