@@ -229,6 +229,11 @@ type WorkspaceStmt struct {
 	// filled on the analysis stage
 	nodes               map[appdef.QName]workspaceNode
 	inheritedWorkspaces []*WorkspaceStmt
+	usedWorkspaces      []*WorkspaceStmt
+
+	// filled on build stage
+	qName   appdef.QName
+	builder appdef.IWorkspaceBuilder
 }
 
 type workspaceNode struct {
@@ -554,8 +559,10 @@ func (s TagStmt) GetName() string { return string(s.Name) }
 
 type UseWorkspaceStmt struct {
 	Statement
-	Workspace Identifier     `parser:"'USE' 'WORKSPACE' @@"`
-	useWs     *statementNode // filled on the analysis stage
+	Workspace Identifier `parser:"'USE' 'WORKSPACE' @@"`
+	// filled on the analysis stage
+	workspace workspaceAddr
+	useWs     *statementNode
 }
 
 /*type sequenceStmt struct {
@@ -813,7 +820,10 @@ type workspaceAddr struct {
 //   - if workspace statement is nil
 //   - if workspace builder not found.
 func (wsa workspaceAddr) mustBuilder(ctx *buildContext) appdef.IWorkspaceBuilder {
-	return ctx.mustWSBuilder(wsa.qName())
+	if wsa.workspace.builder == nil {
+		panic(fmt.Sprintf("workspace builder not found for %s", wsa.qName()))
+	}
+	return wsa.workspace.builder
 }
 
 // Return qualified name of the workspace.

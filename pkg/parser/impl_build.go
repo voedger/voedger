@@ -14,7 +14,6 @@ import (
 type buildContext struct {
 	basicContext
 	adb              appdef.IAppDefBuilder
-	wsBuilders       map[appdef.QName]appdef.IWorkspaceBuilder
 	defs             []defBuildContext
 	variableResolver IVariableResolver
 }
@@ -25,9 +24,8 @@ func newBuildContext(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) *bu
 			app:  appSchema,
 			errs: make([]error, 0),
 		},
-		adb:        builder,
-		wsBuilders: make(map[appdef.QName]appdef.IWorkspaceBuilder),
-		defs:       make([]defBuildContext, 0),
+		adb:  builder,
+		defs: make([]defBuildContext, 0),
 	}
 }
 
@@ -72,26 +70,17 @@ func supported(stmt interface{}) bool {
 	return true
 }
 
-// Return workspace builder by ws name.
-//
-// # Panics:
-//   - if workspace builder not found.
-func (c buildContext) mustWSBuilder(ws appdef.QName) appdef.IWorkspaceBuilder {
-	wsb, ok := c.wsBuilders[ws]
-	if !ok {
-		panic(fmt.Sprintf("workspace «%v» builder not found", ws))
-	}
-	return wsb
-}
-
+// Prepares workspaces builders.
+// First should be called during build stage, then w.builder should be used in next steps.
 func (c *buildContext) prepareWSBuilders() {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(w *WorkspaceStmt, ictx *iterateCtx) {
-			switch ws := schema.NewQName(w.Name); ws {
+			w.qName = schema.NewQName(w.Name)
+			switch w.qName {
 			case appdef.SysWorkspaceQName:
-				c.wsBuilders[ws] = c.adb.AlterWorkspace(ws)
+				w.builder = c.adb.AlterWorkspace(w.qName)
 			default:
-				c.wsBuilders[ws] = c.adb.AddWorkspace(ws)
+				w.builder = c.adb.AddWorkspace(w.qName)
 			}
 		})
 	}
@@ -129,9 +118,7 @@ func (c *buildContext) workspaces() error {
 
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(w *WorkspaceStmt, ictx *iterateCtx) {
-			qname := schema.NewQName(w.Name)
-			bld := c.wsBuilders[qname]
-			wsBuilders = append(wsBuilders, wsBuilder{w, bld, schema})
+			wsBuilders = append(wsBuilders, wsBuilder{w, w.builder, schema})
 		})
 	}
 
@@ -145,16 +132,17 @@ func (c *buildContext) workspaces() error {
 			wb.bld.SetDescriptor(wb.pkg.NewQName(wb.w.Descriptor.Name))
 		}
 
-		// TODO:
-		// if wb.w.inheritedWorkspaces != nil {
-		// 	for qn := range wb.w.inheritedWorkspaces {
-		// 		wb.bld.SetAncestors(qn)
-		// 	}
-		// }
-
-		for qn := range wb.w.nodes {
-			wb.bld.AddType(qn)
+		for _, ancWS := range wb.w.inheritedWorkspaces {
+			wb.bld.SetAncestors(ancWS.qName)
 		}
+
+		for _, usedWS := range wb.w.usedWorkspaces {
+			wb.bld.UseWorkspace(usedWS.qName)
+		}
+
+		// for qn := range wb.w.nodes {
+		// 	wb.bld.AddType(qn)
+		// }
 	}
 	return nil
 }

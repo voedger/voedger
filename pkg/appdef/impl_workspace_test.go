@@ -95,6 +95,8 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 			}())
 		})
 
+		require.Equal(ws, ws.Type(wsName).(IWorkspace), "should be ok to get workspace by type")
+
 		require.Nil(app.Workspace(NewQName("unknown", "workspace")), "must be nil if unknown workspace")
 	})
 
@@ -479,6 +481,134 @@ func Test_WorkspaceInheritance(t *testing.T) {
 					}
 				}
 			}
+		})
+	})
+}
+
+func Test_WorkspaceUsage(t *testing.T) {
+	const wsCount = 7
+
+	require := require.New(t)
+
+	// WS0 —─► WS1 ──► WS2     ┌———————┐
+	//  │              |       |       |
+	//  │              ▼       ▼       |
+	//  └─———► WS3 ──► WS4 ──► WS5 ──► WS6
+
+	wsName := func(idx int) QName { return NewQName("test", fmt.Sprintf("ws%d", idx)) }
+	objName := func(idx int) QName { return NewQName("test", fmt.Sprintf("obj%d", idx)) }
+
+	testADB := func() IAppDefBuilder {
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+
+		for i := 0; i < wsCount; i++ {
+			ws := adb.AddWorkspace(wsName(i))
+			_ = ws.AddObject(objName(i))
+		}
+
+		useWS := func(idx int, use []int) {
+			ws := adb.AlterWorkspace(wsName(idx))
+			if len(use) > 0 {
+				useNames := make([]QName, len(use), len(use))
+				for i, a := range use {
+					useNames[i] = wsName(a)
+				}
+				ws.UseWorkspace(useNames[0], useNames[1:]...)
+			}
+		}
+
+		useWS(0, []int{1, 3})
+		useWS(1, []int{2})
+		useWS(2, []int{4})
+
+		useWS(3, []int{4})
+		useWS(4, []int{5})
+		useWS(5, []int{6})
+		useWS(6, []int{5})
+
+		return adb
+	}
+
+	var app IAppDef
+
+	t.Run("should be ok to add workspaces with usages", func(t *testing.T) {
+		adb := testADB()
+		a, err := adb.Build()
+		require.NoError(err)
+		app = a
+	})
+
+	t.Run("should be ok to to read workspace usage", func(t *testing.T) {
+		tests := [wsCount]struct {
+			use []int
+		}{
+			{[]int{1, 3}}, //0
+			{[]int{2}},    //1
+			{[]int{4}},    //2
+			{[]int{4}},    //3
+			{[]int{5}},    //4
+			{[]int{6}},    //5
+			{[]int{5}},    //6
+		}
+		for idx, test := range tests {
+			ws := app.Workspace(wsName(idx))
+			want := make([]QName, len(test.use), len(test.use))
+			for i, a := range test.use {
+				want[i] = wsName(a)
+			}
+			got := ws.UsedWorkspaces()
+			require.EqualValues(want, got, "unexpected usages for «%v»: want %v, got: %v", ws, want, got)
+		}
+	})
+
+	t.Run("should be ok to read objects from usages", func(t *testing.T) {
+		tests := [wsCount]struct {
+			use []int
+		}{
+			{[]int{0, 1, 2, 3, 4, 5, 6}}, //0
+			{[]int{1, 2, 4, 5, 6}},       //1
+			{[]int{2, 4, 5, 6}},          //2
+			{[]int{3, 4, 5, 6}},          //3
+			{[]int{4, 5, 6}},             //4
+			{[]int{5, 6}},                //5
+			{[]int{6, 5}},                //6
+		}
+		for idx, test := range tests {
+			ws := app.Workspace(wsName(idx))
+			for i := 0; i < wsCount; i++ {
+				obj := Object(ws, objName(i))
+				if slices.Contains(test.use, i) {
+					require.NotNil(obj, "should be ok to find object «%v» in %v", objName(i), ws)
+				} else {
+					require.Nil(obj, "object «%v» should be unknown in %v", objName(i), ws)
+				}
+			}
+		}
+	})
+
+	t.Run("should be panics", func(t *testing.T) {
+		t.Run("if used workspace is not found", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
+
+			ws := adb.AddWorkspace(wsName(0))
+			unknown := NewQName("test", "unknown")
+			require.Panics(func() { ws.UseWorkspace(unknown) },
+				require.Is(ErrNotFoundError), require.Has(unknown))
+			require.Panics(func() { ws.UseWorkspace(SysData_QName) },
+				require.Is(ErrNotFoundError), require.Has(SysData_QName))
+		})
+
+		t.Run("if workspace used twice", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
+
+			ws := adb.AddWorkspace(wsName(0))
+			_ = adb.AddWorkspace(wsName(1))
+			ws.UseWorkspace(wsName(1))
+			require.Panics(func() { ws.UseWorkspace(wsName(1)) },
+				require.Is(ErrAlreadyExistsError), require.Has(wsName(0)), require.Has(wsName(1)))
 		})
 	})
 }

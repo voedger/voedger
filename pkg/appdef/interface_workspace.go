@@ -35,6 +35,11 @@ type IWorkspace interface {
 	// 	- if one of the direct ancestors has the specified name or
 	// 	- if one of the ancestors of the ancestors (recursively) has the specified name.
 	Inherits(QName) bool
+
+	// Returns names of used workspaces.
+	//
+	// Used workspaces enumerated in alphabetic order.
+	UsedWorkspaces() []QName
 }
 
 type IWorkspaceBuilder interface {
@@ -88,6 +93,13 @@ type IWorkspaceBuilder interface {
 	//	- if name is not defined for application
 	//	- if name is not CDoc
 	SetDescriptor(QName) IWorkspaceBuilder
+
+	// Adds used workspace.
+	//
+	// # Panics:
+	//	- if used workspace is not found,
+	//	- if workspace already used.
+	UseWorkspace(QName, ...QName) IWorkspaceBuilder
 
 	// Returns workspace definition while building.
 	//

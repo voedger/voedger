@@ -135,6 +135,15 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 	for _, p := range packages {
 		ictx.setPkg(p)
 		iterateContext(ictx, func(stmt interface{}, ictx *iterateCtx) {
+			if v, ok := stmt.(*UseWorkspaceStmt); ok {
+				analyzeUsedWorkspaces(v, ictx)
+			}
+		})
+	}
+	// Pass 6
+	for _, p := range packages {
+		ictx.setPkg(p)
+		iterateContext(ictx, func(stmt interface{}, ictx *iterateCtx) {
 			switch v := stmt.(type) {
 			case *GrantStmt:
 				analyseGrant(v, ictx)
@@ -452,6 +461,7 @@ func analyseRevoke(revoke *RevokeStmt, c *iterateCtx) {
 }
 
 func analyseUseWorkspace(u *UseWorkspaceStmt, c *iterateCtx) {
+	u.workspace = c.mustCurrentWorkspace()
 	resolveFunc := func(f *WorkspaceStmt, pkg *PackageSchemaAST) error {
 		if f.Abstract {
 			return ErrUseOfAbstractWorkspace(string(u.Workspace.Value))
@@ -1160,6 +1170,14 @@ func includeFromInheritedWorkspaces(ws *WorkspaceStmt, c *iterateCtx) {
 		}
 	}
 	addFromInheritedWs(ws, c.wsCtxs[ws])
+}
+
+func analyzeUsedWorkspaces(uws *UseWorkspaceStmt, _ *iterateCtx) {
+	if ws := uws.workspace.workspace; ws != nil {
+		if usedWS, ok := uws.useWs.Stmt.(*WorkspaceStmt); ok {
+			ws.usedWorkspaces = append(ws.usedWorkspaces, usedWS)
+		}
+	}
 }
 
 func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c *iterateCtx) {
