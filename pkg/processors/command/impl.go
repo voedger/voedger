@@ -695,9 +695,10 @@ func (cmdProc *cmdProc) writeCUDs(_ context.Context, work pipeline.IWorkpiece) (
 		} else {
 			cud = cmd.reb.CUDBuilder().Update(parsedCUD.existingRecord)
 		}
-		if err := coreutils.MapToObject(parsedCUD.fields, cud); err != nil {
-			return parsedCUD.xPath.Error(err)
-		}
+		cud.PutFromJSON(parsedCUD.fields)
+		// if err := coreutils.MapToObject(parsedCUD.fields, cud); err != nil {
+		// 	return parsedCUD.xPath.Error(err)
+		// }
 	}
 	return nil
 }

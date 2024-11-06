@@ -54,7 +54,7 @@ func MapToObject(data map[string]interface{}, rw istructs.IRowWriter) (err error
 	return nil
 }
 
-func MergeMapsMakeFloats64(toMergeMaps ...map[string]interface{}) (res map[string]interface{}) {
+func MergeMaps(toMergeMaps ...map[string]interface{}) (res map[string]interface{}) {
 	res = map[string]interface{}{}
 	for _, toMergeMap := range toMergeMaps {
 		maps.Copy(res, toMergeMap)
