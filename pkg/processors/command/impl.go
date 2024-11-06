@@ -431,7 +431,7 @@ func getArgsObject(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		return nil
 	}
 	aob := cmd.reb.ArgumentObjectBuilder()
-	args, exists, err :=  cmd.requestData.AsObject("args")
+	args, exists, err := cmd.requestData.AsObject("args")
 	if err != nil {
 		return err
 	}
@@ -695,10 +695,9 @@ func (cmdProc *cmdProc) writeCUDs(_ context.Context, work pipeline.IWorkpiece) (
 		} else {
 			cud = cmd.reb.CUDBuilder().Update(parsedCUD.existingRecord)
 		}
-		cud.PutFromJSON(parsedCUD.fields)
-		// if err := coreutils.MapToObject(parsedCUD.fields, cud); err != nil {
-		// 	return parsedCUD.xPath.Error(err)
-		// }
+		if err := coreutils.MapToObject(parsedCUD.fields, cud); err != nil {
+			return parsedCUD.xPath.Error(err)
+		}
 	}
 	return nil
 }
