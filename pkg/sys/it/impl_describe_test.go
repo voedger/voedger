@@ -48,7 +48,7 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 			require.Contains(types, "app2pkg.doc1")
 			require.Contains(types, "app2pkg.testCmd")
 			require.Contains(types, "app2pkg.test_ws")
-			require.Greater(len(types), 3)
+			require.Equal(len(types), 3)
 		})
 
 		t.Run("check other package description", func(t *testing.T) {
