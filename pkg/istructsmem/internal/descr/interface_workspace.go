@@ -9,6 +9,13 @@ import "github.com/voedger/voedger/pkg/appdef"
 
 type Workspace struct {
 	Type
-	Descriptor *appdef.QName `json:",omitempty"`
-	Types      appdef.QNames `json:",omitempty"`
+	Descriptor *appdef.QName               `json:",omitempty"`
+	DataTypes  map[appdef.QName]*Data      `json:",omitempty"`
+	Structures map[appdef.QName]*Structure `json:",omitempty"`
+	Views      map[appdef.QName]*View      `json:",omitempty"`
+	Extensions *Extensions                 `json:",omitempty"`
+	Roles      map[appdef.QName]*Role      `json:",omitempty"`
+	ACL        *ACL                        `json:",omitempty"`
+	Rates      map[appdef.QName]*Rate      `json:",omitempty"`
+	Limits     map[appdef.QName]*Limit     `json:",omitempty"`
 }
