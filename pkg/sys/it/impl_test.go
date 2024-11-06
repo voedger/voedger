@@ -404,25 +404,24 @@ func TestNullability_SetEmptyObject(t *testing.T) {
 	as, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
-	body := `{"cuds":[{"fields":{"sys.QName":"app1pkg.air_table_plan","sys.ID":1,"name":"test","air_table_plan_item":[{"form":42}]}}]}`
+	body := `{"cuds": [
+		{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.air_table_plan"}},
+		{"fields": {"sys.ID": 2,"sys.ParentID": 1,"sys.QName": "app1pkg.air_table_plan_item","sys.Container": "air_table_plan_item","id_air_table_plan": 1,"form": 15}}
+	]}`
 	resp := vit.PostWS(ws, "c.sys.CUD", body)
 	offsCreate := resp.CurrentWLogOffset
-	docID := resp.NewID()
-	checked := false
+	fields := map[string]interface{}{}
+	expectedNestedDocID := resp.NewIDs["1"]
 	as.Events().ReadWLog(context.Background(), ws.WSID, offsCreate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		for cud := range event.CUDs {
 			cud.ModifiedFields(func(fn appdef.FieldName, i interface{}) bool {
-				if checked {
-					t.Fail()
-				}
-				checked = true
-				require.Equal("name", fn)
-				require.EqualValues("test", i)
+				fields[fn] = i
 				return true
 			})
 		}
 		return nil
 	})
-	require.True(checked)
-	_ = docID
+	require.Len(fields, 2)
+	require.EqualValues(expectedNestedDocID, fields["id_air_table_plan"])
+	require.EqualValues(15, fields["form"])
 }
