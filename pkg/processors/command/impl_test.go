@@ -186,7 +186,6 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 		wsb.AddCRecord(testCRecord)
 		wsb.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
 		wsb.AddWDoc(testWDoc)
-		wsb.AddType(testWDoc)
 		wsb.AddCommand(cudQName)
 
 		failingProjQName := appdef.NewQName(appdef.SysPackage, "Failer")
