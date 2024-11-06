@@ -3,7 +3,9 @@
 
 IMPORT SCHEMA 'mypkg1';
 
-TABLE MyTable2 INHERITS ODoc (
-    myfield3 ref(mypkg1.MyTable1) NOT NULL, -- incompatibility: OrderChanged
-    myfield2 int32 NOT NULL -- incompatibility: OrderChanged
+WORKSPACE MyWS1 (
+    TABLE MyTable2 INHERITS ODoc (
+        myfield3 ref(mypkg1.MyTable1) NOT NULL, -- incompatibility: OrderChanged
+        myfield2 int32 NOT NULL -- incompatibility: OrderChanged
+    );
 );
