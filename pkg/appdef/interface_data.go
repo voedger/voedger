@@ -64,24 +64,6 @@ type IDataBuilder interface {
 	AddConstraints(c ...IConstraint) IDataBuilder
 }
 
-// Data types interface.
-type IWithDataTypes interface {
-	// Return data type by name.
-	//
-	// Returns nil if not found.
-	Data(QName) IData
-
-	// Enumerates all application data types.
-	//
-	// Data types are enumerated in alphabetical order by QName.
-	DataTypes(func(IData) bool)
-
-	// Returns system data type (sys.int32, sys.float654, etc.) by data kind.
-	//
-	// Returns nil if not found.
-	SysData(DataKind) IData
-}
-
 // Data types builder interface.
 type IDataTypesBuilder interface {
 	// Adds new data type with specified name and kind.

@@ -23,9 +23,9 @@ type extension struct {
 	intents *storages
 }
 
-func makeExtension(app *appDef, name QName, kind TypeKind) extension {
+func makeExtension(app *appDef, ws *workspace, name QName, kind TypeKind) extension {
 	e := extension{
-		typ:     makeType(app, name, kind),
+		typ:     makeType(app, ws, name, kind),
 		name:    name.Entity(),
 		engine:  ExtensionEngineKind_BuiltIn,
 		states:  newStorages(app),

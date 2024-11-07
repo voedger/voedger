@@ -24,9 +24,10 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 
 		appDef := func() appdef.IAppDef {
 			adb := appdef.New()
+			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
 			addObject := func(n appdef.QName) {
-				adb.AddObject(n).
+				wsb.AddObject(n).
 					AddField("id_lower_case_name", appdef.DataKind_RecordID, false)
 			}
 
@@ -38,7 +39,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 			addObject(appdef.NewQName("s", "deep_children_1"))
 			addObject(appdef.NewQName("s", "very_deep_children_1"))
 
-			adb.AddObject(qNameXLowerCase).
+			wsb.AddObject(qNameXLowerCase).
 				AddField("name", appdef.DataKind_string, false)
 
 			app, err := adb.Build()

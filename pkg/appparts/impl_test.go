@@ -101,11 +101,13 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		prj := adb.AddProjector(prj1name)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		prj := wsb.AddProjector(prj1name)
 		prj.SetSync(false)
 		prj.Events().Add(appdef.QNameAnyCommand, appdef.ProjectorEventKind_Execute)
 
-		job := adb.AddJob(job1name)
+		job := wsb.AddJob(job1name)
 		job.SetCronSchedule("@every 1s")
 
 		return adb, adb.MustBuild()
@@ -184,11 +186,13 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 
-			prj := adb.AddProjector(prj2name)
+			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+			prj := wsb.AddProjector(prj2name)
 			prj.SetSync(false)
 			prj.Events().Add(appdef.QNameAnyCommand, appdef.ProjectorEventKind_Execute)
 
-			job := adb.AddJob(job2name)
+			job := wsb.AddJob(job2name)
 			job.SetCronSchedule("@every 1s")
 
 			return adb.MustBuild()

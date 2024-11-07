@@ -26,8 +26,8 @@ func ProvideSyncActualizerFactory() SyncActualizerFactory {
 	return syncActualizerFactory
 }
 
-func ProvideViewDef(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc ViewTypeBuilder) {
-	provideViewDefImpl(appDef, qname, buildFunc)
+func ProvideViewDef(wsb appdef.IWorkspaceBuilder, qname appdef.QName, buildFunc ViewTypeBuilder) {
+	provideViewDefImpl(wsb, qname, buildFunc)
 }
 
 func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, secretReader isecrets.ISecretReader,
@@ -35,7 +35,7 @@ func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, se
 	return func(appStructs istructs.IAppStructs, partitionID istructs.PartitionID) pipeline.ISyncOperator {
 		projectors := maps.Clone(appStructs.SyncProjectors())
 		for _, projector := range statelessResources.Projectors {
-			if appStructs.AppDef().Projector(projector.Name).Sync() {
+			if appdef.Projector(appStructs.AppDef(), projector.Name).Sync() {
 				projectors[projector.Name] = projector
 			}
 		}

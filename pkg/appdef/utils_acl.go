@@ -12,6 +12,13 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
+// Returns iterator over ACL rules.
+//
+// ACL Rules are visited in the order they are added.
+func ACL(acl IWithACL) func(func(IACLRule) bool) {
+	return acl.ACL
+}
+
 // Returns "grant" if policy is allow, "revoke" if deny
 func (p PolicyKind) ActionString() string {
 	switch p {
@@ -106,12 +113,12 @@ func validateACLResourceNames(tt IWithTypes, names ...QName) (QNames, error) {
 	onType := TypeKind_null
 
 	for _, n := range nn {
-		t := tt.TypeByName(n)
-		if t == nil {
-			return nil, ErrTypeNotFound(n)
-		}
+		t := tt.Type(n)
 		k := onType
+
 		switch t.Kind() {
+		case TypeKind_null:
+			return nil, ErrTypeNotFound(n)
 		case TypeKind_GRecord, TypeKind_GDoc,
 			TypeKind_CRecord, TypeKind_CDoc,
 			TypeKind_WRecord, TypeKind_WDoc,
@@ -124,7 +131,7 @@ func validateACLResourceNames(tt IWithTypes, names ...QName) (QNames, error) {
 		case TypeKind_Role:
 			k = TypeKind_Role
 		default:
-			return nil, ErrIncompatible("type «%v» can not to be used in ACL", t)
+			return nil, ErrIncompatible("%v can not to be used in ACL", t)
 		}
 
 		if onType != k {

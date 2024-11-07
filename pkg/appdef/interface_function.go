@@ -39,15 +39,3 @@ type IFunctionBuilder interface {
 	// If QNameANY passed then it means that result may be any.
 	SetResult(QName) IFunctionBuilder
 }
-
-type IWithFunctions interface {
-	// Return function by name.
-	//
-	// Returns nil if not found.
-	Function(QName) IFunction
-
-	// Enumerates all application functions (commands & queries)
-	//
-	// Functions are enumerated in alphabetical order by QName
-	Functions(func(IFunction) bool)
-}

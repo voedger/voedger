@@ -33,8 +33,10 @@ func Test_KeyType(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		t.Run("must be ok to build view", func(t *testing.T) {
-			view := adb.AddView(viewName)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		t.Run("should be ok to build view", func(t *testing.T) {
+			view := wsb.AddView(viewName)
 			view.Key().PartKey().
 				AddField("pk_int32", appdef.DataKind_int32).
 				AddField("pk_int64", appdef.DataKind_int64).
@@ -133,7 +135,7 @@ func Test_KeyType(t *testing.T) {
 		require.EqualValues(`naked 🔫`, k.AsBytes("cc_bytes"))
 
 		t.Run("should be ok to enum IKey.FieldNames", func(t *testing.T) {
-			view := appCfg.AppDef.View(viewName)
+			view := appdef.View(appCfg.AppDef, viewName)
 			cnt := 0
 			for n := range k.FieldNames {
 				require.NotNil(view.Key().Field(n), "unknown field name passed in callback from IKey.FieldNames(): %q", n)
@@ -162,7 +164,7 @@ func Test_KeyType(t *testing.T) {
 
 	t.Run("key must supports IKey interface", func(t *testing.T) { testIKey(t, key) })
 
-	t.Run("must be ok to load/store key to bytes", func(t *testing.T) {
+	t.Run("should be ok to load/store key to bytes", func(t *testing.T) {
 		p, c := key.storeToBytes(0)
 		require.NotEmpty(p)
 		require.NotEmpty(c)
@@ -200,8 +202,9 @@ func TestCore_ViewRecords(t *testing.T) {
 
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
-		t.Run("must be ok to build application", func(t *testing.T) {
-			view := adb.AddView(appdef.NewQName("test", "viewDrinks"))
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		t.Run("should be ok to build application", func(t *testing.T) {
+			view := wsb.AddView(appdef.NewQName("test", "viewDrinks"))
 			view.Key().PartKey().
 				AddField("partitionKey1", appdef.DataKind_int64)
 			view.Key().ClustCols().
@@ -213,7 +216,7 @@ func TestCore_ViewRecords(t *testing.T) {
 				AddField("name", appdef.DataKind_string, true).
 				AddField("active", appdef.DataKind_bool, true)
 
-			otherView := adb.AddView(appdef.NewQName("test", "otherView"))
+			otherView := wsb.AddView(appdef.NewQName("test", "otherView"))
 			otherView.Key().PartKey().
 				AddField("partitionKey1", appdef.DataKind_QName)
 			otherView.Key().ClustCols().
@@ -237,7 +240,7 @@ func TestCore_ViewRecords(t *testing.T) {
 	require.NoError(err)
 	viewRecords := app.ViewRecords()
 
-	t.Run("must be ok put records one-by-one", func(t *testing.T) {
+	t.Run("should be ok put records one-by-one", func(t *testing.T) {
 		entries := []entryType{
 			newEntry(viewRecords, 1, 100, true, "soda", 1, "Cola"),
 			newEntry(viewRecords, 1, 100, true, "soda", 2, "Cola light"), // dupe, must override previous name
@@ -284,7 +287,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		require.Equal("Cola light", val_name)
 	})
 
-	t.Run("must be ok batch put", func(t *testing.T) {
+	t.Run("should be ok batch put", func(t *testing.T) {
 		entries := []entryType{
 			newEntry(viewRecords, 3, 200, true, "food", 1, "Meat"),
 			newEntry(viewRecords, 3, 300, true, "food", 1, "Bread"),
@@ -845,8 +848,9 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
-		t.Run("must be ok to build application", func(t *testing.T) {
-			view := adb.AddView(appdef.MustParseQName(viewName))
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		t.Run("should be ok to build application", func(t *testing.T) {
+			view := wsb.AddView(appdef.MustParseQName(viewName))
 			view.Key().PartKey().
 				AddField("pk1", appdef.DataKind_int64)
 			view.Key().ClustCols().
@@ -890,9 +894,9 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 		})
 	})
 
-	t.Run("errors test", func(t *testing.T) {
+	t.Run("should be error", func(t *testing.T) {
 		var err error
-		t.Run("should be error if wrong view name", func(t *testing.T) {
+		t.Run("if wrong view name", func(t *testing.T) {
 			json := make(map[appdef.FieldName]any)
 
 			err = app.ViewRecords().PutJSON(1, json)
@@ -920,7 +924,7 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 			require.ErrorContains(err, `test.unknown`)
 		})
 
-		t.Run("should be error if key errors", func(t *testing.T) {
+		t.Run("if key errors", func(t *testing.T) {
 			json := make(map[appdef.FieldName]any)
 			json[appdef.SystemField_QName] = viewName
 
@@ -945,7 +949,7 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 			require.ErrorContains(err, "cc2")
 		})
 
-		t.Run("should be error if value errors", func(t *testing.T) {
+		t.Run("if value errors", func(t *testing.T) {
 			json := make(map[appdef.FieldName]any)
 			json[appdef.SystemField_QName] = viewName
 			json["pk1"] = gojson.Number("1")
@@ -975,8 +979,9 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
-	t.Run("must be ok to build application", func(t *testing.T) {
-		v := adb.AddView(viewName)
+	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	t.Run("should be ok to build application", func(t *testing.T) {
+		v := wsb.AddView(viewName)
 		v.Key().PartKey().
 			AddField("pf_int32", appdef.DataKind_int32).
 			AddField("pf_int64", appdef.DataKind_int64).
@@ -1115,8 +1120,9 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
-		t.Run("must be ok to build application", func(t *testing.T) {
-			v := adb.AddView(appdef.NewQName("test", "viewDrinks"))
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		t.Run("should be ok to build application", func(t *testing.T) {
+			v := wsb.AddView(appdef.NewQName("test", "viewDrinks"))
 			v.Key().PartKey().
 				AddField("partitionKey1", appdef.DataKind_int64)
 			v.Key().ClustCols().
@@ -1127,7 +1133,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 				AddField("name", appdef.DataKind_string, true).
 				AddField("active", appdef.DataKind_bool, true)
 
-			_ = adb.AddObject(appdef.NewQName("test", "obj1"))
+			_ = wsb.AddObject(appdef.NewQName("test", "obj1"))
 		})
 
 		cfgs := make(AppConfigsType, 1)
@@ -1159,7 +1165,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 	//
 	// Fetch single record
 	//
-	t.Run("Test read single item", func(t *testing.T) {
+	t.Run("should be ok to read single item", func(t *testing.T) {
 		kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", int64(1))
 		kb.PutQName("clusteringColumn1", appdef.NewQName("test", "obj1"))
@@ -1193,8 +1199,9 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
-	t.Run("must be ok to build application", func(t *testing.T) {
-		v := adb.AddView(championshipsView)
+	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	t.Run("should be ok to build application", func(t *testing.T) {
+		v := wsb.AddView(championshipsView)
 		v.Key().PartKey().
 			AddField("Year", appdef.DataKind_int32)
 		v.Key().ClustCols().
@@ -1203,7 +1210,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 			AddField("Country", appdef.DataKind_string, true).
 			AddField("City", appdef.DataKind_string, false)
 
-		v = adb.AddView(championsView)
+		v = wsb.AddView(championsView)
 		v.Key().PartKey().
 			AddField("Year", appdef.DataKind_int32)
 		v.Key().ClustCols().
@@ -1229,59 +1236,59 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		winner               string
 	}
 	var championships = []championship{
-		{1949, "Волейбол", "Чехословакия", "Прага", "СССР"},
-		{1952, "Волейбол", "СССР", "Москва", "СССР"},
-		{1956, "Волейбол", "Франция", "Париж", "Чехословакия"},
-		{1960, "Волейбол", "Бразилия", "Рио-де-Жанейро", "СССР"},
-		{1962, "Волейбол", "СССР", "Москва", "СССР"},
-		{1966, "Волейбол", "Чехословакия", "Прага", "Чехословакия"},
-		{1970, "Волейбол", "Болгария", "София", "ГДР"},
-		{1974, "Волейбол", "Мексика", "Мехико", "Польша"},
-		{1978, "Волейбол", "Италия", "Рим", "СССР"},
-		{1982, "Волейбол", "Аргентина", "Буэнос-Айрес", "СССР"},
-		{1986, "Волейбол", "Франция", "Париж", "США"},
-		{1990, "Волейбол", "Бразилия", "Рио-де-Жанейро", "Италия"},
-		{1994, "Волейбол", "Греция", "Афины", "Италия"},
-		{1998, "Волейбол", "Япония", "Токио", "Италия"},
-		{2002, "Волейбол", "Аргентина", "Буэнос-Айрес", "Бразилия"},
-		{2006, "Волейбол", "Япония", "Токио", "Бразилия"},
-		{2010, "Волейбол", "Италия", "Рим", "Бразилия"},
-		{2014, "Волейбол", "Польша", "Катовице", "Польша"},
-		{2018, "Волейбол", "Италия", "Рим", "Польша"},
-		{2022, "Волейбол", "Россия", "Москва", ""},
+		{1949, "Volleyball", "Czechoslovakia", "Prague", "USSR"},
+		{1952, "Volleyball", "USSR", "Moscow", "USSR"},
+		{1956, "Volleyball", "France", "Paris", "Czechoslovakia"},
+		{1960, "Volleyball", "Brazil", "Rio de Janeiro", "USSR"},
+		{1962, "Volleyball", "USSR", "Moscow", "USSR"},
+		{1966, "Volleyball", "Czechoslovakia", "Prague", "Czechoslovakia"},
+		{1970, "Volleyball", "Bulgaria", "Sofia", "GDR"},
+		{1974, "Volleyball", "Mexico", "Mexico", "Poland"},
+		{1978, "Volleyball", "Italy", "Rome", "USSR"},
+		{1982, "Volleyball", "Argentina", "Buenos Aires", "USSR"},
+		{1986, "Volleyball", "France", "Paris", "USA"},
+		{1990, "Volleyball", "Brazil", "Rio de Janeiro", "Italy"},
+		{1994, "Volleyball", "Greece", "Athens", "Italy"},
+		{1998, "Volleyball", "Japan", "Tokyo", "Italy"},
+		{2002, "Volleyball", "Argentina", "Buenos Aires", "Brazil"},
+		{2006, "Volleyball", "Japan", "Tokyo", "Brazil"},
+		{2010, "Volleyball", "Italy", "Rome", "Brazil"},
+		{2014, "Volleyball", "Poland", "Katowice", "Poland"},
+		{2018, "Volleyball", "Italy", "Rome", "Poland"},
+		{2022, "Volleyball", "Russia", "Moscow", ""},
 
-		{1938, "Гандбол", "Германия", "Берлин", "Германия"},
-		{1942, "Гандбол", "Швеция", "Осло", "Швеция"},
-		{1958, "Гандбол", "ГДР", "Берлин", "Швеция"},
-		{1961, "Гандбол", "ФРГ", "Бонн", "Румыния"},
-		{1964, "Гандбол", "Чехословакия", "Прага", "Румыния"},
-		{1967, "Гандбол", "Швеция", "Осло", "Чехословакия"},
-		{1970, "Гандбол", "Франция", "Париж", "Румыния"},
-		{1974, "Гандбол", "ГДР", "Берлин", "Румыния"},
-		{1978, "Гандбол", "Дания", "Копенгаген", "ФРГ"},
-		{1982, "Гандбол", "ФРГ", "Бонн", "СССР"},
-		{1986, "Гандбол", "Швейцария", "Цюрих", "Югославия"},
-		{1990, "Гандбол", "Чехословакия", "Прага", "Швеция"},
-		{1993, "Гандбол", "Швеция", "Осло", "Россия"},
-		{1995, "Гандбол", "Исландия", "Рейкьявик", "Франция"},
-		{1997, "Гандбол", "Япония", "Токио", "Россия"},
-		{1999, "Гандбол", "Египет", "Каир", "Швеция"},
-		{2003, "Гандбол", "Португалия", "Лиссабон", "Хорватия"},
-		{2005, "Гандбол", "Тунис", "Тунис", "Испания"},
-		{2007, "Гандбол", "Германия", "Берлин", "Германия"},
-		{2009, "Гандбол", "Хорватия", "Загреб", "Франция"},
-		{2011, "Гандбол", "Швеция", "Осло", "Франция"},
-		{2013, "Гандбол", "Испания", "Мадрид", "Испания"},
-		{2015, "Гандбол", "Катар", "Доха", "Франция"},
-		{2017, "Гандбол", "Франция", "Париж", "Франция"},
-		{2019, "Гандбол", "Дания", "Копенгаген", "Дания"},
-		{2021, "Гандбол", "Египет", "Каир", "Дания"},
-		{2023, "Гандбол", "Польша", "Прага", ""},
-		{2025, "Гандбол", "Хорватия", "Загреб", ""},
-		{2027, "Гандбол", "Германия", "Берлин", ""},
+		{1938, "Handball", "Germany", "Berlin", "Germany"},
+		{1942, "Handball", "Sweden", "Oslo", "Sweden"},
+		{1958, "Handball", "GDR", "Berlin", "Sweden"},
+		{1961, "Handball", "FRG", "Bonn", "Romania"},
+		{1964, "Handball", "Czechoslovakia", "Prague", "Romania"},
+		{1967, "Handball", "Sweden", "Oslo", "Czechoslovakia"},
+		{1970, "Handball", "France", "Paris", "Romania"},
+		{1974, "Handball", "GDR", "Berlin", "Romania"},
+		{1978, "Handball", "Denmark", "Copenhagen", "FRG"},
+		{1982, "Handball", "FRG", "Bonn", "USSR"},
+		{1986, "Handball", "Switzerland", "Zurich", "Yugoslavia"},
+		{1990, "Handball", "Czechoslovakia", "Prague", "Sweden"},
+		{1993, "Handball", "Sweden", "Oslo", "Russia"},
+		{1995, "Handball", "Iceland", "Reykjavik", "France"},
+		{1997, "Handball", "Japan", "Tokyo", "Russia"},
+		{1999, "Handball", "Egypt", "Cairo", "Sweden"},
+		{2003, "Handball", "Portugal", "Lisbon", "Croatia"},
+		{2005, "Handball", "Tunisia", "Tunisia", "Spain"},
+		{2007, "Handball", "Germany", "Berlin", "Germany"},
+		{2009, "Handball", "Croatia", "Zagreb", "France"},
+		{2011, "Handball", "Sweden", "Oslo", "France"},
+		{2013, "Handball", "Spain", "Madrid", "Spain"},
+		{2015, "Handball", "Qatar", "Doha", "France"},
+		{2017, "Handball", "France", "Paris", "France"},
+		{2019, "Handball", "Denmark", "Copenhagen", "Denmark"},
+		{2021, "Handball", "Egypt", "Cairo", "Denmark"},
+		{2023, "Handball", "Poland", "Prague", ""},
+		{2025, "Handball", "Croatia", "Zagreb", ""},
+		{2027, "Handball", "Germany", "Berlin", ""},
 	}
 
-	t.Run("Put view records to test", func(t *testing.T) {
+	t.Run("should be ok to put view records", func(t *testing.T) {
 		batch := make([]istructs.ViewKV, 0)
 		for _, c := range championships {
 			kv := istructs.ViewKV{}
@@ -1308,7 +1315,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		require.NoError(err)
 	})
 
-	t.Run("must ok to read all recs by batch", func(t *testing.T) {
+	t.Run("should be ok to read all recs by batch", func(t *testing.T) {
 		batch := make([]istructs.ViewRecordGetBatchItem, 0)
 		for _, c := range championships {
 			kv := istructs.ViewRecordGetBatchItem{}
@@ -1344,120 +1351,123 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		}
 	})
 
-	t.Run("must ok to read few records from one view", func(t *testing.T) {
+	t.Run("should be ok to read few records from one view", func(t *testing.T) {
 		batch := make([]istructs.ViewRecordGetBatchItem, 3)
 		batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
 		batch[0].Key.PutInt32("Year", 1962)
-		batch[0].Key.PutString("Sport", "Волейбол")
+		batch[0].Key.PutString("Sport", "Volleyball")
 		batch[1].Key = app.ViewRecords().KeyBuilder(championsView)
 		batch[1].Key.PutInt32("Year", 1997)
-		batch[1].Key.PutString("Sport", "Гандбол")
+		batch[1].Key.PutString("Sport", "Handball")
 		batch[2].Key = app.ViewRecords().KeyBuilder(championsView)
 		batch[2].Key.PutInt32("Year", 2075)
-		batch[2].Key.PutString("Sport", "Футбол")
+		batch[2].Key.PutString("Sport", "Football")
 
 		err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
 		require.NoError(err)
 
 		require.True(batch[0].Ok)
-		require.Equal("СССР", batch[0].Value.AsString("Winner"))
+		require.Equal("USSR", batch[0].Value.AsString("Winner"))
 
 		require.True(batch[1].Ok)
-		require.Equal("Россия", batch[1].Value.AsString("Winner"))
+		require.Equal("Russia", batch[1].Value.AsString("Winner"))
 
 		require.False(batch[2].Ok)
 		require.Equal(appdef.NullQName, batch[2].Value.AsQName(appdef.SystemField_QName))
 	})
 
-	t.Run("must fail to read if maximum batch size exceeds", func(t *testing.T) {
-		batch := make([]istructs.ViewRecordGetBatchItem, maxGetBatchRecordCount+1)
-		for i := 0; i < len(batch); i++ {
-			batch[i].Key = app.ViewRecords().KeyBuilder(championsView)
-			batch[i].Key.PutInt32("Year", int32(i))
-			batch[i].Key.PutString("Sport", "Шашки")
-		}
-		err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-		require.ErrorIs(err, ErrMaxGetBatchRecordCountExceeds)
+	t.Run("should be error", func(t *testing.T) {
+
+		t.Run("if maximum batch size exceeds", func(t *testing.T) {
+			batch := make([]istructs.ViewRecordGetBatchItem, maxGetBatchRecordCount+1)
+			for i := 0; i < len(batch); i++ {
+				batch[i].Key = app.ViewRecords().KeyBuilder(championsView)
+				batch[i].Key.PutInt32("Year", int32(i))
+				batch[i].Key.PutString("Sport", "Шашки")
+			}
+			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
+			require.ErrorIs(err, ErrMaxGetBatchRecordCountExceeds)
+		})
+
+		t.Run("if key build error", func(t *testing.T) {
+			batch := make([]istructs.ViewRecordGetBatchItem, 3)
+			batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
+			batch[0].Key.PutInt64("Year", 1962) // error here
+			batch[0].Key.PutString("Sport", "Volleyball")
+
+			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
+			require.ErrorIs(err, ErrWrongFieldType)
+		})
+
+		t.Run("if key is not valid", func(t *testing.T) {
+			batch := make([]istructs.ViewRecordGetBatchItem, 3)
+			batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
+			batch[0].Key.PutInt32("Year", 1962)
+			// batch[0].Key.PutString("Sport", "Volleyball") // error here
+
+			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
+			require.ErrorIs(err, ErrFieldIsEmpty)
+		})
+
+		t.Run("if storage GetBatch failed", func(t *testing.T) {
+			testError := errors.New("test error")
+
+			batch := make([]istructs.ViewRecordGetBatchItem, 1)
+			batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
+			batch[0].Key.PutInt32("Year", 1962)
+			batch[0].Key.PutString("Sport", "Volleyball")
+
+			storage.ScheduleGetError(testError, nil, []byte("Volleyball")) // error here
+
+			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
+			require.ErrorIs(err, testError)
+		})
+
+		t.Run("if GetBatch returns damaged data", func(t *testing.T) {
+			batch := make([]istructs.ViewRecordGetBatchItem, 1)
+			batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
+			batch[0].Key.PutInt32("Year", 1962)
+			batch[0].Key.PutString("Sport", "Volleyball")
+
+			storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, []byte("Volleyball"))
+
+			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
+			require.ErrorIs(err, ErrUnknownCodec)
+		})
 	})
 
-	t.Run("must fail to read if some key build error", func(t *testing.T) {
-		batch := make([]istructs.ViewRecordGetBatchItem, 3)
-		batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
-		batch[0].Key.PutInt64("Year", 1962) // error here
-		batch[0].Key.PutString("Sport", "Волейбол")
-
-		err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-		require.ErrorIs(err, ErrWrongFieldType)
-	})
-
-	t.Run("must fail to read if some key is not valid", func(t *testing.T) {
-		batch := make([]istructs.ViewRecordGetBatchItem, 3)
-		batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
-		batch[0].Key.PutInt32("Year", 1962)
-		// batch[0].Key.PutString("Sport", "Волейбол") // error here
-
-		err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-		require.ErrorIs(err, ErrFieldIsEmpty)
-	})
-
-	t.Run("must fail to read if storage GetBatch failed", func(t *testing.T) {
-		testError := errors.New("test error")
-
-		batch := make([]istructs.ViewRecordGetBatchItem, 1)
-		batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
-		batch[0].Key.PutInt32("Year", 1962)
-		batch[0].Key.PutString("Sport", "Волейбол")
-
-		storage.ScheduleGetError(testError, nil, []byte("Волейбол")) // error here
-
-		err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-		require.ErrorIs(err, testError)
-	})
-
-	t.Run("must fail to read if storage GetBatch returns damaged data", func(t *testing.T) {
-		batch := make([]istructs.ViewRecordGetBatchItem, 1)
-		batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
-		batch[0].Key.PutInt32("Year", 1962)
-		batch[0].Key.PutString("Sport", "Волейбол")
-
-		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, []byte("Волейбол"))
-
-		err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-		require.ErrorIs(err, ErrUnknownCodec)
-	})
-
-	t.Run("Check IKeyBuilder.Equals", func(t *testing.T) {
+	t.Run("IKeyBuilder.Equals should be", func(t *testing.T) {
 		k1 := app.ViewRecords().KeyBuilder(championsView)
 		k1.PutInt32("Year", 1962)
-		k1.PutString("Sport", "Волейбол")
+		k1.PutString("Sport", "Volleyball")
 
-		require.True(k1.Equals(k1), "KeyBuilder must be equals to itself")
+		require.True(k1.Equals(k1), "equals to itself")
 
-		require.False(k1.Equals(nil), "KeyBuilder must not be equals to nil")
+		require.False(k1.Equals(nil), "not equals to nil")
 
 		k2 := app.ViewRecords().KeyBuilder(championsView)
 		k2.PutInt32("Year", 1962)
-		k2.PutString("Sport", "Волейбол")
+		k2.PutString("Sport", "Volleyball")
 
-		require.True(k1.Equals(k2), "KeyBuilder must be equals if same name and fields")
-		require.True(k2.Equals(k1), "KeyBuilder must be equals if same name and fields")
+		require.True(k1.Equals(k2), "equals if same name and fields")
+		require.True(k2.Equals(k1), "equals if same name and fields")
 
-		k2.PutString("Sport", "Гандбол")
-		require.False(k1.Equals(k2), "KeyBuilder must not be equals if different clustering fields")
-		require.False(k2.Equals(k1), "KeyBuilder must not be equals if different clustering fields")
+		k2.PutString("Sport", "Handball")
+		require.False(k1.Equals(k2), "not equals if different clustering fields")
+		require.False(k2.Equals(k1), "not equals if different clustering fields")
 
 		k3 := app.ViewRecords().KeyBuilder(championsView)
 		k3.PutInt32("Year", 1966)
-		k3.PutString("Sport", "Волейбол")
+		k3.PutString("Sport", "Volleyball")
 
-		require.False(k1.Equals(k3), "KeyBuilder must not be equals if different partition fields")
-		require.False(k3.Equals(k1), "KeyBuilder must not be equals if different partition fields")
+		require.False(k1.Equals(k3), "not equals if different partition fields")
+		require.False(k3.Equals(k1), "not equals if different partition fields")
 
 		k4 := app.ViewRecords().KeyBuilder(championshipsView)
 		k4.PutInt32("Year", 1962)
-		k4.PutString("Sport", "Волейбол")
+		k4.PutString("Sport", "Volleyball")
 
-		require.False(k1.Equals(k4), "KeyBuilder must not be equals if different QNames")
+		require.False(k1.Equals(k4), "not be equals if different QNames")
 	})
 }
 
@@ -1470,8 +1480,9 @@ func Test_ViewRecordStructure(t *testing.T) {
 
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
-	t.Run("must be ok to build application", func(t *testing.T) {
-		v := adb.AddView(viewName)
+	t.Run("should be ok to build application", func(t *testing.T) {
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		v := wsb.AddView(viewName)
 		v.Key().PartKey().
 			AddField("ValueDateYear", appdef.DataKind_int32)
 		v.Key().ClustCols().

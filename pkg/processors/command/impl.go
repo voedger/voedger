@@ -431,7 +431,7 @@ func getArgsObject(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		return nil
 	}
 	aob := cmd.reb.ArgumentObjectBuilder()
-	args, exists, err :=  cmd.requestData.AsObject("args")
+	args, exists, err := cmd.requestData.AsObject("args")
 	if err != nil {
 		return err
 	}

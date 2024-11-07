@@ -148,7 +148,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	prjType := appDef.Projector(a.projectorQName)
+	prjType := appdef.Projector(appDef, a.projectorQName)
 	if prjType == nil {
 		return fmt.Errorf("async projector %s is not defined in AppDef", a.projectorQName)
 	}

@@ -153,7 +153,7 @@ func (a *scheduler) init(_ context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	jobType := appDef.Job(a.job)
+	jobType := appdef.Job(appDef, a.job)
 	if jobType == nil {
 		return fmt.Errorf("job %s is not defined in AppDef", a.job)
 	}

@@ -148,15 +148,14 @@ func (cts *CommandTestState) getQNameFromFQName(fQName IFullQName) appdef.QName 
 func (cts *CommandTestState) isSingletone(fQName IFullQName) bool {
 	qName := cts.getQNameFromFQName(fQName)
 
-	iSingleton := cts.appDef.Singleton(qName)
+	iSingleton := appdef.Singleton(cts.appDef, qName)
 	return iSingleton != nil && iSingleton.Singleton()
 }
 
 func (cts *CommandTestState) isView(fQName IFullQName) bool {
 	qName := cts.getQNameFromFQName(fQName)
 
-	iView := cts.appDef.View(qName)
-	return iView != nil
+	return appdef.View(cts.appDef, qName) != nil
 }
 
 func (cts *CommandTestState) putArgument() {
@@ -198,7 +197,7 @@ func (cts *CommandTestState) buildAppDef(wsPkgPath, wsDescriptorName string) {
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, compileResult.AppDefBuilder)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-	for ext := range cts.appDef.Extensions {
+	for ext := range appdef.Extensions(cts.appDef) {
 		if proj, ok := ext.(appdef.IProjector); ok {
 			if proj.Sync() {
 				cfg.AddSyncProjectors(istructs.Projector{Name: ext.QName()})

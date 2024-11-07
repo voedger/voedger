@@ -16,6 +16,11 @@ WORKSPACE test2app1WS (
 	EXTENSION ENGINE WASM (
 		QUERY TestEcho(TestEchoRequest) RETURNS TestEchoResult;
 		COMMAND TestCmdEcho(TestEchoRequest) RETURNS TestEchoResult;
+	);
+);
+
+ALTER WORKSPACE sys.AppWorkspaceWS (
+	EXTENSION ENGINE WASM (
 		JOB Job1_sidecar '* * * * *';
 	);
 );

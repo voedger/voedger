@@ -11,9 +11,10 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIAppDef_Singletons() {
+func ExampleSingletons() {
 
 	var app appdef.IAppDef
+	wsName := appdef.NewQName("test", "workspace")
 	cDocName := appdef.NewQName("test", "cdoc")
 	wDocName := appdef.NewQName("test", "wdoc")
 
@@ -22,13 +23,15 @@ func ExampleIAppDef_Singletons() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		cDoc := adb.AddCDoc(cDocName)
+		wsb := adb.AddWorkspace(wsName)
+
+		cDoc := wsb.AddCDoc(cDocName)
 		cDoc.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 		cDoc.SetSingleton()
 
-		wDoc := adb.AddWDoc(wDocName)
+		wDoc := wsb.AddWDoc(wDocName)
 		wDoc.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
@@ -40,7 +43,7 @@ func ExampleIAppDef_Singletons() {
 	// how to inspect builded AppDef with singletons
 	{
 		cnt := 0
-		for s := range app.Singletons {
+		for s := range appdef.Singletons(app) {
 			cnt++
 			fmt.Printf("%d. %v\n", cnt, s)
 		}
@@ -50,9 +53,9 @@ func ExampleIAppDef_Singletons() {
 
 	// how to find singleton by name
 	{
-		fmt.Println(app.Singleton(cDocName))
-		fmt.Println(app.Singleton(wDocName))
-		fmt.Println(app.Singleton(appdef.NewQName("test", "unknown")))
+		fmt.Println(appdef.Singleton(app, cDocName))
+		fmt.Println(appdef.Singleton(app, wDocName))
+		fmt.Println(appdef.Singleton(app, appdef.NewQName("test", "unknown")))
 	}
 
 	// Output:

@@ -462,6 +462,10 @@ func discardRespBody(resp *http.Response) error {
 	return nil
 }
 
+func (resp *FuncResponse) Len() int {
+	return resp.NumRows()
+}
+
 func (resp *FuncResponse) NumRows() int {
 	if resp.IsEmpty() {
 		return 0
