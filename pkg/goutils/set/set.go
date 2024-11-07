@@ -16,7 +16,8 @@ import (
 //
 // V must be uint8.
 type Set[V ~uint8] struct {
-	bitmap [4]uint64 // bit set flag
+	bitmap   [4]uint64 // bit set flag
+	readOnly bool
 }
 
 // Makes new empty Set of specified value type. Same as `Set[V]{}`.
@@ -31,10 +32,8 @@ func From[V ~uint8](values ...V) Set[V] {
 	return s
 }
 
-// Represents Set as array.
-//
-// If Set is empty, returns nil.
-func (s Set[V]) AsArray() (a []V) {
+// All calls visit for each value in Set.
+func (s Set[V]) All(visit func(V) bool) {
 	for i, b := range s.bitmap {
 		if b == 0 {
 			continue
@@ -43,9 +42,20 @@ func (s Set[V]) AsArray() (a []V) {
 		h := uintSize - bits.LeadingZeros64(b)
 		for v := l; v < h; v++ {
 			if b&(1<<v) != 0 {
-				a = append(a, V(i*uintSize+v))
+				if !visit(V(i*uintSize + v)) {
+					return
+				}
 			}
 		}
+	}
+}
+
+// Represents Set as array.
+//
+// If Set is empty, returns nil.
+func (s Set[V]) AsArray() (a []V) {
+	for v := range s.All {
+		a = append(a, v)
 	}
 	return a
 }
@@ -63,8 +73,55 @@ func (s Set[V]) AsBytes() []byte {
 	return buf
 }
 
+// Backward calls visit for each value in Set in backward order.
+func (s Set[V]) Backward(visit func(V) bool) {
+	for i := len(s.bitmap) - 1; i >= 0; i-- {
+		b := s.bitmap[i]
+		if b == 0 {
+			continue
+		}
+		h := uintSize - bits.LeadingZeros64(b)
+		l := bits.TrailingZeros64(b)
+		for v := h - 1; v >= l; v-- {
+			if b&(1<<v) != 0 {
+				if !visit(V(i*uintSize + v)) {
+					return
+				}
+			}
+		}
+	}
+}
+
+// Chunk returns an iterator over consecutive sub-sets of up to n elements of s.
+// All but the last sub-set will have length n.
+// If s is empty, the sequence is empty: there is no empty sets in the sequence.
+//
+// # Panics:
+//   - if n is less than 1.
+func (s Set[V]) Chunk(n int) func(visit func(Set[V]) bool) {
+	return func(visit func(Set[V]) bool) {
+		if n < 1 {
+			panic("chunk size should be positive")
+		}
+		chunk := Empty[V]()
+		for v := range s.All {
+			chunk.Set(v)
+			if chunk.Len() == n {
+				if !visit(chunk) {
+					return
+				}
+				chunk.ClearAll()
+			}
+		}
+		if chunk.Len() > 0 {
+			visit(chunk)
+		}
+	}
+}
+
 // Clears specified elements from set.
 func (s *Set[V]) Clear(values ...V) {
+	s.checkRO()
 	for _, v := range values {
 		s.bitmap[v/uintSize] &^= 1 << (v % uintSize)
 	}
@@ -72,6 +129,7 @@ func (s *Set[V]) Clear(values ...V) {
 
 // Clears all elements from Set.
 func (s *Set[V]) ClearAll() {
+	s.checkRO()
 	for i := range s.bitmap {
 		s.bitmap[i] = 0
 	}
@@ -108,34 +166,12 @@ func (s Set[V]) ContainsAny(values ...V) bool {
 	return len(values) == 0
 }
 
-// Enumerate calls visit for each value in Set.
-func (s Set[V]) Enumerate(visit func(V)) {
-	for i, b := range s.bitmap {
-		if b == 0 {
-			continue
-		}
-		l := bits.TrailingZeros64(b)
-		h := uintSize - bits.LeadingZeros64(b)
-		for v := l; v < h; v++ {
-			if b&(1<<v) != 0 {
-				visit(V(i*uintSize + v))
-			}
-		}
-	}
-}
-
 // Returns is Set filled and first value set.
 // If Set is empty, returns false and zero value.
 func (s Set[V]) First() (V, bool) {
-	for i, b := range s.bitmap {
-		if b == 0 {
-			continue
-		}
-		if l := bits.TrailingZeros64(b); l < uintSize {
-			return V(i*uintSize + l), true
-		}
+	for v := range s.All {
+		return v, true
 	}
-
 	return V(0), false
 }
 
@@ -150,6 +186,7 @@ func (s Set[V]) Len() int {
 
 // Sets specified values to Set.
 func (s *Set[V]) Set(values ...V) {
+	s.checkRO()
 	for _, v := range values {
 		s.bitmap[v/uintSize] |= 1 << (v % uintSize)
 	}
@@ -157,9 +194,16 @@ func (s *Set[V]) Set(values ...V) {
 
 // Sets range of value to Set. Inclusive start, exclusive end.
 func (s *Set[V]) SetRange(start, end V) {
+	s.checkRO()
 	for k := start; k < end; k++ {
 		s.Set(k)
 	}
+}
+
+// Mark set readonly. This operation is irreversible.
+// Useful to protect set from modification, then set used as immutable constant.
+func (s *Set[V]) SetReadOnly() {
+	s.readOnly = true
 }
 
 // Renders Set in human-readable form, without `ValueTypeName_` prefixes,
@@ -175,20 +219,17 @@ func (s Set[V]) String() string {
 
 	ss := make([]string, 0, s.Len())
 
-	for i, b := range s.bitmap {
-		if b == 0 {
-			continue
-		}
-		l := bits.TrailingZeros64(b)
-		h := uintSize - bits.LeadingZeros64(b)
-		for v := l; v < h; v++ {
-			if b&(1<<v) != 0 {
-				ss = append(ss, say(V(i*uintSize+v)))
-			}
-		}
+	for v := range s.All {
+		ss = append(ss, say(v))
 	}
 
 	return fmt.Sprintf("[%v]", strings.Join(ss, " "))
+}
+
+func (s Set[V]) checkRO() {
+	if s.readOnly {
+		panic("set is read-only")
+	}
 }
 
 const uintSize = bits.UintSize

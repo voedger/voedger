@@ -20,7 +20,7 @@ func (m MapObject) AsString(name string) (val string, ok bool, err error) {
 	case string:
 		return v, true, nil
 	default:
-		return "", true, fmt.Errorf("field '%s' must be a string: %w", name, ErrFieldTypeMismatch)
+		return "", true, fmt.Errorf(`field "%s" must be a string: %w`, name, ErrFieldTypeMismatch)
 	}
 }
 
@@ -30,7 +30,7 @@ func (m MapObject) AsStringRequired(name string) (val string, err error) {
 		return "", err
 	}
 	if !ok {
-		return "", fmt.Errorf("field '%s' missing: %w", name, ErrFieldsMissed)
+		return "", fmt.Errorf(`field "%s" missing: %w`, name, ErrFieldsMissed)
 	}
 	return val, nil
 }
@@ -42,7 +42,7 @@ func (m MapObject) AsObject(name string) (val MapObject, ok bool, err error) {
 	case map[string]interface{}:
 		return MapObject(v), true, nil
 	default:
-		return nil, true, fmt.Errorf("field '%s' must be an object: %w", name, ErrFieldTypeMismatch)
+		return nil, true, fmt.Errorf(`field "%s" must be an object: %w`, name, ErrFieldTypeMismatch)
 	}
 }
 
@@ -59,7 +59,7 @@ func (m MapObject) AsInt64(name string) (val int64, ok bool, err error) {
 	case int64:
 		return v, true, nil
 	default:
-		return 0, true, fmt.Errorf("field '%s' must be json.Number: %w", name, ErrFieldTypeMismatch)
+		return 0, true, fmt.Errorf(`field "%s" must be json.Number: %w`, name, ErrFieldTypeMismatch)
 	}
 }
 
@@ -70,7 +70,7 @@ func (m MapObject) AsObjects(name string) (val []interface{}, ok bool, err error
 	case []interface{}:
 		return v, true, nil
 	default:
-		return nil, true, fmt.Errorf("field '%s' must be an array of objects: %w", name, ErrFieldTypeMismatch)
+		return nil, true, fmt.Errorf(`field "%s" must be an array of objects: %w`, name, ErrFieldTypeMismatch)
 	}
 }
 
@@ -85,7 +85,7 @@ func (m MapObject) AsFloat64(name string) (val float64, ok bool, err error) {
 		}
 		return float64Intf.(float64), true, nil
 	default:
-		return 0, true, fmt.Errorf("field '%s' must be json.Number: %w", name, ErrFieldTypeMismatch)
+		return 0, true, fmt.Errorf(`field "%s" must be json.Number: %w`, name, ErrFieldTypeMismatch)
 	}
 }
 
@@ -96,6 +96,6 @@ func (m MapObject) AsBoolean(name string) (val bool, ok bool, err error) {
 	case bool:
 		return v, true, nil
 	default:
-		return false, true, fmt.Errorf("field '%s' must be a boolean: %w", name, ErrFieldTypeMismatch)
+		return false, true, fmt.Errorf(`field "%s" must be a boolean: %w`, name, ErrFieldTypeMismatch)
 	}
 }
