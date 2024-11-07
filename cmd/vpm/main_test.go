@@ -19,7 +19,7 @@ import (
 )
 
 func TestCompileBasicUsage(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2747)")
+	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
 	require := require.New(t)
 
 	wd, err := os.Getwd()
@@ -53,7 +53,7 @@ func TestCompileBasicUsage(t *testing.T) {
 }
 
 func TestBaselineBasicUsage(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2747)")
+	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
 	require := require.New(t)
 
 	wd, err := os.Getwd()
@@ -134,7 +134,7 @@ func TestBaselineBasicUsage(t *testing.T) {
 }
 
 func TestCompatBasicUsage(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2747)")
+	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
 	require := require.New(t)
 
 	wd, err := os.Getwd()
@@ -151,7 +151,7 @@ func TestCompatBasicUsage(t *testing.T) {
 }
 
 func TestCompatErrors(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2747)")
+	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
 	require := require.New(t)
 
 	wd, err := os.Getwd()
@@ -180,7 +180,7 @@ func TestCompatErrors(t *testing.T) {
 }
 
 func TestCompileErrors(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2747)")
+	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
 	require := require.New(t)
 
 	wd, err := os.Getwd()
@@ -228,7 +228,7 @@ func TestCompileErrors(t *testing.T) {
 }
 
 func TestPkgRegistryCompile(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2747)")
+	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
 
 	t.Skip("This test is skipped because registry package doesn't have subdirectory 'wasm' with code inside it.")
 	require := require.New(t)
@@ -249,7 +249,7 @@ func TestPkgRegistryCompile(t *testing.T) {
 }
 
 func TestOrmBasicUsage(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2747)")
+	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
 
 	if testing.Short() {
 		t.Skip()
@@ -317,7 +317,7 @@ func TestOrmBasicUsage(t *testing.T) {
 }
 
 func TestBuildExample2(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2747)")
+	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
 
 	if testing.Short() {
 		t.Skip()
@@ -342,7 +342,7 @@ func TestBuildExample2(t *testing.T) {
 }
 
 func TestInitBasicUsage(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2747)")
+	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
 
 	if testing.Short() {
 		t.Skip()
@@ -373,7 +373,7 @@ func TestInitBasicUsage(t *testing.T) {
 }
 
 func TestTidyBasicUsage(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2747)")
+	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
 
 	if testing.Short() {
 		t.Skip()
@@ -403,7 +403,7 @@ func TestTidyBasicUsage(t *testing.T) {
 }
 
 func TestEdgeCases(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2747)")
+	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
 
 	if testing.Short() {
 		t.Skip()
@@ -429,7 +429,7 @@ func TestEdgeCases(t *testing.T) {
 }
 
 func TestBuildBasicUsage(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2747)")
+	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
 
 	if testing.Short() {
 		t.Skip()
@@ -518,7 +518,7 @@ func findWasmFiles(dir string) []string {
 }
 
 func TestCommandMessaging(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2747)")
+	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
 
 	if testing.Short() {
 		t.Skip("Manual run only because of long time execution (e.g. go get github.com/voedger/voedger run is involved)")
