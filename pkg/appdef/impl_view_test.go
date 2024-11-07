@@ -264,7 +264,7 @@ func TestAddView(t *testing.T) {
 			t.Run("should be nil if not view", func(t *testing.T) {
 				require.Nil(View(tested, docName))
 
-				typ := tested.(IWithTypes).Type(docName)
+				typ := tested.Type(docName)
 				require.NotNil(typ)
 				v, ok := typ.(IView)
 				require.False(ok)

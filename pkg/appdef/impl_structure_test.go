@@ -50,7 +50,7 @@ func Test_AppDef_StructuresAndRecords(t *testing.T) {
 	testWith := func(tested IWithTypes) {
 		t.Run("should be ok to find builded structures", func(t *testing.T) {
 			findStruct := func(n QName, kind TypeKind) {
-				typ := tested.(IWithTypes).Type(n)
+				typ := tested.Type(n)
 				require.Equal(kind, typ.Kind())
 
 				doc := Structure(tested, n)
