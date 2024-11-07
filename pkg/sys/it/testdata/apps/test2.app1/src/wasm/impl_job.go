@@ -5,7 +5,13 @@
 
 package main
 
+import (
+	ext "github.com/voedger/voedger/pkg/exttinygo"
+)
+
 //export Job1_sidecar
 func Job1_sidecar() {
-	panic("Job1_sidecar works!!!!!!!!!!")
+	log := ext.KeyBuilder(ext.StorageLogger, ext.NullEntity)
+	log.PutInt32("LogLevel", 3) // LogLevelInfo
+	ext.NewValue(log).PutString("Message", "Job done")
 }
