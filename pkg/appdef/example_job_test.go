@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIAppDefBuilder_AddJob() {
+func ExampleJobs() {
 
 	var app appdef.IAppDef
 

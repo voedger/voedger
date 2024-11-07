@@ -198,7 +198,9 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 							if !lookInOtherPackages && wSchema != ictx.pkg {
 								return nil // do not look tags in other packages
 							}
-							lookInInherted(f)
+							if err := lookInInherted(f); err != nil {
+								return err
+							}
 							if item != nil {
 								return nil
 							}

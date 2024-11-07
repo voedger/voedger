@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIAppDefBuilder_AddQuery() {
+func ExampleQueries() {
 
 	var app appdef.IAppDef
 

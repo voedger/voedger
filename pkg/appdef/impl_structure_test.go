@@ -79,7 +79,7 @@ func Test_AppDef_StructuresAndRecords(t *testing.T) {
 
 		t.Run("should be ok to find builded records", func(t *testing.T) {
 			findRecord := func(n QName, kind TypeKind) {
-				typ := tested.(IWithTypes).Type(n)
+				typ := tested.Type(n)
 				require.Equal(kind, typ.Kind())
 
 				rec := Record(tested, n)

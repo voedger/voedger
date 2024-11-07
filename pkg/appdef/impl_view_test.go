@@ -250,7 +250,7 @@ func TestAddView(t *testing.T) {
 			})
 
 			t.Run("should be ok to cast Type() as IView", func(t *testing.T) {
-				typ := tested.(IWithTypes).Type(viewName)
+				typ := tested.Type(viewName)
 				require.NotNil(typ)
 				require.Equal(TypeKind_ViewRecord, typ.Kind())
 

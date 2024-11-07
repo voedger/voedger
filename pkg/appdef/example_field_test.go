@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIFieldsBuilder_AddField() {
+func ExampleIFields() {
 
 	var app appdef.IAppDef
 	docName := appdef.NewQName("test", "doc")

@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIAppDefBuilder_AddCommand() {
+func ExampleCommands() {
 
 	var app appdef.IAppDef
 

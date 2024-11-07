@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIAppDefBuilder_AddRole() {
+func ExampleRoles() {
 
 	var app appdef.IAppDef
 

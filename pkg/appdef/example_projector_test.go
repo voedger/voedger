@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIAppDefBuilder_AddProjector() {
+func ExampleProjectors() {
 
 	var app appdef.IAppDef
 

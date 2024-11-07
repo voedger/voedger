@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIAppDefBuilder_AddData() {
+func ExampleDataTypes() {
 
 	var app appdef.IAppDef
 

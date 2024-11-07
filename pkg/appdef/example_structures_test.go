@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIAppDef_Structures() {
+func ExampleStructures() {
 
 	var app appdef.IAppDef
 	docName, recName := appdef.NewQName("test", "document"), appdef.NewQName("test", "record")

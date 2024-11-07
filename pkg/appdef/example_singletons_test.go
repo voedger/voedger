@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIAppDef_Singletons() {
+func ExampleSingletons() {
 
 	var app appdef.IAppDef
 	wsName := appdef.NewQName("test", "workspace")

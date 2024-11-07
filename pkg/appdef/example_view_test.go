@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIView() {
+func ExampleViews() {
 
 	var app appdef.IAppDef
 	viewName := appdef.NewQName("test", "view")

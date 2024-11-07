@@ -12,7 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIAppDefBuilder_AddRate() {
+func ExampleRates() {
 
 	var app appdef.IAppDef
 

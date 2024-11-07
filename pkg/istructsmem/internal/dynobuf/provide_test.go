@@ -38,7 +38,7 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 			return adb.MustBuild()
 		}())
 
-	t.Run("should be ok to retrive schemes", func(t *testing.T) {
+	t.Run("should be ok to retrieve schemes", func(t *testing.T) {
 		require := require.New(t)
 
 		t.Run("document scheme", func(t *testing.T) {
