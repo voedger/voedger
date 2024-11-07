@@ -52,6 +52,7 @@ func TestJobs_BasicUsage_Sidecar(t *testing.T) {
 	defer vit.TearDown()
 
 	// note: use vit.TimeAdd(appropriate duration) to force timer fire for the job
+	Set log level
 
 	time.Sleep(time.Second)
 
