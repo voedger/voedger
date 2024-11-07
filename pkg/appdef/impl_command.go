@@ -17,10 +17,10 @@ type command struct {
 	unl typeRef
 }
 
-func newCommand(app *appDef, name QName) *command {
+func newCommand(app *appDef, ws *workspace, name QName) *command {
 	cmd := &command{}
-	cmd.function = makeFunc(app, name, TypeKind_Command)
-	app.appendType(cmd)
+	cmd.function = makeFunc(app, ws, name, TypeKind_Command)
+	ws.appendType(cmd)
 	return cmd
 }
 

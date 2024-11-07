@@ -23,7 +23,9 @@ func Test_checkConstraints(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		obj := adb.AddObject(name)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		obj := wsb.AddObject(name)
 		obj.
 			AddField("str", appdef.DataKind_string, false).
 			AddField("bytes", appdef.DataKind_bytes, false).
@@ -72,7 +74,7 @@ func Test_checkConstraints(t *testing.T) {
 		require.NoError(err)
 		require.NotNil(app)
 
-		return app.Object(name)
+		return appdef.Object(app, name)
 	}()
 
 	type args struct {

@@ -144,7 +144,7 @@ func (ts *testState) ResultBuilder() istructs.IObjectBuilder {
 		panic("no current event")
 	}
 	qname := ts.event.QName()
-	command := ts.appDef.Command(qname)
+	command := appdef.Command(ts.appDef, qname)
 	if command == nil {
 		panic(fmt.Sprintf("%v is not a command", qname))
 	}
@@ -175,7 +175,7 @@ func (ts *testState) PutQuery(wsid istructs.WSID, name appdef.FullQName, argb Qu
 
 	if argb != nil {
 		localPkgName := ts.appDef.PackageLocalName(ts.queryName.PkgPath())
-		query := ts.appDef.Query(appdef.NewQName(localPkgName, ts.queryName.Entity()))
+		query := appdef.Query(ts.appDef, appdef.NewQName(localPkgName, ts.queryName.Entity()))
 		if query == nil {
 			panic(fmt.Sprintf("query not found: %v", ts.queryName))
 		}
@@ -275,7 +275,7 @@ func (ts *testState) buildState(processorKind int) {
 	}
 	qryResultBuilderFunc := func() istructs.IObjectBuilder {
 		localPkgName := ts.appDef.PackageLocalName(ts.queryName.PkgPath())
-		query := ts.appDef.Query(appdef.NewQName(localPkgName, ts.queryName.Entity()))
+		query := appdef.Query(ts.appDef, appdef.NewQName(localPkgName, ts.queryName.Entity()))
 		if query == nil {
 			panic(fmt.Sprintf("query not found: %v", ts.queryName))
 		}
@@ -375,7 +375,7 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-	for ext := range ts.appDef.Extensions {
+	for ext := range appdef.Extensions(ts.appDef) {
 		if ext.QName().Pkg() == PackageName {
 			if proj, ok := ext.(appdef.IProjector); ok {
 				if proj.Sync() {

@@ -29,28 +29,6 @@ type IWRecordBuilder interface {
 	IContainedRecordBuilder
 }
 
-type IWithWDocs interface {
-	// Return WDoc by name.
-	//
-	// Returns nil if not found.
-	WDoc(QName) IWDoc
-
-	// Enumerates all application workflow documents
-	//
-	// Workflow documents are enumerated in alphabetical order by QName
-	WDocs(func(IWDoc) bool)
-
-	// Return WRecord by name.
-	//
-	// Returns nil if not found.
-	WRecord(QName) IWRecord
-
-	// Enumerates all application workflow records
-	//
-	// Workflow records are enumerated in alphabetical order by QName
-	WRecords(func(IWRecord) bool)
-}
-
 type IWDocsBuilder interface {
 	// Adds new WDoc type with specified name.
 	//

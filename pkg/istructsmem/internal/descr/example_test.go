@@ -8,8 +8,8 @@ package descr_test
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
-	"github.com/stretchr/testify/mock"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/descr"
@@ -23,6 +23,9 @@ func Example() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test/path")
 
+		wsName, wsDescName := appdef.NewQName("test", "ws"), appdef.NewQName("test", "wsDesc")
+		wsb := adb.AddWorkspace(wsName)
+
 		numName := appdef.NewQName("test", "number")
 		strName := appdef.NewQName("test", "string")
 
@@ -31,13 +34,13 @@ func Example() {
 
 		docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
 
-		n := adb.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinIncl(1))
+		n := wsb.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinIncl(1))
 		n.SetComment("natural (positive) integer")
 
-		s := adb.AddData(strName, appdef.DataKind_string, appdef.NullQName)
+		s := wsb.AddData(strName, appdef.DataKind_string, appdef.NullQName)
 		s.AddConstraints(appdef.MinLen(1), appdef.MaxLen(100), appdef.Pattern(`^\w+$`, "only word characters allowed"))
 
-		doc := adb.AddCDoc(docName)
+		doc := wsb.AddCDoc(docName)
 		doc.SetSingleton()
 		doc.
 			AddField("f1", appdef.DataKind_int64, true).
@@ -49,7 +52,7 @@ func Example() {
 		doc.AddUnique(appdef.UniqueQName(docName, "unique1"), []appdef.FieldName{"f1", "f2"})
 		doc.SetComment(`comment 1`, `comment 2`)
 
-		rec := adb.AddCRecord(recName)
+		rec := wsb.AddCRecord(recName)
 		rec.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false).
@@ -60,7 +63,7 @@ func Example() {
 			AddUnique(appdef.UniqueQName(recName, "uniq1"), []appdef.FieldName{"f1"})
 
 		viewName := appdef.NewQName("test", "view")
-		view := adb.AddView(viewName)
+		view := wsb.AddView(viewName)
 		view.Key().PartKey().
 			AddField("pk_1", appdef.DataKind_int64)
 		view.Key().ClustCols().
@@ -70,22 +73,22 @@ func Example() {
 			AddRefField("vv_1", true, docName)
 
 		objName := appdef.NewQName("test", "obj")
-		obj := adb.AddObject(objName)
+		obj := wsb.AddObject(objName)
 		obj.AddField("f1", appdef.DataKind_string, true)
 
 		cmdName := appdef.NewQName("test", "cmd")
-		adb.AddCommand(cmdName).
+		wsb.AddCommand(cmdName).
 			SetUnloggedParam(objName).
 			SetParam(objName).
 			SetEngine(appdef.ExtensionEngineKind_WASM)
 
 		queryName := appdef.NewQName("test", "query")
-		adb.AddQuery(queryName).
+		wsb.AddQuery(queryName).
 			SetParam(objName).
 			SetResult(appdef.QNameANY)
 
 		prjName := appdef.NewQName("test", "projector")
-		prj := adb.AddProjector(prjName)
+		prj := wsb.AddProjector(prjName)
 		prj.
 			SetWantErrors().
 			SetEngine(appdef.ExtensionEngineKind_WASM)
@@ -99,14 +102,14 @@ func Example() {
 			Add(sysViews, viewName).SetComment(sysViews, "needs to update «test.view» from «sys.views» storage")
 
 		jobName := appdef.NewQName("test", "job")
-		job := adb.AddJob(jobName)
+		job := wsb.AddJob(jobName)
 		job.SetCronSchedule(`@every 1h30m`)
 		job.SetEngine(appdef.ExtensionEngineKind_WASM)
 		job.States().
 			Add(sysViews, viewName).SetComment(sysViews, "needs to read «test.view» from «sys.views» storage")
 
 		readerName := appdef.NewQName("test", "reader")
-		reader := adb.AddRole(readerName)
+		reader := wsb.AddRole(readerName)
 		reader.SetComment("read-only role")
 		reader.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Select},
@@ -119,7 +122,7 @@ func Example() {
 		reader.GrantAll([]appdef.QName{queryName}, "allow reader to execute test.query")
 
 		writerName := appdef.NewQName("test", "writer")
-		writer := adb.AddRole(writerName)
+		writer := wsb.AddRole(writerName)
 		writer.SetComment("read-write role")
 		writer.GrantAll([]appdef.QName{docName, recName, viewName}, "allow writer to do anything with test.doc, test.rec and test.view")
 		writer.Revoke(
@@ -129,20 +132,14 @@ func Example() {
 			"disable writer to update test.doc")
 		writer.GrantAll([]appdef.QName{cmdName, queryName}, "allow writer to execute all test functions")
 
-		wsName, wsDescName := appdef.NewQName("test", "ws"), appdef.NewQName("test", "wsDesc")
-		adb.AddCDoc(wsDescName).SetSingleton()
-		adb.AddWorkspace(wsName).
-			SetDescriptor(wsDescName).
-			AddType(docName).
-			AddType(recName).
-			AddType(viewName).
-			AddType(objName).
-			AddType(cmdName).
-			AddType(queryName).
-			AddType(prjName).
-			AddType(jobName).
-			AddType(readerName).
-			AddType(writerName)
+		rateName := appdef.NewQName("test", "rate")
+		wsb.AddRate(rateName, 10, time.Minute, []appdef.RateScope{appdef.RateScope_AppPartition}, "rate 10 times per second per partition")
+
+		limitName := appdef.NewQName("test", "limit")
+		wsb.AddLimit(limitName, []appdef.QName{appdef.QNameAnyCommand}, rateName, "limit all commands execution by test.rate")
+
+		wsb.AddCDoc(wsDescName).SetSingleton()
+		wsb.SetDescriptor(wsDescName)
 
 		app, err := adb.Build()
 		if err != nil {
@@ -152,19 +149,7 @@ func Example() {
 		return app
 	}()
 
-	res := &mockResources{}
-	res.
-		On("Resources", mock.AnythingOfType("func(appdef.QName)")).Run(func(args mock.Arguments) {})
-
-	appStr := &mockedAppStructs{}
-	appStr.
-		On("AppQName").Return(appName).
-		On("AppDef").Return(appDef).
-		On("Resources").Return(res)
-
-	appLimits := map[appdef.QName]map[istructs.RateLimitKind]istructs.RateLimit{}
-
-	app := descr.Provide(appStr, appLimits)
+	app := descr.Provide(appName, appDef)
 
 	json, err := json.MarshalIndent(app, "", "  ")
 
@@ -180,306 +165,400 @@ func Example() {
 	//   "Packages": {
 	//     "test": {
 	//       "Path": "test/path",
-	//       "DataTypes": {
-	//         "test.number": {
-	//           "Comment": "natural (positive) integer",
-	//           "Ancestor": "sys.int64",
-	//           "Constraints": {
-	//             "MinIncl": 1
-	//           }
-	//         },
-	//         "test.string": {
-	//           "Ancestor": "sys.string",
-	//           "Constraints": {
-	//             "MaxLen": 100,
-	//             "MinLen": 1,
-	//             "Pattern": "^\\w+$"
-	//           }
-	//         }
-	//       },
-	//       "Structures": {
-	//         "test.doc": {
-	//           "Comment": "comment 1\ncomment 2",
-	//           "Kind": "CDoc",
-	//           "Fields": [
-	//             {
-	//               "Name": "sys.QName",
-	//               "Data": "sys.QName",
-	//               "Required": true
-	//             },
-	//             {
-	//               "Name": "sys.ID",
-	//               "Data": "sys.RecordID",
-	//               "Required": true
-	//             },
-	//             {
-	//               "Name": "sys.IsActive",
-	//               "Data": "sys.bool"
-	//             },
-	//             {
-	//               "Comment": "field comment",
-	//               "Name": "f1",
-	//               "Data": "sys.int64",
-	//               "Required": true
-	//             },
-	//             {
-	//               "Name": "f2",
-	//               "DataType": {
-	//                 "Ancestor": "sys.string",
-	//                 "Constraints": {
-	//                   "MaxLen": 4,
-	//                   "MinLen": 4,
-	//                   "Pattern": "^\\w+$"
-	//                 }
+	//       "Workspaces": {
+	//         "test.ws": {
+	//           "Descriptor": "test.wsDesc",
+	//           "DataTypes": {
+	//             "test.number": {
+	//               "Comment": "natural (positive) integer",
+	//               "Ancestor": "sys.int64",
+	//               "Constraints": {
+	//                 "MinIncl": 1
 	//               }
 	//             },
-	//             {
-	//               "Name": "numField",
-	//               "Data": "test.number"
-	//             },
-	//             {
-	//               "Name": "mainChild",
-	//               "Data": "sys.RecordID",
-	//               "Refs": [
-	//                 "test.rec"
-	//               ]
-	//             }
-	//           ],
-	//           "Containers": [
-	//             {
-	//               "Comment": "container comment",
-	//               "Name": "rec",
-	//               "Type": "test.rec",
-	//               "MinOccurs": 0,
-	//               "MaxOccurs": 100
-	//             }
-	//           ],
-	//           "Uniques": {
-	//             "test.doc$uniques$unique1": {
-	//               "Fields": [
-	//                 "f1",
-	//                 "f2"
-	//               ]
+	//             "test.string": {
+	//               "Ancestor": "sys.string",
+	//               "Constraints": {
+	//                 "MaxLen": 100,
+	//                 "MinLen": 1,
+	//                 "Pattern": "^\\w+$"
+	//               }
 	//             }
 	//           },
-	//           "Singleton": true
-	//         },
-	//         "test.obj": {
-	//           "Kind": "Object",
-	//           "Fields": [
-	//             {
-	//               "Name": "sys.QName",
-	//               "Data": "sys.QName",
-	//               "Required": true
-	//             },
-	//             {
-	//               "Name": "sys.Container",
-	//               "Data": "sys.string"
-	//             },
-	//             {
-	//               "Name": "f1",
-	//               "Data": "sys.string",
-	//               "Required": true
-	//             }
-	//           ]
-	//         },
-	//         "test.rec": {
-	//           "Kind": "CRecord",
-	//           "Fields": [
-	//             {
-	//               "Name": "sys.QName",
-	//               "Data": "sys.QName",
-	//               "Required": true
-	//             },
-	//             {
-	//               "Name": "sys.ID",
-	//               "Data": "sys.RecordID",
-	//               "Required": true
-	//             },
-	//             {
-	//               "Name": "sys.ParentID",
-	//               "Data": "sys.RecordID",
-	//               "Required": true
-	//             },
-	//             {
-	//               "Name": "sys.Container",
-	//               "Data": "sys.string",
-	//               "Required": true
-	//             },
-	//             {
-	//               "Name": "sys.IsActive",
-	//               "Data": "sys.bool"
-	//             },
-	//             {
-	//               "Name": "f1",
-	//               "Data": "sys.int64",
-	//               "Required": true
-	//             },
-	//             {
-	//               "Name": "f2",
-	//               "Data": "sys.string"
-	//             },
-	//             {
-	//               "Name": "phone",
-	//               "DataType": {
-	//                 "Ancestor": "sys.string",
-	//                 "Constraints": {
-	//                   "MaxLen": 25,
-	//                   "MinLen": 1
+	//           "Structures": {
+	//             "test.doc": {
+	//               "Comment": "comment 1\ncomment 2",
+	//               "Kind": "CDoc",
+	//               "Fields": [
+	//                 {
+	//                   "Name": "sys.QName",
+	//                   "Data": "sys.QName",
+	//                   "Required": true
+	//                 },
+	//                 {
+	//                   "Name": "sys.ID",
+	//                   "Data": "sys.RecordID",
+	//                   "Required": true
+	//                 },
+	//                 {
+	//                   "Name": "sys.IsActive",
+	//                   "Data": "sys.bool"
+	//                 },
+	//                 {
+	//                   "Comment": "field comment",
+	//                   "Name": "f1",
+	//                   "Data": "sys.int64",
+	//                   "Required": true
+	//                 },
+	//                 {
+	//                   "Name": "f2",
+	//                   "DataType": {
+	//                     "Ancestor": "sys.string",
+	//                     "Constraints": {
+	//                       "MaxLen": 4,
+	//                       "MinLen": 4,
+	//                       "Pattern": "^\\w+$"
+	//                     }
+	//                   }
+	//                 },
+	//                 {
+	//                   "Name": "numField",
+	//                   "Data": "test.number"
+	//                 },
+	//                 {
+	//                   "Name": "mainChild",
+	//                   "Data": "sys.RecordID",
+	//                   "Refs": [
+	//                     "test.rec"
+	//                   ]
+	//                 }
+	//               ],
+	//               "Containers": [
+	//                 {
+	//                   "Comment": "container comment",
+	//                   "Name": "rec",
+	//                   "Type": "test.rec",
+	//                   "MinOccurs": 0,
+	//                   "MaxOccurs": 100
+	//                 }
+	//               ],
+	//               "Uniques": {
+	//                 "test.doc$uniques$unique1": {
+	//                   "Fields": [
+	//                     "f1",
+	//                     "f2"
+	//                   ]
 	//                 }
 	//               },
-	//               "Required": true,
-	//               "Verifiable": true
-	//             }
-	//           ],
-	//           "Uniques": {
-	//             "test.rec$uniques$uniq1": {
+	//               "Singleton": true
+	//             },
+	//             "test.obj": {
+	//               "Kind": "Object",
 	//               "Fields": [
-	//                 "f1"
+	//                 {
+	//                   "Name": "sys.QName",
+	//                   "Data": "sys.QName",
+	//                   "Required": true
+	//                 },
+	//                 {
+	//                   "Name": "sys.Container",
+	//                   "Data": "sys.string"
+	//                 },
+	//                 {
+	//                   "Name": "f1",
+	//                   "Data": "sys.string",
+	//                   "Required": true
+	//                 }
+	//               ]
+	//             },
+	//             "test.rec": {
+	//               "Kind": "CRecord",
+	//               "Fields": [
+	//                 {
+	//                   "Name": "sys.QName",
+	//                   "Data": "sys.QName",
+	//                   "Required": true
+	//                 },
+	//                 {
+	//                   "Name": "sys.ID",
+	//                   "Data": "sys.RecordID",
+	//                   "Required": true
+	//                 },
+	//                 {
+	//                   "Name": "sys.ParentID",
+	//                   "Data": "sys.RecordID",
+	//                   "Required": true
+	//                 },
+	//                 {
+	//                   "Name": "sys.Container",
+	//                   "Data": "sys.string",
+	//                   "Required": true
+	//                 },
+	//                 {
+	//                   "Name": "sys.IsActive",
+	//                   "Data": "sys.bool"
+	//                 },
+	//                 {
+	//                   "Name": "f1",
+	//                   "Data": "sys.int64",
+	//                   "Required": true
+	//                 },
+	//                 {
+	//                   "Name": "f2",
+	//                   "Data": "sys.string"
+	//                 },
+	//                 {
+	//                   "Name": "phone",
+	//                   "DataType": {
+	//                     "Ancestor": "sys.string",
+	//                     "Constraints": {
+	//                       "MaxLen": 25,
+	//                       "MinLen": 1
+	//                     }
+	//                   },
+	//                   "Required": true,
+	//                   "Verifiable": true
+	//                 }
+	//               ],
+	//               "Uniques": {
+	//                 "test.rec$uniques$uniq1": {
+	//                   "Fields": [
+	//                     "f1"
+	//                   ]
+	//                 }
+	//               },
+	//               "UniqueField": "phone"
+	//             },
+	//             "test.wsDesc": {
+	//               "Kind": "CDoc",
+	//               "Fields": [
+	//                 {
+	//                   "Name": "sys.QName",
+	//                   "Data": "sys.QName",
+	//                   "Required": true
+	//                 },
+	//                 {
+	//                   "Name": "sys.ID",
+	//                   "Data": "sys.RecordID",
+	//                   "Required": true
+	//                 },
+	//                 {
+	//                   "Name": "sys.IsActive",
+	//                   "Data": "sys.bool"
+	//                 }
+	//               ],
+	//               "Singleton": true
+	//             }
+	//           },
+	//           "Views": {
+	//             "test.view": {
+	//               "Key": {
+	//                 "Partition": [
+	//                   {
+	//                     "Name": "pk_1",
+	//                     "Data": "sys.int64",
+	//                     "Required": true
+	//                   }
+	//                 ],
+	//                 "ClustCols": [
+	//                   {
+	//                     "Name": "cc_1",
+	//                     "DataType": {
+	//                       "Ancestor": "sys.string",
+	//                       "Constraints": {
+	//                         "MaxLen": 100
+	//                       }
+	//                     }
+	//                   }
+	//                 ]
+	//               },
+	//               "Value": [
+	//                 {
+	//                   "Name": "sys.QName",
+	//                   "Data": "sys.QName",
+	//                   "Required": true
+	//                 },
+	//                 {
+	//                   "Name": "vv_code",
+	//                   "Data": "test.string",
+	//                   "Required": true
+	//                 },
+	//                 {
+	//                   "Name": "vv_1",
+	//                   "Data": "sys.RecordID",
+	//                   "Required": true,
+	//                   "Refs": [
+	//                     "test.doc"
+	//                   ]
+	//                 }
 	//               ]
 	//             }
 	//           },
-	//           "UniqueField": "phone"
-	//         },
-	//         "test.wsDesc": {
-	//           "Kind": "CDoc",
-	//           "Fields": [
-	//             {
-	//               "Name": "sys.QName",
-	//               "Data": "sys.QName",
-	//               "Required": true
-	//             },
-	//             {
-	//               "Name": "sys.ID",
-	//               "Data": "sys.RecordID",
-	//               "Required": true
-	//             },
-	//             {
-	//               "Name": "sys.IsActive",
-	//               "Data": "sys.bool"
-	//             }
-	//           ],
-	//           "Singleton": true
-	//         }
-	//       },
-	//       "Views": {
-	//         "test.view": {
-	//           "Key": {
-	//             "Partition": [
-	//               {
-	//                 "Name": "pk_1",
-	//                 "Data": "sys.int64",
-	//                 "Required": true
+	//           "Extensions": {
+	//             "Commands": {
+	//               "test.cmd": {
+	//                 "Name": "cmd",
+	//                 "Engine": "WASM",
+	//                 "Arg": "test.obj",
+	//                 "UnloggedArg": "test.obj"
 	//               }
-	//             ],
-	//             "ClustCols": [
-	//               {
-	//                 "Name": "cc_1",
-	//                 "DataType": {
-	//                   "Ancestor": "sys.string",
-	//                   "Constraints": {
-	//                     "MaxLen": 100
+	//             },
+	//             "Queries": {
+	//               "test.query": {
+	//                 "Name": "query",
+	//                 "Engine": "BuiltIn",
+	//                 "Arg": "test.obj",
+	//                 "Result": "sys.ANY"
+	//               }
+	//             },
+	//             "Projectors": {
+	//               "test.projector": {
+	//                 "Name": "projector",
+	//                 "Engine": "WASM",
+	//                 "States": {
+	//                   "sys.records": [
+	//                     "test.doc",
+	//                     "test.rec"
+	//                   ]
+	//                 },
+	//                 "Intents": {
+	//                   "sys.views": [
+	//                     "test.view"
+	//                   ]
+	//                 },
+	//                 "Events": {
+	//                   "test.cmd": {
+	//                     "Comment": "run projector every time when «test.cmd» command is executed",
+	//                     "Kind": [
+	//                       "Execute"
+	//                     ]
+	//                   },
+	//                   "test.obj": {
+	//                     "Comment": "run projector every time when any command with «test.obj» argument is executed",
+	//                     "Kind": [
+	//                       "ExecuteWithParam"
+	//                     ]
+	//                   },
+	//                   "test.rec": {
+	//                     "Comment": "run projector every time when «test.rec» is changed",
+	//                     "Kind": [
+	//                       "Insert",
+	//                       "Update",
+	//                       "Activate",
+	//                       "Deactivate"
+	//                     ]
+	//                   }
+	//                 },
+	//                 "WantErrors": true
+	//               }
+	//             },
+	//             "Jobs": {
+	//               "test.job": {
+	//                 "Name": "job",
+	//                 "Engine": "WASM",
+	//                 "States": {
+	//                   "sys.views": [
+	//                     "test.view"
+	//                   ]
+	//                 },
+	//                 "CronSchedule": "@every 1h30m"
+	//               }
+	//             }
+	//           },
+	//           "Roles": {
+	//             "test.reader": {
+	//               "Comment": "read-only role",
+	//               "ACL": [
+	//                 {
+	//                   "Comment": "allow reader to select some fields from test.doc and test.rec",
+	//                   "Policy": "Allow",
+	//                   "Ops": [
+	//                     "Select"
+	//                   ],
+	//                   "Resources": {
+	//                     "On": [
+	//                       "test.doc",
+	//                       "test.rec"
+	//                     ],
+	//                     "Fields": [
+	//                       "f1",
+	//                       "f2"
+	//                     ]
+	//                   }
+	//                 },
+	//                 {
+	//                   "Comment": "allow reader to select all fields from test.view",
+	//                   "Policy": "Allow",
+	//                   "Ops": [
+	//                     "Select"
+	//                   ],
+	//                   "Resources": {
+	//                     "On": [
+	//                       "test.view"
+	//                     ]
+	//                   }
+	//                 },
+	//                 {
+	//                   "Comment": "allow reader to execute test.query",
+	//                   "Policy": "Allow",
+	//                   "Ops": [
+	//                     "Execute"
+	//                   ],
+	//                   "Resources": {
+	//                     "On": [
+	//                       "test.query"
+	//                     ]
 	//                   }
 	//                 }
-	//               }
-	//             ]
-	//           },
-	//           "Value": [
-	//             {
-	//               "Name": "sys.QName",
-	//               "Data": "sys.QName",
-	//               "Required": true
+	//               ]
 	//             },
-	//             {
-	//               "Name": "vv_code",
-	//               "Data": "test.string",
-	//               "Required": true
-	//             },
-	//             {
-	//               "Name": "vv_1",
-	//               "Data": "sys.RecordID",
-	//               "Required": true,
-	//               "Refs": [
-	//                 "test.doc"
+	//             "test.writer": {
+	//               "Comment": "read-write role",
+	//               "ACL": [
+	//                 {
+	//                   "Comment": "allow writer to do anything with test.doc, test.rec and test.view",
+	//                   "Policy": "Allow",
+	//                   "Ops": [
+	//                     "Insert",
+	//                     "Update",
+	//                     "Select"
+	//                   ],
+	//                   "Resources": {
+	//                     "On": [
+	//                       "test.doc",
+	//                       "test.rec",
+	//                       "test.view"
+	//                     ]
+	//                   }
+	//                 },
+	//                 {
+	//                   "Comment": "disable writer to update test.doc",
+	//                   "Policy": "Deny",
+	//                   "Ops": [
+	//                     "Update"
+	//                   ],
+	//                   "Resources": {
+	//                     "On": [
+	//                       "test.doc"
+	//                     ]
+	//                   }
+	//                 },
+	//                 {
+	//                   "Comment": "allow writer to execute all test functions",
+	//                   "Policy": "Allow",
+	//                   "Ops": [
+	//                     "Execute"
+	//                   ],
+	//                   "Resources": {
+	//                     "On": [
+	//                       "test.cmd",
+	//                       "test.query"
+	//                     ]
+	//                   }
+	//                 }
 	//               ]
 	//             }
-	//           ]
-	//         }
-	//       },
-	//       "Extensions": {
-	//         "Commands": {
-	//           "test.cmd": {
-	//             "Name": "cmd",
-	//             "Engine": "WASM",
-	//             "Arg": "test.obj",
-	//             "UnloggedArg": "test.obj"
-	//           }
-	//         },
-	//         "Queries": {
-	//           "test.query": {
-	//             "Name": "query",
-	//             "Engine": "BuiltIn",
-	//             "Arg": "test.obj",
-	//             "Result": "sys.ANY"
-	//           }
-	//         },
-	//         "Projectors": {
-	//           "test.projector": {
-	//             "Name": "projector",
-	//             "Engine": "WASM",
-	//             "States": {
-	//               "sys.records": [
-	//                 "test.doc",
-	//                 "test.rec"
-	//               ]
-	//             },
-	//             "Intents": {
-	//               "sys.views": [
-	//                 "test.view"
-	//               ]
-	//             },
-	//             "Events": {
-	//               "test.cmd": {
-	//                 "Comment": "run projector every time when «test.cmd» command is executed",
-	//                 "Kind": [
-	//                   "Execute"
-	//                 ]
-	//               },
-	//               "test.obj": {
-	//                 "Comment": "run projector every time when any command with «test.obj» argument is executed",
-	//                 "Kind": [
-	//                   "ExecuteWithParam"
-	//                 ]
-	//               },
-	//               "test.rec": {
-	//                 "Comment": "run projector every time when «test.rec» is changed",
-	//                 "Kind": [
-	//                   "Insert",
-	//                   "Update",
-	//                   "Activate",
-	//                   "Deactivate"
-	//                 ]
-	//               }
-	//             },
-	//             "WantErrors": true
-	//           }
-	//         },
-	//         "Jobs": {
-	//           "test.job": {
-	//             "Name": "job",
-	//             "Engine": "WASM",
-	//             "States": {
-	//               "sys.views": [
-	//                 "test.view"
-	//               ]
-	//             },
-	//             "CronSchedule": "@every 1h30m"
-	//           }
-	//         }
-	//       },
-	//       "Roles": {
-	//         "test.reader": {
-	//           "Comment": "read-only role",
+	//           },
 	//           "ACL": [
 	//             {
 	//               "Comment": "allow reader to select some fields from test.doc and test.rec",
@@ -496,7 +575,8 @@ func Example() {
 	//                   "f1",
 	//                   "f2"
 	//                 ]
-	//               }
+	//               },
+	//               "Principal": "test.reader"
 	//             },
 	//             {
 	//               "Comment": "allow reader to select all fields from test.view",
@@ -508,7 +588,8 @@ func Example() {
 	//                 "On": [
 	//                   "test.view"
 	//                 ]
-	//               }
+	//               },
+	//               "Principal": "test.reader"
 	//             },
 	//             {
 	//               "Comment": "allow reader to execute test.query",
@@ -520,13 +601,9 @@ func Example() {
 	//                 "On": [
 	//                   "test.query"
 	//                 ]
-	//               }
-	//             }
-	//           ]
-	//         },
-	//         "test.writer": {
-	//           "Comment": "read-write role",
-	//           "ACL": [
+	//               },
+	//               "Principal": "test.reader"
+	//             },
 	//             {
 	//               "Comment": "allow writer to do anything with test.doc, test.rec and test.view",
 	//               "Policy": "Allow",
@@ -541,7 +618,8 @@ func Example() {
 	//                   "test.rec",
 	//                   "test.view"
 	//                 ]
-	//               }
+	//               },
+	//               "Principal": "test.writer"
 	//             },
 	//             {
 	//               "Comment": "disable writer to update test.doc",
@@ -553,7 +631,8 @@ func Example() {
 	//                 "On": [
 	//                   "test.doc"
 	//                 ]
-	//               }
+	//               },
+	//               "Principal": "test.writer"
 	//             },
 	//             {
 	//               "Comment": "allow writer to execute all test functions",
@@ -566,145 +645,32 @@ func Example() {
 	//                   "test.cmd",
 	//                   "test.query"
 	//                 ]
-	//               }
+	//               },
+	//               "Principal": "test.writer"
 	//             }
-	//           ]
-	//         }
-	//       },
-	//       "Workspaces": {
-	//         "test.ws": {
-	//           "Descriptor": "test.wsDesc",
-	//           "Types": [
-	//             "test.cmd",
-	//             "test.doc",
-	//             "test.job",
-	//             "test.obj",
-	//             "test.projector",
-	//             "test.query",
-	//             "test.reader",
-	//             "test.rec",
-	//             "test.view",
-	//             "test.writer"
-	//           ]
+	//           ],
+	//           "Rates": {
+	//             "test.rate": {
+	//               "Comment": "rate 10 times per second per partition",
+	//               "Count": 10,
+	//               "Period": 60000000000,
+	//               "Scopes": [
+	//                 "AppPartition"
+	//               ]
+	//             }
+	//           },
+	//           "Limits": {
+	//             "test.limit": {
+	//               "Comment": "limit all commands execution by test.rate",
+	//               "On": [
+	//                 "sys.AnyCommand"
+	//               ],
+	//               "Rate": "test.rate"
+	//             }
+	//           }
 	//         }
 	//       }
 	//     }
-	//   },
-	//   "ACL": [
-	//     {
-	//       "Comment": "allow reader to select some fields from test.doc and test.rec",
-	//       "Policy": "Allow",
-	//       "Ops": [
-	//         "Select"
-	//       ],
-	//       "Resources": {
-	//         "On": [
-	//           "test.doc",
-	//           "test.rec"
-	//         ],
-	//         "Fields": [
-	//           "f1",
-	//           "f2"
-	//         ]
-	//       },
-	//       "Principal": "test.reader"
-	//     },
-	//     {
-	//       "Comment": "allow reader to select all fields from test.view",
-	//       "Policy": "Allow",
-	//       "Ops": [
-	//         "Select"
-	//       ],
-	//       "Resources": {
-	//         "On": [
-	//           "test.view"
-	//         ]
-	//       },
-	//       "Principal": "test.reader"
-	//     },
-	//     {
-	//       "Comment": "allow reader to execute test.query",
-	//       "Policy": "Allow",
-	//       "Ops": [
-	//         "Execute"
-	//       ],
-	//       "Resources": {
-	//         "On": [
-	//           "test.query"
-	//         ]
-	//       },
-	//       "Principal": "test.reader"
-	//     },
-	//     {
-	//       "Comment": "allow writer to do anything with test.doc, test.rec and test.view",
-	//       "Policy": "Allow",
-	//       "Ops": [
-	//         "Insert",
-	//         "Update",
-	//         "Select"
-	//       ],
-	//       "Resources": {
-	//         "On": [
-	//           "test.doc",
-	//           "test.rec",
-	//           "test.view"
-	//         ]
-	//       },
-	//       "Principal": "test.writer"
-	//     },
-	//     {
-	//       "Comment": "disable writer to update test.doc",
-	//       "Policy": "Deny",
-	//       "Ops": [
-	//         "Update"
-	//       ],
-	//       "Resources": {
-	//         "On": [
-	//           "test.doc"
-	//         ]
-	//       },
-	//       "Principal": "test.writer"
-	//     },
-	//     {
-	//       "Comment": "allow writer to execute all test functions",
-	//       "Policy": "Allow",
-	//       "Ops": [
-	//         "Execute"
-	//       ],
-	//       "Resources": {
-	//         "On": [
-	//           "test.cmd",
-	//           "test.query"
-	//         ]
-	//       },
-	//       "Principal": "test.writer"
-	//     }
-	//   ]
+	//   }
 	// }
-}
-
-type mockedAppStructs struct {
-	istructs.IAppStructs
-	mock.Mock
-}
-
-func (s *mockedAppStructs) AppDef() appdef.IAppDef {
-	return s.Called().Get(0).(appdef.IAppDef)
-}
-
-func (s *mockedAppStructs) AppQName() appdef.AppQName {
-	return s.Called().Get(0).(appdef.AppQName)
-}
-
-func (s *mockedAppStructs) Resources() istructs.IResources {
-	return s.Called().Get(0).(istructs.IResources)
-}
-
-type mockResources struct {
-	istructs.IResources
-	mock.Mock
-}
-
-func (r *mockResources) Resources(cb func(appdef.QName) bool) {
-	r.Called(cb)
 }

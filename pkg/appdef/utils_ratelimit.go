@@ -30,14 +30,11 @@ func validateLimitNames(tt IWithTypes, names QNames) (err error) {
 		return ErrMissed("limit objects names")
 	}
 	for _, n := range names {
-		t := tt.TypeByName(n)
-		if t == nil {
+		t := tt.Type(n)
+		switch t.Kind() {
+		case TypeKind_null:
 			err = errors.Join(err,
 				ErrNotFound("type «%v»", n))
-			continue
-		}
-
-		switch t.Kind() {
 		case TypeKind_Any:
 			if !validAny.Contains(n) {
 				err = errors.Join(err,

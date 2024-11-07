@@ -388,8 +388,8 @@ func (row *rowType) setQName(value appdef.QName) {
 		return
 	}
 
-	t := row.appCfg.AppDef.TypeByName(value)
-	if t == nil {
+	t := row.appCfg.AppDef.Type(value)
+	if t == appdef.NullType {
 		row.collectErrorf(errTypeNotFoundWrap, value, ErrNameNotFound)
 		return
 	}
@@ -412,8 +412,8 @@ func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
 	}
 
 	if qName != appdef.NullQName {
-		t := row.appCfg.AppDef.TypeByName(qName)
-		if t == nil {
+		t := row.appCfg.AppDef.Type(qName)
+		if t == appdef.NullType {
 			err = fmt.Errorf(errTypeNotFoundWrap, qName, ErrNameNotFound)
 			row.collectError(err)
 			return err

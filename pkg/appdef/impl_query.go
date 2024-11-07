@@ -11,10 +11,10 @@ type query struct {
 	function
 }
 
-func newQuery(app *appDef, name QName) *query {
+func newQuery(app *appDef, ws *workspace, name QName) *query {
 	q := &query{}
-	q.function = makeFunc(app, name, TypeKind_Query)
-	app.appendType(q)
+	q.function = makeFunc(app, ws, name, TypeKind_Query)
+	ws.appendType(q)
 	return q
 }
 

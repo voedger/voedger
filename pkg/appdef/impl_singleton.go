@@ -13,9 +13,9 @@ type singleton struct {
 }
 
 // Makes new singleton
-func makeSingleton(app *appDef, name QName, kind TypeKind) singleton {
+func makeSingleton(app *appDef, ws *workspace, name QName, kind TypeKind) singleton {
 	s := singleton{
-		doc: makeDoc(app, name, kind),
+		doc: makeDoc(app, ws, name, kind),
 	}
 	return s
 }

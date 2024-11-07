@@ -11,9 +11,11 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIAppDefBuilder_AddQuery() {
+func ExampleQueries() {
 
 	var app appdef.IAppDef
+
+	wsName := appdef.NewQName("test", "workspace")
 
 	qryName := appdef.NewQName("test", "query")
 	parName := appdef.NewQName("test", "param")
@@ -24,14 +26,16 @@ func ExampleIAppDefBuilder_AddQuery() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		qry := adb.AddQuery(qryName)
+		wsb := adb.AddWorkspace(wsName)
+
+		qry := wsb.AddQuery(qryName)
 		qry.SetEngine(appdef.ExtensionEngineKind_WASM)
 		qry.
 			SetParam(parName).
 			SetResult(resName)
 
-		_ = adb.AddObject(parName)
-		_ = adb.AddObject(resName)
+		_ = wsb.AddObject(parName)
+		_ = wsb.AddObject(resName)
 
 		app = adb.MustBuild()
 	}
@@ -39,7 +43,7 @@ func ExampleIAppDefBuilder_AddQuery() {
 	// how to enum queries
 	{
 		cnt := 0
-		for q := range app.Queries {
+		for q := range appdef.Queries(app) {
 			cnt++
 			fmt.Println(cnt, q)
 		}
@@ -48,7 +52,7 @@ func ExampleIAppDefBuilder_AddQuery() {
 
 	// how to inspect builded AppDef with query
 	{
-		qry := app.Query(qryName)
+		qry := appdef.Query(app, qryName)
 		fmt.Println(qry, ":")
 		fmt.Println(" - parameter:", qry.Param())
 		fmt.Println(" - result   :", qry.Result())

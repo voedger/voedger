@@ -11,7 +11,9 @@ APPLICATION appcomplex(
 );
 
 
-TABLE MyTable2 INHERITS ODoc (
-    myfield1 ref(pkg1.MyTable1) NOT NULL,
-    myfield2 int32 NOT NULL
+WORKSPACE MyWS1 (
+	TABLE MyTable2 INHERITS ODoc (
+  	  myfield1 ref(pkg1.MyTable1) NOT NULL,
+    	myfield2 int32 NOT NULL
+	);
 );
