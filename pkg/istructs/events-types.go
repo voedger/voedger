@@ -69,6 +69,9 @@ type ICUDRow interface {
 	IsNew() bool
 	QName() appdef.QName
 	ID() RecordID
+	// Iterate modified fields.
+	//
+	// If a string- or bytes- field is emptied, then an empty string (empty byte array) will be passed to the callback iterator
 	ModifiedFields(func(appdef.FieldName, interface{}) bool)
 }
 
