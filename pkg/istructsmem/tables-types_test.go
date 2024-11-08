@@ -421,37 +421,80 @@ func TestModifiedFields(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	t.Run("no modifications", func(t *testing.T) {
+	t.Run("should has no modifications if new record", func(t *testing.T) {
 		rec := newRecord(test.AppCfg)
 		for _, _ = range rec.ModifiedFields {
 			t.Fail()
 		}
 	})
-	t.Run("has modifications", func(t *testing.T) {
+
+	testEnum := func(rec istructs.ICUDRow, want map[appdef.FieldName]interface{}) {
+		t.Run("enum", func(t *testing.T) {
+			got := make(map[appdef.FieldName]interface{})
+			for n, v := range rec.ModifiedFields {
+				got[n] = v
+			}
+			require.Equal(want, got)
+		})
+
+		t.Run("breakable", func(t *testing.T) {
+			for stop := range want {
+				cnt := 0
+				for n, _ := range rec.ModifiedFields {
+					if n == stop {
+						break
+					}
+					cnt++
+				}
+				require.Less(cnt, len(want))
+			}
+		})
+	}
+
+	t.Run("should enum modified user fields", func(t *testing.T) {
 		rec := newRecord(test.AppCfg)
 		rec.setQName(test.testCDoc)
-		rec.PutInt32("int32", 42)
-		rec.PutBool(appdef.SystemField_IsActive, false) // should be mentioned on ModifiedFields()
+		rec.PutInt32("int32", 1)
+		rec.PutString("string", "test")
+		rec.PutInt64("int64", 0)   // zero (0) value should be enumerated too
+		rec.PutBool("bool", false) // zero (false) value should be enumerated too
 		require.NoError(rec.build())
-		actualModifications := map[appdef.FieldName]bool{}
-		for fieldName, _ := range rec.ModifiedFields {
-			actualModifications[fieldName] = true
-		}
-		expectedModifications := map[appdef.FieldName]bool{
-			"int32":                     true,
-			appdef.SystemField_IsActive: true,
-		}
-		require.Equal(expectedModifications, actualModifications)
 
-		t.Run("iterator ModifiedFields() should by breakable", func(t *testing.T) {
-			f := []appdef.FieldName{}
-			for fn, _ := range rec.ModifiedFields {
-				f = append(f, fn)
-				break
-			}
-			require.Len(f, 1)
-			require.Equal(appdef.SystemField_IsActive, f[0])
-		})
+		testEnum(rec,
+			map[appdef.FieldName]interface{}{
+				"int32":  int32(1),
+				"string": "test",
+				"int64":  int64(0),
+				"bool":   false,
+			})
 	})
 
+	t.Run("should enum modified sys.IsActive", func(t *testing.T) {
+		rec := newRecord(test.AppCfg)
+		rec.setQName(test.testCDoc)
+		rec.PutBool(appdef.SystemField_IsActive, false) // system field should be enumerated
+		require.NoError(rec.build())
+
+		testEnum(rec,
+			map[appdef.FieldName]interface{}{
+				appdef.SystemField_IsActive: false,
+			})
+	})
+
+	// #2785
+	t.Run("should enum emptied user fields", func(t *testing.T) {
+		rec := newRecord(test.AppCfg)
+		rec.setQName(test.testCDoc)
+		rec.PutBytes("bytes", []byte{})
+		rec.PutString("string", "")
+		rec.PutBytes("raw", nil)
+		require.NoError(rec.build())
+
+		testEnum(rec,
+			map[appdef.FieldName]interface{}{
+				"bytes":  []byte{},
+				"string": "",
+				"raw":    []byte{},
+			})
+	})
 }

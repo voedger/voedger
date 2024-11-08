@@ -65,4 +65,18 @@ func (row *rowType) ModifiedFields(cb func(appdef.FieldName, interface{}) bool) 
 	row.dyB.IterateFields(nil, func(name string, value interface{}) bool {
 		return cb(name, value)
 	})
+
+	// #2785
+	for name, fld := range row.nils {
+		switch fld.DataKind() {
+		case appdef.DataKind_string:
+			if !cb(name, "") {
+				return
+			}
+		case appdef.DataKind_bytes:
+			if !cb(name, []byte{}) {
+				return
+			}
+		}
+	}
 }
