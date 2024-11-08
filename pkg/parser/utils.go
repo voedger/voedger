@@ -188,7 +188,7 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 				lookInInherted = func(iws *WorkspaceStmt) error {
 					for _, c := range chain {
 						if c == iws {
-							return ErrCircularReferenceInInherits
+							return nil // avoid circular references. Note this isn't an error because circular references are analyzed elsewhere
 						}
 					}
 					chain = append(chain, iws)
