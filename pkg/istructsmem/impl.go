@@ -516,7 +516,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 
 		// check exists record has correct QName
 		if rec.originRec.QName() != old.QName() {
-			return fmt.Errorf("updated «%v» record «%d» has unexpected QName value «%v»: %w", rec.originRec.QName(), rec.originRec.ID(), old.QName(), ErrWrongType)
+			return ErrWrongType("updated «%v» record «%d» has unexpected QName value «%v»", rec.originRec.QName(), rec.originRec.ID(), old.QName())
 		}
 	}
 
@@ -621,7 +621,7 @@ func (recs *appRecordsType) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any
 	}
 
 	if k := rec.typeDef().Kind(); !storable(k) {
-		return fmt.Errorf("%v is not storable record type: %w", rec.typeDef(), ErrWrongType)
+		return ErrWrongType("%v is not storable record type", rec.typeDef())
 	}
 
 	if rec.ID() == istructs.NullRecordID {

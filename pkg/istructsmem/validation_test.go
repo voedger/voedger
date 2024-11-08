@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -173,8 +173,8 @@ func Test_ValidEventArgs(t *testing.T) {
 		doc.PutQName(appdef.SystemField_QName, rec1Name) // <- error here
 		doc.PutRecordID(appdef.SystemField_ID, 1)
 		_, err := e.BuildRawEvent()
-		require.ErrorIs(err, ErrWrongType)
-		require.ErrorContains(err, "event «test.document» argument uses wrong type «test.record1», expected «test.document»")
+		require.Error(err, require.Is(ErrWrongTypeError),
+			require.Has("event «test.document» argument uses wrong type «test.record1», expected «test.document»"))
 	})
 
 	t.Run("error if invalid unlogged argument QName", func(t *testing.T) {
@@ -187,8 +187,8 @@ func Test_ValidEventArgs(t *testing.T) {
 		unl.PutQName(appdef.SystemField_QName, objName) // <- error here
 
 		_, err := e.BuildRawEvent()
-		require.ErrorIs(err, ErrWrongType)
-		require.ErrorContains(err, "event «test.document» unlogged argument uses wrong type «test.object»")
+		require.Error(err, require.Is(ErrWrongTypeError),
+			require.Has("event «test.document» unlogged argument uses wrong type «test.object»"))
 	})
 
 	t.Run("error if argument not valid", func(t *testing.T) {
@@ -269,8 +269,8 @@ func Test_ValidEventArgs(t *testing.T) {
 				rec.PutRecordID(appdef.SystemField_ID, 2)
 				rec.PutString(appdef.SystemField_Container, "child2") // <- error here
 				_, err := e.BuildRawEvent()
-				require.ErrorIs(err, ErrWrongType)
-				require.ErrorContains(err, "ODoc «test.document» child[0] ORecord «child2: test.record1» has wrong type name, expected «test.record2»")
+				require.Error(err, require.Is(ErrWrongTypeError),
+					require.Has("ODoc «test.document» child[0] ORecord «child2: test.record1» has wrong type name, expected «test.record2»"))
 			})
 
 			t.Run("error if wrong parent ID", func(t *testing.T) {
@@ -828,7 +828,7 @@ func Test_VerifiedFields(t *testing.T) {
 			row.PutInt32("age", 7)
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrWrongFieldType)
+			require.ErrorIs(err, ErrWrongFieldTypeError)
 		})
 
 		t.Run("error if not a token, but plain string value", func(t *testing.T) {
@@ -923,7 +923,7 @@ func Test_VerifiedFields(t *testing.T) {
 			row.PutString("email", wtToken)
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrWrongFieldType)
+			require.ErrorIs(err, ErrWrongFieldTypeError)
 		})
 
 	})

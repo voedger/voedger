@@ -232,7 +232,7 @@ func validateEventArgs(ev *eventType) (err error) {
 	if ev.argObject.QName() != arg {
 		err = errors.Join(err,
 			// event «test.document» argument uses wrong type «test.record1», expected «test.document»
-			validateErrorf(ECode_InvalidTypeName, errEventArgUseWrongType, ev, ev.argObject.QName(), arg, ErrWrongType))
+			validateErrorf(ECode_InvalidTypeName, errEventArgUseWrongType, ev, ev.argObject.QName(), arg, ErrWrongTypeError))
 	} else if ev.argObject.QName() != appdef.NullQName {
 		err = errors.Join(err,
 			validateObject(&ev.argObject))
@@ -241,7 +241,7 @@ func validateEventArgs(ev *eventType) (err error) {
 	if ev.argUnlObj.QName() != argUnl {
 		err = errors.Join(err,
 			// event «test.document» unlogged argument uses wrong type «test.object», expected «.»
-			validateErrorf(ECode_InvalidTypeName, errEventUnloggedArgUseWrongType, ev, ev.argUnlObj.QName(), argUnl, ErrWrongType))
+			validateErrorf(ECode_InvalidTypeName, errEventUnloggedArgUseWrongType, ev, ev.argUnlObj.QName(), argUnl, ErrWrongTypeError))
 	} else if ev.argUnlObj.QName() != appdef.NullQName {
 		err = errors.Join(err,
 			validateObject(&ev.argUnlObj))
@@ -301,7 +301,7 @@ func validateObject(o *objectType) (err error) {
 			if childQName != cont.QName() {
 				err = errors.Join(err,
 					// ODoc «test.document» child[0] ORecord «child2: test.record1» has wrong type name, expected «test.record2»
-					validateErrorf(ECode_InvalidTypeName, errWrongContainerType, o, idx, child, cont.QName(), ErrWrongType))
+					validateErrorf(ECode_InvalidTypeName, errWrongContainerType, o, idx, child, cont.QName(), ErrWrongTypeError))
 				return
 			}
 

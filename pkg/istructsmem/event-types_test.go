@@ -2090,8 +2090,7 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 		{"should be error if invalid data type in JSON field",
 			`{"int32": "error"}`,
 			func(o istructs.IObject, err error) {
-				require.ErrorIs(err, ErrWrongFieldType)
-				require.ErrorContains(err, "int32")
+				require.Error(err, require.Is(ErrWrongFieldTypeError), require.Has("int32"))
 			}},
 		{"should be error if unknown container in JSON",
 			`{"unknown": [{"int32": 1}]}`,
@@ -2102,16 +2101,16 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 		{"should be error if invalid data type in JSON container",
 			`{"child": ["a","b"]}`,
 			func(o istructs.IObject, err error) {
-				require.ErrorIs(err, ErrWrongType)
-				require.ErrorContains(err, "invalid type «string»")
-				require.ErrorContains(err, "child «child[0]»")
+				require.Error(err, ErrWrongTypeError,
+					require.Has("invalid type «string»"),
+					require.Has("child «child[0]»"))
 			}},
 		{"should be error if invalid data type in JSON container",
 			`{"child": ["a","b"]}`,
 			func(o istructs.IObject, err error) {
-				require.ErrorIs(err, ErrWrongType)
-				require.ErrorContains(err, "invalid type «string»")
-				require.ErrorContains(err, "child «child[0]»")
+				require.Error(err, ErrWrongTypeError,
+					require.Has("invalid type «string»"),
+					require.Has("child «child[0]»"))
 			}},
 	}
 	for _, tt := range tests {
@@ -2138,6 +2137,6 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 		b.FillFromJSON(j)
 
 		_, err := b.Build()
-		require.ErrorIs(err, ErrWrongType)
+		require.ErrorIs(err, ErrWrongTypeError)
 	})
 }

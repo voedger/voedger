@@ -94,11 +94,11 @@ func Test_clarifyJSONValue(t *testing.T) {
 		kind          appdef.DataKind
 		expectedError error
 	}{
-		{val: float64(7), kind: appdef.DataKind_int32, expectedError: ErrWrongFieldType},
-		{val: float64(7), kind: appdef.DataKind_int64, expectedError: ErrWrongFieldType},
-		{val: float64(7), kind: appdef.DataKind_float32, expectedError: ErrWrongFieldType},
-		{val: float32(7), kind: appdef.DataKind_float64, expectedError: ErrWrongFieldType},
-		{val: float64(7), kind: appdef.DataKind_RecordID, expectedError: ErrWrongFieldType},
+		{val: float64(7), kind: appdef.DataKind_int32, expectedError: ErrWrongFieldTypeError},
+		{val: float64(7), kind: appdef.DataKind_int64, expectedError: ErrWrongFieldTypeError},
+		{val: float64(7), kind: appdef.DataKind_float32, expectedError: ErrWrongFieldTypeError},
+		{val: float32(7), kind: appdef.DataKind_float64, expectedError: ErrWrongFieldTypeError},
+		{val: float64(7), kind: appdef.DataKind_RecordID, expectedError: ErrWrongFieldTypeError},
 		{val: json.Number("1.1"), kind: appdef.DataKind_int32},
 		{val: json.Number("1.1"), kind: appdef.DataKind_int64},
 		{val: json.Number("1.1"), kind: appdef.DataKind_RecordID},
@@ -117,10 +117,10 @@ func Test_clarifyJSONValue(t *testing.T) {
 		{val: json.Number("-" + coreutils.TooBigNumberStr), kind: appdef.DataKind_float64},
 		{val: json.Number("-1"), kind: appdef.DataKind_RecordID},
 		{val: int64(-1), kind: appdef.DataKind_RecordID},
-		{val: float64(7), kind: appdef.DataKind_bool, expectedError: ErrWrongFieldType},
-		{val: float64(7), kind: appdef.DataKind_string, expectedError: ErrWrongFieldType},
-		{val: float64(7), kind: appdef.DataKind_QName, expectedError: ErrWrongFieldType},
-		{val: float64(7), kind: appdef.DataKind_bytes, expectedError: ErrWrongFieldType},
+		{val: float64(7), kind: appdef.DataKind_bool, expectedError: ErrWrongFieldTypeError},
+		{val: float64(7), kind: appdef.DataKind_string, expectedError: ErrWrongFieldTypeError},
+		{val: float64(7), kind: appdef.DataKind_QName, expectedError: ErrWrongFieldTypeError},
+		{val: float64(7), kind: appdef.DataKind_bytes, expectedError: ErrWrongFieldTypeError},
 		{val: "a", kind: appdef.DataKind_bytes},
 		{val: "a", kind: appdef.DataKind_QName},
 		{val: "a.a", kind: appdef.DataKind_QName, expectedError: qnames.ErrNameNotFound},
@@ -157,7 +157,7 @@ func Test_clarifyJSONValue(t *testing.T) {
 		checkRecord(v)
 
 		v, err = row.clarifyJSONValue("ups", appdef.DataKind_Record)
-		require.ErrorIs(err, ErrWrongFieldType)
+		require.ErrorIs(err, ErrWrongFieldTypeError)
 		require.Nil(v)
 	})
 
@@ -179,7 +179,7 @@ func Test_clarifyJSONValue(t *testing.T) {
 		checkEvent(v)
 
 		v, err = row.clarifyJSONValue("ups", appdef.DataKind_Event)
-		require.ErrorIs(err, ErrWrongFieldType)
+		require.ErrorIs(err, ErrWrongFieldTypeError)
 		require.Nil(v)
 	})
 }
@@ -332,7 +332,7 @@ func Test_rowType_PutFromJSON(t *testing.T) {
 		}
 		bld.PutFromJSON(data)
 		_, err := bld.Build()
-		require.ErrorIs(err, ErrWrongType)
+		require.ErrorIs(err, ErrWrongTypeError)
 		log.Println(err)
 	})
 
@@ -444,7 +444,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 			row := newRow(test.AppCfg)
 			row.setQName(test.testRow)
 			put(row)
-			require.ErrorIs(row.build(), ErrWrongFieldType)
+			require.ErrorIs(row.build(), ErrWrongFieldTypeError)
 		}
 
 		testPut(func(row istructs.IRowWriter) { row.PutInt32("int64", 1) })
@@ -466,7 +466,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 		row.PutNumber("bytes", json.Number("29"))
 		row.PutNumber("raw", json.Number("3.141592653589793238"))
 
-		require.ErrorIs(row.build(), ErrWrongFieldType)
+		require.ErrorIs(row.build(), ErrWrongFieldTypeError)
 	})
 
 	t.Run("PutQName with unknown QName value must be error", func(t *testing.T) {
@@ -485,7 +485,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 
 			row.PutChars("int32", "29")
 
-			require.ErrorIs(row.build(), ErrWrongFieldType)
+			require.ErrorIs(row.build(), ErrWrongFieldTypeError)
 		})
 
 		t.Run("PutChars to QName-type fields non convertible value must be error", func(t *testing.T) {
@@ -516,17 +516,17 @@ func Test_rowType_PutErrors(t *testing.T) {
 
 		err := row.build()
 		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorIs(err, ErrWrongFieldType)
+		require.ErrorIs(err, ErrWrongFieldTypeError)
 	})
 
-	t.Run("Must be error to put into abstract table", func(t *testing.T) {
+	t.Run("Should be error to put into abstract table", func(t *testing.T) {
 		row := makeRow(test.AppCfg)
 		row.setQName(test.abstractCDoc)
 
 		row.PutInt32("int32", 1)
 
 		err := row.build()
-		require.ErrorIs(err, ErrAbstractType)
+		require.Error(err, require.Is(ErrAbstractTypeError), require.Has(test.abstractCDoc))
 	})
 }
 
@@ -727,7 +727,7 @@ func Test_rowType_BuildErrors(t *testing.T) {
 		row.setQName(test.testRow)
 
 		row.PutString("int32", "a")
-		require.ErrorIs(row.build(), ErrWrongFieldType)
+		require.ErrorIs(row.build(), ErrWrongFieldTypeError)
 	})
 
 	t.Run("PutString to []byte type must collect convert error", func(t *testing.T) {
@@ -736,7 +736,7 @@ func Test_rowType_BuildErrors(t *testing.T) {
 
 		row.PutString("bytes", "some string")
 
-		require.ErrorIs(row.build(), ErrWrongFieldType)
+		require.ErrorIs(row.build(), ErrWrongFieldTypeError)
 	})
 
 	t.Run("PutQName invalid QName must have build error", func(t *testing.T) {
@@ -745,7 +745,7 @@ func Test_rowType_BuildErrors(t *testing.T) {
 
 		row.PutString("QName", "zZz")
 
-		require.ErrorIs(row.build(), ErrWrongFieldType)
+		require.ErrorIs(row.build(), ErrWrongFieldTypeError)
 	})
 }
 
@@ -753,13 +753,20 @@ func Test_rowType_Nils(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	t.Run("must be empty nils if no nil assignment", func(t *testing.T) {
+	checkNils := func(row rowType, nils ...string) {
+		require.Len(row.nils, len(nils))
+		for _, n := range nils {
+			require.Contains(row.nils, n)
+		}
+	}
+
+	t.Run("Should be empty nils if no nil assignment", func(t *testing.T) {
 		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
 		row.PutInt32("int32", 8)
 		require.NoError(row.build())
-		require.Empty(row.nils)
+		checkNils(row)
 	})
 
 	t.Run("check nils", func(t *testing.T) {
@@ -770,56 +777,41 @@ func Test_rowType_Nils(t *testing.T) {
 			row.PutInt32("int32", 8)
 			row.PutChars("bytes", "")
 			require.NoError(row.build())
-			require.Len(row.nils, 1)
-			require.Contains(row.nils, "bytes")
+			checkNils(row, "bytes")
 		})
 
 		t.Run("check second nil", func(t *testing.T) {
 			row.PutChars("string", "")
 			require.NoError(row.build())
-			require.Len(row.nils, 2)
-			require.Contains(row.nils, "bytes")
-			require.Contains(row.nils, "string")
+			checkNils(row, "bytes", "string")
 		})
 
 		t.Run("check third nil", func(t *testing.T) {
 			row.PutChars("raw", "")
 			require.NoError(row.build())
-			require.Len(row.nils, 3)
-			require.Contains(row.nils, "bytes")
-			require.Contains(row.nils, "string")
-			require.Contains(row.nils, "raw")
+			checkNils(row, "bytes", "string", "raw")
 		})
 
 		t.Run("check repeat nil", func(t *testing.T) {
 			row.PutChars("bytes", "")
 			require.NoError(row.build())
-			require.Len(row.nils, 3)
-			require.Contains(row.nils, "bytes")
-			require.Contains(row.nils, "string")
-			require.Contains(row.nils, "raw")
+			checkNils(row, "bytes", "string", "raw")
 		})
 
 		t.Run("check nils are kept", func(t *testing.T) {
 			row.PutInt32("int32", 888)
 			require.NoError(row.build())
-			require.Len(row.nils, 3)
-			require.Contains(row.nils, "bytes")
-			require.Contains(row.nils, "string")
-			require.Contains(row.nils, "raw")
+			checkNils(row, "bytes", "string", "raw")
 		})
 
 		t.Run("check nil can be reassigned", func(t *testing.T) {
 			row.PutBytes("bytes", []byte{0})
 			require.NoError(row.build())
-			require.Len(row.nils, 2)
-			require.Contains(row.nils, "string")
-			require.Contains(row.nils, "raw")
+			checkNils(row, "string", "raw")
 
 			row.PutBytes("raw", []byte("📷"))
 			require.NoError(row.build())
-			require.Len(row.nils, 1)
-			require.Contains(row.nils, "string")
+			checkNils(row, "string")
 		})
 	})
 
@@ -871,10 +863,7 @@ func Test_rowType_Nils(t *testing.T) {
 
 		require.Equal(7, cnt)
 
-		require.Len(row.nils, 3)
-		require.Contains(row.nils, "bytes")
-		require.Contains(row.nils, "string")
-		require.Contains(row.nils, "raw")
+		checkNils(row, "bytes", "string", "raw")
 	})
 }
 
@@ -883,12 +872,12 @@ func Test_rowType_String(t *testing.T) {
 
 	test := test()
 
-	t.Run("must be null row", func(t *testing.T) {
+	t.Run("Should be null row", func(t *testing.T) {
 		r := newRow(test.AppCfg)
 		require.Equal("null row", r.String())
 	})
 
-	t.Run("must be complete form for record", func(t *testing.T) {
+	t.Run("Should be complete form for record", func(t *testing.T) {
 		r := newRecord(test.AppCfg)
 		r.setQName(test.testCRec)
 		r.setContainer("child")
@@ -897,7 +886,7 @@ func Test_rowType_String(t *testing.T) {
 		require.Contains(s, "«child: test.Record»")
 	})
 
-	t.Run("must be short form for document", func(t *testing.T) {
+	t.Run("Should be short form for document", func(t *testing.T) {
 		r := newRecord(test.AppCfg)
 		r.setQName(test.testCDoc)
 		s := r.String()

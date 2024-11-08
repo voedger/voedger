@@ -655,7 +655,7 @@ func (upd *updateRecType) build() (err error) {
 		userChanges = true
 		return true
 	})
-	for _, n := range upd.changes.nils {
+	for n := range upd.changes.nils {
 		upd.result.dyB.Set(n, nil)
 		userChanges = true
 	}
@@ -919,14 +919,14 @@ func (o *objectType) FillFromJSON(data map[string]any) {
 			for i, val := range fv {
 				childData, ok := val.(map[string]any)
 				if !ok {
-					o.collectErrorf("%v: invalid type «%T» in JSON for child «%s[%d]», expected «map[string]any»: %w", o, val, n, i, ErrWrongType)
+					o.collectErrorf("%v: invalid type «%T» in JSON for child «%s[%d]», expected «map[string]any»: %w", o, val, n, i, ErrWrongTypeError)
 					break
 				}
 				c := o.ChildBuilder(n)
 				c.FillFromJSON(childData)
 			}
 		default:
-			o.collectErrorf(`%w %#T for field "%s" with value %v`, ErrWrongType, v, n, v)
+			o.collectError(ErrWrongType(`%#T for field "%s" with value %v`, v, n, v))
 		}
 	}
 }

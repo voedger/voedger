@@ -134,7 +134,7 @@ outer:
 			return v.storeToBytes(), nil
 		}
 	}
-	return nil, fmt.Errorf("value has type «%T», but «%s» expected: %w", value, kind.TrimString(), ErrWrongFieldType)
+	return nil, ErrWrongFieldType("value has type «%T», but «%s» expected", value, kind.TrimString())
 }
 
 func dynoBufGetWord(dyB *dynobuffers.Buffer, fieldName appdef.FieldName) (value uint16, ok bool) {

@@ -624,7 +624,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			exists := newValue(appCfg, appdef.NewQName("test", "otherView"))
 			require.Panics(func() {
 				_ = viewRecords.UpdateValueBuilder(appdef.NewQName("test", "viewDrinks"), exists)
-			}, require.Is(ErrWrongType), require.Has("test.otherView"))
+			}, require.Is(ErrWrongTypeError), require.Has("test.otherView"))
 		})
 
 		t.Run("Must have error for put if empty value", func(t *testing.T) {
@@ -677,8 +677,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			vb.PutBool("active", true)
 
 			err := viewRecords.Put(1, kb, vb)
-			require.ErrorIs(err, ErrWrongType)
-			require.ErrorContains(err, "test.viewDrinks")
+			require.Error(err, require.Is(ErrWrongTypeError), require.Has("test.viewDrinks"))
 		})
 
 		t.Run("put batch must fail if error in any key-value item", func(t *testing.T) {
@@ -806,7 +805,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks"))
 		vb.PutInt32("id", 42)
 
-		require.Panics(func() { _ = vb.Build() }, require.Is(ErrWrongFieldType), require.Has("id"))
+		require.Panics(func() { _ = vb.Build() }, require.Is(ErrWrongFieldTypeError), require.Has("id"))
 	})
 }
 
@@ -910,8 +909,7 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 
 			json[appdef.SystemField_QName] = 123
 			err = app.ViewRecords().PutJSON(1, json)
-			require.ErrorIs(err, ErrWrongFieldType)
-			require.ErrorContains(err, appdef.SystemField_QName)
+			require.Error(err, require.Is(ErrWrongFieldTypeError), require.Has(appdef.SystemField_QName))
 
 			json[appdef.SystemField_QName] = `naked 🔫`
 			err = app.ViewRecords().PutJSON(1, json)
@@ -934,8 +932,7 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 
 			json["pk1"] = "error value"
 			err = app.ViewRecords().PutJSON(1, json)
-			require.ErrorIs(err, ErrWrongFieldType)
-			require.ErrorContains(err, "pk1")
+			require.Error(err, require.Is(ErrWrongFieldTypeError), require.Has("pk1"))
 
 			json["pk1"] = gojson.Number("1")
 			err = app.ViewRecords().PutJSON(1, json)
@@ -964,8 +961,7 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 			delete(json, "unknownField")
 			json["v1"] = `value`
 			err = app.ViewRecords().PutJSON(1, json)
-			require.ErrorIs(err, ErrWrongFieldType)
-			require.ErrorContains(err, "v1")
+			require.Error(err, require.Is(ErrWrongFieldTypeError), require.Has(err, "v1"))
 		})
 	})
 }
@@ -1396,7 +1392,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 			batch[0].Key.PutString("Sport", "Volleyball")
 
 			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-			require.ErrorIs(err, ErrWrongFieldType)
+			require.ErrorIs(err, ErrWrongFieldTypeError)
 		})
 
 		t.Run("if key is not valid", func(t *testing.T) {

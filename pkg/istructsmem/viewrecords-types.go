@@ -44,7 +44,7 @@ func (vr *appViewRecords) UpdateValueBuilder(view appdef.QName, existing istruct
 	value := vr.NewValueBuilder(view).(*valueType)
 	src := existing.(*valueType)
 	if qName := src.QName(); qName != value.QName() {
-		panic(fmt.Errorf("invalid existing value type «%v»; expected «%v»: %w", qName, value.QName(), ErrWrongType))
+		panic(ErrWrongType("invalid existing value type «%v»; expected «%v»", qName, value.QName()))
 	}
 	value.copyFrom(&src.rowType)
 	return value
@@ -159,10 +159,10 @@ func (vr *appViewRecords) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any) 
 			if qName, err := appdef.ParseQName(value); err == nil {
 				viewName = qName
 			} else {
-				return fmt.Errorf(errFieldConvertErrorWrap, appdef.SystemField_QName, value, appdef.DataKind_QName.TrimString(), err)
+				return enrichError(err, errFieldValueTypeConvert, appdef.SystemField_QName, value, appdef.DataKind_QName.TrimString())
 			}
 		} else {
-			return fmt.Errorf(errFieldConvertErrorWrap, appdef.SystemField_QName, v, appdef.DataKind_QName.TrimString(), ErrWrongFieldType)
+			return ErrWrongFieldType(errFieldValueTypeConvert, appdef.SystemField_QName, v, appdef.DataKind_QName.TrimString())
 		}
 	}
 
@@ -188,7 +188,7 @@ func (vr *appViewRecords) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any) 
 			if view.Value().Field(f) != nil {
 				valueJ[f] = v
 			} else {
-				return fmt.Errorf(errFieldNotFoundWrap, f, view, ErrNameNotFound)
+				return ErrFieldNotFound(f, view)
 			}
 		}
 	}

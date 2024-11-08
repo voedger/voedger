@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
 	gojson "encoding/json"
 
@@ -275,18 +275,16 @@ func Test_RecordsPutJSON(t *testing.T) {
 
 		json[appdef.SystemField_QName] = 123
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, ErrWrongFieldType)
-		require.ErrorContains(err, appdef.SystemField_QName)
+		require.Error(err, require.Is(ErrWrongFieldTypeError), require.Has(appdef.SystemField_QName))
 
 		json[appdef.SystemField_QName] = `naked 🔫`
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, appdef.ErrConvertError)
-		require.ErrorContains(err, appdef.SystemField_QName)
+		require.Error(err, require.Is(appdef.ErrConvertError), require.Has(appdef.SystemField_QName))
 
 		json[appdef.SystemField_QName] = test.testObj.String()
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, ErrWrongType)
-		require.ErrorContains(err, test.testObj.String())
+		require.Error(err,
+			require.Is(ErrWrongTypeError), require.Has(test.testObj))
 	})
 
 	t.Run("should fail to put record with invalid RecordID", func(t *testing.T) {

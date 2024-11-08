@@ -9,11 +9,26 @@ import (
 	"fmt"
 )
 
+func enrichError(err error, msg string, args ...any) error {
+	s := msg
+	if len(args) > 0 {
+		s = fmt.Sprintf(msg, args...)
+	}
+	return fmt.Errorf("%w: %s", err, s)
+}
+
+// TODO: use enrichError() for all errors
+// eliminate all calls fmt.Errorf("… %w …", …) with err×××Wrap constants
+
 var ErrorEventNotValid = errors.New("event is not valid")
 
 var ErrNameMissed = errors.New("name is empty")
 
 var ErrNameNotFound = errors.New("name not found")
+
+func ErrFieldNotFound(f string, fields interface{}) error {
+	return enrichError(ErrNameNotFound, "field «%s» is not found in %v", f, fields)
+}
 
 var ErrInvalidName = errors.New("name not valid")
 
@@ -43,9 +58,17 @@ var ErrWrongRecordID = errors.New("wrong record ID")
 
 var ErrUnableToUpdateSystemField = errors.New("unable to update system field")
 
-var ErrWrongType = errors.New("wrong type")
+var ErrWrongTypeError = errors.New("wrong type")
 
-var ErrAbstractType = errors.New("abstract type")
+func ErrWrongType(msg string, args ...any) error {
+	return enrichError(ErrWrongTypeError, msg, args...)
+}
+
+var ErrAbstractTypeError = errors.New("abstract type")
+
+func ErrAbstractType(msg string, args ...any) error {
+	return enrichError(ErrAbstractTypeError, msg, args...)
+}
 
 var ErrUnexpectedTypeKind = errors.New("unexpected type kind")
 
@@ -53,7 +76,11 @@ var ErrUnknownCodec = errors.New("unknown codec")
 
 var ErrMaxGetBatchRecordCountExceeds = errors.New("the maximum count of records to batch is exceeded")
 
-var ErrWrongFieldType = errors.New("wrong field type")
+var ErrWrongFieldTypeError = errors.New("wrong field type")
+
+func ErrWrongFieldType(msg string, args ...any) error {
+	return enrichError(ErrWrongFieldTypeError, msg, args...)
+}
 
 var ErrTypeChanged = errors.New("type has been changed")
 
@@ -63,17 +90,16 @@ var ErrNumAppWorkspacesNotSet = errors.New("NumAppWorkspaces is not set")
 
 var ErrCorruptedData = errors.New("corrupted data")
 
+const (
+	errWrongFieldValue        = "field «%v» value should be %s, but got %T"
+	errFieldValueTypeConvert  = "field «%s» value type «%T» can not to be converted to «%s»"
+	errFieldMustBeVerified    = "field «%s» must be verified, token expected, but value «%T» passed"
+	errFieldValueTypeMismatch = "value type «%s» is not applicable for %v"
+)
+
 const errTypedFieldNotFoundWrap = "%s-type field «%s» is not found in %v: %w" // int32-type field «myField» is not found …
 
-const errFieldNotFoundWrap = "field «%s» is not found in %v: %w" // int32-type field «myField» is not found …
-
 const errContainerNotFoundWrap = "container «%s» is not found in type «%v»: %w" // container «order_item» is not found …
-
-const errFieldValueTypeMismatchWrap = "value type «%s» is not applicable for %v: %w" // value type «float64» is not applicable for int32-field «myField»: …
-
-const errFieldMustBeVerified = "field «%s» must be verified, token expected, but value «%T» passed: %w"
-
-const errFieldConvertErrorWrap = "field «%s» value type «%T» can not to be converted to «%s»: %w"
 
 const errNumberFieldWrongValueWrap = "field «%s» value %s can not to be converted to «%s»: %w"
 
