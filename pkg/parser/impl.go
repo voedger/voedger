@@ -337,6 +337,9 @@ func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
 	defineApp(&c)
 
 	preAnalyse(&c, packages)
+	if len(c.errs) > 0 {
+		return nil, errors.Join(c.errs...)
+	}
 
 	analyse(&c, packages)
 

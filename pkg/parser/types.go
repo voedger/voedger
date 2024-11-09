@@ -844,11 +844,19 @@ type tableAddr struct {
 
 type TableStmt struct {
 	Statement
-	Abstract bool            `parser:"@'ABSTRACT'?'TABLE'"`
-	Name     Ident           `parser:"@Ident"`
-	Inherits *DefQName       `parser:"('INHERITS' @@)?"`
-	Items    []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
-	With     []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	Abstract   bool            `parser:"@'ABSTRACT'?'TABLE'"`
+	Name       Ident           `parser:"@Ident"`
+	Inherits   *DefQName       `parser:"( ('INHERITS' @@) |"`
+	CDoc       bool            `parser:"  @('cdoc') |"`
+	WDoc       bool            `parser:"  @('wdoc') |"`
+	ODoc       bool            `parser:"  @('odoc') |"`
+	CRecord    bool            `parser:"  @('crecord') |"`
+	WRecord    bool            `parser:"  @('wrecord') |"`
+	ORecord    bool            `parser:"  @('orecord') |"`
+	CSingleton bool            `parser:"  @('csingleton') |"`
+	WSingleton bool            `parser:"  @('wsingleton') )?"`
+	Items      []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	With       []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 	// filled on the analysis stage
 	tableTypeKind appdef.TypeKind
 	workspace     workspaceAddr

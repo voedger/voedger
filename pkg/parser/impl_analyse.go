@@ -1468,33 +1468,41 @@ func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (k
 
 	kind = appdef.TypeKind_null
 	check := func(node tableNode) {
-		if node.pkg.Path == appdef.SysPackage {
-			if node.table.Name == nameCDOC {
-				kind = appdef.TypeKind_CDoc
-			}
-			if node.table.Name == nameODOC {
-				kind = appdef.TypeKind_ODoc
-			}
-			if node.table.Name == nameWDOC {
-				kind = appdef.TypeKind_WDoc
-			}
-			if node.table.Name == nameCRecord {
-				kind = appdef.TypeKind_CRecord
-			}
-			if node.table.Name == nameORecord {
-				kind = appdef.TypeKind_ORecord
-			}
-			if node.table.Name == nameWRecord {
-				kind = appdef.TypeKind_WRecord
-			}
-			if node.table.Name == nameCSingleton {
-				kind = appdef.TypeKind_CDoc
-				singleton = true
-			}
-			if node.table.Name == nameWSingleton {
-				kind = appdef.TypeKind_WDoc
-				singleton = true
-			}
+		isSysPkg := node.pkg.Path == appdef.SysPackage
+		name := node.table.Name
+		if isSysPkg && name == nameCdoc || node.table.CDoc {
+			kind = appdef.TypeKind_CDoc
+			return
+		}
+		if isSysPkg && name == nameWDoc || node.table.WDoc {
+			kind = appdef.TypeKind_WDoc
+			return
+		}
+		if isSysPkg && name == nameODoc || node.table.ODoc {
+			kind = appdef.TypeKind_ODoc
+			return
+		}
+		if isSysPkg && name == nameCRecord || node.table.CRecord {
+			kind = appdef.TypeKind_CRecord
+			return
+		}
+		if isSysPkg && name == nameORecord || node.table.ORecord {
+			kind = appdef.TypeKind_ORecord
+			return
+		}
+		if isSysPkg && name == nameWRecord || node.table.WRecord {
+			kind = appdef.TypeKind_WRecord
+			return
+		}
+		if isSysPkg && name == nameCSingleton || node.table.CSingleton {
+			kind = appdef.TypeKind_CDoc
+			singleton = true
+			return
+		}
+		if isSysPkg && name == nameWSingleton || node.table.WSingleton {
+			kind = appdef.TypeKind_WDoc
+			singleton = true
+			return
 		}
 	}
 
