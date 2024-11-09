@@ -417,17 +417,20 @@ func validateViewKey(key *keyType, partialClust bool) (err error) {
 
 	ccFields := key.ccolsRow.fields.Fields()
 	if partialClust {
-		for i, f := range ccFields {
+		hole := ""
+		for _, f := range ccFields {
 			fName := f.Name()
-			if !key.ccolsRow.HasValue(fName) {
-				for j := i + 1; j < len(ccFields); j++ {
-					if key.ccolsRow.HasValue(ccFields[j].Name()) {
-						err = errors.Join(err,
-							validateErrorf(ECode_EmptyData, "view «%v» clustering columns has a hole at field «%s»: %w", key.viewName, fName, ErrFieldIsEmpty))
-						break
-					}
+			exists := key.ccolsRow.HasValue(fName)
+			if hole != "" {
+				if exists {
+					err = errors.Join(err,
+						validateErrorf(ECode_EmptyData, "view «%v» clustering columns has a hole at field «%s»: %w", key.viewName, hole, ErrFieldIsEmpty))
+					break
 				}
-				break
+			} else {
+				if !exists {
+					hole = fName
+				}
 			}
 		}
 	} else {

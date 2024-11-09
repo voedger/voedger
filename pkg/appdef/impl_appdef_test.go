@@ -91,6 +91,21 @@ func testBreakable[T any](t *testing.T, name string, seq ...iter.Seq[T]) {
 	}
 }
 
+func testBreakable2[K, V any](t *testing.T, name string, seq ...iter.Seq2[K, V]) {
+	for i, s := range seq {
+		t.Run(fmt.Sprintf("%s[%d]", name, i), func(t *testing.T) {
+			cnt := 0
+			for range s {
+				cnt++
+				break
+			}
+			if cnt != 1 {
+				t.Errorf("got %d iterations, expected 1", i)
+			}
+		})
+	}
+}
+
 func Test_EnumsBreakable(t *testing.T) {
 	require := require.New(t)
 
@@ -129,8 +144,10 @@ func Test_EnumsBreakable(t *testing.T) {
 	wsb.AddObject(NewQName("test", "Object1"))
 	wsb.AddObject(NewQName("test", "Object2"))
 
-	for i := 1; i <= 2; i++ {
-		v := wsb.AddView(NewQName("test", fmt.Sprintf("View%d", i)))
+	var viewName [2]QName
+	for i := 0; i < 2; i++ {
+		viewName[i] = NewQName("test", fmt.Sprintf("View%d", i))
+		v := wsb.AddView(viewName[i])
 		v.Key().PartKey().AddField("pkf", DataKind_int64)
 		v.Key().ClustCols().AddField("ccf", DataKind_string)
 		v.Value().AddField("vf", DataKind_bytes, false)
@@ -148,8 +165,8 @@ func Test_EnumsBreakable(t *testing.T) {
 	wsb.AddProjector(NewQName("test", "Projector2")).
 		Events().Add(cmd2Name)
 
-	job1name, job2name := NewQName("test", "Job1"), NewQName("test", "Job2")
-	wsb.AddJob(job1name).SetCronSchedule("@every 3s").
+	job1Name, job2name := NewQName("test", "Job1"), NewQName("test", "Job2")
+	wsb.AddJob(job1Name).SetCronSchedule("@every 3s").
 		States().
 		Add(NewQName("test", "State1"), cmd1Name, cmd2Name).
 		Add(NewQName("test", "State2"))
@@ -202,6 +219,7 @@ func Test_EnumsBreakable(t *testing.T) {
 		testBreakable(t, "Structures", Structures(app), Structures(ws))
 
 		testBreakable(t, "View", Views(app), Views(ws))
+		testBreakable2(t, "View.Fields", View(app, viewName[0]).Fields())
 
 		testBreakable(t, "Commands", Commands(app), Commands(ws))
 		testBreakable(t, "Queries", Queries(app), Queries(ws))
@@ -209,7 +227,7 @@ func Test_EnumsBreakable(t *testing.T) {
 
 		testBreakable(t, "Projectors", Projectors(app), Projectors(ws))
 		testBreakable(t, "Jobs", Jobs(app), Jobs(ws))
-		testBreakable(t, "IStorages.Enum", Job(app, job1name).States().Enum)
+		testBreakable(t, "IStorages.Enum", Job(app, job1Name).States().Enum)
 
 		testBreakable(t, "Extensions", Extensions(app), Extensions(ws))
 

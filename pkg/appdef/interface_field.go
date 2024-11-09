@@ -36,13 +36,8 @@ type IFields interface {
 	// Returns fields count
 	FieldCount() int
 
-	// All fields in add order.
-	Fields() []IField
-
-	// Finds reference field by name.
-	//
-	// Returns nil if field is not found, or field found but it is not a reference field
-	RefField(FieldName) IRefField
+	// Return iterator for all fields in add order.
+	Fields() func(func(int, IField) bool)
 
 	// All reference fields. System field (sys.ParentID) is also included
 	RefFields() []IRefField

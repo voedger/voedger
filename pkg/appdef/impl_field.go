@@ -127,19 +127,14 @@ func (ff *fields) FieldCount() int {
 	return len(ff.fieldsOrdered)
 }
 
-func (ff *fields) Fields() []IField {
-	return ff.fieldsOrdered
-}
-
-func (ff *fields) RefField(name FieldName) (rf IRefField) {
-	if fld := ff.Field(name); fld != nil {
-		if fld.DataKind() == DataKind_RecordID {
-			if fld, ok := fld.(IRefField); ok {
-				rf = fld
+func (ff *fields) Fields() func(func(int, IField) bool) {
+	return func(visit func(int, IField) bool) {
+		for i, f := range ff.fieldsOrdered {
+			if !visit(i, f) {
+				return
 			}
 		}
 	}
-	return rf
 }
 
 func (ff *fields) RefFields() []IRefField {
@@ -351,9 +346,11 @@ func validateTypeFields(t IType) (err error) {
 
 type nullFields struct{}
 
-func (f *nullFields) Field(FieldName) IField       { return nil }
-func (f *nullFields) FieldCount() int              { return 0 }
-func (f *nullFields) Fields() []IField             { return []IField{} }
+func (f *nullFields) Field(FieldName) IField { return nil }
+func (f *nullFields) FieldCount() int        { return 0 }
+func (f *nullFields) Fields() func(func(int, IField) bool) {
+	return func(func(int, IField) bool) {}
+}
 func (f *nullFields) RefField(FieldName) IRefField { return nil }
 func (f *nullFields) RefFields() []IRefField       { return []IRefField{} }
 func (f *nullFields) UserFieldCount() int          { return 0 }

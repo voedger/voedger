@@ -65,7 +65,7 @@ func ExampleViews() {
 		view := appdef.View(app, viewName)
 		fmt.Printf("view %q: %v, %s\n", view.QName(), view.Kind(), view.Comment())
 
-		fields := func(ff []appdef.IField) {
+		fields := func(ff func(func(int, appdef.IField) bool)) {
 			for _, f := range ff {
 				fmt.Printf("- %s: %s", f.Name(), f.DataKind().TrimString())
 				if f.IsSys() {

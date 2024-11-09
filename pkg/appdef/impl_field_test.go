@@ -314,7 +314,7 @@ func Test_AddRefField(t *testing.T) {
 		})
 
 		t.Run("should be ok to obtain reference field", func(t *testing.T) {
-			rf2 := doc.RefField("rf2")
+			rf2 := RefField(doc, "rf2")
 			require.NotNil(rf2)
 
 			require.Equal("rf2", rf2.Name())
@@ -325,8 +325,8 @@ func Test_AddRefField(t *testing.T) {
 		})
 
 		t.Run("should be nil if unknown reference field", func(t *testing.T) {
-			require.Nil(doc.RefField("unknown"))
-			require.Nil(doc.RefField("f1"), "must be nil because `f1` is not a reference field")
+			require.Nil(RefField(doc, "unknown"))
+			require.Nil(RefField(doc, "f1"), "`f1` is not a reference field")
 		})
 
 		t.Run("should be ok to enumerate reference fields", func(t *testing.T) {
@@ -336,7 +336,7 @@ func Test_AddRefField(t *testing.T) {
 					cnt++
 					switch cnt {
 					case 1:
-						require.Equal(doc.RefField("rf1"), rf)
+						require.Equal(RefField(doc, "rf1"), rf)
 						require.True(rf.Ref(docName))
 						require.True(rf.Ref(NewQName("test", "unknown")), "must be ok because any links are allowed in the field rf1")
 					case 2:
