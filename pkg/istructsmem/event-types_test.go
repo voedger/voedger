@@ -1809,28 +1809,27 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 	testUnloggedObject(t, ev2.ArgumentUnloggedObject())
 }
 
-func Test_LoadEvent_CorruptedBytes(t *testing.T) {
+func Test_LoadEvent_DamagedBytes(t *testing.T) {
 	require := require.New(t)
 
 	ev1 := newTestEvent(100500, 500)
-	testDbEvent(t, ev1)
 
 	b := ev1.storeToBytes()
 	length := len(b)
 
 	t.Run("load/store from truncated bytes", func(t *testing.T) {
 		for i := 0; i < length; i++ {
-			corrupted := b[0:i]
+			damaged := b[0:i]
 
 			ev2 := newEmptyTestEvent()
-			err := ev2.loadFromBytes(corrupted)
+			err := ev2.loadFromBytes(damaged)
 			require.Error(err, fmt.Sprintf("unexpected success load event from bytes truncated at %d", i))
 		}
 	})
 
-	t.Run("load/store from corrupted bytes:\n"+
-		"— fail (Panic or Error) or\n"+
-		"— success read wrong data",
+	t.Run("load/store from damaged bytes",
+		// - fail (Panic or Error) or
+		// - success read wrong data
 		func(t *testing.T) {
 			stat := make(map[string]int)
 			for i := 0; i < length; i++ {
@@ -1953,7 +1952,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 	})
 }
 
-func Test_LoadErrorEvent_CorruptedBytes(t *testing.T) {
+func Test_LoadErrorEvent_DamagedBytes(t *testing.T) {
 	const errMsg = "test build error message; エラーメッセージテスト"
 
 	require := require.New(t)
@@ -1966,10 +1965,10 @@ func Test_LoadErrorEvent_CorruptedBytes(t *testing.T) {
 
 	length := len(b)
 	for i := 0; i < length; i++ {
-		corrupted := b[0:i]
+		damaged := b[0:i]
 
 		ev2 := newEmptyTestEvent()
-		err := ev2.loadFromBytes(corrupted)
+		err := ev2.loadFromBytes(damaged)
 		require.Error(err, fmt.Sprintf("unexpected success load event from bytes truncated at %d", i))
 	}
 }

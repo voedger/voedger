@@ -8,6 +8,7 @@ package istructsmem
 import (
 	"bytes"
 	"io"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -77,13 +78,32 @@ func storeEventCUDs(ev *eventType, buf *bytes.Buffer) {
 	count := uint16(len(ev.cud.creates)) // nolint G115 validated in [validateEventCUDs]
 	utils.WriteUint16(buf, count)
 	for _, rec := range ev.cud.creates {
-		storeRow(&rec.rowType, buf)
+		storeEventCUD(rec, buf)
 	}
 
 	count = uint16(len(ev.cud.updates)) // nolint G115 validated in [validateEventCUDs]
 	utils.WriteUint16(buf, count)
 	for _, rec := range ev.cud.updates {
-		storeRow(&rec.changes.rowType, buf)
+		storeEventCUD(&rec.changes, buf)
+	}
+}
+
+func storeEventCUD(rec *recordType, buf *bytes.Buffer) {
+	storeRow(&rec.rowType, buf)
+
+	// #2785: store emptied fields
+	emptied := make([]uint16, 0, len(rec.nils))
+	if len(rec.nils) > 0 {
+		fields := rec.fields.UserFields()
+		for _, f := range rec.nils {
+			if idx := slices.Index(fields, f); idx >= 0 {
+				emptied = append(emptied, uint16(idx))
+			}
+		}
+	}
+	utils.WriteUint16(buf, uint16(len(emptied)))
+	for i := range emptied {
+		utils.WriteUint16(buf, emptied[i])
 	}
 }
 
@@ -248,7 +268,7 @@ func loadEventCUDs(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) 
 	for ; count > 0; count-- {
 		rec := newRecord(ev.cud.appCfg)
 		rec.isNew = true
-		if err := loadEventCUDRow(&rec.rowType, codecVer, buf); err != nil {
+		if err := loadEventCUD(rec, codecVer, buf); err != nil {
 			return enrichError(err, "CUD new row")
 		}
 		ev.cud.creates = append(ev.cud.creates, rec)
@@ -260,13 +280,13 @@ func loadEventCUDs(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) 
 	}
 	for ; count > 0; count-- {
 		upd := newUpdateRec(ev.cud.appCfg, newRecord(ev.cud.appCfg))
-		if err := loadEventCUDRow(&upd.changes.rowType, codecVer, buf); err != nil {
+		if err := loadEventCUD(&upd.changes, codecVer, buf); err != nil {
 			return enrichError(err, "CUD updated row")
 		}
 		id := upd.changes.ID()
 		upd.originRec.setQName(upd.changes.QName())
 		upd.originRec.setID(id)
-		// warnings:
+		// ⚠ Warnings:
 		// — upd.originRec is partially constructed, not full filled!
 		// — upd.result is null record, not applicable to store!
 		// it is very important for calling code to reread upd.originRec and recall upd.build() to obtain correct upd.result
@@ -276,29 +296,35 @@ func loadEventCUDs(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) 
 	return nil
 }
 
-func loadEventCUDRow(row *rowType, codecVer byte, buf *bytes.Buffer) error {
-	if err := loadRow(row, codecVer, buf); err != nil {
+func loadEventCUD(rec *recordType, codecVer byte, buf *bytes.Buffer) error {
+	if err := loadRow(&rec.rowType, codecVer, buf); err != nil {
 		return enrichError(err, "CUD row")
 	}
 	// #2785: read emptied fields
 	if codecVer >= codec_RDB_2 {
-		if count, err := utils.ReadUInt16(buf); err == nil {
-			indexes := make([]uint16, count, count)
-			for i := uint16(0); i < count; i++ {
-				if indexes[i], err = utils.ReadUInt16(buf); err != nil {
-					return enrichError(err, "emptied field[%d] index", i)
-				}
-				// FIXME: UserFieldCount should be used
-				if indexes[i] >= uint16(row.fields.FieldCount()) {
-					return ErrOutOfBounds("emptied field[%d] index %d should be less than %d", i, indexes[i], row.fields.FieldCount())
-				}
-				f := row.fields.Fields()[indexes[i]]
-				if k := f.DataKind(); k != appdef.DataKind_string && k != appdef.DataKind_bytes {
-					return ErrWrongType("emptied field %s has type %s, but string or []byte expected", f.Name(), k.TrimString())
-				}
-			}
-		} else {
+		count, err := utils.ReadUInt16(buf)
+		if err != nil {
 			return enrichError(err, "emptied field count")
+		}
+		if toRead := int(count) * uint16len; toRead > buf.Len() {
+			return enrichError(io.ErrUnexpectedEOF, "emptied fields indexes, expected %d bytes, but only %d bytes is available", toRead, buf.Len())
+		}
+		fields := rec.fields.UserFields()
+		len := uint16(len(fields))
+		for i := uint16(0); i < count; i++ {
+			idx, err := utils.ReadUInt16(buf)
+			if err != nil {
+				// no test: possible error (only EOF) is handled above
+				return enrichError(err, "emptied field[%d] index", i)
+			}
+			if idx >= len {
+				return ErrOutOfBounds("emptied field[%d] index %d should be less than %d", i, idx, len)
+			}
+			f := fields[idx]
+			if k := f.DataKind(); k != appdef.DataKind_string && k != appdef.DataKind_bytes {
+				return ErrWrongType("emptied %v should be string- (or []byte-) field", f)
+			}
+			rec.checkPutNil(f, nil)
 		}
 	}
 	return nil
