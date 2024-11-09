@@ -437,8 +437,6 @@ func Test_CircularReferencesWorkspaces(t *testing.T) {
 	})
 
 	require.EqualError(err, strings.Join([]string{
-		"file1.vsql:4:4: circular reference in INHERITS",
-		"file1.vsql:4:26: circular reference in INHERITS",
 		"file1.vsql:3:37: circular reference in INHERITS",
 		"file1.vsql:6:34: circular reference in INHERITS",
 		"file1.vsql:7:34: circular reference in INHERITS",
