@@ -11,22 +11,22 @@ APPLICATION TEST(
 	USE pkg2;
 );
 
-ABSTRACT TABLE CRecord();
-ABSTRACT TABLE WRecord();
-ABSTRACT TABLE ORecord();
-
-ABSTRACT TABLE CDoc INHERITS CRecord();
-ABSTRACT TABLE ODoc INHERITS ORecord();
-ABSTRACT TABLE WDoc INHERITS WRecord();
-
-ABSTRACT TABLE Singleton INHERITS CDoc();
-
 ABSTRACT WORKSPACE Workspace (
+    ABSTRACT TABLE CRecord();
+    ABSTRACT TABLE WRecord();
+    ABSTRACT TABLE ORecord();
+
+    ABSTRACT TABLE CDoc INHERITS CRecord();
+    ABSTRACT TABLE ODoc INHERITS ORecord();
+    ABSTRACT TABLE WDoc INHERITS WRecord();
+
+    ABSTRACT TABLE Singleton INHERITS CDoc();
 );
 
-WORKSPACE SomeWorkspace(
-    USE TABLE pkg1.*;
-    USE TABLE pkg2.*;
+ABSTRACT WORKSPACE AbsWorkspace(
+);
+
+WORKSPACE SomeWorkspace INHERITS pkg1.TestWorkspace, pkg2.TestWorkspace (
     TYPE CreateLoginParams(
         Login                       varchar,
         AppName                     varchar,

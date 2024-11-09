@@ -6,7 +6,6 @@
 package descr
 
 import (
-	"fmt"
 	"maps"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -22,33 +21,24 @@ func newExtensions() *Extensions {
 }
 
 func (ff *Extensions) read(ext appdef.IExtension) {
-	if cmd, ok := ext.(appdef.ICommand); ok {
+	switch e := ext.(type) {
+	case appdef.ICommand:
 		c := &CommandFunction{}
-		c.read(cmd)
+		c.read(e)
 		ff.Commands[c.QName] = c
-		return
-	}
-	if qry, ok := ext.(appdef.IQuery); ok {
+	case appdef.IQuery:
 		q := &QueryFunction{}
-		q.read(qry)
+		q.read(e)
 		ff.Queries[q.QName] = q
-		return
-	}
-	if prj, ok := ext.(appdef.IProjector); ok {
+	case appdef.IProjector:
 		p := &Projector{}
-		p.read(prj)
+		p.read(e)
 		ff.Projectors[p.QName] = p
-		return
-	}
-	if job, ok := ext.(appdef.IJob); ok {
+	case appdef.IJob:
 		j := &Job{}
-		j.read(job)
+		j.read(e)
 		ff.Jobs[j.QName] = j
-		return
 	}
-
-	//notest: This panic will only work when new appdef.IFunction interface descendants appear
-	panic(fmt.Errorf("unknown func type %v", ext))
 }
 
 func (e *Extension) read(ex appdef.IExtension) {

@@ -65,6 +65,7 @@ func (c *cmdWorkpiece) AppPartition() appparts.IAppPartition {
 }
 
 // used in c.cluster.VSqlUpdate to determinate partitionID by WSID
+// used in c.registry.CreateLogin to dtermine if the target app is deployed
 func (c *cmdWorkpiece) AppPartitions() appparts.IAppPartitions {
 	return c.appParts
 }
@@ -431,7 +432,7 @@ func getArgsObject(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		return nil
 	}
 	aob := cmd.reb.ArgumentObjectBuilder()
-	args, exists, err :=  cmd.requestData.AsObject("args")
+	args, exists, err := cmd.requestData.AsObject("args")
 	if err != nil {
 		return err
 	}

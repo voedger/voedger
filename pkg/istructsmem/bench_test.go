@@ -57,6 +57,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	// Names
 
 	appName := istructs.AppQName_test1_app1
+	wsName := appdef.NewQName("test", "workspace")
 	oDocQName := appdef.NewQName("test", "oDoc")
 	cmdQName := appdef.NewQName("test", "cmd")
 
@@ -72,7 +73,9 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		doc := adb.AddODoc(oDocQName)
+		wsb := adb.AddWorkspace(wsName)
+
+		doc := wsb.AddODoc(oDocQName)
 		for i := 0; i < numOfIntFields; i++ {
 
 			intFieldName := fmt.Sprintf("i%v", i)
@@ -86,7 +89,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 			stringFieldValues[stringFieldName] = stringFieldName
 
 		}
-		adb.AddCommand(cmdQName).SetParam(oDocQName)
+		wsb.AddCommand(cmdQName).SetParam(oDocQName)
 		return adb
 	}
 

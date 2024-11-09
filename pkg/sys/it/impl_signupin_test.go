@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -117,8 +116,7 @@ func TestCreateLoginErrors(t *testing.T) {
 	t.Run("unknown application", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"my/unknown","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"password"}}`,
 			login, istructs.SubjectKind_User, istructs.CurrentClusterID())
-		loginID := vit.PostApp(istructs.AppQName_sys_registry, loginPseudoWSID, "c.registry.CreateLogin", body).NewID()
-		vit.WaitForProfile(istructs.RecordID(loginID), login, appdef.NewAppQName("my", "unknown"), "unknown app my/unknown")
+		vit.PostApp(istructs.AppQName_sys_registry, loginPseudoWSID, "c.registry.CreateLogin", body, coreutils.Expect400("my/unknown is not found"))
 	})
 
 	t.Run("wrong application name", func(t *testing.T) {

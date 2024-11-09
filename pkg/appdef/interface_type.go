@@ -5,6 +5,8 @@
 
 package appdef
 
+import "github.com/voedger/voedger/pkg/goutils/set"
+
 // Types kinds enumeration
 type TypeKind uint8
 
@@ -69,14 +71,79 @@ const (
 	TypeKind_count
 )
 
+type TypeKindSet = set.Set[TypeKind]
+
+var (
+	TypeKind_Docs = func() TypeKindSet {
+		s := set.From(
+			TypeKind_GDoc,
+			TypeKind_CDoc,
+			TypeKind_ODoc,
+			TypeKind_WDoc,
+		)
+		s.SetReadOnly()
+		return s
+	}()
+
+	TypeKind_Records = func() TypeKindSet {
+		s := set.From(TypeKind_Docs.AsArray()...)
+		s.Set(
+			TypeKind_GRecord,
+			TypeKind_CRecord,
+			TypeKind_ORecord,
+			TypeKind_WRecord,
+		)
+		s.SetReadOnly()
+		return s
+	}()
+
+	TypeKind_Structures = func() TypeKindSet {
+		s := set.From(TypeKind_Records.AsArray()...)
+		s.Set(TypeKind_Object)
+		s.SetReadOnly()
+		return s
+	}()
+
+	TypeKind_Singletons = func() TypeKindSet {
+		s := set.From(
+			TypeKind_CDoc,
+			TypeKind_WDoc,
+		)
+		s.SetReadOnly()
+		return s
+	}()
+
+	TypeKind_Functions = func() TypeKindSet {
+		s := set.From(
+			TypeKind_Command,
+			TypeKind_Query,
+		)
+		s.SetReadOnly()
+		return s
+	}()
+
+	TypeKind_Extensions = func() TypeKindSet {
+		s := set.From(TypeKind_Functions.AsArray()...)
+		s.Set(
+			TypeKind_Projector,
+			TypeKind_Job,
+		)
+		s.SetReadOnly()
+		return s
+	}()
+)
+
 // # Type
 //
 // Type describes the entity, such as document, record or view.
 type IType interface {
 	IWithComments
 
-	// Parent cache
+	// Application
 	App() IAppDef
+
+	// Workspace
+	Workspace() IWorkspace
 
 	// Type qualified name.
 	QName() QName
@@ -88,23 +155,25 @@ type IType interface {
 	IsSystem() bool
 }
 
-// Interface describes the entity with types.
-type IWithTypes interface {
-	// Returns type by name.
-	//
-	// If not found then empty type with TypeKind_null is returned
-	Type(name QName) IType
-
-	// Returns type by name.
-	//
-	// Returns nil if type not found.
-	TypeByName(name QName) IType
-
-	// Enumerates all internal types.
-	//
-	// Types are enumerated in alphabetical order of QNames.
-	Types(func(IType) bool)
-}
+// Interfaces describes the entity with types, such as application or workspace.
+type (
+	IFindType interface {
+		// Returns type by name.
+		//
+		// If not found then empty type with TypeKind_null is returned
+		Type(name QName) IType
+	}
+	ITypes interface {
+		// Enumerates types.
+		//
+		// Types are enumerated in alphabetical order of QNames.
+		Types(func(IType) bool)
+	}
+	IWithTypes interface {
+		IFindType
+		ITypes
+	}
+)
 
 type ITypeBuilder interface {
 	ICommentsBuilder

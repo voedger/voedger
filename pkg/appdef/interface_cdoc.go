@@ -29,28 +29,6 @@ type ICRecordBuilder interface {
 	IContainedRecordBuilder
 }
 
-type IWithCDocs interface {
-	// Return CDoc by name.
-	//
-	// Returns nil if not found.
-	CDoc(name QName) ICDoc
-
-	// Return CRecord by name.
-	//
-	// Returns nil if not found.
-	CRecord(name QName) ICRecord
-
-	// Enumerates all application configuration documents
-	//
-	// Configuration documents are enumerated in alphabetical order by QName
-	CDocs(func(ICDoc) bool)
-
-	// Enumerates all application configuration records
-	//
-	// Configuration records are enumerated in alphabetical order by QName
-	CRecords(func(ICRecord) bool)
-}
-
 type ICDocsBuilder interface {
 	// Adds new CDoc type with specified name.
 	//

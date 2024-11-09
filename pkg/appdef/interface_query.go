@@ -13,18 +13,6 @@ type IQuery interface {
 	isQuery()
 }
 
-type IWithQueries interface {
-	// Returns Query by name.
-	//
-	// Returns nil if not found.
-	Query(QName) IQuery
-
-	// Enumerates all queries
-	//
-	// Queries are enumerated in alphabetical order by QName
-	Queries(func(IQuery) bool)
-}
-
 type IQueryBuilder interface {
 	IFunctionBuilder
 }

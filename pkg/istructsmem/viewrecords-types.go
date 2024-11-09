@@ -170,7 +170,7 @@ func (vr *appViewRecords) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any) 
 		return fmt.Errorf("%w: %v", ErrFieldIsEmpty, appdef.SystemField_QName)
 	}
 
-	view := vr.app.config.AppDef.View(viewName)
+	view := appdef.View(vr.app.config.AppDef, viewName)
 	if view == nil {
 		return fmt.Errorf(errViewNotFoundWrap, viewName, ErrNameNotFound)
 	}
@@ -258,7 +258,7 @@ func newKey(appCfg *AppConfigType, name appdef.QName) *keyType {
 	if name == appdef.NullQName {
 		panic(ErrNameMissed)
 	}
-	view := appCfg.AppDef.View(name)
+	view := appdef.View(appCfg.AppDef, name)
 	if view == nil {
 		panic(fmt.Errorf(errViewNotFoundWrap, name, ErrNameNotFound))
 	}
@@ -580,7 +580,7 @@ func newValue(appCfg *AppConfigType, name appdef.QName) *valueType {
 	if name == appdef.NullQName {
 		panic(ErrNameMissed)
 	}
-	view := appCfg.AppDef.View(name)
+	view := appdef.View(appCfg.AppDef, name)
 	if view == nil {
 		panic(fmt.Errorf(errViewNotFoundWrap, name, ErrNameNotFound))
 	}

@@ -88,7 +88,7 @@ func Test_Basic(t *testing.T) {
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "CommandArgs"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "UnloggedArgs"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "CommandResult"}, ErrorType: ErrorTypeValueChanged},
-			{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Abstract"}, ErrorType: ErrorTypeValueChanged},
+			{OldTreePath: []string{"AppDef", "Types", "sys.AbsWorkspace", "Abstract"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "PartKeyFields"}, ErrorType: ErrorTypeNodeModified},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "Fields", "E"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "ClustColsFields", "B"}, ErrorType: ErrorTypeValueChanged},

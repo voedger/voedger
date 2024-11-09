@@ -19,7 +19,7 @@ func RecursiveRoleAncestors(role appdef.IRole) (roles appdef.QNames) {
 	roles.Add(role.QName())
 	app := role.App()
 	for _, r := range role.AncRoles() {
-		roles.Add(RecursiveRoleAncestors(app.Role(r))...)
+		roles.Add(RecursiveRoleAncestors(appdef.Role(app, r))...)
 	}
 	return roles
 }
@@ -38,11 +38,11 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 	var str appdef.IStructure
 	switch op {
 	case appdef.OperationKind_Insert:
-		if app.Structure(res) == nil {
+		if appdef.Structure(app, res) == nil {
 			return false, nil, appdef.ErrNotFound("structure «%q»", res)
 		}
 	case appdef.OperationKind_Update, appdef.OperationKind_Select:
-		str = app.Structure(res)
+		str = appdef.Structure(app, res)
 		if str == nil {
 			return false, nil, appdef.ErrNotFound("structure «%q»", res)
 		}
@@ -52,7 +52,7 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 			}
 		}
 	case appdef.OperationKind_Execute:
-		if app.Function(res) == nil {
+		if appdef.Function(app, res) == nil {
 			return false, nil, appdef.ErrNotFound("function «%q»", res)
 		}
 	default:
@@ -67,7 +67,7 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 		return false, nil, appdef.ErrMissed("participants")
 	}
 	for _, r := range roles {
-		role := app.Role(r)
+		role := appdef.Role(app, r)
 		if role == nil {
 			return false, nil, appdef.ErrNotFound("role «%q»", r)
 		}

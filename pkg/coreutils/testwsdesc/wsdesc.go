@@ -14,16 +14,20 @@ import (
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
-func AddWorkspaceDescriptorStubDef(adb appdef.IAppDefBuilder) {
-	wsDesc := adb.AddCDoc(authnz.QNameCDocWorkspaceDescriptor)
+var (
+	TestWsName     = appdef.NewQName(appdef.SysPackage, "test_wsWS")
+	TestWsDescName = appdef.NewQName(appdef.SysPackage, "test_ws")
+)
+
+func AddWorkspaceDescriptorStubDef(wsb appdef.IWorkspaceBuilder) {
+	wsDesc := wsb.AddCDoc(authnz.QNameCDocWorkspaceDescriptor)
 	wsDesc.
-		AddField("WSKind", appdef.DataKind_QName, true).
+		AddField(authnz.Field_WSKind, appdef.DataKind_QName, true).
 		AddField("Status", appdef.DataKind_int32, true).
 		AddField("InitCompletedAtMs", appdef.DataKind_int64, true).
 		AddField("InitError", appdef.DataKind_string, false).
-		AddField("WSName", appdef.DataKind_string, false).
+		AddField(authnz.Field_WSName, appdef.DataKind_string, false).
 		AddField("CreatedAtMs", appdef.DataKind_int64, false)
-
 	wsDesc.SetSingleton()
 }
 

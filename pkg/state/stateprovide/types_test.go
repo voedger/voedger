@@ -89,20 +89,28 @@ func TestKeyBuilder(t *testing.T) {
 	require.PanicsWithValue(ErrNotSupported, func() { k.ClusteringColumns() })
 }
 
-func mockedStructs2(t *testing.T, addWsDescriptor bool) (*mockAppStructs, *mockViewRecords) {
-	appDef := appdef.New()
+func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
+	adb := appdef.New()
 
-	appDef.AddPackage("test", "test.com/test")
+	adb.AddPackage("test", "test.com/test")
 
-	view := appDef.AddView(testViewRecordQName1)
+	wsb := adb.AddWorkspace(testWSQName)
+	wsDesc := wsb.AddCDoc(testWSDescriptorQName)
+	wsDesc.AddField(authnz.Field_WSKind, appdef.DataKind_bytes, false)
+	wsb.SetDescriptor(testWSDescriptorQName)
+
+	view := wsb.AddView(testViewRecordQName1)
 	view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
 	view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
 	view.Value().AddField("vk", appdef.DataKind_string, false)
 
-	view = appDef.AddView(testViewRecordQName2)
+	view = wsb.AddView(testViewRecordQName2)
 	view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
 	view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
 	view.Value().AddField("vk", appdef.DataKind_string, false)
+
+	app, err := adb.Build()
+	require.NoError(t, err)
 
 	mockWorkspaceRecord := &mockRecord{}
 	mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
@@ -113,19 +121,6 @@ func mockedStructs2(t *testing.T, addWsDescriptor bool) (*mockAppStructs, *mockV
 	mockedViews := &mockViewRecords{}
 	mockedViews.On("KeyBuilder", testViewRecordQName1).Return(newMapKeyBuilder(sys.Storage_View, testViewRecordQName1))
 
-	if addWsDescriptor {
-		wsDesc := appDef.AddCDoc(testWSDescriptorQName)
-		wsDesc.AddField(authnz.Field_WSKind, appdef.DataKind_bytes, false)
-	}
-
-	ws := appDef.AddWorkspace(testWSQName)
-	ws.AddType(testViewRecordQName1)
-	ws.AddType(testViewRecordQName2)
-	ws.SetDescriptor(testWSDescriptorQName)
-
-	app, err := appDef.Build()
-	require.NoError(t, err)
-
 	appStructs := &mockAppStructs{}
 	appStructs.
 		On("AppDef").Return(app).
@@ -135,10 +130,6 @@ func mockedStructs2(t *testing.T, addWsDescriptor bool) (*mockAppStructs, *mockV
 		On("ViewRecords").Return(mockedViews)
 
 	return appStructs, mockedViews
-}
-
-func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
-	return mockedStructs2(t, true)
 }
 
 func TestBundle(t *testing.T) {

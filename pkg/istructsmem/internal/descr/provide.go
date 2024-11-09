@@ -7,11 +7,10 @@ package descr
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func Provide(app istructs.IAppStructs, rateLimits map[appdef.QName]map[istructs.RateLimitKind]istructs.RateLimit) *Application {
+func Provide(name appdef.AppQName, app appdef.IAppDef) *Application {
 	a := newApplication()
-	a.read(app, rateLimits)
+	a.read(name, app)
 	return a
 }
