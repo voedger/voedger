@@ -141,7 +141,7 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 // build build all event arguments and CUDs
 func (ev *eventType) build() (err error) {
 	if ev.name == appdef.NullQName {
-		return validateErrorf(ECode_EmptyTypeName, "empty event command name: %w", ErrNameMissed)
+		return validateError(ECode_EmptyTypeName, ErrNameMissed("empty event command name"))
 	}
 
 	if _, err = ev.appCfg.qNames.ID(ev.name); err != nil {
@@ -821,7 +821,7 @@ func (o *objectType) Build() (istructs.IObject, error) {
 		return nil, err
 	}
 	if o.QName() == appdef.NullQName {
-		return nil, fmt.Errorf("object builder has empty type name: %w", ErrNameMissed)
+		return nil, ErrNameMissed("object builder has empty type name")
 	}
 	if t := o.typ.Kind(); (t != appdef.TypeKind_Object) &&
 		(t != appdef.TypeKind_ODoc) &&

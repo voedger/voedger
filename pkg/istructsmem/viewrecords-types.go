@@ -256,7 +256,7 @@ type keyType struct {
 //   - if view not found
 func newKey(appCfg *AppConfigType, name appdef.QName) *keyType {
 	if name == appdef.NullQName {
-		panic(ErrNameMissed)
+		panic(ErrNameMissedError)
 	}
 	view := appdef.View(appCfg.AppDef, name)
 	if view == nil {
@@ -578,7 +578,7 @@ type valueType struct {
 //   - if view not found
 func newValue(appCfg *AppConfigType, name appdef.QName) *valueType {
 	if name == appdef.NullQName {
-		panic(ErrNameMissed)
+		panic(ErrNameMissedError)
 	}
 	view := appdef.View(appCfg.AppDef, name)
 	if view == nil {

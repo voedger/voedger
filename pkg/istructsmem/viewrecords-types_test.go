@@ -457,7 +457,7 @@ func TestCore_ViewRecords(t *testing.T) {
 	t.Run("Invalid key building test", func(t *testing.T) {
 
 		require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NullQName) },
-			require.Is(ErrNameMissed, "Should panics if key type missed"))
+			require.Is(ErrNameMissedError, "Should panics if key type missed"))
 
 		require.Panics(func() { _ = viewRecords.KeyBuilder(istructs.QNameForError) },
 			require.Is(ErrNameNotFound), require.Has(istructs.QNameForError))
@@ -612,7 +612,7 @@ func TestCore_ViewRecords(t *testing.T) {
 	t.Run("Invalid value building test", func(t *testing.T) {
 
 		require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NullQName) },
-			require.Is(ErrNameMissed, "Should panics if value type missed"))
+			require.Is(ErrNameMissedError, "Should panics if value type missed"))
 
 		require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NewQName("test", "unknownDrinks")) },
 			require.Is(ErrNameNotFound), require.Has("test.unknownDrinks"))

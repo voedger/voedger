@@ -20,9 +20,17 @@ func enrichError(err error, msg string, args ...any) error {
 // TODO: use enrichError() for all errors
 // eliminate all calls fmt.Errorf("… %w …", …) with err×××Wrap constants
 
-var ErrorEventNotValid = errors.New("event is not valid")
+var ErrorEventNotValidError = errors.New("event is not valid")
 
-var ErrNameMissed = errors.New("name is empty")
+func ErrorEventNotValid(msg string, args ...any) error {
+	return enrichError(ErrorEventNotValidError, msg, args...)
+}
+
+var ErrNameMissedError = errors.New("name is empty")
+
+func ErrNameMissed(msg string, args ...any) error {
+	return enrichError(ErrNameMissedError, msg, args...)
+}
 
 var ErrNameNotFound = errors.New("name not found")
 

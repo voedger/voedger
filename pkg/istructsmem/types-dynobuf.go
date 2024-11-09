@@ -233,6 +233,11 @@ func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 	}
 	row.dyB.Reset(buf.Next(int(length)))
 
+	// #2785
+	// if codecVer >= codec_RDB_2 {
+	// 	// read emptied fields
+	// }
+
 	return nil
 }
 

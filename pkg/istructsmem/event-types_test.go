@@ -1212,7 +1212,7 @@ func Test_BuildPLogEvent(t *testing.T) {
 
 			require.PanicsWith(
 				func() { app.Events().BuildPLogEvent(rawEvent) },
-				require.Is(ErrorEventNotValid),
+				require.Is(ErrorEventNotValidError),
 				require.Has(istructs.QNameCommandCUD.String()),
 			)
 		})
@@ -1241,7 +1241,7 @@ func Test_BuildPLogEvent(t *testing.T) {
 
 			require.PanicsWith(
 				func() { app.Events().BuildPLogEvent(rawEvent) },
-				require.Is(ErrorEventNotValid),
+				require.Is(ErrorEventNotValidError),
 				require.Has("100501"),
 			)
 		})
@@ -1392,7 +1392,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 			func() {
 				_ = app.Records().Apply2(pLogEvent, func(_ istructs.IRecord) {})
 			},
-			require.Is(ErrorEventNotValid), require.Has(buildErr))
+			require.Is(ErrorEventNotValidError), require.Has(buildErr))
 	})
 
 	t.Run("must fail to repeatedly create singleton CDoc", func(t *testing.T) {
@@ -1783,7 +1783,7 @@ func TestEventBuild_Error(t *testing.T) {
 				func() {
 					_ = app.Records().Apply2(pLogEvent, func(r istructs.IRecord) {})
 				},
-				require.Is(ErrorEventNotValid), require.Has(ErrWrongRecordID))
+				require.Is(ErrorEventNotValidError), require.Has(ErrWrongRecordID))
 		})
 	})
 }

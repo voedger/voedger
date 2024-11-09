@@ -728,8 +728,7 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 		d := b.ArgumentObjectBuilder()
 		d.(*objectType).clear()
 		_, err := d.Build()
-		require.ErrorIs(err, ErrNameMissed)
-		require.ErrorContains(err, "empty type name")
+		require.Error(err, require.Is(ErrNameMissedError), require.Has("empty type name"))
 	})
 
 	t.Run("should be error if builder has wrong type name", func(t *testing.T) {

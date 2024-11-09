@@ -253,11 +253,11 @@ func (e *appEventsType) BuildPLogEvent(ev istructs.IRawEvent) istructs.IPLogEven
 	dbEvent := ev.(*eventType)
 
 	if n := dbEvent.QName(); n != istructs.QNameForCorruptedData {
-		panic(fmt.Errorf("%w: QName() is «%v», expected «%v»", ErrorEventNotValid, n, istructs.QNameForCorruptedData))
+		panic(ErrorEventNotValid("QName() is «%v», expected «%v»", n, istructs.QNameForCorruptedData))
 	}
 
 	if o := dbEvent.PLogOffset(); o != istructs.NullOffset {
-		panic(fmt.Errorf("%w: PLogOffset() is «%v», expected «%v»", ErrorEventNotValid, o, istructs.NullOffset))
+		panic(ErrorEventNotValid("PLogOffset() is «%v», expected «%v»", o, istructs.NullOffset))
 	}
 
 	return dbEvent
@@ -533,7 +533,7 @@ func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istruc
 	ev := event.(*eventType)
 
 	if !ev.Error().ValidEvent() {
-		panic(fmt.Errorf("can not apply not valid event: %s: %w", ev.Error().ErrStr(), ErrorEventNotValid))
+		panic(ErrorEventNotValid("can not apply not valid event: %s:", ev.Error().ErrStr()))
 	}
 
 	records := make([]*recordType, 0)
