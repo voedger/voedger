@@ -381,8 +381,8 @@ func Test_Refs_NestedTables(t *testing.T) {
 	app, err := adb.Build()
 	require.NoError(err)
 
-	inner1 := appdef.Structure(app, appdef.NewQName("pkg1", "inner1"))
-	ref1 := appdef.RefField(inner1, "ref1")
+	inner1 := app.Type(appdef.NewQName("pkg1", "inner1"))
+	ref1 := inner1.(appdef.IFields).RefField("ref1")
 	require.EqualValues(appdef.QNames{appdef.NewQName("pkg1", "table3")}, ref1.Refs())
 }
 
