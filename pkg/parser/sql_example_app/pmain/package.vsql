@@ -414,11 +414,16 @@ ALTER WORKSPACE sys.Profile(
 
 ALTER WORKSPACE sys.AppWorkspaceWS (
 
+    VIEW JobStateView(
+        Fixed int,
+        Data bytes,
+        PRIMARY KEY ((Fixed))
+    ) AS RESULT OF TestJob1;
+
     EXTENSION ENGINE BUILTIN (
            -- Job executed by CRON
         JOB TestJob1 '1 0 * * *'
-            STATE (Http, AppSecret);
-
+            STATE (Http, AppSecret) INTENTS(View(JobStateView));
 
         JOB TestJob2 '@every 2m30s'; 
     );

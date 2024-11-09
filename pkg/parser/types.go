@@ -937,12 +937,13 @@ type FieldExpr struct {
 
 type ViewStmt struct {
 	Statement
-	Name      Ident          `parser:"'VIEW' @Ident"`
-	Items     []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
-	ResultOf  DefQName       `parser:"'AS' 'RESULT' 'OF' @@"`
-	With      []WithItem     `parser:"('WITH' @@ (',' @@)* )?"`
-	pkRef     *PrimaryKeyExpr
-	workspace workspaceAddr // filled on the analysis stage
+	Name       Ident          `parser:"'VIEW' @Ident"`
+	Items      []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	ResultOf   DefQName       `parser:"'AS' 'RESULT' 'OF' @@"`
+	With       []WithItem     `parser:"('WITH' @@ (',' @@)* )?"`
+	pkRef      *PrimaryKeyExpr
+	workspace  workspaceAddr // filled on the analysis stage
+	asResultOf appdef.QName  // filled on the analysis stage
 }
 
 func (s *ViewStmt) Iterate(callback func(stmt interface{})) {
