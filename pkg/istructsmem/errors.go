@@ -32,6 +32,18 @@ func ErrNameMissed(msg string, args ...any) error {
 	return enrichError(ErrNameMissedError, msg, args...)
 }
 
+var ErrOutOfBoundsError = errors.New("out of bounds")
+
+func ErrOutOfBounds(msg string, args ...any) error {
+	return enrichError(ErrOutOfBoundsError, msg, args...)
+}
+
+var ErrWrongTypeError = errors.New("wrong type")
+
+func ErrWrongType(msg string, args ...any) error {
+	return enrichError(ErrWrongTypeError, msg, args...)
+}
+
 var ErrNameNotFound = errors.New("name not found")
 
 func ErrFieldNotFound(f string, fields interface{}) error {
@@ -65,12 +77,6 @@ var ErrRecordIDUniqueViolation = errors.New("record ID duplicates")
 var ErrWrongRecordID = errors.New("wrong record ID")
 
 var ErrUnableToUpdateSystemField = errors.New("unable to update system field")
-
-var ErrWrongTypeError = errors.New("wrong type")
-
-func ErrWrongType(msg string, args ...any) error {
-	return enrichError(ErrWrongTypeError, msg, args...)
-}
 
 var ErrAbstractTypeError = errors.New("abstract type")
 

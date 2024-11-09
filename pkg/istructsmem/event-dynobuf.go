@@ -281,7 +281,25 @@ func loadEventCUDRow(row *rowType, codecVer byte, buf *bytes.Buffer) error {
 		return enrichError(err, "CUD row")
 	}
 	// #2785: read emptied fields
-	if codecVer > codec_RDB_1 {
+	if codecVer >= codec_RDB_2 {
+		if count, err := utils.ReadUInt16(buf); err == nil {
+			indexes := make([]uint16, count, count)
+			for i := uint16(0); i < count; i++ {
+				if indexes[i], err = utils.ReadUInt16(buf); err != nil {
+					return enrichError(err, "emptied field[%d] index", i)
+				}
+				// FIXME: UserFieldCount should be used
+				if indexes[i] >= uint16(row.fields.FieldCount()) {
+					return ErrOutOfBounds("emptied field[%d] index %d should be less than %d", i, indexes[i], row.fields.FieldCount())
+				}
+				f := row.fields.Fields()[indexes[i]]
+				if k := f.DataKind(); k != appdef.DataKind_string && k != appdef.DataKind_bytes {
+					return ErrWrongType("emptied field %s has type %s, but string or []byte expected", f.Name(), k.TrimString())
+				}
+			}
+		} else {
+			return enrichError(err, "emptied field count")
+		}
 	}
 	return nil
 }

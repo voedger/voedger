@@ -610,7 +610,7 @@ func (val *valueType) loadFromBytes(in []byte) (err error) {
 		return fmt.Errorf("error read codec version: %w", err)
 	}
 	switch codec {
-	case codec_RawDynoBuffer, codec_RDB_1:
+	case codec_RawDynoBuffer, codec_RDB_1, codec_RDB_2:
 		if err := loadViewValue(val, codec, buf); err != nil {
 			return err
 		}
