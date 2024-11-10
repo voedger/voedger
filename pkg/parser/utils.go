@@ -115,33 +115,43 @@ func lookupInSysPackage[stmtType *WorkspaceStmt](ctx *basicContext, fn DefQName)
 	return s, e
 }
 
-func getCurrentWorkspace(ictx *iterateCtx) *WorkspaceStmt {
-	var ic *iterateCtx = ictx
-	var ws *WorkspaceStmt = nil
-	for ic != nil {
-		if _, isWorkspace := ic.collection.(*AlterWorkspaceStmt); isWorkspace {
-			ws = ic.collection.(*AlterWorkspaceStmt).alteredWorkspace
-			break
+func getCurrentWorkspace(ictx *iterateCtx) workspaceAddr {
+	for ic := ictx; ic != nil; ic = ic.parent {
+		if aws, isWorkspace := ic.collection.(*AlterWorkspaceStmt); isWorkspace {
+			return workspaceAddr{aws.alteredWorkspace, aws.alteredWorkspacePkg}
 		}
-		if _, isWorkspace := ic.collection.(*WorkspaceStmt); isWorkspace {
-			ws = ic.collection.(*WorkspaceStmt)
-			break
+		if ws, isWorkspace := ic.collection.(*WorkspaceStmt); isWorkspace {
+			return workspaceAddr{ws, ic.pkg}
 		}
-		ic = ic.parent
 	}
-	return ws
+	return workspaceAddr{}
 }
 
 func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *RateStmt | *TagStmt | *ProjectorStmt | *JobStmt |
 	*WorkspaceStmt | *ViewStmt | *StorageStmt | *LimitStmt | *QueryStmt | *RoleStmt | *WsDescriptorStmt | *DeclareStmt](fn DefQName, ictx *iterateCtx) (stmtType, *PackageSchemaAST, error) {
 	stmtSchema, err := getTargetSchema(fn, ictx)
+
+	var item stmtType
+	var value interface{} = item
+	lookInOtherPackages := true
+	lookInInheritedWorkspaces := true
+
+	switch value.(type) {
+	case *TagStmt:
+		lookInOtherPackages = false
+		lookInInheritedWorkspaces = false
+	}
+
+	if stmtSchema != ictx.pkg && !lookInOtherPackages {
+		return nil, nil, nil // do not look tags in other packages
+	}
+
 	lookingUpInSchema := stmtSchema
 
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var item stmtType
 	var schema *PackageSchemaAST = nil
 	var lookupCallback func(stmt interface{})
 	lookupCallback = func(stmt interface{}) {
@@ -168,22 +178,48 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 
 	ws := getCurrentWorkspace(ictx)
 	// First look in the current workspace
-	if ws != nil {
-		ws.Iterate(lookupCallback)
+	if ws.workspace != nil {
+		ws.workspace.Iterate(lookupCallback)
 		if item == nil {
 			var value interface{} = item
-			if _, ok := value.(*WorkspaceStmt); !ok { //  when looking for something else than a workspace, look in the inherited workspaces
-				for _, dq := range ws.Inherits {
-					err := resolveInCtx[*WorkspaceStmt](dq, ictx, func(f *WorkspaceStmt, wSchema *PackageSchemaAST) error {
-						lookingUpInSchema = wSchema
-						f.Iterate(lookupCallback)
-						return nil
-					})
-					if err != nil {
-						return nil, nil, err
+			if _, ok := value.(*WorkspaceStmt); !ok && lookInInheritedWorkspaces { //  when looking for something else than a workspace, look in the inherited workspaces
+				var lookInInherted func(iws *WorkspaceStmt) error
+				var chain []*WorkspaceStmt
+				lookInInherted = func(iws *WorkspaceStmt) error {
+					for _, c := range chain {
+						if c == iws {
+							return nil // avoid circular references. Note this isn't an error because circular references are analyzed elsewhere
+						}
 					}
+					chain = append(chain, iws)
+					for _, dq := range iws.Inherits {
+						err := resolveInCtx[*WorkspaceStmt](dq, ictx, func(f *WorkspaceStmt, wSchema *PackageSchemaAST) error {
+							lookingUpInSchema = wSchema
+							if !lookInOtherPackages && wSchema != ictx.pkg {
+								return nil // do not look tags in other packages
+							}
+							if err := lookInInherted(f); err != nil {
+								return err
+							}
+							if item != nil {
+								return nil
+							}
+							f.Iterate(lookupCallback)
+							return nil
+						})
+						if err != nil {
+							return err
+						}
+					}
+					return nil
 				}
-				if item == nil {
+
+				err := lookInInherted(ws.workspace)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				if item == nil && lookInOtherPackages {
 					sysWorkspace, err := lookupInSysPackage(ictx.basicContext, DefQName{Package: appdef.SysPackage, Name: rootWorkspaceName})
 					if err != nil {
 						return nil, nil, err
@@ -204,7 +240,7 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 	}
 
 	// Look in the sys package
-	if item == nil && maybeSysPkg(fn.Package) { // Look in sys pkg
+	if item == nil && maybeSysPkg(fn.Package) && lookInOtherPackages { // Look in sys pkg
 		lookingUpInSchema = ictx.app.Packages[appdef.SysPackage]
 		if lookingUpInSchema == nil {
 			return nil, nil, ErrCouldNotImport(appdef.SysPackage)

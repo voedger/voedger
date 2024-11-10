@@ -88,7 +88,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 	eef := a.apps.extEngineFactories
 
 	enginesPathsModules := map[appdef.ExtensionEngineKind]map[string]*iextengine.ExtensionModule{}
-	for ext := range def.Extensions {
+	for ext := range appdef.Extensions(def) {
 		extEngineKind := ext.Engine()
 		path := ext.App().PackageFullPath(ext.QName().Pkg())
 		pathsModules, ok := enginesPathsModules[extEngineKind]
@@ -217,7 +217,7 @@ func (bp *borrowedPartition) ID() istructs.PartitionID { return bp.part.id }
 
 // # IAppPartition.Invoke
 func (bp *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, state istructs.IState, intents istructs.IIntents) error {
-	e := bp.appDef.Extension(name)
+	e := appdef.Extension(bp.appDef, name)
 	if e == nil {
 		return errUndefinedExtension(name)
 	}

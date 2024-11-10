@@ -15,6 +15,7 @@ import (
 type typ struct {
 	comment
 	app  *appDef
+	ws   *workspace
 	name QName
 	kind TypeKind
 }
@@ -22,13 +23,13 @@ type typ struct {
 // Creates and returns new type.
 //
 // Name can be empty (NullQName), then type is anonymous.
-func makeType(app *appDef, name QName, kind TypeKind) typ {
+func makeType(app *appDef, ws *workspace, name QName, kind TypeKind) typ {
 	if name != NullQName {
 		if ok, err := ValidQName(name); !ok {
 			panic(fmt.Errorf("invalid type name «%v»: %w", name, err))
 		}
 	}
-	return typ{comment{}, app, name, kind}
+	return typ{comment{}, app, ws, name, kind}
 }
 
 func (t *typ) App() IAppDef {
@@ -49,6 +50,10 @@ func (t *typ) QName() QName {
 
 func (t *typ) String() string {
 	return fmt.Sprintf("%s «%v»", t.Kind().TrimString(), t.QName())
+}
+
+func (t *typ) Workspace() IWorkspace {
+	return t.ws
 }
 
 // # Implements:
@@ -83,7 +88,10 @@ func (r *typeRef) target(tt IWithTypes) IType {
 		return AnyType
 	}
 	if (r.typ == nil) || (r.typ.QName() != r.name) {
-		r.typ = tt.TypeByName(r.name)
+		r.typ = nil
+		if t := tt.Type(r.name); t.Kind() != TypeKind_null {
+			r.typ = t
+		}
 	}
 	return r.typ
 }
@@ -128,11 +136,12 @@ const nullTypeString = "null type"
 
 type nullType struct{ nullComment }
 
-func (t *nullType) App() IAppDef   { return nil }
-func (t *nullType) IsSystem() bool { return false }
-func (t *nullType) Kind() TypeKind { return TypeKind_null }
-func (t *nullType) QName() QName   { return NullQName }
-func (t *nullType) String() string { return nullTypeString }
+func (t nullType) App() IAppDef          { return nil }
+func (t nullType) IsSystem() bool        { return false }
+func (t nullType) Kind() TypeKind        { return TypeKind_null }
+func (t nullType) QName() QName          { return NullQName }
+func (t nullType) String() string        { return nullTypeString }
+func (t nullType) Workspace() IWorkspace { return nil }
 
 type anyType struct {
 	nullComment
@@ -141,8 +150,9 @@ type anyType struct {
 
 func newAnyType(name QName) IType { return &anyType{nullComment{}, name} }
 
-func (t anyType) App() IAppDef   { return nil }
-func (t anyType) IsSystem() bool { return true }
-func (t anyType) Kind() TypeKind { return TypeKind_Any }
-func (t anyType) QName() QName   { return t.name }
-func (t anyType) String() string { return t.name.Entity() + " type" }
+func (t anyType) App() IAppDef          { return nil }
+func (t anyType) IsSystem() bool        { return true }
+func (t anyType) Kind() TypeKind        { return TypeKind_Any }
+func (t anyType) QName() QName          { return t.name }
+func (t anyType) String() string        { return t.name.Entity() + " type" }
+func (t anyType) Workspace() IWorkspace { return nil }

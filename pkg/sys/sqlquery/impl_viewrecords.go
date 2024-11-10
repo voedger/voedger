@@ -17,7 +17,7 @@ import (
 )
 
 func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback) error {
-	view := appStructs.AppDef().View(viewRecordQName)
+	view := appdef.View(appStructs.AppDef(), viewRecordQName)
 
 	if !f.acceptAll {
 		allowedFields := make(map[string]bool, view.Key().FieldCount()+view.Value().FieldCount())

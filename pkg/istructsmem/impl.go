@@ -215,7 +215,7 @@ func (app *appStructsType) NumAppWorkspaces() istructs.NumAppWorkspaces {
 
 func (app *appStructsType) describe() *descr.Application {
 	if app.descr == nil {
-		app.descr = descr.Provide(app, app.config.FunctionRateLimits.limits)
+		app.descr = descr.Provide(app.AppQName(), app.AppDef())
 	}
 	return app.descr
 }

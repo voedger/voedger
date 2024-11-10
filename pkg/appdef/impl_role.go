@@ -12,12 +12,12 @@ type role struct {
 	aclRules []*aclRule
 }
 
-func newRole(app *appDef, name QName) *role {
+func newRole(app *appDef, ws *workspace, name QName) *role {
 	r := &role{
-		typ:      makeType(app, name, TypeKind_Role),
+		typ:      makeType(app, ws, name, TypeKind_Role),
 		aclRules: make([]*aclRule, 0),
 	}
-	app.appendType(r)
+	ws.appendType(r)
 	return r
 }
 
@@ -42,7 +42,7 @@ func (r *role) AncRoles() (roles []QName) {
 
 func (r *role) appendACL(rule *aclRule) {
 	r.aclRules = append(r.aclRules, rule)
-	r.app.appendACL(rule)
+	r.ws.appendACL(rule)
 }
 
 func (r *role) grant(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) {

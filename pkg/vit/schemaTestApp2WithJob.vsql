@@ -8,7 +8,9 @@ ALTERABLE WORKSPACE test_wsWS (
 		IntFld int32 NOT NULL,
 		StrFld varchar
 	);
+);
 
+ALTER WORKSPACE sys.AppWorkspaceWS (
 	EXTENSION ENGINE BUILTIN (
 		JOB Job1_builtin '* * * * *';
 	);

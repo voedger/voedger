@@ -118,7 +118,7 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 		return arg, argUnl, nil // #1811 — «sys.Corrupted» command has no arguments objects
 	}
 
-	cmd := ev.appCfg.AppDef.Command(ev.name)
+	cmd := appdef.Command(ev.appCfg.AppDef, ev.name)
 	if cmd != nil {
 		if cmd.Param() != nil {
 			arg = cmd.Param().QName()
@@ -127,8 +127,8 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 			argUnl = cmd.UnloggedParam().QName()
 		}
 	} else {
-		// #!16208: Must be possible to use TypeKind_ODoc as Event.QName
-		if t := ev.appCfg.AppDef.TypeByName(ev.name); (t == nil) || (t.Kind() != appdef.TypeKind_ODoc) {
+		// #!16208: Should be possible to use TypeKind_ODoc as Event.QName
+		if d := appdef.ODoc(ev.appCfg.AppDef, ev.name); d == nil {
 			// command function «test.object» not found
 			return arg, argUnl, fmt.Errorf("command function «%v» not found: %w", ev.name, ErrNameNotFound)
 		}
@@ -895,12 +895,11 @@ func (o *objectType) FillFromJSON(data map[string]any) {
 	for n, v := range data {
 		switch fv := v.(type) {
 		case nil:
+			o.collectErrorf(`field "%s": %w`, n, ErrNullNotAllowed)
 		case float64:
 			o.PutFloat64(n, fv)
 		case istructs.RecordID:
 			o.PutRecordID(n, fv)
-		// case int:
-		// 	o.PutNumber(n, float64(fv))
 		case int32:
 			o.PutInt32(n, fv)
 		case int64:
@@ -928,7 +927,7 @@ func (o *objectType) FillFromJSON(data map[string]any) {
 				c.FillFromJSON(childData)
 			}
 		default:
-			o.collectErrorf("%w: %#T", ErrWrongType, v)
+			o.collectErrorf(`%w %#T for field "%s" with value %v`, ErrWrongType, v, n, v)
 		}
 	}
 }

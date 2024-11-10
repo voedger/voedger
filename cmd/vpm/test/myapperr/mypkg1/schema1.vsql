@@ -3,6 +3,8 @@
 
 IMPORT SCHEMA 'github.com/voedger/voedger/pkg/registry' AS reg;
 
-TABLE MyTable1 INHERITS ODoc (
-    MyField ref(reg.Login) NOT NUL
+WORKSPACE MyWS1 (
+    TABLE MyTable1 INHERITS ODoc (
+        MyField ref(reg.Login) NOT NUL
+    );
 );

@@ -233,22 +233,31 @@ func (w *mockRowWriter) PutQName(name string, value appdef.QName)         { w.Ca
 func (w *mockRowWriter) PutBool(name string, value bool)                  { w.Called(name, value) }
 func (w *mockRowWriter) PutRecordID(name string, value istructs.RecordID) { w.Called(name, value) }
 
-func mockedStructs2(t *testing.T, addWsDescriptor bool) (*mockAppStructs, *mockViewRecords) {
+// TODO: copy-pasted from pkg/state/stateprovide. Can this be moved to a common package?
+func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
 	appDef := appdef.New()
 
 	appDef.AddPackage("test", "test.com/test")
 
-	view := appDef.AddView(testViewRecordQName1)
+	wsb := appDef.AddWorkspace(testWSQName)
+	wsDesc := wsb.AddCDoc(testWSDescriptorQName)
+	wsDesc.AddField(field_WSKind, appdef.DataKind_bytes, false)
+	wsb.SetDescriptor(testWSDescriptorQName)
+
+	view := wsb.AddView(testViewRecordQName1)
 	view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
 	view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
 	view.Value().AddField("vk", appdef.DataKind_string, false)
 	view.Value().AddField("i64", appdef.DataKind_int64, false)
 	view.Value().AddField("recID", appdef.DataKind_RecordID, false)
 
-	view = appDef.AddView(testViewRecordQName2)
+	view = wsb.AddView(testViewRecordQName2)
 	view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
 	view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
 	view.Value().AddField("vk", appdef.DataKind_string, false)
+
+	app, err := appDef.Build()
+	require.NoError(t, err)
 
 	mockWorkspaceRecord := &mockRecord{}
 	mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
@@ -259,19 +268,6 @@ func mockedStructs2(t *testing.T, addWsDescriptor bool) (*mockAppStructs, *mockV
 	mockedViews := &mockViewRecords{}
 	mockedViews.On("KeyBuilder", testViewRecordQName1).Return(&viewKeyBuilder{IKeyBuilder: newUniqKeyBuilder(sys.Storage_View, appdef.NullQName), view: testViewRecordQName1})
 
-	if addWsDescriptor {
-		wsDesc := appDef.AddCDoc(testWSDescriptorQName)
-		wsDesc.AddField(field_WSKind, appdef.DataKind_bytes, false)
-	}
-
-	ws := appDef.AddWorkspace(testWSQName)
-	ws.AddType(testViewRecordQName1)
-	ws.AddType(testViewRecordQName2)
-	ws.SetDescriptor(testWSDescriptorQName)
-
-	app, err := appDef.Build()
-	require.NoError(t, err)
-
 	appStructs := &mockAppStructs{}
 	appStructs.
 		On("AppDef").Return(app).
@@ -281,11 +277,6 @@ func mockedStructs2(t *testing.T, addWsDescriptor bool) (*mockAppStructs, *mockV
 		On("ViewRecords").Return(mockedViews)
 
 	return appStructs, mockedViews
-}
-
-// TODO: copy-pasted from pkg/state/stateprovide. Can this be moved to a common package?
-func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
-	return mockedStructs2(t, true)
 }
 
 // TODO: copy-pasted from pkg/state/stateprovide. Can this be moved to a common package?

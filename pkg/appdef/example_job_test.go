@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIAppDefBuilder_AddJob() {
+func ExampleJobs() {
 
 	var app appdef.IAppDef
 
@@ -24,13 +24,15 @@ func ExampleIAppDefBuilder_AddJob() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		v := adb.AddView(viewName)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		v := wsb.AddView(viewName)
 		v.Key().PartKey().AddDataField("id", appdef.SysData_RecordID)
 		v.Key().ClustCols().AddDataField("name", appdef.SysData_String)
 		v.Value().AddDataField("data", appdef.SysData_bytes, false, appdef.MaxLen(1024))
 		v.SetComment("view is state for job")
 
-		job := adb.AddJob(jobName)
+		job := wsb.AddJob(jobName)
 		job.SetCronSchedule(`@every 2m30s`)
 		job.States().
 			Add(sysViews, viewName).
@@ -41,20 +43,20 @@ func ExampleIAppDefBuilder_AddJob() {
 
 	// how to find job in builded AppDef
 	{
-		job := app.Job(jobName)
+		job := appdef.Job(app, jobName)
 		fmt.Println(job, ":")
 		for s := range job.States().Enum {
 			fmt.Println(" - crone:", job.CronSchedule())
 			fmt.Println(" - state:", s, s.Comment())
 		}
 
-		fmt.Println(app.Job(appdef.NewQName("test", "unknown")))
+		fmt.Println(appdef.Job(app, appdef.NewQName("test", "unknown")))
 	}
 
 	// How to enum all jobs in AppDef
 	{
 		cnt := 0
-		for j := range app.Jobs {
+		for j := range appdef.Jobs(app) {
 			cnt++
 			fmt.Println(cnt, j)
 		}

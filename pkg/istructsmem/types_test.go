@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"reflect"
 	"strconv"
@@ -332,6 +333,7 @@ func Test_rowType_PutFromJSON(t *testing.T) {
 		bld.PutFromJSON(data)
 		_, err := bld.Build()
 		require.ErrorIs(err, ErrWrongType)
+		log.Println(err)
 	})
 
 	t.Run("json.Number errors", func(t *testing.T) {
