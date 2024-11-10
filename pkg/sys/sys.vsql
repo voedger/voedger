@@ -328,7 +328,7 @@ ABSTRACT WORKSPACE Workspace (
 		WSClusterID int32 NOT NULL,
 		WSID int64,           -- to be updated afterwards
 		WSError varchar(1024) -- to be updated afterwards
-	);
+	) WITH Tags=(ReadOnlyTag);
 
 	TYPE InitChildWorkspaceParams (
 		WSName text NOT NULL,
@@ -358,9 +358,9 @@ ABSTRACT WORKSPACE Workspace (
 
 		COMMAND CUD();
 		COMMAND Init(); -- Deprecated: use c.sys.CUD instead. Kept for backward compatibility only
-		QUERY Echo(EchoParams) RETURNS EchoResult;
-		QUERY GRCount RETURNS GRCountResult;
-		QUERY Modules RETURNS ModulesResult;
+		QUERY Echo(EchoParams) RETURNS EchoResult WITH Tags=(WithoutAuthTag);
+		QUERY GRCount RETURNS GRCountResult WITH Tags=(WithoutAuthTag);
+		QUERY Modules RETURNS ModulesResult WITH Tags=(WithoutAuthTag);
 		COMMAND RenameQName(RenameQNameParams);
 		SYNC PROJECTOR RecordsRegistryProjector
 			AFTER INSERT ON (CRecord, WRecord) OR
@@ -381,10 +381,10 @@ ABSTRACT WORKSPACE Workspace (
 		-- invite
 
 		COMMAND InitiateInvitationByEMail(InitiateInvitationByEMailParams);
-		COMMAND InitiateJoinWorkspace(InitiateJoinWorkspaceParams);
+		COMMAND InitiateJoinWorkspace(InitiateJoinWorkspaceParams) WITH Tags=(AllowedForAuthenticatedTag);
 		COMMAND InitiateUpdateInviteRoles(InitiateUpdateInviteRolesParams);
 		COMMAND InitiateCancelAcceptedInvite(InitiateCancelAcceptedInviteParams);
-		COMMAND InitiateLeaveWorkspace;
+		COMMAND InitiateLeaveWorkspace WITH Tags=(AllowedForAuthenticatedTag);
 		COMMAND CancelSentInvite(CancelSentInviteParams);
 		COMMAND CreateJoinedWorkspace(CreateJoinedWorkspaceParams);
 		COMMAND UpdateJoinedWorkspaceRoles(UpdateJoinedWorkspaceRolesParams);
@@ -435,6 +435,46 @@ ABSTRACT WORKSPACE Workspace (
 		SYNC PROJECTOR ProjectorWorkspaceIDIdx AFTER INSERT ON (WorkspaceID) INTENTS(View(WorkspaceIDIdx));
 		SYNC PROJECTOR ProjectorChildWorkspaceIdx AFTER INSERT ON (ChildWorkspace) INTENTS(View(ChildWorkspaceIdx));
 	);
+
+	TAG WithoutAuthTag;
+	TAG AllowedForGuestTag;
+	TAG DenyForAllTag;
+	TAG ReadOnlyTag;
+	TAG AllowedForAuthenticatedTag;
+
+	-- naming windows-like
+	ROLE Everyone; -- assigned in any case regardless of whether the token is provided or not. Named like in Windows
+	ROLE Anonymous;  -- assigned if the token is not provided
+	ROLE AuthenticatedUser; -- assigned if a valid token is provided. Named like in Windows
+	ROLE System; -- assigned -> everything is allowed, ACL checking skipped
+	ROLE ProfileOwner; -- assigned if the user or device works in its profile
+	ROLE WorkspaceDevice; -- assigned if the device MAY in a workspace that is owned by its profile
+	ROLE WorkspaceOwner; -- assigned if user works in a workspace that is owned by his profile
+	ROLE ClusterAdmin; -- TODO: not used for now. Going to allow exec c.cluster.DeployApp to this role
+
+			-- profile owner is workspace owner
+	GRANT WorkspaceOwner TO ProfileOwner; -- inherited
+	GRANT WorkspaceOwner TO WorkspaceDevice; -- inherited
+
+	-- null auth policy
+	-- сделать только явное GRANT\REVOKE
+	-- область вилимости тэга - ws
+	GRANT ALL ON ALL TABLES WITH TAG WithoutAuthTag TO Everyone;
+	GRANT EXECUTE ON ALL QUERIES WITH TAG WithoutAuthTag TO Everyone;
+	GRANT EXECUTE ON ALL COMMANDS WITH TAG WithoutAuthTag TO Everyone;
+	GRANT SELECT ON ALL VIEWS WITH TAG WithoutAuthTag TO Everyone;
+
+	-- everything is allowed to WorkspaceOwner
+
+	GRANT ALL ON ALL TABLES TO WorkspaceOwner; -- not inherited because all
+	GRANT EXECUTE ON ALL QUERIES TO WorkspaceOwner;
+	GRANT EXECUTE ON ALL COMMANDS TO WorkspaceOwner;
+	GRANT SELECT ON ALL VIEWS TO WorkspaceOwner;
+
+	GRANT EXECUTE ON ALL COMMANDS WITH TAG AllowedForAuthenticatedTag TO AuthenticatedUser;
+
+	-- deny all for few resource from all
+	REVOKE EXECUTE ON ALL COMMANDS WITH TAG DenyForAllTag FROM Everyone;
 );
 
 ALTERABLE WORKSPACE AppWorkspaceWS (
