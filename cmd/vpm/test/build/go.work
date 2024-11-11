@@ -7,4 +7,6 @@ use (
 	./nopackagesgen
 	./pkg1
 	./pkg2
+	./air
+	./untill
 )

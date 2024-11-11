@@ -6,6 +6,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	ext "github.com/voedger/voedger/pkg/exttinygo"
@@ -59,6 +60,65 @@ func Pbill() {
 		}
 
 		intent.Set_NextPBillNumber(nextNumber + 1)
+	}
+}
+
+func ProjectorFillPbillDates() {
+	projector := orm.Package_air.Projector_FillPbillDates()
+	if arg, ok := projector.Arg_untill_pbill(); ok {
+		fmt.Println(arg.Get_pdatetime())
+		return
+	}
+
+	if arg, ok := projector.Arg_untill_orders(); ok {
+		fmt.Println(arg.Get_id_bill())
+		return
+	}
+}
+
+func ProjectorNewAbcItem() {
+	projector := orm.Package_air.Projector_NewAbcItem()
+	for cud := range projector.CUDs_air_Abc() {
+		fmt.Println(cud.Get_Field1())
+	}
+}
+
+func ProjectorApplySalesMetrics() {
+	projector := orm.Package_air.Projector_ApplySalesMetrics()
+	if arg, ok := projector.Cmd_Pbill().Arg(); ok {
+		fmt.Println(arg.Get_id_bill())
+		return
+	}
+	if arg, ok := projector.Cmd_Orders().Arg(); ok {
+		fmt.Println(arg.Get_id_bill())
+		return
+	}
+}
+
+func ProjectorODoc() {
+	projector := orm.Package_air.Projector_ProjectorODoc()
+	if odoc, ok := projector.ODoc(); ok {
+		if !odoc.Is(orm.Package_air.ODoc_ProformaPrinted) {
+			return
+		}
+
+		offs := odoc.AsInt64("WLogOffset")
+		date := time.UnixMicro(odoc.AsInt64("timestamp"))
+		// extract year and day of year from pbill datetime
+		year := date.Year()
+		dayOfYear := date.Day()
+
+		var intent orm.Intent_View_air_ProformaPrintedDocs
+
+		val, ok := orm.Package_air.View_ProformaPrintedDocs.Get(int32(year), int32(dayOfYear))
+		if !ok {
+			intent = val.Insert()
+			intent.Set_FirstOffset(offs)
+		} else {
+			intent = val.Update()
+		}
+
+		intent.Set_LastOffset(offs)
 	}
 }
 

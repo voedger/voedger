@@ -110,11 +110,13 @@ func TestFillPbillDates(t *testing.T) {
 	t.Run("View View_PbillDates: insert", func(t *testing.T) {
 		test.NewProjectorTest(
 			t,
-			orm.Package_air.Projector_FillPbillDates(),
+			orm.Package_air.Command_Pbill,
 			FillPbillDates,
 		).
 			EventOffset(123).
+			//Event().
 			EventArgumentObject(
+				//orm.Package_untill.WDoc_bill,
 				2,
 				`id_bill`, 100002,
 				`id_untill_users`, 100001,
@@ -146,14 +148,15 @@ func TestFillPbillDates(t *testing.T) {
 			FillPbillDates,
 		).
 			EventOffset(123).
-			StateView(
-				orm.Package_air.View_PbillDates,
-				110012,
-				`Year`, 2023,
-				`DayOfYear`, 9,
-				`FirstOffset`, 10,
-				`LastOffset`, 10,
-			).
+			//// TODO: add Event method to testcase
+			//EventRegisteredAt(...).
+			//EventArgumentObject(...).
+			//EventQName(...).
+			//EventSynced(...).
+			//EventDeviceID(...).
+			//EventSyncedAt(...).
+			//EventWLogOffset(...).
+			//EventWorkspace(...).
 			EventArgumentObject(
 				2,
 				`id_bill`, 100002,
@@ -169,12 +172,49 @@ func TestFillPbillDates(t *testing.T) {
 				`quantity`, 2,
 				`price`, 50_00,
 			).
+			StateView(
+				orm.Package_air.View_PbillDates,
+				110012,
+				`Year`, 2023,
+				`DayOfYear`, 9,
+				`FirstOffset`, 10,
+				`LastOffset`, 10,
+			).
 			IntentViewUpdate(
 				orm.Package_air.View_PbillDates,
 				110012,
 				`Year`, 2023,
 				`DayOfYear`, 9,
 				`FirstOffset`, 10,
+				`LastOffset`, 124,
+			).
+			Run()
+	})
+}
+
+func TestProjectorODoc(t *testing.T) {
+	t.Parallel()
+
+	date := time.Date(2023, 1, 9, 0, 0, 0, 0, time.UTC)
+	t.Run("View View_ProformaPrintedDocs: insert", func(t *testing.T) {
+		test.NewProjectorTest(
+			t,
+			orm.Package_air.Projector_FillPbillDates(),
+			ProjectorODoc,
+		).
+			EventOffset(123).
+			StateCUDRow(
+				orm.Package_air.ODoc_ProformaPrinted,
+				100002,
+				`Number`, 100002,
+				`UserID`, 100001,
+				`Timestamp`, date.UnixMicro(),
+			).
+			IntentViewInsert(
+				orm.Package_air.View_ProformaPrintedDocs,
+				`Year`, 2023,
+				`DayOfYear`, 9,
+				`FirstOffset`, 124,
 				`LastOffset`, 124,
 			).
 			Run()

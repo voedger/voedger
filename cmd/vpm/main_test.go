@@ -415,6 +415,7 @@ func TestBuildBasicUsage(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
+
 	require := require.New(t)
 	var tempDir string
 	if logger.IsVerbose() {
@@ -436,21 +437,21 @@ func TestBuildBasicUsage(t *testing.T) {
 		errMsg            string
 		expectedWasmFiles []string
 	}{
-		// {
-		// 	dir:               "noappschema",
-		// 	errMsg:            "failed to build, app schema not found",
-		// 	expectedWasmFiles: nil,
-		// },
-		// {
-		// 	dir:               "nopackagesgen",
-		// 	errMsg:            fmt.Sprintf("%s not found. Run 'vpm init'", packagesGenFileName),
-		// 	expectedWasmFiles: nil,
-		// },
-		// {
-		// 	dir:               "appsimple",
-		// 	errMsg:            "",
-		// 	expectedWasmFiles: []string{fmt.Sprintf("%s/appsimple/appsimple.wasm", buildDirName)},
-		// },
+		{
+			dir:               "noappschema",
+			errMsg:            "failed to build, app schema not found",
+			expectedWasmFiles: nil,
+		},
+		{
+			dir:               "nopackagesgen",
+			errMsg:            fmt.Sprintf("%s not found. Run 'vpm init'", packagesGenFileName),
+			expectedWasmFiles: nil,
+		},
+		{
+			dir:               "appsimple",
+			errMsg:            "",
+			expectedWasmFiles: []string{fmt.Sprintf("%s/appsimple/appsimple.wasm", buildDirName)},
+		},
 		{
 			dir:               "appcomplex",
 			errMsg:            "",
@@ -479,6 +480,48 @@ func TestBuildBasicUsage(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBuildOrmForAirApp(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	require := require.New(t)
+
+	err := execRootCmd([]string{"vpm", "orm", "-C", "test/build/air"}, "1.0.0")
+	require.NoError(err)
+
+}
+func TestGenOrmAndBuild(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	require := require.New(t)
+	var tempDir string
+	if logger.IsVerbose() {
+		var err error
+		tempDir, err = os.MkdirTemp("", "test_build")
+		require.NoError(err)
+	} else {
+		tempDir = t.TempDir()
+	}
+
+	wd, err := os.Getwd()
+	require.NoError(err)
+
+	err = coreutils.CopyDir(filepath.Join(wd, "test", "build"), tempDir)
+	require.NoError(err)
+
+	dir := filepath.Join(tempDir, "air")
+	err = execRootCmd([]string{"vpm", "orm", "-C", dir}, "1.0.0")
+	require.NoError(err)
+
+	err = execRootCmd([]string{"go", "test", dir + "wasm"}, "1.0.0")
+	require.NoError(err)
+
+	err = execRootCmd([]string{"vpm", "build", "-C", dir}, "1.0.0")
+	require.NoError(err)
 }
 
 func findWasmFiles(dir string) []string {
