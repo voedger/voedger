@@ -26,30 +26,26 @@ func ProvideSyncActualizerFactory() SyncActualizerFactory {
 	return syncActualizerFactory
 }
 
-func ProvideViewDef(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc ViewTypeBuilder) {
-	provideViewDefImpl(appDef, qname, buildFunc)
+func ProvideViewDef(wsb appdef.IWorkspaceBuilder, qname appdef.QName, buildFunc ViewTypeBuilder) {
+	provideViewDefImpl(wsb, qname, buildFunc)
 }
 
 func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, secretReader isecrets.ISecretReader,
 	n10nBroker in10n.IN10nBroker, statelessResources istructsmem.IStatelessResources) func(appStructs istructs.IAppStructs, partitionID istructs.PartitionID) pipeline.ISyncOperator {
 	return func(appStructs istructs.IAppStructs, partitionID istructs.PartitionID) pipeline.ISyncOperator {
 		projectors := maps.Clone(appStructs.SyncProjectors())
-		statelessResources.Projectors(func(path string, projector istructs.Projector) {
-			if appStructs.AppDef().Projector(projector.Name).Sync() {
+		for _, projector := range statelessResources.Projectors {
+			if appdef.Projector(appStructs.AppDef(), projector.Name).Sync() {
 				projectors[projector.Name] = projector
 			}
-		})
+		}
 		if len(projectors) == 0 {
 			return &pipeline.NOOP{}
 		}
 		conf := SyncActualizerConf{
 			Ctx:          context.Background(), // it is needed for sync pipeline and GMP believes it is enough
-			AppStructs:   func() istructs.IAppStructs { return appStructs },
 			SecretReader: secretReader,
 			Partition:    partitionID,
-			WorkToEvent: func(work interface{}) istructs.IPLogEvent {
-				return work.(interface{ Event() istructs.IPLogEvent }).Event()
-			},
 			N10nFunc: func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {
 				n10nBroker.Update(in10n.ProjectionKey{
 					App:        appStructs.AppQName(),

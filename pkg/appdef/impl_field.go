@@ -97,6 +97,7 @@ func IsSysField(n FieldName) bool {
 //   - IFields
 type fields struct {
 	app           *appDef
+	ws            *workspace
 	typeKind      TypeKind
 	fields        map[FieldName]interface{}
 	fieldsOrdered []IField
@@ -104,9 +105,10 @@ type fields struct {
 }
 
 // Makes new fields instance
-func makeFields(app *appDef, typeKind TypeKind) fields {
+func makeFields(app *appDef, ws *workspace, typeKind TypeKind) fields {
 	ff := fields{
 		app:           app,
+		ws:            ws,
 		typeKind:      typeKind,
 		fields:        make(map[FieldName]interface{}),
 		fieldsOrdered: make([]IField, 0),
@@ -155,31 +157,31 @@ func (ff *fields) UserFieldCount() int {
 }
 
 func (ff *fields) addDataField(name FieldName, data QName, required bool, constraints ...IConstraint) {
-	d := ff.app.Data(data)
+	d := Data(ff.app, data)
 	if d == nil {
 		panic(ErrTypeNotFound(data))
 	}
 	if len(constraints) > 0 {
-		d = newAnonymousData(ff.app, d.DataKind(), data, constraints...)
+		d = newAnonymousData(ff.app, ff.ws, d.DataKind(), data, constraints...)
 	}
 	f := newField(name, d, required)
 	ff.appendField(name, f)
 }
 
 func (ff *fields) addField(name FieldName, kind DataKind, required bool, constraints ...IConstraint) {
-	d := ff.app.SysData(kind)
+	d := SysData(ff.app, kind)
 	if d == nil {
 		panic(ErrNotFound("system data type for data kind «%s»", kind.TrimString()))
 	}
 	if len(constraints) > 0 {
-		d = newAnonymousData(ff.app, d.DataKind(), d.QName(), constraints...)
+		d = newAnonymousData(ff.app, ff.ws, d.DataKind(), d.QName(), constraints...)
 	}
 	f := newField(name, d, required)
 	ff.appendField(name, f)
 }
 
 func (ff *fields) addRefField(name FieldName, required bool, ref ...QName) {
-	d := ff.app.SysData(DataKind_RecordID)
+	d := SysData(ff.app, DataKind_RecordID)
 	f := newRefField(name, d, required, ref...)
 	ff.appendField(name, f)
 }
@@ -335,15 +337,10 @@ func validateTypeFields(t IType) (err error) {
 		// resolve reference types
 		for _, rf := range ff.RefFields() {
 			for _, n := range rf.Refs() {
-				refType := t.App().TypeByName(n)
+				refType := Record(t.App(), n)
 				if refType == nil {
 					err = errors.Join(err,
-						ErrNotFound("%v reference field «%s» type «%v»", t, rf.Name(), n))
-					continue
-				}
-				if _, ok := refType.(IRecord); !ok {
-					err = errors.Join(err,
-						ErrInvalid("%v reference field «%s» type «%v» is not a record type", t, n, refType))
+						ErrNotFound("%v reference field «%s» to unknown table «%v»", t, rf.Name(), n))
 					continue
 				}
 			}

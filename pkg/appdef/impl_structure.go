@@ -16,10 +16,10 @@ type structure struct {
 }
 
 // Makes new structure
-func makeStructure(app *appDef, name QName, kind TypeKind) structure {
+func makeStructure(app *appDef, ws *workspace, name QName, kind TypeKind) structure {
 	s := structure{
-		typ:          makeType(app, name, kind),
-		fields:       makeFields(app, kind),
+		typ:          makeType(app, ws, name, kind),
+		fields:       makeFields(app, ws, kind),
 		containers:   makeContainers(app, kind),
 		withAbstract: makeWithAbstract(),
 	}
@@ -65,9 +65,9 @@ func (r record) SystemField_ID() IField {
 }
 
 // Makes new record
-func makeRecord(app *appDef, name QName, kind TypeKind) record {
+func makeRecord(app *appDef, ws *workspace, name QName, kind TypeKind) record {
 	r := record{
-		structure: makeStructure(app, name, kind),
+		structure: makeStructure(app, ws, name, kind),
 	}
 	return r
 }
@@ -95,9 +95,9 @@ type doc struct {
 func (d doc) isDoc() {}
 
 // Makes new document
-func makeDoc(app *appDef, name QName, kind TypeKind) doc {
+func makeDoc(app *appDef, ws *workspace, name QName, kind TypeKind) doc {
 	d := doc{
-		record: makeRecord(app, name, kind),
+		record: makeRecord(app, ws, name, kind),
 	}
 	return d
 }
@@ -123,9 +123,9 @@ type containedRecord struct {
 }
 
 // Makes new record
-func makeContainedRecord(app *appDef, name QName, kind TypeKind) containedRecord {
+func makeContainedRecord(app *appDef, ws *workspace, name QName, kind TypeKind) containedRecord {
 	r := containedRecord{
-		record: makeRecord(app, name, kind),
+		record: makeRecord(app, ws, name, kind),
 	}
 	return r
 }

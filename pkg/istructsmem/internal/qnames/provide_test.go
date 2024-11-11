@@ -27,11 +27,12 @@ func TestQNamesBasicUsage(t *testing.T) {
 	}
 
 	testName := appdef.NewQName("test", "doc")
-	app := appdef.New()
-	d := app.AddCDoc(testName)
-	d.AddField("f1", appdef.DataKind_int64, false)
-	d.AddUnique(appdef.UniqueQName(testName, "f1"), []appdef.FieldName{"f1"})
-	appDef := app.MustBuild()
+	adb := appdef.New()
+	ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	doc := ws.AddCDoc(testName)
+	doc.AddField("f1", appdef.DataKind_int64, false)
+	doc.AddUnique(appdef.UniqueQName(testName, "f1"), []appdef.FieldName{"f1"})
+	appDef := adb.MustBuild()
 
 	names := New()
 	if err := names.Prepare(storage, versions, appDef); err != nil {

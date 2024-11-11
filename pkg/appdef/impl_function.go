@@ -18,9 +18,9 @@ type function struct {
 	par, res typeRef
 }
 
-func makeFunc(app *appDef, name QName, kind TypeKind) function {
+func makeFunc(app *appDef, ws *workspace, name QName, kind TypeKind) function {
 	f := function{
-		extension: makeExtension(app, name, kind),
+		extension: makeExtension(app, ws, name, kind),
 	}
 	return f
 }

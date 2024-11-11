@@ -65,6 +65,7 @@ func (c *cmdWorkpiece) AppPartition() appparts.IAppPartition {
 }
 
 // used in c.cluster.VSqlUpdate to determinate partitionID by WSID
+// used in c.registry.CreateLogin to dtermine if the target app is deployed
 func (c *cmdWorkpiece) AppPartitions() appparts.IAppPartitions {
 	return c.appParts
 }
@@ -130,14 +131,19 @@ func (ap *appPartition) getWorkspace(wsid istructs.WSID) *workspace {
 
 func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	ap, ok := cmdProc.appPartitions[cmd.cmdMes.AppQName()]
+	appPartitions, ok := cmdProc.appsPartitions[cmd.cmdMes.AppQName()]
 	if !ok {
-		if ap, err = cmdProc.recovery(ctx, cmd); err != nil {
-			return fmt.Errorf("partition %d recovery failed: %w", cmdProc.pNumber, err)
-		}
-		cmdProc.appPartitions[cmd.cmdMes.AppQName()] = ap
+		appPartitions = map[istructs.PartitionID]*appPartition{}
+		cmdProc.appsPartitions[cmd.cmdMes.AppQName()] = appPartitions
 	}
-	cmdProc.appPartition = ap
+	appPartition, ok := appPartitions[cmd.cmdMes.PartitionID()]
+	if !ok {
+		if appPartition, err = cmdProc.recovery(ctx, cmd); err != nil {
+			return fmt.Errorf("partition %d recovery failed: %w", cmd.cmdMes.PartitionID(), err)
+		}
+		appPartitions[cmd.cmdMes.PartitionID()] = appPartition
+	}
+	cmd.appPartition = appPartition
 	return nil
 }
 
@@ -190,7 +196,8 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work pipeline.IWorkp
 	}
 
 	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(),
-		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.eca.CommandPrepareArgs, cmd.workspace.NextWLogOffset, cmd.argsObject, cmd.unloggedArgsObject)
+		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.eca.CommandPrepareArgs, cmd.workspace.NextWLogOffset,
+		cmd.argsObject, cmd.unloggedArgsObject, cmd.cmdMes.PartitionID())
 	hs.ClearIntents()
 
 	cmd.eca.State = hs
@@ -240,7 +247,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		return nil
 	}
 
-	if err := cmd.appStructs.Events().ReadPLog(ctx, cmdProc.pNumber, istructs.FirstOffset, istructs.ReadToTheEnd, cb); err != nil {
+	if err := cmd.appStructs.Events().ReadPLog(ctx, cmd.cmdMes.PartitionID(), istructs.FirstOffset, istructs.ReadToTheEnd, cb); err != nil {
 		return nil, err
 	}
 
@@ -262,7 +269,8 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		// notest
 		return nil, err
 	}
-	logger.Info(fmt.Sprintf(`app "%s" partition %d recovered: nextPLogOffset %d, workspaces: %s`, cmd.cmdMes.AppQName(), cmdProc.pNumber, ap.nextPLogOffset, string(worskapcesJSON)))
+	logger.Info(fmt.Sprintf(`app "%s" partition %d recovered: nextPLogOffset %d, workspaces: %s`, cmd.cmdMes.AppQName(), cmd.cmdMes.PartitionID(),
+		ap.nextPLogOffset, string(worskapcesJSON)))
 	return ap, nil
 }
 
@@ -280,7 +288,7 @@ func (cmdProc *cmdProc) putPLog(_ context.Context, work pipeline.IWorkpiece) (er
 	if cmd.pLogEvent, err = cmd.appStructs.Events().PutPlog(cmd.rawEvent, nil, cmd.idGenerator); err != nil {
 		cmd.appPartitionRestartScheduled = true
 	} else {
-		cmdProc.appPartition.nextPLogOffset++
+		cmd.appPartition.nextPLogOffset++
 	}
 	return
 }
@@ -385,7 +393,7 @@ func unmarshalRequestBody(_ context.Context, work pipeline.IWorkpiece) (err erro
 
 func (cmdProc *cmdProc) getWorkspace(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	cmd.workspace = cmdProc.appPartition.getWorkspace(cmd.cmdMes.WSID())
+	cmd.workspace = cmd.appPartition.getWorkspace(cmd.cmdMes.WSID())
 	return nil
 }
 
@@ -396,7 +404,7 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work pipeline.IWor
 		Workspace:         cmd.cmdMes.WSID(),
 		QName:             cmd.cmdMes.QName(),
 		RegisteredAt:      istructs.UnixMilli(cmdProc.time.Now().UnixMilli()),
-		PLogOffset:        cmdProc.appPartition.nextPLogOffset,
+		PLogOffset:        cmd.appPartition.nextPLogOffset,
 		WLogOffset:        cmd.workspace.NextWLogOffset,
 	}
 
@@ -424,11 +432,11 @@ func getArgsObject(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		return nil
 	}
 	aob := cmd.reb.ArgumentObjectBuilder()
-	if argsIntf, exists := cmd.requestData["args"]; exists {
-		args, ok := argsIntf.(map[string]interface{})
-		if !ok {
-			return errors.New(`"args" field must be an object`)
-		}
+	args, exists, err := cmd.requestData.AsObject("args")
+	if err != nil {
+		return err
+	}
+	if exists {
 		aob.FillFromJSON(args)
 	}
 	if cmd.argsObject, err = aob.Build(); err != nil {
@@ -443,11 +451,11 @@ func getUnloggedArgsObject(_ context.Context, work pipeline.IWorkpiece) (err err
 		return nil
 	}
 	auob := cmd.reb.ArgumentUnloggedObjectBuilder()
-	if unloggedArgsIntf, exists := cmd.requestData["unloggedArgs"]; exists {
-		unloggedArgs, ok := unloggedArgsIntf.(map[string]interface{})
-		if !ok {
-			return errors.New(`"unloggedArgs" field must be an object`)
-		}
+	unloggedArgs, exists, err := cmd.requestData.AsObject("unloggedArgs")
+	if err != nil {
+		return err
+	}
+	if exists {
 		auob.FillFromJSON(unloggedArgs)
 	}
 	if cmd.unloggedArgsObject, err = auob.Build(); err != nil {
@@ -567,6 +575,9 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		if !ok {
 			return cudXPath.Errorf(`"fields" missing`)
 		}
+		if err := checkNullsInCUDs(parsedCUD, cudXPath); err != nil {
+			return err
+		}
 		// sys.ID inside -> create, outside -> update
 		isCreate := false
 		if parsedCUD.id, isCreate, err = parsedCUD.fields.AsInt64(appdef.SystemField_ID); err != nil {
@@ -611,7 +622,7 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	return err
 }
 
-func checkCUDsAllowed(_ context.Context, work pipeline.IWorkpiece) (err error) {
+func checkCUDsInCUDCmdOnly(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	if len(cmd.parsedCUDs) > 0 && cmd.cmdMes.QName() != istructs.QNameCommandCUD && cmd.cmdMes.QName() != builtin.QNameCommandInit {
 		return errors.New("CUDs allowed for c.sys.CUD command only")
@@ -628,6 +639,15 @@ func checkArgsRefIntegrity(_ context.Context, work pipeline.IWorkpiece) (err err
 	}
 	if cmd.unloggedArgsObject != nil {
 		return builtin.CheckRefIntegrity(cmd.unloggedArgsObject, cmd.appStructs, cmd.cmdMes.WSID())
+	}
+	return nil
+}
+
+func checkNullsInCUDs(cud parsedCUD, xPath xPath) (err error) {
+	for fn, v := range cud.fields {
+		if v == nil {
+			return fmt.Errorf(`%s, field "%s": %w`, xPath, fn, istructsmem.ErrNullNotAllowed)
+		}
 	}
 	return nil
 }
@@ -704,9 +724,9 @@ func (cmdProc *cmdProc) n10n(_ context.Context, work pipeline.IWorkpiece) (err e
 	cmdProc.n10nBroker.Update(in10n.ProjectionKey{
 		App:        cmd.cmdMes.AppQName(),
 		Projection: actualizers.PLogUpdatesQName,
-		WS:         istructs.WSID(cmdProc.pNumber),
+		WS:         istructs.WSID(cmd.cmdMes.PartitionID()),
 	}, cmd.rawEvent.PLogOffset())
-	logger.Verbose("updated plog event on offset ", cmd.rawEvent.PLogOffset(), ", pnumber ", cmdProc.pNumber)
+	logger.Verbose("updated plog event on offset ", cmd.rawEvent.PLogOffset(), ", pnumber ", cmd.cmdMes.PartitionID())
 	return nil
 }
 

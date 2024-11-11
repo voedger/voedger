@@ -97,7 +97,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	iAppStorageProvider := provideCachingAppStorageProvider(storageCacheSizeType, iMetrics, vvmName, iAppStorageUncachingProviderFactory)
 	iAppStructsProvider := provideIAppStructsProvider(appConfigsTypeEmpty, bucketsFactoryType, iAppTokensFactory, iAppStorageProvider)
 	syncActualizerFactory := actualizers.ProvideSyncActualizerFactory()
-	quotas := vvmConfig.Quotas
+	quotas := provideN10NQuotas(vvmConfig)
 	in10nBroker, cleanup := in10nmem.ProvideEx2(quotas, iTime)
 	v2 := provideAppsExtensionPoints(vvmConfig)
 	buildInfo, err := provideBuildInfo()
@@ -240,12 +240,6 @@ func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err
 		ChannelBufferSize: 0,
 	}, ProcessorChannel_Query,
 	)
-	vvmCfg.Quotas = in10n.Quotas{
-		Channels:                int(DefaultQuotasChannelsFactor * vvmCfg.NumCommandProcessors),
-		ChannelsPerSubject:      DefaultQuotasChannelsPerSubject,
-		Subscriptions:           int(DefaultQuotasSubscriptionsFactor * vvmCfg.NumCommandProcessors),
-		SubscriptionsPerSubject: DefaultQuotasSubscriptionsPerSubject,
-	}
 	voedgerVM.VVM, voedgerVM.vvmCleanup, err = ProvideCluster(ctx, vvmCfg, vvmIdx)
 	if err != nil {
 		return nil, err
@@ -267,6 +261,15 @@ func (vvm *VoedgerVM) Launch() error {
 		logger.Error(err)
 	}
 	return err
+}
+
+func provideN10NQuotas(vvmCfg *VVMConfig) in10n.Quotas {
+	return in10n.Quotas{
+		Channels:                int(DefaultQuotasChannelsFactor * vvmCfg.NumCommandProcessors),
+		ChannelsPerSubject:      DefaultQuotasChannelsPerSubject,
+		Subscriptions:           int(DefaultQuotasSubscriptionsFactor * vvmCfg.NumCommandProcessors),
+		SubscriptionsPerSubject: DefaultQuotasSubscriptionsPerSubject,
+	}
 }
 
 func provideSchedulerRunner(cfg schedulers.BasicSchedulerConfig) appparts.ISchedulerRunner {
@@ -804,7 +807,7 @@ func provideQueryProcessors(qpCount istructs.NumQueryProcessors, qc QueryChannel
 func provideCommandProcessors(cpCount istructs.NumCommandProcessors, ccf CommandChannelFactory, cpFactory commandprocessor.ServiceFactory) OperatorCommandProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, cpCount)
 	for i := uint(0); i < uint(cpCount); i++ {
-		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(cpFactory(ccf(i), istructs.PartitionID(i))))
+		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(cpFactory(ccf(i))))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }

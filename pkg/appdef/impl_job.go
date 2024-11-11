@@ -18,11 +18,11 @@ type job struct {
 	cronSchedule string
 }
 
-func newJob(app *appDef, name QName) *job {
+func newJob(app *appDef, ws *workspace, name QName) *job {
 	j := &job{
-		extension: makeExtension(app, name, TypeKind_Job),
+		extension: makeExtension(app, ws, name, TypeKind_Job),
 	}
-	app.appendType(j)
+	ws.appendType(j)
 	return j
 }
 

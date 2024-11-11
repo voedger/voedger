@@ -193,7 +193,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 
 	t.Run("III. Read event from PLog & PLog and reads CUD demo", func(t *testing.T) {
 
-		t.Run("must be ok to read PLog", func(t *testing.T) {
+		t.Run("should be ok to read PLog", func(t *testing.T) {
 			check := func(event istructs.IPLogEvent, err error) {
 				require.NoError(err)
 				require.NotNil(event)
@@ -241,13 +241,13 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			})
 		})
 
-		t.Run("must be no events if read other PLog partition", func(t *testing.T) {
+		t.Run("should be no events if read other PLog partition", func(t *testing.T) {
 
 			t.Run("test single record reading", func(t *testing.T) {
 				var event istructs.IPLogEvent
 				err := app.Events().ReadPLog(context.Background(), test.partition+1, test.plogOfs, 1,
 					func(plogOffset istructs.Offset, ev istructs.IPLogEvent) (err error) {
-						require.Fail("must be no events if read other PLog partition")
+						require.Fail("should be no events if read other PLog partition")
 						event = ev
 						return nil
 					})
@@ -259,7 +259,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 				var event istructs.IPLogEvent
 				err := app.Events().ReadPLog(context.Background(), test.partition+1, test.plogOfs, istructs.ReadToTheEnd,
 					func(plogOffset istructs.Offset, ev istructs.IPLogEvent) (err error) {
-						require.Fail("must be no events if read other PLog partition")
+						require.Fail("should be no events if read other PLog partition")
 						event = ev
 						return nil
 					})
@@ -268,7 +268,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			})
 		})
 
-		t.Run("must be ok to read WLog", func(t *testing.T) {
+		t.Run("should be ok to read WLog", func(t *testing.T) {
 
 			t.Run("test single record reading", func(t *testing.T) {
 				var event istructs.IWLogEvent
@@ -301,13 +301,13 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			})
 		})
 
-		t.Run("must be no event if read WLog from other WSID", func(t *testing.T) {
+		t.Run("should be no event if read WLog from other WSID", func(t *testing.T) {
 
 			t.Run("test single record reading", func(t *testing.T) {
 				var wLogEvent istructs.IWLogEvent
 				err := app.Events().ReadWLog(context.Background(), test.workspace+1, test.wlogOfs, 1,
 					func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
-						require.Fail("must be no event if read WLog from other WSID")
+						require.Fail("should be no event if read WLog from other WSID")
 						return nil
 					})
 				require.NoError(err)
@@ -318,7 +318,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 				var wLogEvent istructs.IWLogEvent
 				err := app.Events().ReadWLog(context.Background(), test.workspace+1, test.wlogOfs, istructs.ReadToTheEnd,
 					func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
-						require.Fail("must be no event if read WLog from other WSID")
+						require.Fail("should be no event if read WLog from other WSID")
 						return nil
 					})
 				require.NoError(err)
@@ -446,7 +446,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			})
 		}
 
-		t.Run("must be ok to read PLog", func(t *testing.T) {
+		t.Run("should be ok to read PLog", func(t *testing.T) {
 
 			t.Run("test single record reading", func(t *testing.T) {
 				var event istructs.IPLogEvent
@@ -473,7 +473,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			})
 		})
 
-		t.Run("must be ok to read WLog", func(t *testing.T) {
+		t.Run("should be ok to read WLog", func(t *testing.T) {
 
 			t.Run("test single record reading", func(t *testing.T) {
 				var event istructs.IWLogEvent
@@ -733,21 +733,23 @@ func Test_EventUpdateRawCud(t *testing.T) {
 	require := require.New(t)
 
 	appName := istructs.AppQName_test1_app1
-
+	wsName := appdef.NewQName("test", "workspace")
 	docName := appdef.NewQName("test", "cDoc")
 	recName := appdef.NewQName("test", "cRec")
 
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
-	t.Run("must ok to construct application", func(t *testing.T) {
-		doc := adb.AddCDoc(docName)
+	t.Run("should be ok to construct application", func(t *testing.T) {
+		ws := adb.AddWorkspace(wsName)
+
+		doc := ws.AddCDoc(docName)
 		doc.AddField("new", appdef.DataKind_bool, true)
 		doc.AddField("rec", appdef.DataKind_RecordID, false)
 		doc.AddField("emptied", appdef.DataKind_string, false)
 		doc.AddContainer("rec", recName, 0, 1)
 
-		rec := adb.AddCRecord(recName)
+		rec := ws.AddCRecord(recName)
 		rec.AddField("data", appdef.DataKind_string, false)
 	})
 
@@ -783,7 +785,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 
 		docID := istructs.NewCDocCRecordID(istructs.FirstBaseRecordID + istructs.RecordID(test))
 
-		t.Run("must ok to create CDoc", func(t *testing.T) {
+		t.Run("should be ok to create CDoc", func(t *testing.T) {
 			bld := app.Events().GetNewRawEventBuilder(
 				istructs.NewRawEventBuilderParams{
 					GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
@@ -811,7 +813,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			require.NoError(saveErr)
 			require.True(pLogEvent.Error().ValidEvent())
 
-			t.Run("must ok to apply CDoc records", func(t *testing.T) {
+			t.Run("should be ok to apply CDoc records", func(t *testing.T) {
 				recCnt := 0
 				err = app.Records().Apply2(pLogEvent, func(r istructs.IRecord) {
 					require.EqualValues(docName, r.QName())
@@ -825,7 +827,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 
 		recID := docID + 1
 
-		t.Run("must ok to update CDoc", func(t *testing.T) {
+		t.Run("should be ok to update CDoc", func(t *testing.T) {
 			bld := app.Events().GetNewRawEventBuilder(
 				istructs.NewRawEventBuilderParams{
 					GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
@@ -866,7 +868,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 
 			switch test {
 			case retryTest:
-				t.Run("must ok to reread PLog event", func(t *testing.T) {
+				t.Run("should be ok to reread PLog event", func(t *testing.T) {
 					pLogEvent.Release()
 
 					pLogEvent = nil
@@ -881,7 +883,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 				})
 			}
 
-			t.Run("must ok to apply CDoc records", func(t *testing.T) {
+			t.Run("should be ok to apply CDoc records", func(t *testing.T) {
 				recCnt := 0
 				err = app.Records().Apply2(pLogEvent, func(r istructs.IRecord) {
 					switch id := r.ID(); id {
@@ -903,7 +905,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 
 			pLogEvent.Release()
 
-			t.Run("must ok to reread CDoc record", func(t *testing.T) {
+			t.Run("should be ok to reread CDoc record", func(t *testing.T) {
 				rec, err := app.Records().Get(ws, true, docID)
 				require.NoError(err)
 				require.EqualValues(docName, rec.QName())
@@ -918,14 +920,15 @@ func Test_UpdateCorrupted(t *testing.T) {
 	require := require.New(t)
 
 	appName := istructs.AppQName_test1_app1
-
+	wsName := appdef.NewQName("test", "workspace")
 	docName := appdef.NewQName("test", "doc")
 
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("should be ok to build AppDef", func(t *testing.T) {
-		doc := adb.AddCDoc(docName)
+		ws := adb.AddWorkspace(wsName)
+		doc := ws.AddCDoc(docName)
 		doc.SetSingleton()
 		doc.AddField("option", appdef.DataKind_int64, true)
 
@@ -1051,14 +1054,15 @@ func Test_BuildPLogEvent(t *testing.T) {
 	require := require.New(t)
 
 	appName := istructs.AppQName_test1_app1
-
+	wsName := appdef.NewQName("test", "workspace")
 	docName := appdef.NewQName("test", "doc")
 
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("should be ok to build AppDef", func(t *testing.T) {
-		doc := adb.AddCDoc(docName)
+		ws := adb.AddWorkspace(wsName)
+		doc := ws.AddCDoc(docName)
 		doc.SetSingleton()
 		doc.AddField("option", appdef.DataKind_int64, true)
 
@@ -1248,19 +1252,21 @@ func Test_SingletonCDocEvent(t *testing.T) {
 	require := require.New(t)
 
 	appName := istructs.AppQName_test1_app1
-
+	wsName := appdef.NewQName("test", "workspace")
 	docName, doc2Name := appdef.NewQName("test", "cDoc"), appdef.NewQName("test", "cDoc2")
 	docID := istructs.NullRecordID
 
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
-	t.Run("must ok to construct singleton CDoc", func(t *testing.T) {
-		doc := adb.AddCDoc(docName)
+	t.Run("should be ok to construct singleton CDoc", func(t *testing.T) {
+		ws := adb.AddWorkspace(wsName)
+
+		doc := ws.AddCDoc(docName)
 		doc.SetSingleton()
 		doc.AddField("option", appdef.DataKind_int64, true)
 
-		doc2 := adb.AddCDoc(doc2Name)
+		doc2 := ws.AddCDoc(doc2Name)
 		doc2.SetSingleton()
 		doc2.AddField("option", appdef.DataKind_int64, true)
 	})
@@ -1280,14 +1286,14 @@ func Test_SingletonCDocEvent(t *testing.T) {
 	docID, err = cfgs.GetConfig(appName).singletons.ID(docName)
 	require.NoError(err)
 
-	t.Run("must ok to read not created singleton CDoc by QName", func(t *testing.T) {
+	t.Run("should be ok to read not created singleton CDoc by QName", func(t *testing.T) {
 		rec, err := app.Records().GetSingleton(1, docName)
 		require.NoError(err)
 		require.Equal(appdef.NullQName, rec.QName())
 		require.Equal(docID, rec.ID())
 	})
 
-	t.Run("must ok to create singleton CDoc", func(t *testing.T) {
+	t.Run("should be ok to create singleton CDoc", func(t *testing.T) {
 		bld := app.Events().GetNewRawEventBuilder(
 			istructs.NewRawEventBuilderParams{
 				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
@@ -1327,7 +1333,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 			require.Equal(1, recCnt)
 		})
 
-		t.Run("must ok to apply singleton CDoc records", func(t *testing.T) {
+		t.Run("should be ok to apply singleton CDoc records", func(t *testing.T) {
 			recCnt := 0
 			err = app.Records().Apply2(pLogEvent, func(r istructs.IRecord) {
 				require.Equal(docName, r.QName())
@@ -1339,7 +1345,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 		})
 	})
 
-	t.Run("must ok to read singleton CDoc by QName", func(t *testing.T) {
+	t.Run("should be ok to read singleton CDoc by QName", func(t *testing.T) {
 		rec, err := app.Records().GetSingleton(1, docName)
 		require.NoError(err)
 		require.Equal(docName, rec.QName())
@@ -1414,7 +1420,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 		require.ErrorContains(buildErr, "repeatedly creates the same singleton")
 	})
 
-	t.Run("must ok to update singleton CDoc", func(t *testing.T) {
+	t.Run("should be ok to update singleton CDoc", func(t *testing.T) {
 		bld := app.Events().GetNewRawEventBuilder(
 			istructs.NewRawEventBuilderParams{
 				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
@@ -1458,7 +1464,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 			require.Equal(1, recCnt)
 		})
 
-		t.Run("must ok to apply singleton CDoc update records", func(t *testing.T) {
+		t.Run("should be ok to apply singleton CDoc update records", func(t *testing.T) {
 			recCnt := 0
 			err = app.Records().Apply2(pLogEvent, func(r istructs.IRecord) {
 				require.Equal(docName, r.QName())
@@ -1469,7 +1475,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 			require.Equal(1, recCnt)
 		})
 
-		t.Run("must ok to read updated singleton CDoc from records", func(t *testing.T) {
+		t.Run("should be ok to read updated singleton CDoc from records", func(t *testing.T) {
 			rec, err := app.Records().Get(1, true, docID)
 			require.NoError(err)
 			require.Equal(docName, rec.QName())
@@ -2023,21 +2029,20 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 		data  string
 		check func(istructs.IObject, error)
 	}{
-		{"must be ok to fill from empty JSON",
+		{"should be ok to fill from empty JSON",
 			`{}`,
 			func(o istructs.IObject, err error) {
 				require.NoError(err)
 				require.Equal(test.testObj, o.QName())
 				require.EqualValues(0, o.AsInt32("int32"))
 			}},
-		{"must be ok to fill from JSON with nil values even for unknown fields",
-			`{"int32": null, "unknown": null}`,
+		{"should be error on fill from JSON with nil values even for unknown fields",
+			`{"unknown": null}`,
 			func(o istructs.IObject, err error) {
-				require.NoError(err)
-				require.Equal(test.testObj, o.QName())
-				require.EqualValues(0, o.AsInt32("int32"))
+				require.ErrorIs(err, ErrNullNotAllowed)
+				require.ErrorContains(err, "unknown")
 			}},
-		{"must be ok to fill fields from JSON",
+		{"should be ok to fill fields from JSON",
 			`{"int32": 1, "int64": 2, "float32": 3.3, "float64": 4.4, "bool": true, "string": "test", "bytes": "AQID"}`,
 			func(o istructs.IObject, err error) {
 				require.NoError(err)
@@ -2050,7 +2055,7 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 				require.EqualValues("test", o.AsString("string"))
 				require.EqualValues([]byte{1, 2, 3}, o.AsBytes("bytes"))
 			}},
-		{"must be ok to fill children from JSON",
+		{"should be ok to fill children from JSON",
 			`{"int32": 1, "child": [{"int64": 1}, {"int64": 2}, {"int64": 3}]}`,
 			func(o istructs.IObject, err error) {
 				require.NoError(err)
@@ -2065,42 +2070,41 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 					return cnt
 				}())
 			}},
-		{"must ok to fill with nil values",
+		{"should be error on fill with nil values",
 			`{"int32": null, "bool": null, "string": null, "bytes": null}`,
 			func(o istructs.IObject, err error) {
-				require.NoError(err)
-				require.Equal(test.testObj, o.QName())
-				require.Zero(o.AsInt32("int32"))
-				require.Zero(o.AsBool("bool"))
-				require.Zero(o.AsString("string"))
-				require.Zero(o.AsBytes("bytes"))
+				require.ErrorIs(err, ErrNullNotAllowed)
+				require.ErrorContains(err, "int32")
+				require.ErrorContains(err, "bool")
+				require.ErrorContains(err, "string")
+				require.ErrorContains(err, "bytes")
 			}},
-		{"must be error if unknown field in JSON",
+		{"should be error if unknown field in JSON",
 			`{"unknown": 1}`,
 			func(o istructs.IObject, err error) {
 				require.ErrorIs(err, ErrNameNotFound)
 				require.ErrorContains(err, "field «unknown» is not found")
 			}},
-		{"must be error if invalid data type in JSON field",
+		{"should be error if invalid data type in JSON field",
 			`{"int32": "error"}`,
 			func(o istructs.IObject, err error) {
 				require.ErrorIs(err, ErrWrongFieldType)
 				require.ErrorContains(err, "int32")
 			}},
-		{"must be error if unknown container in JSON",
+		{"should be error if unknown container in JSON",
 			`{"unknown": [{"int32": 1}]}`,
 			func(o istructs.IObject, err error) {
 				require.ErrorIs(err, ErrNameNotFound)
 				require.ErrorContains(err, "container «unknown» is not found")
 			}},
-		{"must be error if invalid data type in JSON container",
+		{"should be error if invalid data type in JSON container",
 			`{"child": ["a","b"]}`,
 			func(o istructs.IObject, err error) {
 				require.ErrorIs(err, ErrWrongType)
 				require.ErrorContains(err, "invalid type «string»")
 				require.ErrorContains(err, "child «child[0]»")
 			}},
-		{"must be error if invalid data type in JSON container",
+		{"should be error if invalid data type in JSON container",
 			`{"child": ["a","b"]}`,
 			func(o istructs.IObject, err error) {
 				require.ErrorIs(err, ErrWrongType)
@@ -2123,7 +2127,7 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 		})
 	}
 
-	t.Run("must be error on provide a value of a wrong type", func(t *testing.T) {
+	t.Run("should be error on provide a value of a wrong type", func(t *testing.T) {
 		b := test.AppStructs.ObjectBuilder(test.testObj)
 		require.NotNil(b)
 		j := map[string]any{

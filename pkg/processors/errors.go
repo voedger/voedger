@@ -13,4 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
-var ErrWSNotInited = coreutils.NewHTTPErrorf(http.StatusForbidden, "workspace is not initialized")
+var (
+	ErrWSNotInited = coreutils.NewHTTPErrorf(http.StatusForbidden, "workspace is not initialized")
+	ErrWSInactive  = coreutils.NewHTTPErrorf(http.StatusGone, "workspace status is not active")
+)

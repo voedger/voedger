@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIAppDef_Structures() {
+func ExampleStructures() {
 
 	var app appdef.IAppDef
 	docName, recName := appdef.NewQName("test", "document"), appdef.NewQName("test", "record")
@@ -22,24 +22,26 @@ func ExampleIAppDef_Structures() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		doc := adb.AddCDoc(docName)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		doc := wsb.AddCDoc(docName)
 		doc.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 		doc.AddContainer("rec", recName, 0, appdef.Occurs_Unbounded)
 
-		rec := adb.AddCRecord(recName)
+		rec := wsb.AddCRecord(recName)
 		rec.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 
-		obj := adb.AddObject(objName)
+		obj := wsb.AddObject(objName)
 		obj.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 		obj.AddContainer("child", childName, 0, appdef.Occurs_Unbounded)
 
-		child := adb.AddObject(childName)
+		child := wsb.AddObject(childName)
 		child.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
@@ -51,7 +53,7 @@ func ExampleIAppDef_Structures() {
 	{
 		// how to enum structures
 		cnt := 0
-		for s := range app.Structures {
+		for s := range appdef.Structures(app) {
 			cnt++
 			fmt.Printf("%d. %v\n", cnt, s)
 			fmt.Printf("- user/overall field count: %d/%d\n", s.UserFieldCount(), s.FieldCount())
@@ -60,14 +62,14 @@ func ExampleIAppDef_Structures() {
 		fmt.Printf("Overall %d structures\n", cnt)
 
 		// how to find structure by name
-		fmt.Println(app.Structure(docName))
-		fmt.Println(app.Structure(appdef.NewQName("test", "unknown")))
+		fmt.Println(appdef.Structure(app, docName))
+		fmt.Println(appdef.Structure(app, appdef.NewQName("test", "unknown")))
 	}
 
 	// how to inspect builded AppDef with records
 	{
 		cnt := 0
-		for r := range app.Records {
+		for r := range appdef.Records(app) {
 			cnt++
 			fmt.Printf("%d. %v\n", cnt, r)
 			fmt.Printf("- user/overall field count: %d/%d\n", r.UserFieldCount(), r.FieldCount())
@@ -76,7 +78,7 @@ func ExampleIAppDef_Structures() {
 
 		fmt.Printf("Overall %d records\n", cnt)
 
-		fmt.Println(app.Record(recName), app.Record(appdef.NewQName("test", "unknown")))
+		fmt.Println(appdef.Record(app, recName), appdef.Record(app, appdef.NewQName("test", "unknown")))
 	}
 
 	// Output:

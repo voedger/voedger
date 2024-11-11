@@ -65,7 +65,9 @@ func newACLRule(ops []OperationKind, policy PolicyKind, resources []QName, field
 	}
 
 	if len(fields) > 0 {
-		if !opSet.ContainsAny(OperationKind_Select, OperationKind_Update) {
+		if !opSet.ContainsAny(
+			OperationKind_Insert, // #2747
+			OperationKind_Update, OperationKind_Select) {
 			panic(ErrIncompatible("fields are not applicable for operations «%s»", opSet))
 		}
 		if err := validateFieldNamesByTypes(principal.app, resources, fields); err != nil {

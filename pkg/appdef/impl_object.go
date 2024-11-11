@@ -11,10 +11,10 @@ type object struct {
 	structure
 }
 
-func newObject(app *appDef, name QName) *object {
+func newObject(app *appDef, ws *workspace, name QName) *object {
 	o := &object{}
-	o.structure = makeStructure(app, name, TypeKind_Object)
-	app.appendType(o)
+	o.structure = makeStructure(app, ws, name, TypeKind_Object)
+	ws.appendType(o)
 	return o
 }
 

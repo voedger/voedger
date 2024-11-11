@@ -112,8 +112,8 @@ func (uu *uniques) addUnique(name QName, fields []FieldName, comment ...string) 
 	}
 
 	if uu.app != nil {
-		if t := uu.app.TypeByName(name); t != nil {
-			panic(ErrAlreadyExists("unique «%v» already used for %v", name, t))
+		if t := uu.app.Type(name); t.Kind() != TypeKind_null {
+			panic(ErrAlreadyExists("name «%v» already used for %v", name, t))
 		}
 	}
 

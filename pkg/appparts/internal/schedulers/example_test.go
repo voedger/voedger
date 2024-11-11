@@ -42,8 +42,9 @@ func Example() {
 	appDef := func(jobNames ...appdef.QName) appdef.IAppDef {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 		for _, name := range jobNames {
-			adb.AddJob(name).SetCronSchedule("@every 5s")
+			wsb.AddJob(name).SetCronSchedule("@every 5s")
 		}
 		return adb.MustBuild()
 	}

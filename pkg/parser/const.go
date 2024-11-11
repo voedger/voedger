@@ -5,9 +5,7 @@
 
 package parser
 
-import (
-	"github.com/voedger/voedger/pkg/appdef"
-)
+import "github.com/voedger/voedger/pkg/appdef"
 
 const (
 	nameCDOC       = "CDoc"
@@ -18,9 +16,11 @@ const (
 	nameCRecord    = "CRecord"
 	nameORecord    = "ORecord"
 	nameWRecord    = "WRecord"
+
+	nameAppWorkspaceWS = "AppWorkspaceWS"
 )
 
-const rootWorkspaceName = "Workspace"
+const rootWorkspaceName = appdef.SysWorkspaceName // "Workspace"
 
 const ExportedAppsFile = "apps.yaml"
 const ExportedPkgFolder = "pkg"

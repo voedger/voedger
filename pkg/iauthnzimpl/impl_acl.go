@@ -317,8 +317,6 @@ var defaultACL = ACL{
 				qNameQryCreateTap2PaySession,
 				// https://dev.untill.com/projects/#!693712
 				qNameCmdSaveTap2PayPayment,
-				// https://dev.untill.com/projects/#!710217
-				qNameQryGetUPInvoices,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
@@ -368,6 +366,8 @@ var defaultACL = ACL{
 				qNameQryUpdateShopperStatement,
 				// https://dev.untill.com/projects/#!710217
 				qNameQryGetUPPayoutTransfers,
+				qNameQryGetUPInvoices,
+				qNameCmdUpdateUPProfile,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
@@ -389,14 +389,6 @@ var defaultACL = ACL{
 				qNameQryGetResellerDailyUPReport,
 			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}}},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
-		desc: "grant exec on c.air.UpdateUPProfile to role air.UntillPaymentsUser",
-		pattern: PatternType{
-			qNamesPattern:     []appdef.QName{qNameCmdUpdateUPProfile},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}}},
 		},
 		policy: ACPolicy_Allow,
 	},

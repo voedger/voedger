@@ -8,19 +8,6 @@ APPLICATION vrestaurant();
 TAG BackofficeTag;
 TAG PosTag;
 
--- TABLE BOEntity : is an Abstract base data struct for many CDOC tables
-ABSTRACT TABLE BOEntity INHERITS CDoc( -- TODO: ABSTRACT
-    Name varchar(50) NOT NULL, -- TODO NOT NULL everywhere
-    Number int NOT NULL -- Number sequence(1) ??? smm
-) WITH Tags=(BackofficeTag);
-
--- TABLE Person : is an Abstract data struct for Waiters, Clients, Adminitsrators, Manager
-ABSTRACT TABLE Person INHERITS BOEntity ( --TODO:  ABSTRACT
-    Address varchar(50), 
-    Email varchar(50) CHECK '^\\S+@\\S+\\.\\S+$',
-    Phone varchar(20),
-    Picture blob
-) WITH Tags=(BackofficeTag);
 
 WORKSPACE Restaurant (
     DESCRIPTOR (
@@ -31,6 +18,20 @@ WORKSPACE Restaurant (
 	    OpenMinutes  int,
 	    OwnerName varchar(30)
     );
+
+    -- TABLE BOEntity : is an Abstract base data struct for many CDOC tables
+    ABSTRACT TABLE BOEntity INHERITS CDoc( -- TODO: ABSTRACT
+        Name varchar(50) NOT NULL, -- TODO NOT NULL everywhere
+        Number int NOT NULL -- Number sequence(1) ??? smm
+    ) WITH Tags=(BackofficeTag);
+
+    -- TABLE Person : is an Abstract data struct for Waiters, Clients, Adminitsrators, Manager
+    ABSTRACT TABLE Person INHERITS BOEntity ( --TODO:  ABSTRACT
+        Address varchar(50), 
+        Email varchar(50) CHECK '^\\S+@\\S+\\.\\S+$',
+        Phone varchar(20),
+        Picture blob
+    ) WITH Tags=(BackofficeTag);
 
     ROLE LocationUser;
     ROLE LocationManager;
@@ -185,7 +186,7 @@ WORKSPACE Restaurant (
     GRANT SELECT ON TABLE Order TO LocationUser;
     -- GRANT EXECUTE ON COMMAND MakeOrder TO LocationUser;
     -- GRANT EXECUTE ON COMMAND MakePayment TO LocationUser;
-    GRANT SELECT ON ALL QUERIES WITH TAG PosTag TO LocationUser;
+    GRANT EXECUTE ON ALL QUERIES WITH TAG PosTag TO LocationUser;
 
     -- VIEW TableStatus     : keeps actual status of table(free/occupied)
     VIEW TableStatus (
