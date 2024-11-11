@@ -110,11 +110,10 @@ func TestFillPbillDates(t *testing.T) {
 	t.Run("View View_PbillDates: insert", func(t *testing.T) {
 		test.NewProjectorTest(
 			t,
-			orm.Package_air.Command_Pbill,
+			orm.Package_air.Projector_FillPbillDates(),
 			FillPbillDates,
 		).
 			EventOffset(123).
-			//Event().
 			EventArgumentObject(
 				//orm.Package_untill.WDoc_bill,
 				2,
@@ -199,7 +198,7 @@ func TestProjectorODoc(t *testing.T) {
 	t.Run("View View_ProformaPrintedDocs: insert", func(t *testing.T) {
 		test.NewProjectorTest(
 			t,
-			orm.Package_air.Projector_FillPbillDates(),
+			orm.Package_air.Projector_ProjectorODoc(),
 			ProjectorODoc,
 		).
 			EventOffset(123).
