@@ -15,8 +15,8 @@ The current version of the codec: `2` .
 
 ### Codec version changes summary
 
-Изменено хранение плана изменяемых записей *commandCUDs*.
-В дополнение к изменениям в записях, план изменяемых записей содержит сведения об опустошенных (очищенных) полях.
+The storage of the plan of modified records *commandCUDs* has been changed.
+In addition to changes in records, the plan of modified records contains information about emptied (cleared) fields.
 
 ## Record
 
@@ -111,23 +111,23 @@ The internal structure of the buffer is determined by the [dynoBuffer](https://g
 
 ## Event
 
-Буфер события *event* содержит версию кодека *codecVer* и данные события *eventData*.
+The event buffer *event* contains the codec version *codecVer* and event data *eventData*.
 
 `event = codecVersion eventData .`
 
 ### Codec Version
 
-Версия кодека *codecVersion* записана как беззнаковое однобайтовое целое число.
+The codec version *codecVersion* is recorded as an unsigned one-byte integer.
 
 `codecVersion = byte . // (0x00)`
 
 ### Event Data
 
-Данные события *eventData* содержат идентификатор имени определения *qNameID*, конструкционные данные события *createParameters*, сведения об ошибке сборки события *buildError*, аргументы команды *commandArguments* и план изменяемых записей *commandCUDs*.
+The event data *eventData* contains the definition name identifier *qNameID*, event construction data *createParameters*, event build error information *buildError*, command arguments *commandArguments*, and the plan of modified records *commandCUDs*.
 
 `eventData = qNameID [ createParameters buildError [ commandArguments commandCUDs ] ].`
 
-Если имя определения (QName) у события не указано (т.е. равно `appdef.NullQName`), то больше ничего для события не указывается.
+If the definition name (QName) is not specified for the event (i.e., it is equal to `appdef.NullQName`), then nothing else is specified for the event.
 
 #### QName ID
 
