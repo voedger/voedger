@@ -1819,9 +1819,10 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 		t.Run("put CUD with emptied photo", func(t *testing.T) {
 			cud := ev1.CUDBuilder().Create(test.tablePhotos)
 			cud.PutRecordID(appdef.SystemField_ID, emptiedPhotoID)
+			cud.PutString(test.buyerIdent, "") // empty here, but next filled
 			cud.PutString(test.buyerIdent, test.buyerValue)
 			cud.PutInt32(test.ageIdent, test.ageValue)
-			cud.PutBytes(test.photoIdent, nil) // emptied bytes-field
+			cud.PutBytes(test.photoIdent, nil) // empty bytes-field
 		})
 
 		t.Run("put CUD with emptied photo remark", func(t *testing.T) {
@@ -1830,7 +1831,7 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 			cud.PutRecordID(appdef.SystemField_ParentID, emptiedPhotoID)
 			cud.PutString(appdef.SystemField_Container, test.remarkIdent)
 			cud.PutRecordID(test.photoIdent, test.tempPhotoID)
-			cud.PutString(test.remarkIdent, "") // emptied string-field
+			cud.PutString(test.remarkIdent, "") // empty string-field
 		})
 
 		b := ev1.storeToBytes()
@@ -1875,6 +1876,15 @@ func Test_LoadEvent_DamagedBytes(t *testing.T) {
 	require := require.New(t)
 
 	ev1 := newTestEvent(100500, 500)
+
+	// #2785
+	t.Run("put CUD with emptied photo", func(t *testing.T) {
+		test := test()
+		cud := ev1.CUDBuilder().Create(test.tablePhotos)
+		cud.PutRecordID(appdef.SystemField_ID, test.tempPhotoID+1)
+		cud.PutString(test.buyerIdent, test.buyerValue)
+		cud.PutBytes(test.photoIdent, nil) // empty bytes-field
+	})
 
 	b := ev1.storeToBytes()
 	length := len(b)
