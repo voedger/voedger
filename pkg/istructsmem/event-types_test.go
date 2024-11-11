@@ -1807,6 +1807,68 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 
 	testDbEvent(t, ev2)
 	testUnloggedObject(t, ev2.ArgumentUnloggedObject())
+
+	// #2785
+	t.Run("should be supports emptied fields in CUDs", func(t *testing.T) {
+		test := test()
+
+		emptiedPhotoID := test.tempPhotoID + 1
+		emptiedRemarkID := test.tempRemarkID + 1
+		ev1 := newTestEvent(100500, 500)
+
+		t.Run("put CUD with emptied photo", func(t *testing.T) {
+			cud := ev1.CUDBuilder().Create(test.tablePhotos)
+			cud.PutRecordID(appdef.SystemField_ID, emptiedPhotoID)
+			cud.PutString(test.buyerIdent, test.buyerValue)
+			cud.PutInt32(test.ageIdent, test.ageValue)
+			cud.PutBytes(test.photoIdent, nil) // emptied bytes-field
+		})
+
+		t.Run("put CUD with emptied photo remark", func(t *testing.T) {
+			cud := ev1.CUDBuilder().Create(test.tablePhotoRems)
+			cud.PutRecordID(appdef.SystemField_ID, emptiedRemarkID)
+			cud.PutRecordID(appdef.SystemField_ParentID, emptiedPhotoID)
+			cud.PutString(appdef.SystemField_Container, test.remarkIdent)
+			cud.PutRecordID(test.photoIdent, test.tempPhotoID)
+			cud.PutString(test.remarkIdent, "") // emptied string-field
+		})
+
+		b := ev1.storeToBytes()
+
+		ev2 := newEmptyTestEvent()
+		err := ev2.loadFromBytes(b)
+		require.NoError(err)
+
+		t.Run("should ok to find CUDs with emptied field", func(t *testing.T) {
+			for cud := range ev2.CUDs {
+				switch cud.AsRecordID(appdef.SystemField_ID) {
+				case emptiedPhotoID:
+					fields := make(map[appdef.FieldName]interface{})
+					for fld, val := range cud.ModifiedFields {
+						fields[fld] = val
+					}
+					require.Equal(
+						map[appdef.FieldName]interface{}{
+							test.buyerIdent: test.buyerValue,
+							test.ageIdent:   test.ageValue,
+							test.photoIdent: []byte{}, // emptied bytes-field
+						},
+						fields)
+				case emptiedRemarkID:
+					fields := make(map[appdef.FieldName]interface{})
+					for fld, val := range cud.ModifiedFields {
+						fields[fld] = val
+					}
+					require.Equal(
+						map[appdef.FieldName]interface{}{
+							test.photoIdent:  test.tempPhotoID,
+							test.remarkIdent: "", // emptied string-field
+						},
+						fields)
+				}
+			}
+		})
+	})
 }
 
 func Test_LoadEvent_DamagedBytes(t *testing.T) {
