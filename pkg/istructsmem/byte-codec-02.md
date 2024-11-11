@@ -11,11 +11,12 @@ Codec has its own version. Codec version number - a whole unsigned byte value (*
 
 ### Current codec version
 
-The current version of the codec: `1` .
+The current version of the codec: `2` .
 
 ### Codec version changes summary
 
-The storage of the values of the system fields has been changed. In the previous version of the Codec, whether the system field will be recorded by the defiant code on the basis of the type of definition.I n the current version, the values of the system fields precedes the bit, which indicates which system fields are preserved.
+Изменено хранение плана изменяемых записей *commandCUDs*.
+В дополнение к изменениям в записях, план изменяемых записей содержит сведения об опустошенных (очищенных) полях.
 
 ## Record
 
@@ -52,8 +53,6 @@ System fields include the bit mask of system fields *sysFieldsMask*, the record 
 `systemFields = sysFieldsMask [sys.ID] [sys.ParentID] [sys.Container] [sys.IsActive] .`
 
 #### System fields mask
-
-❗ *New* in version
 
 The system fields bit mask is an unsigned two-byte number, each set bit of which corresponds to the stored value of a system field.
 
@@ -289,7 +288,7 @@ The internal structure of the buffer is determined by the [dynoBuffer](https://g
 
 Изменяемые командой записи *commandCUDs* содержат сведения о записях, запланированных к изменению в аргументах команды (для системной команды `sys.CUD`), либо для записей, изменяемых в результате выполнения (для всех остальных команд). Эти сведения содержат количество новых записей *createCount*, список новых записей *creates*, количество измененных записей *updateCount*, список изменений в записях *updates*.
 
-`commandCUD = ( createCount { creates } ) ( updateCount { updates } ) .`
+`commandCUDs = ( createCount { creates } ) ( updateCount { updates } ) .`
 
 ##### Create Records Count
 
@@ -299,9 +298,9 @@ The internal structure of the buffer is determined by the [dynoBuffer](https://g
 
 ##### Created Records
 
-Список создаваемых (новых) записей *creates* содержит массив новых [строк данных](#row-data) *rowData*.
+Список создаваемых (новых) записей *creates* содержит массив новых [CUD-записей](#cud-data) *cudData*.
 
-`creates = { rowData }`
+`creates = { cudData }`
 
 ##### Update Record Count
 
@@ -311,9 +310,9 @@ The internal structure of the buffer is determined by the [dynoBuffer](https://g
 
 ##### Updated Records
 
-Список измененных записей *updates* содержит массив измененных [строк данных](#row-data) *rowData*.
+Список измененных записей *updates* содержит массив измененных [CUD-записей](#cud-data) *cudData*.
 
-`updates = { rowData }`
+`updates = { cudData }`
 
 В измененных данных строки сохранены:
 
@@ -321,6 +320,38 @@ The internal structure of the buffer is determined by the [dynoBuffer](https://g
 - значения только измененных пользовательских полей.
 
 сведения о значении остальных (неизмененных) пользовательских полей в списке отсутствуют.
+
+###### CUD Data
+
+Данные CUD-записи *cudData* содержат [строк данных](#row-data) *rowData* и [список опустошенных полей](#emptied-fields) *emptiedFields*.
+
+`cudData = rowData emptiedFields`
+
+###### Emptied Fields
+
+❗ *New* in version
+
+Список опустошенных полей *emptiedFields* содержит количество опустошенных полей](#emptied-fields-count) *emptiedCount* и [список индексов опустошенных полей](#emptied-fields-indexes) *emptiedFieldsIndexes*.
+
+`emptiedFields = emptiedCount emptiedFieldsIndexes`
+
+###### Emptied Fields Count
+
+❗ *New* in version
+
+Количество опустошенных полей *emptiedCount* записано как беззнаковое двух-байтовое число.
+
+`emptiedCount = unit16`
+
+###### Emptied Fields Indexes
+
+❗ *New* in version
+
+Список индексов опустошенных полей *emptiedFieldsIndexes* содержит массив беззнаковых двух-байтовых чисел.
+
+`emptiedFieldsIndexes = { uint16 }`
+
+Индекс поля в списке опустошенных полей соответствует индексу поля в списке пользовательских полей записи. Первое пользовательское поле имеет индекс `0` (ноль), второе - `1` (один) и т.д.
 
 ## View Record Value
 
