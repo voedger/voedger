@@ -122,7 +122,12 @@ func ErrInvalidVerificationKind(t, f interface{}, k appdef.VerificationKind) err
 	return enrichError(ErrInvalidVerificationKindError, "%s for %v «%v»", k.TrimString(), t, f)
 }
 
-var ErrCUDsMissed = errors.New("CUDs are missed")
+var ErrCUDsMissedError = errors.New("CUDs are missed")
+
+// event should be string or any Stringer interface (e.g. IEvent)
+func ErrCUDsMissed(event interface{}) error {
+	return enrichError(ErrCUDsMissedError, "%v", event)
+}
 
 var ErrRawRecordIDRequired = errors.New("raw record ID required")
 

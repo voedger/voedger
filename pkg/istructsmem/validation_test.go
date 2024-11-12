@@ -400,7 +400,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 	t.Run("error if empty CUD", func(t *testing.T) {
 		e := cudRawEvent(false)
 		_, err := e.BuildRawEvent()
-		require.ErrorIs(err, ErrCUDsMissed)
+		require.Error(err, require.Is(ErrCUDsMissedError), require.Has(e))
 	})
 
 	t.Run("should be error if empty CUD QName", func(t *testing.T) {

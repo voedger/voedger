@@ -1523,7 +1523,7 @@ func TestEventBuild_Error(t *testing.T) {
 	t.Run("Build sys.CUD must have error if empty CUDs", func(t *testing.T) {
 		bld := eventBuilder(istructs.QNameCommandCUD)
 		rawEvent, buildErr = bld.BuildRawEvent()
-		require.ErrorIs(buildErr, ErrCUDsMissed)
+		require.Error(buildErr, require.Is(ErrCUDsMissedError), require.Has(istructs.QNameCommandCUD))
 		require.NotNil(rawEvent)
 	})
 

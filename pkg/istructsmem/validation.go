@@ -365,7 +365,7 @@ func validateRow(row *rowType) (err error) {
 func validateEventCUDs(ev *eventType) (err error) {
 	if ev.cud.empty() {
 		if ev.name == istructs.QNameCommandCUD {
-			return validateErrorf(ECode_EEmptyCUDs, errCUDsMissed, ev, ErrCUDsMissed)
+			return validateError(ECode_EEmptyCUDs, ErrCUDsMissed(ev))
 		}
 		return nil
 	}
