@@ -49,6 +49,10 @@ ALTERABLE WORKSPACE UserProfileWS INHERITS ProfileWS (
 		Language text
 	);
 
+	TAG DenyForAllTag;
+
+	TAG WorkspaceOwnerTable;  этим тэгом будем гэгать то, что принадлежит WSOwner
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY DescribePackageNames RETURNS DescribePackageNamesResult;
 		QUERY DescribePackage(DescribePackageParams) RETURNS DescribePackageResult;
@@ -57,6 +61,19 @@ ALTERABLE WORKSPACE UserProfileWS INHERITS ProfileWS (
 		COMMAND SendEmailVerificationCode(SendEmailVerificationParams) WITH Tags=(DenyForAllTag);
 		PROJECTOR ApplySendEmailVerificationCode AFTER EXECUTE ON (SendEmailVerificationCode) STATE(AppSecret) INTENTS(SendMail);
 	);
+
+	сделать grant явно на каждую таблицу
+	сделать grant явно вообще на каждую сущность
+
+	GRANT EXECUTE ON CreateLogin TO тут роль, которая назнаается в любом случае;
+	GRANT SELECT ON InitiateEmailVerification TO WorkspaceOwner;
+	GRANT SELECT ON IssueVerifiedValueToken TO WorkspaceOwner;
+
+	grant all в системных пакетах не испльзовать. Тэги тоже не использовать по возможности
+
+	REVOKE SendEmailVerificationCode - не писать, просто не двать grant.
+
+	в пакете unTill сделать как проще
 
 	GRANT ALL ON ALL TABLES TO WorkspaceOwner;
 	GRANT EXECUTE ON ALL QUERIES TO WorkspaceOwner;
