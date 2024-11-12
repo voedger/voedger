@@ -338,8 +338,8 @@ func validateRow(row *rowType) (err error) {
 		if f.Required() {
 			if !row.HasValue(f.Name()) {
 				err = errors.Join(err,
-					// ODoc «test.document» misses required field «RequiredField»
-					validateErrorf(ECode_EmptyData, errEmptyRequiredField, row, f.Name(), ErrFieldIsEmpty))
+					// field is empty: ODoc «test.document» RequiredField
+					validateError(ECode_EmptyData, ErrFieldMissed(row, f)))
 				continue
 			}
 			if !f.IsSys() {
@@ -411,7 +411,7 @@ func validateViewKey(key *keyType, partialClust bool) (err error) {
 	for _, f := range key.partRow.fields.Fields() {
 		if !key.partRow.HasValue(f.Name()) {
 			err = errors.Join(err,
-				validateErrorf(ECode_EmptyData, "view «%v» partition key field «%s» is empty: %w", key.viewName, f.Name(), ErrFieldIsEmpty))
+				validateError(ECode_EmptyData, ErrFieldMissed(key, f)))
 		}
 	}
 
@@ -423,7 +423,8 @@ func validateViewKey(key *keyType, partialClust bool) (err error) {
 				for j := i + 1; j < len(ccFields); j++ {
 					if key.ccolsRow.HasValue(ccFields[j].Name()) {
 						err = errors.Join(err,
-							validateErrorf(ECode_EmptyData, "view «%v» clustering columns has a hole at field «%s»: %w", key.viewName, fName, ErrFieldIsEmpty))
+							validateError(ECode_EmptyData,
+								enrichError(ErrFieldIsEmptyError, "%v has a hole at field «%s»", key, fName)))
 						break
 					}
 				}
@@ -434,7 +435,7 @@ func validateViewKey(key *keyType, partialClust bool) (err error) {
 		for _, f := range ccFields {
 			if !key.ccolsRow.HasValue(f.Name()) {
 				err = errors.Join(err,
-					validateErrorf(ECode_EmptyData, "view «%v» clustering columns field «%s» is empty: %w", key.viewName, f.Name(), ErrFieldIsEmpty))
+					validateError(ECode_EmptyData, ErrFieldMissed(key, f)))
 			}
 		}
 	}

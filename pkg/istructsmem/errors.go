@@ -105,7 +105,16 @@ func ErrMaxOccursViolated(t interface{}, n string, o, max appdef.Occurs) error {
 	return enrichError(ErrMaxOccursViolationError, "%v container «%s» has too many occurrences (%d, maximum %d)", t, n, o, max)
 }
 
-var ErrFieldIsEmpty = errors.New("field is empty")
+var ErrFieldIsEmptyError = errors.New("field is empty")
+
+// name should  be string or any Stringer interface (e.g. IField)
+func ErrFieldIsEmpty(name interface{}) error {
+	return enrichError(ErrFieldIsEmptyError, "%v", name)
+}
+
+func ErrFieldMissed(t, name interface{}) error {
+	return enrichError(ErrFieldIsEmptyError, "%v %v", t, name)
+}
 
 var ErrInvalidVerificationKind = errors.New("invalid verification kind")
 

@@ -625,7 +625,7 @@ func (recs *appRecordsType) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any
 	}
 
 	if rec.ID() == istructs.NullRecordID {
-		return fmt.Errorf("can not put record with null %s: %w", appdef.SystemField_ID, ErrFieldIsEmpty)
+		return ErrFieldMissed(rec, appdef.SystemField_ID)
 	}
 	if rec.ID().IsRaw() {
 		return fmt.Errorf("can not put record with raw %s: %w", appdef.SystemField_ID, ErrRawRecordIDUnexpected)

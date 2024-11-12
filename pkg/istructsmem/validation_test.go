@@ -112,8 +112,8 @@ func Test_ValidEventArgs(t *testing.T) {
 	t.Run("error if empty doc", func(t *testing.T) {
 		e := oDocEvent(false)
 		_, err := e.BuildRawEvent()
-		require.Error(err, require.Is(ErrFieldIsEmpty),
-			require.Has(docName, appdef.SystemField_ID))
+		require.Error(err, require.Is(ErrFieldIsEmptyError),
+			require.HasAll(docName, appdef.SystemField_ID))
 	})
 
 	t.Run("errors in argument IDs and refs", func(t *testing.T) {
@@ -198,7 +198,7 @@ func Test_ValidEventArgs(t *testing.T) {
 			doc := e.ArgumentObjectBuilder()
 			doc.PutRecordID(appdef.SystemField_ID, 1)
 			_, err := e.BuildRawEvent()
-			require.Error(err, require.Is(ErrFieldIsEmpty),
+			require.Error(err, require.Is(ErrFieldIsEmptyError),
 				require.HasAll(doc, "RequiredField"))
 		})
 
@@ -721,8 +721,8 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 		b := eventBuilder()
 		d := b.ArgumentObjectBuilder()
 		_, err := d.Build()
-		require.Error(err, require.Is(ErrFieldIsEmpty),
-			require.Has("ODoc «test.document»"), require.Has("RequiredField"))
+		require.Error(err, require.Is(ErrFieldIsEmptyError),
+			require.HasAll(d, "RequiredField"))
 	})
 
 	t.Run("should be error if builder has empty type name", func(t *testing.T) {

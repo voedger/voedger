@@ -824,7 +824,7 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 	}
 
 	if (row.QName() == appdef.NullQName) && (len(j) > 0) {
-		row.collectErrorf("%w: %v", ErrFieldIsEmpty, appdef.SystemField_QName)
+		row.collectError(ErrFieldIsEmpty(appdef.SystemField_QName))
 		return
 	}
 

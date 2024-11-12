@@ -74,7 +74,6 @@ const (
 	errUnknownContainerName         = "%v child[%d] has unknown container name «%s»: %w"
 	errWrongContainerType           = "%v child[%d] %v has wrong type name, expected «%v»: %w"
 	errWrongParentID                = "%v child[%d] %v has wrong parent id «%d», expected «%d»: %w"
-	errEmptyRequiredField           = "%v misses required field «%s»: %w"
 	errNullInRequiredRefField       = "%v required ref field «%s» has NullRecordID value: %w"
 	errCUDsMissed                   = "%v must have not empty CUDs: %w"
 	errInvalidTypeKindInCUD         = "%v CUD.%s() [record ID «%d»] %v has invalid type kind: %w"

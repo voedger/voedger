@@ -501,8 +501,8 @@ func TestCore_ViewRecords(t *testing.T) {
 				cnt++
 				return nil
 			})
-			require.ErrorIs(err, ErrFieldIsEmpty)
-			require.ErrorContains(err, "hole at field «clusteringColumn2»")
+			require.Error(err, require.Is(ErrFieldIsEmptyError),
+				require.HasAll("test.viewDrinks", "clusteringColumn2"))
 			require.Zero(cnt)
 		})
 
@@ -526,14 +526,14 @@ func TestCore_ViewRecords(t *testing.T) {
 			err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				return nil
 			})
-			require.ErrorIs(err, ErrFieldIsEmpty)
+			require.Error(err, require.Is(ErrFieldIsEmptyError), require.Has("test.viewDrinks"))
 
 			validateErr := validateErrorf(0, "")
 			require.ErrorAs(err, &validateErr)
 			require.Equal(ECode_EmptyData, validateErr.Code())
 
 			_, err = viewRecords.Get(1, kb)
-			require.ErrorIs(err, ErrFieldIsEmpty)
+			require.Error(err, require.Is(ErrFieldIsEmptyError), require.Has("test.viewDrinks"))
 		})
 
 		t.Run("if put with empty clustering columns key", func(t *testing.T) {
@@ -546,7 +546,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			vb.PutBool("active", true)
 
 			err := viewRecords.Put(1, kb, vb)
-			require.ErrorIs(err, ErrFieldIsEmpty)
+			require.Error(err, require.Is(ErrFieldIsEmptyError), require.Has("test.viewDrinks"))
 
 			validateErr := validateErrorf(0, "")
 			require.ErrorAs(err, &validateErr)
@@ -648,8 +648,8 @@ func TestCore_ViewRecords(t *testing.T) {
 			vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks"))
 
 			err := viewRecords.Put(1, kb, vb)
-			require.Error(err, require.Is(ErrFieldIsEmpty),
-				require.Has("id"), require.Has("name"), require.Has("active"))
+			require.Error(err, require.Is(ErrFieldIsEmptyError),
+				require.HasAll("id", "name", "active"))
 
 			validateErr := validateErrorf(0, "")
 			require.ErrorAs(err, &validateErr)
@@ -916,11 +916,11 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 			json := make(map[appdef.FieldName]any)
 
 			err = app.ViewRecords().PutJSON(1, json)
-			require.Error(err, require.Is(ErrFieldIsEmpty), require.Has(appdef.SystemField_QName))
+			require.Error(err, require.Is(ErrFieldIsEmptyError), require.Has(appdef.SystemField_QName))
 
 			json[appdef.SystemField_QName] = appdef.NullQName.String()
 			err = app.ViewRecords().PutJSON(1, json)
-			require.Error(err, require.Is(ErrFieldIsEmpty), require.Has(appdef.SystemField_QName))
+			require.Error(err, require.Is(ErrFieldIsEmptyError), require.Has(appdef.SystemField_QName))
 
 			json[appdef.SystemField_QName] = 123
 			err = app.ViewRecords().PutJSON(1, json)
@@ -941,7 +941,7 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 			json[appdef.SystemField_QName] = viewName
 
 			err = app.ViewRecords().PutJSON(1, json)
-			require.Error(err, require.Is(ErrFieldIsEmpty), require.Has("pk1"))
+			require.Error(err, require.Is(ErrFieldIsEmptyError), require.Has("pk1"))
 
 			json["pk1"] = "error value"
 			err = app.ViewRecords().PutJSON(1, json)
@@ -949,12 +949,12 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 
 			json["pk1"] = gojson.Number("1")
 			err = app.ViewRecords().PutJSON(1, json)
-			require.Error(err, require.Is(ErrFieldIsEmpty), require.Has("cc1"))
+			require.Error(err, require.Is(ErrFieldIsEmptyError), require.Has("cc1"))
 
 			json["pk1"] = gojson.Number("1")
 			json["cc1"] = gojson.Number("2")
 			err = app.ViewRecords().PutJSON(1, json)
-			require.Error(err, require.Is(ErrFieldIsEmpty), require.Has("cc2"))
+			require.Error(err, require.Is(ErrFieldIsEmptyError), require.Has("cc2"))
 		})
 
 		t.Run("if value errors", func(t *testing.T) {
@@ -1412,7 +1412,8 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 			// batch[0].Key.PutString("Sport", "Volleyball") // error here
 
 			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-			require.ErrorIs(err, ErrFieldIsEmpty)
+			require.Error(err, require.Is(ErrFieldIsEmptyError),
+				require.HasAll(championsView, "Sport"))
 		})
 
 		t.Run("if storage GetBatch failed", func(t *testing.T) {

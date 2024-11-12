@@ -270,8 +270,8 @@ func Test_RecordsPutJSON(t *testing.T) {
 
 		json[appdef.SystemField_QName] = appdef.NullQName.String()
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, ErrFieldIsEmpty)
-		require.ErrorContains(err, appdef.SystemField_QName)
+		require.Error(err, require.Is(ErrFieldIsEmptyError),
+			require.Has(appdef.SystemField_QName))
 
 		json[appdef.SystemField_QName] = 123
 		err = app.Records().PutJSON(test.workspace, json)
@@ -292,18 +292,19 @@ func Test_RecordsPutJSON(t *testing.T) {
 		json[appdef.SystemField_QName] = test.testCDoc.String()
 
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, ErrFieldIsEmpty)
-		require.ErrorContains(err, appdef.SystemField_ID)
+		require.Error(err, require.Is(ErrFieldIsEmptyError),
+			require.HasAll(test.testCDoc, appdef.SystemField_ID))
 
 		json[appdef.SystemField_ID] = int64(0)
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, ErrFieldIsEmpty)
+		require.Error(err, require.Is(ErrFieldIsEmptyError),
+			require.HasAll(test.testCDoc, appdef.SystemField_ID))
 		require.ErrorContains(err, appdef.SystemField_ID)
 
 		json[appdef.SystemField_ID] = gojson.Number("0")
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, ErrFieldIsEmpty)
-		require.ErrorContains(err, appdef.SystemField_ID)
+		require.Error(err, require.Is(ErrFieldIsEmptyError),
+			require.HasAll(test.testCDoc, appdef.SystemField_ID))
 
 		json[appdef.SystemField_ID] = int64(1)
 		err = app.Records().PutJSON(test.workspace, json)

@@ -167,7 +167,7 @@ func (vr *appViewRecords) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any) 
 	}
 
 	if viewName == appdef.NullQName {
-		return fmt.Errorf("%w: %v", ErrFieldIsEmpty, appdef.SystemField_QName)
+		return ErrFieldIsEmpty(appdef.SystemField_QName)
 	}
 
 	view := appdef.View(vr.app.config.AppDef, viewName)
@@ -553,6 +553,10 @@ func (key *keyType) RecordIDs(includeNulls bool) func(cb func(appdef.FieldName, 
 			}
 		}
 	}
+}
+
+func (key *keyType) String() string {
+	return fmt.Sprintf("view «%v» key", key.viewName)
 }
 
 // istructs.IKeyBuilder.ToBytes
