@@ -17,18 +17,6 @@ type IObjectBuilder interface {
 	IStructureBuilder
 }
 
-type IWithObjects interface {
-	// Return Object by name.
-	//
-	// Returns nil if not found.
-	Object(name QName) IObject
-
-	// Enumerates all application objects
-	//
-	// Objects are enumerated in alphabetical order by QName
-	Objects(func(IObject) bool)
-}
-
 type IObjectsBuilder interface {
 	// Adds new Object type with specified name.
 	//

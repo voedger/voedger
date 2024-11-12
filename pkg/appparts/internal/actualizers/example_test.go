@@ -38,8 +38,9 @@ func Example() {
 	appDef := func(prjNames ...appdef.QName) appdef.IAppDef {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 		for _, name := range prjNames {
-			adb.AddProjector(name).SetSync(false).Events().Add(appdef.QNameAnyCommand, appdef.ProjectorEventKind_Execute)
+			wsb.AddProjector(name).SetSync(false).Events().Add(appdef.QNameAnyCommand, appdef.ProjectorEventKind_Execute)
 		}
 		return adb.MustBuild()
 	}

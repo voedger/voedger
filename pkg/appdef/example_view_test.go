@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIView() {
+func ExampleViews() {
 
 	var app appdef.IAppDef
 	viewName := appdef.NewQName("test", "view")
@@ -23,10 +23,12 @@ func ExampleIView() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		docName := appdef.NewQName("test", "doc")
-		_ = adb.AddCDoc(docName)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
-		view := adb.AddView(viewName)
+		docName := appdef.NewQName("test", "doc")
+		_ = wsb.AddCDoc(docName)
+
+		view := wsb.AddView(viewName)
 		view.SetComment("view comment")
 		view.Key().PartKey().
 			AddField("pk_int", appdef.DataKind_int64).
@@ -47,7 +49,10 @@ func ExampleIView() {
 	// now to enum views
 	{
 		cnt := 0
-		for v := range app.Views {
+		for v := range appdef.Views(app) {
+			if v.IsSystem() {
+				continue
+			}
 			cnt++
 			fmt.Println(cnt, v)
 		}
@@ -57,7 +62,7 @@ func ExampleIView() {
 	// how to inspect view
 	{
 		// how to find view by name
-		view := app.View(viewName)
+		view := appdef.View(app, viewName)
 		fmt.Printf("view %q: %v, %s\n", view.QName(), view.Kind(), view.Comment())
 
 		fields := func(ff []appdef.IField) {

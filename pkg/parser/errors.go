@@ -41,6 +41,7 @@ var ErrPackageWithSameNameAlreadyIncludedInApp = errors.New("package with the sa
 var ErrStorageDeclaredOnlyInSys = errors.New("storages are only declared in sys package")
 var ErrPkgFolderNotFound = errors.New("pkg folder not found")
 var ErrGrantFollowsRevoke = errors.New("GRANT follows REVOKE in the same container")
+var ErrJobMustBeInAppWorkspace = errors.New("JOB is only allowed in AppWorkspaceWS")
 
 func ErrLocalPackageNameRedeclared(localPkgName, newLocalPkgName string) error {
 	return fmt.Errorf("local package name %s was redeclared as %s", localPkgName, newLocalPkgName)

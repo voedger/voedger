@@ -49,7 +49,7 @@ func (ps *PartitionSchedulers) Deploy(vvmCtx context.Context, appDef appdef.IApp
 	ps.mx.RLock()
 	for name, wsRT := range ps.jobsInAppWSIDRuntimes {
 		// TODO: compare if job properties changed (cron, etc.)
-		if appDef.Job(name) == nil {
+		if appdef.Job(appDef, name) == nil {
 			for _, rt := range wsRT {
 				stopWG.Add(1)
 				go func(rt *runtime) {
@@ -107,7 +107,7 @@ func (ps *PartitionSchedulers) Deploy(vvmCtx context.Context, appDef appdef.IApp
 	}
 
 	ps.mx.RLock()
-	for job := range appDef.Jobs {
+	for job := range appdef.Jobs(appDef) {
 		jobQName := job.QName()
 		if _, exists := ps.jobsInAppWSIDRuntimes[jobQName]; !exists {
 			start(jobQName)

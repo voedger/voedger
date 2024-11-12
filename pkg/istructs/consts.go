@@ -151,8 +151,8 @@ const (
 	ClusterAppID_test1_app2
 	ClusterAppID_test2_app1
 	ClusterAppID_test2_app2
-	ClusterAppID_sys_blobber
-	ClusterAppID_sys_router
+	ClusterAppID_sys_blobber // Deprecated: not used as app anymore
+	ClusterAppID_sys_router  // Deprecated: not used as app anymore
 	ClusterAppID_untill_resellerportal
 	ClusterAppID_sys_cluster
 	ClusterAppID_untill_fiscalcloud
@@ -172,8 +172,8 @@ var AppQName_test1_app1 = appdef.NewAppQName("test1", "app1")
 var AppQName_test1_app2 = appdef.NewAppQName("test1", "app2")
 var AppQName_test2_app1 = appdef.NewAppQName("test2", "app1")
 var AppQName_test2_app2 = appdef.NewAppQName("test2", "app2")
-var AppQName_sys_blobber = appdef.NewAppQName(SysOwner, "blobber")
-var AppQName_sys_router = appdef.NewAppQName(SysOwner, "router") // For ACME certificates
+var AppQName_sys_blobber = appdef.NewAppQName(SysOwner, "blobber") // Deprecated: not used as app anymore
+var AppQName_sys_router = appdef.NewAppQName(SysOwner, "router")   // Deprecated: not used as app anymore. Used before for ACME certificates
 var AppQName_untill_resellerportal = appdef.NewAppQName("untill", "resellerportal")
 var AppQName_sys_cluster = appdef.NewAppQName(SysOwner, "cluster")
 var AppQName_untill_fiscalcloud = appdef.NewAppQName("untill", "fiscalcloud")

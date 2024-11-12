@@ -11,10 +11,10 @@ type oDoc struct {
 	doc
 }
 
-func newODoc(app *appDef, name QName) *oDoc {
+func newODoc(app *appDef, ws *workspace, name QName) *oDoc {
 	d := &oDoc{}
-	d.doc = makeDoc(app, name, TypeKind_ODoc)
-	app.appendType(d)
+	d.doc = makeDoc(app, ws, name, TypeKind_ODoc)
+	ws.appendType(d)
 	return d
 }
 
@@ -40,10 +40,10 @@ type oRecord struct {
 	containedRecord
 }
 
-func newORecord(app *appDef, name QName) *oRecord {
+func newORecord(app *appDef, ws *workspace, name QName) *oRecord {
 	r := &oRecord{}
-	r.containedRecord = makeContainedRecord(app, name, TypeKind_ORecord)
-	app.appendType(r)
+	r.containedRecord = makeContainedRecord(app, ws, name, TypeKind_ORecord)
+	ws.appendType(r)
 	return r
 }
 

@@ -5,6 +5,7 @@
 package sys_it
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"sync"
@@ -345,4 +346,82 @@ func TestErrorFromResponseIntent(t *testing.T) {
 	t.Run("query", func(t *testing.T) {
 		vit.PostWS(ws, "q.app1pkg.QryWithResponseIntent", body, coreutils.WithExpectedCode(555, "error from response intent"))
 	})
+}
+
+func TestNullability_SetEmptyString(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	as, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_test1_app1)
+	require.NoError(err)
+
+	body := `{"cuds":[{"fields":{"sys.QName":"app1pkg.air_table_plan","sys.ID":1,"name":"test"}}]}`
+	resp := vit.PostWS(ws, "c.sys.CUD", body)
+	offsCreate := resp.CurrentWLogOffset
+	docID := resp.NewID()
+
+	checked := false
+	as.Events().ReadWLog(context.Background(), ws.WSID, offsCreate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
+		for cud := range event.CUDs {
+			cud.ModifiedFields(func(fn appdef.FieldName, i interface{}) bool {
+				if checked {
+					t.Fail()
+				}
+				checked = true
+				require.Equal("name", fn)
+				require.EqualValues("test", i)
+				return true
+			})
+		}
+		return nil
+	})
+	require.True(checked)
+
+	body = fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"name":""}}]}`, docID)
+	offsUpdate := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
+
+	// string set to "" -> info about this is not stored in dynobuffer
+	// cud.ModifiedFields() calls dynobuffers.ModifiedFields() tht iterates over fields that has values
+	as.Events().ReadWLog(context.Background(), ws.WSID, offsUpdate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
+		for cud := range event.CUDs {
+			cud.ModifiedFields(func(fn appdef.FieldName, i interface{}) bool {
+				t.Fatal()
+				return true
+			})
+		}
+		return nil
+	})
+}
+
+func TestNullability_SetEmptyObject(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	as, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_test1_app1)
+	require.NoError(err)
+
+	body := `{"cuds": [
+		{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.air_table_plan"}},
+		{"fields": {"sys.ID": 2,"sys.ParentID": 1,"sys.QName": "app1pkg.air_table_plan_item","sys.Container": "air_table_plan_item","id_air_table_plan": 1,"form": 15}}
+	]}`
+	resp := vit.PostWS(ws, "c.sys.CUD", body)
+	offsCreate := resp.CurrentWLogOffset
+	fields := map[string]interface{}{}
+	expectedNestedDocID := resp.NewIDs["1"]
+	as.Events().ReadWLog(context.Background(), ws.WSID, offsCreate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
+		for cud := range event.CUDs {
+			cud.ModifiedFields(func(fn appdef.FieldName, i interface{}) bool {
+				fields[fn] = i
+				return true
+			})
+		}
+		return nil
+	})
+	require.Len(fields, 2)
+	require.EqualValues(expectedNestedDocID, fields["id_air_table_plan"])
+	require.EqualValues(15, fields["form"])
 }

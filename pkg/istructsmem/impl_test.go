@@ -38,11 +38,12 @@ func TestBasicUsage(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
 		saleParamsName := appdef.NewQName("test", "SaleParams")
 		saleSecureParamsName := appdef.NewQName("test", "saleSecureArgs")
 
-		saleParamsDoc := adb.AddODoc(saleParamsName)
+		saleParamsDoc := wsb.AddODoc(saleParamsName)
 		saleParamsDoc.
 			AddField("Buyer", appdef.DataKind_string, true).
 			AddField("Age", appdef.DataKind_int32, false).
@@ -52,20 +53,20 @@ func TestBasicUsage(t *testing.T) {
 		saleParamsDoc.
 			AddContainer("Basket", appdef.NewQName("test", "Basket"), 1, 1)
 
-		basketRec := adb.AddORecord(appdef.NewQName("test", "Basket"))
+		basketRec := wsb.AddORecord(appdef.NewQName("test", "Basket"))
 		basketRec.AddContainer("Good", appdef.NewQName("test", "Good"), 0, appdef.Occurs_Unbounded)
 
-		goodRec := adb.AddORecord(appdef.NewQName("test", "Good"))
+		goodRec := wsb.AddORecord(appdef.NewQName("test", "Good"))
 		goodRec.
 			AddField("Name", appdef.DataKind_string, true).
 			AddField("Code", appdef.DataKind_int64, true).
 			AddField("Weight", appdef.DataKind_float64, false)
 
-		saleSecureParamsObj := adb.AddObject(saleSecureParamsName)
+		saleSecureParamsObj := wsb.AddObject(saleSecureParamsName)
 		saleSecureParamsObj.
 			AddField("password", appdef.DataKind_string, true)
 
-		photosDoc := adb.AddCDoc(appdef.NewQName("test", "photos"))
+		photosDoc := wsb.AddCDoc(appdef.NewQName("test", "photos"))
 		photosDoc.
 			AddField("Buyer", appdef.DataKind_string, true).
 			AddField("Age", appdef.DataKind_int32, false).
@@ -74,7 +75,7 @@ func TestBasicUsage(t *testing.T) {
 			AddField("Photo", appdef.DataKind_bytes, false)
 
 		qNameCmdTestSale := appdef.NewQName("test", "Sale")
-		adb.AddCommand(qNameCmdTestSale).
+		wsb.AddCommand(qNameCmdTestSale).
 			SetUnloggedParam(saleSecureParamsName).
 			SetParam(saleParamsName)
 
@@ -194,7 +195,8 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
-		view := adb.AddView(appdef.NewQName("test", "viewDrinks"))
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		view := wsb.AddView(appdef.NewQName("test", "viewDrinks"))
 		view.Key().PartKey().AddField("partitionKey1", appdef.DataKind_int64)
 		view.Key().ClustCols().
 			AddField("clusteringColumn1", appdef.DataKind_int64).
@@ -295,7 +297,8 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 	appStructs := func() istructs.IAppStructs {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
-		obj := adb.AddObject(objName)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		obj := wsb.AddObject(objName)
 		obj.AddField("int", appdef.DataKind_int64, true)
 		obj.AddContainer("child", objName, 0, appdef.Occurs_Unbounded)
 
@@ -415,7 +418,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 	app := test.AppStructs
 
 	t.Run("I. test top level type (command object)", func(t *testing.T) {
-		cmdDoc := app.AppDef().ODoc(test.saleCmdDocName)
+		cmdDoc := appdef.ODoc(app.AppDef(), test.saleCmdDocName)
 
 		require.NotNil(cmdDoc)
 		require.Equal(appdef.TypeKind_ODoc, cmdDoc.Kind())
@@ -436,7 +439,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 			require.Equal(test.basketIdent, c.Name())
 			require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), c.QName())
 			t.Run("II. test first level nested type (basket)", func(t *testing.T) {
-				rec := app.AppDef().ORecord(appdef.NewQName(test.pkgName, test.basketIdent))
+				rec := appdef.ORecord(app.AppDef(), appdef.NewQName(test.pkgName, test.basketIdent))
 				require.NotNil(rec)
 				require.Equal(appdef.TypeKind_ORecord, rec.Kind())
 
@@ -445,7 +448,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 					require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), c.QName())
 
 					t.Run("III. test second level nested type (good)", func(t *testing.T) {
-						rec := app.AppDef().ORecord(appdef.NewQName(test.pkgName, test.goodIdent))
+						rec := appdef.ORecord(app.AppDef(), appdef.NewQName(test.pkgName, test.goodIdent))
 						require.NotNil(rec)
 						require.Equal(appdef.TypeKind_ORecord, rec.Kind())
 
@@ -475,7 +478,9 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("structs", "test.com/structs")
 		adb.AddPackage("functions", "test.com/functions")
+		adb.AddPackage("workspaces", "test.com/workspace")
 
+		wsQName := appdef.NewQName("workspaces", "test")
 		docQName := appdef.NewQName("structs", "CDoc")
 		recQName := appdef.NewQName("structs", "CRec")
 		viewQName := appdef.NewQName("structs", "View")
@@ -483,10 +488,12 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		queryQName := appdef.NewQName("functions", "query")
 		argQName := appdef.NewQName("structs", "Arg")
 
-		rec := adb.AddCRecord(recQName)
+		wsb := adb.AddWorkspace(wsQName)
+
+		rec := wsb.AddCRecord(recQName)
 		rec.AddField("int", appdef.DataKind_int64, false)
 
-		doc := adb.AddCDoc(docQName)
+		doc := wsb.AddCDoc(docQName)
 		doc.AddField("str", appdef.DataKind_string, true)
 		doc.AddField("fld", appdef.DataKind_int32, true)
 		doc.SetUniqueField("fld")
@@ -495,18 +502,18 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 
 		doc.AddContainer("rec", recQName, 0, appdef.Occurs_Unbounded)
 
-		view := adb.AddView(viewQName)
+		view := wsb.AddView(viewQName)
 		view.Key().PartKey().AddField("int", appdef.DataKind_int64)
 		view.Key().ClustCols().AddField("str", appdef.DataKind_string, appdef.MaxLen(100))
 		view.Value().AddField("bool", appdef.DataKind_bool, false)
 
-		arg := adb.AddObject(argQName)
+		arg := wsb.AddObject(argQName)
 		arg.AddField("bool", appdef.DataKind_bool, false)
 
-		adb.AddCommand(cmdQName).
+		wsb.AddCommand(cmdQName).
 			SetParam(argQName).
 			SetResult(docQName)
-		adb.AddQuery(queryQName).
+		wsb.AddQuery(queryQName).
 			SetParam(argQName).
 			SetResult(appdef.QNameANY)
 
@@ -534,7 +541,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 	}()
 
 	pkgNames := app.DescribePackageNames()
-	require.Len(pkgNames, 2)
+	require.Len(pkgNames, 3)
 
 	for _, name := range pkgNames {
 		pkg := app.DescribePackage(name)

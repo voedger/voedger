@@ -57,10 +57,10 @@ type IContainer interface {
 	// Returns type name of included in container child
 	QName() QName
 
-	// Returns type of included in container child.
+	// Returns structure type of included in container child.
 	//
 	// Returns nil if not found
-	Type() IType
+	Type() IStructure
 
 	// Returns minimum occurs of child
 	MinOccurs() Occurs

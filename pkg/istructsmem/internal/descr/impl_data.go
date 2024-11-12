@@ -15,14 +15,7 @@ func newData() *Data {
 
 func (d *Data) read(data appdef.IData) {
 	d.Type.read(data)
-	if data.Ancestor() != nil {
-		q := data.Ancestor().QName()
-		d.Ancestor = &q
-	} else {
-		// notest: only system data types have no ancestor
-		k := data.DataKind()
-		d.DataKind = &k
-	}
+	d.Ancestor = data.Ancestor().QName()
 	for k, c := range data.Constraints(false) {
 		d.Constraints[k.TrimString()] = c.Value()
 	}

@@ -21,23 +21,24 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 
 	schemes.Prepare(
 		func() appdef.IAppDef {
-			app := appdef.New()
-			app.AddODoc(docName).
+			adb := appdef.New()
+			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+			wsb.AddODoc(docName).
 				AddField("f1", appdef.DataKind_int32, true).
 				AddField("f2", appdef.DataKind_QName, false).
 				AddField("f3", appdef.DataKind_string, false).
 				AddField("f4", appdef.DataKind_bytes, false)
 
-			v := app.AddView(viewName)
+			v := wsb.AddView(viewName)
 			v.Key().PartKey().AddField("pkF1", appdef.DataKind_int32)
 			v.Key().ClustCols().AddField("ccF1", appdef.DataKind_string, appdef.MaxLen(100))
 			v.Value().AddField("valF1", appdef.DataKind_Event, true)
 
-			a, _ := app.Build()
-			return a
+			return adb.MustBuild()
 		}())
 
-	t.Run("let test basic methods", func(t *testing.T) {
+	t.Run("should be ok to retrieve schemes", func(t *testing.T) {
 		require := require.New(t)
 
 		t.Run("document scheme", func(t *testing.T) {
@@ -63,9 +64,9 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 
 		t.Run("view scheme", func(t *testing.T) {
 
-			t.Run("key scheme", func(t *testing.T) {
+			t.Run("key schemes", func(t *testing.T) {
 
-				t.Run("part key scheme", func(t *testing.T) {
+				t.Run("part key", func(t *testing.T) {
 					pk := schemes.ViewPartKeyScheme(viewName)
 					require.NotNil(pk, "schemes.ViewPartKeyScheme returns nil", "viewName: %q", viewName)
 
@@ -75,7 +76,7 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 					require.Equal(dynobuffers.FieldTypeInt32, pk.Fields[0].Ft)
 				})
 
-				t.Run("ccols scheme", func(t *testing.T) {
+				t.Run("ccols", func(t *testing.T) {
 					ccols := schemes.ViewClustColsScheme(viewName)
 					require.NotNil(ccols, "schemes.ViewClustColsScheme returns nil", "viewName: %q", viewName)
 
@@ -86,7 +87,7 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 				})
 			})
 
-			t.Run("value scheme", func(t *testing.T) {
+			t.Run("value", func(t *testing.T) {
 				val := schemes.Scheme(viewName)
 				require.NotNil(val, "schemes.ViewValueScheme returns nil", "viewName: %q", viewName)
 

@@ -11,10 +11,10 @@ type gDoc struct {
 	doc
 }
 
-func newGDoc(app *appDef, name QName) *gDoc {
+func newGDoc(app *appDef, ws *workspace, name QName) *gDoc {
 	d := &gDoc{}
-	d.doc = makeDoc(app, name, TypeKind_GDoc)
-	app.appendType(d)
+	d.doc = makeDoc(app, ws, name, TypeKind_GDoc)
+	ws.appendType(d)
 	return d
 }
 
@@ -42,10 +42,10 @@ type gRecord struct {
 
 func (r gRecord) isGRecord() {}
 
-func newGRecord(app *appDef, name QName) *gRecord {
+func newGRecord(app *appDef, ws *workspace, name QName) *gRecord {
 	r := &gRecord{}
-	r.containedRecord = makeContainedRecord(app, name, TypeKind_GRecord)
-	app.appendType(r)
+	r.containedRecord = makeContainedRecord(app, ws, name, TypeKind_GRecord)
+	ws.appendType(r)
 	return r
 }
 

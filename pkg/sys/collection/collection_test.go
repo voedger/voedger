@@ -57,19 +57,24 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	statelessResources = istructsmem.NewStatelessResources()
 	cfg := cfgs.AddBuiltInAppConfig(test.appQName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-	{
 
-		adb.AddPackage("test", "test.org/test")
+	adb.AddPackage("test", "test.org/test")
+	wsb := adb.AddWorkspace(appdef.NewQName(appdef.SysPackage, "test_wsWS"))
+
+	{
+		wsb.AddCDoc(qNameTestWSKind).SetSingleton()
+		wsb.SetDescriptor(qNameTestWSKind)
+		wsdescutil.AddWorkspaceDescriptorStubDef(wsb)
 
 		// this should be done in tests only. Runtime -> the projector is defined in sys.vsql already
-		adb.AddCDoc(istructs.QNameCDoc)
-		adb.AddODoc(istructs.QNameODoc)
-		adb.AddWDoc(istructs.QNameWDoc)
-		adb.AddCRecord(istructs.QNameCRecord)
-		adb.AddORecord(istructs.QNameORecord)
-		adb.AddWRecord(istructs.QNameWRecord)
+		wsb.AddCDoc(istructs.QNameCDoc)
+		wsb.AddODoc(istructs.QNameODoc)
+		wsb.AddWDoc(istructs.QNameWDoc)
+		wsb.AddCRecord(istructs.QNameCRecord)
+		wsb.AddORecord(istructs.QNameORecord)
+		wsb.AddWRecord(istructs.QNameWRecord)
 
-		prj := adb.AddProjector(QNameProjectorCollection)
+		prj := wsb.AddProjector(QNameProjectorCollection)
 		prj.SetSync(true).
 			Events().Add(istructs.QNameCRecord, appdef.ProjectorEventKind_Insert, appdef.ProjectorEventKind_Update)
 		prj.Intents().
@@ -80,48 +85,44 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		qNameCollectionParams := appdef.NewQName(appdef.SysPackage, "CollectionParams")
 
 		// will add func definitions to AppDef manually because local test does not use sql. In runtime these definitions will come from sys.vsql
-		adb.AddObject(qNameCollectionParams).
+		wsb.AddObject(qNameCollectionParams).
 			AddField(field_Schema, appdef.DataKind_string, true).
 			AddField(field_ID, appdef.DataKind_RecordID, false)
 
-		adb.AddQuery(qNameQueryCollection).
+		wsb.AddQuery(qNameQueryCollection).
 			SetParam(qNameCollectionParams).
 			SetResult(appdef.QNameANY)
 
 		qNameGetCDocParams := appdef.NewQName(appdef.SysPackage, "GetCDocParams")
-		adb.AddObject(qNameGetCDocParams).
+		wsb.AddObject(qNameGetCDocParams).
 			AddField(field_ID, appdef.DataKind_int64, true)
 
 		qNameGetCDocResult := appdef.NewQName(appdef.SysPackage, "GetCDocResult")
-		adb.AddObject(qNameGetCDocResult).
+		wsb.AddObject(qNameGetCDocResult).
 			AddField("Result", appdef.DataKind_string, true)
 
-		adb.AddQuery(qNameQueryGetCDoc).
+		wsb.AddQuery(qNameQueryGetCDoc).
 			SetParam(qNameGetCDocParams).
 			SetResult(qNameGetCDocResult)
 
 		qNameStateParams := appdef.NewQName(appdef.SysPackage, "StateParams")
-		adb.AddObject(qNameStateParams).
+		wsb.AddObject(qNameStateParams).
 			AddField(field_After, appdef.DataKind_int64, true)
 
 		qNameStateResult := appdef.NewQName(appdef.SysPackage, "StateResult")
-		adb.AddObject(qNameStateResult).
+		wsb.AddObject(qNameStateResult).
 			AddField(field_State, appdef.DataKind_string, true)
 
-		adb.AddQuery(qNameQueryState).
+		wsb.AddQuery(qNameQueryState).
 			SetParam(qNameStateParams).
 			SetResult(qNameStateResult)
-
-		wsdescutil.AddWorkspaceDescriptorStubDef(adb)
-
-		adb.AddCDoc(qNameTestWSKind).SetSingleton()
 	}
 	{ // "modify" function
-		adb.AddCommand(test.modifyCmdName)
+		wsb.AddCommand(test.modifyCmdName)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(test.modifyCmdName, istructsmem.NullCommandExec))
 	}
 	{ // CDoc: articles
-		articles := adb.AddCDoc(test.tableArticles)
+		articles := wsb.AddCDoc(test.tableArticles)
 		articles.
 			AddField(test.articleNameIdent, appdef.DataKind_string, true).
 			AddField(test.articleNumberIdent, appdef.DataKind_int32, false).
@@ -130,26 +131,26 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 			AddContainer(test.tableArticlePrices.Entity(), test.tableArticlePrices, appdef.Occurs(0), appdef.Occurs(100))
 	}
 	{ // CDoc: departments
-		departments := adb.AddCDoc(test.tableDepartments)
+		departments := wsb.AddCDoc(test.tableDepartments)
 		departments.
 			AddField(test.depNameIdent, appdef.DataKind_string, true).
 			AddField(test.depNumberIdent, appdef.DataKind_int32, false)
 	}
 	{ // CDoc: periods
-		periods := adb.AddCDoc(test.tablePeriods)
+		periods := wsb.AddCDoc(test.tablePeriods)
 		periods.
 			AddField(test.periodNameIdent, appdef.DataKind_string, true).
 			AddField(test.periodNumberIdent, appdef.DataKind_int32, false)
 	}
 	{ // CDoc: prices
-		prices := adb.AddCDoc(test.tablePrices)
+		prices := wsb.AddCDoc(test.tablePrices)
 		prices.
 			AddField(test.priceNameIdent, appdef.DataKind_string, true).
 			AddField(test.priceNumberIdent, appdef.DataKind_int32, false)
 	}
 
 	{ // CDoc: article prices
-		articlesPrices := adb.AddCRecord(test.tableArticlePrices)
+		articlesPrices := wsb.AddCRecord(test.tableArticlePrices)
 		articlesPrices.
 			AddField(test.articlePricesPriceIdIdent, appdef.DataKind_RecordID, true).
 			AddField(test.articlePricesPriceIdent, appdef.DataKind_float32, true)
@@ -158,14 +159,14 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	}
 
 	{ // CDoc: article price exceptions
-		articlesPricesExceptions := adb.AddCRecord(test.tableArticlePriceExceptions)
+		articlesPricesExceptions := wsb.AddCRecord(test.tableArticlePriceExceptions)
 		articlesPricesExceptions.
 			AddField(test.articlePriceExceptionsPeriodIdIdent, appdef.DataKind_RecordID, true).
 			AddField(test.articlePriceExceptionsPriceIdent, appdef.DataKind_float32, true)
 	}
 
 	// kept here to keep local tests working without sql
-	actualizers.ProvideViewDef(adb, QNameCollectionView, func(b appdef.IViewBuilder) {
+	actualizers.ProvideViewDef(wsb, QNameCollectionView, func(b appdef.IViewBuilder) {
 		b.Key().PartKey().AddField(Field_PartKey, appdef.DataKind_int32)
 		b.Key().ClustCols().
 			AddField(Field_DocQName, appdef.DataKind_QName).
@@ -175,23 +176,6 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 			AddField(Field_Record, appdef.DataKind_Record, true).
 			AddField(state.ColOffset, appdef.DataKind_int64, true)
 	})
-
-	{
-		// Workspace
-		wsBuilder := adb.AddWorkspace(appdef.NewQName(appdef.SysPackage, "test_wsWS"))
-		wsBuilder.SetDescriptor(qNameTestWSKind)
-		wsBuilder.AddType(qNameQueryCollection)
-		wsBuilder.AddType(qNameQueryGetCDoc)
-		wsBuilder.AddType(qNameQueryState)
-		wsBuilder.AddType(test.modifyCmdName)
-		wsBuilder.AddType(test.tableArticles)
-		wsBuilder.AddType(test.tableDepartments)
-		wsBuilder.AddType(test.tablePeriods)
-		wsBuilder.AddType(test.tablePrices)
-		wsBuilder.AddType(test.tableArticlePrices)
-		wsBuilder.AddType(test.tableArticlePriceExceptions)
-		wsBuilder.AddType(QNameCollectionView)
-	}
 
 	// TODO: remove it after https://github.com/voedger/voedger/issues/56
 	appDef, err := adb.Build()
@@ -227,7 +211,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	// create stub for cdoc.sys.WorkspaceDescriptor to make query processor work
 	as, err := appStructsProvider.BuiltIn(test.appQName)
 	require.NoError(err)
-	err = wsdescutil.CreateCDocWorkspaceDescriptorStub(as, test.partition, test.workspace, qNameTestWSKind, 1, 1)
+	err = wsdescutil.CreateCDocWorkspaceDescriptorStub(as, test.partition, test.workspace, wsdescutil.TestWsDescName, 1, 1)
 	require.NoError(err)
 
 	cleanup = func() {

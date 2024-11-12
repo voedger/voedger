@@ -390,7 +390,7 @@ func newWsTypeValidator(appStructsFunc state.AppStructsFunc) wsTypeVailidator {
 
 func (v *wsTypeVailidator) isStructureInt64FieldRecordID(name appdef.QName, fieldName appdef.FieldName) bool {
 	app := v.appStructsFunc().AppDef()
-	rec := app.Structure(name)
+	rec := appdef.Structure(app, name)
 	field := rec.Field(fieldName)
 	if field == nil {
 		panic(errInt64FieldUndefined(fieldName))
@@ -400,8 +400,8 @@ func (v *wsTypeVailidator) isStructureInt64FieldRecordID(name appdef.QName, fiel
 
 func (v *wsTypeVailidator) isViewInt64FieldRecordID(name appdef.QName, fieldName appdef.FieldName) bool {
 	app := v.appStructsFunc().AppDef()
-	rec := app.View(name)
-	field := rec.Field(fieldName)
+	view := appdef.View(app, name)
+	field := view.Field(fieldName)
 	if field == nil {
 		panic(errInt64FieldUndefined(fieldName))
 	}
@@ -448,7 +448,7 @@ func (v *wsTypeVailidator) validate(wsid istructs.WSID, entity appdef.QName) err
 			// notest
 			return errDescriptorForUndefinedWorkspace
 		}
-		if ws.TypeByName(entity) == nil {
+		if ws.Type(entity).Kind() == appdef.TypeKind_null {
 			return typeIsNotDefinedInWorkspaceWithDescriptor(entity, wsKind)
 		}
 	}

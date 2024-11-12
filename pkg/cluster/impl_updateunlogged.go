@@ -47,7 +47,7 @@ func updateUnlogged_View(update update) (err error) {
 
 	existingFields := coreutils.FieldsToMap(existingViewRec, update.appStructs.AppDef(), coreutils.WithNonNilsOnly())
 
-	mergedFields := coreutils.MergeMapsMakeFloats64(existingFields, update.setFields, update.key)
+	mergedFields := coreutils.MergeMaps(existingFields, update.setFields, update.key)
 	mergedFields[appdef.SystemField_QName] = update.QName.String() // missing on unlogged insert
 	return update.appStructs.ViewRecords().PutJSON(update.wsid, mergedFields)
 }
@@ -62,7 +62,7 @@ func updateUnlogged_Record(update update) error {
 		return fmt.Errorf("record ID %d does not exist", update.id)
 	}
 	existingFields := coreutils.FieldsToMap(existingRec, update.appStructs.AppDef(), coreutils.WithNonNilsOnly())
-	mergedFields := coreutils.MergeMapsMakeFloats64(existingFields, update.setFields)
+	mergedFields := coreutils.MergeMaps(existingFields, update.setFields)
 	return update.appStructs.Records().PutJSON(update.wsid, mergedFields)
 }
 

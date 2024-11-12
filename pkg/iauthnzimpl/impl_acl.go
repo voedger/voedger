@@ -290,6 +290,20 @@ var defaultACL = ACL{
 		policy: ACPolicy_Allow,
 	},
 	{
+		// ACL for FiscalCloud
+		desc: "allow FiscalCloud onboarding functions to role fiscalcloud.OnboardSite",
+		pattern: PatternType{
+			qNamesPattern: []appdef.QName{
+				qNameCmdAddCustomer,
+				qNameCmdUpdateCustomer,
+			},
+			principalsPattern: [][]iauthnz.Principal{
+				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleFiscalCloudOnboardSite}},
+			},
+		},
+		policy: ACPolicy_Allow,
+	},
+	{
 		desc: "grant exec on few funcs to role air.UntillPaymentsUser",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{

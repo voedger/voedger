@@ -20,6 +20,7 @@ import (
 	"github.com/tetratelabs/wazero/sys"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -613,6 +614,10 @@ func Test_RecoverEngine2(t *testing.T) {
 
 	var recoversTotal imetrics.MetricValue
 	we.recoversTotal = &recoversTotal
+	var log []string
+	logger.PrintLine = func(level logger.TLogLevel, line string) {
+		log = append(log, line)
+	}
 
 	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
 	require.Equal(0, mv(&recoversTotal))
@@ -627,9 +632,13 @@ func Test_RecoverEngine2(t *testing.T) {
 	require.Equal(1, mv(&recoversTotal))
 	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
 	require.Equal(1, mv(&recoversTotal))
+	require.Len(log, 1)
+	require.Contains(log[0], "test1/app1/mypkg wazero engine recovered")
 
 	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
 	require.Equal(2, mv(&recoversTotal))
+	require.Len(log, 2)
+	require.Contains(log[1], "test1/app1/mypkg wazero engine recovered")
 }
 
 func Test_Read(t *testing.T) {

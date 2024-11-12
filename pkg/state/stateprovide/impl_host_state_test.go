@@ -76,32 +76,27 @@ func mockedHostStateStructs() istructs.IAppStructs {
 		On("Get", istructs.WSID(1), mock.Anything).Return(nil, nil).
 		On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(nil)
 
-	appDef := appdef.New()
+	adb := appdef.New()
 
-	view := appDef.AddView(testViewRecordQName1)
+	wsb := adb.AddWorkspace(testWSQName)
+	wsDesc := wsb.AddCDoc(testWSDescriptorQName)
+	wsDesc.AddField(authnz.Field_WSKind, appdef.DataKind_bytes, false)
+	wsb.SetDescriptor(testWSDescriptorQName)
+
+	view := wsb.AddView(testViewRecordQName1)
 	view.Key().PartKey().AddField("pkFld", appdef.DataKind_int64)
 	view.Key().ClustCols().AddField("ccFld", appdef.DataKind_string)
 	view.Value().
 		AddField("vFld", appdef.DataKind_int64, false).
 		AddField(state.ColOffset, appdef.DataKind_int64, false)
 
+	app := adb.MustBuild()
+
 	mockWorkspaceRecord := &mockRecord{}
 	mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
 	mockWorkspaceRecord.On("QName").Return(qNameCDocWorkspaceDescriptor)
 	mockedRecords := &mockRecords{}
 	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
-
-	wsDesc := appDef.AddCDoc(testWSDescriptorQName)
-	wsDesc.AddField(authnz.Field_WSKind, appdef.DataKind_bytes, false)
-
-	ws := appDef.AddWorkspace(testWSQName)
-	ws.AddType(testViewRecordQName1)
-	ws.SetDescriptor(testWSDescriptorQName)
-
-	app, err := appDef.Build()
-	if err != nil {
-		panic(err)
-	}
 
 	appStructs := &mockAppStructs{}
 	appStructs.

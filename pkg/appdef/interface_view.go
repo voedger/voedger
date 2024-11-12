@@ -19,18 +19,6 @@ type IView interface {
 	Value() IViewValue
 }
 
-type IWithViews interface {
-	// Return View by name.
-	//
-	// Returns nil if not found.
-	View(name QName) IView
-
-	// Enumerates all application views
-	//
-	// Views are enumerated in alphabetical order by QName
-	Views(func(IView) bool)
-}
-
 type IViewBuilder interface {
 	ITypeBuilder
 

@@ -112,18 +112,6 @@ type IProjectorEventsBuilder interface {
 	SetComment(on QName, comment ...string) IProjectorEventsBuilder
 }
 
-type IWithProjectors interface {
-	// Return projector by name.
-	//
-	// Returns nil if not found.
-	Projector(QName) IProjector
-
-	// Enumerates all application projectors.
-	//
-	// Projectors are enumerated in alphabetical order by QName.
-	Projectors(func(IProjector) bool)
-}
-
 type IProjectorsBuilder interface {
 	// Adds new projector.
 	//

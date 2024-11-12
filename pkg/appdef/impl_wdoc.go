@@ -11,11 +11,11 @@ type wDoc struct {
 	singleton
 }
 
-func newWDoc(app *appDef, name QName) *wDoc {
+func newWDoc(app *appDef, ws *workspace, name QName) *wDoc {
 	d := &wDoc{
-		singleton: makeSingleton(app, name, TypeKind_WDoc),
+		singleton: makeSingleton(app, ws, name, TypeKind_WDoc),
 	}
-	app.appendType(d)
+	ws.appendType(d)
 	return d
 }
 
@@ -41,11 +41,11 @@ type wRecord struct {
 	containedRecord
 }
 
-func newWRecord(app *appDef, name QName) *wRecord {
+func newWRecord(app *appDef, ws *workspace, name QName) *wRecord {
 	r := &wRecord{
-		containedRecord: makeContainedRecord(app, name, TypeKind_WRecord),
+		containedRecord: makeContainedRecord(app, ws, name, TypeKind_WRecord),
 	}
-	app.appendType(r)
+	ws.appendType(r)
 	return r
 }
 

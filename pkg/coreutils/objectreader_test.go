@@ -32,13 +32,15 @@ var (
 	testAppDef = func(t *testing.T) appdef.IAppDef {
 		adb := appdef.New()
 
-		obj := adb.AddObject(testQName)
+		wsb := adb.AddWorkspace(testWS)
+
+		obj := wsb.AddObject(testQName)
 		addFieldDefs(obj, testFieldDefs)
 
-		simpleObj := adb.AddObject(testQNameSimple)
+		simpleObj := wsb.AddObject(testQNameSimple)
 		simpleObj.AddField("int32", appdef.DataKind_int32, false)
 
-		view := adb.AddView(testQNameView)
+		view := wsb.AddView(testQNameView)
 		view.Key().PartKey().AddField("pk", appdef.DataKind_int64)
 		view.Key().ClustCols().AddField("cc", appdef.DataKind_string)
 		iValueFields := map[string]appdef.DataKind{}
@@ -49,11 +51,6 @@ var (
 		for n, k := range iValueFields {
 			view.Value().AddField(n, k, false)
 		}
-
-		ws := adb.AddWorkspace(testWS)
-		ws.AddType(testQName)
-		ws.AddType(testQNameSimple)
-		ws.AddType(appdef.NewQName("test", "view"))
 
 		app, err := adb.Build()
 		require.NoError(t, err)

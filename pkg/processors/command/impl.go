@@ -65,6 +65,7 @@ func (c *cmdWorkpiece) AppPartition() appparts.IAppPartition {
 }
 
 // used in c.cluster.VSqlUpdate to determinate partitionID by WSID
+// used in c.registry.CreateLogin to dtermine if the target app is deployed
 func (c *cmdWorkpiece) AppPartitions() appparts.IAppPartitions {
 	return c.appParts
 }
@@ -431,11 +432,11 @@ func getArgsObject(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		return nil
 	}
 	aob := cmd.reb.ArgumentObjectBuilder()
-	if argsIntf, exists := cmd.requestData["args"]; exists {
-		args, ok := argsIntf.(map[string]interface{})
-		if !ok {
-			return errors.New(`"args" field must be an object`)
-		}
+	args, exists, err := cmd.requestData.AsObject("args")
+	if err != nil {
+		return err
+	}
+	if exists {
 		aob.FillFromJSON(args)
 	}
 	if cmd.argsObject, err = aob.Build(); err != nil {
@@ -450,11 +451,11 @@ func getUnloggedArgsObject(_ context.Context, work pipeline.IWorkpiece) (err err
 		return nil
 	}
 	auob := cmd.reb.ArgumentUnloggedObjectBuilder()
-	if unloggedArgsIntf, exists := cmd.requestData["unloggedArgs"]; exists {
-		unloggedArgs, ok := unloggedArgsIntf.(map[string]interface{})
-		if !ok {
-			return errors.New(`"unloggedArgs" field must be an object`)
-		}
+	unloggedArgs, exists, err := cmd.requestData.AsObject("unloggedArgs")
+	if err != nil {
+		return err
+	}
+	if exists {
 		auob.FillFromJSON(unloggedArgs)
 	}
 	if cmd.unloggedArgsObject, err = auob.Build(); err != nil {

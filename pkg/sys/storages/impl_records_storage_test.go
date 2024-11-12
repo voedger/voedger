@@ -17,24 +17,21 @@ import (
 )
 
 func createAppDef() appdef.IAppDef {
-	appDef := appdef.New()
-	appDef.AddObject(testRecordQName1).
+	adb := appdef.New()
+
+	wsb := adb.AddWorkspace(testWSQName)
+	wsDesc := wsb.AddCDoc(testWSDescriptorQName)
+	wsDesc.AddField(field_WSKind, appdef.DataKind_bytes, false)
+	wsDesc.SetSingleton()
+	wsb.SetDescriptor(testWSDescriptorQName)
+
+	wsb.AddObject(testRecordQName1).
 		AddField("number", appdef.DataKind_int64, false)
-	appDef.AddObject(testRecordQName2).
+	wsb.AddObject(testRecordQName2).
 		AddField("age", appdef.DataKind_int64, false).
 		AddField("ref", appdef.DataKind_RecordID, false)
-	wsDesc := appDef.AddCDoc(testWSDescriptorQName)
-	wsDesc.AddField(field_WSKind, appdef.DataKind_bytes, false)
-	ws := appDef.AddWorkspace(testWSQName)
-	ws.AddType(testRecordQName1)
-	ws.AddType(testRecordQName2)
-	ws.SetDescriptor(testWSDescriptorQName)
 
-	app, err := appDef.Build()
-	if err != nil {
-		panic(err)
-	}
-	return app
+	return adb.MustBuild()
 }
 
 func TestRecordsStorage_GetBatch(t *testing.T) {
@@ -67,13 +64,14 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 				items[1].Record = record2
 			})
 
-		appDef := appdef.New()
-		appDef.AddObject(testRecordQName1).
+		adb := appdef.New()
+		wsb := adb.AddWorkspace(testWSQName)
+		wsb.AddObject(testRecordQName1).
 			AddField("number", appdef.DataKind_int64, false)
-		appDef.AddObject(testRecordQName2).
+		wsb.AddObject(testRecordQName2).
 			AddField("age", appdef.DataKind_int64, false)
 
-		app, err := appDef.Build()
+		app, err := adb.Build()
 		require.NoError(err)
 
 		appStructs := &mockAppStructs{}
