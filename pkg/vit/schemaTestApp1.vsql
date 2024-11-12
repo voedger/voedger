@@ -478,10 +478,6 @@ ALTERABLE WORKSPACE test_wsWS (
 		refToCDoc1OrODoc1 ref(cdoc1, odoc1)
 	);
 
-	TABLE odoc3 INHERITS ODoc (
-		fld1 int32
-	);
-
 	TYPE RatedQryParams (
 		Fld text
 	);
@@ -507,7 +503,7 @@ ALTERABLE WORKSPACE test_wsWS (
 	);
 
 	TYPE TestCmdParams (
-		Arg1 int32
+		Arg1 int32 NOT NULL
 	);
 
 	TYPE TestCmdResult (
@@ -535,7 +531,7 @@ ALTERABLE WORKSPACE test_wsWS (
 	);
 
 	TYPE WithResponseIntentParams (
-		StatusCodeToReturn int32
+		StatusCodeToReturn int32 NOT NULL
 	);
 
 	TYPE QryWithResponseIntentResult (
@@ -557,7 +553,6 @@ ALTERABLE WORKSPACE test_wsWS (
 
 		COMMAND CmdODocOne(odoc1);
 		COMMAND CmdODocTwo(odoc2, UNLOGGED odoc2);
-		COMMAND CmdODocThree(odoc3);
 
 		COMMAND TestCmdRawArg(sys.Raw);
 		PROJECTOR ProjDummy AFTER INSERT ON (CRecord) INTENTS(View(View)); -- does nothing, only to define view.app1pkg.View

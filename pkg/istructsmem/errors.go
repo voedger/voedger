@@ -63,8 +63,6 @@ var ErrNumAppWorkspacesNotSet = errors.New("NumAppWorkspaces is not set")
 
 var ErrCorruptedData = errors.New("corrupted data")
 
-var ErrNullNotAllowed = errors.New("null value is not allowed")
-
 const errTypedFieldNotFoundWrap = "%s-type field «%s» is not found in %v: %w" // int32-type field «myField» is not found …
 
 const errFieldNotFoundWrap = "field «%s» is not found in %v: %w" // int32-type field «myField» is not found …
