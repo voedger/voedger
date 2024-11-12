@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -92,9 +93,17 @@ func ErrRefIDNotFound(t interface{}, f string, id istructs.RecordID) error {
 
 var ErrRecordNotFound = errors.New("record cannot be found")
 
-var ErrMinOccursViolation = errors.New("minimum occurs violated")
+var ErrMinOccursViolationError = errors.New("minimum occurs violated")
 
-var ErrMaxOccursViolation = errors.New("maximum occurs violated")
+func ErrMinOccursViolated(t interface{}, n string, o, min appdef.Occurs) error {
+	return enrichError(ErrMinOccursViolationError, "%v container «%s» has not enough occurrences (%d, minimum %d)", t, n, o, min)
+}
+
+var ErrMaxOccursViolationError = errors.New("maximum occurs violated")
+
+func ErrMaxOccursViolated(t interface{}, n string, o, max appdef.Occurs) error {
+	return enrichError(ErrMaxOccursViolationError, "%v container «%s» has too many occurrences (%d, maximum %d)", t, n, o, max)
+}
 
 var ErrFieldIsEmpty = errors.New("field is empty")
 

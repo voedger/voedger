@@ -113,7 +113,7 @@ func Test_ValidEventArgs(t *testing.T) {
 		e := oDocEvent(false)
 		_, err := e.BuildRawEvent()
 		require.Error(err, require.Is(ErrFieldIsEmpty),
-			require.Has("ODoc «test.document»"), require.Has(appdef.SystemField_ID))
+			require.Has(docName, appdef.SystemField_ID))
 	})
 
 	t.Run("errors in argument IDs and refs", func(t *testing.T) {
@@ -149,7 +149,7 @@ func Test_ValidEventArgs(t *testing.T) {
 			doc.PutRecordID("RefField", unknownID) // <- error here
 			_, err := e.BuildRawEvent()
 			require.Error(err, require.Is(ErrIDNotFoundError),
-				require.Has("ODoc «test.document»"), require.Has("RefField"), require.Has(unknownID))
+				require.HasAll(doc, "RefField", unknownID))
 		})
 
 		t.Run("error if ref to id from invalid target QName", func(t *testing.T) {
@@ -199,7 +199,7 @@ func Test_ValidEventArgs(t *testing.T) {
 			doc.PutRecordID(appdef.SystemField_ID, 1)
 			_, err := e.BuildRawEvent()
 			require.Error(err, require.Is(ErrFieldIsEmpty),
-				require.Has("ODoc «test.document»"), require.Has("RequiredField"))
+				require.HasAll(doc, "RequiredField"))
 		})
 
 		t.Run("error if required ref field filled with NullRecordID", func(t *testing.T) {
@@ -224,8 +224,8 @@ func Test_ValidEventArgs(t *testing.T) {
 				doc.PutInt32("RequiredField", 7)
 
 				_, err := e.BuildRawEvent()
-				require.ErrorIs(err, ErrMinOccursViolation)
-				require.ErrorContains(err, "ODoc «test.document» container «child» has not enough occurrences (0, minimum 1)")
+				require.Error(err, require.Is(ErrMinOccursViolationError),
+					require.HasAll(doc, "child", 0, 1))
 			})
 
 			t.Run("error if max occurs exceeded", func(t *testing.T) {
@@ -237,12 +237,12 @@ func Test_ValidEventArgs(t *testing.T) {
 				doc.ChildBuilder("child").
 					PutRecordID(appdef.SystemField_ID, 2)
 
-				doc.ChildBuilder("child").
-					PutRecordID(appdef.SystemField_ID, 3) // <- error here
+				doc.ChildBuilder("child"). // <- error here
+								PutRecordID(appdef.SystemField_ID, 3)
 
 				_, err := e.BuildRawEvent()
-				require.ErrorIs(err, ErrMaxOccursViolation)
-				require.ErrorContains(err, "ODoc «test.document» container «child» has too many occurrences (2, maximum 1)")
+				require.Error(err, require.Is(ErrMaxOccursViolationError),
+					require.HasAll(doc, "child", 2, 1))
 			})
 
 			t.Run("error if unknown container used", func(t *testing.T) {
@@ -256,7 +256,7 @@ func Test_ValidEventArgs(t *testing.T) {
 				rec.PutString(appdef.SystemField_Container, "objChild") // <- error here
 				_, err := e.BuildRawEvent()
 				require.Error(err, require.Is(ErrNameNotFoundError),
-					require.Has("ODoc «test.document»"), require.Has("objChild"))
+					require.HasAll(doc, "objChild"))
 			})
 
 			t.Run("error if invalid QName used for container", func(t *testing.T) {

@@ -71,8 +71,6 @@ const (
 	// These errors are possible while checking type and content of the event arguments and CUDs
 	errEventArgUseWrongType         = "%v argument uses wrong type «%v», expected «%v»: %w"
 	errEventUnloggedArgUseWrongType = "%v unlogged argument uses wrong type «%v», expected «%v»: %w"
-	errContainerMinOccursViolated   = "%v container «%s» has not enough occurrences (%d, minimum %d): %w"
-	errContainerMaxOccursViolated   = "%v container «%s» has too many occurrences (%d, maximum %d): %w"
 	errUnknownContainerName         = "%v child[%d] has unknown container name «%s»: %w"
 	errWrongContainerType           = "%v child[%d] %v has wrong type name, expected «%v»: %w"
 	errWrongParentID                = "%v child[%d] %v has wrong parent id «%d», expected «%d»: %w"
