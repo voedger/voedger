@@ -879,7 +879,7 @@ func Test_VerifiedFields(t *testing.T) {
 			row.PutString("email", weToken)
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrInvalidName)
+			require.Error(err, require.Is(ErrInvalidNameError), require.Has("test.other"), require.Has(objName))
 		})
 
 		t.Run("error if wrong verified field in token", func(t *testing.T) {
@@ -900,7 +900,7 @@ func Test_VerifiedFields(t *testing.T) {
 			row.PutString("email", wfToken)
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrInvalidName)
+			require.Error(err, require.Is(ErrInvalidNameError), require.Has("otherField"), require.Has("email"))
 		})
 
 		t.Run("error if wrong verified value type in token", func(t *testing.T) {

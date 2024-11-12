@@ -512,10 +512,10 @@ func (row *rowType) verifyToken(fld appdef.IField, token string) (value interfac
 	}
 
 	if payload.Entity != row.QName() {
-		return nil, fmt.Errorf("verified entity QName is «%v», but «%v» expected: %w", payload.Entity, row.QName(), ErrInvalidName)
+		return nil, ErrInvalidName("verified entity QName is «%v», but «%v» expected", payload.Entity, row.QName())
 	}
 	if payload.Field != fld.Name() {
-		return nil, fmt.Errorf("verified field is «%s», but «%s» expected: %w", payload.Field, fld.Name(), ErrInvalidName)
+		return nil, ErrInvalidName("verified field is «%s», but «%s» expected", payload.Field, fld.Name())
 	}
 
 	if value, err = row.clarifyJSONValue(payload.Value, fld.DataKind()); err != nil {

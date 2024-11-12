@@ -72,7 +72,11 @@ func ErrViewNotFound(name interface{}) error {
 	return enrichError(ErrNameNotFoundError, "view «%v»", name)
 }
 
-var ErrInvalidName = errors.New("name not valid")
+var ErrInvalidNameError = errors.New("name not valid")
+
+func ErrInvalidName(msg string, args ...any) error {
+	return enrichError(ErrInvalidNameError, msg, args...)
+}
 
 var ErrIDNotFound = errors.New("ID not found")
 
