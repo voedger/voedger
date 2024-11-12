@@ -287,7 +287,7 @@ The secret object with its elements differs from the regular object with regular
 
 #### Command CUDs
 
-The records modified by the command *commandCUDs* contain information about the records scheduled for modification. 
+The records modified by the command *commandCUDs* contain information about the records scheduled for modification.
 
 This information includes the number of new records *createCount*, the list of new records *creates*, the number of modified records *updateCount*, and the list of changes in the records *updates*.
 
@@ -360,7 +360,7 @@ The list of indexes of emptied fields *emptiedFieldsIndexes* contains an array o
 
 `emptiedFieldsIndexes = uint16 { uint16 } .`
 
-The index of the field in the list of emptied fields corresponds to the index of the field in the list of _user_ fields of the record. The first user field has an index of `0` (zero), the second - `1` (one), and so on.
+The index of the field in the list of emptied fields corresponds to the index of the field in the list of *user* fields of the record. The first user field has an index of `0` (zero), the second - `1` (one), and so on.
 
 ## View Record Value
 
