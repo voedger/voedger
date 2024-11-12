@@ -1,16 +1,14 @@
 module appsimple
 
-go 1.23.1
+go 1.23.2
 
 require (
 	github.com/stretchr/testify v1.9.0
-	github.com/tetratelabs/wazero v1.7.1
-	github.com/untillpro/qs v1.59.0
-	github.com/voedger/voedger v0.0.0-20240925154640-cd63a37232a6
+	github.com/tetratelabs/wazero v1.8.1
+	github.com/voedger/voedger v0.0.0-20241108143238-33e3a259dbe9
 )
 
 require (
-	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
