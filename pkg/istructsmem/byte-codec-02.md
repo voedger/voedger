@@ -24,7 +24,7 @@ Record *record* contains the Codec version *codecVer* and a data *rowData*.
 
 `record = codecVer rowData .`
 
-### Codec Version
+### Codec Version (record)
 
 Codec version *codecVer* stored as an unsigned single byte number.
 
@@ -38,7 +38,7 @@ Row data *rowData* contains the type name identifier *qNameID*, the values of th
 
 If type name `QName` is not specified (i.e. equal to `appdef.NullQName`), then other members (*sysFields* и *userFields*) are omitted.
 
-#### QName ID
+#### QName ID (record)
 
 Type name identifier *qNameID* is stored as unsigned two-bytes number. Here and in the following, unless specifically stated, numerical values are recorded using a byte order from most significant to least significant. (`BigEndian`).
 
@@ -58,10 +58,10 @@ The system fields bit mask is an unsigned two-byte number, each set bit of which
 
 | Bit | Mask | System field | Comment |
 | --: | :---: | :------------- | ----------- |
-|   0 | x0001 | sys.ID         | Record identifier is provided for documents (`CDoc`, `GDoc`, `ODoc`, `WDoc`) and for records (`CRecord`, `GRecord`, `ORecord`, `WRecord`)
-|   1 | x0002 | sys.ParentID   | The identifier of the owner entry (document) is provided for by the definitions of records (`CRecord`, `GRecord`, `ORecord`, `WRecord`). Some documents (`ODoc`) They also allow an indication of the identifier of the owner document if they are invested in the document
-|   2 | x0004 | sys.Container  | The container identifier is provided for records (`CRecord`, `GRecord`, `ORecord`, `WRecord`) and for objects (`Object`). Some documents (`ODoc`) also allow the container if they are nested into document
-|   3 | x0008 | sys.IsActive   | A sign of activity is provided for documents (`CDoc`, `GDoc`, `WDoc`) and records (`CRecord`, `GRecord`, `WRecord`).
+|   0 | x0001 | sys.ID         | Record identifier is provided for documents (`CDoc`, `GDoc`, `ODoc`, `WDoc`) and for records (`CRecord`, `GRecord`, `ORecord`, `WRecord`) |
+|   1 | x0002 | sys.ParentID   | The identifier of the owner entry (document) is provided for by the definitions of records (`CRecord`, `GRecord`, `ORecord`, `WRecord`). Some documents (`ODoc`) They also allow an indication of the identifier of the owner document if they are invested in the document |
+|   2 | x0004 | sys.Container  | The container identifier is provided for records (`CRecord`, `GRecord`, `ORecord`, `WRecord`) and for objects (`Object`). Some documents (`ODoc`) also allow the container if they are nested into document |
+|   3 | x0008 | sys.IsActive   | A sign of activity is provided for documents (`CDoc`, `GDoc`, `WDoc`) and records (`CRecord`, `GRecord`, `WRecord`) |
 
 ##### Record ID
 
@@ -115,7 +115,7 @@ The event buffer *event* contains the codec version *codecVer* and event data *e
 
 `event = codecVersion eventData .`
 
-### Codec Version
+### Codec Version (event)
 
 The codec version *codecVersion* is recorded as an unsigned one-byte integer.
 
@@ -129,51 +129,51 @@ The event data *eventData* contains the definition name identifier *qNameID*, ev
 
 If the definition name (QName) is not specified for the event (i.e., it is equal to `appdef.NullQName`), then nothing else is specified for the event.
 
-#### QName ID
+#### QName ID (event)
 
-Идентификатор имени *qNameID* записывается как беззнаковое двух-байтовое число.
+The name identifier *qNameID* is recorded as an unsigned two-byte number.
 
 `qNameID = uint16 .`
 
 #### Create Parameters
 
-Конструкционные данные события *createParameters* содержат информацию о статических полях события, заданных при его конструировании.
+The event construction data *createParameters* contains information about the static fields of the event, specified during its construction.
 
 `createParameters = ( partition pLogOffs ) ( workSpace wLogOffs ) registerTime ( sync [device syncTime] ) .`
 
 ##### Partition
 
-Раздел обработки события *partition* записан как беззнаковое двух-байтовое число.
+The event partition *partition* is recorded as an unsigned two-byte number.
 
 `partition = uint16 .`
 
 ##### PLog Offset
 
-Смещение события в журнале обработки *pLogOffs* записано как беззнаковое  восьми-байтовое число.
+The event offset in the processing log *pLogOffs* is recorded as an unsigned eight-byte number.
 
 `partition = uint64 .`
 
 ##### Work Space
 
-Рабочая область события *workSpace* записана как беззнаковое восьми-байтовое число.
+The event workspace *workSpace* is recorded as an unsigned eight-byte number.
 
 `workSpace = uint64 .`
 
 ##### WLog Offset
 
-Смещение события в журнале рабочей области *wLogOffs* записано как беззнаковое восьми-байтовое число.
+The event offset in the workspace log *wLogOffs* is recorded as an unsigned eight-byte number.
 
 `workSpace = uint64 .`
 
 ##### Register Time
 
-Время регистрации события *registerTime* записано как восьми-байтовое число.
+The event registration time *registerTime* is recorded as an eight-byte number.
 
 `registerTime = int64 .`
 
 ##### Sync Flag
 
-Признак состоявшегося события *sync* записан как булевское значение (1 байт).
+The event completion flag *sync* is recorded as a boolean value (1 byte).
 
 `sync = bool .`
 
@@ -181,178 +181,187 @@ If the definition name (QName) is not specified for the event (i.e., it is equal
 
 ##### Device ID
 
-Идентификатор устройства, на котором состоялось событие, *device* записан как беззнаковое двух-байтовое число.
+The identifier of the device on which the event occurred *device* is recorded as an unsigned two-byte number.
 
-`device = uint16 . // заполняется, если sync == true`
+`device = uint16 . // filled if sync == true
 
 ##### Sync Time
 
-Время, когда состоялось событие, *syncTime* записано как восьми-байтовое число.
+The time when the event occurred *syncTime* is recorded as an eight-byte number.
 
-`syncTime = int64 . // заполняется, если sync == true`
+`syncTime = int64 . // filled if sync == true
 
 #### Build Error
 
-Данные об ошибке сборки события *buildError* содержат информацию об ошибке, произошедшей во время сборки события, либо сведения о факте повреждения данных, если событие отмечено, как событие с поврежденными данными (QName = "sys.Corrupted")
+The event build error information *buildError* contains information about an error that occurred during the event construction, or information about data corruption if the event is marked as an event with corrupted data (QName = "sys.Corrupted").
 
 `buildError = valid [ ( messageLength [ messageBytes ] ) ( qNameLength [ qNameChars ] ) ( [ rawDataLength [ rawDataBytes ] ] ) ] .`
 
 ##### Valid Flag
 
-Флаг успешной сборки *valid* записан как булевское значение (1 байт).
+The build success flag *valid* is recorded as a boolean value (1 byte).
 
 `valid = bool .`
 
-Флаг успешной сборки *valid* содержит информацию, прошло ли сообщение сборку успешно (`true`) или же при сборке возникла ошибка (`false`). Если записана истина (`true`), то остальные члены, описывающие ошибку сборки, отсутствуют.
-Если записана ложь (`false`), то члены после описания ошибки сборки (аргументы команды и изменяемые записи) отсутствуют.
+The build success flag *valid* contains information on whether the message was successfully built (`true`) or if an error occurred during the build (`false`).
+If `true` is recorded, the other members describing the build error are absent.
+If `false` is recorded, the members after the build error description (command arguments and modified records) are absent.
 
 ##### Error Message Length
 
-Длина сообщения об ошибке при сборке события *messageLength* записана как беззнаковое двух-байтовое число.
+The length of the event build error message *messageLength* is recorded as an unsigned two-byte number.
 
 `messageLength = uint16 .`
 
-Если длина сообщения об ошибке `0` (ноль), то следующий член (сообщение об ошибке *messageBytes*) отсутствует.
+If the length of the error message is `0` (zero), then the next member (error message *messageBytes*) is absent.
 
 ##### Error Message Text
 
-Сообщение об ошибке при сборке события *messageBytes* записано как последовательность байт.
+The event build error message *messageBytes* is recorded as a sequence of bytes.
 
 `messageBytes = byte { byte } . // [messageLength]byte`
 
 ##### Source QName length
 
-Длина исходного имени команды события *qNameLength* записана как беззнаковое двух-байтовое число.
+The length of the original event command name *qNameLength* is recorded as an unsigned two-byte number.
 
 `qNameLength = uint16 .`
 
-Если длина исходного имени команды `0` (ноль), то следующий член (строка исходного имени команды *qNameChars*) отсутствует.
+If the length of the original command name is `0` (zero), then the next member (original command name string *qNameChars*) is absent.
 
 ##### Source QName string
 
-Строка исходного имени команды события *qNameChars* записана как последовательность байт.
+The original event command name string *qNameChars* is recorded as a sequence of bytes.
 
 `qNameChars = byte { byte } . // [qNameLength]byte`
 
 ##### Raw Event Data Length
 
-Длина исходных данных события *rawDataLength* записана как беззнаковое четырех-байтовое число.
+The length of the original event data *rawDataLength* is recorded as an unsigned four-byte number.
 
 `rawDataLength = uint32 .`
 
-Если длина данных `0` (ноль), то следующий член (исходные данные *rawDataBytes*) отсутствует.
+If the length of the data is `0` (zero), then the next member (original data *rawDataBytes*) is absent.
 
 ##### Raw Event Data Bytes
 
-Исходные данные события *rawDataBytes* записаны как последовательность байт.
+The original event data *rawDataBytes* is recorded as a sequence of bytes.
 
 `rawDataBytes = byte { byte } . // [rawDataLength]byte`
 
 #### Command Argument
 
-Аргументы команды *commandArguments* содержат объект *object* и секретный объект *unloggedObject*
+Command arguments *commandArguments* contain an object *object* and a secret object *unloggedObject*.
 
 `commandArguments = ( object unloggedObject ) .`
 
 ##### Argument Object
 
-Объект *object* содержит данные объекта в формате [строка данных](#row-data) *rowData*, количество дочерних элементов *childCount* и список дочерних элементов *children*.
+The object *object* contains the object data in the format of [row data](#row-data) *rowData*, the number of child elements *childCount*, and the list of child elements *children*.
 
 `object = rowData [ childCount { children } ] .`
 
-Если имя определения `QName` у объекта не указано (т.е. равно `appdef.NullQName`), то остальные члены объекта отсутствуют.
+If the definition name `QName` of the object is not specified (i.e., it is equal to `appdef.NullQName`), then the other members of the object are absent.
 
 ###### Argument Children
 
-Элемент *children* содержит данные дочерних объектов в формате [строка данных](#row-data) *rowData*, количество дочерних документов *childCount* и список дочерних элементов *children*.
+The element *children* contains the data of child objects in the format of [row data](#row-data) *rowData*, the number of child documents *childCount*, and the list of child elements *children*.
 
 `children = rowData [ childCount { children } ] .`
 
-Если имя определения `QName` у элемента не указано (т.е. равно `appdef.NullQName`), то остальные члены объекта отсутствуют.
+If the definition name `QName` of the element is not specified (i.e., it is equal to `appdef.NullQName`), then the other members of the object are absent.
 
 ##### Unlogged Argument Object
 
-Секретный объект *unloggedObject* содержит маскированные данные объекта в формате строки данных *rowData*, количество дочерних объектов *childCount* и список дочерних объектов *unloggedChildren* так же с маскированными данными.
+The secret object *unloggedObject* contains masked object data in the format of row data *rowData*, the number of child objects *childCount*, and the list of child objects *unloggedChildren* also with masked data.
 
 `unloggedObject = rowData [ childCount { unloggedChildren } ] .`
 
-От обычного объекта с обычными элементами секретный объект c его элементами отличаются тем, что в последних данные пользовательских полей маскированы:
+The secret object with its elements differs from the regular object with regular elements in that the data of user fields in the former are masked:
 
-- Значения всех числовых полей установлены в `0` (ноль),
-- Значения всех строковых полей установлены в `*` (звездочка),
-- Значения всех булевских полей установлены в `false` (ложь),
-- Длина всех байтовых полей установлена в `0` (ноль),
-- Значения всех полей с квалифицированным именем установлена в `appdef.NullQName`.
+- Values of all numeric fields are set to `0` (zero),
+- Values of all string fields are set to `*` (asterisk),
+- Values of all boolean fields are set to `false`,
+- Length of all byte fields is set to `0` (zero),
+- Values of all fields with a qualified name are set to `appdef.NullQName`.
 
 #### Command CUDs
 
-Изменяемые командой записи *commandCUDs* содержат сведения о записях, запланированных к изменению в аргументах команды (для системной команды `sys.CUD`), либо для записей, изменяемых в результате выполнения (для всех остальных команд). Эти сведения содержат количество новых записей *createCount*, список новых записей *creates*, количество измененных записей *updateCount*, список изменений в записях *updates*.
+The records modified by the command *commandCUDs* contain information about the records scheduled for modification. 
 
-`commandCUDs = ( createCount { creates } ) ( updateCount { updates } ) .`
+This information includes the number of new records *createCount*, the list of new records *creates*, the number of modified records *updateCount*, and the list of changes in the records *updates*.
+
+`commandCUDs = ( createCount [ creates ] ) ( updateCount [ updates ] ) .`
 
 ##### Create Records Count
 
-Количество создаваемых (новых) записей *createCount* записано как беззнаковое двух-байтовое число.
+The number of created (new) records *createCount* is recorded as an unsigned two-byte number.
 
 `createCount = unit16 .`
 
 ##### Created Records
 
-Список создаваемых (новых) записей *creates* содержит массив новых [CUD-записей](#cud-data) *cudData*.
+The list of created (new) records *creates* contains an array of new [CUD records](#cud-data) *cudData*.
 
-`creates = { cudData }`
+If the number of created records is `0` (zero), then the list of created records is absent.
+
+`creates = cudData { cudData } .`
 
 ##### Update Record Count
 
-Количество измененных записей *updateCount* записано как беззнаковое двух-байтовое число.
+The number of modified records *updateCount* is recorded as an unsigned two-byte number.
+
+If the number of modified records is `0` (zero), then the list of modified records is absent.
 
 `updateCount = unit16 .`
 
 ##### Updated Records
 
-Список измененных записей *updates* содержит массив измененных [CUD-записей](#cud-data) *cudData*.
+The list of modified records *updates* contains an array of modified [CUD records](#cud-data) *cudData*.
 
-`updates = { cudData }`
+`updates = cudData { cudData } .`
 
-В измененных данных строки сохранены:
+In the modified data, the rows contain:
 
-- значения всех предусмотренных определением системных полей и
-- значения только измененных пользовательских полей.
+- values of all system fields provided by the type and
+- values of only the modified user fields.
 
-сведения о значении остальных (неизмененных) пользовательских полей в списке отсутствуют.
+Information about the values of the remaining (unchanged) user fields is not included in the list.
 
 ###### CUD Data
 
-Данные CUD-записи *cudData* содержат [строк данных](#row-data) *rowData* и [список опустошенных полей](#emptied-fields) *emptiedFields*.
+The CUD record data *cudData* contains [row data](#row-data) *rowData* and [list of emptied fields](#emptied-fields) *emptiedFields*.
 
-`cudData = rowData emptiedFields`
+`cudData = rowData emptiedFields .`
 
 ###### Emptied Fields
 
 ❗ *New* in version
 
-Список опустошенных полей *emptiedFields* содержит количество опустошенных полей](#emptied-fields-count) *emptiedCount* и [список индексов опустошенных полей](#emptied-fields-indexes) *emptiedFieldsIndexes*.
+The list of emptied fields *emptiedFields* contains the [count of emptied fields](#emptied-fields-count) *emptiedCount* and [list of indexes of emptied fields](#emptied-fields-indexes) *emptiedFieldsIndexes*.
 
-`emptiedFields = emptiedCount emptiedFieldsIndexes`
+`emptiedFields = emptiedCount emptiedFieldsIndexes .`
 
 ###### Emptied Fields Count
 
 ❗ *New* in version
 
-Количество опустошенных полей *emptiedCount* записано как беззнаковое двух-байтовое число.
+The count of emptied fields *emptiedCount* is recorded as an unsigned two-byte number.
 
-`emptiedCount = unit16`
+If count of emptied fields is zero, then the [list of indexes of emptied fields](#emptied-fields-indexes) is absent.
+
+`emptiedCount = unit16 .`
 
 ###### Emptied Fields Indexes
 
 ❗ *New* in version
 
-Список индексов опустошенных полей *emptiedFieldsIndexes* содержит массив беззнаковых двух-байтовых чисел.
+The list of indexes of emptied fields *emptiedFieldsIndexes* contains an array of unsigned two-byte numbers.
 
-`emptiedFieldsIndexes = { uint16 }`
+`emptiedFieldsIndexes = uint16 { uint16 } .`
 
-Индекс поля в списке опустошенных полей соответствует индексу поля в списке пользовательских полей записи. Первое пользовательское поле имеет индекс `0` (ноль), второе - `1` (один) и т.д.
+The index of the field in the list of emptied fields corresponds to the index of the field in the list of _user_ fields of the record. The first user field has an index of `0` (zero), the second - `1` (one), and so on.
 
 ## View Record Value
 
-Структура записи представления совпадает со структурой [записи](#record). Однако, кроме полей с простейшими данными (числа, строки, байты и т.д.), записи представления могут содержать пользовательские поля комплексных типов `appdef.DataKind_Record` и `appdef.DataKind_Event`. Значения полей этих типов сохранены внутри *userFields* в виде массивов байтов, внутренняя структура которых определена выше в разделах [Record](#record) и [Event](#event).
+The structure of the representation record matches the structure of the [record](#record). However, in addition to fields with simple data (numbers, strings, bytes, etc.), representation records can contain user fields of complex types `appdef.DataKind_Record` and `appdef.DataKind_Event`. The values of fields of these types are stored inside *userFields* as byte arrays, the internal structure of which is defined above in the sections [Record](#record) and [Event](#event).
