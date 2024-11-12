@@ -308,13 +308,13 @@ func Test_RecordsPutJSON(t *testing.T) {
 
 		json[appdef.SystemField_ID] = int64(1)
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, ErrRawRecordIDUnexpected)
-		require.ErrorContains(err, appdef.SystemField_ID)
+		require.Error(err, require.Is(ErrUnexpectedRawRecordIDError),
+			require.HasAll(test.testCDoc, appdef.SystemField_ID, 1))
 
 		json[appdef.SystemField_ID] = gojson.Number("1")
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, ErrRawRecordIDUnexpected)
-		require.ErrorContains(err, appdef.SystemField_ID)
+		require.Error(err, require.Is(ErrUnexpectedRawRecordIDError),
+			require.HasAll(test.testCDoc, appdef.SystemField_ID, 1))
 	})
 
 	t.Run("should fail to put record with invalid data", func(t *testing.T) {

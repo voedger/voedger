@@ -155,8 +155,9 @@ func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]appdef.QName)
 		id := rec.changes.ID()
 		if id.IsRaw() {
 			err = errors.Join(err,
-				// event «sys.CUD» unexpectedly uses raw record ID «1» in updated CRRecord «CRec: test.CRecord»
-				validateErrorf(ECode_InvalidRecordID, errUnexpectedRawID, ev, id, rec, ErrRawRecordIDUnexpected))
+				// updated CRecord «test.CRecord» sys.ID: id «1» should not be raw
+				validateError(ECode_InvalidRecordID,
+					ErrUnexpectedRawRecordID(rec, appdef.SystemField_ID, id)))
 		}
 		if _, exists := ids[id]; exists {
 			err = errors.Join(err,

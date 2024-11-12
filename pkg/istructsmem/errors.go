@@ -135,7 +135,11 @@ func ErrRawRecordIDRequired(row, fld interface{}, id istructs.RecordID) error {
 	return enrichError(ErrRawRecordIDRequiredError, "%v %v: id «%d» is not raw", row, fld, id)
 }
 
-var ErrRawRecordIDUnexpected = errors.New("unexpected raw record ID")
+var ErrUnexpectedRawRecordIDError = errors.New("unexpected raw record ID")
+
+func ErrUnexpectedRawRecordID(rec, fld interface{}, id istructs.RecordID) error {
+	return enrichError(ErrUnexpectedRawRecordIDError, "%v %v: id «%d» should not be raw", rec, fld, id)
+}
 
 var ErrRecordIDUniqueViolation = errors.New("record ID duplicates")
 

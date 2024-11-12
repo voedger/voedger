@@ -446,8 +446,8 @@ func Test_ValidSysCudEvent(t *testing.T) {
 		e := cudRawEvent(false)
 		_ = e.CUDBuilder().Update(testDocRec(1)) // <- error here
 		_, err := e.BuildRawEvent()
-		require.ErrorIs(err, ErrRawRecordIDUnexpected)
-		require.ErrorContains(err, "unexpectedly uses raw record ID «1»")
+		require.Error(err, require.Is(ErrUnexpectedRawRecordIDError),
+			require.HasAll(docName, appdef.SystemField_ID, 1))
 	})
 
 	t.Run("should be error if ID duplication", func(t *testing.T) {

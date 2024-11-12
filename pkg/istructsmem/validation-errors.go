@@ -28,7 +28,7 @@ const (
 
 	ECode_TooManyCreates
 	ECode_TooManyUpdates
-	ECode_TooManyChilds
+	ECode_TooManyChildren
 )
 
 type validateErrorType struct {
@@ -59,7 +59,6 @@ func validateErrorf(code int, format string, a ...interface{}) ValidateError {
 const (
 	// These errors are possible while checking raw identifiers specified in the event arguments and CUDs
 	errRepeatedID                = "%v repeatedly uses record ID «%d» in %v: %w"
-	errUnexpectedRawID           = "%v unexpectedly uses raw record ID «%d» in updated %v: %w"
 	errRepeatedSingletonCreation = "%v repeatedly creates the same singleton %v (raw record ID «%d» and «%d»): %w"
 	errUnavailableTargetRef      = "%v field «%s» refers to record ID «%d» that has unavailable target QName «%s»: %w"
 	errParentHasNoContainer      = "%v has parent ID «%d» refers to «%s», which has no container «%s»: %w"

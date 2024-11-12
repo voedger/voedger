@@ -624,12 +624,13 @@ func (recs *appRecordsType) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any
 		return ErrWrongType("%v is not storable record type", rec.typeDef())
 	}
 
-	if rec.ID() == istructs.NullRecordID {
+	id := rec.ID()
+	if id == istructs.NullRecordID {
 		return ErrFieldMissed(rec, appdef.SystemField_ID)
 	}
-	if rec.ID().IsRaw() {
-		return fmt.Errorf("can not put record with raw %s: %w", appdef.SystemField_ID, ErrRawRecordIDUnexpected)
+	if id.IsRaw() {
+		return ErrUnexpectedRawRecordID(rec, appdef.SystemField_ID, id)
 	}
 
-	return recs.putRecord(ws, rec.ID(), rec.storeToBytes())
+	return recs.putRecord(ws, id, rec.storeToBytes())
 }

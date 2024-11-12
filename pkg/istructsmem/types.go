@@ -1010,7 +1010,7 @@ func (row *rowType) RecordIDs(includeNulls bool) func(cb func(appdef.FieldName, 
 //
 // If row has container name, then the result complete like `CRecord «Price: sales.PriceRecord»`.
 // Otherwise it will be short form, such as "CDoc «sales.BillDocument»".
-func (row *rowType) String() string {
+func (row rowType) String() string {
 	qName := row.AsQName(appdef.SystemField_QName)
 	if qName == appdef.NullQName {
 		return "null row"
