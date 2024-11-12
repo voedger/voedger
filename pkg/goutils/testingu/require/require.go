@@ -27,6 +27,18 @@ func (r *Require) Has(substr interface{}, msgAndArgs ...interface{}) Constraint 
 	return Has(substr, msgAndArgs...)
 }
 
+// Returns a constraint that checks that value (panic or error) contains
+// all of the given substrings.
+func (r *Require) HasAll(substr ...interface{}) Constraint {
+	return HasAll(substr...)
+}
+
+// Returns a constraint that checks that value (panic or error) contains
+// at least one from the given substrings.
+func (r *Require) HasAny(substr ...interface{}) Constraint {
+	return HasAny(substr...)
+}
+
 // Returns a constraint that checks that value (panic or error) does not contain
 // the given substring.
 func (r *Require) NotHas(substr string, msgAndArgs ...interface{}) Constraint {

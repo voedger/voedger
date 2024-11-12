@@ -7,6 +7,7 @@ package require
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -19,6 +20,38 @@ type Constraint assert.ValueAssertionFunc
 func Has(substr interface{}, msgAndArgs ...interface{}) Constraint {
 	return func(t assert.TestingT, v interface{}, _ ...interface{}) bool {
 		return assert.Contains(t, fmt.Sprint(v), fmt.Sprint(substr), msgAndArgs...)
+	}
+}
+
+// Returns a constraint that checks that value (panic or error) contains
+// all the given substrings.
+func HasAll(substr ...interface{}) Constraint {
+	return func(t assert.TestingT, v interface{}, _ ...interface{}) bool {
+		list := fmt.Sprint(v)
+		for _, s := range substr {
+			if !assert.Contains(t, list, fmt.Sprint(s)) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+// Returns a constraint that checks that value (panic or error) contains
+// at least one from the given substrings.
+func HasAny(substr ...interface{}) Constraint {
+	return func(t assert.TestingT, v interface{}, _ ...interface{}) bool {
+		if len(substr) == 0 {
+			return true
+		}
+
+		list := fmt.Sprint(v)
+		for _, s := range substr {
+			if strings.Contains(list, fmt.Sprint(s)) {
+				return true
+			}
+		}
+		return assert.Contains(t, list, fmt.Sprint(substr...))
 	}
 }
 
