@@ -508,18 +508,18 @@ func (row *rowType) verifyToken(fld appdef.IField, token string) (value interfac
 	// if expTime := payload.IssuedAt.Add(payload.Duration); time.Now().After(expTime) { … } // redundant check, must be check by IAppToken.ValidateToken()
 
 	if !fld.VerificationKind(payload.VerificationKind) {
-		return nil, fmt.Errorf("unavailable verification method «%s»: %w", payload.VerificationKind.TrimString(), ErrInvalidVerificationKind)
+		return nil, ErrInvalidVerificationKind(row, fld, payload.VerificationKind)
 	}
 
 	if payload.Entity != row.QName() {
-		return nil, ErrInvalidName("verified entity QName is «%v», but «%v» expected", payload.Entity, row.QName())
+		return nil, ErrInvalidName("verified entity is «%v», but «%v» expected", payload.Entity, row.QName())
 	}
 	if payload.Field != fld.Name() {
-		return nil, ErrInvalidName("verified field is «%s», but «%s» expected", payload.Field, fld.Name())
+		return nil, ErrInvalidName("%v verified field is «%s», but «%s» expected", row, payload.Field, fld.Name())
 	}
 
 	if value, err = row.clarifyJSONValue(payload.Value, fld.DataKind()); err != nil {
-		return nil, fmt.Errorf("wrong value for verified field «%s»: %w", fld.Name(), err)
+		return nil, enrichError(err, "wrong value for %v verified %v", row, fld)
 	}
 
 	return value, nil

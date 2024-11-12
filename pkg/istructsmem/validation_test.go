@@ -860,8 +860,8 @@ func Test_VerifiedFields(t *testing.T) {
 			row.PutString("email", ukToken)
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrInvalidVerificationKind)
-			require.ErrorContains(err, "Phone")
+			require.Error(err, require.Is(ErrInvalidVerificationKindError),
+				require.HasAll(objName, "email", "Phone"))
 		})
 
 		t.Run("error if wrong verified entity in token", func(t *testing.T) {

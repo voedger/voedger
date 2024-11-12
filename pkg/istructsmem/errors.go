@@ -116,7 +116,11 @@ func ErrFieldMissed(t, name interface{}) error {
 	return enrichError(ErrFieldIsEmptyError, "%v %v", t, name)
 }
 
-var ErrInvalidVerificationKind = errors.New("invalid verification kind")
+var ErrInvalidVerificationKindError = errors.New("invalid verification kind")
+
+func ErrInvalidVerificationKind(t, f interface{}, k appdef.VerificationKind) error {
+	return enrichError(ErrInvalidVerificationKindError, "%s for %v «%v»", k.TrimString(), t, f)
+}
 
 var ErrCUDsMissed = errors.New("CUDs are missed")
 
