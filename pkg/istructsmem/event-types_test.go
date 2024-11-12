@@ -1379,7 +1379,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 		rawEvent, buildErr := bld.BuildRawEvent()
 		require.NotNil(rawEvent)
-		require.ErrorIs(buildErr, ErrRecordIDUniqueViolation)
+		require.Error(buildErr, require.Is(ErrRecordIDUniqueViolationError), require.Has(cud))
 
 		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
 			return errors.New("unexpected call ID generator from singleton CDoc creation")
@@ -1416,8 +1416,8 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 		rawEvent, buildErr := bld.BuildRawEvent()
 		require.NotNil(rawEvent)
-		require.ErrorIs(buildErr, ErrRecordIDUniqueViolation)
-		require.ErrorContains(buildErr, "repeatedly creates the same singleton")
+		require.Error(buildErr, require.Is(ErrRecordIDUniqueViolationError),
+			require.Has(doc2Name))
 	})
 
 	t.Run("should be ok to update singleton CDoc", func(t *testing.T) {

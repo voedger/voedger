@@ -141,7 +141,16 @@ func ErrUnexpectedRawRecordID(rec, fld interface{}, id istructs.RecordID) error 
 	return enrichError(ErrUnexpectedRawRecordIDError, "%v %v: id «%d» should not be raw", rec, fld, id)
 }
 
-var ErrRecordIDUniqueViolation = errors.New("record ID duplicates")
+var ErrRecordIDUniqueViolationError = errors.New("record ID duplicates")
+
+func ErrRecordIDUniqueViolation(id istructs.RecordID, rec, dupe interface{}) error {
+	return enrichError(ErrRecordIDUniqueViolationError, "id «%d» used by %v and %v", id, rec, dupe)
+}
+
+// name should  be string or any Stringer interface (e.g. QName)
+func ErrSingletonViolation(name interface{}) error {
+	return enrichError(ErrRecordIDUniqueViolationError, "singleton «%v» violation", name)
+}
 
 var ErrWrongRecordID = errors.New("wrong record ID")
 

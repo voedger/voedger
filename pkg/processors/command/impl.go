@@ -491,7 +491,7 @@ func buildRawEvent(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	cmd.rawEvent, err = cmd.reb.BuildRawEvent()
 	status := http.StatusBadRequest
-	if errors.Is(err, istructsmem.ErrRecordIDUniqueViolation) {
+	if errors.Is(err, istructsmem.ErrRecordIDUniqueViolationError) {
 		status = http.StatusConflict
 	}
 	err = coreutils.WrapSysError(err, status)

@@ -499,7 +499,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 				return fmt.Errorf("error checking singleton «%v» record «%d» existence: %w", rec.QName(), id, err)
 			}
 			if exists {
-				return fmt.Errorf("can not create singleton, «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
+				return ErrSingletonViolation(rec)
 			}
 		}
 	}

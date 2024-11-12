@@ -54,11 +54,11 @@ func validateEventIDs(ev *eventType) error {
 // Checks that ID references to created entities is valid, that is target ID known and has available QName.
 //
 // Returns IDs map and error(s) if any.
-func validateObjectIDs(obj *objectType, rawID bool) (ids map[istructs.RecordID]appdef.QName, err error) {
-	ids = make(map[istructs.RecordID]appdef.QName)
+func validateObjectIDs(obj *objectType, rawID bool) (ids map[istructs.RecordID]*rowType, err error) {
+	ids = make(map[istructs.RecordID]*rowType)
 
-	_ = obj.forEach(func(e *objectType) error {
-		id := e.ID()
+	_ = obj.forEach(func(child *objectType) error {
+		id := child.ID()
 		if id == istructs.NullRecordID {
 			return nil
 		}
@@ -70,12 +70,12 @@ func validateObjectIDs(obj *objectType, rawID bool) (ids map[istructs.RecordID]a
 						ErrRawRecordIDRequired(obj, appdef.SystemField_ID, id)))
 			}
 		}
-		if _, exists := ids[id]; exists {
+		if exists, ok := ids[id]; ok {
 			err = errors.Join(err,
-				// ODoc «test.document» repeatedly uses record ID «1» in ORecord «child: test.record1»
-				validateErrorf(ECode_InvalidRecordID, errRepeatedID, obj, id, e, ErrRecordIDUniqueViolation))
+				// id «1» used by %v and %v
+				ErrRecordIDUniqueViolation(id, exists, child))
 		}
-		ids[id] = e.QName()
+		ids[id] = &child.rowType
 		return nil
 	})
 
@@ -91,7 +91,7 @@ func validateObjectIDs(obj *objectType, rawID bool) (ids map[istructs.RecordID]a
 					}
 					continue
 				}
-				if !fld.Ref(target) {
+				if !fld.Ref(target.QName()) {
 					err = errors.Join(err,
 						// ODoc «test.document» field «RefField» refers to record ID «1» that has unavailable target QName «test.document»
 						validateErrorf(ECode_InvalidRefRecordID, errUnavailableTargetRef, e, fld.Name(), id, target, ErrWrongRecordID))
@@ -117,8 +117,8 @@ func validateObjectIDs(obj *objectType, rawID bool) (ids map[istructs.RecordID]a
 // Checks that ID references to created entities is valid, that target ID is known and has available QName.
 //
 // Checks for CUD.Create() that IDs in sys.ParentID field and value in sys.Container are confirmable for target parent.
-func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]appdef.QName) (err error) {
-	st := make(map[appdef.QName]istructs.RecordID) // singletons unique
+func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]*rowType) (err error) {
+	st := make(map[appdef.QName]bool) // singletons unique
 
 	for _, rec := range ev.cud.creates {
 		id := rec.ID()
@@ -134,20 +134,20 @@ func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]appdef.QName)
 						ErrRawRecordIDRequired(rec, appdef.SystemField_ID, id)))
 			}
 		}
-		if _, exists := ids[id]; exists {
+		if exists, ok := ids[id]; ok {
 			err = errors.Join(err,
-				// event «sys.CUD» repeatedly uses record ID «1» in CRecord «CRec: test.CRecord»
-				validateErrorf(ECode_InvalidRecordID, errRepeatedID, ev, id, rec, ErrRecordIDUniqueViolation))
+				// id «1» used by %v and %v
+				ErrRecordIDUniqueViolation(id, exists, rec))
 		}
-		ids[id] = rec.QName()
+		ids[id] = &rec.rowType
 
 		if singleton, ok := rec.typ.(appdef.ISingleton); ok && singleton.Singleton() {
-			if id, ok := st[singleton.QName()]; ok {
+			if _, violated := st[singleton.QName()]; violated {
 				err = errors.Join(err,
-					// event «sys.CUD» repeatedly creates the same singleton «test.CDoc» (raw record ID «1» and «2»)
-					validateErrorf(ECode_InvalidRecordID, errRepeatedSingletonCreation, ev, singleton, id, rec.id, ErrRecordIDUniqueViolation))
+					// id «%d» used by %v and %v
+					validateError(ECode_InvalidRecordID, ErrSingletonViolation(singleton)))
 			}
-			st[singleton.QName()] = rec.id
+			st[singleton.QName()] = true
 		}
 	}
 
@@ -159,12 +159,13 @@ func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]appdef.QName)
 				validateError(ECode_InvalidRecordID,
 					ErrUnexpectedRawRecordID(rec, appdef.SystemField_ID, id)))
 		}
-		if _, exists := ids[id]; exists {
+		if exists, violated := ids[id]; violated {
 			err = errors.Join(err,
-				// event «sys.CUD» repeatedly uses record ID «1» in CRecord «CRec: test.CRecord»
-				validateErrorf(ECode_InvalidRecordID, errRepeatedID, ev, id, rec, ErrRecordIDUniqueViolation))
+				// id «%d» used by %v and %v
+				validateError(ECode_InvalidRecordID,
+					ErrRecordIDUniqueViolation(id, exists, rec)))
 		}
-		ids[id] = rec.changes.QName()
+		ids[id] = &rec.changes.rowType
 	}
 
 	checkRefs := func(rec *recordType) (err error) {
@@ -180,7 +181,7 @@ func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]appdef.QName)
 			}
 			fld := rec.fieldDef(name)
 			if ref, ok := fld.(appdef.IRefField); ok {
-				if !ref.Ref(target) {
+				if !ref.Ref(target.QName()) {
 					err = errors.Join(err,
 						// WRecord «WRec: test.WRecord» field «Ref» refers to record ID «1» that has unavailable target QName «test.WDocument»
 						validateErrorf(ECode_InvalidRefRecordID, errUnavailableTargetRef, rec, name, id, target, ErrWrongRecordID))
@@ -194,7 +195,7 @@ func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]appdef.QName)
 	for _, rec := range ev.cud.creates {
 		parId := rec.Parent()
 		if target, ok := ids[parId]; ok {
-			if parentType, ok := ev.appCfg.AppDef.Type(target).(appdef.IContainers); ok {
+			if parentType, ok := ev.appCfg.AppDef.Type(target.QName()).(appdef.IContainers); ok {
 				cont := parentType.Container(rec.Container())
 				if cont == nil {
 					err = errors.Join(err,

@@ -137,8 +137,8 @@ func Test_ValidEventArgs(t *testing.T) {
 			rec := doc.ChildBuilder("child")
 			rec.PutRecordID(appdef.SystemField_ID, 1) // <- error here
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRecordIDUniqueViolation)
-			require.ErrorContains(err, "ODoc «test.document» repeatedly uses record ID «1» in ORecord «child: test.record1»")
+			require.Error(err, require.Is(ErrRecordIDUniqueViolationError),
+				require.HasAll(doc, rec, 1))
 		})
 
 		t.Run("error if ref to unknown id", func(t *testing.T) {
@@ -160,8 +160,8 @@ func Test_ValidEventArgs(t *testing.T) {
 			doc.PutInt32("RequiredField", 7)
 			doc.PutRecordID("RefField", 1) // <- error here
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrWrongRecordID)
-			require.ErrorContains(err, "ODoc «test.document» field «RefField» refers to record ID «1» that has unavailable target QName «test.document»")
+			require.Error(err, require.Is(ErrWrongRecordID),
+				require.HasAll(doc, "RefField", 1))
 		})
 	})
 
@@ -464,23 +464,24 @@ func Test_ValidSysCudEvent(t *testing.T) {
 			r.PutRecordID(appdef.SystemField_ID, 1) // <- error here
 
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRecordIDUniqueViolation)
-			require.ErrorContains(err, "repeatedly uses record ID «1»")
+			require.Error(err, require.Is(ErrRecordIDUniqueViolationError),
+				require.HasAll(d, r, 1))
 		})
 
 		t.Run("storage ID duplication in Update", func(t *testing.T) {
 			e := cudRawEvent(true)
 
+			const dupID = istructs.RecordID(123456789012345)
 			c := e.CUDBuilder().Create(docName)
-			c.PutRecordID(appdef.SystemField_ID, 123456789012345)
+			c.PutRecordID(appdef.SystemField_ID, dupID)
 			c.PutInt32("RequiredField", 7)
 
-			u := e.CUDBuilder().Update(testDocRec(123456789012345)) // <- error here
+			u := e.CUDBuilder().Update(testDocRec(dupID)) // <- error here
 			u.PutInt32("RequiredField", 7)
 
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRecordIDUniqueViolation)
-			require.ErrorContains(err, "repeatedly uses record ID «123456789012345»")
+			require.Error(err, require.Is(ErrRecordIDUniqueViolationError),
+				require.HasAll(c, u, dupID))
 		})
 
 	})
@@ -508,8 +509,8 @@ func Test_ValidSysCudEvent(t *testing.T) {
 			d.PutRecordID("RefField", 1) // <- error here
 
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrWrongRecordID)
-			require.ErrorContains(err, "refers to record ID «1» that has unavailable target QName «test.document»")
+			require.Error(err, require.Is(ErrWrongRecordID),
+				require.HasAll(docName, "RefField", 1))
 		})
 
 		t.Run("should be error if sys.Parent / sys.Container causes invalid hierarchy", func(t *testing.T) {
@@ -637,20 +638,21 @@ func Test_ValidCommandEvent(t *testing.T) {
 			res.PutRecordID(appdef.SystemField_ID, 1) // <- error here
 
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRecordIDUniqueViolation)
-			require.ErrorContains(err, "repeatedly uses record ID «1»")
+			require.Error(err, require.Is(ErrRecordIDUniqueViolationError),
+				require.HasAll(obj, res, 1))
 		})
 
 		t.Run("repeated storage record ID in synced event", func(t *testing.T) {
 			e := eventBuilder(false)
+			dupID := istructs.RecordID(123456789012345)
 			obj := e.ArgumentObjectBuilder()
-			obj.PutRecordID(appdef.SystemField_ID, 123456789012345)
+			obj.PutRecordID(appdef.SystemField_ID, dupID)
 			res := e.CUDBuilder().Create(wDocName)
-			res.PutRecordID(appdef.SystemField_ID, 123456789012345) // <- error here
+			res.PutRecordID(appdef.SystemField_ID, dupID) // <- error here
 
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRecordIDUniqueViolation)
-			require.ErrorContains(err, "repeatedly uses record ID «123456789012345»")
+			require.Error(err, require.Is(ErrRecordIDUniqueViolationError),
+				require.HasAll(obj, res, dupID))
 		})
 	})
 
@@ -752,8 +754,8 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 		r := d.ChildBuilder("child")
 		r.PutRecordID(appdef.SystemField_ID, 1) // <- error here
 		_, err := d.Build()
-		require.ErrorIs(err, ErrRecordIDUniqueViolation)
-		require.ErrorContains(err, "repeatedly uses record ID «1»")
+		require.Error(err, require.Is(ErrRecordIDUniqueViolationError),
+			require.HasAll(d, r, 1))
 	})
 }
 
