@@ -636,13 +636,13 @@ func (upd *updateRecType) build() (err error) {
 	}
 
 	if upd.originRec.ID() != upd.changes.ID() {
-		return fmt.Errorf("record «%v» ID «%d» can not to be updated: %w", upd.originRec.QName(), upd.originRec.ID(), ErrUnableToUpdateSystemField)
+		return ErrUnableToUpdateSystemField(upd.originRec, appdef.SystemField_ID)
 	}
 	if (upd.changes.Parent() != istructs.NullRecordID) && (upd.changes.Parent() != upd.originRec.Parent()) {
-		return fmt.Errorf("record «%v» parent ID «%d» can not to be updated: %w", upd.originRec.QName(), upd.originRec.Parent(), ErrUnableToUpdateSystemField)
+		return ErrUnableToUpdateSystemField(upd.originRec, appdef.SystemField_ParentID)
 	}
 	if (upd.changes.Container() != "") && (upd.changes.Container() != upd.originRec.Container()) {
-		return fmt.Errorf("record «%v» container «%s» can not to be updated: %w", upd.originRec.QName(), upd.originRec.Container(), ErrUnableToUpdateSystemField)
+		return ErrUnableToUpdateSystemField(upd.originRec, appdef.SystemField_Container)
 	}
 
 	if upd.changes.IsActive() != upd.originRec.IsActive() {

@@ -1674,7 +1674,8 @@ func TestEventBuild_Error(t *testing.T) {
 				cud := bld.CUDBuilder().Update(getPhotoRem())
 				cud.PutRecordID(appdef.SystemField_ID, 100502)
 				_, buildErr = bld.BuildRawEvent()
-				require.ErrorIs(buildErr, ErrUnableToUpdateSystemField)
+				require.Error(buildErr, require.Is(ErrUnableToUpdateSystemFieldError,
+					require.HasAll(getPhotoRem(), appdef.SystemField_ID)))
 			})
 
 			t.Run("can`t change sys.ParentID", func(t *testing.T) {
@@ -1682,7 +1683,8 @@ func TestEventBuild_Error(t *testing.T) {
 				cud := bld.CUDBuilder().Update(getPhotoRem())
 				cud.PutRecordID(appdef.SystemField_ParentID, 100502)
 				_, buildErr = bld.BuildRawEvent()
-				require.ErrorIs(buildErr, ErrUnableToUpdateSystemField)
+				require.Error(buildErr, require.Is(ErrUnableToUpdateSystemFieldError,
+					require.HasAll(getPhotoRem(), appdef.SystemField_ParentID)))
 			})
 
 			t.Run("can`t change sys.Container", func(t *testing.T) {
@@ -1690,7 +1692,8 @@ func TestEventBuild_Error(t *testing.T) {
 				cud := bld.CUDBuilder().Update(getPhotoRem())
 				cud.PutString(appdef.SystemField_Container, test.basketIdent) // error here
 				_, buildErr = bld.BuildRawEvent()
-				require.ErrorIs(buildErr, ErrUnableToUpdateSystemField)
+				require.Error(buildErr, require.Is(ErrUnableToUpdateSystemFieldError,
+					require.HasAll(getPhotoRem(), appdef.SystemField_Container)))
 			})
 
 			t.Run("allow to change sys.IsActive", func(t *testing.T) {

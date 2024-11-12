@@ -162,7 +162,11 @@ func ErrWrongRecordIDTarget(t, f interface{}, id istructs.RecordID, target inter
 	return enrichError(ErrWrongRecordIDError, "%v %v refers to record ID «%d» that has wrong target «%s»", t, f, id, target)
 }
 
-var ErrUnableToUpdateSystemField = errors.New("unable to update system field")
+var ErrUnableToUpdateSystemFieldError = errors.New("unable to update system field")
+
+func ErrUnableToUpdateSystemField(t, f interface{}) error {
+	return enrichError(ErrUnableToUpdateSystemFieldError, "%v %v", t, f)
+}
 
 var ErrAbstractTypeError = errors.New("abstract type")
 
