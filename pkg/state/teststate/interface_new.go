@@ -33,12 +33,12 @@ type ICommandRunner interface {
 }
 
 type IProjectorRunner interface {
+	StateRecord(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner
+	StateSingletonRecord(fQName IFullQName, keyValueList ...any) IProjectorRunner
 	StateCUDRow(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner
 	StateView(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner
 	EventOffset(offset istructs.Offset) IProjectorRunner
 	// methos to fulfill test state
-	StateRecord(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner
-	StateSingletonRecord(fQName IFullQName, keyValueList ...any) IProjectorRunner
 	EventArgumentObject(id istructs.RecordID, keyValueList ...any) IProjectorRunner
 	EventArgumentObjectRow(path string, id istructs.RecordID, keyValueList ...any) IProjectorRunner
 	// methods to check out the test state
