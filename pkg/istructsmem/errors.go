@@ -129,7 +129,11 @@ func ErrCUDsMissed(event interface{}) error {
 	return enrichError(ErrCUDsMissedError, "%v", event)
 }
 
-var ErrRawRecordIDRequired = errors.New("raw record ID required")
+var ErrRawRecordIDRequiredError = errors.New("raw record ID required")
+
+func ErrRawRecordIDRequired(row, fld interface{}, id istructs.RecordID) error {
+	return enrichError(ErrRawRecordIDRequiredError, "%v %v: id «%d» is not raw", row, fld, id)
+}
 
 var ErrRawRecordIDUnexpected = errors.New("unexpected raw record ID")
 

@@ -119,13 +119,14 @@ func Test_ValidEventArgs(t *testing.T) {
 	t.Run("errors in argument IDs and refs", func(t *testing.T) {
 
 		t.Run("error if not raw ID in new event", func(t *testing.T) {
+			const badID = istructs.RecordID(123456789012345)
 			e := oDocEvent(false)
 			doc := e.ArgumentObjectBuilder()
-			doc.PutRecordID(appdef.SystemField_ID, 123456789012345) // <- error here
+			doc.PutRecordID(appdef.SystemField_ID, badID) // <- error here
 			doc.PutInt32("RequiredField", 7)
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRawRecordIDRequired)
-			require.ErrorContains(err, "ODoc «test.document» should use raw record ID (not «123456789012345»)")
+			require.Error(err, require.Is(ErrRawRecordIDRequiredError),
+				require.HasAll(doc, appdef.SystemField_ID, badID))
 		})
 
 		t.Run("error if repeatedly uses record ID", func(t *testing.T) {
@@ -422,12 +423,13 @@ func Test_ValidSysCudEvent(t *testing.T) {
 	t.Run("test raw IDs in CUD.Create", func(t *testing.T) {
 
 		t.Run("should require for new raw event", func(t *testing.T) {
+			const badID = istructs.RecordID(123456789012345)
 			e := cudRawEvent(false)
 			rec := e.CUDBuilder().Create(docName)
-			rec.PutRecordID(appdef.SystemField_ID, 123456789012345) // <- error here
+			rec.PutRecordID(appdef.SystemField_ID, badID) // <- error here
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRawRecordIDRequired)
-			require.ErrorContains(err, "should use raw record ID (not «123456789012345»)")
+			require.Error(err, require.Is(ErrRawRecordIDRequiredError),
+				require.HasAll(docName, appdef.SystemField_ID, badID))
 		})
 
 		t.Run("no error for sync events", func(t *testing.T) {

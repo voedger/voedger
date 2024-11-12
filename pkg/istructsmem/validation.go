@@ -65,8 +65,9 @@ func validateObjectIDs(obj *objectType, rawID bool) (ids map[istructs.RecordID]a
 		if !id.IsRaw() {
 			if rawID {
 				err = errors.Join(err,
-					// ODoc «test.document» should use raw record ID (not «123456789012345») in created ORecord «Rec: test.ORecord»
-					validateErrorf(ECode_InvalidRecordID, errRequiredRawID, obj, id, e, ErrRawRecordIDRequired))
+					// ODoc «test.document» sys.ID: id «123456789012345» is not raw
+					validateError(ECode_InvalidRecordID,
+						ErrRawRecordIDRequired(obj, appdef.SystemField_ID, id)))
 			}
 		}
 		if _, exists := ids[id]; exists {
@@ -128,8 +129,9 @@ func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]appdef.QName)
 		if !id.IsRaw() {
 			if !ev.Synced() {
 				err = errors.Join(err,
-					// event «sys.CUD» should use raw record ID (not «123456789012345») in created CRecord «Rec: test.CRecord»
-					validateErrorf(ECode_InvalidRecordID, errRequiredRawID, ev, id, rec, ErrRawRecordIDRequired))
+					// CDoc «test.document» sys.ID: id «123456789012345» is not raw
+					validateError(ECode_InvalidRecordID,
+						ErrRawRecordIDRequired(rec, appdef.SystemField_ID, id)))
 			}
 		}
 		if _, exists := ids[id]; exists {
