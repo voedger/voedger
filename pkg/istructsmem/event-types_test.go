@@ -1664,7 +1664,7 @@ func TestEventBuild_Error(t *testing.T) {
 			cud.PutFloat32("unknownField", 7.7)
 
 			_, buildErr = bld.BuildRawEvent()
-			require.ErrorIs(buildErr, ErrNameNotFound)
+			require.Error(buildErr, require.Is(ErrNameNotFoundError), require.Has("unknownField"))
 		})
 
 		t.Run("can`t change system fields", func(t *testing.T) {
@@ -1709,10 +1709,10 @@ func TestEventBuild_Error(t *testing.T) {
 			rec := getPhoto()
 
 			cud := bld.CUDBuilder().Update(rec)
-			cud.PutString("unknown field", "someValue")
+			cud.PutString("unknown", "someValue")
 
 			rawEvent, buildErr = bld.BuildRawEvent()
-			require.ErrorIs(buildErr, ErrNameNotFound)
+			require.Error(buildErr, require.Is(ErrNameNotFoundError), require.Has("unknown"))
 			require.NotNil(rawEvent)
 		})
 
@@ -2153,8 +2153,7 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 		{"should be error if unknown field in JSON",
 			`{"unknown": 1}`,
 			func(o istructs.IObject, err error) {
-				require.ErrorIs(err, ErrNameNotFound)
-				require.ErrorContains(err, "field «unknown» is not found")
+				require.Error(err, require.Is(ErrNameNotFoundError), require.Has("unknown"))
 			}},
 		{"should be error if invalid data type in JSON field",
 			`{"int32": "error"}`,
@@ -2164,8 +2163,7 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 		{"should be error if unknown container in JSON",
 			`{"unknown": [{"int32": 1}]}`,
 			func(o istructs.IObject, err error) {
-				require.ErrorIs(err, ErrNameNotFound)
-				require.ErrorContains(err, "container «unknown» is not found")
+				require.Error(err, require.Is(ErrNameNotFoundError), require.Has("unknown"))
 			}},
 		{"should be error if invalid data type in JSON container",
 			`{"child": ["a","b"]}`,

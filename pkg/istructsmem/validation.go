@@ -293,7 +293,7 @@ func validateObject(o *objectType) (err error) {
 			if cont == nil {
 				err = errors.Join(err,
 					// ODoc «test.document» child[0] has unknown container name «child»
-					validateErrorf(ECode_InvalidChildName, errUnknownContainerName, o, idx, child.Container(), ErrNameNotFound))
+					validateError(ECode_InvalidChildName, ErrContainerNotFound(child.Container(), o)))
 				return
 			}
 
@@ -339,7 +339,7 @@ func validateRow(row *rowType) (err error) {
 			if !row.HasValue(f.Name()) {
 				err = errors.Join(err,
 					// ODoc «test.document» misses required field «RequiredField»
-					validateErrorf(ECode_EmptyData, errEmptyRequiredField, row, f.Name(), ErrNameNotFound))
+					validateErrorf(ECode_EmptyData, errEmptyRequiredField, row, f.Name(), ErrFieldIsEmpty))
 				continue
 			}
 			if !f.IsSys() {

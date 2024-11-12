@@ -74,8 +74,7 @@ func Test_ValidEventArgs(t *testing.T) {
 				}})
 
 		_, err := b.BuildRawEvent()
-		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, "command function «test.object» not found")
+		require.Error(err, require.Is(ErrNameNotFoundError), require.Has(objName))
 	})
 
 	oDocEvent := func(sync bool) istructs.IRawEventBuilder {
@@ -113,8 +112,8 @@ func Test_ValidEventArgs(t *testing.T) {
 	t.Run("error if empty doc", func(t *testing.T) {
 		e := oDocEvent(false)
 		_, err := e.BuildRawEvent()
-		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, "ODoc «test.document» misses required field «sys.ID»")
+		require.Error(err, require.Is(ErrFieldIsEmpty),
+			require.Has("ODoc «test.document»"), require.Has(appdef.SystemField_ID))
 	})
 
 	t.Run("errors in argument IDs and refs", func(t *testing.T) {
@@ -198,8 +197,8 @@ func Test_ValidEventArgs(t *testing.T) {
 			doc := e.ArgumentObjectBuilder()
 			doc.PutRecordID(appdef.SystemField_ID, 1)
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrNameNotFound)
-			require.ErrorContains(err, "ODoc «test.document» misses required field «RequiredField»")
+			require.Error(err, require.Is(ErrFieldIsEmpty),
+				require.Has("ODoc «test.document»"), require.Has("RequiredField"))
 		})
 
 		t.Run("error if required ref field filled with NullRecordID", func(t *testing.T) {
@@ -255,8 +254,8 @@ func Test_ValidEventArgs(t *testing.T) {
 				rec.PutRecordID(appdef.SystemField_ID, 2)
 				rec.PutString(appdef.SystemField_Container, "objChild") // <- error here
 				_, err := e.BuildRawEvent()
-				require.ErrorIs(err, ErrNameNotFound)
-				require.ErrorContains(err, "ODoc «test.document» child[0] has unknown container name «objChild»")
+				require.Error(err, require.Is(ErrNameNotFoundError),
+					require.Has("ODoc «test.document»"), require.Has("objChild"))
 			})
 
 			t.Run("error if invalid QName used for container", func(t *testing.T) {
@@ -719,8 +718,8 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 		b := eventBuilder()
 		d := b.ArgumentObjectBuilder()
 		_, err := d.Build()
-		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, "ODoc «test.document» misses required field «RequiredField»")
+		require.Error(err, require.Is(ErrFieldIsEmpty),
+			require.Has("ODoc «test.document»"), require.Has("RequiredField"))
 	})
 
 	t.Run("should be error if builder has empty type name", func(t *testing.T) {

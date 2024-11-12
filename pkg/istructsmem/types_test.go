@@ -422,7 +422,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 				row := newRow(test.AppCfg)
 				row.setQName(test.testRow)
 				put(row)
-				require.Error(row.build(), require.Is(ErrNameNotFound), require.Has(unknown))
+				require.Error(row.build(), require.Is(ErrNameNotFoundError), require.Has(unknown))
 			}
 
 			testPut(func(row istructs.IRowWriter) { row.PutInt32(unknown, 1) })
@@ -531,7 +531,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 
 		err := row.build()
 		require.Error(err,
-			require.Is(ErrNameNotFound), require.Has("unknown"),
+			require.Is(ErrNameNotFoundError), require.Has("unknown"),
 			require.Is(ErrWrongFieldTypeError), require.Has("int64"))
 	})
 }
@@ -559,7 +559,7 @@ func Test_rowType_AsPanics(t *testing.T) {
 			}
 
 			for _, test := range tests {
-				require.Panics(test, require.Is(ErrNameNotFound), require.Has(unknown))
+				require.Panics(test, require.Is(ErrNameNotFoundError), require.Has(unknown))
 			}
 		})
 
@@ -584,7 +584,7 @@ func Test_rowType_AsPanics(t *testing.T) {
 			}
 
 			for _, test := range tests {
-				require.Panics(test.panics, require.Is(ErrNameNotFound), require.Has(test.field))
+				require.Panics(test.panics, require.Is(ErrNameNotFoundError), require.Has(test.field))
 			}
 		})
 	})
@@ -743,7 +743,7 @@ func Test_rowType_BuildErrors(t *testing.T) {
 			row.setQName(test.testRow)
 
 			row.PutInt32("unknown", 1)
-			require.Error(row.build(), require.Is(ErrNameNotFound), require.Has("unknown"))
+			require.Error(row.build(), require.Is(ErrNameNotFoundError), require.Has("unknown"))
 		})
 
 		t.Run("if Putxxx with invalid value type", func(t *testing.T) {

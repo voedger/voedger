@@ -44,10 +44,32 @@ func ErrWrongType(msg string, args ...any) error {
 	return enrichError(ErrWrongTypeError, msg, args...)
 }
 
-var ErrNameNotFound = errors.New("name not found")
+var ErrNameNotFoundError = errors.New("name not found")
 
-func ErrFieldNotFound(f string, fields interface{}) error {
-	return enrichError(ErrNameNotFound, "field «%s» is not found in %v", f, fields)
+func ErrNameNotFound(msg string, args ...any) error {
+	return enrichError(ErrNameNotFoundError, msg, args...)
+}
+
+func ErrFieldNotFound(name string, typ interface{}) error {
+	return enrichError(ErrNameNotFoundError, "field «%s» in %v", name, typ)
+}
+
+func ErrTypedFieldNotFound(t, f string, typ interface{}) error {
+	return enrichError(ErrNameNotFoundError, "%s-field «%s» in %v", t, f, typ)
+}
+
+func ErrContainerNotFound(name string, typ interface{}) error {
+	return enrichError(ErrNameNotFoundError, "container «%s» in %v", name, typ)
+}
+
+// name should  be string or any Stringer interface (e.g. QName)
+func ErrTypeNotFound(name interface{}) error {
+	return enrichError(ErrNameNotFoundError, "type «%v»", name)
+}
+
+// name should  be string or any Stringer interface (e.g. QName)
+func ErrViewNotFound(name interface{}) error {
+	return enrichError(ErrNameNotFoundError, "view «%v»", name)
 }
 
 var ErrInvalidName = errors.New("name not valid")
@@ -113,15 +135,9 @@ const (
 	errFieldValueTypeMismatch = "value type «%s» is not applicable for %v"
 )
 
-const errTypedFieldNotFoundWrap = "%s-type field «%s» is not found in %v: %w" // int32-type field «myField» is not found …
-
-const errContainerNotFoundWrap = "container «%s» is not found in type «%v»: %w" // container «order_item» is not found …
-
 const errNumberFieldWrongValueWrap = "field «%s» value %s can not to be converted to «%s»: %w"
 
 const errCantGetFieldQNameIDWrap = "QName field «%s» can not get ID for value «%v»: %w"
-
-const errTypeNotFoundWrap = "type «%v» not found: %w"
 
 const errMustValidatedBeforeStore = "%v must be validated before store: %w"
 

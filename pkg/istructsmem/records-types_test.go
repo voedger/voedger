@@ -321,10 +321,9 @@ func Test_RecordsPutJSON(t *testing.T) {
 		json[appdef.SystemField_QName] = test.testCDoc.String()
 		json[appdef.SystemField_ID] = float64(100500)
 
-		json["unknown field"] = `naked 🔫`
+		json["unknown"] = `naked 🔫`
 
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, "unknown field")
+		require.Error(err, require.Is(ErrNameNotFoundError), require.Has("unknown"))
 	})
 }

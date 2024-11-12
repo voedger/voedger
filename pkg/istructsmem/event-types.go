@@ -130,7 +130,7 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 		// #!16208: Should be possible to use TypeKind_ODoc as Event.QName
 		if d := appdef.ODoc(ev.appCfg.AppDef, ev.name); d == nil {
 			// command function «test.object» not found
-			return arg, argUnl, fmt.Errorf("command function «%v» not found: %w", ev.name, ErrNameNotFound)
+			return arg, argUnl, ErrNameNotFound("command function «%v»", ev.name)
 		}
 		arg = ev.name
 	}
@@ -914,7 +914,7 @@ func (o *objectType) FillFromJSON(data map[string]any) {
 			// e.g. "order_item": [<2 children>]
 			cont := o.typ.(appdef.IContainers).Container(n)
 			if cont == nil {
-				o.collectErrorf(errContainerNotFoundWrap, n, o.typ, ErrNameNotFound)
+				o.collectError(ErrContainerNotFound(n, o.typ))
 				continue
 			}
 			for i, val := range fv {

@@ -206,7 +206,7 @@ func (row *rowType) fieldMustExists(name appdef.FieldName, k appdef.DataKind, ot
 			}
 		}
 	}
-	panic(fmt.Errorf(errTypedFieldNotFoundWrap, k.TrimString(), name, row, ErrNameNotFound))
+	panic(ErrTypedFieldNotFound(k.TrimString(), name, row))
 }
 
 // Loads row from bytes
@@ -388,7 +388,7 @@ func (row *rowType) setQName(value appdef.QName) {
 
 	t := row.appCfg.AppDef.Type(value)
 	if t == appdef.NullType {
-		row.collectErrorf(errTypeNotFoundWrap, value, ErrNameNotFound)
+		row.collectError(ErrTypeNotFound(value))
 		return
 	}
 
@@ -412,7 +412,7 @@ func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
 	if qName != appdef.NullQName {
 		t := row.appCfg.AppDef.Type(qName)
 		if t == appdef.NullType {
-			err = fmt.Errorf(errTypeNotFoundWrap, qName, ErrNameNotFound)
+			err = ErrTypeNotFound(qName)
 			row.collectError(err)
 			return err
 		}

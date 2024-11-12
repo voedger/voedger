@@ -172,7 +172,7 @@ func (vr *appViewRecords) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any) 
 
 	view := appdef.View(vr.app.config.AppDef, viewName)
 	if view == nil {
-		return fmt.Errorf(errViewNotFoundWrap, viewName, ErrNameNotFound)
+		return ErrViewNotFound(viewName)
 	}
 
 	key := newKey(vr.app.config, viewName)
@@ -260,7 +260,7 @@ func newKey(appCfg *AppConfigType, name appdef.QName) *keyType {
 	}
 	view := appdef.View(appCfg.AppDef, name)
 	if view == nil {
-		panic(fmt.Errorf(errViewNotFoundWrap, name, ErrNameNotFound))
+		panic(ErrViewNotFound(name))
 	}
 	id, err := appCfg.qNames.ID(name)
 	if err != nil {
@@ -582,7 +582,7 @@ func newValue(appCfg *AppConfigType, name appdef.QName) *valueType {
 	}
 	view := appdef.View(appCfg.AppDef, name)
 	if view == nil {
-		panic(fmt.Errorf(errViewNotFoundWrap, name, ErrNameNotFound))
+		panic(ErrViewNotFound(name))
 	}
 
 	value := valueType{
