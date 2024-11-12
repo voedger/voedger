@@ -160,7 +160,7 @@ func Test_ValidEventArgs(t *testing.T) {
 			doc.PutInt32("RequiredField", 7)
 			doc.PutRecordID("RefField", 1) // <- error here
 			_, err := e.BuildRawEvent()
-			require.Error(err, require.Is(ErrWrongRecordID),
+			require.Error(err, require.Is(ErrWrongRecordIDError),
 				require.HasAll(doc, "RefField", 1))
 		})
 	})
@@ -212,8 +212,8 @@ func Test_ValidEventArgs(t *testing.T) {
 			rec.PutRecordID(appdef.SystemField_ID, 2)
 			rec.PutRecordID("RequiredRefField", istructs.NullRecordID) // <- error here
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrWrongRecordID)
-			require.ErrorContains(err, "ORecord «child2: test.record2» required ref field «RequiredRefField» has NullRecordID")
+			require.Error(err, require.Is(ErrWrongRecordIDError),
+				require.HasAll(rec, "RequiredRefField"))
 		})
 
 		t.Run("error if corrupted argument container structure", func(t *testing.T) {
@@ -284,8 +284,8 @@ func Test_ValidEventArgs(t *testing.T) {
 				rec.PutRecordID(appdef.SystemField_ID, 2)
 				rec.PutRecordID(appdef.SystemField_ParentID, 2) // <- error here
 				_, err := e.BuildRawEvent()
-				require.ErrorIs(err, ErrWrongRecordID)
-				require.ErrorContains(err, "ODoc «test.document» child[0] ORecord «child: test.record1» has wrong parent id «2», expected «1»")
+				require.Error(err, require.Is(ErrWrongRecordIDError),
+					require.HasAll(doc, "child", 0, rec, 2, 1))
 			})
 
 			t.Run("should ok if parent ID if omitted", func(t *testing.T) {
@@ -509,7 +509,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 			d.PutRecordID("RefField", 1) // <- error here
 
 			_, err := e.BuildRawEvent()
-			require.Error(err, require.Is(ErrWrongRecordID),
+			require.Error(err, require.Is(ErrWrongRecordIDError),
 				require.HasAll(docName, "RefField", 1))
 		})
 
@@ -527,8 +527,8 @@ func Test_ValidSysCudEvent(t *testing.T) {
 				r.PutString(appdef.SystemField_Container, "objChild") // <- error here
 
 				_, err := e.BuildRawEvent()
-				require.ErrorIs(err, ErrWrongRecordID)
-				require.ErrorContains(err, "has no container «objChild»")
+				require.Error(err, require.Is(ErrWrongRecordIDError),
+					require.HasAll(d, r, 1, "objChild"))
 			})
 
 			t.Run("should be error if specified container has another QName", func(t *testing.T) {
@@ -543,8 +543,8 @@ func Test_ValidSysCudEvent(t *testing.T) {
 				c.PutString(appdef.SystemField_Container, "child2") // <- error here
 
 				_, err := e.BuildRawEvent()
-				require.ErrorIs(err, ErrWrongRecordID)
-				require.ErrorContains(err, "container «child2» has another QName «test.record2»")
+				require.Error(err, require.Is(ErrWrongRecordIDError),
+					require.HasAll(d, c, 1, "child2", rec1Name, rec2Name))
 			})
 		})
 	})

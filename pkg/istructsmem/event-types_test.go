@@ -1739,12 +1739,12 @@ func TestEventBuild_Error(t *testing.T) {
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
 				if rawID == test.tempBasketID {
 					require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), t.QName())
-					return fmt.Errorf("test error: %w", ErrWrongRecordID)
+					return ErrWrongRecordID("test error")
 				}
 				return nil
 			}))
 			require.False(pLogEvent.Error().ValidEvent())
-			require.Contains(pLogEvent.Error().ErrStr(), ErrWrongRecordID.Error())
+			require.Contains(pLogEvent.Error().ErrStr(), ErrWrongRecordIDError.Error())
 			require.NoError(saveErr)
 			require.NotNil(pLogEvent)
 		})
@@ -1770,12 +1770,12 @@ func TestEventBuild_Error(t *testing.T) {
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
 				if rawID == 7 {
 					require.Equal(test.tablePhotoRems, t.QName())
-					return fmt.Errorf("test error: %w", ErrWrongRecordID)
+					return ErrWrongRecordID("test error")
 				}
 				return nil
 			}))
 			require.False(pLogEvent.Error().ValidEvent())
-			require.Contains(pLogEvent.Error().ErrStr(), ErrWrongRecordID.Error())
+			require.Contains(pLogEvent.Error().ErrStr(), ErrWrongRecordIDError.Error())
 			require.NoError(saveErr)
 			require.NotNil(pLogEvent)
 
@@ -1783,7 +1783,7 @@ func TestEventBuild_Error(t *testing.T) {
 				func() {
 					_ = app.Records().Apply2(pLogEvent, func(r istructs.IRecord) {})
 				},
-				require.Is(ErrorEventNotValidError), require.Has(ErrWrongRecordID))
+				require.Is(ErrorEventNotValidError), require.Has(ErrWrongRecordIDError))
 		})
 	})
 }

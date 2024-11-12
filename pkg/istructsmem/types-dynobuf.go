@@ -76,7 +76,7 @@ outer:
 			break outer
 		}
 		if int64Val < 0 {
-			return nil, fmt.Errorf("%w: %d", ErrWrongRecordID, int64Val)
+			return nil, ErrWrongRecordID("negative value %d", int64Val)
 		}
 		return istructs.RecordID(int64Val), nil
 	case appdef.DataKind_bytes:

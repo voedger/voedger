@@ -93,8 +93,8 @@ func validateObjectIDs(obj *objectType, rawID bool) (ids map[istructs.RecordID]*
 				}
 				if !fld.Ref(target.QName()) {
 					err = errors.Join(err,
-						// ODoc «test.document» field «RefField» refers to record ID «1» that has unavailable target QName «test.document»
-						validateErrorf(ECode_InvalidRefRecordID, errUnavailableTargetRef, e, fld.Name(), id, target, ErrWrongRecordID))
+						// ODoc «test.document» field «RefField» refers to record ID «1» that has unavailable target ODoc «test.document»
+						validateError(ECode_InvalidRefRecordID, ErrWrongRecordIDTarget(e, fld, id, target)))
 				}
 			}
 		}
@@ -183,8 +183,8 @@ func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]*rowType) (er
 			if ref, ok := fld.(appdef.IRefField); ok {
 				if !ref.Ref(target.QName()) {
 					err = errors.Join(err,
-						// WRecord «WRec: test.WRecord» field «Ref» refers to record ID «1» that has unavailable target QName «test.WDocument»
-						validateErrorf(ECode_InvalidRefRecordID, errUnavailableTargetRef, rec, name, id, target, ErrWrongRecordID))
+						// WRecord «WRec: test.WRecord» field «Ref» refers to record ID «1» that has unavailable target WDoc «test.WDocument»
+						validateError(ECode_InvalidRefRecordID, ErrWrongRecordIDTarget(rec, ref, id, target)))
 					continue
 				}
 			}
@@ -199,14 +199,16 @@ func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]*rowType) (er
 				cont := parentType.Container(rec.Container())
 				if cont == nil {
 					err = errors.Join(err,
-						// CRecord «CRec: test.CRecord» has parent ID «1» refers to «test.CDoc», which has no container «Record»
-						validateErrorf(ECode_InvalidRefRecordID, errParentHasNoContainer, rec, parId, target, rec.Container(), ErrWrongRecordID))
+						// CRecord «CRec: test.CRecord» has parent ID «1» refers to CDoc «test.CDoc», which has no container «Record»
+						validateError(ECode_InvalidRefRecordID,
+							ErrWrongRecordID("%v has parent ID «%d» refers to %v, which has no container «%s»", rec, parId, target, rec.Container())))
 					return
 				}
 				if cont.QName() != rec.QName() {
 					err = errors.Join(err,
-						// CRecord «Record: test.CRecord» has parent ID «1» refers to «test.CDoc», which container «Record» has another QName «test.CRecord1»
-						validateErrorf(ECode_InvalidRefRecordID, errParentContainerOtherType, rec, parId, target, rec.Container(), cont.QName(), ErrWrongRecordID))
+						// CRecord «Record: test.CRecord» has parent ID «1» refers to CDoc «test.CDoc», which container «Record» has another QName «test.CRecord1»
+						validateError(ECode_InvalidRefRecordID,
+							ErrWrongRecordID("%v has parent ID «%d» refers to %s, which container «%s» has another QName «%s»", rec, parId, target, rec.Container(), cont.QName())))
 					return
 				}
 			}
@@ -321,7 +323,8 @@ func validateObject(o *objectType) (err error) {
 					if parID != objID {
 						err = errors.Join(err,
 							// ODoc «test.document» child[0] ORecord «child: test.record1» has wrong parent id «2», expected «1»
-							validateErrorf(ECode_InvalidRefRecordID, errWrongParentID, o, idx, child, parID, objID, ErrWrongRecordID))
+							validateError(ECode_InvalidRefRecordID,
+								ErrWrongRecordID("%v child[%d] %v has wrong parent id «%d», expected «%d»", o, idx, child, parID, objID)))
 					}
 				}
 			}
@@ -352,7 +355,8 @@ func validateRow(row *rowType) (err error) {
 					if row.AsRecordID(f.Name()) == istructs.NullRecordID {
 						err = errors.Join(err,
 							// ORecord «child2: test.record2» required ref field «RequiredRefField» has NullRecordID value
-							validateErrorf(ECode_InvalidRefRecordID, errNullInRequiredRefField, row, f.Name(), ErrWrongRecordID))
+							validateError(ECode_InvalidRefRecordID,
+								ErrWrongRecordID("%v required ref field «%s» has NullRecordID value", row, f.Name())))
 					}
 				}
 			}

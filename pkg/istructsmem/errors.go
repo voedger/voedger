@@ -152,7 +152,15 @@ func ErrSingletonViolation(name interface{}) error {
 	return enrichError(ErrRecordIDUniqueViolationError, "singleton «%v» violation", name)
 }
 
-var ErrWrongRecordID = errors.New("wrong record ID")
+var ErrWrongRecordIDError = errors.New("wrong record ID")
+
+func ErrWrongRecordID(msg string, args ...any) error {
+	return enrichError(ErrWrongRecordIDError, msg, args...)
+}
+
+func ErrWrongRecordIDTarget(t, f interface{}, id istructs.RecordID, target interface{}) error {
+	return enrichError(ErrWrongRecordIDError, "%v %v refers to record ID «%d» that has wrong target «%s»", t, f, id, target)
+}
 
 var ErrUnableToUpdateSystemField = errors.New("unable to update system field")
 
