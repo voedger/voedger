@@ -77,6 +77,10 @@ func NotIs(target error, msgAndArgs ...interface{}) Constraint {
 //		require.Has("crazy"),
 //		require.Rx("^.*\s+error$"))
 func PanicsWith(t assert.TestingT, f func(), c ...Constraint) bool {
+	return panicsWith(t, f, c)
+}
+
+func panicsWith(t assert.TestingT, f func(), c []Constraint, msgAndArgs ...interface{}) bool {
 	didPanic := func() (wasPanic bool, recovered any) {
 		defer func() {
 			if recovered = recover(); recovered != nil {
@@ -92,7 +96,7 @@ func PanicsWith(t assert.TestingT, f func(), c ...Constraint) bool {
 	wasPanic, recovered := didPanic()
 
 	if !wasPanic {
-		return assert.Fail(t, "panic expected")
+		return assert.Fail(t, "panic expected", msgAndArgs...)
 	}
 
 	for _, constraint := range c {
@@ -111,8 +115,12 @@ func PanicsWith(t assert.TestingT, f func(), c ...Constraint) bool {
 //		require.Is(MyError),
 //		require.Has("my message"))
 func ErrorWith(t assert.TestingT, e error, c ...Constraint) bool {
+	return errorWith(t, e, c)
+}
+
+func errorWith(t assert.TestingT, e error, c []Constraint, msgAndArgs ...interface{}) bool {
 	if e == nil {
-		return assert.Fail(t, "error expected")
+		return assert.Fail(t, "error expected", msgAndArgs)
 	}
 
 	for _, constraint := range c {
