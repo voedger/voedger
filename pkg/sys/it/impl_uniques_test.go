@@ -454,8 +454,7 @@ func TestNullFields(t *testing.T) {
 	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","Int":0,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, bts)
 	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409(fmt.Sprintf("unique constraint violation with ID %d", expectedRecID)))
 
-	// no value for Int field -> conflict
-	// because it is interpreted as zero value: before->ok on inert new, and now->conflict on insert the same record with zero value for Int field
-	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","Str":"str","Bool":true,"Bytes":"%s"}}]}`, bts)
+	// null for Int field -> conflict
+	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","Int":null,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, bts)
 	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409(fmt.Sprintf("unique constraint violation with ID %d", expectedRecID)))
 }
