@@ -417,6 +417,82 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 }
 
+func Test_fieldValue(t *testing.T) {
+	require := require.New(t)
+	test := test()
+
+	t.Run("should return correct field values", func(t *testing.T) {
+
+		t.Run(fmt.Sprint(test.testCDoc), func(t *testing.T) {
+			rec := newTestCDoc(100500)
+			tests := []struct {
+				f appdef.FieldName
+				v interface{}
+			}{
+				{appdef.SystemField_QName, test.testCDoc},
+				{appdef.SystemField_ID, istructs.RecordID(100500)},
+				{appdef.SystemField_IsActive, true},
+				{"int32", int32(1)},
+				{"int64", int64(2)},
+				{"float32", float32(3)},
+				{"float64", float64(4)},
+				{"bytes", []byte{1, 2, 3, 4, 5}},
+				{"string", "test string"},
+				{"raw", test.photoRawValue},
+				{"QName", test.tablePhotos},
+				{"bool", true},
+				{"RecordID", istructs.RecordID(7777777)},
+			}
+
+			for _, test := range tests {
+				f := rec.fieldDef(test.f)
+				require.NotNil(f, test.f)
+				require.Equal(test.v, rec.fieldValue(f))
+			}
+		})
+
+		t.Run(fmt.Sprint(test.testViewRecord.name), func(t *testing.T) {
+			vv := newTestViewValue()
+			tests := []struct {
+				f appdef.FieldName
+				v interface{}
+			}{
+				{appdef.SystemField_QName, test.testViewRecord.name},
+				{test.testViewRecord.valueFields.buyer, test.buyerValue},
+				{test.testViewRecord.valueFields.age, test.ageValue},
+				{test.testViewRecord.valueFields.heights, test.heightValue},
+				{test.testViewRecord.valueFields.human, true},
+				{test.testViewRecord.valueFields.photo, test.photoValue},
+			}
+
+			for _, test := range tests {
+				f := vv.fieldDef(test.f)
+				require.NotNil(f, test.f)
+				require.Equal(test.v, vv.fieldValue(f), test.f)
+			}
+
+			t.Run("complex fields", func(t *testing.T) {
+
+				t.Run(test.testViewRecord.valueFields.record, func(t *testing.T) {
+					val := vv.fieldValue(vv.fieldDef(test.testViewRecord.valueFields.record))
+					require.NotNil(val)
+					rec, ok := val.(istructs.IRecord)
+					require.True(ok)
+					testTestCDoc(t, rec, 100888)
+				})
+
+				t.Run(test.testViewRecord.valueFields.event, func(t *testing.T) {
+					val := vv.fieldValue(vv.fieldDef(test.testViewRecord.valueFields.event))
+					require.NotNil(val)
+					ev, ok := val.(istructs.IDbEvent)
+					require.True(ok)
+					testTestEvent(t, ev, 100500, 1050, true)
+				})
+			})
+		})
+	})
+}
+
 func TestModifiedFields(t *testing.T) {
 	require := require.New(t)
 	test := test()
