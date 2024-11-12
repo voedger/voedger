@@ -511,7 +511,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 			return fmt.Errorf("error load updated «%v» record «%d»: %w", rec.originRec.QName(), rec.originRec.ID(), err)
 		}
 		if !exists {
-			return fmt.Errorf("updated «%v» record «%d» not exists: %w", rec.originRec.QName(), rec.originRec.ID(), ErrRecordIDNotFound)
+			return ErrIDNotFound("updated «%v» record «%d»", rec.originRec.QName(), rec.originRec.ID())
 		}
 
 		// check exists record has correct QName
@@ -554,7 +554,7 @@ func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istruc
 			return err
 		}
 		if !exists {
-			return fmt.Errorf("record «%d» not exists: %w", rec.ID(), ErrRecordIDNotFound)
+			return ErrIDNotFound("record «%d»", rec.ID())
 		}
 		return rec.loadFromBytes(data)
 	}

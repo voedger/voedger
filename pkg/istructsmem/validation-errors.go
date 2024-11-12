@@ -62,7 +62,6 @@ const (
 	errRequiredRawID             = "%v should use raw record ID (not «%d») in created %v: %w"
 	errUnexpectedRawID           = "%v unexpectedly uses raw record ID «%d» in updated %v: %w"
 	errRepeatedSingletonCreation = "%v repeatedly creates the same singleton %v (raw record ID «%d» and «%d»): %w"
-	errUnknownIDRef              = "%v field «%s» refers to unknown record ID «%d»: %w"
 	errUnavailableTargetRef      = "%v field «%s» refers to record ID «%d» that has unavailable target QName «%s»: %w"
 	errParentHasNoContainer      = "%v has parent ID «%d» refers to «%s», which has no container «%s»: %w"
 	errParentContainerOtherType  = "%v has parent ID «%d» refers to «%s», which container «%s» has another QName «%s»: %w"

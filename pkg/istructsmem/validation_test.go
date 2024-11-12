@@ -142,13 +142,14 @@ func Test_ValidEventArgs(t *testing.T) {
 
 		t.Run("error if ref to unknown id", func(t *testing.T) {
 			e := oDocEvent(false)
+			const unknownID = istructs.RecordID(7)
 			doc := e.ArgumentObjectBuilder()
 			doc.PutRecordID(appdef.SystemField_ID, 1)
 			doc.PutInt32("RequiredField", 7)
-			doc.PutRecordID("RefField", 7) // <- error here
+			doc.PutRecordID("RefField", unknownID) // <- error here
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRecordIDNotFound)
-			require.ErrorContains(err, "ODoc «test.document» field «RefField» refers to unknown record ID «7»")
+			require.Error(err, require.Is(ErrIDNotFoundError),
+				require.Has("ODoc «test.document»"), require.Has("RefField"), require.Has(unknownID))
 		})
 
 		t.Run("error if ref to id from invalid target QName", func(t *testing.T) {
@@ -487,13 +488,14 @@ func Test_ValidSysCudEvent(t *testing.T) {
 		t.Run("should be error if unknown ID refs", func(t *testing.T) {
 			e := cudRawEvent(false)
 			d := e.CUDBuilder().Create(docName)
+			const unknownID = istructs.RecordID(7)
 			d.PutRecordID(appdef.SystemField_ID, 1)
 			d.PutInt32("RequiredField", 1)
-			d.PutRecordID("RefField", 7) // <- error here
+			d.PutRecordID("RefField", unknownID) // <- error here
 
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRecordIDNotFound)
-			require.ErrorContains(err, "unknown record ID «7»")
+			require.Error(err, require.Is(ErrIDNotFoundError),
+				require.Has(docName), require.Has("RefField"), require.Has(unknownID))
 		})
 
 		t.Run("should be error if ID refs to invalid QName", func(t *testing.T) {
@@ -654,16 +656,17 @@ func Test_ValidCommandEvent(t *testing.T) {
 
 		t.Run("should be error to ref from argument to result", func(t *testing.T) {
 			e := eventBuilder(false)
+			resultID := istructs.RecordID(7)
 			obj := e.ArgumentObjectBuilder()
 			obj.PutRecordID(appdef.SystemField_ID, 1)
-			obj.PutRecordID("RefField", 2)
+			obj.PutRecordID("RefField", resultID)
 
 			res := e.CUDBuilder().Create(wDocName)
-			res.PutRecordID(appdef.SystemField_ID, 2)
+			res.PutRecordID(appdef.SystemField_ID, resultID)
 
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRecordIDNotFound)
-			require.ErrorContains(err, "unknown record ID «2»")
+			require.Error(err, require.Is(ErrIDNotFoundError),
+				require.Has(obj), require.Has("RefField"), require.Has(resultID))
 		})
 
 	})

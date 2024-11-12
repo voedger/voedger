@@ -85,8 +85,8 @@ func validateObjectIDs(obj *objectType, rawID bool) (ids map[istructs.RecordID]a
 				if !exists {
 					if id.IsRaw() {
 						err = errors.Join(err,
-							// ODoc «test.document» field «RefField» refers to unknown record ID «7»
-							validateErrorf(ECode_InvalidRefRecordID, errUnknownIDRef, e, fld.Name(), id, ErrRecordIDNotFound))
+							// ODoc «test.document» field «RefField» refers to unknown ID «7»
+							validateError(ECode_InvalidRefRecordID, ErrRefIDNotFound(e, fld.Name(), id)))
 					}
 					continue
 				}
@@ -170,8 +170,8 @@ func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]appdef.QName)
 			if !ok {
 				if id.IsRaw() {
 					err = errors.Join(err,
-						// WRecord «WRec: test.WRecord» field «Ref» refers to unknown record ID «7»
-						validateErrorf(ECode_InvalidRefRecordID, errUnknownIDRef, rec, name, id, ErrRecordIDNotFound))
+						// WRecord «WRec: test.WRecord» field «Ref» refers to unknown ID «7»
+						validateError(ECode_InvalidRefRecordID, ErrRefIDNotFound(rec, name, id)))
 				}
 				continue
 			}

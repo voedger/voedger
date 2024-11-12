@@ -7,6 +7,8 @@ package istructsmem
 import (
 	"errors"
 	"fmt"
+
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func enrichError(err error, msg string, args ...any) error {
@@ -78,9 +80,15 @@ func ErrInvalidName(msg string, args ...any) error {
 	return enrichError(ErrInvalidNameError, msg, args...)
 }
 
-var ErrIDNotFound = errors.New("ID not found")
+var ErrIDNotFoundError = errors.New("ID not found")
 
-var ErrRecordIDNotFound = fmt.Errorf("recordID cannot be found: %w", ErrIDNotFound)
+func ErrIDNotFound(msg string, args ...any) error {
+	return enrichError(ErrIDNotFoundError, msg, args...)
+}
+
+func ErrRefIDNotFound(t interface{}, f string, id istructs.RecordID) error {
+	return ErrIDNotFound("%v field «%s» refers to unknown ID «%d»", t, f, id)
+}
 
 var ErrRecordNotFound = errors.New("record cannot be found")
 
