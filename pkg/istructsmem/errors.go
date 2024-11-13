@@ -95,14 +95,14 @@ var ErrRecordNotFound = errors.New("record cannot be found")
 
 var ErrMinOccursViolationError = errors.New("minimum occurs violated")
 
-func ErrMinOccursViolated(t interface{}, n string, o, min appdef.Occurs) error {
-	return enrichError(ErrMinOccursViolationError, "%v container «%s» has not enough occurrences (%d, minimum %d)", t, n, o, min)
+func ErrMinOccursViolated(t interface{}, n string, o, minO appdef.Occurs) error {
+	return enrichError(ErrMinOccursViolationError, "%v container «%s» has not enough occurrences (%d, minimum %d)", t, n, o, minO)
 }
 
 var ErrMaxOccursViolationError = errors.New("maximum occurs violated")
 
-func ErrMaxOccursViolated(t interface{}, n string, o, max appdef.Occurs) error {
-	return enrichError(ErrMaxOccursViolationError, "%v container «%s» has too many occurrences (%d, maximum %d)", t, n, o, max)
+func ErrMaxOccursViolated(t interface{}, n string, o, maxO appdef.Occurs) error {
+	return enrichError(ErrMaxOccursViolationError, "%v container «%s» has too many occurrences (%d, maximum %d)", t, n, o, maxO)
 }
 
 var ErrFieldIsEmptyError = errors.New("field is empty")
