@@ -216,7 +216,11 @@ func ErrDataConstraintViolation(field, constraint interface{}) error {
 	return enrichError(ErrDataConstraintViolationError, "%v: %v", field, constraint)
 }
 
-var ErrNumAppWorkspacesNotSet = errors.New("NumAppWorkspaces is not set")
+var ErrNumAppWorkspacesNotSetError = errors.New("NumAppWorkspaces is not set")
+
+func ErrNumAppWorkspacesNotSet(app interface{}) error {
+	return enrichError(ErrNumAppWorkspacesNotSetError, app)
+}
 
 var ErrCorruptedData = errors.New("corrupted data")
 
