@@ -276,15 +276,15 @@ func validateObject(o *objectType) (err error) {
 		for range o.Children(n) {
 			occurs++
 		}
-		if min := cont.MinOccurs(); occurs < min {
+		if minO := cont.MinOccurs(); occurs < minO {
 			err = errors.Join(err,
 				// ODoc «test.document» container «child» has not enough occurrences (0, minimum 1)
-				validateError(ECode_InvalidOccursMin, ErrMinOccursViolated(o, n, occurs, min)))
+				validateError(ECode_InvalidOccursMin, ErrMinOccursViolated(o, n, occurs, minO)))
 		}
-		if max := cont.MaxOccurs(); occurs > max {
+		if maxO := cont.MaxOccurs(); occurs > maxO {
 			err = errors.Join(err,
 				// ODoc «test.document» container «child» has too many occurrences (2, maximum 1)
-				validateError(ECode_InvalidOccursMax, ErrMaxOccursViolated(o, n, occurs, max)))
+				validateError(ECode_InvalidOccursMax, ErrMaxOccursViolated(o, n, occurs, maxO)))
 		}
 	}
 
