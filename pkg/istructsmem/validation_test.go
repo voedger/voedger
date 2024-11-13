@@ -829,10 +829,10 @@ func Test_VerifiedFields(t *testing.T) {
 
 			row := makeObject(cfg, objName, nil)
 			row.PutInt32("int32", 1)
-			row.PutInt32("age", 7)
+			row.PutInt32("age", 7) //<- verified field
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrWrongFieldTypeError)
+			require.Error(err, require.Is(ErrWrongFieldTypeError), require.Has("age"))
 		})
 
 		t.Run("error if not a token, but plain string value", func(t *testing.T) {
@@ -927,7 +927,7 @@ func Test_VerifiedFields(t *testing.T) {
 			row.PutString("email", wtToken)
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrWrongFieldTypeError)
+			require.Error(err, require.Is(ErrWrongFieldTypeError), require.HasAll(row, "email"))
 		})
 
 	})

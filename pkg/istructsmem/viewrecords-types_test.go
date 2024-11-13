@@ -1405,7 +1405,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 			batch[0].Key.PutString("Sport", "Volleyball")
 
 			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-			require.ErrorIs(err, ErrWrongFieldTypeError)
+			require.Error(err, require.Is(ErrWrongFieldTypeError), require.Has("Year"))
 		})
 
 		t.Run("if key is not valid", func(t *testing.T) {

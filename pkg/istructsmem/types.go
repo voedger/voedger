@@ -273,14 +273,14 @@ func (row *rowType) putValue(name appdef.FieldName, kind dynobuffers.FieldType, 
 		if int64Val, ok := value.(int64); ok {
 			row.setID(istructs.RecordID(int64Val)) // nolint G115
 		} else {
-			row.collectError(ErrWrongType(errWrongFieldValue, name, `int64`, value))
+			row.collectError(ErrWrongType("%T not applicable for %v", value, fld))
 		}
 		return
 	case appdef.SystemField_ParentID:
 		if int64Val, ok := value.(int64); ok {
 			row.setParent(istructs.RecordID(int64Val)) // nolint G115
 		} else {
-			row.collectError(ErrWrongType(errWrongFieldValue, name, `int64`, value))
+			row.collectError(ErrWrongType("%T not applicable for %v", value, fld))
 		}
 		return
 	}
@@ -296,13 +296,13 @@ func (row *rowType) putValue(name appdef.FieldName, kind dynobuffers.FieldType, 
 				return
 			}
 		} else {
-			row.collectError(ErrWrongFieldType(errFieldMustBeVerified, name, value))
+			row.collectError(ErrWrongFieldType("%v should be verified, expected token, but value «%T» passed", fld, value))
 			return
 		}
 	} else {
 		if f, ok := row.dyB.Scheme.FieldsMap[name]; ok {
 			if (kind != dynobuffers.FieldTypeUnspecified) && (f.Ft != kind) {
-				row.collectError(ErrWrongFieldType(errFieldValueTypeMismatch, dynobuf.FieldTypeToString(kind), fld))
+				row.collectError(ErrWrongFieldType("can not put %s to %v", dynobuf.FieldTypeToString(kind), fld))
 				return
 			}
 		}
@@ -811,12 +811,12 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 		if value, ok := v.(string); ok {
 			qName, err := appdef.ParseQName(value)
 			if err != nil {
-				row.collectError(enrichError(err, errFieldValueTypeConvert, appdef.SystemField_QName, value, appdef.DataKind_QName.TrimString()))
+				row.collectError(enrichError(err, "can not parse value for field «%s»", appdef.SystemField_QName))
 				return
 			}
 			row.setQName(qName)
 		} else {
-			row.collectError(ErrWrongFieldType(errFieldValueTypeConvert, appdef.SystemField_QName, v, appdef.DataKind_QName.TrimString()))
+			row.collectError(ErrWrongFieldType("can not put «%T» to field «%s»", v, appdef.SystemField_QName))
 			return
 		}
 	}
@@ -862,7 +862,7 @@ func (row *rowType) PutNumber(name appdef.FieldName, value json.Number) {
 	}
 	clarifiedVal, err := row.clarifyJSONValue(value, fld.DataKind())
 	if err != nil {
-		row.collectErrorf(errNumberFieldWrongValueWrap, fld.Name(), value.String(), fld.DataKind().TrimString(), err)
+		row.collectError(enrichError(err, "can not put %T to %v", value, fld))
 		return
 	}
 	switch fld.DataKind() {
@@ -878,7 +878,7 @@ func (row *rowType) PutNumber(name appdef.FieldName, value json.Number) {
 		row.PutRecordID(name, clarifiedVal.(istructs.RecordID))
 	default:
 		// notest: avoided already by row.clarifyJSONValue()
-		panic(ErrWrongFieldType(errFieldValueTypeMismatch, appdef.DataKind_float64.TrimString(), fld))
+		panic(ErrWrongFieldType("can not put json.Number to %v", fld))
 	}
 }
 
@@ -931,7 +931,7 @@ func (row *rowType) PutChars(name appdef.FieldName, value string) {
 	case appdef.DataKind_bytes:
 		bytes, err := base64.StdEncoding.DecodeString(value)
 		if err != nil {
-			row.collectError(enrichError(err, errFieldValueTypeConvert, name, value, appdef.DataKind_bytes.TrimString()))
+			row.collectError(enrichError(err, "can not decode value for %v", fld))
 			return
 		}
 		row.PutBytes(name, bytes)
@@ -940,12 +940,12 @@ func (row *rowType) PutChars(name appdef.FieldName, value string) {
 	case appdef.DataKind_QName:
 		qName, err := appdef.ParseQName(value)
 		if err != nil {
-			row.collectError(enrichError(err, errFieldValueTypeConvert, name, value, appdef.DataKind_QName.TrimString()))
+			row.collectError(enrichError(err, "can not parse value for %v", fld))
 			return
 		}
 		row.PutQName(name, qName)
 	default:
-		row.collectError(ErrWrongFieldType(errFieldValueTypeMismatch, appdef.DataKind_string.TrimString(), fld))
+		row.collectError(ErrWrongFieldType("can not put string to %v", fld))
 	}
 }
 

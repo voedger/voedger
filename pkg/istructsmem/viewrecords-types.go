@@ -159,10 +159,10 @@ func (vr *appViewRecords) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any) 
 			if qName, err := appdef.ParseQName(value); err == nil {
 				viewName = qName
 			} else {
-				return enrichError(err, errFieldValueTypeConvert, appdef.SystemField_QName, value, appdef.DataKind_QName.TrimString())
+				return enrichError(err, "can not parse value for field «%s»", appdef.SystemField_QName)
 			}
 		} else {
-			return ErrWrongFieldType(errFieldValueTypeConvert, appdef.SystemField_QName, v, appdef.DataKind_QName.TrimString())
+			return ErrWrongFieldType("can not put «%T» to field «%s»", v, appdef.SystemField_QName)
 		}
 	}
 

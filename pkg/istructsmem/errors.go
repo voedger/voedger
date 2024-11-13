@@ -37,32 +37,32 @@ func enrichError(err error, argOrMsg any, args ...any) error {
 
 var ErrorEventNotValidError = errors.New("event is not valid")
 
-func ErrorEventNotValid(arg any, args ...any) error {
-	return enrichError(ErrorEventNotValidError, arg, args...)
+func ErrorEventNotValid(argOrMsg any, args ...any) error {
+	return enrichError(ErrorEventNotValidError, argOrMsg, args...)
 }
 
 var ErrNameMissedError = errors.New("name is empty")
 
-func ErrNameMissed(arg any, args ...any) error {
-	return enrichError(ErrNameMissedError, arg, args...)
+func ErrNameMissed(argOrMsg any, args ...any) error {
+	return enrichError(ErrNameMissedError, argOrMsg, args...)
 }
 
 var ErrOutOfBoundsError = errors.New("out of bounds")
 
-func ErrOutOfBounds(arg any, args ...any) error {
-	return enrichError(ErrOutOfBoundsError, arg, args...)
+func ErrOutOfBounds(argOrMsg any, args ...any) error {
+	return enrichError(ErrOutOfBoundsError, argOrMsg, args...)
 }
 
 var ErrWrongTypeError = errors.New("wrong type")
 
-func ErrWrongType(arg any, args ...any) error {
-	return enrichError(ErrWrongTypeError, arg, args...)
+func ErrWrongType(argOrMsg any, args ...any) error {
+	return enrichError(ErrWrongTypeError, argOrMsg, args...)
 }
 
 var ErrNameNotFoundError = errors.New("name not found")
 
-func ErrNameNotFound(arg any, args ...any) error {
-	return enrichError(ErrNameNotFoundError, arg, args...)
+func ErrNameNotFound(argOrMsg any, args ...any) error {
+	return enrichError(ErrNameNotFoundError, argOrMsg, args...)
 }
 
 func ErrFieldNotFound(name string, typ interface{}) error {
@@ -89,14 +89,14 @@ func ErrViewNotFound(name interface{}) error {
 
 var ErrInvalidNameError = errors.New("name not valid")
 
-func ErrInvalidName(arg any, args ...any) error {
-	return enrichError(ErrInvalidNameError, arg, args...)
+func ErrInvalidName(argOrMsg any, args ...any) error {
+	return enrichError(ErrInvalidNameError, argOrMsg, args...)
 }
 
 var ErrIDNotFoundError = errors.New("ID not found")
 
-func ErrIDNotFound(arg any, args ...any) error {
-	return enrichError(ErrIDNotFoundError, arg, args...)
+func ErrIDNotFound(argOrMsg any, args ...any) error {
+	return enrichError(ErrIDNotFoundError, argOrMsg, args...)
 }
 
 func ErrRefIDNotFound(t interface{}, f string, id istructs.RecordID) error {
@@ -166,8 +166,8 @@ func ErrSingletonViolation(name interface{}) error {
 
 var ErrWrongRecordIDError = errors.New("wrong record ID")
 
-func ErrWrongRecordID(arg any, args ...any) error {
-	return enrichError(ErrWrongRecordIDError, arg, args...)
+func ErrWrongRecordID(argOrMsg any, args ...any) error {
+	return enrichError(ErrWrongRecordIDError, argOrMsg, args...)
 }
 
 func ErrWrongRecordIDTarget(t, f interface{}, id istructs.RecordID, target interface{}) error {
@@ -182,20 +182,20 @@ func ErrUnableToUpdateSystemField(t, f interface{}) error {
 
 var ErrAbstractTypeError = errors.New("abstract type")
 
-func ErrAbstractType(arg any, args ...any) error {
-	return enrichError(ErrAbstractTypeError, arg, args...)
+func ErrAbstractType(argOrMsg any, args ...any) error {
+	return enrichError(ErrAbstractTypeError, argOrMsg, args...)
 }
 
 var ErrUnexpectedTypeError = errors.New("unexpected type")
 
-func ErrUnexpectedType(arg any, args ...any) error {
-	return enrichError(ErrUnexpectedTypeError, arg, args...)
+func ErrUnexpectedType(argOrMsg any, args ...any) error {
+	return enrichError(ErrUnexpectedTypeError, argOrMsg, args...)
 }
 
 var ErrUnknownCodecError = errors.New("unknown codec")
 
-func ErrUnknownCodec(arg any, args ...any) error {
-	return enrichError(ErrUnknownCodecError, arg, args...)
+func ErrUnknownCodec(argOrMsg any, args ...any) error {
+	return enrichError(ErrUnknownCodecError, argOrMsg, args...)
 }
 
 var ErrMaxGetBatchSizeExceedsError = fmt.Errorf("the maximum count of records to batch (%d) is exceeded", maxGetBatchRecordCount)
@@ -206,8 +206,8 @@ func ErrMaxGetBatchSizeExceeds(size int) error {
 
 var ErrWrongFieldTypeError = errors.New("wrong field type")
 
-func ErrWrongFieldType(arg any, args ...any) error {
-	return enrichError(ErrWrongFieldTypeError, arg, args...)
+func ErrWrongFieldType(argOrMsg any, args ...any) error {
+	return enrichError(ErrWrongFieldTypeError, argOrMsg, args...)
 }
 
 var ErrTypeChanged = errors.New("type has been changed")
@@ -217,13 +217,6 @@ var ErrDataConstraintViolation = errors.New("data constraint violation")
 var ErrNumAppWorkspacesNotSet = errors.New("NumAppWorkspaces is not set")
 
 var ErrCorruptedData = errors.New("corrupted data")
-
-const (
-	errWrongFieldValue        = "field «%v» value should be %s, but got %T"
-	errFieldValueTypeConvert  = "field «%s» value type «%T» can not to be converted to «%s»"
-	errFieldMustBeVerified    = "field «%s» must be verified, token expected, but value «%T» passed"
-	errFieldValueTypeMismatch = "value type «%s» is not applicable for %v"
-)
 
 const errNumberFieldWrongValueWrap = "field «%s» value %s can not to be converted to «%s»: %w"
 
