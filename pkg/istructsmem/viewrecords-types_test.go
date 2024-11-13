@@ -474,7 +474,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				return nil
 			})
-			require.ErrorIs(err, ErrTypeChanged)
+			require.Error(err, require.Is(ErrUnableToUpdateSystemFieldError), require.HasAll("test.viewDrinks", appdef.SystemField_QName))
 		})
 
 		t.Run("if wrong clustering columns type", func(t *testing.T) {
@@ -486,7 +486,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				return nil
 			})
-			require.ErrorIs(err, ErrTypeChanged)
+			require.Error(err, require.Is(ErrUnableToUpdateSystemFieldError), require.HasAll("test.viewDrinks", appdef.SystemField_QName))
 		})
 
 		t.Run("if holes in clustering column", func(t *testing.T) {
@@ -517,7 +517,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			vb.PutQName(appdef.SystemField_QName, appdef.NewQName("test", "viewDrinks_ClusteringColumns"))
 
 			err := viewRecords.Put(1, kb, vb)
-			require.ErrorIs(err, ErrTypeChanged)
+			require.Error(err, require.Is(ErrUnableToUpdateSystemFieldError), require.HasAll("test.viewDrinks", appdef.SystemField_QName))
 		})
 
 		t.Run("if empty partition key", func(t *testing.T) {

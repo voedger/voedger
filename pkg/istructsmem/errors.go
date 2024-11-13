@@ -210,21 +210,13 @@ func ErrWrongFieldType(argOrMsg any, args ...any) error {
 	return enrichError(ErrWrongFieldTypeError, argOrMsg, args...)
 }
 
-var ErrTypeChanged = errors.New("type has been changed")
-
 var ErrDataConstraintViolation = errors.New("data constraint violation")
 
 var ErrNumAppWorkspacesNotSet = errors.New("NumAppWorkspaces is not set")
 
 var ErrCorruptedData = errors.New("corrupted data")
 
-const errNumberFieldWrongValueWrap = "field «%s» value %s can not to be converted to «%s»: %w"
-
-const errCantGetFieldQNameIDWrap = "QName field «%s» can not get ID for value «%v»: %w"
-
 const errMustValidatedBeforeStore = "%v must be validated before store: %w"
-
-const errViewNotFoundWrap = "view «%v» not found: %w"
 
 const errFieldDataConstraintViolatedFmt = "%v data constraint «%v» violated: %w"
 

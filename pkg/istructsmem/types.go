@@ -903,14 +903,14 @@ func (row *rowType) PutQName(name appdef.FieldName, value appdef.QName) {
 		if row.QName() == appdef.NullQName {
 			row.setQName(value)
 		} else if row.QName() != value {
-			row.collectErrorf("%w", ErrTypeChanged)
+			row.collectError(ErrUnableToUpdateSystemField(row, appdef.SystemField_QName))
 		}
 		return
 	}
 
 	id, err := row.appCfg.qNames.ID(value)
 	if err != nil {
-		row.collectErrorf(errCantGetFieldQNameIDWrap, name, value, err)
+		row.collectError(enrichError(err, "can not get ID for field «%s»", name))
 		return
 	}
 	b := make([]byte, 2)
