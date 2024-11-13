@@ -210,7 +210,11 @@ func ErrWrongFieldType(argOrMsg any, args ...any) error {
 	return enrichError(ErrWrongFieldTypeError, argOrMsg, args...)
 }
 
-var ErrDataConstraintViolation = errors.New("data constraint violation")
+var ErrDataConstraintViolationError = errors.New("data constraint violation")
+
+func ErrDataConstraintViolation(field, constraint interface{}) error {
+	return enrichError(ErrDataConstraintViolationError, "%v: %v", field, constraint)
+}
 
 var ErrNumAppWorkspacesNotSet = errors.New("NumAppWorkspaces is not set")
 

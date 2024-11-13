@@ -988,9 +988,9 @@ func Test_CharsFieldRestricts(t *testing.T) {
 			row.PutBytes("mime", []byte(`abc`))                    // 3 < 4 : too short
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrDataConstraintViolation)
-			require.ErrorContains(err, "string-field «email» data constraint «MaxLen: 100»")
-			require.ErrorContains(err, "bytes-field «mime» data constraint «MinLen: 4»")
+			require.Error(err, require.Is(ErrDataConstraintViolationError),
+				require.HasAll("email", "MaxLen: 100"),
+				require.HasAll("mime", "MinLen: 4"))
 		})
 
 		t.Run("should be error if pattern restricted", func(t *testing.T) {
@@ -999,9 +999,9 @@ func Test_CharsFieldRestricts(t *testing.T) {
 			row.PutBytes("mime", []byte(`++++`))
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrDataConstraintViolation)
-			require.ErrorContains(err, "string-field «email» data constraint «Pattern:")
-			require.ErrorContains(err, "bytes-field «mime» data constraint «Pattern:")
+			require.ErrorIs(err, ErrDataConstraintViolationError)
+			require.Error(err, require.Is(ErrDataConstraintViolationError),
+				require.HasAll("email", "mime", "Pattern:"))
 		})
 	})
 }
