@@ -899,7 +899,6 @@ func (o *objectType) FillFromJSON(data map[string]any) {
 	for n, v := range data {
 		switch fv := v.(type) {
 		case nil:
-			o.collectErrorf(`field "%s": %w`, n, ErrNullNotAllowed)
 		case float64:
 			o.PutFloat64(n, fv)
 		case istructs.RecordID:

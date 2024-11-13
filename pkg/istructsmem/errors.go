@@ -194,8 +194,6 @@ var ErrNumAppWorkspacesNotSet = errors.New("NumAppWorkspaces is not set")
 
 var ErrCorruptedData = errors.New("corrupted data")
 
-var ErrNullNotAllowed = errors.New("null value is not allowed")
-
 const (
 	errWrongFieldValue        = "field «%v» value should be %s, but got %T"
 	errFieldValueTypeConvert  = "field «%s» value type «%T» can not to be converted to «%s»"

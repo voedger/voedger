@@ -2110,11 +2110,12 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 				require.Equal(test.testObj, o.QName())
 				require.EqualValues(0, o.AsInt32("int32"))
 			}},
-		{"should be error on fill from JSON with nil values even for unknown fields",
-			`{"unknown": null}`,
+		{"should be ok to fill from JSON with nil values even for unknown fields",
+			`{"int32": null, "unknown": null}`,
 			func(o istructs.IObject, err error) {
-				require.ErrorIs(err, ErrNullNotAllowed)
-				require.ErrorContains(err, "unknown")
+				require.NoError(err)
+				require.Equal(test.testObj, o.QName())
+				require.EqualValues(0, o.AsInt32("int32"))
 			}},
 		{"should be ok to fill fields from JSON",
 			`{"int32": 1, "int64": 2, "float32": 3.3, "float64": 4.4, "bool": true, "string": "test", "bytes": "AQID"}`,
@@ -2144,14 +2145,15 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 					return cnt
 				}())
 			}},
-		{"should be error on fill with nil values",
+		{"should be ok to fill with nil values",
 			`{"int32": null, "bool": null, "string": null, "bytes": null}`,
 			func(o istructs.IObject, err error) {
-				require.ErrorIs(err, ErrNullNotAllowed)
-				require.ErrorContains(err, "int32")
-				require.ErrorContains(err, "bool")
-				require.ErrorContains(err, "string")
-				require.ErrorContains(err, "bytes")
+				require.NoError(err)
+				require.Equal(test.testObj, o.QName())
+				require.Zero(o.AsInt32("int32"))
+				require.Zero(o.AsBool("bool"))
+				require.Zero(o.AsString("string"))
+				require.Zero(o.AsBytes("bytes"))
 			}},
 		{"should be error if unknown field in JSON",
 			`{"unknown": 1}`,
