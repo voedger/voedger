@@ -47,7 +47,10 @@ type IFields interface {
 	// All reference fields. System field (sys.ParentID) is also included
 	RefFields() []IRefField
 
-	// Returns user fields count. System fields (sys.QName, sys.ID, …) do not count
+	// User fields in add order. System fields (sys.QName, sys.ID, …) are excluded
+	UserFields() []IField
+
+	// Returns user fields count. System fields (sys.QName, sys.ID, …) are excluded
 	UserFieldCount() int
 }
 

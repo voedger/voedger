@@ -178,7 +178,7 @@ func TestObjectFillAndGet(t *testing.T) {
 			}
 			builder.FillFromJSON(data)
 			o, err := builder.Build()
-			require.ErrorIs(err, ErrWrongFieldType)
+			require.ErrorIs(err, ErrWrongFieldTypeError)
 			require.Nil(o)
 		}
 	})

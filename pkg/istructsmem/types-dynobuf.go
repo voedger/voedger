@@ -76,7 +76,7 @@ outer:
 			break outer
 		}
 		if int64Val < 0 {
-			return nil, fmt.Errorf("%w: %d", ErrWrongRecordID, int64Val)
+			return nil, ErrWrongRecordID("negative value %d", int64Val)
 		}
 		return istructs.RecordID(int64Val), nil
 	case appdef.DataKind_bytes:
@@ -134,7 +134,7 @@ outer:
 			return v.storeToBytes(), nil
 		}
 	}
-	return nil, fmt.Errorf("value has type «%T», but «%s» expected: %w", value, kind.TrimString(), ErrWrongFieldType)
+	return nil, ErrWrongFieldType("value has type «%T», but «%s» expected", value, kind.TrimString())
 }
 
 func dynoBufGetWord(dyB *dynobuffers.Buffer, fieldName appdef.FieldName) (value uint16, ok bool) {

@@ -55,6 +55,47 @@ func NewNullRecord(id istructs.RecordID) istructs.IRecord {
 	return rec
 }
 
+// return field value by field definition.
+//
+// # Panics
+//   - if unsupported field type
+func (row *rowType) fieldValue(f appdef.IField) interface{} {
+	n := f.Name()
+	switch f.DataKind() {
+	case appdef.DataKind_int32:
+		return row.AsInt32(n)
+	case appdef.DataKind_int64:
+		return row.AsInt64(n)
+	case appdef.DataKind_float32:
+		return row.AsFloat32(n)
+	case appdef.DataKind_float64:
+		return row.AsFloat64(n)
+	case appdef.DataKind_bytes:
+		v := row.AsBytes(n)
+		if v == nil {
+			// #2785
+			if _, ok := row.nils[n]; ok {
+				v = []byte{}
+			}
+		}
+		return v
+	case appdef.DataKind_string:
+		return row.AsString(n)
+	case appdef.DataKind_QName:
+		return row.AsQName(n)
+	case appdef.DataKind_bool:
+		return row.AsBool(n)
+	case appdef.DataKind_RecordID:
+		return row.AsRecordID(n)
+	case appdef.DataKind_Record:
+		return row.AsRecord(n)
+	case appdef.DataKind_Event:
+		return row.AsEvent(n)
+	}
+	// notest: fullcase switch
+	panic(ErrWrongFieldType("%v", f))
+}
+
 // istructs.ICUDRow.ModifiedFields
 func (row *rowType) ModifiedFields(cb func(appdef.FieldName, interface{}) bool) {
 	if row.isActiveModified {
@@ -62,7 +103,13 @@ func (row *rowType) ModifiedFields(cb func(appdef.FieldName, interface{}) bool) 
 			return
 		}
 	}
-	row.dyB.IterateFields(nil, func(name string, value interface{}) bool {
-		return cb(name, value)
-	})
+
+	for _, fld := range row.fields.Fields() {
+		n := fld.Name()
+		if row.dyB.HasValue(n) || row.nils[n] != nil {
+			if !cb(n, row.fieldValue(fld)) {
+				return
+			}
+		}
+	}
 }

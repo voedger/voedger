@@ -10,8 +10,8 @@ import (
 	"log"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -363,7 +363,7 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 
 		o, err := b.Build()
 		require.Nil(o)
-		require.ErrorIs(err, ErrNameNotFound)
+		require.Error(err, require.Is(ErrNameNotFoundError), require.Has("test.unknown"))
 	})
 }
 
