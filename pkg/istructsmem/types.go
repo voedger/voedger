@@ -222,7 +222,7 @@ func (row *rowType) loadFromBytes(in []byte) (err error) {
 			return err
 		}
 	default:
-		return fmt.Errorf("unknown codec version «%d»: %w", codec, ErrUnknownCodec)
+		return ErrUnknownCodec(codec)
 	}
 
 	return nil

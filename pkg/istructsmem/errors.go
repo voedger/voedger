@@ -15,15 +15,16 @@ import (
 
 // Enriches error with additional information
 //
-// arg is any value to be added to the error message, and args are additional values to be added to the error message.
+// argOrMsg is any value to be added to the error message, and args are additional values to be added to the error message.
+// Spaces are added between args.
 //
-// If arg is a string contains `%` and args is not empty, then arg is treated as a format string
-func enrichError(err error, arg any, args ...any) error {
+// If argOrMsg is a string contains `%` and args is not empty, then argOrMsg is treated as a format string
+func enrichError(err error, argOrMsg any, args ...any) error {
 	var enrich string
-	if msg, ok := arg.(string); ok && len(args) > 0 && strings.Contains(msg, "%") {
+	if msg, ok := argOrMsg.(string); ok && len(args) > 0 && strings.Contains(msg, "%") {
 		enrich = fmt.Sprintf(msg, args...)
 	} else {
-		enrich = fmt.Sprint(arg)
+		enrich = fmt.Sprint(argOrMsg)
 		for i := range args {
 			enrich += " " + fmt.Sprint(args[i])
 		}
@@ -197,7 +198,11 @@ func ErrUnknownCodec(arg any, args ...any) error {
 	return enrichError(ErrUnknownCodecError, arg, args...)
 }
 
-var ErrMaxGetBatchRecordCountExceeds = errors.New("the maximum count of records to batch is exceeded")
+var ErrMaxGetBatchSizeExceedsError = fmt.Errorf("the maximum count of records to batch (%d) is exceeded", maxGetBatchRecordCount)
+
+func ErrMaxGetBatchSizeExceeds(size int) error {
+	return enrichError(ErrMaxGetBatchSizeExceedsError, size)
+}
 
 var ErrWrongFieldTypeError = errors.New("wrong field type")
 

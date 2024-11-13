@@ -798,13 +798,15 @@ func TestCore_ViewRecords(t *testing.T) {
 
 		_, c := kb.(*keyType).storeToBytes(2)
 
-		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, c)
-		_, err := viewRecords.Get(2, kb)
-		require.ErrorIs(err, ErrUnknownCodec)
+		const badCodec byte = 255
 
-		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, c)
+		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = badCodec /* error here */ }, nil, c)
+		_, err := viewRecords.Get(2, kb)
+		require.Error(err, require.Is(ErrUnknownCodecError), require.Has(badCodec))
+
+		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = badCodec /* error here */ }, nil, c)
 		err = viewRecords.Read(context.Background(), 2, kb, func(key istructs.IKey, value istructs.IValue) (err error) { return nil })
-		require.ErrorIs(err, ErrUnknownCodec)
+		require.Error(err, require.Is(ErrUnknownCodecError), require.Has(badCodec))
 	})
 	t.Run("Value builder must build value", func(t *testing.T) {
 		vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks"))
@@ -1385,14 +1387,15 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 	t.Run("should be error", func(t *testing.T) {
 
 		t.Run("if maximum batch size exceeds", func(t *testing.T) {
-			batch := make([]istructs.ViewRecordGetBatchItem, maxGetBatchRecordCount+1)
+			const tooGig = maxGetBatchRecordCount + 1
+			batch := make([]istructs.ViewRecordGetBatchItem, tooGig)
 			for i := 0; i < len(batch); i++ {
 				batch[i].Key = app.ViewRecords().KeyBuilder(championsView)
 				batch[i].Key.PutInt32("Year", int32(i))
 				batch[i].Key.PutString("Sport", "Шашки")
 			}
 			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-			require.ErrorIs(err, ErrMaxGetBatchRecordCountExceeds)
+			require.Error(err, require.Is(ErrMaxGetBatchSizeExceedsError), require.Has(tooGig))
 		})
 
 		t.Run("if key build error", func(t *testing.T) {
@@ -1439,7 +1442,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 			storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, []byte("Volleyball"))
 
 			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-			require.ErrorIs(err, ErrUnknownCodec)
+			require.ErrorIs(err, ErrUnknownCodecError)
 		})
 	})
 

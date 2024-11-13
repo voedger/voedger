@@ -88,7 +88,7 @@ type batchPtrType struct {
 
 func (vr *appViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.ViewRecordGetBatchItem) (err error) {
 	if len(kv) > maxGetBatchRecordCount {
-		return fmt.Errorf("batch read %d records requested, but only %d supported: %w", len(kv), maxGetBatchRecordCount, ErrMaxGetBatchRecordCountExceeds)
+		return ErrMaxGetBatchSizeExceeds(len(kv))
 	}
 	batches := make([]batchPtrType, len(kv))
 	plan := make(map[string][]istorage.GetBatchItem)
@@ -619,7 +619,7 @@ func (val *valueType) loadFromBytes(in []byte) (err error) {
 			return err
 		}
 	default:
-		return fmt.Errorf("unknown codec version «%d»: %w", codec, ErrUnknownCodec)
+		return ErrUnknownCodec(codec)
 	}
 
 	return nil
