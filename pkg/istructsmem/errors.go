@@ -174,7 +174,11 @@ func ErrAbstractType(msg string, args ...any) error {
 	return enrichError(ErrAbstractTypeError, msg, args...)
 }
 
-var ErrUnexpectedTypeKind = errors.New("unexpected type kind")
+var ErrUnexpectedTypeError = errors.New("unexpected type")
+
+func ErrUnexpectedType(msg string, args ...any) error {
+	return enrichError(ErrUnexpectedTypeError, msg, args...)
+}
 
 var ErrUnknownCodec = errors.New("unknown codec")
 

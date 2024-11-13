@@ -408,16 +408,16 @@ func Test_ValidSysCudEvent(t *testing.T) {
 		e := cudRawEvent(false)
 		_ = e.CUDBuilder().Create(appdef.NullQName) // <- error here
 		_, err := e.BuildRawEvent()
-		require.ErrorIs(err, ErrUnexpectedTypeKind)
-		require.ErrorContains(err, "null row")
+		require.Error(err, require.Is(ErrUnexpectedTypeError),
+			require.HasAll(istructs.QNameCommandCUD, "null row"))
 	})
 
 	t.Run("should be error if wrong CUD type kind", func(t *testing.T) {
 		e := cudRawEvent(false)
 		_ = e.CUDBuilder().Create(objName) // <- error here
 		_, err := e.BuildRawEvent()
-		require.ErrorIs(err, ErrUnexpectedTypeKind)
-		require.ErrorContains(err, "Object «test.object»")
+		require.Error(err, require.Is(ErrUnexpectedTypeError),
+			require.HasAll(istructs.QNameCommandCUD, objName))
 	})
 
 	t.Run("test raw IDs in CUD.Create", func(t *testing.T) {
@@ -743,8 +743,7 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 		d.(*objectType).clear()
 		d.PutQName(appdef.SystemField_QName, recName) // <- error here
 		_, err := d.Build()
-		require.ErrorIs(err, ErrUnexpectedTypeKind)
-		require.ErrorContains(err, "wrong type ORecord «test.record»")
+		require.Error(err, require.Is(ErrUnexpectedTypeError), require.Has(recName))
 	})
 
 	t.Run("should be error if builder has errors in IDs", func(t *testing.T) {
