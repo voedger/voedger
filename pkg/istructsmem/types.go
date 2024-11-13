@@ -116,7 +116,6 @@ func (row *rowType) checkPutNil(field appdef.IField, value interface{}) {
 	} else if row.nils != nil {
 		delete(row.nils, field.Name())
 	}
-
 }
 
 // clear clears row by set QName to NullQName value
