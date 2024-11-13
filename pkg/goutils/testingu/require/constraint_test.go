@@ -29,6 +29,20 @@ func TestPanicsWith(t *testing.T) {
 			func() { panic(testError) }, Has("test"), true},
 		{"Should fail if panic with unexpected message",
 			func() { panic("other error") }, Has("test"), false},
+		// HasAll ———————————————————————————————————————
+		{"Should be ok if panic occurs and contains all expected messages",
+			func() { panic("my crazy message") }, HasAll("my", "crazy", "message"), true},
+		{"Should be ok if panic occurs and contains error with all expected message",
+			func() { panic(testError) }, HasAll("my", "test", "error"), true},
+		{"Should fail if panic not with all unexpected messages",
+			func() { panic("other error") }, HasAll("test", "error"), false},
+		// HasAny ———————————————————————————————————————
+		{"Should be ok if panic occurs and contains any of expected messages",
+			func() { panic("my crazy message") }, HasAny("hot", "crazy", "🔫"), true},
+		{"Should be ok if panic occurs and contains error with all expected message",
+			func() { panic(testError) }, HasAny("hot", "test", "🔫"), true},
+		{"Should fail if panic not contains anyone from unexpected messages",
+			func() { panic("other error") }, HasAny("hot", "crazy", "🔫"), false},
 		// NotHas ———————————————————————————————————————
 		{"Should be ok if panic occurs and does contains deprecated message",
 			func() { panic("my crazy message") }, NotHas("deprecated"), true},
@@ -96,6 +110,22 @@ func TestErrorWith(t *testing.T) {
 			fmt.Errorf("wrapped: %w", testError), Has("my test"), true},
 		{"Should fail if unexpected error",
 			errors.New("other error"), Has("my test"), false},
+		// HasAll ———————————————————————————————————————
+		{"Should be ok if error occurs and contains all expected messages",
+			testError, HasAll("my", "test"), true},
+		{"Should be ok if error occurs and contains error which wraps error with all expected messages",
+			fmt.Errorf("wrapped: %w", testError), HasAll("wrapped", "my", "test"), true},
+		{"Should fail if error not contains all expected messages",
+			errors.New("other error"), HasAll("my", "error"), false},
+		// HasAny ———————————————————————————————————————
+		{"Should be ok if error occurs and contains any from expected messages",
+			testError, HasAny("some", "test"), true},
+		{"Should be ok if error occurs and contains error which wraps error with any from expected messages",
+			fmt.Errorf("wrapped: %w", testError), HasAny("some", "test"), true},
+		{"Should fail if error not contains anyone from expected messages",
+			errors.New("other error"), HasAny("hot", "crazy", "🔫"), false},
+		{"Should be ok if error occurs and expected messages list is empty",
+			testError, HasAny(), true},
 		// NotHas ———————————————————————————————————————
 		{"Should be ok if error occurs and does not contains deprecated message",
 			testError, NotHas("deprecated"), true},

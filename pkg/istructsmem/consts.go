@@ -24,9 +24,10 @@ const (
 	// byte codec versions
 	codec_RawDynoBuffer = byte(0x00) + iota
 	codec_RDB_1         // + row system fields mask
+	codec_RDB_2         // + CUD row emptied fields
 
 	// !do not forget to actualize last codec version!
-	codec_LastVersion = codec_RDB_1
+	codec_LastVersion = codec_RDB_2
 )
 
 // maskString is character to mask values in string cell, used for obfuscate unlogged command arguments data
