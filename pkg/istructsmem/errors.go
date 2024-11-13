@@ -7,17 +7,28 @@ package istructsmem
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func enrichError(err error, msg string, args ...any) error {
-	s := msg
-	if len(args) > 0 {
-		s = fmt.Sprintf(msg, args...)
+// Enriches error with additional information
+//
+// arg is any value to be added to the error message, and args are additional values to be added to the error message.
+//
+// If arg is a string contains `%` and args is not empty, then arg is treated as a format string
+func enrichError(err error, arg any, args ...any) error {
+	var enrich string
+	if msg, ok := arg.(string); ok && len(args) > 0 && strings.Contains(msg, "%") {
+		enrich = fmt.Sprintf(msg, args...)
+	} else {
+		enrich = fmt.Sprint(arg)
+		for i := range args {
+			enrich += " " + fmt.Sprint(args[i])
+		}
 	}
-	return fmt.Errorf("%w: %s", err, s)
+	return fmt.Errorf("%w: %s", err, enrich)
 }
 
 // TODO: use enrichError() for all errors
@@ -25,32 +36,32 @@ func enrichError(err error, msg string, args ...any) error {
 
 var ErrorEventNotValidError = errors.New("event is not valid")
 
-func ErrorEventNotValid(msg string, args ...any) error {
-	return enrichError(ErrorEventNotValidError, msg, args...)
+func ErrorEventNotValid(arg any, args ...any) error {
+	return enrichError(ErrorEventNotValidError, arg, args...)
 }
 
 var ErrNameMissedError = errors.New("name is empty")
 
-func ErrNameMissed(msg string, args ...any) error {
-	return enrichError(ErrNameMissedError, msg, args...)
+func ErrNameMissed(arg any, args ...any) error {
+	return enrichError(ErrNameMissedError, arg, args...)
 }
 
 var ErrOutOfBoundsError = errors.New("out of bounds")
 
-func ErrOutOfBounds(msg string, args ...any) error {
-	return enrichError(ErrOutOfBoundsError, msg, args...)
+func ErrOutOfBounds(arg any, args ...any) error {
+	return enrichError(ErrOutOfBoundsError, arg, args...)
 }
 
 var ErrWrongTypeError = errors.New("wrong type")
 
-func ErrWrongType(msg string, args ...any) error {
-	return enrichError(ErrWrongTypeError, msg, args...)
+func ErrWrongType(arg any, args ...any) error {
+	return enrichError(ErrWrongTypeError, arg, args...)
 }
 
 var ErrNameNotFoundError = errors.New("name not found")
 
-func ErrNameNotFound(msg string, args ...any) error {
-	return enrichError(ErrNameNotFoundError, msg, args...)
+func ErrNameNotFound(arg any, args ...any) error {
+	return enrichError(ErrNameNotFoundError, arg, args...)
 }
 
 func ErrFieldNotFound(name string, typ interface{}) error {
@@ -77,14 +88,14 @@ func ErrViewNotFound(name interface{}) error {
 
 var ErrInvalidNameError = errors.New("name not valid")
 
-func ErrInvalidName(msg string, args ...any) error {
-	return enrichError(ErrInvalidNameError, msg, args...)
+func ErrInvalidName(arg any, args ...any) error {
+	return enrichError(ErrInvalidNameError, arg, args...)
 }
 
 var ErrIDNotFoundError = errors.New("ID not found")
 
-func ErrIDNotFound(msg string, args ...any) error {
-	return enrichError(ErrIDNotFoundError, msg, args...)
+func ErrIDNotFound(arg any, args ...any) error {
+	return enrichError(ErrIDNotFoundError, arg, args...)
 }
 
 func ErrRefIDNotFound(t interface{}, f string, id istructs.RecordID) error {
@@ -154,8 +165,8 @@ func ErrSingletonViolation(name interface{}) error {
 
 var ErrWrongRecordIDError = errors.New("wrong record ID")
 
-func ErrWrongRecordID(msg string, args ...any) error {
-	return enrichError(ErrWrongRecordIDError, msg, args...)
+func ErrWrongRecordID(arg any, args ...any) error {
+	return enrichError(ErrWrongRecordIDError, arg, args...)
 }
 
 func ErrWrongRecordIDTarget(t, f interface{}, id istructs.RecordID, target interface{}) error {
@@ -170,24 +181,28 @@ func ErrUnableToUpdateSystemField(t, f interface{}) error {
 
 var ErrAbstractTypeError = errors.New("abstract type")
 
-func ErrAbstractType(msg string, args ...any) error {
-	return enrichError(ErrAbstractTypeError, msg, args...)
+func ErrAbstractType(arg any, args ...any) error {
+	return enrichError(ErrAbstractTypeError, arg, args...)
 }
 
 var ErrUnexpectedTypeError = errors.New("unexpected type")
 
-func ErrUnexpectedType(msg string, args ...any) error {
-	return enrichError(ErrUnexpectedTypeError, msg, args...)
+func ErrUnexpectedType(arg any, args ...any) error {
+	return enrichError(ErrUnexpectedTypeError, arg, args...)
 }
 
-var ErrUnknownCodec = errors.New("unknown codec")
+var ErrUnknownCodecError = errors.New("unknown codec")
+
+func ErrUnknownCodec(arg any, args ...any) error {
+	return enrichError(ErrUnknownCodecError, arg, args...)
+}
 
 var ErrMaxGetBatchRecordCountExceeds = errors.New("the maximum count of records to batch is exceeded")
 
 var ErrWrongFieldTypeError = errors.New("wrong field type")
 
-func ErrWrongFieldType(msg string, args ...any) error {
-	return enrichError(ErrWrongFieldTypeError, msg, args...)
+func ErrWrongFieldType(arg any, args ...any) error {
+	return enrichError(ErrWrongFieldTypeError, arg, args...)
 }
 
 var ErrTypeChanged = errors.New("type has been changed")
