@@ -113,11 +113,10 @@ func (row *rowType) checkPutNil(field appdef.IField, value interface{}) {
 			row.nils = make(map[string]appdef.IField)
 		}
 		row.nils[field.Name()] = field
-	} else {
-		if row.nils != nil {
-			delete(row.nils, field.Name())
-		}
+	} else if row.nils != nil {
+		delete(row.nils, field.Name())
 	}
+
 }
 
 // clear clears row by set QName to NullQName value
