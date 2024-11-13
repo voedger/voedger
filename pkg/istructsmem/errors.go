@@ -224,10 +224,6 @@ func ErrNumAppWorkspacesNotSet(app interface{}) error {
 
 var ErrCorruptedData = errors.New("corrupted data")
 
-const errMustValidatedBeforeStore = "%v must be validated before store: %w"
-
-const errFieldDataConstraintViolatedFmt = "%v data constraint «%v» violated: %w"
-
 // ValidateError: an interface for describing errors that occurred during validation
 //   - methods:
 //     — Code(): returns error code, see ECode_××× constants
