@@ -130,7 +130,7 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 		// #!16208: Should be possible to use TypeKind_ODoc as Event.QName
 		if d := appdef.ODoc(ev.appCfg.AppDef, ev.name); d == nil {
 			// command function «test.object» not found
-			return arg, argUnl, fmt.Errorf("command function «%v» not found: %w", ev.name, ErrNameNotFound)
+			return arg, argUnl, ErrNameNotFound("command function «%v»", ev.name)
 		}
 		arg = ev.name
 	}
@@ -141,7 +141,7 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 // build build all event arguments and CUDs
 func (ev *eventType) build() (err error) {
 	if ev.name == appdef.NullQName {
-		return validateErrorf(ECode_EmptyTypeName, "empty event command name: %w", ErrNameMissed)
+		return validateError(ECode_EmptyTypeName, ErrNameMissed("empty event command name"))
 	}
 
 	if _, err = ev.appCfg.qNames.ID(ev.name); err != nil {
@@ -165,7 +165,7 @@ func (ev *eventType) loadFromBytes(in []byte) (err error) {
 		return fmt.Errorf("error read codec version: %w", err)
 	}
 	switch codec {
-	case codec_RawDynoBuffer, codec_RDB_1:
+	case codec_RawDynoBuffer, codec_RDB_1, codec_RDB_2:
 		if err := loadEvent(ev, codec, buf); err != nil {
 			return err
 		}
@@ -636,13 +636,13 @@ func (upd *updateRecType) build() (err error) {
 	}
 
 	if upd.originRec.ID() != upd.changes.ID() {
-		return fmt.Errorf("record «%v» ID «%d» can not to be updated: %w", upd.originRec.QName(), upd.originRec.ID(), ErrUnableToUpdateSystemField)
+		return ErrUnableToUpdateSystemField(upd.originRec, appdef.SystemField_ID)
 	}
 	if (upd.changes.Parent() != istructs.NullRecordID) && (upd.changes.Parent() != upd.originRec.Parent()) {
-		return fmt.Errorf("record «%v» parent ID «%d» can not to be updated: %w", upd.originRec.QName(), upd.originRec.Parent(), ErrUnableToUpdateSystemField)
+		return ErrUnableToUpdateSystemField(upd.originRec, appdef.SystemField_ParentID)
 	}
 	if (upd.changes.Container() != "") && (upd.changes.Container() != upd.originRec.Container()) {
-		return fmt.Errorf("record «%v» container «%s» can not to be updated: %w", upd.originRec.QName(), upd.originRec.Container(), ErrUnableToUpdateSystemField)
+		return ErrUnableToUpdateSystemField(upd.originRec, appdef.SystemField_Container)
 	}
 
 	if upd.changes.IsActive() != upd.originRec.IsActive() {
@@ -655,7 +655,7 @@ func (upd *updateRecType) build() (err error) {
 		userChanges = true
 		return true
 	})
-	for _, n := range upd.changes.nils {
+	for n := range upd.changes.nils {
 		upd.result.dyB.Set(n, nil)
 		userChanges = true
 	}
@@ -672,6 +672,10 @@ func (upd *updateRecType) release() {
 	upd.originRec.release()
 	upd.changes.release()
 	upd.result.release()
+}
+
+func (upd *updateRecType) String() string {
+	return fmt.Sprint("updated", upd.changes)
 }
 
 // # Implements object structure
@@ -714,7 +718,7 @@ func (o *objectType) allChildren(cb func(*objectType)) {
 func (o *objectType) build() (err error) {
 	if len(o.child) > math.MaxUint16 {
 		// because len(o.child) will be stored as uint16, see [storeObject]
-		return validateErrorf(ECode_TooManyChilds, "childs number must not be more than %d", math.MaxUint16)
+		return validateErrorf(ECode_TooManyChildren, "children number must not be more than %d", math.MaxUint16)
 	}
 	return o.forEach(func(c *objectType) error {
 		return c.rowType.build()
@@ -821,7 +825,7 @@ func (o *objectType) Build() (istructs.IObject, error) {
 		return nil, err
 	}
 	if o.QName() == appdef.NullQName {
-		return nil, fmt.Errorf("object builder has empty type name: %w", ErrNameMissed)
+		return nil, ErrNameMissed("object builder has empty type name")
 	}
 	if t := o.typ.Kind(); (t != appdef.TypeKind_Object) &&
 		(t != appdef.TypeKind_ODoc) &&
@@ -895,7 +899,6 @@ func (o *objectType) FillFromJSON(data map[string]any) {
 	for n, v := range data {
 		switch fv := v.(type) {
 		case nil:
-			o.collectErrorf(`field "%s": %w`, n, ErrNullNotAllowed)
 		case float64:
 			o.PutFloat64(n, fv)
 		case istructs.RecordID:
@@ -914,20 +917,20 @@ func (o *objectType) FillFromJSON(data map[string]any) {
 			// e.g. "order_item": [<2 children>]
 			cont := o.typ.(appdef.IContainers).Container(n)
 			if cont == nil {
-				o.collectErrorf(errContainerNotFoundWrap, n, o.typ, ErrNameNotFound)
+				o.collectError(ErrContainerNotFound(n, o.typ))
 				continue
 			}
 			for i, val := range fv {
 				childData, ok := val.(map[string]any)
 				if !ok {
-					o.collectErrorf("%v: invalid type «%T» in JSON for child «%s[%d]», expected «map[string]any»: %w", o, val, n, i, ErrWrongType)
+					o.collectErrorf("%v: invalid type «%T» in JSON for child «%s[%d]», expected «map[string]any»: %w", o, val, n, i, ErrWrongTypeError)
 					break
 				}
 				c := o.ChildBuilder(n)
 				c.FillFromJSON(childData)
 			}
 		default:
-			o.collectErrorf(`%w %#T for field "%s" with value %v`, ErrWrongType, v, n, v)
+			o.collectError(ErrWrongType(`%#T for field "%s" with value %v`, v, n, v))
 		}
 	}
 }

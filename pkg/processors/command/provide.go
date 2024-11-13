@@ -113,7 +113,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm coreutils.ITime,
 				pipeline.WireFunc("getUnloggedArgsObject", getUnloggedArgsObject),
 				pipeline.WireFunc("checkArgsRefIntegrity", checkArgsRefIntegrity),
 				pipeline.WireFunc("parseCUDs", parseCUDs),
-				pipeline.WireFunc("checkCUDsInCUDCmdOnly", checkCUDsInCUDCmdOnly),
+				pipeline.WireFunc("checkCUDsAllowed", checkCUDsAllowed),
 				pipeline.WireSyncOperator("wrongArgsCatcher", &wrongArgsCatcher{}), // any error before -> wrap error into bad request http error
 				pipeline.WireFunc("authorizeCUDs", cmdProc.authorizeCUDs),
 				pipeline.WireFunc("checkIsActiveinCUDs", checkIsActiveInCUDs),

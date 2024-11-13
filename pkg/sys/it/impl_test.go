@@ -16,7 +16,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
 	it "github.com/voedger/voedger/pkg/vit"
 )
@@ -416,13 +415,18 @@ func TestNullability_SetEmptyString(t *testing.T) {
 	offsUpdate := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
 
 	// string set to "" -> info about this is not stored in dynobuffer
-	// cud.ModifiedFields() calls dynobuffers.ModifiedFields() tht iterates over fields that has values
+	// cud.ModifiedFields() calls dynobuffers.ModifiedFields() that iterates over fields that has values
+	// #2785 - istructs.ICUDRow.ModifiedFields also iterate emptied string- and bytes- fields
 	as.Events().ReadWLog(context.Background(), ws.WSID, offsUpdate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		for cud := range event.CUDs {
-			cud.ModifiedFields(func(fn appdef.FieldName, i interface{}) bool {
-				t.Fatal()
-				return true
-			})
+			for fn, fv := range cud.ModifiedFields {
+				switch fn {
+				case "name":
+					require.Equal("", fv)
+				default:
+					require.Fail("unexpected modified field", "%v: %v", fn, fv)
+				}
+			}
 		}
 		return nil
 	})
@@ -457,41 +461,4 @@ func TestNullability_SetEmptyObject(t *testing.T) {
 	require.Len(fields, 2)
 	require.EqualValues(expectedNestedDocID, fields["id_air_table_plan"])
 	require.EqualValues(15, fields["form"])
-}
-
-func TestNullsNotAllowed(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-
-	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-
-	t.Run("insert", func(t *testing.T) {
-		t.Run("CUD", func(t *testing.T) {
-			body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.air_table_plan", "name":null}}]}`
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400(`field "name"`, istructsmem.ErrNullNotAllowed.Error()))
-		})
-		t.Run("ODoc", func(t *testing.T) {
-			body := `{"args":{"sys.ID": 1,"fld1":null}}`
-			vit.PostWS(ws, "c.app1pkg.CmdODocThree", body, coreutils.Expect400(`field "fld1"`, istructsmem.ErrNullNotAllowed.Error()))
-		})
-	})
-
-	t.Run("args", func(t *testing.T) {
-		t.Run("command", func(t *testing.T) {
-			body := `{"args":{"Arg1":null}}`
-			vit.PostWS(ws, "c.app1pkg.TestCmd", body, coreutils.Expect400(`field "Arg1"`, istructsmem.ErrNullNotAllowed.Error()))
-		})
-
-		t.Run("query", func(t *testing.T) {
-			body := `{"args": {"StatusCodeToReturn": null},"elements":[{"fields":["Dummy"]}]}`
-			vit.PostWS(ws, "q.app1pkg.QryWithResponseIntent", body, coreutils.Expect400(`field "StatusCodeToReturn"`, istructsmem.ErrNullNotAllowed.Error()))
-		})
-	})
-	t.Run("update", func(t *testing.T) {
-		body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.air_table_plan", "name":"some name"}}]}`
-		id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
-
-		body = fmt.Sprintf(`{"cuds": [{"sys.ID": %d, "fields": {"name":null}}]}`, id)
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400(`field "name"`, istructsmem.ErrNullNotAllowed.Error()))
-	})
 }

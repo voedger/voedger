@@ -27,6 +27,18 @@ func (r *Require) Has(substr interface{}, msgAndArgs ...interface{}) Constraint 
 	return Has(substr, msgAndArgs...)
 }
 
+// Returns a constraint that checks that value (panic or error) contains
+// all of the given substrings.
+func (r *Require) HasAll(substr ...interface{}) Constraint {
+	return HasAll(substr...)
+}
+
+// Returns a constraint that checks that value (panic or error) contains
+// at least one from the given substrings.
+func (r *Require) HasAny(substr ...interface{}) Constraint {
+	return HasAny(substr...)
+}
+
 // Returns a constraint that checks that value (panic or error) does not contain
 // the given substring.
 func (r *Require) NotHas(substr string, msgAndArgs ...interface{}) Constraint {
@@ -66,17 +78,20 @@ func (r *Require) NotIs(targer error, msgAndArgs ...interface{}) Constraint {
 //		func(){ GoCrazy() },
 //		require.Has("crazy", "panic should contains crazy string %q", "crazy"),
 //		"crazy panic expected")
-func (r *Require) Panics(f func(), constaintsOrMsgAndArgs ...interface{}) {
+func (r *Require) Panics(f func(), constaintsAndMsgAndArgs ...interface{}) {
 	cc := make([]Constraint, 0)
-	for _, v := range constaintsOrMsgAndArgs {
+	msgAndArgs := make([]interface{}, 0)
+	for _, v := range constaintsAndMsgAndArgs {
 		if c, ok := v.(Constraint); ok {
 			cc = append(cc, c)
+		} else {
+			msgAndArgs = append(msgAndArgs, v)
 		}
 	}
 	if len(cc) > 0 {
-		PanicsWith(r.t, f, cc...)
+		panicsWith(r.t, f, cc, msgAndArgs...)
 	} else {
-		r.Assertions.Panics(f, constaintsOrMsgAndArgs...)
+		r.Assertions.Panics(f, msgAndArgs...)
 	}
 }
 
@@ -101,21 +116,25 @@ func (r *Require) PanicsWith(f func(), c ...Constraint) {
 // called with these constraints, else Error will be called from testify/assert.
 //
 //	require := require.New(t)
-//	result, err := SomeFunction()
+//	result, err := MyFunction()
 //	require.Error(err,
+//		"if my mistake",
 //		require.Is(MyError),
 //		require.Has("my message"))
-func (r *Require) Error(err error, constaintsOrMsgAndArgs ...interface{}) {
+func (r *Require) Error(err error, constaintsAndMsgAndArgs ...interface{}) {
 	cc := make([]Constraint, 0)
-	for _, v := range constaintsOrMsgAndArgs {
+	msgAndArgs := make([]interface{}, 0)
+	for _, v := range constaintsAndMsgAndArgs {
 		if c, ok := v.(Constraint); ok {
 			cc = append(cc, c)
+		} else {
+			msgAndArgs = append(msgAndArgs, v)
 		}
 	}
 	if len(cc) > 0 {
-		ErrorWith(r.t, err, cc...)
+		errorWith(r.t, err, cc, msgAndArgs)
 	} else {
-		r.Assertions.Error(err, constaintsOrMsgAndArgs...)
+		r.Assertions.Error(err, msgAndArgs...)
 	}
 }
 

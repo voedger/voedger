@@ -34,7 +34,7 @@ func (vr *appViewRecords) storeViewRecord(workspace istructs.WSID, key istructs.
 	}
 
 	if k.viewName != v.viewName {
-		return nil, nil, nil, fmt.Errorf("key and value are from different views (key view is «%v», value view is «%v»): %w", k.viewName, v.viewName, ErrWrongType)
+		return nil, nil, nil, ErrWrongType("key and value are from different views (key view is «%v», value view is «%v»)", k.viewName, v.viewName)
 	}
 
 	partKey, cCols = k.storeToBytes(workspace)
@@ -155,7 +155,7 @@ func loadClustFieldFromBuffer_00(key *keyType, field appdef.IField, buf *bytes.B
 		key.ccolsRow.PutString(field.Name(), buf.String())
 	default:
 		// no test
-		err = fmt.Errorf("%v: unable load data type «%s»: %w", key.viewName, field.DataKind().TrimString(), ErrWrongFieldType)
+		err = ErrWrongFieldType("clustering columns of «%v» unable load data type «%s»", key.viewName, field.DataKind().TrimString())
 	}
 	return err
 }
