@@ -24,21 +24,27 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 			})
 		}
 	}()
+
 	principals = append(principals, iauthnz.Principal{
 		Kind:  iauthnz.PrincipalKind_Role,
-		QName: iauthnz.QNameRoleEveryone,
+		QName: iauthnz.QNameRoleAnonymous,
 	})
+
 	if len(req.Token) == 0 {
+		// add user with login "sys.Guest"
 		principals = append(principals, iauthnz.Principal{
 			Kind: iauthnz.PrincipalKind_User,
 			WSID: istructs.GuestWSID,
 			Name: istructs.SysGuestLogin,
 		})
+
+		// copy roles from subjects
 		rolesFromSubjects, err := i.rolesFromSubjects(requestContext, istructs.SysGuestLogin, as, req.RequestWSID)
 		if err != nil {
 			return nil, principalPayload, err
 		}
 		principals = append(principals, rolesFromSubjects...)
+
 		return principals, principalPayload, nil
 	}
 

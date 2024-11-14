@@ -67,7 +67,7 @@ var (
 	QNameRoleAuthenticatedUser = appdef.NewQName(appdef.SysPackage, "AuthenticatedUser")
 
 	// assigned regardles of wether token is rpvided or not
-	QNameRoleEveryone = appdef.NewQName(appdef.SysPackage, "Everyone")
+	QNameRoleAnonymous = appdef.NewQName(appdef.SysPackage, "Anonymous")
 
 	// assigned if a token is not provided
 	QNameRoleGuest = appdef.NewQName(appdef.SysPackage, "Guest")

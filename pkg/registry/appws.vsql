@@ -12,7 +12,7 @@ ALTER WORKSPACE AppWorkspaceWS (
 		WSID int64,                                     -- to be written after workspace init
 		WSError varchar(1024),                          -- to be written after workspace init
 		WSKindInitializationData varchar(1024) NOT NULL
-	) WITH Tags=(ReadOnlyTag);
+	);
 
 	TYPE CreateLoginParams (
 		Login text NOT NULL,
@@ -88,20 +88,20 @@ ALTER WORKSPACE AppWorkspaceWS (
 	) AS RESULT OF ProjectorLoginIdx;
 
 	EXTENSION ENGINE BUILTIN (
-		COMMAND ChangePassword (ChangePasswordParams, UNLOGGED ChangePasswordUnloggedParams) WITH Tags=(WithoutAuthTag);
-		COMMAND ResetPasswordByEmail (ResetPasswordByEmailParams, UNLOGGED ResetPasswordByEmailUnloggedParams) WITH Tags=(WithoutAuthTag);
-		COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) WITH Tags=(WithoutAuthTag);
-		QUERY IssuePrincipalToken (IssuePrincipalTokenParams) RETURNS IssuePrincipalTokenResult WITH Tags=(WithoutAuthTag);
-		QUERY InitiateResetPasswordByEmail (InitiateResetPasswordByEmailParams) RETURNS InitiateResetPasswordByEmailResult WITH Tags=(WithoutAuthTag);
-		QUERY IssueVerifiedValueTokenForResetPassword (IssueVerifiedValueTokenForResetPasswordParams) RETURNS IssueVerifiedValueTokenForResetPasswordResult WITH Tags=(WithoutAuthTag);
+		COMMAND ChangePassword (ChangePasswordParams, UNLOGGED ChangePasswordUnloggedParams);
+		COMMAND ResetPasswordByEmail (ResetPasswordByEmailParams, UNLOGGED ResetPasswordByEmailUnloggedParams);
+		COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
+		QUERY IssuePrincipalToken (IssuePrincipalTokenParams) RETURNS IssuePrincipalTokenResult;
+		QUERY InitiateResetPasswordByEmail (InitiateResetPasswordByEmailParams) RETURNS InitiateResetPasswordByEmailResult;
+		QUERY IssueVerifiedValueTokenForResetPassword (IssueVerifiedValueTokenForResetPasswordParams) RETURNS IssueVerifiedValueTokenForResetPasswordResult;
 		SYNC PROJECTOR ProjectorLoginIdx AFTER INSERT ON Login INTENTS(View(LoginIdx));
 		PROJECTOR InvokeCreateWorkspaceID_registry AFTER INSERT ON(Login);
 	);
 
-	GRANT ALL ON ALL TABLES WITH TAG WithoutAuthTag TO sys.Everyone;
-	GRANT EXECUTE ON ALL QUERIES WITH TAG WithoutAuthTag TO sys.Everyone;
-	GRANT EXECUTE ON ALL COMMANDS WITH TAG WithoutAuthTag TO sys.Everyone;
-	GRANT SELECT ON ALL VIEWS WITH TAG WithoutAuthTag TO sys.Everyone;
-
-	-- явно делать grant для WorkspaceOwner
+	GRANT EXECUTE ON COMMAND ChangePassword TO Anonymous;
+	GRANT EXECUTE ON COMMAND ResetPasswordByEmail TO Anonymous;
+	GRANT EXECUTE ON COMMAND CreateLogin TO Anonymous;
+	GRANT EXECUTE ON QUERY IssuePrincipalToken TO Anonymous;
+	GRANT EXECUTE ON QUERY InitiateResetPasswordByEmail TO Anonymous;
+	GRANT EXECUTE ON QUERY IssueVerifiedValueTokenForResetPassword TO Anonymous;
 );

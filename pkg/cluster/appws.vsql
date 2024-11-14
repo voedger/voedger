@@ -25,10 +25,8 @@ ALTER WORKSPACE AppWorkspaceWS (
 		NewID ref -- filled on `insert table` only
 	);
 
-	TAG DenyForAllTag;
-
 	EXTENSION ENGINE BUILTIN (
 		COMMAND DeployApp(AppDeploymentDescriptor); -- TODO: make be allowed for role sys.ClusterAdmin only
-		COMMAND VSqlUpdate(VSqlUpdateParams) RETURNS VSqlUpdateResult WITH Tags=(DenyForAllTag);
+		COMMAND VSqlUpdate(VSqlUpdateParams) RETURNS VSqlUpdateResult;
 	);
 );

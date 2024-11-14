@@ -37,7 +37,7 @@ func TestBug2(t *testing.T) {
 			appdef.OperationKind_Select,
 			appdef.NewQName(registry.RegistryPackage, "IssuePrincipalToken"),
 			nil,
-			[]appdef.QName{iauthnz.QNameRoleEveryone},
+			[]appdef.QName{iauthnz.QNameRoleAnonymous},
 		)
 		require.Error(err)
 	})
@@ -47,7 +47,7 @@ func TestBug2(t *testing.T) {
 			appdef.OperationKind_Execute,
 			appdef.NewQName(registry.RegistryPackage, "IssuePrincipalToken"),
 			nil,
-			[]appdef.QName{iauthnz.QNameRoleEveryone},
+			[]appdef.QName{iauthnz.QNameRoleAnonymous},
 		)
 		require.NoError(err)
 		require.True(ok)
@@ -58,7 +58,7 @@ func TestBug2(t *testing.T) {
 			appdef.OperationKind_Execute,
 			appdef.NewQName(registry.RegistryPackage, "CreateLogin"),
 			nil,
-			[]appdef.QName{iauthnz.QNameRoleEveryone},
+			[]appdef.QName{iauthnz.QNameRoleAnonymous},
 		)
 		require.NoError(err)
 		require.True(ok)
@@ -69,7 +69,7 @@ func TestBug2(t *testing.T) {
 			appdef.OperationKind_Insert,
 			appdef.NewQName(registry.RegistryPackage, "CreateLogin"),
 			nil,
-			[]appdef.QName{iauthnz.QNameRoleEveryone},
+			[]appdef.QName{iauthnz.QNameRoleAnonymous},
 		)
 		require.Error(err)
 	})
