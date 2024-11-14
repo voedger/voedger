@@ -420,7 +420,7 @@ func (recs *appRecordsType) getRecord(workspace istructs.WSID, id istructs.Recor
 // getRecordBatch reads record from application storage through view-records methods
 func (recs *appRecordsType) getRecordBatch(workspace istructs.WSID, ids []istructs.RecordGetBatchItem) (err error) {
 	if len(ids) > maxGetBatchRecordCount {
-		return fmt.Errorf("batch read %d records requested, but only %d supported: %w", len(ids), maxGetBatchRecordCount, ErrMaxGetBatchRecordCountExceeds)
+		return ErrMaxGetBatchSizeExceeds(len(ids))
 	}
 	batches := make([]*istorage.GetBatchItem, len(ids))
 	plan := make(map[string][]istorage.GetBatchItem)

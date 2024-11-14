@@ -1644,7 +1644,7 @@ func TestEventBuild_Error(t *testing.T) {
 			rec := getPhoto()
 
 			cud := bld.CUDBuilder().Update(rec)
-			cud.PutQName(appdef.SystemField_QName, test.tablePhotoRems)
+			cud.PutQName(appdef.SystemField_QName, test.tablePhotoRems) // <- error here
 			cud.PutRecordID(appdef.SystemField_ID, 100501)
 			cud.PutRecordID(appdef.SystemField_ParentID, 100500)
 			cud.PutString(appdef.SystemField_Container, test.remarkIdent)
@@ -1652,7 +1652,7 @@ func TestEventBuild_Error(t *testing.T) {
 			cud.PutString(test.remarkIdent, test.remarkValue)
 
 			_, buildErr = bld.BuildRawEvent()
-			require.ErrorIs(buildErr, ErrTypeChanged)
+			require.Error(buildErr, require.Is(ErrUnableToUpdateSystemFieldError), require.HasAll(rec, appdef.SystemField_QName))
 		})
 
 		t.Run("update unknown field", func(t *testing.T) {

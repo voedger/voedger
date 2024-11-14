@@ -288,7 +288,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		cfgs.AddBuiltInAppConfig(appName, appDef)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 		_, err := provider.BuiltIn(appName)
-		require.ErrorIs(err, ErrNumAppWorkspacesNotSet)
+		require.Error(err, require.Is(ErrNumAppWorkspacesNotSetError), require.Has(appName))
 	})
 }
 
@@ -340,9 +340,7 @@ func Test_NewAppStructs(t *testing.T) {
 		t.Run("if workspaces count is omitted", func(t *testing.T) {
 			def := appdef.New().MustBuild()
 			str, err := structs.New(name, def, id, 0)
-			require.Error(err,
-				require.Is(ErrNumAppWorkspacesNotSet),
-				require.Has(name))
+			require.Error(err, require.Is(ErrNumAppWorkspacesNotSetError), require.Has(name))
 			require.Nil(str)
 		})
 
