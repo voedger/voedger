@@ -365,7 +365,7 @@ func TestNewConstraintPanics(t *testing.T) {
 			args{ConstraintKind_Enum, [][]byte{{1, 2, 3}, {4, 5, 6}}}, ErrUnsupportedError,
 		},
 		{"???(0)",
-			args{ConstraintKind_Count, 0}, ErrUnsupportedError,
+			args{ConstraintKind_count, 0}, ErrUnsupportedError,
 		},
 	}
 	require := require.New(t)
@@ -426,9 +426,9 @@ func TestConstraintKind_MarshalText(t *testing.T) {
 			want: `ConstraintKind_MinLen`,
 		},
 		{
-			name: `ConstraintKind_Count —> 4`,
-			k:    ConstraintKind_Count,
-			want: utils.UintToString(ConstraintKind_Count),
+			name: `ConstraintKind_count —> 4`,
+			k:    ConstraintKind_count,
+			want: utils.UintToString(ConstraintKind_count),
 		},
 	}
 	for _, tt := range tests {
@@ -445,11 +445,11 @@ func TestConstraintKind_MarshalText(t *testing.T) {
 	}
 
 	t.Run("100% cover", func(t *testing.T) {
-		const tested = ConstraintKind_Count + 1
+		const tested = ConstraintKind_count + 1
 		want := "ConstraintKind(" + utils.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
-			t.Errorf("(ConstraintKind_Count + 1).String() = %v, want %v", got, want)
+			t.Errorf("(ConstraintKind_count + 1).String() = %v, want %v", got, want)
 		}
 	})
 }
@@ -461,7 +461,7 @@ func TestConstraintKind_TrimString(t *testing.T) {
 		want string
 	}{
 		{name: "basic", k: ConstraintKind_MinLen, want: "MinLen"},
-		{name: "out of range", k: ConstraintKind_Count + 1, want: (ConstraintKind_Count + 1).String()},
+		{name: "out of range", k: ConstraintKind_count + 1, want: (ConstraintKind_count + 1).String()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

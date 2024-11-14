@@ -65,7 +65,7 @@ const (
 	ProjectorEventKind_Execute
 	ProjectorEventKind_ExecuteWithParam
 
-	ProjectorEventKind_Count
+	ProjectorEventKind_count
 )
 
 // ProjectorEventKind_AnyChanges describes events for record any change.
