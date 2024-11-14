@@ -31,7 +31,9 @@ func (t *Type) QName() FQName {
     return t.fQName
 }
 
-type Event struct{}
+type Event struct{
+    WLogOffset int64
+}
 type Value_CommandContext struct{ tv exttinygo.TValue }
 
 var qNames = map[string][]exttinygo.QName{
@@ -88,15 +90,23 @@ type ITypeWRecord interface {
 }
 
 type Value_sys_ODoc struct{
+    qName exttinygo.QName
+    event exttinygo.TValue
     v exttinygo.TValue
 }
 
+func (o Value_sys_ODoc) Event() Event {
+    return Event{
+		WLogOffset: o.event.AsInt64("WLogOffset"),
+    }
+}
+
 func (o Value_sys_ODoc) QName() exttinygo.QName {
-    return o.v.AsQName("sys.QName")
+    return o.v.AsQName("QName")
 }
 
 func (o Value_sys_ODoc) AsQName() exttinygo.QName {
-    return o.v.AsQName("sys.QName")
+    return o.v.AsQName("QName")
 }
 
 func (o Value_sys_ODoc) Get_sys_ID() ID {
@@ -140,19 +150,27 @@ func (o Value_sys_ODoc) Len() int {
 }
 
 func (o Value_sys_ODoc) Is(iODoc ITypeODoc) bool {
-    return o.QName() == iODoc.QName()
+    return o.qName.FullPkgName == iODoc.QName().FullPkgName && o.qName.Entity == iODoc.QName().Entity
 }
 
 type Value_sys_CDoc struct{
+    qName exttinygo.QName
+    event exttinygo.TValue
     v exttinygo.TValue
 }
 
+func (c Value_sys_CDoc) Event() Event {
+    return Event{
+        WLogOffset: c.event.AsInt64("WLogOffset"),
+    }
+}
+
 func (c Value_sys_CDoc) QName() exttinygo.QName {
-    return c.v.AsQName("sys.QName")
+    return c.v.AsQName("QName")
 }
 
 func (c Value_sys_CDoc) AsQName() exttinygo.QName {
-    return c.v.AsQName("sys.QName")
+    return c.v.AsQName("QName")
 }
 
 func (c Value_sys_CDoc) Get_sys_ID() ID {
@@ -196,19 +214,27 @@ func (c Value_sys_CDoc) Len() int {
 }
 
 func (c Value_sys_CDoc) Is(iCDoc ITypeCDoc) bool {
-    return c.QName() == iCDoc.QName()
+    return c.qName.FullPkgName == iCDoc.QName().FullPkgName && c.qName.Entity == iCDoc.QName().Entity
 }
 
 type Value_sys_WDoc struct{
+    qName exttinygo.QName
+    event exttinygo.TValue
     v exttinygo.TValue
 }
 
+func (w Value_sys_WDoc) Event() Event {
+    return Event{
+        WLogOffset: w.event.AsInt64("WLogOffset"),
+    }
+}
+
 func (w Value_sys_WDoc) QName() exttinygo.QName {
-    return w.v.AsQName("sys.QName")
+    return w.v.AsQName("QName")
 }
 
 func (w Value_sys_WDoc) AsQName() exttinygo.QName {
-    return w.v.AsQName("sys.QName")
+    return w.v.AsQName("QName")
 }
 
 func (w Value_sys_WDoc) Get_sys_ID() ID {
@@ -252,19 +278,27 @@ func (w Value_sys_WDoc) Len() int {
 }
 
 func (w Value_sys_WDoc) Is(iWDoc ITypeWDoc) bool {
-    return w.QName() == iWDoc.QName()
+    return w.qName.FullPkgName == iWDoc.QName().FullPkgName && w.qName.Entity == iWDoc.QName().Entity
 }
 
 type Value_sys_CRecord struct{
+    qName exttinygo.QName
+    event exttinygo.TValue
     v exttinygo.TValue
 }
 
+func (cr Value_sys_CRecord) Event() Event {
+    return Event{
+        WLogOffset: cr.event.AsInt64("WLogOffset"),
+    }
+}
+
 func (cr Value_sys_CRecord) QName() exttinygo.QName {
-    return cr.v.AsQName("sys.QName")
+    return cr.v.AsQName("QName")
 }
 
 func (cr Value_sys_CRecord) AsQName() exttinygo.QName {
-    return cr.v.AsQName("sys.QName")
+    return cr.v.AsQName("QName")
 }
 
 func (cr Value_sys_CRecord) Get_sys_ID() ID {
@@ -308,19 +342,27 @@ func (cr Value_sys_CRecord) Len() int {
 }
 
 func (cr Value_sys_CRecord) Is(iCRecord ITypeCRecord) bool {
-    return cr.QName() == iCRecord.QName()
+    return cr.qName.FullPkgName == iCRecord.QName().FullPkgName && cr.qName.Entity == iCRecord.QName().Entity
 }
 
 type Value_sys_WRecord struct{
+    qName exttinygo.QName
+    event exttinygo.TValue
     v exttinygo.TValue
 }
 
+func (wr Value_sys_WRecord) Event() Event {
+    return Event{
+        WLogOffset: wr.event.AsInt64("WLogOffset"),
+    }
+}
+
 func (wr Value_sys_WRecord) QName() exttinygo.QName {
-    return wr.v.AsQName("sys.QName")
+    return wr.v.AsQName("QName")
 }
 
 func (wr Value_sys_WRecord) AsQName() exttinygo.QName {
-    return wr.v.AsQName("sys.QName")
+    return wr.v.AsQName("QName")
 }
 
 func (wr Value_sys_WRecord) Get_sys_ID() ID {
@@ -364,7 +406,7 @@ func (wr Value_sys_WRecord) Len() int {
 }
 
 func (wr Value_sys_WRecord) Is(iWRecord ITypeWRecord) bool {
-    return wr.QName() == iWRecord.QName()
+    return wr.qName.FullPkgName == iWRecord.QName().FullPkgName && wr.qName.Entity == iWRecord.QName().Entity
 }
 
 func IsODoc(qName exttinygo.QName) bool {
@@ -417,4 +459,7 @@ func IsCRecord(qName exttinygo.QName) bool {
     return false
 }
 
+func eventFunc() exttinygo.TValue {
+    return exttinygo.MustGetValue(exttinygo.KeyBuilder(exttinygo.StorageEvent, exttinygo.NullEntity))
+}
 {{end}}

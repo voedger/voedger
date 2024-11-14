@@ -7,7 +7,6 @@ IMPORT SCHEMA 'pkg2';
 APPLICATION appcomplex(
     USE pkg1;
     USE pkg2;
-    --USE bp3;
 );
 
 

@@ -28,22 +28,36 @@ type Container_ORecord_{{.Package.Name}}_{{.Name}} struct {
 
 {{if (eq .Type "Projector")}}
 
-type ProjectorArg_{{.Package.Name}}_{{.Name}} struct {
-    qname string
-	value exttinygo.TValue
-}
+{{/*type ProjectorArg_{{.Package.Name}}_{{.Name}} struct {*/}}
+{{/*    qname string*/}}
+{{/*	value exttinygo.TValue*/}}
+{{/*}*/}}
 
-func (pa ProjectorArg_{{.Package.Name}}_{{.Name}}) QName() string {
-    return pa.qname
-}
+{{/*func (pa ProjectorArg_{{.Package.Name}}_{{.Name}}) QName() string {*/}}
+{{/*    return pa.qname*/}}
+{{/*}*/}}
 
-func (pa ProjectorArg_{{.Package.Name}}_{{.Name}}) Get() exttinygo.TValue {
-    return pa.value
-}
+{{/*func (pa ProjectorArg_{{.Package.Name}}_{{.Name}}) Get() exttinygo.TValue {*/}}
+{{/*    return pa.value*/}}
+{{/*}*/}}
 
 type {{.Type}}_{{.Package.Name}}_{{.Name}} struct {
 Type
-event exttinygo.TValue
+_event exttinygo.TValue
+}
+
+
+func (p {{.Type}}_{{.Package.Name}}_{{.Name}}) Event() Event {
+    return Event{
+        WLogOffset: p.event().AsInt64("WLogOffset"),
+    }
+}
+
+func (p {{.Type}}_{{.Package.Name}}_{{.Name}}) event() exttinygo.TValue {
+    if p._event == 0 {
+        p._event = eventFunc()
+    }
+    return p._event
 }
 
 func (r {{.Type}}_{{.Package.Name}}_{{.Name}}) WorkspaceDescriptor() string {
@@ -51,21 +65,19 @@ func (r {{.Type}}_{{.Package.Name}}_{{.Name}}) WorkspaceDescriptor() string {
 }
 
 func (pkg TPackage_{{.Package.Name}}) Projector_{{.Name}}() Projector_{{.Package.Name}}_{{.Name}} {
-    return Projector_{{.Package.Name}}_{{.Name}}{
-        event: exttinygo.MustGetValue(exttinygo.KeyBuilder(exttinygo.StorageEvent, exttinygo.NullEntity)),
-    }
+    return Projector_{{.Package.Name}}_{{.Name}}{}
 }
 
 
 {{if (hasEventItemName . "CDoc")}}
 func (p Projector_{{.Package.Name}}_{{.Name}}) CUDs_CDoc() iter.Seq[Value_sys_CDoc] {
     return func(yield func(Value_sys_CDoc) bool) {
-        cudsValue := p.event.AsValue("CUDs")
+        cudsValue := p.event().AsValue("CUDs")
         for i := 0; i < cudsValue.Len(); i++ {
             cudValue := cudsValue.GetAsValue(i)
-            cudQName := cudValue.AsQName("QName")
+            cudQName := cudValue.AsQName("sys.QName")
             if IsCDoc(cudQName) {
-                if !yield(Value_sys_CDoc{v: cudValue}) {
+                if !yield(Value_sys_CDoc{event: p.event(), v: cudValue}) {
                     return
                 }
             }
@@ -77,12 +89,12 @@ func (p Projector_{{.Package.Name}}_{{.Name}}) CUDs_CDoc() iter.Seq[Value_sys_CD
 {{if (hasEventItemName . "WDoc")}}
 func (p Projector_{{.Package.Name}}_{{.Name}}) CUDs_WDoc() iter.Seq[Value_sys_WDoc] {
     return func(yield func(Value_sys_WDoc) bool) {
-        cudsValue := p.event.AsValue("CUDs")
+        cudsValue := p.event().AsValue("CUDs")
         for i := 0; i < cudsValue.Len(); i++ {
             cudValue := cudsValue.GetAsValue(i)
-            cudQName := cudValue.AsQName("QName")
+            cudQName := cudValue.AsQName("sys.QName")
             if IsWDoc(cudQName) {
-                if !yield(Value_sys_WDoc{v: cudValue}) {
+                if !yield(Value_sys_WDoc{event: p.event(), v: cudValue}) {
                     return
                 }
             }
@@ -94,12 +106,12 @@ func (p Projector_{{.Package.Name}}_{{.Name}}) CUDs_WDoc() iter.Seq[Value_sys_WD
 {{if (hasEventItemName . "CRecord")}}
 func (p Projector_{{.Package.Name}}_{{.Name}}) CUDs_CRecord() iter.Seq[Value_sys_CRecord] {
     return func(yield func(Value_sys_CRecord) bool) {
-        cudsValue := p.event.AsValue("CUDs")
+        cudsValue := p.event().AsValue("CUDs")
         for i := 0; i < cudsValue.Len(); i++ {
             cudValue := cudsValue.GetAsValue(i)
-            cudQName := cudValue.AsQName("QName")
+            cudQName := cudValue.AsQName("sys.QName")
             if IsCRecord(cudQName) {
-                if !yield(Value_sys_CRecord{v: cudValue}) {
+                if !yield(Value_sys_CRecord{event: p.event(), v: cudValue}) {
                     return
                 }
             }
@@ -111,12 +123,12 @@ func (p Projector_{{.Package.Name}}_{{.Name}}) CUDs_CRecord() iter.Seq[Value_sys
 {{if (hasEventItemName . "WRecord")}}
 func (p Projector_{{.Package.Name}}_{{.Name}}) CUDs_WRecord() iter.Seq[Value_sys_WRecord] {
     return func(yield func(Value_sys_WRecord) bool) {
-        cudsValue := p.event.AsValue("CUDs")
+        cudsValue := p.event().AsValue("CUDs")
         for i := 0; i < cudsValue.Len(); i++ {
             cudValue := cudsValue.GetAsValue(i)
-            cudQName := cudValue.AsQName("QName")
+            cudQName := cudValue.AsQName("sys.QName")
             if IsWRecord(cudQName) {
-                if !yield(Value_sys_WRecord{v: cudValue}) {
+                if !yield(Value_sys_WRecord{event: p.event(), v: cudValue}) {
                     return
                 }
             }
@@ -127,12 +139,17 @@ func (p Projector_{{.Package.Name}}_{{.Name}}) CUDs_WRecord() iter.Seq[Value_sys
 
 {{if (hasEventItemName . "ODoc")}}
 func (p Projector_{{.Package.Name}}_{{.Name}}) ODoc() (Value_sys_ODoc, bool) {
-    qname := p.event.AsQName("QName")
-    if !IsODoc(qname) {
+	arg := p.event().AsValue("ArgumentObject")
+    argQName := arg.AsQName("sys.QName")
+    if !IsODoc(argQName) {
         return Value_sys_ODoc{}, false
     }
 
-    return Value_sys_ODoc{v: p.event}, true
+    return Value_sys_ODoc{
+		event: p.event(),
+		v: arg,
+		qName: exttinygo.QName{FullPkgName: argQName.FullPkgName, Entity: argQName.Entity},
+	}, true
 }
 {{end}}
 

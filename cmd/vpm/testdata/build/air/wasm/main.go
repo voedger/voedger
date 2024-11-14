@@ -6,7 +6,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	ext "github.com/voedger/voedger/pkg/exttinygo"
@@ -66,32 +65,88 @@ func Pbill() {
 func ProjectorFillPbillDates() {
 	projector := orm.Package_air.Projector_FillPbillDates()
 	if arg, ok := projector.Arg_untill_pbill(); ok {
-		fmt.Println(arg.Get_pdatetime())
-		return
-	}
+		offs := projector.Event().WLogOffset
+		// get pbill datetime
+		pbillDatetime := time.UnixMicro(arg.Get_pdatetime())
+		// extract year and day of year from pbill datetime
+		year := pbillDatetime.Year()
+		dayOfYear := pbillDatetime.Day()
 
-	if arg, ok := projector.Arg_untill_orders(); ok {
-		fmt.Println(arg.Get_id_bill())
-		return
+		var intent orm.Intent_View_air_PbillDates
+		val, ok := orm.Package_air.View_PbillDates.Get(int32(year), int32(dayOfYear))
+		if !ok {
+			intent = val.Insert()
+			intent.Set_FirstOffset(offs)
+		} else {
+			intent = val.Update()
+		}
+
+		intent.Set_LastOffset(offs)
+
 	}
 }
 
-func ProjectorNewAbcItem() {
-	projector := orm.Package_air.Projector_NewAbcItem()
-	for cud := range projector.CUDs_air_Abc() {
-		fmt.Println(cud.Get_Field1())
+func ProjectorNewVideoRecord() {
+	projector := orm.Package_air.Projector_ProjectorNewVideoRecord()
+
+	years := make(map[int]map[int]map[int]int64)
+	for cud := range projector.CUDs_air_VideoRecords() {
+		date := time.UnixMicro(cud.Get_Date())
+		year := date.Year()
+		month := int(date.Month())
+		day := date.Day()
+
+		months, ok := years[year]
+		if !ok {
+			months = make(map[int]map[int]int64)
+			years[year] = months
+		}
+
+		days, ok := months[month]
+		if !ok {
+			days = make(map[int]int64)
+			months[month] = days
+		}
+
+		days[day] += cud.Get_Length()
+	}
+
+	for year, months := range years {
+		for month, days := range months {
+			for day, length := range days {
+				var intent orm.Intent_View_air_VideoRecordArchive
+				val, ok := orm.Package_air.View_VideoRecordArchive.Get(int32(year), int32(month), int32(day))
+				if !ok {
+					intent = val.Insert()
+				} else {
+					intent = val.Update()
+				}
+				intent.Set_TotalLength(length)
+			}
+		}
 	}
 }
 
 func ProjectorApplySalesMetrics() {
 	projector := orm.Package_air.Projector_ApplySalesMetrics()
 	if arg, ok := projector.Cmd_Pbill().Arg(); ok {
-		fmt.Println(arg.Get_id_bill())
-		return
-	}
-	if arg, ok := projector.Cmd_Orders().Arg(); ok {
-		fmt.Println(arg.Get_id_bill())
-		return
+		offs := projector.Cmd_Pbill().Event().WLogOffset
+
+		pbillDatetime := time.UnixMicro(arg.Get_pdatetime())
+		// extract year and day of year from pbill datetime
+		year := pbillDatetime.Year()
+		dayOfYear := pbillDatetime.Day()
+
+		var intent orm.Intent_View_air_PbillDates
+		val, ok := orm.Package_air.View_PbillDates.Get(int32(year), int32(dayOfYear))
+		if !ok {
+			intent = val.Insert()
+			intent.Set_FirstOffset(offs)
+		} else {
+			intent = val.Update()
+		}
+
+		intent.Set_LastOffset(offs)
 	}
 }
 
@@ -102,8 +157,9 @@ func ProjectorODoc() {
 			return
 		}
 
-		offs := odoc.AsInt64("WLogOffset")
-		date := time.UnixMicro(odoc.AsInt64("timestamp"))
+		offs := odoc.Event().WLogOffset
+
+		date := time.UnixMicro(odoc.AsInt64("Timestamp"))
 		// extract year and day of year from pbill datetime
 		year := date.Year()
 		dayOfYear := date.Day()
@@ -119,6 +175,7 @@ func ProjectorODoc() {
 		}
 
 		intent.Set_LastOffset(offs)
+
 	}
 }
 
@@ -133,7 +190,6 @@ func FillPbillDates() {
 	dayOfYear := pbillDatetime.Day()
 
 	var intent orm.Intent_View_air_PbillDates
-
 	val, ok := orm.Package_air.View_PbillDates.Get(int32(year), int32(dayOfYear))
 	if !ok {
 		intent = val.Insert()

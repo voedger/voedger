@@ -41,7 +41,7 @@ type IProjectorRunner interface {
 	StateCUDRow(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner
 	StateView(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner
 
-	EventOffset(offset istructs.Offset) IProjectorRunner
+	//EventOffset(offset istructs.Offset) IProjectorRunner
 	EventWLogOffset(offset istructs.Offset) IProjectorRunner
 	EventPLogOffset(offset istructs.Offset) IProjectorRunner
 	EventRegisteredAt(registeredAt time.Time) IProjectorRunner

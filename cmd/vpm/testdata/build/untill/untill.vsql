@@ -2,6 +2,7 @@
 -- @author Maxim Geraskin
 
 ABSTRACT WORKSPACE SomeWS (
+
     TABLE untill_users INHERITS CDoc (
         name varchar(255),
         phone varchar(50),
@@ -40,5 +41,3 @@ ABSTRACT WORKSPACE SomeWS (
         name varchar(255)
     );
 )
-
-

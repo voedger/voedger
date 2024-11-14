@@ -7,12 +7,13 @@ APPLICATION air(
     USE untill;
 );
 
-WORKSPACE RestaurantWS (
+WORKSPACE RestaurantWS INHERITS untill.SomeWS (
     DESCRIPTOR RestaurantDescriptor();
-    USE TABLE untill.*;
 
-	TABLE Abc INHERITS CDoc (
-		Field1 int32 NOT NULL
+	TABLE VideoRecords INHERITS CDoc (
+		Name varchar NOT NULL,
+		Length int64 NOT NULL,
+		Date int64 NOT NULL
 	);
 
 	TABLE ProformaPrinted INHERITS ODoc (
@@ -47,22 +48,30 @@ WORKSPACE RestaurantWS (
 		PRIMARY KEY ((Year), DayOfYear)
 	) AS RESULT OF ProjectorODoc;
 
+	VIEW VideoRecordArchive (
+		Year int32 NOT NULL,
+		Month int32 NOT NULL,
+		Day int32 NOT NULL,
+		TotalLength int64 NOT NULL,
+		PRIMARY KEY ((Year), Month, Day)
+    ) AS RESULT OF ProjectorNewVideoRecord;
+
 	TABLE NextNumbers INHERITS WSingleton (
 		NextPBillNumber int32
 	);
 
+    -- USE TABLE untill.*;
+
 	EXTENSION ENGINE BUILTIN (
 	    COMMAND Cmd1(cmd1Params);
+	    COMMAND CmdForProformaPrinted(ProformaPrinted);
         COMMAND Orders(untill.orders);
         COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
         PROJECTOR ApplyCmd1 AFTER EXECUTE ON (Cmd1);
         PROJECTOR ApplySalesMetrics AFTER EXECUTE ON (Pbill, Orders) INTENTS (View(PbillDates));
         PROJECTOR FillPbillDates AFTER EXECUTE WITH PARAM ON (untill.pbill, untill.orders) INTENTS(View(PbillDates));
-        -- CUD
-        PROJECTOR NewAbcItem AFTER INSERT ON (Abc);
-        --PROJECTOR ProjectorWLogDates AFTER INSERT OR UPDATE ON (CRecord, WRecord) OR AFTER EXECUTE WITH PARAM ON ODoc INTENTS(View(WLogDates)) INCLUDING ERRORS;
+        PROJECTOR ProjectorNewVideoRecord AFTER INSERT ON (VideoRecords) INTENTS(View(VideoRecordArchive));
         PROJECTOR ProjectorODoc AFTER EXECUTE WITH PARAM ON ODoc INTENTS(View(ProformaPrintedDocs));
         PROJECTOR ProjectorWRecord AFTER INSERT OR UPDATE ON (WRecord);
-        --PROJECTOR ProjectorCDoc AFTER INSERT OR UPDATE ON (CDoc);
     );
 )
