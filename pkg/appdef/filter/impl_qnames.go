@@ -16,7 +16,7 @@ type qNamesFilter struct {
 	names appdef.QNames
 }
 
-func qNames(name appdef.QName, names ...appdef.QName) IFilter {
+func qNames(name appdef.QName, names ...appdef.QName) appdef.IFilter {
 	f := &qNamesFilter{names: appdef.QNamesFrom(name)}
 	f.names.Add(names...)
 	return f

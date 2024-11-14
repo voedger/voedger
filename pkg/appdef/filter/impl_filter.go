@@ -9,13 +9,13 @@ import "github.com/voedger/voedger/pkg/appdef"
 
 type filter struct{}
 
-func (filter) And() []IFilter { return nil }
+func (filter) And() []appdef.IFilter { return nil }
 
 func (filter) Kind() appdef.FilterKind { return appdef.FilterKind_null }
 
-func (filter) Not() IFilter { return nil }
+func (filter) Not() appdef.IFilter { return nil }
 
-func (filter) Or() []IFilter { return nil }
+func (filter) Or() []appdef.IFilter { return nil }
 
 func (filter) QNames() appdef.QNames { return nil }
 

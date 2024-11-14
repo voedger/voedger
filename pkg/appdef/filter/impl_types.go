@@ -17,7 +17,7 @@ type typesFilter struct {
 	types appdef.TypeKindSet
 }
 
-func types(t appdef.TypeKind, tt ...appdef.TypeKind) IFilter {
+func types(t appdef.TypeKind, tt ...appdef.TypeKind) appdef.IFilter {
 	f := &typesFilter{types: set.From(t)}
 	f.types.Set(tt...)
 	return f

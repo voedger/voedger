@@ -7,10 +7,10 @@ package filter
 
 import "github.com/voedger/voedger/pkg/appdef"
 
-func QNames(name appdef.QName, names ...appdef.QName) IFilter {
+func QNames(name appdef.QName, names ...appdef.QName) appdef.IFilter {
 	return qNames(name, names...)
 }
 
-func Types(t appdef.TypeKind, tt ...appdef.TypeKind) IFilter {
+func Types(t appdef.TypeKind, tt ...appdef.TypeKind) appdef.IFilter {
 	return types(t, tt...)
 }
