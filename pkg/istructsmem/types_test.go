@@ -157,7 +157,7 @@ func Test_clarifyJSONValue(t *testing.T) {
 		checkRecord(v)
 
 		v, err = row.clarifyJSONValue("ups", appdef.DataKind_Record)
-		require.ErrorIs(err, ErrWrongFieldTypeError)
+		require.Error(err, require.Is(ErrWrongFieldTypeError), require.HasAll("string", "Record"))
 		require.Nil(v)
 	})
 
@@ -179,7 +179,7 @@ func Test_clarifyJSONValue(t *testing.T) {
 		checkEvent(v)
 
 		v, err = row.clarifyJSONValue("ups", appdef.DataKind_Event)
-		require.ErrorIs(err, ErrWrongFieldTypeError)
+		require.Error(err, require.Is(ErrWrongFieldTypeError), require.HasAll("string", "Event"))
 		require.Nil(v)
 	})
 }
@@ -464,7 +464,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 					row.setQName(test.testRow)
 					tst.put(row)
 					// value type «%s» is not applicable for %v
-					require.Error(row.build(), require.Is(ErrWrongFieldTypeError), require.Has("type «"+tst.typ), require.Has("field «"+tst.name))
+					require.Error(row.build(), require.Is(ErrWrongFieldTypeError), require.HasAll(tst.typ, tst.name))
 				})
 			}
 		})
@@ -751,7 +751,7 @@ func Test_rowType_BuildErrors(t *testing.T) {
 			row.setQName(test.testRow)
 
 			row.PutString("int32", "a")
-			require.Error(row.build(), require.Is(ErrWrongFieldTypeError), require.Has("int32"), require.Has("string"))
+			require.Error(row.build(), require.Is(ErrWrongFieldTypeError), require.HasAll("int32", "string"))
 		})
 
 		t.Run("if PutString to byte-field", func(t *testing.T) {
@@ -760,7 +760,7 @@ func Test_rowType_BuildErrors(t *testing.T) {
 
 			row.PutString("bytes", "some string")
 
-			require.Error(row.build(), require.Is(ErrWrongFieldTypeError), require.Has("bytes"), require.Has("string"))
+			require.Error(row.build(), require.Is(ErrWrongFieldTypeError), require.HasAll("bytes", "string"))
 		})
 
 		t.Run("should be build error if PutQName(invalid)", func(t *testing.T) {

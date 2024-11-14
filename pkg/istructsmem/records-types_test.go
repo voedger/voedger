@@ -129,12 +129,13 @@ func Test_RecordsRead(t *testing.T) {
 	})
 
 	t.Run("must fail if too large batch read records", func(t *testing.T) {
-		recs := make([]istructs.RecordGetBatchItem, maxGetBatchRecordCount+1)
-		for id := minTestRecordID; id < minTestRecordID+maxGetBatchRecordCount+1; id++ {
+		const tooBig = maxGetBatchRecordCount + 1
+		recs := make([]istructs.RecordGetBatchItem, tooBig)
+		for id := minTestRecordID; id < minTestRecordID+tooBig; id++ {
 			recs[id-minTestRecordID].ID = id
 		}
 		err := app.Records().GetBatch(test.workspace, true, recs)
-		require.ErrorIs(err, ErrMaxGetBatchRecordCountExceeds)
+		require.Error(err, require.Is(ErrMaxGetBatchSizeExceedsError), require.Has(tooBig))
 	})
 
 	t.Run("must fail batch read records if storage batch failed", func(t *testing.T) {
@@ -166,7 +167,9 @@ func Test_RecordsRead(t *testing.T) {
 		testID := istructs.RecordID(100500)
 		_, cc := recordKey(0, testID)
 
-		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, cc)
+		const badCodec byte = 255
+
+		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = badCodec /* error here */ }, nil, cc)
 		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
@@ -187,7 +190,7 @@ func Test_RecordsRead(t *testing.T) {
 		recs[2].ID = testID + 1
 
 		err = app.Records().GetBatch(test.workspace, true, recs)
-		require.ErrorIs(err, ErrUnknownCodec)
+		require.Error(err, require.Is(ErrUnknownCodecError), require.Has(badCodec))
 	})
 }
 

@@ -170,7 +170,7 @@ func (ev *eventType) loadFromBytes(in []byte) (err error) {
 			return err
 		}
 	default:
-		return fmt.Errorf("unknown codec version «%d»: %w", codec, ErrUnknownCodec)
+		return ErrUnknownCodec(codec)
 	}
 
 	return nil
@@ -832,7 +832,7 @@ func (o *objectType) Build() (istructs.IObject, error) {
 		(t != appdef.TypeKind_GDoc) &&
 		(t != appdef.TypeKind_CDoc) &&
 		(t != appdef.TypeKind_WDoc) {
-		return nil, fmt.Errorf("object builder has wrong type %v (not an object or document): %w", o, ErrUnexpectedTypeKind)
+		return nil, ErrUnexpectedType("%v, should be object or document", o)
 	}
 	if _, err := validateObjectIDs(o, false); err != nil {
 		return nil, err

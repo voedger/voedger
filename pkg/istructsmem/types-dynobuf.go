@@ -151,7 +151,7 @@ func storeRow(row *rowType, buf *bytes.Buffer) {
 	id, err := row.qNameID()
 	if err != nil {
 		// no test
-		panic(fmt.Errorf(errMustValidatedBeforeStore, "row", err))
+		panic(enrichError(err, row))
 	}
 	utils.WriteUint16(buf, id)
 	if row.QName() == appdef.NullQName {
@@ -163,7 +163,7 @@ func storeRow(row *rowType, buf *bytes.Buffer) {
 	b, err := row.dyB.ToBytes()
 	if err != nil {
 		// no test
-		panic(fmt.Errorf(errMustValidatedBeforeStore, row.QName(), err))
+		panic(enrichError(err, row))
 	}
 	length := uint32(len(b)) // nolint G115 considering int32 is enough to store the event
 	utils.WriteUint32(buf, length)
@@ -197,7 +197,7 @@ func storeRowSysFields(row *rowType, buf *bytes.Buffer) {
 		id, err := row.containerID()
 		if err != nil {
 			// no test
-			panic(fmt.Errorf(errMustValidatedBeforeStore, row.QName(), err))
+			panic(enrichError(err, row))
 		}
 		utils.WriteUint16(buf, uint16(id))
 	}

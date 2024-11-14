@@ -388,12 +388,12 @@ func validateEventCUDs(ev *eventType) (err error) {
 
 	for _, rec := range ev.cud.creates {
 		err = errors.Join(err,
-			validateEventCUD(ev, rec, "Create"))
+			validateEventCUD(ev, rec))
 	}
 
 	for _, rec := range ev.cud.updates {
 		err = errors.Join(err,
-			validateEventCUD(ev, &rec.result, "Update"))
+			validateEventCUD(ev, &rec.result))
 	}
 
 	return err
@@ -402,13 +402,13 @@ func validateEventCUDs(ev *eventType) (err error) {
 // Validates specified CUD record.
 //
 // Checks that CUD record has correct (storable) type and content.
-func validateEventCUD(ev *eventType, rec *recordType, part string) error {
-	switch rec.typ.Kind() {
+func validateEventCUD(ev *eventType, rec *recordType) error {
+	switch k := rec.typ.Kind(); k {
 	case appdef.TypeKind_GDoc, appdef.TypeKind_CDoc, appdef.TypeKind_WDoc, appdef.TypeKind_GRecord, appdef.TypeKind_CRecord, appdef.TypeKind_WRecord:
 		return validateRow(&rec.rowType)
 	default:
-		// event «sys.CUD» CUD.Create() [record ID «1»] ORec «test.ORecord» has invalid type kind: %w"
-		return validateErrorf(ECode_InvalidTypeKind, errInvalidTypeKindInCUD, ev, part, rec.ID(), rec, ErrUnexpectedTypeKind)
+		return validateError(ECode_InvalidTypeKind,
+			ErrUnexpectedType("%v in %v CUDs", rec, ev))
 	}
 }
 

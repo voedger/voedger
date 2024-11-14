@@ -408,16 +408,16 @@ func Test_ValidSysCudEvent(t *testing.T) {
 		e := cudRawEvent(false)
 		_ = e.CUDBuilder().Create(appdef.NullQName) // <- error here
 		_, err := e.BuildRawEvent()
-		require.ErrorIs(err, ErrUnexpectedTypeKind)
-		require.ErrorContains(err, "null row")
+		require.Error(err, require.Is(ErrUnexpectedTypeError),
+			require.HasAll(istructs.QNameCommandCUD, "null row"))
 	})
 
 	t.Run("should be error if wrong CUD type kind", func(t *testing.T) {
 		e := cudRawEvent(false)
 		_ = e.CUDBuilder().Create(objName) // <- error here
 		_, err := e.BuildRawEvent()
-		require.ErrorIs(err, ErrUnexpectedTypeKind)
-		require.ErrorContains(err, "Object «test.object»")
+		require.Error(err, require.Is(ErrUnexpectedTypeError),
+			require.HasAll(istructs.QNameCommandCUD, objName))
 	})
 
 	t.Run("test raw IDs in CUD.Create", func(t *testing.T) {
@@ -743,8 +743,7 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 		d.(*objectType).clear()
 		d.PutQName(appdef.SystemField_QName, recName) // <- error here
 		_, err := d.Build()
-		require.ErrorIs(err, ErrUnexpectedTypeKind)
-		require.ErrorContains(err, "wrong type ORecord «test.record»")
+		require.Error(err, require.Is(ErrUnexpectedTypeError), require.Has(recName))
 	})
 
 	t.Run("should be error if builder has errors in IDs", func(t *testing.T) {
@@ -830,10 +829,10 @@ func Test_VerifiedFields(t *testing.T) {
 
 			row := makeObject(cfg, objName, nil)
 			row.PutInt32("int32", 1)
-			row.PutInt32("age", 7)
+			row.PutInt32("age", 7) //<- verified field
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrWrongFieldTypeError)
+			require.Error(err, require.Is(ErrWrongFieldTypeError), require.Has("age"))
 		})
 
 		t.Run("error if not a token, but plain string value", func(t *testing.T) {
@@ -928,7 +927,7 @@ func Test_VerifiedFields(t *testing.T) {
 			row.PutString("email", wtToken)
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrWrongFieldTypeError)
+			require.Error(err, require.Is(ErrWrongFieldTypeError), require.HasAll(row, "email"))
 		})
 
 	})
@@ -989,9 +988,9 @@ func Test_CharsFieldRestricts(t *testing.T) {
 			row.PutBytes("mime", []byte(`abc`))                    // 3 < 4 : too short
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrDataConstraintViolation)
-			require.ErrorContains(err, "string-field «email» data constraint «MaxLen: 100»")
-			require.ErrorContains(err, "bytes-field «mime» data constraint «MinLen: 4»")
+			require.Error(err, require.Is(ErrDataConstraintViolationError),
+				require.HasAll("email", "MaxLen: 100"),
+				require.HasAll("mime", "MinLen: 4"))
 		})
 
 		t.Run("should be error if pattern restricted", func(t *testing.T) {
@@ -1000,9 +999,9 @@ func Test_CharsFieldRestricts(t *testing.T) {
 			row.PutBytes("mime", []byte(`++++`))
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrDataConstraintViolation)
-			require.ErrorContains(err, "string-field «email» data constraint «Pattern:")
-			require.ErrorContains(err, "bytes-field «mime» data constraint «Pattern:")
+			require.ErrorIs(err, ErrDataConstraintViolationError)
+			require.Error(err, require.Is(ErrDataConstraintViolationError),
+				require.HasAll("email", "mime", "Pattern:"))
 		})
 	})
 }
