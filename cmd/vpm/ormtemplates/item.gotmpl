@@ -64,10 +64,6 @@ func (r {{.Type}}_{{.Package.Name}}_{{.Name}}) WorkspaceDescriptor() string {
     {{if (eq .WsDescriptor "")}}return ""{{else}}return Package_{{.Package.Name}}.WS_{{.WsName}}.Descriptor(){{end}}
 }
 
-func (r {{.Type}}_{{.Package.Name}}_{{.Name}}) WorkspaceDescriptor() string {
-    {{if (eq .WsDescriptor "")}}return ""{{else}}return Package_{{.Package.Name}}.WS_{{.WsName}}.Descriptor(){{end}}
-}
-
 func (pkg TPackage_{{.Package.Name}}) Projector_{{.Name}}() Projector_{{.Package.Name}}_{{.Name}} {
     return Projector_{{.Package.Name}}_{{.Name}}{}
 }
