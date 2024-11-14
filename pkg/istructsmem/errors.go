@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// Enriches error with additional information
+// Enriches error with additional information.
 //
 // argOrMsg is any value to be added to the error message, and args are additional values to be added to the error message.
 // Spaces are added between args.
@@ -31,9 +31,6 @@ func enrichError(err error, argOrMsg any, args ...any) error {
 	}
 	return fmt.Errorf("%w: %s", err, enrich)
 }
-
-// TODO: use enrichError() for all errors
-// eliminate all calls fmt.Errorf("… %w …", …) with err×××Wrap constants
 
 var ErrorEventNotValidError = errors.New("event is not valid")
 
