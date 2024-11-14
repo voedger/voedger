@@ -52,4 +52,10 @@ type IFilter interface {
 	// Return negative sub-filter
 	// If kind is not FilterKind_Not, returns nil
 	Not() IFilter
+
+	// Returns is type matched by filter
+	Match(IType) bool
+
+	// Returns names of types, what matches by filter
+	Matches(IWithTypes) QNames
 }
