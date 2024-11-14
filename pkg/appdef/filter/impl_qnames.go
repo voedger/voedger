@@ -16,6 +16,12 @@ type qNamesFilter struct {
 	names appdef.QNames
 }
 
+func qNames(name appdef.QName, names ...appdef.QName) IFilter {
+	f := &qNamesFilter{names: appdef.QNamesFrom(name)}
+	f.names.Add(names...)
+	return f
+}
+
 func (qNamesFilter) Kind() appdef.FilterKind { return appdef.FilterKind_QNames }
 
 func (f qNamesFilter) Match(t appdef.IType) bool {
