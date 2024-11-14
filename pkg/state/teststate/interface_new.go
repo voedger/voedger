@@ -5,7 +5,10 @@
 
 package teststate
 
-import "github.com/voedger/voedger/pkg/istructs"
+import (
+	"github.com/voedger/voedger/pkg/istructs"
+	"time"
+)
 
 type IFullQName interface {
 	PkgPath() string
@@ -37,10 +40,22 @@ type IProjectorRunner interface {
 	StateSingletonRecord(fQName IFullQName, keyValueList ...any) IProjectorRunner
 	StateCUDRow(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner
 	StateView(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner
+
 	EventOffset(offset istructs.Offset) IProjectorRunner
-	// methos to fulfill test state
-	EventArgumentObject(id istructs.RecordID, keyValueList ...any) IProjectorRunner
+	EventWLogOffset(offset istructs.Offset) IProjectorRunner
+	EventPLogOffset(offset istructs.Offset) IProjectorRunner
+	EventRegisteredAt(registeredAt time.Time) IProjectorRunner
+	EventSyncedAt(syncedAt time.Time) IProjectorRunner
+	EventCUD(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner
+	EventQName(qName IFullQName) IProjectorRunner
+	EventSynced(synced bool) IProjectorRunner
+	EventDeviceID(deviceID istructs.ConnectedDeviceID) IProjectorRunner
+	EventWSID(wsid istructs.WSID) IProjectorRunner
+	EventArgumentObject(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner
 	EventArgumentObjectRow(path string, id istructs.RecordID, keyValueList ...any) IProjectorRunner
+	EventUnloggedArgumentObject(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner
+	EventUnloggedArgumentObjectRow(path string, id istructs.RecordID, keyValueList ...any) IProjectorRunner
+
 	// methods to check out the test state
 	IntentSingletonInsert(fQName IFullQName, keyValueList ...any) IProjectorRunner
 	IntentSingletonUpdate(fQName IFullQName, keyValueList ...any) IProjectorRunner

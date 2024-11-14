@@ -29,6 +29,7 @@ func main() {
 }
 
 func execRootCmd(args []string, ver string) error {
+	// TODO: replace go.mod with go.mod replace directive
 	params := &vpmParams{}
 	rootCmd := cobrau.PrepareRootCmd(
 		"vpm",

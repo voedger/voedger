@@ -15,10 +15,12 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/compile"
+	"github.com/voedger/voedger/pkg/coreutils"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -401,14 +403,12 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 	ts.extensionFunc = extensionFunc
 
 	ts.argumentObject = make(map[string]any)
-	if iCommand != nil {
-		// set cud builder function
-		ts.setCudBuilder(iCommand, wsid)
+	// set cud builder function
+	ts.setCudBuilder(iCommand, wsid)
 
-		// set arguments for the command
-		if len(iCommand.ArgumentEntity()) > 0 {
-			ts.argumentType = appdef.NewFullQName(iCommand.ArgumentPkgPath(), iCommand.ArgumentEntity())
-		}
+	// set arguments for the command
+	if len(iCommand.ArgumentEntity()) > 0 {
+		ts.argumentType = appdef.NewFullQName(iCommand.ArgumentPkgPath(), iCommand.ArgumentEntity())
 	}
 
 	return ts
@@ -593,6 +593,8 @@ func (cts *CommandTestState) Run() {
 // ProjectorTestState is a test state for projector testing
 type ProjectorTestState struct {
 	generalTestState
+
+	rawEvent *rawEvent
 }
 
 // NewProjectorTestState creates a new test state for projector testing
@@ -606,6 +608,14 @@ func NewProjectorTestState(t *testing.T, iProjector IProjector, extensionFunc fu
 	// initialize funcRunner and extensionFunc itself
 	ts.funcRunner = &sync.Once{}
 	ts.extensionFunc = extensionFunc
+	ts.rawEvent = &rawEvent{
+		argumentObject: &coreutils.TestObject{
+			Data: make(map[string]any),
+		},
+		unloggedArgumentObject: &coreutils.TestObject{
+			Data: make(map[string]any),
+		},
+	}
 
 	return ts
 }
@@ -622,46 +632,41 @@ func (pts *ProjectorTestState) StateSingletonRecord(fQName IFullQName, keyValueL
 	return pts
 }
 
-func (pts *ProjectorTestState) EventArgumentObject(id istructs.RecordID, keyValueList ...any) IProjectorRunner {
-	keyValueMap, err := parseKeyValues(keyValueList)
-	if err != nil {
-		panic(fmt.Errorf("failed to parse key values: %w", err))
-	}
-
-	for key, value := range keyValueMap {
-		v, valueExist := pts.argumentObject[key]
-		if valueExist {
-			panic(fmt.Errorf("key %s already exists in the argument object with value %v", key, v))
-		}
-
-		pts.argumentObject[key] = value
-		if intValue, ok := value.(int); ok {
-			pts.argumentObject[key] = json.Number(fmt.Sprintf("%d", intValue))
-		}
-	}
-
-	pts.argumentObject[appdef.SystemField_ID] = id
+func (pts *ProjectorTestState) EventArgumentObject(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
+	setArgumentObject(pts.rawEvent.argumentObject, fQName, id, keyValueList...)
 
 	return pts
 }
 
 func (pts *ProjectorTestState) EventArgumentObjectRow(path string, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
-	parts := strings.Split(path, "/")
+	setArgumentObjectRow(pts.rawEvent.argumentObject, path, id, keyValueList...)
 
-	innerTree := pts.argumentObject
-	for i, part := range parts {
-		if len(part) == 0 {
-			continue
-		}
+	return pts
+}
 
-		if i < len(parts)-1 {
-			innerTree = putToArgumentObjectTree(innerTree, part)
-			continue
-		}
+func (pts *ProjectorTestState) EventUnloggedArgumentObject(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
+	setArgumentObject(pts.rawEvent.unloggedArgumentObject, fQName, id, keyValueList...)
 
-		innerTree = putToArgumentObjectTree(innerTree, part, keyValueList...)
-		innerTree[appdef.SystemField_ID] = id
+	return pts
+}
+
+func (pts *ProjectorTestState) EventUnloggedArgumentObjectRow(path string, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
+	setArgumentObjectRow(pts.rawEvent.unloggedArgumentObject, path, id, keyValueList...)
+
+	return pts
+}
+
+func (pts *ProjectorTestState) EventCUD(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
+	keyValueMap, err := parseKeyValues(keyValueList)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse key values: %w", err))
 	}
+
+	pts.rawEvent.cuds = append(pts.rawEvent.cuds, &coreutils.TestObject{
+		Id:   id,
+		Name: appdef.NewQName(fQName.PkgPath(), fQName.Entity()),
+		Data: keyValueMap,
+	})
 
 	return pts
 }
@@ -740,6 +745,7 @@ func (pts *ProjectorTestState) Run() {
 	pts.putRecords()
 	pts.putCudRows()
 	pts.putArgument()
+	pts.putEvent()
 
 	pts.runExtensionFunc()
 
@@ -758,6 +764,68 @@ func (pts *ProjectorTestState) putArgument() {
 			argBuilder.FillFromJSON(pts.argumentObject)
 		},
 	)
+}
+
+func (pts *ProjectorTestState) putEvent() {
+	event, err := pts.appStructs.Events().PutPlog(pts.rawEvent, nil, pts.plogGen)
+	if err != nil {
+		panic(err)
+	}
+
+	err = pts.appStructs.Events().PutWlog(event)
+	if err != nil {
+		panic(err)
+	}
+
+	pts.event = event
+}
+
+func (pts *ProjectorTestState) EventQName(qName IFullQName) IProjectorRunner {
+	pts.rawEvent.qName = appdef.NewQName(qName.PkgPath(), qName.Entity())
+
+	return pts
+}
+
+func (pts *ProjectorTestState) EventSynced(synced bool) IProjectorRunner {
+	pts.rawEvent.synced = synced
+
+	return pts
+}
+
+func (pts *ProjectorTestState) EventDeviceID(deviceID istructs.ConnectedDeviceID) IProjectorRunner {
+	pts.rawEvent.deviceID = deviceID
+
+	return pts
+}
+
+func (pts *ProjectorTestState) EventRegisteredAt(registeredAt time.Time) IProjectorRunner {
+	pts.rawEvent.registeredAt = istructs.UnixMilli(registeredAt.UnixMilli())
+
+	return pts
+}
+
+func (pts *ProjectorTestState) EventSyncedAt(syncedAt time.Time) IProjectorRunner {
+	pts.rawEvent.syncedAt = istructs.UnixMilli(syncedAt.UnixMilli())
+
+	return pts
+}
+
+func (pts *ProjectorTestState) EventWLogOffset(wLogOffset istructs.Offset) IProjectorRunner {
+	pts.rawEvent.wLogOffset = wLogOffset
+
+	return pts
+}
+
+func (pts *ProjectorTestState) EventPLogOffset(pLogOffset istructs.Offset) IProjectorRunner {
+	pts.rawEvent.pLogOffset = pLogOffset
+
+	return pts
+}
+
+func (pts *ProjectorTestState) EventWSID(wsid istructs.WSID) IProjectorRunner {
+	pts.rawEvent.wsid = wsid
+
+	return pts
 }
 
 func parseKeyValues(keyValues []any) (map[string]any, error) {
@@ -832,4 +900,117 @@ func splitKeysFromValues(entity IFullQName, m map[string]any) (mapOfKeys map[str
 	}
 
 	return mapOfKeys, mapOfValues
+}
+
+func setArgumentObject(argumentObject *coreutils.TestObject, fQName IFullQName, id istructs.RecordID, keyValueList ...any) {
+	argumentObject.Id = id
+	argumentObject.Name = appdef.NewQName(fQName.PkgPath(), fQName.Entity())
+
+	keyValueMap, err := parseKeyValues(keyValueList)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse key values: %w", err))
+	}
+
+	for key, value := range keyValueMap {
+		v, valueExist := argumentObject.Data[key]
+		if valueExist {
+			panic(fmt.Errorf("key %s already exists in the argument object with value %v", key, v))
+		}
+
+		argumentObject.Data[key] = value
+		if intValue, ok := value.(int); ok {
+			argumentObject.Data[key] = json.Number(fmt.Sprintf("%d", intValue))
+		}
+	}
+
+	argumentObject.Data[appdef.SystemField_ID] = id
+}
+
+func setArgumentObjectRow(argumentObject *coreutils.TestObject, path string, id istructs.RecordID, keyValueList ...any) {
+	parts := strings.Split(path, "/")
+
+	innerTree := argumentObject.Data
+	for i, part := range parts {
+		if len(part) == 0 {
+			continue
+		}
+
+		if i < len(parts)-1 {
+			innerTree = putToArgumentObjectTree(innerTree, part)
+			continue
+		}
+
+		innerTree = putToArgumentObjectTree(innerTree, part, keyValueList...)
+		innerTree[appdef.SystemField_ID] = id
+	}
+}
+
+type rawEvent struct {
+	// abstract event fields
+	qName                  appdef.QName
+	cuds                   []*coreutils.TestObject
+	argumentObject         *coreutils.TestObject
+	unloggedArgumentObject *coreutils.TestObject
+	registeredAt           istructs.UnixMilli
+	deviceID               istructs.ConnectedDeviceID
+	syncedAt               istructs.UnixMilli
+	synced                 bool
+
+	// raw event fields
+	wLogOffset        istructs.Offset
+	pLogOffset        istructs.Offset
+	wsid              istructs.WSID
+	handlingPartition istructs.PartitionID
+}
+
+func (re *rawEvent) QName() appdef.QName {
+	return re.qName
+}
+
+func (re *rawEvent) ArgumentObject() istructs.IObject {
+	return re.argumentObject
+}
+
+func (re *rawEvent) CUDs(cb func(istructs.ICUDRow) bool) {
+	for _, cud := range re.cuds {
+		if !cb(cud) {
+			break
+		}
+	}
+}
+
+func (re *rawEvent) RegisteredAt() istructs.UnixMilli {
+	return re.registeredAt
+}
+
+func (re *rawEvent) DeviceID() istructs.ConnectedDeviceID {
+	return re.deviceID
+}
+
+func (re *rawEvent) Synced() bool {
+	return re.synced
+}
+
+func (re *rawEvent) SyncedAt() istructs.UnixMilli {
+	return re.syncedAt
+}
+
+func (re *rawEvent) ArgumentUnloggedObject() istructs.IObject {
+	return re.unloggedArgumentObject
+}
+
+func (re *rawEvent) HandlingPartition() istructs.PartitionID {
+	return re.handlingPartition
+}
+
+func (re *rawEvent) PLogOffset() istructs.Offset {
+	return re.pLogOffset
+}
+
+func (re *rawEvent) WLogOffset() istructs.Offset {
+	return re.wLogOffset
+}
+
+func (re *rawEvent) Workspace() istructs.WSID {
+	return re.wsid
 }

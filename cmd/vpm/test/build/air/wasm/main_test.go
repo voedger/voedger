@@ -115,7 +115,7 @@ func TestFillPbillDates(t *testing.T) {
 		).
 			EventOffset(123).
 			EventArgumentObject(
-				//orm.Package_untill.WDoc_bill,
+				orm.Package_untill.WDoc_bill,
 				2,
 				`id_bill`, 100002,
 				`id_untill_users`, 100001,
@@ -141,22 +141,23 @@ func TestFillPbillDates(t *testing.T) {
 	})
 
 	t.Run("View View_PbillDates: update", func(t *testing.T) {
+		reisteredAt := time.Date(2024, 11, 1, 12, 0, 0, 0, time.UTC)
+
 		test.NewProjectorTest(
 			t,
 			orm.Package_air.Projector_FillPbillDates(),
 			FillPbillDates,
 		).
-			EventOffset(123).
-			//// TODO: add Event method to testcase
-			//EventRegisteredAt(...).
-			//EventArgumentObject(...).
-			//EventQName(...).
-			//EventSynced(...).
-			//EventDeviceID(...).
-			//EventSyncedAt(...).
-			//EventWLogOffset(...).
-			//EventWorkspace(...).
+			EventRegisteredAt(reisteredAt).
+			EventQName(orm.Package_air.CDoc_Abc).
+			EventSynced(false).
+			EventDeviceID(1231).
+			EventSyncedAt(reisteredAt.Add(12*time.Hour)).
+			EventWLogOffset(1234).
+			EventPLogOffset(1235).
+			EventWSID(12345).
 			EventArgumentObject(
+				orm.Package_untill.ODoc_pbill,
 				2,
 				`id_bill`, 100002,
 				`id_untill_users`, 100001,
@@ -201,8 +202,8 @@ func TestProjectorODoc(t *testing.T) {
 			orm.Package_air.Projector_ProjectorODoc(),
 			ProjectorODoc,
 		).
-			EventOffset(123).
-			StateCUDRow(
+			EventWLogOffset(123).
+			EventCUD(
 				orm.Package_air.ODoc_ProformaPrinted,
 				100002,
 				`Number`, 100002,
