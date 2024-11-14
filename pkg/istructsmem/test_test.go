@@ -201,7 +201,7 @@ var testData = testDataType{
 	tablePhotos:    appdef.NewQName("test", "photos"),
 	tempPhotoID:    1,
 	tablePhotoRems: appdef.NewQName("test", "photoRems"),
-	tempRemarkID:   2,
+	tempRemarkID:   11,
 
 	changeCmdName: appdef.NewQName("test", "change"),
 

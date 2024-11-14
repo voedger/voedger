@@ -76,7 +76,7 @@ func Test_KeyType(t *testing.T) {
 
 	key := newKey(appCfg, viewName)
 
-	t.Run("key must supports IKeyBuilder interface", func(t *testing.T) {
+	t.Run("should be supported IKeyBuilder", func(t *testing.T) {
 		kb := istructs.IKeyBuilder(key)
 
 		require.NotNil(kb)
@@ -162,7 +162,7 @@ func Test_KeyType(t *testing.T) {
 		})
 	}
 
-	t.Run("key must supports IKey interface", func(t *testing.T) { testIKey(t, key) })
+	t.Run("should be supported IKey interface", func(t *testing.T) { testIKey(t, key) })
 
 	t.Run("should be ok to load/store key to bytes", func(t *testing.T) {
 		p, c := key.storeToBytes(0)
@@ -173,7 +173,7 @@ func Test_KeyType(t *testing.T) {
 		dupe.partRow.copyFrom(&key.partRow)
 		require.NoError(dupe.loadFromBytes(c))
 
-		t.Run("key must supports IKey interface", func(t *testing.T) { testIKey(t, dupe) })
+		t.Run("should be ok to call IKey members", func(t *testing.T) { testIKey(t, dupe) })
 
 		require.True(key.Equals(dupe))
 	})
@@ -253,7 +253,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		}
 	})
 
-	t.Run("Should read one (!) record by WSID = 1", func(t *testing.T) {
+	t.Run("should be ok to read one (!) record by WSID = 1", func(t *testing.T) {
 		kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", 1)
 
@@ -303,7 +303,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		require.NoError(err)
 	})
 
-	t.Run("Should read three record from WSID = 3 with correct order", func(t *testing.T) {
+	t.Run("should be ok to read three record from WSID = 3 with correct order", func(t *testing.T) {
 		kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", 3)
 
@@ -319,13 +319,13 @@ func TestCore_ViewRecords(t *testing.T) {
 		require.Equal("Meat;Bread;Cake;", names, "wrong read order!")
 	})
 
-	t.Run("Should read two records by short clustering key and one by full", func(t *testing.T) {
+	t.Run("should be ok to read two records by short clustering key and one by full", func(t *testing.T) {
 		kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", 2)
 		kb.PutInt64("clusteringColumn1", 100)
 		kb.PutBool("clusteringColumn2", true)
 
-		t.Run("Should read one records by short clustering key", func(t *testing.T) {
+		t.Run("should be ok to read one records by short clustering key", func(t *testing.T) {
 			counter, val_names := 0, "|"
 			err := viewRecords.Read(context.Background(), 2, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				counter++
@@ -337,7 +337,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			require.Equal("|Apple cider|Pepsi|", val_names)
 		})
 
-		t.Run("Should read one records by short «c» clustering key", func(t *testing.T) {
+		t.Run("should be ok to read one records by short «c» clustering key", func(t *testing.T) {
 			kb.PutString("clusteringColumn3", "c")
 			counter, val_name := 0, "|"
 			err := viewRecords.Read(context.Background(), 2, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
@@ -350,7 +350,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			require.Equal("|Apple cider|", val_name)
 		})
 
-		t.Run("Should read one record by long «cid» clustering key", func(t *testing.T) {
+		t.Run("should be ok to read one record by long «cid» clustering key", func(t *testing.T) {
 			kb.PutString("clusteringColumn3", "cid")
 			counter, val_name := 0, "|"
 			err := viewRecords.Read(context.Background(), 2, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
@@ -363,7 +363,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			require.Equal("|Apple cider|", val_name)
 		})
 
-		t.Run("Should no read records by not existing clustering key", func(t *testing.T) {
+		t.Run("should be no records by not existing clustering key", func(t *testing.T) {
 			kb.PutString("clusteringColumn3", "tofu")
 			counter := 0
 			err := viewRecords.Read(context.Background(), 2, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
@@ -374,7 +374,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			require.Equal(0, counter)
 		})
 
-		t.Run("Should read one records by short «s» clustering key. Old style key filling", func(t *testing.T) {
+		t.Run("should be ok to read one records by short «s» clustering key. Old style key filling", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			kb.PartitionKey().PutInt64("partitionKey1", 2)
 			kb.ClusteringColumns().PutInt64("clusteringColumn1", 100)
@@ -393,7 +393,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		})
 	})
 
-	t.Run("get exists record must be ok", func(t *testing.T) {
+	t.Run("should be ok to get exists record", func(t *testing.T) {
 		kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", 2)
 		kb.PutInt64("clusteringColumn1", 100)
@@ -407,7 +407,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		require.True(value.AsBool("active"))
 	})
 
-	t.Run("get not exists record must be available", func(t *testing.T) {
+	t.Run("should be error to get non exists record", func(t *testing.T) {
 		kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", 2)
 		kb.PutInt64("clusteringColumn1", 100)
@@ -419,7 +419,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		require.NotNil(value)
 	})
 
-	t.Run("Test UpdateValueBuilder", func(t *testing.T) {
+	t.Run("should be ok to call UpdateValueBuilder", func(t *testing.T) {
 		kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 		kb.PutInt64("partitionKey1", 1)
 		kb.PutInt64("clusteringColumn1", 100)
@@ -454,30 +454,30 @@ func TestCore_ViewRecords(t *testing.T) {
 		require.Equal("Cola lemon", entryName)
 	})
 
-	t.Run("Invalid key building test", func(t *testing.T) {
+	t.Run("should be errors in build key", func(t *testing.T) {
 
 		require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NullQName) },
-			require.Is(ErrNameMissed, "Should panics if key type missed"))
+			require.Is(ErrNameMissedError, "Should panics if key type missed"))
 
 		require.Panics(func() { _ = viewRecords.KeyBuilder(istructs.QNameForError) },
-			require.Is(ErrNameNotFound), require.Has(istructs.QNameForError))
+			require.Is(ErrNameNotFoundError), require.Has(istructs.QNameForError))
 		require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NewQName("test", "unknownDrinks")) },
-			require.Is(ErrNameNotFound), require.Has("test.unknownDrinks"))
+			require.Is(ErrNameNotFoundError), require.Has("test.unknownDrinks"))
 
 		require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks_Value")) },
-			require.Is(ErrNameNotFound), require.Has("test.viewDrinks_Value"))
+			require.Is(ErrNameNotFoundError), require.Has("test.viewDrinks_Value"))
 
-		t.Run("Must have error if wrong partition key type", func(t *testing.T) {
+		t.Run("if wrong partition key type", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			pk := kb.PartitionKey()
 			pk.PutQName(appdef.SystemField_QName, appdef.NewQName("test", "viewDrinks_Value"))
 			err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				return nil
 			})
-			require.ErrorIs(err, ErrTypeChanged)
+			require.Error(err, require.Is(ErrUnableToUpdateSystemFieldError), require.HasAll("test.viewDrinks", appdef.SystemField_QName))
 		})
 
-		t.Run("Must have error if wrong clustering columns type", func(t *testing.T) {
+		t.Run("if wrong clustering columns type", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			pk := kb.PartitionKey()
 			pk.PutInt64("partitionKey1", 1)
@@ -486,10 +486,10 @@ func TestCore_ViewRecords(t *testing.T) {
 			err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				return nil
 			})
-			require.ErrorIs(err, ErrTypeChanged)
+			require.Error(err, require.Is(ErrUnableToUpdateSystemFieldError), require.HasAll("test.viewDrinks", appdef.SystemField_QName))
 		})
 
-		t.Run("Must have error if holes in clustering column", func(t *testing.T) {
+		t.Run("if holes in clustering column", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			pk := kb.PartitionKey()
 			pk.PutInt64("partitionKey1", 1)
@@ -501,12 +501,12 @@ func TestCore_ViewRecords(t *testing.T) {
 				cnt++
 				return nil
 			})
-			require.ErrorIs(err, ErrFieldIsEmpty)
-			require.ErrorContains(err, "hole at field «clusteringColumn2»")
+			require.Error(err, require.Is(ErrFieldIsEmptyError),
+				require.HasAll("test.viewDrinks", "clusteringColumn2"))
 			require.Zero(cnt)
 		})
 
-		t.Run("Must have error if wrong value type", func(t *testing.T) {
+		t.Run("if wrong value type", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			kb.PutInt64("partitionKey1", 1)
 			kb.PutInt64("clusteringColumn1", 100)
@@ -517,26 +517,26 @@ func TestCore_ViewRecords(t *testing.T) {
 			vb.PutQName(appdef.SystemField_QName, appdef.NewQName("test", "viewDrinks_ClusteringColumns"))
 
 			err := viewRecords.Put(1, kb, vb)
-			require.ErrorIs(err, ErrTypeChanged)
+			require.Error(err, require.Is(ErrUnableToUpdateSystemFieldError), require.HasAll("test.viewDrinks", appdef.SystemField_QName))
 		})
 
-		t.Run("Must have error if empty partition key", func(t *testing.T) {
+		t.Run("if empty partition key", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 
 			err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				return nil
 			})
-			require.ErrorIs(err, ErrFieldIsEmpty)
+			require.Error(err, require.Is(ErrFieldIsEmptyError), require.Has("test.viewDrinks"))
 
 			validateErr := validateErrorf(0, "")
 			require.ErrorAs(err, &validateErr)
 			require.Equal(ECode_EmptyData, validateErr.Code())
 
 			_, err = viewRecords.Get(1, kb)
-			require.ErrorIs(err, ErrFieldIsEmpty)
+			require.Error(err, require.Is(ErrFieldIsEmptyError), require.Has("test.viewDrinks"))
 		})
 
-		t.Run("Must have error for put if empty clustering columns key", func(t *testing.T) {
+		t.Run("if put with empty clustering columns key", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			kb.PutInt64("partitionKey1", 1)
 
@@ -546,88 +546,99 @@ func TestCore_ViewRecords(t *testing.T) {
 			vb.PutBool("active", true)
 
 			err := viewRecords.Put(1, kb, vb)
-			require.ErrorIs(err, ErrFieldIsEmpty)
+			require.Error(err, require.Is(ErrFieldIsEmptyError), require.Has("test.viewDrinks"))
 
 			validateErr := validateErrorf(0, "")
 			require.ErrorAs(err, &validateErr)
 			require.Equal(ECode_EmptyData, validateErr.Code())
 		})
 
-		t.Run("Must have error if wrong fields in key", func(t *testing.T) {
+		t.Run("if put with wrong fields in key", func(t *testing.T) {
 
-			t.Run("Must put error", func(t *testing.T) {
+			t.Run("should be put error", func(t *testing.T) {
 				kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 				kb.PutBool("errorField", true)
 				err := viewRecords.Put(1, kb, nil)
-				require.ErrorIs(err, ErrNameNotFound)
+				require.Error(err, require.Is(ErrNameNotFoundError), require.Has("errorField"))
 
 				t.Run("should be error IKeyBuilder.ToBytes()", func(t *testing.T) {
 					pk, cc, err := kb.ToBytes(0)
-					require.ErrorIs(err, ErrNameNotFound)
+					require.Error(err, require.Is(ErrNameNotFoundError), require.Has("errorField"))
 					require.Empty(pk)
 					require.Empty(cc)
 				})
 			})
 
-			t.Run("Must read and error", func(t *testing.T) {
+			t.Run("if read with invalid key", func(t *testing.T) {
 				kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 				kb.PutBool("errorField", true)
 				err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 					return nil
 				})
-				require.ErrorIs(err, ErrNameNotFound)
+				require.Error(err, "if Read() with invalid key",
+					require.Is(ErrNameNotFoundError), require.Has("errorField"))
 
 				_, err = viewRecords.Get(1, kb)
-				require.ErrorIs(err, ErrNameNotFound)
+				require.Error(err, "if Get() with invalid key",
+					require.Is(ErrNameNotFoundError), require.Has("errorField"))
 			})
 
 		})
 
-		t.Run("Must have error if wrong fields in partition key", func(t *testing.T) {
+		t.Run("if get with wrong fields in partition key", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			kb.PartitionKey().PutBool("errorField", true)
 			err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				return nil
 			})
-			require.ErrorIs(err, ErrNameNotFound)
+			require.Error(err, "if Read() with invalid PK",
+				require.Is(ErrNameNotFoundError), require.Has("errorField"))
 
 			_, err = viewRecords.Get(1, kb)
-			require.ErrorIs(err, ErrNameNotFound)
+			require.Error(err, "if Get() with invalid PK",
+				require.Is(ErrNameNotFoundError), require.Has("errorField"))
 		})
 
-		t.Run("Must have error if wrong fields in clustering columns", func(t *testing.T) {
+		t.Run("if get with wrong fields in clustering columns", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			kb.PutInt64("partitionKey1", 1)
 			kb.ClusteringColumns().PutBytes("errorField", []byte{1, 2, 3})
 			err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				return nil
 			})
-			require.ErrorIs(err, ErrNameNotFound)
+			require.Error(err, "if Read() with invalid CCols",
+				require.Is(ErrNameNotFoundError), require.Has("errorField"))
 
 			_, err = viewRecords.Get(1, kb)
-			require.ErrorIs(err, ErrNameNotFound)
+			require.Error(err, "if Get() with invalid CCols",
+				require.Is(ErrNameNotFoundError), require.Has("errorField"))
 		})
 	})
 
-	t.Run("Invalid value building test", func(t *testing.T) {
+	t.Run("should be errors in build value", func(t *testing.T) {
 
-		require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NullQName) },
-			require.Is(ErrNameMissed, "Should panics if value type missed"))
+		t.Run("should be panics", func(t *testing.T) {
+			require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NullQName) },
+				"if view name missed",
+				require.Is(ErrNameMissedError))
 
-		require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NewQName("test", "unknownDrinks")) },
-			require.Is(ErrNameNotFound), require.Has("test.unknownDrinks"))
+			require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NewQName("test", "unknownDrinks")) },
+				"if view not found",
+				require.Is(ErrNameNotFoundError), require.Has("test.unknownDrinks"))
 
-		require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks_PartitionKey")) },
-			require.Is(ErrNameNotFound), require.Has("test.viewDrinks_PartitionKey"))
+			require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks_PartitionKey")) },
+				"if wrong (not a view) type passed",
+				require.Is(ErrNameNotFoundError), require.Has("test.viewDrinks_PartitionKey"))
 
-		t.Run("Must have panic if wrong existing value type specified", func(t *testing.T) {
-			exists := newValue(appCfg, appdef.NewQName("test", "otherView"))
-			require.Panics(func() {
-				_ = viewRecords.UpdateValueBuilder(appdef.NewQName("test", "viewDrinks"), exists)
-			}, require.Is(ErrWrongType), require.Has("test.otherView"))
+			t.Run("if wrong existing value type specified", func(t *testing.T) {
+				exists := newValue(appCfg, appdef.NewQName("test", "otherView"))
+				require.Panics(func() {
+					_ = viewRecords.UpdateValueBuilder(appdef.NewQName("test", "viewDrinks"), exists)
+				}, require.Is(ErrWrongTypeError), require.Has("test.otherView"))
+			})
 		})
 
-		t.Run("Must have error for put if empty value", func(t *testing.T) {
+		t.Run("if put with empty value", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			kb.PutInt64("partitionKey1", 1)
 			kb.PutInt64("clusteringColumn1", 100)
@@ -637,14 +648,15 @@ func TestCore_ViewRecords(t *testing.T) {
 			vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks"))
 
 			err := viewRecords.Put(1, kb, vb)
-			require.ErrorIs(err, ErrNameNotFound)
+			require.Error(err, require.Is(ErrFieldIsEmptyError),
+				require.HasAll("id", "name", "active"))
 
 			validateErr := validateErrorf(0, "")
 			require.ErrorAs(err, &validateErr)
 			require.Equal(ECode_EmptyData, validateErr.Code())
 		})
 
-		t.Run("Must have error if errors in value", func(t *testing.T) {
+		t.Run("if put with invalid value", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "otherView"))
 			kb.PutQName("partitionKey1", appdef.NullQName)
 			kb.PutFloat32("clusteringColumn1", 44.4)
@@ -655,16 +667,18 @@ func TestCore_ViewRecords(t *testing.T) {
 			vb.PutQName("unknownField", appdef.NullQName)
 
 			err := viewRecords.Put(1, kb, vb)
-			require.ErrorIs(err, ErrNameNotFound)
+			require.Error(err, "if put with unknown field",
+				require.Is(ErrNameNotFoundError), require.Has("unknownField"))
 
 			t.Run("should be error IValueBuilder.ToBytes()", func(t *testing.T) {
 				v, err := vb.ToBytes()
-				require.ErrorIs(err, ErrNameNotFound)
+				require.Error(err, "if ToBytes() with unknown field",
+					require.Is(ErrNameNotFoundError), require.Has("unknownField"))
 				require.Empty(v)
 			})
 		})
 
-		t.Run("Must have error if key and value are from different views", func(t *testing.T) {
+		t.Run("if key and value are from different views", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "otherView"))
 			kb.PutQName("partitionKey1", appdef.NullQName)
 			kb.PutFloat32("clusteringColumn1", 44.4)
@@ -677,11 +691,10 @@ func TestCore_ViewRecords(t *testing.T) {
 			vb.PutBool("active", true)
 
 			err := viewRecords.Put(1, kb, vb)
-			require.ErrorIs(err, ErrWrongType)
-			require.ErrorContains(err, "test.viewDrinks")
+			require.Error(err, require.Is(ErrWrongTypeError), require.Has("test.viewDrinks"))
 		})
 
-		t.Run("put batch must fail if error in any key-value item", func(t *testing.T) {
+		t.Run("if put batch must with invalid key-value item", func(t *testing.T) {
 			entries := []entryType{
 				newEntry(viewRecords, 7, 200, true, "food", 1, "Meat"),
 				newEntry(viewRecords, 7, 300, true, "food", 1, "Bread"),
@@ -695,14 +708,17 @@ func TestCore_ViewRecords(t *testing.T) {
 				batch[i].Key = e.key
 				batch[i].Value = e.value
 			}
-			err := viewRecords.PutBatch(7, batch)
-			require.ErrorIs(err, ErrNameNotFound)
 
-			t.Run("put batch failed; no record from WSID = 7 must be read", func(t *testing.T) {
+			const failedWSID = istructs.WSID(7)
+			err := viewRecords.PutBatch(failedWSID, batch)
+			require.Error(err, require.Is(ErrNameNotFoundError),
+				require.Has("test.viewDrinks"), require.Has("errorField"))
+
+			t.Run("should be no reads if put batch failed", func(t *testing.T) {
 				kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 				kb.PutInt64("partitionKey1", 7)
 
-				require.NoError(viewRecords.Read(context.Background(), 7, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
+				require.NoError(viewRecords.Read(context.Background(), failedWSID, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 					require.Fail("if put batch failed then no records must be read")
 					return nil
 				}))
@@ -782,13 +798,15 @@ func TestCore_ViewRecords(t *testing.T) {
 
 		_, c := kb.(*keyType).storeToBytes(2)
 
-		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, c)
-		_, err := viewRecords.Get(2, kb)
-		require.ErrorIs(err, ErrUnknownCodec)
+		const badCodec byte = 255
 
-		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, c)
+		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = badCodec /* error here */ }, nil, c)
+		_, err := viewRecords.Get(2, kb)
+		require.Error(err, require.Is(ErrUnknownCodecError), require.Has(badCodec))
+
+		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = badCodec /* error here */ }, nil, c)
 		err = viewRecords.Read(context.Background(), 2, kb, func(key istructs.IKey, value istructs.IValue) (err error) { return nil })
-		require.ErrorIs(err, ErrUnknownCodec)
+		require.Error(err, require.Is(ErrUnknownCodecError), require.Has(badCodec))
 	})
 	t.Run("Value builder must build value", func(t *testing.T) {
 		vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks"))
@@ -806,7 +824,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks"))
 		vb.PutInt32("id", 42)
 
-		require.Panics(func() { _ = vb.Build() }, require.Is(ErrWrongFieldType), require.Has("id"))
+		require.Panics(func() { _ = vb.Build() }, require.Is(ErrWrongFieldTypeError), require.Has("id"))
 	})
 }
 
@@ -900,18 +918,15 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 			json := make(map[appdef.FieldName]any)
 
 			err = app.ViewRecords().PutJSON(1, json)
-			require.ErrorIs(err, ErrFieldIsEmpty)
-			require.ErrorContains(err, appdef.SystemField_QName)
+			require.Error(err, require.Is(ErrFieldIsEmptyError), require.Has(appdef.SystemField_QName))
 
 			json[appdef.SystemField_QName] = appdef.NullQName.String()
 			err = app.ViewRecords().PutJSON(1, json)
-			require.ErrorIs(err, ErrFieldIsEmpty)
-			require.ErrorContains(err, appdef.SystemField_QName)
+			require.Error(err, require.Is(ErrFieldIsEmptyError), require.Has(appdef.SystemField_QName))
 
 			json[appdef.SystemField_QName] = 123
 			err = app.ViewRecords().PutJSON(1, json)
-			require.ErrorIs(err, ErrWrongFieldType)
-			require.ErrorContains(err, appdef.SystemField_QName)
+			require.Error(err, require.Is(ErrWrongFieldTypeError), require.Has(appdef.SystemField_QName))
 
 			json[appdef.SystemField_QName] = `naked 🔫`
 			err = app.ViewRecords().PutJSON(1, json)
@@ -920,8 +935,7 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 
 			json[appdef.SystemField_QName] = `test.unknown`
 			err = app.ViewRecords().PutJSON(1, json)
-			require.ErrorIs(err, ErrNameNotFound)
-			require.ErrorContains(err, `test.unknown`)
+			require.Error(err, require.Is(ErrNameNotFoundError), require.Has(`test.unknown`))
 		})
 
 		t.Run("if key errors", func(t *testing.T) {
@@ -929,24 +943,20 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 			json[appdef.SystemField_QName] = viewName
 
 			err = app.ViewRecords().PutJSON(1, json)
-			require.ErrorIs(err, ErrFieldIsEmpty)
-			require.ErrorContains(err, "pk1")
+			require.Error(err, require.Is(ErrFieldIsEmptyError), require.Has("pk1"))
 
 			json["pk1"] = "error value"
 			err = app.ViewRecords().PutJSON(1, json)
-			require.ErrorIs(err, ErrWrongFieldType)
-			require.ErrorContains(err, "pk1")
+			require.Error(err, require.Is(ErrWrongFieldTypeError), require.Has("pk1"))
 
 			json["pk1"] = gojson.Number("1")
 			err = app.ViewRecords().PutJSON(1, json)
-			require.ErrorIs(err, ErrFieldIsEmpty)
-			require.ErrorContains(err, "cc1")
+			require.Error(err, require.Is(ErrFieldIsEmptyError), require.Has("cc1"))
 
 			json["pk1"] = gojson.Number("1")
 			json["cc1"] = gojson.Number("2")
 			err = app.ViewRecords().PutJSON(1, json)
-			require.ErrorIs(err, ErrFieldIsEmpty)
-			require.ErrorContains(err, "cc2")
+			require.Error(err, require.Is(ErrFieldIsEmptyError), require.Has("cc2"))
 		})
 
 		t.Run("if value errors", func(t *testing.T) {
@@ -958,14 +968,12 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 
 			json["unknownField"] = `value`
 			err = app.ViewRecords().PutJSON(1, json)
-			require.ErrorIs(err, ErrNameNotFound)
-			require.ErrorContains(err, "unknownField")
+			require.Error(err, require.Is(ErrNameNotFoundError), require.Has("unknownField"))
 
 			delete(json, "unknownField")
 			json["v1"] = `value`
 			err = app.ViewRecords().PutJSON(1, json)
-			require.ErrorIs(err, ErrWrongFieldType)
-			require.ErrorContains(err, "v1")
+			require.Error(err, require.Is(ErrWrongFieldTypeError), require.Has(err, "v1"))
 		})
 	})
 }
@@ -1379,14 +1387,15 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 	t.Run("should be error", func(t *testing.T) {
 
 		t.Run("if maximum batch size exceeds", func(t *testing.T) {
-			batch := make([]istructs.ViewRecordGetBatchItem, maxGetBatchRecordCount+1)
+			const tooGig = maxGetBatchRecordCount + 1
+			batch := make([]istructs.ViewRecordGetBatchItem, tooGig)
 			for i := 0; i < len(batch); i++ {
 				batch[i].Key = app.ViewRecords().KeyBuilder(championsView)
 				batch[i].Key.PutInt32("Year", int32(i))
 				batch[i].Key.PutString("Sport", "Шашки")
 			}
 			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-			require.ErrorIs(err, ErrMaxGetBatchRecordCountExceeds)
+			require.Error(err, require.Is(ErrMaxGetBatchSizeExceedsError), require.Has(tooGig))
 		})
 
 		t.Run("if key build error", func(t *testing.T) {
@@ -1396,7 +1405,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 			batch[0].Key.PutString("Sport", "Volleyball")
 
 			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-			require.ErrorIs(err, ErrWrongFieldType)
+			require.Error(err, require.Is(ErrWrongFieldTypeError), require.Has("Year"))
 		})
 
 		t.Run("if key is not valid", func(t *testing.T) {
@@ -1406,7 +1415,8 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 			// batch[0].Key.PutString("Sport", "Volleyball") // error here
 
 			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-			require.ErrorIs(err, ErrFieldIsEmpty)
+			require.Error(err, require.Is(ErrFieldIsEmptyError),
+				require.HasAll(championsView, "Sport"))
 		})
 
 		t.Run("if storage GetBatch failed", func(t *testing.T) {
@@ -1432,7 +1442,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 			storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, []byte("Volleyball"))
 
 			err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
-			require.ErrorIs(err, ErrUnknownCodec)
+			require.ErrorIs(err, ErrUnknownCodecError)
 		})
 	})
 
