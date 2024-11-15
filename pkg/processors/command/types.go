@@ -92,7 +92,7 @@ type implIDGenerator struct {
 }
 
 type parsedCUD struct {
-	opKind         iauthnz.OperationKindType
+	opKind         appdef.OperationKind
 	existingRecord istructs.IRecord // create -> nil
 	id             int64
 	qName          appdef.QName

@@ -592,7 +592,7 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 			return cudXPath.Errorf("id can not be negative")
 		}
 		if isCreate {
-			parsedCUD.opKind = iauthnz.OperationKind_INSERT
+			parsedCUD.opKind = appdef.OperationKind_Insert
 			qNameStr, _, err := parsedCUD.fields.AsString(appdef.SystemField_QName)
 			if err != nil {
 				return cudXPath.Error(err)
@@ -601,7 +601,7 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 				return cudXPath.Error(err)
 			}
 		} else {
-			parsedCUD.opKind = iauthnz.OperationKind_UPDATE
+			parsedCUD.opKind = appdef.OperationKind_Update
 			if parsedCUD.id, ok, err = cudData.AsInt64(appdef.SystemField_ID); err != nil {
 				return cudXPath.Error(err)
 			}
@@ -626,7 +626,7 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	return err
 }
 
-func checkCUDsAllowed(_ context.Context, work pipeline.IWorkpiece) (err error) {
+func checkCUDsAllowedInCUDCmdOnly(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	if len(cmd.parsedCUDs) > 0 && cmd.cmdMes.QName() != istructs.QNameCommandCUD && cmd.cmdMes.QName() != builtin.QNameCommandInit {
 		return errors.New("CUDs allowed for c.sys.CUD command only")
@@ -651,7 +651,7 @@ func checkArgsRefIntegrity(_ context.Context, work pipeline.IWorkpiece) (err err
 func checkIsActiveInCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	for _, cud := range cmd.parsedCUDs {
-		if cud.opKind != iauthnz.OperationKind_UPDATE {
+		if cud.opKind != appdef.OperationKind_Update {
 			continue
 		}
 		hasOnlySystemFields := true
@@ -677,32 +677,14 @@ func checkIsActiveInCUDs(_ context.Context, work pipeline.IWorkpiece) (err error
 func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	for _, parsedCUD := range cmd.parsedCUDs {
-		// req := iauthnz.AuthzRequest{
-		// 	OperationKind: parsedCUD.opKind,
-		// 	Resource:      parsedCUD.qName,
-		// 	Fields:        maps.Keys(parsedCUD.fields),
-		// }
-		// ok, err := cmdProc.authorizer.Authorize(cmd.appStructs, cmd.principals, req)
-		// if err != nil {
-		// 	return parsedCUD.xPath.Error(err)
-		// }
-		// if !ok {
-		// roles := []appdef.QName{}
-		// for _, prn := range cmd.principals {
-		// 	if prn.Kind != iauthnz.PrincipalKind_Role {
-		// 		continue
-		// 	}
-		// 	roles = append(roles, prn.QName)
-		// }
 		fields := maps.Keys(parsedCUD.fields)
-		ok, _, err := cmd.appPart.IsOperationAllowed(appdef.OperationKind_Insert, parsedCUD.qName, fields, cmd.roles)
+		ok, _, err := cmd.appPart.IsOperationAllowed(parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
 		if err != nil {
 			return err
 		}
 		if !ok {
 			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
 		}
-		// }
 	}
 	return
 }
@@ -711,7 +693,7 @@ func (cmdProc *cmdProc) writeCUDs(_ context.Context, work pipeline.IWorkpiece) (
 	cmd := work.(*cmdWorkpiece)
 	for _, parsedCUD := range cmd.parsedCUDs {
 		var cud istructs.IRowWriter
-		if parsedCUD.opKind == iauthnz.OperationKind_INSERT {
+		if parsedCUD.opKind == appdef.OperationKind_Insert {
 			cud = cmd.reb.CUDBuilder().Create(parsedCUD.qName)
 			cud.PutRecordID(appdef.SystemField_ID, istructs.RecordID(parsedCUD.id)) // nolint G115
 		} else {

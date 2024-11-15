@@ -246,22 +246,6 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
-			// req := iauthnz.AuthzRequest{
-			// 	OperationKind: iauthnz.OperationKind_EXECUTE,
-			// 	Resource:      qw.msg.QName(),
-			// }
-			// ok, err := authz.Authorize(qw.appStructs, qw.principals, req)
-			// if err != nil {
-			// 	return err
-			// }
-			// if !ok {
-			// 	roles := []appdef.QName{}
-			// 	for _, prn := range qw.principals {
-			// 		if prn.Kind != iauthnz.PrincipalKind_Role {
-			// 			continue
-			// 		}
-			// 		roles = append(roles, prn.QName)
-			// 	}
 			ok, _, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
 			if err != nil {
 				return err
@@ -269,7 +253,6 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			if !ok {
 				return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
 			}
-			// }
 			return nil
 		}),
 		operator("unmarshal request", func(ctx context.Context, qw *queryWork) (err error) {

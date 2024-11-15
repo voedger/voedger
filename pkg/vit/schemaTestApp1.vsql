@@ -549,53 +549,45 @@ ALTERABLE WORKSPACE test_wsWS (
 
 	TABLE TestCDocWithDeniedFields INHERITS CDoc (
 		Fld1 int32,
-		DeniedFld2 int32
-	) WITH Tags=(WorkspaceOwnerTableTag);
+		DeniedFld2 int32 -- denied field, no grants
+	);
 
 	EXTENSION ENGINE BUILTIN (
-		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult;
-		QUERY MockQry(MockQryParams) RETURNS MockQryResult;
-		QUERY QryIntents() RETURNS QryIntentsResult;
+		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult WITH Tags=(WorkspaceOwnerFuncTag);
+		QUERY MockQry(MockQryParams) RETURNS MockQryResult WITH Tags=(WorkspaceOwnerFuncTag);
+		QUERY QryIntents() RETURNS QryIntentsResult WITH Tags=(WorkspaceOwnerFuncTag);
 
-		COMMAND RatedCmd(RatedCmdParams);
-		COMMAND MockCmd(MockCmdParams);
-		COMMAND TestCmd(TestCmdParams) RETURNS TestCmdResult;
+		COMMAND RatedCmd(RatedCmdParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND MockCmd(MockCmdParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND TestCmd(TestCmdParams) RETURNS TestCmdResult WITH Tags=(WorkspaceOwnerFuncTag);
 
 		COMMAND TestDeniedCmd;
 		QUERY TestDeniedQuery() RETURNS TestCmdResult;
 
-		COMMAND CmdODocOne(odoc1);
-		COMMAND CmdODocTwo(odoc2, UNLOGGED odoc2);
+		COMMAND CmdODocOne(odoc1) WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND CmdODocTwo(odoc2, UNLOGGED odoc2) WITH Tags=(WorkspaceOwnerFuncTag);
 
-		COMMAND TestCmdRawArg(sys.Raw);
+		COMMAND TestCmdRawArg(sys.Raw) WITH Tags=(WorkspaceOwnerFuncTag);
 		PROJECTOR ProjDummy AFTER INSERT ON (CRecord) INTENTS(View(View)); -- does nothing, only to define view.app1pkg.View
 		SYNC PROJECTOR ApplyCategoryIdx AFTER INSERT ON (category) INTENTS(View(CategoryIdx));
 
-		COMMAND CmdWithResponseIntent(WithResponseIntentParams);
-		QUERY QryWithResponseIntent(WithResponseIntentParams) RETURNS QryWithResponseIntentResult;
+		COMMAND CmdWithResponseIntent(WithResponseIntentParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		QUERY QryWithResponseIntent(WithResponseIntentParams) RETURNS QryWithResponseIntentResult WITH Tags=(WorkspaceOwnerFuncTag);
 	);
 
 	ROLE Updated; -- need for invite tests
 	ROLE SpecialAPITokenRole; -- need to test foreign auth using APIToken
 
 	TAG WorkspaceOwnerTableTag;
+	TAG WorkspaceOwnerFuncTag;
 
 	GRANT EXECUTE ON QUERY sys.Collection TO SpecialAPITokenRole;
 	GRANT SELECT ON TABLE articles TO SpecialAPITokenRole;
 
-	GRANT SELECT ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO WorkspaceOwner;
-	GRANT INSERT ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO WorkspaceOwner;
-	GRANT UPDATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO WorkspaceOwner;
+	GRANT SELECT, INSERT, UPDATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO WorkspaceOwner;
 
-	GRANT EXECUTE ON QUERY RatedQry TO WorkspaceOwner;
-	GRANT EXECUTE ON QUERY MockQry TO WorkspaceOwner;
-	GRANT EXECUTE ON QUERY QryIntents TO WorkspaceOwner;
-	GRANT EXECUTE ON COMMAND RatedCmd TO WorkspaceOwner;
-	GRANT EXECUTE ON COMMAND MockCmd TO WorkspaceOwner;
-	GRANT EXECUTE ON COMMAND TestCmd TO WorkspaceOwner;
-	GRANT EXECUTE ON COMMAND CmdODocOne TO WorkspaceOwner;
-	GRANT EXECUTE ON COMMAND CmdODocTwo TO WorkspaceOwner;
-	GRANT EXECUTE ON COMMAND TestCmdRawArg TO WorkspaceOwner;
-	GRANT EXECUTE ON COMMAND CmdWithResponseIntent TO WorkspaceOwner;
-	GRANT EXECUTE ON QUERY QryWithResponseIntent TO WorkspaceOwner;
+	GRANT EXECUTE ON ALL QUERIES WITH TAG WorkspaceOwnerFuncTag TO WorkspaceOwner;
+	GRANT EXECUTE ON ALL COMMANDS WITH TAG WorkspaceOwnerFuncTag TO WorkspaceOwner;
+
+	GRANT SELECT(Fld1) ON TABLE TestCDocWithDeniedFields TO WorkspaceOwner;
 );

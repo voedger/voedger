@@ -62,7 +62,9 @@ ALTERABLE WORKSPACE UserProfileWS INHERITS ProfileWS (
 		PROJECTOR ApplySendEmailVerificationCode AFTER EXECUTE ON (SendEmailVerificationCode) STATE(AppSecret) INTENTS(SendMail);
 	);
 
-	GRANT SELECT ON TABLE UserProfile TO ProfileOwner;
+	-- GRANT SELECT ON TABLE UserProfile TO ProfileOwner;
+	GRANT SELECT ON ALL TABLES TO ProfileOwner; -- eliminate, need to select the descriptor
+	GRANT UPDATE ON ALL TABLES TO ProfileOwner;
 
 	GRANT EXECUTE ON QUERY DescribePackageNames TO ProfileOwner;
 	GRANT EXECUTE ON QUERY DescribePackage TO ProfileOwner;

@@ -375,7 +375,7 @@ func TestDeniedResources(t *testing.T) {
 		body = `{"args":{"Schema":"app1pkg.TestCDocWithDeniedFields"},"elements":[{"fields":["DeniedFld2"]}]}`
 		vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect403())
 
-		body = `{"args":{"Schema":"app1pkg.TestCDocWithDeniedFields"},"elements":[{"fields":["DeniedFld2, Fld1"]}]}`
+		body = `{"args":{"Schema":"app1pkg.TestCDocWithDeniedFields"},"elements":[{"fields":["DeniedFld2","Fld1"]}]}`
 		vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect403())
 	})
 }

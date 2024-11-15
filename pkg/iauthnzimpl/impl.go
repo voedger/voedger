@@ -25,9 +25,10 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		}
 	}()
 
+	// role.sys.Everyone
 	principals = append(principals, iauthnz.Principal{
 		Kind:  iauthnz.PrincipalKind_Role,
-		QName: iauthnz.QNameRoleAnonymous,
+		QName: iauthnz.QNameRoleEveryone,
 	})
 
 	if len(req.Token) == 0 {
@@ -36,6 +37,12 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 			Kind: iauthnz.PrincipalKind_User,
 			WSID: istructs.GuestWSID,
 			Name: istructs.SysGuestLogin,
+		})
+
+		// role.sys.Anonymous
+		principals = append(principals, iauthnz.Principal{
+			Kind:  iauthnz.PrincipalKind_Role,
+			QName: iauthnz.QNameRoleAnonymous,
 		})
 
 		// copy roles from subjects
