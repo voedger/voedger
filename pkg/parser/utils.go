@@ -61,7 +61,8 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 }
 
 func resolveInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *ProjectorStmt | *JobStmt |
-	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt | *LimitStmt | *QueryStmt | *RoleStmt | *DeclareStmt](fn DefQName, ictx *iterateCtx, cb func(f stmtType, schema *PackageSchemaAST) error) error {
+	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt | *LimitStmt | *QueryStmt | *RoleStmt |
+	*DeclareStmt | *WsDescriptorStmt](fn DefQName, ictx *iterateCtx, cb func(f stmtType, schema *PackageSchemaAST) error) error {
 	var err error
 	var item stmtType
 	var p *PackageSchemaAST
@@ -157,7 +158,7 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 	lookupCallback = func(stmt interface{}) {
 		if f, ok := stmt.(stmtType); ok && item == nil {
 			named := any(f).(INamedStatement)
-			if named.GetName() == string(fn.Name) {
+			if named.GetName() == string(fn.Name) && lookingUpInSchema == stmtSchema {
 				item = f
 				schema = lookingUpInSchema
 			}
@@ -194,7 +195,6 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 					chain = append(chain, iws)
 					for _, dq := range iws.Inherits {
 						err := resolveInCtx[*WorkspaceStmt](dq, ictx, func(f *WorkspaceStmt, wSchema *PackageSchemaAST) error {
-							lookingUpInSchema = wSchema
 							if !lookInOtherPackages && wSchema != ictx.pkg {
 								return nil // do not look tags in other packages
 							}
@@ -204,6 +204,7 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 							if item != nil {
 								return nil
 							}
+							lookingUpInSchema = wSchema
 							f.Iterate(lookupCallback)
 							return nil
 						})
@@ -239,17 +240,6 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 		lookingUpInSchema.Ast.Iterate(lookupCallback)
 	}
 
-	// Look in the sys package
-	if item == nil && maybeSysPkg(fn.Package) && lookInOtherPackages { // Look in sys pkg
-		lookingUpInSchema = ictx.app.Packages[appdef.SysPackage]
-		if lookingUpInSchema == nil {
-			return nil, nil, ErrCouldNotImport(appdef.SysPackage)
-		}
-		iterPkg := func(coll IStatementCollection) {
-			coll.Iterate(lookupCallback)
-		}
-		iterPkg(lookingUpInSchema.Ast)
-	}
 	return item, schema, nil
 }
 
@@ -346,10 +336,6 @@ func findPackage(pnkName Ident, c *iterateCtx) (*PackageSchemaAST, error) {
 
 func getTargetSchema(n DefQName, c *iterateCtx) (*PackageSchemaAST, error) {
 	return findPackage(n.Package, c)
-}
-
-func maybeSysPkg(pkg Ident) bool {
-	return (pkg == "" || pkg == appdef.SysPackage)
 }
 
 func getNestedTableKind(rootTableKind appdef.TypeKind) (appdef.TypeKind, error) {

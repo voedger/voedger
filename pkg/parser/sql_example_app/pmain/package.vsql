@@ -63,7 +63,7 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
             - using in projectors;
             - making CUD in any workspace;
     */
-    ABSTRACT TABLE NestedWithName INHERITS CRecord (
+    ABSTRACT TABLE NestedWithName INHERITS sys.CRecord (
         /*  Field is added to any table inherited from NestedWithName
             The current comment is also added to scheme for this field  */
 
@@ -82,18 +82,18 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
 
     /*
         Any declared table must have one of the following tables as a root anchestor:
-            - CDoc (Configuration)
-            - ODoc (Operational)
-            - WDoc (Workflow)
-            - CSingleton (Configration singleton)
-            - WSingleton (Workflow singleton)
+            - sys.CDoc (Configuration)
+            - sys.ODoc (Operational)
+            - sys.WDoc (Workflow)
+            - sys.CSingleton (Configration singleton)
+            - sys.WSingleton (Workflow singleton)
 
         Nested tables must have one of the following tables as a root anchestor:
-            - CRecord (Configuration)
-            - ODoc (Operational)
-            - WDoc (Workflow)
+            - sys.CRecord (Configuration)
+            - sys.ODoc (Operational)
+            - sys.WDoc (Workflow)
     */
-    TABLE TablePlan INHERITS CDoc (
+    TABLE TablePlan INHERITS sys.CDoc (
         FState int,
         TableNumber int,
         Name varchar NOT NULL,
@@ -123,10 +123,10 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
         ExcludedTableItems TablePlanItem
     ) WITH Comment='Backoffice Table', Tags=(BackofficeTag); -- Optional comment and tags
 
-    TABLE ScreenGroup INHERITS CDoc();
+    TABLE ScreenGroup INHERITS sys.CDoc();
 
 
-    TABLE Transaction INHERITS WSingleton (
+    TABLE Transaction INHERITS sys.WSingleton (
         OpenDatetime timestamp,
         CloseDatetime timestamp
     );
@@ -154,7 +154,7 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
         CSingletones is a configration singleton.
         These comments are included in the statement definition, but may be overridden with `WITH Comment=...`
     */
-    TABLE SubscriptionProfile INHERITS CSingleton (
+    TABLE SubscriptionProfile INHERITS sys.CSingleton (
         CustomerID varchar,
         CustomerKind int,
         CompanyName varchar
@@ -164,7 +164,7 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
     USE WORKSPACE MyWorkspace;  -- It's now possible to create MyWorkspace in MyWorkspace hierarchy
 
     -- Declare table within workspace
-    TABLE WsTable INHERITS CDoc (
+    TABLE WsTable INHERITS sys.CDoc (
         air.TypeWithName,   -- Fieldset
 
         PsName varchar(15),
@@ -189,30 +189,30 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
         */
         PROJECTOR CountOrders
             AFTER EXECUTE ON NewOrder
-            INTENTS(View(OrdersCountView));
+            INTENTS(sys.View(OrdersCountView));
 
         -- Projectors triggered by CUD operation
         -- SYNC means that projector is synchronous
         SYNC PROJECTOR TablePlanThumbnailGen
             AFTER INSERT ON TablePlan
-            INTENTS(View(TablePlanThumbnails));
+            INTENTS(sys.View(TablePlanThumbnails));
 
         -- Projector triggered by command argument SubscriptionEvent
         -- Projector uses sys.HTTPStorage
         PROJECTOR UpdateSubscriptionProfile
             AFTER EXECUTE WITH PARAM ON SubscriptionEvent
-            STATE(sys.Http, AppSecret);
+            STATE(sys.Http, sys.AppSecret);
 
         -- Projector triggered by few COMMANDs
         PROJECTOR UpdateDashboard
             AFTER EXECUTE ON (NewOrder, NewOrder2)
-            STATE (Http, AppSecret)
-            INTENTS(View(DashboardView, XZReports, NotificationsHistory, ActiveTablePlansView));
+            STATE (sys.Http, sys.AppSecret)
+            INTENTS(sys.View(DashboardView, XZReports, NotificationsHistory, ActiveTablePlansView));
 
         -- Projector triggered by few types of CUD operations
         PROJECTOR UpdateActivePlans
             AFTER ACTIVATE OR DEACTIVATE ON TablePlan
-            INTENTS(View(ActiveTablePlansView));
+            INTENTS(sys.View(ActiveTablePlansView));
 
         /*
             Some projector which sends E-mails and performs HTTP queries.
@@ -220,8 +220,8 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
         */
         PROJECTOR NotifyOnChanges
             AFTER INSERT OR UPDATE ON (TablePlan, WsTable)
-            STATE(Http, AppSecret)
-            INTENTS(SendMail, View(NotificationsHistory))
+            STATE(sys.Http, sys.AppSecret)
+            INTENTS(sys.SendMail, sys.View(NotificationsHistory))
             INCLUDING ERRORS;
 
         /*
@@ -229,7 +229,7 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
         CDoc, WDoc, ODoc are the only abstract tables which are allowed to use in this case
         */
         PROJECTOR RecordsRegistryProjector
-            AFTER INSERT OR ACTIVATE OR DEACTIVATE ON (CRecord, WRecord);
+            AFTER INSERT OR ACTIVATE OR DEACTIVATE ON (sys.CRecord, sys.WRecord);
 
         /*
         Commands can only be declared in workspaces
@@ -239,7 +239,7 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
         COMMAND NewOrder(air.Order, UNLOGGED air.TypeWithName) RETURNS air.Order;
 
         -- Command can return void (in this case `RETURNS void` may be omitted)
-        COMMAND NewOrder2(air.Order) STATE(AppSecret) INTENTS(Record(Transaction)) RETURNS void;
+        COMMAND NewOrder2(air.Order) STATE(sys.AppSecret) INTENTS(sys.Record(Transaction)) RETURNS void;
 
         COMMAND RestorePassword(RestorePasswordParam) RETURNS void;
 
@@ -254,7 +254,7 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
         QUERY Query11() RETURNS air.Order WITH Comment='A comment', Tags=(PosTag);
 
         -- Query which can return any value
-        QUERY Query2(air.Order) STATE(AppSecret, Http) RETURNS any;
+        QUERY Query2(air.Order) STATE(sys.AppSecret, sys.Http) RETURNS any;
     );
 
     -- Object scope is PER APP PARTITION PER IP
@@ -298,7 +298,7 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
     GRANT EXECUTE ON QUERY Query1 TO LocationUser;
     GRANT SELECT ON TABLE untill.Prices TO LocationUser;
     GRANT SELECT(Price) ON TABLE untill.Prices TO LocationUser;
-    GRANT INSERT(Discount) ON TABLE Promotions TO LocationManager; 
+    GRANT INSERT(Discount) ON TABLE untill.Promotions TO LocationManager; 
     GRANT SELECT ON VIEW XZReports TO LocationUser;
     GRANT SELECT(Year) ON VIEW XZReports TO LocationUser;
 
@@ -418,7 +418,7 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
     EXTENSION ENGINE BUILTIN (
            -- Job executed by CRON
         JOB TestJob1 '1 0 * * *'
-            STATE (Http, AppSecret);
+            STATE (sys.Http, sys.AppSecret);
 
 
         JOB TestJob2 '@every 2m30s'; 

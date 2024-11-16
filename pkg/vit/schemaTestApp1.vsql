@@ -6,7 +6,7 @@ APPLICATION app1();
 ALTERABLE WORKSPACE test_wsWS_another (
 	DESCRIPTOR test_ws_another ();
 
-	TABLE docInAnotherWS INHERITS CDoc();
+	TABLE docInAnotherWS INHERITS sys.CDoc();
 
 	EXTENSION ENGINE BUILTIN (
 		COMMAND testCmd();
@@ -20,7 +20,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		StrFld varchar(1024)
 	);
 
-	TABLE articles INHERITS CDoc (
+	TABLE articles INHERITS sys.CDoc (
 		name varchar,
 		article_manual int32 NOT NULL,
 		article_hash int32 NOT NULL,
@@ -29,9 +29,9 @@ ALTERABLE WORKSPACE test_wsWS (
 		control_active int32 NOT NULL
 	);
 
-	TABLE options INHERITS CDoc ();
+	TABLE options INHERITS sys.CDoc ();
 
-	TABLE department INHERITS CDoc (
+	TABLE department INHERITS sys.CDoc (
 		pc_fix_button int32 NOT NULL,
 		rm_fix_button int32 NOT NULL,
 		id_food_group ref,
@@ -43,7 +43,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		)
 	);
 
-	TABLE air_table_plan INHERITS CDoc (
+	TABLE air_table_plan INHERITS sys.CDoc (
 		fstate int32,
 		name varchar,
 		ml_name bytes,
@@ -75,7 +75,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		)
 	);
 
-	TABLE printers INHERITS CDoc (
+	TABLE printers INHERITS sys.CDoc (
 		guid varchar NOT NULL,
 		name varchar,
 		id_printer_drivers ref,
@@ -115,7 +115,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		purpose_preparation_enabled bool
 	);
 
-	TABLE sales_area INHERITS CDoc (
+	TABLE sales_area INHERITS sys.CDoc (
 		name varchar,
 		bmanual int32 NOT NULL,
 		id_prices ref,
@@ -134,7 +134,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		id_table_plan ref
 	);
 
-	TABLE payments INHERITS CDoc (
+	TABLE payments INHERITS sys.CDoc (
 		name varchar,
 		kind int32,
 		number int32,
@@ -149,7 +149,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		paym_external_id varchar
 	);
 
-	TABLE untill_users INHERITS CDoc (
+	TABLE untill_users INHERITS sys.CDoc (
 		name varchar,
 		mandates bytes,
 		user_void int32 NOT NULL,
@@ -194,7 +194,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		creation_date int64
 	);
 
-	TABLE computers INHERITS CDoc (
+	TABLE computers INHERITS sys.CDoc (
 		name varchar,
 		show_cursor int32,
 		on_hold int32,
@@ -312,7 +312,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		)
 	);
 
-	TABLE bill INHERITS CDoc (
+	TABLE bill INHERITS sys.CDoc (
 		tableno int32 NOT NULL,
 		id_untill_users ref NOT NULL,
 		table_part varchar NOT NULL,
@@ -385,13 +385,13 @@ ALTERABLE WORKSPACE test_wsWS (
 		working_day varchar
 	);
 
-	TABLE pos_emails INHERITS CDoc (
+	TABLE pos_emails INHERITS sys.CDoc (
 		kind int32,
 		email varchar,
 		description varchar
 	);
 
-	TABLE category INHERITS CDoc (
+	TABLE category INHERITS sys.CDoc (
 		name varchar,
 		hq_id varchar,
 		ml_name bytes,
@@ -400,13 +400,13 @@ ALTERABLE WORKSPACE test_wsWS (
 		int_fld2 int32
 	);
 
-	TABLE Doc INHERITS CDoc (
+	TABLE Doc INHERITS sys.CDoc (
 		EmailField varchar NOT NULL VERIFIABLE,
 		PhoneField varchar,
 		NonVerifiedField varchar
 	);
 
-	TABLE DocConstraints INHERITS CDoc (
+	TABLE DocConstraints INHERITS sys.CDoc (
 		Int int32,
 		Str varchar(65535) NOT NULL,
 		Bool bool NOT NULL,
@@ -415,13 +415,13 @@ ALTERABLE WORKSPACE test_wsWS (
 		UNIQUE (Int, Str, Bool, Bytes)
 	);
 
-	TABLE DocConstraintsString INHERITS CDoc (
+	TABLE DocConstraintsString INHERITS sys.CDoc (
 		Str varchar,
 		Int int32,
 		UNIQUE ("Str")
 	);
 
-	TABLE DocManyTypes INHERITS CDoc (
+	TABLE DocManyTypes INHERITS sys.CDoc (
 		Int int32,
 		Int64 int64,
 		Float32 float32,
@@ -431,7 +431,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		Bool bool
 	);
 
-	TABLE DocConstraintsFewUniques INHERITS CDoc (
+	TABLE DocConstraintsFewUniques INHERITS sys.CDoc (
 		Int1 int32,
 		Str1 varchar,
 		Bool1 bool,
@@ -444,32 +444,32 @@ ALTERABLE WORKSPACE test_wsWS (
 		CONSTRAINT uniq1 UNIQUE ("Int2", "Str2", "Bool2", "Bytes2")
 	);
 
-	TABLE DocConstraintsOldAndNewUniques INHERITS CDoc (
+	TABLE DocConstraintsOldAndNewUniques INHERITS sys.CDoc (
 		Str varchar,
 		Int int32,
 		UNIQUE (Str),
 		UNIQUEFIELD Int
 	);
 
-	TABLE Config INHERITS CSingleton (
+	TABLE Config INHERITS sys.CSingleton (
 		Fld1 varchar NOT NULL
 	);
 
-	TABLE cdoc1 INHERITS CDoc ();
+	TABLE cdoc1 INHERITS sys.CDoc ();
 
-	TABLE cdoc2 INHERITS CDoc (
+	TABLE cdoc2 INHERITS sys.CDoc (
 		field1 ref, -- war RecordID, should be denied to create RecordID field -> ref type for now
 		field2 ref(cdoc1, department),
 		field3 ref
 	);
 
-	TABLE odoc1 INHERITS ODoc (
+	TABLE odoc1 INHERITS sys.ODoc (
 		orecord1 TABLE orecord1(
 			orecord2 TABLE orecord2()
 		)
 	);
 
-	TABLE odoc2 INHERITS ODoc (
+	TABLE odoc2 INHERITS sys.ODoc (
 		refToODoc1 ref(odoc1),
 		refToORecord1 ref(orecord1),
 		refToORecord2 ref(orecord2),
@@ -538,7 +538,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		Dummy int32
 	);
 
-	TABLE JobTable INHERITS CDoc (
+	TABLE JobTable INHERITS sys.CDoc (
 		Str1 varchar NOT NULL
 	);
 
@@ -555,8 +555,8 @@ ALTERABLE WORKSPACE test_wsWS (
 		COMMAND CmdODocTwo(odoc2, UNLOGGED odoc2);
 
 		COMMAND TestCmdRawArg(sys.Raw);
-		PROJECTOR ProjDummy AFTER INSERT ON (CRecord) INTENTS(View(View)); -- does nothing, only to define view.app1pkg.View
-		SYNC PROJECTOR ApplyCategoryIdx AFTER INSERT ON (category) INTENTS(View(CategoryIdx));
+		PROJECTOR ProjDummy AFTER INSERT ON (sys.CRecord) INTENTS(sys.View(View)); -- does nothing, only to define view.app1pkg.View
+		SYNC PROJECTOR ApplyCategoryIdx AFTER INSERT ON (category) INTENTS(sys.View(CategoryIdx));
 
 		COMMAND CmdWithResponseIntent(WithResponseIntentParams);
 		QUERY QryWithResponseIntent(WithResponseIntentParams) RETURNS QryWithResponseIntentResult;
