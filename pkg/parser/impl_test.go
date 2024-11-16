@@ -2082,7 +2082,7 @@ func Test_Grants(t *testing.T) {
 		GRANT SELECT ON ALL VIEWS WITH TAG x TO role1;
 	);
 	`, "file.vsql:5:30: undefined role: app1",
-			"file.vsql:5:22: undefined table: Fake",
+			"file.vsql:5:22: Fake undefined",
 			"file.vsql:6:28: undefined command: Fake",
 			"file.vsql:7:26: undefined query: Fake",
 			"file.vsql:9:13: undefined field FakeCol",
@@ -2134,6 +2134,39 @@ func Test_Grants(t *testing.T) {
 			require.Len(i.Resources().On(), 1)
 			require.Equal("pkg.admin", i.Resources().On()[0].String())
 			require.Equal("pkg.mgr", i.Principal().QName().String())
+			numACLs++
+			return true
+		})
+		require.Equal(1, numACLs)
+	})
+
+	t.Run("GRANT to descriptor", func(t *testing.T) {
+		schema, err := require.AppSchema(`APPLICATION test();
+			ALTERABLE WORKSPACE UserProfileWS (
+				DESCRIPTOR UserProfile (
+					DisplayName varchar
+				);
+				ROLE ProfileOwner;
+        		GRANT SELECT ON TABLE UserProfile TO ProfileOwner;
+			);
+		`)
+		require.NoError(err)
+		builder := appdef.New()
+		err = BuildAppDefs(schema, builder)
+		require.NoError(err)
+
+		app, err := builder.Build()
+		require.NoError(err)
+		var numACLs int
+
+		// table
+		app.ACL(func(i appdef.IACLRule) bool {
+			require.Len(i.Ops(), 1)
+			require.Equal(appdef.OperationKind_Select, i.Ops()[0])
+			require.Equal(appdef.PolicyKind_Allow, i.Policy())
+			require.Len(i.Resources().On(), 1)
+			require.Equal("pkg.UserProfile", i.Resources().On()[0].String())
+			require.Equal("pkg.ProfileOwner", i.Principal().QName().String())
 			numACLs++
 			return true
 		})
