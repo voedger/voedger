@@ -26,3 +26,7 @@ func And(f1, f2 appdef.IFilter, ff ...appdef.IFilter) appdef.IFilter {
 func Or(f1, f2 appdef.IFilter, ff ...appdef.IFilter) appdef.IFilter {
 	return makeOrFilter(f1, f2, ff...)
 }
+
+func Not(f appdef.IFilter) appdef.IFilter {
+	return makeNotFilter(f)
+}

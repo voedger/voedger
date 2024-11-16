@@ -12,8 +12,8 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
-func ExampleOr() {
-	fmt.Println("This example demonstrates how to work with the Or filter")
+func ExampleNot() {
+	fmt.Println("This example demonstrates how to work with the Not filter")
 
 	wsName := appdef.NewQName("test", "workspace")
 	doc, obj, cmd := appdef.NewQName("test", "doc"), appdef.NewQName("test", "object"), appdef.NewQName("test", "command")
@@ -44,19 +44,19 @@ func ExampleOr() {
 		fmt.Println("List of all matched types from", ws, ":", flt.Matches(ws))
 	}
 
-	example(filter.Or(filter.Types(appdef.TypeKind_ODoc), filter.QNames(obj)))
-	example(filter.Or(filter.QNames(appdef.NewQName("test", "other")), filter.Types(appdef.TypeKind_Command)))
+	example(filter.Not(filter.Types(appdef.TypeKind_Command)))
+	example(filter.Not(filter.QNames(doc, obj)))
 
 	// Output:
-	// This example demonstrates how to work with the Or filter
+	// This example demonstrates how to work with the Not filter
 	//
-	// Testing filter Or(filter Types [ODoc], filter QNames [test.object]) in Workspace «test.workspace»
+	// Testing filter Not(filter Types [Command]) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true
 	// - Object «test.object» is matched: true
 	// List of all matched types from Workspace «test.workspace» : [ODoc «test.doc», Object «test.object»]
 	//
-	// Testing filter Or(filter QNames [test.other], filter Types [Command]) in Workspace «test.workspace»
+	// Testing filter Not(filter QNames [test.doc test.object]) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: true
 	// - ODoc «test.doc» is matched: false
 	// - Object «test.object» is matched: false

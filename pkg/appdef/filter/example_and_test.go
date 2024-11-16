@@ -34,6 +34,7 @@ func ExampleAnd() {
 	ws := app.Workspace(wsName)
 
 	example := func(flt appdef.IFilter) {
+		fmt.Println()
 		fmt.Println("Testing", flt, "in", ws)
 
 		for t := range ws.Types {
@@ -41,7 +42,6 @@ func ExampleAnd() {
 		}
 
 		fmt.Println("List of all matched types from", ws, ":", flt.Matches(ws))
-		fmt.Println()
 	}
 
 	example(filter.And(filter.Types(appdef.TypeKind_ODoc), filter.QNames(doc)))
@@ -49,6 +49,7 @@ func ExampleAnd() {
 
 	// Output:
 	// This example demonstrates how to work with the And filter
+	//
 	// Testing filter And(filter Types [ODoc], filter QNames [test.doc]) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true
@@ -60,5 +61,4 @@ func ExampleAnd() {
 	// - ODoc «test.doc» is matched: false
 	// - Object «test.object» is matched: false
 	// List of all matched types from Workspace «test.workspace» : []
-	//
 }
