@@ -16,7 +16,7 @@ type qNamesFilter struct {
 	names appdef.QNames
 }
 
-func qNames(name appdef.QName, names ...appdef.QName) appdef.IFilter {
+func makeQNamesFilter(name appdef.QName, names ...appdef.QName) appdef.IFilter {
 	f := &qNamesFilter{names: appdef.QNamesFrom(name)}
 	f.names.Add(names...)
 	return f
@@ -28,14 +28,14 @@ func (f qNamesFilter) Match(t appdef.IType) bool {
 	return f.names.Contains(t.QName())
 }
 
-func (f qNamesFilter) Matches(tt appdef.IWithTypes) appdef.QNames {
-	nn := appdef.QNames{}
+func (f qNamesFilter) Matches(tt appdef.IWithTypes) appdef.IWithTypes {
+	flt := makeTypes()
 	for _, n := range f.names {
-		if tt.Type(n).Kind() != appdef.TypeKind_null {
-			nn.Add(n)
+		if t := tt.Type(n); t.Kind() != appdef.TypeKind_null {
+			flt.add(t)
 		}
 	}
-	return nn
+	return flt
 }
 
 func (f qNamesFilter) QNames() appdef.QNames { return f.names }

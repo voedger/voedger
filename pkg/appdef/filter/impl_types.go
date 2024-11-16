@@ -17,7 +17,7 @@ type typesFilter struct {
 	types appdef.TypeKindSet
 }
 
-func types(t appdef.TypeKind, tt ...appdef.TypeKind) appdef.IFilter {
+func makeTypesFilter(t appdef.TypeKind, tt ...appdef.TypeKind) appdef.IFilter {
 	f := &typesFilter{types: set.From(t)}
 	f.types.Set(tt...)
 	return f
@@ -29,14 +29,14 @@ func (f typesFilter) Match(t appdef.IType) bool {
 	return f.types.Contains(t.Kind())
 }
 
-func (f typesFilter) Matches(tt appdef.IWithTypes) appdef.QNames {
-	nn := appdef.QNames{}
+func (f typesFilter) Matches(tt appdef.IWithTypes) appdef.IWithTypes {
+	flt := makeTypes()
 	for t := range tt.Types {
 		if f.types.Contains(t.Kind()) {
-			nn.Add(t.QName())
+			flt.add(t)
 		}
 	}
-	return nn
+	return flt
 }
 
 func (f typesFilter) String() string {

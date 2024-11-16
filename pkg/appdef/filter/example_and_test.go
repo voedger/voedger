@@ -12,7 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
-func ExampleTypes() {
+func ExampleAnd() {
 	wsName := appdef.NewQName("test", "workspace")
 	doc, obj, cmd := appdef.NewQName("test", "doc"), appdef.NewQName("test", "object"), appdef.NewQName("test", "command")
 
@@ -29,9 +29,9 @@ func ExampleTypes() {
 		return adb.MustBuild()
 	}()
 
-	flt := filter.Types(appdef.TypeKind_ODoc, appdef.TypeKind_Object)
+	fmt.Println("This example demonstrate how to work with filter And")
 
-	fmt.Println("This example demonstrate how to work with filter", flt.Kind().TrimString())
+	flt := filter.And(filter.Types(appdef.TypeKind_ODoc), filter.QNames(doc))
 
 	ws := app.Workspace(wsName)
 
@@ -44,10 +44,10 @@ func ExampleTypes() {
 	fmt.Println("List of all matched types from", ws, ":", flt.Matches(ws))
 
 	// Output:
-	// This example demonstrate how to work with filter Types
-	// Testing filter Types [ODoc Object] in Workspace «test.workspace»
+	// This example demonstrate how to work with filter And
+	// Testing filter And(filter Types [ODoc], filter QNames [test.doc]) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true
-	// - Object «test.object» is matched: true
-	// List of all matched types from Workspace «test.workspace» : [ODoc «test.doc», Object «test.object»]
+	// - Object «test.object» is matched: false
+	// List of all matched types from Workspace «test.workspace» : [ODoc «test.doc»]
 }

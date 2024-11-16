@@ -55,8 +55,8 @@ func TestFilter_Match(t *testing.T) {
 
 func TestFilter_Matches(t *testing.T) {
 	f := filter{}
-	if got := f.Matches(nil); got != nil {
-		t.Errorf("filter.Matches() = %v, want nil", got)
+	if got := f.Matches(nil); got.TypeCount() != 0 {
+		t.Errorf("filter.Matches() = %v, want empty", got)
 	}
 }
 

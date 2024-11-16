@@ -49,5 +49,5 @@ func ExampleQNames() {
 	// - ODoc «test.doc1» is matched: true
 	// - ODoc «test.doc2» is matched: true
 	// - ODoc «test.doc3» is matched: false
-	// List of all matched types from Workspace «test.workspace» : [test.doc1 test.doc2]
+	// List of all matched types from Workspace «test.workspace» : [ODoc «test.doc1», ODoc «test.doc2»]
 }
