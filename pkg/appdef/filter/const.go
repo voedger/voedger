@@ -7,4 +7,5 @@ package filter
 
 import "github.com/voedger/voedger/pkg/appdef"
 
-var NullTypes appdef.IWithTypes = makeTypes()
+// NullResults is a result then filter matches nothing.
+var NullResults appdef.IWithTypes = makeResults()

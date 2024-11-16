@@ -12,6 +12,11 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
+// filter abstract filter.
+//
+// # Supports:
+//   - appdef.IFilter.
+//   - fmt.Stringer
 type filter struct{}
 
 func (filter) And() []appdef.IFilter { return nil }
@@ -26,37 +31,39 @@ func (filter) QNames() appdef.QNames { return nil }
 
 func (filter) Match(appdef.IType) bool { return false }
 
-func (filter) Matches(appdef.IWithTypes) appdef.IWithTypes { return NullTypes }
+func (filter) Matches(appdef.IWithTypes) appdef.IWithTypes { return NullResults }
 
 func (filter) Tags() []string { return nil }
 
 func (filter) Types() appdef.TypeKindSet { return appdef.TypeKindSet{} }
 
-// Used to collect filtered types. Supports appdef.IWithTypes
-type types struct {
+// Filter results.
+//
+// # Supports appdef.IWithTypes
+type results struct {
 	m map[appdef.QName]appdef.IType
 	s []appdef.IType
 }
 
-func makeTypes(t ...appdef.IType) *types {
-	tt := &types{m: make(map[appdef.QName]appdef.IType)}
+func makeResults(t ...appdef.IType) *results {
+	r := &results{m: make(map[appdef.QName]appdef.IType)}
 	for _, t := range t {
-		tt.add(t)
+		r.add(t)
 	}
-	return tt
+	return r
 }
 
-func cloneTypes(tt appdef.IWithTypes) *types {
-	clone := makeTypes()
-	for t := range tt.Types {
-		clone.add(t)
+func copyResults(types appdef.IWithTypes) *results {
+	copy := makeResults()
+	for t := range types.Types {
+		copy.add(t)
 	}
-	return clone
+	return copy
 }
 
-func (tt types) String() string {
+func (r results) String() string {
 	s := ""
-	for t := range tt.Types {
+	for t := range r.Types {
 		if s != "" {
 			s += ", "
 		}
@@ -65,34 +72,34 @@ func (tt types) String() string {
 	return fmt.Sprintf("[%s]", s)
 }
 
-func (tt types) Type(name appdef.QName) appdef.IType {
-	if t, ok := tt.m[name]; ok {
+func (r results) Type(name appdef.QName) appdef.IType {
+	if t, ok := r.m[name]; ok {
 		return t
 	}
 	return appdef.NullType
 }
 
-func (tt types) TypeCount() int {
-	return len(tt.m)
+func (r results) TypeCount() int {
+	return len(r.m)
 }
 
-func (tt *types) Types(visit func(appdef.IType) bool) {
-	if len(tt.s) != len(tt.m) {
-		tt.s = make([]appdef.IType, 0, len(tt.m))
-		for _, t := range tt.m {
-			tt.s = append(tt.s, t)
+func (r *results) Types(visit func(appdef.IType) bool) {
+	if len(r.s) != len(r.m) {
+		r.s = make([]appdef.IType, 0, len(r.m))
+		for _, t := range r.m {
+			r.s = append(r.s, t)
 		}
-		sort.Slice(tt.s, func(i, j int) bool {
-			return tt.s[i].QName().String() < tt.s[j].QName().String()
+		sort.Slice(r.s, func(i, j int) bool {
+			return r.s[i].QName().String() < r.s[j].QName().String()
 		})
 	}
-	for _, t := range tt.s {
+	for _, t := range r.s {
 		if !visit(t) {
 			break
 		}
 	}
 }
 
-func (tt *types) add(t appdef.IType) {
-	tt.m[t.QName()] = t
+func (r *results) add(t appdef.IType) {
+	r.m[t.QName()] = t
 }

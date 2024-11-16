@@ -13,6 +13,8 @@ import (
 )
 
 func ExampleAnd() {
+	fmt.Println("This example demonstrates how to work with the And filter")
+
 	wsName := appdef.NewQName("test", "workspace")
 	doc, obj, cmd := appdef.NewQName("test", "doc"), appdef.NewQName("test", "object"), appdef.NewQName("test", "command")
 
@@ -31,8 +33,6 @@ func ExampleAnd() {
 
 	ws := app.Workspace(wsName)
 
-	fmt.Println("This example demonstrate how to work with filter And")
-
 	example := func(flt appdef.IFilter) {
 		fmt.Println("Testing", flt, "in", ws)
 
@@ -48,7 +48,7 @@ func ExampleAnd() {
 	example(filter.And(filter.QNames(appdef.NewQName("test", "other")), filter.Types(appdef.TypeKind_Command)))
 
 	// Output:
-	// This example demonstrate how to work with filter And
+	// This example demonstrates how to work with the And filter
 	// Testing filter And(filter Types [ODoc], filter QNames [test.doc]) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true

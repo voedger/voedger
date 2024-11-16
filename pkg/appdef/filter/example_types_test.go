@@ -13,6 +13,8 @@ import (
 )
 
 func ExampleTypes() {
+	fmt.Println("This example demonstrates how to work with the Types filter")
+
 	wsName := appdef.NewQName("test", "workspace")
 	doc, obj, cmd := appdef.NewQName("test", "doc"), appdef.NewQName("test", "object"), appdef.NewQName("test", "command")
 
@@ -29,11 +31,9 @@ func ExampleTypes() {
 		return adb.MustBuild()
 	}()
 
-	flt := filter.Types(appdef.TypeKind_ODoc, appdef.TypeKind_Object)
-
-	fmt.Println("This example demonstrate how to work with filter", flt.Kind().TrimString())
-
 	ws := app.Workspace(wsName)
+
+	flt := filter.Types(appdef.TypeKind_ODoc, appdef.TypeKind_Object)
 
 	fmt.Println("Testing", flt, "in", ws)
 
@@ -44,7 +44,7 @@ func ExampleTypes() {
 	fmt.Println("List of all matched types from", ws, ":", flt.Matches(ws))
 
 	// Output:
-	// This example demonstrate how to work with filter Types
+	// This example demonstrates how to work with the Types filter
 	// Testing filter Types [ODoc Object] in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true

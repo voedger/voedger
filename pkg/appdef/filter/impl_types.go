@@ -12,6 +12,11 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
+// typesFilter is a filter that matches types by their kind.
+//
+// # Supports:
+//   - appdef.IFilter.
+//   - fmt.Stringer
 type typesFilter struct {
 	filter
 	types appdef.TypeKindSet
@@ -30,13 +35,13 @@ func (f typesFilter) Match(t appdef.IType) bool {
 }
 
 func (f typesFilter) Matches(tt appdef.IWithTypes) appdef.IWithTypes {
-	flt := makeTypes()
+	r := makeResults()
 	for t := range tt.Types {
 		if f.types.Contains(t.Kind()) {
-			flt.add(t)
+			r.add(t)
 		}
 	}
-	return flt
+	return r
 }
 
 func (f typesFilter) String() string {

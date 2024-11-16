@@ -11,22 +11,27 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
+// orFilter realizes filter disjunction.
+//
+// # Supports:
+//   - appdef.IFilter.
+//   - fmt.Stringer
 type orFilter struct {
 	filter
-	filters []appdef.IFilter
+	children []appdef.IFilter
 }
 
 func makeOrFilter(f1, f2 appdef.IFilter, ff ...appdef.IFilter) appdef.IFilter {
-	f := &orFilter{filters: []appdef.IFilter{f1, f2}}
-	f.filters = append(f.filters, ff...)
+	f := &orFilter{children: []appdef.IFilter{f1, f2}}
+	f.children = append(f.children, ff...)
 	return f
 }
 
 func (orFilter) Kind() appdef.FilterKind { return appdef.FilterKind_Or }
 
 func (f orFilter) Match(t appdef.IType) bool {
-	for _, flt := range f.filters {
-		if flt.Match(t) {
+	for _, c := range f.children {
+		if c.Match(t) {
 			return true
 		}
 	}
@@ -34,26 +39,26 @@ func (f orFilter) Match(t appdef.IType) bool {
 }
 
 func (f orFilter) Matches(tt appdef.IWithTypes) appdef.IWithTypes {
-	flt := makeTypes()
+	r := makeResults()
 
-	for _, child := range f.filters {
-		for t := range child.Matches(tt).Types {
-			flt.add(t)
+	for _, c := range f.children {
+		for t := range c.Matches(tt).Types {
+			r.add(t)
 		}
 	}
 
-	return flt
+	return r
 }
 
-func (f orFilter) Or() []appdef.IFilter { return f.filters }
+func (f orFilter) Or() []appdef.IFilter { return f.children }
 
 func (f orFilter) String() string {
 	s := fmt.Sprintf("filter %s(", f.Kind().TrimString())
-	for i, flt := range f.Or() {
+	for i, c := range f.Or() {
 		if i > 0 {
 			s += ", "
 		}
-		s += fmt.Sprint(flt)
+		s += fmt.Sprint(c)
 	}
 	return s + ")"
 }

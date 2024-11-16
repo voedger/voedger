@@ -13,6 +13,8 @@ import (
 )
 
 func ExampleQNames() {
+	fmt.Println("This example demonstrates how to work with the QNames filter")
+
 	wsName := appdef.NewQName("test", "workspace")
 	doc1, doc2, doc3 := appdef.NewQName("test", "doc1"), appdef.NewQName("test", "doc2"), appdef.NewQName("test", "doc3")
 
@@ -29,11 +31,9 @@ func ExampleQNames() {
 		return adb.MustBuild()
 	}()
 
-	flt := filter.QNames(doc1, doc2)
-
-	fmt.Println("This example demonstrate how to work with filter", flt.Kind().TrimString())
-
 	ws := app.Workspace(wsName)
+
+	flt := filter.QNames(doc1, doc2)
 
 	fmt.Println("Testing", flt, "in", ws)
 
@@ -44,7 +44,7 @@ func ExampleQNames() {
 	fmt.Println("List of all matched types from", ws, ":", flt.Matches(ws))
 
 	// Output:
-	// This example demonstrate how to work with filter QNames
+	// This example demonstrates how to work with the QNames filter
 	// Testing filter QNames [test.doc1 test.doc2] in Workspace «test.workspace»
 	// - ODoc «test.doc1» is matched: true
 	// - ODoc «test.doc2» is matched: true

@@ -13,6 +13,8 @@ import (
 )
 
 func ExampleOr() {
+	fmt.Println("This example demonstrates how to work with the Or filter")
+
 	wsName := appdef.NewQName("test", "workspace")
 	doc, obj, cmd := appdef.NewQName("test", "doc"), appdef.NewQName("test", "object"), appdef.NewQName("test", "command")
 
@@ -31,8 +33,6 @@ func ExampleOr() {
 
 	ws := app.Workspace(wsName)
 
-	fmt.Println("This example demonstrate how to work with filter Or")
-
 	example := func(flt appdef.IFilter) {
 		fmt.Println("Testing", flt, "in", ws)
 
@@ -48,7 +48,7 @@ func ExampleOr() {
 	example(filter.Or(filter.QNames(appdef.NewQName("test", "other")), filter.Types(appdef.TypeKind_Command)))
 
 	// Output:
-	// This example demonstrate how to work with filter Or
+	// This example demonstrates how to work with the Or filter
 	// Testing filter Or(filter Types [ODoc], filter QNames [test.object]) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true
