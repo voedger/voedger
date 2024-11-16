@@ -1486,29 +1486,23 @@ func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (k
 	kind = appdef.TypeKind_null
 	check := func(node tableNode) {
 		if node.pkg.Path == appdef.SysPackage {
-			if node.table.Name == nameCDOC {
-				kind = appdef.TypeKind_CDoc
-			}
-			if node.table.Name == nameODOC {
-				kind = appdef.TypeKind_ODoc
-			}
-			if node.table.Name == nameWDOC {
-				kind = appdef.TypeKind_WDoc
-			}
-			if node.table.Name == nameCRecord {
+			switch node.table.Name {
+			case nameCRecord:
 				kind = appdef.TypeKind_CRecord
-			}
-			if node.table.Name == nameORecord {
+			case nameORecord:
 				kind = appdef.TypeKind_ORecord
-			}
-			if node.table.Name == nameWRecord {
+			case nameWRecord:
 				kind = appdef.TypeKind_WRecord
-			}
-			if node.table.Name == nameCSingleton {
+			case nameCdoc:
+				kind = appdef.TypeKind_CDoc
+			case nameODoc:
+				kind = appdef.TypeKind_ODoc
+			case nameWDoc:
+				kind = appdef.TypeKind_WDoc
+			case nameCSingleton:
 				kind = appdef.TypeKind_CDoc
 				singleton = true
-			}
-			if node.table.Name == nameWSingleton {
+			case nameWSingleton:
 				kind = appdef.TypeKind_WDoc
 				singleton = true
 			}

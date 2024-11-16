@@ -3,11 +3,11 @@
 */
 
 ABSTRACT WORKSPACE UntillAWorkspace (
-    TABLE Prices INHERITS CDoc(
+    TABLE Prices INHERITS sys.CDoc(
         Price float
     );
 
-    TABLE Promotions INHERITS CDoc(
+    TABLE Promotions INHERITS sys.CDoc(
         Discount float
     );
 

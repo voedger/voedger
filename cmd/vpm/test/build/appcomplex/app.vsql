@@ -12,7 +12,7 @@ APPLICATION appcomplex(
 
 
 WORKSPACE MyWS1 (
-	TABLE MyTable2 INHERITS ODoc (
+	TABLE MyTable2 INHERITS sys.ODoc (
   	  myfield1 ref(pkg1.MyTable1) NOT NULL,
     	myfield2 int32 NOT NULL
 	);
