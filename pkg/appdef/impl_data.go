@@ -235,7 +235,7 @@ func (c dataConstraint) String() (s string) {
 
 func (k ConstraintKind) MarshalText() ([]byte, error) {
 	var s string
-	if k < ConstraintKind_Count {
+	if k < ConstraintKind_count {
 		s = k.String()
 	} else {
 		s = utils.UintToString(k)

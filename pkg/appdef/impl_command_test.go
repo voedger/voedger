@@ -155,7 +155,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 			cmd := wsb.AddCommand(cmdName)
 			require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_null) },
 				require.Is(ErrOutOfBoundsError))
-			require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_Count) },
+			require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_count) },
 				require.Is(ErrOutOfBoundsError))
 		})
 	})

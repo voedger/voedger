@@ -92,6 +92,7 @@ func Test_AddField(t *testing.T) {
 		require.NoError(err)
 
 		obj := Object(app, objName)
+		require.Equal([]IField{obj.Field("f1")}, obj.UserFields())
 		require.Equal(1, obj.UserFieldCount())
 		require.Equal(obj.UserFieldCount()+2, obj.FieldCount()) // + sys.QName + sys.Container
 
@@ -461,6 +462,7 @@ func TestNullFields(t *testing.T) {
 	require.Empty(NullFields.RefFields())
 
 	require.Zero(NullFields.UserFieldCount())
+	require.Empty(NullFields.UserFields())
 }
 
 func TestVerificationKind_String(t *testing.T) {
