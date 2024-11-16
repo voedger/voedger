@@ -27,6 +27,7 @@ func Or(f1, f2 appdef.IFilter, ff ...appdef.IFilter) appdef.IFilter {
 	return makeOrFilter(f1, f2, ff...)
 }
 
+// Not returns a filter that invert matches for specified filter.
 func Not(f appdef.IFilter) appdef.IFilter {
 	return makeNotFilter(f)
 }
