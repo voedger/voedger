@@ -13,25 +13,15 @@ import (
 )
 
 // filter abstract filter.
-//
-// # Supports:
-//   - appdef.IFilter.
-//   - fmt.Stringer
 type filter struct{}
 
 func (filter) And() []appdef.IFilter { return nil }
-
-func (filter) Kind() appdef.FilterKind { return appdef.FilterKind_null }
 
 func (filter) Not() appdef.IFilter { return nil }
 
 func (filter) Or() []appdef.IFilter { return nil }
 
 func (filter) QNames() appdef.QNames { return nil }
-
-func (filter) Match(appdef.IType) bool { return false }
-
-func (filter) Matches(appdef.IWithTypes) appdef.IWithTypes { return NullResults }
 
 func (filter) Tags() []string { return nil }
 

@@ -17,12 +17,9 @@ func Test_filter(t *testing.T) {
 	require := require.New(t)
 	f := filter{}
 	require.Empty(f.And(), "filter.And() should be empty")
-	require.Equal(appdef.FilterKind_null, f.Kind(), "filter.Kind() should be null")
 	require.Nil(f.Not(), "filter.Not() should be nil")
 	require.Empty(f.Or(), "filter.Or() should be empty")
 	require.Empty(f.QNames(), "filter.QNames() should be empty")
-	require.False(f.Match(appdef.NullType), "filter.Match() should be false")
-	require.Equal(NullResults, f.Matches(nil), "filter.Matches() should be null")
 	require.Empty(f.Tags(), "filter.Tags() should be empty")
 	require.Equal(appdef.TypeKindSet{}, f.Types(), "filter.Types() should be empty")
 }
