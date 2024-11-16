@@ -44,11 +44,11 @@ func makeResults(t ...appdef.IType) *results {
 }
 
 func copyResults(types appdef.IWithTypes) *results {
-	copy := makeResults()
+	r := makeResults()
 	for t := range types.Types {
-		copy.add(t)
+		r.add(t)
 	}
-	return copy
+	return r
 }
 
 func (r results) String() string {
