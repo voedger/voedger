@@ -12,7 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-// filter abstract filter.
+// abstract filter.
 type filter struct{}
 
 func (filter) And() []appdef.IFilter { return nil }
