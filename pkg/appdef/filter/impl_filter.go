@@ -38,8 +38,12 @@ type types struct {
 	s []appdef.IType
 }
 
-func makeTypes() *types {
-	return &types{m: make(map[appdef.QName]appdef.IType)}
+func makeTypes(t ...appdef.IType) *types {
+	tt := &types{m: make(map[appdef.QName]appdef.IType)}
+	for _, t := range t {
+		tt.add(t)
+	}
+	return tt
 }
 
 func cloneTypes(tt appdef.IWithTypes) *types {
@@ -91,10 +95,4 @@ func (tt *types) Types(visit func(appdef.IType) bool) {
 
 func (tt *types) add(t appdef.IType) {
 	tt.m[t.QName()] = t
-	tt.s = nil
-}
-
-func (tt *types) delete(t appdef.IType) {
-	delete(tt.m, t.QName())
-	tt.s = nil
 }
