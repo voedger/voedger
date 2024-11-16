@@ -82,18 +82,18 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
 
     /*
         Any declared table must have one of the following tables as a root anchestor:
-            - CDoc (Configuration)
-            - ODoc (Operational)
-            - WDoc (Workflow)
-            - CSingleton (Configration singleton)
-            - WSingleton (Workflow singleton)
+            - sys.CDoc (Configuration)
+            - sys.ODoc (Operational)
+            - sys.WDoc (Workflow)
+            - sys.CSingleton (Configration singleton)
+            - sys.WSingleton (Workflow singleton)
 
         Nested tables must have one of the following tables as a root anchestor:
-            - CRecord (Configuration)
-            - ODoc (Operational)
-            - WDoc (Workflow)
+            - sys.CRecord (Configuration)
+            - sys.ODoc (Operational)
+            - sys.WDoc (Workflow)
     */
-    TABLE TablePlan cdoc (
+    TABLE TablePlan INHERITS sys.CDoc (
         FState int,
         TableNumber int,
         Name varchar NOT NULL,
@@ -123,10 +123,10 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
         ExcludedTableItems TablePlanItem
     ) WITH Comment='Backoffice Table', Tags=(BackofficeTag); -- Optional comment and tags
 
-    TABLE ScreenGroup cdoc();
+    TABLE ScreenGroup INHERITS sys.CDoc();
 
 
-    TABLE Transaction wsingleton (
+    TABLE Transaction INHERITS sys.WSingleton (
         OpenDatetime timestamp,
         CloseDatetime timestamp
     );
@@ -154,7 +154,7 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
         CSingletones is a configration singleton.
         These comments are included in the statement definition, but may be overridden with `WITH Comment=...`
     */
-    TABLE SubscriptionProfile csingleton (
+    TABLE SubscriptionProfile INHERITS sys.CSingleton (
         CustomerID varchar,
         CustomerKind int,
         CompanyName varchar
@@ -164,7 +164,7 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
     USE WORKSPACE MyWorkspace;  -- It's now possible to create MyWorkspace in MyWorkspace hierarchy
 
     -- Declare table within workspace
-    TABLE WsTable cdoc (
+    TABLE WsTable INHERITS sys.CDoc (
         air.TypeWithName,   -- Fieldset
 
         PsName varchar(15),

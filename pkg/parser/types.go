@@ -819,7 +819,7 @@ type workspaceAddr struct {
 // # Panics:
 //   - if workspace statement is nil
 //   - if workspace builder not found.
-func (wsa workspaceAddr) mustBuilder(ctx *buildContext) appdef.IWorkspaceBuilder {
+func (wsa workspaceAddr) mustBuilder(_ *buildContext) appdef.IWorkspaceBuilder {
 	if wsa.workspace.builder == nil {
 		panic(fmt.Sprintf("workspace builder not found for %s", wsa.qName()))
 	}
@@ -844,19 +844,11 @@ type tableAddr struct {
 
 type TableStmt struct {
 	Statement
-	Abstract   bool            `parser:"@'ABSTRACT'?'TABLE'"`
-	Name       Ident           `parser:"@Ident"`
-	Inherits   *DefQName       `parser:"( ('INHERITS' @@) |"`
-	CDoc       bool            `parser:"  @('cdoc') |"`
-	WDoc       bool            `parser:"  @('wdoc') |"`
-	ODoc       bool            `parser:"  @('odoc') |"`
-	CRecord    bool            `parser:"  @('crecord') |"`
-	WRecord    bool            `parser:"  @('wrecord') |"`
-	ORecord    bool            `parser:"  @('orecord') |"`
-	CSingleton bool            `parser:"  @('csingleton') |"`
-	WSingleton bool            `parser:"  @('wsingleton') )?"`
-	Items      []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
-	With       []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	Abstract bool            `parser:"@'ABSTRACT'?'TABLE'"`
+	Name     Ident           `parser:"@Ident"`
+	Inherits *DefQName       `parser:"('INHERITS' @@) ?"`
+	Items    []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	With     []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 	// filled on the analysis stage
 	tableTypeKind appdef.TypeKind
 	workspace     workspaceAddr

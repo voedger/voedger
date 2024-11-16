@@ -1,9 +1,9 @@
 -- Copyright (c) 2021-present unTill Pro, Ltd.
 -- @author Denis Gribanov
 
-ALTER WORKSPACE AppWorkspaceWS (
+ALTER WORKSPACE sys.AppWorkspaceWS (
 
-	TABLE Login INHERITS CDoc (
+	TABLE Login INHERITS sys.CDoc (
 		ProfileCluster int32 NOT NULL,
 		PwdHash bytes NOT NULL,
 		AppName varchar NOT NULL,
@@ -94,7 +94,7 @@ ALTER WORKSPACE AppWorkspaceWS (
 		QUERY IssuePrincipalToken (IssuePrincipalTokenParams) RETURNS IssuePrincipalTokenResult;
 		QUERY InitiateResetPasswordByEmail (InitiateResetPasswordByEmailParams) RETURNS InitiateResetPasswordByEmailResult;
 		QUERY IssueVerifiedValueTokenForResetPassword (IssueVerifiedValueTokenForResetPasswordParams) RETURNS IssueVerifiedValueTokenForResetPasswordResult;
-		SYNC PROJECTOR ProjectorLoginIdx AFTER INSERT ON Login INTENTS(View(LoginIdx));
+		SYNC PROJECTOR ProjectorLoginIdx AFTER INSERT ON Login INTENTS(sys.View(LoginIdx));
 		PROJECTOR InvokeCreateWorkspaceID_registry AFTER INSERT ON(Login);
 	);
 );
