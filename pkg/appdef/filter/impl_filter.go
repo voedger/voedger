@@ -29,7 +29,9 @@ func (filter) Types() appdef.TypeKindSet { return appdef.TypeKindSet{} }
 
 // Filter results.
 //
-// # Supports appdef.IWithTypes
+// # Supports:
+//   - appdef.IWithTypes
+//   - fmt.Stringer
 type results struct {
 	m map[appdef.QName]appdef.IType
 	s []appdef.IType
