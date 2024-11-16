@@ -253,11 +253,11 @@ func (e *appEventsType) BuildPLogEvent(ev istructs.IRawEvent) istructs.IPLogEven
 	dbEvent := ev.(*eventType)
 
 	if n := dbEvent.QName(); n != istructs.QNameForCorruptedData {
-		panic(fmt.Errorf("%w: QName() is «%v», expected «%v»", ErrorEventNotValid, n, istructs.QNameForCorruptedData))
+		panic(ErrorEventNotValid("QName() is «%v», expected «%v»", n, istructs.QNameForCorruptedData))
 	}
 
 	if o := dbEvent.PLogOffset(); o != istructs.NullOffset {
-		panic(fmt.Errorf("%w: PLogOffset() is «%v», expected «%v»", ErrorEventNotValid, o, istructs.NullOffset))
+		panic(ErrorEventNotValid("PLogOffset() is «%v», expected «%v»", o, istructs.NullOffset))
 	}
 
 	return dbEvent
@@ -420,7 +420,7 @@ func (recs *appRecordsType) getRecord(workspace istructs.WSID, id istructs.Recor
 // getRecordBatch reads record from application storage through view-records methods
 func (recs *appRecordsType) getRecordBatch(workspace istructs.WSID, ids []istructs.RecordGetBatchItem) (err error) {
 	if len(ids) > maxGetBatchRecordCount {
-		return fmt.Errorf("batch read %d records requested, but only %d supported: %w", len(ids), maxGetBatchRecordCount, ErrMaxGetBatchRecordCountExceeds)
+		return ErrMaxGetBatchSizeExceeds(len(ids))
 	}
 	batches := make([]*istorage.GetBatchItem, len(ids))
 	plan := make(map[string][]istorage.GetBatchItem)
@@ -499,7 +499,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 				return fmt.Errorf("error checking singleton «%v» record «%d» existence: %w", rec.QName(), id, err)
 			}
 			if exists {
-				return fmt.Errorf("can not create singleton, «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
+				return ErrSingletonViolation(rec)
 			}
 		}
 	}
@@ -511,12 +511,12 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 			return fmt.Errorf("error load updated «%v» record «%d»: %w", rec.originRec.QName(), rec.originRec.ID(), err)
 		}
 		if !exists {
-			return fmt.Errorf("updated «%v» record «%d» not exists: %w", rec.originRec.QName(), rec.originRec.ID(), ErrRecordIDNotFound)
+			return ErrIDNotFound("updated «%v» record «%d»", rec.originRec.QName(), rec.originRec.ID())
 		}
 
 		// check exists record has correct QName
 		if rec.originRec.QName() != old.QName() {
-			return fmt.Errorf("updated «%v» record «%d» has unexpected QName value «%v»: %w", rec.originRec.QName(), rec.originRec.ID(), old.QName(), ErrWrongType)
+			return ErrWrongType("updated «%v» record «%d» has unexpected QName value «%v»", rec.originRec.QName(), rec.originRec.ID(), old.QName())
 		}
 	}
 
@@ -533,7 +533,7 @@ func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istruc
 	ev := event.(*eventType)
 
 	if !ev.Error().ValidEvent() {
-		panic(fmt.Errorf("can not apply not valid event: %s: %w", ev.Error().ErrStr(), ErrorEventNotValid))
+		panic(ErrorEventNotValid("can not apply not valid event: %s:", ev.Error().ErrStr()))
 	}
 
 	records := make([]*recordType, 0)
@@ -554,7 +554,7 @@ func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istruc
 			return err
 		}
 		if !exists {
-			return fmt.Errorf("record «%d» not exists: %w", rec.ID(), ErrRecordIDNotFound)
+			return ErrIDNotFound("record «%d»", rec.ID())
 		}
 		return rec.loadFromBytes(data)
 	}
@@ -621,15 +621,16 @@ func (recs *appRecordsType) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any
 	}
 
 	if k := rec.typeDef().Kind(); !storable(k) {
-		return fmt.Errorf("%v is not storable record type: %w", rec.typeDef(), ErrWrongType)
+		return ErrWrongType("%v is not storable record type", rec.typeDef())
 	}
 
-	if rec.ID() == istructs.NullRecordID {
-		return fmt.Errorf("can not put record with null %s: %w", appdef.SystemField_ID, ErrFieldIsEmpty)
+	id := rec.ID()
+	if id == istructs.NullRecordID {
+		return ErrFieldMissed(rec, appdef.SystemField_ID)
 	}
-	if rec.ID().IsRaw() {
-		return fmt.Errorf("can not put record with raw %s: %w", appdef.SystemField_ID, ErrRawRecordIDUnexpected)
+	if id.IsRaw() {
+		return ErrUnexpectedRawRecordID(rec, appdef.SystemField_ID, id)
 	}
 
-	return recs.putRecord(ws, rec.ID(), rec.storeToBytes())
+	return recs.putRecord(ws, id, rec.storeToBytes())
 }

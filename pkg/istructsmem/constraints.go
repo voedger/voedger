@@ -44,11 +44,11 @@ func checkCharsConstraints[T chars](fld appdef.IField, value T) (err error) {
 		switch k {
 		case appdef.ConstraintKind_MinLen:
 			if len(value) < int(c.Value().(uint16)) {
-				err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+				err = errors.Join(err, ErrDataConstraintViolation(fld, c))
 			}
 		case appdef.ConstraintKind_MaxLen:
 			if len(value) > int(c.Value().(uint16)) {
-				err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+				err = errors.Join(err, ErrDataConstraintViolation(fld, c))
 			}
 			maxLenChecked = true
 		case appdef.ConstraintKind_Pattern:
@@ -56,11 +56,11 @@ func checkCharsConstraints[T chars](fld appdef.IField, value T) (err error) {
 				switch fld.DataKind() {
 				case appdef.DataKind_string:
 					if !pat.MatchString(string(value)) {
-						err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+						err = errors.Join(err, ErrDataConstraintViolation(fld, c))
 					}
 				case appdef.DataKind_bytes:
 					if !pat.Match([]byte(value)) {
-						err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+						err = errors.Join(err, ErrDataConstraintViolation(fld, c))
 					}
 				}
 			}
@@ -68,7 +68,7 @@ func checkCharsConstraints[T chars](fld appdef.IField, value T) (err error) {
 			if enum, ok := c.Value().([]string); ok {
 				if l := len(enum); l > 0 {
 					if _, ok := slices.BinarySearch(enum, string(value)); !ok {
-						err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+						err = errors.Join(err, ErrDataConstraintViolation(fld, c))
 					}
 				}
 			}
@@ -77,7 +77,7 @@ func checkCharsConstraints[T chars](fld appdef.IField, value T) (err error) {
 
 	if !maxLenChecked {
 		if len(value) > int(appdef.DefaultFieldMaxLength) {
-			err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, fmt.Sprintf("default MaxLen: %d", appdef.DefaultFieldMaxLength), ErrDataConstraintViolation))
+			err = errors.Join(err, ErrDataConstraintViolation(fld, fmt.Sprintf("default MaxLen: %d", appdef.DefaultFieldMaxLength)))
 		}
 	}
 
@@ -94,19 +94,19 @@ func checkNumberConstraints[T number](fld appdef.IField, value T) (err error) {
 		switch k {
 		case appdef.ConstraintKind_MinIncl:
 			if float64(value) < c.Value().(float64) {
-				err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+				err = errors.Join(err, ErrDataConstraintViolation(fld, c))
 			}
 		case appdef.ConstraintKind_MinExcl:
 			if float64(value) <= c.Value().(float64) {
-				err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+				err = errors.Join(err, ErrDataConstraintViolation(fld, c))
 			}
 		case appdef.ConstraintKind_MaxIncl:
 			if float64(value) > c.Value().(float64) {
-				err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+				err = errors.Join(err, ErrDataConstraintViolation(fld, c))
 			}
 		case appdef.ConstraintKind_MaxExcl:
 			if float64(value) >= c.Value().(float64) {
-				err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+				err = errors.Join(err, ErrDataConstraintViolation(fld, c))
 			}
 		case appdef.ConstraintKind_Enum:
 			if enum, ok := c.Value().([]T); ok {
@@ -120,7 +120,7 @@ func checkNumberConstraints[T number](fld appdef.IField, value T) (err error) {
 						}
 						return 0
 					}); !ok {
-						err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
+						err = errors.Join(err, ErrDataConstraintViolation(fld, c))
 					}
 				}
 			}
