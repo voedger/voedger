@@ -111,6 +111,8 @@ var (
 	qNameQryFiscalizationResultStatus               = appdef.NewQName(fiscalcloudPackage, "FiscalizationResultStatus")
 	qNameCmdCreateExport                            = appdef.NewQName(fiscalcloudPackage, "CreateExport")
 	qNameQryExportStatus                            = appdef.NewQName(fiscalcloudPackage, "ExportStatus")
+	qNameCmdAddCustomer                             = appdef.NewQName(fiscalcloudPackage, "AddCustomer")
+	qNameCmdUpdateCustomer                          = appdef.NewQName(fiscalcloudPackage, "UpdateCustomer")
 	qNameQryGetUPInvoices                           = appdef.NewQName(airPackage, "GetUPInvoices")
 	qNameQryGetUPPayoutTransfers                    = appdef.NewQName(airPackage, "GetUPPayoutTransfers")
 	qNameQryGetAllUPInvoices                        = appdef.NewQName(airPackage, "GetAllUPInvoices")
@@ -129,6 +131,7 @@ var (
 	qNameRoleUntillPaymentsManager     = appdef.NewQName(airPackage, "UntillPaymentsManager")
 	qNameRoleBOReader                  = appdef.NewQName(airPackage, "BOReader")
 	qNameResellerPortalDashboardViewer = appdef.NewQName(airPackage, "ResellerPortalDashboardViewer")
+	qNameRoleFiscalCloudOnboardSite    = appdef.NewQName(fiscalcloudPackage, "OnboardSite")
 )
 
 const (

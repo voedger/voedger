@@ -76,7 +76,7 @@ outer:
 			break outer
 		}
 		if int64Val < 0 {
-			return nil, fmt.Errorf("%w: %d", ErrWrongRecordID, int64Val)
+			return nil, ErrWrongRecordID("negative value %d", int64Val)
 		}
 		return istructs.RecordID(int64Val), nil
 	case appdef.DataKind_bytes:
@@ -134,7 +134,7 @@ outer:
 			return v.storeToBytes(), nil
 		}
 	}
-	return nil, fmt.Errorf("value has type «%T», but «%s» expected: %w", value, kind.TrimString(), ErrWrongFieldType)
+	return nil, ErrWrongFieldType("value has type «%T», but «%s» expected", value, kind.TrimString())
 }
 
 func dynoBufGetWord(dyB *dynobuffers.Buffer, fieldName appdef.FieldName) (value uint16, ok bool) {
@@ -151,7 +151,7 @@ func storeRow(row *rowType, buf *bytes.Buffer) {
 	id, err := row.qNameID()
 	if err != nil {
 		// no test
-		panic(fmt.Errorf(errMustValidatedBeforeStore, "row", err))
+		panic(enrichError(err, row))
 	}
 	utils.WriteUint16(buf, id)
 	if row.QName() == appdef.NullQName {
@@ -163,7 +163,7 @@ func storeRow(row *rowType, buf *bytes.Buffer) {
 	b, err := row.dyB.ToBytes()
 	if err != nil {
 		// no test
-		panic(fmt.Errorf(errMustValidatedBeforeStore, row.QName(), err))
+		panic(enrichError(err, row))
 	}
 	length := uint32(len(b)) // nolint G115 considering int32 is enough to store the event
 	utils.WriteUint32(buf, length)
@@ -197,7 +197,7 @@ func storeRowSysFields(row *rowType, buf *bytes.Buffer) {
 		id, err := row.containerID()
 		if err != nil {
 			// no test
-			panic(fmt.Errorf(errMustValidatedBeforeStore, row.QName(), err))
+			panic(enrichError(err, row))
 		}
 		utils.WriteUint16(buf, uint16(id))
 	}

@@ -61,7 +61,8 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 }
 
 func resolveInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *ProjectorStmt | *JobStmt |
-	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt | *LimitStmt | *QueryStmt | *RoleStmt | *DeclareStmt](fn DefQName, ictx *iterateCtx, cb func(f stmtType, schema *PackageSchemaAST) error) error {
+	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt | *LimitStmt | *QueryStmt | *RoleStmt |
+	*DeclareStmt | *WsDescriptorStmt](fn DefQName, ictx *iterateCtx, cb func(f stmtType, schema *PackageSchemaAST) error) error {
 	var err error
 	var item stmtType
 	var p *PackageSchemaAST

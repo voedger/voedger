@@ -1212,7 +1212,7 @@ func Test_BuildPLogEvent(t *testing.T) {
 
 			require.PanicsWith(
 				func() { app.Events().BuildPLogEvent(rawEvent) },
-				require.Is(ErrorEventNotValid),
+				require.Is(ErrorEventNotValidError),
 				require.Has(istructs.QNameCommandCUD.String()),
 			)
 		})
@@ -1241,7 +1241,7 @@ func Test_BuildPLogEvent(t *testing.T) {
 
 			require.PanicsWith(
 				func() { app.Events().BuildPLogEvent(rawEvent) },
-				require.Is(ErrorEventNotValid),
+				require.Is(ErrorEventNotValidError),
 				require.Has("100501"),
 			)
 		})
@@ -1379,7 +1379,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 		rawEvent, buildErr := bld.BuildRawEvent()
 		require.NotNil(rawEvent)
-		require.ErrorIs(buildErr, ErrRecordIDUniqueViolation)
+		require.Error(buildErr, require.Is(ErrRecordIDUniqueViolationError), require.Has(cud))
 
 		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
 			return errors.New("unexpected call ID generator from singleton CDoc creation")
@@ -1392,7 +1392,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 			func() {
 				_ = app.Records().Apply2(pLogEvent, func(_ istructs.IRecord) {})
 			},
-			require.Is(ErrorEventNotValid), require.Has(buildErr))
+			require.Is(ErrorEventNotValidError), require.Has(buildErr))
 	})
 
 	t.Run("must fail to repeatedly create singleton CDoc", func(t *testing.T) {
@@ -1416,8 +1416,8 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 		rawEvent, buildErr := bld.BuildRawEvent()
 		require.NotNil(rawEvent)
-		require.ErrorIs(buildErr, ErrRecordIDUniqueViolation)
-		require.ErrorContains(buildErr, "repeatedly creates the same singleton")
+		require.Error(buildErr, require.Is(ErrRecordIDUniqueViolationError),
+			require.Has(doc2Name))
 	})
 
 	t.Run("should be ok to update singleton CDoc", func(t *testing.T) {
@@ -1523,7 +1523,7 @@ func TestEventBuild_Error(t *testing.T) {
 	t.Run("Build sys.CUD must have error if empty CUDs", func(t *testing.T) {
 		bld := eventBuilder(istructs.QNameCommandCUD)
 		rawEvent, buildErr = bld.BuildRawEvent()
-		require.ErrorIs(buildErr, ErrCUDsMissed)
+		require.Error(buildErr, require.Is(ErrCUDsMissedError), require.Has(istructs.QNameCommandCUD))
 		require.NotNil(rawEvent)
 	})
 
@@ -1644,7 +1644,7 @@ func TestEventBuild_Error(t *testing.T) {
 			rec := getPhoto()
 
 			cud := bld.CUDBuilder().Update(rec)
-			cud.PutQName(appdef.SystemField_QName, test.tablePhotoRems)
+			cud.PutQName(appdef.SystemField_QName, test.tablePhotoRems) // <- error here
 			cud.PutRecordID(appdef.SystemField_ID, 100501)
 			cud.PutRecordID(appdef.SystemField_ParentID, 100500)
 			cud.PutString(appdef.SystemField_Container, test.remarkIdent)
@@ -1652,7 +1652,7 @@ func TestEventBuild_Error(t *testing.T) {
 			cud.PutString(test.remarkIdent, test.remarkValue)
 
 			_, buildErr = bld.BuildRawEvent()
-			require.ErrorIs(buildErr, ErrTypeChanged)
+			require.Error(buildErr, require.Is(ErrUnableToUpdateSystemFieldError), require.HasAll(rec, appdef.SystemField_QName))
 		})
 
 		t.Run("update unknown field", func(t *testing.T) {
@@ -1664,7 +1664,7 @@ func TestEventBuild_Error(t *testing.T) {
 			cud.PutFloat32("unknownField", 7.7)
 
 			_, buildErr = bld.BuildRawEvent()
-			require.ErrorIs(buildErr, ErrNameNotFound)
+			require.Error(buildErr, require.Is(ErrNameNotFoundError), require.Has("unknownField"))
 		})
 
 		t.Run("can`t change system fields", func(t *testing.T) {
@@ -1674,7 +1674,8 @@ func TestEventBuild_Error(t *testing.T) {
 				cud := bld.CUDBuilder().Update(getPhotoRem())
 				cud.PutRecordID(appdef.SystemField_ID, 100502)
 				_, buildErr = bld.BuildRawEvent()
-				require.ErrorIs(buildErr, ErrUnableToUpdateSystemField)
+				require.Error(buildErr, require.Is(ErrUnableToUpdateSystemFieldError,
+					require.HasAll(getPhotoRem(), appdef.SystemField_ID)))
 			})
 
 			t.Run("can`t change sys.ParentID", func(t *testing.T) {
@@ -1682,7 +1683,8 @@ func TestEventBuild_Error(t *testing.T) {
 				cud := bld.CUDBuilder().Update(getPhotoRem())
 				cud.PutRecordID(appdef.SystemField_ParentID, 100502)
 				_, buildErr = bld.BuildRawEvent()
-				require.ErrorIs(buildErr, ErrUnableToUpdateSystemField)
+				require.Error(buildErr, require.Is(ErrUnableToUpdateSystemFieldError,
+					require.HasAll(getPhotoRem(), appdef.SystemField_ParentID)))
 			})
 
 			t.Run("can`t change sys.Container", func(t *testing.T) {
@@ -1690,7 +1692,8 @@ func TestEventBuild_Error(t *testing.T) {
 				cud := bld.CUDBuilder().Update(getPhotoRem())
 				cud.PutString(appdef.SystemField_Container, test.basketIdent) // error here
 				_, buildErr = bld.BuildRawEvent()
-				require.ErrorIs(buildErr, ErrUnableToUpdateSystemField)
+				require.Error(buildErr, require.Is(ErrUnableToUpdateSystemFieldError,
+					require.HasAll(getPhotoRem(), appdef.SystemField_Container)))
 			})
 
 			t.Run("allow to change sys.IsActive", func(t *testing.T) {
@@ -1709,10 +1712,10 @@ func TestEventBuild_Error(t *testing.T) {
 			rec := getPhoto()
 
 			cud := bld.CUDBuilder().Update(rec)
-			cud.PutString("unknown field", "someValue")
+			cud.PutString("unknown", "someValue")
 
 			rawEvent, buildErr = bld.BuildRawEvent()
-			require.ErrorIs(buildErr, ErrNameNotFound)
+			require.Error(buildErr, require.Is(ErrNameNotFoundError), require.Has("unknown"))
 			require.NotNil(rawEvent)
 		})
 
@@ -1739,12 +1742,12 @@ func TestEventBuild_Error(t *testing.T) {
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
 				if rawID == test.tempBasketID {
 					require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), t.QName())
-					return fmt.Errorf("test error: %w", ErrWrongRecordID)
+					return ErrWrongRecordID("test error")
 				}
 				return nil
 			}))
 			require.False(pLogEvent.Error().ValidEvent())
-			require.Contains(pLogEvent.Error().ErrStr(), ErrWrongRecordID.Error())
+			require.Contains(pLogEvent.Error().ErrStr(), ErrWrongRecordIDError.Error())
 			require.NoError(saveErr)
 			require.NotNil(pLogEvent)
 		})
@@ -1770,12 +1773,12 @@ func TestEventBuild_Error(t *testing.T) {
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
 				if rawID == 7 {
 					require.Equal(test.tablePhotoRems, t.QName())
-					return fmt.Errorf("test error: %w", ErrWrongRecordID)
+					return ErrWrongRecordID("test error")
 				}
 				return nil
 			}))
 			require.False(pLogEvent.Error().ValidEvent())
-			require.Contains(pLogEvent.Error().ErrStr(), ErrWrongRecordID.Error())
+			require.Contains(pLogEvent.Error().ErrStr(), ErrWrongRecordIDError.Error())
 			require.NoError(saveErr)
 			require.NotNil(pLogEvent)
 
@@ -1783,7 +1786,7 @@ func TestEventBuild_Error(t *testing.T) {
 				func() {
 					_ = app.Records().Apply2(pLogEvent, func(r istructs.IRecord) {})
 				},
-				require.Is(ErrorEventNotValid), require.Has(ErrWrongRecordID))
+				require.Is(ErrorEventNotValidError), require.Has(ErrWrongRecordIDError))
 		})
 	})
 }
@@ -1807,30 +1810,101 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 
 	testDbEvent(t, ev2)
 	testUnloggedObject(t, ev2.ArgumentUnloggedObject())
+
+	// #2785
+	t.Run("should be supports emptied fields in CUDs", func(t *testing.T) {
+		test := test()
+
+		emptiedPhotoID := test.tempPhotoID + 1
+		emptiedRemarkID := test.tempRemarkID + 1
+		ev1 := newTestEvent(100500, 500)
+
+		t.Run("put CUD with emptied photo", func(t *testing.T) {
+			cud := ev1.CUDBuilder().Create(test.tablePhotos)
+			cud.PutRecordID(appdef.SystemField_ID, emptiedPhotoID)
+			cud.PutString(test.buyerIdent, "") // empty here, but next filled
+			cud.PutString(test.buyerIdent, test.buyerValue)
+			cud.PutInt32(test.ageIdent, test.ageValue)
+			cud.PutBytes(test.photoIdent, nil) // empty bytes-field
+		})
+
+		t.Run("put CUD with emptied photo remark", func(t *testing.T) {
+			cud := ev1.CUDBuilder().Create(test.tablePhotoRems)
+			cud.PutRecordID(appdef.SystemField_ID, emptiedRemarkID)
+			cud.PutRecordID(appdef.SystemField_ParentID, emptiedPhotoID)
+			cud.PutString(appdef.SystemField_Container, test.remarkIdent)
+			cud.PutRecordID(test.photoIdent, test.tempPhotoID)
+			cud.PutString(test.remarkIdent, "") // empty string-field
+		})
+
+		b := ev1.storeToBytes()
+
+		ev2 := newEmptyTestEvent()
+		err := ev2.loadFromBytes(b)
+		require.NoError(err)
+
+		t.Run("should ok to find CUDs with emptied field", func(t *testing.T) {
+			for cud := range ev2.CUDs {
+				switch cud.AsRecordID(appdef.SystemField_ID) {
+				case emptiedPhotoID:
+					fields := make(map[appdef.FieldName]interface{})
+					for fld, val := range cud.ModifiedFields {
+						fields[fld] = val
+					}
+					require.Equal(
+						map[appdef.FieldName]interface{}{
+							test.buyerIdent: test.buyerValue,
+							test.ageIdent:   test.ageValue,
+							test.photoIdent: []byte{}, // emptied bytes-field
+						},
+						fields)
+				case emptiedRemarkID:
+					fields := make(map[appdef.FieldName]interface{})
+					for fld, val := range cud.ModifiedFields {
+						fields[fld] = val
+					}
+					require.Equal(
+						map[appdef.FieldName]interface{}{
+							test.photoIdent:  test.tempPhotoID,
+							test.remarkIdent: "", // emptied string-field
+						},
+						fields)
+				}
+			}
+		})
+	})
 }
 
-func Test_LoadEvent_CorruptedBytes(t *testing.T) {
+func Test_LoadEvent_DamagedBytes(t *testing.T) {
 	require := require.New(t)
 
 	ev1 := newTestEvent(100500, 500)
-	testDbEvent(t, ev1)
+
+	// #2785
+	t.Run("put CUD with emptied photo", func(t *testing.T) {
+		test := test()
+		cud := ev1.CUDBuilder().Create(test.tablePhotos)
+		cud.PutRecordID(appdef.SystemField_ID, test.tempPhotoID+1)
+		cud.PutString(test.buyerIdent, test.buyerValue)
+		cud.PutBytes(test.photoIdent, nil) // empty bytes-field
+	})
 
 	b := ev1.storeToBytes()
 	length := len(b)
 
 	t.Run("load/store from truncated bytes", func(t *testing.T) {
 		for i := 0; i < length; i++ {
-			corrupted := b[0:i]
+			damaged := b[0:i]
 
 			ev2 := newEmptyTestEvent()
-			err := ev2.loadFromBytes(corrupted)
+			err := ev2.loadFromBytes(damaged)
 			require.Error(err, fmt.Sprintf("unexpected success load event from bytes truncated at %d", i))
 		}
 	})
 
-	t.Run("load/store from corrupted bytes:\n"+
-		"— fail (Panic or Error) or\n"+
-		"— success read wrong data",
+	t.Run("load/store from damaged bytes",
+		// - fail (Panic or Error) or
+		// - success read wrong data
 		func(t *testing.T) {
 			stat := make(map[string]int)
 			for i := 0; i < length; i++ {
@@ -1953,7 +2027,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 	})
 }
 
-func Test_LoadErrorEvent_CorruptedBytes(t *testing.T) {
+func Test_LoadErrorEvent_DamagedBytes(t *testing.T) {
 	const errMsg = "test build error message; エラーメッセージテスト"
 
 	require := require.New(t)
@@ -1966,10 +2040,10 @@ func Test_LoadErrorEvent_CorruptedBytes(t *testing.T) {
 
 	length := len(b)
 	for i := 0; i < length; i++ {
-		corrupted := b[0:i]
+		damaged := b[0:i]
 
 		ev2 := newEmptyTestEvent()
-		err := ev2.loadFromBytes(corrupted)
+		err := ev2.loadFromBytes(damaged)
 		require.Error(err, fmt.Sprintf("unexpected success load event from bytes truncated at %d", i))
 	}
 }
@@ -2036,11 +2110,12 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 				require.Equal(test.testObj, o.QName())
 				require.EqualValues(0, o.AsInt32("int32"))
 			}},
-		{"should be error on fill from JSON with nil values even for unknown fields",
-			`{"unknown": null}`,
+		{"should be ok to fill from JSON with nil values even for unknown fields",
+			`{"int32": null, "unknown": null}`,
 			func(o istructs.IObject, err error) {
-				require.ErrorIs(err, ErrNullNotAllowed)
-				require.ErrorContains(err, "unknown")
+				require.NoError(err)
+				require.Equal(test.testObj, o.QName())
+				require.EqualValues(0, o.AsInt32("int32"))
 			}},
 		{"should be ok to fill fields from JSON",
 			`{"int32": 1, "int64": 2, "float32": 3.3, "float64": 4.4, "bool": true, "string": "test", "bytes": "AQID"}`,
@@ -2070,46 +2145,44 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 					return cnt
 				}())
 			}},
-		{"should be error on fill with nil values",
+		{"should be ok to fill with nil values",
 			`{"int32": null, "bool": null, "string": null, "bytes": null}`,
 			func(o istructs.IObject, err error) {
-				require.ErrorIs(err, ErrNullNotAllowed)
-				require.ErrorContains(err, "int32")
-				require.ErrorContains(err, "bool")
-				require.ErrorContains(err, "string")
-				require.ErrorContains(err, "bytes")
+				require.NoError(err)
+				require.Equal(test.testObj, o.QName())
+				require.Zero(o.AsInt32("int32"))
+				require.Zero(o.AsBool("bool"))
+				require.Zero(o.AsString("string"))
+				require.Zero(o.AsBytes("bytes"))
 			}},
 		{"should be error if unknown field in JSON",
 			`{"unknown": 1}`,
 			func(o istructs.IObject, err error) {
-				require.ErrorIs(err, ErrNameNotFound)
-				require.ErrorContains(err, "field «unknown» is not found")
+				require.Error(err, require.Is(ErrNameNotFoundError), require.Has("unknown"))
 			}},
 		{"should be error if invalid data type in JSON field",
 			`{"int32": "error"}`,
 			func(o istructs.IObject, err error) {
-				require.ErrorIs(err, ErrWrongFieldType)
-				require.ErrorContains(err, "int32")
+				require.Error(err, require.Is(ErrWrongFieldTypeError), require.Has("int32"))
 			}},
 		{"should be error if unknown container in JSON",
 			`{"unknown": [{"int32": 1}]}`,
 			func(o istructs.IObject, err error) {
-				require.ErrorIs(err, ErrNameNotFound)
-				require.ErrorContains(err, "container «unknown» is not found")
+				require.Error(err, require.Is(ErrNameNotFoundError), require.Has("unknown"))
 			}},
 		{"should be error if invalid data type in JSON container",
 			`{"child": ["a","b"]}`,
 			func(o istructs.IObject, err error) {
-				require.ErrorIs(err, ErrWrongType)
-				require.ErrorContains(err, "invalid type «string»")
-				require.ErrorContains(err, "child «child[0]»")
+				require.Error(err, ErrWrongTypeError,
+					require.Has("invalid type «string»"),
+					require.Has("child «child[0]»"))
 			}},
 		{"should be error if invalid data type in JSON container",
 			`{"child": ["a","b"]}`,
 			func(o istructs.IObject, err error) {
-				require.ErrorIs(err, ErrWrongType)
-				require.ErrorContains(err, "invalid type «string»")
-				require.ErrorContains(err, "child «child[0]»")
+				require.Error(err, ErrWrongTypeError,
+					require.Has("invalid type «string»"),
+					require.Has("child «child[0]»"))
 			}},
 	}
 	for _, tt := range tests {
@@ -2136,6 +2209,6 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 		b.FillFromJSON(j)
 
 		_, err := b.Build()
-		require.ErrorIs(err, ErrWrongType)
+		require.ErrorIs(err, ErrWrongTypeError)
 	})
 }
