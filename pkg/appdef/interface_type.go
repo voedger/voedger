@@ -164,7 +164,10 @@ type (
 		Type(name QName) IType
 	}
 	ITypes interface {
-		// Enumerates types.
+		// Returns count of types
+		TypeCount() int
+
+		// Enumerates types
 		//
 		// Types are enumerated in alphabetical order of QNames.
 		Types(func(IType) bool)

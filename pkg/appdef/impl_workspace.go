@@ -120,6 +120,8 @@ func (ws *workspace) Type(name QName) IType {
 	return find(ws)
 }
 
+func (ws workspace) TypeCount() int { return len(ws.types) }
+
 func (ws *workspace) Types(visit func(IType) bool) {
 	if len(ws.typesOrdered) != len(ws.types) {
 		ws.typesOrdered = make([]interface{}, 0, len(ws.types))
