@@ -41,7 +41,7 @@ WORKSPACE SomeWorkspace INHERITS pkg1.TestWorkspace, pkg2.TestWorkspace (
         Email varchar,
         Password varchar
     );
-    TABLE OneMoreTable INHERITS CDoc(
+    TABLE OneMoreTable INHERITS sys.CDoc(
         A varchar,
         B varchar,
         C int32,
@@ -51,7 +51,7 @@ WORKSPACE SomeWorkspace INHERITS pkg1.TestWorkspace, pkg2.TestWorkspace (
         A varchar,
         B varchar
     );
-    TABLE AnotherOneTable INHERITS CDoc(
+    TABLE AnotherOneTable INHERITS sys.CDoc(
         A varchar,
         B varchar,
         C varchar,
@@ -74,11 +74,11 @@ WORKSPACE SomeWorkspace INHERITS pkg1.TestWorkspace, pkg2.TestWorkspace (
         E int,
         PRIMARY KEY ((A), B)
     ) AS RESULT OF Proj1;
-    TABLE O_Doc INHERITS ODoc (
+    TABLE O_Doc INHERITS sys.ODoc (
         Fld1 int32
     );
     EXTENSION ENGINE BUILTIN (
-        PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(SomeView));
+        PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(SomeView));
         COMMAND Orders();
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
         COMMAND SomeCommand(SomeType, UNLOGGED SomeType) RETURNS SomeType;

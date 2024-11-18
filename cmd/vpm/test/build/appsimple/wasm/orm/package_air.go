@@ -58,7 +58,7 @@ func (c Command_air_Pbill) Result(number int32) {
 }
 
 /*
-TABLE ProformaPrinted INHERITS ODoc (
+TABLE ProformaPrinted INHERITS sys.ODoc (
 
 	Number int32 NOT NULL,
 	UserID ref(untill.untill_users) NOT NULL,
@@ -72,7 +72,7 @@ type ODoc_air_ProformaPrinted struct {
 }
 
 /*
-	TABLE NextNumbers INHERITS CSingleton (
+	TABLE NextNumbers INHERITS sys.CSingleton (
 		NextPBillNumber int32
 	);
 */

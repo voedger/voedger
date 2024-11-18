@@ -752,8 +752,8 @@ func Test_DupFieldsInTables(t *testing.T) {
 func Test_AbstractTables(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("file1.vsql", `APPLICATION test(); 
-	
+	fs, err := ParseFile("file1.vsql", `APPLICATION test();
+
 	WORKSPACE MyWorkspace1(
 	TABLE ByBaseTable INHERITS sys.CDoc (
 		Name varchar
@@ -929,7 +929,7 @@ func Test_Duplicates(t *testing.T) {
 		WORKSPACE InnerWorkspace (
 			ROLE MyFunc4; -- redeclared
 		);
-		TABLE Doc1 INHERITS ODoc(
+		TABLE Doc1 INHERITS sys.ODoc(
 			nested1 Rec1,
 			nested2 TABLE Rec1() -- redeclared
 		)
@@ -1849,7 +1849,7 @@ func Test_OdocCmdArgs(t *testing.T) {
 	require := require.New(t)
 	pkgApp1 := buildPackage(`
 
-	APPLICATION registry(); 
+	APPLICATION registry();
 	WORKSPACE Workspace1 (
 		TABLE TableODoc INHERITS sys.ODoc (
 			orecord1 TABLE orecord1(
@@ -1860,7 +1860,7 @@ func Test_OdocCmdArgs(t *testing.T) {
 			COMMAND CmdODoc1(TableODoc) RETURNS TableODoc;
 		)
 	);
-	
+
 
 	`)
 
@@ -2092,7 +2092,7 @@ func Test_Grants(t *testing.T) {
 	})
 
 	t.Run("GRANT follows REVOKE in WORKSPACE", func(t *testing.T) {
-		require.AppSchemaError(`APPLICATION test(); 
+		require.AppSchemaError(`APPLICATION test();
 			WORKSPACE AppWorkspaceWS (
 				ROLE role1;
 
@@ -2101,7 +2101,7 @@ func Test_Grants(t *testing.T) {
 				);
 				REVOKE ALL ON TABLE Table1 FROM role1;
 				GRANT ALL ON TABLE Table1 TO role1;
-				
+
 			);`, "file.vsql:9:5: GRANT follows REVOKE in the same container")
 	})
 
@@ -2440,7 +2440,7 @@ func Test_ScheduledProjectors(t *testing.T) {
 				) AS RESULT OF Proj1;
 
 				EXTENSION ENGINE BUILTIN (
-					PROJECTOR Proj1 CRON 'blah' INTENTS (View(test));
+					PROJECTOR Proj1 CRON 'blah' INTENTS (sys.View(test));
 				);
 			);`, "file.vsql:9:6: invalid cron schedule: blah", "file.vsql:9:6: scheduled projector cannot have intents")
 	})
