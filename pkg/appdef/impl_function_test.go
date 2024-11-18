@@ -63,12 +63,12 @@ func Test_AppDefFunctions(t *testing.T) {
 		})
 
 		t.Run("should be ok to find function by name", func(t *testing.T) {
-			f := Function(tested, cmdName)
+			f := Function(tested.Type, cmdName)
 			require.NotNil(f)
 			require.Equal(cmdName, f.QName())
 		})
 
-		require.Nil(Function(tested, NewQName("test", "unknown")), "Should be nil if unknown")
+		require.Nil(Function(tested.Type, NewQName("test", "unknown")), "Should be nil if unknown")
 	}
 
 	testWith(app)

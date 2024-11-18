@@ -61,7 +61,7 @@ func newLimit(app *appDef, ws *workspace, name QName, on []QName, rate QName, co
 	l := &limit{
 		typ:  makeType(app, ws, name, TypeKind_Limit),
 		on:   on,
-		rate: Rate(app, rate),
+		rate: Rate(app.Type, rate),
 	}
 	if l.rate == nil {
 		panic(ErrNotFound("rate «%v»", rate))

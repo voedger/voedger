@@ -56,7 +56,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 			require.True(ok)
 			require.Equal(TypeKind_Command, c.Kind())
 
-			cmd := Command(tested, cmdName)
+			cmd := Command(tested.Type, cmdName)
 			require.Equal(TypeKind_Command, cmd.Kind())
 			require.Equal(cmdName.Entity(), cmd.Name())
 			require.Equal(c, cmd)
@@ -91,7 +91,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 		t.Run("check nil returns", func(t *testing.T) {
 			unknown := NewQName("test", "unknown")
-			require.Nil(Command(tested, unknown))
+			require.Nil(Command(tested.Type, unknown))
 		})
 	}
 

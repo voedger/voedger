@@ -53,9 +53,9 @@ func ExampleSingletons() {
 
 	// how to find singleton by name
 	{
-		fmt.Println(appdef.Singleton(app, cDocName))
-		fmt.Println(appdef.Singleton(app, wDocName))
-		fmt.Println(appdef.Singleton(app, appdef.NewQName("test", "unknown")))
+		fmt.Println(appdef.Singleton(app.Type, cDocName))
+		fmt.Println(appdef.Singleton(app.Type, wDocName))
+		fmt.Println(appdef.Singleton(app.Type, appdef.NewQName("test", "unknown")))
 	}
 
 	// Output:

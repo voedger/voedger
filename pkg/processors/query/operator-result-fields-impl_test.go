@@ -48,7 +48,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 			require.NoError(err)
 
 			appDef = app
-			rootObj = appdef.Object(app, objName)
+			rootObj = appdef.Object(app.Type, objName)
 		})
 
 		commonFields := []IResultField{resultField{field: "name"}}

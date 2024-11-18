@@ -157,19 +157,21 @@ type IType interface {
 
 // Interfaces describes the entity with types, such as application or workspace.
 type (
-	IFindType interface {
+	IWithTypes interface {
 		// Returns type by name.
 		//
 		// If not found then empty type with TypeKind_null is returned
-		Type(name QName) IType
-	}
-	IWithTypes interface {
-		IFindType
+		Type(QName) IType
 		// Enumerates types
 		//
 		// Types are enumerated in alphabetical order of QNames.
 		Types(func(IType) bool)
 	}
+
+	// Finds type by name.
+	//
+	// If not found then empty type with TypeKind_null is returned
+	FindType func(QName) IType
 
 	// Types iterator.
 	//

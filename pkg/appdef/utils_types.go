@@ -15,8 +15,8 @@ import (
 // Returns CDoc by name.
 //
 // Returns nil if CDoc not found.
-func CDoc(types IFindType, name QName) ICDoc {
-	return TypeByNameAndKind[ICDoc](types, name, TypeKind_CDoc)
+func CDoc(f FindType, name QName) ICDoc {
+	return TypeByNameAndKind[ICDoc](f, name, TypeKind_CDoc)
 }
 
 // Returns iterator over CDocs.
@@ -29,8 +29,8 @@ func CDocs(types EnumTypes) func(func(ICDoc) bool) {
 // Returns Command by name.
 //
 // Returns nil if Command not found.
-func Command(types IFindType, name QName) ICommand {
-	return TypeByNameAndKind[ICommand](types, name, TypeKind_Command)
+func Command(f FindType, name QName) ICommand {
+	return TypeByNameAndKind[ICommand](f, name, TypeKind_Command)
 }
 
 // Returns iterator over Commands.
@@ -43,8 +43,8 @@ func Commands(types EnumTypes) func(func(ICommand) bool) {
 // Returns CRecord by name.
 //
 // Returns nil if CRecord not found.
-func CRecord(types IFindType, name QName) ICRecord {
-	return TypeByNameAndKind[ICRecord](types, name, TypeKind_CRecord)
+func CRecord(f FindType, name QName) ICRecord {
+	return TypeByNameAndKind[ICRecord](f, name, TypeKind_CRecord)
 }
 
 // Returns iterator over CRecords.
@@ -57,8 +57,8 @@ func CRecords(types EnumTypes) func(func(ICRecord) bool) {
 // Returns Data type by name.
 //
 // Returns nil if Data not found.
-func Data(types IFindType, name QName) IData {
-	return TypeByNameAndKind[IData](types, name, TypeKind_Data)
+func Data(f FindType, name QName) IData {
+	return TypeByNameAndKind[IData](f, name, TypeKind_Data)
 }
 
 // Returns iterator over Data types.
@@ -71,8 +71,8 @@ func DataTypes(types EnumTypes) func(func(IData) bool) {
 // Returns Extension by name.
 //
 // Returns nil if Extension not found.
-func Extension(types IFindType, name QName) IExtension {
-	return TypeByName[IExtension](types, name)
+func Extension(f FindType, name QName) IExtension {
+	return TypeByName[IExtension](f, name)
 }
 
 // Returns iterator over Extensions.
@@ -85,8 +85,8 @@ func Extensions(types EnumTypes) func(func(IExtension) bool) {
 // Returns Function by name.
 //
 // Returns nil if Function not found.
-func Function(types IFindType, name QName) IFunction {
-	return TypeByName[IFunction](types, name)
+func Function(f FindType, name QName) IFunction {
+	return TypeByName[IFunction](f, name)
 }
 
 // Returns iterator over Functions.
@@ -99,8 +99,8 @@ func Functions(types EnumTypes) func(func(IFunction) bool) {
 // Returns GDoc by name.
 //
 // Returns nil if GDoc not found.
-func GDoc(types IFindType, name QName) IGDoc {
-	return TypeByNameAndKind[IGDoc](types, name, TypeKind_GDoc)
+func GDoc(f FindType, name QName) IGDoc {
+	return TypeByNameAndKind[IGDoc](f, name, TypeKind_GDoc)
 }
 
 // Returns iterator over GDocs.
@@ -113,8 +113,8 @@ func GDocs(types EnumTypes) func(func(IGDoc) bool) {
 // Returns GRecord by name.
 //
 // Returns nil if GRecord not found.
-func GRecord(types IFindType, name QName) IGRecord {
-	return TypeByNameAndKind[IGRecord](types, name, TypeKind_GRecord)
+func GRecord(f FindType, name QName) IGRecord {
+	return TypeByNameAndKind[IGRecord](f, name, TypeKind_GRecord)
 }
 
 // Returns iterator over GRecords.
@@ -127,8 +127,8 @@ func GRecords(types EnumTypes) func(func(IGRecord) bool) {
 // Returns Job by name.
 //
 // Returns nil if Job not found.
-func Job(types IFindType, name QName) IJob {
-	return TypeByNameAndKind[IJob](types, name, TypeKind_Job)
+func Job(f FindType, name QName) IJob {
+	return TypeByNameAndKind[IJob](f, name, TypeKind_Job)
 }
 
 // Returns iterator over Jobs.
@@ -141,8 +141,8 @@ func Jobs(types EnumTypes) func(func(IJob) bool) {
 // Returns Limit by name.
 //
 // Returns nil if Limit not found.
-func Limit(types IFindType, name QName) ILimit {
-	return TypeByNameAndKind[ILimit](types, name, TypeKind_Limit)
+func Limit(f FindType, name QName) ILimit {
+	return TypeByNameAndKind[ILimit](f, name, TypeKind_Limit)
 }
 
 // Returns iterator over Limits.
@@ -155,8 +155,8 @@ func Limits(types EnumTypes) func(func(ILimit) bool) {
 // Returns Object by name.
 //
 // Returns nil if Object not found.
-func Object(types IFindType, name QName) IObject {
-	return TypeByNameAndKind[IObject](types, name, TypeKind_Object)
+func Object(f FindType, name QName) IObject {
+	return TypeByNameAndKind[IObject](f, name, TypeKind_Object)
 }
 
 // Returns iterator over Objects.
@@ -169,8 +169,8 @@ func Objects(types EnumTypes) func(func(IObject) bool) {
 // Returns ODoc by name.
 //
 // Returns nil if ODoc not found.
-func ODoc(types IFindType, name QName) IODoc {
-	return TypeByNameAndKind[IODoc](types, name, TypeKind_ODoc)
+func ODoc(f FindType, name QName) IODoc {
+	return TypeByNameAndKind[IODoc](f, name, TypeKind_ODoc)
 }
 
 // Returns iterator over ODocs.
@@ -183,8 +183,8 @@ func ODocs(types EnumTypes) func(func(IODoc) bool) {
 // Returns ORecord by name.
 //
 // Returns nil if ORecord not found.
-func ORecord(types IFindType, name QName) IORecord {
-	return TypeByNameAndKind[IORecord](types, name, TypeKind_ORecord)
+func ORecord(f FindType, name QName) IORecord {
+	return TypeByNameAndKind[IORecord](f, name, TypeKind_ORecord)
 }
 
 // Returns iterator over ORecords.
@@ -197,8 +197,8 @@ func ORecords(types EnumTypes) func(func(IORecord) bool) {
 // Returns Projector by name.
 //
 // Returns nil if Projector not found.
-func Projector(types IFindType, name QName) IProjector {
-	return TypeByNameAndKind[IProjector](types, name, TypeKind_Projector)
+func Projector(f FindType, name QName) IProjector {
+	return TypeByNameAndKind[IProjector](f, name, TypeKind_Projector)
 }
 
 // Returns iterator over Projectors.
@@ -211,8 +211,8 @@ func Projectors(types EnumTypes) func(func(IProjector) bool) {
 // Returns Query by name.
 //
 // Returns nil if Query not found.
-func Query(types IFindType, name QName) IQuery {
-	return TypeByNameAndKind[IQuery](types, name, TypeKind_Query)
+func Query(f FindType, name QName) IQuery {
+	return TypeByNameAndKind[IQuery](f, name, TypeKind_Query)
 }
 
 // Returns iterator over Queries.
@@ -225,8 +225,8 @@ func Queries(types EnumTypes) func(func(IQuery) bool) {
 // Returns Rate by name.
 //
 // Returns nil if Rate not found.
-func Rate(types IFindType, name QName) IRate {
-	return TypeByNameAndKind[IRate](types, name, TypeKind_Rate)
+func Rate(f FindType, name QName) IRate {
+	return TypeByNameAndKind[IRate](f, name, TypeKind_Rate)
 }
 
 // Returns iterator over Rates.
@@ -239,8 +239,8 @@ func Rates(types EnumTypes) func(func(IRate) bool) {
 // Returns Record by name.
 //
 // Returns nil if Record not found.
-func Record(types IFindType, name QName) IRecord {
-	return TypeByName[IRecord](types, name)
+func Record(f FindType, name QName) IRecord {
+	return TypeByName[IRecord](f, name)
 }
 
 // Returns iterator over Records.
@@ -253,8 +253,8 @@ func Records(types EnumTypes) func(func(IRecord) bool) {
 // Returns Role by name.
 //
 // Returns nil if Role not found.
-func Role(types IFindType, name QName) IRole {
-	return TypeByNameAndKind[IRole](types, name, TypeKind_Role)
+func Role(f FindType, name QName) IRole {
+	return TypeByNameAndKind[IRole](f, name, TypeKind_Role)
 }
 
 // Returns iterator over Roles.
@@ -267,8 +267,8 @@ func Roles(types EnumTypes) func(func(IRole) bool) {
 // Returns Singleton by name.
 //
 // Returns nil if Singleton not found.
-func Singleton(types IFindType, name QName) ISingleton {
-	if s := TypeByName[ISingleton](types, name); (s != nil) && s.Singleton() {
+func Singleton(f FindType, name QName) ISingleton {
+	if s := TypeByName[ISingleton](f, name); (s != nil) && s.Singleton() {
 		return s
 	}
 	return nil
@@ -292,8 +292,8 @@ func Singletons(types EnumTypes) func(func(ISingleton) bool) {
 // Returns Structure by name.
 //
 // Returns nil if Structure not found.
-func Structure(types IFindType, name QName) IStructure {
-	return TypeByName[IStructure](types, name)
+func Structure(f FindType, name QName) IStructure {
+	return TypeByName[IStructure](f, name)
 }
 
 // Returns iterator over Structures.
@@ -306,15 +306,15 @@ func Structures(types EnumTypes) func(func(IStructure) bool) {
 // Returns system Data type (sys.int32, sys.float654, etc.) by data kind.
 //
 // Returns nil if not found.
-func SysData(types IFindType, k DataKind) IData {
-	return TypeByNameAndKind[IData](types, SysDataName(k), TypeKind_Data)
+func SysData(f FindType, k DataKind) IData {
+	return TypeByNameAndKind[IData](f, SysDataName(k), TypeKind_Data)
 }
 
 // Returns type by name.
 //
 // Returns nil if type not found.
-func TypeByName[T IType](types IFindType, name QName) (found T) {
-	if t := types.Type(name); t != NullType {
+func TypeByName[T IType](f FindType, name QName) (found T) {
+	if t := f(name); t != NullType {
 		if r, ok := t.(T); ok {
 			found = r
 		}
@@ -325,8 +325,8 @@ func TypeByName[T IType](types IFindType, name QName) (found T) {
 // Returns type by name and kind.
 //
 // Returns nil if type not found.
-func TypeByNameAndKind[T IType](types IFindType, name QName, kind TypeKind) (found T) {
-	if t := types.Type(name); t.Kind() == kind {
+func TypeByNameAndKind[T IType](f FindType, name QName, kind TypeKind) (found T) {
+	if t := f(name); t.Kind() == kind {
 		found = t.(T)
 	}
 	return found
@@ -365,8 +365,8 @@ func TypesByKinds[T IType](types EnumTypes, kinds TypeKindSet) func(func(T) bool
 // Returns View by name.
 //
 // Returns nil if View not found.
-func View(types IFindType, name QName) IView {
-	return TypeByNameAndKind[IView](types, name, TypeKind_ViewRecord)
+func View(f FindType, name QName) IView {
+	return TypeByNameAndKind[IView](f, name, TypeKind_ViewRecord)
 }
 
 // Returns iterator over Views.
@@ -379,8 +379,8 @@ func Views(types EnumTypes) func(func(IView) bool) {
 // Returns WDoc by name.
 //
 // Returns nil if WDoc not found.
-func WDoc(types IFindType, name QName) IWDoc {
-	return TypeByNameAndKind[IWDoc](types, name, TypeKind_WDoc)
+func WDoc(f FindType, name QName) IWDoc {
+	return TypeByNameAndKind[IWDoc](f, name, TypeKind_WDoc)
 }
 
 // Returns iterator over WDocs.
@@ -393,8 +393,8 @@ func WDocs(types EnumTypes) func(func(IWDoc) bool) {
 // Returns WRecord by name.
 //
 // Returns nil if WRecord not found.
-func WRecord(types IFindType, name QName) IWRecord {
-	return TypeByNameAndKind[IWRecord](types, name, TypeKind_WRecord)
+func WRecord(f FindType, name QName) IWRecord {
+	return TypeByNameAndKind[IWRecord](f, name, TypeKind_WRecord)
 }
 
 // Returns iterator over WRecords.

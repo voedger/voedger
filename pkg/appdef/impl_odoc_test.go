@@ -46,7 +46,7 @@ func Test_AppDef_AddODoc(t *testing.T) {
 			typ := tested.Type(docName)
 			require.Equal(TypeKind_ODoc, typ.Kind())
 
-			doc := ODoc(tested, docName)
+			doc := ODoc(tested.Type, docName)
 			require.Equal(TypeKind_ODoc, doc.Kind())
 			require.Equal(typ.(IODoc), doc)
 			require.NotPanics(func() { doc.isODoc() })
@@ -62,7 +62,7 @@ func Test_AppDef_AddODoc(t *testing.T) {
 				typ := app.Type(recName)
 				require.Equal(TypeKind_ORecord, typ.Kind())
 
-				rec := ORecord(tested, recName)
+				rec := ORecord(tested.Type, recName)
 				require.Equal(TypeKind_ORecord, rec.Kind())
 				require.Equal(typ.(IORecord), rec)
 				require.NotPanics(func() { rec.isORecord() })
@@ -95,8 +95,8 @@ func Test_AppDef_AddODoc(t *testing.T) {
 
 		t.Run("should nil if not found", func(t *testing.T) {
 			unknown := NewQName("test", "unknown")
-			require.Nil(ODoc(tested, unknown))
-			require.Nil(ORecord(tested, unknown))
+			require.Nil(ODoc(tested.Type, unknown))
+			require.Nil(ORecord(tested.Type, unknown))
 		})
 	}
 

@@ -148,14 +148,14 @@ func (cts *CommandTestState) getQNameFromFQName(fQName IFullQName) appdef.QName 
 func (cts *CommandTestState) isSingletone(fQName IFullQName) bool {
 	qName := cts.getQNameFromFQName(fQName)
 
-	iSingleton := appdef.Singleton(cts.appDef, qName)
+	iSingleton := appdef.Singleton(cts.appDef.Type, qName)
 	return iSingleton != nil && iSingleton.Singleton()
 }
 
 func (cts *CommandTestState) isView(fQName IFullQName) bool {
 	qName := cts.getQNameFromFQName(fQName)
 
-	return appdef.View(cts.appDef, qName) != nil
+	return appdef.View(cts.appDef.Type, qName) != nil
 }
 
 func (cts *CommandTestState) putArgument() {

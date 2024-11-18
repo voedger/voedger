@@ -25,12 +25,12 @@ type data struct {
 func newData(app *appDef, ws *workspace, name QName, kind DataKind, anc QName) *data {
 	var ancestor IData
 	if anc == NullQName {
-		ancestor = SysData(app, kind)
+		ancestor = SysData(app.Type, kind)
 		if ancestor == nil {
 			panic(ErrNotFound("system data type for data kind «%v»", kind.TrimString()))
 		}
 	} else {
-		ancestor = Data(app, anc)
+		ancestor = Data(app.Type, anc)
 		if ancestor == nil {
 			panic(ErrTypeNotFound(anc))
 		}

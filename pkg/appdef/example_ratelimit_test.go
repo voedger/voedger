@@ -60,11 +60,11 @@ func ExampleRates() {
 	// how to find rates and limits
 	{
 		fmt.Println("find rate:")
-		rate := appdef.Rate(app, rateName)
+		rate := appdef.Rate(app.Type, rateName)
 		fmt.Println("-", rate, ":", rate.Comment())
 
 		fmt.Println("find limit:")
-		limit := appdef.Limit(app, limitName)
+		limit := appdef.Limit(app.Type, limitName)
 		fmt.Println("-", limit, ":", limit.Comment())
 	}
 

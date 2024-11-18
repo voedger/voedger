@@ -79,12 +79,12 @@ func Test_AppDefExtensions(t *testing.T) {
 		})
 
 		t.Run("should be ok to find extension by name", func(t *testing.T) {
-			ext := Extension(tested, cmdName)
+			ext := Extension(tested.Type, cmdName)
 			require.NotNil(ext)
 			require.Equal(cmdName, ext.QName())
 		})
 
-		require.Nil(Extension(tested, NewQName("test", "unknown")), "should be nil if unknown")
+		require.Nil(Extension(tested.Type, NewQName("test", "unknown")), "should be nil if unknown")
 	}
 
 	testWith(app)

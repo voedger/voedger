@@ -51,20 +51,20 @@ func Test_AppDef_AddData(t *testing.T) {
 
 	testWith := func(tested IWithTypes) {
 		t.Run("should be ok to find builded data type", func(t *testing.T) {
-			i := Data(tested, intName)
+			i := Data(tested.Type, intName)
 			require.Equal(TypeKind_Data, i.Kind())
 			require.Equal(intName, i.QName())
 			require.Equal(DataKind_int64, i.DataKind())
 			require.False(i.IsSystem())
-			require.Equal(SysData(tested, DataKind_int64), i.Ancestor())
+			require.Equal(SysData(tested.Type, DataKind_int64), i.Ancestor())
 
-			s := Data(tested, strName)
+			s := Data(tested.Type, strName)
 			require.Equal(TypeKind_Data, s.Kind())
 			require.Equal(strName, s.QName())
 			require.Equal(DataKind_string, s.DataKind())
-			require.Equal(SysData(tested, DataKind_string), s.Ancestor())
+			require.Equal(SysData(tested.Type, DataKind_string), s.Ancestor())
 
-			tk := Data(tested, tokenName)
+			tk := Data(tested.Type, tokenName)
 			require.Equal(TypeKind_Data, tk.Kind())
 			require.Equal(tokenName, tk.QName())
 			require.Equal(DataKind_string, tk.DataKind())
@@ -111,7 +111,7 @@ func Test_AppDef_AddData(t *testing.T) {
 			require.Equal(3, cnt)
 		})
 
-		require.Nil(Data(tested, NewQName("test", "unknown")), "check nil returns")
+		require.Nil(Data(tested.Type, NewQName("test", "unknown")), "check nil returns")
 	}
 
 	testWith(app)
@@ -230,7 +230,7 @@ func Test_appDef_makeSysDataTypes(t *testing.T) {
 	t.Run("must be ok to get system data types", func(t *testing.T) {
 		sysWS := app.Workspace(SysWorkspaceQName)
 		for k := DataKind_null + 1; k < DataKind_FakeLast; k++ {
-			d := SysData(app, k)
+			d := SysData(app.Type, k)
 			require.NotNil(d)
 			require.Equal(SysDataName(k), d.QName())
 			require.Equal(TypeKind_Data, d.Kind())

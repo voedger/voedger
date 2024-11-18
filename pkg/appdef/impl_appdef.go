@@ -95,7 +95,7 @@ func (app *appDef) Types(visit func(IType) bool) {
 }
 
 func (app *appDef) Workspace(name QName) IWorkspace {
-	return TypeByNameAndKind[IWorkspace](app, name, TypeKind_Workspace)
+	return TypeByNameAndKind[IWorkspace](app.Type, name, TypeKind_Workspace)
 }
 
 func (app *appDef) Workspaces(visit func(IWorkspace) bool) {

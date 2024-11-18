@@ -91,7 +91,7 @@ func Test_AddField(t *testing.T) {
 		app, err := adb.Build()
 		require.NoError(err)
 
-		obj := Object(app, objName)
+		obj := Object(app.Type, objName)
 		require.Equal([]IField{obj.Field("f1")}, obj.UserFields())
 		require.Equal(1, obj.UserFieldCount())
 		require.Equal(obj.UserFieldCount()+2, obj.FieldCount()) // + sys.QName + sys.Container
@@ -123,7 +123,7 @@ func Test_AddField(t *testing.T) {
 		app, err := adb.Build()
 		require.NoError(err)
 
-		obj := Object(app, objName)
+		obj := Object(app.Type, objName)
 		require.Equal(3, obj.UserFieldCount())
 		require.Equal(3+2, obj.FieldCount()) // + sys.QName + sys.Container
 
@@ -204,7 +204,7 @@ func Test_SetFieldComment(t *testing.T) {
 	require.NoError(err)
 
 	t.Run("should be ok to obtain field comment", func(t *testing.T) {
-		obj := Object(app, objName)
+		obj := Object(app.Type, objName)
 		require.Equal(1, obj.UserFieldCount())
 		f1 := obj.Field("f1")
 		require.NotNil(f1)
@@ -242,7 +242,7 @@ func Test_SetFieldVerify(t *testing.T) {
 	require.NoError(err)
 
 	t.Run("should be ok to obtain verified field", func(t *testing.T) {
-		obj := Object(app, objName)
+		obj := Object(app.Type, objName)
 		require.Equal(2, obj.UserFieldCount())
 		f1 := obj.Field("f1")
 		require.NotNil(f1)
@@ -299,7 +299,7 @@ func Test_AddRefField(t *testing.T) {
 	})
 
 	t.Run("should be ok to work with reference fields", func(t *testing.T) {
-		doc := WDoc(app, docName)
+		doc := WDoc(app.Type, docName)
 
 		t.Run("should be ok type cast reference field", func(t *testing.T) {
 			fld := doc.Field("rf1")
@@ -390,7 +390,7 @@ func Test_UserFields(t *testing.T) {
 	})
 
 	t.Run("should be ok to enumerate user fields", func(t *testing.T) {
-		doc := ODoc(app, docName)
+		doc := ODoc(app.Type, docName)
 		require.Equal(3, doc.UserFieldCount())
 
 		require.Equal(doc.UserFieldCount(), func() int {

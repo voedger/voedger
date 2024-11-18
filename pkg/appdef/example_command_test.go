@@ -55,7 +55,7 @@ func ExampleCommands() {
 
 	// how to inspect builded AppDef with command
 	{
-		cmd := appdef.Command(app, cmdName)
+		cmd := appdef.Command(app.Type, cmdName)
 		fmt.Println(cmd, ":")
 		fmt.Println(" - parameter:", cmd.Param())
 		fmt.Println(" - unl.param:", cmd.UnloggedParam())

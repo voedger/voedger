@@ -256,7 +256,7 @@ func (ws *workspace) appendType(t interface{}) {
 }
 
 func (ws *workspace) grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) {
-	r := Role(ws, toRole)
+	r := Role(ws.Type, toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
 	}
@@ -264,7 +264,7 @@ func (ws *workspace) grant(ops []OperationKind, resources []QName, fields []Fiel
 }
 
 func (ws *workspace) grantAll(resources []QName, toRole QName, comment ...string) {
-	r := Role(ws, toRole)
+	r := Role(ws.Type, toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
 	}
@@ -272,7 +272,7 @@ func (ws *workspace) grantAll(resources []QName, toRole QName, comment ...string
 }
 
 func (ws *workspace) revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) {
-	r := Role(ws, fromRole)
+	r := Role(ws.Type, fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}
@@ -280,7 +280,7 @@ func (ws *workspace) revoke(ops []OperationKind, resources []QName, fields []Fie
 }
 
 func (ws *workspace) revokeAll(resources []QName, fromRole QName, comment ...string) {
-	r := Role(ws, fromRole)
+	r := Role(ws.Type, fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}
@@ -324,7 +324,7 @@ func (ws *workspace) setDescriptor(q QName) {
 		return
 	}
 
-	if ws.desc = CDoc(ws.app, q); ws.desc == nil {
+	if ws.desc = CDoc(ws.app.Type, q); ws.desc == nil {
 		panic(ErrNotFound("CDoc «%v»", q))
 	}
 	if ws.desc.Abstract() {

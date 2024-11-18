@@ -60,25 +60,25 @@ func ExampleRoles() {
 
 	// how to inspect builded AppDef with roles
 	{
-		reader := appdef.Role(app, readerRoleName)
+		reader := appdef.Role(app.Type, readerRoleName)
 		fmt.Println(reader, ":")
 		for r := range reader.ACL {
 			fmt.Println("-", r)
 		}
 
-		writer := appdef.Role(app, writerRoleName)
+		writer := appdef.Role(app.Type, writerRoleName)
 		fmt.Println(writer, ":")
 		for r := range writer.ACL {
 			fmt.Println("-", r)
 		}
 
-		adm := appdef.Role(app, admRoleName)
+		adm := appdef.Role(app.Type, admRoleName)
 		fmt.Println(adm, ":")
 		for r := range adm.ACL {
 			fmt.Println("-", r)
 		}
 
-		intruder := appdef.Role(app, intruderRoleName)
+		intruder := appdef.Role(app.Type, intruderRoleName)
 		fmt.Println(intruder, ":")
 		for r := range intruder.ACL {
 			fmt.Println("-", r)

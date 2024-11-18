@@ -39,9 +39,9 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("should be ok to read sys data types", func(t *testing.T) {
-		require.Equal(SysData_RecordID, Data(app, SysData_RecordID).QName())
-		require.Equal(SysData_String, Data(app, SysData_String).QName())
-		require.Equal(SysData_bytes, Data(app, SysData_bytes).QName())
+		require.Equal(SysData_RecordID, Data(app.Type, SysData_RecordID).QName())
+		require.Equal(SysData_String, Data(app.Type, SysData_String).QName())
+		require.Equal(SysData_bytes, Data(app.Type, SysData_bytes).QName())
 	})
 }
 
@@ -54,7 +54,7 @@ func Test_NullAppDef(t *testing.T) {
 
 	t.Run("should be ok to get system data types", func(t *testing.T) {
 		for k := DataKind_null + 1; k < DataKind_FakeLast; k++ {
-			d := SysData(app, k)
+			d := SysData(app.Type, k)
 			require.NotNil(d)
 			require.True(d.IsSystem())
 			require.Equal(SysDataName(k), d.QName())
@@ -209,12 +209,12 @@ func Test_EnumsBreakable(t *testing.T) {
 
 		testBreakable(t, "Projectors", Projectors(app.Types), Projectors(ws.Types))
 		testBreakable(t, "Jobs", Jobs(app.Types), Jobs(ws.Types))
-		testBreakable(t, "IStorages.Enum", Job(app, job1name).States().Enum)
+		testBreakable(t, "IStorages.Enum", Job(app.Type, job1name).States().Enum)
 
 		testBreakable(t, "Extensions", Extensions(app.Types), Extensions(ws.Types))
 
 		testBreakable(t, "Roles", Roles(app.Types), Roles(app.Types))
-		testBreakable(t, "ACL", ACL(app), ACL(ws), ACL(Role(app, role1Name)))
+		testBreakable(t, "ACL", ACL(app), ACL(ws), ACL(Role(app.Type, role1Name)))
 
 		testBreakable(t, "Rates", Rates(app.Types), Rates(ws.Types))
 		testBreakable(t, "Limits", Limits(app.Types), Limits(ws.Types))

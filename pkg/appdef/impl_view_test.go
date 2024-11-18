@@ -98,7 +98,7 @@ func TestAddView(t *testing.T) {
 	})
 
 	testWith_1 := func(tested IWithTypes) {
-		view := View(tested, viewName)
+		view := View(tested.Type, viewName)
 
 		t.Run("should be ok to read view", func(t *testing.T) {
 			require.Equal("test view", view.Comment())
@@ -259,10 +259,10 @@ func TestAddView(t *testing.T) {
 				require.Equal(v, view)
 			})
 
-			require.Nil(View(tested, NewQName("test", "unknown")), "should be nil if unknown view")
+			require.Nil(View(tested.Type, NewQName("test", "unknown")), "should be nil if unknown view")
 
 			t.Run("should be nil if not view", func(t *testing.T) {
-				require.Nil(View(tested, docName))
+				require.Nil(View(tested.Type, docName))
 
 				typ := tested.Type(docName)
 				require.NotNil(typ)
@@ -316,7 +316,7 @@ func TestAddView(t *testing.T) {
 	})
 
 	testWith_2 := func(tested IWithTypes) {
-		view := View(tested, viewName)
+		view := View(tested.Type, viewName)
 
 		require.Equal(3, view.Key().PartKey().FieldCount())
 		require.Equal(3, view.Key().ClustCols().FieldCount())

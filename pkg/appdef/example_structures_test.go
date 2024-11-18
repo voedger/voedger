@@ -62,8 +62,8 @@ func ExampleStructures() {
 		fmt.Printf("Overall %d structures\n", cnt)
 
 		// how to find structure by name
-		fmt.Println(appdef.Structure(app, docName))
-		fmt.Println(appdef.Structure(app, appdef.NewQName("test", "unknown")))
+		fmt.Println(appdef.Structure(app.Type, docName))
+		fmt.Println(appdef.Structure(app.Type, appdef.NewQName("test", "unknown")))
 	}
 
 	// how to inspect builded AppDef with records
@@ -78,7 +78,7 @@ func ExampleStructures() {
 
 		fmt.Printf("Overall %d records\n", cnt)
 
-		fmt.Println(appdef.Record(app, recName), appdef.Record(app, appdef.NewQName("test", "unknown")))
+		fmt.Println(appdef.Record(app.Type, recName), appdef.Record(app.Type, appdef.NewQName("test", "unknown")))
 	}
 
 	// Output:

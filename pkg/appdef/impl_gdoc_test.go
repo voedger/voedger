@@ -56,7 +56,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 			app = a
 		})
 
-		require.Equal(fmt.Sprint(doc), fmt.Sprint(GDoc(app, docName)))
+		require.Equal(fmt.Sprint(doc), fmt.Sprint(GDoc(app.Type, docName)))
 	})
 
 	require.NotNil(app)
@@ -64,7 +64,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 	testWith := func(tested IWithTypes) {
 
 		t.Run("should be ok to find builded doc", func(t *testing.T) {
-			doc := GDoc(tested, docName)
+			doc := GDoc(tested.Type, docName)
 			require.Equal(TypeKind_GDoc, doc.Kind())
 			require.Equal(tested.Type(docName), doc)
 			require.NotPanics(func() { doc.isDoc() })
@@ -87,7 +87,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 			require.Equal(TypeKind_GRecord, doc.Container("rec").Type().Kind())
 
 			t.Run("should be ok to find builded record", func(t *testing.T) {
-				rec := GRecord(tested, recName)
+				rec := GRecord(tested.Type, recName)
 				require.Equal(TypeKind_GRecord, rec.Kind())
 				require.Equal(app.Type(recName), rec)
 				require.NotPanics(func() { rec.isGRecord() })
@@ -128,8 +128,8 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 		t.Run("check nil returns", func(t *testing.T) {
 			unknown := NewQName("test", "unknown")
-			require.Nil(GDoc(tested, unknown))
-			require.Nil(GRecord(tested, unknown))
+			require.Nil(GDoc(tested.Type, unknown))
+			require.Nil(GRecord(tested.Type, unknown))
 		})
 	}
 

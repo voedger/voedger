@@ -49,7 +49,7 @@ func (ps *PartitionSchedulers) Deploy(vvmCtx context.Context, appDef appdef.IApp
 	ps.mx.RLock()
 	for name, wsRT := range ps.jobsInAppWSIDRuntimes {
 		// TODO: compare if job properties changed (cron, etc.)
-		if appdef.Job(appDef, name) == nil {
+		if appdef.Job(appDef.Type, name) == nil {
 			for _, rt := range wsRT {
 				stopWG.Add(1)
 				go func(rt *runtime) {

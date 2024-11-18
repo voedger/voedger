@@ -55,7 +55,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 			require.True(ok)
 			require.Equal(TypeKind_Query, q.Kind())
 
-			query := Query(tested, queryName)
+			query := Query(tested.Type, queryName)
 			require.Equal(TypeKind_Query, query.Kind())
 			require.Equal(wsName, query.Workspace().QName())
 			require.Equal(q, query)
@@ -85,7 +85,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 			require.Equal(1, cnt)
 		})
 
-		require.Nil(Query(tested, NewQName("test", "unknown")), "should be nil if unknown")
+		require.Nil(Query(tested.Type, NewQName("test", "unknown")), "should be nil if unknown")
 	}
 
 	testWith(app)
@@ -192,13 +192,13 @@ func Test_AppDef_AddQueryWithAnyResult(t *testing.T) {
 	require.NotNil(app)
 
 	t.Run("should be ok to find builded query", func(t *testing.T) {
-		query := Query(app, queryName)
+		query := Query(app.Type, queryName)
 
 		require.Equal(AnyType, query.Result())
 		require.Equal(QNameANY, query.Result().QName())
 		require.Equal(TypeKind_Any, query.Result().Kind())
 		require.Equal(wsName, query.Workspace().QName())
 
-		require.Equal(query, Query(app.Workspace(wsName), queryName))
+		require.Equal(query, Query(app.Workspace(wsName).Type, queryName))
 	})
 }

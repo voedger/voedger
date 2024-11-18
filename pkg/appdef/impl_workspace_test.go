@@ -73,7 +73,7 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 			require.Equal(TypeKind_Object, typ.Kind())
 			obj, ok := typ.(IObject)
 			require.True(ok)
-			require.Equal(Object(app, objName), obj)
+			require.Equal(Object(app.Type, objName), obj)
 			require.Equal(ws, obj.Workspace())
 
 			require.Equal(NullType, ws.Type(NewQName("unknown", "type")), "must be NullType if unknown type")
@@ -142,7 +142,7 @@ func Test_AppDef_AlterWorkspace(t *testing.T) {
 		ws := app.Workspace(wsName)
 		require.NotNil(ws, "should be ok to find workspace in app")
 
-		require.NotNil(Object(ws, objName), "should be ok to find object in workspace")
+		require.NotNil(Object(ws.Type, objName), "should be ok to find object in workspace")
 	})
 }
 
@@ -246,7 +246,7 @@ func Test_AppDef_AddWorkspaceAbstract(t *testing.T) {
 		ws := app.Workspace(wsName)
 		require.True(ws.Abstract())
 
-		desc := CDoc(app, ws.Descriptor())
+		desc := CDoc(app.Type, ws.Descriptor())
 		require.True(desc.Abstract())
 	})
 
@@ -415,7 +415,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 			ws := app.Workspace(wsName(test.ws))
 			for o := 0; o < wsCount; o++ {
 				want := slices.Contains(test.objects, o)
-				obj := Object(ws, objName(o))
+				obj := Object(ws.Type, objName(o))
 				got := obj != nil
 				require.Equal(want, got, "unexpected %v.Object(%v) != nil result: want %v, got: %v", ws, objName(o), want, got)
 				if got {
@@ -568,7 +568,7 @@ func Test_WorkspaceUsage(t *testing.T) {
 		for idx, test := range tests {
 			ws := app.Workspace(wsName(idx))
 			for i := 0; i < wsCount; i++ {
-				obj := Object(ws, objName(i))
+				obj := Object(ws.Type, objName(i))
 				if slices.Contains(test.use, i) {
 					require.NotNil(obj, "should be ok to find object «%v» in %v", objName(i), ws)
 				} else {

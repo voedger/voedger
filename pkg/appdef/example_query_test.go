@@ -52,7 +52,7 @@ func ExampleQueries() {
 
 	// how to inspect builded AppDef with query
 	{
-		qry := appdef.Query(app, qryName)
+		qry := appdef.Query(app.Type, qryName)
 		fmt.Println(qry, ":")
 		fmt.Println(" - parameter:", qry.Param())
 		fmt.Println(" - result   :", qry.Result())

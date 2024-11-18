@@ -74,7 +74,7 @@ func Test_checkConstraints(t *testing.T) {
 		require.NoError(err)
 		require.NotNil(app)
 
-		return appdef.Object(app, name)
+		return appdef.Object(app.Type, name)
 	}()
 
 	type args struct {

@@ -217,7 +217,7 @@ func (bp *borrowedPartition) ID() istructs.PartitionID { return bp.part.id }
 
 // # IAppPartition.Invoke
 func (bp *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, state istructs.IState, intents istructs.IIntents) error {
-	e := appdef.Extension(bp.appDef, name)
+	e := appdef.Extension(bp.appDef.Type, name)
 	if e == nil {
 		return errUndefinedExtension(name)
 	}

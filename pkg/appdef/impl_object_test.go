@@ -47,7 +47,7 @@ func Test_AppDef_AddObject(t *testing.T) {
 			typ := tested.Type(rootName)
 			require.Equal(TypeKind_Object, typ.Kind())
 
-			root := Object(tested, rootName)
+			root := Object(tested.Type, rootName)
 			require.Equal(TypeKind_Object, root.Kind())
 			require.Equal(typ.(IObject), root)
 			require.NotPanics(func() { root.isObject() })
@@ -65,7 +65,7 @@ func Test_AppDef_AddObject(t *testing.T) {
 				typ := tested.Type(childName)
 				require.Equal(TypeKind_Object, typ.Kind())
 
-				child := Object(tested, childName)
+				child := Object(tested.Type, childName)
 				require.Equal(TypeKind_Object, child.Kind())
 				require.Equal(typ.(IObject), child)
 
@@ -91,7 +91,7 @@ func Test_AppDef_AddObject(t *testing.T) {
 			require.Equal(rootName, objects[1])
 		})
 
-		require.Nil(Object(tested, NewQName("test", "unknown")), "should be nil if unknown")
+		require.Nil(Object(tested.Type, NewQName("test", "unknown")), "should be nil if unknown")
 	}
 
 	testWith(app)

@@ -62,7 +62,7 @@ func Test_AppDef_AddJob(t *testing.T) {
 			require.True(ok)
 			require.Equal(TypeKind_Job, j.Kind())
 
-			job := Job(tested, jobName)
+			job := Job(tested.Type, jobName)
 			require.Equal(TypeKind_Job, job.Kind())
 			require.Equal(wsName, job.Workspace().QName())
 			require.Equal(j, job)
@@ -120,7 +120,7 @@ func Test_AppDef_AddJob(t *testing.T) {
 			require.Equal(1, cnt)
 		})
 
-		require.Nil(Job(tested, NewQName("test", "unknown")), "should be nil if unknown")
+		require.Nil(Job(tested.Type, NewQName("test", "unknown")), "should be nil if unknown")
 	}
 
 	testWith(app)
@@ -139,7 +139,7 @@ func Test_AppDef_AddJob(t *testing.T) {
 		app, err := adb.Build()
 		require.NoError(err)
 
-		j := Job(app, jobName)
+		j := Job(app.Type, jobName)
 
 		require.Equal("customExtensionName", j.Name())
 		require.Equal(ExtensionEngineKind_WASM, j.Engine())

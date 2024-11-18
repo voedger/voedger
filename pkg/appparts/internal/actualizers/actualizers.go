@@ -42,7 +42,7 @@ func (pa *PartitionActualizers) Deploy(vvmCtx context.Context, appDef appdef.IAp
 	pa.mx.RLock()
 	for name, rt := range pa.rt {
 		// TODO: compare if projector properties changed (events, sync/async, etc.)
-		if appdef.Projector(appDef, name) == nil {
+		if appdef.Projector(appDef.Type, name) == nil {
 			stopWG.Add(1)
 			go func(rt *runtime) {
 				rt.cancel()
