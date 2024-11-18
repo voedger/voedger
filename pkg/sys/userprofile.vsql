@@ -1,7 +1,7 @@
 -- Copyright (c) 2024-present unTill Software Development Group B.V.
 -- @author Denis Gribanov
 
-ALTERABLE WORKSPACE UserProfileWS INHERITS ProfileWS (
+ALTERABLE WORKSPACE UserProfileWS INHERITS sys.ProfileWS (
 	DESCRIPTOR UserProfile (
 		DisplayName varchar
 	);
@@ -55,6 +55,6 @@ ALTERABLE WORKSPACE UserProfileWS INHERITS ProfileWS (
 		QUERY InitiateEmailVerification(InitiateEmailVerificationParams) RETURNS InitialEmailVerificationResult;
 		QUERY IssueVerifiedValueToken(IssueVerifiedValueTokenParams) RETURNS IssueVerifiedValueTokenResult;
 		COMMAND SendEmailVerificationCode(SendEmailVerificationParams);
-		PROJECTOR ApplySendEmailVerificationCode AFTER EXECUTE ON (SendEmailVerificationCode) STATE(AppSecret) INTENTS(SendMail);
+		PROJECTOR ApplySendEmailVerificationCode AFTER EXECUTE ON (SendEmailVerificationCode) STATE(sys.AppSecret) INTENTS(SendMail);
 	);
 );

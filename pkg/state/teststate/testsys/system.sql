@@ -15,7 +15,7 @@ ABSTRACT WORKSPACE Workspace(
 		Body varchar(65535)
 	);
 
-	TABLE WorkspaceDescriptor INHERITS CSingleton (
+	TABLE WorkspaceDescriptor INHERITS sys.CSingleton (
 		-- owner* fields made non-required for app workspaces
 		OwnerWSID int64,
 		OwnerQName qname, -- Deprecated: use OwnerQName2
@@ -36,7 +36,7 @@ ABSTRACT WORKSPACE Workspace(
 		OwnerQName2 text
 	);
 
-	TABLE ChildWorkspace INHERITS CDoc (
+	TABLE ChildWorkspace INHERITS sys.CDoc (
 		WSName varchar NOT NULL,
 		WSKind qname NOT NULL,
 		WSKindInitializationData varchar(1024),
