@@ -113,6 +113,7 @@ var (
 	qNameQryExportStatus                            = appdef.NewQName(fiscalcloudPackage, "ExportStatus")
 	qNameCmdAddCustomer                             = appdef.NewQName(fiscalcloudPackage, "AddCustomer")
 	qNameCmdUpdateCustomer                          = appdef.NewQName(fiscalcloudPackage, "UpdateCustomer")
+	qNameCmdDeactivateCustomer                      = appdef.NewQName(fiscalcloudPackage, "DeactivateCustomer")
 	qNameQryGetUPInvoices                           = appdef.NewQName(airPackage, "GetUPInvoices")
 	qNameQryGetUPPayoutTransfers                    = appdef.NewQName(airPackage, "GetUPPayoutTransfers")
 	qNameQryGetAllUPInvoices                        = appdef.NewQName(airPackage, "GetAllUPInvoices")
