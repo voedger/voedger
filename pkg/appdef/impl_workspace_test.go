@@ -73,16 +73,31 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 			require.Equal(TypeKind_Object, typ.Kind())
 			obj, ok := typ.(IObject)
 			require.True(ok)
+
 			require.Equal(Object(app.Type, objName), obj)
+			require.Equal(Object(ws.Type, objName), obj)
+			require.Equal(Object(ws.LocalType, objName), obj)
+
 			require.Equal(ws, obj.Workspace())
 
-			require.Equal(NullType, ws.Type(NewQName("unknown", "type")), "must be NullType if unknown type")
+			t.Run("should find type from ancestor", func(t *testing.T) {
+				int32type := SysData(app.Type, DataKind_int32)
+				require.NotNil(int32type)
+				require.Equal(int32type, SysData(ws.Type, DataKind_int32))
+				require.Nil(SysData(ws.LocalType, DataKind_int32), "should be nil if not local type")
+			})
+
+			t.Run("should be NullType if unknown type", func(t *testing.T) {
+				unknown := NewQName("unknown", "object")
+				require.Equal(NullType, ws.Type(unknown))
+				require.Equal(NullType, ws.LocalType(unknown))
+			})
 		})
 
 		t.Run("should be ok to enum workspace types", func(t *testing.T) {
 			require.Equal(2, func() int {
 				cnt := 0
-				for typ := range ws.Types {
+				for typ := range ws.LocalTypes {
 					switch typ.QName() {
 					case descName, objName:
 					default:

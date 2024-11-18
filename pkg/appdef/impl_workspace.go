@@ -79,12 +79,20 @@ func (ws *workspace) Inherits(anc QName) bool {
 	return false
 }
 
+func (ws *workspace) LocalType(name QName) IType {
+	return ws.types.local.Type(name)
+}
+
+func (ws *workspace) LocalTypes(visit func(IType) bool) {
+	ws.types.local.Types(visit)
+}
+
 func (ws *workspace) Type(name QName) IType {
 	return ws.allTypes().Type(name)
 }
 
 func (ws *workspace) Types(visit func(IType) bool) {
-	ws.types.local.Types(visit)
+	ws.allTypes().Types(visit)
 }
 
 func (ws *workspace) UsedWorkspaces() []QName {

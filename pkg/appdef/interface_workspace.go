@@ -36,6 +36,16 @@ type IWorkspace interface {
 	// 	- if one of the ancestors of the ancestors (recursively) has the specified name.
 	Inherits(QName) bool
 
+	// LocalType returns type by name. Find only in the workspace, not in ancestors or used workspaces.
+	//
+	// Returns nil if not found.
+	LocalType(QName) IType
+
+	// LocalTypes enumerates all types defined in the workspace.
+	//
+	// Types are enumerated in alphabetical order by QName.
+	LocalTypes(func(IType) bool)
+
 	// Returns names of used workspaces.
 	//
 	// Used workspaces enumerated in alphabetic order.
