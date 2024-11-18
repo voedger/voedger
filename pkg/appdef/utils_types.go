@@ -22,7 +22,7 @@ func CDoc(f FindType, name QName) ICDoc {
 // Returns iterator over CDocs.
 //
 // CDocs are visited in alphabetic order.
-func CDocs(types EnumTypes) func(func(ICDoc) bool) {
+func CDocs(types IterTypes) func(func(ICDoc) bool) {
 	return TypesByKind[ICDoc](types, TypeKind_CDoc)
 }
 
@@ -36,7 +36,7 @@ func Command(f FindType, name QName) ICommand {
 // Returns iterator over Commands.
 //
 // Command are visited in alphabetic order.
-func Commands(types EnumTypes) func(func(ICommand) bool) {
+func Commands(types IterTypes) func(func(ICommand) bool) {
 	return TypesByKind[ICommand](types, TypeKind_Command)
 }
 
@@ -50,7 +50,7 @@ func CRecord(f FindType, name QName) ICRecord {
 // Returns iterator over CRecords.
 //
 // CRecords are visited in alphabetic order.
-func CRecords(types EnumTypes) func(func(ICRecord) bool) {
+func CRecords(types IterTypes) func(func(ICRecord) bool) {
 	return TypesByKind[ICRecord](types, TypeKind_CRecord)
 }
 
@@ -64,7 +64,7 @@ func Data(f FindType, name QName) IData {
 // Returns iterator over Data types.
 //
 // Data types are visited in alphabetic order.
-func DataTypes(types EnumTypes) func(func(IData) bool) {
+func DataTypes(types IterTypes) func(func(IData) bool) {
 	return TypesByKind[IData](types, TypeKind_Data)
 }
 
@@ -78,7 +78,7 @@ func Extension(f FindType, name QName) IExtension {
 // Returns iterator over Extensions.
 //
 // Extensions are visited in alphabetic order.
-func Extensions(types EnumTypes) func(func(IExtension) bool) {
+func Extensions(types IterTypes) func(func(IExtension) bool) {
 	return TypesByKinds[IExtension](types, TypeKind_Extensions)
 }
 
@@ -92,7 +92,7 @@ func Function(f FindType, name QName) IFunction {
 // Returns iterator over Functions.
 //
 // Functions are visited in alphabetic order.
-func Functions(types EnumTypes) func(func(IFunction) bool) {
+func Functions(types IterTypes) func(func(IFunction) bool) {
 	return TypesByKinds[IFunction](types, TypeKind_Functions)
 }
 
@@ -106,7 +106,7 @@ func GDoc(f FindType, name QName) IGDoc {
 // Returns iterator over GDocs.
 //
 // GDocs are visited in alphabetic order.
-func GDocs(types EnumTypes) func(func(IGDoc) bool) {
+func GDocs(types IterTypes) func(func(IGDoc) bool) {
 	return TypesByKind[IGDoc](types, TypeKind_GDoc)
 }
 
@@ -120,7 +120,7 @@ func GRecord(f FindType, name QName) IGRecord {
 // Returns iterator over GRecords.
 //
 // GRecords are visited in alphabetic order.
-func GRecords(types EnumTypes) func(func(IGRecord) bool) {
+func GRecords(types IterTypes) func(func(IGRecord) bool) {
 	return TypesByKind[IGRecord](types, TypeKind_GRecord)
 }
 
@@ -134,7 +134,7 @@ func Job(f FindType, name QName) IJob {
 // Returns iterator over Jobs.
 //
 // Jobs are visited in alphabetic order.
-func Jobs(types EnumTypes) func(func(IJob) bool) {
+func Jobs(types IterTypes) func(func(IJob) bool) {
 	return TypesByKind[IJob](types, TypeKind_Job)
 }
 
@@ -148,7 +148,7 @@ func Limit(f FindType, name QName) ILimit {
 // Returns iterator over Limits.
 //
 // Limits are visited in alphabetic order.
-func Limits(types EnumTypes) func(func(ILimit) bool) {
+func Limits(types IterTypes) func(func(ILimit) bool) {
 	return TypesByKind[ILimit](types, TypeKind_Limit)
 }
 
@@ -162,7 +162,7 @@ func Object(f FindType, name QName) IObject {
 // Returns iterator over Objects.
 //
 // Objects are visited in alphabetic order.
-func Objects(types EnumTypes) func(func(IObject) bool) {
+func Objects(types IterTypes) func(func(IObject) bool) {
 	return TypesByKind[IObject](types, TypeKind_Object)
 }
 
@@ -176,7 +176,7 @@ func ODoc(f FindType, name QName) IODoc {
 // Returns iterator over ODocs.
 //
 // ODocs are visited in alphabetic order.
-func ODocs(types EnumTypes) func(func(IODoc) bool) {
+func ODocs(types IterTypes) func(func(IODoc) bool) {
 	return TypesByKind[IODoc](types, TypeKind_ODoc)
 }
 
@@ -190,7 +190,7 @@ func ORecord(f FindType, name QName) IORecord {
 // Returns iterator over ORecords.
 //
 // ORecords are visited in alphabetic order.
-func ORecords(types EnumTypes) func(func(IORecord) bool) {
+func ORecords(types IterTypes) func(func(IORecord) bool) {
 	return TypesByKind[IORecord](types, TypeKind_ORecord)
 }
 
@@ -204,7 +204,7 @@ func Projector(f FindType, name QName) IProjector {
 // Returns iterator over Projectors.
 //
 // Projectors are visited in alphabetic order.
-func Projectors(types EnumTypes) func(func(IProjector) bool) {
+func Projectors(types IterTypes) func(func(IProjector) bool) {
 	return TypesByKind[IProjector](types, TypeKind_Projector)
 }
 
@@ -218,7 +218,7 @@ func Query(f FindType, name QName) IQuery {
 // Returns iterator over Queries.
 //
 // Queries are visited in alphabetic order.
-func Queries(types EnumTypes) func(func(IQuery) bool) {
+func Queries(types IterTypes) func(func(IQuery) bool) {
 	return TypesByKind[IQuery](types, TypeKind_Query)
 }
 
@@ -232,7 +232,7 @@ func Rate(f FindType, name QName) IRate {
 // Returns iterator over Rates.
 //
 // Rates are visited in alphabetic order.
-func Rates(types EnumTypes) func(func(IRate) bool) {
+func Rates(types IterTypes) func(func(IRate) bool) {
 	return TypesByKind[IRate](types, TypeKind_Rate)
 }
 
@@ -246,7 +246,7 @@ func Record(f FindType, name QName) IRecord {
 // Returns iterator over Records.
 //
 // Records are visited in alphabetic order.
-func Records(types EnumTypes) func(func(IRecord) bool) {
+func Records(types IterTypes) func(func(IRecord) bool) {
 	return TypesByKinds[IRecord](types, TypeKind_Records)
 }
 
@@ -260,7 +260,7 @@ func Role(f FindType, name QName) IRole {
 // Returns iterator over Roles.
 //
 // Roles are visited in alphabetic order.
-func Roles(types EnumTypes) func(func(IRole) bool) {
+func Roles(types IterTypes) func(func(IRole) bool) {
 	return TypesByKind[IRole](types, TypeKind_Role)
 }
 
@@ -277,7 +277,7 @@ func Singleton(f FindType, name QName) ISingleton {
 // Returns iterator over Singletons.
 //
 // Singletons are visited in alphabetic order.
-func Singletons(types EnumTypes) func(func(ISingleton) bool) {
+func Singletons(types IterTypes) func(func(ISingleton) bool) {
 	return func(visit func(ISingleton) bool) {
 		for s := range TypesByKinds[ISingleton](types, TypeKind_Singletons) {
 			if s.Singleton() {
@@ -299,7 +299,7 @@ func Structure(f FindType, name QName) IStructure {
 // Returns iterator over Structures.
 //
 // Structures are visited in alphabetic order.
-func Structures(types EnumTypes) func(func(IStructure) bool) {
+func Structures(types IterTypes) func(func(IStructure) bool) {
 	return TypesByKinds[IStructure](types, TypeKind_Structures)
 }
 
@@ -335,7 +335,7 @@ func TypeByNameAndKind[T IType](f FindType, name QName, kind TypeKind) (found T)
 // Returns iterator over types by kind.
 //
 // Types are visited in alphabetic order.
-func TypesByKind[T IType](types EnumTypes, kind TypeKind) func(func(T) bool) {
+func TypesByKind[T IType](types IterTypes, kind TypeKind) func(func(T) bool) {
 	return func(visit func(T) bool) {
 		for t := range types {
 			if t.Kind() == kind {
@@ -350,7 +350,7 @@ func TypesByKind[T IType](types EnumTypes, kind TypeKind) func(func(T) bool) {
 // Returns iterator over types by kinds set.
 //
 // Types are visited in alphabetic order.
-func TypesByKinds[T IType](types EnumTypes, kinds TypeKindSet) func(func(T) bool) {
+func TypesByKinds[T IType](types IterTypes, kinds TypeKindSet) func(func(T) bool) {
 	return func(visit func(T) bool) {
 		for t := range types {
 			if kinds.Contains(t.Kind()) {
@@ -372,7 +372,7 @@ func View(f FindType, name QName) IView {
 // Returns iterator over Views.
 //
 // Views are visited in alphabetic order.
-func Views(types EnumTypes) func(func(IView) bool) {
+func Views(types IterTypes) func(func(IView) bool) {
 	return TypesByKind[IView](types, TypeKind_ViewRecord)
 }
 
@@ -386,7 +386,7 @@ func WDoc(f FindType, name QName) IWDoc {
 // Returns iterator over WDocs.
 //
 // WDocs are visited in alphabetic order.
-func WDocs(types EnumTypes) func(func(IWDoc) bool) {
+func WDocs(types IterTypes) func(func(IWDoc) bool) {
 	return TypesByKind[IWDoc](types, TypeKind_WDoc)
 }
 
@@ -400,7 +400,7 @@ func WRecord(f FindType, name QName) IWRecord {
 // Returns iterator over WRecords.
 //
 // WRecords are visited in alphabetic order.
-func WRecords(types EnumTypes) func(func(IWRecord) bool) {
+func WRecords(types IterTypes) func(func(IWRecord) bool) {
 	return TypesByKind[IWRecord](types, TypeKind_WRecord)
 }
 

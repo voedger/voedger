@@ -176,7 +176,7 @@ type (
 	// Types iterator.
 	//
 	// Types are enumerated in alphabetical order of QNames.
-	EnumTypes func(func(IType) bool)
+	IterTypes func(func(IType) bool)
 )
 
 type ITypeBuilder interface {
