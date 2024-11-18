@@ -30,14 +30,14 @@ WORKSPACE TestWorkspace (
         QNameVal qname,
         PRIMARY KEY((Pk), Key)
     ) AS RESULT OF ProjectorTestStorageWLog;
-    TABLE Doc1 INHERITS CDoc(
+    TABLE Doc1 INHERITS sys.CDoc(
         Value int32
     );
     EXTENSION ENGINE WASM(
         COMMAND dummyCmd();
         COMMAND CmdToTestWlogStorage(cmdToTestWlogStorageParam) RETURNS cmdToTestWlogStorageResult;
         COMMAND CommandTestStorages(CommandTestStoragesParam) RETURNS CommandTestStoragesResult;
-        PROJECTOR ProjectorTestStorageWLog AFTER EXECUTE ON CmdToTestWlogStorage INTENTS(View(Results));
-        PROJECTOR ProjectorTestStorages AFTER EXECUTE ON CmdToTestWlogStorage INTENTS(SendMail);
+        PROJECTOR ProjectorTestStorageWLog AFTER EXECUTE ON CmdToTestWlogStorage INTENTS(sys.View(Results));
+        PROJECTOR ProjectorTestStorages AFTER EXECUTE ON CmdToTestWlogStorage INTENTS(sys.SendMail);
     );
 )
