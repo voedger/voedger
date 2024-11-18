@@ -32,7 +32,6 @@ func Test_copyResults(t *testing.T) {
 
 	clone := copyResults(r)
 
-	require.Equal(r.TypeCount(), clone.TypeCount(), "should be equal TypeCount()")
 	require.Equal(fmt.Sprint(r), fmt.Sprint(clone), "should be equal String()")
 }
 
@@ -60,23 +59,6 @@ func Test_results_Type(t *testing.T) {
 
 	require.Equal(appdef.AnyType, r.Type(appdef.QNameANY), "should find known type")
 	require.Equal(appdef.NullType, r.Type(appdef.NewQName("test", "unknown")), "should null type if unknown")
-}
-
-func Test_results_TypeCount(t *testing.T) {
-	tests := []struct {
-		r    *results
-		want int
-	}{
-		{makeResults(), 0},
-		{makeResults(appdef.NullType), 1},
-		{makeResults(appdef.NullType, appdef.AnyType), 2},
-	}
-
-	require := require.New(t)
-	for i, test := range tests {
-		got := test.r.TypeCount()
-		require.Equal(test.want, got, "test %d", i)
-	}
 }
 
 func Test_results_Types(t *testing.T) {

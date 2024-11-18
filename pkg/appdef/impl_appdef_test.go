@@ -43,8 +43,6 @@ func TestNew(t *testing.T) {
 		require.Equal(SysData_String, Data(app, SysData_String).QName())
 		require.Equal(SysData_bytes, Data(app, SysData_bytes).QName())
 	})
-
-	require.Greater(app.TypeCount(), 0, "should be ok to get type count")
 }
 
 func Test_NullAppDef(t *testing.T) {
@@ -76,8 +74,6 @@ func Test_NullAppDef(t *testing.T) {
 			}
 		}
 	})
-
-	require.Greater(app.TypeCount(), 0, "should be ok to get type count")
 }
 
 func testBreakable[T any](t *testing.T, name string, seq ...iter.Seq[T]) {

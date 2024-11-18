@@ -71,10 +71,6 @@ func (r results) Type(name appdef.QName) appdef.IType {
 	return appdef.NullType
 }
 
-func (r results) TypeCount() int {
-	return len(r.m)
-}
-
 func (r *results) Types(visit func(appdef.IType) bool) {
 	if len(r.s) != len(r.m) {
 		r.s = make([]appdef.IType, 0, len(r.m))

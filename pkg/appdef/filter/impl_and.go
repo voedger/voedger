@@ -43,9 +43,16 @@ func (f andFilter) Match(t appdef.IType) bool {
 func (f andFilter) Matches(tt appdef.IWithTypes) appdef.IWithTypes {
 	var r appdef.IWithTypes = copyResults(tt)
 
+	empty := func() bool {
+		for range r.Types {
+			return false
+		}
+		return true
+	}
+
 	for _, child := range f.children {
 		r = child.Matches(r)
-		if r.TypeCount() == 0 {
+		if empty() {
 			break
 		}
 	}

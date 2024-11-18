@@ -164,9 +164,6 @@ type (
 		Type(name QName) IType
 	}
 	ITypes interface {
-		// Returns count of types
-		TypeCount() int
-
 		// Enumerates types
 		//
 		// Types are enumerated in alphabetical order of QNames.

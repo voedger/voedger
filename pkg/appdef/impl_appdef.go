@@ -77,8 +77,6 @@ func (app *appDef) Type(name QName) IType {
 	return NullType
 }
 
-func (app appDef) TypeCount() int { return len(app.types) }
-
 func (app *appDef) Types(visit func(IType) bool) {
 	if app.typesOrdered == nil {
 		app.typesOrdered = make([]interface{}, 0, len(app.types))
