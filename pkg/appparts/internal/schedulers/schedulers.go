@@ -107,7 +107,7 @@ func (ps *PartitionSchedulers) Deploy(vvmCtx context.Context, appDef appdef.IApp
 	}
 
 	ps.mx.RLock()
-	for job := range appdef.Jobs(appDef) {
+	for job := range appdef.Jobs(appDef.Types) {
 		jobQName := job.QName()
 		if _, exists := ps.jobsInAppWSIDRuntimes[jobQName]; !exists {
 			start(jobQName)

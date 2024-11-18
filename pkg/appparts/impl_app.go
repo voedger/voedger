@@ -88,7 +88,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 	eef := a.apps.extEngineFactories
 
 	enginesPathsModules := map[appdef.ExtensionEngineKind]map[string]*iextengine.ExtensionModule{}
-	for ext := range appdef.Extensions(def) {
+	for ext := range appdef.Extensions(def.Types) {
 		extEngineKind := ext.Engine()
 		path := ext.App().PackageFullPath(ext.QName().Pkg())
 		pathsModules, ok := enginesPathsModules[extEngineKind]

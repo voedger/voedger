@@ -89,7 +89,7 @@ func (pa *PartitionActualizers) Deploy(vvmCtx context.Context, appDef appdef.IAp
 	}
 
 	pa.mx.RLock()
-	for prj := range appdef.Projectors(appDef) {
+	for prj := range appdef.Projectors(appDef.Types) {
 		if !prj.Sync() {
 			name := prj.QName()
 			if _, exists := pa.rt[name]; !exists {
