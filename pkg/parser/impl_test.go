@@ -351,16 +351,16 @@ func Test_Refs_NestedTables(t *testing.T) {
 
 	fs, err := ParseFile("file1.vsql", `APPLICATION test();
 	WORKSPACE MyWorkspace(
-		TABLE table1 INHERITS CDoc (
+		TABLE table1 INHERITS sys.CDoc (
 			items TABLE inner1 (
 				table1 ref,
 				ref1 ref(table3),
 				urg_number int32
 			)
 		);
-		TABLE table2 INHERITS CRecord (
+		TABLE table2 INHERITS sys.CRecord (
 		);
-		TABLE table3 INHERITS CDoc (
+		TABLE table3 INHERITS sys.CDoc (
 			items table2
 		);
 	);
@@ -421,7 +421,7 @@ func Test_CircularReferencesWorkspaces(t *testing.T) {
 	fs, err := ParseFile("file1.vsql", `APPLICATION test();
 	ABSTRACT WORKSPACE w1();
 		ABSTRACT WORKSPACE w2 INHERITS w1,w2(
-			TABLE table4 INHERITS CDoc();
+			TABLE table4 INHERITS sys.CDoc();
 		);
 		ABSTRACT WORKSPACE w3 INHERITS w4();
 		ABSTRACT WORKSPACE w4 INHERITS w5();
@@ -450,7 +450,7 @@ func Test_Workspace_Defs(t *testing.T) {
 
 	fs1, err := ParseFile("file1.vsql", `APPLICATION test();
 		ABSTRACT WORKSPACE AWorkspace(
-			TABLE table1 INHERITS CDoc (
+			TABLE table1 INHERITS sys.CDoc (
 				a ref,
 				items TABLE inner1 (
 					b ref
@@ -461,7 +461,7 @@ func Test_Workspace_Defs(t *testing.T) {
 	require.NoError(err)
 	fs2, err := ParseFile("file2.vsql", `
 		ALTER WORKSPACE AWorkspace(
-			TABLE table2 INHERITS CDoc (
+			TABLE table2 INHERITS sys.CDoc (
 				a ref,
 				items TABLE inner2 (
 					b ref
@@ -511,7 +511,7 @@ func Test_Workspace_Defs3(t *testing.T) {
 			USE pkg1;
 		);
 		WORKSPACE Workspace2 INHERITS pkg1.Workspace1 (
-			TABLE Table2 INHERITS CDoc (
+			TABLE Table2 INHERITS sys.CDoc (
 				pkg1.Type1
 			);
 		);
@@ -558,13 +558,13 @@ func Test_Alter_Workspace(t *testing.T) {
 		`)
 		pkg1 := require.PkgSchema("file1.vsql", "org/pkg1", `
 			ABSTRACT WORKSPACE AWorkspace(
-				TABLE table1 INHERITS CDoc (a ref);
+				TABLE table1 INHERITS sys.CDoc (a ref);
 			);
 		`)
 		pkg2 := require.PkgSchema("file2.vsql", "org/pkg2", `
 			IMPORT SCHEMA 'org/pkg1'
 			ALTER WORKSPACE pkg1.AWorkspace(
-				TABLE table2 INHERITS CDoc (a ref);
+				TABLE table2 INHERITS sys.CDoc (a ref);
 			);
 		`)
 
@@ -595,7 +595,7 @@ func Test_Alter_Workspace(t *testing.T) {
 		pkg2 := require.PkgSchema("file2.vsql", "org/pkg2", `
 			IMPORT SCHEMA 'org/pkg1'
 			ALTER WORKSPACE pkg1.AWorkspace(
-				TABLE table2 INHERITS CDoc (a ref);
+				TABLE table2 INHERITS sys.CDoc (a ref);
 			);
 		`)
 
@@ -612,7 +612,7 @@ func Test_Alter_Workspace(t *testing.T) {
 	})
 	t.Run("Alter workspace in sys package", func(t *testing.T) {
 		schema, err := require.AppSchema(`APPLICATION SomeApp();
-		ALTER WORKSPACE AppWorkspaceWS (
+		ALTER WORKSPACE sys.AppWorkspaceWS (
 			TYPE SomeType (
 				field int32
 			);
@@ -711,7 +711,7 @@ func Test_DupFieldsInTables(t *testing.T) {
 	TYPE BaseType2 (
 		someField int
 	);
-	ABSTRACT TABLE ByBaseTable INHERITS CDoc (
+	ABSTRACT TABLE ByBaseTable INHERITS sys.CDoc (
 		Name varchar,
 		Code varchar
 	);
@@ -752,41 +752,41 @@ func Test_DupFieldsInTables(t *testing.T) {
 func Test_AbstractTables(t *testing.T) {
 	require := require.New(t)
 
-	fs, err := ParseFile("file1.vsql", `APPLICATION test(); 
-	
+	fs, err := ParseFile("file1.vsql", `APPLICATION test();
+
 	WORKSPACE MyWorkspace1(
-	TABLE ByBaseTable INHERITS CDoc (
+	TABLE ByBaseTable INHERITS sys.CDoc (
 		Name varchar
 	);
 	TABLE MyTable INHERITS ByBaseTable(		-- NOT ALLOWED (base table must be abstract)
 	);
 
-	TABLE My1 INHERITS CRecord(
+	TABLE My1 INHERITS sys.CRecord(
 		f1 ref(AbstractTable)				-- NOT ALLOWED (reference to abstract table)
 	);
 
-	ABSTRACT TABLE AbstractTable INHERITS CDoc(
+	ABSTRACT TABLE AbstractTable INHERITS sys.CDoc(
 	);
 
 	EXTENSION ENGINE BUILTIN (
 
 			PROJECTOR proj1
             AFTER INSERT ON AbstractTable 	-- NOT ALLOWED (projector refers to abstract table)
-            INTENTS(SendMail);
+            INTENTS(sys.SendMail);
 
 			SYNC PROJECTOR proj2
             AFTER INSERT ON My1
-            INTENTS(Record(AbstractTable));	-- NOT ALLOWED (projector refers to abstract table)
+            INTENTS(sys.Record(AbstractTable));	-- NOT ALLOWED (projector refers to abstract table)
 
 			PROJECTOR proj3
             AFTER INSERT ON My1
-			STATE(Record(AbstractTable))		-- NOT ALLOWED (projector refers to abstract table)
-            INTENTS(SendMail);
+			STATE(sys.Record(AbstractTable))		-- NOT ALLOWED (projector refers to abstract table)
+            INTENTS(sys.SendMail);
 		);
-		TABLE My2 INHERITS CRecord(
+		TABLE My2 INHERITS sys.CRecord(
 			nested AbstractTable			-- NOT ALLOWED
 		);
-		TABLE My3 INHERITS CRecord(
+		TABLE My3 INHERITS sys.CRecord(
 			f int,
 			items ABSTRACT TABLE Nested()	-- NOT ALLOWED
 		);
@@ -817,10 +817,10 @@ func Test_AbstractTables2(t *testing.T) {
 
 	fs, err := ParseFile("file1.vsql", `APPLICATION test();
 	WORKSPACE MyWorkspace1(
-		ABSTRACT TABLE AbstractTable INHERITS CDoc(
+		ABSTRACT TABLE AbstractTable INHERITS sys.CDoc(
 		);
 
-		TABLE My2 INHERITS CRecord(
+		TABLE My2 INHERITS sys.CRecord(
 			nested AbstractTable			-- NOT ALLOWED
 		);
 	);
@@ -869,7 +869,7 @@ func Test_PanicUnknownFieldType(t *testing.T) {
 	require := require.New(t)
 
 	fs, err := ParseFile("file1.vsql", `APPLICATION test(); WORKSPACE MyWorkspace(
-	TABLE MyTable INHERITS CDoc (
+	TABLE MyTable INHERITS sys.CDoc (
 		Name asdasd,
 		Code varchar
 	))
@@ -929,7 +929,7 @@ func Test_Duplicates(t *testing.T) {
 		WORKSPACE InnerWorkspace (
 			ROLE MyFunc4; -- redeclared
 		);
-		TABLE Doc1 INHERITS ODoc(
+		TABLE Doc1 INHERITS sys.ODoc(
 			nested1 Rec1,
 			nested2 TABLE Rec1() -- redeclared
 		)
@@ -962,7 +962,7 @@ func Test_DuplicatesInViews(t *testing.T) {
 		) AS RESULT OF Proj1;
 
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(test));
 			COMMAND Orders()
 		);
 	)
@@ -992,7 +992,7 @@ func Test_Views(t *testing.T) {
 				PRIMARY KEY(field2)
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(test));
 				COMMAND Orders()
 			);
 			)
@@ -1004,7 +1004,7 @@ func Test_Views(t *testing.T) {
 				PRIMARY KEY((field1))
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(test));
 				COMMAND Orders()
 			);
 			)
@@ -1016,7 +1016,7 @@ func Test_Views(t *testing.T) {
 			PRIMARY KEY((field1))
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(test));
 			COMMAND Orders()
 		);
 	)
@@ -1029,7 +1029,7 @@ func Test_Views(t *testing.T) {
 			PRIMARY KEY(field1, field2)
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(test));
 			COMMAND Orders()
 		);
 	)
@@ -1042,21 +1042,21 @@ func Test_Views(t *testing.T) {
 			PRIMARY KEY(field1, field2)
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(test));
 			COMMAND Orders()
 		);
 	)
 	`, "file.vsql:5:16: bytes field field1 can only be the last one in clustering key")
 
 	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
-		ABSTRACT TABLE abc INHERITS CDoc();
+		ABSTRACT TABLE abc INHERITS sys.CDoc();
 		VIEW test(
 			field1 ref(abc),
 			field2 ref(unexisting),
 			PRIMARY KEY(field1, field2)
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(test));
 			COMMAND Orders()
 		);
 	)
@@ -1067,7 +1067,7 @@ func Test_Views(t *testing.T) {
 			fld1 int32
 		) AS RESULT OF Proj1;
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(test));
 			COMMAND Orders()
 		);
 	)
@@ -1081,7 +1081,7 @@ func Test_Views(t *testing.T) {
 				PRIMARY KEY((field1))
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(test));
 				COMMAND Orders()
 			);
 			)
@@ -1096,7 +1096,7 @@ func Test_Views(t *testing.T) {
 				PRIMARY KEY((i), field1)
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(test));
 				COMMAND Orders()
 			);
 			)
@@ -1112,7 +1112,7 @@ func Test_Views(t *testing.T) {
 				PRIMARY KEY((i), j)
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(test));
 				COMMAND Orders()
 			);
 			)
@@ -1147,7 +1147,7 @@ func Test_Views2(t *testing.T) {
 				PRIMARY KEY((field1,field4),field2)
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(test));
 				COMMAND Orders()
 			);
 		)
@@ -1184,7 +1184,7 @@ func Test_Views2(t *testing.T) {
 				PRIMARY KEY((field1),field4,field3)
 			) AS RESULT OF Proj1;
 			EXTENSION ENGINE BUILTIN (
-				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(test));
 				COMMAND Orders()
 			);
 		)
@@ -1311,7 +1311,7 @@ func Test_Projectors(t *testing.T) {
 
 	fs, err := ParseFile("example.vsql", `APPLICATION test();
 	WORKSPACE test (
-		TABLE Order INHERITS ODoc();
+		TABLE Order INHERITS sys.ODoc();
 		EXTENSION ENGINE WASM (
 			COMMAND Orders();
 			PROJECTOR ImProjector1 AFTER EXECUTE ON test.CreateUPProfile; 			-- Undefined
@@ -1321,8 +1321,8 @@ func Test_Projectors(t *testing.T) {
 			PROJECTOR ImProjector5 AFTER DEACTIVATE ON Order; 			-- Bad
 			PROJECTOR ImProjector6 AFTER INSERT ON Order OR AFTER EXECUTE ON Orders;	-- Good
 			PROJECTOR ImProjector7 AFTER EXECUTE WITH PARAM ON Bill;	-- Bad: Type undefined
-			PROJECTOR ImProjector8 AFTER EXECUTE WITH PARAM ON ODoc;	-- Good
-			PROJECTOR ImProjector9 AFTER EXECUTE WITH PARAM ON ORecord;	-- Bad
+			PROJECTOR ImProjector8 AFTER EXECUTE WITH PARAM ON sys.ODoc;	-- Good
+			PROJECTOR ImProjector9 AFTER EXECUTE WITH PARAM ON sys.ORecord;	-- Bad
 		);
 	)
 	`)
@@ -1340,7 +1340,7 @@ func Test_Projectors(t *testing.T) {
 		"example.vsql:9:45: only INSERT allowed for ODoc or ORecord",
 		"example.vsql:10:47: only INSERT allowed for ODoc or ORecord",
 		"example.vsql:12:55: undefined type or ODoc: Bill",
-		"example.vsql:14:55: undefined type or ODoc: ORecord",
+		"example.vsql:14:55: undefined type or ODoc: sys.ORecord",
 	}, "\n"))
 }
 
@@ -1425,7 +1425,7 @@ func Test_UniqueFields(t *testing.T) {
 	require := require.New(t)
 
 	fs, err := ParseFile("example.vsql", `APPLICATION test(); WORKSPACE MyWorkspace(
-	TABLE MyTable INHERITS CDoc (
+	TABLE MyTable INHERITS sys.CDoc (
 		Int1 int32,
 		Int2 int32 NOT NULL,
 		UNIQUEFIELD Int1,
@@ -1462,7 +1462,7 @@ func Test_NestedTables(t *testing.T) {
 	require := require.New(t)
 
 	fs, err := ParseFile("example.vsql", `APPLICATION test(); WORKSPACE MyWorkspace(
-	TABLE NestedTable INHERITS CRecord (
+	TABLE NestedTable INHERITS sys.CRecord (
 		ItemName varchar,
 		DeepNested TABLE DeepNestedTable (
 			ItemName varchar
@@ -1496,8 +1496,8 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 		require := require.New(t)
 
 		fs, err := ParseFile("example.vsql", `APPLICATION test(); WORKSPACE MyWorkspace(
-		TABLE OTable INHERITS ODoc ();
-		TABLE CTable INHERITS CDoc (
+		TABLE OTable INHERITS sys.ODoc ();
+		TABLE CTable INHERITS sys.CDoc (
 			OTableRef ref(OTable)
 		))
 		`)
@@ -1523,7 +1523,7 @@ func Test_1KStringField(t *testing.T) {
 	require := require.New(t)
 
 	fs, err := ParseFile("example.vsql", `APPLICATION test(); WORKSPACE MyWorkspace(
-	TABLE MyTable INHERITS CDoc (
+	TABLE MyTable INHERITS sys.CDoc (
 		KB varchar(1024)
 ))
 	`)
@@ -1565,7 +1565,7 @@ func Test_ReferenceToNoTable(t *testing.T) {
 
 	fs, err := ParseFile("example.vsql", `APPLICATION test(); WORKSPACE MyWorkspace(
 	ROLE Admin;
-	TABLE CTable INHERITS CDoc (
+	TABLE CTable INHERITS sys.CDoc (
 		RefField ref(Admin)
 	));
 	`)
@@ -1730,11 +1730,11 @@ func Test_Scope_TableRefs(t *testing.T) {
 	// *****  pkg1
 	fs, err = ParseFile("example2.vsql", `
 	WORKSPACE myWorkspace1 (
-		TABLE PkgTable INHERITS CRecord();
-		TABLE MyTable INHERITS CDoc (
+		TABLE PkgTable INHERITS sys.CRecord();
+		TABLE MyTable INHERITS sys.CDoc (
 			Items TABLE MyInnerTable()
 		);
-		TABLE MyTable2 INHERITS CDoc (
+		TABLE MyTable2 INHERITS sys.CDoc (
 			r1 ref(MyTable),
 			r2 ref(MyTable2),
 			r3 ref(PkgTable),
@@ -1742,7 +1742,7 @@ func Test_Scope_TableRefs(t *testing.T) {
 		);
 	);
 	WORKSPACE myWorkspace2 (
-		TABLE MyTable3 INHERITS CDoc (
+		TABLE MyTable3 INHERITS sys.CDoc (
 			r1 ref(MyTable),
 			r2 ref(MyTable2),
 			r3 ref(PkgTable),
@@ -1780,25 +1780,25 @@ func Test_Alter_Workspace_In_Package(t *testing.T) {
 
 	fs1, err := ParseFile("file1.vsql", `
 		ALTERABLE WORKSPACE Ws0(
-			TABLE wst01 INHERITS CDoc();
+			TABLE wst01 INHERITS sys.CDoc();
 		);
 		ABSTRACT WORKSPACE AWs(
-			TABLE awst1 INHERITS CDoc();
+			TABLE awst1 INHERITS sys.CDoc();
 		);
 		WORKSPACE Ws(
-			TABLE wst1 INHERITS CDoc();
+			TABLE wst1 INHERITS sys.CDoc();
 		);
 	`)
 	require.NoError(err)
 	fs2, err := ParseFile("file2.vsql", `
 		ALTER WORKSPACE Ws0(
-			TABLE wst02 INHERITS CDoc();
+			TABLE wst02 INHERITS sys.CDoc();
 		);
 		ALTER WORKSPACE AWs(
-			TABLE awst2 INHERITS CDoc();
+			TABLE awst2 INHERITS sys.CDoc();
 		);
 		ALTER WORKSPACE Ws(
-			TABLE wst2 INHERITS CDoc();
+			TABLE wst2 INHERITS sys.CDoc();
 		);
 	`)
 	require.NoError(err)
@@ -1849,9 +1849,9 @@ func Test_OdocCmdArgs(t *testing.T) {
 	require := require.New(t)
 	pkgApp1 := buildPackage(`
 
-	APPLICATION registry(); 
+	APPLICATION registry();
 	WORKSPACE Workspace1 (
-		TABLE TableODoc INHERITS ODoc (
+		TABLE TableODoc INHERITS sys.ODoc (
 			orecord1 TABLE orecord1(
 				orecord2 TABLE orecord2()
 			)
@@ -1860,7 +1860,7 @@ func Test_OdocCmdArgs(t *testing.T) {
 			COMMAND CmdODoc1(TableODoc) RETURNS TableODoc;
 		)
 	);
-	
+
 
 	`)
 
@@ -1987,7 +1987,7 @@ TYPE SomeType (
 	t int321
 );
 
-TABLE SomeTable INHERITS CDoc (
+TABLE SomeTable INHERITS sys.CDoc (
 	t int321
 ))
 	`)
@@ -2009,8 +2009,6 @@ TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL ));
 	_, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
 	require.EqualError(err, strings.Join([]string{
 		"source.vsql:2:1: undefined table kind",
-		"source.vsql:2:25: undefined table: ODocUnknown",
-		"source.vsql:2:51: registry undefined",
 	}, "\n"))
 
 }
@@ -2030,7 +2028,7 @@ func Test_Constraints(t *testing.T) {
 
 	require.AppSchemaError(`
 	APPLICATION app1(); WORKSPACE ws1 (
-	TABLE SomeTable INHERITS CDoc (
+	TABLE SomeTable INHERITS sys.CDoc (
 		t1 int32,
 		t2 int32,
 		CONSTRAINT c1 UNIQUE(t1),
@@ -2039,13 +2037,13 @@ func Test_Constraints(t *testing.T) {
 
 	require.AppSchemaError(`
 	APPLICATION app1(); WORKSPACE ws1 (
-	TABLE SomeTable INHERITS CDoc (
+	TABLE SomeTable INHERITS sys.CDoc (
 		UNIQUEFIELD UnknownField
 	))`, "file.vsql:4:3: undefined field UnknownField")
 
 	require.AppSchemaError(`
 	APPLICATION app1(); WORKSPACE ws1 (
-	TABLE SomeTable INHERITS CDoc (
+	TABLE SomeTable INHERITS sys.CDoc (
 		t1 int32,
 		t2 int32,
 		CONSTRAINT c1 UNIQUE(t1),
@@ -2065,12 +2063,12 @@ func Test_Grants(t *testing.T) {
 		GRANT ALL ON TABLE Fake TO app1;
 		GRANT EXECUTE ON COMMAND Fake TO role1;
 		GRANT EXECUTE ON QUERY Fake TO role1;
-		TABLE Tbl INHERITS CDoc();
+		TABLE Tbl INHERITS sys.CDoc();
 		GRANT ALL(FakeCol) ON TABLE Tbl TO role1;
 		GRANT INSERT,UPDATE(FakeCol) ON TABLE Tbl TO role1;
 		GRANT EXECUTE ON ALL COMMANDS WITH TAG x TO role1;
-		TABLE Nested1 INHERITS CRecord();
-		TABLE Tbl2 INHERITS CDoc(
+		TABLE Nested1 INHERITS sys.CRecord();
+		TABLE Tbl2 INHERITS sys.CDoc(
 			ref1 ref(Tbl),
 			items TABLE Nested(),
 			items2 Nested1
@@ -2094,16 +2092,16 @@ func Test_Grants(t *testing.T) {
 	})
 
 	t.Run("GRANT follows REVOKE in WORKSPACE", func(t *testing.T) {
-		require.AppSchemaError(`APPLICATION test(); 
+		require.AppSchemaError(`APPLICATION test();
 			WORKSPACE AppWorkspaceWS (
 				ROLE role1;
 
-				TABLE Table1 INHERITS CDoc(
+				TABLE Table1 INHERITS sys.CDoc(
 					Field1 int32
 				);
 				REVOKE ALL ON TABLE Table1 FROM role1;
 				GRANT ALL ON TABLE Table1 TO role1;
-				
+
 			);`, "file.vsql:9:5: GRANT follows REVOKE in the same container")
 	})
 
@@ -2182,11 +2180,11 @@ func Test_Grants_Inherit(t *testing.T) {
 		schema, err := require.AppSchema(`APPLICATION test();
 			ABSTRACT WORKSPACE BaseWs (
 				ROLE role1;
-				TABLE Table1 INHERITS CDoc();
+				TABLE Table1 INHERITS sys.CDoc();
 			);
 			WORKSPACE AppWorkspaceWS INHERITS BaseWs (
 				DESCRIPTOR AppWorkspace();
-				TABLE Table2 INHERITS CDoc();
+				TABLE Table2 INHERITS sys.CDoc();
 				GRANT INSERT ON ALL TABLES TO role1;
 			);`)
 		require.NoError(err)
@@ -2217,10 +2215,10 @@ func Test_Grants_Inherit(t *testing.T) {
 			TAG tag1;
 			ABSTRACT WORKSPACE BaseWs (
 				ROLE role1;
-				TABLE Table1 INHERITS CDoc() WITH Tags=(tag1);
+				TABLE Table1 INHERITS sys.CDoc() WITH Tags=(tag1);
 			);
 			WORKSPACE AppWorkspaceWS INHERITS BaseWs (
-				TABLE Table2 INHERITS CDoc() WITH Tags=(tag1);
+				TABLE Table2 INHERITS sys.CDoc() WITH Tags=(tag1);
 				GRANT INSERT ON ALL TABLES WITH TAG tag1 TO role1;
 			);`)
 		require.NoError(err)
@@ -2253,7 +2251,7 @@ func Test_UndefinedType(t *testing.T) {
 	require := assertions(t)
 
 	require.AppSchemaError(`APPLICATION app1(); WORKSPACE w (
-TABLE MyTable2 INHERITS ODoc (
+TABLE MyTable2 INHERITS sys.ODoc (
 MyField int23 NOT NULL
 ))
 	`, "file.vsql:3:9: undefined data type or table: int23",
@@ -2266,7 +2264,7 @@ func Test_DescriptorInProjector(t *testing.T) {
 	require.AppSchemaError(`APPLICATION app1();
 	WORKSPACE w (
 		EXTENSION ENGINE BUILTIN (
-		  PROJECTOR x AFTER INSERT ON (unknown.z) STATE(Http);
+		  PROJECTOR x AFTER INSERT ON (unknown.z) STATE(sys.Http);
 		);
 	  );
 	`,
@@ -2276,7 +2274,7 @@ func Test_DescriptorInProjector(t *testing.T) {
 	WORKSPACE RestaurantWS (
 		DESCRIPTOR Restaurant ();
 		EXTENSION ENGINE BUILTIN (
-		  PROJECTOR NewRestaurantVat AFTER INSERT OR UPDATE ON (Restaurant) STATE(AppSecret, Http) INTENTS(SendMail);
+		  PROJECTOR NewRestaurantVat AFTER INSERT OR UPDATE ON (Restaurant) STATE(sys.AppSecret, sys.Http) INTENTS(sys.SendMail);
 		);
 	  );
 	`)
@@ -2332,12 +2330,12 @@ func Test_RefsFromInheritedWs(t *testing.T) {
 
 	require.NoAppSchemaError(`APPLICATION test();
 	ABSTRACT WORKSPACE base (
-		TABLE tab1 INHERITS WDoc (
+		TABLE tab1 INHERITS sys.WDoc (
 			Fld1 int32
 		);
 	);
 	WORKSPACE work INHERITS base (
-		TABLE tab2 INHERITS WDoc (
+		TABLE tab2 INHERITS sys.WDoc (
 			Fld2 ref(tab1)
 		);
 	);`)
@@ -2379,12 +2377,12 @@ func Test_RefsWorkspaces(t *testing.T) {
 
 	require.NoAppSchemaError(`APPLICATION test();
 	WORKSPACE w2 (
-		TABLE t1 INHERITS WDoc(
+		TABLE t1 INHERITS sys.WDoc(
 			items TABLE t2(
 				items TABLE t3()
 			)
 		);
-		TABLE tab2 INHERITS WDoc(
+		TABLE tab2 INHERITS sys.WDoc(
 			f1 ref(t2),
 			f2 ref(t3)
 		);
@@ -2399,7 +2397,7 @@ func Test_RefsWorkspaces(t *testing.T) {
 		) AS RESULT OF Proj1;
 
 		EXTENSION ENGINE BUILTIN (
-			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(test));
 			COMMAND Orders()
 		);
 
@@ -2442,7 +2440,7 @@ func Test_ScheduledProjectors(t *testing.T) {
 				) AS RESULT OF Proj1;
 
 				EXTENSION ENGINE BUILTIN (
-					PROJECTOR Proj1 CRON 'blah' INTENTS (View(test));
+					PROJECTOR Proj1 CRON 'blah' INTENTS (sys.View(test));
 				);
 			);`, "file.vsql:9:6: invalid cron schedule: blah", "file.vsql:9:6: scheduled projector cannot have intents")
 	})
@@ -2475,7 +2473,7 @@ func Test_Jobs(t *testing.T) {
 	t.Run("bad cron", func(t *testing.T) {
 		require := assertions(t)
 		require.AppSchemaError(`APPLICATION test();
-			ALTER WORKSPACE AppWorkspaceWS (
+			ALTER WORKSPACE sys.AppWorkspaceWS (
 				EXTENSION ENGINE BUILTIN (
 					JOB Job1 'blah';
 				);
@@ -2485,7 +2483,7 @@ func Test_Jobs(t *testing.T) {
 	t.Run("good cron", func(t *testing.T) {
 		require := assertions(t)
 		require.NoAppSchemaError(`APPLICATION test();
-			ALTER WORKSPACE AppWorkspaceWS (
+			ALTER WORKSPACE sys.AppWorkspaceWS (
 				EXTENSION ENGINE BUILTIN (
 					JOB Job1 '1 0 * * *';
 				);
@@ -2498,7 +2496,7 @@ func Test_DataTypes(t *testing.T) {
 	require := assertions(t)
 	require.NoAppSchemaError(`APPLICATION test();
 ALTER WORKSPACE sys.AppWorkspaceWS (
-	TABLE t1 INHERITS WDoc(
+	TABLE t1 INHERITS sys.WDoc(
 		s1_1_1 character varying(10),
 		s1_1_1 character varying,
 		s1_2_1 varchar(10),
@@ -2549,7 +2547,7 @@ func Test_UniquesFromFieldsets(t *testing.T) {
 	TYPE fieldset (
 		f1 int32
 	);
-	TABLE t1 INHERITS WDoc(
+	TABLE t1 INHERITS sys.WDoc(
 		fieldset,
 		f2 int32,
 		UNIQUE(f1)
@@ -2566,7 +2564,7 @@ func Test_CRecordInDescriptor(t *testing.T) {
 		DESCRIPTOR wd(
 			items x
 		);
-		TABLE x INHERITS CRecord(
+		TABLE x INHERITS sys.CRecord(
 			f1 int32
 		);
 	);
@@ -2580,7 +2578,7 @@ func Test_RefInheritedFromSys(t *testing.T) {
 
 	_, err := require.AppSchema(`APPLICATION SomeApp();
 	WORKSPACE SomeWS (
-	    TABLE SomeTable INHERITS CDoc(
+	    TABLE SomeTable INHERITS sys.CDoc(
 	        ChildWorkspaceID ref(sys.ChildWorkspace)
     	);
 	)

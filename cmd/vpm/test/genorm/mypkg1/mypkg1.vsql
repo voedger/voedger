@@ -2,15 +2,15 @@
 -- @author Alisher Nurmanov
 
 ABSTRACT WORKSPACE MyWorkspace1(
-    TABLE MyTable1 INHERITS CDoc(
+    TABLE MyTable1 INHERITS sys.CDoc(
         Field1 varchar,
         Field2 varchar
     );
-    TABLE MyTable3 INHERITS ODoc(
+    TABLE MyTable3 INHERITS sys.ODoc(
         Field1 varchar,
         Field2 varchar
     );
-    TABLE MyTable11 INHERITS WDoc(
+    TABLE MyTable11 INHERITS sys.WDoc(
         Field11 varchar,
         Field22 bool,
         Field33 int32
@@ -19,7 +19,7 @@ ABSTRACT WORKSPACE MyWorkspace1(
         Field1 varchar,
         Field2 varchar
     );
-	TABLE NextNumbers INHERITS WSingleton (
+	TABLE NextNumbers INHERITS sys.WSingleton (
 		NextPBillNumber int32
 	);
     VIEW XZReportsView(
@@ -55,6 +55,6 @@ ABSTRACT WORKSPACE MyWorkspace1(
 		QUERY GetUPTransferInstrument() RETURNS GetUPTransferInstrumentResult;
         PROJECTOR GenerateXZReport AFTER EXECUTE ON (CreateXZReport);
         COMMAND RawCmd(sys.Raw) RETURNS sys.Raw;
-        SYNC PROJECTOR UpdateXZReportsView AFTER EXECUTE ON (CreateXZReport, SaveXZReport) INTENTS (View(XZReportsView));
+        SYNC PROJECTOR UpdateXZReportsView AFTER EXECUTE ON (CreateXZReport, SaveXZReport) INTENTS (sys.View(XZReportsView));
 	);
 );
