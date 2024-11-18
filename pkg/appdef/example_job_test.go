@@ -56,7 +56,7 @@ func ExampleJobs() {
 	// How to enum all jobs in AppDef
 	{
 		cnt := 0
-		for j := range appdef.Jobs(app) {
+		for j := range appdef.Jobs(app.Types) {
 			cnt++
 			fmt.Println(cnt, j)
 		}

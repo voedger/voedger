@@ -56,13 +56,13 @@ func Test_AppDef_AddData(t *testing.T) {
 			require.Equal(intName, i.QName())
 			require.Equal(DataKind_int64, i.DataKind())
 			require.False(i.IsSystem())
-			require.Equal(SysData(app, DataKind_int64), i.Ancestor())
+			require.Equal(SysData(tested, DataKind_int64), i.Ancestor())
 
 			s := Data(tested, strName)
 			require.Equal(TypeKind_Data, s.Kind())
 			require.Equal(strName, s.QName())
 			require.Equal(DataKind_string, s.DataKind())
-			require.Equal(SysData(app, DataKind_string), s.Ancestor())
+			require.Equal(SysData(tested, DataKind_string), s.Ancestor())
 
 			tk := Data(tested, tokenName)
 			require.Equal(TypeKind_Data, tk.Kind())
@@ -92,7 +92,7 @@ func Test_AppDef_AddData(t *testing.T) {
 
 		t.Run("should be ok to enum data types", func(t *testing.T) {
 			cnt := 0
-			for d := range DataTypes(tested) {
+			for d := range DataTypes(tested.Types) {
 				if !d.IsSystem() {
 					cnt++
 					require.Equal(TypeKind_Data, d.Kind())

@@ -47,7 +47,7 @@ func ExampleFunctions() {
 	// how to enum functions
 	{
 		cnt := 0
-		for f := range appdef.Functions(app) {
+		for f := range appdef.Functions(app.Types) {
 			cnt++
 			fmt.Println(cnt, f)
 		}

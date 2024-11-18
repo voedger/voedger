@@ -163,16 +163,18 @@ type (
 		// If not found then empty type with TypeKind_null is returned
 		Type(name QName) IType
 	}
-	ITypes interface {
+	IWithTypes interface {
+		IFindType
 		// Enumerates types
 		//
 		// Types are enumerated in alphabetical order of QNames.
 		Types(func(IType) bool)
 	}
-	IWithTypes interface {
-		IFindType
-		ITypes
-	}
+
+	// Types iterator.
+	//
+	// Types are enumerated in alphabetical order of QNames.
+	Types func(func(IType) bool)
 )
 
 type ITypeBuilder interface {

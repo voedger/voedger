@@ -36,7 +36,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 	testWith := func(tested IWithTypes) {
 		t.Run("should be ok to enum rates", func(t *testing.T) {
 			cnt := 0
-			for r := range Rates(tested) {
+			for r := range Rates(tested.Types) {
 				cnt++
 				switch cnt {
 				case 1:
@@ -54,7 +54,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 
 		t.Run("should be ok to enum limits", func(t *testing.T) {
 			cnt := 0
-			for l := range Limits(app) {
+			for l := range Limits(tested.Types) {
 				cnt++
 				switch cnt {
 				case 1:
@@ -77,11 +77,11 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 
 			require.Nil(Rate(tested, unknown), "should be nil if unknown")
 
-			limit := Limit(app, limitName)
+			limit := Limit(tested, limitName)
 			require.NotNil(limit)
 			require.Equal(limitName, limit.QName())
 
-			require.Nil(Limit(app, unknown), "should be nil if unknown")
+			require.Nil(Limit(tested, unknown), "should be nil if unknown")
 		})
 	}
 

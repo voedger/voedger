@@ -46,7 +46,7 @@ func ExampleCommands() {
 	// how to enum commands
 	{
 		cnt := 0
-		for c := range appdef.Commands(app) {
+		for c := range appdef.Commands(app.Types) {
 			cnt++
 			fmt.Println(cnt, c)
 		}

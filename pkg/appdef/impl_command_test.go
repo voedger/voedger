@@ -47,10 +47,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		})
 	})
 
-	require.NotNil(app)
-
 	testWith := func(tested IWithTypes) {
-
 		t.Run("should be ok to find builded command", func(t *testing.T) {
 			typ := tested.Type(cmdName)
 			require.Equal(TypeKind_Command, typ.Kind())
@@ -80,7 +77,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 		t.Run("should be ok to enum commands", func(t *testing.T) {
 			cnt := 0
-			for c := range Commands(tested) {
+			for c := range Commands(tested.Types) {
 				cnt++
 				switch cnt {
 				case 1:

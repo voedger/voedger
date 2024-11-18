@@ -37,7 +37,7 @@ func ExampleQNames() {
 		fmt.Println()
 		fmt.Println("Testing", flt, "in", ws)
 
-		for doc := range appdef.ODocs(ws) {
+		for doc := range appdef.ODocs(ws.Types) {
 			fmt.Println("-", doc, "is matched:", flt.Match(doc))
 		}
 

@@ -71,7 +71,7 @@ func Test_AppDef_StructuresAndRecords(t *testing.T) {
 
 		t.Run("should be ok to enumerate structures", func(t *testing.T) {
 			var str []QName
-			for s := range Structures(tested) {
+			for s := range Structures(tested.Types) {
 				str = append(str, s.QName())
 			}
 			require.Equal(str, []QName{docName, objName, recName})
@@ -100,7 +100,7 @@ func Test_AppDef_StructuresAndRecords(t *testing.T) {
 
 		t.Run("should be ok to enumerate records", func(t *testing.T) {
 			var recs []QName
-			for s := range Records(tested) {
+			for s := range Records(tested.Types) {
 				recs = append(recs, s.QName())
 			}
 			require.Equal(recs, []QName{docName, recName})

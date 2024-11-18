@@ -39,7 +39,7 @@ func ExampleRates() {
 	{
 		fmt.Println("enum rates:")
 		cnt := 0
-		for r := range appdef.Rates(app) {
+		for r := range appdef.Rates(app.Types) {
 			cnt++
 			fmt.Println("-", cnt, r, fmt.Sprintf("%d per %v per %v", r.Count(), r.Period(), r.Scopes()))
 		}
@@ -50,7 +50,7 @@ func ExampleRates() {
 	{
 		fmt.Println("enum limits:")
 		cnt := 0
-		for l := range appdef.Limits(app) {
+		for l := range appdef.Limits(app.Types) {
 			cnt++
 			fmt.Println("-", cnt, l, fmt.Sprintf("on %v with %v", l.On(), l.Rate()))
 		}

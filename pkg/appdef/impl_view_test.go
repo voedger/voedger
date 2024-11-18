@@ -274,7 +274,7 @@ func TestAddView(t *testing.T) {
 
 		t.Run("should be ok to enum views", func(t *testing.T) {
 			names := QNames{}
-			for v := range Views(tested) {
+			for v := range Views(tested.Types) {
 				if !v.IsSystem() {
 					names.Add(v.QName())
 				}

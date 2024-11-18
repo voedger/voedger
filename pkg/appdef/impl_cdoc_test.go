@@ -79,14 +79,14 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 
 		t.Run("should be ok to enumerate docs", func(t *testing.T) {
 			var docs []QName
-			for doc := range CDocs(tested) {
+			for doc := range CDocs(tested.Types) {
 				docs = append(docs, doc.QName())
 			}
 			require.Len(docs, 1)
 			require.Equal(docName, docs[0])
 			t.Run("should be ok to enumerate recs", func(t *testing.T) {
 				var recs []QName
-				for rec := range CRecords(tested) {
+				for rec := range CRecords(tested.Types) {
 					recs = append(recs, rec.QName())
 				}
 				require.Len(recs, 1)
@@ -143,7 +143,7 @@ func Test_AppDef_AddCDocSingleton(t *testing.T) {
 
 		t.Run("should be ok to enum singleton", func(t *testing.T) {
 			names := QNames{}
-			for st := range Singletons(tested) {
+			for st := range Singletons(tested.Types) {
 				names = append(names, st.QName())
 			}
 			require.Len(names, 1)

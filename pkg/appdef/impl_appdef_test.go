@@ -179,45 +179,45 @@ func Test_EnumsBreakable(t *testing.T) {
 
 		testBreakable(t, "Types", app.Types, ws.Types)
 
-		testBreakable(t, "DataTypes", DataTypes(app), DataTypes(ws))
+		testBreakable(t, "DataTypes", DataTypes(app.Types), DataTypes(ws.Types))
 
-		testBreakable(t, "GDocs", GDocs(app), GDocs(ws))
-		testBreakable(t, "GRecords", GRecords(app), GRecords(ws))
+		testBreakable(t, "GDocs", GDocs(app.Types), GDocs(ws.Types))
+		testBreakable(t, "GRecords", GRecords(app.Types), GRecords(ws.Types))
 
-		testBreakable(t, "CDocs", CDocs(app), CDocs(ws))
-		testBreakable(t, "CRecords", CRecords(app), CRecords(ws))
+		testBreakable(t, "CDocs", CDocs(app.Types), CDocs(ws.Types))
+		testBreakable(t, "CRecords", CRecords(app.Types), CRecords(ws.Types))
 
-		testBreakable(t, "WDocs", WDocs(app), WDocs(app))
-		testBreakable(t, "WRecords", WRecords(app), WRecords(app))
+		testBreakable(t, "WDocs", WDocs(app.Types), WDocs(app.Types))
+		testBreakable(t, "WRecords", WRecords(app.Types), WRecords(app.Types))
 
-		testBreakable(t, "Singletons", Singletons(app), Singletons(ws))
+		testBreakable(t, "Singletons", Singletons(app.Types), Singletons(ws.Types))
 
-		testBreakable(t, "ODocs", ODocs(app), ODocs(ws))
-		testBreakable(t, "ORecords", ORecords(app), ORecords(app))
+		testBreakable(t, "ODocs", ODocs(app.Types), ODocs(ws.Types))
+		testBreakable(t, "ORecords", ORecords(app.Types), ORecords(app.Types))
 
-		testBreakable(t, "Records", Records(app), Records(ws))
+		testBreakable(t, "Records", Records(app.Types), Records(ws.Types))
 
-		testBreakable(t, "Objects", Objects(app), Objects(ws))
+		testBreakable(t, "Objects", Objects(app.Types), Objects(ws.Types))
 
-		testBreakable(t, "Structures", Structures(app), Structures(ws))
+		testBreakable(t, "Structures", Structures(app.Types), Structures(ws.Types))
 
-		testBreakable(t, "View", Views(app), Views(ws))
+		testBreakable(t, "View", Views(app.Types), Views(ws.Types))
 
-		testBreakable(t, "Commands", Commands(app), Commands(ws))
-		testBreakable(t, "Queries", Queries(app), Queries(ws))
-		testBreakable(t, "Functions", Functions(app), Functions(ws))
+		testBreakable(t, "Commands", Commands(app.Types), Commands(ws.Types))
+		testBreakable(t, "Queries", Queries(app.Types), Queries(ws.Types))
+		testBreakable(t, "Functions", Functions(app.Types), Functions(ws.Types))
 
-		testBreakable(t, "Projectors", Projectors(app), Projectors(ws))
-		testBreakable(t, "Jobs", Jobs(app), Jobs(ws))
+		testBreakable(t, "Projectors", Projectors(app.Types), Projectors(ws.Types))
+		testBreakable(t, "Jobs", Jobs(app.Types), Jobs(ws.Types))
 		testBreakable(t, "IStorages.Enum", Job(app, job1name).States().Enum)
 
-		testBreakable(t, "Extensions", Extensions(app), Extensions(ws))
+		testBreakable(t, "Extensions", Extensions(app.Types), Extensions(ws.Types))
 
-		testBreakable(t, "Roles", Roles(app), Roles(app))
+		testBreakable(t, "Roles", Roles(app.Types), Roles(app.Types))
 		testBreakable(t, "ACL", ACL(app), ACL(ws), ACL(Role(app, role1Name)))
 
-		testBreakable(t, "Rates", Rates(app), Rates(ws))
-		testBreakable(t, "Limits", Limits(app), Limits(ws))
+		testBreakable(t, "Rates", Rates(app.Types), Rates(ws.Types))
+		testBreakable(t, "Limits", Limits(app.Types), Limits(ws.Types))
 	})
 }
 

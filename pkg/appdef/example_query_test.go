@@ -43,7 +43,7 @@ func ExampleQueries() {
 	// how to enum queries
 	{
 		cnt := 0
-		for q := range appdef.Queries(app) {
+		for q := range appdef.Queries(app.Types) {
 			cnt++
 			fmt.Println(cnt, q)
 		}
