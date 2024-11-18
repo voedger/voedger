@@ -5,10 +5,6 @@
 
 package appdef
 
-import (
-	"sort"
-)
-
 // # Implements:
 //   - IWorkspace
 type workspace struct {
@@ -17,8 +13,7 @@ type workspace struct {
 	acl              []*aclRule
 	ancestors        map[QName]IWorkspace
 	ancestorsOrdered QNames
-	types            map[QName]interface{}
-	typesOrdered     []interface{}
+	types            *types
 	usedWS           map[QName]IWorkspace
 	usedWSOrdered    QNames
 	desc             ICDoc
@@ -29,7 +24,7 @@ func newWorkspace(app *appDef, name QName) *workspace {
 		typ:              makeType(app, nil, name, TypeKind_Workspace),
 		ancestors:        make(map[QName]IWorkspace),
 		ancestorsOrdered: QNames{},
-		types:            make(map[QName]interface{}),
+		types:            newTypes(),
 		usedWS:           make(map[QName]IWorkspace),
 		usedWSOrdered:    QNames{},
 	}
@@ -83,7 +78,6 @@ func (ws *workspace) Inherits(anc QName) bool {
 }
 
 func (ws *workspace) Type(name QName) IType {
-
 	var (
 		find  func(*workspace) IType
 		chain map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
@@ -98,8 +92,8 @@ func (ws *workspace) Type(name QName) IType {
 		if name == w.QName() {
 			return w
 		}
-		if t, ok := w.types[name]; ok {
-			return t.(IType)
+		if t := w.types.Type(name); t != NullType {
+			return t
 		}
 		for _, a := range w.ancestors {
 			if t := find(a.(*workspace)); t != NullType {
@@ -121,20 +115,7 @@ func (ws *workspace) Type(name QName) IType {
 }
 
 func (ws *workspace) Types(visit func(IType) bool) {
-	if len(ws.typesOrdered) != len(ws.types) {
-		ws.typesOrdered = make([]interface{}, 0, len(ws.types))
-		for _, t := range ws.types {
-			ws.typesOrdered = append(ws.typesOrdered, t)
-		}
-		sort.Slice(ws.typesOrdered, func(i, j int) bool {
-			return ws.typesOrdered[i].(IType).QName().String() < ws.typesOrdered[j].(IType).QName().String()
-		})
-	}
-	for _, t := range ws.typesOrdered {
-		if !visit(t.(IType)) {
-			break
-		}
-	}
+	ws.types.Types(visit)
 }
 
 func (ws *workspace) UsedWorkspaces() []QName {
@@ -246,13 +227,9 @@ func (ws *workspace) appendACL(p *aclRule) {
 func (ws *workspace) appendType(t interface{}) {
 	ws.app.appendType(t)
 
-	typ := t.(IType)
-	name := typ.QName()
-
 	// do not check the validity or uniqueness of the name; this was checked by `*application.appendType (t)`
 
-	ws.types[name] = t
-	ws.typesOrdered = nil
+	ws.types.append(t)
 }
 
 func (ws *workspace) grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) {

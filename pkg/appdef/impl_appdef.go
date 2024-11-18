@@ -7,25 +7,23 @@ package appdef
 
 import (
 	"errors"
-	"sort"
 )
 
 // # Implements:
 //   - IAppDef
 type appDef struct {
 	comment
-	packages     *packages
-	sysWS        *workspace
-	acl          []*aclRule // adding order should be saved
-	types        map[QName]interface{}
-	typesOrdered []interface{}
-	wsDesc       map[QName]IWorkspace
+	packages *packages
+	sysWS    *workspace
+	acl      []*aclRule // adding order should be saved
+	types    *types
+	wsDesc   map[QName]IWorkspace
 }
 
 func newAppDef() *appDef {
 	app := appDef{
 		packages: newPackages(),
-		types:    make(map[QName]interface{}),
+		types:    newTypes(),
 		wsDesc:   make(map[QName]IWorkspace),
 	}
 	app.makeSysPackage()
@@ -70,28 +68,11 @@ func (app *appDef) Type(name QName) IType {
 		return t
 	}
 
-	if t, ok := app.types[name]; ok {
-		return t.(IType)
-	}
-
-	return NullType
+	return app.types.Type(name)
 }
 
 func (app *appDef) Types(visit func(IType) bool) {
-	if app.typesOrdered == nil {
-		app.typesOrdered = make([]interface{}, 0, len(app.types))
-		for _, t := range app.types {
-			app.typesOrdered = append(app.typesOrdered, t)
-		}
-		sort.Slice(app.typesOrdered, func(i, j int) bool {
-			return app.typesOrdered[i].(IType).QName().String() < app.typesOrdered[j].(IType).QName().String()
-		})
-	}
-	for _, t := range app.typesOrdered {
-		if !visit(t.(IType)) {
-			break
-		}
-	}
+	app.types.Types(visit)
 }
 
 func (app *appDef) Workspace(name QName) IWorkspace {
@@ -137,8 +118,7 @@ func (app *appDef) appendType(t interface{}) {
 		panic(ErrAlreadyExists("type «%v»", name))
 	}
 
-	app.types[name] = t
-	app.typesOrdered = nil
+	app.types.append(t)
 }
 
 func (app *appDef) build() (err error) {

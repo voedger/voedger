@@ -8,6 +8,7 @@ package appdef
 import (
 	"errors"
 	"fmt"
+	"sort"
 )
 
 // # Implements:
@@ -75,6 +76,51 @@ func (t *typeBuilder) String() string { return t.typ.String() }
 type typeRef struct {
 	name QName
 	typ  IType
+}
+
+// list of types.
+//
+// # Supports:
+//   - IWithTypes
+type types struct {
+	m map[QName]interface{}
+	s []interface{}
+}
+
+// Creates and returns new types.
+func newTypes() *types {
+	return &types{make(map[QName]interface{}), make([]interface{}, 0)}
+}
+
+// Adds type to list.
+func (tt *types) append(typ interface{}) {
+	name := typ.(IType).QName()
+	tt.m[name] = typ
+	tt.s = nil
+}
+
+func (tt types) Type(name QName) IType {
+	if t, ok := tt.m[name]; ok {
+		return t.(IType)
+	}
+	return NullType
+}
+
+func (tt *types) Types(visit func(IType) bool) {
+	if len(tt.s) != len(tt.m) {
+		tt.s = make([]interface{}, 0, len(tt.m))
+		for _, t := range tt.m {
+			tt.s = append(tt.s, t)
+		}
+		sort.Slice(tt.s, func(i, j int) bool {
+			return tt.s[i].(IType).QName().String() < tt.s[j].(IType).QName().String()
+		})
+	}
+	for _, t := range tt.s {
+		if !visit(t.(IType)) {
+			break
+		}
+	}
 }
 
 // Returns type by reference.
