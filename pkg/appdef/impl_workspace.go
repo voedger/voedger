@@ -243,7 +243,7 @@ func (ws *workspace) allTypes() *types {
 }
 
 func (ws *workspace) grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) {
-	r := Role(ws.types.local.Type, toRole)
+	r := Role(ws.allTypes().Type, toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
 	}
@@ -251,7 +251,7 @@ func (ws *workspace) grant(ops []OperationKind, resources []QName, fields []Fiel
 }
 
 func (ws *workspace) grantAll(resources []QName, toRole QName, comment ...string) {
-	r := Role(ws.types.local.Type, toRole)
+	r := Role(ws.allTypes().Type, toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
 	}
@@ -259,7 +259,7 @@ func (ws *workspace) grantAll(resources []QName, toRole QName, comment ...string
 }
 
 func (ws *workspace) revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) {
-	r := Role(ws.types.local.Type, fromRole)
+	r := Role(ws.allTypes().Type, fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}
@@ -267,7 +267,7 @@ func (ws *workspace) revoke(ops []OperationKind, resources []QName, fields []Fie
 }
 
 func (ws *workspace) revokeAll(resources []QName, fromRole QName, comment ...string) {
-	r := Role(ws.types.local.Type, fromRole)
+	r := Role(ws.allTypes().Type, fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}

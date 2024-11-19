@@ -2179,11 +2179,11 @@ func Test_Grants_Inherit(t *testing.T) {
 	t.Run("GRANT ALL does not include resources from inherited workspaces", func(t *testing.T) {
 		schema, err := require.AppSchema(`APPLICATION test();
 			ABSTRACT WORKSPACE BaseWs (
+				ROLE role1;
 				TABLE Table1 INHERITS sys.CDoc();
 			);
 			WORKSPACE AppWorkspaceWS INHERITS BaseWs (
 				DESCRIPTOR AppWorkspace();
-				ROLE role1;
 				TABLE Table2 INHERITS sys.CDoc();
 				GRANT INSERT ON ALL TABLES TO role1;
 			);`)
@@ -2214,10 +2214,10 @@ func Test_Grants_Inherit(t *testing.T) {
 		schema, err := require.AppSchema(`APPLICATION test();
 			TAG tag1;
 			ABSTRACT WORKSPACE BaseWs (
+				ROLE role1;
 				TABLE Table1 INHERITS sys.CDoc() WITH Tags=(tag1);
 			);
 			WORKSPACE AppWorkspaceWS INHERITS BaseWs (
-				ROLE role1;
 				TABLE Table2 INHERITS sys.CDoc() WITH Tags=(tag1);
 				GRANT INSERT ON ALL TABLES WITH TAG tag1 TO role1;
 			);`)
