@@ -35,7 +35,14 @@ func (f typesFilter) Match(t appdef.IType) bool {
 }
 
 func (f typesFilter) String() string {
-	return fmt.Sprintf("filter %s %v", f.Kind().TrimString(), f.types)
+	s := ""
+	for t := range f.types.All {
+		if len(s) > 0 {
+			s += ", "
+		}
+		s += t.TrimString()
+	}
+	return fmt.Sprintf("filter.%s(%s)", f.Kind().TrimString(), s)
 }
 
 func (f typesFilter) Types() func(func(appdef.TypeKind) bool) { return f.types.All }

@@ -51,18 +51,18 @@ func ExampleOr() {
 	// Output:
 	// This example demonstrates how to work with the Or filter
 	//
-	// The filter Or(filter Types [ODoc], filter QNames [test.object]) Or() children:
-	// - filter Types [ODoc]
-	// - filter QNames [test.object]
-	// Testing filter Or(filter Types [ODoc], filter QNames [test.object]) in Workspace «test.workspace»
+	// The filter.Or(filter.Types(ODoc), filter.QNames(test.object)) Or() children:
+	// - filter.Types(ODoc)
+	// - filter.QNames(test.object)
+	// Testing filter.Or(filter.Types(ODoc), filter.QNames(test.object)) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true
 	// - Object «test.object» is matched: true
 	//
-	// The filter Or(filter QNames [test.other], filter Types [Command]) Or() children:
-	// - filter QNames [test.other]
-	// - filter Types [Command]
-	// Testing filter Or(filter QNames [test.other], filter Types [Command]) in Workspace «test.workspace»
+	// The filter.Or(filter.QNames(test.other), filter.Types(Command)) Or() children:
+	// - filter.QNames(test.other)
+	// - filter.Types(Command)
+	// Testing filter.Or(filter.QNames(test.other), filter.Types(Command)) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: true
 	// - ODoc «test.doc» is matched: false
 	// - Object «test.object» is matched: false

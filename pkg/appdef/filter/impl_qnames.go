@@ -39,5 +39,12 @@ func (f qNamesFilter) QNames() func(func(appdef.QName) bool) {
 }
 
 func (f qNamesFilter) String() string {
-	return fmt.Sprintf("filter %s %v", f.Kind().TrimString(), f.names)
+	s := fmt.Sprintf("filter.%s(", f.Kind().TrimString())
+	for i, c := range f.names {
+		if i > 0 {
+			s += ", "
+		}
+		s += fmt.Sprint(c)
+	}
+	return s + ")"
 }

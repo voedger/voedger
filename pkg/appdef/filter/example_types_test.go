@@ -52,17 +52,17 @@ func ExampleTypes() {
 	// Output:
 	// This example demonstrates how to work with the Types filter
 	//
-	// The filter Types [ODoc Object] Types:
+	// The filter.Types(ODoc, Object) Types:
 	// - TypeKind_ODoc
 	// - TypeKind_Object
-	// Testing filter Types [ODoc Object] in Workspace «test.workspace»
+	// Testing filter.Types(ODoc, Object) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true
 	// - Object «test.object» is matched: true
 	//
-	// The filter Types [Query] Types:
+	// The filter.Types(Query) Types:
 	// - TypeKind_Query
-	// Testing filter Types [Query] in Workspace «test.workspace»
+	// Testing filter.Types(Query) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: false
 	// - Object «test.object» is matched: false

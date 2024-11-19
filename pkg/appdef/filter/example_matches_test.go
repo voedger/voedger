@@ -42,6 +42,6 @@ func ExampleMatches() {
 
 	// Output:
 	// This example demonstrates how to use Matches() func
-	// Matches for filter And(filter Types [ODoc], filter QNames [test.doc]) in Workspace «test.workspace» :
+	// Matches for filter.And(filter.Types(ODoc), filter.QNames(test.doc)) in Workspace «test.workspace» :
 	// - ODoc «test.doc»
 }

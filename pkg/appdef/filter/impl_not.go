@@ -34,5 +34,5 @@ func (f notFilter) Match(t appdef.IType) bool {
 func (f notFilter) Not() appdef.IFilter { return f.f }
 
 func (f notFilter) String() string {
-	return fmt.Sprintf("filter %s(%v)", f.Kind().TrimString(), f.Not())
+	return fmt.Sprintf("filter.%s(%v)", f.Kind().TrimString(), f.Not())
 }

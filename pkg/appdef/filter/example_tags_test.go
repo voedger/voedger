@@ -51,10 +51,10 @@ func ExampleTags() {
 	// Output:
 	// This example demonstrates how to work with the Tags filter
 	//
-	// The filter Tags [tag1 tag2] Tags:
+	// The filter.Tags(tag1, tag2) Tags:
 	// - tag1
 	// - tag2
-	// Testing filter Tags [tag1 tag2] in Workspace «test.workspace»
+	// Testing filter.Tags(tag1, tag2) in Workspace «test.workspace»
 	// - ODoc «test.doc1» is matched: true
 	// - ODoc «test.doc2» is matched: true
 	// - ODoc «test.doc3» is matched: true

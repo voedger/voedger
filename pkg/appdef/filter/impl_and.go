@@ -42,7 +42,7 @@ func (f andFilter) Match(t appdef.IType) bool {
 }
 
 func (f andFilter) String() string {
-	s := fmt.Sprintf("filter %s(", f.Kind().TrimString())
+	s := fmt.Sprintf("filter.%s(", f.Kind().TrimString())
 	for i, c := range f.children {
 		if i > 0 {
 			s += ", "

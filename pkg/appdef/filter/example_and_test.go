@@ -51,18 +51,18 @@ func ExampleAnd() {
 	// Output:
 	// This example demonstrates how to work with the And filter
 	//
-	// The filter And(filter Types [ODoc], filter QNames [test.doc]) And() children:
-	// - filter Types [ODoc]
-	// - filter QNames [test.doc]
-	// Testing filter And(filter Types [ODoc], filter QNames [test.doc]) in Workspace «test.workspace»
+	// The filter.And(filter.Types(ODoc), filter.QNames(test.doc)) And() children:
+	// - filter.Types(ODoc)
+	// - filter.QNames(test.doc)
+	// Testing filter.And(filter.Types(ODoc), filter.QNames(test.doc)) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true
 	// - Object «test.object» is matched: false
 	//
-	// The filter And(filter QNames [test.other], filter Types [Command]) And() children:
-	// - filter QNames [test.other]
-	// - filter Types [Command]
-	// Testing filter And(filter QNames [test.other], filter Types [Command]) in Workspace «test.workspace»
+	// The filter.And(filter.QNames(test.other), filter.Types(Command)) And() children:
+	// - filter.QNames(test.other)
+	// - filter.Types(Command)
+	// Testing filter.And(filter.QNames(test.other), filter.Types(Command)) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: false
 	// - Object «test.object» is matched: false

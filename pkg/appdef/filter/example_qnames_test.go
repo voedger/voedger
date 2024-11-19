@@ -52,17 +52,17 @@ func ExampleQNames() {
 	// Output:
 	// This example demonstrates how to work with the QNames filter
 	//
-	// The filter QNames [test.doc1 test.doc2] QNames:
+	// The filter.QNames(test.doc1, test.doc2) QNames:
 	// - test.doc1
 	// - test.doc2
-	// Testing filter QNames [test.doc1 test.doc2] in Workspace «test.workspace»
+	// Testing filter.QNames(test.doc1, test.doc2) in Workspace «test.workspace»
 	// - ODoc «test.doc1» is matched: true
 	// - ODoc «test.doc2» is matched: true
 	// - ODoc «test.doc3» is matched: false
 	//
-	// The filter QNames [test.unknown] QNames:
+	// The filter.QNames(test.unknown) QNames:
 	// - test.unknown
-	// Testing filter QNames [test.unknown] in Workspace «test.workspace»
+	// Testing filter.QNames(test.unknown) in Workspace «test.workspace»
 	// - ODoc «test.doc1» is matched: false
 	// - ODoc «test.doc2» is matched: false
 	// - ODoc «test.doc3» is matched: false
