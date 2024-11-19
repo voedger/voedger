@@ -39,7 +39,7 @@ func newContainer(app *appDef, name string, typeName QName, minOccurs, maxOccurs
 
 func (cont *container) Type() IStructure {
 	if (cont.typ == nil) || (cont.typ.QName() != cont.QName()) {
-		cont.typ = Structure(cont.app, cont.QName())
+		cont.typ = Structure(cont.app.Type, cont.QName())
 	}
 	return cont.typ
 }
@@ -111,7 +111,7 @@ func (cc *containers) addContainer(name string, contType QName, minOccurs, maxOc
 		panic(ErrOutOfBounds("max occurs should be greater than or equal to min occurs (%v)", minOccurs))
 	}
 
-	if child := Structure(cc.app, contType); child != nil {
+	if child := Structure(cc.app.Type, contType); child != nil {
 		if (cc.typeKind != TypeKind_null) && !cc.typeKind.ContainerKindAvailable(child.Kind()) {
 			panic(ErrInvalid("%v can not to be a child of «%v»", child, cc.typeKind.TrimString()))
 		}

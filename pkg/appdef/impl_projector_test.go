@@ -89,7 +89,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			require.True(ok)
 			require.Equal(TypeKind_Projector, p.Kind())
 
-			prj := Projector(tested, prjName)
+			prj := Projector(tested.Type, prjName)
 			require.Equal(TypeKind_Projector, prj.Kind())
 			require.Equal(wsName, prj.Workspace().QName())
 			require.Equal(p, prj)
@@ -222,7 +222,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 		t.Run("should be ok to enum projectors", func(t *testing.T) {
 			cnt := 0
-			for p := range Projectors(tested) {
+			for p := range Projectors(tested.Types) {
 				cnt++
 				switch cnt {
 				case 1:
@@ -235,7 +235,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			require.Equal(1, cnt)
 		})
 
-		require.Nil(Projector(tested, NewQName("test", "unknown")), "should be nil if unknown")
+		require.Nil(Projector(tested.Type, NewQName("test", "unknown")), "should be nil if unknown")
 	}
 
 	testWith(app)
@@ -259,7 +259,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		app, err := adb.Build()
 		require.NoError(err)
 
-		p := Projector(app, prjName)
+		p := Projector(app.Type, prjName)
 
 		require.Equal("customExtensionName", p.Name())
 		require.Equal(ExtensionEngineKind_WASM, p.Engine())

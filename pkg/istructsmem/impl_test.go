@@ -418,7 +418,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 	app := test.AppStructs
 
 	t.Run("I. test top level type (command object)", func(t *testing.T) {
-		cmdDoc := appdef.ODoc(app.AppDef(), test.saleCmdDocName)
+		cmdDoc := appdef.ODoc(app.AppDef().Type, test.saleCmdDocName)
 
 		require.NotNil(cmdDoc)
 		require.Equal(appdef.TypeKind_ODoc, cmdDoc.Kind())
@@ -439,7 +439,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 			require.Equal(test.basketIdent, c.Name())
 			require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), c.QName())
 			t.Run("II. test first level nested type (basket)", func(t *testing.T) {
-				rec := appdef.ORecord(app.AppDef(), appdef.NewQName(test.pkgName, test.basketIdent))
+				rec := appdef.ORecord(app.AppDef().Type, appdef.NewQName(test.pkgName, test.basketIdent))
 				require.NotNil(rec)
 				require.Equal(appdef.TypeKind_ORecord, rec.Kind())
 
@@ -448,7 +448,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 					require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), c.QName())
 
 					t.Run("III. test second level nested type (good)", func(t *testing.T) {
-						rec := appdef.ORecord(app.AppDef(), appdef.NewQName(test.pkgName, test.goodIdent))
+						rec := appdef.ORecord(app.AppDef().Type, appdef.NewQName(test.pkgName, test.goodIdent))
 						require.NotNil(rec)
 						require.Equal(appdef.TypeKind_ORecord, rec.Kind())
 

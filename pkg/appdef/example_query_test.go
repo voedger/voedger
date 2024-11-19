@@ -43,7 +43,7 @@ func ExampleQueries() {
 	// how to enum queries
 	{
 		cnt := 0
-		for q := range appdef.Queries(app) {
+		for q := range appdef.Queries(app.Types) {
 			cnt++
 			fmt.Println(cnt, q)
 		}
@@ -52,7 +52,7 @@ func ExampleQueries() {
 
 	// how to inspect builded AppDef with query
 	{
-		qry := appdef.Query(app, qryName)
+		qry := appdef.Query(app.Type, qryName)
 		fmt.Println(qry, ":")
 		fmt.Println(" - parameter:", qry.Param())
 		fmt.Println(" - result   :", qry.Result())

@@ -439,7 +439,7 @@ func TestRecursiveRoleAncestors(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.role.String(), func(t *testing.T) {
-				roles := RecursiveRoleAncestors(appdef.Role(app, tt.role))
+				roles := RecursiveRoleAncestors(appdef.Role(app.Type, tt.role))
 				require.ElementsMatch(tt.result, roles)
 			})
 		}
