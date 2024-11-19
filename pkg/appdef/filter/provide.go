@@ -44,6 +44,12 @@ func AllTables() appdef.IFilter {
 	return makeTypesFilter(s[0], s[1:]...)
 }
 
+// AllFunctions returns a filter that matches all functions types, see appdef.TypeKind_Functions
+func AllFunctions() appdef.IFilter {
+	f := appdef.TypeKind_Functions.AsArray()
+	return makeTypesFilter(f[0], f[1:]...)
+}
+
 // Matches returns all types that match the filter.
 func Matches(f appdef.IFilter, types appdef.IterTypes) appdef.IterTypes {
 	return allMatches(f, types)

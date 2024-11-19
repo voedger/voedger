@@ -81,3 +81,35 @@ func ExampleAllTables() {
 	// - ODoc «test.doc» is matched: true
 	// - Object «test.object» is matched: true
 }
+
+func ExampleAllFunctions() {
+	fmt.Println("This example demonstrates how to work with the AllFunctions filter")
+
+	wsName := appdef.NewQName("test", "workspace")
+	doc, cmd, qry := appdef.NewQName("test", "doc"), appdef.NewQName("test", "command"), appdef.NewQName("test", "query")
+
+	app := func() appdef.IAppDef {
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+
+		wsb := adb.AddWorkspace(wsName)
+
+		_ = wsb.AddODoc(doc)
+		_ = wsb.AddCommand(cmd)
+		_ = wsb.AddQuery(qry)
+
+		return adb.MustBuild()
+	}()
+
+	ws := app.Workspace(wsName)
+
+	example(ws, filter.AllFunctions())
+
+	// Output:
+	// This example demonstrates how to work with the AllFunctions filter
+	//
+	// Testing filter Types [Query Command] in Workspace «test.workspace»
+	// - BuiltIn-Command «test.command» is matched: true
+	// - ODoc «test.doc» is matched: false
+	// - BuiltIn-Query «test.query» is matched: true
+}
