@@ -46,7 +46,7 @@ func Test_AppDef_AddWDoc(t *testing.T) {
 			typ := tested.Type(docName)
 			require.Equal(TypeKind_WDoc, typ.Kind())
 
-			doc := WDoc(tested, docName)
+			doc := WDoc(tested.Type, docName)
 			require.Equal(TypeKind_WDoc, doc.Kind())
 			require.Equal(typ.(IWDoc), doc)
 			require.NotPanics(func() { doc.isWDoc() })
@@ -62,7 +62,7 @@ func Test_AppDef_AddWDoc(t *testing.T) {
 				typ := app.Type(recName)
 				require.Equal(TypeKind_WRecord, typ.Kind())
 
-				rec := WRecord(tested, recName)
+				rec := WRecord(tested.Type, recName)
 				require.Equal(TypeKind_WRecord, rec.Kind())
 				require.Equal(typ.(IWRecord), rec)
 				require.NotPanics(func() { rec.isWRecord() })
@@ -78,14 +78,14 @@ func Test_AppDef_AddWDoc(t *testing.T) {
 
 		t.Run("should be ok to enumerate docs", func(t *testing.T) {
 			var docs []QName
-			for doc := range WDocs(tested) {
+			for doc := range WDocs(tested.Types) {
 				docs = append(docs, doc.QName())
 			}
 			require.Len(docs, 1)
 			require.Equal(docName, docs[0])
 			t.Run("should be ok to enumerate recs", func(t *testing.T) {
 				var recs []QName
-				for rec := range WRecords(tested) {
+				for rec := range WRecords(tested.Types) {
 					recs = append(recs, rec.QName())
 				}
 				require.Len(recs, 1)
@@ -95,8 +95,8 @@ func Test_AppDef_AddWDoc(t *testing.T) {
 
 		t.Run("should nil if not found", func(t *testing.T) {
 			unknown := NewQName("test", "unknown")
-			require.Nil(WDoc(tested, unknown))
-			require.Nil(WRecord(tested, unknown))
+			require.Nil(WDoc(tested.Type, unknown))
+			require.Nil(WRecord(tested.Type, unknown))
 		})
 	}
 
@@ -130,9 +130,9 @@ func Test_AppDef_AddWDocSingleton(t *testing.T) {
 		app = a
 	})
 
-	testWith := func(tested IFindType) {
+	testWith := func(tested FindType) {
 		t.Run("should be ok to find builded singleton", func(t *testing.T) {
-			typ := tested.Type(docName)
+			typ := tested(docName)
 			require.Equal(TypeKind_WDoc, typ.Kind())
 
 			doc := WDoc(tested, docName)
@@ -143,6 +143,6 @@ func Test_AppDef_AddWDocSingleton(t *testing.T) {
 		})
 	}
 
-	testWith(app)
-	testWith(app.Workspace(wsName))
+	testWith(app.Type)
+	testWith(app.Workspace(wsName).Type)
 }

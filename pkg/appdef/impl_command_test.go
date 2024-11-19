@@ -47,10 +47,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		})
 	})
 
-	require.NotNil(app)
-
 	testWith := func(tested IWithTypes) {
-
 		t.Run("should be ok to find builded command", func(t *testing.T) {
 			typ := tested.Type(cmdName)
 			require.Equal(TypeKind_Command, typ.Kind())
@@ -59,7 +56,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 			require.True(ok)
 			require.Equal(TypeKind_Command, c.Kind())
 
-			cmd := Command(tested, cmdName)
+			cmd := Command(tested.Type, cmdName)
 			require.Equal(TypeKind_Command, cmd.Kind())
 			require.Equal(cmdName.Entity(), cmd.Name())
 			require.Equal(c, cmd)
@@ -80,7 +77,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 		t.Run("should be ok to enum commands", func(t *testing.T) {
 			cnt := 0
-			for c := range Commands(tested) {
+			for c := range Commands(tested.Types) {
 				cnt++
 				switch cnt {
 				case 1:
@@ -94,7 +91,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 		t.Run("check nil returns", func(t *testing.T) {
 			unknown := NewQName("test", "unknown")
-			require.Nil(Command(tested, unknown))
+			require.Nil(Command(tested.Type, unknown))
 		})
 	}
 
@@ -155,7 +152,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 			cmd := wsb.AddCommand(cmdName)
 			require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_null) },
 				require.Is(ErrOutOfBoundsError))
-			require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_Count) },
+			require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_count) },
 				require.Is(ErrOutOfBoundsError))
 		})
 	})

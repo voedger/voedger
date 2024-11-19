@@ -54,7 +54,7 @@ func Test_AppDefFunctions(t *testing.T) {
 	testWith := func(tested IWithTypes) {
 		t.Run("should be ok to enumerate functions", func(t *testing.T) {
 			var names []QName
-			for f := range Functions(tested) {
+			for f := range Functions(tested.Types) {
 				require.Equal(wsName, f.Workspace().QName())
 				names = append(names, f.QName())
 			}
@@ -63,12 +63,12 @@ func Test_AppDefFunctions(t *testing.T) {
 		})
 
 		t.Run("should be ok to find function by name", func(t *testing.T) {
-			f := Function(tested, cmdName)
+			f := Function(tested.Type, cmdName)
 			require.NotNil(f)
 			require.Equal(cmdName, f.QName())
 		})
 
-		require.Nil(Function(tested, NewQName("test", "unknown")), "Should be nil if unknown")
+		require.Nil(Function(tested.Type, NewQName("test", "unknown")), "Should be nil if unknown")
 	}
 
 	testWith(app)

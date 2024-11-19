@@ -73,16 +73,31 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 			require.Equal(TypeKind_Object, typ.Kind())
 			obj, ok := typ.(IObject)
 			require.True(ok)
-			require.Equal(Object(app, objName), obj)
+
+			require.Equal(Object(app.Type, objName), obj)
+			require.Equal(Object(ws.Type, objName), obj)
+			require.Equal(Object(ws.LocalType, objName), obj)
+
 			require.Equal(ws, obj.Workspace())
 
-			require.Equal(NullType, ws.Type(NewQName("unknown", "type")), "must be NullType if unknown type")
+			t.Run("should find type from ancestor", func(t *testing.T) {
+				int32type := SysData(app.Type, DataKind_int32)
+				require.NotNil(int32type)
+				require.Equal(int32type, SysData(ws.Type, DataKind_int32))
+				require.Nil(SysData(ws.LocalType, DataKind_int32), "should be nil if not local type")
+			})
+
+			t.Run("should be NullType if unknown type", func(t *testing.T) {
+				unknown := NewQName("unknown", "object")
+				require.Equal(NullType, ws.Type(unknown))
+				require.Equal(NullType, ws.LocalType(unknown))
+			})
 		})
 
 		t.Run("should be ok to enum workspace types", func(t *testing.T) {
 			require.Equal(2, func() int {
 				cnt := 0
-				for typ := range ws.Types {
+				for typ := range ws.LocalTypes {
 					switch typ.QName() {
 					case descName, objName:
 					default:
@@ -142,7 +157,7 @@ func Test_AppDef_AlterWorkspace(t *testing.T) {
 		ws := app.Workspace(wsName)
 		require.NotNil(ws, "should be ok to find workspace in app")
 
-		require.NotNil(Object(ws, objName), "should be ok to find object in workspace")
+		require.NotNil(Object(ws.Type, objName), "should be ok to find object in workspace")
 	})
 }
 
@@ -246,7 +261,7 @@ func Test_AppDef_AddWorkspaceAbstract(t *testing.T) {
 		ws := app.Workspace(wsName)
 		require.True(ws.Abstract())
 
-		desc := CDoc(app, ws.Descriptor())
+		desc := CDoc(app.Type, ws.Descriptor())
 		require.True(desc.Abstract())
 	})
 
@@ -415,7 +430,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 			ws := app.Workspace(wsName(test.ws))
 			for o := 0; o < wsCount; o++ {
 				want := slices.Contains(test.objects, o)
-				obj := Object(ws, objName(o))
+				obj := Object(ws.Type, objName(o))
 				got := obj != nil
 				require.Equal(want, got, "unexpected %v.Object(%v) != nil result: want %v, got: %v", ws, objName(o), want, got)
 				if got {
@@ -568,12 +583,46 @@ func Test_WorkspaceUsage(t *testing.T) {
 		for idx, test := range tests {
 			ws := app.Workspace(wsName(idx))
 			for i := 0; i < wsCount; i++ {
-				obj := Object(ws, objName(i))
-				if slices.Contains(test.use, i) {
-					require.NotNil(obj, "should be ok to find object «%v» in %v", objName(i), ws)
-				} else {
-					require.Nil(obj, "object «%v» should be unknown in %v", objName(i), ws)
-				}
+				t.Run("should be ok to find", func(t *testing.T) {
+					obj := Object(ws.Type, objName(i))
+					if slices.Contains(test.use, i) {
+						require.NotNil(obj, "should be ok to find object «%v» in %v", objName(i), ws)
+					} else {
+						require.Nil(obj, "object «%v» should be unknown in %v", objName(i), ws)
+					}
+				})
+				t.Run("should be ok to enum", func(t *testing.T) {
+					wantNames := make([]QName, 0, len(test.use))
+					for _, u := range test.use {
+						wantNames = append(wantNames, objName(u))
+					}
+					cnt := 0
+					for obj := range Objects(ws.Types) {
+						require.Contains(wantNames, obj.QName(), "unexpected object in %v: %v", ws, obj)
+						cnt++
+					}
+					require.Len(wantNames, cnt, "unexpected count of objects in %v", ws)
+				})
+
+				t.Run("should be breakable types enumeration", func(t *testing.T) {
+					ws := app.Workspace(wsName(0))
+
+					breakAt := func(wsName QName) {
+						var typ IType
+						for t := range ws.Types {
+							if t.Workspace().QName() == wsName {
+								typ = t
+								break
+							}
+						}
+						require.NotNil(typ)
+						require.Equal(wsName, typ.Workspace().QName())
+					}
+
+					t.Run("from ancestor", func(t *testing.T) { breakAt(SysWorkspaceQName) })
+					t.Run("from local", func(t *testing.T) { breakAt(ws.QName()) })
+					t.Run("from used", func(t *testing.T) { breakAt(wsName(6)) })
+				})
 			}
 		}
 	})

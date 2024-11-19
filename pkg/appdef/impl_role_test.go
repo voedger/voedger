@@ -116,7 +116,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 			}
 
 			rolesCount := 0
-			for r := range Roles(tested) {
+			for r := range Roles(tested.Types) {
 				require.Equal(tt[rolesCount].name, r.QName())
 				wantACL := tt[rolesCount].wantACL
 				aclCount := 0
@@ -140,16 +140,16 @@ func Test_AppDef_AddRole(t *testing.T) {
 			r := tested.Type(workerRoleName)
 			require.Equal(TypeKind_Role, r.Kind())
 
-			role := Role(tested, workerRoleName)
+			role := Role(tested.Type, workerRoleName)
 			require.Equal(r.(IRole), role)
 			require.Equal(workerRoleName, role.QName())
 			require.Equal(wsName, role.Workspace().QName())
 
-			require.Nil(Role(tested, NewQName("test", "unknown")), "should be nil if not found")
+			require.Nil(Role(tested.Type, NewQName("test", "unknown")), "should be nil if not found")
 		})
 
 		t.Run("should be ok to get role inheritance", func(t *testing.T) {
-			roles := Role(tested, workerRoleName).AncRoles()
+			roles := Role(tested.Type, workerRoleName).AncRoles()
 			require.Equal([]QName{readerRoleName, writerRoleName}, roles)
 		})
 	}

@@ -271,7 +271,7 @@ func newPackageItem(
 		iWorkspace := appDef.Workspace(wsQName)
 		wsName = getName(iWorkspace)
 		wsPackage = iWorkspace.QName().Pkg()
-		wsDescriptorName = getName(appdef.CDoc(appDef, iWorkspace.Descriptor()))
+		wsDescriptorName = getName(appdef.CDoc(appDef.Type, iWorkspace.Descriptor()))
 	}
 
 	name := getName(obj)

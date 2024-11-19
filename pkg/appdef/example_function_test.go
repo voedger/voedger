@@ -47,7 +47,7 @@ func ExampleFunctions() {
 	// how to enum functions
 	{
 		cnt := 0
-		for f := range appdef.Functions(app) {
+		for f := range appdef.Functions(app.Types) {
 			cnt++
 			fmt.Println(cnt, f)
 		}
@@ -56,17 +56,17 @@ func ExampleFunctions() {
 
 	// how to find functions
 	{
-		cmd := appdef.Function(app, cmdName)
+		cmd := appdef.Function(app.Type, cmdName)
 		fmt.Println(cmd, ":")
 		fmt.Println(" - parameter:", cmd.Param())
 		fmt.Println(" - result   :", cmd.Result())
 
-		query := appdef.Function(app, queryName)
+		query := appdef.Function(app.Type, queryName)
 		fmt.Println(query, ":")
 		fmt.Println(" - parameter:", query.Param())
 		fmt.Println(" - result   :", query.Result())
 
-		fmt.Println("Search unknown:", appdef.Function(app, appdef.NewQName("test", "unknown")))
+		fmt.Println("Search unknown:", appdef.Function(app.Type, appdef.NewQName("test", "unknown")))
 	}
 
 	// Output:

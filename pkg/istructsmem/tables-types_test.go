@@ -375,7 +375,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			wsb := adb.AddWorkspace(testData.wsName)
 			newCDoc := wsb.AddCDoc(test.testCDoc)
 
-			oldCDoc := appdef.CDoc(rec1.appCfg.AppDef, test.testCDoc)
+			oldCDoc := appdef.CDoc(rec1.appCfg.AppDef.Type, test.testCDoc)
 			for _, f := range oldCDoc.Fields() {
 				if !f.IsSys() {
 					newCDoc.AddField(newFieldName(f.Name()), f.DataKind(), f.Required())

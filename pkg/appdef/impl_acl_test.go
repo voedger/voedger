@@ -315,7 +315,7 @@ func TestPolicyKind_String(t *testing.T) {
 		},
 		{
 			name: "4 —> `PolicyKind(4)`",
-			k:    PolicyKind_Count + 1,
+			k:    PolicyKind_count + 1,
 			want: `PolicyKind(4)`,
 		},
 	}

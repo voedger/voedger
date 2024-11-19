@@ -36,7 +36,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 	testWith := func(tested IWithTypes) {
 		t.Run("should be ok to enum rates", func(t *testing.T) {
 			cnt := 0
-			for r := range Rates(tested) {
+			for r := range Rates(tested.Types) {
 				cnt++
 				switch cnt {
 				case 1:
@@ -54,7 +54,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 
 		t.Run("should be ok to enum limits", func(t *testing.T) {
 			cnt := 0
-			for l := range Limits(app) {
+			for l := range Limits(tested.Types) {
 				cnt++
 				switch cnt {
 				case 1:
@@ -71,17 +71,17 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 		t.Run("should be ok to find rates and limits", func(t *testing.T) {
 			unknown := NewQName("test", "unknown")
 
-			rate := Rate(tested, rateName)
+			rate := Rate(tested.Type, rateName)
 			require.NotNil(rate)
 			require.Equal(rateName, rate.QName())
 
-			require.Nil(Rate(tested, unknown), "should be nil if unknown")
+			require.Nil(Rate(tested.Type, unknown), "should be nil if unknown")
 
-			limit := Limit(app, limitName)
+			limit := Limit(tested.Type, limitName)
 			require.NotNil(limit)
 			require.Equal(limitName, limit.QName())
 
-			require.Nil(Limit(app, unknown), "should be nil if unknown")
+			require.Nil(Limit(tested.Type, unknown), "should be nil if unknown")
 		})
 	}
 
@@ -101,7 +101,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 			return adb.MustBuild()
 		}()
 
-		r := Rate(app, rateName)
+		r := Rate(app.Type, rateName)
 		require.Equal(rateName, r.QName())
 		require.EqualValues(10, r.Count())
 		require.Equal(time.Hour, r.Period())
