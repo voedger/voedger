@@ -8,7 +8,8 @@ package appdef
 import (
 	"errors"
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 )
 
 // # Implements:
@@ -108,12 +109,8 @@ func (tt types) Type(name QName) IType {
 
 func (tt *types) Types(visit func(IType) bool) {
 	if len(tt.s) != len(tt.m) {
-		tt.s = make([]interface{}, 0, len(tt.m))
-		for _, t := range tt.m {
-			tt.s = append(tt.s, t)
-		}
-		sort.Slice(tt.s, func(i, j int) bool {
-			return tt.s[i].(IType).QName().String() < tt.s[j].(IType).QName().String()
+		tt.s = slices.SortedFunc(maps.Values(tt.m), func(i, j interface{}) int {
+			return CompareQName(i.(IType).QName(), j.(IType).QName())
 		})
 	}
 	for _, t := range tt.s {
