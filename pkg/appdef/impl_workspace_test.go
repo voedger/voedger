@@ -583,12 +583,46 @@ func Test_WorkspaceUsage(t *testing.T) {
 		for idx, test := range tests {
 			ws := app.Workspace(wsName(idx))
 			for i := 0; i < wsCount; i++ {
-				obj := Object(ws.Type, objName(i))
-				if slices.Contains(test.use, i) {
-					require.NotNil(obj, "should be ok to find object «%v» in %v", objName(i), ws)
-				} else {
-					require.Nil(obj, "object «%v» should be unknown in %v", objName(i), ws)
-				}
+				t.Run("should be ok to find", func(t *testing.T) {
+					obj := Object(ws.Type, objName(i))
+					if slices.Contains(test.use, i) {
+						require.NotNil(obj, "should be ok to find object «%v» in %v", objName(i), ws)
+					} else {
+						require.Nil(obj, "object «%v» should be unknown in %v", objName(i), ws)
+					}
+				})
+				t.Run("should be ok to enum", func(t *testing.T) {
+					wantNames := make([]QName, 0, len(test.use))
+					for _, u := range test.use {
+						wantNames = append(wantNames, objName(u))
+					}
+					cnt := 0
+					for obj := range Objects(ws.Types) {
+						require.Contains(wantNames, obj.QName(), "unexpected object in %v: %v", ws, obj)
+						cnt++
+					}
+					require.Len(wantNames, cnt, "unexpected count of objects in %v", ws)
+				})
+
+				t.Run("should be breakable types enumeration", func(t *testing.T) {
+					ws := app.Workspace(wsName(0))
+
+					breakAt := func(wsName QName) {
+						var typ IType
+						for t := range ws.Types {
+							if t.Workspace().QName() == wsName {
+								typ = t
+								break
+							}
+						}
+						require.NotNil(typ)
+						require.Equal(wsName, typ.Workspace().QName())
+					}
+
+					t.Run("from ancestor", func(t *testing.T) { breakAt(SysWorkspaceQName) })
+					t.Run("from local", func(t *testing.T) { breakAt(ws.QName()) })
+					t.Run("from used", func(t *testing.T) { breakAt(wsName(6)) })
+				})
 			}
 		}
 	})

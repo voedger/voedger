@@ -13,12 +13,10 @@ type workspace struct {
 	acl              []*aclRule
 	ancestors        map[QName]IWorkspace
 	ancestorsOrdered QNames
-	types            struct {
-		local, all *types
-	}
-	usedWS        map[QName]IWorkspace
-	usedWSOrdered QNames
-	desc          ICDoc
+	types            *types
+	usedWS           map[QName]IWorkspace
+	usedWSOrdered    QNames
+	desc             ICDoc
 }
 
 func newWorkspace(app *appDef, name QName) *workspace {
@@ -26,11 +24,10 @@ func newWorkspace(app *appDef, name QName) *workspace {
 		typ:              makeType(app, nil, name, TypeKind_Workspace),
 		ancestors:        make(map[QName]IWorkspace),
 		ancestorsOrdered: QNames{},
+		types:            newTypes(),
 		usedWS:           make(map[QName]IWorkspace),
 		usedWSOrdered:    QNames{},
 	}
-	ws.types.local = newTypes()
-
 	if name != SysWorkspaceQName {
 		ws.ancestors[SysWorkspaceQName] = app.Workspace(SysWorkspaceQName)
 		ws.ancestorsOrdered.Add(SysWorkspaceQName)
@@ -80,19 +77,85 @@ func (ws *workspace) Inherits(anc QName) bool {
 }
 
 func (ws *workspace) LocalType(name QName) IType {
-	return ws.types.local.Type(name)
+	return ws.types.Type(name)
 }
 
 func (ws *workspace) LocalTypes(visit func(IType) bool) {
-	ws.types.local.Types(visit)
+	ws.types.Types(visit)
 }
 
 func (ws *workspace) Type(name QName) IType {
-	return ws.allTypes().Type(name)
+
+	var (
+		findWS  func(*workspace) IType
+		chainWS map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
+	)
+
+	findWS = func(w *workspace) IType {
+		if chainWS[w.QName()] {
+			return NullType
+		}
+		chainWS[w.QName()] = true
+
+		if name == w.QName() {
+			return w
+		}
+
+		if t := w.types.Type(name); t != NullType {
+			return t
+		}
+
+		for _, a := range w.ancestors {
+			if t := findWS(a.(*workspace)); t != NullType {
+				return t
+			}
+		}
+		for _, u := range w.usedWS {
+			if t := findWS(u.(*workspace)); t != NullType {
+				return t
+			}
+		}
+
+		return NullType
+	}
+
+	return findWS(ws)
 }
 
 func (ws *workspace) Types(visit func(IType) bool) {
-	ws.allTypes().Types(visit)
+	var (
+		visitWS func(*workspace) bool
+		chainWS map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
+	)
+
+	visitWS = func(w *workspace) bool {
+		if chainWS[w.QName()] {
+			return true
+		}
+		chainWS[w.QName()] = true
+
+		for _, a := range w.ancestors {
+			if !visitWS(a.(*workspace)) {
+				return false
+			}
+		}
+
+		for t := range w.types.Types {
+			if !visit(t) {
+				return false
+			}
+		}
+
+		for _, u := range w.usedWS {
+			if !visitWS(u.(*workspace)) {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	visitWS(ws)
 }
 
 func (ws *workspace) UsedWorkspaces() []QName {
@@ -206,44 +269,11 @@ func (ws *workspace) appendType(t interface{}) {
 
 	// do not check the validity or uniqueness of the name; this was checked by `*application.appendType (t)`
 
-	ws.types.local.append(t)
-	ws.types.all = nil
-}
-
-// returns list of all types, include types from ancestor workspaces and used workspaces recursively
-func (ws *workspace) allTypes() *types {
-	if ws.types.all == nil {
-		ws.types.all = newTypes()
-
-		var (
-			append func(*workspace)
-			chain  map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
-		)
-
-		append = func(w *workspace) {
-			if chain[w.QName()] {
-				return
-			}
-			chain[w.QName()] = true
-			ws.types.all.append(w)
-			for t := range w.types.local.Types {
-				ws.types.all.append(t)
-			}
-			for _, a := range w.ancestors {
-				append(a.(*workspace))
-			}
-			for _, u := range w.usedWS {
-				append(u.(*workspace))
-			}
-		}
-
-		append(ws)
-	}
-	return ws.types.all
+	ws.types.append(t)
 }
 
 func (ws *workspace) grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) {
-	r := Role(ws.allTypes().Type, toRole)
+	r := Role(ws.Type, toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
 	}
@@ -251,7 +281,7 @@ func (ws *workspace) grant(ops []OperationKind, resources []QName, fields []Fiel
 }
 
 func (ws *workspace) grantAll(resources []QName, toRole QName, comment ...string) {
-	r := Role(ws.allTypes().Type, toRole)
+	r := Role(ws.Type, toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
 	}
@@ -259,7 +289,7 @@ func (ws *workspace) grantAll(resources []QName, toRole QName, comment ...string
 }
 
 func (ws *workspace) revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) {
-	r := Role(ws.allTypes().Type, fromRole)
+	r := Role(ws.Type, fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}
@@ -267,7 +297,7 @@ func (ws *workspace) revoke(ops []OperationKind, resources []QName, fields []Fie
 }
 
 func (ws *workspace) revokeAll(resources []QName, fromRole QName, comment ...string) {
-	r := Role(ws.allTypes().Type, fromRole)
+	r := Role(ws.Type, fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}
@@ -311,7 +341,7 @@ func (ws *workspace) setDescriptor(q QName) {
 		return
 	}
 
-	if ws.desc = CDoc(ws.types.local.Type, q); ws.desc == nil {
+	if ws.desc = CDoc(ws.types.Type, q); ws.desc == nil {
 		panic(ErrNotFound("CDoc «%v»", q))
 	}
 	if ws.desc.Abstract() {
