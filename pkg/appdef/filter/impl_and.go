@@ -40,26 +40,6 @@ func (f andFilter) Match(t appdef.IType) bool {
 	return true
 }
 
-func (f andFilter) Matches(tt appdef.IWithTypes) appdef.IWithTypes {
-	var r appdef.IWithTypes = copyResults(tt)
-
-	empty := func() bool {
-		for range r.Types {
-			return false
-		}
-		return true
-	}
-
-	for _, child := range f.children {
-		r = child.Matches(r)
-		if empty() {
-			break
-		}
-	}
-
-	return r
-}
-
 func (f andFilter) String() string {
 	s := fmt.Sprintf("filter %s(", f.Kind().TrimString())
 	for i, c := range f.And() {

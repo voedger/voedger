@@ -31,16 +31,6 @@ func (f notFilter) Match(t appdef.IType) bool {
 	return !f.Not().Match(t)
 }
 
-func (f notFilter) Matches(tt appdef.IWithTypes) appdef.IWithTypes {
-	r := makeResults()
-	for t := range tt.Types {
-		if !f.Not().Match(t) {
-			r.add(t)
-		}
-	}
-	return r
-}
-
 func (f notFilter) Not() appdef.IFilter { return f.f }
 
 func (f notFilter) String() string {

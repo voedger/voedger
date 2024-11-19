@@ -37,11 +37,9 @@ func ExampleQNames() {
 		fmt.Println()
 		fmt.Println("Testing", flt, "in", ws)
 
-		for doc := range appdef.ODocs(ws.Types) {
+		for doc := range ws.LocalTypes {
 			fmt.Println("-", doc, "is matched:", flt.Match(doc))
 		}
-
-		fmt.Println("List of all matched types from", ws, ":", flt.Matches(ws))
 	}
 
 	example(filter.QNames(doc1, doc2))
@@ -54,11 +52,9 @@ func ExampleQNames() {
 	// - ODoc «test.doc1» is matched: true
 	// - ODoc «test.doc2» is matched: true
 	// - ODoc «test.doc3» is matched: false
-	// List of all matched types from Workspace «test.workspace» : [ODoc «test.doc1», ODoc «test.doc2»]
 	//
 	// Testing filter QNames [test.unknown] in Workspace «test.workspace»
 	// - ODoc «test.doc1» is matched: false
 	// - ODoc «test.doc2» is matched: false
 	// - ODoc «test.doc3» is matched: false
-	// List of all matched types from Workspace «test.workspace» : []
 }

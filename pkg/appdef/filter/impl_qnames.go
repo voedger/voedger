@@ -33,16 +33,6 @@ func (f qNamesFilter) Match(t appdef.IType) bool {
 	return f.names.Contains(t.QName())
 }
 
-func (f qNamesFilter) Matches(tt appdef.IWithTypes) appdef.IWithTypes {
-	r := makeResults()
-	for _, n := range f.names {
-		if t := tt.Type(n); t.Kind() != appdef.TypeKind_null {
-			r.add(t)
-		}
-	}
-	return r
-}
-
 func (f qNamesFilter) QNames() appdef.QNames { return f.names }
 
 func (f qNamesFilter) String() string {

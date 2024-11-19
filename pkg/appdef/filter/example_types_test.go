@@ -37,11 +37,9 @@ func ExampleTypes() {
 		fmt.Println()
 		fmt.Println("Testing", flt, "in", ws)
 
-		for t := range ws.Types {
+		for t := range ws.LocalTypes {
 			fmt.Println("-", t, "is matched:", flt.Match(t))
 		}
-
-		fmt.Println("List of all matched types from", ws, ":", flt.Matches(ws))
 	}
 
 	example(filter.Types(appdef.TypeKind_ODoc, appdef.TypeKind_Object))
@@ -54,11 +52,9 @@ func ExampleTypes() {
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true
 	// - Object «test.object» is matched: true
-	// List of all matched types from Workspace «test.workspace» : [ODoc «test.doc», Object «test.object»]
 	//
 	// Testing filter Types [Query] in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: false
 	// - Object «test.object» is matched: false
-	// List of all matched types from Workspace «test.workspace» : []
 }

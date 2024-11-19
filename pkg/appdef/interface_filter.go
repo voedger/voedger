@@ -55,7 +55,4 @@ type IFilter interface {
 
 	// Returns is type matched by filter
 	Match(IType) bool
-
-	// Returns types, what matches by filter
-	Matches(IWithTypes) IWithTypes
 }

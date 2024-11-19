@@ -34,16 +34,6 @@ func (f typesFilter) Match(t appdef.IType) bool {
 	return f.types.Contains(t.Kind())
 }
 
-func (f typesFilter) Matches(tt appdef.IWithTypes) appdef.IWithTypes {
-	r := makeResults()
-	for t := range tt.Types {
-		if f.types.Contains(t.Kind()) {
-			r.add(t)
-		}
-	}
-	return r
-}
-
 func (f typesFilter) String() string {
 	return fmt.Sprintf("filter %s %v", f.Kind().TrimString(), f.Types())
 }

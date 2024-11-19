@@ -38,18 +38,6 @@ func (f orFilter) Match(t appdef.IType) bool {
 	return false
 }
 
-func (f orFilter) Matches(tt appdef.IWithTypes) appdef.IWithTypes {
-	r := makeResults()
-
-	for _, c := range f.children {
-		for t := range c.Matches(tt).Types {
-			r.add(t)
-		}
-	}
-
-	return r
-}
-
 func (f orFilter) Or() []appdef.IFilter { return f.children }
 
 func (f orFilter) String() string {

@@ -37,11 +37,9 @@ func ExampleNot() {
 		fmt.Println()
 		fmt.Println("Testing", flt, "in", ws)
 
-		for t := range ws.Types {
+		for t := range ws.LocalTypes {
 			fmt.Println("-", t, "is matched:", flt.Match(t))
 		}
-
-		fmt.Println("List of all matched types from", ws, ":", flt.Matches(ws))
 	}
 
 	example(filter.Not(filter.Types(appdef.TypeKind_Command)))
@@ -54,11 +52,9 @@ func ExampleNot() {
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true
 	// - Object «test.object» is matched: true
-	// List of all matched types from Workspace «test.workspace» : [ODoc «test.doc», Object «test.object»]
 	//
 	// Testing filter Not(filter QNames [test.doc test.object]) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: true
 	// - ODoc «test.doc» is matched: false
 	// - Object «test.object» is matched: false
-	// List of all matched types from Workspace «test.workspace» : [BuiltIn-Command «test.command»]
 }
