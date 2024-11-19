@@ -13,7 +13,8 @@ func QNames(name appdef.QName, names ...appdef.QName) appdef.IFilter {
 }
 
 // Tags is a filter that matches types by their tags.
-// DEPRECATED: not ready IType.Tags().
+//
+// Deprecated: not ready IType.Tags().
 func Tags(tag string, tags ...string) appdef.IFilter {
 	return makeTagsFilter(tag, tags...)
 }
