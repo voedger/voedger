@@ -25,7 +25,7 @@ func (filter) Tags() func(func(string) bool) { return func(func(string) bool) {}
 func (filter) Types() func(func(appdef.TypeKind) bool) { return func(func(appdef.TypeKind) bool) {} }
 
 // allMatches returns types that match the filter.
-func allMatches(f appdef.IFilter, types appdef.IterTypes) appdef.IterTypes {
+func allMatches(f appdef.IFilter, types appdef.SeqType) appdef.SeqType {
 	return func(visit func(appdef.IType) bool) {
 		for t := range types {
 			if f.Match(t) {

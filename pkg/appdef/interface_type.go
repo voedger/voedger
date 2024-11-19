@@ -178,7 +178,7 @@ type (
 	// Types iterator.
 	//
 	// Types are enumerated in alphabetical order of QNames.
-	IterTypes func(func(IType) bool)
+	SeqType func(func(IType) bool)
 )
 
 type ITypeBuilder interface {

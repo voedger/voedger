@@ -51,6 +51,6 @@ func AllFunctions() appdef.IFilter {
 }
 
 // Matches returns all types that match the filter.
-func Matches(f appdef.IFilter, types appdef.IterTypes) appdef.IterTypes {
+func Matches(f appdef.IFilter, types appdef.SeqType) appdef.SeqType {
 	return allMatches(f, types)
 }
