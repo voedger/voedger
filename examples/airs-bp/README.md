@@ -58,7 +58,7 @@ IMPORT SCHEMA 'github.com/untillpro/airs-scheme/bp3' AS untill;
 
 WORKSPACE RestaurantWS (
 
-	TABLE ProformaPrinted INHERITS ODoc (
+	TABLE ProformaPrinted INHERITS sys.ODoc (
 		Number int32 NOT NULL,
 		UserID ref(untill.untill_users) NOT NULL,
 		Timestamp int64 NOT NULL,
@@ -81,7 +81,7 @@ WORKSPACE RestaurantWS (
 		Number int32 NOT NULL
 	);
 
-	TABLE NextNumbers INHERITS CSingleton (
+	TABLE NextNumbers INHERITS sys.CSingleton (
 		NextPBillNumber int32
 	);
 
@@ -93,7 +93,7 @@ https://github.com/untillpro/airs-scheme/blob/master/bp3/schema.vsql
 
 ```sql
 
-TABLE bill INHERITS WDoc (
+TABLE bill INHERITS sys.WDoc (
 	close_datetime int64,
 	table_name varchar(50),
 	tableno int32 NOT NULL,
@@ -101,13 +101,13 @@ TABLE bill INHERITS WDoc (
 	table_part varchar(1) NOT NULL,
 )
 
-TABLE articles INHERITS CDoc (
+TABLE articles INHERITS sys.CDoc (
 	article_number int32,
 	name varchar(255),
     ...
 )
 
-TABLE untill_users INHERITS CDoc (
+TABLE untill_users INHERITS sys.CDoc (
 	name varchar(255),
 	mandates bytes(10),
 	user_void int32 NOT NULL,
@@ -118,7 +118,7 @@ TABLE untill_users INHERITS CDoc (
 )
 
 
-TABLE pbill INHERITS ODoc (
+TABLE pbill INHERITS sys.ODoc (
 	id_bill int64 NOT NULL,
 	id_untill_users ref(untill_users) NOT NULL,
 	number int32,
@@ -126,7 +126,7 @@ TABLE pbill INHERITS ODoc (
 }
 
 
-TABLE pbill_item INHERITS ORecord (
+TABLE pbill_item INHERITS sys.ORecord (
 	id_untill_users ref(untill_users) NOT NULL,
 	tableno int32 NOT NULL,
 	rowbeg int32 NOT NULL

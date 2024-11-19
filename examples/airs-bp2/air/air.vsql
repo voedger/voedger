@@ -11,7 +11,7 @@ WORKSPACE RestaurantWS (
     DESCRIPTOR RestaurantDescriptor();
     USE TABLE untill.*;
 
-	TABLE ProformaPrinted INHERITS ODoc (
+	TABLE ProformaPrinted INHERITS sys.ODoc (
 		Number int32 NOT NULL,
 		UserID ref(untill.untill_users) NOT NULL,
 		Timestamp int64 NOT NULL,
@@ -30,13 +30,13 @@ WORKSPACE RestaurantWS (
 		PRIMARY KEY ((Year), DayOfYear)
 	) AS RESULT OF FillPbillDates;
 
-	TABLE NextNumbers INHERITS WSingleton (
+	TABLE NextNumbers INHERITS sys.WSingleton (
 		NextPBillNumber int32
 	);
 
 	EXTENSION ENGINE BUILTIN (
         COMMAND Orders(untill.orders);
         COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
-	    PROJECTOR FillPbillDates AFTER EXECUTE ON Pbill INTENTS(View(PbillDates));
+	    PROJECTOR FillPbillDates AFTER EXECUTE ON Pbill INTENTS(sys.View(PbillDates));
 	);
 )
