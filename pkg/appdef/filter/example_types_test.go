@@ -33,17 +33,35 @@ func ExampleTypes() {
 
 	ws := app.Workspace(wsName)
 
-	example(ws, filter.Types(appdef.TypeKind_ODoc, appdef.TypeKind_Object))
-	example(ws, filter.Types(appdef.TypeKind_Query))
+	example := func(flt appdef.IFilter) {
+		fmt.Println()
+		fmt.Println("The", flt, "Types:")
+		for t := range flt.Types() {
+			fmt.Println("-", t)
+		}
+
+		fmt.Println("Testing", flt, "in", ws)
+		for t := range ws.LocalTypes {
+			fmt.Println("-", t, "is matched:", flt.Match(t))
+		}
+	}
+
+	example(filter.Types(appdef.TypeKind_ODoc, appdef.TypeKind_Object))
+	example(filter.Types(appdef.TypeKind_Query))
 
 	// Output:
 	// This example demonstrates how to work with the Types filter
 	//
+	// The filter Types [ODoc Object] Types:
+	// - TypeKind_ODoc
+	// - TypeKind_Object
 	// Testing filter Types [ODoc Object] in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true
 	// - Object «test.object» is matched: true
 	//
+	// The filter Types [Query] Types:
+	// - TypeKind_Query
 	// Testing filter Types [Query] in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: false
@@ -70,13 +88,15 @@ func ExampleAllTables() {
 	}()
 
 	ws := app.Workspace(wsName)
-
-	example(ws, filter.AllTables())
+	flt := filter.AllTables()
+	fmt.Println("Testing filter AllTables in", ws)
+	for t := range ws.LocalTypes {
+		fmt.Println("-", t, "is matched:", flt.Match(t))
+	}
 
 	// Output:
 	// This example demonstrates how to work with the AllTables filter
-	//
-	// Testing filter Types [GDoc CDoc ODoc WDoc GRecord CRecord ORecord WRecord Object] in Workspace «test.workspace»
+	// Testing filter AllTables in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true
 	// - Object «test.object» is matched: true
@@ -102,13 +122,15 @@ func ExampleAllFunctions() {
 	}()
 
 	ws := app.Workspace(wsName)
-
-	example(ws, filter.AllFunctions())
+	flt := filter.AllFunctions()
+	fmt.Println("Testing filter AllFunctions in", ws)
+	for t := range ws.LocalTypes {
+		fmt.Println("-", t, "is matched:", flt.Match(t))
+	}
 
 	// Output:
 	// This example demonstrates how to work with the AllFunctions filter
-	//
-	// Testing filter Types [Query Command] in Workspace «test.workspace»
+	// Testing filter AllFunctions in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: true
 	// - ODoc «test.doc» is matched: false
 	// - BuiltIn-Query «test.query» is matched: true

@@ -22,7 +22,7 @@ func (filter) QNames() func(func(appdef.QName) bool) { return func(func(appdef.Q
 
 func (filter) Tags() []string { return nil }
 
-func (filter) Types() appdef.TypeKindSet { return appdef.TypeKindSet{} }
+func (filter) Types() func(func(appdef.TypeKind) bool) { return func(func(appdef.TypeKind) bool) {} }
 
 // allMatches returns types that match the filter.
 func allMatches(f appdef.IFilter, types appdef.IterTypes) appdef.IterTypes {

@@ -24,7 +24,9 @@ func Test_filter(t *testing.T) {
 		require.Fail("filter.QNames() should be empty")
 	}
 	require.Empty(f.Tags(), "filter.Tags() should be empty")
-	require.Equal(appdef.TypeKindSet{}, f.Types(), "filter.Types() should be empty")
+	for range f.Types() {
+		require.Fail("filter.Types() should be empty")
+	}
 }
 
 func Test_allMatches(t *testing.T) {

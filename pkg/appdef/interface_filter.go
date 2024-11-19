@@ -29,13 +29,13 @@ type IFilter interface {
 
 	// switch members by kind
 
-	// Return sorted slice of QNames.
-	// If kind is not FilterKind_QNames, returns nil
+	// Return filtered QNames.
+	// If kind is not FilterKind_QNames, returns empty iterator
 	QNames() func(func(QName) bool)
 
-	// Return set of type kinds
-	// If kind is not FilterKind_Types, returns nil
-	Types() TypeKindSet
+	// Return filtered type kinds
+	// If kind is not FilterKind_Types, returns empty iterator
+	Types() func(func(TypeKind) bool)
 
 	// Return sorted slice of tags
 	// If kind is not FilterKind_Tags, returns nil
