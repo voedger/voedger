@@ -21,6 +21,7 @@ import (
 type tagsFilter struct {
 	filter
 	tags map[string]bool
+	s    []string
 }
 
 func makeTagsFilter(tag string, tags ...string) appdef.IFilter {
@@ -29,6 +30,7 @@ func makeTagsFilter(tag string, tags ...string) appdef.IFilter {
 	for _, t := range tags {
 		f.tags[t] = true
 	}
+	f.s = slices.Sorted(maps.Keys(f.tags))
 	return f
 }
 
@@ -41,9 +43,9 @@ func (f tagsFilter) Match(t appdef.IType) bool {
 }
 
 func (f tagsFilter) String() string {
-	return fmt.Sprintf("filter %s %v", f.Kind().TrimString(), f.Tags())
+	return fmt.Sprintf("filter %s %v", f.Kind().TrimString(), f.s)
 }
 
-func (f tagsFilter) Tags() []string {
-	return slices.Sorted(maps.Keys(f.tags))
+func (f tagsFilter) Tags() func(func(string) bool) {
+	return slices.Values(f.s)
 }

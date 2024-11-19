@@ -20,7 +20,7 @@ func (filter) Or() []appdef.IFilter { return nil }
 
 func (filter) QNames() func(func(appdef.QName) bool) { return func(func(appdef.QName) bool) {} }
 
-func (filter) Tags() []string { return nil }
+func (filter) Tags() func(func(string) bool) { return func(func(string) bool) {} }
 
 func (filter) Types() func(func(appdef.TypeKind) bool) { return func(func(appdef.TypeKind) bool) {} }
 

@@ -23,7 +23,9 @@ func Test_filter(t *testing.T) {
 	for range f.QNames() {
 		require.Fail("filter.QNames() should be empty")
 	}
-	require.Empty(f.Tags(), "filter.Tags() should be empty")
+	for range f.Tags() {
+		require.Fail("filter.Tags() should be empty")
+	}
 	for range f.Types() {
 		require.Fail("filter.Types() should be empty")
 	}

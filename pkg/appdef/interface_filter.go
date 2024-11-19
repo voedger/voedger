@@ -33,13 +33,13 @@ type IFilter interface {
 	// If kind is not FilterKind_QNames, returns empty iterator
 	QNames() func(func(QName) bool)
 
-	// Return filtered type kinds
+	// Return filtered type kinds.
 	// If kind is not FilterKind_Types, returns empty iterator
 	Types() func(func(TypeKind) bool)
 
-	// Return sorted slice of tags
-	// If kind is not FilterKind_Tags, returns nil
-	Tags() []string
+	// Return filtered tags.
+	// If kind is not FilterKind_Tags, returns empty iterator
+	Tags() func(func(string) bool)
 
 	// Return slice of conjunct sub-filters
 	// If kind is not FilterKind_And, returns nil
