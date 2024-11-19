@@ -5,7 +5,9 @@
 
 package appdef
 
-import "github.com/voedger/voedger/pkg/goutils/set"
+import (
+	"github.com/voedger/voedger/pkg/goutils/set"
+)
 
 // Types kinds enumeration
 type TypeKind uint8

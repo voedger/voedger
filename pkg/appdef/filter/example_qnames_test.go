@@ -33,17 +33,8 @@ func ExampleQNames() {
 
 	ws := app.Workspace(wsName)
 
-	example := func(flt appdef.IFilter) {
-		fmt.Println()
-		fmt.Println("Testing", flt, "in", ws)
-
-		for doc := range ws.LocalTypes {
-			fmt.Println("-", doc, "is matched:", flt.Match(doc))
-		}
-	}
-
-	example(filter.QNames(doc1, doc2))
-	example(filter.QNames(appdef.NewQName("test", "unknown")))
+	example(ws, filter.QNames(doc1, doc2))
+	example(ws, filter.QNames(appdef.NewQName("test", "unknown")))
 
 	// Output:
 	// This example demonstrates how to work with the QNames filter

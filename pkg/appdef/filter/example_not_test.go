@@ -33,17 +33,8 @@ func ExampleNot() {
 
 	ws := app.Workspace(wsName)
 
-	example := func(flt appdef.IFilter) {
-		fmt.Println()
-		fmt.Println("Testing", flt, "in", ws)
-
-		for t := range ws.LocalTypes {
-			fmt.Println("-", t, "is matched:", flt.Match(t))
-		}
-	}
-
-	example(filter.Not(filter.Types(appdef.TypeKind_Command)))
-	example(filter.Not(filter.QNames(doc, obj)))
+	example(ws, filter.Not(filter.Types(appdef.TypeKind_Command)))
+	example(ws, filter.Not(filter.QNames(doc, obj)))
 
 	// Output:
 	// This example demonstrates how to work with the Not filter

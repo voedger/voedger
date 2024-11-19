@@ -33,16 +33,7 @@ func ExampleTags() {
 
 	ws := app.Workspace(wsName)
 
-	example := func(flt appdef.IFilter) {
-		fmt.Println()
-		fmt.Println("Testing", flt, "in", ws)
-
-		for t := range ws.LocalTypes {
-			fmt.Println("-", t, "is matched:", flt.Match(t))
-		}
-	}
-
-	example(filter.Tags("tag1", "tag2"))
+	example(ws, filter.Tags("tag1", "tag2"))
 
 	// Output:
 	// This example demonstrates how to work with the Tags filter

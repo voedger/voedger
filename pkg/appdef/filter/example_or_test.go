@@ -33,17 +33,8 @@ func ExampleOr() {
 
 	ws := app.Workspace(wsName)
 
-	example := func(flt appdef.IFilter) {
-		fmt.Println()
-		fmt.Println("Testing", flt, "in", ws)
-
-		for t := range ws.LocalTypes {
-			fmt.Println("-", t, "is matched:", flt.Match(t))
-		}
-	}
-
-	example(filter.Or(filter.Types(appdef.TypeKind_ODoc), filter.QNames(obj)))
-	example(filter.Or(filter.QNames(appdef.NewQName("test", "other")), filter.Types(appdef.TypeKind_Command)))
+	example(ws, filter.Or(filter.Types(appdef.TypeKind_ODoc), filter.QNames(obj)))
+	example(ws, filter.Or(filter.QNames(appdef.NewQName("test", "other")), filter.Types(appdef.TypeKind_Command)))
 
 	// Output:
 	// This example demonstrates how to work with the Or filter

@@ -13,6 +13,7 @@ func QNames(name appdef.QName, names ...appdef.QName) appdef.IFilter {
 }
 
 // Tags is a filter that matches types by their tags.
+// DEPRECATED: not ready IType.Tags().
 func Tags(tag string, tags ...string) appdef.IFilter {
 	return makeTagsFilter(tag, tags...)
 }
@@ -35,4 +36,15 @@ func Or(f1, f2 appdef.IFilter, ff ...appdef.IFilter) appdef.IFilter {
 // Not returns a filter that invert matches for specified filter.
 func Not(f appdef.IFilter) appdef.IFilter {
 	return makeNotFilter(f)
+}
+
+// AllTables returns a filter that matches all structured types, see appdef.TypeKind_Structures
+func AllTables() appdef.IFilter {
+	s := appdef.TypeKind_Structures.AsArray()
+	return makeTypesFilter(s[0], s[1:]...)
+}
+
+// Matches returns all types that match the filter.
+func Matches(f appdef.IFilter, types appdef.IterTypes) appdef.IterTypes {
+	return allMatches(f, types)
 }

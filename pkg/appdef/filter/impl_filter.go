@@ -23,3 +23,16 @@ func (filter) QNames() appdef.QNames { return nil }
 func (filter) Tags() []string { return nil }
 
 func (filter) Types() appdef.TypeKindSet { return appdef.TypeKindSet{} }
+
+// allMatches returns types that match the filter.
+func allMatches(f appdef.IFilter, types appdef.IterTypes) appdef.IterTypes {
+	return func(visit func(appdef.IType) bool) {
+		for t := range types {
+			if f.Match(t) {
+				if !visit(t) {
+					return
+				}
+			}
+		}
+	}
+}

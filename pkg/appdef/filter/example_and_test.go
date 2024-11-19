@@ -12,6 +12,15 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
+func example(ws appdef.IWorkspace, flt appdef.IFilter) {
+	fmt.Println()
+	fmt.Println("Testing", flt, "in", ws)
+
+	for t := range ws.LocalTypes {
+		fmt.Println("-", t, "is matched:", flt.Match(t))
+	}
+}
+
 func ExampleAnd() {
 	fmt.Println("This example demonstrates how to work with the And filter")
 
@@ -33,17 +42,8 @@ func ExampleAnd() {
 
 	ws := app.Workspace(wsName)
 
-	example := func(flt appdef.IFilter) {
-		fmt.Println()
-		fmt.Println("Testing", flt, "in", ws)
-
-		for t := range ws.LocalTypes {
-			fmt.Println("-", t, "is matched:", flt.Match(t))
-		}
-	}
-
-	example(filter.And(filter.Types(appdef.TypeKind_ODoc), filter.QNames(doc)))
-	example(filter.And(filter.QNames(appdef.NewQName("test", "other")), filter.Types(appdef.TypeKind_Command)))
+	example(ws, filter.And(filter.Types(appdef.TypeKind_ODoc), filter.QNames(doc)))
+	example(ws, filter.And(filter.QNames(appdef.NewQName("test", "other")), filter.Types(appdef.TypeKind_Command)))
 
 	// Output:
 	// This example demonstrates how to work with the And filter
