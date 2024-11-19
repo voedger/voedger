@@ -20,8 +20,6 @@ func CDoc(f FindType, name QName) ICDoc {
 }
 
 // Returns iterator over CDocs.
-//
-// CDocs are visited in alphabetic order.
 func CDocs(types SeqType) func(func(ICDoc) bool) {
 	return TypesByKind[ICDoc](types, TypeKind_CDoc)
 }
@@ -34,8 +32,6 @@ func Command(f FindType, name QName) ICommand {
 }
 
 // Returns iterator over Commands.
-//
-// Command are visited in alphabetic order.
 func Commands(types SeqType) func(func(ICommand) bool) {
 	return TypesByKind[ICommand](types, TypeKind_Command)
 }
@@ -48,8 +44,6 @@ func CRecord(f FindType, name QName) ICRecord {
 }
 
 // Returns iterator over CRecords.
-//
-// CRecords are visited in alphabetic order.
 func CRecords(types SeqType) func(func(ICRecord) bool) {
 	return TypesByKind[ICRecord](types, TypeKind_CRecord)
 }
@@ -62,8 +56,6 @@ func Data(f FindType, name QName) IData {
 }
 
 // Returns iterator over Data types.
-//
-// Data types are visited in alphabetic order.
 func DataTypes(types SeqType) func(func(IData) bool) {
 	return TypesByKind[IData](types, TypeKind_Data)
 }
@@ -76,8 +68,6 @@ func Extension(f FindType, name QName) IExtension {
 }
 
 // Returns iterator over Extensions.
-//
-// Extensions are visited in alphabetic order.
 func Extensions(types SeqType) func(func(IExtension) bool) {
 	return TypesByKinds[IExtension](types, TypeKind_Extensions)
 }
@@ -90,8 +80,6 @@ func Function(f FindType, name QName) IFunction {
 }
 
 // Returns iterator over Functions.
-//
-// Functions are visited in alphabetic order.
 func Functions(types SeqType) func(func(IFunction) bool) {
 	return TypesByKinds[IFunction](types, TypeKind_Functions)
 }
@@ -104,8 +92,6 @@ func GDoc(f FindType, name QName) IGDoc {
 }
 
 // Returns iterator over GDocs.
-//
-// GDocs are visited in alphabetic order.
 func GDocs(types SeqType) func(func(IGDoc) bool) {
 	return TypesByKind[IGDoc](types, TypeKind_GDoc)
 }
@@ -118,8 +104,6 @@ func GRecord(f FindType, name QName) IGRecord {
 }
 
 // Returns iterator over GRecords.
-//
-// GRecords are visited in alphabetic order.
 func GRecords(types SeqType) func(func(IGRecord) bool) {
 	return TypesByKind[IGRecord](types, TypeKind_GRecord)
 }
@@ -132,8 +116,6 @@ func Job(f FindType, name QName) IJob {
 }
 
 // Returns iterator over Jobs.
-//
-// Jobs are visited in alphabetic order.
 func Jobs(types SeqType) func(func(IJob) bool) {
 	return TypesByKind[IJob](types, TypeKind_Job)
 }
@@ -146,8 +128,6 @@ func Limit(f FindType, name QName) ILimit {
 }
 
 // Returns iterator over Limits.
-//
-// Limits are visited in alphabetic order.
 func Limits(types SeqType) func(func(ILimit) bool) {
 	return TypesByKind[ILimit](types, TypeKind_Limit)
 }
@@ -160,8 +140,6 @@ func Object(f FindType, name QName) IObject {
 }
 
 // Returns iterator over Objects.
-//
-// Objects are visited in alphabetic order.
 func Objects(types SeqType) func(func(IObject) bool) {
 	return TypesByKind[IObject](types, TypeKind_Object)
 }
@@ -174,8 +152,6 @@ func ODoc(f FindType, name QName) IODoc {
 }
 
 // Returns iterator over ODocs.
-//
-// ODocs are visited in alphabetic order.
 func ODocs(types SeqType) func(func(IODoc) bool) {
 	return TypesByKind[IODoc](types, TypeKind_ODoc)
 }
@@ -188,8 +164,6 @@ func ORecord(f FindType, name QName) IORecord {
 }
 
 // Returns iterator over ORecords.
-//
-// ORecords are visited in alphabetic order.
 func ORecords(types SeqType) func(func(IORecord) bool) {
 	return TypesByKind[IORecord](types, TypeKind_ORecord)
 }
@@ -202,8 +176,6 @@ func Projector(f FindType, name QName) IProjector {
 }
 
 // Returns iterator over Projectors.
-//
-// Projectors are visited in alphabetic order.
 func Projectors(types SeqType) func(func(IProjector) bool) {
 	return TypesByKind[IProjector](types, TypeKind_Projector)
 }
@@ -216,8 +188,6 @@ func Query(f FindType, name QName) IQuery {
 }
 
 // Returns iterator over Queries.
-//
-// Queries are visited in alphabetic order.
 func Queries(types SeqType) func(func(IQuery) bool) {
 	return TypesByKind[IQuery](types, TypeKind_Query)
 }
@@ -230,8 +200,6 @@ func Rate(f FindType, name QName) IRate {
 }
 
 // Returns iterator over Rates.
-//
-// Rates are visited in alphabetic order.
 func Rates(types SeqType) func(func(IRate) bool) {
 	return TypesByKind[IRate](types, TypeKind_Rate)
 }
@@ -244,8 +212,6 @@ func Record(f FindType, name QName) IRecord {
 }
 
 // Returns iterator over Records.
-//
-// Records are visited in alphabetic order.
 func Records(types SeqType) func(func(IRecord) bool) {
 	return TypesByKinds[IRecord](types, TypeKind_Records)
 }
@@ -258,8 +224,6 @@ func Role(f FindType, name QName) IRole {
 }
 
 // Returns iterator over Roles.
-//
-// Roles are visited in alphabetic order.
 func Roles(types SeqType) func(func(IRole) bool) {
 	return TypesByKind[IRole](types, TypeKind_Role)
 }
@@ -275,8 +239,6 @@ func Singleton(f FindType, name QName) ISingleton {
 }
 
 // Returns iterator over Singletons.
-//
-// Singletons are visited in alphabetic order.
 func Singletons(types SeqType) func(func(ISingleton) bool) {
 	return func(visit func(ISingleton) bool) {
 		for s := range TypesByKinds[ISingleton](types, TypeKind_Singletons) {
@@ -297,8 +259,6 @@ func Structure(f FindType, name QName) IStructure {
 }
 
 // Returns iterator over Structures.
-//
-// Structures are visited in alphabetic order.
 func Structures(types SeqType) func(func(IStructure) bool) {
 	return TypesByKinds[IStructure](types, TypeKind_Structures)
 }
@@ -333,8 +293,6 @@ func TypeByNameAndKind[T IType](f FindType, name QName, kind TypeKind) (found T)
 }
 
 // Returns iterator over types by kind.
-//
-// Types are visited in alphabetic order.
 func TypesByKind[T IType](types SeqType, kind TypeKind) func(func(T) bool) {
 	return func(visit func(T) bool) {
 		for t := range types {
@@ -348,8 +306,6 @@ func TypesByKind[T IType](types SeqType, kind TypeKind) func(func(T) bool) {
 }
 
 // Returns iterator over types by kinds set.
-//
-// Types are visited in alphabetic order.
 func TypesByKinds[T IType](types SeqType, kinds TypeKindSet) func(func(T) bool) {
 	return func(visit func(T) bool) {
 		for t := range types {
@@ -370,8 +326,6 @@ func View(f FindType, name QName) IView {
 }
 
 // Returns iterator over Views.
-//
-// Views are visited in alphabetic order.
 func Views(types SeqType) func(func(IView) bool) {
 	return TypesByKind[IView](types, TypeKind_ViewRecord)
 }
@@ -384,8 +338,6 @@ func WDoc(f FindType, name QName) IWDoc {
 }
 
 // Returns iterator over WDocs.
-//
-// WDocs are visited in alphabetic order.
 func WDocs(types SeqType) func(func(IWDoc) bool) {
 	return TypesByKind[IWDoc](types, TypeKind_WDoc)
 }
@@ -398,8 +350,6 @@ func WRecord(f FindType, name QName) IWRecord {
 }
 
 // Returns iterator over WRecords.
-//
-// WRecords are visited in alphabetic order.
 func WRecords(types SeqType) func(func(IWRecord) bool) {
 	return TypesByKind[IWRecord](types, TypeKind_WRecord)
 }

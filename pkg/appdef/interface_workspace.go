@@ -10,8 +10,6 @@ type IWorkspace interface {
 	IType
 	IWithAbstract
 
-	IWithTypes
-
 	IWithACL
 
 	// Returns names of ancestors workspaces.
@@ -43,8 +41,18 @@ type IWorkspace interface {
 
 	// LocalTypes enumerates all types defined in the workspace.
 	//
-	// Types are enumerated in alphabetical order by QName.
+	// Types are enumerated in alphabetical order.
 	LocalTypes(func(IType) bool)
+
+	// Returns type by name. All ancestors and used workspaces are searched.
+	//
+	// If not found then empty type with TypeKind_null is returned
+	Type(QName) IType
+
+	// Enumerates types. All types from ancestors and used workspaces are visited.
+	//
+	// Visiting order is undefined.
+	Types(func(IType) bool)
 
 	// Returns names of used workspaces.
 	//
