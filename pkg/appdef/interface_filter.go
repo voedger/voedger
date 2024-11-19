@@ -31,7 +31,7 @@ type IFilter interface {
 
 	// Return sorted slice of QNames.
 	// If kind is not FilterKind_QNames, returns nil
-	QNames() QNames
+	QNames() func(func(QName) bool)
 
 	// Return set of type kinds
 	// If kind is not FilterKind_Types, returns nil

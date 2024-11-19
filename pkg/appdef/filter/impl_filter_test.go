@@ -20,7 +20,9 @@ func Test_filter(t *testing.T) {
 	require.Empty(f.And(), "filter.And() should be empty")
 	require.Nil(f.Not(), "filter.Not() should be nil")
 	require.Empty(f.Or(), "filter.Or() should be empty")
-	require.Empty(f.QNames(), "filter.QNames() should be empty")
+	for range f.QNames() {
+		require.Fail("filter.QNames() should be empty")
+	}
 	require.Empty(f.Tags(), "filter.Tags() should be empty")
 	require.Equal(appdef.TypeKindSet{}, f.Types(), "filter.Types() should be empty")
 }

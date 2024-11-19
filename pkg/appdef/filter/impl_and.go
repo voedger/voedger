@@ -32,7 +32,7 @@ func (f andFilter) And() []appdef.IFilter { return f.children }
 func (andFilter) Kind() appdef.FilterKind { return appdef.FilterKind_And }
 
 func (f andFilter) Match(t appdef.IType) bool {
-	for _, c := range f.children {
+	for _, c := range f.And() {
 		if !c.Match(t) {
 			return false
 		}

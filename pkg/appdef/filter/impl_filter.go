@@ -18,7 +18,7 @@ func (filter) Not() appdef.IFilter { return nil }
 
 func (filter) Or() []appdef.IFilter { return nil }
 
-func (filter) QNames() appdef.QNames { return nil }
+func (filter) QNames() func(func(appdef.QName) bool) { return func(func(appdef.QName) bool) {} }
 
 func (filter) Tags() []string { return nil }
 

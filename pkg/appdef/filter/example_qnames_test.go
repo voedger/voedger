@@ -33,17 +33,35 @@ func ExampleQNames() {
 
 	ws := app.Workspace(wsName)
 
-	example(ws, filter.QNames(doc1, doc2))
-	example(ws, filter.QNames(appdef.NewQName("test", "unknown")))
+	example := func(flt appdef.IFilter) {
+		fmt.Println()
+		fmt.Println("The", flt, "QNames:")
+		for n := range flt.QNames() {
+			fmt.Println("-", n)
+		}
+
+		fmt.Println("Testing", flt, "in", ws)
+		for t := range ws.LocalTypes {
+			fmt.Println("-", t, "is matched:", flt.Match(t))
+		}
+	}
+
+	example(filter.QNames(doc1, doc2))
+	example(filter.QNames(appdef.NewQName("test", "unknown")))
 
 	// Output:
 	// This example demonstrates how to work with the QNames filter
 	//
+	// The filter QNames [test.doc1 test.doc2] QNames:
+	// - test.doc1
+	// - test.doc2
 	// Testing filter QNames [test.doc1 test.doc2] in Workspace «test.workspace»
 	// - ODoc «test.doc1» is matched: true
 	// - ODoc «test.doc2» is matched: true
 	// - ODoc «test.doc3» is matched: false
 	//
+	// The filter QNames [test.unknown] QNames:
+	// - test.unknown
 	// Testing filter QNames [test.unknown] in Workspace «test.workspace»
 	// - ODoc «test.doc1» is matched: false
 	// - ODoc «test.doc2» is matched: false

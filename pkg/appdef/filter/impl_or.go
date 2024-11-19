@@ -30,7 +30,7 @@ func makeOrFilter(f1, f2 appdef.IFilter, ff ...appdef.IFilter) appdef.IFilter {
 func (orFilter) Kind() appdef.FilterKind { return appdef.FilterKind_Or }
 
 func (f orFilter) Match(t appdef.IType) bool {
-	for _, c := range f.children {
+	for _, c := range f.Or() {
 		if c.Match(t) {
 			return true
 		}
