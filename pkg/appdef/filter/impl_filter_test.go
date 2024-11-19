@@ -17,9 +17,13 @@ import (
 func Test_filter(t *testing.T) {
 	require := require.New(t)
 	f := filter{}
-	require.Empty(f.And(), "filter.And() should be empty")
+	for range f.And() {
+		require.Fail("filter.And() should be empty")
+	}
 	require.Nil(f.Not(), "filter.Not() should be nil")
-	require.Empty(f.Or(), "filter.Or() should be empty")
+	for range f.Or() {
+		require.Fail("filter.Or() should be empty")
+	}
 	for range f.QNames() {
 		require.Fail("filter.QNames() should be empty")
 	}

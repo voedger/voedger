@@ -41,13 +41,13 @@ type IFilter interface {
 	// If kind is not FilterKind_Tags, returns empty iterator
 	Tags() func(func(string) bool)
 
-	// Return slice of conjunct sub-filters
-	// If kind is not FilterKind_And, returns nil
-	And() []IFilter
+	// Returns sub-filters to conjunct
+	// If kind is not FilterKind_And, returns empty iterator
+	And() func(func(IFilter) bool)
 
-	// Return slice of disjunct sub-filters
-	// If kind is not FilterKind_Or, returns nil
-	Or() []IFilter
+	// Returns sub-filters to disjunct
+	// If kind is not FilterKind_Or, returns empty iterator
+	Or() func(func(IFilter) bool)
 
 	// Return negative sub-filter
 	// If kind is not FilterKind_Not, returns nil

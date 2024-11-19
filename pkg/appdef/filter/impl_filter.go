@@ -12,11 +12,11 @@ import (
 // abstract filter.
 type filter struct{}
 
-func (filter) And() []appdef.IFilter { return nil }
+func (filter) And() func(func(appdef.IFilter) bool) { return func(func(appdef.IFilter) bool) {} }
 
 func (filter) Not() appdef.IFilter { return nil }
 
-func (filter) Or() []appdef.IFilter { return nil }
+func (filter) Or() func(func(appdef.IFilter) bool) { return func(func(appdef.IFilter) bool) {} }
 
 func (filter) QNames() func(func(appdef.QName) bool) { return func(func(appdef.QName) bool) {} }
 

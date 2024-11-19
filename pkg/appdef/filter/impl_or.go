@@ -7,6 +7,7 @@ package filter
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -30,7 +31,7 @@ func makeOrFilter(f1, f2 appdef.IFilter, ff ...appdef.IFilter) appdef.IFilter {
 func (orFilter) Kind() appdef.FilterKind { return appdef.FilterKind_Or }
 
 func (f orFilter) Match(t appdef.IType) bool {
-	for _, c := range f.Or() {
+	for c := range f.Or() {
 		if c.Match(t) {
 			return true
 		}
@@ -38,11 +39,11 @@ func (f orFilter) Match(t appdef.IType) bool {
 	return false
 }
 
-func (f orFilter) Or() []appdef.IFilter { return f.children }
+func (f orFilter) Or() func(func(appdef.IFilter) bool) { return slices.Values(f.children) }
 
 func (f orFilter) String() string {
 	s := fmt.Sprintf("filter %s(", f.Kind().TrimString())
-	for i, c := range f.Or() {
+	for i, c := range f.children {
 		if i > 0 {
 			s += ", "
 		}
