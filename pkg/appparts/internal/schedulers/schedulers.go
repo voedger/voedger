@@ -55,7 +55,7 @@ func (ps *PartitionSchedulers) Deploy(vvmCtx context.Context, appDef appdef.IApp
 				go func(rt *runtime) {
 					rt.cancel()
 					for rt.state.Load() >= 0 {
-						time.Sleep(time.Nanosecond) // wait until scheduler is finished
+						time.Sleep(time.Millisecond) // wait until scheduler is finished
 					}
 					stopWG.Done()
 				}(rt)
@@ -99,7 +99,7 @@ func (ps *PartitionSchedulers) Deploy(vvmCtx context.Context, appDef appdef.IApp
 				}(appWSNumber, appWSID)
 
 				for rt.state.Load() == 0 {
-					time.Sleep(time.Nanosecond) // wait until actualizer go-routine is started
+					time.Sleep(time.Millisecond) // wait until actualizer go-routine is started
 				}
 			}
 			startWG.Done()
@@ -147,7 +147,7 @@ func (ps *PartitionSchedulers) Wait() {
 		if cnt == 0 {
 			break
 		}
-		time.Sleep(time.Nanosecond)
+		time.Sleep(time.Millisecond)
 	}
 }
 
