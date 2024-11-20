@@ -12,18 +12,21 @@ type workspace struct {
 	withAbstract
 	acl       []*aclRule
 	ancestors *workspaces
-	types     *types[IType]
-	usedWS    *workspaces
-	desc      ICDoc
+	types     struct {
+		local *types[IType]
+		all   *types[IType]
+	}
+	usedWS *workspaces
+	desc   ICDoc
 }
 
 func newWorkspace(app *appDef, name QName) *workspace {
 	ws := &workspace{
 		typ:       makeType(app, nil, name, TypeKind_Workspace),
 		ancestors: newWorkspaces(),
-		types:     newTypes[IType](),
 		usedWS:    newWorkspaces(),
 	}
+	ws.types.local = newTypes[IType]()
 	if name != SysWorkspaceQName {
 		ws.ancestors.add(app.Workspace(SysWorkspaceQName))
 	}
@@ -66,11 +69,11 @@ func (ws *workspace) Inherits(anc QName) bool {
 }
 
 func (ws *workspace) LocalType(name QName) IType {
-	return ws.types.find(name)
+	return ws.types.local.find(name)
 }
 
 func (ws *workspace) LocalTypes(visit func(IType) bool) {
-	ws.types.all(visit)
+	ws.types.local.all(visit)
 }
 
 func (ws *workspace) Type(name QName) IType {
@@ -258,45 +261,33 @@ func (ws *workspace) appendType(t IType) {
 
 	// do not check the validity or uniqueness of the name; this was checked by `*application.appendType (t)`
 
-	ws.types.add(t)
+	ws.types.local.add(t)
 }
 
 // should be called from appDef.build().
 func (ws *workspace) build() error {
+	ws.types.all = newTypes[IType]()
 
 	var (
-		visitWS func(IWorkspace) bool
-		chainWS map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
+		collect func(IWorkspace)
+		chain   map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
 	)
-
-	visitWS = func(w IWorkspace) bool {
-		if chainWS[w.QName()] {
-			return true
+	collect = func(w IWorkspace) {
+		if chain[w.QName()] {
+			return
 		}
-		chainWS[w.QName()] = true
-
+		chain[w.QName()] = true
 		for a := range w.Ancestors {
-			if !visitWS(a) {
-				return false
-			}
+			collect(a)
 		}
-
 		for t := range w.LocalTypes {
-			if !visit(t) {
-				return false
-			}
+			ws.types.all.add(t)
 		}
-
 		for u := range w.UsedWorkspaces {
-			if !visitWS(u) {
-				return false
-			}
+			collect(u)
 		}
-
-		return true
 	}
-
-	visitWS(ws)
+	collect(ws)
 	return nil
 }
 
@@ -367,7 +358,7 @@ func (ws *workspace) setDescriptor(q QName) {
 		return
 	}
 
-	if ws.desc = CDoc(ws.types.find, q); ws.desc == nil {
+	if ws.desc = CDoc(ws.LocalType, q); ws.desc == nil {
 		panic(ErrNotFound("CDoc «%v»", q))
 	}
 	if ws.desc.Abstract() {
