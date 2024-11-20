@@ -477,10 +477,6 @@ func (wb *workspaceBuilder) UseWorkspace(name QName, names ...QName) IWorkspaceB
 func (wb *workspaceBuilder) Workspace() IWorkspace { return wb.workspace }
 
 // List of workspaces.
-//
-// @ConcurrentAccess
 type workspaces = types[IWorkspace]
 
-func newWorkspaces() *workspaces {
-	return newTypes[IWorkspace]()
-}
+func newWorkspaces() *workspaces { return newTypes[IWorkspace]() }

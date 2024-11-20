@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"sync"
 )
 
 // # Implements:
@@ -81,10 +80,7 @@ type typeRef struct {
 }
 
 // List of types.
-//
-// @ConcurrentAccess
 type types[T IType] struct {
-	l sync.RWMutex
 	m map[QName]T
 	s []T
 }
@@ -97,52 +93,28 @@ func newTypes[T IType]() *types[T] {
 func (tt *types[T]) add(t T) {
 	name := t.QName()
 
-	tt.l.Lock()
 	tt.m[name] = t
 	tt.s = nil
-	tt.l.Unlock()
 }
 
 func (tt *types[T]) all(visit func(T) bool) {
-	tt.l.RLock()
-	ready := len(tt.s) == len(tt.m)
-	tt.l.RUnlock()
-
-	if !ready {
-		tt.l.Lock()
-		if len(tt.s) != len(tt.m) {
-			tt.s = slices.SortedFunc(maps.Values(tt.m), func(i, j T) int {
-				return CompareQName(i.QName(), j.QName())
-			})
-		}
-		tt.l.Unlock()
+	if len(tt.s) != len(tt.m) {
+		tt.s = slices.SortedFunc(maps.Values(tt.m), func(i, j T) int {
+			return CompareQName(i.QName(), j.QName())
+		})
 	}
-
-	tt.l.RLock()
-	for _, t := range tt.s {
-		if !visit(t) {
-			break
-		}
-	}
-	tt.l.RUnlock()
+	slices.Values(tt.s)(visit)
 }
 
 func (tt *types[T]) clear() {
-	tt.l.Lock()
 	tt.m = make(map[QName]T)
 	tt.s = nil
-	tt.l.Unlock()
 }
 
-func (tt *types[T]) find(name QName) IType {
-	tt.l.RLock()
-	t, ok := tt.m[name]
-	tt.l.RUnlock()
-
-	if ok {
+func (tt types[T]) find(name QName) IType {
+	if t, ok := tt.m[name]; ok {
 		return t
 	}
-
 	return NullType
 }
 
