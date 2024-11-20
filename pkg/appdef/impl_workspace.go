@@ -8,6 +8,7 @@ package appdef
 import (
 	"maps"
 	"slices"
+	"sync"
 )
 
 // # Implements:
@@ -484,7 +485,10 @@ func (wb *workspaceBuilder) UseWorkspace(name QName, names ...QName) IWorkspaceB
 func (wb *workspaceBuilder) Workspace() IWorkspace { return wb.workspace }
 
 // List of workspaces.
+//
+// @ConcurrentAccess
 type workspaces struct {
+	l sync.RWMutex
 	m map[QName]IWorkspace
 	s []IWorkspace
 }
@@ -494,19 +498,37 @@ func newWorkspaces() *workspaces {
 }
 
 func (ws *workspaces) add(w IWorkspace) {
-	ws.m[w.QName()] = w
+	name := w.QName()
+
+	ws.l.Lock()
+	ws.m[name] = w
+	ws.s = nil
+	ws.l.Unlock()
 }
 
 func (ws *workspaces) all(visit func(IWorkspace) bool) {
-	if len(ws.s) != len(ws.m) {
-		ws.s = slices.SortedFunc(maps.Values(ws.m), func(i, j IWorkspace) int {
-			return CompareQName(i.QName(), j.QName())
-		})
+	ws.l.RLock()
+	ready := len(ws.s) == len(ws.m)
+	ws.l.RUnlock()
+
+	if !ready {
+		ws.l.Lock()
+		if len(ws.s) != len(ws.m) {
+			ws.s = slices.SortedFunc(maps.Values(ws.m), func(i, j IWorkspace) int {
+				return CompareQName(i.QName(), j.QName())
+			})
+		}
+		ws.l.Unlock()
 	}
+
+	ws.l.RLock()
 	slices.Values(ws.s)(visit)
+	ws.l.RUnlock()
 }
 
 func (ws *workspaces) clear() {
+	ws.l.Lock()
 	ws.m = make(map[QName]IWorkspace)
 	ws.s = nil
+	ws.l.Unlock()
 }
