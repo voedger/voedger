@@ -47,7 +47,7 @@ func (pa *PartitionActualizers) Deploy(vvmCtx context.Context, appDef appdef.IAp
 			go func(rt *runtime) {
 				rt.cancel()
 				for rt.state.Load() >= 0 {
-					time.Sleep(time.Nanosecond) // wait until actualizer is finished
+					time.Sleep(time.Millisecond) // wait until actualizer is finished
 				}
 				stopWG.Done()
 			}(rt)
@@ -82,7 +82,7 @@ func (pa *PartitionActualizers) Deploy(vvmCtx context.Context, appDef appdef.IAp
 			}()
 
 			for rt.state.Load() == 0 {
-				time.Sleep(time.Nanosecond) // wait until actualizer go-routine is started
+				time.Sleep(time.Millisecond) // wait until actualizer go-routine is started
 			}
 			startWG.Done()
 		}()
@@ -120,7 +120,7 @@ func (pa *PartitionActualizers) Wait() {
 		if cnt == 0 {
 			break
 		}
-		time.Sleep(time.Nanosecond)
+		time.Sleep(time.Millisecond)
 	}
 }
 
