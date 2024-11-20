@@ -129,7 +129,7 @@ func (gts *generalTestState) putCudRows() {
 
 	for _, item := range gts.cudRows {
 		kvMap, err := parseKeyValues(item.keyValueList)
-		require.NoError(gts.t, err, errMsgFailedToParseKeyValues)
+		require.NoError(gts.t, err, msgFailedToParseKeyValues)
 
 		gts.PutEvent(
 			gts.commandWSID,
@@ -186,7 +186,7 @@ func (gts *generalTestState) requireIntent(r recordItem) {
 	}
 
 	m, err := parseKeyValues(r.keyValueList)
-	require.NoError(gts.t, err, errMsgFailedToParseKeyValues)
+	require.NoError(gts.t, err, msgFailedToParseKeyValues)
 
 	_, mapOfValues := splitKeysFromValues(r.entity, m)
 
@@ -263,7 +263,7 @@ func (gts *generalTestState) keyBuilder(r recordItem) istructs.IStateKeyBuilder 
 		kb.PutInt64(sys.Storage_Record_Field_ID, int64(r.id)) // nolint G115
 	case r.isView:
 		m, err := parseKeyValues(r.keyValueList)
-		require.NoError(gts.t, err, errMsgFailedToParseKeyValues)
+		require.NoError(gts.t, err, msgFailedToParseKeyValues)
 
 		mapOfKeys, _ := splitKeysFromValues(r.entity, m)
 
@@ -305,7 +305,7 @@ func (gts *generalTestState) putRecords() {
 		pkgAlias := gts.appDef.PackageLocalName(item.entity.PkgPath())
 
 		keyValueMap, err := parseKeyValues(item.keyValueList)
-		require.NoError(gts.t, err, errMsgFailedToParseKeyValues)
+		require.NoError(gts.t, err, msgFailedToParseKeyValues)
 
 		keyValueMap[appdef.SystemField_QName] = appdef.NewQName(pkgAlias, item.entity.Entity()).String()
 		keyValueMap[appdef.SystemField_ID] = item.id
@@ -321,7 +321,7 @@ func (gts *generalTestState) putRecords() {
 func (gts *generalTestState) putViewRecords() {
 	for _, item := range gts.viewRecords {
 		m, err := parseKeyValues(item.keyValueList)
-		require.NoError(gts.t, err, errMsgFailedToParseKeyValues)
+		require.NoError(gts.t, err, msgFailedToParseKeyValues)
 
 		mapOfKeys, mapOfValues := splitKeysFromValues(item.entity, m)
 
@@ -519,7 +519,7 @@ func (gts *generalTestState) buildAppDef(wsPkgPath, wsDescriptorName string) {
 func (cts *CommandTestState) ArgumentObject(id istructs.RecordID, keyValueList ...any) ICommandRunner {
 	keyValueMap, err := parseKeyValues(keyValueList)
 	if err != nil {
-		panic(fmt.Errorf("failed to parse key values: %w", err))
+		panic(fmt.Errorf(fmtMsgFailedToParseKeyValues, err))
 	}
 
 	for key, value := range keyValueMap {
@@ -672,7 +672,7 @@ func (pts *ProjectorTestState) EventCUD(fQName IFullQName, id istructs.RecordID,
 
 	keyValueMap, err := parseKeyValues(keyValueList)
 	if err != nil {
-		panic(fmt.Errorf("failed to parse key values: %w", err))
+		panic(fmt.Errorf(fmtMsgFailedToParseKeyValues, err))
 	}
 
 	pts.rawEvent.cuds = append(pts.rawEvent.cuds, &coreutils.TestObject{
@@ -925,7 +925,7 @@ func putToArgumentObjectTree(tree map[string]any, pathPart string, keyValueList 
 
 	newTree, err := parseKeyValues(keyValueList)
 	if err != nil {
-		panic(fmt.Errorf("failed to parse key values: %w", err))
+		panic(fmt.Errorf(fmtMsgFailedToParseKeyValues, err))
 	}
 
 	// add key value map to the end of tree node
@@ -963,7 +963,7 @@ func setArgumentObject(argumentObject *coreutils.TestObject, fQName IFullQName, 
 
 	keyValueMap, err := parseKeyValues(keyValueList)
 	if err != nil {
-		panic(fmt.Errorf("failed to parse key values: %w", err))
+		panic(fmt.Errorf(fmtMsgFailedToParseKeyValues, err))
 	}
 
 	for key, value := range keyValueMap {
