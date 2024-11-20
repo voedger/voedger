@@ -72,11 +72,11 @@ func (ws *workspace) Inherits(anc QName) bool {
 }
 
 func (ws *workspace) LocalType(name QName) IType {
-	return ws.types.Type(name)
+	return ws.types.find(name)
 }
 
 func (ws *workspace) LocalTypes(visit func(IType) bool) {
-	ws.types.Types(visit)
+	ws.types.all(visit)
 }
 
 func (ws *workspace) Type(name QName) IType {
@@ -96,7 +96,7 @@ func (ws *workspace) Type(name QName) IType {
 			return w
 		}
 
-		if t := w.types.Type(name); t != NullType {
+		if t := w.types.find(name); t != NullType {
 			return t
 		}
 
@@ -135,7 +135,7 @@ func (ws *workspace) Types(visit func(IType) bool) {
 			}
 		}
 
-		for t := range w.types.Types {
+		for t := range w.types.all {
 			if !visit(t) {
 				return false
 			}
@@ -259,12 +259,12 @@ func (ws *workspace) appendACL(p *aclRule) {
 	ws.app.appendACL(p)
 }
 
-func (ws *workspace) appendType(t interface{}) {
+func (ws *workspace) appendType(t IType) {
 	ws.app.appendType(t)
 
 	// do not check the validity or uniqueness of the name; this was checked by `*application.appendType (t)`
 
-	ws.types.append(t)
+	ws.types.add(t)
 }
 
 func (ws *workspace) grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) {
@@ -334,7 +334,7 @@ func (ws *workspace) setDescriptor(q QName) {
 		return
 	}
 
-	if ws.desc = CDoc(ws.types.Type, q); ws.desc == nil {
+	if ws.desc = CDoc(ws.types.find, q); ws.desc == nil {
 		panic(ErrNotFound("CDoc «%v»", q))
 	}
 	if ws.desc.Abstract() {

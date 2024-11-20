@@ -83,16 +83,16 @@ type typeRef struct {
 // List of types.
 type types struct {
 	l sync.RWMutex
-	m map[QName]interface{}
-	s []interface{}
+	m map[QName]IType
+	s []IType
 }
 
 // Creates and returns new types.
 func newTypes() *types {
-	return &types{m: make(map[QName]interface{})}
+	return &types{m: make(map[QName]IType)}
 }
 
-func (tt *types) append(typ interface{}) {
+func (tt *types) add(typ IType) {
 	name := typ.(IType).QName()
 
 	tt.l.Lock()
@@ -101,18 +101,7 @@ func (tt *types) append(typ interface{}) {
 	tt.l.Unlock()
 }
 
-func (tt *types) Type(name QName) IType {
-	tt.l.RLock()
-	t, ok := tt.m[name]
-	tt.l.RUnlock()
-
-	if ok {
-		return t.(IType)
-	}
-	return NullType
-}
-
-func (tt *types) Types(visit func(IType) bool) {
+func (tt *types) all(visit func(IType) bool) {
 	tt.l.RLock()
 	ready := len(tt.s) == len(tt.m)
 	tt.l.RUnlock()
@@ -120,8 +109,8 @@ func (tt *types) Types(visit func(IType) bool) {
 	if !ready {
 		tt.l.Lock()
 		if len(tt.s) != len(tt.m) {
-			tt.s = slices.SortedFunc(maps.Values(tt.m), func(i, j interface{}) int {
-				return CompareQName(i.(IType).QName(), j.(IType).QName())
+			tt.s = slices.SortedFunc(maps.Values(tt.m), func(i, j IType) int {
+				return CompareQName(i.QName(), j.QName())
 			})
 		}
 		tt.l.Unlock()
@@ -134,6 +123,17 @@ func (tt *types) Types(visit func(IType) bool) {
 		}
 	}
 	tt.l.RUnlock()
+}
+
+func (tt *types) find(name QName) IType {
+	tt.l.RLock()
+	t, ok := tt.m[name]
+	tt.l.RUnlock()
+
+	if ok {
+		return t.(IType)
+	}
+	return NullType
 }
 
 // Returns type by reference.

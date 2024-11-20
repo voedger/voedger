@@ -68,11 +68,11 @@ func (app *appDef) Type(name QName) IType {
 		return t
 	}
 
-	return app.types.Type(name)
+	return app.types.find(name)
 }
 
 func (app *appDef) Types(visit func(IType) bool) {
-	app.types.Types(visit)
+	app.types.all(visit)
 }
 
 func (app *appDef) Workspace(name QName) IWorkspace {
@@ -108,7 +108,7 @@ func (app *appDef) appendACL(p *aclRule) {
 	app.acl = append(app.acl, p)
 }
 
-func (app *appDef) appendType(t interface{}) {
+func (app *appDef) appendType(t IType) {
 	typ := t.(IType)
 	name := typ.QName()
 	if name == NullQName {
@@ -118,7 +118,7 @@ func (app *appDef) appendType(t interface{}) {
 		panic(ErrAlreadyExists("type «%v»", name))
 	}
 
-	app.types.append(t)
+	app.types.add(t)
 }
 
 func (app *appDef) build() (err error) {
