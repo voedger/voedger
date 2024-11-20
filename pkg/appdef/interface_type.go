@@ -157,18 +157,7 @@ type IType interface {
 	IsSystem() bool
 }
 
-// Interfaces describes the entity with types, such as application or workspace.
 type (
-	IWithTypes interface {
-		// Returns type by name.
-		//
-		// If not found then empty type with TypeKind_null is returned
-		Type(QName) IType
-
-		// Enumerates types
-		Types(func(IType) bool)
-	}
-
 	// Finds type by name.
 	//
 	// If not found then empty type with TypeKind_null is returned

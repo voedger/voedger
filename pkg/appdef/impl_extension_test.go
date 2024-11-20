@@ -67,7 +67,7 @@ func Test_AppDefExtensions(t *testing.T) {
 		require.NotNil(app)
 	})
 
-	testWith := func(tested IWithTypes) {
+	testWith := func(tested testedTypes) {
 		t.Run("should be ok to enumerate extensions", func(t *testing.T) {
 			var extNames []QName
 			for ex := range Extensions(tested.Types) {

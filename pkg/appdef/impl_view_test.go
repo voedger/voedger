@@ -97,7 +97,7 @@ func TestAddView(t *testing.T) {
 		app = a
 	})
 
-	testWith_1 := func(tested IWithTypes) {
+	testWith_1 := func(tested testedTypes) {
 		view := View(tested.Type, viewName)
 
 		t.Run("should be ok to read view", func(t *testing.T) {
@@ -315,7 +315,7 @@ func TestAddView(t *testing.T) {
 		app = a
 	})
 
-	testWith_2 := func(tested IWithTypes) {
+	testWith_2 := func(tested testedTypes) {
 		view := View(tested.Type, viewName)
 
 		require.Equal(3, view.Key().PartKey().FieldCount())

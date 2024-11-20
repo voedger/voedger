@@ -67,13 +67,13 @@ func (k OperationKind) TrimString() string {
 // Validates specified field names by types. Returns error if any field is not found.
 //
 // If types contains any substitution then all fields are allowed.
-func validateFieldNamesByTypes(tt IWithTypes, types []QName, fields []FieldName) (err error) {
+func validateFieldNamesByTypes(tt FindType, types []QName, fields []FieldName) (err error) {
 	names := QNamesFrom(types...)
 
 	allFields := map[FieldName]struct{}{}
 
 	for _, n := range names {
-		t := tt.Type(n)
+		t := tt(n)
 		switch t.Kind() {
 		case TypeKind_GRecord, TypeKind_GDoc,
 			TypeKind_CRecord, TypeKind_CDoc,
@@ -104,7 +104,7 @@ func validateFieldNamesByTypes(tt IWithTypes, types []QName, fields []FieldName)
 //   - If names contains unknown name then returns error
 //   - If names contains name of type that can not to be in ACL then returns error
 //   - If names contains names of mixed types then returns error.
-func validateACLResourceNames(tt IWithTypes, names ...QName) (QNames, error) {
+func validateACLResourceNames(ft FindType, names ...QName) (QNames, error) {
 	if len(names) == 0 {
 		return nil, ErrMissed("resource names")
 	}
@@ -113,7 +113,7 @@ func validateACLResourceNames(tt IWithTypes, names ...QName) (QNames, error) {
 	onType := TypeKind_null
 
 	for _, n := range nn {
-		t := tt.Type(n)
+		t := ft(n)
 		k := onType
 
 		switch t.Kind() {
@@ -138,7 +138,7 @@ func validateACLResourceNames(tt IWithTypes, names ...QName) (QNames, error) {
 			if onType == TypeKind_null {
 				onType = k
 			} else {
-				return nil, ErrIncompatible("incompatible resource types can not to be mixed in one ACL (%v and %v)", tt.Type(nn[0]), t)
+				return nil, ErrIncompatible("incompatible resource types can not to be mixed in one ACL (%v and %v)", ft(nn[0]), t)
 			}
 		}
 	}

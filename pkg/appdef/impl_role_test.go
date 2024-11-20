@@ -77,7 +77,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 		require.NotNil(app)
 	})
 
-	testWith := func(tested IWithTypes) {
+	testWith := func(tested testedTypes) {
 		t.Run("should be ok to enum roles", func(t *testing.T) {
 			type wantACL []struct {
 				policy PolicyKind

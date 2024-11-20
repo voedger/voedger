@@ -41,7 +41,7 @@ func Test_AppDef_AddODoc(t *testing.T) {
 		app = a
 	})
 
-	testWith := func(tested IWithTypes) {
+	testWith := func(tested testedTypes) {
 		t.Run("should be ok to find builded doc", func(t *testing.T) {
 			typ := tested.Type(docName)
 			require.Equal(TypeKind_ODoc, typ.Kind())

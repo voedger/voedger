@@ -33,7 +33,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 		app = adb.MustBuild()
 	})
 
-	testWith := func(tested IWithTypes) {
+	testWith := func(tested testedTypes) {
 		t.Run("should be ok to enum rates", func(t *testing.T) {
 			cnt := 0
 			for r := range Rates(tested.Types) {
