@@ -381,6 +381,7 @@ func TestTidyBasicUsage(t *testing.T) {
 	}
 	require := require.New(t)
 	logger.SetLogLevel(logger.LogLevelVerbose)
+	defer logger.SetLogLevel(logger.LogLevelInfo)
 
 	var err error
 	var tempDir string
