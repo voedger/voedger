@@ -24,6 +24,13 @@ import (
 	"github.com/voedger/voedger/pkg/sys"
 )
 
+const (
+	gitignoreFileContent = `*
+`
+	unknownType                  = "Unknown"
+	errInGeneratingOrmFileFormat = "error occurred while generating %s: %w"
+)
+
 //go:embed ormtemplates/*
 var ormTemplatesFS embed.FS
 var reservedWords = []string{"type"}
@@ -612,11 +619,11 @@ func getObjType(obj interface{}) string {
 		return "Query"
 	case appdef.IWorkspace:
 		return "WS"
+	case appdef.IProjector:
+		return getTypeKind(t.Kind())
 	case appdef.IObject:
 		return getTypeKind(t.Kind())
 	case appdef.IType:
-		return getTypeKind(t.Kind())
-	case appdef.IProjector:
 		return getTypeKind(t.Kind())
 	default:
 		return unknownType

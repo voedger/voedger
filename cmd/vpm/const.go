@@ -20,13 +20,6 @@ const (
 )
 
 const (
-	gitignoreFileContent = `*
-`
-	unknownType                  = "Unknown"
-	errInGeneratingOrmFileFormat = "error occurred while generating %s: %w"
-)
-
-const (
 	goModFileName                 = "go.mod"
 	goSumFileName                 = "go.sum"
 	packagesGenFileName           = "packages_gen.go"
