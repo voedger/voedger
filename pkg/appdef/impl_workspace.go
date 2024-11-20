@@ -10,27 +10,22 @@ package appdef
 type workspace struct {
 	typ
 	withAbstract
-	acl              []*aclRule
-	ancestors        map[QName]IWorkspace
-	ancestorsOrdered QNames
-	types            *types
-	usedWS           map[QName]IWorkspace
-	usedWSOrdered    QNames
-	desc             ICDoc
+	acl       []*aclRule
+	ancestors *workspaces
+	types     *types[IType]
+	usedWS    *workspaces
+	desc      ICDoc
 }
 
 func newWorkspace(app *appDef, name QName) *workspace {
 	ws := &workspace{
-		typ:              makeType(app, nil, name, TypeKind_Workspace),
-		ancestors:        make(map[QName]IWorkspace),
-		ancestorsOrdered: QNames{},
-		types:            newTypes(),
-		usedWS:           make(map[QName]IWorkspace),
-		usedWSOrdered:    QNames{},
+		typ:       makeType(app, nil, name, TypeKind_Workspace),
+		ancestors: newWorkspaces(),
+		types:     newTypes[IType](),
+		usedWS:    newWorkspaces(),
 	}
 	if name != SysWorkspaceQName {
-		ws.ancestors[SysWorkspaceQName] = app.Workspace(SysWorkspaceQName)
-		ws.ancestorsOrdered.Add(SysWorkspaceQName)
+		ws.ancestors.add(app.Workspace(SysWorkspaceQName))
 	}
 
 	app.appendType(ws)
@@ -45,14 +40,8 @@ func (ws workspace) ACL(cb func(IACLRule) bool) {
 	}
 }
 
-func (ws *workspace) Ancestors(recurse bool) []QName {
-	res := QNamesFrom(ws.ancestorsOrdered...)
-	if recurse {
-		for _, a := range ws.ancestors {
-			res.Add(a.Ancestors(true)...)
-		}
-	}
-	return res
+func (ws *workspace) Ancestors(visit func(IWorkspace) bool) {
+	ws.ancestors.all(visit)
 }
 
 func (ws *workspace) Descriptor() QName {
@@ -67,7 +56,7 @@ func (ws *workspace) Inherits(anc QName) bool {
 	case SysWorkspaceQName, ws.QName():
 		return true
 	default:
-		for _, a := range ws.ancestors {
+		for a := range ws.ancestors.all {
 			if a.Inherits(anc) {
 				return true
 			}
@@ -77,11 +66,11 @@ func (ws *workspace) Inherits(anc QName) bool {
 }
 
 func (ws *workspace) LocalType(name QName) IType {
-	return ws.types.Type(name)
+	return ws.types.find(name)
 }
 
 func (ws *workspace) LocalTypes(visit func(IType) bool) {
-	ws.types.Types(visit)
+	ws.types.all(visit)
 }
 
 func (ws *workspace) Type(name QName) IType {
@@ -101,16 +90,16 @@ func (ws *workspace) Type(name QName) IType {
 			return w
 		}
 
-		if t := w.types.Type(name); t != NullType {
+		if t := w.types.find(name); t != NullType {
 			return t
 		}
 
-		for _, a := range w.ancestors {
+		for a := range w.ancestors.all {
 			if t := findWS(a.(*workspace)); t != NullType {
 				return t
 			}
 		}
-		for _, u := range w.usedWS {
+		for u := range w.usedWS.all {
 			if t := findWS(u.(*workspace)); t != NullType {
 				return t
 			}
@@ -134,19 +123,19 @@ func (ws *workspace) Types(visit func(IType) bool) {
 		}
 		chainWS[w.QName()] = true
 
-		for _, a := range w.ancestors {
+		for a := range w.ancestors.all {
 			if !visitWS(a.(*workspace)) {
 				return false
 			}
 		}
 
-		for t := range w.types.Types {
+		for t := range w.types.all {
 			if !visit(t) {
 				return false
 			}
 		}
 
-		for _, u := range w.usedWS {
+		for u := range w.usedWS.all {
 			if !visitWS(u.(*workspace)) {
 				return false
 			}
@@ -158,8 +147,8 @@ func (ws *workspace) Types(visit func(IType) bool) {
 	visitWS(ws)
 }
 
-func (ws *workspace) UsedWorkspaces() []QName {
-	return QNamesFrom(ws.usedWSOrdered...)
+func (ws *workspace) UsedWorkspaces(visit func(IWorkspace) bool) {
+	ws.usedWS.all(visit)
 }
 
 func (ws *workspace) Validate() error {
@@ -264,12 +253,12 @@ func (ws *workspace) appendACL(p *aclRule) {
 	ws.app.appendACL(p)
 }
 
-func (ws *workspace) appendType(t interface{}) {
+func (ws *workspace) appendType(t IType) {
 	ws.app.appendType(t)
 
 	// do not check the validity or uniqueness of the name; this was checked by `*application.appendType (t)`
 
-	ws.types.append(t)
+	ws.types.add(t)
 }
 
 func (ws *workspace) grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) {
@@ -313,12 +302,10 @@ func (ws *workspace) setAncestors(name QName, names ...QName) {
 		if anc.Inherits(ws.QName()) {
 			panic(ErrUnsupported("Circular inheritance is not allowed. Workspace «%v» inherits from «%v»", n, ws))
 		}
-		ws.ancestors[n] = anc
-		ws.ancestorsOrdered.Add(n)
+		ws.ancestors.add(anc)
 	}
 
-	clear(ws.ancestors)
-	ws.ancestorsOrdered = QNames{}
+	ws.ancestors.clear()
 
 	add(name)
 	for _, n := range names {
@@ -341,7 +328,7 @@ func (ws *workspace) setDescriptor(q QName) {
 		return
 	}
 
-	if ws.desc = CDoc(ws.types.Type, q); ws.desc == nil {
+	if ws.desc = CDoc(ws.types.find, q); ws.desc == nil {
 		panic(ErrNotFound("CDoc «%v»", q))
 	}
 	if ws.desc.Abstract() {
@@ -357,11 +344,7 @@ func (ws *workspace) useWorkspace(name QName, names ...QName) {
 		if usedWS == nil {
 			panic(ErrNotFound("Workspace «%v»", n))
 		}
-		if _, ok := ws.usedWS[n]; ok {
-			panic(ErrAlreadyExists("%v already used by %v", usedWS, ws))
-		}
-		ws.usedWS[n] = usedWS
-		ws.usedWSOrdered.Add(n)
+		ws.usedWS.add(usedWS)
 	}
 
 	use(name)
@@ -494,3 +477,12 @@ func (wb *workspaceBuilder) UseWorkspace(name QName, names ...QName) IWorkspaceB
 }
 
 func (wb *workspaceBuilder) Workspace() IWorkspace { return wb.workspace }
+
+// List of workspaces.
+//
+// @ConcurrentAccess
+type workspaces = types[IWorkspace]
+
+func newWorkspaces() *workspaces {
+	return newTypes[IWorkspace]()
+}

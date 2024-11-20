@@ -80,5 +80,5 @@ func (l limit) Rate() IRate {
 }
 
 func (l limit) Validate() (err error) {
-	return validateLimitNames(l.app, l.on)
+	return validateLimitNames(l.app.Type, l.on)
 }

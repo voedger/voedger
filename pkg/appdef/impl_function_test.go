@@ -51,7 +51,7 @@ func Test_AppDefFunctions(t *testing.T) {
 		require.NotNil(app)
 	})
 
-	testWith := func(tested IWithTypes) {
+	testWith := func(tested testedTypes) {
 		t.Run("should be ok to enumerate functions", func(t *testing.T) {
 			var names []QName
 			for f := range Functions(tested.Types) {

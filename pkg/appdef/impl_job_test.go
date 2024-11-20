@@ -52,7 +52,7 @@ func Test_AppDef_AddJob(t *testing.T) {
 
 	require.NotNil(app)
 
-	testWith := func(tested IWithTypes) {
+	testWith := func(tested testedTypes) {
 
 		t.Run("should be ok to find builded job", func(t *testing.T) {
 			typ := tested.Type(jobName)

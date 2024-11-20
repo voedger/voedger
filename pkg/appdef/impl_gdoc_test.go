@@ -61,7 +61,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 	require.NotNil(app)
 
-	testWith := func(tested IWithTypes) {
+	testWith := func(tested testedTypes) {
 
 		t.Run("should be ok to find builded doc", func(t *testing.T) {
 			doc := GDoc(tested.Type, docName)

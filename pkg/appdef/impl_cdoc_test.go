@@ -41,7 +41,7 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 		app = a
 	})
 
-	testWith := func(tested IWithTypes) {
+	testWith := func(tested testedTypes) {
 		t.Run("should be ok to find builded doc", func(t *testing.T) {
 			typ := tested.Type(docName)
 			require.Equal(TypeKind_CDoc, typ.Kind())
@@ -129,7 +129,7 @@ func Test_AppDef_AddCDocSingleton(t *testing.T) {
 		app = a
 	})
 
-	testWith := func(tested IWithTypes) {
+	testWith := func(tested testedTypes) {
 		t.Run("should be ok to find builded singleton", func(t *testing.T) {
 			typ := tested.Type(stName)
 			require.Equal(TypeKind_CDoc, typ.Kind())
