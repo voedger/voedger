@@ -76,11 +76,11 @@ func (ws *workspace) LocalTypes(visit func(IType) bool) {
 func (ws *workspace) Type(name QName) IType {
 
 	var (
-		findWS  func(*workspace) IType
+		findWS  func(IWorkspace) IType
 		chainWS map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
 	)
 
-	findWS = func(w *workspace) IType {
+	findWS = func(w IWorkspace) IType {
 		if chainWS[w.QName()] {
 			return NullType
 		}
@@ -90,16 +90,16 @@ func (ws *workspace) Type(name QName) IType {
 			return w
 		}
 
-		if t := w.types.find(name); t != NullType {
+		if t := w.LocalType(name); t != NullType {
 			return t
 		}
 
-		for a := range w.ancestors.all {
+		for a := range w.Ancestors {
 			if t := findWS(a.(*workspace)); t != NullType {
 				return t
 			}
 		}
-		for u := range w.usedWS.all {
+		for u := range w.UsedWorkspaces {
 			if t := findWS(u.(*workspace)); t != NullType {
 				return t
 			}
@@ -113,30 +113,30 @@ func (ws *workspace) Type(name QName) IType {
 
 func (ws *workspace) Types(visit func(IType) bool) {
 	var (
-		visitWS func(*workspace) bool
+		visitWS func(IWorkspace) bool
 		chainWS map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
 	)
 
-	visitWS = func(w *workspace) bool {
+	visitWS = func(w IWorkspace) bool {
 		if chainWS[w.QName()] {
 			return true
 		}
 		chainWS[w.QName()] = true
 
-		for a := range w.ancestors.all {
-			if !visitWS(a.(*workspace)) {
+		for a := range w.Ancestors {
+			if !visitWS(a) {
 				return false
 			}
 		}
 
-		for t := range w.types.all {
+		for t := range w.LocalTypes {
 			if !visit(t) {
 				return false
 			}
 		}
 
-		for u := range w.usedWS.all {
-			if !visitWS(u.(*workspace)) {
+		for u := range w.UsedWorkspaces {
+			if !visitWS(u) {
 				return false
 			}
 		}

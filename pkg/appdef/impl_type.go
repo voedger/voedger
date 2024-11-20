@@ -81,6 +81,8 @@ type typeRef struct {
 }
 
 // List of types.
+//
+// @ConcurrentAccess
 type types[T IType] struct {
 	l sync.RWMutex
 	m map[QName]T
@@ -92,11 +94,11 @@ func newTypes[T IType]() *types[T] {
 	return &types[T]{m: make(map[QName]T)}
 }
 
-func (tt *types[T]) add(typ T) {
-	name := typ.QName()
+func (tt *types[T]) add(t T) {
+	name := t.QName()
 
 	tt.l.Lock()
-	tt.m[name] = typ
+	tt.m[name] = t
 	tt.s = nil
 	tt.l.Unlock()
 }
