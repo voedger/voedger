@@ -109,10 +109,9 @@ func (app *appDef) appendACL(p *aclRule) {
 }
 
 func (app *appDef) appendType(t IType) {
-	typ := t.(IType)
-	name := typ.QName()
+	name := t.QName()
 	if name == NullQName {
-		panic(ErrMissed("%s type name", typ.Kind().TrimString()))
+		panic(ErrMissed("%s type name", t.Kind().TrimString()))
 	}
 	if app.Type(name).Kind() != TypeKind_null {
 		panic(ErrAlreadyExists("type «%v»", name))
