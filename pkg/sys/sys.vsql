@@ -436,34 +436,23 @@ ABSTRACT WORKSPACE Workspace (
 		SYNC PROJECTOR ProjectorChildWorkspaceIdx AFTER INSERT ON (ChildWorkspace) INTENTS(sys.View(ChildWorkspaceIdx));
 	);
 
-	-- TAG WithoutAuthTag;
-	-- TAG AllowedForGuestTag;
-	-- TAG DenyForAllTag;
-	TAG ReadOnlyTag;
 	TAG AllowedToAuthenticatedTag;
 	TAG WorkspaceOwnerTableTag;
 	TAG WorkspaceOwnerFuncTag;
 	TAG AllowedToEveryoneTag;
 
-	-- naming windows-like
-	ROLE Everyone; -- assigned in any case regardless of whether the token is provided or not. Named like in Windows
+	ROLE Everyone; -- assigned in any case regardless of whether the token is provided or not
 	ROLE Anonymous;  -- assigned if the token is not provided
-	ROLE AuthenticatedUser; -- assigned if a valid token is provided. Named like in Windows
+	ROLE AuthenticatedUser; -- assigned if a valid token is provided
 	ROLE System; -- assigned -> everything is allowed, ACL checking skipped
 	ROLE ProfileOwner; -- assigned if the user or device works in its profile
 	ROLE WorkspaceDevice; -- assigned if the device MAY in a workspace that is owned by its profile
 	ROLE WorkspaceOwner; -- assigned if user works in a workspace that is owned by his profile
 	ROLE ClusterAdmin; -- TODO: not used for now. Going to allow exec c.cluster.DeployApp to this role
 
-	-- profile owner is workspace owner
-	GRANT WorkspaceOwner TO ProfileOwner; -- inherited
-	GRANT WorkspaceOwner TO WorkspaceDevice; -- inherited
+	GRANT WorkspaceOwner TO ProfileOwner;
+	GRANT WorkspaceOwner TO WorkspaceDevice;
 
-
-	-- WorkspaceOwnerTable
-	-- null auth policy
-	-- сделать только явное GRANT\REVOKE
-	-- область виимости тэга - ws
 	GRANT SELECT, INSERT, UPDATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO WorkspaceOwner;
 
 	GRANT SELECT ON TABLE ChildWorkspace TO WorkspaceOwner;
@@ -476,40 +465,6 @@ ABSTRACT WORKSPACE Workspace (
 
 	GRANT EXECUTE ON ALL QUERIES WITH TAG AllowedToAuthenticatedTag TO AuthenticatedUser;
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG AllowedToAuthenticatedTag TO AuthenticatedUser;
-
-	-- -- queries and commands
-	-- GRANT EXECUTE ON COMMAND UploadBLOBHelper TO WorkspaceOwner;
-	-- GRANT EXECUTE ON COMMAND DownloadBLOBHelper TO WorkspaceOwner;
-	-- GRANT EXECUTE ON QUERY DownloadBLOBAuthnz TO WorkspaceOwner;
-	-- GRANT EXECUTE ON COMMAND CUD TO WorkspaceOwner;
-	-- -- GRANT EXECUTE ON Init TO WorkspaceOwner;
-	-- GRANT EXECUTE ON QUERY Echo TO Everyone;
-	-- GRANT EXECUTE ON QUERY GRCount TO Everyone;
-	-- GRANT EXECUTE ON QUERY Modules TO Everyone;
-	-- GRANT EXECUTE ON COMMAND RenameQName TO WorkspaceOwner;
-	-- GRANT EXECUTE ON QUERY EnrichPrincipalToken TO WorkspaceOwner;
-	-- GRANT EXECUTE ON QUERY Collection TO WorkspaceOwner;
-	-- GRANT EXECUTE ON QUERY GetCDoc TO WorkspaceOwner;
-	-- GRANT EXECUTE ON QUERY State TO WorkspaceOwner;
-	-- GRANT EXECUTE ON COMMAND InitiateInvitationByEMail TO WorkspaceOwner;
-	-- GRANT EXECUTE ON COMMAND InitiateJoinWorkspace TO AuthenticatedUser;
-	-- GRANT EXECUTE ON COMMAND InitiateUpdateInviteRoles TO WorkspaceOwner;
-	-- GRANT EXECUTE ON COMMAND InitiateCancelAcceptedInvite TO WorkspaceOwner;
-	-- GRANT EXECUTE ON COMMAND InitiateLeaveWorkspace TO AuthenticatedUser;
-	-- GRANT EXECUTE ON COMMAND CancelSentInvite TO WorkspaceOwner;
-	-- GRANT EXECUTE ON COMMAND CreateJoinedWorkspace TO WorkspaceOwner;
-	-- GRANT EXECUTE ON COMMAND UpdateJoinedWorkspaceRoles TO WorkspaceOwner;
-	-- GRANT EXECUTE ON COMMAND DeactivateJoinedWorkspace TO WorkspaceOwner;
-	-- GRANT EXECUTE ON QUERY QueryChildWorkspaceByName TO WorkspaceOwner;
-	-- GRANT EXECUTE ON QUERY Journal TO WorkspaceOwner;
-	-- GRANT EXECUTE ON QUERY SqlQuery TO WorkspaceOwner;
-	-- GRANT EXECUTE ON COMMAND CreateWorkspaceID TO WorkspaceOwner;
-	-- GRANT EXECUTE ON COMMAND CreateWorkspace TO WorkspaceOwner;
-	-- GRANT EXECUTE ON COMMAND OnWorkspaceDeactivated TO WorkspaceOwner;
-	-- GRANT EXECUTE ON COMMAND OnJoinedWorkspaceDeactivated TO WorkspaceOwner;
-	-- GRANT EXECUTE ON COMMAND OnChildWorkspaceDeactivated TO WorkspaceOwner;
-	-- GRANT EXECUTE ON COMMAND InitiateDeactivateWorkspace TO WorkspaceOwner;
-	-- GRANT EXECUTE ON COMMAND InitChildWorkspace TO WorkspaceOwner;
 );
 
 ALTERABLE WORKSPACE AppWorkspaceWS (

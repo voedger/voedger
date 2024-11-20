@@ -543,11 +543,11 @@ ALTERABLE WORKSPACE test_wsWS (
 	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	-- all denied for all
-	TABLE TestDeniedCDoc INHERITS CDoc (
+	TABLE TestDeniedCDoc INHERITS sys.CDoc (
 		Fld1 int32
 	);
 
-	TABLE TestCDocWithDeniedFields INHERITS CDoc (
+	TABLE TestCDocWithDeniedFields INHERITS sys.CDoc (
 		Fld1 int32,
 		DeniedFld2 int32 -- denied field, no grants
 	);
@@ -581,13 +581,15 @@ ALTERABLE WORKSPACE test_wsWS (
 	TAG WorkspaceOwnerTableTag;
 	TAG WorkspaceOwnerFuncTag;
 
+	GRANT SELECT, UPDATE ON TABLE test_ws TO sys.WorkspaceOwner;
+
 	GRANT EXECUTE ON QUERY sys.Collection TO SpecialAPITokenRole;
 	GRANT SELECT ON TABLE articles TO SpecialAPITokenRole;
 
-	GRANT SELECT, INSERT, UPDATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO WorkspaceOwner;
+	GRANT SELECT, INSERT, UPDATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO sys.WorkspaceOwner;
 
-	GRANT EXECUTE ON ALL QUERIES WITH TAG WorkspaceOwnerFuncTag TO WorkspaceOwner;
-	GRANT EXECUTE ON ALL COMMANDS WITH TAG WorkspaceOwnerFuncTag TO WorkspaceOwner;
+	GRANT EXECUTE ON ALL QUERIES WITH TAG WorkspaceOwnerFuncTag TO sys.WorkspaceOwner;
+	GRANT EXECUTE ON ALL COMMANDS WITH TAG WorkspaceOwnerFuncTag TO sys.WorkspaceOwner;
 
-	GRANT SELECT(Fld1) ON TABLE TestCDocWithDeniedFields TO WorkspaceOwner;
+	GRANT SELECT(Fld1) ON TABLE TestCDocWithDeniedFields TO sys.WorkspaceOwner;
 );

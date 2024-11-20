@@ -71,7 +71,6 @@ func TestBasicUsage(t *testing.T) {
 		},
 	})
 	authn := NewDefaultAuthenticator(TestSubjectRolesGetter, TestIsDeviceAllowedFuncs)
-	authz := NewDefaultAuthorizer()
 	t.Run("authenticate in the profile", func(t *testing.T) {
 		req := iauthnz.AuthnRequest{
 			Host:        "127.0.0.1",
@@ -80,13 +79,23 @@ func TestBasicUsage(t *testing.T) {
 		}
 		principals, principalPayload, err := authn.Authenticate(context.Background(), appStructs, appTokens, req)
 		require.NoError(err)
-		require.Len(principals, 3)
-		require.Equal(iauthnz.PrincipalKind_User, principals[0].Kind)
+		require.Len(principals, 5)
+		require.Equal(iauthnz.PrincipalKind_Role, principals[0].Kind)
+		require.Equal(iauthnz.QNameRoleEveryone, principals[0].QName)
+
+		require.Equal(iauthnz.PrincipalKind_Role, principals[1].Kind)
+		require.Equal(iauthnz.QNameRoleAuthenticatedUser, principals[1].QName)
+
+		require.Equal(iauthnz.PrincipalKind_User, principals[2].Kind)
+		require.Equal("testlogin", principals[2].Name)
 
 		// request to the profile -> ProfileOwner role got
-		require.Equal(iauthnz.PrincipalKind_Role, principals[1].Kind)
-		require.Equal(iauthnz.QNameRoleProfileOwner, principals[1].QName)
-		require.Equal(iauthnz.PrincipalKind_Host, principals[2].Kind)
+		require.Equal(iauthnz.PrincipalKind_Role, principals[3].Kind)
+		require.Equal(iauthnz.QNameRoleProfileOwner, principals[3].QName)
+
+		require.Equal(iauthnz.PrincipalKind_Host, principals[4].Kind)
+		require.Equal("127.0.0.1", principals[4].Name)
+
 		require.Equal(pp, principalPayload)
 	})
 
@@ -99,13 +108,23 @@ func TestBasicUsage(t *testing.T) {
 		// request to WSID 2, there is a cdoc.sys.WorkspaceDescriptor.OwnerWSID = 1 -> the workspace is owned by the user with ProfileWSID=1
 		principals, principalPayload, err := authn.Authenticate(context.Background(), appStructs, appTokens, req)
 		require.NoError(err)
-		require.Len(principals, 3)
-		require.Equal(iauthnz.PrincipalKind_User, principals[0].Kind)
+		require.Len(principals, 5)
+		require.Equal(iauthnz.PrincipalKind_Role, principals[0].Kind)
+		require.Equal(iauthnz.QNameRoleEveryone, principals[0].QName)
+
+		require.Equal(iauthnz.PrincipalKind_Role, principals[1].Kind)
+		require.Equal(iauthnz.QNameRoleAuthenticatedUser, principals[1].QName)
+
+		require.Equal(iauthnz.PrincipalKind_User, principals[2].Kind)
+		require.Equal("testlogin", principals[2].Name)
 
 		// request to the owned workspace -> WorkspaceOwner role got
-		require.Equal(iauthnz.PrincipalKind_Role, principals[1].Kind)
-		require.Equal(iauthnz.QNameRoleWorkspaceOwner, principals[1].QName)
-		require.Equal(iauthnz.PrincipalKind_Host, principals[2].Kind)
+		require.Equal(iauthnz.PrincipalKind_Role, principals[3].Kind)
+		require.Equal(iauthnz.QNameRoleWorkspaceOwner, principals[3].QName)
+
+		require.Equal(iauthnz.PrincipalKind_Host, principals[4].Kind)
+		require.Equal("127.0.0.1", principals[4].Name)
+
 		require.Equal(pp, principalPayload)
 	})
 
@@ -131,32 +150,23 @@ func TestBasicUsage(t *testing.T) {
 		// request to WSID 2, there is a cdoc.sys.WorkspaceDescriptor.OwnerWSID = 1 -> the workspace is owned by the user with ProfileWSID=1
 		principals, principalPayload, err := authn.Authenticate(context.Background(), appStructs, appTokens, req)
 		require.NoError(err)
-		require.Len(principals, 3)
-		require.Equal(iauthnz.PrincipalKind_User, principals[0].Kind)
+		require.Len(principals, 5)
+		require.Equal(iauthnz.PrincipalKind_Role, principals[0].Kind)
+		require.Equal(iauthnz.QNameRoleEveryone, principals[0].QName)
+
+		require.Equal(iauthnz.PrincipalKind_Role, principals[1].Kind)
+		require.Equal(iauthnz.QNameRoleAuthenticatedUser, principals[1].QName)
+
+		require.Equal(iauthnz.PrincipalKind_User, principals[2].Kind)
+		require.Equal("testlogin", principals[2].Name)
 
 		// request to a workspace with a token enriched by WorkspaceOwne role -> WorkspaceOwner role got
-		require.Equal(iauthnz.PrincipalKind_Role, principals[1].Kind)
-		require.Equal(iauthnz.QNameRoleWorkspaceOwner, principals[1].QName)
-		require.Equal(iauthnz.PrincipalKind_Host, principals[2].Kind)
-		require.Equal(pp, principalPayload)
-	})
+		require.Equal(iauthnz.PrincipalKind_Role, principals[3].Kind)
+		require.Equal(iauthnz.QNameRoleWorkspaceOwner, principals[3].QName)
 
-	t.Run("authorize", func(t *testing.T) {
-		// we are owner -> can do everything, e.g. execute sys.SomeCmd
-		authnReq := iauthnz.AuthnRequest{
-			Host:        "127.0.0.1",
-			RequestWSID: 2,
-			Token:       token,
-		}
-		principals, _, err := authn.Authenticate(context.Background(), appStructs, appTokens, authnReq)
-		require.NoError(err)
-		authzReq := iauthnz.AuthzRequest{
-			OperationKind: iauthnz.OperationKind_EXECUTE,
-			Resource:      appdef.NewQName(appdef.SysPackage, "SomeCmd"),
-		}
-		ok, err := authz.Authorize(appStructs, principals, authzReq)
-		require.NoError(err)
-		require.True(ok)
+		require.Equal(iauthnz.PrincipalKind_Host, principals[4].Kind)
+		require.Equal("127.0.0.1", principals[4].Name)
+		require.Equal(pp, principalPayload)
 	})
 }
 

@@ -49,10 +49,6 @@ ALTERABLE WORKSPACE UserProfileWS INHERITS sys.ProfileWS (
 		Language text
 	);
 
-	-- TAG DenyForAllTag;
-
-	-- TAG WorkspaceOwnerTable;
-
 	EXTENSION ENGINE BUILTIN (
 		QUERY DescribePackageNames RETURNS DescribePackageNamesResult;
 		QUERY DescribePackage(DescribePackageParams) RETURNS DescribePackageResult;
@@ -62,39 +58,10 @@ ALTERABLE WORKSPACE UserProfileWS INHERITS sys.ProfileWS (
 		PROJECTOR ApplySendEmailVerificationCode AFTER EXECUTE ON (SendEmailVerificationCode) STATE(sys.AppSecret) INTENTS(SendMail);
 	);
 
-	-- GRANT SELECT ON TABLE UserProfile TO ProfileOwner;
-	GRANT SELECT ON ALL TABLES TO ProfileOwner; -- eliminate, need to select the descriptor
-	GRANT UPDATE ON ALL TABLES TO ProfileOwner;
-
+	GRANT SELECT, UPDATE ON TABLE UserProfile TO ProfileOwner;
 	GRANT EXECUTE ON QUERY DescribePackageNames TO ProfileOwner;
 	GRANT EXECUTE ON QUERY DescribePackage TO ProfileOwner;
 	GRANT EXECUTE ON QUERY InitiateEmailVerification TO ProfileOwner;
 	GRANT EXECUTE ON QUERY IssueVerifiedValueToken TO ProfileOwner;
 	GRANT EXECUTE ON COMMAND SendEmailVerificationCode TO ProfileOwner;
-
-	-- сделать grant явно на каждую таблицу
-	-- сделать grant явно вообще на каждую сущность
-
-	-- GRANT EXECUTE ON CreateLogin TO тут роль, которая назнаается в любом случае;
-	-- GRANT SELECT ON InitiateEmailVerification TO WorkspaceOwner;
-	-- GRANT SELECT ON IssueVerifiedValueToken TO WorkspaceOwner;
-
-	-- grant all в системных пакетах не испльзовать. Тэги тоже не использовать по возможности
-
-	-- REVOKE SendEmailVerificationCode - не писать, просто не двать grant.
-
-	-- в пакете unTill сделать как проще
-
-	-- GRANT ALL ON ALL TABLES TO WorkspaceOwner;
-	-- GRANT EXECUTE ON ALL QUERIES TO WorkspaceOwner;
-	-- GRANT EXECUTE ON ALL COMMANDS TO WorkspaceOwner;
-	-- GRANT SELECT ON ALL VIEWS TO WorkspaceOwner;
-
-	-- GRANT WorkspaceOwner TO ProfileOwner;
-	-- GRANT WorkspaceOwner TO WorkspaceDevice;
-
-	-- REVOKE ALL ON ALL TABLES WITH TAG DenyForAllTag FROM Everyone;
-	-- REVOKE EXECUTE ON ALL COMMANDS WITH TAG DenyForAllTag FROM Everyone;
-	-- REVOKE EXECUTE ON ALL QUERIES WITH TAG DenyForAllTag FROM Everyone;
-	-- REVOKE SELECT ON ALL VIEWS WITH TAG DenyForAllTag FROM Everyone;
 );
