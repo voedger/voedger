@@ -70,7 +70,7 @@ func newACLRule(ops []OperationKind, policy PolicyKind, resources []QName, field
 			OperationKind_Update, OperationKind_Select) {
 			panic(ErrIncompatible("fields are not applicable for operations «%s»", opSet))
 		}
-		if err := validateFieldNamesByTypes(principal.app, resources, fields); err != nil {
+		if err := validateFieldNamesByTypes(principal.app.Type, resources, fields); err != nil {
 			panic(err)
 		}
 	}

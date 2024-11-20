@@ -123,7 +123,7 @@ func (tt *types) Types(visit func(IType) bool) {
 // Returns type by reference.
 //
 // If type is not found then returns nil.
-func (r *typeRef) target(tt IWithTypes) IType {
+func (r *typeRef) target(tt FindType) IType {
 	if r.name == NullQName {
 		return nil
 	}
@@ -132,7 +132,7 @@ func (r *typeRef) target(tt IWithTypes) IType {
 	}
 	if (r.typ == nil) || (r.typ.QName() != r.name) {
 		r.typ = nil
-		if t := tt.Type(r.name); t.Kind() != TypeKind_null {
+		if t := tt(r.name); t.Kind() != TypeKind_null {
 			r.typ = t
 		}
 	}
@@ -146,7 +146,7 @@ func (r *typeRef) setName(n QName) {
 }
 
 // Returns is reference valid
-func (r *typeRef) valid(tt IWithTypes) (bool, error) {
+func (r *typeRef) valid(tt FindType) (bool, error) {
 	if (r.name == NullQName) || (r.name == QNameANY) || (r.target(tt) != nil) {
 		return true, nil
 	}

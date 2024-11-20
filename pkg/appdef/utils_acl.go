@@ -67,13 +67,13 @@ func (k OperationKind) TrimString() string {
 // Validates specified field names by types. Returns error if any field is not found.
 //
 // If types contains any substitution then all fields are allowed.
-func validateFieldNamesByTypes(tt IWithTypes, types []QName, fields []FieldName) (err error) {
+func validateFieldNamesByTypes(tt FindType, types []QName, fields []FieldName) (err error) {
 	names := QNamesFrom(types...)
 
 	allFields := map[FieldName]struct{}{}
 
 	for _, n := range names {
-		t := tt.Type(n)
+		t := tt(n)
 		switch t.Kind() {
 		case TypeKind_GRecord, TypeKind_GDoc,
 			TypeKind_CRecord, TypeKind_CDoc,
