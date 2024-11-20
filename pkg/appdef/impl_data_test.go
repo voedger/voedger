@@ -49,7 +49,7 @@ func Test_AppDef_AddData(t *testing.T) {
 
 	require.NotNil(app)
 
-	testWith := func(tested IWithTypes) {
+	testWith := func(tested testedTypes) {
 		t.Run("should be ok to find builded data type", func(t *testing.T) {
 			i := Data(tested.Type, intName)
 			require.Equal(TypeKind_Data, i.Kind())

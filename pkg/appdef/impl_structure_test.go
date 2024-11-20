@@ -47,7 +47,7 @@ func Test_AppDef_StructuresAndRecords(t *testing.T) {
 		app = a
 	})
 
-	testWith := func(tested IWithTypes) {
+	testWith := func(tested testedTypes) {
 		t.Run("should be ok to find builded structures", func(t *testing.T) {
 			findStruct := func(n QName, kind TypeKind) {
 				typ := tested.Type(n)

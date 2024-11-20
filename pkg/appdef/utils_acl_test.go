@@ -97,7 +97,7 @@ func Test_validateACLResourceNames(t *testing.T) {
 	require := require.New(t)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := validateACLResourceNames(app, tt.on...)
+			got, err := validateACLResourceNames(app.Type, tt.on...)
 			if tt.wantErr == nil {
 				require.NoError(err, "unexpected error %v in validatePrivilegeOnNames(%v)", err, tt.on)
 				require.Equal(tt.want, got, "validatePrivilegeOnNames(%v): want %v, got %v", tt.on, tt.want, got)

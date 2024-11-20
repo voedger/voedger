@@ -47,7 +47,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		})
 	})
 
-	testWith := func(tested IWithTypes) {
+	testWith := func(tested testedTypes) {
 		t.Run("should be ok to find builded command", func(t *testing.T) {
 			typ := tested.Type(cmdName)
 			require.Equal(TypeKind_Command, typ.Kind())

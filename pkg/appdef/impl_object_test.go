@@ -41,7 +41,7 @@ func Test_AppDef_AddObject(t *testing.T) {
 		app = a
 	})
 
-	testWith := func(tested IWithTypes) {
+	testWith := func(tested testedTypes) {
 
 		t.Run("should be ok to find builded root object", func(t *testing.T) {
 			typ := tested.Type(rootName)

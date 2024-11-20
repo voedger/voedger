@@ -49,7 +49,7 @@ func newACLRule(ops []OperationKind, policy PolicyKind, resources []QName, field
 		panic(ErrMissed("operations"))
 	}
 
-	names, err := validateACLResourceNames(principal.app, resources...)
+	names, err := validateACLResourceNames(principal.app.Type, resources...)
 	if err != nil {
 		panic(err)
 	}
@@ -94,7 +94,7 @@ func newRevoke(ops []OperationKind, resources []QName, fields []FieldName, princ
 }
 
 func newACLRuleAll(policy PolicyKind, resources []QName, principal *role, comment ...string) *aclRule {
-	names, err := validateACLResourceNames(principal.app, resources...)
+	names, err := validateACLResourceNames(principal.app.Type, resources...)
 	if err != nil {
 		panic(err)
 	}
