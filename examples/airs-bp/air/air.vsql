@@ -9,7 +9,7 @@ APPLICATION app(
 
 WORKSPACE RestaurantWS (
 
-	TABLE ProformaPrinted INHERITS ODoc (
+	TABLE ProformaPrinted INHERITS sys.ODoc (
 		Number int32 NOT NULL,
 		UserID ref(untill.untill_users) NOT NULL,
 		Timestamp int64 NOT NULL,

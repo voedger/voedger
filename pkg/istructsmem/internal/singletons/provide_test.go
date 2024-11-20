@@ -83,7 +83,7 @@ func Test_BasicUsage(t *testing.T) {
 
 func test_AppDefSingletons(t *testing.T, appDef appdef.IAppDef, st *Singletons) {
 	require := require.New(t)
-	for s := range appdef.Singletons(appDef) {
+	for s := range appdef.Singletons(appDef.Types) {
 		if s.Singleton() {
 			id, err := st.ID(s.QName())
 			require.NoError(err)

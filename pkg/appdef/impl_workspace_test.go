@@ -73,16 +73,31 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 			require.Equal(TypeKind_Object, typ.Kind())
 			obj, ok := typ.(IObject)
 			require.True(ok)
-			require.Equal(Object(app, objName), obj)
+
+			require.Equal(Object(app.Type, objName), obj)
+			require.Equal(Object(ws.Type, objName), obj)
+			require.Equal(Object(ws.LocalType, objName), obj)
+
 			require.Equal(ws, obj.Workspace())
 
-			require.Equal(NullType, ws.Type(NewQName("unknown", "type")), "must be NullType if unknown type")
+			t.Run("should find type from ancestor", func(t *testing.T) {
+				int32type := SysData(app.Type, DataKind_int32)
+				require.NotNil(int32type)
+				require.Equal(int32type, SysData(ws.Type, DataKind_int32))
+				require.Nil(SysData(ws.LocalType, DataKind_int32), "should be nil if not local type")
+			})
+
+			t.Run("should be NullType if unknown type", func(t *testing.T) {
+				unknown := NewQName("unknown", "object")
+				require.Equal(NullType, ws.Type(unknown))
+				require.Equal(NullType, ws.LocalType(unknown))
+			})
 		})
 
 		t.Run("should be ok to enum workspace types", func(t *testing.T) {
 			require.Equal(2, func() int {
 				cnt := 0
-				for typ := range ws.Types {
+				for typ := range ws.LocalTypes {
 					switch typ.QName() {
 					case descName, objName:
 					default:
@@ -142,7 +157,7 @@ func Test_AppDef_AlterWorkspace(t *testing.T) {
 		ws := app.Workspace(wsName)
 		require.NotNil(ws, "should be ok to find workspace in app")
 
-		require.NotNil(Object(ws, objName), "should be ok to find object in workspace")
+		require.NotNil(Object(ws.Type, objName), "should be ok to find object in workspace")
 	})
 }
 
@@ -246,7 +261,7 @@ func Test_AppDef_AddWorkspaceAbstract(t *testing.T) {
 		ws := app.Workspace(wsName)
 		require.True(ws.Abstract())
 
-		desc := CDoc(app, ws.Descriptor())
+		desc := CDoc(app.Type, ws.Descriptor())
 		require.True(desc.Abstract())
 	})
 
@@ -321,42 +336,33 @@ func Test_WorkspaceInheritance(t *testing.T) {
 
 	t.Run("should be ok to read ancestors", func(t *testing.T) {
 		tests := []struct {
-			ws   int
-			anc  []int
-			ancR []int
+			anc []int
 		}{
-			{0, []int{}, []int{}},
-			{1, []int{0}, []int{0}},
-			{2, []int{1}, []int{0, 1}},
-			{3, []int{}, []int{}},
-			{4, []int{3}, []int{3}},
-			{5, []int{3}, []int{3}},
-			{6, []int{4}, []int{3, 4}},
-			{7, []int{5, 6}, []int{3, 4, 5, 6}},
+			{[]int{}},     //0
+			{[]int{0}},    //1
+			{[]int{1}},    //2
+			{[]int{}},     //3
+			{[]int{3}},    //4
+			{[]int{3}},    //5
+			{[]int{4}},    //6
+			{[]int{5, 6}}, //7
 		}
-		for _, test := range tests {
-			ws := app.Workspace(wsName(test.ws))
+		for wsIdx, test := range tests {
+			ws := app.Workspace(wsName(wsIdx))
 
-			t.Run("direct ancestors", func(t *testing.T) {
-				want := make([]QName, len(test.anc), len(test.anc))
-				for i, a := range test.anc {
-					want[i] = wsName(a)
-				}
-				if len(want) == 0 {
-					want = []QName{SysWorkspaceQName}
-				}
-				got := ws.Ancestors(false)
-				require.EqualValues(want, got, "unexpected direct ancestors for «%v»: want %v, got: %v", ws, want, got)
-			})
-
-			t.Run("ancestors recursively", func(t *testing.T) {
-				want := QNamesFrom(SysWorkspaceQName)
-				for _, a := range test.ancR {
-					want.Add(wsName(a))
-				}
-				got := ws.Ancestors(true)
-				require.EqualValues(want, got, "unexpected recursive ancestors for «%v»: want %v, got: %v", ws, want, got)
-			})
+			want := make([]QName, len(test.anc), len(test.anc))
+			for i, a := range test.anc {
+				want[i] = wsName(a)
+			}
+			if len(want) == 0 {
+				want = []QName{SysWorkspaceQName}
+			}
+			i := 0
+			for a := range ws.Ancestors {
+				require.EqualValues(want[i], a.QName(), "unexpected ancestor for «%v»: want %v, got: %v", ws, want[i], a.QName())
+				i++
+			}
+			require.Len(want, i, "unexpected count of ancestors for «%v»", ws)
 		}
 	})
 
@@ -390,8 +396,8 @@ func Test_WorkspaceInheritance(t *testing.T) {
 	t.Run("should be correspondence between Ancestors() and Inherits()", func(t *testing.T) {
 		for idx := 0; idx < wsCount; idx++ {
 			ws := app.Workspace(wsName(idx))
-			for _, a := range ws.Ancestors(true) {
-				require.True(ws.Inherits(a), "%v.Inherits(%v) returns false for ancestor workspace %v", ws, a, a)
+			for a := range ws.Ancestors {
+				require.True(ws.Inherits(a.QName()), "%v.Inherits(%v) returns false for ancestor workspace", ws, a.QName())
 			}
 		}
 	})
@@ -415,7 +421,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 			ws := app.Workspace(wsName(test.ws))
 			for o := 0; o < wsCount; o++ {
 				want := slices.Contains(test.objects, o)
-				obj := Object(ws, objName(o))
+				obj := Object(ws.Type, objName(o))
 				got := obj != nil
 				require.Equal(want, got, "unexpected %v.Object(%v) != nil result: want %v, got: %v", ws, objName(o), want, got)
 				if got {
@@ -548,8 +554,12 @@ func Test_WorkspaceUsage(t *testing.T) {
 			for i, a := range test.use {
 				want[i] = wsName(a)
 			}
-			got := ws.UsedWorkspaces()
-			require.EqualValues(want, got, "unexpected usages for «%v»: want %v, got: %v", ws, want, got)
+			i := 0
+			for u := range ws.UsedWorkspaces {
+				require.Equal(want[i], u.QName(), "unexpected %v UsedWorkspaces[%d] for: want %v, got: %v", ws, i, want[i], u.QName())
+				i++
+			}
+			require.Len(want, i, "unexpected count of used workspaces for «%v»", ws)
 		}
 	})
 
@@ -568,12 +578,46 @@ func Test_WorkspaceUsage(t *testing.T) {
 		for idx, test := range tests {
 			ws := app.Workspace(wsName(idx))
 			for i := 0; i < wsCount; i++ {
-				obj := Object(ws, objName(i))
-				if slices.Contains(test.use, i) {
-					require.NotNil(obj, "should be ok to find object «%v» in %v", objName(i), ws)
-				} else {
-					require.Nil(obj, "object «%v» should be unknown in %v", objName(i), ws)
-				}
+				t.Run("should be ok to find", func(t *testing.T) {
+					obj := Object(ws.Type, objName(i))
+					if slices.Contains(test.use, i) {
+						require.NotNil(obj, "should be ok to find object «%v» in %v", objName(i), ws)
+					} else {
+						require.Nil(obj, "object «%v» should be unknown in %v", objName(i), ws)
+					}
+				})
+				t.Run("should be ok to enum", func(t *testing.T) {
+					wantNames := make([]QName, 0, len(test.use))
+					for _, u := range test.use {
+						wantNames = append(wantNames, objName(u))
+					}
+					cnt := 0
+					for obj := range Objects(ws.Types) {
+						require.Contains(wantNames, obj.QName(), "unexpected object in %v: %v", ws, obj)
+						cnt++
+					}
+					require.Len(wantNames, cnt, "unexpected count of objects in %v", ws)
+				})
+
+				t.Run("should be breakable types enumeration", func(t *testing.T) {
+					ws := app.Workspace(wsName(0))
+
+					breakAt := func(wsName QName) {
+						var typ IType
+						for t := range ws.Types {
+							if t.Workspace().QName() == wsName {
+								typ = t
+								break
+							}
+						}
+						require.NotNil(typ)
+						require.Equal(wsName, typ.Workspace().QName())
+					}
+
+					t.Run("from ancestor", func(t *testing.T) { breakAt(SysWorkspaceQName) })
+					t.Run("from local", func(t *testing.T) { breakAt(ws.QName()) })
+					t.Run("from used", func(t *testing.T) { breakAt(wsName(6)) })
+				})
 			}
 		}
 	})
@@ -589,17 +633,6 @@ func Test_WorkspaceUsage(t *testing.T) {
 				require.Is(ErrNotFoundError), require.Has(unknown))
 			require.Panics(func() { ws.UseWorkspace(SysData_QName) },
 				require.Is(ErrNotFoundError), require.Has(SysData_QName))
-		})
-
-		t.Run("if workspace used twice", func(t *testing.T) {
-			adb := New()
-			adb.AddPackage("test", "test.com/test")
-
-			ws := adb.AddWorkspace(wsName(0))
-			_ = adb.AddWorkspace(wsName(1))
-			ws.UseWorkspace(wsName(1))
-			require.Panics(func() { ws.UseWorkspace(wsName(1)) },
-				require.Is(ErrAlreadyExistsError), require.Has(wsName(0)), require.Has(wsName(1)))
 		})
 	})
 }

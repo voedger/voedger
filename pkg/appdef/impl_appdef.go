@@ -7,25 +7,23 @@ package appdef
 
 import (
 	"errors"
-	"sort"
 )
 
 // # Implements:
 //   - IAppDef
 type appDef struct {
 	comment
-	packages     *packages
-	sysWS        *workspace
-	acl          []*aclRule // adding order should be saved
-	types        map[QName]interface{}
-	typesOrdered []interface{}
-	wsDesc       map[QName]IWorkspace
+	packages *packages
+	sysWS    *workspace
+	acl      []*aclRule // adding order should be saved
+	types    *types[IType]
+	wsDesc   map[QName]IWorkspace
 }
 
 func newAppDef() *appDef {
 	app := appDef{
 		packages: newPackages(),
-		types:    make(map[QName]interface{}),
+		types:    newTypes[IType](),
 		wsDesc:   make(map[QName]IWorkspace),
 	}
 	app.makeSysPackage()
@@ -70,36 +68,19 @@ func (app *appDef) Type(name QName) IType {
 		return t
 	}
 
-	if t, ok := app.types[name]; ok {
-		return t.(IType)
-	}
-
-	return NullType
+	return app.types.find(name)
 }
 
 func (app *appDef) Types(visit func(IType) bool) {
-	if app.typesOrdered == nil {
-		app.typesOrdered = make([]interface{}, 0, len(app.types))
-		for _, t := range app.types {
-			app.typesOrdered = append(app.typesOrdered, t)
-		}
-		sort.Slice(app.typesOrdered, func(i, j int) bool {
-			return app.typesOrdered[i].(IType).QName().String() < app.typesOrdered[j].(IType).QName().String()
-		})
-	}
-	for _, t := range app.typesOrdered {
-		if !visit(t.(IType)) {
-			break
-		}
-	}
+	app.types.all(visit)
 }
 
 func (app *appDef) Workspace(name QName) IWorkspace {
-	return TypeByNameAndKind[IWorkspace](app, name, TypeKind_Workspace)
+	return TypeByNameAndKind[IWorkspace](app.Type, name, TypeKind_Workspace)
 }
 
 func (app *appDef) Workspaces(visit func(IWorkspace) bool) {
-	TypesByKind[IWorkspace](app, TypeKind_Workspace)(visit)
+	TypesByKind[IWorkspace](app.Types, TypeKind_Workspace)(visit)
 }
 
 func (app *appDef) WorkspaceByDescriptor(name QName) IWorkspace {
@@ -127,18 +108,16 @@ func (app *appDef) appendACL(p *aclRule) {
 	app.acl = append(app.acl, p)
 }
 
-func (app *appDef) appendType(t interface{}) {
-	typ := t.(IType)
-	name := typ.QName()
+func (app *appDef) appendType(t IType) {
+	name := t.QName()
 	if name == NullQName {
-		panic(ErrMissed("%s type name", typ.Kind().TrimString()))
+		panic(ErrMissed("%s type name", t.Kind().TrimString()))
 	}
 	if app.Type(name).Kind() != TypeKind_null {
 		panic(ErrAlreadyExists("type «%v»", name))
 	}
 
-	app.types[name] = t
-	app.typesOrdered = nil
+	app.types.add(t)
 }
 
 func (app *appDef) build() (err error) {

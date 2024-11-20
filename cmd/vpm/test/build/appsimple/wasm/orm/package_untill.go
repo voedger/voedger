@@ -21,7 +21,7 @@ var Package_untill = struct {
 }
 
 /*
-TABLE bill INHERITS WDoc (
+TABLE bill INHERITS sys.WDoc (
 	close_datetime int64,
 	table_name varchar(50),
 	tableno int32 NOT NULL,
@@ -86,7 +86,7 @@ func (i Intent_WDoc_untill_bill) Set_close_datetime(v int64) Intent_WDoc_untill_
 }
 
 /*
-TABLE articles INHERITS CDoc (
+TABLE articles INHERITS sys.CDoc (
 	article_number int32,
 	name varchar(255),
     ...
@@ -115,7 +115,7 @@ func (v CDoc_untill_articles) MustGetValue(id ID) Value_Table_untill_articles {
 }
 
 /*
-TABLE pbill INHERITS ODoc (
+TABLE pbill INHERITS sys.ODoc (
 	id_bill int64 NOT NULL,
 	id_untill_users ref(untill_users) NOT NULL,
 	number int32,

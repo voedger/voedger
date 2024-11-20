@@ -401,6 +401,9 @@ func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
 			// notest
 			return nil, err
 		}
+		if !cdocSubject.AsBool(appdef.SystemField_IsActive) {
+			return nil, nil
+		}
 		roles := strings.Split(cdocSubject.AsString(invite.Field_Roles), ",")
 		for _, role := range roles {
 			roleQName, err := appdef.ParseQName(role)

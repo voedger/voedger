@@ -67,7 +67,7 @@ func Test_BasicUsage(t *testing.T) {
 	app := appStructsFromSQL("github.com/untillpro/airs-bp3/packages/"+testPkg, `APPLICATION test();
 		WORKSPACE Restaurant (
 			DESCRIPTOR RestaurantDescriptor ();
-			TABLE Order INHERITS ODoc (
+			TABLE Order INHERITS sys.ODoc (
 				Year int32,
 				Month int32,
 				Day int32,
@@ -87,7 +87,7 @@ func Test_BasicUsage(t *testing.T) {
 			) AS RESULT OF CalcOrderedItems;
 			EXTENSION ENGINE WASM(
 				COMMAND NewOrder(Order);
-				PROJECTOR CalcOrderedItems AFTER EXECUTE ON NewOrder INTENTS(View(OrderedItems));
+				PROJECTOR CalcOrderedItems AFTER EXECUTE ON NewOrder INTENTS(sys.View(OrderedItems));
 			);
 		)
 		`,
@@ -758,7 +758,7 @@ func Test_WithState(t *testing.T) {
 			) AS RESULT OF DummyProj;
 			EXTENSION ENGINE WASM(
 				COMMAND Dummy();
-				PROJECTOR DummyProj AFTER EXECUTE ON Dummy INTENTS(View(TestView));
+				PROJECTOR DummyProj AFTER EXECUTE ON Dummy INTENTS(sys.View(TestView));
 			);
 		)`,
 		func(cfg *istructsmem.AppConfigType) {
@@ -833,7 +833,7 @@ func Test_StatePanic(t *testing.T) {
 			) AS RESULT OF DummyProj;
 			EXTENSION ENGINE WASM(
 				COMMAND Dummy();
-				PROJECTOR DummyProj AFTER EXECUTE ON Dummy INTENTS(View(TestView));
+				PROJECTOR DummyProj AFTER EXECUTE ON Dummy INTENTS(sys.View(TestView));
 			);
 		)`,
 		func(cfg *istructsmem.AppConfigType) {

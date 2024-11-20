@@ -2,7 +2,7 @@
 -- @author Alisher Nurmanov
 
 WORKSPACE MyWS2 (
-    TABLE MyTable2 INHERITS ODoc (
+    TABLE MyTable2 INHERITS sys.ODoc (
         myfield2 int32 NOT NULL
     );
 );

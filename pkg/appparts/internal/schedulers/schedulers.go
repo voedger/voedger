@@ -49,13 +49,13 @@ func (ps *PartitionSchedulers) Deploy(vvmCtx context.Context, appDef appdef.IApp
 	ps.mx.RLock()
 	for name, wsRT := range ps.jobsInAppWSIDRuntimes {
 		// TODO: compare if job properties changed (cron, etc.)
-		if appdef.Job(appDef, name) == nil {
+		if appdef.Job(appDef.Type, name) == nil {
 			for _, rt := range wsRT {
 				stopWG.Add(1)
 				go func(rt *runtime) {
 					rt.cancel()
 					for rt.state.Load() >= 0 {
-						time.Sleep(time.Nanosecond) // wait until scheduler is finished
+						time.Sleep(time.Millisecond) // wait until scheduler is finished
 					}
 					stopWG.Done()
 				}(rt)
@@ -99,7 +99,7 @@ func (ps *PartitionSchedulers) Deploy(vvmCtx context.Context, appDef appdef.IApp
 				}(appWSNumber, appWSID)
 
 				for rt.state.Load() == 0 {
-					time.Sleep(time.Nanosecond) // wait until actualizer go-routine is started
+					time.Sleep(time.Millisecond) // wait until actualizer go-routine is started
 				}
 			}
 			startWG.Done()
@@ -107,7 +107,7 @@ func (ps *PartitionSchedulers) Deploy(vvmCtx context.Context, appDef appdef.IApp
 	}
 
 	ps.mx.RLock()
-	for job := range appdef.Jobs(appDef) {
+	for job := range appdef.Jobs(appDef.Types) {
 		jobQName := job.QName()
 		if _, exists := ps.jobsInAppWSIDRuntimes[jobQName]; !exists {
 			start(jobQName)
@@ -147,7 +147,7 @@ func (ps *PartitionSchedulers) Wait() {
 		if cnt == 0 {
 			break
 		}
-		time.Sleep(time.Nanosecond)
+		time.Sleep(time.Millisecond)
 	}
 }
 

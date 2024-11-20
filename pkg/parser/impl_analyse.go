@@ -172,7 +172,7 @@ func iterateWorkspaceStmts[stmtType INamedStatement](ctx *iterateCtx, onlyCurren
 	}
 }
 
-func resolveInCurrentWs[stmtType *CommandStmt | *QueryStmt | *ViewStmt | *TableStmt | *RoleStmt](qn DefQName, ctx *iterateCtx) (result stmtType, pkg *PackageSchemaAST, err error) {
+func resolveInCurrentWs[stmtType *CommandStmt | *QueryStmt | *ViewStmt | *TableStmt | *RoleStmt | *WsDescriptorStmt](qn DefQName, ctx *iterateCtx) (result stmtType, pkg *PackageSchemaAST, err error) {
 	err = resolveInCtx(qn, ctx, func(f stmtType, p *PackageSchemaAST) error {
 		currentWs := getCurrentWorkspace(ctx)
 		for _, n := range currentWs.workspace.nodes {
@@ -385,54 +385,71 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 	}
 
 	// TABLE
+	var named INamedStatement
+	var items []TableItemExpr
 	if grant.Table != nil {
-		table, pkg, err := resolveInCurrentWs[*TableStmt](grant.Table.Table, c)
+		var table *TableStmt
+		var descriptor *WsDescriptorStmt
+		var pkg *PackageSchemaAST
+		var err error
+		table, pkg, err = resolveInCurrentWs[*TableStmt](grant.Table.Table, c)
+		if err != nil && err.Error() == ErrUndefinedTable(grant.Table.Table).Error() {
+			descriptor, pkg, err = resolveInCurrentWs[*WsDescriptorStmt](grant.Table.Table, c)
+		}
 		if err != nil {
 			c.stmtErr(&grant.Table.Table.Pos, err)
+			return
 		} else if table != nil {
-			grant.on = append(grant.on, pkg.NewQName(table.Name))
-			for _, item := range grant.Table.Items {
-				if item.Insert {
-					grant.ops = append(grant.ops, appdef.OperationKind_Insert)
-				} else if item.Update {
-					grant.ops = append(grant.ops, appdef.OperationKind_Update)
-				} else if item.Select {
-					grant.ops = append(grant.ops, appdef.OperationKind_Select)
-				}
-			}
-			checkColumn := func(column Ident) error {
-				for _, f := range table.Items {
-					if f.Field != nil && f.Field.Name == column {
-						grant.columns = append(grant.columns, string(column))
-						return nil
-					}
-					if f.RefField != nil && f.RefField.Name == column {
-						grant.columns = append(grant.columns, string(column))
-						return nil
-					}
-					if f.NestedTable != nil && f.NestedTable.Name == column {
-						return nil
-					}
-				}
-				return ErrUndefinedField(string(column))
-			}
-			if grant.Table.All != nil {
-				for _, column := range grant.Table.All.Columns {
-					if err := checkColumn(column.Value); err != nil {
-						c.stmtErr(&column.Pos, err)
-					}
-				}
-			}
-			for _, i := range grant.Table.Items {
-				for _, column := range i.Columns {
-					if err := checkColumn(column.Value); err != nil {
-						c.stmtErr(&column.Pos, err)
-					}
-				}
-			}
+			named = table
+			items = table.Items
+		} else if descriptor != nil {
+			named = descriptor
+			items = descriptor.Items
 		} else {
-			c.stmtErr(&grant.Table.Table.Pos, ErrUndefinedTable(grant.Table.Table))
+			c.stmtErr(&grant.Table.Table.Pos, ErrUndefined(grant.Table.Table.String()))
+			return
 		}
+		grant.on = append(grant.on, pkg.NewQName(Ident(named.GetName())))
+		for _, item := range grant.Table.Items {
+			if item.Insert {
+				grant.ops = append(grant.ops, appdef.OperationKind_Insert)
+			} else if item.Update {
+				grant.ops = append(grant.ops, appdef.OperationKind_Update)
+			} else if item.Select {
+				grant.ops = append(grant.ops, appdef.OperationKind_Select)
+			}
+		}
+		checkColumn := func(column Ident) error {
+			for _, f := range items {
+				if f.Field != nil && f.Field.Name == column {
+					grant.columns = append(grant.columns, string(column))
+					return nil
+				}
+				if f.RefField != nil && f.RefField.Name == column {
+					grant.columns = append(grant.columns, string(column))
+					return nil
+				}
+				if f.NestedTable != nil && f.NestedTable.Name == column {
+					return nil
+				}
+			}
+			return ErrUndefinedField(string(column))
+		}
+		if grant.Table.All != nil {
+			for _, column := range grant.Table.All.Columns {
+				if err := checkColumn(column.Value); err != nil {
+					c.stmtErr(&column.Pos, err)
+				}
+			}
+		}
+		for _, i := range grant.Table.Items {
+			for _, column := range i.Columns {
+				if err := checkColumn(column.Value); err != nil {
+					c.stmtErr(&column.Pos, err)
+				}
+			}
+		}
+
 	}
 
 	grant.workspace = c.mustCurrentWorkspace()
@@ -1469,29 +1486,23 @@ func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (k
 	kind = appdef.TypeKind_null
 	check := func(node tableNode) {
 		if node.pkg.Path == appdef.SysPackage {
-			if node.table.Name == nameCDOC {
-				kind = appdef.TypeKind_CDoc
-			}
-			if node.table.Name == nameODOC {
-				kind = appdef.TypeKind_ODoc
-			}
-			if node.table.Name == nameWDOC {
-				kind = appdef.TypeKind_WDoc
-			}
-			if node.table.Name == nameCRecord {
+			switch node.table.Name {
+			case nameCRecord:
 				kind = appdef.TypeKind_CRecord
-			}
-			if node.table.Name == nameORecord {
+			case nameORecord:
 				kind = appdef.TypeKind_ORecord
-			}
-			if node.table.Name == nameWRecord {
+			case nameWRecord:
 				kind = appdef.TypeKind_WRecord
-			}
-			if node.table.Name == nameCSingleton {
+			case nameCdoc:
+				kind = appdef.TypeKind_CDoc
+			case nameODoc:
+				kind = appdef.TypeKind_ODoc
+			case nameWDoc:
+				kind = appdef.TypeKind_WDoc
+			case nameCSingleton:
 				kind = appdef.TypeKind_CDoc
 				singleton = true
-			}
-			if node.table.Name == nameWSingleton {
+			case nameWSingleton:
 				kind = appdef.TypeKind_WDoc
 				singleton = true
 			}

@@ -118,7 +118,7 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 		return arg, argUnl, nil // #1811 — «sys.Corrupted» command has no arguments objects
 	}
 
-	cmd := appdef.Command(ev.appCfg.AppDef, ev.name)
+	cmd := appdef.Command(ev.appCfg.AppDef.Type, ev.name)
 	if cmd != nil {
 		if cmd.Param() != nil {
 			arg = cmd.Param().QName()
@@ -128,7 +128,7 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 		}
 	} else {
 		// #!16208: Should be possible to use TypeKind_ODoc as Event.QName
-		if d := appdef.ODoc(ev.appCfg.AppDef, ev.name); d == nil {
+		if d := appdef.ODoc(ev.appCfg.AppDef.Type, ev.name); d == nil {
 			// command function «test.object» not found
 			return arg, argUnl, ErrNameNotFound("command function «%v»", ev.name)
 		}
@@ -170,7 +170,7 @@ func (ev *eventType) loadFromBytes(in []byte) (err error) {
 			return err
 		}
 	default:
-		return fmt.Errorf("unknown codec version «%d»: %w", codec, ErrUnknownCodec)
+		return ErrUnknownCodec(codec)
 	}
 
 	return nil
@@ -832,7 +832,7 @@ func (o *objectType) Build() (istructs.IObject, error) {
 		(t != appdef.TypeKind_GDoc) &&
 		(t != appdef.TypeKind_CDoc) &&
 		(t != appdef.TypeKind_WDoc) {
-		return nil, fmt.Errorf("object builder has wrong type %v (not an object or document): %w", o, ErrUnexpectedTypeKind)
+		return nil, ErrUnexpectedType("%v, should be object or document", o)
 	}
 	if _, err := validateObjectIDs(o, false); err != nil {
 		return nil, err

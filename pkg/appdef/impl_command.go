@@ -25,14 +25,14 @@ func newCommand(app *appDef, ws *workspace, name QName) *command {
 }
 
 func (cmd *command) UnloggedParam() IType {
-	return cmd.unl.target(cmd.app)
+	return cmd.unl.target(cmd.app.Type)
 }
 
 // Validates command
 func (cmd *command) Validate() (err error) {
 	err = cmd.function.Validate()
 
-	if ok, e := cmd.unl.valid(cmd.app); !ok {
+	if ok, e := cmd.unl.valid(cmd.app.Type); !ok {
 		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown unlogged parameter type: %w", cmd, e))
 	} else if typ := cmd.UnloggedParam(); typ != nil {
 		switch typ.Kind() {

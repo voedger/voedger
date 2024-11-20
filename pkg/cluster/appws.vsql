@@ -1,9 +1,9 @@
 -- Copyright (c) 2024-present unTill Software Development Group B.V.
 -- @author Denis Gribanov
 
-ALTER WORKSPACE AppWorkspaceWS (
+ALTER WORKSPACE sys.AppWorkspaceWS (
 
-	TABLE App INHERITS WDoc (
+	TABLE App INHERITS sys.WDoc (
 		AppQName varchar NOT NULL,
 		NumPartitions int32 NOT NULL,
 		NumAppWorkspaces int32 NOT NULL,

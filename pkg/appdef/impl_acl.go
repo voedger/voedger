@@ -49,7 +49,7 @@ func newACLRule(ops []OperationKind, policy PolicyKind, resources []QName, field
 		panic(ErrMissed("operations"))
 	}
 
-	names, err := validateACLResourceNames(principal.app, resources...)
+	names, err := validateACLResourceNames(principal.app.Type, resources...)
 	if err != nil {
 		panic(err)
 	}
@@ -70,7 +70,7 @@ func newACLRule(ops []OperationKind, policy PolicyKind, resources []QName, field
 			OperationKind_Update, OperationKind_Select) {
 			panic(ErrIncompatible("fields are not applicable for operations «%s»", opSet))
 		}
-		if err := validateFieldNamesByTypes(principal.app, resources, fields); err != nil {
+		if err := validateFieldNamesByTypes(principal.app.Type, resources, fields); err != nil {
 			panic(err)
 		}
 	}
@@ -94,7 +94,7 @@ func newRevoke(ops []OperationKind, resources []QName, fields []FieldName, princ
 }
 
 func newACLRuleAll(policy PolicyKind, resources []QName, principal *role, comment ...string) *aclRule {
-	names, err := validateACLResourceNames(principal.app, resources...)
+	names, err := validateACLResourceNames(principal.app.Type, resources...)
 	if err != nil {
 		panic(err)
 	}

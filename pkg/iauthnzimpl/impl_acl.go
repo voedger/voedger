@@ -297,6 +297,7 @@ var defaultACL = ACL{
 			qNamesPattern: []appdef.QName{
 				qNameCmdAddCustomer,
 				qNameCmdUpdateCustomer,
+				qNameCmdDeactivateCustomer,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleFiscalCloudOnboardSite}},

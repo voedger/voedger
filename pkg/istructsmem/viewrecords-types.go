@@ -88,7 +88,7 @@ type batchPtrType struct {
 
 func (vr *appViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.ViewRecordGetBatchItem) (err error) {
 	if len(kv) > maxGetBatchRecordCount {
-		return fmt.Errorf("batch read %d records requested, but only %d supported: %w", len(kv), maxGetBatchRecordCount, ErrMaxGetBatchRecordCountExceeds)
+		return ErrMaxGetBatchSizeExceeds(len(kv))
 	}
 	batches := make([]batchPtrType, len(kv))
 	plan := make(map[string][]istorage.GetBatchItem)
@@ -159,10 +159,10 @@ func (vr *appViewRecords) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any) 
 			if qName, err := appdef.ParseQName(value); err == nil {
 				viewName = qName
 			} else {
-				return enrichError(err, errFieldValueTypeConvert, appdef.SystemField_QName, value, appdef.DataKind_QName.TrimString())
+				return enrichError(err, "can not parse value for field «%s»", appdef.SystemField_QName)
 			}
 		} else {
-			return ErrWrongFieldType(errFieldValueTypeConvert, appdef.SystemField_QName, v, appdef.DataKind_QName.TrimString())
+			return ErrWrongFieldType("can not put «%T» to field «%s»", v, appdef.SystemField_QName)
 		}
 	}
 
@@ -170,7 +170,7 @@ func (vr *appViewRecords) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any) 
 		return ErrFieldIsEmpty(appdef.SystemField_QName)
 	}
 
-	view := appdef.View(vr.app.config.AppDef, viewName)
+	view := appdef.View(vr.app.config.AppDef.Type, viewName)
 	if view == nil {
 		return ErrViewNotFound(viewName)
 	}
@@ -258,7 +258,7 @@ func newKey(appCfg *AppConfigType, name appdef.QName) *keyType {
 	if name == appdef.NullQName {
 		panic(ErrNameMissedError)
 	}
-	view := appdef.View(appCfg.AppDef, name)
+	view := appdef.View(appCfg.AppDef.Type, name)
 	if view == nil {
 		panic(ErrViewNotFound(name))
 	}
@@ -584,7 +584,7 @@ func newValue(appCfg *AppConfigType, name appdef.QName) *valueType {
 	if name == appdef.NullQName {
 		panic(ErrNameMissedError)
 	}
-	view := appdef.View(appCfg.AppDef, name)
+	view := appdef.View(appCfg.AppDef.Type, name)
 	if view == nil {
 		panic(ErrViewNotFound(name))
 	}
@@ -619,7 +619,7 @@ func (val *valueType) loadFromBytes(in []byte) (err error) {
 			return err
 		}
 	default:
-		return fmt.Errorf("unknown codec version «%d»: %w", codec, ErrUnknownCodec)
+		return ErrUnknownCodec(codec)
 	}
 
 	return nil

@@ -5,7 +5,7 @@ ALTERABLE WORKSPACE MyWorkspace3(
     TYPE MyType3(
         A varchar
     );
-    TABLE MyTable3 INHERITS CDoc(
+    TABLE MyTable3 INHERITS sys.CDoc(
         Field1 varchar,
         Field2 int32
     );
