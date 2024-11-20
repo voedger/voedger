@@ -81,6 +81,8 @@ type typeRef struct {
 }
 
 // List of types.
+//
+// @ConcurrentAccess
 type types[T IType] struct {
 	l sync.RWMutex
 	m map[QName]T
