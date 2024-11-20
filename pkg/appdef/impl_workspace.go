@@ -77,77 +77,42 @@ func (ws *workspace) LocalTypes(visit func(IType) bool) {
 }
 
 func (ws *workspace) Type(name QName) IType {
-
+	// Type can not use `ws.types.all.find(name)` because two reasons:
+	// - this method called before `appDef.build()` and `ws.build()`,
+	//   when `ws.types.all` is not initialized.
+	// - Type() should find workspaces if ancestor or child or self name passed,
+	//   but `ws.types.all` will not contain workspaces.
 	var (
-		findWS  func(IWorkspace) IType
-		chainWS map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
+		find  func(IWorkspace) IType
+		chain map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
 	)
-
-	findWS = func(w IWorkspace) IType {
-		if chainWS[w.QName()] {
-			return NullType
-		}
-		chainWS[w.QName()] = true
-
-		if name == w.QName() {
-			return w
-		}
-
-		if t := w.LocalType(name); t != NullType {
-			return t
-		}
-
-		for a := range w.Ancestors {
-			if t := findWS(a.(*workspace)); t != NullType {
+	find = func(w IWorkspace) IType {
+		if !chain[w.QName()] {
+			chain[w.QName()] = true
+			if name == w.QName() {
+				return w
+			}
+			if t := w.LocalType(name); t != NullType {
 				return t
 			}
-		}
-		for u := range w.UsedWorkspaces {
-			if t := findWS(u.(*workspace)); t != NullType {
-				return t
+			for a := range w.Ancestors {
+				if t := find(a.(*workspace)); t != NullType {
+					return t
+				}
+			}
+			for u := range w.UsedWorkspaces {
+				if t := find(u.(*workspace)); t != NullType {
+					return t
+				}
 			}
 		}
-
 		return NullType
 	}
-
-	return findWS(ws)
+	return find(ws)
 }
 
 func (ws *workspace) Types(visit func(IType) bool) {
-	var (
-		visitWS func(IWorkspace) bool
-		chainWS map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
-	)
-
-	visitWS = func(w IWorkspace) bool {
-		if chainWS[w.QName()] {
-			return true
-		}
-		chainWS[w.QName()] = true
-
-		for a := range w.Ancestors {
-			if !visitWS(a) {
-				return false
-			}
-		}
-
-		for t := range w.LocalTypes {
-			if !visit(t) {
-				return false
-			}
-		}
-
-		for u := range w.UsedWorkspaces {
-			if !visitWS(u) {
-				return false
-			}
-		}
-
-		return true
-	}
-
-	visitWS(ws)
+	ws.types.all.all(visit)
 }
 
 func (ws *workspace) UsedWorkspaces(visit func(IWorkspace) bool) {
@@ -266,8 +231,12 @@ func (ws *workspace) appendType(t IType) {
 
 // should be called from appDef.build().
 func (ws *workspace) build() error {
-	ws.types.all = newTypes[IType]()
+	ws.buildAllTypes()
+	return nil
+}
 
+func (ws *workspace) buildAllTypes() {
+	ws.types.all = newTypes[IType]()
 	var (
 		collect func(IWorkspace)
 		chain   map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
@@ -288,7 +257,6 @@ func (ws *workspace) build() error {
 		}
 	}
 	collect(ws)
-	return nil
 }
 
 func (ws *workspace) grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) {

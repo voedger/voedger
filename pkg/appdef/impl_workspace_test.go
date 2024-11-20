@@ -111,7 +111,7 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 
 		require.Equal(ws, ws.Type(wsName).(IWorkspace), "should be ok to get workspace by type")
 
-		require.Nil(app.Workspace(NewQName("unknown", "workspace")), "must be nil if unknown workspace")
+		require.Nil(app.Workspace(NewQName("unknown", "workspace")), "should be nil if unknown workspace")
 	})
 
 	t.Run("should be panics", func(t *testing.T) {
