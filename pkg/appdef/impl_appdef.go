@@ -16,14 +16,14 @@ type appDef struct {
 	packages *packages
 	sysWS    *workspace
 	acl      []*aclRule // adding order should be saved
-	types    *types
+	types    *types[IType]
 	wsDesc   map[QName]IWorkspace
 }
 
 func newAppDef() *appDef {
 	app := appDef{
 		packages: newPackages(),
-		types:    newTypes(),
+		types:    newTypes[IType](),
 		wsDesc:   make(map[QName]IWorkspace),
 	}
 	app.makeSysPackage()

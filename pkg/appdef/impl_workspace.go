@@ -5,12 +5,6 @@
 
 package appdef
 
-import (
-	"maps"
-	"slices"
-	"sync"
-)
-
 // # Implements:
 //   - IWorkspace
 type workspace struct {
@@ -18,7 +12,7 @@ type workspace struct {
 	withAbstract
 	acl       []*aclRule
 	ancestors *workspaces
-	types     *types
+	types     *types[IType]
 	usedWS    *workspaces
 	desc      ICDoc
 }
@@ -27,7 +21,7 @@ func newWorkspace(app *appDef, name QName) *workspace {
 	ws := &workspace{
 		typ:       makeType(app, nil, name, TypeKind_Workspace),
 		ancestors: newWorkspaces(),
-		types:     newTypes(),
+		types:     newTypes[IType](),
 		usedWS:    newWorkspaces(),
 	}
 	if name != SysWorkspaceQName {
@@ -487,48 +481,8 @@ func (wb *workspaceBuilder) Workspace() IWorkspace { return wb.workspace }
 // List of workspaces.
 //
 // @ConcurrentAccess
-type workspaces struct {
-	l sync.RWMutex
-	m map[QName]IWorkspace
-	s []IWorkspace
-}
+type workspaces = types[IWorkspace]
 
 func newWorkspaces() *workspaces {
-	return &workspaces{m: make(map[QName]IWorkspace)}
-}
-
-func (ws *workspaces) add(w IWorkspace) {
-	name := w.QName()
-
-	ws.l.Lock()
-	ws.m[name] = w
-	ws.s = nil
-	ws.l.Unlock()
-}
-
-func (ws *workspaces) all(visit func(IWorkspace) bool) {
-	ws.l.RLock()
-	ready := len(ws.s) == len(ws.m)
-	ws.l.RUnlock()
-
-	if !ready {
-		ws.l.Lock()
-		if len(ws.s) != len(ws.m) {
-			ws.s = slices.SortedFunc(maps.Values(ws.m), func(i, j IWorkspace) int {
-				return CompareQName(i.QName(), j.QName())
-			})
-		}
-		ws.l.Unlock()
-	}
-
-	ws.l.RLock()
-	slices.Values(ws.s)(visit)
-	ws.l.RUnlock()
-}
-
-func (ws *workspaces) clear() {
-	ws.l.Lock()
-	ws.m = make(map[QName]IWorkspace)
-	ws.s = nil
-	ws.l.Unlock()
+	return newTypes[IWorkspace]()
 }
