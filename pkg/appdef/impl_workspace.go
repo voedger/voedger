@@ -261,6 +261,45 @@ func (ws *workspace) appendType(t IType) {
 	ws.types.add(t)
 }
 
+// should be called from appDef.build().
+func (ws *workspace) build() error {
+
+	var (
+		visitWS func(IWorkspace) bool
+		chainWS map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
+	)
+
+	visitWS = func(w IWorkspace) bool {
+		if chainWS[w.QName()] {
+			return true
+		}
+		chainWS[w.QName()] = true
+
+		for a := range w.Ancestors {
+			if !visitWS(a) {
+				return false
+			}
+		}
+
+		for t := range w.LocalTypes {
+			if !visit(t) {
+				return false
+			}
+		}
+
+		for u := range w.UsedWorkspaces {
+			if !visitWS(u) {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	visitWS(ws)
+	return nil
+}
+
 func (ws *workspace) grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) {
 	r := Role(ws.Type, toRole)
 	if r == nil {
