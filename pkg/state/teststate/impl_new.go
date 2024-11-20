@@ -105,14 +105,14 @@ func (gts *generalTestState) getQNameFromFQName(fQName IFullQName) appdef.QName 
 func (gts *generalTestState) isSingletone(fQName IFullQName) bool {
 	qName := gts.getQNameFromFQName(fQName)
 
-	iSingleton := appdef.Singleton(gts.appDef, qName)
+	iSingleton := appdef.Singleton(gts.appDef.Type, qName)
 	return iSingleton != nil && iSingleton.Singleton()
 }
 
 func (gts *generalTestState) isView(fQName IFullQName) bool {
 	qName := gts.getQNameFromFQName(fQName)
 
-	iView := appdef.View(gts.appDef, qName)
+	iView := appdef.View(gts.appDef.Type, qName)
 	return iView != nil
 }
 
