@@ -36,12 +36,12 @@ type ICommandRunner interface {
 }
 
 type IProjectorRunner interface {
+	// State related methods
 	StateRecord(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner
 	StateSingletonRecord(fQName IFullQName, keyValueList ...any) IProjectorRunner
 	StateCUDRow(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner
 	StateView(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner
-
-	//EventOffset(offset istructs.Offset) IProjectorRunner
+	// Event related methods
 	EventWLogOffset(offset istructs.Offset) IProjectorRunner
 	EventPLogOffset(offset istructs.Offset) IProjectorRunner
 	EventRegisteredAt(registeredAt time.Time) IProjectorRunner
@@ -56,14 +56,14 @@ type IProjectorRunner interface {
 	EventUnloggedArgumentObject(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner
 	EventUnloggedArgumentObjectRow(path string, id istructs.RecordID, keyValueList ...any) IProjectorRunner
 
-	// methods to check out the test state
+	// Intent related methods for checking out the test state
 	IntentSingletonInsert(fQName IFullQName, keyValueList ...any) IProjectorRunner
 	IntentSingletonUpdate(fQName IFullQName, keyValueList ...any) IProjectorRunner
 	IntentRecordInsert(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner
 	IntentRecordUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner
 	IntentViewInsert(fQName IFullQName, keyValueList ...any) IProjectorRunner
 	IntentViewUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner
-	// method to run the test
+	// Run is a method for running test
 	Run()
 }
 
