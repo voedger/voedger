@@ -292,7 +292,7 @@ func TestMustParseQName(t *testing.T) {
 	})
 }
 
-func TestQNamesFrom(t *testing.T) {
+func TestQNames(t *testing.T) {
 	tests := []struct {
 		name string
 		args []string
@@ -307,6 +307,8 @@ func TestQNamesFrom(t *testing.T) {
 		{"sort and deduplicate", []string{"b.b", "z.z", "b.b", "a.a", "z.b"}, `[a.a b.b z.b z.z]`},
 	}
 
+	require := require.New(t)
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			names := make([]QName, len(tt.args))
@@ -315,44 +317,32 @@ func TestQNamesFrom(t *testing.T) {
 			}
 
 			q := QNamesFrom(names...)
-			if got := fmt.Sprint(q); got != tt.want {
-				t.Errorf("QNamesFrom(%v) = %v, want %v", tt.args, got, tt.want)
-			}
+			require.Equal(tt.want, fmt.Sprint(q), "QNamesFrom(%v) = %v, want %v", tt.args, fmt.Sprint(q), tt.want)
 
-			if !slices.IsSortedFunc(q, CompareQName) {
-				t.Errorf("QNamesFrom(%v) is not sorted", tt.args)
-			}
+			require.True(slices.IsSortedFunc(q, CompareQName), "QNamesFrom(%v) is not sorted", tt.args)
 
 			for _, n := range names {
 				i, ok := q.Find(n)
-				if !ok {
-					t.Errorf("QNamesFrom(%v).Find(%v) returns false", tt.args, n)
-				}
-				if q[i] != n {
-					t.Errorf("QNamesFrom(%v).Find(%v) returns wrong index %v", tt.args, n, i)
-				}
+				require.True(ok, "QNamesFrom(%v).Find(%v) returns false", tt.args, n)
+				require.Equal(n, q[i], "QNamesFrom(%v).Find(%v) returns wrong index %v", tt.args, n, i)
 
-				if !q.Contains(n) {
-					t.Errorf("QNamesFrom(%v).Contains(%v) returns false", tt.args, n)
-				}
+				require.True(q.Contains(n), "QNamesFrom(%v).Contains(%v) returns false", tt.args, n)
+
 				unk := MustParseQName("test.unknown")
-				if q.Contains(unk) {
-					t.Errorf("QNamesFrom(%v).Contains(test.unknown) returns true", tt.args)
-				}
+				require.False(q.Contains(unk), "QNamesFrom(%v).Contains(test.unknown) returns true", tt.args)
 
-				if q.ContainsAll(n, unk) {
-					t.Errorf("QNamesFrom(%v).ContainsAll(%v, %v) returns true", tt.args, n, unk)
-				}
-				if !q.ContainsAll(names[0], n) {
-					t.Errorf("QNamesFrom(%v).ContainsAll(%v, %v) returns false", tt.args, names[0], n)
-				}
-				if q.ContainsAny(unk) {
-					t.Errorf("QNamesFrom(%v).ContainsAny(%v) returns true", tt.args, unk)
-				}
-				if !q.ContainsAny(n, unk) {
-					t.Errorf("QNamesFrom(%v).ContainsAny(%v, %v) returns false", tt.args, n, unk)
-				}
+				require.False(q.ContainsAll(n, unk), "QNamesFrom(%v).ContainsAll(%v, %v) returns true", tt.args, n, unk)
+				require.True(q.ContainsAll(names[0], n), "QNamesFrom(%v).ContainsAll(%v, %v) returns false", tt.args, names[0], n)
+
+				require.False(q.ContainsAny(unk), "QNamesFrom(%v).ContainsAny(%v) returns true", tt.args, unk)
+				require.True(q.ContainsAny(n, unk), "QNamesFrom(%v).ContainsAny(%v, %v) returns false", tt.args, n, unk)
 			}
+
+			t.Run("test Collect", func(t *testing.T) {
+				c := QNames{}
+				c.Collect(slices.Values(names))
+				require.Equal(q, c)
+			})
 		})
 	}
 }
@@ -740,7 +730,7 @@ func TestBasicUsage_AppQName_JSon(t *testing.T) {
 
 	t.Run("key of a map", func(t *testing.T) {
 		expected := map[AppQName]bool{
-			NewAppQName("sys", "my"):            true,
+			NewAppQName("sys", "my"):           true,
 			NewAppQName("sys", `Carlson 哇"呀呀`): true,
 		}
 

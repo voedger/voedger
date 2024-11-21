@@ -50,11 +50,7 @@ type IWorkspace interface {
 	Type(QName) IType
 
 	// Enumerates types. All types from ancestors and used workspaces are enumerated.
-	//
-	// Enumerate order:
-	// 	- types from ancestors in alphabetic order,
-	// 	- local types from workspaces in alphabetic order,
-	// 	- types from used workspaces in alphabetic order.
+	// Types are enumerated in alphabetical order.
 	Types(func(IType) bool)
 
 	// Returns used workspaces.
