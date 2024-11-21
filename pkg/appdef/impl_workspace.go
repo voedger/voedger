@@ -12,18 +12,21 @@ type workspace struct {
 	withAbstract
 	acl       []*aclRule
 	ancestors *workspaces
-	types     *types[IType]
-	usedWS    *workspaces
-	desc      ICDoc
+	types     struct {
+		local *types[IType]
+		all   *types[IType]
+	}
+	usedWS *workspaces
+	desc   ICDoc
 }
 
 func newWorkspace(app *appDef, name QName) *workspace {
 	ws := &workspace{
 		typ:       makeType(app, nil, name, TypeKind_Workspace),
 		ancestors: newWorkspaces(),
-		types:     newTypes[IType](),
 		usedWS:    newWorkspaces(),
 	}
+	ws.types.local = newTypes[IType]()
 	if name != SysWorkspaceQName {
 		ws.ancestors.add(app.Workspace(SysWorkspaceQName))
 	}
@@ -66,85 +69,50 @@ func (ws *workspace) Inherits(anc QName) bool {
 }
 
 func (ws *workspace) LocalType(name QName) IType {
-	return ws.types.find(name)
+	return ws.types.local.find(name)
 }
 
 func (ws *workspace) LocalTypes(visit func(IType) bool) {
-	ws.types.all(visit)
+	ws.types.local.all(visit)
 }
 
 func (ws *workspace) Type(name QName) IType {
-
+	// Type can not use `ws.types.all.find(name)` because two reasons:
+	// - this method called before `appDef.build()` and `ws.build()`,
+	//   when `ws.types.all` is not initialized.
+	// - Type() should find workspaces if ancestor or child or self name passed,
+	//   but `ws.types.all` will not contain workspaces.
 	var (
-		findWS  func(IWorkspace) IType
-		chainWS map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
+		find  func(IWorkspace) IType
+		chain map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
 	)
-
-	findWS = func(w IWorkspace) IType {
-		if chainWS[w.QName()] {
-			return NullType
-		}
-		chainWS[w.QName()] = true
-
-		if name == w.QName() {
-			return w
-		}
-
-		if t := w.LocalType(name); t != NullType {
-			return t
-		}
-
-		for a := range w.Ancestors {
-			if t := findWS(a.(*workspace)); t != NullType {
+	find = func(w IWorkspace) IType {
+		if !chain[w.QName()] {
+			chain[w.QName()] = true
+			if name == w.QName() {
+				return w
+			}
+			if t := w.LocalType(name); t != NullType {
 				return t
 			}
-		}
-		for u := range w.UsedWorkspaces {
-			if t := findWS(u.(*workspace)); t != NullType {
-				return t
+			for a := range w.Ancestors {
+				if t := find(a.(*workspace)); t != NullType {
+					return t
+				}
+			}
+			for u := range w.UsedWorkspaces {
+				if t := find(u.(*workspace)); t != NullType {
+					return t
+				}
 			}
 		}
-
 		return NullType
 	}
-
-	return findWS(ws)
+	return find(ws)
 }
 
 func (ws *workspace) Types(visit func(IType) bool) {
-	var (
-		visitWS func(IWorkspace) bool
-		chainWS map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
-	)
-
-	visitWS = func(w IWorkspace) bool {
-		if chainWS[w.QName()] {
-			return true
-		}
-		chainWS[w.QName()] = true
-
-		for a := range w.Ancestors {
-			if !visitWS(a) {
-				return false
-			}
-		}
-
-		for t := range w.LocalTypes {
-			if !visit(t) {
-				return false
-			}
-		}
-
-		for u := range w.UsedWorkspaces {
-			if !visitWS(u) {
-				return false
-			}
-		}
-
-		return true
-	}
-
-	visitWS(ws)
+	ws.types.all.all(visit)
 }
 
 func (ws *workspace) UsedWorkspaces(visit func(IWorkspace) bool) {
@@ -258,7 +226,37 @@ func (ws *workspace) appendType(t IType) {
 
 	// do not check the validity or uniqueness of the name; this was checked by `*application.appendType (t)`
 
-	ws.types.add(t)
+	ws.types.local.add(t)
+}
+
+// should be called from appDef.build().
+func (ws *workspace) build() error {
+	ws.buildAllTypes()
+	return nil
+}
+
+func (ws *workspace) buildAllTypes() {
+	ws.types.all = newTypes[IType]()
+	var (
+		collect func(IWorkspace)
+		chain   map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
+	)
+	collect = func(w IWorkspace) {
+		if chain[w.QName()] {
+			return
+		}
+		chain[w.QName()] = true
+		for a := range w.Ancestors {
+			collect(a)
+		}
+		for t := range w.LocalTypes {
+			ws.types.all.add(t)
+		}
+		for u := range w.UsedWorkspaces {
+			collect(u)
+		}
+	}
+	collect(ws)
 }
 
 func (ws *workspace) grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) {
@@ -328,7 +326,7 @@ func (ws *workspace) setDescriptor(q QName) {
 		return
 	}
 
-	if ws.desc = CDoc(ws.types.find, q); ws.desc == nil {
+	if ws.desc = CDoc(ws.LocalType, q); ws.desc == nil {
 		panic(ErrNotFound("CDoc «%v»", q))
 	}
 	if ws.desc.Abstract() {
@@ -479,10 +477,6 @@ func (wb *workspaceBuilder) UseWorkspace(name QName, names ...QName) IWorkspaceB
 func (wb *workspaceBuilder) Workspace() IWorkspace { return wb.workspace }
 
 // List of workspaces.
-//
-// @ConcurrentAccess
 type workspaces = types[IWorkspace]
 
-func newWorkspaces() *workspaces {
-	return newTypes[IWorkspace]()
-}
+func newWorkspaces() *workspaces { return newTypes[IWorkspace]() }

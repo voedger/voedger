@@ -111,7 +111,7 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 
 		require.Equal(ws, ws.Type(wsName).(IWorkspace), "should be ok to get workspace by type")
 
-		require.Nil(app.Workspace(NewQName("unknown", "workspace")), "must be nil if unknown workspace")
+		require.Nil(app.Workspace(NewQName("unknown", "workspace")), "should be nil if unknown workspace")
 	})
 
 	t.Run("should be panics", func(t *testing.T) {
@@ -291,6 +291,19 @@ func Test_WorkspaceInheritance(t *testing.T) {
 	//                  └─── test.ws3 ◄──┤                             ├─── test.ws7
 	//                                   └─—— test.ws5 ◄───────────────┘
 
+	testAncestors := [wsCount]struct {
+		anc []int
+	}{
+		{[]int{}},     //0
+		{[]int{0}},    //1
+		{[]int{1}},    //2
+		{[]int{}},     //3
+		{[]int{3}},    //4
+		{[]int{3}},    //5
+		{[]int{4}},    //6
+		{[]int{5, 6}}, //7
+	}
+
 	require := require.New(t)
 
 	wsName := func(idx int) QName { return NewQName("test", fmt.Sprintf("ws%d", idx)) }
@@ -299,9 +312,9 @@ func Test_WorkspaceInheritance(t *testing.T) {
 	testADB := func() IAppDefBuilder {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
-
-		newWS := func(idx int, anc []int) {
+		for idx := 0; idx < wsCount; idx++ {
 			ws := adb.AddWorkspace(wsName(idx))
+			anc := testAncestors[idx].anc
 			if len(anc) > 0 {
 				ancNames := make([]QName, len(anc), len(anc))
 				for i, a := range anc {
@@ -311,17 +324,6 @@ func Test_WorkspaceInheritance(t *testing.T) {
 			}
 			_ = ws.AddObject(objName(idx))
 		}
-
-		newWS(0, nil)
-		newWS(1, []int{0})
-		newWS(2, []int{1})
-
-		newWS(3, nil)
-		newWS(4, []int{3})
-		newWS(5, []int{3})
-		newWS(6, []int{4})
-		newWS(7, []int{5, 6})
-
 		return adb
 	}
 
@@ -335,19 +337,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 	})
 
 	t.Run("should be ok to read ancestors", func(t *testing.T) {
-		tests := []struct {
-			anc []int
-		}{
-			{[]int{}},     //0
-			{[]int{0}},    //1
-			{[]int{1}},    //2
-			{[]int{}},     //3
-			{[]int{3}},    //4
-			{[]int{3}},    //5
-			{[]int{4}},    //6
-			{[]int{5, 6}}, //7
-		}
-		for wsIdx, test := range tests {
+		for wsIdx, test := range testAncestors {
 			ws := app.Workspace(wsName(wsIdx))
 
 			want := make([]QName, len(test.anc), len(test.anc))
@@ -368,21 +358,20 @@ func Test_WorkspaceInheritance(t *testing.T) {
 
 	t.Run("should be ok to check inheritance", func(t *testing.T) {
 		tests := []struct {
-			ws       int
 			inherits []int
 		}{
-			{0, []int{0}},
-			{1, []int{0, 1}},
-			{2, []int{0, 1, 2}},
+			{[]int{0}},
+			{[]int{0, 1}},
+			{[]int{0, 1, 2}},
 
-			{3, []int{3}},
-			{4, []int{3, 4}},
-			{5, []int{3, 5}},
-			{6, []int{3, 4, 6}},
-			{7, []int{3, 4, 5, 6, 7}},
+			{[]int{3}},
+			{[]int{3, 4}},
+			{[]int{3, 5}},
+			{[]int{3, 4, 6}},
+			{[]int{3, 4, 5, 6, 7}},
 		}
-		for _, test := range tests {
-			ws := app.Workspace(wsName(test.ws))
+		for wsIdx, test := range tests {
+			ws := app.Workspace(wsName(wsIdx))
 			for a := 0; a < wsCount; a++ {
 				want := slices.Contains(test.inherits, a)
 				got := ws.Inherits(wsName(a))
@@ -402,23 +391,21 @@ func Test_WorkspaceInheritance(t *testing.T) {
 		}
 	})
 
-	t.Run("should be ok to find types in descendants", func(t *testing.T) {
+	t.Run("should be ok to find ancestor types in descendants", func(t *testing.T) {
 		tests := []struct {
-			ws      int
 			objects []int
 		}{
-			{0, []int{0}},
-			{1, []int{0, 1}},
-			{2, []int{0, 1, 2}},
-
-			{3, []int{3}},
-			{4, []int{3, 4}},
-			{5, []int{3, 5}},
-			{6, []int{3, 4, 6}},
-			{7, []int{3, 4, 5, 6, 7}},
+			{[]int{0}},
+			{[]int{0, 1}},
+			{[]int{0, 1, 2}},
+			{[]int{3}},
+			{[]int{3, 4}},
+			{[]int{3, 5}},
+			{[]int{3, 4, 6}},
+			{[]int{3, 4, 5, 6, 7}},
 		}
-		for _, test := range tests {
-			ws := app.Workspace(wsName(test.ws))
+		for wsIdx, test := range tests {
+			ws := app.Workspace(wsName(wsIdx))
 			for o := 0; o < wsCount; o++ {
 				want := slices.Contains(test.objects, o)
 				obj := Object(ws.Type, objName(o))
@@ -430,6 +417,21 @@ func Test_WorkspaceInheritance(t *testing.T) {
 				}
 			}
 			require.NotNil(ws.Type(SysData_int32), "should be ok to find system type in workspace")
+		}
+	})
+
+	t.Run("should be ok to iterate types", func(t *testing.T) {
+		for wsIdx := 0; wsIdx < wsCount; wsIdx++ {
+			ws := app.Workspace(wsName(wsIdx))
+			types := slices.Collect(ws.Types)
+			for a := range ws.Ancestors {
+				for t := range a.Types {
+					require.Contains(types, t, "%v types should contains type %v from ancestor %v", ws, t, a)
+				}
+			}
+			require.True(slices.IsSortedFunc(types, func(a, b IType) int {
+				return CompareQName(a.QName(), b.QName())
+			}), "%v types should be sorted", ws)
 		}
 	})
 
@@ -448,33 +450,31 @@ func Test_WorkspaceInheritance(t *testing.T) {
 
 		t.Run("if circular inheritance detected", func(t *testing.T) {
 			tests := []struct {
-				ws        int
 				circulars []int
 			}{
-				{0, []int{0, 1, 2}},
-				{1, []int{1, 2}},
-				{2, []int{2}},
-
-				{3, []int{3, 4, 5, 6, 7}},
-				{4, []int{4, 6, 7}},
-				{5, []int{5, 7}},
-				{6, []int{6, 7}},
-				{7, []int{7}},
+				{[]int{0, 1, 2}},       // 0
+				{[]int{1, 2}},          // 1
+				{[]int{2}},             // 2
+				{[]int{3, 4, 5, 6, 7}}, // 3
+				{[]int{4, 6, 7}},       // 4
+				{[]int{5, 7}},          // 5
+				{[]int{6, 7}},          // 6
+				{[]int{7}},             // 7
 			}
 
-			for _, test := range tests {
+			for wsIdx, test := range tests {
 				for a := 0; a < wsCount; a++ {
 					anc := wsName(a)
 
 					adb := testADB()
-					ws := adb.AlterWorkspace(wsName(test.ws))
+					ws := adb.AlterWorkspace(wsName(wsIdx))
 
 					if slices.Contains(test.circulars, a) {
 						require.Panics(func() { ws.SetAncestors(anc) },
-							require.Is(ErrUnsupportedError), require.Has("Circular inheritance"), require.Has(anc), require.Has(wsName(test.ws)))
+							require.Is(ErrUnsupportedError), require.Has("Circular inheritance"), require.Has(anc), require.Has(wsName(wsIdx)))
 					} else {
 						require.NotPanics(func() { ws.SetAncestors(anc) },
-							"unexpected panics while set ancestors for «%v» from «%v»", wsName(test.ws), anc)
+							"unexpected panics while set ancestors for «%v» from «%v»", wsName(wsIdx), anc)
 					}
 				}
 			}
@@ -485,12 +485,24 @@ func Test_WorkspaceInheritance(t *testing.T) {
 func Test_WorkspaceUsage(t *testing.T) {
 	const wsCount = 7
 
-	require := require.New(t)
-
 	// WS0 —─► WS1 ──► WS2     ┌———————┐
 	//  │              |       |       |
 	//  │              ▼       ▼       |
 	//  └─———► WS3 ──► WS4 ──► WS5 ──► WS6
+
+	testUses := [wsCount]struct {
+		use []int
+	}{
+		{[]int{1, 3}}, //0
+		{[]int{2}},    //1
+		{[]int{4}},    //2
+		{[]int{4}},    //3
+		{[]int{5}},    //4
+		{[]int{6}},    //5
+		{[]int{5}},    //6
+	}
+
+	require := require.New(t)
 
 	wsName := func(idx int) QName { return NewQName("test", fmt.Sprintf("ws%d", idx)) }
 	objName := func(idx int) QName { return NewQName("test", fmt.Sprintf("obj%d", idx)) }
@@ -498,32 +510,20 @@ func Test_WorkspaceUsage(t *testing.T) {
 	testADB := func() IAppDefBuilder {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
-
 		for i := 0; i < wsCount; i++ {
 			ws := adb.AddWorkspace(wsName(i))
 			_ = ws.AddObject(objName(i))
 		}
-
-		useWS := func(idx int, use []int) {
+		for idx, test := range testUses {
 			ws := adb.AlterWorkspace(wsName(idx))
-			if len(use) > 0 {
-				useNames := make([]QName, len(use), len(use))
-				for i, a := range use {
+			if len(test.use) > 0 {
+				useNames := make([]QName, len(test.use), len(test.use))
+				for i, a := range test.use {
 					useNames[i] = wsName(a)
 				}
 				ws.UseWorkspace(useNames[0], useNames[1:]...)
 			}
 		}
-
-		useWS(0, []int{1, 3})
-		useWS(1, []int{2})
-		useWS(2, []int{4})
-
-		useWS(3, []int{4})
-		useWS(4, []int{5})
-		useWS(5, []int{6})
-		useWS(6, []int{5})
-
 		return adb
 	}
 
@@ -537,18 +537,7 @@ func Test_WorkspaceUsage(t *testing.T) {
 	})
 
 	t.Run("should be ok to to read workspace usage", func(t *testing.T) {
-		tests := [wsCount]struct {
-			use []int
-		}{
-			{[]int{1, 3}}, //0
-			{[]int{2}},    //1
-			{[]int{4}},    //2
-			{[]int{4}},    //3
-			{[]int{5}},    //4
-			{[]int{6}},    //5
-			{[]int{5}},    //6
-		}
-		for idx, test := range tests {
+		for idx, test := range testUses {
 			ws := app.Workspace(wsName(idx))
 			want := make([]QName, len(test.use), len(test.use))
 			for i, a := range test.use {
@@ -565,7 +554,7 @@ func Test_WorkspaceUsage(t *testing.T) {
 
 	t.Run("should be ok to read objects from usages", func(t *testing.T) {
 		tests := [wsCount]struct {
-			use []int
+			objects []int
 		}{
 			{[]int{0, 1, 2, 3, 4, 5, 6}}, //0
 			{[]int{1, 2, 4, 5, 6}},       //1
@@ -573,52 +562,65 @@ func Test_WorkspaceUsage(t *testing.T) {
 			{[]int{3, 4, 5, 6}},          //3
 			{[]int{4, 5, 6}},             //4
 			{[]int{5, 6}},                //5
-			{[]int{6, 5}},                //6
+			{[]int{5, 6}},                //6
 		}
 		for idx, test := range tests {
 			ws := app.Workspace(wsName(idx))
-			for i := 0; i < wsCount; i++ {
-				t.Run("should be ok to find", func(t *testing.T) {
+			t.Run("should be ok to find", func(t *testing.T) {
+				for i := 0; i < wsCount; i++ {
 					obj := Object(ws.Type, objName(i))
-					if slices.Contains(test.use, i) {
+					if slices.Contains(test.objects, i) {
 						require.NotNil(obj, "should be ok to find object «%v» in %v", objName(i), ws)
 					} else {
 						require.Nil(obj, "object «%v» should be unknown in %v", objName(i), ws)
 					}
-				})
-				t.Run("should be ok to enum", func(t *testing.T) {
-					wantNames := make([]QName, 0, len(test.use))
-					for _, u := range test.use {
-						wantNames = append(wantNames, objName(u))
-					}
-					cnt := 0
-					for obj := range Objects(ws.Types) {
-						require.Contains(wantNames, obj.QName(), "unexpected object in %v: %v", ws, obj)
-						cnt++
-					}
-					require.Len(wantNames, cnt, "unexpected count of objects in %v", ws)
-				})
+				}
+			})
+			t.Run("should be ok to enum", func(t *testing.T) {
+				types := slices.Collect(ws.Types)
+				require.True(slices.IsSortedFunc(types, func(a, b IType) int {
+					return CompareQName(a.QName(), b.QName())
+				}), "%v types should be sorted", ws)
 
-				t.Run("should be breakable types enumeration", func(t *testing.T) {
-					ws := app.Workspace(wsName(0))
+				for used := range ws.UsedWorkspaces {
+					for t := range used.Types {
+						require.Contains(types, t, "%v types should contain %v from %v", ws, t, used)
+					}
+				}
 
-					breakAt := func(wsName QName) {
-						var typ IType
-						for t := range ws.Types {
-							if t.Workspace().QName() == wsName {
-								typ = t
-								break
-							}
+				want := []IObject{}
+				for _, o := range test.objects {
+					want = append(want, Object(app.Type, objName(o)))
+				}
+				for _, o := range want {
+					require.Contains(types, o, "%v types should contain %v", ws, o)
+				}
+
+				got := []IObject{}
+				for o := range Objects(ws.Types) {
+					got = append(got, o)
+				}
+				require.EqualValues(want, got, "unexpected objects in %v", ws)
+			})
+			t.Run("should be breakable types enumeration", func(t *testing.T) {
+				ws := app.Workspace(wsName(0))
+
+				breakAt := func(wsName QName) {
+					var typ IType
+					for t := range ws.Types {
+						if t.Workspace().QName() == wsName {
+							typ = t
+							break
 						}
-						require.NotNil(typ)
-						require.Equal(wsName, typ.Workspace().QName())
 					}
+					require.NotNil(typ)
+					require.Equal(wsName, typ.Workspace().QName())
+				}
 
-					t.Run("from ancestor", func(t *testing.T) { breakAt(SysWorkspaceQName) })
-					t.Run("from local", func(t *testing.T) { breakAt(ws.QName()) })
-					t.Run("from used", func(t *testing.T) { breakAt(wsName(6)) })
-				})
-			}
+				t.Run("from ancestor", func(t *testing.T) { breakAt(SysWorkspaceQName) })
+				t.Run("from local", func(t *testing.T) { breakAt(ws.QName()) })
+				t.Run("from used", func(t *testing.T) { breakAt(wsName(6)) })
+			})
 		}
 	})
 
