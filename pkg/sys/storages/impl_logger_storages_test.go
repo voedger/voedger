@@ -33,6 +33,7 @@ func Test_LoggerStorage(t *testing.T) {
 	}
 
 	logger.SetLogLevel(logger.LogLevelVerbose)
+	defer logger.SetLogLevel(logger.LogLevelInfo)
 	err = intents.ApplyBatch([]state.ApplyBatchItem{{Key: key, Value: value}})
 	require.NoError(t, err)
 	require.Empty(t, line)

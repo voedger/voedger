@@ -6,22 +6,24 @@
 
 package orm
 
-import "github.com/voedger/voedger/pkg/exttinygo"
+import (
+	"github.com/voedger/voedger/pkg/exttinygo"
+)
 
 
 // package type
 type TPackage_{{.Name}} struct {
     Path 								string
-    {{range .Items}}{{.Type}}_{{.Name}} {{.Type}}_{{$.Name}}_{{.Name}}
-    {{end}}
+    {{range .Items}}{{if (ne .Type "Projector")}}{{.Type}}_{{.Name}} {{.Type}}_{{$.Name}}_{{.Name}}
+    {{end}}{{end}}
 }
 
 // package variables
 var Package_{{.Name}} = TPackage_{{.Name}}{  
     Path: "{{.FullPath}}",
-    {{range .Items}}{{.Type}}_{{.Name}}: {{.Type}}_{{$.Name}}_{{.Name}}{
+    {{range .Items}}{{if (ne .Type "Projector")}}{{.Type}}_{{.Name}}: {{.Type}}_{{$.Name}}_{{.Name}}{
         Type: Type{fQName: "{{.Package.FullPath}}.{{.Name}}"},
-    },{{end}}
+    },{{end}}{{end}}
 }
 
 {{range .Items}}{{template "item" .}}{{end}}

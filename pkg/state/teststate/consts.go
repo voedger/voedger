@@ -22,5 +22,6 @@ var IntentsLimit = 10
 var BundlesLimit = 10
 var (
 	PackageName                  = "tstpkg"
-	errMsgFailedToParseKeyValues = "failed to parse key values"
+	msgFailedToParseKeyValues    = "failed to parse key values"
+	fmtMsgFailedToParseKeyValues = "failed to parse key values: %w"
 )
