@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -68,6 +69,10 @@ func TestBasicUsage(t *testing.T) {
 		wsb.AddCRecord(testCRecord)
 
 		wsb.AddCommand(testCmdQName).SetUnloggedParam(testCmdQNameParamsUnlogged).SetParam(testCmdQNameParams)
+
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
 
 		// the test command itself
 		testExec := func(args istructs.ExecCommandArgs) (err error) {
@@ -188,6 +193,10 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 		wsb.AddWDoc(testWDoc)
 		wsb.AddCommand(cudQName)
 
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
+
 		failingProjQName := appdef.NewQName(appdef.SysPackage, "Failer")
 		cfg.AddSyncProjectors(
 			istructs.Projector{
@@ -236,6 +245,9 @@ func TestRecovery(t *testing.T) {
 		wsb.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
 		wsb.AddWDoc(testWDoc)
 		wsb.AddCommand(cudQName)
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
@@ -294,6 +306,9 @@ func TestCUDUpdate(t *testing.T) {
 	app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
 		wsb.AddCDoc(testQName).AddField("IntFld", appdef.DataKind_int32, false)
 		wsb.AddCommand(cudQName)
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
@@ -349,6 +364,9 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 	app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
 		wsb.AddCDoc(testQName)
 		wsb.AddCommand(cudQName)
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
@@ -407,6 +425,10 @@ func TestErrors(t *testing.T) {
 			AddField("Password", appdef.DataKind_string, true)
 
 		wsb.AddCommand(testCmdQName).SetUnloggedParam(testCmdQNameParamsUnlogged).SetParam(testCmdQNameParams)
+
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
 
 		cfg.Resources.Add(istructsmem.NewCommandFunction(testCmdQName, istructsmem.NullCommandExec))
 	})
@@ -477,6 +499,11 @@ func TestAuthnz(t *testing.T) {
 		wsb.AddCommand(qNameAllowedCmd)
 		wsb.AddCommand(qNameDeniedCmd)
 		wsb.AddCommand(istructs.QNameCommandCUD)
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
+		wsb.AddRole(iauthnz.QNameRoleProfileOwner)
+		wsb.AddRole(iauthnz.QNameRoleAnonymous)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(qNameAllowedCmd, istructsmem.NullCommandExec))
 		cfg.Resources.Add(istructsmem.NewCommandFunction(qNameDeniedCmd, istructsmem.NullCommandExec))
 		cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, istructsmem.NullCommandExec))
@@ -554,6 +581,9 @@ func TestBasicUsage_FuncWithRawArg(t *testing.T) {
 	ch := make(chan interface{})
 	app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
 		wsb.AddCommand(testCmdQName).SetParam(istructs.QNameRaw)
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(testCmdQName, func(args istructs.ExecCommandArgs) (err error) {
 			require.EqualValues("custom content", args.ArgumentObject.AsString(processors.Field_RawObject_Body))
 			close(ch)
@@ -588,6 +618,9 @@ func TestRateLimit(t *testing.T) {
 		func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
 			wsb.AddObject(parsQName)
 			wsb.AddCommand(qName).SetParam(parsQName)
+			wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+			wsb.AddRole(iauthnz.QNameRoleEveryone)
+			wsb.AddRole(iauthnz.QNameRoleSystem)
 			cfg.Resources.Add(istructsmem.NewCommandFunction(qName, istructsmem.NullCommandExec))
 
 			cfg.FunctionRateLimits.AddWorkspaceLimit(qName, istructs.RateLimit{
