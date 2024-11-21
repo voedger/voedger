@@ -5,6 +5,11 @@
 
 package main
 
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+	"slices"
+)
+
 type vpmParams struct {
 	Dir        string
 	TargetDir  string
@@ -37,7 +42,7 @@ type ormPackageInfo struct {
 
 type ormPackage struct {
 	ormPackageInfo
-	Items []interface{}
+	Items []any
 }
 
 type ormPackageItem struct {
@@ -60,6 +65,19 @@ type ormTableItem struct {
 	NonKeyFields []ormField
 }
 
+type ormProjector struct {
+	ormPackageItem
+	On []ormProjectorEventItem
+}
+
+type ormProjectorEventItem struct {
+	ormPackageItem
+	EventItem      any
+	Kinds          []appdef.ProjectorEventKind
+	Projector      ormProjector
+	SkipGeneration bool
+}
+
 type ormCommand struct {
 	ormPackageItem
 	ArgumentObject         interface{}
@@ -69,6 +87,8 @@ type ormCommand struct {
 
 func getQName(obj interface{}) string {
 	switch t := obj.(type) {
+	case ormProjector:
+		return t.QName
 	case ormPackageItem:
 		return t.QName
 	case ormTableItem:
@@ -88,11 +108,34 @@ type ormField struct {
 	SetMethodName string
 }
 
-func hasCommands(p ormPackage) bool {
-	for _, item := range p.Items {
-		if _, ok := item.(ormCommand); ok {
+func isExecutableWithParam(p ormProjector) bool {
+	for _, item := range p.On {
+		if doesExecuteWithParam(item) {
 			return true
 		}
 	}
+
 	return false
+}
+
+func doesExecuteWithParam(p ormProjectorEventItem) bool {
+	return slices.Contains(p.Kinds, appdef.ProjectorEventKind_ExecuteWithParam)
+}
+
+func hasEventItemName(p ormProjector, name string) bool {
+	for _, item := range p.On {
+		if item.Name == name {
+			return true
+		}
+	}
+
+	return false
+}
+
+func doesExecuteOn(p ormProjectorEventItem) bool {
+	return slices.Contains(p.Kinds, appdef.ProjectorEventKind_Execute)
+}
+
+func doesTriggerOnCUD(p ormProjectorEventItem) bool {
+	return slices.Contains(p.Kinds, appdef.ProjectorEventKind_Insert) || slices.Contains(p.Kinds, appdef.ProjectorEventKind_Update)
 }

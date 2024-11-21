@@ -9,7 +9,7 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
-	"go/format"
+	"golang.org/x/tools/imports"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -18,16 +18,23 @@ import (
 	"text/template"
 
 	"github.com/spf13/cobra"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/compile"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
+const (
+	gitignoreFileContent = `*
+`
+	unknownType                  = "Unknown"
+	errInGeneratingOrmFileFormat = "error occurred while generating %s: %w"
+)
+
 //go:embed ormtemplates/*
 var ormTemplatesFS embed.FS
 var reservedWords = []string{"type"}
+var uniqueProjectorCommandEvents = []any{}
 
 // newOrmCmd creates a new ORM command
 func newOrmCmd(params *vpmParams) *cobra.Command {
@@ -139,7 +146,27 @@ func getPkgAppDefObjs(
 
 // generateOrmFiles generates ORM files for the given package data
 func generateOrmFiles(pkgData map[ormPackageInfo][]interface{}, dir string) error {
-	ormFiles := make([]string, 0, len(pkgData)+1) // extra 1 for sys.go file
+	ormFiles := make([]string, 0, len(pkgData)+1) // extra 1 for utils.go file
+
+	// gathering all items in one package data for utils.go file
+	allItemsCount := 0
+	for _, pkgItems := range pkgData {
+		allItemsCount += len(pkgItems)
+	}
+
+	generalOrmPkgData := ormPackage{Items: make([]any, 0, allItemsCount)}
+	for _, pkgItems := range pkgData {
+		generalOrmPkgData.Items = append(generalOrmPkgData.Items, pkgItems...)
+	}
+	// generating utils.go file according to the general package data
+	utilsFilePath, err := generateUtilsFile(generalOrmPkgData, dir)
+	if err != nil {
+		return fmt.Errorf(errInGeneratingOrmFileFormat, utilsFilePath, err)
+	}
+
+	ormFiles = append(ormFiles, utilsFilePath)
+
+	// generating package files
 	for pkgInfo, pkgItems := range pkgData {
 		ormPkgData := ormPackage{
 			ormPackageInfo: pkgInfo,
@@ -152,14 +179,6 @@ func generateOrmFiles(pkgData map[ormPackageInfo][]interface{}, dir string) erro
 		}
 
 		ormFiles = append(ormFiles, ormFilePath)
-	}
-
-	// generate sys.go file
-	sysFilePath := filepath.Join(dir, "sys.go")
-
-	ormFiles = append(ormFiles, sysFilePath)
-	if err := os.WriteFile(sysFilePath, []byte(sysContent), coreutils.FileMode_rw_rw_rw_); err != nil {
-		return fmt.Errorf(errInGeneratingOrmFileFormat, sysFilePath, err)
 	}
 
 	// generate .gitignore file
@@ -179,7 +198,7 @@ func formatOrmFiles(ormFiles []string) error {
 			return err
 		}
 
-		formattedContent, err := format.Source(ormFileContent)
+		formattedContent, err := imports.Process("", ormFileContent, nil)
 		if err != nil {
 			return err
 		}
@@ -195,7 +214,23 @@ func formatOrmFiles(ormFiles []string) error {
 // generateOrmFile generates ORM file for the given package data
 func generateOrmFile(localName string, ormPkgData ormPackage, dir string) (filePath string, err error) {
 	filePath = filepath.Join(dir, fmt.Sprintf("package_%s.go", localName))
-	ormFileContent, err := fillInTemplate(ormPkgData)
+	ormFileContent, err := fillInTemplate("package", ormPkgData)
+
+	if err != nil {
+		return filePath, err
+	}
+
+	if err := os.WriteFile(filePath, ormFileContent, coreutils.FileMode_rw_rw_rw_); err != nil {
+		return filePath, err
+	}
+
+	return filePath, nil
+}
+
+// generateUtilsFile generates utils.go file for the given package data
+func generateUtilsFile(ormPkgData ormPackage, dir string) (filePath string, err error) {
+	filePath = filepath.Join(dir, "utils.go")
+	ormFileContent, err := fillInTemplate("utils", ormPkgData)
 
 	if err != nil {
 		return filePath, err
@@ -294,7 +329,7 @@ func processITypeObj(
 	uniquePkgQNames map[ormPackageInfo][]string,
 	wsQName appdef.QName,
 	obj appdef.IType,
-) (newItem interface{}) {
+) (newItem any) {
 	if obj == nil {
 		return nil
 	}
@@ -305,7 +340,7 @@ func processITypeObj(
 	}
 
 	switch t := obj.(type) {
-	case appdef.ICDoc, appdef.IWDoc, appdef.IView, appdef.IODoc, appdef.IObject, appdef.IORecord:
+	case appdef.ICDoc, appdef.IWDoc, appdef.IView, appdef.IODoc, appdef.IObject, appdef.IORecord, appdef.ICRecord, appdef.IWRecord:
 		tableData := ormTableItem{
 			ormPackageItem: pkgItem,
 			Fields:         make([]ormField, 0),
@@ -361,6 +396,43 @@ func processITypeObj(
 			}
 		}
 		newItem = tableData
+	case appdef.IProjector:
+		// projector is a special case
+		ormProjectorItem := ormProjector{
+			ormPackageItem: pkgItem,
+			On:             make([]ormProjectorEventItem, 0),
+		}
+		iProjectorEvents := t.Events()
+
+		// collecting projector events (Commands, CUDs, etc.)
+		iProjectorEvents.Enum(func(iProjectorEvent appdef.IProjectorEvent) {
+			ormObject := processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, iProjectorEvent.On())
+			// Avoiding double generation of the same Cmd_ORM object via
+			// checking if it already exists in other projector events
+			cmdOrmObj, ok := ormObject.(ormCommand)
+			skipGeneration := false
+			if ok {
+				skipGeneration = true
+				if !slices.ContainsFunc(uniqueProjectorCommandEvents, func(item any) bool {
+					return item.(ormCommand).QName == cmdOrmObj.QName
+				}) {
+					uniqueProjectorCommandEvents = append(uniqueProjectorCommandEvents, cmdOrmObj)
+					skipGeneration = false
+				}
+			}
+
+			if ormObject != nil {
+				ormProjectorItem.On = append(ormProjectorItem.On, ormProjectorEventItem{
+					ormPackageItem: extractOrmPackageItem(ormObject),
+					Projector:      ormProjectorItem,
+					Kinds:          iProjectorEvent.Kind(),
+					EventItem:      ormObject,
+					SkipGeneration: skipGeneration,
+				})
+			}
+		})
+
+		newItem = ormProjectorItem
 	case appdef.IWorkspace:
 		newItem = pkgItem
 	case appdef.ICommand, appdef.IQuery:
@@ -433,21 +505,25 @@ func processITypeObj(
 }
 
 // fillInTemplate fills in the template with the given ORM package data
-func fillInTemplate(ormPkgData ormPackage) ([]byte, error) {
+func fillInTemplate(templateName string, ormPkgData ormPackage) ([]byte, error) {
 	ormTemplates, err := fs.Sub(ormTemplatesFS, "ormtemplates")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read templates directory: %w", err)
 	}
 
-	t, err := template.New("package").Funcs(template.FuncMap{
+	t, err := template.New(templateName).Funcs(template.FuncMap{
 		"capitalize": func(s string) string {
 			if len(s) == 0 {
 				return s
 			}
 			return strings.ToUpper(s[:1]) + s[1:]
 		},
-		"lower":       strings.ToLower,
-		"hasCommands": hasCommands,
+		"lower":                 strings.ToLower,
+		"doesExecuteOn":         doesExecuteOn,
+		"doesTriggerOnCUD":      doesTriggerOnCUD,
+		"doesExecuteWithParam":  doesExecuteWithParam,
+		"isExecutableWithParam": isExecutableWithParam,
+		"hasEventItemName":      hasEventItemName,
 	}).ParseFS(ormTemplates, "*")
 
 	if err != nil {
@@ -455,7 +531,7 @@ func fillInTemplate(ormPkgData ormPackage) ([]byte, error) {
 	}
 
 	var filledTemplate bytes.Buffer
-	if err := t.ExecuteTemplate(&filledTemplate, "package", ormPkgData); err != nil {
+	if err := t.ExecuteTemplate(&filledTemplate, templateName, ormPkgData); err != nil {
 		return nil, fmt.Errorf("failed to fill template: %w", err)
 	}
 
@@ -535,10 +611,16 @@ func getObjType(obj interface{}) string {
 		return "Command"
 	case appdef.IORecord:
 		return "ORecord"
+	case appdef.IWRecord:
+		return "WRecord"
+	case appdef.ICRecord:
+		return "CRecord"
 	case appdef.IQuery:
 		return "Query"
 	case appdef.IWorkspace:
 		return "WS"
+	case appdef.IProjector:
+		return getTypeKind(t.Kind())
 	case appdef.IObject:
 		return getTypeKind(t.Kind())
 	case appdef.IType:
@@ -559,6 +641,8 @@ func getTypeKind(typeKind appdef.TypeKind) string {
 		return "WDoc"
 	case appdef.TypeKind_ODoc:
 		return "ODoc"
+	case appdef.TypeKind_Projector:
+		return "Projector"
 	default:
 		return unknownType
 	}
@@ -585,5 +669,22 @@ func getFieldType(field appdef.IField) string {
 		return "ID"
 	default:
 		return unknownType
+	}
+}
+
+func extractOrmPackageItem(ormObject any) ormPackageItem {
+	switch t := ormObject.(type) {
+	case ormPackageItem:
+		return t
+	case ormProjector:
+		return t.ormPackageItem
+	case ormTableItem:
+		return t.ormPackageItem
+	case ormProjectorEventItem:
+		return t.ormPackageItem
+	case ormCommand:
+		return t.ormPackageItem
+	default:
+		return ormPackageItem{}
 	}
 }
