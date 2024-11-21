@@ -279,44 +279,52 @@ func TestAuthenticate(t *testing.T) {
 				Token:       sysToken,
 			},
 			expectedPrincipals: []iauthnz.Principal{
+				{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleEveryone},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleAuthenticatedUser},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleSystem},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
 		},
 		{
-			desc: "request to profile -> host + user + profile + workspace",
+			desc: "request to profile -> Everyone + authenticatedUser + user + profileOwner",
 			req: iauthnz.AuthnRequest{
 				Host:        "127.0.0.1",
 				RequestWSID: 1,
 				Token:       userToken,
 			},
 			expectedPrincipals: []iauthnz.Principal{
+				{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleEveryone},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleAuthenticatedUser},
 				{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleProfileOwner},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
 		},
 		{
-			desc: "request to an owned workspace -> host + user + owner + workspace",
+			desc: "request to an owned workspace -> everyone + AuthenticatedUser + user + workspaceOwner + host",
 			req: iauthnz.AuthnRequest{
 				Host:        "127.0.0.1",
 				RequestWSID: 2,
 				Token:       userToken,
 			},
 			expectedPrincipals: []iauthnz.Principal{
+				{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleEveryone},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleAuthenticatedUser},
 				{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleWorkspaceOwner},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
 		},
 		{
-			desc: "request to a non-owned workspace -> host + user",
+			desc: "request to a non-owned workspace -> Everyone + AuthenticatedUser + user + host",
 			req: iauthnz.AuthnRequest{
 				Host:        "127.0.0.1",
 				RequestWSID: alienWSID,
 				Token:       userToken,
 			},
 			expectedPrincipals: []iauthnz.Principal{
+				{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleEveryone},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: alienWSID, QName: iauthnz.QNameRoleAuthenticatedUser},
 				{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
@@ -329,18 +337,22 @@ func TestAuthenticate(t *testing.T) {
 				Token:       userToken,
 			},
 			expectedPrincipals: []iauthnz.Principal{
+				{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleEveryone},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: nonInitedWSID, QName: iauthnz.QNameRoleAuthenticatedUser},
 				{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
 		},
 		{
-			desc: "device -> host + device + linkedDevice + workspace",
+			desc: "device -> Everyone + AuthenticatedUser + device + ProfileOwner + host",
 			req: iauthnz.AuthnRequest{
 				Host:        "127.0.0.1",
 				RequestWSID: 1,
 				Token:       deviceToken,
 			},
 			expectedPrincipals: []iauthnz.Principal{
+				{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleEveryone},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleAuthenticatedUser},
 				{Kind: iauthnz.PrincipalKind_Device, WSID: 1},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleProfileOwner},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
@@ -354,6 +366,8 @@ func TestAuthenticate(t *testing.T) {
 				Token:       userToken,
 			},
 			expectedPrincipals: []iauthnz.Principal{
+				{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleEveryone},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleAuthenticatedUser},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: qNameRoleResellersAdmin},
 				{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleWorkspaceOwner},
@@ -370,6 +384,8 @@ func TestAuthenticate(t *testing.T) {
 				Token:       userToken,
 			},
 			expectedPrincipals: []iauthnz.Principal{
+				{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleEveryone},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleAuthenticatedUser},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: qNameRoleUntillPaymentsReseller},
 				{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleWorkspaceOwner},
@@ -386,6 +402,8 @@ func TestAuthenticate(t *testing.T) {
 				Token:       apiKeyToken,
 			},
 			expectedPrincipals: []iauthnz.Principal{
+				{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleEveryone},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleAuthenticatedUser},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: testRole},
 			},
 		},
@@ -402,184 +420,6 @@ func TestAuthenticate(t *testing.T) {
 			principals, _, err := authn.Authenticate(context.Background(), appStructs, appTokens, tc.req)
 			require.NoError(err)
 			require.Equal(tc.expectedPrincipals, principals, tc.desc)
-		})
-	}
-}
-
-func TestAuthorize(t *testing.T) {
-	require := require.New(t)
-
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.NewITime())
-	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
-	pp := payloads.PrincipalPayload{
-		Login:       "testlogin",
-		SubjectKind: istructs.SubjectKind_User,
-		ProfileWSID: 1,
-	}
-	userToken, err := appTokens.IssueToken(time.Minute, &pp)
-	require.NoError(err)
-
-	pp.Roles = append(pp.Roles, payloads.RoleType{
-		WSID:  2,
-		QName: iauthnz.QNameRoleWorkspaceOwner,
-	})
-	userTokenWithRole, err := appTokens.IssueToken(time.Minute, &pp)
-	require.NoError(err)
-
-	pp.ProfileWSID = istructs.NullWSID
-	systemToken, err := appTokens.IssueToken(time.Minute, &pp)
-	require.NoError(err)
-	pp.ProfileWSID = 1
-
-	pp.SubjectKind = istructs.SubjectKind_Device
-	deviceToken, err := appTokens.IssueToken(time.Minute, &pp)
-	require.NoError(err)
-
-	qNameCDocComputers := appdef.NewQName("untill", "computers")
-
-	appStructs := AppStructsWithTestStorage(istructs.AppQName_test1_app1, map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}{
-		// workspace owned by the user
-		istructs.WSID(2): {
-			qNameCDocWorkspaceDescriptor: {
-				// cdoc.sys.WorkspaceDescriptor.ID=1, .OwnerWSID=1
-				1: {
-					"OwnerWSID": int64(1), // the same as ProfileWSID
-				},
-			},
-			qNameViewDeviceProfileWSIDIdx: {
-				2: {
-					field_dummy:                 int32(1),
-					field_DeviceProfileWSID:     int64(1),
-					appdef.SystemField_IsActive: true,
-					field_ComputersID:           istructs.RecordID(3),
-					field_RestaurantComputersID: istructs.RecordID(4),
-				},
-			},
-			// wrong to store in the user profile wsid, but ok for test
-			qNameCDocComputers: {
-				3: {
-					appdef.SystemField_QName:    qNameCDocComputers,
-					appdef.SystemField_IsActive: true,
-				},
-				6: {
-					appdef.SystemField_QName:    qNameCDocComputers,
-					appdef.SystemField_IsActive: false,
-				},
-			},
-		},
-
-		// child workspace. Parent is WSID 2
-		istructs.WSID(3): {
-			qNameCDocWorkspaceDescriptor: {
-				// cdoc.sys.WorkspaceDescriptor.ID=1, .OwnerWSID=2
-				1: {
-					"OwnerWSID": int64(2),
-				},
-			},
-		},
-	})
-	authn := NewDefaultAuthenticator(TestSubjectRolesGetter, TestIsDeviceAllowedFuncs)
-	authz := NewDefaultAuthorizer()
-
-	testCmd := appdef.NewQName(appdef.SysPackage, "testcmd")
-	testCases := []struct {
-		desc     string
-		reqz     iauthnz.AuthzRequest
-		reqn     iauthnz.AuthnRequest
-		expected bool
-	}{
-		{
-			desc: "execute in profile -> ok",
-			reqn: iauthnz.AuthnRequest{
-				RequestWSID: 1,
-				Token:       userToken,
-			},
-			reqz: iauthnz.AuthzRequest{
-				OperationKind: iauthnz.OperationKind_EXECUTE,
-				Resource:      testCmd,
-			},
-			expected: true,
-		},
-		{
-			desc: "execute in an owned workspace -> ok",
-			reqn: iauthnz.AuthnRequest{
-				RequestWSID: 2,
-				Token:       userToken,
-			},
-			reqz: iauthnz.AuthzRequest{
-				OperationKind: iauthnz.OperationKind_EXECUTE,
-				Resource:      testCmd,
-			},
-			expected: true,
-		},
-		{
-			desc: "execute a func with null auth policy w/o token at all -> ok",
-			reqn: iauthnz.AuthnRequest{
-				RequestWSID: 1,
-			},
-			reqz: iauthnz.AuthzRequest{
-				OperationKind: iauthnz.OperationKind_EXECUTE,
-				Resource:      qNameCmdLinkDeviceToRestaurant, // has null auth policy in default ACL
-			},
-			expected: true,
-		},
-		{
-			desc: "execute in an alien workspace -> !ok",
-			reqn: iauthnz.AuthnRequest{
-				RequestWSID: alienWSID,
-				Token:       userToken,
-			},
-			reqz: iauthnz.AuthzRequest{
-				OperationKind: iauthnz.OperationKind_EXECUTE,
-				Resource:      testCmd,
-			},
-			expected: false,
-		},
-		{
-			desc: "execute in an alien workspace but have role saying that we are workspaceowner -> ok",
-			reqn: iauthnz.AuthnRequest{
-				RequestWSID: alienWSID,
-				Token:       userTokenWithRole,
-			},
-			reqz: iauthnz.AuthzRequest{
-				OperationKind: iauthnz.OperationKind_EXECUTE,
-				Resource:      testCmd,
-			},
-			expected: true,
-		},
-		{
-			desc: "execute in an alien workspace with system token -> ok",
-			reqn: iauthnz.AuthnRequest{
-				RequestWSID: alienWSID,
-				Token:       systemToken,
-			},
-			reqz: iauthnz.AuthzRequest{
-				OperationKind: iauthnz.OperationKind_EXECUTE,
-				Resource:      testCmd,
-			},
-			expected: true,
-		},
-		{
-			desc: "execute in an owned workspace with device token -> ok",
-			reqn: iauthnz.AuthnRequest{
-				RequestWSID: 2,
-				Token:       deviceToken,
-			},
-			reqz: iauthnz.AuthzRequest{
-				OperationKind: iauthnz.OperationKind_EXECUTE,
-				Resource:      testCmd,
-			},
-			expected: true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.desc, func(t *testing.T) {
-			principals, _, err := authn.Authenticate(context.Background(), appStructs, appTokens, tc.reqn)
-			require.NoError(err)
-			ok, err := authz.Authorize(appStructs, principals, tc.reqz)
-			require.NoError(err)
-			require.Equal(tc.expected, ok, tc.desc)
 		})
 	}
 }

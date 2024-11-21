@@ -25,11 +25,12 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		}
 	}()
 
-	// // role.sys.Everyone
-	// principals = append(principals, iauthnz.Principal{
-	// 	Kind:  iauthnz.PrincipalKind_Role,
-	// 	QName: iauthnz.QNameRoleEveryone,
-	// })
+	// role.sys.Everyone
+	// TODO: надо ли?
+	principals = append(principals, iauthnz.Principal{
+		Kind:  iauthnz.PrincipalKind_Role,
+		QName: iauthnz.QNameRoleEveryone,
+	})
 
 	if len(req.Token) == 0 {
 		// add user with login "sys.Guest"
