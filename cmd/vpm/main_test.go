@@ -6,7 +6,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -527,11 +526,12 @@ func TestGenOrmTestItAndBuildApp(t *testing.T) {
 	// test runs in the temp directory
 	dir := filepath.Join(tempDir, "air")
 
-	// we use an absolute path so that we don't depend on where the test is running.
 	// go up to the root of the project.
 	localVoedgerDir := filepath.Join(wd, "..", "..")
-	fmt.Printf("localVoedgerDir: %s\n", localVoedgerDir)
-	err = replacePackageByLocalPath(dir, "github.com/voedger/voedger", localVoedgerDir)
+
+	// replace the voedger package with the local one in the go.mod file
+	// we use an absolute path so that we don't depend on where the test is running.
+	err = execRootCmd([]string{"go", "mod", "edit", "replace", "github.com/voedger/voedger", localVoedgerDir, "modfile", filepath.Join(dir, "go.mod")}, "1.0.0")
 	require.NoError(err)
 
 	err = execRootCmd([]string{"vpm", "orm", "-C", dir}, "1.0.0")
@@ -609,58 +609,4 @@ func TestCommandMessaging(t *testing.T) {
 	}
 
 	testingu.RunCmdTestCases(t, execRootCmd, testCases, version)
-}
-
-// replacePackageByLocalPath adds a replace directive to the go.mod file in the specified directory.
-// Example usage
-//
-//	dir := "." // Change this to the directory where your go.mod file is located
-//	moduleToReplace := "github.com/voedger/voedger"
-//	localPath := "../../../../../"
-//	replacePackageByLocalPath(dir, moduleToReplace, localPath)
-func replacePackageByLocalPath(dir, moduleToReplace, localPath string) error {
-	goModFile := filepath.Join(dir, "go.mod")
-
-	// Open go.mod file
-	file, err := os.Open(goModFile)
-	if err != nil {
-		return fmt.Errorf("error opening %s: %w", goModFile, err)
-	}
-	defer file.Close()
-
-	// Find the version of the target module
-	var moduleVersion string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if strings.HasPrefix(line, "require") && strings.Contains(line, moduleToReplace) {
-			parts := strings.Fields(line)
-			if len(parts) >= 3 {
-				moduleVersion = parts[2] // Extract the version
-				break
-			}
-		}
-	}
-
-	// Handle the case where the module is not found
-	if moduleVersion == "" {
-		return nil
-	}
-
-	// Construct the replace directive
-	replaceDirective := fmt.Sprintf("replace %s %s => %s", moduleToReplace, moduleVersion, localPath)
-
-	// Reopen the file for appending
-	file, err = os.OpenFile(goModFile, os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("error reopening %s for appending: %w", goModFile, err)
-	}
-	defer file.Close()
-
-	// Write the replace directive
-	if _, err = file.WriteString("\n" + replaceDirective + "\n"); err != nil {
-		return fmt.Errorf("error writing replace directive: %w", err)
-	}
-
-	return nil
 }

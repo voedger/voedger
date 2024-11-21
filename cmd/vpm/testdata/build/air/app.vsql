@@ -60,8 +60,6 @@ WORKSPACE RestaurantWS INHERITS untill.SomeWS (
 		NextPBillNumber int32
 	);
 
-    -- USE TABLE untill.*;
-
 	EXTENSION ENGINE BUILTIN (
 	    COMMAND Cmd1(cmd1Params);
 	    COMMAND CmdForProformaPrinted(ProformaPrinted);
