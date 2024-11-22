@@ -36,8 +36,8 @@ func newActualizers(app appdef.AppQName, part istructs.PartitionID) *PartitionAc
 // Deploys partition actualizers: stops actualizers for removed projectors and
 // starts actualizers for new projectors using the specified run function.
 func (pa *PartitionActualizers) Deploy(vvmCtx context.Context, appDef appdef.IAppDef, run Run) {
-	pa.stopOldActualizers(vvmCtx, appDef)
-	pa.startNewActualizers(vvmCtx, appDef, run)
+	pa.stopOlds(vvmCtx, appDef)
+	pa.startNews(vvmCtx, appDef, run)
 }
 
 // Returns all deployed actualizers
@@ -82,7 +82,7 @@ func (pa *PartitionActualizers) WaitTimeout(timeout time.Duration) (finished boo
 }
 
 // async start actualizer
-func (pa *PartitionActualizers) startActualizer(vvmCtx context.Context, name appdef.QName, run Run, wg *sync.WaitGroup) {
+func (pa *PartitionActualizers) start(vvmCtx context.Context, name appdef.QName, run Run, wg *sync.WaitGroup) {
 
 	ctx, cancel := context.WithCancel(vvmCtx)
 	rt := newRuntime(cancel)
@@ -91,10 +91,9 @@ func (pa *PartitionActualizers) startActualizer(vvmCtx context.Context, name app
 	pa.rt[name] = rt
 	pa.mx.Unlock()
 
-	started := make(chan struct{})
-
+	done := make(chan struct{})
 	go func() {
-		close(started) // started
+		close(done) // actualizer started
 
 		run(ctx, pa.app, pa.part, name)
 
@@ -102,11 +101,11 @@ func (pa *PartitionActualizers) startActualizer(vvmCtx context.Context, name app
 		delete(pa.rt, name)
 		pa.mx.Unlock()
 
-		close(rt.done) // finished
+		close(rt.done) // actualizer finished
 	}()
 
 	select {
-	case <-started:
+	case <-done: // wait until actualizer is started
 	case <-vvmCtx.Done():
 	}
 
@@ -114,71 +113,71 @@ func (pa *PartitionActualizers) startActualizer(vvmCtx context.Context, name app
 }
 
 // async start new actualizers
-func (pa *PartitionActualizers) startNewActualizers(vvmCtx context.Context, appDef appdef.IAppDef, run Run) {
-	startList := make(map[appdef.QName]struct{})
+func (pa *PartitionActualizers) startNews(vvmCtx context.Context, appDef appdef.IAppDef, run Run) {
+	news := make(map[appdef.QName]struct{})
 	pa.mx.RLock()
 	for prj := range appdef.Projectors(appDef.Types) {
 		if !prj.Sync() {
 			name := prj.QName()
 			if _, exists := pa.rt[name]; !exists {
-				startList[name] = struct{}{}
+				news[name] = struct{}{}
 			}
 		}
 	}
 	pa.mx.RUnlock()
 
-	allStarted := make(chan struct{})
+	done := make(chan struct{})
 	go func() {
 		startWG := sync.WaitGroup{}
-		for name := range startList {
+		for name := range news {
 			startWG.Add(1)
-			go pa.startActualizer(vvmCtx, name, run, &startWG)
+			go pa.start(vvmCtx, name, run, &startWG)
 		}
 		startWG.Wait()
-		close(allStarted)
+		close(done)
 	}()
 
 	select {
-	case <-allStarted:
+	case <-done:
 	case <-vvmCtx.Done():
 	}
 }
 
 // async stop actualizer
-func (pa *PartitionActualizers) stopActualizer(vvmCtx context.Context, rt *runtime, wg *sync.WaitGroup) {
+func (pa *PartitionActualizers) stop(vvmCtx context.Context, rt *runtime, wg *sync.WaitGroup) {
 	rt.cancel()
 	select {
-	case <-rt.done: // wait until actualizer go-routine is finished
+	case <-rt.done: // wait until actualizer is finished
 	case <-vvmCtx.Done():
 	}
 	wg.Done()
 }
 
 // async stop old actualizers
-func (pa *PartitionActualizers) stopOldActualizers(vvmCtx context.Context, appDef appdef.IAppDef) {
+func (pa *PartitionActualizers) stopOlds(vvmCtx context.Context, appDef appdef.IAppDef) {
 	pa.mx.RLock()
-	stopList := make(map[appdef.QName]*runtime)
+	olds := make(map[appdef.QName]*runtime)
 	for name, rt := range pa.rt {
 		// TODO: compare if projector properties changed (events, sync/async, etc.)
 		if appdef.Projector(appDef.Type, name) == nil {
-			stopList[name] = rt
+			olds[name] = rt
 		}
 	}
 	pa.mx.RUnlock()
 
-	allFinished := make(chan struct{})
+	done := make(chan struct{})
 	go func() {
 		stopWG := sync.WaitGroup{}
-		for _, rt := range stopList {
+		for _, rt := range olds {
 			stopWG.Add(1)
-			go pa.stopActualizer(vvmCtx, rt, &stopWG)
+			go pa.stop(vvmCtx, rt, &stopWG)
 		}
 		stopWG.Wait() // wait for all old actualizers to stop
-		close(allFinished)
+		close(done)
 	}()
 
 	select {
-	case <-allFinished:
+	case <-done:
 	case <-vvmCtx.Done():
 	}
 }
