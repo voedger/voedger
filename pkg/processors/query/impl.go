@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"runtime/debug"
 	"slices"
@@ -351,12 +352,15 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				return nil
 			}
 			requestedfields := []string{}
+			c := qw.resultType.(appdef.IContainers)
+			_ = c
 			for _, elem := range qw.queryParams.Elements() {
+				log.Println(elem.Path().Name())
 				for _, resultField := range elem.ResultFields() {
 					requestedfields = append(requestedfields, resultField.Field())
 				}
 			}
-			тут вложенное поле price считается внешним, поэтому ошибка. Как IsOoperationAllowed подсовывать вложенные поля?
+			// тут вложенное поле price считается внешним, поэтому ошибка. Как IsOoperationAllowed подсовывать вложенные поля?
 			ok, allowedFields, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, qw.resultType.QName(), requestedfields, qw.roles)
 			if err != nil {
 				return err
@@ -383,6 +387,8 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 	}
 	return pipeline.NewSyncPipeline(requestCtx, "Query Processor", ops[0], ops[1:]...)
 }
+
+func authType()
 
 type queryWork struct {
 	// input
