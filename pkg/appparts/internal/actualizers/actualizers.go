@@ -156,11 +156,11 @@ func (pa *PartitionActualizers) stop(vvmCtx context.Context, rt *runtime, wg *sy
 // async stop old actualizers
 func (pa *PartitionActualizers) stopOlds(vvmCtx context.Context, appDef appdef.IAppDef) {
 	pa.mx.RLock()
-	olds := make(map[appdef.QName]*runtime)
+	olds := make([]*runtime, 0)
 	for name, rt := range pa.rt {
 		// TODO: compare if projector properties changed (events, sync/async, etc.)
 		if appdef.Projector(appDef.Type, name) == nil {
-			olds[name] = rt
+			olds = append(olds, rt)
 		}
 	}
 	pa.mx.RUnlock()

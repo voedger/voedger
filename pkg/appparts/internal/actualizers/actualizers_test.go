@@ -82,7 +82,7 @@ func TestActualizersWaitTimeout(t *testing.T) {
 		app := appDef()
 
 		actualizers.Deploy(ctx, app,
-			func(_ context.Context, _ appdef.AppQName, _ istructs.PartitionID, _ appdef.QName) {
+			func(context.Context, appdef.AppQName, istructs.PartitionID, appdef.QName) {
 				for {
 					time.Sleep(time.Millisecond) // infinite loop
 				}
