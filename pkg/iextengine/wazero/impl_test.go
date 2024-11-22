@@ -311,6 +311,9 @@ func testFactoryHelper(ctx context.Context, moduleUrl *url.URL, funcs []string, 
 }
 
 func Test_Allocs_ManualGC(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 
 	const arrAppend = "arrAppend"
 	const arrReset = "arrReset"
@@ -346,6 +349,9 @@ func Test_Allocs_ManualGC(t *testing.T) {
 }
 
 func Test_Allocs_AutoGC(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 
 	const arrAppend = "arrAppend"
 	const arrReset = "arrReset"
@@ -388,6 +394,9 @@ func Test_Allocs_AutoGC(t *testing.T) {
 }
 
 func Test_NoGc_MemoryOverflow(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 
 	const arrAppend = "arrAppend"
 	const arrReset = "arrReset"
