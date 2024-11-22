@@ -210,6 +210,9 @@ func TestBasicUsage_POST(t *testing.T) {
 }
 
 func TestBasicUsage_OwnTestConfig(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 	ownCfg := NewOwnVITConfig(WithApp(istructs.AppQName_test1_app1, ProvideApp1))
 
 	t.Run("basic - VIT on own config", func(t *testing.T) {

@@ -326,6 +326,9 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		"— success read wrong data (BadData) or\n"+
 		"— success read correct data (Lucky)",
 		func(t *testing.T) {
+			if testing.Short() {
+				t.Skip()
+			}
 			rec1 := newTestCDoc(100500)
 
 			b := rec1.storeToBytes()
