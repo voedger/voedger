@@ -20,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -204,6 +205,12 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	wsb.AddQuery(qNameFunction).SetParam(qNameFindArticlesByModificationTimeStampRangeParams).SetResult(appdef.NewQName("bo", "Article"))
 	wsb.AddCommand(istructs.QNameCommandCUD)
 	wsb.AddQuery(qNameQryDenied)
+
+	wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+	wsb.AddRole(iauthnz.QNameRoleEveryone)
+	wsb.AddRole(iauthnz.QNameRoleSystem)
+	wsb.AddRole(iauthnz.QNameRoleAnonymous)
+	wsb.AddRole(iauthnz.QNameRoleProfileOwner)
 
 	if prepareAppDef != nil {
 		prepareAppDef(adb, wsb)

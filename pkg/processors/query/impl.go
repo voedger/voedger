@@ -356,6 +356,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 					requestedfields = append(requestedfields, resultField.Field())
 				}
 			}
+			тут вложенное поле price считается внешним, поэтому ошибка. Как IsOoperationAllowed подсовывать вложенные поля?
 			ok, allowedFields, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, qw.resultType.QName(), requestedfields, qw.roles)
 			if err != nil {
 				return err

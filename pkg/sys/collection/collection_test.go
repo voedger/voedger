@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -116,6 +117,13 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		wsb.AddQuery(qNameQueryState).
 			SetParam(qNameStateParams).
 			SetResult(qNameStateResult)
+
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
+		wsb.AddRole(iauthnz.QNameRoleAnonymous)
+		wsb.AddRole(iauthnz.QNameRoleProfileOwner)
+
 	}
 	{ // "modify" function
 		wsb.AddCommand(test.modifyCmdName)
@@ -127,6 +135,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 			AddField(test.articleNameIdent, appdef.DataKind_string, true).
 			AddField(test.articleNumberIdent, appdef.DataKind_int32, false).
 			AddField(test.articleDeptIdent, appdef.DataKind_RecordID, false)
+			// AddField("price", appdef.DataKind_float64, false)
 		articles.
 			AddContainer(test.tableArticlePrices.Entity(), test.tableArticlePrices, appdef.Occurs(0), appdef.Occurs(100))
 	}
