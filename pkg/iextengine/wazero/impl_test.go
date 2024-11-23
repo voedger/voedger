@@ -16,8 +16,8 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/stretchr/testify/require"
 	"github.com/tetratelabs/wazero/sys"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
@@ -67,7 +67,7 @@ func Test_BasicUsage(t *testing.T) {
 	app := appStructsFromSQL("github.com/untillpro/airs-bp3/packages/"+testPkg, `APPLICATION test();
 		WORKSPACE Restaurant (
 			DESCRIPTOR RestaurantDescriptor ();
-			TABLE Order INHERITS ODoc (
+			TABLE Order INHERITS sys.ODoc (
 				Year int32,
 				Month int32,
 				Day int32,
@@ -87,7 +87,7 @@ func Test_BasicUsage(t *testing.T) {
 			) AS RESULT OF CalcOrderedItems;
 			EXTENSION ENGINE WASM(
 				COMMAND NewOrder(Order);
-				PROJECTOR CalcOrderedItems AFTER EXECUTE ON NewOrder INTENTS(View(OrderedItems));
+				PROJECTOR CalcOrderedItems AFTER EXECUTE ON NewOrder INTENTS(sys.View(OrderedItems));
 			);
 		)
 		`,
@@ -218,7 +218,7 @@ type expectedMetrics struct {
 	recovers         int
 }
 
-func testMetrics(require *require.Assertions, metrics imetrics.IMetrics, expectedMetrcis expectedMetrics) {
+func testMetrics(require *require.Require, metrics imetrics.IMetrics, expectedMetrcis expectedMetrics) {
 	checkedMetricsCount := 0
 	metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
 		switch metric.Name() {
@@ -266,23 +266,27 @@ func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istr
 }
 
 func requireMemStat(t *testing.T, wasmEngine *wazeroExtEngine, mallocs, frees, heapInUse uint32) {
-	m, err := wasmEngine.getMallocs(testPkg, context.Background())
-	require.NoError(t, err)
-	f, err := wasmEngine.getFrees(testPkg, context.Background())
-	require.NoError(t, err)
-	h, err := wasmEngine.getHeapinuse(testPkg, context.Background())
-	require.NoError(t, err)
+	require := require.New(t)
 
-	require.Equal(t, mallocs, uint32(m))
-	require.Equal(t, frees, uint32(f))
-	require.Equal(t, heapInUse, uint32(h))
+	m, err := wasmEngine.getMallocs(testPkg, context.Background())
+	require.NoError(err)
+	f, err := wasmEngine.getFrees(testPkg, context.Background())
+	require.NoError(err)
+	h, err := wasmEngine.getHeapinuse(testPkg, context.Background())
+	require.NoError(err)
+
+	require.Equal(mallocs, uint32(m))
+	require.Equal(frees, uint32(f))
+	require.Equal(heapInUse, uint32(h))
 }
 
 func requireMemStatEx(t *testing.T, wasmEngine *wazeroExtEngine, mallocs, frees, heapSys, heapInUse uint32) {
+	require := require.New(t)
+
 	requireMemStat(t, wasmEngine, mallocs, frees, heapInUse)
 	h, err := wasmEngine.getHeapSys(testPkg, context.Background())
-	require.NoError(t, err)
-	require.Equal(t, heapSys, uint32(h))
+	require.NoError(err)
+	require.Equal(heapSys, uint32(h))
 }
 
 func testFactoryHelperWithMetrics(ctx context.Context, moduleUrl *url.URL, funcs []string, cfg iextengine.ExtEngineConfig, compile bool) (iextengine.IExtensionEngine, imetrics.IMetrics, error) {
@@ -307,6 +311,9 @@ func testFactoryHelper(ctx context.Context, moduleUrl *url.URL, funcs []string, 
 }
 
 func Test_Allocs_ManualGC(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 
 	const arrAppend = "arrAppend"
 	const arrReset = "arrReset"
@@ -342,6 +349,9 @@ func Test_Allocs_ManualGC(t *testing.T) {
 }
 
 func Test_Allocs_AutoGC(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 
 	const arrAppend = "arrAppend"
 	const arrReset = "arrReset"
@@ -384,6 +394,9 @@ func Test_Allocs_AutoGC(t *testing.T) {
 }
 
 func Test_NoGc_MemoryOverflow(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 
 	const arrAppend = "arrAppend"
 	const arrReset = "arrReset"
@@ -754,7 +767,7 @@ func Test_WithState(t *testing.T) {
 			) AS RESULT OF DummyProj;
 			EXTENSION ENGINE WASM(
 				COMMAND Dummy();
-				PROJECTOR DummyProj AFTER EXECUTE ON Dummy INTENTS(View(TestView));
+				PROJECTOR DummyProj AFTER EXECUTE ON Dummy INTENTS(sys.View(TestView));
 			);
 		)`,
 		func(cfg *istructsmem.AppConfigType) {
@@ -829,7 +842,7 @@ func Test_StatePanic(t *testing.T) {
 			) AS RESULT OF DummyProj;
 			EXTENSION ENGINE WASM(
 				COMMAND Dummy();
-				PROJECTOR DummyProj AFTER EXECUTE ON Dummy INTENTS(View(TestView));
+				PROJECTOR DummyProj AFTER EXECUTE ON Dummy INTENTS(sys.View(TestView));
 			);
 		)`,
 		func(cfg *istructsmem.AppConfigType) {
@@ -865,7 +878,7 @@ func Test_StatePanic(t *testing.T) {
 	// Invoke extension
 	//
 	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, extname), state)
-	require.ErrorContains(err, "field «wrong» is not found")
+	require.Error(err, require.Is(istructsmem.ErrNameNotFoundError), require.HasAll("TestView", "wrong"))
 
 	//
 	// Invoke extension

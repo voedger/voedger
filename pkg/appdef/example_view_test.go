@@ -49,7 +49,7 @@ func ExampleViews() {
 	// now to enum views
 	{
 		cnt := 0
-		for v := range appdef.Views(app) {
+		for v := range appdef.Views(app.Types) {
 			if v.IsSystem() {
 				continue
 			}
@@ -62,7 +62,7 @@ func ExampleViews() {
 	// how to inspect view
 	{
 		// how to find view by name
-		view := appdef.View(app, viewName)
+		view := appdef.View(app.Type, viewName)
 		fmt.Printf("view %q: %v, %s\n", view.QName(), view.Kind(), view.Comment())
 
 		fields := func(ff []appdef.IField) {

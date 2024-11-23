@@ -206,15 +206,15 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work pipeline.IWorkp
 	return
 }
 
-func updateIDGeneratorFromO(root istructs.IObject, types appdef.IWithTypes, idGen istructs.IIDGenerator) {
+func updateIDGeneratorFromO(root istructs.IObject, findType appdef.FindType, idGen istructs.IIDGenerator) {
 	// new IDs only here because update is not allowed for ODocs in Args
-	idGen.UpdateOnSync(root.AsRecordID(appdef.SystemField_ID), types.Type(root.QName()))
+	idGen.UpdateOnSync(root.AsRecordID(appdef.SystemField_ID), findType(root.QName()))
 	for container := range root.Containers {
 		// order of containers here is the order in the schema
 		// but order in the request could be different
 		// that is not a problem because for ODocs/ORecords ID generator will bump next ID only if syncID is actually next
 		for c := range root.Children(container) {
-			updateIDGeneratorFromO(c, types, idGen)
+			updateIDGeneratorFromO(c, findType, idGen)
 		}
 	}
 }
@@ -236,7 +236,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		}
 		ao := event.ArgumentObject()
 		if cmd.appStructs.AppDef().Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
-			updateIDGeneratorFromO(ao, cmd.appStructs.AppDef(), ws.idGenerator)
+			updateIDGeneratorFromO(ao, cmd.appStructs.AppDef().Type, ws.idGenerator)
 		}
 		ws.NextWLogOffset = event.WLogOffset() + 1
 		ap.nextPLogOffset = plogOffset + 1
@@ -491,7 +491,7 @@ func buildRawEvent(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	cmd.rawEvent, err = cmd.reb.BuildRawEvent()
 	status := http.StatusBadRequest
-	if errors.Is(err, istructsmem.ErrRecordIDUniqueViolation) {
+	if errors.Is(err, istructsmem.ErrRecordIDUniqueViolationError) {
 		status = http.StatusConflict
 	}
 	err = coreutils.WrapSysError(err, status)
@@ -575,9 +575,6 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		if !ok {
 			return cudXPath.Errorf(`"fields" missing`)
 		}
-		if err := checkNullsInCUDs(parsedCUD, cudXPath); err != nil {
-			return err
-		}
 		// sys.ID inside -> create, outside -> update
 		isCreate := false
 		if parsedCUD.id, isCreate, err = parsedCUD.fields.AsInt64(appdef.SystemField_ID); err != nil {
@@ -622,7 +619,7 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	return err
 }
 
-func checkCUDsInCUDCmdOnly(_ context.Context, work pipeline.IWorkpiece) (err error) {
+func checkCUDsAllowed(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	if len(cmd.parsedCUDs) > 0 && cmd.cmdMes.QName() != istructs.QNameCommandCUD && cmd.cmdMes.QName() != builtin.QNameCommandInit {
 		return errors.New("CUDs allowed for c.sys.CUD command only")
@@ -639,15 +636,6 @@ func checkArgsRefIntegrity(_ context.Context, work pipeline.IWorkpiece) (err err
 	}
 	if cmd.unloggedArgsObject != nil {
 		return builtin.CheckRefIntegrity(cmd.unloggedArgsObject, cmd.appStructs, cmd.cmdMes.WSID())
-	}
-	return nil
-}
-
-func checkNullsInCUDs(cud parsedCUD, xPath xPath) (err error) {
-	for fn, v := range cud.fields {
-		if v == nil {
-			return fmt.Errorf(`%s, field "%s": %w`, xPath, fn, istructsmem.ErrNullNotAllowed)
-		}
 	}
 	return nil
 }

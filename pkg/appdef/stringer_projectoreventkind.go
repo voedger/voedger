@@ -14,10 +14,10 @@ func _() {
 	_ = x[ProjectorEventKind_Deactivate-4]
 	_ = x[ProjectorEventKind_Execute-5]
 	_ = x[ProjectorEventKind_ExecuteWithParam-6]
-	_ = x[ProjectorEventKind_Count-7]
+	_ = x[ProjectorEventKind_count-7]
 }
 
-const _ProjectorEventKind_name = "ProjectorEventKind_InsertProjectorEventKind_UpdateProjectorEventKind_ActivateProjectorEventKind_DeactivateProjectorEventKind_ExecuteProjectorEventKind_ExecuteWithParamProjectorEventKind_Count"
+const _ProjectorEventKind_name = "ProjectorEventKind_InsertProjectorEventKind_UpdateProjectorEventKind_ActivateProjectorEventKind_DeactivateProjectorEventKind_ExecuteProjectorEventKind_ExecuteWithParamProjectorEventKind_count"
 
 var _ProjectorEventKind_index = [...]uint8{0, 25, 50, 77, 106, 132, 167, 191}
 

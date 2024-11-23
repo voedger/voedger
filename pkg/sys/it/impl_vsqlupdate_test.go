@@ -246,7 +246,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_View(t *testing.T) {
 		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.CategoryIdx set unexistingField = 'any' where IntFld = 43 and Dummy = 1"}}`, ws.WSID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
-			coreutils.Expect400("unexistingField", "is not found"),
+			coreutils.Expect400(istructsmem.ErrNameNotFoundError.Error(), "app1pkg.CategoryIdx", "unexistingField"),
 		)
 	})
 }
@@ -301,7 +301,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_Record(t *testing.T) {
 		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.category.%d set unknownField = 44"}}`, ws.WSID, categoryID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
-			coreutils.Expect400("unknownField", "is not found"),
+			coreutils.Expect400(istructsmem.ErrNameNotFoundError.Error(), "app1pkg.category", "unknownField"),
 		)
 	})
 }
@@ -368,7 +368,7 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 		body := fmt.Sprintf(`{"args": {"Query":"unlogged insert test1.app1.%d.app1pkg.CategoryIdx set Name = '%s', Val = 123, IntFld = %d, Dummy = 1, Unexisting = 42"}}`, ws.WSID, newName, intFld)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
-			coreutils.Expect400("Unexisting", "is not found"),
+			coreutils.Expect400(istructsmem.ErrNameNotFoundError.Error(), "app1pkg.CategoryIdx", "Unexisting"),
 		)
 	})
 }
@@ -481,9 +481,12 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
+	// TODO: make test table more readable
+	// cases := []struct {query string; expected: []string}…
+	//
 	cases := map[string]string{
 		// common, update table
-		"":                       "misses required field",
+		"":                       "field is empty",
 		" ":                      "invalid query format",
 		"update":                 "invalid query format",
 		"update s s s":           "invalid query format",

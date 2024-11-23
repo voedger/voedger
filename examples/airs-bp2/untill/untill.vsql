@@ -1,24 +1,24 @@
 -- Copyright (c) 2024-present unTill Software Development Group B. V.
 -- @author Maxim Geraskin
 
-TABLE untill_users INHERITS CDoc (
+TABLE untill_users INHERITS sys.CDoc (
 	name varchar(255),
 	phone varchar(50),
 	email varchar(100)
 );
 
-TABLE bill INHERITS WDoc (
+TABLE bill INHERITS sys.WDoc (
 	tableno int32 NOT NULL,
 	close_year int32,
 	total int64
 );
 
-TABLE orders INHERITS ODoc (
+TABLE orders INHERITS sys.ODoc (
 	id_bill ref(bill) NOT NULL, -- deprecated
 	ord_tableno int32 NOT NULL
 );
 
-TABLE pbill INHERITS ODoc (
+TABLE pbill INHERITS sys.ODoc (
 	id_bill ref(bill) NOT NULL,
 	id_untill_users ref(untill_users) NOT NULL,
 	pdatetime int64 NOT NULL,
@@ -26,7 +26,7 @@ TABLE pbill INHERITS ODoc (
 	pbill_item pbill_item
 );
 
-TABLE pbill_item INHERITS ORecord (
+TABLE pbill_item INHERITS sys.ORecord (
 	id_pbill ref(pbill) NOT NULL,
 	id_untill_users ref(untill_users) NOT NULL,
 	tableno int32 NOT NULL,
@@ -34,7 +34,7 @@ TABLE pbill_item INHERITS ORecord (
 	price int64 NOT NULL
 );
 
-TABLE articles INHERITS CDoc (
+TABLE articles INHERITS sys.CDoc (
 	article_number int32,
 	name varchar(255)
 );

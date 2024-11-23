@@ -1,0 +1,11 @@
+-- Copyright (c) 2024-present unTill Pro, Ltd.
+-- @author Alisher Nurmanov
+
+IMPORT SCHEMA 'pkg2';
+
+WORKSPACE MyWS1 (
+    TABLE MyTable1 INHERITS sys.ODoc (
+        myfield1 int32 NOT NULL,
+        myfield2 ref(pkg2.MyTable2) NOT NULL
+    );
+);

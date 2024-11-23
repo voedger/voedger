@@ -9,7 +9,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		StrFld varchar
 	);
 
-	TABLE doc1 INHERITS CDoc();
+	TABLE doc1 INHERITS sys.CDoc();
 
 	EXTENSION ENGINE BUILTIN (
 		COMMAND testCmd();

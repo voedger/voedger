@@ -93,7 +93,7 @@ func Test_BuildRow(t *testing.T) {
 
 		r, err := istructs.BuildRow(w)
 		require.ErrorWith(err,
-			require.Is(ErrNameNotFound),
+			require.Is(ErrNameNotFoundError),
 			require.Has("unknownField"),
 		)
 		require.Nil(r)

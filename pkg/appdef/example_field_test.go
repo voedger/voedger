@@ -37,7 +37,7 @@ func ExampleIFields() {
 
 	// how to inspect fields
 	{
-		doc := appdef.ODoc(app, docName)
+		doc := appdef.ODoc(app.Type, docName)
 		fmt.Printf("%v, user field count: %v\n", doc, doc.UserFieldCount())
 
 		cnt := 0
@@ -110,7 +110,7 @@ func ExampleIFieldsBuilder_AddDataField() {
 
 	// how to inspect fields
 	{
-		doc := appdef.CDoc(app, docName)
+		doc := appdef.CDoc(app.Type, docName)
 		fmt.Printf("%v, user field count: %v\n", doc, doc.UserFieldCount())
 
 		cnt := 0
@@ -170,7 +170,7 @@ func ExampleIFieldsBuilder_SetFieldVerify() {
 
 	// how to inspect verified field
 	{
-		doc := appdef.CDoc(app, docName)
+		doc := appdef.CDoc(app.Type, docName)
 		fmt.Printf("doc %q: %v\n", doc.QName(), doc.Kind())
 		fmt.Printf("doc field count: %v\n", doc.UserFieldCount())
 

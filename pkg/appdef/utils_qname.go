@@ -190,6 +190,13 @@ func (qns *QNames) Add(n ...QName) {
 	}
 }
 
+// Collect QNames using iterator. Duplicate values are ignored. Result slice is sorted.
+func (qns *QNames) Collect(seq func(func(QName) bool)) {
+	for n := range seq {
+		qns.Add(n)
+	}
+}
+
 // Returns true if slice contains specified QName
 func (qns QNames) Contains(n QName) bool {
 	_, ok := qns.Find(n)

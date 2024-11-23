@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
 	gojson "encoding/json"
 
@@ -129,12 +129,13 @@ func Test_RecordsRead(t *testing.T) {
 	})
 
 	t.Run("must fail if too large batch read records", func(t *testing.T) {
-		recs := make([]istructs.RecordGetBatchItem, maxGetBatchRecordCount+1)
-		for id := minTestRecordID; id < minTestRecordID+maxGetBatchRecordCount+1; id++ {
+		const tooBig = maxGetBatchRecordCount + 1
+		recs := make([]istructs.RecordGetBatchItem, tooBig)
+		for id := minTestRecordID; id < minTestRecordID+tooBig; id++ {
 			recs[id-minTestRecordID].ID = id
 		}
 		err := app.Records().GetBatch(test.workspace, true, recs)
-		require.ErrorIs(err, ErrMaxGetBatchRecordCountExceeds)
+		require.Error(err, require.Is(ErrMaxGetBatchSizeExceedsError), require.Has(tooBig))
 	})
 
 	t.Run("must fail batch read records if storage batch failed", func(t *testing.T) {
@@ -166,7 +167,9 @@ func Test_RecordsRead(t *testing.T) {
 		testID := istructs.RecordID(100500)
 		_, cc := recordKey(0, testID)
 
-		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = 255 /* error here */ }, nil, cc)
+		const badCodec byte = 255
+
+		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = badCodec /* error here */ }, nil, cc)
 		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
@@ -187,7 +190,7 @@ func Test_RecordsRead(t *testing.T) {
 		recs[2].ID = testID + 1
 
 		err = app.Records().GetBatch(test.workspace, true, recs)
-		require.ErrorIs(err, ErrUnknownCodec)
+		require.Error(err, require.Is(ErrUnknownCodecError), require.Has(badCodec))
 	})
 }
 
@@ -270,23 +273,21 @@ func Test_RecordsPutJSON(t *testing.T) {
 
 		json[appdef.SystemField_QName] = appdef.NullQName.String()
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, ErrFieldIsEmpty)
-		require.ErrorContains(err, appdef.SystemField_QName)
+		require.Error(err, require.Is(ErrFieldIsEmptyError),
+			require.Has(appdef.SystemField_QName))
 
 		json[appdef.SystemField_QName] = 123
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, ErrWrongFieldType)
-		require.ErrorContains(err, appdef.SystemField_QName)
+		require.Error(err, require.Is(ErrWrongFieldTypeError), require.Has(appdef.SystemField_QName))
 
 		json[appdef.SystemField_QName] = `naked 🔫`
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, appdef.ErrConvertError)
-		require.ErrorContains(err, appdef.SystemField_QName)
+		require.Error(err, require.Is(appdef.ErrConvertError), require.Has(appdef.SystemField_QName))
 
 		json[appdef.SystemField_QName] = test.testObj.String()
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, ErrWrongType)
-		require.ErrorContains(err, test.testObj.String())
+		require.Error(err,
+			require.Is(ErrWrongTypeError), require.Has(test.testObj))
 	})
 
 	t.Run("should fail to put record with invalid RecordID", func(t *testing.T) {
@@ -294,28 +295,29 @@ func Test_RecordsPutJSON(t *testing.T) {
 		json[appdef.SystemField_QName] = test.testCDoc.String()
 
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, ErrFieldIsEmpty)
-		require.ErrorContains(err, appdef.SystemField_ID)
+		require.Error(err, require.Is(ErrFieldIsEmptyError),
+			require.HasAll(test.testCDoc, appdef.SystemField_ID))
 
 		json[appdef.SystemField_ID] = int64(0)
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, ErrFieldIsEmpty)
+		require.Error(err, require.Is(ErrFieldIsEmptyError),
+			require.HasAll(test.testCDoc, appdef.SystemField_ID))
 		require.ErrorContains(err, appdef.SystemField_ID)
 
 		json[appdef.SystemField_ID] = gojson.Number("0")
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, ErrFieldIsEmpty)
-		require.ErrorContains(err, appdef.SystemField_ID)
+		require.Error(err, require.Is(ErrFieldIsEmptyError),
+			require.HasAll(test.testCDoc, appdef.SystemField_ID))
 
 		json[appdef.SystemField_ID] = int64(1)
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, ErrRawRecordIDUnexpected)
-		require.ErrorContains(err, appdef.SystemField_ID)
+		require.Error(err, require.Is(ErrUnexpectedRawRecordIDError),
+			require.HasAll(test.testCDoc, appdef.SystemField_ID, 1))
 
 		json[appdef.SystemField_ID] = gojson.Number("1")
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, ErrRawRecordIDUnexpected)
-		require.ErrorContains(err, appdef.SystemField_ID)
+		require.Error(err, require.Is(ErrUnexpectedRawRecordIDError),
+			require.HasAll(test.testCDoc, appdef.SystemField_ID, 1))
 	})
 
 	t.Run("should fail to put record with invalid data", func(t *testing.T) {
@@ -323,10 +325,9 @@ func Test_RecordsPutJSON(t *testing.T) {
 		json[appdef.SystemField_QName] = test.testCDoc.String()
 		json[appdef.SystemField_ID] = float64(100500)
 
-		json["unknown field"] = `naked 🔫`
+		json["unknown"] = `naked 🔫`
 
 		err = app.Records().PutJSON(test.workspace, json)
-		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, "unknown field")
+		require.Error(err, require.Is(ErrNameNotFoundError), require.Has("unknown"))
 	})
 }

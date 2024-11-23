@@ -50,7 +50,7 @@ func ExampleDataTypes() {
 	// how to inspect data types in builded AppDef
 	{
 		cnt := 0
-		for d := range appdef.DataTypes(app) {
+		for d := range appdef.DataTypes(app.Types) {
 			if !d.IsSystem() {
 				cnt++
 				fmt.Println("-", d, "inherits from", d.Ancestor())

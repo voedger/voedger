@@ -53,7 +53,7 @@ const (
 
 	PolicyKind_Deny
 
-	PolicyKind_Count
+	PolicyKind_count
 )
 
 type IResourcePattern interface {

@@ -45,47 +45,47 @@ func ExampleIWorkspace() {
 
 	// how to enum workspaces
 	{
+		fmt.Println("App workspaces:")
 		cnt := 0
 		for ws := range app.Workspaces {
 			cnt++
-			fmt.Println(cnt, ws)
+			fmt.Println("-", cnt, ":", ws)
 		}
-		fmt.Println("overall:", cnt)
 	}
 
 	// how to inspect workspace
 	{
 		// how to find workspace by name
 		ws := app.Workspace(wsName)
-		fmt.Printf("workspace %q: %v\n", ws.QName(), ws.Kind())
+		fmt.Println(ws)
 
 		// how to inspect workspace
-		fmt.Printf("workspace %q descriptor is %q\n", ws.QName(), ws.Descriptor())
+		fmt.Println("Workspace descriptor is", ws.Descriptor())
+		fmt.Println("Workspace local types:")
 		cnt := 0
-		for t := range ws.Types {
-			fmt.Printf("- Type: %q, kind: %v\n", t.QName(), t.Kind())
+		for t := range ws.LocalTypes {
 			cnt++
+			fmt.Println("-", cnt, ":", t)
 		}
-		fmt.Println("types count:", cnt)
 	}
 
 	// how to find workspace by descriptor
 	{
 		ws := app.WorkspaceByDescriptor(descName)
 		fmt.Println()
-		fmt.Printf("founded by descriptor %q: %v\n", descName, ws)
+		fmt.Printf("Founded by descriptor %q: %v\n", descName, ws)
 	}
 
 	// Output:
-	// 1 Workspace «sys.Workspace»
-	// 2 Workspace «test.ws»
-	// overall: 2
-	// workspace "test.ws": TypeKind_Workspace
-	// workspace "test.ws" descriptor is "test.desc"
-	// - Type: "test.desc", kind: TypeKind_CDoc
-	// - Type: "test.doc", kind: TypeKind_CDoc
-	// - Type: "test.rec", kind: TypeKind_CRecord
-	// types count: 3
+	// App workspaces:
+	// - 1 : Workspace «sys.Workspace»
+	// - 2 : Workspace «test.ws»
+	// Workspace «test.ws»
+	// Workspace descriptor is test.desc
+	// Workspace local types:
+	// - 1 : CDoc «test.desc»
+	// - 2 : CDoc «test.doc»
+	// - 3 : CRecord «test.rec»
 	//
-	// founded by descriptor "test.desc": Workspace «test.ws»
+	// Founded by descriptor "test.desc": Workspace «test.ws»
 }

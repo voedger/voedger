@@ -1,29 +1,21 @@
 -- Copyright (c) 2020-present unTill Pro, Ltd.
 
--- note: this schema is for tests only. Voedger sys package uses copy of this schema
+-- note: this schema is for tests only
 
-ABSTRACT TABLE CRecord();
-ABSTRACT TABLE WRecord();
-ABSTRACT TABLE ORecord();
-ABSTRACT TABLE CDoc INHERITS CRecord();
-ABSTRACT TABLE ODoc INHERITS ORecord();
-ABSTRACT TABLE WDoc INHERITS WRecord();
-ABSTRACT TABLE CSingleton INHERITS CDoc();
 ABSTRACT WORKSPACE Workspace(
-	TABLE ChildWorkspace INHERITS CDoc (
-		WSName varchar NOT NULL,
-		WSKind qname NOT NULL,
-		WSKindInitializationData varchar(1024),
-		TemplateName varchar,
-		TemplateParams varchar(1024),
-		WSClusterID int32 NOT NULL,
-		WSID int64,           -- to be updated afterwards
-		WSError varchar(1024) -- to be updated afterwards
-	);
-);
-ALTERABLE WORKSPACE Profile();
+	ABSTRACT TABLE CRecord();
+	ABSTRACT TABLE WRecord();
+	ABSTRACT TABLE ORecord();
+	ABSTRACT TABLE CDoc INHERITS CRecord();
+	ABSTRACT TABLE ODoc INHERITS ORecord();
+	ABSTRACT TABLE WDoc INHERITS WRecord();
+	ABSTRACT TABLE CSingleton INHERITS CDoc();
 
-TABLE WorkspaceDescriptor INHERITS CSingleton (
+	TYPE Raw(
+		Body varchar(65535)
+	);
+
+	TABLE WorkspaceDescriptor INHERITS sys.CSingleton (
 		-- owner* fields made non-required for app workspaces
 		OwnerWSID int64,
 		OwnerQName qname, -- Deprecated: use OwnerQName2
@@ -42,11 +34,21 @@ TABLE WorkspaceDescriptor INHERITS CSingleton (
 		InitCompletedAtMs int64,
 		Status int32,
 		OwnerQName2 text
+	);
+
+	TABLE ChildWorkspace INHERITS sys.CDoc (
+		WSName varchar NOT NULL,
+		WSKind qname NOT NULL,
+		WSKindInitializationData varchar(1024),
+		TemplateName varchar,
+		TemplateParams varchar(1024),
+		WSClusterID int32 NOT NULL,
+		WSID int64,           -- to be updated afterwards
+		WSError varchar(1024) -- to be updated afterwards
+	);
 );
 
-TYPE Raw(
-    Body   varchar(65535)
-);
+ALTERABLE WORKSPACE Profile();
 
 EXTENSION ENGINE BUILTIN (
 
@@ -274,7 +276,7 @@ EXTENSION ENGINE BUILTIN (
 
 	STORAGE Logger(
 		/*
-		Key: 
+		Key:
 			LogLevel int32
 		Value
 			Message text

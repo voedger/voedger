@@ -8,6 +8,8 @@ package appdef
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 )
 
 // # Implements:
@@ -77,10 +79,49 @@ type typeRef struct {
 	typ  IType
 }
 
+// List of types.
+type types[T IType] struct {
+	m map[QName]T
+	s []T
+}
+
+// Creates and returns new types.
+func newTypes[T IType]() *types[T] {
+	return &types[T]{m: make(map[QName]T)}
+}
+
+func (tt *types[T]) add(t T) {
+	name := t.QName()
+
+	tt.m[name] = t
+	tt.s = nil
+}
+
+func (tt *types[T]) all(visit func(T) bool) {
+	if len(tt.s) != len(tt.m) {
+		tt.s = slices.SortedFunc(maps.Values(tt.m), func(i, j T) int {
+			return CompareQName(i.QName(), j.QName())
+		})
+	}
+	slices.Values(tt.s)(visit)
+}
+
+func (tt *types[T]) clear() {
+	tt.m = make(map[QName]T)
+	tt.s = nil
+}
+
+func (tt types[T]) find(name QName) IType {
+	if t, ok := tt.m[name]; ok {
+		return t
+	}
+	return NullType
+}
+
 // Returns type by reference.
 //
 // If type is not found then returns nil.
-func (r *typeRef) target(tt IWithTypes) IType {
+func (r *typeRef) target(tt FindType) IType {
 	if r.name == NullQName {
 		return nil
 	}
@@ -89,7 +130,7 @@ func (r *typeRef) target(tt IWithTypes) IType {
 	}
 	if (r.typ == nil) || (r.typ.QName() != r.name) {
 		r.typ = nil
-		if t := tt.Type(r.name); t.Kind() != TypeKind_null {
+		if t := tt(r.name); t.Kind() != TypeKind_null {
 			r.typ = t
 		}
 	}
@@ -103,7 +144,7 @@ func (r *typeRef) setName(n QName) {
 }
 
 // Returns is reference valid
-func (r *typeRef) valid(tt IWithTypes) (bool, error) {
+func (r *typeRef) valid(tt FindType) (bool, error) {
 	if (r.name == NullQName) || (r.name == QNameANY) || (r.target(tt) != nil) {
 		return true, nil
 	}

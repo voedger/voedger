@@ -17,7 +17,7 @@ ABSTRACT WORKSPACE Workspace (
 
     ALTERABLE WORKSPACE Profile();
 
-    TABLE WorkspaceDescriptor INHERITS CSingleton (
+    TABLE WorkspaceDescriptor INHERITS sys.CSingleton (
         WSKind qname NOT NULL
     );
 

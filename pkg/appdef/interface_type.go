@@ -5,7 +5,9 @@
 
 package appdef
 
-import "github.com/voedger/voedger/pkg/goutils/set"
+import (
+	"github.com/voedger/voedger/pkg/goutils/set"
+)
 
 // Types kinds enumeration
 type TypeKind uint8
@@ -155,24 +157,14 @@ type IType interface {
 	IsSystem() bool
 }
 
-// Interfaces describes the entity with types, such as application or workspace.
 type (
-	IFindType interface {
-		// Returns type by name.
-		//
-		// If not found then empty type with TypeKind_null is returned
-		Type(name QName) IType
-	}
-	ITypes interface {
-		// Enumerates types.
-		//
-		// Types are enumerated in alphabetical order of QNames.
-		Types(func(IType) bool)
-	}
-	IWithTypes interface {
-		IFindType
-		ITypes
-	}
+	// Finds type by name.
+	//
+	// If not found then empty type with TypeKind_null is returned
+	FindType func(QName) IType
+
+	// Types iterator.
+	SeqType func(func(IType) bool)
 )
 
 type ITypeBuilder interface {

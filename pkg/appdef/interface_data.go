@@ -104,7 +104,7 @@ const (
 
 	ConstraintKind_Enum
 
-	ConstraintKind_Count
+	ConstraintKind_count
 )
 
 // Data constraint interface.
