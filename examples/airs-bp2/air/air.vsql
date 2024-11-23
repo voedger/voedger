@@ -7,9 +7,8 @@ APPLICATION AIR(
     USE untill;
 );
 
-WORKSPACE RestaurantWS (
+WORKSPACE RestaurantWS INHERITS untill.SomeWS (
     DESCRIPTOR RestaurantDescriptor();
-    USE TABLE untill.*;
 
 	TABLE ProformaPrinted INHERITS sys.ODoc (
 		Number int32 NOT NULL,

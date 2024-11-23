@@ -606,15 +606,15 @@ func (c *buildContext) addTableFieldToTable(field *FieldExpr) {
 
 	appDef := c.adb.AppDef()
 
-	wrec := appdef.WRecord(appDef, field.Type.qName)
-	crec := appdef.CRecord(appDef, field.Type.qName)
-	orec := appdef.ORecord(appDef, field.Type.qName)
+	wrec := appdef.WRecord(appDef.Type, field.Type.qName)
+	crec := appdef.CRecord(appDef.Type, field.Type.qName)
+	orec := appdef.ORecord(appDef.Type, field.Type.qName)
 
 	if wrec == nil && orec == nil && crec == nil { // not yet built
 		c.table(field.Type.tablePkg, field.Type.tableStmt)
-		wrec = appdef.WRecord(appDef, field.Type.qName)
-		crec = appdef.CRecord(appDef, field.Type.qName)
-		orec = appdef.ORecord(appDef, field.Type.qName)
+		wrec = appdef.WRecord(appDef.Type, field.Type.qName)
+		crec = appdef.CRecord(appDef.Type, field.Type.qName)
+		orec = appdef.ORecord(appDef.Type, field.Type.qName)
 	}
 
 	if wrec != nil || orec != nil || crec != nil {
@@ -781,7 +781,7 @@ func (c *buildContext) isExists(qname appdef.QName, kind appdef.TypeKind) (exist
 		appdef.TypeKind_WDoc,
 		appdef.TypeKind_WRecord,
 		appdef.TypeKind_Object:
-		return appdef.TypeByNameAndKind[appdef.IRecord](c.adb.AppDef(), qname, kind) != nil
+		return appdef.TypeByNameAndKind[appdef.IRecord](c.adb.AppDef().Type, qname, kind) != nil
 	default:
 		panic(fmt.Sprintf("unsupported type kind %d of %s", kind, qname))
 	}
@@ -798,10 +798,10 @@ func (c *buildContext) defCtx() *defBuildContext {
 func (c *buildContext) checkReference(pkg *PackageSchemaAST, table *TableStmt) error {
 	appDef := c.adb.AppDef()
 
-	refTableType := appdef.Structure(appDef, appdef.NewQName(pkg.Name, string(table.Name)))
+	refTableType := appdef.Structure(appDef.Type, appdef.NewQName(pkg.Name, string(table.Name)))
 	if refTableType == nil {
 		c.table(pkg, table)
-		refTableType = appdef.Structure(appDef, appdef.NewQName(pkg.Name, string(table.Name)))
+		refTableType = appdef.Structure(appDef.Type, appdef.NewQName(pkg.Name, string(table.Name)))
 	}
 
 	if refTableType == nil {

@@ -18,7 +18,7 @@ func (rs RateScope) TrimString() string {
 }
 
 // validates object names for rate limit
-func validateLimitNames(tt IWithTypes, names QNames) (err error) {
+func validateLimitNames(ft FindType, names QNames) (err error) {
 	var validAny = QNamesFrom(
 		QNameANY,
 		QNameAnyStructure, QNameAnyRecord,
@@ -30,7 +30,7 @@ func validateLimitNames(tt IWithTypes, names QNames) (err error) {
 		return ErrMissed("limit objects names")
 	}
 	for _, n := range names {
-		t := tt.Type(n)
+		t := ft(n)
 		switch t.Kind() {
 		case TypeKind_null:
 			err = errors.Join(err,

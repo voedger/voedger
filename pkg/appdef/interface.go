@@ -11,10 +11,17 @@ type IAppDef interface {
 
 	IWithPackages
 	IWithWorkspaces
-
-	IWithTypes
-
 	IWithACL
+
+	// Returns type by name.
+	//
+	// If not found then empty type with TypeKind_null is returned
+	Type(QName) IType
+
+	// Enumerates types.
+	//
+	// Types are enumerated in alphabetical order of QNames.
+	Types(func(IType) bool)
 }
 
 type IAppDefBuilder interface {

@@ -11,10 +11,10 @@ func _() {
 	_ = x[PolicyKind_null-0]
 	_ = x[PolicyKind_Allow-1]
 	_ = x[PolicyKind_Deny-2]
-	_ = x[PolicyKind_Count-3]
+	_ = x[PolicyKind_count-3]
 }
 
-const _PolicyKind_name = "PolicyKind_nullPolicyKind_AllowPolicyKind_DenyPolicyKind_Count"
+const _PolicyKind_name = "PolicyKind_nullPolicyKind_AllowPolicyKind_DenyPolicyKind_count"
 
 var _PolicyKind_index = [...]uint8{0, 15, 31, 46, 62}
 

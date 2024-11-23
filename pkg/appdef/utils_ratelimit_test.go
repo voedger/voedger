@@ -75,7 +75,7 @@ func Test_validateLimitNames(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := validateLimitNames(app, tt.names)
+			got := validateLimitNames(app.Type, tt.names)
 			if tt.want == nil {
 				require.NoError(got, "validateLimitNames(app, %v) returns unexpected error %v", tt.names, got)
 			} else {

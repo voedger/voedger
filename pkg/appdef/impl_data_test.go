@@ -49,22 +49,22 @@ func Test_AppDef_AddData(t *testing.T) {
 
 	require.NotNil(app)
 
-	testWith := func(tested IWithTypes) {
+	testWith := func(tested testedTypes) {
 		t.Run("should be ok to find builded data type", func(t *testing.T) {
-			i := Data(tested, intName)
+			i := Data(tested.Type, intName)
 			require.Equal(TypeKind_Data, i.Kind())
 			require.Equal(intName, i.QName())
 			require.Equal(DataKind_int64, i.DataKind())
 			require.False(i.IsSystem())
-			require.Equal(SysData(app, DataKind_int64), i.Ancestor())
+			require.Equal(SysData(tested.Type, DataKind_int64), i.Ancestor())
 
-			s := Data(tested, strName)
+			s := Data(tested.Type, strName)
 			require.Equal(TypeKind_Data, s.Kind())
 			require.Equal(strName, s.QName())
 			require.Equal(DataKind_string, s.DataKind())
-			require.Equal(SysData(app, DataKind_string), s.Ancestor())
+			require.Equal(SysData(tested.Type, DataKind_string), s.Ancestor())
 
-			tk := Data(tested, tokenName)
+			tk := Data(tested.Type, tokenName)
 			require.Equal(TypeKind_Data, tk.Kind())
 			require.Equal(tokenName, tk.QName())
 			require.Equal(DataKind_string, tk.DataKind())
@@ -92,7 +92,7 @@ func Test_AppDef_AddData(t *testing.T) {
 
 		t.Run("should be ok to enum data types", func(t *testing.T) {
 			cnt := 0
-			for d := range DataTypes(tested) {
+			for d := range DataTypes(tested.Types) {
 				if !d.IsSystem() {
 					cnt++
 					require.Equal(TypeKind_Data, d.Kind())
@@ -111,7 +111,7 @@ func Test_AppDef_AddData(t *testing.T) {
 			require.Equal(3, cnt)
 		})
 
-		require.Nil(Data(tested, NewQName("test", "unknown")), "check nil returns")
+		require.Nil(Data(tested.Type, NewQName("test", "unknown")), "check nil returns")
 	}
 
 	testWith(app)
@@ -230,7 +230,7 @@ func Test_appDef_makeSysDataTypes(t *testing.T) {
 	t.Run("must be ok to get system data types", func(t *testing.T) {
 		sysWS := app.Workspace(SysWorkspaceQName)
 		for k := DataKind_null + 1; k < DataKind_FakeLast; k++ {
-			d := SysData(app, k)
+			d := SysData(app.Type, k)
 			require.NotNil(d)
 			require.Equal(SysDataName(k), d.QName())
 			require.Equal(TypeKind_Data, d.Kind())
@@ -365,7 +365,7 @@ func TestNewConstraintPanics(t *testing.T) {
 			args{ConstraintKind_Enum, [][]byte{{1, 2, 3}, {4, 5, 6}}}, ErrUnsupportedError,
 		},
 		{"???(0)",
-			args{ConstraintKind_Count, 0}, ErrUnsupportedError,
+			args{ConstraintKind_count, 0}, ErrUnsupportedError,
 		},
 	}
 	require := require.New(t)
@@ -426,9 +426,9 @@ func TestConstraintKind_MarshalText(t *testing.T) {
 			want: `ConstraintKind_MinLen`,
 		},
 		{
-			name: `ConstraintKind_Count —> 4`,
-			k:    ConstraintKind_Count,
-			want: utils.UintToString(ConstraintKind_Count),
+			name: `ConstraintKind_count —> 4`,
+			k:    ConstraintKind_count,
+			want: utils.UintToString(ConstraintKind_count),
 		},
 	}
 	for _, tt := range tests {
@@ -445,11 +445,11 @@ func TestConstraintKind_MarshalText(t *testing.T) {
 	}
 
 	t.Run("100% cover", func(t *testing.T) {
-		const tested = ConstraintKind_Count + 1
+		const tested = ConstraintKind_count + 1
 		want := "ConstraintKind(" + utils.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
-			t.Errorf("(ConstraintKind_Count + 1).String() = %v, want %v", got, want)
+			t.Errorf("(ConstraintKind_count + 1).String() = %v, want %v", got, want)
 		}
 	})
 }
@@ -461,7 +461,7 @@ func TestConstraintKind_TrimString(t *testing.T) {
 		want string
 	}{
 		{name: "basic", k: ConstraintKind_MinLen, want: "MinLen"},
-		{name: "out of range", k: ConstraintKind_Count + 1, want: (ConstraintKind_Count + 1).String()},
+		{name: "out of range", k: ConstraintKind_count + 1, want: (ConstraintKind_count + 1).String()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

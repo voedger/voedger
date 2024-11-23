@@ -8,6 +8,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"github.com/voedger/voedger/pkg/goutils/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -32,15 +33,15 @@ func TestCompileBasicUsage(t *testing.T) {
 	}{
 		{
 			name: "simple schema with no imports",
-			dir:  filepath.Join(wd, "test", "myapp", "mypkg1"),
+			dir:  filepath.Join(wd, "testdata", "myapp", "mypkg1"),
 		},
 		{
 			name: "schema importing a local package",
-			dir:  filepath.Join(wd, "test", "myapp", "mypkg2"),
+			dir:  filepath.Join(wd, "testdata", "myapp", "mypkg2"),
 		},
 		{
 			name: "app schema importing voedger package",
-			dir:  filepath.Join(wd, "test", "myapp", "app"),
+			dir:  filepath.Join(wd, "testdata", "myapp", "app"),
 		},
 	}
 
@@ -68,7 +69,7 @@ func TestBaselineBasicUsage(t *testing.T) {
 	}{
 		{
 			name: "simple schema with no imports",
-			dir:  filepath.Join(wd, "test", "myapp", "mypkg1"),
+			dir:  filepath.Join(wd, "testdata", "myapp", "mypkg1"),
 			expectedBaselineFiles: []string{
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "userprofile.vsql"),
@@ -79,7 +80,7 @@ func TestBaselineBasicUsage(t *testing.T) {
 		},
 		{
 			name: "schema importing a local package",
-			dir:  filepath.Join(wd, "test", "myapp", "mypkg2"),
+			dir:  filepath.Join(wd, "testdata", "myapp", "mypkg2"),
 			expectedBaselineFiles: []string{
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "userprofile.vsql"),
@@ -91,7 +92,7 @@ func TestBaselineBasicUsage(t *testing.T) {
 		},
 		{
 			name: "application schema using both local package and voedger",
-			dir:  filepath.Join(wd, "test", "myapp", "app"),
+			dir:  filepath.Join(wd, "testdata", "myapp", "app"),
 			expectedBaselineFiles: []string{
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "userprofile.vsql"),
@@ -141,8 +142,8 @@ func TestCompatBasicUsage(t *testing.T) {
 	require.NoError(err)
 
 	tempDir := t.TempDir()
-	workDir := filepath.Join(wd, "test", "myapp", "app")
-	baselineDir := filepath.Join(tempDir, "test", "baseline_myapp")
+	workDir := filepath.Join(wd, "testdata", "myapp", "app")
+	baselineDir := filepath.Join(tempDir, "testdata", "baseline_myapp")
 	err = execRootCmd([]string{"vpm", "baseline", baselineDir, "--change-dir", workDir}, "1.0.0")
 	require.NoError(err)
 
@@ -158,12 +159,12 @@ func TestCompatErrors(t *testing.T) {
 	require.NoError(err)
 
 	tempDir := t.TempDir()
-	workDir := filepath.Join(wd, "test", "myapp", "app")
-	baselineDir := filepath.Join(tempDir, "test", "baseline_myapp")
+	workDir := filepath.Join(wd, "testdata", "myapp", "app")
+	baselineDir := filepath.Join(tempDir, "testdata", "baseline_myapp")
 	err = execRootCmd([]string{"vpm", "baseline", "-C", workDir, baselineDir}, "1.0.0")
 	require.NoError(err)
 
-	workDir = filepath.Join(wd, "test", "myapp_incompatible", "app")
+	workDir = filepath.Join(wd, "testdata", "myapp_incompatible", "app")
 	err = execRootCmd([]string{"vpm", "compat", "--ignore", filepath.Join(workDir, "ignores.yml"), "--change-dir", workDir, baselineDir}, "1.0.0")
 	require.Error(err)
 	errs := coreutils.SplitErrors(err)
@@ -193,21 +194,21 @@ func TestCompileErrors(t *testing.T) {
 	}{
 		{
 			name: "schema1.vsql - syntax errors",
-			dir:  filepath.Join(wd, "test", "myapperr", "mypkg1"),
+			dir:  filepath.Join(wd, "testdata", "myapperr", "mypkg1"),
 			expectedErrPositions: []string{
 				"schema1.vsql:7:28",
 			},
 		},
 		{
 			name: "schema2.vsql - syntax errors",
-			dir:  filepath.Join(wd, "test", "myapperr", "mypkg2"),
+			dir:  filepath.Join(wd, "testdata", "myapperr", "mypkg2"),
 			expectedErrPositions: []string{
 				"schema2.vsql:7:13",
 			},
 		},
 		{
 			name: "schema4.vsql - package local name redeclared",
-			dir:  filepath.Join(wd, "test", "myapperr", "app"),
+			dir:  filepath.Join(wd, "testdata", "myapperr", "app"),
 			expectedErrPositions: []string{
 				"schema4.vsql:5:1: local package name reg was redeclared as registry",
 			},
@@ -272,7 +273,7 @@ func TestOrmBasicUsage(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(err)
 
-	err = coreutils.CopyDir(filepath.Join(wd, "test", "genorm"), tempDir)
+	err = coreutils.CopyDir(filepath.Join(wd, "testdata", "genorm"), tempDir)
 	require.NoError(err)
 
 	tests := []struct {
@@ -380,6 +381,7 @@ func TestTidyBasicUsage(t *testing.T) {
 	}
 	require := require.New(t)
 	logger.SetLogLevel(logger.LogLevelVerbose)
+	defer logger.SetLogLevel(logger.LogLevelInfo)
 
 	var err error
 	var tempDir string
@@ -393,7 +395,7 @@ func TestTidyBasicUsage(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(err)
 
-	err = coreutils.CopyDir(filepath.Join(wd, "test", "build"), tempDir)
+	err = coreutils.CopyDir(filepath.Join(wd, "testdata", "build"), tempDir)
 	require.NoError(err)
 
 	dir := filepath.Join(tempDir, "appcomplex")
@@ -434,6 +436,7 @@ func TestBuildBasicUsage(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
+
 	require := require.New(t)
 	var tempDir string
 	if logger.IsVerbose() {
@@ -447,7 +450,7 @@ func TestBuildBasicUsage(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(err)
 
-	err = coreutils.CopyDir(filepath.Join(wd, "test", "build"), tempDir)
+	err = coreutils.CopyDir(filepath.Join(wd, "testdata", "build"), tempDir)
 	require.NoError(err)
 
 	testCases := []struct {
@@ -455,21 +458,21 @@ func TestBuildBasicUsage(t *testing.T) {
 		errMsg            string
 		expectedWasmFiles []string
 	}{
-		// {
-		// 	dir:               "noappschema",
-		// 	errMsg:            "failed to build, app schema not found",
-		// 	expectedWasmFiles: nil,
-		// },
-		// {
-		// 	dir:               "nopackagesgen",
-		// 	errMsg:            fmt.Sprintf("%s not found. Run 'vpm init'", packagesGenFileName),
-		// 	expectedWasmFiles: nil,
-		// },
-		// {
-		// 	dir:               "appsimple",
-		// 	errMsg:            "",
-		// 	expectedWasmFiles: []string{fmt.Sprintf("%s/appsimple/appsimple.wasm", buildDirName)},
-		// },
+		{
+			dir:               "noappschema",
+			errMsg:            "failed to build, app schema not found",
+			expectedWasmFiles: nil,
+		},
+		{
+			dir:               "nopackagesgen",
+			errMsg:            fmt.Sprintf("%s not found. Run 'vpm init'", packagesGenFileName),
+			expectedWasmFiles: nil,
+		},
+		{
+			dir:               "appsimple",
+			errMsg:            "",
+			expectedWasmFiles: []string{fmt.Sprintf("%s/appsimple/appsimple.wasm", buildDirName)},
+		},
 		{
 			dir:               "appcomplex",
 			errMsg:            "",
@@ -498,6 +501,48 @@ func TestBuildBasicUsage(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGenOrmTestItAndBuildApp(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	require := require.New(t)
+	var tempDir string
+	if logger.IsVerbose() {
+		var err error
+		tempDir, err = os.MkdirTemp("", "test_build")
+		require.NoError(err)
+	} else {
+		tempDir = t.TempDir()
+	}
+
+	wd, err := os.Getwd()
+	require.NoError(err)
+
+	err = coreutils.CopyDir(filepath.Join(wd, "testdata", "build"), tempDir)
+	require.NoError(err)
+
+	// test runs in the temp directory
+	dir := filepath.Join(tempDir, "air")
+
+	// go up to the root of the project.
+	localVoedgerDir := filepath.Join(wd, "..", "..")
+
+	// replace the voedger package with the local one in the go.mod file
+	// we use an absolute path so that we don't depend on where the test is running.
+	err = new(exec.PipedExec).Command("go", "mod", "edit", "-replace", "github.com/voedger/voedger="+localVoedgerDir).WorkingDir(dir).Run(os.Stdout, os.Stderr)
+	require.NoError(err)
+
+	err = execRootCmd([]string{"vpm", "orm", "-C", dir}, "1.0.0")
+	require.NoError(err)
+
+	err = new(exec.PipedExec).Command("go", "test", filepath.Join(dir, "wasm")).WorkingDir(dir).Run(os.Stdout, os.Stderr)
+	require.NoError(err)
+
+	err = execRootCmd([]string{"vpm", "build", "-C", dir}, "1.0.0")
+	require.NoError(err)
 }
 
 func findWasmFiles(dir string) []string {

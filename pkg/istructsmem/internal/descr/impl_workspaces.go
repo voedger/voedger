@@ -24,7 +24,7 @@ func (w *Workspace) read(workspace appdef.IWorkspace) {
 	if name := workspace.Descriptor(); name != appdef.NullQName {
 		w.Descriptor = &name
 	}
-	for typ := range workspace.Types {
+	for typ := range workspace.LocalTypes {
 		name := typ.QName()
 
 		switch t := typ.(type) {

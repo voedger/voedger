@@ -273,7 +273,7 @@ func validateObject(o *objectType) (err error) {
 	// validate occurrences
 	for _, cont := range t.Containers() {
 		n, occurs := cont.Name(), appdef.Occurs(0)
-		for range o.Children(n) {
+		for _ = range o.Children(n) {
 			occurs++
 		}
 		if minO := cont.MinOccurs(); occurs < minO {
@@ -404,7 +404,7 @@ func validateEventCUDs(ev *eventType) (err error) {
 // Checks that CUD record has correct (storable) type and content.
 func validateEventCUD(ev *eventType, rec *recordType) error {
 	switch k := rec.typ.Kind(); k {
-	case appdef.TypeKind_GDoc, appdef.TypeKind_CDoc, appdef.TypeKind_WDoc, appdef.TypeKind_GRecord, appdef.TypeKind_CRecord, appdef.TypeKind_WRecord:
+	case appdef.TypeKind_GDoc, appdef.TypeKind_ODoc, appdef.TypeKind_CDoc, appdef.TypeKind_WDoc, appdef.TypeKind_GRecord, appdef.TypeKind_CRecord, appdef.TypeKind_WRecord:
 		return validateRow(&rec.rowType)
 	default:
 		return validateError(ECode_InvalidTypeKind,

@@ -69,7 +69,7 @@ func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, servic
 			func(ctx context.Context, work pipeline.IWorkpiece) error {
 				appPart := work.(interface{ AppPartition() appparts.IAppPartition }).AppPartition()
 				appDef := appPart.AppStructs().AppDef()
-				prj := appdef.Projector(appDef, projector.Name)
+				prj := appdef.Projector(appDef.Type, projector.Name)
 				event := s.PLogEvent()
 				if !isAcceptable(event, prj.WantErrors(), prj.Events().Map(), appDef, prj.QName()) {
 					return nil

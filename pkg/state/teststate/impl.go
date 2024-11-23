@@ -40,7 +40,7 @@ type testState struct {
 	appStructs            istructs.IAppStructs
 	appDef                appdef.IAppDef
 	cud                   istructs.ICUD
-	event                 istructs.IPLogEvent
+	ipLogEvent            istructs.IPLogEvent
 	plogGen               istructs.IIDGenerator
 	wsOffsets             map[istructs.WSID]istructs.Offset
 	plogOffset            istructs.Offset
@@ -92,14 +92,14 @@ func (ts *testState) WSID() istructs.WSID {
 		return ts.queryWsid
 	case ProcKind_CommandProcessor:
 		// for command processor kind first look for WSID in event field
-		if ts.event != nil {
-			return ts.event.Workspace()
+		if ts.ipLogEvent != nil {
+			return ts.ipLogEvent.Workspace()
 		}
 
 		return ts.commandWSID
 	default:
-		if ts.event != nil {
-			return ts.event.Workspace()
+		if ts.ipLogEvent != nil {
+			return ts.ipLogEvent.Workspace()
 		}
 
 		return istructs.WSID(0)
@@ -132,19 +132,19 @@ func (ts *testState) Arg() istructs.IObject {
 		return obj
 	}
 
-	if ts.event == nil {
+	if ts.ipLogEvent == nil {
 		panic("no current event")
 	}
 
-	return ts.event.ArgumentObject()
+	return ts.ipLogEvent.ArgumentObject()
 }
 
 func (ts *testState) ResultBuilder() istructs.IObjectBuilder {
-	if ts.event == nil {
+	if ts.ipLogEvent == nil {
 		panic("no current event")
 	}
-	qname := ts.event.QName()
-	command := appdef.Command(ts.appDef, qname)
+	qname := ts.ipLogEvent.QName()
+	command := appdef.Command(ts.appDef.Type, qname)
 	if command == nil {
 		panic(fmt.Sprintf("%v is not a command", qname))
 	}
@@ -175,7 +175,7 @@ func (ts *testState) PutQuery(wsid istructs.WSID, name appdef.FullQName, argb Qu
 
 	if argb != nil {
 		localPkgName := ts.appDef.PackageLocalName(ts.queryName.PkgPath())
-		query := appdef.Query(ts.appDef, appdef.NewQName(localPkgName, ts.queryName.Entity()))
+		query := appdef.Query(ts.appDef.Type, appdef.NewQName(localPkgName, ts.queryName.Entity()))
 		if query == nil {
 			panic(fmt.Sprintf("query not found: %v", ts.queryName))
 		}
@@ -230,7 +230,7 @@ func (ts *testState) emulateFederationBlob(owner, appname string, wsid istructs.
 func (ts *testState) buildState(processorKind int) {
 
 	appFunc := func() istructs.IAppStructs { return ts.appStructs }
-	eventFunc := func() istructs.IPLogEvent { return ts.event }
+	eventFunc := func() istructs.IPLogEvent { return ts.ipLogEvent }
 	partitionIDFunc := func() istructs.PartitionID { return TestPartition }
 	cudFunc := func() istructs.ICUD { return ts.cud }
 	commandPrepareArgs := func() istructs.CommandPrepareArgs {
@@ -247,8 +247,8 @@ func (ts *testState) buildState(processorKind int) {
 	argFunc := func() istructs.IObject { return ts.Arg() }
 	unloggedArgFunc := func() istructs.IObject { return nil }
 	wlogOffsetFunc := func() istructs.Offset {
-		if ts.event != nil {
-			return ts.event.WLogOffset()
+		if ts.ipLogEvent != nil {
+			return ts.ipLogEvent.WLogOffset()
 		}
 
 		return istructs.Offset(0)
@@ -275,7 +275,7 @@ func (ts *testState) buildState(processorKind int) {
 	}
 	qryResultBuilderFunc := func() istructs.IObjectBuilder {
 		localPkgName := ts.appDef.PackageLocalName(ts.queryName.PkgPath())
-		query := appdef.Query(ts.appDef, appdef.NewQName(localPkgName, ts.queryName.Entity()))
+		query := appdef.Query(ts.appDef.Type, appdef.NewQName(localPkgName, ts.queryName.Entity()))
 		if query == nil {
 			panic(fmt.Sprintf("query not found: %v", ts.queryName))
 		}
@@ -375,7 +375,7 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-	for ext := range appdef.Extensions(ts.appDef) {
+	for ext := range appdef.Extensions(ts.appDef.Types) {
 		if ext.QName().Pkg() == PackageName {
 			if proj, ok := ext.(appdef.IProjector); ok {
 				if proj.Sync() {
@@ -477,18 +477,19 @@ func (ts *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewE
 	if err != nil {
 		panic(err)
 	}
-	event, err := ts.appStructs.Events().PutPlog(rawEvent, nil, ts.plogGen)
+
+	ipLogEvent, err := ts.appStructs.Events().PutPlog(rawEvent, nil, ts.plogGen)
 	if err != nil {
 		panic(err)
 	}
 
-	err = ts.appStructs.Events().PutWlog(event)
+	err = ts.appStructs.Events().PutWlog(ipLogEvent)
 	if err != nil {
 		panic(err)
 	}
 
 	newRecordIds = make([]istructs.RecordID, 0)
-	err = ts.appStructs.Records().Apply2(event, func(r istructs.IRecord) {
+	err = ts.appStructs.Records().Apply2(ipLogEvent, func(r istructs.IRecord) {
 		newRecordIds = append(newRecordIds, r.ID())
 	})
 
@@ -496,7 +497,7 @@ func (ts *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewE
 		panic(err)
 	}
 
-	ts.event = event
+	ts.ipLogEvent = ipLogEvent
 
 	return wLogOffs, newRecordIds
 }

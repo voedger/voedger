@@ -10,16 +10,14 @@ type IWorkspace interface {
 	IType
 	IWithAbstract
 
-	IWithTypes
-
 	IWithACL
 
-	// Returns names of ancestors workspaces.
+	// Returns ancestors workspaces.
 	//
 	// Ancestors are enumerated in alphabetic order.
-	// Only direct ancestors are returned if no recurse specified.
+	// Only direct ancestors are enumerated.
 	// Workspace `sys.Workspace` is default ancestor used then no other ancestor is specified.
-	Ancestors(recurse bool) []QName
+	Ancestors(func(IWorkspace) bool)
 
 	// Workspace descriptor document.
 	// See [#466](https://github.com/voedger/voedger/issues/466)
@@ -36,10 +34,30 @@ type IWorkspace interface {
 	// 	- if one of the ancestors of the ancestors (recursively) has the specified name.
 	Inherits(QName) bool
 
-	// Returns names of used workspaces.
+	// LocalType returns type by name. Find only in the workspace, not in ancestors or used workspaces.
+	//
+	// Returns nil if not found.
+	LocalType(QName) IType
+
+	// LocalTypes enumerates all types defined in the workspace.
+	//
+	// Types are enumerated in alphabetical order.
+	LocalTypes(func(IType) bool)
+
+	// Returns type by name. All ancestors and used workspaces are searched.
+	//
+	// If not found then empty type with TypeKind_null is returned
+	Type(QName) IType
+
+	// Enumerates types. All types from ancestors and used workspaces are enumerated.
+	// Types are enumerated in alphabetical order.
+	Types(func(IType) bool)
+
+	// Returns used workspaces.
 	//
 	// Used workspaces enumerated in alphabetic order.
-	UsedWorkspaces() []QName
+	// Only direct used workspaces are enumerated.
+	UsedWorkspaces(func(IWorkspace) bool)
 }
 
 type IWorkspaceBuilder interface {

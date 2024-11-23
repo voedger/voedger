@@ -326,6 +326,9 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		"— success read wrong data (BadData) or\n"+
 		"— success read correct data (Lucky)",
 		func(t *testing.T) {
+			if testing.Short() {
+				t.Skip()
+			}
 			rec1 := newTestCDoc(100500)
 
 			b := rec1.storeToBytes()
@@ -375,7 +378,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			wsb := adb.AddWorkspace(testData.wsName)
 			newCDoc := wsb.AddCDoc(test.testCDoc)
 
-			oldCDoc := appdef.CDoc(rec1.appCfg.AppDef, test.testCDoc)
+			oldCDoc := appdef.CDoc(rec1.appCfg.AppDef.Type, test.testCDoc)
 			for _, f := range oldCDoc.Fields() {
 				if !f.IsSys() {
 					newCDoc.AddField(newFieldName(f.Name()), f.DataKind(), f.Required())
