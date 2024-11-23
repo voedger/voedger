@@ -819,7 +819,7 @@ type workspaceAddr struct {
 // # Panics:
 //   - if workspace statement is nil
 //   - if workspace builder not found.
-func (wsa workspaceAddr) mustBuilder(ctx *buildContext) appdef.IWorkspaceBuilder {
+func (wsa workspaceAddr) mustBuilder(_ *buildContext) appdef.IWorkspaceBuilder {
 	if wsa.workspace.builder == nil {
 		panic(fmt.Sprintf("workspace builder not found for %s", wsa.qName()))
 	}
@@ -846,7 +846,7 @@ type TableStmt struct {
 	Statement
 	Abstract bool            `parser:"@'ABSTRACT'?'TABLE'"`
 	Name     Ident           `parser:"@Ident"`
-	Inherits *DefQName       `parser:"('INHERITS' @@)?"`
+	Inherits *DefQName       `parser:"('INHERITS' @@) ?"`
 	Items    []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	With     []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 	// filled on the analysis stage
@@ -937,12 +937,13 @@ type FieldExpr struct {
 
 type ViewStmt struct {
 	Statement
-	Name      Ident          `parser:"'VIEW' @Ident"`
-	Items     []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
-	ResultOf  DefQName       `parser:"'AS' 'RESULT' 'OF' @@"`
-	With      []WithItem     `parser:"('WITH' @@ (',' @@)* )?"`
-	pkRef     *PrimaryKeyExpr
-	workspace workspaceAddr // filled on the analysis stage
+	Name       Ident          `parser:"'VIEW' @Ident"`
+	Items      []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	ResultOf   DefQName       `parser:"'AS' 'RESULT' 'OF' @@"`
+	With       []WithItem     `parser:"('WITH' @@ (',' @@)* )?"`
+	pkRef      *PrimaryKeyExpr
+	workspace  workspaceAddr // filled on the analysis stage
+	asResultOf appdef.QName  // filled on the analysis stage
 }
 
 func (s *ViewStmt) Iterate(callback func(stmt interface{})) {

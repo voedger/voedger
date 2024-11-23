@@ -34,17 +34,12 @@ func (j *job) setCronSchedule(cs string) { j.cronSchedule = cs }
 //
 // # Returns error:
 //   - if cron schedule is invalid
-//   - if has intents
 func (j *job) Validate() (err error) {
 	err = j.extension.Validate()
 
 	_, e := cron.ParseStandard(j.cronSchedule)
 	if e != nil {
 		err = errors.Join(err, enrichError(e, "%v cron schedule", j))
-	}
-
-	if j.intents.Len() > 0 {
-		err = errors.Join(err, ErrUnsupported("%v can't have intents", j))
 	}
 
 	return err

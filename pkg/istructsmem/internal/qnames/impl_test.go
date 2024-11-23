@@ -220,6 +220,9 @@ func TestQNamesPrepareErrors(t *testing.T) {
 	})
 
 	t.Run("should be error if write to storage failed", func(t *testing.T) {
+		if testing.Short() {
+			t.Skip()
+		}
 		qName := appdef.NewQName("test", "test")
 		writeError := errors.New("storage write error")
 

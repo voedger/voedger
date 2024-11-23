@@ -1,7 +1,0 @@
-go 1.23.1
-
-use (
-	./mypkg1
-	./mypkg2
-	./app
-)

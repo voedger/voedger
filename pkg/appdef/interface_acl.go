@@ -53,7 +53,7 @@ const (
 
 	PolicyKind_Deny
 
-	PolicyKind_Count
+	PolicyKind_count
 )
 
 type IResourcePattern interface {
@@ -71,7 +71,7 @@ type IResourcePattern interface {
 	// `QNameANY` or `QNameAny×××` patterns are not allowed in resource names
 	On() QNames
 
-	// Returns fields (of records or views) then update or select operation is described.
+	// Returns fields (of records or views) then insert, update or select operation is described.
 	Fields() []FieldName
 }
 

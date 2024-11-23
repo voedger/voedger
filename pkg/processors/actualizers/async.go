@@ -148,7 +148,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	prjType := appdef.Projector(appDef, a.projectorQName)
+	prjType := appdef.Projector(appDef.Type, a.projectorQName)
 	if prjType == nil {
 		return fmt.Errorf("async projector %s is not defined in AppDef", a.projectorQName)
 	}
@@ -338,7 +338,7 @@ func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
 				return nil
 			})
 		if len(*batch) > 0 {
-			//nolint: suppress error if at least one event was read
+			//nolint suppress error if at least one event was read
 			return nil
 		}
 		return err

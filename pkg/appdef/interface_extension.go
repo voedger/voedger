@@ -15,7 +15,7 @@ const (
 	ExtensionEngineKind_BuiltIn
 	ExtensionEngineKind_WASM
 
-	ExtensionEngineKind_Count
+	ExtensionEngineKind_count
 )
 
 // Entry point is a type that can be executed.

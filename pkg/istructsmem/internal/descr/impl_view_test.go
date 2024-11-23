@@ -52,7 +52,7 @@ func Test_View(t *testing.T) {
 
 	{
 		v := newView()
-		v.read(appdef.View(app, viewName))
+		v.read(appdef.View(app.Type, viewName))
 
 		json, err := json.Marshal(v)
 

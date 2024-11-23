@@ -51,7 +51,7 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 			require.NoError(err)
 			require.NotNil(appStr)
 			t.Run("should be ok to retrieve changed doc from AppStructs", func(t *testing.T) {
-				doc := appdef.CDoc(appStr.AppDef(), docName)
+				doc := appdef.CDoc(appStr.AppDef().Type, docName)
 				require.Equal(docName, doc.QName())
 				require.True(doc.Singleton())
 				require.Equal(appdef.DataKind_int64, doc.Field("field").DataKind())
@@ -206,8 +206,8 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		as, err := provider.BuiltIn(appName)
 		require.NoError(err)
 		require.NotNil(as)
-		require.Equal(docName, appdef.CDoc(as.AppDef(), docName).QName())
-		require.Equal(recName, appdef.CRecord(as.AppDef(), recName).QName())
+		require.Equal(docName, appdef.CDoc(as.AppDef().Type, docName).QName())
+		require.Equal(recName, appdef.CRecord(as.AppDef().Type, recName).QName())
 	})
 
 	t.Run("must be error to provide app structure if error while read versions", func(t *testing.T) {
@@ -288,7 +288,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		cfgs.AddBuiltInAppConfig(appName, appDef)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 		_, err := provider.BuiltIn(appName)
-		require.ErrorIs(err, ErrNumAppWorkspacesNotSet)
+		require.Error(err, require.Is(ErrNumAppWorkspacesNotSetError), require.Has(appName))
 	})
 }
 
@@ -340,9 +340,7 @@ func Test_NewAppStructs(t *testing.T) {
 		t.Run("if workspaces count is omitted", func(t *testing.T) {
 			def := appdef.New().MustBuild()
 			str, err := structs.New(name, def, id, 0)
-			require.Error(err,
-				require.Is(ErrNumAppWorkspacesNotSet),
-				require.Has(name))
+			require.Error(err, require.Is(ErrNumAppWorkspacesNotSetError), require.Has(name))
 			require.Nil(str)
 		})
 

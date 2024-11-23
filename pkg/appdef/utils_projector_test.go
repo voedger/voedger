@@ -26,9 +26,9 @@ func TestProjectorEventKind_MarshalText(t *testing.T) {
 			k:    ProjectorEventKind_Update,
 			want: `ProjectorEventKind_Update`,
 		},
-		{name: `ProjectorEventKind_Count —> <number>`,
-			k:    ProjectorEventKind_Count,
-			want: utils.UintToString(ProjectorEventKind_Count),
+		{name: `ProjectorEventKind_count —> <number>`,
+			k:    ProjectorEventKind_count,
+			want: utils.UintToString(ProjectorEventKind_count),
 		},
 	}
 	for _, tt := range tests {
@@ -45,11 +45,11 @@ func TestProjectorEventKind_MarshalText(t *testing.T) {
 	}
 
 	t.Run("100% cover ProjectorEventKind.String()", func(t *testing.T) {
-		const tested = ProjectorEventKind_Count + 1
+		const tested = ProjectorEventKind_count + 1
 		want := "ProjectorEventKind(" + utils.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
-			t.Errorf("(ProjectorEventKind_Count + 1).String() = %v, want %v", got, want)
+			t.Errorf("(ProjectorEventKind_count + 1).String() = %v, want %v", got, want)
 		}
 	})
 }
@@ -61,7 +61,7 @@ func TestProjectorEventKindTrimString(t *testing.T) {
 		want string
 	}{
 		{name: "basic", k: ProjectorEventKind_Update, want: "Update"},
-		{name: "out of range", k: ProjectorEventKind_Count + 1, want: (ProjectorEventKind_Count + 1).String()},
+		{name: "out of range", k: ProjectorEventKind_count + 1, want: (ProjectorEventKind_count + 1).String()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -120,7 +120,7 @@ func Test_projectorEventCompatableWith(t *testing.T) {
 		{"fail Execute View", ProjectorEventKind_Execute, typ{TypeKind_ViewRecord, testName}, false},
 		{"fail Execute with Workspace", ProjectorEventKind_ExecuteWithParam, typ{TypeKind_Workspace, testName}, false},
 
-		{"fail out of bounds event", ProjectorEventKind_Count + 1, typ{TypeKind_CDoc, testName}, false},
+		{"fail out of bounds event", ProjectorEventKind_count + 1, typ{TypeKind_CDoc, testName}, false},
 	}
 
 	require := require.New(t)

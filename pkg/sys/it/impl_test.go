@@ -383,13 +383,18 @@ func TestNullability_SetEmptyString(t *testing.T) {
 	offsUpdate := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
 
 	// string set to "" -> info about this is not stored in dynobuffer
-	// cud.ModifiedFields() calls dynobuffers.ModifiedFields() tht iterates over fields that has values
+	// cud.ModifiedFields() calls dynobuffers.ModifiedFields() that iterates over fields that has values
+	// #2785 - istructs.ICUDRow.ModifiedFields also iterate emptied string- and bytes- fields
 	as.Events().ReadWLog(context.Background(), ws.WSID, offsUpdate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		for cud := range event.CUDs {
-			cud.ModifiedFields(func(fn appdef.FieldName, i interface{}) bool {
-				t.Fatal()
-				return true
-			})
+			for fn, fv := range cud.ModifiedFields {
+				switch fn {
+				case "name":
+					require.Equal("", fv)
+				default:
+					require.Fail("unexpected modified field", "%v: %v", fn, fv)
+				}
+			}
 		}
 		return nil
 	})

@@ -224,7 +224,7 @@ func (e *event) addKind(kind ...ProjectorEventKind) {
 
 func (i ProjectorEventKind) MarshalText() ([]byte, error) {
 	var s string
-	if (i > 0) && (i < ProjectorEventKind_Count) {
+	if (i > 0) && (i < ProjectorEventKind_count) {
 		s = i.String()
 	} else {
 		s = utils.UintToString(i)

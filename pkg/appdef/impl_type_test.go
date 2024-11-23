@@ -13,6 +13,11 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
+type testedTypes interface {
+	Type(QName) IType
+	Types(func(IType) bool)
+}
+
 func Test_NullType(t *testing.T) {
 	require := require.New(t)
 

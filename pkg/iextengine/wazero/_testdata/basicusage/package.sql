@@ -4,7 +4,7 @@
  */
 WORKSPACE Restaurant (
     DESCRIPTOR RestaurantDescriptor ();
-    TABLE Order INHERITS ODoc (
+    TABLE Order INHERITS sys.ODoc (
         Year int32,
         Month int32,
         Day int32,
@@ -24,6 +24,6 @@ WORKSPACE Restaurant (
     ) AS RESULT OF CalcOrderedItems;
     EXTENSION ENGINE WASM(
         COMMAND NewOrder(Order);
-        PROJECTOR CalcOrderedItems AFTER EXECUTE ON NewOrder INTENTS(View(OrderedItems));
+        PROJECTOR CalcOrderedItems AFTER EXECUTE ON NewOrder INTENTS(sys.View(OrderedItems));
     );
 )

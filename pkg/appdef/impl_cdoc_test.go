@@ -41,12 +41,12 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 		app = a
 	})
 
-	testWith := func(tested IWithTypes) {
+	testWith := func(tested testedTypes) {
 		t.Run("should be ok to find builded doc", func(t *testing.T) {
 			typ := tested.Type(docName)
 			require.Equal(TypeKind_CDoc, typ.Kind())
 
-			doc := CDoc(tested, docName)
+			doc := CDoc(tested.Type, docName)
 			require.Equal(TypeKind_CDoc, doc.Kind())
 			require.Equal(typ.(ICDoc), doc)
 			require.NotPanics(func() { doc.isCDoc() })
@@ -61,7 +61,7 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 				typ := tested.Type(recName)
 				require.Equal(TypeKind_CRecord, typ.Kind())
 
-				rec := CRecord(tested, recName)
+				rec := CRecord(tested.Type, recName)
 				require.Equal(TypeKind_CRecord, rec.Kind())
 				require.Equal(typ.(ICRecord), rec)
 
@@ -74,19 +74,19 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 		})
 
 		unknownName := NewQName("test", "unknown")
-		require.Nil(CDoc(tested, unknownName))
-		require.Nil(CRecord(tested, unknownName))
+		require.Nil(CDoc(tested.Type, unknownName))
+		require.Nil(CRecord(tested.Type, unknownName))
 
 		t.Run("should be ok to enumerate docs", func(t *testing.T) {
 			var docs []QName
-			for doc := range CDocs(tested) {
+			for doc := range CDocs(tested.Types) {
 				docs = append(docs, doc.QName())
 			}
 			require.Len(docs, 1)
 			require.Equal(docName, docs[0])
 			t.Run("should be ok to enumerate recs", func(t *testing.T) {
 				var recs []QName
-				for rec := range CRecords(tested) {
+				for rec := range CRecords(tested.Types) {
 					recs = append(recs, rec.QName())
 				}
 				require.Len(recs, 1)
@@ -129,12 +129,12 @@ func Test_AppDef_AddCDocSingleton(t *testing.T) {
 		app = a
 	})
 
-	testWith := func(tested IWithTypes) {
+	testWith := func(tested testedTypes) {
 		t.Run("should be ok to find builded singleton", func(t *testing.T) {
 			typ := tested.Type(stName)
 			require.Equal(TypeKind_CDoc, typ.Kind())
 
-			st := CDoc(tested, stName)
+			st := CDoc(tested.Type, stName)
 			require.Equal(TypeKind_CDoc, st.Kind())
 			require.Equal(typ.(ICDoc), st)
 
@@ -143,15 +143,15 @@ func Test_AppDef_AddCDocSingleton(t *testing.T) {
 
 		t.Run("should be ok to enum singleton", func(t *testing.T) {
 			names := QNames{}
-			for st := range Singletons(tested) {
+			for st := range Singletons(tested.Types) {
 				names = append(names, st.QName())
 			}
 			require.Len(names, 1)
 			require.Equal(stName, names[0])
 		})
 
-		require.Nil(Singleton(tested, NewQName("test", "unknown")), "should be nil if unknown")
-		require.Nil(Singleton(tested, docName), "should be nil if not singleton")
+		require.Nil(Singleton(tested.Type, NewQName("test", "unknown")), "should be nil if unknown")
+		require.Nil(Singleton(tested.Type, docName), "should be nil if not singleton")
 	}
 
 	testWith(app)

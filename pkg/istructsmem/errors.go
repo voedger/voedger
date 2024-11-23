@@ -7,85 +7,219 @@ package istructsmem
 import (
 	"errors"
 	"fmt"
+	"strings"
+
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
-var ErrorEventNotValid = errors.New("event is not valid")
+// Enriches error with additional information.
+//
+// argOrMsg is any value to be added to the error message, and args are additional values to be added to the error message.
+// Spaces are added between args.
+//
+// If argOrMsg is a string contains `%` and args is not empty, then argOrMsg is treated as a format string
+func enrichError(err error, argOrMsg any, args ...any) error {
+	var enrich string
+	if msg, ok := argOrMsg.(string); ok && len(args) > 0 && strings.Contains(msg, "%") {
+		enrich = fmt.Sprintf(msg, args...)
+	} else {
+		enrich = fmt.Sprint(argOrMsg)
+		for i := range args {
+			enrich += " " + fmt.Sprint(args[i])
+		}
+	}
+	return fmt.Errorf("%w: %s", err, enrich)
+}
 
-var ErrNameMissed = errors.New("name is empty")
+var ErrorEventNotValidError = errors.New("event is not valid")
 
-var ErrNameNotFound = errors.New("name not found")
+func ErrorEventNotValid(argOrMsg any, args ...any) error {
+	return enrichError(ErrorEventNotValidError, argOrMsg, args...)
+}
 
-var ErrInvalidName = errors.New("name not valid")
+var ErrNameMissedError = errors.New("name is empty")
 
-var ErrIDNotFound = errors.New("ID not found")
+func ErrNameMissed(argOrMsg any, args ...any) error {
+	return enrichError(ErrNameMissedError, argOrMsg, args...)
+}
 
-var ErrRecordIDNotFound = fmt.Errorf("recordID cannot be found: %w", ErrIDNotFound)
+var ErrOutOfBoundsError = errors.New("out of bounds")
+
+func ErrOutOfBounds(argOrMsg any, args ...any) error {
+	return enrichError(ErrOutOfBoundsError, argOrMsg, args...)
+}
+
+var ErrWrongTypeError = errors.New("wrong type")
+
+func ErrWrongType(argOrMsg any, args ...any) error {
+	return enrichError(ErrWrongTypeError, argOrMsg, args...)
+}
+
+var ErrNameNotFoundError = errors.New("name not found")
+
+func ErrNameNotFound(argOrMsg any, args ...any) error {
+	return enrichError(ErrNameNotFoundError, argOrMsg, args...)
+}
+
+func ErrFieldNotFound(name string, typ interface{}) error {
+	return enrichError(ErrNameNotFoundError, "field «%s» in %v", name, typ)
+}
+
+func ErrTypedFieldNotFound(t, f string, typ interface{}) error {
+	return enrichError(ErrNameNotFoundError, "%s-field «%s» in %v", t, f, typ)
+}
+
+func ErrContainerNotFound(name string, typ interface{}) error {
+	return enrichError(ErrNameNotFoundError, "container «%s» in %v", name, typ)
+}
+
+// name should  be string or any Stringer interface (e.g. QName)
+func ErrTypeNotFound(name interface{}) error {
+	return enrichError(ErrNameNotFoundError, "type «%v»", name)
+}
+
+// name should  be string or any Stringer interface (e.g. QName)
+func ErrViewNotFound(name interface{}) error {
+	return enrichError(ErrNameNotFoundError, "view «%v»", name)
+}
+
+var ErrInvalidNameError = errors.New("name not valid")
+
+func ErrInvalidName(argOrMsg any, args ...any) error {
+	return enrichError(ErrInvalidNameError, argOrMsg, args...)
+}
+
+var ErrIDNotFoundError = errors.New("ID not found")
+
+func ErrIDNotFound(argOrMsg any, args ...any) error {
+	return enrichError(ErrIDNotFoundError, argOrMsg, args...)
+}
+
+func ErrRefIDNotFound(t interface{}, f string, id istructs.RecordID) error {
+	return ErrIDNotFound("%v field «%s» refers to unknown ID «%d»", t, f, id)
+}
 
 var ErrRecordNotFound = errors.New("record cannot be found")
 
-var ErrMinOccursViolation = errors.New("minimum occurs violated")
+var ErrMinOccursViolationError = errors.New("minimum occurs violated")
 
-var ErrMaxOccursViolation = errors.New("maximum occurs violated")
+func ErrMinOccursViolated(t interface{}, n string, o, minO appdef.Occurs) error {
+	return enrichError(ErrMinOccursViolationError, "%v container «%s» has not enough occurrences (%d, minimum %d)", t, n, o, minO)
+}
 
-var ErrFieldIsEmpty = errors.New("field is empty")
+var ErrMaxOccursViolationError = errors.New("maximum occurs violated")
 
-var ErrInvalidVerificationKind = errors.New("invalid verification kind")
+func ErrMaxOccursViolated(t interface{}, n string, o, maxO appdef.Occurs) error {
+	return enrichError(ErrMaxOccursViolationError, "%v container «%s» has too many occurrences (%d, maximum %d)", t, n, o, maxO)
+}
 
-var ErrCUDsMissed = errors.New("CUDs are missed")
+var ErrFieldIsEmptyError = errors.New("field is empty")
 
-var ErrRawRecordIDRequired = errors.New("raw record ID required")
+// name should  be string or any Stringer interface (e.g. IField)
+func ErrFieldIsEmpty(name interface{}) error {
+	return enrichError(ErrFieldIsEmptyError, "%v", name)
+}
 
-var ErrRawRecordIDUnexpected = errors.New("unexpected raw record ID")
+func ErrFieldMissed(t, name interface{}) error {
+	return enrichError(ErrFieldIsEmptyError, "%v %v", t, name)
+}
 
-var ErrRecordIDUniqueViolation = errors.New("record ID duplicates")
+var ErrInvalidVerificationKindError = errors.New("invalid verification kind")
 
-var ErrWrongRecordID = errors.New("wrong record ID")
+func ErrInvalidVerificationKind(t, f interface{}, k appdef.VerificationKind) error {
+	return enrichError(ErrInvalidVerificationKindError, "%s for %v «%v»", k.TrimString(), t, f)
+}
 
-var ErrUnableToUpdateSystemField = errors.New("unable to update system field")
+var ErrCUDsMissedError = errors.New("CUDs are missed")
 
-var ErrWrongType = errors.New("wrong type")
+// event should be string or any Stringer interface (e.g. IEvent)
+func ErrCUDsMissed(event interface{}) error {
+	return enrichError(ErrCUDsMissedError, "%v", event)
+}
 
-var ErrAbstractType = errors.New("abstract type")
+var ErrRawRecordIDRequiredError = errors.New("raw record ID required")
 
-var ErrUnexpectedTypeKind = errors.New("unexpected type kind")
+func ErrRawRecordIDRequired(row, fld interface{}, id istructs.RecordID) error {
+	return enrichError(ErrRawRecordIDRequiredError, "%v %v: id «%d» is not raw", row, fld, id)
+}
 
-var ErrUnknownCodec = errors.New("unknown codec")
+var ErrUnexpectedRawRecordIDError = errors.New("unexpected raw record ID")
 
-var ErrMaxGetBatchRecordCountExceeds = errors.New("the maximum count of records to batch is exceeded")
+func ErrUnexpectedRawRecordID(rec, fld interface{}, id istructs.RecordID) error {
+	return enrichError(ErrUnexpectedRawRecordIDError, "%v %v: id «%d» should not be raw", rec, fld, id)
+}
 
-var ErrWrongFieldType = errors.New("wrong field type")
+var ErrRecordIDUniqueViolationError = errors.New("record ID duplicates")
 
-var ErrTypeChanged = errors.New("type has been changed")
+func ErrRecordIDUniqueViolation(id istructs.RecordID, rec, dupe interface{}) error {
+	return enrichError(ErrRecordIDUniqueViolationError, "id «%d» used by %v and %v", id, rec, dupe)
+}
 
-var ErrDataConstraintViolation = errors.New("data constraint violation")
+// name should  be string or any Stringer interface (e.g. QName)
+func ErrSingletonViolation(name interface{}) error {
+	return enrichError(ErrRecordIDUniqueViolationError, "singleton «%v» violation", name)
+}
 
-var ErrNumAppWorkspacesNotSet = errors.New("NumAppWorkspaces is not set")
+var ErrWrongRecordIDError = errors.New("wrong record ID")
+
+func ErrWrongRecordID(argOrMsg any, args ...any) error {
+	return enrichError(ErrWrongRecordIDError, argOrMsg, args...)
+}
+
+func ErrWrongRecordIDTarget(t, f interface{}, id istructs.RecordID, target interface{}) error {
+	return enrichError(ErrWrongRecordIDError, "%v %v refers to record ID «%d» that has wrong target «%s»", t, f, id, target)
+}
+
+var ErrUnableToUpdateSystemFieldError = errors.New("unable to update system field")
+
+func ErrUnableToUpdateSystemField(t, f interface{}) error {
+	return enrichError(ErrUnableToUpdateSystemFieldError, "%v %v", t, f)
+}
+
+var ErrAbstractTypeError = errors.New("abstract type")
+
+func ErrAbstractType(argOrMsg any, args ...any) error {
+	return enrichError(ErrAbstractTypeError, argOrMsg, args...)
+}
+
+var ErrUnexpectedTypeError = errors.New("unexpected type")
+
+func ErrUnexpectedType(argOrMsg any, args ...any) error {
+	return enrichError(ErrUnexpectedTypeError, argOrMsg, args...)
+}
+
+var ErrUnknownCodecError = errors.New("unknown codec")
+
+func ErrUnknownCodec(argOrMsg any, args ...any) error {
+	return enrichError(ErrUnknownCodecError, argOrMsg, args...)
+}
+
+var ErrMaxGetBatchSizeExceedsError = fmt.Errorf("the maximum count of records to batch (%d) is exceeded", maxGetBatchRecordCount)
+
+func ErrMaxGetBatchSizeExceeds(size int) error {
+	return enrichError(ErrMaxGetBatchSizeExceedsError, size)
+}
+
+var ErrWrongFieldTypeError = errors.New("wrong field type")
+
+func ErrWrongFieldType(argOrMsg any, args ...any) error {
+	return enrichError(ErrWrongFieldTypeError, argOrMsg, args...)
+}
+
+var ErrDataConstraintViolationError = errors.New("data constraint violation")
+
+func ErrDataConstraintViolation(field, constraint interface{}) error {
+	return enrichError(ErrDataConstraintViolationError, "%v: %v", field, constraint)
+}
+
+var ErrNumAppWorkspacesNotSetError = errors.New("NumAppWorkspaces is not set")
+
+func ErrNumAppWorkspacesNotSet(app interface{}) error {
+	return enrichError(ErrNumAppWorkspacesNotSetError, app)
+}
 
 var ErrCorruptedData = errors.New("corrupted data")
-
-const errTypedFieldNotFoundWrap = "%s-type field «%s» is not found in %v: %w" // int32-type field «myField» is not found …
-
-const errFieldNotFoundWrap = "field «%s» is not found in %v: %w" // int32-type field «myField» is not found …
-
-const errContainerNotFoundWrap = "container «%s» is not found in type «%v»: %w" // container «order_item» is not found …
-
-const errFieldValueTypeMismatchWrap = "value type «%s» is not applicable for %v: %w" // value type «float64» is not applicable for int32-field «myField»: …
-
-const errFieldMustBeVerified = "field «%s» must be verified, token expected, but value «%T» passed: %w"
-
-const errFieldConvertErrorWrap = "field «%s» value type «%T» can not to be converted to «%s»: %w"
-
-const errNumberFieldWrongValueWrap = "field «%s» value %s can not to be converted to «%s»: %w"
-
-const errCantGetFieldQNameIDWrap = "QName field «%s» can not get ID for value «%v»: %w"
-
-const errTypeNotFoundWrap = "type «%v» not found: %w"
-
-const errMustValidatedBeforeStore = "%v must be validated before store: %w"
-
-const errViewNotFoundWrap = "view «%v» not found: %w"
-
-const errFieldDataConstraintViolatedFmt = "%v data constraint «%v» violated: %w"
 
 // ValidateError: an interface for describing errors that occurred during validation
 //   - methods:

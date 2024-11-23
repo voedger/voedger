@@ -1,0 +1,10 @@
+-- Copyright (c) 2023-present unTill Pro, Ltd.
+-- @author Alisher Nurmanov
+
+IMPORT SCHEMA 'github.com/voedger/voedger/pkg/registry' AS reg;
+
+WORKSPACE MyWS1 (
+    TABLE MyTable1 INHERITS sys.ODoc (
+        MyField ref(reg.Login) NOT NUL
+    );
+);

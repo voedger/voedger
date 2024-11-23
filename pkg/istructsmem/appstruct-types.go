@@ -175,7 +175,7 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	}
 
 	if cfg.numAppWorkspaces <= 0 {
-		return fmt.Errorf("%s: %w", cfg.Name, ErrNumAppWorkspacesNotSet)
+		return ErrNumAppWorkspacesNotSet(cfg.Name)
 	}
 
 	cfg.prepared = true
@@ -194,18 +194,18 @@ func (cfg *AppConfigType) validateJobs() error {
 func (cfg *AppConfigType) validateResources() error {
 
 	for qName := range cfg.Resources.Resources {
-		if appdef.Extension(cfg.AppDef, qName) == nil {
+		if appdef.Extension(cfg.AppDef.Type, qName) == nil {
 			return fmt.Errorf("exec of func %s is defined but the func is not defined in SQL", qName)
 		}
 	}
 
 	for _, prj := range cfg.syncProjectors {
-		if appdef.Projector(cfg.AppDef, prj.Name) == nil {
+		if appdef.Projector(cfg.AppDef.Type, prj.Name) == nil {
 			return fmt.Errorf("exec of sync projector %s is defined but the projector is not defined in SQL", prj.Name)
 		}
 	}
 	for _, prj := range cfg.asyncProjectors {
-		if appdef.Projector(cfg.AppDef, prj.Name) == nil {
+		if appdef.Projector(cfg.AppDef.Type, prj.Name) == nil {
 			return fmt.Errorf("exec of async projector %s is defined but the projector is not defined in SQL", prj.Name)
 		}
 	}
