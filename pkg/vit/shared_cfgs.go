@@ -6,10 +6,10 @@ package vit
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -121,7 +121,8 @@ func ProvideApp2WithJob(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, e
 	cfg.AddJobs(istructsmem.BuiltinJob{
 		Name: appdef.NewQName(app2PkgName, "Job1_builtin"),
 		Func: func(st istructs.IState, intents istructs.IIntents) error {
-			return errors.New("Job1_builtin works!!!!!!!!!!!!!! ")
+			logger.Info("job done")
+			return nil
 		},
 	})
 	return builtinapps.Def{
