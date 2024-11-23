@@ -20,26 +20,28 @@ type Run func(ctx context.Context, app appdef.AppQName, partID istructs.Partitio
 
 // PartitionSchedulers manages schedulers deployment for the specified application partition.
 type PartitionSchedulers struct {
-	mx                    sync.RWMutex
-	appQName              appdef.AppQName
-	partitionID           istructs.PartitionID
-	appWSNumbers          map[istructs.WSID]istructs.AppWorkspaceNumber
-	jobsInAppWSIDRuntimes map[appdef.QName]map[istructs.WSID]*runtime
+	mx          sync.RWMutex
+	appQName    appdef.AppQName
+	partitionID istructs.PartitionID
+	wsNumbers   map[istructs.WSID]istructs.AppWorkspaceNumber
+	rt          map[appdef.QName]map[istructs.WSID]*runtime // job name -> workspace ID -> runtime
+	rtWG        sync.WaitGroup
 }
 
 func newPartitionSchedulers(appQName appdef.AppQName, partCount istructs.NumAppPartitions, wsCount istructs.NumAppWorkspaces, partitionID istructs.PartitionID) *PartitionSchedulers {
 	return &PartitionSchedulers{
-		appQName:              appQName,
-		partitionID:           partitionID,
-		appWSNumbers:          AppWorkspacesHandledByPartition(partCount, wsCount, partitionID),
-		jobsInAppWSIDRuntimes: make(map[appdef.QName]map[istructs.WSID]*runtime),
+		appQName:    appQName,
+		partitionID: partitionID,
+		wsNumbers:   AppWorkspacesHandledByPartition(partCount, wsCount, partitionID),
+		rt:          make(map[appdef.QName]map[istructs.WSID]*runtime),
+		rtWG:        sync.WaitGroup{},
 	}
 }
 
 // Deploys partition schedulers: stops schedulers for removed jobs and
 // starts schedulers for new jobs using the specified run function.
 func (ps *PartitionSchedulers) Deploy(vvmCtx context.Context, appDef appdef.IAppDef, run Run) {
-	if len(ps.appWSNumbers) == 0 {
+	if len(ps.wsNumbers) == 0 {
 		return // no application workspaces handled by this partition
 	}
 
@@ -55,7 +57,7 @@ func (ps *PartitionSchedulers) Enum() map[appdef.QName][]istructs.WSID {
 	defer ps.mx.RUnlock()
 
 	res := make(map[appdef.QName][]istructs.WSID)
-	for name, wsRT := range ps.jobsInAppWSIDRuntimes {
+	for name, wsRT := range ps.rt {
 		ws := make([]istructs.WSID, 0, len(wsRT))
 		for wsID := range wsRT {
 			ws = append(ws, wsID)
@@ -70,15 +72,7 @@ func (ps *PartitionSchedulers) Enum() map[appdef.QName][]istructs.WSID {
 //
 // Contexts for schedulers should be stopped. Here we just wait for schedulers to finish
 func (ps *PartitionSchedulers) Wait() {
-	for {
-		ps.mx.RLock()
-		cnt := len(ps.jobsInAppWSIDRuntimes)
-		ps.mx.RUnlock()
-		if cnt == 0 {
-			break
-		}
-		time.Sleep(time.Millisecond)
-	}
+	ps.rtWG.Wait()
 }
 
 // Wait waits for all schedulers to finish.
@@ -103,32 +97,37 @@ func (ps *PartitionSchedulers) WaitTimeout(timeout time.Duration) (finished bool
 func (ps *PartitionSchedulers) start(vvmCtx context.Context, name appdef.QName, run Run, wg *sync.WaitGroup) {
 
 	ps.mx.Lock()
-	ps.jobsInAppWSIDRuntimes[name] = make(map[istructs.WSID]*runtime)
+	ps.rt[name] = make(map[istructs.WSID]*runtime)
 	ps.mx.Unlock()
 
-	for appWSID, appWSNumber := range ps.appWSNumbers {
+	for wsID, wsNum := range ps.wsNumbers {
 		ctx, cancel := context.WithCancel(vvmCtx)
 		rt := newRuntime(cancel)
 
 		ps.mx.Lock()
-		ps.jobsInAppWSIDRuntimes[name][appWSID] = rt
+		ps.rt[name][wsID] = rt
 		ps.mx.Unlock()
 
+		ps.rtWG.Add(1)
+
 		done := make(chan struct{})
-		go func(appWSNumber istructs.AppWorkspaceNumber, appWSID istructs.WSID) {
+		go func(wsNum istructs.AppWorkspaceNumber, wsID istructs.WSID) {
 			close(done) // scheduler started
 
-			run(ctx, ps.appQName, ps.partitionID, appWSNumber, appWSID, name)
+			defer func() {
+				ps.mx.Lock()
+				delete(ps.rt[name], wsID)
+				if len(ps.rt[name]) == 0 {
+					delete(ps.rt, name)
+				}
+				ps.mx.Unlock()
 
-			ps.mx.Lock()
-			delete(ps.jobsInAppWSIDRuntimes[name], appWSID)
-			if len(ps.jobsInAppWSIDRuntimes[name]) == 0 {
-				delete(ps.jobsInAppWSIDRuntimes, name)
-			}
-			ps.mx.Unlock()
+				close(rt.done) // scheduler finished
+				ps.rtWG.Done()
+			}()
 
-			close(rt.done) // scheduler finished
-		}(appWSNumber, appWSID)
+			run(ctx, ps.appQName, ps.partitionID, wsNum, wsID, name)
+		}(wsNum, wsID)
 
 		select {
 		case <-done: // wait until scheduler is started
@@ -145,7 +144,7 @@ func (ps *PartitionSchedulers) startNews(vvmCtx context.Context, appDef appdef.I
 	ps.mx.RLock()
 	for job := range appdef.Jobs(appDef.Types) {
 		name := job.QName()
-		if _, exists := ps.jobsInAppWSIDRuntimes[name]; !exists {
+		if _, exists := ps.rt[name]; !exists {
 			news[name] = struct{}{}
 		}
 	}
@@ -182,7 +181,7 @@ func (ps *PartitionSchedulers) stop(vvmCtx context.Context, rt *runtime, wg *syn
 func (ps *PartitionSchedulers) stopOlds(vvmCtx context.Context, appDef appdef.IAppDef) {
 	ps.mx.RLock()
 	olds := make([]*runtime, 0)
-	for name, wsRT := range ps.jobsInAppWSIDRuntimes {
+	for name, wsRT := range ps.rt {
 		// TODO: compare if job properties changed (cron, states, intents, etc.)
 		if appdef.Job(appDef.Type, name) == nil {
 			for _, rt := range wsRT {
