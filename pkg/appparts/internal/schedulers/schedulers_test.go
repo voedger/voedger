@@ -130,3 +130,72 @@ func TestSchedulersWaitTimeout(t *testing.T) {
 		require.Len(schedulers.Enum(), 2)
 	})
 }
+
+func TestSchedulersDeploy(t *testing.T) {
+
+	appName := istructs.AppQName_test1_app1
+	const (
+		partCnt = 2 // partition 0 should handle schedulers for single workspace 0, partition 1 should not
+		wsCnt   = 1
+	)
+	jobName := appdef.MustParseQName("test.j1")
+
+	app := func() appdef.IAppDef {
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test").
+			AddWorkspace(appdef.NewQName("test", "workspace")).
+			AddJob(jobName).SetCronSchedule("@every 5s")
+		return adb.MustBuild()
+	}()
+
+	require := require.New(t)
+
+	ctx, stop := context.WithCancel(context.Background())
+
+	var schedulers [partCnt]*PartitionSchedulers
+
+	t.Run("should be ok to deploy if partitions does not handle schedulers", func(t *testing.T) {
+		deploy := func(partID istructs.PartitionID) *PartitionSchedulers {
+			s := New(appName, partCnt, wsCnt, partID)
+			s.Deploy(ctx, app,
+				func(ctx context.Context, _ appdef.AppQName, _ istructs.PartitionID, _ istructs.AppWorkspaceNumber, _ istructs.WSID, name appdef.QName) {
+					<-ctx.Done()
+				})
+			return s
+		}
+
+		for pid := istructs.PartitionID(0); pid < partCnt; pid++ {
+			schedulers[pid] = deploy(pid)
+		}
+
+		require.Equal(
+			map[appdef.QName][]istructs.WSID{
+				jobName: {
+					istructs.NewWSID(istructs.CurrentClusterID(), istructs.WSID(0)+istructs.FirstBaseAppWSID),
+				},
+			},
+			schedulers[0].Enum())
+
+		require.Empty(schedulers[1].Enum(), "partition 1 should not handle schedulers")
+	})
+
+	t.Run("should be ok to wait for all actualizers finished", func(t *testing.T) {
+		// stop vvm from context, wait actualizers finished
+		stop()
+
+		wg := sync.WaitGroup{}
+		for pid := istructs.PartitionID(0); pid < partCnt; pid++ {
+			wg.Add(1)
+			go func(pid istructs.PartitionID) {
+				defer wg.Done()
+				schedulers[pid].Wait()
+			}(pid)
+		}
+
+		wg.Wait()
+
+		for pid := istructs.PartitionID(0); pid < partCnt; pid++ {
+			require.Empty(schedulers[pid].Enum())
+		}
+	})
+}
