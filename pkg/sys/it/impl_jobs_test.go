@@ -8,30 +8,37 @@ package sys_it
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
 func TestJobjs_BasicUsage_Builtin(t *testing.T) {
-	// job will run because time is increased by 1 day per each NewVIT
-	// case:
-	//   VVM is launched, timer for Job1_builtin is charged to MockTime.Now()+1minute
-	//   MockTime.Now+1day is made on NewVIT()
-	//   timer for Job1_builtin is fired
 	cfg := it.NewOwnVITConfig(
 		it.WithApp(istructs.AppQName_test1_app2, it.ProvideApp2WithJob, it.WithUserLogin("login", "1")),
 	)
+
+	loggedJob := make(chan string)
+	logger.PrintLine = func(level logger.TLogLevel, line string) {
+		if strings.Contains(line, "job done") {
+			loggedJob <- line
+		}
+	}
+
 	vit := it.NewVIT(t, &cfg)
 	defer vit.TearDown()
 
-	// note: use vit.TimeAdd(appropriate duration) to force timer fire for the job
-
-	// observe "Job1_builtin works!!!!!!!!!!!!!!" in console output
+	select {
+	case <-loggedJob:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("job was not fired")
+	}
 }
 
 func TestJobs_BasicUsage_Sidecar(t *testing.T) {
@@ -39,21 +46,37 @@ func TestJobs_BasicUsage_Sidecar(t *testing.T) {
 	require.NoError(t, err)
 	cfg := it.NewOwnVITConfig(
 		it.WithVVMConfig(func(cfg *vvm.VVMConfig) {
-			// configure VVM to read sidecar apps from /testdata
 			cfg.DataPath = filepath.Join(wd, "testdata")
 		}),
 	)
-	// job will run because time is increased by 1 day per each NewVIT
-	// case:
-	//   VVM is launched, timer for Job1_sidecar is charged to MockTime.Now()+1minute
-	//   MockTime.Now+1day is made on NewVIT()
-	//   timer for Job1_sidecar is fired
+	loggedJobs := make(chan string, 10)
+	logger.PrintLine = func(level logger.TLogLevel, line string) {
+		if strings.Contains(line, "job:") {
+			loggedJobs <- line
+		}
+	}
+
 	vit := it.NewVIT(t, &cfg)
 	defer vit.TearDown()
 
-	// note: use vit.TimeAdd(appropriate duration) to force timer fire for the job
+	waitForJob := func(job string) {
+		select {
+		case job := <-loggedJobs:
+			require.True(t, strings.HasSuffix(job, job))
+		case <-time.After(5 * time.Second):
+			t.Fatalf("job %s was not fired", job)
+		}
+	}
 
-	time.Sleep(time.Second)
+	addMinutes := func(minutes int) {
+		time.Sleep(10 * time.Millisecond) // to let scheduler to schedule the text job
+		vit.TimeAdd(time.Duration(minutes) * time.Minute)
+	}
 
-	// observe "panic: Job1_sidecar works!!!!!!!!!!" in console output
+	waitForJob("job:1")
+	addMinutes(1)
+	waitForJob("job:2")
+	addMinutes(5)
+	waitForJob("job:3")
+
 }

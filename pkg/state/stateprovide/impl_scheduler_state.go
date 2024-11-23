@@ -48,6 +48,7 @@ func implProvideSchedulerState(ctx context.Context, appStructsFunc state.AppStru
 	state.addStorage(sys.Storage_AppSecret, storages.NewAppSecretsStorage(secretReader), S_GET)
 	state.addStorage(sys.Storage_Uniq, storages.NewUniquesStorage(appStructsFunc, wsidFunc, opts.UniquesHandler), S_GET)
 	state.addStorage(sys.Storage_JobContext, storages.NewJobContextStorage(wsidFunc, unixTimeFunc), S_GET)
+	state.addStorage(sys.Storage_Logger, storages.NewLoggerStorage(), S_INSERT)
 
 	return state
 }
