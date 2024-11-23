@@ -23,6 +23,7 @@ type PartitionActualizers struct {
 	app  appdef.AppQName
 	part istructs.PartitionID
 	rt   map[appdef.QName]*runtime
+	rtWG sync.WaitGroup
 }
 
 func newActualizers(app appdef.AppQName, part istructs.PartitionID) *PartitionActualizers {
@@ -30,6 +31,7 @@ func newActualizers(app appdef.AppQName, part istructs.PartitionID) *PartitionAc
 		app:  app,
 		part: part,
 		rt:   make(map[appdef.QName]*runtime),
+		rtWG: sync.WaitGroup{},
 	}
 }
 
@@ -52,15 +54,7 @@ func (pa *PartitionActualizers) Enum() appdef.QNames {
 //
 // The context should be stopped before calling this method. Here we just wait for actualizers to finish.
 func (pa *PartitionActualizers) Wait() {
-	for {
-		pa.mx.RLock()
-		cnt := len(pa.rt)
-		pa.mx.RUnlock()
-		if cnt == 0 {
-			break
-		}
-		time.Sleep(time.Millisecond)
-	}
+	pa.rtWG.Wait()
 }
 
 // Wait waits for all actualizers to finish.
@@ -91,17 +85,22 @@ func (pa *PartitionActualizers) start(vvmCtx context.Context, name appdef.QName,
 	pa.rt[name] = rt
 	pa.mx.Unlock()
 
+	pa.rtWG.Add(1)
+
 	done := make(chan struct{})
 	go func() {
 		close(done) // actualizer started
 
+		defer func() {
+			pa.mx.Lock()
+			delete(pa.rt, name)
+			pa.mx.Unlock()
+
+			close(rt.done) // actualizer finished
+			pa.rtWG.Done()
+		}()
+
 		run(ctx, pa.app, pa.part, name)
-
-		pa.mx.Lock()
-		delete(pa.rt, name)
-		pa.mx.Unlock()
-
-		close(rt.done) // actualizer finished
 	}()
 
 	select {
