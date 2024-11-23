@@ -221,6 +221,7 @@ func (b *viewKeyBuilder) String() string {
 
 type viewValueBuilder struct {
 	istructs.IValueBuilder
+	istructs.IStateViewValueBuilder
 	offset istructs.Offset
 	entity appdef.QName
 	fc     iViewInt64FieldTypeChecker
@@ -232,8 +233,11 @@ func (b *viewValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
 	if err != nil {
 		panic(err)
 	}
-
-	bSrc, err := src.ToBytes()
+	srcValueBuilder, ok := src.(*viewValueBuilder)
+	if !ok {
+		return false
+	}
+	bSrc, err := srcValueBuilder.IValueBuilder.ToBytes()
 	if err != nil {
 		panic(err)
 	}
@@ -241,6 +245,12 @@ func (b *viewValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
 	return reflect.DeepEqual(bThis, bSrc)
 }
 
+func (b *viewValueBuilder) PutRecord(name string, record istructs.IRecord) {
+	b.IValueBuilder.PutRecord(name, record)
+}
+func (b *viewValueBuilder) ToBytes() ([]byte, error) {
+	return b.IValueBuilder.ToBytes()
+}
 func (b *viewValueBuilder) PutInt64(name string, value int64) {
 	if name == state.ColOffset {
 		b.offset = istructs.Offset(value) // nolint G115
@@ -273,6 +283,7 @@ func (b *viewValueBuilder) BuildValue() istructs.IStateValue {
 
 type viewValue struct {
 	baseStateValue
+	istructs.IStateViewValue
 	value istructs.IValue
 }
 

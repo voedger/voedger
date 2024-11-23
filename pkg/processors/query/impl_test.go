@@ -1351,11 +1351,12 @@ func (b *mockStateKeyBuilder) PutRecordID(name string, value istructs.RecordID) 
 
 type mockStateValue struct {
 	istructs.IStateValue
+	istructs.IStateRecordValue
 	mock.Mock
 }
 
-func (o *mockStateValue) AsRecord(name string) istructs.IRecord {
-	return o.Called(name).Get(0).(istructs.IRecord)
+func (o *mockStateValue) AsRecord() istructs.IRecord {
+	return o.Called("").Get(0).(istructs.IRecord)
 }
 
 type mockRecord struct {
