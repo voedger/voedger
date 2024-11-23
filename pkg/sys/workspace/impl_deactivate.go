@@ -214,7 +214,7 @@ func projectorApplyDeactivateWorkspace(federation federation.IFederation, tokens
 		subjectsKB.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
 		subjectsKB.PutQName(collection.Field_DocQName, invite.QNameCDocSubject)
 		err = s.Read(subjectsKB, func(_ istructs.IKey, value istructs.IStateValue) (err error) {
-			subject := value.AsRecord(collection.Field_Record)
+			subject := value.(istructs.IStateViewValue).AsRecord(collection.Field_Record)
 			if istructs.SubjectKindType(subject.AsInt32(authnz.Field_SubjectKind)) != istructs.SubjectKind_User {
 				return nil
 			}

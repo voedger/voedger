@@ -37,7 +37,7 @@ func stateFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callback is
 		if value.AsInt64(state.ColOffset) <= after {
 			return
 		}
-		record := value.AsRecord(Field_Record)
+		record := value.(istructs.IStateViewValue).AsRecord(Field_Record)
 		_, ok := data[record.QName().String()]
 		if !ok {
 			data[record.QName().String()] = make(map[istructs.RecordID]map[string]interface{})
