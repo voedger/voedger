@@ -15,9 +15,10 @@ jobs:
       ignore_copyright: "cmd/voedger/sys.monitor/site.main"
       ignore_bp3: "true"
       short_test: "true"
+      go_race: "false"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-      codecov_token: ${{ secrets.CODECOV_TOKEN }}
+      codecov_token: ""
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   build:
     needs: call-workflow-ci-pkg
@@ -44,9 +45,10 @@ jobs:
       ignore_copyright: "cmd/voedger/sys.monitor/site.main"
       short_test: "true"
       ignore_build: "true"
+      go_race: "false"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-      codecov_token: ${{ secrets.CODECOV_TOKEN }}
+      codecov_token: ""
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   call-workflow-ci-cmd-edger:
     needs: call-workflow-ci-cmd-ctool
@@ -56,9 +58,10 @@ jobs:
       ignore_copyright: "cmd/voedger/sys.monitor/site.main"
       short_test: "true"
       ignore_build: "true"
+      go_race: "false"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-      codecov_token: ${{ secrets.CODECOV_TOKEN }}
+      codecov_token: ""
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   call-workflow-ci-cmd-voedger:
     needs: call-workflow-ci-cmd-edger
@@ -68,9 +71,10 @@ jobs:
       ignore_copyright: "cmd/voedger/sys.monitor/site.main"
       short_test: "true"
       ignore_build: "true"
+      go_race: "false"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-      codecov_token: ${{ secrets.CODECOV_TOKEN }}
+      codecov_token: ""
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   call-workflow-cd_voeger:
     needs: call-workflow-ci-cmd-voedger

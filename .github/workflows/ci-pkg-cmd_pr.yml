@@ -17,9 +17,10 @@ jobs:
       short_test: "true"
       ignore_build: "true"
       running_workflow: "CI pkg-cmd PR"
+      go_race: "false"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-      codecov_token: ${{ secrets.CODECOV_TOKEN }}
+      codecov_token: ""
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   call-workflow-ci-cmd-ctool:
     needs: call-workflow-ci-pkg
@@ -30,10 +31,11 @@ jobs:
       ignore_bp3: "true"
       short_test: "true"
       ignore_build: "true"
+      go_race: "false"
       running_workflow: "CI pkg-cmd PR"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-      codecov_token: ${{ secrets.CODECOV_TOKEN }}
+      codecov_token: ""
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   call-workflow-ci-cmd-edger:
     needs: call-workflow-ci-cmd-ctool
@@ -44,10 +46,11 @@ jobs:
       ignore_bp3: "true"
       short_test: "true"
       ignore_build: "true"
+      go_race: "false"
       running_workflow: "CI pkg-cmd PR"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-      codecov_token: ${{ secrets.CODECOV_TOKEN }}
+      codecov_token: ""
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   call-workflow-ci-cmd-vpm:
     needs: call-workflow-ci-cmd-edger
@@ -58,10 +61,11 @@ jobs:
       ignore_bp3: "true"
       short_test: "true"
       ignore_build: "true"
+      go_race: "false"
       running_workflow: "CI pkg-cmd PR"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-      codecov_token: ${{ secrets.CODECOV_TOKEN }}
+      codecov_token: ""
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   call-workflow-ci-cmd-voedger:
     needs: call-workflow-ci-cmd-vpm
@@ -72,10 +76,11 @@ jobs:
       ignore_bp3: "true"
       short_test: "true"
       ignore_build: "true"
+      go_race: "false"
       running_workflow: "CI pkg-cmd PR"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-      codecov_token: ${{ secrets.CODECOV_TOKEN }}
+      codecov_token: ""
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   auto-merge-pr:
     needs: call-workflow-ci-cmd-voedger
