@@ -552,6 +552,16 @@ ALTERABLE WORKSPACE test_wsWS (
 		DeniedFld2 int32 -- denied field, no grants
 	);
 
+	TABLE Root INHERITS sys.CDoc (
+		FldRoot int32,
+		Nested TABLE Nested (
+			FldNested int32,
+			Third TABLE Third (
+				Fld1 int32
+			)
+		)
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY MockQry(MockQryParams) RETURNS MockQryResult WITH Tags=(WorkspaceOwnerFuncTag);
@@ -580,6 +590,10 @@ ALTERABLE WORKSPACE test_wsWS (
 
 	TAG WorkspaceOwnerTableTag;
 	TAG WorkspaceOwnerFuncTag;
+
+	GRANT SELECT, UPDATE, INSERT ON TABLE Root TO sys.WorkspaceOwner;
+	GRANT SELECT, UPDATE, INSERT ON TABLE Nested TO sys.WorkspaceOwner;
+	GRANT SELECT, UPDATE, INSERT ON TABLE Third TO sys.WorkspaceOwner;
 
 	GRANT SELECT, UPDATE ON TABLE test_ws TO sys.WorkspaceOwner;
 

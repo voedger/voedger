@@ -470,3 +470,20 @@ func TestDenyCreateNonRawIDs(t *testing.T) {
 	body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": %d,"sys.QName": "app1pkg.options"}}]}`, istructs.FirstBaseUserWSID)
 	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
 }
+
+func TestRoot(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	body := `{"cuds": [
+		{"fields":{"sys.ID": 1,"sys.QName": "app1pkg.Root", "FldRoot": 2}},
+		{"fields":{"sys.ID": 2,"sys.QName": "app1pkg.Nested", "sys.ParentID":1,"sys.Container": "Nested","FldNested":3}},
+		{"fields":{"sys.ID": 3,"sys.QName": "app1pkg.Third", "Fld1": 42,"sys.ParentID":2,"sys.Container": "Third"}}
+		]}`
+	vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+	body = "{\n\t\t\"args\":{\n\t\t\t\"Schema\":\"app1pkg.Root\"\n\t\t},\n\t\t\"elements\": [\n\t\t\t{\n\t\t\t\t\"fields\": [\"FldRoot\"]\n\t\t\t},\n\t\t\t{\n\t\t\t\t\"path\": \"nested\",\n\t\t\t\t\"fields\": [\"Fldested\"]\n\t\t\t}\n\t\t]\n\t}"
+	vit.PostWS(ws, "q.sys.Collection", body).Println()
+
+}

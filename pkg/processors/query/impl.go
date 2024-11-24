@@ -351,6 +351,9 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				// otherwise each field is considered as allowed if EXECUTE ON QUERY is allowed
 				return nil
 			}
+ошибка тут
+
+			return nil
 			requestedfields := []string{}
 			c := qw.resultType.(appdef.IContainers)
 			_ = c
@@ -387,8 +390,6 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 	}
 	return pipeline.NewSyncPipeline(requestCtx, "Query Processor", ops[0], ops[1:]...)
 }
-
-func authType()
 
 type queryWork struct {
 	// input
