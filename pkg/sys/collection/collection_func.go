@@ -51,7 +51,7 @@ func collectionFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callba
 	var lastDoc *collectionObject
 
 	err = args.State.Read(kb, func(key istructs.IKey, value istructs.IStateValue) (err error) {
-		rec := value.AsRecord(Field_Record)
+		rec := value.(istructs.IStateViewValue).AsRecord(Field_Record)
 		docId := key.AsRecordID(field_DocID)
 
 		if lastDoc != nil && lastDoc.ID() == docId {

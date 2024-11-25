@@ -47,13 +47,13 @@ func Test_AppDef_StructuresAndRecords(t *testing.T) {
 		app = a
 	})
 
-	testWith := func(tested IWithTypes) {
+	testWith := func(tested testedTypes) {
 		t.Run("should be ok to find builded structures", func(t *testing.T) {
 			findStruct := func(n QName, kind TypeKind) {
 				typ := tested.Type(n)
 				require.Equal(kind, typ.Kind())
 
-				doc := Structure(tested, n)
+				doc := Structure(tested.Type, n)
 				require.Equal(kind, doc.Kind())
 
 				require.Equal(wsName, doc.Workspace().QName())
@@ -67,11 +67,11 @@ func Test_AppDef_StructuresAndRecords(t *testing.T) {
 			findStruct(objName, TypeKind_Object)
 		})
 
-		require.Nil(Structure(tested, NewQName("test", "unknown")), "should nil if not found")
+		require.Nil(Structure(tested.Type, NewQName("test", "unknown")), "should nil if not found")
 
 		t.Run("should be ok to enumerate structures", func(t *testing.T) {
 			var str []QName
-			for s := range Structures(tested) {
+			for s := range Structures(tested.Types) {
 				str = append(str, s.QName())
 			}
 			require.Equal(str, []QName{docName, objName, recName})
@@ -82,7 +82,7 @@ func Test_AppDef_StructuresAndRecords(t *testing.T) {
 				typ := tested.Type(n)
 				require.Equal(kind, typ.Kind())
 
-				rec := Record(tested, n)
+				rec := Record(tested.Type, n)
 				require.Equal(kind, rec.Kind())
 
 				require.Equal(wsName, rec.Workspace().QName())
@@ -95,12 +95,12 @@ func Test_AppDef_StructuresAndRecords(t *testing.T) {
 			findRecord(recName, TypeKind_ORecord)
 		})
 
-		require.Nil(Record(tested, NewQName("test", "unknown")), "should nil if not found")
-		require.Nil(Record(tested, objName), "should nil if not record")
+		require.Nil(Record(tested.Type, NewQName("test", "unknown")), "should nil if not found")
+		require.Nil(Record(tested.Type, objName), "should nil if not record")
 
 		t.Run("should be ok to enumerate records", func(t *testing.T) {
 			var recs []QName
-			for s := range Records(tested) {
+			for s := range Records(tested.Types) {
 				recs = append(recs, s.QName())
 			}
 			require.Equal(recs, []QName{docName, recName})

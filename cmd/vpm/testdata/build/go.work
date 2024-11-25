@@ -1,0 +1,12 @@
+go 1.23.2
+
+use (
+	./appcomplex
+	./appsimple
+	./noappschema
+	./nopackagesgen
+	./pkg1
+	./pkg2
+	./air
+	./untill
+)

@@ -111,10 +111,10 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 
 	// Wait for the projectors
 	for getActualizerOffset(require, appStructs, partitionNr, incrementorName) < topOffset {
-		time.Sleep(time.Nanosecond)
+		time.Sleep(time.Millisecond)
 	}
 	for getActualizerOffset(require, appStructs, partitionNr, decrementorName) < topOffset {
-		time.Sleep(time.Nanosecond)
+		time.Sleep(time.Millisecond)
 	}
 
 	// stop services
@@ -191,7 +191,7 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 
 	// Wait for the projectors
 	for getActualizerOffset(require, appStructs, partitionNr, incrementorName) < topOffset {
-		time.Sleep(time.Nanosecond)
+		time.Sleep(time.Millisecond)
 	}
 	require.True(time.Now().Before(t0.Add(conf.FlushInterval)))
 
@@ -258,7 +258,7 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 
 	// Wait for the projectors
 	for getActualizerOffset(require, appStructs, partitionNr, incrementorName) < topOffset {
-		time.Sleep(time.Nanosecond)
+		time.Sleep(time.Millisecond)
 	}
 	require.True(time.Now().After(t0.Add(actCfg.FlushInterval)))
 
@@ -459,7 +459,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 
 	// Wait for the projectors
 	for getActualizerOffset(require, appStructs, partitionNr, incrementorName) < topOffset {
-		time.Sleep(time.Nanosecond)
+		time.Sleep(time.Millisecond)
 	}
 
 	//New events in pLog
@@ -475,7 +475,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 
 	// Wait for the projectors
 	for getActualizerOffset(require, appStructs, partitionNr, incrementorName) < topOffset {
-		time.Sleep(time.Nanosecond)
+		time.Sleep(time.Millisecond)
 	}
 
 	// stop services
@@ -602,7 +602,7 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 
 	// Wait for the projectors
 	for actMetrics.value(aaStoredOffset, partitionNr, incrementorName) < int64(topOffset) {
-		time.Sleep(time.Nanosecond)
+		time.Sleep(time.Millisecond)
 	}
 	d := time.Since(t0)
 	d0 := d.Nanoseconds() / totalEvents
@@ -679,7 +679,7 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 
 	// Wait for the projectors
 	for actMetrics.value(aaStoredOffset, partitionNr, incrementorName) < int64(topOffset) {
-		time.Sleep(time.Nanosecond)
+		time.Sleep(time.Millisecond)
 	}
 	require.True(time.Now().Before(t0.Add(actCfg.FlushInterval))) // no flushes by timer happen
 

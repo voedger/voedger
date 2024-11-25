@@ -17,10 +17,10 @@ func _() {
 	_ = x[ConstraintKind_MaxIncl-6]
 	_ = x[ConstraintKind_MaxExcl-7]
 	_ = x[ConstraintKind_Enum-8]
-	_ = x[ConstraintKind_Count-9]
+	_ = x[ConstraintKind_count-9]
 }
 
-const _ConstraintKind_name = "ConstraintKind_nullConstraintKind_MinLenConstraintKind_MaxLenConstraintKind_PatternConstraintKind_MinInclConstraintKind_MinExclConstraintKind_MaxInclConstraintKind_MaxExclConstraintKind_EnumConstraintKind_Count"
+const _ConstraintKind_name = "ConstraintKind_nullConstraintKind_MinLenConstraintKind_MaxLenConstraintKind_PatternConstraintKind_MinInclConstraintKind_MinExclConstraintKind_MaxInclConstraintKind_MaxExclConstraintKind_EnumConstraintKind_count"
 
 var _ConstraintKind_index = [...]uint8{0, 19, 40, 61, 83, 105, 127, 149, 171, 190, 210}
 

@@ -43,20 +43,20 @@ func ExampleJobs() {
 
 	// how to find job in builded AppDef
 	{
-		job := appdef.Job(app, jobName)
+		job := appdef.Job(app.Type, jobName)
 		fmt.Println(job, ":")
 		for s := range job.States().Enum {
 			fmt.Println(" - crone:", job.CronSchedule())
 			fmt.Println(" - state:", s, s.Comment())
 		}
 
-		fmt.Println(appdef.Job(app, appdef.NewQName("test", "unknown")))
+		fmt.Println(appdef.Job(app.Type, appdef.NewQName("test", "unknown")))
 	}
 
 	// How to enum all jobs in AppDef
 	{
 		cnt := 0
-		for j := range appdef.Jobs(app) {
+		for j := range appdef.Jobs(app.Types) {
 			cnt++
 			fmt.Println(cnt, j)
 		}

@@ -1,0 +1,14 @@
+-- Copyright (c) 2024-present unTill Pro, Ltd.
+-- @author Alisher Nurmanov
+
+IMPORT SCHEMA 'mypkg3';
+
+ALTER WORKSPACE mypkg3.MyWorkspace3(
+    TYPE MyType4(
+        A varchar
+    );
+    TABLE MyTable4 INHERITS sys.CDoc(
+        Field1 varchar,
+        Field2 int32
+    );
+);

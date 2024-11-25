@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/invite"
@@ -290,6 +291,37 @@ func TestCancelSentInvite(t *testing.T) {
 	t.Run("invite not exists -> 400 bad request", func(t *testing.T) {
 		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, istructs.NonExistingRecordID), coreutils.Expect400RefIntegrity_Existence())
 	})
+}
+
+func TestInactiveCDocSubject(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	// sign up a new login
+	newLoginName := vit.NextName()
+	newLogin := vit.SignUp(newLoginName, "1", istructs.AppQName_test1_app1)
+	newPrn := vit.SignIn(newLogin)
+
+	parentWS := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	// try to execute an operation by the foreign login, expect 403
+	cudBody := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
+	vit.PostWS(parentWS, "c.sys.CUD", cudBody, coreutils.Expect403(), coreutils.WithAuthorizeBy(newPrn.Token))
+
+	// make this new foreign login a subject in the existing workspace
+	body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "sys.Subject","Login": "%s","SubjectKind":%d,"Roles": "%s","ProfileWSID":%d}}]}`,
+		newLoginName, istructs.SubjectKind_User, iauthnz.QNameRoleWorkspaceOwner, newPrn.ProfileWSID)
+	cdocSubjectID := vit.PostWS(parentWS, "c.sys.CUD", body).NewID()
+
+	// now the foreign login could work in the workspace
+	vit.PostWS(parentWS, "c.sys.CUD", cudBody, coreutils.WithAuthorizeBy(newPrn.Token))
+
+	// deactivate cdoc.Subject
+	body = fmt.Sprintf(`{"cuds": [{"sys.ID": %d,"fields": {"sys.IsActive": false}}]}`, cdocSubjectID)
+	vit.PostWS(parentWS, "c.sys.CUD", body)
+
+	// try again to work in the foreign workspace -> should fail
+	vit.PostWS(parentWS, "c.sys.CUD", cudBody, coreutils.WithAuthorizeBy(newPrn.Token), coreutils.Expect403())
 }
 
 func testOverwriteRoles(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, email string, inviteID int64) (verificationCode string) {

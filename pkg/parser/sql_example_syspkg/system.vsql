@@ -5,7 +5,7 @@
 ABSTRACT WORKSPACE Workspace (
 
     /*
-        Specify sys.Raw as a command/function parameter to pass raw data to the command/function. 
+        Specify sys.Raw as a command/function parameter to pass raw data to the command/function.
         The data isn't validated by the core.
         An extension accesses the data by reading the "Body" field from the argument.
     */
@@ -36,7 +36,7 @@ ABSTRACT WORKSPACE Workspace (
     TYPE CreateLoginUnloggedParams(
         Password varchar
     );
-	TABLE ChildWorkspace INHERITS CDoc (
+	TABLE ChildWorkspace INHERITS sys.CDoc (
 	);
     EXTENSION ENGINE BUILTIN (
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
@@ -66,8 +66,8 @@ EXTENSION ENGINE BUILTIN (
         GET         SCOPE(COMMANDS, QUERIES, PROJECTORS, JOBS),
         GETBATCH    SCOPE(COMMANDS, QUERIES, PROJECTORS, JOBS),
         READ        SCOPE(QUERIES, PROJECTORS, JOBS),
-        INSERT      SCOPE(PROJECTORS),
-        UPDATE      SCOPE(PROJECTORS)
+		INSERT      SCOPE(PROJECTORS, JOBS),
+		UPDATE      SCOPE(PROJECTORS, JOBS)
     ) ENTITY VIEW;
 
     STORAGE WLog(

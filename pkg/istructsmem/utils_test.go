@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
@@ -173,12 +173,12 @@ func TestObjectFillAndGet(t *testing.T) {
 		for name, val := range cases {
 			builder := as.ObjectBuilder(test.testCDoc)
 			data := map[string]interface{}{
-				"sys.ID": json.Number("1"),
-				name:     val,
+				appdef.SystemField_ID: json.Number("1"),
+				name:                  val,
 			}
 			builder.FillFromJSON(data)
 			o, err := builder.Build()
-			require.ErrorIs(err, ErrWrongFieldType)
+			require.Error(err, require.Is(ErrWrongFieldTypeError))
 			require.Nil(o)
 		}
 	})

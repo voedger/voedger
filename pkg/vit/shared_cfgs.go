@@ -6,7 +6,6 @@ package vit
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -121,7 +120,19 @@ func ProvideApp2WithJob(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, e
 	cfg.AddJobs(istructsmem.BuiltinJob{
 		Name: appdef.NewQName(app2PkgName, "Job1_builtin"),
 		Func: func(st istructs.IState, intents istructs.IIntents) error {
-			return errors.New("Job1_builtin works!!!!!!!!!!!!!! ")
+			jobsQName := appdef.NewQName("app2pkg", "Jobs")
+			kb, err := st.KeyBuilder(sys.Storage_View, jobsQName)
+			if err != nil {
+				return err
+			}
+			kb.PutInt64("RunUnixMilli", apis.ITime.Now().UnixMilli())
+			kb.PutInt32("Dummy1", 1)
+			vb, err := intents.NewValue(kb)
+			if err != nil {
+				return err
+			}
+			vb.PutInt32("Dummy2", 1)
+			return nil
 		},
 	})
 	return builtinapps.Def{

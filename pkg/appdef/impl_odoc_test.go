@@ -41,12 +41,12 @@ func Test_AppDef_AddODoc(t *testing.T) {
 		app = a
 	})
 
-	testWith := func(tested IWithTypes) {
+	testWith := func(tested testedTypes) {
 		t.Run("should be ok to find builded doc", func(t *testing.T) {
 			typ := tested.Type(docName)
 			require.Equal(TypeKind_ODoc, typ.Kind())
 
-			doc := ODoc(tested, docName)
+			doc := ODoc(tested.Type, docName)
 			require.Equal(TypeKind_ODoc, doc.Kind())
 			require.Equal(typ.(IODoc), doc)
 			require.NotPanics(func() { doc.isODoc() })
@@ -62,7 +62,7 @@ func Test_AppDef_AddODoc(t *testing.T) {
 				typ := app.Type(recName)
 				require.Equal(TypeKind_ORecord, typ.Kind())
 
-				rec := ORecord(tested, recName)
+				rec := ORecord(tested.Type, recName)
 				require.Equal(TypeKind_ORecord, rec.Kind())
 				require.Equal(typ.(IORecord), rec)
 				require.NotPanics(func() { rec.isORecord() })
@@ -78,14 +78,14 @@ func Test_AppDef_AddODoc(t *testing.T) {
 
 		t.Run("should be ok to enumerate docs", func(t *testing.T) {
 			var docs []QName
-			for doc := range ODocs(tested) {
+			for doc := range ODocs(tested.Types) {
 				docs = append(docs, doc.QName())
 			}
 			require.Len(docs, 1)
 			require.Equal(docName, docs[0])
 			t.Run("should be ok to enumerate recs", func(t *testing.T) {
 				var recs []QName
-				for rec := range ORecords(tested) {
+				for rec := range ORecords(tested.Types) {
 					recs = append(recs, rec.QName())
 				}
 				require.Len(recs, 1)
@@ -95,8 +95,8 @@ func Test_AppDef_AddODoc(t *testing.T) {
 
 		t.Run("should nil if not found", func(t *testing.T) {
 			unknown := NewQName("test", "unknown")
-			require.Nil(ODoc(tested, unknown))
-			require.Nil(ORecord(tested, unknown))
+			require.Nil(ODoc(tested.Type, unknown))
+			require.Nil(ORecord(tested.Type, unknown))
 		})
 	}
 

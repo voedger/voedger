@@ -136,7 +136,7 @@ type IPkgNameResolver interface {
 	PackageLocalName(fullPath string) string
 }
 type IStateValue interface {
-	IValue
+	IRowReader
 	AsValue(name string) IStateValue
 	Length() int
 	GetAsString(index int) string
@@ -149,12 +149,27 @@ type IStateValue interface {
 	GetAsBool(index int) bool
 	GetAsValue(index int) IStateValue
 }
+type IStateRecordValue interface {
+	AsRecord() IRecord
+}
+
+type IStateViewValue interface {
+	AsRecord(name string) IRecord
+}
+
+type IStateWLogValue interface {
+	AsEvent() IWLogEvent
+}
+
 type IStateValueBuilder interface {
-	IValueBuilder
+	IRowWriter
 
 	BuildValue() IStateValue // Currently used in testState and for the intents in the bundled storage. Must return nil of not supported by storage.
 
 	Equal(to IStateValueBuilder) bool // used in testState
+}
+type IStateViewValueBuilder interface {
+	PutRecord(name string, record IRecord)
 }
 type IStateKeyBuilder interface {
 	IKeyBuilder
