@@ -77,13 +77,12 @@ func TestJobs_BasicUsage_Sidecar(t *testing.T) {
 	sysToken := vit.GetSystemPrincipal(istructs.AppQName_test2_app1).Token
 
 	// need to wait for the job to fire for the first time beause day++ on NewVIT()
-	initialCounter := getSidecarJobFireCounter(vit, anyAppWSID, sysToken)
+	waitForSidecarJobCounter(vit, anyAppWSID, sysToken, 1)
 
 	// expect that the job will not fire again during the current minute
 	for second := vit.Now().Second(); second < 59; second++ { // 60 instead of 59 -> time++ -> current time cross the minute if current second is 59 -> fail
 		vit.TimeAdd(time.Second)
-		currentCounter := getSidecarJobFireCounter(vit, anyAppWSID, sysToken)
-		require.Equal(t, initialCounter, currentCounter)
+		waitForSidecarJobCounter(vit, anyAppWSID, sysToken, 1)
 	}
 
 	// now current second is 59
@@ -91,9 +90,7 @@ func TestJobs_BasicUsage_Sidecar(t *testing.T) {
 	vit.TimeAdd(time.Second)
 
 	// expect the job have fired and inserted the record into its view
-	nextCounter := getSidecarJobFireCounter(vit, anyAppWSID, sysToken)
-	require.Equal(t, initialCounter+1, nextCounter)
-
+	waitForSidecarJobCounter(vit, anyAppWSID, sysToken, 2)
 }
 
 func isJobFiredForCurrentInstant_builtin(vit *it.VIT, wsid istructs.WSID, token string) bool {
@@ -102,10 +99,18 @@ func isJobFiredForCurrentInstant_builtin(vit *it.VIT, wsid istructs.WSID, token 
 	return !resp.IsEmpty()
 }
 
-func getSidecarJobFireCounter(vit *it.VIT, wsid istructs.WSID, token string) int {
-	body := `{"args":{"Query":"select * from a0.sidecartestapp.JobStateView where Pk = 1 and Cc = 1"},"elements":[{"fields":["Result"]}]}`
-	resp := vit.PostApp(istructs.AppQName_test2_app1, wsid, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(token))
-	m := map[string]interface{}{}
-	require.NoError(vit.T, json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
-	return int(m["Counter"].(float64))
+func waitForSidecarJobCounter(vit *it.VIT, wsid istructs.WSID, token string, expectedCouterValue int) {
+	start := time.Now()
+	lastValue := 0
+	for time.Since(start) < 3*time.Second {
+		body := `{"args":{"Query":"select * from a0.sidecartestapp.JobStateView where Pk = 1 and Cc = 1"},"elements":[{"fields":["Result"]}]}`
+		resp := vit.PostApp(istructs.AppQName_test2_app1, wsid, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(token))
+		m := map[string]interface{}{}
+		require.NoError(vit.T, json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
+		lastValue = int(m["Counter"].(float64))
+		if lastValue == expectedCouterValue {
+			return
+		}
+	}
+	vit.T.Fatal("failed to wait for sidecar job counter. Last value:", lastValue)
 }
