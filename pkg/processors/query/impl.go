@@ -351,13 +351,16 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				// otherwise each field is considered as allowed if EXECUTE ON QUERY is allowed
 				return nil
 			}
-ошибка тут
+			// ошибка тут
 
-			return nil
+			// return nil
 			requestedfields := []string{}
 			c := qw.resultType.(appdef.IContainers)
 			_ = c
 			for _, elem := range qw.queryParams.Elements() {
+				path := elem.Path().AsArray()
+				deepestName := path[len(path)-1]
+				deepestQName := appdef.NewQName()
 				log.Println(elem.Path().Name())
 				for _, resultField := range elem.ResultFields() {
 					requestedfields = append(requestedfields, resultField.Field())

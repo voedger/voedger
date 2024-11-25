@@ -483,7 +483,11 @@ func TestRoot(t *testing.T) {
 		]}`
 	vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
-	body = "{\n\t\t\"args\":{\n\t\t\t\"Schema\":\"app1pkg.Root\"\n\t\t},\n\t\t\"elements\": [\n\t\t\t{\n\t\t\t\t\"fields\": [\"FldRoot\"]\n\t\t\t},\n\t\t\t{\n\t\t\t\t\"path\": \"nested\",\n\t\t\t\t\"fields\": [\"Fldested\"]\n\t\t\t}\n\t\t]\n\t}"
+	body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
+		{"fields": ["FldRoot"]},
+		{"path": "Nested","fields": ["FldNested"]},
+		{"path": "Nested/Third","fields": ["Fld1"]}
+	]}`
 	vit.PostWS(ws, "q.sys.Collection", body).Println()
 
 }
