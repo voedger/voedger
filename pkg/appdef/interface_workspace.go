@@ -36,7 +36,7 @@ type IWorkspace interface {
 
 	// LocalType returns type by name. Find only in the workspace, not in ancestors or used workspaces.
 	//
-	// Returns nil if not found.
+	// If not found then empty type with TypeKind_null is returned
 	LocalType(QName) IType
 
 	// LocalTypes enumerates all types defined in the workspace.
@@ -44,12 +44,17 @@ type IWorkspace interface {
 	// Types are enumerated in alphabetical order.
 	LocalTypes(func(IType) bool)
 
-	// Returns type by name. All ancestors and used workspaces are searched.
+	// Returns a type by name. All ancestor types are searched recursively.
+	//
+	// If the workspace uses other workspaces, these used workspaces (but not the types from them) can be found by this method.
 	//
 	// If not found then empty type with TypeKind_null is returned
 	Type(QName) IType
 
-	// Enumerates types. All types from ancestors and used workspaces are enumerated.
+	// Enumerates types. All types from ancestors are enumerated recursively.
+	//
+	// If the workspace uses other workspaces, these used workspaces (but not the types from them) also enumerated.
+	//
 	// Types are enumerated in alphabetical order.
 	Types(func(IType) bool)
 
