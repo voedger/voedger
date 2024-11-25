@@ -77,7 +77,7 @@ func (ws *workspace) LocalTypes(visit func(IType) bool) {
 }
 
 func (ws *workspace) Type(name QName) IType {
-	// Type can not use `ws.types.all.find(name)` because two reasons:
+	// Type can not use `ws.types.all.find(name)` because:
 	// - this method called before `appDef.build()` and `ws.build()`,
 	//   when `ws.types.all` is not initialized.
 	var (
