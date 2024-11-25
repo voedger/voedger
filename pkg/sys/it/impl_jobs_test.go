@@ -6,16 +6,15 @@
 package sys_it
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
 	"github.com/voedger/voedger/pkg/vvm"
@@ -35,13 +34,25 @@ func TestJobjs_BasicUsage_Builtin(t *testing.T) {
 	//   MockTime.Now+1day is made on NewVIT()
 	//   timer for Job1_builtin is fired
 
-	// ensure the job have inserted the record into its view
-	// query the view from any App Workspace 
-	body := fmt.Sprintf(`{"args":{"Query":"select * from a1.app2pkg.Jobs where RunUnixMilli = %d"},"elements":[{"fields":["Result"]}]}`, vit.Now().UnixMilli())
+	// will query the view from an any App Workspace
 	anyAppWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID)
 	sysToken := vit.GetSystemPrincipal(istructs.AppQName_test1_app2).Token
-	resp := vit.PostApp(istructs.AppQName_test1_app2, anyAppWSID, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(sysToken))
-	require.False(t, resp.IsEmpty())
+
+	// need to wait for the job to fire for the first time beause day++ on NewVIT()
+	require.True(t, isJobFiredForCurrentInstant_builtin(vit, anyAppWSID, sysToken))
+
+	// expect that the job will not fire again during the current minute
+	for second := vit.Now().Second(); second < 59; second++ { // 60 instead of 59 -> time++ -> current time cross the minute if current second if 59 -> fail
+		vit.TimeAdd(time.Second)
+		require.False(t, isJobFiredForCurrentInstant_builtin(vit, anyAppWSID, sysToken))
+	}
+
+	// now current second is 59
+	// proceed to the next minute -> job should fire
+	vit.TimeAdd(time.Second)
+
+	// expect the job have fired and inserted the record into its view
+	require.True(t, isJobFiredForCurrentInstant_builtin(vit, anyAppWSID, sysToken))
 }
 
 func TestJobs_BasicUsage_Sidecar(t *testing.T) {
@@ -52,34 +63,49 @@ func TestJobs_BasicUsage_Sidecar(t *testing.T) {
 			cfg.DataPath = filepath.Join(wd, "testdata")
 		}),
 	)
-	loggedJobs := make(chan string, 10)
-	logger.PrintLine = func(level logger.TLogLevel, line string) {
-		if strings.Contains(line, "job:") {
-			loggedJobs <- line
-		}
-	}
-
 	vit := it.NewVIT(t, &cfg)
 	defer vit.TearDown()
 
-	waitForJob := func(job string) {
-		select {
-		case job := <-loggedJobs:
-			require.True(t, strings.HasSuffix(job, job))
-		case <-time.After(5 * time.Second):
-			t.Fatalf("job %s was not fired", job)
-		}
+	// the job have run here because time is increased by 1 day per each NewVIT
+	// case:
+	//   VVM is launched, timer for Job1_builtin is charged to MockTime.Now()+1minute (according to cron schedule)
+	//   MockTime.Now+1day is made on NewVIT()
+	//   timer for Job1_builtin is fired
+
+	// will query the view from an any App Workspace
+	anyAppWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID)
+	sysToken := vit.GetSystemPrincipal(istructs.AppQName_test2_app1).Token
+
+	// need to wait for the job to fire for the first time beause day++ on NewVIT()
+	initialCounter := getSidecarJobFireCounter(vit, anyAppWSID, sysToken)
+
+	// expect that the job will not fire again during the current minute
+	for second := vit.Now().Second(); second < 59; second++ { // 60 instead of 59 -> time++ -> current time cross the minute if current second is 59 -> fail
+		vit.TimeAdd(time.Second)
+		currentCounter := getSidecarJobFireCounter(vit, anyAppWSID, sysToken)
+		require.Equal(t, initialCounter, currentCounter)
 	}
 
-	addMinutes := func(minutes int) {
-		time.Sleep(10 * time.Millisecond) // to let scheduler to schedule the text job
-		vit.TimeAdd(time.Duration(minutes) * time.Minute)
-	}
+	// now current second is 59
+	// proceed to the next minute -> job should fire
+	vit.TimeAdd(time.Second)
 
-	waitForJob("job:1")
-	addMinutes(1)
-	waitForJob("job:2")
-	addMinutes(5)
-	waitForJob("job:3")
+	// expect the job have fired and inserted the record into its view
+	nextCounter := getSidecarJobFireCounter(vit, anyAppWSID, sysToken)
+	require.Equal(t, initialCounter+1, nextCounter)
 
+}
+
+func isJobFiredForCurrentInstant_builtin(vit *it.VIT, wsid istructs.WSID, token string) bool {
+	body := fmt.Sprintf(`{"args":{"Query":"select * from a1.app2pkg.Jobs where RunUnixMilli = %d"},"elements":[{"fields":["Result"]}]}`, vit.Now().UnixMilli())
+	resp := vit.PostApp(istructs.AppQName_test1_app2, wsid, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(token))
+	return !resp.IsEmpty()
+}
+
+func getSidecarJobFireCounter(vit *it.VIT, wsid istructs.WSID, token string) int {
+	body := `{"args":{"Query":"select * from a0.sidecartestapp.JobStateView where Pk = 1 and Cc = 1"},"elements":[{"fields":["Result"]}]}`
+	resp := vit.PostApp(istructs.AppQName_test2_app1, wsid, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(token))
+	m := map[string]interface{}{}
+	require.NoError(vit.T, json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
+	return int(m["Counter"].(float64))
 }
