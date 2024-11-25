@@ -80,8 +80,6 @@ func (ws *workspace) Type(name QName) IType {
 	// Type can not use `ws.types.all.find(name)` because two reasons:
 	// - this method called before `appDef.build()` and `ws.build()`,
 	//   when `ws.types.all` is not initialized.
-	// - Type() should find workspaces if ancestor or child or self name passed,
-	//   but `ws.types.all` will not contain workspaces.
 	var (
 		find  func(IWorkspace) IType
 		chain map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
@@ -89,9 +87,6 @@ func (ws *workspace) Type(name QName) IType {
 	find = func(w IWorkspace) IType {
 		if !chain[w.QName()] {
 			chain[w.QName()] = true
-			if name == w.QName() {
-				return w
-			}
 			if t := w.LocalType(name); t != NullType {
 				return t
 			}
@@ -101,8 +96,9 @@ func (ws *workspace) Type(name QName) IType {
 				}
 			}
 			for u := range w.UsedWorkspaces {
-				if t := find(u.(*workspace)); t != NullType {
-					return t
+				// #2872 should find used workspaces, but not types from them
+				if u.QName() == name {
+					return u
 				}
 			}
 		}
@@ -253,7 +249,8 @@ func (ws *workspace) buildAllTypes() {
 			ws.types.all.add(t)
 		}
 		for u := range w.UsedWorkspaces {
-			collect(u)
+			// #2872 should enum used workspaces, but not type from them
+			ws.types.all.add(u)
 		}
 	}
 	collect(ws)
