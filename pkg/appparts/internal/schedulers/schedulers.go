@@ -93,32 +93,30 @@ func (ps *PartitionSchedulers) WaitTimeout(timeout time.Duration) (finished bool
 }
 
 // start actualizer
-func (ps *PartitionSchedulers) start(vvmCtx context.Context, name appdef.QName, run Run, wg *sync.WaitGroup) {
-	for wsID, wsNum := range ps.wsNumbers {
-		ctx, cancel := context.WithCancel(vvmCtx)
-		rt := newRuntime(cancel)
+func (ps *PartitionSchedulers) start(vvmCtx context.Context, jws jWS, run Run, wg *sync.WaitGroup) {
+	ctx, cancel := context.WithCancel(vvmCtx)
+	rt := newRuntime(cancel)
 
-		ps.rt.Store(jWS{name, wsID}, rt)
+	ps.rt.Store(jws, rt)
 
-		ps.rtWG.Add(1)
+	ps.rtWG.Add(1)
 
-		done := make(chan struct{})
-		go func(wsNum istructs.AppWorkspaceNumber, wsID istructs.WSID) {
-			close(done) // scheduler started
+	done := make(chan struct{})
+	go func() {
+		close(done) // scheduler started
 
-			defer func() {
-				ps.rt.Delete(jWS{name, wsID})
-				close(rt.done) // scheduler finished
-				ps.rtWG.Done()
-			}()
+		defer func() {
+			ps.rt.Delete(jws)
+			close(rt.done) // scheduler finished
+			ps.rtWG.Done()
+		}()
 
-			run(ctx, ps.appQName, ps.partitionID, wsNum, wsID, name)
-		}(wsNum, wsID)
+		run(ctx, ps.appQName, ps.partitionID, jws.AppWorkspaceNumber, jws.WSID, jws.QName)
+	}()
 
-		select {
-		case <-done: // wait until scheduler is started
-		case <-vvmCtx.Done():
-		}
+	select {
+	case <-done: // wait until scheduler is started
+	case <-vvmCtx.Done():
 	}
 
 	wg.Done()
@@ -126,24 +124,23 @@ func (ps *PartitionSchedulers) start(vvmCtx context.Context, name appdef.QName, 
 
 // start new schedulers
 func (ps *PartitionSchedulers) startNews(vvmCtx context.Context, appDef appdef.IAppDef, run Run) {
-	news := make(map[appdef.QName]struct{})
+	news := make(map[jWS]struct{})
 	for job := range appdef.Jobs(appDef.Types) {
 		name := job.QName()
-		for wsID := range ps.wsNumbers {
-			jws := jWS{name, wsID}
+		for wsID, wsNum := range ps.wsNumbers {
+			jws := jWS{name, wsID, wsNum}
 			if _, exists := ps.rt.Load(jws); !exists {
-				news[name] = struct{}{}
+				news[jws] = struct{}{}
 			}
-			break
 		}
 	}
 
 	done := make(chan struct{})
 	go func() {
 		startWG := sync.WaitGroup{}
-		for name := range news {
+		for jws := range news {
 			startWG.Add(1)
-			go ps.start(vvmCtx, name, run, &startWG)
+			go ps.start(vvmCtx, jws, run, &startWG)
 		}
 		startWG.Wait()
 		close(done)
@@ -196,6 +193,7 @@ func (ps *PartitionSchedulers) stopOlds(vvmCtx context.Context, appDef appdef.IA
 type jWS struct {
 	appdef.QName // job name
 	istructs.WSID
+	istructs.AppWorkspaceNumber
 }
 
 type runtime struct {
