@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/extensionpoints"
-	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -121,7 +120,18 @@ func ProvideApp2WithJob(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, e
 	cfg.AddJobs(istructsmem.BuiltinJob{
 		Name: appdef.NewQName(app2PkgName, "Job1_builtin"),
 		Func: func(st istructs.IState, intents istructs.IIntents) error {
-			logger.Info("job done")
+			jobsQName := appdef.NewQName("app2pkg", "Jobs")
+			kb, err := st.KeyBuilder(sys.Storage_View, jobsQName)
+			if err != nil {
+				return err
+			}
+			kb.PutInt64("RunUnixMilli", apis.ITime.Now().UnixMilli())
+			kb.PutInt32("Dummy1", 1)
+			vb, err := intents.NewValue(kb)
+			if err != nil {
+				return err
+			}
+			vb.PutInt32("Dummy2", 1)
 			return nil
 		},
 	})
