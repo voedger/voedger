@@ -49,7 +49,7 @@ func execQryCDoc(ctx context.Context, args istructs.ExecQueryArgs, callback istr
 
 	// build tree
 	err = args.State.Read(vrkb, func(key istructs.IKey, value istructs.IStateValue) (err error) {
-		rec := value.AsRecord(Field_Record)
+		rec := value.(istructs.IStateViewValue).AsRecord(Field_Record)
 		if doc == nil {
 			cobj := newCollectionObject(rec)
 			doc = cobj
@@ -152,7 +152,7 @@ func addRefs(obj map[string]interface{}, refs map[istructs.RecordID]bool, s istr
 
 		recKey := utils.UintToString(recordId)
 		if _, ok := recmap[recKey]; !ok {
-			child := newCollectionObject(rkv.AsRecord(""))
+			child := newCollectionObject(rkv.(istructs.IStateRecordValue).AsRecord())
 			obj, err := convert(child, appDef, nil, istructs.NullRecordID)
 			if err != nil {
 				return err

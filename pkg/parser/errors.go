@@ -39,6 +39,7 @@ var ErrMaxFieldLengthTooLarge = fmt.Errorf("maximum field length is %d", appdef.
 var ErrOnlyInsertForOdocOrORecord = errors.New("only INSERT allowed for ODoc or ORecord")
 var ErrPackageWithSameNameAlreadyIncludedInApp = errors.New("package with the same name already included in application")
 var ErrStorageDeclaredOnlyInSys = errors.New("storages are only declared in sys package")
+var ErrRecordFieldsOnlyInSys = errors.New("record fields are only allowed in sys package")
 var ErrPkgFolderNotFound = errors.New("pkg folder not found")
 var ErrGrantFollowsRevoke = errors.New("GRANT follows REVOKE in the same container")
 var ErrJobMustBeInAppWorkspace = errors.New("JOB is only allowed in AppWorkspaceWS")
@@ -148,8 +149,8 @@ func ErrAbstractTableNotAlowedInProjectors(tblName string) error {
 	return fmt.Errorf("projector refers to abstract table %s", tblName)
 }
 
-func ErrProjectorDoesNotDeclareViewIntent(projectorName, viewName string) error {
-	return fmt.Errorf("projector %s does not declare intent for view %s", projectorName, viewName)
+func ErrStatementDoesNotDeclareViewIntent(projectorName, viewName string) error {
+	return fmt.Errorf("%s does not declare intent for view %s", projectorName, viewName)
 }
 
 func ErrUndefined(name string) error {

@@ -11,7 +11,14 @@ ALTERABLE WORKSPACE test_wsWS (
 );
 
 ALTER WORKSPACE sys.AppWorkspaceWS (
+	VIEW Jobs (
+		RunUnixMilli int64 NOT NULL,
+		Dummy1 int32 NOT NULL,
+		Dummy2 int32 NOT NULL,
+		PRIMARY KEY((RunUnixMilli), Dummy1)
+	) AS RESULT OF Job1_builtin;
+
 	EXTENSION ENGINE BUILTIN (
-		JOB Job1_builtin '* * * * *';
+		JOB Job1_builtin '* * * * *' INTENTS(sys.View(Jobs));
 	);
 );

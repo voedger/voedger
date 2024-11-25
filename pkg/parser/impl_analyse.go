@@ -595,6 +595,9 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 				fields[string(rf.Name.Value)] = i
 			}
 		} else if fe.RecordField != nil {
+			if c.pkg.Path != appdef.SysPackage {
+				c.stmtErr(&fe.Pos, ErrRecordFieldsOnlyInSys)
+			}
 			rf := fe.RecordField
 			if _, ok := fields[string(rf.Name.Value)]; ok {
 				c.stmtErr(&rf.Name.Pos, ErrRedefined(string(rf.Name.Value)))
@@ -648,20 +651,39 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 	}
 
 	// ResultOf
+	var job *JobStmt
 	var projector *ProjectorStmt
-	err := resolveInCtx(view.ResultOf, c, func(f *ProjectorStmt, _ *PackageSchemaAST) error {
-		projector = f
-		return nil
-	})
+	var err error
+	var schema *PackageSchemaAST
+
+	projector, schema, err = lookupInCtx[*ProjectorStmt](view.ResultOf, c)
+
+	if projector == nil && err == nil {
+		job, schema, err = lookupInCtx[*JobStmt](view.ResultOf, c)
+	}
+
 	if err != nil {
 		c.stmtErr(&view.ResultOf.Pos, err)
 		return
 	}
 
+	var intents []StateStorage
+
+	if projector != nil {
+		view.asResultOf = schema.NewQName(projector.Name)
+		intents = projector.Intents
+	} else if job != nil {
+		view.asResultOf = schema.NewQName(job.Name)
+		intents = job.Intents
+	} else {
+		c.stmtErr(&view.ResultOf.Pos, ErrUndefined(view.ResultOf.String()))
+		return
+	}
+
 	var intentForView *StateStorage
-	for i := 0; i < len(projector.Intents) && intentForView == nil; i++ {
+	for i := 0; i < len(intents) && intentForView == nil; i++ {
 		var isView bool
-		intent := projector.Intents[i]
+		intent := intents[i]
 		if err := resolveInCtx(intent.Storage, c, func(storage *StorageStmt, _ *PackageSchemaAST) error {
 			isView = isView || storage.EntityView
 			return nil
@@ -672,14 +694,14 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 		if isView {
 			for _, entity := range intent.Entities {
 				if entity.Name == view.Name && (entity.Package == Ident(c.pkg.Name) || entity.Package == Ident("")) {
-					intentForView = &projector.Intents[i]
+					intentForView = &intents[i]
 					break
 				}
 			}
 		}
 	}
 	if intentForView == nil {
-		c.stmtErr(&view.ResultOf.Pos, ErrProjectorDoesNotDeclareViewIntent(projector.GetName(), view.GetName()))
+		c.stmtErr(&view.ResultOf.Pos, ErrStatementDoesNotDeclareViewIntent(projector.GetName(), view.GetName()))
 		return
 	}
 

@@ -135,8 +135,6 @@ func (v *baseStateValue) AsValue(name string) istructs.IStateValue {
 func (v *baseStateValue) AsRecordID(name string) istructs.RecordID {
 	panic(errRecordIDFieldUndefined(name))
 }
-func (v *baseStateValue) AsRecord(name string) istructs.IRecord { panic(errNotImplemented) }
-func (v *baseStateValue) AsEvent(name string) istructs.IDbEvent { panic(errNotImplemented) }
 func (v *baseStateValue) RecordIDs(bool) func(func(string, istructs.RecordID) bool) {
 	panic(errNotImplemented)
 }

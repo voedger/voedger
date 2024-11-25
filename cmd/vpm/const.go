@@ -11,7 +11,7 @@ import (
 
 const (
 	wasmDirName          = "wasm"
-	buildDirName         = "build"
+	buildDirName         = "pkg"
 	ormDirName           = "orm"
 	pkgDirName           = "pkg"
 	baselineInfoFileName = "baseline.json"

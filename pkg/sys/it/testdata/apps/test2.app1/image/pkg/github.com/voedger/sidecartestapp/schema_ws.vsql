@@ -23,7 +23,13 @@ WORKSPACE test2app1WS (
 );
 
 ALTER WORKSPACE sys.AppWorkspaceWS (
+    VIEW JobStateView(
+        Pk int,
+        Cc int,
+        Counter int,
+        PRIMARY KEY ((Pk), Cc)
+    ) AS RESULT OF Job1_sidecar;
 	EXTENSION ENGINE WASM (
-		JOB Job1_sidecar '* * * * *';
+		JOB Job1_sidecar '* * * * *' INTENTS(sys.View(JobStateView), sys.SendMail);
 	);
 );

@@ -114,6 +114,7 @@ func (s *wLogStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.Value
 
 type wLogValue struct {
 	baseStateValue
+	istructs.IStateWLogValue
 	event  istructs.IWLogEvent
 	offset istructs.Offset
 }
@@ -134,11 +135,8 @@ func (v *wLogValue) AsInt64(name string) int64 {
 }
 func (v *wLogValue) AsBool(_ string) bool          { return v.event.Synced() }
 func (v *wLogValue) AsQName(_ string) appdef.QName { return v.event.QName() }
-func (v *wLogValue) AsEvent(_ string) (event istructs.IDbEvent) {
+func (v *wLogValue) AsEvent() (event istructs.IWLogEvent) {
 	return v.event
-}
-func (v *wLogValue) AsRecord(_ string) (record istructs.IRecord) {
-	return v.event.ArgumentObject().AsRecord()
 }
 func (v *wLogValue) AsValue(name string) istructs.IStateValue {
 	if name == sys.Storage_WLog_Field_CUDs {
