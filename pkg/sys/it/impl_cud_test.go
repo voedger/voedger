@@ -471,7 +471,8 @@ func TestDenyCreateNonRawIDs(t *testing.T) {
 	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
 }
 
-func TestRoot(t *testing.T) {
+func TestSelectFromNestedTables(t *testing.T) {
+	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -480,14 +481,81 @@ func TestRoot(t *testing.T) {
 		{"fields":{"sys.ID": 1,"sys.QName": "app1pkg.Root", "FldRoot": 2}},
 		{"fields":{"sys.ID": 2,"sys.QName": "app1pkg.Nested", "sys.ParentID":1,"sys.Container": "Nested","FldNested":3}},
 		{"fields":{"sys.ID": 3,"sys.QName": "app1pkg.Third", "Fld1": 42,"sys.ParentID":2,"sys.Container": "Third"}}
-		]}`
+	]}`
 	vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
-	body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
-		{"fields": ["FldRoot"]},
-		{"path": "Nested","fields": ["FldNested"]},
-		{"path": "Nested/Third","fields": ["Fld1"]}
-	]}`
-	vit.PostWS(ws, "q.sys.Collection", body).Println()
+	t.Run("normal select", func(t *testing.T) {
+		body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
+			{"fields": ["FldRoot"]},
+			{"path": "Nested","fields": ["FldNested"]},
+			{"path": "Nested/Third","fields": ["Fld1"]}
+		]}`
+		resp := vit.PostWS(ws, "q.sys.Collection", body)
 
+		require.EqualValues(2, resp.Sections[0].Elements[0][0][0][0])
+		require.EqualValues(3, resp.Sections[0].Elements[0][1][0][0])
+		require.EqualValues(42, resp.Sections[0].Elements[0][2][0][0])
+	})
+
+	t.Run("unknown nested table", func(t *testing.T) {
+		t.Run("2nd level", func(t *testing.T) {
+			body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
+				{"fields": ["FldRoot"]},
+				{"path": "unknownNested","fields": ["FldNested"]},
+				{"path": "Nested/Third","fields": ["Fld1"]}
+			]}`
+			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("unknown nested table unknownNested"))
+		})
+		t.Run("3rd level", func(t *testing.T) {
+			body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
+				{"fields": ["FldRoot"]},
+				{"path": "Nested","fields": ["FldNested"]},
+				{"path": "Nested/unknownThird","fields": ["Fld1"]}
+			]}`
+			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("unknown nested table unknownThird"))
+
+			body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
+				{"fields": ["FldRoot"]},
+				{"path": "Nested","fields": ["FldNested"]},
+				{"path": "unknownNested/Third","fields": ["Fld1"]}
+			]}`
+			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("unknown nested table unknownNested"))
+		})
+	})
+
+	t.Run("unknown field in nested table", func(t *testing.T) {
+		t.Run("2nd level", func(t *testing.T) {
+			body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
+				{"fields": ["FldRoot"]},
+				{"path": "Nested","fields": ["unknown"]},
+				{"path": "Nested/Third","fields": ["Fld1"]}
+			]}`
+			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("'unknown' that is unexpected among fields of app1pkg.Nested"))
+		})
+		t.Run("3rd level", func(t *testing.T) {
+			body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
+				{"fields": ["FldRoot"]},
+				{"path": "Nested","fields": ["FldNested"]},
+				{"path": "Nested/Third","fields": ["unknown"]}
+			]}`
+			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("'unknown' that is unexpected among fields of app1pkg.Third"))
+		})
+	})
+
+	t.Run("nested requested in a table that has no nested tables", func(t *testing.T) {
+		t.Run("in root", func(t *testing.T) {
+			// cdoc2.field1 exists but it is not a nested table
+			body = `{"args":{"Schema":"app1pkg.cdoc2"},"elements": [
+				{"path": "field1","fields": ["SomeField"]}
+				]}`
+			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("unknown nested table field1"))
+		})
+		t.Run("in nested", func(t *testing.T) {
+			// Root.Nested.Third.Fld1 field exists but is not a nested table
+			body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
+				{"path": "Nested/Third/Fld1","fields": ["SomeField"]}
+			]}`
+			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("unknown nested table Fld1"))
+		})
+	})
 }

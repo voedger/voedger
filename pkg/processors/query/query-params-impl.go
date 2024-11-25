@@ -7,6 +7,7 @@ package queryprocessor
 import (
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
@@ -24,7 +25,8 @@ func (p queryParams) OrderBy() []IOrderBy  { return p.orderBy }
 func (p queryParams) StartFrom() int64     { return p.startFrom }
 func (p queryParams) Count() int64         { return p.count }
 
-func newQueryParams(data coreutils.MapObject, elementFactory ElementFactory, filterFactory FilterFactory, orderByFactory OrderByFactory, rootFieldsKinds FieldsKinds) (res IQueryParams, err error) {
+func newQueryParams(data coreutils.MapObject, elementFactory ElementFactory, filterFactory FilterFactory, orderByFactory OrderByFactory, rootFieldsKinds FieldsKinds,
+	rootType appdef.IType) (res IQueryParams, err error) {
 	qp := queryParams{}
 	if err = qp.fillArray(data, "elements", func(elem coreutils.MapObject) error {
 		element, err := elementFactory(elem)
@@ -59,7 +61,7 @@ func newQueryParams(data coreutils.MapObject, elementFactory ElementFactory, fil
 	if qp.startFrom, _, err = data.AsInt64("startFrom"); err != nil {
 		return nil, err
 	}
-	return qp, qp.validate(rootFieldsKinds)
+	return qp, qp.validate(rootFieldsKinds, rootType)
 }
 
 func (p *queryParams) fillArray(data coreutils.MapObject, fieldName string, cb func(elem coreutils.MapObject) error) error {
@@ -76,7 +78,7 @@ func (p *queryParams) fillArray(data coreutils.MapObject, fieldName string, cb f
 	return err
 }
 
-func (p queryParams) validate(rootFieldsKinds FieldsKinds) (err error) {
+func (p queryParams) validate(rootFieldsKinds FieldsKinds, rootType appdef.IType) (err error) {
 	pathPresent := make(map[string]bool)
 	for _, e := range p.elements {
 		if pathPresent[e.Path().Name()] {
@@ -84,14 +86,43 @@ func (p queryParams) validate(rootFieldsKinds FieldsKinds) (err error) {
 		}
 		pathPresent[e.Path().Name()] = true
 	}
+
 	fields := make(map[string]bool)
 	for _, e := range p.elements {
-		if !e.Path().IsRoot() {
+		path := e.Path().AsArray()
+		if e.Path().IsRoot() {
+			// root
+			for _, field := range e.ResultFields() {
+				if _, ok := rootFieldsKinds[field.Field()]; !ok {
+					return fmt.Errorf("elements: root element fields has field '%s' that is unexpected in root fields, please remove it: %w", field.Field(), ErrUnexpected)
+				}
+				fields[field.Field()] = true
+			}
+			for _, field := range e.RefFields() {
+				fields[field.Key()] = true
+			}
 			continue
 		}
+		// nested
+		currentType := rootType
+		var deepestContainer appdef.IContainer
+		for _, nestedName := range path {
+			currentContainers, ok  := currentType.(appdef.IContainers)
+			if !ok {
+				return fmt.Errorf("elements: table %s has no nested tables but %s nested table is queried: %w", currentType.QName(), nestedName, ErrUnexpected)
+			}
+			nestedContainer := currentContainers.Container(nestedName)
+			if nestedContainer == nil {
+				return fmt.Errorf("elements: unknown nested table %s: %w", nestedName, ErrUnexpected)
+			}
+			currentType = nestedContainer.Type()
+			deepestContainer = nestedContainer
+		}
+		deepestContainerFields := deepestContainer.Type().(appdef.IFields)
 		for _, field := range e.ResultFields() {
-			if _, ok := rootFieldsKinds[field.Field()]; !ok {
-				return fmt.Errorf("elements: root element fields has field '%s' that is unexpected in root fields, please remove it: %w", field.Field(), ErrUnexpected)
+			iField := deepestContainerFields.Field(field.Field())
+			if iField == nil {
+				return fmt.Errorf("elements: nested element fields has field '%s' that is unexpected among fields of %s, please remove it: %w", field.Field(), deepestContainer.QName(), ErrUnexpected)
 			}
 			fields[field.Field()] = true
 		}
