@@ -542,6 +542,16 @@ ALTERABLE WORKSPACE test_wsWS (
 		Str1 varchar NOT NULL
 	);
 
+	TABLE Root INHERITS sys.CDoc (
+		FldRoot int32,
+		Nested TABLE Nested (
+			FldNested int32,
+			Third TABLE Third (
+				Fld1 int32
+			)
+		)
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult;
 		QUERY MockQry(MockQryParams) RETURNS MockQryResult;
