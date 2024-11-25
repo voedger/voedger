@@ -6,6 +6,7 @@
 package sys_it
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -24,21 +26,22 @@ func TestJobjs_BasicUsage_Builtin(t *testing.T) {
 		it.WithApp(istructs.AppQName_test1_app2, it.ProvideApp2WithJob, it.WithUserLogin("login", "1")),
 	)
 
-	loggedJob := make(chan string)
-	logger.PrintLine = func(level logger.TLogLevel, line string) {
-		if strings.Contains(line, "job done") {
-			loggedJob <- line
-		}
-	}
-
 	vit := it.NewVIT(t, &cfg)
 	defer vit.TearDown()
 
-	select {
-	case <-loggedJob:
-	case <-time.After(5 * time.Second):
-		t.Fatalf("job was not fired")
-	}
+	// the job have run here because time is increased by 1 day per each NewVIT
+	// case:
+	//   VVM is launched, timer for Job1_builtin is charged to MockTime.Now()+1minute (according to cron schedule)
+	//   MockTime.Now+1day is made on NewVIT()
+	//   timer for Job1_builtin is fired
+
+	// ensure the job have inserted the record into its view
+	// query the view from any App Workspace 
+	body := fmt.Sprintf(`{"args":{"Query":"select * from a1.app2pkg.Jobs where RunUnixMilli = %d"},"elements":[{"fields":["Result"]}]}`, vit.Now().UnixMilli())
+	anyAppWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID)
+	sysToken := vit.GetSystemPrincipal(istructs.AppQName_test1_app2).Token
+	resp := vit.PostApp(istructs.AppQName_test1_app2, anyAppWSID, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(sysToken))
+	require.False(t, resp.IsEmpty())
 }
 
 func TestJobs_BasicUsage_Sidecar(t *testing.T) {
