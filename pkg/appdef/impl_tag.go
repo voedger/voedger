@@ -31,11 +31,8 @@ func makeTags(find FindType) tags {
 	return tags{find, newTypes[ITag]()}
 }
 
-func (t *tags) Tag(name QName) ITag {
-	if tag := t.list.find(name); tag != NullType {
-		return tag
-	}
-	return nil
+func (t *tags) HasTag(name QName) bool {
+	return t.list.find(name) != NullType
 }
 
 func (t *tags) Tags(visit func(ITag) bool) {
@@ -69,5 +66,5 @@ func (t *tagBuilder) SetTag(tag QName, tags ...QName) {
 
 type nullTags struct{}
 
-func (t nullTags) Tag(QName) ITag       { return nil }
+func (t nullTags) HasTag(QName) bool    { return false }
 func (t nullTags) Tags(func(ITag) bool) {}

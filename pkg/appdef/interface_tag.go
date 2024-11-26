@@ -12,10 +12,8 @@ type ITag interface {
 
 // IWithTags is an interface for types that have tags.
 type IWithTags interface {
-	// Tag returns tag by name.
-	//
-	// Returns nil if tag with specified name is not found.
-	Tag(QName) ITag
+	// HasTag returns has type specified tag.
+	HasTag(QName) bool
 
 	// Returns tags.
 	//
