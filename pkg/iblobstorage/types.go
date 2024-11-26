@@ -15,7 +15,7 @@ type BLOBState struct {
 	Status BLOBStatus
 	// Not empty if error happened during upload
 	Error string
-	// 0 - the BLOB is permanent, otherwise - temporary
+	// 0 - the BLOB is persistent, otherwise - temporary
 	Duration DurationType
 }
 
@@ -50,4 +50,4 @@ type BLOBMaxSizeType uint64
 
 type DurationType int
 
-type WQuoterType func(chunkSize uint64) (isAllowed bool, err error)
+type WQuoterType func(blobKey []byte, chunkSize uint64) error

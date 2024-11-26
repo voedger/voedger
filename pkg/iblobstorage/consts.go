@@ -5,7 +5,10 @@
 
 package iblobstorage
 
-const SUUIDNumRandomBytes = 16
+const (
+	SUUIDNumRandomBytes = 16
+	blobPKPrefix        = uint64(1)
+)
 
 const (
 	DurationType_1Hour   DurationType = 1

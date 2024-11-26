@@ -40,87 +40,104 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 		Duration:  duration,
 	}
 
-	err = b.writeState(blobKey, &state)
+	pKeyState := newKeyWithBucketNumber(blobKey, zeroBucket)
+	cColStateBuf, err := createKey(zeroCcCol)
+	if err != nil {
+		// notest
+		return
+	}
+	cColState := cColStateBuf.Bytes()
+	err = b.writeState(&state, pKeyState, cColState)
 	if err != nil {
 		return err
 	}
 
-	buf := make([]byte, 0, chunkSize)
+	chunkBuf := make([]byte, 0, chunkSize)
 
 	pKeyWithBucket = newKeyWithBucketNumber(blobKey, bucketNumber)
 
-	// if pKeyBuf, err = createKey(blobberAppID, key.AppID, key.WSID, key.ID, bucketNumber); err != nil {
-	// 	return
-	// }
-
 	cCol := make([]byte, uint64Size)
 
-	for err == nil {
-		if ctx.Err() != nil {
-			state.Error = ctx.Err().Error()
-			state.Status = iblobstorage.BLOBStatus_Unknown
-			break
-		}
-		currentChunkSize, err := reader.Read(buf[:cap(buf)])
-
+	for ctx.Err() == nil && err == nil {
+		var currentChunkSize int
+		currentChunkSize, err = reader.Read(chunkBuf[:cap(chunkBuf)])
 		if currentChunkSize > 0 {
-			buf = buf[:currentChunkSize]
-			bytesRead += uint64(len(buf))
-			isAllowed, err := quoter(uint64(len(buf)))
-			if err != nil {
-				return err
-			}
-			if !isAllowed {
-				err = iblobstorage.ErrBLOBSizeQuotaExceeded
+			chunkBuf = chunkBuf[:currentChunkSize]
+			bytesRead += uint64(len(chunkBuf))
+			if err = quoter(blobKey, uint64(len(chunkBuf))); err != nil {
 				break
 			}
-			// if bytesRead > uint64(maxSize) {
-			// 	err = iblobstorage.ErrBLOBSizeQuotaExceeded
-			// 	break
-			// }
 			if bytesRead > chunkSize*bucketSize*bucketNumber {
 				bucketNumber++
 				binary.LittleEndian.PutUint64(pKeyWithBucket[len(pKeyWithBucket)-uint64Size:], bucketNumber)
 			}
 			binary.LittleEndian.PutUint64(cCol, chunkNumber)
-			if err = (*(b.appStorage)).Put(pKeyWithBucket, cCol, buf); err != nil {
+			if err = (*(b.appStorage)).Put(pKeyWithBucket, cCol, chunkBuf); err != nil {
 				break
 			}
 			chunkNumber++
 		}
 	}
+
+	if ctx.Err() != nil && err == nil {
+		// err has priority over ctx.Err
+		err = ctx.Err()
+	}
+
 	if errors.Is(err, io.EOF) {
 		err = nil
 	}
+
 	state.FinishedAt = istructs.UnixMilli(b.time.Now().UnixMilli())
 	state.Status = iblobstorage.BLOBStatus_Completed
 	state.Size = bytesRead
+
 	if err != nil {
 		state.Error = err.Error()
 		state.Status = iblobstorage.BLOBStatus_Unknown
 	}
-	if errStatus := b.writeState(key, &state); errStatus != nil {
-		err = errStatus
+
+	if errStatus := b.writeState(&state, pKeyState, cColState); errStatus != nil {
+		if err == nil {
+			// err as priority over errStatus
+			return errStatus
+		}
+		logger.Error("failed to write blob state: " + errStatus.Error())
 	}
 	return err
-
 }
 
-func (b *bStorageType) WriteBLOB(ctx context.Context, key *bytes.Buffer, descr iblobstorage.DescrType, reader io.Reader, maxSize iblobstorage.BLOBMaxSizeType) (err error) {
-
+type persistentBLOBQuoter struct {
+	uploadedSize uint64
+	maxSize      iblobstorage.BLOBMaxSizeType
 }
 
-func (b *bStorageType) writeChunk(pKeyWithBucket *[]byte, cCol uint64, bucketNumber *uint64, bytesRead uint64, buf *[]byte) (err error) {
-	var cColBuf *bytes.Buffer
-	if bytesRead > chunkSize*bucketSize*(*bucketNumber) {
-		*bucketNumber++
-		binary.LittleEndian.PutUint64((*pKeyWithBucket)[len(*pKeyWithBucket)-uint64Size:], *bucketNumber)
+func (q *persistentBLOBQuoter) quoter(blobKey []byte, chunkSize uint64) error {
+	q.uploadedSize += chunkSize
+	if q.uploadedSize > uint64(q.maxSize) {
+		return iblobstorage.ErrBLOBSizeQuotaExceeded
 	}
-	if cColBuf, err = createKey(cCol); err != nil {
-		return
+	return nil
+}
+
+func (b *bStorageType) WriteBLOB(ctx context.Context, key iblobstorage.KeyType, descr iblobstorage.DescrType, reader io.Reader, maxSize iblobstorage.BLOBMaxSizeType) (err error) {
+	blobKey, err := createKey(blobberAppID, key.AppID, key.WSID, key.ID)
+	if err != nil {
+		// notest
+		return err
 	}
-	err = (*(b.appStorage)).Put(*pKeyWithBucket, cColBuf.Bytes(), *buf)
-	return
+	quoter := persistentBLOBQuoter{maxSize: maxSize}
+	return b.writeBLOB(ctx, blobKey.Bytes(), descr, reader, quoter.quoter, 0)
+}
+
+func (b *bStorageType) WriteTempBLOB(ctx context.Context, key iblobstorage.TempKeyType, descr iblobstorage.DescrType, reader io.Reader,
+	duration iblobstorage.DurationType, quoter iblobstorage.WQuoterType) error {
+	blobKey, err := createKey(blobberAppID, key.AppID, key.WSID, key.SUUID)
+	if err != nil {
+		// notest
+		return err
+	}
+	return b.writeBLOB(ctx, blobKey.Bytes(), descr, reader, quoter, duration)
 }
 
 func (b *bStorageType) ReadBLOB(ctx context.Context, key iblobstorage.KeyType, stateWriter func(state iblobstorage.BLOBState) error, writer io.Writer) (err error) {
@@ -169,20 +186,14 @@ func (b *bStorageType) ReadBLOB(ctx context.Context, key iblobstorage.KeyType, s
 	return err
 }
 
-func (b *bStorageType) QueryBLOBState(ctx context.Context, key iblobstorage.KeyType) (state iblobstorage.BLOBState, err error) {
-	err = b.ReadBLOB(ctx, key,
+func (b *bStorageType) QueryBLOBState(ctx context.Context, key iblobstorage.IBLOBKey) (state iblobstorage.BLOBState, err error) {
+	err = b.ReadBLOB(ctx, key.Bytes(),
 		func(blobState iblobstorage.BLOBState) (err error) {
 			state = blobState
 			return nil
 		},
 		nil)
 	return
-}
-
-func (b *bStorageType) WriteTempBLOB(ctx context.Context, key iblobstorage.TempKeyType, descr iblobstorage.DescrType, reader io.Reader,
-	duration iblobstorage.DurationType, quoter iblobstorage.WQuoterType) error {
-
-	return nil
 }
 
 // warning: the bucket number must be the last value!
@@ -230,29 +241,13 @@ func (b *bStorageType) readState(key iblobstorage.KeyType, state *iblobstorage.B
 	return err
 }
 
-func (b *bStorageType) writeState(blobKey []byte, state *iblobstorage.BLOBState) (err error) {
-	var (
-		value   []byte
-		pKeyBuf []byte
-		cColBuf *bytes.Buffer
-	)
-	pKeyBuf = newKeyWithBucketNumber(blobKey, zeroBucket)
-	// if pKeyBuf, err = createKey(blobberAppID, key.AppID, key.WSID, key.ID, zeroBucket); err != nil {
-	// 	return
-	// }
-	if cColBuf, err = createKey(zeroCcCol); err != nil {
-		return
-	}
-	value, err = json.Marshal(state)
+func (b *bStorageType) writeState(state *iblobstorage.BLOBState, pKey, cCol []byte) (err error) {
+	value, err := json.Marshal(state)
 	if err != nil {
 		// notest
-		return err
+		panic(err)
 	}
-	return (*(b.appStorage)).Put(
-		pKeyBuf,
-		cColBuf.Bytes(),
-		value,
-	)
+	return (*(b.appStorage)).Put(pKey, cCol, value)
 }
 
 func newKeyWithBucketNumber(blobKey []byte, bucket uint64) []byte {
