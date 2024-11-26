@@ -11,4 +11,5 @@ const (
 	bucketSize   uint64  = 100
 	keyLength    byte    = 28
 	blobberAppID appType = 1
+	uint64Size           = 8
 )

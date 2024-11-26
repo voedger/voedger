@@ -28,10 +28,10 @@ type bStorageType struct {
 // key does not cotain the bucket number
 func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblobstorage.DescrType, reader io.Reader, quoter iblobstorage.WQuoterType, duration iblobstorage.DurationType) (err error) {
 	var (
-		bytesRead    uint64
-		cCol         uint64
-		bucketNumber uint64 = 1
-		pKeyBuf      []byte
+		bytesRead      uint64
+		chunkNumber    uint64
+		bucketNumber   uint64 = 1
+		pKeyWithBucket []byte
 	)
 	state := iblobstorage.BLOBState{
 		Descr:     descr,
@@ -47,23 +47,24 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 
 	buf := make([]byte, 0, chunkSize)
 
-	pKeyBuf = newKeyWithBucketNumber(blobKey, bucketNumber)
+	pKeyWithBucket = newKeyWithBucketNumber(blobKey, bucketNumber)
 
 	// if pKeyBuf, err = createKey(blobberAppID, key.AppID, key.WSID, key.ID, bucketNumber); err != nil {
 	// 	return
 	// }
 
+	cCol := make([]byte, uint64Size)
+
 	for err == nil {
-		var chunkBytes int
 		if ctx.Err() != nil {
 			state.Error = ctx.Err().Error()
 			state.Status = iblobstorage.BLOBStatus_Unknown
 			break
 		}
-		chunkBytes, err = reader.Read(buf[:cap(buf)])
+		currentChunkSize, err := reader.Read(buf[:cap(buf)])
 
-		if chunkBytes > 0 {
-			buf = buf[:chunkBytes]
+		if currentChunkSize > 0 {
+			buf = buf[:currentChunkSize]
 			bytesRead += uint64(len(buf))
 			isAllowed, err := quoter(uint64(len(buf)))
 			if err != nil {
@@ -77,10 +78,15 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 			// 	err = iblobstorage.ErrBLOBSizeQuotaExceeded
 			// 	break
 			// }
-			if err = b.writeChunk(pKeyBuf, cCol, &bucketNumber, bytesRead, &buf); err != nil {
+			if bytesRead > chunkSize*bucketSize*bucketNumber {
+				bucketNumber++
+				binary.LittleEndian.PutUint64(pKeyWithBucket[len(pKeyWithBucket)-uint64Size:], bucketNumber)
+			}
+			binary.LittleEndian.PutUint64(cCol, chunkNumber)
+			if err = (*(b.appStorage)).Put(pKeyWithBucket, cCol, buf); err != nil {
 				break
 			}
-			cCol++
+			chunkNumber++
 		}
 	}
 	if errors.Is(err, io.EOF) {
@@ -104,16 +110,16 @@ func (b *bStorageType) WriteBLOB(ctx context.Context, key *bytes.Buffer, descr i
 
 }
 
-func (b *bStorageType) writeChunk(pKeyBuf *bytes.Buffer, cCol uint64, bucketNumber *uint64, bytesRead uint64, buf *[]byte) (err error) {
+func (b *bStorageType) writeChunk(pKeyWithBucket *[]byte, cCol uint64, bucketNumber *uint64, bytesRead uint64, buf *[]byte) (err error) {
 	var cColBuf *bytes.Buffer
 	if bytesRead > chunkSize*bucketSize*(*bucketNumber) {
 		*bucketNumber++
-		binary.LittleEndian.PutUint64(pKeyBuf.Bytes()[keyLength:], *bucketNumber)
+		binary.LittleEndian.PutUint64((*pKeyWithBucket)[len(*pKeyWithBucket)-uint64Size:], *bucketNumber)
 	}
 	if cColBuf, err = createKey(cCol); err != nil {
 		return
 	}
-	err = (*(b.appStorage)).Put(pKeyBuf.Bytes(), cColBuf.Bytes(), *buf)
+	err = (*(b.appStorage)).Put(*pKeyWithBucket, cColBuf.Bytes(), *buf)
 	return
 }
 
