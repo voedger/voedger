@@ -165,6 +165,12 @@ func (b *bStorageType) QueryBLOBState(ctx context.Context, key iblobstorage.KeyT
 	return
 }
 
+func (b *bStorageType) WriteTempBLOB(ctx context.Context, key iblobstorage.TempKeyType, descr iblobstorage.DescrType, reader io.Reader,
+	duration iblobstorage.DurationType, quoter iblobstorage.WQuoterType) error {
+
+	return nil
+}
+
 func createKey(columns ...interface{}) (buf *bytes.Buffer, err error) {
 	buf = new(bytes.Buffer)
 	for _, col := range columns {

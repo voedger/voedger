@@ -11,6 +11,10 @@ import (
 
 //	"context"
 
+type IBLOBKey interface {
+	Bytes() []byte
+}
+
 type IBLOBStorage interface {
 	// Errors: ErrBLOBSizeQuotaExceeded
 	WriteBLOB(ctx context.Context, key KeyType, descr DescrType, reader io.Reader, maxSize BLOBMaxSizeType) (err error)
@@ -21,5 +25,7 @@ type IBLOBStorage interface {
 	ReadBLOB(ctx context.Context, key KeyType, stateWriter func(state BLOBState) error, writer io.Writer) (err error)
 
 	// Wrapper around ReadBLOB() with nil writer argument
-	QueryBLOBState(ctx context.Context, key KeyType) (state BLOBState, err error)
+	QueryBLOBState(ctx context.Context, key IBLOBKey) (state BLOBState, err error)
+
+	WriteTempBLOB(ctx context.Context, key TempKeyType, descr DescrType, reader io.Reader, duration DurationType, quoter WQuoterType) error
 }

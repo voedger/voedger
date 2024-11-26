@@ -15,6 +15,8 @@ type BLOBState struct {
 	Status BLOBStatus
 	// Not empty if error happened during upload
 	Error string
+	// 0 - the BLOB is permanent, otherwise - temporary
+	Duration DurationType
 }
 
 type KeyType struct {
@@ -22,6 +24,14 @@ type KeyType struct {
 	WSID  istructs.WSID
 	ID    istructs.RecordID
 }
+
+type TempKeyType struct {
+	AppID istructs.ClusterAppID
+	WSID  istructs.WSID
+	SUUID SUUID
+}
+
+type SUUID string
 
 type DescrType struct {
 	Name     string
@@ -37,3 +47,7 @@ const (
 )
 
 type BLOBMaxSizeType uint64
+
+type DurationType int
+
+type WQuoterType func(chunkSize uint64) (isAllowed bool, err error)
