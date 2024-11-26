@@ -12,10 +12,11 @@ import (
 	"slices"
 )
 
-// # Implements:
+// # Supports:
 //   - IType
 type typ struct {
 	comment
+	tags
 	app  *appDef
 	ws   *workspace
 	name QName
@@ -31,7 +32,15 @@ func makeType(app *appDef, ws *workspace, name QName, kind TypeKind) typ {
 			panic(fmt.Errorf("invalid type name «%v»: %w", name, err))
 		}
 	}
-	return typ{comment{}, app, ws, name, kind}
+	t := typ{
+		comment: makeComment(),
+		tags:    makeTags(ws.Type),
+		app:     app,
+		ws:      ws,
+		name:    name,
+		kind:    kind,
+	}
+	return t
 }
 
 func (t *typ) App() IAppDef {
@@ -62,6 +71,7 @@ func (t *typ) Workspace() IWorkspace {
 //   - ITypeBuilder
 type typeBuilder struct {
 	commentBuilder
+	tagBuilder
 	*typ
 }
 
@@ -175,7 +185,10 @@ func validateType(t IType) (err error) {
 
 const nullTypeString = "null type"
 
-type nullType struct{ nullComment }
+type nullType struct {
+	nullComment
+	nullTags
+}
 
 func (t nullType) App() IAppDef          { return nil }
 func (t nullType) IsSystem() bool        { return false }
@@ -186,10 +199,11 @@ func (t nullType) Workspace() IWorkspace { return nil }
 
 type anyType struct {
 	nullComment
+	nullTags
 	name QName
 }
 
-func newAnyType(name QName) IType { return &anyType{nullComment{}, name} }
+func newAnyType(name QName) IType { return &anyType{nullComment{}, nullTags{}, name} }
 
 func (t anyType) App() IAppDef          { return nil }
 func (t anyType) IsSystem() bool        { return true }

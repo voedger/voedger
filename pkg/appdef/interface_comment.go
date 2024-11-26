@@ -16,7 +16,18 @@ type IWithComments interface {
 	CommentLines() []string
 }
 
-type ICommentsBuilder interface {
+// ICommentBuilder is interface for building comment for an entity (type, field, etc.).
+type ICommentBuilder interface {
 	// Sets comment as string with lines, concatenated with LF
 	SetComment(...string)
+}
+
+// ITypeCommentBuilder is interface for building comment for a type.
+type ITypeCommentBuilder interface {
+	// Sets comments for type, specified by name.
+	// For workspace type should be local.
+	//
+	// # Panics:
+	//   - if type with specified name is not found.
+	SetTypeComment(QName, ...string)
 }

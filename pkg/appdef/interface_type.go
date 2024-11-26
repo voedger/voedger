@@ -143,6 +143,7 @@ var (
 // Type describes the entity, such as document, record or view.
 type IType interface {
 	IWithComments
+	IWithTags
 
 	// Application
 	App() IAppDef
@@ -171,7 +172,8 @@ type (
 )
 
 type ITypeBuilder interface {
-	ICommentsBuilder
+	ICommentBuilder
+	ITagBuilder
 }
 
 // AnyType is used for return then type is any
