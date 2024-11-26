@@ -22,6 +22,9 @@ const (
 	// Used as result types kind for functions that has parameter or result of any type.
 	TypeKind_Any
 
+	// Tag type. Used for grouping types.
+	TypeKind_Tag
+
 	// Simple data types, like string, number, date, etc.
 	TypeKind_Data
 
