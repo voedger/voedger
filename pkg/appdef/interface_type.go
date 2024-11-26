@@ -172,8 +172,8 @@ type (
 )
 
 type ITypeBuilder interface {
-	ICommentBuilder
-	ITagBuilder
+	ICommenter
+	ITagger
 }
 
 // AnyType is used for return then type is any

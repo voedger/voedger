@@ -16,14 +16,14 @@ type IWithComments interface {
 	CommentLines() []string
 }
 
-// ICommentBuilder is interface for building comment for an entity (type, field, etc.).
-type ICommentBuilder interface {
+// ICommenter is interface to set comment for an entity (type, field, etc.).
+type ICommenter interface {
 	// Sets comment as string with lines, concatenated with LF
 	SetComment(...string)
 }
 
-// ITypeCommentBuilder is interface for building comment for a type.
-type ITypeCommentBuilder interface {
+// ITypeCommenter is interface to set comment for a type.
+type ITypeCommenter interface {
 	// Sets comments for type, specified by name.
 	// For workspace type should be local.
 	//

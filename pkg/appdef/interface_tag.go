@@ -23,13 +23,13 @@ type IWithTags interface {
 	Tags(func(ITag) bool)
 }
 
-// ITagBuilder is an interface for building a type with tags.
-type ITagBuilder interface {
-	// Adds new tags with specified name.
+// ITagger is an interface to set tags for type.
+type ITagger interface {
+	// Sets specified tags.
 	//
 	// # Panics:
 	//   - if tag with specified name is not found.
-	SetTag(QName, ...QName)
+	SetTag(tag QName, moreTags ...QName)
 }
 
 // ITagsBuilder is an interface for building tags.

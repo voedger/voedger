@@ -69,7 +69,7 @@ type IWorkspaceBuilder interface {
 	ITypeBuilder
 	IWithAbstractBuilder
 
-	ITypeCommentBuilder
+	ITypeCommenter
 	ITagsBuilder
 
 	IDataTypesBuilder

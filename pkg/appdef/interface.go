@@ -25,8 +25,8 @@ type IAppDef interface {
 }
 
 type IAppDefBuilder interface {
-	ICommentBuilder
-	ITypeCommentBuilder
+	ICommenter
+	ITypeCommenter
 
 	IPackagesBuilder
 	IWorkspacesBuilder
