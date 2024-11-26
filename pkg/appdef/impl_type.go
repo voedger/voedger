@@ -78,6 +78,7 @@ type typeBuilder struct {
 func makeTypeBuilder(typ *typ) typeBuilder {
 	return typeBuilder{
 		commentBuilder: makeCommentBuilder(&typ.comment),
+		tagBuilder:     makeTagBuilder(&typ.tags),
 		typ:            typ,
 	}
 }

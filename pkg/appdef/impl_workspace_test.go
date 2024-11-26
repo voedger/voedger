@@ -174,7 +174,7 @@ func Test_AppDef_AlterWorkspace(t *testing.T) {
 	})
 }
 
-func Test_AppDef_SetDescriptor(t *testing.T) {
+func Test_Workspace_SetDescriptor(t *testing.T) {
 	require := require.New(t)
 
 	t.Run("should be ok to add workspace with descriptor", func(t *testing.T) {
