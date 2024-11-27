@@ -87,7 +87,7 @@ func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails blobReadDetails
 	}
 
 	// read the BLOB
-	key := iblobstorage.KeyType{
+	key := iblobstorage.PersistentBLOBKeyType{
 		AppID: istructs.ClusterAppID_sys_blobber,
 		WSID:  bbm.wsid,
 		ID:    blobReadDetails.blobID,
@@ -145,7 +145,7 @@ func writeBLOB(ctx context.Context, wsid istructs.WSID, appQName string, header 
 
 	blobID = istructs.RecordID(newIDs["1"].(float64))
 	// write the BLOB
-	key := iblobstorage.KeyType{
+	key := iblobstorage.PersistentBLOBKeyType{
 		AppID: istructs.ClusterAppID_sys_blobber,
 		WSID:  wsid,
 		ID:    blobID,

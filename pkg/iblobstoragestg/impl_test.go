@@ -31,7 +31,7 @@ var (
 
 func TestBasicUsage(t *testing.T) {
 	var (
-		key = iblobstorage.KeyType{
+		key = iblobstorage.PersistentBLOBKeyType{
 			AppID: 2,
 			WSID:  2,
 			ID:    2,
@@ -106,7 +106,7 @@ func TestBasicUsage(t *testing.T) {
 
 func TestFewBucketsBLOB(t *testing.T) {
 	var (
-		key = iblobstorage.KeyType{
+		key = iblobstorage.PersistentBLOBKeyType{
 			AppID: 2,
 			WSID:  2,
 			ID:    2,
@@ -155,7 +155,7 @@ func TestFewBucketsBLOB(t *testing.T) {
 
 func TestQuotaExceed(t *testing.T) {
 	var (
-		key = iblobstorage.KeyType{
+		key = iblobstorage.PersistentBLOBKeyType{
 			AppID: 2,
 			WSID:  2,
 			ID:    2,

@@ -5,11 +5,11 @@
 package iblobstoragestg
 
 const (
-	chunkSize    uint64  = 102400
-	zeroCcCol    uint64  = 0
-	zeroBucket   uint64  = 0
-	bucketSize   uint64  = 100
-	keyLength    byte    = 28
-	blobberAppID appType = 1
-	uint64Size           = 8
+	chunkSize    uint64 = 102400
+	zeroCCol     uint64 = 0
+	zeroBucket   uint64 = 0
+	bucketSize   uint64 = 100
+	keyLength    byte   = 28
+	blobberAppID uint64 = 1
+	uint64Size          = 8
 )
