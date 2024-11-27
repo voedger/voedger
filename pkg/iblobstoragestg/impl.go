@@ -40,13 +40,12 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 		Duration:  duration,
 	}
 
-	pKeyState := newKeyWithBucketNumber(blobKey, zeroBucket)
-	cColStateBuf, err := createKey(zeroCCol)
+	pKeyState, cColState, err := getStateKeys(blobKey)
 	if err != nil {
 		// notest
-		return
+		return err
 	}
-	cColState := cColStateBuf.Bytes()
+
 	err = b.writeState(&state, pKeyState, cColState)
 	if err != nil {
 		return err
@@ -107,6 +106,17 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 	return err
 }
 
+func getStateKeys(blobKey []byte) (pKeyState, cColState []byte, err error) {
+	pKeyState = newKeyWithBucketNumber(blobKey, zeroBucket)
+	cColStateBuf, err := createKey(zeroCCol)
+	if err != nil {
+		// notest
+		return nil, nil, err
+	}
+	cColState = cColStateBuf.Bytes()
+	return
+}
+
 type persistentBLOBQuoter struct {
 	uploadedSize uint64
 	maxSize      iblobstorage.BLOBMaxSizeType
@@ -140,19 +150,44 @@ func (b *bStorageType) WriteTempBLOB(ctx context.Context, key iblobstorage.TempB
 	return b.writeBLOB(ctx, blobKey.Bytes(), descr, reader, quoter, duration)
 }
 
-func (b *bStorageType) ReadBLOB(ctx context.Context, key iblobstorage.PersistentBLOBKeyType, stateWriter func(state iblobstorage.BLOBState) error, writer io.Writer) (err error) {
+func (b *bStorageType) ReadTempBLOB(ctx context.Context, key iblobstorage.TempBLOBKeyType,
+	stateWriter func(state iblobstorage.BLOBState) error, writer io.Writer, quoter iblobstorage.RQuoterType) (err error) {
+
+}
+
+func (b *bStorageType) readBLOB(ctx context.Context, blobKey []byte,
+	stateCallback func(state iblobstorage.BLOBState) error, writer io.Writer) (err error) {
+	pKeyState, cColState, err := getStateKeys(blobKey)
+	if err != nil {
+		// notest
+		return err
+	}
+	var state iblobstorage.BLOBState
+	if stateCallback != nil {
+		if state, err = b.readState(pKeyState, cColState); err != nil {
+			return err
+		}
+		isFound = true
+		if err := stateCallback(state); err != nil {
+			return err
+		}
+	}
+
+}
+
+func (b *bStorageType) ReadBLOB(ctx context.Context, key iblobstorage.PersistentBLOBKeyType, stateCallback func(state iblobstorage.BLOBState) error, writer io.Writer) (err error) {
 	var (
 		bucketNumber uint64 = 1
 		isFound      bool
 		state        iblobstorage.BLOBState
 		pKeyBuf      *bytes.Buffer
 	)
-	if stateWriter != nil {
+	if stateCallback != nil {
 		if err := b.readState(key, &state); err != nil {
 			return err
 		}
 		isFound = true
-		if err := stateWriter(state); err != nil {
+		if err := stateCallback(state); err != nil {
 			return err
 		}
 	}
@@ -203,7 +238,7 @@ func createKey(columns ...interface{}) (buf *bytes.Buffer, err error) {
 		switch v := col.(type) {
 		case nil:
 			return nil, fmt.Errorf("key column with type «%s» is missed: %w", reflect.ValueOf(col).Type(), errPKeyCreateError)
-		case appType, istructs.ClusterAppID, istructs.WSID, istructs.RecordID, uint64:
+		case istructs.ClusterAppID, istructs.WSID, istructs.RecordID, uint64:
 			if errWrite := binary.Write(buf, binary.LittleEndian, v); errWrite != nil {
 				err = errWrite
 				return nil, fmt.Errorf("error create key: %w", err)
@@ -215,30 +250,19 @@ func createKey(columns ...interface{}) (buf *bytes.Buffer, err error) {
 	return buf, nil
 }
 
-func (b *bStorageType) readState(key iblobstorage.PersistentBLOBKeyType, state *iblobstorage.BLOBState) (err error) {
+func (b *bStorageType) readState(pKey, cCol []byte) (state iblobstorage.BLOBState, err error) {
 	var (
-		currentState []byte
-		ok           bool
-		pKeyBuf      *bytes.Buffer
-		cColBuf      *bytes.Buffer
+		stateBytes []byte
+		ok         bool
 	)
-	if pKeyBuf, err = createKey(blobberAppID, key.AppID, key.WSID, key.ID, zeroBucket); err != nil {
-		return
-	}
-	if cColBuf, err = createKey(zeroCCol); err != nil {
-		return
-	}
-	ok, err = (*(b.appStorage)).Get(
-		pKeyBuf.Bytes(),
-		cColBuf.Bytes(),
-		&currentState)
+	ok, err = (*(b.appStorage)).Get(pKey, cCol, &stateBytes)
 	if ok {
-		return json.Unmarshal(currentState, &state)
-	}
-	if err == nil {
+		err = json.Unmarshal(stateBytes, &state)
+		return state, err
+	} else if err == nil {
 		err = iblobstorage.ErrBLOBNotFound
 	}
-	return err
+	return state, err
 }
 
 func (b *bStorageType) writeState(state *iblobstorage.BLOBState, pKey, cCol []byte) (err error) {

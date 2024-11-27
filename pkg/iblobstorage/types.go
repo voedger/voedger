@@ -50,4 +50,6 @@ type BLOBMaxSizeType uint64
 
 type DurationType int
 
-type WQuoterType func(wantToWriteBytes uint64) (err error)
+type WQuoterType func(wantToWriteBytes uint64) error
+
+type RQuoterType func(wantReadBytes uint64) error
