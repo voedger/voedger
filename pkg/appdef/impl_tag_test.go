@@ -32,7 +32,7 @@ func TestTags(t *testing.T) {
 
 		doc := wsb.AddODoc(docName)
 		doc.AddField("f1", DataKind_int64, true)
-		doc.SetTag(tagNames[0], tagNames[1:]...)
+		doc.SetTag(tagNames...)
 
 		a, err := adb.Build()
 		require.NoError(err)

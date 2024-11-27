@@ -27,7 +27,7 @@ type ITagger interface {
 	//
 	// # Panics:
 	//   - if tag with specified name is not found.
-	SetTag(tag QName, moreTags ...QName)
+	SetTag(tag ...QName)
 }
 
 // ITagsBuilder is an interface for building tags.

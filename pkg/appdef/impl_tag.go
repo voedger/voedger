@@ -49,18 +49,14 @@ func makeTagBuilder(tags *tags) tagBuilder {
 	return tagBuilder{tags}
 }
 
-func (t *tagBuilder) SetTag(tag QName, tags ...QName) {
-	add := func(name QName) {
+func (t *tagBuilder) SetTag(tag ...QName) {
+	t.tags.list.clear()
+	for _, name := range tag {
 		tag := Tag(t.tags.find, name)
 		if tag == nil {
 			panic(ErrNotFound("tag %s", name))
 		}
 		t.tags.list.add(tag)
-	}
-
-	add(tag)
-	for _, tag := range tags {
-		add(tag)
 	}
 }
 
