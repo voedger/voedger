@@ -10,7 +10,7 @@ import (
 )
 
 // nolint: revive
-func (t *KeyType) Bytes() []byte {
+func (t *PersistentBLOBKeyType) Bytes() []byte {
 	res := make([]byte, 28)
 	binary.LittleEndian.PutUint64(res, blobPKPrefix)
 	binary.LittleEndian.PutUint32(res[8:], t.AppID)
@@ -20,7 +20,7 @@ func (t *KeyType) Bytes() []byte {
 }
 
 // nolint: revive
-func (t *TempKeyType) Bytes() []byte {
+func (t *TempBLOBKeyType) Bytes() []byte {
 	res := make([]byte, 20)
 	binary.LittleEndian.PutUint64(res, blobPKPrefix)
 	binary.LittleEndian.PutUint32(res[8:], t.AppID)

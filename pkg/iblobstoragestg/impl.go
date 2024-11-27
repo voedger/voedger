@@ -41,7 +41,7 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 	}
 
 	pKeyState := newKeyWithBucketNumber(blobKey, zeroBucket)
-	cColStateBuf, err := createKey(zeroCcCol)
+	cColStateBuf, err := createKey(zeroCCol)
 	if err != nil {
 		// notest
 		return
@@ -64,7 +64,7 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 		if currentChunkSize > 0 {
 			chunkBuf = chunkBuf[:currentChunkSize]
 			bytesRead += uint64(len(chunkBuf))
-			if err = quoter(blobKey, uint64(len(chunkBuf))); err != nil {
+			if err = quoter(uint64(len(chunkBuf))); err != nil {
 				break
 			}
 			if bytesRead > chunkSize*bucketSize*bucketNumber {
@@ -112,15 +112,15 @@ type persistentBLOBQuoter struct {
 	maxSize      iblobstorage.BLOBMaxSizeType
 }
 
-func (q *persistentBLOBQuoter) quoter(blobKey []byte, chunkSize uint64) error {
-	q.uploadedSize += chunkSize
+func (q *persistentBLOBQuoter) quoter(wantToWriteBytes uint64) error {
+	q.uploadedSize += wantToWriteBytes
 	if q.uploadedSize > uint64(q.maxSize) {
 		return iblobstorage.ErrBLOBSizeQuotaExceeded
 	}
 	return nil
 }
 
-func (b *bStorageType) WriteBLOB(ctx context.Context, key iblobstorage.KeyType, descr iblobstorage.DescrType, reader io.Reader, maxSize iblobstorage.BLOBMaxSizeType) (err error) {
+func (b *bStorageType) WriteBLOB(ctx context.Context, key iblobstorage.PersistentBLOBKeyType, descr iblobstorage.DescrType, reader io.Reader, maxSize iblobstorage.BLOBMaxSizeType) (err error) {
 	blobKey, err := createKey(blobberAppID, key.AppID, key.WSID, key.ID)
 	if err != nil {
 		// notest
@@ -130,7 +130,7 @@ func (b *bStorageType) WriteBLOB(ctx context.Context, key iblobstorage.KeyType, 
 	return b.writeBLOB(ctx, blobKey.Bytes(), descr, reader, quoter.quoter, 0)
 }
 
-func (b *bStorageType) WriteTempBLOB(ctx context.Context, key iblobstorage.TempKeyType, descr iblobstorage.DescrType, reader io.Reader,
+func (b *bStorageType) WriteTempBLOB(ctx context.Context, key iblobstorage.TempBLOBKeyType, descr iblobstorage.DescrType, reader io.Reader,
 	duration iblobstorage.DurationType, quoter iblobstorage.WQuoterType) error {
 	blobKey, err := createKey(blobberAppID, key.AppID, key.WSID, key.SUUID)
 	if err != nil {
@@ -140,7 +140,7 @@ func (b *bStorageType) WriteTempBLOB(ctx context.Context, key iblobstorage.TempK
 	return b.writeBLOB(ctx, blobKey.Bytes(), descr, reader, quoter, duration)
 }
 
-func (b *bStorageType) ReadBLOB(ctx context.Context, key iblobstorage.KeyType, stateWriter func(state iblobstorage.BLOBState) error, writer io.Writer) (err error) {
+func (b *bStorageType) ReadBLOB(ctx context.Context, key iblobstorage.PersistentBLOBKeyType, stateWriter func(state iblobstorage.BLOBState) error, writer io.Writer) (err error) {
 	var (
 		bucketNumber uint64 = 1
 		isFound      bool
@@ -186,8 +186,8 @@ func (b *bStorageType) ReadBLOB(ctx context.Context, key iblobstorage.KeyType, s
 	return err
 }
 
-func (b *bStorageType) QueryBLOBState(ctx context.Context, key iblobstorage.IBLOBKey) (state iblobstorage.BLOBState, err error) {
-	err = b.ReadBLOB(ctx, key.Bytes(),
+func (b *bStorageType) QueryBLOBState(ctx context.Context, key iblobstorage.PersistentBLOBKeyType) (state iblobstorage.BLOBState, err error) {
+	err = b.ReadBLOB(ctx, key,
 		func(blobState iblobstorage.BLOBState) (err error) {
 			state = blobState
 			return nil
@@ -215,7 +215,7 @@ func createKey(columns ...interface{}) (buf *bytes.Buffer, err error) {
 	return buf, nil
 }
 
-func (b *bStorageType) readState(key iblobstorage.KeyType, state *iblobstorage.BLOBState) (err error) {
+func (b *bStorageType) readState(key iblobstorage.PersistentBLOBKeyType, state *iblobstorage.BLOBState) (err error) {
 	var (
 		currentState []byte
 		ok           bool
@@ -225,7 +225,7 @@ func (b *bStorageType) readState(key iblobstorage.KeyType, state *iblobstorage.B
 	if pKeyBuf, err = createKey(blobberAppID, key.AppID, key.WSID, key.ID, zeroBucket); err != nil {
 		return
 	}
-	if cColBuf, err = createKey(zeroCcCol); err != nil {
+	if cColBuf, err = createKey(zeroCCol); err != nil {
 		return
 	}
 	ok, err = (*(b.appStorage)).Get(

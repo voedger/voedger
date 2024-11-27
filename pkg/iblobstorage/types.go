@@ -19,13 +19,13 @@ type BLOBState struct {
 	Duration DurationType
 }
 
-type KeyType struct {
+type PersistentBLOBKeyType struct {
 	AppID istructs.ClusterAppID
 	WSID  istructs.WSID
 	ID    istructs.RecordID
 }
 
-type TempKeyType struct {
+type TempBLOBKeyType struct {
 	AppID istructs.ClusterAppID
 	WSID  istructs.WSID
 	SUUID SUUID
@@ -50,4 +50,4 @@ type BLOBMaxSizeType uint64
 
 type DurationType int
 
-type WQuoterType func(blobKey []byte, chunkSize uint64) error
+type WQuoterType func(wantToWriteBytes uint64) (err error)
