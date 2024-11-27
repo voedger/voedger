@@ -69,6 +69,9 @@ type IWorkspaceBuilder interface {
 	ITypeBuilder
 	IWithAbstractBuilder
 
+	ITypeCommenter
+	ITagsBuilder
+
 	IDataTypesBuilder
 
 	IGDocsBuilder
