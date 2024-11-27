@@ -22,6 +22,7 @@ func provideCmdInitiateInvitationByEMail(sr istructsmem.IStatelessResources, tim
 	))
 }
 
+// called in the workspace that we're inviting to.
 func execCmdInitiateInvitationByEMail(tm coreutils.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		if !coreutils.IsValidEmailTemplate(args.ArgumentObject.AsString(field_EmailTemplate)) {
