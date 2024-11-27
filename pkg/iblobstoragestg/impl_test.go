@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/rand"
 	_ "embed"
 	"io"
 	"log"
@@ -101,6 +102,55 @@ func TestBasicUsage(t *testing.T) {
 		// Compare
 		require.Equal(v, buf.Bytes())
 	})
+}
+
+func TestFewBucketsBLOB(t *testing.T) {
+	var (
+		key = iblobstorage.KeyType{
+			AppID: 2,
+			WSID:  2,
+			ID:    2,
+		}
+		desc = iblobstorage.DescrType{
+			Name:     "test",
+			MimeType: "image/png",
+		}
+	)
+	require := require.New(t)
+
+	asf := mem.Provide()
+	asp := istorageimpl.Provide(asf)
+	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
+	require.NoError(err)
+	blobber := Provide(&storage, coreutils.NewITime())
+	ctx := context.TODO()
+
+	// size is more than chunkSize*bucketSize -> bucket++. Will check the case when the bucket number is increased
+	bigBLOB := make([]byte, chunkSize*bucketSize*2+1)
+
+	// fill the blob with the random bytes
+	_, err = rand.Read(bigBLOB)
+	require.NoError(err)
+
+	// write the blob
+	reader := bytes.NewReader(bigBLOB)
+	err = blobber.WriteBLOB(ctx, key, desc, reader, iblobstorage.BLOBMaxSizeType(len(bigBLOB)))
+	require.NoError(err)
+
+	var buf bytes.Buffer
+	writer := bufio.NewWriter(&buf)
+
+	// Reset reader and read anew
+	reader.Reset(bigBLOB)
+
+	// Read
+	err = blobber.ReadBLOB(ctx, key, func(blobState iblobstorage.BLOBState) (err error) { return nil }, writer)
+	require.NoError(err)
+	err = writer.Flush()
+	require.NoError(err)
+
+	// Compare
+	require.Equal(bigBLOB, buf.Bytes())
 }
 
 func TestQuotaExceed(t *testing.T) {
