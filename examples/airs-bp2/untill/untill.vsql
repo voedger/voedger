@@ -1,41 +1,40 @@
--- Copyright (c) 2024-present unTill Software Development Group B. V.
--- @author Maxim Geraskin
+ABSTRACT WORKSPACE SomeWS (
 
-TABLE untill_users INHERITS sys.CDoc (
-	name varchar(255),
-	phone varchar(50),
-	email varchar(100)
-);
+    TABLE untill_users INHERITS sys.CDoc (
+        name varchar(255),
+        phone varchar(50),
+        email varchar(100)
+    );
 
-TABLE bill INHERITS sys.WDoc (
-	tableno int32 NOT NULL,
-	close_year int32,
-	total int64
-);
+    TABLE bill INHERITS sys.WDoc (
+        tableno int32 NOT NULL,
+        close_year int32,
+        total int64
+    );
 
-TABLE orders INHERITS sys.ODoc (
-	id_bill ref(bill) NOT NULL, -- deprecated
-	ord_tableno int32 NOT NULL
-);
+    TABLE orders INHERITS sys.ODoc (
+        id_bill ref(bill) NOT NULL, -- deprecated
+        ord_tableno int32 NOT NULL
+    );
 
-TABLE pbill INHERITS sys.ODoc (
-	id_bill ref(bill) NOT NULL,
-	id_untill_users ref(untill_users) NOT NULL,
-	pdatetime int64 NOT NULL,
-	number int32,
-	pbill_item pbill_item
-);
+    TABLE pbill INHERITS sys.ODoc (
+        id_bill ref(bill) NOT NULL,
+        id_untill_users ref(untill_users) NOT NULL,
+        pdatetime int64 NOT NULL,
+        number int32,
+        pbill_item pbill_item
+    );
 
-TABLE pbill_item INHERITS sys.ORecord (
-	id_pbill ref(pbill) NOT NULL,
-	id_untill_users ref(untill_users) NOT NULL,
-	tableno int32 NOT NULL,
-	quantity int32 NOT NULL,
-	price int64 NOT NULL
-);
+    TABLE pbill_item INHERITS sys.ORecord (
+        id_pbill ref(pbill) NOT NULL,
+        id_untill_users ref(untill_users) NOT NULL,
+        tableno int32 NOT NULL,
+        quantity int32 NOT NULL,
+        price int64 NOT NULL
+    );
 
-TABLE articles INHERITS sys.CDoc (
-	article_number int32,
-	name varchar(255)
-);
-
+    TABLE articles INHERITS sys.CDoc (
+        article_number int32,
+        name varchar(255)
+    );
+)

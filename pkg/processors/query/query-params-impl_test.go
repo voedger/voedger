@@ -239,7 +239,7 @@ func TestWrongTypes(t *testing.T) {
 		{
 			name: "Root element fields must be present in result fields",
 			body: `{"elements":[{"path":"not/root"},{"fields":["wrong"]}]}`,
-			err:  "elements: root element fields has field 'wrong' that is unexpected in root fields, please remove it: unexpected",
+			err:  "elements: unknown nested table not: unexpected",
 		},
 		{
 			name: "Equals filter field must be present in root element fields/refs",

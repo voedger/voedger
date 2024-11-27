@@ -77,11 +77,9 @@ func (ws *workspace) LocalTypes(visit func(IType) bool) {
 }
 
 func (ws *workspace) Type(name QName) IType {
-	// Type can not use `ws.types.all.find(name)` because two reasons:
+	// Type can not use `ws.types.all.find(name)` because:
 	// - this method called before `appDef.build()` and `ws.build()`,
 	//   when `ws.types.all` is not initialized.
-	// - Type() should find workspaces if ancestor or child or self name passed,
-	//   but `ws.types.all` will not contain workspaces.
 	var (
 		find  func(IWorkspace) IType
 		chain map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
@@ -89,9 +87,6 @@ func (ws *workspace) Type(name QName) IType {
 	find = func(w IWorkspace) IType {
 		if !chain[w.QName()] {
 			chain[w.QName()] = true
-			if name == w.QName() {
-				return w
-			}
 			if t := w.LocalType(name); t != NullType {
 				return t
 			}
@@ -101,8 +96,9 @@ func (ws *workspace) Type(name QName) IType {
 				}
 			}
 			for u := range w.UsedWorkspaces {
-				if t := find(u.(*workspace)); t != NullType {
-					return t
+				// #2872 should find used workspaces, but not types from them
+				if u.QName() == name {
+					return u
 				}
 			}
 		}
@@ -201,6 +197,11 @@ func (ws *workspace) addRole(name QName) IRoleBuilder {
 	return newRoleBuilder(role)
 }
 
+func (ws *workspace) addTag(name QName, comments ...string) {
+	t := newTag(ws.app, ws, name)
+	t.setComment(comments...)
+}
+
 func (ws *workspace) addView(name QName) IViewBuilder {
 	v := newView(ws.app, ws, name)
 	return newViewBuilder(v)
@@ -253,7 +254,8 @@ func (ws *workspace) buildAllTypes() {
 			ws.types.all.add(t)
 		}
 		for u := range w.UsedWorkspaces {
-			collect(u)
+			// #2872 should enum used workspaces, but not type from them
+			ws.types.all.add(u)
 		}
 	}
 	collect(ws)
@@ -336,6 +338,16 @@ func (ws *workspace) setDescriptor(q QName) {
 	ws.app.wsDesc[q] = ws
 }
 
+func (ws *workspace) setTypeComment(name QName, c ...string) {
+	t := ws.LocalType(name)
+	if t == NullType {
+		panic(ErrNotFound("type %s", name))
+	}
+	if t, ok := t.(interface{ setComment(...string) }); ok {
+		t.setComment(c...)
+	}
+}
+
 func (ws *workspace) useWorkspace(name QName, names ...QName) {
 	use := func(n QName) {
 		usedWS := ws.app.Workspace(n)
@@ -415,6 +427,10 @@ func (wb *workspaceBuilder) AddProjector(name QName) IProjectorBuilder {
 	return wb.workspace.addProjector(name)
 }
 
+func (wb *workspaceBuilder) AddQuery(name QName) IQueryBuilder {
+	return wb.workspace.addQuery(name)
+}
+
 func (wb *workspaceBuilder) AddRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) {
 	wb.workspace.addRate(name, count, period, scopes, comment...)
 }
@@ -423,8 +439,8 @@ func (wb *workspaceBuilder) AddRole(name QName) IRoleBuilder {
 	return wb.workspace.addRole(name)
 }
 
-func (wb *workspaceBuilder) AddQuery(name QName) IQueryBuilder {
-	return wb.workspace.addQuery(name)
+func (wb *workspaceBuilder) AddTag(name QName, comments ...string) {
+	wb.workspace.addTag(name, comments...)
 }
 
 func (wb *workspaceBuilder) AddView(name QName) IViewBuilder {
@@ -467,6 +483,10 @@ func (wb *workspaceBuilder) SetAncestors(name QName, names ...QName) IWorkspaceB
 func (wb *workspaceBuilder) SetDescriptor(q QName) IWorkspaceBuilder {
 	wb.workspace.setDescriptor(q)
 	return wb
+}
+
+func (wb *workspaceBuilder) SetTypeComment(n QName, c ...string) {
+	wb.workspace.setTypeComment(n, c...)
 }
 
 func (wb *workspaceBuilder) UseWorkspace(name QName, names ...QName) IWorkspaceBuilder {

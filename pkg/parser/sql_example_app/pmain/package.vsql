@@ -370,7 +370,7 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
 
     VIEW DashboardView(
         Dummy int,
-        SomeRec record,
+        SomeRec bytes,
         Dummy2 int,
         PRIMARY KEY ((Dummy), Dummy2)
     ) AS RESULT OF UpdateDashboard;

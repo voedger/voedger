@@ -49,7 +49,7 @@ func (o *EnrichmentOperator) DoAsync(ctx context.Context, work pipeline.IWorkpie
 				if err != nil {
 					return work, err
 				}
-				record := sv.AsRecord("")
+				record := sv.(istructs.IStateRecordValue).AsRecord()
 
 				recFields := o.fieldsDefs.get(record.QName())
 				refFieldKind, ok := recFields[field.RefField()]

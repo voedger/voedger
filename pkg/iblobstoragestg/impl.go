@@ -91,21 +91,12 @@ func (b *bStorageType) writeChunk(pKeyBuf *bytes.Buffer, cCol uint64, bucketNumb
 	var cColBuf *bytes.Buffer
 	if bytesRead > chunkSize*bucketSize*(*bucketNumber) {
 		*bucketNumber++
-		if errBucket := addBucket(pKeyBuf, *bucketNumber); errBucket != nil {
-			err = errBucket
-			return
-		}
+		binary.LittleEndian.PutUint64(pKeyBuf.Bytes()[keyLength:], *bucketNumber)
 	}
 	if cColBuf, err = createKey(cCol); err != nil {
 		return
 	}
 	err = (*(b.appStorage)).Put(pKeyBuf.Bytes(), cColBuf.Bytes(), *buf)
-	return
-}
-
-func addBucket(pKeyBuf *bytes.Buffer, bucketNumber uint64) (err error) {
-	bucketKey := bytes.NewBuffer(pKeyBuf.Bytes()[:keyLength])
-	err = binary.Write(bucketKey, binary.LittleEndian, bucketNumber)
 	return
 }
 

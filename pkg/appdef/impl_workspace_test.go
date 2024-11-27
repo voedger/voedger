@@ -13,30 +13,43 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
+func requireSortedTypes(t *testing.T, types []IType) {
+	require := require.New(t)
+	require.True(slices.IsSortedFunc(types, func(a, b IType) int {
+		return CompareQName(a.QName(), b.QName())
+	}), "types should be sorted")
+}
+
 func Test_AppDef_AddWorkspace(t *testing.T) {
 	require := require.New(t)
 
 	wsName, descName, objName := NewQName("test", "ws"), NewQName("test", "desc"), NewQName("test", "object")
+	wsPName, descPName, objPName := NewQName("test", "parentWs"), NewQName("test", "parentDesc"), NewQName("test", "parentObject")
 
 	var app IAppDef
 
-	t.Run("should be ok to add workspace", func(t *testing.T) {
+	t.Run("should be ok to add workspace with used workspace", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		wsb := adb.AddWorkspace(wsName)
-
-		t.Run("should be ok to set workspace descriptor", func(t *testing.T) {
+		t.Run("should be ok to add workspace", func(t *testing.T) {
+			wsb := adb.AddWorkspace(wsName)
 			_ = wsb.AddCDoc(descName)
 			wsb.SetDescriptor(descName)
-		})
-
-		t.Run("should be ok to add some object to workspace", func(t *testing.T) {
 			_ = wsb.AddObject(objName)
+
+			require.NotNil(wsb.Workspace(), "should be ok to get workspace definition before build")
+			require.Equal(descName, wsb.Workspace().Descriptor(), "should be ok to get workspace descriptor before build")
 		})
 
-		require.NotNil(wsb.Workspace(), "should be ok to get workspace definition before build")
-		require.Equal(descName, wsb.Workspace().Descriptor(), "should be ok to get workspace descriptor before build")
+		t.Run("should be ok to add parent workspace", func(t *testing.T) {
+			wsb := adb.AddWorkspace(wsPName)
+			_ = wsb.AddCDoc(descPName)
+			wsb.SetDescriptor(descPName)
+			_ = wsb.AddObject(objPName)
+
+			wsb.UseWorkspace(wsName)
+		})
 
 		a, err := adb.Build()
 		require.NoError(err)
@@ -51,11 +64,12 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 			switch ws.QName() {
 			case SysWorkspaceQName:
 			case wsName:
+			case wsPName:
 			default:
 				require.Fail("unexpected workspace", "unexpected workspace «%v»", ws.QName())
 			}
 		}
-		require.Equal(1+1, cnt) // system ws + test ws
+		require.Equal(1+1+1, cnt) // system ws + test ws + parent ws
 	})
 
 	t.Run("should be ok to find workspace", func(t *testing.T) {
@@ -66,53 +80,52 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 		require.Equal(TypeKind_Workspace, ws.Kind())
 		require.Equal(typ.(IWorkspace), ws)
 
-		require.Equal(descName, ws.Descriptor(), "must be ok to get workspace descriptor")
+		require.Equal(descName, ws.Descriptor())
 
-		t.Run("should be ok to find structures in workspace", func(t *testing.T) {
-			typ := ws.Type(objName)
-			require.Equal(TypeKind_Object, typ.Kind())
-			obj, ok := typ.(IObject)
-			require.True(ok)
-
-			require.Equal(Object(app.Type, objName), obj)
-			require.Equal(Object(ws.Type, objName), obj)
-			require.Equal(Object(ws.LocalType, objName), obj)
-
-			require.Equal(ws, obj.Workspace())
-
-			t.Run("should find type from ancestor", func(t *testing.T) {
-				int32type := SysData(app.Type, DataKind_int32)
-				require.NotNil(int32type)
-				require.Equal(int32type, SysData(ws.Type, DataKind_int32))
-				require.Nil(SysData(ws.LocalType, DataKind_int32), "should be nil if not local type")
-			})
-
-			t.Run("should be NullType if unknown type", func(t *testing.T) {
-				unknown := NewQName("unknown", "object")
-				require.Equal(NullType, ws.Type(unknown))
-				require.Equal(NullType, ws.LocalType(unknown))
-			})
+		t.Run("should be ok to find by Type()", func(t *testing.T) {
+			require.Equal(app.Type(objName), ws.Type(objName), "should find local type")
+			require.Equal(SysData(app.Type, DataKind_int32), SysData(ws.Type, DataKind_int32), "should find type from ancestor")
+			require.Equal(NullType, ws.Type(NewQName("unknown", "object")))
 		})
 
-		t.Run("should be ok to enum workspace types", func(t *testing.T) {
-			require.Equal(2, func() int {
-				cnt := 0
-				for typ := range ws.LocalTypes {
-					switch typ.QName() {
-					case descName, objName:
-					default:
-						require.Fail("unexpected type in workspace", "unexpected type «%v» in workspace «%v»", typ.QName(), ws.QName())
-					}
-					cnt++
-				}
-				return cnt
-			}())
+		t.Run("should be ok to enum Types()", func(t *testing.T) {
+			types := slices.Collect(ws.Types)
+			requireSortedTypes(t, types)
+			require.Contains(types, app.Type(descName), "ws types should contain descriptor")
+			require.Contains(types, app.Type(objName), "ws types should contain local types")
+			require.Contains(types, app.Type(SysData_bool), "ws types should contain types from ancestor")
 		})
 
-		require.Equal(ws, ws.Type(wsName).(IWorkspace), "should be ok to get workspace by type")
+		t.Run("should be ok to find by LocalType()", func(t *testing.T) {
+			require.NotNil(ws.LocalType(objName))
+			require.Equal(NullType, ws.LocalType(SysData_bool))
+		})
 
-		require.Nil(app.Workspace(NewQName("unknown", "workspace")), "should be nil if unknown workspace")
+		t.Run("should be ok to enum LocalTypes()", func(t *testing.T) {
+			types := slices.Collect(ws.LocalTypes)
+			requireSortedTypes(t, types)
+			require.Equal([]IType{app.Type(descName), app.Type(objName)}, types)
+		})
 	})
+
+	t.Run("should be ok to find parent workspace", func(t *testing.T) {
+		pWs := app.Workspace(wsPName)
+		require.Equal(TypeKind_Workspace, pWs.Kind())
+
+		t.Run("should be ok to find by Type()", func(t *testing.T) {
+			require.Equal(app.Type(wsName), pWs.Type(wsName), "should find used workspace in parent")
+			require.Equal(NullType, pWs.Type(objName), "should not found object from used workspace in parent")
+		})
+
+		t.Run("should be ok to enum Types()", func(t *testing.T) {
+			types := slices.Collect(pWs.Types)
+			requireSortedTypes(t, types)
+			require.Contains(types, app.Type(wsName), "ws types should contain used workspace")
+			require.NotContains(types, app.Type(objName), "ws types should not contain type from used workspace", pWs, objName)
+		})
+	})
+
+	require.Nil(app.Workspace(NewQName("unknown", "workspace")), "should be nil if unknown workspace")
 
 	t.Run("should be panics", func(t *testing.T) {
 		t.Run("if unknown descriptor assigned to workspace", func(t *testing.T) {
@@ -161,7 +174,7 @@ func Test_AppDef_AlterWorkspace(t *testing.T) {
 	})
 }
 
-func Test_AppDef_SetDescriptor(t *testing.T) {
+func Test_Workspace_SetDescriptor(t *testing.T) {
 	require := require.New(t)
 
 	t.Run("should be ok to add workspace with descriptor", func(t *testing.T) {
@@ -424,6 +437,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 		for wsIdx := 0; wsIdx < wsCount; wsIdx++ {
 			ws := app.Workspace(wsName(wsIdx))
 			types := slices.Collect(ws.Types)
+			requireSortedTypes(t, types)
 			for a := range ws.Ancestors {
 				for t := range a.Types {
 					require.Contains(types, t, "%v types should contains type %v from ancestor %v", ws, t, a)
@@ -540,8 +554,8 @@ func Test_WorkspaceUsage(t *testing.T) {
 		for idx, test := range testUses {
 			ws := app.Workspace(wsName(idx))
 			want := make([]QName, len(test.use), len(test.use))
-			for i, a := range test.use {
-				want[i] = wsName(a)
+			for i, u := range test.use {
+				want[i] = wsName(u)
 			}
 			i := 0
 			for u := range ws.UsedWorkspaces {
@@ -552,74 +566,56 @@ func Test_WorkspaceUsage(t *testing.T) {
 		}
 	})
 
-	t.Run("should be ok to read objects from usages", func(t *testing.T) {
-		tests := [wsCount]struct {
-			objects []int
-		}{
-			{[]int{0, 1, 2, 3, 4, 5, 6}}, //0
-			{[]int{1, 2, 4, 5, 6}},       //1
-			{[]int{2, 4, 5, 6}},          //2
-			{[]int{3, 4, 5, 6}},          //3
-			{[]int{4, 5, 6}},             //4
-			{[]int{5, 6}},                //5
-			{[]int{5, 6}},                //6
-		}
-		for idx, test := range tests {
+	t.Run("should be ok to read types from usages", func(t *testing.T) {
+		for idx, test := range testUses {
 			ws := app.Workspace(wsName(idx))
-			t.Run("should be ok to find", func(t *testing.T) {
-				for i := 0; i < wsCount; i++ {
-					obj := Object(ws.Type, objName(i))
-					if slices.Contains(test.objects, i) {
-						require.NotNil(obj, "should be ok to find object «%v» in %v", objName(i), ws)
+			t.Run("should be ok to find used workspaces by Type()", func(t *testing.T) {
+				for u := 0; u < wsCount; u++ {
+					used := wsName(u)
+					got := ws.Type(used)
+					if slices.Contains(test.use, u) {
+						require.Equal(used, got.QName(), "(%v).Type() should find %v", ws, used)
+						require.Equal(TypeKind_Workspace, got.Kind())
 					} else {
-						require.Nil(obj, "object «%v» should be unknown in %v", objName(i), ws)
+						require.Equal(NullType, got)
 					}
 				}
 			})
-			t.Run("should be ok to enum", func(t *testing.T) {
-				types := slices.Collect(ws.Types)
-				require.True(slices.IsSortedFunc(types, func(a, b IType) int {
-					return CompareQName(a.QName(), b.QName())
-				}), "%v types should be sorted", ws)
-
-				for used := range ws.UsedWorkspaces {
-					for t := range used.Types {
-						require.Contains(types, t, "%v types should contain %v from %v", ws, t, used)
+			t.Run("should be ok to range used workspaces by Types()", func(t *testing.T) {
+				wsTypes := slices.Collect(ws.Types)
+				requireSortedTypes(t, wsTypes)
+				for u := 0; u < wsCount; u++ {
+					usedWs := app.Type(wsName(u))
+					if slices.Contains(test.use, u) {
+						require.Contains(wsTypes, usedWs, "(%v).Types() should contain %v", ws, usedWs)
+					} else {
+						require.NotContains(wsTypes, usedWs, "(%v).Types() should not contain %v", ws, usedWs)
+					}
+					obj := Object(app.Type, objName(u))
+					if u == idx {
+						require.Contains(wsTypes, obj, "(%v).Types() should contain %v", ws, obj)
+					} else {
+						require.NotContains(wsTypes, obj, "(%v).Types() should not contain %v", ws, obj)
 					}
 				}
-
-				want := []IObject{}
-				for _, o := range test.objects {
-					want = append(want, Object(app.Type, objName(o)))
-				}
-				for _, o := range want {
-					require.Contains(types, o, "%v types should contain %v", ws, o)
-				}
-
-				got := []IObject{}
-				for o := range Objects(ws.Types) {
-					got = append(got, o)
-				}
-				require.EqualValues(want, got, "unexpected objects in %v", ws)
 			})
 			t.Run("should be breakable types enumeration", func(t *testing.T) {
 				ws := app.Workspace(wsName(0))
 
-				breakAt := func(wsName QName) {
-					var typ IType
+				breakAt := func(n QName) {
+					var stop IType
 					for t := range ws.Types {
-						if t.Workspace().QName() == wsName {
-							typ = t
+						if t.QName() == n {
+							stop = t
 							break
 						}
 					}
-					require.NotNil(typ)
-					require.Equal(wsName, typ.Workspace().QName())
+					require.NotNil(stop)
 				}
 
-				t.Run("from ancestor", func(t *testing.T) { breakAt(SysWorkspaceQName) })
-				t.Run("from local", func(t *testing.T) { breakAt(ws.QName()) })
-				t.Run("from used", func(t *testing.T) { breakAt(wsName(6)) })
+				t.Run("from ancestor", func(t *testing.T) { breakAt(SysData_int32) })
+				t.Run("from local", func(t *testing.T) { breakAt(objName(0)) })
+				t.Run("from used", func(t *testing.T) { breakAt(wsName(1)) })
 			})
 		}
 	})

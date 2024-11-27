@@ -595,6 +595,9 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 				fields[string(rf.Name.Value)] = i
 			}
 		} else if fe.RecordField != nil {
+			if c.pkg.Path != appdef.SysPackage {
+				c.stmtErr(&fe.Pos, ErrRecordFieldsOnlyInSys)
+			}
 			rf := fe.RecordField
 			if _, ok := fields[string(rf.Name.Value)]; ok {
 				c.stmtErr(&rf.Name.Pos, ErrRedefined(string(rf.Name.Value)))

@@ -11,7 +11,9 @@ jobs:
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
     with:
       ignore_copyright: "cmd/voedger/sys.monitor/site.main"
+      go_race: "true"
       short_test: "false"
+      ignore_build: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
