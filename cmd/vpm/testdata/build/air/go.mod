@@ -32,3 +32,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/voedger/voedger v0.0.0-20241114100238-f3ce7227cf18 => ../../../../../

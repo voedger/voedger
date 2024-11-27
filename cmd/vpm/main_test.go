@@ -8,13 +8,13 @@ package main
 import (
 	"fmt"
 	"os"
-	"github.com/voedger/voedger/pkg/goutils/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 )
@@ -318,11 +318,10 @@ func TestOrmBasicUsage(t *testing.T) {
 }
 
 func TestBuildExample2(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
-
 	if testing.Short() {
 		t.Skip()
 	}
+
 	require := require.New(t)
 
 	err := execRootCmd([]string{"vpm", "orm", "-C", "../../examples/airs-bp2/air"}, "1.0.0")
@@ -339,6 +338,17 @@ func TestBuildExample2(t *testing.T) {
 	}
 
 	err = execRootCmd([]string{"vpm", "build", "-C", "../../examples/airs-bp2/air"}, "1.0.0")
+	require.NoError(err)
+}
+
+func TestGenOrmForAirApp(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	require := require.New(t)
+
+	err := execRootCmd([]string{"vpm", "orm", "-C", "testdata/build/air"}, "1.0.0")
 	require.NoError(err)
 }
 
@@ -542,6 +552,20 @@ func TestGenOrmTestItAndBuildApp(t *testing.T) {
 	require.NoError(err)
 
 	err = execRootCmd([]string{"vpm", "build", "-C", dir}, "1.0.0")
+	require.NoError(err)
+}
+
+func TestGenOrm(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	require := require.New(t)
+
+	wd, err := os.Getwd()
+	require.NoError(err)
+
+	err = execRootCmd([]string{"vpm", "orm", "-C", filepath.Join(wd, "testdata", "build", "air")}, "1.0.0")
 	require.NoError(err)
 }
 
