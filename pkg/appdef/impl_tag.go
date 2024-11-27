@@ -51,11 +51,11 @@ func makeTagBuilder(tags *tags) tagBuilder {
 
 func (t *tagBuilder) SetTag(tag QName, tags ...QName) {
 	add := func(name QName) {
-		typ := t.tags.find(name)
-		if typ.Kind() != TypeKind_Tag {
+		tag := Tag(t.tags.find, name)
+		if tag == nil {
 			panic(ErrNotFound("tag %s", name))
 		}
-		t.tags.list.add(typ.(ITag))
+		t.tags.list.add(tag)
 	}
 
 	add(tag)
