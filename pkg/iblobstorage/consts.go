@@ -6,11 +6,16 @@
 package iblobstorage
 
 const (
-	SUUIDNumRandomBytes = 16
-	blobPKPrefix        = uint64(1)
+	SUUIDRandomPartLen = 16
 )
 
 const (
 	DurationType_1Hour   DurationType = 1
 	DurationType_32Hours DurationType = 5
+)
+
+const (
+	blobPrefix_null blobPrefix = iota
+	blobPrefix_persistent
+	blobPrefix_temporary
 )

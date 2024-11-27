@@ -6,7 +6,6 @@ package iblobstorage
 
 import "errors"
 
-//	"context"
-
 var ErrBLOBNotFound = errors.New("BLOB not found")
+var ErrBLOBCorrupted = errors.New("BLOB corrupted")
 var ErrBLOBSizeQuotaExceeded = errors.New("BLOB size quote exceeded")

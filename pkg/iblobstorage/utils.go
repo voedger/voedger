@@ -12,12 +12,12 @@ import (
 	"github.com/google/uuid"
 )
 
-func NewSUUID() string {
+func NewSUUID() SUUID {
 	// Generate UUID (Version 4)
 	uuidPart := uuid.New()
 
 	// Generate additional random bytes (16 bytes for 128 bits)
-	randomPart := make([]byte, SUUIDNumRandomBytes)
+	randomPart := make([]byte, SUUIDRandomPartLen)
 	if _, err := rand.Read(randomPart); err != nil {
 		// notest
 		panic(err)
@@ -27,5 +27,5 @@ func NewSUUID() string {
 	combined := append(uuidPart[:], randomPart...)
 
 	// Encode to Base64 using URL-safe encoding
-	return base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(combined)
+	return SUUID(base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(combined))
 }

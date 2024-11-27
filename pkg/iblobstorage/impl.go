@@ -12,18 +12,18 @@ import (
 // nolint: revive
 func (t *PersistentBLOBKeyType) Bytes() []byte {
 	res := make([]byte, 28)
-	binary.LittleEndian.PutUint64(res, blobPKPrefix)
-	binary.LittleEndian.PutUint32(res[8:], t.AppID)
+	binary.LittleEndian.PutUint64(res, uint64(blobPrefix_persistent))
+	binary.LittleEndian.PutUint32(res[8:], t.ClusterAppID)
 	binary.LittleEndian.PutUint64(res[12:], uint64(t.WSID))
-	binary.LittleEndian.PutUint64(res[20:], uint64(t.ID))
+	binary.LittleEndian.PutUint64(res[20:], uint64(t.BlobID))
 	return res
 }
 
 // nolint: revive
 func (t *TempBLOBKeyType) Bytes() []byte {
 	res := make([]byte, 20)
-	binary.LittleEndian.PutUint64(res, blobPKPrefix)
-	binary.LittleEndian.PutUint32(res[8:], t.AppID)
+	binary.LittleEndian.PutUint64(res, uint64(blobPrefix_temporary))
+	binary.LittleEndian.PutUint32(res[8:], t.ClusterAppID)
 	binary.LittleEndian.PutUint64(res[12:], uint64(t.WSID))
 	res = append(res, []byte(t.SUUID)...)
 	return res

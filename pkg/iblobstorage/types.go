@@ -20,15 +20,15 @@ type BLOBState struct {
 }
 
 type PersistentBLOBKeyType struct {
-	AppID istructs.ClusterAppID
-	WSID  istructs.WSID
-	ID    istructs.RecordID
+	ClusterAppID istructs.ClusterAppID
+	WSID         istructs.WSID
+	BlobID       istructs.RecordID
 }
 
 type TempBLOBKeyType struct {
-	AppID istructs.ClusterAppID
-	WSID  istructs.WSID
-	SUUID SUUID
+	ClusterAppID istructs.ClusterAppID
+	WSID         istructs.WSID
+	SUUID        SUUID
 }
 
 type SUUID string
@@ -50,6 +50,8 @@ type BLOBMaxSizeType uint64
 
 type DurationType int
 
-type WQuoterType func(wantToWriteBytes uint64) error
+type WLimiterType func(wantToWriteBytes uint64) error
 
-type RQuoterType func(wantReadBytes uint64) error
+type RLimiterType func(wantReadBytes uint64) error
+
+type blobPrefix uint64
