@@ -26,10 +26,9 @@ type bStorageType struct {
 // key does not cotain the bucket number
 func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblobstorage.DescrType, reader io.Reader, limiter iblobstorage.WLimiterType, duration iblobstorage.DurationType) (err error) {
 	var (
-		bytesRead      uint64
-		chunkNumber    uint64
-		bucketNumber   uint64 = 1
-		pKeyWithBucket []byte
+		bytesRead    uint64
+		chunkNumber  uint64
+		bucketNumber uint64 = 1
 	)
 	state := iblobstorage.BLOBState{
 		Descr:     descr,
@@ -47,7 +46,7 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 
 	chunkBuf := make([]byte, 0, chunkSize)
 
-	pKeyWithBucket = newKeyWithBucketNumber(blobKey, bucketNumber)
+	pKeyWithBucket := newKeyWithBucketNumber(blobKey, bucketNumber)
 
 	cCol := make([]byte, uint64Size)
 
@@ -210,7 +209,7 @@ func (b *bStorageType) writeState(state *iblobstorage.BLOBState, pKey, cCol []by
 	value, err := json.Marshal(state)
 	if err != nil {
 		// notest
-		panic(err)
+		return err
 	}
 	return (*(b.appStorage)).Put(pKey, cCol, value)
 }

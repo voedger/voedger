@@ -212,7 +212,7 @@ func writeBLOB_persistent(ctx context.Context, wsid istructs.WSID, appQName stri
 
 	// request VVM for check the principalToken and get a blobID
 	ok := false
-	if ok, blobID = registerBLOB(ctx, wsid, appQName, "c.sys/UploadBLOBHelper", header, busTimeout, bus, resp); !ok {
+	if ok, blobID = registerBLOB(ctx, wsid, appQName, "c.sys.UploadBLOBHelper", header, busTimeout, bus, resp); !ok {
 		return
 	}
 
