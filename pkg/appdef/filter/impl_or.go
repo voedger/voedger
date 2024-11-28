@@ -7,6 +7,7 @@ package filter
 
 import (
 	"fmt"
+	"iter"
 	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -39,7 +40,7 @@ func (f orFilter) Match(t appdef.IType) bool {
 	return false
 }
 
-func (f orFilter) Or() func(func(appdef.IFilter) bool) { return slices.Values(f.children) }
+func (f orFilter) Or() iter.Seq[appdef.IFilter] { return slices.Values(f.children) }
 
 func (f orFilter) String() string {
 	s := fmt.Sprintf("filter.%s(", f.Kind().TrimString())

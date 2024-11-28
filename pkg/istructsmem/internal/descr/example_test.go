@@ -26,6 +26,11 @@ func Example() {
 		wsName, wsDescName := appdef.NewQName("test", "ws"), appdef.NewQName("test", "wsDesc")
 		wsb := adb.AddWorkspace(wsName)
 
+		tags := appdef.MustParseQNames("test.dataTag", "test.engineTag", "test.structTag")
+		for _, tag := range tags {
+			wsb.AddTag(tag)
+		}
+
 		numName := appdef.NewQName("test", "number")
 		strName := appdef.NewQName("test", "string")
 
@@ -36,9 +41,11 @@ func Example() {
 
 		n := wsb.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinIncl(1))
 		n.SetComment("natural (positive) integer")
+		n.SetTag(tags[0])
 
 		s := wsb.AddData(strName, appdef.DataKind_string, appdef.NullQName)
 		s.AddConstraints(appdef.MinLen(1), appdef.MaxLen(100), appdef.Pattern(`^\w+$`, "only word characters allowed"))
+		s.SetTag(tags[0])
 
 		doc := wsb.AddCDoc(docName)
 		doc.SetSingleton()
@@ -51,6 +58,7 @@ func Example() {
 		doc.AddContainer("rec", recName, 0, 100, "container comment")
 		doc.AddUnique(appdef.UniqueQName(docName, "unique1"), []appdef.FieldName{"f1", "f2"})
 		doc.SetComment(`comment 1`, `comment 2`)
+		doc.SetTag(tags[2])
 
 		rec := wsb.AddCRecord(recName)
 		rec.
@@ -61,6 +69,7 @@ func Example() {
 		rec.
 			SetUniqueField("phone").
 			AddUnique(appdef.UniqueQName(recName, "uniq1"), []appdef.FieldName{"f1"})
+		rec.SetTag(tags[2])
 
 		viewName := appdef.NewQName("test", "view")
 		view := wsb.AddView(viewName)
@@ -71,21 +80,25 @@ func Example() {
 		view.Value().
 			AddDataField("vv_code", strName, true).
 			AddRefField("vv_1", true, docName)
+		view.SetTag(tags[2])
 
 		objName := appdef.NewQName("test", "obj")
 		obj := wsb.AddObject(objName)
 		obj.AddField("f1", appdef.DataKind_string, true)
+		obj.SetTag(tags[2])
 
 		cmdName := appdef.NewQName("test", "cmd")
 		wsb.AddCommand(cmdName).
 			SetUnloggedParam(objName).
 			SetParam(objName).
-			SetEngine(appdef.ExtensionEngineKind_WASM)
+			SetEngine(appdef.ExtensionEngineKind_WASM).
+			SetTag(tags[1])
 
 		queryName := appdef.NewQName("test", "query")
 		wsb.AddQuery(queryName).
 			SetParam(objName).
-			SetResult(appdef.QNameANY)
+			SetResult(appdef.QNameANY).
+			SetTag(tags[1])
 
 		prjName := appdef.NewQName("test", "projector")
 		prj := wsb.AddProjector(prjName)
@@ -100,6 +113,7 @@ func Example() {
 			Add(sysRecords, docName, recName).SetComment(sysRecords, "needs to read «test.doc» and «test.rec» from «sys.records» storage")
 		prj.Intents().
 			Add(sysViews, viewName).SetComment(sysViews, "needs to update «test.view» from «sys.views» storage")
+		prj.SetTag(tags[1])
 
 		jobName := appdef.NewQName("test", "job")
 		job := wsb.AddJob(jobName)
@@ -107,6 +121,7 @@ func Example() {
 		job.SetEngine(appdef.ExtensionEngineKind_WASM)
 		job.States().
 			Add(sysViews, viewName).SetComment(sysViews, "needs to read «test.view» from «sys.views» storage")
+		job.SetTag(tags[1])
 
 		readerName := appdef.NewQName("test", "reader")
 		reader := wsb.AddRole(readerName)
@@ -168,15 +183,26 @@ func Example() {
 	//       "Workspaces": {
 	//         "test.ws": {
 	//           "Descriptor": "test.wsDesc",
+	//           "Tags": {
+	//             "test.dataTag": {},
+	//             "test.engineTag": {},
+	//             "test.structTag": {}
+	//           },
 	//           "DataTypes": {
 	//             "test.number": {
 	//               "Comment": "natural (positive) integer",
+	//               "Tags": [
+	//                 "test.dataTag"
+	//               ],
 	//               "Ancestor": "sys.int64",
 	//               "Constraints": {
 	//                 "MinIncl": 1
 	//               }
 	//             },
 	//             "test.string": {
+	//               "Tags": [
+	//                 "test.dataTag"
+	//               ],
 	//               "Ancestor": "sys.string",
 	//               "Constraints": {
 	//                 "MaxLen": 100,
@@ -188,6 +214,9 @@ func Example() {
 	//           "Structures": {
 	//             "test.doc": {
 	//               "Comment": "comment 1\ncomment 2",
+	//               "Tags": [
+	//                 "test.structTag"
+	//               ],
 	//               "Kind": "CDoc",
 	//               "Fields": [
 	//                 {
@@ -253,6 +282,9 @@ func Example() {
 	//               "Singleton": true
 	//             },
 	//             "test.obj": {
+	//               "Tags": [
+	//                 "test.structTag"
+	//               ],
 	//               "Kind": "Object",
 	//               "Fields": [
 	//                 {
@@ -272,6 +304,9 @@ func Example() {
 	//               ]
 	//             },
 	//             "test.rec": {
+	//               "Tags": [
+	//                 "test.structTag"
+	//               ],
 	//               "Kind": "CRecord",
 	//               "Fields": [
 	//                 {
@@ -352,6 +387,9 @@ func Example() {
 	//           },
 	//           "Views": {
 	//             "test.view": {
+	//               "Tags": [
+	//                 "test.structTag"
+	//               ],
 	//               "Key": {
 	//                 "Partition": [
 	//                   {
@@ -397,6 +435,9 @@ func Example() {
 	//           "Extensions": {
 	//             "Commands": {
 	//               "test.cmd": {
+	//                 "Tags": [
+	//                   "test.engineTag"
+	//                 ],
 	//                 "Name": "cmd",
 	//                 "Engine": "WASM",
 	//                 "Arg": "test.obj",
@@ -405,6 +446,9 @@ func Example() {
 	//             },
 	//             "Queries": {
 	//               "test.query": {
+	//                 "Tags": [
+	//                   "test.engineTag"
+	//                 ],
 	//                 "Name": "query",
 	//                 "Engine": "BuiltIn",
 	//                 "Arg": "test.obj",
@@ -413,6 +457,9 @@ func Example() {
 	//             },
 	//             "Projectors": {
 	//               "test.projector": {
+	//                 "Tags": [
+	//                   "test.engineTag"
+	//                 ],
 	//                 "Name": "projector",
 	//                 "Engine": "WASM",
 	//                 "States": {
@@ -454,6 +501,9 @@ func Example() {
 	//             },
 	//             "Jobs": {
 	//               "test.job": {
+	//                 "Tags": [
+	//                   "test.engineTag"
+	//                 ],
 	//                 "Name": "job",
 	//                 "Engine": "WASM",
 	//                 "States": {

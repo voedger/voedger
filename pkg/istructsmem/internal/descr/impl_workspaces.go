@@ -9,6 +9,7 @@ import "github.com/voedger/voedger/pkg/appdef"
 
 func newWorkspace() *Workspace {
 	return &Workspace{
+		Tags:       make(map[appdef.QName]*Tag),
 		DataTypes:  make(map[appdef.QName]*Data),
 		Structures: make(map[appdef.QName]*Structure),
 		Views:      make(map[appdef.QName]*View),
@@ -24,10 +25,14 @@ func (w *Workspace) read(workspace appdef.IWorkspace) {
 	if name := workspace.Descriptor(); name != appdef.NullQName {
 		w.Descriptor = &name
 	}
-	for typ := range workspace.LocalTypes {
+	for typ := range workspace.LocalTypes() {
 		name := typ.QName()
 
 		switch t := typ.(type) {
+		case appdef.ITag:
+			tag := newTag()
+			tag.read(t)
+			w.Tags[name] = tag
 		case appdef.IData:
 			d := newData()
 			d.read(t)

@@ -770,10 +770,9 @@ func (s *CommandStmt) GetName() string            { return string(s.Name) }
 func (s *CommandStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 type WithItem struct {
-	Comment  *string        `parser:"('Comment' '=' @String)"`
-	Tags     []DefQName     `parser:"| ('Tags' '=' '(' @@ (',' @@)* ')')"`
-	tag      appdef.QName   // filled on the analysis stage
-	moreTags []appdef.QName // filled on the analysis stage
+	Comment *string        `parser:"('Comment' '=' @String)"`
+	Tags    []DefQName     `parser:"| ('Tags' '=' '(' @@ (',' @@)* ')')"`
+	tags    []appdef.QName // filled on the analysis stage
 }
 
 type AnyOrVoidOrDef struct {

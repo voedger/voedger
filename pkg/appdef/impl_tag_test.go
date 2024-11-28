@@ -32,7 +32,7 @@ func TestTags(t *testing.T) {
 
 		doc := wsb.AddODoc(docName)
 		doc.AddField("f1", DataKind_int64, true)
-		doc.SetTag(tagNames[0], tagNames[1:]...)
+		doc.SetTag(tagNames...)
 
 		a, err := adb.Build()
 		require.NoError(err)
@@ -54,7 +54,7 @@ func TestTags(t *testing.T) {
 
 		t.Run("should be ok to enumerate tags", func(t *testing.T) {
 			got := QNames{}
-			for tag := range Tags(tested.Types) {
+			for tag := range Tags(tested.Types()) {
 				got.Add(tag.QName())
 			}
 			require.Equal(QNamesFrom(tagNames...), got)
@@ -76,7 +76,7 @@ func TestTags(t *testing.T) {
 
 	t.Run("should be ok to enumerate tags", func(t *testing.T) {
 		got := QNames{}
-		for t := range doc.Tags {
+		for t := range doc.Tags() {
 			got.Add(t.QName())
 		}
 		require.Equal(QNamesFrom(tagNames...), got)
@@ -89,6 +89,24 @@ func TestTags(t *testing.T) {
 			wsb := adb.AddWorkspace(wsName)
 			doc := wsb.AddODoc(docName)
 			require.Panics(func() { doc.SetTag(tagNames[0]) })
+		})
+
+		// #2889 $VSQL_TagNonExp: only local tags can be used
+		t.Run("if set tag from ancestor ws", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
+
+			ancName := NewQName("test", "wsAncestor")
+			tagName := NewQName("test", "tagAncestor")
+
+			ancWS := adb.AddWorkspace(ancName)
+			ancWS.AddTag(tagName)
+
+			wsb := adb.AddWorkspace(wsName)
+			wsb.SetAncestors(ancName)
+
+			doc := wsb.AddODoc(docName)
+			require.Panics(func() { doc.SetTag(tagName) })
 		})
 	})
 }

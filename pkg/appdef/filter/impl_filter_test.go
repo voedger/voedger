@@ -6,7 +6,6 @@
 package filter
 
 import (
-	"iter"
 	"slices"
 	"testing"
 
@@ -63,12 +62,12 @@ func Test_allMatches(t *testing.T) {
 			ws.Type(cmd),
 			ws.Type(doc),
 			ws.Type(obj),
-		}, slices.Collect(iter.Seq[appdef.IType](Matches(flt, ws.LocalTypes))))
+		}, slices.Collect(Matches(flt, ws.LocalTypes())))
 	})
 
 	t.Run("should be breakable", func(t *testing.T) {
 		cnt := 0
-		for range Matches(flt, ws.LocalTypes) {
+		for range Matches(flt, ws.LocalTypes()) {
 			cnt++
 			break
 		}

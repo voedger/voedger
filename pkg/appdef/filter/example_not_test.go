@@ -38,7 +38,7 @@ func ExampleNot() {
 		fmt.Println("The", flt, "Not() filter:")
 		fmt.Println("-", flt.Not())
 		fmt.Println("Testing", flt, "in", ws)
-		for t := range ws.LocalTypes {
+		for t := range ws.LocalTypes() {
 			fmt.Println("-", t, "is matched:", flt.Match(t))
 		}
 	}
