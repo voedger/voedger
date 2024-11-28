@@ -34,7 +34,7 @@ func makeType(app *appDef, ws *workspace, name QName, kind TypeKind) typ {
 	}
 	t := typ{
 		comment: makeComment(),
-		tags:    makeTags(ws.Type),
+		tags:    makeTags(ws.LocalType), // #2889 $VSQL_TagNonExp: only local tags can be used
 		app:     app,
 		ws:      ws,
 		name:    name,

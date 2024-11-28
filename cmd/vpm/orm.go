@@ -9,13 +9,14 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
-	"golang.org/x/tools/imports"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"text/template"
+
+	"golang.org/x/tools/imports"
 
 	"github.com/spf13/cobra"
 	"github.com/voedger/voedger/pkg/appdef"
@@ -136,7 +137,7 @@ func getPkgAppDefObjs(
 		// add workspace itself to the list of objects as well
 		collectITypeObjs(workspace)(workspace)
 		// then add all types of the workspace
-		for typ := range workspace.Types {
+		for typ := range workspace.Types() {
 			collectITypeObjs(workspace)(typ)
 		}
 	}

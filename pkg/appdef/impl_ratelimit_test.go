@@ -36,7 +36,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 	testWith := func(tested testedTypes) {
 		t.Run("should be ok to enum rates", func(t *testing.T) {
 			cnt := 0
-			for r := range Rates(tested.Types) {
+			for r := range Rates(tested.Types()) {
 				cnt++
 				switch cnt {
 				case 1:
@@ -54,7 +54,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 
 		t.Run("should be ok to enum limits", func(t *testing.T) {
 			cnt := 0
-			for l := range Limits(tested.Types) {
+			for l := range Limits(tested.Types()) {
 				cnt++
 				switch cnt {
 				case 1:

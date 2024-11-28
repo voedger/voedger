@@ -1000,11 +1000,7 @@ func analyseWith(with *[]WithItem, statement IStatement, c *iterateCtx) {
 			tag := item.Tags[j]
 			if err := resolveInCtx(tag, c, func(t *TagStmt, tPkg *PackageSchemaAST) error {
 				qname := tPkg.NewQName(t.Name)
-				if item.tag == appdef.NullQName {
-					item.tag = qname
-				} else {
-					item.moreTags = append(item.moreTags, qname)
-				}
+				item.tags = append(item.tags, qname)
 				return nil
 			}); err != nil {
 				c.stmtErr(&tag.Pos, err)

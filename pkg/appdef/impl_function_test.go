@@ -54,7 +54,7 @@ func Test_AppDefFunctions(t *testing.T) {
 	testWith := func(tested testedTypes) {
 		t.Run("should be ok to enumerate functions", func(t *testing.T) {
 			var names []QName
-			for f := range Functions(tested.Types) {
+			for f := range Functions(tested.Types()) {
 				require.Equal(wsName, f.Workspace().QName())
 				names = append(names, f.QName())
 			}

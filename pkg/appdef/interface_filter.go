@@ -5,6 +5,8 @@
 
 package appdef
 
+import "iter"
+
 // Filter kind enumeration
 type FilterKind uint8
 
@@ -31,23 +33,23 @@ type IFilter interface {
 
 	// Return filtered QNames.
 	// If kind is not FilterKind_QNames, returns empty iterator
-	QNames() func(func(QName) bool)
+	QNames() iter.Seq[QName]
 
 	// Return filtered type kinds.
 	// If kind is not FilterKind_Types, returns empty iterator
-	Types() func(func(TypeKind) bool)
+	Types() iter.Seq[TypeKind]
 
 	// Return filtered tags.
 	// If kind is not FilterKind_Tags, returns empty iterator
-	Tags() func(func(string) bool)
+	Tags() iter.Seq[QName]
 
 	// Returns sub-filters to conjunct
 	// If kind is not FilterKind_And, returns empty iterator
-	And() func(func(IFilter) bool)
+	And() iter.Seq[IFilter]
 
 	// Returns sub-filters to disjunct
 	// If kind is not FilterKind_Or, returns empty iterator
-	Or() func(func(IFilter) bool)
+	Or() iter.Seq[IFilter]
 
 	// Return negative sub-filter
 	// If kind is not FilterKind_Not, returns nil

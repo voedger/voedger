@@ -92,7 +92,7 @@ func Test_AppDef_AddData(t *testing.T) {
 
 		t.Run("should be ok to enum data types", func(t *testing.T) {
 			cnt := 0
-			for d := range DataTypes(tested.Types) {
+			for d := range DataTypes(tested.Types()) {
 				if !d.IsSystem() {
 					cnt++
 					require.Equal(TypeKind_Data, d.Kind())

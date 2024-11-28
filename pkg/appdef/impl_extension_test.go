@@ -70,7 +70,7 @@ func Test_AppDefExtensions(t *testing.T) {
 	testWith := func(tested testedTypes) {
 		t.Run("should be ok to enumerate extensions", func(t *testing.T) {
 			var extNames []QName
-			for ex := range Extensions(tested.Types) {
+			for ex := range Extensions(tested.Types()) {
 				require.Equal(wsName, ex.Workspace().QName())
 				extNames = append(extNames, ex.QName())
 			}

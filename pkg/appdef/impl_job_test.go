@@ -148,7 +148,7 @@ func Test_AppDef_AddJob(t *testing.T) {
 
 		t.Run("should be ok to enum jobs", func(t *testing.T) {
 			cnt := 0
-			for j := range Jobs(tested.Types) {
+			for j := range Jobs(tested.Types()) {
 				cnt++
 				switch cnt {
 				case 1:

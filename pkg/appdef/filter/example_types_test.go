@@ -41,7 +41,7 @@ func ExampleTypes() {
 		}
 
 		fmt.Println("Testing", flt, "in", ws)
-		for t := range ws.LocalTypes {
+		for t := range ws.LocalTypes() {
 			fmt.Println("-", t, "is matched:", flt.Match(t))
 		}
 	}
@@ -90,7 +90,7 @@ func ExampleAllTables() {
 	ws := app.Workspace(wsName)
 	flt := filter.AllTables()
 	fmt.Println("Testing filter AllTables in", ws)
-	for t := range ws.LocalTypes {
+	for t := range ws.LocalTypes() {
 		fmt.Println("-", t, "is matched:", flt.Match(t))
 	}
 
@@ -124,7 +124,7 @@ func ExampleAllFunctions() {
 	ws := app.Workspace(wsName)
 	flt := filter.AllFunctions()
 	fmt.Println("Testing filter AllFunctions in", ws)
-	for t := range ws.LocalTypes {
+	for t := range ws.LocalTypes() {
 		fmt.Println("-", t, "is matched:", flt.Match(t))
 	}
 

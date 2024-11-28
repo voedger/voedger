@@ -5,9 +5,14 @@
 
 package appdef
 
+import "iter"
+
 // Tag is a type that groups other types.
 type ITag interface {
 	IType
+
+	// Unwanted type assertion stub
+	isTag()
 }
 
 // IWithTags is an interface for types that have tags.
@@ -18,7 +23,7 @@ type IWithTags interface {
 	// Returns tags.
 	//
 	// Tags are returned in alphabetical order.
-	Tags(func(ITag) bool)
+	Tags() iter.Seq[ITag]
 }
 
 // ITagger is an interface to set tags for type.
@@ -27,7 +32,7 @@ type ITagger interface {
 	//
 	// # Panics:
 	//   - if tag with specified name is not found.
-	SetTag(tag QName, moreTags ...QName)
+	SetTag(tag ...QName)
 }
 
 // ITagsBuilder is an interface for building tags.

@@ -5,6 +5,8 @@
 
 package appdef
 
+import "iter"
+
 // # Implements:
 //   - IWorkspace
 type workspace struct {
@@ -72,8 +74,8 @@ func (ws *workspace) LocalType(name QName) IType {
 	return ws.types.local.find(name)
 }
 
-func (ws *workspace) LocalTypes(visit func(IType) bool) {
-	ws.types.local.all(visit)
+func (ws *workspace) LocalTypes() iter.Seq[IType] {
+	return ws.types.local.all
 }
 
 func (ws *workspace) Type(name QName) IType {
@@ -107,8 +109,8 @@ func (ws *workspace) Type(name QName) IType {
 	return find(ws)
 }
 
-func (ws *workspace) Types(visit func(IType) bool) {
-	ws.types.all.all(visit)
+func (ws *workspace) Types() iter.Seq[IType] {
+	return ws.types.all.all
 }
 
 func (ws *workspace) UsedWorkspaces(visit func(IWorkspace) bool) {
@@ -250,7 +252,7 @@ func (ws *workspace) buildAllTypes() {
 		for a := range w.Ancestors {
 			collect(a)
 		}
-		for t := range w.LocalTypes {
+		for t := range w.LocalTypes() {
 			ws.types.all.add(t)
 		}
 		for u := range w.UsedWorkspaces {
