@@ -67,7 +67,7 @@ func ExampleTags() {
 	{
 		obj := appdef.Object(app.Type, objName)
 		fmt.Println(obj, "tags:")
-		for tag := range obj.Tags {
+		for tag := range obj.Tags() {
 			fmt.Println("-", tag, tag.Comment())
 		}
 	}

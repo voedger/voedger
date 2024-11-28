@@ -5,6 +5,8 @@
 
 package appdef
 
+import "iter"
+
 // # Supports:
 //   - ITag
 type tag struct {
@@ -21,7 +23,7 @@ func newTag(app *appDef, ws *workspace, name QName) *tag {
 }
 
 // # Supports:
-//	 - ITags
+//	 - IWithTags
 type tags struct {
 	find FindType
 	list *types[ITag]
@@ -35,8 +37,8 @@ func (t *tags) HasTag(name QName) bool {
 	return t.list.find(name) != NullType
 }
 
-func (t *tags) Tags(visit func(ITag) bool) {
-	t.list.all(visit)
+func (t *tags) Tags() iter.Seq[ITag] {
+	return t.list.all
 }
 
 // # Supports:
@@ -63,4 +65,4 @@ func (t *tagBuilder) SetTag(tag ...QName) {
 type nullTags struct{}
 
 func (t nullTags) HasTag(QName) bool    { return false }
-func (t nullTags) Tags(func(ITag) bool) {}
+func (t nullTags) Tags() iter.Seq[ITag] { return func(func(ITag) bool) {} }
