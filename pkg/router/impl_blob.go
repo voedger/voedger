@@ -52,13 +52,13 @@ type blobReadDetails_Temporary struct {
 }
 
 type blobBaseMessage struct {
-	req         *http.Request
-	resp        http.ResponseWriter
-	doneChan    chan struct{}
-	wsid        istructs.WSID
-	appQName    appdef.AppQName
-	header      map[string][]string
-	blobMaxSize iblobstorage.BLOBMaxSizeType
+	req      *http.Request
+	resp     http.ResponseWriter
+	doneChan chan struct{}
+	wsid     istructs.WSID
+	appQName appdef.AppQName
+	header   map[string][]string
+	wLimiter iblobstorage.WLimiterType
 }
 
 type blobMessage struct {
@@ -126,7 +126,7 @@ func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails interface{}, bl
 		return nil
 	}
 	if err := blobStorage.ReadBLOB(bbm.req.Context(), blobKey, stateWriterDiscard, bbm.resp, iblobstoragestg.RLimiter_Null); err != nil {
-		logger.Error(fmt.Sprintf("failed to read or send BLOB: id %d, appQName %s, wsid %d: %s", blobKey.ID(), bbm.appQName, bbm.wsid, err.Error()))
+		logger.Error(fmt.Sprintf("failed to read or send BLOB: id %s, appQName %s, wsid %d: %s", blobKey.ID(), bbm.appQName, bbm.wsid, err.Error()))
 		if errors.Is(err, iblobstorage.ErrBLOBNotFound) {
 			WriteTextResponse(bbm.resp, err.Error(), http.StatusNotFound)
 			return
@@ -135,60 +135,101 @@ func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails interface{}, bl
 	}
 }
 
-func writeBLOB(ctx context.Context, wsid istructs.WSID, appQName string, header map[string][]string, resp http.ResponseWriter,
-	blobName, blobMimeType string, blobDuration iblobstorage.DurationType, blobStorage iblobstorage.IBLOBStorage, body io.ReadCloser,
-	blobMaxSize iblobstorage.BLOBMaxSizeType, bus ibus.IBus, busTimeout time.Duration) (blobID istructs.RecordID) {
-	// request VVM for check the principalToken and get a blobID
+// returns NullRecordID for temporary BLOB
+func registerBLOB(ctx context.Context, wsid istructs.WSID, appQName string, registerFuncName string, header map[string][]string, busTimeout time.Duration,
+	bus ibus.IBus, resp http.ResponseWriter) (ok bool, blobID istructs.RecordID) {
 	req := ibus.Request{
 		Method:   ibus.HTTPMethodPOST,
 		WSID:     wsid,
 		AppQName: appQName,
-		Resource: "c.sys.UploadBLOBHelper",
+		Resource: registerFuncName,
 		Body:     []byte(`{}`),
 		Header:   header,
 		Host:     localhost,
 	}
 	blobHelperResp, _, _, err := bus.SendRequest2(ctx, req, busTimeout)
 	if err != nil {
-		WriteTextResponse(resp, "failed to exec c.sys.UploadBLOBHelper: "+err.Error(), http.StatusInternalServerError)
-		return 0
+		WriteTextResponse(resp, fmt.Sprintf("failed to exec %s: %s", registerFuncName, err.Error()), http.StatusInternalServerError)
+		return false, istructs.NullRecordID
 	}
 	if blobHelperResp.StatusCode != http.StatusOK {
-		WriteTextResponse(resp, "c.sys.UploadBLOBHelper returned error: "+string(blobHelperResp.Data), blobHelperResp.StatusCode)
-		return 0
+		WriteTextResponse(resp, fmt.Sprintf("%s returned error: %s", registerFuncName, string(blobHelperResp.Data)), blobHelperResp.StatusCode)
+		return false, istructs.NullRecordID
 	}
+
 	cmdResp := map[string]interface{}{}
 	if err := json.Unmarshal(blobHelperResp.Data, &cmdResp); err != nil {
-		WriteTextResponse(resp, "failed to json-unmarshal c.sys.UploadBLOBHelper result: "+err.Error(), http.StatusInternalServerError)
-		return 0
+		WriteTextResponse(resp, fmt.Sprintf("failed to json-unmarshal %s result: %s", registerFuncName, err), http.StatusInternalServerError)
+		return false, istructs.NullRecordID
 	}
-	newIDs := cmdResp["NewIDs"].(map[string]interface{})
-
-	blobID = istructs.RecordID(newIDs["1"].(float64))
-
-	// write the BLOB
-	if blobDuration > 0 {
-		// temporary blob
-		key := iblobstorage.TempBLOBKeyType {
-			ClusterAppID:  istructs.ClusterAppID_sys_blobber,
-			WSID: wsid,
-			SUUID: iblobstorage.NewSUUID(),
-		}
-		blobStorage.WriteTempBLOB(ctx, key, descr, body, )
+	newIDsIntf, ok := cmdResp["NewIDs"]
+	if ok {
+		newIDs := newIDsIntf.(map[string]interface{})
+		return true, istructs.RecordID(newIDs["1"].(float64))
 	}
-	key := iblobstorage.PersistentBLOBKeyType{
-		AppID: istructs.ClusterAppID_sys_blobber,
-		WSID:  wsid,
-		ID:    blobID,
+	return true, istructs.NullRecordID
+}
+
+func writeBLOB_temporary(ctx context.Context, wsid istructs.WSID, appQName string, header map[string][]string, resp http.ResponseWriter,
+	blobName, blobMimeType string, blobDuration iblobstorage.DurationType, blobStorage iblobstorage.IBLOBStorage, body io.ReadCloser,
+	bus ibus.IBus, busTimeout time.Duration, wLimiter iblobstorage.WLimiterType) (blobSUUID iblobstorage.SUUID) {
+	registerFuncName, ok := durationToRegisterFuncs[blobDuration]
+	if !ok {
+		// notest
+		WriteTextResponse(resp, "unsupported blob duration value: "+strconv.Itoa(int(blobDuration)), http.StatusBadRequest)
+		return ""
+	}
+
+	if ok, _ = registerBLOB(ctx, wsid, appQName, registerFuncName, header, busTimeout, bus, resp); !ok {
+		return
+	}
+
+	blobSUUID = iblobstorage.NewSUUID()
+	key := iblobstorage.TempBLOBKeyType{
+		ClusterAppID: istructs.ClusterAppID_sys_blobber,
+		WSID:         wsid,
+		SUUID:        blobSUUID,
 	}
 	descr := iblobstorage.DescrType{
 		Name:     blobName,
 		MimeType: blobMimeType,
 	}
 
-	if err := blobStorage.WriteBLOB(ctx, key, descr, body, blobMaxSize); err != nil {
+	if err := blobStorage.WriteTempBLOB(ctx, key, descr, body, wLimiter, blobDuration); err != nil {
 		if errors.Is(err, iblobstorage.ErrBLOBSizeQuotaExceeded) {
-			WriteTextResponse(resp, fmt.Sprintf("blob size quouta exceeded (max %d allowed)", blobMaxSize), http.StatusForbidden)
+			WriteTextResponse(resp, err.Error(), http.StatusForbidden)
+			return ""
+		}
+		WriteTextResponse(resp, err.Error(), http.StatusInternalServerError)
+		return ""
+	}
+	return blobSUUID
+}
+
+func writeBLOB_persistent(ctx context.Context, wsid istructs.WSID, appQName string, header map[string][]string, resp http.ResponseWriter,
+	blobName, blobMimeType string, blobStorage iblobstorage.IBLOBStorage, body io.ReadCloser,
+	bus ibus.IBus, busTimeout time.Duration, wLimiter iblobstorage.WLimiterType) (blobID istructs.RecordID) {
+
+	// request VVM for check the principalToken and get a blobID
+	ok := false
+	if ok, blobID = registerBLOB(ctx, wsid, appQName, "c.sys/UploadBLOBHelper", header, busTimeout, bus, resp); !ok {
+		return
+	}
+
+	// write the BLOB
+	key := iblobstorage.PersistentBLOBKeyType{
+		ClusterAppID: istructs.ClusterAppID_sys_blobber,
+		WSID:         wsid,
+		BlobID:       blobID,
+	}
+	descr := iblobstorage.DescrType{
+		Name:     blobName,
+		MimeType: blobMimeType,
+	}
+
+	if err := blobStorage.WriteBLOB(ctx, key, descr, body, wLimiter); err != nil {
+		if errors.Is(err, iblobstorage.ErrBLOBSizeQuotaExceeded) {
+			WriteTextResponse(resp, err.Error(), http.StatusForbidden)
 			return 0
 		}
 		WriteTextResponse(resp, err.Error(), http.StatusInternalServerError)
@@ -196,8 +237,15 @@ func writeBLOB(ctx context.Context, wsid istructs.WSID, appQName string, header 
 	}
 
 	// set WDoc<sys.BLOB>.status = BLOBStatus_Completed
-	req.Resource = "c.sys.CUD"
-	req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"status":%d}}]}`, blobID, iblobstorage.BLOBStatus_Completed))
+	req := ibus.Request{
+		Method:   ibus.HTTPMethodPOST,
+		WSID:     wsid,
+		AppQName: appQName,
+		Resource: "c.sys.CUD",
+		Body:     []byte(fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"status":%d}}]}`, blobID, iblobstorage.BLOBStatus_Completed)),
+		Header:   header,
+		Host:     localhost,
+	}
 	cudWDocBLOBUpdateResp, _, _, err := bus.SendRequest2(ctx, req, busTimeout)
 	if err != nil {
 		WriteTextResponse(resp, "failed to exec c.sys.CUD: "+err.Error(), http.StatusInternalServerError)
@@ -218,7 +266,7 @@ func blobWriteMessageHandlerMultipart(bbm blobBaseMessage, blobStorage iblobstor
 	r := multipart.NewReader(bbm.req.Body, blobDetails.boundary)
 	var part *multipart.Part
 	var err error
-	blobIDs := []string{}
+	blobIDsOrSUUIDs := []string{}
 	partNum := 0
 	for err == nil {
 		part, err = r.NextPart()
@@ -245,25 +293,44 @@ func blobWriteMessageHandlerMultipart(bbm blobBaseMessage, blobStorage iblobstor
 			contentType = coreutils.ApplicationXBinary
 		}
 		part.Header[coreutils.Authorization] = bbm.header[coreutils.Authorization] // add auth header for c.sys.*BLOBHelper
-		blobID := writeBLOB(bbm.req.Context(), bbm.wsid, bbm.appQName.String(), part.Header, bbm.resp,
-			params["name"], contentType, blobDetails.duration, blobStorage, part, bbm.blobMaxSize, bus, busTimeout)
-		if blobID == 0 {
+		blobIDOrSUUID := ""
+		if blobDetails.duration > 0 {
+			// temporary BLOB
+			blobIDOrSUUID = string(writeBLOB_temporary(bbm.req.Context(), bbm.wsid, bbm.appQName.String(), part.Header, bbm.resp,
+				params["name"], contentType, blobDetails.duration, blobStorage, part, bus, busTimeout, bbm.wLimiter))
+		} else {
+			// persistent BLOB
+			blobID := writeBLOB_persistent(bbm.req.Context(), bbm.wsid, bbm.appQName.String(), part.Header, bbm.resp,
+				params["name"], contentType, blobStorage, part, bus, busTimeout, bbm.wLimiter)
+			blobIDOrSUUID = utils.UintToString(blobID)
+		}
+		if len(blobIDOrSUUID) == 0 {
 			return // request handled
 		}
-		blobIDs = append(blobIDs, utils.UintToString(blobID))
+		blobIDsOrSUUIDs = append(blobIDsOrSUUIDs, blobIDOrSUUID)
 		partNum++
 	}
-	WriteTextResponse(bbm.resp, strings.Join(blobIDs, ","), http.StatusOK)
+	WriteTextResponse(bbm.resp, strings.Join(blobIDsOrSUUIDs, ","), http.StatusOK)
 }
 
 func blobWriteMessageHandlerSingle(bbm blobBaseMessage, blobWriteDetails blobWriteDetailsSingle, blobStorage iblobstorage.IBLOBStorage, header map[string][]string,
 	bus ibus.IBus, busTimeout time.Duration) {
 	defer close(bbm.doneChan)
 
-	blobID := writeBLOB(bbm.req.Context(), bbm.wsid, bbm.appQName.String(), header, bbm.resp, blobWriteDetails.name,
-		blobWriteDetails.mimeType, blobWriteDetails.duration, blobStorage, bbm.req.Body, bbm.blobMaxSize, bus, busTimeout)
-	if blobID > 0 {
-		WriteTextResponse(bbm.resp, utils.UintToString(blobID), http.StatusOK)
+	if blobWriteDetails.duration > 0 {
+		// remporary BLOB
+		blobSUUID := writeBLOB_temporary(bbm.req.Context(), bbm.wsid, bbm.appQName.String(), header, bbm.resp, blobWriteDetails.name,
+			blobWriteDetails.mimeType, blobWriteDetails.duration, blobStorage, bbm.req.Body, bus, busTimeout, bbm.wLimiter)
+		if len(blobSUUID) > 0 {
+			WriteTextResponse(bbm.resp, string(blobSUUID), http.StatusOK)
+		}
+	} else {
+		// persistent BLOB
+		blobID := writeBLOB_persistent(bbm.req.Context(), bbm.wsid, bbm.appQName.String(), header, bbm.resp, blobWriteDetails.name,
+			blobWriteDetails.mimeType, blobStorage, bbm.req.Body, bus, busTimeout, bbm.wLimiter)
+		if blobID > 0 {
+			WriteTextResponse(bbm.resp, utils.UintToString(blobID), http.StatusOK)
+		}
 	}
 }
 
@@ -296,13 +363,13 @@ func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Req
 	}
 	mes := blobMessage{
 		blobBaseMessage: blobBaseMessage{
-			req:         req,
-			resp:        resp,
-			wsid:        istructs.WSID(wsid),
-			doneChan:    make(chan struct{}),
-			appQName:    appdef.NewAppQName(vars[AppOwner], vars[AppName]),
-			header:      req.Header,
-			blobMaxSize: s.BLOBMaxSize,
+			req:      req,
+			resp:     resp,
+			wsid:     istructs.WSID(wsid),
+			doneChan: make(chan struct{}),
+			appQName: appdef.NewAppQName(vars[AppOwner], vars[AppName]),
+			header:   req.Header,
+			wLimiter: s.WLimiter,
 		},
 		blobDetails: details,
 	}

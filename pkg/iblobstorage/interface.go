@@ -24,7 +24,7 @@ type IBLOBStorage interface {
 	WriteTempBLOB(ctx context.Context, key TempBLOBKeyType, descr DescrType, reader io.Reader, limiter WLimiterType, Duration DurationType) (err error)
 
 	// Function calls stateCallback then writer
-	// Both stateCallback and writer can be nil
+	// stateCallback can be nil
 	// Errors: ErrBLOBNotFound, ErrBLOBCorrupted
 	ReadBLOB(ctx context.Context, key IBLOBKey, stateCallback func(state BLOBState) error, writer io.Writer, limiter RLimiterType) (err error)
 

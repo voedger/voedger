@@ -38,4 +38,7 @@ var (
 	temporaryBLOBTTLs         = map[string]iblobstorage.DurationType{
 		"1d": iblobstorage.DurationType_1Day,
 	}
+	durationToRegisterFuncs = map[iblobstorage.DurationType]string{
+		iblobstorage.DurationType_1Day: "c.sys.RegisterTempBLOB1d",
+	}
 )

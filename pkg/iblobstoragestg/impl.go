@@ -24,7 +24,7 @@ type bStorageType struct {
 }
 
 // key does not cotain the bucket number
-func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblobstorage.DescrType, reader io.Reader, quoter iblobstorage.WLimiterType, duration iblobstorage.DurationType) (err error) {
+func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblobstorage.DescrType, reader io.Reader, limiter iblobstorage.WLimiterType, duration iblobstorage.DurationType) (err error) {
 	var (
 		bytesRead      uint64
 		chunkNumber    uint64
@@ -57,7 +57,7 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 		if currentChunkSize > 0 {
 			chunkBuf = chunkBuf[:currentChunkSize]
 			bytesRead += uint64(len(chunkBuf))
-			if err = quoter(uint64(len(chunkBuf))); err != nil {
+			if err = limiter(uint64(len(chunkBuf))); err != nil {
 				break
 			}
 			if bytesRead > chunkSize*bucketSize*bucketNumber {
@@ -147,6 +147,7 @@ func (b *bStorageType) ReadBLOB(ctx context.Context, blobKey iblobstorage.IBLOBK
 	pKeyWithBucket := newKeyWithBucketNumber(blobKeyBytes, bucketNumber)
 
 	blobDataExists := false
+	var bytesRead uint64
 	for ctx.Err() == nil && err == nil {
 		bucketExists := false
 		err = (*(b.appStorage)).Read(ctx, pKeyWithBucket, nil, nil,
@@ -156,6 +157,7 @@ func (b *bStorageType) ReadBLOB(ctx context.Context, blobKey iblobstorage.IBLOBK
 				err = limiter(uint64(len(viewRecord)))
 				if err == nil && writer != nil {
 					_, err = writer.Write(viewRecord)
+					bytesRead += uint64(len(viewRecord))
 				}
 				return err
 			})
@@ -179,6 +181,81 @@ func (b *bStorageType) ReadBLOB(ctx context.Context, blobKey iblobstorage.IBLOBK
 
 	if err != nil {
 		return err
+	}
+
+	if bytesRead != state.Size {
+		return fmt.Errorf("%w: %d bytes stored in the blob stte whereas %d bytes are read", iblobstorage.ErrBLOBCorrupted, state.Size, bytesRead)
+	}
+
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
+	if !stateExists && !blobDataExists {
+		return iblobstorage.ErrBLOBNotFound
+	}
+
+	return nil
+}
+
+func (b *bStorageType) ReadBLOB_(ctx context.Context, blobKey iblobstorage.IBLOBKey, stateCallback func(state iblobstorage.BLOBState) error, writer io.Writer, limiter iblobstorage.RLimiterType) (err error) {
+	blobKeyBytes := blobKey.Bytes()
+	pKeyState, cColState := getStateKeys(blobKeyBytes)
+	state, stateExists, err := b.readState(pKeyState, cColState)
+	if err != nil {
+		return err
+	}
+
+	if stateExists && stateCallback != nil {
+		if err = stateCallback(state); err != nil {
+			return err
+		}
+	}
+
+	if len(state.Error) > 0 {
+		return fmt.Errorf("%w: %s", iblobstorage.ErrBLOBCorrupted, state.Error)
+	}
+
+	bucketNumber := uint64(1)
+	pKeyWithBucket := newKeyWithBucketNumber(blobKeyBytes, bucketNumber)
+
+	var bytesRead uint64
+	for ctx.Err() == nil && err == nil {
+		err = (*(b.appStorage)).Read(ctx, pKeyWithBucket, nil, nil,
+			func(ccols []byte, viewRecord []byte) (err error) {
+				if !stateExists {
+					return fmt.Errorf("%w: blob data exists whereas state is missing", iblobstorage.ErrBLOBCorrupted)
+				}
+				if err = limiter(uint64(len(viewRecord))); err == nil {
+					_, err = writer.Write(viewRecord)
+					bytesRead += uint64(len(viewRecord))
+				}
+				return err
+			})
+
+		if bucketExists {
+			if bucketNumber == 1 && !stateExists {
+				return fmt.Errorf("%w: BLOB state exists but the corresponding first bucket does not exist", iblobstorage.ErrBLOBCorrupted)
+			}
+			if writer == nil {
+				break
+			}
+			bucketNumber++
+			pKeyWithBucket = mutateBucketNumber(pKeyWithBucket, bucketNumber)
+		} else {
+			if bucketNumber == 1 && stateExists {
+				return fmt.Errorf("%w: bucket 1 exists but the corresponding BLOB state does not exist", iblobstorage.ErrBLOBCorrupted)
+			}
+			break
+		}
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if bytesRead != state.Size {
+		return fmt.Errorf("%w: %d bytes stored in the blob stte whereas %d bytes are read", iblobstorage.ErrBLOBCorrupted, state.Size, bytesRead)
 	}
 
 	if ctx.Err() != nil {
@@ -230,7 +307,7 @@ func newKeyWithBucketNumber(blobKey []byte, bucket uint64) []byte {
 func (q *implSizeLimiter) limit(wantToWriteBytes uint64) error {
 	q.uploadedSize += wantToWriteBytes
 	if q.uploadedSize > uint64(q.maxSize) {
-		return iblobstorage.ErrBLOBSizeQuotaExceeded
+		return fmt.Errorf("%w (max %d allowed)", iblobstorage.ErrBLOBSizeQuotaExceeded, q.maxSize)
 	}
 	return nil
 }

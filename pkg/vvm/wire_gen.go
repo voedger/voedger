@@ -184,6 +184,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	busTimeout := vvmConfig.BusTimeout
 	blobberServiceChannels := vvmConfig.BlobberServiceChannels
 	blobMaxSizeType := vvmConfig.BLOBMaxSize
+	wLimiterType := iblobstoragestg.NewWLimiter_Size(blobMaxSizeType)
 	blobStorage := provideBlobStorage(blobAppStoragePtr, iTime)
 	cache := dbcertcache.ProvideDbCache(routerAppStoragePtr)
 	commandProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxCommand(vvmConfig)
@@ -198,7 +199,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		cleanup()
 		return nil, nil, err
 	}
-	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, blobberServiceChannels, blobMaxSizeType, blobStorage, cache, iBus, vvmPortSource, v8)
+	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, blobberServiceChannels, wLimiterType, blobStorage, cache, iBus, vvmPortSource, v8)
 	adminEndpointServiceOperator := provideAdminEndpointServiceOperator(routerServices)
 	metricsServicePortInitial := vvmConfig.MetricsServicePort
 	metricsServicePort := provideMetricsServicePort(metricsServicePortInitial, vvmIdx)
@@ -746,14 +747,14 @@ func provideRouterAppStoragePtr(astp istorage.IAppStorageProvider) dbcertcache.R
 
 // port 80 -> [0] is http server, port 443 -> [0] is https server, [1] is acme server
 func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTimeout BusTimeout, broker in10n.IN10nBroker, quotas in10n.Quotas,
-	bsc router.BlobberServiceChannels, bms iblobstorage.BLOBMaxSizeType, blobStorage BlobStorage,
+	bsc router.BlobberServiceChannels, wLimiter iblobstorage.WLimiterType, blobStorage BlobStorage,
 	autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) RouterServices {
 	bp := &router.BlobberParams{
 		ServiceChannels:        bsc,
 		BLOBStorage:            blobStorage,
 		BLOBWorkersNum:         DefaultBLOBWorkersNum,
 		RetryAfterSecondsOn503: DefaultRetryAfterSecondsOn503,
-		BLOBMaxSize:            bms,
+		WLimiter:               wLimiter,
 	}
 	httpSrv, acmeSrv, adminSrv := router.Provide(vvmCtx, rp, time.Duration(busTimeout), broker, bp, autocertCache, bus, numsAppsWorkspaces)
 	vvmPortSource.getter = func() VVMPortType {
