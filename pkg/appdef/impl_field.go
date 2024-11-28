@@ -255,7 +255,7 @@ func (ff *fields) setFieldComment(name FieldName, comment ...string) {
 	if fld == nil {
 		panic(ErrFieldNotFound(name))
 	}
-	if fld, ok := fld.(interface{ setComment(comment ...string) }); ok {
+	if fld, ok := fld.(interface{ setComment(...string) }); ok {
 		fld.setComment(comment...)
 	}
 }

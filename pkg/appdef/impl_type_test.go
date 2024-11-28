@@ -24,6 +24,9 @@ func Test_NullType(t *testing.T) {
 	require.Empty(NullType.Comment())
 	require.Empty(NullType.CommentLines())
 
+	require.False(NullType.HasTag(NullQName))
+	NullType.Tags(func(ITag) bool { require.Fail("Tags() should be empty"); return false })
+
 	require.Nil(NullType.App())
 	require.Nil(NullType.Workspace())
 	require.Equal(NullQName, NullType.QName())
@@ -254,11 +257,11 @@ func TestTypeKind_MarshalText(t *testing.T) {
 			k:    TypeKind_null,
 			want: `TypeKind_null`,
 		},
-		{name: `1 —> "TypeKind_Data"`,
+		{name: `2 —> "TypeKind_Data"`,
 			k:    TypeKind_Data,
 			want: `TypeKind_Data`,
 		},
-		{name: `2 —> "TypeKind_GDoc"`,
+		{name: `3 —> "TypeKind_GDoc"`,
 			k:    TypeKind_GDoc,
 			want: `TypeKind_GDoc`,
 		},

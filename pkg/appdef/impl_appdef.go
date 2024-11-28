@@ -175,6 +175,16 @@ func (app *appDef) makeSysStructures() {
 
 }
 
+func (app *appDef) setTypeComment(n QName, c ...string) {
+	t := app.Type(n)
+	if t == NullType {
+		panic(ErrNotFound("type %v", n))
+	}
+	if t, ok := t.(interface{ setComment(...string) }); ok {
+		t.setComment(c...)
+	}
+}
+
 // # Implements:
 //   - IAppDefBuilder
 type appDefBuilder struct {
@@ -214,4 +224,8 @@ func (ab *appDefBuilder) MustBuild() IAppDef {
 		panic(err)
 	}
 	return ab.app
+}
+
+func (ab *appDefBuilder) SetTypeComment(n QName, c ...string) {
+	ab.app.setTypeComment(n, c...)
 }
