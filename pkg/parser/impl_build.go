@@ -35,6 +35,7 @@ func (c *buildContext) build() error {
 	c.prepareWSBuilders()
 
 	var steps = []buildFunc{
+		c.tags,
 		c.types,
 		c.rates,
 		c.tables,
@@ -58,9 +59,6 @@ func (c *buildContext) build() error {
 
 func supported(stmt interface{}) bool {
 	// FIXME: this must be empty in the end
-	if _, ok := stmt.(*TagStmt); ok {
-		return false
-	}
 	if _, ok := stmt.(*RateStmt); ok {
 		return false
 	}
@@ -152,6 +150,20 @@ func (c *buildContext) addComments(s IStatement, builder appdef.ICommenter) {
 	if len(comments) > 0 {
 		builder.SetComment(comments...)
 	}
+}
+
+func (c *buildContext) tags() error {
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(tag *TagStmt, ictx *iterateCtx) {
+			qname := tag.workspace.pkg.NewQName(tag.Name)
+			builder := tag.workspace.mustBuilder(c)
+			builder.AddTag(qname)
+			if len(tag.Comments) > 0 {
+				builder.SetTypeComment(qname, tag.Comments...)
+			}
+		})
+	}
+	return nil
 }
 
 func (c *buildContext) types() error {
@@ -325,6 +337,7 @@ func (c *buildContext) views() error {
 				return c.defCtx().defBuilder.(appdef.IViewBuilder)
 			}
 			c.addComments(view, vb())
+			c.applyTags(view.With, c.defCtx().defBuilder.(appdef.ITagger))
 
 			resolveConstraints := func(f *ViewField) []appdef.IConstraint {
 				cc := []appdef.IConstraint{}
@@ -442,9 +455,18 @@ func (c *buildContext) commands() error {
 			for _, state := range cmd.State {
 				b.States().Add(state.storageQName, state.entityQNames...)
 			}
+			c.applyTags(cmd.With, b)
 		})
 	}
 	return nil
+}
+
+func (c *buildContext) applyTags(with []WithItem, t appdef.ITagger) {
+	for _, item := range with {
+		if item.tag != appdef.NullQName {
+			t.SetTag(item.tag, item.moreTags...)
+		}
+	}
 }
 
 func (c *buildContext) queries() error {
@@ -472,7 +494,7 @@ func (c *buildContext) queries() error {
 			for _, state := range q.State {
 				b.States().Add(state.storageQName, state.entityQNames...)
 			}
-
+			c.applyTags(q.With, b)
 		})
 	}
 	return nil
@@ -525,6 +547,7 @@ func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt) {
 	if table.Abstract {
 		c.defCtx().defBuilder.(appdef.IWithAbstractBuilder).SetAbstract()
 	}
+	c.applyTags(table.With, c.defCtx().defBuilder.(appdef.ITagger))
 	c.popDef()
 }
 

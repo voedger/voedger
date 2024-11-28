@@ -113,7 +113,6 @@ type RootStatement struct {
 	Role           *RoleStmt           `parser:"| @@"`
 	Rate           *RateStmt           `parser:"| @@"`
 	Limit          *LimitStmt          `parser:"| @@"`
-	Tag            *TagStmt            `parser:"| @@"`
 	ExtEngine      *RootExtEngineStmt  `parser:"| @@"`
 	Workspace      *WorkspaceStmt      `parser:"| @@"`
 	AlterWorkspace *AlterWorkspaceStmt `parser:"| @@"`
@@ -552,7 +551,8 @@ func (s RoleStmt) GetName() string { return string(s.Name) }
 
 type TagStmt struct {
 	Statement
-	Name Ident `parser:"'TAG' @Ident"`
+	Name      Ident `parser:"'TAG' @Ident"`
+	workspace workspaceAddr
 }
 
 func (s TagStmt) GetName() string { return string(s.Name) }
@@ -770,8 +770,10 @@ func (s *CommandStmt) GetName() string            { return string(s.Name) }
 func (s *CommandStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 type WithItem struct {
-	Comment *string    `parser:"('Comment' '=' @String)"`
-	Tags    []DefQName `parser:"| ('Tags' '=' '(' @@ (',' @@)* ')')"`
+	Comment  *string        `parser:"('Comment' '=' @String)"`
+	Tags     []DefQName     `parser:"| ('Tags' '=' '(' @@ (',' @@)* ')')"`
+	tag      appdef.QName   // filled on the analysis stage
+	moreTags []appdef.QName // filled on the analysis stage
 }
 
 type AnyOrVoidOrDef struct {
