@@ -26,9 +26,6 @@ DECLARE nAntiDdosPerSecRate int32 DEFAULT 1000;
 
 
 
--- Declare tag to assign it later to definition(s)
-TAG BackofficeTag;
-
 -- Package-level extensions
 EXTENSION ENGINE WASM (
 
@@ -52,6 +49,9 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
         Country varchar(2) CHECK '^[A-Za-z]{2}$',
         Description varchar(100)
     );
+
+    -- Declare tag to assign it later to definition(s)
+    TAG BackofficeTag;
 
     /*
         Abstract tables can only be used for INHERITance by other tables.
