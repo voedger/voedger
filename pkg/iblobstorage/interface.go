@@ -11,6 +11,8 @@ import (
 
 type IBLOBKey interface {
 	Bytes() []byte
+	// blobID for persistent, SUUID for temporary
+	ID() string
 }
 
 type IBLOBStorage interface {
@@ -24,7 +26,7 @@ type IBLOBStorage interface {
 	// Function calls stateCallback then writer
 	// Both stateCallback and writer can be nil
 	// Errors: ErrBLOBNotFound, ErrBLOBCorrupted
-	ReadBLOB(ctx context.Context, key IBLOBKey, stateCallback func(state BLOBState) error, writer io.Writer) (err error)
+	ReadBLOB(ctx context.Context, key IBLOBKey, stateCallback func(state BLOBState) error, writer io.Writer, limiter RLimiterType) (err error)
 
 	// Wrapper around ReadBLOB() with nil writer argument
 	QueryBLOBState(ctx context.Context, key IBLOBKey) (state BLOBState, err error)

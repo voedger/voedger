@@ -4,6 +4,8 @@
 
 package iblobstoragestg
 
+import "github.com/voedger/voedger/pkg/iblobstorage"
+
 const (
 	chunkSize  uint64 = 102400
 	zeroCCol   uint64 = 0
@@ -13,4 +15,4 @@ const (
 	uint64Size        = 8
 )
 
-
+var RLimiter_Null iblobstorage.RLimiterType = func(wantReadBytes uint64) error { return nil }

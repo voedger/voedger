@@ -16,6 +16,7 @@ type BLOBState struct {
 	// Not empty if error happened during upload
 	Error string
 	// 0 - the BLOB is persistent, otherwise - temporary
+	// TODO: it is not a state, it is like properties. Descr - wrong because we provide descr to WriteBLOB and possible: duration>0 but PersistentBLOBKey is provided
 	Duration DurationType
 }
 
@@ -48,6 +49,7 @@ const (
 
 type BLOBMaxSizeType uint64
 
+// DurationType^2 - amount of days to store the BLOB
 type DurationType int
 
 type WLimiterType func(wantToWriteBytes uint64) error

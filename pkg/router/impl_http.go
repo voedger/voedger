@@ -132,7 +132,7 @@ func (s *httpService) registerHandlers(busTimeout time.Duration, numsAppsWorkspa
 		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}", AppOwner, AppName, WSID), corsHandler(s.blobWriteRequestHandler())).
 			Methods("POST", "OPTIONS").
 			Name("blob write")
-		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}/{%s:[0-9]+}", AppOwner, AppName, WSID, blobID), corsHandler(s.blobReadRequestHandler())).
+		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9]+}", AppOwner, AppName, WSID, blobID), corsHandler(s.blobReadRequestHandler())).
 			Methods("POST", "GET", "OPTIONS").
 			Name("blob read")
 	}

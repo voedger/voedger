@@ -7,6 +7,8 @@ package iblobstorage
 
 import (
 	"encoding/binary"
+
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
 // nolint: revive
@@ -19,6 +21,10 @@ func (t *PersistentBLOBKeyType) Bytes() []byte {
 	return res
 }
 
+func (t *PersistentBLOBKeyType) ID() string {
+	return utils.UintToString(t.BlobID)
+}
+
 // nolint: revive
 func (t *TempBLOBKeyType) Bytes() []byte {
 	res := make([]byte, 20)
@@ -27,4 +33,8 @@ func (t *TempBLOBKeyType) Bytes() []byte {
 	binary.LittleEndian.PutUint64(res[12:], uint64(t.WSID))
 	res = append(res, []byte(t.SUUID)...)
 	return res
+}
+
+func (t *TempBLOBKeyType) ID() string {
+	return string(t.SUUID)
 }

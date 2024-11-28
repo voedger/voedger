@@ -56,7 +56,7 @@ func TestBasicUsage(t *testing.T) {
 		}, func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, duration iblobstorage.DurationType) error {
 			ctx := context.Background()
 			return blobber.WriteTempBLOB(ctx, key, desc, reader, NewWLimiter_Size(maxSize), duration)
-		}, iblobstorage.DurationType_1Hour)
+		}, iblobstorage.DurationType_1Day)
 	})
 }
 
@@ -88,7 +88,7 @@ func testBasicUsage(t *testing.T, keyGetter func() iblobstorage.IBLOBKey, blobWr
 			state = blobState
 			require.Nil(state)
 			return nil
-		}, writer)
+		}, writer, RLimiter_Null)
 		require.ErrorIs(err, iblobstorage.ErrBLOBNotFound)
 	})
 
@@ -127,7 +127,7 @@ func testBasicUsage(t *testing.T, keyGetter func() iblobstorage.IBLOBKey, blobWr
 			state = blobState
 			log.Println(state.Error)
 			return nil
-		}, writer)
+		}, writer, RLimiter_Null)
 
 		require.NoError(err)
 		err = writer.Flush()
@@ -178,7 +178,7 @@ func TestFewBucketsBLOB(t *testing.T) {
 	reader.Reset(bigBLOB)
 
 	// Read
-	err = blobber.ReadBLOB(ctx, &key, func(blobState iblobstorage.BLOBState) (err error) { return nil }, writer)
+	err = blobber.ReadBLOB(ctx, &key, func(blobState iblobstorage.BLOBState) (err error) { return nil }, writer, RLimiter_Null)
 	require.NoError(err)
 	err = writer.Flush()
 	require.NoError(err)

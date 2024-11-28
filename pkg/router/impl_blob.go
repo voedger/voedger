@@ -27,6 +27,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
+	"github.com/voedger/voedger/pkg/iblobstoragestg"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -34,14 +35,20 @@ import (
 type blobWriteDetailsSingle struct {
 	name     string
 	mimeType string
+	duration iblobstorage.DurationType
 }
 
 type blobWriteDetailsMultipart struct {
 	boundary string
+	duration iblobstorage.DurationType
 }
 
-type blobReadDetails struct {
+type blobReadDetails_Persistent struct {
 	blobID istructs.RecordID
+}
+
+type blobReadDetails_Temporary struct {
+	suuid iblobstorage.SUUID
 }
 
 type blobBaseMessage struct {
@@ -56,6 +63,7 @@ type blobBaseMessage struct {
 
 type blobMessage struct {
 	blobBaseMessage
+	// could be blobReadDetails_Temporary or blobReadDetails_Persistent
 	blobDetails interface{}
 }
 
@@ -63,7 +71,7 @@ func (bm *blobBaseMessage) Release() {
 	bm.req.Body.Close()
 }
 
-func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails blobReadDetails, blobStorage iblobstorage.IBLOBStorage, bus ibus.IBus, busTimeout time.Duration) {
+func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails interface{}, blobStorage iblobstorage.IBLOBStorage, bus ibus.IBus, busTimeout time.Duration) {
 	defer close(bbm.doneChan)
 
 	// request to VVM to check the principalToken
@@ -87,10 +95,23 @@ func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails blobReadDetails
 	}
 
 	// read the BLOB
-	key := iblobstorage.PersistentBLOBKeyType{
-		AppID: istructs.ClusterAppID_sys_blobber,
-		WSID:  bbm.wsid,
-		ID:    blobReadDetails.blobID,
+	var blobKey iblobstorage.IBLOBKey
+	switch typedKey := blobReadDetails.(type) {
+	case blobReadDetails_Persistent:
+		blobKey = &iblobstorage.PersistentBLOBKeyType{
+			ClusterAppID: istructs.ClusterAppID_sys_blobber,
+			WSID:         bbm.wsid,
+			BlobID:       typedKey.blobID,
+		}
+	case blobReadDetails_Temporary:
+		blobKey = &iblobstorage.TempBLOBKeyType{
+			ClusterAppID: istructs.ClusterAppID_sys_blobber,
+			WSID:         bbm.wsid,
+			SUUID:        typedKey.suuid,
+		}
+	default:
+		// notest
+		panic(fmt.Sprintf("unexpected blobReadDetails: %T", blobReadDetails))
 	}
 	stateWriterDiscard := func(state iblobstorage.BLOBState) error {
 		if state.Status != iblobstorage.BLOBStatus_Completed {
@@ -104,8 +125,8 @@ func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails blobReadDetails
 		bbm.resp.WriteHeader(http.StatusOK)
 		return nil
 	}
-	if err := blobStorage.ReadBLOB(bbm.req.Context(), key, stateWriterDiscard, bbm.resp); err != nil {
-		logger.Error(fmt.Sprintf("failed to read or send BLOB: id %d, appQName %s, wsid %d: %s", blobReadDetails.blobID, bbm.appQName, bbm.wsid, err.Error()))
+	if err := blobStorage.ReadBLOB(bbm.req.Context(), blobKey, stateWriterDiscard, bbm.resp, iblobstoragestg.RLimiter_Null); err != nil {
+		logger.Error(fmt.Sprintf("failed to read or send BLOB: id %d, appQName %s, wsid %d: %s", blobKey.ID(), bbm.appQName, bbm.wsid, err.Error()))
 		if errors.Is(err, iblobstorage.ErrBLOBNotFound) {
 			WriteTextResponse(bbm.resp, err.Error(), http.StatusNotFound)
 			return
@@ -115,7 +136,7 @@ func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails blobReadDetails
 }
 
 func writeBLOB(ctx context.Context, wsid istructs.WSID, appQName string, header map[string][]string, resp http.ResponseWriter,
-	blobName, blobMimeType string, blobStorage iblobstorage.IBLOBStorage, body io.ReadCloser,
+	blobName, blobMimeType string, blobDuration iblobstorage.DurationType, blobStorage iblobstorage.IBLOBStorage, body io.ReadCloser,
 	blobMaxSize iblobstorage.BLOBMaxSizeType, bus ibus.IBus, busTimeout time.Duration) (blobID istructs.RecordID) {
 	// request VVM for check the principalToken and get a blobID
 	req := ibus.Request{
@@ -144,7 +165,17 @@ func writeBLOB(ctx context.Context, wsid istructs.WSID, appQName string, header 
 	newIDs := cmdResp["NewIDs"].(map[string]interface{})
 
 	blobID = istructs.RecordID(newIDs["1"].(float64))
+
 	// write the BLOB
+	if blobDuration > 0 {
+		// temporary blob
+		key := iblobstorage.TempBLOBKeyType {
+			ClusterAppID:  istructs.ClusterAppID_sys_blobber,
+			WSID: wsid,
+			SUUID: iblobstorage.NewSUUID(),
+		}
+		blobStorage.WriteTempBLOB(ctx, key, descr, body, )
+	}
 	key := iblobstorage.PersistentBLOBKeyType{
 		AppID: istructs.ClusterAppID_sys_blobber,
 		WSID:  wsid,
@@ -180,11 +211,11 @@ func writeBLOB(ctx context.Context, wsid istructs.WSID, appQName string, header 
 	return blobID
 }
 
-func blobWriteMessageHandlerMultipart(bbm blobBaseMessage, blobStorage iblobstorage.IBLOBStorage, boundary string,
+func blobWriteMessageHandlerMultipart(bbm blobBaseMessage, blobStorage iblobstorage.IBLOBStorage, blobDetails blobWriteDetailsMultipart,
 	bus ibus.IBus, busTimeout time.Duration) {
 	defer close(bbm.doneChan)
 
-	r := multipart.NewReader(bbm.req.Body, boundary)
+	r := multipart.NewReader(bbm.req.Body, blobDetails.boundary)
 	var part *multipart.Part
 	var err error
 	blobIDs := []string{}
@@ -215,7 +246,7 @@ func blobWriteMessageHandlerMultipart(bbm blobBaseMessage, blobStorage iblobstor
 		}
 		part.Header[coreutils.Authorization] = bbm.header[coreutils.Authorization] // add auth header for c.sys.*BLOBHelper
 		blobID := writeBLOB(bbm.req.Context(), bbm.wsid, bbm.appQName.String(), part.Header, bbm.resp,
-			params["name"], contentType, blobStorage, part, bbm.blobMaxSize, bus, busTimeout)
+			params["name"], contentType, blobDetails.duration, blobStorage, part, bbm.blobMaxSize, bus, busTimeout)
 		if blobID == 0 {
 			return // request handled
 		}
@@ -230,7 +261,7 @@ func blobWriteMessageHandlerSingle(bbm blobBaseMessage, blobWriteDetails blobWri
 	defer close(bbm.doneChan)
 
 	blobID := writeBLOB(bbm.req.Context(), bbm.wsid, bbm.appQName.String(), header, bbm.resp, blobWriteDetails.name,
-		blobWriteDetails.mimeType, blobStorage, bbm.req.Body, bbm.blobMaxSize, bus, busTimeout)
+		blobWriteDetails.mimeType, blobWriteDetails.duration, blobStorage, bbm.req.Body, bbm.blobMaxSize, bus, busTimeout)
 	if blobID > 0 {
 		WriteTextResponse(bbm.resp, utils.UintToString(blobID), http.StatusOK)
 	}
@@ -243,12 +274,12 @@ func blobMessageHandler(vvmCtx context.Context, sc iprocbus.ServiceChannel, blob
 		case mesIntf := <-sc:
 			blobMessage := mesIntf.(blobMessage)
 			switch blobDetails := blobMessage.blobDetails.(type) {
-			case blobReadDetails:
+			case blobReadDetails_Persistent, blobReadDetails_Temporary:
 				blobReadMessageHandler(blobMessage.blobBaseMessage, blobDetails, blobStorage, bus, busTimeout)
 			case blobWriteDetailsSingle:
 				blobWriteMessageHandlerSingle(blobMessage.blobBaseMessage, blobDetails, blobStorage, blobMessage.header, bus, busTimeout)
 			case blobWriteDetailsMultipart:
-				blobWriteMessageHandlerMultipart(blobMessage.blobBaseMessage, blobStorage, blobDetails.boundary, bus, busTimeout)
+				blobWriteMessageHandlerMultipart(blobMessage.blobBaseMessage, blobStorage, blobDetails, bus, busTimeout)
 			}
 		case <-vvmCtx.Done():
 			return
@@ -300,17 +331,26 @@ func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Req
 func (s *httpService) blobReadRequestHandler() http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
-		blobID, err := strconv.ParseUint(vars[blobID], utils.DecimalBase, utils.BitSize64)
-		if err != nil {
-			// notest: checked by router url rule
-			panic(err)
+		var blobReadDetails interface{}
+		if len(blobID) > 40 {
+			// consider the blobID contains SUUID of a temporary BLOB
+			blobReadDetails = blobReadDetails_Temporary{
+				suuid: blobID,
+			}
+		} else {
+			// conider the BLOB is persistent
+			blobID, err := strconv.ParseUint(vars[blobID], utils.DecimalBase, utils.BitSize64)
+			if err != nil {
+				// notest: checked by router url rule
+				panic(err)
+			}
+			blobReadDetails = blobReadDetails_Persistent{
+				blobID: istructs.RecordID(blobID),
+			}
 		}
 		principalToken := headerOrCookieAuth(resp, req)
 		if len(principalToken) == 0 {
 			return
-		}
-		blobReadDetails := blobReadDetails{
-			blobID: istructs.RecordID(blobID),
 		}
 		s.blobRequestHandler(resp, req, blobReadDetails)
 	}
@@ -326,7 +366,7 @@ func (s *httpService) blobWriteRequestHandler() http.HandlerFunc {
 			return
 		}
 
-		queryParamName, queryParamMimeType, boundary, ok := getBlobParams(resp, req)
+		queryParamName, queryParamMimeType, boundary, duration, ok := getBlobParams(resp, req)
 		if !ok {
 			return
 		}
@@ -335,10 +375,12 @@ func (s *httpService) blobWriteRequestHandler() http.HandlerFunc {
 			s.blobRequestHandler(resp, req, blobWriteDetailsSingle{
 				name:     queryParamName,
 				mimeType: queryParamMimeType,
+				duration: duration,
 			})
 		} else {
 			s.blobRequestHandler(resp, req, blobWriteDetailsMultipart{
 				boundary: boundary,
+				duration: duration,
 			})
 		}
 	}
@@ -384,16 +426,27 @@ func headerOrCookieAuth(rw http.ResponseWriter, req *http.Request) (principalTok
 
 // determines BLOBs write kind: name+mimeType in query params -> single BLOB, body is BLOB content, otherwise -> body is multipart/form-data
 // (is multipart/form-data) == len(boundary) > 0
-func getBlobParams(rw http.ResponseWriter, req *http.Request) (name, mimeType, boundary string, ok bool) {
+func getBlobParams(rw http.ResponseWriter, req *http.Request) (name, mimeType, boundary string, duration iblobstorage.DurationType, ok bool) {
 	badRequest := func(msg string) {
 		WriteTextResponse(rw, msg, http.StatusBadRequest)
 	}
 	values := req.URL.Query()
 	nameQuery, isSingleBLOB := values["name"]
 	mimeTypeQuery, hasMimeType := values["mimeType"]
+	ttlQuery := values["ttl"]
 	if (isSingleBLOB && !hasMimeType) || (!isSingleBLOB && hasMimeType) {
 		badRequest("both name and mimeType query params must be specified")
 		return
+	}
+
+	if len(ttlQuery) > 0 {
+		// temporary BLOB
+		ttl := ttlQuery[0]
+		ttlSupported := false
+		if duration, ttlSupported = temporaryBLOBTTLs[ttl]; !ttlSupported {
+			badRequest(`"1d" is only supported for now for temporary blob ttl`)
+			return
+		}
 	}
 
 	contentType := req.Header.Get(coreutils.ContentType)
@@ -425,5 +478,5 @@ func getBlobParams(rw http.ResponseWriter, req *http.Request) (name, mimeType, b
 		badRequest("boundary of multipart/form-data is not specified")
 		return
 	}
-	return name, mimeType, boundary, true
+	return name, mimeType, boundary, duration, true
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/iblobstorage"
 )
 
 const (
@@ -34,4 +35,7 @@ var (
 	onRequestCtxClosed func() = nil // used in tests
 	elem1                     = map[string]interface{}{"fld1": "fld1Val"}
 	adminEndpoint             = "127.0.0.1:55555"
+	temporaryBLOBTTLs         = map[string]iblobstorage.DurationType{
+		"1d": iblobstorage.DurationType_1Day,
+	}
 )

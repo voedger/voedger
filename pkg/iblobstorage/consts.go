@@ -6,12 +6,8 @@
 package iblobstorage
 
 const (
-	SUUIDRandomPartLen = 16
-)
-
-const (
-	DurationType_1Hour   DurationType = 1
-	DurationType_32Hours DurationType = 5
+	DurationType_1Day  DurationType = 1
+	SUUIDRandomPartLen              = 16
 )
 
 const (
