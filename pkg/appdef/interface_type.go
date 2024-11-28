@@ -170,7 +170,7 @@ type (
 	FindType func(QName) IType
 
 	// Types iterator.
-	SeqType iter.Seq[IType]
+	SeqType = iter.Seq[IType]
 )
 
 type ITypeBuilder interface {

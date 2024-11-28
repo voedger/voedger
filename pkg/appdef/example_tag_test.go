@@ -49,7 +49,7 @@ func ExampleTags() {
 	// How to enum all tags in AppDef
 	{
 		fmt.Println("All application tags:")
-		for tag := range appdef.Tags(app.Types) {
+		for tag := range appdef.Tags(app.Types()) {
 			fmt.Println("-", tag, tag.Comment())
 		}
 	}

@@ -7,6 +7,7 @@ package appdef
 
 import (
 	"fmt"
+	"iter"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,7 +16,7 @@ import (
 
 type testedTypes interface {
 	Type(QName) IType
-	Types(func(IType) bool)
+	Types() iter.Seq[IType]
 }
 
 func Test_NullType(t *testing.T) {

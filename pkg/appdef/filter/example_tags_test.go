@@ -46,7 +46,7 @@ func ExampleTags() {
 		}
 
 		fmt.Println("Testing", flt, "in", ws)
-		for t := range appdef.ODocs(ws.LocalTypes) {
+		for t := range appdef.ODocs(ws.LocalTypes()) {
 			fmt.Println("-", t, "is matched:", flt.Match(t))
 		}
 	}

@@ -36,7 +36,7 @@ func ExampleMatches() {
 	flt := filter.And(filter.Types(appdef.TypeKind_ODoc), filter.QNames(doc))
 
 	fmt.Println("Matches for", flt, "in", ws, ":")
-	for t := range filter.Matches(flt, ws.LocalTypes) {
+	for t := range filter.Matches(flt, ws.LocalTypes()) {
 		fmt.Println("-", t)
 	}
 

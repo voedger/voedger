@@ -222,7 +222,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 		t.Run("should be ok to enum projectors", func(t *testing.T) {
 			cnt := 0
-			for p := range Projectors(tested.Types) {
+			for p := range Projectors(tested.Types()) {
 				cnt++
 				switch cnt {
 				case 1:

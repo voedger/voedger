@@ -40,7 +40,7 @@ func ExampleAnd() {
 			fmt.Println("-", f)
 		}
 		fmt.Println("Testing", flt, "in", ws)
-		for t := range ws.LocalTypes {
+		for t := range ws.LocalTypes() {
 			fmt.Println("-", t, "is matched:", flt.Match(t))
 		}
 	}

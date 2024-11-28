@@ -53,7 +53,7 @@ func ExampleStructures() {
 	{
 		// how to enum structures
 		cnt := 0
-		for s := range appdef.Structures(app.Types) {
+		for s := range appdef.Structures(app.Types()) {
 			cnt++
 			fmt.Printf("%d. %v\n", cnt, s)
 			fmt.Printf("- user/overall field count: %d/%d\n", s.UserFieldCount(), s.FieldCount())
@@ -69,7 +69,7 @@ func ExampleStructures() {
 	// how to inspect builded AppDef with records
 	{
 		cnt := 0
-		for r := range appdef.Records(app.Types) {
+		for r := range appdef.Records(app.Types()) {
 			cnt++
 			fmt.Printf("%d. %v\n", cnt, r)
 			fmt.Printf("- user/overall field count: %d/%d\n", r.UserFieldCount(), r.FieldCount())
