@@ -90,5 +90,23 @@ func TestTags(t *testing.T) {
 			doc := wsb.AddODoc(docName)
 			require.Panics(func() { doc.SetTag(tagNames[0]) })
 		})
+
+		// #2889 $VSQL_TagNonExp: only local tags can be used
+		t.Run("if set tag from ancestor ws", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
+
+			ancName := NewQName("test", "wsAncestor")
+			tagName := NewQName("test", "tagAncestor")
+
+			ancWS := adb.AddWorkspace(ancName)
+			ancWS.AddTag(tagName)
+
+			wsb := adb.AddWorkspace(wsName)
+			wsb.SetAncestors(ancName)
+
+			doc := wsb.AddODoc(docName)
+			require.Panics(func() { doc.SetTag(tagName) })
+		})
 	})
 }
