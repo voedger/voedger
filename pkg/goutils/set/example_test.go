@@ -79,7 +79,7 @@ func ExampleSet_All() {
 	s := set.From(Jan, Feb, Mar)
 
 	// Enumerate values from Set.
-	for v := range s.All {
+	for v := range s.All() {
 		fmt.Println(v)
 	}
 
@@ -163,6 +163,23 @@ func ExampleSet_ClearAll() {
 
 	// Output:
 	// []
+}
+
+func ExampleSet_Collect() {
+	// This example demonstrates how to use Set type.
+
+	// Create new Set from values.
+	spring := set.From(Mar, Apr, May)
+	autumn := set.From(Sep, Oct, Nov)
+
+	// Collect values from iterator into Set.
+	offSeason := set.Empty[Month]()
+	offSeason.Collect(spring.All())
+	offSeason.Collect(autumn.All())
+	fmt.Println(offSeason)
+
+	// Output:
+	// [Mar Apr May Sep Oct Nov]
 }
 
 func ExampleSet_Contains() {

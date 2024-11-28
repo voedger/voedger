@@ -49,20 +49,21 @@ func TestSet_All(t *testing.T) {
 	set := From[uint8](0, 1, 2, 3, 126, 127, 128, 129, 253, 254, 255)
 
 	var sum int
-	for v := range set.All {
-		sum += int(v)
+	for i, v := range set.All() {
+		sum += i * int(v)
 	}
-	require.EqualValues(1278, sum)
+	require.EqualValues(0*0+1*1+2*2+3*3+4*126+5*127+6*128+7*129+8*253+9*254+10*255, sum)
 
 	t.Run("should be breakable", func(t *testing.T) {
+		const cnt = 5
 		var sum int
-		for v := range set.All {
+		for i, v := range set.All() {
 			sum += int(v)
-			if v > 128 {
+			if i == cnt-1 {
 				break
 			}
 		}
-		require.EqualValues(0+1+2+3+126+127+128+129, sum)
+		require.EqualValues(0+1+2+3+126, sum)
 	})
 }
 
@@ -115,7 +116,7 @@ func TestSet_Backward(t *testing.T) {
 	set := From[uint8](0, 1, 2, 3, 126, 127, 128, 129, 253, 254, 255)
 	set.SetReadOnly()
 	result := make([]int, 0, set.Len())
-	for v := range set.Backward {
+	for v := range set.Backward() {
 		result = append(result, int(v))
 	}
 	require.EqualValues([]int{255, 254, 253, 129, 128, 127, 126, 3, 2, 1, 0}, result)
@@ -123,7 +124,7 @@ func TestSet_Backward(t *testing.T) {
 	t.Run("should be breakable", func(t *testing.T) {
 		set := From[uint8](0, 1, 2, 3, 129, 253, 254, 255)
 		result := make([]int, 0, set.Len())
-		for v := range set.Backward {
+		for v := range set.Backward() {
 			result = append(result, int(v))
 			if v < 128 {
 				break
