@@ -22,6 +22,8 @@ func newTag(app *appDef, ws *workspace, name QName) *tag {
 	return t
 }
 
+func (tag) isTag() {}
+
 // # Supports:
 //	 - IWithTags
 type tags struct {
