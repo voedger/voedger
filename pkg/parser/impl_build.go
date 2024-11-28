@@ -463,8 +463,8 @@ func (c *buildContext) commands() error {
 
 func (c *buildContext) applyTags(with []WithItem, t appdef.ITagger) {
 	for _, item := range with {
-		if item.tag != appdef.NullQName {
-			t.SetTag(item.tag, item.moreTags...)
+		if len(item.tags) > 0 {
+			t.SetTag(item.tags...)
 		}
 	}
 }
