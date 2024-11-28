@@ -186,7 +186,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideStatelessResources,
 		provideSidecarApps,
 		provideN10NQuotas,
-		iblobstoragestg.NewWLimiter_Size,
+		provideWLimiterFactory,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -204,6 +204,12 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"SecretsReader",
 		),
 	))
+}
+
+func provideWLimiterFactory(maxSize iblobstorage.BLOBMaxSizeType) func() iblobstorage.WLimiterType {
+	return func() iblobstorage.WLimiterType {
+		return iblobstoragestg.NewWLimiter_Size(maxSize)
+	}
 }
 
 func provideN10NQuotas(vvmCfg *VVMConfig) in10n.Quotas {
@@ -692,14 +698,14 @@ func provideRouterAppStoragePtr(astp istorage.IAppStorageProvider) dbcertcache.R
 
 // port 80 -> [0] is http server, port 443 -> [0] is https server, [1] is acme server
 func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTimeout BusTimeout, broker in10n.IN10nBroker, quotas in10n.Quotas,
-	bsc router.BlobberServiceChannels, wLimiter iblobstorage.WLimiterType, blobStorage BlobStorage,
+	bsc router.BlobberServiceChannels, wLimiterFactory func() iblobstorage.WLimiterType, blobStorage BlobStorage,
 	autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) RouterServices {
 	bp := &router.BlobberParams{
 		ServiceChannels:        bsc,
 		BLOBStorage:            blobStorage,
 		BLOBWorkersNum:         DefaultBLOBWorkersNum,
 		RetryAfterSecondsOn503: DefaultRetryAfterSecondsOn503,
-		WLimiter:               wLimiter,
+		WLimiterFactory:        wLimiterFactory,
 	}
 	httpSrv, acmeSrv, adminSrv := router.Provide(vvmCtx, rp, time.Duration(busTimeout), broker, bp, autocertCache, bus, numsAppsWorkspaces)
 	vvmPortSource.getter = func() VVMPortType {

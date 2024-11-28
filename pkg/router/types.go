@@ -72,7 +72,7 @@ type BlobberParams struct {
 	BLOBWorkersNum         int
 	procBus                iprocbus.IProcBus
 	RetryAfterSecondsOn503 int
-	WLimiter               iblobstorage.WLimiterType
+	WLimiterFactory        func() iblobstorage.WLimiterType
 }
 
 type route struct {

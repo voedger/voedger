@@ -52,13 +52,13 @@ type blobReadDetails_Temporary struct {
 }
 
 type blobBaseMessage struct {
-	req      *http.Request
-	resp     http.ResponseWriter
-	doneChan chan struct{}
-	wsid     istructs.WSID
-	appQName appdef.AppQName
-	header   map[string][]string
-	wLimiter iblobstorage.WLimiterType
+	req             *http.Request
+	resp            http.ResponseWriter
+	doneChan        chan struct{}
+	wsid            istructs.WSID
+	appQName        appdef.AppQName
+	header          map[string][]string
+	wLimiterFactory func() iblobstorage.WLimiterType
 }
 
 type blobMessage struct {
@@ -172,7 +172,7 @@ func registerBLOB(ctx context.Context, wsid istructs.WSID, appQName string, regi
 
 func writeBLOB_temporary(ctx context.Context, wsid istructs.WSID, appQName string, header map[string][]string, resp http.ResponseWriter,
 	blobName, blobMimeType string, blobDuration iblobstorage.DurationType, blobStorage iblobstorage.IBLOBStorage, body io.ReadCloser,
-	bus ibus.IBus, busTimeout time.Duration, wLimiter iblobstorage.WLimiterType) (blobSUUID iblobstorage.SUUID) {
+	bus ibus.IBus, busTimeout time.Duration, wLimiterFactory func() iblobstorage.WLimiterType) (blobSUUID iblobstorage.SUUID) {
 	registerFuncName, ok := durationToRegisterFuncs[blobDuration]
 	if !ok {
 		// notest
@@ -195,6 +195,7 @@ func writeBLOB_temporary(ctx context.Context, wsid istructs.WSID, appQName strin
 		MimeType: blobMimeType,
 	}
 
+	wLimiter := wLimiterFactory()
 	if err := blobStorage.WriteTempBLOB(ctx, key, descr, body, wLimiter, blobDuration); err != nil {
 		if errors.Is(err, iblobstorage.ErrBLOBSizeQuotaExceeded) {
 			WriteTextResponse(resp, err.Error(), http.StatusForbidden)
@@ -208,7 +209,7 @@ func writeBLOB_temporary(ctx context.Context, wsid istructs.WSID, appQName strin
 
 func writeBLOB_persistent(ctx context.Context, wsid istructs.WSID, appQName string, header map[string][]string, resp http.ResponseWriter,
 	blobName, blobMimeType string, blobStorage iblobstorage.IBLOBStorage, body io.ReadCloser,
-	bus ibus.IBus, busTimeout time.Duration, wLimiter iblobstorage.WLimiterType) (blobID istructs.RecordID) {
+	bus ibus.IBus, busTimeout time.Duration, wLimiterFactory func() iblobstorage.WLimiterType) (blobID istructs.RecordID) {
 
 	// request VVM for check the principalToken and get a blobID
 	ok := false
@@ -227,6 +228,7 @@ func writeBLOB_persistent(ctx context.Context, wsid istructs.WSID, appQName stri
 		MimeType: blobMimeType,
 	}
 
+	wLimiter := wLimiterFactory()
 	if err := blobStorage.WriteBLOB(ctx, key, descr, body, wLimiter); err != nil {
 		if errors.Is(err, iblobstorage.ErrBLOBSizeQuotaExceeded) {
 			WriteTextResponse(resp, err.Error(), http.StatusForbidden)
@@ -297,11 +299,11 @@ func blobWriteMessageHandlerMultipart(bbm blobBaseMessage, blobStorage iblobstor
 		if blobDetails.duration > 0 {
 			// temporary BLOB
 			blobIDOrSUUID = string(writeBLOB_temporary(bbm.req.Context(), bbm.wsid, bbm.appQName.String(), part.Header, bbm.resp,
-				params["name"], contentType, blobDetails.duration, blobStorage, part, bus, busTimeout, bbm.wLimiter))
+				params["name"], contentType, blobDetails.duration, blobStorage, part, bus, busTimeout, bbm.wLimiterFactory))
 		} else {
 			// persistent BLOB
 			blobID := writeBLOB_persistent(bbm.req.Context(), bbm.wsid, bbm.appQName.String(), part.Header, bbm.resp,
-				params["name"], contentType, blobStorage, part, bus, busTimeout, bbm.wLimiter)
+				params["name"], contentType, blobStorage, part, bus, busTimeout, bbm.wLimiterFactory)
 			blobIDOrSUUID = utils.UintToString(blobID)
 		}
 		if len(blobIDOrSUUID) == 0 {
@@ -320,14 +322,14 @@ func blobWriteMessageHandlerSingle(bbm blobBaseMessage, blobWriteDetails blobWri
 	if blobWriteDetails.duration > 0 {
 		// remporary BLOB
 		blobSUUID := writeBLOB_temporary(bbm.req.Context(), bbm.wsid, bbm.appQName.String(), header, bbm.resp, blobWriteDetails.name,
-			blobWriteDetails.mimeType, blobWriteDetails.duration, blobStorage, bbm.req.Body, bus, busTimeout, bbm.wLimiter)
+			blobWriteDetails.mimeType, blobWriteDetails.duration, blobStorage, bbm.req.Body, bus, busTimeout, bbm.wLimiterFactory)
 		if len(blobSUUID) > 0 {
 			WriteTextResponse(bbm.resp, string(blobSUUID), http.StatusOK)
 		}
 	} else {
 		// persistent BLOB
 		blobID := writeBLOB_persistent(bbm.req.Context(), bbm.wsid, bbm.appQName.String(), header, bbm.resp, blobWriteDetails.name,
-			blobWriteDetails.mimeType, blobStorage, bbm.req.Body, bus, busTimeout, bbm.wLimiter)
+			blobWriteDetails.mimeType, blobStorage, bbm.req.Body, bus, busTimeout, bbm.wLimiterFactory)
 		if blobID > 0 {
 			WriteTextResponse(bbm.resp, utils.UintToString(blobID), http.StatusOK)
 		}
@@ -363,13 +365,13 @@ func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Req
 	}
 	mes := blobMessage{
 		blobBaseMessage: blobBaseMessage{
-			req:      req,
-			resp:     resp,
-			wsid:     istructs.WSID(wsid),
-			doneChan: make(chan struct{}),
-			appQName: appdef.NewAppQName(vars[AppOwner], vars[AppName]),
-			header:   req.Header,
-			wLimiter: s.WLimiter,
+			req:             req,
+			resp:            resp,
+			wsid:            istructs.WSID(wsid),
+			doneChan:        make(chan struct{}),
+			appQName:        appdef.NewAppQName(vars[AppOwner], vars[AppName]),
+			header:          req.Header,
+			wLimiterFactory: s.WLimiterFactory,
 		},
 		blobDetails: details,
 	}
