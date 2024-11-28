@@ -39,7 +39,7 @@ type IFilter interface {
 
 	// Return filtered tags.
 	// If kind is not FilterKind_Tags, returns empty iterator
-	Tags() func(func(string) bool)
+	Tags() func(func(QName) bool)
 
 	// Returns sub-filters to conjunct
 	// If kind is not FilterKind_And, returns empty iterator

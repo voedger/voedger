@@ -17,6 +17,8 @@ func ExampleTags() {
 
 	wsName := appdef.NewQName("test", "workspace")
 	doc1, doc2, doc3 := appdef.NewQName("test", "doc1"), appdef.NewQName("test", "doc2"), appdef.NewQName("test", "doc3")
+	tagOdd := appdef.NewQName("test", "tagOdd")
+	tagEven := appdef.NewQName("test", "tagEven")
 
 	app := func() appdef.IAppDef {
 		adb := appdef.New()
@@ -24,9 +26,12 @@ func ExampleTags() {
 
 		wsb := adb.AddWorkspace(wsName)
 
-		_ = wsb.AddODoc(doc1)
-		_ = wsb.AddODoc(doc2)
-		_ = wsb.AddODoc(doc3)
+		wsb.AddTag(tagOdd)
+		wsb.AddTag(tagEven)
+
+		wsb.AddODoc(doc1).SetTag(tagOdd)
+		wsb.AddODoc(doc2).SetTag(tagEven)
+		wsb.AddODoc(doc3).SetTag(tagOdd)
 
 		return adb.MustBuild()
 	}()
@@ -41,20 +46,36 @@ func ExampleTags() {
 		}
 
 		fmt.Println("Testing", flt, "in", ws)
-		for t := range ws.LocalTypes {
+		for t := range appdef.ODocs(ws.LocalTypes) {
 			fmt.Println("-", t, "is matched:", flt.Match(t))
 		}
 	}
 
-	example(filter.Tags("tag1", "tag2"))
+	example(filter.Tags(tagOdd))
+	example(filter.Tags(tagEven))
+	example(filter.Tags(tagOdd, tagEven))
 
 	// Output:
 	// This example demonstrates how to work with the Tags filter
 	//
-	// The filter.Tags(tag1, tag2) Tags:
-	// - tag1
-	// - tag2
-	// Testing filter.Tags(tag1, tag2) in Workspace «test.workspace»
+	// The filter.Tags(test.tagOdd) Tags:
+	// - test.tagOdd
+	// Testing filter.Tags(test.tagOdd) in Workspace «test.workspace»
+	// - ODoc «test.doc1» is matched: true
+	// - ODoc «test.doc2» is matched: false
+	// - ODoc «test.doc3» is matched: true
+	//
+	// The filter.Tags(test.tagEven) Tags:
+	// - test.tagEven
+	// Testing filter.Tags(test.tagEven) in Workspace «test.workspace»
+	// - ODoc «test.doc1» is matched: false
+	// - ODoc «test.doc2» is matched: true
+	// - ODoc «test.doc3» is matched: false
+	//
+	// The filter.Tags(test.tagEven, test.tagOdd) Tags:
+	// - test.tagEven
+	// - test.tagOdd
+	// Testing filter.Tags(test.tagEven, test.tagOdd) in Workspace «test.workspace»
 	// - ODoc «test.doc1» is matched: true
 	// - ODoc «test.doc2» is matched: true
 	// - ODoc «test.doc3» is matched: true
