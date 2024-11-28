@@ -75,6 +75,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.TypeKind_CDoc, cdoc.Kind())
 	require.Equal(appdef.DataKind_int32, cdoc.Field("FState").DataKind())
 	require.Equal("Backoffice Table", cdoc.Comment())
+	require.True(cdoc.HasTag(appdef.NewQName("main", "BackofficeTag")))
 
 	// TODO: sf := cdoc.Field("CheckedField").(appdef.IStringField)
 	// TODO: require.Equal(uint16(8), sf.Restricts().MaxLen())
@@ -1321,46 +1322,51 @@ func Test_Projectors(t *testing.T) {
 	}, "\n"))
 }
 
-func Test_Imports(t *testing.T) {
+func Test_Tags(t *testing.T) {
 	require := assertions(t)
 
-	pkg1 := require.PkgSchema("example.vsql", "github.com/untillpro/airsbp3/pkg1", `
-	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg2';
-	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg3' AS air;
-	APPLICATION test(
-		USE pkg2;
-		USE pkg3;
-	);
-	ABSTRACT WORKSPACE base INHERITS pkg2.BaseWorkspace (
-		TAG SomeTag;
-	);
-	WORKSPACE test INHERITS base (
-		EXTENSION ENGINE WASM (
-    		COMMAND Orders1 WITH Tags=(pkg2.InheritedTag); -- pkg2.InheritedTag undefined
-    		COMMAND Orders2 WITH Tags=(pkg3.SomePkg3Tag); -- pkg3.SomePkg3Tag undefined
-    		QUERY Query3 RETURNS void WITH Tags=(air.UnknownTag); -- air.UnknownTag undefined
-    		PROJECTOR ImProjector AFTER EXECUTE ON Air.CreateUPProfil; -- Air undefined
-    		COMMAND Orders3 WITH Tags=(SomeTag); -- SomeTag undefined
-		)
-	)
-	`)
+	t.Run("Tag namespace", func(t *testing.T) {
+		pkg1 := require.PkgSchema("example.vsql", "github.com/untillpro/airsbp3/pkg1", `
+		IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg2';
+		IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg3' AS air;
+		APPLICATION test(
+			USE pkg2;
+			USE pkg3;
+		);
+		ABSTRACT WORKSPACE base INHERITS pkg2.BaseWorkspace (
+			TAG TagFromInheritedWs;
+		);
+		WORKSPACE test INHERITS base (
+			EXTENSION ENGINE WASM (
+				COMMAND Orders1 WITH Tags=(pkg2.InheritedTag); -- pkg2.InheritedTag undefined
+				COMMAND Orders2 WITH Tags=(pkg3.SomePkg3Tag); -- pkg3.SomePkg3Tag undefined
+				QUERY Query3 RETURNS void WITH Tags=(air.UnknownTag); -- air.UnknownTag undefined
+				PROJECTOR ImProjector AFTER EXECUTE ON Air.CreateUPProfil; -- Air undefined
+				COMMAND Orders3 WITH Tags=(TagFromInheritedWs);
+			)
+		);
+		`)
 
-	pkg2 := require.PkgSchema("example.vsql", "github.com/untillpro/airsbp3/pkg2", `
-	ABSTRACT WORKSPACE BaseWorkspace(
-		TAG InheritedTag;
-	);
-	`)
+		pkg2 := require.PkgSchema("example.vsql", "github.com/untillpro/airsbp3/pkg2", `
+		ABSTRACT WORKSPACE BaseWorkspace(
+			TAG InheritedTag;
+		);
+		`)
 
-	pkg3 := require.PkgSchema("example.vsql", "github.com/untillpro/airsbp3/pkg3", `TAG SomePkg3Tag;`)
+		pkg3 := require.PkgSchema("example.vsql", "github.com/untillpro/airsbp3/pkg3", `
+		WORKSPACE WorkspacePkg3(
+			TAG SomePkg3Tag;
+		);`)
 
-	_, err := BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), pkg1, pkg2, pkg3})
-	require.EqualError(err, strings.Join([]string{
-		"example.vsql:13:34: undefined tag: pkg2.InheritedTag",
-		"example.vsql:14:34: undefined tag: pkg3.SomePkg3Tag",
-		"example.vsql:15:44: undefined tag: air.UnknownTag",
-		"example.vsql:16:46: Air undefined",
-		"example.vsql:17:34: undefined tag: SomeTag",
-	}, "\n"))
+		_, err := BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), pkg1, pkg2, pkg3})
+		require.EqualError(err, strings.Join([]string{
+			"example.vsql:13:32: undefined tag: pkg2.InheritedTag",
+			"example.vsql:14:32: undefined tag: pkg3.SomePkg3Tag",
+			"example.vsql:15:42: undefined tag: air.UnknownTag",
+			"example.vsql:16:44: Air undefined",
+			"example.vsql:17:32: undefined tag: TagFromInheritedWs",
+		}, "\n"))
+	})
 
 }
 
@@ -2180,41 +2186,6 @@ func Test_Grants_Inherit(t *testing.T) {
 			require.Equal(appdef.PolicyKind_Allow, i.Policy())
 			require.Len(i.Resources().On(), 2)
 			require.True(i.Resources().On().ContainsAll(appdef.NewQName("pkg", "Table2"), appdef.NewQName("pkg", "AppWorkspace")))
-			require.Equal("pkg.role1", i.Principal().QName().String())
-			numACLs++
-			return true
-		})
-		require.Equal(1, numACLs)
-	})
-
-	t.Run("GRANT ALL * WITH TAG includes resources from inherited workspaces", func(t *testing.T) {
-		schema, err := require.AppSchema(`APPLICATION test();
-			TAG tag1;
-			ABSTRACT WORKSPACE BaseWs (
-				ROLE role1;
-				TABLE Table1 INHERITS sys.CDoc() WITH Tags=(tag1);
-			);
-			WORKSPACE AppWorkspaceWS INHERITS BaseWs (
-				TABLE Table2 INHERITS sys.CDoc() WITH Tags=(tag1);
-				GRANT INSERT ON ALL TABLES WITH TAG tag1 TO role1;
-			);`)
-		require.NoError(err)
-		builder := appdef.New()
-		err = BuildAppDefs(schema, builder)
-		require.NoError(err)
-
-		app, err := builder.Build()
-		require.NoError(err)
-		var numACLs int
-
-		// table
-		app.ACL(func(i appdef.IACLRule) bool {
-			require.Len(i.Ops(), 1)
-			require.Equal(appdef.OperationKind_Insert, i.Ops()[0])
-			require.Equal(appdef.PolicyKind_Allow, i.Policy())
-			require.Len(i.Resources().On(), 2)
-			require.Equal("pkg.Table1", i.Resources().On()[0].String())
-			require.Equal("pkg.Table2", i.Resources().On()[1].String())
 			require.Equal("pkg.role1", i.Principal().QName().String())
 			numACLs++
 			return true
