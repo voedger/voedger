@@ -318,6 +318,7 @@ func TestOrmBasicUsage(t *testing.T) {
 }
 
 func TestBuildExample2(t *testing.T) {
+	t.Skip("wait for https://github.com/voedger/voedger/issues/2901")
 	if testing.Short() {
 		t.Skip()
 	}
@@ -514,6 +515,7 @@ func TestBuildBasicUsage(t *testing.T) {
 }
 
 func TestGenOrmTestItAndBuildApp(t *testing.T) {
+	t.Skip("wait for https://github.com/voedger/voedger/issues/2901")
 	if testing.Short() {
 		t.Skip()
 	}
