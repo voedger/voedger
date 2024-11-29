@@ -28,6 +28,7 @@ const (
 	URLPlaceholder_blobID           = "blobID"
 	URLPlaceholder_ResourceName     = "resourceName"
 	hours24                         = 24 * time.Hour
+	temporaryBLOBIDLenTreshold      = 40 // greater -> temporary, persistent oherwise
 )
 
 var (
