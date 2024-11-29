@@ -14,6 +14,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -63,6 +64,16 @@ func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs
 	resp, err := f.postReader(uploadBLOBURL, blobReader, optFuncs...)
 	if err != nil {
 		return "", err
+	}
+	if !slices.Contains(resp.ExpectedHTTPCodes(), resp.HTTPResp.StatusCode) {
+		funcErr, err := getFuncError(resp)
+		if err != nil {
+			return "", err
+		}
+		return "", funcErr
+	}
+	if resp.HTTPResp.StatusCode != http.StatusOK {
+		return "", nil
 	}
 	return iblobstorage.SUUID(resp.Body), nil
 }
@@ -134,6 +145,35 @@ func (f *implIFederation) AdminFunc(relativeURL string, body string, optFuncs ..
 	return f.httpRespToFuncResp(httpResp, err)
 }
 
+func getFuncError(httpResp *coreutils.HTTPResponse) (funcError coreutils.FuncError, err error) {
+	funcError = coreutils.FuncError{
+		SysError: coreutils.SysError{
+			HTTPStatus: httpResp.HTTPResp.StatusCode,
+		},
+		ExpectedHTTPCodes: httpResp.ExpectedHTTPCodes(),
+	}
+	if len(httpResp.Body) == 0 || httpResp.HTTPResp.StatusCode == http.StatusOK {
+		return funcError, nil
+	}
+	m := map[string]interface{}{}
+	if err := json.Unmarshal([]byte(httpResp.Body), &m); err != nil {
+		return funcError, err
+	}
+	sysErrorMap := m["sys.Error"].(map[string]interface{})
+	errQNameStr, ok := sysErrorMap["QName"].(string)
+	if ok {
+		errQName, err := appdef.ParseQName(errQNameStr)
+		if err != nil {
+			errQName = appdef.NewQName("<err>", sysErrorMap["QName"].(string))
+		}
+		funcError.SysError.QName = errQName
+	}
+	funcError.SysError.HTTPStatus = int(sysErrorMap["HTTPStatus"].(float64))
+	funcError.SysError.Message = sysErrorMap["Message"].(string)
+	funcError.SysError.Data, _ = sysErrorMap["Data"].(string)
+	return funcError, nil
+}
+
 func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (*coreutils.FuncResponse, error) {
 	isUnexpectedCode := errors.Is(httpRespErr, coreutils.ErrUnexpectedStatusCode)
 	if httpRespErr != nil && !isUnexpectedCode {
@@ -143,31 +183,10 @@ func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, h
 		return nil, nil
 	}
 	if isUnexpectedCode {
-		funcError := coreutils.FuncError{
-			SysError: coreutils.SysError{
-				HTTPStatus: httpResp.HTTPResp.StatusCode,
-			},
-			ExpectedHTTPCodes: httpResp.ExpectedHTTPCodes(),
-		}
-		if len(httpResp.Body) == 0 || httpResp.HTTPResp.StatusCode == http.StatusOK {
-			return nil, funcError
-		}
-		m := map[string]interface{}{}
-		if err := json.Unmarshal([]byte(httpResp.Body), &m); err != nil {
+		funcError, err := getFuncError(httpResp)
+		if err != nil {
 			return nil, err
 		}
-		sysErrorMap := m["sys.Error"].(map[string]interface{})
-		errQNameStr, ok := sysErrorMap["QName"].(string)
-		if ok {
-			errQName, err := appdef.ParseQName(errQNameStr)
-			if err != nil {
-				errQName = appdef.NewQName("<err>", sysErrorMap["QName"].(string))
-			}
-			funcError.SysError.QName = errQName
-		}
-		funcError.SysError.HTTPStatus = int(sysErrorMap["HTTPStatus"].(float64))
-		funcError.SysError.Message = sysErrorMap["Message"].(string)
-		funcError.SysError.Data, _ = sysErrorMap["Data"].(string)
 		return nil, funcError
 	}
 	res := &coreutils.FuncResponse{

@@ -369,6 +369,9 @@ func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobNam
 	opts ...coreutils.ReqOptFunc) (blobID istructs.RecordID) {
 	vit.T.Helper()
 	blobSUUID := vit.UploadTempBLOB(appQName, wsid, blobName, blobMimeType, blobContent, 0, opts...)
+	if len(blobSUUID) == 0 {
+		return istructs.NullRecordID
+	}
 	blobIDUint64, err := strconv.ParseUint(string(blobSUUID), utils.DecimalBase, utils.BitSize64)
 	require.NoError(vit.T, err)
 	return istructs.RecordID(blobIDUint64)
