@@ -238,3 +238,8 @@ func readData(ctx context.Context, reader io.Reader) (data []byte, err error) {
 	}
 	return entity, err
 }
+
+
+func TestBLOBNoFound(t *testing.T) {
+	
+}

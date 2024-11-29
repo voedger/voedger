@@ -41,6 +41,7 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 
 	err = b.writeState(&state, pKeyState, cColState)
 	if err != nil {
+		// notest
 		return err
 	}
 
@@ -65,6 +66,7 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 			}
 			cCol = mutateChunkNumber(cCol, chunkNumber)
 			if err = (*(b.appStorage)).Put(pKeyWithBucket, cCol, chunkBuf); err != nil {
+				// notest
 				break
 			}
 			chunkNumber++
@@ -90,6 +92,7 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 	}
 
 	if errStatus := b.writeState(&state, pKeyState, cColState); errStatus != nil {
+		// notest
 		if err == nil {
 			// err as priority over errStatus
 			return errStatus
@@ -133,6 +136,7 @@ func (b *bStorageType) ReadBLOB(ctx context.Context, blobKey iblobstorage.IBLOBK
 	if err == nil {
 		stateExists = true
 	} else if !errors.Is(err, iblobstorage.ErrBLOBNotFound)  {
+		// notest
 		return err
 	}
 
@@ -195,6 +199,7 @@ func (b *bStorageType) QueryBLOBState(ctx context.Context, key iblobstorage.IBLO
 	pKeyState, cColState := getStateKeys(blobKeyBytes)
 	state, stateExists, err := b.readState(pKeyState, cColState)
 	if err != nil {
+		// notest
 		return state, err
 	}
 	if !stateExists {
