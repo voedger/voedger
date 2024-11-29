@@ -459,11 +459,13 @@ func (s *httpService) blobWriteRequestHandler() http.HandlerFunc {
 
 func headerAuth(rw http.ResponseWriter, req *http.Request) (principalToken string, isHandled bool) {
 	authHeader := req.Header.Get(coreutils.Authorization)
-	if strings.HasPrefix(authHeader, coreutils.BearerPrefix) {
-		return authHeader[bearerPrefixLen:], false
+	if len(authHeader) > 0 {
+		if strings.HasPrefix(authHeader, coreutils.BearerPrefix) {
+			return authHeader[bearerPrefixLen:], false
+		}
+		writeUnauthorized(rw)
 	}
-	writeUnauthorized(rw)
-	return "", true
+	return "", false
 }
 
 func headerOrCookieAuth(rw http.ResponseWriter, req *http.Request) (principalToken string) {
