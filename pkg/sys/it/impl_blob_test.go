@@ -196,6 +196,6 @@ func TestTemporaryBLOBErrors(t *testing.T) {
 	)
 
 	t.Run("404 on not found", func(t *testing.T) {
-		vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, "unknownSUUID", coreutils.WithAuthorizeBy(systemPrincipal), coreutils.Expect404())
+		vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, "unknownSUUIDaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", coreutils.WithAuthorizeBy(systemPrincipal), coreutils.Expect404())
 	})
 }
