@@ -27,14 +27,14 @@ import (
 
 func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (res ibus.Request, ok bool) {
 	vars := mux.Vars(req)
-	wsidStr := vars[WSID]
+	wsidStr := vars[URLPlaceholder_WSID]
 	wsidUint, err := strconv.ParseUint(wsidStr, utils.DecimalBase, utils.BitSize64)
 	if err != nil {
 		//  impossible because of regexp in a handler
 		// notest
 		panic(err)
 	}
-	appQNameStr := vars[AppOwner] + appdef.AppQNameQualifierChar + vars[AppName]
+	appQNameStr := vars[URLPlaceholder_AppOwner] + appdef.AppQNameQualifierChar + vars[URLPlaceholder_AppName]
 	wsid := istructs.WSID(wsidUint)
 	if appQName, err := appdef.ParseAppQName(appQNameStr); err == nil {
 		if numAppWorkspaces, ok := numsAppsWorkspaces[appQName]; ok {

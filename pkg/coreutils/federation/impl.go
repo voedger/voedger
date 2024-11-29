@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -52,40 +53,54 @@ func (f *implIFederation) req(relativeURL string, body string, optFuncs ...coreu
 	return f.httpClient.Req(url, body, optFuncs...)
 }
 
-func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blob coreutils.BLOBReader,
-	optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error) {
-	uploadBLOBURL := fmt.Sprintf("blob/%s/%d?name=%s&mimeType=%s", appQName.String(), wsid, blob.Name, blob.MimeType)
-	resp, err := f.postReader(uploadBLOBURL, blob, optFuncs...)
+func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader BLOBReader, duration iblobstorage.DurationType,
+	optFuncs ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID, err error) {
+	ttl, ok := TemporaryBLOBDurationToURLTTL[duration]
+	if ok {
+		ttl = "&ttl=" + ttl
+	}
+	uploadBLOBURL := fmt.Sprintf("blob/%s/%d?name=%s&mimeType=%s%s", appQName.String(), wsid, blobReader.Name, blobReader.MimeType, ttl)
+	resp, err := f.postReader(uploadBLOBURL, blobReader, optFuncs...)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
-	if resp.HTTPResp.StatusCode == http.StatusOK {
-		newBLOBID, err := strconv.ParseUint(resp.Body, utils.DecimalBase, utils.BitSize64)
-		if err != nil {
-			return 0, fmt.Errorf("failed to parse the received blobID string: %w", err)
-		}
-		return istructs.RecordID(newBLOBID), nil
-	}
-	return istructs.NullRecordID, nil
+	return iblobstorage.SUUID(resp.Body), nil
 }
 
-func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) (res coreutils.BLOBReader, err error) {
-	url := fmt.Sprintf(`blob/%s/%d/%d`, appQName, wsid, blobID)
+func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blob BLOBReader,
+	optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error) {
+	newBLOBIDStr, err := f.UploadTempBLOB(appQName, wsid, blob, 0, optFuncs...)
+	if err != nil {
+		return istructs.NullRecordID, err
+	}
+	newBLOBID, err := strconv.ParseUint(string(newBLOBIDStr), utils.DecimalBase, utils.BitSize64)
+	if err != nil {
+		return istructs.NullRecordID, fmt.Errorf("failed to parse the received blobID string: %w", err)
+	}
+	return istructs.RecordID(newBLOBID), nil
+}
+
+func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) (res BLOBReader, err error) {
+	return f.ReadTempBLOB(appQName, wsid, iblobstorage.SUUID(utils.UintToString(blobID)), optFuncs...)
+}
+
+func (f *implIFederation) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...coreutils.ReqOptFunc) (res BLOBReader, err error) {
+	url := fmt.Sprintf(`blob/%s/%d/%s`, appQName, wsid, blobSUUID)
 	optFuncs = append(optFuncs, coreutils.WithResponseHandler(func(httpResp *http.Response) {}))
 	resp, err := f.post(url, "", optFuncs...)
 	if err != nil {
 		return res, err
 	}
 	if resp.HTTPResp.StatusCode != http.StatusOK {
-		return coreutils.BLOBReader{}, nil
+		return BLOBReader{}, nil
 	}
 	contentDisposition := resp.HTTPResp.Header.Get(coreutils.ContentDisposition)
 	_, params, err := mime.ParseMediaType(contentDisposition)
 	if err != nil {
 		return res, err
 	}
-	res = coreutils.BLOBReader{
-		BLOBDesc: coreutils.BLOBDesc{
+	res = BLOBReader{
+		DescrType: iblobstorage.DescrType{
 			Name:     params["filename"],
 			MimeType: resp.HTTPResp.Header.Get(coreutils.ContentType),
 		},

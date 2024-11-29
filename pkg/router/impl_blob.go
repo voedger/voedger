@@ -24,6 +24,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -358,7 +359,7 @@ func blobMessageHandler(vvmCtx context.Context, sc iprocbus.ServiceChannel, blob
 
 func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Request, details interface{}) {
 	vars := mux.Vars(req)
-	wsid, err := strconv.ParseUint(vars[WSID], utils.DecimalBase, utils.BitSize64)
+	wsid, err := strconv.ParseUint(vars[URLPlaceholder_WSID], utils.DecimalBase, utils.BitSize64)
 	if err != nil {
 		// notest: checked by router url rule
 		panic(err)
@@ -369,7 +370,7 @@ func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Req
 			resp:            resp,
 			wsid:            istructs.WSID(wsid),
 			doneChan:        make(chan struct{}),
-			appQName:        appdef.NewAppQName(vars[AppOwner], vars[AppName]),
+			appQName:        appdef.NewAppQName(vars[URLPlaceholder_AppOwner], vars[URLPlaceholder_AppName]),
 			header:          req.Header,
 			wLimiterFactory: s.WLimiterFactory,
 		},
@@ -400,15 +401,16 @@ func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Req
 func (s *httpService) blobReadRequestHandler() http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
+		blobIDStr := vars[URLPlaceholder_blobID]
 		var blobReadDetails interface{}
-		if len(blobID) > 40 {
+		if len(URLPlaceholder_blobID) > 8 {
 			// consider the blobID contains SUUID of a temporary BLOB
 			blobReadDetails = blobReadDetails_Temporary{
-				suuid: blobID,
+				suuid: URLPlaceholder_blobID,
 			}
 		} else {
 			// conider the BLOB is persistent
-			blobID, err := strconv.ParseUint(vars[blobID], utils.DecimalBase, utils.BitSize64)
+			blobID, err := strconv.ParseUint(blobIDStr, utils.DecimalBase, utils.BitSize64)
 			if err != nil {
 				// notest: checked by router url rule
 				panic(err)
@@ -457,14 +459,11 @@ func (s *httpService) blobWriteRequestHandler() http.HandlerFunc {
 
 func headerAuth(rw http.ResponseWriter, req *http.Request) (principalToken string, isHandled bool) {
 	authHeader := req.Header.Get(coreutils.Authorization)
-	if len(authHeader) > 0 {
-		if len(authHeader) < bearerPrefixLen || authHeader[:bearerPrefixLen] != coreutils.BearerPrefix {
-			writeUnauthorized(rw)
-			return "", true
-		}
+	if strings.HasPrefix(authHeader, coreutils.BearerPrefix) {
 		return authHeader[bearerPrefixLen:], false
 	}
-	return "", false
+	writeUnauthorized(rw)
+	return "", true
 }
 
 func headerOrCookieAuth(rw http.ResponseWriter, req *http.Request) (principalToken string) {
@@ -512,7 +511,7 @@ func getBlobParams(rw http.ResponseWriter, req *http.Request) (name, mimeType, b
 		// temporary BLOB
 		ttl := ttlQuery[0]
 		ttlSupported := false
-		if duration, ttlSupported = temporaryBLOBTTLs[ttl]; !ttlSupported {
+		if duration, ttlSupported = federation.TemporaryBLOB_URLTTLToDurationLs[ttl]; !ttlSupported {
 			badRequest(`"1d" is only supported for now for temporary blob ttl`)
 			return
 		}

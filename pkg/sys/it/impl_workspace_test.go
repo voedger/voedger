@@ -276,7 +276,7 @@ func checkDemoAndDemoMinBLOBs(vit *it.VIT, templateName string, ep extensionpoin
 	blobs, _, err := workspace.ValidateTemplate(templateName, ep, wsKind)
 	require.NoError(err)
 	require.Len(blobs, 4)
-	blobsMap := map[string]coreutils.BLOBWorkspaceTemplateField{}
+	blobsMap := map[string]workspace.BLOBWorkspaceTemplateField{}
 	for _, templateBLOB := range blobs {
 		blobsMap[string(templateBLOB.Content)] = templateBLOB
 	}

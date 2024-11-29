@@ -126,9 +126,13 @@ func (b *bStorageType) WriteTempBLOB(ctx context.Context, key iblobstorage.TempB
 
 func (b *bStorageType) ReadBLOB(ctx context.Context, blobKey iblobstorage.IBLOBKey, stateCallback func(state iblobstorage.BLOBState) error, writer io.Writer, limiter iblobstorage.RLimiterType) (err error) {
 	blobKeyBytes := blobKey.Bytes()
-	pKeyState, cColState := getStateKeys(blobKeyBytes)
-	state, stateExists, err := b.readState(pKeyState, cColState)
-	if err != nil {
+
+	// will not return on just !stateExists, need check if the blob is not corrupted
+	stateExists := false
+	state, err := b.QueryBLOBState(ctx, blobKey)
+	if err == nil {
+		stateExists = true
+	} else if !errors.Is(err, iblobstorage.ErrBLOBNotFound)  {
 		return err
 	}
 
@@ -187,12 +191,16 @@ func (b *bStorageType) ReadBLOB(ctx context.Context, blobKey iblobstorage.IBLOBK
 }
 
 func (b *bStorageType) QueryBLOBState(ctx context.Context, key iblobstorage.IBLOBKey) (state iblobstorage.BLOBState, err error) {
-	err = b.ReadBLOB(ctx, key,
-		func(blobState iblobstorage.BLOBState) (err error) {
-			state = blobState
-			return nil
-		}, nil, RLimiter_Null)
-	return
+	blobKeyBytes := key.Bytes()
+	pKeyState, cColState := getStateKeys(blobKeyBytes)
+	state, stateExists, err := b.readState(pKeyState, cColState)
+	if err != nil {
+		return state, err
+	}
+	if !stateExists {
+		return state, iblobstorage.ErrBLOBNotFound
+	}
+	return state, nil
 }
 
 func (b *bStorageType) readState(pKey, cCol []byte) (state iblobstorage.BLOBState, ok bool, err error) {
