@@ -429,7 +429,6 @@ func (vit *VIT) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobS
 	vit.T.Helper()
 	blobReader, err := vit.IFederation.ReadTempBLOB(appQName, wsid, blobSUUID, optFuncs...)
 	require.NoError(vit.T, err)
-	require.NoError(vit.T, err)
 	vit.registerBLOBReaderCleanup(blobReader)
 	return blobReader
 }

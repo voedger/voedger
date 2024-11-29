@@ -27,7 +27,7 @@ func (t *PersistentBLOBKeyType) ID() string {
 
 // nolint: revive
 func (t *TempBLOBKeyType) Bytes() []byte {
-	res := make([]byte, 20)
+	res := make([]byte, 20, 20+len(t.SUUID))
 	binary.LittleEndian.PutUint64(res, uint64(blobPrefix_temporary))
 	binary.LittleEndian.PutUint32(res[8:], t.ClusterAppID)
 	binary.LittleEndian.PutUint64(res[12:], uint64(t.WSID))
