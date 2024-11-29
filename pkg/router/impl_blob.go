@@ -403,10 +403,10 @@ func (s *httpService) blobReadRequestHandler() http.HandlerFunc {
 		vars := mux.Vars(req)
 		blobIDStr := vars[URLPlaceholder_blobID]
 		var blobReadDetails interface{}
-		if len(URLPlaceholder_blobID) > 8 {
+		if len(blobIDStr) > 8 {
 			// consider the blobID contains SUUID of a temporary BLOB
 			blobReadDetails = blobReadDetails_Temporary{
-				suuid: URLPlaceholder_blobID,
+				suuid: iblobstorage.SUUID(blobIDStr),
 			}
 		} else {
 			// conider the BLOB is persistent
