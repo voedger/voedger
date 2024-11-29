@@ -30,24 +30,51 @@ var (
 )
 
 func TestBasicUsage(t *testing.T) {
-	var (
-		key = iblobstorage.KeyType{
-			AppID: 2,
-			WSID:  2,
-			ID:    2,
+	t.Run("persistent", func(t *testing.T) {
+		key := iblobstorage.PersistentBLOBKeyType{
+			ClusterAppID: 2,
+			WSID:         2,
+			BlobID:       2,
 		}
-		desc = iblobstorage.DescrType{
-			Name:     "logo.png",
-			MimeType: "image/png",
+		testBasicUsage(t, func() iblobstorage.IBLOBKey {
+			return &key
+		}, func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, _ iblobstorage.DurationType) error {
+			ctx := context.Background()
+			return blobber.WriteBLOB(ctx, key, desc, reader, NewWLimiter_Size(maxSize))
+		}, 0)
+	})
+
+	t.Run("temporary", func(t *testing.T) {
+		ssuid := iblobstorage.NewSUUID()
+		key := iblobstorage.TempBLOBKeyType{
+			ClusterAppID: 2,
+			WSID:         2,
+			SUUID:        ssuid,
 		}
-	)
+		testBasicUsage(t, func() iblobstorage.IBLOBKey {
+			return &key
+		}, func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, duration iblobstorage.DurationType) error {
+			ctx := context.Background()
+			return blobber.WriteTempBLOB(ctx, key, desc, reader, NewWLimiter_Size(maxSize), duration)
+		}, iblobstorage.DurationType_1Day)
+	})
+}
+
+func testBasicUsage(t *testing.T, keyGetter func() iblobstorage.IBLOBKey, blobWriter func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, duration iblobstorage.DurationType) error, duration iblobstorage.DurationType) {
+	desc := iblobstorage.DescrType{
+		Name:     "logo.png",
+		MimeType: "image/png",
+	}
+
+	key := keyGetter()
 	require := require.New(t)
 
 	asf := mem.Provide()
 	asp := istorageimpl.Provide(asf)
 	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
-	blobber := Provide(&storage, coreutils.NewITime())
+	time := coreutils.MockTime
+	blobber := Provide(&storage, time)
 	ctx := context.TODO()
 	reader := provideTestData()
 
@@ -61,19 +88,26 @@ func TestBasicUsage(t *testing.T) {
 			state = blobState
 			require.Nil(state)
 			return nil
-		}, writer)
+		}, writer, RLimiter_Null)
 		require.ErrorIs(err, iblobstorage.ErrBLOBNotFound)
 	})
 
 	t.Run("Write blob to storage, return must be without errors", func(t *testing.T) {
-		err := blobber.WriteBLOB(ctx, key, desc, reader, maxSize)
+		err := blobWriter(blobber, desc, reader, duration)
 		require.NoError(err)
 	})
 
 	t.Run("Read blob status, return must be without errors", func(t *testing.T) {
 		bs, err := blobber.QueryBLOBState(ctx, key)
 		require.NoError(err)
+		require.Equal(desc.Name, bs.Descr.Name)
+		require.Equal(desc.MimeType, bs.Descr.MimeType)
+		require.Equal(time.Now().UnixMilli(), int64(bs.StartedAt))
+		require.Equal(time.Now().UnixMilli(), int64(bs.FinishedAt))
+		require.EqualValues(len(blob), bs.Size)
 		require.Equal(iblobstorage.BLOBStatus_Completed, bs.Status)
+		require.Empty(bs.Error)
+		require.Equal(duration, bs.Duration)
 	})
 
 	t.Run("Read blob that present in storage and compare with reference", func(t *testing.T) {
@@ -93,7 +127,7 @@ func TestBasicUsage(t *testing.T) {
 			state = blobState
 			log.Println(state.Error)
 			return nil
-		}, writer)
+		}, writer, RLimiter_Null)
 
 		require.NoError(err)
 		err = writer.Flush()
@@ -106,10 +140,10 @@ func TestBasicUsage(t *testing.T) {
 
 func TestFewBucketsBLOB(t *testing.T) {
 	var (
-		key = iblobstorage.KeyType{
-			AppID: 2,
-			WSID:  2,
-			ID:    2,
+		key = iblobstorage.PersistentBLOBKeyType{
+			ClusterAppID: 2,
+			WSID:         2,
+			BlobID:       2,
 		}
 		desc = iblobstorage.DescrType{
 			Name:     "test",
@@ -134,7 +168,7 @@ func TestFewBucketsBLOB(t *testing.T) {
 
 	// write the blob
 	reader := bytes.NewReader(bigBLOB)
-	err = blobber.WriteBLOB(ctx, key, desc, reader, iblobstorage.BLOBMaxSizeType(len(bigBLOB)))
+	err = blobber.WriteBLOB(ctx, key, desc, reader, NewWLimiter_Size(iblobstorage.BLOBMaxSizeType(len(bigBLOB))))
 	require.NoError(err)
 
 	var buf bytes.Buffer
@@ -144,7 +178,7 @@ func TestFewBucketsBLOB(t *testing.T) {
 	reader.Reset(bigBLOB)
 
 	// Read
-	err = blobber.ReadBLOB(ctx, key, func(blobState iblobstorage.BLOBState) (err error) { return nil }, writer)
+	err = blobber.ReadBLOB(ctx, &key, func(blobState iblobstorage.BLOBState) (err error) { return nil }, writer, RLimiter_Null)
 	require.NoError(err)
 	err = writer.Flush()
 	require.NoError(err)
@@ -155,10 +189,10 @@ func TestFewBucketsBLOB(t *testing.T) {
 
 func TestQuotaExceed(t *testing.T) {
 	var (
-		key = iblobstorage.KeyType{
-			AppID: 2,
-			WSID:  2,
-			ID:    2,
+		key = iblobstorage.PersistentBLOBKeyType{
+			ClusterAppID: 2,
+			WSID:         2,
+			BlobID:       2,
 		}
 		desc = iblobstorage.DescrType{
 			Name:     "logo.png",
@@ -175,7 +209,7 @@ func TestQuotaExceed(t *testing.T) {
 	ctx := context.Background()
 	// Quota (maxSize -1 = 19265) assigned to reader less then filesize logo.png (maxSize)
 	// So, it must be error
-	err = blobber.WriteBLOB(ctx, key, desc, reader, maxSize-1)
+	err = blobber.WriteBLOB(ctx, key, desc, reader, NewWLimiter_Size(maxSize-1))
 	require.Error(err, "Reading a file larger than the quota assigned to the reader. It must be a error.")
 }
 
