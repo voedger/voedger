@@ -275,7 +275,7 @@ Example Result 200:
 
 Example request:
  ```
- POST /api/v2/owner/app/wsid/blobs HTTP/1.1
+ POST /api/v2/users/untill/apps/airsbp3/workspaces/12344566789/blobs HTTP/1.1
 Content-Type: multipart/form-data
 
 --boundary
@@ -304,7 +304,7 @@ Example response 201:
     "description": "This is a sample image uploaded as a BLOB.",
     "contentType": "image/jpeg",
     "size": 524288,  // Size in bytes
-    "url": "https://federation.example.com/api/v2/owner/app/wsid/blobs/1010231232123123"
+    "url": "https://federation.example.com/api/v2/users/untill/apps/airsbp3/workspaces/12344566789/blobs/1010231232123123"
 }
 ```
 
