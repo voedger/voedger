@@ -10,31 +10,32 @@ func _() {
 	var x [1]struct{}
 	_ = x[TypeKind_null-0]
 	_ = x[TypeKind_Any-1]
-	_ = x[TypeKind_Data-2]
-	_ = x[TypeKind_GDoc-3]
-	_ = x[TypeKind_CDoc-4]
-	_ = x[TypeKind_ODoc-5]
-	_ = x[TypeKind_WDoc-6]
-	_ = x[TypeKind_GRecord-7]
-	_ = x[TypeKind_CRecord-8]
-	_ = x[TypeKind_ORecord-9]
-	_ = x[TypeKind_WRecord-10]
-	_ = x[TypeKind_ViewRecord-11]
-	_ = x[TypeKind_Object-12]
-	_ = x[TypeKind_Query-13]
-	_ = x[TypeKind_Command-14]
-	_ = x[TypeKind_Projector-15]
-	_ = x[TypeKind_Job-16]
-	_ = x[TypeKind_Workspace-17]
-	_ = x[TypeKind_Role-18]
-	_ = x[TypeKind_Rate-19]
-	_ = x[TypeKind_Limit-20]
-	_ = x[TypeKind_count-21]
+	_ = x[TypeKind_Tag-2]
+	_ = x[TypeKind_Data-3]
+	_ = x[TypeKind_GDoc-4]
+	_ = x[TypeKind_CDoc-5]
+	_ = x[TypeKind_ODoc-6]
+	_ = x[TypeKind_WDoc-7]
+	_ = x[TypeKind_GRecord-8]
+	_ = x[TypeKind_CRecord-9]
+	_ = x[TypeKind_ORecord-10]
+	_ = x[TypeKind_WRecord-11]
+	_ = x[TypeKind_ViewRecord-12]
+	_ = x[TypeKind_Object-13]
+	_ = x[TypeKind_Query-14]
+	_ = x[TypeKind_Command-15]
+	_ = x[TypeKind_Projector-16]
+	_ = x[TypeKind_Job-17]
+	_ = x[TypeKind_Workspace-18]
+	_ = x[TypeKind_Role-19]
+	_ = x[TypeKind_Rate-20]
+	_ = x[TypeKind_Limit-21]
+	_ = x[TypeKind_count-22]
 }
 
-const _TypeKind_name = "TypeKind_nullTypeKind_AnyTypeKind_DataTypeKind_GDocTypeKind_CDocTypeKind_ODocTypeKind_WDocTypeKind_GRecordTypeKind_CRecordTypeKind_ORecordTypeKind_WRecordTypeKind_ViewRecordTypeKind_ObjectTypeKind_QueryTypeKind_CommandTypeKind_ProjectorTypeKind_JobTypeKind_WorkspaceTypeKind_RoleTypeKind_RateTypeKind_LimitTypeKind_count"
+const _TypeKind_name = "TypeKind_nullTypeKind_AnyTypeKind_TagTypeKind_DataTypeKind_GDocTypeKind_CDocTypeKind_ODocTypeKind_WDocTypeKind_GRecordTypeKind_CRecordTypeKind_ORecordTypeKind_WRecordTypeKind_ViewRecordTypeKind_ObjectTypeKind_QueryTypeKind_CommandTypeKind_ProjectorTypeKind_JobTypeKind_WorkspaceTypeKind_RoleTypeKind_RateTypeKind_LimitTypeKind_count"
 
-var _TypeKind_index = [...]uint16{0, 13, 25, 38, 51, 64, 77, 90, 106, 122, 138, 154, 173, 188, 202, 218, 236, 248, 266, 279, 292, 306, 320}
+var _TypeKind_index = [...]uint16{0, 13, 25, 37, 50, 63, 76, 89, 102, 118, 134, 150, 166, 185, 200, 214, 230, 248, 260, 278, 291, 304, 318, 332}
 
 func (i TypeKind) String() string {
 	if i >= TypeKind(len(_TypeKind_index)-1) {

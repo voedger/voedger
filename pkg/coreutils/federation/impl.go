@@ -14,6 +14,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -52,40 +54,64 @@ func (f *implIFederation) req(relativeURL string, body string, optFuncs ...coreu
 	return f.httpClient.Req(url, body, optFuncs...)
 }
 
-func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blob coreutils.BLOBReader,
-	optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error) {
-	uploadBLOBURL := fmt.Sprintf("blob/%s/%d?name=%s&mimeType=%s", appQName.String(), wsid, blob.Name, blob.MimeType)
-	resp, err := f.postReader(uploadBLOBURL, blob, optFuncs...)
+func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader, duration iblobstorage.DurationType,
+	optFuncs ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID, err error) {
+	ttl, ok := TemporaryBLOBDurationToURLTTL[duration]
+	if ok {
+		ttl = "&ttl=" + ttl
+	}
+	uploadBLOBURL := fmt.Sprintf("blob/%s/%d?name=%s&mimeType=%s%s", appQName.String(), wsid, blobReader.Name, blobReader.MimeType, ttl)
+	resp, err := f.postReader(uploadBLOBURL, blobReader, optFuncs...)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
-	if resp.HTTPResp.StatusCode == http.StatusOK {
-		newBLOBID, err := strconv.ParseUint(resp.Body, utils.DecimalBase, utils.BitSize64)
+	if !slices.Contains(resp.ExpectedHTTPCodes(), resp.HTTPResp.StatusCode) {
+		funcErr, err := getFuncError(resp)
 		if err != nil {
-			return 0, fmt.Errorf("failed to parse the received blobID string: %w", err)
+			return "", err
 		}
-		return istructs.RecordID(newBLOBID), nil
+		return "", funcErr
 	}
-	return istructs.NullRecordID, nil
+	if resp.HTTPResp.StatusCode != http.StatusOK {
+		return "", nil
+	}
+	return iblobstorage.SUUID(resp.Body), nil
 }
 
-func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) (res coreutils.BLOBReader, err error) {
-	url := fmt.Sprintf(`blob/%s/%d/%d`, appQName, wsid, blobID)
+func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blob iblobstorage.BLOBReader,
+	optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error) {
+	newBLOBIDStr, err := f.UploadTempBLOB(appQName, wsid, blob, 0, optFuncs...)
+	if err != nil {
+		return istructs.NullRecordID, err
+	}
+	newBLOBID, err := strconv.ParseUint(string(newBLOBIDStr), utils.DecimalBase, utils.BitSize64)
+	if err != nil {
+		return istructs.NullRecordID, fmt.Errorf("failed to parse the received blobID string: %w", err)
+	}
+	return istructs.RecordID(newBLOBID), nil
+}
+
+func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) (res iblobstorage.BLOBReader, err error) {
+	return f.ReadTempBLOB(appQName, wsid, iblobstorage.SUUID(utils.UintToString(blobID)), optFuncs...)
+}
+
+func (f *implIFederation) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...coreutils.ReqOptFunc) (res iblobstorage.BLOBReader, err error) {
+	url := fmt.Sprintf(`blob/%s/%d/%s`, appQName, wsid, blobSUUID)
 	optFuncs = append(optFuncs, coreutils.WithResponseHandler(func(httpResp *http.Response) {}))
 	resp, err := f.post(url, "", optFuncs...)
 	if err != nil {
 		return res, err
 	}
 	if resp.HTTPResp.StatusCode != http.StatusOK {
-		return coreutils.BLOBReader{}, nil
+		return iblobstorage.BLOBReader{}, nil
 	}
 	contentDisposition := resp.HTTPResp.Header.Get(coreutils.ContentDisposition)
 	_, params, err := mime.ParseMediaType(contentDisposition)
 	if err != nil {
 		return res, err
 	}
-	res = coreutils.BLOBReader{
-		BLOBDesc: coreutils.BLOBDesc{
+	res = iblobstorage.BLOBReader{
+		DescrType: iblobstorage.DescrType{
 			Name:     params["filename"],
 			MimeType: resp.HTTPResp.Header.Get(coreutils.ContentType),
 		},
@@ -119,6 +145,35 @@ func (f *implIFederation) AdminFunc(relativeURL string, body string, optFuncs ..
 	return f.httpRespToFuncResp(httpResp, err)
 }
 
+func getFuncError(httpResp *coreutils.HTTPResponse) (funcError coreutils.FuncError, err error) {
+	funcError = coreutils.FuncError{
+		SysError: coreutils.SysError{
+			HTTPStatus: httpResp.HTTPResp.StatusCode,
+		},
+		ExpectedHTTPCodes: httpResp.ExpectedHTTPCodes(),
+	}
+	if len(httpResp.Body) == 0 || httpResp.HTTPResp.StatusCode == http.StatusOK {
+		return funcError, nil
+	}
+	m := map[string]interface{}{}
+	if err := json.Unmarshal([]byte(httpResp.Body), &m); err != nil {
+		return funcError, err
+	}
+	sysErrorMap := m["sys.Error"].(map[string]interface{})
+	errQNameStr, ok := sysErrorMap["QName"].(string)
+	if ok {
+		errQName, err := appdef.ParseQName(errQNameStr)
+		if err != nil {
+			errQName = appdef.NewQName("<err>", sysErrorMap["QName"].(string))
+		}
+		funcError.SysError.QName = errQName
+	}
+	funcError.SysError.HTTPStatus = int(sysErrorMap["HTTPStatus"].(float64))
+	funcError.SysError.Message = sysErrorMap["Message"].(string)
+	funcError.SysError.Data, _ = sysErrorMap["Data"].(string)
+	return funcError, nil
+}
+
 func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (*coreutils.FuncResponse, error) {
 	isUnexpectedCode := errors.Is(httpRespErr, coreutils.ErrUnexpectedStatusCode)
 	if httpRespErr != nil && !isUnexpectedCode {
@@ -128,31 +183,10 @@ func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, h
 		return nil, nil
 	}
 	if isUnexpectedCode {
-		funcError := coreutils.FuncError{
-			SysError: coreutils.SysError{
-				HTTPStatus: httpResp.HTTPResp.StatusCode,
-			},
-			ExpectedHTTPCodes: httpResp.ExpectedHTTPCodes(),
-		}
-		if len(httpResp.Body) == 0 || httpResp.HTTPResp.StatusCode == http.StatusOK {
-			return nil, funcError
-		}
-		m := map[string]interface{}{}
-		if err := json.Unmarshal([]byte(httpResp.Body), &m); err != nil {
+		funcError, err := getFuncError(httpResp)
+		if err != nil {
 			return nil, err
 		}
-		sysErrorMap := m["sys.Error"].(map[string]interface{})
-		errQNameStr, ok := sysErrorMap["QName"].(string)
-		if ok {
-			errQName, err := appdef.ParseQName(errQNameStr)
-			if err != nil {
-				errQName = appdef.NewQName("<err>", sysErrorMap["QName"].(string))
-			}
-			funcError.SysError.QName = errQName
-		}
-		funcError.SysError.HTTPStatus = int(sysErrorMap["HTTPStatus"].(float64))
-		funcError.SysError.Message = sysErrorMap["Message"].(string)
-		funcError.SysError.Data, _ = sysErrorMap["Data"].(string)
 		return nil, funcError
 	}
 	res := &coreutils.FuncResponse{

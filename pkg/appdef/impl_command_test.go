@@ -77,7 +77,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 		t.Run("should be ok to enum commands", func(t *testing.T) {
 			cnt := 0
-			for c := range Commands(tested.Types) {
+			for c := range Commands(tested.Types()) {
 				cnt++
 				switch cnt {
 				case 1:

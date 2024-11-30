@@ -7,6 +7,7 @@ package appdef
 
 import (
 	"fmt"
+	"iter"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,7 +16,7 @@ import (
 
 type testedTypes interface {
 	Type(QName) IType
-	Types(func(IType) bool)
+	Types() iter.Seq[IType]
 }
 
 func Test_NullType(t *testing.T) {
@@ -23,6 +24,9 @@ func Test_NullType(t *testing.T) {
 
 	require.Empty(NullType.Comment())
 	require.Empty(NullType.CommentLines())
+
+	require.False(NullType.HasTag(NullQName))
+	NullType.Tags()(func(ITag) bool { require.Fail("Tags() should be empty"); return false })
 
 	require.Nil(NullType.App())
 	require.Nil(NullType.Workspace())
@@ -254,11 +258,11 @@ func TestTypeKind_MarshalText(t *testing.T) {
 			k:    TypeKind_null,
 			want: `TypeKind_null`,
 		},
-		{name: `1 —> "TypeKind_Data"`,
+		{name: `2 —> "TypeKind_Data"`,
 			k:    TypeKind_Data,
 			want: `TypeKind_Data`,
 		},
-		{name: `2 —> "TypeKind_GDoc"`,
+		{name: `3 —> "TypeKind_GDoc"`,
 			k:    TypeKind_GDoc,
 			want: `TypeKind_GDoc`,
 		},

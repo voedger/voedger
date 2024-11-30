@@ -5,6 +5,8 @@
 
 package appdef
 
+import "iter"
+
 // # Implements:
 //   - IWorkspace
 type workspace struct {
@@ -72,8 +74,8 @@ func (ws *workspace) LocalType(name QName) IType {
 	return ws.types.local.find(name)
 }
 
-func (ws *workspace) LocalTypes(visit func(IType) bool) {
-	ws.types.local.all(visit)
+func (ws *workspace) LocalTypes() iter.Seq[IType] {
+	return ws.types.local.all
 }
 
 func (ws *workspace) Type(name QName) IType {
@@ -107,8 +109,8 @@ func (ws *workspace) Type(name QName) IType {
 	return find(ws)
 }
 
-func (ws *workspace) Types(visit func(IType) bool) {
-	ws.types.all.all(visit)
+func (ws *workspace) Types() iter.Seq[IType] {
+	return ws.types.all.all
 }
 
 func (ws *workspace) UsedWorkspaces(visit func(IWorkspace) bool) {
@@ -197,6 +199,11 @@ func (ws *workspace) addRole(name QName) IRoleBuilder {
 	return newRoleBuilder(role)
 }
 
+func (ws *workspace) addTag(name QName, comments ...string) {
+	t := newTag(ws.app, ws, name)
+	t.setComment(comments...)
+}
+
 func (ws *workspace) addView(name QName) IViewBuilder {
 	v := newView(ws.app, ws, name)
 	return newViewBuilder(v)
@@ -245,7 +252,7 @@ func (ws *workspace) buildAllTypes() {
 		for a := range w.Ancestors {
 			collect(a)
 		}
-		for t := range w.LocalTypes {
+		for t := range w.LocalTypes() {
 			ws.types.all.add(t)
 		}
 		for u := range w.UsedWorkspaces {
@@ -333,6 +340,16 @@ func (ws *workspace) setDescriptor(q QName) {
 	ws.app.wsDesc[q] = ws
 }
 
+func (ws *workspace) setTypeComment(name QName, c ...string) {
+	t := ws.LocalType(name)
+	if t == NullType {
+		panic(ErrNotFound("type %s", name))
+	}
+	if t, ok := t.(interface{ setComment(...string) }); ok {
+		t.setComment(c...)
+	}
+}
+
 func (ws *workspace) useWorkspace(name QName, names ...QName) {
 	use := func(n QName) {
 		usedWS := ws.app.Workspace(n)
@@ -412,6 +429,10 @@ func (wb *workspaceBuilder) AddProjector(name QName) IProjectorBuilder {
 	return wb.workspace.addProjector(name)
 }
 
+func (wb *workspaceBuilder) AddQuery(name QName) IQueryBuilder {
+	return wb.workspace.addQuery(name)
+}
+
 func (wb *workspaceBuilder) AddRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) {
 	wb.workspace.addRate(name, count, period, scopes, comment...)
 }
@@ -420,8 +441,8 @@ func (wb *workspaceBuilder) AddRole(name QName) IRoleBuilder {
 	return wb.workspace.addRole(name)
 }
 
-func (wb *workspaceBuilder) AddQuery(name QName) IQueryBuilder {
-	return wb.workspace.addQuery(name)
+func (wb *workspaceBuilder) AddTag(name QName, comments ...string) {
+	wb.workspace.addTag(name, comments...)
 }
 
 func (wb *workspaceBuilder) AddView(name QName) IViewBuilder {
@@ -464,6 +485,10 @@ func (wb *workspaceBuilder) SetAncestors(name QName, names ...QName) IWorkspaceB
 func (wb *workspaceBuilder) SetDescriptor(q QName) IWorkspaceBuilder {
 	wb.workspace.setDescriptor(q)
 	return wb
+}
+
+func (wb *workspaceBuilder) SetTypeComment(n QName, c ...string) {
+	wb.workspace.setTypeComment(n, c...)
 }
 
 func (wb *workspaceBuilder) UseWorkspace(name QName, names ...QName) IWorkspaceBuilder {

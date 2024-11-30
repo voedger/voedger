@@ -73,7 +73,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 
 		t.Run("should be ok to enum queries", func(t *testing.T) {
 			cnt := 0
-			for q := range Queries(tested.Types) {
+			for q := range Queries(tested.Types()) {
 				cnt++
 				switch cnt {
 				case 1:

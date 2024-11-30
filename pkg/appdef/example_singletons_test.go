@@ -43,7 +43,7 @@ func ExampleSingletons() {
 	// how to inspect builded AppDef with singletons
 	{
 		cnt := 0
-		for s := range appdef.Singletons(app.Types) {
+		for s := range appdef.Singletons(app.Types()) {
 			cnt++
 			fmt.Printf("%d. %v\n", cnt, s)
 		}

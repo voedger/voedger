@@ -9,17 +9,26 @@ import (
 	"io"
 )
 
-//	"context"
+type IBLOBKey interface {
+	Bytes() []byte
+
+	// blobID for persistent, SUUID for temporary
+	ID() string
+}
 
 type IBLOBStorage interface {
 	// Errors: ErrBLOBSizeQuotaExceeded
-	WriteBLOB(ctx context.Context, key KeyType, descr DescrType, reader io.Reader, maxSize BLOBMaxSizeType) (err error)
+	WriteBLOB(ctx context.Context, key PersistentBLOBKeyType, descr DescrType, reader io.Reader, limiter WLimiterType) (err error)
 
-	// Function calls stateWriter then writer
-	// Both stateWriter and writer can be nil
-	// Errors: ErrBLOBNotFound
-	ReadBLOB(ctx context.Context, key KeyType, stateWriter func(state BLOBState) error, writer io.Writer) (err error)
+	// blob TTL is 2^duration hours
+	// Errors: ErrBLOBSizeQuotaExceeded
+	WriteTempBLOB(ctx context.Context, key TempBLOBKeyType, descr DescrType, reader io.Reader, limiter WLimiterType, duration DurationType) (err error)
 
-	// Wrapper around ReadBLOB() with nil writer argument
-	QueryBLOBState(ctx context.Context, key KeyType) (state BLOBState, err error)
+	// Function calls stateCallback then writer
+	// stateCallback can be nil
+	// Errors: ErrBLOBNotFound, ErrBLOBCorrupted
+	ReadBLOB(ctx context.Context, key IBLOBKey, stateCallback func(state BLOBState) error, writer io.Writer, limiter RLimiterType) (err error)
+
+	// state missing but the blob data exists -> ErrBLOBNotFound unlike ReadBLOB: it will return ErrBLOBCorrupted in this case
+	QueryBLOBState(ctx context.Context, key IBLOBKey) (state BLOBState, err error)
 }

@@ -83,7 +83,7 @@ func Test_AppDef_AddObject(t *testing.T) {
 
 		t.Run("should be ok to enumerate objects", func(t *testing.T) {
 			var objects []QName
-			for obj := range Objects(tested.Types) {
+			for obj := range Objects(tested.Types()) {
 				objects = append(objects, obj.QName())
 			}
 			require.Len(objects, 2)

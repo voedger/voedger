@@ -352,6 +352,7 @@ ABSTRACT WORKSPACE Workspace (
 
 		COMMAND UploadBLOBHelper WITH Tags=(WorkspaceOwnerFuncTag);
 		COMMAND DownloadBLOBHelper; -- Deprecated: use q.sys.DownloadBLOBAuthnz
+		COMMAND RegisterTempBLOB1d WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY DownloadBLOBAuthnz RETURNS void WITH Tags=(WorkspaceOwnerFuncTag);
 
 		-- builtin

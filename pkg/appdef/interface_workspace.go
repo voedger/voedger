@@ -5,6 +5,8 @@
 
 package appdef
 
+import "iter"
+
 // Workspace is a set of types.
 type IWorkspace interface {
 	IType
@@ -39,10 +41,10 @@ type IWorkspace interface {
 	// If not found then empty type with TypeKind_null is returned
 	LocalType(QName) IType
 
-	// LocalTypes enumerates all types defined in the workspace.
+	// LocalTypes returns iterator for all types defined in the workspace.
 	//
-	// Types are enumerated in alphabetical order.
-	LocalTypes(func(IType) bool)
+	// Types are iterated in alphabetical order.
+	LocalTypes() iter.Seq[IType]
 
 	// Returns a type by name. All ancestor types are searched recursively.
 	//
@@ -51,12 +53,12 @@ type IWorkspace interface {
 	// If not found then empty type with TypeKind_null is returned
 	Type(QName) IType
 
-	// Enumerates types. All types from ancestors are enumerated recursively.
+	// Returns types iterator. All types from ancestors are iterated recursively.
 	//
-	// If the workspace uses other workspaces, these used workspaces (but not the types from them) also enumerated.
+	// If the workspace uses other workspaces, these used workspaces (but not the types from them) also iterated.
 	//
 	// Types are enumerated in alphabetical order.
-	Types(func(IType) bool)
+	Types() iter.Seq[IType]
 
 	// Returns used workspaces.
 	//
@@ -68,6 +70,9 @@ type IWorkspace interface {
 type IWorkspaceBuilder interface {
 	ITypeBuilder
 	IWithAbstractBuilder
+
+	ITypeCommenter
+	ITagsBuilder
 
 	IDataTypesBuilder
 

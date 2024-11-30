@@ -646,7 +646,7 @@ func TestBasicUsage_AppQName(t *testing.T) {
 
 	require := require.New(t)
 
-	// Create from onwer + name
+	// Create from owner + name
 
 	aqn := NewAppQName("sys", "registry")
 	require.Equal(NewAppQName("sys", "registry"), aqn)

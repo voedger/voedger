@@ -110,7 +110,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 		t.Run("should be ok to enumerate docs", func(t *testing.T) {
 			var docs []QName
-			for doc := range GDocs(tested.Types) {
+			for doc := range GDocs(tested.Types()) {
 				docs = append(docs, doc.QName())
 			}
 			require.Len(docs, 1)
@@ -118,7 +118,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 			t.Run("should be ok to enumerate recs", func(t *testing.T) {
 				var recs []QName
-				for rec := range GRecords(tested.Types) {
+				for rec := range GRecords(tested.Types()) {
 					recs = append(recs, rec.QName())
 				}
 				require.Len(recs, 1)

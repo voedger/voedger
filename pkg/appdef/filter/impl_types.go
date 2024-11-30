@@ -7,6 +7,7 @@ package filter
 
 import (
 	"fmt"
+	"iter"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/set"
@@ -36,7 +37,7 @@ func (f typesFilter) Match(t appdef.IType) bool {
 
 func (f typesFilter) String() string {
 	s := ""
-	for t := range f.types.All {
+	for t := range f.types.Values() {
 		if len(s) > 0 {
 			s += ", "
 		}
@@ -45,4 +46,4 @@ func (f typesFilter) String() string {
 	return fmt.Sprintf("filter.%s(%s)", f.Kind().TrimString(), s)
 }
 
-func (f typesFilter) Types() func(func(appdef.TypeKind) bool) { return f.types.All }
+func (f typesFilter) Types() iter.Seq[appdef.TypeKind] { return f.types.Values() }

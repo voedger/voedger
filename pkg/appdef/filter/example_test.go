@@ -37,13 +37,13 @@ func Example() {
 	example := func(flt appdef.IFilter) {
 		fmt.Println()
 		fmt.Println("Testing", flt, "in", ws)
-		for t := range ws.LocalTypes {
+		for t := range ws.LocalTypes() {
 			fmt.Println("-", t, "is matched:", flt.Match(t))
 		}
 
 		fmt.Println("All matches:")
 		cnt := 0
-		for t := range filter.Matches(flt, ws.LocalTypes) {
+		for t := range filter.Matches(flt, ws.LocalTypes()) {
 			cnt++
 			fmt.Println("-", t)
 		}

@@ -8,13 +8,13 @@ package main
 import (
 	"fmt"
 	"os"
-	"github.com/voedger/voedger/pkg/goutils/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 )
@@ -318,11 +318,10 @@ func TestOrmBasicUsage(t *testing.T) {
 }
 
 func TestBuildExample2(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
-
 	if testing.Short() {
 		t.Skip()
 	}
+
 	require := require.New(t)
 
 	err := execRootCmd([]string{"vpm", "orm", "-C", "../../examples/airs-bp2/air"}, "1.0.0")
@@ -339,6 +338,17 @@ func TestBuildExample2(t *testing.T) {
 	}
 
 	err = execRootCmd([]string{"vpm", "build", "-C", "../../examples/airs-bp2/air"}, "1.0.0")
+	require.NoError(err)
+}
+
+func TestGenOrmForAirApp(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	require := require.New(t)
+
+	err := execRootCmd([]string{"vpm", "orm", "-C", "testdata/build/air"}, "1.0.0")
 	require.NoError(err)
 }
 
@@ -525,23 +535,37 @@ func TestGenOrmTestItAndBuildApp(t *testing.T) {
 	require.NoError(err)
 
 	// test runs in the temp directory
-	dir := filepath.Join(tempDir, "air")
+	tempAirDir := filepath.Join(tempDir, "air")
 
 	// go up to the root of the project.
 	localVoedgerDir := filepath.Join(wd, "..", "..")
 
 	// replace the voedger package with the local one in the go.mod file
 	// we use an absolute path so that we don't depend on where the test is running.
-	err = new(exec.PipedExec).Command("go", "mod", "edit", "-replace", "github.com/voedger/voedger="+localVoedgerDir).WorkingDir(dir).Run(os.Stdout, os.Stderr)
+	err = new(exec.PipedExec).Command("go", "mod", "edit", "-replace", "github.com/voedger/voedger="+localVoedgerDir).WorkingDir(tempAirDir).Run(os.Stdout, os.Stderr)
 	require.NoError(err)
 
-	err = execRootCmd([]string{"vpm", "orm", "-C", dir}, "1.0.0")
+	err = execRootCmd([]string{"vpm", "orm", "-C", tempAirDir}, "1.0.0")
 	require.NoError(err)
 
-	err = new(exec.PipedExec).Command("go", "test", filepath.Join(dir, "wasm")).WorkingDir(dir).Run(os.Stdout, os.Stderr)
+	err = new(exec.PipedExec).Command("go", "test", filepath.Join(tempAirDir, "wasm")).WorkingDir(tempAirDir).Run(os.Stdout, os.Stderr)
 	require.NoError(err)
 
-	err = execRootCmd([]string{"vpm", "build", "-C", dir}, "1.0.0")
+	err = execRootCmd([]string{"vpm", "build", "-C", tempAirDir}, "1.0.0")
+	require.NoError(err)
+}
+
+func TestGenOrm(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	require := require.New(t)
+
+	wd, err := os.Getwd()
+	require.NoError(err)
+
+	err = execRootCmd([]string{"vpm", "orm", "-C", filepath.Join(wd, "testdata", "build", "air")}, "1.0.0")
 	require.NoError(err)
 }
 

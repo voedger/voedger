@@ -78,14 +78,14 @@ func Test_AppDef_AddWDoc(t *testing.T) {
 
 		t.Run("should be ok to enumerate docs", func(t *testing.T) {
 			var docs []QName
-			for doc := range WDocs(tested.Types) {
+			for doc := range WDocs(tested.Types()) {
 				docs = append(docs, doc.QName())
 			}
 			require.Len(docs, 1)
 			require.Equal(docName, docs[0])
 			t.Run("should be ok to enumerate recs", func(t *testing.T) {
 				var recs []QName
-				for rec := range WRecords(tested.Types) {
+				for rec := range WRecords(tested.Types()) {
 					recs = append(recs, rec.QName())
 				}
 				require.Len(recs, 1)

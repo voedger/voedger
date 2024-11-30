@@ -11,4 +11,9 @@ func (t *Type) read(typ appdef.IType) {
 	t.Comment = readComment(typ)
 	t.QName = typ.QName()
 	t.Kind = typ.Kind()
+
+	t.Tags = appdef.QNames{}
+	for tag := range typ.Tags() {
+		t.Tags.Add(tag.QName())
+	}
 }
