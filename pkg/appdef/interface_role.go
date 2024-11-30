@@ -21,30 +21,29 @@ type IRole interface {
 type IRoleBuilder interface {
 	ITypeBuilder
 
-	// Grants specified operations on specified resources.
+	// Grants operations on filtered types.
 	//
 	// # Panics:
 	//   - if ops is empty,
-	//	 - if resources are empty,
-	//	 - if resources contains unknown names,
-	//	 - if ops are not compatible with resources,
+	//	 - if ops contains incompatible operations (e.g. INSERT with EXECUTE),
+	//	 - if filtered type is not compatible with operations,
 	//	 - if fields contains unknown names.
-	Grant(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) IRoleBuilder
+	Grant(ops []OperationKind, flt IFilter, fields []FieldName, comment ...string) IRoleBuilder
 
-	// Grants all available operations on specified resources.
+	// Grants all available operations on filtered types.
 	//
-	// If the resources are records or view records, then insert, update, and select are granted.
+	// If the types are records or view records, then insert, update, and select are granted.
 	//
-	// If the resources are commands or queries, their execution is granted.
+	// If the types are commands or queries, their execution is granted.
 	//
-	// If the resources are roles, then all operations from these roles are granted.
-	GrantAll(resources []QName, comment ...string) IRoleBuilder
+	// If the types are roles, then inheritance all operations from these roles are granted.
+	GrantAll(flt IFilter, comment ...string) IRoleBuilder
 
-	// Revokes operations on specified resources.
-	Revoke(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) IRoleBuilder
+	// Revokes operations on filtered types.
+	Revoke(ops []OperationKind, flt IFilter, fields []FieldName, comment ...string) IRoleBuilder
 
-	// Remove all available operations on specified resources.
-	RevokeAll(resources []QName, comment ...string) IRoleBuilder
+	// Remove all available operations on filtered types.
+	RevokeAll(flt IFilter, comment ...string) IRoleBuilder
 }
 
 type IRolesBuilder interface {

@@ -56,20 +56,8 @@ const (
 	PolicyKind_count
 )
 
-type IResourcePattern interface {
-	// Returns resource names that match the pattern.
-	//
-	// # insert, update and select:
-	//	- records or view records names
-	//
-	// # execute:
-	//	- commands & queries names
-	//
-	// # inherits:
-	//	- roles names.
-	//
-	// `QNameANY` or `QNameAny×××` patterns are not allowed in resource names
-	On() QNames
+type IACLFilter interface {
+	IFilter
 
 	// Returns fields (of records or views) then insert, update or select operation is described.
 	Fields() []FieldName
@@ -85,8 +73,8 @@ type IACLRule interface {
 	// Returns operations are granted or revoked.
 	Policy() PolicyKind
 
-	// Returns resource on which rule is applicable.
-	Resources() IResourcePattern
+	// Returns filter of types on which rule is applicable.
+	Filter() IACLFilter
 
 	// Returns the role to which the operations was granted or revoked.
 	Principal() IRole
@@ -112,7 +100,7 @@ type IACLBuilder interface {
 	//	 - if fields are not applicable for ops,
 	//	 - if fields contains unknown names,
 	//   - if role is unknown.
-	Grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) IACLBuilder
+	Grant(ops []OperationKind, resources IFilter, fields []FieldName, toRole QName, comment ...string) IACLBuilder
 
 	// Grants all available operations on specified resources to specified role.
 	//
@@ -123,15 +111,15 @@ type IACLBuilder interface {
 	// If the resources are roles, then all operations from these roles are granted to specified role.
 	//
 	// No mixed resources are allowed.
-	GrantAll(resources []QName, toRole QName, comment ...string) IACLBuilder
+	GrantAll(resources IFilter, toRole QName, comment ...string) IACLBuilder
 
 	// Revokes specified operations on specified resources from specified role.
 	//
 	// Revoke inherited roles is not supported
-	Revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) IACLBuilder
+	Revoke(ops []OperationKind, resources IFilter, fields []FieldName, fromRole QName, comment ...string) IACLBuilder
 
 	// Remove all available operations on specified resources from specified role.
 	//
 	// Revoke inherited roles is not supported
-	RevokeAll(resources []QName, fromRole QName, comment ...string) IACLBuilder
+	RevokeAll(resources IFilter, fromRole QName, comment ...string) IACLBuilder
 }

@@ -46,7 +46,7 @@ func newACLResourcePattern() *ACLResourcePattern {
 	}
 }
 
-func (arp *ACLResourcePattern) read(rp appdef.IResourcePattern) {
+func (arp *ACLResourcePattern) read(rp appdef.IACLFilter) {
 	arp.On.Add(rp.On()...)
 	arp.Fields = append(arp.Fields, rp.Fields()...)
 }

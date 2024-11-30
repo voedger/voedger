@@ -5,7 +5,9 @@
 
 package appdef
 
-// # Implements:
+import "errors"
+
+// # Supports:
 //   - IRole
 type role struct {
 	typ
@@ -30,10 +32,10 @@ func (r role) ACL(cb func(IACLRule) bool) {
 }
 
 func (r *role) AncRoles() (roles []QName) {
-	for _, p := range r.aclRules {
-		if p.ops.Contains(OperationKind_Inherits) {
-			for _, n := range p.Resources().On() {
-				roles = append(roles, n)
+	for _, acl := range r.aclRules {
+		if acl.ops.Contains(OperationKind_Inherits) {
+			for role := range Roles(FilterMatches(acl.Filter(), r.Workspace().Types())) {
+				roles = append(roles, role.QName())
 			}
 		}
 	}
@@ -45,23 +47,36 @@ func (r *role) appendACL(rule *aclRule) {
 	r.ws.appendACL(rule)
 }
 
-func (r *role) grant(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) {
-	r.appendACL(newGrant(ops, resources, fields, r, comment...))
+func (r *role) grant(ops []OperationKind, flt IFilter, fields []FieldName, comment ...string) {
+	r.appendACL(newGrant(ops, flt, fields, r, comment...))
 }
 
-func (r *role) grantAll(resources []QName, comment ...string) {
-	r.appendACL(newGrantAll(resources, r, comment...))
+func (r *role) grantAll(flt IFilter, comment ...string) {
+	r.appendACL(newGrantAll(flt, r, comment...))
 }
 
-func (r *role) revoke(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) {
-	r.appendACL(newRevoke(ops, resources, fields, r, comment...))
+func (r *role) revoke(ops []OperationKind, flt IFilter, fields []FieldName, comment ...string) {
+	r.appendACL(newRevoke(ops, flt, fields, r, comment...))
 }
 
-func (r *role) revokeAll(resources []QName, comment ...string) {
-	r.appendACL(newRevokeAll(resources, r, comment...))
+func (r *role) revokeAll(flt IFilter, comment ...string) {
+	r.appendACL(newRevokeAll(flt, r, comment...))
 }
 
-// # Implements:
+// validates role.
+//
+// # Error if:
+//   - ACL rule is not valid
+func (r role) validate() (err error) {
+	for _, p := range r.aclRules {
+		if e := p.validate(); e != nil {
+			err = errors.Join(err, e)
+		}
+	}
+	return err
+}
+
+// # Supports:
 //   - IRoleBuilder
 type roleBuilder struct {
 	typeBuilder
@@ -75,22 +90,22 @@ func newRoleBuilder(role *role) *roleBuilder {
 	}
 }
 
-func (rb *roleBuilder) Grant(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) IRoleBuilder {
-	rb.role.grant(ops, resources, fields, comment...)
+func (rb *roleBuilder) Grant(ops []OperationKind, flt IFilter, fields []FieldName, comment ...string) IRoleBuilder {
+	rb.role.grant(ops, flt, fields, comment...)
 	return rb
 }
 
-func (rb *roleBuilder) GrantAll(resource []QName, comment ...string) IRoleBuilder {
-	rb.role.grantAll(resource, comment...)
+func (rb *roleBuilder) GrantAll(flt IFilter, comment ...string) IRoleBuilder {
+	rb.role.grantAll(flt, comment...)
 	return rb
 }
 
-func (rb *roleBuilder) Revoke(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) IRoleBuilder {
-	rb.role.revoke(ops, resources, fields, comment...)
+func (rb *roleBuilder) Revoke(ops []OperationKind, flt IFilter, fields []FieldName, comment ...string) IRoleBuilder {
+	rb.role.revoke(ops, flt, fields, comment...)
 	return rb
 }
 
-func (rb *roleBuilder) RevokeAll(resources []QName, comment ...string) IRoleBuilder {
-	rb.role.revokeAll(resources, comment...)
+func (rb *roleBuilder) RevokeAll(flt IFilter, comment ...string) IRoleBuilder {
+	rb.role.revokeAll(flt, comment...)
 	return rb
 }

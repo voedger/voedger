@@ -263,36 +263,36 @@ func (ws *workspace) buildAllTypes() {
 	collect(ws)
 }
 
-func (ws *workspace) grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) {
+func (ws *workspace) grant(ops []OperationKind, flt IFilter, fields []FieldName, toRole QName, comment ...string) {
 	r := Role(ws.Type, toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
 	}
-	r.(*role).grant(ops, resources, fields, comment...)
+	r.(*role).grant(ops, flt, fields, comment...)
 }
 
-func (ws *workspace) grantAll(resources []QName, toRole QName, comment ...string) {
+func (ws *workspace) grantAll(flt IFilter, toRole QName, comment ...string) {
 	r := Role(ws.Type, toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
 	}
-	r.(*role).grantAll(resources, comment...)
+	r.(*role).grantAll(flt, comment...)
 }
 
-func (ws *workspace) revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) {
+func (ws *workspace) revoke(ops []OperationKind, flt IFilter, fields []FieldName, fromRole QName, comment ...string) {
 	r := Role(ws.Type, fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}
-	r.(*role).revoke(ops, resources, fields, comment...)
+	r.(*role).revoke(ops, flt, fields, comment...)
 }
 
-func (ws *workspace) revokeAll(resources []QName, fromRole QName, comment ...string) {
+func (ws *workspace) revokeAll(flt IFilter, fromRole QName, comment ...string) {
 	r := Role(ws.Type, fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}
-	r.(*role).revokeAll(resources, comment...)
+	r.(*role).revokeAll(flt, comment...)
 }
 
 func (ws *workspace) setAncestors(name QName, names ...QName) {
@@ -457,23 +457,23 @@ func (wb *workspaceBuilder) AddWRecord(name QName) IWRecordBuilder {
 	return wb.workspace.addWRecord(name)
 }
 
-func (wb *workspaceBuilder) Grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) IACLBuilder {
-	wb.workspace.grant(ops, resources, fields, toRole, comment...)
+func (wb *workspaceBuilder) Grant(ops []OperationKind, flt IFilter, fields []FieldName, toRole QName, comment ...string) IACLBuilder {
+	wb.workspace.grant(ops, flt, fields, toRole, comment...)
 	return wb
 }
 
-func (wb *workspaceBuilder) GrantAll(resources []QName, toRole QName, comment ...string) IACLBuilder {
-	wb.workspace.grantAll(resources, toRole, comment...)
+func (wb *workspaceBuilder) GrantAll(flt IFilter, toRole QName, comment ...string) IACLBuilder {
+	wb.workspace.grantAll(flt, toRole, comment...)
 	return wb
 }
 
-func (wb *workspaceBuilder) Revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) IACLBuilder {
-	wb.workspace.revoke(ops, resources, fields, fromRole, comment...)
+func (wb *workspaceBuilder) Revoke(ops []OperationKind, flt IFilter, fields []FieldName, fromRole QName, comment ...string) IACLBuilder {
+	wb.workspace.revoke(ops, flt, fields, fromRole, comment...)
 	return wb
 }
 
-func (wb *workspaceBuilder) RevokeAll(resources []QName, fromRole QName, comment ...string) IACLBuilder {
-	wb.workspace.revokeAll(resources, fromRole, comment...)
+func (wb *workspaceBuilder) RevokeAll(flt IFilter, fromRole QName, comment ...string) IACLBuilder {
+	wb.workspace.revokeAll(flt, fromRole, comment...)
 	return wb
 }
 

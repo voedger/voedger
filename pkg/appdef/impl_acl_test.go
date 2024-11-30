@@ -3,73 +3,108 @@
  * @author: Nikolay Nikitin
  */
 
-package appdef
+package appdef_test
 
 import (
 	"fmt"
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func Test_GrantAndRevoke(t *testing.T) {
 	require := require.New(t)
 
-	var app IAppDef
+	var app appdef.IAppDef
 
-	wsName := NewQName("test", "workspace")
-	docName := NewQName("test", "doc")
-	viewName := NewQName("test", "view")
-	cmdName := NewQName("test", "cmd")
-	queryName := NewQName("test", "query")
+	wsName := appdef.NewQName("test", "workspace")
+	docName := appdef.NewQName("test", "doc")
+	viewName := appdef.NewQName("test", "view")
+	cmdName := appdef.NewQName("test", "cmd")
+	queryName := appdef.NewQName("test", "query")
 
-	readerName := NewQName("test", "reader")
-	writerName := NewQName("test", "writer")
-	workerName := NewQName("test", "worker")
-	ownerName := NewQName("test", "owner")
-	adminName := NewQName("test", "admin")
+	readerName := appdef.NewQName("test", "reader")
+	writerName := appdef.NewQName("test", "writer")
+	workerName := appdef.NewQName("test", "worker")
+	ownerName := appdef.NewQName("test", "owner")
+	adminName := appdef.NewQName("test", "admin")
 
-	intruderRoleName := NewQName("test", "intruder")
+	intruderRoleName := appdef.NewQName("test", "intruder")
 
 	t.Run("should be ok to build application with ACL", func(t *testing.T) {
-		adb := New()
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
 
 		doc := wsb.AddCDoc(docName)
-		doc.AddField("field1", DataKind_int32, true)
+		doc.AddField("field1", appdef.DataKind_int32, true)
 
 		view := wsb.AddView(viewName)
-		view.Key().PartKey().AddField("pk_1", DataKind_int32)
-		view.Key().ClustCols().AddField("cc_1", DataKind_string)
-		view.Value().AddField("vf_1", DataKind_string, false)
+		view.Key().PartKey().AddField("pk_1", appdef.DataKind_int32)
+		view.Key().ClustCols().AddField("cc_1", appdef.DataKind_string)
+		view.Value().AddField("vf_1", appdef.DataKind_string, false)
 
 		_ = wsb.AddCommand(cmdName)
 		_ = wsb.AddQuery(queryName)
 
 		_ = wsb.AddRole(readerName)
-		wsb.Grant([]OperationKind{OperationKind_Select}, []QName{docName, viewName}, []FieldName{"field1"}, readerName, "grant select from doc & view to reader")
-		wsb.Grant([]OperationKind{OperationKind_Execute}, []QName{queryName}, nil, readerName, "grant execute query to reader")
+		wsb.Grant([]appdef.OperationKind{appdef.OperationKind_Select},
+			filter.QNames(docName, viewName),
+			[]appdef.FieldName{"field1"},
+			readerName,
+			"grant select from doc & view to reader")
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Execute},
+			filter.QNames(queryName),
+			nil,
+			readerName,
+			"grant execute query to reader")
 
 		_ = wsb.AddRole(writerName)
-		wsb.GrantAll([]QName{docName, viewName}, writerName, "grant all on doc & view to writer")
-		wsb.GrantAll([]QName{cmdName, queryName}, writerName, "grant execute all functions to writer")
+		wsb.GrantAll(
+			filter.QNames(docName, viewName),
+			writerName,
+			"grant all on doc & view to writer")
+		wsb.GrantAll(
+			filter.QNames(cmdName, queryName),
+			writerName,
+			"grant execute all functions to writer")
 
 		_ = wsb.AddRole(workerName)
-		wsb.GrantAll([]QName{readerName, writerName}, workerName, "grant reader and writer roles to worker")
+		wsb.GrantAll(
+			filter.QNames(readerName, writerName),
+			workerName,
+			"grant reader and writer roles to worker")
 
 		_ = wsb.AddRole(ownerName)
-		wsb.GrantAll([]QName{docName, viewName}, ownerName)
-		wsb.GrantAll([]QName{cmdName, queryName}, ownerName)
+		wsb.GrantAll(
+			filter.QNames(docName, viewName),
+			ownerName)
+		wsb.GrantAll(
+			filter.QNames(cmdName, queryName),
+			ownerName)
 
 		_ = wsb.AddRole(adminName)
-		wsb.GrantAll([]QName{ownerName}, adminName)
-		wsb.Revoke([]OperationKind{OperationKind_Execute}, []QName{cmdName, queryName}, nil, adminName, "revoke execute on workspace from admin")
+		wsb.GrantAll(
+			filter.QNames(ownerName),
+			adminName)
+		wsb.Revoke(
+			[]appdef.OperationKind{appdef.OperationKind_Execute},
+			filter.QNames(cmdName, queryName),
+			nil,
+			adminName,
+			"revoke execute on workspace from admin")
 
 		_ = wsb.AddRole(intruderRoleName)
-		wsb.RevokeAll([]QName{docName, viewName}, intruderRoleName)
-		wsb.RevokeAll([]QName{cmdName, queryName}, intruderRoleName)
+		wsb.RevokeAll(
+			filter.QNames(docName, viewName),
+			intruderRoleName)
+		wsb.RevokeAll(
+			filter.QNames(cmdName, queryName),
+			intruderRoleName)
 
 		var err error
 		app, err = adb.Build()
@@ -77,32 +112,32 @@ func Test_GrantAndRevoke(t *testing.T) {
 		require.NotNil(app)
 	})
 
-	testWith := func(tested IWithACL) {
+	testWith := func(tested appdef.IWithACL) {
 		t.Run("should be ok to enum all ACL rules", func(t *testing.T) {
 			want := []struct {
-				policy    PolicyKind
-				ops       []OperationKind
-				res       []QName
-				fields    []FieldName
-				principal QName
+				policy    appdef.PolicyKind
+				ops       []appdef.OperationKind
+				flt       []appdef.QName
+				fields    []appdef.FieldName
+				principal appdef.QName
 			}{
 				// reader role
-				{PolicyKind_Allow, []OperationKind{OperationKind_Select}, []QName{docName, viewName}, []FieldName{"field1"}, readerName},
-				{PolicyKind_Allow, []OperationKind{OperationKind_Execute}, []QName{queryName}, nil, readerName},
+				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName, viewName}, []appdef.FieldName{"field1"}, readerName},
+				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{queryName}, nil, readerName},
 				// writer role
-				{PolicyKind_Allow, []OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select}, []QName{docName, viewName}, nil, writerName},
-				{PolicyKind_Allow, []OperationKind{OperationKind_Execute}, []QName{cmdName, queryName}, nil, writerName},
+				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select}, []appdef.QName{docName, viewName}, nil, writerName},
+				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{cmdName, queryName}, nil, writerName},
 				// worker role
-				{PolicyKind_Allow, []OperationKind{OperationKind_Inherits}, []QName{readerName, writerName}, nil, workerName},
+				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Inherits}, []appdef.QName{readerName, writerName}, nil, workerName},
 				// owner role
-				{PolicyKind_Allow, []OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select}, []QName{docName, viewName}, nil, ownerName},
-				{PolicyKind_Allow, []OperationKind{OperationKind_Execute}, []QName{cmdName, queryName}, nil, ownerName},
+				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select}, []appdef.QName{docName, viewName}, nil, ownerName},
+				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{cmdName, queryName}, nil, ownerName},
 				// admin role
-				{PolicyKind_Allow, []OperationKind{OperationKind_Inherits}, []QName{ownerName}, nil, adminName},
-				{PolicyKind_Deny, []OperationKind{OperationKind_Execute}, []QName{cmdName, queryName}, nil, adminName},
+				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Inherits}, []appdef.QName{ownerName}, nil, adminName},
+				{appdef.PolicyKind_Deny, []appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{cmdName, queryName}, nil, adminName},
 				// intruder role
-				{PolicyKind_Deny, []OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select}, []QName{docName, viewName}, nil, intruderRoleName},
-				{PolicyKind_Deny, []OperationKind{OperationKind_Execute}, []QName{cmdName, queryName}, nil, intruderRoleName},
+				{appdef.PolicyKind_Deny, []appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select}, []appdef.QName{docName, viewName}, nil, intruderRoleName},
+				{appdef.PolicyKind_Deny, []appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{cmdName, queryName}, nil, intruderRoleName},
 			}
 
 			cnt := 0
@@ -111,8 +146,14 @@ func Test_GrantAndRevoke(t *testing.T) {
 				t.Run(fmt.Sprintf("ACL[%d]", cnt), func(t *testing.T) {
 					require.Equal(want[cnt].policy, r.Policy())
 					require.Equal(want[cnt].ops, r.Ops())
-					require.EqualValues(want[cnt].res, r.Resources().On())
-					require.Equal(want[cnt].fields, r.Resources().Fields())
+
+					got := appdef.QNames{}
+					for t := range appdef.FilterMatches(r.Filter(), r.Principal().Workspace().Types()) {
+						got = append(got, t.QName())
+					}
+					require.EqualValues(want[cnt].flt, got)
+
+					require.Equal(want[cnt].fields, r.Filter().Fields())
 					require.Equal(want[cnt].principal, r.Principal().QName())
 				})
 				cnt++
@@ -128,66 +169,93 @@ func Test_GrantAndRevoke(t *testing.T) {
 func Test_GrantAndRevokeErrors(t *testing.T) {
 	require := require.New(t)
 	t.Run("should be panics", func(t *testing.T) {
-		adb := New()
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		wsName := NewQName("test", "workspace")
-		docName := NewQName("test", "doc")
+		wsName := appdef.NewQName("test", "workspace")
+		docName := appdef.NewQName("test", "doc")
 
-		cmdName := NewQName("test", "cmd")
+		cmdName := appdef.NewQName("test", "cmd")
 
 		wsb := adb.AddWorkspace(wsName)
 
 		_ = wsb.AddCommand(cmdName)
 
-		readerName := NewQName("test", "reader")
+		readerName := appdef.NewQName("test", "reader")
 
 		doc := wsb.AddCDoc(docName)
-		doc.AddField("field1", DataKind_int32, true)
+		doc.AddField("field1", appdef.DataKind_int32, true)
 
 		t.Run("if unknown principal", func(t *testing.T) {
-			unknownRole := NewQName("test", "unknown")
+			unknownRole := appdef.NewQName("test", "unknown")
 			require.Panics(func() {
-				wsb.Grant([]OperationKind{OperationKind_Select}, []QName{docName}, nil, unknownRole)
-			}, require.Is(ErrNotFoundError), require.Has(unknownRole))
+				wsb.Grant(
+					[]appdef.OperationKind{appdef.OperationKind_Select},
+					filter.QNames(docName),
+					nil,
+					unknownRole)
+			}, require.Is(appdef.ErrNotFoundError), require.Has(unknownRole))
 			require.Panics(func() {
-				wsb.GrantAll([]QName{docName}, unknownRole)
-			}, require.Is(ErrNotFoundError), require.Has(unknownRole))
+				wsb.GrantAll(
+					filter.QNames(docName),
+					unknownRole)
+			}, require.Is(appdef.ErrNotFoundError), require.Has(unknownRole))
 			require.Panics(func() {
-				wsb.Revoke([]OperationKind{OperationKind_Select}, []QName{docName}, nil, unknownRole)
-			}, require.Is(ErrNotFoundError), require.Has(unknownRole))
+				wsb.Revoke(
+					[]appdef.OperationKind{appdef.OperationKind_Select},
+					filter.QNames(docName),
+					nil,
+					unknownRole)
+			}, require.Is(appdef.ErrNotFoundError), require.Has(unknownRole))
 			require.Panics(func() {
-				wsb.RevokeAll([]QName{docName}, unknownRole)
-			}, require.Is(ErrNotFoundError), require.Has(unknownRole))
+				wsb.RevokeAll(
+					filter.QNames(docName),
+					unknownRole)
+			}, require.Is(appdef.ErrNotFoundError), require.Has(unknownRole))
 		})
 
 		_ = wsb.AddRole(readerName)
 
 		t.Run("if invalid operations", func(t *testing.T) {
 			require.Panics(func() {
-				wsb.Grant([]OperationKind{}, []QName{docName}, nil, readerName)
-			}, require.Is(ErrMissedError))
+				wsb.Grant(
+					[]appdef.OperationKind{},
+					filter.QNames(docName),
+					nil,
+					readerName)
+			}, require.Is(appdef.ErrMissedError))
 			require.Panics(func() {
-				wsb.Grant([]OperationKind{OperationKind_null}, []QName{docName}, nil, readerName)
-			}, require.Is(ErrIncompatibleError), require.Has("[null]"))
+				wsb.Grant(
+					[]appdef.OperationKind{appdef.OperationKind_null},
+					filter.QNames(docName),
+					nil,
+					readerName)
+			}, require.Is(appdef.ErrIncompatibleError), require.Has("[null]"))
 			require.Panics(func() {
-				wsb.Grant([]OperationKind{OperationKind_count}, []QName{docName}, nil, readerName)
-			}, require.Is(ErrIncompatibleError), require.Has("[count]"))
+				wsb.Grant([]appdef.OperationKind{appdef.OperationKind_count},
+					filter.QNames(docName),
+					nil,
+					readerName)
+			}, require.Is(appdef.ErrIncompatibleError), require.Has("[count]"))
 			require.Panics(func() {
-				wsb.Revoke([]OperationKind{OperationKind_Inherits}, []QName{readerName}, nil, readerName)
-			}, require.Is(ErrUnsupportedError), require.Has("revoke"), require.Has("Inherits"))
+				wsb.Grant([]appdef.OperationKind{appdef.OperationKind_Select, appdef.OperationKind_Execute},
+					filter.QNames(docName),
+					nil,
+					readerName)
+			}, require.Is(appdef.ErrIncompatibleError), require.Has("[count]"))
+			require.Panics(func() {
+				wsb.Revoke(
+					[]appdef.OperationKind{appdef.OperationKind_Inherits},
+					filter.QNames(readerName),
+					nil,
+					readerName)
+			}, require.Is(appdef.ErrUnsupportedError), require.Has("revoke"), require.Has("Inherits"))
 		})
 
 		t.Run("if operations on invalid resources", func(t *testing.T) {
 			require.Panics(func() {
-				wsb.Grant([]OperationKind{OperationKind_Select}, []QName{}, nil, readerName)
-			}, require.Is(ErrMissedError))
-			require.Panics(func() {
-				wsb.GrantAll(nil, readerName)
-			}, require.Is(ErrMissedError))
-
-			require.Panics(func() {
-				wsb.Grant([]OperationKind{OperationKind_Select}, []QName{NewQName("test", "unknown")}, nil, readerName)
+				wsb.Grant(
+					[]OperationKind{OperationKind_Select}, []QName{NewQName("test", "unknown")}, nil, readerName)
 			}, require.Is(ErrNotFoundError), require.Has("test.unknown"))
 
 			require.Panics(func() {

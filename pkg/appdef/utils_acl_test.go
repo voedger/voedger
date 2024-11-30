@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
@@ -49,60 +48,6 @@ func Test_allACLOperationsOnType(t *testing.T) {
 			typ.name = tt.typ.name
 			if gotPk := allACLOperationsOnType(typ); !reflect.DeepEqual(gotPk, tt.wantPk) {
 				t.Errorf("allACLOperationsOnType(%s) = %v, want %v", tt.typ.kind.TrimString(), gotPk, tt.wantPk)
-			}
-		})
-	}
-}
-
-func Test_validateACLResourceNames(t *testing.T) {
-
-	cdoc := NewQName("test", "cdoc")
-	gdoc := NewQName("test", "gdoc")
-	cmd := NewQName("test", "cmd")
-	query := NewQName("test", "query")
-	role := NewQName("test", "role")
-
-	app := func() IAppDef {
-		adb := New()
-		wsb := adb.AddWorkspace(NewQName("test", "ws"))
-
-		_ = wsb.AddGDoc(gdoc)
-		_ = wsb.AddCDoc(cdoc)
-		_ = wsb.AddCommand(cmd)
-		_ = wsb.AddQuery(query)
-		_ = wsb.AddRole(role)
-
-		return adb.MustBuild()
-	}()
-
-	tests := []struct {
-		name    string
-		on      []QName
-		want    QNames
-		wantErr error
-	}{
-		{"error: empty names", []QName{}, nil, ErrMissedError},
-		{"error: unknown name", []QName{NewQName("test", "unknown")}, nil, ErrNotFoundError},
-
-		{"ok: test.gdoc + test.cdoc", []QName{gdoc, cdoc}, QNamesFrom(gdoc, cdoc), nil},
-
-		{"ok: test.cmd + test.query", []QName{cmd, query}, QNamesFrom(cmd, query), nil},
-
-		{"ok test.role", []QName{role}, QNamesFrom(role), nil},
-		{"error: test.role + test.cmd", []QName{role, cmd}, nil, ErrIncompatibleError},
-
-		{"error: test.cdoc + test.cmd", []QName{cdoc, cmd}, nil, ErrIncompatibleError},
-	}
-
-	require := require.New(t)
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := validateACLResourceNames(app.Type, tt.on...)
-			if tt.wantErr == nil {
-				require.NoError(err, "unexpected error %v in validatePrivilegeOnNames(%v)", err, tt.on)
-				require.Equal(tt.want, got, "validatePrivilegeOnNames(%v): want %v, got %v", tt.on, tt.want, got)
-			} else {
-				require.ErrorIs(err, tt.wantErr, "expected error %v in validatePrivilegeOnNames(%v)", tt.wantErr, tt.on)
 			}
 		})
 	}
