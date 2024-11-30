@@ -60,6 +60,7 @@ type IACLFilter interface {
 	IFilter
 
 	// Returns fields (of records or views) then insert, update or select operation is described.
+	// TODO: should return iter.Seq[FieldName]
 	Fields() []FieldName
 }
 
@@ -85,41 +86,40 @@ type IWithACL interface {
 	// Enumerates all ACL rules.
 	//
 	// Rules are enumerated in the order they are added.
+	//
+	// TODO: should return iter.Seq[IACLRule]
 	ACL(func(IACLRule) bool)
 }
 
 type IACLBuilder interface {
-	// Grants specified operations on specified resources to specified role.
+	// Grants operations on filtered types to role.
 	//
 	// # Panics:
 	//   - if ops is empty,
-	//	 - if resources are empty,
-	//	 - if resources contains unknown names,
-	//	 - if resources are mixed, e.g. records and commands,
-	//	 - if ops are not compatible with resources,
-	//	 - if fields are not applicable for ops,
+	//	 - if ops contains incompatible operations (e.g. INSERT with EXECUTE),
+	//	 - if filtered type is not compatible with operations,
 	//	 - if fields contains unknown names,
 	//   - if role is unknown.
-	Grant(ops []OperationKind, resources IFilter, fields []FieldName, toRole QName, comment ...string) IACLBuilder
+	Grant(ops []OperationKind, flt IFilter, fields []FieldName, toRole QName, comment ...string) IACLBuilder
 
-	// Grants all available operations on specified resources to specified role.
+	// Grants all available operations on filtered types to role.
 	//
-	// If the resources are records or view records, then insert, update, and select are granted.
+	// If the types are records or view records, then insert, update, and select are granted.
 	//
-	// If the resources are commands or queries, their execution is granted.
+	// If the types are commands or queries, their execution is granted.
 	//
-	// If the resources are roles, then all operations from these roles are granted to specified role.
+	// If the types are roles, then all operations from these roles are granted to specified role.
 	//
-	// No mixed resources are allowed.
-	GrantAll(resources IFilter, toRole QName, comment ...string) IACLBuilder
+	// No mixed types are allowed.
+	GrantAll(flt IFilter, toRole QName, comment ...string) IACLBuilder
 
-	// Revokes specified operations on specified resources from specified role.
+	// Revokes operations on filtered types from role.
 	//
 	// Revoke inherited roles is not supported
 	Revoke(ops []OperationKind, resources IFilter, fields []FieldName, fromRole QName, comment ...string) IACLBuilder
 
-	// Remove all available operations on specified resources from specified role.
+	// Remove all available operations on filtered types from role.
 	//
 	// Revoke inherited roles is not supported
-	RevokeAll(resources IFilter, fromRole QName, comment ...string) IACLBuilder
+	RevokeAll(flt IFilter, fromRole QName, comment ...string) IACLBuilder
 }
