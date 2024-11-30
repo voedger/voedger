@@ -32,7 +32,6 @@ func TestWrongTypes(t *testing.T) {
 	}
 	done := make(chan struct{})
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
-	authz := iauthnzimpl.NewDefaultAuthorizer()
 
 	appParts, cleanAppParts, appTokens, statelessResources := deployTestAppWithSecretToken(require, nil)
 
@@ -44,7 +43,7 @@ func TestWrongTypes(t *testing.T) {
 		appParts,
 		3, // maxPrepareQueries
 
-		imetrics.Provide(), "vvm", authn, authz, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader)
+		imetrics.Provide(), "vvm", authn, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		queryProcessor.Run(ctx)

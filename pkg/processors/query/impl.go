@@ -94,7 +94,7 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 
 func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClosableFactory ResultSenderClosableFactory,
 	appParts appparts.IAppPartitions, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
-	authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer, itokens itokens.ITokens, federation federation.IFederation,
+	authn iauthnz.IAuthenticator, itokens itokens.ITokens, federation federation.IFederation,
 	statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) pipeline.IService {
 	return pipeline.NewService(func(ctx context.Context) {
 		var p pipeline.ISyncPipeline
@@ -114,7 +114,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				func() { // borrowed application partition should be guaranteed to be freed
 					defer qwork.Release()
 					if p == nil {
-						p = newQueryProcessorPipeline(ctx, authn, authz, itokens, federation, statelessResources)
+						p = newQueryProcessorPipeline(ctx, authn, itokens, federation, statelessResources)
 					}
 					err := p.SendSync(qwork)
 					if err != nil {
@@ -165,7 +165,7 @@ func execQuery(ctx context.Context, qw *queryWork) (err error) {
 }
 
 // IStatelessResources need only for determine the exact result type of ANY
-func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
+func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator,
 	itokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources) pipeline.ISyncPipeline {
 	ops := []*pipeline.WiredOperator{
 		operator("borrowAppPart", borrowAppPart),
@@ -350,34 +350,25 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				// otherwise each field is considered as allowed if EXECUTE ON QUERY is allowed
 				return nil
 			}
-			// ошибка тут
-
-			// return nil
 			for _, elem := range qw.queryParams.Elements() {
-				path := elem.Path().AsArray()
-				_ = path
-				nested := qw.resultType
-				ok := false
-				for _, pathElem := range path {
-					if len(pathElem) == 0 {
+				nestedPath := elem.Path().AsArray()
+				nestedType := qw.resultType
+				for _, nestedName := range nestedPath {
+					if len(nestedName) == 0 {
 						// root
 						continue
 					}
-					nestedContainers, ok := nested.(appdef.IContainers)
-					if !ok {
-						return fmt.Errorf("%w: table nested has no containers but %s is queried", ErrNotFound, elem.Path().Name())
-					}
-					nestedContainer := nestedContainers.Container(pathElem)
-					if nestedContainer == nil {
-						return fmt.Errorf("%w: field %s is not a nested table but %s is queried", ErrNotFound, pathElem, elem.Path().Name())
-					}
-					nested = nestedContainer.Type()
+					// incorrectness is excluded already on validation stage in [queryParams.validate]
+					containersOfNested := nestedType.(appdef.IContainers)
+					// container presence is checked already on validation stage in [queryParams.validate]
+					nestedContainer := containersOfNested.Container(nestedName)
+					nestedType = nestedContainer.Type()
 				}
 				requestedfields := []string{}
 				for _, resultField := range elem.ResultFields() {
 					requestedfields = append(requestedfields, resultField.Field())
 				}
-				ok, allowedFields, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, nested.QName(), requestedfields, qw.roles)
+				ok, allowedFields, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
 				if err != nil {
 					return err
 				}
@@ -390,8 +381,6 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 					}
 				}
 			}
-			// тут вложенное поле price считается внешним, поэтому ошибка. Как IsOoperationAllowed подсовывать вложенные поля?
-
 			return nil
 		}),
 		operator("build rows processor", func(ctx context.Context, qw *queryWork) error {
