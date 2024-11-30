@@ -6,11 +6,9 @@
 package federation
 
 import (
-	"io"
 	"net/url"
 
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -21,10 +19,3 @@ type implIFederation struct {
 }
 
 type OffsetsChan chan istructs.Offset
-
-// for read and write
-// caller must read out and close the reader
-type BLOBReader struct {
-	io.ReadCloser
-	iblobstorage.DescrType
-}

@@ -54,7 +54,7 @@ func (f *implIFederation) req(relativeURL string, body string, optFuncs ...coreu
 	return f.httpClient.Req(url, body, optFuncs...)
 }
 
-func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader BLOBReader, duration iblobstorage.DurationType,
+func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader, duration iblobstorage.DurationType,
 	optFuncs ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID, err error) {
 	ttl, ok := TemporaryBLOBDurationToURLTTL[duration]
 	if ok {
@@ -78,7 +78,7 @@ func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs
 	return iblobstorage.SUUID(resp.Body), nil
 }
 
-func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blob BLOBReader,
+func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blob iblobstorage.BLOBReader,
 	optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error) {
 	newBLOBIDStr, err := f.UploadTempBLOB(appQName, wsid, blob, 0, optFuncs...)
 	if err != nil {
@@ -91,11 +91,11 @@ func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSI
 	return istructs.RecordID(newBLOBID), nil
 }
 
-func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) (res BLOBReader, err error) {
+func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) (res iblobstorage.BLOBReader, err error) {
 	return f.ReadTempBLOB(appQName, wsid, iblobstorage.SUUID(utils.UintToString(blobID)), optFuncs...)
 }
 
-func (f *implIFederation) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...coreutils.ReqOptFunc) (res BLOBReader, err error) {
+func (f *implIFederation) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...coreutils.ReqOptFunc) (res iblobstorage.BLOBReader, err error) {
 	url := fmt.Sprintf(`blob/%s/%d/%s`, appQName, wsid, blobSUUID)
 	optFuncs = append(optFuncs, coreutils.WithResponseHandler(func(httpResp *http.Response) {}))
 	resp, err := f.post(url, "", optFuncs...)
@@ -103,14 +103,14 @@ func (f *implIFederation) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.W
 		return res, err
 	}
 	if resp.HTTPResp.StatusCode != http.StatusOK {
-		return BLOBReader{}, nil
+		return iblobstorage.BLOBReader{}, nil
 	}
 	contentDisposition := resp.HTTPResp.Header.Get(coreutils.ContentDisposition)
 	_, params, err := mime.ParseMediaType(contentDisposition)
 	if err != nil {
 		return res, err
 	}
-	res = BLOBReader{
+	res = iblobstorage.BLOBReader{
 		DescrType: iblobstorage.DescrType{
 			Name:     params["filename"],
 			MimeType: resp.HTTPResp.Header.Get(coreutils.ContentType),
