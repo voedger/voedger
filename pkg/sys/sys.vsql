@@ -442,9 +442,9 @@ ABSTRACT WORKSPACE Workspace (
 	TAG WorkspaceOwnerFuncTag;
 	TAG AllowedToEveryoneTag;
 
-	ROLE Everyone; -- assigned in any case regardless of whether the token is provided or not
+	ROLE Everyone; -- assigned in any case regardless of whether the authorization token is provided or not
 	ROLE Anonymous;  -- assigned if the token is not provided
-	ROLE AuthenticatedUser; -- assigned if a valid token is provided
+	ROLE AuthenticatedUser; -- assigned if the valid token is provided
 	ROLE System; -- assigned -> everything is allowed, ACL checking skipped
 	ROLE ProfileOwner; -- assigned if the user or device works in its profile
 	ROLE WorkspaceDevice; -- assigned if the device MAY work in a workspace that is owned by its profile
