@@ -4,7 +4,11 @@
 
 package iblobstorage
 
-import istructs "github.com/voedger/voedger/pkg/istructs"
+import (
+	"io"
+
+	istructs "github.com/voedger/voedger/pkg/istructs"
+)
 
 type BLOBState struct {
 	Descr      DescrType
@@ -57,3 +61,10 @@ type WLimiterType func(wantToWriteBytes uint64) error
 type RLimiterType func(wantReadBytes uint64) error
 
 type blobPrefix uint64
+
+// for read and write
+// caller must read out and close the reader
+type BLOBReader struct {
+	io.ReadCloser
+	DescrType
+}

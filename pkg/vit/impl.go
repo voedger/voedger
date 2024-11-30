@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -380,7 +379,7 @@ func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobNam
 func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobName string, blobMimeType string, blobContent []byte, duration iblobstorage.DurationType,
 	opts ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID) {
 	vit.T.Helper()
-	blobReader := federation.BLOBReader{
+	blobReader := iblobstorage.BLOBReader{
 		DescrType: iblobstorage.DescrType{
 			Name:     blobName,
 			MimeType: blobMimeType,
@@ -401,7 +400,7 @@ func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *cor
 
 // blob ReadCloser must be read out by the test
 // will be closed by the VIT
-func (vit *VIT) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) federation.BLOBReader {
+func (vit *VIT) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) iblobstorage.BLOBReader {
 	vit.T.Helper()
 	reader, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID, optFuncs...)
 	require.NoError(vit.T, err)
@@ -409,7 +408,7 @@ func (vit *VIT) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID is
 	return reader
 }
 
-func (vit *VIT) registerBLOBReaderCleanup(reader federation.BLOBReader) {
+func (vit *VIT) registerBLOBReaderCleanup(reader iblobstorage.BLOBReader) {
 	vit.cleanups = append(vit.cleanups, func(vit *VIT) {
 		if reader.ReadCloser != nil {
 			buf := make([]byte, 1)
@@ -428,7 +427,7 @@ func (vit *VIT) registerBLOBReaderCleanup(reader federation.BLOBReader) {
 
 // blob ReadCloser must be read out by the test
 // will be closed by the VIT
-func (vit *VIT) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...coreutils.ReqOptFunc) federation.BLOBReader {
+func (vit *VIT) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...coreutils.ReqOptFunc) iblobstorage.BLOBReader {
 	vit.T.Helper()
 	blobReader, err := vit.IFederation.ReadTempBLOB(appQName, wsid, blobSUUID, optFuncs...)
 	require.NoError(vit.T, err)

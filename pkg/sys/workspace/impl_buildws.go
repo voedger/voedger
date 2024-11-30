@@ -70,7 +70,7 @@ func uploadBLOBs(blobs []BLOBWorkspaceTemplateField, fed federation.IFederation,
 	res := blobsMap{}
 	for _, blob := range blobs {
 		logger.Info("workspace build: uploading blob", blob.Name)
-		blobReader := federation.BLOBReader{
+		blobReader := iblobstorage.BLOBReader{
 			DescrType: iblobstorage.DescrType{
 				Name:     blob.Name,
 				MimeType: blob.MimeType,
