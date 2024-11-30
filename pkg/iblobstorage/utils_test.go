@@ -18,8 +18,10 @@ func TestNewSUUID(t *testing.T) {
 
 	log.Println(suuid)
 
-	expectedLength := 43
+	const expectedLength = 43
 	require.Len(t, suuid, expectedLength)
+
+	require.Regexp(t, "[a-zA-Z0-9-_]", suuid)
 
 	_, err := base64.URLEncoding.WithPadding(base64.NoPadding).DecodeString(string(suuid))
 	require.NoError(t, err)
