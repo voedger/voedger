@@ -4,8 +4,14 @@
 
 package iblobstoragestg
 
-import "github.com/voedger/voedger/pkg/istorage"
-
-type appType uint64
+import (
+	"github.com/voedger/voedger/pkg/iblobstorage"
+	"github.com/voedger/voedger/pkg/istorage"
+)
 
 type BlobAppStoragePtr *istorage.IAppStorage
+
+type implSizeLimiter struct {
+	uploadedSize uint64
+	maxSize      iblobstorage.BLOBMaxSizeType
+}

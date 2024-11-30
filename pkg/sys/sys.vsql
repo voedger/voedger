@@ -352,6 +352,7 @@ ABSTRACT WORKSPACE Workspace (
 
 		COMMAND UploadBLOBHelper;
 		COMMAND DownloadBLOBHelper; -- Deprecated: use q.sys.DownloadBLOBAuthnz
+		COMMAND RegisterTempBLOB1d;
 		QUERY DownloadBLOBAuthnz RETURNS void;
 
 		-- builtin

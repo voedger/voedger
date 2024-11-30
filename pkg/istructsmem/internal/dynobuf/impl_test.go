@@ -91,7 +91,7 @@ func TestDynoBufSchemes(t *testing.T) {
 		}
 	}
 
-	for typ := range app.Types {
+	for typ := range app.Types() {
 		name := typ.QName()
 		if view, ok := typ.(appdef.IView); ok {
 			checkScheme(name, view.Key().PartKey(), schemes.ViewPartKeyScheme(name))

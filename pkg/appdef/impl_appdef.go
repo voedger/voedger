@@ -7,6 +7,7 @@ package appdef
 
 import (
 	"errors"
+	"iter"
 )
 
 // # Implements:
@@ -71,8 +72,8 @@ func (app *appDef) Type(name QName) IType {
 	return app.types.find(name)
 }
 
-func (app *appDef) Types(visit func(IType) bool) {
-	app.types.all(visit)
+func (app *appDef) Types() iter.Seq[IType] {
+	return app.types.all
 }
 
 func (app *appDef) Workspace(name QName) IWorkspace {
@@ -80,7 +81,7 @@ func (app *appDef) Workspace(name QName) IWorkspace {
 }
 
 func (app *appDef) Workspaces(visit func(IWorkspace) bool) {
-	TypesByKind[IWorkspace](app.Types, TypeKind_Workspace)(visit)
+	TypesByKind[IWorkspace](app.Types(), TypeKind_Workspace)(visit)
 }
 
 func (app *appDef) WorkspaceByDescriptor(name QName) IWorkspace {
@@ -121,13 +122,13 @@ func (app *appDef) appendType(t IType) {
 }
 
 func (app *appDef) build() (err error) {
-	for t := range app.Types {
+	for t := range app.Types() {
 		err = errors.Join(err, validateType(t))
 	}
 	if err != nil {
 		return err
 	}
-	for t := range app.Types {
+	for t := range app.Types() {
 		if b, ok := t.(interface{ build() error }); ok {
 			err = errors.Join(err, b.build())
 		}

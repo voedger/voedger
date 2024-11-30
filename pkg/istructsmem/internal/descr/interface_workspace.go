@@ -10,6 +10,7 @@ import "github.com/voedger/voedger/pkg/appdef"
 type Workspace struct {
 	Type
 	Descriptor *appdef.QName               `json:",omitempty"`
+	Tags       map[appdef.QName]*Tag       `json:",omitempty"`
 	DataTypes  map[appdef.QName]*Data      `json:",omitempty"`
 	Structures map[appdef.QName]*Structure `json:",omitempty"`
 	Views      map[appdef.QName]*View      `json:",omitempty"`

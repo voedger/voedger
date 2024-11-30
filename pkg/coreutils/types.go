@@ -98,22 +98,3 @@ type IReadFS interface {
 	fs.ReadFileFS
 }
 
-type BLOBDesc struct {
-	Name     string
-	MimeType string
-}
-
-// moved here to avoid import cycle: state -> federation (for cmd storage) -> blobber (IFederation.UploadBLOBs([]blobber.BLOBWorkspaceTemplateField)) -> state
-type BLOBWorkspaceTemplateField struct {
-	BLOBDesc
-	FieldName string
-	Content   []byte
-	RecordID  istructs.RecordID
-}
-
-// for read and write
-// caller must read out and close the reader
-type BLOBReader struct {
-	io.ReadCloser
-	BLOBDesc
-}

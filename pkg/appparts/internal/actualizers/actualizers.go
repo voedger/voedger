@@ -108,7 +108,7 @@ func (pa *PartitionActualizers) start(vvmCtx context.Context, name appdef.QName,
 // async start new actualizers
 func (pa *PartitionActualizers) startNews(vvmCtx context.Context, appDef appdef.IAppDef, run Run) {
 	news := make(map[appdef.QName]struct{})
-	for prj := range appdef.Projectors(appDef.Types) {
+	for prj := range appdef.Projectors(appDef.Types()) {
 		if !prj.Sync() {
 			name := prj.QName()
 			if _, exists := pa.rt.Load(name); !exists {

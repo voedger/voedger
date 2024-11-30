@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -65,18 +66,18 @@ func updateBLOBsIDsMap(wsData []map[string]interface{}, blobsMap blobsMap) {
 	}
 }
 
-func uploadBLOBs(blobs []coreutils.BLOBWorkspaceTemplateField, federation federation.IFederation, appQName appdef.AppQName, wsid istructs.WSID, principalToken string) (blobsMap, error) {
+func uploadBLOBs(blobs []BLOBWorkspaceTemplateField, fed federation.IFederation, appQName appdef.AppQName, wsid istructs.WSID, principalToken string) (blobsMap, error) {
 	res := blobsMap{}
 	for _, blob := range blobs {
 		logger.Info("workspace build: uploading blob", blob.Name)
-		blobReader := coreutils.BLOBReader{
-			BLOBDesc: coreutils.BLOBDesc{
+		blobReader := iblobstorage.BLOBReader{
+			DescrType: iblobstorage.DescrType{
 				Name:     blob.Name,
 				MimeType: blob.MimeType,
 			},
 			ReadCloser: io.NopCloser(bytes.NewReader(blob.Content)),
 		}
-		newBLOBID, err := federation.UploadBLOB(appQName, wsid, blobReader, coreutils.WithAuthorizeBy(principalToken))
+		newBLOBID, err := fed.UploadBLOB(appQName, wsid, blobReader, coreutils.WithAuthorizeBy(principalToken))
 		if err != nil {
 			return nil, fmt.Errorf("blob %s: %w", blob.Name, err)
 		}
