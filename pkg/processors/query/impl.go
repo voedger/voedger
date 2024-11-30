@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"runtime/debug"
 	"slices"
@@ -345,7 +344,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			qw.queryParams, err = newQueryParams(qw.requestData, NewElement, NewFilter, NewOrderBy, newFieldsKinds(qw.resultType), qw.resultType)
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
-		operator("authorize sys.Any result", func(ctx context.Context, qw *queryWork) (err error) {
+		operator("authorize actual sys.Any result", func(ctx context.Context, qw *queryWork) (err error) {
 			if qw.iQuery.Result() != appdef.AnyType {
 				// will authorize result only if result is sys.Any
 				// otherwise each field is considered as allowed if EXECUTE ON QUERY is allowed
@@ -354,31 +353,45 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			// ошибка тут
 
 			// return nil
-			requestedfields := []string{}
-			c := qw.resultType.(appdef.IContainers)
-			_ = c
 			for _, elem := range qw.queryParams.Elements() {
 				path := elem.Path().AsArray()
-				deepestName := path[len(path)-1]
-				deepestQName := appdef.NewQName()
-				log.Println(elem.Path().Name())
+				_ = path
+				nested := qw.resultType
+				ok := false
+				for _, pathElem := range path {
+					if len(pathElem) == 0 {
+						// root
+						continue
+					}
+					nestedContainers, ok := nested.(appdef.IContainers)
+					if !ok {
+						return fmt.Errorf("%w: table nested has no containers but %s is queried", ErrNotFound, elem.Path().Name())
+					}
+					nestedContainer := nestedContainers.Container(pathElem)
+					if nestedContainer == nil {
+						return fmt.Errorf("%w: field %s is not a nested table but %s is queried", ErrNotFound, pathElem, elem.Path().Name())
+					}
+					nested = nestedContainer.Type()
+				}
+				requestedfields := []string{}
 				for _, resultField := range elem.ResultFields() {
 					requestedfields = append(requestedfields, resultField.Field())
 				}
-			}
-			// тут вложенное поле price считается внешним, поэтому ошибка. Как IsOoperationAllowed подсовывать вложенные поля?
-			ok, allowedFields, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, qw.resultType.QName(), requestedfields, qw.roles)
-			if err != nil {
-				return err
-			}
-			if !ok {
-				return coreutils.NewSysError(http.StatusForbidden)
-			}
-			for _, requestedField := range requestedfields {
-				if !slices.Contains(allowedFields, requestedField) {
+				ok, allowedFields, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, nested.QName(), requestedfields, qw.roles)
+				if err != nil {
+					return err
+				}
+				if !ok {
 					return coreutils.NewSysError(http.StatusForbidden)
 				}
+				for _, requestedField := range requestedfields {
+					if !slices.Contains(allowedFields, requestedField) {
+						return coreutils.NewSysError(http.StatusForbidden)
+					}
+				}
 			}
+			// тут вложенное поле price считается внешним, поэтому ошибка. Как IsOoperationAllowed подсовывать вложенные поля?
+
 			return nil
 		}),
 		operator("build rows processor", func(ctx context.Context, qw *queryWork) error {

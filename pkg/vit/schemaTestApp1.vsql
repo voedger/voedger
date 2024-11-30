@@ -562,16 +562,6 @@ ALTERABLE WORKSPACE test_wsWS (
 		)
 	);
 
-	TABLE Root INHERITS sys.CDoc (
-		FldRoot int32,
-		Nested TABLE Nested (
-			FldNested int32,
-			Third TABLE Third (
-				Fld1 int32
-			)
-		)
-	);
-
 	EXTENSION ENGINE BUILTIN (
 		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY MockQry(MockQryParams) RETURNS MockQryResult WITH Tags=(WorkspaceOwnerFuncTag);
