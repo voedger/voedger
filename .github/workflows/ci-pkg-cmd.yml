@@ -40,7 +40,7 @@ jobs:
           fi
 
   call-workflow-cd_voeger:
-    needs: run-test
+    needs: build
     if: github.repository == 'voedger/voedger'
     uses: voedger/voedger/.github/workflows/cd-voedger.yml@main
     secrets:
