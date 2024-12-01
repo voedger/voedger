@@ -31,9 +31,8 @@ jobs:
     steps:
       - name: Run test script
         run: |
-          cd "$(git rev-parse --show-toplevel)/.github/scripts"
-          chmod +x test_subfolders.sh
-          bash test_subfolders.sh
+          chmod +x ./.github/scriptstest_subfolders.sh
+          bash ./.github/scriptstest_subfolders.sh
         shell: bash
 
       - name: Set Ignore Build BP3
