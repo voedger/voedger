@@ -23,7 +23,7 @@ jobs:
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   run-test:
     needs: call-workflow-ci-pkg
-    name: build
+    name: run-test
     runs-on: ubuntu-latest
     outputs:
       ibp3: ${{ steps.setignore.outputs.ignore_bp3 }}
