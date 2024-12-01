@@ -1,0 +1,87 @@
+name: CI pkg-cmd
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "pkg/**"
+
+jobs:
+  call-workflow-ci-pkg:
+    uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
+    with:
+      test_folder: "pkg"
+      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
+      ignore_bp3: "true"
+      short_test: "true"
+      go_race: "false"
+    secrets:
+      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
+      codecov_token: ""
+      personal_token: ${{ secrets.PERSONAL_TOKEN }}
+  build:
+    needs: call-workflow-ci-pkg
+    name: build
+    runs-on: ubuntu-latest
+    outputs:
+      ibp3: ${{ steps.setignore.outputs.ignore_bp3 }}
+
+    steps:
+      - name: Set Ignore Build BP3
+        id: setignore
+        run: |
+          if [[ ${{ github.repository }} == 'voedger/voedger' ]]; then
+            echo "ignore_bp3=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ignore_bp3=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  call-workflow-ci-cmd-ctool:
+    needs: build
+    uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
+    with:
+      test_folder: "cmd/ctool/"
+      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
+      short_test: "true"
+      ignore_build: "true"
+      go_race: "false"
+    secrets:
+      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
+      codecov_token: ""
+      personal_token: ${{ secrets.PERSONAL_TOKEN }}
+  call-workflow-ci-cmd-edger:
+    needs: call-workflow-ci-cmd-ctool
+    uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
+    with:
+      test_folder: "cmd/edger/"
+      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
+      short_test: "true"
+      ignore_build: "true"
+      go_race: "false"
+    secrets:
+      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
+      codecov_token: ""
+      personal_token: ${{ secrets.PERSONAL_TOKEN }}
+  call-workflow-ci-cmd-voedger:
+    needs: call-workflow-ci-cmd-edger
+    uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
+    with:
+      test_folder: "cmd/voedger/"
+      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
+      short_test: "true"
+      ignore_build: "true"
+      go_race: "false"
+    secrets:
+      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
+      codecov_token: ""
+      personal_token: ${{ secrets.PERSONAL_TOKEN }}
+  call-workflow-cd_voeger:
+    needs: call-workflow-ci-cmd-voedger
+    if: github.repository == 'voedger/voedger'
+    uses: voedger/voedger/.github/workflows/cd-voedger.yml@main
+    secrets:
+      dockerusername: ${{ secrets.DOCKER_USERNAME }}
+      dockerpassword: ${{ secrets.DOCKER_PASSWORD }}
+      personaltoken: ${{ secrets.PERSONAL_TOKEN }}
+      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
