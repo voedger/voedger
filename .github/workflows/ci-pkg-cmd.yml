@@ -31,7 +31,7 @@ jobs:
     steps:
       - name: Run test script
         run: |
-          cd $(git rev-parse --show-toplevel)/.github/scripts
+          cd "$(git rev-parse --show-toplevel)/.github/scripts"
           chmod +x test_subfolders.sh
           bash test_subfolders.sh
         shell: bash
