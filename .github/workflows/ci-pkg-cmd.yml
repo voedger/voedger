@@ -21,12 +21,6 @@ jobs:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ""
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
-    steps:
-      - name: Run test script
-        run: |
-          chmod +x ./.github/scriptstest_subfolders.sh
-          bash ./.github/scriptstest_subfolders.sh
-        shell: bash
   build:
     needs: call-workflow-ci-pkg
     name: build
