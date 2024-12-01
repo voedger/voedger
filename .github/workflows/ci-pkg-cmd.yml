@@ -29,14 +29,12 @@ jobs:
       ibp3: ${{ steps.setignore.outputs.ignore_bp3 }}
 
     steps:
-
       - name: Run test script
         run: |
-          cd "$(git rev-parse --show-toplevel)"/.github/scripts
+          cd $(git rev-parse --show-toplevel)/.github/scripts
           chmod +x test_subfolders.sh
           bash test_subfolders.sh
-      shell: bash
-
+        shell: bash
 
       - name: Set Ignore Build BP3
         id: setignore
