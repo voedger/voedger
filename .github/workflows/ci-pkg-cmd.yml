@@ -21,20 +21,20 @@ jobs:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ""
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
-  run-test:
-    needs: call-workflow-ci-pkg
-    name: run-test
-    runs-on: ubuntu-latest
-    outputs:
-      ibp3: ${{ steps.setignore.outputs.ignore_bp3 }}
-
     steps:
       - name: Run test script
         run: |
           chmod +x ./.github/scriptstest_subfolders.sh
           bash ./.github/scriptstest_subfolders.sh
         shell: bash
+  build:
+    needs: call-workflow-ci-pkg
+    name: build
+    runs-on: ubuntu-latest
+    outputs:
+      ibp3: ${{ steps.setignore.outputs.ignore_bp3 }}
 
+    steps:
       - name: Set Ignore Build BP3
         id: setignore
         run: |
@@ -43,7 +43,6 @@ jobs:
           else
             echo "ignore_bp3=true" >> "$GITHUB_OUTPUT"
           fi
-
 
   call-workflow-cd_voeger:
     needs: run-test
