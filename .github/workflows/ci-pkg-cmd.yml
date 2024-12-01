@@ -45,7 +45,7 @@ jobs:
 
 
   call-workflow-cd_voeger:
-    needs: call-workflow-ci-cmd-voedger
+    needs: call-workflow-ci-pkg
     if: github.repository == 'voedger/voedger'
     uses: voedger/voedger/.github/workflows/cd-voedger.yml@main
     secrets:
