@@ -16,11 +16,12 @@ jobs:
       ignore_bp3: "true"
       short_test: "true"
       go_race: "false"
+      ignore_build: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ""
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
-  build:
+  run-test:
     needs: call-workflow-ci-pkg
     name: build
     runs-on: ubuntu-latest
@@ -31,8 +32,11 @@ jobs:
 
       - name: Run test script
         run: |
-          chmod +x ./github/scripts/test_subfolders.sh
-          ./github/scripts/test_subfolders.sh
+          cd "$(git rev-parse --show-toplevel)"/.github/scripts
+          chmod +x test_subfolders.sh
+          bash test_subfolders.sh
+      shell: bash
+
 
       - name: Set Ignore Build BP3
         id: setignore
@@ -45,7 +49,7 @@ jobs:
 
 
   call-workflow-cd_voeger:
-    needs: call-workflow-ci-pkg
+    needs: run-test
     if: github.repository == 'voedger/voedger'
     uses: voedger/voedger/.github/workflows/cd-voedger.yml@main
     secrets:
