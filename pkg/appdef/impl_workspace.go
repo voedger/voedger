@@ -110,7 +110,12 @@ func (ws *workspace) Type(name QName) IType {
 }
 
 func (ws *workspace) Types() iter.Seq[IType] {
-	return ws.types.all.all
+	if ws.types.all != nil {
+		return ws.types.all.all
+	}
+
+	// called before successful `appDef.build()`
+	return ws.buildAllTypes().all
 }
 
 func (ws *workspace) UsedWorkspaces(visit func(IWorkspace) bool) {
@@ -234,12 +239,12 @@ func (ws *workspace) appendType(t IType) {
 
 // should be called from appDef.build().
 func (ws *workspace) build() error {
-	ws.buildAllTypes()
+	ws.types.all = ws.buildAllTypes()
 	return nil
 }
 
-func (ws *workspace) buildAllTypes() {
-	ws.types.all = newTypes[IType]()
+func (ws *workspace) buildAllTypes() *types[IType] {
+	tt := newTypes[IType]()
 	var (
 		collect func(IWorkspace)
 		chain   map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
@@ -253,14 +258,15 @@ func (ws *workspace) buildAllTypes() {
 			collect(a)
 		}
 		for t := range w.LocalTypes() {
-			ws.types.all.add(t)
+			tt.add(t)
 		}
 		for u := range w.UsedWorkspaces {
 			// #2872 should enum used workspaces, but not type from them
-			ws.types.all.add(u)
+			tt.add(u)
 		}
 	}
 	collect(ws)
+	return tt
 }
 
 func (ws *workspace) grant(ops []OperationKind, flt IFilter, fields []FieldName, toRole QName, comment ...string) {

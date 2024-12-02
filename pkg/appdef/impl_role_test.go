@@ -51,7 +51,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 		view := wsb.AddView(viewName)
 		view.Key().PartKey().AddField("pk_1", appdef.DataKind_int32)
 		view.Key().ClustCols().AddField("cc_1", appdef.DataKind_string)
-		view.Value().AddField("vf_1", appdef.DataKind_string, false)
+		view.Value().AddField("field1", appdef.DataKind_string, false)
 
 		_ = wsb.AddCommand(cmdName)
 		_ = wsb.AddQuery(queryName)
@@ -190,7 +190,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 
 		t.Run("should be ok to get role inheritance", func(t *testing.T) {
 			roles := appdef.Role(tested.Type, workerRoleName).AncRoles()
-			require.Equal(filter.QNames(readerRoleName, writerRoleName), roles)
+			require.Equal([]appdef.QName{readerRoleName, writerRoleName}, roles)
 		})
 	}
 

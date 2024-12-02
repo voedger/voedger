@@ -67,7 +67,7 @@ func (r *role) revokeAll(flt IFilter, comment ...string) {
 //
 // # Error if:
 //   - ACL rule is not valid
-func (r role) validate() (err error) {
+func (r role) Validate() (err error) {
 	for _, p := range r.aclRules {
 		if e := p.validate(); e != nil {
 			err = errors.Join(err, e)

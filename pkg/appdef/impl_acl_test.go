@@ -45,7 +45,7 @@ func Test_GrantAndRevoke(t *testing.T) {
 		view := wsb.AddView(viewName)
 		view.Key().PartKey().AddField("pk_1", appdef.DataKind_int32)
 		view.Key().ClustCols().AddField("cc_1", appdef.DataKind_string)
-		view.Value().AddField("vf_1", appdef.DataKind_string, false)
+		view.Value().AddField("field1", appdef.DataKind_string, false)
 
 		_ = wsb.AddCommand(cmdName)
 		_ = wsb.AddQuery(queryName)
@@ -230,47 +230,39 @@ func Test_GrantAndRevokeErrors(t *testing.T) {
 					filter.QNames(docName),
 					nil,
 					readerName)
-			}, require.Is(appdef.ErrIncompatibleError), require.Has("[null]"))
+			}, require.Is(appdef.ErrUnsupportedError), require.Has("OperationKind_null"))
 			require.Panics(func() {
 				wsb.Grant([]appdef.OperationKind{appdef.OperationKind_count},
 					filter.QNames(docName),
 					nil,
 					readerName)
-			}, require.Is(appdef.ErrIncompatibleError), require.Has("[count]"))
+			}, require.Is(appdef.ErrUnsupportedError), require.Has("OperationKind_count"))
 			require.Panics(func() {
 				wsb.Grant([]appdef.OperationKind{appdef.OperationKind_Select, appdef.OperationKind_Execute},
 					filter.QNames(docName),
 					nil,
 					readerName)
-			}, require.Is(appdef.ErrIncompatibleError), require.Has("[count]"))
+			}, require.Is(appdef.ErrIncompatibleError), require.HasAll("Select", "Execute"))
 			require.Panics(func() {
 				wsb.Revoke(
 					[]appdef.OperationKind{appdef.OperationKind_Inherits},
 					filter.QNames(readerName),
 					nil,
 					readerName)
-			}, require.Is(appdef.ErrUnsupportedError), require.Has("revoke"), require.Has("Inherits"))
+			}, require.Is(appdef.ErrUnsupportedError), require.HasAll("revoke", "Inherits"))
 		})
 
 		t.Run("if operations on invalid resources", func(t *testing.T) {
 			require.Panics(func() {
 				wsb.Grant(
 					[]appdef.OperationKind{appdef.OperationKind_Select},
-					filter.QNames(appdef.NewQName("test", "unknown")),
-					nil,
-					readerName)
-			}, require.Is(appdef.ErrNotFoundError), require.Has("test.unknown"))
-
-			require.Panics(func() {
-				wsb.Grant(
-					[]appdef.OperationKind{appdef.OperationKind_Select},
 					filter.QNames(appdef.SysData_String),
 					nil,
 					readerName)
-			}, require.Is(appdef.ErrIncompatibleError), require.Has(appdef.SysData_String))
+			}, require.Is(appdef.ErrUnsupportedError), require.Has(appdef.SysData_String))
 
 			require.Panics(func() {
-				wsb.GrantAll(filter.QNames(docName, wsName), readerName)
+				wsb.GrantAll(filter.QNames(docName, cmdName), readerName)
 			}, require.Is(appdef.ErrIncompatibleError))
 
 			require.Panics(func() {
@@ -295,6 +287,36 @@ func Test_GrantAndRevokeErrors(t *testing.T) {
 					readerName)
 			}, require.Is(appdef.ErrNotFoundError), require.Has("unknown"))
 		})
+	})
+
+	t.Run("should be validate errors", func(t *testing.T) {
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+
+		wsName := appdef.NewQName("test", "workspace")
+		docName := appdef.NewQName("test", "doc")
+
+		cmdName := appdef.NewQName("test", "cmd")
+
+		wsb := adb.AddWorkspace(wsName)
+
+		_ = wsb.AddCommand(cmdName)
+
+		readerName := appdef.NewQName("test", "reader")
+
+		doc := wsb.AddCDoc(docName)
+		doc.AddField("field1", appdef.DataKind_int32, true)
+
+		_ = wsb.AddRole(readerName)
+
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Select},
+			filter.QNames(appdef.NewQName("test", "unknown")),
+			nil,
+			readerName)
+
+		_, err := adb.Build()
+		require.Error(err, require.Is(appdef.ErrNotFoundError), require.Has("test.unknown"))
 	})
 }
 

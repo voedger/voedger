@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/goutils/set"
@@ -62,6 +63,13 @@ func newACLRule(ops []OperationKind, policy PolicyKind, flt IFilter, fields []Fi
 		flt:       newAclFilter(flt, fields),
 		principal: principal,
 	}
+
+	for t := range FilterMatches(acl.Filter(), principal.Workspace().Types()) {
+		if err := acl.validateOnType(t); err != nil {
+			panic(err)
+		}
+	}
+
 	return acl
 }
 
@@ -104,7 +112,7 @@ func (acl aclRule) Policy() PolicyKind { return acl.policy }
 func (acl aclRule) Principal() IRole { return acl.principal }
 
 func (acl aclRule) String() string {
-	s := fmt.Sprint(acl.Policy().ActionString(), acl.ops, " on ", acl.Filter())
+	s := fmt.Sprintf("%s %s on %s", acl.Policy().ActionString(), acl.ops, acl.Filter())
 	switch acl.policy {
 	case PolicyKind_Deny:
 		s += " from "
@@ -119,34 +127,43 @@ func (acl aclRule) String() string {
 //
 // # Error if:
 //   - filter has no matches in the workspace
-//   - filtered type is not supported by ACL
-//   - ACL operations are not compatible with the filtered type
-//   - some specified field is not found in the filtered type
-func (acl aclRule) validate() error {
+//   - some filtered type can not to be proceed with ACL. See validateOnType
+func (acl aclRule) validate() (err error) {
 	cnt := 0
 	for t := range FilterMatches(acl.Filter(), acl.Principal().Workspace().Types()) {
-		o := allACLOperationsOnType(t)
-		if o.Len() == 0 {
-			return ErrACLUnsupportedType(t)
-		}
-		if !o.ContainsAll(acl.Ops()...) {
-			return ErrIncompatible("operations %v and %v", acl.ops, t)
-		}
-		if ff := acl.Filter().Fields(); len(ff) > 0 {
-			if fields, ok := t.(IFields); ok {
-				for _, f := range ff {
-					if fields.Field(f) == nil {
-						return ErrNotFound("field «%v» in %v", f, t)
-					}
-				}
-			}
-		}
+		err = errors.Join(err, acl.validateOnType(t))
 		cnt++
 	}
 
-	if cnt == 0 {
+	if (err == nil) && (cnt == 0) {
 		return ErrFilterHasNoMatches(acl.Filter(), acl.Principal().Workspace())
 	}
 
+	return err
+}
+
+// validates ACL rule on the filtered type.
+//
+// # Error if:
+//   - filtered type is not supported by ACL
+//   - ACL operations are not compatible with the filtered type
+//   - some specified field is not found in the filtered type
+func (acl aclRule) validateOnType(t IType) error {
+	o := allACLOperationsOnType(t)
+	if o.Len() == 0 {
+		return ErrACLUnsupportedType(t)
+	}
+	if !o.ContainsAll(acl.Ops()...) {
+		return ErrIncompatible("operations %v and %v", acl.ops, t)
+	}
+	if ff := acl.Filter().Fields(); len(ff) > 0 {
+		if fields, ok := t.(IFields); ok {
+			for _, f := range ff {
+				if fields.Field(f) == nil {
+					return ErrNotFound("field «%v» in %v", f, t)
+				}
+			}
+		}
+	}
 	return nil
 }
