@@ -99,4 +99,3 @@ Benchmark_Extensions_NoGc/oneKey1call-20                   	 4534441	       253.
 Benchmark_Extensions_NoGc/doNothing-20                     	17558064	        62.54 ns/op	       0 B/op	       0 allocs/op
 PASS
 ```
-
