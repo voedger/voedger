@@ -147,11 +147,11 @@ func Test_GrantAndRevoke(t *testing.T) {
 					require.Equal(want[cnt].policy, r.Policy())
 					require.Equal(want[cnt].ops, r.Ops())
 
-					got := appdef.QNames{}
+					flt := appdef.QNames{}
 					for t := range appdef.FilterMatches(r.Filter(), r.Principal().Workspace().Types()) {
-						got = append(got, t.QName())
+						flt = append(flt, t.QName())
 					}
-					require.EqualValues(want[cnt].flt, got)
+					require.EqualValues(want[cnt].flt, flt)
 
 					require.Equal(want[cnt].fields, r.Filter().Fields())
 					require.Equal(want[cnt].principal, r.Principal().QName())
@@ -255,29 +255,45 @@ func Test_GrantAndRevokeErrors(t *testing.T) {
 		t.Run("if operations on invalid resources", func(t *testing.T) {
 			require.Panics(func() {
 				wsb.Grant(
-					[]OperationKind{OperationKind_Select}, []QName{NewQName("test", "unknown")}, nil, readerName)
-			}, require.Is(ErrNotFoundError), require.Has("test.unknown"))
+					[]appdef.OperationKind{appdef.OperationKind_Select},
+					filter.QNames(appdef.NewQName("test", "unknown")),
+					nil,
+					readerName)
+			}, require.Is(appdef.ErrNotFoundError), require.Has("test.unknown"))
 
 			require.Panics(func() {
-				wsb.Grant([]OperationKind{OperationKind_Select}, []QName{SysData_String}, nil, readerName)
-			}, require.Is(ErrIncompatibleError), require.Has(SysData_String))
+				wsb.Grant(
+					[]appdef.OperationKind{appdef.OperationKind_Select},
+					filter.QNames(appdef.SysData_String),
+					nil,
+					readerName)
+			}, require.Is(appdef.ErrIncompatibleError), require.Has(appdef.SysData_String))
 
 			require.Panics(func() {
-				wsb.GrantAll([]QName{docName, wsName}, readerName)
-			}, require.Is(ErrIncompatibleError))
+				wsb.GrantAll(filter.QNames(docName, wsName), readerName)
+			}, require.Is(appdef.ErrIncompatibleError))
 
 			require.Panics(func() {
-				wsb.Grant([]OperationKind{OperationKind_Execute}, []QName{docName}, nil, readerName)
-			}, require.Is(ErrIncompatibleError), require.Has("Execute"), require.Has(docName))
+				wsb.Grant(
+					[]appdef.OperationKind{appdef.OperationKind_Execute},
+					filter.QNames(docName), nil, readerName)
+			}, require.Is(appdef.ErrIncompatibleError), require.Has("Execute"), require.Has(docName))
 		})
 
 		t.Run("if operations on invalid fields", func(t *testing.T) {
 			require.Panics(func() {
-				wsb.Grant([]OperationKind{OperationKind_Execute}, []QName{cmdName}, []FieldName{"field1"}, readerName)
-			}, require.Is(ErrIncompatibleError), require.Has("Execute"))
+				wsb.Grant(
+					[]appdef.OperationKind{appdef.OperationKind_Execute},
+					filter.QNames(cmdName),
+					[]appdef.FieldName{"field1"},
+					readerName)
+			}, require.Is(appdef.ErrIncompatibleError), require.Has("Execute"))
 			require.Panics(func() {
-				wsb.Grant([]OperationKind{OperationKind_Select}, []QName{docName}, []FieldName{"unknown"}, readerName)
-			}, require.Is(ErrNotFoundError), require.Has("unknown"))
+				wsb.Grant([]appdef.OperationKind{appdef.OperationKind_Select},
+					filter.QNames(docName),
+					[]appdef.FieldName{"unknown"},
+					readerName)
+			}, require.Is(appdef.ErrNotFoundError), require.Has("unknown"))
 		})
 	})
 }
@@ -285,14 +301,14 @@ func Test_GrantAndRevokeErrors(t *testing.T) {
 func Test_ACLWithFields(t *testing.T) {
 	require := require.New(t)
 
-	var app IAppDef
+	var app appdef.IAppDef
 
-	wsName := NewQName("test", "workspace")
-	docName := NewQName("test", "doc")
+	wsName := appdef.NewQName("test", "workspace")
+	docName := appdef.NewQName("test", "doc")
 
-	creatorName := NewQName("test", "creator")
-	writerName := NewQName("test", "writer")
-	readerName := NewQName("test", "reader")
+	creatorName := appdef.NewQName("test", "creator")
+	writerName := appdef.NewQName("test", "writer")
+	readerName := appdef.NewQName("test", "reader")
 
 	t.Run("should be ok to build application with ACL with fields", func(t *testing.T) {
 		//         | creator | writer | reader
@@ -300,28 +316,40 @@ func Test_ACLWithFields(t *testing.T) {
 		// field_i | Insert  |   --   |   --    // #2747{Test plan}
 		// field_u |   --    | Update |   --
 		// field_s |   --    | Update | Select
-		adb := New()
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
 
 		doc := wsb.AddCDoc(docName)
 		doc.
-			AddField("field_i", DataKind_int32, true).
-			AddField("field_u", DataKind_int32, false).
-			AddField("field_s", DataKind_int32, false)
+			AddField("field_i", appdef.DataKind_int32, true).
+			AddField("field_u", appdef.DataKind_int32, false).
+			AddField("field_s", appdef.DataKind_int32, false)
 
 		wsb.AddRole(creatorName).
 			// #2747{Test plan}
-			Grant([]OperationKind{OperationKind_Insert}, []QName{docName}, []FieldName{"field_i"},
+			Grant(
+				[]appdef.OperationKind{appdef.OperationKind_Insert},
+				filter.QNames(docName),
+				[]appdef.FieldName{"field_i"},
 				`GRANT INSERT test.doc(field_i) TO test.creator`)
 		wsb.AddRole(writerName).
-			Grant([]OperationKind{OperationKind_Update}, []QName{docName}, nil,
+			Grant(
+				[]appdef.OperationKind{appdef.OperationKind_Update},
+				filter.QNames(docName),
+				nil,
 				`GRANT UPDATE test.doc TO test.writer`).
-			Revoke([]OperationKind{OperationKind_Update}, []QName{docName}, []FieldName{"field_i"},
+			Revoke(
+				[]appdef.OperationKind{appdef.OperationKind_Update},
+				filter.QNames(docName),
+				[]appdef.FieldName{"field_i"},
 				`REVOKE UPDATE test.doc(field_i) FROM test.writer`)
 		wsb.AddRole(readerName).
-			Grant([]OperationKind{OperationKind_Select}, []QName{docName}, []FieldName{"field_s"},
+			Grant(
+				[]appdef.OperationKind{appdef.OperationKind_Select},
+				filter.QNames(docName),
+				[]appdef.FieldName{"field_s"},
 				`GRANT SELECT test.doc(field_s) TO test.reader`)
 
 		var err error
@@ -330,19 +358,19 @@ func Test_ACLWithFields(t *testing.T) {
 		require.NotNil(app)
 	})
 
-	testWith := func(tested IWithACL) {
+	testWith := func(tested appdef.IWithACL) {
 		t.Run("should be ok to check ACL", func(t *testing.T) {
 			want := []struct {
-				policy    PolicyKind
-				ops       []OperationKind
-				res       []QName
-				fields    []FieldName
-				principal QName
+				policy    appdef.PolicyKind
+				ops       []appdef.OperationKind
+				flt       []appdef.QName
+				fields    []appdef.FieldName
+				principal appdef.QName
 			}{
-				{PolicyKind_Allow, []OperationKind{OperationKind_Insert}, []QName{docName}, []FieldName{"field_i"}, creatorName},
-				{PolicyKind_Allow, []OperationKind{OperationKind_Update}, []QName{docName}, nil, writerName},
-				{PolicyKind_Deny, []OperationKind{OperationKind_Update}, []QName{docName}, []FieldName{"field_i"}, writerName},
-				{PolicyKind_Allow, []OperationKind{OperationKind_Select}, []QName{docName}, []FieldName{"field_s"}, readerName},
+				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Insert}, []appdef.QName{docName}, []appdef.FieldName{"field_i"}, creatorName},
+				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Update}, []appdef.QName{docName}, nil, writerName},
+				{appdef.PolicyKind_Deny, []appdef.OperationKind{appdef.OperationKind_Update}, []appdef.QName{docName}, []appdef.FieldName{"field_i"}, writerName},
+				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName}, []appdef.FieldName{"field_s"}, readerName},
 			}
 
 			cnt := 0
@@ -351,8 +379,15 @@ func Test_ACLWithFields(t *testing.T) {
 				t.Run(fmt.Sprintf("ACL[%d]", cnt), func(t *testing.T) {
 					require.Equal(want[cnt].policy, r.Policy())
 					require.Equal(want[cnt].ops, r.Ops())
-					require.EqualValues(want[cnt].res, r.Resources().On())
-					require.Equal(want[cnt].fields, r.Resources().Fields())
+
+					flt := appdef.QNames{}
+					for t := range appdef.FilterMatches(r.Filter(), r.Principal().Workspace().Types()) {
+						flt = append(flt, t.QName())
+					}
+					require.EqualValues(want[cnt].flt, flt)
+
+					require.Equal(want[cnt].fields, r.Filter().Fields())
+
 					require.Equal(want[cnt].principal, r.Principal().QName())
 				})
 				cnt++
@@ -368,22 +403,22 @@ func Test_ACLWithFields(t *testing.T) {
 func TestPolicyKind_String(t *testing.T) {
 	tests := []struct {
 		name string
-		k    PolicyKind
+		k    appdef.PolicyKind
 		want string
 	}{
 		{
 			name: "0 —> `PolicyKind_null`",
-			k:    PolicyKind_null,
+			k:    appdef.PolicyKind_null,
 			want: `PolicyKind_null`,
 		},
 		{
 			name: "1 —> `PolicyKind_Allow`",
-			k:    PolicyKind_Allow,
+			k:    appdef.PolicyKind_Allow,
 			want: `PolicyKind_Allow`,
 		},
 		{
 			name: "4 —> `PolicyKind(4)`",
-			k:    PolicyKind_count + 1,
+			k:    appdef.PolicyKind_count + 1,
 			want: `PolicyKind(4)`,
 		},
 	}

@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
 func ExampleRoles() {
@@ -34,16 +35,16 @@ func ExampleRoles() {
 		doc.AddField("field1", appdef.DataKind_int32, true)
 
 		reader := wsb.AddRole(readerRoleName)
-		reader.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName}, []appdef.FieldName{"field1"}, "grant select on doc.field1")
+		reader.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, filter.QNames(docName), []appdef.FieldName{"field1"}, "grant select on doc.field1")
 
 		writer := wsb.AddRole(writerRoleName)
-		writer.GrantAll([]appdef.QName{docName}, "grant all on test.doc")
+		writer.GrantAll(filter.QNames(docName), "grant all on test.doc")
 
 		adm := wsb.AddRole(admRoleName)
-		adm.GrantAll([]appdef.QName{readerRoleName, writerRoleName}, "grant reader and writer roles to adm")
+		adm.GrantAll(filter.QNames(readerRoleName, writerRoleName), "grant reader and writer roles to adm")
 
 		intruder := wsb.AddRole(intruderRoleName)
-		intruder.RevokeAll([]appdef.QName{docName}, "revoke all on test.doc")
+		intruder.RevokeAll(filter.QNames(docName), "revoke all on test.doc")
 
 		app = adb.MustBuild()
 	}
