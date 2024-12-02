@@ -34,5 +34,4 @@ erDiagram
     QueryState ||--|| State : "is"
     CommandState  ||--|| State : "is"
 
-
 ```
