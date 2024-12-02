@@ -35,15 +35,17 @@ func RecursiveRoleAncestors(role appdef.IRole) (roles appdef.QNames) {
 // If some error in arguments, (resource or role not found, operation is not applicable to resource, etc…) then error is returned.
 func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, rol []appdef.QName) (bool, []appdef.FieldName, error) {
 
+	t := app.Type(res)
+	if t == appdef.NullType {
+		return false, nil, appdef.ErrNotFound("resource «%s»", res)
+	}
+
 	var str appdef.IStructure
 	switch op {
-	case appdef.OperationKind_Insert:
-		if appdef.Structure(app.Type, res) == nil {
-			return false, nil, appdef.ErrNotFound("structure «%q»", res)
-		}
-	case appdef.OperationKind_Update, appdef.OperationKind_Select:
-		str = appdef.Structure(app.Type, res)
-		if str == nil {
+	case appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select:
+		if s, ok := t.(appdef.IStructure); ok {
+			str = s
+		} else {
 			return false, nil, appdef.ErrNotFound("structure «%q»", res)
 		}
 		for _, f := range fld {
@@ -52,7 +54,7 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 			}
 		}
 	case appdef.OperationKind_Execute:
-		if appdef.Function(app.Type, res) == nil {
+		if _, ok := t.(appdef.IFunction); !ok {
 			return false, nil, appdef.ErrNotFound("function «%q»", res)
 		}
 	default:
@@ -77,15 +79,15 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 	result := false
 	for rule := range app.ACL {
 		if slices.Contains(rule.Ops(), op) {
-			if rule.Resources().On().Contains(res) {
+			if rule.Filter().Match(t) {
 				if roles.Contains(rule.Principal().QName()) {
 					switch rule.Policy() {
 					case appdef.PolicyKind_Allow:
 						result = true
 						if str != nil {
-							if len(rule.Resources().Fields()) > 0 {
+							if fields := rule.Filter().Fields(); len(fields) > 0 {
 								// allow for specified fields only
-								for _, f := range rule.Resources().Fields() {
+								for _, f := range fields {
 									allowedFields[f] = true
 								}
 							} else {
@@ -97,9 +99,9 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 						}
 					case appdef.PolicyKind_Deny:
 						if str != nil {
-							if len(rule.Resources().Fields()) > 0 {
+							if fields := rule.Filter().Fields(); len(fields) > 0 {
 								// partially deny, only specified fields
-								for _, f := range rule.Resources().Fields() {
+								for _, f := range fields {
 									delete(allowedFields, f)
 								}
 								result = len(allowedFields) > 0
