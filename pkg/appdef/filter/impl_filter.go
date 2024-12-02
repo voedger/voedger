@@ -25,16 +25,3 @@ func (filter) QNames() iter.Seq[appdef.QName] { return func(func(appdef.QName) b
 func (filter) Tags() iter.Seq[appdef.QName] { return func(func(appdef.QName) bool) {} }
 
 func (filter) Types() iter.Seq[appdef.TypeKind] { return func(func(appdef.TypeKind) bool) {} }
-
-// allMatches returns types that match the filter.
-func allMatches(f appdef.IFilter, types appdef.SeqType) appdef.SeqType {
-	return func(visit func(appdef.IType) bool) {
-		for t := range types {
-			if f.Match(t) {
-				if !visit(t) {
-					return
-				}
-			}
-		}
-	}
-}
