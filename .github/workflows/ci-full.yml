@@ -23,7 +23,7 @@ jobs:
   notify_failure:
     needs: call-workflow-ci
     if: ${{ failure() }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       failure_url: ${{ steps.set_output.outputs.failure_url }} # Declaring output at the job level
     steps:

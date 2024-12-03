@@ -26,7 +26,7 @@ jobs:
   build:
     needs: call-workflow-ci-pkg
     name: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       ibp3: ${{ steps.setignore.outputs.ignore_bp3 }}
 
