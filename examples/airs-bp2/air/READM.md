@@ -5,7 +5,7 @@ This folder contains an example project for the Airs BP2 application. This examp
 # How to make tests run
 - install `vpm`:
 ```bash
-go install ../../../cmd/vpm
+go install github.com/voedger/voedger/cmd/vpm@latest
 ```
 - generate ORM for airs-bp2 application in `wasm/orm` dir
 ```bash
