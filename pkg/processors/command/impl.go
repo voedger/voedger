@@ -376,12 +376,24 @@ func getPrincipalsRoles(_ context.Context, work pipeline.IWorkpiece) (err error)
 
 func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	ok, _, err := cmd.appPart.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles)
+	// TODO: eliminate when all application will use ACL in VSQL
+	req := iauthnz.AuthzRequest{
+		OperationKind: iauthnz.OperationKind_EXECUTE,
+		Resource:      cmd.cmdMes.QName(),
+	}
+	ok, err := cmdProc.authorizer.Authorize(cmd.appStructs, cmd.principals, req)
 	if err != nil {
 		return err
 	}
 	if !ok {
-		return coreutils.NewHTTPErrorf(http.StatusForbidden)
+		ok, _, err := cmd.appPart.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles)
+		if err != nil {
+			return err
+		}
+		if !ok {
+
+			return coreutils.NewHTTPErrorf(http.StatusForbidden)
+		}
 	}
 	return nil
 }
@@ -593,6 +605,7 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		}
 		if isCreate {
 			parsedCUD.opKind = appdef.OperationKind_Insert
+			parsedCUD.opKindOld = iauthnz.OperationKind_INSERT
 			qNameStr, _, err := parsedCUD.fields.AsString(appdef.SystemField_QName)
 			if err != nil {
 				return cudXPath.Error(err)
@@ -602,6 +615,7 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 			}
 		} else {
 			parsedCUD.opKind = appdef.OperationKind_Update
+			parsedCUD.opKindOld = iauthnz.OperationKind_UPDATE
 			if parsedCUD.id, ok, err = cudData.AsInt64(appdef.SystemField_ID); err != nil {
 				return cudXPath.Error(err)
 			}
@@ -677,13 +691,25 @@ func checkIsActiveInCUDs(_ context.Context, work pipeline.IWorkpiece) (err error
 func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	for _, parsedCUD := range cmd.parsedCUDs {
-		fields := maps.Keys(parsedCUD.fields)
-		ok, _, err := cmd.appPart.IsOperationAllowed(parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
+		// TODO: eliminate when all application will use ACL in VSQL
+		req := iauthnz.AuthzRequest{
+			OperationKind: parsedCUD.opKindOld,
+			Resource:      parsedCUD.qName,
+			Fields:        maps.Keys(parsedCUD.fields),
+		}
+		ok, err := cmdProc.authorizer.Authorize(cmd.appStructs, cmd.principals, req)
 		if err != nil {
-			return err
+			return parsedCUD.xPath.Error(err)
 		}
 		if !ok {
-			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
+			fields := maps.Keys(parsedCUD.fields)
+			ok, _, err := cmd.appPart.IsOperationAllowed(parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
+			}
 		}
 	}
 	return

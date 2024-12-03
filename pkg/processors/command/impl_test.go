@@ -490,7 +490,7 @@ func TestErrors(t *testing.T) {
 func TestAuthnz(t *testing.T) {
 	require := require.New(t)
 
-	qNameTestDeniedCDoc := appdef.NewQName(appdef.SysPackage, "TestDeniedCDoc") // the same in core/iauthnzimpl
+	qNameTestDeniedCDoc := appdef.NewQName("app1pkg", "TestDeniedCDoc") // the same in core/iauthnzimpl
 
 	qNameAllowedCmd := appdef.NewQName(appdef.SysPackage, "TestAllowedCmd")
 	qNameDeniedCmd := appdef.NewQName(appdef.SysPackage, "TestDeniedCmd") // the same in core/iauthnzimpl
@@ -504,9 +504,12 @@ func TestAuthnz(t *testing.T) {
 		wsb.AddRole(iauthnz.QNameRoleSystem)
 		wsb.AddRole(iauthnz.QNameRoleProfileOwner)
 		wsb.AddRole(iauthnz.QNameRoleAnonymous)
+		wsb.AddRole(iauthnz.QNameRoleWorkspaceOwner)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(qNameAllowedCmd, istructsmem.NullCommandExec))
 		cfg.Resources.Add(istructsmem.NewCommandFunction(qNameDeniedCmd, istructsmem.NullCommandExec))
 		cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, istructsmem.NullCommandExec))
+
+		wsb.Revoke([]appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{qNameDeniedCmd}, nil, iauthnz.QNameRoleWorkspaceOwner)
 	})
 	defer tearDown(app)
 
@@ -536,7 +539,7 @@ func TestAuthnz(t *testing.T) {
 		},
 		{
 			desc: "403 on INSERT CUD forbidden", req: ibus.Request{
-				Body:     []byte(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.TestDeniedCDoc"}}]}`),
+				Body:     []byte(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.TestDeniedCDoc"}}]}`),
 				AppQName: istructs.AppQName_untill_airs_bp.String(),
 				WSID:     1,
 				Resource: "c.sys.CUD",
@@ -782,7 +785,8 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(testAppName)
 	systemToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	cmdProcessorFactory := ProvideServiceFactory(appParts, coreutils.NewITime(), n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs), secretReader)
+	cmdProcessorFactory := ProvideServiceFactory(appParts, coreutils.NewITime(), n10nBroker, imetrics.Provide(), "vvm",
+		iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs), iauthnzimpl.NewDefaultAuthorizer(), secretReader)
 	cmdProcService := cmdProcessorFactory(serviceChannel)
 
 	go func() {

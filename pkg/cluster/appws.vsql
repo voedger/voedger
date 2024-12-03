@@ -26,7 +26,11 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 	);
 
 	EXTENSION ENGINE BUILTIN (
-		COMMAND DeployApp(AppDeploymentDescriptor); -- TODO: make be allowed for role sys.ClusterAdmin only
+		COMMAND DeployApp(AppDeploymentDescriptor);
 		COMMAND VSqlUpdate(VSqlUpdateParams) RETURNS VSqlUpdateResult;
 	);
+
+	ROLE ClusterAdmin;
+
+	GRANT EXECUTE ON COMMAND DeployApp TO ClusterAdmin;
 );

@@ -33,6 +33,7 @@ type cmdProc struct {
 	n10nBroker     in10n.IN10nBroker
 	time           coreutils.ITime
 	authenticator  iauthnz.IAuthenticator
+	authorizer     iauthnz.IAuthorizer
 	storeOp        pipeline.ISyncOperator
 }
 
@@ -43,7 +44,7 @@ type appPartition struct {
 
 // syncActualizerFactory is a factory(partitionID) that returns a fork operator with a sync actualizer per each application. Inside of an each actualizer - projectors for each application
 func ProvideServiceFactory(appParts appparts.IAppPartitions, tm coreutils.ITime,
-	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm processors.VVMName, authenticator iauthnz.IAuthenticator,
+	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm processors.VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
 	secretReader isecrets.ISecretReader) ServiceFactory {
 	return func(commandsChannel CommandChannel) pipeline.IService {
 		cmdProc := &cmdProc{
@@ -51,6 +52,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm coreutils.ITime,
 			n10nBroker:     n10nBroker,
 			time:           tm,
 			authenticator:  authenticator,
+			authorizer:     authorizer,
 		}
 
 		return pipeline.NewService(func(vvmCtx context.Context) {

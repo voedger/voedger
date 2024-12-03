@@ -211,6 +211,9 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	wsb.AddRole(iauthnz.QNameRoleSystem)
 	wsb.AddRole(iauthnz.QNameRoleAnonymous)
 	wsb.AddRole(iauthnz.QNameRoleProfileOwner)
+	wsb.AddRole(iauthnz.QNameRoleWorkspaceOwner)
+
+	wsb.Revoke([]appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{qNameQryDenied}, nil, iauthnz.QNameRoleWorkspaceOwner)
 
 	if prepareAppDef != nil {
 		prepareAppDef(adb, wsb)
@@ -384,12 +387,13 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 	defer cleanAppParts()
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
+	authz := iauthnzimpl.NewDefaultAuthorizer()
 	queryProcessor := ProvideServiceFactory()(
 		serviceChannel,
 		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appParts,
 		3, // max concurrent queries
-		metrics, "vvm", authn, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader)
+		metrics, "vvm", authn, authz, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader)
 	processorCtx, processorCtxCancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -1150,12 +1154,13 @@ func TestRateLimiter(t *testing.T) {
 	// create aquery processor
 	metrics := imetrics.Provide()
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
+	authz := iauthnzimpl.NewDefaultAuthorizer()
 	queryProcessor := ProvideServiceFactory()(
 		serviceChannel,
 		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appParts,
 		3, // max concurrent queries
-		metrics, "vvm", authn, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader)
+		metrics, "vvm", authn, authz, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader)
 	go queryProcessor.Run(context.Background())
 
 	systemToken := getSystemToken(appTokens)
@@ -1198,12 +1203,13 @@ func TestAuthnz(t *testing.T) {
 	defer cleanAppParts()
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
+	authz := iauthnzimpl.NewDefaultAuthorizer()
 	queryProcessor := ProvideServiceFactory()(
 		serviceChannel,
 		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appParts,
 		3, // max concurrent queries
-		metrics, "vvm", authn, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader)
+		metrics, "vvm", authn, authz, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader)
 	go queryProcessor.Run(context.Background())
 
 	t.Run("no token for a query that requires authorization -> 403 unauthorized", func(t *testing.T) {

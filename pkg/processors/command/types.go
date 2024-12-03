@@ -93,7 +93,8 @@ type implIDGenerator struct {
 
 type parsedCUD struct {
 	opKind         appdef.OperationKind
-	existingRecord istructs.IRecord // create -> nil
+	opKindOld      iauthnz.OperationKindType // TODO: eliminate when all application will use ACL in VSQL
+	existingRecord istructs.IRecord          // create -> nil
 	id             int64
 	qName          appdef.QName
 	fields         coreutils.MapObject

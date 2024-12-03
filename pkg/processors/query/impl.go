@@ -94,7 +94,7 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 
 func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClosableFactory ResultSenderClosableFactory,
 	appParts appparts.IAppPartitions, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
-	authn iauthnz.IAuthenticator, itokens itokens.ITokens, federation federation.IFederation,
+	authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer, itokens itokens.ITokens, federation federation.IFederation,
 	statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) pipeline.IService {
 	return pipeline.NewService(func(ctx context.Context) {
 		var p pipeline.ISyncPipeline
@@ -114,7 +114,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				func() { // borrowed application partition should be guaranteed to be freed
 					defer qwork.Release()
 					if p == nil {
-						p = newQueryProcessorPipeline(ctx, authn, itokens, federation, statelessResources)
+						p = newQueryProcessorPipeline(ctx, authn, authz, itokens, federation, statelessResources)
 					}
 					err := p.SendSync(qwork)
 					if err != nil {
@@ -165,7 +165,7 @@ func execQuery(ctx context.Context, qw *queryWork) (err error) {
 }
 
 // IStatelessResources need only for determine the exact result type of ANY
-func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator,
+func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
 	itokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources) pipeline.ISyncPipeline {
 	ops := []*pipeline.WiredOperator{
 		operator("borrowAppPart", borrowAppPart),
@@ -246,12 +246,24 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
-			ok, _, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
+			// TODO: eliminate when all application will use ACL in VSQL
+			req := iauthnz.AuthzRequest{
+				OperationKind: iauthnz.OperationKind_EXECUTE,
+				Resource:      qw.msg.QName(),
+			}
+			ok, err := authz.Authorize(qw.appStructs, qw.principals, req)
 			if err != nil {
 				return err
 			}
 			if !ok {
-				return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
+				ok, _, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
+				if err != nil {
+					return err
+				}
+				if !ok {
+
+					return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
+				}
 			}
 			return nil
 		}),
@@ -368,16 +380,36 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				for _, resultField := range elem.ResultFields() {
 					requestedfields = append(requestedfields, resultField.Field())
 				}
-				ok, allowedFields, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
+
+				// TODO: eliminate when all application will use ACL in VSQL
+				req := iauthnz.AuthzRequest{
+					OperationKind: iauthnz.OperationKind_SELECT,
+					Resource:      nestedType.QName(),
+				}
+				for _, elem := range qw.queryParams.Elements() {
+					for _, resultField := range elem.ResultFields() {
+						req.Fields = append(req.Fields, resultField.Field())
+					}
+				}
+				if len(req.Fields) == 0 {
+					return nil
+				}
+				ok, err := authz.Authorize(qw.appStructs, qw.principals, req)
 				if err != nil {
 					return err
 				}
 				if !ok {
-					return coreutils.NewSysError(http.StatusForbidden)
-				}
-				for _, requestedField := range requestedfields {
-					if !slices.Contains(allowedFields, requestedField) {
+					ok, allowedFields, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
+					if err != nil {
+						return err
+					}
+					if !ok {
 						return coreutils.NewSysError(http.StatusForbidden)
+					}
+					for _, requestedField := range requestedfields {
+						if !slices.Contains(allowedFields, requestedField) {
+							return coreutils.NewSysError(http.StatusForbidden)
+						}
 					}
 				}
 			}

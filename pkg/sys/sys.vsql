@@ -448,20 +448,20 @@ ABSTRACT WORKSPACE Workspace (
 	ROLE System; -- assigned -> everything is allowed, ACL checking skipped
 	ROLE ProfileOwner; -- assigned if the user or device works in its profile
 	ROLE WorkspaceDevice; -- assigned if the device MAY work in a workspace that is owned by its profile
-	ROLE WorkspaceOwner; -- assigned if user works in a workspace that is owned by his profile
+	ROLE RoleWorkspaceOwner; -- assigned if user works in a workspace that is owned by his profile. Note: "Role" prefix is kept for backward compatibility
 	ROLE ClusterAdmin; -- TODO: not used for now. Going to allow exec c.cluster.DeployApp to this role
 
-	GRANT WorkspaceOwner TO ProfileOwner;
-	GRANT WorkspaceOwner TO WorkspaceDevice;
+	GRANT RoleWorkspaceOwner TO ProfileOwner;
+	GRANT RoleWorkspaceOwner TO WorkspaceDevice;
 	GRANT Everyone TO Anonymous;
 	GRANT Everyone TO AuthenticatedUser;
 
-	GRANT SELECT, INSERT, UPDATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO WorkspaceOwner;
+	GRANT SELECT, INSERT, UPDATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO RoleWorkspaceOwner;
 
-	GRANT SELECT ON TABLE ChildWorkspace TO WorkspaceOwner;
+	GRANT SELECT ON TABLE ChildWorkspace TO RoleWorkspaceOwner;
 
-	GRANT EXECUTE ON ALL QUERIES WITH TAG WorkspaceOwnerFuncTag TO WorkspaceOwner;
-	GRANT EXECUTE ON ALL COMMANDS WITH TAG WorkspaceOwnerFuncTag TO WorkspaceOwner;
+	GRANT EXECUTE ON ALL QUERIES WITH TAG WorkspaceOwnerFuncTag TO RoleWorkspaceOwner;
+	GRANT EXECUTE ON ALL COMMANDS WITH TAG WorkspaceOwnerFuncTag TO RoleWorkspaceOwner;
 
 	GRANT EXECUTE ON ALL QUERIES WITH TAG AllowedToEveryoneTag TO Everyone;
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG AllowedToEveryoneTag TO Everyone;
@@ -483,7 +483,7 @@ ABSTRACT WORKSPACE ProfileWS (
 		QUERY RefreshPrincipalToken RETURNS RefreshPrincipalTokenResult;
 	);
 
-	GRANT EXECUTE ON QUERY RefreshPrincipalToken TO WorkspaceOwner;
+	GRANT EXECUTE ON QUERY RefreshPrincipalToken TO RoleWorkspaceOwner;
 );
 
 ALTERABLE WORKSPACE DeviceProfileWS INHERITS sys.ProfileWS (

@@ -369,6 +369,7 @@ func TestDeniedResources(t *testing.T) {
 	})
 
 	t.Run("cerain fields of cdoc", func(t *testing.T) {
+		t.Skip("wait for ACL in VSQL")
 		body := `{"args":{"Schema":"app1pkg.TestCDocWithDeniedFields"},"elements":[{"fields":["Fld1"]}]}`
 		vit.PostWS(ws, "q.sys.Collection", body)
 

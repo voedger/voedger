@@ -54,7 +54,7 @@ const (
 
 var (
 	QNameRoleSystem          = appdef.NewQName(appdef.SysPackage, "System")
-	QNameRoleWorkspaceOwner  = appdef.NewQName(appdef.SysPackage, "WorkspaceOwner")
+	QNameRoleWorkspaceOwner  = appdef.NewQName(appdef.SysPackage, "RoleWorkspaceOwner")
 	QNameRoleWorkspaceDevice = appdef.NewQName(appdef.SysPackage, "WorkspaceDevice")
 
 	// assigned if request is came to subject's profile
