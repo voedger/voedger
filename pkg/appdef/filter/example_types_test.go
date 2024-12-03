@@ -46,23 +46,23 @@ func ExampleTypes() {
 		}
 	}
 
-	example(filter.Types(appdef.TypeKind_ODoc, appdef.TypeKind_Object))
-	example(filter.Types(appdef.TypeKind_Query))
+	example(filter.Types(wsName, appdef.TypeKind_ODoc, appdef.TypeKind_Object))
+	example(filter.Types(wsName, appdef.TypeKind_Query))
 
 	// Output:
 	// This example demonstrates how to work with the Types filter
 	//
-	// The filter.Types(ODoc, Object) Types:
+	// The filter.Types(workspace «test.workspace»: ODoc, Object) Types:
 	// - TypeKind_ODoc
 	// - TypeKind_Object
-	// Testing filter.Types(ODoc, Object) in Workspace «test.workspace»
+	// Testing filter.Types(workspace «test.workspace»: ODoc, Object) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true
 	// - Object «test.object» is matched: true
 	//
-	// The filter.Types(Query) Types:
+	// The filter.Types(workspace «test.workspace»: Query) Types:
 	// - TypeKind_Query
-	// Testing filter.Types(Query) in Workspace «test.workspace»
+	// Testing filter.Types(workspace «test.workspace»: Query) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: false
 	// - Object «test.object» is matched: false
@@ -88,7 +88,7 @@ func ExampleAllTables() {
 	}()
 
 	ws := app.Workspace(wsName)
-	flt := filter.AllTables()
+	flt := filter.AllTables(wsName)
 	fmt.Println("Testing filter AllTables in", ws)
 	for t := range ws.LocalTypes() {
 		fmt.Println("-", t, "is matched:", flt.Match(t))
@@ -122,7 +122,7 @@ func ExampleAllFunctions() {
 	}()
 
 	ws := app.Workspace(wsName)
-	flt := filter.AllFunctions()
+	flt := filter.AllFunctions(wsName)
 	fmt.Println("Testing filter AllFunctions in", ws)
 	for t := range ws.LocalTypes() {
 		fmt.Println("-", t, "is matched:", flt.Match(t))

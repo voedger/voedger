@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "pkg/**"
+      - "cmd/**"
 
 jobs:
   call-workflow-ci-pkg:
@@ -16,6 +17,8 @@ jobs:
       ignore_bp3: "true"
       short_test: "true"
       go_race: "false"
+      ignore_build: "true"
+      test_subfolders: "true" 
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ""
@@ -37,47 +40,8 @@ jobs:
             echo "ignore_bp3=true" >> "$GITHUB_OUTPUT"
           fi
 
-  call-workflow-ci-cmd-ctool:
-    needs: build
-    uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
-    with:
-      test_folder: "cmd/ctool/"
-      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
-      short_test: "true"
-      ignore_build: "true"
-      go_race: "false"
-    secrets:
-      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-      codecov_token: ""
-      personal_token: ${{ secrets.PERSONAL_TOKEN }}
-  call-workflow-ci-cmd-edger:
-    needs: call-workflow-ci-cmd-ctool
-    uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
-    with:
-      test_folder: "cmd/edger/"
-      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
-      short_test: "true"
-      ignore_build: "true"
-      go_race: "false"
-    secrets:
-      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-      codecov_token: ""
-      personal_token: ${{ secrets.PERSONAL_TOKEN }}
-  call-workflow-ci-cmd-voedger:
-    needs: call-workflow-ci-cmd-edger
-    uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
-    with:
-      test_folder: "cmd/voedger/"
-      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
-      short_test: "true"
-      ignore_build: "true"
-      go_race: "false"
-    secrets:
-      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-      codecov_token: ""
-      personal_token: ${{ secrets.PERSONAL_TOKEN }}
   call-workflow-cd_voeger:
-    needs: call-workflow-ci-cmd-voedger
+    needs: build
     if: github.repository == 'voedger/voedger'
     uses: voedger/voedger/.github/workflows/cd-voedger.yml@main
     secrets:
