@@ -37,16 +37,6 @@ var defaultACL = ACL{
 		desc: "null auth policy",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
-				// qNameCmdLinkDeviceToRestaurant,
-				// qNameQryIssuePrincipalToken,
-				// qNameCmdCreateLogin,
-				// qNameQryEcho,
-				// qNameQryGRCount,
-				// qNameCmdResetPasswordByEmail,
-				// qNameQryInitiateResetPasswordByEmail,
-				// qNameQryIssueVerifiedValueTokenForResetPassword,
-				// qNameCmdChangePassword,
-				// qNameQryModules,
 				// https://dev.untill.com/projects/#!688808
 				qNameQryGetDigitalReceipt,
 				// https://dev.untill.com/projects/#!688808
@@ -85,17 +75,6 @@ var defaultACL = ACL{
 				qNameCDocSubscriptionProfile, qNameCDocUnTillOrders, qNameCDocUnTillPBill,
 				qNameTestDeniedCmd, qNameTestDeniedCDoc, qNameCDocLogin, qNameCDocChildWorkspace, qNameTestDeniedQry, qNameTestDeniedCmd_it, qNameTestDeniedQry_it,
 
-				/* not denied, not necessary to deny:
-				qNameCDocWorkspaceKindUser,
-				qNameCDocWorkspaceKindDevice,
-				qNameCDocWorkspaceKindRestaurant,
-				qNameCDocWorkspaceKindAppWorkspace,*/
-				/*qNameCmdSendEmailVerificationCode,
-
-				qNameQryDescribePackage,
-				qNameQryDescribePackageNames,
-
-				qNameCmdVSqlUpdate,*/
 			},
 		},
 		policy: ACPolicy_Deny,
@@ -108,22 +87,6 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Deny,
 	},
-	/*{
-		desc: "update only is allowed for CDoc<$wsKind> for WorkspaceOwner",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameCDocWorkspaceKindUser,
-				qNameCDocWorkspaceKindDevice,
-				qNameCDocWorkspaceKindRestaurant,
-				qNameCDocWorkspaceKindAppWorkspace,
-				qNameCDocReseller,
-				qNameCDocUntillPayments,
-			},
-			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_UPDATE},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},
-		},
-		policy: ACPolicy_Allow,
-	},*/
 	{
 		// DENY ALL FROM LOGIN 'untillchargebeeagent'
 		desc: "deny all from 'untillchargebeeagent' login",
@@ -147,38 +110,6 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Allow,
 	},
-	// {
-	// 	// GRANT SELECT q.sys.DescribePackage* TO ROLE ProfileUser
-	// 	desc: "q.sys.DescribePackage* is allowed to be called in profile only",
-	// 	pattern: PatternType{
-	// 		qNamesPattern: []appdef.QName{
-	// 			qNameQryDescribePackage,
-	// 			qNameQryDescribePackageNames,
-	// 		},
-	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleProfileOwner}}},
-	// 	},
-	// 	policy: ACPolicy_Allow,
-	// },
-	// {
-	// 	desc: "c.sys.InitiateJoinWorkspace is allowed for authenticated users",
-	// 	pattern: PatternType{
-	// 		qNamesPattern: []appdef.QName{
-	// 			qNameCmdInitiateJoinWorkspace,
-	// 		},
-	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User}}},
-	// 	},
-	// 	policy: ACPolicy_Allow,
-	// },
-	// {
-	// 	desc: "c.sys.InitiateLeaveWorkspace is allowed for authenticated users",
-	// 	pattern: PatternType{
-	// 		qNamesPattern: []appdef.QName{
-	// 			qNameCmdInitiateLeaveWorkspace,
-	// 		},
-	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User}}},
-	// 	},
-	// 	policy: ACPolicy_Allow,
-	// },
 	{
 		// WorkspaceAdmin role asssigned automatically if has e.g. RoleResellersAdmin or RoleUntillPaymentsReseller
 		desc: "allow few reseller-related commands to WorkspaceAdmin",

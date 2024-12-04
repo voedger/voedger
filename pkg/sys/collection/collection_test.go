@@ -135,7 +135,6 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 			AddField(test.articleNameIdent, appdef.DataKind_string, true).
 			AddField(test.articleNumberIdent, appdef.DataKind_int32, false).
 			AddField(test.articleDeptIdent, appdef.DataKind_RecordID, false)
-			// AddField("price", appdef.DataKind_float64, false)
 		articles.
 			AddContainer(test.tableArticlePrices.Entity(), test.tableArticlePrices, appdef.Occurs(0), appdef.Occurs(100))
 	}

@@ -114,7 +114,6 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm coreutils.ITime,
 				pipeline.WireFunc("checkArgsRefIntegrity", checkArgsRefIntegrity),
 				pipeline.WireFunc("parseCUDs", parseCUDs),
 				pipeline.WireFunc("checkCUDsAllowedInCUDCmdOnly", checkCUDsAllowedInCUDCmdOnly),
-				// pipeline.WireFunc("checkCUDsQNamesExistence", checkCUDsQNamesExistence),
 				pipeline.WireSyncOperator("wrongArgsCatcher", &wrongArgsCatcher{}), // any error before -> wrap error into bad request http error
 				pipeline.WireFunc("checkIsActiveInCUDs", checkIsActiveInCUDs),
 				pipeline.WireFunc("writeCUDs", cmdProc.writeCUDs),

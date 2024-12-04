@@ -26,7 +26,6 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 	}()
 
 	// role.sys.Everyone
-	// TODO: надо ли?
 	principals = append(principals, iauthnz.Principal{
 		Kind:  iauthnz.PrincipalKind_Role,
 		QName: iauthnz.QNameRoleEveryone,

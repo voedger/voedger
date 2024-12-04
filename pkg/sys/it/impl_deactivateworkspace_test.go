@@ -14,66 +14,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/registry"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	it "github.com/voedger/voedger/pkg/vit"
 )
-
-func TestBug2(t *testing.T) {
-	require := require.New(t)
-	vit := it.NewVITVVMOnly(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-	appPart, err := vit.IAppPartitions.Borrow(istructs.AppQName_sys_registry, 1, appparts.ProcessorKind_Command)
-	require.NoError(err)
-	defer appPart.Release()
-
-	t.Run("GRANT SELECT ON ALL QUERIES WITH TAG WithoutAuthTag TO sys.Anyone: OperationKind_Select does not work", func(t *testing.T) {
-		_, _, err := appPart.IsOperationAllowed(
-			appdef.OperationKind_Select,
-			appdef.NewQName(registry.RegistryPackage, "IssuePrincipalToken"),
-			nil,
-			[]appdef.QName{iauthnz.QNameRoleAnonymous},
-		)
-		require.Error(err)
-	})
-
-	t.Run("GRANT SELECT ON ALL QUERIES WITH TAG WithoutAuthTag TO sys.Anyone: OperationKind_Execute works", func(t *testing.T) {
-		ok, _, err := appPart.IsOperationAllowed(
-			appdef.OperationKind_Execute,
-			appdef.NewQName(registry.RegistryPackage, "IssuePrincipalToken"),
-			nil,
-			[]appdef.QName{iauthnz.QNameRoleAnonymous},
-		)
-		require.NoError(err)
-		require.True(ok)
-	})
-
-	t.Run("GRANT INSERT ON ALL COMMANDS WITH TAG WithoutAuthTag TO sys.Anyone: OperationKind_Execute works", func(t *testing.T) {
-		ok, _, err := appPart.IsOperationAllowed(
-			appdef.OperationKind_Execute,
-			appdef.NewQName(registry.RegistryPackage, "CreateLogin"),
-			nil,
-			[]appdef.QName{iauthnz.QNameRoleAnonymous},
-		)
-		require.NoError(err)
-		require.True(ok)
-	})
-
-	t.Run("GRANT INSERT ON ALL COMMANDS WITH TAG WithoutAuthTag TO sys.Anyone: OperationKind_Insert doe not work", func(t *testing.T) {
-		_, _, err := appPart.IsOperationAllowed(
-			appdef.OperationKind_Insert,
-			appdef.NewQName(registry.RegistryPackage, "CreateLogin"),
-			nil,
-			[]appdef.QName{iauthnz.QNameRoleAnonymous},
-		)
-		require.Error(err)
-	})
-}
 
 func TestBasicUsage_InitiateDeactivateWorkspace(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)

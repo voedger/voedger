@@ -263,15 +263,6 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppW
 	}
 }
 
-func NewVITVVMOnly(tb testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
-	vit = newVit(tb, vitCfg, false, true)
-	for _, opt := range opts {
-		opt(vit)
-	}
-
-	return vit
-}
-
 func NewVITLocalCassandra(tb testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 	vit = newVit(tb, vitCfg, true, false)
 	for _, opt := range opts {
