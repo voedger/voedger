@@ -341,3 +341,23 @@ func testOverwriteRoles(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, email st
 
 	return verificationCode
 }
+
+func TestRejectInvitationOnDifferentLogin(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	email := fmt.Sprintf("testcancelsentinvite_%d@123.com", vit.NextNumber())
+	login := vit.SignUp(email, "1", istructs.AppQName_test1_app1)
+	loginPrn := vit.SignIn(login)
+	wsParams := it.SimpleWSParams("TestCancelSentInvite_ws")
+	ws := vit.CreateWorkspace(wsParams, loginPrn)
+	inviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+	actualEmail := vit.CaptureEmail()
+	verificationCode := actualEmail.Body[:6]
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+	// simulate accepting invitation by different login
+	differentLogin := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
+	InitiateJoinWorkspace(vit, ws, inviteID, differentLogin, verificationCode,
+		coreutils.Expect400(fmt.Sprintf("invitation was sent to %s but current login is login", email)))
+}
