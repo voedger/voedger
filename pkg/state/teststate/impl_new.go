@@ -63,7 +63,7 @@ func (gts *generalTestState) getMockedStorage(storageQName appdef.QName) (*stora
 
 	mockedStorage, ok2 := mockedState.GetMockedStorage(storageQName)
 	if !ok2 {
-		panic("failed to get mocked event storage")
+		panic(fmt.Sprintf("failed to get mocked storage for %s", storageQName.String()))
 	}
 
 	return mockedStorage, true
@@ -102,16 +102,8 @@ func (gts *generalTestState) stateSingletonRecord(fQName IFullQName, keyValueLis
 	if !isSingleton {
 		panic("use Record method for non-singleton entities")
 	}
-	qName := gts.getQNameFromFQName(fQName)
 
-	// get real ID of the specific singleton
-	// TODO: move to mockRecordStorage
-	id, err := gts.appStructs.Records().GetSingletonID(qName)
-	if err != nil {
-		panic(fmt.Errorf("failed to get singleton id: %w", err))
-	}
-
-	gts.record(fQName, id, isSingleton, keyValueList...)
+	gts.record(fQName, istructs.MinReservedBaseRecordID, isSingleton, keyValueList...)
 }
 
 func (gts *generalTestState) getQNameFromFQName(fQName IFullQName) appdef.QName {
@@ -327,21 +319,22 @@ func (gts *generalTestState) putRecords() {
 	for _, item := range gts.recordItems {
 		pkgAlias := gts.appDef.PackageLocalName(item.entity.PkgPath())
 
-		keyValueMap, err := parseKeyValues(item.keyValueList)
+		kvMap, err := parseKeyValues(item.keyValueList)
 		require.NoError(gts.t, err, msgFailedToParseKeyValues)
 
-		keyValueMap[appdef.SystemField_QName] = appdef.NewQName(pkgAlias, item.entity.Entity()).String()
-		keyValueMap[appdef.SystemField_ID] = item.id
-		keyValueMap["WSID"] = gts.commandWSID
-		keyValueMap["ID"] = item.id
+		kvMap[appdef.SystemField_QName] = appdef.NewQName(pkgAlias, item.entity.Entity()).String()
+		kvMap[appdef.SystemField_ID] = item.id
+		kvMap[sys.Storage_Record_Field_WSID] = gts.commandWSID
+		kvMap[sys.Storage_Record_Field_ID] = item.id
 
 		mockedObject := &coreutils.TestObject{
 			Id:          item.id,
 			Name:        item.qName,
 			IsNew_:      item.isNew,
-			Data:        keyValueMap,
+			Data:        kvMap,
 			Containers_: make(map[string][]*coreutils.TestObject),
 		}
+
 		mockedRecordStorage.PutValue(item.id, mockedObject)
 	}
 
@@ -356,19 +349,20 @@ func (gts *generalTestState) putViewRecords() {
 	}
 
 	for _, item := range gts.viewRecords {
-		m, err := parseKeyValues(item.keyValueList)
+		kvMap, err := parseKeyValues(item.keyValueList)
 		require.NoError(gts.t, err, msgFailedToParseKeyValues)
 
-		m["WSID"] = gts.commandWSID
-		m["ID"] = item.id
+		kvMap[sys.Storage_Record_Field_WSID] = gts.commandWSID
+		kvMap[sys.Storage_Record_Field_ID] = item.id
 
 		mockedObject := &coreutils.TestObject{
 			Id:          item.id,
 			Name:        item.qName,
 			IsNew_:      item.isNew,
-			Data:        m,
+			Data:        kvMap,
 			Containers_: make(map[string][]*coreutils.TestObject),
 		}
+
 		mockedViewStorage.PutValue(0, mockedObject)
 	}
 
@@ -427,7 +421,6 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 	cts := &CommandTestState{}
 
 	cts.testData = make(map[string]any)
-	// set test object
 	cts.t = t
 	cts.ctx = context.Background()
 	cts.processorKind = ProcKind_CommandProcessor
@@ -435,7 +428,7 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 	cts.secretReader = &secretReader{secrets: make(map[string][]byte)}
 
 	// build appDef
-	cts.buildAppDef(iCommand.PkgPath(), iCommand.WorkspaceDescriptor())
+	cts.buildAppDef()
 	// build state
 	cts.IState = stateprovide.ProvideMockedCommandProcessorStateFactory()(
 		IntentsLimit,
@@ -447,9 +440,6 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 	cts.extensionFunc = extensionFunc
 
 	cts.argumentObject = make(map[string]any)
-	// set cud builder function
-	cts.setCudBuilder(iCommand, wsid)
-
 	// set arguments for the command
 	if len(iCommand.ArgumentEntity()) > 0 {
 		cts.argumentType = appdef.NewFullQName(iCommand.ArgumentPkgPath(), iCommand.ArgumentEntity())
@@ -459,13 +449,13 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 }
 
 func (cts *CommandTestState) StateRecord(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ICommandRunner {
-	cts.generalTestState.stateRecord(fQName, id, keyValueList...)
+	cts.stateRecord(fQName, id, keyValueList...)
 
 	return cts
 }
 
 func (cts *CommandTestState) StateSingletonRecord(fQName IFullQName, keyValueList ...any) ICommandRunner {
-	cts.generalTestState.stateSingletonRecord(fQName, keyValueList...)
+	cts.stateSingletonRecord(fQName, keyValueList...)
 
 	return cts
 }
@@ -475,30 +465,47 @@ func (cts *CommandTestState) putArgument() {
 		return
 	}
 
-	cts.testData[sys.Storage_CommandContext_Field_ArgumentObject] = cts.argumentObject
-}
-
-func (cts *CommandTestState) setCudBuilder(wsItem IFullQName, wsid istructs.WSID) {
-	localPkgName := cts.appDef.PackageLocalName(wsItem.PkgPath())
-	if wsItem.PkgPath() == appdef.SysPackage {
-		localPkgName = wsItem.PkgPath()
+	mockedCommandContextStorage, ok := cts.getMockedStorage(sys.Storage_CommandContext)
+	if !ok {
+		panic("failed to get mocked command context storage")
 	}
 
-	reb := cts.appStructs.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
-		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-			Workspace:         wsid,
-			HandlingPartition: TestPartition,
-			QName:             appdef.NewQName(localPkgName, wsItem.Entity()),
-			WLogOffset:        0,
-			PLogOffset:        cts.nextPLogOffs(),
-		},
-	})
+	localPkgName := cts.appDef.PackageLocalName(cts.argumentType.PkgPath())
+	localQName := appdef.NewQName(localPkgName, cts.argumentType.Entity())
 
-	cts.cud = reb.CUDBuilder()
+	mockedObject := &coreutils.TestObject{
+		Containers_: make(map[string][]*coreutils.TestObject),
+	}
+
+	// setting argument object
+	mockedObject.Containers_[sys.Storage_CommandContext_Field_ArgumentObject] = append(
+		mockedObject.Containers_[sys.Storage_CommandContext_Field_ArgumentObject],
+		&coreutils.TestObject{
+			Name:        localQName,
+			Data:        cts.argumentObject,
+			Containers_: make(map[string][]*coreutils.TestObject),
+		},
+	)
+
+	for key, value := range cts.argumentObject {
+		if innerSlice, ok := value.([]any); ok {
+			for _, innerValue := range innerSlice {
+				mockedObject.Containers_[sys.Storage_CommandContext_Field_ArgumentObject][0].Containers_[key] = append(
+					mockedObject.Containers_[sys.Storage_CommandContext_Field_ArgumentObject][0].Containers_[key],
+					&coreutils.TestObject{
+						Data:        innerValue.(map[string]any),
+						Containers_: make(map[string][]*coreutils.TestObject),
+					},
+				)
+			}
+		}
+	}
+	// writing an event object directly to the storage
+	mockedCommandContextStorage.PutValue(0, mockedObject)
 }
 
 // buildAppDef alternative way of building IAppDef
-func (gts *generalTestState) buildAppDef(wsPkgPath, wsDescriptorName string) {
+func (gts *generalTestState) buildAppDef() {
 	compileResult, err := compile.Compile("..")
 	if err != nil {
 		panic(err)
@@ -538,20 +545,6 @@ func (gts *generalTestState) buildAppDef(wsPkgPath, wsDescriptorName string) {
 	}
 
 	gts.appStructs = structs
-	//gts.plogGen = istructsmem.NewIDGenerator()
-	//gts.wsOffsets = make(map[istructs.WSID]istructs.Offset)
-
-	//err = wsdescutil.CreateCDocWorkspaceDescriptorStub(
-	//	gts.appStructs,
-	//	TestPartition,
-	//	gts.commandWSID,
-	//	appdef.NewQName(filepath.Base(wsPkgPath), wsDescriptorName),
-	//	gts.nextPLogOffs(),
-	//	gts.nextWSOffs(gts.commandWSID),
-	//)
-	//if err != nil {
-	//	panic(err)
-	//}
 }
 
 func (cts *CommandTestState) ArgumentObject(id istructs.RecordID, keyValueList ...any) ICommandRunner {
@@ -648,7 +641,7 @@ func NewProjectorTestState(t *testing.T, iProjector IProjector, extensionFunc fu
 	pts.ctx = context.Background()
 	pts.processorKind = ProcKind_Actualizer
 	pts.secretReader = &secretReader{secrets: make(map[string][]byte)}
-	pts.buildAppDef(iProjector.PkgPath(), iProjector.WorkspaceDescriptor())
+	pts.buildAppDef()
 	// build state
 	pts.IState = stateprovide.ProvideMockedActualizerStateFactory()(
 		IntentsLimit,
@@ -790,12 +783,11 @@ func (pts *ProjectorTestState) StateView(fQName IFullQName, id istructs.RecordID
 }
 
 func (pts *ProjectorTestState) Run() {
-	//defer pts.recoverPanicInTestState()
-	//
+	defer pts.recoverPanicInTestState()
+
 	pts.putViewRecords()
 	pts.putRecords()
 	pts.putCudRows()
-	pts.putArgument()
 	pts.putEvent()
 
 	pts.runExtensionFunc()
@@ -804,7 +796,7 @@ func (pts *ProjectorTestState) Run() {
 }
 
 func (pts *ProjectorTestState) putArgument() {
-	if pts.argumentObject == nil {
+	if pts.rawEvent.argumentObject == nil {
 		return
 	}
 
@@ -822,16 +814,17 @@ func (pts *ProjectorTestState) putEvent() {
 		Data:        pts.rawEvent.argumentObject.Data,
 		Containers_: make(map[string][]*coreutils.TestObject),
 	}
-	mockedEventObject.Data["Workspace"] = pts.rawEvent.Workspace()
-	mockedEventObject.Data["HandlingPartition"] = pts.rawEvent.handlingPartition
-	mockedEventObject.Data["QName"] = pts.rawEvent.qName
-	mockedEventObject.Data["WLogOffset"] = pts.rawEvent.wLogOffset
+	// add comnment
 	mockedEventObject.Data["PLogOffset"] = pts.rawEvent.pLogOffset
+	mockedEventObject.Data["HandlingPartition"] = pts.rawEvent.handlingPartition
+	mockedEventObject.Data[sys.Storage_Event_Field_Workspace] = pts.rawEvent.Workspace()
+	mockedEventObject.Data[sys.Storage_Event_Field_QName] = pts.rawEvent.qName
+	mockedEventObject.Data[sys.Storage_CommandContext_Field_WLogOffset] = pts.rawEvent.wLogOffset
 
 	for _, cud := range pts.rawEvent.cuds {
-		cud.Data["sys.ID"] = cud.Id
-		mockedEventObject.Containers_["CUDs"] = append(
-			mockedEventObject.Containers_["CUDs"],
+		cud.Data[appdef.SystemField_ID] = cud.Id
+		mockedEventObject.Containers_[sys.Storage_Event_Field_CUDs] = append(
+			mockedEventObject.Containers_[sys.Storage_Event_Field_CUDs],
 			&coreutils.TestObject{
 				Name:        cud.Name,
 				Data:        cud.Data,
@@ -843,12 +836,14 @@ func (pts *ProjectorTestState) putEvent() {
 		)
 	}
 
+	argQName := pts.rawEvent.argumentObject.Name
+	pts.rawEvent.argumentObject.Data[appdef.SystemField_QName] = argQName
 	// setting argument object
-	mockedEventObject.Containers_["ArgumentObject"] = append(
-		mockedEventObject.Containers_["ArgumentObject"],
+	mockedEventObject.Containers_[sys.Storage_Event_Field_ArgumentObject] = append(
+		mockedEventObject.Containers_[sys.Storage_Event_Field_ArgumentObject],
 		&coreutils.TestObject{
-			Name:        pts.getQNameFromFQName(pts.argumentType),
-			Data:        pts.argumentObject,
+			Name:        argQName,
+			Data:        pts.rawEvent.argumentObject.Data,
 			Containers_: make(map[string][]*coreutils.TestObject),
 		},
 	)
@@ -940,8 +935,7 @@ func putToArgumentObjectTree(tree map[string]any, pathPart string, keyValueList 
 	}
 
 	// check if path part is a valid key
-	_, ok := tree[pathPart]
-	if !ok {
+	if _, ok := tree[pathPart]; !ok {
 		tree[pathPart] = make([]any, 0)
 	}
 

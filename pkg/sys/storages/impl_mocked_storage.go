@@ -8,11 +8,13 @@ package storages
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
-	"reflect"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 var notFoundKeyError = fmt.Errorf("not found key")
@@ -25,8 +27,9 @@ type MockedStorage struct {
 	state.IWithRead
 	state.IWithApplyBatch
 
-	KVBuilders   map[istructs.RecordID]istructs.IStateValueBuilder
-	storageQName appdef.QName
+	storageQName  appdef.QName
+	keyBuilders   []*mockedKeyBuilder
+	valueBuilders map[istructs.RecordID]istructs.IStateValueBuilder
 }
 
 func (s *MockedStorage) NewKeyBuilder(
@@ -51,7 +54,7 @@ func (s *MockedStorage) GetBatch(items []state.GetBatchItem) (err error) {
 			return fmt.Errorf("IStataKeyBuilder must be mockedKeyBuilder")
 		}
 
-		vb, ok := s.KVBuilders[mkb.Id]
+		vb, ok := s.valueBuilders[mkb.Id]
 		if !ok {
 			return notFoundKeyError
 		}
@@ -68,24 +71,21 @@ func (s *MockedStorage) Get(kb istructs.IStateKeyBuilder) (value istructs.IState
 		return nil, fmt.Errorf("IStataKeyBuilder must be mockedKeyBuilder")
 	}
 
-	vb, ok2 := s.KVBuilders[mkb.Id]
-	if !ok2 {
+	vb, ok := s.valueBuilders[mkb.Id]
+	if !ok {
 		return nil, nil
 	}
 
 	return vb.BuildValue(), nil
 }
 
-func (s *MockedStorage) Read(
-	kb istructs.IStateKeyBuilder,
-	callback istructs.ValueCallback,
-) (err error) {
+func (s *MockedStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
 	mkb, ok := kb.(*mockedKeyBuilder)
 	if !ok {
 		return fmt.Errorf("IStataKeyBuilder must be mockedKeyBuilder")
 	}
 
-	vb, ok := s.KVBuilders[mkb.Id]
+	vb, ok := s.valueBuilders[mkb.Id]
 	if !ok {
 		return notFoundKeyError
 	}
@@ -107,9 +107,11 @@ func (s *MockedStorage) ProvideValueBuilder(
 		return nil, fmt.Errorf("IStataKeyBuilder must be mockedKeyBuilder")
 	}
 
-	s.KVBuilders[mkb.Id] = newMockedValueBuilder(value)
+	newMVB := newMockedValueBuilder(value)
+	s.keyBuilders = append(s.keyBuilders, mkb)
+	s.valueBuilders[mkb.Id] = newMVB
 
-	return s.KVBuilders[mkb.Id], nil
+	return newMVB, nil
 }
 
 func (s *MockedStorage) ProvideValueBuilderForUpdate(
@@ -133,13 +135,14 @@ func (s *MockedStorage) ApplyBatch([]state.ApplyBatchItem) (err error) {
 }
 
 func (s *MockedStorage) PutValue(recordID istructs.RecordID, value *coreutils.TestObject) {
-	s.KVBuilders[recordID] = newMockedValueBuilder(newMockedStateValue([]*coreutils.TestObject{value}))
+	s.valueBuilders[recordID] = newMockedValueBuilder(newMockedStateValue([]*coreutils.TestObject{value}))
 }
 
 func NewMockedStorage(storageQName appdef.QName) *MockedStorage {
 	return &MockedStorage{
-		storageQName: storageQName,
-		KVBuilders:   make(map[istructs.RecordID]istructs.IStateValueBuilder),
+		storageQName:  storageQName,
+		keyBuilders:   make([]*mockedKeyBuilder, 0),
+		valueBuilders: make(map[istructs.RecordID]istructs.IStateValueBuilder),
 	}
 }
 
@@ -151,10 +154,9 @@ type mockedKeyBuilder struct {
 func newMockedKeyBuilder(storage, entity appdef.QName, id istructs.RecordID) *mockedKeyBuilder {
 	return &mockedKeyBuilder{
 		TestObject: coreutils.TestObject{
-			Name:    entity,
-			Id:      id,
-			Parent_: 0,
-			Data:    make(map[string]any),
+			Name: entity,
+			Id:   id,
+			Data: make(map[string]any),
 		},
 		baseKeyBuilder: baseKeyBuilder{
 			storage: storage,
@@ -208,6 +210,9 @@ func (mkb *mockedKeyBuilder) PutInt32(field appdef.FieldName, value int32) {
 
 func (mkb *mockedKeyBuilder) PutInt64(field appdef.FieldName, value int64) {
 	mkb.TestObject.Data[field] = value
+	if field == "ID" {
+		mkb.TestObject.Id = istructs.RecordID(value)
+	}
 }
 
 func (mkb *mockedKeyBuilder) PutFloat32(field appdef.FieldName, value float32) {
@@ -232,6 +237,11 @@ func (mkb *mockedKeyBuilder) PutQName(field appdef.FieldName, value appdef.QName
 
 func (mkb *mockedKeyBuilder) PutBool(field appdef.FieldName, value bool) {
 	mkb.TestObject.Data[field] = value
+	// if IsSingleton is true, then ID must be set to MinReservedBaseRecordID
+	// it is workaround for singleton entities
+	if field == sys.Storage_Record_Field_IsSingleton && value {
+		mkb.TestObject.Id = istructs.MinReservedBaseRecordID
+	}
 }
 
 func (mkb *mockedKeyBuilder) PutRecordID(field appdef.FieldName, value istructs.RecordID) {
@@ -309,12 +319,14 @@ func (mvb *mockedValueBuilder) PutFromJSON(m map[appdef.FieldName]any) {
 func newMockedValueBuilder(value istructs.IStateValue) (mvb *mockedValueBuilder) {
 	if value == nil {
 		return &mockedValueBuilder{
-			value: newMockedStateValue([]*coreutils.TestObject{
-				{
-					Data:        make(map[string]any),
-					Containers_: make(map[string][]*coreutils.TestObject),
+			value: newMockedStateValue(
+				[]*coreutils.TestObject{
+					{
+						Data:        make(map[string]any),
+						Containers_: make(map[string][]*coreutils.TestObject),
+					},
 				},
-			}),
+			),
 		}
 	}
 
@@ -384,20 +396,39 @@ type mockedStateValue struct {
 }
 
 func (m *mockedStateValue) AsInt32(name appdef.FieldName) int32 {
-	return m.TestObjects[0].Data[name].(int32)
+	switch t := m.TestObjects[0].Data[name].(type) {
+	case int32:
+		return t
+	case json.Number:
+		val, err := t.Int64()
+		if err != nil {
+			panic(fmt.Errorf("json.Number.AsInt64(): %w", err))
+		}
+
+		return int32(val)
+	default:
+		panic(fmt.Sprintf("mockedStateValue.AsInt32(%s): unexpected type", name))
+	}
 }
 
 func (m *mockedStateValue) AsInt64(name appdef.FieldName) int64 {
-	if val, ok := m.TestObjects[0].Data[name].(int64); ok {
+	switch t := m.TestObjects[0].Data[name].(type) {
+	case int64:
+		return t
+	case istructs.Offset:
+		return int64(t)
+	case istructs.RecordID:
+		return int64(t)
+	case json.Number:
+		val, err := t.Int64()
+		if err != nil {
+			panic(fmt.Errorf("json.Number.AsInt64(): %w", err))
+		}
+
 		return val
+	default:
+		panic(fmt.Sprintf("mockedStateValue.AsInt64(%s): unexpected type", name))
 	}
-
-	val, err := m.TestObjects[0].Data[name].(json.Number).Int64()
-	if err != nil {
-		panic(err)
-	}
-
-	return val
 }
 
 func (m *mockedStateValue) AsFloat32(name appdef.FieldName) float32 {
@@ -461,10 +492,9 @@ func (m *mockedStateValue) Length() int {
 
 func (m mockedStateValue) GetAsString(index int) string {
 	if index < 0 || index >= len(m.TestObjects) {
-		panic("index out of range")
+		panic(fmt.Sprintf("mockedStateValue.GetAsString(%d): index out of range", index))
 	}
 
-	//
 	//TODO implement me
 	panic("implement me")
 }
@@ -506,16 +536,8 @@ func (m mockedStateValue) GetAsBool(index int) bool {
 
 func (m mockedStateValue) GetAsValue(index int) istructs.IStateValue {
 	if index < 0 || index >= len(m.TestObjects) {
-		panic("index out of range")
+		panic(fmt.Sprintf("mockedStateValue.GetAsValue(%d): index out of range", index))
 	}
 
 	return newMockedStateValue([]*coreutils.TestObject{m.TestObjects[index]})
 }
-
-type mockedKeyValue struct {
-	baseStateValue
-	coreutils.TestObject
-}
-
-func (v *mockedKeyValue) AsRecord(name string) (record istructs.IRecord) { panic("") }
-func (v *mockedKeyValue) AsEvent(name string) (event istructs.IDbEvent)  { panic("") }
