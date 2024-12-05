@@ -412,7 +412,7 @@ var defaultACL = ACL{
 		desc: "grant select on few tables to air.AirReseller and air.UntillPaymentsReseller ",
 		pattern: PatternType{
 			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
-			qNamesPattern:  []appdef.QName{qNameCDocAirReseller},
+			qNamesPattern:  []appdef.QName{qNameCDocReseller},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleAirReseller}},
 				// OR
