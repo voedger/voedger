@@ -53,8 +53,12 @@ const (
 )
 
 var (
-	QNameRoleSystem          = appdef.NewQName(appdef.SysPackage, "System")
-	QNameRoleWorkspaceOwner  = appdef.NewQName(appdef.SysPackage, "RoleWorkspaceOwner")
+	QNameRoleSystem = appdef.NewQName(appdef.SysPackage, "System")
+
+	// Deprecated: use WorkspaceOwner. Kept for backward compatibility
+	QNameRoleRoleWorkspaceOwner = appdef.NewQName(appdef.SysPackage, "RoleWorkspaceOwner")
+
+	QNameRoleWorkspaceOwner  = appdef.NewQName(appdef.SysPackage, "WorkspaceOwner")
 	QNameRoleWorkspaceDevice = appdef.NewQName(appdef.SysPackage, "WorkspaceDevice")
 
 	// assigned if request is came to subject's profile
@@ -79,12 +83,14 @@ var (
 var SysRoles = []appdef.QName{
 	QNameRoleSystem,
 	QNameRoleWorkspaceOwner,
+	QNameRoleRoleWorkspaceOwner,
 	QNameRoleWorkspaceDevice,
 	QNameRoleProfileOwner,
 	QNameRoleWorkspaceAdmin,
 }
 
 var rolesInheritance = map[appdef.QName]appdef.QName{
-	QNameRoleProfileOwner:    QNameRoleWorkspaceOwner,
-	QNameRoleWorkspaceDevice: QNameRoleWorkspaceOwner,
+	QNameRoleProfileOwner:       QNameRoleWorkspaceOwner,
+	QNameRoleWorkspaceDevice:    QNameRoleWorkspaceOwner,
+	QNameRoleRoleWorkspaceOwner: QNameRoleWorkspaceOwner,
 }
