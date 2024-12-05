@@ -1,11 +1,6 @@
 name: CI pkg-cmd PR
 
-on:
-  pull_request_target:
-    paths:
-      - "pkg/**"
-      - "cmd/**"
-      - "design/**"
+on: pull_request_target
 
 jobs:
   call-workflow-ci-pkg:
