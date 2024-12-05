@@ -6,6 +6,8 @@
 package appdef
 
 import (
+	"iter"
+
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
@@ -21,6 +23,9 @@ const (
 	//
 	// Used as result types kind for functions that has parameter or result of any type.
 	TypeKind_Any
+
+	// Tag type. Used for grouping types.
+	TypeKind_Tag
 
 	// Simple data types, like string, number, date, etc.
 	TypeKind_Data
@@ -140,6 +145,7 @@ var (
 // Type describes the entity, such as document, record or view.
 type IType interface {
 	IWithComments
+	IWithTags
 
 	// Application
 	App() IAppDef
@@ -164,11 +170,12 @@ type (
 	FindType func(QName) IType
 
 	// Types iterator.
-	SeqType func(func(IType) bool)
+	SeqType = iter.Seq[IType]
 )
 
 type ITypeBuilder interface {
-	ICommentsBuilder
+	ICommenter
+	ITagger
 }
 
 // AnyType is used for return then type is any

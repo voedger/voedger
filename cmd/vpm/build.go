@@ -176,6 +176,10 @@ func execTinyGoBuild(dir, appName string) (wasmFilePath string, err error) {
 		// checking compatibility of the tinygo with go version
 		if strings.Contains(err.Error(), "requires go version") {
 			return "", fmt.Errorf("tinygo is incompatible with the current go version - %w", err)
+		} else if strings.Contains(err.Error(), "error: unable to make temporary file: No such file or directory") {
+			return "", fmt.Errorf(`"%w". Hint: on Windows try to create c:\Temp dir`, err)
+		} else if strings.Contains(err.Error(), "error: could not find wasm-opt, set the WASMOPT environment variable to override") {
+			return "", fmt.Errorf(`"%w". Hint: try to install binaryen from https://github.com/WebAssembly/binaryen/releases/`, err)
 		}
 		return "", err
 	}

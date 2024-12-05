@@ -1,11 +1,6 @@
 name: CI pkg-cmd PR
 
-on:
-  pull_request_target:
-    paths:
-      - "pkg/**"
-      - "cmd/**"
-      - "design/**"
+on: pull_request_target
 
 jobs:
   call-workflow-ci-pkg:
@@ -18,72 +13,13 @@ jobs:
       ignore_build: "true"
       running_workflow: "CI pkg-cmd PR"
       go_race: "false"
-    secrets:
-      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-      codecov_token: ""
-      personal_token: ${{ secrets.PERSONAL_TOKEN }}
-  call-workflow-ci-cmd-ctool:
-    needs: call-workflow-ci-pkg
-    uses: untillpro/ci-action/.github/workflows/ci_reuse_go_pr.yml@master
-    with:
-      test_folder: "cmd/ctool/"
-      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
-      ignore_bp3: "true"
-      short_test: "true"
-      ignore_build: "true"
-      go_race: "false"
-      running_workflow: "CI pkg-cmd PR"
-    secrets:
-      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-      codecov_token: ""
-      personal_token: ${{ secrets.PERSONAL_TOKEN }}
-  call-workflow-ci-cmd-edger:
-    needs: call-workflow-ci-cmd-ctool
-    uses: untillpro/ci-action/.github/workflows/ci_reuse_go_pr.yml@master
-    with:
-      test_folder: "cmd/edger/"
-      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
-      ignore_bp3: "true"
-      short_test: "true"
-      ignore_build: "true"
-      go_race: "false"
-      running_workflow: "CI pkg-cmd PR"
-    secrets:
-      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-      codecov_token: ""
-      personal_token: ${{ secrets.PERSONAL_TOKEN }}
-  call-workflow-ci-cmd-vpm:
-    needs: call-workflow-ci-cmd-edger
-    uses: untillpro/ci-action/.github/workflows/ci_reuse_go_pr.yml@master
-    with:
-      test_folder: "cmd/vpm/"
-      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
-      ignore_bp3: "true"
-      short_test: "true"
-      ignore_build: "true"
-      go_race: "false"
-      running_workflow: "CI pkg-cmd PR"
-    secrets:
-      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-      codecov_token: ""
-      personal_token: ${{ secrets.PERSONAL_TOKEN }}
-  call-workflow-ci-cmd-voedger:
-    needs: call-workflow-ci-cmd-vpm
-    uses: untillpro/ci-action/.github/workflows/ci_reuse_go_pr.yml@master
-    with:
-      test_folder: "cmd/voedger/"
-      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
-      ignore_bp3: "true"
-      short_test: "true"
-      ignore_build: "true"
-      go_race: "false"
-      running_workflow: "CI pkg-cmd PR"
+      test_subfolders: "true" 
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ""
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   auto-merge-pr:
-    needs: call-workflow-ci-cmd-voedger
+    needs: call-workflow-ci-pkg
     uses: voedger/voedger/.github/workflows/merge.yml@main
     secrets:
       personaltoken: ${{ secrets.REPOREADING_TOKEN }}

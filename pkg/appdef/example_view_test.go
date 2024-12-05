@@ -49,7 +49,7 @@ func ExampleViews() {
 	// now to enum views
 	{
 		cnt := 0
-		for v := range appdef.Views(app.Types) {
+		for v := range appdef.Views(app.Types()) {
 			if v.IsSystem() {
 				continue
 			}

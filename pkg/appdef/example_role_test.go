@@ -51,7 +51,7 @@ func ExampleRoles() {
 	// how to enum roles
 	{
 		cnt := 0
-		for r := range appdef.Roles(app.Types) {
+		for r := range appdef.Roles(app.Types()) {
 			cnt++
 			fmt.Println(cnt, r)
 		}

@@ -38,9 +38,7 @@ type commentBuilder struct {
 }
 
 func makeCommentBuilder(comment *comment) commentBuilder {
-	return commentBuilder{
-		comment: comment,
-	}
+	return commentBuilder{comment}
 }
 
 func (cb *commentBuilder) SetComment(v ...string) {

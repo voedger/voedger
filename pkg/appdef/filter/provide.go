@@ -13,15 +13,15 @@ func QNames(name appdef.QName, names ...appdef.QName) appdef.IFilter {
 }
 
 // Tags is a filter that matches types by their tags.
-//
-// Deprecated: not ready IType.Tags().
-func Tags(tag string, tags ...string) appdef.IFilter {
+func Tags(tag appdef.QName, tags ...appdef.QName) appdef.IFilter {
 	return makeTagsFilter(tag, tags...)
 }
 
 // Types is a filter that matches types by their kind.
-func Types(t appdef.TypeKind, tt ...appdef.TypeKind) appdef.IFilter {
-	return makeTypesFilter(t, tt...)
+//
+// If workspace is not empty, then matched types should be located in the specified workspace.
+func Types(ws appdef.QName, t appdef.TypeKind, tt ...appdef.TypeKind) appdef.IFilter {
+	return makeTypesFilter(ws, t, tt...)
 }
 
 // And returns a filter that matches types that match all filters.
@@ -39,19 +39,14 @@ func Not(f appdef.IFilter) appdef.IFilter {
 	return makeNotFilter(f)
 }
 
-// AllTables returns a filter that matches all structured types, see appdef.TypeKind_Structures
-func AllTables() appdef.IFilter {
+// AllTables returns a filter that matches all structured types from workspace, see appdef.TypeKind_Structures
+func AllTables(ws appdef.QName) appdef.IFilter {
 	s := appdef.TypeKind_Structures.AsArray()
-	return makeTypesFilter(s[0], s[1:]...)
+	return makeTypesFilter(ws, s[0], s[1:]...)
 }
 
-// AllFunctions returns a filter that matches all functions types, see appdef.TypeKind_Functions
-func AllFunctions() appdef.IFilter {
+// AllFunctions returns a filter that matches all functions types from workspace, see appdef.TypeKind_Functions
+func AllFunctions(ws appdef.QName) appdef.IFilter {
 	f := appdef.TypeKind_Functions.AsArray()
-	return makeTypesFilter(f[0], f[1:]...)
-}
-
-// Matches returns all types that match the filter.
-func Matches(f appdef.IFilter, types appdef.SeqType) appdef.SeqType {
-	return allMatches(f, types)
+	return makeTypesFilter(ws, f[0], f[1:]...)
 }

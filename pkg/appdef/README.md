@@ -8,29 +8,18 @@
 
 ```mermaid
 classDiagram
-    class IAppDef {
-        <<interface>>
-        +Type(QName) IType
-        +Data(QName) IData
-        +GDoc(QName) IGDoc
-        +CDoc(QName) ICDoc
-        +WDoc(QName) IWDoc
-        +ODoc(QName) IODoc
-        +View(QName) IView
-        +Command(QName) ICommand
-        +Query(QName) IQuery
-        +Role(QName) IRole
-        +Projector(QName) IProjector
-        +Job(QName) IJob
-        +Workspace(QName) IWorkspace
-    }
-    IAppDef "1" *--> "0..*" IType : compose
-
     class IType {
         <<interface>>
         +QName() QName
         +Kind()* TypeKind
         +Comment() []string
+        +Tags(func(ITag)bool)
+    }
+
+    ITag --|> IType : inherits
+    class ITag {
+        <<interface>>
+        +Kind()* TypeKind_Tag
     }
 
     IData --|> IType : inherits
@@ -196,7 +185,7 @@ classDiagram
         +Kind()* TypeKind_Workspace
         +Abstract() bool
         +Descriptor() QName
-        +Types() []IType
+        +Types(func(IType) bool)
     }
 
     IRole --|> IType : inherits
@@ -205,6 +194,58 @@ classDiagram
         +Kind()* TypeKind_Role
         +ACL() []IACLRule
     }
+```
+
+### Types iterators
+
+```mermaid
+classDiagram
+
+  class IAppDef {
+    <<interface>>
+    +Types(func(IType) bool)
+  }
+  IAppDef "1" *--> "1" iterator : Types
+
+  class IWorkspace {
+    <<interface>>
+    +LocalTypes(func(IType) bool)
+    +Types(func(IType) bool)
+  }
+  IWorkspace "1" *--> "2" iterator : LocalTypes and Types
+
+  class iterator {
+    <<func(iter.Seq[IType])iter.Seq[T]>>
+    
+    +CDocs(iter.Seq[IType]) iter.Seq[ICDoc]
+    +Commands(iter.Seq[IType]) iter.Seq[ICommand]
+    +CRecords(iter.Seq[IType]) iter.Seq[ICRecord]
+    +DataTypes(iter.Seq[IType]) iter.Seq[IData]
+    +Extensions(iter.Seq[IType]) iter.Seq[IExtension]
+    +Functions(iter.Seq[IType]) iter.Seq[IFunction]
+    +GDocs(iter.Seq[IType]) iter.Seq[IGDoc]
+    +GRecords(iter.Seq[IType]) iter.Seq[IGRecord]
+    +Jobs(iter.Seq[IType]) iter.Seq[IJob]
+    +Limits(iter.Seq[IType]) iter.Seq[ILimit]
+    +Objects(iter.Seq[IType]) iter.Seq[IObject]
+    +ODocs(iter.Seq[IType]) iter.Seq[IODoc]
+    +ORecords(iter.Seq[IType]) iter.Seq[IORecord]
+    +Projectors(iter.Seq[IType]) iter.Seq[IProjector]
+    +Queries(iter.Seq[IType]) iter.Seq[IQuery]
+    +Rates(iter.Seq[IType]) iter.Seq[IRate]
+    +Records(iter.Seq[IType]) iter.Seq[IRecord]
+    +Roles(iter.Seq[IType]) iter.Seq[IRole]
+    +Singletons(iter.Seq[IType]) iter.Seq[ISingleton]
+    +Structures(iter.Seq[IType]) iter.Seq[IStructure]
+    +Tags(iter.Seq[IType]) iter.Seq[ITag]
+    +Views(iter.Seq[IType]) iter.Seq[IView]
+    +WDocs(iter.Seq[IType]) iter.Seq[IWDoc]
+    +WRecords(iter.Seq[IType]) iter.Seq[IWRecord]
+
+    +TypesByKind(iter.Seq[IType],TypeKind) iter.Seq[T]
+    +TypesByKinds(iter.Seq[IType],TypeKinds) iter.Seq[T]
+  }
+
 ```
 
 ### Data types
@@ -297,7 +338,7 @@ The inheritance and composing diagrams given below are expanded general diagrams
 ```mermaid
 classDiagram
     direction BT
-%%    namespace _ {
+    namespace _ {
         class IStructure {
             <<interface>>
             +Abstract() bool
@@ -312,7 +353,7 @@ classDiagram
             +SystemField_ID() IField
             +SystemField_IsActive() IField
         }
-%%    }
+    }
 
     IRecord --|> IStructure : inherits
 
@@ -388,34 +429,6 @@ classDiagram
 ```mermaid
 classDiagram
   direction TB
-
-  class IAppDef {
-    <<Interface>>
-    +Structures() []IStructure
-    +Records() []IRecord
-    +Singletons() []ISingleton
-    +GDocs()[]IGDoc
-    +GRecords()[]IGRecord
-    +CDocs()[]ICDoc
-    +CRecords()[]ICRecord
-    +WDocs()[]IWDoc
-    +WRecords()[]IWRecord
-    +ODocs()[]IODoc
-    +ORecords()[]IORecord
-    +Objects()[]IObject
-  }
-  IAppDef "1" o--> "0..*" IStructure : Structures
-  IAppDef "1" o--> "0..*" IRecord : Records
-  IAppDef "1" o--> "0..*" ISingleton : Singletons
-  IAppDef "1" o--> "0..*" IGDoc : GDocs
-  IAppDef "1" o--> "0..*" IGRecord : GRecords
-  IAppDef "1" o--> "0..*" ICDoc : CDocs
-  IAppDef "1" o--> "0..*" ICRecord : CRecords
-  IAppDef "1" o--> "0..*" IWDoc : WDocs
-  IAppDef "1" o--> "0..*" IWRecord : WRecords
-  IAppDef "1" o--> "0..*" IODoc : ODocs
-  IAppDef "1" o--> "0..*" IORecord : ORecords
-  IAppDef "1" o--> "0..*" IObject : Objects
 
   IGDoc "1" o--> "0..*" IGRecord : children
   IGRecord "1" o--> "0..*" IGRecord : children
@@ -569,13 +582,6 @@ classDiagram
     <<interface>>
     …
   }
-
-    class IAppDef {
-      …
-      +Views() []IView
-    }
-
-    IAppDef "1" *--> "0..*" IView : Views
 ```
 
 ### Extensions
@@ -676,28 +682,9 @@ classDiagram
         +Kind()* TypeKind_Job
         +CronSchedule() string
     }
-
-    class IAppDef {
-      …
-      +Extensions() []IExtension
-      +Functions() []IFunction
-      +Commands() []ICommand
-      +Queries() []IQuery
-      +Projectors() []IProjector
-      +Jobs() []IJob
-    }
-
-    IAppDef "1" *--> "0..*" IExtension : Extensions
-    IAppDef "1" *--> "0..*" IFunction : Functions
-    IAppDef "1" *--> "0..*" ICommand : Commands
-    IAppDef "1" *--> "0..*" IQuery : Queries
-    IAppDef "1" *--> "0..*" IProjector : Projectors
-    IAppDef "1" *--> "0..*" IJob : Jobs
 ```
 
 *Rem*: In the above diagram the Param and Result of the function are `IType`, in future versions it will be changed to an array of `[]IParam` and renamed to plural (`Params`, `Results`).
-
-### Workspaces
 
 ### Roles and ACL
 
@@ -752,16 +739,13 @@ classDiagram
 
     note for QName "names or patterns of resources"
     note for FieldName "fields of records or view records for select and update operations"
-
-    class IAppDef {
-      …
-      +Roles() []IRole
-      +ACL() []IACLRule
-    }
-
-    IAppDef "1" *--> "0..*" IRole : Roles
-    IAppDef "1" *--> "0..*" IACLRule : application ACL
 ```
+
+### Tags
+
+### Rates and Limits
+
+### Workspaces
 
 ## Restrictions
 

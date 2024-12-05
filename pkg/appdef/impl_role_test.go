@@ -116,7 +116,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 			}
 
 			rolesCount := 0
-			for r := range Roles(tested.Types) {
+			for r := range Roles(tested.Types()) {
 				require.Equal(tt[rolesCount].name, r.QName())
 				wantACL := tt[rolesCount].wantACL
 				aclCount := 0

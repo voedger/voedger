@@ -76,7 +76,7 @@ func ExampleProjectors() {
 	// How to enum all projectors in AppDef
 	{
 		cnt := 0
-		for prj := range appdef.Projectors(app.Types) {
+		for prj := range appdef.Projectors(app.Types()) {
 			cnt++
 			fmt.Println(cnt, prj)
 		}

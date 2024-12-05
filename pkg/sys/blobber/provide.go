@@ -16,6 +16,7 @@ func ProvideBlobberCmds(sr istructsmem.IStatelessResources) {
 	provideUploadBLOBHelperCmd(sr)
 	provideDownloadBLOBHelperCmd(sr)
 	provideDownloadBLOBAuthnzQry(sr)
+	provideRegisterTempBLOB(sr)
 }
 
 func provideDownloadBLOBAuthnzQry(sr istructsmem.IStatelessResources) {
@@ -52,4 +53,8 @@ func ubhExec(args istructs.ExecCommandArgs) (err error) {
 	vb.PutRecordID(appdef.SystemField_ID, 1)
 	vb.PutInt32(fldStatus, int32(iblobstorage.BLOBStatus_Unknown))
 	return nil
+}
+
+func provideRegisterTempBLOB(sr istructsmem.IStatelessResources) {
+	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(appdef.NewQName(appdef.SysPackage, "RegisterTempBLOB1d"), istructsmem.NullCommandExec))
 }
