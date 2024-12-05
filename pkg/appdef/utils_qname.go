@@ -9,6 +9,7 @@ package appdef
 import (
 	"encoding/json"
 	"errors"
+	"iter"
 	"slices"
 	"strconv"
 	"strings"
@@ -191,7 +192,7 @@ func (qns *QNames) Add(n ...QName) {
 }
 
 // Collect QNames using iterator. Duplicate values are ignored. Result slice is sorted.
-func (qns *QNames) Collect(seq func(func(QName) bool)) {
+func (qns *QNames) Collect(seq iter.Seq[QName]) {
 	for n := range seq {
 		qns.Add(n)
 	}

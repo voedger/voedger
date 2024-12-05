@@ -77,7 +77,7 @@ func (names *QNames) collectAll(appDef appdef.IAppDef) error {
 	var err error
 
 	if appDef != nil {
-		for t := range appDef.Types {
+		for t := range appDef.Types() {
 			err = errors.Join(err,
 				names.collect(t.QName()))
 			if uu, ok := t.(appdef.IUniques); ok {

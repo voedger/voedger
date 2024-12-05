@@ -63,7 +63,7 @@ func ExampleIWorkspace() {
 		fmt.Println("Workspace descriptor is", ws.Descriptor())
 		fmt.Println("Workspace local types:")
 		cnt := 0
-		for t := range ws.LocalTypes {
+		for t := range ws.LocalTypes() {
 			cnt++
 			fmt.Println("-", cnt, ":", t)
 		}

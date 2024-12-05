@@ -15,3 +15,8 @@ func Provide(storage BlobAppStoragePtr, time coreutils.ITime) iblobstorage.IBLOB
 		time:       time,
 	}
 }
+
+func NewWLimiter_Size(maxSize iblobstorage.BLOBMaxSizeType) iblobstorage.WLimiterType {
+	limiter := implSizeLimiter{maxSize: maxSize}
+	return limiter.limit
+}

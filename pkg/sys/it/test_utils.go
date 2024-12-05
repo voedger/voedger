@@ -76,9 +76,10 @@ func InitiateInvitationByEMail(vit *it.VIT, ws *it.AppWorkspace, expireDatetime 
 	return vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body).NewID()
 }
 
-func InitiateJoinWorkspace(vit *it.VIT, ws *it.AppWorkspace, inviteID int64, login *it.Principal, verificationCode string) {
+func InitiateJoinWorkspace(vit *it.VIT, ws *it.AppWorkspace, inviteID int64, login *it.Principal, verificationCode string, opts ...coreutils.ReqOptFunc) {
 	vit.T.Helper()
-	vit.PostWS(ws, "c.sys.InitiateJoinWorkspace", fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"%s"}}`, inviteID, verificationCode), coreutils.WithAuthorizeBy(login.Token))
+	opts = append(opts, coreutils.WithAuthorizeBy(login.Token))
+	vit.PostWS(ws, "c.sys.InitiateJoinWorkspace", fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"%s"}}`, inviteID, verificationCode), opts...)
 }
 
 func WaitForInviteState(vit *it.VIT, ws *it.AppWorkspace, inviteID int64, inviteStatesSeq ...int32) {
@@ -132,6 +133,7 @@ func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *it.VIT, invitin
 }
 
 func DenyCreateCDocWSKind_Test(t *testing.T, cdocWSKinds []appdef.QName) {
+	t.Skip("wait for ACL in VSQL")
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 

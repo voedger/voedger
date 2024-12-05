@@ -11,7 +11,10 @@ jobs:
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
     with:
       ignore_copyright: "cmd/voedger/sys.monitor/site.main"
+      go_race: "true"
       short_test: "false"
+      ignore_build: "true"
+      test_subfolders: "true" 
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
@@ -20,7 +23,7 @@ jobs:
   notify_failure:
     needs: call-workflow-ci
     if: ${{ failure() }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       failure_url: ${{ steps.set_output.outputs.failure_url }} # Declaring output at the job level
     steps:

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/iblobstorage"
 )
 
 const (
@@ -21,17 +22,21 @@ const (
 	DefaultRouterReadTimeout        = 15
 	DefaultRouterWriteTimeout       = 15
 	localhost                       = "127.0.0.1"
-	WSID                            = "wsid"
-	AppOwner                        = "appOwner"
-	AppName                         = "appName"
-	blobID                          = "blobID"
-	ResourceName                    = "resourceName"
+	URLPlaceholder_WSID             = "wsid"
+	URLPlaceholder_AppOwner         = "appOwner"
+	URLPlaceholder_AppName          = "appName"
+	URLPlaceholder_blobID           = "blobID"
+	URLPlaceholder_ResourceName     = "resourceName"
 	hours24                         = 24 * time.Hour
+	temporaryBLOBIDLenTreshold      = 40 // greater -> temporary, persistent oherwise
 )
 
 var (
-	bearerPrefixLen           = len(coreutils.BearerPrefix)
-	onRequestCtxClosed func() = nil // used in tests
-	elem1                     = map[string]interface{}{"fld1": "fld1Val"}
-	adminEndpoint             = "127.0.0.1:55555"
+	bearerPrefixLen                = len(coreutils.BearerPrefix)
+	onRequestCtxClosed      func() = nil // used in tests
+	elem1                          = map[string]interface{}{"fld1": "fld1Val"}
+	adminEndpoint                  = "127.0.0.1:55555"
+	durationToRegisterFuncs        = map[iblobstorage.DurationType]string{
+		iblobstorage.DurationType_1Day: "c.sys.RegisterTempBLOB1d",
+	}
 )

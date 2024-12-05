@@ -19,7 +19,7 @@ func newSchemes() *DynoBufSchemes {
 
 // Prepares schemes
 func (sch *DynoBufSchemes) Prepare(appDef appdef.IAppDef) {
-	for t := range appDef.Types {
+	for t := range appDef.Types() {
 		if view, ok := t.(appdef.IView); ok {
 			sch.addView(view)
 			continue

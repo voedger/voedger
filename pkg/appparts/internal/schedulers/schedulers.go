@@ -125,7 +125,7 @@ func (ps *PartitionSchedulers) start(vvmCtx context.Context, jws jWS, run Run, w
 // start new schedulers
 func (ps *PartitionSchedulers) startNews(vvmCtx context.Context, appDef appdef.IAppDef, run Run) {
 	news := make(map[jWS]struct{})
-	for job := range appdef.Jobs(appDef.Types) {
+	for job := range appdef.Jobs(appDef.Types()) {
 		name := job.QName()
 		for wsID, wsNum := range ps.wsNumbers {
 			jws := jWS{name, wsID, wsNum}

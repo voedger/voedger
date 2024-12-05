@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/sys"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -90,7 +91,7 @@ func ApplyInvokeCreateWorkspaceID(federation federation.IFederation, appQName ap
 		coreutils.WithExpectedCode(http.StatusOK),
 		coreutils.WithExpectedCode(http.StatusConflict),
 	); createWSIDCmdErr != nil {
-		logger.Error(fmt.Sprintf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %s. Body:\n%s", err, body))
+		logger.Error(fmt.Sprintf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %s. Body:\n%s", createWSIDCmdErr, body))
 		ownerAppQName, err := appdef.ParseAppQName(ownerApp)
 		if err != nil {
 			// notest
@@ -463,7 +464,7 @@ func updateOwner(ownerWSID istructs.WSID, ownerID istructs.RecordID, ownerApp st
 	return updateOwnerErr == nil
 }
 
-func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID]map[string]struct{}, wsTemplateFS coreutils.EmbedFS) (blobs []coreutils.BLOBWorkspaceTemplateField, err error) {
+func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID]map[string]struct{}, wsTemplateFS coreutils.EmbedFS) (blobs []BLOBWorkspaceTemplateField, err error) {
 	for _, ent := range fsEntries {
 		switch ent.Name() {
 		case "data.json", "provide.go":
@@ -494,8 +495,8 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID
 			if err != nil {
 				return nil, fmt.Errorf("failed to read blob %s content: %w", ent.Name(), err)
 			}
-			blobs = append(blobs, coreutils.BLOBWorkspaceTemplateField{
-				BLOBDesc: coreutils.BLOBDesc{
+			blobs = append(blobs, BLOBWorkspaceTemplateField{
+				DescrType: iblobstorage.DescrType{
 					Name:     ent.Name(),
 					MimeType: filepath.Ext(ent.Name())[1:], // excluding dot
 				},
@@ -543,7 +544,7 @@ func checkOrphanedBLOBs(blobIDs map[istructs.RecordID]map[string]struct{}, works
 	return nil
 }
 
-func ValidateTemplate(wsTemplateName string, ep extensionpoints.IExtensionPoint, wsKind appdef.QName) (wsBLOBs []coreutils.BLOBWorkspaceTemplateField, wsData []map[string]interface{}, err error) {
+func ValidateTemplate(wsTemplateName string, ep extensionpoints.IExtensionPoint, wsKind appdef.QName) (wsBLOBs []BLOBWorkspaceTemplateField, wsData []map[string]interface{}, err error) {
 	if len(wsTemplateName) == 0 {
 		return nil, nil, nil
 	}

@@ -4,9 +4,6 @@
 
 APPLICATION vrestaurant();
 
--- Declare tag to assign it later to definition(s)
-TAG BackofficeTag;
-TAG PosTag;
 
 
 WORKSPACE Restaurant (
@@ -18,6 +15,10 @@ WORKSPACE Restaurant (
 	    OpenMinutes  int,
 	    OwnerName varchar(30)
     );
+
+    -- Declare tag to assign it later to definition(s)
+    TAG BackofficeTag;
+    TAG PosTag;
 
     -- TABLE BOEntity : is an Abstract base data struct for many CDOC tables
     ABSTRACT TABLE BOEntity INHERITS sys.CDoc( -- TODO: ABSTRACT

@@ -62,4 +62,5 @@ erDiagram
     CommandState  ||--|| State : "is"
     AppPartitionVersion ||--|| ISSEPartitionFactory : ""
     ProjectorState ||--|| State : is
+
 ```

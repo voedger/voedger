@@ -137,7 +137,7 @@ func buildQNameNode(parentNode *CompatibilityTreeNode, item appdef.IType, name s
 
 func buildAppDefNode(parentNode *CompatibilityTreeNode, app appdef.IAppDef) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameAppDef, nil)
-	node.Props = append(node.Props, buildTypesNode(node, app.Types, false))
+	node.Props = append(node.Props, buildTypesNode(node, app.Types(), false))
 	node.Props = append(node.Props, buildPackagesNode(node, app))
 	return
 }
@@ -205,7 +205,7 @@ func buildContainersNode(parentNode *CompatibilityTreeNode, item appdef.IContain
 func buildWorkspaceNode(parentNode *CompatibilityTreeNode, ws appdef.IWorkspace) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, ws.QName().String(), nil)
 	node.Props = append(node.Props,
-		buildTypesNode(node, ws.Types, true),
+		buildTypesNode(node, ws.Types(), true),
 		buildDescriptorNode(node, ws.Descriptor()),
 		buildAbstractNode(node, ws.(appdef.IWithAbstract)),
 		// TODO: add buildInheritsNode with ancestors in Props

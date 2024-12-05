@@ -8,6 +8,7 @@ package set
 import (
 	"encoding/binary"
 	"fmt"
+	"iter"
 	"math/bits"
 	"strings"
 )
@@ -32,18 +33,22 @@ func From[V ~uint8](values ...V) Set[V] {
 	return s
 }
 
-// All calls visit for each value in Set.
-func (s Set[V]) All(visit func(V) bool) {
-	for i, b := range s.bitmap {
-		if b == 0 {
-			continue
-		}
-		l := bits.TrailingZeros64(b)
-		h := uintSize - bits.LeadingZeros64(b)
-		for v := l; v < h; v++ {
-			if b&(1<<v) != 0 {
-				if !visit(V(i*uintSize + v)) {
-					return
+// All returns iterator which calls visit for each value in Set.
+func (s Set[V]) All() iter.Seq2[int, V] {
+	return func(visit func(int, V) bool) {
+		idx := 0
+		for i, b := range s.bitmap {
+			if b == 0 {
+				continue
+			}
+			l := bits.TrailingZeros64(b)
+			h := uintSize - bits.LeadingZeros64(b)
+			for v := l; v < h; v++ {
+				if b&(1<<v) != 0 {
+					if !visit(idx, V(i*uintSize+v)) {
+						return
+					}
+					idx++
 				}
 			}
 		}
@@ -54,7 +59,7 @@ func (s Set[V]) All(visit func(V) bool) {
 //
 // If Set is empty, returns nil.
 func (s Set[V]) AsArray() (a []V) {
-	for v := range s.All {
+	for v := range s.Values() {
 		a = append(a, v)
 	}
 	return a
@@ -74,18 +79,20 @@ func (s Set[V]) AsBytes() []byte {
 }
 
 // Backward calls visit for each value in Set in backward order.
-func (s Set[V]) Backward(visit func(V) bool) {
-	for i := len(s.bitmap) - 1; i >= 0; i-- {
-		b := s.bitmap[i]
-		if b == 0 {
-			continue
-		}
-		h := uintSize - bits.LeadingZeros64(b)
-		l := bits.TrailingZeros64(b)
-		for v := h - 1; v >= l; v-- {
-			if b&(1<<v) != 0 {
-				if !visit(V(i*uintSize + v)) {
-					return
+func (s Set[V]) Backward() iter.Seq[V] {
+	return func(visit func(V) bool) {
+		for i := len(s.bitmap) - 1; i >= 0; i-- {
+			b := s.bitmap[i]
+			if b == 0 {
+				continue
+			}
+			h := uintSize - bits.LeadingZeros64(b)
+			l := bits.TrailingZeros64(b)
+			for v := h - 1; v >= l; v-- {
+				if b&(1<<v) != 0 {
+					if !visit(V(i*uintSize + v)) {
+						return
+					}
 				}
 			}
 		}
@@ -98,14 +105,14 @@ func (s Set[V]) Backward(visit func(V) bool) {
 //
 // # Panics:
 //   - if n is less than 1.
-func (s Set[V]) Chunk(n int) func(visit func(Set[V]) bool) {
+func (s Set[V]) Chunk(n int) iter.Seq[Set[V]] {
+	if n < 1 {
+		panic("chunk size should be positive")
+	}
 	return func(visit func(Set[V]) bool) {
-		if n < 1 {
-			panic("chunk size should be positive")
-		}
 		chunk := Empty[V]()
-		for v := range s.All {
-			chunk.Set(v)
+		for v := range s.Values() {
+			chunk.setBit(v)
 			if chunk.Len() == n {
 				if !visit(chunk) {
 					return
@@ -140,6 +147,14 @@ func (s Set[V]) Clone() Set[V] {
 	return s
 }
 
+// Collect collects values from iterator into Set.
+func (s *Set[V]) Collect(it iter.Seq[V]) {
+	s.checkRO()
+	for v := range it {
+		s.setBit(v)
+	}
+}
+
 // Returns is Set contains specified value.
 func (s Set[V]) Contains(v V) bool {
 	return s.bitmap[v/uintSize]&(1<<(v%uintSize)) != 0
@@ -169,7 +184,7 @@ func (s Set[V]) ContainsAny(values ...V) bool {
 // Returns is Set filled and first value set.
 // If Set is empty, returns false and zero value.
 func (s Set[V]) First() (V, bool) {
-	for v := range s.All {
+	for v := range s.Values() {
 		return v, true
 	}
 	return V(0), false
@@ -188,7 +203,7 @@ func (s Set[V]) Len() int {
 func (s *Set[V]) Set(values ...V) {
 	s.checkRO()
 	for _, v := range values {
-		s.bitmap[v/uintSize] |= 1 << (v % uintSize)
+		s.setBit(v)
 	}
 }
 
@@ -196,7 +211,7 @@ func (s *Set[V]) Set(values ...V) {
 func (s *Set[V]) SetRange(start, end V) {
 	s.checkRO()
 	for k := start; k < end; k++ {
-		s.Set(k)
+		s.setBit(k)
 	}
 }
 
@@ -219,17 +234,32 @@ func (s Set[V]) String() string {
 
 	ss := make([]string, 0, s.Len())
 
-	for v := range s.All {
+	for v := range s.Values() {
 		ss = append(ss, say(v))
 	}
 
 	return fmt.Sprintf("[%v]", strings.Join(ss, " "))
 }
 
+// Values returns iterator which calls visit for each value in Set.
+func (s Set[V]) Values() iter.Seq[V] {
+	return func(visit func(V) bool) {
+		for _, v := range s.All() {
+			if !visit(v) {
+				return
+			}
+		}
+	}
+}
+
 func (s Set[V]) checkRO() {
 	if s.readOnly {
 		panic("set is read-only")
 	}
+}
+
+func (s *Set[V]) setBit(v V) {
+	s.bitmap[v/uintSize] |= 1 << (v % uintSize)
 }
 
 const uintSize = bits.UintSize

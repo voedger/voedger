@@ -13,7 +13,7 @@ jobs:
 
   deploy:
     if: ${{ contains(github.event.issue.title, 'ctoolintegrationtest ce') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       SSH_PORT: 2214
       SSH_OPTIONS: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR"
@@ -121,7 +121,7 @@ jobs:
   upgrade:
     needs: deploy
     if: ${{ contains(github.event.issue.title, 'ctoolintegrationtest ce') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       SSH_PORT: 2214
       SSH_OPTIONS: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR"

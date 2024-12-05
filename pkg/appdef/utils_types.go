@@ -270,6 +270,18 @@ func SysData(f FindType, k DataKind) IData {
 	return TypeByNameAndKind[IData](f, SysDataName(k), TypeKind_Data)
 }
 
+// Returns Tag by name.
+//
+// Returns nil if Tag not found.
+func Tag(f FindType, name QName) ITag {
+	return TypeByNameAndKind[ITag](f, name, TypeKind_Tag)
+}
+
+// Returns iterator over Tags.
+func Tags(types SeqType) func(func(ITag) bool) {
+	return TypesByKind[ITag](types, TypeKind_Tag)
+}
+
 // Returns type by name.
 //
 // Returns nil if type not found.

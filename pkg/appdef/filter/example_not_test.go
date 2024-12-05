@@ -38,20 +38,20 @@ func ExampleNot() {
 		fmt.Println("The", flt, "Not() filter:")
 		fmt.Println("-", flt.Not())
 		fmt.Println("Testing", flt, "in", ws)
-		for t := range ws.LocalTypes {
+		for t := range ws.LocalTypes() {
 			fmt.Println("-", t, "is matched:", flt.Match(t))
 		}
 	}
 
-	example(filter.Not(filter.Types(appdef.TypeKind_Command)))
+	example(filter.Not(filter.Types(wsName, appdef.TypeKind_Command)))
 	example(filter.Not(filter.QNames(doc, obj)))
 
 	// Output:
 	// This example demonstrates how to work with the Not filter
 	//
-	// The filter.Not(filter.Types(Command)) Not() filter:
-	// - filter.Types(Command)
-	// Testing filter.Not(filter.Types(Command)) in Workspace «test.workspace»
+	// The filter.Not(filter.Types(workspace «test.workspace»: Command)) Not() filter:
+	// - filter.Types(workspace «test.workspace»: Command)
+	// Testing filter.Not(filter.Types(workspace «test.workspace»: Command)) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true
 	// - Object «test.object» is matched: true

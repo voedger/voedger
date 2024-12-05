@@ -118,7 +118,7 @@ func TestBasicUsage_SectionedResponse(t *testing.T) {
 	body := []byte("test body SectionedResponse")
 	bodyReader := bytes.NewReader(body)
 
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc_SectionedResponse", router.port(), AppOwner, AppName, testWSID), "application/json", bodyReader)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc_SectionedResponse", router.port(), URLPlaceholder_AppOwner, URLPlaceholder_AppName, testWSID), "application/json", bodyReader)
 	require.NoError(err)
 	defer resp.Body.Close()
 
@@ -244,7 +244,7 @@ func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
 	}, 5*time.Second)
 	defer tearDown()
 
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc_ClientDisconnect_CtxCanceledOnElemSend", router.port(), AppOwner, AppName, testWSID), "application/json", http.NoBody)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc_ClientDisconnect_CtxCanceledOnElemSend", router.port(), URLPlaceholder_AppOwner, URLPlaceholder_AppName, testWSID), "application/json", http.NoBody)
 	require.NoError(err)
 
 	// ensure the first element is sent successfully
@@ -328,7 +328,7 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 	// client side
 	body := []byte("")
 	bodyReader := bytes.NewReader(body)
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc_ClientDisconnect_FailedToWriteResponse", router.port(), AppOwner, AppName, testWSID), "application/json", bodyReader)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc_ClientDisconnect_FailedToWriteResponse", router.port(), URLPlaceholder_AppOwner, URLPlaceholder_AppName, testWSID), "application/json", bodyReader)
 	require.NoError(err)
 
 	// ensure the first element is sent successfully

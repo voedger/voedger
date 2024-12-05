@@ -40,29 +40,29 @@ func ExampleAnd() {
 			fmt.Println("-", f)
 		}
 		fmt.Println("Testing", flt, "in", ws)
-		for t := range ws.LocalTypes {
+		for t := range ws.LocalTypes() {
 			fmt.Println("-", t, "is matched:", flt.Match(t))
 		}
 	}
 
-	example(filter.And(filter.Types(appdef.TypeKind_ODoc), filter.QNames(doc)))
-	example(filter.And(filter.QNames(appdef.NewQName("test", "other")), filter.Types(appdef.TypeKind_Command)))
+	example(filter.And(filter.Types(wsName, appdef.TypeKind_ODoc), filter.QNames(doc)))
+	example(filter.And(filter.QNames(appdef.NewQName("test", "other")), filter.Types(wsName, appdef.TypeKind_Command)))
 
 	// Output:
 	// This example demonstrates how to work with the And filter
 	//
-	// The filter.And(filter.Types(ODoc), filter.QNames(test.doc)) And() children:
-	// - filter.Types(ODoc)
+	// The filter.And(filter.Types(workspace «test.workspace»: ODoc), filter.QNames(test.doc)) And() children:
+	// - filter.Types(workspace «test.workspace»: ODoc)
 	// - filter.QNames(test.doc)
-	// Testing filter.And(filter.Types(ODoc), filter.QNames(test.doc)) in Workspace «test.workspace»
+	// Testing filter.And(filter.Types(workspace «test.workspace»: ODoc), filter.QNames(test.doc)) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true
 	// - Object «test.object» is matched: false
 	//
-	// The filter.And(filter.QNames(test.other), filter.Types(Command)) And() children:
+	// The filter.And(filter.QNames(test.other), filter.Types(workspace «test.workspace»: Command)) And() children:
 	// - filter.QNames(test.other)
-	// - filter.Types(Command)
-	// Testing filter.And(filter.QNames(test.other), filter.Types(Command)) in Workspace «test.workspace»
+	// - filter.Types(workspace «test.workspace»: Command)
+	// Testing filter.And(filter.QNames(test.other), filter.Types(workspace «test.workspace»: Command)) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: false
 	// - Object «test.object» is matched: false
