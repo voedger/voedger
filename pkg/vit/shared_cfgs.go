@@ -257,6 +257,8 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "testCmd"), istructsmem.NullCommandExec))
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "TestCmdRawArg"), istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "TestDeniedCmd"), istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "TestDeniedQuery"), istructsmem.NullQueryExec))
 
 	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryIntents"), func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		kb, err := args.State.KeyBuilder(sys.Storage_Result, appdef.NewQName(app1PkgName, "QryIntentsResult"))

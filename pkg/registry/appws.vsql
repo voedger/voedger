@@ -88,13 +88,20 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 	) AS RESULT OF ProjectorLoginIdx;
 
 	EXTENSION ENGINE BUILTIN (
-		COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
 		COMMAND ChangePassword (ChangePasswordParams, UNLOGGED ChangePasswordUnloggedParams);
 		COMMAND ResetPasswordByEmail (ResetPasswordByEmailParams, UNLOGGED ResetPasswordByEmailUnloggedParams);
+		COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
 		QUERY IssuePrincipalToken (IssuePrincipalTokenParams) RETURNS IssuePrincipalTokenResult;
 		QUERY InitiateResetPasswordByEmail (InitiateResetPasswordByEmailParams) RETURNS InitiateResetPasswordByEmailResult;
 		QUERY IssueVerifiedValueTokenForResetPassword (IssueVerifiedValueTokenForResetPasswordParams) RETURNS IssueVerifiedValueTokenForResetPasswordResult;
 		SYNC PROJECTOR ProjectorLoginIdx AFTER INSERT ON Login INTENTS(sys.View(LoginIdx));
 		PROJECTOR InvokeCreateWorkspaceID_registry AFTER INSERT ON(Login);
 	);
+
+	GRANT EXECUTE ON COMMAND ChangePassword TO sys.Anonymous;
+	GRANT EXECUTE ON COMMAND ResetPasswordByEmail TO sys.Anonymous;
+	GRANT EXECUTE ON COMMAND CreateLogin TO sys.Anonymous;
+	GRANT EXECUTE ON QUERY IssuePrincipalToken TO sys.Anonymous;
+	GRANT EXECUTE ON QUERY InitiateResetPasswordByEmail TO sys.Anonymous;
+	GRANT EXECUTE ON QUERY IssueVerifiedValueTokenForResetPassword TO sys.Anonymous;
 );

@@ -24,23 +24,46 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 			})
 		}
 	}()
+
+	// role.sys.Everyone
+	principals = append(principals, iauthnz.Principal{
+		Kind:  iauthnz.PrincipalKind_Role,
+		QName: iauthnz.QNameRoleEveryone,
+	})
+
 	if len(req.Token) == 0 {
+		// add user with login "sys.Guest"
 		principals = append(principals, iauthnz.Principal{
 			Kind: iauthnz.PrincipalKind_User,
 			WSID: istructs.GuestWSID,
 			Name: istructs.SysGuestLogin,
 		})
+
+		// role.sys.Anonymous
+		principals = append(principals, iauthnz.Principal{
+			Kind:  iauthnz.PrincipalKind_Role,
+			QName: iauthnz.QNameRoleAnonymous,
+		})
+
+		// copy roles from subjects
 		rolesFromSubjects, err := i.rolesFromSubjects(requestContext, istructs.SysGuestLogin, as, req.RequestWSID)
 		if err != nil {
 			return nil, principalPayload, err
 		}
 		principals = append(principals, rolesFromSubjects...)
+
 		return principals, principalPayload, nil
 	}
 
 	if _, err = appTokens.ValidateToken(req.Token, &principalPayload); err != nil {
 		return nil, principalPayload, err
 	}
+
+	principals = append(principals, iauthnz.Principal{
+		Kind:  iauthnz.PrincipalKind_Role,
+		WSID:  req.RequestWSID,
+		QName: iauthnz.QNameRoleAuthenticatedUser,
+	})
 
 	if principalPayload.IsAPIToken {
 		for _, role := range principalPayload.Roles {

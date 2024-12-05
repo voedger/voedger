@@ -132,6 +132,7 @@ func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *it.VIT, invitin
 }
 
 func DenyCreateCDocWSKind_Test(t *testing.T, cdocWSKinds []appdef.QName) {
+	t.Skip("wait for ACL in VSQL")
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 

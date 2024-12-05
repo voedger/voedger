@@ -29,4 +29,8 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		COMMAND DeployApp(AppDeploymentDescriptor);
 		COMMAND VSqlUpdate(VSqlUpdateParams) RETURNS VSqlUpdateResult;
 	);
+
+	ROLE ClusterAdmin;
+
+	GRANT EXECUTE ON COMMAND DeployApp TO ClusterAdmin;
 );
