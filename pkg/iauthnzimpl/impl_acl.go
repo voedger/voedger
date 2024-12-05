@@ -72,9 +72,8 @@ var defaultACL = ACL{
 			qNamesPattern: []appdef.QName{
 				qNameCmdStoreSubscriptionProfile, qNameCmdUpdateSubscription,
 
-				qNameCDocSubscriptionProfile, qNameCDocUnTillOrders, qNameCDocUnTillPBill,
+				qNameCDocUnTillOrders, qNameCDocUnTillPBill,
 				qNameTestDeniedCmd, qNameTestDeniedCDoc, qNameCDocLogin, qNameCDocChildWorkspace, qNameTestDeniedQry, qNameTestDeniedCmd_it, qNameTestDeniedQry_it,
-
 			},
 		},
 		policy: ACPolicy_Deny,
