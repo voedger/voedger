@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -21,7 +20,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/compile"
 	"github.com/voedger/voedger/pkg/coreutils"
-	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -29,12 +27,16 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
+	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/sys/storages"
 )
 
 type IODOc interface {
 	IAmODoc()
 }
+
+// TODO: eliminate usage of IAppStructs here
 
 // generalTestState is a test state
 type generalTestState struct {
@@ -53,20 +55,34 @@ type generalTestState struct {
 	viewRecords []recordItem
 }
 
+func (gts *generalTestState) getMockedStorage(storageQName appdef.QName) (*storages.MockedStorage, bool) {
+	mockedState, ok1 := gts.IState.(*stateprovide.MockedState)
+	if !ok1 {
+		panic("failed to get mocked state")
+	}
+
+	mockedStorage, ok2 := mockedState.GetMockedStorage(storageQName)
+	if !ok2 {
+		panic("failed to get mocked event storage")
+	}
+
+	return mockedStorage, true
+}
+
 func (gts *generalTestState) intentSingletonInsert(fQName IFullQName, keyValueList ...any) {
-	gts.addRequiredRecordItems(fQName, 0, true, true, false, keyValueList...)
+	gts.addRequiredItems(fQName, 0, true, true, false, keyValueList...)
 }
 
 func (gts *generalTestState) intentSingletonUpdate(fQName IFullQName, keyValueList ...any) {
-	gts.addRequiredRecordItems(fQName, 0, true, false, false, keyValueList...)
+	gts.addRequiredItems(fQName, 0, true, false, false, keyValueList...)
 }
 
 func (gts *generalTestState) intentRecordInsert(fQName IFullQName, id istructs.RecordID, keyValueList ...any) {
-	gts.addRequiredRecordItems(fQName, id, false, true, false, keyValueList...)
+	gts.addRequiredItems(fQName, id, false, true, false, keyValueList...)
 }
 
 func (gts *generalTestState) intentRecordUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) {
-	gts.addRequiredRecordItems(fQName, id, false, false, false, keyValueList...)
+	gts.addRequiredItems(fQName, id, false, false, false, keyValueList...)
 }
 
 func (gts *generalTestState) stateRecord(fQName IFullQName, id istructs.RecordID, keyValueList ...any) {
@@ -89,6 +105,7 @@ func (gts *generalTestState) stateSingletonRecord(fQName IFullQName, keyValueLis
 	qName := gts.getQNameFromFQName(fQName)
 
 	// get real ID of the specific singleton
+	// TODO: move to mockRecordStorage
 	id, err := gts.appStructs.Records().GetSingletonID(qName)
 	if err != nil {
 		panic(fmt.Errorf("failed to get singleton id: %w", err))
@@ -142,7 +159,7 @@ func (gts *generalTestState) putCudRows() {
 	}
 }
 
-func (gts *generalTestState) addRequiredRecordItems(
+func (gts *generalTestState) addRequiredItems(
 	fQName IFullQName,
 	id istructs.RecordID,
 	isSingleton, isNew, isView bool,
@@ -300,6 +317,11 @@ func (gts *generalTestState) record(fQName IFullQName, id istructs.RecordID, isS
 }
 
 func (gts *generalTestState) putRecords() {
+	mockedRecordStorage, ok := gts.getMockedStorage(sys.Storage_Record)
+	if !ok {
+		panic("failed to get mocked record storage")
+	}
+
 	// put records into the state
 	for _, item := range gts.recordItems {
 		pkgAlias := gts.appDef.PackageLocalName(item.entity.PkgPath())
@@ -309,9 +331,17 @@ func (gts *generalTestState) putRecords() {
 
 		keyValueMap[appdef.SystemField_QName] = appdef.NewQName(pkgAlias, item.entity.Entity()).String()
 		keyValueMap[appdef.SystemField_ID] = item.id
+		keyValueMap["WSID"] = gts.commandWSID
+		keyValueMap["ID"] = item.id
 
-		err = gts.appStructs.Records().PutJSON(gts.commandWSID, keyValueMap)
-		require.NoError(gts.t, err)
+		mockedObject := &coreutils.TestObject{
+			Id:          item.id,
+			Name:        item.qName,
+			IsNew_:      item.isNew,
+			Data:        keyValueMap,
+			Containers_: make(map[string][]*coreutils.TestObject),
+		}
+		mockedRecordStorage.PutValue(item.id, mockedObject)
 	}
 
 	// clear record items after they are processed
@@ -319,23 +349,26 @@ func (gts *generalTestState) putRecords() {
 }
 
 func (gts *generalTestState) putViewRecords() {
+	mockedViewStorage, ok := gts.getMockedStorage(sys.Storage_View)
+	if !ok {
+		panic("failed to get mocked view storage")
+	}
+
 	for _, item := range gts.viewRecords {
 		m, err := parseKeyValues(item.keyValueList)
 		require.NoError(gts.t, err, msgFailedToParseKeyValues)
 
-		mapOfKeys, mapOfValues := splitKeysFromValues(item.entity, m)
+		m["WSID"] = gts.commandWSID
+		m["ID"] = item.id
 
-		gts.PutView(
-			gts.commandWSID,
-			appdef.NewFullQName(
-				item.entity.PkgPath(),
-				item.entity.Entity(),
-			),
-			func(key istructs.IKeyBuilder, value istructs.IValueBuilder) {
-				key.PutFromJSON(mapOfKeys)
-				value.PutFromJSON(mapOfValues)
-			},
-		)
+		mockedObject := &coreutils.TestObject{
+			Id:          item.id,
+			Name:        item.qName,
+			IsNew_:      item.isNew,
+			Data:        m,
+			Containers_: make(map[string][]*coreutils.TestObject),
+		}
+		mockedViewStorage.PutValue(0, mockedObject)
 	}
 
 	// clear view record items after they are processed
@@ -402,7 +435,11 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 
 	// build appDef
 	cts.buildAppDef(iCommand.PkgPath(), iCommand.WorkspaceDescriptor())
-	cts.buildState(ProcKind_CommandProcessor)
+	// build state
+	cts.IState = stateprovide.ProvideMockedCommandProcessorStateFactory()(
+		IntentsLimit,
+		func() istructs.IAppStructs { return cts.appStructs },
+	)
 
 	// initialize funcRunner and extensionFunc itself
 	cts.funcRunner = &sync.Once{}
@@ -500,20 +537,20 @@ func (gts *generalTestState) buildAppDef(wsPkgPath, wsDescriptorName string) {
 	}
 
 	gts.appStructs = structs
-	gts.plogGen = istructsmem.NewIDGenerator()
-	gts.wsOffsets = make(map[istructs.WSID]istructs.Offset)
+	//gts.plogGen = istructsmem.NewIDGenerator()
+	//gts.wsOffsets = make(map[istructs.WSID]istructs.Offset)
 
-	err = wsdescutil.CreateCDocWorkspaceDescriptorStub(
-		gts.appStructs,
-		TestPartition,
-		gts.commandWSID,
-		appdef.NewQName(filepath.Base(wsPkgPath), wsDescriptorName),
-		gts.nextPLogOffs(),
-		gts.nextWSOffs(gts.commandWSID),
-	)
-	if err != nil {
-		panic(err)
-	}
+	//err = wsdescutil.CreateCDocWorkspaceDescriptorStub(
+	//	gts.appStructs,
+	//	TestPartition,
+	//	gts.commandWSID,
+	//	appdef.NewQName(filepath.Base(wsPkgPath), wsDescriptorName),
+	//	gts.nextPLogOffs(),
+	//	gts.nextWSOffs(gts.commandWSID),
+	//)
+	//if err != nil {
+	//	panic(err)
+	//}
 }
 
 func (cts *CommandTestState) ArgumentObject(id istructs.RecordID, keyValueList ...any) ICommandRunner {
@@ -600,7 +637,7 @@ func (cts *CommandTestState) Run() {
 type ProjectorTestState struct {
 	generalTestState
 
-	rawEvent *rawEvent
+	rawEvent rawEvent
 }
 
 // NewProjectorTestState creates a new test state for projector testing
@@ -611,12 +648,16 @@ func NewProjectorTestState(t *testing.T, iProjector IProjector, extensionFunc fu
 	pts.processorKind = ProcKind_Actualizer
 	pts.secretReader = &secretReader{secrets: make(map[string][]byte)}
 	pts.buildAppDef(iProjector.PkgPath(), iProjector.WorkspaceDescriptor())
-	pts.buildState(ProcKind_Actualizer)
+	// build state
+	pts.IState = stateprovide.ProvideMockedActualizerStateFactory()(
+		IntentsLimit,
+		func() istructs.IAppStructs { return pts.appStructs },
+	)
 
 	// initialize funcRunner and extensionFunc itself
 	pts.funcRunner = &sync.Once{}
 	pts.extensionFunc = extensionFunc
-	pts.rawEvent = &rawEvent{
+	pts.rawEvent = rawEvent{
 		qName: appdef.NullQName,
 		argumentObject: &coreutils.TestObject{
 			Data: make(map[string]any),
@@ -720,13 +761,13 @@ func (pts *ProjectorTestState) StateCUDRow(fQName IFullQName, id istructs.Record
 }
 
 func (pts *ProjectorTestState) IntentViewInsert(fQName IFullQName, keyValueList ...any) IProjectorRunner {
-	pts.addRequiredRecordItems(fQName, 0, false, true, true, keyValueList...)
+	pts.addRequiredItems(fQName, 0, false, true, true, keyValueList...)
 
 	return pts
 }
 
 func (pts *ProjectorTestState) IntentViewUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
-	pts.addRequiredRecordItems(fQName, id, false, false, true, keyValueList...)
+	pts.addRequiredItems(fQName, id, false, false, true, keyValueList...)
 
 	return pts
 }
@@ -748,8 +789,8 @@ func (pts *ProjectorTestState) StateView(fQName IFullQName, id istructs.RecordID
 }
 
 func (pts *ProjectorTestState) Run() {
-	defer pts.recoverPanicInTestState()
-
+	//defer pts.recoverPanicInTestState()
+	//
 	pts.putViewRecords()
 	pts.putRecords()
 	pts.putCudRows()
@@ -766,73 +807,52 @@ func (pts *ProjectorTestState) putArgument() {
 		return
 	}
 
-	pts.PutEvent(
-		pts.commandWSID,
-		pts.argumentType,
-		func(argBuilder istructs.IObjectBuilder, cudBuilder istructs.ICUD) {
-			argBuilder.FillFromJSON(pts.argumentObject)
-		},
-	)
+	pts.putEvent()
 }
 
 func (pts *ProjectorTestState) putEvent() {
-	reb := pts.appStructs.Events().GetNewRawEventBuilder(
-		istructs.NewRawEventBuilderParams{
-			GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-				Workspace:         pts.rawEvent.Workspace(),
-				HandlingPartition: pts.rawEvent.handlingPartition,
-				QName:             pts.rawEvent.qName,
-				WLogOffset:        pts.rawEvent.wLogOffset,
-				PLogOffset:        pts.rawEvent.pLogOffset,
-			},
-		},
-	)
+	mockedEventStorage, ok := pts.getMockedStorage(sys.Storage_Event)
+	if !ok {
+		panic("failed to get mocked event storage")
+	}
+
+	mockedEventObject := &coreutils.TestObject{
+		Name:        pts.rawEvent.qName,
+		Data:        pts.rawEvent.argumentObject.Data,
+		Containers_: make(map[string][]*coreutils.TestObject),
+	}
+	mockedEventObject.Data["Workspace"] = pts.rawEvent.Workspace()
+	mockedEventObject.Data["HandlingPartition"] = pts.rawEvent.handlingPartition
+	mockedEventObject.Data["QName"] = pts.rawEvent.qName
+	mockedEventObject.Data["WLogOffset"] = pts.rawEvent.wLogOffset
+	mockedEventObject.Data["PLogOffset"] = pts.rawEvent.pLogOffset
 
 	for _, cud := range pts.rawEvent.cuds {
 		cud.Data["sys.ID"] = cud.Id
-
-		// if id is raw
-		var cudObject istructs.IRowWriter
-		if cud.Id.IsRaw() {
-			cudObject = reb.CUDBuilder().Create(cud.Name)
-		} else {
-			// we must find existing CUD record from test state and use in in Update() method
-			found := false
-			for _, item := range pts.recordItems {
-				if item.qName == cud.Name && item.id == cud.Id {
-					cudObject = reb.CUDBuilder().Update(item.toIRecord())
-
-					found = true
-					break
-				}
-			}
-
-			if !found {
-				panic(fmt.Errorf("record with entity %s and id %d not found in state", cud.Name.String(), cud.Id))
-			}
-		}
-
-		cudObject.PutFromJSON(cud.Data)
+		mockedEventObject.Containers_["CUDs"] = append(
+			mockedEventObject.Containers_["CUDs"],
+			&coreutils.TestObject{
+				Name:        cud.Name,
+				Data:        cud.Data,
+				Id:          cud.Id,
+				Parent_:     cud.Parent_,
+				Containers_: cud.Containers_,
+				IsNew_:      cud.IsNew_,
+			},
+		)
 	}
+	// setting argument object
+	mockedEventObject.Containers_["ArgumentObject"] = append(
+		mockedEventObject.Containers_["ArgumentObject"],
+		&coreutils.TestObject{
+			Name:        pts.getQNameFromFQName(pts.argumentType),
+			Data:        pts.argumentObject,
+			Containers_: make(map[string][]*coreutils.TestObject),
+		},
+	)
 
-	reb.ArgumentObjectBuilder().FillFromJSON(pts.rawEvent.argumentObject.Data)
-
-	re, err := reb.BuildRawEvent()
-	if err != nil {
-		panic(err)
-	}
-
-	event, err := pts.appStructs.Events().PutPlog(re, nil, pts.plogGen)
-	if err != nil {
-		panic(err)
-	}
-
-	err = pts.appStructs.Events().PutWlog(event)
-	if err != nil {
-		panic(err)
-	}
-
-	pts.ipLogEvent = event
+	// writing an event object directly to the storage
+	mockedEventStorage.PutValue(0, mockedEventObject)
 }
 
 func (pts *ProjectorTestState) EventQName(fQName IFullQName) IProjectorRunner {

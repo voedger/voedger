@@ -206,7 +206,7 @@ func (c Cmd_air_Cmd1) Event() Event {
 	}
 }
 
-func (p Projector_air_ApplyCmd1) Cmd_Cmd1() Cmd_air_Cmd1 {
+func (p *Projector_air_ApplyCmd1) Cmd_Cmd1() Cmd_air_Cmd1 {
 	return Cmd_air_Cmd1{
 		qname: p.PkgPath() + "." + "Cmd1",
 		event: p.event(),
@@ -363,7 +363,7 @@ func (c Cmd_air_Orders) Event() Event {
 	}
 }
 
-func (p Projector_air_ApplySalesMetrics) Cmd_Orders() Cmd_air_Orders {
+func (p *Projector_air_ApplySalesMetrics) Cmd_Orders() Cmd_air_Orders {
 	return Cmd_air_Orders{
 		qname: p.PkgPath() + "." + "Orders",
 		event: p.event(),
@@ -390,7 +390,7 @@ func (c Cmd_air_Pbill) Event() Event {
 	}
 }
 
-func (p Projector_air_ApplySalesMetrics) Cmd_Pbill() Cmd_air_Pbill {
+func (p *Projector_air_ApplySalesMetrics) Cmd_Pbill() Cmd_air_Pbill {
 	return Cmd_air_Pbill{
 		qname: p.PkgPath() + "." + "Pbill",
 		event: p.event(),
@@ -523,7 +523,7 @@ func (r Projector_air_FillPbillDates) Entity() string {
 	return "FillPbillDates"
 }
 
-func (p Projector_air_FillPbillDates) Arg_untill_orders() (Value_ODoc_untill_orders, bool) {
+func (p *Projector_air_FillPbillDates) Arg_untill_orders() (Value_ODoc_untill_orders, bool) {
 	arg := p.event().AsValue("ArgumentObject")
 	argQName := arg.AsQName("sys.QName")
 	if argQName.FullPkgName != Package_untill.ODoc_orders.PkgPath() || argQName.Entity != Package_untill.ODoc_orders.Entity() {
@@ -533,7 +533,7 @@ func (p Projector_air_FillPbillDates) Arg_untill_orders() (Value_ODoc_untill_ord
 	return Value_ODoc_untill_orders{tv: arg}, true
 }
 
-func (p Projector_air_FillPbillDates) Arg_untill_pbill() (Value_ODoc_untill_pbill, bool) {
+func (p *Projector_air_FillPbillDates) Arg_untill_pbill() (Value_ODoc_untill_pbill, bool) {
 	arg := p.event().AsValue("ArgumentObject")
 	argQName := arg.AsQName("sys.QName")
 	if argQName.FullPkgName != Package_untill.ODoc_pbill.PkgPath() || argQName.Entity != Package_untill.ODoc_pbill.Entity() {
@@ -905,7 +905,7 @@ func (r Projector_air_ProjectorNewVideoRecord) Entity() string {
 	return "ProjectorNewVideoRecord"
 }
 
-func (p Projector_air_ProjectorNewVideoRecord) CUDs_air_VideoRecords() iter.Seq[Value_CDoc_air_VideoRecords] {
+func (p *Projector_air_ProjectorNewVideoRecord) CUDs_air_VideoRecords() iter.Seq[Value_CDoc_air_VideoRecords] {
 	return func(yield func(Value_CDoc_air_VideoRecords) bool) {
 		cudsValue := p.event().AsValue("CUDs")
 		for i := 0; i < cudsValue.Len(); i++ {
@@ -968,7 +968,7 @@ func (r Projector_air_ProjectorODoc) Entity() string {
 	return "ProjectorODoc"
 }
 
-func (p Projector_air_ProjectorODoc) Arg_sys_ODoc() (Value_ODoc_sys_ODoc, bool) {
+func (p *Projector_air_ProjectorODoc) Arg_sys_ODoc() (Value_ODoc_sys_ODoc, bool) {
 	arg := p.event().AsValue("ArgumentObject")
 	argQName := arg.AsQName("sys.QName")
 	if argQName.FullPkgName != Package_sys.ODoc_ODoc.PkgPath() || argQName.Entity != Package_sys.ODoc_ODoc.Entity() {
@@ -1027,7 +1027,7 @@ func (r Projector_air_ProjectorWRecord) Entity() string {
 	return "ProjectorWRecord"
 }
 
-func (p Projector_air_ProjectorWRecord) CUDs_sys_WRecord() iter.Seq[Value_WRecord_sys_WRecord] {
+func (p *Projector_air_ProjectorWRecord) CUDs_sys_WRecord() iter.Seq[Value_WRecord_sys_WRecord] {
 	return func(yield func(Value_WRecord_sys_WRecord) bool) {
 		cudsValue := p.event().AsValue("CUDs")
 		for i := 0; i < cudsValue.Len(); i++ {

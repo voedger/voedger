@@ -507,7 +507,7 @@ func (c Cmd_sys_InitiateCancelAcceptedInvite) Event() Event {
 	}
 }
 
-func (p Projector_sys_ApplyCancelAcceptedInvite) Cmd_InitiateCancelAcceptedInvite() Cmd_sys_InitiateCancelAcceptedInvite {
+func (p *Projector_sys_ApplyCancelAcceptedInvite) Cmd_InitiateCancelAcceptedInvite() Cmd_sys_InitiateCancelAcceptedInvite {
 	return Cmd_sys_InitiateCancelAcceptedInvite{
 		qname: p.PkgPath() + "." + "InitiateCancelAcceptedInvite",
 		event: p.event(),
@@ -577,7 +577,7 @@ type Cmd_sys_InitiateDeactivateWorkspace struct {
 	event exttinygo.TValue
 }
 
-func (p Projector_sys_ApplyDeactivateWorkspace) Cmd_InitiateDeactivateWorkspace() Cmd_sys_InitiateDeactivateWorkspace {
+func (p *Projector_sys_ApplyDeactivateWorkspace) Cmd_InitiateDeactivateWorkspace() Cmd_sys_InitiateDeactivateWorkspace {
 	return Cmd_sys_InitiateDeactivateWorkspace{
 		qname: p.PkgPath() + "." + "InitiateDeactivateWorkspace",
 		event: p.event(),
@@ -713,7 +713,7 @@ func (c Cmd_sys_InitiateInvitationByEMail) Event() Event {
 	}
 }
 
-func (p Projector_sys_ApplyInvitation) Cmd_InitiateInvitationByEMail() Cmd_sys_InitiateInvitationByEMail {
+func (p *Projector_sys_ApplyInvitation) Cmd_InitiateInvitationByEMail() Cmd_sys_InitiateInvitationByEMail {
 	return Cmd_sys_InitiateInvitationByEMail{
 		qname: p.PkgPath() + "." + "InitiateInvitationByEMail",
 		event: p.event(),
@@ -837,7 +837,7 @@ func (c Cmd_sys_InitiateJoinWorkspace) Event() Event {
 	}
 }
 
-func (p Projector_sys_ApplyJoinWorkspace) Cmd_InitiateJoinWorkspace() Cmd_sys_InitiateJoinWorkspace {
+func (p *Projector_sys_ApplyJoinWorkspace) Cmd_InitiateJoinWorkspace() Cmd_sys_InitiateJoinWorkspace {
 	return Cmd_sys_InitiateJoinWorkspace{
 		qname: p.PkgPath() + "." + "InitiateJoinWorkspace",
 		event: p.event(),
@@ -907,7 +907,7 @@ type Cmd_sys_InitiateLeaveWorkspace struct {
 	event exttinygo.TValue
 }
 
-func (p Projector_sys_ApplyLeaveWorkspace) Cmd_InitiateLeaveWorkspace() Cmd_sys_InitiateLeaveWorkspace {
+func (p *Projector_sys_ApplyLeaveWorkspace) Cmd_InitiateLeaveWorkspace() Cmd_sys_InitiateLeaveWorkspace {
 	return Cmd_sys_InitiateLeaveWorkspace{
 		qname: p.PkgPath() + "." + "InitiateLeaveWorkspace",
 		event: p.event(),
@@ -1012,7 +1012,7 @@ func (r Projector_sys_ApplyUniques) Entity() string {
 	return "ApplyUniques"
 }
 
-func (p Projector_sys_ApplyUniques) CUDs_sys_CRecord() iter.Seq[Value_CRecord_sys_CRecord] {
+func (p *Projector_sys_ApplyUniques) CUDs_sys_CRecord() iter.Seq[Value_CRecord_sys_CRecord] {
 	return func(yield func(Value_CRecord_sys_CRecord) bool) {
 		cudsValue := p.event().AsValue("CUDs")
 		for i := 0; i < cudsValue.Len(); i++ {
@@ -1027,7 +1027,7 @@ func (p Projector_sys_ApplyUniques) CUDs_sys_CRecord() iter.Seq[Value_CRecord_sy
 	}
 }
 
-func (p Projector_sys_ApplyUniques) Arg_sys_ODoc() (Value_ODoc_sys_ODoc, bool) {
+func (p *Projector_sys_ApplyUniques) Arg_sys_ODoc() (Value_ODoc_sys_ODoc, bool) {
 	arg := p.event().AsValue("ArgumentObject")
 	argQName := arg.AsQName("sys.QName")
 	if argQName.FullPkgName != Package_sys.ODoc_ODoc.PkgPath() || argQName.Entity != Package_sys.ODoc_ODoc.Entity() {
@@ -1037,7 +1037,7 @@ func (p Projector_sys_ApplyUniques) Arg_sys_ODoc() (Value_ODoc_sys_ODoc, bool) {
 	return Value_ODoc_sys_ODoc{tv: arg}, true
 }
 
-func (p Projector_sys_ApplyUniques) CUDs_sys_WRecord() iter.Seq[Value_WRecord_sys_WRecord] {
+func (p *Projector_sys_ApplyUniques) CUDs_sys_WRecord() iter.Seq[Value_WRecord_sys_WRecord] {
 	return func(yield func(Value_WRecord_sys_WRecord) bool) {
 		cudsValue := p.event().AsValue("CUDs")
 		for i := 0; i < cudsValue.Len(); i++ {
@@ -1177,7 +1177,7 @@ func (c Cmd_sys_InitiateUpdateInviteRoles) Event() Event {
 	}
 }
 
-func (p Projector_sys_ApplyUpdateInviteRoles) Cmd_InitiateUpdateInviteRoles() Cmd_sys_InitiateUpdateInviteRoles {
+func (p *Projector_sys_ApplyUpdateInviteRoles) Cmd_InitiateUpdateInviteRoles() Cmd_sys_InitiateUpdateInviteRoles {
 	return Cmd_sys_InitiateUpdateInviteRoles{
 		qname: p.PkgPath() + "." + "InitiateUpdateInviteRoles",
 		event: p.event(),
@@ -1317,7 +1317,7 @@ func (r Projector_sys_ApplyViewSubjectsIdx) Entity() string {
 	return "ApplyViewSubjectsIdx"
 }
 
-func (p Projector_sys_ApplyViewSubjectsIdx) CUDs_sys_Subject() iter.Seq[Value_CDoc_sys_Subject] {
+func (p *Projector_sys_ApplyViewSubjectsIdx) CUDs_sys_Subject() iter.Seq[Value_CDoc_sys_Subject] {
 	return func(yield func(Value_CDoc_sys_Subject) bool) {
 		cudsValue := p.event().AsValue("CUDs")
 		for i := 0; i < cudsValue.Len(); i++ {
@@ -2647,7 +2647,7 @@ func (r Projector_sys_InitializeWorkspace) Entity() string {
 	return "InitializeWorkspace"
 }
 
-func (p Projector_sys_InitializeWorkspace) CUDs_sys_WorkspaceDescriptor() iter.Seq[Value_CSingleton_sys_WorkspaceDescriptor] {
+func (p *Projector_sys_InitializeWorkspace) CUDs_sys_WorkspaceDescriptor() iter.Seq[Value_CSingleton_sys_WorkspaceDescriptor] {
 	return func(yield func(Value_CSingleton_sys_WorkspaceDescriptor) bool) {
 		cudsValue := p.event().AsValue("CUDs")
 		for i := 0; i < cudsValue.Len(); i++ {
@@ -3087,7 +3087,7 @@ func (r Projector_sys_InvokeCreateWorkspace) Entity() string {
 	return "InvokeCreateWorkspace"
 }
 
-func (p Projector_sys_InvokeCreateWorkspace) CUDs_sys_WorkspaceID() iter.Seq[Value_CDoc_sys_WorkspaceID] {
+func (p *Projector_sys_InvokeCreateWorkspace) CUDs_sys_WorkspaceID() iter.Seq[Value_CDoc_sys_WorkspaceID] {
 	return func(yield func(Value_CDoc_sys_WorkspaceID) bool) {
 		cudsValue := p.event().AsValue("CUDs")
 		for i := 0; i < cudsValue.Len(); i++ {
@@ -3136,7 +3136,7 @@ func (r Projector_sys_InvokeCreateWorkspaceID) Entity() string {
 	return "InvokeCreateWorkspaceID"
 }
 
-func (p Projector_sys_InvokeCreateWorkspaceID) CUDs_sys_ChildWorkspace() iter.Seq[Value_CDoc_sys_ChildWorkspace] {
+func (p *Projector_sys_InvokeCreateWorkspaceID) CUDs_sys_ChildWorkspace() iter.Seq[Value_CDoc_sys_ChildWorkspace] {
 	return func(yield func(Value_CDoc_sys_ChildWorkspace) bool) {
 		cudsValue := p.event().AsValue("CUDs")
 		for i := 0; i < cudsValue.Len(); i++ {
@@ -3777,7 +3777,7 @@ func (r Projector_sys_ProjectorChildWorkspaceIdx) Entity() string {
 	return "ProjectorChildWorkspaceIdx"
 }
 
-func (p Projector_sys_ProjectorChildWorkspaceIdx) CUDs_sys_ChildWorkspace() iter.Seq[Value_CDoc_sys_ChildWorkspace] {
+func (p *Projector_sys_ProjectorChildWorkspaceIdx) CUDs_sys_ChildWorkspace() iter.Seq[Value_CDoc_sys_ChildWorkspace] {
 	return func(yield func(Value_CDoc_sys_ChildWorkspace) bool) {
 		cudsValue := p.event().AsValue("CUDs")
 		for i := 0; i < cudsValue.Len(); i++ {
@@ -3841,7 +3841,7 @@ func (r Projector_sys_ProjectorCollection) Entity() string {
 	return "ProjectorCollection"
 }
 
-func (p Projector_sys_ProjectorCollection) CUDs_sys_CRecord() iter.Seq[Value_CRecord_sys_CRecord] {
+func (p *Projector_sys_ProjectorCollection) CUDs_sys_CRecord() iter.Seq[Value_CRecord_sys_CRecord] {
 	return func(yield func(Value_CRecord_sys_CRecord) bool) {
 		cudsValue := p.event().AsValue("CUDs")
 		for i := 0; i < cudsValue.Len(); i++ {
@@ -3890,7 +3890,7 @@ func (r Projector_sys_ProjectorInviteIndex) Entity() string {
 	return "ProjectorInviteIndex"
 }
 
-func (p Projector_sys_ProjectorInviteIndex) Cmd_InitiateInvitationByEMail() Cmd_sys_InitiateInvitationByEMail {
+func (p *Projector_sys_ProjectorInviteIndex) Cmd_InitiateInvitationByEMail() Cmd_sys_InitiateInvitationByEMail {
 	return Cmd_sys_InitiateInvitationByEMail{
 		qname: p.PkgPath() + "." + "InitiateInvitationByEMail",
 		event: p.event(),
@@ -3951,7 +3951,7 @@ func (c Cmd_sys_CreateJoinedWorkspace) Event() Event {
 	}
 }
 
-func (p Projector_sys_ProjectorJoinedWorkspaceIndex) Cmd_CreateJoinedWorkspace() Cmd_sys_CreateJoinedWorkspace {
+func (p *Projector_sys_ProjectorJoinedWorkspaceIndex) Cmd_CreateJoinedWorkspace() Cmd_sys_CreateJoinedWorkspace {
 	return Cmd_sys_CreateJoinedWorkspace{
 		qname: p.PkgPath() + "." + "CreateJoinedWorkspace",
 		event: p.event(),
@@ -4036,7 +4036,7 @@ func (r Projector_sys_ProjectorWLogDates) Entity() string {
 	return "ProjectorWLogDates"
 }
 
-func (p Projector_sys_ProjectorWLogDates) CUDs_sys_CRecord() iter.Seq[Value_CRecord_sys_CRecord] {
+func (p *Projector_sys_ProjectorWLogDates) CUDs_sys_CRecord() iter.Seq[Value_CRecord_sys_CRecord] {
 	return func(yield func(Value_CRecord_sys_CRecord) bool) {
 		cudsValue := p.event().AsValue("CUDs")
 		for i := 0; i < cudsValue.Len(); i++ {
@@ -4051,7 +4051,7 @@ func (p Projector_sys_ProjectorWLogDates) CUDs_sys_CRecord() iter.Seq[Value_CRec
 	}
 }
 
-func (p Projector_sys_ProjectorWLogDates) Arg_sys_ODoc() (Value_ODoc_sys_ODoc, bool) {
+func (p *Projector_sys_ProjectorWLogDates) Arg_sys_ODoc() (Value_ODoc_sys_ODoc, bool) {
 	arg := p.event().AsValue("ArgumentObject")
 	argQName := arg.AsQName("sys.QName")
 	if argQName.FullPkgName != Package_sys.ODoc_ODoc.PkgPath() || argQName.Entity != Package_sys.ODoc_ODoc.Entity() {
@@ -4061,7 +4061,7 @@ func (p Projector_sys_ProjectorWLogDates) Arg_sys_ODoc() (Value_ODoc_sys_ODoc, b
 	return Value_ODoc_sys_ODoc{tv: arg}, true
 }
 
-func (p Projector_sys_ProjectorWLogDates) CUDs_sys_WRecord() iter.Seq[Value_WRecord_sys_WRecord] {
+func (p *Projector_sys_ProjectorWLogDates) CUDs_sys_WRecord() iter.Seq[Value_WRecord_sys_WRecord] {
 	return func(yield func(Value_WRecord_sys_WRecord) bool) {
 		cudsValue := p.event().AsValue("CUDs")
 		for i := 0; i < cudsValue.Len(); i++ {
@@ -4110,7 +4110,7 @@ func (r Projector_sys_ProjectorWorkspaceIDIdx) Entity() string {
 	return "ProjectorWorkspaceIDIdx"
 }
 
-func (p Projector_sys_ProjectorWorkspaceIDIdx) CUDs_sys_WorkspaceID() iter.Seq[Value_CDoc_sys_WorkspaceID] {
+func (p *Projector_sys_ProjectorWorkspaceIDIdx) CUDs_sys_WorkspaceID() iter.Seq[Value_CDoc_sys_WorkspaceID] {
 	return func(yield func(Value_CDoc_sys_WorkspaceID) bool) {
 		cudsValue := p.event().AsValue("CUDs")
 		for i := 0; i < cudsValue.Len(); i++ {
@@ -4426,7 +4426,7 @@ func (r Projector_sys_RecordsRegistryProjector) Entity() string {
 	return "RecordsRegistryProjector"
 }
 
-func (p Projector_sys_RecordsRegistryProjector) CUDs_sys_CRecord() iter.Seq[Value_CRecord_sys_CRecord] {
+func (p *Projector_sys_RecordsRegistryProjector) CUDs_sys_CRecord() iter.Seq[Value_CRecord_sys_CRecord] {
 	return func(yield func(Value_CRecord_sys_CRecord) bool) {
 		cudsValue := p.event().AsValue("CUDs")
 		for i := 0; i < cudsValue.Len(); i++ {
@@ -4441,7 +4441,7 @@ func (p Projector_sys_RecordsRegistryProjector) CUDs_sys_CRecord() iter.Seq[Valu
 	}
 }
 
-func (p Projector_sys_RecordsRegistryProjector) Arg_sys_ODoc() (Value_ODoc_sys_ODoc, bool) {
+func (p *Projector_sys_RecordsRegistryProjector) Arg_sys_ODoc() (Value_ODoc_sys_ODoc, bool) {
 	arg := p.event().AsValue("ArgumentObject")
 	argQName := arg.AsQName("sys.QName")
 	if argQName.FullPkgName != Package_sys.ODoc_ODoc.PkgPath() || argQName.Entity != Package_sys.ODoc_ODoc.Entity() {
@@ -4451,7 +4451,7 @@ func (p Projector_sys_RecordsRegistryProjector) Arg_sys_ODoc() (Value_ODoc_sys_O
 	return Value_ODoc_sys_ODoc{tv: arg}, true
 }
 
-func (p Projector_sys_RecordsRegistryProjector) CUDs_sys_WRecord() iter.Seq[Value_WRecord_sys_WRecord] {
+func (p *Projector_sys_RecordsRegistryProjector) CUDs_sys_WRecord() iter.Seq[Value_WRecord_sys_WRecord] {
 	return func(yield func(Value_WRecord_sys_WRecord) bool) {
 		cudsValue := p.event().AsValue("CUDs")
 		for i := 0; i < cudsValue.Len(); i++ {
@@ -5475,7 +5475,7 @@ func (c Cmd_sys_SendEmailVerificationCode) Event() Event {
 	}
 }
 
-func (p Projector_sys_ApplySendEmailVerificationCode) Cmd_SendEmailVerificationCode() Cmd_sys_SendEmailVerificationCode {
+func (p *Projector_sys_ApplySendEmailVerificationCode) Cmd_SendEmailVerificationCode() Cmd_sys_SendEmailVerificationCode {
 	return Cmd_sys_SendEmailVerificationCode{
 		qname: p.PkgPath() + "." + "SendEmailVerificationCode",
 		event: p.event(),

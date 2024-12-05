@@ -296,7 +296,7 @@ func (c Cmd_{{.Projector.Package.Name}}_{{.Name}}) Event() Event {
 {{end}}
 {{end}}
 
-func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Cmd_{{.Name}}() Cmd_{{.Projector.Package.Name}}_{{.Name}} {
+func (p *Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Cmd_{{.Name}}() Cmd_{{.Projector.Package.Name}}_{{.Name}} {
 	return Cmd_{{.Projector.Package.Name}}_{{.Name}}{
 		qname: p.PkgPath() + "." + "{{.Name}}",
 		event: p.event(),
@@ -307,7 +307,7 @@ func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Cmd_{{.Name}}
 
 {{if (doesTriggerOnCUD .)}}
 
-func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) CUDs_{{.Package.Name}}_{{.Name}}() iter.Seq[Value_{{.Type}}_{{.Package.Name}}_{{.Name}}] {
+func (p *Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) CUDs_{{.Package.Name}}_{{.Name}}() iter.Seq[Value_{{.Type}}_{{.Package.Name}}_{{.Name}}] {
 	return func(yield func(Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) bool) {
 		cudsValue := p.event().AsValue("CUDs")
 		for i := 0; i < cudsValue.Len(); i++ {
@@ -326,7 +326,7 @@ func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) CUDs_{{.Packa
 
 {{if (doesExecuteWithParam .)}}
 
-func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Arg_{{.Package.Name}}_{{.Name}}() (Value_{{.Type}}_{{.Package.Name}}_{{.Name}}, bool) {
+func (p *Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Arg_{{.Package.Name}}_{{.Name}}() (Value_{{.Type}}_{{.Package.Name}}_{{.Name}}, bool) {
 	arg := p.event().AsValue("ArgumentObject")
 	argQName := arg.AsQName("sys.QName")
 	if argQName.FullPkgName != Package_{{.Package.Name}}.{{.Type}}_{{.Name}}.PkgPath() || argQName.Entity != Package_{{.Package.Name}}.{{.Type}}_{{.Name}}.Entity() {
