@@ -122,6 +122,9 @@ var (
 	qNameQryGetDailyUPReports                       = appdef.NewQName(airPackage, "GetDailyUPReports")
 	qNameQryGetUPVATTransfers                       = appdef.NewQName(airPackage, "GetUPVATTransfers")
 	qNameQryGetUPBeneficiaryVATDebts                = appdef.NewQName(airPackage, "GetUPBeneficiaryVATDebts")
+	qNameQryShowBillOnDisplay                       = appdef.NewQName(airPackage, "ShowBillOnDisplay")
+	qNameQryShowOrderOnDisplay                      = appdef.NewQName(airPackage, "ShowOrderOnDisplay")
+	qNameQryShowStandbyOnDisplay                    = appdef.NewQName(airPackage, "ShowStandbyOnDisplay")
 
 	// Air roles
 	qNameRoleResellersAdmin            = appdef.NewQName(airPackage, "ResellersAdmin")

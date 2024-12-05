@@ -264,6 +264,10 @@ var defaultACL = ACL{
 				qNameQryCreateTap2PaySession,
 				// https://dev.untill.com/projects/#!693712
 				qNameCmdSaveTap2PayPayment,
+				// https://untill.atlassian.net/browse/AIR-47
+				qNameQryShowBillOnDisplay,
+				qNameQryShowOrderOnDisplay,
+				qNameQryShowStandbyOnDisplay,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
