@@ -148,6 +148,7 @@ func (gts *generalTestState) putCudRows() {
 		kvMap, err := parseKeyValues(item.keyValueList)
 		require.NoError(gts.t, err, msgFailedToParseKeyValues)
 
+		// TODO: use mocked storage
 		gts.PutEvent(
 			gts.commandWSID,
 			appdef.NewFullQName(item.entity.PkgPath(), item.entity.Entity()),
@@ -841,6 +842,7 @@ func (pts *ProjectorTestState) putEvent() {
 			},
 		)
 	}
+
 	// setting argument object
 	mockedEventObject.Containers_["ArgumentObject"] = append(
 		mockedEventObject.Containers_["ArgumentObject"],
