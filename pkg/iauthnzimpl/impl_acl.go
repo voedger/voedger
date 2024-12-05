@@ -37,6 +37,7 @@ var defaultACL = ACL{
 		desc: "null auth policy",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
+				qNameCmdLinkDeviceToRestaurant,
 				// https://dev.untill.com/projects/#!688808
 				qNameQryGetDigitalReceipt,
 				// https://dev.untill.com/projects/#!688808
