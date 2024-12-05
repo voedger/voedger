@@ -398,4 +398,13 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Allow,
 	},
+	{
+		desc: "grant select on table air.UntillPayments to air.UntillPaymentsUser",
+		pattern: PatternType{
+			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
+			qNamesPattern:     []appdef.QName{qNameCDocUntillPayments},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}}},
+		},
+		policy: ACPolicy_Allow,
+	},
 }
