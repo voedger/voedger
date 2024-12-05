@@ -12,7 +12,6 @@ var (
 	qNameViewDeviceProfileWSIDIdx                   = appdef.NewQName(airPackage, "DeviceProfileWSIDIdx")
 	qNameCDocWorkspaceKindRestaurant                = appdef.NewQName(airPackage, "Restaurant")
 	qNameCDocWorkspaceKindAppWorkspace              = appdef.NewQName(appdef.SysPackage, "AppWorkspace")
-	qNameCDocSubscriptionProfile                    = appdef.NewQName(airPackage, "SubscriptionProfile")
 	qNameCDocUnTillOrders                           = appdef.NewQName(untillPackage, "orders")
 	qNameCDocUnTillPBill                            = appdef.NewQName(untillPackage, "pbill")
 	qNameTestDeniedCmd                              = appdef.NewQName(appdef.SysPackage, "TestDeniedCmd")
