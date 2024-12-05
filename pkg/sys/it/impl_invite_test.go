@@ -359,5 +359,5 @@ func TestRejectInvitationOnDifferentLogin(t *testing.T) {
 	// simulate accepting invitation by different login
 	differentLogin := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
 	InitiateJoinWorkspace(vit, ws, inviteID, differentLogin, verificationCode,
-		coreutils.Expect400("invitation was sent to testcancelsentinvite_1@123.com but current login is login"))
+		coreutils.Expect400(fmt.Sprintf("invitation was sent to %s but current login is login", email)))
 }
