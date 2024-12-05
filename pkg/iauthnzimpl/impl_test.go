@@ -79,7 +79,7 @@ func TestBasicUsage(t *testing.T) {
 		}
 		principals, principalPayload, err := authn.Authenticate(context.Background(), appStructs, appTokens, req)
 		require.NoError(err)
-		require.Len(principals, 5)
+		require.Len(principals, 6)
 		require.Equal(iauthnz.PrincipalKind_Role, principals[0].Kind)
 		require.Equal(iauthnz.QNameRoleEveryone, principals[0].QName)
 
@@ -92,9 +92,12 @@ func TestBasicUsage(t *testing.T) {
 		// request to the profile -> ProfileOwner role got
 		require.Equal(iauthnz.PrincipalKind_Role, principals[3].Kind)
 		require.Equal(iauthnz.QNameRoleProfileOwner, principals[3].QName)
+		// ProfileOwner -> WorkspaceOwner is added as well
+		require.Equal(iauthnz.PrincipalKind_Role, principals[4].Kind)
+		require.Equal(iauthnz.QNameRoleWorkspaceOwner, principals[4].QName)
 
-		require.Equal(iauthnz.PrincipalKind_Host, principals[4].Kind)
-		require.Equal("127.0.0.1", principals[4].Name)
+		require.Equal(iauthnz.PrincipalKind_Host, principals[5].Kind)
+		require.Equal("127.0.0.1", principals[5].Name)
 
 		require.Equal(pp, principalPayload)
 	})
@@ -286,7 +289,7 @@ func TestAuthenticate(t *testing.T) {
 			},
 		},
 		{
-			desc: "request to profile -> Everyone + authenticatedUser + user + profileOwner",
+			desc: "request to profile -> Everyone + authenticatedUser + user + profileOwner + workspaceOwner",
 			req: iauthnz.AuthnRequest{
 				Host:        "127.0.0.1",
 				RequestWSID: 1,
@@ -297,6 +300,7 @@ func TestAuthenticate(t *testing.T) {
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleAuthenticatedUser},
 				{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleProfileOwner},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleWorkspaceOwner},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
 		},
@@ -344,7 +348,7 @@ func TestAuthenticate(t *testing.T) {
 			},
 		},
 		{
-			desc: "device -> Everyone + AuthenticatedUser + device + ProfileOwner + host",
+			desc: "device -> Everyone + AuthenticatedUser + device + ProfileOwner + WorkspaceOwner + host",
 			req: iauthnz.AuthnRequest{
 				Host:        "127.0.0.1",
 				RequestWSID: 1,
@@ -355,6 +359,7 @@ func TestAuthenticate(t *testing.T) {
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleAuthenticatedUser},
 				{Kind: iauthnz.PrincipalKind_Device, WSID: 1},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleProfileOwner},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleWorkspaceOwner},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
 		},

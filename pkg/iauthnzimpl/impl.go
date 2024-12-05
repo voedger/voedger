@@ -122,6 +122,12 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		principals = append(principals, prn)
 	}
 
+	prnWSOwner := iauthnz.Principal{
+		Kind:  iauthnz.PrincipalKind_Role,
+		WSID:  req.RequestWSID,
+		QName: iauthnz.QNameRoleWorkspaceOwner,
+	}
+
 	if req.RequestWSID == profileWSID {
 		// allow user or device to work in its profile
 		prnProfileOwner := iauthnz.Principal{
@@ -131,6 +137,9 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		}
 		if !slices.Contains(principals, prnProfileOwner) {
 			principals = append(principals, prnProfileOwner)
+		}
+		if !slices.Contains(principals, prnWSOwner) {
+			principals = append(principals, prnWSOwner)
 		}
 	} else {
 		// not the profile -> check if we could work in that workspace
@@ -142,11 +151,6 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 			}
 			if wsDesc.QName() != appdef.NullQName {
 				ownerWSID := wsDesc.AsInt64(field_OwnerWSID)
-				prnWSOwner := iauthnz.Principal{
-					Kind:  iauthnz.PrincipalKind_Role,
-					WSID:  req.RequestWSID,
-					QName: iauthnz.QNameRoleWorkspaceOwner,
-				}
 				if ownerWSID == int64(profileWSID) && !slices.Contains(principals, prnWSOwner) { // nolint G115
 					principals = append(principals, prnWSOwner)
 				}
