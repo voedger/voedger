@@ -36,23 +36,23 @@ type Value_CommandContext struct{ tv exttinygo.TValue }
 
 var qNames = map[string][]exttinygo.QName{
 	"ODoc": {
-		{FullPkgName: "untill", Entity: "pbill"},
-		{FullPkgName: "untill", Entity: "orders"},
 		{FullPkgName: "voedger.com/packages/sys", Entity: "ODoc"},
 		{FullPkgName: "air", Entity: "ProformaPrinted"},
+		{FullPkgName: "untill", Entity: "pbill"},
+		{FullPkgName: "untill", Entity: "orders"},
 	},
 	"CDoc": {
-		{FullPkgName: "untill", Entity: "articles"},
-		{FullPkgName: "untill", Entity: "untill_users"},
 		{FullPkgName: "voedger.com/packages/sys", Entity: "Subject"},
 		{FullPkgName: "voedger.com/packages/sys", Entity: "ChildWorkspace"},
 		{FullPkgName: "voedger.com/packages/sys", Entity: "Invite"},
 		{FullPkgName: "voedger.com/packages/sys", Entity: "WorkspaceID"},
 		{FullPkgName: "voedger.com/packages/sys", Entity: "JoinedWorkspace"},
+		{FullPkgName: "untill", Entity: "articles"},
+		{FullPkgName: "untill", Entity: "untill_users"},
 	},
 	"WDoc": {
-		{FullPkgName: "untill", Entity: "bill"},
 		{FullPkgName: "voedger.com/packages/sys", Entity: "BLOB"},
+		{FullPkgName: "untill", Entity: "bill"},
 	},
 	"CRecord": {
 		{FullPkgName: "voedger.com/packages/sys", Entity: "CRecord"},

@@ -11,27 +11,6 @@ import (
 // package type
 type TPackage_sys struct {
 	Path                                    string
-	WS_AppWorkspaceWS                       WS_sys_AppWorkspaceWS
-	CSingleton_AppWorkspace                 CSingleton_sys_AppWorkspace
-	WS_DeviceProfileWS                      WS_sys_DeviceProfileWS
-	CSingleton_DeviceProfile                CSingleton_sys_DeviceProfile
-	Type_RefreshPrincipalTokenResult        Type_sys_RefreshPrincipalTokenResult
-	Query_RefreshPrincipalToken             Query_sys_RefreshPrincipalToken
-	WS_UserProfileWS                        WS_sys_UserProfileWS
-	Type_SendEmailVerificationParams        Type_sys_SendEmailVerificationParams
-	Command_SendEmailVerificationCode       Command_sys_SendEmailVerificationCode
-	Type_DescribePackageParams              Type_sys_DescribePackageParams
-	Type_DescribePackageResult              Type_sys_DescribePackageResult
-	Query_DescribePackage                   Query_sys_DescribePackage
-	Type_DescribePackageNamesResult         Type_sys_DescribePackageNamesResult
-	Query_DescribePackageNames              Query_sys_DescribePackageNames
-	Type_InitialEmailVerificationResult     Type_sys_InitialEmailVerificationResult
-	Type_InitiateEmailVerificationParams    Type_sys_InitiateEmailVerificationParams
-	Query_InitiateEmailVerification         Query_sys_InitiateEmailVerification
-	Type_IssueVerifiedValueTokenParams      Type_sys_IssueVerifiedValueTokenParams
-	Type_IssueVerifiedValueTokenResult      Type_sys_IssueVerifiedValueTokenResult
-	Query_IssueVerifiedValueToken           Query_sys_IssueVerifiedValueToken
-	CSingleton_UserProfile                  CSingleton_sys_UserProfile
 	ODoc_ODoc                               ODoc_sys_ODoc
 	WRecord_WRecord                         WRecord_sys_WRecord
 	Type_InitiateCancelAcceptedInviteParams Type_sys_InitiateCancelAcceptedInviteParams
@@ -119,54 +98,33 @@ type TPackage_sys struct {
 	View_WLogDates                          View_sys_WLogDates
 	View_WorkspaceIDIdx                     View_sys_WorkspaceIDIdx
 	View_projectionOffsets                  View_sys_projectionOffsets
+	WS_AppWorkspaceWS                       WS_sys_AppWorkspaceWS
+	CSingleton_AppWorkspace                 CSingleton_sys_AppWorkspace
+	WS_DeviceProfileWS                      WS_sys_DeviceProfileWS
+	CSingleton_DeviceProfile                CSingleton_sys_DeviceProfile
+	Type_RefreshPrincipalTokenResult        Type_sys_RefreshPrincipalTokenResult
+	Query_RefreshPrincipalToken             Query_sys_RefreshPrincipalToken
+	WS_UserProfileWS                        WS_sys_UserProfileWS
+	Type_SendEmailVerificationParams        Type_sys_SendEmailVerificationParams
+	Command_SendEmailVerificationCode       Command_sys_SendEmailVerificationCode
+	Type_DescribePackageParams              Type_sys_DescribePackageParams
+	Type_DescribePackageResult              Type_sys_DescribePackageResult
+	Query_DescribePackage                   Query_sys_DescribePackage
+	Type_DescribePackageNamesResult         Type_sys_DescribePackageNamesResult
+	Query_DescribePackageNames              Query_sys_DescribePackageNames
+	Type_InitialEmailVerificationResult     Type_sys_InitialEmailVerificationResult
+	Type_InitiateEmailVerificationParams    Type_sys_InitiateEmailVerificationParams
+	Query_InitiateEmailVerification         Query_sys_InitiateEmailVerification
+	Type_IssueVerifiedValueTokenParams      Type_sys_IssueVerifiedValueTokenParams
+	Type_IssueVerifiedValueTokenResult      Type_sys_IssueVerifiedValueTokenResult
+	Query_IssueVerifiedValueToken           Query_sys_IssueVerifiedValueToken
+	CSingleton_UserProfile                  CSingleton_sys_UserProfile
 }
 
 // package variables
 var Package_sys = TPackage_sys{
 	Path: "voedger.com/packages/sys",
-	WS_AppWorkspaceWS: WS_sys_AppWorkspaceWS{
-		Type: Type{fQName: "voedger.com/packages/sys.AppWorkspaceWS"},
-	}, CSingleton_AppWorkspace: CSingleton_sys_AppWorkspace{
-		Type: Type{fQName: "voedger.com/packages/sys.AppWorkspace"},
-	}, WS_DeviceProfileWS: WS_sys_DeviceProfileWS{
-		Type: Type{fQName: "voedger.com/packages/sys.DeviceProfileWS"},
-	}, CSingleton_DeviceProfile: CSingleton_sys_DeviceProfile{
-		Type: Type{fQName: "voedger.com/packages/sys.DeviceProfile"},
-	}, Type_RefreshPrincipalTokenResult: Type_sys_RefreshPrincipalTokenResult{
-		Type: Type{fQName: "voedger.com/packages/sys.RefreshPrincipalTokenResult"},
-	}, Query_RefreshPrincipalToken: Query_sys_RefreshPrincipalToken{
-		Type: Type{fQName: "voedger.com/packages/sys.RefreshPrincipalToken"},
-	}, WS_UserProfileWS: WS_sys_UserProfileWS{
-		Type: Type{fQName: "voedger.com/packages/sys.UserProfileWS"},
-	}, Type_SendEmailVerificationParams: Type_sys_SendEmailVerificationParams{
-		Type: Type{fQName: "voedger.com/packages/sys.SendEmailVerificationParams"},
-	}, Command_SendEmailVerificationCode: Command_sys_SendEmailVerificationCode{
-		Type: Type{fQName: "voedger.com/packages/sys.SendEmailVerificationCode"},
-	}, Type_DescribePackageParams: Type_sys_DescribePackageParams{
-		Type: Type{fQName: "voedger.com/packages/sys.DescribePackageParams"},
-	}, Type_DescribePackageResult: Type_sys_DescribePackageResult{
-		Type: Type{fQName: "voedger.com/packages/sys.DescribePackageResult"},
-	}, Query_DescribePackage: Query_sys_DescribePackage{
-		Type: Type{fQName: "voedger.com/packages/sys.DescribePackage"},
-	}, Type_DescribePackageNamesResult: Type_sys_DescribePackageNamesResult{
-		Type: Type{fQName: "voedger.com/packages/sys.DescribePackageNamesResult"},
-	}, Query_DescribePackageNames: Query_sys_DescribePackageNames{
-		Type: Type{fQName: "voedger.com/packages/sys.DescribePackageNames"},
-	}, Type_InitialEmailVerificationResult: Type_sys_InitialEmailVerificationResult{
-		Type: Type{fQName: "voedger.com/packages/sys.InitialEmailVerificationResult"},
-	}, Type_InitiateEmailVerificationParams: Type_sys_InitiateEmailVerificationParams{
-		Type: Type{fQName: "voedger.com/packages/sys.InitiateEmailVerificationParams"},
-	}, Query_InitiateEmailVerification: Query_sys_InitiateEmailVerification{
-		Type: Type{fQName: "voedger.com/packages/sys.InitiateEmailVerification"},
-	}, Type_IssueVerifiedValueTokenParams: Type_sys_IssueVerifiedValueTokenParams{
-		Type: Type{fQName: "voedger.com/packages/sys.IssueVerifiedValueTokenParams"},
-	}, Type_IssueVerifiedValueTokenResult: Type_sys_IssueVerifiedValueTokenResult{
-		Type: Type{fQName: "voedger.com/packages/sys.IssueVerifiedValueTokenResult"},
-	}, Query_IssueVerifiedValueToken: Query_sys_IssueVerifiedValueToken{
-		Type: Type{fQName: "voedger.com/packages/sys.IssueVerifiedValueToken"},
-	}, CSingleton_UserProfile: CSingleton_sys_UserProfile{
-		Type: Type{fQName: "voedger.com/packages/sys.UserProfile"},
-	}, ODoc_ODoc: ODoc_sys_ODoc{
+	ODoc_ODoc: ODoc_sys_ODoc{
 		Type: Type{fQName: "voedger.com/packages/sys.ODoc"},
 	}, WRecord_WRecord: WRecord_sys_WRecord{
 		Type: Type{fQName: "voedger.com/packages/sys.WRecord"},
@@ -340,674 +298,49 @@ var Package_sys = TPackage_sys{
 		Type: Type{fQName: "voedger.com/packages/sys.WorkspaceIDIdx"},
 	}, View_projectionOffsets: View_sys_projectionOffsets{
 		Type: Type{fQName: "voedger.com/packages/sys.projectionOffsets"},
+	}, WS_AppWorkspaceWS: WS_sys_AppWorkspaceWS{
+		Type: Type{fQName: "voedger.com/packages/sys.AppWorkspaceWS"},
+	}, CSingleton_AppWorkspace: CSingleton_sys_AppWorkspace{
+		Type: Type{fQName: "voedger.com/packages/sys.AppWorkspace"},
+	}, WS_DeviceProfileWS: WS_sys_DeviceProfileWS{
+		Type: Type{fQName: "voedger.com/packages/sys.DeviceProfileWS"},
+	}, CSingleton_DeviceProfile: CSingleton_sys_DeviceProfile{
+		Type: Type{fQName: "voedger.com/packages/sys.DeviceProfile"},
+	}, Type_RefreshPrincipalTokenResult: Type_sys_RefreshPrincipalTokenResult{
+		Type: Type{fQName: "voedger.com/packages/sys.RefreshPrincipalTokenResult"},
+	}, Query_RefreshPrincipalToken: Query_sys_RefreshPrincipalToken{
+		Type: Type{fQName: "voedger.com/packages/sys.RefreshPrincipalToken"},
+	}, WS_UserProfileWS: WS_sys_UserProfileWS{
+		Type: Type{fQName: "voedger.com/packages/sys.UserProfileWS"},
+	}, Type_SendEmailVerificationParams: Type_sys_SendEmailVerificationParams{
+		Type: Type{fQName: "voedger.com/packages/sys.SendEmailVerificationParams"},
+	}, Command_SendEmailVerificationCode: Command_sys_SendEmailVerificationCode{
+		Type: Type{fQName: "voedger.com/packages/sys.SendEmailVerificationCode"},
+	}, Type_DescribePackageParams: Type_sys_DescribePackageParams{
+		Type: Type{fQName: "voedger.com/packages/sys.DescribePackageParams"},
+	}, Type_DescribePackageResult: Type_sys_DescribePackageResult{
+		Type: Type{fQName: "voedger.com/packages/sys.DescribePackageResult"},
+	}, Query_DescribePackage: Query_sys_DescribePackage{
+		Type: Type{fQName: "voedger.com/packages/sys.DescribePackage"},
+	}, Type_DescribePackageNamesResult: Type_sys_DescribePackageNamesResult{
+		Type: Type{fQName: "voedger.com/packages/sys.DescribePackageNamesResult"},
+	}, Query_DescribePackageNames: Query_sys_DescribePackageNames{
+		Type: Type{fQName: "voedger.com/packages/sys.DescribePackageNames"},
+	}, Type_InitialEmailVerificationResult: Type_sys_InitialEmailVerificationResult{
+		Type: Type{fQName: "voedger.com/packages/sys.InitialEmailVerificationResult"},
+	}, Type_InitiateEmailVerificationParams: Type_sys_InitiateEmailVerificationParams{
+		Type: Type{fQName: "voedger.com/packages/sys.InitiateEmailVerificationParams"},
+	}, Query_InitiateEmailVerification: Query_sys_InitiateEmailVerification{
+		Type: Type{fQName: "voedger.com/packages/sys.InitiateEmailVerification"},
+	}, Type_IssueVerifiedValueTokenParams: Type_sys_IssueVerifiedValueTokenParams{
+		Type: Type{fQName: "voedger.com/packages/sys.IssueVerifiedValueTokenParams"},
+	}, Type_IssueVerifiedValueTokenResult: Type_sys_IssueVerifiedValueTokenResult{
+		Type: Type{fQName: "voedger.com/packages/sys.IssueVerifiedValueTokenResult"},
+	}, Query_IssueVerifiedValueToken: Query_sys_IssueVerifiedValueToken{
+		Type: Type{fQName: "voedger.com/packages/sys.IssueVerifiedValueToken"},
+	}, CSingleton_UserProfile: CSingleton_sys_UserProfile{
+		Type: Type{fQName: "voedger.com/packages/sys.UserProfile"},
 	},
-}
-
-type WS_sys_AppWorkspaceWS struct {
-	Type
-}
-
-type Value_WS_sys_AppWorkspaceWS struct {
-	tv exttinygo.TValue
-}
-
-type Intent_WS_sys_AppWorkspaceWS struct {
-	intent exttinygo.TIntent
-}
-
-func (r WS_sys_AppWorkspaceWS) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r WS_sys_AppWorkspaceWS) Entity() string {
-	return "AppWorkspaceWS"
-}
-
-func (r WS_sys_AppWorkspaceWS) Descriptor() string {
-	return "AppWorkspace"
-}
-
-type CSingleton_sys_AppWorkspace struct {
-	Type
-}
-
-type Value_CSingleton_sys_AppWorkspace struct {
-	tv exttinygo.TValue
-}
-
-type Intent_CSingleton_sys_AppWorkspace struct {
-	intent exttinygo.TIntent
-}
-
-func (r CSingleton_sys_AppWorkspace) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r CSingleton_sys_AppWorkspace) Entity() string {
-	return "AppWorkspace"
-}
-
-type WS_sys_DeviceProfileWS struct {
-	Type
-}
-
-type Value_WS_sys_DeviceProfileWS struct {
-	tv exttinygo.TValue
-}
-
-type Intent_WS_sys_DeviceProfileWS struct {
-	intent exttinygo.TIntent
-}
-
-func (r WS_sys_DeviceProfileWS) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r WS_sys_DeviceProfileWS) Entity() string {
-	return "DeviceProfileWS"
-}
-
-func (r WS_sys_DeviceProfileWS) Descriptor() string {
-	return "DeviceProfile"
-}
-
-type CSingleton_sys_DeviceProfile struct {
-	Type
-}
-
-type Value_CSingleton_sys_DeviceProfile struct {
-	tv exttinygo.TValue
-}
-
-type Intent_CSingleton_sys_DeviceProfile struct {
-	intent exttinygo.TIntent
-}
-
-func (r CSingleton_sys_DeviceProfile) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r CSingleton_sys_DeviceProfile) Entity() string {
-	return "DeviceProfile"
-}
-
-type Type_sys_RefreshPrincipalTokenResult struct {
-	Type
-}
-
-type Value_Type_sys_RefreshPrincipalTokenResult struct {
-	tv exttinygo.TValue
-}
-
-type Intent_Type_sys_RefreshPrincipalTokenResult struct {
-	intent exttinygo.TIntent
-}
-
-func (v Value_Type_sys_RefreshPrincipalTokenResult) Get_sys_Container() string {
-	return v.tv.AsString("sys_Container")
-}
-
-func (v Value_Type_sys_RefreshPrincipalTokenResult) Get_NewPrincipalToken() string {
-	return v.tv.AsString("NewPrincipalToken")
-}
-
-func (r Type_sys_RefreshPrincipalTokenResult) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r Type_sys_RefreshPrincipalTokenResult) Entity() string {
-	return "RefreshPrincipalTokenResult"
-}
-
-type Query_sys_RefreshPrincipalToken struct {
-	Type
-}
-
-func (r Query_sys_RefreshPrincipalToken) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r Query_sys_RefreshPrincipalToken) Entity() string {
-	return "RefreshPrincipalToken"
-}
-
-func (r Query_sys_RefreshPrincipalToken) ArgumentPkgPath() string {
-	return ""
-}
-
-func (r Query_sys_RefreshPrincipalToken) ArgumentEntity() string {
-	return ""
-}
-
-func (c Query_sys_RefreshPrincipalToken) Result(sys_container string, newprincipaltoken string) {
-	__result := exttinygo.NewValue(exttinygo.KeyBuilder(exttinygo.StorageResult, exttinygo.NullEntity))
-	__result.PutString("sys_Container", sys_container)
-	__result.PutString("NewPrincipalToken", newprincipaltoken)
-}
-
-type WS_sys_UserProfileWS struct {
-	Type
-}
-
-type Value_WS_sys_UserProfileWS struct {
-	tv exttinygo.TValue
-}
-
-type Intent_WS_sys_UserProfileWS struct {
-	intent exttinygo.TIntent
-}
-
-func (r WS_sys_UserProfileWS) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r WS_sys_UserProfileWS) Entity() string {
-	return "UserProfileWS"
-}
-
-func (r WS_sys_UserProfileWS) Descriptor() string {
-	return "UserProfile"
-}
-
-type Type_sys_SendEmailVerificationParams struct {
-	Type
-}
-
-type Value_Type_sys_SendEmailVerificationParams struct {
-	tv exttinygo.TValue
-}
-
-type Intent_Type_sys_SendEmailVerificationParams struct {
-	intent exttinygo.TIntent
-}
-
-func (v Value_Type_sys_SendEmailVerificationParams) Get_sys_Container() string {
-	return v.tv.AsString("sys_Container")
-}
-
-func (v Value_Type_sys_SendEmailVerificationParams) Get_VerificationCode() string {
-	return v.tv.AsString("VerificationCode")
-}
-
-func (v Value_Type_sys_SendEmailVerificationParams) Get_Email() string {
-	return v.tv.AsString("Email")
-}
-
-func (v Value_Type_sys_SendEmailVerificationParams) Get_Reason() string {
-	return v.tv.AsString("Reason")
-}
-
-func (v Value_Type_sys_SendEmailVerificationParams) Get_Language() string {
-	return v.tv.AsString("Language")
-}
-
-func (r Type_sys_SendEmailVerificationParams) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r Type_sys_SendEmailVerificationParams) Entity() string {
-	return "SendEmailVerificationParams"
-}
-
-type Command_sys_SendEmailVerificationCode struct {
-	Type
-}
-
-func (r Command_sys_SendEmailVerificationCode) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r Command_sys_SendEmailVerificationCode) Entity() string {
-	return "SendEmailVerificationCode"
-}
-
-func (c Command_sys_SendEmailVerificationCode) ArgumentObject() Value_Type_sys_SendEmailVerificationParams {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
-	return Value_Type_sys_SendEmailVerificationParams{tv: exttinygo.MustGetValue(kb).AsValue(FieldNameEventArgumentObject)}
-}
-
-func (r Command_sys_SendEmailVerificationCode) ArgumentPkgPath() string {
-	return Package_sys.Type_SendEmailVerificationParams.PkgPath()
-
-}
-
-func (r Command_sys_SendEmailVerificationCode) ArgumentEntity() string {
-	return Package_sys.Type_SendEmailVerificationParams.Entity()
-
-}
-
-func (r Command_sys_SendEmailVerificationCode) WorkspaceDescriptor() string {
-	return Package_sys.WS_UserProfileWS.Descriptor()
-}
-
-type Projector_sys_ApplySendEmailVerificationCode struct {
-	Type
-	_event exttinygo.TValue
-}
-
-func (p Projector_sys_ApplySendEmailVerificationCode) Event() Event {
-	return Event{
-		WLogOffset: p.event().AsInt64("WLogOffset"),
-	}
-}
-
-func (p Projector_sys_ApplySendEmailVerificationCode) event() exttinygo.TValue {
-	if p._event == 0 {
-		p._event = eventFunc()
-	}
-	return p._event
-}
-
-func (r Projector_sys_ApplySendEmailVerificationCode) WorkspaceDescriptor() string {
-	return Package_sys.WS_UserProfileWS.Descriptor()
-}
-
-func (pkg TPackage_sys) Projector_ApplySendEmailVerificationCode() Projector_sys_ApplySendEmailVerificationCode {
-	return Projector_sys_ApplySendEmailVerificationCode{}
-}
-
-func (r Projector_sys_ApplySendEmailVerificationCode) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r Projector_sys_ApplySendEmailVerificationCode) Entity() string {
-	return "ApplySendEmailVerificationCode"
-}
-
-type Cmd_sys_SendEmailVerificationCode struct {
-	qname string
-	event exttinygo.TValue
-}
-
-func (c Cmd_sys_SendEmailVerificationCode) Arg() (Value_Type_sys_SendEmailVerificationParams, bool) {
-	qname := c.event.AsQName("QName")
-	if qname.FullPkgName != Package_sys.Command_SendEmailVerificationCode.PkgPath() || qname.Entity != Package_sys.Command_SendEmailVerificationCode.Entity() {
-		return Value_Type_sys_SendEmailVerificationParams{}, false
-	}
-
-	return Value_Type_sys_SendEmailVerificationParams{tv: c.event.AsValue("ArgumentObject")}, true
-}
-
-func (c Cmd_sys_SendEmailVerificationCode) Event() Event {
-	return Event{
-		WLogOffset: c.event.AsInt64("WLogOffset"),
-	}
-}
-
-func (p *Projector_sys_ApplySendEmailVerificationCode) Cmd_SendEmailVerificationCode() Cmd_sys_SendEmailVerificationCode {
-	return Cmd_sys_SendEmailVerificationCode{
-		qname: p.PkgPath() + "." + "SendEmailVerificationCode",
-		event: p.event(),
-	}
-}
-
-type Type_sys_DescribePackageParams struct {
-	Type
-}
-
-type Value_Type_sys_DescribePackageParams struct {
-	tv exttinygo.TValue
-}
-
-type Intent_Type_sys_DescribePackageParams struct {
-	intent exttinygo.TIntent
-}
-
-func (v Value_Type_sys_DescribePackageParams) Get_sys_Container() string {
-	return v.tv.AsString("sys_Container")
-}
-
-func (v Value_Type_sys_DescribePackageParams) Get_PackageName() string {
-	return v.tv.AsString("PackageName")
-}
-
-func (r Type_sys_DescribePackageParams) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r Type_sys_DescribePackageParams) Entity() string {
-	return "DescribePackageParams"
-}
-
-type Type_sys_DescribePackageResult struct {
-	Type
-}
-
-type Value_Type_sys_DescribePackageResult struct {
-	tv exttinygo.TValue
-}
-
-type Intent_Type_sys_DescribePackageResult struct {
-	intent exttinygo.TIntent
-}
-
-func (v Value_Type_sys_DescribePackageResult) Get_sys_Container() string {
-	return v.tv.AsString("sys_Container")
-}
-
-func (v Value_Type_sys_DescribePackageResult) Get_PackageDesc() string {
-	return v.tv.AsString("PackageDesc")
-}
-
-func (r Type_sys_DescribePackageResult) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r Type_sys_DescribePackageResult) Entity() string {
-	return "DescribePackageResult"
-}
-
-type Query_sys_DescribePackage struct {
-	Type
-}
-
-func (r Query_sys_DescribePackage) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r Query_sys_DescribePackage) Entity() string {
-	return "DescribePackage"
-}
-
-func (c Query_sys_DescribePackage) ArgumentObject() Value_Type_sys_DescribePackageParams {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
-	return Value_Type_sys_DescribePackageParams{tv: exttinygo.MustGetValue(kb).AsValue(FieldNameEventArgumentObject)}
-}
-
-func (r Query_sys_DescribePackage) ArgumentPkgPath() string {
-	return Package_sys.Type_DescribePackageParams.PkgPath()
-
-}
-
-func (r Query_sys_DescribePackage) ArgumentEntity() string {
-	return Package_sys.Type_DescribePackageParams.Entity()
-
-}
-
-func (c Query_sys_DescribePackage) Result(sys_container string, packagedesc string) {
-	__result := exttinygo.NewValue(exttinygo.KeyBuilder(exttinygo.StorageResult, exttinygo.NullEntity))
-	__result.PutString("sys_Container", sys_container)
-	__result.PutString("PackageDesc", packagedesc)
-}
-
-type Type_sys_DescribePackageNamesResult struct {
-	Type
-}
-
-type Value_Type_sys_DescribePackageNamesResult struct {
-	tv exttinygo.TValue
-}
-
-type Intent_Type_sys_DescribePackageNamesResult struct {
-	intent exttinygo.TIntent
-}
-
-func (v Value_Type_sys_DescribePackageNamesResult) Get_sys_Container() string {
-	return v.tv.AsString("sys_Container")
-}
-
-func (v Value_Type_sys_DescribePackageNamesResult) Get_Names() string {
-	return v.tv.AsString("Names")
-}
-
-func (r Type_sys_DescribePackageNamesResult) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r Type_sys_DescribePackageNamesResult) Entity() string {
-	return "DescribePackageNamesResult"
-}
-
-type Query_sys_DescribePackageNames struct {
-	Type
-}
-
-func (r Query_sys_DescribePackageNames) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r Query_sys_DescribePackageNames) Entity() string {
-	return "DescribePackageNames"
-}
-
-func (r Query_sys_DescribePackageNames) ArgumentPkgPath() string {
-	return ""
-}
-
-func (r Query_sys_DescribePackageNames) ArgumentEntity() string {
-	return ""
-}
-
-func (c Query_sys_DescribePackageNames) Result(sys_container string, names string) {
-	__result := exttinygo.NewValue(exttinygo.KeyBuilder(exttinygo.StorageResult, exttinygo.NullEntity))
-	__result.PutString("sys_Container", sys_container)
-	__result.PutString("Names", names)
-}
-
-type Type_sys_InitialEmailVerificationResult struct {
-	Type
-}
-
-type Value_Type_sys_InitialEmailVerificationResult struct {
-	tv exttinygo.TValue
-}
-
-type Intent_Type_sys_InitialEmailVerificationResult struct {
-	intent exttinygo.TIntent
-}
-
-func (v Value_Type_sys_InitialEmailVerificationResult) Get_sys_Container() string {
-	return v.tv.AsString("sys_Container")
-}
-
-func (v Value_Type_sys_InitialEmailVerificationResult) Get_VerificationToken() string {
-	return v.tv.AsString("VerificationToken")
-}
-
-func (r Type_sys_InitialEmailVerificationResult) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r Type_sys_InitialEmailVerificationResult) Entity() string {
-	return "InitialEmailVerificationResult"
-}
-
-type Type_sys_InitiateEmailVerificationParams struct {
-	Type
-}
-
-type Value_Type_sys_InitiateEmailVerificationParams struct {
-	tv exttinygo.TValue
-}
-
-type Intent_Type_sys_InitiateEmailVerificationParams struct {
-	intent exttinygo.TIntent
-}
-
-func (v Value_Type_sys_InitiateEmailVerificationParams) Get_sys_Container() string {
-	return v.tv.AsString("sys_Container")
-}
-
-func (v Value_Type_sys_InitiateEmailVerificationParams) Get_Entity() string {
-	return v.tv.AsString("Entity")
-}
-
-func (v Value_Type_sys_InitiateEmailVerificationParams) Get_Field() string {
-	return v.tv.AsString("Field")
-}
-
-func (v Value_Type_sys_InitiateEmailVerificationParams) Get_Email() string {
-	return v.tv.AsString("Email")
-}
-
-func (v Value_Type_sys_InitiateEmailVerificationParams) Get_TargetWSID() int64 {
-	return v.tv.AsInt64("TargetWSID")
-}
-
-func (v Value_Type_sys_InitiateEmailVerificationParams) Get_ForRegistry() bool {
-	return v.tv.AsBool("ForRegistry")
-}
-
-func (v Value_Type_sys_InitiateEmailVerificationParams) Get_Language() string {
-	return v.tv.AsString("Language")
-}
-
-func (r Type_sys_InitiateEmailVerificationParams) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r Type_sys_InitiateEmailVerificationParams) Entity() string {
-	return "InitiateEmailVerificationParams"
-}
-
-type Query_sys_InitiateEmailVerification struct {
-	Type
-}
-
-func (r Query_sys_InitiateEmailVerification) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r Query_sys_InitiateEmailVerification) Entity() string {
-	return "InitiateEmailVerification"
-}
-
-func (c Query_sys_InitiateEmailVerification) ArgumentObject() Value_Type_sys_InitiateEmailVerificationParams {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
-	return Value_Type_sys_InitiateEmailVerificationParams{tv: exttinygo.MustGetValue(kb).AsValue(FieldNameEventArgumentObject)}
-}
-
-func (r Query_sys_InitiateEmailVerification) ArgumentPkgPath() string {
-	return Package_sys.Type_InitiateEmailVerificationParams.PkgPath()
-
-}
-
-func (r Query_sys_InitiateEmailVerification) ArgumentEntity() string {
-	return Package_sys.Type_InitiateEmailVerificationParams.Entity()
-
-}
-
-func (c Query_sys_InitiateEmailVerification) Result(sys_container string, verificationtoken string) {
-	__result := exttinygo.NewValue(exttinygo.KeyBuilder(exttinygo.StorageResult, exttinygo.NullEntity))
-	__result.PutString("sys_Container", sys_container)
-	__result.PutString("VerificationToken", verificationtoken)
-}
-
-type Type_sys_IssueVerifiedValueTokenParams struct {
-	Type
-}
-
-type Value_Type_sys_IssueVerifiedValueTokenParams struct {
-	tv exttinygo.TValue
-}
-
-type Intent_Type_sys_IssueVerifiedValueTokenParams struct {
-	intent exttinygo.TIntent
-}
-
-func (v Value_Type_sys_IssueVerifiedValueTokenParams) Get_sys_Container() string {
-	return v.tv.AsString("sys_Container")
-}
-
-func (v Value_Type_sys_IssueVerifiedValueTokenParams) Get_VerificationToken() string {
-	return v.tv.AsString("VerificationToken")
-}
-
-func (v Value_Type_sys_IssueVerifiedValueTokenParams) Get_VerificationCode() string {
-	return v.tv.AsString("VerificationCode")
-}
-
-func (v Value_Type_sys_IssueVerifiedValueTokenParams) Get_ForRegistry() bool {
-	return v.tv.AsBool("ForRegistry")
-}
-
-func (r Type_sys_IssueVerifiedValueTokenParams) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r Type_sys_IssueVerifiedValueTokenParams) Entity() string {
-	return "IssueVerifiedValueTokenParams"
-}
-
-type Type_sys_IssueVerifiedValueTokenResult struct {
-	Type
-}
-
-type Value_Type_sys_IssueVerifiedValueTokenResult struct {
-	tv exttinygo.TValue
-}
-
-type Intent_Type_sys_IssueVerifiedValueTokenResult struct {
-	intent exttinygo.TIntent
-}
-
-func (v Value_Type_sys_IssueVerifiedValueTokenResult) Get_sys_Container() string {
-	return v.tv.AsString("sys_Container")
-}
-
-func (v Value_Type_sys_IssueVerifiedValueTokenResult) Get_VerifiedValueToken() string {
-	return v.tv.AsString("VerifiedValueToken")
-}
-
-func (r Type_sys_IssueVerifiedValueTokenResult) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r Type_sys_IssueVerifiedValueTokenResult) Entity() string {
-	return "IssueVerifiedValueTokenResult"
-}
-
-type Query_sys_IssueVerifiedValueToken struct {
-	Type
-}
-
-func (r Query_sys_IssueVerifiedValueToken) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r Query_sys_IssueVerifiedValueToken) Entity() string {
-	return "IssueVerifiedValueToken"
-}
-
-func (c Query_sys_IssueVerifiedValueToken) ArgumentObject() Value_Type_sys_IssueVerifiedValueTokenParams {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
-	return Value_Type_sys_IssueVerifiedValueTokenParams{tv: exttinygo.MustGetValue(kb).AsValue(FieldNameEventArgumentObject)}
-}
-
-func (r Query_sys_IssueVerifiedValueToken) ArgumentPkgPath() string {
-	return Package_sys.Type_IssueVerifiedValueTokenParams.PkgPath()
-
-}
-
-func (r Query_sys_IssueVerifiedValueToken) ArgumentEntity() string {
-	return Package_sys.Type_IssueVerifiedValueTokenParams.Entity()
-
-}
-
-func (c Query_sys_IssueVerifiedValueToken) Result(sys_container string, verifiedvaluetoken string) {
-	__result := exttinygo.NewValue(exttinygo.KeyBuilder(exttinygo.StorageResult, exttinygo.NullEntity))
-	__result.PutString("sys_Container", sys_container)
-	__result.PutString("VerifiedValueToken", verifiedvaluetoken)
-}
-
-type CSingleton_sys_UserProfile struct {
-	Type
-}
-
-type Value_CSingleton_sys_UserProfile struct {
-	tv exttinygo.TValue
-}
-
-type Intent_CSingleton_sys_UserProfile struct {
-	intent exttinygo.TIntent
-}
-
-func (r CSingleton_sys_UserProfile) PkgPath() string {
-	return Package_sys.Path
-}
-
-func (r CSingleton_sys_UserProfile) Entity() string {
-	return "UserProfile"
 }
 
 type ODoc_sys_ODoc struct {
@@ -5876,4 +5209,671 @@ func (v Value_View_sys_projectionOffsets) Insert() Intent_View_sys_projectionOff
 
 func (v Value_View_sys_projectionOffsets) Update() Intent_View_sys_projectionOffsets {
 	return Intent_View_sys_projectionOffsets{intent: exttinygo.UpdateValue(v.kb, v.tv)}
+}
+
+type WS_sys_AppWorkspaceWS struct {
+	Type
+}
+
+type Value_WS_sys_AppWorkspaceWS struct {
+	tv exttinygo.TValue
+}
+
+type Intent_WS_sys_AppWorkspaceWS struct {
+	intent exttinygo.TIntent
+}
+
+func (r WS_sys_AppWorkspaceWS) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r WS_sys_AppWorkspaceWS) Entity() string {
+	return "AppWorkspaceWS"
+}
+
+func (r WS_sys_AppWorkspaceWS) Descriptor() string {
+	return "AppWorkspace"
+}
+
+type CSingleton_sys_AppWorkspace struct {
+	Type
+}
+
+type Value_CSingleton_sys_AppWorkspace struct {
+	tv exttinygo.TValue
+}
+
+type Intent_CSingleton_sys_AppWorkspace struct {
+	intent exttinygo.TIntent
+}
+
+func (r CSingleton_sys_AppWorkspace) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r CSingleton_sys_AppWorkspace) Entity() string {
+	return "AppWorkspace"
+}
+
+type WS_sys_DeviceProfileWS struct {
+	Type
+}
+
+type Value_WS_sys_DeviceProfileWS struct {
+	tv exttinygo.TValue
+}
+
+type Intent_WS_sys_DeviceProfileWS struct {
+	intent exttinygo.TIntent
+}
+
+func (r WS_sys_DeviceProfileWS) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r WS_sys_DeviceProfileWS) Entity() string {
+	return "DeviceProfileWS"
+}
+
+func (r WS_sys_DeviceProfileWS) Descriptor() string {
+	return "DeviceProfile"
+}
+
+type CSingleton_sys_DeviceProfile struct {
+	Type
+}
+
+type Value_CSingleton_sys_DeviceProfile struct {
+	tv exttinygo.TValue
+}
+
+type Intent_CSingleton_sys_DeviceProfile struct {
+	intent exttinygo.TIntent
+}
+
+func (r CSingleton_sys_DeviceProfile) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r CSingleton_sys_DeviceProfile) Entity() string {
+	return "DeviceProfile"
+}
+
+type Type_sys_RefreshPrincipalTokenResult struct {
+	Type
+}
+
+type Value_Type_sys_RefreshPrincipalTokenResult struct {
+	tv exttinygo.TValue
+}
+
+type Intent_Type_sys_RefreshPrincipalTokenResult struct {
+	intent exttinygo.TIntent
+}
+
+func (v Value_Type_sys_RefreshPrincipalTokenResult) Get_sys_Container() string {
+	return v.tv.AsString("sys_Container")
+}
+
+func (v Value_Type_sys_RefreshPrincipalTokenResult) Get_NewPrincipalToken() string {
+	return v.tv.AsString("NewPrincipalToken")
+}
+
+func (r Type_sys_RefreshPrincipalTokenResult) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r Type_sys_RefreshPrincipalTokenResult) Entity() string {
+	return "RefreshPrincipalTokenResult"
+}
+
+type Query_sys_RefreshPrincipalToken struct {
+	Type
+}
+
+func (r Query_sys_RefreshPrincipalToken) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r Query_sys_RefreshPrincipalToken) Entity() string {
+	return "RefreshPrincipalToken"
+}
+
+func (r Query_sys_RefreshPrincipalToken) ArgumentPkgPath() string {
+	return ""
+}
+
+func (r Query_sys_RefreshPrincipalToken) ArgumentEntity() string {
+	return ""
+}
+
+func (c Query_sys_RefreshPrincipalToken) Result(sys_container string, newprincipaltoken string) {
+	__result := exttinygo.NewValue(exttinygo.KeyBuilder(exttinygo.StorageResult, exttinygo.NullEntity))
+	__result.PutString("sys_Container", sys_container)
+	__result.PutString("NewPrincipalToken", newprincipaltoken)
+}
+
+type WS_sys_UserProfileWS struct {
+	Type
+}
+
+type Value_WS_sys_UserProfileWS struct {
+	tv exttinygo.TValue
+}
+
+type Intent_WS_sys_UserProfileWS struct {
+	intent exttinygo.TIntent
+}
+
+func (r WS_sys_UserProfileWS) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r WS_sys_UserProfileWS) Entity() string {
+	return "UserProfileWS"
+}
+
+func (r WS_sys_UserProfileWS) Descriptor() string {
+	return "UserProfile"
+}
+
+type Type_sys_SendEmailVerificationParams struct {
+	Type
+}
+
+type Value_Type_sys_SendEmailVerificationParams struct {
+	tv exttinygo.TValue
+}
+
+type Intent_Type_sys_SendEmailVerificationParams struct {
+	intent exttinygo.TIntent
+}
+
+func (v Value_Type_sys_SendEmailVerificationParams) Get_sys_Container() string {
+	return v.tv.AsString("sys_Container")
+}
+
+func (v Value_Type_sys_SendEmailVerificationParams) Get_VerificationCode() string {
+	return v.tv.AsString("VerificationCode")
+}
+
+func (v Value_Type_sys_SendEmailVerificationParams) Get_Email() string {
+	return v.tv.AsString("Email")
+}
+
+func (v Value_Type_sys_SendEmailVerificationParams) Get_Reason() string {
+	return v.tv.AsString("Reason")
+}
+
+func (v Value_Type_sys_SendEmailVerificationParams) Get_Language() string {
+	return v.tv.AsString("Language")
+}
+
+func (r Type_sys_SendEmailVerificationParams) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r Type_sys_SendEmailVerificationParams) Entity() string {
+	return "SendEmailVerificationParams"
+}
+
+type Command_sys_SendEmailVerificationCode struct {
+	Type
+}
+
+func (r Command_sys_SendEmailVerificationCode) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r Command_sys_SendEmailVerificationCode) Entity() string {
+	return "SendEmailVerificationCode"
+}
+
+func (c Command_sys_SendEmailVerificationCode) ArgumentObject() Value_Type_sys_SendEmailVerificationParams {
+	kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
+	return Value_Type_sys_SendEmailVerificationParams{tv: exttinygo.MustGetValue(kb).AsValue(FieldNameEventArgumentObject)}
+}
+
+func (r Command_sys_SendEmailVerificationCode) ArgumentPkgPath() string {
+	return Package_sys.Type_SendEmailVerificationParams.PkgPath()
+
+}
+
+func (r Command_sys_SendEmailVerificationCode) ArgumentEntity() string {
+	return Package_sys.Type_SendEmailVerificationParams.Entity()
+
+}
+
+func (r Command_sys_SendEmailVerificationCode) WorkspaceDescriptor() string {
+	return Package_sys.WS_UserProfileWS.Descriptor()
+}
+
+type Projector_sys_ApplySendEmailVerificationCode struct {
+	Type
+	_event exttinygo.TValue
+}
+
+func (p Projector_sys_ApplySendEmailVerificationCode) Event() Event {
+	return Event{
+		WLogOffset: p.event().AsInt64("WLogOffset"),
+	}
+}
+
+func (p Projector_sys_ApplySendEmailVerificationCode) event() exttinygo.TValue {
+	if p._event == 0 {
+		p._event = eventFunc()
+	}
+	return p._event
+}
+
+func (r Projector_sys_ApplySendEmailVerificationCode) WorkspaceDescriptor() string {
+	return Package_sys.WS_UserProfileWS.Descriptor()
+}
+
+func (pkg TPackage_sys) Projector_ApplySendEmailVerificationCode() Projector_sys_ApplySendEmailVerificationCode {
+	return Projector_sys_ApplySendEmailVerificationCode{}
+}
+
+func (r Projector_sys_ApplySendEmailVerificationCode) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r Projector_sys_ApplySendEmailVerificationCode) Entity() string {
+	return "ApplySendEmailVerificationCode"
+}
+
+type Cmd_sys_SendEmailVerificationCode struct {
+	qname string
+	event exttinygo.TValue
+}
+
+func (c Cmd_sys_SendEmailVerificationCode) Arg() (Value_Type_sys_SendEmailVerificationParams, bool) {
+	qname := c.event.AsQName("QName")
+	if qname.FullPkgName != Package_sys.Command_SendEmailVerificationCode.PkgPath() || qname.Entity != Package_sys.Command_SendEmailVerificationCode.Entity() {
+		return Value_Type_sys_SendEmailVerificationParams{}, false
+	}
+
+	return Value_Type_sys_SendEmailVerificationParams{tv: c.event.AsValue("ArgumentObject")}, true
+}
+
+func (c Cmd_sys_SendEmailVerificationCode) Event() Event {
+	return Event{
+		WLogOffset: c.event.AsInt64("WLogOffset"),
+	}
+}
+
+func (p *Projector_sys_ApplySendEmailVerificationCode) Cmd_SendEmailVerificationCode() Cmd_sys_SendEmailVerificationCode {
+	return Cmd_sys_SendEmailVerificationCode{
+		qname: p.PkgPath() + "." + "SendEmailVerificationCode",
+		event: p.event(),
+	}
+}
+
+type Type_sys_DescribePackageParams struct {
+	Type
+}
+
+type Value_Type_sys_DescribePackageParams struct {
+	tv exttinygo.TValue
+}
+
+type Intent_Type_sys_DescribePackageParams struct {
+	intent exttinygo.TIntent
+}
+
+func (v Value_Type_sys_DescribePackageParams) Get_sys_Container() string {
+	return v.tv.AsString("sys_Container")
+}
+
+func (v Value_Type_sys_DescribePackageParams) Get_PackageName() string {
+	return v.tv.AsString("PackageName")
+}
+
+func (r Type_sys_DescribePackageParams) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r Type_sys_DescribePackageParams) Entity() string {
+	return "DescribePackageParams"
+}
+
+type Type_sys_DescribePackageResult struct {
+	Type
+}
+
+type Value_Type_sys_DescribePackageResult struct {
+	tv exttinygo.TValue
+}
+
+type Intent_Type_sys_DescribePackageResult struct {
+	intent exttinygo.TIntent
+}
+
+func (v Value_Type_sys_DescribePackageResult) Get_sys_Container() string {
+	return v.tv.AsString("sys_Container")
+}
+
+func (v Value_Type_sys_DescribePackageResult) Get_PackageDesc() string {
+	return v.tv.AsString("PackageDesc")
+}
+
+func (r Type_sys_DescribePackageResult) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r Type_sys_DescribePackageResult) Entity() string {
+	return "DescribePackageResult"
+}
+
+type Query_sys_DescribePackage struct {
+	Type
+}
+
+func (r Query_sys_DescribePackage) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r Query_sys_DescribePackage) Entity() string {
+	return "DescribePackage"
+}
+
+func (c Query_sys_DescribePackage) ArgumentObject() Value_Type_sys_DescribePackageParams {
+	kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
+	return Value_Type_sys_DescribePackageParams{tv: exttinygo.MustGetValue(kb).AsValue(FieldNameEventArgumentObject)}
+}
+
+func (r Query_sys_DescribePackage) ArgumentPkgPath() string {
+	return Package_sys.Type_DescribePackageParams.PkgPath()
+
+}
+
+func (r Query_sys_DescribePackage) ArgumentEntity() string {
+	return Package_sys.Type_DescribePackageParams.Entity()
+
+}
+
+func (c Query_sys_DescribePackage) Result(sys_container string, packagedesc string) {
+	__result := exttinygo.NewValue(exttinygo.KeyBuilder(exttinygo.StorageResult, exttinygo.NullEntity))
+	__result.PutString("sys_Container", sys_container)
+	__result.PutString("PackageDesc", packagedesc)
+}
+
+type Type_sys_DescribePackageNamesResult struct {
+	Type
+}
+
+type Value_Type_sys_DescribePackageNamesResult struct {
+	tv exttinygo.TValue
+}
+
+type Intent_Type_sys_DescribePackageNamesResult struct {
+	intent exttinygo.TIntent
+}
+
+func (v Value_Type_sys_DescribePackageNamesResult) Get_sys_Container() string {
+	return v.tv.AsString("sys_Container")
+}
+
+func (v Value_Type_sys_DescribePackageNamesResult) Get_Names() string {
+	return v.tv.AsString("Names")
+}
+
+func (r Type_sys_DescribePackageNamesResult) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r Type_sys_DescribePackageNamesResult) Entity() string {
+	return "DescribePackageNamesResult"
+}
+
+type Query_sys_DescribePackageNames struct {
+	Type
+}
+
+func (r Query_sys_DescribePackageNames) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r Query_sys_DescribePackageNames) Entity() string {
+	return "DescribePackageNames"
+}
+
+func (r Query_sys_DescribePackageNames) ArgumentPkgPath() string {
+	return ""
+}
+
+func (r Query_sys_DescribePackageNames) ArgumentEntity() string {
+	return ""
+}
+
+func (c Query_sys_DescribePackageNames) Result(sys_container string, names string) {
+	__result := exttinygo.NewValue(exttinygo.KeyBuilder(exttinygo.StorageResult, exttinygo.NullEntity))
+	__result.PutString("sys_Container", sys_container)
+	__result.PutString("Names", names)
+}
+
+type Type_sys_InitialEmailVerificationResult struct {
+	Type
+}
+
+type Value_Type_sys_InitialEmailVerificationResult struct {
+	tv exttinygo.TValue
+}
+
+type Intent_Type_sys_InitialEmailVerificationResult struct {
+	intent exttinygo.TIntent
+}
+
+func (v Value_Type_sys_InitialEmailVerificationResult) Get_sys_Container() string {
+	return v.tv.AsString("sys_Container")
+}
+
+func (v Value_Type_sys_InitialEmailVerificationResult) Get_VerificationToken() string {
+	return v.tv.AsString("VerificationToken")
+}
+
+func (r Type_sys_InitialEmailVerificationResult) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r Type_sys_InitialEmailVerificationResult) Entity() string {
+	return "InitialEmailVerificationResult"
+}
+
+type Type_sys_InitiateEmailVerificationParams struct {
+	Type
+}
+
+type Value_Type_sys_InitiateEmailVerificationParams struct {
+	tv exttinygo.TValue
+}
+
+type Intent_Type_sys_InitiateEmailVerificationParams struct {
+	intent exttinygo.TIntent
+}
+
+func (v Value_Type_sys_InitiateEmailVerificationParams) Get_sys_Container() string {
+	return v.tv.AsString("sys_Container")
+}
+
+func (v Value_Type_sys_InitiateEmailVerificationParams) Get_Entity() string {
+	return v.tv.AsString("Entity")
+}
+
+func (v Value_Type_sys_InitiateEmailVerificationParams) Get_Field() string {
+	return v.tv.AsString("Field")
+}
+
+func (v Value_Type_sys_InitiateEmailVerificationParams) Get_Email() string {
+	return v.tv.AsString("Email")
+}
+
+func (v Value_Type_sys_InitiateEmailVerificationParams) Get_TargetWSID() int64 {
+	return v.tv.AsInt64("TargetWSID")
+}
+
+func (v Value_Type_sys_InitiateEmailVerificationParams) Get_ForRegistry() bool {
+	return v.tv.AsBool("ForRegistry")
+}
+
+func (v Value_Type_sys_InitiateEmailVerificationParams) Get_Language() string {
+	return v.tv.AsString("Language")
+}
+
+func (r Type_sys_InitiateEmailVerificationParams) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r Type_sys_InitiateEmailVerificationParams) Entity() string {
+	return "InitiateEmailVerificationParams"
+}
+
+type Query_sys_InitiateEmailVerification struct {
+	Type
+}
+
+func (r Query_sys_InitiateEmailVerification) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r Query_sys_InitiateEmailVerification) Entity() string {
+	return "InitiateEmailVerification"
+}
+
+func (c Query_sys_InitiateEmailVerification) ArgumentObject() Value_Type_sys_InitiateEmailVerificationParams {
+	kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
+	return Value_Type_sys_InitiateEmailVerificationParams{tv: exttinygo.MustGetValue(kb).AsValue(FieldNameEventArgumentObject)}
+}
+
+func (r Query_sys_InitiateEmailVerification) ArgumentPkgPath() string {
+	return Package_sys.Type_InitiateEmailVerificationParams.PkgPath()
+
+}
+
+func (r Query_sys_InitiateEmailVerification) ArgumentEntity() string {
+	return Package_sys.Type_InitiateEmailVerificationParams.Entity()
+
+}
+
+func (c Query_sys_InitiateEmailVerification) Result(sys_container string, verificationtoken string) {
+	__result := exttinygo.NewValue(exttinygo.KeyBuilder(exttinygo.StorageResult, exttinygo.NullEntity))
+	__result.PutString("sys_Container", sys_container)
+	__result.PutString("VerificationToken", verificationtoken)
+}
+
+type Type_sys_IssueVerifiedValueTokenParams struct {
+	Type
+}
+
+type Value_Type_sys_IssueVerifiedValueTokenParams struct {
+	tv exttinygo.TValue
+}
+
+type Intent_Type_sys_IssueVerifiedValueTokenParams struct {
+	intent exttinygo.TIntent
+}
+
+func (v Value_Type_sys_IssueVerifiedValueTokenParams) Get_sys_Container() string {
+	return v.tv.AsString("sys_Container")
+}
+
+func (v Value_Type_sys_IssueVerifiedValueTokenParams) Get_VerificationToken() string {
+	return v.tv.AsString("VerificationToken")
+}
+
+func (v Value_Type_sys_IssueVerifiedValueTokenParams) Get_VerificationCode() string {
+	return v.tv.AsString("VerificationCode")
+}
+
+func (v Value_Type_sys_IssueVerifiedValueTokenParams) Get_ForRegistry() bool {
+	return v.tv.AsBool("ForRegistry")
+}
+
+func (r Type_sys_IssueVerifiedValueTokenParams) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r Type_sys_IssueVerifiedValueTokenParams) Entity() string {
+	return "IssueVerifiedValueTokenParams"
+}
+
+type Type_sys_IssueVerifiedValueTokenResult struct {
+	Type
+}
+
+type Value_Type_sys_IssueVerifiedValueTokenResult struct {
+	tv exttinygo.TValue
+}
+
+type Intent_Type_sys_IssueVerifiedValueTokenResult struct {
+	intent exttinygo.TIntent
+}
+
+func (v Value_Type_sys_IssueVerifiedValueTokenResult) Get_sys_Container() string {
+	return v.tv.AsString("sys_Container")
+}
+
+func (v Value_Type_sys_IssueVerifiedValueTokenResult) Get_VerifiedValueToken() string {
+	return v.tv.AsString("VerifiedValueToken")
+}
+
+func (r Type_sys_IssueVerifiedValueTokenResult) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r Type_sys_IssueVerifiedValueTokenResult) Entity() string {
+	return "IssueVerifiedValueTokenResult"
+}
+
+type Query_sys_IssueVerifiedValueToken struct {
+	Type
+}
+
+func (r Query_sys_IssueVerifiedValueToken) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r Query_sys_IssueVerifiedValueToken) Entity() string {
+	return "IssueVerifiedValueToken"
+}
+
+func (c Query_sys_IssueVerifiedValueToken) ArgumentObject() Value_Type_sys_IssueVerifiedValueTokenParams {
+	kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
+	return Value_Type_sys_IssueVerifiedValueTokenParams{tv: exttinygo.MustGetValue(kb).AsValue(FieldNameEventArgumentObject)}
+}
+
+func (r Query_sys_IssueVerifiedValueToken) ArgumentPkgPath() string {
+	return Package_sys.Type_IssueVerifiedValueTokenParams.PkgPath()
+
+}
+
+func (r Query_sys_IssueVerifiedValueToken) ArgumentEntity() string {
+	return Package_sys.Type_IssueVerifiedValueTokenParams.Entity()
+
+}
+
+func (c Query_sys_IssueVerifiedValueToken) Result(sys_container string, verifiedvaluetoken string) {
+	__result := exttinygo.NewValue(exttinygo.KeyBuilder(exttinygo.StorageResult, exttinygo.NullEntity))
+	__result.PutString("sys_Container", sys_container)
+	__result.PutString("VerifiedValueToken", verifiedvaluetoken)
+}
+
+type CSingleton_sys_UserProfile struct {
+	Type
+}
+
+type Value_CSingleton_sys_UserProfile struct {
+	tv exttinygo.TValue
+}
+
+type Intent_CSingleton_sys_UserProfile struct {
+	intent exttinygo.TIntent
+}
+
+func (r CSingleton_sys_UserProfile) PkgPath() string {
+	return Package_sys.Path
+}
+
+func (r CSingleton_sys_UserProfile) Entity() string {
+	return "UserProfile"
 }

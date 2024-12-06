@@ -17,8 +17,6 @@ import (
 	"github.com/voedger/voedger/pkg/sys"
 )
 
-var notFoundKeyError = fmt.Errorf("not found key")
-
 type MockedStorage struct {
 	state.IWithInsert
 	state.IWithGet
@@ -51,12 +49,12 @@ func (s *MockedStorage) GetBatch(items []state.GetBatchItem) (err error) {
 	for _, item := range items {
 		mkb, ok := item.Key.(*mockedKeyBuilder)
 		if !ok {
-			return fmt.Errorf("IStataKeyBuilder must be mockedKeyBuilder")
+			return errMockedKeyBuilderExpected
 		}
 
 		vb, ok := s.valueBuilders[mkb.Id]
 		if !ok {
-			return notFoundKeyError
+			return ErrNotFoundKey
 		}
 
 		item.Value = vb.BuildValue()
@@ -68,7 +66,7 @@ func (s *MockedStorage) GetBatch(items []state.GetBatchItem) (err error) {
 func (s *MockedStorage) Get(kb istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
 	mkb, ok := kb.(*mockedKeyBuilder)
 	if !ok {
-		return nil, fmt.Errorf("IStataKeyBuilder must be mockedKeyBuilder")
+		return nil, errMockedKeyBuilderExpected
 	}
 
 	vb, ok := s.valueBuilders[mkb.Id]
@@ -82,12 +80,12 @@ func (s *MockedStorage) Get(kb istructs.IStateKeyBuilder) (value istructs.IState
 func (s *MockedStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
 	mkb, ok := kb.(*mockedKeyBuilder)
 	if !ok {
-		return fmt.Errorf("IStataKeyBuilder must be mockedKeyBuilder")
+		return errMockedKeyBuilderExpected
 	}
 
 	vb, ok := s.valueBuilders[mkb.Id]
 	if !ok {
-		return notFoundKeyError
+		return ErrNotFoundKey
 	}
 
 	return callback(mkb.Key(), vb.BuildValue())
@@ -104,7 +102,7 @@ func (s *MockedStorage) ProvideValueBuilder(
 
 	mkb, ok := kb.(*mockedKeyBuilder)
 	if !ok {
-		return nil, fmt.Errorf("IStataKeyBuilder must be mockedKeyBuilder")
+		return nil, errMockedKeyBuilderExpected
 	}
 
 	newMVB := newMockedValueBuilder(value)
@@ -211,6 +209,7 @@ func (mkb *mockedKeyBuilder) PutInt32(field appdef.FieldName, value int32) {
 func (mkb *mockedKeyBuilder) PutInt64(field appdef.FieldName, value int64) {
 	mkb.TestObject.Data[field] = value
 	if field == "ID" {
+		//nolint:gosec
 		mkb.TestObject.Id = istructs.RecordID(value)
 	}
 }
@@ -404,7 +403,7 @@ func (m *mockedStateValue) AsInt32(name appdef.FieldName) int32 {
 		if err != nil {
 			panic(fmt.Errorf("json.Number.AsInt64(): %w", err))
 		}
-
+		//nolint:gosec
 		return int32(val)
 	default:
 		panic(fmt.Sprintf("mockedStateValue.AsInt32(%s): unexpected type", name))
@@ -415,10 +414,6 @@ func (m *mockedStateValue) AsInt64(name appdef.FieldName) int64 {
 	switch t := m.TestObjects[0].Data[name].(type) {
 	case int64:
 		return t
-	case istructs.Offset:
-		return int64(t)
-	case istructs.RecordID:
-		return int64(t)
 	case json.Number:
 		val, err := t.Int64()
 		if err != nil {
@@ -460,13 +455,11 @@ func (m *mockedStateValue) AsRecordID(name appdef.FieldName) istructs.RecordID {
 }
 
 func (m *mockedStateValue) RecordIDs(includeNulls bool) func(func(appdef.FieldName, istructs.RecordID) bool) {
-	//TODO implement me
-	panic("implement me")
+	panic(errNotImplemented)
 }
 
 func (m *mockedStateValue) FieldNames(f func(appdef.FieldName) bool) {
-	//TODO implement me
-	panic("implement me")
+	panic(errNotImplemented)
 }
 
 func (m *mockedStateValue) AsValue(name string) istructs.IStateValue {
@@ -495,43 +488,35 @@ func (m mockedStateValue) GetAsString(index int) string {
 		panic(fmt.Sprintf("mockedStateValue.GetAsString(%d): index out of range", index))
 	}
 
-	//TODO implement me
-	panic("implement me")
+	panic(errNotImplemented)
 }
 
 func (m mockedStateValue) GetAsBytes(index int) []byte {
-	//TODO implement me
-	panic("implement me")
+	panic(errNotImplemented)
 }
 
 func (m mockedStateValue) GetAsInt32(index int) int32 {
-	//TODO implement me
-	panic("implement me")
+	panic(errNotImplemented)
 }
 
 func (m mockedStateValue) GetAsInt64(index int) int64 {
-	//TODO implement me
-	panic("implement me")
+	panic(errNotImplemented)
 }
 
 func (m mockedStateValue) GetAsFloat32(index int) float32 {
-	//TODO implement me
-	panic("implement me")
+	panic(errNotImplemented)
 }
 
 func (m mockedStateValue) GetAsFloat64(index int) float64 {
-	//TODO implement me
-	panic("implement me")
+	panic(errNotImplemented)
 }
 
 func (m mockedStateValue) GetAsQName(index int) appdef.QName {
-	//TODO implement me
-	panic("implement me")
+	panic(errNotImplemented)
 }
 
 func (m mockedStateValue) GetAsBool(index int) bool {
-	//TODO implement me
-	panic("implement me")
+	panic(errNotImplemented)
 }
 
 func (m mockedStateValue) GetAsValue(index int) istructs.IStateValue {
