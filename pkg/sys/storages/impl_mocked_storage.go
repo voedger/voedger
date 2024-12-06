@@ -155,7 +155,7 @@ func NewMockedStorage(storageQName appdef.QName) *MockedStorage {
 		keyBuilders:     make([]*mockedKeyBuilder, 0),
 		valueBuilders:   make(map[istructs.RecordID]istructs.IStateValueBuilder),
 		singletonIDs:    make(map[appdef.QName]istructs.RecordID),
-		nextSingletonID: istructs.MinReservedBaseRecordID,
+		nextSingletonID: istructs.FirstSingletonID,
 	}
 }
 
@@ -286,6 +286,12 @@ func (mvb *mockedValueBuilder) PutInt32(name appdef.FieldName, i int32) {
 }
 
 func (mvb *mockedValueBuilder) PutInt64(name appdef.FieldName, i int64) {
+	if name == appdef.SystemField_ID {
+		mvb.value.TestObjects[0].Id = istructs.RecordID(i)
+
+		return
+	}
+
 	mvb.value.TestObjects[0].Data[name] = i
 }
 
@@ -467,7 +473,20 @@ func (m *mockedStateValue) AsBool(name appdef.FieldName) bool {
 }
 
 func (m *mockedStateValue) AsRecordID(name appdef.FieldName) istructs.RecordID {
-	return m.TestObjects[0].Id
+	if name == appdef.SystemField_ID {
+		return m.TestObjects[0].Id
+	}
+
+	switch t := m.TestObjects[0].Data[name].(type) {
+	case int32:
+		return istructs.RecordID(t)
+	case int64:
+		return istructs.RecordID(t)
+	case istructs.RecordID:
+		return t
+	default:
+		panic(fmt.Sprintf("mockedStateValue.AsRecordID(%s): unexpected type", name))
+	}
 }
 
 func (m *mockedStateValue) RecordIDs(includeNulls bool) func(func(appdef.FieldName, istructs.RecordID) bool) {

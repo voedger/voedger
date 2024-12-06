@@ -136,19 +136,28 @@ func (gts *generalTestState) putCudRows() {
 		return
 	}
 
+	mockedEventStorage, ok := gts.getMockedStorage(sys.Storage_Event)
+	if !ok {
+		panic("failed to get mocked event storage")
+	}
+
 	for _, item := range gts.cudRows {
 		kvMap, err := parseKeyValues(item.keyValueList)
 		require.NoError(gts.t, err, msgFailedToParseKeyValues)
 
-		// TODO: use mocked storage
-		gts.PutEvent(
-			gts.commandWSID,
-			appdef.NewFullQName(item.entity.PkgPath(), item.entity.Entity()),
-			func(argBuilder istructs.IObjectBuilder, cudBuilder istructs.ICUD) {
-				cud := cudBuilder.Create(gts.getQNameFromFQName(item.entity))
-				cud.PutFromJSON(kvMap)
-			},
-		)
+		localQName := gts.getQNameFromFQName(item.entity)
+
+		mockedEventObject := &coreutils.TestObject{
+			Name:        localQName,
+			Data:        kvMap,
+			Containers_: make(map[string][]*coreutils.TestObject),
+		}
+		mockedEventObject.Data[appdef.SystemField_ID] = item.id
+		mockedEventObject.Data[sys.Storage_Event_Field_Workspace] = gts.commandWSID
+		mockedEventObject.Data[sys.Storage_Event_Field_QName] = localQName
+
+		// writing an event object directly to the storage
+		mockedEventStorage.PutValue(item.id, mockedEventObject)
 	}
 }
 
@@ -363,7 +372,7 @@ func (gts *generalTestState) putViewRecords() {
 			Containers_: make(map[string][]*coreutils.TestObject),
 		}
 
-		mockedViewStorage.PutValue(0, mockedObject)
+		mockedViewStorage.PutValue(item.id, mockedObject)
 	}
 
 	// clear view record items after they are processed
@@ -814,7 +823,6 @@ func (pts *ProjectorTestState) putEvent() {
 		Data:        pts.rawEvent.argumentObject.Data,
 		Containers_: make(map[string][]*coreutils.TestObject),
 	}
-	// add comnment
 	mockedEventObject.Data["PLogOffset"] = pts.rawEvent.pLogOffset
 	mockedEventObject.Data["HandlingPartition"] = pts.rawEvent.handlingPartition
 	mockedEventObject.Data[sys.Storage_Event_Field_Workspace] = pts.rawEvent.Workspace()
