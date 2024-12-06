@@ -473,6 +473,9 @@ func Test_Workspace_Defs(t *testing.T) {
 		WORKSPACE MyWorkspace2 INHERITS AWorkspace();
 		ALTER WORKSPACE sys.Profile(
 			USE WORKSPACE MyWorkspace;
+			WORKSPACE ProfileChildWS(
+				WORKSPACE ProfileGrandChildWS();
+			);
 		);
 	`)
 	require.NoError(err)
@@ -502,7 +505,11 @@ func Test_Workspace_Defs(t *testing.T) {
 	wsProfile := app.Workspace(appdef.NewQName("sys", "Profile"))
 
 	require.Equal(appdef.TypeKind_Workspace, wsProfile.Type(appdef.NewQName("pkg1", "MyWorkspace")).Kind())
+	require.Equal(appdef.TypeKind_Workspace, wsProfile.Type(appdef.NewQName("pkg1", "ProfileChildWS")).Kind())
 	require.Equal(appdef.NullType, wsProfile.Type(appdef.NewQName("pkg1", "MyWorkspace2")))
+
+	wsProfileChildWS := app.Workspace(appdef.NewQName("pkg1", "ProfileChildWS"))
+	require.Equal(appdef.TypeKind_Workspace, wsProfileChildWS.Type(appdef.NewQName("pkg1", "ProfileGrandChildWS")).Kind())
 }
 
 func Test_Workspace_Defs3(t *testing.T) {
