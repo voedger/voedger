@@ -25,16 +25,18 @@ type MockedStorage struct {
 	state.IWithRead
 	state.IWithApplyBatch
 
-	storageQName  appdef.QName
-	keyBuilders   []*mockedKeyBuilder
-	valueBuilders map[istructs.RecordID]istructs.IStateValueBuilder
+	nextSingletonID istructs.RecordID
+	singletonIDs    map[appdef.QName]istructs.RecordID
+	storageQName    appdef.QName
+	keyBuilders     []*mockedKeyBuilder
+	valueBuilders   map[istructs.RecordID]istructs.IStateValueBuilder
 }
 
 func (s *MockedStorage) NewKeyBuilder(
 	entity appdef.QName,
 	existingBuilder istructs.IStateKeyBuilder,
 ) istructs.IStateKeyBuilder {
-	kb := newMockedKeyBuilder(s.storageQName, entity, 0)
+	kb := newMockedKeyBuilder(s, entity)
 	kb.IsNew_ = true
 
 	if existingBuilder != nil {
@@ -136,30 +138,44 @@ func (s *MockedStorage) PutValue(recordID istructs.RecordID, value *coreutils.Te
 	s.valueBuilders[recordID] = newMockedValueBuilder(newMockedStateValue([]*coreutils.TestObject{value}))
 }
 
+func (s *MockedStorage) GetSingletonID(singletonQName appdef.QName) istructs.RecordID {
+	id, ok := s.singletonIDs[singletonQName]
+	if !ok {
+		id = s.nextSingletonID
+		s.singletonIDs[singletonQName] = id
+		s.nextSingletonID++
+	}
+
+	return id
+}
+
 func NewMockedStorage(storageQName appdef.QName) *MockedStorage {
 	return &MockedStorage{
-		storageQName:  storageQName,
-		keyBuilders:   make([]*mockedKeyBuilder, 0),
-		valueBuilders: make(map[istructs.RecordID]istructs.IStateValueBuilder),
+		storageQName:    storageQName,
+		keyBuilders:     make([]*mockedKeyBuilder, 0),
+		valueBuilders:   make(map[istructs.RecordID]istructs.IStateValueBuilder),
+		singletonIDs:    make(map[appdef.QName]istructs.RecordID),
+		nextSingletonID: istructs.MinReservedBaseRecordID,
 	}
 }
 
 type mockedKeyBuilder struct {
 	baseKeyBuilder
+	mockedStorage *MockedStorage
 	coreutils.TestObject
 }
 
-func newMockedKeyBuilder(storage, entity appdef.QName, id istructs.RecordID) *mockedKeyBuilder {
+func newMockedKeyBuilder(mockedStorage *MockedStorage, entity appdef.QName) *mockedKeyBuilder {
 	return &mockedKeyBuilder{
 		TestObject: coreutils.TestObject{
 			Name: entity,
-			Id:   id,
 			Data: make(map[string]any),
 		},
 		baseKeyBuilder: baseKeyBuilder{
-			storage: storage,
+			storage: mockedStorage.storageQName,
 			entity:  entity,
 		},
+		mockedStorage: mockedStorage,
 	}
 }
 
@@ -239,7 +255,7 @@ func (mkb *mockedKeyBuilder) PutBool(field appdef.FieldName, value bool) {
 	// if IsSingleton is true, then ID must be set to MinReservedBaseRecordID
 	// it is workaround for singleton entities
 	if field == sys.Storage_Record_Field_IsSingleton && value {
-		mkb.TestObject.Id = istructs.MinReservedBaseRecordID
+		mkb.TestObject.Id = mkb.mockedStorage.GetSingletonID(mkb.Name)
 	}
 }
 
