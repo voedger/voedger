@@ -287,6 +287,7 @@ func (mvb *mockedValueBuilder) PutInt32(name appdef.FieldName, i int32) {
 
 func (mvb *mockedValueBuilder) PutInt64(name appdef.FieldName, i int64) {
 	if name == appdef.SystemField_ID {
+		//nolint:gosec
 		mvb.value.TestObjects[0].Id = istructs.RecordID(i)
 
 		return
@@ -479,8 +480,10 @@ func (m *mockedStateValue) AsRecordID(name appdef.FieldName) istructs.RecordID {
 
 	switch t := m.TestObjects[0].Data[name].(type) {
 	case int32:
+		//nolint:gosec
 		return istructs.RecordID(t)
 	case int64:
+		//nolint:gosec
 		return istructs.RecordID(t)
 	case istructs.RecordID:
 		return t
