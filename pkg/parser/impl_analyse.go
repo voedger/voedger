@@ -111,7 +111,7 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 		ictx.setPkg(p)
 		iterateContext(ictx, func(stmt interface{}, ictx *iterateCtx) {
 			if v, ok := stmt.(*WorkspaceStmt); ok {
-				analyseWorkspace(v, ictx)
+				analyzeWorkspace(v, ictx)
 			}
 		})
 	}
@@ -120,7 +120,10 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 		ictx.setPkg(p)
 		iterateContext(ictx, func(stmt interface{}, ictx *iterateCtx) {
 			if v, ok := stmt.(*AlterWorkspaceStmt); ok {
-				analyseAlterWorkspace(v, ictx)
+				analyzeAlterWorkspace(v, ictx)
+				if v.alteredWorkspace != nil {
+					includeChildWorkspaces(v, v.alteredWorkspace)
+				}
 			}
 		})
 	}
@@ -130,6 +133,7 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 		iterateContext(ictx, func(stmt interface{}, ictx *iterateCtx) {
 			if v, ok := stmt.(*WorkspaceStmt); ok {
 				includeFromInheritedWorkspaces(v, ictx)
+				includeChildWorkspaces(v, v)
 			}
 		})
 	}
@@ -494,7 +498,7 @@ func analyzeUseWorkspace(u *UseWorkspaceStmt, c *iterateCtx) {
 	}
 }
 
-func analyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
+func analyzeAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 	// find all included statements
 
 	var iterTableItems func(ws *WorkspaceStmt, wsctx *wsCtx, items []TableItemExpr)
@@ -1066,7 +1070,7 @@ func useStmtInWs(wsctx *wsCtx, stmtPackage *PackageSchemaAST, stmt interface{}) 
 	}
 }
 
-func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
+func analyzeWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 
 	wsc := &wsCtx{
 		pkg:  c.pkg,
@@ -1219,6 +1223,14 @@ func includeFromInheritedWorkspaces(ws *WorkspaceStmt, c *iterateCtx) {
 		}
 	}
 	addFromInheritedWs(ws, c.wsCtxs[ws])
+}
+
+func includeChildWorkspaces(collection IStatementCollection, ws *WorkspaceStmt) {
+	collection.Iterate(func(stmt interface{}) {
+		if child, ok := stmt.(*WorkspaceStmt); ok {
+			ws.usedWorkspaces = append(ws.usedWorkspaces, child)
+		}
+	})
 }
 
 func analyzeUsedWorkspaces(uws *UseWorkspaceStmt, _ *iterateCtx) {
