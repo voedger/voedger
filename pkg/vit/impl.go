@@ -42,7 +42,7 @@ import (
 func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 	useCas := coreutils.IsCassandraStorage()
 	if !vitCfg.isShared {
-		vit = newVit(t, vitCfg, useCas)
+		vit = newVit(t, vitCfg, useCas, false)
 	} else {
 		ok := false
 		if vit, ok = vits[vitCfg]; ok {
@@ -51,7 +51,7 @@ func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 			}
 			vit.isFinalized = false
 		} else {
-			vit = newVit(t, vitCfg, useCas)
+			vit = newVit(t, vitCfg, useCas, false)
 			vits[vitCfg] = vit
 		}
 	}
@@ -72,7 +72,7 @@ func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 	return vit
 }
 
-func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
+func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *VIT {
 	cfg := vvm.NewVVMDefaultConfig()
 
 	// only dynamic ports are used in tests
@@ -146,6 +146,10 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 
 	// launch the server
 	require.NoError(t, vit.Launch())
+
+	if vvmLaunchOnly {
+		return vit
+	}
 
 	for _, app := range vitPreConfig.vitApps {
 		// generate verified value tokens if queried
@@ -260,7 +264,7 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppW
 }
 
 func NewVITLocalCassandra(tb testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
-	vit = newVit(tb, vitCfg, true)
+	vit = newVit(tb, vitCfg, true, false)
 	for _, opt := range opts {
 		opt(vit)
 	}

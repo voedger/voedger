@@ -5,6 +5,7 @@
 package invite
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -54,6 +55,12 @@ func execCmdInitiateJoinWorkspace(tm coreutils.ITime) func(args istructs.ExecCom
 		svPrincipal, err := args.State.MustExist(skbPrincipal)
 		if err != nil {
 			return
+		}
+
+		loginFromToken := svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name)
+		emailWeSentTo := svCDocInvite.AsString(field_Email)
+		if loginFromToken != emailWeSentTo {
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("invitation was sent to %s but current login is %s", emailWeSentTo, loginFromToken))
 		}
 
 		svbCDocInvite, err := args.Intents.UpdateValue(skbCDocInvite, svCDocInvite)

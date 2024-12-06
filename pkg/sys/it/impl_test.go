@@ -348,6 +348,39 @@ func TestErrorFromResponseIntent(t *testing.T) {
 	})
 }
 
+func TestDeniedResources(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	t.Run("command", func(t *testing.T) {
+		body := `{}`
+		vit.PostWS(ws, "c.app1pkg.TestDeniedCmd", body, coreutils.Expect403())
+	})
+
+	t.Run("query", func(t *testing.T) {
+		body := `{}`
+		vit.PostWS(ws, "q.app1pkg.TestDeniedQuery", body, coreutils.Expect403())
+	})
+
+	t.Run("entire cdoc", func(t *testing.T) {
+		body := `{"args":{"Schema":"app1pkg.TestDeniedCDoc"},"elements":[{"fields":["sys.ID"]}]}`
+		vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect403())
+	})
+
+	t.Run("cerain fields of cdoc", func(t *testing.T) {
+		t.Skip("wait for ACL in VSQL")
+		body := `{"args":{"Schema":"app1pkg.TestCDocWithDeniedFields"},"elements":[{"fields":["Fld1"]}]}`
+		vit.PostWS(ws, "q.sys.Collection", body)
+
+		body = `{"args":{"Schema":"app1pkg.TestCDocWithDeniedFields"},"elements":[{"fields":["DeniedFld2"]}]}`
+		vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect403())
+
+		body = `{"args":{"Schema":"app1pkg.TestCDocWithDeniedFields"},"elements":[{"fields":["DeniedFld2","Fld1"]}]}`
+		vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect403())
+	})
+}
+
 func TestNullability_SetEmptyString(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)

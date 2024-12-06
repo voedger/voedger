@@ -23,7 +23,7 @@ func JSONUnmarshal(b []byte, ptrToPayload interface{}) error {
 }
 
 func ClarifyJSONNumber(value json.Number, kind appdef.DataKind) (val interface{}, err error) {
-	switch kind {
+switch kind {
 	case appdef.DataKind_int32:
 		int64Val, err := value.Int64()
 		if err != nil {
