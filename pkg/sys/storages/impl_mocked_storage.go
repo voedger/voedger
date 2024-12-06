@@ -208,7 +208,7 @@ func (mkb *mockedKeyBuilder) PutInt32(field appdef.FieldName, value int32) {
 
 func (mkb *mockedKeyBuilder) PutInt64(field appdef.FieldName, value int64) {
 	mkb.TestObject.Data[field] = value
-	if field == "ID" {
+	if field == sys.Storage_Record_Field_ID {
 		//nolint:gosec
 		mkb.TestObject.Id = istructs.RecordID(value)
 	}
