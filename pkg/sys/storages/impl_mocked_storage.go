@@ -422,12 +422,12 @@ func (m *mockedStateValue) AsInt32(name appdef.FieldName) int32 {
 	case int32:
 		return t
 	case json.Number:
-		val, err := t.Int64()
+		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_int32)
 		if err != nil {
-			panic(fmt.Errorf("json.Number.AsInt64(): %w", err))
+			panic(fmt.Errorf("coreutils.ClarifyJSONNumber: %w", err))
 		}
-		//nolint:gosec
-		return int32(val)
+
+		return t2.(int32)
 	default:
 		panic(fmt.Sprintf("mockedStateValue.AsInt32(%s): unexpected type", name))
 	}
@@ -438,23 +438,47 @@ func (m *mockedStateValue) AsInt64(name appdef.FieldName) int64 {
 	case int64:
 		return t
 	case json.Number:
-		val, err := t.Int64()
+		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_int64)
 		if err != nil {
-			panic(fmt.Errorf("json.Number.AsInt64(): %w", err))
+			panic(fmt.Errorf("coreutils.ClarifyJSONNumber: %w", err))
 		}
 
-		return val
+		return t2.(int64)
 	default:
 		panic(fmt.Sprintf("mockedStateValue.AsInt64(%s): unexpected type", name))
 	}
 }
 
 func (m *mockedStateValue) AsFloat32(name appdef.FieldName) float32 {
-	return m.TestObjects[0].Data[name].(float32)
+	switch t := m.TestObjects[0].Data[name].(type) {
+	case float32:
+		return t
+	case json.Number:
+		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_float32)
+		if err != nil {
+			panic(fmt.Errorf("coreutils.ClarifyJSONNumber: %w", err))
+		}
+
+		return t2.(float32)
+	default:
+		panic(fmt.Sprintf("mockedStateValue.AsFloat32(%s): unexpected type", name))
+	}
 }
 
 func (m *mockedStateValue) AsFloat64(name appdef.FieldName) float64 {
-	return m.TestObjects[0].Data[name].(float64)
+	switch t := m.TestObjects[0].Data[name].(type) {
+	case float64:
+		return t
+	case json.Number:
+		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_float64)
+		if err != nil {
+			panic(fmt.Errorf("coreutils.ClarifyJSONNumber: %w", err))
+		}
+
+		return t2.(float64)
+	default:
+		panic(fmt.Sprintf("mockedStateValue.AsFloat64(%s): unexpected type", name))
+	}
 }
 
 func (m *mockedStateValue) AsBytes(name appdef.FieldName) []byte {
