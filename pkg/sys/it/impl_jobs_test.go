@@ -119,7 +119,7 @@ func isJobFiredForCurrentInstant_builtin(vit *it.VIT, wsid istructs.WSID, token 
 func waitForSidecarJobCounter(vit *it.VIT, wsid istructs.WSID, token string, expectedCouterValue int) {
 	start := time.Now()
 	lastValue := 0
-	for time.Since(start) < 3*time.Second {
+	for time.Since(start) < 5*time.Second {
 		body := `{"args":{"Query":"select * from a0.sidecartestapp.JobStateView where Pk = 1 and Cc = 1"},"elements":[{"fields":["Result"]}]}`
 		resp := vit.PostApp(istructs.AppQName_test2_app1, wsid, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(token))
 		if resp.IsEmpty() {

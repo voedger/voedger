@@ -74,6 +74,7 @@ type cmdWorkpiece struct {
 	syncProjectorsStart          time.Time
 	principals                   []iauthnz.Principal
 	principalPayload             payloads.PrincipalPayload
+	roles                        []appdef.QName
 	parsedCUDs                   []parsedCUD
 	wsDesc                       istructs.IRecord
 	hostStateProvider            *hostStateProvider
@@ -91,8 +92,9 @@ type implIDGenerator struct {
 }
 
 type parsedCUD struct {
-	opKind         iauthnz.OperationKindType
-	existingRecord istructs.IRecord // create -> nil
+	opKind         appdef.OperationKind
+	opKindOld      iauthnz.OperationKindType // TODO: eliminate when all application will use ACL in VSQL
+	existingRecord istructs.IRecord          // create -> nil
 	id             int64
 	qName          appdef.QName
 	fields         coreutils.MapObject

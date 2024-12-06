@@ -91,13 +91,13 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 		state.Status = iblobstorage.BLOBStatus_Unknown
 	}
 
-	if errStatus := b.writeState(&state, pKeyState, cColState); errStatus != nil {
+	if errState := b.writeState(&state, pKeyState, cColState); errState != nil {
 		// notest
 		if err == nil {
 			// err as priority over errStatus
-			return errStatus
+			return errState
 		}
-		logger.Error("failed to write blob state: " + errStatus.Error())
+		logger.Error("failed to write blob state: " + errState.Error())
 	}
 	return err
 }
@@ -112,11 +112,9 @@ func mutateBucketNumber(key []byte, bucketNumber uint64) (mutatedKey []byte) {
 	return key
 }
 
-func getStateKeys(blobKey []byte) (pKeyState, cColState []byte) {
-	pKeyState = newKeyWithBucketNumber(blobKey, zeroBucket)
-	cColState = make([]byte, uint64Size)
-	binary.LittleEndian.PutUint64(cColState, zeroCCol)
-	return
+func getStateKeys(blobKey []byte) (pKeyState, cColSt []byte) {
+	pKeyState = newKeyWithBucketNumber(blobKey, 0)
+	return pKeyState, cColState
 }
 
 func (b *bStorageType) WriteBLOB(ctx context.Context, key iblobstorage.PersistentBLOBKeyType, descr iblobstorage.DescrType, reader io.Reader, limiter iblobstorage.WLimiterType) (err error) {
@@ -135,7 +133,7 @@ func (b *bStorageType) ReadBLOB(ctx context.Context, blobKey iblobstorage.IBLOBK
 	state, err := b.QueryBLOBState(ctx, blobKey)
 	if err == nil {
 		stateExists = true
-	} else if !errors.Is(err, iblobstorage.ErrBLOBNotFound)  {
+	} else if !errors.Is(err, iblobstorage.ErrBLOBNotFound) {
 		// notest
 		return err
 	}
