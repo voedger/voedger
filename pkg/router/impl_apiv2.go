@@ -118,6 +118,7 @@ func requestHandlerV2_blobs() http.HandlerFunc {
 		isBLOBCreate := !notBLOBCreate
 		_ = blobID
 		_ = isBLOBCreate
+		// note: request lead to create -> 201 Created
 		switch req.Method {
 		case http.MethodGet:
 		case http.MethodPost:
@@ -150,6 +151,7 @@ func requestHandlerV2_table() http.HandlerFunc {
 			return
 		}
 		_ = docQName
+		// note: request lead to create -> 201 Created
 		writeNotImplemented(resp)
 	}
 }
