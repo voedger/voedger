@@ -18,9 +18,11 @@ func Test_IsOperationAllowed(t *testing.T) {
 
 	var app appdef.IAppDef
 
+	wsName := appdef.NewQName("test", "workspace")
 	docName := appdef.NewQName("test", "doc")
 	queryName := appdef.NewQName("test", "qry")
 	cmdName := appdef.NewQName("test", "cmd")
+	tagName := appdef.NewQName("test", "tag")
 
 	reader := appdef.NewQName("test", "reader")
 	writer := appdef.NewQName("test", "writer")
@@ -30,13 +32,16 @@ func Test_IsOperationAllowed(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb := adb.AddWorkspace(wsName)
+
+		wsb.AddTag(tagName, "test tag")
 
 		doc := wsb.AddCDoc(docName)
 		doc.
 			AddField("field1", appdef.DataKind_int32, true).
 			AddField("hiddenField", appdef.DataKind_int32, false).
 			AddField("field3", appdef.DataKind_int32, false)
+		doc.SetTag(tagName)
 
 		qry := wsb.AddQuery(queryName)
 		qry.SetResult(docName)
@@ -47,10 +52,10 @@ func Test_IsOperationAllowed(t *testing.T) {
 		_ = wsb.AddRole(reader)
 		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Select},
-			filter.QNames(docName),
+			filter.And(filter.Types(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
 			nil,
 			reader,
-			"grant select doc.* to reader")
+			"grant select any CDoc with tag to reader")
 		wsb.Revoke(
 			[]appdef.OperationKind{appdef.OperationKind_Select},
 			filter.QNames(docName),
@@ -67,10 +72,10 @@ func Test_IsOperationAllowed(t *testing.T) {
 		_ = wsb.AddRole(writer)
 		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Insert},
-			filter.QNames(docName),
+			filter.And(filter.Types(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
 			nil,
 			writer,
-			"grant insert doc.* to writer")
+			"grant insert any CDoc with tag to writer")
 		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Update},
 			filter.QNames(docName),
@@ -85,18 +90,18 @@ func Test_IsOperationAllowed(t *testing.T) {
 			"revoke update doc.hiddenField from writer")
 		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
-			filter.QNames(cmdName),
+			filter.AllFunctions(wsName),
 			nil,
 			writer,
-			"grant execute cmd to writer")
+			"grant execute all commands and queries to writer")
 
 		_ = wsb.AddRole(intruder)
 		wsb.RevokeAll(
-			filter.QNames(docName),
+			filter.Types(wsName, appdef.TypeKind_CDoc),
 			intruder,
-			"revoke all access to doc from intruder")
+			"revoke all access to CDocs from intruder")
 		wsb.RevokeAll(
-			filter.QNames(queryName, cmdName),
+			filter.AllFunctions(wsName),
 			intruder,
 			"revoke all access to functions from intruder")
 
@@ -239,12 +244,12 @@ func Test_IsOperationAllowed(t *testing.T) {
 				allowedFields: nil,
 			},
 			{
-				name:          "deny execute query for writer",
+				name:          "allow execute query for writer",
 				op:            appdef.OperationKind_Execute,
 				res:           queryName,
 				fields:        nil,
 				role:          writer,
-				allowed:       false,
+				allowed:       true,
 				allowedFields: nil,
 			},
 			// intruder tests
