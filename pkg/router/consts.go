@@ -22,11 +22,18 @@ const (
 	DefaultRouterReadTimeout        = 15
 	DefaultRouterWriteTimeout       = 15
 	localhost                       = "127.0.0.1"
-	URLPlaceholder_WSID             = "wsid"
-	URLPlaceholder_AppOwner         = "appOwner"
-	URLPlaceholder_AppName          = "appName"
+	URLPlaceholder_wsid             = "wsid"
+	URLPlaceholder_appOwner         = "appOwner"
+	URLPlaceholder_appName          = "appName"
 	URLPlaceholder_blobID           = "blobID"
-	URLPlaceholder_ResourceName     = "resourceName"
+	URLPlaceholder_resourceName     = "resourceName"
+	URLPlaceholder_pkg              = "pkg"
+	URLPlaceholder_table            = "table"
+	URLPlaceholder_id               = "id"
+	URLPlaceholder_command          = "command"
+	URLPlaceholder_query            = "query"
+	URLPlaceholder_view             = "view"
+	URLPlaceholder_workspace        = "workspace"
 	hours24                         = 24 * time.Hour
 	temporaryBLOBIDLenTreshold      = 40 // greater -> temporary, persistent oherwise
 )

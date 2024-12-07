@@ -359,7 +359,7 @@ func blobMessageHandler(vvmCtx context.Context, sc iprocbus.ServiceChannel, blob
 
 func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Request, details interface{}) {
 	vars := mux.Vars(req)
-	wsid, err := strconv.ParseUint(vars[URLPlaceholder_WSID], utils.DecimalBase, utils.BitSize64)
+	wsid, err := strconv.ParseUint(vars[URLPlaceholder_wsid], utils.DecimalBase, utils.BitSize64)
 	if err != nil {
 		// notest: checked by router url rule
 		panic(err)
@@ -370,7 +370,7 @@ func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Req
 			resp:            resp,
 			wsid:            istructs.WSID(wsid),
 			doneChan:        make(chan struct{}),
-			appQName:        appdef.NewAppQName(vars[URLPlaceholder_AppOwner], vars[URLPlaceholder_AppName]),
+			appQName:        appdef.NewAppQName(vars[URLPlaceholder_appOwner], vars[URLPlaceholder_appName]),
 			header:          req.Header,
 			wLimiterFactory: s.WLimiterFactory,
 		},

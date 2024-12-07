@@ -306,10 +306,10 @@ func newRouter() *router {
 
 func (r *router) setUpRoutes(appRequestHandler http.HandlerFunc) {
 	appRequestPath := fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}",
-		routerpkg.URLPlaceholder_AppOwner,
-		routerpkg.URLPlaceholder_AppName,
-		routerpkg.URLPlaceholder_WSID,
-		routerpkg.URLPlaceholder_ResourceName,
+		routerpkg.URLPlaceholder_appOwner,
+		routerpkg.URLPlaceholder_appName,
+		routerpkg.URLPlaceholder_wsid,
+		routerpkg.URLPlaceholder_resourceName,
 	)
 	r.router.HandleFunc(appRequestPath, appRequestHandler).Name("api").Methods("POST", "PATCH", "OPTIONS")
 	r.router.Name("static").PathPrefix(staticPath).MatcherFunc(r.matchStaticContent)
