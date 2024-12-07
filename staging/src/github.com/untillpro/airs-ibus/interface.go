@@ -101,6 +101,8 @@ type IBus interface {
 	// SendParallelResponse2 is called again or SendResponse is called after -> panic
 	// IResultSenderClosable.Close() must be called at the end
 	SendParallelResponse2(sender interface{}) (rsender IResultSenderClosable)
+
+	SetChunkedResponse()
 }
 
 type ISender interface {
