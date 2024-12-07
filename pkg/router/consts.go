@@ -33,6 +33,7 @@ const (
 	URLPlaceholder_command          = "command"
 	URLPlaceholder_query            = "query"
 	URLPlaceholder_view             = "view"
+	URLPlaceholder_workspace        = "workspace"
 	hours24                         = 24 * time.Hour
 	temporaryBLOBIDLenTreshold      = 40 // greater -> temporary, persistent oherwise
 )

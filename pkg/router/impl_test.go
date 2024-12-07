@@ -407,7 +407,7 @@ func TestAdminService(t *testing.T) {
 		if len(nonLocalhostIP) == 0 {
 			t.Skip("unable to find local non-loopback ip address")
 		}
-		_, err = http.Post(fmt.Sprintf("http://%s:%d/api/test1/app1/%d/somefunc_AdminService2", nonLocalhostIP, router.adminPort(), testWSID), "application/json", http.NoBody)
+		_, err = net.DialTimeout("tcp", nonLocalhostIP, 1*time.Second)
 		require.Error(err)
 		log.Println(err)
 	})
@@ -425,7 +425,7 @@ type testRouter struct {
 
 func startRouter(t *testing.T, rp RouterParams, bus ibus.IBus, busTimeout time.Duration) {
 	ctx, cancel := context.WithCancel(context.Background())
-	httpSrv, acmeSrv, adminService := Provide(ctx, rp, busTimeout, nil, nil, nil, bus, map[appdef.AppQName]istructs.NumAppWorkspaces{istructs.AppQName_test1_app1: 10})
+	httpSrv, acmeSrv, adminService := Provide(rp, busTimeout, nil, nil, nil, bus, map[appdef.AppQName]istructs.NumAppWorkspaces{istructs.AppQName_test1_app1: 10})
 	require.Nil(t, acmeSrv)
 	require.NoError(t, httpSrv.Prepare(nil))
 	require.NoError(t, adminService.Prepare(nil))

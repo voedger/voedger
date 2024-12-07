@@ -62,7 +62,9 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 	s.registerDebugHandlers()
 
 	// must be the last
-	s.registerReverseProxyHandler()
+	if err := s.registerReverseProxyHandler(); err != nil {
+		return err
+	}
 
 	if s.listener, err = net.Listen("tcp", s.listenAddress); err != nil {
 		return err
@@ -86,6 +88,15 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 
 // pipeline.IService
 func (s *httpService) Run(ctx context.Context) {
+	if s.BlobberParams != nil {
+		for i := 0; i < s.BlobberParams.BLOBWorkersNum; i++ {
+			s.blobWG.Add(1)
+			go func() {
+				defer s.blobWG.Done()
+				blobMessageHandler(ctx, s.procBus.ServiceChannel(0, 0), s.BLOBStorage, s.bus, s.busTimeout)
+			}()
+		}
+	}
 	s.server.BaseContext = func(l net.Listener) context.Context {
 		return ctx // need to track both client disconnect and app finalize
 	}
