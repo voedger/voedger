@@ -35,11 +35,11 @@ func ExampleAnd() {
 
 	example := func(flt appdef.IFilter) {
 		fmt.Println()
-		fmt.Println("The", flt, "And() children:")
+		fmt.Println("The filter", flt, "children:")
 		for f := range flt.And() {
 			fmt.Println("-", f)
 		}
-		fmt.Println("Testing", flt, "in", ws)
+		fmt.Println("Testing filter", flt, "in", ws)
 		for t := range ws.LocalTypes() {
 			fmt.Println("-", t, "is matched:", flt.Match(t))
 		}
@@ -51,18 +51,18 @@ func ExampleAnd() {
 	// Output:
 	// This example demonstrates how to work with the And filter
 	//
-	// The filter.And(filter.Types(workspace «test.workspace»: ODoc), filter.QNames(test.doc)) And() children:
-	// - filter.Types(workspace «test.workspace»: ODoc)
-	// - filter.QNames(test.doc)
-	// Testing filter.And(filter.Types(workspace «test.workspace»: ODoc), filter.QNames(test.doc)) in Workspace «test.workspace»
+	// The filter Types(ODoc from Workspace test.workspace) and QNames(test.doc) children:
+	// - Types(ODoc from Workspace test.workspace)
+	// - QNames(test.doc)
+	// Testing filter Types(ODoc from Workspace test.workspace) and QNames(test.doc) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true
 	// - Object «test.object» is matched: false
 	//
-	// The filter.And(filter.QNames(test.other), filter.Types(workspace «test.workspace»: Command)) And() children:
-	// - filter.QNames(test.other)
-	// - filter.Types(workspace «test.workspace»: Command)
-	// Testing filter.And(filter.QNames(test.other), filter.Types(workspace «test.workspace»: Command)) in Workspace «test.workspace»
+	// The filter QNames(test.other) and Types(Command from Workspace test.workspace) children:
+	// - QNames(test.other)
+	// - Types(Command from Workspace test.workspace)
+	// Testing filter QNames(test.other) and Types(Command from Workspace test.workspace) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: false
 	// - Object «test.object» is matched: false

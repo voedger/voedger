@@ -38,17 +38,19 @@ func (f typesFilter) Match(t appdef.IType) bool {
 }
 
 func (f typesFilter) String() string {
-	s := ""
-	for t := range f.types.Values() {
-		if len(s) > 0 {
+	// Types(…)
+	// Types(… from Workspace …)
+	s := "Types("
+	for i, t := range f.types.All() {
+		if i > 0 {
 			s += ", "
 		}
 		s += t.TrimString()
 	}
 	if f.ws != appdef.NullQName {
-		s = fmt.Sprintf("workspace «%s»: %s", f.ws, s)
+		s += fmt.Sprintf(" from Workspace %s", f.ws)
 	}
-	return fmt.Sprintf("filter.%s(%s)", f.Kind().TrimString(), s)
+	return s + ")"
 }
 
 func (f typesFilter) Types() iter.Seq[appdef.TypeKind] { return f.types.Values() }

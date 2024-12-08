@@ -35,30 +35,30 @@ func ExampleNot() {
 
 	example := func(flt appdef.IFilter) {
 		fmt.Println()
-		fmt.Println("The", flt, "Not() filter:")
+		fmt.Println("The filter", flt, "negative sub-filter:")
 		fmt.Println("-", flt.Not())
-		fmt.Println("Testing", flt, "in", ws)
+		fmt.Println("Testing filter", flt, "in", ws)
 		for t := range ws.LocalTypes() {
 			fmt.Println("-", t, "is matched:", flt.Match(t))
 		}
 	}
 
 	example(filter.Not(filter.Types(wsName, appdef.TypeKind_Command)))
-	example(filter.Not(filter.QNames(doc, obj)))
+	example(filter.Not(filter.Or(filter.QNames(doc), filter.QNames(obj))))
 
 	// Output:
 	// This example demonstrates how to work with the Not filter
 	//
-	// The filter.Not(filter.Types(workspace «test.workspace»: Command)) Not() filter:
-	// - filter.Types(workspace «test.workspace»: Command)
-	// Testing filter.Not(filter.Types(workspace «test.workspace»: Command)) in Workspace «test.workspace»
+	// The filter not Types(Command from Workspace test.workspace) negative sub-filter:
+	// - Types(Command from Workspace test.workspace)
+	// Testing filter not Types(Command from Workspace test.workspace) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true
 	// - Object «test.object» is matched: true
 	//
-	// The filter.Not(filter.QNames(test.doc, test.object)) Not() filter:
-	// - filter.QNames(test.doc, test.object)
-	// Testing filter.Not(filter.QNames(test.doc, test.object)) in Workspace «test.workspace»
+	// The filter not (QNames(test.doc) or QNames(test.object)) negative sub-filter:
+	// - QNames(test.doc) or QNames(test.object)
+	// Testing filter not (QNames(test.doc) or QNames(test.object)) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: true
 	// - ODoc «test.doc» is matched: false
 	// - Object «test.object» is matched: false
