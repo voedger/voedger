@@ -6,7 +6,6 @@
 package router
 
 import (
-	"context"
 	"log"
 	"net/http"
 	"time"
@@ -23,14 +22,14 @@ import (
 )
 
 // port == 443 -> httpsService + ACMEService, otherwise -> HTTPService only, ACMEService is nil
-func Provide(vvmCtx context.Context, rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker, bp *BlobberParams, autocertCache autocert.Cache,
+func Provide(rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker, bp *BlobberParams, autocertCache autocert.Cache,
 	bus ibus.IBus, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
-	httpServ := getHttpService(vvmCtx, "HTTP server", coreutils.ServerAddress(rp.Port), rp, aBusTimeout, broker, bp, bus, numsAppsWorkspaces)
+	httpServ := getHttpService("HTTP server", coreutils.ServerAddress(rp.Port), rp, aBusTimeout, broker, bp, bus, numsAppsWorkspaces)
 
 	if coreutils.IsTest() {
 		adminEndpoint = "127.0.0.1:0"
 	}
-	adminSrv = getHttpService(vvmCtx, "Admin HTTP server", adminEndpoint, RouterParams{
+	adminSrv = getHttpService("Admin HTTP server", adminEndpoint, RouterParams{
 		WriteTimeout:     rp.WriteTimeout,
 		ReadTimeout:      rp.ReadTimeout,
 		ConnectionsLimit: rp.ConnectionsLimit,
@@ -76,7 +75,7 @@ func Provide(vvmCtx context.Context, rp RouterParams, aBusTimeout time.Duration,
 	return httpsService, acmeService, adminSrv
 }
 
-func getHttpService(vvmCtx context.Context, name string, listenAddress string, rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker, bp *BlobberParams,
+func getHttpService(name string, listenAddress string, rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker, bp *BlobberParams,
 	bus ibus.IBus, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) *httpService {
 	httpServ := &httpService{
 		RouterParams:       rp,
@@ -91,14 +90,6 @@ func getHttpService(vvmCtx context.Context, name string, listenAddress string, r
 
 	if bp != nil {
 		bp.procBus = iprocbusmem.Provide(bp.ServiceChannels)
-		for i := 0; i < bp.BLOBWorkersNum; i++ {
-			httpServ.blobWG.Add(1)
-			go func() {
-				defer httpServ.blobWG.Done()
-				blobMessageHandler(vvmCtx, bp.procBus.ServiceChannel(0, 0), bp.BLOBStorage, bus, aBusTimeout)
-			}()
-		}
-
 	}
 	return httpServ
 }

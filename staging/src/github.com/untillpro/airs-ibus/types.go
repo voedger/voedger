@@ -129,3 +129,12 @@ type IResultSenderClosable interface {
 	Close(err error)
 }
 type RequestHandler func(requestCtx context.Context, sender ISender, request Request)
+
+type IElementSender interface {
+	Send(data interface{}) error
+}
+
+type IElementSenderClosable interface {
+	IElementSender
+	Close(err error)
+}

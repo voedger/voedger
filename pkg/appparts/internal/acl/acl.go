@@ -6,9 +6,13 @@
 package acl
 
 import (
+	"bytes"
+	"fmt"
 	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/iauthnz"
 )
 
 // Returns recursive list of role ancestors for specified role.
@@ -76,6 +80,11 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 		roles.Add(RecursiveRoleAncestors(role)...)
 	}
 
+	if slices.Contains(roles, iauthnz.QNameRoleSystem) {
+		// nothung else matters
+		return true, fld, nil
+	}
+
 	result := false
 	for rule := range app.ACL {
 		if slices.Contains(rule.Ops(), op) {
@@ -119,6 +128,7 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 		}
 	}
 
+	var allowed []appdef.FieldName
 	if str != nil {
 		if result {
 			if len(fld) > 0 {
@@ -131,16 +141,33 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 			}
 		}
 		if len(allowedFields) > 0 {
-			allowed := make([]appdef.FieldName, 0, len(allowedFields))
+			allowed = make([]appdef.FieldName, 0, len(allowedFields))
 			for _, fld := range str.Fields() {
 				f := fld.Name()
 				if _, ok := allowedFields[f]; ok {
 					allowed = append(allowed, f)
 				}
 			}
-			return result, allowed, nil
 		}
 	}
 
-	return result, nil, nil
+	if !result && logger.IsVerbose() {
+		logger.Verbose(fmt.Sprintf("%s for %s: [%s] -> deny", op, res, rolesToString(rol)))
+		for rule := range app.ACL {
+			logger.Verbose(fmt.Sprintf("ops: %v, res: %s, policy %s", rule.Ops(), rule.Resources().On(), rule.Policy()))
+		}
+	}
+
+	return result, allowed, nil
+}
+
+func rolesToString(roles []appdef.QName) string {
+	buf := bytes.NewBufferString("")
+	for i, role := range roles {
+		if i > 0 {
+			buf.WriteString(",")
+		}
+		buf.WriteString(role.String())
+	}
+	return buf.String()
 }

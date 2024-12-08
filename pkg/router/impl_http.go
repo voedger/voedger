@@ -53,7 +53,16 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 	// https://dev.untill.com/projects/#!627072
 	s.router.SkipClean(true)
 
-	if err = s.registerHandlers(s.busTimeout, s.numsAppsWorkspaces); err != nil {
+	s.registerRouterCheckerHandler()
+
+	s.registerHandlersV1()
+
+	s.registerHandlersV2()
+
+	s.registerDebugHandlers()
+
+	// must be the last
+	if err := s.registerReverseProxyHandler(); err != nil {
 		return err
 	}
 
@@ -79,6 +88,15 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 
 // pipeline.IService
 func (s *httpService) Run(ctx context.Context) {
+	if s.BlobberParams != nil {
+		for i := 0; i < s.BlobberParams.BLOBWorkersNum; i++ {
+			s.blobWG.Add(1)
+			go func() {
+				defer s.blobWG.Done()
+				blobMessageHandler(ctx, s.procBus.ServiceChannel(0, 0), s.BLOBStorage, s.bus, s.busTimeout)
+			}()
+		}
+	}
 	s.server.BaseContext = func(l net.Listener) context.Context {
 		return ctx // need to track both client disconnect and app finalize
 	}
@@ -117,36 +135,7 @@ func (s *httpService) GetPort() int {
 	return int(port)
 }
 
-func (s *httpService) registerHandlers(busTimeout time.Duration, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (err error) {
-	redirectMatcher, err := s.getRedirectMatcher()
-	if err != nil {
-		return err
-	}
-	s.router.HandleFunc("/api/check", corsHandler(checkHandler())).Methods("POST", "OPTIONS").Name("router check")
-	/*
-		launching app from localhost from browser. Trying to execute POST from web app within browser.
-		Browser sees that hosts differs: from localhost to alpha -> need CORS -> denies POST and executes the same request with OPTIONS header
-		-> need to allow OPTIONS
-	*/
-	if s.BlobberParams != nil {
-		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}", URLPlaceholder_AppOwner, URLPlaceholder_AppName, URLPlaceholder_WSID), corsHandler(s.blobWriteRequestHandler())).
-			Methods("POST", "OPTIONS").
-			Name("blob write")
-
-		// allowed symbols according to see base64.URLEncoding
-		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9-_]+}", URLPlaceholder_AppOwner, URLPlaceholder_AppName, URLPlaceholder_WSID, URLPlaceholder_blobID), corsHandler(s.blobReadRequestHandler())).
-			Methods("POST", "GET", "OPTIONS").
-			Name("blob read")
-	}
-	s.router.HandleFunc(fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}", URLPlaceholder_AppOwner, URLPlaceholder_AppName,
-		URLPlaceholder_WSID, URLPlaceholder_ResourceName), corsHandler(RequestHandler(s.bus, busTimeout, numsAppsWorkspaces))).
-		Methods("POST", "PATCH", "OPTIONS").Name("api")
-
-	s.router.Handle("/n10n/channel", corsHandler(s.subscribeAndWatchHandler())).Methods("GET")
-	s.router.Handle("/n10n/subscribe", corsHandler(s.subscribeHandler())).Methods("GET")
-	s.router.Handle("/n10n/unsubscribe", corsHandler(s.unSubscribeHandler())).Methods("GET")
-	s.router.Handle("/n10n/update/{offset:[0-9]{1,10}}", corsHandler(s.updateHandler()))
-
+func (s *httpService) registerDebugHandlers() {
 	// pprof profile
 	s.router.Handle("/debug/pprof", http.HandlerFunc(pprof.Index))
 	s.router.Handle("/debug/cmdline", http.HandlerFunc(pprof.Cmdline))
@@ -158,10 +147,46 @@ func (s *httpService) registerHandlers(busTimeout time.Duration, numsAppsWorkspa
 		r.URL.Path = "/debug/pprof/" + newPath
 		pprof.Index(w, r)
 	})) // must be the last
+}
 
+func (s *httpService) registerReverseProxyHandler() error {
+	redirectMatcher, err := s.getRedirectMatcher()
+	if err != nil {
+		return err
+	}
 	// must be the last handler
 	s.router.MatcherFunc(redirectMatcher).Name("reverse proxy")
 	return nil
+}
+
+func (s *httpService) registerRouterCheckerHandler() {
+	s.router.HandleFunc("/api/check", corsHandler(checkHandler())).Methods("POST", "OPTIONS").Name("router check")
+}
+
+func (s *httpService) registerHandlersV1() {
+	/*
+		launching app from localhost from browser. Trying to execute POST from web app within browser.
+		Browser sees that hosts differs: from localhost to alpha -> need CORS -> denies POST and executes the same request with OPTIONS header
+		-> need to allow OPTIONS
+	*/
+	if s.BlobberParams != nil {
+		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}", URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid), corsHandler(s.blobWriteRequestHandler())).
+			Methods("POST", "OPTIONS").
+			Name("blob write")
+
+		// allowed symbols according to see base64.URLEncoding
+		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9-_]+}", URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobID), corsHandler(s.blobReadRequestHandler())).
+			Methods("POST", "GET", "OPTIONS").
+			Name("blob read")
+	}
+	s.router.HandleFunc(fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}", URLPlaceholder_appOwner, URLPlaceholder_appName,
+		URLPlaceholder_wsid, URLPlaceholder_resourceName), corsHandler(RequestHandler(s.bus, s.busTimeout, s.numsAppsWorkspaces))).
+		Methods("POST", "PATCH", "OPTIONS").Name("api")
+
+	s.router.Handle("/n10n/channel", corsHandler(s.subscribeAndWatchHandler())).Methods("GET")
+	s.router.Handle("/n10n/subscribe", corsHandler(s.subscribeHandler())).Methods("GET")
+	s.router.Handle("/n10n/unsubscribe", corsHandler(s.unSubscribeHandler())).Methods("GET")
+	s.router.Handle("/n10n/update/{offset:[0-9]{1,10}}", corsHandler(s.updateHandler()))
 }
 
 func RequestHandler(bus ibus.IBus, busTimeout time.Duration, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
@@ -172,7 +197,7 @@ func RequestHandler(bus ibus.IBus, busTimeout time.Duration, numsAppsWorkspaces 
 			return
 		}
 
-		queueRequest.Resource = vars[URLPlaceholder_ResourceName]
+		queueRequest.Resource = vars[URLPlaceholder_resourceName]
 
 		// req's BaseContext is router service's context. See service.Start()
 		// router app closing or client disconnected -> req.Context() is done

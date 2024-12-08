@@ -473,6 +473,9 @@ func Test_Workspace_Defs(t *testing.T) {
 		WORKSPACE MyWorkspace2 INHERITS AWorkspace();
 		ALTER WORKSPACE sys.Profile(
 			USE WORKSPACE MyWorkspace;
+			WORKSPACE ProfileChildWS(
+				WORKSPACE ProfileGrandChildWS();
+			);
 		);
 	`)
 	require.NoError(err)
@@ -502,7 +505,11 @@ func Test_Workspace_Defs(t *testing.T) {
 	wsProfile := app.Workspace(appdef.NewQName("sys", "Profile"))
 
 	require.Equal(appdef.TypeKind_Workspace, wsProfile.Type(appdef.NewQName("pkg1", "MyWorkspace")).Kind())
+	require.Equal(appdef.TypeKind_Workspace, wsProfile.Type(appdef.NewQName("pkg1", "ProfileChildWS")).Kind())
 	require.Equal(appdef.NullType, wsProfile.Type(appdef.NewQName("pkg1", "MyWorkspace2")))
+
+	wsProfileChildWS := app.Workspace(appdef.NewQName("pkg1", "ProfileChildWS"))
+	require.Equal(appdef.TypeKind_Workspace, wsProfileChildWS.Type(appdef.NewQName("pkg1", "ProfileGrandChildWS")).Kind())
 }
 
 func Test_Workspace_Defs3(t *testing.T) {
@@ -1285,9 +1292,10 @@ func Test_Undefined(t *testing.T) {
 }
 
 func Test_Projectors(t *testing.T) {
-	require := require.New(t)
 
-	fs, err := ParseFile("example.vsql", `APPLICATION test();
+	t.Run("Errors", func(t *testing.T) {
+		require := require.New(t)
+		fs, err := ParseFile("example.vsql", `APPLICATION test();
 	WORKSPACE test (
 		TABLE Order INHERITS sys.ODoc();
 		EXTENSION ENGINE WASM (
@@ -1304,22 +1312,48 @@ func Test_Projectors(t *testing.T) {
 		);
 	)
 	`)
-	require.NoError(err)
+		require.NoError(err)
 
-	pkg, err := BuildPackageSchema("test", []*FileSchemaAST{fs})
-	require.NoError(err)
+		pkg, err := BuildPackageSchema("test", []*FileSchemaAST{fs})
+		require.NoError(err)
 
-	_, err = BuildAppSchema([]*PackageSchemaAST{pkg, getSysPackageAST()})
+		_, err = BuildAppSchema([]*PackageSchemaAST{pkg, getSysPackageAST()})
 
-	require.EqualError(err, strings.Join([]string{
-		"example.vsql:6:44: undefined command: test.CreateUPProfile",
-		"example.vsql:7:44: undefined command: Order",
-		"example.vsql:8:43: only INSERT allowed for ODoc or ORecord",
-		"example.vsql:9:45: only INSERT allowed for ODoc or ORecord",
-		"example.vsql:10:47: only INSERT allowed for ODoc or ORecord",
-		"example.vsql:12:55: undefined type or ODoc: Bill",
-		"example.vsql:14:55: undefined type or ODoc: sys.ORecord",
-	}, "\n"))
+		require.EqualError(err, strings.Join([]string{
+			"example.vsql:6:44: undefined command: test.CreateUPProfile",
+			"example.vsql:7:44: undefined command: Order",
+			"example.vsql:8:43: only INSERT allowed for ODoc or ORecord",
+			"example.vsql:9:45: only INSERT allowed for ODoc or ORecord",
+			"example.vsql:10:47: only INSERT allowed for ODoc or ORecord",
+			"example.vsql:12:55: undefined type or ODoc: Bill",
+			"example.vsql:14:55: undefined type or ODoc: sys.ORecord",
+		}, "\n"))
+	})
+
+	t.Run("Projector on table from an ancestor workspace", func(t *testing.T) {
+		require := assertions(t)
+		schema, err := require.AppSchema(`APPLICATION test();
+		ABSTRACT WORKSPACE BaseWS(
+			TABLE BaseWSTable INHERITS sys.CDoc();
+		);
+		WORKSPACE InheritedWS INHERITS BaseWS(
+			EXTENSION ENGINE WASM (
+				PROJECTOR ImProjector AFTER INSERT ON BaseWSTable;
+			);
+		);`)
+		require.NoError(err)
+
+		appBld := appdef.New()
+		err = BuildAppDefs(schema, appBld)
+		require.NoError(err)
+
+		app, err := appBld.Build()
+		require.NoError(err)
+
+		proj := appdef.Projector(app.Type, appdef.NewQName("pkg", "ImProjector"))
+		require.NotNil(proj)
+		require.Equal(1, proj.Events().Len())
+	})
 }
 
 func Test_Tags(t *testing.T) {
