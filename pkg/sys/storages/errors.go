@@ -11,11 +11,15 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-var ErrNotFound = errors.New("not found")
-var ErrNotSupported = errors.New("not supported")
-var errNotImplemented = errors.New("not implemented")
-var errCurrentValueIsNotAnArray = errors.New("current value is not an array")
-var errFieldByIndexIsNotAnObjectOrArray = errors.New("field by index is not an object or array")
+var (
+	ErrNotFoundKey                      = errors.New("not found key")
+	ErrNotFound                         = errors.New("not found")
+	ErrNotSupported                     = errors.New("not supported")
+	errNotImplemented                   = errors.New("not implemented")
+	errCurrentValueIsNotAnArray         = errors.New("current value is not an array")
+	errFieldByIndexIsNotAnObjectOrArray = errors.New("field by index is not an object or array")
+	errMockedKeyBuilderExpected         = errors.New("IStataKeyBuilder must be mockedKeyBuilder")
+)
 
 func errInt32FieldUndefined(name string) error {
 	return errors.New("undefined int32 field: " + name)

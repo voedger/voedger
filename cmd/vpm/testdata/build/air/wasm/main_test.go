@@ -6,11 +6,12 @@
 package main
 
 import (
-	"air/wasm/orm"
 	"testing"
 	"time"
 
 	test "github.com/voedger/voedger/pkg/exttinygo/exttinygotests"
+
+	"air/wasm/orm"
 )
 
 func TestProjectorFillPbillDates(t *testing.T) {
@@ -97,8 +98,7 @@ func TestProjectorFillPbillDates(t *testing.T) {
 func TestPbill(t *testing.T) {
 	date := time.Now()
 
-	t.Run("Singleton NextPBillNumber: insert", func(t *testing.T) {
-
+	t.Run("Singleton.NextPBillNumber:insert", func(t *testing.T) {
 		test.NewCommandTest(
 			t,
 			orm.Package_air.Command_Pbill,
@@ -136,7 +136,7 @@ func TestPbill(t *testing.T) {
 			Run()
 	})
 
-	t.Run("Singleton NextPBillNumber: update", func(t *testing.T) {
+	t.Run("Singleton.NextPBillNumber:update", func(t *testing.T) {
 		nextNumber := 5
 
 		test.NewCommandTest(
