@@ -259,9 +259,11 @@ func (mkb *mockedKeyBuilder) PutRecordID(field appdef.FieldName, value istructs.
 	if field == sys.Storage_Record_Field_ID {
 		//nolint:gosec
 		mkb.TestObject.Id = value
-	} else {
-		mkb.TestObject.Data[field] = value
+
+		return
 	}
+
+	mkb.TestObject.Data[field] = value
 }
 
 func (mkb *mockedKeyBuilder) PutNumber(field appdef.FieldName, value json.Number) {

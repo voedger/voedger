@@ -279,7 +279,7 @@ func (gts *generalTestState) keyBuilder(r recordItem) istructs.IStateKeyBuilder 
 	case r.isSingleton:
 		kb.PutBool(sys.Storage_Record_Field_IsSingleton, true)
 	case !r.isView:
-		kb.PutInt64(sys.Storage_Record_Field_ID, int64(r.id)) // nolint G115
+		kb.PutRecordID(sys.Storage_Record_Field_ID, r.id)
 	case r.isView:
 		m, err := parseKeyValues(r.keyValueList)
 		require.NoError(gts.t, err, msgFailedToParseKeyValues)
@@ -334,7 +334,6 @@ func (gts *generalTestState) putRecords() {
 		kvMap[appdef.SystemField_QName] = appdef.NewQName(pkgAlias, item.entity.Entity()).String()
 		kvMap[appdef.SystemField_ID] = item.id
 		kvMap[sys.Storage_Record_Field_WSID] = gts.commandWSID
-		kvMap[sys.Storage_Record_Field_ID] = item.id
 
 		mockedObject := &coreutils.TestObject{
 			Id:          item.id,
@@ -362,7 +361,6 @@ func (gts *generalTestState) putViewRecords() {
 		require.NoError(gts.t, err, msgFailedToParseKeyValues)
 
 		kvMap[sys.Storage_Record_Field_WSID] = gts.commandWSID
-		kvMap[sys.Storage_Record_Field_ID] = item.id
 
 		mockedObject := &coreutils.TestObject{
 			Id:          item.id,
