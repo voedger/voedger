@@ -40,5 +40,5 @@ func (f notFilter) String() string {
 	if k := f.Not().Kind(); (k == appdef.FilterKind_Or) || (k == appdef.FilterKind_And) {
 		s = fmt.Sprintf("(%s)", s)
 	}
-	return fmt.Sprintf("not %s", s)
+	return fmt.Sprintf("NOT %s", s)
 }

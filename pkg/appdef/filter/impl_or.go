@@ -52,7 +52,7 @@ func (f orFilter) String() string {
 			cStr = fmt.Sprintf("(%s)", cStr)
 		}
 		if i > 0 {
-			s += " or "
+			s += " OR "
 		}
 		s += cStr
 	}

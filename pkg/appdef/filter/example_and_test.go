@@ -65,7 +65,7 @@ func ExampleAnd() {
 	// Output:
 	// This example demonstrates how to work with the And filter
 	//
-	// Types(ODoc, Object) from Workspace test.workspace and Tags(test.tag)
+	// Types(ODoc, Object) from Workspace test.workspace AND Tags(test.tag)
 	// - kind: FilterKind_And
 	// - children:
 	//   * Types(ODoc, Object) from Workspace test.workspace
@@ -76,11 +76,11 @@ func ExampleAnd() {
 	//   * Object «test.object» is matched: true
 	//   * Tag «test.tag» is matched: false
 	//
-	// QNames(test.doc, test.object) and (Types(Command) from Workspace test.workspace or Tags(test.tag))
+	// QNames(test.doc, test.object) AND (Types(Command) from Workspace test.workspace OR Tags(test.tag))
 	// - kind: FilterKind_And
 	// - children:
 	//   * QNames(test.doc, test.object)
-	//   * Types(Command) from Workspace test.workspace or Tags(test.tag)
+	//   * Types(Command) from Workspace test.workspace OR Tags(test.tag)
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
 	//   * ODoc «test.doc» is matched: false

@@ -18,7 +18,6 @@ func ExampleQNames() {
 
 	wsName := appdef.NewQName("test", "workspace")
 	doc, obj, cmd := appdef.NewQName("test", "doc"), appdef.NewQName("test", "object"), appdef.NewQName("test", "command")
-	tag := appdef.NewQName("test", "tag")
 
 	app := func() appdef.IAppDef {
 		adb := appdef.New()
@@ -26,9 +25,8 @@ func ExampleQNames() {
 
 		wsb := adb.AddWorkspace(wsName)
 
-		wsb.AddTag(tag)
 		_ = wsb.AddODoc(doc)
-		wsb.AddObject(obj).SetTag(tag)
+		_ = wsb.AddObject(obj)
 		_ = wsb.AddCommand(cmd)
 
 		return adb.MustBuild()
@@ -65,7 +63,6 @@ func ExampleQNames() {
 	//   * BuiltIn-Command «test.command» is matched: false
 	//   * ODoc «test.doc» is matched: true
 	//   * Object «test.object» is matched: true
-	//   * Tag «test.tag» is matched: false
 	//
 	// QNames(test.unknown)
 	// - kind: FilterKind_QNames
@@ -75,5 +72,4 @@ func ExampleQNames() {
 	//   * BuiltIn-Command «test.command» is matched: false
 	//   * ODoc «test.doc» is matched: false
 	//   * Object «test.object» is matched: false
-	//   * Tag «test.tag» is matched: false
 }

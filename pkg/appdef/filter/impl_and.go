@@ -52,7 +52,7 @@ func (f andFilter) String() string {
 			cStr = fmt.Sprintf("(%s)", cStr)
 		}
 		if i > 0 {
-			s += " and "
+			s += " AND "
 		}
 		s += cStr
 	}

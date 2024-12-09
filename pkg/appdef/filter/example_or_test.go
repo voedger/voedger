@@ -65,7 +65,7 @@ func ExampleOr() {
 	// Output:
 	// This example demonstrates how to work with the Or filter
 	//
-	// Types(ODoc) from Workspace test.workspace or Tags(test.tag)
+	// Types(ODoc) from Workspace test.workspace OR Tags(test.tag)
 	// - kind: FilterKind_Or
 	// - children:
 	//   * Types(ODoc) from Workspace test.workspace
@@ -76,11 +76,11 @@ func ExampleOr() {
 	//   * Object «test.object» is matched: true
 	//   * Tag «test.tag» is matched: false
 	//
-	// QNames(test.doc) or (Types(Object) from Workspace test.workspace and Tags(test.tag))
+	// QNames(test.doc) OR (Types(Object) from Workspace test.workspace AND Tags(test.tag))
 	// - kind: FilterKind_Or
 	// - children:
 	//   * QNames(test.doc)
-	//   * Types(Object) from Workspace test.workspace and Tags(test.tag)
+	//   * Types(Object) from Workspace test.workspace AND Tags(test.tag)
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
 	//   * ODoc «test.doc» is matched: true

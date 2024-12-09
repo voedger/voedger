@@ -57,7 +57,8 @@ func Example() {
 			filter.QNames(doc),
 			filter.And(
 				filter.Types(wsName, appdef.TypeKind_Object),
-				filter.Tags(tag))))
+				filter.Not(
+					filter.Tags(tag)))))
 
 	example(
 		filter.Not(
@@ -68,21 +69,21 @@ func Example() {
 	// Output:
 	// This example demonstrates how to work with filters
 	//
-	// QNames(test.doc, test.object) and (Types(Command) from Workspace test.workspace or Tags(test.tag))
+	// QNames(test.doc, test.object) AND (Types(Command) from Workspace test.workspace OR Tags(test.tag))
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
 	//   * ODoc «test.doc» is matched: false
 	//   * Object «test.object» is matched: true
 	//   * Tag «test.tag» is matched: false
 	//
-	// QNames(test.doc) or (Types(Object) from Workspace test.workspace and Tags(test.tag))
+	// QNames(test.doc) OR (Types(Object) from Workspace test.workspace AND NOT Tags(test.tag))
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
 	//   * ODoc «test.doc» is matched: true
-	//   * Object «test.object» is matched: true
+	//   * Object «test.object» is matched: false
 	//   * Tag «test.tag» is matched: false
 	//
-	// not (QNames(test.doc) or Tags(test.tag))
+	// NOT (QNames(test.doc) OR Tags(test.tag))
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: true
 	//   * ODoc «test.doc» is matched: false
