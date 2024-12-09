@@ -274,7 +274,11 @@ func (ws *workspace) grant(ops []OperationKind, flt IFilter, fields []FieldName,
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
 	}
-	r.(*role).grant(ops, flt, fields, comment...)
+	role := r.(*role)
+
+	acl := newGrant(ws, ops, flt, fields, role, comment...)
+	role.appendACL(acl)
+	ws.appendACL(acl)
 }
 
 func (ws *workspace) grantAll(flt IFilter, toRole QName, comment ...string) {
@@ -282,7 +286,11 @@ func (ws *workspace) grantAll(flt IFilter, toRole QName, comment ...string) {
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
 	}
-	r.(*role).grantAll(flt, comment...)
+	role := r.(*role)
+
+	acl := newGrantAll(ws, flt, role, comment...)
+	role.appendACL(acl)
+	ws.appendACL(acl)
 }
 
 func (ws *workspace) revoke(ops []OperationKind, flt IFilter, fields []FieldName, fromRole QName, comment ...string) {
@@ -290,7 +298,11 @@ func (ws *workspace) revoke(ops []OperationKind, flt IFilter, fields []FieldName
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}
-	r.(*role).revoke(ops, flt, fields, comment...)
+	role := r.(*role)
+
+	acl := newRevoke(ws, ops, flt, fields, role, comment...)
+	role.appendACL(acl)
+	ws.appendACL(acl)
 }
 
 func (ws *workspace) revokeAll(flt IFilter, fromRole QName, comment ...string) {
@@ -298,7 +310,11 @@ func (ws *workspace) revokeAll(flt IFilter, fromRole QName, comment ...string) {
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}
-	r.(*role).revokeAll(flt, comment...)
+	role := r.(*role)
+
+	acl := newRevokeAll(ws, flt, role, comment...)
+	role.appendACL(acl)
+	ws.appendACL(acl)
 }
 
 func (ws *workspace) setAncestors(name QName, names ...QName) {

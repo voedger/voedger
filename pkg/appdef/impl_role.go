@@ -44,23 +44,30 @@ func (r *role) AncRoles() (roles []QName) {
 
 func (r *role) appendACL(rule *aclRule) {
 	r.aclRules = append(r.aclRules, rule)
-	r.ws.appendACL(rule)
 }
 
 func (r *role) grant(ops []OperationKind, flt IFilter, fields []FieldName, comment ...string) {
-	r.appendACL(newGrant(r.ws, ops, flt, fields, r, comment...))
+	acl := newGrant(r.ws, ops, flt, fields, r, comment...)
+	r.appendACL(acl)
+	r.ws.appendACL(acl)
 }
 
 func (r *role) grantAll(flt IFilter, comment ...string) {
-	r.appendACL(newGrantAll(r.ws, flt, r, comment...))
+	acl := newGrantAll(r.ws, flt, r, comment...)
+	r.appendACL(acl)
+	r.ws.appendACL(acl)
 }
 
 func (r *role) revoke(ops []OperationKind, flt IFilter, fields []FieldName, comment ...string) {
-	r.appendACL(newRevoke(r.ws, ops, flt, fields, r, comment...))
+	acl := newRevoke(r.ws, ops, flt, fields, r, comment...)
+	r.appendACL(acl)
+	r.ws.appendACL(acl)
 }
 
 func (r *role) revokeAll(flt IFilter, comment ...string) {
-	r.appendACL(newRevokeAll(r.ws, flt, r, comment...))
+	acl := newRevokeAll(r.ws, flt, r, comment...)
+	r.appendACL(acl)
+	r.ws.appendACL(acl)
 }
 
 // validates role.
