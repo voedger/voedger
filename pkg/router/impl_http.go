@@ -38,9 +38,7 @@ func (s *httpsService) Prepare(work interface{}) error {
 }
 
 func (s *httpsService) Run(ctx context.Context) {
-	s.log("starting on %s", s.server.Addr)
-	s.log("write timeout: %d", s.server.WriteTimeout)
-	s.log("read timeout: %d", s.server.ReadTimeout)
+	s.preRun(ctx)
 	if err := s.server.ServeTLS(s.listener, "", ""); err != http.ErrServerClosed {
 		s.log("ServeTLS() error: %s", err.Error())
 	}
@@ -86,8 +84,7 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 	return nil
 }
 
-// pipeline.IService
-func (s *httpService) Run(ctx context.Context) {
+func (s *httpService) preRun(ctx context.Context) {
 	if s.BlobberParams != nil {
 		for i := 0; i < s.BlobberParams.BLOBWorkersNum; i++ {
 			s.blobWG.Add(1)
@@ -101,6 +98,11 @@ func (s *httpService) Run(ctx context.Context) {
 		return ctx // need to track both client disconnect and app finalize
 	}
 	s.log("starting on %s", s.listener.Addr().(*net.TCPAddr).String())
+}
+
+// pipeline.IService
+func (s *httpService) Run(ctx context.Context) {
+	s.preRun(ctx)
 	if err := s.server.Serve(s.listener); err != http.ErrServerClosed {
 		s.log("Serve() error: %s", err.Error())
 	}
