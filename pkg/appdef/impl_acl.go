@@ -40,9 +40,10 @@ type aclRule struct {
 	policy    PolicyKind
 	flt       *aclFilter
 	principal *role
+	ws        *workspace
 }
 
-func newACLRule(ops []OperationKind, policy PolicyKind, flt IFilter, fields []FieldName, principal *role, comment ...string) *aclRule {
+func newACLRule(ws *workspace, ops []OperationKind, policy PolicyKind, flt IFilter, fields []FieldName, principal *role, comment ...string) *aclRule {
 	opSet := set.From(ops...)
 	if compatible, err := isCompatibleOperations(opSet); !compatible {
 		panic(err)
@@ -62,9 +63,10 @@ func newACLRule(ops []OperationKind, policy PolicyKind, flt IFilter, fields []Fi
 		ops:       opSet,
 		flt:       newAclFilter(flt, fields),
 		principal: principal,
+		ws:        ws,
 	}
 
-	for t := range FilterMatches(acl.Filter(), principal.Workspace().Types()) {
+	for t := range FilterMatches(acl.Filter(), ws.Types()) {
 		if err := acl.validateOnType(t); err != nil {
 			panic(err)
 		}
@@ -73,18 +75,18 @@ func newACLRule(ops []OperationKind, policy PolicyKind, flt IFilter, fields []Fi
 	return acl
 }
 
-func newGrant(ops []OperationKind, flt IFilter, fields []FieldName, principal *role, comment ...string) *aclRule {
-	return newACLRule(ops, PolicyKind_Allow, flt, fields, principal, comment...)
+func newGrant(ws *workspace, ops []OperationKind, flt IFilter, fields []FieldName, principal *role, comment ...string) *aclRule {
+	return newACLRule(ws, ops, PolicyKind_Allow, flt, fields, principal, comment...)
 }
 
-func newRevoke(ops []OperationKind, flt IFilter, fields []FieldName, principal *role, comment ...string) *aclRule {
-	return newACLRule(ops, PolicyKind_Deny, flt, fields, principal, comment...)
+func newRevoke(ws *workspace, ops []OperationKind, flt IFilter, fields []FieldName, principal *role, comment ...string) *aclRule {
+	return newACLRule(ws, ops, PolicyKind_Deny, flt, fields, principal, comment...)
 }
 
-func newACLRuleAll(policy PolicyKind, flt IFilter, principal *role, comment ...string) *aclRule {
-	t := FirstFilterMatch(flt, principal.Workspace().LocalTypes())
+func newACLRuleAll(ws *workspace, policy PolicyKind, flt IFilter, principal *role, comment ...string) *aclRule {
+	t := FirstFilterMatch(flt, ws.LocalTypes())
 	if t == nil {
-		panic(ErrFilterHasNoMatches(flt, principal.Workspace()))
+		panic(ErrFilterHasNoMatches(flt, ws))
 	}
 
 	ops := allACLOperationsOnType(t)
@@ -92,15 +94,15 @@ func newACLRuleAll(policy PolicyKind, flt IFilter, principal *role, comment ...s
 		panic(ErrACLUnsupportedType(t))
 	}
 
-	return newACLRule(ops.AsArray(), policy, flt, nil, principal, comment...)
+	return newACLRule(ws, ops.AsArray(), policy, flt, nil, principal, comment...)
 }
 
-func newGrantAll(flt IFilter, principal *role, comment ...string) *aclRule {
-	return newACLRuleAll(PolicyKind_Allow, flt, principal, comment...)
+func newGrantAll(ws *workspace, flt IFilter, principal *role, comment ...string) *aclRule {
+	return newACLRuleAll(ws, PolicyKind_Allow, flt, principal, comment...)
 }
 
-func newRevokeAll(flt IFilter, principal *role, comment ...string) *aclRule {
-	return newACLRuleAll(PolicyKind_Deny, flt, principal, comment...)
+func newRevokeAll(ws *workspace, flt IFilter, principal *role, comment ...string) *aclRule {
+	return newACLRuleAll(ws, PolicyKind_Deny, flt, principal, comment...)
 }
 
 func (acl aclRule) Filter() IACLFilter { return acl.flt }
@@ -123,6 +125,8 @@ func (acl aclRule) String() string {
 	return s
 }
 
+func (acl aclRule) Workspace() IWorkspace { return acl.ws }
+
 // validates ACL rule.
 //
 // # Error if:
@@ -130,13 +134,13 @@ func (acl aclRule) String() string {
 //   - some filtered type can not to be proceed with ACL. See validateOnType
 func (acl aclRule) validate() (err error) {
 	cnt := 0
-	for t := range FilterMatches(acl.Filter(), acl.Principal().Workspace().Types()) {
+	for t := range FilterMatches(acl.Filter(), acl.Workspace().Types()) {
 		err = errors.Join(err, acl.validateOnType(t))
 		cnt++
 	}
 
 	if (err == nil) && (cnt == 0) {
-		return ErrFilterHasNoMatches(acl.Filter(), acl.Principal().Workspace())
+		return ErrFilterHasNoMatches(acl.Filter(), acl.Workspace())
 	}
 
 	return err

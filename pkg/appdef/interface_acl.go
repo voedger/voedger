@@ -79,6 +79,9 @@ type IACLRule interface {
 
 	// Returns the role to which the operations was granted or revoked.
 	Principal() IRole
+
+	// Returns workspace where the rule is defined.
+	Workspace() IWorkspace
 }
 
 // IWithACL is an interface for entities that have ACL.

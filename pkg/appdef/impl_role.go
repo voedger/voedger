@@ -48,19 +48,19 @@ func (r *role) appendACL(rule *aclRule) {
 }
 
 func (r *role) grant(ops []OperationKind, flt IFilter, fields []FieldName, comment ...string) {
-	r.appendACL(newGrant(ops, flt, fields, r, comment...))
+	r.appendACL(newGrant(r.ws, ops, flt, fields, r, comment...))
 }
 
 func (r *role) grantAll(flt IFilter, comment ...string) {
-	r.appendACL(newGrantAll(flt, r, comment...))
+	r.appendACL(newGrantAll(r.ws, flt, r, comment...))
 }
 
 func (r *role) revoke(ops []OperationKind, flt IFilter, fields []FieldName, comment ...string) {
-	r.appendACL(newRevoke(ops, flt, fields, r, comment...))
+	r.appendACL(newRevoke(r.ws, ops, flt, fields, r, comment...))
 }
 
 func (r *role) revokeAll(flt IFilter, comment ...string) {
-	r.appendACL(newRevokeAll(flt, r, comment...))
+	r.appendACL(newRevokeAll(r.ws, flt, r, comment...))
 }
 
 // validates role.

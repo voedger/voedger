@@ -7,6 +7,7 @@ package parser
 import (
 	"embed"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -2142,13 +2143,17 @@ func Test_Grants(t *testing.T) {
 		var numACLs int
 
 		// table
-		app.ACL(func(i appdef.IACLRule) bool {
-			require.Len(i.Ops(), 1)
-			require.Equal(appdef.OperationKind_Inherits, i.Ops()[0])
-			require.Equal(appdef.PolicyKind_Allow, i.Policy())
-			require.Len(i.Resources().On(), 1)
-			require.Equal("pkg.admin", i.Resources().On()[0].String())
-			require.Equal("pkg.mgr", i.Principal().QName().String())
+		app.ACL(func(acl appdef.IACLRule) bool {
+			require.Len(acl.Ops(), 1)
+			require.Equal(appdef.OperationKind_Inherits, acl.Ops()[0])
+			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
+
+			require.Equal(appdef.FilterKind_QNames, acl.Filter().Kind())
+			require.EqualValues(
+				appdef.MustParseQNames("pkg.admin"),
+				slices.Collect(acl.Filter().QNames()))
+
+			require.Equal("pkg.mgr", acl.Principal().QName().String())
 			numACLs++
 			return true
 		})
@@ -2175,13 +2180,17 @@ func Test_Grants(t *testing.T) {
 		var numACLs int
 
 		// table
-		app.ACL(func(i appdef.IACLRule) bool {
-			require.Len(i.Ops(), 1)
-			require.Equal(appdef.OperationKind_Select, i.Ops()[0])
-			require.Equal(appdef.PolicyKind_Allow, i.Policy())
-			require.Len(i.Resources().On(), 1)
-			require.Equal("pkg.UserProfile", i.Resources().On()[0].String())
-			require.Equal("pkg.ProfileOwner", i.Principal().QName().String())
+		app.ACL(func(acl appdef.IACLRule) bool {
+			require.Len(acl.Ops(), 1)
+			require.Equal(appdef.OperationKind_Select, acl.Ops()[0])
+			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
+
+			require.Equal(appdef.FilterKind_QNames, acl.Filter().Kind())
+			require.EqualValues(
+				appdef.MustParseQNames("pkg.UserProfile"),
+				slices.Collect(acl.Filter().QNames()))
+
+			require.Equal("pkg.ProfileOwner", acl.Principal().QName().String())
 			numACLs++
 			return true
 		})
@@ -2214,13 +2223,17 @@ func Test_Grants_Inherit(t *testing.T) {
 		var numACLs int
 
 		// table
-		app.ACL(func(i appdef.IACLRule) bool {
-			require.Len(i.Ops(), 1)
-			require.Equal(appdef.OperationKind_Insert, i.Ops()[0])
-			require.Equal(appdef.PolicyKind_Allow, i.Policy())
-			require.Len(i.Resources().On(), 2)
-			require.True(i.Resources().On().ContainsAll(appdef.NewQName("pkg", "Table2"), appdef.NewQName("pkg", "AppWorkspace")))
-			require.Equal("pkg.role1", i.Principal().QName().String())
+		app.ACL(func(acl appdef.IACLRule) bool {
+			require.Len(acl.Ops(), 1)
+			require.Equal(appdef.OperationKind_Insert, acl.Ops()[0])
+			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
+
+			require.Equal(appdef.FilterKind_QNames, acl.Filter().Kind())
+			require.EqualValues(
+				appdef.MustParseQNames("pkg.Table2", "pkg.AppWorkspace"),
+				slices.Collect(acl.Filter().QNames()))
+
+			require.Equal("pkg.role1", acl.Principal().QName().String())
 			numACLs++
 			return true
 		})

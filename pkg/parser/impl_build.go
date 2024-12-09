@@ -199,10 +199,10 @@ func (c *buildContext) grantsAndRevokes() error {
 				if (s.Grant.AllTablesWithTag != nil && s.Grant.AllTablesWithTag.All) ||
 					(s.Grant.Table != nil && s.Grant.Table.All != nil) ||
 					(s.Grant.AllTables != nil && s.Grant.AllTables.All) {
-					wsb.GrantAll(s.Grant.on, s.Grant.toRole, comments...)
+					wsb.GrantAll(s.Grant.filter(), s.Grant.toRole, comments...)
 					continue
 				}
-				wsb.Grant(s.Grant.ops, s.Grant.on, s.Grant.columns, s.Grant.toRole, comments...)
+				wsb.Grant(s.Grant.ops, s.Grant.filter(), s.Grant.columns, s.Grant.toRole, comments...)
 			}
 		}
 	}
@@ -214,10 +214,10 @@ func (c *buildContext) grantsAndRevokes() error {
 				if (s.Revoke.AllTablesWithTag != nil && s.Revoke.AllTablesWithTag.All) ||
 					(s.Revoke.Table != nil && s.Revoke.Table.All != nil) ||
 					(s.Revoke.AllTables != nil && s.Revoke.AllTables.All) {
-					wsb.RevokeAll(s.Revoke.on, s.Revoke.toRole, comments...)
+					wsb.RevokeAll(s.Revoke.filter(), s.Revoke.toRole, comments...)
 					continue
 				}
-				wsb.Revoke(s.Revoke.ops, s.Revoke.on, s.Revoke.columns, s.Revoke.toRole, comments...)
+				wsb.Revoke(s.Revoke.ops, s.Revoke.filter(), s.Revoke.columns, s.Revoke.toRole, comments...)
 			}
 		}
 	}
