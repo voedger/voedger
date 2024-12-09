@@ -86,6 +86,7 @@ var defaultACL = ACL{
 			qNamesPattern:     []appdef.QName{qNameCDocChildWorkspace},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},
 		},
+		policy: ACPolicy_Allow,
 	},
 	{
 		desc: "revoke insert or update on wdoc.air.LastNumbers from all",
