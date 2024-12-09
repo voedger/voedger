@@ -128,6 +128,7 @@ func (s *safeState) KeyBuilderPutInt64(key safe.TKeyBuilder, name string, value 
 }
 
 func (s *safeState) KeyBuilderPutRecordID(key safe.TKeyBuilder, name string, value int64) {
+	//nolint:gosec
 	s.kb(key).PutRecordID(name, istructs.RecordID(value))
 }
 
