@@ -357,7 +357,11 @@ func blobWriteMessageHandlerSingle(bbm blobBaseMessage, blobWriteDetails blobWri
 
 // ctx here is VVM context. It used to track VVM shutdown. Blobber will use the request's context
 func blobMessageHandler(vvmCtx context.Context, sc iprocbus.ServiceChannel, blobStorage iblobstorage.IBLOBStorage, bus ibus.IBus, busTimeout time.Duration) {
+	logger.Info("starting BLOB handler")
 	for vvmCtx.Err() == nil {
+		if sc == nil {
+			logger.Info("read from nil chan")
+		}
 		select {
 		case mesIntf := <-sc:
 			blobMessage := mesIntf.(blobMessage)
@@ -370,9 +374,10 @@ func blobMessageHandler(vvmCtx context.Context, sc iprocbus.ServiceChannel, blob
 				blobWriteMessageHandlerMultipart(blobMessage.blobBaseMessage, blobStorage, blobDetails, bus, busTimeout)
 			}
 		case <-vvmCtx.Done():
-			return
+			break
 		}
 	}
+	logger.Info("BLOB handler stopped")
 }
 
 func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Request, details interface{}) {
