@@ -237,7 +237,7 @@ func writeBLOB_persistent(ctx context.Context, wsid istructs.WSID, appQName stri
 
 	wLimiter := wLimiterFactory()
 	if logger.IsVerbose() {
-		logger.Verbose("uploading blob wsid", wsid, ",descr", descr)
+		logger.Verbose(fmt.Sprintf("uploading blob wsid %d descr %v", wsid, descr))
 	}
 	if err := blobStorage.WriteBLOB(ctx, key, descr, body, wLimiter); err != nil {
 		if errors.Is(err, iblobstorage.ErrBLOBSizeQuotaExceeded) {
@@ -248,7 +248,7 @@ func writeBLOB_persistent(ctx context.Context, wsid istructs.WSID, appQName stri
 		return 0
 	}
 	if logger.IsVerbose() {
-		logger.Verbose("upladed blob wsid", wsid, ",descr", descr)
+		logger.Verbose(fmt.Sprintf("uploaded blob wsid %d descr %v", wsid, descr))
 	}
 
 	// set WDoc<sys.BLOB>.status = BLOBStatus_Completed
@@ -262,7 +262,7 @@ func writeBLOB_persistent(ctx context.Context, wsid istructs.WSID, appQName stri
 		Host:     localhost,
 	}
 	if logger.IsVerbose() {
-		logger.Verbose("updating blob state wsid", wsid, ",descr", descr)
+		logger.Verbose(fmt.Sprintf("updating blob state wsid %d descr %v", wsid, descr))
 	}
 	cudWDocBLOBUpdateResp, _, _, err := bus.SendRequest2(ctx, req, busTimeout)
 	if err != nil {
@@ -274,7 +274,7 @@ func writeBLOB_persistent(ctx context.Context, wsid istructs.WSID, appQName stri
 		return 0
 	}
 	if logger.IsVerbose() {
-		logger.Verbose("updated blob state wsid", wsid, ",descr", descr)
+		logger.Verbose(fmt.Sprintf("updated blob state wsid %d descr %v", wsid, descr))
 	}
 
 	return blobID
