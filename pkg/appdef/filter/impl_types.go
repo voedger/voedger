@@ -38,19 +38,30 @@ func (f typesFilter) Match(t appdef.IType) bool {
 }
 
 func (f typesFilter) String() string {
-	// Types(…)
-	// Types(… from Workspace …)
-	s := "Types("
-	for i, t := range f.types.All() {
-		if i > 0 {
-			s += ", "
+	var s string
+	if t, ok := typesStringDecorators[string(f.types.AsBytes())]; ok {
+		s = t
+	} else {
+		// Types(…)
+		// Types(… from Workspace …)
+		s = "Types("
+		for i, t := range f.types.All() {
+			if i > 0 {
+				s += ", "
+			}
+			s += t.TrimString()
 		}
-		s += t.TrimString()
+		s += ")"
 	}
 	if f.ws != appdef.NullQName {
 		s += fmt.Sprintf(" from Workspace %s", f.ws)
 	}
-	return s + ")"
+	return s
 }
 
 func (f typesFilter) Types() iter.Seq[appdef.TypeKind] { return f.types.Values() }
+
+var typesStringDecorators = map[string]string{
+	string(appdef.TypeKind_Structures.AsBytes()): "All tables",
+	string(appdef.TypeKind_Functions.AsBytes()):  "All functions",
+}

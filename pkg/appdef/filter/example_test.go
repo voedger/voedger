@@ -13,11 +13,12 @@ import (
 )
 
 func Example() {
-	wsName := appdef.NewQName("test", "workspace")
+	fmt.Println("This example demonstrates how to work with filters")
+	fmt.Println()
 
-	doc := appdef.NewQName("test", "doc")
-	obj := appdef.NewQName("test", "object")
-	cmd := appdef.NewQName("test", "command")
+	wsName := appdef.NewQName("test", "workspace")
+	doc, obj, cmd := appdef.NewQName("test", "doc"), appdef.NewQName("test", "object"), appdef.NewQName("test", "command")
+	tag := appdef.NewQName("test", "tag")
 
 	app := func() appdef.IAppDef {
 		adb := appdef.New()
@@ -25,8 +26,9 @@ func Example() {
 
 		wsb := adb.AddWorkspace(wsName)
 
+		wsb.AddTag(tag)
 		_ = wsb.AddODoc(doc)
-		_ = wsb.AddObject(obj)
+		wsb.AddObject(obj).SetTag(tag)
 		_ = wsb.AddCommand(cmd)
 
 		return adb.MustBuild()
@@ -35,25 +37,55 @@ func Example() {
 	ws := app.Workspace(wsName)
 
 	example := func(flt appdef.IFilter) {
-		fmt.Println()
-		fmt.Println("Testing filter", flt, "in", ws)
+		fmt.Println(flt)
+		fmt.Println("- testing:")
 		for t := range ws.LocalTypes() {
-			fmt.Println("-", t, "is matched:", flt.Match(t))
+			fmt.Println("  *", t, "is matched:", flt.Match(t))
 		}
+		fmt.Println()
 	}
 
-	example(filter.And(filter.Types(wsName, appdef.TypeKind_ODoc), filter.QNames(doc)))
-	example(filter.And(filter.QNames(appdef.NewQName("test", "other")), filter.Types(wsName, appdef.TypeKind_Command)))
+	example(
+		filter.And(
+			filter.QNames(doc, obj),
+			filter.Or(
+				filter.Types(wsName, appdef.TypeKind_Command),
+				filter.Tags(tag))))
+
+	example(
+		filter.Or(
+			filter.QNames(doc),
+			filter.And(
+				filter.Types(wsName, appdef.TypeKind_Object),
+				filter.Tags(tag))))
+
+	example(
+		filter.Not(
+			filter.Or(
+				filter.QNames(doc),
+				filter.Tags(tag))))
 
 	// Output:
+	// This example demonstrates how to work with filters
 	//
-	// Testing filter Types(ODoc from Workspace test.workspace) and QNames(test.doc) in Workspace «test.workspace»
-	// - BuiltIn-Command «test.command» is matched: false
-	// - ODoc «test.doc» is matched: true
-	// - Object «test.object» is matched: false
+	// QNames(test.doc, test.object) and (Types(Command) from Workspace test.workspace or Tags(test.tag))
+	// - testing:
+	//   * BuiltIn-Command «test.command» is matched: false
+	//   * ODoc «test.doc» is matched: false
+	//   * Object «test.object» is matched: true
+	//   * Tag «test.tag» is matched: false
 	//
-	// Testing filter QNames(test.other) and Types(Command from Workspace test.workspace) in Workspace «test.workspace»
-	// - BuiltIn-Command «test.command» is matched: false
-	// - ODoc «test.doc» is matched: false
-	// - Object «test.object» is matched: false
+	// QNames(test.doc) or (Types(Object) from Workspace test.workspace and Tags(test.tag))
+	// - testing:
+	//   * BuiltIn-Command «test.command» is matched: false
+	//   * ODoc «test.doc» is matched: true
+	//   * Object «test.object» is matched: true
+	//   * Tag «test.tag» is matched: false
+	//
+	// not (QNames(test.doc) or Tags(test.tag))
+	// - testing:
+	//   * BuiltIn-Command «test.command» is matched: true
+	//   * ODoc «test.doc» is matched: false
+	//   * Object «test.object» is matched: false
+	//   * Tag «test.tag» is matched: true
 }
