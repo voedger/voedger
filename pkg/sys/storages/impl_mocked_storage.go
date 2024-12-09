@@ -224,10 +224,6 @@ func (mkb *mockedKeyBuilder) PutInt32(field appdef.FieldName, value int32) {
 
 func (mkb *mockedKeyBuilder) PutInt64(field appdef.FieldName, value int64) {
 	mkb.TestObject.Data[field] = value
-	if field == sys.Storage_Record_Field_ID {
-		//nolint:gosec
-		mkb.TestObject.Id = istructs.RecordID(value)
-	}
 }
 
 func (mkb *mockedKeyBuilder) PutFloat32(field appdef.FieldName, value float32) {
@@ -260,7 +256,12 @@ func (mkb *mockedKeyBuilder) PutBool(field appdef.FieldName, value bool) {
 }
 
 func (mkb *mockedKeyBuilder) PutRecordID(field appdef.FieldName, value istructs.RecordID) {
-	mkb.TestObject.Data[field] = value
+	if field == sys.Storage_Record_Field_ID {
+		//nolint:gosec
+		mkb.TestObject.Id = value
+	} else {
+		mkb.TestObject.Data[field] = value
+	}
 }
 
 func (mkb *mockedKeyBuilder) PutNumber(field appdef.FieldName, value json.Number) {
@@ -321,7 +322,11 @@ func (mvb *mockedValueBuilder) PutBool(name appdef.FieldName, b bool) {
 }
 
 func (mvb *mockedValueBuilder) PutRecordID(name appdef.FieldName, id istructs.RecordID) {
-	mvb.value.TestObjects[0].Data[name] = id
+	if name == appdef.SystemField_ID {
+		mvb.value.TestObjects[0].Id = id
+	} else {
+		mvb.value.TestObjects[0].Data[name] = id
+	}
 }
 
 func (mvb *mockedValueBuilder) PutNumber(name appdef.FieldName, number json.Number) {
@@ -424,7 +429,7 @@ func (m *mockedStateValue) AsInt32(name appdef.FieldName) int32 {
 	case json.Number:
 		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_int32)
 		if err != nil {
-			panic(fmt.Errorf("coreutils.ClarifyJSONNumber: %w", err))
+			panic(err)
 		}
 
 		return t2.(int32)
@@ -440,7 +445,7 @@ func (m *mockedStateValue) AsInt64(name appdef.FieldName) int64 {
 	case json.Number:
 		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_int64)
 		if err != nil {
-			panic(fmt.Errorf("coreutils.ClarifyJSONNumber: %w", err))
+			panic(err)
 		}
 
 		return t2.(int64)
@@ -456,7 +461,7 @@ func (m *mockedStateValue) AsFloat32(name appdef.FieldName) float32 {
 	case json.Number:
 		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_float32)
 		if err != nil {
-			panic(fmt.Errorf("coreutils.ClarifyJSONNumber: %w", err))
+			panic(err)
 		}
 
 		return t2.(float32)
@@ -472,7 +477,7 @@ func (m *mockedStateValue) AsFloat64(name appdef.FieldName) float64 {
 	case json.Number:
 		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_float64)
 		if err != nil {
-			panic(fmt.Errorf("coreutils.ClarifyJSONNumber: %w", err))
+			panic(err)
 		}
 
 		return t2.(float64)
@@ -503,14 +508,17 @@ func (m *mockedStateValue) AsRecordID(name appdef.FieldName) istructs.RecordID {
 	}
 
 	switch t := m.TestObjects[0].Data[name].(type) {
-	case int32:
-		//nolint:gosec
-		return istructs.RecordID(t)
 	case int64:
 		//nolint:gosec
 		return istructs.RecordID(t)
 	case istructs.RecordID:
 		return t
+	case json.Number:
+		res, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_RecordID)
+		if err != nil {
+			panic(err)
+		}
+		return res.(istructs.RecordID)
 	default:
 		panic(fmt.Sprintf("mockedStateValue.AsRecordID(%s): unexpected type", name))
 	}
