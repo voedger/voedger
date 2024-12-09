@@ -6,7 +6,6 @@
 package appdef
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/goutils/set"
@@ -92,38 +91,4 @@ func (k OperationKind) IsCompatible(o OperationKind) bool {
 func (k OperationKind) TrimString() string {
 	const pref = "OperationKind_"
 	return strings.TrimPrefix(k.String(), pref)
-}
-
-// Validates specified field names by types. Returns error if any field is not found.
-//
-// If types contains any substitution then all fields are allowed.
-func validateFieldNamesByTypes(tt FindType, types []QName, fields []FieldName) (err error) {
-	names := QNamesFrom(types...)
-
-	allFields := map[FieldName]struct{}{}
-
-	for _, n := range names {
-		t := tt(n)
-		switch t.Kind() {
-		case TypeKind_GRecord, TypeKind_GDoc,
-			TypeKind_CRecord, TypeKind_CDoc,
-			TypeKind_WRecord, TypeKind_WDoc,
-			TypeKind_ORecord, TypeKind_ODoc,
-			TypeKind_Object,
-			TypeKind_ViewRecord:
-			if ff, ok := t.(IFields); ok {
-				for _, f := range ff.Fields() {
-					allFields[f.Name()] = struct{}{}
-				}
-			}
-		}
-	}
-
-	for _, f := range fields {
-		if _, ok := allFields[f]; !ok {
-			err = errors.Join(err, ErrFieldNotFound(f))
-		}
-	}
-
-	return err
 }
