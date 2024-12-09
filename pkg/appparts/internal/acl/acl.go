@@ -154,7 +154,7 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 	if !result && logger.IsVerbose() {
 		logger.Verbose(fmt.Sprintf("%s for %s: [%s] -> deny", op, res, rolesToString(rol)))
 		for rule := range app.ACL {
-			logger.Verbose(fmt.Sprintf("ops: %v, res: %s, policy %s", rule.Ops(), rule.Resources().On(), rule.Policy()))
+			logger.Verbose(fmt.Sprintf("ops: %v, filter: %s, policy %s", rule.Ops(), rule.Filter(), rule.Policy()))
 		}
 	}
 

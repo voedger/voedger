@@ -179,6 +179,8 @@ func Test_GrantAndRevokeErrors(t *testing.T) {
 
 		wsb := adb.AddWorkspace(wsName)
 
+		_ = wsb.AddData(appdef.NewQName("test", "data"), appdef.DataKind_int32, appdef.NullQName)
+
 		_ = wsb.AddCommand(cmdName)
 
 		readerName := appdef.NewQName("test", "reader")
@@ -250,6 +252,16 @@ func Test_GrantAndRevokeErrors(t *testing.T) {
 					nil,
 					readerName)
 			}, require.Is(appdef.ErrUnsupportedError), require.HasAll("revoke", "Inherits"))
+		})
+
+		t.Run("if invalid resources", func(t *testing.T) {
+			require.Panics(func() {
+				wsb.GrantAll(filter.Types(wsName, appdef.TypeKind_ViewRecord), readerName)
+			}, require.Is(appdef.ErrNotFoundError), "ViewRecord", require.Has(wsName))
+
+			require.Panics(func() {
+				wsb.GrantAll(filter.Types(wsName, appdef.TypeKind_Data), readerName)
+			}, require.Is(appdef.ErrUnsupportedError), "test.data")
 		})
 
 		t.Run("if operations on invalid resources", func(t *testing.T) {
