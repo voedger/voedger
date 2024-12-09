@@ -40,12 +40,12 @@ func ExampleTags() {
 
 	example := func(flt appdef.IFilter) {
 		fmt.Println()
-		fmt.Println("The", flt, "Tags:")
+		fmt.Println("The filter", flt, "Tags:")
 		for t := range flt.Tags() {
 			fmt.Println("-", t)
 		}
 
-		fmt.Println("Testing", flt, "in", ws)
+		fmt.Println("Testing filter", flt, "in", ws)
 		for t := range appdef.ODocs(ws.LocalTypes()) {
 			fmt.Println("-", t, "is matched:", flt.Match(t))
 		}
@@ -58,24 +58,24 @@ func ExampleTags() {
 	// Output:
 	// This example demonstrates how to work with the Tags filter
 	//
-	// The filter.Tags(test.tagOdd) Tags:
+	// The filter Tags(test.tagOdd) Tags:
 	// - test.tagOdd
-	// Testing filter.Tags(test.tagOdd) in Workspace «test.workspace»
+	// Testing filter Tags(test.tagOdd) in Workspace «test.workspace»
 	// - ODoc «test.doc1» is matched: true
 	// - ODoc «test.doc2» is matched: false
 	// - ODoc «test.doc3» is matched: true
 	//
-	// The filter.Tags(test.tagEven) Tags:
+	// The filter Tags(test.tagEven) Tags:
 	// - test.tagEven
-	// Testing filter.Tags(test.tagEven) in Workspace «test.workspace»
+	// Testing filter Tags(test.tagEven) in Workspace «test.workspace»
 	// - ODoc «test.doc1» is matched: false
 	// - ODoc «test.doc2» is matched: true
 	// - ODoc «test.doc3» is matched: false
 	//
-	// The filter.Tags(test.tagEven, test.tagOdd) Tags:
+	// The filter Tags(test.tagEven, test.tagOdd) Tags:
 	// - test.tagEven
 	// - test.tagOdd
-	// Testing filter.Tags(test.tagEven, test.tagOdd) in Workspace «test.workspace»
+	// Testing filter Tags(test.tagEven, test.tagOdd) in Workspace «test.workspace»
 	// - ODoc «test.doc1» is matched: true
 	// - ODoc «test.doc2» is matched: true
 	// - ODoc «test.doc3» is matched: true

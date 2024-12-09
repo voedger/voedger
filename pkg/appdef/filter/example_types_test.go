@@ -35,12 +35,12 @@ func ExampleTypes() {
 
 	example := func(flt appdef.IFilter) {
 		fmt.Println()
-		fmt.Println("The", flt, "Types:")
+		fmt.Println("The filter", flt, "Types:")
 		for t := range flt.Types() {
 			fmt.Println("-", t)
 		}
 
-		fmt.Println("Testing", flt, "in", ws)
+		fmt.Println("Testing filter", flt, "in", ws)
 		for t := range ws.LocalTypes() {
 			fmt.Println("-", t, "is matched:", flt.Match(t))
 		}
@@ -52,17 +52,17 @@ func ExampleTypes() {
 	// Output:
 	// This example demonstrates how to work with the Types filter
 	//
-	// The filter.Types(workspace «test.workspace»: ODoc, Object) Types:
+	// The filter Types(ODoc, Object from Workspace test.workspace) Types:
 	// - TypeKind_ODoc
 	// - TypeKind_Object
-	// Testing filter.Types(workspace «test.workspace»: ODoc, Object) in Workspace «test.workspace»
+	// Testing filter Types(ODoc, Object from Workspace test.workspace) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true
 	// - Object «test.object» is matched: true
 	//
-	// The filter.Types(workspace «test.workspace»: Query) Types:
+	// The filter Types(Query from Workspace test.workspace) Types:
 	// - TypeKind_Query
-	// Testing filter.Types(workspace «test.workspace»: Query) in Workspace «test.workspace»
+	// Testing filter Types(Query from Workspace test.workspace) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: false
 	// - Object «test.object» is matched: false

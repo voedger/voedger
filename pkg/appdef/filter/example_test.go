@@ -36,7 +36,7 @@ func Example() {
 
 	example := func(flt appdef.IFilter) {
 		fmt.Println()
-		fmt.Println("Testing", flt, "in", ws)
+		fmt.Println("Testing filter", flt, "in", ws)
 		for t := range ws.LocalTypes() {
 			fmt.Println("-", t, "is matched:", flt.Match(t))
 		}
@@ -47,12 +47,12 @@ func Example() {
 
 	// Output:
 	//
-	// Testing filter.And(filter.Types(workspace «test.workspace»: ODoc), filter.QNames(test.doc)) in Workspace «test.workspace»
+	// Testing filter Types(ODoc from Workspace test.workspace) and QNames(test.doc) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: true
 	// - Object «test.object» is matched: false
 	//
-	// Testing filter.And(filter.QNames(test.other), filter.Types(workspace «test.workspace»: Command)) in Workspace «test.workspace»
+	// Testing filter QNames(test.other) and Types(Command from Workspace test.workspace) in Workspace «test.workspace»
 	// - BuiltIn-Command «test.command» is matched: false
 	// - ODoc «test.doc» is matched: false
 	// - Object «test.object» is matched: false
