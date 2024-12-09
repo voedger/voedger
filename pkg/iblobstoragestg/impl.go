@@ -39,7 +39,7 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 
 	pKeyState, cColState := getStateKeys(blobKey)
 
-	err = b.writeState(&state, pKeyState, cColState)
+	err = b.writeState(state, pKeyState, cColState)
 	if err != nil {
 		// notest
 		return err
@@ -91,7 +91,7 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 		state.Status = iblobstorage.BLOBStatus_Unknown
 	}
 
-	if errState := b.writeState(&state, pKeyState, cColState); errState != nil {
+	if errState := b.writeState(state, pKeyState, cColState); errState != nil {
 		// notest
 		if err == nil {
 			// err as priority over errStatus
@@ -216,7 +216,7 @@ func (b *bStorageType) readState(pKey, cCol []byte) (state iblobstorage.BLOBStat
 	return state, true, err
 }
 
-func (b *bStorageType) writeState(state *iblobstorage.BLOBState, pKey, cCol []byte) (err error) {
+func (b *bStorageType) writeState(state iblobstorage.BLOBState, pKey, cCol []byte) (err error) {
 	value, err := json.Marshal(state)
 	if err != nil {
 		// notest
