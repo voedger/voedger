@@ -33,8 +33,16 @@ func makeTypesFilter(ws appdef.QName, t appdef.TypeKind, tt ...appdef.TypeKind) 
 func (typesFilter) Kind() appdef.FilterKind { return appdef.FilterKind_Types }
 
 func (f typesFilter) Match(t appdef.IType) bool {
-	return ((f.ws == appdef.NullQName) || (t.Workspace().QName() == f.ws)) &&
-		f.types.Contains(t.Kind())
+	if !f.types.Contains(t.Kind()) {
+		return false
+	}
+
+	if f.ws == appdef.NullQName {
+		return true
+	}
+
+	ws := t.Workspace()
+	return (ws != nil) && (ws.QName() == f.ws)
 }
 
 func (f typesFilter) String() string {
