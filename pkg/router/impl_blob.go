@@ -148,6 +148,9 @@ func registerBLOB(ctx context.Context, wsid istructs.WSID, appQName string, regi
 		Header:   header,
 		Host:     localhost,
 	}
+	if logger.IsVerbose() {
+		logger.Verbose("registering BLOB: wsid", wsid, ",header", header)
+	}
 	blobHelperResp, _, _, err := bus.SendRequest2(ctx, req, busTimeout)
 	if err != nil {
 		WriteTextResponse(resp, fmt.Sprintf("failed to exec %s: %s", registerFuncName, err.Error()), http.StatusInternalServerError)
@@ -164,6 +167,9 @@ func registerBLOB(ctx context.Context, wsid istructs.WSID, appQName string, regi
 		return false, istructs.NullRecordID
 	}
 	newIDsIntf, ok := cmdResp["NewIDs"]
+	if logger.IsVerbose() {
+		logger.Verbose("registered BLOB: wsid", wsid, ",header", header, "blobIDs", newIDsIntf.(map[string]interface{}))
+	}
 	if ok {
 		newIDs := newIDsIntf.(map[string]interface{})
 		return true, istructs.RecordID(newIDs["1"].(float64))
@@ -230,6 +236,9 @@ func writeBLOB_persistent(ctx context.Context, wsid istructs.WSID, appQName stri
 	}
 
 	wLimiter := wLimiterFactory()
+	if logger.IsVerbose() {
+		logger.Verbose(fmt.Sprintf("uploading blob wsid %d descr %v", wsid, descr))
+	}
 	if err := blobStorage.WriteBLOB(ctx, key, descr, body, wLimiter); err != nil {
 		if errors.Is(err, iblobstorage.ErrBLOBSizeQuotaExceeded) {
 			WriteTextResponse(resp, err.Error(), http.StatusForbidden)
@@ -237,6 +246,9 @@ func writeBLOB_persistent(ctx context.Context, wsid istructs.WSID, appQName stri
 		}
 		WriteTextResponse(resp, err.Error(), http.StatusInternalServerError)
 		return 0
+	}
+	if logger.IsVerbose() {
+		logger.Verbose(fmt.Sprintf("uploaded blob wsid %d descr %v", wsid, descr))
 	}
 
 	// set WDoc<sys.BLOB>.status = BLOBStatus_Completed
@@ -249,6 +261,9 @@ func writeBLOB_persistent(ctx context.Context, wsid istructs.WSID, appQName stri
 		Header:   header,
 		Host:     localhost,
 	}
+	if logger.IsVerbose() {
+		logger.Verbose(fmt.Sprintf("updating blob state wsid %d descr %v", wsid, descr))
+	}
 	cudWDocBLOBUpdateResp, _, _, err := bus.SendRequest2(ctx, req, busTimeout)
 	if err != nil {
 		WriteTextResponse(resp, "failed to exec c.sys.CUD: "+err.Error(), http.StatusInternalServerError)
@@ -257,6 +272,9 @@ func writeBLOB_persistent(ctx context.Context, wsid istructs.WSID, appQName stri
 	if cudWDocBLOBUpdateResp.StatusCode != http.StatusOK {
 		WriteTextResponse(resp, "c.sys.CUD returned error: "+string(cudWDocBLOBUpdateResp.Data), cudWDocBLOBUpdateResp.StatusCode)
 		return 0
+	}
+	if logger.IsVerbose() {
+		logger.Verbose(fmt.Sprintf("updated blob state wsid %d descr %v", wsid, descr))
 	}
 
 	return blobID
