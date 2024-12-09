@@ -21,8 +21,8 @@ func (acl *ACL) read(a appdef.IWithACL, withPrincipals bool) {
 
 func newACLRule() *ACLRule {
 	return &ACLRule{
-		Ops:       make([]string, 0),
-		Resources: newACLResourcePattern(),
+		Ops:    make([]string, 0),
+		Filter: newACLFilter(),
 	}
 }
 
@@ -32,7 +32,7 @@ func (ar *ACLRule) read(acl appdef.IACLRule, withPrincipal bool) {
 	for _, k := range acl.Ops() {
 		ar.Ops = append(ar.Ops, k.TrimString())
 	}
-	ar.Resources.read(acl.Resources())
+	ar.Filter.read(acl.Filter())
 
 	if withPrincipal {
 		n := acl.Principal().QName()
@@ -40,13 +40,13 @@ func (ar *ACLRule) read(acl appdef.IACLRule, withPrincipal bool) {
 	}
 }
 
-func newACLResourcePattern() *ACLResourcePattern {
-	return &ACLResourcePattern{
+func newACLFilter() *ACLFilter {
+	return &ACLFilter{
 		Fields: make([]appdef.FieldName, 0),
 	}
 }
 
-func (arp *ACLResourcePattern) read(rp appdef.IACLFilter) {
-	arp.On.Add(rp.On()...)
-	arp.Fields = append(arp.Fields, rp.Fields()...)
+func (f *ACLFilter) read(flt appdef.IACLFilter) {
+	f.Filter.read(flt)
+	f.Fields = append(f.Fields, flt.Fields()...)
 }
