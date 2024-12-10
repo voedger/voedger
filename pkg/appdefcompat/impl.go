@@ -196,7 +196,7 @@ func buildUniquesNode(parentNode *CompatibilityTreeNode, item appdef.IUniques) (
 
 func buildContainersNode(parentNode *CompatibilityTreeNode, item appdef.IContainers) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameContainers, nil)
-	for _, container := range item.Containers() {
+	for container := range item.Containers() {
 		node.Props = append(node.Props, buildContainerNode(node, container))
 	}
 	return
