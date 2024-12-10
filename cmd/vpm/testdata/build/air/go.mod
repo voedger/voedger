@@ -2,7 +2,7 @@ module air
 
 go 1.23.1
 
-require github.com/voedger/voedger v0.0.0-20241114100238-f3ce7227cf18
+require github.com/voedger/voedger v0.0.0-20241210143322-b216a682f6d3
 
 require (
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect

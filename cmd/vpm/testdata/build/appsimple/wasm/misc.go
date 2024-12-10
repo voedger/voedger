@@ -23,18 +23,3 @@ func StupidPow(base, pow uint64) (res uint64) {
 	}
 	return res
 }
-
-// func Pow(base, pow uint64) uint64 {
-// 	if base == 0 {
-// 		return 0 // 0 raised to any power is 0
-// 	}
-// 	result := uint64(1)
-// 	for pow > 0 {
-// 		if pow&1 == 1 {
-// 			result *= base
-// 		}
-// 		base *= base
-// 		pow >>= 1
-// 	}
-// 	return result
-// }

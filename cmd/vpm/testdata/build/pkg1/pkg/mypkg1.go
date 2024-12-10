@@ -3,21 +3,15 @@
  * @author Alisher Nurmanov
  */
 
-package main
+package pkg
 
 import (
-	mypkg1 "pkg1/pkg"
 	mypkg2 "pkg2/pkg"
 
 	_ "github.com/voedger/voedger/pkg/sys"
 )
 
-func main() {
-	appFunc()
-	mypkg1.MyPkg1()
+func MyPkg1() {
+	println("mypkg2.MyPkg2")
 	mypkg2.MyPkg2()
-}
-
-func appFunc() {
-	println("app.AppFunc")
 }
