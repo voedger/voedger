@@ -25,6 +25,8 @@ type IProjectorEvents interface {
 	// Enumerate events to trigger the projector.
 	//
 	// Events enumerated in alphabetical QNames order.
+	//
+	// TODO: should be iter.Seq[IProjectorEvent]
 	Enum(func(IProjectorEvent))
 
 	// Returns event by name.
@@ -36,6 +38,8 @@ type IProjectorEvents interface {
 	Len() int
 
 	// Returns events to trigger as map.
+	//
+	// TODO: should be iter.Seq2[QName, []ProjectorEventKind]
 	Map() map[QName][]ProjectorEventKind
 }
 

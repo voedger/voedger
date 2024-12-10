@@ -35,6 +35,8 @@ type IRate interface {
 	IType
 	Count() RateCount
 	Period() RatePeriod
+
+	// TODO: should be iter.Seq[RateScope]
 	Scopes() []RateScope
 }
 
@@ -53,7 +55,10 @@ type IRatesBuilder interface {
 
 type ILimit interface {
 	IType
+
+	// TODO: should be iter.Seq[QName]
 	On() QNames
+
 	Rate() IRate
 }
 
