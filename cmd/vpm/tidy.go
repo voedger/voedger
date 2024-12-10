@@ -60,7 +60,7 @@ func getImports(appDef appdef.IAppDef, packagePath string) (imports []string) {
 		return imports
 	}
 	excludedPaths := []string{compile.DummyAppName, appdef.SysPackagePath, packagePath}
-	for _, fullPath := range appDef.Packages {
+	for _, fullPath := range appDef.Packages() {
 		if !slices.Contains(excludedPaths, fullPath) {
 			imports = append(imports, fullPath)
 		}

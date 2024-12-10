@@ -49,7 +49,7 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 			doc := CDoc(tested.Type, docName)
 			require.Equal(TypeKind_CDoc, doc.Kind())
 			require.Equal(typ.(ICDoc), doc)
-			require.NotPanics(func() { doc.isCDoc() })
+			doc.isCDoc()
 
 			require.Equal(wsName, doc.Workspace().QName())
 			require.Equal(2, doc.UserFieldCount())
@@ -64,6 +64,7 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 				rec := CRecord(tested.Type, recName)
 				require.Equal(TypeKind_CRecord, rec.Kind())
 				require.Equal(typ.(ICRecord), rec)
+				rec.isCRecord()
 
 				require.Equal(wsName, rec.Workspace().QName())
 				require.Equal(2, rec.UserFieldCount())

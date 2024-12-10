@@ -43,12 +43,18 @@ func (f andFilter) Match(t appdef.IType) bool {
 }
 
 func (f andFilter) String() string {
-	s := fmt.Sprintf("filter.%s(", f.Kind().TrimString())
+	// QNames(…) and Tags(…)
+	// (QNames(…) or Types(…)) and not Tags(…)
+	s := ""
 	for i, c := range f.children {
-		if i > 0 {
-			s += ", "
+		cStr := fmt.Sprint(c)
+		if (c.Kind() == appdef.FilterKind_Or) || (c.Kind() == appdef.FilterKind_And) {
+			cStr = fmt.Sprintf("(%s)", cStr)
 		}
-		s += fmt.Sprint(c)
+		if i > 0 {
+			s += " AND "
+		}
+		s += cStr
 	}
-	return s + ")"
+	return s
 }

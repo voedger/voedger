@@ -59,7 +59,7 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 
 	t.Run("should be ok to enum workspaces", func(t *testing.T) {
 		cnt := 0
-		for ws := range app.Workspaces {
+		for ws := range app.Workspaces() {
 			cnt++
 			switch ws.QName() {
 			case SysWorkspaceQName:
@@ -361,7 +361,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 				want = []QName{SysWorkspaceQName}
 			}
 			i := 0
-			for a := range ws.Ancestors {
+			for a := range ws.Ancestors() {
 				require.EqualValues(want[i], a.QName(), "unexpected ancestor for «%v»: want %v, got: %v", ws, want[i], a.QName())
 				i++
 			}
@@ -398,7 +398,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 	t.Run("should be correspondence between Ancestors() and Inherits()", func(t *testing.T) {
 		for idx := 0; idx < wsCount; idx++ {
 			ws := app.Workspace(wsName(idx))
-			for a := range ws.Ancestors {
+			for a := range ws.Ancestors() {
 				require.True(ws.Inherits(a.QName()), "%v.Inherits(%v) returns false for ancestor workspace", ws, a.QName())
 			}
 		}
@@ -438,7 +438,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 			ws := app.Workspace(wsName(wsIdx))
 			types := slices.Collect(ws.Types())
 			requireSortedTypes(t, types)
-			for a := range ws.Ancestors {
+			for a := range ws.Ancestors() {
 				for t := range a.Types() {
 					require.Contains(types, t, "%v types should contains type %v from ancestor %v", ws, t, a)
 				}
@@ -447,6 +447,30 @@ func Test_WorkspaceInheritance(t *testing.T) {
 				return CompareQName(a.QName(), b.QName())
 			}), "%v types should be sorted", ws)
 		}
+	})
+
+	t.Run("Should be rebuild workspace if ancestors changed", func(t *testing.T) {
+		adb := testADB()
+		_ = adb.MustBuild()
+
+		newObj := NewQName("test", "newObject")
+		find := func() (obj IObject) {
+			ws7 := adb.AlterWorkspace(wsName(7)).Workspace()
+			for o := range Objects(ws7.Types()) {
+				if o.QName() == newObj {
+					obj = o
+					break
+				}
+			}
+			return obj
+		}
+
+		require.Nil(find(), "should not found new object before add")
+
+		ws3b := adb.AlterWorkspace(wsName(3))
+		_ = ws3b.AddObject(newObj)
+
+		require.NotNil(find(), "should found new object after add")
 	})
 
 	t.Run("should be panics", func(t *testing.T) {
@@ -558,7 +582,7 @@ func Test_WorkspaceUsage(t *testing.T) {
 				want[i] = wsName(u)
 			}
 			i := 0
-			for u := range ws.UsedWorkspaces {
+			for u := range ws.UsedWorkspaces() {
 				require.Equal(want[i], u.QName(), "unexpected %v UsedWorkspaces[%d] for: want %v, got: %v", ws, i, want[i], u.QName())
 				i++
 			}

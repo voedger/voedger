@@ -34,5 +34,11 @@ func (f notFilter) Match(t appdef.IType) bool {
 func (f notFilter) Not() appdef.IFilter { return f.f }
 
 func (f notFilter) String() string {
-	return fmt.Sprintf("filter.%s(%v)", f.Kind().TrimString(), f.Not())
+	// not Tags(…)
+	// not (QNames(…) and Tags(…))
+	s := fmt.Sprint(f.Not())
+	if k := f.Not().Kind(); (k == appdef.FilterKind_Or) || (k == appdef.FilterKind_And) {
+		s = fmt.Sprintf("(%s)", s)
+	}
+	return fmt.Sprintf("NOT %s", s)
 }

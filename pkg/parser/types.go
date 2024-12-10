@@ -12,6 +12,7 @@ import (
 	"github.com/alecthomas/participle/v2/lexer"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
@@ -701,6 +702,11 @@ type GrantOrRevoke struct {
 	ops       []appdef.OperationKind
 	columns   []appdef.FieldName
 	workspace workspaceAddr
+}
+
+func (g GrantOrRevoke) filter() appdef.IFilter {
+	// TODO: implement support Types, Tags, Or, And, Not
+	return filter.QNames(g.on[0], g.on[1:]...)
 }
 
 type GrantStmt struct {

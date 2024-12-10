@@ -40,7 +40,8 @@ func (f qNamesFilter) QNames() iter.Seq[appdef.QName] {
 }
 
 func (f qNamesFilter) String() string {
-	s := fmt.Sprintf("filter.%s(", f.Kind().TrimString())
+	// QNames(…)
+	s := "QNames("
 	for i, c := range f.names {
 		if i > 0 {
 			s += ", "

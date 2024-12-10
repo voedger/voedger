@@ -24,12 +24,12 @@ func Types(ws appdef.QName, t appdef.TypeKind, tt ...appdef.TypeKind) appdef.IFi
 	return makeTypesFilter(ws, t, tt...)
 }
 
-// And returns a filter that matches types that match all filters.
+// And returns a filter that matches types that match all children filters.
 func And(f1, f2 appdef.IFilter, ff ...appdef.IFilter) appdef.IFilter {
 	return makeAndFilter(f1, f2, ff...)
 }
 
-// Or returns a filter that matches types that match any filter.
+// Or returns a filter that matches types that match any children filter.
 func Or(f1, f2 appdef.IFilter, ff ...appdef.IFilter) appdef.IFilter {
 	return makeOrFilter(f1, f2, ff...)
 }

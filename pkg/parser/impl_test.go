@@ -7,6 +7,7 @@ package parser
 import (
 	"embed"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -295,12 +296,8 @@ func Test_BasicUsage(t *testing.T) {
 	require.NotNil(intent)
 	require.True(intent.Names().Contains(appdef.NewQName("main", "Transaction")))
 
-	localNames := app.PackageLocalNames()
-	require.Len(localNames, 4)
-	require.Contains(localNames, appdef.SysPackage)
-	require.Contains(localNames, "main")
-	require.Contains(localNames, "air")
-	require.Contains(localNames, "untill")
+	localNames := slices.Collect(app.PackageLocalNames())
+	require.Equal([]string{"air", "main", appdef.SysPackage, "untill"}, localNames)
 
 	require.Equal(appdef.SysPackagePath, app.PackageFullPath(appdef.SysPackage))
 	require.Equal("github.com/untillpro/main", app.PackageFullPath("main"))
@@ -2142,16 +2139,18 @@ func Test_Grants(t *testing.T) {
 		var numACLs int
 
 		// table
-		app.ACL(func(i appdef.IACLRule) bool {
-			require.Len(i.Ops(), 1)
-			require.Equal(appdef.OperationKind_Inherits, i.Ops()[0])
-			require.Equal(appdef.PolicyKind_Allow, i.Policy())
-			require.Len(i.Resources().On(), 1)
-			require.Equal("pkg.admin", i.Resources().On()[0].String())
-			require.Equal("pkg.mgr", i.Principal().QName().String())
+		for acl := range app.ACL() {
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Inherits}, slices.Collect(acl.Ops()))
+			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
+
+			require.Equal(appdef.FilterKind_QNames, acl.Filter().Kind())
+			require.EqualValues(
+				appdef.MustParseQNames("pkg.admin"),
+				slices.Collect(acl.Filter().QNames()))
+
+			require.Equal("pkg.mgr", acl.Principal().QName().String())
 			numACLs++
-			return true
-		})
+		}
 		require.Equal(1, numACLs)
 	})
 
@@ -2175,16 +2174,18 @@ func Test_Grants(t *testing.T) {
 		var numACLs int
 
 		// table
-		app.ACL(func(i appdef.IACLRule) bool {
-			require.Len(i.Ops(), 1)
-			require.Equal(appdef.OperationKind_Select, i.Ops()[0])
-			require.Equal(appdef.PolicyKind_Allow, i.Policy())
-			require.Len(i.Resources().On(), 1)
-			require.Equal("pkg.UserProfile", i.Resources().On()[0].String())
-			require.Equal("pkg.ProfileOwner", i.Principal().QName().String())
+		for acl := range app.ACL() {
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Select}, slices.Collect(acl.Ops()))
+			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
+
+			require.Equal(appdef.FilterKind_QNames, acl.Filter().Kind())
+			require.EqualValues(
+				appdef.MustParseQNames("pkg.UserProfile"),
+				slices.Collect(acl.Filter().QNames()))
+
+			require.Equal("pkg.ProfileOwner", acl.Principal().QName().String())
 			numACLs++
-			return true
-		})
+		}
 		require.Equal(1, numACLs)
 	})
 
@@ -2214,16 +2215,18 @@ func Test_Grants_Inherit(t *testing.T) {
 		var numACLs int
 
 		// table
-		app.ACL(func(i appdef.IACLRule) bool {
-			require.Len(i.Ops(), 1)
-			require.Equal(appdef.OperationKind_Insert, i.Ops()[0])
-			require.Equal(appdef.PolicyKind_Allow, i.Policy())
-			require.Len(i.Resources().On(), 2)
-			require.True(i.Resources().On().ContainsAll(appdef.NewQName("pkg", "Table2"), appdef.NewQName("pkg", "AppWorkspace")))
-			require.Equal("pkg.role1", i.Principal().QName().String())
+		for acl := range app.ACL() {
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert}, slices.Collect(acl.Ops()))
+			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
+
+			require.Equal(appdef.FilterKind_QNames, acl.Filter().Kind())
+			require.EqualValues(
+				appdef.MustParseQNames("pkg.Table2", "pkg.AppWorkspace"),
+				slices.Collect(acl.Filter().QNames()))
+
+			require.Equal("pkg.role1", acl.Principal().QName().String())
 			numACLs++
-			return true
-		})
+		}
 		require.Equal(1, numACLs)
 	})
 

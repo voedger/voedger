@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/descr"
 )
@@ -128,24 +129,24 @@ func Example() {
 		reader.SetComment("read-only role")
 		reader.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Select},
-			[]appdef.QName{docName, recName}, []appdef.FieldName{"f1", "f2"},
+			filter.QNames(docName, recName), []appdef.FieldName{"f1", "f2"},
 			"allow reader to select some fields from test.doc and test.rec")
 		reader.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Select},
-			[]appdef.QName{viewName}, nil,
+			filter.QNames(viewName), nil,
 			"allow reader to select all fields from test.view")
-		reader.GrantAll([]appdef.QName{queryName}, "allow reader to execute test.query")
+		reader.GrantAll(filter.QNames(queryName), "allow reader to execute test.query")
 
 		writerName := appdef.NewQName("test", "writer")
 		writer := wsb.AddRole(writerName)
 		writer.SetComment("read-write role")
-		writer.GrantAll([]appdef.QName{docName, recName, viewName}, "allow writer to do anything with test.doc, test.rec and test.view")
+		writer.GrantAll(filter.QNames(docName, recName, viewName), "allow writer to do anything with test.doc, test.rec and test.view")
 		writer.Revoke(
 			[]appdef.OperationKind{appdef.OperationKind_Update},
-			[]appdef.QName{docName},
+			filter.QNames(docName),
 			nil,
 			"disable writer to update test.doc")
-		writer.GrantAll([]appdef.QName{cmdName, queryName}, "allow writer to execute all test functions")
+		writer.GrantAll(filter.AllFunctions(wsName), "allow writer to execute all test functions")
 
 		rateName := appdef.NewQName("test", "rate")
 		wsb.AddRate(rateName, 10, time.Minute, []appdef.RateScope{appdef.RateScope_AppPartition}, "rate 10 times per second per partition")
@@ -525,8 +526,8 @@ func Example() {
 	//                   "Ops": [
 	//                     "Select"
 	//                   ],
-	//                   "Resources": {
-	//                     "On": [
+	//                   "Filter": {
+	//                     "QNames": [
 	//                       "test.doc",
 	//                       "test.rec"
 	//                     ],
@@ -542,8 +543,8 @@ func Example() {
 	//                   "Ops": [
 	//                     "Select"
 	//                   ],
-	//                   "Resources": {
-	//                     "On": [
+	//                   "Filter": {
+	//                     "QNames": [
 	//                       "test.view"
 	//                     ]
 	//                   }
@@ -554,8 +555,8 @@ func Example() {
 	//                   "Ops": [
 	//                     "Execute"
 	//                   ],
-	//                   "Resources": {
-	//                     "On": [
+	//                   "Filter": {
+	//                     "QNames": [
 	//                       "test.query"
 	//                     ]
 	//                   }
@@ -573,8 +574,8 @@ func Example() {
 	//                     "Update",
 	//                     "Select"
 	//                   ],
-	//                   "Resources": {
-	//                     "On": [
+	//                   "Filter": {
+	//                     "QNames": [
 	//                       "test.doc",
 	//                       "test.rec",
 	//                       "test.view"
@@ -587,8 +588,8 @@ func Example() {
 	//                   "Ops": [
 	//                     "Update"
 	//                   ],
-	//                   "Resources": {
-	//                     "On": [
+	//                   "Filter": {
+	//                     "QNames": [
 	//                       "test.doc"
 	//                     ]
 	//                   }
@@ -599,10 +600,10 @@ func Example() {
 	//                   "Ops": [
 	//                     "Execute"
 	//                   ],
-	//                   "Resources": {
-	//                     "On": [
-	//                       "test.cmd",
-	//                       "test.query"
+	//                   "Filter": {
+	//                     "Types": [
+	//                       "TypeKind_Query",
+	//                       "TypeKind_Command"
 	//                     ]
 	//                   }
 	//                 }
@@ -616,8 +617,8 @@ func Example() {
 	//               "Ops": [
 	//                 "Select"
 	//               ],
-	//               "Resources": {
-	//                 "On": [
+	//               "Filter": {
+	//                 "QNames": [
 	//                   "test.doc",
 	//                   "test.rec"
 	//                 ],
@@ -634,8 +635,8 @@ func Example() {
 	//               "Ops": [
 	//                 "Select"
 	//               ],
-	//               "Resources": {
-	//                 "On": [
+	//               "Filter": {
+	//                 "QNames": [
 	//                   "test.view"
 	//                 ]
 	//               },
@@ -647,8 +648,8 @@ func Example() {
 	//               "Ops": [
 	//                 "Execute"
 	//               ],
-	//               "Resources": {
-	//                 "On": [
+	//               "Filter": {
+	//                 "QNames": [
 	//                   "test.query"
 	//                 ]
 	//               },
@@ -662,8 +663,8 @@ func Example() {
 	//                 "Update",
 	//                 "Select"
 	//               ],
-	//               "Resources": {
-	//                 "On": [
+	//               "Filter": {
+	//                 "QNames": [
 	//                   "test.doc",
 	//                   "test.rec",
 	//                   "test.view"
@@ -677,8 +678,8 @@ func Example() {
 	//               "Ops": [
 	//                 "Update"
 	//               ],
-	//               "Resources": {
-	//                 "On": [
+	//               "Filter": {
+	//                 "QNames": [
 	//                   "test.doc"
 	//                 ]
 	//               },
@@ -690,10 +691,10 @@ func Example() {
 	//               "Ops": [
 	//                 "Execute"
 	//               ],
-	//               "Resources": {
-	//                 "On": [
-	//                   "test.cmd",
-	//                   "test.query"
+	//               "Filter": {
+	//                 "Types": [
+	//                   "TypeKind_Query",
+	//                   "TypeKind_Command"
 	//                 ]
 	//               },
 	//               "Principal": "test.writer"

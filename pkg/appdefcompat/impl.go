@@ -196,7 +196,7 @@ func buildUniquesNode(parentNode *CompatibilityTreeNode, item appdef.IUniques) (
 
 func buildContainersNode(parentNode *CompatibilityTreeNode, item appdef.IContainers) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameContainers, nil)
-	for _, container := range item.Containers() {
+	for container := range item.Containers() {
 		node.Props = append(node.Props, buildContainerNode(node, container))
 	}
 	return
@@ -227,7 +227,7 @@ func buildTypesNode(parentNode *CompatibilityTreeNode, types appdef.SeqType, qNa
 
 func buildPackagesNode(parentNode *CompatibilityTreeNode, item appdef.IAppDef) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNamePackages, nil)
-	for localName, fullPath := range item.Packages {
+	for localName, fullPath := range item.Packages() {
 		node.Props = append(node.Props, newNode(node, fullPath, localName))
 	}
 	return

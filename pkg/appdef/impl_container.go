@@ -8,6 +8,8 @@ package appdef
 import (
 	"errors"
 	"fmt"
+	"iter"
+	"slices"
 	"strconv"
 
 	"github.com/voedger/voedger/pkg/coreutils/utils"
@@ -85,8 +87,8 @@ func (cc containers) ContainerCount() int {
 	return len(cc.containersOrdered)
 }
 
-func (cc containers) Containers() []IContainer {
-	return cc.containersOrdered
+func (cc containers) Containers() iter.Seq[IContainer] {
+	return slices.Values(cc.containersOrdered)
 }
 
 func (cc *containers) addContainer(name string, contType QName, minOccurs, maxOccurs Occurs, comment ...string) {
@@ -135,7 +137,7 @@ func (cc *containers) addContainer(name string, contType QName, minOccurs, maxOc
 func validateTypeContainers(t IType) (err error) {
 	if cnt, ok := t.(IContainers); ok {
 		// resolve containers types
-		for _, cont := range cnt.Containers() {
+		for cont := range cnt.Containers() {
 			contType := cont.Type()
 			if contType == nil {
 				err = errors.Join(err,

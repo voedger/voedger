@@ -7,6 +7,8 @@ package appdef
 
 import (
 	"fmt"
+	"iter"
+	"maps"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/coreutils/utils"
@@ -58,9 +60,9 @@ func (d *data) Ancestor() IData {
 	return d.ancestor
 }
 
-func (d *data) Constraints(withInherited bool) map[ConstraintKind]IConstraint {
+func (d *data) Constraints(withInherited bool) iter.Seq2[ConstraintKind, IConstraint] {
 	if !withInherited {
-		return d.constraints
+		return maps.All(d.constraints)
 	}
 
 	cc := make(map[ConstraintKind]IConstraint)
@@ -75,7 +77,7 @@ func (d *data) Constraints(withInherited bool) map[ConstraintKind]IConstraint {
 		}
 		a = a.ancestor.(*data)
 	}
-	return cc
+	return maps.All(cc)
 }
 
 func (d *data) DataKind() DataKind {
