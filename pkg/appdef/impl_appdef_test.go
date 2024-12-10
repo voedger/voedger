@@ -177,7 +177,7 @@ func Test_EnumsBreakable(t *testing.T) {
 	t.Run("should be breakable", func(t *testing.T) {
 		ws := app.Workspace(wsName)
 
-		testBreakable(t, "Workspaces", app.Workspaces)
+		testBreakable(t, "Workspaces", app.Workspaces())
 
 		testBreakable(t, "Types", app.Types(), ws.Types(), ws.LocalTypes())
 

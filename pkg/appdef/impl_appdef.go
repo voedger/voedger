@@ -84,8 +84,8 @@ func (app *appDef) Workspace(name QName) IWorkspace {
 	return TypeByNameAndKind[IWorkspace](app.Type, name, TypeKind_Workspace)
 }
 
-func (app *appDef) Workspaces(visit func(IWorkspace) bool) {
-	app.workspaces.all(visit)
+func (app *appDef) Workspaces() iter.Seq[IWorkspace] {
+	return app.workspaces.all
 }
 
 func (app *appDef) WorkspaceByDescriptor(name QName) IWorkspace {

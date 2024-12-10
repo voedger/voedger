@@ -52,8 +52,8 @@ func (ws workspace) ACL() iter.Seq[IACLRule] {
 	}
 }
 
-func (ws *workspace) Ancestors(visit func(IWorkspace) bool) {
-	ws.ancestors.all(visit)
+func (ws *workspace) Ancestors() iter.Seq[IWorkspace] {
+	return ws.ancestors.all
 }
 
 func (ws *workspace) Descriptor() QName {
@@ -99,12 +99,12 @@ func (ws *workspace) Type(name QName) IType {
 			if t := w.LocalType(name); t != NullType {
 				return t
 			}
-			for a := range w.Ancestors {
+			for a := range w.Ancestors() {
 				if t := find(a.(*workspace)); t != NullType {
 					return t
 				}
 			}
-			for u := range w.UsedWorkspaces {
+			for u := range w.UsedWorkspaces() {
 				// #2872 should find used workspaces, but not types from them
 				if u.QName() == name {
 					return u
@@ -123,8 +123,8 @@ func (ws *workspace) Types() iter.Seq[IType] {
 	return ws.types.all.all
 }
 
-func (ws *workspace) UsedWorkspaces(visit func(IWorkspace) bool) {
-	ws.usedWS.all(visit)
+func (ws *workspace) UsedWorkspaces() iter.Seq[IWorkspace] {
+	return ws.usedWS.all
 }
 
 func (ws *workspace) Validate() error {
@@ -253,13 +253,13 @@ func (ws *workspace) buildAllTypes() *types[IType] {
 			return
 		}
 		chain[w.QName()] = true
-		for a := range w.Ancestors {
+		for a := range w.Ancestors() {
 			collect(a)
 		}
 		for t := range w.LocalTypes() {
 			tt.add(t)
 		}
-		for u := range w.UsedWorkspaces {
+		for u := range w.UsedWorkspaces() {
 			// #2872 should enum used workspaces, but not type from them
 			tt.add(u)
 		}
