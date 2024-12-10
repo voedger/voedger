@@ -7,9 +7,11 @@ package appdef
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -238,7 +240,7 @@ func Test_appDef_makeSysDataTypes(t *testing.T) {
 			require.True(d.IsSystem())
 			require.Equal(k, d.DataKind())
 			require.Nil(d.Ancestor())
-			require.Empty(d.Constraints(false))
+			require.Empty(maps.Collect(d.Constraints(false)))
 		}
 	})
 }
@@ -291,8 +293,8 @@ func TestNewConstraint(t *testing.T) {
 			args{ConstraintKind_Enum, []int32{1, 2, 3}, []string{"test int32 enum"}},
 		},
 		{"int64 enumeration",
-			args{ConstraintKind_Enum, []int64{3, 2, 1, 2}, []string{}},
-			args{ConstraintKind_Enum, []int64{1, 2, 3}, []string{}},
+			args{ConstraintKind_Enum, []int64{3, 2, 1, 2}, nil},
+			args{ConstraintKind_Enum, []int64{1, 2, 3}, nil},
 		},
 		{"float32 enumeration",
 			args{ConstraintKind_Enum, []float32{1, 3, 2, 1}, []string{"test", "float32", "enum"}},
@@ -310,7 +312,7 @@ func TestNewConstraint(t *testing.T) {
 			require.NotNil(c)
 			require.Equal(tt.want.kind, c.Kind())
 			require.EqualValues(tt.want.value, c.Value())
-			require.EqualValues(tt.want.c, c.CommentLines())
+			require.EqualValues(tt.want.c, slices.Collect(c.CommentLines()))
 		})
 	}
 }

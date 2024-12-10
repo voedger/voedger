@@ -37,6 +37,8 @@ type IFields interface {
 	FieldCount() int
 
 	// All fields in add order.
+	//
+	// TODO: should be iter.Seq2[int, IField] or iter.Seq[IField]
 	Fields() []IField
 
 	// Finds reference field by name.
@@ -45,9 +47,13 @@ type IFields interface {
 	RefField(FieldName) IRefField
 
 	// All reference fields. System field (sys.ParentID) is also included
+	//
+	// TODO: should be iter.Seq[IField]
 	RefFields() []IRefField
 
 	// User fields in add order. System fields (sys.QName, sys.ID, …) are excluded
+	//
+	// TODO: should be iter.Seq[IField]
 	UserFields() []IField
 
 	// Returns user fields count. System fields (sys.QName, sys.ID, …) are excluded

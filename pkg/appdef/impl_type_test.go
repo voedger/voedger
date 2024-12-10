@@ -8,6 +8,7 @@ package appdef
 import (
 	"fmt"
 	"iter"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,7 +24,7 @@ func Test_NullType(t *testing.T) {
 	require := require.New(t)
 
 	require.Empty(NullType.Comment())
-	require.Empty(NullType.CommentLines())
+	require.Empty(slices.Collect(NullType.CommentLines()))
 
 	require.False(NullType.HasTag(NullQName))
 	NullType.Tags()(func(ITag) bool { require.Fail("Tags() should be empty"); return false })
@@ -41,7 +42,7 @@ func Test_AnyTypes(t *testing.T) {
 	require := require.New(t)
 
 	require.Empty(AnyType.Comment())
-	require.Empty(AnyType.CommentLines())
+	require.Empty(slices.Collect(AnyType.CommentLines()))
 
 	require.Nil(AnyType.App())
 	require.Nil(AnyType.Workspace())

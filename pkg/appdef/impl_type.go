@@ -102,9 +102,7 @@ func newTypes[T IType]() *types[T] {
 }
 
 func (tt *types[T]) add(t T) {
-	name := t.QName()
-
-	tt.m[name] = t
+	tt.m[t.QName()] = t
 	tt.s = nil
 }
 
@@ -127,6 +125,11 @@ func (tt types[T]) find(name QName) IType {
 		return t
 	}
 	return NullType
+}
+
+func (tt *types[T]) remove(name QName) {
+	delete(tt.m, name)
+	tt.s = nil
 }
 
 // Returns type by reference.

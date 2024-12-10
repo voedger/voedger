@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
@@ -509,7 +510,7 @@ func TestAuthnz(t *testing.T) {
 		cfg.Resources.Add(istructsmem.NewCommandFunction(qNameDeniedCmd, istructsmem.NullCommandExec))
 		cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, istructsmem.NullCommandExec))
 
-		wsb.Revoke([]appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{qNameDeniedCmd}, nil, iauthnz.QNameRoleWorkspaceOwner)
+		wsb.Revoke([]appdef.OperationKind{appdef.OperationKind_Execute}, filter.QNames(qNameDeniedCmd), nil, iauthnz.QNameRoleWorkspaceOwner)
 	})
 	defer tearDown(app)
 

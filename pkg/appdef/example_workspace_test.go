@@ -47,7 +47,7 @@ func ExampleIWorkspace() {
 	{
 		fmt.Println("App workspaces:")
 		cnt := 0
-		for ws := range app.Workspaces {
+		for ws := range app.Workspaces() {
 			cnt++
 			fmt.Println("-", cnt, ":", ws)
 		}

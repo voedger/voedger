@@ -43,6 +43,7 @@ func TestTags(t *testing.T) {
 	testWith := func(tested testedTypes) {
 		t.Run("should be ok to find tag by name", func(t *testing.T) {
 			tag := Tag(tested.Type, tagNames[0])
+			tag.isTag()
 			require.NotNil(tag)
 			require.Equal(tagNames[0], tag.QName())
 			require.Equal(TypeKind_Tag, tag.Kind())

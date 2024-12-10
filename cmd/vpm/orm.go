@@ -99,7 +99,7 @@ func getPkgAppDefObjs(
 		HeaderFileContent: headerContent,
 	}
 
-	for localName, fullPath := range appDef.Packages {
+	for localName, fullPath := range appDef.Packages() {
 		if fullPath == packagePath {
 			currentPkgLocalName = localName
 		}
@@ -132,7 +132,7 @@ func getPkgAppDefObjs(
 	}
 
 	// gather objects from the current package
-	for workspace := range appDef.Workspaces {
+	for workspace := range appDef.Workspaces() {
 		// add workspace itself to the list of objects as well
 		collectITypeObjs(workspace)(workspace)
 		// then add all types of the workspace
@@ -386,7 +386,7 @@ func processITypeObj(
 		}
 
 		if iContainers, ok := t.(appdef.IContainers); ok {
-			for _, container := range iContainers.Containers() {
+			for container := range iContainers.Containers() {
 				containerName := container.Name()
 				tableData.Containers = append(tableData.Containers, ormField{
 					Table:         tableData,

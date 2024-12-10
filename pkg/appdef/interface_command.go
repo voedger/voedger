@@ -15,18 +15,6 @@ type ICommand interface {
 	UnloggedParam() IType
 }
 
-// type IWithCommands interface {
-// 	// Returns Command by name.
-// 	//
-// 	// Returns nil if not found.
-// 	Command(QName) ICommand
-
-// 	// Enumerates all commands
-// 	//
-// 	// Commands are enumerated in alphabetical order by QName
-// 	Commands(func(ICommand) bool)
-// }
-
 type ICommandBuilder interface {
 	IFunctionBuilder
 

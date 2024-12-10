@@ -14,9 +14,11 @@ import (
 
 func ExampleAnd() {
 	fmt.Println("This example demonstrates how to work with the And filter")
+	fmt.Println()
 
 	wsName := appdef.NewQName("test", "workspace")
 	doc, obj, cmd := appdef.NewQName("test", "doc"), appdef.NewQName("test", "object"), appdef.NewQName("test", "command")
+	tag := appdef.NewQName("test", "tag")
 
 	app := func() appdef.IAppDef {
 		adb := appdef.New()
@@ -24,8 +26,9 @@ func ExampleAnd() {
 
 		wsb := adb.AddWorkspace(wsName)
 
+		wsb.AddTag(tag)
 		_ = wsb.AddODoc(doc)
-		_ = wsb.AddObject(obj)
+		wsb.AddObject(obj).SetTag(tag)
 		_ = wsb.AddCommand(cmd)
 
 		return adb.MustBuild()
@@ -34,36 +37,53 @@ func ExampleAnd() {
 	ws := app.Workspace(wsName)
 
 	example := func(flt appdef.IFilter) {
-		fmt.Println()
-		fmt.Println("The", flt, "And() children:")
+		fmt.Println(flt)
+		fmt.Println("- kind:", flt.Kind())
+		fmt.Println("- children:")
 		for f := range flt.And() {
-			fmt.Println("-", f)
+			fmt.Println("  *", f)
 		}
-		fmt.Println("Testing", flt, "in", ws)
+		fmt.Println("- testing:")
 		for t := range ws.LocalTypes() {
-			fmt.Println("-", t, "is matched:", flt.Match(t))
+			fmt.Println("  *", t, "is matched:", flt.Match(t))
 		}
+		fmt.Println()
 	}
 
-	example(filter.And(filter.Types(wsName, appdef.TypeKind_ODoc), filter.QNames(doc)))
-	example(filter.And(filter.QNames(appdef.NewQName("test", "other")), filter.Types(wsName, appdef.TypeKind_Command)))
+	example(
+		filter.And(
+			filter.Types(wsName, appdef.TypeKind_ODoc, appdef.TypeKind_Object),
+			filter.Tags(tag)))
+
+	example(
+		filter.And(
+			filter.QNames(doc, obj),
+			filter.Or(
+				filter.Types(wsName, appdef.TypeKind_Command),
+				filter.Tags(tag))))
 
 	// Output:
 	// This example demonstrates how to work with the And filter
 	//
-	// The filter.And(filter.Types(workspace «test.workspace»: ODoc), filter.QNames(test.doc)) And() children:
-	// - filter.Types(workspace «test.workspace»: ODoc)
-	// - filter.QNames(test.doc)
-	// Testing filter.And(filter.Types(workspace «test.workspace»: ODoc), filter.QNames(test.doc)) in Workspace «test.workspace»
-	// - BuiltIn-Command «test.command» is matched: false
-	// - ODoc «test.doc» is matched: true
-	// - Object «test.object» is matched: false
+	// Types(ODoc, Object) from Workspace test.workspace AND Tags(test.tag)
+	// - kind: FilterKind_And
+	// - children:
+	//   * Types(ODoc, Object) from Workspace test.workspace
+	//   * Tags(test.tag)
+	// - testing:
+	//   * BuiltIn-Command «test.command» is matched: false
+	//   * ODoc «test.doc» is matched: false
+	//   * Object «test.object» is matched: true
+	//   * Tag «test.tag» is matched: false
 	//
-	// The filter.And(filter.QNames(test.other), filter.Types(workspace «test.workspace»: Command)) And() children:
-	// - filter.QNames(test.other)
-	// - filter.Types(workspace «test.workspace»: Command)
-	// Testing filter.And(filter.QNames(test.other), filter.Types(workspace «test.workspace»: Command)) in Workspace «test.workspace»
-	// - BuiltIn-Command «test.command» is matched: false
-	// - ODoc «test.doc» is matched: false
-	// - Object «test.object» is matched: false
+	// QNames(test.doc, test.object) AND (Types(Command) from Workspace test.workspace OR Tags(test.tag))
+	// - kind: FilterKind_And
+	// - children:
+	//   * QNames(test.doc, test.object)
+	//   * Types(Command) from Workspace test.workspace OR Tags(test.tag)
+	// - testing:
+	//   * BuiltIn-Command «test.command» is matched: false
+	//   * ODoc «test.doc» is matched: false
+	//   * Object «test.object» is matched: true
+	//   * Tag «test.tag» is matched: false
 }

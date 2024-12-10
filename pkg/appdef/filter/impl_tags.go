@@ -43,7 +43,8 @@ func (f tagsFilter) Match(t appdef.IType) bool {
 }
 
 func (f tagsFilter) String() string {
-	s := fmt.Sprintf("filter.%s(", f.Kind().TrimString())
+	// Tags(…)
+	s := "Tags("
 	for i, c := range f.tags {
 		if i > 0 {
 			s += ", "

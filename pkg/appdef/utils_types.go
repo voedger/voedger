@@ -20,6 +20,8 @@ func CDoc(f FindType, name QName) ICDoc {
 }
 
 // Returns iterator over CDocs.
+//
+// TODO: here and further according to the code: should return iter.Seq[I×××]
 func CDocs(types SeqType) func(func(ICDoc) bool) {
 	return TypesByKind[ICDoc](types, TypeKind_CDoc)
 }

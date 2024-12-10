@@ -8,33 +8,38 @@ package appdef
 import (
 	"errors"
 	"iter"
+	"slices"
 )
 
 // # Implements:
 //   - IAppDef
 type appDef struct {
 	comment
-	packages *packages
-	sysWS    *workspace
-	acl      []*aclRule // adding order should be saved
-	types    *types[IType]
-	wsDesc   map[QName]IWorkspace
+	packages   *packages
+	sysWS      *workspace
+	acl        []*aclRule // adding order should be saved
+	types      *types[IType]
+	workspaces *workspaces
+	wsDesc     map[QName]IWorkspace
 }
 
 func newAppDef() *appDef {
 	app := appDef{
-		packages: newPackages(),
-		types:    newTypes[IType](),
-		wsDesc:   make(map[QName]IWorkspace),
+		packages:   newPackages(),
+		types:      newTypes[IType](),
+		workspaces: newWorkspaces(),
+		wsDesc:     make(map[QName]IWorkspace),
 	}
 	app.makeSysPackage()
 	return &app
 }
 
-func (app appDef) ACL(cb func(IACLRule) bool) {
-	for _, p := range app.acl {
-		if !cb(p) {
-			break
+func (app appDef) ACL() iter.Seq[IACLRule] {
+	return func(yield func(IACLRule) bool) {
+		for _, acl := range app.acl {
+			if !yield(acl) {
+				return
+			}
 		}
 	}
 }
@@ -51,12 +56,12 @@ func (app *appDef) PackageFullPath(local string) string {
 	return app.packages.pathByLocalName(local)
 }
 
-func (app *appDef) PackageLocalNames() []string {
-	return app.packages.localNames()
+func (app *appDef) PackageLocalNames() iter.Seq[string] {
+	return slices.Values(app.packages.local)
 }
 
-func (app *appDef) Packages(cb func(local, path string) bool) {
-	app.packages.forEach(cb)
+func (app *appDef) Packages() iter.Seq2[string, string] {
+	return app.packages.all()
 }
 
 func (app *appDef) Type(name QName) IType {
@@ -80,8 +85,8 @@ func (app *appDef) Workspace(name QName) IWorkspace {
 	return TypeByNameAndKind[IWorkspace](app.Type, name, TypeKind_Workspace)
 }
 
-func (app *appDef) Workspaces(visit func(IWorkspace) bool) {
-	TypesByKind[IWorkspace](app.Types(), TypeKind_Workspace)(visit)
+func (app *appDef) Workspaces() iter.Seq[IWorkspace] {
+	return app.workspaces.all
 }
 
 func (app *appDef) WorkspaceByDescriptor(name QName) IWorkspace {
@@ -121,17 +126,13 @@ func (app *appDef) appendType(t IType) {
 	app.types.add(t)
 }
 
+func (app *appDef) appendWorkspace(ws *workspace) {
+	app.workspaces.add(ws)
+}
+
 func (app *appDef) build() (err error) {
 	for t := range app.Types() {
 		err = errors.Join(err, validateType(t))
-	}
-	if err != nil {
-		return err
-	}
-	for t := range app.Types() {
-		if b, ok := t.(interface{ build() error }); ok {
-			err = errors.Join(err, b.build())
-		}
 	}
 	return err
 }
