@@ -193,7 +193,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 		})
 
 		t.Run("should be ok to get role inheritance", func(t *testing.T) {
-			roles := appdef.Role(tested.Type, workerRoleName).AncRoles()
+			roles := slices.Collect(appdef.Role(tested.Type, workerRoleName).Ancestors())
 			require.Equal([]appdef.QName{readerRoleName, writerRoleName}, roles)
 		})
 	}
@@ -202,5 +202,40 @@ func Test_AppDef_AddRole(t *testing.T) {
 	testWith(app.Workspace(wsName))
 }
 
-func Test_AppDef_AddRoleErrors(t *testing.T) {
+func Test_RoleInheritanceWithComplexFilter(t *testing.T) {
+	require := require.New(t)
+
+	var app appdef.IAppDef
+
+	wsName := appdef.NewQName("test", "ws")
+
+	anc1RoleName := appdef.NewQName("test", "ancestor1Role")
+	anc2RoleName := appdef.NewQName("test", "ancestor2Role")
+	descRoleName := appdef.NewQName("test", "descendantRole")
+
+	ancTag := appdef.NewQName("test", "ancestorTag")
+
+	t.Run("should be ok to build application with complex role inheritance", func(t *testing.T) {
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+
+		wsb := adb.AddWorkspace(wsName)
+
+		wsb.AddTag(ancTag)
+
+		wsb.AddRole(anc1RoleName).SetTag(ancTag)
+		wsb.AddRole(anc2RoleName).SetTag(ancTag)
+
+		wsb.AddRole(descRoleName).GrantAll(filter.Tags(ancTag))
+
+		var err error
+		app, err = adb.Build()
+		require.NoError(err)
+		require.NotNil(app)
+	})
+
+	t.Run("should be ok to obtain roles inheritance", func(t *testing.T) {
+		roles := slices.Collect(appdef.Role(app.Workspace(wsName).Type, descRoleName).Ancestors())
+		require.Equal([]appdef.QName{anc1RoleName, anc2RoleName}, roles)
+	})
 }

@@ -5,6 +5,8 @@
 
 package appdef
 
+import "iter"
+
 type IRole interface {
 	IType
 
@@ -15,7 +17,7 @@ type IRole interface {
 	// Role inheritance provided by `GRANT <role> TO <role>` statement.
 	//
 	// Only direct inheritance is returned. If role inherits another role, which inherits another role, then only direct ancestor is returned.
-	AncRoles() []QName
+	Ancestors() iter.Seq[QName]
 }
 
 type IRoleBuilder interface {

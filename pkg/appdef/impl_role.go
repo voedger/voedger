@@ -8,6 +8,7 @@ package appdef
 import (
 	"errors"
 	"iter"
+	"slices"
 )
 
 // # Supports:
@@ -36,15 +37,24 @@ func (r role) ACL() iter.Seq[IACLRule] {
 	}
 }
 
-func (r *role) AncRoles() (roles []QName) {
+func (r *role) Ancestors() iter.Seq[QName] {
+	roles := QNames{}
 	for _, acl := range r.acl {
 		if acl.ops.Contains(OperationKind_Inherits) {
-			for role := range Roles(FilterMatches(acl.Filter(), r.Workspace().Types())) {
-				roles = append(roles, role.QName())
+			switch acl.Filter().Kind() {
+			case FilterKind_QNames:
+				for q := range acl.Filter().QNames() {
+					roles.Add(q)
+				}
+			default:
+				// complex filter
+				for role := range Roles(FilterMatches(acl.Filter(), r.Workspace().Types())) {
+					roles.Add(role.QName())
+				}
 			}
 		}
 	}
-	return roles
+	return slices.Values(roles)
 }
 
 func (r *role) appendACL(rule *aclRule) {
