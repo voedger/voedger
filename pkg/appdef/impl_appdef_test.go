@@ -8,6 +8,7 @@ package appdef_test
 import (
 	"fmt"
 	"iter"
+	"slices"
 	"testing"
 	"time"
 
@@ -31,7 +32,7 @@ func TestNew(t *testing.T) {
 	require.Equal(adb.AppDef(), app, "should be ok get AppDef after build")
 
 	t.Run("should be ok to read sys package", func(t *testing.T) {
-		require.Equal([]string{appdef.SysPackage}, app.PackageLocalNames())
+		require.Equal([]string{appdef.SysPackage}, slices.Collect(app.PackageLocalNames()))
 		require.Equal(appdef.SysPackagePath, app.PackageFullPath(appdef.SysPackage))
 	})
 
@@ -65,7 +66,7 @@ func Test_NullAppDef(t *testing.T) {
 	})
 
 	t.Run("should be return sys package only", func(t *testing.T) {
-		require.Equal([]string{appdef.SysPackage}, app.PackageLocalNames())
+		require.Equal([]string{appdef.SysPackage}, slices.Collect(app.PackageLocalNames()))
 		require.Equal(appdef.SysPackagePath, app.PackageFullPath(appdef.SysPackage))
 	})
 

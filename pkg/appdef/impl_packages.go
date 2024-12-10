@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"iter"
 	"slices"
 )
 
@@ -45,10 +46,12 @@ func (p *packages) add(local, path string) {
 	p.pathByLocal[local] = path
 }
 
-func (p packages) forEach(cb func(local, path string) bool) {
-	for _, local := range p.local {
-		if !cb(local, p.pathByLocal[local]) {
-			break
+func (p packages) all() iter.Seq2[string, string] {
+	return func(visit func(string, string) bool) {
+		for _, local := range p.local {
+			if !visit(local, p.pathByLocal[local]) {
+				break
+			}
 		}
 	}
 }
@@ -66,10 +69,6 @@ func (p packages) localNameByPath(path string) string {
 
 func (p packages) pathByLocalName(local string) string {
 	return p.pathByLocal[local]
-}
-
-func (p *packages) localNames() []string {
-	return p.local
 }
 
 func (p packages) localQName(n FullQName) QName {

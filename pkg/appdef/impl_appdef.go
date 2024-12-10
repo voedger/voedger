@@ -8,6 +8,7 @@ package appdef
 import (
 	"errors"
 	"iter"
+	"slices"
 )
 
 // # Implements:
@@ -55,12 +56,12 @@ func (app *appDef) PackageFullPath(local string) string {
 	return app.packages.pathByLocalName(local)
 }
 
-func (app *appDef) PackageLocalNames() []string {
-	return app.packages.localNames()
+func (app *appDef) PackageLocalNames() iter.Seq[string] {
+	return slices.Values(app.packages.local)
 }
 
-func (app *appDef) Packages(cb func(local, path string) bool) {
-	app.packages.forEach(cb)
+func (app *appDef) Packages() iter.Seq2[string, string] {
+	return app.packages.all()
 }
 
 func (app *appDef) Type(name QName) IType {
