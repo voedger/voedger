@@ -1,6 +1,3 @@
-//go:build !excludeFile
-// +build !excludeFile
-
 /*
  * Copyright (c) 2024-present unTill Software Development Group B. V.
  * @author Maxim Geraskin
@@ -9,8 +6,11 @@
 package main
 
 import (
-	"appsimple/wasm/orm"
 	"time"
+
+	_ "github.com/voedger/voedger/pkg/sys"
+
+	"appsimple/wasm/orm"
 )
 
 // Command
