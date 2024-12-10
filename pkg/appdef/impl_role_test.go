@@ -158,7 +158,10 @@ func Test_AppDef_AddRole(t *testing.T) {
 				for acl := range r.ACL {
 					t.Run(fmt.Sprintf("%v.ACL[%d]", r, aclCount), func(t *testing.T) {
 						require.Equal(wantACL[aclCount].policy, acl.Policy())
-						require.Equal(wantACL[aclCount].ops, acl.Ops())
+						require.Equal(wantACL[aclCount].ops, slices.Collect(acl.Ops()))
+						for _, o := range wantACL[aclCount].ops {
+							require.True(acl.Op(o))
+						}
 
 						flt := appdef.QNames{}
 						for t := range appdef.FilterMatches(acl.Filter(), tested.Types()) {

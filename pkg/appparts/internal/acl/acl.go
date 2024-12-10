@@ -87,7 +87,7 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 
 	result := false
 	for rule := range app.ACL {
-		if slices.Contains(rule.Ops(), op) {
+		if rule.Op(op) {
 			if rule.Filter().Match(t) {
 				if roles.Contains(rule.Principal().QName()) {
 					switch rule.Policy() {

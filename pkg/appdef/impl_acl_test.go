@@ -146,7 +146,10 @@ func Test_GrantAndRevoke(t *testing.T) {
 				require.Less(cnt, len(want))
 				t.Run(fmt.Sprintf("ACL[%d]", cnt), func(t *testing.T) {
 					require.Equal(want[cnt].policy, r.Policy())
-					require.Equal(want[cnt].ops, r.Ops())
+					require.Equal(want[cnt].ops, slices.Collect(r.Ops()))
+					for _, o := range want[cnt].ops {
+						require.True(r.Op(o))
+					}
 
 					flt := appdef.QNames{}
 					for t := range appdef.FilterMatches(r.Filter(), r.Principal().Workspace().Types()) {
@@ -413,7 +416,10 @@ func Test_ACLWithFields(t *testing.T) {
 				require.Less(cnt, len(want))
 				t.Run(fmt.Sprintf("ACL[%d]", cnt), func(t *testing.T) {
 					require.Equal(want[cnt].policy, r.Policy())
-					require.Equal(want[cnt].ops, r.Ops())
+					require.Equal(want[cnt].ops, slices.Collect(r.Ops()))
+					for _, o := range want[cnt].ops {
+						require.True(r.Op(o))
+					}
 
 					flt := appdef.QNames{}
 					for t := range appdef.FilterMatches(r.Filter(), r.Principal().Workspace().Types()) {

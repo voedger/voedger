@@ -2144,8 +2144,7 @@ func Test_Grants(t *testing.T) {
 
 		// table
 		app.ACL(func(acl appdef.IACLRule) bool {
-			require.Len(acl.Ops(), 1)
-			require.Equal(appdef.OperationKind_Inherits, acl.Ops()[0])
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Inherits}, slices.Collect(acl.Ops()))
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 
 			require.Equal(appdef.FilterKind_QNames, acl.Filter().Kind())
@@ -2181,8 +2180,7 @@ func Test_Grants(t *testing.T) {
 
 		// table
 		app.ACL(func(acl appdef.IACLRule) bool {
-			require.Len(acl.Ops(), 1)
-			require.Equal(appdef.OperationKind_Select, acl.Ops()[0])
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Select}, slices.Collect(acl.Ops()))
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 
 			require.Equal(appdef.FilterKind_QNames, acl.Filter().Kind())
@@ -2224,8 +2222,7 @@ func Test_Grants_Inherit(t *testing.T) {
 
 		// table
 		app.ACL(func(acl appdef.IACLRule) bool {
-			require.Len(acl.Ops(), 1)
-			require.Equal(appdef.OperationKind_Insert, acl.Ops()[0])
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert}, slices.Collect(acl.Ops()))
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 
 			require.Equal(appdef.FilterKind_QNames, acl.Filter().Kind())

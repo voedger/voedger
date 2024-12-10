@@ -111,7 +111,9 @@ func newRevokeAll(ws *workspace, flt IFilter, principal *role, comment ...string
 
 func (acl aclRule) Filter() IACLFilter { return acl.flt }
 
-func (acl aclRule) Ops() []OperationKind { return acl.ops.AsArray() }
+func (acl aclRule) Op(op OperationKind) bool { return acl.ops.Contains(op) }
+
+func (acl aclRule) Ops() iter.Seq[OperationKind] { return acl.ops.Values() }
 
 func (acl aclRule) Policy() PolicyKind { return acl.policy }
 
@@ -157,12 +159,14 @@ func (acl aclRule) validate() (err error) {
 //   - ACL operations are not compatible with the filtered type
 //   - some specified field is not found in the filtered type
 func (acl aclRule) validateOnType(t IType) error {
-	o := allACLOperationsOnType(t)
-	if o.Len() == 0 {
+	allOps := allACLOperationsOnType(t)
+	if allOps.Len() == 0 {
 		return ErrACLUnsupportedType(t)
 	}
-	if !o.ContainsAll(acl.Ops()...) {
-		return ErrIncompatible("operations %v and %v", acl.ops, t)
+	for op := range acl.Ops() {
+		if !allOps.Contains(op) {
+			return ErrIncompatible("operation %v and %v", op.TrimString(), t)
+		}
 	}
 	if acl.Filter().HasFields() {
 		if fields, ok := t.(IFields); ok {

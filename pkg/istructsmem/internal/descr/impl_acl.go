@@ -33,7 +33,7 @@ func newACLRule() *ACLRule {
 func (ar *ACLRule) read(acl appdef.IACLRule, withPrincipal bool) {
 	ar.Comment = readComment(acl)
 	ar.Policy = acl.Policy().TrimString()
-	for _, k := range acl.Ops() {
+	for k := range acl.Ops() {
 		ar.Ops = append(ar.Ops, k.TrimString())
 	}
 	ar.Filter.read(acl.Filter())

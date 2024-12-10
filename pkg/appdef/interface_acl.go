@@ -72,13 +72,18 @@ type IACLFilter interface {
 type IACLRule interface {
 	IWithComments
 
-	// Returns operations that was granted or revoked.
-	Ops() []OperationKind
+	// Returns is this rule describes specified operation.
+	Op(OperationKind) bool
 
-	// Returns operations are granted or revoked.
+	// Returns operations that was described (granted or revoked).
+	Ops() iter.Seq[OperationKind]
+
+	// Returns the policy: operations are granted (policy is allow) or revoked (policy is deny).
 	Policy() PolicyKind
 
 	// Returns filter of types on which rule is applicable.
+	//
+	// If filter contains FilterKind_Types, then local types from workspace where rule is defined are used.
 	Filter() IACLFilter
 
 	// Returns the role to which the operations was granted or revoked.
