@@ -125,14 +125,6 @@ func (app *appDef) build() (err error) {
 	for t := range app.Types() {
 		err = errors.Join(err, validateType(t))
 	}
-	if err != nil {
-		return err
-	}
-	for t := range app.Types() {
-		if b, ok := t.(interface{ build() error }); ok {
-			err = errors.Join(err, b.build())
-		}
-	}
 	return err
 }
 

@@ -110,12 +110,10 @@ func (ws *workspace) Type(name QName) IType {
 }
 
 func (ws *workspace) Types() iter.Seq[IType] {
-	if ws.types.all != nil {
-		return ws.types.all.all
+	if ws.types.all == nil {
+		ws.types.all = ws.buildAllTypes()
 	}
-
-	// called before successful `appDef.build()`
-	return ws.buildAllTypes().all
+	return ws.types.all.all
 }
 
 func (ws *workspace) UsedWorkspaces(visit func(IWorkspace) bool) {
@@ -227,20 +225,14 @@ func (ws *workspace) addWRecord(name QName) IWRecordBuilder {
 func (ws *workspace) appendACL(p *aclRule) {
 	ws.acl = append(ws.acl, p)
 	ws.app.appendACL(p)
+	ws.needRebuild()
 }
 
 func (ws *workspace) appendType(t IType) {
 	ws.app.appendType(t)
-
 	// do not check the validity or uniqueness of the name; this was checked by `*application.appendType (t)`
-
 	ws.types.local.add(t)
-}
-
-// should be called from appDef.build().
-func (ws *workspace) build() error {
-	ws.types.all = ws.buildAllTypes()
-	return nil
+	ws.needRebuild()
 }
 
 func (ws *workspace) buildAllTypes() *types[IType] {
@@ -293,6 +285,16 @@ func (ws *workspace) grantAll(flt IFilter, toRole QName, comment ...string) {
 	ws.appendACL(acl)
 }
 
+func (ws *workspace) needRebuild() {
+	ws.types.all = nil
+	for w := range ws.app.Workspaces {
+		w := w.(*workspace)
+		if w.ancestors.find(ws.QName()) != NullType {
+			w.needRebuild()
+		}
+	}
+}
+
 func (ws *workspace) revoke(ops []OperationKind, flt IFilter, fields []FieldName, fromRole QName, comment ...string) {
 	r := Role(ws.Type, fromRole)
 	if r == nil {
@@ -330,11 +332,12 @@ func (ws *workspace) setAncestors(name QName, names ...QName) {
 	}
 
 	ws.ancestors.clear()
-
 	add(name)
 	for _, n := range names {
 		add(n)
 	}
+
+	ws.needRebuild()
 }
 
 func (ws *workspace) setDescriptor(q QName) {
@@ -360,6 +363,8 @@ func (ws *workspace) setDescriptor(q QName) {
 	}
 
 	ws.app.wsDesc[q] = ws
+
+	ws.needRebuild()
 }
 
 func (ws *workspace) setTypeComment(name QName, c ...string) {
@@ -385,6 +390,8 @@ func (ws *workspace) useWorkspace(name QName, names ...QName) {
 	for _, n := range names {
 		use(n)
 	}
+
+	ws.needRebuild()
 }
 
 // # Implements:
