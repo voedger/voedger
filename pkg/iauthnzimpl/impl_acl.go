@@ -80,6 +80,15 @@ var defaultACL = ACL{
 		policy: ACPolicy_Deny,
 	},
 	{
+		desc: "grant select only on few documents to WorkspaceOwner",
+		pattern: PatternType{
+			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
+			qNamesPattern:     []appdef.QName{qNameCDocChildWorkspace},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},
+		},
+		policy: ACPolicy_Allow,
+	},
+	{
 		desc: "revoke insert or update on wdoc.air.LastNumbers from all",
 		pattern: PatternType{
 			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_INSERT, iauthnz.OperationKind_UPDATE},

@@ -22,7 +22,7 @@ TODO: add endpoint for the list of supported versions
 | [Update document or record](#update-document-or-record)                  | PATCH  | `/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/{pkg}.{table}/{id}` |
 | [Deactivate document or record](#deactivate-document-or-record)          | DELETE | `/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/{pkg}.{table}/{id}` |
 | [Read document or record](#read-document-or-record)                      | GET    | `/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/{pkg}.{table}/{id}` |
-| [Read from CDoc Collection](#read-from-cdoc-collection)                  | GET    | `/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/{pkg}.{table}`      |
+| [Read from CDoc Collection](#read-from-cdoc-collection)                  | GET    | `/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/cdocs/{pkg}.{table}`     |
 | **Extensions**
 | [Execute Command](#execute-command)                                      | POST   | `/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/commands/{pkg}.{command}`|
 | [Read from Query](#read-from-query)                                      | GET    | `/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/queries/{pkg}.{query}`   |

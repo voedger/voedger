@@ -57,6 +57,10 @@ func (hostSafeStateAPI) KeyBuilderPutInt64(key safe.TKeyBuilder, name string, va
 	hostRowWriterPutInt64(uint64(key), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint64(value))
 }
 
+func (hostSafeStateAPI) KeyBuilderPutRecordID(key safe.TKeyBuilder, name string, value int64) {
+	hostRowWriterPutInt64(uint64(key), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint64(value))
+}
+
 func (hostSafeStateAPI) KeyBuilderPutFloat32(key safe.TKeyBuilder, name string, value float32) {
 	hostRowWriterPutFloat32(uint64(key), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), value)
 }

@@ -485,7 +485,7 @@ ABSTRACT WORKSPACE ProfileWS (
 		QUERY RefreshPrincipalToken RETURNS RefreshPrincipalTokenResult;
 	);
 
-	GRANT EXECUTE ON QUERY RefreshPrincipalToken TO WorkspaceOwner;
+	GRANT EXECUTE ON QUERY RefreshPrincipalToken TO ProfileOwner;
 );
 
 ALTERABLE WORKSPACE DeviceProfileWS INHERITS sys.ProfileWS (
