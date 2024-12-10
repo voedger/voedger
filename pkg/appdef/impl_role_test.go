@@ -155,7 +155,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 				require.Equal(tt[rolesCount].name, r.QName())
 				wantACL := tt[rolesCount].wantACL
 				aclCount := 0
-				for acl := range r.ACL {
+				for acl := range r.ACL() {
 					t.Run(fmt.Sprintf("%v.ACL[%d]", r, aclCount), func(t *testing.T) {
 						require.Equal(wantACL[aclCount].policy, acl.Policy())
 						require.Equal(wantACL[aclCount].ops, slices.Collect(acl.Ops()))

@@ -2143,7 +2143,7 @@ func Test_Grants(t *testing.T) {
 		var numACLs int
 
 		// table
-		app.ACL(func(acl appdef.IACLRule) bool {
+		for acl := range app.ACL() {
 			require.Equal([]appdef.OperationKind{appdef.OperationKind_Inherits}, slices.Collect(acl.Ops()))
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 
@@ -2154,8 +2154,7 @@ func Test_Grants(t *testing.T) {
 
 			require.Equal("pkg.mgr", acl.Principal().QName().String())
 			numACLs++
-			return true
-		})
+		}
 		require.Equal(1, numACLs)
 	})
 
@@ -2179,7 +2178,7 @@ func Test_Grants(t *testing.T) {
 		var numACLs int
 
 		// table
-		app.ACL(func(acl appdef.IACLRule) bool {
+		for acl := range app.ACL() {
 			require.Equal([]appdef.OperationKind{appdef.OperationKind_Select}, slices.Collect(acl.Ops()))
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 
@@ -2190,8 +2189,7 @@ func Test_Grants(t *testing.T) {
 
 			require.Equal("pkg.ProfileOwner", acl.Principal().QName().String())
 			numACLs++
-			return true
-		})
+		}
 		require.Equal(1, numACLs)
 	})
 
@@ -2221,7 +2219,7 @@ func Test_Grants_Inherit(t *testing.T) {
 		var numACLs int
 
 		// table
-		app.ACL(func(acl appdef.IACLRule) bool {
+		for acl := range app.ACL() {
 			require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert}, slices.Collect(acl.Ops()))
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 
@@ -2232,8 +2230,7 @@ func Test_Grants_Inherit(t *testing.T) {
 
 			require.Equal("pkg.role1", acl.Principal().QName().String())
 			numACLs++
-			return true
-		})
+		}
 		require.Equal(1, numACLs)
 	})
 

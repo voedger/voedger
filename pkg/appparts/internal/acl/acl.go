@@ -86,7 +86,7 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 	}
 
 	result := false
-	for rule := range app.ACL {
+	for rule := range app.ACL() {
 		if rule.Op(op) {
 			if rule.Filter().Match(t) {
 				if roles.Contains(rule.Principal().QName()) {
@@ -153,7 +153,7 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 
 	if !result && logger.IsVerbose() {
 		logger.Verbose(fmt.Sprintf("%s for %s: [%s] -> deny", op, res, rolesToString(rol)))
-		for rule := range app.ACL {
+		for rule := range app.ACL() {
 			logger.Verbose(fmt.Sprintf("ops: %v, filter: %s, policy %s", rule.Ops(), rule.Filter(), rule.Policy()))
 		}
 	}

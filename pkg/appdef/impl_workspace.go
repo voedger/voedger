@@ -5,7 +5,9 @@
 
 package appdef
 
-import "iter"
+import (
+	"iter"
+)
 
 // # Implements:
 //   - IWorkspace
@@ -40,10 +42,12 @@ func newWorkspace(app *appDef, name QName) *workspace {
 	return ws
 }
 
-func (ws workspace) ACL(cb func(IACLRule) bool) {
-	for _, p := range ws.acl {
-		if !cb(p) {
-			break
+func (ws workspace) ACL() iter.Seq[IACLRule] {
+	return func(yield func(IACLRule) bool) {
+		for _, acl := range ws.acl {
+			if !yield(acl) {
+				return
+			}
 		}
 	}
 }

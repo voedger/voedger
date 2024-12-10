@@ -142,7 +142,7 @@ func Test_GrantAndRevoke(t *testing.T) {
 			}
 
 			cnt := 0
-			for r := range tested.ACL {
+			for r := range tested.ACL() {
 				require.Less(cnt, len(want))
 				t.Run(fmt.Sprintf("ACL[%d]", cnt), func(t *testing.T) {
 					require.Equal(want[cnt].policy, r.Policy())
@@ -412,7 +412,7 @@ func Test_ACLWithFields(t *testing.T) {
 			}
 
 			cnt := 0
-			for r := range tested.ACL {
+			for r := range tested.ACL() {
 				require.Less(cnt, len(want))
 				t.Run(fmt.Sprintf("ACL[%d]", cnt), func(t *testing.T) {
 					require.Equal(want[cnt].policy, r.Policy())

@@ -98,9 +98,7 @@ type IWithACL interface {
 	// Enumerates all ACL rules.
 	//
 	// Rules are enumerated in the order they are added.
-	//
-	// TODO: should return iter.Seq[IACLRule]
-	ACL(func(IACLRule) bool)
+	ACL() iter.Seq[IACLRule]
 }
 
 type IACLBuilder interface {

@@ -33,10 +33,12 @@ func newAppDef() *appDef {
 	return &app
 }
 
-func (app appDef) ACL(cb func(IACLRule) bool) {
-	for _, p := range app.acl {
-		if !cb(p) {
-			break
+func (app appDef) ACL() iter.Seq[IACLRule] {
+	return func(yield func(IACLRule) bool) {
+		for _, acl := range app.acl {
+			if !yield(acl) {
+				return
+			}
 		}
 	}
 }

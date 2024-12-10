@@ -16,7 +16,7 @@ func newACL() *ACL {
 }
 
 func (acl *ACL) read(a appdef.IWithACL, withPrincipals bool) {
-	for r := range a.ACL {
+	for r := range a.ACL() {
 		ar := newACLRule()
 		ar.read(r, withPrincipals)
 		*acl = append(*acl, ar)

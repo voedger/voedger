@@ -5,34 +5,39 @@
 
 package appdef
 
-import "errors"
+import (
+	"errors"
+	"iter"
+)
 
 // # Supports:
 //   - IRole
 type role struct {
 	typ
-	aclRules []*aclRule
+	acl []*aclRule
 }
 
 func newRole(app *appDef, ws *workspace, name QName) *role {
 	r := &role{
-		typ:      makeType(app, ws, name, TypeKind_Role),
-		aclRules: make([]*aclRule, 0),
+		typ: makeType(app, ws, name, TypeKind_Role),
+		acl: make([]*aclRule, 0),
 	}
 	ws.appendType(r)
 	return r
 }
 
-func (r role) ACL(cb func(IACLRule) bool) {
-	for _, p := range r.aclRules {
-		if !cb(p) {
-			break
+func (r role) ACL() iter.Seq[IACLRule] {
+	return func(yield func(IACLRule) bool) {
+		for _, acl := range r.acl {
+			if !yield(acl) {
+				return
+			}
 		}
 	}
 }
 
 func (r *role) AncRoles() (roles []QName) {
-	for _, acl := range r.aclRules {
+	for _, acl := range r.acl {
 		if acl.ops.Contains(OperationKind_Inherits) {
 			for role := range Roles(FilterMatches(acl.Filter(), r.Workspace().Types())) {
 				roles = append(roles, role.QName())
@@ -43,7 +48,7 @@ func (r *role) AncRoles() (roles []QName) {
 }
 
 func (r *role) appendACL(rule *aclRule) {
-	r.aclRules = append(r.aclRules, rule)
+	r.acl = append(r.acl, rule)
 }
 
 func (r *role) grant(ops []OperationKind, flt IFilter, fields []FieldName, comment ...string) {
@@ -75,7 +80,7 @@ func (r *role) revokeAll(flt IFilter, comment ...string) {
 // # Error if:
 //   - ACL rule is not valid
 func (r role) Validate() (err error) {
-	for _, p := range r.aclRules {
+	for _, p := range r.acl {
 		if e := p.validate(); e != nil {
 			err = errors.Join(err, e)
 		}
