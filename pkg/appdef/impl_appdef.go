@@ -14,18 +14,20 @@ import (
 //   - IAppDef
 type appDef struct {
 	comment
-	packages *packages
-	sysWS    *workspace
-	acl      []*aclRule // adding order should be saved
-	types    *types[IType]
-	wsDesc   map[QName]IWorkspace
+	packages   *packages
+	sysWS      *workspace
+	acl        []*aclRule // adding order should be saved
+	types      *types[IType]
+	workspaces *workspaces
+	wsDesc     map[QName]IWorkspace
 }
 
 func newAppDef() *appDef {
 	app := appDef{
-		packages: newPackages(),
-		types:    newTypes[IType](),
-		wsDesc:   make(map[QName]IWorkspace),
+		packages:   newPackages(),
+		types:      newTypes[IType](),
+		workspaces: newWorkspaces(),
+		wsDesc:     make(map[QName]IWorkspace),
 	}
 	app.makeSysPackage()
 	return &app
@@ -81,7 +83,7 @@ func (app *appDef) Workspace(name QName) IWorkspace {
 }
 
 func (app *appDef) Workspaces(visit func(IWorkspace) bool) {
-	TypesByKind[IWorkspace](app.Types(), TypeKind_Workspace)(visit)
+	app.workspaces.all(visit)
 }
 
 func (app *appDef) WorkspaceByDescriptor(name QName) IWorkspace {
@@ -119,6 +121,10 @@ func (app *appDef) appendType(t IType) {
 	}
 
 	app.types.add(t)
+}
+
+func (app *appDef) appendWorkspace(ws *workspace) {
+	app.workspaces.add(ws)
 }
 
 func (app *appDef) build() (err error) {

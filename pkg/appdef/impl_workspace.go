@@ -12,9 +12,10 @@ import "iter"
 type workspace struct {
 	typ
 	withAbstract
-	acl       []*aclRule
-	ancestors *workspaces
-	types     struct {
+	acl         []*aclRule
+	ancestors   *workspaces
+	descendants *workspaces
+	types       struct {
 		local *types[IType]
 		all   *types[IType]
 	}
@@ -24,9 +25,10 @@ type workspace struct {
 
 func newWorkspace(app *appDef, name QName) *workspace {
 	ws := &workspace{
-		typ:       makeType(app, nil, name, TypeKind_Workspace),
-		ancestors: newWorkspaces(),
-		usedWS:    newWorkspaces(),
+		typ:         makeType(app, nil, name, TypeKind_Workspace),
+		ancestors:   newWorkspaces(),
+		descendants: newWorkspaces(),
+		usedWS:      newWorkspaces(),
 	}
 	ws.types.local = newTypes[IType]()
 	if name != SysWorkspaceQName {
@@ -34,6 +36,7 @@ func newWorkspace(app *appDef, name QName) *workspace {
 	}
 
 	app.appendType(ws)
+	app.appendWorkspace(ws)
 	return ws
 }
 
@@ -287,11 +290,8 @@ func (ws *workspace) grantAll(flt IFilter, toRole QName, comment ...string) {
 
 func (ws *workspace) needRebuild() {
 	ws.types.all = nil
-	for w := range ws.app.Workspaces {
-		w := w.(*workspace)
-		if w.ancestors.find(ws.QName()) != NullType {
-			w.needRebuild()
-		}
+	for d := range ws.descendants.all {
+		d.(*workspace).needRebuild()
 	}
 }
 
@@ -320,6 +320,10 @@ func (ws *workspace) revokeAll(flt IFilter, fromRole QName, comment ...string) {
 }
 
 func (ws *workspace) setAncestors(name QName, names ...QName) {
+	for a := range ws.ancestors.all {
+		a.(*workspace).descendants.remove(ws.QName())
+	}
+
 	add := func(n QName) {
 		anc := ws.app.Workspace(n)
 		if anc == nil {
@@ -329,6 +333,7 @@ func (ws *workspace) setAncestors(name QName, names ...QName) {
 			panic(ErrUnsupported("Circular inheritance is not allowed. Workspace «%v» inherits from «%v»", n, ws))
 		}
 		ws.ancestors.add(anc)
+		anc.(*workspace).descendants.add(ws)
 	}
 
 	ws.ancestors.clear()

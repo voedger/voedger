@@ -449,6 +449,30 @@ func Test_WorkspaceInheritance(t *testing.T) {
 		}
 	})
 
+	t.Run("Should be rebuild workspace if ancestors changed", func(t *testing.T) {
+		adb := testADB()
+		_ = adb.MustBuild()
+
+		newObj := NewQName("test", "newObject")
+		find := func() (obj IObject) {
+			ws7 := adb.AlterWorkspace(wsName(7)).Workspace()
+			for o := range Objects(ws7.Types()) {
+				if o.QName() == newObj {
+					obj = o
+					break
+				}
+			}
+			return obj
+		}
+
+		require.Nil(find(), "should not found new object before add")
+
+		ws3b := adb.AlterWorkspace(wsName(3))
+		_ = ws3b.AddObject(newObj)
+
+		require.NotNil(find(), "should found new object after add")
+	})
+
 	t.Run("should be panics", func(t *testing.T) {
 		t.Run("if ancestor workspace is not found", func(t *testing.T) {
 			adb := New()
