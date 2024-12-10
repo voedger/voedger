@@ -5,6 +5,8 @@
 
 package appdef
 
+import "iter"
+
 // See [Issue #488](https://github.com/voedger/voedger/issues/488)
 //
 // Any type may have comment
@@ -13,7 +15,7 @@ type IWithComments interface {
 	Comment() string
 
 	// Returns comment as string array
-	CommentLines() []string
+	CommentLines() iter.Seq[string]
 }
 
 // ICommenter is interface to set comment for an entity (type, field, etc.).
