@@ -8,6 +8,8 @@ package appdef
 import (
 	"errors"
 	"fmt"
+	"iter"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
@@ -23,10 +25,12 @@ func newAclFilter(flt IFilter, fields []FieldName) *aclFilter {
 	return &aclFilter{flt, fields}
 }
 
-func (f aclFilter) Fields() []FieldName { return f.fields }
+func (f aclFilter) Fields() iter.Seq[FieldName] { return slices.Values(f.fields) }
+
+func (f aclFilter) HasFields() bool { return len(f.fields) > 0 }
 
 func (f aclFilter) String() string {
-	if len(f.fields) > 0 {
+	if f.HasFields() {
 		return fmt.Sprintf("%v(%v)", f.IFilter, f.fields)
 	}
 	return fmt.Sprint(f.IFilter)
@@ -160,9 +164,9 @@ func (acl aclRule) validateOnType(t IType) error {
 	if !o.ContainsAll(acl.Ops()...) {
 		return ErrIncompatible("operations %v and %v", acl.ops, t)
 	}
-	if ff := acl.Filter().Fields(); len(ff) > 0 {
+	if acl.Filter().HasFields() {
 		if fields, ok := t.(IFields); ok {
-			for _, f := range ff {
+			for f := range acl.Filter().Fields() {
 				if fields.Field(f) == nil {
 					return ErrNotFound("field «%v» in %v", f, t)
 				}

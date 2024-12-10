@@ -5,7 +5,11 @@
 
 package descr
 
-import "github.com/voedger/voedger/pkg/appdef"
+import (
+	"slices"
+
+	"github.com/voedger/voedger/pkg/appdef"
+)
 
 func newACL() *ACL {
 	return &ACL{}
@@ -48,5 +52,5 @@ func newACLFilter() *ACLFilter {
 
 func (f *ACLFilter) read(flt appdef.IACLFilter) {
 	f.Filter.read(flt)
-	f.Fields = append(f.Fields, flt.Fields()...)
+	f.Fields = slices.Collect(flt.Fields())
 }

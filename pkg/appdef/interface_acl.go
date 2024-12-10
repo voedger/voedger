@@ -5,6 +5,8 @@
 
 package appdef
 
+import "iter"
+
 // Enumeration of ACL operation kinds.
 type OperationKind uint8
 
@@ -59,9 +61,11 @@ const (
 type IACLFilter interface {
 	IFilter
 
-	// Returns fields (of records or views) then insert, update or select operation is described.
-	// TODO: should return iter.Seq[FieldName]
-	Fields() []FieldName
+	// Returns fields iterator then insert, update or select operation is described.
+	Fields() iter.Seq[FieldName]
+
+	// Resturns true if fields are specified.
+	HasFields() bool
 }
 
 // Represents a ACL rule record (specific rights or permissions) to be granted to role or revoked from.

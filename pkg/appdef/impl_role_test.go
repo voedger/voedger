@@ -8,6 +8,7 @@ package appdef_test
 import (
 	"fmt"
 	"iter"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -165,7 +166,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 						}
 						require.EqualValues(wantACL[aclCount].flt, flt)
 
-						require.Equal(wantACL[aclCount].fld, acl.Filter().Fields())
+						require.Equal(wantACL[aclCount].fld, slices.Collect(acl.Filter().Fields()))
 						require.Equal(wantACL[aclCount].to, acl.Principal().QName())
 					})
 					aclCount++

@@ -7,6 +7,7 @@ package appdef_test
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -153,7 +154,7 @@ func Test_GrantAndRevoke(t *testing.T) {
 					}
 					require.EqualValues(want[cnt].flt, flt)
 
-					require.Equal(want[cnt].fields, r.Filter().Fields())
+					require.Equal(want[cnt].fields, slices.Collect(r.Filter().Fields()))
 					require.Equal(want[cnt].principal, r.Principal().QName())
 				})
 				cnt++
@@ -420,7 +421,7 @@ func Test_ACLWithFields(t *testing.T) {
 					}
 					require.EqualValues(want[cnt].flt, flt)
 
-					require.Equal(want[cnt].fields, r.Filter().Fields())
+					require.Equal(want[cnt].fields, slices.Collect(r.Filter().Fields()))
 
 					require.Equal(want[cnt].principal, r.Principal().QName())
 				})

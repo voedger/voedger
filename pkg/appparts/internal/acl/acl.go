@@ -94,9 +94,9 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 					case appdef.PolicyKind_Allow:
 						result = true
 						if str != nil {
-							if fields := rule.Filter().Fields(); len(fields) > 0 {
+							if rule.Filter().HasFields() {
 								// allow for specified fields only
-								for _, f := range fields {
+								for f := range rule.Filter().Fields() {
 									allowedFields[f] = true
 								}
 							} else {
@@ -108,9 +108,9 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 						}
 					case appdef.PolicyKind_Deny:
 						if str != nil {
-							if fields := rule.Filter().Fields(); len(fields) > 0 {
+							if rule.Filter().HasFields() {
 								// partially deny, only specified fields
-								for _, f := range fields {
+								for f := range rule.Filter().Fields() {
 									delete(allowedFields, f)
 								}
 								result = len(allowedFields) > 0
