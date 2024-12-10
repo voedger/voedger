@@ -7,6 +7,7 @@ package appdef
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"reflect"
 	"regexp"
@@ -239,7 +240,7 @@ func Test_appDef_makeSysDataTypes(t *testing.T) {
 			require.True(d.IsSystem())
 			require.Equal(k, d.DataKind())
 			require.Nil(d.Ancestor())
-			require.Empty(d.Constraints(false))
+			require.Empty(maps.Collect(d.Constraints(false)))
 		}
 	})
 }
