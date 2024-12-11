@@ -5,7 +5,11 @@
 
 package appdef
 
-import "github.com/voedger/voedger/pkg/goutils/set"
+import (
+	"iter"
+
+	"github.com/voedger/voedger/pkg/goutils/set"
+)
 
 // Implements:
 //   - IRate
@@ -39,8 +43,8 @@ func (r rate) Period() RatePeriod {
 	return r.period
 }
 
-func (r rate) Scopes() []RateScope {
-	return r.scopes.AsArray()
+func (r rate) Scopes() iter.Seq[RateScope] {
+	return r.scopes.Values()
 }
 
 // Implements:

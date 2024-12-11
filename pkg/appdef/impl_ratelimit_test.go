@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -43,7 +44,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 					require.Equal(rateName, r.QName())
 					require.EqualValues(10, r.Count())
 					require.Equal(time.Hour, r.Period())
-					require.Equal([]RateScope{RateScope_AppPartition, RateScope_IP}, r.Scopes())
+					require.Equal([]RateScope{RateScope_AppPartition, RateScope_IP}, slices.Collect(r.Scopes()))
 					require.Equal("10 times per hour per partition per IP", r.Comment())
 				default:
 					require.FailNow("unexpected rate", "rate: %v", r)
@@ -105,7 +106,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 		require.Equal(rateName, r.QName())
 		require.EqualValues(10, r.Count())
 		require.Equal(time.Hour, r.Period())
-		require.Equal(DefaultRateScopes, r.Scopes())
+		require.Equal(DefaultRateScopes, slices.Collect(r.Scopes()))
 		require.Equal("10 times per hour", r.Comment())
 	})
 }

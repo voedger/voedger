@@ -7,6 +7,7 @@ package appdef_test
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -41,7 +42,7 @@ func ExampleRates() {
 		cnt := 0
 		for r := range appdef.Rates(app.Types()) {
 			cnt++
-			fmt.Println("-", cnt, r, fmt.Sprintf("%d per %v per %v", r.Count(), r.Period(), r.Scopes()))
+			fmt.Println("-", cnt, r, fmt.Sprintf("%d per %v per %v", r.Count(), r.Period(), slices.Collect(r.Scopes())))
 		}
 		fmt.Println("overall:", cnt)
 	}

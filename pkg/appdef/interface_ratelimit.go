@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"iter"
 	"time"
 )
 
@@ -36,8 +37,7 @@ type IRate interface {
 	Count() RateCount
 	Period() RatePeriod
 
-	// TODO: should be iter.Seq[RateScope]
-	Scopes() []RateScope
+	Scopes() iter.Seq[RateScope]
 }
 
 type IRatesBuilder interface {
