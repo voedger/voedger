@@ -43,8 +43,8 @@ func (f andFilter) Match(t appdef.IType) bool {
 }
 
 func (f andFilter) String() string {
-	// QNames(…) and Tags(…)
-	// (QNames(…) or Types(…)) and not Tags(…)
+	// QNAMES(…) AND TAGS(…)
+	// (QNAMES(…) OR TYPES(…)) AND NOT TAGS(…)
 	s := ""
 	for i, c := range f.children {
 		cStr := fmt.Sprint(c)

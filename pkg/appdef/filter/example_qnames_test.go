@@ -54,7 +54,7 @@ func ExampleQNames() {
 	// Output:
 	// This example demonstrates how to work with the QNames filter
 	//
-	// QNames(test.doc, test.object)
+	// QNAMES(test.doc, test.object)
 	// - kind: FilterKind_QNames
 	// - QNames:
 	//   * test.doc
@@ -64,7 +64,7 @@ func ExampleQNames() {
 	//   * ODoc «test.doc» is matched: true
 	//   * Object «test.object» is matched: true
 	//
-	// QNames(test.unknown)
+	// QNAMES(test.unknown)
 	// - kind: FilterKind_QNames
 	// - QNames:
 	//   * test.unknown

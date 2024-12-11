@@ -69,21 +69,21 @@ func Example() {
 	// Output:
 	// This example demonstrates how to work with filters
 	//
-	// QNames(test.doc, test.object) AND (Types(Command) from Workspace test.workspace OR Tags(test.tag))
+	// QNAMES(test.doc, test.object) AND (TYPES(Command) FROM test.workspace OR TAGS(test.tag))
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
 	//   * ODoc «test.doc» is matched: false
 	//   * Object «test.object» is matched: true
 	//   * Tag «test.tag» is matched: false
 	//
-	// QNames(test.doc) OR (Types(Object) from Workspace test.workspace AND NOT Tags(test.tag))
+	// QNAMES(test.doc) OR (TYPES(Object) FROM test.workspace AND NOT TAGS(test.tag))
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
 	//   * ODoc «test.doc» is matched: true
 	//   * Object «test.object» is matched: false
 	//   * Tag «test.tag» is matched: false
 	//
-	// NOT (QNames(test.doc) OR Tags(test.tag))
+	// NOT (QNAMES(test.doc) OR TAGS(test.tag))
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: true
 	//   * ODoc «test.doc» is matched: false
