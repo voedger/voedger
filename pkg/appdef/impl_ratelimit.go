@@ -109,12 +109,7 @@ func (l limit) Validate() (err error) {
 }
 
 func (l limit) validateOnType(t IType) error {
-	switch t.Kind() {
-	case TypeKind_Command, TypeKind_Query: //ok
-	case TypeKind_GDoc, TypeKind_CDoc, TypeKind_WDoc,
-		TypeKind_GRecord, TypeKind_CRecord, TypeKind_WRecord,
-		TypeKind_ViewRecord: //ok
-	default:
+	if !TypeKind_Limitables.Contains(t.Kind()) {
 		return ErrUnsupported("%v can not to be limited", t)
 	}
 	return nil
