@@ -255,7 +255,7 @@ func Test_GrantAndRevokeErrors(t *testing.T) {
 					filter.QNames(readerName),
 					nil,
 					readerName)
-			}, require.Is(appdef.ErrUnsupportedError), require.HasAll("revoke", "Inherits"))
+			}, require.Is(appdef.ErrUnsupportedError), require.HasAll("REVOKE", "Inherits"))
 		})
 
 		t.Run("if invalid resources", func(t *testing.T) {

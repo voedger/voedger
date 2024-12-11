@@ -15,9 +15,9 @@ import (
 func (p PolicyKind) ActionString() string {
 	switch p {
 	case PolicyKind_Allow:
-		return "grant"
+		return "GRANT"
 	case PolicyKind_Deny:
-		return "revoke"
+		return "REVOKE"
 	}
 	return p.TrimString()
 }
