@@ -53,6 +53,21 @@ type IRatesBuilder interface {
 	AddRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string)
 }
 
+// Limit kind enumeration
+type LimitKind uint8
+
+//go:generate stringer -type=LimitKind -output=stringer_limitkind.go
+
+const (
+	// Limit all objects matched by filter.
+	// Single bucket for all objects.
+	LimitKind_ALL LimitKind = iota
+
+	// Limit each object matched by filter.
+	// Separate bucket for each object.
+	LimitKind_EACH
+)
+
 type ILimit interface {
 	IType
 
