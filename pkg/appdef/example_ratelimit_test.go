@@ -57,7 +57,7 @@ func ExampleRates() {
 		cnt := 0
 		for l := range appdef.Limits(app.Types()) {
 			cnt++
-			fmt.Println("-", cnt, l, fmt.Sprintf("on %v with %v", l.On(), l.Rate()))
+			fmt.Println("-", cnt, l, fmt.Sprintf("on %v with %v", l.Filter(), l.Rate()))
 		}
 		fmt.Println("overall:", cnt)
 	}

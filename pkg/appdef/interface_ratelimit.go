@@ -57,7 +57,7 @@ type ILimit interface {
 	IType
 
 	// Returns limited resources filter.
-	On() IFilter
+	Filter() IFilter
 
 	Rate() IRate
 }
@@ -65,7 +65,7 @@ type ILimit interface {
 type ILimitsBuilder interface {
 	// Adds new Limit for objects matched by filter.
 	//
-	// # Limited objects:
+	// # Filtered objects to limit:
 	// 	- If these contain a function (command or query), this limits count of execution.
 	// 	- If these contain a structural (record or view record), this limits count of create/update operations.
 	//

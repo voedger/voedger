@@ -26,6 +26,6 @@ func newLimit() *Limit {
 
 func (l *Limit) read(limit appdef.ILimit) {
 	l.Type.read(limit)
-	l.Filter.read(limit.On())
+	l.Filter.read(limit.Filter())
 	l.Rate = limit.Rate().QName()
 }
