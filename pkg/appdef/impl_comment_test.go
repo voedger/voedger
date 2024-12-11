@@ -3,11 +3,12 @@
  * @author: Nikolay Nikitin
  */
 
-package appdef
+package appdef_test
 
 import (
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
@@ -15,9 +16,9 @@ func Test_SetTypeComment(t *testing.T) {
 	require := require.New(t)
 
 	t.Run("should be ok to set type comment", func(t *testing.T) {
-		wsName, objName := NewQName("test", "ws"), NewQName("test", "object")
+		wsName, objName := appdef.NewQName("test", "ws"), appdef.NewQName("test", "object")
 
-		adb := New()
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		ws := adb.AddWorkspace(wsName)
@@ -33,21 +34,21 @@ func Test_SetTypeComment(t *testing.T) {
 			ws := app.Workspace(wsName)
 			require.Equal("workspace comment", ws.Comment())
 
-			obj := Object(ws.Type, objName)
+			obj := appdef.Object(ws.Type, objName)
 			require.Equal("object comment", obj.Comment())
 		})
 	})
 
 	t.Run("should be panics", func(t *testing.T) {
 		t.Run("if unknown type", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 
-			require.Panics(func() { adb.SetTypeComment(NewQName("test", "unknown"), "ups") })
+			require.Panics(func() { adb.SetTypeComment(appdef.NewQName("test", "unknown"), "ups") })
 
-			wsb := adb.AddWorkspace(NewQName("test", "ws"))
-			require.Panics(func() { wsb.SetTypeComment(NewQName("test", "unknown"), "ups") })
-			require.Panics(func() { wsb.SetTypeComment(SysData_bool, "ups") }, "should panic if not local type")
+			wsb := adb.AddWorkspace(appdef.NewQName("test", "ws"))
+			require.Panics(func() { wsb.SetTypeComment(appdef.NewQName("test", "unknown"), "ups") })
+			require.Panics(func() { wsb.SetTypeComment(appdef.SysData_bool, "ups") }, "should panic if not local type")
 		})
 	})
 }
