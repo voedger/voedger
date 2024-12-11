@@ -61,7 +61,7 @@ func ErrRoleNotFound(r QName) error {
 }
 
 func ErrFilterHasNoMatches(flt IFilter, where any) error {
-	return ErrNotFound("%v has no matches in %v", flt, where)
+	return ErrNotFound("filter «%v» has no matches in %v", flt, where)
 }
 
 var ErrConvertError = errors.New("convert error")

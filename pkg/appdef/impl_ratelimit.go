@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"errors"
 	"iter"
 
 	"github.com/voedger/voedger/pkg/goutils/set"
@@ -51,38 +52,70 @@ func (r rate) Scopes() iter.Seq[RateScope] {
 //   - ILimit
 type limit struct {
 	typ
-	on   QNames
+	flt  IFilter
 	rate IRate
 }
 
-func newLimit(app *appDef, ws *workspace, name QName, on []QName, rate QName, comment ...string) *limit {
+func newLimit(app *appDef, ws *workspace, name QName, flt IFilter, rate QName, comment ...string) *limit {
 	if rate == NullQName {
 		panic(ErrMissed("rate name"))
 	}
-	if len(on) == 0 {
-		panic(ErrMissed("limit objects names"))
+	if flt == nil {
+		panic(ErrMissed("filter"))
 	}
 	l := &limit{
 		typ:  makeType(app, ws, name, TypeKind_Limit),
-		on:   on,
+		flt:  flt,
 		rate: Rate(app.Type, rate),
 	}
 	if l.rate == nil {
 		panic(ErrNotFound("rate «%v»", rate))
+	}
+	for t := range FilterMatches(l.On(), ws.Types()) {
+		if err := l.validateOnType(t); err != nil {
+			panic(err)
+		}
 	}
 	l.typ.comment.setComment(comment...)
 	ws.appendType(l)
 	return l
 }
 
-func (l limit) On() QNames {
-	return l.on
+func (l limit) On() IFilter {
+	return l.flt
 }
 
 func (l limit) Rate() IRate {
 	return l.rate
 }
 
+// Validates limit.
+//
+// # Error if:
+//   - filter has no matches in the workspace
+//   - some filtered type can not to be limited. See validateOnType
 func (l limit) Validate() (err error) {
-	return validateLimitNames(l.app.Type, l.on)
+	cnt := 0
+	for t := range FilterMatches(l.On(), l.Workspace().Types()) {
+		err = errors.Join(err, l.validateOnType(t))
+		cnt++
+	}
+
+	if (err == nil) && (cnt == 0) {
+		return ErrFilterHasNoMatches(l.On(), l.Workspace())
+	}
+
+	return err
+}
+
+func (l limit) validateOnType(t IType) error {
+	switch t.Kind() {
+	case TypeKind_Command, TypeKind_Query: //ok
+	case TypeKind_GDoc, TypeKind_CDoc, TypeKind_WDoc,
+		TypeKind_GRecord, TypeKind_CRecord, TypeKind_WRecord,
+		TypeKind_ViewRecord: //ok
+	default:
+		return ErrUnsupported("%v can not to be limited", t)
+	}
+	return nil
 }
