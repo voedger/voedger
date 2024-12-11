@@ -3,23 +3,24 @@
  * @author: Nikolay Nikitin
  */
 
-package appdef
+package appdef_test
 
 import (
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func Test_AppDef_AddCommand(t *testing.T) {
 	require := require.New(t)
 
-	var app IAppDef
-	wsName := NewQName("test", "workspace")
-	cmdName, parName, unlName, resName := NewQName("test", "cmd"), NewQName("test", "par"), NewQName("test", "unl"), NewQName("test", "res")
+	var app appdef.IAppDef
+	wsName := appdef.NewQName("test", "workspace")
+	cmdName, parName, unlName, resName := appdef.NewQName("test", "cmd"), appdef.NewQName("test", "par"), appdef.NewQName("test", "unl"), appdef.NewQName("test", "res")
 
 	t.Run("should be ok to add command", func(t *testing.T) {
-		adb := New()
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
@@ -31,7 +32,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		cmd := wsb.AddCommand(cmdName)
 
 		t.Run("should be ok to assign cmd parameter and result", func(t *testing.T) {
-			cmd.SetEngine(ExtensionEngineKind_BuiltIn)
+			cmd.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
 			cmd.
 				SetParam(parName).
 				SetResult(resName)
@@ -50,34 +51,34 @@ func Test_AppDef_AddCommand(t *testing.T) {
 	testWith := func(tested testedTypes) {
 		t.Run("should be ok to find builded command", func(t *testing.T) {
 			typ := tested.Type(cmdName)
-			require.Equal(TypeKind_Command, typ.Kind())
+			require.Equal(appdef.TypeKind_Command, typ.Kind())
 
-			c, ok := typ.(ICommand)
+			c, ok := typ.(appdef.ICommand)
 			require.True(ok)
-			require.Equal(TypeKind_Command, c.Kind())
+			require.Equal(appdef.TypeKind_Command, c.Kind())
 
-			cmd := Command(tested.Type, cmdName)
-			require.Equal(TypeKind_Command, cmd.Kind())
+			cmd := appdef.Command(tested.Type, cmdName)
+			require.Equal(appdef.TypeKind_Command, cmd.Kind())
 			require.Equal(cmdName.Entity(), cmd.Name())
 			require.Equal(c, cmd)
 
 			require.Equal(wsName, cmd.Workspace().QName())
 
-			require.Equal(ExtensionEngineKind_BuiltIn, cmd.Engine())
+			require.Equal(appdef.ExtensionEngineKind_BuiltIn, cmd.Engine())
 
 			require.Equal(parName, cmd.Param().QName())
-			require.Equal(TypeKind_Object, cmd.Param().Kind())
+			require.Equal(appdef.TypeKind_Object, cmd.Param().Kind())
 
 			require.Equal(unlName, cmd.UnloggedParam().QName())
-			require.Equal(TypeKind_Object, cmd.UnloggedParam().Kind())
+			require.Equal(appdef.TypeKind_Object, cmd.UnloggedParam().Kind())
 
 			require.Equal(resName, cmd.Result().QName())
-			require.Equal(TypeKind_Object, cmd.Result().Kind())
+			require.Equal(appdef.TypeKind_Object, cmd.Result().Kind())
 		})
 
 		t.Run("should be ok to enum commands", func(t *testing.T) {
 			cnt := 0
-			for c := range Commands(tested.Types()) {
+			for c := range appdef.Commands(tested.Types()) {
 				cnt++
 				switch cnt {
 				case 1:
@@ -90,8 +91,8 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		})
 
 		t.Run("check nil returns", func(t *testing.T) {
-			unknown := NewQName("test", "unknown")
-			require.Nil(Command(tested.Type, unknown))
+			unknown := appdef.NewQName("test", "unknown")
+			require.Nil(appdef.Command(tested.Type, unknown))
 		})
 	}
 
@@ -100,60 +101,60 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 	t.Run("should be panics", func(t *testing.T) {
 		t.Run("if name is empty", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			wsb := adb.AddWorkspace(wsName)
-			require.Panics(func() { wsb.AddCommand(NullQName) },
-				require.Is(ErrMissedError))
+			require.Panics(func() { wsb.AddCommand(appdef.NullQName) },
+				require.Is(appdef.ErrMissedError))
 		})
 
 		t.Run("if name is invalid", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			wsb := adb.AddWorkspace(wsName)
-			require.Panics(func() { wsb.AddCommand(NewQName("naked", "🔫")) },
-				require.Is(ErrInvalidError),
+			require.Panics(func() { wsb.AddCommand(appdef.NewQName("naked", "🔫")) },
+				require.Is(appdef.ErrInvalidError),
 				require.Has("naked.🔫"))
 		})
 
 		t.Run("if type with name already exists", func(t *testing.T) {
-			testName := NewQName("test", "dupe")
-			adb := New()
+			testName := appdef.NewQName("test", "dupe")
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 			wsb.AddObject(testName)
 			require.Panics(func() { wsb.AddCommand(testName) },
-				require.Is(ErrAlreadyExistsError),
+				require.Is(appdef.ErrAlreadyExistsError),
 				require.Has(testName.String()))
 		})
 
 		t.Run("if extension name is empty", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 			cmd := wsb.AddCommand(cmdName)
 			require.Panics(func() { cmd.SetName("") },
-				require.Is(ErrMissedError),
+				require.Is(appdef.ErrMissedError),
 				require.Has("test.cmd"))
 		})
 
 		t.Run("if extension name is invalid", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 			cmd := wsb.AddCommand(cmdName)
 			require.Panics(func() { cmd.SetName("naked 🔫") },
-				require.Is(ErrInvalidError),
+				require.Is(appdef.ErrInvalidError),
 				require.Has("naked 🔫"))
 		})
 
 		t.Run("if extension kind is invalid", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 			cmd := wsb.AddCommand(cmdName)
-			require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_null) },
-				require.Is(ErrOutOfBoundsError))
-			require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_count) },
-				require.Is(ErrOutOfBoundsError))
+			require.Panics(func() { cmd.SetEngine(appdef.ExtensionEngineKind_null) },
+				require.Is(appdef.ErrOutOfBoundsError))
+			require.Panics(func() { cmd.SetEngine(appdef.ExtensionEngineKind_count) },
+				require.Is(appdef.ErrOutOfBoundsError))
 		})
 	})
 }
@@ -161,41 +162,41 @@ func Test_AppDef_AddCommand(t *testing.T) {
 func Test_CommandValidate(t *testing.T) {
 	require := require.New(t)
 
-	adb := New()
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
-	wsb := adb.AddWorkspace(NewQName("test", "workspace"))
-	obj := NewQName("test", "obj")
+	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	obj := appdef.NewQName("test", "obj")
 	_ = wsb.AddObject(obj)
-	bad := NewQName("test", "job")
+	bad := appdef.NewQName("test", "job")
 	wsb.AddJob(bad).SetCronSchedule("@hourly")
-	unknown := NewQName("test", "unknown")
+	unknown := appdef.NewQName("test", "unknown")
 
-	cmd := wsb.AddCommand(NewQName("test", "cmd"))
+	cmd := wsb.AddCommand(appdef.NewQName("test", "cmd"))
 
 	t.Run("should be errors", func(t *testing.T) {
 		t.Run("if parameter name is unknown", func(t *testing.T) {
 			cmd.SetParam(unknown)
 			_, err := adb.Build()
-			require.Error(err, require.Is(ErrNotFoundError), require.Has(unknown))
+			require.Error(err, require.Is(appdef.ErrNotFoundError), require.Has(unknown))
 		})
 
 		t.Run("if deprecated parameter type", func(t *testing.T) {
 			cmd.SetParam(bad)
 			_, err := adb.Build()
-			require.Error(err, require.Is(ErrInvalidError), require.Has(bad))
+			require.Error(err, require.Is(appdef.ErrInvalidError), require.Has(bad))
 		})
 
 		cmd.SetParam(obj)
 		t.Run("if unlogged parameter name is unknown", func(t *testing.T) {
 			cmd.SetUnloggedParam(unknown)
 			_, err := adb.Build()
-			require.Error(err, require.Is(ErrNotFoundError), require.Has(unknown))
+			require.Error(err, require.Is(appdef.ErrNotFoundError), require.Has(unknown))
 		})
 
 		t.Run("if deprecated unlogged parameter type", func(t *testing.T) {
 			cmd.SetUnloggedParam(bad)
 			_, err := adb.Build()
-			require.Error(err, require.Is(ErrInvalidError), require.Has(bad))
+			require.Error(err, require.Is(appdef.ErrInvalidError), require.Has(bad))
 		})
 
 		cmd.SetUnloggedParam(obj)
@@ -205,13 +206,13 @@ func Test_CommandValidate(t *testing.T) {
 		t.Run("if result object name is unknown", func(t *testing.T) {
 			cmd.SetResult(unknown)
 			_, err := adb.Build()
-			require.Error(err, require.Is(ErrNotFoundError), require.Has(unknown))
+			require.Error(err, require.Is(appdef.ErrNotFoundError), require.Has(unknown))
 		})
 
 		t.Run("if deprecated unlogged parameter type", func(t *testing.T) {
 			cmd.SetResult(bad)
 			_, err := adb.Build()
-			require.Error(err, require.Is(ErrInvalidError), require.Has(bad))
+			require.Error(err, require.Is(appdef.ErrInvalidError), require.Has(bad))
 		})
 
 		cmd.SetResult(obj)
