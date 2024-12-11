@@ -3,22 +3,23 @@
  * @author: Nikolay Nikitin
  */
 
-package appdef
+package appdef_test
 
 import (
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
 func TestRateScopeTrimString(t *testing.T) {
 	tests := []struct {
 		name string
-		s    RateScope
+		s    appdef.RateScope
 		want string
 	}{
-		{name: "basic", s: RateScope_AppPartition, want: "AppPartition"},
-		{name: "out of range", s: RateScope_count + 1, want: (RateScope_count + 1).String()},
+		{name: "basic", s: appdef.RateScope_AppPartition, want: "AppPartition"},
+		{name: "out of range", s: appdef.RateScope_count + 1, want: (appdef.RateScope_count + 1).String()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -32,20 +33,20 @@ func TestRateScopeTrimString(t *testing.T) {
 func TestLimitOption_MarshalText(t *testing.T) {
 	tests := []struct {
 		name string
-		o    LimitOption
+		o    appdef.LimitOption
 		want string
 	}{
 		{name: `0 —> "LimitOption_ALL"`,
-			o:    LimitOption_ALL,
+			o:    appdef.LimitOption_ALL,
 			want: `LimitOption_ALL`,
 		},
 		{name: `1 —> "LimitOption_EACH"`,
-			o:    LimitOption_EACH,
+			o:    appdef.LimitOption_EACH,
 			want: `LimitOption_EACH`,
 		},
 		{name: `LimitOption_count —> <number>`,
-			o:    LimitOption_count,
-			want: utils.UintToString(LimitOption_count),
+			o:    appdef.LimitOption_count,
+			want: utils.UintToString(appdef.LimitOption_count),
 		},
 	}
 	for _, tt := range tests {
@@ -62,7 +63,7 @@ func TestLimitOption_MarshalText(t *testing.T) {
 	}
 
 	t.Run("100% cover LimitOption.String()", func(t *testing.T) {
-		const tested = LimitOption_count + 1
+		const tested = appdef.LimitOption_count + 1
 		want := "LimitOption(" + utils.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
@@ -74,11 +75,11 @@ func TestLimitOption_MarshalText(t *testing.T) {
 func TestLimitOptionTrimString(t *testing.T) {
 	tests := []struct {
 		name string
-		o    LimitOption
+		o    appdef.LimitOption
 		want string
 	}{
-		{name: "basic", o: LimitOption_ALL, want: "ALL"},
-		{name: "out of range", o: LimitOption_count + 1, want: (LimitOption_count + 1).String()},
+		{name: "basic", o: appdef.LimitOption_ALL, want: "ALL"},
+		{name: "out of range", o: appdef.LimitOption_count + 1, want: (appdef.LimitOption_count + 1).String()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

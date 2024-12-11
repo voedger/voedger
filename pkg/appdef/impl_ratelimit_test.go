@@ -68,6 +68,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 				switch cnt {
 				case 1:
 					require.Equal(limitName, l.QName())
+					require.Equal(appdef.LimitOption_ALL, l.Option())
 					require.Equal(appdef.FilterKind_Types, l.Filter().Kind())
 					require.Equal([]appdef.TypeKind{appdef.TypeKind_Query, appdef.TypeKind_Command}, slices.Collect(l.Filter().Types()))
 					require.Equal(rateName, l.Rate().QName())
