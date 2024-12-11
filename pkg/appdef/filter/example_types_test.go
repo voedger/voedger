@@ -56,7 +56,7 @@ func ExampleTypes() {
 	// Output:
 	// This example demonstrates how to work with the Types filter
 	//
-	// Types(ODoc, Object) from Workspace test.workspace
+	// TYPES(ODoc, Object) FROM test.workspace
 	// - kind: FilterKind_Types
 	// - type kinds:
 	//   * TypeKind_ODoc
@@ -67,7 +67,7 @@ func ExampleTypes() {
 	//   * Object «test.object» is matched: true
 	//   * Tag «test.tag» is matched: false
 	//
-	// Types(Query) from Workspace test.workspace
+	// TYPES(Query) FROM test.workspace
 	// - kind: FilterKind_Types
 	// - type kinds:
 	//   * TypeKind_Query
@@ -110,7 +110,7 @@ func ExampleAllTables() {
 	// Output:
 	// This example demonstrates how to work with the AllTables filter
 	//
-	// All tables from Workspace test.workspace
+	// ALL TABLES FROM test.workspace
 	// - kind: FilterKind_Types
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
@@ -150,7 +150,7 @@ func ExampleAllFunctions() {
 	// Output:
 	// This example demonstrates how to work with the AllFunctions filter
 	//
-	// All functions from Workspace test.workspace
+	// ALL FUNCTIONS FROM test.workspace
 	// - kind: FilterKind_Types
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: true

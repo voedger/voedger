@@ -120,14 +120,16 @@ func (acl aclRule) Policy() PolicyKind { return acl.policy }
 func (acl aclRule) Principal() IRole { return acl.principal }
 
 func (acl aclRule) String() string {
-	s := fmt.Sprintf("%s %s on %s", acl.Policy().ActionString(), acl.ops, acl.Filter())
+	// GRANT [Select] ON QNAMES(test.doc) TO test.reader
+	// REVOKE [INSERT UPDATE SELECT] QNAMES(test.doc)([field1]) FROM test.writer
+	s := fmt.Sprintf("%s %s ON %s", acl.Policy().ActionString(), acl.ops, acl.Filter())
 	switch acl.policy {
 	case PolicyKind_Deny:
-		s += " from "
+		s += " FROM "
 	default:
-		s += " to "
+		s += " TO "
 	}
-	s += fmt.Sprint(acl.Principal())
+	s += fmt.Sprint(acl.Principal().QName())
 	return s
 }
 

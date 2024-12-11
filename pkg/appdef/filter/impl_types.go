@@ -50,9 +50,9 @@ func (f typesFilter) String() string {
 	if t, ok := typesStringDecorators[string(f.types.AsBytes())]; ok {
 		s = t
 	} else {
-		// Types(…)
-		// Types(… from Workspace …)
-		s = "Types("
+		// TYPES(…)
+		// TYPES(…) FROM …)
+		s = "TYPES("
 		for i, t := range f.types.All() {
 			if i > 0 {
 				s += ", "
@@ -62,7 +62,7 @@ func (f typesFilter) String() string {
 		s += ")"
 	}
 	if f.ws != appdef.NullQName {
-		s += fmt.Sprintf(" from Workspace %s", f.ws)
+		s += fmt.Sprintf(" FROM %s", f.ws)
 	}
 	return s
 }
@@ -70,6 +70,6 @@ func (f typesFilter) String() string {
 func (f typesFilter) Types() iter.Seq[appdef.TypeKind] { return f.types.Values() }
 
 var typesStringDecorators = map[string]string{
-	string(appdef.TypeKind_Structures.AsBytes()): "All tables",
-	string(appdef.TypeKind_Functions.AsBytes()):  "All functions",
+	string(appdef.TypeKind_Structures.AsBytes()): "ALL TABLES",
+	string(appdef.TypeKind_Functions.AsBytes()):  "ALL FUNCTIONS",
 }

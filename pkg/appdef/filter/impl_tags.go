@@ -43,8 +43,8 @@ func (f tagsFilter) Match(t appdef.IType) bool {
 }
 
 func (f tagsFilter) String() string {
-	// Tags(…)
-	s := "Tags("
+	// TAGS(…)
+	s := "TAGS("
 	for i, c := range f.tags {
 		if i > 0 {
 			s += ", "

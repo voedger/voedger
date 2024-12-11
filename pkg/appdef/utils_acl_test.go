@@ -59,8 +59,8 @@ func TestPolicyKindActionString(t *testing.T) {
 		policy PolicyKind
 		want   string
 	}{
-		{"granted", PolicyKind_Allow, "grant"},
-		{"revoked", PolicyKind_Deny, "revoke"},
+		{"granted", PolicyKind_Allow, "GRANT"},
+		{"revoked", PolicyKind_Deny, "REVOKE"},
 		{"none", PolicyKind_null, "null"},
 	}
 	for _, tt := range tests {

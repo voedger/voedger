@@ -7,9 +7,11 @@ package appdef_test
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
 func ExampleRates() {
@@ -21,6 +23,7 @@ func ExampleRates() {
 	wsName := appdef.NewQName("test", "workspace")
 	rateName := appdef.NewQName("test", "rate")
 	limitName := appdef.NewQName("test", "limit")
+	cmdName := appdef.NewQName("test", "command")
 
 	// how to build AppDef with rates and limits
 	{
@@ -29,8 +32,10 @@ func ExampleRates() {
 
 		wsb := adb.AddWorkspace(wsName)
 
+		_ = wsb.AddCommand(cmdName)
+
 		wsb.AddRate(rateName, 10, time.Hour, []appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, "10 times per hour per partition per IP")
-		wsb.AddLimit(limitName, []appdef.QName{appdef.QNameAnyFunction}, rateName, "limit all commands and queries execution with test.rate")
+		wsb.AddLimit(limitName, filter.AllFunctions(wsName), rateName, "limit all commands and queries execution with test.rate")
 
 		app = adb.MustBuild()
 	}
@@ -41,7 +46,7 @@ func ExampleRates() {
 		cnt := 0
 		for r := range appdef.Rates(app.Types()) {
 			cnt++
-			fmt.Println("-", cnt, r, fmt.Sprintf("%d per %v per %v", r.Count(), r.Period(), r.Scopes()))
+			fmt.Println("-", cnt, r, fmt.Sprintf("%d per %v per %v", r.Count(), r.Period(), slices.Collect(r.Scopes())))
 		}
 		fmt.Println("overall:", cnt)
 	}
@@ -52,7 +57,7 @@ func ExampleRates() {
 		cnt := 0
 		for l := range appdef.Limits(app.Types()) {
 			cnt++
-			fmt.Println("-", cnt, l, fmt.Sprintf("on %v with %v", l.On(), l.Rate()))
+			fmt.Println("-", cnt, l, fmt.Sprintf("on %v with %v", l.Filter(), l.Rate()))
 		}
 		fmt.Println("overall:", cnt)
 	}
@@ -73,7 +78,7 @@ func ExampleRates() {
 	// - 1 Rate «test.rate» 10 per 1h0m0s per [RateScope_AppPartition RateScope_IP]
 	// overall: 1
 	// enum limits:
-	// - 1 Limit «test.limit» on [sys.AnyFunction] with Rate «test.rate»
+	// - 1 Limit «test.limit» on ALL FUNCTIONS FROM test.workspace with Rate «test.rate»
 	// overall: 1
 	// find rate:
 	// - Rate «test.rate» : 10 times per hour per partition per IP

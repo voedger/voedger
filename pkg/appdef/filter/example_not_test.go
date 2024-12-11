@@ -53,18 +53,18 @@ func ExampleNot() {
 	// Output:
 	// This example demonstrates how to work with the Not filter
 	//
-	// NOT Types(Command) from Workspace test.workspace
+	// NOT TYPES(Command) FROM test.workspace
 	// - kind: FilterKind_Not
-	// - not: Types(Command) from Workspace test.workspace
+	// - not: TYPES(Command) FROM test.workspace
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
 	//   * ODoc «test.doc» is matched: true
 	//   * Object «test.object» is matched: true
 	//   * Tag «test.tag» is matched: true
 	//
-	// NOT (QNames(test.doc) OR QNames(test.object))
+	// NOT (QNAMES(test.doc) OR QNAMES(test.object))
 	// - kind: FilterKind_Not
-	// - not: QNames(test.doc) OR QNames(test.object)
+	// - not: QNAMES(test.doc) OR QNAMES(test.object)
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: true
 	//   * ODoc «test.doc» is matched: false
