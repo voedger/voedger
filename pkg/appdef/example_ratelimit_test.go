@@ -78,7 +78,7 @@ func ExampleRates() {
 	// - 1 Rate «test.rate» 10 per 1h0m0s per [RateScope_AppPartition RateScope_IP]
 	// overall: 1
 	// enum limits:
-	// - 1 Limit «test.limit» on All functions from Workspace test.workspace with Rate «test.rate»
+	// - 1 Limit «test.limit» on ALL FUNCTIONS FROM test.workspace with Rate «test.rate»
 	// overall: 1
 	// find rate:
 	// - Rate «test.rate» : 10 times per hour per partition per IP
