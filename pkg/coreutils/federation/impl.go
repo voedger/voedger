@@ -60,7 +60,8 @@ func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs
 	if ok {
 		ttl = "&ttl=" + ttl
 	}
-	uploadBLOBURL := fmt.Sprintf("blob/%s/%d?name=%s&mimeType=%s%s", appQName.String(), wsid, blobReader.Name, blobReader.MimeType, ttl)
+	uploadBLOBURL := fmt.Sprintf("blob/%s/%d?name=%s&mimeType=%s%s", appQName.String(), wsid,
+		url.QueryEscape(blobReader.Name), url.QueryEscape(blobReader.MimeType), ttl)
 	resp, err := f.postReader(uploadBLOBURL, blobReader, optFuncs...)
 	if err != nil {
 		return "", err
