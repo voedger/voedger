@@ -382,10 +382,11 @@ var defaultACL = ACL{
 	},
 	{
 		// https://github.com/voedger/voedger/issues/2470
-		desc: "grant exec on q.sys.State to role.air.BOReader",
+		// https://github.com/voedger/voedger/issues/3007
+		desc: "grant exec on q.sys.State, sys.RegisterTempBLOB1d, q.sys.DownloadBLOBAuthnz to role.air.BOReader",
 		pattern: PatternType{
 			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_EXECUTE},
-			qNamesPattern:     []appdef.QName{qNameQryState},
+			qNamesPattern:     []appdef.QName{qNameQryState, qNameCmdRegisterTempBLOB1d, qNameQryDownloadBLOBAuthnz},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleBOReader}}},
 		},
 		policy: ACPolicy_Allow,

@@ -84,19 +84,19 @@ func TestBlobberErrors(t *testing.T) {
 	systemPrincipal, err := payloads.GetSystemPrincipalTokenApp(as.AppTokens())
 	require.NoError(err)
 
-	t.Run("401 unauthorized on write without token", func(t *testing.T) {
+	t.Run("403 forbudden on write without token", func(t *testing.T) {
 		vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, []byte{},
-			coreutils.Expect401(),
+			coreutils.Expect403(),
 		)
 	})
 
-	t.Run("401 unauthorized on read without token", func(t *testing.T) {
+	t.Run("403 forbidden on read without token", func(t *testing.T) {
 		expBLOB := []byte{1, 2, 3, 4, 5}
 		blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, expBLOB,
 			coreutils.WithAuthorizeBy(systemPrincipal),
 			coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"), // has name+mimeType query params -> any Content-Type except "multipart/form-data" is allowed
 		)
-		vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID, coreutils.Expect401())
+		vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID, coreutils.Expect403())
 	})
 
 	t.Run("403 forbidden on blob size quota exceeded", func(t *testing.T) {
