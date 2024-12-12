@@ -41,6 +41,8 @@ func New[Key comparable, SP any, PV any, State any](
 		callerFinalizerCh <- struct{}{}
 	}
 
+	close(callerFinalizerCh)
+
 	for i := 0; i < numControllerRoutines; i++ {
 		go caller(callerCh, dedupOutCh, callerFinalizerCh, controllerFunc)
 	}
