@@ -90,11 +90,16 @@ type IAppPartition interface {
 	//
 	// If some error in arguments, (resource or role not found, operation is not applicable to resource, etc…) then error is returned.
 	IsOperationAllowed(op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, roles []appdef.QName) (bool, []appdef.FieldName, error)
+
+	// Return is specified resource (command, query or structure) usage limit is exceeded.
+	//
+	// If resource usage is exceeded then returns name of first exceeded limit.
+	IsLimitExceeded(resource appdef.QName, workspace istructs.WSID, remoteAddr string) (exceed bool, limit appdef.QName)
 }
 
 // dependency cycle: func requires IAppPartitions, provider of IAppPartitions requires already filled AppConfigsType -> impossible to provide AppConfigsType because we're filling it now
 // TODO: eliminate this workaround
-// type BuiltInAppsDeploymentDescriptors map[appdef.AppQName]AppDeploymentDescriptor
+// type BuiltInAppsDeploymentDescriptors map[appdef.appdef.AppQName]AppDeploymentDescriptor
 
 // Async actualizer runner.
 //

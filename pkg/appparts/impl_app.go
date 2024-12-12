@@ -179,7 +179,8 @@ func (p *appPartitionRT) borrow(proc ProcessorKind) (*borrowedPartition, error) 
 	return b, nil
 }
 
-// # Implements IAppPartition
+// # Supports:
+//   - IAppPartition
 type borrowedPartition struct {
 	part       *appPartitionRT
 	appDef     appdef.IAppDef
@@ -238,6 +239,10 @@ func (bp *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, stat
 	}
 
 	return extEngine.Invoke(ctx, extName, io)
+}
+
+func (bp *borrowedPartition) IsLimitExceeded(appdef.QName, istructs.WSID, string) (bool, appdef.QName) {
+	return false, appdef.NullQName
 }
 
 func (bp *borrowedPartition) IsOperationAllowed(op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, roles []appdef.QName) (bool, []appdef.FieldName, error) {
