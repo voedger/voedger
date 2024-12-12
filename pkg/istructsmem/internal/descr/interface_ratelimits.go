@@ -19,6 +19,7 @@ type Rate struct {
 
 type Limit struct {
 	Type
-	On   []appdef.QName
-	Rate appdef.QName
+	Option string // ALL or EACH
+	Filter Filter
+	Rate   appdef.QName
 }

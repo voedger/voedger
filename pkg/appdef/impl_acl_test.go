@@ -255,17 +255,30 @@ func Test_GrantAndRevokeErrors(t *testing.T) {
 					filter.QNames(readerName),
 					nil,
 					readerName)
-			}, require.Is(appdef.ErrUnsupportedError), require.HasAll("revoke", "Inherits"))
+			}, require.Is(appdef.ErrUnsupportedError), require.HasAll("REVOKE", "Inherits"))
 		})
 
-		t.Run("if invalid resources", func(t *testing.T) {
+		t.Run("if invalid resource filter", func(t *testing.T) {
+			require.Panics(func() {
+				wsb.Grant(
+					[]appdef.OperationKind{appdef.OperationKind_Select},
+					nil, // <-- missed filter
+					nil,
+					readerName)
+			}, require.Is(appdef.ErrMissedError), require.Has("filter"))
+			require.Panics(func() {
+				wsb.GrantAll(
+					nil, // <-- missed filter
+					readerName)
+			}, require.Is(appdef.ErrMissedError), require.Has("filter"))
+
 			require.Panics(func() {
 				wsb.GrantAll(filter.Types(wsName, appdef.TypeKind_ViewRecord), readerName)
-			}, require.Is(appdef.ErrNotFoundError), "ViewRecord", require.Has(wsName))
+			}, require.Is(appdef.ErrNotFoundError), require.HasAll("ViewRecord", wsName))
 
 			require.Panics(func() {
 				wsb.GrantAll(filter.Types(wsName, appdef.TypeKind_Data), readerName)
-			}, require.Is(appdef.ErrUnsupportedError), "test.data")
+			}, require.Is(appdef.ErrUnsupportedError), require.Has("test.data"))
 		})
 
 		t.Run("if operations on invalid resources", func(t *testing.T) {

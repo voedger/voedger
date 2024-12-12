@@ -5,7 +5,12 @@
 
 package appdef
 
-import "github.com/voedger/voedger/pkg/goutils/set"
+import (
+	"errors"
+	"iter"
+
+	"github.com/voedger/voedger/pkg/goutils/set"
+)
 
 // Implements:
 //   - IRate
@@ -39,46 +44,73 @@ func (r rate) Period() RatePeriod {
 	return r.period
 }
 
-func (r rate) Scopes() []RateScope {
-	return r.scopes.AsArray()
+func (r rate) Scopes() iter.Seq[RateScope] {
+	return r.scopes.Values()
 }
 
 // Implements:
 //   - ILimit
 type limit struct {
 	typ
-	on   QNames
+	opt  LimitOption
+	flt  IFilter
 	rate IRate
 }
 
-func newLimit(app *appDef, ws *workspace, name QName, on []QName, rate QName, comment ...string) *limit {
+func newLimit(app *appDef, ws *workspace, name QName, opt LimitOption, flt IFilter, rate QName, comment ...string) *limit {
 	if rate == NullQName {
 		panic(ErrMissed("rate name"))
 	}
-	if len(on) == 0 {
-		panic(ErrMissed("limit objects names"))
+	if flt == nil {
+		panic(ErrMissed("filter"))
 	}
 	l := &limit{
 		typ:  makeType(app, ws, name, TypeKind_Limit),
-		on:   on,
+		opt:  opt,
+		flt:  flt,
 		rate: Rate(app.Type, rate),
 	}
 	if l.rate == nil {
 		panic(ErrNotFound("rate «%v»", rate))
+	}
+	for t := range FilterMatches(l.Filter(), ws.Types()) {
+		if err := l.validateOnType(t); err != nil {
+			panic(err)
+		}
 	}
 	l.typ.comment.setComment(comment...)
 	ws.appendType(l)
 	return l
 }
 
-func (l limit) On() QNames {
-	return l.on
-}
+func (l limit) Filter() IFilter { return l.flt }
 
-func (l limit) Rate() IRate {
-	return l.rate
-}
+func (l limit) Option() LimitOption { return l.opt }
 
+func (l limit) Rate() IRate { return l.rate }
+
+// Validates limit.
+//
+// # Error if:
+//   - filter has no matches in the workspace
+//   - some filtered type can not to be limited. See validateOnType
 func (l limit) Validate() (err error) {
-	return validateLimitNames(l.app.Type, l.on)
+	cnt := 0
+	for t := range FilterMatches(l.Filter(), l.Workspace().Types()) {
+		err = errors.Join(err, l.validateOnType(t))
+		cnt++
+	}
+
+	if (err == nil) && (cnt == 0) {
+		return ErrFilterHasNoMatches(l.Filter(), l.Workspace())
+	}
+
+	return err
+}
+
+func (l limit) validateOnType(t IType) error {
+	if !TypeKind_Limitables.Contains(t.Kind()) {
+		return ErrUnsupported("%v can not to be limited", t)
+	}
+	return nil
 }

@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"iter"
 	"time"
 )
 
@@ -36,8 +37,7 @@ type IRate interface {
 	Count() RateCount
 	Period() RatePeriod
 
-	// TODO: should be iter.Seq[RateScope]
-	Scopes() []RateScope
+	Scopes() iter.Seq[RateScope]
 }
 
 type IRatesBuilder interface {
@@ -53,29 +53,45 @@ type IRatesBuilder interface {
 	AddRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string)
 }
 
+// Limit options enumeration
+type LimitOption uint8
+
+//go:generate stringer -type=LimitOption -output=stringer_limitoption.go
+
+const (
+	// Limit all objects matched by filter.
+	// Single bucket for all objects.
+	LimitOption_ALL LimitOption = iota
+
+	// Limit each object matched by filter.
+	// Separate bucket for each object.
+	LimitOption_EACH
+
+	LimitOption_count
+)
+
 type ILimit interface {
 	IType
 
-	// TODO: should be iter.Seq[QName]
-	On() QNames
+	Option() LimitOption
+
+	// Returns limited resources filter.
+	Filter() IFilter
 
 	Rate() IRate
 }
 
 type ILimitsBuilder interface {
-	// Adds new Limit type with specified name.
+	// Adds new Limit for objects matched by filter.
 	//
-	// # Limited object names
-	//
-	// on which limit is applied, must be specified.
-	// If these contain a function (command or query), this limits count of execution.
-	// If these contain a structural (record or view record), this limits count of create/update operations.
-	// Object names can contain `QNameANY` or one of `QNameAny×××` names.
+	// # Filtered objects to limit:
+	// 	- If these contain a function (command or query), this limits count of execution.
+	// 	- If these contain a structural (record or view record), this limits count of create/update operations.
 	//
 	// # Panics:
 	//   - if name is empty or invalid,
 	//   - if type with the same name already exists,
-	//	 - if no limited objects names specified,
+	//	 - if matched objects can not to be limited,
 	//	 - if rate is not found.
-	AddLimit(name QName, on []QName, rate QName, comment ...string)
+	AddLimit(name QName, opt LimitOption, flt IFilter, rate QName, comment ...string)
 }

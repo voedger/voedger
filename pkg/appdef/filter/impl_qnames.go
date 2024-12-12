@@ -40,8 +40,8 @@ func (f qNamesFilter) QNames() iter.Seq[appdef.QName] {
 }
 
 func (f qNamesFilter) String() string {
-	// QNames(…)
-	s := "QNames("
+	// QNAMES(…)
+	s := "QNAMES("
 	for i, c := range f.names {
 		if i > 0 {
 			s += ", "

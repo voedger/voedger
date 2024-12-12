@@ -81,8 +81,8 @@ func ExampleRoles() {
 
 		intruder := appdef.Role(app.Type, intruderRoleName)
 		fmt.Println(intruder, ":")
-		for r := range intruder.ACL() {
-			fmt.Println("-", r)
+		for acl := range intruder.ACL() {
+			fmt.Println("-", acl)
 		}
 	}
 
@@ -93,11 +93,11 @@ func ExampleRoles() {
 	// 4 Role «test.writerRole»
 	// overall: 4
 	// Role «test.readerRole» :
-	// - grant [Select] on QNames(test.doc)([field1]) to Role «test.readerRole»
+	// - GRANT [Select] ON QNAMES(test.doc)([field1]) TO test.readerRole
 	// Role «test.writerRole» :
-	// - grant [Insert Update Select] on QNames(test.doc) to Role «test.writerRole»
+	// - GRANT [Insert Update Select] ON QNAMES(test.doc) TO test.writerRole
 	// Role «test.admRole» :
-	// - grant [Inherits] on QNames(test.readerRole, test.writerRole) to Role «test.admRole»
+	// - GRANT [Inherits] ON QNAMES(test.readerRole, test.writerRole) TO test.admRole
 	// Role «test.intruderRole» :
-	// - revoke [Insert Update Select] on QNames(test.doc) from Role «test.intruderRole»
+	// - REVOKE [Insert Update Select] ON QNAMES(test.doc) FROM test.intruderRole
 }

@@ -152,7 +152,7 @@ func Example() {
 		wsb.AddRate(rateName, 10, time.Minute, []appdef.RateScope{appdef.RateScope_AppPartition}, "rate 10 times per second per partition")
 
 		limitName := appdef.NewQName("test", "limit")
-		wsb.AddLimit(limitName, []appdef.QName{appdef.QNameAnyCommand}, rateName, "limit all commands execution by test.rate")
+		wsb.AddLimit(limitName, appdef.LimitOption_ALL, filter.Types(wsName, appdef.TypeKind_Command), rateName, "limit all commands execution by test.rate")
 
 		wsb.AddCDoc(wsDescName).SetSingleton()
 		wsb.SetDescriptor(wsDescName)
@@ -713,9 +713,12 @@ func Example() {
 	//           "Limits": {
 	//             "test.limit": {
 	//               "Comment": "limit all commands execution by test.rate",
-	//               "On": [
-	//                 "sys.AnyCommand"
-	//               ],
+	//               "Option": "ALL",
+	//               "Filter": {
+	//                 "Types": [
+	//                   "TypeKind_Command"
+	//                 ]
+	//               },
 	//               "Rate": "test.rate"
 	//             }
 	//           }

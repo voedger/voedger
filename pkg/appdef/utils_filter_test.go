@@ -10,6 +10,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/filter"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
@@ -62,4 +63,64 @@ func Test_FilterMatches(t *testing.T) {
 			require.Equal(1, cnt)
 		})
 	})
+}
+
+func TestFilterKind_MarshalText(t *testing.T) {
+	tests := []struct {
+		name string
+		k    appdef.FilterKind
+		want string
+	}{
+		{name: `0 —> "FilterKind_null"`,
+			k:    appdef.FilterKind_null,
+			want: `FilterKind_null`,
+		},
+		{name: `1 —> "FilterKind_QNames"`,
+			k:    appdef.FilterKind_QNames,
+			want: `FilterKind_QNames`,
+		},
+		{name: `FilterKind_count —> <number>`,
+			k:    appdef.FilterKind_count,
+			want: utils.UintToString(appdef.FilterKind_count),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.k.MarshalText()
+			if err != nil {
+				t.Errorf("FilterKind.MarshalText() unexpected error %v", err)
+				return
+			}
+			if string(got) != tt.want {
+				t.Errorf("FilterKind.MarshalText() = %s, want %v", got, tt.want)
+			}
+		})
+	}
+
+	t.Run("100% cover FilterKind.String()", func(t *testing.T) {
+		const tested = appdef.FilterKind_count + 1
+		want := "FilterKind(" + utils.UintToString(tested) + ")"
+		got := tested.String()
+		if got != want {
+			t.Errorf("(FilterKind_count + 1).String() = %v, want %v", got, want)
+		}
+	})
+}
+
+func TestFilterKindTrimString(t *testing.T) {
+	tests := []struct {
+		name string
+		k    appdef.FilterKind
+		want string
+	}{
+		{name: "basic", k: appdef.FilterKind_QNames, want: "QNames"},
+		{name: "out of range", k: appdef.FilterKind_count + 1, want: (appdef.FilterKind_count + 1).String()},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.k.TrimString(); got != tt.want {
+				t.Errorf("%v.(FilterKind).TrimString() = %v, want %v", tt.k, got, tt.want)
+			}
+		})
+	}
 }

@@ -60,7 +60,7 @@ func ExampleTags() {
 	// Output:
 	// This example demonstrates how to work with the Tags filter
 	//
-	// Tags(test.tagOdd)
+	// TAGS(test.tagOdd)
 	// - kind: FilterKind_Tags
 	// - tags:
 	//   * test.tagOdd
@@ -69,7 +69,7 @@ func ExampleTags() {
 	//   * ODoc «test.doc2» is matched: false
 	//   * ODoc «test.doc3» is matched: true
 	//
-	// Tags(test.tagEven)
+	// TAGS(test.tagEven)
 	// - kind: FilterKind_Tags
 	// - tags:
 	//   * test.tagEven
@@ -78,7 +78,7 @@ func ExampleTags() {
 	//   * ODoc «test.doc2» is matched: true
 	//   * ODoc «test.doc3» is matched: false
 	//
-	// Tags(test.tagEven, test.tagOdd)
+	// TAGS(test.tagEven, test.tagOdd)
 	// - kind: FilterKind_Tags
 	// - tags:
 	//   * test.tagEven

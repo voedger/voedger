@@ -43,8 +43,8 @@ func (f orFilter) Match(t appdef.IType) bool {
 func (f orFilter) Or() iter.Seq[appdef.IFilter] { return slices.Values(f.children) }
 
 func (f orFilter) String() string {
-	// QNames(…) or Tags(…)
-	// (QNames(…) and Types(…)) or not Tags(…)
+	// QNAMES(…) OR TAGS(…)
+	// (QNAMES(…) AND TYPES(…)) OR NOT TAGS(…)
 	s := ""
 	for i, c := range f.children {
 		cStr := fmt.Sprint(c)

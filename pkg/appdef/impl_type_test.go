@@ -249,6 +249,38 @@ func Test_TypeKind_Extensions(t *testing.T) {
 	}, "should be read-only")
 }
 
+func Test_TypeKind_Limitables(t *testing.T) {
+	require := require.New(t)
+
+	var tests = []struct {
+		name string
+		k    TypeKind
+		want bool
+	}{
+		{"Query", TypeKind_Query, true},
+		{"Command", TypeKind_Command, true},
+		{"CDoc", TypeKind_CDoc, true},
+		{"ORecord", TypeKind_ORecord, true},
+
+		{"Any", TypeKind_Any, false},
+		{"null", TypeKind_null, false},
+		{"count", TypeKind_count, false},
+		{"Job", TypeKind_Job, false},
+		{"Object", TypeKind_Object, false},
+		{"Role", TypeKind_Role, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(tt.want, TypeKind_Limitables.Contains(tt.k))
+		})
+	}
+
+	require.Panics(func() {
+		TypeKind_Limitables.ClearAll()
+	}, "should be read-only")
+}
+
 func TestTypeKind_MarshalText(t *testing.T) {
 	tests := []struct {
 		name string
