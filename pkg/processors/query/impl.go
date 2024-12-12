@@ -258,10 +258,13 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			if !ok {
 				ok, _, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
 				if err != nil {
+					// TODO: temporary workaround. Eliminate later
+					if roleNotFound(err) {
+						return coreutils.WrapSysError(err, http.StatusForbidden)
+					}
 					return err
 				}
 				if !ok {
-
 					return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
 				}
 			}
@@ -401,6 +404,10 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				if !ok {
 					ok, allowedFields, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
 					if err != nil {
+						// TODO: temporary workaround. Eliminate later
+						if roleNotFound(err) {
+							return coreutils.WrapSysError(err, http.StatusForbidden)
+						}
 						return err
 					}
 					if !ok {
@@ -454,6 +461,10 @@ type queryWork struct {
 	wsDesc             istructs.IRecord
 	// queryExec         func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error
 	callbackFunc istructs.ExecQueryCallback
+}
+
+func roleNotFound(err error) bool {
+	return errors.Is(err, appdef.ErrNotFoundError) && strings.Contains(err.Error(), "role")
 }
 
 func newQueryWork(msg IQueryMessage, rs IResultSenderClosable, appParts appparts.IAppPartitions,

@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/voedger/voedger/pkg/goutils/logger"
@@ -388,14 +389,21 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkp
 	if !ok {
 		ok, _, err := cmd.appPart.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles)
 		if err != nil {
+			// TODO: temporary workaround. Eliminate later
+			if roleNotFound(err) {
+				return coreutils.NewHTTPErrorf(http.StatusForbidden)
+			}
 			return err
 		}
 		if !ok {
-
 			return coreutils.NewHTTPErrorf(http.StatusForbidden)
 		}
 	}
 	return nil
+}
+
+func roleNotFound(err error) bool {
+	return errors.Is(err, appdef.ErrNotFoundError) && strings.Contains(err.Error(), "role")
 }
 
 func unmarshalRequestBody(_ context.Context, work pipeline.IWorkpiece) (err error) {
@@ -705,6 +713,10 @@ func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work pipeline.IWorkpiec
 			fields := maps.Keys(parsedCUD.fields)
 			ok, _, err := cmd.appPart.IsOperationAllowed(parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
 			if err != nil {
+				// TODO: temporary workaround. Eliminate later
+				if roleNotFound(err) {
+					return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
+				}
 				return err
 			}
 			if !ok {
