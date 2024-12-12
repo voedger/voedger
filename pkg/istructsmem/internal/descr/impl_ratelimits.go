@@ -26,6 +26,12 @@ func newLimit() *Limit {
 
 func (l *Limit) read(limit appdef.ILimit) {
 	l.Type.read(limit)
+	switch limit.Option() {
+	case appdef.LimitOption_ALL:
+		l.Option = "ALL"
+	case appdef.LimitOption_EACH:
+		l.Option = "EACH"
+	}
 	l.Filter.read(limit.Filter())
 	l.Rate = limit.Rate().QName()
 }

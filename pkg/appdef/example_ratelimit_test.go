@@ -21,9 +21,9 @@ func ExampleRates() {
 	// RATE test.rate 10 PER HOUR PER APP PARTITION PER IP
 
 	wsName := appdef.NewQName("test", "workspace")
-	rateName := appdef.NewQName("test", "rate")
-	limitName := appdef.NewQName("test", "limit")
-	cmdName := appdef.NewQName("test", "command")
+	rateAllName, rateEachName := appdef.NewQName("test", "rateAll"), appdef.NewQName("test", "rateEach")
+	limitAllName, limitEachName := appdef.NewQName("test", "limitAll"), appdef.NewQName("test", "limitEach")
+	cmdName, queryName := appdef.NewQName("test", "command"), appdef.NewQName("test", "query")
 
 	// how to build AppDef with rates and limits
 	{
@@ -33,9 +33,13 @@ func ExampleRates() {
 		wsb := adb.AddWorkspace(wsName)
 
 		_ = wsb.AddCommand(cmdName)
+		_ = wsb.AddQuery(queryName)
 
-		wsb.AddRate(rateName, 10, time.Hour, []appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, "10 times per hour per partition per IP")
-		wsb.AddLimit(limitName, filter.AllFunctions(wsName), rateName, "limit all commands and queries execution with test.rate")
+		wsb.AddRate(rateAllName, 10, time.Hour, []appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, "10 times per hour per partition per IP")
+		wsb.AddRate(rateEachName, 1, 10*time.Minute, []appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, "1 times per 10 minutes per partition per IP")
+
+		wsb.AddLimit(limitAllName, appdef.LimitOption_ALL, filter.AllFunctions(wsName), rateAllName, "limit all commands and queries execution with test.rateAll")
+		wsb.AddLimit(limitEachName, appdef.LimitOption_EACH, filter.AllFunctions(wsName), rateEachName, "limit each command and query execution with test.rateEach")
 
 		app = adb.MustBuild()
 	}
@@ -57,7 +61,7 @@ func ExampleRates() {
 		cnt := 0
 		for l := range appdef.Limits(app.Types()) {
 			cnt++
-			fmt.Println("-", cnt, l, fmt.Sprintf("on %v with %v", l.Filter(), l.Rate()))
+			fmt.Println("-", cnt, l, fmt.Sprintf("%s on %v with %v", l.Option().TrimString(), l.Filter(), l.Rate()))
 		}
 		fmt.Println("overall:", cnt)
 	}
@@ -65,23 +69,25 @@ func ExampleRates() {
 	// how to find rates and limits
 	{
 		fmt.Println("find rate:")
-		rate := appdef.Rate(app.Type, rateName)
+		rate := appdef.Rate(app.Type, rateAllName)
 		fmt.Println("-", rate, ":", rate.Comment())
 
 		fmt.Println("find limit:")
-		limit := appdef.Limit(app.Type, limitName)
+		limit := appdef.Limit(app.Type, limitAllName)
 		fmt.Println("-", limit, ":", limit.Comment())
 	}
 
 	// Output:
 	// enum rates:
-	// - 1 Rate «test.rate» 10 per 1h0m0s per [RateScope_AppPartition RateScope_IP]
-	// overall: 1
+	// - 1 Rate «test.rateAll» 10 per 1h0m0s per [RateScope_AppPartition RateScope_IP]
+	// - 2 Rate «test.rateEach» 1 per 10m0s per [RateScope_AppPartition RateScope_IP]
+	// overall: 2
 	// enum limits:
-	// - 1 Limit «test.limit» on ALL FUNCTIONS FROM test.workspace with Rate «test.rate»
-	// overall: 1
+	// - 1 Limit «test.limitAll» ALL on ALL FUNCTIONS FROM test.workspace with Rate «test.rateAll»
+	// - 2 Limit «test.limitEach» EACH on ALL FUNCTIONS FROM test.workspace with Rate «test.rateEach»
+	// overall: 2
 	// find rate:
-	// - Rate «test.rate» : 10 times per hour per partition per IP
+	// - Rate «test.rateAll» : 10 times per hour per partition per IP
 	// find limit:
-	// - Limit «test.limit» : limit all commands and queries execution with test.rate
+	// - Limit «test.limitAll» : limit all commands and queries execution with test.rateAll
 }

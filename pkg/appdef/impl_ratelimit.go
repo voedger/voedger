@@ -52,11 +52,12 @@ func (r rate) Scopes() iter.Seq[RateScope] {
 //   - ILimit
 type limit struct {
 	typ
+	opt  LimitOption
 	flt  IFilter
 	rate IRate
 }
 
-func newLimit(app *appDef, ws *workspace, name QName, flt IFilter, rate QName, comment ...string) *limit {
+func newLimit(app *appDef, ws *workspace, name QName, opt LimitOption, flt IFilter, rate QName, comment ...string) *limit {
 	if rate == NullQName {
 		panic(ErrMissed("rate name"))
 	}
@@ -65,6 +66,7 @@ func newLimit(app *appDef, ws *workspace, name QName, flt IFilter, rate QName, c
 	}
 	l := &limit{
 		typ:  makeType(app, ws, name, TypeKind_Limit),
+		opt:  opt,
 		flt:  flt,
 		rate: Rate(app.Type, rate),
 	}
@@ -81,13 +83,11 @@ func newLimit(app *appDef, ws *workspace, name QName, flt IFilter, rate QName, c
 	return l
 }
 
-func (l limit) Filter() IFilter {
-	return l.flt
-}
+func (l limit) Filter() IFilter { return l.flt }
 
-func (l limit) Rate() IRate {
-	return l.rate
-}
+func (l limit) Option() LimitOption { return l.opt }
+
+func (l limit) Rate() IRate { return l.rate }
 
 // Validates limit.
 //

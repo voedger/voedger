@@ -61,6 +61,10 @@ func newACLRule(ws *workspace, ops []OperationKind, policy PolicyKind, flt IFilt
 		panic(ErrIncompatible("operations %v with fields", opSet))
 	}
 
+	if flt == nil {
+		panic(ErrMissed("filter"))
+	}
+
 	acl := &aclRule{
 		comment:   makeComment(comment...),
 		policy:    policy,
@@ -88,6 +92,10 @@ func newRevoke(ws *workspace, ops []OperationKind, flt IFilter, fields []FieldNa
 }
 
 func newACLRuleAll(ws *workspace, policy PolicyKind, flt IFilter, principal *role, comment ...string) *aclRule {
+	if flt == nil {
+		panic(ErrMissed("filter"))
+	}
+
 	t := FirstFilterMatch(flt, ws.LocalTypes())
 	if t == nil {
 		panic(ErrFilterHasNoMatches(flt, ws))
