@@ -94,7 +94,7 @@ type IAppPartition interface {
 	// Return is specified resource (command, query or structure) usage limit is exceeded.
 	//
 	// If resource usage is exceeded then returns name of first exceeded limit.
-	IsLimitExceeded(resource appdef.QName, workspace istructs.WSID, remoteAddr string) (exceed bool, limit appdef.QName)
+	IsLimitExceeded(resource appdef.QName, operation appdef.OperationKind, workspace istructs.WSID, remoteAddr string) (exceed bool, limit appdef.QName)
 }
 
 // dependency cycle: func requires IAppPartitions, provider of IAppPartitions requires already filled AppConfigsType -> impossible to provide AppConfigsType because we're filling it now

@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts/internal/acl"
 	"github.com/voedger/voedger/pkg/appparts/internal/actualizers"
+	"github.com/voedger/voedger/pkg/appparts/internal/limiter"
 	"github.com/voedger/voedger/pkg/appparts/internal/pool"
 	"github.com/voedger/voedger/pkg/appparts/internal/schedulers"
 	"github.com/voedger/voedger/pkg/iextengine"
@@ -154,6 +155,7 @@ type appPartitionRT struct {
 	syncActualizer pipeline.ISyncOperator
 	actualizers    *actualizers.PartitionActualizers
 	schedulers     *schedulers.PartitionSchedulers
+	limiter        *limiter.Limiter
 }
 
 func newAppPartitionRT(app *appRT, id istructs.PartitionID) *appPartitionRT {
@@ -164,6 +166,7 @@ func newAppPartitionRT(app *appRT, id istructs.PartitionID) *appPartitionRT {
 		syncActualizer: app.apps.syncActualizerFactory(as, id),
 		actualizers:    actualizers.New(app.name, id),
 		schedulers:     schedulers.New(app.name, app.partsCount, as.NumAppWorkspaces(), id),
+		limiter:        limiter.New(app.lastestVersion.appDef()),
 	}
 	return part
 }
@@ -241,8 +244,8 @@ func (bp *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, stat
 	return extEngine.Invoke(ctx, extName, io)
 }
 
-func (bp *borrowedPartition) IsLimitExceeded(appdef.QName, istructs.WSID, string) (bool, appdef.QName) {
-	return false, appdef.NullQName
+func (bp *borrowedPartition) IsLimitExceeded(resource appdef.QName, operation appdef.OperationKind, workspace istructs.WSID, remoteAddr string) (bool, appdef.QName) {
+	return bp.part.limiter.Exceeded(resource, operation, workspace, remoteAddr)
 }
 
 func (bp *borrowedPartition) IsOperationAllowed(op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, roles []appdef.QName) (bool, []appdef.FieldName, error) {
