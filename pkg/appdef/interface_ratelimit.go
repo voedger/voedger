@@ -53,21 +53,21 @@ type IRatesBuilder interface {
 	AddRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string)
 }
 
-// Limit options enumeration
-type LimitOption uint8
+// Limit filter options enumeration
+type LimitFilterOption uint8
 
-//go:generate stringer -type=LimitOption -output=stringer_limitoption.go
+//go:generate stringer -type=LimitFilterOption -output=stringer_limitfilteroption.go
 
 const (
 	// Limit all objects matched by filter.
 	// Single bucket for all objects.
-	LimitOption_ALL LimitOption = iota
+	LimitFilterOption_ALL LimitFilterOption = iota
 
 	// Limit each object matched by filter.
 	// Separate bucket for each object.
-	LimitOption_EACH
+	LimitFilterOption_EACH
 
-	LimitOption_count
+	LimitFilterOption_count
 )
 
 type ILimit interface {
@@ -80,7 +80,7 @@ type ILimit interface {
 	Ops() iter.Seq[OperationKind]
 
 	// Returns limit option.
-	Option() LimitOption
+	Option() LimitFilterOption
 
 	// Returns limited resources filter.
 	Filter() IFilter
@@ -101,5 +101,5 @@ type ILimitsBuilder interface {
 	//   - if type with the same name already exists,
 	//	 - if matched objects can not to be limited,
 	//	 - if rate is not found.
-	AddLimit(name QName, ops []OperationKind, opt LimitOption, flt IFilter, rate QName, comment ...string)
+	AddLimit(name QName, ops []OperationKind, opt LimitFilterOption, flt IFilter, rate QName, comment ...string)
 }

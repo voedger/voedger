@@ -30,61 +30,61 @@ func TestRateScopeTrimString(t *testing.T) {
 	}
 }
 
-func TestLimitOption_MarshalText(t *testing.T) {
+func Test_LimitFilterOption_MarshalText(t *testing.T) {
 	tests := []struct {
 		name string
-		o    appdef.LimitOption
+		o    appdef.LimitFilterOption
 		want string
 	}{
-		{name: `0 —> "LimitOption_ALL"`,
-			o:    appdef.LimitOption_ALL,
-			want: `LimitOption_ALL`,
+		{name: `0 —> "LimitFilterOption_ALL"`,
+			o:    appdef.LimitFilterOption_ALL,
+			want: `LimitFilterOption_ALL`,
 		},
-		{name: `1 —> "LimitOption_EACH"`,
-			o:    appdef.LimitOption_EACH,
-			want: `LimitOption_EACH`,
+		{name: `1 —> "LimitFilterOption_EACH"`,
+			o:    appdef.LimitFilterOption_EACH,
+			want: `LimitFilterOption_EACH`,
 		},
-		{name: `LimitOption_count —> <number>`,
-			o:    appdef.LimitOption_count,
-			want: utils.UintToString(appdef.LimitOption_count),
+		{name: `LimitFilterOption_count —> <number>`,
+			o:    appdef.LimitFilterOption_count,
+			want: utils.UintToString(appdef.LimitFilterOption_count),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.o.MarshalText()
 			if err != nil {
-				t.Errorf("LimitOption.MarshalText() unexpected error %v", err)
+				t.Errorf("LimitFilterOption.MarshalText() unexpected error %v", err)
 				return
 			}
 			if string(got) != tt.want {
-				t.Errorf("LimitOption.MarshalText() = %s, want %v", got, tt.want)
+				t.Errorf("LimitFilterOption.MarshalText() = %s, want %v", got, tt.want)
 			}
 		})
 	}
 
-	t.Run("100% cover LimitOption.String()", func(t *testing.T) {
-		const tested = appdef.LimitOption_count + 1
-		want := "LimitOption(" + utils.UintToString(tested) + ")"
+	t.Run("100% cover LimitFilterOption.String()", func(t *testing.T) {
+		const tested = appdef.LimitFilterOption_count + 1
+		want := "LimitFilterOption(" + utils.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
-			t.Errorf("(LimitOption_count + 1).String() = %v, want %v", got, want)
+			t.Errorf("(LimitFilterOption_count + 1).String() = %v, want %v", got, want)
 		}
 	})
 }
 
-func TestLimitOptionTrimString(t *testing.T) {
+func TestLimitFilterOptionTrimString(t *testing.T) {
 	tests := []struct {
 		name string
-		o    appdef.LimitOption
+		o    appdef.LimitFilterOption
 		want string
 	}{
-		{name: "basic", o: appdef.LimitOption_ALL, want: "ALL"},
-		{name: "out of range", o: appdef.LimitOption_count + 1, want: (appdef.LimitOption_count + 1).String()},
+		{name: "basic", o: appdef.LimitFilterOption_ALL, want: "ALL"},
+		{name: "out of range", o: appdef.LimitFilterOption_count + 1, want: (appdef.LimitFilterOption_count + 1).String()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.o.TrimString(); got != tt.want {
-				t.Errorf("%v.(LimitOption).TrimString() = %v, want %v", tt.o, got, tt.want)
+				t.Errorf("%v.(LimitFilterOption).TrimString() = %v, want %v", tt.o, got, tt.want)
 			}
 		})
 	}

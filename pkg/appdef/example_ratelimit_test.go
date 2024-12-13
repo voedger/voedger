@@ -38,8 +38,8 @@ func ExampleRates() {
 		wsb.AddRate(rateAllName, 10, time.Hour, []appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, "10 times per hour per partition per IP")
 		wsb.AddRate(rateEachName, 1, 10*time.Minute, []appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, "1 times per 10 minutes per partition per IP")
 
-		wsb.AddLimit(limitAllName, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitOption_ALL, filter.AllFunctions(wsName), rateAllName, "limit all commands and queries execution with test.rateAll")
-		wsb.AddLimit(limitEachName, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitOption_EACH, filter.AllFunctions(wsName), rateEachName, "limit each command and query execution with test.rateEach")
+		wsb.AddLimit(limitAllName, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_ALL, filter.AllFunctions(wsName), rateAllName, "limit all commands and queries execution with test.rateAll")
+		wsb.AddLimit(limitEachName, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_EACH, filter.AllFunctions(wsName), rateEachName, "limit each command and query execution with test.rateEach")
 
 		app = adb.MustBuild()
 	}
