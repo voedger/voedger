@@ -171,8 +171,8 @@ func (ws *workspace) addJob(name QName) IJobBuilder {
 	return newJobBuilder(r)
 }
 
-func (ws *workspace) addLimit(name QName, kind LimitOption, flt IFilter, rate QName, comment ...string) {
-	_ = newLimit(ws.app, ws, name, kind, flt, rate, comment...)
+func (ws *workspace) addLimit(name QName, opt LimitOption, ops []OperationKind, flt IFilter, rate QName, comment ...string) {
+	_ = newLimit(ws.app, ws, name, opt, ops, flt, rate, comment...)
 }
 
 func (ws *workspace) addObject(name QName) IObjectBuilder {
@@ -447,8 +447,8 @@ func (wb *workspaceBuilder) AddJob(name QName) IJobBuilder {
 	return wb.workspace.addJob(name)
 }
 
-func (wb *workspaceBuilder) AddLimit(name QName, kind LimitOption, flt IFilter, rate QName, comment ...string) {
-	wb.workspace.addLimit(name, kind, flt, rate, comment...)
+func (wb *workspaceBuilder) AddLimit(name QName, opt LimitOption, ops []OperationKind, flt IFilter, rate QName, comment ...string) {
+	wb.workspace.addLimit(name, opt, ops, flt, rate, comment...)
 }
 
 func (wb *workspaceBuilder) AddObject(name QName) IObjectBuilder {

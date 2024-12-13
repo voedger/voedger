@@ -169,8 +169,8 @@ func Test_EnumsBreakable(t *testing.T) {
 	rate1Name, rate2Name := appdef.NewQName("test", "Rate1"), appdef.NewQName("test", "Rate2")
 	wsb.AddRate(rate1Name, 1, time.Second, []appdef.RateScope{appdef.RateScope_AppPartition})
 	wsb.AddRate(rate2Name, 2, 2*time.Second, []appdef.RateScope{appdef.RateScope_IP})
-	wsb.AddLimit(appdef.NewQName("test", "Limit1"), appdef.LimitOption_ALL, filter.QNames(cmd1Name), rate1Name)
-	wsb.AddLimit(appdef.NewQName("test", "Limit2"), appdef.LimitOption_ALL, filter.QNames(cmd2Name), rate2Name)
+	wsb.AddLimit(appdef.NewQName("test", "Limit1"), appdef.LimitOption_ALL, []appdef.OperationKind{appdef.OperationKind_Execute}, filter.QNames(cmd1Name), rate1Name)
+	wsb.AddLimit(appdef.NewQName("test", "Limit2"), appdef.LimitOption_ALL, []appdef.OperationKind{appdef.OperationKind_Execute}, filter.QNames(cmd2Name), rate2Name)
 
 	app := adb.MustBuild()
 	require.NotNil(app)

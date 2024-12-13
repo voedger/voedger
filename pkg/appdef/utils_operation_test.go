@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
-func Test_allOperationsOnType(t *testing.T) {
+func Test_AllOperationsForType(t *testing.T) {
 
 	tests := []struct {
 		appdef.TypeKind
