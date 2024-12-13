@@ -346,6 +346,7 @@ func TestTypeKindTrimString(t *testing.T) {
 	}
 }
 
+// TODO: eliminate this mock
 type mockType struct {
 	IType
 	kind TypeKind
