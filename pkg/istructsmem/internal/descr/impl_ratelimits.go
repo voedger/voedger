@@ -26,12 +26,14 @@ func newLimit() *Limit {
 
 func (l *Limit) read(limit appdef.ILimit) {
 	l.Type.read(limit)
-	switch limit.Option() {
-	case appdef.LimitOption_ALL:
-		l.Option = "ALL"
-	case appdef.LimitOption_EACH:
-		l.Option = "EACH"
+	for op := range limit.Ops() {
+		l.Ops = append(l.Ops, op.TrimString())
 	}
 	l.Filter.read(limit.Filter())
 	l.Rate = limit.Rate().QName()
+}
+
+func (f *LimitFilter) read(flt appdef.ILimitFilter) {
+	f.Option = flt.Option().TrimString()
+	f.Filter.read(flt)
 }

@@ -423,7 +423,8 @@ var defaultACL = ACL{
 		policy: ACPolicy_Allow,
 	},
 	{
-		desc: "grant select on few tables to air.AirReseller and air.UntillPaymentsReseller ",
+		// TODO: carefully check which docs are able to be read by whom
+		desc: "grant select on few tables to air.AirReseller and air.UntillPaymentsReseller and SubscriptionReseller and WorkspaceAdmin",
 		pattern: PatternType{
 			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
 			qNamesPattern:  []appdef.QName{qNameCDocReseller, qNameCDocUntillPayments},
@@ -433,6 +434,8 @@ var defaultACL = ACL{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
 				// OR
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleSubscriptionReseller}},
+				// OR
+				{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceAdmin}},
 			},
 		},
 		policy: ACPolicy_Allow,

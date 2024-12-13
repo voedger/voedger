@@ -19,7 +19,12 @@ type Rate struct {
 
 type Limit struct {
 	Type
-	Option string // ALL or EACH
-	Filter Filter
+	Ops    []string
+	Filter LimitFilter
 	Rate   appdef.QName
+}
+
+type LimitFilter struct {
+	Option string // ALL or EACH
+	Filter
 }

@@ -25,6 +25,8 @@ func (i ProjectorEventKind) TrimString() string {
 //   - Any Document or Record, except ODoc and ORecord, can be inserted, updated, activated or deactivated.
 //   - Command can be executed.
 //   - Object or ODoc can be parameter for command execute with.
+//
+// TODO: after refactore projectors to support filters, IType should be reduced to TypeKind
 func allProjectorEventsOnType(typ IType) set.Set[ProjectorEventKind] {
 	var (
 		recEvents = set.From(ProjectorEventKind_Insert, ProjectorEventKind_Update, ProjectorEventKind_Activate, ProjectorEventKind_Deactivate)
@@ -76,6 +78,8 @@ func allProjectorEventsOnType(typ IType) set.Set[ProjectorEventKind] {
 //   - Any document or record, except ODoc and ORecord, can be inserted, updated, activated or deactivated.
 //   - Only command can be executed.
 //   - Only object or ODoc can be parameter for command execute with.
+//
+// TODO: after refactore projectors to support filters, IType should be reduced to TypeKind
 func projectorEventCompatableWith(event ProjectorEventKind, typ IType) (ok bool, err error) {
 	if allProjectorEventsOnType(typ).Contains(event) {
 		return true, nil

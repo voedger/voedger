@@ -18,9 +18,9 @@ func (rs RateScope) TrimString() string {
 	return strings.TrimPrefix(rs.String(), pref)
 }
 
-func (o LimitOption) MarshalText() ([]byte, error) {
+func (o LimitFilterOption) MarshalText() ([]byte, error) {
 	var s string
-	if o < LimitOption_count {
+	if o < LimitFilterOption_count {
 		s = o.String()
 	} else {
 		s = utils.UintToString(o)
@@ -30,7 +30,7 @@ func (o LimitOption) MarshalText() ([]byte, error) {
 
 // Renders an LimitOption in human-readable form, without `LimitOption_` prefix,
 // suitable for debugging or error messages
-func (o LimitOption) TrimString() string {
-	const pref = "LimitOption" + "_"
+func (o LimitFilterOption) TrimString() string {
+	const pref = "LimitFilterOption" + "_"
 	return strings.TrimPrefix(o.String(), pref)
 }
