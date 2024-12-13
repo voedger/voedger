@@ -34,7 +34,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 		_ = wsb.AddCommand(cmdName)
 
 		wsb.AddRate(rateName, 10, time.Hour, []appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, "10 times per hour per partition per IP")
-		wsb.AddLimit(limitName, appdef.LimitOption_ALL, []appdef.OperationKind{appdef.OperationKind_Execute}, filter.AllFunctions(wsName), rateName, "limit all commands and queries execution with test.rate")
+		wsb.AddLimit(limitName, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitOption_ALL, filter.AllFunctions(wsName), rateName, "limit all commands and queries execution with test.rate")
 
 		a, err := adb.Build()
 		require.NoError(err)
@@ -143,26 +143,26 @@ func Test_AppDefAddRateLimitErrors(t *testing.T) {
 
 		t.Run("if missed operations", func(t *testing.T) {
 			require.Panics(func() {
-				wsb.AddLimit(limitName, appdef.LimitOption_ALL,
+				wsb.AddLimit(limitName,
 					[]appdef.OperationKind{}, // <-- missed operations
-					filter.AllTables(wsName), rateName)
+					appdef.LimitOption_ALL, filter.AllTables(wsName), rateName)
 			},
 				require.Is(appdef.ErrMissedError), require.Has("operations"))
 		})
 
 		t.Run("if incompatible operations", func(t *testing.T) {
 			require.Panics(func() {
-				wsb.AddLimit(limitName, appdef.LimitOption_ALL,
+				wsb.AddLimit(limitName,
 					[]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Execute}, // <-- incompatible operations
-					filter.AllTables(wsName), rateName)
+					appdef.LimitOption_ALL, filter.AllTables(wsName), rateName)
 			},
 				require.Is(appdef.ErrIncompatibleError), require.Has("operations"))
 		})
 
 		t.Run("if missed filter", func(t *testing.T) {
 			require.Panics(func() {
-				wsb.AddLimit(limitName, appdef.LimitOption_ALL,
-					[]appdef.OperationKind{appdef.OperationKind_Execute},
+				wsb.AddLimit(limitName,
+					[]appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitOption_ALL,
 					nil, // <-- missed filter
 					rateName)
 			},
@@ -171,7 +171,7 @@ func Test_AppDefAddRateLimitErrors(t *testing.T) {
 
 		t.Run("if filtered object is not limitable", func(t *testing.T) {
 			require.Panics(func() {
-				wsb.AddLimit(limitName, appdef.LimitOption_ALL, []appdef.OperationKind{appdef.OperationKind_Execute},
+				wsb.AddLimit(limitName, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitOption_ALL,
 					filter.QNames(appdef.SysData_bool), // <-- not limitable
 					rateName)
 			},
@@ -180,7 +180,7 @@ func Test_AppDefAddRateLimitErrors(t *testing.T) {
 
 		t.Run("if missed or unknown rate", func(t *testing.T) {
 			require.Panics(func() {
-				wsb.AddLimit(limitName, appdef.LimitOption_ALL, []appdef.OperationKind{appdef.OperationKind_Execute}, filter.AllFunctions(wsName),
+				wsb.AddLimit(limitName, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitOption_ALL, filter.AllFunctions(wsName),
 					unknown, // <-- unknown rate
 				)
 			},
@@ -198,7 +198,7 @@ func Test_AppDefAddRateLimitErrors(t *testing.T) {
 
 			wsb.AddRate(rateName, 10, time.Hour, nil, "10 times per hour")
 			f := filter.AllFunctions(wsName)
-			wsb.AddLimit(limitName, appdef.LimitOption_ALL, []appdef.OperationKind{appdef.OperationKind_Execute}, f, rateName)
+			wsb.AddLimit(limitName, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitOption_ALL, f, rateName)
 
 			_, err := adb.Build()
 			require.Error(err, require.Is(appdef.ErrNotFoundError), require.HasAll(f, "no matches", wsName))
@@ -213,7 +213,7 @@ func Test_AppDefAddRateLimitErrors(t *testing.T) {
 			wsb := adb.AddWorkspace(wsName)
 
 			wsb.AddRate(rateName, 10, time.Hour, nil, "10 times per hour")
-			wsb.AddLimit(limitName, appdef.LimitOption_ALL, []appdef.OperationKind{appdef.OperationKind_Execute},
+			wsb.AddLimit(limitName, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitOption_ALL,
 				filter.QNames(testName), // <-- not limitable
 				rateName)
 

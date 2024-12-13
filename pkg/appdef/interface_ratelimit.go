@@ -73,14 +73,14 @@ const (
 type ILimit interface {
 	IType
 
-	// Returns limit option.
-	Option() LimitOption
-
 	// Returns is this limit specified operation.
 	Op(OperationKind) bool
 
 	// Returns operations that was limited.
 	Ops() iter.Seq[OperationKind]
+
+	// Returns limit option.
+	Option() LimitOption
 
 	// Returns limited resources filter.
 	Filter() IFilter
@@ -101,5 +101,5 @@ type ILimitsBuilder interface {
 	//   - if type with the same name already exists,
 	//	 - if matched objects can not to be limited,
 	//	 - if rate is not found.
-	AddLimit(name QName, opt LimitOption, ops []OperationKind, flt IFilter, rate QName, comment ...string)
+	AddLimit(name QName, ops []OperationKind, opt LimitOption, flt IFilter, rate QName, comment ...string)
 }

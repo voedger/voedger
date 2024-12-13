@@ -52,13 +52,13 @@ func (r rate) Scopes() iter.Seq[RateScope] {
 //   - ILimit
 type limit struct {
 	typ
-	opt  LimitOption
 	ops  set.Set[OperationKind]
+	opt  LimitOption
 	flt  IFilter
 	rate IRate
 }
 
-func newLimit(app *appDef, ws *workspace, name QName, opt LimitOption, ops []OperationKind, flt IFilter, rate QName, comment ...string) *limit {
+func newLimit(app *appDef, ws *workspace, name QName, ops []OperationKind, opt LimitOption, flt IFilter, rate QName, comment ...string) *limit {
 	opSet := set.From(ops...)
 	if compatible, err := isCompatibleOperations(opSet); !compatible {
 		panic(err)
@@ -68,8 +68,8 @@ func newLimit(app *appDef, ws *workspace, name QName, opt LimitOption, ops []Ope
 	}
 	l := &limit{
 		typ:  makeType(app, ws, name, TypeKind_Limit),
-		opt:  opt,
 		ops:  opSet,
+		opt:  opt,
 		flt:  flt,
 		rate: Rate(app.Type, rate),
 	}
