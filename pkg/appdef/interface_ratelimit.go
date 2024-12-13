@@ -70,6 +70,14 @@ const (
 	LimitFilterOption_count
 )
 
+// Filter with option (ALL or EACH).
+type ILimitFilter interface {
+	IFilter
+
+	// Returns limit filter option.
+	Option() LimitFilterOption
+}
+
 type ILimit interface {
 	IType
 
@@ -79,11 +87,8 @@ type ILimit interface {
 	// Returns operations that was limited.
 	Ops() iter.Seq[OperationKind]
 
-	// Returns limit option.
-	Option() LimitFilterOption
-
 	// Returns limited resources filter.
-	Filter() IFilter
+	Filter() ILimitFilter
 
 	// Returns rate for this limit.
 	Rate() IRate

@@ -61,7 +61,7 @@ func ExampleRates() {
 		cnt := 0
 		for l := range appdef.Limits(app.Types()) {
 			cnt++
-			fmt.Println("-", cnt, l, fmt.Sprintf("%v on %s {%v} with %v", slices.Collect(l.Ops()), l.Option().TrimString(), l.Filter(), l.Rate()))
+			fmt.Println("-", cnt, l, fmt.Sprintf("%v ON %v BY %v", slices.Collect(l.Ops()), l.Filter(), l.Rate()))
 		}
 		fmt.Println("overall:", cnt)
 	}
@@ -83,8 +83,8 @@ func ExampleRates() {
 	// - 2 Rate «test.rateEach» 1 per 10m0s per [RateScope_AppPartition RateScope_IP]
 	// overall: 2
 	// enum limits:
-	// - 1 Limit «test.limitAll» [OperationKind_Execute] on ALL {ALL FUNCTIONS FROM test.workspace} with Rate «test.rateAll»
-	// - 2 Limit «test.limitEach» [OperationKind_Execute] on EACH {ALL FUNCTIONS FROM test.workspace} with Rate «test.rateEach»
+	// - 1 Limit «test.limitAll» [OperationKind_Execute] ON ALL FUNCTIONS FROM test.workspace BY Rate «test.rateAll»
+	// - 2 Limit «test.limitEach» [OperationKind_Execute] ON EACH FUNCTIONS FROM test.workspace BY Rate «test.rateEach»
 	// overall: 2
 	// find rate:
 	// - Rate «test.rateAll» : 10 times per hour per partition per IP

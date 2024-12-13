@@ -6,6 +6,7 @@
 package appdef_test
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 	"time"
@@ -22,8 +23,11 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 
 	wsName := appdef.NewQName("test", "workspace")
 	cmdName := appdef.NewQName("test", "command")
+	tagName := appdef.NewQName("test", "tag")
 	rateName := appdef.NewQName("test", "rate")
-	limitName := appdef.NewQName("test", "limit")
+	limitAllFunc := appdef.NewQName("test", "limitAllFunc")
+	limitEachFunc := appdef.NewQName("test", "limitEachFunc")
+	limitEachTag := appdef.NewQName("test", "limitEachTag")
 
 	t.Run("should be ok to build application with rates and limits", func(t *testing.T) {
 		adb := appdef.New()
@@ -31,10 +35,13 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 
 		wsb := adb.AddWorkspace(wsName)
 
-		_ = wsb.AddCommand(cmdName)
+		wsb.AddTag(tagName)
+		wsb.AddCommand(cmdName).SetTag(tagName)
 
 		wsb.AddRate(rateName, 10, time.Hour, []appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, "10 times per hour per partition per IP")
-		wsb.AddLimit(limitName, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_ALL, filter.AllFunctions(wsName), rateName, "limit all commands and queries execution with test.rate")
+		wsb.AddLimit(limitAllFunc, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_ALL, filter.AllFunctions(wsName), rateName, "limit all commands and queries execution by test.rate")
+		wsb.AddLimit(limitEachFunc, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_EACH, filter.AllFunctions(wsName), rateName, "limit each command and query execution by test.rate")
+		wsb.AddLimit(limitEachTag, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_EACH, filter.Tags(tagName), rateName, "limit each with test.tag by test.rate")
 
 		a, err := adb.Build()
 		require.NoError(err)
@@ -67,19 +74,43 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 				cnt++
 				switch cnt {
 				case 1:
-					require.Equal(limitName, l.QName())
-					require.Equal(appdef.LimitFilterOption_ALL, l.Option())
+					require.Equal(limitAllFunc, l.QName())
+
 					require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, slices.Collect(l.Ops()))
 					require.True(l.Op(appdef.OperationKind_Execute))
 					require.False(l.Op(appdef.OperationKind_Insert))
+
 					require.Equal(appdef.FilterKind_Types, l.Filter().Kind())
+					require.Equal(appdef.LimitFilterOption_ALL, l.Filter().Option())
 					require.Equal([]appdef.TypeKind{appdef.TypeKind_Query, appdef.TypeKind_Command}, slices.Collect(l.Filter().Types()))
+					require.Equal("ALL FUNCTIONS FROM test.workspace", fmt.Sprint(l.Filter()))
+
 					require.Equal(rateName, l.Rate().QName())
-					require.Equal("limit all commands and queries execution with test.rate", l.Comment())
+
+					require.Equal("limit all commands and queries execution by test.rate", l.Comment())
+				case 2:
+					require.Equal(limitEachFunc, l.QName())
+					require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, slices.Collect(l.Ops()))
+					require.Equal(appdef.FilterKind_Types, l.Filter().Kind())
+					require.Equal(appdef.LimitFilterOption_EACH, l.Filter().Option())
+					require.Equal([]appdef.TypeKind{appdef.TypeKind_Query, appdef.TypeKind_Command}, slices.Collect(l.Filter().Types()))
+					require.Equal("EACH FUNCTIONS FROM test.workspace", fmt.Sprint(l.Filter()))
+					require.Equal(rateName, l.Rate().QName())
+					require.Equal("limit each command and query execution by test.rate", l.Comment())
+				case 3:
+					require.Equal(limitEachTag, l.QName())
+					require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, slices.Collect(l.Ops()))
+					require.Equal(appdef.FilterKind_Tags, l.Filter().Kind())
+					require.Equal(appdef.LimitFilterOption_EACH, l.Filter().Option())
+					require.Equal([]appdef.QName{tagName}, slices.Collect(l.Filter().Tags()))
+					require.Equal("EACH TAGS(test.tag)", fmt.Sprint(l.Filter()))
+					require.Equal(rateName, l.Rate().QName())
+					require.Equal("limit each with test.tag by test.rate", l.Comment())
 				default:
 					require.FailNow("unexpected limit", "limit: %v", l)
 				}
 			}
+			require.Equal(3, cnt)
 		})
 
 		t.Run("should be ok to find rates and limits", func(t *testing.T) {
@@ -91,9 +122,9 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 
 			require.Nil(appdef.Rate(tested.Type, unknown), "should be nil if unknown")
 
-			limit := appdef.Limit(tested.Type, limitName)
+			limit := appdef.Limit(tested.Type, limitAllFunc)
 			require.NotNil(limit)
-			require.Equal(limitName, limit.QName())
+			require.Equal(limitAllFunc, limit.QName())
 
 			require.Nil(appdef.Limit(tested.Type, unknown), "should be nil if unknown")
 		})
