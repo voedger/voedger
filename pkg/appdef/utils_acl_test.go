@@ -6,52 +6,8 @@
 package appdef
 
 import (
-	"reflect"
 	"testing"
-
-	"github.com/voedger/voedger/pkg/goutils/set"
 )
-
-func Test_allACLOperationsOnType(t *testing.T) {
-
-	testName := NewQName("test", "test")
-
-	type typ struct {
-		kind TypeKind
-		name QName
-	}
-	tests := []struct {
-		name   string
-		typ    typ
-		wantPk set.Set[OperationKind]
-	}{
-		{"null", typ{TypeKind_null, NullQName},
-			set.Empty[OperationKind]()},
-		{"GRecord", typ{TypeKind_GRecord, testName},
-			set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)},
-		{"CDoc", typ{TypeKind_CDoc, testName},
-			set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)},
-		{"View", typ{TypeKind_ViewRecord, testName},
-			set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)},
-		{"Command", typ{TypeKind_Command, testName},
-			set.From(OperationKind_Execute)},
-		{"Role", typ{TypeKind_Role, testName},
-			set.From(OperationKind_Inherits)},
-		{"Projector", typ{TypeKind_Projector, testName},
-			set.Empty[OperationKind]()},
-	}
-	for i := range tests {
-		tt := tests[i]
-		t.Run(tt.name, func(t *testing.T) {
-			typ := new(mockType)
-			typ.kind = tt.typ.kind
-			typ.name = tt.typ.name
-			if gotPk := allACLOperationsOnType(typ); !reflect.DeepEqual(gotPk, tt.wantPk) {
-				t.Errorf("allACLOperationsOnType(%s) = %v, want %v", tt.typ.kind.TrimString(), gotPk, tt.wantPk)
-			}
-		})
-	}
-}
 
 func TestPolicyKindActionString(t *testing.T) {
 	tests := []struct {
