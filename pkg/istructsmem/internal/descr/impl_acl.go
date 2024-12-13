@@ -25,8 +25,7 @@ func (acl *ACL) read(a appdef.IWithACL, withPrincipals bool) {
 
 func newACLRule() *ACLRule {
 	return &ACLRule{
-		Ops:    make([]string, 0),
-		Filter: newACLFilter(),
+		Ops: make([]string, 0),
 	}
 }
 
@@ -41,12 +40,6 @@ func (ar *ACLRule) read(acl appdef.IACLRule, withPrincipal bool) {
 	if withPrincipal {
 		n := acl.Principal().QName()
 		ar.Principal = &n
-	}
-}
-
-func newACLFilter() *ACLFilter {
-	return &ACLFilter{
-		Fields: make([]appdef.FieldName, 0),
 	}
 }
 

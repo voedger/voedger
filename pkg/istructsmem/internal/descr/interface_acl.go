@@ -13,7 +13,7 @@ type ACLRule struct {
 	Comment   string `json:",omitempty"`
 	Policy    string // `Allow` or `Deny`
 	Ops       []string
-	Filter    *ACLFilter
+	Filter    ACLFilter
 	Principal *appdef.QName `json:",omitempty"`
 }
 
