@@ -7,11 +7,13 @@ package limiter
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type Limiter struct {
-	app appdef.IAppDef
+	app     appdef.IAppDef
+	buckets irates.IBuckets
 }
 
 // Return is specified resource (command, query or structure) usage limit is exceeded.

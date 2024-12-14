@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts/internal/pool"
 	"github.com/voedger/voedger/pkg/appparts/internal/schedulers"
 	"github.com/voedger/voedger/pkg/iextengine"
+	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
@@ -160,13 +161,14 @@ type appPartitionRT struct {
 
 func newAppPartitionRT(app *appRT, id istructs.PartitionID) *appPartitionRT {
 	as := app.lastestVersion.appStructs()
+	buckets := app.apps.bucketsFactory()
 	part := &appPartitionRT{
 		app:            app,
 		id:             id,
 		syncActualizer: app.apps.syncActualizerFactory(as, id),
 		actualizers:    actualizers.New(app.name, id),
 		schedulers:     schedulers.New(app.name, app.partsCount, as.NumAppWorkspaces(), id),
-		limiter:        limiter.New(app.lastestVersion.appDef()),
+		limiter:        limiter.New(app.lastestVersion.appDef(), buckets),
 	}
 	return part
 }
@@ -188,9 +190,10 @@ type borrowedPartition struct {
 	part       *appPartitionRT
 	appDef     appdef.IAppDef
 	appStructs istructs.IAppStructs
-	kind       ProcessorKind
 	pool       *pool.Pool[engines] // pool of borrowed engines
-	engines    engines             // borrowed engines
+	buckets    irates.IBuckets
+	kind       ProcessorKind
+	engines    engines // borrowed engines
 }
 
 var borrowedPartitionsPool = sync.Pool{
@@ -268,6 +271,7 @@ func (bp *borrowedPartition) Release() {
 			pool.Release(engine)
 		}
 	}
+	bp.buckets = nil
 	borrowedPartitionsPool.Put(bp)
 }
 

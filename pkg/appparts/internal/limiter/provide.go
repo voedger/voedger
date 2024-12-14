@@ -5,8 +5,11 @@
 
 package limiter
 
-import "github.com/voedger/voedger/pkg/appdef"
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/irates"
+)
 
-func New(app appdef.IAppDef) *Limiter {
-	return &Limiter{app: app}
+func New(app appdef.IAppDef, buckets irates.IBuckets) *Limiter {
+	return &Limiter{app: app, buckets: buckets}
 }

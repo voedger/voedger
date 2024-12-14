@@ -131,7 +131,8 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 	appParts, cleanupParts, err := New2(ctx, appStructs, NullSyncActualizerFactory,
 		mockActualizers,
 		mockSchedulers,
-		NullExtensionEngineFactories)
+		NullExtensionEngineFactories,
+		iratesce.TestBucketsFactory)
 	require.NoError(err)
 
 	defer cleanupParts()

@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iextengine"
+	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -26,6 +27,7 @@ type apps struct {
 	asyncActualizersRunner IActualizerRunner
 	schedulerRunner        ISchedulerRunner
 	extEngineFactories     iextengine.ExtensionEngineFactories
+	bucketsFactory         irates.BucketsFactoryType
 	apps                   map[appdef.AppQName]*appRT
 }
 
@@ -36,6 +38,7 @@ func newAppPartitions(
 	asyncActualizersRunner IActualizerRunner,
 	jobSchedulerRunner ISchedulerRunner,
 	eef iextengine.ExtensionEngineFactories,
+	bf irates.BucketsFactoryType,
 ) (ap IAppPartitions, cleanup func(), err error) {
 	a := &apps{
 		mx:                     sync.RWMutex{},
@@ -45,6 +48,7 @@ func newAppPartitions(
 		schedulerRunner:        jobSchedulerRunner,
 		syncActualizerFactory:  saf,
 		extEngineFactories:     eef,
+		bucketsFactory:         bf,
 		apps:                   map[appdef.AppQName]*appRT{},
 	}
 	a.asyncActualizersRunner.SetAppPartitions(a)
