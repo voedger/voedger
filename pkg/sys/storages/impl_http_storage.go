@@ -35,11 +35,12 @@ func NewHttpStorage(customClient state.IHttpClient) state.IStateStorage {
 
 type httpStorageKeyBuilder struct {
 	baseKeyBuilder
-	timeout time.Duration
-	method  string
-	url     string
-	body    []byte
-	headers map[string]string
+	timeout      time.Duration
+	method       string
+	url          string
+	body         []byte
+	headers      map[string]string
+	handleErrors bool
 }
 
 func (b *httpStorageKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
@@ -52,6 +53,9 @@ func (b *httpStorageKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 		return false
 	}
 	if b.method != kb.method {
+		return false
+	}
+	if b.handleErrors != kb.handleErrors {
 		return false
 	}
 	if b.url != kb.url {
@@ -92,6 +96,15 @@ func (b *httpStorageKeyBuilder) String() string {
 	ss = append(ss, b.url)
 	ss = append(ss, string(b.body))
 	return strings.Join(ss, " ")
+}
+
+func (b *httpStorageKeyBuilder) PutBool(name string, value bool) {
+	switch name {
+	case sys.Storage_Http_Field_HandleErrors:
+		b.handleErrors = value
+	default:
+		b.baseKeyBuilder.PutBool(name, value)
+	}
 }
 
 func (b *httpStorageKeyBuilder) PutInt64(name string, value int64) {
@@ -137,10 +150,20 @@ func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.Valu
 		body = bytes.NewReader(kb.body)
 	}
 
+	errorResult := func(err error) error {
+		if !kb.handleErrors {
+			return err
+		}
+		return callback(nil, &httpValue{
+			error: err.Error(),
+			body:  []byte(err.Error()),
+		})
+	}
+
 	if s.customClient != nil {
 		resStatus, resBody, resHeaders, err := s.customClient.Request(timeout, method, kb.url, body, kb.headers)
 		if err != nil {
-			return err
+			return errorResult(err)
 		}
 		return callback(nil, &httpValue{
 			body:       resBody,
@@ -154,7 +177,7 @@ func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.Valu
 
 	req, err := http.NewRequestWithContext(ctx, method, kb.url, body)
 	if err != nil {
-		return err
+		return errorResult(err)
 	}
 
 	for k, v := range kb.headers {
@@ -167,13 +190,13 @@ func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.Valu
 	}
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return errorResult(err)
 	}
 	defer res.Body.Close()
 
 	bb, err := io.ReadAll(res.Body)
 	if err != nil {
-		return err
+		return errorResult(err)
 	}
 
 	if logger.IsVerbose() {
@@ -192,6 +215,7 @@ type httpValue struct {
 	body       []byte
 	header     map[string][]string
 	statusCode int
+	error      string
 }
 
 func (v *httpValue) AsBytes(string) []byte { return v.body }
@@ -208,6 +232,9 @@ func (v *httpValue) AsString(name string) string {
 			}
 		}
 		return res.String()
+	}
+	if name == sys.Storage_Http_Field_Error {
+		return v.error
 	}
 	return string(v.body)
 }

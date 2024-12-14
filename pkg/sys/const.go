@@ -54,6 +54,8 @@ const (
 	Storage_Http_Field_Body                          = "Body"
 	Storage_Http_Field_HTTPClientTimeoutMilliseconds = "HTTPClientTimeoutMilliseconds"
 	Storage_Http_Field_StatusCode                    = "StatusCode"
+	Storage_Http_Field_HandleErrors                  = "HandleErrors"
+	Storage_Http_Field_Error                         = "Error"
 
 	Storage_WLog_Field_Offset         = "Offset"
 	Storage_WLog_Field_ArgumentObject = "ArgumentObject"
