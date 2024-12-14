@@ -7,6 +7,7 @@ package appparts
 
 import (
 	"context"
+	"iter"
 	"net/url"
 
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -63,6 +64,24 @@ type IAppPartitions interface {
 	//
 	// If partition not exist, returns error.
 	WaitForBorrow(context.Context, appdef.AppQName, istructs.PartitionID, ProcessorKind) (IAppPartition, error)
+
+	// Returns iterator for actualizers from deployed partitions.
+	//
+	// This method snapshots the current state of the partitions.
+	// The snapshotted iterator are not updated when partitions are deployed or removed.
+	WorkedActualizers(appdef.AppQName) iter.Seq2[istructs.PartitionID, []appdef.QName]
+
+	// Returns iterator for schedulers from deployed partitions.
+	//
+	// This method snapshots the current state of the partitions.
+	// The snapshotted iterator are not updated when partitions are deployed or removed.
+	WorkedSchedulers(appdef.AppQName) iter.Seq2[istructs.PartitionID, map[appdef.QName][]istructs.WSID]
+
+	// Upgrade application definition.
+	//
+	// This experimental method should be used for test purposes only.
+	// Should be deprecated after application redeployment is implemented.
+	UpgradeAppDef(appdef.AppQName, appdef.IAppDef)
 }
 
 // Application partition.
