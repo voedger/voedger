@@ -327,8 +327,18 @@ func (require *ParserAssertions) NoBuildError(sql string) {
 	schema, err := require.AppSchema(sql)
 	require.NoError(err)
 	builder := appdef.New()
+	BuildAppDefs(schema, builder)
+}
+
+func (require *ParserAssertions) Build(sql string) appdef.IAppDef {
+	schema, err := require.AppSchema(sql)
+	require.NoError(err)
+	builder := appdef.New()
 	err = BuildAppDefs(schema, builder)
 	require.NoError(err)
+	appdef, err := builder.Build()
+	require.NoError(err)
+	return appdef
 }
 
 func (require *ParserAssertions) PkgSchema(filename, pkg, sql string) *PackageSchemaAST {
@@ -554,6 +564,26 @@ func Test_Workspace_Defs3(t *testing.T) {
 
 	_, err = builder.Build()
 	require.NoError(err)
+}
+
+func Test_Workspaces(t *testing.T) {
+
+	require := assertions(t)
+
+	t.Run("Multiple ancestors", func(t *testing.T) {
+		def := require.Build(`APPLICATION test();
+		ABSTRACT WORKSPACE AW1();
+		ABSTRACT WORKSPACE AW2();
+		WORKSPACE W INHERITS AW1, AW2();
+		`)
+		w := def.Workspace(appdef.NewQName("pkg", "W"))
+		require.NotNil(w)
+		actualAncestors := []appdef.IWorkspace{}
+		for a := range w.Ancestors() {
+			actualAncestors = append(actualAncestors, a)
+		}
+		require.Len(actualAncestors, 2)
+	})
 }
 
 func Test_Alter_Workspace(t *testing.T) {
