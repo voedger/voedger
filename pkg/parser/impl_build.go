@@ -155,7 +155,7 @@ func (c *buildContext) addComments(s IStatement, builder appdef.ICommenter) {
 func (c *buildContext) tags() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(tag *TagStmt, ictx *iterateCtx) {
-			qname := tag.workspace.pkg.NewQName(tag.Name)
+			qname := schema.NewQName(tag.Name)
 			builder := tag.workspace.mustBuilder(c)
 			builder.AddTag(qname)
 			if len(tag.Comments) > 0 {
