@@ -40,6 +40,12 @@ var canNotReferenceTo = map[appdef.TypeKind][]appdef.TypeKind{
 	appdef.TypeKind_ViewRecord: {appdef.TypeKind_ODoc, appdef.TypeKind_ORecord},
 }
 
+var grantAllToTableOps = []appdef.OperationKind{
+	appdef.OperationKind_Select,
+	appdef.OperationKind_Insert,
+	appdef.OperationKind_Update,
+}
+
 func defaultDescriptorName(wsName string) Ident {
 	return Ident(wsName + "Descriptor")
 }
