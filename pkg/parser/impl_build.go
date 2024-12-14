@@ -130,8 +130,12 @@ func (c *buildContext) workspaces() error {
 			wb.bld.SetDescriptor(wb.pkg.NewQName(wb.w.Descriptor.Name))
 		}
 
+		ancestors := make([]appdef.QName, 0)
 		for _, ancWS := range wb.w.inheritedWorkspaces {
-			wb.bld.SetAncestors(ancWS.qName)
+			ancestors = append(ancestors, ancWS.qName)
+		}
+		if len(ancestors) > 0 {
+			wb.bld.SetAncestors(ancestors[0], ancestors[1:]...)
 		}
 
 		for _, usedWS := range wb.w.usedWorkspaces {
