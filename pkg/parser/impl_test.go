@@ -323,6 +323,14 @@ func (require *ParserAssertions) NoAppSchemaError(sql string) {
 	require.NoError(err)
 }
 
+func (require *ParserAssertions) NoBuildError(sql string) {
+	schema, err := require.AppSchema(sql)
+	require.NoError(err)
+	builder := appdef.New()
+	err = BuildAppDefs(schema, builder)
+	require.NoError(err)
+}
+
 func (require *ParserAssertions) PkgSchema(filename, pkg, sql string) *PackageSchemaAST {
 	ast, err := ParseFile(filename, sql)
 	require.NoError(err)
@@ -1397,6 +1405,16 @@ func Test_Tags(t *testing.T) {
 			"example.vsql:16:44: Air undefined",
 			"example.vsql:17:32: undefined tag: TagFromInheritedWs",
 		}, "\n"))
+	})
+
+	t.Run("Tag namespaces", func(t *testing.T) {
+		require.NoBuildError(`APPLICATION test(); 
+		ALTER WORKSPACE sys.Profile (
+			TABLE t1 INHERITS sys.WDoc(
+				Fld1 int32
+			) WITH Tags=(Tag1);
+			TAG Tag1;
+		)`)
 	})
 
 }
