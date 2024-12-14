@@ -5,63 +5,100 @@
 
 package appdef
 
-// # Implements:
+import (
+	"errors"
+	"iter"
+	"slices"
+)
+
+// # Supports:
 //   - IRole
 type role struct {
 	typ
-	aclRules []*aclRule
+	acl []*aclRule
 }
 
 func newRole(app *appDef, ws *workspace, name QName) *role {
 	r := &role{
-		typ:      makeType(app, ws, name, TypeKind_Role),
-		aclRules: make([]*aclRule, 0),
+		typ: makeType(app, ws, name, TypeKind_Role),
+		acl: make([]*aclRule, 0),
 	}
 	ws.appendType(r)
 	return r
 }
 
-func (r role) ACL(cb func(IACLRule) bool) {
-	for _, p := range r.aclRules {
-		if !cb(p) {
-			break
-		}
-	}
-}
-
-func (r *role) AncRoles() (roles []QName) {
-	for _, p := range r.aclRules {
-		if p.ops.Contains(OperationKind_Inherits) {
-			for _, n := range p.Resources().On() {
-				roles = append(roles, n)
+func (r role) ACL() iter.Seq[IACLRule] {
+	return func(yield func(IACLRule) bool) {
+		for _, acl := range r.acl {
+			if !yield(acl) {
+				return
 			}
 		}
 	}
-	return roles
+}
+
+func (r *role) Ancestors() iter.Seq[QName] {
+	roles := QNames{}
+	for _, acl := range r.acl {
+		if acl.ops.Contains(OperationKind_Inherits) {
+			switch acl.Filter().Kind() {
+			case FilterKind_QNames:
+				for q := range acl.Filter().QNames() {
+					roles.Add(q)
+				}
+			default:
+				// complex filter
+				for role := range Roles(FilterMatches(acl.Filter(), r.Workspace().Types())) {
+					roles.Add(role.QName())
+				}
+			}
+		}
+	}
+	return slices.Values(roles)
 }
 
 func (r *role) appendACL(rule *aclRule) {
-	r.aclRules = append(r.aclRules, rule)
-	r.ws.appendACL(rule)
+	r.acl = append(r.acl, rule)
 }
 
-func (r *role) grant(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) {
-	r.appendACL(newGrant(ops, resources, fields, r, comment...))
+func (r *role) grant(ops []OperationKind, flt IFilter, fields []FieldName, comment ...string) {
+	acl := newGrant(r.ws, ops, flt, fields, r, comment...)
+	r.appendACL(acl)
+	r.ws.appendACL(acl)
 }
 
-func (r *role) grantAll(resources []QName, comment ...string) {
-	r.appendACL(newGrantAll(resources, r, comment...))
+func (r *role) grantAll(flt IFilter, comment ...string) {
+	acl := newGrantAll(r.ws, flt, r, comment...)
+	r.appendACL(acl)
+	r.ws.appendACL(acl)
 }
 
-func (r *role) revoke(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) {
-	r.appendACL(newRevoke(ops, resources, fields, r, comment...))
+func (r *role) revoke(ops []OperationKind, flt IFilter, fields []FieldName, comment ...string) {
+	acl := newRevoke(r.ws, ops, flt, fields, r, comment...)
+	r.appendACL(acl)
+	r.ws.appendACL(acl)
 }
 
-func (r *role) revokeAll(resources []QName, comment ...string) {
-	r.appendACL(newRevokeAll(resources, r, comment...))
+func (r *role) revokeAll(flt IFilter, comment ...string) {
+	acl := newRevokeAll(r.ws, flt, r, comment...)
+	r.appendACL(acl)
+	r.ws.appendACL(acl)
 }
 
-// # Implements:
+// validates role.
+//
+// # Error if:
+//   - ACL rule is not valid
+func (r role) Validate() (err error) {
+	for _, p := range r.acl {
+		if e := p.validate(); e != nil {
+			err = errors.Join(err, e)
+		}
+	}
+	return err
+}
+
+// # Supports:
 //   - IRoleBuilder
 type roleBuilder struct {
 	typeBuilder
@@ -75,22 +112,22 @@ func newRoleBuilder(role *role) *roleBuilder {
 	}
 }
 
-func (rb *roleBuilder) Grant(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) IRoleBuilder {
-	rb.role.grant(ops, resources, fields, comment...)
+func (rb *roleBuilder) Grant(ops []OperationKind, flt IFilter, fields []FieldName, comment ...string) IRoleBuilder {
+	rb.role.grant(ops, flt, fields, comment...)
 	return rb
 }
 
-func (rb *roleBuilder) GrantAll(resource []QName, comment ...string) IRoleBuilder {
-	rb.role.grantAll(resource, comment...)
+func (rb *roleBuilder) GrantAll(flt IFilter, comment ...string) IRoleBuilder {
+	rb.role.grantAll(flt, comment...)
 	return rb
 }
 
-func (rb *roleBuilder) Revoke(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) IRoleBuilder {
-	rb.role.revoke(ops, resources, fields, comment...)
+func (rb *roleBuilder) Revoke(ops []OperationKind, flt IFilter, fields []FieldName, comment ...string) IRoleBuilder {
+	rb.role.revoke(ops, flt, fields, comment...)
 	return rb
 }
 
-func (rb *roleBuilder) RevokeAll(resources []QName, comment ...string) IRoleBuilder {
-	rb.role.revokeAll(resources, comment...)
+func (rb *roleBuilder) RevokeAll(flt IFilter, comment ...string) IRoleBuilder {
+	rb.role.revokeAll(flt, comment...)
 	return rb
 }

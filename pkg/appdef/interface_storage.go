@@ -12,6 +12,8 @@ type IStorage interface {
 	Name() QName
 
 	// Returns names in storage.
+	//
+	// TODO: should be iter.Seq[QName]
 	Names() QNames
 }
 
@@ -25,12 +27,16 @@ type IStorages interface {
 	//
 	// Storages enumerated in alphabetical QNames order.
 	// Names slice in every storage is sorted and deduplicated.
+	//
+	// TODO: should be iter.Seq[IStorage], should be renamed to Values()
 	Enum(func(IStorage) bool)
 
 	// Returns number of storages.
 	Len() int
 
 	// Returns storages as map.
+	//
+	// TODO: should be iter.Seq2[QName, QNames], should be renamed to All()
 	Map() map[QName]QNames
 }
 

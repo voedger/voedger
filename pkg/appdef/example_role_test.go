@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
 func ExampleRoles() {
@@ -34,16 +35,16 @@ func ExampleRoles() {
 		doc.AddField("field1", appdef.DataKind_int32, true)
 
 		reader := wsb.AddRole(readerRoleName)
-		reader.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName}, []appdef.FieldName{"field1"}, "grant select on doc.field1")
+		reader.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, filter.QNames(docName), []appdef.FieldName{"field1"}, "grant select on doc.field1")
 
 		writer := wsb.AddRole(writerRoleName)
-		writer.GrantAll([]appdef.QName{docName}, "grant all on test.doc")
+		writer.GrantAll(filter.QNames(docName), "grant all on test.doc")
 
 		adm := wsb.AddRole(admRoleName)
-		adm.GrantAll([]appdef.QName{readerRoleName, writerRoleName}, "grant reader and writer roles to adm")
+		adm.GrantAll(filter.QNames(readerRoleName, writerRoleName), "grant reader and writer roles to adm")
 
 		intruder := wsb.AddRole(intruderRoleName)
-		intruder.RevokeAll([]appdef.QName{docName}, "revoke all on test.doc")
+		intruder.RevokeAll(filter.QNames(docName), "revoke all on test.doc")
 
 		app = adb.MustBuild()
 	}
@@ -62,26 +63,26 @@ func ExampleRoles() {
 	{
 		reader := appdef.Role(app.Type, readerRoleName)
 		fmt.Println(reader, ":")
-		for r := range reader.ACL {
+		for r := range reader.ACL() {
 			fmt.Println("-", r)
 		}
 
 		writer := appdef.Role(app.Type, writerRoleName)
 		fmt.Println(writer, ":")
-		for r := range writer.ACL {
+		for r := range writer.ACL() {
 			fmt.Println("-", r)
 		}
 
 		adm := appdef.Role(app.Type, admRoleName)
 		fmt.Println(adm, ":")
-		for r := range adm.ACL {
+		for r := range adm.ACL() {
 			fmt.Println("-", r)
 		}
 
 		intruder := appdef.Role(app.Type, intruderRoleName)
 		fmt.Println(intruder, ":")
-		for r := range intruder.ACL {
-			fmt.Println("-", r)
+		for acl := range intruder.ACL() {
+			fmt.Println("-", acl)
 		}
 	}
 
@@ -92,11 +93,11 @@ func ExampleRoles() {
 	// 4 Role «test.writerRole»
 	// overall: 4
 	// Role «test.readerRole» :
-	// - grant [Select] on [test.doc]([field1]) to Role «test.readerRole»
+	// - GRANT [Select] ON QNAMES(test.doc)([field1]) TO test.readerRole
 	// Role «test.writerRole» :
-	// - grant [Insert Update Select] on [test.doc] to Role «test.writerRole»
+	// - GRANT [Insert Update Select] ON QNAMES(test.doc) TO test.writerRole
 	// Role «test.admRole» :
-	// - grant [Inherits] on [test.readerRole test.writerRole] to Role «test.admRole»
+	// - GRANT [Inherits] ON QNAMES(test.readerRole, test.writerRole) TO test.admRole
 	// Role «test.intruderRole» :
-	// - revoke [Insert Update Select] on [test.doc] from Role «test.intruderRole»
+	// - REVOKE [Insert Update Select] ON QNAMES(test.doc) FROM test.intruderRole
 }

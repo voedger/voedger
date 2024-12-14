@@ -7,6 +7,7 @@ package parser
 import (
 	"embed"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -295,12 +296,8 @@ func Test_BasicUsage(t *testing.T) {
 	require.NotNil(intent)
 	require.True(intent.Names().Contains(appdef.NewQName("main", "Transaction")))
 
-	localNames := app.PackageLocalNames()
-	require.Len(localNames, 4)
-	require.Contains(localNames, appdef.SysPackage)
-	require.Contains(localNames, "main")
-	require.Contains(localNames, "air")
-	require.Contains(localNames, "untill")
+	localNames := slices.Collect(app.PackageLocalNames())
+	require.Equal([]string{"air", "main", appdef.SysPackage, "untill"}, localNames)
 
 	require.Equal(appdef.SysPackagePath, app.PackageFullPath(appdef.SysPackage))
 	require.Equal("github.com/untillpro/main", app.PackageFullPath("main"))
@@ -1292,9 +1289,10 @@ func Test_Undefined(t *testing.T) {
 }
 
 func Test_Projectors(t *testing.T) {
-	require := require.New(t)
 
-	fs, err := ParseFile("example.vsql", `APPLICATION test();
+	t.Run("Errors", func(t *testing.T) {
+		require := require.New(t)
+		fs, err := ParseFile("example.vsql", `APPLICATION test();
 	WORKSPACE test (
 		TABLE Order INHERITS sys.ODoc();
 		EXTENSION ENGINE WASM (
@@ -1311,22 +1309,48 @@ func Test_Projectors(t *testing.T) {
 		);
 	)
 	`)
-	require.NoError(err)
+		require.NoError(err)
 
-	pkg, err := BuildPackageSchema("test", []*FileSchemaAST{fs})
-	require.NoError(err)
+		pkg, err := BuildPackageSchema("test", []*FileSchemaAST{fs})
+		require.NoError(err)
 
-	_, err = BuildAppSchema([]*PackageSchemaAST{pkg, getSysPackageAST()})
+		_, err = BuildAppSchema([]*PackageSchemaAST{pkg, getSysPackageAST()})
 
-	require.EqualError(err, strings.Join([]string{
-		"example.vsql:6:44: undefined command: test.CreateUPProfile",
-		"example.vsql:7:44: undefined command: Order",
-		"example.vsql:8:43: only INSERT allowed for ODoc or ORecord",
-		"example.vsql:9:45: only INSERT allowed for ODoc or ORecord",
-		"example.vsql:10:47: only INSERT allowed for ODoc or ORecord",
-		"example.vsql:12:55: undefined type or ODoc: Bill",
-		"example.vsql:14:55: undefined type or ODoc: sys.ORecord",
-	}, "\n"))
+		require.EqualError(err, strings.Join([]string{
+			"example.vsql:6:44: undefined command: test.CreateUPProfile",
+			"example.vsql:7:44: undefined command: Order",
+			"example.vsql:8:43: only INSERT allowed for ODoc or ORecord",
+			"example.vsql:9:45: only INSERT allowed for ODoc or ORecord",
+			"example.vsql:10:47: only INSERT allowed for ODoc or ORecord",
+			"example.vsql:12:55: undefined type or ODoc: Bill",
+			"example.vsql:14:55: undefined type or ODoc: sys.ORecord",
+		}, "\n"))
+	})
+
+	t.Run("Projector on table from an ancestor workspace", func(t *testing.T) {
+		require := assertions(t)
+		schema, err := require.AppSchema(`APPLICATION test();
+		ABSTRACT WORKSPACE BaseWS(
+			TABLE BaseWSTable INHERITS sys.CDoc();
+		);
+		WORKSPACE InheritedWS INHERITS BaseWS(
+			EXTENSION ENGINE WASM (
+				PROJECTOR ImProjector AFTER INSERT ON BaseWSTable;
+			);
+		);`)
+		require.NoError(err)
+
+		appBld := appdef.New()
+		err = BuildAppDefs(schema, appBld)
+		require.NoError(err)
+
+		app, err := appBld.Build()
+		require.NoError(err)
+
+		proj := appdef.Projector(app.Type, appdef.NewQName("pkg", "ImProjector"))
+		require.NotNil(proj)
+		require.Equal(1, proj.Events().Len())
+	})
 }
 
 func Test_Tags(t *testing.T) {
@@ -2115,16 +2139,18 @@ func Test_Grants(t *testing.T) {
 		var numACLs int
 
 		// table
-		app.ACL(func(i appdef.IACLRule) bool {
-			require.Len(i.Ops(), 1)
-			require.Equal(appdef.OperationKind_Inherits, i.Ops()[0])
-			require.Equal(appdef.PolicyKind_Allow, i.Policy())
-			require.Len(i.Resources().On(), 1)
-			require.Equal("pkg.admin", i.Resources().On()[0].String())
-			require.Equal("pkg.mgr", i.Principal().QName().String())
+		for acl := range app.ACL() {
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Inherits}, slices.Collect(acl.Ops()))
+			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
+
+			require.Equal(appdef.FilterKind_QNames, acl.Filter().Kind())
+			require.EqualValues(
+				appdef.MustParseQNames("pkg.admin"),
+				slices.Collect(acl.Filter().QNames()))
+
+			require.Equal("pkg.mgr", acl.Principal().QName().String())
 			numACLs++
-			return true
-		})
+		}
 		require.Equal(1, numACLs)
 	})
 
@@ -2148,16 +2174,18 @@ func Test_Grants(t *testing.T) {
 		var numACLs int
 
 		// table
-		app.ACL(func(i appdef.IACLRule) bool {
-			require.Len(i.Ops(), 1)
-			require.Equal(appdef.OperationKind_Select, i.Ops()[0])
-			require.Equal(appdef.PolicyKind_Allow, i.Policy())
-			require.Len(i.Resources().On(), 1)
-			require.Equal("pkg.UserProfile", i.Resources().On()[0].String())
-			require.Equal("pkg.ProfileOwner", i.Principal().QName().String())
+		for acl := range app.ACL() {
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Select}, slices.Collect(acl.Ops()))
+			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
+
+			require.Equal(appdef.FilterKind_QNames, acl.Filter().Kind())
+			require.EqualValues(
+				appdef.MustParseQNames("pkg.UserProfile"),
+				slices.Collect(acl.Filter().QNames()))
+
+			require.Equal("pkg.ProfileOwner", acl.Principal().QName().String())
 			numACLs++
-			return true
-		})
+		}
 		require.Equal(1, numACLs)
 	})
 
@@ -2187,16 +2215,18 @@ func Test_Grants_Inherit(t *testing.T) {
 		var numACLs int
 
 		// table
-		app.ACL(func(i appdef.IACLRule) bool {
-			require.Len(i.Ops(), 1)
-			require.Equal(appdef.OperationKind_Insert, i.Ops()[0])
-			require.Equal(appdef.PolicyKind_Allow, i.Policy())
-			require.Len(i.Resources().On(), 2)
-			require.True(i.Resources().On().ContainsAll(appdef.NewQName("pkg", "Table2"), appdef.NewQName("pkg", "AppWorkspace")))
-			require.Equal("pkg.role1", i.Principal().QName().String())
+		for acl := range app.ACL() {
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert}, slices.Collect(acl.Ops()))
+			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
+
+			require.Equal(appdef.FilterKind_QNames, acl.Filter().Kind())
+			require.EqualValues(
+				appdef.MustParseQNames("pkg.Table2", "pkg.AppWorkspace"),
+				slices.Collect(acl.Filter().QNames()))
+
+			require.Equal("pkg.role1", acl.Principal().QName().String())
 			numACLs++
-			return true
-		})
+		}
 		require.Equal(1, numACLs)
 	})
 

@@ -79,12 +79,8 @@ func dedupOut[Key comparable, SP any, PV any, State any](in chan answer[Key, SP,
 
 func caller[Key comparable, SP any, PV any, State any](in chan statefulMessage[Key, SP, State], dedupOutCh chan answer[Key, SP, PV, State], callerFinalizerCh chan struct{}, controllerFunc ControllerFunction[Key, SP, State, PV]) {
 	defer func() {
-		select {
-		case <-callerFinalizerCh:
-			break
-		default:
+		if _, ok := <-callerFinalizerCh; !ok {
 			close(dedupOutCh)
-			close(callerFinalizerCh)
 		}
 	}()
 

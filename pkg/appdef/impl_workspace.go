@@ -5,16 +5,19 @@
 
 package appdef
 
-import "iter"
+import (
+	"iter"
+)
 
 // # Implements:
 //   - IWorkspace
 type workspace struct {
 	typ
 	withAbstract
-	acl       []*aclRule
-	ancestors *workspaces
-	types     struct {
+	acl         []*aclRule
+	ancestors   *workspaces
+	descendants *workspaces
+	types       struct {
 		local *types[IType]
 		all   *types[IType]
 	}
@@ -24,9 +27,10 @@ type workspace struct {
 
 func newWorkspace(app *appDef, name QName) *workspace {
 	ws := &workspace{
-		typ:       makeType(app, nil, name, TypeKind_Workspace),
-		ancestors: newWorkspaces(),
-		usedWS:    newWorkspaces(),
+		typ:         makeType(app, nil, name, TypeKind_Workspace),
+		ancestors:   newWorkspaces(),
+		descendants: newWorkspaces(),
+		usedWS:      newWorkspaces(),
 	}
 	ws.types.local = newTypes[IType]()
 	if name != SysWorkspaceQName {
@@ -34,19 +38,22 @@ func newWorkspace(app *appDef, name QName) *workspace {
 	}
 
 	app.appendType(ws)
+	app.appendWorkspace(ws)
 	return ws
 }
 
-func (ws workspace) ACL(cb func(IACLRule) bool) {
-	for _, p := range ws.acl {
-		if !cb(p) {
-			break
+func (ws workspace) ACL() iter.Seq[IACLRule] {
+	return func(yield func(IACLRule) bool) {
+		for _, acl := range ws.acl {
+			if !yield(acl) {
+				return
+			}
 		}
 	}
 }
 
-func (ws *workspace) Ancestors(visit func(IWorkspace) bool) {
-	ws.ancestors.all(visit)
+func (ws *workspace) Ancestors() iter.Seq[IWorkspace] {
+	return ws.ancestors.all
 }
 
 func (ws *workspace) Descriptor() QName {
@@ -92,12 +99,12 @@ func (ws *workspace) Type(name QName) IType {
 			if t := w.LocalType(name); t != NullType {
 				return t
 			}
-			for a := range w.Ancestors {
+			for a := range w.Ancestors() {
 				if t := find(a.(*workspace)); t != NullType {
 					return t
 				}
 			}
-			for u := range w.UsedWorkspaces {
+			for u := range w.UsedWorkspaces() {
 				// #2872 should find used workspaces, but not types from them
 				if u.QName() == name {
 					return u
@@ -110,11 +117,14 @@ func (ws *workspace) Type(name QName) IType {
 }
 
 func (ws *workspace) Types() iter.Seq[IType] {
+	if ws.types.all == nil {
+		ws.types.all = ws.buildAllTypes()
+	}
 	return ws.types.all.all
 }
 
-func (ws *workspace) UsedWorkspaces(visit func(IWorkspace) bool) {
-	ws.usedWS.all(visit)
+func (ws *workspace) UsedWorkspaces() iter.Seq[IWorkspace] {
+	return ws.usedWS.all
 }
 
 func (ws *workspace) Validate() error {
@@ -161,8 +171,8 @@ func (ws *workspace) addJob(name QName) IJobBuilder {
 	return newJobBuilder(r)
 }
 
-func (ws *workspace) addLimit(name QName, on []QName, rate QName, comment ...string) {
-	_ = newLimit(ws.app, ws, name, on, rate, comment...)
+func (ws *workspace) addLimit(name QName, ops []OperationKind, opt LimitFilterOption, flt IFilter, rate QName, comment ...string) {
+	_ = newLimit(ws.app, ws, name, ops, opt, flt, rate, comment...)
 }
 
 func (ws *workspace) addObject(name QName) IObjectBuilder {
@@ -222,24 +232,18 @@ func (ws *workspace) addWRecord(name QName) IWRecordBuilder {
 func (ws *workspace) appendACL(p *aclRule) {
 	ws.acl = append(ws.acl, p)
 	ws.app.appendACL(p)
+	ws.needRebuild()
 }
 
 func (ws *workspace) appendType(t IType) {
 	ws.app.appendType(t)
-
 	// do not check the validity or uniqueness of the name; this was checked by `*application.appendType (t)`
-
 	ws.types.local.add(t)
+	ws.needRebuild()
 }
 
-// should be called from appDef.build().
-func (ws *workspace) build() error {
-	ws.buildAllTypes()
-	return nil
-}
-
-func (ws *workspace) buildAllTypes() {
-	ws.types.all = newTypes[IType]()
+func (ws *workspace) buildAllTypes() *types[IType] {
+	tt := newTypes[IType]()
 	var (
 		collect func(IWorkspace)
 		chain   map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
@@ -249,53 +253,81 @@ func (ws *workspace) buildAllTypes() {
 			return
 		}
 		chain[w.QName()] = true
-		for a := range w.Ancestors {
+		for a := range w.Ancestors() {
 			collect(a)
 		}
 		for t := range w.LocalTypes() {
-			ws.types.all.add(t)
+			tt.add(t)
 		}
-		for u := range w.UsedWorkspaces {
+		for u := range w.UsedWorkspaces() {
 			// #2872 should enum used workspaces, but not type from them
-			ws.types.all.add(u)
+			tt.add(u)
 		}
 	}
 	collect(ws)
+	return tt
 }
 
-func (ws *workspace) grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) {
+func (ws *workspace) grant(ops []OperationKind, flt IFilter, fields []FieldName, toRole QName, comment ...string) {
 	r := Role(ws.Type, toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
 	}
-	r.(*role).grant(ops, resources, fields, comment...)
+	role := r.(*role)
+
+	acl := newGrant(ws, ops, flt, fields, role, comment...)
+	role.appendACL(acl)
+	ws.appendACL(acl)
 }
 
-func (ws *workspace) grantAll(resources []QName, toRole QName, comment ...string) {
+func (ws *workspace) grantAll(flt IFilter, toRole QName, comment ...string) {
 	r := Role(ws.Type, toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
 	}
-	r.(*role).grantAll(resources, comment...)
+	role := r.(*role)
+
+	acl := newGrantAll(ws, flt, role, comment...)
+	role.appendACL(acl)
+	ws.appendACL(acl)
 }
 
-func (ws *workspace) revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) {
+func (ws *workspace) needRebuild() {
+	ws.types.all = nil
+	for d := range ws.descendants.all {
+		d.(*workspace).needRebuild()
+	}
+}
+
+func (ws *workspace) revoke(ops []OperationKind, flt IFilter, fields []FieldName, fromRole QName, comment ...string) {
 	r := Role(ws.Type, fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}
-	r.(*role).revoke(ops, resources, fields, comment...)
+	role := r.(*role)
+
+	acl := newRevoke(ws, ops, flt, fields, role, comment...)
+	role.appendACL(acl)
+	ws.appendACL(acl)
 }
 
-func (ws *workspace) revokeAll(resources []QName, fromRole QName, comment ...string) {
+func (ws *workspace) revokeAll(flt IFilter, fromRole QName, comment ...string) {
 	r := Role(ws.Type, fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}
-	r.(*role).revokeAll(resources, comment...)
+	role := r.(*role)
+
+	acl := newRevokeAll(ws, flt, role, comment...)
+	role.appendACL(acl)
+	ws.appendACL(acl)
 }
 
 func (ws *workspace) setAncestors(name QName, names ...QName) {
+	for a := range ws.ancestors.all {
+		a.(*workspace).descendants.remove(ws.QName())
+	}
+
 	add := func(n QName) {
 		anc := ws.app.Workspace(n)
 		if anc == nil {
@@ -305,14 +337,16 @@ func (ws *workspace) setAncestors(name QName, names ...QName) {
 			panic(ErrUnsupported("Circular inheritance is not allowed. Workspace «%v» inherits from «%v»", n, ws))
 		}
 		ws.ancestors.add(anc)
+		anc.(*workspace).descendants.add(ws)
 	}
 
 	ws.ancestors.clear()
-
 	add(name)
 	for _, n := range names {
 		add(n)
 	}
+
+	ws.needRebuild()
 }
 
 func (ws *workspace) setDescriptor(q QName) {
@@ -338,6 +372,8 @@ func (ws *workspace) setDescriptor(q QName) {
 	}
 
 	ws.app.wsDesc[q] = ws
+
+	ws.needRebuild()
 }
 
 func (ws *workspace) setTypeComment(name QName, c ...string) {
@@ -363,6 +399,8 @@ func (ws *workspace) useWorkspace(name QName, names ...QName) {
 	for _, n := range names {
 		use(n)
 	}
+
+	ws.needRebuild()
 }
 
 // # Implements:
@@ -409,8 +447,8 @@ func (wb *workspaceBuilder) AddJob(name QName) IJobBuilder {
 	return wb.workspace.addJob(name)
 }
 
-func (wb *workspaceBuilder) AddLimit(name QName, on []QName, rate QName, comment ...string) {
-	wb.workspace.addLimit(name, on, rate, comment...)
+func (wb *workspaceBuilder) AddLimit(name QName, ops []OperationKind, opt LimitFilterOption, flt IFilter, rate QName, comment ...string) {
+	wb.workspace.addLimit(name, ops, opt, flt, rate, comment...)
 }
 
 func (wb *workspaceBuilder) AddObject(name QName) IObjectBuilder {
@@ -457,23 +495,23 @@ func (wb *workspaceBuilder) AddWRecord(name QName) IWRecordBuilder {
 	return wb.workspace.addWRecord(name)
 }
 
-func (wb *workspaceBuilder) Grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) IACLBuilder {
-	wb.workspace.grant(ops, resources, fields, toRole, comment...)
+func (wb *workspaceBuilder) Grant(ops []OperationKind, flt IFilter, fields []FieldName, toRole QName, comment ...string) IACLBuilder {
+	wb.workspace.grant(ops, flt, fields, toRole, comment...)
 	return wb
 }
 
-func (wb *workspaceBuilder) GrantAll(resources []QName, toRole QName, comment ...string) IACLBuilder {
-	wb.workspace.grantAll(resources, toRole, comment...)
+func (wb *workspaceBuilder) GrantAll(flt IFilter, toRole QName, comment ...string) IACLBuilder {
+	wb.workspace.grantAll(flt, toRole, comment...)
 	return wb
 }
 
-func (wb *workspaceBuilder) Revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) IACLBuilder {
-	wb.workspace.revoke(ops, resources, fields, fromRole, comment...)
+func (wb *workspaceBuilder) Revoke(ops []OperationKind, flt IFilter, fields []FieldName, fromRole QName, comment ...string) IACLBuilder {
+	wb.workspace.revoke(ops, flt, fields, fromRole, comment...)
 	return wb
 }
 
-func (wb *workspaceBuilder) RevokeAll(resources []QName, fromRole QName, comment ...string) IACLBuilder {
-	wb.workspace.revokeAll(resources, fromRole, comment...)
+func (wb *workspaceBuilder) RevokeAll(flt IFilter, fromRole QName, comment ...string) IACLBuilder {
+	wb.workspace.revokeAll(flt, fromRole, comment...)
 	return wb
 }
 

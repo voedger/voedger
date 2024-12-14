@@ -8,6 +8,7 @@ package appdef
 import (
 	"fmt"
 	"iter"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,7 +24,7 @@ func Test_NullType(t *testing.T) {
 	require := require.New(t)
 
 	require.Empty(NullType.Comment())
-	require.Empty(NullType.CommentLines())
+	require.Empty(slices.Collect(NullType.CommentLines()))
 
 	require.False(NullType.HasTag(NullQName))
 	NullType.Tags()(func(ITag) bool { require.Fail("Tags() should be empty"); return false })
@@ -41,7 +42,7 @@ func Test_AnyTypes(t *testing.T) {
 	require := require.New(t)
 
 	require.Empty(AnyType.Comment())
-	require.Empty(AnyType.CommentLines())
+	require.Empty(slices.Collect(AnyType.CommentLines()))
 
 	require.Nil(AnyType.App())
 	require.Nil(AnyType.Workspace())
@@ -248,6 +249,38 @@ func Test_TypeKind_Extensions(t *testing.T) {
 	}, "should be read-only")
 }
 
+func Test_TypeKind_Limitables(t *testing.T) {
+	require := require.New(t)
+
+	var tests = []struct {
+		name string
+		k    TypeKind
+		want bool
+	}{
+		{"Query", TypeKind_Query, true},
+		{"Command", TypeKind_Command, true},
+		{"CDoc", TypeKind_CDoc, true},
+		{"ORecord", TypeKind_ORecord, true},
+
+		{"Any", TypeKind_Any, false},
+		{"null", TypeKind_null, false},
+		{"count", TypeKind_count, false},
+		{"Job", TypeKind_Job, false},
+		{"Object", TypeKind_Object, false},
+		{"Role", TypeKind_Role, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(tt.want, TypeKind_Limitables.Contains(tt.k))
+		})
+	}
+
+	require.Panics(func() {
+		TypeKind_Limitables.ClearAll()
+	}, "should be read-only")
+}
+
 func TestTypeKind_MarshalText(t *testing.T) {
 	tests := []struct {
 		name string
@@ -313,6 +346,7 @@ func TestTypeKindTrimString(t *testing.T) {
 	}
 }
 
+// TODO: eliminate this mock
 type mockType struct {
 	IType
 	kind TypeKind

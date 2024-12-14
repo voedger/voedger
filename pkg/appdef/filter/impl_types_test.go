@@ -44,4 +44,9 @@ func Test_Types(t *testing.T) {
 	sysInt32 := appdef.Data(ws.Type, appdef.SysDataName(appdef.DataKind_int32))
 	require.NotNil(sysInt32, "system sys.Int32 should be found")
 	require.False(flt.Match(sysInt32), "system data should not be matched")
+
+	t.Run("should test filter with no workspace", func(t *testing.T) {
+		flt := filter.Types(appdef.NullQName, appdef.TypeKind_Data)
+		require.True(flt.Match(sysInt32), "system data should be matched")
+	})
 }

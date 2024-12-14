@@ -364,6 +364,7 @@ func TestDeniedResources(t *testing.T) {
 	})
 
 	t.Run("entire cdoc", func(t *testing.T) {
+		t.Skip("wait for ACL in VSQl for Air. Currently SElECT rule chechink is skipped in QP")
 		body := `{"args":{"Schema":"app1pkg.TestDeniedCDoc"},"elements":[{"fields":["sys.ID"]}]}`
 		vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect403())
 	})

@@ -33,22 +33,43 @@ func makeTypesFilter(ws appdef.QName, t appdef.TypeKind, tt ...appdef.TypeKind) 
 func (typesFilter) Kind() appdef.FilterKind { return appdef.FilterKind_Types }
 
 func (f typesFilter) Match(t appdef.IType) bool {
-	return ((f.ws == appdef.NullQName) || (t.Workspace().QName() == f.ws)) &&
-		f.types.Contains(t.Kind())
+	if !f.types.Contains(t.Kind()) {
+		return false
+	}
+
+	if f.ws == appdef.NullQName {
+		return true
+	}
+
+	ws := t.Workspace()
+	return (ws != nil) && (ws.QName() == f.ws)
 }
 
 func (f typesFilter) String() string {
-	s := ""
-	for t := range f.types.Values() {
-		if len(s) > 0 {
-			s += ", "
+	var s string
+	if t, ok := typesStringDecorators[string(f.types.AsBytes())]; ok {
+		s = t
+	} else {
+		// TYPES(…)
+		// TYPES(…) FROM …)
+		s = "TYPES("
+		for i, t := range f.types.All() {
+			if i > 0 {
+				s += ", "
+			}
+			s += t.TrimString()
 		}
-		s += t.TrimString()
+		s += ")"
 	}
 	if f.ws != appdef.NullQName {
-		s = fmt.Sprintf("workspace «%s»: %s", f.ws, s)
+		s += fmt.Sprintf(" FROM %s", f.ws)
 	}
-	return fmt.Sprintf("filter.%s(%s)", f.Kind().TrimString(), s)
+	return s
 }
 
 func (f typesFilter) Types() iter.Seq[appdef.TypeKind] { return f.types.Values() }
+
+var typesStringDecorators = map[string]string{
+	string(appdef.TypeKind_Structures.AsBytes()): "ALL TABLES",
+	string(appdef.TypeKind_Functions.AsBytes()):  "ALL FUNCTIONS",
+}
