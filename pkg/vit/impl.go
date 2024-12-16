@@ -513,7 +513,7 @@ func (vit *VIT) NextName() string {
 
 // sets `bs` as state of Buckets for `rateLimitName` in `appQName`
 // will be automatically restored on vit.TearDown() to the state the Bucket was before MockBuckets() call
-func (vit *VIT) MockBuckets(appQName appdef.AppQName, rateLimitName string, bs irates.BucketState) {
+func (vit *VIT) MockBuckets(appQName appdef.AppQName, rateLimitName appdef.QName, bs irates.BucketState) {
 	vit.T.Helper()
 	as, err := vit.IAppStructsProvider.BuiltIn(appQName)
 	require.NoError(vit.T, err)

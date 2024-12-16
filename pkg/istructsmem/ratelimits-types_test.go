@@ -5,6 +5,7 @@
 package istructsmem
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -97,28 +98,24 @@ func TestGetFunctionRateLimitName(t *testing.T) {
 	testFn := appdef.NewQName(appdef.SysPackage, "test")
 
 	tests := []struct {
-		name string
 		kind istructs.RateLimitKind
-		want string
+		want appdef.QName
 	}{
 		{
-			name: `RateLimitKind_byApp —> func_sys.test_ByApp`,
 			kind: istructs.RateLimitKind_byApp,
-			want: `func_sys.test_byApp`,
+			want: appdef.MustParseQName(`sys.func_test_byApp`),
 		},
 		{
-			name: `RateLimitKind_byWorkspace —> func_sys.test_ByWS`,
 			kind: istructs.RateLimitKind_byWorkspace,
-			want: `func_sys.test_byWS`,
+			want: appdef.MustParseQName(`sys.func_test_byWS`),
 		},
 		{
-			name: `RateLimitKind_byID —> func_sys.test_ByID`,
 			kind: istructs.RateLimitKind_byID,
-			want: `func_sys.test_byID`,
+			want: appdef.MustParseQName(`sys.func_test_byID`),
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%v --> %v", tt.kind, tt.want), func(t *testing.T) {
 			if got := GetFunctionRateLimitName(testFn, tt.kind); got != tt.want {
 				t.Errorf("GetFunctionRateLimitName(%v, %v) = %v, want %v", testFn, tt.kind, got, tt.want)
 			}
