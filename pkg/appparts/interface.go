@@ -7,6 +7,7 @@ package appparts
 
 import (
 	"context"
+	"iter"
 	"net/url"
 
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -63,6 +64,24 @@ type IAppPartitions interface {
 	//
 	// If partition not exist, returns error.
 	WaitForBorrow(context.Context, appdef.AppQName, istructs.PartitionID, ProcessorKind) (IAppPartition, error)
+
+	// Returns iterator for actualizers from deployed partitions.
+	//
+	// This method snapshots the current state of the partitions.
+	// The snapshotted iterator are not updated when partitions are deployed or removed.
+	WorkedActualizers(appdef.AppQName) iter.Seq2[istructs.PartitionID, []appdef.QName]
+
+	// Returns iterator for schedulers from deployed partitions.
+	//
+	// This method snapshots the current state of the partitions.
+	// The snapshotted iterator are not updated when partitions are deployed or removed.
+	WorkedSchedulers(appdef.AppQName) iter.Seq2[istructs.PartitionID, map[appdef.QName][]istructs.WSID]
+
+	// Upgrade application definition.
+	//
+	// This experimental method should be used for test purposes only.
+	// Should be deprecated after application redeployment is implemented.
+	UpgradeAppDef(appdef.AppQName, appdef.IAppDef)
 }
 
 // Application partition.
@@ -90,11 +109,12 @@ type IAppPartition interface {
 	//
 	// If some error in arguments, (resource or role not found, operation is not applicable to resource, etc…) then error is returned.
 	IsOperationAllowed(op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, roles []appdef.QName) (bool, []appdef.FieldName, error)
-}
 
-// dependency cycle: func requires IAppPartitions, provider of IAppPartitions requires already filled AppConfigsType -> impossible to provide AppConfigsType because we're filling it now
-// TODO: eliminate this workaround
-// type BuiltInAppsDeploymentDescriptors map[appdef.AppQName]AppDeploymentDescriptor
+	// Return is specified resource (command, query or structure) usage limit is exceeded.
+	//
+	// If resource usage is exceeded then returns name of first exceeded limit.
+	IsLimitExceeded(resource appdef.QName, operation appdef.OperationKind, workspace istructs.WSID, remoteAddr string) (exceed bool, limit appdef.QName)
+}
 
 // Async actualizer runner.
 //

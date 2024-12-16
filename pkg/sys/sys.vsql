@@ -485,7 +485,7 @@ ABSTRACT WORKSPACE ProfileWS (
 		QUERY RefreshPrincipalToken RETURNS RefreshPrincipalTokenResult;
 	);
 
-	GRANT EXECUTE ON QUERY RefreshPrincipalToken TO WorkspaceOwner;
+	GRANT EXECUTE ON QUERY RefreshPrincipalToken TO ProfileOwner;
 );
 
 ALTERABLE WORKSPACE DeviceProfileWS INHERITS sys.ProfileWS (
@@ -575,11 +575,12 @@ EXTENSION ENGINE BUILTIN (
 			Body []byte
 			HTTPClientTimeoutMilliseconds int64
 			Header text (can be called multiple times)
+			HandleErrors bool (do not panic, return error in response)
 		Value:
 			StatusCode int32
 			Body []byte
 			Header text (headers combined)
-
+			Error text (if HandleErrors is true)
 		*/
 		READ SCOPE(QUERIES, PROJECTORS, JOBS)
 	);

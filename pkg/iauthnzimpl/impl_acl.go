@@ -80,6 +80,15 @@ var defaultACL = ACL{
 		policy: ACPolicy_Deny,
 	},
 	{
+		desc: "grant select only on few documents to WorkspaceOwner",
+		pattern: PatternType{
+			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
+			qNamesPattern:     []appdef.QName{qNameCDocChildWorkspace},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},
+		},
+		policy: ACPolicy_Allow,
+	},
+	{
 		desc: "revoke insert or update on wdoc.air.LastNumbers from all",
 		pattern: PatternType{
 			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_INSERT, iauthnz.OperationKind_UPDATE},
@@ -264,6 +273,10 @@ var defaultACL = ACL{
 				qNameQryCreateTap2PaySession,
 				// https://dev.untill.com/projects/#!693712
 				qNameCmdSaveTap2PayPayment,
+				// https://untill.atlassian.net/browse/AIR-47
+				qNameQryShowBillOnDisplay,
+				qNameQryShowOrderOnDisplay,
+				qNameQryShowStandbyOnDisplay,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
@@ -369,10 +382,11 @@ var defaultACL = ACL{
 	},
 	{
 		// https://github.com/voedger/voedger/issues/2470
-		desc: "grant exec on q.sys.State to role.air.BOReader",
+		// https://github.com/voedger/voedger/issues/3007
+		desc: "grant exec on q.sys.State, sys.RegisterTempBLOB1d, q.sys.DownloadBLOBAuthnz to role.air.BOReader",
 		pattern: PatternType{
 			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_EXECUTE},
-			qNamesPattern:     []appdef.QName{qNameQryState},
+			qNamesPattern:     []appdef.QName{qNameQryState, qNameCmdRegisterTempBLOB1d, qNameQryDownloadBLOBAuthnz},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleBOReader}}},
 		},
 		policy: ACPolicy_Allow,
@@ -409,16 +423,19 @@ var defaultACL = ACL{
 		policy: ACPolicy_Allow,
 	},
 	{
-		desc: "grant select on few tables to air.AirReseller and air.UntillPaymentsReseller ",
+		// TODO: carefully check which docs are able to be read by whom
+		desc: "grant select on few tables to air.AirReseller and air.UntillPaymentsReseller and SubscriptionReseller and WorkspaceAdmin",
 		pattern: PatternType{
 			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
-			qNamesPattern:  []appdef.QName{qNameCDocReseller},
+			qNamesPattern:  []appdef.QName{qNameCDocReseller, qNameCDocUntillPayments},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleAirReseller}},
 				// OR
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
 				// OR
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleSubscriptionReseller}},
+				// OR
+				{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceAdmin}},
 			},
 		},
 		policy: ACPolicy_Allow,

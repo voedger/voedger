@@ -151,6 +151,8 @@ github.com/viant/assertly v0.4.8/go.mod h1:aGifi++jvCrUaklKEKT0BU95igDNaqkvz+49u
 github.com/viant/assertly v0.5.4/go.mod h1:aGifi++jvCrUaklKEKT0BU95igDNaqkvz+49uaYMPRU=
 github.com/viant/toolbox v0.24.0/go.mod h1:OxMCG57V0PXuIP2HNQrtJf2CjqdmbrOx5EkMILuUhzM=
 github.com/viant/toolbox v0.33.0/go.mod h1:OxMCG57V0PXuIP2HNQrtJf2CjqdmbrOx5EkMILuUhzM=
+github.com/voedger/voedger v0.0.0-20241210143322-b216a682f6d3 h1:QnM+KFDwKrvGihe5HUSfyPJEsDqQadC/87TrzPydOVI=
+github.com/voedger/voedger v0.0.0-20241210143322-b216a682f6d3/go.mod h1:XMigq/s2tao7Jn0PPIORDCucZFZFcmuwrYW0uN/q2gc=
 github.com/wneessen/go-mail v0.5.2 h1:MZKwgHJoRboLJ+EHMLuHpZc95wo+u1xViL/4XSswDT8=
 github.com/wneessen/go-mail v0.5.2/go.mod h1:kRroJvEq2hOSEPFRiKjN7Csrz0G1w+RpiGR3b6yo+Ck=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=

@@ -37,20 +37,23 @@ func (frl *functionRateLimits) AddWorkspaceLimit(funcQName appdef.QName, rl istr
 
 func (frl *functionRateLimits) prepare(buckets irates.IBuckets) {
 	for funcQName, rls := range frl.limits {
-		rateLimitName := ""
+		rateLimitName := appdef.NullQName
 		for rlKind, rl := range rls {
 			rateLimitName = GetFunctionRateLimitName(funcQName, rlKind)
 			buckets.SetDefaultBucketState(rateLimitName, irates.BucketState{
 				Period:             rl.Period,
-				MaxTokensPerPeriod: irates.NumTokensType(rl.MaxAllowedPerDuration),
+				MaxTokensPerPeriod: rl.MaxAllowedPerDuration,
 			})
 		}
 	}
 }
 
-func GetFunctionRateLimitName(funcQName appdef.QName, rateLimitKind istructs.RateLimitKind) (res string) {
+func GetFunctionRateLimitName(funcQName appdef.QName, rateLimitKind istructs.RateLimitKind) (res appdef.QName) {
 	if rateLimitKind >= istructs.RateLimitKind_FakeLast {
 		panic(fmt.Sprintf("unsupported limit kind %v", rateLimitKind))
 	}
-	return fmt.Sprintf(funcRateLimitNameFmt[rateLimitKind], funcQName)
+	return appdef.NewQName(
+		funcQName.Pkg(),
+		fmt.Sprintf(funcRateLimitNameFmt[rateLimitKind], funcQName.Entity()),
+	)
 }

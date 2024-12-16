@@ -6,6 +6,7 @@
 package iratesce
 
 import (
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	irates "github.com/voedger/voedger/pkg/irates"
 )
@@ -14,7 +15,7 @@ import (
 func Provide(time coreutils.ITime) (buckets irates.IBuckets) {
 	return &bucketsType{
 		buckets:       map[irates.BucketKey]*bucketType{},
-		defaultStates: map[string]irates.BucketState{},
+		defaultStates: map[appdef.QName]irates.BucketState{},
 		time:          time,
 	}
 }

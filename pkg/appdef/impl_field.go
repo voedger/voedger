@@ -9,6 +9,7 @@ package appdef
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 
@@ -34,7 +35,7 @@ func makeField(name FieldName, data IData, required bool, comments ...string) fi
 		data:        data,
 		required:    required,
 		verifiable:  false,
-		constraints: data.Constraints(true),
+		constraints: maps.Collect(data.Constraints(true)),
 	}
 	return f
 }

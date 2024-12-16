@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"mime"
 	"mime/multipart"
 	"net/http"
@@ -359,10 +360,29 @@ func blobMessageHandler(vvmCtx context.Context, sc iprocbus.ServiceChannel, blob
 
 func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Request, details interface{}) {
 	vars := mux.Vars(req)
-	wsid, err := strconv.ParseUint(vars[URLPlaceholder_WSID], utils.DecimalBase, utils.BitSize64)
+	wsid, err := strconv.ParseUint(vars[URLPlaceholder_wsid], utils.DecimalBase, utils.BitSize64)
 	if err != nil {
 		// notest: checked by router url rule
 		panic(err)
+	}
+	headers := maps.Clone(req.Header)
+	if _, ok := headers[coreutils.Authorization]; !ok {
+		// no token among headers -> look among cookies
+		// no token among cookies as well -> just do nothing, 403 will happen on call helper commands further in BLOBs processor
+		cookie, err := req.Cookie(coreutils.Authorization)
+		if !errors.Is(err, http.ErrNoCookie) {
+			if err != nil {
+				// notest
+				panic(err)
+			}
+			val, err := url.QueryUnescape(cookie.Value)
+			if err != nil {
+				WriteTextResponse(resp, "failed to unescape cookie '"+cookie.Value+"'", http.StatusBadRequest)
+				return
+			}
+			// authorization token in cookies -> q.sys.DownloadBLOBAuthnz requires it in headers
+			headers[coreutils.Authorization] = []string{val}
+		}
 	}
 	mes := blobMessage{
 		blobBaseMessage: blobBaseMessage{
@@ -370,25 +390,11 @@ func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Req
 			resp:            resp,
 			wsid:            istructs.WSID(wsid),
 			doneChan:        make(chan struct{}),
-			appQName:        appdef.NewAppQName(vars[URLPlaceholder_AppOwner], vars[URLPlaceholder_AppName]),
-			header:          req.Header,
+			appQName:        appdef.NewAppQName(vars[URLPlaceholder_appOwner], vars[URLPlaceholder_appName]),
+			header:          headers,
 			wLimiterFactory: s.WLimiterFactory,
 		},
 		blobDetails: details,
-	}
-	if _, ok := mes.blobBaseMessage.header[coreutils.Authorization]; !ok {
-		cookie, err := req.Cookie(coreutils.Authorization)
-		if err != nil && !errors.Is(err, http.ErrNoCookie) {
-			// notest
-			panic(err)
-		}
-		val, err := url.QueryUnescape(cookie.Value)
-		if err != nil {
-			// notest
-			panic(err)
-		}
-		// authorization token in cookies -> q.sys.DownloadBLOBAuthnz requires it in headers
-		mes.blobBaseMessage.header[coreutils.Authorization] = []string{val}
 	}
 	if !s.BlobberParams.procBus.Submit(0, 0, mes) {
 		resp.WriteHeader(http.StatusServiceUnavailable)
@@ -419,24 +425,12 @@ func (s *httpService) blobReadRequestHandler() http.HandlerFunc {
 				blobID: istructs.RecordID(blobID),
 			}
 		}
-		principalToken := headerOrCookieAuth(resp, req)
-		if len(principalToken) == 0 {
-			return
-		}
 		s.blobRequestHandler(resp, req, blobReadDetails)
 	}
 }
 
 func (s *httpService) blobWriteRequestHandler() http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
-		principalToken, isHandled := headerAuth(resp, req)
-		if len(principalToken) == 0 {
-			if !isHandled {
-				writeUnauthorized(resp)
-			}
-			return
-		}
-
 		queryParamName, queryParamMimeType, boundary, duration, ok := getBlobParams(resp, req)
 		if !ok {
 			return
@@ -455,43 +449,6 @@ func (s *httpService) blobWriteRequestHandler() http.HandlerFunc {
 			})
 		}
 	}
-}
-
-func headerAuth(rw http.ResponseWriter, req *http.Request) (principalToken string, isHandled bool) {
-	authHeader := req.Header.Get(coreutils.Authorization)
-	if len(authHeader) > 0 {
-		if strings.HasPrefix(authHeader, coreutils.BearerPrefix) {
-			return authHeader[bearerPrefixLen:], false
-		}
-		writeUnauthorized(rw)
-	}
-	return "", false
-}
-
-func headerOrCookieAuth(rw http.ResponseWriter, req *http.Request) (principalToken string) {
-	principalToken, isHandled := headerAuth(rw, req)
-	if isHandled {
-		return ""
-	}
-	if len(principalToken) > 0 {
-		return principalToken
-	}
-	for _, c := range req.Cookies() {
-		if c.Name == coreutils.Authorization {
-			val, err := url.QueryUnescape(c.Value)
-			if err != nil {
-				WriteTextResponse(rw, "failed to unescape cookie '"+c.Value+"'", http.StatusBadRequest)
-				return ""
-			}
-			if len(val) < bearerPrefixLen || val[:bearerPrefixLen] != coreutils.BearerPrefix {
-				writeUnauthorized(rw)
-				return ""
-			}
-			return val[bearerPrefixLen:]
-		}
-	}
-	writeUnauthorized(rw)
-	return ""
 }
 
 // determines BLOBs write kind: name+mimeType in query params -> single BLOB, body is BLOB content, otherwise -> body is multipart/form-data

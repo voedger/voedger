@@ -5,8 +5,6 @@
 package irates
 
 import (
-	"time"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -24,15 +22,17 @@ type IBuckets interface {
 	// Try to take n tokens from the given buckets
 	// The operation must be atomic - either all buckets are modified or none
 	// If ResetRateBuckets/SetBucketState for the given RateLimitName have not been called true is returned
-	TakeTokens(bucketKeys []BucketKey, n int) (ok bool)
+	//
+	// #3027: If returns false, then excLimit is the first RateLimitName that has been exceeded
+	TakeTokens(bucketKeys []BucketKey, n int) (ok bool, excLimit appdef.QName)
 
-	SetDefaultBucketState(RateLimitName string, bucketState BucketState)
+	SetDefaultBucketState(RateLimitName appdef.QName, bucketState BucketState)
 
 	// returns ErrorRateLimitNotFound
-	GetDefaultBucketsState(RateLimitName string) (state BucketState, err error)
+	GetDefaultBucketsState(RateLimitName appdef.QName) (state BucketState, err error)
 
-	// Reset all buckets withi given RateLimitName to given state
-	ResetRateBuckets(RateLimitName string, bucketState BucketState)
+	// Reset all buckets with given RateLimitName to given state
+	ResetRateBuckets(RateLimitName appdef.QName, bucketState BucketState)
 
 	// returns ErrorRateLimitNotFound
 	SetBucketState(bucketKey BucketKey, state BucketState) (err error)
@@ -42,20 +42,20 @@ type IBuckets interface {
 }
 
 type BucketKey struct {
-	RateLimitName string
+	RateLimitName appdef.QName
 	RemoteAddr    string
-	App           appdef.AppQName
+	App           appdef.AppQName //?
 	Workspace     istructs.WSID
 	QName         appdef.QName
-	ID            istructs.RecordID
+	ID            istructs.RecordID //?
 }
 
 type BucketState struct {
-	Period             time.Duration
+	Period             appdef.RatePeriod
 	MaxTokensPerPeriod NumTokensType
 	TakenTokens        NumTokensType
 }
 
-type NumTokensType uint32
+type NumTokensType = appdef.RateCount
 
 type BucketsFactoryType func() IBuckets

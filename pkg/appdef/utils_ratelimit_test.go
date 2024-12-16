@@ -3,22 +3,23 @@
  * @author: Nikolay Nikitin
  */
 
-package appdef
+package appdef_test
 
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
 func TestRateScopeTrimString(t *testing.T) {
 	tests := []struct {
 		name string
-		s    RateScope
+		s    appdef.RateScope
 		want string
 	}{
-		{name: "basic", s: RateScope_AppPartition, want: "AppPartition"},
-		{name: "out of range", s: RateScope_count + 1, want: (RateScope_count + 1).String()},
+		{name: "basic", s: appdef.RateScope_AppPartition, want: "AppPartition"},
+		{name: "out of range", s: appdef.RateScope_count + 1, want: (appdef.RateScope_count + 1).String()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -29,60 +30,61 @@ func TestRateScopeTrimString(t *testing.T) {
 	}
 }
 
-func Test_validateLimitNames(t *testing.T) {
-
-	cmdName := NewQName("test", "cmd")
-	queryName := NewQName("test", "query")
-	docName := NewQName("test", "doc")
-	roleName := NewQName("test", "role")
-
-	app := func() IAppDef {
-		adb := New()
-		adb.AddPackage("test", "test.com/test")
-
-		wsb := adb.AddWorkspace(NewQName("test", "workspace"))
-
-		_ = wsb.AddCommand(cmdName)
-		_ = wsb.AddQuery(queryName)
-		_ = wsb.AddCDoc(docName)
-
-		_ = wsb.AddRole(roleName)
-
-		return adb.MustBuild()
-	}()
-
+func Test_LimitFilterOption_MarshalText(t *testing.T) {
 	tests := []struct {
-		name         string
-		names        QNames
-		want         error
-		wantcontains string
+		name string
+		o    appdef.LimitFilterOption
+		want string
 	}{
-		{"error: empty", QNames{}, ErrMissedError, ""},
-		{"error: unknown name", QNames{NewQName("test", "unknown")}, ErrNotFoundError, "test.unknown"},
-		{"ok: sys.ANY", QNames{QNameANY}, nil, ""},
-		{"ok: sys.AnyCommand", QNames{QNameAnyCommand}, nil, ""},
-		{"error: sys.AnyExtension", QNames{QNameAnyExtension}, ErrIncompatibleError, "sys.AnyExtension"},
-		{"ok: test.cmd", QNames{cmdName}, nil, ""},
-		{"ok: test.cmd + test.query", QNamesFrom(cmdName, queryName), nil, ""},
-		{"ok: test.cmd + sys.AnyQuery", QNamesFrom(cmdName, QNameAnyQuery), nil, ""},
-		{"ok: test.doc", QNames{docName}, nil, ""},
-		{"ok: test.doc + sys.AnyView", QNamesFrom(docName, QNameAnyView), nil, ""},
-		{"error: test.doc + sys.AnyODoc", QNamesFrom(docName, QNameAnyODoc), ErrIncompatibleError, "sys.AnyODoc"},
-		{"error: test.role", QNames{roleName}, ErrIncompatibleError, "test.role"},
+		{name: `0 —> "LimitFilterOption_ALL"`,
+			o:    appdef.LimitFilterOption_ALL,
+			want: `LimitFilterOption_ALL`,
+		},
+		{name: `1 —> "LimitFilterOption_EACH"`,
+			o:    appdef.LimitFilterOption_EACH,
+			want: `LimitFilterOption_EACH`,
+		},
+		{name: `LimitFilterOption_count —> <number>`,
+			o:    appdef.LimitFilterOption_count,
+			want: utils.UintToString(appdef.LimitFilterOption_count),
+		},
 	}
-
-	require := require.New(t)
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := validateLimitNames(app.Type, tt.names)
-			if tt.want == nil {
-				require.NoError(got, "validateLimitNames(app, %v) returns unexpected error %v", tt.names, got)
-			} else {
-				require.ErrorIs(got, tt.want, "validateLimitNames(app, %v) = %v, want %v", tt.names, got, tt.want)
-				if tt.wantcontains != "" {
-					require.ErrorContains(got, tt.wantcontains, "validateLimitNames(app, %v) returns %v does not contains %v", tt.names, got, tt.want)
-				}
+			got, err := tt.o.MarshalText()
+			if err != nil {
+				t.Errorf("LimitFilterOption.MarshalText() unexpected error %v", err)
+				return
+			}
+			if string(got) != tt.want {
+				t.Errorf("LimitFilterOption.MarshalText() = %s, want %v", got, tt.want)
+			}
+		})
+	}
+
+	t.Run("100% cover LimitFilterOption.String()", func(t *testing.T) {
+		const tested = appdef.LimitFilterOption_count + 1
+		want := "LimitFilterOption(" + utils.UintToString(tested) + ")"
+		got := tested.String()
+		if got != want {
+			t.Errorf("(LimitFilterOption_count + 1).String() = %v, want %v", got, want)
+		}
+	})
+}
+
+func TestLimitFilterOptionTrimString(t *testing.T) {
+	tests := []struct {
+		name string
+		o    appdef.LimitFilterOption
+		want string
+	}{
+		{name: "basic", o: appdef.LimitFilterOption_ALL, want: "ALL"},
+		{name: "out of range", o: appdef.LimitFilterOption_count + 1, want: (appdef.LimitFilterOption_count + 1).String()},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.o.TrimString(); got != tt.want {
+				t.Errorf("%v.(LimitFilterOption).TrimString() = %v, want %v", tt.o, got, tt.want)
 			}
 		})
 	}

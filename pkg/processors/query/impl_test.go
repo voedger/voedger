@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iauthnz"
@@ -213,7 +214,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	wsb.AddRole(iauthnz.QNameRoleProfileOwner)
 	wsb.AddRole(iauthnz.QNameRoleWorkspaceOwner)
 
-	wsb.Revoke([]appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{qNameQryDenied}, nil, iauthnz.QNameRoleWorkspaceOwner)
+	wsb.Revoke([]appdef.OperationKind{appdef.OperationKind_Execute}, filter.QNames(qNameQryDenied), nil, iauthnz.QNameRoleWorkspaceOwner)
 
 	if prepareAppDef != nil {
 		prepareAppDef(adb, wsb)
@@ -338,7 +339,8 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 				AppConfigs:         cfgs,
 				StatelessResources: statelessResources,
 				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
-			}, "", imetrics.Provide()))
+			}, "", imetrics.Provide()),
+		iratesce.TestBucketsFactory)
 	require.NoError(err)
 	appParts.DeployApp(appName, nil, appDef, partCount, appEngines, cfg.NumAppWorkspaces())
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})

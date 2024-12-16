@@ -19,7 +19,7 @@ type IWorkspace interface {
 	// Ancestors are enumerated in alphabetic order.
 	// Only direct ancestors are enumerated.
 	// Workspace `sys.Workspace` is default ancestor used then no other ancestor is specified.
-	Ancestors(func(IWorkspace) bool)
+	Ancestors() iter.Seq[IWorkspace]
 
 	// Workspace descriptor document.
 	// See [#466](https://github.com/voedger/voedger/issues/466)
@@ -64,7 +64,7 @@ type IWorkspace interface {
 	//
 	// Used workspaces enumerated in alphabetic order.
 	// Only direct used workspaces are enumerated.
-	UsedWorkspaces(func(IWorkspace) bool)
+	UsedWorkspaces() iter.Seq[IWorkspace]
 }
 
 type IWorkspaceBuilder interface {
@@ -143,7 +143,7 @@ type IWithWorkspaces interface {
 	// Enumerates all application workspaces.
 	//
 	// Workspaces are enumerated in alphabetical order by QName
-	Workspaces(func(IWorkspace) bool)
+	Workspaces() iter.Seq[IWorkspace]
 }
 
 type IWorkspacesBuilder interface {

@@ -13,7 +13,6 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
@@ -226,5 +225,5 @@ func TestIBucketsFromIAppStructs(t *testing.T) {
 	bsActual, err := buckets.GetDefaultBucketsState(GetFunctionRateLimitName(funcQName, istructs.RateLimitKind_byApp))
 	require.NoError(err)
 	require.Equal(rlExpected.Period, bsActual.Period)
-	require.Equal(irates.NumTokensType(rlExpected.MaxAllowedPerDuration), bsActual.MaxTokensPerPeriod)
+	require.EqualValues(rlExpected.MaxAllowedPerDuration, bsActual.MaxTokensPerPeriod)
 }

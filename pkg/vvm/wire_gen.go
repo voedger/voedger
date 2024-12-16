@@ -143,7 +143,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		cleanup()
 		return nil, nil, err
 	}
-	iAppPartitions, cleanup3, err := provideAppPartitions(vvmCtx, iAppStructsProvider, v3, iActualizersService, iSchedulerRunner, iStatelessResources, builtInAppsArtefacts, vvmName, iMetrics)
+	iAppPartitions, cleanup3, err := provideAppPartitions(vvmCtx, iAppStructsProvider, v3, iActualizersService, iSchedulerRunner, bucketsFactoryType, iStatelessResources, builtInAppsArtefacts, vvmName, iMetrics)
 	if err != nil {
 		cleanup2()
 		cleanup()
@@ -199,7 +199,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		cleanup()
 		return nil, nil, err
 	}
-	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, blobberServiceChannels, v8, blobStorage, cache, iBus, vvmPortSource, v9)
+	routerServices := provideRouterServices(routerParams, busTimeout, in10nBroker, quotas, blobberServiceChannels, v8, blobStorage, cache, iBus, vvmPortSource, v9)
 	adminEndpointServiceOperator := provideAdminEndpointServiceOperator(routerServices)
 	metricsServicePortInitial := vvmConfig.MetricsServicePort
 	metricsServicePort := provideMetricsServicePort(metricsServicePortInitial, vvmIdx)
@@ -381,6 +381,7 @@ func provideAppPartitions(
 	saf appparts.SyncActualizerFactory,
 	act actualizers.IActualizersService,
 	sch appparts.ISchedulerRunner,
+	bf irates.BucketsFactoryType,
 	sr istructsmem.IStatelessResources,
 	builtinAppsArtefacts BuiltInAppsArtefacts,
 	vvmName processors.VVMName, imetrics2 imetrics.IMetrics,
@@ -402,6 +403,7 @@ func provideAppPartitions(
 		act,
 		sch,
 		eef,
+		bf,
 	)
 }
 
@@ -752,7 +754,7 @@ func provideRouterAppStoragePtr(astp istorage.IAppStorageProvider) dbcertcache.R
 }
 
 // port 80 -> [0] is http server, port 443 -> [0] is https server, [1] is acme server
-func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTimeout BusTimeout, broker in10n.IN10nBroker, quotas in10n.Quotas,
+func provideRouterServices(rp router.RouterParams, busTimeout BusTimeout, broker in10n.IN10nBroker, quotas in10n.Quotas,
 	bsc router.BlobberServiceChannels, wLimiterFactory func() iblobstorage.WLimiterType, blobStorage BlobStorage,
 	autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) RouterServices {
 	bp := &router.BlobberParams{
@@ -762,7 +764,7 @@ func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTi
 		RetryAfterSecondsOn503: DefaultRetryAfterSecondsOn503,
 		WLimiterFactory:        wLimiterFactory,
 	}
-	httpSrv, acmeSrv, adminSrv := router.Provide(vvmCtx, rp, time.Duration(busTimeout), broker, bp, autocertCache, bus, numsAppsWorkspaces)
+	httpSrv, acmeSrv, adminSrv := router.Provide(rp, time.Duration(busTimeout), broker, bp, autocertCache, bus, numsAppsWorkspaces)
 	vvmPortSource.getter = func() VVMPortType {
 		return VVMPortType(httpSrv.GetPort())
 	}

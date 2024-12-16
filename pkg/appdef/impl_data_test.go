@@ -3,16 +3,19 @@
  * @author: Nikolay Nikitin
  */
 
-package appdef
+package appdef_test
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
@@ -20,23 +23,23 @@ import (
 func Test_AppDef_AddData(t *testing.T) {
 	require := require.New(t)
 
-	var app IAppDef
+	var app appdef.IAppDef
 
-	wsName := NewQName("test", "workspace")
-	intName := NewQName("test", "int")
-	strName := NewQName("test", "string")
-	tokenName := NewQName("test", "token")
+	wsName := appdef.NewQName("test", "workspace")
+	intName := appdef.NewQName("test", "int")
+	strName := appdef.NewQName("test", "string")
+	tokenName := appdef.NewQName("test", "token")
 
 	t.Run("should be ok to add data types", func(t *testing.T) {
-		adb := New()
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		ws := adb.AddWorkspace(wsName)
 
-		_ = ws.AddData(intName, DataKind_int64, NullQName)
-		_ = ws.AddData(strName, DataKind_string, NullQName)
-		token := ws.AddData(tokenName, DataKind_string, strName)
-		token.AddConstraints(MinLen(1), MaxLen(100), Pattern(`^\w+$`, "only word characters allowed"))
+		_ = ws.AddData(intName, appdef.DataKind_int64, appdef.NullQName)
+		_ = ws.AddData(strName, appdef.DataKind_string, appdef.NullQName)
+		token := ws.AddData(tokenName, appdef.DataKind_string, strName)
+		token.AddConstraints(appdef.MinLen(1), appdef.MaxLen(100), appdef.Pattern(`^\w+$`, "only word characters allowed"))
 
 		t.Run("should be ok to build", func(t *testing.T) {
 			a, err := adb.Build()
@@ -51,36 +54,36 @@ func Test_AppDef_AddData(t *testing.T) {
 
 	testWith := func(tested testedTypes) {
 		t.Run("should be ok to find builded data type", func(t *testing.T) {
-			i := Data(tested.Type, intName)
-			require.Equal(TypeKind_Data, i.Kind())
+			i := appdef.Data(tested.Type, intName)
+			require.Equal(appdef.TypeKind_Data, i.Kind())
 			require.Equal(intName, i.QName())
-			require.Equal(DataKind_int64, i.DataKind())
+			require.Equal(appdef.DataKind_int64, i.DataKind())
 			require.False(i.IsSystem())
-			require.Equal(SysData(tested.Type, DataKind_int64), i.Ancestor())
+			require.Equal(appdef.SysData(tested.Type, appdef.DataKind_int64), i.Ancestor())
 
-			s := Data(tested.Type, strName)
-			require.Equal(TypeKind_Data, s.Kind())
+			s := appdef.Data(tested.Type, strName)
+			require.Equal(appdef.TypeKind_Data, s.Kind())
 			require.Equal(strName, s.QName())
-			require.Equal(DataKind_string, s.DataKind())
-			require.Equal(SysData(tested.Type, DataKind_string), s.Ancestor())
+			require.Equal(appdef.DataKind_string, s.DataKind())
+			require.Equal(appdef.SysData(tested.Type, appdef.DataKind_string), s.Ancestor())
 
-			tk := Data(tested.Type, tokenName)
-			require.Equal(TypeKind_Data, tk.Kind())
+			tk := appdef.Data(tested.Type, tokenName)
+			require.Equal(appdef.TypeKind_Data, tk.Kind())
 			require.Equal(tokenName, tk.QName())
-			require.Equal(DataKind_string, tk.DataKind())
+			require.Equal(appdef.DataKind_string, tk.DataKind())
 			require.Equal(s, tk.Ancestor())
 			cnt := 0
 			for k, c := range tk.Constraints(false) {
 				cnt++
 				switch k {
-				case ConstraintKind_MinLen:
-					require.Equal(ConstraintKind_MinLen, c.Kind())
+				case appdef.ConstraintKind_MinLen:
+					require.Equal(appdef.ConstraintKind_MinLen, c.Kind())
 					require.EqualValues(1, c.Value())
-				case ConstraintKind_MaxLen:
-					require.Equal(ConstraintKind_MaxLen, c.Kind())
+				case appdef.ConstraintKind_MaxLen:
+					require.Equal(appdef.ConstraintKind_MaxLen, c.Kind())
 					require.EqualValues(100, c.Value())
-				case ConstraintKind_Pattern:
-					require.Equal(ConstraintKind_Pattern, c.Kind())
+				case appdef.ConstraintKind_Pattern:
+					require.Equal(appdef.ConstraintKind_Pattern, c.Kind())
 					require.EqualValues(`^\w+$`, c.Value().(*regexp.Regexp).String())
 					require.Equal("only word characters allowed", c.Comment())
 				default:
@@ -92,10 +95,10 @@ func Test_AppDef_AddData(t *testing.T) {
 
 		t.Run("should be ok to enum data types", func(t *testing.T) {
 			cnt := 0
-			for d := range DataTypes(tested.Types()) {
+			for d := range appdef.DataTypes(tested.Types()) {
 				if !d.IsSystem() {
 					cnt++
-					require.Equal(TypeKind_Data, d.Kind())
+					require.Equal(appdef.TypeKind_Data, d.Kind())
 					switch cnt {
 					case 1:
 						require.Equal(intName, d.QName())
@@ -111,7 +114,7 @@ func Test_AppDef_AddData(t *testing.T) {
 			require.Equal(3, cnt)
 		})
 
-		require.Nil(Data(tested.Type, NewQName("test", "unknown")), "check nil returns")
+		require.Nil(appdef.Data(tested.Type, appdef.NewQName("test", "unknown")), "check nil returns")
 	}
 
 	testWith(app)
@@ -120,101 +123,101 @@ func Test_AppDef_AddData(t *testing.T) {
 	t.Run("should be panics", func(t *testing.T) {
 
 		t.Run("if data type name missed", func(t *testing.T) {
-			wsb := New().AddWorkspace(wsName)
+			wsb := appdef.New().AddWorkspace(wsName)
 			require.Panics(func() {
-				wsb.AddData(NullQName, DataKind_int64, NullQName)
-			}, require.Is(ErrMissedError))
+				wsb.AddData(appdef.NullQName, appdef.DataKind_int64, appdef.NullQName)
+			}, require.Is(appdef.ErrMissedError))
 		})
 
 		t.Run("if invalid data type name", func(t *testing.T) {
-			wsb := New().AddWorkspace(wsName)
+			wsb := appdef.New().AddWorkspace(wsName)
 			require.Panics(func() {
-				wsb.AddData(NewQName("naked", "🔫"), DataKind_QName, NullQName)
-			}, require.Is(ErrInvalidError), require.Has("naked.🔫"))
+				wsb.AddData(appdef.NewQName("naked", "🔫"), appdef.DataKind_QName, appdef.NullQName)
+			}, require.Is(appdef.ErrInvalidError), require.Has("naked.🔫"))
 		})
 
 		t.Run("if type with name already exists", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 			wsb.AddObject(intName)
 			require.Panics(func() {
-				wsb.AddData(intName, DataKind_int64, NullQName)
-			}, require.Is(ErrAlreadyExistsError), require.Has(intName.String()))
+				wsb.AddData(intName, appdef.DataKind_int64, appdef.NullQName)
+			}, require.Is(appdef.ErrAlreadyExistsError), require.Has(intName.String()))
 		})
 
 		t.Run("if sys data to inherits from not found", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 			require.Panics(func() {
-				wsb.AddData(strName, DataKind_null, NullQName)
-			}, require.Is(ErrNotFoundError), require.Has("null"))
+				wsb.AddData(strName, appdef.DataKind_null, appdef.NullQName)
+			}, require.Is(appdef.ErrNotFoundError), require.Has("null"))
 		})
 
 		t.Run("if ancestor not found", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 			require.Panics(func() {
-				wsb.AddData(strName, DataKind_string,
-					NewQName("test", "unknown"), // <- error here
+				wsb.AddData(strName, appdef.DataKind_string,
+					appdef.NewQName("test", "unknown"), // <- error here
 				)
-			}, require.Is(ErrNotFoundError), require.Has("test.unknown"))
+			}, require.Is(appdef.ErrNotFoundError), require.Has("test.unknown"))
 		})
 
 		t.Run("if ancestor is not data type", func(t *testing.T) {
-			objName := NewQName("test", "object")
-			adb := New()
+			objName := appdef.NewQName("test", "object")
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 			_ = wsb.AddObject(objName)
 			require.Panics(func() {
-				wsb.AddData(intName, DataKind_int64,
+				wsb.AddData(intName, appdef.DataKind_int64,
 					objName, // <- error here
 				)
-			}, require.Is(ErrNotFoundError), require.Has(objName.String()))
+			}, require.Is(appdef.ErrNotFoundError), require.Has(objName.String()))
 		})
 
 		t.Run("if ancestor has different kind", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
-			_ = wsb.AddData(strName, DataKind_string, NullQName)
+			_ = wsb.AddData(strName, appdef.DataKind_string, appdef.NullQName)
 			require.Panics(func() {
-				wsb.AddData(intName, DataKind_int64, strName)
-			}, require.Is(ErrInvalidError), require.Has(strName.String()))
+				wsb.AddData(intName, appdef.DataKind_int64, strName)
+			}, require.Is(appdef.ErrInvalidError), require.Has(strName.String()))
 		})
 
 		t.Run("if incompatible constraints", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
-			require.Panics(func() { _ = wsb.AddData(strName, DataKind_string, NullQName, MinIncl(1)) },
-				require.Is(ErrIncompatibleError), require.Has("MinIncl"))
-			require.Panics(func() { _ = wsb.AddData(intName, DataKind_float64, NullQName, MaxLen(100)) },
-				require.Is(ErrIncompatibleError), require.Has("MaxLen"))
+			require.Panics(func() { _ = wsb.AddData(strName, appdef.DataKind_string, appdef.NullQName, appdef.MinIncl(1)) },
+				require.Is(appdef.ErrIncompatibleError), require.Has("MinIncl"))
+			require.Panics(func() { _ = wsb.AddData(intName, appdef.DataKind_float64, appdef.NullQName, appdef.MaxLen(100)) },
+				require.Is(appdef.ErrIncompatibleError), require.Has("MaxLen"))
 		})
 	})
 }
 
 func Test_SysDataName(t *testing.T) {
 	type args struct {
-		k DataKind
+		k appdef.DataKind
 	}
 	tests := []struct {
 		name string
 		args args
-		want QName
+		want appdef.QName
 	}{
-		{"null", args{k: DataKind_null}, NullQName},
-		{"int32", args{k: DataKind_int32}, MustParseQName("sys.int32")},
-		{"string", args{k: DataKind_string}, MustParseQName("sys.string")},
-		{"out of bounds", args{k: DataKind_FakeLast}, NullQName},
+		{"null", args{k: appdef.DataKind_null}, appdef.NullQName},
+		{"int32", args{k: appdef.DataKind_int32}, appdef.MustParseQName("sys.int32")},
+		{"string", args{k: appdef.DataKind_string}, appdef.MustParseQName("sys.string")},
+		{"out of bounds", args{k: appdef.DataKind_FakeLast}, appdef.NullQName},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := SysDataName(tt.args.k); !reflect.DeepEqual(got, tt.want) {
+			if got := appdef.SysDataName(tt.args.k); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("sysDataTypeName() = %v, want %v", got, tt.want)
 			}
 		})
@@ -224,28 +227,28 @@ func Test_SysDataName(t *testing.T) {
 func Test_appDef_makeSysDataTypes(t *testing.T) {
 	require := require.New(t)
 
-	app, err := New().Build()
+	app, err := appdef.New().Build()
 	require.NoError(err)
 
 	t.Run("must be ok to get system data types", func(t *testing.T) {
-		sysWS := app.Workspace(SysWorkspaceQName)
-		for k := DataKind_null + 1; k < DataKind_FakeLast; k++ {
-			d := SysData(app.Type, k)
+		sysWS := app.Workspace(appdef.SysWorkspaceQName)
+		for k := appdef.DataKind_null + 1; k < appdef.DataKind_FakeLast; k++ {
+			d := appdef.SysData(app.Type, k)
 			require.NotNil(d)
-			require.Equal(SysDataName(k), d.QName())
-			require.Equal(TypeKind_Data, d.Kind())
+			require.Equal(appdef.SysDataName(k), d.QName())
+			require.Equal(appdef.TypeKind_Data, d.Kind())
 			require.Equal(d.Workspace(), sysWS)
 			require.True(d.IsSystem())
 			require.Equal(k, d.DataKind())
 			require.Nil(d.Ancestor())
-			require.Empty(d.Constraints(false))
+			require.Empty(maps.Collect(d.Constraints(false)))
 		}
 	})
 }
 
 func TestNewConstraint(t *testing.T) {
 	type args struct {
-		kind  ConstraintKind
+		kind  appdef.ConstraintKind
 		value any
 		c     []string
 	}
@@ -255,69 +258,69 @@ func TestNewConstraint(t *testing.T) {
 		want args
 	}{
 		{"Min length",
-			args{ConstraintKind_MinLen, uint16(1), []string{"test min length"}},
-			args{ConstraintKind_MinLen, 1, []string{"test min length"}},
+			args{appdef.ConstraintKind_MinLen, uint16(1), []string{"test min length"}},
+			args{appdef.ConstraintKind_MinLen, 1, []string{"test min length"}},
 		},
 		{"Max length",
-			args{ConstraintKind_MaxLen, uint16(100), []string{"test max length"}},
-			args{ConstraintKind_MaxLen, 100, []string{"test max length"}},
+			args{appdef.ConstraintKind_MaxLen, uint16(100), []string{"test max length"}},
+			args{appdef.ConstraintKind_MaxLen, 100, []string{"test max length"}},
 		},
 		{"Pattern",
-			args{ConstraintKind_Pattern, "^/w+$", []string{"test pattern"}},
-			args{ConstraintKind_Pattern, regexp.MustCompile("^/w+$"), []string{"test pattern"}},
+			args{appdef.ConstraintKind_Pattern, "^/w+$", []string{"test pattern"}},
+			args{appdef.ConstraintKind_Pattern, regexp.MustCompile("^/w+$"), []string{"test pattern"}},
 		},
 		{"Min inclusive",
-			args{ConstraintKind_MinIncl, float64(1), []string{"test min inclusive"}},
-			args{ConstraintKind_MinIncl, 1, []string{"test min inclusive"}},
+			args{appdef.ConstraintKind_MinIncl, float64(1), []string{"test min inclusive"}},
+			args{appdef.ConstraintKind_MinIncl, 1, []string{"test min inclusive"}},
 		},
 		{"Min exclusive",
-			args{ConstraintKind_MinExcl, float64(1), []string{"test min exclusive"}},
-			args{ConstraintKind_MinExcl, 1, []string{"test min exclusive"}},
+			args{appdef.ConstraintKind_MinExcl, float64(1), []string{"test min exclusive"}},
+			args{appdef.ConstraintKind_MinExcl, 1, []string{"test min exclusive"}},
 		},
 		{"Max inclusive",
-			args{ConstraintKind_MaxIncl, float64(1), []string{"test max inclusive"}},
-			args{ConstraintKind_MaxIncl, 1, []string{"test max inclusive"}},
+			args{appdef.ConstraintKind_MaxIncl, float64(1), []string{"test max inclusive"}},
+			args{appdef.ConstraintKind_MaxIncl, 1, []string{"test max inclusive"}},
 		},
 		{"Max exclusive",
-			args{ConstraintKind_MaxExcl, float64(1), []string{"test max exclusive"}},
-			args{ConstraintKind_MaxExcl, 1, []string{"test max exclusive"}},
+			args{appdef.ConstraintKind_MaxExcl, float64(1), []string{"test max exclusive"}},
+			args{appdef.ConstraintKind_MaxExcl, 1, []string{"test max exclusive"}},
 		},
 		{"string enumeration",
-			args{ConstraintKind_Enum, []string{"c", "b", "a", "b"}, []string{"test string enum"}},
-			args{ConstraintKind_Enum, []string{"a", "b", "c"}, []string{"test string enum"}},
+			args{appdef.ConstraintKind_Enum, []string{"c", "b", "a", "b"}, []string{"test string enum"}},
+			args{appdef.ConstraintKind_Enum, []string{"a", "b", "c"}, []string{"test string enum"}},
 		},
 		{"int32 enumeration",
-			args{ConstraintKind_Enum, []int32{3, 2, 1, 3}, []string{"test int32 enum"}},
-			args{ConstraintKind_Enum, []int32{1, 2, 3}, []string{"test int32 enum"}},
+			args{appdef.ConstraintKind_Enum, []int32{3, 2, 1, 3}, []string{"test int32 enum"}},
+			args{appdef.ConstraintKind_Enum, []int32{1, 2, 3}, []string{"test int32 enum"}},
 		},
 		{"int64 enumeration",
-			args{ConstraintKind_Enum, []int64{3, 2, 1, 2}, []string{}},
-			args{ConstraintKind_Enum, []int64{1, 2, 3}, []string{}},
+			args{appdef.ConstraintKind_Enum, []int64{3, 2, 1, 2}, nil},
+			args{appdef.ConstraintKind_Enum, []int64{1, 2, 3}, nil},
 		},
 		{"float32 enumeration",
-			args{ConstraintKind_Enum, []float32{1, 3, 2, 1}, []string{"test", "float32", "enum"}},
-			args{ConstraintKind_Enum, []float32{1, 2, 3}, []string{"test", "float32", "enum"}},
+			args{appdef.ConstraintKind_Enum, []float32{1, 3, 2, 1}, []string{"test", "float32", "enum"}},
+			args{appdef.ConstraintKind_Enum, []float32{1, 2, 3}, []string{"test", "float32", "enum"}},
 		},
 		{"float64 enumeration",
-			args{ConstraintKind_Enum, []float64{3, 1, 2, 2, 3}, []string{"test float64 enum"}},
-			args{ConstraintKind_Enum, []float64{1, 2, 3}, []string{"test float64 enum"}},
+			args{appdef.ConstraintKind_Enum, []float64{3, 1, 2, 2, 3}, []string{"test float64 enum"}},
+			args{appdef.ConstraintKind_Enum, []float64{1, 2, 3}, []string{"test float64 enum"}},
 		},
 	}
 	require := require.New(t)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := NewConstraint(tt.args.kind, tt.args.value, tt.args.c...)
+			c := appdef.NewConstraint(tt.args.kind, tt.args.value, tt.args.c...)
 			require.NotNil(c)
 			require.Equal(tt.want.kind, c.Kind())
 			require.EqualValues(tt.want.value, c.Value())
-			require.EqualValues(tt.want.c, c.CommentLines())
+			require.EqualValues(tt.want.c, slices.Collect(c.CommentLines()))
 		})
 	}
 }
 
 func TestNewConstraintPanics(t *testing.T) {
 	type args struct {
-		kind  ConstraintKind
+		kind  appdef.ConstraintKind
 		value any
 	}
 	tests := []struct {
@@ -326,55 +329,55 @@ func TestNewConstraintPanics(t *testing.T) {
 		e    error
 	}{
 		{"MaxLen(0)",
-			args{ConstraintKind_MaxLen, uint16(0)}, ErrOutOfBoundsError,
+			args{appdef.ConstraintKind_MaxLen, uint16(0)}, appdef.ErrOutOfBoundsError,
 		},
 		{"Pattern(`^[error$`)",
-			args{ConstraintKind_Pattern, `^[error$`}, nil,
+			args{appdef.ConstraintKind_Pattern, `^[error$`}, nil,
 		},
 		{"MinIncl(+∞)",
-			args{ConstraintKind_MinIncl, math.NaN()}, ErrInvalidError,
+			args{appdef.ConstraintKind_MinIncl, math.NaN()}, appdef.ErrInvalidError,
 		},
 		{"MinIncl(+∞)",
-			args{ConstraintKind_MinIncl, math.Inf(+1)}, ErrOutOfBoundsError,
+			args{appdef.ConstraintKind_MinIncl, math.Inf(+1)}, appdef.ErrOutOfBoundsError,
 		},
 		{"MinExcl(NaN)",
-			args{ConstraintKind_MinExcl, math.NaN()}, ErrInvalidError,
+			args{appdef.ConstraintKind_MinExcl, math.NaN()}, appdef.ErrInvalidError,
 		},
 		{"MinExcl(+∞)",
-			args{ConstraintKind_MinExcl, math.Inf(+1)}, ErrOutOfBoundsError,
+			args{appdef.ConstraintKind_MinExcl, math.Inf(+1)}, appdef.ErrOutOfBoundsError,
 		},
 		{"MaxIncl(NaN)",
-			args{ConstraintKind_MaxIncl, math.NaN()}, ErrInvalidError,
+			args{appdef.ConstraintKind_MaxIncl, math.NaN()}, appdef.ErrInvalidError,
 		},
 		{"MaxIncl(-∞)",
-			args{ConstraintKind_MaxIncl, math.Inf(-1)}, ErrOutOfBoundsError,
+			args{appdef.ConstraintKind_MaxIncl, math.Inf(-1)}, appdef.ErrOutOfBoundsError,
 		},
 		{"MaxExcl(NaN)",
-			args{ConstraintKind_MaxExcl, math.NaN()}, ErrInvalidError,
+			args{appdef.ConstraintKind_MaxExcl, math.NaN()}, appdef.ErrInvalidError,
 		},
 		{"MaxExcl(-∞)",
-			args{ConstraintKind_MaxExcl, math.Inf(-1)}, ErrOutOfBoundsError,
+			args{appdef.ConstraintKind_MaxExcl, math.Inf(-1)}, appdef.ErrOutOfBoundsError,
 		},
 		{"Enum([]string{})",
-			args{ConstraintKind_Enum, []string{}}, ErrMissedError,
+			args{appdef.ConstraintKind_Enum, []string{}}, appdef.ErrMissedError,
 		},
 		{"Enum([]bool)",
-			args{ConstraintKind_Enum, []bool{true, false}}, ErrUnsupportedError,
+			args{appdef.ConstraintKind_Enum, []bool{true, false}}, appdef.ErrUnsupportedError,
 		},
 		{"Enum([][]byte)",
-			args{ConstraintKind_Enum, [][]byte{{1, 2, 3}, {4, 5, 6}}}, ErrUnsupportedError,
+			args{appdef.ConstraintKind_Enum, [][]byte{{1, 2, 3}, {4, 5, 6}}}, appdef.ErrUnsupportedError,
 		},
 		{"???(0)",
-			args{ConstraintKind_count, 0}, ErrUnsupportedError,
+			args{appdef.ConstraintKind_count, 0}, appdef.ErrUnsupportedError,
 		},
 	}
 	require := require.New(t)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.e == nil {
-				require.Panics(func() { _ = NewConstraint(tt.args.kind, tt.args.value) })
+				require.Panics(func() { _ = appdef.NewConstraint(tt.args.kind, tt.args.value) })
 			} else {
-				require.Panics(func() { _ = NewConstraint(tt.args.kind, tt.args.value) },
+				require.Panics(func() { _ = appdef.NewConstraint(tt.args.kind, tt.args.value) },
 					require.Is(tt.e))
 			}
 		})
@@ -384,21 +387,21 @@ func TestNewConstraintPanics(t *testing.T) {
 func Test_dataConstraint_String(t *testing.T) {
 	tests := []struct {
 		name  string
-		c     IConstraint
+		c     appdef.IConstraint
 		wantS string
 	}{
-		{"MinLen", MinLen(1), "MinLen: 1"},
-		{"MaxLen", MaxLen(100), "MaxLen: 100"},
-		{"Pattern", Pattern(`^\d+$`), "Pattern: `^\\d+$`"},
-		{"MinIncl", MinIncl(1), "MinIncl: 1"},
-		{"MinExcl", MinExcl(0), "MinExcl: 0"},
-		{"MinExcl(-∞)", MinExcl(math.Inf(-1)), "MinExcl: -Inf"},
-		{"MaxIncl", MaxIncl(100), "MaxIncl: 100"},
-		{"MaxExcl", MaxExcl(100), "MaxExcl: 100"},
-		{"MaxExcl(+∞)", MaxExcl(math.Inf(+1)), "MaxExcl: +Inf"},
-		{"Enum(string)", Enum("c", "d", "a", "a", "b", "c"), "Enum: [a b c d]"},
-		{"Enum(float64)", Enum(float64(1), 2, 3, 4, math.Round(100*math.Pi)/100, math.Inf(-1)), "Enum: [-Inf 1 2 3 3.14 4]"},
-		{"Enum(long case)", Enum("b", "d", "a", strings.Repeat("c", 100)), "Enum: [a b cccccccccccccccccccccccccccccccccccccccccccccccccccc…"},
+		{"MinLen", appdef.MinLen(1), "MinLen: 1"},
+		{"MaxLen", appdef.MaxLen(100), "MaxLen: 100"},
+		{"Pattern", appdef.Pattern(`^\d+$`), "Pattern: `^\\d+$`"},
+		{"MinIncl", appdef.MinIncl(1), "MinIncl: 1"},
+		{"MinExcl", appdef.MinExcl(0), "MinExcl: 0"},
+		{"MinExcl(-∞)", appdef.MinExcl(math.Inf(-1)), "MinExcl: -Inf"},
+		{"MaxIncl", appdef.MaxIncl(100), "MaxIncl: 100"},
+		{"MaxExcl", appdef.MaxExcl(100), "MaxExcl: 100"},
+		{"MaxExcl(+∞)", appdef.MaxExcl(math.Inf(+1)), "MaxExcl: +Inf"},
+		{"Enum(string)", appdef.Enum("c", "d", "a", "a", "b", "c"), "Enum: [a b c d]"},
+		{"Enum(float64)", appdef.Enum(float64(1), 2, 3, 4, math.Round(100*math.Pi)/100, math.Inf(-1)), "Enum: [-Inf 1 2 3 3.14 4]"},
+		{"Enum(long case)", appdef.Enum("b", "d", "a", strings.Repeat("c", 100)), "Enum: [a b cccccccccccccccccccccccccccccccccccccccccccccccccccc…"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -412,23 +415,23 @@ func Test_dataConstraint_String(t *testing.T) {
 func TestConstraintKind_MarshalText(t *testing.T) {
 	tests := []struct {
 		name string
-		k    ConstraintKind
+		k    appdef.ConstraintKind
 		want string
 	}{
 		{
 			name: `0 —> "ConstraintKind_null"`,
-			k:    ConstraintKind_null,
+			k:    appdef.ConstraintKind_null,
 			want: `ConstraintKind_null`,
 		},
 		{
 			name: `1 —> "ConstraintKind_MinLen"`,
-			k:    ConstraintKind_MinLen,
+			k:    appdef.ConstraintKind_MinLen,
 			want: `ConstraintKind_MinLen`,
 		},
 		{
 			name: `ConstraintKind_count —> 4`,
-			k:    ConstraintKind_count,
-			want: utils.UintToString(ConstraintKind_count),
+			k:    appdef.ConstraintKind_count,
+			want: utils.UintToString(appdef.ConstraintKind_count),
 		},
 	}
 	for _, tt := range tests {
@@ -445,7 +448,7 @@ func TestConstraintKind_MarshalText(t *testing.T) {
 	}
 
 	t.Run("100% cover", func(t *testing.T) {
-		const tested = ConstraintKind_count + 1
+		const tested = appdef.ConstraintKind_count + 1
 		want := "ConstraintKind(" + utils.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
@@ -457,11 +460,11 @@ func TestConstraintKind_MarshalText(t *testing.T) {
 func TestConstraintKind_TrimString(t *testing.T) {
 	tests := []struct {
 		name string
-		k    ConstraintKind
+		k    appdef.ConstraintKind
 		want string
 	}{
-		{name: "basic", k: ConstraintKind_MinLen, want: "MinLen"},
-		{name: "out of range", k: ConstraintKind_count + 1, want: (ConstraintKind_count + 1).String()},
+		{name: "basic", k: appdef.ConstraintKind_MinLen, want: "MinLen"},
+		{name: "out of range", k: appdef.ConstraintKind_count + 1, want: (appdef.ConstraintKind_count + 1).String()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -474,8 +477,8 @@ func TestConstraintKind_TrimString(t *testing.T) {
 
 func Test_data_AddConstraint(t *testing.T) {
 	type args struct {
-		da DataKind
-		ck ConstraintKind
+		da appdef.DataKind
+		ck appdef.ConstraintKind
 		cv any
 	}
 	tests := []struct {
@@ -484,49 +487,49 @@ func Test_data_AddConstraint(t *testing.T) {
 		wantPanic bool
 		e         error
 	}{
-		//- MaxLen
+		//- appdef.MaxLen
 		{"string: max length constraint should be ok",
-			args{DataKind_string, ConstraintKind_MaxLen, uint16(100)}, false, nil},
+			args{appdef.DataKind_string, appdef.ConstraintKind_MaxLen, uint16(100)}, false, nil},
 		{"bytes: max length constraint should be ok",
-			args{DataKind_bytes, ConstraintKind_MaxLen, uint16(1024)}, false, nil},
+			args{appdef.DataKind_bytes, appdef.ConstraintKind_MaxLen, uint16(1024)}, false, nil},
 		//- Enum
 		{"int32: enum constraint should be ok",
-			args{DataKind_int32, ConstraintKind_Enum, []int32{1, 2, 3}}, false, nil},
+			args{appdef.DataKind_int32, appdef.ConstraintKind_Enum, []int32{1, 2, 3}}, false, nil},
 		{"int32: enum constraint should fail if incompatible enum type",
-			args{DataKind_int32, ConstraintKind_Enum, []int64{1, 2, 3}}, true, ErrIncompatibleError},
+			args{appdef.DataKind_int32, appdef.ConstraintKind_Enum, []int64{1, 2, 3}}, true, appdef.ErrIncompatibleError},
 		{"int64: enum constraint should be ok",
-			args{DataKind_int64, ConstraintKind_Enum, []int64{1, 2, 3}}, false, nil},
-		{"int64: enum constraint should fail if incompatible ErrIncompatibleError type",
-			args{DataKind_int64, ConstraintKind_Enum, []string{"1", "2", "3"}}, true, ErrIncompatibleError},
+			args{appdef.DataKind_int64, appdef.ConstraintKind_Enum, []int64{1, 2, 3}}, false, nil},
+		{"int64: enum constraint should fail if incompatible appdef.ErrIncompatibleError type",
+			args{appdef.DataKind_int64, appdef.ConstraintKind_Enum, []string{"1", "2", "3"}}, true, appdef.ErrIncompatibleError},
 		{"float32: enum constraint should be ok",
-			args{DataKind_float32, ConstraintKind_Enum, []float32{1.0, 2.0, 3.0}}, false, nil},
+			args{appdef.DataKind_float32, appdef.ConstraintKind_Enum, []float32{1.0, 2.0, 3.0}}, false, nil},
 		{"float32: enum constraint should fail if incompatible enum type",
-			args{DataKind_float32, ConstraintKind_Enum, []float64{1.0, 2.0, 3.0}}, true, ErrIncompatibleError},
+			args{appdef.DataKind_float32, appdef.ConstraintKind_Enum, []float64{1.0, 2.0, 3.0}}, true, appdef.ErrIncompatibleError},
 		{"float64: enum constraint should be ok",
-			args{DataKind_float64, ConstraintKind_Enum, []float64{1.0, 2.0, 3.0}}, false, nil},
+			args{appdef.DataKind_float64, appdef.ConstraintKind_Enum, []float64{1.0, 2.0, 3.0}}, false, nil},
 		{"float64: enum constraint should fail if incompatible enum type",
-			args{DataKind_float64, ConstraintKind_Enum, []int32{1, 2, 3}}, true, ErrIncompatibleError},
+			args{appdef.DataKind_float64, appdef.ConstraintKind_Enum, []int32{1, 2, 3}}, true, appdef.ErrIncompatibleError},
 		{"string: enum constraint should be ok",
-			args{DataKind_string, ConstraintKind_Enum, []string{"a", "b", "c"}}, false, nil},
+			args{appdef.DataKind_string, appdef.ConstraintKind_Enum, []string{"a", "b", "c"}}, false, nil},
 		{"string: enum constraint should fail if incompatible enum type",
-			args{DataKind_float64, ConstraintKind_Enum, []int32{1, 2, 3}}, true, ErrIncompatibleError},
+			args{appdef.DataKind_float64, appdef.ConstraintKind_Enum, []int32{1, 2, 3}}, true, appdef.ErrIncompatibleError},
 	}
 	require := require.New(t)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
-			wsb := adb.AddWorkspace(NewQName("test", "workspace"))
-			d := wsb.AddData(NewQName("test", "test"), tt.args.da, NullQName)
+			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+			d := wsb.AddData(appdef.NewQName("test", "test"), tt.args.da, appdef.NullQName)
 			if tt.wantPanic {
 				if tt.e == nil {
-					require.Panics(func() { d.AddConstraints(NewConstraint(tt.args.ck, tt.args.cv)) })
+					require.Panics(func() { d.AddConstraints(appdef.NewConstraint(tt.args.ck, tt.args.cv)) })
 				} else {
-					require.Panics(func() { d.AddConstraints(NewConstraint(tt.args.ck, tt.args.cv)) },
+					require.Panics(func() { d.AddConstraints(appdef.NewConstraint(tt.args.ck, tt.args.cv)) },
 						require.Is(tt.e))
 				}
 			} else {
-				require.NotPanics(func() { d.AddConstraints(NewConstraint(tt.args.ck, tt.args.cv)) })
+				require.NotPanics(func() { d.AddConstraints(appdef.NewConstraint(tt.args.ck, tt.args.cv)) })
 			}
 		})
 	}
@@ -534,7 +537,7 @@ func Test_data_AddConstraint(t *testing.T) {
 
 func TestDataKindType_IsFixed(t *testing.T) {
 	type args struct {
-		kind DataKind
+		kind appdef.DataKind
 	}
 	tests := []struct {
 		name string
@@ -542,10 +545,10 @@ func TestDataKindType_IsFixed(t *testing.T) {
 		want bool
 	}{
 		{name: "int32 must be fixed",
-			args: args{kind: DataKind_int32},
+			args: args{kind: appdef.DataKind_int32},
 			want: true},
 		{name: "string must be variable",
-			args: args{kind: DataKind_string},
+			args: args{kind: appdef.DataKind_string},
 			want: false},
 	}
 	for _, tt := range tests {
@@ -560,23 +563,23 @@ func TestDataKindType_IsFixed(t *testing.T) {
 func TestDataKindType_MarshalText(t *testing.T) {
 	tests := []struct {
 		name string
-		k    DataKind
+		k    appdef.DataKind
 		want string
 	}{
 		{
 			name: `0 —> "DataKind_null"`,
-			k:    DataKind_null,
+			k:    appdef.DataKind_null,
 			want: `DataKind_null`,
 		},
 		{
 			name: `1 —> "DataKind_int32"`,
-			k:    DataKind_int32,
+			k:    appdef.DataKind_int32,
 			want: `DataKind_int32`,
 		},
 		{
 			name: `DataKind_FakeLast —> 12`,
-			k:    DataKind_FakeLast,
-			want: utils.UintToString(DataKind_FakeLast),
+			k:    appdef.DataKind_FakeLast,
+			want: utils.UintToString(appdef.DataKind_FakeLast),
 		},
 	}
 	for _, tt := range tests {
@@ -593,7 +596,7 @@ func TestDataKindType_MarshalText(t *testing.T) {
 	}
 
 	t.Run("100% cover", func(t *testing.T) {
-		const tested = DataKind_FakeLast + 1
+		const tested = appdef.DataKind_FakeLast + 1
 		want := "DataKind(" + utils.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
@@ -605,11 +608,11 @@ func TestDataKindType_MarshalText(t *testing.T) {
 func TestDataKind_TrimString(t *testing.T) {
 	tests := []struct {
 		name string
-		k    DataKind
+		k    appdef.DataKind
 		want string
 	}{
-		{name: "basic", k: DataKind_int32, want: "int32"},
-		{name: "out of range", k: DataKind_FakeLast + 1, want: (DataKind_FakeLast + 1).String()},
+		{name: "basic", k: appdef.DataKind_int32, want: "int32"},
+		{name: "out of range", k: appdef.DataKind_FakeLast + 1, want: (appdef.DataKind_FakeLast + 1).String()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -622,67 +625,67 @@ func TestDataKind_TrimString(t *testing.T) {
 
 func TestDataKind_IsSupportedConstraint(t *testing.T) {
 	type args struct {
-		c ConstraintKind
+		c appdef.ConstraintKind
 	}
 	tests := []struct {
 		name string
-		k    DataKind
+		k    appdef.DataKind
 		args args
 		want bool
 	}{
-		{"string: MinLen", DataKind_string, args{ConstraintKind_MinLen}, true},
-		{"string: MaxLen", DataKind_string, args{ConstraintKind_MaxLen}, true},
-		{"string: Pattern", DataKind_string, args{ConstraintKind_Pattern}, true},
-		{"string: MinIncl", DataKind_string, args{ConstraintKind_MinIncl}, false},
-		{"string: MinExcl", DataKind_string, args{ConstraintKind_MinExcl}, false},
-		{"string: MaxIncl", DataKind_string, args{ConstraintKind_MaxIncl}, false},
-		{"string: MaxExcl", DataKind_string, args{ConstraintKind_MaxExcl}, false},
-		{"string: Enum", DataKind_string, args{ConstraintKind_Enum}, true},
+		{"string: MinLen", appdef.DataKind_string, args{appdef.ConstraintKind_MinLen}, true},
+		{"string: MaxLen", appdef.DataKind_string, args{appdef.ConstraintKind_MaxLen}, true},
+		{"string: Pattern", appdef.DataKind_string, args{appdef.ConstraintKind_Pattern}, true},
+		{"string: MinIncl", appdef.DataKind_string, args{appdef.ConstraintKind_MinIncl}, false},
+		{"string: MinExcl", appdef.DataKind_string, args{appdef.ConstraintKind_MinExcl}, false},
+		{"string: MaxIncl", appdef.DataKind_string, args{appdef.ConstraintKind_MaxIncl}, false},
+		{"string: MaxExcl", appdef.DataKind_string, args{appdef.ConstraintKind_MaxExcl}, false},
+		{"string: Enum", appdef.DataKind_string, args{appdef.ConstraintKind_Enum}, true},
 		//-
-		{"bytes: MinLen", DataKind_bytes, args{ConstraintKind_MinLen}, true},
-		{"bytes: MaxLen", DataKind_bytes, args{ConstraintKind_MaxLen}, true},
-		{"bytes: Pattern", DataKind_bytes, args{ConstraintKind_Pattern}, true},
-		{"bytes: MinIncl", DataKind_bytes, args{ConstraintKind_MinIncl}, false},
-		{"bytes: MinExcl", DataKind_bytes, args{ConstraintKind_MinExcl}, false},
-		{"bytes: MaxIncl", DataKind_bytes, args{ConstraintKind_MaxIncl}, false},
-		{"bytes: MaxExcl", DataKind_bytes, args{ConstraintKind_MaxExcl}, false},
-		{"bytes: Enum", DataKind_bytes, args{ConstraintKind_Enum}, false},
+		{"bytes: MinLen", appdef.DataKind_bytes, args{appdef.ConstraintKind_MinLen}, true},
+		{"bytes: MaxLen", appdef.DataKind_bytes, args{appdef.ConstraintKind_MaxLen}, true},
+		{"bytes: Pattern", appdef.DataKind_bytes, args{appdef.ConstraintKind_Pattern}, true},
+		{"bytes: MinIncl", appdef.DataKind_bytes, args{appdef.ConstraintKind_MinIncl}, false},
+		{"bytes: MinExcl", appdef.DataKind_bytes, args{appdef.ConstraintKind_MinExcl}, false},
+		{"bytes: MaxIncl", appdef.DataKind_bytes, args{appdef.ConstraintKind_MaxIncl}, false},
+		{"bytes: MaxExcl", appdef.DataKind_bytes, args{appdef.ConstraintKind_MaxExcl}, false},
+		{"bytes: Enum", appdef.DataKind_bytes, args{appdef.ConstraintKind_Enum}, false},
 		//-
-		{"int32: MinLen", DataKind_int32, args{ConstraintKind_MinLen}, false},
-		{"int32: MaxLen", DataKind_int32, args{ConstraintKind_MaxLen}, false},
-		{"int32: Pattern", DataKind_int32, args{ConstraintKind_Pattern}, false},
-		{"int32: MinIncl", DataKind_int32, args{ConstraintKind_MinIncl}, true},
-		{"int32: MinExcl", DataKind_int32, args{ConstraintKind_MinExcl}, true},
-		{"int32: MaxIncl", DataKind_int32, args{ConstraintKind_MaxIncl}, true},
-		{"int32: MaxExcl", DataKind_int32, args{ConstraintKind_MaxExcl}, true},
-		{"int32: Enum", DataKind_int32, args{ConstraintKind_Enum}, true},
+		{"int32: MinLen", appdef.DataKind_int32, args{appdef.ConstraintKind_MinLen}, false},
+		{"int32: MaxLen", appdef.DataKind_int32, args{appdef.ConstraintKind_MaxLen}, false},
+		{"int32: Pattern", appdef.DataKind_int32, args{appdef.ConstraintKind_Pattern}, false},
+		{"int32: MinIncl", appdef.DataKind_int32, args{appdef.ConstraintKind_MinIncl}, true},
+		{"int32: MinExcl", appdef.DataKind_int32, args{appdef.ConstraintKind_MinExcl}, true},
+		{"int32: MaxIncl", appdef.DataKind_int32, args{appdef.ConstraintKind_MaxIncl}, true},
+		{"int32: MaxExcl", appdef.DataKind_int32, args{appdef.ConstraintKind_MaxExcl}, true},
+		{"int32: Enum", appdef.DataKind_int32, args{appdef.ConstraintKind_Enum}, true},
 		//-
-		{"int64: MinLen", DataKind_int64, args{ConstraintKind_MinLen}, false},
-		{"int64: MaxLen", DataKind_int64, args{ConstraintKind_MaxLen}, false},
-		{"int64: Pattern", DataKind_int64, args{ConstraintKind_Pattern}, false},
-		{"int64: MinIncl", DataKind_int64, args{ConstraintKind_MinIncl}, true},
-		{"int64: MinExcl", DataKind_int64, args{ConstraintKind_MinExcl}, true},
-		{"int64: MaxIncl", DataKind_int64, args{ConstraintKind_MaxIncl}, true},
-		{"int64: MaxExcl", DataKind_int64, args{ConstraintKind_MaxExcl}, true},
-		{"int64: Enum", DataKind_int64, args{ConstraintKind_Enum}, true},
+		{"int64: MinLen", appdef.DataKind_int64, args{appdef.ConstraintKind_MinLen}, false},
+		{"int64: MaxLen", appdef.DataKind_int64, args{appdef.ConstraintKind_MaxLen}, false},
+		{"int64: Pattern", appdef.DataKind_int64, args{appdef.ConstraintKind_Pattern}, false},
+		{"int64: MinIncl", appdef.DataKind_int64, args{appdef.ConstraintKind_MinIncl}, true},
+		{"int64: MinExcl", appdef.DataKind_int64, args{appdef.ConstraintKind_MinExcl}, true},
+		{"int64: MaxIncl", appdef.DataKind_int64, args{appdef.ConstraintKind_MaxIncl}, true},
+		{"int64: MaxExcl", appdef.DataKind_int64, args{appdef.ConstraintKind_MaxExcl}, true},
+		{"int64: Enum", appdef.DataKind_int64, args{appdef.ConstraintKind_Enum}, true},
 		//-
-		{"float32: MinLen", DataKind_float32, args{ConstraintKind_MinLen}, false},
-		{"float32: MaxLen", DataKind_float32, args{ConstraintKind_MaxLen}, false},
-		{"float32: Pattern", DataKind_float32, args{ConstraintKind_Pattern}, false},
-		{"float32: MinIncl", DataKind_float32, args{ConstraintKind_MinIncl}, true},
-		{"float32: MinExcl", DataKind_float32, args{ConstraintKind_MinExcl}, true},
-		{"float32: MaxIncl", DataKind_float32, args{ConstraintKind_MaxIncl}, true},
-		{"float32: MaxExcl", DataKind_float32, args{ConstraintKind_MaxExcl}, true},
-		{"float32: Enum", DataKind_float32, args{ConstraintKind_Enum}, true},
+		{"float32: appdef.MinLen", appdef.DataKind_float32, args{appdef.ConstraintKind_MinLen}, false},
+		{"float32: appdef.MaxLen", appdef.DataKind_float32, args{appdef.ConstraintKind_MaxLen}, false},
+		{"float32: appdef.Pattern", appdef.DataKind_float32, args{appdef.ConstraintKind_Pattern}, false},
+		{"float32: appdef.MinIncl", appdef.DataKind_float32, args{appdef.ConstraintKind_MinIncl}, true},
+		{"float32: MinExcl", appdef.DataKind_float32, args{appdef.ConstraintKind_MinExcl}, true},
+		{"float32: MaxIncl", appdef.DataKind_float32, args{appdef.ConstraintKind_MaxIncl}, true},
+		{"float32: MaxExcl", appdef.DataKind_float32, args{appdef.ConstraintKind_MaxExcl}, true},
+		{"float32: Enum", appdef.DataKind_float32, args{appdef.ConstraintKind_Enum}, true},
 		//-
-		{"float64: MinLen", DataKind_float64, args{ConstraintKind_MinLen}, false},
-		{"float64: MaxLen", DataKind_float64, args{ConstraintKind_MaxLen}, false},
-		{"float64: Pattern", DataKind_float64, args{ConstraintKind_Pattern}, false},
-		{"float64: MinIncl", DataKind_float64, args{ConstraintKind_MinIncl}, true},
-		{"float64: MinExcl", DataKind_float64, args{ConstraintKind_MinExcl}, true},
-		{"float64: MaxIncl", DataKind_float64, args{ConstraintKind_MaxIncl}, true},
-		{"float64: MaxExcl", DataKind_float64, args{ConstraintKind_MaxExcl}, true},
-		{"float64: Enum", DataKind_float64, args{ConstraintKind_Enum}, true},
+		{"float64: appdef.MinLen", appdef.DataKind_float64, args{appdef.ConstraintKind_MinLen}, false},
+		{"float64: appdef.MaxLen", appdef.DataKind_float64, args{appdef.ConstraintKind_MaxLen}, false},
+		{"float64: appdef.Pattern", appdef.DataKind_float64, args{appdef.ConstraintKind_Pattern}, false},
+		{"float64: appdef.MinIncl", appdef.DataKind_float64, args{appdef.ConstraintKind_MinIncl}, true},
+		{"float64: MinExcl", appdef.DataKind_float64, args{appdef.ConstraintKind_MinExcl}, true},
+		{"float64: MaxIncl", appdef.DataKind_float64, args{appdef.ConstraintKind_MaxIncl}, true},
+		{"float64: MaxExcl", appdef.DataKind_float64, args{appdef.ConstraintKind_MaxExcl}, true},
+		{"float64: Enum", appdef.DataKind_float64, args{appdef.ConstraintKind_Enum}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

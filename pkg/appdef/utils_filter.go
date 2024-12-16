@@ -11,6 +11,30 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
+// Returns all types that match the filter.
+func FilterMatches(f IFilter, types SeqType) SeqType {
+	return func(yield func(IType) bool) {
+		for t := range types {
+			if f.Match(t) {
+				if !yield(t) {
+					return
+				}
+			}
+		}
+	}
+}
+
+// Returns the first type that matches the filter.
+// Returns nil if no types match the filter.
+func FirstFilterMatch(f IFilter, types SeqType) IType {
+	for t := range types {
+		if f.Match(t) {
+			return t
+		}
+	}
+	return nil
+}
+
 func (k FilterKind) MarshalText() ([]byte, error) {
 	var s string
 	if k < FilterKind_count {

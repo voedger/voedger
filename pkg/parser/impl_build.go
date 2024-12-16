@@ -130,8 +130,12 @@ func (c *buildContext) workspaces() error {
 			wb.bld.SetDescriptor(wb.pkg.NewQName(wb.w.Descriptor.Name))
 		}
 
+		ancestors := make([]appdef.QName, 0)
 		for _, ancWS := range wb.w.inheritedWorkspaces {
-			wb.bld.SetAncestors(ancWS.qName)
+			ancestors = append(ancestors, ancWS.qName)
+		}
+		if len(ancestors) > 0 {
+			wb.bld.SetAncestors(ancestors[0], ancestors[1:]...)
 		}
 
 		for _, usedWS := range wb.w.usedWorkspaces {
@@ -155,7 +159,7 @@ func (c *buildContext) addComments(s IStatement, builder appdef.ICommenter) {
 func (c *buildContext) tags() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(tag *TagStmt, ictx *iterateCtx) {
-			qname := tag.workspace.pkg.NewQName(tag.Name)
+			qname := schema.NewQName(tag.Name)
 			builder := tag.workspace.mustBuilder(c)
 			builder.AddTag(qname)
 			if len(tag.Comments) > 0 {
@@ -199,10 +203,10 @@ func (c *buildContext) grantsAndRevokes() error {
 				if (s.Grant.AllTablesWithTag != nil && s.Grant.AllTablesWithTag.All) ||
 					(s.Grant.Table != nil && s.Grant.Table.All != nil) ||
 					(s.Grant.AllTables != nil && s.Grant.AllTables.All) {
-					wsb.GrantAll(s.Grant.on, s.Grant.toRole, comments...)
+					wsb.GrantAll(s.Grant.filter(), s.Grant.toRole, comments...)
 					continue
 				}
-				wsb.Grant(s.Grant.ops, s.Grant.on, s.Grant.columns, s.Grant.toRole, comments...)
+				wsb.Grant(s.Grant.ops, s.Grant.filter(), s.Grant.columns, s.Grant.toRole, comments...)
 			}
 		}
 	}
@@ -214,10 +218,10 @@ func (c *buildContext) grantsAndRevokes() error {
 				if (s.Revoke.AllTablesWithTag != nil && s.Revoke.AllTablesWithTag.All) ||
 					(s.Revoke.Table != nil && s.Revoke.Table.All != nil) ||
 					(s.Revoke.AllTables != nil && s.Revoke.AllTables.All) {
-					wsb.RevokeAll(s.Revoke.on, s.Revoke.toRole, comments...)
+					wsb.RevokeAll(s.Revoke.filter(), s.Revoke.toRole, comments...)
 					continue
 				}
-				wsb.Revoke(s.Revoke.ops, s.Revoke.on, s.Revoke.columns, s.Revoke.toRole, comments...)
+				wsb.Revoke(s.Revoke.ops, s.Revoke.filter(), s.Revoke.columns, s.Revoke.toRole, comments...)
 			}
 		}
 	}
