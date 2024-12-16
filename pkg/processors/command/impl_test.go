@@ -755,7 +755,8 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 				AppConfigs:         cfgs,
 				StatelessResources: statelessResources,
 				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
-			}, "", imetrics.Provide()))
+			}, "", imetrics.Provide()),
+		iratesce.TestBucketsFactory)
 	require.NoError(err)
 	defer appPartsClean()
 

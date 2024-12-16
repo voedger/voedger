@@ -329,7 +329,9 @@ func deployTestAppEx(
 				AppConfigs:         cfgs,
 				StatelessResources: statelessResources,
 				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
-			}, "", imetrics.Provide()))
+			}, "", imetrics.Provide()),
+		iratesce.TestBucketsFactory,
+	)
 	if err != nil {
 		panic(err)
 	}
