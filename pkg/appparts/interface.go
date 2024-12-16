@@ -116,10 +116,6 @@ type IAppPartition interface {
 	IsLimitExceeded(resource appdef.QName, operation appdef.OperationKind, workspace istructs.WSID, remoteAddr string) (exceed bool, limit appdef.QName)
 }
 
-// dependency cycle: func requires IAppPartitions, provider of IAppPartitions requires already filled AppConfigsType -> impossible to provide AppConfigsType because we're filling it now
-// TODO: eliminate this workaround
-// type BuiltInAppsDeploymentDescriptors map[appdef.appdef.AppQName]AppDeploymentDescriptor
-
 // Async actualizer runner.
 //
 // Used by application partitions to run actualizers

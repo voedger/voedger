@@ -23,7 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/itokensjwt"
 )
 
-func Example_IsLimitExceeded() {
+func ExampleIAppPartition_IsLimitExceeded() {
 	cmd1Name := appdef.NewQName("test", "cmd1")
 	cmd2Name := appdef.NewQName("test", "cmd2")
 	adb, app := func() (appdef.IAppDefBuilder, appdef.IAppDef) {
@@ -42,7 +42,7 @@ func Example_IsLimitExceeded() {
 			appdef.NewQName("test", "wsLimit"),
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
 			appdef.LimitFilterOption_ALL,
-			filter.Types(wsName, appdef.TypeKind_Command),
+			filter.AllFunctions(wsName),
 			wsRateName)
 
 		// Add rate and limit for IP: 3 commands per minute for each IP address for each command
@@ -52,7 +52,7 @@ func Example_IsLimitExceeded() {
 			appdef.NewQName("test", "ipLimit"),
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
 			appdef.LimitFilterOption_EACH,
-			filter.Types(wsName, appdef.TypeKind_Command),
+			filter.AllFunctions(wsName),
 			ipRateName)
 
 		return adb, adb.MustBuild()
