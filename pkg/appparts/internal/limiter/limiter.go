@@ -17,7 +17,7 @@ type Limiter struct {
 	limits  map[appdef.QName][]appdef.ILimit
 }
 
-func newLimiter(app appdef.IAppDef, buckets irates.IBuckets) *Limiter {
+func New(app appdef.IAppDef, buckets irates.IBuckets) *Limiter {
 	l := &Limiter{app, buckets, make(map[appdef.QName][]appdef.ILimit)}
 	l.init()
 	return l
@@ -28,7 +28,7 @@ func newLimiter(app appdef.IAppDef, buckets irates.IBuckets) *Limiter {
 // If resource usage is exceeded then returns name of first exceeded limit.
 func (l *Limiter) Exceeded(resource appdef.QName, operation appdef.OperationKind, workspace istructs.WSID, remoteAddr string) (bool, appdef.QName) {
 	if limits, ok := l.limits[resource]; ok {
-		keys := []irates.BucketKey{}
+		keys := make([]irates.BucketKey, 0, len(limits))
 		for _, limit := range limits {
 			if limit.Op(operation) {
 				key := irates.BucketKey{
@@ -46,7 +46,6 @@ func (l *Limiter) Exceeded(resource appdef.QName, operation appdef.OperationKind
 				keys = append(keys, key)
 			}
 		}
-
 		if len(keys) > 0 {
 			ok, excLimit := l.buckets.TakeTokens(keys, 1)
 			return !ok, excLimit
@@ -67,7 +66,7 @@ func (l *Limiter) init() {
 			})
 	}
 
-	// initialize objects cache
+	// initialize limits cache
 	for t := range l.app.Types() {
 		if appdef.TypeKind_Limitables.Contains(t.Kind()) {
 			for limit := range appdef.Limits(l.app.Types()) {
