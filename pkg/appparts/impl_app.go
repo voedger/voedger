@@ -18,7 +18,6 @@ import (
 	"github.com/voedger/voedger/pkg/appparts/internal/pool"
 	"github.com/voedger/voedger/pkg/appparts/internal/schedulers"
 	"github.com/voedger/voedger/pkg/iextengine"
-	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
@@ -191,7 +190,6 @@ type borrowedPartition struct {
 	appDef     appdef.IAppDef
 	appStructs istructs.IAppStructs
 	pool       *pool.Pool[engines] // pool of borrowed engines
-	buckets    irates.IBuckets
 	kind       ProcessorKind
 	engines    engines // borrowed engines
 }
@@ -271,7 +269,6 @@ func (bp *borrowedPartition) Release() {
 			pool.Release(engine)
 		}
 	}
-	bp.buckets = nil
 	borrowedPartitionsPool.Put(bp)
 }
 

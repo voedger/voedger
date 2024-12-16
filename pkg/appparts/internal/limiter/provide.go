@@ -11,5 +11,5 @@ import (
 )
 
 func New(app appdef.IAppDef, buckets irates.IBuckets) *Limiter {
-	return &Limiter{app: app, buckets: buckets}
+	return newLimiter(app, buckets)
 }

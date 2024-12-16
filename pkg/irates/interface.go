@@ -29,7 +29,7 @@ type IBuckets interface {
 	// returns ErrorRateLimitNotFound
 	GetDefaultBucketsState(RateLimitName string) (state BucketState, err error)
 
-	// Reset all buckets withi given RateLimitName to given state
+	// Reset all buckets with given RateLimitName to given state
 	ResetRateBuckets(RateLimitName string, bucketState BucketState)
 
 	// returns ErrorRateLimitNotFound
@@ -42,10 +42,10 @@ type IBuckets interface {
 type BucketKey struct {
 	RateLimitName string
 	RemoteAddr    string
-	App           appdef.AppQName
+	App           appdef.AppQName //?
 	Workspace     istructs.WSID
 	QName         appdef.QName
-	ID            istructs.RecordID
+	ID            istructs.RecordID //?
 }
 
 type BucketState struct {
