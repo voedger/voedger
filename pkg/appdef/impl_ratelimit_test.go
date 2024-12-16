@@ -59,7 +59,12 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 					require.Equal(rateName, r.QName())
 					require.EqualValues(10, r.Count())
 					require.Equal(time.Hour, r.Period())
+
 					require.Equal([]appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, slices.Collect(r.Scopes()))
+					require.True(r.Scope(appdef.RateScope_AppPartition))
+					require.True(r.Scope(appdef.RateScope_IP))
+					require.False(r.Scope(appdef.RateScope_Workspace))
+
 					require.Equal("10 times per hour per partition per IP", r.Comment())
 				default:
 					require.FailNow("unexpected rate", "rate: %v", r)

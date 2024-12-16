@@ -37,6 +37,10 @@ type IRate interface {
 	Count() RateCount
 	Period() RatePeriod
 
+	// Returns is this rate has specified scope
+	Scope(RateScope) bool
+
+	// Returns rate scopes.
 	Scopes() iter.Seq[RateScope]
 }
 
