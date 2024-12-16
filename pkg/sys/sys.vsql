@@ -468,7 +468,6 @@ ABSTRACT WORKSPACE Workspace (
 	GRANT EXECUTE ON ALL QUERIES WITH TAG AllowedToEveryoneTag TO Everyone;
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG AllowedToEveryoneTag TO Everyone;
 
-	GRANT EXECUTE ON ALL QUERIES WITH TAG AllowedToAuthenticatedTag TO AuthenticatedUser;
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG AllowedToAuthenticatedTag TO AuthenticatedUser;
 );
 
