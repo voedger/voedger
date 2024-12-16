@@ -38,15 +38,6 @@ var defaultACL = ACL{
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
 				qNameCmdLinkDeviceToRestaurant,
-				qNameQryIssuePrincipalToken,
-				qNameCmdCreateLogin,
-				qNameQryEcho,
-				qNameQryGRCount,
-				qNameCmdResetPasswordByEmail,
-				qNameQryInitiateResetPasswordByEmail,
-				qNameQryIssueVerifiedValueTokenForResetPassword,
-				qNameCmdChangePassword,
-				qNameQryModules,
 				// https://dev.untill.com/projects/#!688808
 				qNameQryGetDigitalReceipt,
 				// https://dev.untill.com/projects/#!688808
@@ -82,22 +73,20 @@ var defaultACL = ACL{
 			qNamesPattern: []appdef.QName{
 				qNameCmdStoreSubscriptionProfile, qNameCmdUpdateSubscription,
 
-				qNameCDocSubscriptionProfile, qNameCDocUnTillOrders, qNameCDocUnTillPBill,
-				qNameTestDeniedCmd, qNameTestDeniedCDoc, qNameCDocLogin, qNameCDocChildWorkspace, qNameTestDeniedQry,
-
-				qNameCDocWorkspaceKindUser,
-				qNameCDocWorkspaceKindDevice,
-				qNameCDocWorkspaceKindRestaurant,
-				qNameCDocWorkspaceKindAppWorkspace,
-				qNameCmdSendEmailVerificationCode,
-
-				qNameQryDescribePackage,
-				qNameQryDescribePackageNames,
-
-				qNameCmdVSqlUpdate,
+				qNameCDocUnTillOrders, qNameCDocUnTillPBill,
+				qNameTestDeniedCmd, qNameTestDeniedCDoc, qNameCDocLogin, qNameCDocChildWorkspace, qNameTestDeniedQry, qNameTestDeniedCmd_it, qNameTestDeniedQry_it,
 			},
 		},
 		policy: ACPolicy_Deny,
+	},
+	{
+		desc: "grant select only on few documents to WorkspaceOwner",
+		pattern: PatternType{
+			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
+			qNamesPattern:     []appdef.QName{qNameCDocChildWorkspace},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},
+		},
+		policy: ACPolicy_Allow,
 	},
 	{
 		desc: "revoke insert or update on wdoc.air.LastNumbers from all",
@@ -106,22 +95,6 @@ var defaultACL = ACL{
 			qNamesPattern:  []appdef.QName{qNameWDocLastNumbers},
 		},
 		policy: ACPolicy_Deny,
-	},
-	{
-		desc: "update only is allowed for CDoc<$wsKind> for WorkspaceOwner",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameCDocWorkspaceKindUser,
-				qNameCDocWorkspaceKindDevice,
-				qNameCDocWorkspaceKindRestaurant,
-				qNameCDocWorkspaceKindAppWorkspace,
-				qNameCDocReseller,
-				qNameCDocUntillPayments,
-			},
-			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_UPDATE},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},
-		},
-		policy: ACPolicy_Allow,
 	},
 	{
 		// DENY ALL FROM LOGIN 'untillchargebeeagent'
@@ -143,38 +116,6 @@ var defaultACL = ACL{
 					{Kind: iauthnz.PrincipalKind_User, Name: untillChargebeeAgentLogin},
 				},
 			},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
-		// GRANT SELECT q.sys.DescribePackage* TO ROLE ProfileUser
-		desc: "q.sys.DescribePackage* is allowed to be called in profile only",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameQryDescribePackage,
-				qNameQryDescribePackageNames,
-			},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleProfileOwner}}},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
-		desc: "c.sys.InitiateJoinWorkspace is allowed for authenticated users",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameCmdInitiateJoinWorkspace,
-			},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User}}},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
-		desc: "c.sys.InitiateLeaveWorkspace is allowed for authenticated users",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameCmdInitiateLeaveWorkspace,
-			},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User}}},
 		},
 		policy: ACPolicy_Allow,
 	},
@@ -290,6 +231,21 @@ var defaultACL = ACL{
 		policy: ACPolicy_Allow,
 	},
 	{
+		// ACL for FiscalCloud
+		desc: "allow FiscalCloud onboarding functions to role fiscalcloud.OnboardSite",
+		pattern: PatternType{
+			qNamesPattern: []appdef.QName{
+				qNameCmdAddCustomer,
+				qNameCmdUpdateCustomer,
+				qNameCmdDeactivateCustomer,
+			},
+			principalsPattern: [][]iauthnz.Principal{
+				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleFiscalCloudOnboardSite}},
+			},
+		},
+		policy: ACPolicy_Allow,
+	},
+	{
 		desc: "grant exec on few funcs to role air.UntillPaymentsUser",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
@@ -317,6 +273,10 @@ var defaultACL = ACL{
 				qNameQryCreateTap2PaySession,
 				// https://dev.untill.com/projects/#!693712
 				qNameCmdSaveTap2PayPayment,
+				// https://untill.atlassian.net/browse/AIR-47
+				qNameQryShowBillOnDisplay,
+				qNameQryShowOrderOnDisplay,
+				qNameQryShowStandbyOnDisplay,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
@@ -364,6 +324,10 @@ var defaultACL = ACL{
 				qNameQryGetUPLocationRates,
 				// https://dev.untill.com/projects/#!685179
 				qNameQryUpdateShopperStatement,
+				// https://dev.untill.com/projects/#!710217
+				qNameQryGetUPPayoutTransfers,
+				qNameQryGetUPInvoices,
+				qNameCmdUpdateUPProfile,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
@@ -389,19 +353,19 @@ var defaultACL = ACL{
 		policy: ACPolicy_Allow,
 	},
 	{
-		desc: "grant exec on c.air.UpdateUPProfile to role air.UntillPaymentsUser",
-		pattern: PatternType{
-			qNamesPattern:     []appdef.QName{qNameCmdUpdateUPProfile},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}}},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
 		desc: "grant exec on few funcs to role air.UntillPaymentsManager",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
 				qNameQryGetAllUPPayouts,
 				qNameQryGetUPLocationInvoiceParties,
+				// https://dev.untill.com/projects/#!710217
+				qNameQryGetAllUPInvoices,
+				qNameQryGetAllUPPayoutTransfers,
+				// https://dev.untill.com/projects/#!711418
+				qNameQryGetDailyUPReports,
+				// https://dev.untill.com/projects/#!710982
+				qNameQryGetUPVATTransfers,
+				qNameQryGetUPBeneficiaryVATDebts,
 			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsManager}}},
 		},
@@ -418,10 +382,11 @@ var defaultACL = ACL{
 	},
 	{
 		// https://github.com/voedger/voedger/issues/2470
-		desc: "grant exec on q.sys.State to role.air.BOReader",
+		// https://github.com/voedger/voedger/issues/3007
+		desc: "grant exec on q.sys.State, sys.RegisterTempBLOB1d, q.sys.DownloadBLOBAuthnz to role.air.BOReader",
 		pattern: PatternType{
 			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_EXECUTE},
-			qNamesPattern:     []appdef.QName{qNameQryState},
+			qNamesPattern:     []appdef.QName{qNameQryState, qNameCmdRegisterTempBLOB1d, qNameQryDownloadBLOBAuthnz},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleBOReader}}},
 		},
 		policy: ACPolicy_Allow,
@@ -445,6 +410,33 @@ var defaultACL = ACL{
 				qNameQryResellersDashboardBackofficeMetrics,
 			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameResellerPortalDashboardViewer}}},
+		},
+		policy: ACPolicy_Allow,
+	},
+	{
+		desc: "grant select on table air.UntillPayments to air.UntillPaymentsUser",
+		pattern: PatternType{
+			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
+			qNamesPattern:     []appdef.QName{qNameCDocUntillPayments},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}}},
+		},
+		policy: ACPolicy_Allow,
+	},
+	{
+		// TODO: carefully check which docs are able to be read by whom
+		desc: "grant select on few tables to air.AirReseller and air.UntillPaymentsReseller and SubscriptionReseller and WorkspaceAdmin",
+		pattern: PatternType{
+			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
+			qNamesPattern:  []appdef.QName{qNameCDocReseller, qNameCDocUntillPayments},
+			principalsPattern: [][]iauthnz.Principal{
+				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleAirReseller}},
+				// OR
+				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
+				// OR
+				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleSubscriptionReseller}},
+				// OR
+				{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceAdmin}},
+			},
 		},
 		policy: ACPolicy_Allow,
 	},

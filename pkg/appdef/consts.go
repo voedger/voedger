@@ -17,12 +17,17 @@ const (
 	// Used as delimiter in qualified names
 	QNameQualifierChar = "."
 
-	// Used as prefix for names of system fields and containers
+	// Used as prefix for names of system fields
 	SystemPackagePrefix = SysPackage + QNameQualifierChar
 
 	// System package path
 	SysPackagePath = "voedger.com/packages/sys"
 )
+
+// System QName
+const SysWorkspaceName = "Workspace"
+
+var SysWorkspaceQName = NewQName(SysPackage, SysWorkspaceName)
 
 // Any names
 const (

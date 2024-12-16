@@ -63,14 +63,31 @@ func TestHttpStorage_Timeout(t *testing.T) {
 		require := require.New(t)
 		storage := NewHttpStorage(nil)
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			time.Sleep(time.Millisecond * 200)
+			time.Sleep(time.Millisecond * 20)
 		}))
 		defer ts.Close()
 		k := storage.NewKeyBuilder(appdef.NullQName, nil)
 		k.PutString(sys.Storage_Http_Field_Url, ts.URL)
-		k.PutInt64(sys.Storage_Http_Field_HTTPClientTimeoutMilliseconds, 100)
+		k.PutInt64(sys.Storage_Http_Field_HTTPClientTimeoutMilliseconds, 10)
 		err := storage.(state.IWithRead).Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
 		require.Error(err)
+	})
+	t.Run("Should not return error on timeout", func(t *testing.T) {
+		require := require.New(t)
+		storage := NewHttpStorage(nil)
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			time.Sleep(time.Millisecond * 20)
+		}))
+		defer ts.Close()
+		k := storage.NewKeyBuilder(appdef.NullQName, nil)
+		k.PutString(sys.Storage_Http_Field_Url, ts.URL)
+		k.PutInt64(sys.Storage_Http_Field_HTTPClientTimeoutMilliseconds, 10)
+		k.PutBool(sys.Storage_Http_Field_HandleErrors, true)
+		err := storage.(state.IWithRead).Read(k, func(_ istructs.IKey, v istructs.IStateValue) error {
+			require.Contains(v.AsString(sys.Storage_Http_Field_Error), "context deadline exceeded")
+			return nil
+		})
+		require.NoError(err)
 	})
 }
 func TestHttpStorage_NewKeyBuilder_should_refresh_key_builder(t *testing.T) {

@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/invite"
@@ -41,7 +42,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	updateRolesEmailTemplate := "text:" + invite.EmailTemplatePlaceholder_Roles
 	updateRolesEmailSubject := "your roles are updated"
 	expireDatetime := vit.Now().UnixMilli()
-	updatedRoles := "updated.Roles"
+	updatedRoles := "app1pkg.Updated"
 
 	email1 := fmt.Sprintf("testinvite_basicusage_%d@123.com", vit.NextNumber())
 	email2 := fmt.Sprintf("testinvite_basicusage_%d@123.com", vit.NextNumber())
@@ -292,6 +293,37 @@ func TestCancelSentInvite(t *testing.T) {
 	})
 }
 
+func TestInactiveCDocSubject(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	// sign up a new login
+	newLoginName := vit.NextName()
+	newLogin := vit.SignUp(newLoginName, "1", istructs.AppQName_test1_app1)
+	newPrn := vit.SignIn(newLogin)
+
+	parentWS := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	// try to execute an operation by the foreign login, expect 403
+	cudBody := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
+	vit.PostWS(parentWS, "c.sys.CUD", cudBody, coreutils.Expect403(), coreutils.WithAuthorizeBy(newPrn.Token))
+
+	// make this new foreign login a subject in the existing workspace
+	body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "sys.Subject","Login": "%s","SubjectKind":%d,"Roles": "%s","ProfileWSID":%d}}]}`,
+		newLoginName, istructs.SubjectKind_User, iauthnz.QNameRoleWorkspaceOwner, newPrn.ProfileWSID)
+	cdocSubjectID := vit.PostWS(parentWS, "c.sys.CUD", body).NewID()
+
+	// now the foreign login could work in the workspace
+	vit.PostWS(parentWS, "c.sys.CUD", cudBody, coreutils.WithAuthorizeBy(newPrn.Token))
+
+	// deactivate cdoc.Subject
+	body = fmt.Sprintf(`{"cuds": [{"sys.ID": %d,"fields": {"sys.IsActive": false}}]}`, cdocSubjectID)
+	vit.PostWS(parentWS, "c.sys.CUD", body)
+
+	// try again to work in the foreign workspace -> should fail
+	vit.PostWS(parentWS, "c.sys.CUD", cudBody, coreutils.WithAuthorizeBy(newPrn.Token), coreutils.Expect403())
+}
+
 func testOverwriteRoles(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, email string, inviteID int64) (verificationCode string) {
 	require := require.New(t)
 
@@ -308,4 +340,24 @@ func testOverwriteRoles(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, email st
 	require.Equal(newRoles, resp.SectionRow()[0].(string))
 
 	return verificationCode
+}
+
+func TestRejectInvitationOnDifferentLogin(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	email := fmt.Sprintf("testcancelsentinvite_%d@123.com", vit.NextNumber())
+	login := vit.SignUp(email, "1", istructs.AppQName_test1_app1)
+	loginPrn := vit.SignIn(login)
+	wsParams := it.SimpleWSParams("TestCancelSentInvite_ws")
+	ws := vit.CreateWorkspace(wsParams, loginPrn)
+	inviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+	actualEmail := vit.CaptureEmail()
+	verificationCode := actualEmail.Body[:6]
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+	// simulate accepting invitation by different login
+	differentLogin := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
+	InitiateJoinWorkspace(vit, ws, inviteID, differentLogin, verificationCode,
+		coreutils.Expect400(fmt.Sprintf("invitation was sent to %s but current login is login", email)))
 }

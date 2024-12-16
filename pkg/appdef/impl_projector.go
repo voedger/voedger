@@ -23,12 +23,12 @@ type projector struct {
 	events    *events
 }
 
-func newProjector(app *appDef, name QName) *projector {
+func newProjector(app *appDef, ws *workspace, name QName) *projector {
 	prj := &projector{
-		extension: makeExtension(app, name, TypeKind_Projector),
+		extension: makeExtension(app, ws, name, TypeKind_Projector),
 		events:    newProjectorEvents(app),
 	}
-	app.appendType(prj)
+	ws.appendType(prj)
 	return prj
 }
 
@@ -124,8 +124,8 @@ func (ee *events) add(on QName, event ...ProjectorEventKind) {
 		panic(ErrMissed("event name"))
 	}
 
-	t := ee.app.TypeByName(on)
-	if t == nil {
+	t := ee.app.Type(on)
+	if t.Kind() == TypeKind_null {
 		panic(ErrTypeNotFound(on))
 	}
 
@@ -224,7 +224,7 @@ func (e *event) addKind(kind ...ProjectorEventKind) {
 
 func (i ProjectorEventKind) MarshalText() ([]byte, error) {
 	var s string
-	if (i > 0) && (i < ProjectorEventKind_Count) {
+	if (i > 0) && (i < ProjectorEventKind_count) {
 		s = i.String()
 	} else {
 		s = utils.UintToString(i)

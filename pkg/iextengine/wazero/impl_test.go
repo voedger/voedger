@@ -16,16 +16,18 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/stretchr/testify/require"
 	"github.com/tetratelabs/wazero/sys"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/parser"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state/safestate"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -45,7 +47,7 @@ var testView = appdef.NewQName(testPkg, "TestView")
 var dummyCommand = appdef.NewQName(testPkg, "Dummy")
 var dummyProj = appdef.NewQName(testPkg, "DummyProj")
 var testWorkspaceDescriptor = appdef.NewQName(testPkg, "RestaurantDescriptor")
-
+var testVVMName = processors.VVMName("test VVM name")
 var testApp = istructs.AppQName_test1_app1
 
 const testPkg = "mypkg"
@@ -65,7 +67,7 @@ func Test_BasicUsage(t *testing.T) {
 	app := appStructsFromSQL("github.com/untillpro/airs-bp3/packages/"+testPkg, `APPLICATION test();
 		WORKSPACE Restaurant (
 			DESCRIPTOR RestaurantDescriptor ();
-			TABLE Order INHERITS ODoc (
+			TABLE Order INHERITS sys.ODoc (
 				Year int32,
 				Month int32,
 				Day int32,
@@ -85,7 +87,7 @@ func Test_BasicUsage(t *testing.T) {
 			) AS RESULT OF CalcOrderedItems;
 			EXTENSION ENGINE WASM(
 				COMMAND NewOrder(Order);
-				PROJECTOR CalcOrderedItems AFTER EXECUTE ON NewOrder INTENTS(View(OrderedItems));
+				PROJECTOR CalcOrderedItems AFTER EXECUTE ON NewOrder INTENTS(sys.View(OrderedItems));
 			);
 		)
 		`,
@@ -160,7 +162,8 @@ func Test_BasicUsage(t *testing.T) {
 	}
 
 	// Create extension engine
-	factory := ProvideExtensionEngineFactory(iextengine.WASMFactoryConfig{Compile: true})
+	metrics := imetrics.Provide()
+	factory := ProvideExtensionEngineFactory(iextengine.WASMFactoryConfig{Compile: true}, testVVMName, metrics)
 	engines, err := factory.New(ctx, app.AppQName(), packages, &iextengine.ExtEngineConfig{}, 1)
 	if err != nil {
 		panic(err)
@@ -200,6 +203,43 @@ func Test_BasicUsage(t *testing.T) {
 	require.NoError(err)
 	require.NotNil(value)
 	require.Equal(int64(400), value.AsInt64("Amount"))
+
+	testMetrics(require, metrics, expectedMetrics{
+		errors:           0,
+		invocationsTotal: 3,
+		recovers:         0,
+	})
+
+}
+
+type expectedMetrics struct {
+	errors           int
+	invocationsTotal int
+	recovers         int
+}
+
+func testMetrics(require *require.Require, metrics imetrics.IMetrics, expectedMetrcis expectedMetrics) {
+	checkedMetricsCount := 0
+	metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
+		switch metric.Name() {
+		case metric_voedger_pee_invocations_total:
+			require.EqualValues(expectedMetrcis.invocationsTotal, metricValue)
+			checkedMetricsCount++
+		case metric_voedger_pee_errors_total:
+			require.EqualValues(expectedMetrcis.errors, metricValue)
+			checkedMetricsCount++
+		case metric_voedger_pee_invocations_seconds:
+			require.GreaterOrEqual(metricValue, float64(0))
+			checkedMetricsCount++
+		case metric_voedger_pee_recovers_total:
+			require.EqualValues(expectedMetrcis.recovers, metricValue)
+			checkedMetricsCount++
+		default:
+			panic("unexpected metric: " + metric.Name())
+		}
+		return nil
+	})
+	require.Equal(4, checkedMetricsCount)
 }
 
 func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istructs.IAppStructs {
@@ -226,26 +266,30 @@ func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istr
 }
 
 func requireMemStat(t *testing.T, wasmEngine *wazeroExtEngine, mallocs, frees, heapInUse uint32) {
-	m, err := wasmEngine.getMallocs(testPkg, context.Background())
-	require.NoError(t, err)
-	f, err := wasmEngine.getFrees(testPkg, context.Background())
-	require.NoError(t, err)
-	h, err := wasmEngine.getHeapinuse(testPkg, context.Background())
-	require.NoError(t, err)
+	require := require.New(t)
 
-	require.Equal(t, mallocs, uint32(m))
-	require.Equal(t, frees, uint32(f))
-	require.Equal(t, heapInUse, uint32(h))
+	m, err := wasmEngine.getMallocs(testPkg, context.Background())
+	require.NoError(err)
+	f, err := wasmEngine.getFrees(testPkg, context.Background())
+	require.NoError(err)
+	h, err := wasmEngine.getHeapinuse(testPkg, context.Background())
+	require.NoError(err)
+
+	require.Equal(mallocs, uint32(m))
+	require.Equal(frees, uint32(f))
+	require.Equal(heapInUse, uint32(h))
 }
 
 func requireMemStatEx(t *testing.T, wasmEngine *wazeroExtEngine, mallocs, frees, heapSys, heapInUse uint32) {
+	require := require.New(t)
+
 	requireMemStat(t, wasmEngine, mallocs, frees, heapInUse)
 	h, err := wasmEngine.getHeapSys(testPkg, context.Background())
-	require.NoError(t, err)
-	require.Equal(t, heapSys, uint32(h))
+	require.NoError(err)
+	require.Equal(heapSys, uint32(h))
 }
 
-func testFactoryHelper(ctx context.Context, moduleUrl *url.URL, funcs []string, cfg iextengine.ExtEngineConfig, compile bool) (iextengine.IExtensionEngine, error) {
+func testFactoryHelperWithMetrics(ctx context.Context, moduleUrl *url.URL, funcs []string, cfg iextengine.ExtEngineConfig, compile bool) (iextengine.IExtensionEngine, imetrics.IMetrics, error) {
 	packages := []iextengine.ExtensionModule{
 		{
 			Path:           testPkg,
@@ -253,14 +297,23 @@ func testFactoryHelper(ctx context.Context, moduleUrl *url.URL, funcs []string, 
 			ExtensionNames: funcs,
 		},
 	}
-	engines, err := ProvideExtensionEngineFactory(iextengine.WASMFactoryConfig{Compile: compile}).New(ctx, testApp, packages, &cfg, 1)
+	imetrics := imetrics.Provide()
+	engines, err := ProvideExtensionEngineFactory(iextengine.WASMFactoryConfig{Compile: compile}, testVVMName, imetrics).New(ctx, testApp, packages, &cfg, 1)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return engines[0], nil
+	return engines[0], imetrics, nil
+}
+
+func testFactoryHelper(ctx context.Context, moduleUrl *url.URL, funcs []string, cfg iextengine.ExtEngineConfig, compile bool) (iextengine.IExtensionEngine, error) {
+	extEngine, _, err := testFactoryHelperWithMetrics(ctx, moduleUrl, funcs, cfg, compile)
+	return extEngine, err
 }
 
 func Test_Allocs_ManualGC(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 
 	const arrAppend = "arrAppend"
 	const arrReset = "arrReset"
@@ -296,6 +349,9 @@ func Test_Allocs_ManualGC(t *testing.T) {
 }
 
 func Test_Allocs_AutoGC(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 
 	const arrAppend = "arrAppend"
 	const arrReset = "arrReset"
@@ -338,6 +394,9 @@ func Test_Allocs_AutoGC(t *testing.T) {
 }
 
 func Test_NoGc_MemoryOverflow(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 
 	const arrAppend = "arrAppend"
 	const arrReset = "arrReset"
@@ -450,6 +509,22 @@ func Test_HandlePanics(t *testing.T) {
 	}
 }
 
+func Test_ResetStdout(t *testing.T) {
+	const testResetStdout = "TestPanic"
+	require := require.New(t)
+	ctx := context.Background()
+	moduleUrl := testModuleURL("./_testdata/panics/pkg.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{testResetStdout}, iextengine.ExtEngineConfig{}, false)
+	require.NoError(err)
+	defer extEngine.Close(ctx)
+	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, testResetStdout), extIO)
+	require.ErrorContains(err, "world")
+	error1 := err.Error()
+	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, testResetStdout), extIO)
+	require.ErrorContains(err, "world")
+	require.Equal(error1, err.Error())
+}
+
 func Test_QueryValue(t *testing.T) {
 	const testQueryValue = "testQueryValue"
 
@@ -482,51 +557,46 @@ func Test_RecoverEngine(t *testing.T) {
 			require := require.New(t)
 			ctx := context.Background()
 			moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-			extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend2}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, true)
+			extEngine, metrics, err := testFactoryHelperWithMetrics(ctx, moduleUrl, []string{arrAppend2}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, true)
 			require.NoError(err)
 			defer extEngine.Close(ctx)
 			we := extEngine.(*wazeroExtEngine)
 
-			var invocationsTotal imetrics.MetricValue
-			var invocationsSeconds imetrics.MetricValue
-			var eTotal imetrics.MetricValue
-			var recoversTotal imetrics.MetricValue
-
-			we.invocationsTotal = &invocationsTotal
-			we.errorsTotal = &eTotal
-			we.recoversTotal = &recoversTotal
-			we.invocationsSeconds = &invocationsSeconds
-
 			totalRuns := 0
 			totalErrors := 0
 
+			invocationsTotal := metrics.AppMetricAddr(metric_voedger_pee_invocations_total, string(testVVMName), testApp)
+			invocationsSeconds := metrics.AppMetricAddr(metric_voedger_pee_invocations_seconds, string(testVVMName), testApp)
+			eTotal := metrics.AppMetricAddr(metric_voedger_pee_errors_total, string(testVVMName), testApp)
+			recoversTotal := metrics.AppMetricAddr(metric_voedger_pee_recovers_total, string(testVVMName), testApp)
+
 			require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
 			totalRuns++
-			require.Equal(0, mv(&recoversTotal))
-			require.Equal(totalRuns, mv(&invocationsTotal))
-			require.Equal(totalErrors, mv(&eTotal))
+			require.Equal(0, mv(recoversTotal))
+			require.Equal(totalRuns, mv(invocationsTotal))
+			require.Equal(totalErrors, mv(eTotal))
 			heapInUseAfterFirstInvoke, err := we.getHeapinuse(testPkg, context.Background())
 			require.NoError(err)
 
 			for recoverNo := 0; recoverNo < 10; recoverNo++ { // 10 recover cycles
-				for run := 1; mv(&recoversTotal) == recoverNo; { // run until auto-recover is triggered{
+				for run := 1; mv(recoversTotal) == recoverNo; { // run until auto-recover is triggered{
 					require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
 					totalRuns++
-					if mv(&recoversTotal) != recoverNo {
+					if mv(recoversTotal) != recoverNo {
 						totalRuns++ // recovered, means one more invocation
 						totalErrors++
 					}
-					require.Equal(totalRuns, mv(&invocationsTotal))
-					require.Equal(totalErrors, mv(&eTotal))
+					require.Equal(totalRuns, mv(invocationsTotal))
+					require.Equal(totalErrors, mv(eTotal))
 					run++
 				}
-				require.Equal(recoverNo+1, mv(&recoversTotal))
+				require.Equal(recoverNo+1, mv(recoversTotal))
 				heapInUseAfterRecover, err := we.getHeapinuse(testPkg, context.Background())
 				require.NoError(err)
 				require.Equal(heapInUseAfterRecover, heapInUseAfterFirstInvoke)
 			}
 
-			require.Greater(mvf(&invocationsSeconds), 0.0)
+			require.Greater(mvf(invocationsSeconds), 0.0)
 		})
 	}
 
@@ -557,6 +627,10 @@ func Test_RecoverEngine2(t *testing.T) {
 
 	var recoversTotal imetrics.MetricValue
 	we.recoversTotal = &recoversTotal
+	var log []string
+	logger.PrintLine = func(level logger.TLogLevel, line string) {
+		log = append(log, line)
+	}
 
 	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
 	require.Equal(0, mv(&recoversTotal))
@@ -571,9 +645,13 @@ func Test_RecoverEngine2(t *testing.T) {
 	require.Equal(1, mv(&recoversTotal))
 	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
 	require.Equal(1, mv(&recoversTotal))
+	require.Len(log, 1)
+	require.Contains(log[0], "test1/app1/mypkg wazero engine recovered")
 
 	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
 	require.Equal(2, mv(&recoversTotal))
+	require.Len(log, 2)
+	require.Contains(log[1], "test1/app1/mypkg wazero engine recovered")
 }
 
 func Test_Read(t *testing.T) {
@@ -689,7 +767,7 @@ func Test_WithState(t *testing.T) {
 			) AS RESULT OF DummyProj;
 			EXTENSION ENGINE WASM(
 				COMMAND Dummy();
-				PROJECTOR DummyProj AFTER EXECUTE ON Dummy INTENTS(View(TestView));
+				PROJECTOR DummyProj AFTER EXECUTE ON Dummy INTENTS(sys.View(TestView));
 			);
 		)`,
 		func(cfg *istructsmem.AppConfigType) {
@@ -712,7 +790,8 @@ func Test_WithState(t *testing.T) {
 	}
 
 	// build extension engine
-	factory := ProvideExtensionEngineFactory(iextengine.WASMFactoryConfig{Compile: true})
+	imetrics := imetrics.Provide()
+	factory := ProvideExtensionEngineFactory(iextengine.WASMFactoryConfig{Compile: true}, testVVMName, imetrics)
 	engines, err := factory.New(ctx, app.AppQName(), packages, &iextengine.ExtEngineConfig{}, 1)
 	if err != nil {
 		panic(err)
@@ -763,7 +842,7 @@ func Test_StatePanic(t *testing.T) {
 			) AS RESULT OF DummyProj;
 			EXTENSION ENGINE WASM(
 				COMMAND Dummy();
-				PROJECTOR DummyProj AFTER EXECUTE ON Dummy INTENTS(View(TestView));
+				PROJECTOR DummyProj AFTER EXECUTE ON Dummy INTENTS(sys.View(TestView));
 			);
 		)`,
 		func(cfg *istructsmem.AppConfigType) {
@@ -787,7 +866,8 @@ func Test_StatePanic(t *testing.T) {
 			ExtensionNames: []string{extname, undefinedPackage},
 		},
 	}
-	factory := ProvideExtensionEngineFactory(iextengine.WASMFactoryConfig{Compile: true})
+	imetrics := imetrics.Provide()
+	factory := ProvideExtensionEngineFactory(iextengine.WASMFactoryConfig{Compile: true}, testVVMName, imetrics)
 	engines, err := factory.New(ctx, app.AppQName(), packages, &iextengine.ExtEngineConfig{}, 1)
 	if err != nil {
 		panic(err)
@@ -798,7 +878,7 @@ func Test_StatePanic(t *testing.T) {
 	// Invoke extension
 	//
 	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, extname), state)
-	require.ErrorContains(err, "field «wrong» is not found")
+	require.Error(err, require.Is(istructsmem.ErrNameNotFoundError), require.HasAll("TestView", "wrong"))
 
 	//
 	// Invoke extension
@@ -878,23 +958,33 @@ func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCf
 
 func Test_Panics(t *testing.T) {
 	require := require.New(t)
-	invoke := func(name string) error {
+	invoke := func(name string) (imetrics.IMetrics, error) {
 		ctx := context.Background()
 		WasmPreallocatedBufferSize = 1000000
 		moduleUrl := testModuleURL("./_testdata/panics/pkg.wasm")
-		extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{name}, iextengine.ExtEngineConfig{}, false)
-		if err != nil {
-			return err
-		}
+		extEngine, metrics, err := testFactoryHelperWithMetrics(ctx, moduleUrl, []string{name}, iextengine.ExtEngineConfig{}, false)
+		require.NoError(err)
 		defer extEngine.Close(ctx)
-		return extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, name), extIO)
+		return metrics, extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, name), extIO)
 	}
 
 	t.Run("Test Panic", func(t *testing.T) {
-		require.EqualError(invoke("TestPanic"), "panic: goodbye, world")
+		metrics, err := invoke("TestPanic")
+		require.EqualError(err, "panic: goodbye, world")
+		testMetrics(require, metrics, expectedMetrics{
+			errors:           1,
+			invocationsTotal: 1,
+			recovers:         0,
+		})
 	})
 
 	t.Run("No Panic On Sign Extensions Funcs", func(t *testing.T) {
-		require.NoError(invoke("TestSignExtensionsFuncs"))
+		metrics, err := invoke("TestSignExtensionsFuncs")
+		require.NoError(err)
+		testMetrics(require, metrics, expectedMetrics{
+			errors:           0,
+			invocationsTotal: 1,
+			recovers:         0,
+		})
 	})
 }

@@ -21,72 +21,71 @@ func ExampleIWorkspace() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		adb.AddCDoc(descName).
+		ws := adb.AddWorkspace(wsName)
+
+		ws.AddCDoc(descName).
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 
-		adb.AddCRecord(recName).
-			AddField("r1", appdef.DataKind_int64, true).
-			AddField("r2", appdef.DataKind_string, false)
+		ws.SetDescriptor(descName)
 
-		cDoc := adb.AddCDoc(docName)
+		cDoc := ws.AddCDoc(docName)
 		cDoc.
 			AddField("d1", appdef.DataKind_int64, true).
 			AddField("d2", appdef.DataKind_string, false)
 		cDoc.
 			AddContainer("rec", recName, 0, 100)
 
-		adb.AddWorkspace(wsName).
-			SetDescriptor(descName).
-			AddType(recName).
-			AddType(docName)
+		ws.AddCRecord(recName).
+			AddField("r1", appdef.DataKind_int64, true).
+			AddField("r2", appdef.DataKind_string, false)
 
 		app = adb.MustBuild()
 	}
 
 	// how to enum workspaces
 	{
+		fmt.Println("App workspaces:")
 		cnt := 0
-		app.Workspaces(func(ws appdef.IWorkspace) bool {
+		for ws := range app.Workspaces() {
 			cnt++
-			fmt.Println(cnt, ws)
-			return true
-		})
-		fmt.Println("overall:", cnt)
+			fmt.Println("-", cnt, ":", ws)
+		}
 	}
 
 	// how to inspect workspace
 	{
 		// how to find workspace by name
 		ws := app.Workspace(wsName)
-		fmt.Printf("workspace %q: %v\n", ws.QName(), ws.Kind())
+		fmt.Println(ws)
 
 		// how to inspect workspace
-		fmt.Printf("workspace %q descriptor is %q\n", ws.QName(), ws.Descriptor())
+		fmt.Println("Workspace descriptor is", ws.Descriptor())
+		fmt.Println("Workspace local types:")
 		cnt := 0
-		ws.Types(func(t appdef.IType) bool {
-			fmt.Printf("- Type: %q, kind: %v\n", t.QName(), t.Kind())
+		for t := range ws.LocalTypes() {
 			cnt++
-			return true
-		})
-		fmt.Println("types count:", cnt)
+			fmt.Println("-", cnt, ":", t)
+		}
 	}
 
 	// how to find workspace by descriptor
 	{
 		ws := app.WorkspaceByDescriptor(descName)
 		fmt.Println()
-		fmt.Printf("founded by descriptor %q: %v\n", descName, ws)
+		fmt.Printf("Founded by descriptor %q: %v\n", descName, ws)
 	}
 
 	// Output:
-	// 1 Workspace «test.ws»
-	// overall: 1
-	// workspace "test.ws": TypeKind_Workspace
-	// workspace "test.ws" descriptor is "test.desc"
-	// - Type: "test.doc", kind: TypeKind_CDoc
-	// - Type: "test.rec", kind: TypeKind_CRecord
-	// types count: 2
+	// App workspaces:
+	// - 1 : Workspace «sys.Workspace»
+	// - 2 : Workspace «test.ws»
+	// Workspace «test.ws»
+	// Workspace descriptor is test.desc
+	// Workspace local types:
+	// - 1 : CDoc «test.desc»
+	// - 2 : CDoc «test.doc»
+	// - 3 : CRecord «test.rec»
 	//
-	// founded by descriptor "test.desc": Workspace «test.ws»
+	// Founded by descriptor "test.desc": Workspace «test.ws»
 }

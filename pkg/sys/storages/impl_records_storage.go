@@ -6,10 +6,12 @@ package storages
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"reflect"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
@@ -70,11 +72,19 @@ func (b *recordsKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 }
 func (b *recordsKeyBuilder) PutInt64(name string, value int64) {
 	if name == sys.Storage_Record_Field_WSID {
-		b.wsid = istructs.WSID(value)
+		wsid, err := coreutils.Int64ToWSID(value)
+		if err != nil {
+			panic(err)
+		}
+		b.wsid = wsid
 		return
 	}
 	if name == sys.Storage_Record_Field_ID {
-		b.id = istructs.RecordID(value)
+		recID, err := coreutils.Int64ToRecordID(value)
+		if err != nil {
+			panic(err)
+		}
+		b.id = recID
 		return
 	}
 	b.baseKeyBuilder.PutInt64(name, value)
@@ -272,7 +282,11 @@ func (b *recordsValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
 func (b *recordsValueBuilder) PutInt32(name string, value int32) { b.rw.PutInt32(name, value) }
 func (b *recordsValueBuilder) PutInt64(name string, value int64) {
 	if b.fc.isStructureInt64FieldRecordID(b.entity, name) {
-		b.rw.PutRecordID(name, istructs.RecordID(value))
+		recID, err := coreutils.Int64ToRecordID(value)
+		if err != nil {
+			panic(err)
+		}
+		b.rw.PutRecordID(name, recID)
 	} else {
 		b.rw.PutInt64(name, value)
 	}
@@ -284,13 +298,14 @@ func (b *recordsValueBuilder) PutChars(name string, value string)       { b.rw.P
 func (b *recordsValueBuilder) PutFloat32(name string, value float32)    { b.rw.PutFloat32(name, value) }
 func (b *recordsValueBuilder) PutFloat64(name string, value float64)    { b.rw.PutFloat64(name, value) }
 func (b *recordsValueBuilder) PutQName(name string, value appdef.QName) { b.rw.PutQName(name, value) }
-func (b *recordsValueBuilder) PutNumber(name string, value float64)     { b.rw.PutNumber(name, value) }
+func (b *recordsValueBuilder) PutNumber(name string, value json.Number) { b.rw.PutNumber(name, value) }
 func (b *recordsValueBuilder) PutRecordID(name string, value istructs.RecordID) {
 	b.rw.PutRecordID(name, value)
 }
 
 type recordsValue struct {
 	baseStateValue
+	istructs.IStateRecordValue
 	record istructs.IRecord
 }
 
@@ -305,7 +320,5 @@ func (v *recordsValue) AsBool(name string) bool          { return v.record.AsBoo
 func (v *recordsValue) AsRecordID(name string) istructs.RecordID {
 	return v.record.AsRecordID(name)
 }
-func (v *recordsValue) AsRecord(string) (record istructs.IRecord) { return v.record }
-func (v *recordsValue) FieldNames(cb func(fieldName string)) {
-	v.record.FieldNames(cb)
-}
+func (v *recordsValue) AsRecord() (record istructs.IRecord)       { return v.record }
+func (v *recordsValue) FieldNames(cb func(fieldName string) bool) { v.record.FieldNames(cb) }

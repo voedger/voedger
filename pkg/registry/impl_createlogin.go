@@ -7,12 +7,14 @@ package registry
 
 import (
 	"errors"
+	"fmt"
+	"math"
 	"net/http"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -24,9 +26,10 @@ func execCmdCreateLogin(args istructs.ExecCommandArgs) (err error) {
 	loginStr := args.ArgumentObject.AsString(authnz.Field_Login)
 	appName := args.ArgumentObject.AsString(authnz.Field_AppName)
 
-	subjectKind := istructs.SubjectKindType(args.ArgumentObject.AsInt32(authnz.Field_SubjectKind))
-	if subjectKind >= istructs.SubjectKind_FakeLast || subjectKind <= istructs.SubjectKind_null {
-		return errors.New("wrong subject kind")
+	subjectKind := args.ArgumentObject.AsInt32(authnz.Field_SubjectKind)
+	if subjectKind >= int32(istructs.SubjectKind_FakeLast) || subjectKind <= int32(istructs.SubjectKind_null) {
+		// TODO: cover it by tests
+		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "SubjectKind must be >0 and <", istructs.SubjectKind_FakeLast)
 	}
 
 	appQName, err := appdef.ParseAppQName(appName)
@@ -34,6 +37,16 @@ func execCmdCreateLogin(args istructs.ExecCommandArgs) (err error) {
 		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "failed to parse app qualified name", appQName.String(), ":", err)
 	}
 
+	appParts := args.Workpiece.(interface {
+		AppPartitions() appparts.IAppPartitions
+	}).AppPartitions()
+	if _, err = appParts.AppDef(appQName); err != nil {
+		if errors.Is(err, appparts.ErrNotFound) {
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("target app %s is not found", appQName))
+		}
+		return err
+	}
+	
 	// still need this check after https://github.com/voedger/voedger/issues/1311: the command is tkaen from AppWS, number of AppWS related to the login is checked here
 	if err = CheckAppWSID(loginStr, args.WSID, args.State.AppStructs().NumAppWorkspaces()); err != nil {
 		return
@@ -60,6 +73,10 @@ func execCmdCreateLogin(args istructs.ExecCommandArgs) (err error) {
 		return err
 	}
 	profileCluster := args.ArgumentObject.AsInt32(authnz.Field_ProfileCluster)
+	if profileCluster <= 0 || profileCluster > math.MaxUint16 {
+		// TODO: cover it by tests
+		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "ProfileCluster must be >0 and <", math.MaxUint16)
+	}
 
 	kb, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocLogin)
 	if err != nil {
@@ -72,7 +89,7 @@ func execCmdCreateLogin(args istructs.ExecCommandArgs) (err error) {
 	cdocLogin.PutInt32(authnz.Field_ProfileCluster, profileCluster)
 	cdocLogin.PutBytes(field_PwdHash, pwdSaltedHash)
 	cdocLogin.PutString(authnz.Field_AppName, appName)
-	cdocLogin.PutInt32(authnz.Field_SubjectKind, args.ArgumentObject.AsInt32(authnz.Field_SubjectKind))
+	cdocLogin.PutInt32(authnz.Field_SubjectKind, subjectKind)
 	cdocLogin.PutString(authnz.Field_LoginHash, GetLoginHash(loginStr))
 	cdocLogin.PutRecordID(appdef.SystemField_ID, 1)
 	cdocLogin.PutString(authnz.Field_WSKindInitializationData, wsKindInitializationData)
@@ -82,9 +99,9 @@ func execCmdCreateLogin(args istructs.ExecCommandArgs) (err error) {
 
 // sys/registry, appWorkspace, triggered by CDoc<Login>
 var projectorLoginIdx = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+	for rec := range event.CUDs {
 		if rec.QName() != QNameCDocLogin {
-			return nil
+			continue
 		}
 		kb, err := s.KeyBuilder(sys.Storage_View, QNameViewLoginIdx)
 		if err != nil {
@@ -98,6 +115,6 @@ var projectorLoginIdx = func(event istructs.IPLogEvent, s istructs.IState, inten
 			return err
 		}
 		vb.PutInt64(field_CDocLoginID, int64(rec.AsRecordID(appdef.SystemField_ID)))
-		return nil
-	})
+	}
+	return nil
 }

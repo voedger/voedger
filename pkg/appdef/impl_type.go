@@ -8,13 +8,17 @@ package appdef
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 )
 
-// # Implements:
+// # Supports:
 //   - IType
 type typ struct {
 	comment
+	tags
 	app  *appDef
+	ws   *workspace
 	name QName
 	kind TypeKind
 }
@@ -22,13 +26,21 @@ type typ struct {
 // Creates and returns new type.
 //
 // Name can be empty (NullQName), then type is anonymous.
-func makeType(app *appDef, name QName, kind TypeKind) typ {
+func makeType(app *appDef, ws *workspace, name QName, kind TypeKind) typ {
 	if name != NullQName {
 		if ok, err := ValidQName(name); !ok {
 			panic(fmt.Errorf("invalid type name «%v»: %w", name, err))
 		}
 	}
-	return typ{comment{}, app, name, kind}
+	t := typ{
+		comment: makeComment(),
+		tags:    makeTags(ws.LocalType), // #2889 $VSQL_TagNonExp: only local tags can be used
+		app:     app,
+		ws:      ws,
+		name:    name,
+		kind:    kind,
+	}
+	return t
 }
 
 func (t *typ) App() IAppDef {
@@ -51,16 +63,22 @@ func (t *typ) String() string {
 	return fmt.Sprintf("%s «%v»", t.Kind().TrimString(), t.QName())
 }
 
+func (t *typ) Workspace() IWorkspace {
+	return t.ws
+}
+
 // # Implements:
 //   - ITypeBuilder
 type typeBuilder struct {
 	commentBuilder
+	tagBuilder
 	*typ
 }
 
 func makeTypeBuilder(typ *typ) typeBuilder {
 	return typeBuilder{
 		commentBuilder: makeCommentBuilder(&typ.comment),
+		tagBuilder:     makeTagBuilder(&typ.tags),
 		typ:            typ,
 	}
 }
@@ -72,10 +90,52 @@ type typeRef struct {
 	typ  IType
 }
 
+// List of types.
+type types[T IType] struct {
+	m map[QName]T
+	s []T
+}
+
+// Creates and returns new types.
+func newTypes[T IType]() *types[T] {
+	return &types[T]{m: make(map[QName]T)}
+}
+
+func (tt *types[T]) add(t T) {
+	tt.m[t.QName()] = t
+	tt.s = nil
+}
+
+func (tt *types[T]) all(visit func(T) bool) {
+	if len(tt.s) != len(tt.m) {
+		tt.s = slices.SortedFunc(maps.Values(tt.m), func(i, j T) int {
+			return CompareQName(i.QName(), j.QName())
+		})
+	}
+	slices.Values(tt.s)(visit)
+}
+
+func (tt *types[T]) clear() {
+	tt.m = make(map[QName]T)
+	tt.s = nil
+}
+
+func (tt types[T]) find(name QName) IType {
+	if t, ok := tt.m[name]; ok {
+		return t
+	}
+	return NullType
+}
+
+func (tt *types[T]) remove(name QName) {
+	delete(tt.m, name)
+	tt.s = nil
+}
+
 // Returns type by reference.
 //
 // If type is not found then returns nil.
-func (r *typeRef) target(tt IWithTypes) IType {
+func (r *typeRef) target(tt FindType) IType {
 	if r.name == NullQName {
 		return nil
 	}
@@ -83,7 +143,10 @@ func (r *typeRef) target(tt IWithTypes) IType {
 		return AnyType
 	}
 	if (r.typ == nil) || (r.typ.QName() != r.name) {
-		r.typ = tt.TypeByName(r.name)
+		r.typ = nil
+		if t := tt(r.name); t.Kind() != TypeKind_null {
+			r.typ = t
+		}
 	}
 	return r.typ
 }
@@ -95,7 +158,7 @@ func (r *typeRef) setName(n QName) {
 }
 
 // Returns is reference valid
-func (r *typeRef) valid(tt IWithTypes) (bool, error) {
+func (r *typeRef) valid(tt FindType) (bool, error) {
 	if (r.name == NullQName) || (r.name == QNameANY) || (r.target(tt) != nil) {
 		return true, nil
 	}
@@ -126,23 +189,29 @@ func validateType(t IType) (err error) {
 
 const nullTypeString = "null type"
 
-type nullType struct{ nullComment }
+type nullType struct {
+	nullComment
+	nullTags
+}
 
-func (t *nullType) App() IAppDef   { return nil }
-func (t *nullType) IsSystem() bool { return false }
-func (t *nullType) Kind() TypeKind { return TypeKind_null }
-func (t *nullType) QName() QName   { return NullQName }
-func (t *nullType) String() string { return nullTypeString }
+func (t nullType) App() IAppDef          { return nil }
+func (t nullType) IsSystem() bool        { return false }
+func (t nullType) Kind() TypeKind        { return TypeKind_null }
+func (t nullType) QName() QName          { return NullQName }
+func (t nullType) String() string        { return nullTypeString }
+func (t nullType) Workspace() IWorkspace { return nil }
 
 type anyType struct {
 	nullComment
+	nullTags
 	name QName
 }
 
-func newAnyType(name QName) *anyType { return &anyType{nullComment{}, name} }
+func newAnyType(name QName) IType { return &anyType{nullComment{}, nullTags{}, name} }
 
-func (t anyType) App() IAppDef   { return nil }
-func (t anyType) IsSystem() bool { return true }
-func (t anyType) Kind() TypeKind { return TypeKind_Any }
-func (t anyType) QName() QName   { return t.name }
-func (t anyType) String() string { return fmt.Sprintf("%s type", t.name.Entity()) }
+func (t anyType) App() IAppDef          { return nil }
+func (t anyType) IsSystem() bool        { return true }
+func (t anyType) Kind() TypeKind        { return TypeKind_Any }
+func (t anyType) QName() QName          { return t.name }
+func (t anyType) String() string        { return t.name.Entity() + " type" }
+func (t anyType) Workspace() IWorkspace { return nil }

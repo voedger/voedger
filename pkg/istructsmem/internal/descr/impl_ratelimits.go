@@ -5,6 +5,35 @@
 
 package descr
 
-func newRateLimit() *RateLimit {
-	return &RateLimit{}
+import "github.com/voedger/voedger/pkg/appdef"
+
+func newRate() *Rate {
+	return &Rate{}
+}
+
+func (r *Rate) read(rate appdef.IRate) {
+	r.Type.read(rate)
+	r.Count = rate.Count()
+	r.Period = rate.Period()
+	for scope := range rate.Scopes() {
+		r.Scopes = append(r.Scopes, scope.TrimString())
+	}
+}
+
+func newLimit() *Limit {
+	return &Limit{}
+}
+
+func (l *Limit) read(limit appdef.ILimit) {
+	l.Type.read(limit)
+	for op := range limit.Ops() {
+		l.Ops = append(l.Ops, op.TrimString())
+	}
+	l.Filter.read(limit.Filter())
+	l.Rate = limit.Rate().QName()
+}
+
+func (f *LimitFilter) read(flt appdef.ILimitFilter) {
+	f.Option = flt.Option().TrimString()
+	f.Filter.read(flt)
 }

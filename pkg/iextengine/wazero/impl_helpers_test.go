@@ -273,7 +273,7 @@ func (kb *mockKeyBuilder) PutRecordID(name string, value istructs.RecordID) {}
 func (kb *mockKeyBuilder) ToBytes(istructs.WSID) ([]byte, []byte, error)    { return nil, nil, nil }
 
 // Tries to make conversion from value to a name type
-func (kb *mockKeyBuilder) PutNumber(name string, value float64) {}
+func (kb *mockKeyBuilder) PutNumber(name string, value json.Number) {}
 
 // Tries to make conversion from value to a name type
 func (kb *mockKeyBuilder) PutChars(name string, value string) {}
@@ -335,10 +335,10 @@ func (v *mockValue) AsValue(name string) istructs.IStateValue {
 	}
 	panic("unsupported value stored under key: " + name)
 }
-func (v *mockValue) RecordIDs(includeNulls bool, cb func(name string, value istructs.RecordID)) {}
-func (v *mockValue) FieldNames(cb func(fieldName string)) {
-	v.TestObject.FieldNames(cb)
+func (v *mockValue) RecordIDs(bool) func(func(string, istructs.RecordID) bool) {
+	return func(func(name string, value istructs.RecordID) bool) {}
 }
+func (v *mockValue) FieldNames(cb func(fieldName string) bool) { v.TestObject.FieldNames(cb) }
 
 type intent struct {
 	key   istructs.IStateKeyBuilder
@@ -399,5 +399,5 @@ func (vb *mockValueBuilder) PutBool(name string, value bool)                  {}
 func (vb *mockValueBuilder) PutRecordID(name string, value istructs.RecordID) {}
 func (vb *mockValueBuilder) PutFromJSON(map[string]any)                       {}
 func (vb *mockValueBuilder) ToBytes() ([]byte, error)                         { return nil, nil }
-func (vb *mockValueBuilder) PutNumber(name string, value float64)             {}
+func (vb *mockValueBuilder) PutNumber(name string, value json.Number)         {}
 func (vb *mockValueBuilder) PutChars(name string, value string)               {}

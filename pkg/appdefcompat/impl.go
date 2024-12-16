@@ -62,8 +62,6 @@ func buildTreeNode(parentNode *CompatibilityTreeNode, item interface{}) (node *C
 		node = buildWorkspaceNode(parentNode, t)
 	case appdef.IView:
 		node = buildViewNode(parentNode, t)
-	case appdef.IWithTypes:
-		node = buildTypesNode(parentNode, t, false)
 	case appdef.IQuery:
 		node = buildQueryNode(parentNode, t)
 	case appdef.ICommand:
@@ -137,10 +135,10 @@ func buildQNameNode(parentNode *CompatibilityTreeNode, item appdef.IType, name s
 	return
 }
 
-func buildAppDefNode(parentNode *CompatibilityTreeNode, item appdef.IAppDef) (node *CompatibilityTreeNode) {
+func buildAppDefNode(parentNode *CompatibilityTreeNode, app appdef.IAppDef) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameAppDef, nil)
-	node.Props = append(node.Props, buildTypesNode(node, item, false))
-	node.Props = append(node.Props, buildPackagesNode(node, item))
+	node.Props = append(node.Props, buildTypesNode(node, app.Types(), false))
+	node.Props = append(node.Props, buildPackagesNode(node, app))
 	return
 }
 
@@ -198,42 +196,40 @@ func buildUniquesNode(parentNode *CompatibilityTreeNode, item appdef.IUniques) (
 
 func buildContainersNode(parentNode *CompatibilityTreeNode, item appdef.IContainers) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameContainers, nil)
-	for _, container := range item.Containers() {
+	for container := range item.Containers() {
 		node.Props = append(node.Props, buildContainerNode(node, container))
 	}
 	return
 }
 
-func buildWorkspaceNode(parentNode *CompatibilityTreeNode, item appdef.IWorkspace) (node *CompatibilityTreeNode) {
-	node = newNode(parentNode, item.QName().String(), nil)
+func buildWorkspaceNode(parentNode *CompatibilityTreeNode, ws appdef.IWorkspace) (node *CompatibilityTreeNode) {
+	node = newNode(parentNode, ws.QName().String(), nil)
 	node.Props = append(node.Props,
-		buildTypesNode(node, item.(appdef.IWithTypes), true),
-		buildDescriptorNode(node, item.Descriptor()),
-		buildAbstractNode(node, item.(appdef.IWithAbstract)),
+		buildTypesNode(node, ws.Types(), true),
+		buildDescriptorNode(node, ws.Descriptor()),
+		buildAbstractNode(node, ws.(appdef.IWithAbstract)),
 		// TODO: add buildInheritsNode with ancestors in Props
 	)
 	return
 }
 
-func buildTypesNode(parentNode *CompatibilityTreeNode, item appdef.IWithTypes, qNamesOnly bool) (node *CompatibilityTreeNode) {
+func buildTypesNode(parentNode *CompatibilityTreeNode, types appdef.SeqType, qNamesOnly bool) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameTypes, nil)
-	item.Types(func(t appdef.IType) bool {
+	for t := range types {
 		if qNamesOnly {
 			node.Props = append(node.Props, buildQNameNode(node, t, t.QName().String(), true))
 		} else {
 			node.Props = append(node.Props, buildTreeNode(node, t))
 		}
-		return true
-	})
+	}
 	return
 }
 
 func buildPackagesNode(parentNode *CompatibilityTreeNode, item appdef.IAppDef) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNamePackages, nil)
-	item.Packages(func(localName, fullPath string) bool {
+	for localName, fullPath := range item.Packages() {
 		node.Props = append(node.Props, newNode(node, fullPath, localName))
-		return true
-	})
+	}
 	return
 }
 

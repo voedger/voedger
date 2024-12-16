@@ -10,7 +10,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -25,11 +24,11 @@ func asyncProjectorApplyLeaveWorkspace(time coreutils.ITime, federation federati
 }
 
 func applyLeaveWorkspace(time coreutils.ITime, federation federation.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
-	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
+		for rec := range event.CUDs {
 			//TODO additional check that CUD only once?
 			if rec.QName() != qNameCDocInvite {
-				return nil
+				continue
 			}
 
 			skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
@@ -60,33 +59,32 @@ func applyLeaveWorkspace(time coreutils.ITime, federation federation.IFederation
 			}
 
 			//Update subject
-			_, err = federation.Func(
+			if _, err = federation.Func(
 				fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 				fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID)),
 				coreutils.WithAuthorizeBy(token),
-				coreutils.WithDiscardResponse())
-			if err != nil {
+				coreutils.WithDiscardResponse()); err != nil {
 				return err
 			}
 
 			//Deactivate joined workspace
-			_, err = federation.Func(
+			if _, err = federation.Func(
 				fmt.Sprintf("api/%s/%d/c.sys.DeactivateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 				fmt.Sprintf(`{"args":{"InvitingWorkspaceWSID":%d}}`, event.Workspace()),
 				coreutils.WithAuthorizeBy(token),
-				coreutils.WithDiscardResponse())
-			if err != nil {
+				coreutils.WithDiscardResponse()); err != nil {
 				return err
 			}
 
 			//Update invite
-			_, err = federation.Func(
+			if _, err = federation.Func(
 				fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 				fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`, rec.ID(), State_Left, time.Now().UnixMilli()),
 				coreutils.WithAuthorizeBy(token),
-				coreutils.WithDiscardResponse())
-
-			return err
-		})
+				coreutils.WithDiscardResponse()); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 }

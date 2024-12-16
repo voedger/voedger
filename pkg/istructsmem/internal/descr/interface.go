@@ -13,13 +13,7 @@ type Application struct {
 }
 
 type Package struct {
-	Name       string                  `json:"-"`
-	Path       string                  `json:",omitempty"`
-	DataTypes  map[string]*Data        `json:",omitempty"`
-	Structures map[string]*Structure   `json:",omitempty"`
-	Views      map[string]*View        `json:",omitempty"`
-	Extensions *Extensions             `json:",omitempty"`
-	Roles      map[string]*Role        `json:",omitempty"`
-	Resources  map[string]*Resource    `json:",omitempty"`
-	RateLimits map[string][]*RateLimit `json:",omitempty"`
+	Name       string                      `json:"-"`
+	Path       string                      `json:",omitempty"`
+	Workspaces map[appdef.QName]*Workspace `json:",omitempty"`
 }

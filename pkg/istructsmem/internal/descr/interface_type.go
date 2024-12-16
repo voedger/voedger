@@ -11,4 +11,5 @@ type Type struct {
 	Comment string          `json:",omitempty"`
 	QName   appdef.QName    `json:"-"`
 	Kind    appdef.TypeKind `json:"-"`
+	Tags    appdef.QNames   `json:",omitempty"`
 }

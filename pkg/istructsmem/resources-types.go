@@ -16,9 +16,9 @@ import (
 // actually defines resources that are shared between apps
 // was: sys package is compiled per each app, now: sys package is compiled once and used in all apps through IStatelessResources
 type IStatelessResources interface {
-	Commands(func(path string, cmd istructs.ICommandFunction))
-	Queries(func(path string, qry istructs.IQueryFunction))
-	Projectors(func(path string, projector istructs.Projector))
+	Commands(func(path string, cmd istructs.ICommandFunction) bool)
+	Queries(func(path string, qry istructs.IQueryFunction) bool)
+	Projectors(func(path string, projector istructs.Projector) bool)
 	AddCommands(path string, cmds ...istructs.ICommandFunction)
 	AddQueries(path string, queries ...istructs.IQueryFunction)
 	AddProjectors(path string, projectors ...istructs.Projector)
@@ -38,26 +38,32 @@ type implIStatelessResources struct {
 	projectors map[string][]istructs.Projector
 }
 
-func (sr *implIStatelessResources) Commands(cb func(path string, cmd istructs.ICommandFunction)) {
+func (sr *implIStatelessResources) Commands(cb func(path string, cmd istructs.ICommandFunction) bool) {
 	for path, cmds := range sr.cmds {
 		for _, cmd := range cmds {
-			cb(path, cmd)
+			if !cb(path, cmd) {
+				return
+			}
 		}
 	}
 }
 
-func (sr *implIStatelessResources) Queries(cb func(path string, query istructs.IQueryFunction)) {
+func (sr *implIStatelessResources) Queries(cb func(path string, query istructs.IQueryFunction) bool) {
 	for path, queries := range sr.queries {
 		for _, query := range queries {
-			cb(path, query)
+			if !cb(path, query) {
+				return
+			}
 		}
 	}
 }
 
-func (sr *implIStatelessResources) Projectors(cb func(path string, projector istructs.Projector)) {
+func (sr *implIStatelessResources) Projectors(cb func(path string, projector istructs.Projector) bool) {
 	for path, projectors := range sr.projectors {
 		for _, projector := range projectors {
-			cb(path, projector)
+			if !cb(path, projector) {
+				return
+			}
 		}
 	}
 }
@@ -73,7 +79,6 @@ func (sr *implIStatelessResources) AddQueries(path string, queries ...istructs.I
 func (sr *implIStatelessResources) AddProjectors(path string, projectors ...istructs.Projector) {
 	sr.projectors[path] = append(sr.projectors[path], projectors...)
 }
-
 
 // Implements istructs.IResources
 type Resources map[appdef.QName]istructs.IResource
@@ -97,9 +102,11 @@ func (res Resources) QueryResource(name appdef.QName) istructs.IResource {
 }
 
 // Enumerates all application resources
-func (res Resources) Resources(enum func(appdef.QName)) {
+func (res Resources) Resources(enum func(appdef.QName) bool) {
 	for n := range res {
-		enum(n)
+		if !enum(n) {
+			break
+		}
 	}
 }
 

@@ -27,8 +27,10 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 		t.Run("Should set result fields", func(t *testing.T) {
 			adb := appdef.New()
 
+			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
 			addObject := func(n appdef.QName) {
-				o := adb.AddObject(n)
+				o := wsb.AddObject(n)
 				o.AddField("name", appdef.DataKind_string, false)
 			}
 			addObject(appdef.NewQName("_", "root"))
@@ -46,7 +48,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 			require.NoError(err)
 
 			appDef = app
-			rootObj = app.Object(objName)
+			rootObj = appdef.Object(app.Type, objName)
 		})
 
 		commonFields := []IResultField{resultField{field: "name"}}

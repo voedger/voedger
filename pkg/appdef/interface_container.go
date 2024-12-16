@@ -5,6 +5,8 @@
 
 package appdef
 
+import "iter"
+
 // Numeric with OccursUnbounded value.
 //
 // Ref. occurs.go for constants and methods
@@ -31,7 +33,7 @@ type IContainers interface {
 	ContainerCount() int
 
 	// All containers in add order.
-	Containers() []IContainer
+	Containers() iter.Seq[IContainer]
 }
 
 type IContainersBuilder interface {
@@ -44,7 +46,7 @@ type IContainersBuilder interface {
 	//   - if type name is empty,
 	//   - if invalid occurrences,
 	//   - if container type kind is not compatible with parent type kind.
-	AddContainer(name string, typeName QName, min, max Occurs, comment ...string) IContainersBuilder
+	AddContainer(name string, typeName QName, minimum, maximum Occurs, comment ...string) IContainersBuilder
 }
 
 // Describes single inclusion of child in parent.
@@ -57,10 +59,10 @@ type IContainer interface {
 	// Returns type name of included in container child
 	QName() QName
 
-	// Returns type of included in container child.
+	// Returns structure type of included in container child.
 	//
 	// Returns nil if not found
-	Type() IType
+	Type() IStructure
 
 	// Returns minimum occurs of child
 	MinOccurs() Occurs

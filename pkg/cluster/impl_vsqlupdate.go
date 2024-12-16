@@ -7,10 +7,10 @@ package cluster
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 	"github.com/voedger/voedger/pkg/appdef"
@@ -118,7 +118,14 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 		update.offset = istructs.Offset(update.EntityID)
 		switch update.QName {
 		case plog:
-			update.partitionID = istructs.PartitionID(wsid)
+			numPartitionsDeployed, err := update.appParts.AppPartsCount(update.AppQName)
+			if err != nil {
+				return update, err
+			}
+			if wsid >= istructs.IDType(numPartitionsDeployed) {
+				return update, fmt.Errorf("provided partno %d is out of %d declared by app %s", wsid, numPartitionsDeployed, update.AppQName)
+			}
+			update.partitionID = istructs.PartitionID(wsid) // nolint G115 checked above
 		case wlog:
 			update.wsid = istructs.WSID(wsid)
 		}
@@ -150,11 +157,7 @@ func exprToInterface(expr sqlparser.Expr) (val interface{}, err error) {
 		case sqlparser.StrVal:
 			return string(typed.Val), nil
 		case sqlparser.IntVal, sqlparser.FloatVal:
-			if val, err = strconv.ParseFloat(string(typed.Val), bitSize64); err != nil {
-				// notest: avoided already by sql parser
-				return nil, err
-			}
-			return val, nil
+			return json.Number(string(typed.Val)), nil
 		case sqlparser.HexNum:
 			hexBytes := typed.Val[2:] // cut `0x` prefix
 			val := make([]byte, len(hexBytes)/2)

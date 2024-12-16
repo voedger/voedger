@@ -1,6 +1,0 @@
--- Copyright (c) 2024-present unTill Pro, Ltd.
--- @author Alisher Nurmanov
-
-TABLE MyTable2 INHERITS ODoc (
-    myfield2 int32 NOT NULL
-);

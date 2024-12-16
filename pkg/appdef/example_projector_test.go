@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIAppDefBuilder_AddProjector() {
+func ExampleProjectors() {
 
 	var app appdef.IAppDef
 
@@ -27,16 +27,18 @@ func ExampleIAppDefBuilder_AddProjector() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		adb.AddCRecord(recName).SetComment("record is trigger for projector")
-		adb.AddCDoc(docName).SetComment("doc is state for projector")
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
-		v := adb.AddView(viewName)
+		wsb.AddCRecord(recName).SetComment("record is trigger for projector")
+		wsb.AddCDoc(docName).SetComment("doc is state for projector")
+
+		v := wsb.AddView(viewName)
 		v.Key().PartKey().AddDataField("id", appdef.SysData_RecordID)
 		v.Key().ClustCols().AddDataField("name", appdef.SysData_String)
 		v.Value().AddDataField("data", appdef.SysData_bytes, false, appdef.MaxLen(1024))
 		v.SetComment("view is intent for projector")
 
-		prj := adb.AddProjector(prjName)
+		prj := wsb.AddProjector(prjName)
 		prj.SetWantErrors()
 		prj.Events().
 			Add(recName, appdef.ProjectorEventKind_AnyChanges...).
@@ -53,7 +55,7 @@ func ExampleIAppDefBuilder_AddProjector() {
 
 	// how to inspect builded AppDef with projector
 	{
-		prj := app.Projector(prjName)
+		prj := appdef.Projector(app.Type, prjName)
 		fmt.Println(prj, ":")
 		prj.Events().Enum(func(e appdef.IProjectorEvent) {
 			fmt.Println(" - event:", e, e.Comment())
@@ -61,26 +63,23 @@ func ExampleIAppDefBuilder_AddProjector() {
 		if prj.WantErrors() {
 			fmt.Println(" - want sys.error events")
 		}
-		prj.States().Enum(func(s appdef.IStorage) bool {
+		for s := range prj.States().Enum {
 			fmt.Println(" - state:", s, s.Comment())
-			return true
-		})
-		prj.Intents().Enum(func(s appdef.IStorage) bool {
-			fmt.Println(" - intent:", s, s.Comment())
-			return true
-		})
+		}
+		for i := range prj.Intents().Enum {
+			fmt.Println(" - intent:", i, i.Comment())
+		}
 
-		fmt.Println(app.Projector(appdef.NewQName("test", "unknown")))
+		fmt.Println(appdef.Projector(app.Type, appdef.NewQName("test", "unknown")))
 	}
 
 	// How to enum all projectors in AppDef
 	{
 		cnt := 0
-		app.Projectors(func(prj appdef.IProjector) bool {
+		for prj := range appdef.Projectors(app.Types()) {
 			cnt++
 			fmt.Println(cnt, prj)
-			return true
-		})
+		}
 	}
 
 	// Output:

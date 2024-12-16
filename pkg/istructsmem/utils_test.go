@@ -6,13 +6,13 @@
 package istructsmem
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
@@ -116,19 +116,19 @@ func TestObjectFillAndGet(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 
 		data := map[string]interface{}{
-			"sys.ID":  float64(7),
-			"int32":   float64(1),
-			"int64":   float64(2),
-			"float32": float64(3),
-			"float64": float64(4),
+			"sys.ID":  json.Number("7"),
+			"int32":   json.Number("1"),
+			"int64":   json.Number("2"),
+			"float32": json.Number("3"),
+			"float64": json.Number("4"),
 			"bytes":   "BQY=", // []byte{5,6}
 			"string":  "str",
 			"QName":   "test.CDoc",
 			"bool":    true,
 			"record": []interface{}{
 				map[string]interface{}{
-					"sys.ID": float64(8),
-					"int32":  float64(6),
+					"sys.ID": json.Number("8"),
+					"int32":  json.Number("6"),
 				},
 			},
 		}
@@ -146,11 +146,11 @@ func TestObjectFillAndGet(t *testing.T) {
 		require.Equal(test.testCDoc, o.AsQName("QName"))
 		require.True(o.AsBool("bool"))
 		count := 0
-		o.Children("record", func(c istructs.IObject) {
+		for c := range o.Children("record") {
 			require.Equal(istructs.RecordID(8), c.AsRecordID("sys.ID"))
 			require.Equal(int32(6), c.AsInt32("int32"))
 			count++
-		})
+		}
 		require.Equal(1, count)
 	})
 
@@ -172,12 +172,12 @@ func TestObjectFillAndGet(t *testing.T) {
 		for name, val := range cases {
 			builder := as.ObjectBuilder(test.testCDoc)
 			data := map[string]interface{}{
-				"sys.ID": float64(1),
-				name:     val,
+				appdef.SystemField_ID: json.Number("1"),
+				name:                  val,
 			}
 			builder.FillFromJSON(data)
 			o, err := builder.Build()
-			require.ErrorIs(err, ErrWrongFieldType)
+			require.Error(err, require.Is(ErrWrongFieldTypeError))
 			require.Nil(o)
 		}
 	})
@@ -225,5 +225,5 @@ func TestIBucketsFromIAppStructs(t *testing.T) {
 	bsActual, err := buckets.GetDefaultBucketsState(GetFunctionRateLimitName(funcQName, istructs.RateLimitKind_byApp))
 	require.NoError(err)
 	require.Equal(rlExpected.Period, bsActual.Period)
-	require.Equal(irates.NumTokensType(rlExpected.MaxAllowedPerDuration), bsActual.MaxTokensPerPeriod)
+	require.EqualValues(rlExpected.MaxAllowedPerDuration, bsActual.MaxTokensPerPeriod)
 }

@@ -1,0 +1,75 @@
+-- Copyright (c) 2024-present unTill Software Development Group B. V.
+-- @author Maxim Geraskin
+
+IMPORT SCHEMA 'untill';
+
+APPLICATION air(
+    USE untill;
+);
+
+WORKSPACE RestaurantWS INHERITS untill.SomeWS (
+    DESCRIPTOR RestaurantDescriptor();
+
+	TABLE VideoRecords INHERITS sys.CDoc (
+		Name varchar NOT NULL,
+		Length int64 NOT NULL,
+		Date int64 NOT NULL
+	);
+
+	TABLE ProformaPrinted INHERITS sys.ODoc (
+		Number int32 NOT NULL,
+		UserID ref(untill.untill_users) NOT NULL,
+		Timestamp int64 NOT NULL
+	);
+
+	TYPE CmdPBillResult (
+		Number int32 NOT NULL
+	);
+
+	TYPE cmd1Params (
+		A int32 NOT NULL,
+		B int32 NOT NULL,
+		C varchar NOT NULL
+	);
+
+	VIEW PbillDates (
+		Year int32 NOT NULL,
+		DayOfYear int32 NOT NULL,
+		FirstOffset int64 NOT NULL,
+		LastOffset int64 NOT NULL,
+		PRIMARY KEY ((Year), DayOfYear)
+	) AS RESULT OF FillPbillDates;
+
+	VIEW ProformaPrintedDocs (
+		Year int32 NOT NULL,
+		DayOfYear int32 NOT NULL,
+		FirstOffset int64 NOT NULL,
+		LastOffset int64 NOT NULL,
+		PRIMARY KEY ((Year), DayOfYear)
+	) AS RESULT OF ProjectorODoc;
+
+	VIEW VideoRecordArchive (
+		Year int32 NOT NULL,
+		Month int32 NOT NULL,
+		Day int32 NOT NULL,
+		TotalLength int64 NOT NULL,
+		PRIMARY KEY ((Year), Month, Day)
+    ) AS RESULT OF ProjectorNewVideoRecord;
+
+	TABLE NextNumbers INHERITS sys.WSingleton (
+		NextPBillNumber int32
+	);
+
+	EXTENSION ENGINE BUILTIN (
+	    COMMAND Cmd1(cmd1Params);
+	    COMMAND CmdForProformaPrinted(ProformaPrinted);
+        COMMAND Orders(untill.orders);
+        COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
+        PROJECTOR ApplyCmd1 AFTER EXECUTE ON (Cmd1);
+        PROJECTOR ApplySalesMetrics AFTER EXECUTE ON (Pbill, Orders) INTENTS (sys.View(PbillDates));
+        PROJECTOR FillPbillDates AFTER EXECUTE WITH PARAM ON (untill.pbill, untill.orders) INTENTS(sys.View(PbillDates));
+        PROJECTOR ProjectorNewVideoRecord AFTER INSERT ON (VideoRecords) INTENTS(sys.View(VideoRecordArchive));
+        PROJECTOR ProjectorODoc AFTER EXECUTE WITH PARAM ON sys.ODoc INTENTS(sys.View(ProformaPrintedDocs));
+        PROJECTOR ProjectorWRecord AFTER INSERT OR UPDATE ON (sys.WRecord);
+    );
+)

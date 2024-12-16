@@ -19,7 +19,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/iblobstorage"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -40,7 +42,7 @@ import (
 func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 	useCas := coreutils.IsCassandraStorage()
 	if !vitCfg.isShared {
-		vit = newVit(t, vitCfg, useCas)
+		vit = newVit(t, vitCfg, useCas, false)
 	} else {
 		ok := false
 		if vit, ok = vits[vitCfg]; ok {
@@ -49,7 +51,7 @@ func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 			}
 			vit.isFinalized = false
 		} else {
-			vit = newVit(t, vitCfg, useCas)
+			vit = newVit(t, vitCfg, useCas, false)
 			vits[vitCfg] = vit
 		}
 	}
@@ -70,7 +72,7 @@ func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 	return vit
 }
 
-func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
+func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *VIT {
 	cfg := vvm.NewVVMDefaultConfig()
 
 	// only dynamic ports are used in tests
@@ -144,6 +146,10 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 
 	// launch the server
 	require.NoError(t, vit.Launch())
+
+	if vvmLaunchOnly {
+		return vit
+	}
 
 	for _, app := range vitPreConfig.vitApps {
 		// generate verified value tokens if queried
@@ -258,7 +264,7 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppW
 }
 
 func NewVITLocalCassandra(tb testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
-	vit = newVit(tb, vitCfg, true)
+	vit = newVit(tb, vitCfg, true, false)
 	for _, opt := range opts {
 		opt(vit)
 	}
@@ -365,16 +371,28 @@ func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts .
 func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobName string, blobMimeType string, blobContent []byte,
 	opts ...coreutils.ReqOptFunc) (blobID istructs.RecordID) {
 	vit.T.Helper()
-	blobReader := coreutils.BLOBReader{
-		BLOBDesc: coreutils.BLOBDesc{
+	blobSUUID := vit.UploadTempBLOB(appQName, wsid, blobName, blobMimeType, blobContent, 0, opts...)
+	if len(blobSUUID) == 0 {
+		return istructs.NullRecordID
+	}
+	blobIDUint64, err := strconv.ParseUint(string(blobSUUID), utils.DecimalBase, utils.BitSize64)
+	require.NoError(vit.T, err)
+	return istructs.RecordID(blobIDUint64)
+}
+
+func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobName string, blobMimeType string, blobContent []byte, duration iblobstorage.DurationType,
+	opts ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID) {
+	vit.T.Helper()
+	blobReader := iblobstorage.BLOBReader{
+		DescrType: iblobstorage.DescrType{
 			Name:     blobName,
 			MimeType: blobMimeType,
 		},
 		ReadCloser: io.NopCloser(bytes.NewReader(blobContent)),
 	}
-	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobReader, opts...)
+	blobSUUID, err := vit.IFederation.UploadTempBLOB(appQName, wsid, blobReader, duration, opts...)
 	require.NoError(vit.T, err)
-	return blobID
+	return blobSUUID
 }
 
 func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
@@ -386,10 +404,15 @@ func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *cor
 
 // blob ReadCloser must be read out by the test
 // will be closed by the VIT
-func (vit *VIT) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) coreutils.BLOBReader {
+func (vit *VIT) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) iblobstorage.BLOBReader {
 	vit.T.Helper()
 	reader, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID, optFuncs...)
 	require.NoError(vit.T, err)
+	vit.registerBLOBReaderCleanup(reader)
+	return reader
+}
+
+func (vit *VIT) registerBLOBReaderCleanup(reader iblobstorage.BLOBReader) {
 	vit.cleanups = append(vit.cleanups, func(vit *VIT) {
 		if reader.ReadCloser != nil {
 			buf := make([]byte, 1)
@@ -404,7 +427,16 @@ func (vit *VIT) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID is
 			vit.T.Fatal("BLOB reader is not read out")
 		}
 	})
-	return reader
+}
+
+// blob ReadCloser must be read out by the test
+// will be closed by the VIT
+func (vit *VIT) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...coreutils.ReqOptFunc) iblobstorage.BLOBReader {
+	vit.T.Helper()
+	blobReader, err := vit.IFederation.ReadTempBLOB(appQName, wsid, blobSUUID, optFuncs...)
+	require.NoError(vit.T, err)
+	vit.registerBLOBReaderCleanup(blobReader)
+	return blobReader
 }
 
 func (vit *VIT) POST(relativeURL string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
@@ -481,7 +513,7 @@ func (vit *VIT) NextName() string {
 
 // sets `bs` as state of Buckets for `rateLimitName` in `appQName`
 // will be automatically restored on vit.TearDown() to the state the Bucket was before MockBuckets() call
-func (vit *VIT) MockBuckets(appQName appdef.AppQName, rateLimitName string, bs irates.BucketState) {
+func (vit *VIT) MockBuckets(appQName appdef.AppQName, rateLimitName appdef.QName, bs irates.BucketState) {
 	vit.T.Helper()
 	as, err := vit.IAppStructsProvider.BuiltIn(appQName)
 	require.NoError(vit.T, err)

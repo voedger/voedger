@@ -5,10 +5,14 @@
 
 package appdef
 
-import "strings"
+import (
+	"iter"
+	"slices"
+	"strings"
+)
 
 // # Implements:
-//  - IComment
+//   - IComment
 type comment struct {
 	string
 }
@@ -22,11 +26,11 @@ func (c *comment) Comment() string {
 	return c.string
 }
 
-func (c *comment) CommentLines() []string {
+func (c *comment) CommentLines() iter.Seq[string] {
 	if len(c.string) == 0 {
-		return []string{}
+		return func(func(string) bool) {}
 	}
-	return strings.Split(c.string, "\n")
+	return slices.Values(strings.Split(c.string, "\n"))
 }
 
 func (c *comment) setComment(v ...string) {
@@ -38,9 +42,7 @@ type commentBuilder struct {
 }
 
 func makeCommentBuilder(comment *comment) commentBuilder {
-	return commentBuilder{
-		comment: comment,
-	}
+	return commentBuilder{comment}
 }
 
 func (cb *commentBuilder) SetComment(v ...string) {
@@ -49,5 +51,5 @@ func (cb *commentBuilder) SetComment(v ...string) {
 
 type nullComment struct{}
 
-func (c *nullComment) Comment() string        { return "" }
-func (c *nullComment) CommentLines() []string { return []string{} }
+func (c *nullComment) Comment() string                { return "" }
+func (c *nullComment) CommentLines() iter.Seq[string] { return func(func(string) bool) {} }

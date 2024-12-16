@@ -6,6 +6,8 @@ package queryprocessor
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -47,10 +49,14 @@ func (o *EnrichmentOperator) DoAsync(ctx context.Context, work pipeline.IWorkpie
 				if err != nil {
 					return work, err
 				}
-				record := sv.AsRecord("")
+				record := sv.(istructs.IStateRecordValue).AsRecord()
 
 				recFields := o.fieldsDefs.get(record.QName())
-				value := coreutils.ReadByKind(field.RefField(), recFields[field.RefField()], record)
+				refFieldKind, ok := recFields[field.RefField()]
+				if !ok {
+					return work, coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Errorf("ref field %s references to table %s that does not contain field %s", field.Field(), record.QName(), field.RefField()))
+				}
+				value := coreutils.ReadByKind(field.RefField(), refFieldKind, record)
 				if element.Path().IsRoot() {
 					work.(IWorkpiece).PutEnrichedRootFieldKind(field.Key(), recFields[field.RefField()])
 				}

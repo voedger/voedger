@@ -97,12 +97,10 @@ func (a *asyncActualizer) Run(ctx context.Context) {
 	for ctx.Err() == nil {
 		if err = a.init(ctx); err == nil {
 			logger.Trace(a.name, "started")
-			if err = a.keepReading(); err != nil {
-				a.conf.LogError(a.name, err)
-			}
+			err = a.keepReading()
 		}
-		a.finit() // even execute if a.init has failed
-		if ctx.Err() == nil && err != nil {
+		a.finit() // execute even if a.init() has failed
+		if err != nil {
 			a.conf.LogError(a.name, err)
 			select {
 			case <-ctx.Done():
@@ -150,7 +148,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	prjType := appDef.Projector(a.projectorQName)
+	prjType := appdef.Projector(appDef.Type, a.projectorQName)
 	if prjType == nil {
 		return fmt.Errorf("async projector %s is not defined in AppDef", a.projectorQName)
 	}
@@ -160,14 +158,13 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		if ss.Len() > 2 {
 			return true
 		}
-		found := false
-		ss.Enum(
-			func(storage appdef.IStorage) bool {
-				n := storage.Name()
-				found = n != sys.Storage_View && n != sys.Storage_Record
-				return !found
-			})
-		return found
+		for storage := range ss.Enum {
+			n := storage.Name()
+			if n != sys.Storage_View && n != sys.Storage_Record {
+				return true
+			}
+		}
+		return false
 	}
 
 	// https://github.com/voedger/voedger/issues/1048
@@ -341,7 +338,7 @@ func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
 				return nil
 			})
 		if len(*batch) > 0 {
-			//nolint: suppress error if at least one event was read
+			//nolint suppress error if at least one event was read
 			return nil
 		}
 		return err
@@ -423,7 +420,7 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 		p.aametrics.Set(aaCurrentOffset, p.partitionID, p.name, float64(w.pLogOffset))
 	}
 
-	if !isAcceptable(w.event, p.iProjector.WantErrors(), p.iProjector.Events().Map(), p.iProjector.App()) {
+	if !isAcceptable(w.event, p.iProjector.WantErrors(), p.iProjector.Events().Map(), p.iProjector.App(), p.name) {
 		return nil, nil
 	}
 
@@ -478,7 +475,7 @@ func (p *asyncProjector) isProjectorDefined() (bool, error) {
 		return false, err
 	}
 	skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
-	skbCDocWorkspaceDescriptor.PutInt64(state.Field_WSID, int64(p.event.Workspace()))
+	skbCDocWorkspaceDescriptor.PutInt64(state.Field_WSID, int64(p.event.Workspace())) // nolint G115
 	svCDocWorkspaceDescriptor, err := p.state.MustExist(skbCDocWorkspaceDescriptor)
 	if err != nil {
 		// notest
@@ -538,7 +535,7 @@ func (p *asyncProjector) savePosition() error {
 	if e != nil {
 		return e
 	}
-	value.PutInt64(offsetFld, int64(p.pLogOffset))
+	value.PutInt64(offsetFld, int64(p.pLogOffset)) // nolint G115
 	return nil
 }
 func (p *asyncProjector) flush() (err error) {
@@ -603,5 +600,5 @@ func ActualizerOffset(appStructs istructs.IAppStructs, partition istructs.Partit
 	if err != nil {
 		return istructs.NullOffset, err
 	}
-	return istructs.Offset(value.AsInt64(offsetFld)), err
+	return istructs.Offset(value.AsInt64(offsetFld)), err // nolint G115
 }

@@ -25,94 +25,6 @@ APPLICATION example_app (
 DECLARE nAntiDdosPerSecRate int32 DEFAULT 1000;
 
 
-/*
-    Abstract tables can only be used for INHERITance by other tables.
-    INHERITS includes all the fields, nested tables and constraints from an ancestor table.
-    It is not allowed to use abstract tables for:
-        - including into workspaces with USE statement;
-        - declaring as nested table;
-        - specifying in reference fields;
-        - using in projectors;
-        - making CUD in any workspace;
-*/
-ABSTRACT TABLE NestedWithName INHERITS CRecord (
-    /*  Field is added to any table inherited from NestedWithName
-        The current comment is also added to scheme for this field  */
-
-    ItemName varchar(50) -- Max length is 1024
-);
-
-/*
-    Declare a table to use it later as nested.
-    Note: Quotes can be optionally used with identifiers
-*/
-TABLE "NestedTable" INHERITS NestedWithName (
-    ItemDescr varchar, -- Default length is 255
-    ItemTitle character varying(50) -- varchar and text are aliases for 'character varying'
-);
-
--- Declare tag to assign it later to definition(s)
-TAG BackofficeTag;
-
-/*
-    Any declared table must have one of the following tables as a root anchestor:
-        - CDoc (Configuration)
-        - ODoc (Operational)
-        - WDoc (Workflow)
-        - CSingleton (Configration singleton)
-        - WSingleton (Workflow singleton)
-
-    Nested tables must have one of the following tables as a root anchestor:
-        - CRecord (Configuration)
-        - ODoc (Operational)
-        - WDoc (Workflow)
-*/
-TABLE TablePlan INHERITS CDoc (
-    FState int,
-    TableNumber int,
-    Name varchar NOT NULL,
-    Rate currency NOT NULL,
-    Expiration timestamp,
-    VerifiableField varchar NOT NULL VERIFIABLE, -- Verifiable field
-    Int1 int DEFAULT 1 CHECK(Int1 >= 1 AND Int2 < 10000),  -- Expressions evaluating to TRUE or UNKNOWN succeed.
-    Text1 varchar DEFAULT 'a',
-    BinData binary varying,
-    BinData2 varbinary, -- "varbinary" and "bytes" are aliases for "binary varying"
-    "bytes" bytes, -- optional quotes
-
-    ScreenGroupRef ref(ScreenGroup),
-    AnyTableRef ref,
-    FewTablesRef ref(ScreenGroup, TablePlan) NOT NULL,
-    CheckedField varchar(8) CHECK '^[0-9]{8}$', -- Field validated by regexp
-    CHECK (ValidateRow(this)), -- Unnamed CHECK table constraint. Expressions evaluating to TRUE or UNKNOWN succeed.
-    CONSTRAINT StateChecker CHECK (ValidateFState(FState)), -- Named CHECK table constraint
-    UNIQUE (FState, Name), -- unnamed UNIQUE table constraint, core generates `main.TablePlan$uniques$01` automatically
-    CONSTRAINT UniqueTable UNIQUE (TableNumber), -- named UNIQUE table constraint
-    UNIQUEFIELD Name, -- deprecated. For Air backward compatibility only
-    TableItems TABLE TablePlanItem (
-        TableNo int,
-        Chairs int
-    ),
-    items NestedTable, -- Include table declared in different place. Must be one of Record types
-    ExcludedTableItems TablePlanItem
-) WITH Comment='Backoffice Table', Tags=(BackofficeTag); -- Optional comment and tags
-
-TABLE ScreenGroup INHERITS CDoc();
-
-/*
-    CSingletones is a configration singleton.
-    These comments are included in the statement definition, but may be overridden with `WITH Comment=...`
-*/
-TABLE SubscriptionProfile INHERITS CSingleton (
-    CustomerID varchar,
-    CustomerKind int,
-    CompanyName varchar
-);
-
-TABLE Transaction INHERITS WSingleton (
-    OpenDatetime timestamp,
-    CloseDatetime timestamp
-);
 
 -- Package-level extensions
 EXTENSION ENGINE WASM (
@@ -129,7 +41,7 @@ EXTENSION ENGINE WASM (
 RATE AppDefaultRate 1000 PER HOUR;
 
 -- WORKSPACE statement declares the Workspace, descriptor and definitions, allowed in this workspace
-WORKSPACE MyWorkspace (
+WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
     DESCRIPTOR(                     -- Workspace descriptor is always SINGLETON
                                     -- If name omitted, then QName is: <WorkspaceName>+"Descriptor"
 
@@ -138,10 +50,94 @@ WORKSPACE MyWorkspace (
         Description varchar(100)
     );
 
+    -- Declare tag to assign it later to definition(s)
+    TAG BackofficeTag;
+
+    /*
+        Abstract tables can only be used for INHERITance by other tables.
+        INHERITS includes all the fields, nested tables and constraints from an ancestor table.
+        It is not allowed to use abstract tables for:
+            - including into workspaces with USE statement;
+            - declaring as nested table;
+            - specifying in reference fields;
+            - using in projectors;
+            - making CUD in any workspace;
+    */
+    ABSTRACT TABLE NestedWithName INHERITS sys.CRecord (
+        /*  Field is added to any table inherited from NestedWithName
+            The current comment is also added to scheme for this field  */
+
+        ItemName varchar(50) -- Max length is 1024
+    );
+
+    /*
+        Declare a table to use it later as nested.
+        Note: Quotes can be optionally used with identifiers
+    */
+    TABLE "NestedTable" INHERITS NestedWithName (
+        ItemDescr varchar, -- Default length is 255
+        ItemTitle character varying(50) -- varchar and text are aliases for 'character varying'
+    );
+
+
+    /*
+        Any declared table must have one of the following tables as a root anchestor:
+            - sys.CDoc (Configuration)
+            - sys.ODoc (Operational)
+            - sys.WDoc (Workflow)
+            - sys.CSingleton (Configration singleton)
+            - sys.WSingleton (Workflow singleton)
+
+        Nested tables must have one of the following tables as a root anchestor:
+            - sys.CRecord (Configuration)
+            - sys.ODoc (Operational)
+            - sys.WDoc (Workflow)
+    */
+    TABLE TablePlan INHERITS sys.CDoc (
+        FState int,
+        TableNumber int,
+        Name varchar NOT NULL,
+        Rate currency NOT NULL,
+        Expiration timestamp,
+        VerifiableField varchar NOT NULL VERIFIABLE, -- Verifiable field
+        Int1 int DEFAULT 1 CHECK(Int1 >= 1 AND Int2 < 10000),  -- Expressions evaluating to TRUE or UNKNOWN succeed.
+        Text1 varchar DEFAULT 'a',
+        BinData binary varying,
+        BinData2 varbinary, -- "varbinary" and "bytes" are aliases for "binary varying"
+        "bytes" bytes, -- optional quotes
+
+        ScreenGroupRef ref(ScreenGroup),
+        AnyTableRef ref,
+        FewTablesRef ref(ScreenGroup, TablePlan) NOT NULL,
+        CheckedField varchar(8) CHECK '^[0-9]{8}$', -- Field validated by regexp
+        CHECK (ValidateRow(this)), -- Unnamed CHECK table constraint. Expressions evaluating to TRUE or UNKNOWN succeed.
+        CONSTRAINT StateChecker CHECK (ValidateFState(FState)), -- Named CHECK table constraint
+        UNIQUE (FState, Name), -- unnamed UNIQUE table constraint, core generates `main.TablePlan$uniques$01` automatically
+        CONSTRAINT UniqueTable UNIQUE (TableNumber), -- named UNIQUE table constraint
+        UNIQUEFIELD Name, -- deprecated. For Air backward compatibility only
+        TableItems TABLE TablePlanItem (
+            TableNo int,
+            Chairs int
+        ),
+        items NestedTable, -- Include table declared in different place. Must be one of Record types
+        ExcludedTableItems TablePlanItem
+    ) WITH Comment='Backoffice Table', Tags=(BackofficeTag); -- Optional comment and tags
+
+    TABLE ScreenGroup INHERITS sys.CDoc();
+
+
+    TABLE Transaction INHERITS sys.WSingleton (
+        OpenDatetime timestamp,
+        CloseDatetime timestamp
+    );
+
     -- Definitions declared in the workspace are only available in this workspace
     TAG PosTag;
+    ROLE Admin;
     ROLE LocationManager;
     ROLE LocationUser;
+    ROLE LocationGuest;
+
     TYPE TypeWithKind (
         Kind int
     );
@@ -153,12 +149,22 @@ WORKSPACE MyWorkspace (
         Email varchar(50)
     );
 
-    -- To include table or workspace declared in different place of the schema, they must be USEd:
-	USE TABLE SubscriptionProfile;
+
+    /*
+        CSingletones is a configration singleton.
+        These comments are included in the statement definition, but may be overridden with `WITH Comment=...`
+    */
+    TABLE SubscriptionProfile INHERITS sys.CSingleton (
+        CustomerID varchar,
+        CustomerKind int,
+        CompanyName varchar
+    );
+
+
     USE WORKSPACE MyWorkspace;  -- It's now possible to create MyWorkspace in MyWorkspace hierarchy
 
     -- Declare table within workspace
-    TABLE WsTable INHERITS CDoc (
+    TABLE WsTable INHERITS sys.CDoc (
         air.TypeWithName,   -- Fieldset
 
         PsName varchar(15),
@@ -166,7 +172,7 @@ WORKSPACE MyWorkspace (
             TypeWithKind, -- Fieldset
             Number int
         )
-    );
+    ) WITH Tags=(BackofficeTag);
 
     -- Workspace-level extensions
     EXTENSION ENGINE BUILTIN (
@@ -183,30 +189,30 @@ WORKSPACE MyWorkspace (
         */
         PROJECTOR CountOrders
             AFTER EXECUTE ON NewOrder
-            INTENTS(View(OrdersCountView));
+            INTENTS(sys.View(OrdersCountView));
 
         -- Projectors triggered by CUD operation
         -- SYNC means that projector is synchronous
         SYNC PROJECTOR TablePlanThumbnailGen
             AFTER INSERT ON TablePlan
-            INTENTS(View(TablePlanThumbnails));
+            INTENTS(sys.View(TablePlanThumbnails));
 
         -- Projector triggered by command argument SubscriptionEvent
         -- Projector uses sys.HTTPStorage
         PROJECTOR UpdateSubscriptionProfile
             AFTER EXECUTE WITH PARAM ON SubscriptionEvent
-            STATE(sys.Http, AppSecret);
+            STATE(sys.Http, sys.AppSecret);
 
         -- Projector triggered by few COMMANDs
         PROJECTOR UpdateDashboard
             AFTER EXECUTE ON (NewOrder, NewOrder2)
-            STATE (Http, AppSecret)
-            INTENTS(View(DashboardView, XZReports, NotificationsHistory, ActiveTablePlansView));
+            STATE (sys.Http, sys.AppSecret)
+            INTENTS(sys.View(DashboardView, XZReports, NotificationsHistory, ActiveTablePlansView));
 
         -- Projector triggered by few types of CUD operations
         PROJECTOR UpdateActivePlans
             AFTER ACTIVATE OR DEACTIVATE ON TablePlan
-            INTENTS(View(ActiveTablePlansView));
+            INTENTS(sys.View(ActiveTablePlansView));
 
         /*
             Some projector which sends E-mails and performs HTTP queries.
@@ -214,8 +220,8 @@ WORKSPACE MyWorkspace (
         */
         PROJECTOR NotifyOnChanges
             AFTER INSERT OR UPDATE ON (TablePlan, WsTable)
-            STATE(Http, AppSecret)
-            INTENTS(SendMail, View(NotificationsHistory))
+            STATE(sys.Http, sys.AppSecret)
+            INTENTS(sys.SendMail, sys.View(NotificationsHistory))
             INCLUDING ERRORS;
 
         /*
@@ -223,14 +229,7 @@ WORKSPACE MyWorkspace (
         CDoc, WDoc, ODoc are the only abstract tables which are allowed to use in this case
         */
         PROJECTOR RecordsRegistryProjector
-            AFTER INSERT OR ACTIVATE OR DEACTIVATE ON (CRecord, WRecord);
-
-        -- Job executed by CRON
-        JOB TestJob1 '1 0 * * *'
-            STATE (Http, AppSecret);
-
-
-        JOB TestJob2 '@every 2m30s';
+            AFTER INSERT OR ACTIVATE OR DEACTIVATE ON (sys.CRecord, sys.WRecord);
 
         /*
         Commands can only be declared in workspaces
@@ -240,7 +239,7 @@ WORKSPACE MyWorkspace (
         COMMAND NewOrder(air.Order, UNLOGGED air.TypeWithName) RETURNS air.Order;
 
         -- Command can return void (in this case `RETURNS void` may be omitted)
-        COMMAND NewOrder2(air.Order) STATE(AppSecret) INTENTS(Record(Transaction)) RETURNS void;
+        COMMAND NewOrder2(air.Order) STATE(sys.AppSecret) INTENTS(sys.Record(Transaction)) RETURNS void;
 
         COMMAND RestorePassword(RestorePasswordParam) RETURNS void;
 
@@ -252,10 +251,10 @@ WORKSPACE MyWorkspace (
         QUERY Query1 RETURNS void;
 
         -- WITH Comment... overrides this comment
-        QUERY Query11() RETURNS air.Order WITH Comment='A comment';
+        QUERY Query11() RETURNS air.Order WITH Comment='A comment', Tags=(PosTag);
 
         -- Query which can return any value
-        QUERY Query2(air.Order) STATE(AppSecret, Http) RETURNS any;
+        QUERY Query2(air.Order) STATE(sys.AppSecret, sys.Http) RETURNS any;
     );
 
     -- Object scope is PER APP PARTITION PER IP
@@ -276,17 +275,57 @@ WORKSPACE MyWorkspace (
 	LIMIT tl1 ON TABLE WsTable WITH RATE CudRate; -- CUD operations on a single table
 	LIMIT BackofficeLimit ON TAG BackofficeTag WITH RATE BackofficeRate; -- Limit on anything with tag
 
-    -- ACLs
+    -- GRANTs
+    -- Roles
+    GRANT Admin TO LocationManager;
+
+    -- ALL COMMANDS/QUERIES/TABLES/VIEWS - all resources in the workspace
+    GRANT ALL ON ALL TABLES TO Admin;
+    GRANT SELECT,INSERT,UPDATE ON ALL TABLES TO Admin; -- equivalent to GRANT ALL ON ALL TABLES TO Admin;
+    GRANT EXECUTE ON ALL QUERIES TO Admin;
+    GRANT EXECUTE ON ALL COMMANDS TO Admin;
+    GRANT SELECT ON ALL VIEWS TO Admin;
+
+    -- ALL * WITH TAG - includes all statements in current or inherited workspaces
     GRANT ALL ON ALL TABLES WITH TAG BackofficeTag TO LocationManager;
-    GRANT INSERT,UPDATE ON ALL TABLES WITH TAG PosTag TO LocationUser;
+    GRANT INSERT,UPDATE,SELECT ON ALL TABLES WITH TAG BackofficeTag TO LocationManager; -- equivalent to GRANT ALL ON ALL TABLES WITH TAG BackofficeTag TO LocationManager;
+    GRANT EXECUTE ON ALL QUERIES WITH TAG PosTag TO main.LocationUser;
+    GRANT EXECUTE ON ALL COMMANDS WITH TAG PosTag TO main.LocationUser;
+    GRANT SELECT ON ALL VIEWS WITH TAG PosTag TO LocationUser;
+    
+    -- SPECIFIC STATEMENTS
+    GRANT EXECUTE ON COMMAND NewOrder TO LocationUser;
+    GRANT EXECUTE ON QUERY Query1 TO LocationUser;
     GRANT SELECT ON TABLE untill.Prices TO LocationUser;
     GRANT SELECT(Price) ON TABLE untill.Prices TO LocationUser;
-    GRANT INSERT ON COMMAND NewOrder TO LocationUser;
-    GRANT SELECT ON QUERY Query1 TO LocationUser;
-    GRANT SELECT ON ALL QUERIES WITH TAG PosTag TO main.LocationUser;
-    GRANT INSERT ON WORKSPACE MyWorkspace TO LocationUser;
+    GRANT INSERT(Discount) ON TABLE untill.Promotions TO LocationManager; 
     GRANT SELECT ON VIEW XZReports TO LocationUser;
-    GRANT SELECT ON ALL VIEWS WITH TAG PosTag TO LocationUser;
+    GRANT SELECT(Year) ON VIEW XZReports TO LocationUser;
+
+    -- REVOKEs
+    -- ALL COMMANDS/QUERIES/TABLES/VIEWS - all resources in the workspace    
+    REVOKE ALL ON ALL TABLES FROM LocationGuest;
+    REVOKE INSERT,UPDATE,SELECT ON ALL TABLES FROM LocationGuest; -- equivalent to REVOKE ALL ON ALL TABLES FROM LocationGuest;
+    REVOKE EXECUTE ON ALL QUERIES FROM LocationGuest;
+    REVOKE EXECUTE ON ALL COMMANDS FROM LocationGuest;
+    REVOKE SELECT ON ALL VIEWS FROM LocationGuest;
+    
+
+    -- ALL * WITH TAG - includes all statements in current or inherited workspaces
+    REVOKE ALL ON ALL TABLES WITH TAG BackofficeTag FROM LocationGuest;    
+    REVOKE INSERT,UPDATE,SELECT ON ALL TABLES WITH TAG BackofficeTag FROM LocationGuest; -- equivalent to REVOKE ALL ON ALL TABLES WITH TAG BackofficeTag FROM LocationGuest;
+    REVOKE EXECUTE ON ALL QUERIES WITH TAG PosTag FROM LocationGuest;
+    REVOKE EXECUTE ON ALL COMMANDS WITH TAG PosTag FROM LocationGuest;
+    REVOKE SELECT ON ALL VIEWS WITH TAG PosTag FROM LocationGuest;
+    
+    
+    -- SPECIFIC STATEMENTS
+    REVOKE EXECUTE ON COMMAND NewOrder FROM LocationGuest;
+    REVOKE EXECUTE ON QUERY Query1 FROM LocationGuest;
+    REVOKE SELECT ON TABLE untill.Prices FROM LocationGuest;
+    REVOKE SELECT(Price) ON TABLE untill.Prices FROM LocationGuest;
+    REVOKE SELECT ON VIEW XZReports FROM LocationGuest;
+    REVOKE SELECT(Year) ON VIEW XZReports FROM LocationGuest;
 
     -- VIEWs generated by the PROJECTOR.
     -- Primary Key must be declared in View.
@@ -312,7 +351,7 @@ WORKSPACE MyWorkspace (
         -- Reference to WDoc
         XZReportWDocID ref NOT NULL,
         PRIMARY KEY ((Year), Month, Day, Kind, Number)
-    ) AS RESULT OF UpdateDashboard;
+    ) AS RESULT OF UpdateDashboard WITH Comment='XZ Reports', Tags=(PosTag);
 
     VIEW OrdersCountView(
         Year int, -- same as int32
@@ -331,7 +370,7 @@ WORKSPACE MyWorkspace (
 
     VIEW DashboardView(
         Dummy int,
-        SomeRec record,
+        SomeRec bytes,
         Dummy2 int,
         PRIMARY KEY ((Dummy), Dummy2)
     ) AS RESULT OF UpdateDashboard;
@@ -371,9 +410,24 @@ WORKSPACE MyWorkspace1 INHERITS AWorkspace, untill.UntillAWorkspace (
     We can also ALTER non-alterable workspaces when they are in the same package
 */
 ALTER WORKSPACE sys.Profile(
-    USE TABLE TablePlan;
     USE WORKSPACE MyWorkspace1;
 );
 
--- Declares ROLE
-ROLE UntillPaymentsUser;
+ALTER WORKSPACE sys.AppWorkspaceWS (
+
+    VIEW JobStateView(
+        Fixed int,
+        Dummy int,
+        Data bytes,
+        PRIMARY KEY ((Fixed), Dummy)
+    ) AS RESULT OF TestJob1;
+
+    EXTENSION ENGINE BUILTIN (
+           -- Job executed by CRON
+        JOB TestJob1 '1 0 * * *'
+            STATE (sys.Http, sys.AppSecret) INTENTS(sys.View(JobStateView));
+
+
+        JOB TestJob2 '@every 2m30s'; 
+    );
+)

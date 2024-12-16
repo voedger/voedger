@@ -6,6 +6,7 @@
 package singletons
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -37,7 +38,8 @@ func Test_BasicUsage(t *testing.T) {
 	testAppDef := func() appdef.IAppDef {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
-		doc := adb.AddCDoc(testName)
+		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		doc := ws.AddCDoc(testName)
 		doc.SetSingleton()
 		appDef, err := adb.Build()
 		if err != nil {
@@ -81,17 +83,13 @@ func Test_BasicUsage(t *testing.T) {
 
 func test_AppDefSingletons(t *testing.T, appDef appdef.IAppDef, st *Singletons) {
 	require := require.New(t)
-	appDef.Types(
-		func(t appdef.IType) bool {
-			if singleton, ok := t.(appdef.ISingleton); ok {
-				if singleton.Singleton() {
-					id, err := st.ID(singleton.QName())
-					require.NoError(err)
-					require.NotEqual(istructs.NullRecordID, id)
-				}
-			}
-			return true
-		})
+	for s := range appdef.Singletons(appDef.Types()) {
+		if s.Singleton() {
+			id, err := st.ID(s.QName())
+			require.NoError(err)
+			require.NotEqual(istructs.NullRecordID, id)
+		}
+	}
 }
 
 func Test_SingletonsGetID(t *testing.T) {
@@ -113,15 +111,16 @@ func Test_SingletonsGetID(t *testing.T) {
 
 			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
+			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
 			{
-				doc := adb.AddCDoc(cDocName)
+				doc := wsb.AddCDoc(cDocName)
 				doc.SetSingleton()
 				doc.AddField("f1", appdef.DataKind_QName, true)
 			}
 
 			{
-				doc := adb.AddWDoc(wDocName)
+				doc := wsb.AddWDoc(wDocName)
 				doc.SetSingleton()
 				doc.AddField("f1", appdef.DataKind_QName, true)
 			}
@@ -190,7 +189,7 @@ func Test_Singletons_Errors(t *testing.T) {
 
 	require := require.New(t)
 	cDocName := appdef.NewQName("test", "SingletonCDoc")
-	testError := fmt.Errorf("test error")
+	testError := errors.New("test error")
 
 	t.Run("must error if unknown version of Singletons system view", func(t *testing.T) {
 		storage, err := istorageimpl.Provide(mem.Provide()).AppStorage(istructs.AppQName_test1_app1)
@@ -219,7 +218,9 @@ func Test_Singletons_Errors(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		doc := adb.AddCDoc(cDocName)
+		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		doc := ws.AddCDoc(cDocName)
 		doc.SetSingleton()
 		doc.AddField("f1", appdef.DataKind_QName, true)
 		appDef, err := adb.Build()
@@ -240,9 +241,10 @@ func Test_Singletons_Errors(t *testing.T) {
 
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
+		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
 		for id := istructs.FirstSingletonID; id <= istructs.MaxSingletonID; id++ {
-			doc := adb.AddCDoc(appdef.NewQName("test", fmt.Sprintf("doc_%v", id)))
+			doc := ws.AddCDoc(appdef.NewQName("test", fmt.Sprintf("doc_%v", id)))
 			doc.SetSingleton()
 		}
 		appDef, err := adb.Build()
@@ -264,10 +266,11 @@ func Test_Singletons_Errors(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		app := appdef.New()
-		doc := app.AddCDoc(defName)
+		adb := appdef.New()
+		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		doc := ws.AddCDoc(defName)
 		doc.SetSingleton()
-		appDef, err := app.Build()
+		appDef, err := adb.Build()
 		require.NoError(err)
 
 		st := New()
@@ -284,10 +287,11 @@ func Test_Singletons_Errors(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		app := appdef.New()
-		doc := app.AddCDoc(defName)
+		adb := appdef.New()
+		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		doc := ws.AddCDoc(defName)
 		doc.SetSingleton()
-		appDef, err := app.Build()
+		appDef, err := adb.Build()
 		require.NoError(err)
 
 		st := New()

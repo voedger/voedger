@@ -18,6 +18,8 @@ func Test_AppDefExtensions(t *testing.T) {
 
 	var app IAppDef
 
+	wsName := NewQName("test", "workspace")
+
 	cmdName := NewQName("test", "cmd")
 	qrName := NewQName("test", "query")
 	prjName := NewQName("test", "projector")
@@ -31,27 +33,29 @@ func Test_AppDefExtensions(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		cmd := adb.AddCommand(cmdName)
+		wsb := adb.AddWorkspace(wsName)
+
+		_ = wsb.AddObject(parName)
+		_ = wsb.AddObject(resName)
+
+		cmd := wsb.AddCommand(cmdName)
 		cmd.SetEngine(ExtensionEngineKind_WASM)
 		cmd.
 			SetParam(parName).
 			SetResult(resName)
 
-		qry := adb.AddQuery(qrName)
+		qry := wsb.AddQuery(qrName)
 		qry.
 			SetParam(parName).
 			SetResult(QNameANY)
 
-		prj := adb.AddProjector(prjName)
+		prj := wsb.AddProjector(prjName)
 		prj.Events().
 			Add(cmdName, ProjectorEventKind_Execute)
 		prj.Intents().
 			Add(sysViews, viewName)
 
-		_ = adb.AddObject(parName)
-		_ = adb.AddObject(resName)
-
-		v := adb.AddView(viewName)
+		v := wsb.AddView(viewName)
 		v.Key().PartKey().AddField("pk", DataKind_int64)
 		v.Key().ClustCols().AddField("cc", DataKind_string)
 		v.Value().AddField("f1", DataKind_int64, true)
@@ -63,23 +67,28 @@ func Test_AppDefExtensions(t *testing.T) {
 		require.NotNil(app)
 	})
 
-	t.Run("Should be ok to enumerate extensions", func(t *testing.T) {
-		var extNames []QName
-		app.Extensions(func(ex IExtension) bool {
-			extNames = append(extNames, ex.QName())
-			return true
+	testWith := func(tested testedTypes) {
+		t.Run("should be ok to enumerate extensions", func(t *testing.T) {
+			var extNames []QName
+			for ex := range Extensions(tested.Types()) {
+				require.Equal(wsName, ex.Workspace().QName())
+				extNames = append(extNames, ex.QName())
+			}
+			require.Len(extNames, 3)
+			require.Equal([]QName{cmdName, prjName, qrName}, extNames)
 		})
-		require.Len(extNames, 3)
-		require.Equal([]QName{cmdName, prjName, qrName}, extNames)
-	})
 
-	t.Run("Should be ok to find extension by name", func(t *testing.T) {
-		ext := app.Extension(cmdName)
-		require.NotNil(ext)
-		require.Equal(cmdName, ext.QName())
+		t.Run("should be ok to find extension by name", func(t *testing.T) {
+			ext := Extension(tested.Type, cmdName)
+			require.NotNil(ext)
+			require.Equal(cmdName, ext.QName())
+		})
 
-		require.Nil(app.Extension(NewQName("test", "unknown")), "Should be nil if unknown extension")
-	})
+		require.Nil(Extension(tested.Type, NewQName("test", "unknown")), "should be nil if unknown")
+	}
+
+	testWith(app)
+	testWith(app.Workspace(wsName))
 }
 
 func TestExtensionEngineKind_MarshalText(t *testing.T) {
@@ -96,9 +105,9 @@ func TestExtensionEngineKind_MarshalText(t *testing.T) {
 			k:    ExtensionEngineKind_BuiltIn,
 			want: `ExtensionEngineKind_BuiltIn`,
 		},
-		{name: `ExtensionEngineKind_Count —> <number>`,
-			k:    ExtensionEngineKind_Count,
-			want: utils.UintToString(ExtensionEngineKind_Count),
+		{name: `ExtensionEngineKind_count —> <number>`,
+			k:    ExtensionEngineKind_count,
+			want: utils.UintToString(ExtensionEngineKind_count),
 		},
 	}
 	for _, tt := range tests {
@@ -115,11 +124,11 @@ func TestExtensionEngineKind_MarshalText(t *testing.T) {
 	}
 
 	t.Run("100% cover ExtensionEngineKind.String()", func(t *testing.T) {
-		const tested = ExtensionEngineKind_Count + 1
+		const tested = ExtensionEngineKind_count + 1
 		want := "ExtensionEngineKind(" + utils.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
-			t.Errorf("(ExtensionEngineKind_Count + 1).String() = %v, want %v", got, want)
+			t.Errorf("(ExtensionEngineKind_count + 1).String() = %v, want %v", got, want)
 		}
 	})
 }
@@ -131,7 +140,7 @@ func TestExtensionEngineKindTrimString(t *testing.T) {
 		want string
 	}{
 		{name: "basic", k: ExtensionEngineKind_BuiltIn, want: "BuiltIn"},
-		{name: "out of range", k: ExtensionEngineKind_Count + 1, want: (ExtensionEngineKind_Count + 1).String()},
+		{name: "out of range", k: ExtensionEngineKind_count + 1, want: (ExtensionEngineKind_count + 1).String()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

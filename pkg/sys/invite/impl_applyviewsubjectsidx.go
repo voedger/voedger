@@ -5,7 +5,6 @@
 package invite
 
 import (
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -17,9 +16,9 @@ func applyViewSubjectsIdx() istructs.Projector {
 }
 
 func applyViewSubjectsIdxProjector(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
-	return iterate.ForEachError(event.CUDs, func(cdocSubject istructs.ICUDRow) error {
+	for cdocSubject := range event.CUDs {
 		if cdocSubject.QName() != QNameCDocSubject || !cdocSubject.IsNew() {
-			return nil
+			continue
 		}
 
 		actualLogin := cdocSubject.AsString(Field_Login) // cdoc.sys.Subject.Login <- cdoc.sys.Invite.ActualLogin by ap.sys.ApplyJoinWorkspace
@@ -38,6 +37,6 @@ func applyViewSubjectsIdxProjector(event istructs.IPLogEvent, st istructs.IState
 			return err
 		}
 		subjectsIdxBuilder.PutRecordID(Field_SubjectID, cdocSubject.ID())
-		return nil
-	})
+	}
+	return nil
 }

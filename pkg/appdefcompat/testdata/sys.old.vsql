@@ -11,22 +11,22 @@ APPLICATION TEST(
 	USE pkg2;
 );
 
-ABSTRACT TABLE CRecord();
-ABSTRACT TABLE WRecord();
-ABSTRACT TABLE ORecord();
-
-ABSTRACT TABLE CDoc INHERITS CRecord();
-ABSTRACT TABLE ODoc INHERITS ORecord();
-ABSTRACT TABLE WDoc INHERITS WRecord();
-
-ABSTRACT TABLE Singleton INHERITS CDoc();
-
 ABSTRACT WORKSPACE Workspace (
+    ABSTRACT TABLE CRecord();
+    ABSTRACT TABLE WRecord();
+    ABSTRACT TABLE ORecord();
+
+    ABSTRACT TABLE CDoc INHERITS CRecord();
+    ABSTRACT TABLE ODoc INHERITS ORecord();
+    ABSTRACT TABLE WDoc INHERITS WRecord();
+
+    ABSTRACT TABLE Singleton INHERITS CDoc();
 );
 
-WORKSPACE SomeWorkspace(
-    USE TABLE pkg1.*;
-    USE TABLE pkg2.*;
+ABSTRACT WORKSPACE AbsWorkspace(
+);
+
+WORKSPACE SomeWorkspace INHERITS pkg1.TestWorkspace, pkg2.TestWorkspace (
     TYPE CreateLoginParams(
         Login                       varchar,
         AppName                     varchar,
@@ -41,7 +41,7 @@ WORKSPACE SomeWorkspace(
         Email varchar,
         Password varchar
     );
-    TABLE OneMoreTable INHERITS CDoc(
+    TABLE OneMoreTable INHERITS sys.CDoc(
         A varchar,
         B varchar,
         C int32,
@@ -51,7 +51,7 @@ WORKSPACE SomeWorkspace(
         A varchar,
         B varchar
     );
-    TABLE AnotherOneTable INHERITS CDoc(
+    TABLE AnotherOneTable INHERITS sys.CDoc(
         A varchar,
         B varchar,
         C varchar,
@@ -74,11 +74,11 @@ WORKSPACE SomeWorkspace(
         E int,
         PRIMARY KEY ((A), B)
     ) AS RESULT OF Proj1;
-    TABLE O_Doc INHERITS ODoc (
+    TABLE O_Doc INHERITS sys.ODoc (
         Fld1 int32
     );
     EXTENSION ENGINE BUILTIN (
-        PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(SomeView));
+        PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(SomeView));
         COMMAND Orders();
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
         COMMAND SomeCommand(SomeType, UNLOGGED SomeType) RETURNS SomeType;

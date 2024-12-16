@@ -26,7 +26,9 @@ var NullAppConfig = newBuiltInAppConfig(istructs.AppQName_null, appdef.New())
 var (
 	nullDynoBuffer = dynobuffers.NewBuffer(dynobuffers.NewScheme())
 	// not a func -> golang itokensjwt.TimeFunc will be initialized on process init forever
-	testTokensFactory     = func() payloads.IAppTokensFactory { return payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()) }
+	testTokensFactory = func() payloads.IAppTokensFactory {
+		return payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT())
+	}
 	simpleStorageProvider = func() istorage.IAppStorageProvider {
 		asf := mem.Provide()
 		return provider.Provide(asf)
@@ -35,7 +37,7 @@ var (
 
 // crackID splits ID to two-parts key — partition key (hi) and clustering columns (lo)
 func crackID(id uint64) (hi uint64, low uint16) {
-	return id >> partitionBits, uint16(id) & lowMask
+	return id >> partitionBits, uint16(id) & lowMask // nolint G115
 }
 
 // CrackRecordID splits record ID to two-parts key — partition key (hi) and clustering columns (lo)

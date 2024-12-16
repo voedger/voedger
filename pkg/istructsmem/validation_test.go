@@ -6,13 +6,12 @@
 package istructsmem
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -27,14 +26,16 @@ func Test_ValidEventArgs(t *testing.T) {
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
+	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
 	docName := appdef.NewQName("test", "document")
 	rec1Name := appdef.NewQName("test", "record1")
 	rec2Name := appdef.NewQName("test", "record2")
 
 	objName := appdef.NewQName("test", "object")
 
-	t.Run("must be ok to build test application", func(t *testing.T) {
-		doc := adb.AddODoc(docName)
+	t.Run("should be ok to build test application", func(t *testing.T) {
+		doc := wsb.AddODoc(docName)
 		doc.
 			AddField("RequiredField", appdef.DataKind_int32, true).
 			AddRefField("RefField", false, rec1Name)
@@ -42,12 +43,12 @@ func Test_ValidEventArgs(t *testing.T) {
 			AddContainer("child", rec1Name, 1, 1).
 			AddContainer("child2", rec2Name, 0, appdef.Occurs_Unbounded)
 
-		_ = adb.AddORecord(rec1Name)
+		_ = wsb.AddORecord(rec1Name)
 
-		rec2 := adb.AddORecord(rec2Name)
+		rec2 := wsb.AddORecord(rec2Name)
 		rec2.AddRefField("RequiredRefField", true, rec2Name)
 
-		obj := adb.AddObject(objName)
+		obj := wsb.AddObject(objName)
 		obj.AddContainer("objChild", objName, 0, appdef.Occurs_Unbounded)
 	})
 
@@ -73,8 +74,7 @@ func Test_ValidEventArgs(t *testing.T) {
 				}})
 
 		_, err := b.BuildRawEvent()
-		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, "command function «test.object» not found")
+		require.Error(err, require.Is(ErrNameNotFoundError), require.Has(objName))
 	})
 
 	oDocEvent := func(sync bool) istructs.IRawEventBuilder {
@@ -112,20 +112,21 @@ func Test_ValidEventArgs(t *testing.T) {
 	t.Run("error if empty doc", func(t *testing.T) {
 		e := oDocEvent(false)
 		_, err := e.BuildRawEvent()
-		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, "ODoc «test.document» misses required field «sys.ID»")
+		require.Error(err, require.Is(ErrFieldIsEmptyError),
+			require.HasAll(docName, appdef.SystemField_ID))
 	})
 
 	t.Run("errors in argument IDs and refs", func(t *testing.T) {
 
 		t.Run("error if not raw ID in new event", func(t *testing.T) {
+			const badID = istructs.RecordID(123456789012345)
 			e := oDocEvent(false)
 			doc := e.ArgumentObjectBuilder()
-			doc.PutRecordID(appdef.SystemField_ID, 123456789012345) // <- error here
+			doc.PutRecordID(appdef.SystemField_ID, badID) // <- error here
 			doc.PutInt32("RequiredField", 7)
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRawRecordIDRequired)
-			require.ErrorContains(err, "ODoc «test.document» should use raw record ID (not «123456789012345»)")
+			require.Error(err, require.Is(ErrRawRecordIDRequiredError),
+				require.HasAll(doc, appdef.SystemField_ID, badID))
 		})
 
 		t.Run("error if repeatedly uses record ID", func(t *testing.T) {
@@ -136,19 +137,20 @@ func Test_ValidEventArgs(t *testing.T) {
 			rec := doc.ChildBuilder("child")
 			rec.PutRecordID(appdef.SystemField_ID, 1) // <- error here
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRecordIDUniqueViolation)
-			require.ErrorContains(err, "ODoc «test.document» repeatedly uses record ID «1» in ORecord «child: test.record1»")
+			require.Error(err, require.Is(ErrRecordIDUniqueViolationError),
+				require.HasAll(doc, rec, 1))
 		})
 
 		t.Run("error if ref to unknown id", func(t *testing.T) {
 			e := oDocEvent(false)
+			const unknownID = istructs.RecordID(7)
 			doc := e.ArgumentObjectBuilder()
 			doc.PutRecordID(appdef.SystemField_ID, 1)
 			doc.PutInt32("RequiredField", 7)
-			doc.PutRecordID("RefField", 7) // <- error here
+			doc.PutRecordID("RefField", unknownID) // <- error here
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRecordIDNotFound)
-			require.ErrorContains(err, "ODoc «test.document» field «RefField» refers to unknown record ID «7»")
+			require.Error(err, require.Is(ErrIDNotFoundError),
+				require.HasAll(doc, "RefField", unknownID))
 		})
 
 		t.Run("error if ref to id from invalid target QName", func(t *testing.T) {
@@ -158,8 +160,8 @@ func Test_ValidEventArgs(t *testing.T) {
 			doc.PutInt32("RequiredField", 7)
 			doc.PutRecordID("RefField", 1) // <- error here
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrWrongRecordID)
-			require.ErrorContains(err, "ODoc «test.document» field «RefField» refers to record ID «1» that has unavailable target QName «test.document»")
+			require.Error(err, require.Is(ErrWrongRecordIDError),
+				require.HasAll(doc, "RefField", 1))
 		})
 	})
 
@@ -172,8 +174,8 @@ func Test_ValidEventArgs(t *testing.T) {
 		doc.PutQName(appdef.SystemField_QName, rec1Name) // <- error here
 		doc.PutRecordID(appdef.SystemField_ID, 1)
 		_, err := e.BuildRawEvent()
-		require.ErrorIs(err, ErrWrongType)
-		require.ErrorContains(err, "event «test.document» argument uses wrong type «test.record1», expected «test.document»")
+		require.Error(err, require.Is(ErrWrongTypeError),
+			require.Has("event «test.document» argument uses wrong type «test.record1», expected «test.document»"))
 	})
 
 	t.Run("error if invalid unlogged argument QName", func(t *testing.T) {
@@ -186,8 +188,8 @@ func Test_ValidEventArgs(t *testing.T) {
 		unl.PutQName(appdef.SystemField_QName, objName) // <- error here
 
 		_, err := e.BuildRawEvent()
-		require.ErrorIs(err, ErrWrongType)
-		require.ErrorContains(err, "event «test.document» unlogged argument uses wrong type «test.object»")
+		require.Error(err, require.Is(ErrWrongTypeError),
+			require.Has("event «test.document» unlogged argument uses wrong type «test.object»"))
 	})
 
 	t.Run("error if argument not valid", func(t *testing.T) {
@@ -197,8 +199,8 @@ func Test_ValidEventArgs(t *testing.T) {
 			doc := e.ArgumentObjectBuilder()
 			doc.PutRecordID(appdef.SystemField_ID, 1)
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrNameNotFound)
-			require.ErrorContains(err, "ODoc «test.document» misses required field «RequiredField»")
+			require.Error(err, require.Is(ErrFieldIsEmptyError),
+				require.HasAll(doc, "RequiredField"))
 		})
 
 		t.Run("error if required ref field filled with NullRecordID", func(t *testing.T) {
@@ -210,8 +212,8 @@ func Test_ValidEventArgs(t *testing.T) {
 			rec.PutRecordID(appdef.SystemField_ID, 2)
 			rec.PutRecordID("RequiredRefField", istructs.NullRecordID) // <- error here
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrWrongRecordID)
-			require.ErrorContains(err, "ORecord «child2: test.record2» required ref field «RequiredRefField» has NullRecordID")
+			require.Error(err, require.Is(ErrWrongRecordIDError),
+				require.HasAll(rec, "RequiredRefField"))
 		})
 
 		t.Run("error if corrupted argument container structure", func(t *testing.T) {
@@ -223,8 +225,8 @@ func Test_ValidEventArgs(t *testing.T) {
 				doc.PutInt32("RequiredField", 7)
 
 				_, err := e.BuildRawEvent()
-				require.ErrorIs(err, ErrMinOccursViolation)
-				require.ErrorContains(err, "ODoc «test.document» container «child» has not enough occurrences (0, minimum 1)")
+				require.Error(err, require.Is(ErrMinOccursViolationError),
+					require.HasAll(doc, "child", 0, 1))
 			})
 
 			t.Run("error if max occurs exceeded", func(t *testing.T) {
@@ -236,12 +238,12 @@ func Test_ValidEventArgs(t *testing.T) {
 				doc.ChildBuilder("child").
 					PutRecordID(appdef.SystemField_ID, 2)
 
-				doc.ChildBuilder("child").
-					PutRecordID(appdef.SystemField_ID, 3) // <- error here
+				doc.ChildBuilder("child"). // <- error here
+								PutRecordID(appdef.SystemField_ID, 3)
 
 				_, err := e.BuildRawEvent()
-				require.ErrorIs(err, ErrMaxOccursViolation)
-				require.ErrorContains(err, "ODoc «test.document» container «child» has too many occurrences (2, maximum 1)")
+				require.Error(err, require.Is(ErrMaxOccursViolationError),
+					require.HasAll(doc, "child", 2, 1))
 			})
 
 			t.Run("error if unknown container used", func(t *testing.T) {
@@ -254,8 +256,8 @@ func Test_ValidEventArgs(t *testing.T) {
 				rec.PutRecordID(appdef.SystemField_ID, 2)
 				rec.PutString(appdef.SystemField_Container, "objChild") // <- error here
 				_, err := e.BuildRawEvent()
-				require.ErrorIs(err, ErrNameNotFound)
-				require.ErrorContains(err, "ODoc «test.document» child[0] has unknown container name «objChild»")
+				require.Error(err, require.Is(ErrNameNotFoundError),
+					require.HasAll(doc, "objChild"))
 			})
 
 			t.Run("error if invalid QName used for container", func(t *testing.T) {
@@ -268,8 +270,8 @@ func Test_ValidEventArgs(t *testing.T) {
 				rec.PutRecordID(appdef.SystemField_ID, 2)
 				rec.PutString(appdef.SystemField_Container, "child2") // <- error here
 				_, err := e.BuildRawEvent()
-				require.ErrorIs(err, ErrWrongType)
-				require.ErrorContains(err, "ODoc «test.document» child[0] ORecord «child2: test.record1» has wrong type name, expected «test.record2»")
+				require.Error(err, require.Is(ErrWrongTypeError),
+					require.Has("ODoc «test.document» child[0] ORecord «child2: test.record1» has wrong type name, expected «test.record2»"))
 			})
 
 			t.Run("error if wrong parent ID", func(t *testing.T) {
@@ -282,11 +284,11 @@ func Test_ValidEventArgs(t *testing.T) {
 				rec.PutRecordID(appdef.SystemField_ID, 2)
 				rec.PutRecordID(appdef.SystemField_ParentID, 2) // <- error here
 				_, err := e.BuildRawEvent()
-				require.ErrorIs(err, ErrWrongRecordID)
-				require.ErrorContains(err, "ODoc «test.document» child[0] ORecord «child: test.record1» has wrong parent id «2», expected «1»")
+				require.Error(err, require.Is(ErrWrongRecordIDError),
+					require.HasAll(doc, "child", 0, rec, 2, 1))
 			})
 
-			t.Run("must ok if parent ID if omitted", func(t *testing.T) {
+			t.Run("should ok if parent ID if omitted", func(t *testing.T) {
 				e := oDocEvent(false)
 				doc := e.ArgumentObjectBuilder()
 				doc.PutRecordID(appdef.SystemField_ID, 1)
@@ -302,10 +304,10 @@ func Test_ValidEventArgs(t *testing.T) {
 					d, err := doc.Build()
 					require.NoError(err)
 					cnt := 0
-					d.Children("child", func(c istructs.IObject) {
+					for c := range d.Children("child") {
 						cnt++
 						require.EqualValues(1, c.AsRecordID(appdef.SystemField_ParentID))
-					})
+					}
 					require.Equal(1, cnt)
 				})
 			})
@@ -321,14 +323,17 @@ func Test_ValidSysCudEvent(t *testing.T) {
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
+	wsName := appdef.NewQName("test", "workspace")
+
 	docName := appdef.NewQName("test", "document")
 	rec1Name := appdef.NewQName("test", "record1")
 	rec2Name := appdef.NewQName("test", "record2")
 
 	objName := appdef.NewQName("test", "object")
 
-	t.Run("must be ok to build test application", func(t *testing.T) {
-		doc := adb.AddCDoc(docName)
+	t.Run("should be ok to build test application", func(t *testing.T) {
+		wsb := adb.AddWorkspace(wsName)
+		doc := wsb.AddCDoc(docName)
 		doc.
 			AddField("RequiredField", appdef.DataKind_int32, true).
 			AddRefField("RefField", false, rec1Name)
@@ -336,10 +341,10 @@ func Test_ValidSysCudEvent(t *testing.T) {
 			AddContainer("child", rec1Name, 0, appdef.Occurs_Unbounded).
 			AddContainer("child2", rec2Name, 0, appdef.Occurs_Unbounded)
 
-		_ = adb.AddCRecord(rec1Name)
-		_ = adb.AddCRecord(rec2Name)
+		_ = wsb.AddCRecord(rec1Name)
+		_ = wsb.AddCRecord(rec2Name)
 
-		obj := adb.AddObject(objName)
+		obj := wsb.AddObject(objName)
 		obj.AddContainer("objChild", objName, 0, appdef.Occurs_Unbounded)
 	})
 
@@ -396,34 +401,35 @@ func Test_ValidSysCudEvent(t *testing.T) {
 	t.Run("error if empty CUD", func(t *testing.T) {
 		e := cudRawEvent(false)
 		_, err := e.BuildRawEvent()
-		require.ErrorIs(err, ErrCUDsMissed)
+		require.Error(err, require.Is(ErrCUDsMissedError), require.Has(e))
 	})
 
-	t.Run("must error if empty CUD QName", func(t *testing.T) {
+	t.Run("should be error if empty CUD QName", func(t *testing.T) {
 		e := cudRawEvent(false)
 		_ = e.CUDBuilder().Create(appdef.NullQName) // <- error here
 		_, err := e.BuildRawEvent()
-		require.ErrorIs(err, ErrUnexpectedTypeKind)
-		require.ErrorContains(err, "null row")
+		require.Error(err, require.Is(ErrUnexpectedTypeError),
+			require.HasAll(istructs.QNameCommandCUD, "null row"))
 	})
 
-	t.Run("must error if wrong CUD type kind", func(t *testing.T) {
+	t.Run("should be error if wrong CUD type kind", func(t *testing.T) {
 		e := cudRawEvent(false)
 		_ = e.CUDBuilder().Create(objName) // <- error here
 		_, err := e.BuildRawEvent()
-		require.ErrorIs(err, ErrUnexpectedTypeKind)
-		require.ErrorContains(err, "Object «test.object»")
+		require.Error(err, require.Is(ErrUnexpectedTypeError),
+			require.HasAll(istructs.QNameCommandCUD, objName))
 	})
 
 	t.Run("test raw IDs in CUD.Create", func(t *testing.T) {
 
-		t.Run("must require for new raw event", func(t *testing.T) {
+		t.Run("should require for new raw event", func(t *testing.T) {
+			const badID = istructs.RecordID(123456789012345)
 			e := cudRawEvent(false)
 			rec := e.CUDBuilder().Create(docName)
-			rec.PutRecordID(appdef.SystemField_ID, 123456789012345) // <- error here
+			rec.PutRecordID(appdef.SystemField_ID, badID) // <- error here
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRawRecordIDRequired)
-			require.ErrorContains(err, "should use raw record ID (not «123456789012345»)")
+			require.Error(err, require.Is(ErrRawRecordIDRequiredError),
+				require.HasAll(docName, appdef.SystemField_ID, badID))
 		})
 
 		t.Run("no error for sync events", func(t *testing.T) {
@@ -436,15 +442,15 @@ func Test_ValidSysCudEvent(t *testing.T) {
 		})
 	})
 
-	t.Run("must error if raw id in CUD.Update", func(t *testing.T) {
+	t.Run("should be error if raw id in CUD.Update", func(t *testing.T) {
 		e := cudRawEvent(false)
 		_ = e.CUDBuilder().Update(testDocRec(1)) // <- error here
 		_, err := e.BuildRawEvent()
-		require.ErrorIs(err, ErrRawRecordIDUnexpected)
-		require.ErrorContains(err, "unexpectedly uses raw record ID «1»")
+		require.Error(err, require.Is(ErrUnexpectedRawRecordIDError),
+			require.HasAll(docName, appdef.SystemField_ID, 1))
 	})
 
-	t.Run("must error if ID duplication", func(t *testing.T) {
+	t.Run("should be error if ID duplication", func(t *testing.T) {
 
 		t.Run("raw ID duplication", func(t *testing.T) {
 			e := cudRawEvent(false)
@@ -458,42 +464,44 @@ func Test_ValidSysCudEvent(t *testing.T) {
 			r.PutRecordID(appdef.SystemField_ID, 1) // <- error here
 
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRecordIDUniqueViolation)
-			require.ErrorContains(err, "repeatedly uses record ID «1»")
+			require.Error(err, require.Is(ErrRecordIDUniqueViolationError),
+				require.HasAll(d, r, 1))
 		})
 
 		t.Run("storage ID duplication in Update", func(t *testing.T) {
 			e := cudRawEvent(true)
 
+			const dupID = istructs.RecordID(123456789012345)
 			c := e.CUDBuilder().Create(docName)
-			c.PutRecordID(appdef.SystemField_ID, 123456789012345)
+			c.PutRecordID(appdef.SystemField_ID, dupID)
 			c.PutInt32("RequiredField", 7)
 
-			u := e.CUDBuilder().Update(testDocRec(123456789012345)) // <- error here
+			u := e.CUDBuilder().Update(testDocRec(dupID)) // <- error here
 			u.PutInt32("RequiredField", 7)
 
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRecordIDUniqueViolation)
-			require.ErrorContains(err, "repeatedly uses record ID «123456789012345»")
+			require.Error(err, require.Is(ErrRecordIDUniqueViolationError),
+				require.HasAll(c, u, dupID))
 		})
 
 	})
 
-	t.Run("must error if invalid ID refs", func(t *testing.T) {
+	t.Run("should be error if invalid ID refs", func(t *testing.T) {
 
-		t.Run("must error if unknown ID refs", func(t *testing.T) {
+		t.Run("should be error if unknown ID refs", func(t *testing.T) {
 			e := cudRawEvent(false)
 			d := e.CUDBuilder().Create(docName)
+			const unknownID = istructs.RecordID(7)
 			d.PutRecordID(appdef.SystemField_ID, 1)
 			d.PutInt32("RequiredField", 1)
-			d.PutRecordID("RefField", 7) // <- error here
+			d.PutRecordID("RefField", unknownID) // <- error here
 
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRecordIDNotFound)
-			require.ErrorContains(err, "unknown record ID «7»")
+			require.Error(err, require.Is(ErrIDNotFoundError),
+				require.Has(docName), require.Has("RefField"), require.Has(unknownID))
 		})
 
-		t.Run("must error if ID refs to invalid QName", func(t *testing.T) {
+		t.Run("should be error if ID refs to invalid QName", func(t *testing.T) {
 			e := cudRawEvent(false)
 			d := e.CUDBuilder().Create(docName)
 			d.PutRecordID(appdef.SystemField_ID, 1)
@@ -501,13 +509,13 @@ func Test_ValidSysCudEvent(t *testing.T) {
 			d.PutRecordID("RefField", 1) // <- error here
 
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrWrongRecordID)
-			require.ErrorContains(err, "refers to record ID «1» that has unavailable target QName «test.document»")
+			require.Error(err, require.Is(ErrWrongRecordIDError),
+				require.HasAll(docName, "RefField", 1))
 		})
 
-		t.Run("must error if sys.Parent / sys.Container causes invalid hierarchy", func(t *testing.T) {
+		t.Run("should be error if sys.Parent / sys.Container causes invalid hierarchy", func(t *testing.T) {
 
-			t.Run("must error if container unknown for specified ParentID", func(t *testing.T) {
+			t.Run("should be error if container unknown for specified ParentID", func(t *testing.T) {
 				e := cudRawEvent(false)
 				d := e.CUDBuilder().Create(docName)
 				d.PutRecordID(appdef.SystemField_ID, 1)
@@ -519,11 +527,11 @@ func Test_ValidSysCudEvent(t *testing.T) {
 				r.PutString(appdef.SystemField_Container, "objChild") // <- error here
 
 				_, err := e.BuildRawEvent()
-				require.ErrorIs(err, ErrWrongRecordID)
-				require.ErrorContains(err, "has no container «objChild»")
+				require.Error(err, require.Is(ErrWrongRecordIDError),
+					require.HasAll(d, r, 1, "objChild"))
 			})
 
-			t.Run("must error if specified container has another QName", func(t *testing.T) {
+			t.Run("should be error if specified container has another QName", func(t *testing.T) {
 				e := cudRawEvent(false)
 				d := e.CUDBuilder().Create(docName)
 				d.PutRecordID(appdef.SystemField_ID, 1)
@@ -535,8 +543,8 @@ func Test_ValidSysCudEvent(t *testing.T) {
 				c.PutString(appdef.SystemField_Container, "child2") // <- error here
 
 				_, err := e.BuildRawEvent()
-				require.ErrorIs(err, ErrWrongRecordID)
-				require.ErrorContains(err, "container «child2» has another QName «test.record2»")
+				require.Error(err, require.Is(ErrWrongRecordIDError),
+					require.HasAll(d, c, 1, "child2", rec1Name, rec2Name))
 			})
 		})
 	})
@@ -550,20 +558,20 @@ func Test_ValidCommandEvent(t *testing.T) {
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
+	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
 	cmdName := appdef.NewQName("test", "command")
-
 	oDocName := appdef.NewQName("test", "ODocument")
-
 	wDocName := appdef.NewQName("test", "WDocument")
 
-	t.Run("must be ok to build test application", func(t *testing.T) {
-		oDoc := adb.AddODoc(oDocName)
+	t.Run("should be ok to build test application", func(t *testing.T) {
+		oDoc := wsb.AddODoc(oDocName)
 		oDoc.AddRefField("RefField", false)
 
-		wDoc := adb.AddWDoc(wDocName)
+		wDoc := wsb.AddWDoc(wDocName)
 		wDoc.AddRefField("RefField", false, oDocName)
 
-		adb.AddCommand(cmdName).SetParam(oDocName).SetResult(wDocName)
+		wsb.AddCommand(cmdName).SetParam(oDocName).SetResult(wDocName)
 	})
 
 	cfgs := make(AppConfigsType, 1)
@@ -608,7 +616,7 @@ func Test_ValidCommandEvent(t *testing.T) {
 		return b
 	}
 
-	t.Run("must be ok to ref from result to argument", func(t *testing.T) {
+	t.Run("should be ok to ref from result to argument", func(t *testing.T) {
 		e := eventBuilder(false)
 		obj := e.ArgumentObjectBuilder()
 		obj.PutRecordID(appdef.SystemField_ID, 1)
@@ -620,7 +628,7 @@ func Test_ValidCommandEvent(t *testing.T) {
 		require.NoError(err)
 	})
 
-	t.Run("must error if repeatedly uses record ID", func(t *testing.T) {
+	t.Run("should be error if repeatedly uses record ID", func(t *testing.T) {
 
 		t.Run("repeated raw record ID in new event", func(t *testing.T) {
 			e := eventBuilder(false)
@@ -630,37 +638,39 @@ func Test_ValidCommandEvent(t *testing.T) {
 			res.PutRecordID(appdef.SystemField_ID, 1) // <- error here
 
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRecordIDUniqueViolation)
-			require.ErrorContains(err, "repeatedly uses record ID «1»")
+			require.Error(err, require.Is(ErrRecordIDUniqueViolationError),
+				require.HasAll(obj, res, 1))
 		})
 
 		t.Run("repeated storage record ID in synced event", func(t *testing.T) {
 			e := eventBuilder(false)
+			dupID := istructs.RecordID(123456789012345)
 			obj := e.ArgumentObjectBuilder()
-			obj.PutRecordID(appdef.SystemField_ID, 123456789012345)
+			obj.PutRecordID(appdef.SystemField_ID, dupID)
 			res := e.CUDBuilder().Create(wDocName)
-			res.PutRecordID(appdef.SystemField_ID, 123456789012345) // <- error here
+			res.PutRecordID(appdef.SystemField_ID, dupID) // <- error here
 
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRecordIDUniqueViolation)
-			require.ErrorContains(err, "repeatedly uses record ID «123456789012345»")
+			require.Error(err, require.Is(ErrRecordIDUniqueViolationError),
+				require.HasAll(obj, res, dupID))
 		})
 	})
 
-	t.Run("must error if invalid references", func(t *testing.T) {
+	t.Run("should be error if invalid references", func(t *testing.T) {
 
-		t.Run("must error to ref from argument to result", func(t *testing.T) {
+		t.Run("should be error to ref from argument to result", func(t *testing.T) {
 			e := eventBuilder(false)
+			resultID := istructs.RecordID(7)
 			obj := e.ArgumentObjectBuilder()
 			obj.PutRecordID(appdef.SystemField_ID, 1)
-			obj.PutRecordID("RefField", 2)
+			obj.PutRecordID("RefField", resultID)
 
 			res := e.CUDBuilder().Create(wDocName)
-			res.PutRecordID(appdef.SystemField_ID, 2)
+			res.PutRecordID(appdef.SystemField_ID, resultID)
 
 			_, err := e.BuildRawEvent()
-			require.ErrorIs(err, ErrRecordIDNotFound)
-			require.ErrorContains(err, "unknown record ID «2»")
+			require.Error(err, require.Is(ErrIDNotFoundError),
+				require.Has(obj), require.Has("RefField"), require.Has(resultID))
 		})
 
 	})
@@ -674,14 +684,16 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
+	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
 	docName := appdef.NewQName("test", "document")
 	recName := appdef.NewQName("test", "record")
 
-	t.Run("must be ok to build test application", func(t *testing.T) {
-		oDoc := adb.AddODoc(docName)
+	t.Run("should be ok to build test application", func(t *testing.T) {
+		oDoc := wsb.AddODoc(docName)
 		oDoc.AddField("RequiredField", appdef.DataKind_string, true)
 		oDoc.AddContainer("child", recName, 0, appdef.Occurs_Unbounded)
-		_ = adb.AddORecord(recName)
+		_ = wsb.AddORecord(recName)
 	})
 
 	cfgs := make(AppConfigsType, 1)
@@ -709,42 +721,40 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 			})
 	}
 
-	t.Run("must error if required field is empty", func(t *testing.T) {
+	t.Run("should be error if required field is empty", func(t *testing.T) {
 		b := eventBuilder()
 		d := b.ArgumentObjectBuilder()
 		_, err := d.Build()
-		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, "ODoc «test.document» misses required field «RequiredField»")
+		require.Error(err, require.Is(ErrFieldIsEmptyError),
+			require.HasAll(d, "RequiredField"))
 	})
 
-	t.Run("must error if builder has empty type name", func(t *testing.T) {
+	t.Run("should be error if builder has empty type name", func(t *testing.T) {
 		b := eventBuilder()
 		d := b.ArgumentObjectBuilder()
 		d.(*objectType).clear()
 		_, err := d.Build()
-		require.ErrorIs(err, ErrNameMissed)
-		require.ErrorContains(err, "empty type name")
+		require.Error(err, require.Is(ErrNameMissedError), require.Has("empty type name"))
 	})
 
-	t.Run("must error if builder has wrong type name", func(t *testing.T) {
+	t.Run("should be error if builder has wrong type name", func(t *testing.T) {
 		b := eventBuilder()
 		d := b.ArgumentObjectBuilder()
 		d.(*objectType).clear()
 		d.PutQName(appdef.SystemField_QName, recName) // <- error here
 		_, err := d.Build()
-		require.ErrorIs(err, ErrUnexpectedTypeKind)
-		require.ErrorContains(err, "wrong type ORecord «test.record»")
+		require.Error(err, require.Is(ErrUnexpectedTypeError), require.Has(recName))
 	})
 
-	t.Run("must error if builder has errors in IDs", func(t *testing.T) {
+	t.Run("should be error if builder has errors in IDs", func(t *testing.T) {
 		b := eventBuilder()
 		d := b.ArgumentObjectBuilder()
 		d.PutRecordID(appdef.SystemField_ID, 1)
 		r := d.ChildBuilder("child")
 		r.PutRecordID(appdef.SystemField_ID, 1) // <- error here
 		_, err := d.Build()
-		require.ErrorIs(err, ErrRecordIDUniqueViolation)
-		require.ErrorContains(err, "repeatedly uses record ID «1»")
+		require.Error(err, require.Is(ErrRecordIDUniqueViolationError),
+			require.HasAll(d, r, 1))
 	})
 }
 
@@ -757,8 +767,10 @@ func Test_VerifiedFields(t *testing.T) {
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
-	t.Run("must be ok to build application", func(t *testing.T) {
-		adb.AddObject(objName).
+	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+	t.Run("should be ok to build application", func(t *testing.T) {
+		wsb.AddObject(objName).
 			AddField("int32", appdef.DataKind_int32, true).
 			AddField("email", appdef.DataKind_string, false).
 			SetFieldVerify("email", appdef.VerificationKind_EMail).
@@ -817,10 +829,10 @@ func Test_VerifiedFields(t *testing.T) {
 
 			row := makeObject(cfg, objName, nil)
 			row.PutInt32("int32", 1)
-			row.PutInt32("age", 7)
+			row.PutInt32("age", 7) //<- verified field
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrWrongFieldType)
+			require.Error(err, require.Is(ErrWrongFieldTypeError), require.Has("age"))
 		})
 
 		t.Run("error if not a token, but plain string value", func(t *testing.T) {
@@ -851,8 +863,8 @@ func Test_VerifiedFields(t *testing.T) {
 			row.PutString("email", ukToken)
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrInvalidVerificationKind)
-			require.ErrorContains(err, "Phone")
+			require.Error(err, require.Is(ErrInvalidVerificationKindError),
+				require.HasAll(objName, "email", "Phone"))
 		})
 
 		t.Run("error if wrong verified entity in token", func(t *testing.T) {
@@ -873,7 +885,7 @@ func Test_VerifiedFields(t *testing.T) {
 			row.PutString("email", weToken)
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrInvalidName)
+			require.Error(err, require.Is(ErrInvalidNameError), require.Has("test.other"), require.Has(objName))
 		})
 
 		t.Run("error if wrong verified field in token", func(t *testing.T) {
@@ -894,7 +906,7 @@ func Test_VerifiedFields(t *testing.T) {
 			row.PutString("email", wfToken)
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrInvalidName)
+			require.Error(err, require.Is(ErrInvalidNameError), require.Has("otherField"), require.Has("email"))
 		})
 
 		t.Run("error if wrong verified value type in token", func(t *testing.T) {
@@ -915,7 +927,7 @@ func Test_VerifiedFields(t *testing.T) {
 			row.PutString("email", wtToken)
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrWrongFieldType)
+			require.Error(err, require.Is(ErrWrongFieldTypeError), require.HasAll(row, "email"))
 		})
 
 	})
@@ -928,23 +940,25 @@ func Test_CharsFieldRestricts(t *testing.T) {
 	objName := appdef.NewQName("test", "obj")
 
 	adb := appdef.New()
-	adb.AddPackage("test", "test.com/test")
 
-	t.Run("must be ok to build application", func(t *testing.T) {
+	t.Run("should be ok to build application", func(t *testing.T) {
+		adb.AddPackage("test", "test.com/test")
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
 		s100Data := appdef.NewQName("test", "s100")
 		emailData := appdef.NewQName("test", "email")
 		mimeData := appdef.NewQName("test", "mime")
 
-		adb.AddData(s100Data, appdef.DataKind_string, appdef.NullQName,
+		wsb.AddData(s100Data, appdef.DataKind_string, appdef.NullQName,
 			appdef.MinLen(1), appdef.MaxLen(100)).SetComment("string 1..100")
 
-		_ = adb.AddData(emailData, appdef.DataKind_string, s100Data,
+		_ = wsb.AddData(emailData, appdef.DataKind_string, s100Data,
 			appdef.MinLen(6), appdef.Pattern(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`))
 
-		_ = adb.AddData(mimeData, appdef.DataKind_bytes, appdef.NullQName,
+		_ = wsb.AddData(mimeData, appdef.DataKind_bytes, appdef.NullQName,
 			appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`))
 
-		adb.AddObject(objName).
+		wsb.AddObject(objName).
 			AddDataField("email", emailData, true).
 			AddDataField("mime", mimeData, false)
 	})
@@ -959,7 +973,7 @@ func Test_CharsFieldRestricts(t *testing.T) {
 
 	t.Run("test constraints", func(t *testing.T) {
 
-		t.Run("must be ok check good value", func(t *testing.T) {
+		t.Run("should be ok check good value", func(t *testing.T) {
 			row := makeObject(cfg, objName, nil)
 			row.PutString("email", `test@test.io`)
 			row.PutBytes("mime", []byte(`abcd`))
@@ -968,26 +982,26 @@ func Test_CharsFieldRestricts(t *testing.T) {
 			require.NoError(err)
 		})
 
-		t.Run("must be error if length constraint violated", func(t *testing.T) {
+		t.Run("should be error if length constraint violated", func(t *testing.T) {
 			row := makeObject(cfg, objName, nil)
-			row.PutString("email", fmt.Sprintf("%s.com", strings.Repeat("a", 97))) // 97 + 4 = 101 : too long
-			row.PutBytes("mime", []byte(`abc`))                                    // 3 < 4 : too short
+			row.PutString("email", strings.Repeat("a", 97)+".com") // 97 + 4 = 101 : too long
+			row.PutBytes("mime", []byte(`abc`))                    // 3 < 4 : too short
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrDataConstraintViolation)
-			require.ErrorContains(err, "string-field «email» data constraint «MaxLen: 100»")
-			require.ErrorContains(err, "bytes-field «mime» data constraint «MinLen: 4»")
+			require.Error(err, require.Is(ErrDataConstraintViolationError),
+				require.HasAll("email", "MaxLen: 100"),
+				require.HasAll("mime", "MinLen: 4"))
 		})
 
-		t.Run("must be error if pattern restricted", func(t *testing.T) {
+		t.Run("should be error if pattern restricted", func(t *testing.T) {
 			row := makeObject(cfg, objName, nil)
 			row.PutString("email", "naked@🔫.error")
 			row.PutBytes("mime", []byte(`++++`))
 
 			_, err := row.Build()
-			require.ErrorIs(err, ErrDataConstraintViolation)
-			require.ErrorContains(err, "string-field «email» data constraint «Pattern:")
-			require.ErrorContains(err, "bytes-field «mime» data constraint «Pattern:")
+			require.ErrorIs(err, ErrDataConstraintViolationError)
+			require.Error(err, require.Is(ErrDataConstraintViolationError),
+				require.HasAll("email", "mime", "Pattern:"))
 		})
 	})
 }

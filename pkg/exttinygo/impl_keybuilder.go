@@ -18,6 +18,10 @@ func (kb TKeyBuilder) PutInt64(name string, value int64) {
 	internal.SafeStateAPI.KeyBuilderPutInt64(safe.TKeyBuilder(kb), name, value)
 }
 
+func (kb TKeyBuilder) PutRecordID(name string, value int64) {
+	internal.SafeStateAPI.KeyBuilderPutRecordID(safe.TKeyBuilder(kb), name, value)
+}
+
 func (kb TKeyBuilder) PutFloat32(name string, value float32) {
 	internal.SafeStateAPI.KeyBuilderPutFloat32(safe.TKeyBuilder(kb), name, value)
 }

@@ -52,7 +52,7 @@ type qryContextValue struct {
 
 func (v *qryContextValue) AsInt64(name string) int64 {
 	if name == sys.Storage_QueryContext_Field_Workspace {
-		return int64(v.wsid)
+		return int64(v.wsid) // nolint G115
 	}
 	return v.baseStateValue.AsInt64(name)
 }

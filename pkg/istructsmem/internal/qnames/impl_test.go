@@ -43,7 +43,8 @@ func TestQNames(t *testing.T) {
 		func() appdef.IAppDef {
 			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
-			adb.AddCDoc(defName)
+			ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+			ws.AddCDoc(defName)
 			appDef, err := adb.Build()
 			require.NoError(err)
 			return appDef
@@ -67,7 +68,7 @@ func TestQNames(t *testing.T) {
 
 		sID := check(names, defName)
 
-		t.Run("must be ok to load early stored names", func(t *testing.T) {
+		t.Run("should be ok to load early stored names", func(t *testing.T) {
 			versions1 := vers.New()
 			if err := versions1.Prepare(storage); err != nil {
 				panic(err)
@@ -81,7 +82,7 @@ func TestQNames(t *testing.T) {
 			require.Equal(sID, check(names1, defName))
 		})
 
-		t.Run("must be ok to redeclare names", func(t *testing.T) {
+		t.Run("should be ok to redeclare names", func(t *testing.T) {
 			versions2 := vers.New()
 			if err := versions2.Prepare(storage); err != nil {
 				panic(err)
@@ -92,7 +93,8 @@ func TestQNames(t *testing.T) {
 				func() appdef.IAppDef {
 					adb := appdef.New()
 					adb.AddPackage("test", "test.com/test")
-					adb.AddCDoc(defName)
+					ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+					ws.AddCDoc(defName)
 					appDef, err := adb.Build()
 					require.NoError(err)
 					return appDef
@@ -104,13 +106,13 @@ func TestQNames(t *testing.T) {
 		})
 	})
 
-	t.Run("must be error if unknown name", func(t *testing.T) {
+	t.Run("should be error if unknown name", func(t *testing.T) {
 		id, err := names.ID(appdef.NewQName("test", "unknown"))
 		require.Equal(NullQNameID, id)
 		require.ErrorIs(err, ErrNameNotFound)
 	})
 
-	t.Run("must be error if unknown id", func(t *testing.T) {
+	t.Run("should be error if unknown id", func(t *testing.T) {
 		n, err := names.QName(QNameID(MaxAvailableQNameID))
 		require.Equal(appdef.NullQName, n)
 		require.ErrorIs(err, ErrIDNotFound)
@@ -122,7 +124,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 
 	appName := istructs.AppQName_test1_app1
 
-	t.Run("must be error if unknown system view version", func(t *testing.T) {
+	t.Run("should be error if unknown system view version", func(t *testing.T) {
 		sp := istorageimpl.Provide(mem.Provide())
 		storage, _ := sp.AppStorage(appName)
 
@@ -138,7 +140,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
 
-	t.Run("must be error if invalid QName loaded from system view ", func(t *testing.T) {
+	t.Run("should be error if invalid QName loaded from system view ", func(t *testing.T) {
 		sp := istorageimpl.Provide(mem.Provide())
 		storage, _ := sp.AppStorage(appName)
 
@@ -157,7 +159,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		require.ErrorContains(err, badName)
 	})
 
-	t.Run("must be ok if deleted QName loaded from system view ", func(t *testing.T) {
+	t.Run("should be ok if deleted QName loaded from system view ", func(t *testing.T) {
 		sp := istorageimpl.Provide(mem.Provide())
 		storage, _ := sp.AppStorage(appName)
 
@@ -174,7 +176,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		require.NoError(err)
 	})
 
-	t.Run("must be error if invalid (small) QNameID loaded from system view ", func(t *testing.T) {
+	t.Run("should be error if invalid (small) QNameID loaded from system view ", func(t *testing.T) {
 		sp := istorageimpl.Provide(mem.Provide())
 		storage, _ := sp.AppStorage(appName)
 
@@ -192,7 +194,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		require.ErrorContains(err, fmt.Sprintf("unexpected ID (%v)", QNameIDForError))
 	})
 
-	t.Run("must be error if too many QNames", func(t *testing.T) {
+	t.Run("should be error if too many QNames", func(t *testing.T) {
 		sp := istorageimpl.Provide(mem.Provide())
 		storage, _ := sp.AppStorage(appName)
 
@@ -206,8 +208,9 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			func() appdef.IAppDef {
 				adb := appdef.New()
 				adb.AddPackage("test", "test.com/test")
+				wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 				for i := 0; i <= MaxAvailableQNameID; i++ {
-					adb.AddObject(appdef.NewQName("test", fmt.Sprintf("name_%d", i)))
+					wsb.AddObject(appdef.NewQName("test", fmt.Sprintf("name_%d", i)))
 				}
 				appDef, err := adb.Build()
 				require.NoError(err)
@@ -216,11 +219,14 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		require.ErrorIs(err, ErrQNameIDsExceeds)
 	})
 
-	t.Run("must be error if write to storage failed", func(t *testing.T) {
+	t.Run("should be error if write to storage failed", func(t *testing.T) {
+		if testing.Short() {
+			t.Skip()
+		}
 		qName := appdef.NewQName("test", "test")
 		writeError := errors.New("storage write error")
 
-		t.Run("must be error if write some name failed", func(t *testing.T) {
+		t.Run("should be error if write some name failed", func(t *testing.T) {
 			storage := teststore.NewStorage(appName)
 
 			versions := vers.New()
@@ -235,7 +241,8 @@ func TestQNamesPrepareErrors(t *testing.T) {
 				func() appdef.IAppDef {
 					adb := appdef.New()
 					adb.AddPackage("test", "test.com/test")
-					adb.AddObject(qName)
+					wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+					wsb.AddObject(qName)
 					appDef, err := adb.Build()
 					require.NoError(err)
 					return appDef
@@ -243,7 +250,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			require.ErrorIs(err, writeError)
 		})
 
-		t.Run("must be error if write system view version failed", func(t *testing.T) {
+		t.Run("should be error if write system view version failed", func(t *testing.T) {
 			storage := teststore.NewStorage(appName)
 
 			versions := vers.New()
@@ -258,7 +265,8 @@ func TestQNamesPrepareErrors(t *testing.T) {
 				func() appdef.IAppDef {
 					adb := appdef.New()
 					adb.AddPackage("test", "test.com/test")
-					adb.AddObject(qName)
+					wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+					wsb.AddObject(qName)
 					appDef, err := adb.Build()
 					require.NoError(err)
 					return appDef

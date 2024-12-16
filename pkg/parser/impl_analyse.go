@@ -23,6 +23,17 @@ type iterateCtx struct {
 	wsCtxs     map[*WorkspaceStmt]*wsCtx
 }
 
+// Returns the current workspace.
+//
+// # Panics:
+//   - if there is no current workspace.
+func (c *iterateCtx) mustCurrentWorkspace() workspaceAddr {
+	if ws := getCurrentWorkspace(c); (ws.workspace != nil) && (ws.pkg != nil) {
+		return ws
+	}
+	panic("no current workspace")
+}
+
 func (c *iterateCtx) setPkg(pkg *PackageSchemaAST) {
 	c.pkg = pkg
 	c.collection = pkg.Ast
@@ -66,32 +77,32 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 		ictx.setPkg(p)
 		iterateContext(ictx, func(stmt interface{}, ictx *iterateCtx) {
 			switch v := stmt.(type) {
+			case *TagStmt:
+				analyzeTag(v, ictx)
 			case *CommandStmt:
 				analyzeCommand(v, ictx)
 			case *QueryStmt:
 				analyzeQuery(v, ictx)
 			case *ProjectorStmt:
-				analyseProjector(v, ictx)
+				analyzeProjector(v, ictx)
 			case *JobStmt:
-				analyseJob(v, ictx)
+				analyzeJob(v, ictx)
 			case *TableStmt:
-				analyseTable(v, ictx)
+				analyzeTable(v, ictx)
 			case *TypeStmt:
-				analyseType(v, ictx)
+				analyzeType(v, ictx)
 			case *ViewStmt:
-				analyseView(v, ictx)
-			case *UseTableStmt:
-				analyseUseTable(v, ictx)
+				analyzeView(v, ictx)
 			case *UseWorkspaceStmt:
-				analyseUseWorkspace(v, ictx)
+				analyzeUseWorkspace(v, ictx)
 			case *StorageStmt:
-				analyseStorage(v, ictx)
+				analyzeStorage(v, ictx)
+			case *RoleStmt:
+				analyzeRole(v, ictx)
 			case *RateStmt:
-				analyseRate(v, ictx)
+				analyzeRate(v, ictx)
 			case *LimitStmt:
-				analyseLimit(v, ictx)
-			case *GrantStmt:
-				analyseGrant(v, ictx)
+				analyzeLimit(v, ictx)
 			}
 		})
 	}
@@ -100,7 +111,7 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 		ictx.setPkg(p)
 		iterateContext(ictx, func(stmt interface{}, ictx *iterateCtx) {
 			if v, ok := stmt.(*WorkspaceStmt); ok {
-				analyseWorkspace(v, ictx)
+				analyzeWorkspace(v, ictx)
 			}
 		})
 	}
@@ -109,7 +120,10 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 		ictx.setPkg(p)
 		iterateContext(ictx, func(stmt interface{}, ictx *iterateCtx) {
 			if v, ok := stmt.(*AlterWorkspaceStmt); ok {
-				analyseAlterWorkspace(v, ictx)
+				analyzeAlterWorkspace(v, ictx)
+				if v.alteredWorkspace != nil {
+					includeChildWorkspaces(v, v.alteredWorkspace)
+				}
 			}
 		})
 	}
@@ -119,6 +133,7 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 		iterateContext(ictx, func(stmt interface{}, ictx *iterateCtx) {
 			if v, ok := stmt.(*WorkspaceStmt); ok {
 				includeFromInheritedWorkspaces(v, ictx)
+				includeChildWorkspaces(v, v)
 			}
 		})
 	}
@@ -126,81 +141,298 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 	for _, p := range packages {
 		ictx.setPkg(p)
 		iterateContext(ictx, func(stmt interface{}, ictx *iterateCtx) {
-			if v, ok := stmt.(*TableStmt); ok {
-				analyseRefFields(v.Items, ictx)
+			if v, ok := stmt.(*UseWorkspaceStmt); ok {
+				analyzeUsedWorkspaces(v, ictx)
 			}
-			if v, ok := stmt.(*TypeStmt); ok {
+		})
+	}
+	// Pass 6
+	for _, p := range packages {
+		ictx.setPkg(p)
+		iterateContext(ictx, func(stmt interface{}, ictx *iterateCtx) {
+			switch v := stmt.(type) {
+			case *GrantStmt:
+				analyseGrant(v, ictx)
+			case *RevokeStmt:
+				analyseRevoke(v, ictx)
+			case *TableStmt:
 				analyseRefFields(v.Items, ictx)
-			}
-			if v, ok := stmt.(*ViewStmt); ok {
+			case *TypeStmt:
+				analyseRefFields(v.Items, ictx)
+			case *ViewStmt:
 				analyseViewRefFields(v.Items, ictx)
 			}
 		})
 	}
 }
 
-func analyseGrant(grant *GrantStmt, c *iterateCtx) {
+func iterateWorkspaceStmts[stmtType INamedStatement](ctx *iterateCtx, onlyCurrentWs bool, callback func(stmt stmtType, schema *PackageSchemaAST, ctx *iterateCtx)) {
+	currentWs := getCurrentWorkspace(ctx)
+	for _, stmt := range currentWs.workspace.nodes {
+		if onlyCurrentWs && currentWs.workspace != stmt.workspace {
+			continue
+		}
+		if s, ok := stmt.node.Stmt.(stmtType); ok {
+			callback(s, stmt.node.Pkg, ctx)
+		}
+	}
+}
 
+func resolveInCurrentWs[stmtType *CommandStmt | *QueryStmt | *ViewStmt | *TableStmt | *RoleStmt | *WsDescriptorStmt](qn DefQName, ctx *iterateCtx) (result stmtType, pkg *PackageSchemaAST, err error) {
+	err = resolveInCtx(qn, ctx, func(f stmtType, p *PackageSchemaAST) error {
+		currentWs := getCurrentWorkspace(ctx)
+		for _, n := range currentWs.workspace.nodes {
+			if n.node.Stmt.GetName() == string(qn.Name) && n.node.Pkg == p {
+				result = f
+				pkg = n.node.Pkg
+				return nil
+			}
+		}
+		return nil
+	})
+	return result, pkg, err
+}
+
+func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx) {
 	// To
-	err := resolveInCtx(grant.To, c, func(f *RoleStmt, _ *PackageSchemaAST) error { return nil })
+	err := resolveInCtx(toOrFrom, c, func(f *RoleStmt, pkg *PackageSchemaAST) error {
+		grant.toRole = pkg.NewQName(f.Name)
+		return nil
+	})
 	if err != nil {
-		c.stmtErr(&grant.To.Pos, err)
+		c.stmtErr(&toOrFrom.Pos, err)
 	}
-
-	// On
-	if grant.Command {
-		err := resolveInCtx(grant.On, c, func(f *CommandStmt, _ *PackageSchemaAST) error { return nil })
+	// Role
+	if grant.Role != nil {
+		role, pkg, err := resolveInCurrentWs[*RoleStmt](*grant.Role, c)
 		if err != nil {
-			c.stmtErr(&grant.On.Pos, err)
+			c.stmtErr(&grant.Role.Pos, err)
+		} else if role != nil {
+			grant.on = append(grant.on, pkg.NewQName(role.Name))
+			grant.ops = append(grant.ops, appdef.OperationKind_Inherits)
+		} else {
+			c.stmtErr(&grant.Role.Pos, ErrUndefinedRole(*grant.Role))
+		}
+	}
+	// INSERT ON COMMAND
+	if grant.Command != nil {
+		cmd, pkg, err := resolveInCurrentWs[*CommandStmt](*grant.Command, c)
+		if err != nil {
+			c.stmtErr(&grant.Command.Pos, err)
+		} else if cmd != nil {
+			grant.on = append(grant.on, pkg.NewQName(cmd.Name))
+			grant.ops = append(grant.ops, appdef.OperationKind_Execute)
+		} else {
+			c.stmtErr(&grant.Command.Pos, ErrUndefinedCommand(*grant.Command))
 		}
 	}
 
-	if grant.Query {
-		err := resolveInCtx(grant.On, c, func(f *QueryStmt, _ *PackageSchemaAST) error { return nil })
+	// SELECT ON QUERY
+	if grant.Query != nil {
+		query, pkg, err := resolveInCurrentWs[*QueryStmt](*grant.Query, c)
 		if err != nil {
-			c.stmtErr(&grant.On.Pos, err)
+			c.stmtErr(&grant.Query.Pos, err)
+		} else if query != nil {
+			grant.on = append(grant.on, pkg.NewQName(query.Name))
+			grant.ops = append(grant.ops, appdef.OperationKind_Execute)
+		} else {
+			c.stmtErr(&grant.Query.Pos, ErrUndefinedQuery(*grant.Query))
 		}
 	}
 
-	if grant.View {
-		err := resolveInCtx(grant.On, c, func(f *ViewStmt, _ *PackageSchemaAST) error { return nil })
+	// SELECT ON VIEW
+	if grant.View != nil {
+		view, pkg, err := resolveInCurrentWs[*ViewStmt](grant.View.View, c)
 		if err != nil {
-			c.stmtErr(&grant.On.Pos, err)
+			c.stmtErr(&grant.View.View.Pos, err)
+		} else if view != nil {
+			grant.on = append(grant.on, pkg.NewQName(view.Name))
+			grant.ops = append(grant.ops, appdef.OperationKind_Select)
+			// check columns
+			checkColumn := func(column Identifier) error {
+				for _, f := range view.Items {
+					if f.Field != nil && f.Field.Name.Value == column.Value {
+						grant.columns = append(grant.columns, string(column.Value))
+						return nil
+					}
+					if f.RefField != nil && f.RefField.Name.Value == column.Value {
+						grant.columns = append(grant.columns, string(column.Value))
+						return nil
+					}
+				}
+				return ErrUndefinedField(string(column.Value))
+			}
+			for _, i := range grant.View.Columns {
+				if err := checkColumn(i); err != nil {
+					c.stmtErr(&i.Pos, err)
+				}
+			}
+		} else {
+			c.stmtErr(&grant.View.View.Pos, ErrUndefinedView(grant.View.View))
 		}
 	}
 
-	if grant.Workspace {
-		err := resolveInCtx(grant.On, c, func(f *WorkspaceStmt, _ *PackageSchemaAST) error { return nil })
-		if err != nil {
-			c.stmtErr(&grant.On.Pos, err)
+	// if grant.Workspace {
+	// 	err := resolveInCtx(grant.On, c, func(f *WorkspaceStmt, _ *PackageSchemaAST) error { return nil })
+	// 	if err != nil {
+	// 		c.stmtErr(&grant.On.Pos, err)
+	// 	}
+	// }
+
+	// ALL COMMANDS WITH TAG
+	if grant.AllCommandsWithTag != nil {
+		if err := resolveInCtx(*grant.AllCommandsWithTag, c, func(tag *TagStmt, tagPkg *PackageSchemaAST) error {
+			grant.ops = append(grant.ops, appdef.OperationKind_Execute)
+			iterateWorkspaceStmts(c, false, func(cmd *CommandStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
+				if hasTags(cmd.With, tag, c) {
+					grant.on = append(grant.on, schema.NewQName(cmd.Name))
+				}
+			})
+			return nil
+		}); err != nil {
+			c.stmtErr(&grant.AllCommandsWithTag.Pos, err)
 		}
 	}
 
-	if grant.AllCommandsWithTag || grant.AllQueriesWithTag || grant.AllWorkspacesWithTag || (grant.AllTablesWithTag != nil) || (grant.AllViewsWithTag) {
-		err := resolveInCtx(grant.On, c, func(f *TagStmt, _ *PackageSchemaAST) error { return nil })
-		if err != nil {
-			c.stmtErr(&grant.On.Pos, err)
+	// ALL COMMANDS
+	if grant.AllCommands {
+		grant.ops = append(grant.ops, appdef.OperationKind_Execute)
+		iterateWorkspaceStmts(c, true, func(cmd *CommandStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
+			grant.on = append(grant.on, schema.NewQName(cmd.Name))
+		})
+	}
+
+	// ALL QUERIES WITH TAG
+	if grant.AllQueriesWithTag != nil {
+		if err := resolveInCtx(*grant.AllQueriesWithTag, c, func(tag *TagStmt, tagPkg *PackageSchemaAST) error {
+			grant.ops = append(grant.ops, appdef.OperationKind_Execute)
+			iterateWorkspaceStmts(c, false, func(query *QueryStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
+				if hasTags(query.With, tag, c) {
+					grant.on = append(grant.on, schema.NewQName(query.Name))
+				}
+			})
+			return nil
+		}); err != nil {
+			c.stmtErr(&grant.AllQueriesWithTag.Pos, err)
 		}
 	}
 
-	var table *TableStmt
+	// ALL QUERIES
+	if grant.AllQueries {
+		grant.ops = append(grant.ops, appdef.OperationKind_Execute)
+		iterateWorkspaceStmts(c, true, func(query *QueryStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
+			grant.on = append(grant.on, schema.NewQName(query.Name))
+		})
+	}
 
+	// ALL VIEWS WITH TAG
+	if grant.AllViewsWithTag != nil {
+		if err := resolveInCtx(*grant.AllViewsWithTag, c, func(tag *TagStmt, tagPkg *PackageSchemaAST) error {
+			grant.ops = append(grant.ops, appdef.OperationKind_Select)
+			iterateWorkspaceStmts(c, false, func(view *ViewStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
+				if hasTags(view.With, tag, c) {
+					grant.on = append(grant.on, schema.NewQName(view.Name))
+				}
+			})
+			return nil
+		}); err != nil {
+			c.stmtErr(&grant.AllViewsWithTag.Pos, err)
+		}
+	}
+
+	// ALL VIEWS
+	if grant.AllViews {
+		grant.ops = append(grant.ops, appdef.OperationKind_Select)
+		iterateWorkspaceStmts(c, true, func(view *ViewStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
+			grant.on = append(grant.on, schema.NewQName(view.Name))
+		})
+	}
+
+	// ALL TABLES WITH TAG
+	if grant.AllTablesWithTag != nil {
+		if err := resolveInCtx(grant.AllTablesWithTag.Tag, c, func(tag *TagStmt, tagPkg *PackageSchemaAST) error {
+			for _, item := range grant.AllTablesWithTag.Items {
+				if item.Insert {
+					grant.ops = append(grant.ops, appdef.OperationKind_Insert)
+				} else if item.Update {
+					grant.ops = append(grant.ops, appdef.OperationKind_Update)
+				} else if item.Select {
+					grant.ops = append(grant.ops, appdef.OperationKind_Select)
+				}
+			}
+			iterateWorkspaceStmts(c, false, func(tbl *TableStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
+				if hasTags(tbl.With, tag, c) {
+					grant.on = append(grant.on, schema.NewQName(tbl.Name))
+				}
+			})
+			return nil
+		}); err != nil {
+			c.stmtErr(&grant.AllTablesWithTag.Tag.Pos, err)
+		}
+	}
+
+	// ALL TABLES
+	if grant.AllTables != nil {
+		for _, item := range grant.AllTables.Items {
+			if item.Insert {
+				grant.ops = append(grant.ops, appdef.OperationKind_Insert)
+			} else if item.Update {
+				grant.ops = append(grant.ops, appdef.OperationKind_Update)
+			} else if item.Select {
+				grant.ops = append(grant.ops, appdef.OperationKind_Select)
+			}
+		}
+		iterateWorkspaceStmts(c, true, func(tbl *TableStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
+			grant.on = append(grant.on, schema.NewQName(tbl.Name))
+		})
+		iterateWorkspaceStmts(c, true, func(tbl *WsDescriptorStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
+			grant.on = append(grant.on, schema.NewQName(tbl.Name))
+		})
+	}
+
+	// TABLE
+	var named INamedStatement
+	var items []TableItemExpr
 	if grant.Table != nil {
-		err := resolveInCtx(grant.On, c, func(f *TableStmt, _ *PackageSchemaAST) error { table = f; return nil })
-		if err != nil {
-			c.stmtErr(&grant.On.Pos, err)
+		var table *TableStmt
+		var descriptor *WsDescriptorStmt
+		var pkg *PackageSchemaAST
+		var err error
+		table, pkg, err = resolveInCurrentWs[*TableStmt](grant.Table.Table, c)
+		if err != nil && err.Error() == ErrUndefinedTable(grant.Table.Table).Error() {
+			descriptor, pkg, err = resolveInCurrentWs[*WsDescriptorStmt](grant.Table.Table, c)
 		}
-	}
-
-	// Grant table actions
-	if table != nil {
-
+		if err != nil {
+			c.stmtErr(&grant.Table.Table.Pos, err)
+			return
+		} else if table != nil {
+			named = table
+			items = table.Items
+		} else if descriptor != nil {
+			named = descriptor
+			items = descriptor.Items
+		} else {
+			c.stmtErr(&grant.Table.Table.Pos, ErrUndefined(grant.Table.Table.String()))
+			return
+		}
+		grant.on = append(grant.on, pkg.NewQName(Ident(named.GetName())))
+		for _, item := range grant.Table.Items {
+			if item.Insert {
+				grant.ops = append(grant.ops, appdef.OperationKind_Insert)
+			} else if item.Update {
+				grant.ops = append(grant.ops, appdef.OperationKind_Update)
+			} else if item.Select {
+				grant.ops = append(grant.ops, appdef.OperationKind_Select)
+			}
+		}
 		checkColumn := func(column Ident) error {
-			for _, f := range table.Items {
+			for _, f := range items {
 				if f.Field != nil && f.Field.Name == column {
+					grant.columns = append(grant.columns, string(column))
 					return nil
 				}
 				if f.RefField != nil && f.RefField.Name == column {
+					grant.columns = append(grant.columns, string(column))
 					return nil
 				}
 				if f.NestedTable != nil && f.NestedTable.Name == column {
@@ -209,15 +441,13 @@ func analyseGrant(grant *GrantStmt, c *iterateCtx) {
 			}
 			return ErrUndefinedField(string(column))
 		}
-
-		if grant.Table.GrantAll != nil {
-			for _, column := range grant.Table.GrantAll.Columns {
+		if grant.Table.All != nil {
+			for _, column := range grant.Table.All.Columns {
 				if err := checkColumn(column.Value); err != nil {
 					c.stmtErr(&column.Pos, err)
 				}
 			}
 		}
-
 		for _, i := range grant.Table.Items {
 			for _, column := range i.Columns {
 				if err := checkColumn(column.Value); err != nil {
@@ -225,66 +455,41 @@ func analyseGrant(grant *GrantStmt, c *iterateCtx) {
 				}
 			}
 		}
+
 	}
+
+	grant.workspace = c.mustCurrentWorkspace()
 }
 
-func analyseUseTable(u *UseTableStmt, c *iterateCtx) {
-
-	var pkg *PackageSchemaAST
-	var pkgName Ident = ""
-	var err error
-
-	if u.Package != nil {
-		pkg, err = findPackage(u.Package.Value, c)
-		if err != nil {
-			c.stmtErr(&u.Package.Pos, err)
-			return
-		}
-		pkgName = u.Package.Value
-	}
-
-	if u.AllTables {
-		var iter func(tbl *TableStmt)
-		iter = func(tbl *TableStmt) {
-			if !tbl.Abstract {
-				u.qNames = append(u.qNames, pkg.NewQName(tbl.Name))
-			}
-			for _, item := range tbl.Items {
-				if item.NestedTable != nil {
-					iter(&item.NestedTable.Table)
+func hasTags(with []WithItem, tag *TagStmt, c *iterateCtx) bool {
+	for _, w := range with {
+		for _, t := range w.Tags {
+			if t.Name == tag.Name {
+				withTag, _, err := lookupInCtx[*TagStmt](t, c)
+				if err == nil && withTag == tag {
+					return true
 				}
 			}
-
-		}
-		if pkg == nil {
-			pkg = c.pkg
-		}
-		for _, stmt := range pkg.Ast.Statements {
-			if stmt.Table != nil {
-				iter(stmt.Table)
-			}
-		}
-	} else {
-		defQName := DefQName{Package: pkgName, Name: u.TableName.Value}
-		err = resolveInCtx(defQName, c, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
-			if tbl.Abstract {
-				return ErrUseOfAbstractTable(defQName.String())
-			}
-			u.qNames = append(u.qNames, pkg.NewQName(tbl.Name))
-			return nil
-		})
-		if err != nil {
-			c.stmtErr(&u.TableName.Pos, err)
 		}
 	}
+	return false
 }
 
-func analyseUseWorkspace(u *UseWorkspaceStmt, c *iterateCtx) {
-	resolveFunc := func(f *WorkspaceStmt, _ *PackageSchemaAST) error {
+func analyseGrant(grant *GrantStmt, c *iterateCtx) {
+	analyseGrantOrRevoke(grant.To, &grant.GrantOrRevoke, c)
+}
+
+func analyseRevoke(revoke *RevokeStmt, c *iterateCtx) {
+	analyseGrantOrRevoke(revoke.From, &revoke.GrantOrRevoke, c)
+}
+
+func analyzeUseWorkspace(u *UseWorkspaceStmt, c *iterateCtx) {
+	u.workspace = c.mustCurrentWorkspace()
+	resolveFunc := func(f *WorkspaceStmt, pkg *PackageSchemaAST) error {
 		if f.Abstract {
 			return ErrUseOfAbstractWorkspace(string(u.Workspace.Value))
 		}
-		u.qName = appdef.NewQName(c.pkg.Name, string(u.Workspace.Value))
+		u.useWs = &statementNode{Pkg: pkg, Stmt: f}
 		return nil
 	}
 	err := resolveInCtx(DefQName{Package: Ident(c.pkg.Name), Name: u.Workspace.Value}, c, resolveFunc)
@@ -293,14 +498,14 @@ func analyseUseWorkspace(u *UseWorkspaceStmt, c *iterateCtx) {
 	}
 }
 
-func analyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
+func analyzeAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 	// find all included statements
 
 	var iterTableItems func(ws *WorkspaceStmt, wsctx *wsCtx, items []TableItemExpr)
 	iterTableItems = func(ws *WorkspaceStmt, wsctx *wsCtx, items []TableItemExpr) {
 		for i := range items {
 			if items[i].NestedTable != nil {
-				useStmtInWs(wsctx, wsctx.pkg.Name, &items[i].NestedTable.Table)
+				useStmtInWs(wsctx, wsctx.pkg, &items[i].NestedTable.Table)
 				iterTableItems(ws, wsctx, items[i].NestedTable.Table.Items)
 			}
 		}
@@ -309,7 +514,7 @@ func analyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 	var iter func(wsctx *wsCtx, coll IStatementCollection)
 	iter = func(wsctx *wsCtx, coll IStatementCollection) {
 		coll.Iterate(func(stmt interface{}) {
-			useStmtInWs(wsctx, c.pkg.Name, stmt)
+			useStmtInWs(wsctx, c.pkg, stmt)
 			if collection, ok := stmt.(IStatementCollection); ok {
 				if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
 					iter(wsctx, collection)
@@ -325,13 +530,13 @@ func analyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 	}
 }
 
-func analyseStorage(u *StorageStmt, c *iterateCtx) {
+func analyzeStorage(u *StorageStmt, c *iterateCtx) {
 	if c.pkg.Path != appdef.SysPackage {
 		c.stmtErr(&u.Pos, ErrStorageDeclaredOnlyInSys)
 	}
 }
 
-func analyseRate(r *RateStmt, c *iterateCtx) {
+func analyzeRate(r *RateStmt, c *iterateCtx) {
 	if r.Value.Variable != nil {
 		resolved := func(d *DeclareStmt, p *PackageSchemaAST) error {
 			r.Value.variable = p.NewQName(d.Name)
@@ -344,7 +549,7 @@ func analyseRate(r *RateStmt, c *iterateCtx) {
 	}
 }
 
-func analyseLimit(u *LimitStmt, c *iterateCtx) {
+func analyzeLimit(u *LimitStmt, c *iterateCtx) {
 	err := resolveInCtx(u.RateName, c, func(l *RateStmt, schema *PackageSchemaAST) error { return nil })
 	if err != nil {
 		c.stmtErr(&u.RateName.Pos, err)
@@ -369,7 +574,7 @@ func analyseLimit(u *LimitStmt, c *iterateCtx) {
 	}
 }
 
-func analyseView(view *ViewStmt, c *iterateCtx) {
+func analyzeView(view *ViewStmt, c *iterateCtx) {
 	view.pkRef = nil
 	fields := make(map[string]int)
 	for i := range view.Items {
@@ -396,6 +601,9 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 				fields[string(rf.Name.Value)] = i
 			}
 		} else if fe.RecordField != nil {
+			if c.pkg.Path != appdef.SysPackage {
+				c.stmtErr(&fe.Pos, ErrRecordFieldsOnlyInSys)
+			}
 			rf := fe.RecordField
 			if _, ok := fields[string(rf.Name.Value)]; ok {
 				c.stmtErr(&rf.Name.Pos, ErrRedefined(string(rf.Name.Value)))
@@ -449,20 +657,39 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 	}
 
 	// ResultOf
+	var job *JobStmt
 	var projector *ProjectorStmt
-	err := resolveInCtx(view.ResultOf, c, func(f *ProjectorStmt, _ *PackageSchemaAST) error {
-		projector = f
-		return nil
-	})
+	var err error
+	var schema *PackageSchemaAST
+
+	projector, schema, err = lookupInCtx[*ProjectorStmt](view.ResultOf, c)
+
+	if projector == nil && err == nil {
+		job, schema, err = lookupInCtx[*JobStmt](view.ResultOf, c)
+	}
+
 	if err != nil {
 		c.stmtErr(&view.ResultOf.Pos, err)
 		return
 	}
 
+	var intents []StateStorage
+
+	if projector != nil {
+		view.asResultOf = schema.NewQName(projector.Name)
+		intents = projector.Intents
+	} else if job != nil {
+		view.asResultOf = schema.NewQName(job.Name)
+		intents = job.Intents
+	} else {
+		c.stmtErr(&view.ResultOf.Pos, ErrUndefined(view.ResultOf.String()))
+		return
+	}
+
 	var intentForView *StateStorage
-	for i := 0; i < len(projector.Intents) && intentForView == nil; i++ {
+	for i := 0; i < len(intents) && intentForView == nil; i++ {
 		var isView bool
-		intent := projector.Intents[i]
+		intent := intents[i]
 		if err := resolveInCtx(intent.Storage, c, func(storage *StorageStmt, _ *PackageSchemaAST) error {
 			isView = isView || storage.EntityView
 			return nil
@@ -473,17 +700,22 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 		if isView {
 			for _, entity := range intent.Entities {
 				if entity.Name == view.Name && (entity.Package == Ident(c.pkg.Name) || entity.Package == Ident("")) {
-					intentForView = &projector.Intents[i]
+					intentForView = &intents[i]
 					break
 				}
 			}
 		}
 	}
 	if intentForView == nil {
-		c.stmtErr(&view.ResultOf.Pos, ErrProjectorDoesNotDeclareViewIntent(projector.GetName(), view.GetName()))
+		c.stmtErr(&view.ResultOf.Pos, ErrStatementDoesNotDeclareViewIntent(projector.GetName(), view.GetName()))
 		return
 	}
 
+	view.workspace = c.mustCurrentWorkspace()
+}
+
+func analyzeTag(tag *TagStmt, c *iterateCtx) {
+	tag.workspace = c.mustCurrentWorkspace()
 }
 
 func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
@@ -522,6 +754,8 @@ func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
 	analyseWith(&cmd.With, cmd, c)
 	checkState(cmd.State, c, func(sc *StorageScope) bool { return sc.Commands })
 	checkIntents(cmd.Intents, c, func(sc *StorageScope) bool { return sc.Commands })
+
+	cmd.workspace = c.mustCurrentWorkspace()
 }
 
 func analyzeQuery(query *QueryStmt, c *iterateCtx) {
@@ -538,6 +772,12 @@ func analyzeQuery(query *QueryStmt, c *iterateCtx) {
 	}
 	analyseWith(&query.With, query, c)
 	checkState(query.State, c, func(sc *StorageScope) bool { return sc.Queries })
+
+	query.workspace = c.mustCurrentWorkspace()
+}
+
+func analyzeRole(r *RoleStmt, c *iterateCtx) {
+	r.workspace = c.mustCurrentWorkspace()
 }
 
 func checkStorageEntity(key *StateStorage, f *StorageStmt, c *iterateCtx) error {
@@ -636,11 +876,11 @@ func checkIntents(intents []StateStorage, c *iterateCtx, scope checkScopeFunc) {
 
 func preAnalyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 	resolveFunc := func(w *WorkspaceStmt, schema *PackageSchemaAST) error {
+		u.alteredWorkspace = w
+		u.alteredWorkspacePkg = schema
 		if !w.Alterable && schema != c.pkg {
 			return ErrWorkspaceIsNotAlterable(u.Name.String())
 		}
-		u.alteredWorkspace = w
-		u.alteredWorkspacePkg = schema
 		return nil
 	}
 	err := resolveInCtx(u.Name, c, resolveFunc)
@@ -650,12 +890,12 @@ func preAnalyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 	}
 }
 
-func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
-	for i := range v.Triggers {
-		trigger := &v.Triggers[i]
+func analyzeProjector(prj *ProjectorStmt, c *iterateCtx) {
+	for i := range prj.Triggers {
+		trigger := &prj.Triggers[i]
 
 		if trigger.CronSchedule != nil {
-			c.stmtErr(&v.Pos, ErrScheduledProjectorDeprecated)
+			c.stmtErr(&prj.Pos, ErrScheduledProjectorDeprecated)
 		}
 
 		for _, qname := range trigger.QNames {
@@ -726,17 +966,29 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 		}
 	}
 
-	checkState(v.State, c, func(sc *StorageScope) bool { return sc.Projectors })
-	checkIntents(v.Intents, c, func(sc *StorageScope) bool { return sc.Projectors })
+	checkState(prj.State, c, func(sc *StorageScope) bool { return sc.Projectors })
+	checkIntents(prj.Intents, c, func(sc *StorageScope) bool { return sc.Projectors })
+
+	prj.workspace = c.mustCurrentWorkspace()
 }
 
-func analyseJob(j *JobStmt, c *iterateCtx) {
+func analyzeJob(j *JobStmt, c *iterateCtx) {
+	ws := getCurrentWorkspace(c)
+	if ws.workspace == nil {
+		panic("workspace not found for JOB" + j.Name)
+	}
+	if !(ws.workspace.GetName() == nameAppWorkspaceWS && ws.pkg.Name == appdef.SysPackage) {
+		c.stmtErr(&j.Pos, ErrJobMustBeInAppWorkspace)
+	}
+
 	parser := cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
 	if _, e := parser.Parse(*j.CronSchedule); e != nil {
 		c.stmtErr(&j.Pos, ErrInvalidCronSchedule(*j.CronSchedule))
 	}
 	checkState(j.State, c, func(sc *StorageScope) bool { return sc.Jobs })
 	checkIntents(j.Intents, c, func(sc *StorageScope) bool { return sc.Jobs })
+
+	j.workspace = c.mustCurrentWorkspace()
 }
 
 // Note: function may update with argument
@@ -750,7 +1002,11 @@ func analyseWith(with *[]WithItem, statement IStatement, c *iterateCtx) {
 		}
 		for j := range item.Tags {
 			tag := item.Tags[j]
-			if err := resolveInCtx(tag, c, func(*TagStmt, *PackageSchemaAST) error { return nil }); err != nil {
+			if err := resolveInCtx(tag, c, func(t *TagStmt, tPkg *PackageSchemaAST) error {
+				qname := tPkg.NewQName(t.Name)
+				item.tags = append(item.tags, qname)
+				return nil
+			}); err != nil {
 				c.stmtErr(&tag.Pos, err)
 			}
 		}
@@ -770,26 +1026,27 @@ func preAnalyseTable(v *TableStmt, c *iterateCtx) {
 	}
 }
 
-func analyseTable(v *TableStmt, c *iterateCtx) {
+func analyzeTable(v *TableStmt, c *iterateCtx) {
 	analyseWith(&v.With, v, c)
 	analyseNestedTables(v.Items, v.tableTypeKind, c)
 	analyseFieldSets(v.Items, c)
 	analyseFields(v.Items, c, true)
 	if v.Inherits != nil {
-		resolvedFunc := func(f *TableStmt, _ *PackageSchemaAST) error {
+		resolvedFunc := func(f *TableStmt, p *PackageSchemaAST) error {
 			if !f.Abstract {
 				return ErrBaseTableMustBeAbstract
 			}
+			v.inherits = tableAddr{f, p}
 			return nil
 		}
 		if err := resolveInCtx(*v.Inherits, c, resolvedFunc); err != nil {
 			c.stmtErr(&v.Inherits.Pos, err)
 		}
-
 	}
+	v.workspace = c.mustCurrentWorkspace()
 }
 
-func analyseType(v *TypeStmt, c *iterateCtx) {
+func analyzeType(v *TypeStmt, c *iterateCtx) {
 	for _, i := range v.Items {
 		if i.NestedTable != nil {
 			c.stmtErr(&i.NestedTable.Pos, ErrNestedTablesNotSupportedInTypes)
@@ -797,23 +1054,23 @@ func analyseType(v *TypeStmt, c *iterateCtx) {
 	}
 	analyseFieldSets(v.Items, c)
 	analyseFields(v.Items, c, false)
+	v.workspace = c.mustCurrentWorkspace()
 }
 
-func useStmtInWs(wsctx *wsCtx, stmtPackage string, stmt interface{}) {
+func useStmtInWs(wsctx *wsCtx, stmtPackage *PackageSchemaAST, stmt interface{}) {
 	if named, ok := stmt.(INamedStatement); ok {
 		if supported(stmt) {
-			wsctx.ws.qNames = append(wsctx.ws.qNames, appdef.NewQName(stmtPackage, named.GetName()))
+			wsctx.ws.registerNode(stmtPackage.NewQName(Ident(named.GetName())), statementNode{Pkg: stmtPackage, Stmt: named}, wsctx.ws)
 		}
 	}
-	if useTable, ok := stmt.(*UseTableStmt); ok {
-		wsctx.ws.qNames = append(wsctx.ws.qNames, useTable.qNames...)
-	}
 	if useWorkspace, ok := stmt.(*UseWorkspaceStmt); ok {
-		wsctx.ws.qNames = append(wsctx.ws.qNames, useWorkspace.qName)
+		if useWorkspace.useWs != nil {
+			wsctx.ws.registerNode(useWorkspace.useWs.qName(), *useWorkspace.useWs, wsctx.ws)
+		}
 	}
 }
 
-func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
+func analyzeWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 
 	wsc := &wsCtx{
 		pkg:  c.pkg,
@@ -826,7 +1083,7 @@ func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 	var checkChain func(qn DefQName) error
 
 	checkChain = func(qn DefQName) error {
-		resolveFunc := func(w *WorkspaceStmt, _ *PackageSchemaAST) error {
+		resolveFunc := func(w *WorkspaceStmt, wp *PackageSchemaAST) error {
 			if !w.Abstract {
 				return ErrBaseWorkspaceMustBeAbstract
 			}
@@ -842,6 +1099,7 @@ func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 					return e
 				}
 			}
+			v.inheritedWorkspaces = append(v.inheritedWorkspaces, w)
 			return nil
 		}
 		return resolveInCtx(qn, c, resolveFunc)
@@ -868,6 +1126,7 @@ func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 		analyseNestedTables(v.Descriptor.Items, appdef.TypeKind_CDoc, wc)
 		analyseFields(v.Descriptor.Items, wc, true)
 		analyseFieldSets(v.Descriptor.Items, wc)
+		v.Descriptor.workspace = workspaceAddr{v, c.pkg}
 	}
 
 	// find all included QNames
@@ -877,7 +1136,7 @@ func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 	iterTableItems = func(ws *WorkspaceStmt, wsctx *wsCtx, items []TableItemExpr) {
 		for i := range items {
 			if items[i].NestedTable != nil {
-				useStmtInWs(wsctx, wsctx.pkg.Name, &items[i].NestedTable.Table)
+				useStmtInWs(wsctx, wsctx.pkg, &items[i].NestedTable.Table)
 				iterTableItems(ws, wsctx, items[i].NestedTable.Table.Items)
 			}
 		}
@@ -885,7 +1144,7 @@ func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 
 	iter = func(ws *WorkspaceStmt, wsctx *wsCtx, coll IStatementCollection) {
 		coll.Iterate(func(stmt interface{}) {
-			useStmtInWs(wsctx, wsctx.pkg.Name, stmt)
+			useStmtInWs(wsctx, wsctx.pkg, stmt)
 			if collection, ok := stmt.(IStatementCollection); ok {
 				if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
 					iter(ws, wsctx, collection)
@@ -898,6 +1157,18 @@ func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 	}
 
 	iter(v, wsc, v)
+
+	// GRANT shall not follow REVOKE
+	revokeFound := false
+	for _, s := range v.Statements {
+		if s.Revoke != nil {
+			revokeFound = true
+		}
+		if s.Grant != nil && revokeFound {
+			c.stmtErr(&s.Grant.Pos, ErrGrantFollowsRevoke)
+		}
+
+	}
 }
 
 type wsCtx struct {
@@ -940,14 +1211,34 @@ func includeFromInheritedWorkspaces(ws *WorkspaceStmt, c *iterateCtx) {
 			}
 
 			addFromInheritedWs(baseWs, wsctx)
-			wsctx.ws.qNames = append(wsctx.ws.qNames, c.wsCtxs[baseWs].ws.qNames...)
+			for bws, bwsn := range c.wsCtxs[baseWs].ws.nodes {
+				wsctx.ws.registerNode(bws, bwsn.node, c.wsCtxs[baseWs].ws)
+			}
 			added = append(added, baseWs)
 		}
 		if !inheritsAnything {
-			wsctx.ws.qNames = append(wsctx.ws.qNames, c.wsCtxs[sysWorkspace].ws.qNames...)
+			for sws, swsn := range c.wsCtxs[sysWorkspace].ws.nodes {
+				wsctx.ws.registerNode(sws, swsn.node, c.wsCtxs[sysWorkspace].ws)
+			}
 		}
 	}
 	addFromInheritedWs(ws, c.wsCtxs[ws])
+}
+
+func includeChildWorkspaces(collection IStatementCollection, ws *WorkspaceStmt) {
+	collection.Iterate(func(stmt interface{}) {
+		if child, ok := stmt.(*WorkspaceStmt); ok {
+			ws.usedWorkspaces = append(ws.usedWorkspaces, child)
+		}
+	})
+}
+
+func analyzeUsedWorkspaces(uws *UseWorkspaceStmt, _ *iterateCtx) {
+	if ws := uws.workspace.workspace; ws != nil {
+		if usedWS, ok := uws.useWs.Stmt.(*WorkspaceStmt); ok {
+			ws.usedWorkspaces = append(ws.usedWorkspaces, usedWS)
+		}
+	}
 }
 
 func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c *iterateCtx) {
@@ -989,6 +1280,7 @@ func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c
 					return
 				}
 			}
+			nestedTable.workspace = getCurrentWorkspace(c)
 			analyseNestedTables(nestedTable.Items, rootTableKind, c)
 		}
 	}
@@ -998,7 +1290,10 @@ func analyseFieldSets(items []TableItemExpr, c *iterateCtx) {
 	for i := range items {
 		item := items[i]
 		if item.FieldSet != nil {
-			if err := resolveInCtx(item.FieldSet.Type, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
+			if err := resolveInCtx(item.FieldSet.Type, c, func(t *TypeStmt, _ *PackageSchemaAST) error {
+				item.FieldSet.typ = t
+				return nil
+			}); err != nil {
 				c.stmtErr(&item.FieldSet.Type.Pos, err)
 				continue
 			}
@@ -1142,13 +1437,15 @@ func analyseRefFields(items []TableItemExpr, c *iterateCtx) {
 					if f.Abstract {
 						return ErrReferenceToAbstractTable(rf.RefDocs[i].String())
 					}
+					refQname := tblPkg.NewQName(f.Name)
 					ws := getCurrentWorkspace(c)
-					if ws != nil {
-						refQname := tblPkg.NewQName(f.Name)
-						if !ws.containsQName(refQname) {
+					if ws.workspace != nil {
+						if !ws.workspace.containsQName(refQname) {
 							return ErrReferenceToTableNotInWorkspace(rf.RefDocs[i].String())
 						}
 					}
+					rf.refQNames = append(rf.refQNames, refQname)
+					rf.refTables = append(rf.refTables, tableAddr{f, tblPkg})
 					return nil
 				}); err != nil {
 					c.stmtErr(&rf.RefDocs[i].Pos, err)
@@ -1174,9 +1471,9 @@ func analyseViewRefFields(items []ViewItemExpr, c *iterateCtx) {
 						return ErrReferenceToAbstractTable(rf.RefDocs[i].String())
 					}
 					ws := getCurrentWorkspace(c)
-					if ws != nil {
+					if ws.workspace != nil {
 						refQname := tblPkg.NewQName(f.Name)
-						if !ws.containsQName(refQname) {
+						if !ws.workspace.containsQName(refQname) {
 							return ErrReferenceToTableNotInWorkspace(rf.RefDocs[i].String())
 						}
 					}
@@ -1233,29 +1530,23 @@ func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (k
 	kind = appdef.TypeKind_null
 	check := func(node tableNode) {
 		if node.pkg.Path == appdef.SysPackage {
-			if node.table.Name == nameCDOC {
-				kind = appdef.TypeKind_CDoc
-			}
-			if node.table.Name == nameODOC {
-				kind = appdef.TypeKind_ODoc
-			}
-			if node.table.Name == nameWDOC {
-				kind = appdef.TypeKind_WDoc
-			}
-			if node.table.Name == nameCRecord {
+			switch node.table.Name {
+			case nameCRecord:
 				kind = appdef.TypeKind_CRecord
-			}
-			if node.table.Name == nameORecord {
+			case nameORecord:
 				kind = appdef.TypeKind_ORecord
-			}
-			if node.table.Name == nameWRecord {
+			case nameWRecord:
 				kind = appdef.TypeKind_WRecord
-			}
-			if node.table.Name == nameCSingleton {
+			case nameCdoc:
+				kind = appdef.TypeKind_CDoc
+			case nameODoc:
+				kind = appdef.TypeKind_ODoc
+			case nameWDoc:
+				kind = appdef.TypeKind_WDoc
+			case nameCSingleton:
 				kind = appdef.TypeKind_CDoc
 				singleton = true
-			}
-			if node.table.Name == nameWSingleton {
+			case nameWSingleton:
 				kind = appdef.TypeKind_WDoc
 				singleton = true
 			}

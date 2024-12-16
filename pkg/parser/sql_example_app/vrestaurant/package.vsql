@@ -4,23 +4,7 @@
 
 APPLICATION vrestaurant();
 
--- Declare tag to assign it later to definition(s)
-TAG BackofficeTag;
-TAG PosTag;
 
--- TABLE BOEntity : is an Abstract base data struct for many CDOC tables
-ABSTRACT TABLE BOEntity INHERITS CDoc( -- TODO: ABSTRACT
-    Name varchar(50) NOT NULL, -- TODO NOT NULL everywhere
-    Number int NOT NULL -- Number sequence(1) ??? smm
-) WITH Tags=(BackofficeTag);
-
--- TABLE Person : is an Abstract data struct for Waiters, Clients, Adminitsrators, Manager
-ABSTRACT TABLE Person INHERITS BOEntity ( --TODO:  ABSTRACT
-    Address varchar(50), 
-    Email varchar(50) CHECK '^\\S+@\\S+\\.\\S+$',
-    Phone varchar(20),
-    Picture blob
-) WITH Tags=(BackofficeTag);
 
 WORKSPACE Restaurant (
     DESCRIPTOR (
@@ -31,6 +15,24 @@ WORKSPACE Restaurant (
 	    OpenMinutes  int,
 	    OwnerName varchar(30)
     );
+
+    -- Declare tag to assign it later to definition(s)
+    TAG BackofficeTag;
+    TAG PosTag;
+
+    -- TABLE BOEntity : is an Abstract base data struct for many CDOC tables
+    ABSTRACT TABLE BOEntity INHERITS sys.CDoc( -- TODO: ABSTRACT
+        Name varchar(50) NOT NULL, -- TODO NOT NULL everywhere
+        Number int NOT NULL -- Number sequence(1) ??? smm
+    ) WITH Tags=(BackofficeTag);
+
+    -- TABLE Person : is an Abstract data struct for Waiters, Clients, Adminitsrators, Manager
+    ABSTRACT TABLE Person INHERITS BOEntity ( --TODO:  ABSTRACT
+        Address varchar(50), 
+        Email varchar(50) CHECK '^\\S+@\\S+\\.\\S+$',
+        Phone varchar(20),
+        Picture blob
+    ) WITH Tags=(BackofficeTag);
 
     ROLE LocationUser;
     ROLE LocationManager;
@@ -109,7 +111,7 @@ WORKSPACE Restaurant (
     );
 
     -- TABLE Transaction   : defines parameters of table, occupied by client
-    TABLE Transaction INHERITS WDoc(
+    TABLE Transaction INHERITS sys.WDoc(
         Name varchar(50),
         Number int,
         Tableno int, 
@@ -124,7 +126,7 @@ WORKSPACE Restaurant (
     ) WITH Tags=(PosTag);
 
     -- TABLE Orders     : defines parameters of order on table. One transaction can have several orders
-    TABLE Order INHERITS ODoc(
+    TABLE Order INHERITS sys.ODoc(
         TransactionID ref(Transaction) NOT NULL, 
         -- time of creating order
         OrdTimeStamp timestamp, 
@@ -145,7 +147,7 @@ WORKSPACE Restaurant (
     ) WITH Tags=(PosTag);
 
     -- TABLE Bill          : defines parameters of bill on table. One transaction can have several bills
-    TABLE Bill INHERITS ODoc(
+    TABLE Bill INHERITS sys.ODoc(
         TransactionID ref(Transaction) NOT NULL, 
         --   ref of POSUser, who took created Transaction
        	AuthorID ref(POSUser) NOT NULL,
@@ -170,12 +172,12 @@ WORKSPACE Restaurant (
 	    SYNC PROJECTOR UpdateTableStatus
             AFTER INSERT ON Transaction OR
 	        AFTER EXECUTE WITH PARAM ON (Order, Bill)
-		INTENTS(View(TableStatus));
+		INTENTS(sys.View(TableStatus));
 
 	    PROJECTOR UpdateSalesReport
             AFTER INSERT ON Transaction OR 
 	        AFTER EXECUTE WITH PARAM ON Bill
-		INTENTS(View(SalesPerDay));
+		INTENTS(sys.View(SalesPerDay));
 
     );
 
@@ -185,7 +187,7 @@ WORKSPACE Restaurant (
     GRANT SELECT ON TABLE Order TO LocationUser;
     -- GRANT EXECUTE ON COMMAND MakeOrder TO LocationUser;
     -- GRANT EXECUTE ON COMMAND MakePayment TO LocationUser;
-    GRANT SELECT ON ALL QUERIES WITH TAG PosTag TO LocationUser;
+    GRANT EXECUTE ON ALL QUERIES WITH TAG PosTag TO LocationUser;
 
     -- VIEW TableStatus     : keeps actual status of table(free/occupied)
     VIEW TableStatus (

@@ -6,16 +6,14 @@ package vit
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	"github.com/voedger/voedger/pkg/sys/sysprovide"
+	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -91,48 +89,60 @@ var (
 	MockCmdExec func(input string, args istructs.ExecCommandArgs) error
 )
 
-func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
+func ProvideApp2(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
 	sysPackageFS := sysprovide.Provide(cfg)
 	app2PackageFS := parser.PackageFS{
 		Path: app2PkgPath,
 		FS:   SchemaTestApp2FS,
 	}
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app2PkgName, "testCmd"), istructsmem.NullCommandExec))
-	ep.AddNamed(apps.EPIsDeviceAllowedFunc, func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
+	ep.AddNamed(builtinapps.EPIsDeviceAllowedFunc, func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
 		// simulate we could not work in any non-profile WS
 		return false, err
 	})
-	return apps.BuiltInAppDef{
+	return builtinapps.Def{
 		AppQName:                istructs.AppQName_test1_app2,
 		Packages:                []parser.PackageFS{sysPackageFS, app2PackageFS},
 		AppDeploymentDescriptor: TestAppDeploymentDescriptor,
 	}
 }
 
-func ProvideApp2WithJob(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
+func ProvideApp2WithJob(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
 	sysPackageFS := sysprovide.Provide(cfg)
 	app2PackageFS := parser.PackageFS{
 		Path: app2PkgPath,
 		FS:   SchemaTestApp2WithJobFS,
 	}
-	ep.AddNamed(apps.EPIsDeviceAllowedFunc, func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
+	ep.AddNamed(builtinapps.EPIsDeviceAllowedFunc, func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
 		// simulate we could not work in any non-profile WS
 		return false, err
 	})
 	cfg.AddJobs(istructsmem.BuiltinJob{
 		Name: appdef.NewQName(app2PkgName, "Job1_builtin"),
 		Func: func(st istructs.IState, intents istructs.IIntents) error {
-			return errors.New("Job1_builtin works!!!!!!!!!!!!!! ")
+			jobsQName := appdef.NewQName("app2pkg", "Jobs")
+			kb, err := st.KeyBuilder(sys.Storage_View, jobsQName)
+			if err != nil {
+				return err
+			}
+			kb.PutInt64("RunUnixMilli", apis.ITime.Now().UnixMilli())
+			kb.PutInt32("Dummy1", 1)
+			vb, err := intents.NewValue(kb)
+			if err != nil {
+				return err
+			}
+			vb.PutInt32("Dummy2", 1)
+			return nil
 		},
 	})
-	return apps.BuiltInAppDef{
+	return builtinapps.Def{
 		AppQName:                istructs.AppQName_test1_app2,
 		Packages:                []parser.PackageFS{sysPackageFS, app2PackageFS},
 		AppDeploymentDescriptor: TestAppDeploymentDescriptor,
 	}
 }
 
-func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
+func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
 	// sys package
 	sysPackageFS := sysprovide.Provide(cfg)
 
@@ -222,10 +232,10 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 	cfg.AddSyncProjectors(
 		istructs.Projector{
 			Name: appdef.NewQName(app1PkgName, "ApplyCategoryIdx"),
-			Func: func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
-				return iterate.ForEachError(event.CUDs, func(cud istructs.ICUDRow) error {
+			Func: func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) error {
+				for cud := range event.CUDs {
 					if cud.QName() != QNameApp1_CDocCategory {
-						return nil
+						continue
 					}
 					kb, err := st.KeyBuilder(sys.Storage_View, qNameViewCategoryIdx)
 					if err != nil {
@@ -239,14 +249,16 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 					}
 					b.PutInt32("Val", 42)
 					b.PutString("Name", cud.AsString("name"))
-					return nil
-				})
+				}
+				return nil
 			},
 		},
 	)
 
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "testCmd"), istructsmem.NullCommandExec))
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "TestCmdRawArg"), istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "TestDeniedCmd"), istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "TestDeniedQuery"), istructsmem.NullQueryExec))
 
 	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryIntents"), func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		kb, err := args.State.KeyBuilder(sys.Storage_Result, appdef.NewQName(app1PkgName, "QryIntentsResult"))
@@ -287,7 +299,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 		Path: App1PkgPath,
 		FS:   SchemaTestApp1FS,
 	}
-	return apps.BuiltInAppDef{
+	return builtinapps.Def{
 		AppQName:                istructs.AppQName_test1_app1,
 		Packages:                []parser.PackageFS{sysPackageFS, app1PackageFS},
 		AppDeploymentDescriptor: TestAppDeploymentDescriptor,

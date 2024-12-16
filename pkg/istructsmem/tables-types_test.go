@@ -223,7 +223,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		testRecsIsEqual(t, rec1, rec2)
 	})
 
-	t.Run("must be ok to read data stored with previous codec versions", func(t *testing.T) {
+	t.Run("should be ok to read data stored with previous codec versions", func(t *testing.T) {
 		store_codec_RawDynoBuffer := func(row *recordType) (out []byte) {
 			buf := new(bytes.Buffer)
 			_ = binary.Write(buf, binary.BigEndian, codec_RawDynoBuffer)
@@ -326,6 +326,9 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		"— success read wrong data (BadData) or\n"+
 		"— success read correct data (Lucky)",
 		func(t *testing.T) {
+			if testing.Short() {
+				t.Skip()
+			}
 			rec1 := newTestCDoc(100500)
 
 			b := rec1.storeToBytes()
@@ -371,16 +374,17 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		t.Run("must be ok to build application", func(t *testing.T) {
-			newCDoc := adb.AddCDoc(test.testCDoc)
+		t.Run("should be ok to build new ver of application", func(t *testing.T) {
+			wsb := adb.AddWorkspace(testData.wsName)
+			newCDoc := wsb.AddCDoc(test.testCDoc)
 
-			oldCDoc := rec1.appCfg.AppDef.CDoc(test.testCDoc)
+			oldCDoc := appdef.CDoc(rec1.appCfg.AppDef.Type, test.testCDoc)
 			for _, f := range oldCDoc.Fields() {
 				if !f.IsSys() {
 					newCDoc.AddField(newFieldName(f.Name()), f.DataKind(), f.Required())
 				}
 			}
-			adb.AddObject(test.tablePhotos) // for reading QName_1 field value
+			wsb.AddObject(test.tablePhotos) // for reading QName_1 field value
 		})
 
 		newConfig := newBuiltInAppConfig(test.AppCfg.Name, adb)
@@ -416,31 +420,160 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 }
 
+func Test_fieldValue(t *testing.T) {
+	require := require.New(t)
+	test := test()
+
+	t.Run("should return correct field values", func(t *testing.T) {
+
+		t.Run(fmt.Sprint(test.testCDoc), func(t *testing.T) {
+			rec := newTestCDoc(100500)
+			tests := []struct {
+				f appdef.FieldName
+				v interface{}
+			}{
+				{appdef.SystemField_QName, test.testCDoc},
+				{appdef.SystemField_ID, istructs.RecordID(100500)},
+				{appdef.SystemField_IsActive, true},
+				{"int32", int32(1)},
+				{"int64", int64(2)},
+				{"float32", float32(3)},
+				{"float64", float64(4)},
+				{"bytes", []byte{1, 2, 3, 4, 5}},
+				{"string", "test string"},
+				{"raw", test.photoRawValue},
+				{"QName", test.tablePhotos},
+				{"bool", true},
+				{"RecordID", istructs.RecordID(7777777)},
+			}
+
+			for _, test := range tests {
+				f := rec.fieldDef(test.f)
+				require.NotNil(f, test.f)
+				require.Equal(test.v, rec.fieldValue(f))
+			}
+		})
+
+		t.Run(fmt.Sprint(test.testViewRecord.name), func(t *testing.T) {
+			vv := newTestViewValue()
+			tests := []struct {
+				f appdef.FieldName
+				v interface{}
+			}{
+				{appdef.SystemField_QName, test.testViewRecord.name},
+				{test.testViewRecord.valueFields.buyer, test.buyerValue},
+				{test.testViewRecord.valueFields.age, test.ageValue},
+				{test.testViewRecord.valueFields.heights, test.heightValue},
+				{test.testViewRecord.valueFields.human, true},
+				{test.testViewRecord.valueFields.photo, test.photoValue},
+			}
+
+			for _, test := range tests {
+				f := vv.fieldDef(test.f)
+				require.NotNil(f, test.f)
+				require.Equal(test.v, vv.fieldValue(f), test.f)
+			}
+
+			t.Run("complex fields", func(t *testing.T) {
+
+				t.Run(test.testViewRecord.valueFields.record, func(t *testing.T) {
+					val := vv.fieldValue(vv.fieldDef(test.testViewRecord.valueFields.record))
+					require.NotNil(val)
+					rec, ok := val.(istructs.IRecord)
+					require.True(ok)
+					testTestCDoc(t, rec, 100888)
+				})
+
+				t.Run(test.testViewRecord.valueFields.event, func(t *testing.T) {
+					val := vv.fieldValue(vv.fieldDef(test.testViewRecord.valueFields.event))
+					require.NotNil(val)
+					ev, ok := val.(istructs.IDbEvent)
+					require.True(ok)
+					testTestEvent(t, ev, 100500, 1050, true)
+				})
+			})
+		})
+	})
+}
+
 func TestModifiedFields(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	t.Run("no modifications", func(t *testing.T) {
+	t.Run("should has no modifications if new record", func(t *testing.T) {
 		rec := newRecord(test.AppCfg)
-		rec.ModifiedFields(func(fieldName appdef.FieldName, newValue interface{}) {
+		for _, _ = range rec.ModifiedFields {
 			t.Fail()
-		})
-	})
-	t.Run("has modifications", func(t *testing.T) {
-		rec := newRecord(test.AppCfg)
-		rec.setQName(test.testCDoc)
-		rec.PutInt32("int32", 42)
-		rec.PutBool(appdef.SystemField_IsActive, false) // should be mentioned on ModifiedFields()
-		require.NoError(rec.build())
-		actualModifications := map[appdef.FieldName]bool{}
-		rec.ModifiedFields(func(fieldName appdef.FieldName, newValue interface{}) {
-			actualModifications[fieldName] = true
-		})
-		expectedModifications := map[appdef.FieldName]bool{
-			"int32":                     true,
-			appdef.SystemField_IsActive: true,
 		}
-		require.Equal(expectedModifications, actualModifications)
 	})
 
+	testEnum := func(rec istructs.ICUDRow, want map[appdef.FieldName]interface{}) {
+		t.Run("enum", func(t *testing.T) {
+			got := make(map[appdef.FieldName]interface{})
+			for n, v := range rec.ModifiedFields {
+				got[n] = v
+			}
+			require.Equal(want, got)
+		})
+
+		t.Run("breakable", func(t *testing.T) {
+			for stop := range want {
+				cnt := 0
+				for n, _ := range rec.ModifiedFields {
+					if n == stop {
+						break
+					}
+					cnt++
+				}
+				require.Less(cnt, len(want))
+			}
+		})
+	}
+
+	t.Run("should enum modified user fields", func(t *testing.T) {
+		rec := newRecord(test.AppCfg)
+		rec.setQName(test.testCDoc)
+		rec.PutInt32("int32", 1)
+		rec.PutString("string", "test")
+		rec.PutInt64("int64", 0)   // zero (0) value should be enumerated too
+		rec.PutBool("bool", false) // zero (false) value should be enumerated too
+		require.NoError(rec.build())
+
+		testEnum(rec,
+			map[appdef.FieldName]interface{}{
+				"int32":  int32(1),
+				"string": "test",
+				"int64":  int64(0),
+				"bool":   false,
+			})
+	})
+
+	t.Run("should enum modified sys.IsActive", func(t *testing.T) {
+		rec := newRecord(test.AppCfg)
+		rec.setQName(test.testCDoc)
+		rec.PutBool(appdef.SystemField_IsActive, false) // system field should be enumerated
+		require.NoError(rec.build())
+
+		testEnum(rec,
+			map[appdef.FieldName]interface{}{
+				appdef.SystemField_IsActive: false,
+			})
+	})
+
+	// #2785
+	t.Run("should enum emptied user fields", func(t *testing.T) {
+		rec := newRecord(test.AppCfg)
+		rec.setQName(test.testCDoc)
+		rec.PutBytes("bytes", []byte{})
+		rec.PutString("string", "")
+		rec.PutBytes("raw", nil)
+		require.NoError(rec.build())
+
+		testEnum(rec,
+			map[appdef.FieldName]interface{}{
+				"bytes":  []byte{},
+				"string": "",
+				"raw":    []byte{},
+			})
+	})
 }

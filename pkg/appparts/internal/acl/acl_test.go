@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
@@ -17,9 +18,11 @@ func Test_IsOperationAllowed(t *testing.T) {
 
 	var app appdef.IAppDef
 
+	wsName := appdef.NewQName("test", "workspace")
 	docName := appdef.NewQName("test", "doc")
 	queryName := appdef.NewQName("test", "qry")
 	cmdName := appdef.NewQName("test", "cmd")
+	tagName := appdef.NewQName("test", "tag")
 
 	reader := appdef.NewQName("test", "reader")
 	writer := appdef.NewQName("test", "writer")
@@ -29,32 +32,78 @@ func Test_IsOperationAllowed(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		doc := adb.AddCDoc(docName)
+		wsb := adb.AddWorkspace(wsName)
+
+		wsb.AddTag(tagName, "test tag")
+
+		doc := wsb.AddCDoc(docName)
 		doc.
 			AddField("field1", appdef.DataKind_int32, true).
 			AddField("hiddenField", appdef.DataKind_int32, false).
 			AddField("field3", appdef.DataKind_int32, false)
+		doc.SetTag(tagName)
 
-		qry := adb.AddQuery(queryName)
+		qry := wsb.AddQuery(queryName)
 		qry.SetResult(docName)
 
-		cmd := adb.AddCommand(cmdName)
+		cmd := wsb.AddCommand(cmdName)
 		cmd.SetParam(appdef.QNameANY)
 
-		_ = adb.AddRole(reader)
-		adb.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName}, nil, reader, "grant select doc.* to reader")
-		adb.Revoke([]appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName}, []appdef.FieldName{"hiddenField"}, reader, "revoke select doc.field1 from reader")
-		adb.Grant([]appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{queryName}, nil, reader, "grant execute query to reader")
+		_ = wsb.AddRole(reader)
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Select},
+			filter.And(filter.Types(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
+			nil,
+			reader,
+			"grant select any CDoc with tag to reader")
+		wsb.Revoke(
+			[]appdef.OperationKind{appdef.OperationKind_Select},
+			filter.QNames(docName),
+			[]appdef.FieldName{"hiddenField"},
+			reader,
+			"revoke select doc.field1 from reader")
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Execute},
+			filter.QNames(queryName),
+			nil,
+			reader,
+			"grant execute query to reader")
 
-		_ = adb.AddRole(writer)
-		adb.Grant([]appdef.OperationKind{appdef.OperationKind_Insert}, []appdef.QName{docName}, nil, writer, "grant insert doc.* to writer")
-		adb.Grant([]appdef.OperationKind{appdef.OperationKind_Update}, []appdef.QName{docName}, []appdef.FieldName{"field1", "hiddenField", "field3"}, writer, "grant update doc.field[1,2,3] to writer")
-		adb.Revoke([]appdef.OperationKind{appdef.OperationKind_Update}, []appdef.QName{docName}, []appdef.FieldName{"hiddenField"}, writer, "revoke update doc.hiddenField from writer")
-		adb.Grant([]appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{cmdName}, nil, writer, "grant execute cmd to writer")
+		_ = wsb.AddRole(writer)
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Insert},
+			filter.And(filter.Types(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
+			nil,
+			writer,
+			"grant insert any CDoc with tag to writer")
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Update},
+			filter.QNames(docName),
+			[]appdef.FieldName{"field1", "hiddenField", "field3"},
+			writer,
+			"grant update doc.field[1,2,3] to writer")
+		wsb.Revoke(
+			[]appdef.OperationKind{appdef.OperationKind_Update},
+			filter.QNames(docName),
+			[]appdef.FieldName{"hiddenField"},
+			writer,
+			"revoke update doc.hiddenField from writer")
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Execute},
+			filter.AllFunctions(wsName),
+			nil,
+			writer,
+			"grant execute all commands and queries to writer")
 
-		_ = adb.AddRole(intruder)
-		adb.RevokeAll([]appdef.QName{docName}, intruder, "revoke all access to doc from intruder")
-		adb.RevokeAll([]appdef.QName{queryName, cmdName}, intruder, "revoke all access to functions from intruder")
+		_ = wsb.AddRole(intruder)
+		wsb.RevokeAll(
+			filter.Types(wsName, appdef.TypeKind_CDoc),
+			intruder,
+			"revoke all access to CDocs from intruder")
+		wsb.RevokeAll(
+			filter.AllFunctions(wsName),
+			intruder,
+			"revoke all access to functions from intruder")
 
 		var err error
 		app, err = adb.Build()
@@ -165,7 +214,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 				fields:        nil,
 				role:          writer,
 				allowed:       true,
-				allowedFields: nil,
+				allowedFields: []appdef.FieldName{"sys.QName", "sys.ID", "sys.IsActive", "field1", "hiddenField", "field3"},
 			},
 			{
 				name:          "allow update doc for writer",
@@ -195,12 +244,12 @@ func Test_IsOperationAllowed(t *testing.T) {
 				allowedFields: nil,
 			},
 			{
-				name:          "deny execute query for writer",
+				name:          "allow execute query for writer",
 				op:            appdef.OperationKind_Execute,
 				res:           queryName,
 				fields:        nil,
 				role:          writer,
-				allowed:       false,
+				allowed:       true,
 				allowedFields: nil,
 			},
 			// intruder tests
@@ -406,18 +455,20 @@ func TestRecursiveRoleAncestors(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		_ = adb.AddRole(reader)
-		_ = adb.AddRole(writer)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
-		adb.AddRole(worker).Grant(
+		_ = wsb.AddRole(reader)
+		_ = wsb.AddRole(writer)
+
+		wsb.AddRole(worker).Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Inherits},
-			[]appdef.QName{reader, writer}, nil, "grant reader and writer roles to worker")
+			filter.QNames(reader, writer), nil, "grant reader and writer roles to worker")
 
-		adb.AddRole(owner).GrantAll(
-			[]appdef.QName{worker}, "grant worker role to owner")
+		wsb.AddRole(owner).GrantAll(
+			filter.QNames(worker), "grant worker role to owner")
 
-		adb.AddRole(admin).GrantAll(
-			[]appdef.QName{owner}, "grant owner role to admin")
+		wsb.AddRole(admin).GrantAll(
+			filter.QNames(owner), "grant owner role to admin")
 
 		app = adb.MustBuild()
 	})
@@ -435,7 +486,7 @@ func TestRecursiveRoleAncestors(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.role.String(), func(t *testing.T) {
-				roles := RecursiveRoleAncestors(app.Role(tt.role))
+				roles := RecursiveRoleAncestors(appdef.Role(app.Type, tt.role))
 				require.ElementsMatch(tt.result, roles)
 			})
 		}

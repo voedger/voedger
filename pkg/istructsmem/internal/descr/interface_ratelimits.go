@@ -7,11 +7,24 @@ package descr
 import (
 	"time"
 
-	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
-type RateLimit struct {
-	Kind                  istructs.RateLimitKind
-	Period                time.Duration
-	MaxAllowedPerDuration uint32
+type Rate struct {
+	Type
+	Count  appdef.RateCount
+	Period time.Duration
+	Scopes []string `json:",omitempty"`
+}
+
+type Limit struct {
+	Type
+	Ops    []string
+	Filter LimitFilter
+	Rate   appdef.QName
+}
+
+type LimitFilter struct {
+	Option string // ALL or EACH
+	Filter
 }

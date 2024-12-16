@@ -9,7 +9,6 @@ import (
 	"context"
 	"slices"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -17,122 +16,53 @@ import (
 )
 
 // Run is a function that runs scheduler for the specified job.
-type Run func(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, wsIdx int, wsID istructs.WSID, job appdef.QName)
+type Run func(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, wsIdx istructs.AppWorkspaceNumber, wsID istructs.WSID, job appdef.QName)
 
 // PartitionSchedulers manages schedulers deployment for the specified application partition.
 type PartitionSchedulers struct {
-	mx                    sync.RWMutex
-	appQName              appdef.AppQName
-	partitionID           istructs.PartitionID
-	appWSNumbers          map[istructs.WSID]int
-	jobsInAppWSIDRuntimes map[appdef.QName]map[istructs.WSID]*runtime
+	appQName    appdef.AppQName
+	partitionID istructs.PartitionID
+	wsNumbers   map[istructs.WSID]istructs.AppWorkspaceNumber
+	rt          sync.Map // {appdef.QName, istructs.WSID} -> *runtime
+	rtWG        sync.WaitGroup
 }
 
-func newPartitionSchedulers(appQName appdef.AppQName, partCount istructs.NumAppPartitions, wsCount istructs.NumAppWorkspaces, partitionID istructs.PartitionID) *PartitionSchedulers {
+func New(app appdef.AppQName, partCount istructs.NumAppPartitions, wsCount istructs.NumAppWorkspaces, part istructs.PartitionID) *PartitionSchedulers {
 	return &PartitionSchedulers{
-		appQName:              appQName,
-		partitionID:           partitionID,
-		appWSNumbers:          AppWorkspacesHandledByPartition(partCount, wsCount, partitionID),
-		jobsInAppWSIDRuntimes: make(map[appdef.QName]map[istructs.WSID]*runtime),
+		appQName:    app,
+		partitionID: part,
+		wsNumbers:   AppWorkspacesHandledByPartition(partCount, wsCount, part),
+		rt:          sync.Map{},
+		rtWG:        sync.WaitGroup{},
 	}
 }
 
 // Deploys partition schedulers: stops schedulers for removed jobs and
 // starts schedulers for new jobs using the specified run function.
 func (ps *PartitionSchedulers) Deploy(vvmCtx context.Context, appDef appdef.IAppDef, run Run) {
-	if len(ps.appWSNumbers) == 0 {
+	if len(ps.wsNumbers) == 0 {
 		return // no application workspaces handled by this partition
 	}
 
-	// async stop old actualizers
-	stopWG := sync.WaitGroup{}
-	ps.mx.RLock()
-	for name, wsRT := range ps.jobsInAppWSIDRuntimes {
-		// TODO: compare if job properties changed (cron, etc.)
-		if appDef.Job(name) == nil {
-			for _, rt := range wsRT {
-				stopWG.Add(1)
-				go func(rt *runtime) {
-					rt.cancel()
-					for rt.state.Load() >= 0 {
-						time.Sleep(time.Nanosecond) // wait until scheduler is finished
-					}
-					stopWG.Done()
-				}(rt)
-			}
-		}
-	}
-	ps.mx.RUnlock()
-	stopWG.Wait() // wait for all old schedulers to stop
-
-	// async start new schedulers
-	startWG := sync.WaitGroup{}
-
-	start := func(jobQName appdef.QName) {
-		startWG.Add(1)
-		go func() {
-			ps.mx.Lock()
-			ps.jobsInAppWSIDRuntimes[jobQName] = make(map[istructs.WSID]*runtime)
-			ps.mx.Unlock()
-
-			for appWSID, appWSNumber := range ps.appWSNumbers {
-				ctx, cancel := context.WithCancel(vvmCtx)
-				rt := newRuntime(cancel)
-
-				ps.mx.Lock()
-				ps.jobsInAppWSIDRuntimes[jobQName][appWSID] = rt
-				ps.mx.Unlock()
-
-				go func(appWSNumber int, appWSID istructs.WSID) {
-					rt.state.Store(1) // started
-
-					run(ctx, ps.appQName, ps.partitionID, appWSNumber, appWSID, jobQName)
-
-					ps.mx.Lock()
-					delete(ps.jobsInAppWSIDRuntimes[jobQName], appWSID)
-					if len(ps.jobsInAppWSIDRuntimes[jobQName]) == 0 {
-						delete(ps.jobsInAppWSIDRuntimes, jobQName)
-					}
-					ps.mx.Unlock()
-
-					rt.state.Store(-1) // finished
-				}(appWSNumber, appWSID)
-
-				for rt.state.Load() == 0 {
-					time.Sleep(time.Nanosecond) // wait until actualizer go-routine is started
-				}
-			}
-			startWG.Done()
-		}()
-	}
-
-	ps.mx.RLock()
-	appDef.Jobs(func(job appdef.IJob) bool {
-		jobQName := job.QName()
-		if _, exists := ps.jobsInAppWSIDRuntimes[jobQName]; !exists {
-			start(jobQName)
-		}
-		return true
-	})
-	ps.mx.RUnlock()
-	startWG.Wait() // wait for all new schedulers to start
+	ps.stopOlds(vvmCtx, appDef)
+	ps.startNews(vvmCtx, appDef, run)
 }
 
 // Returns all deployed schedulers.
 //
 // Returned map keys - job names, values - workspace IDs.
 func (ps *PartitionSchedulers) Enum() map[appdef.QName][]istructs.WSID {
-	ps.mx.RLock()
-	defer ps.mx.RUnlock()
-
 	res := make(map[appdef.QName][]istructs.WSID)
-	for name, wsRT := range ps.jobsInAppWSIDRuntimes {
-		ws := make([]istructs.WSID, 0, len(wsRT))
-		for wsID := range wsRT {
-			ws = append(ws, wsID)
+	for jws := range ps.rt.Range {
+		jws := jws.(jWS)
+		if _, exists := res[jws.QName]; !exists {
+			res[jws.QName] = make([]istructs.WSID, 0, len(ps.wsNumbers))
 		}
-		slices.Sort(ws)
-		res[name] = ws
+		res[jws.QName] = append(res[jws.QName], jws.WSID)
+	}
+	for n, wsIDs := range res {
+		slices.Sort(wsIDs)
+		res[n] = wsIDs
 	}
 	return res
 }
@@ -141,22 +71,139 @@ func (ps *PartitionSchedulers) Enum() map[appdef.QName][]istructs.WSID {
 //
 // Contexts for schedulers should be stopped. Here we just wait for schedulers to finish
 func (ps *PartitionSchedulers) Wait() {
-	for {
-		ps.mx.RLock()
-		cnt := len(ps.jobsInAppWSIDRuntimes)
-		ps.mx.RUnlock()
-		if cnt == 0 {
-			break
-		}
-		time.Sleep(time.Nanosecond)
+	ps.rtWG.Wait()
+}
+
+// Wait waits for all schedulers to finish.
+// Returns true if all schedulers finished before the timeout.
+// Returns false if the timeout is reached.
+func (ps *PartitionSchedulers) WaitTimeout(timeout time.Duration) (finished bool) {
+	done := make(chan struct{})
+	go func() {
+		ps.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return true
+	case <-time.After(timeout):
+		return false
 	}
 }
 
+// start actualizer
+func (ps *PartitionSchedulers) start(vvmCtx context.Context, jws jWS, run Run, wg *sync.WaitGroup) {
+	ctx, cancel := context.WithCancel(vvmCtx)
+	rt := newRuntime(cancel)
+
+	ps.rt.Store(jws, rt)
+
+	ps.rtWG.Add(1)
+
+	done := make(chan struct{})
+	go func() {
+		close(done) // scheduler started
+
+		defer func() {
+			ps.rt.Delete(jws)
+			close(rt.done) // scheduler finished
+			ps.rtWG.Done()
+		}()
+
+		run(ctx, ps.appQName, ps.partitionID, jws.AppWorkspaceNumber, jws.WSID, jws.QName)
+	}()
+
+	select {
+	case <-done: // wait until scheduler is started
+	case <-vvmCtx.Done():
+	}
+
+	wg.Done()
+}
+
+// start new schedulers
+func (ps *PartitionSchedulers) startNews(vvmCtx context.Context, appDef appdef.IAppDef, run Run) {
+	news := make(map[jWS]struct{})
+	for job := range appdef.Jobs(appDef.Types()) {
+		name := job.QName()
+		for wsID, wsNum := range ps.wsNumbers {
+			jws := jWS{name, wsID, wsNum}
+			if _, exists := ps.rt.Load(jws); !exists {
+				news[jws] = struct{}{}
+			}
+		}
+	}
+
+	done := make(chan struct{})
+	go func() {
+		startWG := sync.WaitGroup{}
+		for jws := range news {
+			startWG.Add(1)
+			go ps.start(vvmCtx, jws, run, &startWG)
+		}
+		startWG.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-vvmCtx.Done():
+	}
+}
+
+// stop scheduler
+func (ps *PartitionSchedulers) stop(vvmCtx context.Context, rt *runtime, wg *sync.WaitGroup) {
+	rt.cancel()
+	select {
+	case <-rt.done: // wait until scheduler is finished
+	case <-vvmCtx.Done():
+	}
+	wg.Done()
+}
+
+// stop old schedulers
+func (ps *PartitionSchedulers) stopOlds(vvmCtx context.Context, appDef appdef.IAppDef) {
+	olds := make([]*runtime, 0)
+	for jws, rt := range ps.rt.Range {
+		// TODO: compare if job properties changed (cron, states, intents, etc.)
+		name := jws.(jWS).QName
+		if appdef.Job(appDef.Type, name) == nil {
+			olds = append(olds, rt.(*runtime))
+		}
+	}
+
+	done := make(chan struct{})
+	go func() {
+		stopWG := sync.WaitGroup{}
+		for _, rt := range olds {
+			stopWG.Add(1)
+			go ps.stop(vvmCtx, rt, &stopWG)
+		}
+		stopWG.Wait() // wait for all old actualizers to stop
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-vvmCtx.Done():
+	}
+}
+
+type jWS struct {
+	appdef.QName // job name
+	istructs.WSID
+	istructs.AppWorkspaceNumber
+}
+
 type runtime struct {
-	state  atomic.Int32 // 0: newly; +1: started; -1: finished
 	cancel context.CancelFunc
+	done   chan []struct{}
 }
 
 func newRuntime(cancel context.CancelFunc) *runtime {
-	return &runtime{cancel: cancel}
+	return &runtime{
+		cancel: cancel,
+		done:   make(chan []struct{}),
+	}
 }

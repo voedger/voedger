@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 
@@ -18,7 +17,7 @@ import (
 )
 
 func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback) error {
-	view := appStructs.AppDef().View(viewRecordQName)
+	view := appdef.View(appStructs.AppDef().Type, viewRecordQName)
 
 	if !f.acceptAll {
 		allowedFields := make(map[string]bool, view.Key().FieldCount()+view.Value().FieldCount())
@@ -94,12 +93,8 @@ func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName ap
 		case appdef.DataKind_float64:
 			fallthrough
 		case appdef.DataKind_RecordID:
-			v, e := strconv.ParseFloat(string(k.value), bitSize64)
-			if e != nil {
-				// notest: avoided already by sqlparser
-				return e
-			}
-			kb.PutNumber(k.name, v)
+			n := json.Number(string(k.value))
+			kb.PutNumber(k.name, n)
 		case appdef.DataKind_bytes, appdef.DataKind_string:
 			fallthrough
 		case appdef.DataKind_QName:

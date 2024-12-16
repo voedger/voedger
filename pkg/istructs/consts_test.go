@@ -6,11 +6,22 @@
 package istructs
 
 import (
+	"log"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 )
+
+func TestConst(t *testing.T) {
+	exp := NewWSID(math.MaxUint16, WSID(MaxBaseWSID))
+	act := MaxAllowedWSID
+	p := uint64(math.Pow(2, 63))-1
+	log.Printf("%64b\n", exp)
+	log.Printf("%64b\n", act)
+	log.Printf("%64b\n", p)
+}
 
 func TestClusterApps(t *testing.T) {
 

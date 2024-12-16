@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts/internal/acl"
 	"github.com/voedger/voedger/pkg/appparts/internal/actualizers"
+	"github.com/voedger/voedger/pkg/appparts/internal/limiter"
 	"github.com/voedger/voedger/pkg/appparts/internal/pool"
 	"github.com/voedger/voedger/pkg/appparts/internal/schedulers"
 	"github.com/voedger/voedger/pkg/iextengine"
@@ -84,11 +85,11 @@ func newApplication(apps *apps, name appdef.AppQName, partsCount istructs.NumApp
 
 // extModuleURLs is important for non-builtin (non-native) apps
 // extModuleURLs: packagePath->packageURL
-func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]int) {
+func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]uint) {
 	eef := a.apps.extEngineFactories
 
 	enginesPathsModules := map[appdef.ExtensionEngineKind]map[string]*iextengine.ExtensionModule{}
-	def.Extensions(func(ext appdef.IExtension) bool {
+	for ext := range appdef.Extensions(def.Types()) {
 		extEngineKind := ext.Engine()
 		path := ext.App().PackageFullPath(ext.QName().Pkg())
 		pathsModules, ok := enginesPathsModules[extEngineKind]
@@ -98,7 +99,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 			enginesPathsModules[extEngineKind] = pathsModules
 		}
 		if extEngineKind != appdef.ExtensionEngineKind_WASM {
-			return true
+			continue
 		}
 		extModule, ok := pathsModules[path]
 		if !ok {
@@ -113,8 +114,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 			pathsModules[path] = extModule
 		}
 		extModule.ExtensionNames = append(extModule.ExtensionNames, ext.QName().Entity())
-		return true
-	})
+	}
 	extModules := map[appdef.ExtensionEngineKind][]iextengine.ExtensionModule{}
 	for extEngineKind, pathsModules := range enginesPathsModules {
 		extModules[extEngineKind] = nil // initialize any engine mentioned in the schema
@@ -136,7 +136,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 			if err != nil {
 				panic(err)
 			}
-			for i := 0; i < processorsCountPerKind; i++ {
+			for i := uint(0); i < processorsCountPerKind; i++ {
 				if ee[i] == nil {
 					ee[i] = map[appdef.ExtensionEngineKind]iextengine.IExtensionEngine{}
 				}
@@ -155,16 +155,19 @@ type appPartitionRT struct {
 	syncActualizer pipeline.ISyncOperator
 	actualizers    *actualizers.PartitionActualizers
 	schedulers     *schedulers.PartitionSchedulers
+	limiter        *limiter.Limiter
 }
 
 func newAppPartitionRT(app *appRT, id istructs.PartitionID) *appPartitionRT {
 	as := app.lastestVersion.appStructs()
+	buckets := app.apps.bucketsFactory()
 	part := &appPartitionRT{
 		app:            app,
 		id:             id,
 		syncActualizer: app.apps.syncActualizerFactory(as, id),
 		actualizers:    actualizers.New(app.name, id),
 		schedulers:     schedulers.New(app.name, app.partsCount, as.NumAppWorkspaces(), id),
+		limiter:        limiter.New(app.lastestVersion.appDef(), buckets),
 	}
 	return part
 }
@@ -173,20 +176,22 @@ func (p *appPartitionRT) borrow(proc ProcessorKind) (*borrowedPartition, error) 
 	b := newBorrowedPartition(p)
 
 	if err := b.borrow(proc); err != nil {
+		b.Release()
 		return nil, err
 	}
 
 	return b, nil
 }
 
-// # Implements IAppPartition
+// # Supports:
+//   - IAppPartition
 type borrowedPartition struct {
 	part       *appPartitionRT
 	appDef     appdef.IAppDef
 	appStructs istructs.IAppStructs
-	kind       ProcessorKind
 	pool       *pool.Pool[engines] // pool of borrowed engines
-	engines    engines             // borrowed engines
+	kind       ProcessorKind
+	engines    engines // borrowed engines
 }
 
 var borrowedPartitionsPool = sync.Pool{
@@ -217,7 +222,7 @@ func (bp *borrowedPartition) ID() istructs.PartitionID { return bp.part.id }
 
 // # IAppPartition.Invoke
 func (bp *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, state istructs.IState, intents istructs.IIntents) error {
-	e := bp.appDef.Extension(name)
+	e := appdef.Extension(bp.appDef.Type, name)
 	if e == nil {
 		return errUndefinedExtension(name)
 	}
@@ -238,6 +243,10 @@ func (bp *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, stat
 	}
 
 	return extEngine.Invoke(ctx, extName, io)
+}
+
+func (bp *borrowedPartition) IsLimitExceeded(resource appdef.QName, operation appdef.OperationKind, workspace istructs.WSID, remoteAddr string) (bool, appdef.QName) {
+	return bp.part.limiter.Exceeded(resource, operation, workspace, remoteAddr)
 }
 
 func (bp *borrowedPartition) IsOperationAllowed(op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, roles []appdef.QName) (bool, []appdef.FieldName, error) {

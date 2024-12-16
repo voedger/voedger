@@ -13,12 +13,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
-func TestBasicUsage_BLOBProcessors(t *testing.T) {
+func TestBasicUsage_Persistent(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
@@ -83,19 +84,19 @@ func TestBlobberErrors(t *testing.T) {
 	systemPrincipal, err := payloads.GetSystemPrincipalTokenApp(as.AppTokens())
 	require.NoError(err)
 
-	t.Run("401 unauthorized on write without token", func(t *testing.T) {
+	t.Run("403 forbudden on write without token", func(t *testing.T) {
 		vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, []byte{},
-			coreutils.Expect401(),
+			coreutils.Expect403(),
 		)
 	})
 
-	t.Run("401 unauthorized on read without token", func(t *testing.T) {
+	t.Run("403 forbidden on read without token", func(t *testing.T) {
 		expBLOB := []byte{1, 2, 3, 4, 5}
 		blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, expBLOB,
 			coreutils.WithAuthorizeBy(systemPrincipal),
 			coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"), // has name+mimeType query params -> any Content-Type except "multipart/form-data" is allowed
 		)
-		vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID, coreutils.Expect401())
+		vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID, coreutils.Expect403())
 	})
 
 	t.Run("403 forbidden on blob size quota exceeded", func(t *testing.T) {
@@ -141,5 +142,60 @@ func TestBlobberErrors(t *testing.T) {
 				coreutils.Expect400(),
 			).Println()
 		})
+	})
+}
+
+func TestBasicUsage_Temporary(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	as, err := vit.BuiltIn(istructs.AppQName_test1_app1)
+	require.NoError(err)
+	systemPrincipal, err := payloads.GetSystemPrincipalTokenApp(as.AppTokens())
+	require.NoError(err)
+
+	expBLOB := []byte{1, 2, 3, 4, 5}
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	// write
+	blobSUUID := vit.UploadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, expBLOB, iblobstorage.DurationType_1Day,
+		coreutils.WithAuthorizeBy(systemPrincipal),
+		coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"), // has name+mimeType query params -> any Content-Type except "multipart/form-data" is allowed
+	)
+	log.Println(blobSUUID)
+
+	// read
+	blobReader := vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, blobSUUID, coreutils.WithAuthorizeBy(systemPrincipal))
+	actualBLOBContent, err := io.ReadAll(blobReader)
+	require.NoError(err)
+	require.Equal(coreutils.ApplicationXBinary, blobReader.MimeType)
+	require.Equal("test", blobReader.Name)
+	require.Equal(expBLOB, actualBLOBContent)
+}
+
+func TestTemporaryBLOBErrors(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	as, err := vit.BuiltIn(istructs.AppQName_test1_app1)
+	require.NoError(err)
+	systemPrincipal, err := payloads.GetSystemPrincipalTokenApp(as.AppTokens())
+	require.NoError(err)
+
+	expBLOB := []byte{1, 2, 3, 4, 5}
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	// write
+	vit.UploadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, expBLOB, iblobstorage.DurationType_1Day,
+		coreutils.WithAuthorizeBy(systemPrincipal),
+		coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"), // has name+mimeType query params -> any Content-Type except "multipart/form-data" is allowed
+	)
+
+	t.Run("404 on not found", func(t *testing.T) {
+		vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, "unknownSUUIDaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", coreutils.WithAuthorizeBy(systemPrincipal), coreutils.Expect404())
 	})
 }

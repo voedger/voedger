@@ -11,9 +11,11 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIAppDef_Functions() {
+func ExampleFunctions() {
 
 	var app appdef.IAppDef
+
+	wsName := appdef.NewQName("test", "workspace")
 
 	cmdName := appdef.NewQName("test", "cmd")
 	parName := appdef.NewQName("test", "param")
@@ -25,17 +27,19 @@ func ExampleIAppDef_Functions() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		cmd := adb.AddCommand(cmdName)
+		wsb := adb.AddWorkspace(wsName)
+
+		cmd := wsb.AddCommand(cmdName)
 		cmd.SetEngine(appdef.ExtensionEngineKind_WASM)
 		cmd.
 			SetParam(parName).
 			SetResult(resName)
 
-		query := adb.AddQuery(queryName)
+		query := wsb.AddQuery(queryName)
 		query.SetResult(resName)
 
-		_ = adb.AddObject(parName)
-		_ = adb.AddObject(resName)
+		_ = wsb.AddObject(parName)
+		_ = wsb.AddObject(resName)
 
 		app = adb.MustBuild()
 	}
@@ -43,27 +47,26 @@ func ExampleIAppDef_Functions() {
 	// how to enum functions
 	{
 		cnt := 0
-		app.Functions(func(f appdef.IFunction) bool {
+		for f := range appdef.Functions(app.Types()) {
 			cnt++
 			fmt.Println(cnt, f)
-			return true
-		})
+		}
 		fmt.Println("overall function(s):", cnt)
 	}
 
 	// how to find functions
 	{
-		cmd := app.Function(cmdName)
+		cmd := appdef.Function(app.Type, cmdName)
 		fmt.Println(cmd, ":")
 		fmt.Println(" - parameter:", cmd.Param())
 		fmt.Println(" - result   :", cmd.Result())
 
-		query := app.Function(queryName)
+		query := appdef.Function(app.Type, queryName)
 		fmt.Println(query, ":")
 		fmt.Println(" - parameter:", query.Param())
 		fmt.Println(" - result   :", query.Result())
 
-		fmt.Println("Search unknown:", app.Function(appdef.NewQName("test", "unknown")))
+		fmt.Println("Search unknown:", appdef.Function(app.Type, appdef.NewQName("test", "unknown")))
 	}
 
 	// Output:

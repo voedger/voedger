@@ -34,13 +34,13 @@ type AppDeploymentDescriptor struct {
 	NumParts istructs.NumAppPartitions
 
 	// EnginePoolSize pools size for each processor kind
-	EnginePoolSize [ProcessorKind_Count]int
+	EnginePoolSize [ProcessorKind_Count]uint
 
 	// total number of AppWorkspaces
 	NumAppWorkspaces istructs.NumAppWorkspaces
 }
 
-func PoolSize(c, q, p, s int) [ProcessorKind_Count]int { return [ProcessorKind_Count]int{c, q, p, s} }
+func PoolSize(c, q, p, s uint) [ProcessorKind_Count]uint { return [ProcessorKind_Count]uint{c, q, p, s} }
 
 // Describes built-in application.
 type BuiltInApp struct {

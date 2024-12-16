@@ -5,67 +5,33 @@
 
 package appdef
 
+import "iter"
+
 // Application definition is a set of types, views, commands, queries and workspaces.
 type IAppDef interface {
 	IWithComments
 
 	IWithPackages
 	IWithWorkspaces
-
-	IWithTypes
-	IWithDataTypes
-
-	IWithStructures
-	IWithRecords
-	IWithGDocs
-	IWithCDocs
-	IWithWDocs
-	IWithSingletons
-	IWithODocs
-	IWithObjects
-
-	IWithViews
-
-	IWithExtensions
-	IWithFunctions
-	IWithCommands
-	IWithQueries
-	IWithProjectors
-	IWithJobs
-
-	IWithRoles
 	IWithACL
 
-	IWithRates
-	IWithLimits
+	// Returns type by name.
+	//
+	// If not found then empty type with TypeKind_null is returned
+	Type(QName) IType
+
+	// Iterate types.
+	//
+	// Types are iterated in alphabetical order of QNames.
+	Types() iter.Seq[IType]
 }
 
 type IAppDefBuilder interface {
-	ICommentsBuilder
+	ICommenter
+	ITypeCommenter
 
 	IPackagesBuilder
 	IWorkspacesBuilder
-
-	IDataTypesBuilder
-
-	IGDocsBuilder
-	ICDocsBuilder
-	IWDocsBuilder
-	IODocsBuilder
-	IObjectsBuilder
-
-	IViewsBuilder
-
-	ICommandsBuilder
-	IQueriesBuilder
-	IProjectorsBuilder
-	IJobsBuilder
-
-	IRolesBuilder
-	IACLBuilder
-
-	IRatesBuilder
-	ILimitsBuilder
 
 	// Returns application definition while building.
 	//

@@ -20,11 +20,16 @@ import (
 )
 
 func Example() {
-	buildAppDef := func(verInfo ...string) (appdef.IAppDefBuilder, appdef.IAppDef) {
+	wsName := appdef.NewQName("test", "workspace")
+	verInfo := appdef.NewQName("test", "verInfo")
+	buildAppDef := func(ver ...string) (appdef.IAppDefBuilder, appdef.IAppDef) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		adb.AddCDoc(appdef.NewQName("test", "verInfo")).SetComment(verInfo...)
+		ws := adb.AddWorkspace(wsName)
+		ws.AddCDoc(verInfo).SetComment(ver...)
+		ws.SetDescriptor(verInfo)
+
 		app, err := adb.Build()
 		if err != nil {
 			panic(err)
@@ -52,12 +57,8 @@ func Example() {
 
 	report := func(part appparts.IAppPartition) {
 		fmt.Println(part.App(), "partition", part.ID())
-		part.AppStructs().AppDef().Types(func(t appdef.IType) bool {
-			if !t.IsSystem() {
-				fmt.Println("-", t, t.Comment())
-			}
-			return true
-		})
+		ver := appdef.CDoc(part.AppStructs().AppDef().Type, verInfo)
+		fmt.Println("-", ver, ver.Comment())
 	}
 
 	fmt.Println("*** Add ver 1 ***")

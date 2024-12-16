@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIFieldsBuilder_AddField() {
+func ExampleIFields() {
 
 	var app appdef.IAppDef
 	docName := appdef.NewQName("test", "doc")
@@ -23,7 +23,9 @@ func ExampleIFieldsBuilder_AddField() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		doc := adb.AddODoc(docName)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		doc := wsb.AddODoc(docName)
 		doc.
 			AddField("code", appdef.DataKind_string, true, appdef.MinLen(1), appdef.MaxLen(4), appdef.Pattern(`^\d+$`)).
 			SetFieldComment("code", "Code is string containing from one to four digits").
@@ -35,7 +37,7 @@ func ExampleIFieldsBuilder_AddField() {
 
 	// how to inspect fields
 	{
-		doc := app.ODoc(docName)
+		doc := appdef.ODoc(app.Type, docName)
 		fmt.Printf("%v, user field count: %v\n", doc, doc.UserFieldCount())
 
 		cnt := 0
@@ -83,18 +85,20 @@ func ExampleIFieldsBuilder_AddDataField() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
 		str10name := appdef.NewQName("test", "str10")
-		str10 := adb.AddData(str10name, appdef.DataKind_string, appdef.NullQName, appdef.MinLen(10), appdef.MaxLen(10))
+		str10 := wsb.AddData(str10name, appdef.DataKind_string, appdef.NullQName, appdef.MinLen(10), appdef.MaxLen(10))
 		str10.SetComment("String with 10 characters exact")
 
 		dig10name := appdef.NewQName("test", "dig10")
-		_ = adb.AddData(dig10name, appdef.DataKind_string, str10name, appdef.Pattern(`^\d+$`, "only digits"))
+		_ = wsb.AddData(dig10name, appdef.DataKind_string, str10name, appdef.Pattern(`^\d+$`, "only digits"))
 
 		monthName := appdef.NewQName("test", "month")
-		month := adb.AddData(monthName, appdef.DataKind_int32, appdef.NullQName, appdef.MinExcl(0), appdef.MaxIncl(12))
+		month := wsb.AddData(monthName, appdef.DataKind_int32, appdef.NullQName, appdef.MinExcl(0), appdef.MaxIncl(12))
 		month.SetComment("Month number, left-open range (0-12]")
 
-		doc := adb.AddCDoc(docName)
+		doc := wsb.AddCDoc(docName)
 		doc.
 			AddDataField("code", dig10name, true).
 			SetFieldComment("code", "Code is string containing 10 digits").
@@ -106,7 +110,7 @@ func ExampleIFieldsBuilder_AddDataField() {
 
 	// how to inspect fields
 	{
-		doc := app.CDoc(docName)
+		doc := appdef.CDoc(app.Type, docName)
 		fmt.Printf("%v, user field count: %v\n", doc, doc.UserFieldCount())
 
 		cnt := 0
@@ -153,7 +157,9 @@ func ExampleIFieldsBuilder_SetFieldVerify() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		doc := adb.AddCDoc(docName)
+		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		doc := ws.AddCDoc(docName)
 		doc.
 			AddField("pin", appdef.DataKind_string, true, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\d+$`)).
 			SetFieldComment("pin", "Secret four digits pin code").
@@ -164,7 +170,7 @@ func ExampleIFieldsBuilder_SetFieldVerify() {
 
 	// how to inspect verified field
 	{
-		doc := app.CDoc(docName)
+		doc := appdef.CDoc(app.Type, docName)
 		fmt.Printf("doc %q: %v\n", doc.QName(), doc.Kind())
 		fmt.Printf("doc field count: %v\n", doc.UserFieldCount())
 

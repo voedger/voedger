@@ -7,6 +7,8 @@ package appdef
 
 import (
 	"fmt"
+	"iter"
+	"maps"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/coreutils/utils"
@@ -22,15 +24,15 @@ type data struct {
 }
 
 // Creates and returns new data type.
-func newData(app *appDef, name QName, kind DataKind, anc QName) *data {
+func newData(app *appDef, ws *workspace, name QName, kind DataKind, anc QName) *data {
 	var ancestor IData
 	if anc == NullQName {
-		ancestor = app.SysData(kind)
+		ancestor = SysData(app.Type, kind)
 		if ancestor == nil {
 			panic(ErrNotFound("system data type for data kind «%v»", kind.TrimString()))
 		}
 	} else {
-		ancestor = app.Data(anc)
+		ancestor = Data(app.Type, anc)
 		if ancestor == nil {
 			panic(ErrTypeNotFound(anc))
 		}
@@ -39,7 +41,7 @@ func newData(app *appDef, name QName, kind DataKind, anc QName) *data {
 		}
 	}
 	d := &data{
-		typ:         makeType(app, name, TypeKind_Data),
+		typ:         makeType(app, ws, name, TypeKind_Data),
 		dataKind:    ancestor.DataKind(),
 		ancestor:    ancestor,
 		constraints: make(map[ConstraintKind]IConstraint),
@@ -48,8 +50,8 @@ func newData(app *appDef, name QName, kind DataKind, anc QName) *data {
 }
 
 // Creates and returns new anonymous data type with specified constraints.
-func newAnonymousData(app *appDef, kind DataKind, anc QName, constraints ...IConstraint) *data {
-	d := newData(app, NullQName, kind, anc)
+func newAnonymousData(app *appDef, ws *workspace, kind DataKind, anc QName, constraints ...IConstraint) *data {
+	d := newData(app, ws, NullQName, kind, anc)
 	d.addConstraints(constraints...)
 	return d
 }
@@ -58,9 +60,9 @@ func (d *data) Ancestor() IData {
 	return d.ancestor
 }
 
-func (d *data) Constraints(withInherited bool) map[ConstraintKind]IConstraint {
+func (d *data) Constraints(withInherited bool) iter.Seq2[ConstraintKind, IConstraint] {
 	if !withInherited {
-		return d.constraints
+		return maps.All(d.constraints)
 	}
 
 	cc := make(map[ConstraintKind]IConstraint)
@@ -75,7 +77,7 @@ func (d *data) Constraints(withInherited bool) map[ConstraintKind]IConstraint {
 		}
 		a = a.ancestor.(*data)
 	}
-	return cc
+	return maps.All(cc)
 }
 
 func (d *data) DataKind() DataKind {
@@ -163,12 +165,12 @@ var (
 )
 
 // Creates and returns new system type by data kind.
-func newSysData(app *appDef, kind DataKind) *data {
+func newSysData(app *appDef, ws *workspace, kind DataKind) *data {
 	d := &data{
-		typ:      makeType(app, SysDataName(kind), TypeKind_Data),
+		typ:      makeType(app, ws, SysDataName(kind), TypeKind_Data),
 		dataKind: kind,
 	}
-	app.appendType(d)
+	ws.appendType(d)
 	return d
 }
 
@@ -235,7 +237,7 @@ func (c dataConstraint) String() (s string) {
 
 func (k ConstraintKind) MarshalText() ([]byte, error) {
 	var s string
-	if k < ConstraintKind_Count {
+	if k < ConstraintKind_count {
 		s = k.String()
 	} else {
 		s = utils.UintToString(k)

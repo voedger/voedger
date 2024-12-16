@@ -9,7 +9,6 @@ import (
 	"errors"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -72,18 +71,6 @@ func Test_p_flush(t *testing.T) {
 		p_flush(operator, "test")
 
 		require.Empty(t, operator.Stdout)
-	})
-}
-
-func Test_flushTimer_stop(t *testing.T) {
-	flushTimer := flushTimer{
-		active: true,
-		timer:  time.NewTimer(time.Millisecond),
-	}
-	time.Sleep(time.Duration(2) * time.Millisecond)
-
-	require.NotPanics(t, func() {
-		flushTimer.stop()
 	})
 }
 

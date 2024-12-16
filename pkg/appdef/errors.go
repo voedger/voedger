@@ -60,6 +60,10 @@ func ErrRoleNotFound(r QName) error {
 	return ErrNotFound("role «%v»", r)
 }
 
+func ErrFilterHasNoMatches(flt IFilter, where any) error {
+	return ErrNotFound("filter «%v» has no matches in %v", flt, where)
+}
+
 var ErrConvertError = errors.New("convert error")
 
 func ErrConvert(msg string, args ...any) error {
@@ -82,4 +86,8 @@ var ErrUnsupportedError = errors.ErrUnsupported
 
 func ErrUnsupported(msg string, args ...any) error {
 	return enrichError(ErrUnsupportedError, msg, args...)
+}
+
+func ErrACLUnsupportedType(t IType) error {
+	return ErrUnsupported("ACL for %v", t)
 }

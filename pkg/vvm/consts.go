@@ -7,6 +7,7 @@ package vvm
 import (
 	"time"
 
+	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istorage/cas"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/router"
@@ -15,7 +16,7 @@ import (
 const (
 	DefaultNumCommandProcessors          istructs.NumCommandProcessors = 10
 	DefaultNumQueryProcessors            istructs.NumQueryProcessors   = 10  // <=0 -> 1 query processor will exist anyway
-	DefaultQuotasChannelsFactor                                        = 100 // Quotas.Channels will be NumCommandProcessors * DefaultQuotasFactor
+	DefaultQuotasChannelsFactor                                        = 1000 // Quotas.Channels will be NumCommandProcessors * DefaultQuotasChannelsFactor
 	DefaultQuotasChannelsPerSubject                                    = 50
 	DefaultQuotasSubscriptionsFactor                                   = 1000 // Quotas.Subscriptions will be NumCommandProcessors * DefaultQuotasSubscriptionsFactor
 	DefaultQuotasSubscriptionsPerSubject                               = 100
@@ -25,7 +26,7 @@ const (
 	DefaultBLOBWorkersNum                                              = 10
 	DefaultRetryAfterSecondsOn503                                      = 1
 	DefaultMaxPrepareQueries                                           = 10
-	DefaultBLOBMaxSize                                                 = router.BLOBMaxSizeType(20971520) // 20Mb
+	DefaultBLOBMaxSize                                                 = iblobstorage.BLOBMaxSizeType(20971520) // 20Mb
 	DefaultVVMPort                                                     = router.DefaultPort
 	actualizerFlushInterval                                            = time.Millisecond * 500
 	defaultCassandraPort                                               = 9042

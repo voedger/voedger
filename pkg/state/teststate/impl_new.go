@@ -7,18 +7,19 @@ package teststate
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/compile"
-	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -26,11 +27,19 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
+	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/sys/storages"
 )
 
-// CommandTestState is a test state for command testing
-type CommandTestState struct {
+type IODOc interface {
+	IAmODoc()
+}
+
+// TODO: eliminate usage of IAppStructs here
+
+// generalTestState is a test state
+type generalTestState struct {
 	testState
 
 	extensionFunc func()
@@ -46,209 +55,248 @@ type CommandTestState struct {
 	viewRecords []recordItem
 }
 
-// NewCommandTestState creates a new test state for command testing
-func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) *CommandTestState {
-	const wsid = istructs.WSID(1)
-
-	ts := &CommandTestState{}
-
-	ts.testData = make(map[string]any)
-	// set test object
-	ts.t = t
-
-	ts.ctx = context.Background()
-	ts.processorKind = ProcKind_CommandProcessor
-	ts.commandWSID = wsid
-	ts.secretReader = &secretReader{secrets: make(map[string][]byte)}
-
-	// build appDef
-	ts.buildAppDef(iCommand.PkgPath(), iCommand.WorkspaceDescriptor())
-	ts.buildState(ProcKind_CommandProcessor)
-
-	// initialize funcRunner and extensionFunc itself
-	ts.funcRunner = &sync.Once{}
-	ts.extensionFunc = extensionFunc
-
-	if iCommand != nil {
-		// set cud builder function
-		ts.setCudBuilder(iCommand, wsid)
-
-		// set arguments for the command
-		if len(iCommand.ArgumentEntity()) > 0 {
-			ts.argumentType = appdef.NewFullQName(iCommand.ArgumentPkgPath(), iCommand.ArgumentEntity())
-			ts.argumentObject = make(map[string]any)
-		}
+func (gts *generalTestState) getMockedStorage(storageQName appdef.QName) (*storages.MockedStorage, bool) {
+	mockedState, ok1 := gts.IState.(*stateprovide.MockedState)
+	if !ok1 {
+		panic("failed to get mocked state")
 	}
 
-	return ts
+	mockedStorage, ok2 := mockedState.GetMockedStorage(storageQName)
+	if !ok2 {
+		panic(fmt.Sprintf("failed to get mocked storage for %s", storageQName.String()))
+	}
+
+	return mockedStorage, true
 }
 
-func (cts *CommandTestState) Record(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	isSingleton := cts.isSingletone(fQName)
+func (gts *generalTestState) intentSingletonInsert(fQName IFullQName, keyValueList ...any) {
+	gts.addRequiredItems(fQName, 0, true, true, false, keyValueList...)
+}
+
+func (gts *generalTestState) intentSingletonUpdate(fQName IFullQName, keyValueList ...any) {
+	gts.addRequiredItems(fQName, 0, true, false, false, keyValueList...)
+}
+
+func (gts *generalTestState) intentRecordInsert(fQName IFullQName, id istructs.RecordID, keyValueList ...any) {
+	gts.addRequiredItems(fQName, id, false, true, false, keyValueList...)
+}
+
+func (gts *generalTestState) intentRecordUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) {
+	gts.addRequiredItems(fQName, id, false, false, false, keyValueList...)
+}
+
+func (gts *generalTestState) stateRecord(fQName IFullQName, id istructs.RecordID, keyValueList ...any) {
+	isSingleton := gts.isSingletone(fQName)
 	if isSingleton {
 		panic("use SingletonRecord method for singletons")
 	}
 
-	return cts.record(fQName, id, isSingleton, keyValueList...)
+	gts.record(fQName, id, isSingleton, keyValueList...)
 }
 
 // SingletonRecord adds a singleton record to the state
 // Implemented in own method because of ID for singletons are generated under-the-hood and
 // we can not insert singletons with our own IDs
-func (cts *CommandTestState) SingletonRecord(fQName IFullQName, keyValueList ...any) ITestRunner {
-	isSingleton := cts.isSingletone(fQName)
+func (gts *generalTestState) stateSingletonRecord(fQName IFullQName, keyValueList ...any) {
+	isSingleton := gts.isSingletone(fQName)
 	if !isSingleton {
 		panic("use Record method for non-singleton entities")
 	}
-	qName := cts.getQNameFromFQName(fQName)
 
-	// get real ID of the specific singleton
-	id, err := cts.appStructs.Records().GetSingletonID(qName)
-	if err != nil {
-		panic(fmt.Errorf("failed to get singleton id: %w", err))
-	}
-
-	return cts.record(fQName, int(id), isSingleton, keyValueList...)
+	gts.record(fQName, istructs.MinReservedBaseRecordID, isSingleton, keyValueList...)
 }
 
-func (cts *CommandTestState) Offset(offset int) ITestRunner {
-	cts.wsOffsets[cts.commandWSID] = istructs.Offset(offset)
-
-	return cts
-}
-
-func (cts *CommandTestState) RequireViewInsert(fQName IFullQName, keyValueList ...any) ITestRunner {
-	return cts.addRequiredRecordItems(fQName, 0, false, true, true, keyValueList...)
-}
-
-func (cts *CommandTestState) RequireViewUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	return cts.addRequiredRecordItems(fQName, id, false, false, true, keyValueList...)
-}
-
-func (cts *CommandTestState) View(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	if !cts.isView(fQName) {
-		panic("View method must be used for views only")
-	}
-
-	cts.viewRecords = append(cts.viewRecords, recordItem{
-		entity:       fQName,
-		id:           id,
-		isView:       true,
-		keyValueList: keyValueList,
-	})
-
-	return cts
-}
-
-func (cts *CommandTestState) getQNameFromFQName(fQName IFullQName) appdef.QName {
-	localPkgName := cts.appDef.PackageLocalName(fQName.PkgPath())
+func (gts *generalTestState) getQNameFromFQName(fQName IFullQName) appdef.QName {
+	localPkgName := gts.appDef.PackageLocalName(fQName.PkgPath())
 	return appdef.NewQName(localPkgName, fQName.Entity())
 }
 
-func (cts *CommandTestState) isSingletone(fQName IFullQName) bool {
-	qName := cts.getQNameFromFQName(fQName)
+func (gts *generalTestState) isSingletone(fQName IFullQName) bool {
+	qName := gts.getQNameFromFQName(fQName)
 
-	iSingleton := cts.appDef.Singleton(qName)
+	iSingleton := appdef.Singleton(gts.appDef.Type, qName)
 	return iSingleton != nil && iSingleton.Singleton()
 }
 
-func (cts *CommandTestState) isView(fQName IFullQName) bool {
-	qName := cts.getQNameFromFQName(fQName)
+func (gts *generalTestState) isView(fQName IFullQName) bool {
+	qName := gts.getQNameFromFQName(fQName)
 
-	iView := cts.appDef.View(qName)
+	iView := appdef.View(gts.appDef.Type, qName)
 	return iView != nil
 }
 
-func (cts *CommandTestState) putArgument() {
-	if cts.argumentObject == nil {
+func (gts *generalTestState) runExtensionFunc() {
+	if gts.extensionFunc != nil {
+		gts.funcRunner.Do(gts.extensionFunc)
+	}
+}
+
+func (gts *generalTestState) putCudRows() {
+	if len(gts.cudRows) == 0 {
 		return
 	}
 
-	cts.testData[sys.Storage_CommandContext_Field_ArgumentObject] = cts.argumentObject
-}
-
-func (cts *CommandTestState) setCudBuilder(wsItem IFullQName, wsid istructs.WSID) {
-	localPkgName := cts.appDef.PackageLocalName(wsItem.PkgPath())
-	if wsItem.PkgPath() == appdef.SysPackage {
-		localPkgName = wsItem.PkgPath()
+	mockedEventStorage, ok := gts.getMockedStorage(sys.Storage_Event)
+	if !ok {
+		panic("failed to get mocked event storage")
 	}
 
-	reb := cts.appStructs.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
-		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-			Workspace:         wsid,
-			HandlingPartition: TestPartition,
-			QName:             appdef.NewQName(localPkgName, wsItem.Entity()),
-			WLogOffset:        0,
-			PLogOffset:        cts.nextPLogOffs(),
-		},
-	})
+	for _, item := range gts.cudRows {
+		kvMap, err := parseKeyValues(item.keyValueList)
+		require.NoError(gts.t, err, msgFailedToParseKeyValues)
 
-	cts.cud = reb.CUDBuilder()
-}
+		localQName := gts.getQNameFromFQName(item.entity)
 
-// buildAppDef alternative way of building IAppDef
-func (cts *CommandTestState) buildAppDef(wsPkgPath, wsDescriptorName string) {
-	compileResult, err := compile.Compile("..")
-	if err != nil {
-		panic(err)
-	}
-
-	cts.appDef = compileResult.AppDef
-
-	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, compileResult.AppDefBuilder)
-	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-	cts.appDef.Extensions(func(i appdef.IExtension) bool {
-		if proj, ok := i.(appdef.IProjector); ok {
-			if proj.Sync() {
-				cfg.AddSyncProjectors(istructs.Projector{Name: i.QName()})
-			} else {
-				cfg.AddAsyncProjectors(istructs.Projector{Name: i.QName()})
-			}
-		} else if cmd, ok := i.(appdef.ICommand); ok {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmd.QName(), istructsmem.NullCommandExec))
-		} else if q, ok := i.(appdef.IQuery); ok {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(q.QName(), istructsmem.NullCommandExec))
+		mockedEventObject := &coreutils.TestObject{
+			Name:        localQName,
+			Data:        kvMap,
+			Containers_: make(map[string][]*coreutils.TestObject),
 		}
-		return true
-	})
+		mockedEventObject.Data[appdef.SystemField_ID] = item.id
+		mockedEventObject.Data[sys.Storage_Event_Field_Workspace] = gts.commandWSID
+		mockedEventObject.Data[sys.Storage_Event_Field_QName] = localQName
 
-	asf := mem.Provide()
-	storageProvider := istorageimpl.Provide(asf)
-	prov := istructsmem.Provide(
-		cfgs,
-		iratesce.TestBucketsFactory,
-		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
-		storageProvider,
-	)
-
-	structs, err := prov.BuiltIn(istructs.AppQName_test1_app1)
-	if err != nil {
-		panic(err)
-	}
-
-	cts.appStructs = structs
-	cts.plogGen = istructsmem.NewIDGenerator()
-	cts.wsOffsets = make(map[istructs.WSID]istructs.Offset)
-
-	err = wsdescutil.CreateCDocWorkspaceDescriptorStub(
-		cts.appStructs,
-		TestPartition,
-		cts.commandWSID,
-		appdef.NewQName(filepath.Base(wsPkgPath), wsDescriptorName),
-		cts.nextPLogOffs(),
-		cts.nextWSOffs(cts.commandWSID),
-	)
-	if err != nil {
-		panic(err)
+		// writing an event object directly to the storage
+		mockedEventStorage.PutValue(item.id, mockedEventObject)
 	}
 }
 
-func (cts *CommandTestState) record(fQName IFullQName, id int, isSingleton bool, keyValueList ...any) ITestRunner {
-	qName := cts.getQNameFromFQName(fQName)
+func (gts *generalTestState) addRequiredItems(
+	fQName IFullQName,
+	id istructs.RecordID,
+	isSingleton, isNew, isView bool,
+	keyValueList ...any,
+) {
+	gts.requiredRecordItems = append(gts.requiredRecordItems, recordItem{
+		entity:       fQName,
+		qName:        gts.getQNameFromFQName(fQName),
+		id:           id,
+		isSingleton:  isSingleton,
+		isNew:        isNew,
+		isView:       isView,
+		keyValueList: keyValueList,
+	})
+}
+
+// recoverPanicInTestState must be called in defer to recover panic in the test state
+func (gts *generalTestState) recoverPanicInTestState() {
+	r := recover()
+	recoveredError, ok := r.(error)
+	if ok {
+		require.Fail(gts.t, recoveredError.Error())
+	}
+}
+
+// requireIntent checks if the intent exists in the state
+// Parameters:
+// fQName - full qname of the entity
+// id - record id (unused for singletons)
+// isSingletone - if the entity is a singleton
+// isInsertIntent - if the intent is insert or update
+// isView - if the entity is a view
+// keyValueList - list of key-value pairs
+func (gts *generalTestState) requireIntent(r recordItem) {
+	kb := gts.keyBuilder(r)
+
+	vb, isNew := gts.IState.FindIntentWithOpKind(kb)
+	if vb == nil {
+		require.Fail(gts.t, "intent not found")
+		return
+	}
+
+	m, err := parseKeyValues(r.keyValueList)
+	require.NoError(gts.t, err, msgFailedToParseKeyValues)
+
+	_, mapOfValues := splitKeysFromValues(r.entity, m)
+
+	localQName := gts.getQNameFromFQName(r.entity)
+	require.Equalf(gts.t, r.isNew, isNew, "%s: intent kind mismatch", localQName.String())
+	gts.equalValues(vb, mapOfValues)
+}
+
+func (gts *generalTestState) equalValues(vb istructs.IStateValueBuilder, expectedValues map[string]any) {
+	if vb == nil {
+		require.Fail(gts.t, "expected value builder is nil")
+		return
+	}
+	value := vb.BuildValue()
+	if value == nil {
+		require.Fail(gts.t, "value builder does not support equalValues operation")
+		return
+	}
+
+	for expectedKey, expectedValue := range expectedValues {
+		switch t := expectedValue.(type) {
+		case int8:
+			require.Equal(gts.t, int32(t), value.AsInt32(expectedKey))
+		case int16:
+			require.Equal(gts.t, int32(t), value.AsInt32(expectedKey))
+		case int32:
+			require.Equal(gts.t, t, value.AsInt32(expectedKey))
+		case int64:
+			require.Equal(gts.t, t, value.AsInt64(expectedKey))
+		case int:
+			require.Equal(gts.t, int64(t), value.AsInt64(expectedKey))
+		case float32:
+			require.Equal(gts.t, t, value.AsFloat32(expectedKey))
+		case float64:
+			require.Equal(gts.t, t, value.AsFloat64(expectedKey))
+		case []byte:
+			require.Equal(gts.t, t, value.AsBytes(expectedKey))
+		case string:
+			require.Equal(gts.t, t, value.AsString(expectedKey))
+		case bool:
+			require.Equal(gts.t, t, value.AsBool(expectedKey))
+		case appdef.QName:
+			require.Equal(gts.t, t, value.AsQName(expectedKey))
+		case istructs.IStateValue:
+			require.Equal(gts.t, t, value.AsValue(expectedKey))
+		case json.Number:
+			int64Value, err := t.Int64()
+			require.NoError(gts.t, err)
+
+			require.Equal(gts.t, int64Value, value.AsInt64(expectedKey))
+		default:
+			require.Fail(gts.t, "unsupported value type")
+		}
+	}
+}
+
+func (gts *generalTestState) keyBuilder(r recordItem) istructs.IStateKeyBuilder {
+	var err error
+	var kb istructs.IStateKeyBuilder
+
+	localQName := gts.getQNameFromFQName(r.entity)
+	if r.isView {
+		kb, err = gts.IState.KeyBuilder(sys.Storage_View, localQName)
+	} else {
+		kb, err = gts.IState.KeyBuilder(sys.Storage_Record, localQName)
+	}
+
+	require.NoError(gts.t, err, "IState.KeyBuilder: failed to create key builder")
+
+	switch {
+	case r.isSingleton:
+		kb.PutBool(sys.Storage_Record_Field_IsSingleton, true)
+	case !r.isView:
+		kb.PutRecordID(sys.Storage_Record_Field_ID, r.id)
+	case r.isView:
+		m, err := parseKeyValues(r.keyValueList)
+		require.NoError(gts.t, err, msgFailedToParseKeyValues)
+
+		mapOfKeys, _ := splitKeysFromValues(r.entity, m)
+
+		kb.PutFromJSON(mapOfKeys)
+	}
+
+	return kb
+}
+
+func (gts *generalTestState) record(fQName IFullQName, id istructs.RecordID, isSingleton bool, keyValueList ...any) {
+	qName := gts.getQNameFromFQName(fQName)
 
 	// check if the record already exists
-	slices.ContainsFunc(cts.recordItems, func(i recordItem) bool {
+	slices.ContainsFunc(gts.recordItems, func(i recordItem) bool {
 		if i.entity == fQName {
 			if isSingleton {
 				panic(fmt.Errorf("singletone %s already exists", qName.String()))
@@ -261,71 +309,86 @@ func (cts *CommandTestState) record(fQName IFullQName, id int, isSingleton bool,
 		return false
 	})
 
-	cts.recordItems = append(cts.recordItems, recordItem{
+	gts.recordItems = append(gts.recordItems, recordItem{
 		entity:       fQName,
+		qName:        gts.getQNameFromFQName(fQName),
 		isSingleton:  isSingleton,
 		id:           id,
 		keyValueList: keyValueList,
 	})
-
-	return cts
 }
 
-func (cts *CommandTestState) putRecords() {
+func (gts *generalTestState) putRecords() {
+	mockedRecordStorage, ok := gts.getMockedStorage(sys.Storage_Record)
+	if !ok {
+		panic("failed to get mocked record storage")
+	}
+
 	// put records into the state
-	for _, item := range cts.recordItems {
-		pkgAlias := cts.appDef.PackageLocalName(item.entity.PkgPath())
+	for _, item := range gts.recordItems {
+		pkgAlias := gts.appDef.PackageLocalName(item.entity.PkgPath())
 
-		keyValueMap, err := parseKeyValues(item.keyValueList)
-		require.NoError(cts.t, err, errMsgFailedToParseKeyValues)
+		kvMap, err := parseKeyValues(item.keyValueList)
+		require.NoError(gts.t, err, msgFailedToParseKeyValues)
 
-		keyValueMap[appdef.SystemField_QName] = appdef.NewQName(pkgAlias, item.entity.Entity()).String()
-		keyValueMap[appdef.SystemField_ID] = istructs.RecordID(item.id)
+		kvMap[appdef.SystemField_QName] = appdef.NewQName(pkgAlias, item.entity.Entity()).String()
+		kvMap[appdef.SystemField_ID] = item.id
+		kvMap[sys.Storage_Record_Field_WSID] = gts.commandWSID
 
-		err = cts.appStructs.Records().PutJSON(cts.commandWSID, keyValueMap)
-		require.NoError(cts.t, err)
+		mockedObject := &coreutils.TestObject{
+			Id:          item.id,
+			Name:        item.qName,
+			IsNew_:      item.isNew,
+			Data:        kvMap,
+			Containers_: make(map[string][]*coreutils.TestObject),
+		}
+
+		mockedRecordStorage.PutValue(item.id, mockedObject)
 	}
 
 	// clear record items after they are processed
-	cts.recordItems = nil
+	gts.recordItems = nil
 }
 
-func (cts *CommandTestState) putViewRecords() {
-	for _, item := range cts.viewRecords {
-		m, err := parseKeyValues(item.keyValueList)
-		require.NoError(cts.t, err, errMsgFailedToParseKeyValues)
+func (gts *generalTestState) putViewRecords() {
+	mockedViewStorage, ok := gts.getMockedStorage(sys.Storage_View)
+	if !ok {
+		panic("failed to get mocked view storage")
+	}
 
-		mapOfKeys, mapOfValues := splitKeysFromValues(item.entity, m)
+	for _, item := range gts.viewRecords {
+		kvMap, err := parseKeyValues(item.keyValueList)
+		require.NoError(gts.t, err, msgFailedToParseKeyValues)
 
-		cts.PutView(
-			cts.commandWSID,
-			appdef.NewFullQName(
-				item.entity.PkgPath(),
-				item.entity.Entity(),
-			),
-			func(key istructs.IKeyBuilder, value istructs.IValueBuilder) {
-				key.PutFromJSON(mapOfKeys)
-				value.PutFromJSON(mapOfValues)
-			},
-		)
+		kvMap[sys.Storage_Record_Field_WSID] = gts.commandWSID
+
+		mockedObject := &coreutils.TestObject{
+			Id:          item.id,
+			Name:        item.qName,
+			IsNew_:      item.isNew,
+			Data:        kvMap,
+			Containers_: make(map[string][]*coreutils.TestObject),
+		}
+
+		mockedViewStorage.PutValue(item.id, mockedObject)
 	}
 
 	// clear view record items after they are processed
-	cts.viewRecords = nil
+	gts.viewRecords = nil
 }
 
-func (cts *CommandTestState) require() {
+func (gts *generalTestState) require() {
 	// check out required allIntents
-	requiredKeys := make([]istructs.IStateKeyBuilder, 0, len(cts.requiredRecordItems))
-	for _, item := range cts.requiredRecordItems {
-		requiredKeys = append(requiredKeys, cts.keyBuilder(item))
+	requiredKeys := make([]istructs.IStateKeyBuilder, 0, len(gts.requiredRecordItems))
+	for _, item := range gts.requiredRecordItems {
+		requiredKeys = append(requiredKeys, gts.keyBuilder(item))
 
-		cts.requireIntent(item)
+		gts.requireIntent(item)
 	}
 
 	// gather all intents
-	allIntents := make([]intentItem, 0, cts.IState.IntentsCount())
-	cts.IState.Intents(func(key istructs.IStateKeyBuilder, value istructs.IStateValueBuilder, isNew bool) {
+	allIntents := make([]intentItem, 0, gts.IState.IntentsCount())
+	gts.IState.Intents(func(key istructs.IStateKeyBuilder, value istructs.IStateValueBuilder, isNew bool) {
 		allIntents = append(allIntents, intentItem{
 			key:   key,
 			value: value,
@@ -347,16 +410,154 @@ func (cts *CommandTestState) require() {
 			notFoundKeys = append(notFoundKeys, intent.key)
 		}
 	}
-	require.Empty(cts.t, notFoundKeys, "unexpected intents: %v", notFoundKeys)
+	require.Empty(gts.t, notFoundKeys, "unexpected intents: %v", notFoundKeys)
 
 	// clear required record items after they are processed
-	cts.requiredRecordItems = nil
+	gts.requiredRecordItems = nil
 }
 
-func (cts *CommandTestState) ArgumentObject(id int, keyValueList ...any) ITestRunner {
+// CommandTestState is a test state for command testing
+type CommandTestState struct {
+	generalTestState
+}
+
+// NewCommandTestState creates a new test state for command testing
+func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) *CommandTestState {
+	const wsid = istructs.WSID(1)
+
+	cts := &CommandTestState{}
+
+	cts.testData = make(map[string]any)
+	cts.t = t
+	cts.ctx = context.Background()
+	cts.processorKind = ProcKind_CommandProcessor
+	cts.commandWSID = wsid
+	cts.secretReader = &secretReader{secrets: make(map[string][]byte)}
+
+	// build appDef
+	cts.buildAppDef()
+	// build state
+	cts.IState = stateprovide.ProvideMockedCommandProcessorStateFactory()(
+		IntentsLimit,
+		func() istructs.IAppStructs { return cts.appStructs },
+	)
+
+	// initialize funcRunner and extensionFunc itself
+	cts.funcRunner = &sync.Once{}
+	cts.extensionFunc = extensionFunc
+
+	cts.argumentObject = make(map[string]any)
+	// set arguments for the command
+	if len(iCommand.ArgumentEntity()) > 0 {
+		cts.argumentType = appdef.NewFullQName(iCommand.ArgumentPkgPath(), iCommand.ArgumentEntity())
+	}
+
+	return cts
+}
+
+func (cts *CommandTestState) StateRecord(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ICommandRunner {
+	cts.stateRecord(fQName, id, keyValueList...)
+
+	return cts
+}
+
+func (cts *CommandTestState) StateSingletonRecord(fQName IFullQName, keyValueList ...any) ICommandRunner {
+	cts.stateSingletonRecord(fQName, keyValueList...)
+
+	return cts
+}
+
+func (cts *CommandTestState) putArgument() {
+	if cts.argumentObject == nil {
+		return
+	}
+
+	mockedCommandContextStorage, ok := cts.getMockedStorage(sys.Storage_CommandContext)
+	if !ok {
+		panic("failed to get mocked command context storage")
+	}
+
+	localPkgName := cts.appDef.PackageLocalName(cts.argumentType.PkgPath())
+	localQName := appdef.NewQName(localPkgName, cts.argumentType.Entity())
+
+	mockedObject := &coreutils.TestObject{
+		Containers_: make(map[string][]*coreutils.TestObject),
+	}
+
+	// setting argument object
+	mockedObject.Containers_[sys.Storage_CommandContext_Field_ArgumentObject] = append(
+		mockedObject.Containers_[sys.Storage_CommandContext_Field_ArgumentObject],
+		&coreutils.TestObject{
+			Name:        localQName,
+			Data:        cts.argumentObject,
+			Containers_: make(map[string][]*coreutils.TestObject),
+		},
+	)
+
+	for key, value := range cts.argumentObject {
+		if innerSlice, ok := value.([]any); ok {
+			for _, innerValue := range innerSlice {
+				mockedObject.Containers_[sys.Storage_CommandContext_Field_ArgumentObject][0].Containers_[key] = append(
+					mockedObject.Containers_[sys.Storage_CommandContext_Field_ArgumentObject][0].Containers_[key],
+					&coreutils.TestObject{
+						Data:        innerValue.(map[string]any),
+						Containers_: make(map[string][]*coreutils.TestObject),
+					},
+				)
+			}
+		}
+	}
+	// writing an event object directly to the storage
+	mockedCommandContextStorage.PutValue(0, mockedObject)
+}
+
+// buildAppDef alternative way of building IAppDef
+func (gts *generalTestState) buildAppDef() {
+	compileResult, err := compile.Compile("..")
+	if err != nil {
+		panic(err)
+	}
+
+	gts.appDef = compileResult.AppDef
+
+	cfgs := make(istructsmem.AppConfigsType, 1)
+	cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, compileResult.AppDefBuilder)
+	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+	for ext := range appdef.Extensions(gts.appDef.Types()) {
+		if proj, ok := ext.(appdef.IProjector); ok {
+			if proj.Sync() {
+				cfg.AddSyncProjectors(istructs.Projector{Name: ext.QName()})
+			} else {
+				cfg.AddAsyncProjectors(istructs.Projector{Name: ext.QName()})
+			}
+		} else if cmd, ok := ext.(appdef.ICommand); ok {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmd.QName(), istructsmem.NullCommandExec))
+		} else if q, ok := ext.(appdef.IQuery); ok {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(q.QName(), istructsmem.NullCommandExec))
+		}
+	}
+
+	asf := mem.Provide()
+	storageProvider := istorageimpl.Provide(asf)
+	prov := istructsmem.Provide(
+		cfgs,
+		iratesce.TestBucketsFactory,
+		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
+		storageProvider,
+	)
+
+	structs, err := prov.BuiltIn(istructs.AppQName_test1_app1)
+	if err != nil {
+		panic(err)
+	}
+
+	gts.appStructs = structs
+}
+
+func (cts *CommandTestState) ArgumentObject(id istructs.RecordID, keyValueList ...any) ICommandRunner {
 	keyValueMap, err := parseKeyValues(keyValueList)
 	if err != nil {
-		panic(fmt.Errorf("failed to parse key values: %w", err))
+		panic(fmt.Errorf(fmtMsgFailedToParseKeyValues, err))
 	}
 
 	for key, value := range keyValueMap {
@@ -366,13 +567,16 @@ func (cts *CommandTestState) ArgumentObject(id int, keyValueList ...any) ITestRu
 		}
 
 		cts.argumentObject[key] = value
+		if intValue, ok := value.(int); ok {
+			cts.argumentObject[key] = json.Number(fmt.Sprintf("%d", intValue))
+		}
 	}
-	cts.argumentObject[appdef.SystemField_ID] = istructs.RecordID(id)
+	cts.argumentObject[appdef.SystemField_ID] = id
 
 	return cts
 }
 
-func (cts *CommandTestState) ArgumentObjectRow(path string, id int, keyValueList ...any) ITestRunner {
+func (cts *CommandTestState) ArgumentObjectRow(path string, id istructs.RecordID, keyValueList ...any) ICommandRunner {
 	parts := strings.Split(path, "/")
 
 	innerTree := cts.argumentObject
@@ -387,34 +591,32 @@ func (cts *CommandTestState) ArgumentObjectRow(path string, id int, keyValueList
 		}
 
 		innerTree = putToArgumentObjectTree(innerTree, part, keyValueList...)
-		innerTree[appdef.SystemField_ID] = istructs.RecordID(id)
+		innerTree[appdef.SystemField_ID] = id
 	}
 
 	return cts
 }
 
-func (cts *CommandTestState) RequireSingletonInsert(fQName IFullQName, keyValueList ...any) ITestRunner {
-	return cts.addRequiredRecordItems(fQName, 0, true, true, false, keyValueList...)
+func (cts *CommandTestState) IntentSingletonInsert(fQName IFullQName, keyValueList ...any) ICommandRunner {
+	cts.intentSingletonInsert(fQName, keyValueList...)
+
+	return cts
 }
 
-func (cts *CommandTestState) RequireSingletonUpdate(fQName IFullQName, keyValueList ...any) ITestRunner {
-	return cts.addRequiredRecordItems(fQName, 0, true, false, false, keyValueList...)
+func (cts *CommandTestState) IntentSingletonUpdate(fQName IFullQName, keyValueList ...any) ICommandRunner {
+	cts.intentSingletonUpdate(fQName, keyValueList...)
+
+	return cts
 }
 
-func (cts *CommandTestState) RequireRecordInsert(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	return cts.addRequiredRecordItems(fQName, id, false, true, false, keyValueList...)
+func (cts *CommandTestState) IntentRecordInsert(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ICommandRunner {
+	cts.intentRecordInsert(fQName, id, keyValueList...)
+
+	return cts
 }
 
-func (cts *CommandTestState) RequireRecordUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	return cts.addRequiredRecordItems(fQName, id, false, false, false, keyValueList...)
-}
-
-func (cts *CommandTestState) CUDRow(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	cts.cudRows = append(cts.cudRows, recordItem{
-		entity:       fQName,
-		id:           id,
-		keyValueList: keyValueList,
-	})
+func (cts *CommandTestState) IntentRecordUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ICommandRunner {
+	cts.intentRecordUpdate(fQName, id, keyValueList...)
 
 	return cts
 }
@@ -432,246 +634,157 @@ func (cts *CommandTestState) Run() {
 	cts.require()
 }
 
-func (cts *CommandTestState) runExtensionFunc() {
-	if cts.extensionFunc != nil {
-		cts.funcRunner.Do(cts.extensionFunc)
-	}
-}
-
-func (cts *CommandTestState) putCudRows() {
-	if len(cts.cudRows) == 0 {
-		return
-	}
-
-	for _, item := range cts.cudRows {
-		kvMap, err := parseKeyValues(item.keyValueList)
-		require.NoError(cts.t, err, errMsgFailedToParseKeyValues)
-
-		cts.PutEvent(
-			cts.commandWSID,
-			cts.argumentType,
-			func(argBuilder istructs.IObjectBuilder, cudBuilder istructs.ICUD) {
-				cud := cudBuilder.Create(cts.getQNameFromFQName(item.entity))
-				cud.PutFromJSON(kvMap)
-			},
-		)
-	}
-}
-
-func (cts *CommandTestState) addRequiredRecordItems(fQName IFullQName, id int, isSingleton, isNew, isView bool, keyValueList ...any) ITestRunner {
-	cts.requiredRecordItems = append(cts.requiredRecordItems, recordItem{
-		entity:       fQName,
-		id:           id,
-		isSingleton:  isSingleton,
-		isNew:        isNew,
-		isView:       isView,
-		keyValueList: keyValueList,
-	})
-
-	return cts
-}
-
-// recoverPanicInTestState must be called in defer to recover panic in the test state
-func (cts *CommandTestState) recoverPanicInTestState() {
-	r := recover()
-	if r != nil {
-		require.Fail(cts.t, r.(error).Error())
-	}
-}
-
-// requireIntent checks if the intent exists in the state
-// Parameters:
-// fQName - full qname of the entity
-// id - record id (unused for singletons)
-// isSingletone - if the entity is a singleton
-// isInsertIntent - if the intent is insert or update
-// isView - if the entity is a view
-// keyValueList - list of key-value pairs
-func (cts *CommandTestState) requireIntent(r recordItem) {
-	kb := cts.keyBuilder(r)
-
-	vb, isNew := cts.IState.FindIntentWithOpKind(kb)
-	if vb == nil {
-		require.Fail(cts.t, "intent not found")
-		return
-	}
-
-	m, err := parseKeyValues(r.keyValueList)
-	require.NoError(cts.t, err, errMsgFailedToParseKeyValues)
-
-	_, mapOfValues := splitKeysFromValues(r.entity, m)
-
-	localQName := cts.getQNameFromFQName(r.entity)
-	require.Equalf(cts.t, r.isNew, isNew, "%s: intent kind mismatch", localQName.String())
-	cts.equalValues(vb, mapOfValues)
-}
-
-func (cts *CommandTestState) equalValues(vb istructs.IStateValueBuilder, expectedValues map[string]any) {
-	if vb == nil {
-		require.Fail(cts.t, "expected value builder is nil")
-		return
-	}
-	value := vb.BuildValue()
-	if value == nil {
-		require.Fail(cts.t, "value builder does not support equalValues operation")
-		return
-	}
-
-	for expectedKey, expectedValue := range expectedValues {
-		switch t := expectedValue.(type) {
-		case int8:
-			require.Equal(cts.t, int32(t), value.AsInt32(expectedKey))
-		case int16:
-			require.Equal(cts.t, int32(t), value.AsInt32(expectedKey))
-		case int32:
-			require.Equal(cts.t, t, value.AsInt32(expectedKey))
-		case int64:
-			require.Equal(cts.t, t, value.AsInt64(expectedKey))
-		case int:
-			require.Equal(cts.t, int64(t), value.AsInt64(expectedKey))
-		case float32:
-			require.Equal(cts.t, t, value.AsFloat32(expectedKey))
-		case float64:
-			require.Equal(cts.t, t, value.AsFloat64(expectedKey))
-		case []byte:
-			require.Equal(cts.t, t, value.AsBytes(expectedKey))
-		case string:
-			require.Equal(cts.t, t, value.AsString(expectedKey))
-		case bool:
-			require.Equal(cts.t, t, value.AsBool(expectedKey))
-		case appdef.QName:
-			require.Equal(cts.t, t, value.AsQName(expectedKey))
-		case istructs.IStateValue:
-			require.Equal(cts.t, t, value.AsValue(expectedKey))
-		default:
-			require.Fail(cts.t, "unsupported value type")
-		}
-	}
-}
-
-func (cts *CommandTestState) keyBuilder(r recordItem) istructs.IStateKeyBuilder {
-	var err error
-	var kb istructs.IStateKeyBuilder
-
-	localQName := cts.getQNameFromFQName(r.entity)
-	if r.isView {
-		kb, err = cts.IState.KeyBuilder(sys.Storage_View, localQName)
-	} else {
-		kb, err = cts.IState.KeyBuilder(sys.Storage_Record, localQName)
-	}
-
-	require.NoError(cts.t, err, "IState.KeyBuilder: failed to create key builder")
-
-	switch {
-	case r.isSingleton:
-		kb.PutBool(sys.Storage_Record_Field_IsSingleton, true)
-	case !r.isView:
-		kb.PutInt64(sys.Storage_Record_Field_ID, int64(r.id))
-	case r.isView:
-		m, err := parseKeyValues(r.keyValueList)
-		require.NoError(cts.t, err, errMsgFailedToParseKeyValues)
-
-		mapOfKeys, _ := splitKeysFromValues(r.entity, m)
-
-		kb.PutFromJSON(mapOfKeys)
-	}
-
-	return kb
-}
-
 // ProjectorTestState is a test state for projector testing
 type ProjectorTestState struct {
-	CommandTestState
+	generalTestState
+
+	rawEvent rawEvent
 }
 
 // NewProjectorTestState creates a new test state for projector testing
-func NewProjectorTestState(t *testing.T, iCommand ICommand, extensionFunc func()) *ProjectorTestState {
-	ts := &ProjectorTestState{
-		*NewCommandTestState(t, iCommand, extensionFunc),
+func NewProjectorTestState(t *testing.T, iProjector IProjector, extensionFunc func()) *ProjectorTestState {
+	pts := &ProjectorTestState{}
+	pts.t = t
+	pts.ctx = context.Background()
+	pts.processorKind = ProcKind_Actualizer
+	pts.secretReader = &secretReader{secrets: make(map[string][]byte)}
+	pts.buildAppDef()
+	// build state
+	pts.IState = stateprovide.ProvideMockedActualizerStateFactory()(
+		IntentsLimit,
+		func() istructs.IAppStructs { return pts.appStructs },
+	)
+
+	// initialize funcRunner and extensionFunc itself
+	pts.funcRunner = &sync.Once{}
+	pts.extensionFunc = extensionFunc
+	pts.rawEvent = rawEvent{
+		qName: appdef.NullQName,
+		argumentObject: &coreutils.TestObject{
+			Data: make(map[string]any),
+		},
+		unloggedArgumentObject: &coreutils.TestObject{
+			Data: make(map[string]any),
+		},
 	}
-	ts.ctx = context.Background()
-	ts.processorKind = ProcKind_Actualizer
-	ts.secretReader = &secretReader{secrets: make(map[string][]byte)}
-	ts.buildAppDef(iCommand.PkgPath(), iCommand.WorkspaceDescriptor())
-	ts.buildState(ProcKind_Actualizer)
-
-	return ts
-}
-
-func (pts *ProjectorTestState) Record(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	pts.CommandTestState.Record(fQName, id, keyValueList...)
 
 	return pts
 }
 
-func (pts *ProjectorTestState) SingletonRecord(fQName IFullQName, keyValueList ...any) ITestRunner {
-	pts.CommandTestState.SingletonRecord(fQName, keyValueList...)
+func (pts *ProjectorTestState) StateRecord(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
+	pts.stateRecord(fQName, id, keyValueList...)
 
 	return pts
 }
 
-func (pts *ProjectorTestState) ArgumentObject(id int, keyValueList ...any) ITestRunner {
-	pts.CommandTestState.ArgumentObject(id, keyValueList...)
+func (pts *ProjectorTestState) StateSingletonRecord(fQName IFullQName, keyValueList ...any) IProjectorRunner {
+	pts.stateSingletonRecord(fQName, keyValueList...)
 
 	return pts
 }
 
-func (pts *ProjectorTestState) ArgumentObjectRow(path string, id int, keyValueList ...any) ITestRunner {
-	pts.CommandTestState.ArgumentObjectRow(path, id, keyValueList...)
+func (pts *ProjectorTestState) EventArgumentObject(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
+	setArgumentObject(pts.rawEvent.argumentObject, fQName, id, keyValueList...)
 
 	return pts
 }
 
-func (pts *ProjectorTestState) RequireSingletonInsert(fQName IFullQName, keyValueList ...any) ITestRunner {
-	pts.CommandTestState.RequireSingletonInsert(fQName, keyValueList...)
+func (pts *ProjectorTestState) EventArgumentObjectRow(path string, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
+	setArgumentObjectRow(pts.rawEvent.argumentObject, path, id, keyValueList...)
 
 	return pts
 }
 
-func (pts *ProjectorTestState) RequireSingletonUpdate(fQName IFullQName, keyValueList ...any) ITestRunner {
-	pts.CommandTestState.RequireSingletonUpdate(fQName, keyValueList...)
+func (pts *ProjectorTestState) EventUnloggedArgumentObject(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
+	setArgumentObject(pts.rawEvent.unloggedArgumentObject, fQName, id, keyValueList...)
 
 	return pts
 }
 
-func (pts *ProjectorTestState) RequireRecordInsert(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	pts.CommandTestState.RequireRecordInsert(fQName, id, keyValueList...)
+func (pts *ProjectorTestState) EventUnloggedArgumentObjectRow(path string, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
+	setArgumentObjectRow(pts.rawEvent.unloggedArgumentObject, path, id, keyValueList...)
 
 	return pts
 }
 
-func (pts *ProjectorTestState) RequireRecordUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	pts.CommandTestState.RequireRecordUpdate(fQName, id, keyValueList...)
+func (pts *ProjectorTestState) EventCUD(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
+	if isODoc(fQName) {
+		panic(fmt.Errorf("ODoc is not supported in the EventCUD method"))
+	}
+
+	keyValueMap, err := parseKeyValues(keyValueList)
+	if err != nil {
+		panic(fmt.Errorf(fmtMsgFailedToParseKeyValues, err))
+	}
+
+	pts.rawEvent.cuds = append(pts.rawEvent.cuds, &coreutils.TestObject{
+		Id:   id,
+		Name: appdef.NewQName(getPackageLocalName(pts.appDef, fQName), fQName.Entity()),
+		Data: keyValueMap,
+	})
 
 	return pts
 }
 
-func (pts *ProjectorTestState) CUDRow(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	pts.CommandTestState.CUDRow(fQName, id, keyValueList...)
+func (pts *ProjectorTestState) IntentSingletonInsert(fQName IFullQName, keyValueList ...any) IProjectorRunner {
+	pts.intentSingletonInsert(fQName, keyValueList...)
 
 	return pts
 }
 
-func (pts *ProjectorTestState) RequireViewInsert(fQName IFullQName, keyValueList ...any) ITestRunner {
-	pts.CommandTestState.RequireViewInsert(fQName, keyValueList...)
+func (pts *ProjectorTestState) IntentSingletonUpdate(fQName IFullQName, keyValueList ...any) IProjectorRunner {
+	pts.intentSingletonUpdate(fQName, keyValueList...)
 
 	return pts
 }
 
-func (pts *ProjectorTestState) RequireViewUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	pts.CommandTestState.RequireViewUpdate(fQName, id, keyValueList...)
+func (pts *ProjectorTestState) IntentRecordInsert(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
+	pts.intentRecordInsert(fQName, id, keyValueList...)
 
 	return pts
 }
 
-func (pts *ProjectorTestState) View(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	pts.CommandTestState.View(fQName, id, keyValueList...)
+func (pts *ProjectorTestState) IntentRecordUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
+	pts.intentRecordUpdate(fQName, id, keyValueList...)
 
 	return pts
 }
 
-func (pts *ProjectorTestState) Offset(offset int) ITestRunner {
-	pts.CommandTestState.Offset(offset)
+func (pts *ProjectorTestState) StateCUDRow(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
+	pts.cudRows = append(pts.cudRows, recordItem{
+		entity:       fQName,
+		id:           id,
+		qName:        pts.getQNameFromFQName(fQName),
+		keyValueList: keyValueList,
+	})
+
+	return pts
+}
+
+func (pts *ProjectorTestState) IntentViewInsert(fQName IFullQName, keyValueList ...any) IProjectorRunner {
+	pts.addRequiredItems(fQName, 0, false, true, true, keyValueList...)
+
+	return pts
+}
+
+func (pts *ProjectorTestState) IntentViewUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
+	pts.addRequiredItems(fQName, id, false, false, true, keyValueList...)
+
+	return pts
+}
+
+func (pts *ProjectorTestState) StateView(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
+	if !pts.isView(fQName) {
+		panic("View method must be used for views only")
+	}
+
+	pts.viewRecords = append(pts.viewRecords, recordItem{
+		entity:       fQName,
+		qName:        pts.getQNameFromFQName(fQName),
+		id:           id,
+		isView:       true,
+		keyValueList: keyValueList,
+	})
 
 	return pts
 }
@@ -682,7 +795,7 @@ func (pts *ProjectorTestState) Run() {
 	pts.putViewRecords()
 	pts.putRecords()
 	pts.putCudRows()
-	pts.putArgument()
+	pts.putEvent()
 
 	pts.runExtensionFunc()
 
@@ -690,17 +803,107 @@ func (pts *ProjectorTestState) Run() {
 }
 
 func (pts *ProjectorTestState) putArgument() {
-	if pts.argumentObject == nil {
+	if pts.rawEvent.argumentObject == nil {
 		return
 	}
 
-	pts.PutEvent(
-		pts.commandWSID,
-		pts.argumentType,
-		func(argBuilder istructs.IObjectBuilder, cudBuilder istructs.ICUD) {
-			argBuilder.FillFromJSON(pts.argumentObject)
+	pts.putEvent()
+}
+
+func (pts *ProjectorTestState) putEvent() {
+	mockedEventStorage, ok := pts.getMockedStorage(sys.Storage_Event)
+	if !ok {
+		panic("failed to get mocked event storage")
+	}
+
+	mockedEventObject := &coreutils.TestObject{
+		Name:        pts.rawEvent.qName,
+		Data:        pts.rawEvent.argumentObject.Data,
+		Containers_: make(map[string][]*coreutils.TestObject),
+	}
+	mockedEventObject.Data["PLogOffset"] = pts.rawEvent.pLogOffset
+	mockedEventObject.Data["HandlingPartition"] = pts.rawEvent.handlingPartition
+	mockedEventObject.Data[sys.Storage_Event_Field_Workspace] = pts.rawEvent.Workspace()
+	mockedEventObject.Data[sys.Storage_Event_Field_QName] = pts.rawEvent.qName
+	mockedEventObject.Data[sys.Storage_CommandContext_Field_WLogOffset] = pts.rawEvent.wLogOffset
+
+	for _, cud := range pts.rawEvent.cuds {
+		cud.Data[appdef.SystemField_ID] = cud.Id
+		mockedEventObject.Containers_[sys.Storage_Event_Field_CUDs] = append(
+			mockedEventObject.Containers_[sys.Storage_Event_Field_CUDs],
+			&coreutils.TestObject{
+				Name:        cud.Name,
+				Data:        cud.Data,
+				Id:          cud.Id,
+				Parent_:     cud.Parent_,
+				Containers_: cud.Containers_,
+				IsNew_:      cud.IsNew_,
+			},
+		)
+	}
+
+	argQName := pts.rawEvent.argumentObject.Name
+	pts.rawEvent.argumentObject.Data[appdef.SystemField_QName] = argQName
+	// setting argument object
+	mockedEventObject.Containers_[sys.Storage_Event_Field_ArgumentObject] = append(
+		mockedEventObject.Containers_[sys.Storage_Event_Field_ArgumentObject],
+		&coreutils.TestObject{
+			Name:        argQName,
+			Data:        pts.rawEvent.argumentObject.Data,
+			Containers_: make(map[string][]*coreutils.TestObject),
 		},
 	)
+
+	// writing an event object directly to the storage
+	mockedEventStorage.PutValue(0, mockedEventObject)
+}
+
+func (pts *ProjectorTestState) EventQName(fQName IFullQName) IProjectorRunner {
+	pts.rawEvent.qName = appdef.NewQName(getPackageLocalName(pts.appDef, fQName), fQName.Entity())
+
+	return pts
+}
+
+func (pts *ProjectorTestState) EventSynced(synced bool) IProjectorRunner {
+	pts.rawEvent.synced = synced
+
+	return pts
+}
+
+func (pts *ProjectorTestState) EventDeviceID(deviceID istructs.ConnectedDeviceID) IProjectorRunner {
+	pts.rawEvent.deviceID = deviceID
+
+	return pts
+}
+
+func (pts *ProjectorTestState) EventRegisteredAt(registeredAt time.Time) IProjectorRunner {
+	pts.rawEvent.registeredAt = istructs.UnixMilli(registeredAt.UnixMilli())
+
+	return pts
+}
+
+func (pts *ProjectorTestState) EventSyncedAt(syncedAt time.Time) IProjectorRunner {
+	pts.rawEvent.syncedAt = istructs.UnixMilli(syncedAt.UnixMilli())
+
+	return pts
+}
+
+func (pts *ProjectorTestState) EventWLogOffset(wLogOffset istructs.Offset) IProjectorRunner {
+	pts.rawEvent.wLogOffset = wLogOffset
+
+	return pts
+}
+
+func (pts *ProjectorTestState) EventPLogOffset(pLogOffset istructs.Offset) IProjectorRunner {
+	pts.rawEvent.pLogOffset = pLogOffset
+
+	return pts
+}
+
+func (pts *ProjectorTestState) EventWSID(wsid istructs.WSID) IProjectorRunner {
+	pts.rawEvent.wsid = wsid
+
+	return pts
 }
 
 func parseKeyValues(keyValues []any) (map[string]any, error) {
@@ -716,7 +919,12 @@ func parseKeyValues(keyValues []any) (map[string]any, error) {
 		}
 
 		value := keyValues[i+1]
-		result[key] = value
+
+		if intValue, ok := value.(int); ok {
+			result[key] = json.Number(fmt.Sprintf("%d", intValue))
+		} else {
+			result[key] = value
+		}
 	}
 
 	return result, nil
@@ -733,14 +941,13 @@ func putToArgumentObjectTree(tree map[string]any, pathPart string, keyValueList 
 	}
 
 	// check if path part is a valid key
-	_, ok := tree[pathPart]
-	if !ok {
+	if _, ok := tree[pathPart]; !ok {
 		tree[pathPart] = make([]any, 0)
 	}
 
 	newTree, err := parseKeyValues(keyValueList)
 	if err != nil {
-		panic(fmt.Errorf("failed to parse key values: %w", err))
+		panic(fmt.Errorf(fmtMsgFailedToParseKeyValues, err))
 	}
 
 	// add key value map to the end of tree node
@@ -770,4 +977,130 @@ func splitKeysFromValues(entity IFullQName, m map[string]any) (mapOfKeys map[str
 	}
 
 	return mapOfKeys, mapOfValues
+}
+
+func setArgumentObject(argumentObject *coreutils.TestObject, fQName IFullQName, id istructs.RecordID, keyValueList ...any) {
+	argumentObject.Id = id
+	argumentObject.Name = appdef.NewQName(fQName.PkgPath(), fQName.Entity())
+
+	keyValueMap, err := parseKeyValues(keyValueList)
+	if err != nil {
+		panic(fmt.Errorf(fmtMsgFailedToParseKeyValues, err))
+	}
+
+	for key, value := range keyValueMap {
+		v, valueExist := argumentObject.Data[key]
+		if valueExist {
+			panic(fmt.Errorf("key %s already exists in the argument object with value %v", key, v))
+		}
+
+		argumentObject.Data[key] = value
+		if intValue, ok := value.(int); ok {
+			argumentObject.Data[key] = json.Number(fmt.Sprintf("%d", intValue))
+		}
+	}
+
+	argumentObject.Data[appdef.SystemField_ID] = id
+}
+
+func setArgumentObjectRow(argumentObject *coreutils.TestObject, path string, id istructs.RecordID, keyValueList ...any) {
+	parts := strings.Split(path, "/")
+
+	innerTree := argumentObject.Data
+	for i, part := range parts {
+		if len(part) == 0 {
+			continue
+		}
+
+		if i < len(parts)-1 {
+			innerTree = putToArgumentObjectTree(innerTree, part)
+			continue
+		}
+
+		innerTree = putToArgumentObjectTree(innerTree, part, keyValueList...)
+		innerTree[appdef.SystemField_ID] = id
+	}
+}
+
+func getPackageLocalName(appDef appdef.IAppDef, fQName IFullQName) string {
+	if fQName.PkgPath() == appdef.SysPackage {
+		return fQName.PkgPath()
+	}
+
+	return appDef.PackageLocalName(fQName.PkgPath())
+}
+
+func isODoc(entity IFullQName) bool {
+	_, ok := entity.(IODOc)
+	return ok
+}
+
+type rawEvent struct {
+	// abstract event fields
+	qName                  appdef.QName
+	cuds                   []*coreutils.TestObject
+	argumentObject         *coreutils.TestObject
+	unloggedArgumentObject *coreutils.TestObject
+	registeredAt           istructs.UnixMilli
+	deviceID               istructs.ConnectedDeviceID
+	syncedAt               istructs.UnixMilli
+	synced                 bool
+
+	// raw event fields
+	wLogOffset        istructs.Offset
+	pLogOffset        istructs.Offset
+	wsid              istructs.WSID
+	handlingPartition istructs.PartitionID
+}
+
+func (re *rawEvent) QName() appdef.QName {
+	return re.qName
+}
+
+func (re *rawEvent) ArgumentObject() istructs.IObject {
+	return re.argumentObject
+}
+
+func (re *rawEvent) CUDs(cb func(istructs.ICUDRow) bool) {
+	for _, cud := range re.cuds {
+		if !cb(cud) {
+			break
+		}
+	}
+}
+
+func (re *rawEvent) RegisteredAt() istructs.UnixMilli {
+	return re.registeredAt
+}
+
+func (re *rawEvent) DeviceID() istructs.ConnectedDeviceID {
+	return re.deviceID
+}
+
+func (re *rawEvent) Synced() bool {
+	return re.synced
+}
+
+func (re *rawEvent) SyncedAt() istructs.UnixMilli {
+	return re.syncedAt
+}
+
+func (re *rawEvent) ArgumentUnloggedObject() istructs.IObject {
+	return re.unloggedArgumentObject
+}
+
+func (re *rawEvent) HandlingPartition() istructs.PartitionID {
+	return re.handlingPartition
+}
+
+func (re *rawEvent) PLogOffset() istructs.Offset {
+	return re.pLogOffset
+}
+
+func (re *rawEvent) WLogOffset() istructs.Offset {
+	return re.wLogOffset
+}
+
+func (re *rawEvent) Workspace() istructs.WSID {
+	return re.wsid
 }

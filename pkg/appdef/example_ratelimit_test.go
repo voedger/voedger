@@ -7,27 +7,39 @@ package appdef_test
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
-func ExampleIAppDefBuilder_AddRate() {
+func ExampleRates() {
 
 	var app appdef.IAppDef
 
 	// RATE test.rate 10 PER HOUR PER APP PARTITION PER IP
 
-	rateName := appdef.NewQName("test", "rate")
-	limitName := appdef.NewQName("test", "limit")
+	wsName := appdef.NewQName("test", "workspace")
+	rateAllName, rateEachName := appdef.NewQName("test", "rateAll"), appdef.NewQName("test", "rateEach")
+	limitAllName, limitEachName := appdef.NewQName("test", "limitAll"), appdef.NewQName("test", "limitEach")
+	cmdName, queryName := appdef.NewQName("test", "command"), appdef.NewQName("test", "query")
 
 	// how to build AppDef with rates and limits
 	{
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		adb.AddRate(rateName, 10, time.Hour, []appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, "10 times per hour per partition per IP")
-		adb.AddLimit(limitName, []appdef.QName{appdef.QNameAnyFunction}, rateName, "limit all commands and queries execution with test.rate")
+		wsb := adb.AddWorkspace(wsName)
+
+		_ = wsb.AddCommand(cmdName)
+		_ = wsb.AddQuery(queryName)
+
+		wsb.AddRate(rateAllName, 10, time.Hour, []appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, "10 times per hour per partition per IP")
+		wsb.AddRate(rateEachName, 1, 10*time.Minute, []appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, "1 times per 10 minutes per partition per IP")
+
+		wsb.AddLimit(limitAllName, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_ALL, filter.AllFunctions(wsName), rateAllName, "limit all commands and queries execution with test.rateAll")
+		wsb.AddLimit(limitEachName, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_EACH, filter.AllFunctions(wsName), rateEachName, "limit each command and query execution with test.rateEach")
 
 		app = adb.MustBuild()
 	}
@@ -36,11 +48,10 @@ func ExampleIAppDefBuilder_AddRate() {
 	{
 		fmt.Println("enum rates:")
 		cnt := 0
-		app.Rates(func(r appdef.IRate) bool {
+		for r := range appdef.Rates(app.Types()) {
 			cnt++
-			fmt.Println("-", cnt, r, fmt.Sprintf("%d per %v per %v", r.Count(), r.Period(), r.Scopes()))
-			return true
-		})
+			fmt.Println("-", cnt, r, fmt.Sprintf("%d per %v per %v", r.Count(), r.Period(), slices.Collect(r.Scopes())))
+		}
 		fmt.Println("overall:", cnt)
 	}
 
@@ -48,34 +59,35 @@ func ExampleIAppDefBuilder_AddRate() {
 	{
 		fmt.Println("enum limits:")
 		cnt := 0
-		app.Limits(func(l appdef.ILimit) bool {
+		for l := range appdef.Limits(app.Types()) {
 			cnt++
-			fmt.Println("-", cnt, l, fmt.Sprintf("on %v with %v", l.On(), l.Rate()))
-			return true
-		})
+			fmt.Println("-", cnt, l, fmt.Sprintf("%v ON %v BY %v", slices.Collect(l.Ops()), l.Filter(), l.Rate()))
+		}
 		fmt.Println("overall:", cnt)
 	}
 
 	// how to find rates and limits
 	{
 		fmt.Println("find rate:")
-		rate := app.Rate(rateName)
+		rate := appdef.Rate(app.Type, rateAllName)
 		fmt.Println("-", rate, ":", rate.Comment())
 
 		fmt.Println("find limit:")
-		limit := app.Limit(limitName)
+		limit := appdef.Limit(app.Type, limitAllName)
 		fmt.Println("-", limit, ":", limit.Comment())
 	}
 
 	// Output:
 	// enum rates:
-	// - 1 Rate «test.rate» 10 per 1h0m0s per [RateScope_AppPartition RateScope_IP]
-	// overall: 1
+	// - 1 Rate «test.rateAll» 10 per 1h0m0s per [RateScope_AppPartition RateScope_IP]
+	// - 2 Rate «test.rateEach» 1 per 10m0s per [RateScope_AppPartition RateScope_IP]
+	// overall: 2
 	// enum limits:
-	// - 1 Limit «test.limit» on [sys.AnyFunction] with Rate «test.rate»
-	// overall: 1
+	// - 1 Limit «test.limitAll» [OperationKind_Execute] ON ALL FUNCTIONS FROM test.workspace BY Rate «test.rateAll»
+	// - 2 Limit «test.limitEach» [OperationKind_Execute] ON EACH FUNCTIONS FROM test.workspace BY Rate «test.rateEach»
+	// overall: 2
 	// find rate:
-	// - Rate «test.rate» : 10 times per hour per partition per IP
+	// - Rate «test.rateAll» : 10 times per hour per partition per IP
 	// find limit:
-	// - Limit «test.limit» : limit all commands and queries execution with test.rate
+	// - Limit «test.limitAll» : limit all commands and queries execution with test.rateAll
 }

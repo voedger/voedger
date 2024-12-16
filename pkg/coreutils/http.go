@@ -207,6 +207,10 @@ func Expect400(expectErrorContains ...string) ReqOptFunc {
 	return WithExpectedCode(http.StatusBadRequest, expectErrorContains...)
 }
 
+func Expect423(expectErrorContains ...string) ReqOptFunc {
+	return WithExpectedCode(http.StatusLocked, expectErrorContains...)
+}
+
 func Expect400RefIntegrity_Existence() ReqOptFunc {
 	return WithExpectedCode(http.StatusBadRequest, "referential integrity violation", "does not exist")
 }
@@ -460,6 +464,10 @@ func discardRespBody(resp *http.Response) error {
 		}
 	}
 	return nil
+}
+
+func (resp *FuncResponse) Len() int {
+	return resp.NumRows()
 }
 
 func (resp *FuncResponse) NumRows() int {

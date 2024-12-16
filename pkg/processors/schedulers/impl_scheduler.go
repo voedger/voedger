@@ -46,7 +46,7 @@ func (a *scheduler) Prepare() {
 	if a.conf.LogError == nil {
 		a.conf.LogError = logger.Error
 	}
-	a.name = fmt.Sprintf("%v [idx: %d, id: %d]", a.job, a.conf.WSIdx, a.conf.Workspace)
+	a.name = fmt.Sprintf("%v [idx: %d, id: %d]", a.job, a.conf.AppWSIdx, a.conf.Workspace)
 }
 
 func (a *scheduler) Run(ctx context.Context) {
@@ -112,7 +112,7 @@ func (a *scheduler) runJob() {
 		return
 	}
 	if logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("invoked %s", a.name))
+		logger.Verbose("invoked " + a.name)
 	}
 	err = state.ApplyIntents()
 	if err != nil {
@@ -153,7 +153,7 @@ func (a *scheduler) init(_ context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	jobType := appDef.Job(a.job)
+	jobType := appdef.Job(appDef.Type, a.job)
 	if jobType == nil {
 		return fmt.Errorf("job %s is not defined in AppDef", a.job)
 	}

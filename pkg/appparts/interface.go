@@ -7,6 +7,7 @@ package appparts
 
 import (
 	"context"
+	"iter"
 	"net/url"
 
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -27,7 +28,7 @@ type IAppPartitions interface {
 	//
 	// If application with the same name exists, then its definition will be updated.
 	DeployApp(name appdef.AppQName, extModuleURLs map[string]*url.URL, def appdef.IAppDef,
-		partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]int, numAppWorkspaces istructs.NumAppWorkspaces)
+		partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]uint, numAppWorkspaces istructs.NumAppWorkspaces)
 
 	// Deploys new partitions for specified application or update existing.
 	//
@@ -63,6 +64,24 @@ type IAppPartitions interface {
 	//
 	// If partition not exist, returns error.
 	WaitForBorrow(context.Context, appdef.AppQName, istructs.PartitionID, ProcessorKind) (IAppPartition, error)
+
+	// Returns iterator for actualizers from deployed partitions.
+	//
+	// This method snapshots the current state of the partitions.
+	// The snapshotted iterator are not updated when partitions are deployed or removed.
+	WorkedActualizers(appdef.AppQName) iter.Seq2[istructs.PartitionID, []appdef.QName]
+
+	// Returns iterator for schedulers from deployed partitions.
+	//
+	// This method snapshots the current state of the partitions.
+	// The snapshotted iterator are not updated when partitions are deployed or removed.
+	WorkedSchedulers(appdef.AppQName) iter.Seq2[istructs.PartitionID, map[appdef.QName][]istructs.WSID]
+
+	// Upgrade application definition.
+	//
+	// This experimental method should be used for test purposes only.
+	// Should be deprecated after application redeployment is implemented.
+	UpgradeAppDef(appdef.AppQName, appdef.IAppDef)
 }
 
 // Application partition.
@@ -90,11 +109,12 @@ type IAppPartition interface {
 	//
 	// If some error in arguments, (resource or role not found, operation is not applicable to resource, etc…) then error is returned.
 	IsOperationAllowed(op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, roles []appdef.QName) (bool, []appdef.FieldName, error)
-}
 
-// dependency cycle: func requires IAppPartitions, provider of IAppPartitions requires already filled AppConfigsType -> impossible to provide AppConfigsType because we're filling it now
-// TODO: eliminate this workaround
-// type BuiltInAppsDeploymentDescriptors map[appdef.AppQName]AppDeploymentDescriptor
+	// Return is specified resource (command, query or structure) usage limit is exceeded.
+	//
+	// If resource usage is exceeded then returns name of first exceeded limit.
+	IsLimitExceeded(resource appdef.QName, operation appdef.OperationKind, workspace istructs.WSID, remoteAddr string) (exceed bool, limit appdef.QName)
+}
 
 // Async actualizer runner.
 //
@@ -119,5 +139,5 @@ type ISchedulerRunner interface {
 	SetAppPartitions(IAppPartitions)
 
 	// Creates and runs new specified job scheduler for specified application partition and workspace
-	NewAndRun(ctx context.Context, app appdef.AppQName, partition istructs.PartitionID, wsIdx int, wsid istructs.WSID, job appdef.QName)
+	NewAndRun(ctx context.Context, app appdef.AppQName, partition istructs.PartitionID, wsIdx istructs.AppWorkspaceNumber, wsid istructs.WSID, job appdef.QName)
 }

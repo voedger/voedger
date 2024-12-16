@@ -9,22 +9,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/stretchr/testify/mock"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts/internal/schedulers"
 	"github.com/voedger/voedger/pkg/istructs"
 )
-
-type mockSchedulerRunner struct {
-	mock.Mock
-}
-
-func (t *mockSchedulerRunner) Run(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, wsIdx int, wsID istructs.WSID, job appdef.QName) {
-
-	t.Called(ctx, app, partID, wsIdx, wsID, job)
-
-	<-ctx.Done()
-}
 
 func Example() {
 	appName := istructs.AppQName_test1_app1
@@ -34,17 +22,20 @@ func Example() {
 
 	ctx, stop := context.WithCancel(context.Background())
 
-	runner := &mockSchedulerRunner{}
-
 	schedulers := schedulers.New(appName, partCnt, wsCnt, partID)
 
 	appDef := func(jobNames ...appdef.QName) appdef.IAppDef {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 		for _, name := range jobNames {
-			adb.AddJob(name).SetCronSchedule("@every 5s")
+			wsb.AddJob(name).SetCronSchedule("@every 5s")
 		}
 		return adb.MustBuild()
+	}
+
+	run := func(ctx context.Context, _ appdef.AppQName, _ istructs.PartitionID, _ istructs.AppWorkspaceNumber, _ istructs.WSID, _ appdef.QName) {
+		<-ctx.Done()
 	}
 
 	{
@@ -52,20 +43,7 @@ func Example() {
 		jobNames := appdef.MustParseQNames("test.j1", "test.j2")
 		appDefV1 := appDef(jobNames...)
 
-		for ws := 0; ws < int(wsCnt); ws++ {
-			for _, name := range jobNames {
-				if ws%int(partCnt) == int(partID) {
-					runner.On("Run", mock.Anything,
-						appName,
-						partID,
-						ws,
-						istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID+istructs.WSID(ws)),
-						name).Once()
-				}
-			}
-		}
-
-		schedulers.Deploy(ctx, appDefV1, runner.Run)
+		schedulers.Deploy(ctx, appDefV1, run)
 
 		fmt.Println(schedulers.Enum())
 	}
@@ -75,20 +53,7 @@ func Example() {
 		jobNames := appdef.MustParseQNames("test.j2", "test.j3")
 		appDefV2 := appDef(jobNames...)
 
-		for ws := 0; ws < int(wsCnt); ws++ {
-			for _, name := range jobNames {
-				if ws%int(partCnt) == int(partID) {
-					runner.On("Run", mock.Anything,
-						appName,
-						partID,
-						ws,
-						istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID+istructs.WSID(ws)),
-						name).Once()
-				}
-			}
-		}
-
-		schedulers.Deploy(ctx, appDefV2, runner.Run)
+		schedulers.Deploy(ctx, appDefV2, run)
 
 		fmt.Println(schedulers.Enum())
 	}

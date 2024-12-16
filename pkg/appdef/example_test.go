@@ -21,12 +21,14 @@ func Example() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		doc := adb.AddCDoc(docName)
+		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		doc := ws.AddCDoc(docName)
 		doc.SetComment("This is example doc")
 		doc.
 			AddField("f1", appdef.DataKind_int64, true).SetFieldComment("f1", "Field may have comments too").
 			AddField("f2", appdef.DataKind_string, false)
-		rec := adb.AddCRecord(recName)
+		rec := ws.AddCRecord(recName)
 
 		doc.AddContainer("rec", recName, 0, appdef.Occurs_Unbounded)
 
@@ -48,7 +50,7 @@ func Example() {
 		fmt.Printf("%q is CDoc: %v\n", d.QName(), ok && (d.Kind() == appdef.TypeKind_CDoc))
 
 		// how to find CDoc by name
-		doc := app.CDoc(docName)
+		doc := appdef.CDoc(app.Type, docName)
 		fmt.Printf("doc %q: %v. %s\n", doc.QName(), doc.Kind(), d.Comment())
 
 		// how to inspect doc fields
@@ -77,7 +79,7 @@ func Example() {
 		fmt.Println("founded", doc.Container("rec"))
 
 		contCnt := 0
-		for _, c := range doc.Containers() {
+		for c := range doc.Containers() {
 			contCnt++
 			fmt.Printf("%d. %v, occurs: %v…%v\n", contCnt, c, c.MinOccurs(), c.MaxOccurs())
 		}

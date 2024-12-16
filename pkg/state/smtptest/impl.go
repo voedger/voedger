@@ -12,9 +12,13 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
+func (b *backend) NewSession(c *smtp.Conn) (smtp.Session, error) {
+	return &session{ch: make(chan Message), server: b.server}, nil
+}
+
 func NewServer(opts ...Option) Server {
 	ts := &server{messages: make(map[credentials]chan Message)}
-	s := smtp.NewServer(ts)
+	s := smtp.NewServer(&backend{server: ts})
 	ts.server = s
 
 	for _, opt := range opts {
@@ -25,7 +29,7 @@ func NewServer(opts ...Option) Server {
 	if err != nil {
 		panic(err)
 	}
-	ts.port = l.Addr().(*net.TCPAddr).Port
+	ts.port = int32(l.Addr().(*net.TCPAddr).Port) // nolint G115
 
 	s.AllowInsecureAuth = true
 

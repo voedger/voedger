@@ -55,7 +55,7 @@ func qryJournalExec(eps map[appdef.AppQName]extensionpoints.IExtensionPoint) ist
 			if fo == int64(0) {
 				return
 			}
-			eo, err := NewEventObject(value.AsEvent("").(istructs.IWLogEvent), appDef, f, coreutils.WithNonNilsOnly())
+			eo, err := NewEventObject(value.(istructs.IStateWLogValue).AsEvent(), appDef, f, coreutils.WithNonNilsOnly())
 			if err != nil {
 				return err
 			}

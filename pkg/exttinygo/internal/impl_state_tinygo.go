@@ -3,6 +3,7 @@
     @author Michael Saigachenko
 */
 
+// nolint G115
 package internal
 
 import (
@@ -53,6 +54,10 @@ func (hostSafeStateAPI) KeyBuilderPutInt32(key safe.TKeyBuilder, name string, va
 }
 
 func (hostSafeStateAPI) KeyBuilderPutInt64(key safe.TKeyBuilder, name string, value int64) {
+	hostRowWriterPutInt64(uint64(key), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint64(value))
+}
+
+func (hostSafeStateAPI) KeyBuilderPutRecordID(key safe.TKeyBuilder, name string, value int64) {
 	hostRowWriterPutInt64(uint64(key), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint64(value))
 }
 

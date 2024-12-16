@@ -12,11 +12,11 @@ type cDoc struct {
 }
 
 // Creates a new CDoc
-func newCDoc(app *appDef, name QName) *cDoc {
+func newCDoc(app *appDef, ws *workspace, name QName) *cDoc {
 	d := &cDoc{
-		singleton: makeSingleton(app, name, TypeKind_CDoc),
+		singleton: makeSingleton(app, ws, name, TypeKind_CDoc),
 	}
-	app.appendType(d)
+	ws.appendType(d)
 	return d
 }
 
@@ -42,11 +42,11 @@ type cRecord struct {
 	containedRecord
 }
 
-func newCRecord(app *appDef, name QName) *cRecord {
+func newCRecord(app *appDef, ws *workspace, name QName) *cRecord {
 	r := &cRecord{
-		containedRecord: makeContainedRecord(app, name, TypeKind_CRecord),
+		containedRecord: makeContainedRecord(app, ws, name, TypeKind_CRecord),
 	}
-	app.appendType(r)
+	ws.appendType(r)
 	return r
 }
 

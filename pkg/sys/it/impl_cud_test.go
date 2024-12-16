@@ -332,7 +332,7 @@ func TestRefIntegrity(t *testing.T) {
 	})
 }
 
-func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, appDef appdef.IAppDef, urlTemplate string) {
+func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, app appdef.IAppDef, urlTemplate string) {
 	body := `{"args":{"sys.ID": 1,"orecord1":[{"sys.ID":2,"sys.ParentID":1,"orecord2":[{"sys.ID":3,"sys.ParentID":2}]}]}}`
 	resp := vit.PostWS(ws, "c.app1pkg.CmdODocOne", body)
 	idOdoc1 := resp.NewIDs["1"]
@@ -341,7 +341,7 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, appDef
 	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.cdoc1"}}]}`
 	idCDoc := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 	t.Run("ref to unexisting -> 400 bad request", func(t *testing.T) {
-		oDoc := appDef.ODoc(it.QNameODoc2)
+		oDoc := appdef.ODoc(app.Type, it.QNameODoc2)
 		for _, oDoc1RefField := range oDoc.RefFields() {
 			t.Run(oDoc1RefField.Name(), func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"%s":%d`, oDoc1RefField.Name(), istructs.NonExistingRecordID))
@@ -469,4 +469,93 @@ func TestDenyCreateNonRawIDs(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": %d,"sys.QName": "app1pkg.options"}}]}`, istructs.FirstBaseUserWSID)
 	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
+}
+
+func TestSelectFromNestedTables(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	body := `{"cuds": [
+		{"fields":{"sys.ID": 1,"sys.QName": "app1pkg.Root", "FldRoot": 2}},
+		{"fields":{"sys.ID": 2,"sys.QName": "app1pkg.Nested", "sys.ParentID":1,"sys.Container": "Nested","FldNested":3}},
+		{"fields":{"sys.ID": 3,"sys.QName": "app1pkg.Third", "Fld1": 42,"sys.ParentID":2,"sys.Container": "Third"}}
+	]}`
+	vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+	t.Run("normal select", func(t *testing.T) {
+		body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
+			{"fields": ["FldRoot"]},
+			{"path": "Nested","fields": ["FldNested"]},
+			{"path": "Nested/Third","fields": ["Fld1"]}
+		]}`
+		resp := vit.PostWS(ws, "q.sys.Collection", body)
+
+		require.EqualValues(2, resp.Sections[0].Elements[0][0][0][0])
+		require.EqualValues(3, resp.Sections[0].Elements[0][1][0][0])
+		require.EqualValues(42, resp.Sections[0].Elements[0][2][0][0])
+	})
+
+	t.Run("unknown nested table", func(t *testing.T) {
+		t.Run("2nd level", func(t *testing.T) {
+			body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
+				{"fields": ["FldRoot"]},
+				{"path": "unknownNested","fields": ["FldNested"]},
+				{"path": "Nested/Third","fields": ["Fld1"]}
+			]}`
+			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("unknown nested table unknownNested"))
+		})
+		t.Run("3rd level", func(t *testing.T) {
+			body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
+				{"fields": ["FldRoot"]},
+				{"path": "Nested","fields": ["FldNested"]},
+				{"path": "Nested/unknownThird","fields": ["Fld1"]}
+			]}`
+			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("unknown nested table unknownThird"))
+
+			body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
+				{"fields": ["FldRoot"]},
+				{"path": "Nested","fields": ["FldNested"]},
+				{"path": "unknownNested/Third","fields": ["Fld1"]}
+			]}`
+			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("unknown nested table unknownNested"))
+		})
+	})
+
+	t.Run("unknown field in nested table", func(t *testing.T) {
+		t.Run("2nd level", func(t *testing.T) {
+			body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
+				{"fields": ["FldRoot"]},
+				{"path": "Nested","fields": ["unknown"]},
+				{"path": "Nested/Third","fields": ["Fld1"]}
+			]}`
+			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("'unknown' that is unexpected among fields of app1pkg.Nested"))
+		})
+		t.Run("3rd level", func(t *testing.T) {
+			body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
+				{"fields": ["FldRoot"]},
+				{"path": "Nested","fields": ["FldNested"]},
+				{"path": "Nested/Third","fields": ["unknown"]}
+			]}`
+			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("'unknown' that is unexpected among fields of app1pkg.Third"))
+		})
+	})
+
+	t.Run("nested requested in a table that has no nested tables", func(t *testing.T) {
+		t.Run("in root", func(t *testing.T) {
+			// cdoc2.field1 exists but it is not a nested table
+			body = `{"args":{"Schema":"app1pkg.cdoc2"},"elements": [
+				{"path": "field1","fields": ["SomeField"]}
+				]}`
+			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("unknown nested table field1"))
+		})
+		t.Run("in nested", func(t *testing.T) {
+			// Root.Nested.Third.Fld1 field exists but is not a nested table
+			body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
+				{"path": "Nested/Third/Fld1","fields": ["SomeField"]}
+			]}`
+			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("unknown nested table Fld1"))
+		})
+	})
 }

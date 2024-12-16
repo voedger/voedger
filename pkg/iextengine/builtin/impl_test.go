@@ -86,6 +86,6 @@ func Test_Panics(t *testing.T) {
 	require.NoError(err)
 	require.Len(engines, 5)
 
-	require.ErrorContains(engines[0].Invoke(context.Background(), ext1name, nil), "extension panic: boom")
+	require.ErrorContains(engines[0].Invoke(context.Background(), ext1name, nil), "extension test.ext1 panic: boom")
 
 }

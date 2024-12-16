@@ -7,7 +7,6 @@ package descr
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func newApplication() *Application {
@@ -17,101 +16,42 @@ func newApplication() *Application {
 	return &a
 }
 
-func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName]map[istructs.RateLimitKind]istructs.RateLimit) {
+func (a *Application) read(name appdef.AppQName, app appdef.IAppDef) {
 	a.Packages = make(map[string]*Package)
 
-	app.AppDef().Packages(func(localName, fullPath string) bool {
-		if localName != appdef.SysPackage {
-			pkg := newPackage()
-			pkg.Name = localName
-			pkg.Path = fullPath
-			a.Packages[localName] = pkg
+	for localName, fullPath := range app.Packages() {
+		if localName == appdef.SysPackage {
+			continue
 		}
-		return true
-	})
+		pkg := newPackage()
+		pkg.Name = localName
+		pkg.Path = fullPath
+		a.Packages[localName] = pkg
+	}
 
-	a.Name = app.AppQName()
+	a.Name = name
 
-	app.AppDef().Types(func(typ appdef.IType) bool {
-		name := typ.QName()
-
-		if name.Pkg() == appdef.SysPackage {
-			return true
+	for ws := range app.Workspaces() {
+		if ws.IsSystem() {
+			continue
 		}
 
-		pkg := getPkg(name, a)
+		wsName := ws.QName()
+		pkg := a.pkg(wsName.Pkg())
 
-		if data, ok := typ.(appdef.IData); ok {
-			if !data.IsSystem() {
-				d := newData()
-				d.read(data)
-				pkg.DataTypes[name.String()] = d
-			}
-			return true
-		}
+		w := newWorkspace()
+		w.read(ws)
 
-		if str, ok := typ.(appdef.IStructure); ok {
-			s := newStructure()
-			s.read(str)
-			pkg.Structures[name.String()] = s
-			return true
-		}
-
-		if view, ok := typ.(appdef.IView); ok {
-			v := newView()
-			v.read(view)
-			pkg.Views[name.String()] = v
-			return true
-		}
-
-		if ext, ok := typ.(appdef.IExtension); ok {
-			if pkg.Extensions == nil {
-				pkg.Extensions = newExtensions()
-			}
-			pkg.Extensions.read(ext)
-			return true
-		}
-
-		if role, ok := typ.(appdef.IRole); ok {
-			r := newRole()
-			r.read(role)
-			pkg.Roles[name.String()] = r
-			return true
-		}
-
-		return true
-	})
-
-	for qName, qNameRateLimit := range rateLimits {
-		pkg := getPkg(qName, a)
-		for rlKind, rl := range qNameRateLimit {
-			rateLimit := newRateLimit()
-			rateLimit.Kind = rlKind
-			rateLimit.MaxAllowedPerDuration = rl.MaxAllowedPerDuration
-			rateLimit.Period = rl.Period
-			pkg.RateLimits[qName.String()] = append(pkg.RateLimits[qName.String()], rateLimit)
-		}
+		pkg.Workspaces[wsName] = w
 	}
 }
 
-func getPkg(name appdef.QName, a *Application) *Package {
-	pkgName := name.Pkg()
-	pkg := a.Packages[pkgName]
-	if pkg == nil {
-		pkg = newPackage()
-		pkg.Name = pkgName
-		a.Packages[pkgName] = pkg
-	}
-	return pkg
+func (a Application) pkg(name string) *Package {
+	return a.Packages[name]
 }
 
 func newPackage() *Package {
 	return &Package{
-		DataTypes:  make(map[string]*Data),
-		Structures: make(map[string]*Structure),
-		Views:      make(map[string]*View),
-		Roles:      make(map[string]*Role),
-		Resources:  make(map[string]*Resource),
-		RateLimits: make(map[string][]*RateLimit),
+		Workspaces: make(map[appdef.QName]*Workspace),
 	}
 }

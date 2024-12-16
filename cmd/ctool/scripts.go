@@ -152,7 +152,7 @@ func getEnvValue1(key string) string {
 	return value
 }
 
-func updateTemplateScripts(c *clusterType) error {
+func updateTemplateScripts() error {
 
 	cluster := newCluster()
 	if err := cluster.updateTemplateFile(filepath.Join("alertmanager", "config.yml")); err != nil {
@@ -177,19 +177,14 @@ func prepareScripts(scriptFileNames ...string) error {
 	}
 
 	// If scriptfilenames is empty, then we will copy all scripts from scriptsfs
-	err = coreutils.CopyDirFS(scriptsFS, filepath.Join("scripts", "drafts"), scriptsTempDir, coreutils.WithFilterFilesWithRelativePaths(scriptFileNames),
+	err = coreutils.CopyDirFS(scriptsFS, "scripts/drafts", scriptsTempDir, coreutils.WithFilterFilesWithRelativePaths(scriptFileNames),
 		coreutils.WithSkipExisting(), coreutils.WithFileMode(coreutils.FileMode_rwxrwxrwx))
 	if err != nil {
 		loggerError(err.Error())
 		return err
 	}
 
-	cluster := newCluster()
-	if err = updateTemplateScripts(cluster); err != nil {
-		return err
-	}
-
-	return nil
+	return updateTemplateScripts()
 }
 
 // nolint

@@ -20,7 +20,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -40,7 +39,7 @@ import (
 )
 
 func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state istructs.IState, params IQueryParams,
-	resultMeta appdef.IType, rs IResultSenderClosable, metrics IMetrics) pipeline.IAsyncPipeline {
+	resultMeta appdef.IType, rs IResultSenderClosable, metrics IMetrics, errCh chan<- error) pipeline.IAsyncPipeline {
 	operators := make([]*pipeline.WiredOperator, 0)
 	if resultMeta == nil {
 		// happens when the query has no result, e.g. q.air.UpdateSubscriptionDetails
@@ -87,6 +86,7 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 	operators = append(operators, pipeline.WireAsyncOperator("Send to bus", &SendToBusOperator{
 		rs:      rs,
 		metrics: metrics,
+		errCh:   errCh,
 	}))
 	return pipeline.NewAsyncPipeline(ctx, "Rows processor", operators[0], operators[1:]...)
 }
@@ -130,6 +130,13 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 					if qwork.rowsProcessor != nil {
 						// wait until all rows are sent
 						qwork.rowsProcessor.Close()
+					}
+					select {
+					case rowsProcErr := <-qwork.rowsProcessorErrCh:
+						if err == nil {
+							err = rowsProcErr
+						}
+					default:
 					}
 					err = coreutils.WrapSysError(err, http.StatusInternalServerError)
 					rs.Close(err)
@@ -189,6 +196,15 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			return nil
 		}),
+		operator("get principals roles", func(ctx context.Context, qw *queryWork) (err error) {
+			for _, prn := range qw.principals {
+				if prn.Kind != iauthnz.PrincipalKind_Role {
+					continue
+				}
+				qw.roles = append(qw.roles, prn.QName)
+			}
+			return nil
+		}),
 		operator("check workspace active", func(ctx context.Context, qw *queryWork) (err error) {
 			for _, prn := range qw.principals {
 				if prn.Kind == iauthnz.PrincipalKind_Role && prn.QName == iauthnz.QNameRoleSystem && prn.WSID == qw.msg.WSID() {
@@ -229,6 +245,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
+			// TODO: eliminate when all application will use ACL in VSQL
 			req := iauthnz.AuthzRequest{
 				OperationKind: iauthnz.OperationKind_EXECUTE,
 				Resource:      qw.msg.QName(),
@@ -238,7 +255,17 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				return err
 			}
 			if !ok {
-				return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
+				ok, _, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
+				if err != nil {
+					// TODO: temporary workaround. Eliminate later
+					if roleNotFound(err) {
+						return coreutils.WrapSysError(err, http.StatusForbidden)
+					}
+					return err
+				}
+				if !ok {
+					return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
+				}
 			}
 			return nil
 		}),
@@ -250,7 +277,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				}
 				return nil
 			}
-			err = json.Unmarshal(qw.msg.Body(), &qw.requestData)
+			err = coreutils.JSONUnmarshal(qw.msg.Body(), &qw.requestData)
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
@@ -313,9 +340,12 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			if iResource.Kind() != istructs.ResourceKind_null {
 				iQueryFunc = iResource.(istructs.IQueryFunction)
 			} else {
-				_, _, iQueryFunc = iterate.FindFirstMap(statelessResources.Queries, func(path string, qry istructs.IQueryFunction) bool {
-					return qry.QName() == qw.msg.QName()
-				})
+				for _, qry := range statelessResources.Queries {
+					if qry.QName() == qw.msg.QName() {
+						iQueryFunc = qry
+						break
+					}
+				}
 			}
 			qNameResultType := iQueryFunc.ResultType(qw.execQueryArgs.PrepareArgs)
 			qw.resultType = qw.iWorkspace.Type(qNameResultType)
@@ -325,29 +355,71 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("validate: get query params", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.queryParams, err = newQueryParams(qw.requestData, NewElement, NewFilter, NewOrderBy, newFieldsKinds(qw.resultType))
+			qw.queryParams, err = newQueryParams(qw.requestData, NewElement, NewFilter, NewOrderBy, newFieldsKinds(qw.resultType), qw.resultType)
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
-		operator("authorize result", func(ctx context.Context, qw *queryWork) (err error) {
-			req := iauthnz.AuthzRequest{
-				OperationKind: iauthnz.OperationKind_SELECT,
-				Resource:      qw.msg.QName(),
-			}
-			for _, elem := range qw.queryParams.Elements() {
-				for _, resultField := range elem.ResultFields() {
-					req.Fields = append(req.Fields, resultField.Field())
-				}
-			}
-			if len(req.Fields) == 0 {
+		operator("authorize actual sys.Any result", func(ctx context.Context, qw *queryWork) (err error) {
+			if qw.iQuery.Result() != appdef.AnyType {
+				// will authorize result only if result is sys.Any
+				// otherwise each field is considered as allowed if EXECUTE ON QUERY is allowed
 				return nil
 			}
-			ok, err := authz.Authorize(qw.appStructs, qw.principals, req)
-			if err != nil {
-				return err
-			}
-			if !ok {
-				return coreutils.NewSysError(http.StatusForbidden)
-			}
+			// TODO: eliminate SELECT rule skipping after implementing ACL in VSQL in Air
+			// for _, elem := range qw.queryParams.Elements() {
+			// 	nestedPath := elem.Path().AsArray()
+			// 	nestedType := qw.resultType
+			// 	for _, nestedName := range nestedPath {
+			// 		if len(nestedName) == 0 {
+			// 			// root
+			// 			continue
+			// 		}
+			// 		// incorrectness is excluded already on validation stage in [queryParams.validate]
+			// 		containersOfNested := nestedType.(appdef.IContainers)
+			// 		// container presence is checked already on validation stage in [queryParams.validate]
+			// 		nestedContainer := containersOfNested.Container(nestedName)
+			// 		nestedType = nestedContainer.Type()
+			// 	}
+			// 	requestedfields := []string{}
+			// 	for _, resultField := range elem.ResultFields() {
+			// 		requestedfields = append(requestedfields, resultField.Field())
+			// 	}
+
+			// 	// TODO: eliminate when all application will use ACL in VSQL
+			// 	req := iauthnz.AuthzRequest{
+			// 		OperationKind: iauthnz.OperationKind_SELECT,
+			// 		Resource:      nestedType.QName(),
+			// 	}
+			// 	for _, elem := range qw.queryParams.Elements() {
+			// 		for _, resultField := range elem.ResultFields() {
+			// 			req.Fields = append(req.Fields, resultField.Field())
+			// 		}
+			// 	}
+			// 	if len(req.Fields) == 0 {
+			// 		return nil
+			// 	}
+			// 	ok, err := authz.Authorize(qw.appStructs, qw.principals, req)
+			// 	if err != nil {
+			// 		return err
+			// 	}
+			// 	if !ok {
+			// 		ok, allowedFields, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
+			// 		if err != nil {
+			// 			// TODO: temporary workaround. Eliminate later
+			// 			if roleNotFound(err) {
+			// 				return coreutils.WrapSysError(err, http.StatusForbidden)
+			// 			}
+			// 			return err
+			// 		}
+			// 		if !ok {
+			// 			return coreutils.NewSysError(http.StatusForbidden)
+			// 		}
+			// 		for _, requestedField := range requestedfields {
+			// 			if !slices.Contains(allowedFields, requestedField) {
+			// 				return coreutils.NewSysError(http.StatusForbidden)
+			// 			}
+			// 		}
+			// 	}
+			// }
 			return nil
 		}),
 		operator("build rows processor", func(ctx context.Context, qw *queryWork) error {
@@ -356,7 +428,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				qw.metrics.Increase(buildSeconds, time.Since(now).Seconds())
 			}()
 			qw.rowsProcessor = ProvideRowsProcessorFactory()(qw.msg.RequestCtx(), qw.appStructs.AppDef(),
-				qw.state, qw.queryParams, qw.resultType, qw.rs, qw.metrics)
+				qw.state, qw.queryParams, qw.resultType, qw.rs, qw.metrics, qw.rowsProcessorErrCh)
 			return nil
 		}),
 	}
@@ -369,36 +441,43 @@ type queryWork struct {
 	rs       IResultSenderClosable
 	appParts appparts.IAppPartitions
 	// work
-	requestData       map[string]interface{}
-	state             state.IHostState
-	queryParams       IQueryParams
-	appPart           appparts.IAppPartition
-	appStructs        istructs.IAppStructs
-	resultType        appdef.IType
-	execQueryArgs     istructs.ExecQueryArgs
-	maxPrepareQueries int
-	rowsProcessor     pipeline.IAsyncPipeline
-	metrics           IMetrics
-	principals        []iauthnz.Principal
-	principalPayload  payloads.PrincipalPayload
-	secretReader      isecrets.ISecretReader
-	iWorkspace        appdef.IWorkspace
-	iQuery            appdef.IQuery
-	wsDesc            istructs.IRecord
+	requestData        map[string]interface{}
+	state              state.IHostState
+	queryParams        IQueryParams
+	appPart            appparts.IAppPartition
+	appStructs         istructs.IAppStructs
+	resultType         appdef.IType
+	execQueryArgs      istructs.ExecQueryArgs
+	maxPrepareQueries  int
+	rowsProcessor      pipeline.IAsyncPipeline
+	rowsProcessorErrCh chan error // will contain the first error from rowProcessor if any. The rest of errors in rowsProcessor will be just logged
+	metrics            IMetrics
+	principals         []iauthnz.Principal
+	principalPayload   payloads.PrincipalPayload
+	roles              []appdef.QName
+	secretReader       isecrets.ISecretReader
+	iWorkspace         appdef.IWorkspace
+	iQuery             appdef.IQuery
+	wsDesc             istructs.IRecord
 	// queryExec         func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error
 	callbackFunc istructs.ExecQueryCallback
+}
+
+func roleNotFound(err error) bool {
+	return errors.Is(err, appdef.ErrNotFoundError) && strings.Contains(err.Error(), "role")
 }
 
 func newQueryWork(msg IQueryMessage, rs IResultSenderClosable, appParts appparts.IAppPartitions,
 	maxPrepareQueries int, metrics *queryProcessorMetrics, secretReader isecrets.ISecretReader) *queryWork {
 	return &queryWork{
-		msg:               msg,
-		rs:                rs,
-		appParts:          appParts,
-		requestData:       make(map[string]interface{}),
-		maxPrepareQueries: maxPrepareQueries,
-		metrics:           metrics,
-		secretReader:      secretReader,
+		msg:                msg,
+		rs:                 rs,
+		appParts:           appParts,
+		requestData:        make(map[string]interface{}),
+		maxPrepareQueries:  maxPrepareQueries,
+		metrics:            metrics,
+		secretReader:       secretReader,
+		rowsProcessorErrCh: make(chan error, 1),
 	}
 }
 
@@ -522,10 +601,12 @@ type outputRow struct {
 	values   []interface{}
 }
 
-func (r *outputRow) Set(alias string, value interface{}) { r.values[r.keyToIdx[alias]] = value }
-func (r *outputRow) Values() []interface{}               { return r.values }
-func (r *outputRow) Value(alias string) interface{}      { return r.values[r.keyToIdx[alias]] }
-func (r *outputRow) MarshalJSON() ([]byte, error)        { return json.Marshal(r.values) }
+func (r *outputRow) Set(alias string, value interface{}) {
+	r.values[r.keyToIdx[alias]] = value
+}
+func (r *outputRow) Values() []interface{}          { return r.values }
+func (r *outputRow) Value(alias string) interface{} { return r.values[r.keyToIdx[alias]] }
+func (r *outputRow) MarshalJSON() ([]byte, error)   { return json.Marshal(r.values) }
 
 func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, qw *queryWork) (execQueryArgs istructs.ExecQueryArgs, err error) {
 	args, _, err := data.AsObject("args")

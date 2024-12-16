@@ -7,6 +7,7 @@ package istructsmem
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -56,13 +57,14 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	// Names
 
 	appName := istructs.AppQName_test1_app1
+	wsName := appdef.NewQName("test", "workspace")
 	oDocQName := appdef.NewQName("test", "oDoc")
 	cmdQName := appdef.NewQName("test", "cmd")
 
 	// oDoc field names and values
 
 	intFieldNames := make([]string, numOfIntFields)
-	intFieldNamesFloat64Values := make(map[string]float64)
+	intFieldNamesFloat64Values := make(map[string]json.Number)
 	stringFieldNames := make([]string, numOfIntFields)
 	stringFieldValues := make(map[string]string)
 
@@ -71,13 +73,15 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		doc := adb.AddODoc(oDocQName)
+		wsb := adb.AddWorkspace(wsName)
+
+		doc := wsb.AddODoc(oDocQName)
 		for i := 0; i < numOfIntFields; i++ {
 
 			intFieldName := fmt.Sprintf("i%v", i)
 			doc.AddField(intFieldName, appdef.DataKind_int64, true)
 			intFieldNames[i] = intFieldName
-			intFieldNamesFloat64Values[intFieldName] = float64(i)
+			intFieldNamesFloat64Values[intFieldName] = json.Number(strconv.Itoa(i))
 
 			stringFieldName := fmt.Sprintf("s%v", i)
 			doc.AddField(stringFieldName, appdef.DataKind_string, true)
@@ -85,7 +89,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 			stringFieldValues[stringFieldName] = stringFieldName
 
 		}
-		adb.AddCommand(cmdQName).SetParam(oDocQName)
+		wsb.AddCommand(cmdQName).SetParam(oDocQName)
 		return adb
 	}
 

@@ -18,16 +18,16 @@ type function struct {
 	par, res typeRef
 }
 
-func makeFunc(app *appDef, name QName, kind TypeKind) function {
+func makeFunc(app *appDef, ws *workspace, name QName, kind TypeKind) function {
 	f := function{
-		extension: makeExtension(app, name, kind),
+		extension: makeExtension(app, ws, name, kind),
 	}
 	return f
 }
 
-func (f *function) Param() IType { return f.par.target(f.app) }
+func (f *function) Param() IType { return f.par.target(f.app.Type) }
 
-func (f *function) Result() IType { return f.res.target(f.app) }
+func (f *function) Result() IType { return f.res.target(f.app.Type) }
 
 func (f *function) setParam(name QName) { f.par.setName(name) }
 
@@ -39,7 +39,7 @@ func (f *function) setResult(name QName) { f.res.setName(name) }
 //   - if parameter type is unknown or not a Data, ODoc or Object,
 //   - if result type is unknown or not a Data, Doc or Object,
 func (f *function) Validate() (err error) {
-	if ok, e := f.par.valid(f.app); !ok {
+	if ok, e := f.par.valid(f.app.Type); !ok {
 		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown parameter type: %w", f, e))
 	} else if typ := f.Param(); typ != nil {
 		switch typ.Kind() {
@@ -49,7 +49,7 @@ func (f *function) Validate() (err error) {
 		}
 	}
 
-	if ok, e := f.res.valid(f.app); !ok {
+	if ok, e := f.res.valid(f.app.Type); !ok {
 		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown result type: %w", f, e))
 	} else if typ := f.Result(); typ != nil {
 		switch typ.Kind() {

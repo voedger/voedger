@@ -13,10 +13,11 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIAppDefBuilder_AddData() {
+func ExampleDataTypes() {
 
 	var app appdef.IAppDef
 
+	wsName := appdef.NewQName("test", "ws")
 	numName := appdef.NewQName("test", "num")
 	floatName := appdef.NewQName("test", "float")
 	strName := appdef.NewQName("test", "string")
@@ -28,18 +29,19 @@ func ExampleIAppDefBuilder_AddData() {
 	{
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
+		ws := adb.AddWorkspace(wsName)
 
-		adb.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinExcl(0)).SetComment("Natural number")
+		ws.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinExcl(0)).SetComment("Natural number")
 
-		_ = adb.AddData(floatName, appdef.DataKind_float64, appdef.NullQName)
+		_ = ws.AddData(floatName, appdef.DataKind_float64, appdef.NullQName)
 
-		_ = adb.AddData(strName, appdef.DataKind_string, appdef.NullQName, appdef.MinLen(1), appdef.MaxLen(4))
+		_ = ws.AddData(strName, appdef.DataKind_string, appdef.NullQName, appdef.MinLen(1), appdef.MaxLen(4))
 
-		_ = adb.AddData(tokenName, appdef.DataKind_string, strName, appdef.Pattern("^[a-z]+$"))
+		_ = ws.AddData(tokenName, appdef.DataKind_string, strName, appdef.Pattern("^[a-z]+$"))
 
-		_ = adb.AddData(weekDayName, appdef.DataKind_string, strName, appdef.Enum("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+		_ = ws.AddData(weekDayName, appdef.DataKind_string, strName, appdef.Enum("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
 
-		adb.AddData(jsonName, appdef.DataKind_string, appdef.NullQName,
+		ws.AddData(jsonName, appdef.DataKind_string, appdef.NullQName,
 			appdef.MaxLen(appdef.MaxFieldLength)).SetComment("JSON string up to 64K")
 
 		app = adb.MustBuild()
@@ -48,7 +50,7 @@ func ExampleIAppDefBuilder_AddData() {
 	// how to inspect data types in builded AppDef
 	{
 		cnt := 0
-		app.DataTypes(func(d appdef.IData) bool {
+		for d := range appdef.DataTypes(app.Types()) {
 			if !d.IsSystem() {
 				cnt++
 				fmt.Println("-", d, "inherits from", d.Ancestor())
@@ -64,8 +66,7 @@ func ExampleIAppDefBuilder_AddData() {
 					fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
 				}
 			}
-			return true
-		})
+		}
 		fmt.Println("overall user data types: ", cnt)
 	}
 

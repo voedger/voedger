@@ -21,11 +21,11 @@ import (
 func TestRace_Buckets(t *testing.T) {
 	buckets := Provide(coreutils.NewITime())
 
-	sTotalRegLimitName := "TotalRegLimitName"
-	sAddrRegLimitName := "TotalRegLimitName"
+	totalRegLimitName := appdef.NewQName("test", "TotalRegLimitName")
+	addrRegLimitName := appdef.NewQName("test", "TotalRegLimitName")
 
 	totalRegKey := irates.BucketKey{
-		RateLimitName: sTotalRegLimitName,
+		RateLimitName: totalRegLimitName,
 		App:           istructs.AppQName_test1_app1,
 		QName:         appdef.NewQName("test", "test"),
 		RemoteAddr:    "",
@@ -39,7 +39,7 @@ func TestRace_Buckets(t *testing.T) {
 	}
 
 	addrRegKey := irates.BucketKey{
-		RateLimitName: sAddrRegLimitName,
+		RateLimitName: addrRegLimitName,
 		App:           istructs.AppQName_test1_app1,
 		QName:         appdef.NewQName("test", "test"),
 		RemoteAddr:    "addr",
@@ -52,8 +52,8 @@ func TestRace_Buckets(t *testing.T) {
 		TakenTokens:        0,
 	}
 
-	buckets.SetDefaultBucketState(sTotalRegLimitName, totalRegistrationQuota)
-	buckets.SetDefaultBucketState(sAddrRegLimitName, addrRegistrationQuota)
+	buckets.SetDefaultBucketState(totalRegLimitName, totalRegistrationQuota)
+	buckets.SetDefaultBucketState(addrRegLimitName, addrRegistrationQuota)
 
 	keys := []irates.BucketKey{totalRegKey, addrRegKey}
 	var finish sync.WaitGroup
@@ -64,7 +64,7 @@ func TestRace_Buckets(t *testing.T) {
 		defer finish.Done()
 		start.Done()
 		for ctx.Err() == nil {
-			_ = buckets.TakeTokens(keys, 1)
+			_, _ = buckets.TakeTokens(keys, 1)
 		}
 	}
 
@@ -81,7 +81,7 @@ func TestRace_Buckets(t *testing.T) {
 		defer finish.Done()
 		start.Done()
 		for ctx.Err() == nil {
-			buckets.SetDefaultBucketState(sTotalRegLimitName, totalRegistrationQuota)
+			buckets.SetDefaultBucketState(totalRegLimitName, totalRegistrationQuota)
 		}
 	}
 

@@ -2,26 +2,28 @@
 
 -- note: this schema is for tests only. Voedger sys package uses copy of this schema
 
-ABSTRACT TABLE CRecord();
-ABSTRACT TABLE WRecord();
-ABSTRACT TABLE ORecord();
-ABSTRACT TABLE CDoc INHERITS CRecord();
-ABSTRACT TABLE ODoc INHERITS ORecord();
-ABSTRACT TABLE WDoc INHERITS WRecord();
-ABSTRACT TABLE CSingleton INHERITS CDoc();
-ABSTRACT WORKSPACE Workspace(
-	EXTENSION ENGINE WASM(
-        COMMAND NewWorkspace();
+ABSTRACT WORKSPACE Workspace (
+    ABSTRACT TABLE CRecord();
+    ABSTRACT TABLE WRecord();
+    ABSTRACT TABLE ORecord();
+    ABSTRACT TABLE CDoc INHERITS CRecord();
+    ABSTRACT TABLE ODoc INHERITS ORecord();
+    ABSTRACT TABLE WDoc INHERITS WRecord();
+    ABSTRACT TABLE CSingleton INHERITS CDoc();
+
+    EXTENSION ENGINE WASM(
+       COMMAND NewWorkspace();
     );
-);
-ALTERABLE WORKSPACE Profile();
 
-TABLE WorkspaceDescriptor INHERITS CSingleton (
-	WSKind qname NOT NULL
-);
+    ALTERABLE WORKSPACE Profile();
 
-TYPE Raw(
-    Body   varchar(65535)
+    TABLE WorkspaceDescriptor INHERITS sys.CSingleton (
+        WSKind qname NOT NULL
+    );
+
+    TYPE Raw(
+        Body   varchar(65535)
+    );
 );
 
 EXTENSION ENGINE BUILTIN (

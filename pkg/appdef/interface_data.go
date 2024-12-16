@@ -5,6 +5,8 @@
 
 package appdef
 
+import "iter"
+
 // Data kind enumeration.
 //
 // Ref. data-kind.go for constants and methods
@@ -51,7 +53,7 @@ type IData interface {
 	// All data type constraints.
 	//
 	// To obtain all constraints include ancestor data types, pass true to withInherited parameter.
-	Constraints(withInherited bool) map[ConstraintKind]IConstraint
+	Constraints(withInherited bool) iter.Seq2[ConstraintKind, IConstraint]
 }
 
 type IDataBuilder interface {
@@ -62,24 +64,6 @@ type IDataBuilder interface {
 	// # Panics:
 	//	 - if constraint is not compatible with data type.
 	AddConstraints(c ...IConstraint) IDataBuilder
-}
-
-// Data types interface.
-type IWithDataTypes interface {
-	// Return data type by name.
-	//
-	// Returns nil if not found.
-	Data(QName) IData
-
-	// Enumerates all application data types.
-	//
-	// Data types are enumerated in alphabetical order by QName.
-	DataTypes(func(IData) bool)
-
-	// Returns system data type (sys.int32, sys.float654, etc.) by data kind.
-	//
-	// Returns nil if not found.
-	SysData(DataKind) IData
 }
 
 // Data types builder interface.
@@ -122,7 +106,7 @@ const (
 
 	ConstraintKind_Enum
 
-	ConstraintKind_Count
+	ConstraintKind_count
 )
 
 // Data constraint interface.

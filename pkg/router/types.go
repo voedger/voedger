@@ -52,7 +52,7 @@ type httpService struct {
 	busTimeout         time.Duration
 	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces
 	name               string
-	listeningPort      atomic.Int32
+	listeningPort      atomic.Uint32
 }
 
 type httpsService struct {
@@ -64,8 +64,6 @@ type acmeService struct {
 	http.Server
 }
 
-type BLOBMaxSizeType int64
-
 type BlobberServiceChannels []iprocbusmem.ChannelGroup
 
 type BlobberParams struct {
@@ -74,7 +72,7 @@ type BlobberParams struct {
 	BLOBWorkersNum         int
 	procBus                iprocbus.IProcBus
 	RetryAfterSecondsOn503 int
-	BLOBMaxSize            BLOBMaxSizeType
+	WLimiterFactory        func() iblobstorage.WLimiterType
 }
 
 type route struct {

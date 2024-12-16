@@ -39,38 +39,24 @@ func newBuildCmd(params *vpmParams) *cobra.Command {
 			}
 
 			compileRes, err := compile.CompileNoDummyApp(params.Dir)
-			if err := checkAppSchemaNotFoundErr(err); err != nil {
-				return err
+			if err != nil {
+				if errors.Is(err, compile.ErrAppSchemaNotFound) {
+					return errors.New("failed to build, app schema not found")
+				}
+
+				return errors.New("failed to compile, check schemas")
 			}
-			if err := checkCompileResult(compileRes); err != nil {
-				return err
+
+			if len(compileRes.NotFoundDeps) > 0 {
+				return errors.New("failed to compile, missing dependencies. Run 'vpm tidy'")
 			}
+
 			return build(compileRes, params)
 		},
 	}
 	cmd.Flags().StringVarP(&params.Output, "output", "o", "", "output archive name")
+
 	return cmd
-}
-
-func checkAppSchemaNotFoundErr(err error) error {
-	if err != nil {
-		logger.Error(err)
-		if errors.Is(err, compile.ErrAppSchemaNotFound) {
-			return errors.New("failed to build, app schema not found")
-		}
-	}
-	return nil
-}
-
-func checkCompileResult(compileRes *compile.Result) error {
-	switch {
-	case compileRes == nil:
-		return errors.New("failed to compile, check schemas")
-	case len(compileRes.NotFoundDeps) > 0:
-		return errors.New("failed to compile, missing dependencies. Run 'vpm tidy'")
-	default:
-		return nil
-	}
 }
 
 func build(compileRes *compile.Result, params *vpmParams) error {
@@ -176,6 +162,10 @@ func execTinyGoBuild(dir, appName string) (wasmFilePath string, err error) {
 		// checking compatibility of the tinygo with go version
 		if strings.Contains(err.Error(), "requires go version") {
 			return "", fmt.Errorf("tinygo is incompatible with the current go version - %w", err)
+		} else if strings.Contains(err.Error(), "error: unable to make temporary file: No such file or directory") {
+			return "", fmt.Errorf(`"%w". Hint: on Windows try to create c:\Temp dir`, err)
+		} else if strings.Contains(err.Error(), "error: could not find wasm-opt, set the WASMOPT environment variable to override") {
+			return "", fmt.Errorf(`"%w". Hint: try to install binaryen from https://github.com/WebAssembly/binaryen/releases/`, err)
 		}
 		return "", err
 	}

@@ -11,8 +11,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/goutils/iterate"
-	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -69,10 +67,10 @@ func execCmdInitChildWorkspace(args istructs.ExecCommandArgs) (err error) {
 	return err
 }
 
-var childWorkspaceIdxProjector = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+var childWorkspaceIdxProjector = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
+	for rec := range event.CUDs {
 		if rec.QName() != authnz.QNameCDocChildWorkspace || !rec.IsNew() {
-			return nil
+			continue
 		}
 
 		kb, err := s.KeyBuilder(sys.Storage_View, QNameViewChildWorkspaceIdx)
@@ -88,13 +86,12 @@ var childWorkspaceIdxProjector = func(event istructs.IPLogEvent, s istructs.ISta
 			return err
 		}
 		vb.PutInt64(Field_ChildWorkspaceID, int64(rec.ID()))
-		return nil
-	})
+	}
+	return nil
 }
 
 // targetApp/parentWSID/q.sys.QueryChildWorkspaceByName
 func qcwbnQryExec(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
-	logger.Info(args.State.App())
 	wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
 	kb, err := args.State.KeyBuilder(sys.Storage_View, QNameViewChildWorkspaceIdx)
 	if err != nil {
@@ -113,7 +110,7 @@ func qcwbnQryExec(_ context.Context, args istructs.ExecQueryArgs, callback istru
 	if err != nil {
 		return err
 	}
-	kb.PutRecordID(sys.Storage_Record_Field_ID, istructs.RecordID(childWSIdx.AsInt64(Field_ChildWorkspaceID)))
+	kb.PutRecordID(sys.Storage_Record_Field_ID, istructs.RecordID(childWSIdx.AsInt64(Field_ChildWorkspaceID))) // nolint G115
 	rec, err := args.State.MustExist(kb)
 	if err != nil {
 		return err

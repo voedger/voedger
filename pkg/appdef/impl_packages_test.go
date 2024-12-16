@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
@@ -34,10 +35,10 @@ func Test_AppDef_AddPackage(t *testing.T) {
 		require.Equal("example", app.PackageLocalName("example.com/path"))
 		require.Equal("example.com/path", app.PackageFullPath("example"))
 
-		require.EqualValues([]string{"example", "sys", "test"}, app.PackageLocalNames())
+		require.EqualValues([]string{"example", "sys", "test"}, slices.Collect(app.PackageLocalNames()))
 
 		cnt := 0
-		app.Packages(func(localName, fullPath string) bool {
+		for localName, fullPath := range app.Packages() {
 			switch cnt {
 			case 0:
 				require.Equal("example", localName)
@@ -52,16 +53,15 @@ func Test_AppDef_AddPackage(t *testing.T) {
 				require.Fail("unexpected package %v (%v)", localName, fullPath)
 			}
 			cnt++
-			return true
-		})
+		}
 		require.Equal(3, cnt)
 
 		t.Run("range for packages should be breakable", func(t *testing.T) {
 			cnt := 0
-			app.Packages(func(string, string) bool {
+			for _, _ = range app.Packages() {
 				cnt++
-				return false
-			})
+				break
+			}
 			require.Equal(1, cnt)
 		})
 	})

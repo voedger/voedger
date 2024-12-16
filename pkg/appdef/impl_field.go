@@ -9,6 +9,7 @@ package appdef
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 
@@ -34,7 +35,7 @@ func makeField(name FieldName, data IData, required bool, comments ...string) fi
 		data:        data,
 		required:    required,
 		verifiable:  false,
-		constraints: data.Constraints(true),
+		constraints: maps.Collect(data.Constraints(true)),
 	}
 	return f
 }
@@ -97,20 +98,24 @@ func IsSysField(n FieldName) bool {
 //   - IFields
 type fields struct {
 	app           *appDef
+	ws            *workspace
 	typeKind      TypeKind
 	fields        map[FieldName]interface{}
 	fieldsOrdered []IField
 	refFields     []IRefField
+	userFields    []IField
 }
 
 // Makes new fields instance
-func makeFields(app *appDef, typeKind TypeKind) fields {
+func makeFields(app *appDef, ws *workspace, typeKind TypeKind) fields {
 	ff := fields{
 		app:           app,
+		ws:            ws,
 		typeKind:      typeKind,
 		fields:        make(map[FieldName]interface{}),
 		fieldsOrdered: make([]IField, 0),
-		refFields:     make([]IRefField, 0)}
+		refFields:     make([]IRefField, 0),
+		userFields:    make([]IField, 0)}
 	return ff
 }
 
@@ -144,42 +149,40 @@ func (ff *fields) RefFields() []IRefField {
 	return ff.refFields
 }
 
+func (ff *fields) UserFields() []IField {
+	return ff.userFields
+}
+
 func (ff *fields) UserFieldCount() int {
-	cnt := 0
-	for _, fld := range ff.fieldsOrdered {
-		if !fld.IsSys() {
-			cnt++
-		}
-	}
-	return cnt
+	return len(ff.userFields)
 }
 
 func (ff *fields) addDataField(name FieldName, data QName, required bool, constraints ...IConstraint) {
-	d := ff.app.Data(data)
+	d := Data(ff.app.Type, data)
 	if d == nil {
 		panic(ErrTypeNotFound(data))
 	}
 	if len(constraints) > 0 {
-		d = newAnonymousData(ff.app, d.DataKind(), data, constraints...)
+		d = newAnonymousData(ff.app, ff.ws, d.DataKind(), data, constraints...)
 	}
 	f := newField(name, d, required)
 	ff.appendField(name, f)
 }
 
 func (ff *fields) addField(name FieldName, kind DataKind, required bool, constraints ...IConstraint) {
-	d := ff.app.SysData(kind)
+	d := SysData(ff.app.Type, kind)
 	if d == nil {
 		panic(ErrNotFound("system data type for data kind «%s»", kind.TrimString()))
 	}
 	if len(constraints) > 0 {
-		d = newAnonymousData(ff.app, d.DataKind(), d.QName(), constraints...)
+		d = newAnonymousData(ff.app, ff.ws, d.DataKind(), d.QName(), constraints...)
 	}
 	f := newField(name, d, required)
 	ff.appendField(name, f)
 }
 
 func (ff *fields) addRefField(name FieldName, required bool, ref ...QName) {
-	d := ff.app.SysData(DataKind_RecordID)
+	d := SysData(ff.app.Type, DataKind_RecordID)
 	f := newRefField(name, d, required, ref...)
 	ff.appendField(name, f)
 }
@@ -202,18 +205,23 @@ func (ff *fields) appendField(name FieldName, fld interface{}) {
 		panic(ErrTooMany("fields, maximum is %d", MaxTypeFieldCount))
 	}
 
+	f := fld.(IField)
+
 	if !IsSysField(name) {
 		if ok, err := ValidFieldName(name); !ok {
 			panic(fmt.Errorf("field name «%v» is invalid: %w", name, err))
 		}
-		dk := fld.(IField).DataKind()
+		dk := f.DataKind()
 		if (ff.typeKind != TypeKind_null) && !ff.typeKind.FieldKindAvailable(dk) {
 			panic(ErrIncompatible("data kind «%s» with fields of «%v»", dk.TrimString(), ff.typeKind.TrimString()))
 		}
 	}
 
 	ff.fields[name] = fld
-	ff.fieldsOrdered = append(ff.fieldsOrdered, fld.(IField))
+	ff.fieldsOrdered = append(ff.fieldsOrdered, f)
+	if !IsSysField(name) {
+		ff.userFields = append(ff.userFields, f)
+	}
 
 	if rf, ok := fld.(IRefField); ok {
 		ff.refFields = append(ff.refFields, rf)
@@ -248,7 +256,7 @@ func (ff *fields) setFieldComment(name FieldName, comment ...string) {
 	if fld == nil {
 		panic(ErrFieldNotFound(name))
 	}
-	if fld, ok := fld.(interface{ setComment(comment ...string) }); ok {
+	if fld, ok := fld.(interface{ setComment(...string) }); ok {
 		fld.setComment(comment...)
 	}
 }
@@ -335,15 +343,10 @@ func validateTypeFields(t IType) (err error) {
 		// resolve reference types
 		for _, rf := range ff.RefFields() {
 			for _, n := range rf.Refs() {
-				refType := t.App().TypeByName(n)
+				refType := Record(t.App().Type, n)
 				if refType == nil {
 					err = errors.Join(err,
-						ErrNotFound("%v reference field «%s» type «%v»", t, rf.Name(), n))
-					continue
-				}
-				if _, ok := refType.(IRecord); !ok {
-					err = errors.Join(err,
-						ErrInvalid("%v reference field «%s» type «%v» is not a record type", t, n, refType))
+						ErrNotFound("%v reference field «%s» to unknown table «%v»", t, rf.Name(), n))
 					continue
 				}
 			}
@@ -360,6 +363,7 @@ func (f *nullFields) Fields() []IField             { return []IField{} }
 func (f *nullFields) RefField(FieldName) IRefField { return nil }
 func (f *nullFields) RefFields() []IRefField       { return []IRefField{} }
 func (f *nullFields) UserFieldCount() int          { return 0 }
+func (f *nullFields) UserFields() []IField         { return []IField{} }
 
 func (k VerificationKind) MarshalJSON() ([]byte, error) {
 	var s string
@@ -390,11 +394,9 @@ func (k *VerificationKind) UnmarshalJSON(data []byte) (err error) {
 		}
 	}
 
-	var i uint64
-	const base, wordBits = 10, 16
-	i, err = strconv.ParseUint(text, base, wordBits)
+	uint8Val, err := utils.StringToUint8(text)
 	if err == nil {
-		*k = VerificationKind(i)
+		*k = VerificationKind(uint8Val)
 	}
 	return err
 }

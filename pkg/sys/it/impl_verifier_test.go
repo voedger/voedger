@@ -151,7 +151,6 @@ func TestVerifierErrors(t *testing.T) {
 	t.Run("error 400 on wrong app", func(t *testing.T) {
 		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, emailVerifiedValueToken)
 		userPrincipal := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
-		// wsApp2 := vit.DummyWS(istructs.AppQName_test1_app2, userPrincipal.ProfileWSID)
 		vit.PostProfile(userPrincipal, "c.sys.CUD", body, coreutils.Expect400()).Println()
 	})
 

@@ -26,6 +26,8 @@ type (
 		appName          appdef.AppQName
 		pkgName, pkgPath string
 
+		wsName appdef.QName
+
 		AppConfigs AppConfigsType
 		AppCfg     *AppConfigType
 		AppDef     appdef.IAppDef
@@ -146,6 +148,8 @@ var testData = testDataType{
 	pkgName: "test",
 	pkgPath: "test.com/test",
 
+	wsName: appdef.NewQName("test", "workspace"),
+
 	eventRawBytes:      []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0},
 	partition:          55,
 	plogOfs:            10000,
@@ -197,7 +201,7 @@ var testData = testDataType{
 	tablePhotos:    appdef.NewQName("test", "photos"),
 	tempPhotoID:    1,
 	tablePhotoRems: appdef.NewQName("test", "photoRems"),
-	tempRemarkID:   2,
+	tempRemarkID:   11,
 
 	changeCmdName: appdef.NewQName("test", "change"),
 
@@ -240,14 +244,16 @@ func test() *testDataType {
 		adb := appdef.New()
 		adb.AddPackage(testData.pkgName, testData.pkgPath)
 
+		wsb := adb.AddWorkspace(testData.wsName)
+
 		{
-			identData := adb.AddData(testData.dataIdent, appdef.DataKind_string, appdef.NullQName)
+			identData := wsb.AddData(testData.dataIdent, appdef.DataKind_string, appdef.NullQName)
 			identData.AddConstraints(appdef.MinLen(1), appdef.MaxLen(50)).SetComment("string from 1 to 50 runes")
 
-			photoData := adb.AddData(testData.dataPhoto, appdef.DataKind_bytes, appdef.NullQName)
+			photoData := wsb.AddData(testData.dataPhoto, appdef.DataKind_bytes, appdef.NullQName)
 			photoData.AddConstraints(appdef.MaxLen(1024)).SetComment("up to 1Kb")
 
-			saleParams := adb.AddODoc(testData.saleCmdDocName)
+			saleParams := wsb.AddODoc(testData.saleCmdDocName)
 			saleParams.
 				AddDataField(testData.buyerIdent, testData.dataIdent, true).
 				AddField(testData.ageIdent, appdef.DataKind_int32, false).
@@ -257,29 +263,29 @@ func test() *testDataType {
 			saleParams.
 				AddContainer(testData.basketIdent, appdef.NewQName(testData.pkgName, testData.basketIdent), 1, 1)
 
-			basket := adb.AddORecord(appdef.NewQName(testData.pkgName, testData.basketIdent))
+			basket := wsb.AddORecord(appdef.NewQName(testData.pkgName, testData.basketIdent))
 			basket.
 				AddContainer(testData.goodIdent, appdef.NewQName(testData.pkgName, testData.goodIdent), 0, appdef.Occurs_Unbounded)
 
-			good := adb.AddORecord(appdef.NewQName(testData.pkgName, testData.goodIdent))
+			good := wsb.AddORecord(appdef.NewQName(testData.pkgName, testData.goodIdent))
 			good.
 				AddField(testData.saleIdent, appdef.DataKind_RecordID, true).
 				AddField(testData.nameIdent, appdef.DataKind_string, true, appdef.MinLen(1)).
 				AddField(testData.codeIdent, appdef.DataKind_int64, true).
 				AddField(testData.weightIdent, appdef.DataKind_float64, false)
 
-			saleSecureParams := adb.AddObject(testData.saleSecureParsName)
+			saleSecureParams := wsb.AddObject(testData.saleSecureParsName)
 			saleSecureParams.
 				AddField(testData.passwordIdent, appdef.DataKind_string, true)
 
-			photoParams := adb.AddObject(testData.queryPhotoFunctionParamsName)
+			photoParams := wsb.AddObject(testData.queryPhotoFunctionParamsName)
 			photoParams.
 				AddField(testData.buyerIdent, appdef.DataKind_string, true, appdef.MinLen(1), appdef.MaxLen(50)).
 				AddField(testData.photoRawIdent, appdef.DataKind_bytes, false, appdef.MaxLen(appdef.MaxFieldLength))
 		}
 
 		{
-			rec := adb.AddCDoc(testData.tablePhotos)
+			rec := wsb.AddCDoc(testData.tablePhotos)
 			rec.
 				AddDataField(testData.buyerIdent, testData.dataIdent, true).
 				AddField(testData.ageIdent, appdef.DataKind_int32, false).
@@ -291,7 +297,7 @@ func test() *testDataType {
 			rec.
 				AddContainer(testData.remarkIdent, testData.tablePhotoRems, 0, appdef.Occurs_Unbounded)
 
-			recChild := adb.AddCRecord(testData.tablePhotoRems)
+			recChild := wsb.AddCRecord(testData.tablePhotoRems)
 			recChild.
 				AddField(testData.photoIdent, appdef.DataKind_RecordID, true).
 				AddField(testData.remarkIdent, appdef.DataKind_string, true).
@@ -299,7 +305,7 @@ func test() *testDataType {
 		}
 
 		{
-			abstractDoc := adb.AddCDoc(testData.abstractCDoc)
+			abstractDoc := wsb.AddCDoc(testData.abstractCDoc)
 			abstractDoc.SetComment("abstract test cdoc")
 			abstractDoc.SetAbstract()
 			abstractDoc.
@@ -307,7 +313,7 @@ func test() *testDataType {
 		}
 
 		{
-			row := adb.AddObject(testData.testRow)
+			row := wsb.AddObject(testData.testRow)
 			row.
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).
@@ -323,7 +329,7 @@ func test() *testDataType {
 		}
 
 		{
-			obj := adb.AddObject(testData.testObj)
+			obj := wsb.AddObject(testData.testObj)
 			obj.
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).
@@ -339,7 +345,7 @@ func test() *testDataType {
 		}
 
 		{
-			cDoc := adb.AddCDoc(testData.testCDoc)
+			cDoc := wsb.AddCDoc(testData.testCDoc)
 			cDoc.
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).
@@ -354,7 +360,7 @@ func test() *testDataType {
 			cDoc.
 				AddContainer("record", testData.testCRec, 0, appdef.Occurs_Unbounded)
 
-			cRec := adb.AddCRecord(testData.testCRec)
+			cRec := wsb.AddCRecord(testData.testCRec)
 			cRec.
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).
@@ -369,7 +375,7 @@ func test() *testDataType {
 		}
 
 		{
-			view := adb.AddView(testData.testViewRecord.name)
+			view := wsb.AddView(testData.testViewRecord.name)
 			view.Key().PartKey().
 				AddField(testData.testViewRecord.partFields.partition, appdef.DataKind_int32).
 				AddField(testData.testViewRecord.partFields.workspace, appdef.DataKind_int64)
@@ -387,9 +393,9 @@ func test() *testDataType {
 		}
 
 		{
-			adb.AddCommand(testData.saleCmdName).SetUnloggedParam(testData.saleSecureParsName).SetParam(testData.saleCmdDocName)
-			adb.AddCommand(testData.changeCmdName)
-			adb.AddQuery(testData.queryPhotoFunctionName).SetParam(testData.queryPhotoFunctionParamsName)
+			wsb.AddCommand(testData.saleCmdName).SetUnloggedParam(testData.saleSecureParsName).SetParam(testData.saleCmdDocName)
+			wsb.AddCommand(testData.changeCmdName)
+			wsb.AddQuery(testData.queryPhotoFunctionName).SetParam(testData.queryPhotoFunctionParamsName)
 		}
 
 		return adb
@@ -652,17 +658,20 @@ func testTestObject(t *testing.T, value istructs.IObject) {
 	require.Equal(test.photoValue, value.AsBytes(test.photoIdent))
 
 	var basket istructs.IObject
-	value.Children(test.basketIdent, func(c istructs.IObject) { basket = c })
+	for c := range value.Children(test.basketIdent) {
+		basket = c
+		break
+	}
 	require.NotNil(basket)
 
 	var cnt int
-	basket.Children(test.goodIdent, func(c istructs.IObject) {
+	for c := range basket.Children(test.goodIdent) {
 		require.NotEqual(istructs.NullRecordID, c.AsRecordID(test.saleIdent))
 		require.Equal(test.goodNames[cnt], c.AsString(test.nameIdent))
 		require.Equal(test.goodCodes[cnt], c.AsInt64(test.codeIdent))
 		require.Equal(test.goodWeights[cnt], c.AsFloat64(test.weightIdent))
 		cnt++
-	})
+	}
 
 	require.Equal(test.goodCount, cnt)
 }
@@ -752,7 +761,7 @@ func testTestEvent(t *testing.T, value istructs.IDbEvent, pLogOffs, wLogOffs ist
 	}
 
 	var cnt int
-	value.CUDs(func(rec istructs.ICUDRow) {
+	for rec := range value.CUDs {
 		require.True(rec.IsNew())
 		if rec.QName() == test.tablePhotos {
 			testPhotoRow(t, rec)
@@ -762,7 +771,7 @@ func testTestEvent(t *testing.T, value istructs.IDbEvent, pLogOffs, wLogOffs ist
 			require.Equal(test.remarkValue, rec.AsString(test.remarkIdent))
 		}
 		cnt++
-	})
+	}
 	require.Equal(2, cnt)
 }
 

@@ -22,7 +22,9 @@ func Test_def_AddUnique(t *testing.T) {
 	adb := New()
 	adb.AddPackage("test", "test.com/test")
 
-	doc := adb.AddCDoc(qName)
+	ws := adb.AddWorkspace(NewQName("test", "workspace"))
+
+	doc := ws.AddCDoc(qName)
 	require.NotNil(doc)
 
 	doc.
@@ -40,7 +42,7 @@ func Test_def_AddUnique(t *testing.T) {
 		app, err := adb.Build()
 		require.NoError(err)
 
-		doc := app.CDoc(qName)
+		doc := CDoc(app.Type, qName)
 		require.NotEqual(TypeKind_null, doc.Kind())
 
 		require.Equal(2, doc.UniqueCount())
@@ -101,7 +103,8 @@ func Test_def_AddUnique(t *testing.T) {
 		t.Run("panics if too many fields", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-			rec := adb.AddCRecord(NewQName("test", "rec"))
+			ws := adb.AddWorkspace(NewQName("test", "workspace"))
+			rec := ws.AddCRecord(NewQName("test", "rec"))
 			fldNames := []FieldName{}
 			for i := 0; i <= MaxTypeUniqueFieldsCount; i++ {
 				n := fmt.Sprintf("f_%#x", i)
@@ -131,11 +134,12 @@ func Test_def_AddUnique(t *testing.T) {
 		t.Run("panics if too many uniques", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-			rec := adb.AddCRecord(NewQName("test", "rec"))
+			ws := adb.AddWorkspace(NewQName("test", "workspace"))
+			rec := ws.AddCRecord(NewQName("test", "rec"))
 			for i := 0; i < MaxTypeUniqueCount; i++ {
 				n := fmt.Sprintf("f_%#x", i)
 				rec.AddField(n, DataKind_int32, false)
-				rec.AddUnique(NewQName("test", fmt.Sprintf("rec$uniques$%s", n)), []FieldName{n})
+				rec.AddUnique(NewQName("test", "rec$uniques$"+n), []FieldName{n})
 			}
 			rec.AddField("lastStraw", DataKind_int32, false)
 			require.Panics(func() { rec.AddUnique(NewQName("test", "rec$uniques$lastStraw"), []FieldName{"lastStraw"}) },
@@ -153,7 +157,9 @@ func Test_type_UniqueField(t *testing.T) {
 	adb := New()
 	adb.AddPackage("test", "test.com/test")
 
-	doc := adb.AddCDoc(qName)
+	ws := adb.AddWorkspace(NewQName("test", "workspace"))
+
+	doc := ws.AddCDoc(qName)
 	require.NotNil(doc)
 
 	doc.
@@ -165,11 +171,11 @@ func Test_type_UniqueField(t *testing.T) {
 		AddField("eMail", DataKind_string, true)
 	doc.SetUniqueField("eMail")
 
-	t.Run("test is ok", func(t *testing.T) {
+	t.Run("should be ok to build app", func(t *testing.T) {
 		app, err := adb.Build()
 		require.NoError(err)
 
-		d := app.CDoc(qName)
+		d := CDoc(app.Type, qName)
 		require.NotEqual(TypeKind_null, d.Kind())
 
 		fld := d.UniqueField()
@@ -177,13 +183,13 @@ func Test_type_UniqueField(t *testing.T) {
 		require.True(fld.Required())
 	})
 
-	t.Run("must be ok to clear unique field", func(t *testing.T) {
+	t.Run("should be ok to clear unique field", func(t *testing.T) {
 		doc.SetUniqueField("")
 
 		app, err := adb.Build()
 		require.NoError(err)
 
-		d := app.CDoc(qName)
+		d := CDoc(app.Type, qName)
 		require.NotEqual(TypeKind_null, d.Kind())
 
 		require.Nil(d.UniqueField())
@@ -233,13 +239,13 @@ func Test_subSet(t *testing.T) {
 		require.True(subSet([]bool{}, []bool{true, false}))
 	})
 
-	t.Run("must be true", func(t *testing.T) {
+	t.Run("should be true", func(t *testing.T) {
 		require.True(subSet([]int{1}, []int{1}))
 		require.True(subSet([]string{"a"}, []string{"a", "b"}))
 		require.True(subSet([]int{1, 2, 3}, []int{0, 1, 2, 3, 4}))
 	})
 
-	t.Run("must be false", func(t *testing.T) {
+	t.Run("should be false", func(t *testing.T) {
 		require.False(subSet([]int{1}, []int{}))
 		require.False(subSet([]string{"a"}, []string{"b", "c"}))
 		require.False(subSet([]int{1, 2, 3}, []int{0, 2, 4, 6, 8}))
@@ -259,13 +265,13 @@ func Test_overlaps(t *testing.T) {
 		require.True(overlaps([]bool{true, false}, []bool{}))
 	})
 
-	t.Run("must be true", func(t *testing.T) {
+	t.Run("should be true", func(t *testing.T) {
 		require.True(overlaps([]int{1}, []int{1}))
 		require.True(overlaps([]string{"a"}, []string{"a", "b"}))
 		require.True(overlaps([]int{0, 1, 2, 3, 4}, []int{1, 2, 3}))
 	})
 
-	t.Run("must be false", func(t *testing.T) {
+	t.Run("should be false", func(t *testing.T) {
 		require.False(overlaps([]int{1}, []int{2}))
 		require.False(overlaps([]string{"a"}, []string{"b", "c"}))
 		require.False(overlaps([]int{1, 2, 3}, []int{7, 0, 3, 2, 0, -1}))

@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
@@ -16,6 +17,7 @@ type SendToBusOperator struct {
 	rs          IResultSenderClosable
 	initialized bool
 	metrics     IMetrics
+	errCh       chan<- error
 }
 
 func (o *SendToBusOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
@@ -32,5 +34,9 @@ func (o *SendToBusOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece)
 }
 
 func (o *SendToBusOperator) OnError(_ context.Context, err error) {
-	o.rs.Close(err)
+	select {
+	case o.errCh <- err:
+	default:
+		logger.Error("failed to send error from rowsProcessor to QP: " + err.Error())
+	}
 }

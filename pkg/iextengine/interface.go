@@ -12,7 +12,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
 
 type IExtensionsModule interface {
@@ -39,11 +38,7 @@ type ExtEngineConfig struct {
 }
 
 type WASMFactoryConfig struct {
-	Compile            bool
-	InvocationsTotal   *imetrics.MetricValue
-	InvocationsSeconds *imetrics.MetricValue
-	ErrorsTotal        *imetrics.MetricValue
-	RecoversTotal      *imetrics.MetricValue
+	Compile bool
 }
 
 type IExtensionIO interface {
@@ -77,5 +72,5 @@ type IExtensionEngineFactory interface {
 	// LocalPath is a path package data can be got from
 	// - modules is not used for ExtensionEngineKind_BuiltIn
 	// - config is not used for ExtensionEngineKind_BuiltIn
-	New(ctx context.Context, app appdef.AppQName, modules []ExtensionModule, config *ExtEngineConfig, numEnginesPerKind int) ([]IExtensionEngine, error)
+	New(ctx context.Context, app appdef.AppQName, modules []ExtensionModule, config *ExtEngineConfig, numEnginesPerKind uint) ([]IExtensionEngine, error)
 }

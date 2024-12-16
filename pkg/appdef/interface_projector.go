@@ -25,6 +25,8 @@ type IProjectorEvents interface {
 	// Enumerate events to trigger the projector.
 	//
 	// Events enumerated in alphabetical QNames order.
+	//
+	// TODO: should be iter.Seq[IProjectorEvent]
 	Enum(func(IProjectorEvent))
 
 	// Returns event by name.
@@ -36,6 +38,8 @@ type IProjectorEvents interface {
 	Len() int
 
 	// Returns events to trigger as map.
+	//
+	// TODO: should be iter.Seq2[QName, []ProjectorEventKind]
 	Map() map[QName][]ProjectorEventKind
 }
 
@@ -65,7 +69,7 @@ const (
 	ProjectorEventKind_Execute
 	ProjectorEventKind_ExecuteWithParam
 
-	ProjectorEventKind_Count
+	ProjectorEventKind_count
 )
 
 // ProjectorEventKind_AnyChanges describes events for record any change.
@@ -110,18 +114,6 @@ type IProjectorEventsBuilder interface {
 	// # Panics:
 	//	- if event for QName is not added.
 	SetComment(on QName, comment ...string) IProjectorEventsBuilder
-}
-
-type IWithProjectors interface {
-	// Return projector by name.
-	//
-	// Returns nil if not found.
-	Projector(QName) IProjector
-
-	// Enumerates all application projectors.
-	//
-	// Projectors are enumerated in alphabetical order by QName.
-	Projectors(func(IProjector) bool)
 }
 
 type IProjectorsBuilder interface {

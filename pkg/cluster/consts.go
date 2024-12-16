@@ -24,7 +24,6 @@ const (
 	Field_NumAppWorkspaces = "NumAppWorkspaces"
 	field_Query            = "Query"
 	field_NewID            = "NewID"
-	bitSize64              = 64
 )
 
 var (

@@ -9,9 +9,10 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
-func ExampleIAppDefBuilder_AddRole() {
+func ExampleRoles() {
 
 	var app appdef.IAppDef
 
@@ -28,23 +29,22 @@ func ExampleIAppDefBuilder_AddRole() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		doc := adb.AddCDoc(docName)
+		wsb := adb.AddWorkspace(wsName)
+
+		doc := wsb.AddCDoc(docName)
 		doc.AddField("field1", appdef.DataKind_int32, true)
 
-		ws := adb.AddWorkspace(wsName)
-		ws.AddType(docName)
+		reader := wsb.AddRole(readerRoleName)
+		reader.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, filter.QNames(docName), []appdef.FieldName{"field1"}, "grant select on doc.field1")
 
-		reader := adb.AddRole(readerRoleName)
-		reader.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName}, []appdef.FieldName{"field1"}, "grant select on doc.field1")
+		writer := wsb.AddRole(writerRoleName)
+		writer.GrantAll(filter.QNames(docName), "grant all on test.doc")
 
-		writer := adb.AddRole(writerRoleName)
-		writer.GrantAll([]appdef.QName{docName}, "grant all on test.doc")
+		adm := wsb.AddRole(admRoleName)
+		adm.GrantAll(filter.QNames(readerRoleName, writerRoleName), "grant reader and writer roles to adm")
 
-		adm := adb.AddRole(admRoleName)
-		adm.GrantAll([]appdef.QName{readerRoleName, writerRoleName}, "grant reader and writer roles to adm")
-
-		intruder := adb.AddRole(intruderRoleName)
-		intruder.RevokeAll([]appdef.QName{docName}, "revoke all on test.doc")
+		intruder := wsb.AddRole(intruderRoleName)
+		intruder.RevokeAll(filter.QNames(docName), "revoke all on test.doc")
 
 		app = adb.MustBuild()
 	}
@@ -52,31 +52,38 @@ func ExampleIAppDefBuilder_AddRole() {
 	// how to enum roles
 	{
 		cnt := 0
-		app.Roles(func(r appdef.IRole) bool {
+		for r := range appdef.Roles(app.Types()) {
 			cnt++
 			fmt.Println(cnt, r)
-			return true
-		})
+		}
 		fmt.Println("overall:", cnt)
 	}
 
 	// how to inspect builded AppDef with roles
 	{
-		reader := app.Role(readerRoleName)
+		reader := appdef.Role(app.Type, readerRoleName)
 		fmt.Println(reader, ":")
-		reader.ACL(func(r appdef.IACLRule) bool { fmt.Println("-", r); return true })
+		for r := range reader.ACL() {
+			fmt.Println("-", r)
+		}
 
-		writer := app.Role(writerRoleName)
+		writer := appdef.Role(app.Type, writerRoleName)
 		fmt.Println(writer, ":")
-		writer.ACL(func(r appdef.IACLRule) bool { fmt.Println("-", r); return true })
+		for r := range writer.ACL() {
+			fmt.Println("-", r)
+		}
 
-		adm := app.Role(admRoleName)
+		adm := appdef.Role(app.Type, admRoleName)
 		fmt.Println(adm, ":")
-		adm.ACL(func(r appdef.IACLRule) bool { fmt.Println("-", r); return true })
+		for r := range adm.ACL() {
+			fmt.Println("-", r)
+		}
 
-		intruder := app.Role(intruderRoleName)
+		intruder := appdef.Role(app.Type, intruderRoleName)
 		fmt.Println(intruder, ":")
-		intruder.ACL(func(r appdef.IACLRule) bool { fmt.Println("-", r); return true })
+		for acl := range intruder.ACL() {
+			fmt.Println("-", acl)
+		}
 	}
 
 	// Output:
@@ -86,11 +93,11 @@ func ExampleIAppDefBuilder_AddRole() {
 	// 4 Role «test.writerRole»
 	// overall: 4
 	// Role «test.readerRole» :
-	// - grant [Select] on [test.doc]([field1]) to Role «test.readerRole»
+	// - GRANT [Select] ON QNAMES(test.doc)([field1]) TO test.readerRole
 	// Role «test.writerRole» :
-	// - grant [Insert Update Select] on [test.doc] to Role «test.writerRole»
+	// - GRANT [Insert Update Select] ON QNAMES(test.doc) TO test.writerRole
 	// Role «test.admRole» :
-	// - grant [Inherits] on [test.readerRole test.writerRole] to Role «test.admRole»
+	// - GRANT [Inherits] ON QNAMES(test.readerRole, test.writerRole) TO test.admRole
 	// Role «test.intruderRole» :
-	// - revoke [Insert Update Select] on [test.doc] from Role «test.intruderRole»
+	// - REVOKE [Insert Update Select] ON QNAMES(test.doc) FROM test.intruderRole
 }

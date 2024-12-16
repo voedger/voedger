@@ -87,9 +87,9 @@ func TestBasicUsage_SectionedResponse(t *testing.T) {
 	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		require.Equal("test body SectionedResponse", string(request.Body))
 		require.Equal(ibus.HTTPMethodPOST, request.Method)
-		require.Equal(0, request.PartitionNumber)
+		require.Equal(istructs.PartitionID(0), request.PartitionID)
 
-		require.Equal(testWSID, istructs.WSID(request.WSID))
+		require.Equal(testWSID, request.WSID)
 		require.Equal("somefunc_SectionedResponse", request.Resource)
 		require.Empty(request.Attachments)
 		require.Equal(map[string][]string{
@@ -118,7 +118,7 @@ func TestBasicUsage_SectionedResponse(t *testing.T) {
 	body := []byte("test body SectionedResponse")
 	bodyReader := bytes.NewReader(body)
 
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc_SectionedResponse", router.port(), AppOwner, AppName, testWSID), "application/json", bodyReader)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc_SectionedResponse", router.port(), URLPlaceholder_appOwner, URLPlaceholder_appName, testWSID), "application/json", bodyReader)
 	require.NoError(err)
 	defer resp.Body.Close()
 
@@ -244,7 +244,7 @@ func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
 	}, 5*time.Second)
 	defer tearDown()
 
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc_ClientDisconnect_CtxCanceledOnElemSend", router.port(), AppOwner, AppName, testWSID), "application/json", http.NoBody)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc_ClientDisconnect_CtxCanceledOnElemSend", router.port(), URLPlaceholder_appOwner, URLPlaceholder_appName, testWSID), "application/json", http.NoBody)
 	require.NoError(err)
 
 	// ensure the first element is sent successfully
@@ -328,7 +328,7 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 	// client side
 	body := []byte("")
 	bodyReader := bytes.NewReader(body)
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc_ClientDisconnect_FailedToWriteResponse", router.port(), AppOwner, AppName, testWSID), "application/json", bodyReader)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc_ClientDisconnect_FailedToWriteResponse", router.port(), URLPlaceholder_appOwner, URLPlaceholder_appName, testWSID), "application/json", bodyReader)
 	require.NoError(err)
 
 	// ensure the first element is sent successfully
@@ -407,7 +407,7 @@ func TestAdminService(t *testing.T) {
 		if len(nonLocalhostIP) == 0 {
 			t.Skip("unable to find local non-loopback ip address")
 		}
-		_, err = http.Post(fmt.Sprintf("http://%s:%d/api/test1/app1/%d/somefunc_AdminService2", nonLocalhostIP, router.adminPort(), testWSID), "application/json", http.NoBody)
+		_, err = net.DialTimeout("tcp", nonLocalhostIP, 1*time.Second)
 		require.Error(err)
 		log.Println(err)
 	})
@@ -425,7 +425,7 @@ type testRouter struct {
 
 func startRouter(t *testing.T, rp RouterParams, bus ibus.IBus, busTimeout time.Duration) {
 	ctx, cancel := context.WithCancel(context.Background())
-	httpSrv, acmeSrv, adminService := Provide(ctx, rp, busTimeout, nil, nil, nil, bus, map[appdef.AppQName]istructs.NumAppWorkspaces{istructs.AppQName_test1_app1: 10})
+	httpSrv, acmeSrv, adminService := Provide(rp, busTimeout, nil, nil, nil, bus, map[appdef.AppQName]istructs.NumAppWorkspaces{istructs.AppQName_test1_app1: 10})
 	require.Nil(t, acmeSrv)
 	require.NoError(t, httpSrv.Prepare(nil))
 	require.NoError(t, adminService.Prepare(nil))

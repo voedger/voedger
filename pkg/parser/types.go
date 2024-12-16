@@ -12,6 +12,7 @@ import (
 	"github.com/alecthomas/participle/v2/lexer"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
@@ -39,6 +40,15 @@ type AppSchemaAST struct {
 type PackageFS struct {
 	Path string
 	FS   coreutils.IReadFS
+}
+
+type statementNode struct {
+	Pkg  *PackageSchemaAST
+	Stmt INamedStatement
+}
+
+func (s *statementNode) qName() appdef.QName {
+	return s.Pkg.NewQName(Ident(s.Stmt.GetName()))
 }
 
 type Ident string
@@ -104,12 +114,9 @@ type RootStatement struct {
 	Role           *RoleStmt           `parser:"| @@"`
 	Rate           *RateStmt           `parser:"| @@"`
 	Limit          *LimitStmt          `parser:"| @@"`
-	Tag            *TagStmt            `parser:"| @@"`
 	ExtEngine      *RootExtEngineStmt  `parser:"| @@"`
 	Workspace      *WorkspaceStmt      `parser:"| @@"`
 	AlterWorkspace *AlterWorkspaceStmt `parser:"| @@"`
-	Table          *TableStmt          `parser:"| @@"`
-	Type           *TypeStmt           `parser:"| @@"`
 	Application    *ApplicationStmt    `parser:"| @@"`
 	Declare        *DeclareStmt        `parser:"| @@"`
 	// Sequence  *sequenceStmt  `parser:"| @@"`
@@ -121,7 +128,6 @@ type WorkspaceStatement struct {
 	// Only allowed in workspace
 	Rate         *RateStmt         `parser:"@@"`
 	View         *ViewStmt         `parser:"| @@"`
-	UseTable     *UseTableStmt     `parser:"| @@"`
 	UseWorkspace *UseWorkspaceStmt `parser:"| @@"`
 
 	// Also allowed in workspace
@@ -133,7 +139,8 @@ type WorkspaceStatement struct {
 	Type      *TypeStmt               `parser:"| @@"`
 	Limit     *LimitStmt              `parser:"| @@"`
 	// Sequence  *sequenceStmt  `parser:"| @@"`
-	Grant *GrantStmt `parser:"| @@"`
+	Grant  *GrantStmt  `parser:"| @@"`
+	Revoke *RevokeStmt `parser:"| @@"`
 
 	stmt interface{}
 }
@@ -220,12 +227,31 @@ type WorkspaceStmt struct {
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 
 	// filled on the analysis stage
-	qNames []appdef.QName
+	nodes               map[appdef.QName]workspaceNode
+	inheritedWorkspaces []*WorkspaceStmt
+	usedWorkspaces      []*WorkspaceStmt
+
+	// filled on build stage
+	qName   appdef.QName
+	builder appdef.IWorkspaceBuilder
+}
+
+type workspaceNode struct {
+	workspace *WorkspaceStmt
+	node      statementNode
+}
+
+func (s *WorkspaceStmt) registerNode(qn appdef.QName, node statementNode, ws *WorkspaceStmt) {
+	wsNode := workspaceNode{workspace: ws, node: node}
+	if s.nodes == nil {
+		s.nodes = make(map[appdef.QName]workspaceNode)
+	}
+	s.nodes[qn] = wsNode
 }
 
 func (s *WorkspaceStmt) containsQName(qName appdef.QName) bool {
-	for i := 0; i < len(s.qNames); i++ {
-		if s.qNames[i] == qName {
+	for k := range s.nodes {
+		if k == qName {
 			return true
 		}
 	}
@@ -268,17 +294,19 @@ func (s *AlterWorkspaceStmt) Iterate(callback func(stmt interface{})) {
 
 type TypeStmt struct {
 	Statement
-	Name  Ident           `parser:"'TYPE' @Ident "`
-	Items []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	Name      Ident           `parser:"'TYPE' @Ident "`
+	Items     []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	workspace workspaceAddr   // filled on the analysis stage
 }
 
 func (s TypeStmt) GetName() string { return string(s.Name) }
 
 type WsDescriptorStmt struct {
 	Statement
-	Name  Ident           `parser:"@Ident?"`
-	Items []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
-	_     int             `parser:"';'"`
+	Name      Ident           `parser:"@Ident?"`
+	Items     []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	_         int             `parser:"';'"`
+	workspace workspaceAddr   // filled on the analysis stage
 }
 
 func (s WsDescriptorStmt) GetName() string { return string(s.Name) }
@@ -450,6 +478,7 @@ type ProjectorStmt struct {
 	Intents         []StateStorage     `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
 	IncludingErrors bool               `parser:"@('INCLUDING' 'ERRORS')?"`
 	Engine          EngineType         // Initialized with 1st pass
+	workspace       workspaceAddr      // filled on the analysis stage
 }
 
 func (s *ProjectorStmt) GetName() string            { return string(s.Name) }
@@ -498,6 +527,7 @@ type JobStmt struct {
 	State        []StateStorage `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
 	Intents      []StateStorage `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
 	Engine       EngineType     // Initialized with 1st pass
+	workspace    workspaceAddr  // filled on the analysis stage
 }
 
 func (j *JobStmt) GetName() string            { return string(j.Name) }
@@ -514,33 +544,26 @@ func (s TemplateStmt) GetName() string { return string(s.Name) }
 
 type RoleStmt struct {
 	Statement
-	Name Ident `parser:"'ROLE' @Ident"`
+	Name      Ident         `parser:"'ROLE' @Ident"`
+	workspace workspaceAddr // filled on the analysis stage
 }
 
 func (s RoleStmt) GetName() string { return string(s.Name) }
 
 type TagStmt struct {
 	Statement
-	Name Ident `parser:"'TAG' @Ident"`
+	Name      Ident `parser:"'TAG' @Ident"`
+	workspace workspaceAddr
 }
 
 func (s TagStmt) GetName() string { return string(s.Name) }
 
-type UseTableStmt struct {
-	Statement
-
-	Package   *Identifier `parser:"'USE' 'TABLE' (@@ '.')?"`
-	AllTables bool        `parser:"(@'*'"`
-	TableName *Identifier `parser:"| @@)"`
-
-	qNames []appdef.QName // filled on the analysis stage
-}
-
 type UseWorkspaceStmt struct {
 	Statement
 	Workspace Identifier `parser:"'USE' 'WORKSPACE' @@"`
-
-	qName appdef.QName // filled on the analysis stage
+	// filled on the analysis stage
+	workspace workspaceAddr
+	useWs     *statementNode
 }
 
 /*type sequenceStmt struct {
@@ -615,7 +638,7 @@ type GrantTableAction struct {
 	Columns []Identifier `parser:"( '(' @@ (',' @@)* ')' )?"`
 }
 
-type GrantAllTablesWithTagAction struct {
+type GrantAllTablesAction struct {
 	Pos    lexer.Position
 	Select bool `parser:"@'SELECT'"`
 	Insert bool `parser:"| @'INSERT'"`
@@ -629,32 +652,74 @@ type GrantTableAll struct {
 }
 
 type GrantTableActions struct {
-	Pos      lexer.Position
-	GrantAll *GrantTableAll     `parser:"(@@ | "`
-	Items    []GrantTableAction `parser:"(@@ (',' @@)*))"`
+	Pos   lexer.Position
+	All   *GrantTableAll     `parser:"(@@ | "`
+	Items []GrantTableAction `parser:"(@@ (',' @@)*))"`
+	Table DefQName           `parser:"ONTABLE @@"`
 }
 
 type GrantAllTablesWithTagActions struct {
-	Pos      lexer.Position
-	GrantAll bool                          `parser:"@'ALL' | "`
-	Items    []GrantAllTablesWithTagAction `parser:"(@@ (',' @@)*)"`
+	Pos   lexer.Position
+	All   bool                   `parser:"( @'ALL' | "`
+	Items []GrantAllTablesAction `parser:"(@@ (',' @@)*) )"`
+	Tag   DefQName               `parser:"ONALLTABLESWITHTAG @@"`
+}
+
+type GrantAllTables struct {
+	Pos   lexer.Position
+	All   bool                   `parser:"( @'ALL' | "`
+	Items []GrantAllTablesAction `parser:"(@@ (',' @@)*) )"`
+	Tag   DefQName               `parser:"ONALLTABLES"`
+}
+
+type GrantView struct {
+	Pos        lexer.Position
+	AllColumns bool         `parser:"(@SELECTONVIEW | "`
+	Columns    []Identifier `parser:"( SELECT '(' @@ (',' @@)* ')' ONVIEW))"`
+	View       DefQName     `parser:"@@"`
+}
+
+type GrantOrRevoke struct {
+	Command              *DefQName                     `parser:"( (EXECUTEONCOMMAND @@)"`
+	AllCommandsWithTag   *DefQName                     `parser:"  | (EXECUTEONALLCOMMANDSWITHTAG @@)"`
+	Query                *DefQName                     `parser:"  | (EXECUTEONQUERY @@)"`
+	AllQueriesWithTag    *DefQName                     `parser:"  | (EXECUTEONALLQUERIESWITHTAG @@)"`
+	AllViewsWithTag      *DefQName                     `parser:"  | (SELECTONALLVIEWSWITHTAG @@)"`
+	Workspace            *DefQName                     `parser:"  | (INSERTONWORKSPACE @@)"`
+	AllWorkspacesWithTag *DefQName                     `parser:"  | (INSERTONALLWORKSPACESWITHTAG @@)"`
+	View                 *GrantView                    `parser:"  | @@"`
+	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"  | @@"`
+	Table                *GrantTableActions            `parser:"  | @@"`
+	AllCommands          bool                          `parser:"  | @EXECUTEONALLCOMMANDS"`
+	AllQueries           bool                          `parser:"  | @EXECUTEONALLQUERIES"`
+	AllViews             bool                          `parser:"  | @SELECTONALLVIEWS"`
+	AllTables            *GrantAllTables               `parser:"  | @@"`
+	Role                 *DefQName                     `parser:"  | @@)"`
+
+	/* filled on the analysis stage */
+	toRole    appdef.QName
+	on        []appdef.QName
+	ops       []appdef.OperationKind
+	columns   []appdef.FieldName
+	workspace workspaceAddr
+}
+
+func (g GrantOrRevoke) filter() appdef.IFilter {
+	// TODO: implement support Types, Tags, Or, And, Not
+	return filter.QNames(g.on[0], g.on[1:]...)
 }
 
 type GrantStmt struct {
 	Statement
-	Command              bool                          `parser:"'GRANT' ( @INSERTONCOMMAND"`
-	AllCommandsWithTag   bool                          `parser:"| @INSERTONALLCOMMANDSWITHTAG"`
-	Query                bool                          `parser:"| @SELECTONQUERY"`
-	AllQueriesWithTag    bool                          `parser:"| @SELECTONALLQUERIESWITHTAG"`
-	View                 bool                          `parser:"| @SELECTONVIEW"`
-	AllViewsWithTag      bool                          `parser:"| @SELECTONALLVIEWSWITHTAG"`
-	Workspace            bool                          `parser:"| @INSERTONWORKSPACE"`
-	AllWorkspacesWithTag bool                          `parser:"| @INSERTONALLWORKSPACESWITHTAG"`
-	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"| (@@ ONALLTABLESWITHTAG)"`
-	Table                *GrantTableActions            `parser:"| (@@ ONTABLE) )"`
-
-	On DefQName `parser:"@@"`
+	Revoke bool `parser:"'GRANT'"`
+	GrantOrRevoke
 	To DefQName `parser:"'TO' @@"`
+}
+type RevokeStmt struct {
+	Statement
+	Revoke bool `parser:"'REVOKE'"`
+	GrantOrRevoke
+	From DefQName `parser:"'FROM' @@"`
 }
 
 type StorageStmt struct {
@@ -704,14 +769,16 @@ type CommandStmt struct {
 	Returns       *AnyOrVoidOrDef `parser:"('RETURNS' @@)?"`
 	With          []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 	Engine        EngineType      // Initialized with 1st pass
+	workspace     workspaceAddr   // filled on the analysis stage
 }
 
 func (s *CommandStmt) GetName() string            { return string(s.Name) }
 func (s *CommandStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 type WithItem struct {
-	Comment *string    `parser:"('Comment' '=' @String)"`
-	Tags    []DefQName `parser:"| ('Tags' '=' '(' @@ (',' @@)* ')')"`
+	Comment *string        `parser:"('Comment' '=' @String)"`
+	Tags    []DefQName     `parser:"| ('Tags' '=' '(' @@ (',' @@)* ')')"`
+	tags    []appdef.QName // filled on the analysis stage
 }
 
 type AnyOrVoidOrDef struct {
@@ -722,12 +789,13 @@ type AnyOrVoidOrDef struct {
 
 type QueryStmt struct {
 	Statement
-	Name    Ident           `parser:"'QUERY' @Ident"`
-	Param   *AnyOrVoidOrDef `parser:"('(' @@? ')')?"`
-	State   []StateStorage  `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
-	Returns AnyOrVoidOrDef  `parser:"'RETURNS' @@"`
-	With    []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
-	Engine  EngineType      // Initialized with 1st pass
+	Name      Ident           `parser:"'QUERY' @Ident"`
+	Param     *AnyOrVoidOrDef `parser:"('(' @@? ')')?"`
+	State     []StateStorage  `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
+	Returns   AnyOrVoidOrDef  `parser:"'RETURNS' @@"`
+	With      []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	Engine    EngineType      // Initialized with 1st pass
+	workspace workspaceAddr   // filled on the analysis stage
 }
 
 func (s *QueryStmt) GetName() string            { return string(s.Name) }
@@ -748,14 +816,50 @@ type NamedParam struct {
 	Type DataTypeOrDef `parser:"@@"`
 }
 
+type workspaceAddr struct {
+	workspace *WorkspaceStmt
+	pkg       *PackageSchemaAST
+}
+
+// Return workspace builder from specified build context.
+//
+// # Panics:
+//   - if workspace statement is nil
+//   - if workspace builder not found.
+func (wsa workspaceAddr) mustBuilder(_ *buildContext) appdef.IWorkspaceBuilder {
+	if wsa.workspace.builder == nil {
+		panic(fmt.Sprintf("workspace builder not found for %s", wsa.qName()))
+	}
+	return wsa.workspace.builder
+}
+
+// Return qualified name of the workspace.
+//
+// # Panics:
+//   - if workspace statement is nil
+func (wsa workspaceAddr) qName() appdef.QName {
+	if wsa.workspace == nil {
+		panic("workspace statement is nil")
+	}
+	return wsa.pkg.NewQName(Ident(wsa.workspace.GetName()))
+}
+
+type tableAddr struct {
+	table *TableStmt
+	pkg   *PackageSchemaAST
+}
+
 type TableStmt struct {
 	Statement
-	Abstract      bool            `parser:"@'ABSTRACT'?'TABLE'"`
-	Name          Ident           `parser:"@Ident"`
-	Inherits      *DefQName       `parser:"('INHERITS' @@)?"`
-	Items         []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
-	With          []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
-	tableTypeKind appdef.TypeKind // filled on the analysis stage
+	Abstract bool            `parser:"@'ABSTRACT'?'TABLE'"`
+	Name     Ident           `parser:"@Ident"`
+	Inherits *DefQName       `parser:"('INHERITS' @@) ?"`
+	Items    []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	With     []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
+	// filled on the analysis stage
+	tableTypeKind appdef.TypeKind
+	workspace     workspaceAddr
+	inherits      tableAddr
 	singleton     bool
 }
 
@@ -778,6 +882,8 @@ type NestedTableStmt struct {
 type FieldSetItem struct {
 	Pos  lexer.Position
 	Type DefQName `parser:"@@"`
+	// filled on the analysis stage
+	typ *TypeStmt
 }
 
 type TableItemExpr struct {
@@ -813,6 +919,9 @@ type RefFieldExpr struct {
 	Name    Ident      `parser:"@Ident"`
 	RefDocs []DefQName `parser:"'ref' ('(' @@ (',' @@)* ')')?"`
 	NotNull bool       `parser:"@(NOTNULL)?"`
+	// filled on the analysis stage
+	refQNames []appdef.QName
+	refTables []tableAddr
 }
 
 type CheckRegExp struct {
@@ -835,10 +944,13 @@ type FieldExpr struct {
 
 type ViewStmt struct {
 	Statement
-	Name     Ident          `parser:"'VIEW' @Ident"`
-	Items    []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
-	ResultOf DefQName       `parser:"'AS' 'RESULT' 'OF' @@"`
-	pkRef    *PrimaryKeyExpr
+	Name       Ident          `parser:"'VIEW' @Ident"`
+	Items      []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
+	ResultOf   DefQName       `parser:"'AS' 'RESULT' 'OF' @@"`
+	With       []WithItem     `parser:"('WITH' @@ (',' @@)* )?"`
+	pkRef      *PrimaryKeyExpr
+	workspace  workspaceAddr // filled on the analysis stage
+	asResultOf appdef.QName  // filled on the analysis stage
 }
 
 func (s *ViewStmt) Iterate(callback func(stmt interface{})) {

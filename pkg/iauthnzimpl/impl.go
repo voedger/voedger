@@ -24,23 +24,46 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 			})
 		}
 	}()
+
+	// role.sys.Everyone
+	principals = append(principals, iauthnz.Principal{
+		Kind:  iauthnz.PrincipalKind_Role,
+		QName: iauthnz.QNameRoleEveryone,
+	})
+
 	if len(req.Token) == 0 {
+		// add user with login "sys.Guest"
 		principals = append(principals, iauthnz.Principal{
 			Kind: iauthnz.PrincipalKind_User,
 			WSID: istructs.GuestWSID,
 			Name: istructs.SysGuestLogin,
 		})
+
+		// role.sys.Anonymous
+		principals = append(principals, iauthnz.Principal{
+			Kind:  iauthnz.PrincipalKind_Role,
+			QName: iauthnz.QNameRoleAnonymous,
+		})
+
+		// copy roles from subjects
 		rolesFromSubjects, err := i.rolesFromSubjects(requestContext, istructs.SysGuestLogin, as, req.RequestWSID)
 		if err != nil {
 			return nil, principalPayload, err
 		}
 		principals = append(principals, rolesFromSubjects...)
+
 		return principals, principalPayload, nil
 	}
 
 	if _, err = appTokens.ValidateToken(req.Token, &principalPayload); err != nil {
 		return nil, principalPayload, err
 	}
+
+	principals = append(principals, iauthnz.Principal{
+		Kind:  iauthnz.PrincipalKind_Role,
+		WSID:  req.RequestWSID,
+		QName: iauthnz.QNameRoleAuthenticatedUser,
+	})
 
 	if principalPayload.IsAPIToken {
 		for _, role := range principalPayload.Roles {
@@ -99,6 +122,12 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		principals = append(principals, prn)
 	}
 
+	prnWSOwner := iauthnz.Principal{
+		Kind:  iauthnz.PrincipalKind_Role,
+		WSID:  req.RequestWSID,
+		QName: iauthnz.QNameRoleWorkspaceOwner,
+	}
+
 	if req.RequestWSID == profileWSID {
 		// allow user or device to work in its profile
 		prnProfileOwner := iauthnz.Principal{
@@ -108,6 +137,9 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		}
 		if !slices.Contains(principals, prnProfileOwner) {
 			principals = append(principals, prnProfileOwner)
+		}
+		if !slices.Contains(principals, prnWSOwner) {
+			principals = append(principals, prnWSOwner)
 		}
 	} else {
 		// not the profile -> check if we could work in that workspace
@@ -119,17 +151,12 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 			}
 			if wsDesc.QName() != appdef.NullQName {
 				ownerWSID := wsDesc.AsInt64(field_OwnerWSID)
-				prnWSOwner := iauthnz.Principal{
-					Kind:  iauthnz.PrincipalKind_Role,
-					WSID:  req.RequestWSID,
-					QName: iauthnz.QNameRoleWorkspaceOwner,
-				}
-				if ownerWSID == int64(profileWSID) && !slices.Contains(principals, prnWSOwner) {
+				if ownerWSID == int64(profileWSID) && !slices.Contains(principals, prnWSOwner) { // nolint G115
 					principals = append(principals, prnWSOwner)
 				}
 				// check roles came from token
 				for _, role := range principalPayload.Roles {
-					if role.WSID != istructs.WSID(ownerWSID) {
+					if role.WSID != istructs.WSID(ownerWSID) { // nolint G115
 						continue
 					}
 					prn := iauthnz.Principal{
@@ -162,7 +189,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		}
 	}
 
-	// ResellersAdmin || UntillPaymentsReseller -> WorkspaceAdmin
+	// air.ResellersAdmin || air.UntillPaymentsReseller -> WorkspaceAdmin
 	for _, prn := range principals {
 		if prn.Kind == iauthnz.PrincipalKind_Role && (prn.QName == qNameRoleResellersAdmin || prn.QName == qNameRoleUntillPaymentsReseller) {
 			prnWSAdmin := iauthnz.Principal{

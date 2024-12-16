@@ -23,9 +23,9 @@ type extension struct {
 	intents *storages
 }
 
-func makeExtension(app *appDef, name QName, kind TypeKind) extension {
+func makeExtension(app *appDef, ws *workspace, name QName, kind TypeKind) extension {
 	e := extension{
-		typ:     makeType(app, name, kind),
+		typ:     makeType(app, ws, name, kind),
 		name:    name.Entity(),
 		engine:  ExtensionEngineKind_BuiltIn,
 		states:  newStorages(app),
@@ -60,7 +60,7 @@ func (ex extension) Validate() error {
 }
 
 func (ex *extension) setEngine(engine ExtensionEngineKind) {
-	if (engine == ExtensionEngineKind_null) || (engine >= ExtensionEngineKind_Count) {
+	if (engine == ExtensionEngineKind_null) || (engine >= ExtensionEngineKind_count) {
 		panic(ErrOutOfBounds("%v extension engine kind «%v»", ex, engine))
 	}
 	ex.engine = engine
@@ -112,7 +112,7 @@ func (exb extensionBuilder) String() string { return exb.extension.String() }
 
 func (k ExtensionEngineKind) MarshalText() ([]byte, error) {
 	var s string
-	if k < ExtensionEngineKind_Count {
+	if k < ExtensionEngineKind_count {
 		s = k.String()
 	} else {
 		s = utils.UintToString(k)

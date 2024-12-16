@@ -29,28 +29,6 @@ type IGRecordBuilder interface {
 	IContainedRecordBuilder
 }
 
-type IWithGDocs interface {
-	// Return GDoc by name.
-	//
-	// Returns nil if not found.
-	GDoc(QName) IGDoc
-
-	// Enumerates all global documents
-	//
-	// Global documents are enumerated in alphabetical order by QName
-	GDocs(func(IGDoc) bool)
-
-	// Return GRecord by name.
-	//
-	// Returns nil if not found.
-	GRecord(QName) IGRecord
-
-	// Enumerates all global records
-	//
-	// Global records are enumerated in alphabetical order by QName
-	GRecords(func(IGRecord) bool)
-}
-
 type IGDocsBuilder interface {
 	// Adds new GDoc type with specified name.
 	//

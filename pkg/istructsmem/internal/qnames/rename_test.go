@@ -37,7 +37,9 @@ func TestRenameQName(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		_ = adb.AddObject(oldQName)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		_ = wsb.AddObject(oldQName)
 		appDef, err := adb.Build()
 		require.NoError(err)
 
@@ -93,8 +95,10 @@ func TestRenameQName_Errors(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		_ = adb.AddObject(oldQName)
-		_ = adb.AddObject(other)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		_ = wsb.AddObject(oldQName)
+		_ = wsb.AddObject(other)
 		appDef, err := adb.Build()
 		require.NoError(err)
 
@@ -103,12 +107,12 @@ func TestRenameQName_Errors(t *testing.T) {
 		require.NoError(err)
 	})
 
-	t.Run("must error if old and new are equals", func(t *testing.T) {
+	t.Run("should be error if old and new are equals", func(t *testing.T) {
 		err := Rename(storage, oldQName, oldQName)
 		require.ErrorContains(err, "equals")
 	})
 
-	t.Run("must error if twice rename", func(t *testing.T) {
+	t.Run("should be error if twice rename", func(t *testing.T) {
 		err := Rename(storage, oldQName, newQName)
 		require.NoError(err)
 
@@ -121,12 +125,12 @@ func TestRenameQName_Errors(t *testing.T) {
 		})
 	})
 
-	t.Run("must error if old name not found", func(t *testing.T) {
+	t.Run("should be error if old name not found", func(t *testing.T) {
 		err := Rename(storage, appdef.NewQName("test", "unknown"), newQName)
 		require.ErrorIs(err, ErrNameNotFound)
 	})
 
-	t.Run("must error if new name is already exists", func(t *testing.T) {
+	t.Run("should be error if new name is already exists", func(t *testing.T) {
 		err := Rename(storage, oldQName, other)
 		require.ErrorContains(err, "exists")
 	})
@@ -140,7 +144,7 @@ func TestRenameQName_Fails(t *testing.T) {
 	oldQName := appdef.NewQName("test", "old")
 	newQName := appdef.NewQName("test", "new")
 
-	t.Run("must error if unsupported version of Versions system view", func(t *testing.T) {
+	t.Run("should be error if unsupported version of Versions system view", func(t *testing.T) {
 		testError := errors.New("error read versions")
 		storage := teststore.NewStorage(appName)
 
@@ -155,7 +159,7 @@ func TestRenameQName_Fails(t *testing.T) {
 		require.ErrorIs(err, testError)
 	})
 
-	t.Run("must error if unsupported version of QNames system view", func(t *testing.T) {
+	t.Run("should be error if unsupported version of QNames system view", func(t *testing.T) {
 		storage := teststore.NewStorage(appName)
 
 		versions := vers.New()
@@ -177,7 +181,9 @@ func TestRenameQName_Fails(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		_ = adb.AddObject(oldQName)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+		_ = wsb.AddObject(oldQName)
 		appDef, err := adb.Build()
 		require.NoError(err)
 
@@ -186,7 +192,7 @@ func TestRenameQName_Fails(t *testing.T) {
 		require.NoError(err)
 	})
 
-	t.Run("must error if storage read failed", func(t *testing.T) {
+	t.Run("should be error if storage read failed", func(t *testing.T) {
 		testError := errors.New("can not read old qname")
 
 		storage.ScheduleGetError(testError, nil, []byte(oldQName.String()))
@@ -195,7 +201,7 @@ func TestRenameQName_Fails(t *testing.T) {
 		require.ErrorIs(err, testError)
 	})
 
-	t.Run("must error if storage put failed", func(t *testing.T) {
+	t.Run("should be error if storage put failed", func(t *testing.T) {
 		testError := errors.New("can not delete old qname")
 
 		storage.SchedulePutError(testError, nil, []byte(newQName.String()))

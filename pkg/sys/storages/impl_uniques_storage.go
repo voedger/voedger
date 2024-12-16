@@ -6,6 +6,7 @@ package storages
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"maps"
 
@@ -29,7 +30,7 @@ type uniquesValue struct {
 
 func (v *uniquesValue) AsInt64(name string) int64 {
 	if name == sys.Storage_Uniq_Field_ID {
-		return int64(v.id)
+		return int64(v.id) // nolint G115
 	}
 	return v.baseStateValue.AsInt64(name)
 }
@@ -98,7 +99,7 @@ func (b *uniqKeyBuilder) PutString(name string, value string)              { b.d
 func (b *uniqKeyBuilder) PutQName(name string, value appdef.QName)         { b.data[name] = value }
 func (b *uniqKeyBuilder) PutBool(name string, value bool)                  { b.data[name] = value }
 func (b *uniqKeyBuilder) PutRecordID(name string, value istructs.RecordID) { b.data[name] = value }
-func (b *uniqKeyBuilder) PutNumber(string, float64)                        { panic(ErrNotSupported) }
+func (b *uniqKeyBuilder) PutNumber(string, json.Number)                    { panic(ErrNotSupported) }
 func (b *uniqKeyBuilder) PutChars(string, string)                          { panic(ErrNotSupported) }
 func (b *uniqKeyBuilder) PutFromJSON(j map[string]any)                     { maps.Copy(b.data, j) }
 func (b *uniqKeyBuilder) PartitionKey() istructs.IRowWriter                { panic(ErrNotSupported) }

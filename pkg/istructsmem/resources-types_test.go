@@ -29,6 +29,7 @@ func TestResourceEnumerator(t *testing.T) {
 		cfg *AppConfigType
 		app istructs.IAppStructs
 
+		wsName       appdef.QName = appdef.NewQName("test", "workspace")
 		cmdCreateDoc appdef.QName = appdef.NewQName("test", "CreateDoc")
 		oDocName     appdef.QName = appdef.NewQName("test", "ODoc")
 
@@ -44,21 +45,23 @@ func TestResourceEnumerator(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
+		wsb := adb.AddWorkspace(wsName)
+
 		t.Run("must be ok to build application", func(t *testing.T) {
-			doc := adb.AddODoc(oDocName)
+			doc := wsb.AddODoc(oDocName)
 			doc.
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddField("String", appdef.DataKind_string, false)
 
-			obj := adb.AddObject(oObjName)
+			obj := wsb.AddObject(oObjName)
 			obj.
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddField("String", appdef.DataKind_string, false)
 
-			adb.AddCommand(cmdCreateDoc).SetParam(oDocName)
-			adb.AddCommand(cmdCreateObj).SetParam(oObjName)
-			adb.AddCommand(cmdCreateObjUnlogged).SetUnloggedParam(oObjName)
-			adb.AddCommand(cmdCUD)
+			wsb.AddCommand(cmdCreateDoc).SetParam(oDocName)
+			wsb.AddCommand(cmdCreateObj).SetParam(oObjName)
+			wsb.AddCommand(cmdCreateObjUnlogged).SetUnloggedParam(oObjName)
+			wsb.AddCommand(cmdCUD)
 		})
 
 		cfgs := make(AppConfigsType, 1)
@@ -77,14 +80,12 @@ func TestResourceEnumerator(t *testing.T) {
 		require.NoError(err)
 	})
 
-	t.Run("enumerate all resources", func(t *testing.T) {
+	t.Run("should be ok to enumerate all resources", func(t *testing.T) {
 		cnt := 0
-		app.Resources().Resources(
-			func(resName appdef.QName) {
-				cnt++
-				require.NotNil(app.Resources().QueryResource(resName))
-			})
-
+		for resName := range app.Resources().Resources {
+			cnt++
+			require.NotNil(app.Resources().QueryResource(resName))
+		}
 		require.EqualValues(4, cnt)
 	})
 }

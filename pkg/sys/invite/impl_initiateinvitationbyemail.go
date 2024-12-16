@@ -5,6 +5,7 @@
 package invite
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -21,6 +22,7 @@ func provideCmdInitiateInvitationByEMail(sr istructsmem.IStatelessResources, tim
 	))
 }
 
+// called in the workspace that we're inviting to.
 func execCmdInitiateInvitationByEMail(tm coreutils.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		if !coreutils.IsValidEmailTemplate(args.ArgumentObject.AsString(field_EmailTemplate)) {
@@ -28,7 +30,7 @@ func execCmdInitiateInvitationByEMail(tm coreutils.ITime) func(args istructs.Exe
 		}
 
 		login := args.ArgumentObject.AsString(field_Email)
-		subjectExists, actualLogin, err := SubjectExistByBothLogins(login, args.State) // for backward compatibility
+		subjectExists, actualLogin, existingSubjectID, err := SubjectExistByBothLogins(login, args.State) // for backward compatibility
 		if err != nil {
 			return
 		}
@@ -57,7 +59,7 @@ func execCmdInitiateInvitationByEMail(tm coreutils.ITime) func(args istructs.Exe
 
 			if subjectExists && !reInviteAllowedForState[svCDocInvite.AsInt32(field_State)] {
 				// If Subject exists by token.Login and state is not ToBeInvited and not Invited -> subject already exists error
-				return coreutils.NewHTTPError(http.StatusBadRequest, ErrSubjectAlreadyExists)
+				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf(`%w cdoc.sys.Subject.%d by login "%s"`, ErrSubjectAlreadyExists, existingSubjectID, actualLogin))
 			}
 
 			if !isValidInviteState(svCDocInvite.AsInt32(field_State), qNameCmdInitiateInvitationByEMail) {

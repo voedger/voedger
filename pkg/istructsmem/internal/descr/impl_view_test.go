@@ -24,10 +24,12 @@ func Test_View(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		docName := appdef.NewQName("test", "doc")
-		_ = adb.AddCDoc(docName)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
-		view := adb.AddView(viewName)
+		docName := appdef.NewQName("test", "doc")
+		_ = wsb.AddCDoc(docName)
+
+		view := wsb.AddView(viewName)
 		view.SetComment("view comment")
 		view.Key().PartKey().
 			AddField("pk_int", appdef.DataKind_int64).
@@ -50,7 +52,7 @@ func Test_View(t *testing.T) {
 
 	{
 		v := newView()
-		v.read(app.View(viewName))
+		v.read(appdef.View(app.Type, viewName))
 
 		json, err := json.Marshal(v)
 

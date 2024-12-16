@@ -23,12 +23,12 @@ func TestBasicUsage(t *testing.T) {
 
 	// description of the application and workspace
 	app := istructs.AppQName_test1_app1
-	qName := appdef.NewQName("testPkg", "test")
+	qName := appdef.NewQName("test", "test")
 	wsid := istructs.WSID(1)
 
 	// constraint names
-	sTotalRegLimitName := "TotalRegPerDay"
-	sAddrRegLimitName := "AddrRegPerDay"
+	totalRegLimitName := appdef.NewQName("test", "TotalRegPerDay")
+	addrRegLimitName := appdef.NewQName("test", "AddrRegPerDay")
 
 	// parameters of the general limitation of the number of registrations (no more than 1000 per day)
 	totalRegistrationQuota := irates.BucketState{
@@ -48,24 +48,24 @@ func TestBasicUsage(t *testing.T) {
 	buckets := Provide(coreutils.MockTime)
 
 	// passing named constraints to bucket's
-	buckets.SetDefaultBucketState(sTotalRegLimitName, totalRegistrationQuota)
-	buckets.SetDefaultBucketState(sAddrRegLimitName, addrRegistrationQuota)
+	buckets.SetDefaultBucketState(totalRegLimitName, totalRegistrationQuota)
+	buckets.SetDefaultBucketState(addrRegLimitName, addrRegistrationQuota)
 
-	state, err := buckets.GetDefaultBucketsState(sTotalRegLimitName)
+	state, err := buckets.GetDefaultBucketsState(totalRegLimitName)
 	require.NoError(err)
 	require.Equal(totalRegistrationQuota, state)
-	state, err = buckets.GetDefaultBucketsState(sAddrRegLimitName)
+	state, err = buckets.GetDefaultBucketsState(addrRegLimitName)
 	require.NoError(err)
 	require.Equal(addrRegistrationQuota, state)
 
-	_, err = buckets.GetDefaultBucketsState("unknown")
+	_, err = buckets.GetDefaultBucketsState(appdef.NewQName("test", "unknown"))
 	require.ErrorIs(irates.ErrorRateLimitNotFound, err)
 
 	// let's check if this operation is available
 
 	// key for checking the total number of registrations
 	totalRegKey := irates.BucketKey{
-		RateLimitName: sTotalRegLimitName,
+		RateLimitName: totalRegLimitName,
 		App:           app,
 		QName:         qName,
 		RemoteAddr:    "",
@@ -74,7 +74,7 @@ func TestBasicUsage(t *testing.T) {
 
 	// key for checking the number of registrations from the address "remote_address"
 	addrRegKey := irates.BucketKey{
-		RateLimitName: sAddrRegLimitName,
+		RateLimitName: addrRegLimitName,
 		App:           app,
 		QName:         qName,
 		RemoteAddr:    "remote_address",
@@ -99,12 +99,12 @@ func TestBucketsNew(t *testing.T) {
 
 	// description of the application and workspace
 	app := istructs.AppQName_test1_app1
-	qName := appdef.NewQName("testPkg", "test")
+	qName := appdef.NewQName("test", "test")
 	wsid := istructs.WSID(1)
 
 	// constraint names
-	sTotalRegLimitName := "TotalRegPerDay"
-	sAddrRegLimitName := "AddrRegPerDay"
+	totalRegLimitName := appdef.NewQName("test", "TotalRegPerDay")
+	addrRegLimitName := appdef.NewQName("test", "AddrRegPerDay")
 
 	// parameters of the general limitation of the number of registrations (no more than 1000 per hour)
 	totalRegistrationQuota := irates.BucketState{
@@ -122,7 +122,7 @@ func TestBucketsNew(t *testing.T) {
 
 	// key for checking the number of registrations from the address "remote_address"
 	addrRegKey := irates.BucketKey{
-		RateLimitName: sAddrRegLimitName,
+		RateLimitName: addrRegLimitName,
 		App:           app,
 		QName:         qName,
 		RemoteAddr:    "remote_address",
@@ -131,15 +131,15 @@ func TestBucketsNew(t *testing.T) {
 
 	// key for checking the total number of registrations
 	totalRegKey := irates.BucketKey{
-		RateLimitName: sTotalRegLimitName,
+		RateLimitName: totalRegLimitName,
 		App:           app,
 		QName:         qName,
 		RemoteAddr:    "",
 		Workspace:     wsid,
 	}
 
-	buckets.SetDefaultBucketState(sTotalRegLimitName, totalRegistrationQuota)
-	buckets.SetDefaultBucketState(sAddrRegLimitName, addrRegistrationQuota)
+	buckets.SetDefaultBucketState(totalRegLimitName, totalRegistrationQuota)
+	buckets.SetDefaultBucketState(addrRegLimitName, addrRegistrationQuota)
 
 	keys := []irates.BucketKey{totalRegKey}
 
@@ -206,17 +206,17 @@ func TestBucketsNew(t *testing.T) {
 	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(0))
 
-	buckets.SetDefaultBucketState(sTotalRegLimitName, totalRegistrationQuota)
+	buckets.SetDefaultBucketState(totalRegLimitName, totalRegistrationQuota)
 	bs, err = buckets.GetBucketState(totalRegKey)
 	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(10))
 
-	buckets.ResetRateBuckets(sTotalRegLimitName, totalRegistrationQuota)
+	buckets.ResetRateBuckets(totalRegLimitName, totalRegistrationQuota)
 	bs, err = buckets.GetBucketState(totalRegKey)
 	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(0))
 
-	totalRegKey.RateLimitName = "new limit name"
+	totalRegKey.RateLimitName = appdef.NewQName("test", "newLimit")
 	bs, err = buckets.GetBucketState(totalRegKey)
 	require.Error(err)
 	require.True(BucketStateIsZero(&bs))

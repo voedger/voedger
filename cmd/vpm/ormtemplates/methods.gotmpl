@@ -15,29 +15,37 @@ func (r {{.Type}}_{{.Package.Name}}_{{.Name}}) Descriptor() string {
 {{end}}
 
 {{if (eq .Type "WDoc")}}
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) IAmWDoc() {
+	return
+}
+
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) QName() exttinygo.QName {
+	return exttinygo.QName{FullPkgName: v.PkgPath(), Entity: v.Entity()}
+}
+
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
-	kb.PutInt64(FieldName_ID, int64(id))
+	kb.PutRecordID(sys.Storage_Record_Field_ID, int64(id))
 	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(kb)}
 }
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Update(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	existingValue := v.MustGet(id)
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
-	kb.PutInt64(FieldName_ID, int64(id))
+	kb.PutRecordID(sys.Storage_Record_Field_ID, int64(id))
 	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.UpdateValue(kb, existingValue.tv)}
 }
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get(id ID) (Value_{{.Type}}_{{.Package.Name}}_{{.Name}}, bool) {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
-	kb.PutInt64(FieldName_ID, int64(id))
+	kb.PutRecordID(sys.Storage_Record_Field_ID, int64(id))
 	tv, exists := exttinygo.QueryValue(kb)
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: tv, kb: kb}, exists
 }
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) MustGet(id ID) Value_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
-	kb.PutInt64(FieldName_ID, int64(id))
+	kb.PutRecordID(sys.Storage_Record_Field_ID, int64(id))
 	tv := exttinygo.MustGetValue(kb)
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: tv, kb: kb}
 }
@@ -54,20 +62,20 @@ func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Update() Intent_{{.Type}}_{
 {{if (eq .Type "WSingleton")}}
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert() Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
-	kb.PutBool(FieldName_IsSingleton, true)
+	kb.PutBool(sys.Storage_Record_Field_IsSingleton, true)
 	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(kb)}
 }
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Update() Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	existingValue := v.MustGet()
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
-	kb.PutBool(FieldName_IsSingleton, true)
+	kb.PutBool(sys.Storage_Record_Field_IsSingleton, true)
 	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.UpdateValue(kb, existingValue.tv)}
 }
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get() (Value_{{.Type}}_{{.Package.Name}}_{{.Name}}, bool) {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
-	kb.PutBool(FieldName_IsSingleton, true)
+	kb.PutBool(sys.Storage_Record_Field_IsSingleton, true)
 	tv, exists := exttinygo.QueryValue(kb)
 	if !exists {
 		return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{kb: kb}, false
@@ -77,7 +85,7 @@ func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get() (Value_{{.Type}}_{{.Package
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) MustGet() Value_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
-	kb.PutBool(FieldName_IsSingleton, true)
+	kb.PutBool(sys.Storage_Record_Field_IsSingleton, true)
 	tv := exttinygo.MustGetValue(kb)
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: tv, kb: kb}
 }
@@ -92,29 +100,37 @@ func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Update() Intent_{{.Type}}_{
 {{end}}
 
 {{if (eq .Type "CDoc")}}
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) IAmCDoc() {
+	return
+}
+
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) QName() exttinygo.QName {
+	return exttinygo.QName{FullPkgName: v.PkgPath(), Entity: v.Entity()}
+}
+
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) MustGet(id ID) Value_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
-	kb.PutInt64(FieldName_ID, int64(id))
+	kb.PutRecordID(sys.Storage_Record_Field_ID, int64(id))
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: exttinygo.MustGetValue(kb)}
 }
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get(id ID) (Value_{{.Type}}_{{.Package.Name}}_{{.Name}}, bool) {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
-	kb.PutInt64(FieldName_ID, int64(id))
+	kb.PutRecordID(sys.Storage_Record_Field_ID, int64(id))
 	tv, exists := exttinygo.QueryValue(kb)
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: tv}, exists
 }
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
-	kb.PutInt64(FieldName_ID, int64(id))
+	kb.PutRecordID(sys.Storage_Record_Field_ID, int64(id))
 	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(kb)}
 }
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Update(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	existingValue := v.MustGet(id)
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
-	kb.PutInt64(FieldName_ID, int64(id))
+	kb.PutRecordID(sys.Storage_Record_Field_ID, int64(id))
 	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.UpdateValue(kb, existingValue.tv)}
 }
 
@@ -128,9 +144,17 @@ func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Update() Intent_{{.Type}}_{
 {{end}}
 
 {{if (eq .Type "ODoc")}}
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) IAmODoc() {
+	return
+}
+
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) QName() exttinygo.QName {
+	return exttinygo.QName{FullPkgName: v.PkgPath(), Entity: v.Entity()}
+}
+
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
-	kb.PutInt64(FieldName_ID, int64(id))
+	kb.PutRecordID(sys.Storage_Record_Field_ID, int64(id))
 	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(kb)}
 }
 {{end}}
@@ -197,7 +221,7 @@ func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Update() Intent_{{.Type}}_{
 {{if or (eq .Type "Container")}}
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get(id ID) (Value_{{.Type}}_{{.Package.Name}}_{{.Name}}, bool) {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
-	kb.PutInt64(FieldName_ID, int64(id))
+	kb.PutRecordID(sys.Storage_Record_Field_ID, int64(id))
 	tv, exists := exttinygo.QueryValue(kb)
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: tv}, exists
 }
@@ -207,7 +231,7 @@ func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get(id ID) (Value_{{.Type}}_{{.Pa
 {{if .ArgumentObject}}
 func (c {{.Type}}_{{.Package.Name}}_{{.Name}}) ArgumentObject() Value_{{.ArgumentObject.Type}}_{{.ArgumentObject.Package.Name}}_{{.ArgumentObject.Name}} {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
-	return Value_{{.ArgumentObject.Type}}_{{.ArgumentObject.Package.Name}}_{{.ArgumentObject.Name}}{tv: exttinygo.MustGetValue(kb).AsValue(FieldNameEventArgumentObject)}
+	return Value_{{.ArgumentObject.Type}}_{{.ArgumentObject.Package.Name}}_{{.ArgumentObject.Name}}{tv: exttinygo.MustGetValue(kb).AsValue(sys.Storage_Event_Field_ArgumentObject)}
 }
 {{end}}
 
@@ -241,6 +265,83 @@ func (c {{.Type}}_{{.Package.Name}}_{{.Name}}) Result({{range .ResultObjectField
 }
 {{end}}
 {{end}}
+
+{{if (eq .Type "Projector")}}
+
+{{range .On}}
+
+{{if (doesExecuteOn .)}}
+
+{{if not .SkipGeneration}}
+type Cmd_{{.Projector.Package.Name}}_{{.Name}} struct {
+	qname string
+	event exttinygo.TValue
+}
+
+{{if .EventItem.ArgumentObject}}
+func (c Cmd_{{.Projector.Package.Name}}_{{.Name}}) Arg() (Value_{{.EventItem.ArgumentObject.Type}}_{{.EventItem.ArgumentObject.Package.Name}}_{{.EventItem.ArgumentObject.Name}}, bool) {
+	qname := c.event.AsQName("QName")
+	if qname.FullPkgName != Package_{{.EventItem.Package.Name}}.{{.EventItem.Type}}_{{.EventItem.Name}}.PkgPath() || qname.Entity != Package_{{.EventItem.Package.Name}}.{{.EventItem.Type}}_{{.EventItem.Name}}.Entity() {
+		return Value_{{.EventItem.ArgumentObject.Type}}_{{.EventItem.ArgumentObject.Package.Name}}_{{.EventItem.ArgumentObject.Name}}{}, false
+	}
+
+	return Value_{{.EventItem.ArgumentObject.Type}}_{{.EventItem.ArgumentObject.Package.Name}}_{{.EventItem.ArgumentObject.Name}}{tv: c.event.AsValue("ArgumentObject")}, true
+}
+
+func (c Cmd_{{.Projector.Package.Name}}_{{.Name}}) Event() Event {
+	return Event{
+		WLogOffset: c.event.AsInt64(sys.Storage_Event_Field_WLogOffset),
+	}
+}
+{{end}}
+{{end}}
+
+func (p *Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Cmd_{{.Name}}() Cmd_{{.Projector.Package.Name}}_{{.Name}} {
+	return Cmd_{{.Projector.Package.Name}}_{{.Name}}{
+		qname: p.PkgPath() + "." + "{{.Name}}",
+		event: p.event(),
+	}
+}
+
+{{end}}
+
+{{if (doesTriggerOnCUD .)}}
+
+func (p *Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) CUDs_{{.Package.Name}}_{{.Name}}() iter.Seq[Value_{{.Type}}_{{.Package.Name}}_{{.Name}}] {
+	return func(yield func(Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) bool) {
+		cudsValue := p.event().AsValue("CUDs")
+		for i := 0; i < cudsValue.Len(); i++ {
+			cudValue := cudsValue.GetAsValue(i)
+			cudQName := cudValue.AsQName("sys.QName")
+			if cudQName.FullPkgName == Package_{{.Package.Name}}.{{.Type}}_{{.Name}}.PkgPath() && cudQName.Entity == Package_{{.Package.Name}}.{{.Type}}_{{.Name}}.Entity() {
+				if !yield(Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: cudValue}) {
+					return
+				}
+			}
+		}
+	}
+}
+
+{{end}}
+
+{{if (doesExecuteWithParam .)}}
+
+func (p *Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Arg_{{.Package.Name}}_{{.Name}}() (Value_{{.Type}}_{{.Package.Name}}_{{.Name}}, bool) {
+	arg := p.event().AsValue("ArgumentObject")
+	argQName := arg.AsQName("sys.QName")
+	if argQName.FullPkgName != Package_{{.Package.Name}}.{{.Type}}_{{.Name}}.PkgPath() || argQName.Entity != Package_{{.Package.Name}}.{{.Type}}_{{.Name}}.Entity() {
+		return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{}, false
+	}
+
+	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: arg}, true
+}
+{{end}}
+
+{{end}}
+
+{{end}}
+
+
 
 {{end}}
 

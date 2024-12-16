@@ -15,7 +15,7 @@ const (
 	ExtensionEngineKind_BuiltIn
 	ExtensionEngineKind_WASM
 
-	ExtensionEngineKind_Count
+	ExtensionEngineKind_count
 )
 
 // Entry point is a type that can be executed.
@@ -60,16 +60,4 @@ type IExtensionBuilder interface {
 
 	// Returns intents builder.
 	Intents() IStoragesBuilder
-}
-
-type IWithExtensions interface {
-	// Return extension by name.
-	//
-	// Returns nil if not found.
-	Extension(QName) IExtension
-
-	// Enumerates all application extensions (commands, queries and extensions)
-	//
-	// Extensions are enumerated in alphabetical order by QName
-	Extensions(func(IExtension) bool)
 }

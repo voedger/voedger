@@ -7,6 +7,7 @@
 package istructs
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"math"
@@ -62,6 +63,11 @@ func TestBasicUsage_NewWSID(t *testing.T) {
 		require.Equal(ClusterID(0xffff), wsid.ClusterID())
 		require.Equal(WSID(0x7fffffffffff), wsid.BaseWSID())
 	}
+}
+
+func TestBaseWSIDOverflow(t *testing.T) {
+	NewWSID(CurrentClusterID(), MaxBaseWSID)
+	require.Panics(t, func() { NewWSID(CurrentClusterID(), MaxBaseWSID+1) })
 }
 
 func TestBasicUsage_NewRecordID(t *testing.T) {
@@ -157,9 +163,9 @@ func TestNullObject(t *testing.T) {
 		builder.PutQName("QName", appdef.NullQName)
 		builder.PutBool("bool", true)
 		builder.PutRecordID("RecordID", NullRecordID)
-		builder.PutNumber("float64", 1)
+		builder.PutNumber("float64", json.Number("1"))
 		builder.PutChars("string", "ABC")
-		builder.PutNumber("int64", 1)
+		builder.PutNumber("int64", json.Number("1"))
 
 		builder.PutFromJSON(map[string]interface{}{"int32": 1})
 		builder.FillFromJSON(map[string]interface{}{"int32": 1, "child": []any{map[string]interface{}{"int32": 1}}})
@@ -185,10 +191,18 @@ func TestNullObject(t *testing.T) {
 
 	// Should not be called
 	{
-		null.Containers(nil)
-		null.Children(appdef.NullName, nil)
-		null.RecordIDs(true, nil)
-		null.FieldNames(nil)
+		for range null.Containers {
+			require.Fail("null.Containers should be empty")
+		}
+		for range null.Children(appdef.NullName) {
+			require.Fail("null.Children should be empty")
+		}
+		for range null.RecordIDs(true) {
+			require.Fail("null.RecordIDs should be empty")
+		}
+		for range null.FieldNames {
+			require.Fail("null.FieldNames should be empty")
+		}
 	}
 
 	t.Run("IRecord fields", func(t *testing.T) {

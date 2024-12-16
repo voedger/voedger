@@ -11,9 +11,11 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIAppDefBuilder_AddCommand() {
+func ExampleCommands() {
 
 	var app appdef.IAppDef
+
+	wsName := appdef.NewQName("test", "workspace")
 
 	cmdName := appdef.NewQName("test", "cmd")
 	parName := appdef.NewQName("test", "param")
@@ -25,16 +27,18 @@ func ExampleIAppDefBuilder_AddCommand() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		cmd := adb.AddCommand(cmdName)
+		wsb := adb.AddWorkspace(wsName)
+
+		cmd := wsb.AddCommand(cmdName)
 		cmd.SetEngine(appdef.ExtensionEngineKind_WASM)
 		cmd.
 			SetParam(parName).
 			SetResult(resName)
 		cmd.SetUnloggedParam(unlName)
 
-		_ = adb.AddObject(parName)
-		_ = adb.AddObject(unlName)
-		_ = adb.AddObject(resName)
+		_ = wsb.AddObject(parName)
+		_ = wsb.AddObject(unlName)
+		_ = wsb.AddObject(resName)
 
 		app = adb.MustBuild()
 	}
@@ -42,17 +46,16 @@ func ExampleIAppDefBuilder_AddCommand() {
 	// how to enum commands
 	{
 		cnt := 0
-		app.Commands(func(c appdef.ICommand) bool {
+		for c := range appdef.Commands(app.Types()) {
 			cnt++
 			fmt.Println(cnt, c)
-			return true
-		})
+		}
 		fmt.Println("overall command(s):", cnt)
 	}
 
 	// how to inspect builded AppDef with command
 	{
-		cmd := app.Command(cmdName)
+		cmd := appdef.Command(app.Type, cmdName)
 		fmt.Println(cmd, ":")
 		fmt.Println(" - parameter:", cmd.Param())
 		fmt.Println(" - unl.param:", cmd.UnloggedParam())

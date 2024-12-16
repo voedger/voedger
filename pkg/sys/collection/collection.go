@@ -7,7 +7,6 @@
 package collection
 
 import (
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/sys"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -60,15 +59,16 @@ var collectionProjector = istructs.Projector{
 				return err
 			}
 			vb.PutInt64(state.ColOffset, int64(event.WLogOffset()))
-			vb.PutRecord(Field_Record, record)
+			vb.(istructs.IStateViewValueBuilder).PutRecord(Field_Record, record)
 			return nil
 		}
 
 		keyBuildersAndIDs := []kbAndID{}
-		err = iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+
+		for rec := range event.CUDs {
 			kind := s.AppStructs().AppDef().Type(rec.QName()).Kind()
 			if kind != appdef.TypeKind_CDoc && kind != appdef.TypeKind_CRecord {
-				return nil
+				continue
 			}
 			kb, err := is.state.KeyBuilder(sys.Storage_Record, appdef.NullQName)
 			if err != nil {
@@ -81,11 +81,6 @@ var collectionProjector = istructs.Projector{
 				id:               rec.ID(),
 				isNew:            rec.IsNew(),
 			})
-			return nil
-		})
-		if err != nil {
-			// notest
-			return err
 		}
 
 		keyBuilders := make([]istructs.IStateKeyBuilder, len(keyBuildersAndIDs))
@@ -93,7 +88,7 @@ var collectionProjector = istructs.Projector{
 			keyBuilders[i] = kbID.IStateKeyBuilder
 		}
 		err = is.state.MustExistAll(keyBuilders, func(key istructs.IKeyBuilder, sv istructs.IStateValue, ok bool) (err error) {
-			record := sv.AsRecord("")
+			record := sv.(istructs.IStateRecordValue).AsRecord()
 			is.cache[record.ID()] = record
 			return nil
 		})
@@ -139,7 +134,7 @@ func (s *idService) findRecordByID(id istructs.RecordID) (record istructs.IRecor
 	if err != nil {
 		return nil, err
 	}
-	return sv.AsRecord(""), nil
+	return sv.(istructs.IStateRecordValue).AsRecord(), nil
 }
 
 func (s *idService) findRootByID(id istructs.RecordID) (root istructs.IRecord, err error) {

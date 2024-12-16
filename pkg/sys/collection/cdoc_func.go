@@ -10,10 +10,10 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
@@ -31,7 +31,7 @@ func execQryCDoc(ctx context.Context, args istructs.ExecQueryArgs, callback istr
 	if err != nil {
 		return
 	}
-	rkb.PutRecordID(sys.Storage_Record_Field_ID, istructs.RecordID(args.ArgumentObject.AsInt64(field_ID)))
+	rkb.PutRecordID(sys.Storage_Record_Field_ID, istructs.RecordID(args.ArgumentObject.AsInt64(field_ID))) // nolint G115
 	rsv, err := args.State.MustExist(rkb)
 	if err != nil {
 		return
@@ -49,7 +49,7 @@ func execQryCDoc(ctx context.Context, args istructs.ExecQueryArgs, callback istr
 
 	// build tree
 	err = args.State.Read(vrkb, func(key istructs.IKey, value istructs.IStateValue) (err error) {
-		rec := value.AsRecord(Field_Record)
+		rec := value.(istructs.IStateViewValue).AsRecord(Field_Record)
 		if doc == nil {
 			cobj := newCollectionObject(rec)
 			doc = cobj
@@ -107,21 +107,18 @@ func convert(doc istructs.IObject, appDef appdef.IAppDef, refs map[istructs.Reco
 		}
 		return true
 	}))
-	doc.Containers(func(container string) {
+	for container := range doc.Containers {
 		list := make([]interface{}, 0)
-		doc.Children(container, func(c istructs.IObject) {
+		for c := range doc.Children(container) {
 			var childObj map[string]interface{}
-			if err == nil {
-				childObj, err = convert(c.(*collectionObject), appDef, refs, doc.AsRecord().ID())
-				if err == nil {
-					list = append(list, childObj)
-				}
+			childObj, err = convert(c.(*collectionObject), appDef, refs, doc.AsRecord().ID())
+			if err != nil {
+				break
 			}
-		})
-		if container != "" {
-			obj[container] = list
+			list = append(list, childObj)
 		}
-	})
+		obj[container] = list
+	}
 
 	return obj, nil
 }
@@ -152,9 +149,10 @@ func addRefs(obj map[string]interface{}, refs map[istructs.RecordID]bool, s istr
 			recmap = make(map[string]interface{})
 			references[rkv.AsQName(appdef.SystemField_QName).String()] = recmap
 		}
-		recKey := strconv.FormatInt(int64(recordId), DEC)
+
+		recKey := utils.UintToString(recordId)
 		if _, ok := recmap[recKey]; !ok {
-			child := newCollectionObject(rkv.AsRecord(""))
+			child := newCollectionObject(rkv.(istructs.IStateRecordValue).AsRecord())
 			obj, err := convert(child, appDef, nil, istructs.NullRecordID)
 			if err != nil {
 				return err

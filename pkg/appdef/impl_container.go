@@ -8,6 +8,8 @@ package appdef
 import (
 	"errors"
 	"fmt"
+	"iter"
+	"slices"
 	"strconv"
 
 	"github.com/voedger/voedger/pkg/coreutils/utils"
@@ -22,7 +24,7 @@ type container struct {
 	app       *appDef
 	name      string
 	qName     QName
-	typ       IType
+	typ       IStructure
 	minOccurs Occurs
 	maxOccurs Occurs
 }
@@ -37,9 +39,9 @@ func newContainer(app *appDef, name string, typeName QName, minOccurs, maxOccurs
 	}
 }
 
-func (cont *container) Type() IType {
+func (cont *container) Type() IStructure {
 	if (cont.typ == nil) || (cont.typ.QName() != cont.QName()) {
-		cont.typ = cont.app.TypeByName(cont.QName())
+		cont.typ = Structure(cont.app.Type, cont.QName())
 	}
 	return cont.typ
 }
@@ -85,8 +87,8 @@ func (cc containers) ContainerCount() int {
 	return len(cc.containersOrdered)
 }
 
-func (cc containers) Containers() []IContainer {
-	return cc.containersOrdered
+func (cc containers) Containers() iter.Seq[IContainer] {
+	return slices.Values(cc.containersOrdered)
 }
 
 func (cc *containers) addContainer(name string, contType QName, minOccurs, maxOccurs Occurs, comment ...string) {
@@ -101,7 +103,7 @@ func (cc *containers) addContainer(name string, contType QName, minOccurs, maxOc
 	}
 
 	if contType == NullQName {
-		panic(ErrMissed(fmt.Sprintf("container «%v» type", name)))
+		panic(ErrMissed("container «%v» type", name))
 	}
 
 	if maxOccurs == 0 {
@@ -111,9 +113,9 @@ func (cc *containers) addContainer(name string, contType QName, minOccurs, maxOc
 		panic(ErrOutOfBounds("max occurs should be greater than or equal to min occurs (%v)", minOccurs))
 	}
 
-	if typ := cc.app.TypeByName(contType); typ != nil {
-		if (cc.typeKind != TypeKind_null) && !cc.typeKind.ContainerKindAvailable(typ.Kind()) {
-			panic(ErrInvalid("type «%v» can not to be a child of «%v»", typ, cc.typeKind.TrimString()))
+	if child := Structure(cc.app.Type, contType); child != nil {
+		if (cc.typeKind != TypeKind_null) && !cc.typeKind.ContainerKindAvailable(child.Kind()) {
+			panic(ErrInvalid("%v can not to be a child of «%v»", child, cc.typeKind.TrimString()))
 		}
 	}
 
@@ -135,7 +137,7 @@ func (cc *containers) addContainer(name string, contType QName, minOccurs, maxOc
 func validateTypeContainers(t IType) (err error) {
 	if cnt, ok := t.(IContainers); ok {
 		// resolve containers types
-		for _, cont := range cnt.Containers() {
+		for cont := range cnt.Containers() {
 			contType := cont.Type()
 			if contType == nil {
 				err = errors.Join(err,
@@ -163,8 +165,8 @@ func makeContainersBuilder(containers *containers) containersBuilder {
 	}
 }
 
-func (cb *containersBuilder) AddContainer(name string, typeName QName, min, max Occurs, comment ...string) IContainersBuilder {
-	cb.addContainer(name, typeName, min, max, comment...)
+func (cb *containersBuilder) AddContainer(name string, typeName QName, minimum, maximum Occurs, comment ...string) IContainersBuilder {
+	cb.addContainer(name, typeName, minimum, maximum, comment...)
 	return cb
 }
 

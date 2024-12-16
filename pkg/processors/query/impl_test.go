@@ -7,6 +7,7 @@ package queryprocessor
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"net/http"
 	"sync"
@@ -17,8 +18,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -79,11 +82,12 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		appDef     appdef.IAppDef
 		resultMeta appdef.IObject
 	)
-	t.Run(" should be ok to build appDef and resultMeta", func(t *testing.T) {
+	t.Run("should be ok to build appDef and resultMeta", func(t *testing.T) {
 		adb := appdef.New()
-		adb.AddObject(qNamePosDepartment).
+		wsb := adb.AddWorkspace(qNameTestWS)
+		wsb.AddObject(qNamePosDepartment).
 			AddField("name", appdef.DataKind_string, false)
-		resBld := adb.AddObject(qNamePosDepartmentResult)
+		resBld := wsb.AddObject(qNamePosDepartmentResult)
 		resBld.
 			AddField("id", appdef.DataKind_int64, true).
 			AddField("name", appdef.DataKind_string, false)
@@ -91,7 +95,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		require.NoError(err)
 
 		appDef = app
-		resultMeta = app.Object(qNamePosDepartmentResult)
+		resultMeta = appdef.Object(app.Type, qNamePosDepartmentResult)
 	})
 
 	params := queryParams{
@@ -146,7 +150,8 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		},
 		close: func(err error) {},
 	}
-	processor := ProvideRowsProcessorFactory()(context.Background(), appDef, s, params, resultMeta, rs, &testMetrics{})
+	rowsProcessorErrCh := make(chan error, 1)
+	processor := ProvideRowsProcessorFactory()(context.Background(), appDef, s, params, resultMeta, rs, &testMetrics{}, rowsProcessorErrCh)
 
 	require.NoError(processor.SendAsync(work(1, "Cola", 10)))
 	require.NoError(processor.SendAsync(work(3, "White wine", 20)))
@@ -155,6 +160,11 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	processor.Close()
 
 	require.Equal(`[[[3,"White wine","Alcohol drinks"]]]`, result)
+	select {
+	case err := <-rowsProcessorErrCh:
+		t.Fatal(err)
+	default:
+	}
 }
 
 func deployTestAppWithSecretToken(require *require.Assertions,
@@ -173,36 +183,38 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	adb.AddPackage(pkgBo, pkgBoPath)
 
 	wsb := adb.AddWorkspace(qNameTestWS)
-	adb.AddCDoc(qNameTestWSDescriptor)
+	wsb.AddCDoc(qNameTestWSDescriptor)
 	wsb.SetDescriptor(qNameTestWSDescriptor)
 
-	adb.AddObject(qNameFindArticlesByModificationTimeStampRangeParams).
+	wsb.AddObject(qNameFindArticlesByModificationTimeStampRangeParams).
 		AddField("from", appdef.DataKind_int64, false).
 		AddField("till", appdef.DataKind_int64, false)
-	adb.AddCDoc(qNameDepartment).
+	wsb.AddCDoc(qNameDepartment).
 		AddField("name", appdef.DataKind_string, true)
-	adb.AddObject(qNameArticle).
+	wsb.AddObject(qNameArticle).
 		AddField("sys.ID", appdef.DataKind_RecordID, true).
 		AddField("name", appdef.DataKind_string, true).
 		AddField("id_department", appdef.DataKind_int64, true)
 
 	// simplified cdoc.sys.WorkspaceDescriptor
-	wsDescBuilder := adb.AddCDoc(authnz.QNameCDocWorkspaceDescriptor)
+	wsDescBuilder := wsb.AddCDoc(authnz.QNameCDocWorkspaceDescriptor)
 	wsDescBuilder.
 		AddField(authnz.Field_WSKind, appdef.DataKind_QName, false).
 		AddField(authnz.Field_Status, appdef.DataKind_int32, false)
 	wsDescBuilder.SetSingleton()
 
-	adb.AddQuery(qNameFunction).SetParam(qNameFindArticlesByModificationTimeStampRangeParams).SetResult(appdef.NewQName("bo", "Article"))
-	adb.AddCommand(istructs.QNameCommandCUD)
-	adb.AddQuery(qNameQryDenied)
-	wsb.AddType(qNameDepartment)
-	wsb.AddType(qNameArticle)
-	wsb.AddType(qNameArticle)
-	wsb.AddType(authnz.QNameCDocWorkspaceDescriptor)
-	wsb.AddType(qNameFunction)
-	wsb.AddType(istructs.QNameCommandCUD)
-	wsb.AddType(qNameQryDenied)
+	wsb.AddQuery(qNameFunction).SetParam(qNameFindArticlesByModificationTimeStampRangeParams).SetResult(appdef.NewQName("bo", "Article"))
+	wsb.AddCommand(istructs.QNameCommandCUD)
+	wsb.AddQuery(qNameQryDenied)
+
+	wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+	wsb.AddRole(iauthnz.QNameRoleEveryone)
+	wsb.AddRole(iauthnz.QNameRoleSystem)
+	wsb.AddRole(iauthnz.QNameRoleAnonymous)
+	wsb.AddRole(iauthnz.QNameRoleProfileOwner)
+	wsb.AddRole(iauthnz.QNameRoleWorkspaceOwner)
+
+	wsb.Revoke([]appdef.OperationKind{appdef.OperationKind_Execute}, filter.QNames(qNameQryDenied), nil, iauthnz.QNameRoleWorkspaceOwner)
 
 	if prepareAppDef != nil {
 		prepareAppDef(adb, wsb)
@@ -327,7 +339,8 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 				AppConfigs:         cfgs,
 				StatelessResources: statelessResources,
 				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
-			}))
+			}, "", imetrics.Provide()),
+		iratesce.TestBucketsFactory)
 	require.NoError(err)
 	appParts.DeployApp(appName, nil, appDef, partCount, appEngines, cfg.NumAppWorkspaces())
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
@@ -421,14 +434,15 @@ func TestRawMode(t *testing.T) {
 		appDef     appdef.IAppDef
 		resultMeta appdef.IObject
 	)
-	t.Run(" should be ok to build appDef and resultMeta", func(t *testing.T) {
+	t.Run("should be ok to build appDef and resultMeta", func(t *testing.T) {
 		adb := appdef.New()
-		adb.AddObject(istructs.QNameRaw)
+		wsb := adb.AddWorkspace(qNameTestWS)
+		wsb.AddObject(istructs.QNameRaw)
 		app, err := adb.Build()
 		require.NoError(err)
 
 		appDef = app
-		resultMeta = app.Object(istructs.QNameRaw)
+		resultMeta = appdef.Object(app.Type, istructs.QNameRaw)
 	})
 
 	result := ""
@@ -441,7 +455,8 @@ func TestRawMode(t *testing.T) {
 		},
 		close: func(err error) {},
 	}
-	processor := ProvideRowsProcessorFactory()(context.Background(), appDef, &mockState{}, queryParams{}, resultMeta, rs, &testMetrics{})
+	rowsProcessorErrCh := make(chan error, 1)
+	processor := ProvideRowsProcessorFactory()(context.Background(), appDef, &mockState{}, queryParams{}, resultMeta, rs, &testMetrics{}, rowsProcessorErrCh)
 
 	require.NoError(processor.SendAsync(rowsWorkpiece{
 		object: &coreutils.TestObject{
@@ -455,6 +470,11 @@ func TestRawMode(t *testing.T) {
 		},
 	}))
 	processor.Close()
+	select {
+	case err := <-rowsProcessorErrCh:
+		t.Fatal(err)
+	default:
+	}
 
 	require.Equal(`[[["[accepted]"]]]`, result)
 }
@@ -467,7 +487,7 @@ func Test_epsilon(t *testing.T) {
 		}
 		return options
 	}
-	args := func(options map[string]interface{}) interface{} {
+	args := func(options map[string]interface{}) coreutils.MapObject {
 		args := make(map[string]interface{})
 		if options != nil {
 			args["options"] = options
@@ -475,7 +495,7 @@ func Test_epsilon(t *testing.T) {
 		return args
 	}
 	t.Run("Should return epsilon", func(t *testing.T) {
-		epsilon, err := epsilon(args(options(math.E)))
+		epsilon, err := epsilon(args(options(json.Number(fmt.Sprint(math.E)))))
 
 		require.Equal(t, math.E, epsilon)
 		require.NoError(t, err)
@@ -1111,13 +1131,12 @@ func TestRateLimiter(t *testing.T) {
 	qNameMyFuncResults := appdef.NewQName(appdef.SysPackage, "results")
 	qName := appdef.NewQName(appdef.SysPackage, "myFunc")
 	appParts, cleanAppParts, appTokens, statelessResources := deployTestAppWithSecretToken(require,
-		func(appDef appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
-			appDef.AddObject(qNameMyFuncParams)
-			appDef.AddObject(qNameMyFuncResults).
+		func(_ appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
+			wsb.AddObject(qNameMyFuncParams)
+			wsb.AddObject(qNameMyFuncResults).
 				AddField("fld", appdef.DataKind_string, false)
-			qry := appDef.AddQuery(qName)
+			qry := wsb.AddQuery(qName)
 			qry.SetParam(qNameMyFuncParams).SetResult(qNameMyFuncResults)
-			wsb.AddType(qName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			myFunc := istructsmem.NewQueryFunction(qName, istructsmem.NullQueryExec)
@@ -1344,11 +1363,12 @@ func (b *mockStateKeyBuilder) PutRecordID(name string, value istructs.RecordID) 
 
 type mockStateValue struct {
 	istructs.IStateValue
+	istructs.IStateRecordValue
 	mock.Mock
 }
 
-func (o *mockStateValue) AsRecord(name string) istructs.IRecord {
-	return o.Called(name).Get(0).(istructs.IRecord)
+func (o *mockStateValue) AsRecord() istructs.IRecord {
+	return o.Called("").Get(0).(istructs.IRecord)
 }
 
 type mockRecord struct {

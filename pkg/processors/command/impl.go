@@ -12,9 +12,9 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"golang.org/x/exp/maps"
@@ -66,6 +66,7 @@ func (c *cmdWorkpiece) AppPartition() appparts.IAppPartition {
 }
 
 // used in c.cluster.VSqlUpdate to determinate partitionID by WSID
+// used in c.registry.CreateLogin to dtermine if the target app is deployed
 func (c *cmdWorkpiece) AppPartitions() appparts.IAppPartitions {
 	return c.appParts
 }
@@ -131,14 +132,19 @@ func (ap *appPartition) getWorkspace(wsid istructs.WSID) *workspace {
 
 func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	ap, ok := cmdProc.appPartitions[cmd.cmdMes.AppQName()]
+	appPartitions, ok := cmdProc.appsPartitions[cmd.cmdMes.AppQName()]
 	if !ok {
-		if ap, err = cmdProc.recovery(ctx, cmd); err != nil {
-			return fmt.Errorf("partition %d recovery failed: %w", cmdProc.pNumber, err)
-		}
-		cmdProc.appPartitions[cmd.cmdMes.AppQName()] = ap
+		appPartitions = map[istructs.PartitionID]*appPartition{}
+		cmdProc.appsPartitions[cmd.cmdMes.AppQName()] = appPartitions
 	}
-	cmdProc.appPartition = ap
+	appPartition, ok := appPartitions[cmd.cmdMes.PartitionID()]
+	if !ok {
+		if appPartition, err = cmdProc.recovery(ctx, cmd); err != nil {
+			return fmt.Errorf("partition %d recovery failed: %w", cmd.cmdMes.PartitionID(), err)
+		}
+		appPartitions[cmd.cmdMes.PartitionID()] = appPartition
+	}
+	cmd.appPartition = appPartition
 	return nil
 }
 
@@ -191,7 +197,8 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work pipeline.IWorkp
 	}
 
 	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(),
-		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.eca.CommandPrepareArgs, cmd.workspace.NextWLogOffset, cmd.argsObject, cmd.unloggedArgsObject)
+		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.eca.CommandPrepareArgs, cmd.workspace.NextWLogOffset,
+		cmd.argsObject, cmd.unloggedArgsObject, cmd.cmdMes.PartitionID())
 	hs.ClearIntents()
 
 	cmd.eca.State = hs
@@ -200,17 +207,17 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work pipeline.IWorkp
 	return
 }
 
-func updateIDGeneratorFromO(root istructs.IObject, types appdef.IWithTypes, idGen istructs.IIDGenerator) {
+func updateIDGeneratorFromO(root istructs.IObject, findType appdef.FindType, idGen istructs.IIDGenerator) {
 	// new IDs only here because update is not allowed for ODocs in Args
-	idGen.UpdateOnSync(root.AsRecordID(appdef.SystemField_ID), types.Type(root.QName()))
-	root.Containers(func(container string) {
+	idGen.UpdateOnSync(root.AsRecordID(appdef.SystemField_ID), findType(root.QName()))
+	for container := range root.Containers {
 		// order of containers here is the order in the schema
 		// but order in the request could be different
 		// that is not a problem because for ODocs/ORecords ID generator will bump next ID only if syncID is actually next
-		root.Children(container, func(c istructs.IObject) {
-			updateIDGeneratorFromO(c, types, idGen)
-		})
-	})
+		for c := range root.Children(container) {
+			updateIDGeneratorFromO(c, findType, idGen)
+		}
+	}
 }
 
 func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPartition, error) {
@@ -222,15 +229,15 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 	cb := func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		ws := ap.getWorkspace(event.Workspace())
 
-		event.CUDs(func(rec istructs.ICUDRow) {
+		for rec := range event.CUDs {
 			if rec.IsNew() {
 				t := cmd.appStructs.AppDef().Type(rec.QName())
 				ws.idGenerator.UpdateOnSync(rec.ID(), t)
 			}
-		})
+		}
 		ao := event.ArgumentObject()
 		if cmd.appStructs.AppDef().Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
-			updateIDGeneratorFromO(ao, cmd.appStructs.AppDef(), ws.idGenerator)
+			updateIDGeneratorFromO(ao, cmd.appStructs.AppDef().Type, ws.idGenerator)
 		}
 		ws.NextWLogOffset = event.WLogOffset() + 1
 		ap.nextPLogOffset = plogOffset + 1
@@ -241,7 +248,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		return nil
 	}
 
-	if err := cmd.appStructs.Events().ReadPLog(ctx, cmdProc.pNumber, istructs.FirstOffset, istructs.ReadToTheEnd, cb); err != nil {
+	if err := cmd.appStructs.Events().ReadPLog(ctx, cmd.cmdMes.PartitionID(), istructs.FirstOffset, istructs.ReadToTheEnd, cb); err != nil {
 		return nil, err
 	}
 
@@ -263,7 +270,8 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		// notest
 		return nil, err
 	}
-	logger.Info(fmt.Sprintf(`app "%s" partition %d recovered: nextPLogOffset %d, workspaces: %s`, cmd.cmdMes.AppQName(), cmdProc.pNumber, ap.nextPLogOffset, string(worskapcesJSON)))
+	logger.Info(fmt.Sprintf(`app "%s" partition %d recovered: nextPLogOffset %d, workspaces: %s`, cmd.cmdMes.AppQName(), cmd.cmdMes.PartitionID(),
+		ap.nextPLogOffset, string(worskapcesJSON)))
 	return ap, nil
 }
 
@@ -281,7 +289,7 @@ func (cmdProc *cmdProc) putPLog(_ context.Context, work pipeline.IWorkpiece) (er
 	if cmd.pLogEvent, err = cmd.appStructs.Events().PutPlog(cmd.rawEvent, nil, cmd.idGenerator); err != nil {
 		cmd.appPartitionRestartScheduled = true
 	} else {
-		cmdProc.appPartition.nextPLogOffset++
+		cmd.appPartition.nextPLogOffset++
 	}
 	return
 }
@@ -356,8 +364,20 @@ func (cmdProc *cmdProc) authenticate(_ context.Context, work pipeline.IWorkpiece
 	return
 }
 
+func getPrincipalsRoles(_ context.Context, work pipeline.IWorkpiece) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	for _, prn := range cmd.principals {
+		if prn.Kind != iauthnz.PrincipalKind_Role {
+			continue
+		}
+		cmd.roles = append(cmd.roles, prn.QName)
+	}
+	return nil
+}
+
 func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
+	// TODO: eliminate when all application will use ACL in VSQL
 	req := iauthnz.AuthzRequest{
 		OperationKind: iauthnz.OperationKind_EXECUTE,
 		Resource:      cmd.cmdMes.QName(),
@@ -367,9 +387,23 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkp
 		return err
 	}
 	if !ok {
-		return coreutils.NewHTTPErrorf(http.StatusForbidden)
+		ok, _, err := cmd.appPart.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles)
+		if err != nil {
+			// TODO: temporary workaround. Eliminate later
+			if roleNotFound(err) {
+				return coreutils.NewHTTPErrorf(http.StatusForbidden)
+			}
+			return err
+		}
+		if !ok {
+			return coreutils.NewHTTPErrorf(http.StatusForbidden)
+		}
 	}
 	return nil
+}
+
+func roleNotFound(err error) bool {
+	return errors.Is(err, appdef.ErrNotFoundError) && strings.Contains(err.Error(), "role")
 }
 
 func unmarshalRequestBody(_ context.Context, work pipeline.IWorkpiece) (err error) {
@@ -378,7 +412,7 @@ func unmarshalRequestBody(_ context.Context, work pipeline.IWorkpiece) (err erro
 		cmd.requestData["args"] = map[string]interface{}{
 			processors.Field_RawObject_Body: string(cmd.cmdMes.Body()),
 		}
-	} else if err = json.Unmarshal(cmd.cmdMes.Body(), &cmd.requestData); err != nil {
+	} else if err = coreutils.JSONUnmarshal(cmd.cmdMes.Body(), &cmd.requestData); err != nil {
 		err = fmt.Errorf("failed to unmarshal request body: %w\n%s", err, cmd.cmdMes.Body())
 	}
 	return
@@ -386,7 +420,7 @@ func unmarshalRequestBody(_ context.Context, work pipeline.IWorkpiece) (err erro
 
 func (cmdProc *cmdProc) getWorkspace(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	cmd.workspace = cmdProc.appPartition.getWorkspace(cmd.cmdMes.WSID())
+	cmd.workspace = cmd.appPartition.getWorkspace(cmd.cmdMes.WSID())
 	return nil
 }
 
@@ -397,7 +431,7 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work pipeline.IWor
 		Workspace:         cmd.cmdMes.WSID(),
 		QName:             cmd.cmdMes.QName(),
 		RegisteredAt:      istructs.UnixMilli(cmdProc.time.Now().UnixMilli()),
-		PLogOffset:        cmdProc.appPartition.nextPLogOffset,
+		PLogOffset:        cmd.appPartition.nextPLogOffset,
 		WLogOffset:        cmd.workspace.NextWLogOffset,
 	}
 
@@ -425,11 +459,11 @@ func getArgsObject(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		return nil
 	}
 	aob := cmd.reb.ArgumentObjectBuilder()
-	if argsIntf, exists := cmd.requestData["args"]; exists {
-		args, ok := argsIntf.(map[string]interface{})
-		if !ok {
-			return errors.New(`"args" field must be an object`)
-		}
+	args, exists, err := cmd.requestData.AsObject("args")
+	if err != nil {
+		return err
+	}
+	if exists {
 		aob.FillFromJSON(args)
 	}
 	if cmd.argsObject, err = aob.Build(); err != nil {
@@ -444,11 +478,11 @@ func getUnloggedArgsObject(_ context.Context, work pipeline.IWorkpiece) (err err
 		return nil
 	}
 	auob := cmd.reb.ArgumentUnloggedObjectBuilder()
-	if unloggedArgsIntf, exists := cmd.requestData["unloggedArgs"]; exists {
-		unloggedArgs, ok := unloggedArgsIntf.(map[string]interface{})
-		if !ok {
-			return errors.New(`"unloggedArgs" field must be an object`)
-		}
+	unloggedArgs, exists, err := cmd.requestData.AsObject("unloggedArgs")
+	if err != nil {
+		return err
+	}
+	if exists {
 		auob.FillFromJSON(unloggedArgs)
 	}
 	if cmd.unloggedArgsObject, err = auob.Build(); err != nil {
@@ -484,7 +518,7 @@ func buildRawEvent(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	cmd.rawEvent, err = cmd.reb.BuildRawEvent()
 	status := http.StatusBadRequest
-	if errors.Is(err, istructsmem.ErrRecordIDUniqueViolation) {
+	if errors.Is(err, istructsmem.ErrRecordIDUniqueViolationError) {
 		status = http.StatusConflict
 	}
 	err = coreutils.WrapSysError(err, status)
@@ -516,16 +550,12 @@ func (cmdProc *cmdProc) eventValidators(ctx context.Context, work pipeline.IWork
 func (cmdProc *cmdProc) cudsValidators(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	for _, appCUDValidator := range cmd.appStructs.CUDValidators() {
-		err = iterate.ForEachError(cmd.rawEvent.CUDs, func(rec istructs.ICUDRow) error {
+		for rec := range cmd.rawEvent.CUDs {
 			if appCUDValidator.Match(rec, cmd.cmdMes.WSID(), cmd.cmdMes.QName()) {
 				if err := appCUDValidator.Validate(ctx, cmd.appStructs, rec, cmd.cmdMes.WSID(), cmd.cmdMes.QName()); err != nil {
 					return coreutils.WrapSysError(err, http.StatusForbidden)
 				}
 			}
-			return nil
-		})
-		if err != nil {
-			return err
 		}
 	}
 	return nil
@@ -537,13 +567,13 @@ func (cmdProc *cmdProc) validateCUDsQNames(ctx context.Context, work pipeline.IW
 		// dummy or c.sys.CreateWorkspace
 		return nil
 	}
-	return iterate.ForEachError(cmd.rawEvent.CUDs, func(cud istructs.ICUDRow) error {
+	for cud := range cmd.rawEvent.CUDs {
 		if cmd.iWorkspace.Type(cud.QName()) == appdef.NullType {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Errorf("doc %s mentioned in resulting CUDs does not exist in the workspace %s",
 				cud.QName(), cmd.wsDesc.AsQName(authnz.Field_WSKind)))
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
 func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
@@ -577,8 +607,13 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		if parsedCUD.id, isCreate, err = parsedCUD.fields.AsInt64(appdef.SystemField_ID); err != nil {
 			return cudXPath.Error(err)
 		}
+		if parsedCUD.id < 0 {
+			// TODO: cover by tests
+			return cudXPath.Errorf("id can not be negative")
+		}
 		if isCreate {
-			parsedCUD.opKind = iauthnz.OperationKind_INSERT
+			parsedCUD.opKind = appdef.OperationKind_Insert
+			parsedCUD.opKindOld = iauthnz.OperationKind_INSERT
 			qNameStr, _, err := parsedCUD.fields.AsString(appdef.SystemField_QName)
 			if err != nil {
 				return cudXPath.Error(err)
@@ -587,14 +622,15 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 				return cudXPath.Error(err)
 			}
 		} else {
-			parsedCUD.opKind = iauthnz.OperationKind_UPDATE
+			parsedCUD.opKind = appdef.OperationKind_Update
+			parsedCUD.opKindOld = iauthnz.OperationKind_UPDATE
 			if parsedCUD.id, ok, err = cudData.AsInt64(appdef.SystemField_ID); err != nil {
 				return cudXPath.Error(err)
 			}
 			if !ok {
 				return cudXPath.Errorf(`"sys.ID" missing`)
 			}
-			if parsedCUD.existingRecord, err = cmd.appStructs.Records().Get(cmd.cmdMes.WSID(), true, istructs.RecordID(parsedCUD.id)); err != nil {
+			if parsedCUD.existingRecord, err = cmd.appStructs.Records().Get(cmd.cmdMes.WSID(), true, istructs.RecordID(parsedCUD.id)); err != nil { // nolint G115
 				return
 			}
 			if parsedCUD.qName = parsedCUD.existingRecord.QName(); parsedCUD.qName == appdef.NullQName {
@@ -612,7 +648,7 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	return err
 }
 
-func checkCUDsAllowed(_ context.Context, work pipeline.IWorkpiece) (err error) {
+func checkCUDsAllowedInCUDCmdOnly(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	if len(cmd.parsedCUDs) > 0 && cmd.cmdMes.QName() != istructs.QNameCommandCUD && cmd.cmdMes.QName() != builtin.QNameCommandInit {
 		return errors.New("CUDs allowed for c.sys.CUD command only")
@@ -637,7 +673,7 @@ func checkArgsRefIntegrity(_ context.Context, work pipeline.IWorkpiece) (err err
 func checkIsActiveInCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	for _, cud := range cmd.parsedCUDs {
-		if cud.opKind != iauthnz.OperationKind_UPDATE {
+		if cud.opKind != appdef.OperationKind_Update {
 			continue
 		}
 		hasOnlySystemFields := true
@@ -663,17 +699,29 @@ func checkIsActiveInCUDs(_ context.Context, work pipeline.IWorkpiece) (err error
 func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	for _, parsedCUD := range cmd.parsedCUDs {
+		// TODO: eliminate when all application will use ACL in VSQL
 		req := iauthnz.AuthzRequest{
-			OperationKind: parsedCUD.opKind,
+			OperationKind: parsedCUD.opKindOld,
 			Resource:      parsedCUD.qName,
 			Fields:        maps.Keys(parsedCUD.fields),
+		}
+		if parsedCUD.opKind == appdef.OperationKind_Select {
+			// TODO: eliminate SELECT rule skipping after implementing ACL in VSQL in Air
+			continue
 		}
 		ok, err := cmdProc.authorizer.Authorize(cmd.appStructs, cmd.principals, req)
 		if err != nil {
 			return parsedCUD.xPath.Error(err)
 		}
 		if !ok {
-			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
+			fields := maps.Keys(parsedCUD.fields)
+			ok, _, err := cmd.appPart.IsOperationAllowed(parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
+			}
 		}
 	}
 	return
@@ -683,9 +731,9 @@ func (cmdProc *cmdProc) writeCUDs(_ context.Context, work pipeline.IWorkpiece) (
 	cmd := work.(*cmdWorkpiece)
 	for _, parsedCUD := range cmd.parsedCUDs {
 		var cud istructs.IRowWriter
-		if parsedCUD.opKind == iauthnz.OperationKind_INSERT {
+		if parsedCUD.opKind == appdef.OperationKind_Insert {
 			cud = cmd.reb.CUDBuilder().Create(parsedCUD.qName)
-			cud.PutRecordID(appdef.SystemField_ID, istructs.RecordID(parsedCUD.id))
+			cud.PutRecordID(appdef.SystemField_ID, istructs.RecordID(parsedCUD.id)) // nolint G115
 		} else {
 			cud = cmd.reb.CUDBuilder().Update(parsedCUD.existingRecord)
 		}
@@ -705,9 +753,9 @@ func (cmdProc *cmdProc) n10n(_ context.Context, work pipeline.IWorkpiece) (err e
 	cmdProc.n10nBroker.Update(in10n.ProjectionKey{
 		App:        cmd.cmdMes.AppQName(),
 		Projection: actualizers.PLogUpdatesQName,
-		WS:         istructs.WSID(cmdProc.pNumber),
+		WS:         istructs.WSID(cmd.cmdMes.PartitionID()),
 	}, cmd.rawEvent.PLogOffset())
-	logger.Verbose("updated plog event on offset ", cmd.rawEvent.PLogOffset(), ", pnumber ", cmdProc.pNumber)
+	logger.Verbose("updated plog event on offset ", cmd.rawEvent.PLogOffset(), ", pnumber ", cmd.cmdMes.PartitionID())
 	return nil
 }
 

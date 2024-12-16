@@ -12,8 +12,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/apps"
-	"github.com/voedger/voedger/pkg/apps/sys/clusterapp"
 	"github.com/voedger/voedger/pkg/btstrp"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -29,6 +27,8 @@ import (
 	"github.com/voedger/voedger/pkg/sys/sysprovide"
 	it "github.com/voedger/voedger/pkg/vit"
 	"github.com/voedger/voedger/pkg/vvm"
+	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
+	"github.com/voedger/voedger/pkg/vvm/builtin/clusterapp"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 )
 
@@ -112,9 +112,9 @@ func getTestCfg(numParts istructs.NumAppPartitions, numAppWS istructs.NumAppWork
 		FS:   fs,
 	}
 	return it.NewOwnVITConfig(
-		it.WithApp(istructs.AppQName_test1_app1, func(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
+		it.WithApp(istructs.AppQName_test1_app1, func(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
 			sysPkg := sysprovide.Provide(cfg)
-			return apps.BuiltInAppDef{
+			return builtinapps.Def{
 				AppDeploymentDescriptor: appparts.AppDeploymentDescriptor{
 					NumParts:         numParts,
 					EnginePoolSize:   it.DefaultTestAppEnginesPool,

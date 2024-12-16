@@ -6,6 +6,7 @@ package storages
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -28,7 +29,7 @@ func (b *baseKeyBuilder) Entity() appdef.QName {
 }
 func (b *baseKeyBuilder) String() string {
 	if b.entity == appdef.NullQName {
-		return fmt.Sprintf("storage:%s", b.Storage().String())
+		return "storage:" + b.Storage().String()
 	}
 	return fmt.Sprintf("storage:%s, entity:%s", b.Storage(), b.entity.String())
 }
@@ -67,7 +68,7 @@ func (b *baseKeyBuilder) PutBool(name appdef.FieldName, value bool) {
 func (b *baseKeyBuilder) PutRecordID(name appdef.FieldName, value istructs.RecordID) {
 	panic(errRecordIDFieldUndefined(name))
 }
-func (b *baseKeyBuilder) PutNumber(name appdef.FieldName, value float64) {
+func (b *baseKeyBuilder) PutNumber(name appdef.FieldName, value json.Number) {
 	panic(errNumberFieldUndefined(name))
 }
 func (b *baseKeyBuilder) PutChars(name appdef.FieldName, value string) {
@@ -108,7 +109,7 @@ func (b *baseValueBuilder) PutFloat64(name string, value float64) {
 func (b *baseValueBuilder) PutQName(name string, value appdef.QName) {
 	panic(errQNameFieldUndefined(name))
 }
-func (b *baseValueBuilder) PutNumber(name string, value float64) {
+func (b *baseValueBuilder) PutNumber(name string, value json.Number) {
 	panic(errNumberFieldUndefined(name))
 }
 func (b *baseValueBuilder) PutRecordID(name string, value istructs.RecordID) {
@@ -134,19 +135,19 @@ func (v *baseStateValue) AsValue(name string) istructs.IStateValue {
 func (v *baseStateValue) AsRecordID(name string) istructs.RecordID {
 	panic(errRecordIDFieldUndefined(name))
 }
-func (v *baseStateValue) AsRecord(name string) istructs.IRecord           { panic(errNotImplemented) }
-func (v *baseStateValue) AsEvent(name string) istructs.IDbEvent           { panic(errNotImplemented) }
-func (v *baseStateValue) RecordIDs(bool, func(string, istructs.RecordID)) { panic(errNotImplemented) }
-func (v *baseStateValue) FieldNames(func(string))                         { panic(errNotImplemented) }
-func (v *baseStateValue) Length() int                                     { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsString(int) string                          { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsBytes(int) []byte                           { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsInt32(int) int32                            { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsInt64(int) int64                            { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsFloat32(int) float32                        { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsFloat64(int) float64                        { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsQName(int) appdef.QName                     { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsBool(int) bool                              { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) RecordIDs(bool) func(func(string, istructs.RecordID) bool) {
+	panic(errNotImplemented)
+}
+func (v *baseStateValue) FieldNames(func(string) bool) { panic(errNotImplemented) }
+func (v *baseStateValue) Length() int                  { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsString(int) string       { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsBytes(int) []byte        { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsInt32(int) int32         { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsInt64(int) int64         { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsFloat32(int) float32     { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsFloat64(int) float64     { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsQName(int) appdef.QName  { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsBool(int) bool           { panic(errCurrentValueIsNotAnArray) }
 func (v *baseStateValue) GetAsValue(int) istructs.IStateValue {
 	panic(errFieldByIndexIsNotAnObjectOrArray)
 }
@@ -200,17 +201,17 @@ func (v *ObjectStateValue) AsBool(name string) bool          { return v.object.A
 func (v *ObjectStateValue) AsRecordID(name string) istructs.RecordID {
 	return v.object.AsRecordID(name)
 }
-func (v *ObjectStateValue) RecordIDs(includeNulls bool, cb func(string, istructs.RecordID)) {
-	v.object.RecordIDs(includeNulls, cb)
+func (v *ObjectStateValue) RecordIDs(includeNulls bool) func(func(string, istructs.RecordID) bool) {
+	return v.object.RecordIDs(includeNulls)
 }
-func (v *ObjectStateValue) FieldNames(cb func(string)) { v.object.FieldNames(cb) }
+func (v *ObjectStateValue) FieldNames(cb func(string) bool) { v.object.FieldNames(cb) }
 func (v *ObjectStateValue) AsValue(name string) (result istructs.IStateValue) {
-	v.object.Containers(func(name string) {
-		result = &objectArrayContainerValue{
-			object:    v.object,
-			container: name,
+	for n := range v.object.Containers {
+		if n == name {
+			result = &objectArrayContainerValue{object: v.object, container: name}
+			break
 		}
-	})
+	}
 	if result == nil {
 		panic(errValueFieldUndefined(name))
 	}
@@ -233,12 +234,13 @@ func (v *objectArrayContainerValue) GetAsQName(int) appdef.QName { panic(ErrNotS
 func (v *objectArrayContainerValue) GetAsBool(int) bool          { panic(ErrNotSupported) }
 func (v *objectArrayContainerValue) GetAsValue(i int) (result istructs.IStateValue) {
 	index := 0
-	v.object.Children(v.container, func(o istructs.IObject) {
+	for o := range v.object.Children(v.container) {
 		if index == i {
 			result = &ObjectStateValue{object: o}
+			break
 		}
 		index++
-	})
+	}
 	if result == nil {
 		panic(errIndexOutOfBounds(i))
 	}
@@ -246,9 +248,9 @@ func (v *objectArrayContainerValue) GetAsValue(i int) (result istructs.IStateVal
 }
 func (v *objectArrayContainerValue) Length() int {
 	var result int
-	v.object.Children(v.container, func(i istructs.IObject) {
+	for range v.object.Children(v.container) {
 		result++
-	})
+	}
 	return result
 }
 
@@ -342,10 +344,14 @@ func (v *jsonValue) AsRecordID(name string) istructs.RecordID {
 	}
 	panic(errRecordIDFieldUndefined(name))
 }
-func (v *jsonValue) RecordIDs(includeNulls bool, cb func(string, istructs.RecordID)) {}
-func (v *jsonValue) FieldNames(cb func(string)) {
+func (v *jsonValue) RecordIDs(bool) func(func(string, istructs.RecordID) bool) {
+	return func(cb func(string, istructs.RecordID) bool) {}
+}
+func (v *jsonValue) FieldNames(cb func(string) bool) {
 	for name := range v.json {
-		cb(name)
+		if !cb(name) {
+			break
+		}
 	}
 }
 func (v *jsonValue) AsValue(name string) (result istructs.IStateValue) {
@@ -382,7 +388,7 @@ func newWsTypeValidator(appStructsFunc state.AppStructsFunc) wsTypeVailidator {
 
 func (v *wsTypeVailidator) isStructureInt64FieldRecordID(name appdef.QName, fieldName appdef.FieldName) bool {
 	app := v.appStructsFunc().AppDef()
-	rec := app.Structure(name)
+	rec := appdef.Structure(app.Type, name)
 	field := rec.Field(fieldName)
 	if field == nil {
 		panic(errInt64FieldUndefined(fieldName))
@@ -392,8 +398,8 @@ func (v *wsTypeVailidator) isStructureInt64FieldRecordID(name appdef.QName, fiel
 
 func (v *wsTypeVailidator) isViewInt64FieldRecordID(name appdef.QName, fieldName appdef.FieldName) bool {
 	app := v.appStructsFunc().AppDef()
-	rec := app.View(name)
-	field := rec.Field(fieldName)
+	view := appdef.View(app.Type, name)
+	field := view.Field(fieldName)
 	if field == nil {
 		panic(errInt64FieldUndefined(fieldName))
 	}
@@ -440,7 +446,7 @@ func (v *wsTypeVailidator) validate(wsid istructs.WSID, entity appdef.QName) err
 			// notest
 			return errDescriptorForUndefinedWorkspace
 		}
-		if ws.TypeByName(entity) == nil {
+		if ws.Type(entity).Kind() == appdef.TypeKind_null {
 			return typeIsNotDefinedInWorkspaceWithDescriptor(entity, wsKind)
 		}
 	}

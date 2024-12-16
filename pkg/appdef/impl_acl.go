@@ -6,123 +6,186 @@
 package appdef
 
 import (
+	"errors"
 	"fmt"
+	"iter"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
-// # Implements:
-//   - IResourcePattern
-type resourcePattern struct {
-	on     QNames
+// # Supports:
+//   - IACLFilter
+type aclFilter struct {
+	IFilter
 	fields []FieldName
 }
 
-func newResourcePattern(on []QName, fields []FieldName) *resourcePattern {
-	return &resourcePattern{on: on, fields: fields}
+func newAclFilter(flt IFilter, fields []FieldName) *aclFilter {
+	return &aclFilter{flt, fields}
 }
 
-func (r resourcePattern) On() QNames { return r.on }
+func (f aclFilter) Fields() iter.Seq[FieldName] { return slices.Values(f.fields) }
 
-func (r resourcePattern) Fields() []FieldName { return r.fields }
+func (f aclFilter) HasFields() bool { return len(f.fields) > 0 }
 
-func (r resourcePattern) String() string {
-	if len(r.fields) > 0 {
-		return fmt.Sprintf("%v(%v)", r.on, r.fields)
+func (f aclFilter) String() string {
+	if f.HasFields() {
+		return fmt.Sprintf("%v(%v)", f.IFilter, f.fields)
 	}
-	return fmt.Sprint(r.on)
+	return fmt.Sprint(f.IFilter)
 }
 
-// # Implements:
+// # Supports:
 //   - IACLRule
 type aclRule struct {
 	comment
 	ops       set.Set[OperationKind]
 	policy    PolicyKind
-	resources *resourcePattern
+	flt       *aclFilter
 	principal *role
+	ws        *workspace
 }
 
-func newACLRule(ops []OperationKind, policy PolicyKind, resources []QName, fields []FieldName, principal *role, comment ...string) *aclRule {
+func newACLRule(ws *workspace, ops []OperationKind, policy PolicyKind, flt IFilter, fields []FieldName, principal *role, comment ...string) *aclRule {
 	opSet := set.From(ops...)
-	if opSet.Len() == 0 {
-		panic(ErrMissed("operations"))
-	}
-
-	names, err := validateACLResourceNames(principal.app, resources...)
-	if err != nil {
+	if compatible, err := isCompatibleOperations(opSet); !compatible {
 		panic(err)
 	}
 
 	if opSet.Contains(OperationKind_Inherits) && (policy != PolicyKind_Allow) {
-		panic(ErrUnsupported("«%s» for «%s»", policy.ActionString(), OperationKind_Inherits.TrimString()))
+		panic(ErrUnsupported("%s %s", policy.ActionString(), OperationKind_Inherits.TrimString()))
 	}
 
-	res := principal.app.Type(names[0])
-	allOps := allACLOperationsOnType(res)
-	if !allOps.ContainsAll(opSet.AsArray()...) {
-		panic(ErrIncompatible("operations «%s» with %v", opSet, res))
+	if opSet.ContainsAny(OperationKind_Inherits, OperationKind_Execute) && (len(fields) > 0) {
+		panic(ErrIncompatible("operations %v with fields", opSet))
 	}
 
-	if len(fields) > 0 {
-		if !opSet.ContainsAny(OperationKind_Select, OperationKind_Update) {
-			panic(ErrIncompatible("fields are not applicable for operations «%s»", opSet))
-		}
-		if err := validateFieldNamesByTypes(principal.app, resources, fields); err != nil {
-			panic(err)
-		}
+	if flt == nil {
+		panic(ErrMissed("filter"))
 	}
 
 	acl := &aclRule{
 		comment:   makeComment(comment...),
 		policy:    policy,
 		ops:       opSet,
-		resources: newResourcePattern(names, fields),
+		flt:       newAclFilter(flt, fields),
 		principal: principal,
+		ws:        ws,
 	}
+
+	for t := range FilterMatches(acl.Filter(), ws.Types()) {
+		if err := acl.validateOnType(t); err != nil {
+			panic(err)
+		}
+	}
+
 	return acl
 }
 
-func newGrant(ops []OperationKind, resources []QName, fields []FieldName, principal *role, comment ...string) *aclRule {
-	return newACLRule(ops, PolicyKind_Allow, resources, fields, principal, comment...)
+func newGrant(ws *workspace, ops []OperationKind, flt IFilter, fields []FieldName, principal *role, comment ...string) *aclRule {
+	return newACLRule(ws, ops, PolicyKind_Allow, flt, fields, principal, comment...)
 }
 
-func newRevoke(ops []OperationKind, resources []QName, fields []FieldName, principal *role, comment ...string) *aclRule {
-	return newACLRule(ops, PolicyKind_Deny, resources, fields, principal, comment...)
+func newRevoke(ws *workspace, ops []OperationKind, flt IFilter, fields []FieldName, principal *role, comment ...string) *aclRule {
+	return newACLRule(ws, ops, PolicyKind_Deny, flt, fields, principal, comment...)
 }
 
-func newACLRuleAll(policy PolicyKind, resources []QName, principal *role, comment ...string) *aclRule {
-	names, err := validateACLResourceNames(principal.app, resources...)
-	if err != nil {
-		panic(err)
+func newACLRuleAll(ws *workspace, policy PolicyKind, flt IFilter, principal *role, comment ...string) *aclRule {
+	if flt == nil {
+		panic(ErrMissed("filter"))
 	}
 
-	allOps := allACLOperationsOnType(principal.app.Type(names[0]))
+	t := FirstFilterMatch(flt, ws.LocalTypes())
+	if t == nil {
+		panic(ErrFilterHasNoMatches(flt, ws))
+	}
 
-	return newACLRule(allOps.AsArray(), policy, names, nil, principal, comment...)
+	ops := AllOperationsForType(t.Kind())
+	if ops.Len() == 0 {
+		panic(ErrACLUnsupportedType(t))
+	}
+
+	return newACLRule(ws, ops.AsArray(), policy, flt, nil, principal, comment...)
 }
 
-func newGrantAll(resources []QName, principal *role, comment ...string) *aclRule {
-	return newACLRuleAll(PolicyKind_Allow, resources, principal, comment...)
+func newGrantAll(ws *workspace, flt IFilter, principal *role, comment ...string) *aclRule {
+	return newACLRuleAll(ws, PolicyKind_Allow, flt, principal, comment...)
 }
 
-func newRevokeAll(resources []QName, principal *role, comment ...string) *aclRule {
-	return newACLRuleAll(PolicyKind_Deny, resources, principal, comment...)
+func newRevokeAll(ws *workspace, flt IFilter, principal *role, comment ...string) *aclRule {
+	return newACLRuleAll(ws, PolicyKind_Deny, flt, principal, comment...)
 }
 
-func (g aclRule) Ops() []OperationKind { return g.ops.AsArray() }
+func (acl aclRule) Filter() IACLFilter { return acl.flt }
 
-func (g aclRule) Policy() PolicyKind { return g.policy }
+func (acl aclRule) Op(op OperationKind) bool { return acl.ops.Contains(op) }
 
-func (g aclRule) Principal() IRole { return g.principal }
+func (acl aclRule) Ops() iter.Seq[OperationKind] { return acl.ops.Values() }
 
-func (g aclRule) Resources() IResourcePattern { return g.resources }
+func (acl aclRule) Policy() PolicyKind { return acl.policy }
 
-func (g aclRule) String() string {
-	switch g.policy {
+func (acl aclRule) Principal() IRole { return acl.principal }
+
+func (acl aclRule) String() string {
+	// GRANT [Select] ON QNAMES(test.doc) TO test.reader
+	// REVOKE [INSERT UPDATE SELECT] QNAMES(test.doc)([field1]) FROM test.writer
+	s := fmt.Sprintf("%s %s ON %s", acl.Policy().ActionString(), acl.ops, acl.Filter())
+	switch acl.policy {
 	case PolicyKind_Deny:
-		return fmt.Sprintf("%s %v on %v from %v", g.policy.ActionString(), g.ops, g.resources, g.principal)
+		s += " FROM "
 	default:
-		return fmt.Sprintf("%s %v on %v to %v", g.policy.ActionString(), g.ops, g.resources, g.principal)
+		s += " TO "
 	}
+	s += fmt.Sprint(acl.Principal().QName())
+	return s
+}
+
+func (acl aclRule) Workspace() IWorkspace { return acl.ws }
+
+// validates ACL rule.
+//
+// # Error if:
+//   - filter has no matches in the workspace
+//   - some filtered type can not to be proceed with ACL. See validateOnType
+func (acl aclRule) validate() (err error) {
+	cnt := 0
+	for t := range FilterMatches(acl.Filter(), acl.Workspace().Types()) {
+		err = errors.Join(err, acl.validateOnType(t))
+		cnt++
+	}
+
+	if (err == nil) && (cnt == 0) {
+		return ErrFilterHasNoMatches(acl.Filter(), acl.Workspace())
+	}
+
+	return err
+}
+
+// validates ACL rule on the filtered type.
+//
+// # Error if:
+//   - filtered type is not supported by ACL
+//   - ACL operations are not compatible with the filtered type
+//   - some specified field is not found in the filtered type
+func (acl aclRule) validateOnType(t IType) error {
+	allOps := AllOperationsForType(t.Kind())
+	if allOps.Len() == 0 {
+		return ErrACLUnsupportedType(t)
+	}
+	for op := range acl.Ops() {
+		if !allOps.Contains(op) {
+			return ErrIncompatible("operation %v and %v", op.TrimString(), t)
+		}
+	}
+	if acl.Filter().HasFields() {
+		if fields, ok := t.(IFields); ok {
+			for f := range acl.Filter().Fields() {
+				if fields.Field(f) == nil {
+					return ErrNotFound("field «%v» in %v", f, t)
+				}
+			}
+		}
+	}
+	return nil
 }

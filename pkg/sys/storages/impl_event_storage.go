@@ -33,9 +33,9 @@ type eventValue struct {
 func (v *eventValue) AsInt64(name string) int64 {
 	switch name {
 	case sys.Storage_Event_Field_WLogOffset:
-		return int64(v.event.WLogOffset())
+		return int64(v.event.WLogOffset()) // nolint G115
 	case sys.Storage_Event_Field_Workspace:
-		return int64(v.event.Workspace())
+		return int64(v.event.Workspace()) // nolint G115
 	case sys.Storage_Event_Field_RegisteredAt:
 		return int64(v.event.RegisteredAt())
 	case sys.Storage_Event_Field_DeviceID:
@@ -66,9 +66,9 @@ func (v *eventValue) AsEvent(string) istructs.IDbEvent { return v.event }
 func (v *eventValue) AsValue(name string) istructs.IStateValue {
 	if name == sys.Storage_Event_Field_CUDs {
 		sv := &cudsValue{}
-		v.event.CUDs(func(rec istructs.ICUDRow) {
+		for rec := range v.event.CUDs {
 			sv.cuds = append(sv.cuds, rec)
-		})
+		}
 		return sv
 	}
 	if name == sys.Storage_Event_Field_Error {

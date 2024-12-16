@@ -2,18 +2,30 @@
 
 -- note: this schema is for tests only. Voedger sys package uses copy of this schema
 
-ABSTRACT TABLE CRecord();
-ABSTRACT TABLE WRecord();
-ABSTRACT TABLE ORecord();
-
-ABSTRACT TABLE CDoc INHERITS CRecord();
-ABSTRACT TABLE ODoc INHERITS ORecord();
-ABSTRACT TABLE WDoc INHERITS WRecord();
-
-ABSTRACT TABLE CSingleton INHERITS CDoc();
-ABSTRACT TABLE WSingleton INHERITS WDoc();
-
 ABSTRACT WORKSPACE Workspace (
+
+    /*
+        Specify sys.Raw as a command/function parameter to pass raw data to the command/function.
+        The data isn't validated by the core.
+        An extension accesses the data by reading the "Body" field from the argument.
+    */
+    TYPE Raw(
+        Body   varchar(65535)
+    );
+
+    ABSTRACT TABLE CRecord();
+    ABSTRACT TABLE WRecord();
+    ABSTRACT TABLE ORecord();
+
+    ABSTRACT TABLE CDoc INHERITS CRecord();
+    ABSTRACT TABLE ODoc INHERITS ORecord();
+    ABSTRACT TABLE WDoc INHERITS WRecord();
+
+    ABSTRACT TABLE CSingleton INHERITS CDoc();
+    ABSTRACT TABLE WSingleton INHERITS WDoc();
+
+    TAG WithoutAuthTag;
+    ROLE Anyone;
     TYPE CreateLoginParams(
         Login                       varchar,
         AppName                     varchar,
@@ -24,7 +36,7 @@ ABSTRACT WORKSPACE Workspace (
     TYPE CreateLoginUnloggedParams(
         Password varchar
     );
-	TABLE ChildWorkspace INHERITS CDoc (
+	TABLE ChildWorkspace INHERITS sys.CDoc (
 	);
     EXTENSION ENGINE BUILTIN (
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
@@ -39,14 +51,6 @@ ALTERABLE WORKSPACE Profile(
 
 );
 
-/*
-    Specify sys.Raw as a command/function parameter to pass raw data to the command/function. 
-    The data isn't validated by the core.
-    An extension accesses the data by reading the "Body" field from the argument.
-*/
-TYPE Raw(
-    Body   varchar(65535)
-);
 
 EXTENSION ENGINE BUILTIN (
 
@@ -62,8 +66,8 @@ EXTENSION ENGINE BUILTIN (
         GET         SCOPE(COMMANDS, QUERIES, PROJECTORS, JOBS),
         GETBATCH    SCOPE(COMMANDS, QUERIES, PROJECTORS, JOBS),
         READ        SCOPE(QUERIES, PROJECTORS, JOBS),
-        INSERT      SCOPE(PROJECTORS),
-        UPDATE      SCOPE(PROJECTORS)
+		INSERT      SCOPE(PROJECTORS, JOBS),
+		UPDATE      SCOPE(PROJECTORS, JOBS)
     ) ENTITY VIEW;
 
     STORAGE WLog(

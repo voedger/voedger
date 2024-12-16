@@ -74,21 +74,25 @@ func Test_IsSysField(t *testing.T) {
 func Test_AddField(t *testing.T) {
 	require := require.New(t)
 
+	wsName := NewQName("test", "workspace")
 	objName := NewQName("test", "object")
 
 	adb := New()
 	adb.AddPackage("test", "test.com/test")
 
-	obj := adb.AddObject(objName)
+	wsb := adb.AddWorkspace(wsName)
+
+	obj := wsb.AddObject(objName)
 	require.NotNil(obj)
 
-	t.Run("must be ok to add field", func(t *testing.T) {
+	t.Run("should be ok to add field", func(t *testing.T) {
 		obj.AddField("f1", DataKind_int64, true)
 
 		app, err := adb.Build()
 		require.NoError(err)
 
-		obj := app.Object(objName)
+		obj := Object(app.Type, objName)
+		require.Equal([]IField{obj.Field("f1")}, obj.UserFields())
 		require.Equal(1, obj.UserFieldCount())
 		require.Equal(obj.UserFieldCount()+2, obj.FieldCount()) // + sys.QName + sys.Container
 
@@ -105,11 +109,13 @@ func Test_AddField(t *testing.T) {
 		require.False(f.Verifiable())
 	})
 
-	t.Run("chain notation is ok to add fields", func(t *testing.T) {
+	t.Run("should be ok to add field use chain notation", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		_ = adb.AddObject(NewQName("test", "obj")).
+		wsb := adb.AddWorkspace(wsName)
+
+		_ = wsb.AddObject(objName).
 			AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_int32, false).
 			AddField("f3", DataKind_string, false)
@@ -117,7 +123,7 @@ func Test_AddField(t *testing.T) {
 		app, err := adb.Build()
 		require.NoError(err)
 
-		obj := app.Object(NewQName("test", "obj"))
+		obj := Object(app.Type, objName)
 		require.Equal(3, obj.UserFieldCount())
 		require.Equal(3+2, obj.FieldCount()) // + sys.QName + sys.Container
 
@@ -127,7 +133,7 @@ func Test_AddField(t *testing.T) {
 		require.Equal(DataKind_string, obj.Field("f3").DataKind())
 	})
 
-	t.Run("test panics", func(t *testing.T) {
+	t.Run("should be panics", func(t *testing.T) {
 		require.Panics(func() { obj.AddField("", DataKind_int64, true) },
 			require.Is(ErrMissedError))
 		require.Panics(func() { obj.AddField("naked_🔫", DataKind_int64, true) },
@@ -137,19 +143,21 @@ func Test_AddField(t *testing.T) {
 			require.Is(ErrAlreadyExistsError),
 			require.Has("f1"))
 
-		t.Run("must be panic if field data kind is not allowed by type kind", func(t *testing.T) {
+		t.Run("if field data kind is not allowed by type kind", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-			o := adb.AddObject(NewQName("test", "object"))
+			wsb := adb.AddWorkspace(wsName)
+			o := wsb.AddObject(objName)
 			require.Panics(func() { o.AddField("f1", DataKind_Event, false) },
 				require.Is(ErrIncompatibleError),
 				require.Has("Event"))
 		})
 
-		t.Run("must be panic if too many fields", func(t *testing.T) {
+		t.Run("if too many fields", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-			o := adb.AddObject(NewQName("test", "obj"))
+			wsb := adb.AddWorkspace(wsName)
+			o := wsb.AddObject(objName)
 			for i := 0; i < MaxTypeFieldCount-2; i++ { // -2 because sys.QName, sys.Container
 				o.AddField(fmt.Sprintf("f_%#x", i), DataKind_bool, false)
 			}
@@ -157,18 +165,20 @@ func Test_AddField(t *testing.T) {
 				require.Is(ErrTooManyError))
 		})
 
-		t.Run("must be panic if not found field data kind", func(t *testing.T) {
+		t.Run("if not found field data kind", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-			o := adb.AddObject(NewQName("test", "obj"))
+			wsb := adb.AddWorkspace(wsName)
+			o := wsb.AddObject(objName)
 			require.Panics(func() { o.AddField("errorField", DataKind_FakeLast, false) },
 				require.Is(ErrNotFoundError))
 		})
 
-		t.Run("must be panic if unknown data type", func(t *testing.T) {
+		t.Run("if unknown data type", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
-			o := adb.AddObject(NewQName("test", "obj"))
+			wsb := adb.AddWorkspace(wsName)
+			o := wsb.AddObject(objName)
 			require.Panics(func() { o.AddDataField("errorField", NewQName("test", "unknown"), false) },
 				require.Is(ErrNotFoundError),
 				require.Has("test.unknown"))
@@ -182,27 +192,31 @@ func Test_SetFieldComment(t *testing.T) {
 	adb := New()
 	adb.AddPackage("test", "test.com/test")
 
+	wsName := NewQName("test", "workspace")
+	wsb := adb.AddWorkspace(wsName)
+
 	objName := NewQName("test", "object")
-	adb.AddObject(objName).
+	wsb.AddObject(objName).
 		AddField("f1", DataKind_int64, true).
 		SetFieldComment("f1", "test comment")
 
 	app, err := adb.Build()
 	require.NoError(err)
 
-	t.Run("must be ok to obtain field comment", func(t *testing.T) {
-		obj := app.Object(objName)
+	t.Run("should be ok to obtain field comment", func(t *testing.T) {
+		obj := Object(app.Type, objName)
 		require.Equal(1, obj.UserFieldCount())
 		f1 := obj.Field("f1")
 		require.NotNil(f1)
 		require.Equal("test comment", f1.Comment())
 	})
 
-	t.Run("must be panic if unknown field name passed to comment", func(t *testing.T) {
+	t.Run("should be panic if unknown field name passed to comment", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
+		wsb := adb.AddWorkspace(wsName)
 		require.Panics(func() {
-			adb.AddObject(NewQName("test", "object")).
+			wsb.AddObject(NewQName("test", "object")).
 				SetFieldComment("unknownField", "error here")
 		}, require.Is(ErrNotFoundError), require.Has("unknownField"))
 	})
@@ -214,8 +228,11 @@ func Test_SetFieldVerify(t *testing.T) {
 	adb := New()
 	adb.AddPackage("test", "test.com/test")
 
+	wsName := NewQName("test", "workspace")
+	wsb := adb.AddWorkspace(wsName)
+
 	objName := NewQName("test", "object")
-	adb.AddObject(objName).
+	wsb.AddObject(objName).
 		AddField("f1", DataKind_int64, true).
 		SetFieldVerify("f1", VerificationKind_Phone).
 		AddField("f2", DataKind_int64, true).
@@ -224,8 +241,8 @@ func Test_SetFieldVerify(t *testing.T) {
 	app, err := adb.Build()
 	require.NoError(err)
 
-	t.Run("must be ok to obtain verified field", func(t *testing.T) {
-		obj := app.Object(objName)
+	t.Run("should be ok to obtain verified field", func(t *testing.T) {
+		obj := Object(app.Type, objName)
 		require.Equal(2, obj.UserFieldCount())
 		f1 := obj.Field("f1")
 		require.NotNil(f1)
@@ -244,11 +261,12 @@ func Test_SetFieldVerify(t *testing.T) {
 		require.False(f2.VerificationKind(VerificationKind_FakeLast))
 	})
 
-	t.Run("must be panic if unknown field name passed to verify", func(t *testing.T) {
+	t.Run("should be panic if unknown field name passed to verify", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
+		wsb := adb.AddWorkspace(wsName)
 		require.Panics(func() {
-			adb.AddObject(NewQName("test", "object")).
+			wsb.AddObject(NewQName("test", "object")).
 				SetFieldVerify("unknownField", VerificationKind_Phone)
 		}, require.Is(ErrNotFoundError), require.Has("unknownField"))
 	})
@@ -260,11 +278,13 @@ func Test_AddRefField(t *testing.T) {
 	docName := NewQName("test", "doc")
 	var app IAppDef
 
-	t.Run("must be ok to add reference fields", func(t *testing.T) {
+	t.Run("should be ok to add reference fields", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		doc := adb.AddWDoc(docName)
+		wsb := adb.AddWorkspace(NewQName("test", "workspace"))
+
+		doc := wsb.AddWDoc(docName)
 		require.NotNil(doc)
 
 		doc.
@@ -278,10 +298,10 @@ func Test_AddRefField(t *testing.T) {
 		app = a
 	})
 
-	t.Run("must be ok to work with reference fields", func(t *testing.T) {
-		doc := app.WDoc(docName)
+	t.Run("should be ok to work with reference fields", func(t *testing.T) {
+		doc := WDoc(app.Type, docName)
 
-		t.Run("must be ok type cast reference field", func(t *testing.T) {
+		t.Run("should be ok type cast reference field", func(t *testing.T) {
 			fld := doc.Field("rf1")
 			require.NotNil(fld)
 
@@ -294,7 +314,7 @@ func Test_AddRefField(t *testing.T) {
 			require.Empty(rf.Refs())
 		})
 
-		t.Run("must be ok to obtain reference field", func(t *testing.T) {
+		t.Run("should be ok to obtain reference field", func(t *testing.T) {
 			rf2 := doc.RefField("rf2")
 			require.NotNil(rf2)
 
@@ -305,12 +325,12 @@ func Test_AddRefField(t *testing.T) {
 			require.EqualValues(QNames{docName}, rf2.Refs())
 		})
 
-		t.Run("must be nil if unknown reference field", func(t *testing.T) {
+		t.Run("should be nil if unknown reference field", func(t *testing.T) {
 			require.Nil(doc.RefField("unknown"))
 			require.Nil(doc.RefField("f1"), "must be nil because `f1` is not a reference field")
 		})
 
-		t.Run("must be ok to enumerate reference fields", func(t *testing.T) {
+		t.Run("should be ok to enumerate reference fields", func(t *testing.T) {
 			require.Equal(2, func() int {
 				cnt := 0
 				for _, rf := range doc.RefFields() {
@@ -333,10 +353,11 @@ func Test_AddRefField(t *testing.T) {
 		})
 	})
 
-	t.Run("must be panic if empty field name", func(t *testing.T) {
+	t.Run("should be panic if empty field name", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
-		doc := adb.AddWDoc(docName)
+		wsb := adb.AddWorkspace(NewQName("test", "workspace"))
+		doc := wsb.AddWDoc(docName)
 		require.Panics(func() { doc.AddRefField("", false) },
 			require.Is(ErrMissedError))
 	})
@@ -348,11 +369,13 @@ func Test_UserFields(t *testing.T) {
 	docName := NewQName("test", "doc")
 	var app IAppDef
 
-	t.Run("must be ok to add fields", func(t *testing.T) {
+	t.Run("should be ok to add fields", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
-		doc := adb.AddODoc(docName)
+		wsb := adb.AddWorkspace(NewQName("test", "workspace"))
+
+		doc := wsb.AddODoc(docName)
 		require.NotNil(doc)
 
 		doc.
@@ -366,8 +389,8 @@ func Test_UserFields(t *testing.T) {
 		app = a
 	})
 
-	t.Run("must be ok to enumerate user fields", func(t *testing.T) {
-		doc := app.ODoc(docName)
+	t.Run("should be ok to enumerate user fields", func(t *testing.T) {
+		doc := ODoc(app.Type, docName)
 		require.Equal(3, doc.UserFieldCount())
 
 		require.Equal(doc.UserFieldCount(), func() int {
@@ -398,27 +421,33 @@ func TestValidateRefFields(t *testing.T) {
 	adb := New()
 	adb.AddPackage("test", "test.com/test")
 
-	doc := adb.AddCDoc(NewQName("test", "doc"))
+	wsb := adb.AddWorkspace(NewQName("test", "workspace"))
+
+	doc := wsb.AddCDoc(NewQName("test", "doc"))
 	doc.AddRefField("f1", true, NewQName("test", "rec"))
 
-	rec := adb.AddCRecord(NewQName("test", "rec"))
+	rec := wsb.AddCRecord(NewQName("test", "rec"))
 	rec.AddRefField("f1", true, NewQName("test", "rec"))
 
-	t.Run("must be ok if all reference field is valid", func(t *testing.T) {
+	t.Run("should be ok if all reference field is valid", func(t *testing.T) {
 		_, err := adb.Build()
 		require.NoError(err)
 	})
 
-	t.Run("must be error if reference field ref is not found", func(t *testing.T) {
-		rec.AddRefField("f2", true, NewQName("test", "obj"))
-		_, err := adb.Build()
-		require.Error(err, require.Is(ErrNotFoundError), require.Has("test.obj"))
-	})
+	t.Run("should be error", func(t *testing.T) {
+		objName := NewQName("test", "obj")
 
-	t.Run("must be error if reference field refs to non referable type", func(t *testing.T) {
-		adb.AddObject(NewQName("test", "obj"))
-		_, err := adb.Build()
-		require.Error(err, require.Is(ErrInvalidError), require.Has("test.obj"))
+		t.Run("if reference field refs to unknown", func(t *testing.T) {
+			rec.AddRefField("f2", true, objName)
+			_, err := adb.Build()
+			require.Error(err, require.Is(ErrNotFoundError), require.Has(objName.String()))
+		})
+
+		t.Run("if reference field refs to non referable type", func(t *testing.T) {
+			_ = wsb.AddObject(objName)
+			_, err := adb.Build()
+			require.Error(err, require.Is(ErrNotFoundError), require.Has(objName.String()))
+		})
 	})
 }
 
@@ -433,6 +462,7 @@ func TestNullFields(t *testing.T) {
 	require.Empty(NullFields.RefFields())
 
 	require.Zero(NullFields.UserFieldCount())
+	require.Empty(NullFields.UserFields())
 }
 
 func TestVerificationKind_String(t *testing.T) {

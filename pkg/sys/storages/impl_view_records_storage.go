@@ -12,6 +12,7 @@ import (
 	"reflect"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
@@ -175,7 +176,11 @@ type viewKeyBuilder struct {
 
 func (b *viewKeyBuilder) PutInt64(name string, value int64) {
 	if name == sys.Storage_View_Field_WSID {
-		b.wsid = istructs.WSID(value)
+		wsid, err := coreutils.Int64ToWSID(value)
+		if err != nil {
+			panic(err)
+		}
+		b.wsid = wsid
 		return
 	}
 	b.IKeyBuilder.PutInt64(name, value)
@@ -216,6 +221,7 @@ func (b *viewKeyBuilder) String() string {
 
 type viewValueBuilder struct {
 	istructs.IValueBuilder
+	istructs.IStateViewValueBuilder
 	offset istructs.Offset
 	entity appdef.QName
 	fc     iViewInt64FieldTypeChecker
@@ -227,8 +233,11 @@ func (b *viewValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
 	if err != nil {
 		panic(err)
 	}
-
-	bSrc, err := src.ToBytes()
+	srcValueBuilder, ok := src.(*viewValueBuilder)
+	if !ok {
+		return false
+	}
+	bSrc, err := srcValueBuilder.IValueBuilder.ToBytes()
 	if err != nil {
 		panic(err)
 	}
@@ -236,12 +245,22 @@ func (b *viewValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
 	return reflect.DeepEqual(bThis, bSrc)
 }
 
+func (b *viewValueBuilder) PutRecord(name string, record istructs.IRecord) {
+	b.IValueBuilder.PutRecord(name, record)
+}
+func (b *viewValueBuilder) ToBytes() ([]byte, error) {
+	return b.IValueBuilder.ToBytes()
+}
 func (b *viewValueBuilder) PutInt64(name string, value int64) {
 	if name == state.ColOffset {
-		b.offset = istructs.Offset(value)
+		b.offset = istructs.Offset(value) // nolint G115
 	}
 	if b.fc.isViewInt64FieldRecordID(b.entity, name) {
-		b.IValueBuilder.PutRecordID(name, istructs.RecordID(value))
+		recID, err := coreutils.Int64ToRecordID(value)
+		if err != nil {
+			panic(err)
+		}
+		b.IValueBuilder.PutRecordID(name, recID)
 	} else {
 		b.IValueBuilder.PutInt64(name, value)
 	}
@@ -264,6 +283,7 @@ func (b *viewValueBuilder) BuildValue() istructs.IStateValue {
 
 type viewValue struct {
 	baseStateValue
+	istructs.IStateViewValue
 	value istructs.IValue
 }
 

@@ -5,4 +5,7 @@
 
 package utils
 
-const DecimalBase = 10
+const (
+	DecimalBase = 10
+	BitSize64   = 64
+)

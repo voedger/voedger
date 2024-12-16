@@ -11,22 +11,22 @@ APPLICATION TEST(
 	USE pkg2;
 );
 
-ABSTRACT TABLE CRecord();
-ABSTRACT TABLE WRecord();
-ABSTRACT TABLE ORecord();
+ABSTRACT WORKSPACE Workspace (
+    ABSTRACT TABLE CRecord();
+    ABSTRACT TABLE WRecord();
+    ABSTRACT TABLE ORecord();
 
-ABSTRACT TABLE CDoc INHERITS CRecord();
-ABSTRACT TABLE ODoc INHERITS ORecord();
-ABSTRACT TABLE WDoc INHERITS WRecord();
+    ABSTRACT TABLE CDoc INHERITS CRecord();
+    ABSTRACT TABLE ODoc INHERITS ORecord();
+    ABSTRACT TABLE WDoc INHERITS WRecord();
 
-ABSTRACT TABLE Singleton INHERITS CDoc();
-
-WORKSPACE Workspace ( -- ValueChanged: Abstract flag must not be changed
+    ABSTRACT TABLE Singleton INHERITS CDoc();
 );
 
-WORKSPACE SomeWorkspace(
-    USE TABLE pkg1.*;
-    USE TABLE pkg2.*;
+WORKSPACE AbsWorkspace( -- ValueChanged: Abstract flag must not be changed
+);
+
+WORKSPACE SomeWorkspace INHERITS pkg1.TestWorkspace, pkg2.TestWorkspace (
     TYPE CreateLoginUnloggedParams(
         Password varchar, -- OrderChanged
         Email varchar --OrderChanged
@@ -42,13 +42,13 @@ WORKSPACE SomeWorkspace(
         myfield2 ref(pkg2.MyTable1),
         NewField                    varchar -- appending field is allowed
     );
-    TABLE OneMoreTable INHERITS CDoc(
+    TABLE OneMoreTable INHERITS sys.CDoc(
         A varchar,
         B varchar,
         C int32,
         UNIQUE (A, B) -- allowed to reorder fields in unique constraint
     );
-    TABLE AnotherOneTable INHERITS CDoc(
+    TABLE AnotherOneTable INHERITS sys.CDoc(
         A varchar,
         B varchar,
         D varchar, -- NodeInserted
@@ -74,7 +74,7 @@ WORKSPACE SomeWorkspace(
         F int, -- appending field is allowed to value fields
         PRIMARY KEY ((A, C), B) -- NodeModified: added field C to PartKeyFields
     ) AS RESULT OF Proj1;
-    TABLE NewTable INHERITS CDoc(
+    TABLE NewTable INHERITS sys.CDoc(
         A varchar
     );
     TYPE NewType( -- new type is allowed
@@ -89,12 +89,12 @@ WORKSPACE SomeWorkspace(
         B int,
         PRIMARY KEY ((A), B)
     ) AS RESULT OF Proj1;
-    TABLE O_Doc INHERITS ODoc (
+    TABLE O_Doc INHERITS sys.ODoc (
         Fld1 int32,
         Fld2 int64 -- field added, the doc is an arg of c.sys.CmdODoc -> no problem becuase the field is not required
     );
     EXTENSION ENGINE BUILTIN (
-        PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(SomeView), View(NewView));
+        PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(SomeView), View(NewView));
         COMMAND Orders();
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
         COMMAND SomeCommand(SomeType2, UNLOGGED SomeType2) RETURNS SomeType2; -- args, unloggedArgs and result are changed -> deny, clietn will fail to call the cmd he just called

@@ -3,156 +3,174 @@
  * @author: Nikolay Nikitin
  */
 
-package appdef
+package appdef_test
 
 import (
 	"fmt"
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func Test_type_AddContainer(t *testing.T) {
 	require := require.New(t)
 
-	adb := New()
-	adb.AddPackage("test", "test.com/test")
+	wsName := appdef.NewQName("test", "workspace")
+	rootName := appdef.NewQName("test", "root")
+	childName := appdef.NewQName("test", "child")
 
-	rootName := NewQName("test", "root")
-	root := adb.AddObject(rootName)
-	require.NotNil(root)
+	t.Run("should be ok to add container", func(t *testing.T) {
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+		wsb := adb.AddWorkspace(wsName)
+		root := wsb.AddObject(rootName)
+		_ = wsb.AddObject(childName)
 
-	childName := NewQName("test", "child")
-	_ = adb.AddObject(childName)
-
-	t.Run("must be ok to add container", func(t *testing.T) {
-		root.AddContainer("c1", childName, 1, Occurs_Unbounded)
+		root.AddContainer("c1", childName, 1, appdef.Occurs_Unbounded)
 
 		app, err := adb.Build()
 		require.NoError(err)
 		require.NotNil(app)
 
-		root := app.Object(rootName)
-		require.NotNil(root)
+		t.Run("should be ok to find builded container", func(t *testing.T) {
+			r := appdef.Object(app.Type, rootName)
+			require.NotNil(r)
 
-		require.EqualValues(1, root.ContainerCount())
+			require.EqualValues(1, r.ContainerCount())
 
-		c1 := root.Container("c1")
-		require.NotNil(c1)
-		require.EqualValues(childName, c1.Type().QName())
+			c1 := r.Container("c1")
+			require.NotNil(c1)
+			require.EqualValues(childName, c1.Type().QName())
+		})
 	})
 
-	t.Run("chain notation is ok to add containers", func(t *testing.T) {
-		adb := New()
+	t.Run("should be ok to add containers use chain notation", func(t *testing.T) {
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
-		_ = adb.AddObject(childName)
-		_ = adb.AddObject(rootName).
-			AddContainer("c1", childName, 1, Occurs_Unbounded).
-			AddContainer("c2", childName, 1, Occurs_Unbounded).
-			AddContainer("c3", childName, 1, Occurs_Unbounded)
+		wsb := adb.AddWorkspace(wsName)
+		_ = wsb.AddObject(childName)
+		_ = wsb.AddObject(rootName).
+			AddContainer("c1", childName, 1, appdef.Occurs_Unbounded).
+			AddContainer("c2", childName, 1, appdef.Occurs_Unbounded).
+			AddContainer("c3", childName, 1, appdef.Occurs_Unbounded)
 
 		app, err := adb.Build()
 		require.NoError(err)
 
-		obj := app.Object(rootName)
-		require.NotNil(obj)
-		require.EqualValues(3, obj.ContainerCount())
-		require.NotNil(obj.Container("c1"))
-		require.NotNil(obj.Container("c2"))
-		require.NotNil(obj.Container("c3"))
-		require.Nil(obj.Container("unknown"))
+		t.Run("should be ok to find builded containder", func(t *testing.T) {
+			obj := appdef.Object(app.Type, rootName)
+			require.NotNil(obj)
+			require.EqualValues(3, obj.ContainerCount())
+			require.NotNil(obj.Container("c1"))
+			require.NotNil(obj.Container("c2"))
+			require.NotNil(obj.Container("c3"))
+			require.Nil(obj.Container("unknown"))
+		})
 	})
 
-	t.Run("must be panic if empty container name", func(t *testing.T) {
-		require.Panics(func() { root.AddContainer("", childName, 1, Occurs_Unbounded) },
-			require.Is(ErrMissedError))
-	})
+	t.Run("should be panics", func(t *testing.T) {
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+		wsb := adb.AddWorkspace(wsName)
+		root := wsb.AddObject(rootName)
+		_ = wsb.AddObject(childName)
 
-	t.Run("must be panic if invalid container name", func(t *testing.T) {
-		require.Panics(func() { root.AddContainer("naked_🔫", childName, 1, Occurs_Unbounded) },
-			require.Is(ErrInvalidError))
-	})
+		t.Run("if empty container name", func(t *testing.T) {
+			require.Panics(func() { root.AddContainer("", childName, 1, appdef.Occurs_Unbounded) },
+				require.Is(appdef.ErrMissedError))
+		})
 
-	t.Run("must be panic if container name dupe", func(t *testing.T) {
-		require.Panics(func() { root.AddContainer("c1", childName, 1, Occurs_Unbounded) },
-			require.Is(ErrAlreadyExistsError),
-			require.Has("c1"))
-	})
+		t.Run("if invalid container name", func(t *testing.T) {
+			require.Panics(func() { root.AddContainer("naked_🔫", childName, 1, appdef.Occurs_Unbounded) },
+				require.Is(appdef.ErrInvalidError))
+		})
 
-	t.Run("must be panic if container type name missed", func(t *testing.T) {
-		require.Panics(func() { root.AddContainer("c2", NullQName, 1, Occurs_Unbounded) },
-			require.Is(ErrMissedError),
-			require.Has("c2"))
-	})
+		t.Run("if container name dupe", func(t *testing.T) {
+			root.AddContainer("dupe", childName, 1, appdef.Occurs_Unbounded)
+			require.Panics(func() { root.AddContainer("dupe", childName, 1, appdef.Occurs_Unbounded) },
+				require.Is(appdef.ErrAlreadyExistsError),
+				require.Has("dupe"))
+		})
 
-	t.Run("must be panic if invalid occurrences", func(t *testing.T) {
-		require.Panics(func() { root.AddContainer("c2", childName, 1, 0) },
-			require.Is(ErrOutOfBoundsError))
-		require.Panics(func() { root.AddContainer("c3", childName, 2, 1) },
-			require.Is(ErrOutOfBoundsError))
-	})
+		t.Run("if container type name missed", func(t *testing.T) {
+			require.Panics(func() { root.AddContainer("c2", appdef.NullQName, 1, appdef.Occurs_Unbounded) },
+				require.Is(appdef.ErrMissedError),
+				require.Has("c2"))
+		})
 
-	t.Run("must be panic if container type is incompatible", func(t *testing.T) {
-		docName := NewQName("test", "doc")
-		_ = adb.AddCDoc(docName)
-		require.Panics(func() { root.AddContainer("c2", docName, 1, 1) },
-			require.Is(ErrInvalidError),
-			require.Has(docName.String()))
-	})
+		t.Run("if invalid occurrences", func(t *testing.T) {
+			require.Panics(func() { root.AddContainer("c2", childName, 1, 0) },
+				require.Is(appdef.ErrOutOfBoundsError))
+			require.Panics(func() { root.AddContainer("c3", childName, 2, 1) },
+				require.Is(appdef.ErrOutOfBoundsError))
+		})
 
-	t.Run("must be panic if too many containers", func(t *testing.T) {
-		el := New().AddObject(childName)
-		for i := 0; i < MaxTypeContainerCount; i++ {
-			el.AddContainer(fmt.Sprintf("c_%#x", i), childName, 0, Occurs_Unbounded)
-		}
-		require.Panics(func() { el.AddContainer("errorContainer", childName, 0, Occurs_Unbounded) },
-			require.Is(ErrTooManyError))
+		t.Run("if container type is incompatible", func(t *testing.T) {
+			docName := appdef.NewQName("test", "doc")
+			_ = wsb.AddCDoc(docName)
+			require.Panics(func() { root.AddContainer("c2", docName, 1, 1) },
+				require.Is(appdef.ErrInvalidError),
+				require.Has(docName.String()))
+		})
+
+		t.Run("if too many containers", func(t *testing.T) {
+			o := appdef.New().AddWorkspace(wsName).AddObject(childName)
+			for i := 0; i < appdef.MaxTypeContainerCount; i++ {
+				o.AddContainer(fmt.Sprintf("c_%#x", i), childName, 0, appdef.Occurs_Unbounded)
+			}
+			require.Panics(func() { o.AddContainer("errorContainer", childName, 0, appdef.Occurs_Unbounded) },
+				require.Is(appdef.ErrTooManyError))
+		})
 	})
 }
 
 func TestValidateContainer(t *testing.T) {
 	require := require.New(t)
 
-	app := New()
-	app.AddPackage("test", "test.com/test")
-	doc := app.AddCDoc(NewQName("test", "doc"))
-	doc.AddContainer("rec", NewQName("test", "rec"), 0, Occurs_Unbounded)
+	adb := appdef.New()
+	adb.AddPackage("test", "test.com/test")
 
-	t.Run("must be error if container type not found", func(t *testing.T) {
-		_, err := app.Build()
-		require.Error(err, require.Is(ErrNotFoundError), require.Has("test.rec"))
+	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+
+	doc := wsb.AddCDoc(appdef.NewQName("test", "doc"))
+	doc.AddContainer("rec", appdef.NewQName("test", "rec"), 0, appdef.Occurs_Unbounded)
+
+	t.Run("should be error if container type not found", func(t *testing.T) {
+		_, err := adb.Build()
+		require.Error(err, require.Is(appdef.ErrNotFoundError), require.Has("test.rec"))
 	})
 
-	rec := app.AddCRecord(NewQName("test", "rec"))
-	_, err := app.Build()
+	rec := wsb.AddCRecord(appdef.NewQName("test", "rec"))
+	_, err := adb.Build()
 	require.NoError(err)
 
-	t.Run("must be ok container recurse", func(t *testing.T) {
-		rec.AddContainer("rec", NewQName("test", "rec"), 0, Occurs_Unbounded)
-		_, err := app.Build()
+	t.Run("should be ok container recurse", func(t *testing.T) {
+		rec.AddContainer("rec", appdef.NewQName("test", "rec"), 0, appdef.Occurs_Unbounded)
+		_, err := adb.Build()
 		require.NoError(err)
 	})
 
-	t.Run("must be ok container sub recurse", func(t *testing.T) {
-		rec.AddContainer("rec1", NewQName("test", "rec1"), 0, Occurs_Unbounded)
-		rec1 := app.AddCRecord(NewQName("test", "rec1"))
-		rec1.AddContainer("rec", NewQName("test", "rec"), 0, Occurs_Unbounded)
-		_, err := app.Build()
+	t.Run("should be ok container sub recurse", func(t *testing.T) {
+		rec.AddContainer("rec1", appdef.NewQName("test", "rec1"), 0, appdef.Occurs_Unbounded)
+		rec1 := wsb.AddCRecord(appdef.NewQName("test", "rec1"))
+		rec1.AddContainer("rec", appdef.NewQName("test", "rec"), 0, appdef.Occurs_Unbounded)
+		_, err := adb.Build()
 		require.NoError(err)
 	})
 
-	t.Run("must be error if container kind is incompatible", func(t *testing.T) {
-		doc.AddContainer("obj", NewQName("test", "obj"), 0, 1)
-		_ = app.AddObject(NewQName("test", "obj"))
-		_, err := app.Build()
-		require.Error(err, require.Is(ErrInvalidError), require.Has("test.obj"))
+	t.Run("should be error if container kind is incompatible", func(t *testing.T) {
+		doc.AddContainer("obj", appdef.NewQName("test", "obj"), 0, 1)
+		_ = wsb.AddObject(appdef.NewQName("test", "obj"))
+		_, err := adb.Build()
+		require.Error(err, require.Is(appdef.ErrInvalidError), require.Has("test.obj"))
 	})
 }
 
 func TestOccurs_String(t *testing.T) {
 	tests := []struct {
 		name string
-		o    Occurs
+		o    appdef.Occurs
 		want string
 	}{
 		{
@@ -167,7 +185,7 @@ func TestOccurs_String(t *testing.T) {
 		},
 		{
 			name: "∞ —> `unbounded`",
-			o:    Occurs_Unbounded,
+			o:    appdef.Occurs_Unbounded,
 			want: `unbounded`,
 		},
 	}
@@ -183,7 +201,7 @@ func TestOccurs_String(t *testing.T) {
 func TestOccurs_MarshalJSON(t *testing.T) {
 	tests := []struct {
 		name    string
-		o       Occurs
+		o       appdef.Occurs
 		want    string
 		wantErr bool
 	}{
@@ -201,7 +219,7 @@ func TestOccurs_MarshalJSON(t *testing.T) {
 		},
 		{
 			name:    "∞ —> `unbounded`",
-			o:       Occurs_Unbounded,
+			o:       appdef.Occurs_Unbounded,
 			want:    `"unbounded"`,
 			wantErr: false,
 		},
@@ -224,7 +242,7 @@ func TestOccurs_UnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		name    string
 		data    string
-		want    Occurs
+		want    appdef.Occurs
 		wantErr bool
 	}{
 		{
@@ -242,7 +260,7 @@ func TestOccurs_UnmarshalJSON(t *testing.T) {
 		{
 			name:    `"unbounded" —> ∞`,
 			data:    `"unbounded"`,
-			want:    Occurs_Unbounded,
+			want:    appdef.Occurs_Unbounded,
 			wantErr: false,
 		},
 		{
@@ -272,7 +290,7 @@ func TestOccurs_UnmarshalJSON(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var o Occurs
+			var o appdef.Occurs
 			err := o.UnmarshalJSON([]byte(tt.data))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Occurs.UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)

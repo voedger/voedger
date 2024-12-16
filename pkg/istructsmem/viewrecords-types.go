@@ -7,6 +7,7 @@ package istructsmem
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -43,7 +44,7 @@ func (vr *appViewRecords) UpdateValueBuilder(view appdef.QName, existing istruct
 	value := vr.NewValueBuilder(view).(*valueType)
 	src := existing.(*valueType)
 	if qName := src.QName(); qName != value.QName() {
-		panic(fmt.Errorf("invalid existing value type «%v»; expected «%v»: %w", qName, value.QName(), ErrWrongType))
+		panic(ErrWrongType("invalid existing value type «%v»; expected «%v»", qName, value.QName()))
 	}
 	value.copyFrom(&src.rowType)
 	return value
@@ -87,7 +88,7 @@ type batchPtrType struct {
 
 func (vr *appViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.ViewRecordGetBatchItem) (err error) {
 	if len(kv) > maxGetBatchRecordCount {
-		return fmt.Errorf("batch read %d records requested, but only %d supported: %w", len(kv), maxGetBatchRecordCount, ErrMaxGetBatchRecordCountExceeds)
+		return ErrMaxGetBatchSizeExceeds(len(kv))
 	}
 	batches := make([]batchPtrType, len(kv))
 	plan := make(map[string][]istorage.GetBatchItem)
@@ -158,20 +159,20 @@ func (vr *appViewRecords) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any) 
 			if qName, err := appdef.ParseQName(value); err == nil {
 				viewName = qName
 			} else {
-				return fmt.Errorf(errFieldConvertErrorWrap, appdef.SystemField_QName, value, appdef.DataKind_QName.TrimString(), err)
+				return enrichError(err, "can not parse value for field «%s»", appdef.SystemField_QName)
 			}
 		} else {
-			return fmt.Errorf(errFieldConvertErrorWrap, appdef.SystemField_QName, v, appdef.DataKind_QName.TrimString(), ErrWrongFieldType)
+			return ErrWrongFieldType("can not put «%T» to field «%s»", v, appdef.SystemField_QName)
 		}
 	}
 
 	if viewName == appdef.NullQName {
-		return fmt.Errorf("%w: %v", ErrFieldIsEmpty, appdef.SystemField_QName)
+		return ErrFieldIsEmpty(appdef.SystemField_QName)
 	}
 
-	view := vr.app.config.AppDef.View(viewName)
+	view := appdef.View(vr.app.config.AppDef.Type, viewName)
 	if view == nil {
-		return fmt.Errorf(errViewNotFoundWrap, viewName, ErrNameNotFound)
+		return ErrViewNotFound(viewName)
 	}
 
 	key := newKey(vr.app.config, viewName)
@@ -187,7 +188,7 @@ func (vr *appViewRecords) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any) 
 			if view.Value().Field(f) != nil {
 				valueJ[f] = v
 			} else {
-				return fmt.Errorf(errFieldNotFoundWrap, f, view, ErrNameNotFound)
+				return ErrFieldNotFound(f, view)
 			}
 		}
 	}
@@ -255,11 +256,11 @@ type keyType struct {
 //   - if view not found
 func newKey(appCfg *AppConfigType, name appdef.QName) *keyType {
 	if name == appdef.NullQName {
-		panic(ErrNameMissed)
+		panic(ErrNameMissedError)
 	}
-	view := appCfg.AppDef.View(name)
+	view := appdef.View(appCfg.AppDef.Type, name)
 	if view == nil {
-		panic(fmt.Errorf(errViewNotFoundWrap, name, ErrNameNotFound))
+		panic(ErrViewNotFound(name))
 	}
 	id, err := appCfg.qNames.ID(name)
 	if err != nil {
@@ -416,9 +417,17 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 }
 
 // istructs.IRowReader.FieldNames
-func (key *keyType) FieldNames(cb func(appdef.FieldName)) {
-	key.partRow.FieldNames(cb)
-	key.ccolsRow.FieldNames(cb)
+func (key *keyType) FieldNames(cb func(appdef.FieldName) bool) {
+	for f := range key.partRow.FieldNames {
+		if !cb(f) {
+			return
+		}
+	}
+	for f := range key.ccolsRow.FieldNames {
+		if !cb(f) {
+			return
+		}
+	}
 }
 
 // istructs.IKeyBuilder.PartitionKey
@@ -499,7 +508,7 @@ func (key *keyType) PutInt64(name appdef.FieldName, value int64) {
 }
 
 // istructs.IRowWriter.PutNumber
-func (key *keyType) PutNumber(name appdef.FieldName, value float64) {
+func (key *keyType) PutNumber(name appdef.FieldName, value json.Number) {
 	if key.partRow.fieldDef(name) != nil {
 		key.partRow.PutNumber(name, value)
 	} else {
@@ -531,9 +540,23 @@ func (key *keyType) PutString(name appdef.FieldName, value string) {
 }
 
 // istructs.IRowReader.RecordIDs
-func (key *keyType) RecordIDs(includeNulls bool, cb func(appdef.FieldName, istructs.RecordID)) {
-	key.partRow.RecordIDs(includeNulls, cb)
-	key.ccolsRow.RecordIDs(includeNulls, cb)
+func (key *keyType) RecordIDs(includeNulls bool) func(cb func(appdef.FieldName, istructs.RecordID) bool) {
+	return func(cb func(appdef.FieldName, istructs.RecordID) bool) {
+		for n, id := range key.partRow.RecordIDs(includeNulls) {
+			if !cb(n, id) {
+				return
+			}
+		}
+		for n, id := range key.ccolsRow.RecordIDs(includeNulls) {
+			if !cb(n, id) {
+				return
+			}
+		}
+	}
+}
+
+func (key *keyType) String() string {
+	return fmt.Sprintf("view «%v» key", key.viewName)
 }
 
 // istructs.IKeyBuilder.ToBytes
@@ -559,11 +582,11 @@ type valueType struct {
 //   - if view not found
 func newValue(appCfg *AppConfigType, name appdef.QName) *valueType {
 	if name == appdef.NullQName {
-		panic(ErrNameMissed)
+		panic(ErrNameMissedError)
 	}
-	view := appCfg.AppDef.View(name)
+	view := appdef.View(appCfg.AppDef.Type, name)
 	if view == nil {
-		panic(fmt.Errorf(errViewNotFoundWrap, name, ErrNameNotFound))
+		panic(ErrViewNotFound(name))
 	}
 
 	value := valueType{
@@ -591,12 +614,12 @@ func (val *valueType) loadFromBytes(in []byte) (err error) {
 		return fmt.Errorf("error read codec version: %w", err)
 	}
 	switch codec {
-	case codec_RawDynoBuffer, codec_RDB_1:
+	case codec_RawDynoBuffer, codec_RDB_1, codec_RDB_2:
 		if err := loadViewValue(val, codec, buf); err != nil {
 			return err
 		}
 	default:
-		return fmt.Errorf("unknown codec version «%d»: %w", codec, ErrUnknownCodec)
+		return ErrUnknownCodec(codec)
 	}
 
 	return nil
