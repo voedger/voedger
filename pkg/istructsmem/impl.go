@@ -201,7 +201,8 @@ func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName appdef.QName, 
 		}
 		keys = append(keys, key)
 	}
-	return !app.buckets.TakeTokens(keys, 1)
+	ok, _ = app.buckets.TakeTokens(keys, 1)
+	return !ok
 }
 
 // istructs.IAppStructs.SyncProjectors
