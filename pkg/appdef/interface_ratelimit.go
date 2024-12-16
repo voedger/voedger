@@ -28,7 +28,7 @@ const (
 var DefaultRateScopes = []RateScope{RateScope_AppPartition}
 
 type (
-	RateCount  = uint
+	RateCount  = uint32
 	RatePeriod = time.Duration
 )
 
@@ -37,6 +37,10 @@ type IRate interface {
 	Count() RateCount
 	Period() RatePeriod
 
+	// Returns is this rate has specified scope
+	Scope(RateScope) bool
+
+	// Returns rate scopes.
 	Scopes() iter.Seq[RateScope]
 }
 

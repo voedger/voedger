@@ -42,7 +42,7 @@ func (frl *functionRateLimits) prepare(buckets irates.IBuckets) {
 			rateLimitName = GetFunctionRateLimitName(funcQName, rlKind)
 			buckets.SetDefaultBucketState(rateLimitName, irates.BucketState{
 				Period:             rl.Period,
-				MaxTokensPerPeriod: irates.NumTokensType(rl.MaxAllowedPerDuration),
+				MaxTokensPerPeriod: rl.MaxAllowedPerDuration,
 			})
 		}
 	}

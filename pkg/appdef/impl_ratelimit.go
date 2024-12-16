@@ -46,6 +46,10 @@ func (r rate) Period() RatePeriod {
 	return r.period
 }
 
+func (r rate) Scope(s RateScope) bool {
+	return r.scopes.Contains(s)
+}
+
 func (r rate) Scopes() iter.Seq[RateScope] {
 	return r.scopes.Values()
 }

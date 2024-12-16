@@ -5,8 +5,6 @@
 package irates
 
 import (
-	"time"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -46,18 +44,18 @@ type IBuckets interface {
 type BucketKey struct {
 	RateLimitName appdef.QName
 	RemoteAddr    string
-	App           appdef.AppQName
+	App           appdef.AppQName //?
 	Workspace     istructs.WSID
 	QName         appdef.QName
-	ID            istructs.RecordID
+	ID            istructs.RecordID //?
 }
 
 type BucketState struct {
-	Period             time.Duration
+	Period             appdef.RatePeriod
 	MaxTokensPerPeriod NumTokensType
 	TakenTokens        NumTokensType
 }
 
-type NumTokensType uint32
+type NumTokensType = appdef.RateCount
 
 type BucketsFactoryType func() IBuckets
