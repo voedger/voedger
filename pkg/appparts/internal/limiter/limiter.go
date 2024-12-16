@@ -6,8 +6,6 @@
 package limiter
 
 import (
-	"fmt"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -36,7 +34,7 @@ func (l *Limiter) init() {
 	// initialize default buckets states
 	for limit := range appdef.Limits(l.app.Types()) {
 		l.buckets.SetDefaultBucketState(
-			fmt.Sprint(limit.QName()),
+			limit.QName(),
 			irates.BucketState{
 				Period:             limit.Rate().Period(),
 				MaxTokensPerPeriod: limit.Rate().Count(),
