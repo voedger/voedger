@@ -28,7 +28,7 @@ const (
 var DefaultRateScopes = []RateScope{RateScope_AppPartition}
 
 type (
-	RateCount  = uint
+	RateCount  = uint32
 	RatePeriod = time.Duration
 )
 
