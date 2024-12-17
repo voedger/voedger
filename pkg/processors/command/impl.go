@@ -389,10 +389,6 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkp
 	if !ok {
 		ok, _, err := cmd.appPart.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles)
 		if err != nil {
-			// TODO: temporary workaround. Eliminate later
-			if roleNotFound(err) {
-				return coreutils.NewHTTPErrorf(http.StatusForbidden)
-			}
 			return err
 		}
 		if !ok {
@@ -704,10 +700,6 @@ func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work pipeline.IWorkpiec
 			OperationKind: parsedCUD.opKindOld,
 			Resource:      parsedCUD.qName,
 			Fields:        maps.Keys(parsedCUD.fields),
-		}
-		if parsedCUD.opKind == appdef.OperationKind_Select {
-			// TODO: eliminate SELECT rule skipping after implementing ACL in VSQL in Air
-			continue
 		}
 		ok, err := cmdProc.authorizer.Authorize(cmd.appStructs, cmd.principals, req)
 		if err != nil {
