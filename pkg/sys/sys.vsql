@@ -466,7 +466,6 @@ ABSTRACT WORKSPACE Workspace (
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG WorkspaceOwnerFuncTag TO WorkspaceOwner;
 
 	GRANT EXECUTE ON ALL QUERIES WITH TAG AllowedToEveryoneTag TO Everyone;
-	GRANT EXECUTE ON ALL COMMANDS WITH TAG AllowedToEveryoneTag TO Everyone;
 
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG AllowedToAuthenticatedTag TO AuthenticatedUser;
 );
