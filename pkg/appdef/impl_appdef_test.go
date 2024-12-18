@@ -146,12 +146,12 @@ func Test_EnumsBreakable(t *testing.T) {
 	wsb.AddQuery(appdef.NewQName("test", "Query1"))
 	wsb.AddQuery(appdef.NewQName("test", "Query2"))
 
-	wsb.AddProjector(
-		appdef.NewQName("test", "Projector1"),
+	prj1 := wsb.AddProjector(appdef.NewQName("test", "Projector1"))
+	prj1.Events().Add(
 		[]appdef.OperationKind{appdef.OperationKind_Execute},
 		filter.QNames(cmd1Name))
-	wsb.AddProjector(
-		appdef.NewQName("test", "Projector2"),
+	prj2 := wsb.AddProjector(appdef.NewQName("test", "Projector2"))
+	prj2.Events().Add(
 		[]appdef.OperationKind{appdef.OperationKind_Execute},
 		filter.QNames(cmd2Name))
 

@@ -14,22 +14,32 @@ type IProjector interface {
 	// Returns is synchronous projector.
 	Sync() bool
 
-	// Returns is this projector triggered by specified operation.
-	Op(OperationKind) bool
-
-	// Returns operations that triggers this projector.
-	Ops() iter.Seq[OperationKind]
-
-	// Returns filter of types on which projector is applicable.
-	Filter() IFilter
+	// Returns events that triggers this projector.
+	Events() iter.Seq[IProjectorEvent]
 
 	// Returns is projector is able to handle `sys.Error` events.
 	// False by default.
 	WantErrors() bool
 }
 
+type IProjectorEvent interface {
+	IWithComments
+
+	// Returns is triggered by specified operation.
+	Op(OperationKind) bool
+
+	// Returns triggered operations.
+	Ops() iter.Seq[OperationKind]
+
+	// Returns filter of triggered types.
+	Filter() IFilter
+}
+
 type IProjectorBuilder interface {
 	IExtensionBuilder
+
+	// Returns events builder
+	Events() IProjectorEventsBuilder
 
 	// Sets is synchronous projector.
 	SetSync(bool) IProjectorBuilder
@@ -38,13 +48,20 @@ type IProjectorBuilder interface {
 	SetWantErrors() IProjectorBuilder
 }
 
+type IProjectorEventsBuilder interface {
+	// Adds new event.
+	//
+	// # Panics:
+	//	 - if specified operations are incompatible,
+	//	 - if matched objects can not to be used with specified operations.
+	Add(ops []OperationKind, flt IFilter, comment ...string) IProjectorEventsBuilder
+}
+
 type IProjectorsBuilder interface {
 	// Adds new projector.
 	//
 	// # Panics:
 	//   - if name is empty or invalid,
-	//   - if type with the same name already exists,
-	//	 - if specified operations are incompatible,
-	//	 - if matched objects can not to be used with specified operations.
-	AddProjector(name QName, ops []OperationKind, flt IFilter, comment ...string) IProjectorBuilder
+	//   - if type with the same name already exists.
+	AddProjector(name QName) IProjectorBuilder
 }

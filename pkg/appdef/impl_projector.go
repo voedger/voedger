@@ -18,62 +18,39 @@ type projector struct {
 	extension
 	sync      bool
 	sysErrors bool
-	ops       set.Set[OperationKind]
-	flt       IFilter
+	events    *projectorEvents
 }
 
-func newProjector(app *appDef, ws *workspace, name QName, ops []OperationKind, flt IFilter, comment ...string) *projector {
-	if !ProjectorOperations.ContainsAll(ops...) {
-		panic(ErrUnsupported("projector operations %v", ops))
-	}
-
-	opSet := set.From(ops...)
-	if compatible, err := isCompatibleOperations(opSet); !compatible {
-		panic(err)
-	}
-	if flt == nil {
-		panic(ErrMissed("filter"))
-	}
+func newProjector(app *appDef, ws *workspace, name QName) *projector {
 	prj := &projector{
 		extension: makeExtension(app, ws, name, TypeKind_Projector),
-		ops:       opSet,
-		flt:       flt,
+		events:    &projectorEvents{},
 	}
-	for t := range FilterMatches(prj.Filter(), ws.Types()) {
-		if err := prj.validateOnType(t); err != nil {
-			panic(err)
-		}
-	}
-	prj.typ.comment.setComment(comment...)
 	ws.appendType(prj)
 	return prj
 }
 
-func (prj projector) Filter() IFilter { return prj.flt }
-
-func (prj projector) Op(o OperationKind) bool { return prj.ops.Contains(o) }
-
-func (prj projector) Ops() iter.Seq[OperationKind] { return prj.ops.Values() }
+func (prj projector) Events() iter.Seq[IProjectorEvent] {
+	return func(yield func(IProjectorEvent) bool) {
+		for _, e := range prj.events.events {
+			if !yield(e) {
+				return
+			}
+		}
+	}
+}
 
 func (prj projector) Sync() bool { return prj.sync }
 
 // Validates projector.
 //
 // # Error if:
-//   - filter has no matches in the workspace
-//   - some filtered type can not trigger projector. See validateOnType
-func (prj projector) Validate() (err error) {
+//   - some event filter has no matches in the workspace
+//   - some event filtered type can not trigger projector
+func (prj *projector) Validate() (err error) {
 	err = prj.extension.Validate()
 
-	cnt := 0
-	for t := range FilterMatches(prj.Filter(), prj.Workspace().Types()) {
-		err = errors.Join(err, prj.validateOnType(t))
-		cnt++
-	}
-
-	if cnt == 0 {
-		err = errors.Join(err, ErrFilterHasNoMatches(prj, prj.Filter(), prj.Workspace()))
-	}
+	err = errors.Join(err, prj.events.validate(prj))
 
 	return err
 }
@@ -83,13 +60,6 @@ func (prj projector) WantErrors() bool { return prj.sysErrors }
 func (prj *projector) setSync(sync bool) { prj.sync = sync }
 
 func (prj *projector) setWantErrors() { prj.sysErrors = true }
-
-func (prj projector) validateOnType(t IType) error {
-	if !TypeKind_ProjectorTriggers.Contains(t.Kind()) {
-		return ErrUnsupported("%v can not trigger projector", t)
-	}
-	return nil
-}
 
 // # Supports:
 //   - IProjectorBuilder
@@ -105,6 +75,10 @@ func newProjectorBuilder(projector *projector) *projectorBuilder {
 	}
 }
 
+func (pb *projectorBuilder) Events() IProjectorEventsBuilder {
+	return pb.projector.events
+}
+
 func (pb *projectorBuilder) SetSync(sync bool) IProjectorBuilder {
 	pb.projector.setSync(sync)
 	return pb
@@ -113,4 +87,65 @@ func (pb *projectorBuilder) SetSync(sync bool) IProjectorBuilder {
 func (pb *projectorBuilder) SetWantErrors() IProjectorBuilder {
 	pb.projector.setWantErrors()
 	return pb
+}
+
+// # Supports:
+//   - IProjectorEventsBuilder
+type projectorEvents struct {
+	events []*projectorEvent
+}
+
+func (ev *projectorEvents) Add(ops []OperationKind, flt IFilter, comment ...string) IProjectorEventsBuilder {
+	if !ProjectorOperations.ContainsAll(ops...) {
+		panic(ErrUnsupported("projector operations %v", ops))
+	}
+	if flt == nil {
+		panic(ErrMissed("filter"))
+	}
+	e := &projectorEvent{
+		ops: set.From(ops...),
+		flt: flt,
+	}
+	e.comment.setComment(comment...)
+	ev.events = append(ev.events, e)
+	return ev
+}
+
+// Validates projector events.
+func (ev projectorEvents) validate(prj IProjector) (err error) {
+	for _, e := range ev.events {
+		err = errors.Join(err, e.validate(prj))
+	}
+	return err
+}
+
+// # Supports:
+//   - IProjectorEvent
+type projectorEvent struct {
+	comment
+	ops set.Set[OperationKind]
+	flt IFilter
+}
+
+func (e projectorEvent) Filter() IFilter { return e.flt }
+
+func (e projectorEvent) Op(o OperationKind) bool { return e.ops.Contains(o) }
+
+func (e projectorEvent) Ops() iter.Seq[OperationKind] { return e.ops.Values() }
+
+// Validates projector event.
+func (ev projectorEvent) validate(prj IProjector) (err error) {
+	cnt := 0
+	for t := range prj.Workspace().Types() {
+		if ev.flt.Match(t) {
+			cnt++
+			if !TypeKind_ProjectorTriggers.Contains(t.Kind()) {
+				err = errors.Join(err, ErrUnsupported("type %v can not trigger projector", t))
+			}
+		}
+	}
+	if cnt == 0 {
+		err = errors.Join(err, ErrFilterHasNoMatches(prj, ev.flt, prj.Workspace()))
+	}
+	return err
 }

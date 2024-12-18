@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
 type buildContext struct {
@@ -281,34 +282,41 @@ func (c *buildContext) projectors() error {
 			pQname := schema.NewQName(proj.Name)
 
 			wsb := proj.workspace.mustBuilder(c)
-			builder := wsb.AddProjector(pQname)
 			// Triggers
+			ops := make([]appdef.OperationKind, 0)
+			qNames := appdef.QNames{}
 			for _, trigger := range proj.Triggers {
-				evKinds := make([]appdef.ProjectorEventKind, 0)
 				if trigger.ExecuteAction != nil {
 					if trigger.ExecuteAction.WithParam {
-						evKinds = append(evKinds, appdef.ProjectorEventKind_ExecuteWithParam)
+						ops = append(ops, appdef.OperationKind_ExecuteWithParam)
 					} else {
-						evKinds = append(evKinds, appdef.ProjectorEventKind_Execute)
+						ops = append(ops, appdef.OperationKind_Execute)
 					}
 				} else {
 					if trigger.insert() {
-						evKinds = append(evKinds, appdef.ProjectorEventKind_Insert)
+						ops = append(ops, appdef.OperationKind_Insert)
 					}
 					if trigger.update() {
-						evKinds = append(evKinds, appdef.ProjectorEventKind_Update)
+						ops = append(ops, appdef.OperationKind_Update)
 					}
 					if trigger.activate() {
-						evKinds = append(evKinds, appdef.ProjectorEventKind_Activate)
+						ops = append(ops, appdef.OperationKind_Activate)
 					}
 					if trigger.deactivate() {
-						evKinds = append(evKinds, appdef.ProjectorEventKind_Deactivate)
+						ops = append(ops, appdef.OperationKind_Deactivate)
 					}
 				}
-				for _, qn := range trigger.qNames {
-					builder.Events().Add(qn, evKinds...)
-				}
+				qNames.Add(trigger.qNames...)
 			}
+			if len(ops) == 0 {
+				c.errs = append(c.errs, fmt.Errorf("no trigger operations specified for projector %s", proj.Name))
+				return
+			}
+			if len(qNames) == 0 {
+				c.errs = append(c.errs, fmt.Errorf("no triggers names specified for projector %s", proj.Name))
+				return
+			}
+			builder := wsb.AddProjector(pQname, ops, filter.QNames(qNames[0], qNames[1:]...))
 
 			if proj.IncludingErrors {
 				builder.SetWantErrors()
@@ -330,7 +338,7 @@ func (c *buildContext) projectors() error {
 			builder.SetSync(proj.Sync)
 		})
 	}
-	return nil
+	return errors.Join(c.errs...)
 }
 
 func (c *buildContext) views() error {

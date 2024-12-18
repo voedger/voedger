@@ -51,7 +51,8 @@ func Test_AppDefExtensions(t *testing.T) {
 			SetParam(parName).
 			SetResult(appdef.QNameANY)
 
-		prj := wsb.AddProjector(prjName, []appdef.OperationKind{appdef.OperationKind_Execute}, filter.QNames(cmdName))
+		prj := wsb.AddProjector(prjName)
+		prj.Events().Add([]appdef.OperationKind{appdef.OperationKind_Execute}, filter.QNames(cmdName))
 		prj.Intents().
 			Add(sysViews, viewName)
 

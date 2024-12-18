@@ -40,8 +40,8 @@ func ExampleProjectors() {
 		v.Value().AddDataField("data", appdef.SysData_bytes, false, appdef.MaxLen(1024))
 		v.SetComment("view is intent for projector")
 
-		prj := wsb.AddProjector(
-			prjName,
+		prj := wsb.AddProjector(prjName)
+		prj.Events().Add(
 			[]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate},
 			filter.QNames(recName),
 			fmt.Sprintf("run projector every time when %v is changed", recName))
@@ -59,9 +59,12 @@ func ExampleProjectors() {
 	// how to inspect builded AppDef with projector
 	{
 		prj := appdef.Projector(app.Type, prjName)
-		fmt.Println(prj, ":")
-		fmt.Println(" - ops:", slices.Collect(prj.Ops()))
-		fmt.Println(" - filter:", prj.Filter())
+		fmt.Println(prj)
+		fmt.Println(" - events:")
+		for e := range prj.Events() {
+			fmt.Println("   - ops:", slices.Collect(e.Ops()))
+			fmt.Println("   - filter:", e.Filter())
+		}
 		if prj.WantErrors() {
 			fmt.Println(" - want sys.error events")
 		}
@@ -85,9 +88,10 @@ func ExampleProjectors() {
 	}
 
 	// Output:
-	// BuiltIn-Projector «test.projector» :
-	//  - ops: [OperationKind_Insert OperationKind_Update OperationKind_Activate OperationKind_Deactivate]
-	//  - filter: QNAMES(test.record)
+	// BuiltIn-Projector «test.projector»
+	//  - events:
+	//    - ops: [OperationKind_Insert OperationKind_Update OperationKind_Activate OperationKind_Deactivate]
+	//    - filter: QNAMES(test.record)
 	//  - want sys.error events
 	//  - state: Storage «sys.records» [test.doc] projector needs to read «test.doc» from «sys.records» storage
 	//  - intent: Storage «sys.views» [test.view] projector needs to update «test.view» from «sys.views» storage

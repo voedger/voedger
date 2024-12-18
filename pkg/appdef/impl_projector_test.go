@@ -36,7 +36,6 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 	prjRecName := appdef.NewQName("test", "recProjector")
 	prjCmdName := appdef.NewQName("test", "cmdProjector")
-	prjObjName := appdef.NewQName("test", "objProjector")
 
 	t.Run("should be ok to add projector", func(t *testing.T) {
 		adb := appdef.New()
@@ -57,8 +56,8 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		_ = wsb.AddObject(objName)
 		wsb.AddCommand(cmdName).SetParam(objName)
 
-		prjRec := wsb.AddProjector(
-			prjRecName,
+		prjRec := wsb.AddProjector(prjRecName)
+		prjRec.Events().Add(
 			[]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate},
 			filter.QNames(recName),
 			fmt.Sprintf("run projector every time when %v is changed", recName))
@@ -72,20 +71,18 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		prjRec.Intents().
 			Add(sysViews, viewName).SetComment(sysViews, "view is intent for projector")
 
-		prjCmd := wsb.AddProjector(
-			prjCmdName,
+		prjCmd := wsb.AddProjector(prjCmdName)
+		prjCmd.Events().Add(
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
 			filter.QNames(cmdName),
 			fmt.Sprintf("run projector every time when %v is executed", cmdName))
-		prjCmd.SetEngine(appdef.ExtensionEngineKind_WASM)
-		prjCmd.SetName("customExtensionName")
-		prjCmd.Intents().Add(sysViews, viewName)
-
-		_ = wsb.AddProjector(
-			prjObjName,
+		prjCmd.Events().Add(
 			[]appdef.OperationKind{appdef.OperationKind_ExecuteWithParam},
 			filter.QNames(objName),
 			fmt.Sprintf("run projector every time when command with %v is executed", objName))
+		prjCmd.SetEngine(appdef.ExtensionEngineKind_WASM)
+		prjCmd.SetName("customExtensionName")
+		prjCmd.Intents().Add(sysViews, viewName)
 
 		t.Run("should be ok to build", func(t *testing.T) {
 			a, err := adb.Build()
@@ -118,15 +115,24 @@ func Test_AppDef_AddProjector(t *testing.T) {
 				require.Equal(prjRecName.Entity(), prj.Name())
 				require.Equal(appdef.ExtensionEngineKind_BuiltIn, prj.Engine())
 				require.True(prj.Sync())
-
-				require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate}, slices.Collect(prj.Ops()))
-				require.True(prj.Op(appdef.OperationKind_Insert))
-				require.False(prj.Op(appdef.OperationKind_Execute))
-
-				require.Equal(appdef.FilterKind_QNames, prj.Filter().Kind())
-				require.EqualValues([]appdef.QName{recName}, slices.Collect(prj.Filter().QNames()))
-
 				require.True(prj.WantErrors())
+
+				t.Run("should be ok enum events", func(t *testing.T) {
+					cnt := 0
+					for ev := range prj.Events() {
+						cnt++
+						switch cnt {
+						case 1:
+							require.EqualValues([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate}, slices.Collect(ev.Ops()))
+							require.Equal(appdef.FilterKind_QNames, ev.Filter().Kind())
+							require.EqualValues([]appdef.QName{recName}, slices.Collect(ev.Filter().QNames()))
+							require.Equal("run projector every time when test.record is changed", ev.Comment())
+						default:
+							require.Failf("unexpected event", "event: %v", ev)
+						}
+					}
+					require.Equal(1, cnt)
+				})
 
 				t.Run("should be ok enum states", func(t *testing.T) {
 					cnt := 0
@@ -204,22 +210,31 @@ func Test_AppDef_AddProjector(t *testing.T) {
 				require.NotNil(prj)
 				require.Equal(appdef.ExtensionEngineKind_WASM, prj.Engine())
 				require.Equal("customExtensionName", prj.Name())
-				require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, slices.Collect(prj.Ops()))
-				require.Equal(appdef.FilterKind_QNames, prj.Filter().Kind())
-				require.EqualValues([]appdef.QName{cmdName}, slices.Collect(prj.Filter().QNames()))
+
+				t.Run("should be ok enum events", func(t *testing.T) {
+					cnt := 0
+					for ev := range prj.Events() {
+						cnt++
+						switch cnt {
+						case 1:
+							require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, slices.Collect(ev.Ops()))
+							require.Equal(appdef.FilterKind_QNames, ev.Filter().Kind())
+							require.EqualValues([]appdef.QName{cmdName}, slices.Collect(ev.Filter().QNames()))
+							require.Equal("run projector every time when test.command is executed", ev.Comment())
+						case 2:
+							require.Equal([]appdef.OperationKind{appdef.OperationKind_ExecuteWithParam}, slices.Collect(ev.Ops()))
+							require.Equal(appdef.FilterKind_QNames, ev.Filter().Kind())
+							require.EqualValues([]appdef.QName{objName}, slices.Collect(ev.Filter().QNames()))
+							require.Equal("run projector every time when command with test.object is executed", ev.Comment())
+						default:
+							require.Failf("unexpected event", "event: %v", ev)
+						}
+					}
+					require.Equal(2, cnt)
+				})
+
 				require.Empty(prj.States().Map())
 				require.EqualValues(map[appdef.QName]appdef.QNames{sysViews: {viewName}}, prj.Intents().Map())
-			})
-
-			t.Run(fmt.Sprint(prjObjName), func(t *testing.T) {
-				prj := appdef.Projector(tested.Type, prjObjName)
-				require.NotNil(prj)
-				require.Equal(appdef.ExtensionEngineKind_BuiltIn, prj.Engine())
-				require.Equal([]appdef.OperationKind{appdef.OperationKind_ExecuteWithParam}, slices.Collect(prj.Ops()))
-				require.Equal(appdef.FilterKind_QNames, prj.Filter().Kind())
-				require.EqualValues([]appdef.QName{objName}, slices.Collect(prj.Filter().QNames()))
-				require.Empty(prj.States().Map())
-				require.Empty(prj.Intents().Map())
 			})
 		})
 
@@ -228,7 +243,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			for p := range appdef.Projectors(tested.Types()) {
 				names.Add(p.QName())
 			}
-			require.EqualValues(appdef.QNamesFrom(prjRecName, prjCmdName, prjObjName), names)
+			require.EqualValues(appdef.QNamesFrom(prjRecName, prjCmdName), names)
 		})
 
 		require.Nil(appdef.Projector(tested.Type, appdef.NewQName("test", "unknown")), "should be nil if unknown")
@@ -242,8 +257,8 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 
-			prj := adb.AddWorkspace(wsName).AddProjector(
-				prjCmdName,
+			prj := adb.AddWorkspace(wsName).AddProjector(prjCmdName)
+			prj.Events().Add(
 				[]appdef.OperationKind{appdef.OperationKind_Execute},
 				filter.AllFunctions(wsName))
 
@@ -258,10 +273,8 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			wsb := adb.AddWorkspace(wsName)
 
 			wsb.AddCRecord(recName)
-			prj := wsb.AddProjector(
-				prjRecName,
-				[]appdef.OperationKind{appdef.OperationKind_Insert},
-				filter.QNames(recName))
+			prj := wsb.AddProjector(prjRecName)
+			prj.Events().Add([]appdef.OperationKind{appdef.OperationKind_Insert}, filter.QNames(recName))
 			prj.States().
 				Add(appdef.NewQName("sys", "records"), recName, appdef.NewQName("test", "unknown"))
 			_, err := adb.Build()
@@ -277,14 +290,12 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			require.Panics(func() {
 				wsb.AddProjector(
 					appdef.NullQName, // <-- missed name
-					[]appdef.OperationKind{appdef.OperationKind_Insert},
-					filter.QNames(recName))
+				)
 			}, require.Is(appdef.ErrMissedError))
 			require.Panics(func() {
 				wsb.AddProjector(
 					appdef.NewQName("naked", "🔫"), // <-- invalid name
-					[]appdef.OperationKind{appdef.OperationKind_Insert},
-					filter.QNames(recName))
+				)
 			}, require.Is(appdef.ErrInvalidError), require.Has("naked.🔫"))
 
 			testName := appdef.NewQName("test", "dupe")
@@ -292,8 +303,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			require.Panics(func() {
 				wsb.AddProjector(
 					testName, // <-- dupe name
-					[]appdef.OperationKind{appdef.OperationKind_Insert},
-					filter.QNames(recName))
+				)
 			}, require.Is(appdef.ErrAlreadyExistsError), require.Has(testName))
 		})
 
@@ -301,10 +311,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
-			prj := wsb.AddProjector(
-				prjRecName,
-				[]appdef.OperationKind{appdef.OperationKind_Insert},
-				filter.QNames(recName))
+			prj := wsb.AddProjector(prjRecName)
 			require.Panics(func() { prj.SetName("naked 🔫") },
 				require.Is(appdef.ErrInvalidError), require.Has("naked 🔫"))
 		})
@@ -313,10 +320,8 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
-			prj := wsb.AddProjector(
-				prjRecName,
-				[]appdef.OperationKind{appdef.OperationKind_Insert},
-				filter.QNames(recName))
+			prj := wsb.AddProjector(prjRecName)
+			prj.Events().Add([]appdef.OperationKind{appdef.OperationKind_Insert}, filter.QNames(recName))
 			require.Panics(func() { prj.States().Add(appdef.NullQName) },
 				require.Is(appdef.ErrMissedError))
 			require.Panics(func() { prj.States().Add(appdef.NewQName("appdef.naked", "🔫")) },
@@ -331,10 +336,8 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
-			prj := wsb.AddProjector(
-				prjRecName,
-				[]appdef.OperationKind{appdef.OperationKind_Insert},
-				filter.QNames(recName))
+			prj := wsb.AddProjector(prjRecName)
+			prj.Events().Add([]appdef.OperationKind{appdef.OperationKind_Insert}, filter.QNames(recName))
 			require.Panics(func() { prj.Intents().Add(appdef.NullQName) },
 				require.Is(appdef.ErrMissedError))
 			require.Panics(func() { prj.Intents().Add(appdef.NewQName("appdef.naked", "🔫")) },
