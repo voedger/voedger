@@ -655,7 +655,7 @@ type ProjectorTestState struct {
 }
 
 // NewProjectorTestState creates a new test state for projector testing
-func NewProjectorTestState(t *testing.T, iProjector IProjector, extensionFunc func()) *ProjectorTestState {
+func NewProjectorTestState(t *testing.T, extensionFunc func()) *ProjectorTestState {
 	pts := &ProjectorTestState{}
 	pts.t = t
 	pts.ctx = context.Background()
