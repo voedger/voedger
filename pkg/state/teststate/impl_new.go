@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -69,20 +70,20 @@ func (gts *generalTestState) getMockedStorage(storageQName appdef.QName) (*stora
 	return mockedStorage, true
 }
 
-func (gts *generalTestState) intentSingletonInsert(fQName IFullQName, keyValueList ...any) {
-	gts.addRequiredItems(fQName, 0, true, true, false, keyValueList...)
+func (gts *generalTestState) intentSingletonInsert(fQName IFullQName, fileRef string, keyValueList ...any) {
+	gts.addRequiredItems(fQName, 0, true, true, false, fileRef, keyValueList...)
 }
 
-func (gts *generalTestState) intentSingletonUpdate(fQName IFullQName, keyValueList ...any) {
-	gts.addRequiredItems(fQName, 0, true, false, false, keyValueList...)
+func (gts *generalTestState) intentSingletonUpdate(fQName IFullQName, fileRef string, keyValueList ...any) {
+	gts.addRequiredItems(fQName, 0, true, false, false, fileRef, keyValueList...)
 }
 
-func (gts *generalTestState) intentRecordInsert(fQName IFullQName, id istructs.RecordID, keyValueList ...any) {
-	gts.addRequiredItems(fQName, id, false, true, false, keyValueList...)
+func (gts *generalTestState) intentRecordInsert(fQName IFullQName, id istructs.RecordID, fileRef string, keyValueList ...any) {
+	gts.addRequiredItems(fQName, id, false, true, false, fileRef, keyValueList...)
 }
 
-func (gts *generalTestState) intentRecordUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) {
-	gts.addRequiredItems(fQName, id, false, false, false, keyValueList...)
+func (gts *generalTestState) intentRecordUpdate(fQName IFullQName, id istructs.RecordID, fileRef string, keyValueList ...any) {
+	gts.addRequiredItems(fQName, id, false, false, false, fileRef, keyValueList...)
 }
 
 func (gts *generalTestState) stateRecord(fQName IFullQName, id istructs.RecordID, keyValueList ...any) {
@@ -157,7 +158,7 @@ func (gts *generalTestState) putCudRows() {
 		mockedEventObject.Data[sys.Storage_Event_Field_QName] = localQName
 
 		// writing an event object directly to the storage
-		mockedEventStorage.PutValue(item.id, mockedEventObject)
+		mockedEventStorage.PutRecord(uint64(item.id), mockedEventObject)
 	}
 }
 
@@ -165,16 +166,18 @@ func (gts *generalTestState) addRequiredItems(
 	fQName IFullQName,
 	id istructs.RecordID,
 	isSingleton, isNew, isView bool,
+	fileRef string,
 	keyValueList ...any,
 ) {
 	gts.requiredRecordItems = append(gts.requiredRecordItems, recordItem{
-		entity:       fQName,
-		qName:        gts.getQNameFromFQName(fQName),
-		id:           id,
-		isSingleton:  isSingleton,
-		isNew:        isNew,
-		isView:       isView,
-		keyValueList: keyValueList,
+		entity:        fQName,
+		qName:         gts.getQNameFromFQName(fQName),
+		id:            id,
+		isSingleton:   isSingleton,
+		isNew:         isNew,
+		isView:        isView,
+		fileReference: fileRef,
+		keyValueList:  keyValueList,
 	})
 }
 
@@ -200,7 +203,7 @@ func (gts *generalTestState) requireIntent(r recordItem) {
 
 	vb, isNew := gts.IState.FindIntentWithOpKind(kb)
 	if vb == nil {
-		require.Fail(gts.t, "intent not found")
+		require.Fail(gts.t, fmt.Sprintf("intent not found: %s", r.fileReference))
 		return
 	}
 
@@ -211,10 +214,15 @@ func (gts *generalTestState) requireIntent(r recordItem) {
 
 	localQName := gts.getQNameFromFQName(r.entity)
 	require.Equalf(gts.t, r.isNew, isNew, "%s: intent kind mismatch", localQName.String())
-	gts.equalValues(vb, mapOfValues)
+	gts.equalValues(vb, mapOfValues, r.fileReference)
 }
 
-func (gts *generalTestState) equalValues(vb istructs.IStateValueBuilder, expectedValues map[string]any) {
+func (gts *generalTestState) equalValues(vb istructs.IStateValueBuilder, expectedValues map[string]any, fileReference string) {
+	var fileRefSuffix string
+	if len(fileReference) != 0 {
+		fileRefSuffix = fmt.Sprintf(": %s", fileReference)
+	}
+
 	if vb == nil {
 		require.Fail(gts.t, "expected value builder is nil")
 		return
@@ -225,37 +233,38 @@ func (gts *generalTestState) equalValues(vb istructs.IStateValueBuilder, expecte
 		return
 	}
 
+	notEqualMsg := fmt.Sprintf("values are not equal%s", fileRefSuffix)
 	for expectedKey, expectedValue := range expectedValues {
 		switch t := expectedValue.(type) {
 		case int8:
-			require.Equal(gts.t, int32(t), value.AsInt32(expectedKey))
+			require.Equal(gts.t, int32(t), value.AsInt32(expectedKey), notEqualMsg)
 		case int16:
-			require.Equal(gts.t, int32(t), value.AsInt32(expectedKey))
+			require.Equal(gts.t, int32(t), value.AsInt32(expectedKey), notEqualMsg)
 		case int32:
-			require.Equal(gts.t, t, value.AsInt32(expectedKey))
+			require.Equal(gts.t, t, value.AsInt32(expectedKey), notEqualMsg)
 		case int64:
-			require.Equal(gts.t, t, value.AsInt64(expectedKey))
+			require.Equal(gts.t, t, value.AsInt64(expectedKey), notEqualMsg)
 		case int:
-			require.Equal(gts.t, int64(t), value.AsInt64(expectedKey))
+			require.Equal(gts.t, int64(t), value.AsInt64(expectedKey), notEqualMsg)
 		case float32:
-			require.Equal(gts.t, t, value.AsFloat32(expectedKey))
+			require.Equal(gts.t, t, value.AsFloat32(expectedKey), notEqualMsg)
 		case float64:
-			require.Equal(gts.t, t, value.AsFloat64(expectedKey))
+			require.Equal(gts.t, t, value.AsFloat64(expectedKey), notEqualMsg)
 		case []byte:
-			require.Equal(gts.t, t, value.AsBytes(expectedKey))
+			require.Equal(gts.t, t, value.AsBytes(expectedKey), notEqualMsg)
 		case string:
-			require.Equal(gts.t, t, value.AsString(expectedKey))
+			require.Equal(gts.t, t, value.AsString(expectedKey), notEqualMsg)
 		case bool:
-			require.Equal(gts.t, t, value.AsBool(expectedKey))
+			require.Equal(gts.t, t, value.AsBool(expectedKey), notEqualMsg)
 		case appdef.QName:
-			require.Equal(gts.t, t, value.AsQName(expectedKey))
+			require.Equal(gts.t, t, value.AsQName(expectedKey), notEqualMsg)
 		case istructs.IStateValue:
-			require.Equal(gts.t, t, value.AsValue(expectedKey))
+			require.Equal(gts.t, t, value.AsValue(expectedKey), notEqualMsg)
 		case json.Number:
 			int64Value, err := t.Int64()
 			require.NoError(gts.t, err)
 
-			require.Equal(gts.t, int64Value, value.AsInt64(expectedKey))
+			require.Equal(gts.t, int64Value, value.AsInt64(expectedKey), notEqualMsg)
 		default:
 			require.Fail(gts.t, "unsupported value type")
 		}
@@ -343,7 +352,7 @@ func (gts *generalTestState) putRecords() {
 			Containers_: make(map[string][]*coreutils.TestObject),
 		}
 
-		mockedRecordStorage.PutValue(item.id, mockedObject)
+		mockedRecordStorage.PutRecord(uint64(item.id), mockedObject)
 	}
 
 	// clear record items after they are processed
@@ -370,7 +379,11 @@ func (gts *generalTestState) putViewRecords() {
 			Containers_: make(map[string][]*coreutils.TestObject),
 		}
 
-		mockedViewStorage.PutValue(item.id, mockedObject)
+		kb := gts.keyBuilder(item)
+
+		if err := mockedViewStorage.PutViewRecord(kb, mockedObject); err != nil {
+			panic(fmt.Errorf("failed to put view record: %w", err))
+		}
 	}
 
 	// clear view record items after they are processed
@@ -508,7 +521,7 @@ func (cts *CommandTestState) putArgument() {
 		}
 	}
 	// writing an event object directly to the storage
-	mockedCommandContextStorage.PutValue(0, mockedObject)
+	mockedCommandContextStorage.PutRecord(0, mockedObject)
 }
 
 // buildAppDef alternative way of building IAppDef
@@ -598,25 +611,25 @@ func (cts *CommandTestState) ArgumentObjectRow(path string, id istructs.RecordID
 }
 
 func (cts *CommandTestState) IntentSingletonInsert(fQName IFullQName, keyValueList ...any) ICommandRunner {
-	cts.intentSingletonInsert(fQName, keyValueList...)
+	cts.intentSingletonInsert(fQName, getSourceFileReference(2), keyValueList...)
 
 	return cts
 }
 
 func (cts *CommandTestState) IntentSingletonUpdate(fQName IFullQName, keyValueList ...any) ICommandRunner {
-	cts.intentSingletonUpdate(fQName, keyValueList...)
+	cts.intentSingletonUpdate(fQName, getSourceFileReference(2), keyValueList...)
 
 	return cts
 }
 
 func (cts *CommandTestState) IntentRecordInsert(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ICommandRunner {
-	cts.intentRecordInsert(fQName, id, keyValueList...)
+	cts.intentRecordInsert(fQName, id, getSourceFileReference(2), keyValueList...)
 
 	return cts
 }
 
 func (cts *CommandTestState) IntentRecordUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ICommandRunner {
-	cts.intentRecordUpdate(fQName, id, keyValueList...)
+	cts.intentRecordUpdate(fQName, id, getSourceFileReference(2), keyValueList...)
 
 	return cts
 }
@@ -727,25 +740,25 @@ func (pts *ProjectorTestState) EventCUD(fQName IFullQName, id istructs.RecordID,
 }
 
 func (pts *ProjectorTestState) IntentSingletonInsert(fQName IFullQName, keyValueList ...any) IProjectorRunner {
-	pts.intentSingletonInsert(fQName, keyValueList...)
+	pts.intentSingletonInsert(fQName, getSourceFileReference(2), keyValueList...)
 
 	return pts
 }
 
 func (pts *ProjectorTestState) IntentSingletonUpdate(fQName IFullQName, keyValueList ...any) IProjectorRunner {
-	pts.intentSingletonUpdate(fQName, keyValueList...)
+	pts.intentSingletonUpdate(fQName, getSourceFileReference(2), keyValueList...)
 
 	return pts
 }
 
 func (pts *ProjectorTestState) IntentRecordInsert(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
-	pts.intentRecordInsert(fQName, id, keyValueList...)
+	pts.intentRecordInsert(fQName, id, getSourceFileReference(2), keyValueList...)
 
 	return pts
 }
 
 func (pts *ProjectorTestState) IntentRecordUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
-	pts.intentRecordUpdate(fQName, id, keyValueList...)
+	pts.intentRecordUpdate(fQName, id, getSourceFileReference(2), keyValueList...)
 
 	return pts
 }
@@ -762,13 +775,13 @@ func (pts *ProjectorTestState) StateCUDRow(fQName IFullQName, id istructs.Record
 }
 
 func (pts *ProjectorTestState) IntentViewInsert(fQName IFullQName, keyValueList ...any) IProjectorRunner {
-	pts.addRequiredItems(fQName, 0, false, true, true, keyValueList...)
+	pts.addRequiredItems(fQName, 0, false, true, true, getSourceFileReference(2), keyValueList...)
 
 	return pts
 }
 
 func (pts *ProjectorTestState) IntentViewUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
-	pts.addRequiredItems(fQName, id, false, false, true, keyValueList...)
+	pts.addRequiredItems(fQName, id, false, false, true, getSourceFileReference(2), keyValueList...)
 
 	return pts
 }
@@ -855,7 +868,7 @@ func (pts *ProjectorTestState) putEvent() {
 	)
 
 	// writing an event object directly to the storage
-	mockedEventStorage.PutValue(0, mockedEventObject)
+	mockedEventStorage.PutRecord(0, mockedEventObject)
 }
 
 func (pts *ProjectorTestState) EventQName(fQName IFullQName) IProjectorRunner {
@@ -1020,6 +1033,17 @@ func setArgumentObjectRow(argumentObject *coreutils.TestObject, path string, id 
 		innerTree = putToArgumentObjectTree(innerTree, part, keyValueList...)
 		innerTree[appdef.SystemField_ID] = id
 	}
+}
+
+// getSourceFileReference returns the file reference of the source file.
+// The argument skip is the number of stack frames to ascend.
+func getSourceFileReference(skip int) string {
+	var fileRef string
+	if _, file, line, ok := runtime.Caller(skip); ok {
+		fileRef = fmt.Sprintf("%s:%d", file, line)
+	}
+
+	return fileRef
 }
 
 func getPackageLocalName(appDef appdef.IAppDef, fQName IFullQName) string {

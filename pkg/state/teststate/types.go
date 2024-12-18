@@ -41,13 +41,15 @@ type HttpResponse struct {
 }
 
 type recordItem struct {
-	entity       IFullQName
-	qName        appdef.QName
-	isSingleton  bool
-	isView       bool
-	isNew        bool
-	id           istructs.RecordID
-	keyValueList []any
+	entity      IFullQName
+	qName       appdef.QName
+	isSingleton bool
+	isView      bool
+	isNew       bool
+	id          istructs.RecordID
+	// fileReference is used to store the file reference in test where the record was added
+	fileReference string
+	keyValueList  []any
 }
 
 type intentItem struct {
