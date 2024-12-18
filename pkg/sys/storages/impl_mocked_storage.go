@@ -324,10 +324,10 @@ func (mkb *mockedKeyBuilder) Equals(kb istructs.IKeyBuilder) bool {
 			default:
 				return false
 			}
-		} else {
-			if !reflect.DeepEqual(v1, v2) {
-				return false
-			}
+		}
+
+		if !reflect.DeepEqual(v1, v2) {
+			return false
 		}
 	}
 
