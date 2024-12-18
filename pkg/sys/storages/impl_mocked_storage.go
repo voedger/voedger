@@ -19,6 +19,8 @@ import (
 	"github.com/voedger/voedger/pkg/sys"
 )
 
+const fmtErrHashCode = "mkb.HashCode(): %w"
+
 type MockedStorage struct {
 	state.IWithInsert
 	state.IWithGet
@@ -58,7 +60,7 @@ func (s *MockedStorage) GetBatch(items []state.GetBatchItem) (err error) {
 
 		hashCode, err := mkb.HashCode()
 		if err != nil {
-			return fmt.Errorf("mkb.HashCode(): %w", err)
+			return fmt.Errorf(fmtErrHashCode, err)
 		}
 
 		vb, ok := s.valueBuilders[hashCode]
@@ -80,7 +82,7 @@ func (s *MockedStorage) Get(kb istructs.IStateKeyBuilder) (value istructs.IState
 
 	hashCode, err := mkb.HashCode()
 	if err != nil {
-		return nil, fmt.Errorf("mkb.HashCode(): %w", err)
+		return nil, fmt.Errorf(fmtErrHashCode, err)
 	}
 
 	vb, ok := s.valueBuilders[hashCode]
@@ -99,7 +101,7 @@ func (s *MockedStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.Val
 
 	hashCode, err := mkb.HashCode()
 	if err != nil {
-		return fmt.Errorf("mkb.HashCode(): %w", err)
+		return fmt.Errorf(fmtErrHashCode, err)
 	}
 
 	vb, ok := s.valueBuilders[hashCode]
@@ -129,7 +131,7 @@ func (s *MockedStorage) ProvideValueBuilder(
 
 	hashCode, err := mkb.HashCode()
 	if err != nil {
-		return nil, fmt.Errorf("mkb.HashCode(): %w", err)
+		return nil, fmt.Errorf(fmtErrHashCode, err)
 	}
 
 	s.valueBuilders[hashCode] = newMVB
@@ -165,7 +167,7 @@ func (s *MockedStorage) PutViewRecord(kb istructs.IStateKeyBuilder, value *coreu
 
 	hashCode, err := mkb.HashCode()
 	if err != nil {
-		return fmt.Errorf("mkb.HashCode(): %w", err)
+		return fmt.Errorf(fmtErrHashCode, err)
 	}
 
 	s.keyBuilders = append(s.keyBuilders, mkb)
@@ -301,14 +303,17 @@ func (mkb *mockedKeyBuilder) Equals(kb istructs.IKeyBuilder) bool {
 
 			switch t1 := v1.(type) {
 			case int8:
+				//nolint:gosec
 				if t1 != int8(v2) {
 					return false
 				}
 			case int16:
+				//nolint:gosec
 				if t1 != int16(v2) {
 					return false
 				}
 			case int32:
+				//nolint:gosec
 				if t1 != int32(v2) {
 					return false
 				}
@@ -568,8 +573,10 @@ func (m *mockedStateValue) AsInt64(name appdef.FieldName) int64 {
 	case int64:
 		return t
 	case istructs.Offset:
+		//nolint:gosec
 		return int64(t)
 	case istructs.RecordID:
+		//nolint:gosec
 		return int64(t)
 	case json.Number:
 		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_int64)
