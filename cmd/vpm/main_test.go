@@ -352,17 +352,6 @@ func TestBuildExample2(t *testing.T) {
 	require.NoError(err)
 }
 
-func TestGenOrmForAirApp(t *testing.T) {
-	if testing.Short() {
-		t.Skip()
-	}
-
-	require := require.New(t)
-
-	err := execRootCmd([]string{"vpm", "orm", "-C", "testdata/build/air"}, "1.0.0")
-	require.NoError(err)
-}
-
 func TestInitBasicUsage(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
@@ -564,20 +553,6 @@ func TestGenOrmTestItAndBuildApp(t *testing.T) {
 	require.NoError(err)
 
 	err = execRootCmd([]string{"vpm", "build", "-C", tempAirDir}, "1.0.0")
-	require.NoError(err)
-}
-
-func TestGenOrm(t *testing.T) {
-	if testing.Short() {
-		t.Skip()
-	}
-
-	require := require.New(t)
-
-	wd, err := os.Getwd()
-	require.NoError(err)
-
-	err = execRootCmd([]string{"vpm", "orm", "-C", filepath.Join(wd, "testdata", "build", "air")}, "1.0.0")
 	require.NoError(err)
 }
 
