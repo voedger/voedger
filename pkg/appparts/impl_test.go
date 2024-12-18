@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/appparts/internal/schedulers"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
@@ -102,11 +103,17 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsName := appdef.NewQName("test", "workspace")
 
-		prj := wsb.AddProjector(prj1name)
+		wsb := adb.AddWorkspace(wsName)
+
+		_ = wsb.AddCommand(appdef.NewQName("test", "command"))
+
+		prj := wsb.AddProjector(
+			prj1name,
+			[]appdef.OperationKind{appdef.OperationKind_Execute},
+			filter.Types(wsName, appdef.TypeKind_Command))
 		prj.SetSync(false)
-		prj.Events().Add(appdef.QNameAnyCommand, appdef.ProjectorEventKind_Execute)
 
 		job := wsb.AddJob(job1name)
 		job.SetCronSchedule("@every 1s")
@@ -187,11 +194,17 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 
-			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+			wsName := appdef.NewQName("test", "workspace")
 
-			prj := wsb.AddProjector(prj2name)
+			wsb := adb.AddWorkspace(wsName)
+
+			_ = wsb.AddCommand(appdef.NewQName("test", "command"))
+
+			prj := wsb.AddProjector(
+				prj2name,
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.Types(wsName, appdef.TypeKind_Command))
 			prj.SetSync(false)
-			prj.Events().Add(appdef.QNameAnyCommand, appdef.ProjectorEventKind_Execute)
 
 			job := wsb.AddJob(job2name)
 			job.SetCronSchedule("@every 1s")
