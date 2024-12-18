@@ -146,10 +146,14 @@ func Test_EnumsBreakable(t *testing.T) {
 	wsb.AddQuery(appdef.NewQName("test", "Query1"))
 	wsb.AddQuery(appdef.NewQName("test", "Query2"))
 
-	wsb.AddProjector(appdef.NewQName("test", "Projector1")).
-		Events().Add(cmd1Name)
-	wsb.AddProjector(appdef.NewQName("test", "Projector2")).
-		Events().Add(cmd2Name)
+	wsb.AddProjector(
+		appdef.NewQName("test", "Projector1"),
+		[]appdef.OperationKind{appdef.OperationKind_Execute},
+		filter.QNames(cmd1Name))
+	wsb.AddProjector(
+		appdef.NewQName("test", "Projector2"),
+		[]appdef.OperationKind{appdef.OperationKind_Execute},
+		filter.QNames(cmd2Name))
 
 	job1name, job2name := appdef.NewQName("test", "Job1"), appdef.NewQName("test", "Job2")
 	wsb.AddJob(job1name).SetCronSchedule("@every 3s").

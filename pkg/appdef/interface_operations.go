@@ -5,6 +5,8 @@
 
 package appdef
 
+import "github.com/voedger/voedger/pkg/goutils/set"
+
 // Enumeration of operation kinds.
 //
 // Used for ACL and for Limits.
@@ -49,3 +51,33 @@ const (
 
 	OperationKind_count
 )
+
+// ACL operations is a set of operations that applicable with ACL rules.
+var ACLOperations = func() set.Set[OperationKind] {
+	s := set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute, OperationKind_Inherits)
+	s.SetReadOnly()
+	return s
+}()
+
+// Limitable operations is a set of operations that can be limited.
+var LimitableOperations = func() set.Set[OperationKind] {
+	s := set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute)
+	s.SetReadOnly()
+	return s
+}()
+
+// Projector operations is a set of operations that can trigger a projector.
+var ProjectorOperations = func() set.Set[OperationKind] {
+	s := set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select,
+		OperationKind_Activate, OperationKind_Deactivate,
+		OperationKind_Execute, OperationKind_ExecuteWithParam)
+	s.SetReadOnly()
+	return s
+}()
+
+// RecordsOperations is a set of operations that applicable on records.
+var RecordsOperations = func() set.Set[OperationKind] {
+	s := set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Activate, OperationKind_Deactivate)
+	s.SetReadOnly()
+	return s
+}()

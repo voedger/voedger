@@ -190,8 +190,8 @@ func (ws *workspace) addORecord(name QName) IORecordBuilder {
 	return newORecordBuilder(r)
 }
 
-func (ws *workspace) addProjector(name QName) IProjectorBuilder {
-	p := newProjector(ws.app, ws, name)
+func (ws *workspace) addProjector(name QName, ops []OperationKind, flt IFilter, comment ...string) IProjectorBuilder {
+	p := newProjector(ws.app, ws, name, ops, flt, comment...)
 	return newProjectorBuilder(p)
 }
 
@@ -463,8 +463,8 @@ func (wb *workspaceBuilder) AddORecord(name QName) IORecordBuilder {
 	return wb.workspace.addORecord(name)
 }
 
-func (wb *workspaceBuilder) AddProjector(name QName) IProjectorBuilder {
-	return wb.workspace.addProjector(name)
+func (wb *workspaceBuilder) AddProjector(name QName, ops []OperationKind, flt IFilter, comment ...string) IProjectorBuilder {
+	return wb.workspace.addProjector(name, ops, flt, comment...)
 }
 
 func (wb *workspaceBuilder) AddQuery(name QName) IQueryBuilder {

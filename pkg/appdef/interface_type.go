@@ -185,6 +185,22 @@ var (
 		s.SetReadOnly()
 		return s
 	}()
+
+	// Set of types which can trigger projectors.
+	//
+	// # Includes:
+	//	 - Functions (Commands and Queries)
+	//	 - Records (and Documents)
+	//	 - Views
+	//	 - Objects and ODocs
+	TypeKind_ProjectorTriggers = func() TypeKindSet {
+		s := set.From(TypeKind_Functions.AsArray()...)
+		s.Set(TypeKind_Records.AsArray()...)
+		s.Set(TypeKind_ViewRecord)
+		s.Set(TypeKind_Object, TypeKind_ODoc)
+		s.SetReadOnly()
+		return s
+	}()
 )
 
 // # Type

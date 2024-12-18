@@ -7,8 +7,10 @@ package appdef_test
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
 func ExampleProjectors() {
@@ -38,11 +40,12 @@ func ExampleProjectors() {
 		v.Value().AddDataField("data", appdef.SysData_bytes, false, appdef.MaxLen(1024))
 		v.SetComment("view is intent for projector")
 
-		prj := wsb.AddProjector(prjName)
+		prj := wsb.AddProjector(
+			prjName,
+			[]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate},
+			filter.QNames(recName),
+			fmt.Sprintf("run projector every time when %v is changed", recName))
 		prj.SetWantErrors()
-		prj.Events().
-			Add(recName, appdef.ProjectorEventKind_AnyChanges...).
-			SetComment(recName, fmt.Sprintf("run projector every time when %v is changed", recName))
 		prj.States().
 			Add(sysRecords, docName).
 			SetComment(sysRecords, "projector needs to read «test.doc» from «sys.records» storage")
@@ -57,9 +60,8 @@ func ExampleProjectors() {
 	{
 		prj := appdef.Projector(app.Type, prjName)
 		fmt.Println(prj, ":")
-		prj.Events().Enum(func(e appdef.IProjectorEvent) {
-			fmt.Println(" - event:", e, e.Comment())
-		})
+		fmt.Println(" - ops:", slices.Collect(prj.Ops()))
+		fmt.Println(" - filter:", prj.Filter())
 		if prj.WantErrors() {
 			fmt.Println(" - want sys.error events")
 		}
@@ -84,7 +86,8 @@ func ExampleProjectors() {
 
 	// Output:
 	// BuiltIn-Projector «test.projector» :
-	//  - event: CRecord «test.record» [Insert Update Activate Deactivate] run projector every time when test.record is changed
+	//  - ops: [OperationKind_Insert OperationKind_Update OperationKind_Activate OperationKind_Deactivate]
+	//  - filter: QNAMES(test.record)
 	//  - want sys.error events
 	//  - state: Storage «sys.records» [test.doc] projector needs to read «test.doc» from «sys.records» storage
 	//  - intent: Storage «sys.views» [test.view] projector needs to update «test.view» from «sys.views» storage

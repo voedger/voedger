@@ -60,8 +60,8 @@ func ErrRoleNotFound(r QName) error {
 	return ErrNotFound("role «%v»", r)
 }
 
-func ErrFilterHasNoMatches(flt IFilter, where any) error {
-	return ErrNotFound("filter «%v» has no matches in %v", flt, where)
+func ErrFilterHasNoMatches(t any, flt IFilter, where any) error {
+	return ErrNotFound("%v filter «%v» has no matches in %v", t, flt, where)
 }
 
 var ErrConvertError = errors.New("convert error")
