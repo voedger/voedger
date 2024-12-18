@@ -8,7 +8,9 @@ package storages
 import (
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"reflect"
+	"sort"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -16,6 +18,8 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
+
+const fmtErrHashCode = "mkb.HashCode(): %w"
 
 type MockedStorage struct {
 	state.IWithInsert
@@ -29,7 +33,7 @@ type MockedStorage struct {
 	singletonIDs    map[appdef.QName]istructs.RecordID
 	storageQName    appdef.QName
 	keyBuilders     []*mockedKeyBuilder
-	valueBuilders   map[istructs.RecordID]istructs.IStateValueBuilder
+	valueBuilders   map[uint64]istructs.IStateValueBuilder
 }
 
 func (s *MockedStorage) NewKeyBuilder(
@@ -54,7 +58,12 @@ func (s *MockedStorage) GetBatch(items []state.GetBatchItem) (err error) {
 			return errMockedKeyBuilderExpected
 		}
 
-		vb, ok := s.valueBuilders[mkb.Id]
+		hashCode, err := mkb.HashCode()
+		if err != nil {
+			return fmt.Errorf(fmtErrHashCode, err)
+		}
+
+		vb, ok := s.valueBuilders[hashCode]
 		if !ok {
 			return ErrNotFoundKey
 		}
@@ -71,7 +80,12 @@ func (s *MockedStorage) Get(kb istructs.IStateKeyBuilder) (value istructs.IState
 		return nil, errMockedKeyBuilderExpected
 	}
 
-	vb, ok := s.valueBuilders[mkb.Id]
+	hashCode, err := mkb.HashCode()
+	if err != nil {
+		return nil, fmt.Errorf(fmtErrHashCode, err)
+	}
+
+	vb, ok := s.valueBuilders[hashCode]
 	if !ok {
 		return nil, nil
 	}
@@ -85,7 +99,12 @@ func (s *MockedStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.Val
 		return errMockedKeyBuilderExpected
 	}
 
-	vb, ok := s.valueBuilders[mkb.Id]
+	hashCode, err := mkb.HashCode()
+	if err != nil {
+		return fmt.Errorf(fmtErrHashCode, err)
+	}
+
+	vb, ok := s.valueBuilders[hashCode]
 	if !ok {
 		return ErrNotFoundKey
 	}
@@ -109,7 +128,13 @@ func (s *MockedStorage) ProvideValueBuilder(
 
 	newMVB := newMockedValueBuilder(value)
 	s.keyBuilders = append(s.keyBuilders, mkb)
-	s.valueBuilders[mkb.Id] = newMVB
+
+	hashCode, err := mkb.HashCode()
+	if err != nil {
+		return nil, fmt.Errorf(fmtErrHashCode, err)
+	}
+
+	s.valueBuilders[hashCode] = newMVB
 
 	return newMVB, nil
 }
@@ -134,7 +159,24 @@ func (s *MockedStorage) ApplyBatch([]state.ApplyBatchItem) (err error) {
 	return
 }
 
-func (s *MockedStorage) PutValue(recordID istructs.RecordID, value *coreutils.TestObject) {
+func (s *MockedStorage) PutViewRecord(kb istructs.IStateKeyBuilder, value *coreutils.TestObject) error {
+	mkb, ok := kb.(*mockedKeyBuilder)
+	if !ok {
+		panic(errMockedKeyBuilderExpected)
+	}
+
+	hashCode, err := mkb.HashCode()
+	if err != nil {
+		return fmt.Errorf(fmtErrHashCode, err)
+	}
+
+	s.keyBuilders = append(s.keyBuilders, mkb)
+	s.valueBuilders[hashCode] = newMockedValueBuilder(newMockedStateValue([]*coreutils.TestObject{value}))
+
+	return nil
+}
+
+func (s *MockedStorage) PutRecord(recordID uint64, value *coreutils.TestObject) {
 	s.valueBuilders[recordID] = newMockedValueBuilder(newMockedStateValue([]*coreutils.TestObject{value}))
 }
 
@@ -153,7 +195,7 @@ func NewMockedStorage(storageQName appdef.QName) *MockedStorage {
 	return &MockedStorage{
 		storageQName:    storageQName,
 		keyBuilders:     make([]*mockedKeyBuilder, 0),
-		valueBuilders:   make(map[istructs.RecordID]istructs.IStateValueBuilder),
+		valueBuilders:   make(map[uint64]istructs.IStateValueBuilder),
 		singletonIDs:    make(map[appdef.QName]istructs.RecordID),
 		nextSingletonID: istructs.FirstSingletonID,
 	}
@@ -177,6 +219,44 @@ func newMockedKeyBuilder(mockedStorage *MockedStorage, entity appdef.QName) *moc
 		},
 		mockedStorage: mockedStorage,
 	}
+}
+
+// HashCode returns a hash code for the key builder.
+// It is used to identify a value associated to key builder in the storage.
+func (mkb *mockedKeyBuilder) HashCode() (uint64, error) {
+	if mkb.Id == 0 && len(mkb.Data) > 0 {
+		// Convert map to a sorted slice of key-value pairs to ensure consistent ordering
+		var pairs []struct {
+			Key   string
+			Value any
+		}
+		for k, v := range mkb.Data {
+			pairs = append(pairs, struct {
+				Key   string
+				Value any
+			}{Key: k, Value: v})
+		}
+
+		sort.Slice(pairs, func(i, j int) bool {
+			return pairs[i].Key < pairs[j].Key
+		})
+
+		// Serialize to JSON
+		data, err := json.Marshal(pairs)
+		if err != nil {
+			return 0, fmt.Errorf("json.Marshal(): %w", err)
+		}
+
+		// Compute the FNV-1a hash
+		hasher := fnv.New64a()
+		if _, err = hasher.Write(data); err != nil {
+			return 0, fmt.Errorf("hasher.Write(): %w", err)
+		}
+
+		return hasher.Sum64(), nil
+	}
+
+	return uint64(mkb.Id), nil
 }
 
 func (mkb *mockedKeyBuilder) Key() istructs.IKey {
@@ -203,6 +283,52 @@ func (mkb *mockedKeyBuilder) Equals(kb istructs.IKeyBuilder) bool {
 	m, ok := kb.(*mockedKeyBuilder)
 	if !ok {
 		return false
+	}
+
+	if len(mkb.Data) != len(m.Data) {
+		return false
+	}
+
+	for k, v1 := range mkb.Data {
+		v2, exists := m.Data[k]
+		if !exists {
+			return false
+		}
+
+		if jsonNumber, ok := v2.(json.Number); ok {
+			v2, err := jsonNumber.Int64()
+			if err != nil {
+				panic(fmt.Errorf("jsonNumber.Int64(): %w", err))
+			}
+
+			switch t1 := v1.(type) {
+			case int8:
+				//nolint:gosec
+				if t1 != int8(v2) {
+					return false
+				}
+			case int16:
+				//nolint:gosec
+				if t1 != int16(v2) {
+					return false
+				}
+			case int32:
+				//nolint:gosec
+				if t1 != int32(v2) {
+					return false
+				}
+			case int64:
+				if t1 != v2 {
+					return false
+				}
+			default:
+				return false
+			}
+		}
+
+		if !reflect.DeepEqual(v1, v2) {
+			return false
+		}
 	}
 
 	return mkb.Name == m.Name && mkb.Id == m.Id
@@ -442,8 +568,16 @@ func (m *mockedStateValue) AsInt32(name appdef.FieldName) int32 {
 
 func (m *mockedStateValue) AsInt64(name appdef.FieldName) int64 {
 	switch t := m.TestObjects[0].Data[name].(type) {
+	case int:
+		return int64(t)
 	case int64:
 		return t
+	case istructs.Offset:
+		//nolint:gosec
+		return int64(t)
+	case istructs.RecordID:
+		//nolint:gosec
+		return int64(t)
 	case json.Number:
 		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_int64)
 		if err != nil {

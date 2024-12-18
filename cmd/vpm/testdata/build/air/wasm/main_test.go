@@ -17,7 +17,7 @@ import (
 func TestProjectorFillPbillDates(t *testing.T) {
 	date := time.Date(2023, 1, 9, 0, 0, 0, 0, time.UTC)
 
-	t.Run("View View_PbillDates: insert", func(t *testing.T) {
+	t.Run("View View_PbillDates:insert", func(t *testing.T) {
 		test.NewProjectorTest(
 			t,
 			orm.Package_air.Projector_FillPbillDates(),
@@ -51,7 +51,7 @@ func TestProjectorFillPbillDates(t *testing.T) {
 			Run()
 	})
 
-	t.Run("View View_PbillDates: update", func(t *testing.T) {
+	t.Run("View View_PbillDates:update", func(t *testing.T) {
 		test.NewProjectorTest(
 			t,
 			orm.Package_air.Projector_FillPbillDates(),
