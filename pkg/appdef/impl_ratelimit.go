@@ -7,12 +7,14 @@ package appdef
 
 import (
 	"errors"
+	"fmt"
 	"iter"
+	"strings"
 
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
-// Implements:
+// # Supports:
 //   - IRate
 type rate struct {
 	typ
@@ -44,30 +46,68 @@ func (r rate) Period() RatePeriod {
 	return r.period
 }
 
+func (r rate) Scope(s RateScope) bool {
+	return r.scopes.Contains(s)
+}
+
 func (r rate) Scopes() iter.Seq[RateScope] {
 	return r.scopes.Values()
 }
 
-// Implements:
+// # Supports:
+//   - ILimitFilter
+type limitFilter struct {
+	IFilter
+	opt LimitFilterOption
+}
+
+func newLimitFilter(opt LimitFilterOption, flt IFilter) *limitFilter {
+	return &limitFilter{flt, opt}
+}
+
+func (f limitFilter) Option() LimitFilterOption { return f.opt }
+
+func (f limitFilter) String() string {
+	// ALL TABLES FROM WORKSPACE … --> EACH TABLES FROM WORKSPACE …
+	// TAGS(…) --> EACH TAGS(…)
+	const (
+		all  = "ALL "
+		each = "EACH "
+	)
+	s := fmt.Sprint(f.IFilter)
+	if f.Option() == LimitFilterOption_EACH {
+		if strings.HasPrefix(s, all) {
+			s = strings.Replace(s, all, each, 1)
+		} else {
+			s = each + s
+		}
+	}
+	return s
+}
+
+// # Supports:
 //   - ILimit
 type limit struct {
 	typ
-	opt  LimitOption
-	flt  IFilter
+	ops  set.Set[OperationKind]
+	opt  LimitFilterOption
+	flt  ILimitFilter
 	rate IRate
 }
 
-func newLimit(app *appDef, ws *workspace, name QName, opt LimitOption, flt IFilter, rate QName, comment ...string) *limit {
-	if rate == NullQName {
-		panic(ErrMissed("rate name"))
+func newLimit(app *appDef, ws *workspace, name QName, ops []OperationKind, opt LimitFilterOption, flt IFilter, rate QName, comment ...string) *limit {
+	opSet := set.From(ops...)
+	if compatible, err := isCompatibleOperations(opSet); !compatible {
+		panic(err)
 	}
 	if flt == nil {
 		panic(ErrMissed("filter"))
 	}
 	l := &limit{
 		typ:  makeType(app, ws, name, TypeKind_Limit),
+		ops:  opSet,
 		opt:  opt,
-		flt:  flt,
+		flt:  newLimitFilter(opt, flt),
 		rate: Rate(app.Type, rate),
 	}
 	if l.rate == nil {
@@ -83,9 +123,11 @@ func newLimit(app *appDef, ws *workspace, name QName, opt LimitOption, flt IFilt
 	return l
 }
 
-func (l limit) Filter() IFilter { return l.flt }
+func (l limit) Filter() ILimitFilter { return l.flt }
 
-func (l limit) Option() LimitOption { return l.opt }
+func (l limit) Op(o OperationKind) bool { return l.ops.Contains(o) }
+
+func (l limit) Ops() iter.Seq[OperationKind] { return l.ops.Values() }
 
 func (l limit) Rate() IRate { return l.rate }
 

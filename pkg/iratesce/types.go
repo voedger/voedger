@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	irates "github.com/voedger/voedger/pkg/irates"
 )
@@ -22,7 +23,7 @@ type bucketType struct {
 type bucketsType struct {
 	mu            sync.Mutex
 	buckets       map[irates.BucketKey]*bucketType
-	defaultStates map[string]irates.BucketState
+	defaultStates map[appdef.QName]irates.BucketState
 	time          coreutils.ITime
 }
 

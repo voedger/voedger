@@ -38,8 +38,8 @@ func ExampleRates() {
 		wsb.AddRate(rateAllName, 10, time.Hour, []appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, "10 times per hour per partition per IP")
 		wsb.AddRate(rateEachName, 1, 10*time.Minute, []appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, "1 times per 10 minutes per partition per IP")
 
-		wsb.AddLimit(limitAllName, appdef.LimitOption_ALL, filter.AllFunctions(wsName), rateAllName, "limit all commands and queries execution with test.rateAll")
-		wsb.AddLimit(limitEachName, appdef.LimitOption_EACH, filter.AllFunctions(wsName), rateEachName, "limit each command and query execution with test.rateEach")
+		wsb.AddLimit(limitAllName, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_ALL, filter.AllFunctions(wsName), rateAllName, "limit all commands and queries execution with test.rateAll")
+		wsb.AddLimit(limitEachName, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_EACH, filter.AllFunctions(wsName), rateEachName, "limit each command and query execution with test.rateEach")
 
 		app = adb.MustBuild()
 	}
@@ -61,7 +61,7 @@ func ExampleRates() {
 		cnt := 0
 		for l := range appdef.Limits(app.Types()) {
 			cnt++
-			fmt.Println("-", cnt, l, fmt.Sprintf("%s on %v with %v", l.Option().TrimString(), l.Filter(), l.Rate()))
+			fmt.Println("-", cnt, l, fmt.Sprintf("%v ON %v BY %v", slices.Collect(l.Ops()), l.Filter(), l.Rate()))
 		}
 		fmt.Println("overall:", cnt)
 	}
@@ -83,8 +83,8 @@ func ExampleRates() {
 	// - 2 Rate «test.rateEach» 1 per 10m0s per [RateScope_AppPartition RateScope_IP]
 	// overall: 2
 	// enum limits:
-	// - 1 Limit «test.limitAll» ALL on ALL FUNCTIONS FROM test.workspace with Rate «test.rateAll»
-	// - 2 Limit «test.limitEach» EACH on ALL FUNCTIONS FROM test.workspace with Rate «test.rateEach»
+	// - 1 Limit «test.limitAll» [OperationKind_Execute] ON ALL FUNCTIONS FROM test.workspace BY Rate «test.rateAll»
+	// - 2 Limit «test.limitEach» [OperationKind_Execute] ON EACH FUNCTIONS FROM test.workspace BY Rate «test.rateEach»
 	// overall: 2
 	// find rate:
 	// - Rate «test.rateAll» : 10 times per hour per partition per IP

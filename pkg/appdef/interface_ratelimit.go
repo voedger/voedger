@@ -28,7 +28,7 @@ const (
 var DefaultRateScopes = []RateScope{RateScope_AppPartition}
 
 type (
-	RateCount  = uint
+	RateCount  = uint32
 	RatePeriod = time.Duration
 )
 
@@ -37,6 +37,10 @@ type IRate interface {
 	Count() RateCount
 	Period() RatePeriod
 
+	// Returns is this rate has specified scope
+	Scope(RateScope) bool
+
+	// Returns rate scopes.
 	Scopes() iter.Seq[RateScope]
 }
 
@@ -53,31 +57,44 @@ type IRatesBuilder interface {
 	AddRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string)
 }
 
-// Limit options enumeration
-type LimitOption uint8
+// Limit filter options enumeration
+type LimitFilterOption uint8
 
-//go:generate stringer -type=LimitOption -output=stringer_limitoption.go
+//go:generate stringer -type=LimitFilterOption -output=stringer_limitfilteroption.go
 
 const (
 	// Limit all objects matched by filter.
 	// Single bucket for all objects.
-	LimitOption_ALL LimitOption = iota
+	LimitFilterOption_ALL LimitFilterOption = iota
 
 	// Limit each object matched by filter.
 	// Separate bucket for each object.
-	LimitOption_EACH
+	LimitFilterOption_EACH
 
-	LimitOption_count
+	LimitFilterOption_count
 )
+
+// Filter with option (ALL or EACH).
+type ILimitFilter interface {
+	IFilter
+
+	// Returns limit filter option.
+	Option() LimitFilterOption
+}
 
 type ILimit interface {
 	IType
 
-	Option() LimitOption
+	// Returns is this limit specified operation.
+	Op(OperationKind) bool
+
+	// Returns operations that was limited.
+	Ops() iter.Seq[OperationKind]
 
 	// Returns limited resources filter.
-	Filter() IFilter
+	Filter() ILimitFilter
 
+	// Returns rate for this limit.
 	Rate() IRate
 }
 
@@ -93,5 +110,5 @@ type ILimitsBuilder interface {
 	//   - if type with the same name already exists,
 	//	 - if matched objects can not to be limited,
 	//	 - if rate is not found.
-	AddLimit(name QName, opt LimitOption, flt IFilter, rate QName, comment ...string)
+	AddLimit(name QName, ops []OperationKind, opt LimitFilterOption, flt IFilter, rate QName, comment ...string)
 }

@@ -101,7 +101,7 @@ func newACLRuleAll(ws *workspace, policy PolicyKind, flt IFilter, principal *rol
 		panic(ErrFilterHasNoMatches(flt, ws))
 	}
 
-	ops := allACLOperationsOnType(t)
+	ops := AllOperationsForType(t.Kind())
 	if ops.Len() == 0 {
 		panic(ErrACLUnsupportedType(t))
 	}
@@ -169,7 +169,7 @@ func (acl aclRule) validate() (err error) {
 //   - ACL operations are not compatible with the filtered type
 //   - some specified field is not found in the filtered type
 func (acl aclRule) validateOnType(t IType) error {
-	allOps := allACLOperationsOnType(t)
+	allOps := AllOperationsForType(t.Kind())
 	if allOps.Len() == 0 {
 		return ErrACLUnsupportedType(t)
 	}
