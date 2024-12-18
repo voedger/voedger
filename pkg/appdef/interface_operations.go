@@ -15,29 +15,36 @@ type OperationKind uint8
 const (
 	OperationKind_null OperationKind = iota
 
-	// # Insert records or view records.
-	// 	- Operation applicable on records, view records.
-	// 	- Fields are not applicable.
+	// Insert records or view records. Operation applicable on records, view records.
+	// Used to describe ACL rules, limits and projectors.
 	OperationKind_Insert
 
-	// # Update records or view records.
-	// 	- Operation applicable on records, view records.
-	// 	- Fields are applicable and specify fields of records or view records that can be updated.
+	// Update records or view records. Operation applicable on records, view records.
+	// Used to describe ACL rules, limits and projectors.
 	OperationKind_Update
 
-	// # Select records or view records.
-	// 	- Operation applicable on records, view records.
-	// 	- Fields are applicable and specify fields of records or view records that can be selected.
+	// Activate records. Operation applicable on records.
+	// Used to describe projectors.
+	OperationKind_Activate
+
+	// Deactivate records. Operation applicable on records.
+	// Used to describe projectors.
+	OperationKind_Deactivate
+
+	// Select records or view records. Operation applicable on records, view records.
+	// Used to describe ACL rules, limits and projectors.
 	OperationKind_Select
 
-	// # Execute functions.
-	// 	- Operation applicable on commands, queries.
-	// 	- Fields are not applicable.
+	// Execute functions. Operation applicable on commands, queries.
+	// Used to describe ACL rules, limits and projectors.
 	OperationKind_Execute
 
-	// # ACL Only. Inherit ACL rules from other roles.
-	// 	- Operation applicable on roles only.
-	// 	- Fields are not applicable.
+	// Parameter for functions. Operation applicable on objects and ODocs.
+	// Used to describe projectors.
+	OperationKind_ExecuteWithParam
+
+	// Inherit ACL rules from other roles. Operation applicable on roles only.
+	// Used to describe ACL rules only.
 	OperationKind_Inherits
 
 	OperationKind_count
