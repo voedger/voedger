@@ -39,14 +39,9 @@ type QueryFunction struct {
 
 type Projector struct {
 	Extension
-	Events     map[appdef.QName]ProjectorEvent `json:",omitempty"`
-	WantErrors bool                            `json:",omitempty"`
-}
-
-type ProjectorEvent struct {
-	Comment string       `json:",omitempty"`
-	On      appdef.QName `json:"-"`
-	Kind    []string     `json:",omitempty"`
+	Ops        []string
+	Filter     Filter
+	WantErrors bool `json:",omitempty"`
 }
 
 type Job struct {

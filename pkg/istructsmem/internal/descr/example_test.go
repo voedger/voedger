@@ -101,20 +101,35 @@ func Example() {
 			SetResult(appdef.QNameANY).
 			SetTag(tags[1])
 
-		prjName := appdef.NewQName("test", "projector")
-		prj := wsb.AddProjector(prjName)
-		prj.
+		prjRec := wsb.AddProjector(
+			appdef.NewQName("test", "recProjector"),
+			[]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate},
+			filter.QNames(recName),
+			"run projector every time when «test.rec» is changed")
+		prjRec.
 			SetWantErrors().
 			SetEngine(appdef.ExtensionEngineKind_WASM)
-		prj.Events().
-			Add(recName, appdef.ProjectorEventKind_AnyChanges...).SetComment(recName, "run projector every time when «test.rec» is changed").
-			Add(cmdName).SetComment(cmdName, "run projector every time when «test.cmd» command is executed").
-			Add(objName).SetComment(objName, "run projector every time when any command with «test.obj» argument is executed")
-		prj.States().
+		prjRec.States().
 			Add(sysRecords, docName, recName).SetComment(sysRecords, "needs to read «test.doc» and «test.rec» from «sys.records» storage")
-		prj.Intents().
+		prjRec.Intents().
 			Add(sysViews, viewName).SetComment(sysViews, "needs to update «test.view» from «sys.views» storage")
-		prj.SetTag(tags[1])
+		prjRec.SetTag(tags[1])
+
+		prjCmd := wsb.AddProjector(
+			appdef.NewQName("test", "cmdProjector"),
+			[]appdef.OperationKind{appdef.OperationKind_Execute},
+			filter.QNames(cmdName),
+			"run projector every time when «test.cmd» command is executed")
+		prjCmd.SetEngine(appdef.ExtensionEngineKind_WASM)
+		prjCmd.SetTag(tags[1])
+
+		prjObj := wsb.AddProjector(
+			appdef.NewQName("test", "objProjector"),
+			[]appdef.OperationKind{appdef.OperationKind_ExecuteWithParam},
+			filter.QNames(objName),
+			"run projector every time when any command with «test.obj» argument is executed")
+		prjObj.SetEngine(appdef.ExtensionEngineKind_WASM)
+		prjObj.SetTag(tags[1])
 
 		jobName := appdef.NewQName("test", "job")
 		job := wsb.AddJob(jobName)
@@ -457,11 +472,44 @@ func Example() {
 	//               }
 	//             },
 	//             "Projectors": {
-	//               "test.projector": {
+	//               "test.cmdProjector": {
+	//                 "Comment": "run projector every time when «test.cmd» command is executed",
 	//                 "Tags": [
 	//                   "test.engineTag"
 	//                 ],
-	//                 "Name": "projector",
+	//                 "Name": "cmdProjector",
+	//                 "Engine": "WASM",
+	//                 "Ops": [
+	//                   "Execute"
+	//                 ],
+	//                 "Filter": {
+	//                   "QNames": [
+	//                     "test.cmd"
+	//                   ]
+	//                 }
+	//               },
+	//               "test.objProjector": {
+	//                 "Comment": "run projector every time when any command with «test.obj» argument is executed",
+	//                 "Tags": [
+	//                   "test.engineTag"
+	//                 ],
+	//                 "Name": "objProjector",
+	//                 "Engine": "WASM",
+	//                 "Ops": [
+	//                   "ExecuteWithParam"
+	//                 ],
+	//                 "Filter": {
+	//                   "QNames": [
+	//                     "test.obj"
+	//                   ]
+	//                 }
+	//               },
+	//               "test.recProjector": {
+	//                 "Comment": "run projector every time when «test.rec» is changed",
+	//                 "Tags": [
+	//                   "test.engineTag"
+	//                 ],
+	//                 "Name": "recProjector",
 	//                 "Engine": "WASM",
 	//                 "States": {
 	//                   "sys.records": [
@@ -474,28 +522,16 @@ func Example() {
 	//                     "test.view"
 	//                   ]
 	//                 },
-	//                 "Events": {
-	//                   "test.cmd": {
-	//                     "Comment": "run projector every time when «test.cmd» command is executed",
-	//                     "Kind": [
-	//                       "Execute"
-	//                     ]
-	//                   },
-	//                   "test.obj": {
-	//                     "Comment": "run projector every time when any command with «test.obj» argument is executed",
-	//                     "Kind": [
-	//                       "ExecuteWithParam"
-	//                     ]
-	//                   },
-	//                   "test.rec": {
-	//                     "Comment": "run projector every time when «test.rec» is changed",
-	//                     "Kind": [
-	//                       "Insert",
-	//                       "Update",
-	//                       "Activate",
-	//                       "Deactivate"
-	//                     ]
-	//                   }
+	//                 "Ops": [
+	//                   "Insert",
+	//                   "Update",
+	//                   "Activate",
+	//                   "Deactivate"
+	//                 ],
+	//                 "Filter": {
+	//                   "QNames": [
+	//                     "test.rec"
+	//                   ]
 	//                 },
 	//                 "WantErrors": true
 	//               }
