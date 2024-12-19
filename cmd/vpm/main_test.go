@@ -491,7 +491,7 @@ func TestBuildBasicUsage(t *testing.T) {
 
 			// replace the voedger package with the local one in the go.mod file
 			// we use an absolute path so that we don't depend on where the test is running.
-			err = new(exec.PipedExec).Command("go", "mod", "edit", "-replace", "github.com/voedger/voedger="+localVoedgerDir).WorkingDir(dir).Run(os.Stdout, os.Stderr)
+			err = new(exec.PipedExec).Command("go", "work", "edit", "-replace", "github.com/voedger/voedger="+localVoedgerDir).WorkingDir(tempDir).Run(os.Stdout, os.Stderr)
 			require.NoError(err)
 
 			err = execRootCmd([]string{"vpm", "build", "-C", dir, "-o", "qwerty"}, "1.0.0")
