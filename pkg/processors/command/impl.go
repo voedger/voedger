@@ -149,7 +149,7 @@ func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work pipeline.IWork
 
 func getIWorkspace(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.cmdMes.QName() != workspacemgmt.QNameCommandCreateWorkspace {
+	if cmd.cmdMes.QName() != workspacemgmt.QNameCommandCreateWorkspace && cmd.cmdMes.QName() != workspacemgmt.QNameCommandCreateWorkspaceID {
 		cmd.iWorkspace = cmd.appStructs.AppDef().WorkspaceByDescriptor(cmd.wsDesc.AsQName(authnz.Field_WSKind))
 	}
 	return nil
@@ -159,7 +159,7 @@ func getICommand(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	var cmdType appdef.IType
 	if cmd.iWorkspace == nil {
-		// DummyWS or c.sys.CreateWorkspace
+		// DummyWS or c.sys.CreateWorkspace or c.sys.CreateWorkspaceID
 		cmdType = cmd.appStructs.AppDef().Type(cmd.cmdMes.QName())
 	} else {
 		if cmdType = cmd.iWorkspace.Type(cmd.cmdMes.QName()); cmdType.Kind() == appdef.TypeKind_null {
@@ -537,7 +537,7 @@ func (cmdProc *cmdProc) cudsValidators(ctx context.Context, work pipeline.IWorkp
 func (cmdProc *cmdProc) validateCUDsQNames(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	if cmd.iWorkspace == nil {
-		// dummy or c.sys.CreateWorkspace
+		// dummy or c.sys.CreateWorkspace or c.sys.CreateWorkspaceID
 		return nil
 	}
 	for cud := range cmd.rawEvent.CUDs {
