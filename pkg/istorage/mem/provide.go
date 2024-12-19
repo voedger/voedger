@@ -4,8 +4,15 @@
 
 package mem
 
-import "github.com/voedger/voedger/pkg/istorage"
+import (
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/istorage"
+)
 
-func Provide() istorage.IAppStorageFactory {
-	return &appStorageFactory{storages: map[string]map[string]map[string][]byte{}}
+func Provide(iTime coreutils.ITime, iSleeper coreutils.Sleeper) istorage.IAppStorageFactory {
+	return &appStorageFactory{
+		storages: map[string]map[string]map[string]dataWithTTL{},
+		iTime:    iTime,
+		iSleeper: iSleeper,
+	}
 }

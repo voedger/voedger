@@ -24,5 +24,5 @@ func TestBasicUsage(t *testing.T) {
 		SessionToken:    "",
 	}
 	asf := Provide(params)
-	istorage.TechnologyCompatibilityKit(t, asf)
+	istorage.TechnologyCompatibilityKit(t, asf, coreutils.NewRealTimeSleeper())
 }

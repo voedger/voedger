@@ -88,3 +88,27 @@ func (t *mockedTime) checkTimers() {
 		}
 	}
 }
+
+type Sleeper interface {
+	Sleep(d time.Duration)
+}
+
+type realTimeSleeper struct{}
+
+func NewRealTimeSleeper() Sleeper {
+	return &realTimeSleeper{}
+}
+
+func (r *realTimeSleeper) Sleep(d time.Duration) {
+	time.Sleep(d)
+}
+
+type mockTimeSleeper struct{}
+
+func NewMockTimeSleeper() Sleeper {
+	return &mockTimeSleeper{}
+}
+
+func (m *mockTimeSleeper) Sleep(d time.Duration) {
+	MockTime.Add(d)
+}

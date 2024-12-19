@@ -7,6 +7,7 @@ package istructsmem
 
 import (
 	"encoding/binary"
+	"github.com/voedger/voedger/pkg/coreutils"
 
 	"github.com/untillpro/dynobuffers"
 
@@ -30,7 +31,7 @@ var (
 		return payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT())
 	}
 	simpleStorageProvider = func() istorage.IAppStorageProvider {
-		asf := mem.Provide()
+		asf := mem.Provide(coreutils.MockTime, coreutils.NewMockTimeSleeper())
 		return provider.Provide(asf)
 	}
 )

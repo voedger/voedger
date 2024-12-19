@@ -7,6 +7,7 @@ package istoragecache
 import (
 	"context"
 	"errors"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -314,12 +315,13 @@ func TestAppStorage_GetBatch(t *testing.T) {
 }
 
 func TestTechnologyCompatibilityKit(t *testing.T) {
-	asf := mem.Provide()
+	mockSleeper := coreutils.NewMockTimeSleeper()
+	asf := mem.Provide(coreutils.MockTime, mockSleeper)
 	asp := istorageimpl.Provide(asf)
 	cachingStorageProvider := Provide(testCacheSize, asp, imetrics.Provide(), "vvm")
 	storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(t, err)
-	istorage.TechnologyCompatibilityKit_Storage(t, storage)
+	istorage.TechnologyCompatibilityKit_Storage(t, storage, mockSleeper)
 }
 
 func TestCacheNils(t *testing.T) {
@@ -408,10 +410,35 @@ func (sp *testStorageProvider) Init(appQName appdef.AppQName) error {
 }
 
 type testStorage struct {
-	put      func(pKey []byte, cCols []byte, value []byte) (err error)
-	putBatch func(items []istorage.BatchItem) (err error)
-	get      func(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error)
-	getBatch func(pKey []byte, items []istorage.GetBatchItem) (err error)
+	insertIfNotExists func(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error)
+	compareAndSwap    func(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error)
+	compareAndDelete  func(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error)
+	ttlGet            func(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error)
+	ttlRead           func(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error)
+	put               func(pKey []byte, cCols []byte, value []byte) (err error)
+	putBatch          func(items []istorage.BatchItem) (err error)
+	get               func(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error)
+	getBatch          func(pKey []byte, items []istorage.GetBatchItem) (err error)
+}
+
+func (s *testStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
+	return s.insertIfNotExists(pKey, cCols, value, ttlSeconds)
+}
+
+func (s *testStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
+	return s.compareAndSwap(pKey, cCols, oldValue, newValue, ttlSeconds)
+}
+
+func (s *testStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
+	return s.compareAndDelete(pKey, cCols, expectedValue)
+}
+
+func (s *testStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
+	return s.ttlGet(pKey, cCols, data)
+}
+
+func (s *testStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
+	return s.ttlRead(ctx, pKey, startCCols, finishCCols, cb)
 }
 
 func (s *testStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
