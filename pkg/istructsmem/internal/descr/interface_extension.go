@@ -39,9 +39,14 @@ type QueryFunction struct {
 
 type Projector struct {
 	Extension
-	Ops        []string
-	Filter     Filter
+	Events     []ProjectorEvent
 	WantErrors bool `json:",omitempty"`
+}
+
+type ProjectorEvent struct {
+	Ops     []string
+	Filter  Filter
+	Comment string `json:",omitempty"`
 }
 
 type Job struct {

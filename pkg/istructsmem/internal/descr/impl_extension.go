@@ -74,11 +74,20 @@ func (f *CommandFunction) read(fn appdef.ICommand) {
 
 func (p *Projector) read(prj appdef.IProjector) {
 	p.Extension.read(prj)
-	for o := range prj.Ops() {
-		p.Ops = append(p.Ops, o.TrimString())
+	for ev := range prj.Events() {
+		e := ProjectorEvent{}
+		e.read(ev)
+		p.Events = append(p.Events, e)
 	}
-	p.Filter.read(prj.Filter())
 	p.WantErrors = prj.WantErrors()
+}
+
+func (e *ProjectorEvent) read(ev appdef.IProjectorEvent) {
+	for o := range ev.Ops() {
+		e.Ops = append(e.Ops, o.TrimString())
+	}
+	e.Filter.read(ev.Filter())
+	e.Comment = ev.Comment()
 }
 
 func (j *Job) read(job appdef.IJob) {
