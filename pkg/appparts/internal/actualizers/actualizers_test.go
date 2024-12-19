@@ -30,8 +30,8 @@ func TestActualizersWaitTimeout(t *testing.T) {
 		wsb := adb.AddWorkspace(wsName)
 		_ = wsb.AddCommand(appdef.NewQName("test", "command"))
 		for _, name := range prjNames {
-			prj := wsb.AddProjector(
-				name,
+			prj := wsb.AddProjector(name)
+			prj.Events().Add(
 				[]appdef.OperationKind{appdef.OperationKind_Execute},
 				filter.Types(wsName, appdef.TypeKind_Command))
 			prj.SetSync(false)

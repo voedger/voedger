@@ -30,11 +30,10 @@ func Example() {
 		wsb := adb.AddWorkspace(wsName)
 		_ = wsb.AddCommand(appdef.NewQName("test", "command"))
 		for _, name := range prjNames {
-			prj := wsb.AddProjector(
-				name,
+			prj := wsb.AddProjector(name)
+			prj.Events().Add(
 				[]appdef.OperationKind{appdef.OperationKind_Execute},
-				filter.AllFunctions(wsName),
-			)
+				filter.AllFunctions(wsName))
 			prj.SetSync(false)
 		}
 		return adb.MustBuild()

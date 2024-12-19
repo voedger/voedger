@@ -227,7 +227,7 @@ func (bp *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, stat
 		return errUndefinedExtension(name)
 	}
 
-	if compat, err := bp.kind.compatibleWithExtension(e); !compat {
+	if compat, err := bp.kind.CompatibleWithExtension(e); !compat {
 		return fmt.Errorf("%s: %w", bp, err)
 	}
 

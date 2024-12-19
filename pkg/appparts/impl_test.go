@@ -109,8 +109,8 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 
 		_ = wsb.AddCommand(appdef.NewQName("test", "command"))
 
-		prj := wsb.AddProjector(
-			prj1name,
+		prj := wsb.AddProjector(prj1name)
+		prj.Events().Add(
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
 			filter.Types(wsName, appdef.TypeKind_Command))
 		prj.SetSync(false)
@@ -200,8 +200,8 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 
 			_ = wsb.AddCommand(appdef.NewQName("test", "command"))
 
-			prj := wsb.AddProjector(
-				prj2name,
+			prj := wsb.AddProjector(prj2name)
+			prj.Events().Add(
 				[]appdef.OperationKind{appdef.OperationKind_Execute},
 				filter.Types(wsName, appdef.TypeKind_Command))
 			prj.SetSync(false)
