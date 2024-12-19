@@ -41,6 +41,100 @@ type appStorage struct {
 	testDelayPut time.Duration // used in tests only
 }
 
+func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if s.testDelayGet > 0 {
+		time.Sleep(s.testDelayGet)
+	}
+
+	p := s.storage[string(pKey)]
+	if p == nil {
+		p = make(map[string][]byte)
+		s.storage[string(pKey)] = p
+	}
+
+	p[string(cCols)] = copySlice(value)
+	s.deleteKeyAfter(pKey, ttlSeconds)
+
+	return true, nil
+}
+
+func (s *appStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if s.testDelayGet > 0 {
+		time.Sleep(s.testDelayGet)
+	}
+
+	p, ok := s.storage[string(pKey)]
+	if !ok {
+		return
+	}
+
+	viewRecord, ok := p[string(cCols)]
+	if !ok {
+		return
+	}
+
+	currentValue := copySlice(viewRecord)
+	if bytes.Compare(currentValue, oldValue) == 0 {
+		ok = true
+		p[string(cCols)] = copySlice(newValue)
+
+		s.deleteKeyAfter(pKey, ttlSeconds)
+	}
+
+	return
+}
+
+func (s *appStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if s.testDelayGet > 0 {
+		time.Sleep(s.testDelayGet)
+	}
+
+	p, ok := s.storage[string(pKey)]
+	if !ok {
+		return
+	}
+
+	viewRecord, ok := p[string(cCols)]
+	if !ok {
+		return
+	}
+
+	currentValue := copySlice(viewRecord)
+	if bytes.Compare(currentValue, expectedValue) == 0 {
+		ok = true
+
+		delete(s.storage, string(pKey))
+	}
+
+	return
+}
+
+func (s *appStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
+	return s.Get(pKey, cCols, data)
+}
+
+func (s *appStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
+	return s.Read(ctx, pKey, startCCols, finishCCols, cb)
+}
+
+func (s *appStorage) deleteKeyAfter(pKey []byte, ttlSeconds int) {
+	time.AfterFunc(time.Duration(ttlSeconds)*time.Second, func() {
+		s.lock.Lock()
+		defer s.lock.Unlock()
+
+		delete(s.storage, string(pKey))
+	})
+}
+
 func (s *appStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
