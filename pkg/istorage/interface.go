@@ -57,6 +57,64 @@ type IAppStorage interface {
 	// finishCCols can be empty (nil or zero len) too. In this case reads to the end of partition
 	// @ConcurrentAccess
 	Read(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb ReadCallback) (err error)
+	// ********* Working with TTL records ***********************
+
+	// Implementors of this interface may choose to store TTL records in a separate keyspace
+	// to optimize performance of non-TTL operations. This is an implementation detail and
+	// not required. Both approaches (same or separate keyspace) must provide identical
+	// behavior from the caller's perspective.
+
+	// InsertIfNotExists performs a conditional insert operation similar to Cassandra's INSERT IF NOT EXISTS.
+	// It atomically inserts a new record only if no record exists for the given primary key.
+	//
+	// Parameters:
+	//   - pKey: Primary key bytes
+	//   - cCols: Clustering columns bytes (if any)
+	//   - value: Value bytes to be inserted
+	//   - ttlSeconds: Time-to-live in seconds after which the record will be automatically deleted
+	//
+	// Returns:
+	//   - ok: true if insert was successful (record didn't exist), false if record already exists
+	//   - err: error if operation failed
+	InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error)
+
+	// CompareAndSwap performs an atomic compare-and-swap operation similar to Cassandra's UPDATE IF.
+	// It updates a record's value only if its current value matches oldValue.
+	//
+	// Parameters:
+	//   - pKey: Primary key bytes
+	//   - cCols: Clustering columns bytes (if any)
+	//   - oldValue: Expected current value bytes to compare against
+	//   - newValue: New value bytes to swap in if comparison succeeds
+	//   - ttlSeconds: Time-to-live in seconds to set/update on the record
+	//
+	// Returns:
+	//   - ok: true if swap was successful (record existed and matched oldValue), false otherwise
+	//   - err: error if operation failed
+	CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error)
+
+	// CompareAndDelete performs an atomic compare-and-delete operation similar to Cassandra's DELETE IF.
+	// It deletes a record only if it exists and optionally matches a specific value.
+	//
+	// Parameters:
+	//   - pKey: Primary key bytes
+	//   - cCols: Clustering columns bytes (if any)
+	//   - expectedValue: Optional value bytes to compare against. If nil, only checks existence
+	//
+	// Returns:
+	//   - ok: true if deletion was successful (record existed and matched value if provided), false otherwise
+	//   - err: error if operation failed
+	CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error)
+
+	// TTLGet retrieves a record that might have been written with a TTL.
+	// The TTL information is not returned, only the record's existence and value.
+	// ok == false means that record does not exist or has expired
+	TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error)
+
+	// TTLRead reads records that might have been written with a TTL.
+	// The TTL information is not returned in the callback.
+	// Only existing and non-expired records are returned through the callback.
+	TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb ReadCallback) (err error)
 }
 
 // ccols and viewRecord are temporary internal values, must NOT be changed
