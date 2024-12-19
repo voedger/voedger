@@ -3,13 +3,14 @@
  * @author: Nikolay Nikitin
  */
 
-package acl
+package acl_test
 
 import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/filter"
+	"github.com/voedger/voedger/pkg/appparts/internal/acl"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
@@ -301,7 +302,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				allowed, allowedFields, err := IsOperationAllowed(app, tt.op, tt.res, tt.fields, []appdef.QName{tt.role})
+				allowed, allowedFields, err := acl.IsOperationAllowed(app, tt.op, tt.res, tt.fields, []appdef.QName{tt.role})
 				require.NoError(err)
 				require.Equal(tt.allowed, allowed)
 				require.EqualValues(tt.allowedFields, allowedFields)
@@ -354,7 +355,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				allowed, allowedFields, err := IsOperationAllowed(app, tt.op, tt.res, tt.fields, tt.role)
+				allowed, allowedFields, err := acl.IsOperationAllowed(app, tt.op, tt.res, tt.fields, tt.role)
 				require.NoError(err)
 				require.Equal(tt.allowed, allowed)
 				require.EqualValues(tt.allowedFields, allowedFields)
@@ -431,7 +432,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				allowed, allowedFields, err := IsOperationAllowed(app, tt.op, tt.res, tt.fields, tt.role)
+				allowed, allowedFields, err := acl.IsOperationAllowed(app, tt.op, tt.res, tt.fields, tt.role)
 				require.Error(err, require.Is(tt.error), require.Has(tt.errHas))
 				require.False(allowed)
 				require.Nil(allowedFields)
@@ -486,7 +487,7 @@ func TestRecursiveRoleAncestors(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.role.String(), func(t *testing.T) {
-				roles := RecursiveRoleAncestors(appdef.Role(app.Type, tt.role))
+				roles := acl.RecursiveRoleAncestors(appdef.Role(app.Type, tt.role))
 				require.ElementsMatch(tt.result, roles)
 			})
 		}
