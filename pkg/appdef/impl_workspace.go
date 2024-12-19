@@ -294,6 +294,11 @@ func (ws *workspace) grantAll(flt IFilter, toRole QName, comment ...string) {
 
 func (ws *workspace) needRebuild() {
 	ws.types.all = nil
+	for t := range ws.LocalTypes() {
+		if t, ok := t.(interface{ needRebuild() }); ok {
+			t.needRebuild()
+		}
+	}
 	for d := range ws.descendants.all {
 		d.(*workspace).needRebuild()
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/set"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -53,7 +54,7 @@ func TestProjector_isAcceptable(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		triggeringQNames map[appdef.QName][]appdef.ProjectorEventKind
+		triggeringQNames map[appdef.QName]appdef.OperationsSet
 		cuds             map[appdef.QName]map[string]interface{}
 		wantErrors       bool
 		events           []istructs.IPLogEvent
@@ -86,48 +87,48 @@ func TestProjector_isAcceptable(t *testing.T) {
 		{
 			name:   "Should accept event",
 			events: []istructs.IPLogEvent{newEvent(istructs.QNameCommand, appdef.NullQName, nil)},
-			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
-				istructs.QNameCommand: {appdef.ProjectorEventKind_Execute},
+			triggeringQNames: map[appdef.QName]appdef.OperationsSet{
+				istructs.QNameCommand: set.From(appdef.OperationKind_Execute),
 			},
 			want: true,
 		},
 		{
 			name:   "Should not accept event",
 			events: []istructs.IPLogEvent{newEvent(istructs.QNameCommand, appdef.NullQName, nil)},
-			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
-				istructs.QNameQuery: {appdef.ProjectorEventKind_Execute},
+			triggeringQNames: map[appdef.QName]appdef.OperationsSet{
+				istructs.QNameQuery: set.From(appdef.OperationKind_Execute),
 			},
 			want: false,
 		},
 		{
 			name: "Should accept event args, doc of kind ODoc",
-			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
-				qNameODoc: {appdef.ProjectorEventKind_ExecuteWithParam},
+			triggeringQNames: map[appdef.QName]appdef.OperationsSet{
+				qNameODoc: set.From(appdef.OperationKind_ExecuteWithParam),
 			},
 			events: []istructs.IPLogEvent{newEvent(appdef.NullQName, qNameODoc, nil)},
 			want:   true,
 		},
 		{
 			name: "Should accept event args, ODoc",
-			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
-				istructs.QNameODoc: {appdef.ProjectorEventKind_ExecuteWithParam},
+			triggeringQNames: map[appdef.QName]appdef.OperationsSet{
+				istructs.QNameODoc: set.From(appdef.OperationKind_ExecuteWithParam),
 			},
 			events: []istructs.IPLogEvent{newEvent(appdef.NullQName, qNameODoc, nil)},
 			want:   true,
 		},
 		{
 			name: "Should not accept event args",
-			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
-				istructs.QNameQuery: {appdef.ProjectorEventKind_ExecuteWithParam},
+			triggeringQNames: map[appdef.QName]appdef.OperationsSet{
+				istructs.QNameQuery: set.From(appdef.OperationKind_ExecuteWithParam),
 			},
 			events: []istructs.IPLogEvent{newEvent(appdef.NullQName, istructs.QNameCommand, nil)},
 			want:   false,
 		},
 		{
 			name: "Should accept AFTER INSERT",
-			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
-				qNameDoc1: {appdef.ProjectorEventKind_Insert},
-				qNameDoc2: {appdef.ProjectorEventKind_Insert},
+			triggeringQNames: map[appdef.QName]appdef.OperationsSet{
+				qNameDoc1: set.From(appdef.OperationKind_Insert),
+				qNameDoc2: set.From(appdef.OperationKind_Insert),
 			},
 			events: []istructs.IPLogEvent{
 				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
@@ -143,8 +144,8 @@ func TestProjector_isAcceptable(t *testing.T) {
 		},
 		{
 			name: "Should not accept AFTER INSERT",
-			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
-				qNameDoc1: {appdef.ProjectorEventKind_Insert},
+			triggeringQNames: map[appdef.QName]appdef.OperationsSet{
+				qNameDoc1: set.From(appdef.OperationKind_Insert),
 			},
 			events: []istructs.IPLogEvent{
 				newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil),
@@ -161,9 +162,9 @@ func TestProjector_isAcceptable(t *testing.T) {
 		},
 		{
 			name: "Should accept AFTER UPDATE",
-			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
-				qNameDoc1: {appdef.ProjectorEventKind_Update},
-				qNameDoc2: {appdef.ProjectorEventKind_Update},
+			triggeringQNames: map[appdef.QName]appdef.OperationsSet{
+				qNameDoc1: set.From(appdef.OperationKind_Update),
+				qNameDoc2: set.From(appdef.OperationKind_Update),
 			},
 			events: []istructs.IPLogEvent{
 				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
@@ -179,8 +180,8 @@ func TestProjector_isAcceptable(t *testing.T) {
 		},
 		{
 			name: "Should not accept AFTER UPDATE",
-			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
-				qNameDoc1: {appdef.ProjectorEventKind_Update},
+			triggeringQNames: map[appdef.QName]appdef.OperationsSet{
+				qNameDoc1: set.From(appdef.OperationKind_Update),
 			},
 			events: []istructs.IPLogEvent{
 				newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil),
@@ -197,8 +198,8 @@ func TestProjector_isAcceptable(t *testing.T) {
 		},
 		{
 			name: "Should accept AFTER INSERT OR UPDATE",
-			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
-				qNameDoc1: {appdef.ProjectorEventKind_Update, appdef.ProjectorEventKind_Insert},
+			triggeringQNames: map[appdef.QName]appdef.OperationsSet{
+				qNameDoc1: set.From(appdef.OperationKind_Update, appdef.OperationKind_Insert),
 			},
 			events: []istructs.IPLogEvent{
 				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
@@ -214,9 +215,9 @@ func TestProjector_isAcceptable(t *testing.T) {
 		},
 		{
 			name: "Should accept AFTER ACTIVATE",
-			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
-				qNameDoc1: {appdef.ProjectorEventKind_Activate},
-				qNameDoc2: {appdef.ProjectorEventKind_Activate},
+			triggeringQNames: map[appdef.QName]appdef.OperationsSet{
+				qNameDoc1: set.From(appdef.OperationKind_Activate),
+				qNameDoc2: set.From(appdef.OperationKind_Activate),
 			},
 			events: []istructs.IPLogEvent{
 				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
@@ -236,9 +237,9 @@ func TestProjector_isAcceptable(t *testing.T) {
 		},
 		{
 			name: "Should not accept AFTER ACTIVATE",
-			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
-				qNameDoc1: {appdef.ProjectorEventKind_Activate},
-				qNameDoc2: {appdef.ProjectorEventKind_Activate},
+			triggeringQNames: map[appdef.QName]appdef.OperationsSet{
+				qNameDoc1: set.From(appdef.OperationKind_Activate),
+				qNameDoc2: set.From(appdef.OperationKind_Activate),
 			},
 			events: []istructs.IPLogEvent{
 				newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil),
@@ -251,9 +252,9 @@ func TestProjector_isAcceptable(t *testing.T) {
 		},
 		{
 			name: "Should accept AFTER DEACTIVATE",
-			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
-				qNameDoc1: {appdef.ProjectorEventKind_Deactivate},
-				qNameDoc2: {appdef.ProjectorEventKind_Deactivate},
+			triggeringQNames: map[appdef.QName]appdef.OperationsSet{
+				qNameDoc1: set.From(appdef.OperationKind_Deactivate),
+				qNameDoc2: set.From(appdef.OperationKind_Deactivate),
 			},
 			events: []istructs.IPLogEvent{
 				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
@@ -273,9 +274,9 @@ func TestProjector_isAcceptable(t *testing.T) {
 		},
 		{
 			name: "Should not accept AFTER DEACTIVATE",
-			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
-				qNameDoc1: {appdef.ProjectorEventKind_Deactivate},
-				qNameDoc2: {appdef.ProjectorEventKind_Deactivate},
+			triggeringQNames: map[appdef.QName]appdef.OperationsSet{
+				qNameDoc1: set.From(appdef.OperationKind_Deactivate),
+				qNameDoc2: set.From(appdef.OperationKind_Deactivate),
 			},
 			events: []istructs.IPLogEvent{
 				newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil),
@@ -296,9 +297,9 @@ func TestProjector_isAcceptable(t *testing.T) {
 		},
 		{
 			name: "Should not accept AFTER ACTIVATE OR DEACTIVATE",
-			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
-				qNameDoc1: {appdef.ProjectorEventKind_Deactivate, appdef.ProjectorEventKind_Activate},
-				qNameDoc2: {appdef.ProjectorEventKind_Deactivate, appdef.ProjectorEventKind_Activate},
+			triggeringQNames: map[appdef.QName]appdef.OperationsSet{
+				qNameDoc1: set.From(appdef.OperationKind_Deactivate, appdef.OperationKind_Activate),
+				qNameDoc2: set.From(appdef.OperationKind_Deactivate, appdef.OperationKind_Activate),
 			},
 			events: []istructs.IPLogEvent{
 				newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil),
@@ -315,9 +316,9 @@ func TestProjector_isAcceptable(t *testing.T) {
 		},
 		{
 			name: "Should accept AFTER INSERT OR UPDATE OR ACTIVATE OR DEACTIVATE",
-			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
-				qNameDoc1: {appdef.ProjectorEventKind_Deactivate, appdef.ProjectorEventKind_Activate, appdef.ProjectorEventKind_Insert, appdef.ProjectorEventKind_Update},
-				qNameDoc2: {appdef.ProjectorEventKind_Deactivate, appdef.ProjectorEventKind_Activate, appdef.ProjectorEventKind_Insert, appdef.ProjectorEventKind_Update},
+			triggeringQNames: map[appdef.QName]appdef.OperationsSet{
+				qNameDoc1: set.From(appdef.OperationKind_Deactivate, appdef.OperationKind_Activate, appdef.OperationKind_Insert, appdef.OperationKind_Update),
+				qNameDoc2: set.From(appdef.OperationKind_Deactivate, appdef.OperationKind_Activate, appdef.OperationKind_Insert, appdef.OperationKind_Update),
 			},
 			events: []istructs.IPLogEvent{
 				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
@@ -449,8 +450,8 @@ func TestProjector_isAcceptableGlobalDocs(t *testing.T) {
 				event := newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 					eventCUDQName: {isNew: true},
 				})
-				require.Equal(want, isAcceptable(event, false, map[appdef.QName][]appdef.ProjectorEventKind{
-					globalQName: {appdef.ProjectorEventKind_Insert},
+				require.Equal(want, isAcceptable(event, false, map[appdef.QName]appdef.OperationsSet{
+					globalQName: set.From(appdef.OperationKind_Insert),
 				}, appDef, appdef.NewQName(appdef.SysPackage, "testProj")), fmt.Sprintf("global %s, cud %s", globalQName, eventCUDQName))
 			}
 		}

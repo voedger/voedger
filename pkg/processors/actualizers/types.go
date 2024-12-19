@@ -9,7 +9,6 @@ package actualizers
 import (
 	"context"
 	"fmt"
-	"slices"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -38,7 +37,8 @@ func (s *asyncActualizerContextState) error() error {
 	return s.err
 }
 
-func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames map[appdef.QName][]appdef.ProjectorEventKind, appDef appdef.IAppDef, projQName appdef.QName) (ok bool) {
+// FIXME: should accept appdef.IProjector instead triggers.
+func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggers map[appdef.QName]appdef.OperationsSet, _ appdef.IAppDef, projQName appdef.QName) (ok bool) {
 	defer func() {
 		if ok && logger.IsVerbose() {
 			logger.Verbose(fmt.Sprintf("projector %s is acceptable to event %s", projQName, event.QName()))
@@ -51,67 +51,54 @@ func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames m
 		return false
 	}
 
-	if len(triggeringQNames) == 0 {
-		return true
+	if len(triggers) == 0 {
+		return true //nnv: Suspicious
 	}
 
-	if triggeringKinds, ok := triggeringQNames[event.QName()]; ok {
-		if slices.Contains(triggeringKinds, appdef.ProjectorEventKind_Execute) {
+	if ops, ok := triggers[event.QName()]; ok {
+		// Event QName is Command `ON EXECUTE`
+		if ops.Contains(appdef.OperationKind_Execute) {
+			return true
+		}
+		// Event QName is ODoc `ON EXECUTE WITH`
+		if ops.Contains(appdef.OperationKind_ExecuteWithParam) {
 			return true
 		}
 	}
 
-	if triggeringKinds, ok := triggeringQNames[event.ArgumentObject().QName()]; ok {
-		// ON (some doc of kind ODoc)
-		if slices.Contains(triggeringKinds, appdef.ProjectorEventKind_ExecuteWithParam) {
+	if ops, ok := triggers[event.ArgumentObject().QName()]; ok {
+		// Event Arg is ODoc or Object `ON EXECUTE WITH`
+		if ops.Contains(appdef.OperationKind_ExecuteWithParam) {
 			return true
-		}
-	} else {
-		// ON (ODoc)
-		argumentTypeKind := appDef.Type(event.ArgumentObject().QName()).Kind()
-		if argumentTypeKind == appdef.TypeKind_ODoc {
-			if triggeringKinds, ok := triggeringQNames[istructs.QNameODoc]; ok {
-				if slices.Contains(triggeringKinds, appdef.ProjectorEventKind_ExecuteWithParam) {
-					return true
-				}
-			}
 		}
 	}
 
 	for rec := range event.CUDs {
-		triggeringKinds, ok := triggeringQNames[rec.QName()]
-		if !ok {
-			recType := appDef.Type(rec.QName())
-			globalQNames := cudTypeKindToGlobalDocQNames[recType.Kind()]
-			for _, globalQName := range globalQNames {
-				if triggeringKinds, ok = triggeringQNames[globalQName]; ok {
-					break
-				}
-			}
-		}
-		for _, triggerkingKind := range triggeringKinds {
-			switch triggerkingKind {
-			case appdef.ProjectorEventKind_Insert:
-				if rec.IsNew() {
-					return true
-				}
-			case appdef.ProjectorEventKind_Update:
-				if !rec.IsNew() {
-					return true
-				}
-			case appdef.ProjectorEventKind_Activate:
-				if !rec.IsNew() {
-					for fieldName, newValue := range rec.ModifiedFields {
-						if fieldName == appdef.SystemField_IsActive && newValue.(bool) {
-							return true
+		if ops, ok := triggers[rec.QName()]; ok {
+			for op := range ops.Values() {
+				switch op {
+				case appdef.OperationKind_Insert:
+					if rec.IsNew() {
+						return true
+					}
+				case appdef.OperationKind_Update:
+					if !rec.IsNew() {
+						return true
+					}
+				case appdef.OperationKind_Activate:
+					if !rec.IsNew() {
+						for fieldName, newValue := range rec.ModifiedFields {
+							if fieldName == appdef.SystemField_IsActive && newValue.(bool) {
+								return true
+							}
 						}
 					}
-				}
-			case appdef.ProjectorEventKind_Deactivate:
-				if !rec.IsNew() {
-					for fieldName, newValue := range rec.ModifiedFields {
-						if fieldName == appdef.SystemField_IsActive && !newValue.(bool) {
-							return true
+				case appdef.OperationKind_Deactivate:
+					if !rec.IsNew() {
+						for fieldName, newValue := range rec.ModifiedFields {
+							if fieldName == appdef.SystemField_IsActive && !newValue.(bool) {
+								return true
+							}
 						}
 					}
 				}

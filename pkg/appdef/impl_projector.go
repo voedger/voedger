@@ -19,13 +19,14 @@ type projector struct {
 	sync      bool
 	sysErrors bool
 	events    *projectorEvents
+	triggers  map[QName]set.Set[OperationKind]
 }
 
 func newProjector(app *appDef, ws *workspace, name QName) *projector {
 	prj := &projector{
 		extension: makeExtension(app, ws, name, TypeKind_Projector),
-		events:    &projectorEvents{},
 	}
+	prj.events = newProjectorEvents(prj)
 	ws.appendType(prj)
 	return prj
 }
@@ -47,15 +48,34 @@ func (prj projector) Sync() bool { return prj.sync }
 // # Error if:
 //   - some event filter has no matches in the workspace
 //   - some event filtered type can not trigger projector
-func (prj *projector) Validate() (err error) {
-	err = prj.extension.Validate()
+func (prj *projector) Validate() error {
+	prj.needRebuild()
+	return errors.Join(
+		prj.extension.Validate(),
+		prj.events.validate())
+}
 
-	err = errors.Join(err, prj.events.validate(prj))
-
-	return err
+func (prj *projector) Triggers() map[QName]set.Set[OperationKind] {
+	if prj.triggers == nil {
+		for t := range prj.Workspace().Types() {
+			for e := range prj.Events() {
+				if e.Filter().Match(t) {
+					ops, ok := prj.triggers[t.QName()]
+					if !ok {
+						ops = set.Empty[OperationKind]()
+					}
+					ops.Collect(e.Ops())
+					prj.triggers[t.QName()] = ops
+				}
+			}
+		}
+	}
+	return prj.triggers
 }
 
 func (prj projector) WantErrors() bool { return prj.sysErrors }
+
+func (prj *projector) needRebuild() { prj.triggers = nil }
 
 func (prj *projector) setSync(sync bool) { prj.sync = sync }
 
@@ -92,7 +112,15 @@ func (pb *projectorBuilder) SetWantErrors() IProjectorBuilder {
 // # Supports:
 //   - IProjectorEventsBuilder
 type projectorEvents struct {
+	prj    *projector
 	events []*projectorEvent
+}
+
+func newProjectorEvents(prj *projector) *projectorEvents {
+	return &projectorEvents{
+		prj:    prj,
+		events: make([]*projectorEvent, 0),
+	}
 }
 
 func (ev *projectorEvents) Add(ops []OperationKind, flt IFilter, comment ...string) IProjectorEventsBuilder {
@@ -108,13 +136,14 @@ func (ev *projectorEvents) Add(ops []OperationKind, flt IFilter, comment ...stri
 	}
 	e.comment.setComment(comment...)
 	ev.events = append(ev.events, e)
+	ev.prj.needRebuild()
 	return ev
 }
 
 // Validates projector events.
-func (ev projectorEvents) validate(prj IProjector) (err error) {
+func (ev projectorEvents) validate() (err error) {
 	for _, e := range ev.events {
-		err = errors.Join(err, e.validate(prj))
+		err = errors.Join(err, e.validate(ev.prj))
 	}
 	return err
 }

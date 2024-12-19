@@ -52,22 +52,24 @@ const (
 	OperationKind_count
 )
 
+type OperationsSet = set.Set[OperationKind]
+
 // ACL operations is a set of operations that applicable with ACL rules.
-var ACLOperations = func() set.Set[OperationKind] {
+var ACLOperations = func() OperationsSet {
 	s := set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute, OperationKind_Inherits)
 	s.SetReadOnly()
 	return s
 }()
 
 // Limitable operations is a set of operations that can be limited.
-var LimitableOperations = func() set.Set[OperationKind] {
+var LimitableOperations = func() OperationsSet {
 	s := set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute)
 	s.SetReadOnly()
 	return s
 }()
 
 // Projector operations is a set of operations that can trigger a projector.
-var ProjectorOperations = func() set.Set[OperationKind] {
+var ProjectorOperations = func() OperationsSet {
 	s := set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select,
 		OperationKind_Activate, OperationKind_Deactivate,
 		OperationKind_Execute, OperationKind_ExecuteWithParam)
@@ -76,7 +78,7 @@ var ProjectorOperations = func() set.Set[OperationKind] {
 }()
 
 // RecordsOperations is a set of operations that applicable on records.
-var RecordsOperations = func() set.Set[OperationKind] {
+var RecordsOperations = func() OperationsSet {
 	s := set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Activate, OperationKind_Deactivate)
 	s.SetReadOnly()
 	return s
