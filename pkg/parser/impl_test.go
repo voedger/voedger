@@ -191,21 +191,24 @@ func Test_BasicUsage(t *testing.T) {
 	// CUD Projector
 	proj := appdef.Projector(app.Type, appdef.NewQName("main", "RecordsRegistryProjector"))
 	require.NotNil(proj)
-
+	pe := slices.Collect(proj.Events())
+	require.Len(pe, 1)
 	require.Equal(
 		[]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate},
-		slices.Collect(proj.Ops()))
-	require.Equal(appdef.FilterKind_QNames, proj.Filter().Kind())
-	require.Equal([]appdef.QName{istructs.QNameCRecord, istructs.QNameWRecord}, slices.Collect(proj.Filter().QNames()))
+		slices.Collect(pe[0].Ops()))
+	require.Equal(appdef.FilterKind_QNames, pe[0].Filter().Kind())
+	require.Equal([]appdef.QName{istructs.QNameCRecord, istructs.QNameWRecord}, slices.Collect(pe[0].Filter().QNames()))
 
 	// Execute Projector
 	proj = appdef.Projector(app.Type, appdef.NewQName("main", "UpdateDashboard"))
 	require.NotNil(proj)
+	pe = slices.Collect(proj.Events())
+	require.Len(pe, 1)
 	require.Equal(
 		[]appdef.OperationKind{appdef.OperationKind_Execute},
-		slices.Collect(proj.Ops()))
-	require.Equal(appdef.FilterKind_QNames, proj.Filter().Kind())
-	require.Equal([]appdef.QName{appdef.NewQName("main", "NewOrder"), appdef.NewQName("main", "NewOrder2")}, slices.Collect(proj.Filter().QNames()))
+		slices.Collect(pe[0].Ops()))
+	require.Equal(appdef.FilterKind_QNames, pe[0].Filter().Kind())
+	require.Equal([]appdef.QName{appdef.NewQName("main", "NewOrder"), appdef.NewQName("main", "NewOrder2")}, slices.Collect(pe[0].Filter().QNames()))
 
 	stateCount := 0
 	for s := range proj.States().Enum {
@@ -1366,9 +1369,11 @@ func Test_Projectors(t *testing.T) {
 
 		proj := appdef.Projector(app.Type, appdef.NewQName("pkg", "ImProjector"))
 		require.NotNil(proj)
-		require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert}, slices.Collect(proj.Ops()))
-		require.Equal(appdef.FilterKind_QNames, proj.Filter().Kind())
-		require.Len(slices.Collect(proj.Filter().QNames()), 1)
+		pe := slices.Collect(proj.Events())
+		require.Len(pe, 1)
+		require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert}, slices.Collect((pe[0].Ops())))
+		require.Equal(appdef.FilterKind_QNames, pe[0].Filter().Kind())
+		require.Len(slices.Collect(pe[0].Filter().QNames()), 1)
 	})
 }
 

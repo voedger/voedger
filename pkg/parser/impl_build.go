@@ -282,10 +282,11 @@ func (c *buildContext) projectors() error {
 			pQname := schema.NewQName(proj.Name)
 
 			wsb := proj.workspace.mustBuilder(c)
+			builder := wsb.AddProjector(pQname)
 			// Triggers
-			ops := make([]appdef.OperationKind, 0)
-			qNames := appdef.QNames{}
 			for _, trigger := range proj.Triggers {
+				ops := make([]appdef.OperationKind, 0)
+				qNames := appdef.QNames{}
 				if trigger.ExecuteAction != nil {
 					if trigger.ExecuteAction.WithParam {
 						ops = append(ops, appdef.OperationKind_ExecuteWithParam)
@@ -307,16 +308,16 @@ func (c *buildContext) projectors() error {
 					}
 				}
 				qNames.Add(trigger.qNames...)
+				if len(ops) == 0 {
+					c.errs = append(c.errs, fmt.Errorf("no trigger operations specified for projector %s", proj.Name))
+					return
+				}
+				if len(qNames) == 0 {
+					c.errs = append(c.errs, fmt.Errorf("no triggers names specified for projector %s", proj.Name))
+					return
+				}
+				builder.Events().Add(ops, filter.QNames(qNames[0], qNames[1:]...))
 			}
-			if len(ops) == 0 {
-				c.errs = append(c.errs, fmt.Errorf("no trigger operations specified for projector %s", proj.Name))
-				return
-			}
-			if len(qNames) == 0 {
-				c.errs = append(c.errs, fmt.Errorf("no triggers names specified for projector %s", proj.Name))
-				return
-			}
-			builder := wsb.AddProjector(pQname, ops, filter.QNames(qNames[0], qNames[1:]...))
 
 			if proj.IncludingErrors {
 				builder.SetWantErrors()
