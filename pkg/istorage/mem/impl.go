@@ -45,8 +45,8 @@ func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, 
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if s.testDelayGet > 0 {
-		time.Sleep(s.testDelayGet)
+	if s.testDelayPut > 0 {
+		time.Sleep(s.testDelayPut)
 	}
 
 	p := s.storage[string(pKey)]
@@ -65,8 +65,8 @@ func (s *appStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValu
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if s.testDelayGet > 0 {
-		time.Sleep(s.testDelayGet)
+	if s.testDelayPut > 0 {
+		time.Sleep(s.testDelayPut)
 	}
 
 	p, ok := s.storage[string(pKey)]

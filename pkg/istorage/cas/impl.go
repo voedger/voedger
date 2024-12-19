@@ -144,13 +144,23 @@ func (s *appStorageType) InsertIfNotExists(pKey []byte, cCols []byte, value []by
 }
 
 func (s *appStorageType) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
-	//TODO implement me
-	panic("implement me")
+	q := fmt.Sprintf("update %s	using ttl ? set value = ? where p_key = ? and c_col = ? if value = ?", s.keyspace)
+	applied := false
+	if _, err = s.session.Query(q, ttlSeconds, newValue, pKey, cCols, oldValue).ScanCAS(&applied); err != nil {
+		return false, err
+	}
+
+	return applied, nil
 }
 
 func (s *appStorageType) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
-	//TODO implement me
-	panic("implement me")
+	q := fmt.Sprintf(`delete from %s where p_key = ? AND c_col = ? if value = ?`, s.keyspace)
+	applied := false
+	if _, err = s.session.Query(q, pKey, cCols, expectedValue).ScanCAS(&applied); err != nil {
+		return false, err
+	}
+
+	return applied, nil
 }
 
 func (s *appStorageType) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
