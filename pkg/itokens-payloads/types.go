@@ -24,7 +24,7 @@ type PrincipalPayload struct {
 }
 
 type RoleType struct {
-	WSID istructs.WSID
+	WSID istructs.WSID // for SubjectKind_user is ProfileWSID
 	// E.g. air.LinkedDevice
 	QName appdef.QName
 }
