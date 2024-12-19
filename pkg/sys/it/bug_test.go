@@ -124,3 +124,13 @@ func TestWrongFieldReferencedByRefField(t *testing.T) {
 	body = `{"args":{"Schema":"app1pkg.cdoc2"},"elements":[{"fields": ["field2","sys.ID"], "refs":[["field2","unexistingFieldInTargetDoc"]]}]}`
 	vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("ref field field2 references to table app1pkg.cdoc1 that does not contain field unexistingFieldInTargetDoc"))
 }
+
+// https://github.com/voedger/voedger/issues/3046
+func TestWSNameCausesMaxPseudoWSID(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	// BaseWSID for entity "2062880497" is 65535 so due of comparing <istructs.MaxPseudoBaseWSID in router the WSID
+	// considered as not pseudo -> panic on try to call AsQName() on a missing workspace descriptor on a non-inited ws
+	vit.SignUpDevice("2062880497", "1", istructs.AppQName_test1_app1)
+}
