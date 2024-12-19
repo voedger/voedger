@@ -53,6 +53,31 @@ func (d implIAppStorageFactory) Init(appName istorage.SafeAppName) error {
 	return nil
 }
 
+func (s *implIAppStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *implIAppStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *implIAppStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *implIAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *implIAppStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (s *implIAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
 	params := dynamodb.PutItemInput{
 		TableName: aws.String(s.keySpace),
