@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
@@ -60,7 +61,8 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	adb.AddPackage("test", "test.org/test")
-	wsb := adb.AddWorkspace(appdef.NewQName(appdef.SysPackage, "test_wsWS"))
+	wsName := appdef.NewQName(appdef.SysPackage, "test_wsWS")
+	wsb := adb.AddWorkspace(wsName)
 
 	{
 		wsb.AddCDoc(qNameTestWSKind).SetSingleton()
@@ -77,7 +79,9 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 
 		prj := wsb.AddProjector(QNameProjectorCollection)
 		prj.SetSync(true).
-			Events().Add(istructs.QNameCRecord, appdef.ProjectorEventKind_Insert, appdef.ProjectorEventKind_Update)
+			Events().Add(
+			[]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update},
+			filter.Types(wsName, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord))
 		prj.Intents().
 			Add(sys.Storage_View, QNameCollectionView) // this view will be added below
 	}
