@@ -150,7 +150,7 @@ func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work pipeline.IWork
 
 func getIWorkspace(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.cmdMes.QName() != workspacemgmt.QNameCommandCreateWorkspace && cmd.cmdMes.QName() != workspacemgmt.QNameCommandCreateWorkspaceID {
+	if cmd.cmdMes.QName() != workspacemgmt.QNameCommandCreateWorkspace {
 		cmd.iWorkspace = cmd.appStructs.AppDef().WorkspaceByDescriptor(cmd.wsDesc.AsQName(authnz.Field_WSKind))
 	}
 	return nil
@@ -160,7 +160,7 @@ func getICommand(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	var cmdType appdef.IType
 	if cmd.iWorkspace == nil {
-		// DummyWS or c.sys.CreateWorkspace or c.sys.CreateWorkspaceID
+		// DummyWS or c.sys.CreateWorkspace
 		cmdType = cmd.appStructs.AppDef().Type(cmd.cmdMes.QName())
 	} else {
 		if cmdType = cmd.iWorkspace.Type(cmd.cmdMes.QName()); cmdType.Kind() == appdef.TypeKind_null {
@@ -304,9 +304,7 @@ func checkWSInitialized(_ context.Context, work pipeline.IWorkpiece) (err error)
 	cmd := work.(*cmdWorkpiece)
 	wsDesc := work.(*cmdWorkpiece).wsDesc
 	cmdQName := cmd.cmdMes.QName()
-	if cmdQName == workspacemgmt.QNameCommandCreateWorkspace ||
-		cmdQName == workspacemgmt.QNameCommandCreateWorkspaceID || // happens on creating a child of an another workspace
-		cmdQName == builtin.QNameCommandInit {
+	if cmdQName == workspacemgmt.QNameCommandCreateWorkspace || cmdQName == builtin.QNameCommandInit {
 		return nil
 	}
 	if wsDesc.QName() != appdef.NullQName {
@@ -564,7 +562,7 @@ func (cmdProc *cmdProc) cudsValidators(ctx context.Context, work pipeline.IWorkp
 func (cmdProc *cmdProc) validateCUDsQNames(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	if cmd.iWorkspace == nil {
-		// dummy or c.sys.CreateWorkspace or c.sys.CreateWorkspaceID
+		// dummy or c.sys.CreateWorkspace
 		return nil
 	}
 	for cud := range cmd.rawEvent.CUDs {
