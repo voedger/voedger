@@ -616,6 +616,7 @@ func testAppStorage_GetBatch(t *testing.T, storage IAppStorage) {
 
 }
 
+//nolint:revive
 func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage) {
 	switch storage.Type() {
 	case StorageTypeMem:
@@ -662,6 +663,7 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage) {
 	})
 }
 
+//nolint:revive
 func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage) {
 	switch storage.Type() {
 	case StorageTypeMem:
@@ -738,6 +740,7 @@ func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage) {
 	})
 }
 
+//nolint:revive
 func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage) {
 	switch storage.Type() {
 	case StorageTypeMem:
@@ -798,6 +801,7 @@ func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage) {
 	})
 }
 
+//nolint:revive
 func testAppStorage_TTLGet(t *testing.T, storage IAppStorage) {
 	switch storage.Type() {
 	case StorageTypeMem:
@@ -855,6 +859,7 @@ func testAppStorage_TTLGet(t *testing.T, storage IAppStorage) {
 	})
 }
 
+//nolint:revive
 func testAppStorage_TTLRead(t *testing.T, storage IAppStorage) {
 	switch storage.Type() {
 	case StorageTypeMem:

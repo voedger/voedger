@@ -45,26 +45,31 @@ func (s *TestMemStorage) Type() istorage.StorageType {
 	return istorage.StorageTypeTestMem
 }
 
+//nolint:revive
 func (s *TestMemStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
 	//TODO implement me
 	panic("implement me")
 }
 
+//nolint:revive
 func (s *TestMemStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
 	//TODO implement me
 	panic("implement me")
 }
 
+//nolint:revive
 func (s *TestMemStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
 	//TODO implement me
 	panic("implement me")
 }
 
+//nolint:revive
 func (s *TestMemStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
 	//TODO implement me
 	panic("implement me")
 }
 
+//nolint:revive
 func (s *TestMemStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
 	//TODO implement me
 	panic("implement me")

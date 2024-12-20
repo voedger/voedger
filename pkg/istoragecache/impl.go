@@ -88,26 +88,31 @@ func (s *cachedAppStorage) Type() istorage.StorageType {
 	return istorage.StorageTypeCached
 }
 
+//nolint:revive
 func (s *cachedAppStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
 	//TODO implement me
 	panic("implement me")
 }
 
+//nolint:revive
 func (s *cachedAppStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
 	//TODO implement me
 	panic("implement me")
 }
 
+//nolint:revive
 func (s *cachedAppStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
 	//TODO implement me
 	panic("implement me")
 }
 
+//nolint:revive
 func (s *cachedAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
 	//TODO implement me
 	panic("implement me")
 }
 
+//nolint:revive
 func (s *cachedAppStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
 	//TODO implement me
 	panic("implement me")
