@@ -25,3 +25,16 @@ func (filter) QNames() iter.Seq[appdef.QName] { return func(func(appdef.QName) b
 func (filter) Tags() iter.Seq[appdef.QName] { return func(func(appdef.QName) bool) {} }
 
 func (filter) Types() iter.Seq[appdef.TypeKind] { return func(func(appdef.TypeKind) bool) {} }
+
+// trueFilter realizes filter what always matches any type.
+//
+// # Supports:
+//   - appdef.IFilter.
+//   - fmt.Stringer
+type trueFilter struct{ filter }
+
+func (trueFilter) Kind() appdef.FilterKind   { return appdef.FilterKind_True }
+func (trueFilter) Match(t appdef.IType) bool { return true }
+func (trueFilter) String() string            { return "TRUE" }
+
+var trueFlt appdef.IFilter = trueFilter{}

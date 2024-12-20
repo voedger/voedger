@@ -14,6 +14,8 @@ type FilterKind uint8
 const (
 	FilterKind_null FilterKind = iota
 
+	FilterKind_True
+
 	FilterKind_QNames
 	FilterKind_Types
 	FilterKind_Tags

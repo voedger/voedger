@@ -39,6 +39,9 @@ func Not(f appdef.IFilter) appdef.IFilter {
 	return makeNotFilter(f)
 }
 
+// True returns filter that always matches any type
+func True() appdef.IFilter { return trueFlt }
+
 // AllTables returns a filter that matches all structured types from workspace, see appdef.TypeKind_Structures
 func AllTables(ws appdef.QName) appdef.IFilter {
 	s := appdef.TypeKind_Structures.AsArray()
