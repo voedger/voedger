@@ -41,7 +41,7 @@ type appStorage struct {
 	testDelayPut time.Duration // used in tests only
 }
 
-func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
+func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, newValue []byte, ttlSeconds int) (ok bool, err error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -55,8 +55,13 @@ func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, 
 		s.storage[string(pKey)] = p
 	}
 
-	p[string(cCols)] = copySlice(value)
-	s.deleteKeyAfter(pKey, ttlSeconds)
+	oldValue := p[string(cCols)]
+	if bytes.Compare(copySlice(oldValue), newValue) == 0 {
+		return false, nil
+	}
+
+	p[string(cCols)] = copySlice(newValue)
+	s.deleteKeyAfter(pKey, cCols, ttlSeconds)
 
 	return true, nil
 }
@@ -71,12 +76,12 @@ func (s *appStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValu
 
 	p, ok := s.storage[string(pKey)]
 	if !ok {
-		return
+		return false, nil
 	}
 
 	viewRecord, ok := p[string(cCols)]
 	if !ok {
-		return
+		return false, nil
 	}
 
 	currentValue := copySlice(viewRecord)
@@ -84,10 +89,11 @@ func (s *appStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValu
 		ok = true
 		p[string(cCols)] = copySlice(newValue)
 
-		s.deleteKeyAfter(pKey, ttlSeconds)
+		s.deleteKeyAfter(pKey, cCols, ttlSeconds)
+		return
 	}
 
-	return
+	return false, nil
 }
 
 func (s *appStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
@@ -113,9 +119,10 @@ func (s *appStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue [
 		ok = true
 
 		delete(s.storage, string(pKey))
+		return
 	}
 
-	return
+	return false, nil
 }
 
 func (s *appStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
@@ -126,12 +133,12 @@ func (s *appStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finis
 	return s.Read(ctx, pKey, startCCols, finishCCols, cb)
 }
 
-func (s *appStorage) deleteKeyAfter(pKey []byte, ttlSeconds int) {
+func (s *appStorage) deleteKeyAfter(pKey []byte, cCol []byte, ttlSeconds int) {
 	time.AfterFunc(time.Duration(ttlSeconds)*time.Second, func() {
 		s.lock.Lock()
 		defer s.lock.Unlock()
 
-		delete(s.storage, string(pKey))
+		delete(s.storage[string(pKey)], string(cCol))
 	})
 }
 

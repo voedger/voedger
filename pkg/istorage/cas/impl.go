@@ -144,7 +144,7 @@ func (s *appStorageType) InsertIfNotExists(pKey []byte, cCols []byte, value []by
 }
 
 func (s *appStorageType) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
-	q := fmt.Sprintf("update %s	using ttl ? set value = ? where p_key = ? and c_col = ? if value = ?", s.keyspace)
+	q := fmt.Sprintf("update %s using ttl ? set value = ? where p_key = ? and c_col = ? if value = ?", s.keyspace)
 	applied := false
 	if _, err = s.session.Query(q, ttlSeconds, newValue, pKey, cCols, oldValue).ScanCAS(&applied); err != nil {
 		return false, err
