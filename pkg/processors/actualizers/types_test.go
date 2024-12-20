@@ -28,18 +28,23 @@ func Test_ProjectorEvent(t *testing.T) {
 	wsName := appdef.NewQName("my", "workspace")
 	prjName := appdef.NewQName("my", "projector")
 	cmdName := appdef.NewQName("my", "command")
+	queryName := appdef.NewQName("my", "query")
 	oDocName := appdef.NewQName("my", "ODoc")
 	objName := appdef.NewQName("my", "object")
 	cDocName := appdef.NewQName("my", "CDoc")
 	wDocName := appdef.NewQName("my", "WDoc")
+	tagName := appdef.NewQName("my", "CDocTag")
 
 	newProjector := func(ops appdef.OperationsSet, flt appdef.IFilter, wantErrors bool) appdef.IProjector {
 		adb := appdef.New()
 		wsb := adb.AddWorkspace(wsName)
+		wsb.AddTag(tagName)
+		_ = wsb.AddCommand(istructs.QNameCommandCUD) // should be in ancestor
 		_ = wsb.AddCommand(cmdName)
+		_ = wsb.AddQuery(queryName)
 		_ = wsb.AddODoc(oDocName)
 		_ = wsb.AddObject(objName)
-		_ = wsb.AddCDoc(cDocName)
+		wsb.AddCDoc(cDocName).SetTag(tagName)
 		_ = wsb.AddWDoc(wDocName)
 		prj := wsb.AddProjector(prjName)
 		prj.Events().Add(ops.AsArray(), flt)
@@ -48,6 +53,12 @@ func Test_ProjectorEvent(t *testing.T) {
 		}
 		return appdef.Projector(adb.MustBuild().Type, prjName)
 	}
+
+	newProjectorOnAll := func(wantErrors bool) appdef.IProjector {
+		types := appdef.TypeKind_ProjectorTriggers.AsArray()
+		return newProjector(appdef.ProjectorOperations, filter.Types(wsName, types[0], types[1:]...), wantErrors)
+	}
+
 	newEvent := func(eventQName, eventArgsQName appdef.QName, cuds map[appdef.QName]cud) istructs.IPLogEvent {
 		event := &coreutils.MockPLogEvent{}
 		event.On("QName").Return(eventQName)
@@ -69,8 +80,9 @@ func Test_ProjectorEvent(t *testing.T) {
 	}
 
 	type testEvent struct {
-		event istructs.IPLogEvent
-		want  bool
+		name string
+		plog istructs.IPLogEvent
+		want bool
 	}
 	tests := []struct {
 		name   string
@@ -78,238 +90,297 @@ func Test_ProjectorEvent(t *testing.T) {
 		events []testEvent
 	}{
 		{
-			name: "Should accept any",
-			prj:  newProjector(appdef.ProjectorOperations, filter.True(), false),
+			name: "projector ON ALL except sys.error",
+			prj:  newProjectorOnAll(false),
 			events: []testEvent{
-				{newEvent(appdef.NullQName, appdef.NullQName, nil), true},
+				{"accept my.cmd", newEvent(cmdName, appdef.NullQName, nil), true},
+				{"accept sys.CUD", newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil), true},
+				{"reject sys.error", newEvent(istructs.QNameForError, appdef.NullQName, nil), false},
+				{"reject sys.corrupted", newEvent(istructs.QNameForCorruptedData, appdef.NullQName, nil), false},
 			},
 		},
 		{
-			name: "Should accept error",
-			prj:  newProjector(appdef.ProjectorOperations, filter.True(), true),
+			name: "projector ON ALL",
+			prj:  newProjectorOnAll(true),
 			events: []testEvent{
-				{newEvent(istructs.QNameForError, appdef.NullQName, nil), true},
+				{"accept sys.error", newEvent(istructs.QNameForError, appdef.NullQName, nil), true},
+				{"reject sys.corrupted", newEvent(istructs.QNameForCorruptedData, appdef.NullQName, nil), false},
 			},
 		},
 		{
-			name: "Should not accept error",
-			prj:  newProjector(appdef.ProjectorOperations, filter.True(), false),
-			events: []testEvent{
-				{newEvent(istructs.QNameForError, appdef.NullQName, nil), false},
-			},
-		},
-		{
-			name: "Should not accept sys.Corrupted",
-			prj:  newProjector(appdef.ProjectorOperations, filter.True(), false),
-			events: []testEvent{
-				{newEvent(istructs.QNameForCorruptedData, appdef.NullQName, nil), false},
-			},
-		},
-		{
-			name: "Should accept my.Command",
+			name: "projector ON EXECUTE ALL COMMANDS",
 			prj:  newProjector(set.From(appdef.OperationKind_Execute), filter.Types(wsName, appdef.TypeKind_Command), false),
 			events: []testEvent{
-				{newEvent(cmdName, appdef.NullQName, nil), true},
-				{newEvent(oDocName, appdef.NullQName, nil), false}, // not a command
+				{"accept my.command", newEvent(cmdName, appdef.NullQName, nil), true},
+				{"accept sys.CUD", newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil), true},
+				{"reject my.ODoc", newEvent(oDocName, appdef.NullQName, nil), false}, // not a command
 			},
 		},
 		{
-			name: "Should not accept my.Command",
+			name: "projector ON EXECUTE ALL QUERIES",
 			prj:  newProjector(set.From(appdef.OperationKind_Execute), filter.Types(wsName, appdef.TypeKind_Query), false),
 			events: []testEvent{
-				{newEvent(cmdName, appdef.NullQName, nil), false}, // not a query
+				{"reject my.command", newEvent(cmdName, appdef.NullQName, nil), false}, // not a query
 			},
 		},
 		{
-			name: "Should accept event my.ODoc",
+			name: "projector ON EXECUTE my.ODoc",
 			prj:  newProjector(set.From(appdef.OperationKind_Execute), filter.QNames(oDocName), false),
 			events: []testEvent{
-				{newEvent(oDocName, appdef.NullQName, nil), true},
-				{newEvent(cmdName, appdef.NullQName, nil), false}, // not my.ODoc
+				{"accept my.ODoc", newEvent(oDocName, appdef.NullQName, nil), true},
+				{"reject my.command", newEvent(cmdName, appdef.NullQName, nil), false}, // not my.ODoc
 			},
 		},
 		{
-			name: "Should accept my.Command with argument",
+			name: "projector ON EXECUTE WITH PARAM my.ODoc OR my.object",
 			prj:  newProjector(set.From(appdef.OperationKind_ExecuteWithParam), filter.QNames(oDocName, objName), false),
 			events: []testEvent{
-				{newEvent(cmdName, oDocName, nil), true},
-				{newEvent(cmdName, objName, nil), true},
-				{newEvent(cmdName, wDocName, nil), false}, // not my.ODoc or my.object
+				{"accept my.ODoc", newEvent(cmdName, oDocName, nil), true},
+				{"accept my.object", newEvent(cmdName, objName, nil), true},
+				{"reject my.WDoc", newEvent(cmdName, wDocName, nil), false}, // not my.ODoc or my.object
 			},
 		},
 		{
-			name: "Should accept AFTER INSERT",
-			prj:  newProjector(set.From(appdef.OperationKind_Insert), filter.QNames(cDocName, wDocName), false),
-			events: []istructs.IPLogEvent{
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {isNew: true},
-					wDocName: {isNew: false},
-				}),
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					wDocName: {isNew: true},
-					wDocName: {isNew: true},
-				}),
-			},
-			want: true,
-		},
-		{
-			name: "Should not accept AFTER INSERT",
+			name: "projector AFTER INSERT my.CDoc",
 			prj:  newProjector(set.From(appdef.OperationKind_Insert), filter.QNames(cDocName), false),
-			events: []istructs.IPLogEvent{
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil),
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					wDocName: {isNew: true},
-					cDocName: {isNew: false},
-				}),
+			events: []testEvent{
+				{"accept insert my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {isNew: true},
+					}),
+					true},
+				{"reject update my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {isNew: false},
+					}),
+					false}, // not INSERT
+				{"reject insert my.WDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						wDocName: {isNew: true},
+					}),
+					false}, // not my.CDoc
 			},
-			want: false,
 		},
 		{
-			name: "Should accept AFTER UPDATE",
-			prj:  newProjector(set.From(appdef.OperationKind_Update), filter.QNames(cDocName, wDocName), false),
-			events: []istructs.IPLogEvent{
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {isNew: true},
-					wDocName: {isNew: false},
-				}),
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {isNew: false},
-					wDocName: {isNew: true},
-				}),
+			name: "projector AFTER INSERT ALL CDocs",
+			prj:  newProjector(set.From(appdef.OperationKind_Insert), filter.Types(wsName, appdef.TypeKind_CDoc), false),
+			events: []testEvent{
+				{"accept insert my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {isNew: true},
+					}),
+					true},
+				{"reject insert my.WDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						wDocName: {isNew: true},
+					}),
+					false}, // not CDoc
 			},
-			want: true,
 		},
 		{
-			name: "Should not accept AFTER UPDATE",
+			name: "projector AFTER UPDATE my.CDoc",
 			prj:  newProjector(set.From(appdef.OperationKind_Update), filter.QNames(cDocName), false),
-			events: []istructs.IPLogEvent{
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil),
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {isNew: true},
-					wDocName: {isNew: false},
-				}),
+			events: []testEvent{
+				{"accept update my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {isNew: false},
+					}),
+					true},
+				{"reject insert my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {isNew: true},
+					}),
+					false}, // not UPDATE
+				{"reject update my.WDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						wDocName: {isNew: false},
+					}),
+					false}, // not my.CDoc
 			},
-			want: false,
 		},
 		{
-			name: "Should accept AFTER INSERT OR UPDATE",
+			name: "projector AFTER UPDATE ALL CDocs",
+			prj:  newProjector(set.From(appdef.OperationKind_Update), filter.Types(wsName, appdef.TypeKind_CDoc), false),
+			events: []testEvent{
+				{"accept update my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {isNew: false},
+					}),
+					true},
+				{"reject update my.WDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						wDocName: {isNew: false},
+					}),
+					false}, // not CDoc
+			},
+		},
+		{
+			name: "projector AFTER INSERT OR UPDATE my.CDoc",
 			prj:  newProjector(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update), filter.QNames(cDocName), false),
-			events: []istructs.IPLogEvent{
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {isNew: false},
-				}),
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {isNew: true},
-				}),
+			events: []testEvent{
+				{"accept insert my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {isNew: true},
+					}),
+					true},
+				{"accept update my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {isNew: false},
+					}),
+					true},
+				{"reject insert or update my.WDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						wDocName: {isNew: true},
+						wDocName: {isNew: false},
+					}),
+					false}, // not my.CDoc
 			},
-			want: true,
 		},
 		{
-			name: "Should accept AFTER ACTIVATE",
-			prj:  newProjector(set.From(appdef.OperationKind_Activate), filter.QNames(cDocName, wDocName), false),
-			events: []istructs.IPLogEvent{
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: true}},
-					wDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: true}},
-				}),
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: true}},
-					wDocName: {},
-				}),
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {},
-					wDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: true}},
-				}),
+			name: "projector AFTER INSERT OR UPDATE ALL CDocs",
+			prj:  newProjector(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update), filter.Types(wsName, appdef.TypeKind_CDoc), false),
+			events: []testEvent{
+				{"accept insert my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {isNew: true},
+					}),
+					true},
+				{"accept update my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {isNew: false},
+					}),
+					true},
+				{"reject insert or update my.WDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						wDocName: {isNew: true},
+						wDocName: {isNew: false},
+					}),
+					false}, // not CDoc
 			},
-			want: true,
 		},
 		{
-			name: "Should not accept AFTER ACTIVATE",
-			prj:  newProjector(set.From(appdef.OperationKind_Activate), filter.QNames(cDocName, wDocName), false),
-			events: []istructs.IPLogEvent{
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil),
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {},
-					wDocName: {},
-				}),
+			name: "projector AFTER ACTIVATE my.CDoc",
+			prj:  newProjector(set.From(appdef.OperationKind_Activate), filter.QNames(cDocName), false),
+			events: []testEvent{
+				{"accept activate my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: true}},
+					}),
+					true},
+				{"reject insert or update my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {isNew: true},
+						cDocName: {data: map[string]interface{}{"field1": 0}},
+					}),
+					false}, // INSERT and UPDATE, but not ACTIVATE
+				{"reject deactivate my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: false}},
+					}),
+					false}, // DEACTIVATE
+				{"reject activate my.WDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						wDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: true}},
+					}),
+					false}, // not my.CDoc
 			},
-			want: false,
 		},
 		{
-			name: "Should accept AFTER DEACTIVATE",
-			prj:  newProjector(set.From(appdef.OperationKind_Deactivate), filter.QNames(cDocName, wDocName), false),
-			events: []istructs.IPLogEvent{
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: false}},
-					wDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: false}},
-				}),
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: false}},
-					wDocName: {},
-				}),
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {},
-					wDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: false}},
-				}),
+			name: "projector AFTER DEACTIVATE my.CDoc",
+			prj:  newProjector(set.From(appdef.OperationKind_Deactivate), filter.QNames(cDocName), false),
+			events: []testEvent{
+				{"accept deactivate my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: false}},
+					}),
+					true},
+				{"reject insert or update my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {isNew: true},
+						cDocName: {data: map[string]interface{}{"field1": 0}},
+					}),
+					false}, // INSERT and UPDATE, but not DEACTIVATE
+				{"reject activate my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: true}},
+					}),
+					false}, // ACTIVATE
+				{"reject deactivate my.WDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						wDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: false}},
+					}),
+					false}, // not my.CDoc
 			},
-			want: true,
 		},
 		{
-			name: "Should not accept AFTER DEACTIVATE",
-			prj:  newProjector(set.From(appdef.OperationKind_Deactivate), filter.QNames(cDocName, wDocName), false),
-			events: []istructs.IPLogEvent{
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil),
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: true}},
-				}),
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					wDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: true}},
-				}),
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {},
-				}),
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					wDocName: {},
-				}),
+			name: "projector AFTER ACTIVATE OR DEACTIVATE ALL CDoc",
+			prj:  newProjector(set.From(appdef.OperationKind_Activate, appdef.OperationKind_Deactivate), filter.Types(wsName, appdef.TypeKind_CDoc), false),
+			events: []testEvent{
+				{"accept activate my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: true}},
+					}),
+					true},
+				{"accept deactivate my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: false}},
+					}),
+					true},
+				{"reject insert or update my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {isNew: true},
+						cDocName: {data: map[string]interface{}{"field1": 0}},
+					}),
+					false}, // INSERT and UPDATE, but not (ACTIVATE or DEACTIVATE)
+				{"reject activate or deactivate my.WDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						wDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: false}},
+						wDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: true}},
+					}),
+					false}, // not CDoc
 			},
-			want: false,
 		},
 		{
-			name: "Should not accept AFTER ACTIVATE OR DEACTIVATE",
-			prj:  newProjector(set.From(appdef.OperationKind_Activate, appdef.OperationKind_Deactivate), filter.QNames(cDocName, wDocName), false),
-			events: []istructs.IPLogEvent{
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil),
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {},
-					wDocName: {isNew: true},
-				}),
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {isNew: true},
-					wDocName: {},
-				}),
+			name: "projector AFTER INSERT OR UPDATE OR ACTIVATE OR DEACTIVATE ALL WITH TAG my.CDocTag",
+			prj:  newProjector(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate), filter.Tags(tagName), false),
+			events: []testEvent{
+				{"accept insert my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {isNew: true},
+					}),
+					true},
+				{"accept update my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {isNew: false},
+					}),
+					true},
+				{"accept activate my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: true}},
+					}),
+					true},
+				{"accept deactivate my.CDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: false}},
+					}),
+					true},
+				{"reject insert, update, activate or deactivate my.WDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
+						wDocName: {isNew: true},
+						wDocName: {isNew: false},
+						wDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: true}},
+						wDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: false}},
+					}),
+					false}, // not with tag my.CDocTag
 			},
-			want: false,
-		},
-		{
-			name: "Should accept AFTER INSERT OR UPDATE OR ACTIVATE OR DEACTIVATE",
-			prj:  newProjector(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate), filter.QNames(cDocName, wDocName), false),
-			events: []istructs.IPLogEvent{
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: true}},
-					wDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: false}},
-				}),
-				newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
-					cDocName: {},
-					wDocName: {isNew: true},
-				}),
-			},
-			want: true,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			for _, event := range test.events {
-				require.Equal(event.want, actualizers.ProjectorEvent(test.prj, event.IPLogEvent))
+				t.Run(event.name, func(t *testing.T) {
+					require.Equal(event.want, actualizers.ProjectorEvent(test.prj, event.plog))
+				})
 			}
 		})
 	}

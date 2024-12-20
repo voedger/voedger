@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
@@ -66,8 +67,12 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 			ProvideViewDef(wsb, incProjectionView, buildProjectionView)
 			ProvideViewDef(wsb, decProjectionView, buildProjectionView)
 			wsb.AddCommand(testQName)
-			wsb.AddProjector(incrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
-			wsb.AddProjector(decrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			wsb.AddProjector(incrementorName).SetSync(true).Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.QNames(testQName))
+			wsb.AddProjector(decrementorName).SetSync(true).Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.QNames(testQName))
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.AddSyncProjectors(testIncrementor, testDecrementor)
@@ -395,8 +400,12 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 			ProvideViewDef(wsb, incProjectionView, buildProjectionView)
 			ProvideViewDef(wsb, decProjectionView, buildProjectionView)
 			wsb.AddCommand(testQName)
-			wsb.AddProjector(incrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
-			wsb.AddProjector(decrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			wsb.AddProjector(incrementorName).SetSync(true).Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.QNames(testQName))
+			wsb.AddProjector(decrementorName).SetSync(true).Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.QNames(testQName))
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.AddSyncProjectors(testIncrementor, testDecrementor)
