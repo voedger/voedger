@@ -115,9 +115,6 @@ type IAppStorage interface {
 	// The TTL information is not returned in the callback.
 	// Only existing and non-expired records are returned through the callback.
 	TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb ReadCallback) (err error)
-
-	// Returns the type of the storage
-	Type() StorageType
 }
 
 // ccols and viewRecord are temporary internal values, must NOT be changed

@@ -19,15 +19,3 @@ const (
 var (
 	SysMetaSafeName = SafeAppName{name: "sysmeta"}
 )
-
-type StorageType int
-
-const (
-	StorageTypeMem StorageType = iota
-	StorageTypeCassandra
-	StorageTypeBbolt
-	StorageTypeAmazonDynamoDB
-	StorageTypeTest
-	StorageTypeTestMem
-	StorageTypeCached
-)

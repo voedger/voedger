@@ -7,6 +7,7 @@ package mem
 import (
 	"bytes"
 	"context"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"sort"
 	"sync"
 	"time"
@@ -34,15 +35,13 @@ func (s *appStorageFactory) Init(appName istorage.SafeAppName) error {
 	return nil
 }
 
+// TODO: pass iTime interface to appStorage
 type appStorage struct {
 	storage      map[string]map[string][]byte
 	lock         sync.RWMutex
 	testDelayGet time.Duration // used in tests only
 	testDelayPut time.Duration // used in tests only
-}
-
-func (s *appStorage) Type() istorage.StorageType {
-	return istorage.StorageTypeMem
+	iTime        coreutils.ITime
 }
 
 func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, newValue []byte, ttlSeconds int) (ok bool, err error) {
@@ -137,6 +136,8 @@ func (s *appStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finis
 	return s.Read(ctx, pKey, startCCols, finishCCols, cb)
 }
 
+// TODO: eliminate this method
+// TODO: save ttl record the same way as regular records, just ignore expired records in Read
 func (s *appStorage) deleteKeyAfter(pKey []byte, cCol []byte, ttlSeconds int) {
 	time.AfterFunc(time.Duration(ttlSeconds)*time.Second, func() {
 		s.lock.Lock()

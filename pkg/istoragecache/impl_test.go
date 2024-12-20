@@ -419,10 +419,6 @@ type testStorage struct {
 	getBatch          func(pKey []byte, items []istorage.GetBatchItem) (err error)
 }
 
-func (s *testStorage) Type() istorage.StorageType {
-	return istorage.StorageTypeTest
-}
-
 func (s *testStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
 	return s.insertIfNotExists(pKey, cCols, value, ttlSeconds)
 }

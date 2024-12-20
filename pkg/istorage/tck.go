@@ -7,6 +7,7 @@ package istorage
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 	"time"
 
@@ -616,10 +617,12 @@ func testAppStorage_GetBatch(t *testing.T, storage IAppStorage) {
 
 }
 
+// TODO: pass Waiter/Sleeper interface to imitate time.Sleep
+//
 //nolint:revive
 func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage) {
-	switch storage.Type() {
-	case StorageTypeMem:
+	switch storageImplPkgPath(storage) {
+	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
 	default:
 		t.Skip("Unsupported storage type")
 	}
@@ -631,13 +634,13 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage) {
 		value := []byte("Toyota")
 
 		ok, err := storage.InsertIfNotExists(pKey, ccols, value, 2)
-		require.True(ok)
 		require.NoError(err)
+		require.True(ok)
 
 		data := make([]byte, 0)
 		ok, err = storage.Get(pKey, ccols, &data)
-		require.True(ok)
 		require.NoError(err)
+		require.True(ok)
 		require.Equal(value, data)
 	})
 
@@ -648,25 +651,25 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage) {
 		value := []byte("Tea")
 
 		ok, err := storage.InsertIfNotExists(pKey, ccols, value, 2)
-		require.True(ok)
 		require.NoError(err)
+		require.True(ok)
 
 		ok, err = storage.InsertIfNotExists(pKey, ccols, value, 2)
-		require.False(ok)
 		require.NoError(err)
+		require.False(ok)
 
 		data := make([]byte, 0)
 		ok, err = storage.Get(pKey, ccols, &data)
-		require.True(ok)
 		require.NoError(err)
+		require.True(ok)
 		require.Equal(value, data)
 	})
 }
 
 //nolint:revive
 func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage) {
-	switch storage.Type() {
-	case StorageTypeMem:
+	switch storageImplPkgPath(storage) {
+	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
 	default:
 		t.Skip("Unsupported storage type")
 	}
@@ -678,18 +681,18 @@ func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage) {
 		oldValue := []byte("Doom")
 
 		ok, err := storage.InsertIfNotExists(pKey, ccols, oldValue, 2)
-		require.True(ok)
 		require.NoError(err)
+		require.True(ok)
 
 		newValue := []byte("Call of Duty")
 		ok, err = storage.CompareAndSwap(pKey, ccols, oldValue, newValue, 2)
-		require.True(ok)
 		require.NoError(err)
+		require.True(ok)
 
 		data := make([]byte, 0)
 		ok, err = storage.Get(pKey, ccols, &data)
-		require.True(ok)
 		require.NoError(err)
+		require.True(ok)
 		require.Equal(newValue, data)
 	})
 
@@ -700,19 +703,19 @@ func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage) {
 		oldValue := []byte("Caesar")
 
 		ok, err := storage.InsertIfNotExists(pKey, ccols, oldValue, 2)
-		time.Sleep(3 * time.Second)
-		require.True(ok)
 		require.NoError(err)
+		require.True(ok)
+		time.Sleep(3 * time.Second)
 
 		newValue := []byte("Olivier")
 		ok, err = storage.CompareAndSwap(pKey, ccols, oldValue, newValue, 2)
-		require.False(ok)
 		require.NoError(err)
+		require.False(ok)
 
 		data := make([]byte, 0)
 		ok, err = storage.Get(pKey, ccols, &data)
-		require.False(ok)
 		require.NoError(err)
+		require.False(ok)
 	})
 
 	t.Run("Should not swap because of inequality new value and old one", func(t *testing.T) {
@@ -723,27 +726,27 @@ func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage) {
 
 		ok, err := storage.InsertIfNotExists(pKey, ccols, oldValue, 5)
 		time.Sleep(3 * time.Second)
-		require.True(ok)
 		require.NoError(err)
+		require.True(ok)
 
 		newValue := []byte("The desolation of Smaug")
 		anotherOneValue := []byte("The battle of the five armies")
 		ok, err = storage.CompareAndSwap(pKey, ccols, newValue, anotherOneValue, 2)
-		require.False(ok)
 		require.NoError(err)
+		require.False(ok)
 
 		data := make([]byte, 0)
 		ok, err = storage.Get(pKey, ccols, &data)
+		require.NoError(err)
 		require.True(ok)
-		require.NotEqual(anotherOneValue, data)
 		require.Equal(oldValue, data)
 	})
 }
 
 //nolint:revive
 func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage) {
-	switch storage.Type() {
-	case StorageTypeMem:
+	switch storageImplPkgPath(storage) {
+	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
 	default:
 		t.Skip("Unsupported storage type")
 	}
@@ -755,12 +758,17 @@ func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage) {
 		value := []byte("The Avengers")
 
 		ok, err := storage.InsertIfNotExists(pKey, ccols, value, 2)
-		require.True(ok)
 		require.NoError(err)
+		require.True(ok)
 
 		ok, err = storage.CompareAndDelete(pKey, ccols, value)
-		require.True(ok)
 		require.NoError(err)
+		require.True(ok)
+
+		data := make([]byte, 0)
+		ok, err = storage.Get(pKey, ccols, &data)
+		require.NoError(err)
+		require.False(ok)
 	})
 
 	t.Run("Should not delete because of key is expired", func(t *testing.T) {
@@ -770,13 +778,18 @@ func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage) {
 		oldValue := []byte("Thorin")
 
 		ok, err := storage.InsertIfNotExists(pKey, ccols, oldValue, 1)
-		time.Sleep(2 * time.Second)
-		require.True(ok)
 		require.NoError(err)
+		require.True(ok)
+		time.Sleep(2 * time.Second)
 
 		ok, err = storage.CompareAndDelete(pKey, ccols, oldValue)
-		require.False(ok)
 		require.NoError(err)
+		require.False(ok)
+
+		data := make([]byte, 0)
+		ok, err = storage.Get(pKey, ccols, &data)
+		require.NoError(err)
+		require.False(ok)
 	})
 
 	t.Run("Should not delete because of inequality values", func(t *testing.T) {
@@ -786,25 +799,25 @@ func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage) {
 		oldValue := []byte("M1911")
 
 		ok, err := storage.InsertIfNotExists(pKey, ccols, oldValue, 2)
-		time.Sleep(1 * time.Second)
-		require.True(ok)
 		require.NoError(err)
+		require.True(ok)
+		time.Sleep(1 * time.Second)
 
 		newValue := []byte("Glock")
 		ok, err = storage.CompareAndDelete(pKey, ccols, newValue)
-		require.False(ok)
 		require.NoError(err)
+		require.False(ok)
 
 		ok, err = storage.InsertIfNotExists(pKey, ccols, oldValue, 2)
-		require.False(ok)
 		require.NoError(err)
+		require.False(ok)
 	})
 }
 
 //nolint:revive
 func testAppStorage_TTLGet(t *testing.T, storage IAppStorage) {
-	switch storage.Type() {
-	case StorageTypeMem:
+	switch storageImplPkgPath(storage) {
+	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
 	default:
 		t.Skip("Unsupported storage type")
 	}
@@ -816,13 +829,13 @@ func testAppStorage_TTLGet(t *testing.T, storage IAppStorage) {
 		value := []byte("Gone with the wind")
 
 		ok, err := storage.InsertIfNotExists(pKey, ccols, value, 2)
-		require.True(ok)
 		require.NoError(err)
+		require.True(ok)
 
 		data := make([]byte, 0)
 		ok, err = storage.TTLGet(pKey, ccols, &data)
-		require.True(ok)
 		require.Equal(value, data)
+		require.True(ok)
 	})
 
 	t.Run("Should not get ttl record if it is expired", func(t *testing.T) {
@@ -832,13 +845,14 @@ func testAppStorage_TTLGet(t *testing.T, storage IAppStorage) {
 		value := []byte("Harry Potter")
 
 		ok, err := storage.InsertIfNotExists(pKey, ccols, value, 1)
-		require.True(ok)
 		require.NoError(err)
+		require.True(ok)
 
 		time.Sleep(2 * time.Second)
 
 		data := make([]byte, 0)
 		ok, err = storage.TTLGet(pKey, ccols, &data)
+		require.NoError(err)
 		require.False(ok)
 	})
 
@@ -853,16 +867,16 @@ func testAppStorage_TTLGet(t *testing.T, storage IAppStorage) {
 
 		data := make([]byte, 0)
 		ok, err := storage.TTLGet(pKey, ccols, &data)
-		require.True(ok)
 		require.NoError(err)
+		require.True(ok)
 		require.Equal(value, data)
 	})
 }
 
 //nolint:revive
 func testAppStorage_TTLRead(t *testing.T, storage IAppStorage) {
-	switch storage.Type() {
-	case StorageTypeMem:
+	switch storageImplPkgPath(storage) {
+	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
 	default:
 		t.Skip("Unsupported storage type")
 	}
@@ -873,18 +887,18 @@ func testAppStorage_TTLRead(t *testing.T, storage IAppStorage) {
 
 		value1 := []byte{byte(1)}
 		ok, err := storage.InsertIfNotExists(pKey, []byte("Col1"), value1, 1)
-		require.True(ok)
 		require.NoError(err)
+		require.True(ok)
 
 		value2 := []byte{byte(2)}
-		ok, err = storage.InsertIfNotExists(pKey, []byte("Col2"), value2, 2)
-		require.True(ok)
+		ok, err = storage.InsertIfNotExists(pKey, []byte("Col2"), value2, 3)
 		require.NoError(err)
+		require.True(ok)
 
 		value3 := []byte{byte(3)}
-		ok, err = storage.InsertIfNotExists(pKey, []byte("Col3"), value3, 3)
-		require.True(ok)
+		ok, err = storage.InsertIfNotExists(pKey, []byte("Col3"), value3, 4)
 		require.NoError(err)
+		require.True(ok)
 
 		time.Sleep(1100 * time.Millisecond)
 
@@ -913,9 +927,9 @@ func testAppStorage_TTLRead(t *testing.T, storage IAppStorage) {
 		require.NoError(err)
 
 		value3 := []byte{byte(3)}
-		ok, err := storage.InsertIfNotExists(pKey, []byte("Col3"), value3, 2)
-		require.True(ok)
+		ok, err := storage.InsertIfNotExists(pKey, []byte("Col3"), value3, 3)
 		require.NoError(err)
+		require.True(ok)
 
 		time.Sleep(1 * time.Second)
 
@@ -930,4 +944,14 @@ func testAppStorage_TTLRead(t *testing.T, storage IAppStorage) {
 		require.NoError(err)
 		require.Len(subjects, 3)
 	})
+}
+
+// storageImplPkgPath returns package path of storage implementation
+// it is used to skip tests for unsupported storage types
+func storageImplPkgPath(storage IAppStorage) string {
+	t := reflect.TypeOf(storage)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	return t.PkgPath()
 }

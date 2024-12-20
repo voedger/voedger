@@ -84,10 +84,6 @@ func newCachingAppStorage(maxBytes int, nonCachingAppStorage istorage.IAppStorag
 	}
 }
 
-func (s *cachedAppStorage) Type() istorage.StorageType {
-	return istorage.StorageTypeCached
-}
-
 //nolint:revive
 func (s *cachedAppStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
 	//TODO implement me

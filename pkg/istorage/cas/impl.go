@@ -132,14 +132,10 @@ type appStorageType struct {
 	keyspace string
 }
 
-func (s *appStorageType) Type() istorage.StorageType {
-	return istorage.StorageTypeCassandra
-}
-
 func (s *appStorageType) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
-	q := fmt.Sprintf("insert into %s.values (p_key, c_col, value) values (?,?,?) using ? if not exists", s.keyspace)
+	q := fmt.Sprintf("insert into %s.values (p_key, c_col, value) values (?,?,?) if not exists using ttl %d", s.keyspace, ttlSeconds)
 	m := make(map[string]interface{})
-	applied, err := s.session.Query(q, pKey, safeCcols(cCols), value, ttlSeconds).Consistency(gocql.Quorum).MapScanCAS(m)
+	applied, err := s.session.Query(q, pKey, safeCcols(cCols), value).Consistency(gocql.Quorum).MapScanCAS(m)
 	if err != nil {
 		return false, err
 	}
@@ -148,9 +144,11 @@ func (s *appStorageType) InsertIfNotExists(pKey []byte, cCols []byte, value []by
 }
 
 func (s *appStorageType) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
-	q := fmt.Sprintf("update %s using ttl ? set value = ? where p_key = ? and c_col = ? if value = ?", s.keyspace)
-	applied := false
-	if _, err = s.session.Query(q, ttlSeconds, newValue, pKey, cCols, oldValue).ScanCAS(&applied); err != nil {
+	q := fmt.Sprintf("update %s.values using ttl %d set value = ? where p_key = ? and c_col = ? if value = ?", s.keyspace, ttlSeconds)
+
+	data := make([]byte, 0)
+	applied, err := s.session.Query(q, newValue, pKey, cCols, oldValue).ScanCAS(&data)
+	if err != nil {
 		return false, err
 	}
 
@@ -158,9 +156,11 @@ func (s *appStorageType) CompareAndSwap(pKey []byte, cCols []byte, oldValue, new
 }
 
 func (s *appStorageType) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
-	q := fmt.Sprintf(`delete from %s where p_key = ? AND c_col = ? if value = ?`, s.keyspace)
-	applied := false
-	if _, err = s.session.Query(q, pKey, cCols, expectedValue).ScanCAS(&applied); err != nil {
+	q := fmt.Sprintf(`delete from %s.values where p_key = ? AND c_col = ? if value = ?`, s.keyspace)
+
+	data := make([]byte, 0)
+	applied, err := s.session.Query(q, pKey, cCols, expectedValue).ScanCAS(&data)
+	if err != nil {
 		return false, err
 	}
 
