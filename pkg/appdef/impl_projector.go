@@ -19,7 +19,6 @@ type projector struct {
 	sync      bool
 	sysErrors bool
 	events    *projectorEvents
-	triggers  map[QName]set.Set[OperationKind]
 }
 
 func newProjector(app *appDef, ws *workspace, name QName) *projector {
@@ -43,39 +42,29 @@ func (prj projector) Events() iter.Seq[IProjectorEvent] {
 
 func (prj projector) Sync() bool { return prj.sync }
 
+func (prj projector) Triggers(op OperationKind, t IType) bool {
+	for e := range prj.Events() {
+		if e.Op(op) {
+			if e.Filter().Match(t) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Validates projector.
 //
 // # Error if:
 //   - some event filter has no matches in the workspace
 //   - some event filtered type can not trigger projector
 func (prj *projector) Validate() error {
-	prj.needRebuild()
 	return errors.Join(
 		prj.extension.Validate(),
 		prj.events.validate())
 }
 
-func (prj *projector) Triggers() map[QName]set.Set[OperationKind] {
-	if prj.triggers == nil {
-		for t := range prj.Workspace().Types() {
-			for e := range prj.Events() {
-				if e.Filter().Match(t) {
-					ops, ok := prj.triggers[t.QName()]
-					if !ok {
-						ops = set.Empty[OperationKind]()
-					}
-					ops.Collect(e.Ops())
-					prj.triggers[t.QName()] = ops
-				}
-			}
-		}
-	}
-	return prj.triggers
-}
-
 func (prj projector) WantErrors() bool { return prj.sysErrors }
-
-func (prj *projector) needRebuild() { prj.triggers = nil }
 
 func (prj *projector) setSync(sync bool) { prj.sync = sync }
 
@@ -136,7 +125,6 @@ func (ev *projectorEvents) Add(ops []OperationKind, flt IFilter, comment ...stri
 	}
 	e.comment.setComment(comment...)
 	ev.events = append(ev.events, e)
-	ev.prj.needRebuild()
 	return ev
 }
 

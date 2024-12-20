@@ -19,11 +19,8 @@ type IProjector interface {
 	// Returns events that triggers this projector.
 	Events() iter.Seq[IProjectorEvent]
 
-	// Returns map of projector triggers. Types to trigger obtained by enumeration of all projector workspace types.
-	//
-	// 	- Key is QName of triggered type.
-	// 	- Value is set of OperationKind
-	Triggers() map[QName]OperationsSet
+	// Returns whether this projector triggers with the specified operation and type
+	Triggers(OperationKind, IType) bool
 
 	// Returns is projector is able to handle `sys.Error` events.
 	// False by default.
