@@ -378,7 +378,7 @@ func (ev *eventType) WLogOffset() istructs.Offset {
 
 // cudType implements event cud member
 //
-// # Implements:
+// # Supports:
 //
 //	— istructs.ICUD
 type cudType struct {
