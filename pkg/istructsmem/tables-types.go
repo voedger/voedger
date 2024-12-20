@@ -91,13 +91,13 @@ func (row *rowType) fieldValue(f appdef.IField) interface{} {
 	panic(ErrWrongFieldType("%v", f))
 }
 
-// istructs.ICUDRow.Activated
-func (rec *recordType) Activated() bool {
+// istructs.ICUDRow.IsActivated
+func (rec *recordType) IsActivated() bool {
 	return !rec.isNew && rec.isActiveModified && rec.isActive
 }
 
-// istructs.ICUDRow.Deactivated
-func (rec *recordType) Deactivated() bool {
+// istructs.ICUDRow.IsDeactivated
+func (rec *recordType) IsDeactivated() bool {
 	return !rec.isNew && rec.isActiveModified && !rec.isActive
 }
 

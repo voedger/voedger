@@ -77,10 +77,10 @@ type ICUDRow interface {
 	ModifiedFields(func(appdef.FieldName, interface{}) bool)
 
 	// Returns is row deactivated.
-	Deactivated() bool
+	IsDeactivated() bool
 
 	// Returns is previously deactivated record is activated (reactivated).
-	Activated() bool
+	IsActivated() bool
 }
 
 type IIDGenerator interface {
