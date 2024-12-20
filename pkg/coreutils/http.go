@@ -123,6 +123,12 @@ func WithDiscardResponse() ReqOptFunc {
 	}
 }
 
+func WithoutAuth() ReqOptFunc {
+	return func(opts *reqOpts) {
+		opts.withoutAuth = true
+	}
+}
+
 func WithCookies(cookiesPairs ...string) ReqOptFunc {
 	return func(po *reqOpts) {
 		for i := 0; i < len(cookiesPairs); i += 2 {
@@ -253,6 +259,7 @@ type reqOpts struct {
 	expectedSysErrorCode  int
 	retriersOnErrors      []retrier
 	bodyReader            io.Reader
+	withoutAuth           bool
 }
 
 // body and bodyReader are mutual exclusive
@@ -327,6 +334,10 @@ func (c *implIHTTPClient) req(urlStr string, body string, optFuncs ...ReqOptFunc
 		}
 		netURL.Path = opts.relativeURL
 		urlStr = netURL.String()
+	}
+	if opts.withoutAuth {
+		delete(opts.headers, Authorization)
+		delete(opts.cookies, Authorization)
 	}
 	var resp *http.Response
 	var err error

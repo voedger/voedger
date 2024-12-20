@@ -123,6 +123,10 @@ const FirtReservedWSID = FirstBaseAppWSID + MaxNumAppWorkspaces // 0x18000, 9830
 const NumReservedWSID = 0x7fff                                  // 32767
 
 const (
+	// case: location is made Demo. How to allow q.sys.State without token?
+	// Everyone is bad because q.sys.State from all locations must not be allowed for everyone
+	// emit role BOreader if no token provided is bad as well: q.sys.State will be available without token is all locations
+	// we have a tool to append roles from subjects matched by login name -> need to emit sys.Guest principal login
 	GuestWSID               = FirtReservedWSID + iota // 0x18000, 98304
 	LastCurrentReservedWSID                           // Can be changed in the future
 )

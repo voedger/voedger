@@ -51,6 +51,7 @@ var defaultACL = ACL{
 	// 	policy: ACPolicy_Allow,
 	// },
 	{
+		//  
 		desc: "allowed to sys.Guest login, i.e. without principal token at all",
 		pattern: PatternType{
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User, WSID: istructs.GuestWSID}}},
