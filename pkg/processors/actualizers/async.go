@@ -420,7 +420,7 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 		p.aametrics.Set(aaCurrentOffset, p.partitionID, p.name, float64(w.pLogOffset))
 	}
 
-	if !isAcceptable(p.iProjector, w.event) {
+	if !ProjectorEvent(p.iProjector, w.event) {
 		return nil, nil
 	}
 

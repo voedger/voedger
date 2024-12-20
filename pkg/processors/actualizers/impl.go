@@ -71,7 +71,7 @@ func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, servic
 				appDef := appPart.AppStructs().AppDef()
 				prj := appdef.Projector(appDef.Type, projector.Name)
 				event := s.PLogEvent()
-				if !isAcceptable(prj, event) {
+				if !ProjectorEvent(prj, event) {
 					return nil
 				}
 				return appPart.Invoke(ctx, projector.Name, s, s)
