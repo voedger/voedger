@@ -51,7 +51,10 @@ var defaultACL = ACL{
 	// 	policy: ACPolicy_Allow,
 	// },
 	{
-		//  
+		// case: location is made Demo. How to allow q.sys.State without token?
+		// Everyone is bad because q.sys.State from all locations must not be allowed for everyone
+		// emit role BOreader if no token provided is bad as well: q.sys.State will be available without token is all locations
+		// we have a tool to append roles from subjects matched by login name -> need to emit sys.Guest principal login
 		desc: "allowed to sys.Guest login, i.e. without principal token at all",
 		pattern: PatternType{
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User, WSID: istructs.GuestWSID}}},
