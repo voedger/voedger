@@ -37,69 +37,60 @@ func (s *asyncActualizerContextState) error() error {
 	return s.err
 }
 
-// FIXME: should accept appdef.IProjector instead triggers.
-func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggers map[appdef.QName]appdef.OperationsSet, _ appdef.IAppDef, projQName appdef.QName) (ok bool) {
+// Returns is projector triggered by event
+func isAcceptable(prj appdef.IProjector, event istructs.IPLogEvent) (ok bool) {
 	defer func() {
 		if ok && logger.IsVerbose() {
-			logger.Verbose(fmt.Sprintf("projector %s is acceptable to event %s", projQName, event.QName()))
+			logger.Verbose(fmt.Sprintf("%v is triggered by %v", prj, event))
 		}
 	}()
+
 	switch event.QName() {
 	case istructs.QNameForError:
-		return wantErrors
+		return prj.WantErrors()
 	case istructs.QNameForCorruptedData:
 		return false
 	}
 
-	if len(triggers) == 0 {
-		return true //nnv: Suspicious
-	}
-
-	if ops, ok := triggers[event.QName()]; ok {
-		// Event QName is Command `ON EXECUTE`
-		if ops.Contains(appdef.OperationKind_Execute) {
-			return true
-		}
-		// Event QName is ODoc `ON EXECUTE WITH`
-		if ops.Contains(appdef.OperationKind_ExecuteWithParam) {
-			return true
+	if cmd := appdef.Command(prj.App().Type, event.QName()); cmd != nil {
+		if prj.Triggers(appdef.OperationKind_Execute, cmd) {
+			return true // ON EXECUTE <Command>
 		}
 	}
 
-	if ops, ok := triggers[event.ArgumentObject().QName()]; ok {
-		// Event Arg is ODoc or Object `ON EXECUTE WITH`
-		if ops.Contains(appdef.OperationKind_ExecuteWithParam) {
-			return true
+	if doc := appdef.ODoc(prj.App().Type, event.QName()); doc != nil {
+		if prj.Triggers(appdef.OperationKind_ExecuteWithParam, doc) {
+			return true // ON EXECUTE WITH <ODoc>
+		}
+		if prj.Triggers(appdef.OperationKind_Execute, doc) {
+			return true // ON EXECUTE <ODoc>
+		}
+	}
+
+	if arg := prj.App().Type(event.ArgumentObject().QName()); arg.Kind() != appdef.TypeKind_null {
+		if prj.Triggers(appdef.OperationKind_ExecuteWithParam, arg) {
+			return true // ON EXECUTE WITH <ODoc>; ON EXECUTE WITH <Object>
 		}
 	}
 
 	for rec := range event.CUDs {
-		if ops, ok := triggers[rec.QName()]; ok {
-			for op := range ops.Values() {
-				switch op {
-				case appdef.OperationKind_Insert:
-					if rec.IsNew() {
-						return true
+		t := prj.App().Type(rec.QName())
+		if t.Kind() != appdef.TypeKind_null {
+			if rec.IsNew() {
+				if prj.Triggers(appdef.OperationKind_Insert, t) {
+					return true // ON INSERT <Record>
+				}
+			} else {
+				if prj.Triggers(appdef.OperationKind_Update, t) {
+					return true // ON UPDATE <Record>
+				}
+				if rec.IsDeactivated() {
+					if prj.Triggers(appdef.OperationKind_Deactivate, t) {
+						return true // ON DEACTIVATE <Record>
 					}
-				case appdef.OperationKind_Update:
-					if !rec.IsNew() {
-						return true
-					}
-				case appdef.OperationKind_Activate:
-					if !rec.IsNew() {
-						for fieldName, newValue := range rec.ModifiedFields {
-							if fieldName == appdef.SystemField_IsActive && newValue.(bool) {
-								return true
-							}
-						}
-					}
-				case appdef.OperationKind_Deactivate:
-					if !rec.IsNew() {
-						for fieldName, newValue := range rec.ModifiedFields {
-							if fieldName == appdef.SystemField_IsActive && !newValue.(bool) {
-								return true
-							}
-						}
+				} else if rec.IsActivated() {
+					if prj.Triggers(appdef.OperationKind_Activate, t) {
+						return true // ON ACTIVATE <Record>
 					}
 				}
 			}
