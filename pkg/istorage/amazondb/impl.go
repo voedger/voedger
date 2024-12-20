@@ -53,6 +53,10 @@ func (d implIAppStorageFactory) Init(appName istorage.SafeAppName) error {
 	return nil
 }
 
+func (s *implIAppStorage) Type() istorage.StorageType {
+	return istorage.StorageTypeAmazonDynamoDB
+}
+
 func (s *implIAppStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
 	//TODO implement me
 	panic("implement me")

@@ -132,6 +132,10 @@ type appStorageType struct {
 	keyspace string
 }
 
+func (s *appStorageType) Type() istorage.StorageType {
+	return istorage.StorageTypeCassandra
+}
+
 func (s *appStorageType) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
 	q := fmt.Sprintf("insert into %s.values (p_key, c_col, value) values (?,?,?) using ? if not exists", s.keyspace)
 	m := make(map[string]interface{})

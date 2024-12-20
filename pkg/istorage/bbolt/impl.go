@@ -86,6 +86,10 @@ type appStorageType struct {
 	db *bolt.DB
 }
 
+func (s *appStorageType) Type() istorage.StorageType {
+	return istorage.StorageTypeBbolt
+}
+
 func (s *appStorageType) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
 	//TODO implement me
 	panic("implement me")

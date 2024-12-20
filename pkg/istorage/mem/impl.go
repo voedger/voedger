@@ -41,6 +41,10 @@ type appStorage struct {
 	testDelayPut time.Duration // used in tests only
 }
 
+func (s *appStorage) Type() istorage.StorageType {
+	return istorage.StorageTypeMem
+}
+
 func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, newValue []byte, ttlSeconds int) (ok bool, err error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()

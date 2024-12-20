@@ -41,6 +41,10 @@ type (
 	}
 )
 
+func (s *TestMemStorage) Type() istorage.StorageType {
+	return istorage.StorageTypeTestMem
+}
+
 func (s *TestMemStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
 	//TODO implement me
 	panic("implement me")

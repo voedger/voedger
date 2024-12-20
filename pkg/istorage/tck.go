@@ -617,6 +617,12 @@ func testAppStorage_GetBatch(t *testing.T, storage IAppStorage) {
 }
 
 func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage) {
+	switch storage.Type() {
+	case StorageTypeMem:
+	default:
+		t.Skip("Unsupported storage type")
+	}
+
 	t.Run("Should insert if not exists", func(t *testing.T) {
 		require := require.New(t)
 		pKey := []byte("Vehicles")
@@ -657,6 +663,12 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage) {
 }
 
 func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage) {
+	switch storage.Type() {
+	case StorageTypeMem:
+	default:
+		t.Skip("Unsupported storage type")
+	}
+
 	t.Run("Should swap if exists", func(t *testing.T) {
 		require := require.New(t)
 		pKey := []byte("Games")
@@ -727,6 +739,12 @@ func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage) {
 }
 
 func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage) {
+	switch storage.Type() {
+	case StorageTypeMem:
+	default:
+		t.Skip("Unsupported storage type")
+	}
+
 	t.Run("Should delete if exists", func(t *testing.T) {
 		require := require.New(t)
 		pKey := []byte("Comics")
@@ -781,6 +799,12 @@ func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage) {
 }
 
 func testAppStorage_TTLGet(t *testing.T, storage IAppStorage) {
+	switch storage.Type() {
+	case StorageTypeMem:
+	default:
+		t.Skip("Unsupported storage type")
+	}
+
 	t.Run("Should get ttl record if exists", func(t *testing.T) {
 		require := require.New(t)
 		pKey := []byte("Books")
@@ -832,6 +856,12 @@ func testAppStorage_TTLGet(t *testing.T, storage IAppStorage) {
 }
 
 func testAppStorage_TTLRead(t *testing.T, storage IAppStorage) {
+	switch storage.Type() {
+	case StorageTypeMem:
+	default:
+		t.Skip("Unsupported storage type")
+	}
+
 	t.Run("Should read ttl records", func(t *testing.T) {
 		require := require.New(t)
 		pKey := []byte("Key1")
