@@ -618,7 +618,7 @@ func testAppStorage_GetBatch(t *testing.T, storage IAppStorage) {
 
 }
 
-//nolint:revive
+//nolint:revive,goconst
 func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iSleeper coreutils.Sleeper) {
 	switch storageImplPkgPath(storage) {
 	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
@@ -671,7 +671,7 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iSleepe
 	})
 }
 
-//nolint:revive
+//nolint:revive,goconst
 func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage, iSleeper coreutils.Sleeper) {
 	switch storageImplPkgPath(storage) {
 	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
@@ -750,7 +750,7 @@ func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage, iSleeper c
 	})
 }
 
-//nolint:revive
+//nolint:revive,goconst
 func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage, iSleeper coreutils.Sleeper) {
 	switch storageImplPkgPath(storage) {
 	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
@@ -823,7 +823,7 @@ func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage, iSleeper
 	})
 }
 
-//nolint:revive
+//nolint:revive,goconst
 func testAppStorage_TTLGet(t *testing.T, storage IAppStorage, iSleeper coreutils.Sleeper) {
 	switch storageImplPkgPath(storage) {
 	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
@@ -882,7 +882,7 @@ func testAppStorage_TTLGet(t *testing.T, storage IAppStorage, iSleeper coreutils
 	})
 }
 
-//nolint:revive
+//nolint:revive,goconst
 func testAppStorage_TTLRead(t *testing.T, storage IAppStorage, iSleeper coreutils.Sleeper) {
 	switch storageImplPkgPath(storage) {
 	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
