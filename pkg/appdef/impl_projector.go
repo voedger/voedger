@@ -154,10 +154,9 @@ func (e projectorEvent) Ops() iter.Seq[OperationKind] { return e.ops.Values() }
 func (ev projectorEvent) validate(prj IProjector) (err error) {
 	cnt := 0
 	for t := range prj.Workspace().Types() {
-		if ev.flt.Match(t) {
-			cnt++
-			if !TypeKind_ProjectorTriggers.Contains(t.Kind()) {
-				err = errors.Join(err, ErrUnsupported("type %v can not trigger projector", t))
+		if TypeKind_ProjectorTriggers.Contains(t.Kind()) {
+			if ev.flt.Match(t) {
+				cnt++
 			}
 		}
 	}
