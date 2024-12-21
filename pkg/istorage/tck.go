@@ -7,6 +7,7 @@ package istorage
 import (
 	"context"
 	"errors"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"reflect"
 	"testing"
 	"time"
@@ -18,22 +19,22 @@ import (
 )
 
 // TechnologyCompatibilityKit test suit
-func TechnologyCompatibilityKit(t *testing.T, storageFactory IAppStorageFactory) {
+func TechnologyCompatibilityKit(t *testing.T, storageFactory IAppStorageFactory, iSleeper coreutils.Sleeper) {
 	testAppQName := appdef.NewAppQName("tcktest", uuid.NewString())
 	storage := testAppStorageFactory(t, storageFactory, testAppQName)
-	TechnologyCompatibilityKit_Storage(t, storage)
+	TechnologyCompatibilityKit_Storage(t, storage, iSleeper)
 }
 
 // need to test e.g. istoragecache
-func TechnologyCompatibilityKit_Storage(t *testing.T, storage IAppStorage) {
+func TechnologyCompatibilityKit_Storage(t *testing.T, storage IAppStorage, iSleeper coreutils.Sleeper) {
 	t.Run("TestAppStorage_GetPutRead", func(t *testing.T) { testAppStorage_GetPutRead(t, storage) })
 	t.Run("TestAppStorage_PutBatch", func(t *testing.T) { testAppStorage_PutBatch(t, storage) })
 	t.Run("TestAppStorage_GetBatch", func(t *testing.T) { testAppStorage_GetBatch(t, storage) })
-	t.Run("TestAppStorage_InsertIfNotExists", func(t *testing.T) { testAppStorage_InsertIfNotExists(t, storage) })
-	t.Run("TestAppStorage_CompareAndSwap", func(t *testing.T) { testAppStorage_CompareAndSwap(t, storage) })
-	t.Run("TestAppStorage_CompareAndDelete", func(t *testing.T) { testAppStorage_CompareAndDelete(t, storage) })
-	t.Run("TestAppStorage_TTLGet", func(t *testing.T) { testAppStorage_TTLGet(t, storage) })
-	t.Run("TestAppStorage_TTLRead", func(t *testing.T) { testAppStorage_TTLRead(t, storage) })
+	t.Run("TestAppStorage_InsertIfNotExists", func(t *testing.T) { testAppStorage_InsertIfNotExists(t, storage, iSleeper) })
+	t.Run("TestAppStorage_CompareAndSwap", func(t *testing.T) { testAppStorage_CompareAndSwap(t, storage, iSleeper) })
+	t.Run("TestAppStorage_CompareAndDelete", func(t *testing.T) { testAppStorage_CompareAndDelete(t, storage, iSleeper) })
+	t.Run("TestAppStorage_TTLGet", func(t *testing.T) { testAppStorage_TTLGet(t, storage, iSleeper) })
+	t.Run("TestAppStorage_TTLRead", func(t *testing.T) { testAppStorage_TTLRead(t, storage, iSleeper) })
 }
 
 func testAppStorageFactory(t *testing.T, sf IAppStorageFactory, testAppQName appdef.AppQName) IAppStorage {
@@ -617,10 +618,8 @@ func testAppStorage_GetBatch(t *testing.T, storage IAppStorage) {
 
 }
 
-// TODO: pass Waiter/Sleeper interface to imitate time.Sleep
-//
 //nolint:revive
-func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage) {
+func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iSleeper coreutils.Sleeper) {
 	switch storageImplPkgPath(storage) {
 	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
 	default:
@@ -633,7 +632,13 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage) {
 		ccols := []byte("Cars")
 		value := []byte("Toyota")
 
-		ok, err := storage.InsertIfNotExists(pKey, ccols, value, 2)
+		ok, err := storage.InsertIfNotExists(pKey, ccols, value, 1)
+		require.NoError(err)
+		require.True(ok)
+
+		iSleeper.Sleep(2 * time.Second)
+
+		ok, err = storage.InsertIfNotExists(pKey, ccols, value, 1)
 		require.NoError(err)
 		require.True(ok)
 
@@ -650,11 +655,11 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage) {
 		ccols := []byte("Non-alcohol")
 		value := []byte("Tea")
 
-		ok, err := storage.InsertIfNotExists(pKey, ccols, value, 2)
+		ok, err := storage.InsertIfNotExists(pKey, ccols, value, 1)
 		require.NoError(err)
 		require.True(ok)
 
-		ok, err = storage.InsertIfNotExists(pKey, ccols, value, 2)
+		ok, err = storage.InsertIfNotExists(pKey, ccols, value, 1)
 		require.NoError(err)
 		require.False(ok)
 
@@ -667,7 +672,7 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage) {
 }
 
 //nolint:revive
-func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage) {
+func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage, iSleeper coreutils.Sleeper) {
 	switch storageImplPkgPath(storage) {
 	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
 	default:
@@ -705,7 +710,8 @@ func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage) {
 		ok, err := storage.InsertIfNotExists(pKey, ccols, oldValue, 2)
 		require.NoError(err)
 		require.True(ok)
-		time.Sleep(3 * time.Second)
+
+		iSleeper.Sleep(3 * time.Second)
 
 		newValue := []byte("Olivier")
 		ok, err = storage.CompareAndSwap(pKey, ccols, oldValue, newValue, 2)
@@ -725,9 +731,10 @@ func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage) {
 		oldValue := []byte("An unexpected journey")
 
 		ok, err := storage.InsertIfNotExists(pKey, ccols, oldValue, 5)
-		time.Sleep(3 * time.Second)
 		require.NoError(err)
 		require.True(ok)
+
+		iSleeper.Sleep(3 * time.Second)
 
 		newValue := []byte("The desolation of Smaug")
 		anotherOneValue := []byte("The battle of the five armies")
@@ -744,7 +751,7 @@ func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage) {
 }
 
 //nolint:revive
-func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage) {
+func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage, iSleeper coreutils.Sleeper) {
 	switch storageImplPkgPath(storage) {
 	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
 	default:
@@ -780,7 +787,8 @@ func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage) {
 		ok, err := storage.InsertIfNotExists(pKey, ccols, oldValue, 1)
 		require.NoError(err)
 		require.True(ok)
-		time.Sleep(2 * time.Second)
+
+		iSleeper.Sleep(2 * time.Second)
 
 		ok, err = storage.CompareAndDelete(pKey, ccols, oldValue)
 		require.NoError(err)
@@ -801,7 +809,8 @@ func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage) {
 		ok, err := storage.InsertIfNotExists(pKey, ccols, oldValue, 2)
 		require.NoError(err)
 		require.True(ok)
-		time.Sleep(1 * time.Second)
+
+		iSleeper.Sleep(1 * time.Second)
 
 		newValue := []byte("Glock")
 		ok, err = storage.CompareAndDelete(pKey, ccols, newValue)
@@ -815,7 +824,7 @@ func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage) {
 }
 
 //nolint:revive
-func testAppStorage_TTLGet(t *testing.T, storage IAppStorage) {
+func testAppStorage_TTLGet(t *testing.T, storage IAppStorage, iSleeper coreutils.Sleeper) {
 	switch storageImplPkgPath(storage) {
 	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
 	default:
@@ -848,7 +857,7 @@ func testAppStorage_TTLGet(t *testing.T, storage IAppStorage) {
 		require.NoError(err)
 		require.True(ok)
 
-		time.Sleep(2 * time.Second)
+		iSleeper.Sleep(2 * time.Second)
 
 		data := make([]byte, 0)
 		ok, err = storage.TTLGet(pKey, ccols, &data)
@@ -874,7 +883,7 @@ func testAppStorage_TTLGet(t *testing.T, storage IAppStorage) {
 }
 
 //nolint:revive
-func testAppStorage_TTLRead(t *testing.T, storage IAppStorage) {
+func testAppStorage_TTLRead(t *testing.T, storage IAppStorage, iSleeper coreutils.Sleeper) {
 	switch storageImplPkgPath(storage) {
 	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
 	default:
@@ -900,7 +909,7 @@ func testAppStorage_TTLRead(t *testing.T, storage IAppStorage) {
 		require.NoError(err)
 		require.True(ok)
 
-		time.Sleep(1100 * time.Millisecond)
+		iSleeper.Sleep(1100 * time.Millisecond)
 
 		subjects := make([][]byte, 0)
 		data := make([]byte, 0)
@@ -931,7 +940,7 @@ func testAppStorage_TTLRead(t *testing.T, storage IAppStorage) {
 		require.NoError(err)
 		require.True(ok)
 
-		time.Sleep(1 * time.Second)
+		iSleeper.Sleep(1 * time.Second)
 
 		subjects := make([][]byte, 0)
 		data := make([]byte, 0)

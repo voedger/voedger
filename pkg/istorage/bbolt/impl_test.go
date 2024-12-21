@@ -7,6 +7,7 @@
 package bbolt
 
 import (
+	"github.com/voedger/voedger/pkg/coreutils"
 	"os"
 	"testing"
 
@@ -21,7 +22,7 @@ func TestBasicUsage(t *testing.T) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
 	factory := Provide(params)
-	istorage.TechnologyCompatibilityKit(t, factory)
+	istorage.TechnologyCompatibilityKit(t, factory, coreutils.NewRealTimeSleeper())
 }
 
 func Test_MyTestBasicUsage(t *testing.T) {

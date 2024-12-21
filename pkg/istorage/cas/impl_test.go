@@ -31,7 +31,7 @@ func TestBasicUsage(t *testing.T) {
 	}
 	asf, err := Provide(casPar)
 	require.NoError(t, err)
-	istorage.TechnologyCompatibilityKit(t, asf)
+	istorage.TechnologyCompatibilityKit(t, asf, coreutils.NewRealTimeSleeper())
 
 }
 
@@ -54,7 +54,7 @@ func TestMultipleApps(t *testing.T) {
 
 	testApp := func() {
 		defer wg.Done()
-		istorage.TechnologyCompatibilityKit(t, asf)
+		istorage.TechnologyCompatibilityKit(t, asf, coreutils.NewRealTimeSleeper())
 	}
 
 	for appNo := 0; appNo < appCount; appNo++ {

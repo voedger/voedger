@@ -7,6 +7,7 @@ package istoragecache
 import (
 	"context"
 	"errors"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -314,12 +315,13 @@ func TestAppStorage_GetBatch(t *testing.T) {
 }
 
 func TestTechnologyCompatibilityKit(t *testing.T) {
-	asf := mem.Provide()
+	mockSleeper := coreutils.NewMockTimeSleeper()
+	asf := mem.Provide(coreutils.MockTime, mockSleeper)
 	asp := istorageimpl.Provide(asf)
 	cachingStorageProvider := Provide(testCacheSize, asp, imetrics.Provide(), "vvm")
 	storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(t, err)
-	istorage.TechnologyCompatibilityKit_Storage(t, storage)
+	istorage.TechnologyCompatibilityKit_Storage(t, storage, mockSleeper)
 }
 
 func TestCacheNils(t *testing.T) {

@@ -16,7 +16,9 @@ import (
 )
 
 type appStorageFactory struct {
-	storages map[string]map[string]map[string][]byte
+	storages map[string]map[string]map[string]dataWithTTL
+	iTime    coreutils.ITime
+	iSleeper coreutils.Sleeper
 }
 
 func (s *appStorageFactory) AppStorage(appName istorage.SafeAppName) (istorage.IAppStorage, error) {
@@ -24,24 +26,31 @@ func (s *appStorageFactory) AppStorage(appName istorage.SafeAppName) (istorage.I
 	if !ok {
 		return nil, istorage.ErrStorageDoesNotExist
 	}
-	return &appStorage{storage: storage}, nil
+
+	return &appStorage{storage: storage, iTime: s.iTime, iSleeper: s.iSleeper}, nil
 }
 
 func (s *appStorageFactory) Init(appName istorage.SafeAppName) error {
 	if _, ok := s.storages[appName.String()]; ok {
 		return istorage.ErrStorageAlreadyExists
 	}
-	s.storages[appName.String()] = map[string]map[string][]byte{}
+	s.storages[appName.String()] = map[string]map[string]dataWithTTL{}
+
 	return nil
 }
 
-// TODO: pass iTime interface to appStorage
 type appStorage struct {
-	storage      map[string]map[string][]byte
+	storage      map[string]map[string]dataWithTTL
 	lock         sync.RWMutex
 	testDelayGet time.Duration // used in tests only
 	testDelayPut time.Duration // used in tests only
 	iTime        coreutils.ITime
+	iSleeper     coreutils.Sleeper
+}
+
+type dataWithTTL struct {
+	data     []byte
+	expireAt *time.Time
 }
 
 func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, newValue []byte, ttlSeconds int) (ok bool, err error) {
@@ -49,22 +58,29 @@ func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, newValue []byt
 	defer s.lock.Unlock()
 
 	if s.testDelayPut > 0 {
-		time.Sleep(s.testDelayPut)
+		s.iSleeper.Sleep(s.testDelayPut)
 	}
 
 	p := s.storage[string(pKey)]
 	if p == nil {
-		p = make(map[string][]byte)
+		p = make(map[string]dataWithTTL)
 		s.storage[string(pKey)] = p
 	}
 
-	oldValue := p[string(cCols)]
-	if bytes.Compare(copySlice(oldValue), newValue) == 0 {
+	now := s.iTime.Now()
+	data, ok := p[string(cCols)]
+	ttlExpired := data.expireAt != nil && !now.Before(*data.expireAt)
+
+	oldValue := p[string(cCols)].data
+	if !ttlExpired && bytes.Compare(copySlice(oldValue), newValue) == 0 {
 		return false, nil
 	}
 
-	p[string(cCols)] = copySlice(newValue)
-	s.deleteKeyAfter(pKey, cCols, ttlSeconds)
+	newExpireAt := now.Add(time.Duration(ttlSeconds) * time.Second)
+	p[string(cCols)] = dataWithTTL{
+		data:     copySlice(newValue),
+		expireAt: &newExpireAt,
+	}
 
 	return true, nil
 }
@@ -74,7 +90,7 @@ func (s *appStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValu
 	defer s.lock.Unlock()
 
 	if s.testDelayPut > 0 {
-		time.Sleep(s.testDelayPut)
+		s.iSleeper.Sleep(s.testDelayPut)
 	}
 
 	p, ok := s.storage[string(pKey)]
@@ -82,17 +98,23 @@ func (s *appStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValu
 		return false, nil
 	}
 
+	now := s.iTime.Now()
 	viewRecord, ok := p[string(cCols)]
 	if !ok {
 		return false, nil
 	}
 
-	currentValue := copySlice(viewRecord)
-	if bytes.Compare(currentValue, oldValue) == 0 {
+	ttlExpired := viewRecord.expireAt != nil && !now.Before(*viewRecord.expireAt)
+	currentValue := copySlice(viewRecord.data)
+	if !ttlExpired && bytes.Compare(currentValue, oldValue) == 0 {
 		ok = true
-		p[string(cCols)] = copySlice(newValue)
 
-		s.deleteKeyAfter(pKey, cCols, ttlSeconds)
+		newExpireAt := now.Add(time.Duration(ttlSeconds) * time.Second)
+		p[string(cCols)] = dataWithTTL{
+			data:     copySlice(newValue),
+			expireAt: &newExpireAt,
+		}
+
 		return
 	}
 
@@ -104,7 +126,7 @@ func (s *appStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue [
 	defer s.lock.Unlock()
 
 	if s.testDelayGet > 0 {
-		time.Sleep(s.testDelayGet)
+		s.iSleeper.Sleep(s.testDelayGet)
 	}
 
 	p, ok := s.storage[string(pKey)]
@@ -117,11 +139,14 @@ func (s *appStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue [
 		return
 	}
 
-	currentValue := copySlice(viewRecord)
-	if bytes.Compare(currentValue, expectedValue) == 0 {
+	now := s.iTime.Now()
+	ttlExpired := viewRecord.expireAt != nil && !now.Before(*viewRecord.expireAt)
+
+	currentValue := copySlice(viewRecord.data)
+	if !ttlExpired && bytes.Compare(currentValue, expectedValue) == 0 {
 		ok = true
 
-		delete(s.storage, string(pKey))
+		delete(s.storage[string(pKey)], string(cCols))
 		return
 	}
 
@@ -136,38 +161,31 @@ func (s *appStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finis
 	return s.Read(ctx, pKey, startCCols, finishCCols, cb)
 }
 
-// TODO: eliminate this method
-// TODO: save ttl record the same way as regular records, just ignore expired records in Read
-func (s *appStorage) deleteKeyAfter(pKey []byte, cCol []byte, ttlSeconds int) {
-	time.AfterFunc(time.Duration(ttlSeconds)*time.Second, func() {
-		s.lock.Lock()
-		defer s.lock.Unlock()
-
-		delete(s.storage[string(pKey)], string(cCol))
-	})
-}
-
 func (s *appStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
+
 	if s.testDelayPut > 0 {
-		time.Sleep(s.testDelayPut)
+		s.iSleeper.Sleep(s.testDelayPut)
 	}
+
 	p := s.storage[string(pKey)]
 	if p == nil {
-		p = make(map[string][]byte)
+		p = make(map[string]dataWithTTL)
 		s.storage[string(pKey)] = p
 	}
-	p[string(cCols)] = copySlice(value)
+	p[string(cCols)] = dataWithTTL{data: copySlice(value)}
+
 	return
 }
 
 func (s *appStorage) PutBatch(items []istorage.BatchItem) (err error) {
 	s.lock.Lock()
 	if s.testDelayPut > 0 {
-		time.Sleep(s.testDelayPut)
+		s.iSleeper.Sleep(s.testDelayPut)
 		tmpDelayPut := s.testDelayPut
 		s.testDelayPut = 0
+
 		defer func() {
 			s.lock.Lock()
 			s.testDelayPut = tmpDelayPut
@@ -175,20 +193,30 @@ func (s *appStorage) PutBatch(items []istorage.BatchItem) (err error) {
 		}()
 	}
 	s.lock.Unlock()
+
 	for _, item := range items {
 		if err = s.Put(item.PKey, item.CCols, item.Value); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
-func (s *appStorage) readPartSort(ctx context.Context, part map[string][]byte, startCCols, finishCCols []byte) (sortKeys []string) {
+func (s *appStorage) readPartSort(ctx context.Context, part map[string]dataWithTTL, startCCols, finishCCols []byte) (sortKeys []string) {
 	sortKeys = make([]string, 0)
 	for col := range part {
 		if ctx.Err() != nil {
 			return nil
 		}
+
+		now := s.iTime.Now()
+		ttlExpired := part[col].expireAt != nil && !now.Before(*part[col].expireAt)
+		// skip expired records
+		if ttlExpired {
+			continue
+		}
+
 		if len(startCCols) > 0 {
 			if bytes.Compare(startCCols, []byte(col)) > 0 {
 				continue
@@ -202,6 +230,7 @@ func (s *appStorage) readPartSort(ctx context.Context, part map[string][]byte, s
 		sortKeys = append(sortKeys, col)
 	}
 	sort.Strings(sortKeys)
+
 	return sortKeys
 }
 
@@ -209,7 +238,7 @@ func (s *appStorage) readPart(ctx context.Context, pKey []byte, startCCols, fini
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 	var (
-		v  map[string][]byte
+		v  map[string]dataWithTTL
 		ok bool
 	)
 	if v, ok = s.storage[string(pKey)]; !ok {
@@ -228,7 +257,7 @@ func (s *appStorage) readPart(ctx context.Context, pKey []byte, startCCols, fini
 			return nil, nil
 		}
 		cCols = append(cCols, copySlice([]byte(col)))
-		values = append(values, copySlice(v[col]))
+		values = append(values, copySlice(v[col].data))
 	}
 
 	return cCols, values
@@ -257,25 +286,37 @@ func (s *appStorage) Read(ctx context.Context, pKey []byte, startCCols, finishCC
 func (s *appStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
+
 	if s.testDelayGet > 0 {
-		time.Sleep(s.testDelayGet)
+		s.iSleeper.Sleep(s.testDelayGet)
 	}
+
 	p, ok := s.storage[string(pKey)]
 	if !ok {
 		return
 	}
+
 	viewRecord, ok := p[string(cCols)]
 	if !ok {
 		return
 	}
-	*data = append((*data)[0:0], copySlice(viewRecord)...)
+
+	now := s.iTime.Now()
+	ttlExpired := viewRecord.expireAt != nil && !now.Before(*viewRecord.expireAt)
+	// skip expired records
+	if ttlExpired {
+		return false, nil
+	}
+
+	*data = append((*data)[0:0], copySlice(viewRecord.data)...)
+
 	return
 }
 
 func (s *appStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) (err error) {
 	s.lock.Lock()
 	if s.testDelayGet > 0 {
-		time.Sleep(s.testDelayGet)
+		s.iSleeper.Sleep(s.testDelayGet)
 		tmpDelayGet := s.testDelayGet
 		s.testDelayGet = 0
 		defer func() {
@@ -285,12 +326,14 @@ func (s *appStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) (err e
 		}()
 	}
 	s.lock.Unlock()
+
 	for i := range items {
 		items[i].Ok, err = s.Get(pKey, items[i].CCols, items[i].Data)
 		if err != nil {
 			return
 		}
 	}
+
 	return
 }
 

@@ -5,11 +5,12 @@
 package mem
 
 import (
-	"testing"
-
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage"
+	"testing"
 )
 
 func TestMemTCK(t *testing.T) {
-	istorage.TechnologyCompatibilityKit(t, Provide())
+	mockSleeper := coreutils.NewMockTimeSleeper()
+	istorage.TechnologyCompatibilityKit(t, Provide(coreutils.MockTime, mockSleeper), mockSleeper)
 }

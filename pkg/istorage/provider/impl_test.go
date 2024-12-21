@@ -5,6 +5,7 @@
 package provider
 
 import (
+	"github.com/voedger/voedger/pkg/coreutils"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -16,7 +17,7 @@ import (
 
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
-	asf := mem.Provide()
+	asf := mem.Provide(coreutils.MockTime, coreutils.NewMockTimeSleeper())
 	asp := Provide(asf)
 
 	app1 := appdef.NewAppQName("sys", "_") // SafeAppName is "sys"
@@ -61,7 +62,7 @@ func TestBasicUsage(t *testing.T) {
 
 func TestInitErrorPersistence(t *testing.T) {
 	require := require.New(t)
-	asf := mem.Provide()
+	asf := mem.Provide(coreutils.MockTime, coreutils.NewMockTimeSleeper())
 	asp := Provide(asf)
 
 	app1 := appdef.NewAppQName("sys", "_")

@@ -55,7 +55,7 @@ func NewVVMDefaultConfig() VVMConfig {
 		MetricsServicePort:   DefaultMetricsServicePort,
 		StorageFactory: func() (provider istorage.IAppStorageFactory, err error) {
 			logger.Info("using istoragemem")
-			return mem.Provide(), nil
+			return mem.Provide(coreutils.MockTime, coreutils.NewMockTimeSleeper()), nil
 		},
 		SecretsReader: isecretsimpl.ProvideSecretReader(),
 	}
