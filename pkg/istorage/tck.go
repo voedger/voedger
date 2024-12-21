@@ -7,7 +7,6 @@ package istorage
 import (
 	"context"
 	"errors"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"reflect"
 	"testing"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 // TechnologyCompatibilityKit test suit
