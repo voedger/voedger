@@ -112,7 +112,7 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 		prj := wsb.AddProjector(prj1name)
 		prj.Events().Add(
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
-			filter.Types(wsName, appdef.TypeKind_Command))
+			filter.WSTypes(wsName, appdef.TypeKind_Command))
 		prj.SetSync(false)
 
 		job := wsb.AddJob(job1name)
@@ -203,7 +203,7 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 			prj := wsb.AddProjector(prj2name)
 			prj.Events().Add(
 				[]appdef.OperationKind{appdef.OperationKind_Execute},
-				filter.Types(wsName, appdef.TypeKind_Command))
+				filter.WSTypes(wsName, appdef.TypeKind_Command))
 			prj.SetSync(false)
 
 			job := wsb.AddJob(job2name)

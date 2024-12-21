@@ -33,7 +33,7 @@ func TestActualizersWaitTimeout(t *testing.T) {
 			prj := wsb.AddProjector(name)
 			prj.Events().Add(
 				[]appdef.OperationKind{appdef.OperationKind_Execute},
-				filter.Types(wsName, appdef.TypeKind_Command))
+				filter.WSTypes(wsName, appdef.TypeKind_Command))
 			prj.SetSync(false)
 		}
 		return adb.MustBuild()

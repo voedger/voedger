@@ -38,7 +38,7 @@ func TestProcessorKind_CompatibleWithExtension(t *testing.T) {
 		p1 := wsb.AddProjector(syncPrj)
 		p1.Events().Add(
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
-			filter.Types(wsName, appdef.TypeKind_Command))
+			filter.WSTypes(wsName, appdef.TypeKind_Command))
 		p1.SetSync(true)
 		p1.States().Add(sys.Storage_Record, appdef.QNameAnyRecord)
 		p1.Intents().Add(sys.Storage_View, appdef.QNameAnyView)
@@ -46,7 +46,7 @@ func TestProcessorKind_CompatibleWithExtension(t *testing.T) {
 		p2 := wsb.AddProjector(asyncPrj)
 		p2.Events().Add(
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
-			filter.Types(wsName, appdef.TypeKind_Command))
+			filter.WSTypes(wsName, appdef.TypeKind_Command))
 		p2.SetSync(false)
 		p2.States().Add(sys.Storage_Record, appdef.QNameAnyRecord)
 		p2.Intents().Add(sys.Storage_View, appdef.QNameAnyView)

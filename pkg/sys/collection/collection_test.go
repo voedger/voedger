@@ -81,7 +81,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		prj.SetSync(true).
 			Events().Add(
 			[]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update},
-			filter.Types(wsName, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord))
+			filter.WSTypes(wsName, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord))
 		prj.Intents().
 			Add(sys.Storage_View, QNameCollectionView) // this view will be added below
 	}

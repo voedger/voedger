@@ -56,7 +56,7 @@ func Test_ProjectorEvent(t *testing.T) {
 
 	newProjectorOnAll := func(wantErrors bool) appdef.IProjector {
 		types := appdef.TypeKind_ProjectorTriggers.AsArray()
-		return newProjector(appdef.ProjectorOperations, filter.Types(wsName, types[0], types[1:]...), wantErrors)
+		return newProjector(appdef.ProjectorOperations, filter.WSTypes(wsName, types[0], types[1:]...), wantErrors)
 	}
 
 	newEvent := func(eventQName, eventArgsQName appdef.QName, cuds map[appdef.QName]cud) istructs.IPLogEvent {
@@ -109,7 +109,7 @@ func Test_ProjectorEvent(t *testing.T) {
 		},
 		{
 			name: "projector ON EXECUTE ALL COMMANDS",
-			prj:  newProjector(set.From(appdef.OperationKind_Execute), filter.Types(wsName, appdef.TypeKind_Command), false),
+			prj:  newProjector(set.From(appdef.OperationKind_Execute), filter.WSTypes(wsName, appdef.TypeKind_Command), false),
 			events: []testEvent{
 				{"accept my.command", newEvent(cmdName, appdef.NullQName, nil), true},
 				{"accept sys.CUD", newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil), true},
@@ -118,7 +118,7 @@ func Test_ProjectorEvent(t *testing.T) {
 		},
 		{
 			name: "projector ON EXECUTE ALL QUERIES",
-			prj:  newProjector(set.From(appdef.OperationKind_Execute), filter.Types(wsName, appdef.TypeKind_Query), false),
+			prj:  newProjector(set.From(appdef.OperationKind_Execute), filter.WSTypes(wsName, appdef.TypeKind_Query), false),
 			events: []testEvent{
 				{"reject my.command", newEvent(cmdName, appdef.NullQName, nil), false}, // not a query
 			},
@@ -163,7 +163,7 @@ func Test_ProjectorEvent(t *testing.T) {
 		},
 		{
 			name: "projector AFTER INSERT ALL CDocs",
-			prj:  newProjector(set.From(appdef.OperationKind_Insert), filter.Types(wsName, appdef.TypeKind_CDoc), false),
+			prj:  newProjector(set.From(appdef.OperationKind_Insert), filter.WSTypes(wsName, appdef.TypeKind_CDoc), false),
 			events: []testEvent{
 				{"accept insert my.CDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
@@ -200,7 +200,7 @@ func Test_ProjectorEvent(t *testing.T) {
 		},
 		{
 			name: "projector AFTER UPDATE ALL CDocs",
-			prj:  newProjector(set.From(appdef.OperationKind_Update), filter.Types(wsName, appdef.TypeKind_CDoc), false),
+			prj:  newProjector(set.From(appdef.OperationKind_Update), filter.WSTypes(wsName, appdef.TypeKind_CDoc), false),
 			events: []testEvent{
 				{"accept update my.CDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
@@ -238,7 +238,7 @@ func Test_ProjectorEvent(t *testing.T) {
 		},
 		{
 			name: "projector AFTER INSERT OR UPDATE ALL CDocs",
-			prj:  newProjector(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update), filter.Types(wsName, appdef.TypeKind_CDoc), false),
+			prj:  newProjector(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update), filter.WSTypes(wsName, appdef.TypeKind_CDoc), false),
 			events: []testEvent{
 				{"accept insert my.CDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
@@ -314,7 +314,7 @@ func Test_ProjectorEvent(t *testing.T) {
 		},
 		{
 			name: "projector AFTER ACTIVATE OR DEACTIVATE ALL CDoc",
-			prj:  newProjector(set.From(appdef.OperationKind_Activate, appdef.OperationKind_Deactivate), filter.Types(wsName, appdef.TypeKind_CDoc), false),
+			prj:  newProjector(set.From(appdef.OperationKind_Activate, appdef.OperationKind_Deactivate), filter.WSTypes(wsName, appdef.TypeKind_CDoc), false),
 			events: []testEvent{
 				{"accept activate my.CDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{

@@ -53,7 +53,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 		_ = wsb.AddRole(reader)
 		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Select},
-			filter.And(filter.Types(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
+			filter.And(filter.WSTypes(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
 			nil,
 			reader,
 			"grant select any CDoc with tag to reader")
@@ -73,7 +73,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 		_ = wsb.AddRole(writer)
 		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Insert},
-			filter.And(filter.Types(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
+			filter.And(filter.WSTypes(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
 			nil,
 			writer,
 			"grant insert any CDoc with tag to writer")
@@ -98,7 +98,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 
 		_ = wsb.AddRole(intruder)
 		wsb.RevokeAll(
-			filter.Types(wsName, appdef.TypeKind_CDoc),
+			filter.WSTypes(wsName, appdef.TypeKind_CDoc),
 			intruder,
 			"revoke all access to CDocs from intruder")
 		wsb.RevokeAll(

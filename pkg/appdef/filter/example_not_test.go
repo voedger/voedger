@@ -47,7 +47,7 @@ func ExampleNot() {
 		fmt.Println()
 	}
 
-	example(filter.Not(filter.Types(wsName, appdef.TypeKind_Command)))
+	example(filter.Not(filter.WSTypes(wsName, appdef.TypeKind_Command)))
 	example(filter.Not(filter.Or(filter.QNames(doc), filter.QNames(obj))))
 
 	// Output:

@@ -12,8 +12,8 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
-func ExampleTypes() {
-	fmt.Println("This example demonstrates how to work with the Types filter")
+func ExampleWSTypes() {
+	fmt.Println("This example demonstrates how to work with the WSTypes filter")
 	fmt.Println()
 
 	wsName := appdef.NewQName("test", "workspace")
@@ -50,11 +50,11 @@ func ExampleTypes() {
 		fmt.Println()
 	}
 
-	example(filter.Types(wsName, appdef.TypeKind_ODoc, appdef.TypeKind_Object))
-	example(filter.Types(wsName, appdef.TypeKind_Query))
+	example(filter.WSTypes(wsName, appdef.TypeKind_ODoc, appdef.TypeKind_Object))
+	example(filter.WSTypes(wsName, appdef.TypeKind_Query))
 
 	// Output:
-	// This example demonstrates how to work with the Types filter
+	// This example demonstrates how to work with the WSTypes filter
 	//
 	// TYPES(ODoc, Object) FROM test.workspace
 	// - kind: FilterKind_Types

@@ -52,14 +52,14 @@ func ExampleOr() {
 
 	example(
 		filter.Or(
-			filter.Types(wsName, appdef.TypeKind_ODoc),
+			filter.WSTypes(wsName, appdef.TypeKind_ODoc),
 			filter.Tags(tag)))
 
 	example(
 		filter.Or(
 			filter.QNames(doc),
 			filter.And(
-				filter.Types(wsName, appdef.TypeKind_Object),
+				filter.WSTypes(wsName, appdef.TypeKind_Object),
 				filter.Tags(tag))))
 
 	// Output:

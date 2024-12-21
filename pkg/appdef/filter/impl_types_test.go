@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
-func Test_Types(t *testing.T) {
+func Test_WSTypes(t *testing.T) {
 	require := require.New(t)
 
 	wsName := appdef.NewQName("test", "workspace")
@@ -33,7 +33,7 @@ func Test_Types(t *testing.T) {
 		return app
 	}()
 
-	flt := filter.Types(wsName, appdef.TypeKind_Data)
+	flt := filter.WSTypes(wsName, appdef.TypeKind_Data)
 
 	ws := app.Workspace(wsName)
 
@@ -45,8 +45,12 @@ func Test_Types(t *testing.T) {
 	require.NotNil(sysInt32, "system sys.Int32 should be found")
 	require.False(flt.Match(sysInt32), "system data should not be matched")
 
-	t.Run("should test filter with no workspace", func(t *testing.T) {
-		flt := filter.Types(appdef.NullQName, appdef.TypeKind_Data)
-		require.True(flt.Match(sysInt32), "system data should be matched")
+	t.Run("should be panics", func(t *testing.T) {
+		require.Panics(func() {
+			_ = filter.WSTypes(appdef.NullQName, appdef.TypeKind_Data)
+		}, "if workspace name is null")
+		require.Panics(func() {
+			_ = filter.WSTypes(wsName)
+		}, "if no type kinds are provided")
 	})
 }

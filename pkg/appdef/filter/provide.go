@@ -17,11 +17,10 @@ func Tags(tag appdef.QName, tags ...appdef.QName) appdef.IFilter {
 	return makeTagsFilter(tag, tags...)
 }
 
-// Types is a filter that matches types by their kind.
-//
-// If workspace is not empty, then matched types should be located in the specified workspace.
-func Types(ws appdef.QName, t appdef.TypeKind, tt ...appdef.TypeKind) appdef.IFilter {
-	return makeTypesFilter(ws, t, tt...)
+// WSTypes is a filter that matches types by their kind.
+// Matched types should be located in the specified workspace.
+func WSTypes(ws appdef.QName, tt ...appdef.TypeKind) appdef.IFilter {
+	return makeWSTypesFilter(ws, tt...)
 }
 
 // And returns a filter that matches types that match all children filters.
@@ -44,12 +43,10 @@ func True() appdef.IFilter { return trueFlt }
 
 // AllTables returns a filter that matches all structured types from workspace, see appdef.TypeKind_Structures
 func AllTables(ws appdef.QName) appdef.IFilter {
-	s := appdef.TypeKind_Structures.AsArray()
-	return makeTypesFilter(ws, s[0], s[1:]...)
+	return makeWSTypesFilter(ws, appdef.TypeKind_Structures.AsArray()...)
 }
 
 // AllFunctions returns a filter that matches all functions types from workspace, see appdef.TypeKind_Functions
 func AllFunctions(ws appdef.QName) appdef.IFilter {
-	f := appdef.TypeKind_Functions.AsArray()
-	return makeTypesFilter(ws, f[0], f[1:]...)
+	return makeWSTypesFilter(ws, appdef.TypeKind_Functions.AsArray()...)
 }

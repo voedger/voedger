@@ -50,14 +50,14 @@ func Example() {
 		filter.And(
 			filter.QNames(doc, obj),
 			filter.Or(
-				filter.Types(wsName, appdef.TypeKind_Command),
+				filter.WSTypes(wsName, appdef.TypeKind_Command),
 				filter.Tags(tag))))
 
 	example(
 		filter.Or(
 			filter.QNames(doc),
 			filter.And(
-				filter.Types(wsName, appdef.TypeKind_Object),
+				filter.WSTypes(wsName, appdef.TypeKind_Object),
 				filter.Not(
 					filter.Tags(tag)))))
 
