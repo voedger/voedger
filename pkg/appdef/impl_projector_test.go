@@ -231,6 +231,15 @@ func Test_AppDef_AddProjector(t *testing.T) {
 						}
 					}
 					require.Equal(2, cnt)
+
+					t.Run("should be ok to break enum events", func(t *testing.T) {
+						cnt := 0
+						for range prj.Events() {
+							cnt++
+							break
+						}
+						require.Equal(1, cnt)
+					})
 				})
 
 				require.Empty(prj.States().Map())
@@ -314,6 +323,22 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			prj := wsb.AddProjector(prjRecName)
 			require.Panics(func() { prj.SetName("naked 🔫") },
 				require.Is(appdef.ErrInvalidError), require.Has("naked 🔫"))
+		})
+
+		t.Run("if invalid events", func(t *testing.T) {
+			adb := appdef.New()
+			adb.AddPackage("test", "test.com/test")
+			wsb := adb.AddWorkspace(wsName)
+			prj := wsb.AddProjector(prjRecName)
+			require.Panics(func() {
+				prj.Events().Add(
+					[]appdef.OperationKind{appdef.OperationKind_Inherits}, // <-- invalid operation
+					filter.True())
+			}, require.Is(appdef.ErrUnsupportedError), require.HasAll("operations", "Inherits"))
+			require.Panics(func() {
+				prj.Events().Add([]appdef.OperationKind{appdef.OperationKind_Execute},
+					nil) // <-- missed filter
+			}, require.Is(appdef.ErrMissedError), require.Has("filter"))
 		})
 
 		t.Run("if invalid states", func(t *testing.T) {
