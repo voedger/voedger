@@ -56,7 +56,7 @@ func Test_ProjectorEvent(t *testing.T) {
 
 	newProjectorOnAll := func(wantErrors bool) appdef.IProjector {
 		types := appdef.TypeKind_ProjectorTriggers.AsArray()
-		return newProjector(appdef.ProjectorOperations, filter.WSTypes(wsName, types[0], types[1:]...), wantErrors)
+		return newProjector(appdef.ProjectorOperations, filter.WSTypes(wsName, types...), wantErrors)
 	}
 
 	newEvent := func(eventQName, eventArgsQName appdef.QName, cuds map[appdef.QName]cud) istructs.IPLogEvent {
