@@ -41,11 +41,6 @@ func (f wsTypesFilter) Match(t appdef.IType) bool {
 	if !f.types.Contains(t.Kind()) {
 		return false
 	}
-
-	if f.ws == appdef.NullQName {
-		return true
-	}
-
 	ws := t.Workspace()
 	return (ws != nil) && (ws.QName() == f.ws)
 }
