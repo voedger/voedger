@@ -550,7 +550,7 @@ func (gts *generalTestState) buildAppDef() {
 		}
 	}
 
-	asf := mem.Provide(coreutils.MockTime, coreutils.NewMockTimeSleeper())
+	asf := mem.Provide(coreutils.MockTime)
 	storageProvider := istorageimpl.Provide(asf)
 	prov := istructsmem.Provide(
 		cfgs,

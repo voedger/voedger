@@ -48,7 +48,7 @@ func Example() {
 		appConfigs,
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
-		provider.Provide(mem.Provide(coreutils.MockTime, coreutils.NewMockTimeSleeper()), ""))
+		provider.Provide(mem.Provide(coreutils.MockTime), ""))
 
 	appParts, cleanupParts, err := appparts.New(appStructs)
 	if err != nil {

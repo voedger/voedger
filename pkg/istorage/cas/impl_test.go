@@ -21,7 +21,7 @@ const casDefaultHost = "127.0.0.1"
 
 func TestBasicUsage(t *testing.T) {
 	if !coreutils.IsCassandraStorage() {
-		t.Skip()
+		// t.Skip()
 	}
 	casPar := CassandraParamsType{
 		Hosts:                   hosts(),
@@ -31,7 +31,7 @@ func TestBasicUsage(t *testing.T) {
 	}
 	asf, err := Provide(casPar)
 	require.NoError(t, err)
-	istorage.TechnologyCompatibilityKit(t, asf, coreutils.NewRealTimeSleeper())
+	istorage.TechnologyCompatibilityKit(t, asf)
 
 }
 
@@ -54,7 +54,7 @@ func TestMultipleApps(t *testing.T) {
 
 	testApp := func() {
 		defer wg.Done()
-		istorage.TechnologyCompatibilityKit(t, asf, coreutils.NewRealTimeSleeper())
+		istorage.TechnologyCompatibilityKit(t, asf)
 	}
 
 	for appNo := 0; appNo < appCount; appNo++ {

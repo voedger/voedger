@@ -53,7 +53,7 @@ func NewAppStorageFactory(params CLIParams) (istorage.IAppStorageFactory, error)
 		casParams.Hosts = "db-node-1,db-node-2,db-node-3"
 		casParams.KeyspaceWithReplication = cas3ReplicationStrategy
 	case storageTypeMem:
-		return mem.Provide(coreutils.MockTime, coreutils.NewMockTimeSleeper()), nil
+		return mem.Provide(coreutils.MockTime), nil
 	default:
 		return nil, errors.New("unable to define replication strategy")
 	}

@@ -12,7 +12,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -22,7 +21,7 @@ func TestBasicUsage(t *testing.T) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
 	factory := Provide(params)
-	istorage.TechnologyCompatibilityKit(t, factory, coreutils.NewRealTimeSleeper())
+	istorage.TechnologyCompatibilityKit(t, factory)
 }
 
 func Test_MyTestBasicUsage(t *testing.T) {

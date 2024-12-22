@@ -414,7 +414,7 @@ func test() *testDataType {
 
 		var err error
 
-		testData.StorageProvider = istorageimpl.Provide(mem.Provide(coreutils.MockTime, coreutils.NewMockTimeSleeper()))
+		testData.StorageProvider = istorageimpl.Provide(mem.Provide(coreutils.MockTime))
 
 		testData.AppStructsProvider = Provide(testData.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), testData.StorageProvider)
 		testData.AppStructs, err = testData.AppStructsProvider.BuiltIn(testData.appName)

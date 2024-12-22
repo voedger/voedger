@@ -123,7 +123,7 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 func TestAppConfigsType_GetConfig(t *testing.T) {
 	require := require.New(t)
 
-	asf := mem.Provide(coreutils.MockTime, coreutils.NewMockTimeSleeper())
+	asf := mem.Provide(coreutils.MockTime)
 	storages := istorageimpl.Provide(asf)
 
 	cfgs := make(AppConfigsType)

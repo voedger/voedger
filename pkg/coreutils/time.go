@@ -13,6 +13,7 @@ import (
 type ITime interface {
 	Now() time.Time
 	NewTimerChan(d time.Duration) <-chan time.Time
+	Sleep(d time.Duration)
 }
 
 // MockTime must be a global var to avoid case when different times could be used in tests.
@@ -51,6 +52,10 @@ func (t *realTime) NewTimerChan(d time.Duration) <-chan time.Time {
 	return res.C
 }
 
+func (t *realTime) Sleep(d time.Duration) {
+	time.Sleep(d)
+}
+
 func (t *mockedTime) Now() time.Time {
 	t.RLock()
 	defer t.RUnlock()
@@ -80,6 +85,10 @@ func (t *mockedTime) Add(d time.Duration) {
 	t.checkTimers()
 }
 
+func (t *mockedTime) Sleep(d time.Duration) {
+	t.Add(d)
+}
+
 func (t *mockedTime) checkTimers() {
 	for timer := range t.timers {
 		if t.now.Equal(timer.expiration) || t.now.After(timer.expiration) {
@@ -87,28 +96,4 @@ func (t *mockedTime) checkTimers() {
 			delete(t.timers, timer)
 		}
 	}
-}
-
-type Sleeper interface {
-	Sleep(d time.Duration)
-}
-
-type realTimeSleeper struct{}
-
-func NewRealTimeSleeper() Sleeper {
-	return &realTimeSleeper{}
-}
-
-func (r *realTimeSleeper) Sleep(d time.Duration) {
-	time.Sleep(d)
-}
-
-type mockTimeSleeper struct{}
-
-func NewMockTimeSleeper() Sleeper {
-	return &mockTimeSleeper{}
-}
-
-func (m *mockTimeSleeper) Sleep(d time.Duration) {
-	MockTime.Add(d)
 }

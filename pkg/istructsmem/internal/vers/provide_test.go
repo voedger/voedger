@@ -17,7 +17,7 @@ import (
 )
 
 func Test_BasicUsage(t *testing.T) {
-	sp := istorageimpl.Provide(mem.Provide(coreutils.MockTime, coreutils.NewMockTimeSleeper()))
+	sp := istorageimpl.Provide(mem.Provide(coreutils.MockTime))
 	storage, err := sp.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(t, err)
 

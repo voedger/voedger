@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 // Same as IAppStructsProvider, called per request or frequently inside services
@@ -29,6 +30,9 @@ type IAppStorageFactory interface {
 	// creates new storage
 	// returns ErrStorageExistsAlready
 	Init(appName SafeAppName) error
+
+	// used by TCK in tests
+	Time() coreutils.ITime
 }
 
 type IAppStorage interface {

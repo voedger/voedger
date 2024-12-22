@@ -34,7 +34,7 @@ import (
 
 func TestBoostrap_BasicUsage(t *testing.T) {
 	require := require.New(t)
-	memStorage := mem.Provide(coreutils.MockTime, coreutils.NewMockTimeSleeper())
+	memStorage := mem.Provide(coreutils.MockTime)
 
 	// launch the VVM with an app with a certain NumParts and NumAppWorkspaces
 	numParts := istructs.NumAppPartitions(42)

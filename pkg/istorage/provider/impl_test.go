@@ -17,7 +17,7 @@ import (
 
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
-	asf := mem.Provide(coreutils.MockTime, coreutils.NewMockTimeSleeper())
+	asf := mem.Provide(coreutils.MockTime)
 	asp := Provide(asf)
 
 	app1 := appdef.NewAppQName("sys", "_") // SafeAppName is "sys"
@@ -62,7 +62,7 @@ func TestBasicUsage(t *testing.T) {
 
 func TestInitErrorPersistence(t *testing.T) {
 	require := require.New(t)
-	asf := mem.Provide(coreutils.MockTime, coreutils.NewMockTimeSleeper())
+	asf := mem.Provide(coreutils.MockTime)
 	asp := Provide(asf)
 
 	app1 := appdef.NewAppQName("sys", "_")

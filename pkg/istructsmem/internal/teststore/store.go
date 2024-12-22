@@ -89,7 +89,7 @@ func NewStorageProvider(ts *TestMemStorage) istorage.IAppStorageProvider {
 // Returns new test storage
 func NewStorage(appName appdef.AppQName) *TestMemStorage {
 	s := &TestMemStorage{name: appName, get: scheduleStorageError{}, put: scheduleStorageError{}}
-	asf := mem.Provide(coreutils.MockTime, coreutils.NewMockTimeSleeper())
+	asf := mem.Provide(coreutils.MockTime)
 	sp := provider.Provide(asf)
 	var err error
 	if s.storage, err = sp.AppStorage(appName); err != nil {

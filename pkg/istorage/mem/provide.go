@@ -9,10 +9,9 @@ import (
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
-func Provide(iTime coreutils.ITime, iSleeper coreutils.Sleeper) istorage.IAppStorageFactory {
+func Provide(iTime coreutils.ITime) istorage.IAppStorageFactory {
 	return &appStorageFactory{
 		storages: map[string]map[string]map[string]dataWithTTL{},
 		iTime:    iTime,
-		iSleeper: iSleeper,
 	}
 }

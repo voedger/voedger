@@ -12,6 +12,5 @@ import (
 )
 
 func TestMemTCK(t *testing.T) {
-	mockSleeper := coreutils.NewMockTimeSleeper()
-	istorage.TechnologyCompatibilityKit(t, Provide(coreutils.MockTime, mockSleeper), mockSleeper)
+	istorage.TechnologyCompatibilityKit(t, Provide(coreutils.MockTime))
 }

@@ -18,7 +18,6 @@ import (
 type appStorageFactory struct {
 	storages map[string]map[string]map[string]dataWithTTL
 	iTime    coreutils.ITime
-	iSleeper coreutils.Sleeper
 }
 
 func (s *appStorageFactory) AppStorage(appName istorage.SafeAppName) (istorage.IAppStorage, error) {
@@ -27,7 +26,7 @@ func (s *appStorageFactory) AppStorage(appName istorage.SafeAppName) (istorage.I
 		return nil, istorage.ErrStorageDoesNotExist
 	}
 
-	return &appStorage{storage: storage, iTime: s.iTime, iSleeper: s.iSleeper}, nil
+	return &appStorage{storage: storage, iTime: s.iTime}, nil
 }
 
 func (s *appStorageFactory) Init(appName istorage.SafeAppName) error {
@@ -39,13 +38,16 @@ func (s *appStorageFactory) Init(appName istorage.SafeAppName) error {
 	return nil
 }
 
+func (s *appStorageFactory) Time() coreutils.ITime {
+	return s.iTime
+}
+
 type appStorage struct {
 	storage      map[string]map[string]dataWithTTL
 	lock         sync.RWMutex
 	testDelayGet time.Duration // used in tests only
 	testDelayPut time.Duration // used in tests only
 	iTime        coreutils.ITime
-	iSleeper     coreutils.Sleeper
 }
 
 type dataWithTTL struct {
@@ -58,7 +60,7 @@ func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, newValue []byt
 	defer s.lock.Unlock()
 
 	if s.testDelayPut > 0 {
-		s.iSleeper.Sleep(s.testDelayPut)
+		time.Sleep(s.testDelayPut)
 	}
 
 	p := s.storage[string(pKey)]
@@ -90,7 +92,7 @@ func (s *appStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValu
 	defer s.lock.Unlock()
 
 	if s.testDelayPut > 0 {
-		s.iSleeper.Sleep(s.testDelayPut)
+		time.Sleep(s.testDelayPut)
 	}
 
 	p, ok := s.storage[string(pKey)]
@@ -126,7 +128,7 @@ func (s *appStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue [
 	defer s.lock.Unlock()
 
 	if s.testDelayGet > 0 {
-		s.iSleeper.Sleep(s.testDelayGet)
+		time.Sleep(s.testDelayGet)
 	}
 
 	p, ok := s.storage[string(pKey)]
@@ -166,7 +168,7 @@ func (s *appStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
 	defer s.lock.Unlock()
 
 	if s.testDelayPut > 0 {
-		s.iSleeper.Sleep(s.testDelayPut)
+		time.Sleep(s.testDelayPut)
 	}
 
 	p := s.storage[string(pKey)]
@@ -182,7 +184,7 @@ func (s *appStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
 func (s *appStorage) PutBatch(items []istorage.BatchItem) (err error) {
 	s.lock.Lock()
 	if s.testDelayPut > 0 {
-		s.iSleeper.Sleep(s.testDelayPut)
+		time.Sleep(s.testDelayPut)
 		tmpDelayPut := s.testDelayPut
 		s.testDelayPut = 0
 
@@ -288,7 +290,7 @@ func (s *appStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err 
 	defer s.lock.RUnlock()
 
 	if s.testDelayGet > 0 {
-		s.iSleeper.Sleep(s.testDelayGet)
+		time.Sleep(s.testDelayGet)
 	}
 
 	p, ok := s.storage[string(pKey)]
@@ -316,7 +318,7 @@ func (s *appStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err 
 func (s *appStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) (err error) {
 	s.lock.Lock()
 	if s.testDelayGet > 0 {
-		s.iSleeper.Sleep(s.testDelayGet)
+		time.Sleep(s.testDelayGet)
 		tmpDelayGet := s.testDelayGet
 		s.testDelayGet = 0
 		defer func() {
