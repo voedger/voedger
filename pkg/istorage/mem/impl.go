@@ -71,7 +71,7 @@ func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, newValue []byt
 
 	now := s.iTime.Now()
 	data, ok := p[string(cCols)]
-	ttlExpired := data.expireAt != nil && !now.Before(*data.expireAt)
+	ttlExpired := isExpired(data, now)
 
 	oldValue := p[string(cCols)].data
 	if !ttlExpired && bytes.Compare(copySlice(oldValue), newValue) == 0 {
@@ -106,7 +106,7 @@ func (s *appStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValu
 		return false, nil
 	}
 
-	ttlExpired := viewRecord.expireAt != nil && !now.Before(*viewRecord.expireAt)
+	ttlExpired := isExpired(viewRecord, now)
 	currentValue := copySlice(viewRecord.data)
 	if !ttlExpired && bytes.Compare(currentValue, oldValue) == 0 {
 		ok = true
@@ -142,7 +142,7 @@ func (s *appStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue [
 	}
 
 	now := s.iTime.Now()
-	ttlExpired := viewRecord.expireAt != nil && !now.Before(*viewRecord.expireAt)
+	ttlExpired := isExpired(viewRecord, now)
 
 	currentValue := copySlice(viewRecord.data)
 	if !ttlExpired && bytes.Compare(currentValue, expectedValue) == 0 {
@@ -213,7 +213,7 @@ func (s *appStorage) readPartSort(ctx context.Context, part map[string]dataWithT
 		}
 
 		now := s.iTime.Now()
-		ttlExpired := part[col].expireAt != nil && !now.Before(*part[col].expireAt)
+		ttlExpired := isExpired(part[col], now)
 		// skip expired records
 		if ttlExpired {
 			continue
@@ -304,7 +304,7 @@ func (s *appStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err 
 	}
 
 	now := s.iTime.Now()
-	ttlExpired := viewRecord.expireAt != nil && !now.Before(*viewRecord.expireAt)
+	ttlExpired := isExpired(viewRecord, now)
 	// skip expired records
 	if ttlExpired {
 		return false, nil
@@ -355,4 +355,8 @@ func (s *appStorage) SetTestDelayPut(delay time.Duration) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.testDelayPut = delay
+}
+
+func isExpired(data dataWithTTL, now time.Time) bool {
+	return data.expireAt != nil && !now.Before(*data.expireAt)
 }
