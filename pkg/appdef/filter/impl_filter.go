@@ -37,4 +37,4 @@ func (trueFilter) Kind() appdef.FilterKind   { return appdef.FilterKind_True }
 func (trueFilter) Match(t appdef.IType) bool { return true }
 func (trueFilter) String() string            { return "TRUE" }
 
-var trueFlt appdef.IFilter = trueFilter{}
+var trueFlt *trueFilter = &trueFilter{}

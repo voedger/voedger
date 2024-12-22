@@ -23,7 +23,7 @@ type tagsFilter struct {
 	tags appdef.QNames
 }
 
-func makeTagsFilter(tag appdef.QName, tags ...appdef.QName) appdef.IFilter {
+func newTagsFilter(tag appdef.QName, tags ...appdef.QName) *tagsFilter {
 	f := &tagsFilter{tags: appdef.QNamesFrom(tag)}
 	for _, t := range tags {
 		f.tags.Add(t)

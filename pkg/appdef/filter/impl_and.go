@@ -23,7 +23,7 @@ type andFilter struct {
 	children []appdef.IFilter
 }
 
-func makeAndFilter(f1, f2 appdef.IFilter, ff ...appdef.IFilter) appdef.IFilter {
+func newAndFilter(f1, f2 appdef.IFilter, ff ...appdef.IFilter) *andFilter {
 	f := &andFilter{children: []appdef.IFilter{f1, f2}}
 	f.children = append(f.children, ff...)
 	return f

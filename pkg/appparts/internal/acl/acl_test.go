@@ -91,7 +91,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			"revoke update doc.hiddenField from writer")
 		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
-			filter.AllFunctions(wsName),
+			filter.AllWSFunctions(wsName),
 			nil,
 			writer,
 			"grant execute all commands and queries to writer")
@@ -102,7 +102,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			intruder,
 			"revoke all access to CDocs from intruder")
 		wsb.RevokeAll(
-			filter.AllFunctions(wsName),
+			filter.AllWSFunctions(wsName),
 			intruder,
 			"revoke all access to functions from intruder")
 

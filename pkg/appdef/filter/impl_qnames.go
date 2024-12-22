@@ -23,7 +23,7 @@ type qNamesFilter struct {
 	names appdef.QNames
 }
 
-func makeQNamesFilter(name appdef.QName, names ...appdef.QName) appdef.IFilter {
+func newQNamesFilter(name appdef.QName, names ...appdef.QName) *qNamesFilter {
 	f := &qNamesFilter{names: appdef.QNamesFrom(name)}
 	f.names.Add(names...)
 	return f

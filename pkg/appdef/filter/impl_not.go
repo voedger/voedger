@@ -21,7 +21,7 @@ type notFilter struct {
 	f appdef.IFilter
 }
 
-func makeNotFilter(f appdef.IFilter) appdef.IFilter {
+func newNotFilter(f appdef.IFilter) *notFilter {
 	return &notFilter{f: f}
 }
 

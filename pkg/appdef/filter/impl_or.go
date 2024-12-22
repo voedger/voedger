@@ -23,7 +23,7 @@ type orFilter struct {
 	children []appdef.IFilter
 }
 
-func makeOrFilter(f1, f2 appdef.IFilter, ff ...appdef.IFilter) appdef.IFilter {
+func newOrFilter(f1, f2 appdef.IFilter, ff ...appdef.IFilter) *orFilter {
 	f := &orFilter{children: []appdef.IFilter{f1, f2}}
 	f.children = append(f.children, ff...)
 	return f

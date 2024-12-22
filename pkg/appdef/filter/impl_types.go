@@ -13,44 +13,39 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
-// wsTypesFilter is a filter that matches types by their kind.
+// typesFilter is a filter that matches types by their kind.
 //
 // # Supports:
 //   - appdef.IFilter.
 //   - fmt.Stringer
-type wsTypesFilter struct {
+type typesFilter struct {
 	filter
-	ws    appdef.QName
 	types appdef.TypeKindSet
 }
 
-func makeWSTypesFilter(ws appdef.QName, tt ...appdef.TypeKind) appdef.IFilter {
-	if ws == appdef.NullQName {
-		panic("workspace should be specified")
-	}
+func makeTypesFilter(tt ...appdef.TypeKind) typesFilter {
 	if len(tt) == 0 {
 		panic("types filter should have at least one type")
 	}
-	f := &wsTypesFilter{ws: ws, types: set.From(tt...)}
-	return f
+	return typesFilter{types: set.From(tt...)}
 }
 
-func (wsTypesFilter) Kind() appdef.FilterKind { return appdef.FilterKind_Types }
-
-func (f wsTypesFilter) Match(t appdef.IType) bool {
-	if !f.types.Contains(t.Kind()) {
-		return false
-	}
-	ws := t.Workspace()
-	return (ws != nil) && (ws.QName() == f.ws)
+func newTypesFilter(tt ...appdef.TypeKind) *typesFilter {
+	f := makeTypesFilter(tt...)
+	return &f
 }
 
-func (f wsTypesFilter) String() string {
+func (typesFilter) Kind() appdef.FilterKind { return appdef.FilterKind_Types }
+
+func (f typesFilter) Match(t appdef.IType) bool {
+	return f.types.Contains(t.Kind())
+}
+
+func (f typesFilter) String() string {
 	var s string
 	if t, ok := typesStringDecorators[string(f.types.AsBytes())]; ok {
 		s = t
 	} else {
-		// TYPES(…)
 		// TYPES(…) FROM …)
 		s = "TYPES("
 		for i, t := range f.types.All() {
@@ -61,15 +56,45 @@ func (f wsTypesFilter) String() string {
 		}
 		s += ")"
 	}
-	if f.ws != appdef.NullQName {
-		s += fmt.Sprintf(" FROM %s", f.ws)
-	}
 	return s
 }
 
-func (f wsTypesFilter) Types() iter.Seq[appdef.TypeKind] { return f.types.Values() }
+func (f typesFilter) Types() iter.Seq[appdef.TypeKind] { return f.types.Values() }
 
 var typesStringDecorators = map[string]string{
 	string(appdef.TypeKind_Structures.AsBytes()): "ALL TABLES",
 	string(appdef.TypeKind_Functions.AsBytes()):  "ALL FUNCTIONS",
+}
+
+// wsTypesFilter is a filter that matches types by their kind.
+// Matched types should be located in the specified workspace.
+//
+// # Supports:
+//   - appdef.IFilter.
+//   - fmt.Stringer
+type wsTypesFilter struct {
+	typesFilter
+	ws appdef.QName
+}
+
+func newWSTypesFilter(ws appdef.QName, tt ...appdef.TypeKind) *wsTypesFilter {
+	if ws == appdef.NullQName {
+		panic("workspace should be specified")
+	}
+	return &wsTypesFilter{
+		typesFilter: makeTypesFilter(tt...),
+		ws:          ws,
+	}
+}
+
+func (f wsTypesFilter) Match(t appdef.IType) bool {
+	if f.typesFilter.Match(t) {
+		ws := t.Workspace()
+		return (ws != nil) && (ws.QName() == f.ws)
+	}
+	return false
+}
+
+func (f wsTypesFilter) String() string {
+	return fmt.Sprintf("%s FROM %s", f.typesFilter.String(), f.ws)
 }

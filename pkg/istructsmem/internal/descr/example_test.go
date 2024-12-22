@@ -161,7 +161,7 @@ func Example() {
 			filter.QNames(docName),
 			nil,
 			"disable writer to update test.doc")
-		writer.GrantAll(filter.AllFunctions(wsName), "allow writer to execute all test functions")
+		writer.GrantAll(filter.AllWSFunctions(wsName), "allow writer to execute all test functions")
 
 		rateName := appdef.NewQName("test", "rate")
 		wsb.AddRate(rateName, 10, time.Minute, []appdef.RateScope{appdef.RateScope_AppPartition}, "rate 10 times per second per partition")

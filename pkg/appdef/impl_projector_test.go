@@ -269,7 +269,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			prj := adb.AddWorkspace(wsName).AddProjector(prjCmdName)
 			prj.Events().Add(
 				[]appdef.OperationKind{appdef.OperationKind_Execute},
-				filter.AllFunctions(wsName))
+				filter.AllWSFunctions(wsName))
 
 			_, err := adb.Build()
 			require.Error(err, require.Is(appdef.ErrNotFoundError), require.HasAll(prj, "no matches", wsName))

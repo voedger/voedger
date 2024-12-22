@@ -33,7 +33,7 @@ func Example() {
 			prj := wsb.AddProjector(name)
 			prj.Events().Add(
 				[]appdef.OperationKind{appdef.OperationKind_Execute},
-				filter.AllFunctions(wsName))
+				filter.AllWSFunctions(wsName))
 			prj.SetSync(false)
 		}
 		return adb.MustBuild()
