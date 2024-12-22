@@ -251,6 +251,6 @@ func (s *appStorageType) GetBatch(pKey []byte, items []istorage.GetBatchItem) (e
 	return err
 }
 
-func (s *appStorageFactory) Time() coreutils.ITime {
+func (p *appStorageFactory) Time() coreutils.ITime {
 	return nil
 }
