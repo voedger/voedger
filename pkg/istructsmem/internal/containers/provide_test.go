@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -18,7 +19,7 @@ import (
 )
 
 func Test_BasicUsage(t *testing.T) {
-	sp := istorageimpl.Provide(mem.Provide())
+	sp := istorageimpl.Provide(mem.Provide(coreutils.MockTime))
 	storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
 	versions := vers.New()
