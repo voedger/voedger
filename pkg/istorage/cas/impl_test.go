@@ -21,7 +21,7 @@ const casDefaultHost = "127.0.0.1"
 
 func TestBasicUsage(t *testing.T) {
 	if !coreutils.IsCassandraStorage() {
-		// t.Skip()
+		t.Skip()
 	}
 	casPar := CassandraParamsType{
 		Hosts:                   hosts(),
