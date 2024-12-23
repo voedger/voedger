@@ -8,6 +8,7 @@ package appparts_test
 import (
 	"context"
 	"errors"
+	"maps"
 	"testing"
 	"time"
 
@@ -153,7 +154,8 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 			m[pid] = appdef.QNamesFrom(actualizers...)
 		}
 		for pid, schedulers := range appParts.WorkedSchedulers(appName) {
-			names := appdef.QNamesFromMap(schedulers)
+			names := appdef.QNames{}
+			names.Collect(maps.Keys(schedulers))
 			if exists, ok := m[pid]; ok {
 				names.Add(exists...)
 			}
