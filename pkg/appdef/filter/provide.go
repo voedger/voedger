@@ -8,8 +8,8 @@ package filter
 import "github.com/voedger/voedger/pkg/appdef"
 
 // QNames is a filter that matches types by their qualified names.
-func QNames(name appdef.QName, names ...appdef.QName) appdef.IFilter {
-	return newQNamesFilter(name, names...)
+func QNames(names ...appdef.QName) appdef.IFilter {
+	return newQNamesFilter(names...)
 }
 
 // Tags is a filter that matches types by their tags.
