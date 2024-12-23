@@ -94,6 +94,21 @@ func testBreakable[T any](t *testing.T, name string, seq ...iter.Seq[T]) {
 	}
 }
 
+func testBreakable2[K, V any](t *testing.T, name string, seq ...iter.Seq2[K, V]) {
+	for i, s := range seq {
+		t.Run(fmt.Sprintf("%s[%d]", name, i), func(t *testing.T) {
+			cnt := 0
+			for range s {
+				cnt++
+				break
+			}
+			if cnt != 1 {
+				t.Errorf("got %d iterations, expected 1", i)
+			}
+		})
+	}
+}
+
 func Test_EnumsBreakable(t *testing.T) {
 	require := require.New(t)
 
@@ -181,6 +196,8 @@ func Test_EnumsBreakable(t *testing.T) {
 
 	t.Run("should be breakable", func(t *testing.T) {
 		ws := app.Workspace(wsName)
+
+		testBreakable2(t, "Packages", app.Packages())
 
 		testBreakable(t, "Workspaces", app.Workspaces())
 
