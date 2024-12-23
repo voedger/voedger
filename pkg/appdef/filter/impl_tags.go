@@ -23,12 +23,11 @@ type tagsFilter struct {
 	tags appdef.QNames
 }
 
-func newTagsFilter(tag appdef.QName, tags ...appdef.QName) *tagsFilter {
-	f := &tagsFilter{tags: appdef.QNamesFrom(tag)}
-	for _, t := range tags {
-		f.tags.Add(t)
+func newTagsFilter(tags ...appdef.QName) *tagsFilter {
+	if len(tags) == 0 {
+		panic("no tags provided")
 	}
-	return f
+	return &tagsFilter{tags: appdef.QNamesFrom(tags...)}
 }
 
 func (tagsFilter) Kind() appdef.FilterKind { return appdef.FilterKind_Tags }

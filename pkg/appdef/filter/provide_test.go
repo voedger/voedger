@@ -48,6 +48,41 @@ func Test_QNames(t *testing.T) {
 	})
 }
 
+func Test_Tags(t *testing.T) {
+	require := require.New(t)
+
+	wsName := appdef.NewQName("test", "workspace")
+	doc1Name, doc2Name := appdef.NewQName("test", "doc1"), appdef.NewQName("test", "doc2")
+	tagName := appdef.NewQName("test", "tag")
+
+	app := func() appdef.IAppDef {
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+
+		wsb := adb.AddWorkspace(wsName)
+
+		wsb.AddTag(tagName)
+		wsb.AddCDoc(doc1Name).SetTag(tagName)
+		_ = wsb.AddCDoc(doc2Name)
+
+		app, err := adb.Build()
+
+		require.NoError(err)
+		return app
+	}()
+
+	flt := filter.Tags(tagName)
+
+	require.True(flt.Match(appdef.CDoc(app.Type, doc1Name)), "Doc1 should be matched")
+	require.False(flt.Match(appdef.CDoc(app.Type, doc2Name)), "Doc2 should not be matched")
+
+	t.Run("should be panics", func(t *testing.T) {
+		require.Panics(func() {
+			_ = filter.Tags()
+		}, "if no tags are provided")
+	})
+}
+
 func Test_WSTypes(t *testing.T) {
 	require := require.New(t)
 

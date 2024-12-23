@@ -13,8 +13,8 @@ func QNames(names ...appdef.QName) appdef.IFilter {
 }
 
 // Tags is a filter that matches types by their tags.
-func Tags(tag appdef.QName, tags ...appdef.QName) appdef.IFilter {
-	return newTagsFilter(tag, tags...)
+func Tags(tags ...appdef.QName) appdef.IFilter {
+	return newTagsFilter(tags...)
 }
 
 // Types is a filter that matches types by their kind.
