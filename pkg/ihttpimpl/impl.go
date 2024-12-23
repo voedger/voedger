@@ -36,10 +36,11 @@ import (
 
 type appInfo struct {
 	numPartitions istructs.NumAppPartitions
-	handlers      map[istructs.PartitionID]ibus.RequestHandler
+	handlers      map[istructs.PartitionID]coreutils.RequestHandler
 }
 
 type httpProcessor struct {
+	sync.RWMutex
 	params             ihttp.CLIParams
 	router             *router
 	server             *http.Server
@@ -49,10 +50,9 @@ type httpProcessor struct {
 	acmeDomains        *sync.Map
 	certCache          autocert.Cache
 	certManager        *autocert.Manager
-	bus                ibus.IBus
 	apps               map[appdef.AppQName]*appInfo
 	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces
-	sync.RWMutex
+	requestSender      coreutils.IRequestSender
 }
 
 type redirectionRoute struct {
@@ -157,7 +157,7 @@ func (p *httpProcessor) DeployStaticContent(resource string, fs fs.FS) {
 	p.router.addStaticContent(resource, fs)
 }
 
-func (p *httpProcessor) DeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID, appPartitionRequestHandler ibus.RequestHandler) error {
+func (p *httpProcessor) DeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID, appPartitionRequestHandler coreutils.RequestHandler) error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -179,7 +179,7 @@ func (p *httpProcessor) UndeployAppPartition(app appdef.AppQName, partNo istruct
 	return nil
 }
 
-func (p *httpProcessor) getAppPartHandler(appQName appdef.AppQName, partNo istructs.PartitionID) (ibus.RequestHandler, error) {
+func (p *httpProcessor) getAppPartHandler(appQName appdef.AppQName, partNo istructs.PartitionID) (coreutils.RequestHandler, error) {
 	app, ok := p.apps[appQName]
 	if !ok {
 		return nil, ErrAppIsNotDeployed
@@ -203,7 +203,7 @@ func (p *httpProcessor) DeployApp(app appdef.AppQName, numPartitions istructs.Nu
 	}
 	p.apps[app] = &appInfo{
 		numPartitions: numPartitions,
-		handlers:      make(map[istructs.PartitionID]ibus.RequestHandler),
+		handlers:      make(map[istructs.PartitionID]coreutils.RequestHandler),
 	}
 	p.numsAppsWorkspaces[app] = numAppWS
 	return nil
@@ -263,28 +263,28 @@ func (p *httpProcessor) registerRoutes() {
 
 func (p *httpProcessor) httpHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		routerpkg.RequestHandler(p.bus, ibus.DefaultTimeout, p.numsAppsWorkspaces)(w, r)
+		routerpkg.RequestHandler(p.requestSender, p.numsAppsWorkspaces)(w, r)
 	}
 }
 
-func (p *httpProcessor) requestHandler(ctx context.Context, sender ibus.ISender, request ibus.Request) {
+func (p *httpProcessor) requestHandler(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
 	appQName, err := appdef.ParseAppQName(request.AppQName)
 	if err != nil {
-		coreutils.ReplyBadRequest(sender, err.Error())
+		coreutils.ReplyBadRequest(responder, err.Error())
 		return
 	}
 	app, ok := p.apps[appQName]
 	if !ok {
-		coreutils.ReplyBadRequest(sender, ErrAppIsNotDeployed.Error())
+		coreutils.ReplyBadRequest(responder, ErrAppIsNotDeployed.Error())
 		return
 	}
 	partNo := coreutils.AppPartitionID(request.WSID, app.numPartitions)
 	handler, err := p.getAppPartHandler(appQName, partNo)
 	if err != nil {
-		coreutils.ReplyBadRequest(sender, err.Error())
+		coreutils.ReplyBadRequest(responder, err.Error())
 		return
 	}
-	handler(ctx, sender, request)
+	handler(requestCtx, request, responder)
 }
 
 type router struct {

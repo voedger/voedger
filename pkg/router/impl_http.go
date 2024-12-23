@@ -208,7 +208,6 @@ func RequestHandler(requestSender coreutils.IRequestSender, numsAppsWorkspaces m
 		requestCtx, cancel := context.WithCancel(req.Context())
 		defer cancel() // to avoid context leak
 		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(requestCtx, request)
-		// res, sections, secErr, err := bus.SendRequest2(requestCtx, request, busTimeout)
 		if err != nil {
 			logger.Error("sending request to VVM on", request.Resource, "is failed:", err, ". Body:\n", string(request.Body))
 			status := http.StatusInternalServerError
@@ -219,12 +218,6 @@ func RequestHandler(requestSender coreutils.IRequestSender, numsAppsWorkspaces m
 			return
 		}
 
-		// if elements == nil {
-		// 	resp.Header().Set(coreutils.ContentType, res.ContentType)
-		// 	resp.WriteHeader(res.StatusCode)
-		// 	writeResponse(resp, string(res.Data))
-		// 	return
-		// }
 		initResponse(resp, responseMeta.ContentType, responseMeta.StatusCode)
 		reply(requestCtx, resp, responseCh, responseErr, responseMeta.ContentType, cancel)
 	}

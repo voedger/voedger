@@ -60,31 +60,25 @@ func NewAppStorageFactory(params CLIParams) (istorage.IAppStorageFactory, error)
 	return cas.Provide(casParams)
 }
 
-func NewSysRouterRequestHandler(_ context.Context, sender ibus.ISender, request ibus.Request) {
+func NewSysRouterRequestHandler(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
 	go func() {
 		queryParamsBytes, err := json.Marshal(request.Query)
 		if err != nil {
-			coreutils.ReplyBadRequest(sender, err.Error())
+			coreutils.ReplyBadRequest(responder, err.Error())
 			return
 		}
 
 		switch request.Resource {
 		case "c.EchoCommand":
-			sender.SendResponse(ibus.Response{
-				ContentType: "text/plain",
-				StatusCode:  http.StatusOK,
-				Data:        []byte(fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes))),
-			})
+			coreutils.ReplyPlainText(responder, fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes)))
 		case "q.EchoQuery":
-			rs := sender.SendParallelResponse()
-			rs.StartArraySection("", []string{})
-			err := rs.SendElement("Result", []byte(fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes))))
-			if err != nil {
+			sender := responder.InitResponse(coreutils.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+			if err := sender.Send(fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes))); err != nil {
 				logger.Error(err)
 			}
-			rs.Close(nil)
+			sender.Close(nil)
 		default:
-			coreutils.ReplyBadRequest(sender, "unknown func: "+request.Resource)
+			coreutils.ReplyBadRequest(responder, "unknown func: "+request.Resource)
 		}
 	}()
 }
@@ -94,7 +88,7 @@ func NewAppRequestHandlers() ihttpctl.AppRequestHandlers {
 		{
 			AppQName:      istructs.AppQName_sys_router,
 			NumPartitions: 1,
-			Handlers: map[istructs.PartitionID]ibus.RequestHandler{
+			Handlers: map[istructs.PartitionID]coreutils.RequestHandler{
 				istructs.PartitionID(0): NewSysRouterRequestHandler,
 			},
 		},
