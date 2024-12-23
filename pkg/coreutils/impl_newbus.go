@@ -157,9 +157,6 @@ func (rs *implIResponseSenderCloseable) Send(obj any) error {
 	case <-sendTimeoutTimerChan:
 		return ibus.ErrNoConsumer
 	}
-	if errors.Is(rs.clientCtx.Err(), context.Canceled) {
-		return ibus.ErrNoConsumer
-	}
 	return rs.clientCtx.Err()
 }
 

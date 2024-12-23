@@ -200,8 +200,6 @@ func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
 				IntField: 42,
 				StrField: "str",
 			})
-			// rs.StartMapSection("secMap", []string{"2"})
-			// firstElemSendErrCh <- rs.SendElement("id1_ClientDisconnect_CtxCanceledOnElemSend", elem1)
 
 			// let's wait for the client close
 			<-clientClosed
@@ -245,106 +243,113 @@ func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
 	<-clientDisconnections
 }
 
-// func TestCheck(t *testing.T) {
-// 	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
-// 	}, 1*time.Second)
-// 	defer tearDown()
+func TestCheck(t *testing.T) {
+	setUp(t, func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+	}, 1*time.Second)
+	defer tearDown()
 
-// 	bodyReader := bytes.NewReader(nil)
-// 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/check", router.port()), "application/json", bodyReader)
-// 	require.NoError(t, err)
-// 	defer resp.Body.Close()
-// 	respBodyBytes, err := io.ReadAll(resp.Body)
-// 	require.NoError(t, err)
-// 	require.Equal(t, "ok", string(respBodyBytes))
-// 	expectOKRespPlainText(t, resp)
-// }
+	bodyReader := bytes.NewReader(nil)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/check", router.port()), "application/json", bodyReader)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	respBodyBytes, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, "ok", string(respBodyBytes))
+	expectOKRespPlainText(t, resp)
+}
 
-// func Test404(t *testing.T) {
-// 	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
-// 	}, 1*time.Second)
-// 	defer tearDown()
+func Test404(t *testing.T) {
+	setUp(t, func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+	}, 1*time.Second)
+	defer tearDown()
 
-// 	bodyReader := bytes.NewReader(nil)
-// 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/wrong", router.port()), "", bodyReader)
-// 	require.NoError(t, err)
-// 	defer resp.Body.Close()
-// 	require.Equal(t, http.StatusNotFound, resp.StatusCode)
-// }
+	bodyReader := bytes.NewReader(nil)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/wrong", router.port()), "", bodyReader)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
 
-// func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
-// 	require := require.New(t)
-// 	firstElemSendErrCh := make(chan error)
-// 	clientDisconnect := make(chan any)
-// 	requestCtxCh := make(chan context.Context, 1)
-// 	expectedErrCh := make(chan error)
-// 	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
-// 		go func() {
-// 			// handler, on server side
-// 			rs := sender.SendParallelResponse()
-// 			defer rs.Close(nil)
-// 			rs.StartMapSection("secMap", []string{"2"})
-// 			firstElemSendErrCh <- rs.SendElement("id1_ClientDisconnect_FailedToWriteResponse", elem1)
+func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
+	require := require.New(t)
+	firstElemSendErrCh := make(chan error)
+	clientDisconnect := make(chan any)
+	requestCtxCh := make(chan context.Context, 1)
+	expectedErrCh := make(chan error)
+	setUp(t, func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+		go func() {
+			// handler, on server side
+			sender := responder.InitResponse(coreutils.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+			defer sender.Close(nil)
+			firstElemSendErrCh <- sender.Send(testObject{
+				IntField: 42,
+				StrField: "str",
+			})
+			// rs.StartMapSection("secMap", []string{"2"})
+			// firstElemSendErrCh <- rs.SendElement("id1_ClientDisconnect_FailedToWriteResponse", elem1)
 
-// 			// capture the request context so that it will be able to check if it is closed indeed right before
-// 			// write to the socket on next writeResponse() call
-// 			requestCtxCh <- requestCtx
+			// capture the request context so that it will be able to check if it is closed indeed right before
+			// write to the socket on next writeResponse() call
+			requestCtxCh <- requestCtx
 
-// 			// now let's wait for client disconnect
-// 			<-clientDisconnect
+			// now let's wait for client disconnect
+			<-clientDisconnect
 
-// 			// next section should be failed on writeResponse() call because the client is disconnected
-// 			// the expected error on this bus side is context.Canceled, on the router's side - `failed to write response`
-// 			expectedErrCh <- rs.ObjectSection("objSec", []string{"3"}, 42)
-// 		}()
-// 	}, time.Hour) // one hour timeout to eliminate case when client context closes longer than bus timoeut on client disconnect. It could take up to few seconds
-// 	defer tearDown()
+			// next section should be failed on writeResponse() call because the client is disconnected
+			// the expected error on this bus side is context.Canceled, on the router's side - `failed to write response`
+			expectedErrCh <- sender.Send(testObject{
+				IntField: 43,
+				StrField: "str1",
+			})
+		}()
+	}, time.Hour) // one hour timeout to eliminate case when client context closes longer than bus timoeut on client disconnect. It could take up to few seconds
+	defer tearDown()
 
-// 	// client side
-// 	body := []byte("")
-// 	bodyReader := bytes.NewReader(body)
-// 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc_ClientDisconnect_FailedToWriteResponse", router.port(), URLPlaceholder_appOwner, URLPlaceholder_appName, testWSID), "application/json", bodyReader)
-// 	require.NoError(err)
+	// client side
+	body := []byte("")
+	bodyReader := bytes.NewReader(body)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc_ClientDisconnect_FailedToWriteResponse", router.port(), URLPlaceholder_appOwner, URLPlaceholder_appName, testWSID), "application/json", bodyReader)
+	require.NoError(err)
 
-// 	// ensure the first element is sent successfully
-// 	require.NoError(<-firstElemSendErrCh)
+	// ensure the first element is sent successfully
+	require.NoError(<-firstElemSendErrCh)
 
-// 	// read out the first section
-// 	entireResp := []byte{}
-// 	for string(entireResp) != `{"sections":[{"type":"secMap","path":["2"],"elements":{"id1_ClientDisconnect_FailedToWriteResponse":{"fld1":"fld1Val"}` {
-// 		buf := make([]byte, 512)
-// 		n, err := resp.Body.Read(buf)
-// 		require.NoError(err)
-// 		entireResp = append(entireResp, buf[:n]...)
-// 		log.Println(string(entireResp))
-// 	}
+	// read out the first section
+	entireResp := []byte{}
+	for string(entireResp) != `{"sections":[{"type":"","elements":[{"IntField":42,"StrField":"str"}` {
+		buf := make([]byte, 512)
+		n, err := resp.Body.Read(buf)
+		require.NoError(err)
+		entireResp = append(entireResp, buf[:n]...)
+		log.Println(string(entireResp))
+	}
 
-// 	// force client disconnect right before write to the socket on the next writeResponse() call
-// 	once := sync.Once{}
-// 	onBeforeWriteResponse = func(w http.ResponseWriter) {
-// 		once.Do(func() {
-// 			resp.Request.Body.Close()
-// 			resp.Body.Close()
+	// force client disconnect right before write to the socket on the next writeResponse() call
+	once := sync.Once{}
+	onBeforeWriteResponse = func(w http.ResponseWriter) {
+		once.Do(func() {
+			resp.Request.Body.Close()
+			resp.Body.Close()
 
-// 			// wait for write to the socket will be failed indeed. It happens not at once
-// 			// that will guarantee context.Canceled error on next sending instead of possible ErrNoConsumer
-// 			requestCtx := <-requestCtxCh
-// 			for requestCtx.Err() == nil {
-// 			}
-// 		})
-// 	}
-// 	defer func() {
-// 		onBeforeWriteResponse = nil
-// 	}()
+			// wait for write to the socket will be failed indeed. It happens not at once
+			// that will guarantee context.Canceled error on next sending instead of possible ErrNoConsumer
+			requestCtx := <-requestCtxCh
+			for requestCtx.Err() == nil {
+			}
+		})
+	}
+	defer func() {
+		onBeforeWriteResponse = nil
+	}()
 
-// 	// signal to the handler it could try to send the next section
-// 	close(clientDisconnect)
+	// signal to the handler it could try to send the next section
+	close(clientDisconnect)
 
-// 	// ensure the next writeResponse call is failed with the expected context.Canceled error
-// 	require.ErrorIs(<-expectedErrCh, context.Canceled)
+	// ensure the next writeResponse call is failed with the expected context.Canceled error
+	require.ErrorIs(<-expectedErrCh, context.Canceled)
 
-// 	<-clientDisconnections
-// }
+	<-clientDisconnections
+}
 
 // func TestAdminService(t *testing.T) {
 // 	require := require.New(t)
