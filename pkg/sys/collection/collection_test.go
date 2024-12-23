@@ -70,18 +70,11 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		wsdescutil.AddWorkspaceDescriptorStubDef(wsb)
 
 		// this should be done in tests only. Runtime -> the projector is defined in sys.vsql already
-		wsb.AddCDoc(istructs.QNameCDoc)
-		wsb.AddODoc(istructs.QNameODoc)
-		wsb.AddWDoc(istructs.QNameWDoc)
-		wsb.AddCRecord(istructs.QNameCRecord)
-		wsb.AddORecord(istructs.QNameORecord)
-		wsb.AddWRecord(istructs.QNameWRecord)
-
 		prj := wsb.AddProjector(QNameProjectorCollection)
 		prj.SetSync(true).
 			Events().Add(
 			[]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update},
-			filter.WSTypes(wsName, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord))
+			filter.Types(appdef.TypeKind_CDoc, appdef.TypeKind_CRecord))
 		prj.Intents().
 			Add(sys.Storage_View, QNameCollectionView) // this view will be added below
 	}

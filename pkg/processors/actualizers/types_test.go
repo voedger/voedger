@@ -37,9 +37,12 @@ func Test_ProjectorEvent(t *testing.T) {
 
 	newProjector := func(ops appdef.OperationsSet, flt appdef.IFilter, wantErrors bool) appdef.IProjector {
 		adb := appdef.New()
+		sysWsb := adb.AlterWorkspace(appdef.SysWorkspaceQName)
+		_ = sysWsb.AddCommand(istructs.QNameCommandCUD) // should be in ancestor
+
 		wsb := adb.AddWorkspace(wsName)
 		wsb.AddTag(tagName)
-		_ = wsb.AddCommand(istructs.QNameCommandCUD) // should be in ancestor
+		//_ = wsb.AddCommand(istructs.QNameCommandCUD) // should be in ancestor
 		_ = wsb.AddCommand(cmdName)
 		_ = wsb.AddQuery(queryName)
 		_ = wsb.AddODoc(oDocName)
@@ -55,8 +58,7 @@ func Test_ProjectorEvent(t *testing.T) {
 	}
 
 	newProjectorOnAll := func(wantErrors bool) appdef.IProjector {
-		types := appdef.TypeKind_ProjectorTriggers.AsArray()
-		return newProjector(appdef.ProjectorOperations, filter.WSTypes(wsName, types...), wantErrors)
+		return newProjector(appdef.ProjectorOperations, filter.True(), wantErrors)
 	}
 
 	newEvent := func(eventQName, eventArgsQName appdef.QName, cuds map[appdef.QName]cud) istructs.IPLogEvent {
@@ -90,6 +92,14 @@ func Test_ProjectorEvent(t *testing.T) {
 		events []testEvent
 	}{
 		{
+			name: "projector ON ALL",
+			prj:  newProjectorOnAll(true),
+			events: []testEvent{
+				{"accept sys.error", newEvent(istructs.QNameForError, appdef.NullQName, nil), true},
+				{"reject sys.corrupted", newEvent(istructs.QNameForCorruptedData, appdef.NullQName, nil), false},
+			},
+		},
+		{
 			name: "projector ON ALL except sys.error",
 			prj:  newProjectorOnAll(false),
 			events: []testEvent{
@@ -100,20 +110,21 @@ func Test_ProjectorEvent(t *testing.T) {
 			},
 		},
 		{
-			name: "projector ON ALL",
-			prj:  newProjectorOnAll(true),
-			events: []testEvent{
-				{"accept sys.error", newEvent(istructs.QNameForError, appdef.NullQName, nil), true},
-				{"reject sys.corrupted", newEvent(istructs.QNameForCorruptedData, appdef.NullQName, nil), false},
-			},
-		},
-		{
 			name: "projector ON EXECUTE ALL COMMANDS",
-			prj:  newProjector(set.From(appdef.OperationKind_Execute), filter.WSTypes(wsName, appdef.TypeKind_Command), false),
+			prj:  newProjector(set.From(appdef.OperationKind_Execute), filter.Types(appdef.TypeKind_Command), false),
 			events: []testEvent{
 				{"accept my.command", newEvent(cmdName, appdef.NullQName, nil), true},
 				{"accept sys.CUD", newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil), true},
 				{"reject my.ODoc", newEvent(oDocName, appdef.NullQName, nil), false}, // not a command
+			},
+		},
+		{
+			name: "projector ON EXECUTE ALL COMMANDS FROM my.workspace",
+			prj:  newProjector(set.From(appdef.OperationKind_Execute), filter.WSTypes(wsName, appdef.TypeKind_Command), false),
+			events: []testEvent{
+				{"accept my.command", newEvent(cmdName, appdef.NullQName, nil), true},
+				{"accept sys.CUD", newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil), false}, // not from my.workspace
+				{"reject my.ODoc", newEvent(oDocName, appdef.NullQName, nil), false},                 // not a command
 			},
 		},
 		{
