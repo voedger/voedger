@@ -55,7 +55,6 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
-	"github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 	"golang.org/x/crypto/acme/autocert"
 	"net/url"
 	"os"
@@ -64,7 +63,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // Injectors from provide.go:
@@ -181,7 +179,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	}
 	vvmPortType := vvmConfig.VVMPort
 	routerParams := provideRouterParams(vvmConfig, vvmPortType, vvmIdx)
-	busTimeout := vvmConfig.BusTimeout
+	sendTimeout := vvmConfig.SendTimeout
 	blobberServiceChannels := vvmConfig.BlobberServiceChannels
 	blobMaxSizeType := vvmConfig.BLOBMaxSize
 	v8 := provideWLimiterFactory(blobMaxSizeType)
@@ -190,7 +188,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	commandProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxCommand(vvmConfig)
 	queryProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxQuery(vvmConfig)
 	vvmApps := provideVVMApps(v7)
-	iBus := provideIBus(iAppPartitions, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, numCommandProcessors, vvmApps)
+	requestHandler := provideRequestHandler(iAppPartitions, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, numCommandProcessors, vvmApps)
+	iRequestSender := coreutils.NewIRequestSender(iTime, sendTimeout, requestHandler)
 	v9, err := provideNumsAppsWorkspaces(vvmApps, iAppStructsProvider, v5)
 	if err != nil {
 		cleanup4()
@@ -199,7 +198,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		cleanup()
 		return nil, nil, err
 	}
-	routerServices := provideRouterServices(routerParams, busTimeout, in10nBroker, quotas, blobberServiceChannels, v8, blobStorage, cache, iBus, vvmPortSource, v9)
+	routerServices := provideRouterServices(routerParams, sendTimeout, in10nBroker, quotas, blobberServiceChannels, v8, blobStorage, cache, iRequestSender, vvmPortSource, v9)
 	adminEndpointServiceOperator := provideAdminEndpointServiceOperator(routerServices)
 	metricsServicePortInitial := vvmConfig.MetricsServicePort
 	metricsServicePort := provideMetricsServicePort(metricsServicePortInitial, vvmIdx)
@@ -754,9 +753,9 @@ func provideRouterAppStoragePtr(astp istorage.IAppStorageProvider) dbcertcache.R
 }
 
 // port 80 -> [0] is http server, port 443 -> [0] is https server, [1] is acme server
-func provideRouterServices(rp router.RouterParams, busTimeout BusTimeout, broker in10n.IN10nBroker, quotas in10n.Quotas,
+func provideRouterServices(rp router.RouterParams, sendTimeout coreutils.SendTimeout, broker in10n.IN10nBroker, quotas in10n.Quotas,
 	bsc router.BlobberServiceChannels, wLimiterFactory func() iblobstorage.WLimiterType, blobStorage BlobStorage,
-	autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) RouterServices {
+	autocertCache autocert.Cache, requestSender coreutils.IRequestSender, vvmPortSource *VVMPortSource, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) RouterServices {
 	bp := &router.BlobberParams{
 		ServiceChannels:        bsc,
 		BLOBStorage:            blobStorage,
@@ -764,7 +763,7 @@ func provideRouterServices(rp router.RouterParams, busTimeout BusTimeout, broker
 		RetryAfterSecondsOn503: DefaultRetryAfterSecondsOn503,
 		WLimiterFactory:        wLimiterFactory,
 	}
-	httpSrv, acmeSrv, adminSrv := router.Provide(rp, time.Duration(busTimeout), broker, bp, autocertCache, bus, numsAppsWorkspaces)
+	httpSrv, acmeSrv, adminSrv := router.Provide(rp, broker, bp, autocertCache, requestSender, numsAppsWorkspaces)
 	vvmPortSource.getter = func() VVMPortType {
 		return VVMPortType(httpSrv.GetPort())
 	}
@@ -804,14 +803,9 @@ func provideQueryProcessors(qpCount istructs.NumQueryProcessors, qc QueryChannel
 	vvm processors.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
 	tokens itokens.ITokens, federation2 federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) OperatorQueryProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
-	resultSenderFactory := func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
-		return &resultSenderErrorFirst{
-			ctx:    ctx,
-			sender: sender,
-		}
-	}
+
 	for i := 0; i < int(qpCount); i++ {
-		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), resultSenderFactory, appParts, int(mpq), imetrics2, string(vvm), authn, authz, tokens, federation2, statelessResources, secretReader)))
+		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), appParts, int(mpq), imetrics2, string(vvm), authn, authz, tokens, federation2, statelessResources, secretReader)))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }

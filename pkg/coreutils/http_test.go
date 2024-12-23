@@ -135,7 +135,7 @@ func TestReply(t *testing.T) {
 	t.Run("http status helpers", func(t *testing.T) {
 		cases := []struct {
 			statusCode      int
-			f               func(sender ibus.ISender, message string)
+			f               func(responder ISingleResponder, message string)
 			expectedMessage string
 		}{
 			{f: ReplyUnauthorized, statusCode: http.StatusUnauthorized},

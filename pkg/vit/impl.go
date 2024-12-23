@@ -113,7 +113,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	// eliminate timeouts impact for debugging
 	cfg.RouterReadTimeout = int(debugTimeout)
 	cfg.RouterWriteTimeout = int(debugTimeout)
-	cfg.BusTimeout = vvm.BusTimeout(debugTimeout)
+	cfg.SendTimeout = coreutils.SendTimeout(debugTimeout)
 
 	vvm, err := vvm.ProvideVVM(&cfg, 0)
 	require.NoError(t, err)

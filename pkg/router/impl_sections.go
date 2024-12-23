@@ -7,6 +7,7 @@ package router
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -60,92 +61,247 @@ func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, 
 	return res, err == nil
 }
 
-func writeSectionedResponse(requestCtx context.Context, w http.ResponseWriter, sections <-chan ibus.ISection, secErr *error, onSendFailed func()) {
-	ok := true
-	var iSection ibus.ISection
+func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error, contentType string, onSendFailed func()) {
+	sendSuccess := true
 	defer func() {
-		if !ok {
+		if requestCtx.Err() != nil {
+			if onRequestCtxClosed != nil {
+				onRequestCtxClosed()
+			}
+			log.Println("client disconnected during sections sending")
+			return
+		}
+		if !sendSuccess {
 			onSendFailed()
-			// consume all pending sections or elems to avoid hanging on ibusnats side
-			// normally should one pending elem or section because ibusnats implementation
-			// will terminate on next elem or section because `onSendFailed()` actually closes the context
-			discardSection(iSection, requestCtx)
-			for iSection := range sections {
-				discardSection(iSection, requestCtx)
+			for range responseCh {
 			}
 		}
 	}()
-
-	sectionsOpened := false
-	sectionedResponseStarted := false
-
+	elemsCount := 0
 	closer := ""
-	readSections := func() bool {
-		for iSection = range sections {
+	for elem := range responseCh {
+		// http client disconnected -> ErrNoConsumer on IMultiResponseSender.SendElement() -> QP will call Close()
+		if requestCtx.Err() != nil {
 			// possible: ctx is done but on select {sections<-section, <-ctx.Done()} write to sections channel is triggered.
 			// ctx.Done() must have the priority
-			if requestCtx.Err() != nil {
-				ok = false
-				break
-			}
-			if !sectionedResponseStarted {
-				if ok = startSectionedResponse(w); !ok {
-					return false
-				}
-				sectionedResponseStarted = true
-			}
-
-			if !sectionsOpened {
-				if ok = writeResponse(w, `"sections":[`); !ok {
-					return false
-				}
-				closer = "]"
-				sectionsOpened = true
+			return
+		}
+		if elemsCount == 0 {
+			if contentType == coreutils.TextPlain {
+				sendSuccess = writeResponse(w, elem.(string))
 			} else {
-				if ok = writeResponse(w, ","); !ok {
-					return false
-				}
+				sendSuccess = writeResponse(w, `{"sections":[{"type":"","elements":[`)
+				closer = "]}]"
 			}
-			if ok = writeSection(w, iSection, requestCtx); !ok {
-				return false
-			}
+		} else {
+			sendSuccess = writeResponse(w, ",")
 		}
-		return true
-	}
-	mustReturn := readSections()
-	if requestCtx.Err() != nil {
-		if onRequestCtxClosed != nil {
-			onRequestCtxClosed()
-		}
-		log.Println("client disconnected during sections sending")
-		return
-	}
-	if !mustReturn {
-		return
-	}
 
-	if *secErr != nil {
-		if !sectionedResponseStarted {
-			if !startSectionedResponse(w) {
-				return
-			}
+		if !sendSuccess {
+			return
 		}
-		if sectionsOpened {
-			closer = "],"
+
+		if contentType == coreutils.TextPlain {
+			continue
+		}
+
+		elemBytes, err := json.Marshal(&elem)
+		if err != nil {
+			panic(err)
+		}
+
+		if sendSuccess = writeResponse(w, string(elemBytes)); !sendSuccess {
+			return
+		}
+		elemsCount++
+	}
+	if len(closer) > 0 {
+		if sendSuccess = writeResponse(w, closer); !sendSuccess {
+			return
+		}
+	}
+	if *responseErr != nil {
+		if elemsCount > 0 {
+			sendSuccess = writeResponse(w, ",")
+		} else {
+			sendSuccess = writeResponse(w, "{")
+		}
+		if !sendSuccess {
+			return
 		}
 		var jsonableErr interface{ ToJSON() string }
-		if errors.As(*secErr, &jsonableErr) {
+		if errors.As(*responseErr, &jsonableErr) {
 			jsonErr := jsonableErr.ToJSON()
 			jsonErr = strings.TrimPrefix(jsonErr, "{")
-			jsonErr = strings.TrimSuffix(jsonErr, "}")
-			writeResponse(w, fmt.Sprintf(`%s%s}`, closer, jsonErr))
+			sendSuccess = writeResponse(w, jsonErr)
 		} else {
-			writeResponse(w, fmt.Sprintf(`%s"status":%d,"errorDescription":"%s"}`, closer, http.StatusInternalServerError, *secErr))
+			sendSuccess = writeResponse(w, fmt.Sprintf(`"status":%d,"errorDescription":"%s"}`, http.StatusInternalServerError, *responseErr))
 		}
-	} else if sectionedResponseStarted {
-		writeResponse(w, closer+"}")
+	} else if sendSuccess && contentType == coreutils.ApplicationJSON && elemsCount == 0 {
+		sendSuccess = writeResponse(w, "{}")
 	}
 }
+
+// func writeSectionedResponse_(requestCtx context.Context, w http.ResponseWriter, marshaledElems <-chan string, secErr *error, onSendFailed func()) {
+// 	sendSuccess := false
+// 	defer func() {
+// 		if requestCtx.Err() != nil {
+// 			if onRequestCtxClosed != nil {
+// 				onRequestCtxClosed()
+// 			}
+// 			log.Println("client disconnected during sections sending")
+// 			return
+// 		}
+// 		if !sendSuccess {
+// 			onSendFailed()
+// 			for range marshaledElems {
+// 			}
+// 		}
+// 	}()
+// 	elemsCount := 0
+// 	for marshaledElem := range marshaledElems {
+// 		// http client disconnected -> ErrNoConsumer on IMultiResponseSender.SendElement() -> QP will call Close()
+// 		if requestCtx.Err() != nil {
+// 			// possible: ctx is done but on select {sections<-section, <-ctx.Done()} write to sections channel is triggered.
+// 			// ctx.Done() must have the priority
+// 			return
+// 		}
+// 		if elemsCount == 0 {
+// 			sendSuccess = initResponse(w, coreutils.ApplicationJSON, http.StatusOK) && writeResponse(w, `"sections":[{"type":"","elements":[`)
+// 		} else {
+// 			sendSuccess = writeResponse(w, ",")
+// 		}
+
+// 		if !sendSuccess {
+// 			return
+// 		}
+
+// 		if sendSuccess = writeResponse(w, marshaledElem); !sendSuccess {
+// 			return
+// 		}
+// 		elemsCount++
+// 	}
+// 	if elemsCount > 0 {
+// 		if sendSuccess = writeResponse(w, "]}]"); !sendSuccess {
+// 			return
+// 		}
+// 	}
+// 	if *secErr != nil {
+// 		if elemsCount == 0 {
+// 			// no elements -> let's see which status code to send
+// 			headerStatusCode := http.StatusInternalServerError
+// 			var sysErr coreutils.SysError
+// 			if errors.As(*secErr, &sysErr) {
+// 				headerStatusCode = sysErr.HTTPStatus
+// 			}
+// 			sendSuccess = initResponse(w, coreutils.ApplicationJSON, headerStatusCode)
+// 		} else {
+// 			sendSuccess = writeResponse(w, ",")
+// 		}
+// 		if !sendSuccess {
+// 			return
+// 		}
+// 		var jsonableErr interface{ ToJSON() string }
+// 		if errors.As(*secErr, &jsonableErr) {
+// 			jsonErr := jsonableErr.ToJSON()
+// 			// will not eliminate { and } because currently router will send not initial "{" and final "}" if the first element is string
+// 			// that is done for backward compatibility for handling text/plain responses
+// 			sendSuccess = writeResponse(w, jsonErr)
+// 		} else {
+// 			sendSuccess = writeResponse(w, fmt.Sprintf(`"status":%d,"errorDescription":"%s"}`, http.StatusInternalServerError, *secErr))
+// 		}
+// 	}
+// 	if sendSuccess {
+// 		sendSuccess = writeResponse(w, "}")
+// 	}
+// }
+
+// func writeSectionedResponse(requestCtx context.Context, w http.ResponseWriter, marshaledElems <-chan string, secErr *error, onSendFailed func()) {
+// 	ok := true
+// 	var iSection ibus.ISection
+// 	defer func() {
+// 		if !ok {
+// 			onSendFailed()
+// 			// consume all pending sections or elems to avoid hanging on ibusnats side
+// 			// normally should one pending elem or section because ibusnats implementation
+// 			// will terminate on next elem or section because `onSendFailed()` actually closes the context
+// 			discardSection(iSection, requestCtx)
+// 			for iSection := range sections {
+// 				discardSection(iSection, requestCtx)
+// 			}
+// 		}
+// 	}()
+
+// 	sectionsOpened := false
+// 	sectionedResponseStarted := false
+
+// 	closer := ""
+// 	readSections := func() bool {
+// 		for iSection = range sections {
+// 			// possible: ctx is done but on select {sections<-section, <-ctx.Done()} write to sections channel is triggered.
+// 			// ctx.Done() must have the priority
+// 			if requestCtx.Err() != nil {
+// 				ok = false
+// 				break
+// 			}
+// 			if !sectionedResponseStarted {
+// 				if ok = startSectionedResponse(w); !ok {
+// 					return false
+// 				}
+// 				sectionedResponseStarted = true
+// 			}
+
+// 			if !sectionsOpened {
+// 				if ok = writeResponse(w, `"sections":[`); !ok {
+// 					return false
+// 				}
+// 				closer = "]"
+// 				sectionsOpened = true
+// 			} else {
+// 				if ok = writeResponse(w, ","); !ok {
+// 					return false
+// 				}
+// 			}
+// 			if ok = writeSection(w, iSection, requestCtx); !ok {
+// 				return false
+// 			}
+// 		}
+// 		return true
+// 	}
+// 	mustReturn := readSections()
+// 	if requestCtx.Err() != nil {
+// 		if onRequestCtxClosed != nil {
+// 			onRequestCtxClosed()
+// 		}
+// 		log.Println("client disconnected during sections sending")
+// 		return
+// 	}
+// 	if !mustReturn {
+// 		return
+// 	}
+
+// 	if *secErr != nil {
+// 		if !sectionedResponseStarted {
+// 			if !startSectionedResponse(w) {
+// 				return
+// 			}
+// 		}
+// 		if sectionsOpened {
+// 			closer = "],"
+// 		}
+// 		var jsonableErr interface{ ToJSON() string }
+// 		if errors.As(*secErr, &jsonableErr) {
+// 			jsonErr := jsonableErr.ToJSON()
+// 			jsonErr = strings.TrimPrefix(jsonErr, "{")
+// 			jsonErr = strings.TrimSuffix(jsonErr, "}")
+// 			writeResponse(w, fmt.Sprintf(`%s%s}`, closer, jsonErr))
+// 		} else {
+// 			writeResponse(w, fmt.Sprintf(`%s"status":%d,"errorDescription":"%s"}`, closer, http.StatusInternalServerError, *secErr))
+// 		}
+// 	} else if sectionedResponseStarted {
+// 		writeResponse(w, closer+"}")
+// 	}
+// }
 
 func discardSection(iSection ibus.ISection, requestCtx context.Context) {
 	switch t := iSection.(type) {
@@ -161,11 +317,10 @@ func discardSection(iSection ibus.ISection, requestCtx context.Context) {
 	}
 }
 
-func startSectionedResponse(w http.ResponseWriter) bool {
-	w.Header().Set(coreutils.ContentType, coreutils.ApplicationJSON)
+func initResponse(w http.ResponseWriter, contentType string, statusCode int) {
+	w.Header().Set(coreutils.ContentType, contentType)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.WriteHeader(http.StatusOK)
-	return writeResponse(w, "{")
+	w.WriteHeader(statusCode)
 }
 
 func writeSection(w http.ResponseWriter, isec ibus.ISection, requestCtx context.Context) bool {

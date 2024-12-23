@@ -40,7 +40,7 @@ func NewVVMDefaultConfig() VVMConfig {
 		Time:                   coreutils.NewITime(),
 		Name:                   processors.VVMName(hostname),
 		VVMAppsBuilder:         VVMAppsBuilder{},
-		BusTimeout:             BusTimeout(ibus.DefaultTimeout),
+		SendTimeout:            coreutils.SendTimeout(ibus.DefaultTimeout),
 		BlobberServiceChannels: router.BlobberServiceChannels{
 			{
 				NumChannels:       1,

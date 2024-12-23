@@ -21,10 +21,34 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	"golang.org/x/exp/slices"
-
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
+	"golang.org/x/exp/slices"
 )
+
+// TODO: CP should send CommandResponse struct itself, not CommandResponse marshaled to a string
+func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req ibus.Request) (statusCode int, cmdResp CommandResponse, err error) {
+	responseCh, responseMeta, responseErr, err := requestSender.SendRequest(ctx, req)
+	if err != nil {
+		return 0, cmdResp, err
+	}
+	body := ""
+	for elem := range responseCh {
+		if len(body) > 0 {
+			// notest
+			panic(fmt.Sprintf("unexpected response element: %v", elem))
+		}
+		body = elem.(string)
+	}
+	if *responseErr != nil {
+		cmdResp.SysError = (*responseErr).(SysError)
+		return cmdResp.SysError.HTTPStatus, cmdResp, nil
+	}
+	if err = json.Unmarshal([]byte(body), &cmdResp); err != nil {
+		// notest
+		panic(err)
+	}
+	return responseMeta.StatusCode, cmdResp, nil
+}
 
 func NewHTTPErrorf(httpStatus int, args ...interface{}) SysError {
 	return SysError{
@@ -37,54 +61,61 @@ func NewHTTPError(httpStatus int, err error) SysError {
 	return NewHTTPErrorf(httpStatus, err.Error())
 }
 
-func ReplyErrf(sender ibus.ISender, status int, args ...interface{}) {
-	ReplyErrDef(sender, NewHTTPErrorf(status, args...), http.StatusInternalServerError)
+func ReplyPlainText(responder IResponder, text string) {
+	sender := responder.InitResponse(ResponseMeta{ContentType: TextPlain, StatusCode: http.StatusOK})
+	if err := sender.Send(text); err != nil {
+		logger.Error(err.Error() + ": failed to send response: " + text)
+	}
+	sender.Close(nil)
+}
+
+func ReplyErrf(responder IResponder, status int, args ...interface{}) {
+	ReplyErrDef(responder, NewHTTPErrorf(status, args...), http.StatusInternalServerError)
 }
 
 //nolint:errorlint
-func ReplyErrDef(sender ibus.ISender, err error, defaultStatusCode int) {
+func ReplyErrDef(responder IResponder, err error, defaultStatusCode int) {
 	res := WrapSysError(err, defaultStatusCode).(SysError)
-	ReplyJSON(sender, res.HTTPStatus, res.ToJSON())
+	sender := responder.InitResponse(ResponseMeta{ApplicationJSON, res.HTTPStatus})
+	sender.Close(res)
 }
 
-func ReplyErr(sender ibus.ISender, err error) {
-	ReplyErrDef(sender, err, http.StatusInternalServerError)
+func ReplyErr(responder IResponder, err error) {
+	ReplyErrDef(responder, err, http.StatusInternalServerError)
 }
 
-func ReplyJSON(sender ibus.ISender, httpCode int, body string) {
-	sender.SendResponse(ibus.Response{
-		ContentType: ApplicationJSON,
-		StatusCode:  httpCode,
-		Data:        []byte(body),
-	})
+func ReplyJSON(responder IResponder, httpCode int, obj any) {
+	sender := responder.InitResponse(ResponseMeta{ContentType: ApplicationJSON, StatusCode: httpCode})
+	sender.Send(obj)
+	sender.Close(nil)
 }
 
-func ReplyBadRequest(sender ibus.ISender, message string) {
-	ReplyErrf(sender, http.StatusBadRequest, message)
+func ReplyBadRequest(responder IResponder, message string) {
+	ReplyErrf(responder, http.StatusBadRequest, message)
 }
 
-func replyAccessDenied(sender ibus.ISender, code int, message string) {
+func replyAccessDenied(responder IResponder, code int, message string) {
 	msg := "access denied"
 	if len(message) > 0 {
 		msg += ": " + message
 	}
-	ReplyErrf(sender, code, msg)
+	ReplyErrf(responder, code, msg)
 }
 
-func ReplyAccessDeniedUnauthorized(sender ibus.ISender, message string) {
-	replyAccessDenied(sender, http.StatusUnauthorized, message)
+func ReplyAccessDeniedUnauthorized(responder IResponder, message string) {
+	replyAccessDenied(responder, http.StatusUnauthorized, message)
 }
 
-func ReplyAccessDeniedForbidden(sender ibus.ISender, message string) {
-	replyAccessDenied(sender, http.StatusForbidden, message)
+func ReplyAccessDeniedForbidden(responder IResponder, message string) {
+	replyAccessDenied(responder, http.StatusForbidden, message)
 }
 
-func ReplyUnauthorized(sender ibus.ISender, message string) {
-	ReplyErrf(sender, http.StatusUnauthorized, message)
+func ReplyUnauthorized(responder IResponder, message string) {
+	ReplyErrf(responder, http.StatusUnauthorized, message)
 }
 
-func ReplyInternalServerError(sender ibus.ISender, message string, err error) {
-	ReplyErrf(sender, http.StatusInternalServerError, message, ": ", err)
+func ReplyInternalServerError(responder IResponder, message string, err error) {
+	ReplyErrf(responder, http.StatusInternalServerError, message, ": ", err)
 }
 
 // WithResponseHandler, WithLongPolling and WithDiscardResponse are mutual exclusive

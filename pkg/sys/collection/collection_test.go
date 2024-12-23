@@ -474,7 +474,7 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 	// Fill the collection projection
 	cp_Collection_3levels(t, appParts, appStructs)
 
-	request := []byte(`{
+	requestBody := []byte(`{
 						"args":{
 							"Schema":"test.articles"
 						},
@@ -492,7 +492,6 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 						"orderBy":[{"field":"name"}]
 					}`)
 	serviceChannel := make(iprocbus.ServiceChannel)
-	out := newTestSender()
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
@@ -500,89 +499,90 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(
 		serviceChannel,
-		func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable { return out },
 		appParts,
 		maxPrepareQueries,
 		imetrics.Provide(), "vvm", authn, authz, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, request, qNameQueryCollection, "", sysToken)
-	<-out.done
+	sender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+		serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, responder, requestBody, qNameQueryCollection, "", sysToken)
+	})
 
-	out.requireNoError(require)
-	require.Len(out.resultRows, 2) // 2 rows
+	resultRows := getResultRows(sender, require)
 
-	json, err := json.Marshal(out.resultRows)
+	require.Len(resultRows, 2) // 2 rows
+
+	json, err := json.Marshal(resultRows)
 	require.NoError(err)
 	require.NotNil(json)
 
 	{
 		row := 0
-		require.Len(out.resultRows[row], 2) // 2 elements in a row
+		require.Len(resultRows[row], 2) // 2 elements in a row
 		{
 			elem := 0
-			require.Len(out.resultRows[row][elem], 1)    // 1 element row in 1st element
-			require.Len(out.resultRows[row][elem][0], 3) // 3 cell in a row element
-			name := out.resultRows[row][elem][0][0]
-			number := out.resultRows[row][elem][0][1]
-			department := out.resultRows[row][elem][0][2]
+			require.Len(resultRows[row][elem], 1)    // 1 element row in 1st element
+			require.Len(resultRows[row][elem][0], 3) // 3 cell in a row element
+			name := resultRows[row][elem][0][0]
+			number := resultRows[row][elem][0][1]
+			department := resultRows[row][elem][0][2]
 			require.Equal("Coca-cola", name)
-			require.Equal(int32(10), number)
+			require.EqualValues(10, number)
 			require.Equal("Cold Drinks", department)
 		}
 		{
 			elem := 1
-			require.Len(out.resultRows[row][elem], 2) // 2 element rows in 2nd element
+			require.Len(resultRows[row][elem], 2) // 2 element rows in 2nd element
 			{
 				elemRow := 0
-				require.Len(out.resultRows[row][elem][elemRow], 2) // 2 cells in a row element
-				price := out.resultRows[row][elem][elemRow][0]
-				pricename := out.resultRows[row][elem][elemRow][1]
-				require.Equal(float32(2.0), price)
+				require.Len(resultRows[row][elem][elemRow], 2) // 2 cells in a row element
+				price := resultRows[row][elem][elemRow][0]
+				pricename := resultRows[row][elem][elemRow][1]
+				require.EqualValues(2.0, price)
 				require.Equal("Normal Price", pricename)
 			}
 			{
 				elemRow := 1
-				require.Len(out.resultRows[row][elem][elemRow], 2) // 2 cells in a row element
-				price := out.resultRows[row][elem][elemRow][0]
-				pricename := out.resultRows[row][elem][elemRow][1]
-				require.Equal(float32(1.5), price)
+				require.Len(resultRows[row][elem][elemRow], 2) // 2 cells in a row element
+				price := resultRows[row][elem][elemRow][0]
+				pricename := resultRows[row][elem][elemRow][1]
+				require.EqualValues(1.5, price)
 				require.Equal("Happy Hour Price", pricename)
 			}
 		}
 	}
 	{
 		row := 1
-		require.Len(out.resultRows[row], 2) // 2 elements in a row
+		require.Len(resultRows[row], 2) // 2 elements in a row
 		{
 			elem := 0
-			require.Len(out.resultRows[row][elem], 1)    // 1 element row in 1st element
-			require.Len(out.resultRows[row][elem][0], 3) // 3 cell in a row element
-			name := out.resultRows[row][elem][0][0]
-			number := out.resultRows[row][elem][0][1]
-			department := out.resultRows[row][elem][0][2]
+			require.Len(resultRows[row][elem], 1)    // 1 element row in 1st element
+			require.Len(resultRows[row][elem][0], 3) // 3 cell in a row element
+			name := resultRows[row][elem][0][0]
+			number := resultRows[row][elem][0][1]
+			department := resultRows[row][elem][0][2]
 			require.Equal("Fanta", name)
-			require.Equal(int32(12), number)
+			require.EqualValues(12, number)
 			require.Equal("Cold Drinks", department)
 		}
 		{
 			elem := 1
-			require.Len(out.resultRows[row][elem], 2) // 2 element rows in 2nd element
+			require.Len(resultRows[row][elem], 2) // 2 element rows in 2nd element
 			{
 				elemRow := 0
-				require.Len(out.resultRows[row][elem][elemRow], 2) // 2 cells in a row element
-				price := out.resultRows[row][elem][elemRow][0]
-				pricename := out.resultRows[row][elem][elemRow][1]
-				require.Equal(float32(2.1), price)
+				require.Len(resultRows[row][elem][elemRow], 2) // 2 cells in a row element
+				price := resultRows[row][elem][elemRow][0]
+				pricename := resultRows[row][elem][elemRow][1]
+				require.EqualValues(2.1, price)
 				require.Equal("Normal Price", pricename)
 			}
 			{
 				elemRow := 1
-				require.Len(out.resultRows[row][elem][elemRow], 2) // 2 cells in a row element
-				price := out.resultRows[row][elem][elemRow][0]
-				pricename := out.resultRows[row][elem][elemRow][1]
-				require.Equal(float32(1.6), price)
+				require.Len(resultRows[row][elem][elemRow], 2) // 2 cells in a row element
+				price := resultRows[row][elem][elemRow][0]
+				pricename := resultRows[row][elem][elemRow][1]
+				require.EqualValues(1.6, price)
 				require.Equal("Happy Hour Price", pricename)
 			}
 		}
@@ -598,7 +598,7 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 	// Fill the collection projection
 	cp_Collection_3levels(t, appParts, appStructs)
 
-	request := fmt.Sprintf(`{
+	requestBody := fmt.Sprintf(`{
 		"args":{
 			"ID":%d
 		},
@@ -610,29 +610,29 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 	}`, int64(cocaColaDocID))
 
 	serviceChannel := make(iprocbus.ServiceChannel)
-	out := newTestSender()
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	tokens := itokensjwt.TestTokensJWT()
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
-	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
-		return out
-	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
+	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, appParts, maxPrepareQueries, imetrics.Provide(),
+		"vvm", authn, authz, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
 
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, []byte(request), qNameQueryGetCDoc, "", sysToken)
-	<-out.done
+	sender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+		serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, responder, []byte(requestBody), qNameQueryGetCDoc, "", sysToken)
+	})
 
-	out.requireNoError(require)
-	require.Len(out.resultRows, 1)          // 1 row
-	require.Len(out.resultRows[0], 1)       // 1 element in a row
-	require.Len(out.resultRows[0][0], 1)    // 1 row element in an element
-	require.Len(out.resultRows[0][0][0], 1) // 1 cell in a row element
+	resultRows := getResultRows(sender, require)
 
-	value := out.resultRows[0][0][0][0]
+	require.Len(resultRows, 1)          // 1 row
+	require.Len(resultRows[0], 1)       // 1 element in a row
+	require.Len(resultRows[0][0], 1)    // 1 row element in an element
+	require.Len(resultRows[0][0][0], 1) // 1 cell in a row element
+
+	value := resultRows[0][0][0][0]
 	expected := `{
 
 		"article_prices":[
@@ -729,28 +729,28 @@ func TestBasicUsage_State(t *testing.T) {
 	cp_Collection_3levels(t, appParts, appStructs)
 
 	serviceChannel := make(iprocbus.ServiceChannel)
-	out := newTestSender()
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	tokens := itokensjwt.TestTokensJWT()
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
-	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
-		return out
-	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
+	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, appParts, maxPrepareQueries, imetrics.Provide(),
+		"vvm", authn, authz, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
 
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, []byte(`{"args":{"After":0},"elements":[{"fields":["State"]}]}`),
-		qNameQueryState, "", sysToken)
-	<-out.done
+	sender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+		serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, responder, []byte(`{"args":{"After":0},"elements":[{"fields":["State"]}]}`),
+			qNameQueryState, "", sysToken)
+	})
 
-	out.requireNoError(require)
-	require.Len(out.resultRows, 1)          // 1 row
-	require.Len(out.resultRows[0], 1)       // 1 element in a row
-	require.Len(out.resultRows[0][0], 1)    // 1 row element in an element
-	require.Len(out.resultRows[0][0][0], 1) // 1 cell in a row element
+	resultRows := getResultRows(sender, require)
+
+	require.Len(resultRows, 1)          // 1 row
+	require.Len(resultRows[0], 1)       // 1 element in a row
+	require.Len(resultRows[0][0], 1)    // 1 row element in an element
+	require.Len(resultRows[0][0][0], 1) // 1 cell in a row element
 	expected := `{
 		"test.article_price_exceptions":{
 			"322685000131081":{
@@ -885,7 +885,7 @@ func TestBasicUsage_State(t *testing.T) {
 			}
 		}
 	}`
-	require.JSONEq(expected, out.resultRows[0][0][0][0].(string))
+	require.JSONEq(expected, resultRows[0][0][0][0].(string))
 }
 
 func TestState_withAfterArgument(t *testing.T) {
@@ -898,28 +898,29 @@ func TestState_withAfterArgument(t *testing.T) {
 	cp_Collection_3levels(t, appParts, appStructs)
 
 	serviceChannel := make(iprocbus.ServiceChannel)
-	out := newTestSender()
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	tokens := itokensjwt.TestTokensJWT()
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
-	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
-		return out
-	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
+	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, appParts, maxPrepareQueries, imetrics.Provide(),
+		"vvm", authn, authz, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
 
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, []byte(`{"args":{"After":5},"elements":[{"fields":["State"]}]}`),
-		qNameQueryState, "", sysToken)
-	<-out.done
+	sender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+		serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, responder, []byte(`{"args":{"After":5},"elements":[{"fields":["State"]}]}`),
+			qNameQueryState, "", sysToken)
+	})
 
-	out.requireNoError(require)
-	require.Len(out.resultRows, 1)          // 1 row
-	require.Len(out.resultRows[0], 1)       // 1 element in a row
-	require.Len(out.resultRows[0][0], 1)    // 1 row element in an element
-	require.Len(out.resultRows[0][0][0], 1) // 1 cell in a row element
+	resultRows := getResultRows(sender, require)
+
+	// out.requireNoError(require)
+	require.Len(resultRows, 1)          // 1 row
+	require.Len(resultRows[0], 1)       // 1 element in a row
+	require.Len(resultRows[0][0], 1)    // 1 row element in an element
+	require.Len(resultRows[0][0][0], 1) // 1 cell in a row element
 	expected := `
 	{
 		"test.article_price_exceptions":{
@@ -939,7 +940,23 @@ func TestState_withAfterArgument(t *testing.T) {
 			}
 		}
 	}`
-	require.JSONEq(expected, out.resultRows[0][0][0][0].(string))
+	require.JSONEq(expected, resultRows[0][0][0][0].(string))
+}
+
+func getResultRows(sender coreutils.IRequestSender, require *require.Assertions) []resultRow {
+	respCh, _, respErr, err := sender.SendRequest(context.Background(), ibus.Request{})
+	require.NoError(err)
+	resultRows := []resultRow{}
+	for elem := range respCh {
+		_ = elem
+		bts, err := json.Marshal(elem)
+		require.NoError(err)
+		var resultRow resultRow
+		require.NoError(json.Unmarshal(bts, &resultRow))
+		resultRows = append(resultRows, resultRow)
+	}
+	require.NoError(*respErr)
+	return resultRows
 }
 
 func createEvent(require *require.Assertions, app istructs.IAppStructs, generator istructs.IIDGenerator, bld istructs.IRawEventBuilder) istructs.IPLogEvent {

@@ -12,7 +12,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 // FilterFactory creates IFilter from data
@@ -92,7 +91,7 @@ type IOutputRow interface {
 type IQueryMessage interface {
 	AppQName() appdef.AppQName
 	WSID() istructs.WSID
-	Sender() ibus.ISender
+	Responder() coreutils.IResponder
 	Body() []byte
 	RequestCtx() context.Context
 	QName() appdef.QName
@@ -102,15 +101,15 @@ type IQueryMessage interface {
 	Token() string
 }
 
-type ResultSenderClosableFactory func(ctx context.Context, sender ibus.ISender) IResultSenderClosable
+// type ResultSenderClosableFactory func(ctx context.Context, sender ibus.ISender) IResultSenderClosable
 
-type IResultSenderClosable interface {
-	StartArraySection(sectionType string, path []string)
-	StartMapSection(sectionType string, path []string)
-	ObjectSection(sectionType string, path []string, element interface{}) (err error)
-	SendElement(name string, element interface{}) (err error)
-	Close(err error)
-}
+// type IResultSenderClosable interface {
+// 	StartArraySection(sectionType string, path []string)
+// 	StartMapSection(sectionType string, path []string)
+// 	ObjectSection(sectionType string, path []string, element interface{}) (err error)
+// 	SendElement(name string, element interface{}) (err error)
+// 	Close(err error)
+// }
 
 type IMetrics interface {
 	Increase(metricName string, valueDelta float64)

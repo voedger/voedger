@@ -6,7 +6,6 @@ package router
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -17,7 +16,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gorilla/mux"
 
@@ -73,7 +71,27 @@ func (bm *blobBaseMessage) Release() {
 	bm.req.Body.Close()
 }
 
-func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails interface{}, blobStorage iblobstorage.IBLOBStorage, bus ibus.IBus, busTimeout time.Duration) {
+// use statusCode and errorMessage only if err == nil
+// statusCode == 200 -> errorMessage is empty
+func sendQueryRequest(ctx context.Context, req ibus.Request, requestSender coreutils.IRequestSender) (statusCode int, errorMessage string, err error) {
+	responseCh, _, responseErr, err := requestSender.SendRequest(ctx, req)
+	if err != nil {
+		return 0, "", err
+	}
+	for range responseCh {
+	}
+	if *responseErr != nil {
+		var sysErr coreutils.SysError
+		if errors.As(*responseErr, &sysErr) {
+			return sysErr.HTTPStatus, sysErr.Data, nil
+		}
+		return http.StatusInternalServerError, (*responseErr).Error(), nil
+	}
+	return http.StatusOK, "", nil
+}
+
+func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails interface{}, blobStorage iblobstorage.IBLOBStorage,
+	requestSender coreutils.IRequestSender) {
 	defer close(bbm.doneChan)
 
 	// request to VVM to check the principalToken
@@ -86,13 +104,13 @@ func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails interface{}, bl
 		Body:     []byte(`{}`),
 		Host:     localhost,
 	}
-	blobHelperResp, _, _, err := bus.SendRequest2(bbm.req.Context(), req, busTimeout)
+	statusCode, errorMessage, err := sendQueryRequest(bbm.req.Context(), req, requestSender)
 	if err != nil {
 		WriteTextResponse(bbm.resp, "failed to exec q.sys.DownloadBLOBAuthnz: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if blobHelperResp.StatusCode != http.StatusOK {
-		WriteTextResponse(bbm.resp, "q.sys.DownloadBLOBAuthnz returned error: "+string(blobHelperResp.Data), blobHelperResp.StatusCode)
+	if statusCode != http.StatusOK {
+		WriteTextResponse(bbm.resp, "q.sys.DownloadBLOBAuthnz returned error: "+errorMessage, statusCode)
 		return
 	}
 
@@ -138,8 +156,8 @@ func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails interface{}, bl
 }
 
 // returns NullRecordID for temporary BLOB
-func registerBLOB(ctx context.Context, wsid istructs.WSID, appQName string, registerFuncName string, header map[string][]string, busTimeout time.Duration,
-	bus ibus.IBus, resp http.ResponseWriter) (ok bool, blobID istructs.RecordID) {
+func registerBLOB(ctx context.Context, wsid istructs.WSID, appQName string, registerFuncName string, header map[string][]string,
+	requestSender coreutils.IRequestSender, resp http.ResponseWriter) (ok bool, blobID istructs.RecordID) {
 	req := ibus.Request{
 		Method:   ibus.HTTPMethodPOST,
 		WSID:     wsid,
@@ -149,32 +167,22 @@ func registerBLOB(ctx context.Context, wsid istructs.WSID, appQName string, regi
 		Header:   header,
 		Host:     localhost,
 	}
-	blobHelperResp, _, _, err := bus.SendRequest2(ctx, req, busTimeout)
+
+	statusCode, cmdResp, err := coreutils.GetCommandResponse(ctx, requestSender, req)
 	if err != nil {
 		WriteTextResponse(resp, fmt.Sprintf("failed to exec %s: %s", registerFuncName, err.Error()), http.StatusInternalServerError)
 		return false, istructs.NullRecordID
 	}
-	if blobHelperResp.StatusCode != http.StatusOK {
-		WriteTextResponse(resp, fmt.Sprintf("%s returned error: %s", registerFuncName, string(blobHelperResp.Data)), blobHelperResp.StatusCode)
+	if statusCode != http.StatusOK {
+		WriteTextResponse(resp, fmt.Sprintf("%s returned error: %v", registerFuncName, cmdResp.SysError), statusCode)
 		return false, istructs.NullRecordID
 	}
-
-	cmdResp := map[string]interface{}{}
-	if err := json.Unmarshal(blobHelperResp.Data, &cmdResp); err != nil {
-		WriteTextResponse(resp, fmt.Sprintf("failed to json-unmarshal %s result: %s", registerFuncName, err), http.StatusInternalServerError)
-		return false, istructs.NullRecordID
-	}
-	newIDsIntf, ok := cmdResp["NewIDs"]
-	if ok {
-		newIDs := newIDsIntf.(map[string]interface{})
-		return true, istructs.RecordID(newIDs["1"].(float64))
-	}
-	return true, istructs.NullRecordID
+	return true, istructs.RecordID(cmdResp.NewIDs["1"])
 }
 
 func writeBLOB_temporary(ctx context.Context, wsid istructs.WSID, appQName string, header map[string][]string, resp http.ResponseWriter,
 	blobName, blobMimeType string, blobDuration iblobstorage.DurationType, blobStorage iblobstorage.IBLOBStorage, body io.ReadCloser,
-	bus ibus.IBus, busTimeout time.Duration, wLimiterFactory func() iblobstorage.WLimiterType) (blobSUUID iblobstorage.SUUID) {
+	requestSender coreutils.IRequestSender, wLimiterFactory func() iblobstorage.WLimiterType) (blobSUUID iblobstorage.SUUID) {
 	registerFuncName, ok := durationToRegisterFuncs[blobDuration]
 	if !ok {
 		// notest
@@ -182,7 +190,7 @@ func writeBLOB_temporary(ctx context.Context, wsid istructs.WSID, appQName strin
 		return ""
 	}
 
-	if ok, _ = registerBLOB(ctx, wsid, appQName, registerFuncName, header, busTimeout, bus, resp); !ok {
+	if ok, _ = registerBLOB(ctx, wsid, appQName, registerFuncName, header, requestSender, resp); !ok {
 		return
 	}
 
@@ -211,11 +219,11 @@ func writeBLOB_temporary(ctx context.Context, wsid istructs.WSID, appQName strin
 
 func writeBLOB_persistent(ctx context.Context, wsid istructs.WSID, appQName string, header map[string][]string, resp http.ResponseWriter,
 	blobName, blobMimeType string, blobStorage iblobstorage.IBLOBStorage, body io.ReadCloser,
-	bus ibus.IBus, busTimeout time.Duration, wLimiterFactory func() iblobstorage.WLimiterType) (blobID istructs.RecordID) {
+	requestSender coreutils.IRequestSender, wLimiterFactory func() iblobstorage.WLimiterType) (blobID istructs.RecordID) {
 
 	// request VVM for check the principalToken and get a blobID
 	ok := false
-	if ok, blobID = registerBLOB(ctx, wsid, appQName, "c.sys.UploadBLOBHelper", header, busTimeout, bus, resp); !ok {
+	if ok, blobID = registerBLOB(ctx, wsid, appQName, "c.sys.UploadBLOBHelper", header, requestSender, resp); !ok {
 		return
 	}
 
@@ -250,13 +258,13 @@ func writeBLOB_persistent(ctx context.Context, wsid istructs.WSID, appQName stri
 		Header:   header,
 		Host:     localhost,
 	}
-	cudWDocBLOBUpdateResp, _, _, err := bus.SendRequest2(ctx, req, busTimeout)
+	statusCode, cmdResp, err  := coreutils.GetCommandResponse(ctx, requestSender, req)
 	if err != nil {
 		WriteTextResponse(resp, "failed to exec c.sys.CUD: "+err.Error(), http.StatusInternalServerError)
 		return 0
 	}
-	if cudWDocBLOBUpdateResp.StatusCode != http.StatusOK {
-		WriteTextResponse(resp, "c.sys.CUD returned error: "+string(cudWDocBLOBUpdateResp.Data), cudWDocBLOBUpdateResp.StatusCode)
+	if statusCode != http.StatusOK {
+		WriteTextResponse(resp, "c.sys.CUD returned error: "+cmdResp.SysError.Message, statusCode)
 		return 0
 	}
 
@@ -264,7 +272,7 @@ func writeBLOB_persistent(ctx context.Context, wsid istructs.WSID, appQName stri
 }
 
 func blobWriteMessageHandlerMultipart(bbm blobBaseMessage, blobStorage iblobstorage.IBLOBStorage, blobDetails blobWriteDetailsMultipart,
-	bus ibus.IBus, busTimeout time.Duration) {
+	requestSender coreutils.IRequestSender) {
 	defer close(bbm.doneChan)
 
 	r := multipart.NewReader(bbm.req.Body, blobDetails.boundary)
@@ -301,11 +309,11 @@ func blobWriteMessageHandlerMultipart(bbm blobBaseMessage, blobStorage iblobstor
 		if blobDetails.duration > 0 {
 			// temporary BLOB
 			blobIDOrSUUID = string(writeBLOB_temporary(bbm.req.Context(), bbm.wsid, bbm.appQName.String(), part.Header, bbm.resp,
-				params["name"], contentType, blobDetails.duration, blobStorage, part, bus, busTimeout, bbm.wLimiterFactory))
+				params["name"], contentType, blobDetails.duration, blobStorage, part, requestSender, bbm.wLimiterFactory))
 		} else {
 			// persistent BLOB
 			blobID := writeBLOB_persistent(bbm.req.Context(), bbm.wsid, bbm.appQName.String(), part.Header, bbm.resp,
-				params["name"], contentType, blobStorage, part, bus, busTimeout, bbm.wLimiterFactory)
+				params["name"], contentType, blobStorage, part, requestSender, bbm.wLimiterFactory)
 			blobIDOrSUUID = utils.UintToString(blobID)
 		}
 		if len(blobIDOrSUUID) == 0 {
@@ -318,20 +326,20 @@ func blobWriteMessageHandlerMultipart(bbm blobBaseMessage, blobStorage iblobstor
 }
 
 func blobWriteMessageHandlerSingle(bbm blobBaseMessage, blobWriteDetails blobWriteDetailsSingle, blobStorage iblobstorage.IBLOBStorage, header map[string][]string,
-	bus ibus.IBus, busTimeout time.Duration) {
+	requestSender coreutils.IRequestSender) {
 	defer close(bbm.doneChan)
 
 	if blobWriteDetails.duration > 0 {
 		// remporary BLOB
 		blobSUUID := writeBLOB_temporary(bbm.req.Context(), bbm.wsid, bbm.appQName.String(), header, bbm.resp, blobWriteDetails.name,
-			blobWriteDetails.mimeType, blobWriteDetails.duration, blobStorage, bbm.req.Body, bus, busTimeout, bbm.wLimiterFactory)
+			blobWriteDetails.mimeType, blobWriteDetails.duration, blobStorage, bbm.req.Body, requestSender, bbm.wLimiterFactory)
 		if len(blobSUUID) > 0 {
 			WriteTextResponse(bbm.resp, string(blobSUUID), http.StatusOK)
 		}
 	} else {
 		// persistent BLOB
 		blobID := writeBLOB_persistent(bbm.req.Context(), bbm.wsid, bbm.appQName.String(), header, bbm.resp, blobWriteDetails.name,
-			blobWriteDetails.mimeType, blobStorage, bbm.req.Body, bus, busTimeout, bbm.wLimiterFactory)
+			blobWriteDetails.mimeType, blobStorage, bbm.req.Body, requestSender, bbm.wLimiterFactory)
 		if blobID > 0 {
 			WriteTextResponse(bbm.resp, utils.UintToString(blobID), http.StatusOK)
 		}
@@ -339,18 +347,18 @@ func blobWriteMessageHandlerSingle(bbm blobBaseMessage, blobWriteDetails blobWri
 }
 
 // ctx here is VVM context. It used to track VVM shutdown. Blobber will use the request's context
-func blobMessageHandler(vvmCtx context.Context, sc iprocbus.ServiceChannel, blobStorage iblobstorage.IBLOBStorage, bus ibus.IBus, busTimeout time.Duration) {
+func blobMessageHandler(vvmCtx context.Context, sc iprocbus.ServiceChannel, blobStorage iblobstorage.IBLOBStorage, requestSender coreutils.IRequestSender) {
 	for vvmCtx.Err() == nil {
 		select {
 		case mesIntf := <-sc:
 			blobMessage := mesIntf.(blobMessage)
 			switch blobDetails := blobMessage.blobDetails.(type) {
 			case blobReadDetails_Persistent, blobReadDetails_Temporary:
-				blobReadMessageHandler(blobMessage.blobBaseMessage, blobDetails, blobStorage, bus, busTimeout)
+				blobReadMessageHandler(blobMessage.blobBaseMessage, blobDetails, blobStorage, requestSender)
 			case blobWriteDetailsSingle:
-				blobWriteMessageHandlerSingle(blobMessage.blobBaseMessage, blobDetails, blobStorage, blobMessage.header, bus, busTimeout)
+				blobWriteMessageHandlerSingle(blobMessage.blobBaseMessage, blobDetails, blobStorage, blobMessage.header, requestSender)
 			case blobWriteDetailsMultipart:
-				blobWriteMessageHandlerMultipart(blobMessage.blobBaseMessage, blobStorage, blobDetails, bus, busTimeout)
+				blobWriteMessageHandlerMultipart(blobMessage.blobBaseMessage, blobStorage, blobDetails, requestSender)
 			}
 		case <-vvmCtx.Done():
 			return

@@ -18,6 +18,7 @@ const (
 	ContentDisposition                                         = "Content-Disposition"
 	ApplicationJSON                                            = "application/json"
 	ApplicationXBinary                                         = "application/x-binary"
+	TextPlain                                                  = "text/plain"
 	BearerPrefix                                               = "Bearer "
 	shortRetryOn503Delay                                       = 100 * time.Millisecond
 	longRetryOn503Delay                                        = time.Second
