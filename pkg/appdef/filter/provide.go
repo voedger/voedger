@@ -50,8 +50,11 @@ func And(ff ...appdef.IFilter) appdef.IFilter {
 }
 
 // Or returns a filter that matches types that match any children filter.
-func Or(f1, f2 appdef.IFilter, ff ...appdef.IFilter) appdef.IFilter {
-	return newOrFilter(f1, f2, ff...)
+//
+// # Panics:
+//	 - if less then two filters are provided
+func Or(ff ...appdef.IFilter) appdef.IFilter {
+	return newOrFilter(ff...)
 }
 
 // Not returns a filter that invert matches for specified filter.

@@ -165,3 +165,46 @@ func Test_And(t *testing.T) {
 		}, "if only one filter are provided")
 	})
 }
+
+func Test_Or(t *testing.T) {
+	require := require.New(t)
+
+	wsName := appdef.NewQName("test", "workspace")
+	docName, cmdName, objName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "cmd"), appdef.NewQName("test", "obj")
+	tagName := appdef.NewQName("test", "tag")
+
+	app := func() appdef.IAppDef {
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+
+		wsb := adb.AddWorkspace(wsName)
+
+		wsb.AddTag(tagName)
+		wsb.AddCommand(cmdName).SetTag(tagName)
+		_ = wsb.AddCDoc(docName)
+		_ = wsb.AddObject(objName)
+
+		app, err := adb.Build()
+
+		require.NoError(err)
+		return app
+	}()
+
+	flt := filter.Or(
+		filter.Types(appdef.TypeKind_CDoc),
+		filter.Tags(tagName),
+	)
+
+	require.True(flt.Match(appdef.CDoc(app.Type, docName)), "Doc should be matched")
+	require.True(flt.Match(appdef.Command(app.Type, cmdName)), "Command should be matched")
+	require.False(flt.Match(appdef.Object(app.Type, objName)), "Object should be matched")
+
+	t.Run("should be panics", func(t *testing.T) {
+		require.Panics(func() {
+			_ = filter.Or()
+		}, "if no filters are provided")
+		require.Panics(func() {
+			_ = filter.Or(filter.True())
+		}, "if only one filter are provided")
+	})
+}

@@ -23,10 +23,11 @@ type orFilter struct {
 	children []appdef.IFilter
 }
 
-func newOrFilter(f1, f2 appdef.IFilter, ff ...appdef.IFilter) *orFilter {
-	f := &orFilter{children: []appdef.IFilter{f1, f2}}
-	f.children = append(f.children, ff...)
-	return f
+func newOrFilter(ff ...appdef.IFilter) *orFilter {
+	if len(ff) < 1+1 {
+		panic("less then two filters are provided")
+	}
+	return &orFilter{children: slices.Clone(ff)}
 }
 
 func (orFilter) Kind() appdef.FilterKind { return appdef.FilterKind_Or }
