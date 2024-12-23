@@ -69,7 +69,7 @@ func testBasicUsage(t *testing.T, keyGetter func() iblobstorage.IBLOBKey, blobWr
 	key := keyGetter()
 	require := require.New(t)
 
-	asf := mem.Provide()
+	asf := mem.Provide(coreutils.MockTime)
 	asp := istorageimpl.Provide(asf)
 	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -152,7 +152,7 @@ func TestFewBucketsBLOB(t *testing.T) {
 	)
 	require := require.New(t)
 
-	asf := mem.Provide()
+	asf := mem.Provide(coreutils.MockTime)
 	asp := istorageimpl.Provide(asf)
 	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -200,7 +200,7 @@ func TestQuotaExceed(t *testing.T) {
 		}
 	)
 	require := require.New(t)
-	asf := mem.Provide()
+	asf := mem.Provide(coreutils.MockTime)
 	asp := istorageimpl.Provide(asf)
 	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -239,7 +239,6 @@ func readData(ctx context.Context, reader io.Reader) (data []byte, err error) {
 	return entity, err
 }
 
-
 func TestBLOBNoFound(t *testing.T) {
-	
+
 }

@@ -549,6 +549,7 @@ func (vit *VIT) Restart() {
 
 // sets delay on IAppStorage.Get() in mem implementation
 // will be automatically reset to 0 on TearDown
+// need to e.g. investigate slow workspace create, see https://github.com/voedger/voedger/issues/1663
 func (vit *VIT) SetMemStorageGetDelay(delay time.Duration) {
 	vit.T.Helper()
 	vit.iterateDelaySetters(func(delaySetter istorage.IStorageDelaySetter) {
@@ -561,6 +562,7 @@ func (vit *VIT) SetMemStorageGetDelay(delay time.Duration) {
 
 // sets delay on IAppStorage.Put() in mem implementation
 // will be automatically reset to 0 on TearDown
+// need to e.g. investigate slow workspace create, see https://github.com/voedger/voedger/issues/1663
 func (vit *VIT) SetMemStoragePutDelay(delay time.Duration) {
 	vit.T.Helper()
 	vit.iterateDelaySetters(func(delaySetter istorage.IStorageDelaySetter) {

@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/gocql/gocql"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/istorage"
@@ -130,6 +131,49 @@ type appStorageType struct {
 	cluster  *gocql.ClusterConfig
 	session  *gocql.Session
 	keyspace string
+}
+
+func (s *appStorageType) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
+	q := fmt.Sprintf("insert into %s.values (p_key, c_col, value) values (?,?,?) if not exists using ttl %d", s.keyspace, ttlSeconds)
+	m := make(map[string]interface{})
+	applied, err := s.session.Query(q, pKey, safeCcols(cCols), value).Consistency(gocql.Quorum).MapScanCAS(m)
+	if err != nil {
+		return false, err
+	}
+
+	return applied, nil
+}
+
+func (s *appStorageType) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
+	q := fmt.Sprintf("update %s.values using ttl %d set value = ? where p_key = ? and c_col = ? if value = ?", s.keyspace, ttlSeconds)
+
+	data := make([]byte, 0)
+	applied, err := s.session.Query(q, newValue, pKey, cCols, oldValue).ScanCAS(&data)
+	if err != nil {
+		return false, err
+	}
+
+	return applied, nil
+}
+
+func (s *appStorageType) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
+	q := fmt.Sprintf(`delete from %s.values where p_key = ? AND c_col = ? if value = ?`, s.keyspace)
+
+	data := make([]byte, 0)
+	applied, err := s.session.Query(q, pKey, cCols, expectedValue).ScanCAS(&data)
+	if err != nil {
+		return false, err
+	}
+
+	return applied, nil
+}
+
+func (s *appStorageType) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
+	return s.Get(pKey, cCols, data)
+}
+
+func (s *appStorageType) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
+	return s.Read(ctx, pKey, startCCols, finishCCols, cb)
 }
 
 func getSession(cluster *gocql.ClusterConfig) (*gocql.Session, error) {
@@ -285,6 +329,10 @@ func (s *appStorageType) GetBatch(pKey []byte, items []istorage.GetBatchItem) (e
 	}
 
 	return scannerCloser(scanner, nil)
+}
+
+func (p appStorageProviderType) Time() coreutils.ITime {
+	return coreutils.NewITime()
 }
 
 func scannerCloser(scanner gocql.Scanner, err error) error {

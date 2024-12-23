@@ -198,13 +198,13 @@ func (c *buildContext) roles() error {
 func (c *buildContext) grantsAndRevokes() error {
 	grants := func(stmts []WorkspaceStatement) {
 		for _, s := range stmts {
-			if s.Grant != nil && len(s.Grant.on) > 0 {
+			if s.Grant != nil {
 				wsb := s.Grant.workspace.mustBuilder(c)
 				comments := s.Grant.GetComments()
 				if (s.Grant.AllTablesWithTag != nil && s.Grant.AllTablesWithTag.All) ||
 					(s.Grant.Table != nil && s.Grant.Table.All != nil) ||
 					(s.Grant.AllTables != nil && s.Grant.AllTables.All) {
-					wsb.GrantAll(s.Grant.filter(), s.Grant.toRole, comments...)
+					wsb.Grant(grantAllToTableOps, s.Grant.filter(), []appdef.FieldName{}, s.Grant.toRole, comments...)
 					continue
 				}
 				wsb.Grant(s.Grant.ops, s.Grant.filter(), s.Grant.columns, s.Grant.toRole, comments...)
@@ -213,13 +213,13 @@ func (c *buildContext) grantsAndRevokes() error {
 	}
 	revokes := func(stmts []WorkspaceStatement) {
 		for _, s := range stmts {
-			if s.Revoke != nil && len(s.Revoke.on) > 0 {
+			if s.Revoke != nil {
 				wsb := s.Revoke.workspace.mustBuilder(c)
 				comments := s.Revoke.GetComments()
 				if (s.Revoke.AllTablesWithTag != nil && s.Revoke.AllTablesWithTag.All) ||
 					(s.Revoke.Table != nil && s.Revoke.Table.All != nil) ||
 					(s.Revoke.AllTables != nil && s.Revoke.AllTables.All) {
-					wsb.RevokeAll(s.Revoke.filter(), s.Revoke.toRole, comments...)
+					wsb.Revoke(grantAllToTableOps, s.Revoke.filter(), []appdef.FieldName{}, s.Revoke.toRole, comments...)
 					continue
 				}
 				wsb.Revoke(s.Revoke.ops, s.Revoke.filter(), s.Revoke.columns, s.Revoke.toRole, comments...)

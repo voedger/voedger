@@ -6,11 +6,11 @@ package teststate
 
 import (
 	"fmt"
-	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"io"
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -41,13 +41,15 @@ type HttpResponse struct {
 }
 
 type recordItem struct {
-	entity       IFullQName
-	qName        appdef.QName
-	isSingleton  bool
-	isView       bool
-	isNew        bool
-	id           istructs.RecordID
-	keyValueList []any
+	entity      IFullQName
+	qName       appdef.QName
+	isSingleton bool
+	isView      bool
+	isNew       bool
+	id          istructs.RecordID
+	// fileReference is used to store the file reference in test where the record was added
+	fileReference string
+	keyValueList  []any
 }
 
 type intentItem struct {

@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
@@ -51,6 +52,40 @@ func (d implIAppStorageFactory) Init(appName istorage.SafeAppName) error {
 		return err
 	}
 	return nil
+}
+
+func (d implIAppStorageFactory) Time() coreutils.ITime {
+	return nil
+}
+
+//nolint:revive
+func (s *implIAppStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+//nolint:revive
+func (s *implIAppStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+//nolint:revive
+func (s *implIAppStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+//nolint:revive
+func (s *implIAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+//nolint:revive
+func (s *implIAppStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (s *implIAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {

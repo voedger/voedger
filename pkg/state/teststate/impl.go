@@ -391,7 +391,7 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 		}
 	}
 
-	asf := mem.Provide()
+	asf := mem.Provide(coreutils.MockTime)
 	storageProvider := istorageimpl.Provide(asf)
 	prov := istructsmem.Provide(
 		cfgs,
