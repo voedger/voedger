@@ -56,6 +56,13 @@ func Test_newRecord(t *testing.T) {
 			require.Equal("", r.AsString(appdef.SystemField_Container))
 			require.True(r.AsBool(appdef.SystemField_IsActive))
 		})
+
+		t.Run("test as ICUDRow", func(t *testing.T) {
+			var r istructs.ICUDRow = rec
+			require.False(r.IsActivated())
+			require.False(r.IsDeactivated())
+			require.False(r.IsNew())
+		})
 	})
 
 	t.Run("newEmptyTestCDoc must return empty, «test.CDoc»", func(t *testing.T) {
