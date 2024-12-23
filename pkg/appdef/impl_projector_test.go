@@ -134,6 +134,23 @@ func Test_AppDef_AddProjector(t *testing.T) {
 					require.Equal(1, cnt)
 				})
 
+				t.Run("should be ok to check Triggers", func(t *testing.T) {
+					tests := []struct {
+						name string
+						op   appdef.OperationKind
+						t    appdef.IType
+						want bool
+					}{
+						{"ON EXECUTE test.cmd", appdef.OperationKind_Execute, tested.Type(cmdName), false},
+						{"ON INSERT test.rec", appdef.OperationKind_Insert, tested.Type(recName), true},
+					}
+					for _, tt := range tests {
+						t.Run(tt.name, func(t *testing.T) {
+							require.Equal(tt.want, prj.Triggers(tt.op, tt.t))
+						})
+					}
+				})
+
 				t.Run("should be ok enum states", func(t *testing.T) {
 					cnt := 0
 					for s := range prj.States().Enum {
@@ -231,15 +248,23 @@ func Test_AppDef_AddProjector(t *testing.T) {
 						}
 					}
 					require.Equal(2, cnt)
+				})
 
-					t.Run("should be ok to break enum events", func(t *testing.T) {
-						cnt := 0
-						for range prj.Events() {
-							cnt++
-							break
-						}
-						require.Equal(1, cnt)
-					})
+				t.Run("should be ok to check Triggers", func(t *testing.T) {
+					tests := []struct {
+						name string
+						op   appdef.OperationKind
+						t    appdef.IType
+						want bool
+					}{
+						{"ON EXECUTE test.cmd", appdef.OperationKind_Execute, tested.Type(cmdName), true},
+						{"ON INSERT test.rec", appdef.OperationKind_Insert, tested.Type(recName), false},
+					}
+					for _, tt := range tests {
+						t.Run(tt.name, func(t *testing.T) {
+							require.Equal(tt.want, prj.Triggers(tt.op, tt.t))
+						})
+					}
 				})
 
 				require.Empty(prj.States().Map())

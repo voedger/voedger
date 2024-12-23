@@ -186,6 +186,15 @@ func Test_AppDefAddRateLimitErrors(t *testing.T) {
 				require.Is(appdef.ErrMissedError), require.Has("operations"))
 		})
 
+		t.Run("if not limitable operations", func(t *testing.T) {
+			require.Panics(func() {
+				wsb.AddLimit(limitName,
+					[]appdef.OperationKind{appdef.OperationKind_Inherits}, // <-- non limitable operation
+					appdef.LimitFilterOption_ALL, filter.AllWSTables(wsName), rateName)
+			},
+				require.Is(appdef.ErrUnsupportedError), require.Has("Inherits"))
+		})
+
 		t.Run("if incompatible operations", func(t *testing.T) {
 			require.Panics(func() {
 				wsb.AddLimit(limitName,
