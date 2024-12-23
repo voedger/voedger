@@ -652,7 +652,8 @@ func Example() {
 	//                     "Types": [
 	//                       "TypeKind_Query",
 	//                       "TypeKind_Command"
-	//                     ]
+	//                     ],
+	//                     "Workspace": "test.ws"
 	//                   }
 	//                 }
 	//               ]
@@ -743,7 +744,8 @@ func Example() {
 	//                 "Types": [
 	//                   "TypeKind_Query",
 	//                   "TypeKind_Command"
-	//                 ]
+	//                 ],
+	//                 "Workspace": "test.ws"
 	//               },
 	//               "Principal": "test.writer"
 	//             }
@@ -768,7 +770,8 @@ func Example() {
 	//                 "Option": "ALL",
 	//                 "Types": [
 	//                   "TypeKind_Command"
-	//                 ]
+	//                 ],
+	//                 "Workspace": "test.ws"
 	//               },
 	//               "Rate": "test.rate"
 	//             }
