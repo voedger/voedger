@@ -10,6 +10,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/filter"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type buildContext struct {
@@ -286,7 +287,6 @@ func (c *buildContext) projectors() error {
 			// Triggers
 			for _, trigger := range proj.Triggers {
 				ops := make([]appdef.OperationKind, 0)
-				qNames := appdef.QNames{}
 				if trigger.ExecuteAction != nil {
 					if trigger.ExecuteAction.WithParam {
 						ops = append(ops, appdef.OperationKind_ExecuteWithParam)
@@ -307,16 +307,53 @@ func (c *buildContext) projectors() error {
 						ops = append(ops, appdef.OperationKind_Deactivate)
 					}
 				}
-				qNames.Add(trigger.qNames...)
 				if len(ops) == 0 {
 					c.errs = append(c.errs, fmt.Errorf("no trigger operations specified for projector %s", proj.Name))
 					return
 				}
-				if len(qNames) == 0 {
+
+				qNames := appdef.QNames{}
+				types := appdef.TypeKindSet{}
+				for _, n := range trigger.qNames {
+					switch n {
+					case istructs.QNameCommand:
+						types.Set(appdef.TypeKind_Command)
+					case istructs.QNameQuery:
+						types.Set(appdef.TypeKind_Query)
+					case istructs.QNameCDoc:
+						types.Set(appdef.TypeKind_CDoc)
+					case istructs.QNameCRecord:
+						types.Set(appdef.TypeKind_CDoc, appdef.TypeKind_CRecord)
+					case istructs.QNameWDoc:
+						types.Set(appdef.TypeKind_WDoc)
+					case istructs.QNameWRecord:
+						types.Set(appdef.TypeKind_WDoc, appdef.TypeKind_WRecord)
+					case istructs.QNameODoc:
+						types.Set(appdef.TypeKind_ODoc)
+					case istructs.QNameORecord:
+						types.Set(appdef.TypeKind_ODoc, appdef.TypeKind_ORecord)
+					default:
+						qNames.Add(n)
+					}
+				}
+
+				flt := []appdef.IFilter{}
+				if len(qNames) > 0 {
+					flt = append(flt, filter.QNames(qNames...))
+				}
+				if types.Len() > 0 {
+					flt = append(flt, filter.Types(types.AsArray()...))
+				}
+
+				switch len(flt) {
+				case 0:
 					c.errs = append(c.errs, fmt.Errorf("no triggers names specified for projector %s", proj.Name))
 					return
+				case 1:
+					builder.Events().Add(ops, flt[0])
+				default:
+					builder.Events().Add(ops, filter.And(flt...))
 				}
-				builder.Events().Add(ops, filter.QNames(qNames[0], qNames[1:]...))
 			}
 
 			if proj.IncludingErrors {
