@@ -38,6 +38,7 @@ func Example() {
 
 	example := func(flt appdef.IFilter) {
 		fmt.Println(flt)
+		fmt.Println("- kind:", flt.Kind())
 		fmt.Println("- testing:")
 		for t := range ws.LocalTypes() {
 			fmt.Println("  *", t, "is matched:", flt.Match(t))
@@ -49,14 +50,14 @@ func Example() {
 		filter.And(
 			filter.QNames(doc, obj),
 			filter.Or(
-				filter.Types(wsName, appdef.TypeKind_Command),
+				filter.WSTypes(wsName, appdef.TypeKind_Command),
 				filter.Tags(tag))))
 
 	example(
 		filter.Or(
 			filter.QNames(doc),
 			filter.And(
-				filter.Types(wsName, appdef.TypeKind_Object),
+				filter.WSTypes(wsName, appdef.TypeKind_Object),
 				filter.Not(
 					filter.Tags(tag)))))
 
@@ -66,10 +67,13 @@ func Example() {
 				filter.QNames(doc),
 				filter.Tags(tag))))
 
+	example(filter.True())
+
 	// Output:
 	// This example demonstrates how to work with filters
 	//
 	// QNAMES(test.doc, test.object) AND (TYPES(Command) FROM test.workspace OR TAGS(test.tag))
+	// - kind: FilterKind_And
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
 	//   * ODoc «test.doc» is matched: false
@@ -77,6 +81,7 @@ func Example() {
 	//   * Tag «test.tag» is matched: false
 	//
 	// QNAMES(test.doc) OR (TYPES(Object) FROM test.workspace AND NOT TAGS(test.tag))
+	// - kind: FilterKind_Or
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
 	//   * ODoc «test.doc» is matched: true
@@ -84,9 +89,18 @@ func Example() {
 	//   * Tag «test.tag» is matched: false
 	//
 	// NOT (QNAMES(test.doc) OR TAGS(test.tag))
+	// - kind: FilterKind_Not
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: true
 	//   * ODoc «test.doc» is matched: false
 	//   * Object «test.object» is matched: false
+	//   * Tag «test.tag» is matched: true
+	//
+	// TRUE
+	// - kind: FilterKind_True
+	// - testing:
+	//   * BuiltIn-Command «test.command» is matched: true
+	//   * ODoc «test.doc» is matched: true
+	//   * Object «test.object» is matched: true
 	//   * Tag «test.tag» is matched: true
 }

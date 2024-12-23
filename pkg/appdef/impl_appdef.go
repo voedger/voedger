@@ -68,12 +68,9 @@ func (app *appDef) Type(name QName) IType {
 	switch name {
 	case NullQName:
 		return NullType
+	case QNameANY:
+		return AnyType
 	}
-
-	if t, ok := anyTypes[name]; ok {
-		return t
-	}
-
 	return app.types.find(name)
 }
 

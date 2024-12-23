@@ -96,6 +96,10 @@ type limit struct {
 }
 
 func newLimit(app *appDef, ws *workspace, name QName, ops []OperationKind, opt LimitFilterOption, flt IFilter, rate QName, comment ...string) *limit {
+	if !LimitableOperations.ContainsAll(ops...) {
+		panic(ErrUnsupported("limit operations %v", ops))
+	}
+
 	opSet := set.From(ops...)
 	if compatible, err := isCompatibleOperations(opSet); !compatible {
 		panic(err)
@@ -144,7 +148,7 @@ func (l limit) Validate() (err error) {
 	}
 
 	if (err == nil) && (cnt == 0) {
-		return ErrFilterHasNoMatches(l.Filter(), l.Workspace())
+		return ErrFilterHasNoMatches(l, l.Filter(), l.Workspace())
 	}
 
 	return err

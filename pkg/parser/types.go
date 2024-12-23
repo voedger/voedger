@@ -719,41 +719,39 @@ func (g GrantOrRevoke) filter() appdef.IFilter {
 	}
 	if g.AllCommandsWithTag != nil {
 		return filter.And(
-			filter.Types(appdef.NullQName, appdef.TypeKind_Command),
+			filter.Types(appdef.TypeKind_Command),
 			filter.Tags(g.AllCommandsWithTag.qName),
 		)
 	}
 	if g.AllCommands {
-		return filter.Types(g.workspace.qName(), appdef.TypeKind_Command)
+		return filter.WSTypes(g.workspace.qName(), appdef.TypeKind_Command)
 	}
 	if g.AllQueriesWithTag != nil {
 		return filter.And(
-			filter.Types(appdef.NullQName, appdef.TypeKind_Query),
+			filter.Types(appdef.TypeKind_Query),
 			filter.Tags(g.AllQueriesWithTag.qName),
 		)
 	}
 	if g.AllQueries {
-		return filter.Types(g.workspace.qName(), appdef.TypeKind_Query)
+		return filter.WSTypes(g.workspace.qName(), appdef.TypeKind_Query)
 	}
 	if g.AllViewsWithTag != nil {
 		return filter.And(
-			filter.Types(appdef.NullQName, appdef.TypeKind_ViewRecord),
+			filter.Types(appdef.TypeKind_ViewRecord),
 			filter.Tags(g.AllViewsWithTag.qName),
 		)
 	}
 	if g.AllViews {
-		return filter.Types(g.workspace.qName(), appdef.TypeKind_ViewRecord)
+		return filter.WSTypes(g.workspace.qName(), appdef.TypeKind_ViewRecord)
 	}
 	if g.AllTablesWithTag != nil {
-		s := appdef.TypeKind_Records.AsArray()
 		return filter.And(
-			filter.Types(appdef.NullQName, s[0], s[1:]...),
+			filter.Types(appdef.TypeKind_Records.AsArray()...),
 			filter.Tags(g.AllTablesWithTag.Tag.qName),
 		)
 	}
 	if g.AllTables != nil {
-		s := appdef.TypeKind_Records.AsArray()
-		return filter.Types(g.workspace.qName(), s[0], s[1:]...)
+		return filter.WSTypes(g.workspace.qName(), appdef.TypeKind_Records.AsArray()...)
 	}
 	if g.Table != nil {
 		return filter.QNames(g.Table.Table.qName)

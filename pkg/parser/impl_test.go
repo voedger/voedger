@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 //go:embed sql_example_app/pmain/*.vsql
@@ -191,42 +190,27 @@ func Test_BasicUsage(t *testing.T) {
 	// CUD Projector
 	proj := appdef.Projector(app.Type, appdef.NewQName("main", "RecordsRegistryProjector"))
 	require.NotNil(proj)
-	eventsCount := 0
-	proj.Events().Enum(func(ie appdef.IProjectorEvent) {
-		eventsCount++
-		k, on := ie.Kind(), ie.On().QName()
-		require.Len(k, 3)
-		require.Contains(k, appdef.ProjectorEventKind_Insert)
-		require.Contains(k, appdef.ProjectorEventKind_Activate)
-		require.Contains(k, appdef.ProjectorEventKind_Deactivate)
-		switch eventsCount {
-		case 1:
-			require.Equal(istructs.QNameCRecord, on)
-		case 2:
-			require.Equal(istructs.QNameWRecord, on)
-		}
-	})
-	require.Equal(2, eventsCount)
-	require.Equal(eventsCount, proj.Events().Len())
+	pe := slices.Collect(proj.Events())
+	require.Len(pe, 1)
+	require.Equal(
+		[]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate},
+		slices.Collect(pe[0].Ops()))
+	require.Equal(appdef.FilterKind_Types, pe[0].Filter().Kind())
+	require.Equal([]appdef.TypeKind{
+		appdef.TypeKind_CDoc, appdef.TypeKind_WDoc,
+		appdef.TypeKind_CRecord, appdef.TypeKind_WRecord},
+		slices.Collect(pe[0].Filter().Types()))
 
 	// Execute Projector
 	proj = appdef.Projector(app.Type, appdef.NewQName("main", "UpdateDashboard"))
 	require.NotNil(proj)
-	eventsCount = 0
-	proj.Events().Enum(func(ie appdef.IProjectorEvent) {
-		eventsCount++
-		if eventsCount == 1 {
-			require.Len(ie.Kind(), 1)
-			require.Equal(appdef.ProjectorEventKind_Execute, ie.Kind()[0])
-			require.Equal(appdef.NewQName("main", "NewOrder"), ie.On().QName())
-		} else if eventsCount == 2 {
-			require.Len(ie.Kind(), 1)
-			require.Equal(appdef.ProjectorEventKind_Execute, ie.Kind()[0])
-			require.Equal(appdef.NewQName("main", "NewOrder2"), ie.On().QName())
-		}
-	})
-	require.Equal(2, eventsCount)
-	require.Equal(eventsCount, proj.Events().Len())
+	pe = slices.Collect(proj.Events())
+	require.Len(pe, 1)
+	require.Equal(
+		[]appdef.OperationKind{appdef.OperationKind_Execute},
+		slices.Collect(pe[0].Ops()))
+	require.Equal(appdef.FilterKind_QNames, pe[0].Filter().Kind())
+	require.Equal([]appdef.QName{appdef.NewQName("main", "NewOrder"), appdef.NewQName("main", "NewOrder2")}, slices.Collect(pe[0].Filter().QNames()))
 
 	stateCount := 0
 	for s := range proj.States().Enum {
@@ -1387,7 +1371,11 @@ func Test_Projectors(t *testing.T) {
 
 		proj := appdef.Projector(app.Type, appdef.NewQName("pkg", "ImProjector"))
 		require.NotNil(proj)
-		require.Equal(1, proj.Events().Len())
+		pe := slices.Collect(proj.Events())
+		require.Len(pe, 1)
+		require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert}, slices.Collect((pe[0].Ops())))
+		require.Equal(appdef.FilterKind_QNames, pe[0].Filter().Kind())
+		require.Len(slices.Collect(pe[0].Filter().QNames()), 1)
 	})
 }
 

@@ -31,6 +31,8 @@ func (m *MockCUDRow) AsQName(name appdef.FieldName) appdef.QName {
 }
 func (m *MockCUDRow) AsBool(name appdef.FieldName) bool         { return m.Called(name).Get(0).(bool) }
 func (m *MockCUDRow) FieldNames(cb func(appdef.FieldName) bool) { m.Called(cb) }
+func (m *MockCUDRow) IsActivated() bool                         { return m.Called().Get(0).(bool) }
+func (m *MockCUDRow) IsDeactivated() bool                       { return m.Called().Get(0).(bool) }
 func (m *MockCUDRow) IsNew() bool                               { return m.Called().Get(0).(bool) }
 func (m *MockCUDRow) QName() appdef.QName                       { return m.Called().Get(0).(appdef.QName) }
 func (m *MockCUDRow) ID() istructs.RecordID                     { return m.Called().Get(0).(istructs.RecordID) }

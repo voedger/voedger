@@ -132,17 +132,6 @@ func QNamesFrom(n ...QName) QNames {
 	return qq
 }
 
-// Returns slice of QNames from map keys.
-//
-// Result slice is sorted and has no duplicates.
-func QNamesFromMap[V any, M ~map[QName]V](m M) QNames {
-	qq := QNames{}
-	for k := range m {
-		qq.Add(k)
-	}
-	return qq
-}
-
 // Parse a qualified names from strings.
 //
 // # Panics:

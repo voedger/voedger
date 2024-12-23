@@ -21,6 +21,9 @@ func (f *Filter) read(flt appdef.IFilter) {
 		f.QNames = slices.Collect(flt.QNames())
 	case appdef.FilterKind_Types:
 		f.Types = slices.Collect(flt.Types())
+		if n := flt.WS(); n != appdef.NullQName {
+			f.Workspace = &n
+		}
 	case appdef.FilterKind_Tags:
 		f.Tags = slices.Collect(flt.Tags())
 	case appdef.FilterKind_And:
