@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 //go:embed sql_example_app/pmain/*.vsql
@@ -196,8 +195,11 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(
 		[]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate},
 		slices.Collect(pe[0].Ops()))
-	require.Equal(appdef.FilterKind_QNames, pe[0].Filter().Kind())
-	require.Equal([]appdef.QName{istructs.QNameCRecord, istructs.QNameWRecord}, slices.Collect(pe[0].Filter().QNames()))
+	require.Equal(appdef.FilterKind_Types, pe[0].Filter().Kind())
+	require.Equal([]appdef.TypeKind{
+		appdef.TypeKind_CDoc, appdef.TypeKind_WDoc,
+		appdef.TypeKind_CRecord, appdef.TypeKind_WRecord},
+		slices.Collect(pe[0].Filter().Types()))
 
 	// Execute Projector
 	proj = appdef.Projector(app.Type, appdef.NewQName("main", "UpdateDashboard"))
