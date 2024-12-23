@@ -98,3 +98,5 @@ func (f wsTypesFilter) Match(t appdef.IType) bool {
 func (f wsTypesFilter) String() string {
 	return fmt.Sprintf("%s FROM %s", f.typesFilter.String(), f.ws)
 }
+
+func (f wsTypesFilter) WS() appdef.QName { return f.ws }

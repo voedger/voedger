@@ -41,6 +41,10 @@ type IFilter interface {
 	// If kind is not FilterKind_Types, returns empty iterator
 	Types() iter.Seq[TypeKind]
 
+	// Return filtered types workspace.
+	// If kind is not FilterKind_Types or not workspace assigned, returns NullQName.
+	WS() QName
+
 	// Return filtered tags.
 	// If kind is not FilterKind_Tags, returns empty iterator
 	Tags() iter.Seq[QName]

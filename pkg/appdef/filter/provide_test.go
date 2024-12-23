@@ -83,6 +83,47 @@ func Test_Tags(t *testing.T) {
 	})
 }
 
+func Test_Types(t *testing.T) {
+	require := require.New(t)
+
+	wsName := appdef.NewQName("test", "workspace")
+	dataName := appdef.NewQName("test", "data")
+
+	app := func() appdef.IAppDef {
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+
+		wsb := adb.AddWorkspace(wsName)
+
+		_ = wsb.AddData(dataName, appdef.DataKind_int32, appdef.NullQName, appdef.MinIncl(0))
+
+		app, err := adb.Build()
+
+		require.NoError(err)
+		return app
+	}()
+
+	flt := filter.Types(appdef.TypeKind_Data)
+
+	require.Equal(appdef.NullQName, flt.WS())
+
+	ws := app.Workspace(wsName)
+
+	data := appdef.Data(ws.Type, dataName)
+	require.NotNil(data, "Data should be found")
+	require.True(flt.Match(data), "Data should be matched")
+
+	sysInt32 := appdef.Data(ws.Type, appdef.SysDataName(appdef.DataKind_int32))
+	require.NotNil(sysInt32, "system sys.Int32 should be found")
+	require.True(flt.Match(sysInt32), "system data should be matched")
+
+	t.Run("should be panics", func(t *testing.T) {
+		require.Panics(func() {
+			_ = filter.Types()
+		}, "if no type kinds are provided")
+	})
+}
+
 func Test_WSTypes(t *testing.T) {
 	require := require.New(t)
 
@@ -104,6 +145,8 @@ func Test_WSTypes(t *testing.T) {
 	}()
 
 	flt := filter.WSTypes(wsName, appdef.TypeKind_Data)
+
+	require.Equal(wsName, flt.WS())
 
 	ws := app.Workspace(wsName)
 

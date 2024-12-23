@@ -26,6 +26,8 @@ func (filter) Tags() iter.Seq[appdef.QName] { return func(func(appdef.QName) boo
 
 func (filter) Types() iter.Seq[appdef.TypeKind] { return func(func(appdef.TypeKind) bool) {} }
 
+func (filter) WS() appdef.QName { return appdef.NullQName }
+
 // trueFilter realizes filter what always matches any type.
 //
 // # Supports:
