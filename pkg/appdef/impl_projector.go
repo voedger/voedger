@@ -57,7 +57,6 @@ func (prj projector) Triggers(op OperationKind, t IType) bool {
 //
 // # Error if:
 //   - some event filter has no matches in the workspace
-//   - some event filtered type can not trigger projector
 func (prj *projector) Validate() error {
 	return errors.Join(
 		prj.extension.Validate(),
@@ -151,17 +150,18 @@ func (e projectorEvent) Op(o OperationKind) bool { return e.ops.Contains(o) }
 func (e projectorEvent) Ops() iter.Seq[OperationKind] { return e.ops.Values() }
 
 // Validates projector event.
-func (ev projectorEvent) validate(prj IProjector) (err error) {
+func (e projectorEvent) validate(prj IProjector) (err error) {
 	cnt := 0
 	for t := range prj.Workspace().Types() {
 		if TypeKind_ProjectorTriggers.Contains(t.Kind()) {
-			if ev.flt.Match(t) {
+			if e.flt.Match(t) {
 				cnt++
+				break // is enough
 			}
 		}
 	}
 	if cnt == 0 {
-		err = errors.Join(err, ErrFilterHasNoMatches(prj, ev.flt, prj.Workspace()))
+		err = errors.Join(err, ErrFilterHasNoMatches(prj, e.flt, prj.Workspace()))
 	}
 	return err
 }
