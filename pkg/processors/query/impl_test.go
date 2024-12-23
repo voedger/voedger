@@ -172,7 +172,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	cfgFunc ...func(*istructsmem.AppConfigType)) (appParts appparts.IAppPartitions, cleanup func(),
 	appTokens istructs.IAppTokens, statelessResources istructsmem.IStatelessResources) {
 	cfgs := make(istructsmem.AppConfigsType)
-	asf := mem.Provide()
+	asf := mem.Provide(coreutils.MockTime)
 	storageProvider := istorageimpl.Provide(asf)
 
 	qNameFindArticlesByModificationTimeStampRangeParams := appdef.NewQName("bo", "FindArticlesByModificationTimeStampRangeParamsDef")

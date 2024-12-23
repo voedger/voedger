@@ -274,9 +274,9 @@ func deployTestAppEx(
 	var storageProvider istorage.IAppStorageProvider
 
 	if cachedStorage {
-		storageProvider = istoragecache.Provide(1000000, istorageimpl.Provide(mem.Provide()), metrics, vvmName)
+		storageProvider = istoragecache.Provide(1000000, istorageimpl.Provide(mem.Provide(coreutils.MockTime)), metrics, vvmName)
 	} else {
-		storageProvider = istorageimpl.Provide(mem.Provide())
+		storageProvider = istorageimpl.Provide(mem.Provide(coreutils.MockTime))
 	}
 
 	var (

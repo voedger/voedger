@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/iratesce"
 	istorage "github.com/voedger/voedger/pkg/istorage"
@@ -122,7 +123,7 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 func TestAppConfigsType_GetConfig(t *testing.T) {
 	require := require.New(t)
 
-	asf := mem.Provide()
+	asf := mem.Provide(coreutils.MockTime)
 	storages := istorageimpl.Provide(asf)
 
 	cfgs := make(AppConfigsType)

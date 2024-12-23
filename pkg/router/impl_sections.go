@@ -39,7 +39,7 @@ func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, 
 	if appQName, err := appdef.ParseAppQName(appQNameStr); err == nil {
 		if numAppWorkspaces, ok := numsAppsWorkspaces[appQName]; ok {
 			baseWSID := wsid.BaseWSID()
-			if baseWSID < istructs.MaxPseudoBaseWSID {
+			if baseWSID <= istructs.MaxPseudoBaseWSID {
 				wsid = coreutils.GetAppWSID(wsid, numAppWorkspaces)
 			}
 		}

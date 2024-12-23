@@ -12,12 +12,13 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
-	"golang.org/x/exp/slices"
 )
 
 func InitiateEmailVerification(vit *it.VIT, prn *it.Principal, entity appdef.QName, field, email string, targetWSID istructs.WSID, opts ...coreutils.ReqOptFunc) (token, code string) {
