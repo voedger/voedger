@@ -137,8 +137,12 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 		} else {
 			sendSuccess = writeResponse(w, fmt.Sprintf(`"status":%d,"errorDescription":"%s"}`, http.StatusInternalServerError, *responseErr))
 		}
-	} else if sendSuccess && contentType == coreutils.ApplicationJSON && elemsCount == 0 {
-		sendSuccess = writeResponse(w, "{}")
+	} else if sendSuccess && contentType == coreutils.ApplicationJSON {
+		if elemsCount == 0 {
+			sendSuccess = writeResponse(w, "{}")
+		} else {
+			sendSuccess = writeResponse(w, "}")
+		}
 	}
 }
 
