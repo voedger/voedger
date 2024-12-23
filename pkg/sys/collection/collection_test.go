@@ -84,7 +84,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 
 		// will add func definitions to AppDef manually because local test does not use sql. In runtime these definitions will come from sys.vsql
 		wsb.AddObject(qNameCollectionParams).
-			AddField(field_Schema, appdef.DataKind_string, true).
+			AddField(Field_Schema, appdef.DataKind_string, true).
 			AddField(field_ID, appdef.DataKind_RecordID, false)
 
 		wsb.AddQuery(qNameQueryCollection).

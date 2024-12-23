@@ -31,7 +31,7 @@ var (
 //
 //	FUNC: sys.Collection
 const (
-	field_Schema = "Schema"
+	Field_Schema = "Schema"
 	field_ID     = "ID"
 )
 
