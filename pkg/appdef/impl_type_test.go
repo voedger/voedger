@@ -38,7 +38,7 @@ func Test_NullType(t *testing.T) {
 	require.Contains(fmt.Sprint(NullType), "null type")
 }
 
-func Test_AnyTypes(t *testing.T) {
+func Test_AnyType(t *testing.T) {
 	require := require.New(t)
 
 	require.Empty(AnyType.Comment())
@@ -51,14 +51,6 @@ func Test_AnyTypes(t *testing.T) {
 	require.True(AnyType.IsSystem())
 
 	require.Contains(fmt.Sprint(AnyType), "ANY type")
-
-	for n, t := range anyTypes {
-		require.Empty(t.Comment())
-		require.Nil(t.App())
-		require.Equal(n, t.QName())
-		require.Equal(TypeKind_Any, t.Kind())
-		require.True(t.IsSystem())
-	}
 }
 
 func Test_TypeKind_Records(t *testing.T) {

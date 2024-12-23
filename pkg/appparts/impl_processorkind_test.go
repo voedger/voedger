@@ -12,7 +12,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/sys"
 )
 
 func TestProcessorKind_CompatibleWithExtension(t *testing.T) {
@@ -31,25 +30,21 @@ func TestProcessorKind_CompatibleWithExtension(t *testing.T) {
 		wsName := appdef.NewQName("test", "workspace")
 		wsb := adb.AddWorkspace(wsName)
 
-		wsb.AddCommand(cmd).SetParam(appdef.QNameAnyObject)
+		_ = wsb.AddCommand(cmd)
 
-		wsb.AddQuery(query).SetResult(appdef.QNameAnyView)
+		wsb.AddQuery(query).SetResult(appdef.QNameANY)
 
 		p1 := wsb.AddProjector(syncPrj)
 		p1.Events().Add(
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
 			filter.WSTypes(wsName, appdef.TypeKind_Command))
 		p1.SetSync(true)
-		p1.States().Add(sys.Storage_Record, appdef.QNameAnyRecord)
-		p1.Intents().Add(sys.Storage_View, appdef.QNameAnyView)
 
 		p2 := wsb.AddProjector(asyncPrj)
 		p2.Events().Add(
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
 			filter.WSTypes(wsName, appdef.TypeKind_Command))
 		p2.SetSync(false)
-		p2.States().Add(sys.Storage_Record, appdef.QNameAnyRecord)
-		p2.Intents().Add(sys.Storage_View, appdef.QNameAnyView)
 
 		wsb.AddJob(job).SetCronSchedule("@every 1m")
 
