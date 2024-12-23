@@ -8,18 +8,24 @@ package filter
 import "github.com/voedger/voedger/pkg/appdef"
 
 // QNames is a filter that matches types by their qualified names.
+//
+// # Panics:
+//	 - if no names are specified
 func QNames(names ...appdef.QName) appdef.IFilter {
 	return newQNamesFilter(names...)
 }
 
 // Tags is a filter that matches types by their tags.
+//
+// # Panics:
+//	 - if no tags are specified
 func Tags(tags ...appdef.QName) appdef.IFilter {
 	return newTagsFilter(tags...)
 }
 
 // Types is a filter that matches types by their kind.
 //
-// #Panics:
+// # Panics:
 //	 - if no type kinds are specified
 func Types(tt ...appdef.TypeKind) appdef.IFilter {
 	return newTypesFilter(tt...)
@@ -28,7 +34,7 @@ func Types(tt ...appdef.TypeKind) appdef.IFilter {
 // WSTypes is a filter that matches types by their kind.
 // Matched types should be located in the specified workspace.
 //
-// #Panics:
+// # Panics:
 //	 - if workspace is not specified (NullQName)
 //	 - if no type kinds are specified
 func WSTypes(ws appdef.QName, tt ...appdef.TypeKind) appdef.IFilter {
@@ -36,8 +42,11 @@ func WSTypes(ws appdef.QName, tt ...appdef.TypeKind) appdef.IFilter {
 }
 
 // And returns a filter that matches types that match all children filters.
-func And(f1, f2 appdef.IFilter, ff ...appdef.IFilter) appdef.IFilter {
-	return newAndFilter(f1, f2, ff...)
+//
+// # Panics:
+//	 - if less then two filters are provided
+func And(ff ...appdef.IFilter) appdef.IFilter {
+	return newAndFilter(ff...)
 }
 
 // Or returns a filter that matches types that match any children filter.

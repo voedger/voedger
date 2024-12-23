@@ -124,3 +124,44 @@ func Test_WSTypes(t *testing.T) {
 		}, "if no type kinds are provided")
 	})
 }
+
+func Test_And(t *testing.T) {
+	require := require.New(t)
+
+	wsName := appdef.NewQName("test", "workspace")
+	docName, cmdName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "cmd")
+	tagName := appdef.NewQName("test", "tag")
+
+	app := func() appdef.IAppDef {
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+
+		wsb := adb.AddWorkspace(wsName)
+
+		wsb.AddTag(tagName)
+		wsb.AddCommand(cmdName).SetTag(tagName)
+		wsb.AddCDoc(docName).SetTag(tagName)
+
+		app, err := adb.Build()
+
+		require.NoError(err)
+		return app
+	}()
+
+	flt := filter.And(
+		filter.Types(appdef.TypeKind_CDoc),
+		filter.Tags(tagName),
+	)
+
+	require.True(flt.Match(appdef.CDoc(app.Type, docName)), "Doc should be matched")
+	require.False(flt.Match(appdef.Command(app.Type, cmdName)), "Command should not be matched")
+
+	t.Run("should be panics", func(t *testing.T) {
+		require.Panics(func() {
+			_ = filter.And()
+		}, "if no filters are provided")
+		require.Panics(func() {
+			_ = filter.And(filter.True())
+		}, "if only one filter are provided")
+	})
+}
