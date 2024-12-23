@@ -509,7 +509,7 @@ func TestModifiedFields(t *testing.T) {
 
 	t.Run("should has no modifications if new record", func(t *testing.T) {
 		rec := newRecord(test.AppCfg)
-		for _, _ = range rec.ModifiedFields {
+		for range rec.ModifiedFields {
 			t.Fail()
 		}
 	})
@@ -526,7 +526,7 @@ func TestModifiedFields(t *testing.T) {
 		t.Run("breakable", func(t *testing.T) {
 			for stop := range want {
 				cnt := 0
-				for n, _ := range rec.ModifiedFields {
+				for n := range rec.ModifiedFields {
 					if n == stop {
 						break
 					}
