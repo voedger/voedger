@@ -50,20 +50,20 @@ var defaultACL = ACL{
 	// 	},
 	// 	policy: ACPolicy_Allow,
 	// },
-	{
-		// case: location is made Demo. How to allow q.sys.State without token?
-		// Everyone is bad because q.sys.State from all locations must not be allowed for everyone
-		// emit role BOreader if no token provided is bad as well: q.sys.State will be available without token is all locations
-		// we have a tool to append roles from subjects matched by login name -> need to emit sys.Guest principal login
-		desc: "allowed to sys.Guest login, i.e. without principal token at all",
-		pattern: PatternType{
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User, WSID: istructs.GuestWSID}}},
-			qNamesPattern: []appdef.QName{
-				qNameCmdProvideCertificatePart, qNameCmdProvideCertificate, qNameQryGetCustomerStatus,
-				qNameCmdFiscalizeDocument, qNameQryFiscalizationResultStatus, qNameCmdCreateExport, qNameQryExportStatus},
-		},
-		policy: ACPolicy_Allow,
-	},
+	// {
+	// 	// case: location is made Demo. How to allow q.sys.State without token?
+	// 	// Everyone is bad because q.sys.State from all locations must not be allowed for everyone
+	// 	// emit role BOreader if no token provided is bad as well: q.sys.State will be available without token is all locations
+	// 	// we have a tool to append roles from subjects matched by login name -> need to emit sys.Guest principal login
+	// 	desc: "allowed to sys.Guest login, i.e. without principal token at all",
+	// 	pattern: PatternType{
+	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User, WSID: istructs.GuestWSID}}},
+	// 		qNamesPattern: []appdef.QName{
+	// 			qNameCmdProvideCertificatePart, qNameCmdProvideCertificate, qNameQryGetCustomerStatus,
+	// 			qNameCmdFiscalizeDocument, qNameQryFiscalizationResultStatus, qNameCmdCreateExport, qNameQryExportStatus},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
 	// {
 	// 	desc: "everything is allowed to WorkspaceOwner",
 	// 	pattern: PatternType{
@@ -71,27 +71,27 @@ var defaultACL = ACL{
 	// 	},
 	// 	policy: ACPolicy_Allow,
 	// },
-	{
-		desc: "deny all on few QNames from all",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameCmdStoreSubscriptionProfile, qNameCmdUpdateSubscription,
+	// {
+	// 	desc: "deny all on few QNames from all",
+	// 	pattern: PatternType{
+	// 		qNamesPattern: []appdef.QName{
+	// 			/*qNameCmdStoreSubscriptionProfile, qNameCmdUpdateSubscription,
 
-				qNameCDocUnTillOrders, qNameCDocUnTillPBill,
-				qNameTestDeniedCmd, qNameTestDeniedCDoc, qNameCDocLogin, qNameCDocChildWorkspace, qNameTestDeniedQry, qNameTestDeniedCmd_it, qNameTestDeniedQry_it,
-			},
-		},
-		policy: ACPolicy_Deny,
-	},
-	{
-		desc: "grant select only on few documents to WorkspaceOwner",
-		pattern: PatternType{
-			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
-			qNamesPattern:     []appdef.QName{qNameCDocChildWorkspace},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},
-		},
-		policy: ACPolicy_Allow,
-	},
+	// 			qNameCDocUnTillOrders, qNameCDocUnTillPBill,*/
+	// 			qNameTestDeniedCmd, qNameTestDeniedCDoc, qNameCDocLogin, qNameCDocChildWorkspace, qNameTestDeniedQry, qNameTestDeniedCmd_it, qNameTestDeniedQry_it,
+	// 		},
+	// 	},
+	// 	policy: ACPolicy_Deny,
+	// },
+	// {
+	// 	desc: "grant select only on few documents to WorkspaceOwner",
+	// 	pattern: PatternType{
+	// 		opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
+	// 		qNamesPattern:     []appdef.QName{qNameCDocChildWorkspace},
+	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
 	// {
 	// 	desc: "revoke insert or update on wdoc.air.LastNumbers from all",
 	// 	pattern: PatternType{
@@ -384,27 +384,27 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Allow,
 	},
-	{
-		// https://github.com/voedger/voedger/issues/2470
-		// https://github.com/voedger/voedger/issues/3007
-		desc: "grant exec on q.sys.State, sys.RegisterTempBLOB1d, q.sys.DownloadBLOBAuthnz to role.air.BOReader",
-		pattern: PatternType{
-			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_EXECUTE},
-			qNamesPattern:     []appdef.QName{qNameQryState, qNameCmdRegisterTempBLOB1d, qNameQryDownloadBLOBAuthnz},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleBOReader}}},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
-		// https://github.com/voedger/voedger/issues/2470
-		desc: "grant select on field q.sys.State.State to role.air.BOReader",
-		pattern: PatternType{
-			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
-			fieldsPattern:     [][]string{{"State"}},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleBOReader}}},
-		},
-		policy: ACPolicy_Allow,
-	},
+	// {
+	// 	// https://github.com/voedger/voedger/issues/2470
+	// 	// https://github.com/voedger/voedger/issues/3007
+	// 	desc: "grant exec on q.sys.State, sys.RegisterTempBLOB1d, q.sys.DownloadBLOBAuthnz to role.air.BOReader",
+	// 	pattern: PatternType{
+	// 		opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_EXECUTE},
+	// 		qNamesPattern:     []appdef.QName{qNameQryState, qNameCmdRegisterTempBLOB1d, qNameQryDownloadBLOBAuthnz},
+	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleBOReader}}},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
+	// {
+	// 	// https://github.com/voedger/voedger/issues/2470
+	// 	desc: "grant select on field q.sys.State.State to role.air.BOReader",
+	// 	pattern: PatternType{
+	// 		opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
+	// 		fieldsPattern:     [][]string{{"State"}},
+	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleBOReader}}},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
 	{
 		desc: "grant exec on few funcs to role air.ResellerPortalDashboardViewer",
 		pattern: PatternType{
