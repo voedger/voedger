@@ -760,6 +760,7 @@ func (c *buildContext) addNestedTableToDef(schema *PackageSchemaAST, nested *Nes
 	if !c.isExists(contQName, nestedTable.tableTypeKind) {
 		c.pushDef(contQName, nestedTable.tableTypeKind, nestedTable.workspace)
 		c.addTableItems(schema, nestedTable.Items)
+		c.applyTags(nestedTable.With, c.defCtx().defBuilder.(appdef.ITagger))
 		c.popDef()
 	}
 
