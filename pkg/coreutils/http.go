@@ -26,10 +26,10 @@ import (
 )
 
 // TODO: CP should send CommandResponse struct itself, not CommandResponse marshaled to a string
-func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req ibus.Request) (statusCode int, cmdResp CommandResponse, err error) {
+func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req ibus.Request) (cmdRespMeta ResponseMeta, cmdResp CommandResponse, err error) {
 	responseCh, responseMeta, responseErr, err := requestSender.SendRequest(ctx, req)
 	if err != nil {
-		return 0, cmdResp, err
+		return cmdRespMeta, cmdResp, err
 	}
 	body := ""
 	for elem := range responseCh {
@@ -41,13 +41,13 @@ func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req i
 	}
 	if *responseErr != nil {
 		cmdResp.SysError = (*responseErr).(SysError)
-		return cmdResp.SysError.HTTPStatus, cmdResp, nil
+		return responseMeta, cmdResp, nil
 	}
 	if err = json.Unmarshal([]byte(body), &cmdResp); err != nil {
 		// notest
 		panic(err)
 	}
-	return responseMeta.StatusCode, cmdResp, nil
+	return responseMeta, cmdResp, nil
 }
 
 func NewHTTPErrorf(httpStatus int, args ...interface{}) SysError {

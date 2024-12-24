@@ -17,13 +17,11 @@ import (
 	"runtime"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
-	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
 )
 
 func TestNewHTTPError(t *testing.T) {
@@ -47,95 +45,90 @@ func TestNewHTTPError(t *testing.T) {
 	})
 }
 
-type testResp struct {
-	sender interface{}
-	resp   ibus.Response
-}
-
-type testIBus struct {
-	responses []testResp
-}
-
-func (bus *testIBus) SendRequest2(ctx context.Context, request ibus.Request, timeout time.Duration) (res ibus.Response, sections <-chan ibus.ISection, secError *error, err error) {
-	panic("")
-}
-
-func (bus *testIBus) SendResponse(sender interface{}, response ibus.Response) {
-	bus.responses = append(bus.responses, testResp{
-		sender: sender,
-		resp:   response,
-	})
-}
-
-func (bus *testIBus) SendParallelResponse2(sender interface{}) (rsender ibus.IResultSenderClosable) {
-	panic("")
-}
-
 func TestReply(t *testing.T) {
 	require := require.New(t)
-	busSender := "whatever"
 
-	t.Run("ReplyErr", func(t *testing.T) {
-		bus := &testIBus{}
+	type expected struct {
+		code  int
+		error string
+	}
+
+	t.Run("reply errors", func(t *testing.T) {
 		err := errors.New("test error")
-		sender := ibusmem.NewISender(bus, busSender)
-		ReplyErr(sender, err)
-		expectedResp := ibus.Response{
-			ContentType: ApplicationJSON,
-			StatusCode:  http.StatusInternalServerError,
-			Data:        []byte(`{"sys.Error":{"HTTPStatus":500,"Message":"test error"}}`),
+		cases := []struct {
+			desc     string
+			f        func(responder IResponder)
+			expected expected
+		}{
+			{
+				desc: "ReplyErr",
+				f:    func(responder IResponder) { ReplyErr(responder, err) },
+				expected: expected{
+					code:  http.StatusInternalServerError,
+					error: `{"sys.Error":{"HTTPStatus":500,"Message":"test error"}}`,
+				},
+			},
+			{
+				desc: "ReplyErrf",
+				f:    func(responder IResponder) { ReplyErrf(responder, http.StatusAccepted, "test ", "message") },
+				expected: expected{
+					code:  http.StatusAccepted,
+					error: `{"sys.Error":{"HTTPStatus":202,"Message":"test message"}}`,
+				},
+			},
+			{
+				desc: "ReplyErrorDef",
+				f:    func(responder IResponder) { ReplyErrDef(responder, err, http.StatusAccepted) },
+				expected: expected{
+					code:  http.StatusAccepted,
+					error: `{"sys.Error":{"HTTPStatus":202,"Message":"test error"}}`,
+				},
+			},
+			{
+				desc: "SysError",
+				f: func(responder IResponder) {
+					err := SysError{
+						HTTPStatus: http.StatusAlreadyReported,
+						Message:    "test error",
+						Data:       "dddfd",
+						QName:      appdef.NewQName("my", "qname"),
+					}
+					ReplyErrDef(responder, err, http.StatusAccepted)
+				},
+				expected: expected{
+					code:  http.StatusAccepted,
+					error: `{"sys.Error":{"HTTPStatus":208,"Message":"test error","QName":"my.qname","Data":"dddfd"}}`,
+				},
+			},
+			{
+				desc: "ReplyInternalServerError",
+				f: func(responder IResponder) {
+					ReplyInternalServerError(responder, "test", err)
+				},
+				expected: expected{
+					code:  http.StatusInternalServerError,
+					error: `{"sys.Error":{"HTTPStatus":500,"Message":"test: test error"}}`,
+				},
+			},
 		}
-		require.Equal(testResp{sender: "whatever", resp: expectedResp}, bus.responses[0])
-	})
 
-	t.Run("ReplyErrf", func(t *testing.T) {
-		bus := &testIBus{}
-		sender := ibusmem.NewISender(bus, busSender)
-		ReplyErrf(sender, http.StatusAccepted, "test ", "message")
-		expectedResp := ibus.Response{
-			ContentType: ApplicationJSON,
-			StatusCode:  http.StatusAccepted,
-			Data:        []byte(`{"sys.Error":{"HTTPStatus":202,"Message":"test message"}}`),
+		for _, c := range cases {
+			requestSender := NewIRequestSender(MockTime, SendTimeout(GetTestBusTimeout()), func(requestCtx context.Context, request ibus.Request, responder IResponder) {
+				c.f(responder)
+			})
+			cmdRespMeta, cmdResp, err := GetCommandResponse(context.Background(), requestSender, ibus.Request{})
+			require.NoError(err)
+			require.Equal(ApplicationJSON, cmdRespMeta.ContentType)
+			require.Equal(c.expected.code, cmdRespMeta.StatusCode)
+			require.Equal(c.expected.error, cmdResp.SysError.ToJSON())
 		}
-		require.Equal(testResp{sender: "whatever", resp: expectedResp}, bus.responses[0])
-	})
 
-	t.Run("ReplyErrorDef", func(t *testing.T) {
-		t.Run("common error", func(t *testing.T) {
-			bus := &testIBus{}
-			err := errors.New("test error")
-			sender := ibusmem.NewISender(bus, busSender)
-			ReplyErrDef(sender, err, http.StatusAccepted)
-			expectedResp := ibus.Response{
-				ContentType: ApplicationJSON,
-				StatusCode:  http.StatusAccepted,
-				Data:        []byte(`{"sys.Error":{"HTTPStatus":202,"Message":"test error"}}`),
-			}
-			require.Equal(testResp{sender: "whatever", resp: expectedResp}, bus.responses[0])
-		})
-		t.Run("SysError", func(t *testing.T) {
-			bus := &testIBus{}
-			err := SysError{
-				HTTPStatus: http.StatusAlreadyReported,
-				Message:    "test error",
-				Data:       "dddfd",
-				QName:      appdef.NewQName("my", "qname"),
-			}
-			sender := ibusmem.NewISender(bus, busSender)
-			ReplyErrDef(sender, err, http.StatusAccepted)
-			expectedResp := ibus.Response{
-				ContentType: ApplicationJSON,
-				StatusCode:  http.StatusAlreadyReported,
-				Data:        []byte(`{"sys.Error":{"HTTPStatus":208,"Message":"test error","QName":"my.qname","Data":"dddfd"}}`),
-			}
-			require.Equal(testResp{sender: "whatever", resp: expectedResp}, bus.responses[0])
-		})
 	})
 
 	t.Run("http status helpers", func(t *testing.T) {
 		cases := []struct {
 			statusCode      int
-			f               func(responder ISingleResponder, message string)
+			f               func(responder IResponder, message string)
 			expectedMessage string
 		}{
 			{f: ReplyUnauthorized, statusCode: http.StatusUnauthorized},
@@ -148,36 +141,21 @@ func TestReply(t *testing.T) {
 			name := runtime.FuncForPC(reflect.ValueOf(c.f).Pointer()).Name()
 			name = name[strings.LastIndex(name, ".")+1:]
 			t.Run(name, func(t *testing.T) {
-				bus := &testIBus{}
-				busSender := "whatever"
-				sender := ibusmem.NewISender(bus, busSender)
-				c.f(sender, "test message")
+				requestSender := NewIRequestSender(MockTime, SendTimeout(GetTestBusTimeout()), func(requestCtx context.Context, request ibus.Request, responder IResponder) {
+					c.f(responder, "test message")
+				})
 				expectedMessage := "test message"
 				if len(c.expectedMessage) > 0 {
 					expectedMessage = c.expectedMessage
 				}
-				expectedResp := ibus.Response{
-					ContentType: ApplicationJSON,
-					StatusCode:  c.statusCode,
-					Data:        []byte(fmt.Sprintf(`{"sys.Error":{"HTTPStatus":%d,"Message":"%s"}}`, c.statusCode, expectedMessage)),
-				}
-				require.Equal(testResp{sender: "whatever", resp: expectedResp}, bus.responses[0])
+				meta, resp, err := GetCommandResponse(context.Background(), requestSender, ibus.Request{})
+				require.NoError(err)
+				require.Equal(ApplicationJSON, meta.ContentType)
+				require.Equal(resp.SysError.HTTPStatus, c.statusCode)
+				require.Equal(resp.SysError.Message, expectedMessage)
 			})
 		}
 
-		t.Run("ReplyInternalServerError", func(t *testing.T) {
-			bus := &testIBus{}
-			busSender := "whatever"
-			err := errors.New("test error")
-			sender := ibusmem.NewISender(bus, busSender)
-			ReplyInternalServerError(sender, "test", err)
-			expectedResp := ibus.Response{
-				ContentType: ApplicationJSON,
-				StatusCode:  http.StatusInternalServerError,
-				Data:        []byte(`{"sys.Error":{"HTTPStatus":500,"Message":"test: test error"}}`),
-			}
-			require.Equal(testResp{sender: "whatever", resp: expectedResp}, bus.responses[0])
-		})
 	})
 }
 

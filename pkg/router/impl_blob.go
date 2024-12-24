@@ -168,13 +168,13 @@ func registerBLOB(ctx context.Context, wsid istructs.WSID, appQName string, regi
 		Host:     localhost,
 	}
 
-	statusCode, cmdResp, err := coreutils.GetCommandResponse(ctx, requestSender, req)
+	cmdRespMeta, cmdResp, err := coreutils.GetCommandResponse(ctx, requestSender, req)
 	if err != nil {
 		WriteTextResponse(resp, fmt.Sprintf("failed to exec %s: %s", registerFuncName, err.Error()), http.StatusInternalServerError)
 		return false, istructs.NullRecordID
 	}
-	if statusCode != http.StatusOK {
-		WriteTextResponse(resp, fmt.Sprintf("%s returned error: %v", registerFuncName, cmdResp.SysError), statusCode)
+	if cmdRespMeta.StatusCode != http.StatusOK {
+		WriteTextResponse(resp, fmt.Sprintf("%s returned error: %v", registerFuncName, cmdResp.SysError), cmdRespMeta.StatusCode)
 		return false, istructs.NullRecordID
 	}
 	return true, istructs.RecordID(cmdResp.NewIDs["1"])
@@ -258,13 +258,13 @@ func writeBLOB_persistent(ctx context.Context, wsid istructs.WSID, appQName stri
 		Header:   header,
 		Host:     localhost,
 	}
-	statusCode, cmdResp, err  := coreutils.GetCommandResponse(ctx, requestSender, req)
+	cmdRespMeta, cmdResp, err := coreutils.GetCommandResponse(ctx, requestSender, req)
 	if err != nil {
 		WriteTextResponse(resp, "failed to exec c.sys.CUD: "+err.Error(), http.StatusInternalServerError)
 		return 0
 	}
-	if statusCode != http.StatusOK {
-		WriteTextResponse(resp, "c.sys.CUD returned error: "+cmdResp.SysError.Message, statusCode)
+	if cmdRespMeta.StatusCode != http.StatusOK {
+		WriteTextResponse(resp, "c.sys.CUD returned error: "+cmdResp.SysError.Message, cmdRespMeta.StatusCode)
 		return 0
 	}
 
