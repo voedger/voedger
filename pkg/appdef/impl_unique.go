@@ -8,6 +8,8 @@ package appdef
 import (
 	"fmt"
 	"slices"
+
+	slicesex "github.com/voedger/voedger/pkg/appdef/internal/slices"
 )
 
 // # Implements:
@@ -120,7 +122,7 @@ func (uu *uniques) addUnique(name QName, fields []FieldName, comment ...string) 
 	if len(fields) == 0 {
 		panic(ErrMissed("unique «%v» fields", name))
 	}
-	if i, j := duplicates(fields); i >= 0 {
+	if i, j := slicesex.Duplicates(fields); i >= 0 {
 		panic(ErrAlreadyExists("fields in unique «%v» has duplicates (fields[%d] == fields[%d] == %q)", name, i, j, fields[i]))
 	}
 
@@ -133,7 +135,7 @@ func (uu *uniques) addUnique(name QName, fields []FieldName, comment ...string) 
 		for _, f := range un.Fields() {
 			ff = append(ff, f.Name())
 		}
-		if overlaps(fields, ff) {
+		if slicesex.Overlaps(fields, ff) {
 			panic(ErrAlreadyExists("type already has %v which fields overlaps new unique fields", un))
 		}
 	}
@@ -168,38 +170,4 @@ func (ub *uniquesBuilder) AddUnique(name QName, fields []FieldName, comment ...s
 func (ub *uniquesBuilder) SetUniqueField(name FieldName) IUniquesBuilder {
 	ub.setUniqueField(name)
 	return ub
-}
-
-// If the slices have duplicates, then the indices of the first pair are returned, otherwise (-1, -1)
-func duplicates[T comparable](s []T) (int, int) {
-	for i := range s {
-		for j := i + 1; j < len(s); j++ {
-			if s[i] == s[j] {
-				return i, j
-			}
-		}
-	}
-	return -1, -1
-}
-
-// Returns is slice sub is a subset of slice set, i.e. all elements from sub exist in set
-func subSet[T comparable](sub, set []T) bool {
-	for _, v1 := range sub {
-		found := false
-		for _, v2 := range set {
-			found = v1 == v2
-			if found {
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-	return true
-}
-
-// Returns is set1 and set2 overlaps, i.e. set1 is subset of set2 or set2 is subset of set1
-func overlaps[T comparable](set1, set2 []T) bool {
-	return subSet(set1, set2) || subSet(set2, set1)
 }

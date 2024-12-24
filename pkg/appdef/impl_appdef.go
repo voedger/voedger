@@ -75,7 +75,7 @@ func (app *appDef) Type(name QName) IType {
 }
 
 func (app *appDef) Types() iter.Seq[IType] {
-	return app.types.all
+	return app.types.values()
 }
 
 func (app *appDef) Workspace(name QName) IWorkspace {
@@ -83,7 +83,7 @@ func (app *appDef) Workspace(name QName) IWorkspace {
 }
 
 func (app *appDef) Workspaces() iter.Seq[IWorkspace] {
-	return app.workspaces.all
+	return app.workspaces.values()
 }
 
 func (app *appDef) WorkspaceByDescriptor(name QName) IWorkspace {
