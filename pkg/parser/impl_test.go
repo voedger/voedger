@@ -5,6 +5,7 @@
 package parser
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"slices"
@@ -14,7 +15,18 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/iextengine"
+	"github.com/voedger/voedger/pkg/irates"
+	"github.com/voedger/voedger/pkg/istorage/mem"
+	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/itokensjwt"
+	imetrics "github.com/voedger/voedger/pkg/metrics"
+	"github.com/voedger/voedger/pkg/vvm/engines"
 )
 
 //go:embed sql_example_app/pmain/*.vsql
@@ -1438,7 +1450,7 @@ func Test_Tags(t *testing.T) {
 	})
 
 	t.Run("Tag namespaces", func(t *testing.T) {
-		require.NoBuildError(`APPLICATION test(); 
+		require.NoBuildError(`APPLICATION test();
 		ALTER WORKSPACE sys.Profile (
 			TABLE t1 INHERITS sys.WDoc(
 				Fld1 int32
@@ -2237,6 +2249,61 @@ func Test_Grants(t *testing.T) {
 		require.Equal(1, numACLs)
 	})
 
+}
+
+func TestIsOperationAllowedOnNestedTable(t *testing.T) {
+	require := assertions(t)
+	schema, err := require.AppSchema(`APPLICATION test();
+		WORKSPACE MyWS (
+			TABLE Table2 INHERITS sys.CDoc(
+				Fld1 int32,
+				Nested TABLE Nested (
+					Fld2 int32
+				) WITH Tags=(AllowedTablesTag)
+			) WITH Tags=(AllowedTablesTag);
+
+			TAG AllowedTablesTag;
+			ROLE WorkspaceOwner;
+			GRANT SELECT, INSERT, UPDATE ON ALL TABLES WITH TAG AllowedTablesTag TO WorkspaceOwner;
+		);`)
+	require.NoError(err)
+	builder := appdef.New()
+	err = BuildAppDefs(schema, builder)
+	require.NoError(err)
+
+	appDef, err := builder.Build()
+	require.NoError(err)
+	appQName := appdef.NewAppQName("pkg", "test")
+	cfgs := istructsmem.AppConfigsType{}
+	cfgs.AddAppConfig(appQName, 1, appDef, 1)
+	appStructsProvider := istructsmem.Provide(cfgs, irates.NullBucketsFactory,
+		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.MockTime)),
+		provider.Provide(mem.Provide(coreutils.MockTime)))
+	statelessResources := istructsmem.NewStatelessResources()
+	appParts, cleanup, err := appparts.New2(context.Background(), appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
+		engines.ProvideExtEngineFactories(
+			engines.ExtEngineFactoriesConfig{
+				AppConfigs:         cfgs,
+				StatelessResources: statelessResources,
+				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
+			}, "vvmName", imetrics.Provide()),
+		irates.NullBucketsFactory)
+	require.NoError(err)
+	defer cleanup()
+	appParts.DeployApp(appQName, nil, appDef, 1, [4]uint{1, 1, 1, 1}, 1)
+	appParts.DeployAppPartitions(appQName, []istructs.PartitionID{1})
+	borrowedAppPart, err := appParts.Borrow(appQName, 1, appparts.ProcessorKind_Command)
+	require.NoError(err)
+
+	ok, _, err := borrowedAppPart.IsOperationAllowed(appdef.OperationKind_Insert, appdef.NewQName("pkg", "Table2"), nil,
+		[]appdef.QName{appdef.NewQName("pkg", "WorkspaceOwner")})
+	require.NoError(err)
+	require.True(ok)
+
+	ok, _, err = borrowedAppPart.IsOperationAllowed(appdef.OperationKind_Insert, appdef.NewQName("pkg", "Nested"), nil,
+		[]appdef.QName{appdef.NewQName("pkg", "WorkspaceOwner")})
+	require.NoError(err)
+	require.True(ok)
 }
 
 func Test_Grants_Inherit(t *testing.T) {

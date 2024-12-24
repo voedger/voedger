@@ -10,7 +10,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iauthnz"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func (acl ACL) IsAllowed(principals []iauthnz.Principal, req iauthnz.AuthzRequest) bool {
@@ -123,28 +122,28 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Allow,
 	},
-	{
-		// WorkspaceAdmin role asssigned automatically if has e.g. RoleResellersAdmin or RoleUntillPaymentsReseller
-		desc: "allow few reseller-related commands to WorkspaceAdmin",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameCmdInitiateInvitationByEmail,
-				qNameQryCollection,
-				qNameCmdInitiateUpdateInviteRoles,
-				qNameCmdInitiateCancelAcceptedInvite,
-				qNameCmdCancelSentInvite,
-				qNameCDocChildWorkspace,
-				qNameCmdInitChildWorkspace,
-				qNameCmdEnrichPrincipalToken,
-				istructs.QNameCommandCUD,
+	// {
+	// 	// WorkspaceAdmin role asssigned automatically if has e.g. RoleResellersAdmin or RoleUntillPaymentsReseller
+	// 	desc: "allow few reseller-related commands to WorkspaceAdmin",
+	// 	pattern: PatternType{
+	// 		qNamesPattern: []appdef.QName{
+	// 			// qNameCmdInitiateInvitationByEmail,
+	// 			qNameQryCollection,
+	// 			qNameCmdInitiateUpdateInviteRoles,
+	// 			qNameCmdInitiateCancelAcceptedInvite,
+	// 			qNameCmdCancelSentInvite,
+	// 			qNameCDocChildWorkspace,
+	// 			qNameCmdInitChildWorkspace,
+	// 			qNameCmdEnrichPrincipalToken,
+	// 			istructs.QNameCommandCUD,
 
-				// https://github.com/voedger/voedger/issues/208
-				qNameCmdInitiateDeactivateWorkspace,
-			},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceAdmin}}},
-		},
-		policy: ACPolicy_Allow,
-	},
+	// 			// https://github.com/voedger/voedger/issues/208
+	// 			qNameCmdInitiateDeactivateWorkspace,
+	// 		},
+	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceAdmin}}},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
 	{
 		// https://github.com/voedger/voedger/issues/125
 		desc: "grant UPDATE on air.UntillPayments to role sys.WorkspaceAdmin",
