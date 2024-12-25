@@ -19,8 +19,6 @@ import (
 
 	"github.com/gorilla/mux"
 
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
@@ -73,7 +71,7 @@ func (bm *blobBaseMessage) Release() {
 
 // use statusCode and errorMessage only if err == nil
 // statusCode == 200 -> errorMessage is empty
-func sendQueryRequest(ctx context.Context, req ibus.Request, requestSender coreutils.IRequestSender) (statusCode int, errorMessage string, err error) {
+func sendQueryRequest(ctx context.Context, req coreutils.Request, requestSender coreutils.IRequestSender) (statusCode int, errorMessage string, err error) {
 	responseCh, _, responseErr, err := requestSender.SendRequest(ctx, req)
 	if err != nil {
 		return 0, "", err
@@ -95,14 +93,13 @@ func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails interface{}, bl
 	defer close(bbm.doneChan)
 
 	// request to VVM to check the principalToken
-	req := ibus.Request{
-		Method:   ibus.HTTPMethodPOST,
+	req := coreutils.Request{
+		Method:   http.MethodPost,
 		WSID:     bbm.wsid,
 		AppQName: bbm.appQName.String(),
 		Resource: "q.sys.DownloadBLOBAuthnz",
 		Header:   bbm.header,
 		Body:     []byte(`{}`),
-		Host:     localhost,
 	}
 	statusCode, errorMessage, err := sendQueryRequest(bbm.req.Context(), req, requestSender)
 	if err != nil {
@@ -158,14 +155,13 @@ func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails interface{}, bl
 // returns NullRecordID for temporary BLOB
 func registerBLOB(ctx context.Context, wsid istructs.WSID, appQName string, registerFuncName string, header map[string][]string,
 	requestSender coreutils.IRequestSender, resp http.ResponseWriter) (ok bool, blobID istructs.RecordID) {
-	req := ibus.Request{
-		Method:   ibus.HTTPMethodPOST,
+	req := coreutils.Request{
+		Method:   http.MethodPost,
 		WSID:     wsid,
 		AppQName: appQName,
 		Resource: registerFuncName,
 		Body:     []byte(`{}`),
 		Header:   header,
-		Host:     localhost,
 	}
 
 	cmdRespMeta, cmdResp, err := coreutils.GetCommandResponse(ctx, requestSender, req)
@@ -249,14 +245,13 @@ func writeBLOB_persistent(ctx context.Context, wsid istructs.WSID, appQName stri
 	}
 
 	// set WDoc<sys.BLOB>.status = BLOBStatus_Completed
-	req := ibus.Request{
-		Method:   ibus.HTTPMethodPOST,
+	req := coreutils.Request{
+		Method:   http.MethodPost,
 		WSID:     wsid,
 		AppQName: appQName,
 		Resource: "c.sys.CUD",
 		Body:     []byte(fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"status":%d}}]}`, blobID, iblobstorage.BLOBStatus_Completed)),
 		Header:   header,
-		Host:     localhost,
 	}
 	cmdRespMeta, cmdResp, err := coreutils.GetCommandResponse(ctx, requestSender, req)
 	if err != nil {

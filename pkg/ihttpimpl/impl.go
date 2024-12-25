@@ -31,7 +31,6 @@ import (
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/istructs"
 	routerpkg "github.com/voedger/voedger/pkg/router"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 type appInfo struct {
@@ -267,7 +266,7 @@ func (p *httpProcessor) httpHandler() http.HandlerFunc {
 	}
 }
 
-func (p *httpProcessor) requestHandler(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+func (p *httpProcessor) requestHandler(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
 	appQName, err := appdef.ParseAppQName(request.AppQName)
 	if err != nil {
 		coreutils.ReplyBadRequest(responder, err.Error())

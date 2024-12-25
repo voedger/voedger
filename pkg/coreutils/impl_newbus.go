@@ -14,8 +14,21 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/istructs"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
+
+type Request struct {
+	Method      string
+	WSID        istructs.WSID
+	PartitionID istructs.PartitionID
+	Header      map[string][]string `json:",omitempty"`
+	Resource    string
+	Query       map[string][]string `json:",omitempty"`
+	Body        []byte              `json:",omitempty"`
+	AppQName    string
+	Host        string // used by authenticator to emit Host principal
+}
 
 type IResponder interface {
 	// panics if called >1 times
@@ -42,10 +55,10 @@ type IRequestSender interface {
 	// resultsCh must be read out
 	// *resultErr must be checked only after reading out the resultCh
 	// caller must eventually close clientCtx
-	SendRequest(clientCtx context.Context, req ibus.Request) (responseCh <-chan any, responseMeta ResponseMeta, responseErr *error, err error)
+	SendRequest(clientCtx context.Context, req Request) (responseCh <-chan any, responseMeta ResponseMeta, responseErr *error, err error)
 }
 
-type RequestHandler func(requestCtx context.Context, request ibus.Request, responder IResponder)
+type RequestHandler func(requestCtx context.Context, request Request, responder IResponder)
 
 type implIRequestSender struct {
 	timeout        SendTimeout
@@ -77,7 +90,7 @@ func NewIRequestSender(tm ITime, sendTimeout SendTimeout, requestHandler Request
 	}
 }
 
-func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req ibus.Request) (responseCh <-chan any, responseMeta ResponseMeta, responseErr *error, err error) {
+func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request) (responseCh <-chan any, responseMeta ResponseMeta, responseErr *error, err error) {
 	timeoutChan := rs.tm.NewTimerChan(time.Duration(rs.timeout))
 	respSender := &implIResponseSenderCloseable{
 		ch:          make(chan any),
@@ -103,7 +116,7 @@ func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req ibus.Re
 		case responseMeta = <-responder.responseMetaCh:
 			err = clientCtx.Err() // to make clientCtx.Done() take priority
 		case <-clientCtx.Done():
-			// wrong to close(replier.elems) because possible that elems is being writting at the same time -> data race
+			// wrong to close(replier.elems) because possible that elems is being writing at the same time -> data race
 			// clientCxt closed -> ErrNoConsumer on SendElement() according to IReplier contract
 			// so will do nothing here
 			if err = checkHandlerPanic(handlerPanic); err == nil {

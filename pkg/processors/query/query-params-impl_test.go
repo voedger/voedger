@@ -16,7 +16,6 @@ import (
 	"github.com/voedger/voedger/pkg/isecretsimpl"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func TestWrongTypes(t *testing.T) {
@@ -267,10 +266,10 @@ func TestWrongTypes(t *testing.T) {
 	sysToken := getSystemToken(appTokens)
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			requestSender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+			requestSender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
 				serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, responder, []byte(test.body), qNameFunction, "", sysToken)
 			})
-			respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), ibus.Request{})
+			respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), coreutils.Request{})
 			require.NoError(err)
 			require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
 			require.Equal(http.StatusBadRequest, respMeta.StatusCode)

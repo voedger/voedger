@@ -26,7 +26,7 @@ import (
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
-func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (res ibus.Request, ok bool) {
+func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (res coreutils.Request, ok bool) {
 	vars := mux.Vars(req)
 	wsidStr := vars[URLPlaceholder_wsid]
 	wsidUint, err := strconv.ParseUint(wsidStr, utils.DecimalBase, utils.BitSize64)
@@ -45,13 +45,12 @@ func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, 
 			}
 		}
 	}
-	res = ibus.Request{
-		Method:   ibus.NameToHTTPMethod[reqMethod],
+	res = coreutils.Request{
+		Method:   reqMethod,
 		WSID:     wsid,
 		Query:    req.URL.Query(),
 		Header:   req.Header,
 		AppQName: appQNameStr,
-		Host:     req.Host,
 	}
 	if req.Body != nil && req.Body != http.NoBody {
 		if res.Body, err = io.ReadAll(req.Body); err != nil {

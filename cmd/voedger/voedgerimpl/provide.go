@@ -20,7 +20,6 @@ import (
 	"github.com/voedger/voedger/pkg/istorage/cas"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istructs"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func NewStaticEmbeddedResources() []ihttpctl.StaticResourcesType {
@@ -60,7 +59,7 @@ func NewAppStorageFactory(params CLIParams) (istorage.IAppStorageFactory, error)
 	return cas.Provide(casParams)
 }
 
-func NewSysRouterRequestHandler(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+func NewSysRouterRequestHandler(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
 	go func() {
 		queryParamsBytes, err := json.Marshal(request.Query)
 		if err != nil {

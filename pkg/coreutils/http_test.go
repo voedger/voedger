@@ -21,7 +21,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func TestNewHTTPError(t *testing.T) {
@@ -114,10 +113,10 @@ func TestReply(t *testing.T) {
 
 		for _, c := range cases {
 			t.Run(c.desc, func(t *testing.T) {
-				requestSender := NewIRequestSender(MockTime, SendTimeout(GetTestBusTimeout()), func(requestCtx context.Context, request ibus.Request, responder IResponder) {
+				requestSender := NewIRequestSender(MockTime, SendTimeout(GetTestBusTimeout()), func(requestCtx context.Context, request Request, responder IResponder) {
 					c.f(responder)
 				})
-				cmdRespMeta, cmdResp, err := GetCommandResponse(context.Background(), requestSender, ibus.Request{})
+				cmdRespMeta, cmdResp, err := GetCommandResponse(context.Background(), requestSender, Request{})
 				require.NoError(err)
 				require.Equal(ApplicationJSON, cmdRespMeta.ContentType)
 				require.Equal(c.expected.code, cmdRespMeta.StatusCode)
@@ -143,14 +142,14 @@ func TestReply(t *testing.T) {
 			name := runtime.FuncForPC(reflect.ValueOf(c.f).Pointer()).Name()
 			name = name[strings.LastIndex(name, ".")+1:]
 			t.Run(name, func(t *testing.T) {
-				requestSender := NewIRequestSender(MockTime, SendTimeout(GetTestBusTimeout()), func(requestCtx context.Context, request ibus.Request, responder IResponder) {
+				requestSender := NewIRequestSender(MockTime, SendTimeout(GetTestBusTimeout()), func(requestCtx context.Context, request Request, responder IResponder) {
 					c.f(responder, "test message")
 				})
 				expectedMessage := "test message"
 				if len(c.expectedMessage) > 0 {
 					expectedMessage = c.expectedMessage
 				}
-				meta, resp, err := GetCommandResponse(context.Background(), requestSender, ibus.Request{})
+				meta, resp, err := GetCommandResponse(context.Background(), requestSender, Request{})
 				require.NoError(err)
 				require.Equal(ApplicationJSON, meta.ContentType)
 				require.Equal(c.statusCode, resp.SysError.HTTPStatus)

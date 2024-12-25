@@ -20,13 +20,12 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 	cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
 	cpAmount istructs.NumCommandProcessors, vvmApps VVMApps) coreutils.RequestHandler {
-	return func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+	return func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
 		if len(request.Resource) <= ShortestPossibleFunctionNameLen {
 			coreutils.ReplyBadRequest(responder, "wrong function name: "+request.Resource)
 			return
@@ -76,7 +75,7 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 // func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 // 	cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
 // 	cpAmount istructs.NumCommandProcessors, vvmApps VVMApps) ibus.IBus {
-// 	return ibusmem.Provide(func(requestCtx context.Context, replier coreutils.IReplier, request ibus.Request) {
+// 	return ibusmem.Provide(func(requestCtx context.Context, replier coreutils.IReplier, request coreutils.Request) {
 // 		// Handling Command/Query messages
 // 		// router -> SendRequest2(ctx, ...) -> requestHandler(ctx, ... ) - it is that context. If connection gracefully closed the that ctx is Done()
 // 		// so we need to forward that context
@@ -127,7 +126,7 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 // 	})
 // }
 
-func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQName appdef.AppQName, responder coreutils.IResponder, funcQName appdef.QName,
+func deliverToProcessors(request coreutils.Request, requestCtx context.Context, appQName appdef.AppQName, responder coreutils.IResponder, funcQName appdef.QName,
 	procbus iprocbus.IProcBus, token string, cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
 	cpCount istructs.NumCommandProcessors, partitionID istructs.PartitionID) {
 	switch request.Resource[:1] {
@@ -148,7 +147,7 @@ func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQN
 	}
 }
 
-func getPrincipalToken(request ibus.Request) (token string, err error) {
+func getPrincipalToken(request coreutils.Request) (token string, err error) {
 	authHeaders := request.Header[coreutils.Authorization]
 	if len(authHeaders) == 0 {
 		return "", nil
@@ -175,42 +174,3 @@ func getBasicAuthToken(authHeader string) (token string, err error) {
 	}
 	return strings.ReplaceAll(headerValue, ":", ""), nil
 }
-
-// func (rs *resultSenderErrorFirst) checkRS() {
-// 	if rs.rs == nil {
-// 		rs.rs = rs.sender.SendParallelResponse()
-// 	}
-// }
-
-// func (rs *resultSenderErrorFirst) StartArraySection(sectionType string, path []string) {
-// 	rs.checkRS()
-// 	rs.rs.StartArraySection(sectionType, path)
-// }
-// func (rs *resultSenderErrorFirst) StartMapSection(sectionType string, path []string) {
-// 	rs.checkRS()
-// 	rs.rs.StartMapSection(sectionType, path)
-// }
-// func (rs *resultSenderErrorFirst) ObjectSection(sectionType string, path []string, element interface{}) (err error) {
-// 	rs.checkRS()
-// 	return rs.rs.ObjectSection(sectionType, path, element)
-// }
-// func (rs *resultSenderErrorFirst) SendElement(name string, element interface{}) (err error) {
-// 	rs.checkRS()
-// 	return rs.rs.SendElement(name, element)
-// }
-// func (rs *resultSenderErrorFirst) Close(err error) {
-// 	defer func() {
-// 		if err != nil {
-// 			logger.Error(err)
-// 		}
-// 	}()
-// 	if rs.rs != nil {
-// 		rs.rs.Close(err)
-// 		return
-// 	}
-// 	if err != nil {
-// 		coreutils.ReplyErr(rs.sender, err)
-// 		return
-// 	}
-// 	coreutils.ReplyJSON(rs.sender, http.StatusOK, "{}")
-// }

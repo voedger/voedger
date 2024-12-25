@@ -41,7 +41,7 @@ func TestXXX(t *testing.T) {
 
 func TestBasicUsage_SingleResponse(t *testing.T) {
 	require := require.New(t)
-	router := setUp(t, func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
 		go func() {
 			coreutils.ReplyPlainText(responder, "test resp SingleResponse")
 		}()
@@ -59,7 +59,7 @@ func TestBasicUsage_SingleResponse(t *testing.T) {
 }
 
 func TestSectionedSendResponseError(t *testing.T) {
-	router := setUp(t, func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
 		// bump the mock time to make timeout timer fire
 		coreutils.MockTime.Add(2 * time.Millisecond)
 		// just do not use the responder
@@ -84,14 +84,13 @@ type testObject struct {
 
 func TestBasicUsage_MultiResponse(t *testing.T) {
 	require := require.New(t)
-	router := setUp(t, func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
 		require.Equal("test body SectionedResponse", string(request.Body))
 		require.Equal(ibus.HTTPMethodPOST, request.Method)
 		require.Equal(istructs.PartitionID(0), request.PartitionID)
 
 		require.Equal(testWSID, request.WSID)
 		require.Equal("somefunc_SectionedResponse", request.Resource)
-		require.Empty(request.Attachments)
 		require.Equal(map[string][]string{
 			"Accept-Encoding": {"gzip"},
 			"Content-Length":  {"27"}, // len("test body SectionedResponse")
@@ -137,7 +136,7 @@ func TestBasicUsage_MultiResponse(t *testing.T) {
 }
 
 func TestEmptySectionedResponse(t *testing.T) {
-	router := setUp(t, func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
 		sender := responder.InitResponse(coreutils.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 		sender.Close(nil)
 
@@ -154,7 +153,7 @@ func TestEmptySectionedResponse(t *testing.T) {
 }
 
 func TestSimpleErrorSectionedResponse(t *testing.T) {
-	router := setUp(t, func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
 		sender := responder.InitResponse(coreutils.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 		sender.Close(errors.New("test error SimpleErrorSectionedResponse"))
 	}, ibus.DefaultTimeout)
@@ -172,7 +171,7 @@ func TestSimpleErrorSectionedResponse(t *testing.T) {
 }
 
 func TestHandlerPanic(t *testing.T) {
-	router := setUp(t, func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
 		panic("test panic HandlerPanic")
 	}, ibus.DefaultTimeout)
 	defer tearDown(router)
@@ -194,7 +193,7 @@ func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
 	clientClosed := make(chan struct{})
 	firstElemSendErrCh := make(chan error)
 	expectedErrCh := make(chan error)
-	router := setUp(t, func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
 		go func() {
 			sender := responder.InitResponse(coreutils.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 			defer sender.Close(nil)
@@ -246,7 +245,7 @@ func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
 }
 
 func TestCheck(t *testing.T) {
-	router := setUp(t, func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
 	}, 1*time.Second)
 	defer tearDown(router)
 
@@ -261,7 +260,7 @@ func TestCheck(t *testing.T) {
 }
 
 func Test404(t *testing.T) {
-	router := setUp(t, func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
 	}, 1*time.Second)
 	defer tearDown(router)
 
@@ -278,7 +277,7 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 	clientDisconnect := make(chan any)
 	requestCtxCh := make(chan context.Context, 1)
 	expectedErrCh := make(chan error)
-	router := setUp(t, func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
 		go func() {
 			// handler, on server side
 			sender := responder.InitResponse(coreutils.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
@@ -361,7 +360,7 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 
 func TestAdminService(t *testing.T) {
 	require := require.New(t)
-	router := setUp(t, func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
 		go coreutils.ReplyPlainText(responder, "test resp AdminService")
 	}, ibus.DefaultTimeout)
 	defer tearDown(router)

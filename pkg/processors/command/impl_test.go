@@ -38,7 +38,6 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"github.com/voedger/voedger/pkg/vvm/engines"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 var (
@@ -112,7 +111,7 @@ func TestBasicUsage(t *testing.T) {
 
 	t.Run("basic usage", func(t *testing.T) {
 		// command processor works through ibus.SendResponse -> we need a sender -> let's test using ibus.SendRequest2()
-		request := ibus.Request{
+		request := coreutils.Request{
 			Body:     []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"pass"}}`),
 			AppQName: istructs.AppQName_untill_airs_bp.String(),
 			WSID:     1,
@@ -140,7 +139,7 @@ func TestBasicUsage(t *testing.T) {
 	})
 
 	t.Run("500 internal server error command exec error", func(t *testing.T) {
-		request := ibus.Request{
+		request := coreutils.Request{
 			Body:     []byte(`{"args":{"Text":"fire error"},"unloggedArgs":{"Password":"pass"}}`),
 			AppQName: istructs.AppQName_untill_airs_bp.String(),
 			WSID:     1,
@@ -161,7 +160,7 @@ func TestBasicUsage(t *testing.T) {
 
 func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int) map[string]interface{} {
 	require := require.New(t)
-	req := ibus.Request{
+	req := coreutils.Request{
 		WSID:     wsid,
 		AppQName: istructs.AppQName_untill_airs_bp.String(),
 		Resource: "c.sys.CUD",
@@ -172,7 +171,7 @@ func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int)
 		]}`),
 		Header: app.sysAuthHeader,
 	}
-	respCh, respMeta, _, err := app.requestSender.SendRequest(app.ctx, req)
+	respCh, respMeta, respErr, err := app.requestSender.SendRequest(app.ctx, req)
 	require.NoError(err)
 	respDataStr := ""
 	for elem := range respCh {
@@ -184,9 +183,17 @@ func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int)
 	} else {
 		require.Equal(expectedCode[0], respMeta.StatusCode)
 	}
-	respData := map[string]interface{}{}
 
-	require.NoError(json.Unmarshal([]byte(respDataStr), &respData))
+	respData := map[string]interface{}{}
+	if len(respDataStr) > 0 {
+		require.NoError(json.Unmarshal([]byte(respDataStr), &respData))
+	}
+	if *respErr != nil {
+		var sysErr coreutils.SysError
+		errors.As(*respErr, &sysErr)
+		sysErrorJSON := sysErr.ToJSON()
+		require.NoError(json.Unmarshal([]byte(sysErrorJSON), &respData))
+	}
 	return respData
 }
 
@@ -326,7 +333,7 @@ func restartCmdProc(app *testApp) {
 // 	app.cfg.Resources.Add(cmdCUD)
 
 // 	// insert
-// 	req := ibus.Request{
+// 	req := coreutils.Request{
 // 		WSID:     1,
 // 		AppQName: istructs.AppQName_untill_airs_bp.String(),
 // 		Resource: "c.sys.CUD",
@@ -400,7 +407,7 @@ func restartCmdProc(app *testApp) {
 
 // 	for _, c := range cases {
 // 		t.Run(c.desc, func(t *testing.T) {
-// 			req := ibus.Request{
+// 			req := coreutils.Request{
 // 				WSID:     1,
 // 				AppQName: istructs.AppQName_untill_airs_bp.String(),
 // 				Resource: "c.sys.CUD",
@@ -443,7 +450,7 @@ func restartCmdProc(app *testApp) {
 // 	})
 // 	defer tearDown(app)
 
-// 	baseReq := ibus.Request{
+// 	baseReq := coreutils.Request{
 // 		WSID:     1,
 // 		AppQName: istructs.AppQName_untill_airs_bp.String(),
 // 		Resource: "c.sys.Test",
@@ -453,20 +460,20 @@ func restartCmdProc(app *testApp) {
 
 // 	cases := []struct {
 // 		desc string
-// 		ibus.Request
+// 		coreutils.Request
 // 		expectedMessageLike string
 // 		expectedStatusCode  int
 // 	}{
-// 		{"unknown app", ibus.Request{AppQName: "untill/unknown"}, "application untill/unknown not found", http.StatusServiceUnavailable},
-// 		{"bad request body", ibus.Request{Body: []byte("{wrong")}, "failed to unmarshal request body: invalid character 'w' looking for beginning of object key string", http.StatusBadRequest},
-// 		{"unknown func", ibus.Request{Resource: "c.sys.Unknown"}, "unknown function", http.StatusBadRequest},
-// 		{"args: field of wrong type provided", ibus.Request{Body: []byte(`{"args":{"Text":42}}`)}, "wrong field type", http.StatusBadRequest},
-// 		{"args: not an object", ibus.Request{Body: []byte(`{"args":42}`)}, `field "args" must be an object`, http.StatusBadRequest},
-// 		{"args: missing at all with a required field", ibus.Request{Body: []byte(`{}`)}, "", http.StatusBadRequest},
-// 		{"unloggedArgs: not an object", ibus.Request{Body: []byte(`{"unloggedArgs":42,"args":{"Text":"txt"}}`)}, `field "unloggedArgs" must be an object`, http.StatusBadRequest},
-// 		{"unloggedArgs: field of wrong type provided", ibus.Request{Body: []byte(`{"unloggedArgs":{"Password":42},"args":{"Text":"txt"}}`)}, "wrong field type", http.StatusBadRequest},
-// 		{"unloggedArgs: missing required field of unlogged args, no unlogged args at all", ibus.Request{Body: []byte(`{"args":{"Text":"txt"}}`)}, "", http.StatusBadRequest},
-// 		{"cuds: not an object", ibus.Request{Body: []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"123"},"cuds":42}`)}, `field "cuds" must be an array of objects`, http.StatusBadRequest},
+// 		{"unknown app", coreutils.Request{AppQName: "untill/unknown"}, "application untill/unknown not found", http.StatusServiceUnavailable},
+// 		{"bad request body", coreutils.Request{Body: []byte("{wrong")}, "failed to unmarshal request body: invalid character 'w' looking for beginning of object key string", http.StatusBadRequest},
+// 		{"unknown func", coreutils.Request{Resource: "c.sys.Unknown"}, "unknown function", http.StatusBadRequest},
+// 		{"args: field of wrong type provided", coreutils.Request{Body: []byte(`{"args":{"Text":42}}`)}, "wrong field type", http.StatusBadRequest},
+// 		{"args: not an object", coreutils.Request{Body: []byte(`{"args":42}`)}, `field "args" must be an object`, http.StatusBadRequest},
+// 		{"args: missing at all with a required field", coreutils.Request{Body: []byte(`{}`)}, "", http.StatusBadRequest},
+// 		{"unloggedArgs: not an object", coreutils.Request{Body: []byte(`{"unloggedArgs":42,"args":{"Text":"txt"}}`)}, `field "unloggedArgs" must be an object`, http.StatusBadRequest},
+// 		{"unloggedArgs: field of wrong type provided", coreutils.Request{Body: []byte(`{"unloggedArgs":{"Password":42},"args":{"Text":"txt"}}`)}, "wrong field type", http.StatusBadRequest},
+// 		{"unloggedArgs: missing required field of unlogged args, no unlogged args at all", coreutils.Request{Body: []byte(`{"args":{"Text":"txt"}}`)}, "", http.StatusBadRequest},
+// 		{"cuds: not an object", coreutils.Request{Body: []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"123"},"cuds":42}`)}, `field "cuds" must be an array of objects`, http.StatusBadRequest},
 // 	}
 
 // 	for _, c := range cases {
@@ -532,12 +539,12 @@ func restartCmdProc(app *testApp) {
 
 // 	type testCase struct {
 // 		desc               string
-// 		req                ibus.Request
+// 		req                coreutils.Request
 // 		expectedStatusCode int
 // 	}
 // 	cases := []testCase{
 // 		{
-// 			desc: "403 on cmd EXECUTE forbidden", req: ibus.Request{
+// 			desc: "403 on cmd EXECUTE forbidden", req: coreutils.Request{
 // 				Body:     []byte(`{}`),
 // 				AppQName: istructs.AppQName_untill_airs_bp.String(),
 // 				WSID:     1,
@@ -547,7 +554,7 @@ func restartCmdProc(app *testApp) {
 // 			expectedStatusCode: http.StatusForbidden,
 // 		},
 // 		{
-// 			desc: "403 on INSERT CUD forbidden", req: ibus.Request{
+// 			desc: "403 on INSERT CUD forbidden", req: coreutils.Request{
 // 				Body:     []byte(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.TestDeniedCDoc"}}]}`),
 // 				AppQName: istructs.AppQName_untill_airs_bp.String(),
 // 				WSID:     1,
@@ -557,7 +564,7 @@ func restartCmdProc(app *testApp) {
 // 			expectedStatusCode: http.StatusForbidden,
 // 		},
 // 		{
-// 			desc: "403 if no token for a func that requires authentication", req: ibus.Request{
+// 			desc: "403 if no token for a func that requires authentication", req: coreutils.Request{
 // 				Body:     []byte(`{}`),
 // 				AppQName: istructs.AppQName_untill_airs_bp.String(),
 // 				WSID:     1,
@@ -604,7 +611,7 @@ func getAuthHeader(token string) map[string][]string {
 // 	})
 // 	defer tearDown(app)
 
-// 	request := ibus.Request{
+// 	request := coreutils.Request{
 // 		Body:     []byte(`custom content`),
 // 		AppQName: istructs.AppQName_untill_airs_bp.String(),
 // 		WSID:     1,
@@ -642,7 +649,7 @@ func getAuthHeader(token string) map[string][]string {
 // 		})
 // 	defer tearDown(app)
 
-// 	request := ibus.Request{
+// 	request := coreutils.Request{
 // 		Body:     []byte(`{"args":{}}`),
 // 		AppQName: istructs.AppQName_untill_airs_bp.String(),
 // 		WSID:     1,
@@ -763,7 +770,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 
 	// command processor works through ibus.SendResponse -> we need ibus implementation
 
-	requestSender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+	requestSender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
 		// simulate handling the command request be a real application
 		cmdQName, err := appdef.ParseQName(request.Resource[2:])
 		require.NoError(err)

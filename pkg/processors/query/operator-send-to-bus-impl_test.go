@@ -12,13 +12,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/coreutils"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func TestSendToBusOperator_DoAsync(t *testing.T) {
 	require := require.New(t)
 	errCh := make(chan error, 1)
-	requestSender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request ibus.Request, responder coreutils.IResponder) {
+	requestSender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
 		go func() {
 			operator := SendToBusOperator{
 				responder: responder,
@@ -37,7 +36,7 @@ func TestSendToBusOperator_DoAsync(t *testing.T) {
 		}()
 	})
 
-	respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), ibus.Request{})
+	respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), coreutils.Request{})
 	require.NoError(err)
 	require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
 	require.Equal(http.StatusOK, respMeta.StatusCode)

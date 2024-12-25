@@ -21,12 +21,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 	"golang.org/x/exp/slices"
 )
 
 // TODO: CP should send CommandResponse struct itself, not CommandResponse marshaled to a string
-func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req ibus.Request) (cmdRespMeta ResponseMeta, cmdResp CommandResponse, err error) {
+func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req Request) (cmdRespMeta ResponseMeta, cmdResp CommandResponse, err error) {
 	responseCh, responseMeta, responseErr, err := requestSender.SendRequest(ctx, req)
 	if err != nil {
 		return cmdRespMeta, cmdResp, err
