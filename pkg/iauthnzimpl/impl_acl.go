@@ -124,7 +124,7 @@ var defaultACL = ACL{
 	},
 	// {
 	// 	// WorkspaceAdmin role asssigned automatically if has e.g. RoleResellersAdmin or RoleUntillPaymentsReseller
-	// 	desc: "allow few reseller-related commands to WorkspaceAdmin",
+	// 	desc: "allow few reseller-related commands TO sys.WorkspaceAdmin",
 	// 	pattern: PatternType{
 	// 		qNamesPattern: []appdef.QName{
 	// 			// qNameCmdInitiateInvitationByEmail,
@@ -324,12 +324,12 @@ var defaultACL = ACL{
 				qNameQryGetUPTransferInstrument,
 				qNameCmdRetryTransferUPPayout,
 				// https://dev.untill.com/projects/#!685617
-				qNameQryGetUPLocationRates,
+				// qNameQryGetUPLocationRates,
 				// https://dev.untill.com/projects/#!685179
 				qNameQryUpdateShopperStatement,
 				// https://dev.untill.com/projects/#!710217
 				qNameQryGetUPPayoutTransfers,
-				qNameQryGetUPInvoices,
+				// qNameQryGetUPInvoices,
 				qNameCmdUpdateUPProfile,
 			},
 			principalsPattern: [][]iauthnz.Principal{
@@ -347,7 +347,7 @@ var defaultACL = ACL{
 				qNameCmdUpdateUPLocationRates,
 				qNameQryGetUPFeesOverview,
 				// https://dev.untill.com/projects/#!664876
-				qNameQryIsDirectReseller,
+				// qNameQryIsDirectReseller,
 				// https://dev.untill.com/projects/#!659825
 				qNameQryGetResellerDailyUPReport,
 			},
@@ -362,10 +362,10 @@ var defaultACL = ACL{
 				qNameQryGetAllUPPayouts,
 				qNameQryGetUPLocationInvoiceParties,
 				// https://dev.untill.com/projects/#!710217
-				qNameQryGetAllUPInvoices,
+				// qNameQryGetAllUPInvoices,
 				qNameQryGetAllUPPayoutTransfers,
 				// https://dev.untill.com/projects/#!711418
-				qNameQryGetDailyUPReports,
+				// qNameQryGetDailyUPReports,
 				// https://dev.untill.com/projects/#!710982
 				qNameQryGetUPVATTransfers,
 				qNameQryGetUPBeneficiaryVATDebts,
