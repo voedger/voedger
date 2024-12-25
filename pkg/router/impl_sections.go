@@ -61,7 +61,7 @@ func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, 
 	return res, err == nil
 }
 
-func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error, contentType string, onSendFailed func()) {
+func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error, contentType string, onSendFailed func(), isCmd bool) {
 	sendSuccess := true
 	defer func() {
 		if requestCtx.Err() != nil {
@@ -87,7 +87,7 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 			return
 		}
 		if elemsCount == 0 {
-			if contentType == coreutils.TextPlain {
+			if isCmd || contentType == coreutils.TextPlain {
 				sendSuccess = writeResponse(w, elem.(string))
 			} else {
 				sendSuccess = writeResponse(w, `{"sections":[{"type":"","elements":[`)
@@ -97,11 +97,13 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 			sendSuccess = writeResponse(w, ",")
 		}
 
+		elemsCount++
+
 		if !sendSuccess {
 			return
 		}
 
-		if contentType == coreutils.TextPlain {
+		if isCmd || contentType == coreutils.TextPlain {
 			continue
 		}
 
@@ -113,7 +115,6 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 		if sendSuccess = writeResponse(w, string(elemBytes)); !sendSuccess {
 			return
 		}
-		elemsCount++
 	}
 	if len(closer) > 0 {
 		if sendSuccess = writeResponse(w, closer); !sendSuccess {
@@ -137,7 +138,7 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 		} else {
 			sendSuccess = writeResponse(w, fmt.Sprintf(`"status":%d,"errorDescription":"%s"}`, http.StatusInternalServerError, *responseErr))
 		}
-	} else if sendSuccess && contentType == coreutils.ApplicationJSON {
+	} else if sendSuccess && contentType == coreutils.ApplicationJSON && !isCmd {
 		if elemsCount == 0 {
 			sendSuccess = writeResponse(w, "{}")
 		} else {

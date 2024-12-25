@@ -40,7 +40,7 @@ func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req i
 		body = elem.(string)
 	}
 	if *responseErr != nil {
-		cmdResp.SysError = (*responseErr).(SysError)
+		cmdResp.SysError = WrapSysErrorToExact(*responseErr, http.StatusInternalServerError)
 		return responseMeta, cmdResp, nil
 	}
 	if err = json.Unmarshal([]byte(body), &cmdResp); err != nil {

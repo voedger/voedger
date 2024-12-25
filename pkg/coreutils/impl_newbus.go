@@ -41,7 +41,7 @@ type IRequestSender interface {
 	// err != nil -> nothing else matters
 	// resultsCh must be read out
 	// *resultErr must be checked only after reading out the resultCh
-	// caller must eventaully close clientCtx
+	// caller must eventually close clientCtx
 	SendRequest(clientCtx context.Context, req ibus.Request) (responseCh <-chan any, responseMeta ResponseMeta, responseErr *error, err error)
 }
 

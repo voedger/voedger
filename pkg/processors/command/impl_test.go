@@ -172,22 +172,20 @@ func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int)
 		]}`),
 		Header: app.sysAuthHeader,
 	}
-	respCh, respMeta, respErr, err := app.requestSender.SendRequest(app.ctx, req)
+	respCh, respMeta, _, err := app.requestSender.SendRequest(app.ctx, req)
 	require.NoError(err)
 	respDataStr := ""
 	for elem := range respCh {
 		require.Empty(respDataStr)
-		respDataBytes, err := json.Marshal(elem)
-		require.NoError(err)
-		respDataStr = string(respDataBytes)
+		respDataStr = elem.(string)
 	}
-	require.NoError(*respErr)
 	if len(expectedCode) == 0 {
 		require.Equal(http.StatusOK, respMeta.StatusCode)
 	} else {
 		require.Equal(expectedCode[0], respMeta.StatusCode)
 	}
 	respData := map[string]interface{}{}
+
 	require.NoError(json.Unmarshal([]byte(respDataStr), &respData))
 	return respData
 }

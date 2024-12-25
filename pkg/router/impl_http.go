@@ -219,7 +219,8 @@ func RequestHandler(requestSender coreutils.IRequestSender, numsAppsWorkspaces m
 		}
 
 		initResponse(resp, responseMeta.ContentType, responseMeta.StatusCode)
-		reply(requestCtx, resp, responseCh, responseErr, responseMeta.ContentType, cancel)
+		isCmd := strings.HasPrefix(request.Resource, "c.")
+		reply(requestCtx, resp, responseCh, responseErr, responseMeta.ContentType, cancel, isCmd)
 	}
 }
 

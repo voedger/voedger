@@ -96,7 +96,7 @@ func TestReply(t *testing.T) {
 					ReplyErrDef(responder, err, http.StatusAccepted)
 				},
 				expected: expected{
-					code:  http.StatusAccepted,
+					code:  http.StatusAlreadyReported,
 					error: `{"sys.Error":{"HTTPStatus":208,"Message":"test error","QName":"my.qname","Data":"dddfd"}}`,
 				},
 			},
@@ -113,14 +113,16 @@ func TestReply(t *testing.T) {
 		}
 
 		for _, c := range cases {
-			requestSender := NewIRequestSender(MockTime, SendTimeout(GetTestBusTimeout()), func(requestCtx context.Context, request ibus.Request, responder IResponder) {
-				c.f(responder)
+			t.Run(c.desc, func(t *testing.T) {
+				requestSender := NewIRequestSender(MockTime, SendTimeout(GetTestBusTimeout()), func(requestCtx context.Context, request ibus.Request, responder IResponder) {
+					c.f(responder)
+				})
+				cmdRespMeta, cmdResp, err := GetCommandResponse(context.Background(), requestSender, ibus.Request{})
+				require.NoError(err)
+				require.Equal(ApplicationJSON, cmdRespMeta.ContentType)
+				require.Equal(c.expected.code, cmdRespMeta.StatusCode)
+				require.Equal(c.expected.error, cmdResp.SysError.ToJSON())
 			})
-			cmdRespMeta, cmdResp, err := GetCommandResponse(context.Background(), requestSender, ibus.Request{})
-			require.NoError(err)
-			require.Equal(ApplicationJSON, cmdRespMeta.ContentType)
-			require.Equal(c.expected.code, cmdRespMeta.StatusCode)
-			require.Equal(c.expected.error, cmdResp.SysError.ToJSON())
 		}
 
 	})
@@ -151,8 +153,8 @@ func TestReply(t *testing.T) {
 				meta, resp, err := GetCommandResponse(context.Background(), requestSender, ibus.Request{})
 				require.NoError(err)
 				require.Equal(ApplicationJSON, meta.ContentType)
-				require.Equal(resp.SysError.HTTPStatus, c.statusCode)
-				require.Equal(resp.SysError.Message, expectedMessage)
+				require.Equal(c.statusCode, resp.SysError.HTTPStatus)
+				require.Equal(expectedMessage, resp.SysError.Message)
 			})
 		}
 
