@@ -2240,6 +2240,7 @@ func Test_Grants(t *testing.T) {
 
 }
 
+// https://github.com/voedger/voedger/issues/3060
 func TestIsOperationAllowedOnNestedTable(t *testing.T) {
 	require := assertions(t)
 	schema, err := require.AppSchema(`APPLICATION test();

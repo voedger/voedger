@@ -219,7 +219,7 @@ var defaultACL = ACL{
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
 				qNameCmdCreateUPProfile,
-				qNameQryGetUPOnboardingPage,
+				// qNameQryGetUPOnboardingPage,
 				qNameQryGetUPVerificationStatus,
 				qNameQryGetUPAccountStatus,
 				qNameQryGetUPEventHistory,
@@ -259,9 +259,9 @@ var defaultACL = ACL{
 				qNameCmdEnsureUPPredefinedPaymentModesExist,
 
 				// https://dev.untill.com/projects/#!641315
-				qNameQryGetUPTerminals,
+				// qNameQryGetUPTerminals,
 				qNameQryActivateUPTerminal,
-				qNameQryGetUPPaymentMethods,
+				// qNameQryGetUPPaymentMethods,
 				qNameQryToggleUPPaymentMethod,
 				qNameQryRequestUPPaymentMethod,
 				qNameQryGetUPTransactionsOverview,
