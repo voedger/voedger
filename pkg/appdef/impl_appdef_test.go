@@ -94,6 +94,21 @@ func testBreakable[T any](t *testing.T, name string, seq ...iter.Seq[T]) {
 	}
 }
 
+func testBreakable2[K, V any](t *testing.T, name string, seq ...iter.Seq2[K, V]) {
+	for i, s := range seq {
+		t.Run(fmt.Sprintf("%s[%d]", name, i), func(t *testing.T) {
+			cnt := 0
+			for range s {
+				cnt++
+				break
+			}
+			if cnt != 1 {
+				t.Errorf("got %d iterations, expected 1", i)
+			}
+		})
+	}
+}
+
 func Test_EnumsBreakable(t *testing.T) {
 	require := require.New(t)
 
@@ -146,10 +161,18 @@ func Test_EnumsBreakable(t *testing.T) {
 	wsb.AddQuery(appdef.NewQName("test", "Query1"))
 	wsb.AddQuery(appdef.NewQName("test", "Query2"))
 
-	wsb.AddProjector(appdef.NewQName("test", "Projector1")).
-		Events().Add(cmd1Name)
-	wsb.AddProjector(appdef.NewQName("test", "Projector2")).
-		Events().Add(cmd2Name)
+	prj1name, prj2name := appdef.NewQName("test", "Projector1"), appdef.NewQName("test", "Projector2")
+	prj1 := wsb.AddProjector(prj1name)
+	prj1.Events().Add(
+		[]appdef.OperationKind{appdef.OperationKind_Execute},
+		filter.QNames(cmd1Name))
+	prj1.Events().Add(
+		[]appdef.OperationKind{appdef.OperationKind_ExecuteWithParam},
+		filter.WSTypes(wsName, appdef.TypeKind_ODoc))
+	prj2 := wsb.AddProjector(prj2name)
+	prj2.Events().Add(
+		[]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update},
+		filter.Types(appdef.TypeKind_CDoc, appdef.TypeKind_CRecord))
 
 	job1name, job2name := appdef.NewQName("test", "Job1"), appdef.NewQName("test", "Job2")
 	wsb.AddJob(job1name).SetCronSchedule("@every 3s").
@@ -177,6 +200,8 @@ func Test_EnumsBreakable(t *testing.T) {
 
 	t.Run("should be breakable", func(t *testing.T) {
 		ws := app.Workspace(wsName)
+
+		testBreakable2(t, "Packages", app.Packages())
 
 		testBreakable(t, "Workspaces", app.Workspaces())
 
@@ -211,6 +236,11 @@ func Test_EnumsBreakable(t *testing.T) {
 		testBreakable(t, "Functions", appdef.Functions(app.Types()), appdef.Functions(ws.LocalTypes()))
 
 		testBreakable(t, "Projectors", appdef.Projectors(app.Types()), appdef.Projectors(ws.LocalTypes()))
+		testBreakable(t, "Projectors.Events", appdef.Projector(app.Type, prj1name).Events())
+		for ev := range appdef.Projector(app.Type, prj2name).Events() {
+			testBreakable(t, "Projectors.Events.Ops", ev.Ops())
+		}
+
 		testBreakable(t, "Jobs", appdef.Jobs(app.Types()), appdef.Jobs(ws.LocalTypes()))
 		testBreakable(t, "IStorages.Enum", appdef.Job(app.Type, job1name).States().Enum)
 

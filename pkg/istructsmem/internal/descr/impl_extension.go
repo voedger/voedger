@@ -74,23 +74,20 @@ func (f *CommandFunction) read(fn appdef.ICommand) {
 
 func (p *Projector) read(prj appdef.IProjector) {
 	p.Extension.read(prj)
-	if prj.Events().Len() > 0 {
-		p.Events = make(map[appdef.QName]ProjectorEvent)
-		prj.Events().Enum(func(ev appdef.IProjectorEvent) {
-			e := ProjectorEvent{}
-			e.read(ev)
-			p.Events[e.On] = e
-		})
+	for ev := range prj.Events() {
+		e := ProjectorEvent{}
+		e.read(ev)
+		p.Events = append(p.Events, e)
 	}
 	p.WantErrors = prj.WantErrors()
 }
 
 func (e *ProjectorEvent) read(ev appdef.IProjectorEvent) {
-	e.Comment = ev.Comment()
-	e.On = ev.On().QName()
-	for _, k := range ev.Kind() {
-		e.Kind = append(e.Kind, k.TrimString())
+	for o := range ev.Ops() {
+		e.Ops = append(e.Ops, o.TrimString())
 	}
+	e.Filter.read(ev.Filter())
+	e.Comment = ev.Comment()
 }
 
 func (j *Job) read(job appdef.IJob) {

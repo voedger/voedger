@@ -3,43 +3,44 @@
  * @author: Nikolay Nikitin
  */
 
-package appdef
+package appdef_test
 
 import (
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func Test_AppDef_AddJob(t *testing.T) {
 	require := require.New(t)
 
-	var app IAppDef
+	var app appdef.IAppDef
 
-	wsName := NewQName("test", "workspace")
+	wsName := appdef.NewQName("test", "workspace")
 
-	sysViews := NewQName(SysPackage, "views")
-	viewName := NewQName("test", "view")
-	resultName := NewQName("test", "result")
+	sysViews := appdef.NewQName(appdef.SysPackage, "views")
+	viewName := appdef.NewQName("test", "view")
+	resultName := appdef.NewQName("test", "result")
 	cronSchedule := `@every 2m30s`
-	jobName := NewQName("test", "job")
+	jobName := appdef.NewQName("test", "job")
 
 	t.Run("should be ok to add job", func(t *testing.T) {
-		adb := New()
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
 
 		view := wsb.AddView(viewName)
-		view.Key().PartKey().AddDataField("id", SysData_RecordID)
-		view.Key().ClustCols().AddDataField("name", SysData_String)
-		view.Value().AddDataField("data", SysData_bytes, false, MaxLen(1024))
+		view.Key().PartKey().AddDataField("id", appdef.SysData_RecordID)
+		view.Key().ClustCols().AddDataField("name", appdef.SysData_String)
+		view.Value().AddDataField("data", appdef.SysData_bytes, false, appdef.MaxLen(1024))
 		view.SetComment("view is state for job")
 
 		result := wsb.AddView(resultName)
-		result.Key().PartKey().AddDataField("id", SysData_RecordID)
-		result.Key().ClustCols().AddDataField("name", SysData_String)
-		result.Value().AddDataField("data", SysData_bytes, false, MaxLen(1024))
+		result.Key().PartKey().AddDataField("id", appdef.SysData_RecordID)
+		result.Key().ClustCols().AddDataField("name", appdef.SysData_String)
+		result.Value().AddDataField("data", appdef.SysData_bytes, false, appdef.MaxLen(1024))
 		result.SetComment("result is intent for job")
 
 		job := wsb.AddJob(jobName)
@@ -64,19 +65,19 @@ func Test_AppDef_AddJob(t *testing.T) {
 
 		t.Run("should be ok to find builded job", func(t *testing.T) {
 			typ := tested.Type(jobName)
-			require.Equal(TypeKind_Job, typ.Kind())
+			require.Equal(appdef.TypeKind_Job, typ.Kind())
 
-			j, ok := typ.(IJob)
+			j, ok := typ.(appdef.IJob)
 			require.True(ok)
-			require.Equal(TypeKind_Job, j.Kind())
+			require.Equal(appdef.TypeKind_Job, j.Kind())
 
-			job := Job(tested.Type, jobName)
-			require.Equal(TypeKind_Job, job.Kind())
+			job := appdef.Job(tested.Type, jobName)
+			require.Equal(appdef.TypeKind_Job, job.Kind())
 			require.Equal(wsName, job.Workspace().QName())
 			require.Equal(j, job)
 
 			require.Equal(jobName.Entity(), job.Name())
-			require.Equal(ExtensionEngineKind_BuiltIn, job.Engine())
+			require.Equal(appdef.ExtensionEngineKind_BuiltIn, job.Engine())
 
 			require.Equal(cronSchedule, job.CronSchedule())
 
@@ -87,7 +88,7 @@ func Test_AppDef_AddJob(t *testing.T) {
 					switch cnt {
 					case 1:
 						require.Equal(sysViews, s.Name())
-						require.EqualValues(QNames{viewName}, s.Names())
+						require.EqualValues(appdef.QNames{viewName}, s.Names())
 					default:
 						require.Failf("unexpected state", "state: %v", s)
 					}
@@ -99,16 +100,16 @@ func Test_AppDef_AddJob(t *testing.T) {
 					states := job.States().Map()
 					require.Len(states, 1)
 					require.Contains(states, sysViews)
-					require.EqualValues(QNames{viewName}, states[sysViews])
+					require.EqualValues(appdef.QNames{viewName}, states[sysViews])
 				})
 
 				t.Run("should be ok to get state by name", func(t *testing.T) {
 					state := job.States().Storage(sysViews)
 					require.NotNil(state)
 					require.Equal(sysViews, state.Name())
-					require.EqualValues(QNames{viewName}, state.Names())
+					require.EqualValues(appdef.QNames{viewName}, state.Names())
 
-					require.Nil(job.States().Storage(NewQName("test", "unknown")), "should be nil for unknown state")
+					require.Nil(job.States().Storage(appdef.NewQName("test", "unknown")), "should be nil for unknown state")
 				})
 			})
 
@@ -120,7 +121,7 @@ func Test_AppDef_AddJob(t *testing.T) {
 					switch cnt {
 					case 1:
 						require.Equal(sysViews, i.Name())
-						require.EqualValues(QNames{resultName}, i.Names())
+						require.EqualValues(appdef.QNames{resultName}, i.Names())
 					default:
 						require.Failf("unexpected intent", "intent: %v", i)
 					}
@@ -132,27 +133,27 @@ func Test_AppDef_AddJob(t *testing.T) {
 					intents := job.Intents().Map()
 					require.Len(intents, 1)
 					require.Contains(intents, sysViews)
-					require.EqualValues(QNames{resultName}, intents[sysViews])
+					require.EqualValues(appdef.QNames{resultName}, intents[sysViews])
 				})
 
 				t.Run("should be ok to get intent by name", func(t *testing.T) {
 					intent := job.Intents().Storage(sysViews)
 					require.NotNil(intent)
 					require.Equal(sysViews, intent.Name())
-					require.EqualValues(QNames{resultName}, intent.Names())
+					require.EqualValues(appdef.QNames{resultName}, intent.Names())
 
-					require.Nil(job.Intents().Storage(NewQName("test", "unknown")), "should be nil for unknown intent")
+					require.Nil(job.Intents().Storage(appdef.NewQName("test", "unknown")), "should be nil for unknown intent")
 				})
 			})
 		})
 
 		t.Run("should be ok to enum jobs", func(t *testing.T) {
 			cnt := 0
-			for j := range Jobs(tested.Types()) {
+			for j := range appdef.Jobs(tested.Types()) {
 				cnt++
 				switch cnt {
 				case 1:
-					require.Equal(TypeKind_Job, j.Kind())
+					require.Equal(appdef.TypeKind_Job, j.Kind())
 					require.Equal(jobName, j.QName())
 				default:
 					require.Failf("unexpected job", "job: %v", j)
@@ -161,46 +162,46 @@ func Test_AppDef_AddJob(t *testing.T) {
 			require.Equal(1, cnt)
 		})
 
-		require.Nil(Job(tested.Type, NewQName("test", "unknown")), "should be nil if unknown")
+		require.Nil(appdef.Job(tested.Type, appdef.NewQName("test", "unknown")), "should be nil if unknown")
 	}
 
 	testWith(app)
 	testWith(app.Workspace(wsName))
 
 	t.Run("more add job checks", func(t *testing.T) {
-		adb := New()
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(wsName)
 
 		job := wsb.AddJob(jobName)
 		job.
-			SetEngine(ExtensionEngineKind_WASM).
+			SetEngine(appdef.ExtensionEngineKind_WASM).
 			SetName("customExtensionName")
 		job.SetCronSchedule(cronSchedule)
 		app, err := adb.Build()
 		require.NoError(err)
 
-		j := Job(app.Type, jobName)
+		j := appdef.Job(app.Type, jobName)
 
 		require.Equal("customExtensionName", j.Name())
-		require.Equal(ExtensionEngineKind_WASM, j.Engine())
+		require.Equal(appdef.ExtensionEngineKind_WASM, j.Engine())
 		require.Equal(cronSchedule, j.CronSchedule())
 	})
 
 	t.Run("should be validation error", func(t *testing.T) {
 		t.Run("if unknown names in states", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 			job := wsb.AddJob(jobName)
 			job.States().
-				Add(sysViews, viewName, NewQName("test", "unknown"))
+				Add(sysViews, viewName, appdef.NewQName("test", "unknown"))
 			_, err := adb.Build()
-			require.Error(err, require.Is(ErrNotFoundError), require.Has("test.unknown"))
+			require.Error(err, require.Is(appdef.ErrNotFoundError), require.Has("test.unknown"))
 		})
 
 		t.Run("if no cron string", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 			job := wsb.AddJob(jobName)
@@ -209,7 +210,7 @@ func Test_AppDef_AddJob(t *testing.T) {
 		})
 
 		t.Run("if invalid cron string", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 			job := wsb.AddJob(jobName)
@@ -221,68 +222,68 @@ func Test_AppDef_AddJob(t *testing.T) {
 
 	t.Run("should be panics", func(t *testing.T) {
 		t.Run("if invalid name", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 
-			require.Panics(func() { wsb.AddJob(NullQName) },
-				require.Is(ErrMissedError))
-			require.Panics(func() { wsb.AddJob(NewQName("naked", "🔫")) },
-				require.Is(ErrInvalidError), require.Has("naked.🔫"))
+			require.Panics(func() { wsb.AddJob(appdef.NullQName) },
+				require.Is(appdef.ErrMissedError))
+			require.Panics(func() { wsb.AddJob(appdef.NewQName("naked", "🔫")) },
+				require.Is(appdef.ErrInvalidError), require.Has("naked.🔫"))
 		})
 
 		t.Run("if type with name already exists", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
-			testName := NewQName("test", "dupe")
+			testName := appdef.NewQName("test", "dupe")
 			wsb.AddObject(testName)
 
 			require.Panics(func() { wsb.AddJob(testName) },
-				require.Is(ErrAlreadyExistsError), require.Has(testName))
+				require.Is(appdef.ErrAlreadyExistsError), require.Has(testName))
 		})
 
 		t.Run("if extension name is invalid", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 			job := wsb.AddJob(jobName)
 
 			require.Panics(func() { job.SetName("naked 🔫") },
-				require.Is(ErrInvalidError), require.Has("naked 🔫"))
+				require.Is(appdef.ErrInvalidError), require.Has("naked 🔫"))
 		})
 
 		t.Run("if invalid states", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 			job := wsb.AddJob(jobName)
 
-			require.Panics(func() { job.States().Add(NullQName) },
-				require.Is(ErrMissedError))
-			require.Panics(func() { job.States().Add(NewQName("naked", "🔫")) },
-				require.Is(ErrInvalidError), require.Has("naked.🔫"))
-			require.Panics(func() { job.States().Add(sysViews, NewQName("naked", "🔫")) },
-				require.Is(ErrInvalidError), require.Has("🔫"))
-			require.Panics(func() { job.States().SetComment(NewQName("unknown", "storage"), "comment") },
-				require.Is(ErrNotFoundError), require.Has("unknown.storage"))
+			require.Panics(func() { job.States().Add(appdef.NullQName) },
+				require.Is(appdef.ErrMissedError))
+			require.Panics(func() { job.States().Add(appdef.NewQName("naked", "🔫")) },
+				require.Is(appdef.ErrInvalidError), require.Has("naked.🔫"))
+			require.Panics(func() { job.States().Add(sysViews, appdef.NewQName("naked", "🔫")) },
+				require.Is(appdef.ErrInvalidError), require.Has("🔫"))
+			require.Panics(func() { job.States().SetComment(appdef.NewQName("unknown", "storage"), "comment") },
+				require.Is(appdef.ErrNotFoundError), require.Has("unknown.storage"))
 		})
 
 		// #2810
 		t.Run("if invalid intents", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 			job := wsb.AddJob(jobName)
 
-			require.Panics(func() { job.Intents().Add(NullQName) },
-				require.Is(ErrMissedError))
-			require.Panics(func() { job.Intents().Add(NewQName("naked", "🔫")) },
-				require.Is(ErrInvalidError), require.Has("naked.🔫"))
-			require.Panics(func() { job.Intents().Add(sysViews, NewQName("naked", "🔫")) },
-				require.Is(ErrInvalidError), require.Has("🔫"))
-			require.Panics(func() { job.Intents().SetComment(NewQName("unknown", "storage"), "comment") },
-				require.Is(ErrNotFoundError), require.Has("unknown.storage"))
+			require.Panics(func() { job.Intents().Add(appdef.NullQName) },
+				require.Is(appdef.ErrMissedError))
+			require.Panics(func() { job.Intents().Add(appdef.NewQName("naked", "🔫")) },
+				require.Is(appdef.ErrInvalidError), require.Has("naked.🔫"))
+			require.Panics(func() { job.Intents().Add(sysViews, appdef.NewQName("naked", "🔫")) },
+				require.Is(appdef.ErrInvalidError), require.Has("🔫"))
+			require.Panics(func() { job.Intents().SetComment(appdef.NewQName("unknown", "storage"), "comment") },
+				require.Is(appdef.ErrNotFoundError), require.Has("unknown.storage"))
 		})
 	})
 }

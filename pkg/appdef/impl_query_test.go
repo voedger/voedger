@@ -3,23 +3,24 @@
  * @author: Nikolay Nikitin
  */
 
-package appdef
+package appdef_test
 
 import (
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func Test_AppDef_AddQuery(t *testing.T) {
 	require := require.New(t)
 
-	var app IAppDef
-	wsName := NewQName("test", "workspace")
-	queryName, parName, resName := NewQName("test", "query"), NewQName("test", "param"), NewQName("test", "res")
+	var app appdef.IAppDef
+	wsName := appdef.NewQName("test", "workspace")
+	queryName, parName, resName := appdef.NewQName("test", "query"), appdef.NewQName("test", "param"), appdef.NewQName("test", "res")
 
 	t.Run("should be ok to add query", func(t *testing.T) {
-		adb := New()
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
@@ -49,31 +50,30 @@ func Test_AppDef_AddQuery(t *testing.T) {
 	testWith := func(tested testedTypes) {
 		t.Run("should be ok to find builded query", func(t *testing.T) {
 			typ := tested.Type(queryName)
-			require.Equal(TypeKind_Query, typ.Kind())
+			require.Equal(appdef.TypeKind_Query, typ.Kind())
 
-			q, ok := typ.(IQuery)
+			q, ok := typ.(appdef.IQuery)
 			require.True(ok)
-			require.Equal(TypeKind_Query, q.Kind())
+			require.Equal(appdef.TypeKind_Query, q.Kind())
 
-			query := Query(tested.Type, queryName)
-			require.Equal(TypeKind_Query, query.Kind())
+			query := appdef.Query(tested.Type, queryName)
+			require.Equal(appdef.TypeKind_Query, query.Kind())
 			require.Equal(wsName, query.Workspace().QName())
 			require.Equal(q, query)
-			require.NotPanics(func() { query.isQuery() })
 
 			require.Equal(queryName.Entity(), query.Name())
-			require.Equal(ExtensionEngineKind_BuiltIn, query.Engine())
+			require.Equal(appdef.ExtensionEngineKind_BuiltIn, query.Engine())
 
 			require.Equal(parName, query.Param().QName())
-			require.Equal(TypeKind_Object, query.Param().Kind())
+			require.Equal(appdef.TypeKind_Object, query.Param().Kind())
 
 			require.Equal(resName, query.Result().QName())
-			require.Equal(TypeKind_Object, query.Result().Kind())
+			require.Equal(appdef.TypeKind_Object, query.Result().Kind())
 		})
 
 		t.Run("should be ok to enum queries", func(t *testing.T) {
 			cnt := 0
-			for q := range Queries(tested.Types()) {
+			for q := range appdef.Queries(tested.Types()) {
 				cnt++
 				switch cnt {
 				case 1:
@@ -85,50 +85,49 @@ func Test_AppDef_AddQuery(t *testing.T) {
 			require.Equal(1, cnt)
 		})
 
-		require.Nil(Query(tested.Type, NewQName("test", "unknown")), "should be nil if unknown")
+		require.Nil(appdef.Query(tested.Type, appdef.NewQName("test", "unknown")), "should be nil if unknown")
 	}
 
 	testWith(app)
-	testWith(app.Workspace(wsName))
 
 	t.Run("should be panics ", func(t *testing.T) {
 		require.Panics(func() {
-			New().AddWorkspace(wsName).AddQuery(NullQName)
-		}, require.Is(ErrMissedError))
+			appdef.New().AddWorkspace(wsName).AddQuery(appdef.NullQName)
+		}, require.Is(appdef.ErrMissedError))
 
 		require.Panics(func() {
-			New().AddWorkspace(wsName).AddQuery(NewQName("naked", "🔫"))
-		}, require.Is(ErrInvalidError), require.Has("naked.🔫"))
+			appdef.New().AddWorkspace(wsName).AddQuery(appdef.NewQName("naked", "🔫"))
+		}, require.Is(appdef.ErrInvalidError), require.Has("naked.🔫"))
 
 		t.Run("if type with name already exists", func(t *testing.T) {
-			testName := NewQName("test", "dupe")
-			adb := New()
+			testName := appdef.NewQName("test", "dupe")
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 			wsb.AddObject(testName)
 			require.Panics(func() {
 				wsb.AddQuery(testName)
-			}, require.Is(ErrAlreadyExistsError), require.Has(testName))
+			}, require.Is(appdef.ErrAlreadyExistsError), require.Has(testName))
 		})
 
 		t.Run("if extension name is empty", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 			query := wsb.AddQuery(queryName)
 			require.Panics(func() {
 				query.SetName("")
-			}, require.Is(ErrMissedError))
+			}, require.Is(appdef.ErrMissedError))
 		})
 
 		t.Run("if extension name is invalid", func(t *testing.T) {
-			adb := New()
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 			query := wsb.AddQuery(queryName)
 			require.Panics(func() {
 				query.SetName("naked 🔫")
-			}, require.Is(ErrInvalidError), require.Has("🔫"))
+			}, require.Is(appdef.ErrInvalidError), require.Has("🔫"))
 		})
 	})
 }
@@ -136,27 +135,27 @@ func Test_AppDef_AddQuery(t *testing.T) {
 func Test_QueryValidate(t *testing.T) {
 	require := require.New(t)
 
-	adb := New()
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
-	wsb := adb.AddWorkspace(NewQName("test", "workspace"))
+	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
-	query := wsb.AddQuery(NewQName("test", "query"))
+	query := wsb.AddQuery(appdef.NewQName("test", "query"))
 
 	t.Run("should be error if parameter name is unknown", func(t *testing.T) {
-		par := NewQName("test", "param")
+		par := appdef.NewQName("test", "param")
 		query.SetParam(par)
 		_, err := adb.Build()
-		require.Error(err, require.Is(ErrNotFoundError), require.Has(par))
+		require.Error(err, require.Is(appdef.ErrNotFoundError), require.Has(par))
 
 		_ = wsb.AddObject(par)
 	})
 
 	t.Run("should be error if result object name is unknown", func(t *testing.T) {
-		res := NewQName("test", "res")
+		res := appdef.NewQName("test", "res")
 		query.SetResult(res)
 		_, err := adb.Build()
-		require.Error(err, require.Is(ErrNotFoundError), require.Has(res))
+		require.Error(err, require.Is(appdef.ErrNotFoundError), require.Has(res))
 
 		_ = wsb.AddObject(res)
 	})
@@ -168,19 +167,19 @@ func Test_QueryValidate(t *testing.T) {
 func Test_AppDef_AddQueryWithAnyResult(t *testing.T) {
 	require := require.New(t)
 
-	var app IAppDef
-	wsName := NewQName("test", "workspace")
-	queryName := NewQName("test", "query")
+	var app appdef.IAppDef
+	wsName := appdef.NewQName("test", "workspace")
+	queryName := appdef.NewQName("test", "query")
 
 	t.Run("should be ok to add query with any result", func(t *testing.T) {
-		adb := New()
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
 
 		query := wsb.AddQuery(queryName)
 		query.
-			SetResult(QNameANY)
+			SetResult(appdef.QNameANY)
 
 		a, err := adb.Build()
 		require.NoError(err)
@@ -192,13 +191,12 @@ func Test_AppDef_AddQueryWithAnyResult(t *testing.T) {
 	require.NotNil(app)
 
 	t.Run("should be ok to find builded query", func(t *testing.T) {
-		query := Query(app.Type, queryName)
+		query := appdef.Query(app.Type, queryName)
 
-		require.Equal(AnyType, query.Result())
-		require.Equal(QNameANY, query.Result().QName())
-		require.Equal(TypeKind_Any, query.Result().Kind())
+		require.Equal(appdef.AnyType, query.Result())
+		require.Equal(appdef.QNameANY, query.Result().QName())
 		require.Equal(wsName, query.Workspace().QName())
 
-		require.Equal(query, Query(app.Workspace(wsName).Type, queryName))
+		require.Equal(query, appdef.Query(app.Workspace(wsName).Type, queryName))
 	})
 }

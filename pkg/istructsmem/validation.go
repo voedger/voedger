@@ -273,7 +273,7 @@ func validateObject(o *objectType) (err error) {
 	// validate occurrences
 	for cont := range t.Containers() {
 		n, occurs := cont.Name(), appdef.Occurs(0)
-		for _ = range o.Children(n) {
+		for range o.Children(n) {
 			occurs++
 		}
 		if minO := cont.MinOccurs(); occurs < minO {

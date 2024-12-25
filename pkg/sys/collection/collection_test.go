@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
@@ -60,7 +61,8 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	adb.AddPackage("test", "test.org/test")
-	wsb := adb.AddWorkspace(appdef.NewQName(appdef.SysPackage, "test_wsWS"))
+	wsName := appdef.NewQName(appdef.SysPackage, "test_wsWS")
+	wsb := adb.AddWorkspace(wsName)
 
 	{
 		wsb.AddCDoc(qNameTestWSKind).SetSingleton()
@@ -68,16 +70,11 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		wsdescutil.AddWorkspaceDescriptorStubDef(wsb)
 
 		// this should be done in tests only. Runtime -> the projector is defined in sys.vsql already
-		wsb.AddCDoc(istructs.QNameCDoc)
-		wsb.AddODoc(istructs.QNameODoc)
-		wsb.AddWDoc(istructs.QNameWDoc)
-		wsb.AddCRecord(istructs.QNameCRecord)
-		wsb.AddORecord(istructs.QNameORecord)
-		wsb.AddWRecord(istructs.QNameWRecord)
-
 		prj := wsb.AddProjector(QNameProjectorCollection)
 		prj.SetSync(true).
-			Events().Add(istructs.QNameCRecord, appdef.ProjectorEventKind_Insert, appdef.ProjectorEventKind_Update)
+			Events().Add(
+			[]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update},
+			filter.Types(appdef.TypeKind_CDoc, appdef.TypeKind_CRecord))
 		prj.Intents().
 			Add(sys.Storage_View, QNameCollectionView) // this view will be added below
 	}
@@ -87,7 +84,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 
 		// will add func definitions to AppDef manually because local test does not use sql. In runtime these definitions will come from sys.vsql
 		wsb.AddObject(qNameCollectionParams).
-			AddField(field_Schema, appdef.DataKind_string, true).
+			AddField(Field_Schema, appdef.DataKind_string, true).
 			AddField(field_ID, appdef.DataKind_RecordID, false)
 
 		wsb.AddQuery(qNameQueryCollection).

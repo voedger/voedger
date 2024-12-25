@@ -23,10 +23,11 @@ type andFilter struct {
 	children []appdef.IFilter
 }
 
-func makeAndFilter(f1, f2 appdef.IFilter, ff ...appdef.IFilter) appdef.IFilter {
-	f := &andFilter{children: []appdef.IFilter{f1, f2}}
-	f.children = append(f.children, ff...)
-	return f
+func newAndFilter(ff ...appdef.IFilter) *andFilter {
+	if len(ff) < 1+1 {
+		panic("less then two filters are provided")
+	}
+	return &andFilter{children: slices.Clone(ff)}
 }
 
 func (f andFilter) And() iter.Seq[appdef.IFilter] { return slices.Values(f.children) }

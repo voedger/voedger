@@ -9,7 +9,6 @@ package actualizers
 import (
 	"context"
 	"fmt"
-	"slices"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -38,82 +37,50 @@ func (s *asyncActualizerContextState) error() error {
 	return s.err
 }
 
-func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames map[appdef.QName][]appdef.ProjectorEventKind, appDef appdef.IAppDef, projQName appdef.QName) (ok bool) {
+// Returns is projector triggered by event
+func ProjectorEvent(prj appdef.IProjector, event istructs.IPLogEvent) (triggered bool) {
 	defer func() {
-		if ok && logger.IsVerbose() {
-			logger.Verbose(fmt.Sprintf("projector %s is acceptable to event %s", projQName, event.QName()))
+		if triggered && logger.IsVerbose() {
+			logger.Verbose(fmt.Sprintf("%v is triggered by %v", prj, event))
 		}
 	}()
+
 	switch event.QName() {
 	case istructs.QNameForError:
-		return wantErrors
+		return prj.WantErrors()
 	case istructs.QNameForCorruptedData:
 		return false
 	}
 
-	if len(triggeringQNames) == 0 {
-		return true
+	t := prj.App().Type(event.QName())
+	if prj.Triggers(appdef.OperationKind_Execute, t) {
+		return true // ON EXECUTE <Command> || ON EXECUTE <ODoc>
 	}
 
-	if triggeringKinds, ok := triggeringQNames[event.QName()]; ok {
-		if slices.Contains(triggeringKinds, appdef.ProjectorEventKind_Execute) {
-			return true
-		}
-	}
-
-	if triggeringKinds, ok := triggeringQNames[event.ArgumentObject().QName()]; ok {
-		// ON (some doc of kind ODoc)
-		if slices.Contains(triggeringKinds, appdef.ProjectorEventKind_ExecuteWithParam) {
-			return true
-		}
-	} else {
-		// ON (ODoc)
-		argumentTypeKind := appDef.Type(event.ArgumentObject().QName()).Kind()
-		if argumentTypeKind == appdef.TypeKind_ODoc {
-			if triggeringKinds, ok := triggeringQNames[istructs.QNameODoc]; ok {
-				if slices.Contains(triggeringKinds, appdef.ProjectorEventKind_ExecuteWithParam) {
-					return true
-				}
-			}
+	if arg := event.ArgumentObject().QName(); arg != appdef.NullQName {
+		t := prj.App().Type(arg)
+		if prj.Triggers(appdef.OperationKind_ExecuteWithParam, t) {
+			return true // ON EXECUTE WITH <ODoc>; ON EXECUTE WITH <Object>
 		}
 	}
 
 	for rec := range event.CUDs {
-		triggeringKinds, ok := triggeringQNames[rec.QName()]
-		if !ok {
-			recType := appDef.Type(rec.QName())
-			globalQNames := cudTypeKindToGlobalDocQNames[recType.Kind()]
-			for _, globalQName := range globalQNames {
-				if triggeringKinds, ok = triggeringQNames[globalQName]; ok {
-					break
-				}
+		t := prj.App().Type(rec.QName())
+		if rec.IsNew() {
+			if prj.Triggers(appdef.OperationKind_Insert, t) {
+				return true // AFTER INSERT <Record>
 			}
-		}
-		for _, triggerkingKind := range triggeringKinds {
-			switch triggerkingKind {
-			case appdef.ProjectorEventKind_Insert:
-				if rec.IsNew() {
-					return true
+		} else {
+			if prj.Triggers(appdef.OperationKind_Update, t) {
+				return true // AFTER UPDATE <Record>
+			}
+			if rec.IsDeactivated() {
+				if prj.Triggers(appdef.OperationKind_Deactivate, t) {
+					return true // AFTER DEACTIVATE <Record>
 				}
-			case appdef.ProjectorEventKind_Update:
-				if !rec.IsNew() {
-					return true
-				}
-			case appdef.ProjectorEventKind_Activate:
-				if !rec.IsNew() {
-					for fieldName, newValue := range rec.ModifiedFields {
-						if fieldName == appdef.SystemField_IsActive && newValue.(bool) {
-							return true
-						}
-					}
-				}
-			case appdef.ProjectorEventKind_Deactivate:
-				if !rec.IsNew() {
-					for fieldName, newValue := range rec.ModifiedFields {
-						if fieldName == appdef.SystemField_IsActive && !newValue.(bool) {
-							return true
-						}
-					}
+			} else if rec.IsActivated() {
+				if prj.Triggers(appdef.OperationKind_Activate, t) {
+					return true // AFTER ACTIVATE <Record>
 				}
 			}
 		}

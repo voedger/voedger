@@ -11,15 +11,18 @@ func _() {
 	_ = x[OperationKind_null-0]
 	_ = x[OperationKind_Insert-1]
 	_ = x[OperationKind_Update-2]
-	_ = x[OperationKind_Select-3]
-	_ = x[OperationKind_Execute-4]
-	_ = x[OperationKind_Inherits-5]
-	_ = x[OperationKind_count-6]
+	_ = x[OperationKind_Activate-3]
+	_ = x[OperationKind_Deactivate-4]
+	_ = x[OperationKind_Select-5]
+	_ = x[OperationKind_Execute-6]
+	_ = x[OperationKind_ExecuteWithParam-7]
+	_ = x[OperationKind_Inherits-8]
+	_ = x[OperationKind_count-9]
 }
 
-const _OperationKind_name = "OperationKind_nullOperationKind_InsertOperationKind_UpdateOperationKind_SelectOperationKind_ExecuteOperationKind_InheritsOperationKind_count"
+const _OperationKind_name = "OperationKind_nullOperationKind_InsertOperationKind_UpdateOperationKind_ActivateOperationKind_DeactivateOperationKind_SelectOperationKind_ExecuteOperationKind_ExecuteWithParamOperationKind_InheritsOperationKind_count"
 
-var _OperationKind_index = [...]uint8{0, 18, 38, 58, 78, 99, 121, 140}
+var _OperationKind_index = [...]uint8{0, 18, 38, 58, 80, 104, 124, 145, 175, 197, 216}
 
 func (i OperationKind) String() string {
 	if i >= OperationKind(len(_OperationKind_index)-1) {

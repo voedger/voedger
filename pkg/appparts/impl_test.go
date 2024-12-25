@@ -8,12 +8,14 @@ package appparts_test
 import (
 	"context"
 	"errors"
+	"maps"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/mock"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/appparts/internal/schedulers"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -104,11 +106,17 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsName := appdef.NewQName("test", "workspace")
+
+		wsb := adb.AddWorkspace(wsName)
+
+		_ = wsb.AddCommand(appdef.NewQName("test", "command"))
 
 		prj := wsb.AddProjector(prj1name)
+		prj.Events().Add(
+			[]appdef.OperationKind{appdef.OperationKind_Execute},
+			filter.WSTypes(wsName, appdef.TypeKind_Command))
 		prj.SetSync(false)
-		prj.Events().Add(appdef.QNameAnyCommand, appdef.ProjectorEventKind_Execute)
 
 		job := wsb.AddJob(job1name)
 		job.SetCronSchedule("@every 1s")
@@ -146,7 +154,8 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 			m[pid] = appdef.QNamesFrom(actualizers...)
 		}
 		for pid, schedulers := range appParts.WorkedSchedulers(appName) {
-			names := appdef.QNamesFromMap(schedulers)
+			names := appdef.QNames{}
+			names.Collect(maps.Keys(schedulers))
 			if exists, ok := m[pid]; ok {
 				names.Add(exists...)
 			}
@@ -189,11 +198,17 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 
-			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+			wsName := appdef.NewQName("test", "workspace")
+
+			wsb := adb.AddWorkspace(wsName)
+
+			_ = wsb.AddCommand(appdef.NewQName("test", "command"))
 
 			prj := wsb.AddProjector(prj2name)
+			prj.Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.WSTypes(wsName, appdef.TypeKind_Command))
 			prj.SetSync(false)
-			prj.Events().Add(appdef.QNameAnyCommand, appdef.ProjectorEventKind_Execute)
 
 			job := wsb.AddJob(job2name)
 			job.SetCronSchedule("@every 1s")
