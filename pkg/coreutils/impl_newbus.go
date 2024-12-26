@@ -15,8 +15,14 @@ import (
 
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
+
+var (
+	ErrSendTimeoutExpired = errors.New("send timeout expired")
+	ErrNoConsumer         = errors.New("no consumer for the stream")
+)
+
+const DefaultSendTimeout = SendTimeout(10 * time.Second)
 
 type Request struct {
 	Method      string
@@ -111,7 +117,7 @@ func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request
 		select {
 		case <-timeoutChan:
 			if err = checkHandlerPanic(handlerPanic); err == nil {
-				err = ibus.ErrBusTimeoutExpired
+				err = ErrSendTimeoutExpired
 			}
 		case responseMeta = <-responder.responseMetaCh:
 			err = clientCtx.Err() // to make clientCtx.Done() take priority
@@ -168,7 +174,7 @@ func (rs *implIResponseSenderCloseable) Send(obj any) error {
 	case rs.ch <- obj:
 	case <-rs.clientCtx.Done():
 	case <-sendTimeoutTimerChan:
-		return ibus.ErrNoConsumer
+		return ErrNoConsumer
 	}
 	return rs.clientCtx.Err()
 }
@@ -182,7 +188,7 @@ func (r *implIResponder) InitResponse(rm ResponseMeta) IResponseSenderCloseable 
 	select {
 	case r.responseMetaCh <- rm:
 	default:
-		panic(ibus.ErrNoConsumer)
+		panic(ErrNoConsumer)
 	}
 	return r.respSender
 }

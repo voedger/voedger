@@ -85,7 +85,7 @@ func ReplyErr(responder IResponder, err error) {
 
 func ReplyJSON(responder IResponder, httpCode int, obj any) {
 	sender := responder.InitResponse(ResponseMeta{ContentType: ApplicationJSON, StatusCode: httpCode})
-	sender.Send(obj)
+	_ = sender.Send(obj)
 	sender.Close(nil)
 }
 

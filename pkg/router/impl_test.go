@@ -73,7 +73,7 @@ func TestSectionedSendResponseError(t *testing.T) {
 
 	respBodyBytes, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	require.Equal(t, ibus.ErrBusTimeoutExpired.Error(), string(respBodyBytes))
+	require.Equal(t, coreutils.ErrSendTimeoutExpired.Error(), string(respBodyBytes))
 	expectResp(t, resp, coreutils.TextPlain, http.StatusServiceUnavailable)
 }
 

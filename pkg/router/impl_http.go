@@ -22,8 +22,6 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/net/netutil"
 
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
-
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -211,7 +209,7 @@ func RequestHandler(requestSender coreutils.IRequestSender, numsAppsWorkspaces m
 		if err != nil {
 			logger.Error("sending request to VVM on", request.Resource, "is failed:", err, ". Body:\n", string(request.Body))
 			status := http.StatusInternalServerError
-			if errors.Is(err, ibus.ErrBusTimeoutExpired) {
+			if errors.Is(err, coreutils.ErrSendTimeoutExpired) {
 				status = http.StatusServiceUnavailable
 			}
 			WriteTextResponse(resp, err.Error(), status)
