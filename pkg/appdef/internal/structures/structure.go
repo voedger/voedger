@@ -25,15 +25,15 @@ type Structure struct {
 }
 
 // Makes new structure
-func MakeStructure(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) Structure {
+func MakeStructure(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) Structure {
 	s := Structure{
-		Typ:          types.MakeType(app, ws, name, kind),
-		Fields:       fields.MakeFields(app, ws, kind),
-		Containers:   containers.MakeContainers(app, kind),
+		Typ:          types.MakeType(ws.App(), ws, name, kind),
+		Fields:       fields.MakeFields(ws, kind),
+		Containers:   containers.MakeContainers(ws, kind),
 		WithAbstract: abstracts.MakeWithAbstract(),
 	}
 	s.Fields.MakeSysFields()
-	s.Uniques = uniques.MakeUniques(app, &s.Fields)
+	s.Uniques = uniques.MakeUniques(ws.App().Type, &s.Fields)
 	return s
 }
 
@@ -74,9 +74,9 @@ func (r Record) SystemField_ID() appdef.IField {
 }
 
 // Makes new record
-func MakeRecord(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) Record {
+func MakeRecord(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) Record {
 	r := Record{
-		Structure: MakeStructure(app, ws, name, kind),
+		Structure: MakeStructure(ws, name, kind),
 	}
 	return r
 }
@@ -102,11 +102,8 @@ type Doc struct {
 }
 
 // Makes new document
-func MakeDoc(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) Doc {
-	d := Doc{
-		Record: MakeRecord(app, ws, name, kind),
-	}
-	return d
+func MakeDoc(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) Doc {
+	return Doc{Record: MakeRecord(ws, name, kind)}
 }
 
 // # Supports:
@@ -130,8 +127,8 @@ type ContainedRecord struct {
 }
 
 // Makes new record
-func MakeContainedRecord(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) ContainedRecord {
-	return ContainedRecord{Record: MakeRecord(app, ws, name, kind)}
+func MakeContainedRecord(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) ContainedRecord {
+	return ContainedRecord{Record: MakeRecord(ws, name, kind)}
 }
 
 func (r ContainedRecord) SystemField_ParentID() appdef.IField {

@@ -162,25 +162,25 @@ func (ws *Workspace) Validate() error {
 }
 
 func (ws *Workspace) addCDoc(name appdef.QName) appdef.ICDocBuilder {
-	d := structures.NewCDoc(ws.App(), ws, name)
+	d := structures.NewCDoc(ws, name)
 	ws.AppendType(d)
 	return structures.NewCDocBuilder(d)
 }
 
 func (ws *Workspace) addCommand(name appdef.QName) appdef.ICommandBuilder {
-	c := extensions.NewCommand(ws.App(), ws, name)
+	c := extensions.NewCommand(ws, name)
 	ws.AppendType(c)
 	return extensions.NewCommandBuilder(c)
 }
 
 func (ws *Workspace) addCRecord(name appdef.QName) appdef.ICRecordBuilder {
-	r := structures.NewCRecord(ws.App(), ws, name)
+	r := structures.NewCRecord(ws, name)
 	ws.AppendType(r)
 	return structures.NewCRecordBuilder(r)
 }
 
 func (ws *Workspace) addData(name appdef.QName, kind appdef.DataKind, ancestor appdef.QName, constraints ...appdef.IConstraint) appdef.IDataBuilder {
-	d := datas.NewData(ws.App(), ws, name, kind, ancestor)
+	d := datas.NewData(ws, name, kind, ancestor)
 	ws.AppendType(d)
 	b := datas.NewDataBuilder(d)
 	b.AddConstraints(constraints...)
@@ -188,20 +188,21 @@ func (ws *Workspace) addData(name appdef.QName, kind appdef.DataKind, ancestor a
 }
 
 func (ws *Workspace) addGDoc(name appdef.QName) appdef.IGDocBuilder {
-	d := structures.NewGDoc(ws.App(), ws, name)
+	d := structures.NewGDoc(ws, name)
 	ws.AppendType(d)
 	return structures.NewGDocBuilder(d)
 }
 
 func (ws *Workspace) addGRecord(name appdef.QName) appdef.IGRecordBuilder {
-	r := structures.NewGRecord(ws.App(), ws, name)
+	r := structures.NewGRecord(ws, name)
 	ws.AppendType(r)
 	return structures.NewGRecordBuilder(r)
 }
 
-func (ws *Workspace) addJob(name QName) IJobBuilder {
-	r := newJob(ws.app, ws, name)
-	return newJobBuilder(r)
+func (ws *Workspace) addJob(name appdef.QName) appdef.IJobBuilder {
+	j := extensions.NewJob(ws, name)
+	ws.AppendType(j)
+	return extensions.NewJobBuilder(j)
 }
 
 func (ws *Workspace) addLimit(name QName, ops []OperationKind, opt LimitFilterOption, flt IFilter, rate QName, comment ...string) {
@@ -430,7 +431,7 @@ func (wb *WorkspaceBuilder) AddGRecord(name appdef.QName) appdef.IGRecordBuilder
 	return wb.Workspace.addGRecord(name)
 }
 
-func (wb *WorkspaceBuilder) AddJob(name QName) IJobBuilder {
+func (wb *WorkspaceBuilder) AddJob(name appdef.QName) appdef.IJobBuilder {
 	return wb.Workspace.addJob(name)
 }
 

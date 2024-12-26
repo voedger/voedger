@@ -25,15 +25,15 @@ type Data struct {
 }
 
 // Creates and returns new data type.
-func NewData(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName, kind appdef.DataKind, anc appdef.QName) *Data {
+func NewData(ws appdef.IWorkspace, name appdef.QName, kind appdef.DataKind, anc appdef.QName) *Data {
 	var ancestor appdef.IData
 	if anc == appdef.NullQName {
-		ancestor = appdef.SysData(app.Type, kind)
+		ancestor = appdef.SysData(ws.Type, kind)
 		if ancestor == nil {
 			panic(appdef.ErrNotFound("system data type for data kind «%v»", kind.TrimString()))
 		}
 	} else {
-		ancestor = appdef.Data(app.Type, anc)
+		ancestor = appdef.Data(ws.Type, anc)
 		if ancestor == nil {
 			panic(appdef.ErrTypeNotFound(anc))
 		}
@@ -42,7 +42,7 @@ func NewData(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName, kind a
 		}
 	}
 	d := &Data{
-		Typ:         types.MakeType(app, ws, name, appdef.TypeKind_Data),
+		Typ:         types.MakeType(ws.App(), ws, name, appdef.TypeKind_Data),
 		dataKind:    ancestor.DataKind(),
 		ancestor:    ancestor,
 		constraints: make(map[appdef.ConstraintKind]appdef.IConstraint),
@@ -51,8 +51,8 @@ func NewData(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName, kind a
 }
 
 // Creates and returns new anonymous data type with specified constraints.
-func NewAnonymousData(app appdef.IAppDef, ws appdef.IWorkspace, kind appdef.DataKind, anc appdef.QName, constraints ...appdef.IConstraint) *Data {
-	d := NewData(app, ws, appdef.NullQName, kind, anc)
+func NewAnonymousData(ws appdef.IWorkspace, kind appdef.DataKind, anc appdef.QName, constraints ...appdef.IConstraint) *Data {
+	d := NewData(ws, appdef.NullQName, kind, anc)
 	d.addConstraints(constraints...)
 	return d
 }
@@ -143,12 +143,11 @@ func (db *DataBuilder) AddConstraints(cc ...appdef.IConstraint) appdef.IDataBuil
 }
 
 // Creates and returns new system type by data kind.
-func NewSysData(app appdef.IAppDef, ws appdef.IWorkspace, kind appdef.DataKind) *Data {
-	d := &Data{
-		Typ:      types.MakeType(app, ws, appdef.SysDataName(kind), appdef.TypeKind_Data),
+func NewSysData(ws appdef.IWorkspace, kind appdef.DataKind) *Data {
+	return &Data{
+		Typ:      types.MakeType(ws.App(), ws, appdef.SysDataName(kind), appdef.TypeKind_Data),
 		dataKind: kind,
 	}
-	return d
 }
 
 // # Supports:

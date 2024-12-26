@@ -46,21 +46,21 @@ func MakeType(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName, kind 
 	return t
 }
 
-func (t *Typ) App() appdef.IAppDef { return t.app }
+func (t Typ) App() appdef.IAppDef { return t.app }
 
-func (t *Typ) IsSystem() bool {
+func (t Typ) IsSystem() bool {
 	return t.QName().Pkg() == appdef.SysPackage
 }
 
-func (t *Typ) Kind() appdef.TypeKind { return t.kind }
+func (t Typ) Kind() appdef.TypeKind { return t.kind }
 
-func (t *Typ) QName() appdef.QName { return t.name }
+func (t Typ) QName() appdef.QName { return t.name }
 
-func (t *Typ) String() string {
+func (t Typ) String() string {
 	return fmt.Sprintf("%s «%v»", t.Kind().TrimString(), t.QName())
 }
 
-func (t *Typ) Workspace() appdef.IWorkspace { return t.ws }
+func (t Typ) Workspace() appdef.IWorkspace { return t.ws }
 
 // # Supports:
 //   - appdef.ITypeBuilder
@@ -88,7 +88,7 @@ type TypeRef struct {
 // Returns type by reference.
 //
 // If type is not found then returns nil.
-func (r *TypeRef) Target(tt appdef.FindType) appdef.IType {
+func (r *TypeRef) Target(find appdef.FindType) appdef.IType {
 	if r.name == appdef.NullQName {
 		return nil
 	}
@@ -97,7 +97,7 @@ func (r *TypeRef) Target(tt appdef.FindType) appdef.IType {
 	}
 	if (r.typ == nil) || (r.typ.QName() != r.name) {
 		r.typ = nil
-		if t := tt(r.name); t.Kind() != appdef.TypeKind_null {
+		if t := find(r.name); t.Kind() != appdef.TypeKind_null {
 			r.typ = t
 		}
 	}

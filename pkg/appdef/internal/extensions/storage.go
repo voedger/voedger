@@ -39,11 +39,10 @@ func (s Storage) String() string {
 }
 
 func (s Storage) Validate() (err error) {
-	for _, n := range s.names {
+	for _, n := range s.Names() {
 		if s.app.Type(n).Kind() == appdef.TypeKind_null {
 			err = errors.Join(err,
 				appdef.ErrNotFound("storage «%v» type «%v»", s.QName, n))
-			break
 		}
 	}
 	return err

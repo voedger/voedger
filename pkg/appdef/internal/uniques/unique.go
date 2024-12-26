@@ -53,15 +53,15 @@ func (u Unique) String() string {
 // # Supports:
 //   - appdef.IUniques
 type Uniques struct {
-	app     appdef.IAppDef
+	find    appdef.FindType
 	fields  appdef.IFields
 	uniques map[appdef.QName]appdef.IUnique
 	field   appdef.IField
 }
 
-func MakeUniques(app appdef.IAppDef, fields appdef.IFields) Uniques {
+func MakeUniques(find appdef.FindType, fields appdef.IFields) Uniques {
 	uu := Uniques{
-		app:     app,
+		find:    find,
 		fields:  fields,
 		uniques: make(map[appdef.QName]appdef.IUnique),
 	}
@@ -115,10 +115,8 @@ func (uu *Uniques) addUnique(name appdef.QName, fields []appdef.FieldName, comme
 		panic(appdef.ErrAlreadyExists("unique «%v»", name))
 	}
 
-	if uu.app != nil {
-		if t := uu.app.Type(name); t.Kind() != appdef.TypeKind_null {
-			panic(appdef.ErrAlreadyExists("name «%v» already used for %v", name, t))
-		}
+	if t := uu.find(name); t.Kind() != appdef.TypeKind_null {
+		panic(appdef.ErrAlreadyExists("name «%v» already used for %v", name, t))
 	}
 
 	if len(fields) == 0 {

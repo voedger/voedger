@@ -39,7 +39,7 @@ func (j *job) Validate() (err error) {
 
 	_, e := cron.ParseStandard(j.cronSchedule)
 	if e != nil {
-		err = errors.Join(err, enrichError(e, "%v cron schedule", j))
+		err = errors.Join(err, EnrichError(e, "%v cron schedule", j))
 	}
 
 	return err

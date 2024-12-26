@@ -19,7 +19,7 @@ import (
 //   - appdef.IContainer
 type Container struct {
 	comments.WithComments
-	app       appdef.IAppDef
+	ws        appdef.IWorkspace
 	name      string
 	qName     appdef.QName
 	typ       appdef.IStructure
@@ -27,9 +27,9 @@ type Container struct {
 	maxOccurs appdef.Occurs
 }
 
-func NewContainer(app appdef.IAppDef, name string, typeName appdef.QName, minOccurs, maxOccurs appdef.Occurs) *Container {
+func NewContainer(ws appdef.IWorkspace, name string, typeName appdef.QName, minOccurs, maxOccurs appdef.Occurs) *Container {
 	return &Container{
-		app:       app,
+		ws:        ws,
 		name:      name,
 		qName:     typeName,
 		minOccurs: minOccurs,
@@ -39,7 +39,7 @@ func NewContainer(app appdef.IAppDef, name string, typeName appdef.QName, minOcc
 
 func (cont *Container) Type() appdef.IStructure {
 	if (cont.typ == nil) || (cont.typ.QName() != cont.QName()) {
-		cont.typ = appdef.Structure(cont.app.Type, cont.QName())
+		cont.typ = appdef.Structure(cont.ws.Type, cont.QName())
 	}
 	return cont.typ
 }
@@ -59,15 +59,15 @@ func (cont Container) String() string {
 // # Supports:
 //   - appdef.IContainers
 type Containers struct {
-	app               appdef.IAppDef
+	ws                appdef.IWorkspace
 	typeKind          appdef.TypeKind
 	containers        map[string]*Container
 	containersOrdered []appdef.IContainer
 }
 
-func MakeContainers(app appdef.IAppDef, typeKind appdef.TypeKind) Containers {
+func MakeContainers(ws appdef.IWorkspace, typeKind appdef.TypeKind) Containers {
 	cc := Containers{
-		app:               app,
+		ws:                ws,
 		typeKind:          typeKind,
 		containers:        make(map[string]*Container),
 		containersOrdered: make([]appdef.IContainer, 0)}
@@ -81,9 +81,7 @@ func (cc Containers) Container(name string) appdef.IContainer {
 	return nil
 }
 
-func (cc Containers) ContainerCount() int {
-	return len(cc.containersOrdered)
-}
+func (cc Containers) ContainerCount() int { return len(cc.containersOrdered) }
 
 func (cc Containers) Containers() iter.Seq[appdef.IContainer] {
 	return slices.Values(cc.containersOrdered)
@@ -111,7 +109,7 @@ func (cc *Containers) addContainer(name string, contType appdef.QName, minOccurs
 		panic(appdef.ErrOutOfBounds("max occurs should be greater than or equal to min occurs (%v)", minOccurs))
 	}
 
-	if child := appdef.Structure(cc.app.Type, contType); child != nil {
+	if child := appdef.Structure(cc.ws.Type, contType); child != nil {
 		if (cc.typeKind != appdef.TypeKind_null) && !cc.typeKind.ContainerKindAvailable(child.Kind()) {
 			panic(appdef.ErrInvalid("%v can not to be a child of «%v»", child, cc.typeKind.TrimString()))
 		}
@@ -121,7 +119,7 @@ func (cc *Containers) addContainer(name string, contType appdef.QName, minOccurs
 		panic(appdef.ErrTooMany("containers, maximum is %d", appdef.MaxTypeContainerCount))
 	}
 
-	cont := NewContainer(cc.app, name, contType, minOccurs, maxOccurs)
+	cont := NewContainer(cc.ws, name, contType, minOccurs, maxOccurs)
 	comments.SetComment(cont.WithComments, comment...)
 	cc.containers[name] = cont
 	cc.containersOrdered = append(cc.containersOrdered, cont)

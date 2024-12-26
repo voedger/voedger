@@ -23,13 +23,13 @@ type Extension struct {
 	intents *Storages
 }
 
-func MakeExtension(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) Extension {
+func MakeExtension(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) Extension {
 	return Extension{
-		Typ:     types.MakeType(app, ws, name, kind),
+		Typ:     types.MakeType(ws.App(), ws, name, kind),
 		name:    name.Entity(),
 		engine:  appdef.ExtensionEngineKind_BuiltIn,
-		states:  NewStorages(app),
-		intents: NewStorages(app),
+		states:  NewStorages(ws.App()),
+		intents: NewStorages(ws.App()),
 	}
 }
 

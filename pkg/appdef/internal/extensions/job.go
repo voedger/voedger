@@ -19,12 +19,8 @@ type Job struct {
 	cronSchedule string
 }
 
-func NewJob(app appdef.IAppDef, ws *workspace, name QName) *Job {
-	j := &Job{
-		extension: makeExtension(app, ws, name, TypeKind_Job),
-	}
-	ws.appendType(j)
-	return j
+func NewJob(ws appdef.IWorkspace, name appdef.QName) *Job {
+	return &Job{Extension: MakeExtension(ws, name, appdef.TypeKind_Job)}
 }
 
 func (j Job) CronSchedule() string { return j.cronSchedule }
@@ -36,31 +32,31 @@ func (j *Job) setCronSchedule(cs string) { j.cronSchedule = cs }
 // # Returns error:
 //   - if cron schedule is invalid
 func (j *Job) Validate() (err error) {
-	err = j.extension.Validate()
+	err = j.Extension.Validate()
 
 	_, e := cron.ParseStandard(j.cronSchedule)
 	if e != nil {
-		err = errors.Join(err, enrichError(e, "%v cron schedule", j))
+		err = errors.Join(err, appdef.EnrichError(e, "%v cron schedule", j))
 	}
 
 	return err
 }
 
-// # Implements:
-//   - IJobBuilder
-type jobBuilder struct {
-	extensionBuilder
+// # Supports:
+//   - appdef.IJobBuilder
+type JobBuilder struct {
+	ExtensionBuilder
 	*Job
 }
 
-func newJobBuilder(j *Job) *jobBuilder {
-	return &jobBuilder{
-		extensionBuilder: makeExtensionBuilder(&j.extension),
+func NewJobBuilder(j *Job) *JobBuilder {
+	return &JobBuilder{
+		ExtensionBuilder: MakeExtensionBuilder(&j.Extension),
 		Job:              j,
 	}
 }
 
-func (jb *jobBuilder) SetCronSchedule(cs string) IJobBuilder {
+func (jb *JobBuilder) SetCronSchedule(cs string) appdef.IJobBuilder {
 	jb.Job.setCronSchedule(cs)
 	return jb
 }

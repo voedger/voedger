@@ -20,11 +20,8 @@ type Function struct {
 	par, res types.TypeRef
 }
 
-func MakeFunc(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) Function {
-	f := Function{
-		Extension: MakeExtension(app, ws, name, kind),
-	}
-	return f
+func MakeFunc(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) Function {
+	return Function{Extension: MakeExtension(ws, name, kind)}
 }
 
 func (f *Function) Param() appdef.IType { return f.par.Target(f.App().Type) }

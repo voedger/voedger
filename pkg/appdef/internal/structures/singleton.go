@@ -15,11 +15,8 @@ type Singleton struct {
 }
 
 // Makes new singleton
-func MakeSingleton(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) Singleton {
-	s := Singleton{
-		Doc: MakeDoc(app, ws, name, kind),
-	}
-	return s
+func MakeSingleton(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) Singleton {
+	return Singleton{Doc: MakeDoc(ws, name, kind)}
 }
 
 func (s *Singleton) Singleton() bool { return s.singleton }

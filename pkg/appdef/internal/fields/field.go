@@ -82,7 +82,6 @@ func (fld *Field) setVerify(k ...appdef.VerificationKind) {
 // # Supports:
 //   - appdef.IFields
 type Fields struct {
-	app           appdef.IAppDef
 	ws            appdef.IWorkspace
 	typeKind      appdef.TypeKind
 	fields        map[appdef.FieldName]interface{}
@@ -92,9 +91,8 @@ type Fields struct {
 }
 
 // Makes new fields instance
-func MakeFields(app appdef.IAppDef, ws appdef.IWorkspace, typeKind appdef.TypeKind) Fields {
+func MakeFields(ws appdef.IWorkspace, typeKind appdef.TypeKind) Fields {
 	ff := Fields{
-		app:           app,
 		ws:            ws,
 		typeKind:      typeKind,
 		fields:        make(map[appdef.FieldName]interface{}),
@@ -104,18 +102,18 @@ func MakeFields(app appdef.IAppDef, ws appdef.IWorkspace, typeKind appdef.TypeKi
 	return ff
 }
 
-func (ff *Fields) Field(name appdef.FieldName) appdef.IField {
+func (ff Fields) Field(name appdef.FieldName) appdef.IField {
 	if ff, ok := ff.fields[name]; ok {
 		return ff.(appdef.IField)
 	}
 	return nil
 }
 
-func (ff *Fields) FieldCount() int { return len(ff.fieldsOrdered) }
+func (ff Fields) FieldCount() int { return len(ff.fieldsOrdered) }
 
-func (ff *Fields) Fields() []appdef.IField { return ff.fieldsOrdered }
+func (ff Fields) Fields() []appdef.IField { return ff.fieldsOrdered }
 
-func (ff *Fields) RefField(name appdef.FieldName) (rf appdef.IRefField) {
+func (ff Fields) RefField(name appdef.FieldName) (rf appdef.IRefField) {
 	if fld := ff.Field(name); fld != nil {
 		if fld.DataKind() == appdef.DataKind_RecordID {
 			if fld, ok := fld.(appdef.IRefField); ok {
@@ -149,38 +147,38 @@ func (ff *Fields) MakeSysFields() {
 	}
 }
 
-func (ff *Fields) RefFields() []appdef.IRefField { return ff.refFields }
+func (ff Fields) RefFields() []appdef.IRefField { return ff.refFields }
 
-func (ff *Fields) UserFields() []appdef.IField { return ff.userFields }
+func (ff Fields) UserFields() []appdef.IField { return ff.userFields }
 
-func (ff *Fields) UserFieldCount() int { return len(ff.userFields) }
+func (ff Fields) UserFieldCount() int { return len(ff.userFields) }
 
 func (ff *Fields) addDataField(name appdef.FieldName, data appdef.QName, required bool, constraints ...appdef.IConstraint) {
-	d := appdef.Data(ff.app.Type, data)
+	d := appdef.Data(ff.ws.Type, data)
 	if d == nil {
 		panic(appdef.ErrTypeNotFound(data))
 	}
 	if len(constraints) > 0 {
-		d = datas.NewAnonymousData(ff.app, ff.ws, d.DataKind(), data, constraints...)
+		d = datas.NewAnonymousData(ff.ws, d.DataKind(), data, constraints...)
 	}
 	f := NewField(name, d, required)
 	ff.appendField(name, f)
 }
 
 func (ff *Fields) addField(name appdef.FieldName, kind appdef.DataKind, required bool, constraints ...appdef.IConstraint) {
-	d := appdef.SysData(ff.app.Type, kind)
+	d := appdef.SysData(ff.ws.Type, kind)
 	if d == nil {
 		panic(appdef.ErrNotFound("system data type for data kind «%s»", kind.TrimString()))
 	}
 	if len(constraints) > 0 {
-		d = datas.NewAnonymousData(ff.app, ff.ws, d.DataKind(), d.QName(), constraints...)
+		d = datas.NewAnonymousData(ff.ws, d.DataKind(), d.QName(), constraints...)
 	}
 	f := NewField(name, d, required)
 	ff.appendField(name, f)
 }
 
 func (ff *Fields) addRefField(name appdef.FieldName, required bool, ref ...appdef.QName) {
-	d := appdef.SysData(ff.app.Type, appdef.DataKind_RecordID)
+	d := appdef.SysData(ff.ws.Type, appdef.DataKind_RecordID)
 	f := NewRefField(name, d, required, ref...)
 	ff.appendField(name, f)
 }

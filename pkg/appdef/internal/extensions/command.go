@@ -20,11 +20,8 @@ type Command struct {
 	unl types.TypeRef
 }
 
-func NewCommand(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName) *Command {
-	cmd := &Command{
-		Function: MakeFunc(app, ws, name, appdef.TypeKind_Command),
-	}
-	return cmd
+func NewCommand(ws appdef.IWorkspace, name appdef.QName) *Command {
+	return &Command{Function: MakeFunc(ws, name, appdef.TypeKind_Command)}
 }
 
 func (cmd *Command) UnloggedParam() appdef.IType {

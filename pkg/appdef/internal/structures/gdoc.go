@@ -13,10 +13,8 @@ type GDoc struct {
 	Doc
 }
 
-func NewGDoc(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName) *GDoc {
-	return &GDoc{
-		Doc: MakeDoc(app, ws, name, appdef.TypeKind_GDoc),
-	}
+func NewGDoc(ws appdef.IWorkspace, name appdef.QName) *GDoc {
+	return &GDoc{Doc: MakeDoc(ws, name, appdef.TypeKind_GDoc)}
 }
 
 // # Supports:
@@ -39,10 +37,8 @@ type GRecord struct {
 	ContainedRecord
 }
 
-func NewGRecord(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName) *GRecord {
-	return &GRecord{
-		ContainedRecord: MakeContainedRecord(app, ws, name, appdef.TypeKind_GRecord),
-	}
+func NewGRecord(ws appdef.IWorkspace, name appdef.QName) *GRecord {
+	return &GRecord{ContainedRecord: MakeContainedRecord(ws, name, appdef.TypeKind_GRecord)}
 }
 
 // # Supports:

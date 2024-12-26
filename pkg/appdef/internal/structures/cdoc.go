@@ -14,11 +14,8 @@ type CDoc struct {
 }
 
 // Creates a new CDoc
-func NewCDoc(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName) *CDoc {
-	d := &CDoc{
-		Singleton: MakeSingleton(app, ws, name, appdef.TypeKind_CDoc),
-	}
-	return d
+func NewCDoc(ws appdef.IWorkspace, name appdef.QName) *CDoc {
+	return &CDoc{Singleton: MakeSingleton(ws, name, appdef.TypeKind_CDoc)}
 }
 
 // # Supports:
@@ -41,11 +38,8 @@ type CRecord struct {
 	ContainedRecord
 }
 
-func NewCRecord(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName) *CRecord {
-	r := &CRecord{
-		ContainedRecord: MakeContainedRecord(app, ws, name, appdef.TypeKind_CRecord),
-	}
-	return r
+func NewCRecord(ws appdef.IWorkspace, name appdef.QName) *CRecord {
+	return &CRecord{ContainedRecord: MakeContainedRecord(ws, name, appdef.TypeKind_CRecord)}
 }
 
 // # Supports:

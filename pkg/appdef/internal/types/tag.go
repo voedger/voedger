@@ -18,11 +18,8 @@ type Tag struct {
 }
 
 // Creates and returns new tag.
-func NewTag(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName) *Tag {
-	t := &Tag{
-		Typ: MakeType(app, ws, name, appdef.TypeKind_Tag),
-	}
-	return t
+func NewTag(ws appdef.IWorkspace, name appdef.QName) *Tag {
+	return &Tag{Typ: MakeType(ws.App(), ws, name, appdef.TypeKind_Tag)}
 }
 
 // # Supports:
@@ -36,12 +33,23 @@ func MakeWithTags(find appdef.FindType) WithTags {
 	return WithTags{find, NewTypes[appdef.ITag]()}
 }
 
-func (t *WithTags) HasTag(name appdef.QName) bool {
+func (t WithTags) HasTag(name appdef.QName) bool {
 	return t.list.Find(name) != appdef.NullType
 }
 
 func (t *WithTags) Tags() iter.Seq[appdef.ITag] {
 	return t.list.Values()
+}
+
+func (t *WithTags) setTag(tag ...appdef.QName) {
+	t.list.Clear()
+	for _, name := range tag {
+		tag := appdef.Tag(t.find, name)
+		if tag == nil {
+			panic(appdef.ErrNotFound("tag %s", name))
+		}
+		t.list.Add(tag)
+	}
 }
 
 // # Supports:
@@ -54,16 +62,7 @@ func MakeTagBuilder(tags *WithTags) TagBuilder {
 	return TagBuilder{tags}
 }
 
-func (t *TagBuilder) SetTag(tag ...appdef.QName) {
-	t.WithTags.list.Clear()
-	for _, name := range tag {
-		tag := appdef.Tag(t.WithTags.find, name)
-		if tag == nil {
-			panic(appdef.ErrNotFound("tag %s", name))
-		}
-		t.WithTags.list.Add(tag)
-	}
-}
+func (t *TagBuilder) SetTag(tag ...appdef.QName) { t.WithTags.setTag(tag...) }
 
 // # Supports:
 //   - appdef.IWithTags
