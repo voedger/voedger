@@ -19,6 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/internal/roles"
 	"github.com/voedger/voedger/pkg/appdef/internal/structures"
 	"github.com/voedger/voedger/pkg/appdef/internal/types"
+	"github.com/voedger/voedger/pkg/appdef/internal/views"
 )
 
 // # Supports:
@@ -263,12 +264,14 @@ func (ws *Workspace) addRole(name appdef.QName) appdef.IRoleBuilder {
 
 func (ws *Workspace) addTag(name appdef.QName, comment ...string) {
 	t := types.NewTag(ws, name)
+	ws.AppendType(t)
 	comments.SetComment(t.WithComments, comment...)
 }
 
-func (ws *Workspace) addView(name QName) IViewBuilder {
-	v := newView(ws.app, ws, name)
-	return newViewBuilder(v)
+func (ws *Workspace) addView(name appdef.QName) appdef.IViewBuilder {
+	v := views.NewView(ws, name)
+	ws.AppendType(v)
+	return views.NewViewBuilder(v)
 }
 
 func (ws *Workspace) addWDoc(name QName) IWDocBuilder {
@@ -458,11 +461,11 @@ func (wb *WorkspaceBuilder) AddRole(name appdef.QName) appdef.IRoleBuilder {
 	return wb.Workspace.addRole(name)
 }
 
-func (wb *WorkspaceBuilder) AddTag(name QName, comments ...string) {
+func (wb *WorkspaceBuilder) AddTag(name appdef.QName, comments ...string) {
 	wb.Workspace.addTag(name, comments...)
 }
 
-func (wb *WorkspaceBuilder) AddView(name QName) IViewBuilder {
+func (wb *WorkspaceBuilder) AddView(name appdef.QName) appdef.IViewBuilder {
 	return wb.Workspace.addView(name)
 }
 
