@@ -53,7 +53,7 @@ func newACLRule(ws *workspace, ops []OperationKind, policy PolicyKind, flt IFilt
 	}
 
 	opSet := set.From(ops...)
-	if compatible, err := isCompatibleOperations(opSet); !compatible {
+	if compatible, err := IsCompatibleOperations(opSet); !compatible {
 		panic(err)
 	}
 

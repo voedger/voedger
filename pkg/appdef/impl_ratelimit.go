@@ -101,7 +101,7 @@ func newLimit(app *appDef, ws *workspace, name QName, ops []OperationKind, opt L
 	}
 
 	opSet := set.From(ops...)
-	if compatible, err := isCompatibleOperations(opSet); !compatible {
+	if compatible, err := IsCompatibleOperations(opSet); !compatible {
 		panic(err)
 	}
 	if flt == nil {
