@@ -8,9 +8,9 @@ package apps
 import (
 	"errors"
 	"iter"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/appdef/internal/acl"
 	"github.com/voedger/voedger/pkg/appdef/internal/comments"
 	"github.com/voedger/voedger/pkg/appdef/internal/packages"
 	"github.com/voedger/voedger/pkg/appdef/internal/types"
@@ -23,7 +23,7 @@ type AppDef struct {
 	comments.WithComments
 	packages   *packages.Packages
 	sysWS      *workspaces.Workspace
-	acl        []*acl.Rule // adding order should be saved
+	acl        []appdef.IACLRule
 	types      *types.Types[appdef.IType]
 	workspaces *workspaces.Workspaces
 	wsDesc     map[appdef.QName]appdef.IWorkspace
@@ -31,27 +31,21 @@ type AppDef struct {
 
 func NewAppDef() *AppDef {
 	app := AppDef{
-		packages:   packages.NewPackages(),
-		types:      types.NewTypes[appdef.IType](),
-		workspaces: workspaces.NewWorkspaces(),
-		wsDesc:     make(map[appdef.QName]appdef.IWorkspace),
+		WithComments: comments.MakeWithComments(),
+		packages:     packages.NewPackages(),
+		acl:          make([]appdef.IACLRule, 0),
+		types:        types.NewTypes[appdef.IType](),
+		workspaces:   workspaces.NewWorkspaces(),
+		wsDesc:       make(map[appdef.QName]appdef.IWorkspace),
 	}
 	app.makeSysPackage()
 	return &app
 }
 
-func (app AppDef) ACL() iter.Seq[appdef.IACLRule] {
-	return func(yield func(appdef.IACLRule) bool) {
-		for _, acl := range app.acl {
-			if !yield(acl) {
-				return
-			}
-		}
-	}
-}
+func (app AppDef) ACL() iter.Seq[appdef.IACLRule] { return slices.Values(app.acl) }
 
-func (app *AppDef) AppendACL(p *acl.Rule) {
-	app.acl = append(app.acl, p)
+func (app *AppDef) AppendACL(acl appdef.IACLRule) {
+	app.acl = append(app.acl, acl)
 }
 
 func (app *AppDef) AppendType(t appdef.IType) {

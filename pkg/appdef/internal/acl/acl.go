@@ -86,6 +86,10 @@ func NewRule(ws appdef.IWorkspace, ops []appdef.OperationKind, policy appdef.Pol
 		}
 	}
 
+	if role, ok := principal.(interface{ appendACL(appdef.IACLRule) }); ok {
+		role.appendACL(acl) // propagate ACL to role, workspace and app
+	}
+
 	return acl
 }
 
@@ -147,8 +151,6 @@ func (acl Rule) String() string {
 	return s
 }
 
-func (acl Rule) Workspace() appdef.IWorkspace { return acl.ws }
-
 // validates ACL rule.
 //
 // # Error if:
@@ -161,12 +163,14 @@ func (acl Rule) Validate() (err error) {
 		cnt++
 	}
 
-	if (err == nil) && (cnt == 0) {
-		return appdef.ErrFilterHasNoMatches("ACL", acl.Filter(), acl.Workspace())
+	if cnt == 0 {
+		err = errors.Join(err, appdef.ErrFilterHasNoMatches("ACL", acl.Filter(), acl.Workspace()))
 	}
 
 	return err
 }
+
+func (acl Rule) Workspace() appdef.IWorkspace { return acl.ws }
 
 // validates ACL rule on the filtered type.
 //

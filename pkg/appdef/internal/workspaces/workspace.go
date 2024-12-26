@@ -7,6 +7,7 @@ package workspaces
 
 import (
 	"iter"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/abstracts"
@@ -14,6 +15,8 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/internal/comments"
 	"github.com/voedger/voedger/pkg/appdef/internal/datas"
 	"github.com/voedger/voedger/pkg/appdef/internal/extensions"
+	"github.com/voedger/voedger/pkg/appdef/internal/rates"
+	"github.com/voedger/voedger/pkg/appdef/internal/roles"
 	"github.com/voedger/voedger/pkg/appdef/internal/structures"
 	"github.com/voedger/voedger/pkg/appdef/internal/types"
 )
@@ -23,7 +26,7 @@ import (
 type Workspace struct {
 	types.Typ
 	abstracts.WithAbstract
-	acl       []*acl.Rule
+	acl       []appdef.IACLRule
 	ancestors *Workspaces
 	types     *types.Types[appdef.IType]
 	usedWS    *Workspaces
@@ -32,10 +35,12 @@ type Workspace struct {
 
 func NewWorkspace(app appdef.IAppDef, name appdef.QName) *Workspace {
 	ws := &Workspace{
-		Typ:       types.MakeType(app, nil, name, appdef.TypeKind_Workspace),
-		ancestors: NewWorkspaces(),
-		types:     types.NewTypes[appdef.IType](),
-		usedWS:    NewWorkspaces(),
+		Typ:          types.MakeType(app, nil, name, appdef.TypeKind_Workspace),
+		WithAbstract: abstracts.MakeWithAbstract(),
+		acl:          make([]appdef.IACLRule, 0),
+		ancestors:    NewWorkspaces(),
+		types:        types.NewTypes[appdef.IType](),
+		usedWS:       NewWorkspaces(),
 	}
 	if name != appdef.SysWorkspaceQName {
 		ws.ancestors.Add(app.Workspace(appdef.SysWorkspaceQName))
@@ -43,18 +48,23 @@ func NewWorkspace(app appdef.IAppDef, name appdef.QName) *Workspace {
 	return ws
 }
 
-func (ws Workspace) ACL() iter.Seq[appdef.IACLRule] {
-	return func(yield func(appdef.IACLRule) bool) {
-		for _, acl := range ws.acl {
-			if !yield(acl) {
-				return
-			}
-		}
-	}
-}
+func (ws Workspace) ACL() iter.Seq[appdef.IACLRule] { return slices.Values(ws.acl) }
 
 func (ws *Workspace) Ancestors() iter.Seq[appdef.IWorkspace] {
 	return ws.ancestors.Values()
+}
+
+func (ws *Workspace) AppendACL(acl appdef.IACLRule) {
+	ws.acl = append(ws.acl, acl)
+	if app, ok := ws.App().(interface{ AppendACL(appdef.IACLRule) }); ok {
+		app.AppendACL(acl) // propagate ACL to app
+	}
+}
+
+func (ws *Workspace) AppendType(t appdef.IType) {
+	ws.App().(interface{ AppendType(appdef.IType) }).AppendType(t)
+	// do not check the validity or uniqueness of the name; this was checked by `App().AppendType(t)`
+	ws.types.Add(t)
 }
 
 func (ws *Workspace) Descriptor() appdef.QName {
@@ -205,46 +215,54 @@ func (ws *Workspace) addJob(name appdef.QName) appdef.IJobBuilder {
 	return extensions.NewJobBuilder(j)
 }
 
-func (ws *Workspace) addLimit(name QName, ops []OperationKind, opt LimitFilterOption, flt IFilter, rate QName, comment ...string) {
-	_ = newLimit(ws.app, ws, name, ops, opt, flt, rate, comment...)
+func (ws *Workspace) addLimit(name appdef.QName, ops []appdef.OperationKind, opt appdef.LimitFilterOption, flt appdef.IFilter, rate appdef.QName, comment ...string) {
+	l := rates.NewLimit(ws, name, ops, opt, flt, rate, comment...)
+	ws.AppendType(l)
 }
 
-func (ws *Workspace) addObject(name QName) IObjectBuilder {
-	o := newObject(ws.app, ws, name)
-	return newObjectBuilder(o)
+func (ws *Workspace) addObject(name appdef.QName) appdef.IObjectBuilder {
+	o := structures.NewObject(ws, name)
+	ws.AppendType(o)
+	return structures.NewObjectBuilder(o)
 }
 
-func (ws *Workspace) addODoc(name QName) IODocBuilder {
-	d := newODoc(ws.app, ws, name)
-	return newODocBuilder(d)
+func (ws *Workspace) addODoc(name appdef.QName) appdef.IODocBuilder {
+	d := structures.NewODoc(ws, name)
+	ws.AppendType(d)
+	return structures.NewODocBuilder(d)
 }
 
-func (ws *Workspace) addORecord(name QName) IORecordBuilder {
-	r := newORecord(ws.app, ws, name)
-	return newORecordBuilder(r)
+func (ws *Workspace) addORecord(name appdef.QName) appdef.IORecordBuilder {
+	r := structures.NewORecord(ws, name)
+	ws.AppendType(r)
+	return structures.NewORecordBuilder(r)
 }
 
-func (ws *Workspace) addProjector(name QName) IProjectorBuilder {
-	p := newProjector(ws.app, ws, name)
-	return newProjectorBuilder(p)
+func (ws *Workspace) addProjector(name appdef.QName) appdef.IProjectorBuilder {
+	p := extensions.NewProjector(ws, name)
+	ws.AppendType(p)
+	return extensions.NewProjectorBuilder(p)
 }
 
-func (ws *Workspace) addQuery(name QName) IQueryBuilder {
-	q := newQuery(ws.app, ws, name)
-	return newQueryBuilder(q)
+func (ws *Workspace) addQuery(name appdef.QName) appdef.IQueryBuilder {
+	q := extensions.NewQuery(ws, name)
+	ws.AppendType(q)
+	return extensions.NewQueryBuilder(q)
 }
 
-func (ws *Workspace) addRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) {
-	_ = newRate(ws.app, ws, name, count, period, scopes, comment...)
+func (ws *Workspace) addRate(name appdef.QName, count appdef.RateCount, period appdef.RatePeriod, scopes []appdef.RateScope, comment ...string) {
+	r := rates.NewRate(ws, name, count, period, scopes, comment...)
+	ws.AppendType(r)
 }
 
-func (ws *Workspace) addRole(name QName) IRoleBuilder {
-	role := newRole(ws.app, ws, name)
-	return newRoleBuilder(role)
+func (ws *Workspace) addRole(name appdef.QName) appdef.IRoleBuilder {
+	r := roles.NewRole(ws, name)
+	ws.AppendType(r)
+	return roles.NewRoleBuilder(r)
 }
 
 func (ws *Workspace) addTag(name appdef.QName, comment ...string) {
-	t := types.NewTag(ws.App(), ws, name)
+	t := types.NewTag(ws, name)
 	comments.SetComment(t.WithComments, comment...)
 }
 
@@ -263,63 +281,36 @@ func (ws *Workspace) addWRecord(name QName) IWRecordBuilder {
 	return newWRecordBuilder(r)
 }
 
-func (ws *Workspace) AppendACL(p *acl.Rule) {
-	ws.acl = append(ws.acl, p)
-	ws.App().(interface{ AppendACL(*acl.Rule) }).AppendACL(p)
-}
-
-func (ws *Workspace) AppendType(t appdef.IType) {
-	ws.App().(interface{ AppendType(appdef.IType) }).AppendType(t)
-	// do not check the validity or uniqueness of the name; this was checked by `App().AppendType(t)`
-	ws.types.Add(t)
-}
-
-func (ws *Workspace) grant(ops []OperationKind, flt IFilter, fields []FieldName, toRole QName, comment ...string) {
+func (ws *Workspace) grant(ops []appdef.OperationKind, flt appdef.IFilter, fields []appdef.FieldName, toRole appdef.QName, comment ...string) {
 	r := appdef.Role(ws.Type, toRole)
 	if r == nil {
-		panic(ErrRoleNotFound(toRole))
+		panic(appdef.ErrRoleNotFound(toRole))
 	}
-	role := r.(*role)
-
-	acl := newGrant(ws, ops, flt, fields, role, comment...)
-	role.appendACL(acl)
-	ws.appendACL(acl)
+	acl.NewGrant(ws, ops, flt, fields, r, comment...)
 }
 
-func (ws *Workspace) grantAll(flt IFilter, toRole QName, comment ...string) {
-	r := Role(ws.Type, toRole)
+func (ws *Workspace) grantAll(flt appdef.IFilter, toRole appdef.QName, comment ...string) {
+	r := appdef.Role(ws.Type, toRole)
 	if r == nil {
-		panic(ErrRoleNotFound(toRole))
+		panic(appdef.ErrRoleNotFound(toRole))
 	}
-	role := r.(*role)
-
-	acl := newGrantAll(ws, flt, role, comment...)
-	role.appendACL(acl)
-	ws.appendACL(acl)
+	acl.NewGrantAll(ws, flt, r, comment...)
 }
 
-func (ws *Workspace) revoke(ops []OperationKind, flt IFilter, fields []FieldName, fromRole QName, comment ...string) {
-	r := Role(ws.Type, fromRole)
+func (ws *Workspace) revoke(ops []appdef.OperationKind, flt appdef.IFilter, fields []appdef.FieldName, fromRole appdef.QName, comment ...string) {
+	r := appdef.Role(ws.Type, fromRole)
 	if r == nil {
-		panic(ErrRoleNotFound(fromRole))
+		panic(appdef.ErrRoleNotFound(fromRole))
 	}
-	role := r.(*role)
-
-	acl := newRevoke(ws, ops, flt, fields, role, comment...)
-	role.appendACL(acl)
-	ws.appendACL(acl)
+	acl.NewRevoke(ws, ops, flt, fields, r, comment...)
 }
 
-func (ws *Workspace) revokeAll(flt IFilter, fromRole QName, comment ...string) {
-	r := Role(ws.Type, fromRole)
+func (ws *Workspace) revokeAll(flt appdef.IFilter, fromRole appdef.QName, comment ...string) {
+	r := appdef.Role(ws.Type, fromRole)
 	if r == nil {
-		panic(ErrRoleNotFound(fromRole))
+		panic(appdef.ErrRoleNotFound(fromRole))
 	}
-	role := r.(*role)
-
-	acl := newRevokeAll(ws, flt, role, comment...)
-	role.appendACL(acl)
-	ws.appendACL(acl)
+	acl.NewRevokeAll(ws, flt, r, comment...)
 }
 
 func (ws *Workspace) setAncestors(name QName, names ...QName) {
@@ -435,35 +426,35 @@ func (wb *WorkspaceBuilder) AddJob(name appdef.QName) appdef.IJobBuilder {
 	return wb.Workspace.addJob(name)
 }
 
-func (wb *WorkspaceBuilder) AddLimit(name QName, ops []OperationKind, opt LimitFilterOption, flt IFilter, rate QName, comment ...string) {
+func (wb *WorkspaceBuilder) AddLimit(name appdef.QName, ops []appdef.OperationKind, opt appdef.LimitFilterOption, flt appdef.IFilter, rate appdef.QName, comment ...string) {
 	wb.Workspace.addLimit(name, ops, opt, flt, rate, comment...)
 }
 
-func (wb *WorkspaceBuilder) AddObject(name QName) IObjectBuilder {
+func (wb *WorkspaceBuilder) AddObject(name appdef.QName) appdef.IObjectBuilder {
 	return wb.Workspace.addObject(name)
 }
 
-func (wb *WorkspaceBuilder) AddODoc(name QName) IODocBuilder {
+func (wb *WorkspaceBuilder) AddODoc(name appdef.QName) appdef.IODocBuilder {
 	return wb.Workspace.addODoc(name)
 }
 
-func (wb *WorkspaceBuilder) AddORecord(name QName) IORecordBuilder {
+func (wb *WorkspaceBuilder) AddORecord(name appdef.QName) appdef.IORecordBuilder {
 	return wb.Workspace.addORecord(name)
 }
 
-func (wb *WorkspaceBuilder) AddProjector(name QName) IProjectorBuilder {
+func (wb *WorkspaceBuilder) AddProjector(name appdef.QName) appdef.IProjectorBuilder {
 	return wb.Workspace.addProjector(name)
 }
 
-func (wb *WorkspaceBuilder) AddQuery(name QName) IQueryBuilder {
+func (wb *WorkspaceBuilder) AddQuery(name appdef.QName) appdef.IQueryBuilder {
 	return wb.Workspace.addQuery(name)
 }
 
-func (wb *WorkspaceBuilder) AddRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) {
+func (wb *WorkspaceBuilder) AddRate(name appdef.QName, count appdef.RateCount, period appdef.RatePeriod, scopes []appdef.RateScope, comment ...string) {
 	wb.Workspace.addRate(name, count, period, scopes, comment...)
 }
 
-func (wb *WorkspaceBuilder) AddRole(name QName) IRoleBuilder {
+func (wb *WorkspaceBuilder) AddRole(name appdef.QName) appdef.IRoleBuilder {
 	return wb.Workspace.addRole(name)
 }
 
@@ -483,22 +474,22 @@ func (wb *WorkspaceBuilder) AddWRecord(name QName) IWRecordBuilder {
 	return wb.Workspace.addWRecord(name)
 }
 
-func (wb *WorkspaceBuilder) Grant(ops []OperationKind, flt IFilter, fields []FieldName, toRole QName, comment ...string) IACLBuilder {
+func (wb *WorkspaceBuilder) Grant(ops []appdef.OperationKind, flt appdef.IFilter, fields []appdef.FieldName, toRole appdef.QName, comment ...string) appdef.IACLBuilder {
 	wb.Workspace.grant(ops, flt, fields, toRole, comment...)
 	return wb
 }
 
-func (wb *WorkspaceBuilder) GrantAll(flt IFilter, toRole QName, comment ...string) IACLBuilder {
+func (wb *WorkspaceBuilder) GrantAll(flt appdef.IFilter, toRole appdef.QName, comment ...string) appdef.IACLBuilder {
 	wb.Workspace.grantAll(flt, toRole, comment...)
 	return wb
 }
 
-func (wb *WorkspaceBuilder) Revoke(ops []OperationKind, flt IFilter, fields []FieldName, fromRole QName, comment ...string) IACLBuilder {
+func (wb *WorkspaceBuilder) Revoke(ops []appdef.OperationKind, flt appdef.IFilter, fields []appdef.FieldName, fromRole appdef.QName, comment ...string) appdef.IACLBuilder {
 	wb.Workspace.revoke(ops, flt, fields, fromRole, comment...)
 	return wb
 }
 
-func (wb *WorkspaceBuilder) RevokeAll(flt IFilter, fromRole QName, comment ...string) IACLBuilder {
+func (wb *WorkspaceBuilder) RevokeAll(flt appdef.IFilter, fromRole appdef.QName, comment ...string) appdef.IACLBuilder {
 	wb.Workspace.revokeAll(flt, fromRole, comment...)
 	return wb
 }
