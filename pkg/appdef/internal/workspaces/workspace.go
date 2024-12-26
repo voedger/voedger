@@ -63,8 +63,10 @@ func (ws *Workspace) AppendACL(acl appdef.IACLRule) {
 }
 
 func (ws *Workspace) AppendType(t appdef.IType) {
-	ws.App().(interface{ AppendType(appdef.IType) }).AppendType(t)
-	// do not check the validity or uniqueness of the name; this was checked by `App().AppendType(t)`
+	if app, ok := ws.App().(interface{ AppendType(appdef.IType) }); ok {
+		app.AppendType(t) // propagate type to app
+	}
+	// do not check the validity or uniqueness of the name; this was checked by `app.AppendType(t)`
 	ws.types.Add(t)
 }
 
