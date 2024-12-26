@@ -57,7 +57,7 @@ type ResponseMeta struct {
 }
 
 type IRequestSender interface {
-	// err != nil -> nothing else matters
+	// err != nil -> responseMeta does not matter, responseCh and responseErr must be be touched
 	// resultsCh must be read out
 	// *resultErr must be checked only after reading out the resultCh
 	// caller must eventually close clientCtx

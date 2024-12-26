@@ -9,6 +9,7 @@ import (
 	"context"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -69,6 +70,108 @@ func TestRequestSender_BasicUsage(t *testing.T) {
 	require.Equal(http.StatusOK, respMeta.StatusCode)
 }
 
-func TestErrorBeforeSend(t *testing.T) {
-	
+func TestErrors(t *testing.T) {
+	require := require.New(t)
+	t.Run("response timeout", func(t *testing.T) {
+		requestSender := NewIRequestSender(MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
+			// force response timeout
+			MockTime.Add(time.Duration(DefaultSendTimeout))
+			sender := responder.InitResponse(ResponseMeta{ContentType: ApplicationJSON, StatusCode: http.StatusOK})
+			sender.Close(nil)
+		})
+
+		_, _, _, err := requestSender.SendRequest(context.Background(), Request{})
+		require.ErrorIs(err, ErrSendTimeoutExpired)
+	})
+
+	t.Run("client disconnect on send response", func(t *testing.T) {
+		maySendAfterDisconnect := make(chan interface{})
+		sendErrCh := make(chan error)
+		clientCtx, disconnectClient := context.WithCancel(context.Background())
+		requestSender := NewIRequestSender(MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
+			go func() {
+				sender := responder.InitResponse(ResponseMeta{ContentType: ApplicationJSON, StatusCode: http.StatusOK})
+				<-maySendAfterDisconnect
+				sendErrCh <- sender.Send("test")
+				sender.Close(nil)
+			}()
+		})
+
+		respCh, _, respErr, err := requestSender.SendRequest(clientCtx, Request{})
+		require.NoError(err)
+		disconnectClient()
+		close(maySendAfterDisconnect)
+		err = <-sendErrCh
+		require.ErrorIs(err, context.Canceled)
+		for range respCh {
+		}
+		require.NoError(*respErr)
+	})
+
+	t.Run("client disconnect on send request", func(t *testing.T) {
+		requestHandlerStarted := make(chan interface{})
+		sendErrCh := make(chan error)
+		clientCtx, disconnectClient := context.WithCancel(context.Background())
+		requestSender := NewIRequestSender(MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
+			close(requestHandlerStarted)
+			go func() {
+				<-clientCtx.Done()
+				sender := responder.InitResponse(ResponseMeta{ContentType: ApplicationJSON, StatusCode: http.StatusOK})
+				sendErrCh <- sender.Send("test")
+				sender.Close(nil)
+			}()
+		})
+
+		go func() {
+			<-requestHandlerStarted
+			disconnectClient()
+		}()
+
+		respCh, _, respErr, err := requestSender.SendRequest(clientCtx, Request{})
+		require.ErrorIs(err, context.Canceled)
+		err = <-sendErrCh
+		require.ErrorIs(err, context.Canceled)
+		for range respCh {
+		}
+		require.NoError(*respErr)
+	})
+
+	t.Run("no consumer", func(t *testing.T) {
+		sendErrCh := make(chan error)
+		maySend := make(chan interface{})
+		requestSender := NewIRequestSender(MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
+			go func() {
+				sender := responder.InitResponse(ResponseMeta{ContentType: ApplicationJSON, StatusCode: http.StatusOK})
+				<-maySend
+				sendErrCh <- sender.Send("test")
+				sender.Close(nil)
+			}()
+		})
+
+		respCh, _, respErr, err := requestSender.SendRequest(context.Background(), Request{})
+		require.NoError(err)
+		close(maySend)
+
+		// sleep to make sure we're in select in Send()
+		time.Sleep(100 * time.Millisecond)
+
+		// force send timeout
+		MockTime.Add(time.Duration(DefaultSendTimeout + SendTimeout(time.Second)))
+
+		err = <-sendErrCh
+		require.ErrorIs(err, ErrNoConsumer)
+		for range respCh {
+		}
+		require.NoError(*respErr)
+	})
+
+	t.Run("hander panic", func(t *testing.T) {
+		requestSender := NewIRequestSender(MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
+			panic("test panic")
+		})
+
+		_, _, _, err := requestSender.SendRequest(context.Background(), Request{})
+		require.ErrorContains(err, "test panic")
+	})
+
 }
