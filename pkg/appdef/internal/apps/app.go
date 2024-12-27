@@ -8,10 +8,14 @@ package apps
 import (
 	"errors"
 	"iter"
+	"maps"
 	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/comments"
+	"github.com/voedger/voedger/pkg/appdef/internal/containers"
+	"github.com/voedger/voedger/pkg/appdef/internal/datas"
+	"github.com/voedger/voedger/pkg/appdef/internal/fields"
 	"github.com/voedger/voedger/pkg/appdef/internal/packages"
 	"github.com/voedger/voedger/pkg/appdef/internal/types"
 	"github.com/voedger/voedger/pkg/appdef/internal/workspaces"
@@ -80,6 +84,13 @@ func (app AppDef) PackageLocalNames() iter.Seq[string] {
 
 func (app AppDef) Packages() iter.Seq2[string, string] { return app.packages.Packages() }
 
+func (app *AppDef) SetWorkspaceDescriptor(ws, desc appdef.QName) {
+	maps.DeleteFunc(app.wsDesc, func(_ appdef.QName, w appdef.IWorkspace) bool {
+		return w.QName() == ws // remove old descriptor
+	})
+	app.wsDesc[desc] = app.Workspace(ws)
+}
+
 func (app AppDef) Type(name appdef.QName) appdef.IType {
 	switch name {
 	case appdef.NullQName:
@@ -100,9 +111,7 @@ func (app *AppDef) Workspace(name appdef.QName) appdef.IWorkspace {
 	return nil
 }
 
-func (app AppDef) Workspaces() iter.Seq[appdef.IWorkspace] {
-	return app.workspaces.Values()
-}
+func (app AppDef) Workspaces() iter.Seq[appdef.IWorkspace] { return app.workspaces.Values() }
 
 func (app AppDef) WorkspaceByDescriptor(name appdef.QName) appdef.IWorkspace {
 	return app.wsDesc[name]
@@ -154,7 +163,8 @@ func (app *AppDef) makeSysWorkspace() {
 // Makes system data types.
 func (app *AppDef) makeSysDataTypes() {
 	for k := appdef.DataKind_null + 1; k < appdef.DataKind_FakeLast; k++ {
-		_ = newSysData(app, app.sysWS, k)
+		d := datas.NewSysData(app.sysWS, k)
+		app.sysWS.AppendType(d) // propagate type to ws and app
 	}
 }
 
@@ -180,8 +190,24 @@ func (app *AppDef) setTypeComment(n appdef.QName, comment ...string) {
 	}
 
 	if t, ok := t.(*types.Typ); ok {
-		comments.SetComment(t.WithComments, comment...)
+		comments.SetComment(&t.WithComments, comment...)
 	}
+}
+
+func (app *AppDef) validateType(t appdef.IType) (err error) {
+	if v, ok := t.(interface{ Validate() error }); ok {
+		err = v.Validate()
+	}
+
+	if _, ok := t.(appdef.IFields); ok {
+		err = errors.Join(err, fields.ValidateTypeFields(t))
+	}
+
+	if _, ok := t.(appdef.IContainers); ok {
+		err = errors.Join(err, containers.ValidateTypeContainers(t))
+	}
+
+	return err
 }
 
 // # Supports:

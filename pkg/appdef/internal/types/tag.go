@@ -37,7 +37,7 @@ func (t WithTags) HasTag(name appdef.QName) bool {
 	return t.list.Find(name) != appdef.NullType
 }
 
-func (t *WithTags) Tags() iter.Seq[appdef.ITag] {
+func (t WithTags) Tags() iter.Seq[appdef.ITag] {
 	return t.list.Values()
 }
 

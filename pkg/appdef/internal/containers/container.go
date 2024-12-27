@@ -120,7 +120,7 @@ func (cc *Containers) addContainer(name string, contType appdef.QName, minOccurs
 	}
 
 	cont := NewContainer(cc.ws, name, contType, minOccurs, maxOccurs)
-	comments.SetComment(cont.WithComments, comment...)
+	comments.SetComment(&cont.WithComments, comment...)
 	cc.containers[name] = cont
 	cc.containersOrdered = append(cc.containersOrdered, cont)
 }

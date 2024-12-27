@@ -35,7 +35,7 @@ func NewView(ws appdef.IWorkspace, name appdef.QName) *View {
 
 func (v View) Key() appdef.IViewKey { return v.key }
 
-func (v *View) Value() appdef.IViewValue { return v.value }
+func (v View) Value() appdef.IViewValue { return v.value }
 
 // Validates view
 func (v *View) Validate() error {
@@ -85,9 +85,9 @@ func NewViewKey(view *View) *ViewKey {
 	}
 }
 
-func (key *ViewKey) PartKey() appdef.IViewPartKey { return key.pkey }
+func (key ViewKey) PartKey() appdef.IViewPartKey { return key.pkey }
 
-func (key *ViewKey) ClustCols() appdef.IViewClustCols { return key.ccols }
+func (key ViewKey) ClustCols() appdef.IViewClustCols { return key.ccols }
 
 // Validates value key
 func (key *ViewKey) Validate() error {
@@ -140,30 +140,30 @@ func (pk *ViewPartKey) addDataField(name appdef.FieldName, dataType appdef.QName
 	if k := d.DataKind(); !k.IsFixed() {
 		panic(appdef.ErrUnsupported("various length %s-field «%s» with partition key of %v", k.TrimString(), name, pk.view))
 	}
-	fields.AddDataField(pk.view.FieldsList, name, dataType, true, constraints...)
-	fields.AddDataField(pk.view.key.FieldsList, name, dataType, true, constraints...)
-	fields.AddDataField(pk.FieldsList, name, dataType, true, constraints...)
+	fields.AddDataField(&pk.view.FieldsList, name, dataType, true, constraints...)
+	fields.AddDataField(&pk.view.key.FieldsList, name, dataType, true, constraints...)
+	fields.AddDataField(&pk.FieldsList, name, dataType, true, constraints...)
 }
 
 func (pk *ViewPartKey) addField(name appdef.FieldName, kind appdef.DataKind, constraints ...appdef.IConstraint) {
 	if !kind.IsFixed() {
 		panic(appdef.ErrUnsupported("various length %s-field «%s» with partition key of %v", kind.TrimString(), name, pk.view))
 	}
-	fields.AddField(pk.view.FieldsList, name, kind, true, constraints...)
-	fields.AddField(pk.view.key.FieldsList, name, kind, true, constraints...)
-	fields.AddField(pk.FieldsList, name, kind, true, constraints...)
+	fields.AddField(&pk.view.FieldsList, name, kind, true, constraints...)
+	fields.AddField(&pk.view.key.FieldsList, name, kind, true, constraints...)
+	fields.AddField(&pk.FieldsList, name, kind, true, constraints...)
 }
 
 func (pk *ViewPartKey) addRefField(name appdef.FieldName, ref ...appdef.QName) {
-	fields.AddRefField(pk.view.FieldsList, name, true, ref...)
-	fields.AddRefField(pk.view.key.FieldsList, name, false, ref...)
-	fields.AddRefField(pk.FieldsList, name, false, ref...)
+	fields.AddRefField(&pk.view.FieldsList, name, true, ref...)
+	fields.AddRefField(&pk.view.key.FieldsList, name, false, ref...)
+	fields.AddRefField(&pk.FieldsList, name, false, ref...)
 }
 
 func (pk *ViewPartKey) setFieldComment(name appdef.FieldName, comment ...string) {
-	fields.SetFieldComment(pk.view.FieldsList, name, comment...)
-	fields.SetFieldComment(pk.view.key.FieldsList, name, comment...)
-	fields.SetFieldComment(pk.FieldsList, name, comment...)
+	fields.SetFieldComment(&pk.view.FieldsList, name, comment...)
+	fields.SetFieldComment(&pk.view.key.FieldsList, name, comment...)
+	fields.SetFieldComment(&pk.FieldsList, name, comment...)
 }
 
 // Validates view partition key
@@ -225,23 +225,23 @@ func (cc *ViewClustCols) addDataField(name appdef.FieldName, dataType appdef.QNa
 		panic(appdef.ErrNotFound("%v clustering columns field «%s» data type «%v»", cc.view.QName(), name, dataType))
 	}
 	cc.panicIfVarFieldDuplication(name, d.DataKind())
-	fields.AddDataField(cc.view.FieldsList, name, dataType, false, constraints...)
-	fields.AddDataField(cc.view.key.FieldsList, name, dataType, false, constraints...)
-	fields.AddDataField(cc.FieldsList, name, dataType, false, constraints...)
+	fields.AddDataField(&cc.view.FieldsList, name, dataType, false, constraints...)
+	fields.AddDataField(&cc.view.key.FieldsList, name, dataType, false, constraints...)
+	fields.AddDataField(&cc.FieldsList, name, dataType, false, constraints...)
 }
 
 func (cc *ViewClustCols) addField(name appdef.FieldName, kind appdef.DataKind, constraints ...appdef.IConstraint) {
 	cc.panicIfVarFieldDuplication(name, kind)
-	fields.AddField(cc.view.FieldsList, name, kind, false, constraints...)
-	fields.AddField(cc.view.key.FieldsList, name, kind, false, constraints...)
-	fields.AddField(cc.FieldsList, name, kind, false, constraints...)
+	fields.AddField(&cc.view.FieldsList, name, kind, false, constraints...)
+	fields.AddField(&cc.view.key.FieldsList, name, kind, false, constraints...)
+	fields.AddField(&cc.FieldsList, name, kind, false, constraints...)
 }
 
 func (cc *ViewClustCols) addRefField(name appdef.FieldName, ref ...appdef.QName) {
 	cc.panicIfVarFieldDuplication(name, appdef.DataKind_RecordID)
-	fields.AddRefField(cc.view.FieldsList, name, false, ref...)
-	fields.AddRefField(cc.view.key.FieldsList, name, false, ref...)
-	fields.AddRefField(cc.FieldsList, name, false, ref...)
+	fields.AddRefField(&cc.view.FieldsList, name, false, ref...)
+	fields.AddRefField(&cc.view.key.FieldsList, name, false, ref...)
+	fields.AddRefField(&cc.FieldsList, name, false, ref...)
 }
 
 // Panics if variable length field already exists
@@ -255,9 +255,9 @@ func (cc *ViewClustCols) panicIfVarFieldDuplication(name appdef.FieldName, kind 
 }
 
 func (cc *ViewClustCols) setFieldComment(name appdef.FieldName, comment ...string) {
-	fields.SetFieldComment(cc.view.FieldsList, name, comment...)
-	fields.SetFieldComment(cc.view.key.FieldsList, name, comment...)
-	fields.SetFieldComment(cc.FieldsList, name, comment...)
+	fields.SetFieldComment(&cc.view.FieldsList, name, comment...)
+	fields.SetFieldComment(&cc.view.key.FieldsList, name, comment...)
+	fields.SetFieldComment(&cc.FieldsList, name, comment...)
 }
 
 // Validates view clustering columns
@@ -315,28 +315,28 @@ func NewViewValue(v *View) *ViewValue {
 }
 
 func (v *ViewValue) addDataField(name appdef.FieldName, dataType appdef.QName, required bool, constraints ...appdef.IConstraint) {
-	fields.AddDataField(v.view.FieldsList, name, dataType, required, constraints...)
-	fields.AddDataField(v.FieldsList, name, dataType, required, constraints...)
+	fields.AddDataField(&v.view.FieldsList, name, dataType, required, constraints...)
+	fields.AddDataField(&v.FieldsList, name, dataType, required, constraints...)
 }
 
 func (v *ViewValue) addField(name appdef.FieldName, kind appdef.DataKind, required bool, constraints ...appdef.IConstraint) {
-	fields.AddField(v.view.FieldsList, name, kind, required, constraints...)
-	fields.AddField(v.FieldsList, name, kind, required, constraints...)
+	fields.AddField(&v.view.FieldsList, name, kind, required, constraints...)
+	fields.AddField(&v.FieldsList, name, kind, required, constraints...)
 }
 
 func (v *ViewValue) addRefField(name appdef.FieldName, required bool, ref ...appdef.QName) {
-	fields.AddRefField(v.view.FieldsList, name, required, ref...)
-	fields.AddRefField(v.FieldsList, name, required, ref...)
+	fields.AddRefField(&v.view.FieldsList, name, required, ref...)
+	fields.AddRefField(&v.FieldsList, name, required, ref...)
 }
 
 func (v *ViewValue) setFieldComment(name appdef.FieldName, comment ...string) {
-	fields.SetFieldComment(v.view.FieldsList, name, comment...)
-	fields.SetFieldComment(v.FieldsList, name, comment...)
+	fields.SetFieldComment(&v.view.FieldsList, name, comment...)
+	fields.SetFieldComment(&v.FieldsList, name, comment...)
 }
 
 func (v *ViewValue) setFieldVerify(name appdef.FieldName, vk ...appdef.VerificationKind) {
-	fields.SetFieldVerify(v.view.FieldsList, name, vk...)
-	fields.SetFieldVerify(v.FieldsList, name, vk...)
+	fields.SetFieldVerify(&v.view.FieldsList, name, vk...)
+	fields.SetFieldVerify(&v.FieldsList, name, vk...)
 }
 
 // Validates view value

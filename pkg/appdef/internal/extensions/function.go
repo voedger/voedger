@@ -24,9 +24,9 @@ func MakeFunc(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) Fun
 	return Function{Extension: MakeExtension(ws, name, kind)}
 }
 
-func (f *Function) Param() appdef.IType { return f.par.Target(f.App().Type) }
+func (f Function) Param() appdef.IType { return f.par.Target(f.App().Type) }
 
-func (f *Function) Result() appdef.IType { return f.res.Target(f.App().Type) }
+func (f Function) Result() appdef.IType { return f.res.Target(f.App().Type) }
 
 func (f *Function) setParam(name appdef.QName) { f.par.SetName(name) }
 

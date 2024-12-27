@@ -338,22 +338,22 @@ func (f *NullFields) RefFields() []appdef.IRefField              { return []appd
 func (f *NullFields) UserFieldCount() int                        { return 0 }
 func (f *NullFields) UserFields() []appdef.IField                { return []appdef.IField{} }
 
-func AddDataField(fields FieldsList, name appdef.FieldName, data appdef.QName, required bool, constraints ...appdef.IConstraint) {
+func AddDataField(fields *FieldsList, name appdef.FieldName, data appdef.QName, required bool, constraints ...appdef.IConstraint) {
 	fields.addDataField(name, data, required, constraints...)
 }
 
-func AddField(fields FieldsList, name appdef.FieldName, kind appdef.DataKind, required bool, constraints ...appdef.IConstraint) {
+func AddField(fields *FieldsList, name appdef.FieldName, kind appdef.DataKind, required bool, constraints ...appdef.IConstraint) {
 	fields.addField(name, kind, required, constraints...)
 }
 
-func AddRefField(fields FieldsList, name appdef.FieldName, required bool, ref ...appdef.QName) {
+func AddRefField(fields *FieldsList, name appdef.FieldName, required bool, ref ...appdef.QName) {
 	fields.addRefField(name, required, ref...)
 }
 
-func SetFieldComment(fields FieldsList, name appdef.FieldName, comment ...string) {
+func SetFieldComment(fields *FieldsList, name appdef.FieldName, comment ...string) {
 	fields.setFieldComment(name, comment...)
 }
 
-func SetFieldVerify(fields FieldsList, name appdef.FieldName, vk ...appdef.VerificationKind) {
+func SetFieldVerify(fields *FieldsList, name appdef.FieldName, vk ...appdef.VerificationKind) {
 	fields.setFieldVerify(name, vk...)
 }

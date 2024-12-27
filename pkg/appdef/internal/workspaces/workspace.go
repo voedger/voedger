@@ -267,7 +267,7 @@ func (ws *Workspace) addRole(name appdef.QName) appdef.IRoleBuilder {
 func (ws *Workspace) addTag(name appdef.QName, comment ...string) {
 	t := types.NewTag(ws, name)
 	ws.AppendType(t)
-	comments.SetComment(t.WithComments, comment...)
+	comments.SetComment(&t.WithComments, comment...)
 }
 
 func (ws *Workspace) addView(name appdef.QName) appdef.IViewBuilder {
@@ -276,14 +276,16 @@ func (ws *Workspace) addView(name appdef.QName) appdef.IViewBuilder {
 	return views.NewViewBuilder(v)
 }
 
-func (ws *Workspace) addWDoc(name QName) IWDocBuilder {
-	d := newWDoc(ws.app, ws, name)
-	return newWDocBuilder(d)
+func (ws *Workspace) addWDoc(name appdef.QName) appdef.IWDocBuilder {
+	d := structures.NewWDoc(ws, name)
+	ws.AppendType(d)
+	return structures.NewWDocBuilder(d)
 }
 
-func (ws *Workspace) addWRecord(name QName) IWRecordBuilder {
-	r := newWRecord(ws.app, ws, name)
-	return newWRecordBuilder(r)
+func (ws *Workspace) addWRecord(name appdef.QName) appdef.IWRecordBuilder {
+	r := structures.NewWRecord(ws, name)
+	ws.AppendType(r)
+	return structures.NewWRecordBuilder(r)
 }
 
 func (ws *Workspace) grant(ops []appdef.OperationKind, flt appdef.IFilter, fields []appdef.FieldName, toRole appdef.QName, comment ...string) {
@@ -318,67 +320,69 @@ func (ws *Workspace) revokeAll(flt appdef.IFilter, fromRole appdef.QName, commen
 	acl.NewRevokeAll(ws, flt, r, comment...)
 }
 
-func (ws *Workspace) setAncestors(name QName, names ...QName) {
-	add := func(n QName) {
-		anc := ws.app.Workspace(n)
+func (ws *Workspace) setAncestors(name appdef.QName, names ...appdef.QName) {
+	add := func(n appdef.QName) {
+		anc := ws.App().Workspace(n)
 		if anc == nil {
-			panic(ErrNotFound("Workspace «%v»", n))
+			panic(appdef.ErrNotFound("Workspace «%v»", n))
 		}
 		if anc.Inherits(ws.QName()) {
-			panic(ErrUnsupported("Circular inheritance is not allowed. Workspace «%v» inherits from «%v»", n, ws))
+			panic(appdef.ErrUnsupported("Circular inheritance is not allowed. Workspace «%v» inherits from «%v»", n, ws))
 		}
-		ws.ancestors.add(anc)
+		ws.ancestors.Add(anc)
 	}
 
-	ws.ancestors.clear()
+	ws.ancestors.Clear()
 	add(name)
 	for _, n := range names {
 		add(n)
 	}
 }
 
-func (ws *Workspace) setDescriptor(q QName) {
+func (ws *Workspace) setDescriptor(q appdef.QName) {
 	old := ws.Descriptor()
 	if old == q {
 		return
 	}
 
-	if (old != NullQName) && (ws.app.wsDesc[old] == ws) {
-		delete(ws.app.wsDesc, old)
-	}
-
-	if q == NullQName {
+	switch q {
+	case appdef.NullQName:
 		ws.desc = nil
-		return
-	}
-
-	if ws.desc = CDoc(ws.LocalType, q); ws.desc == nil {
-		panic(ErrNotFound("CDoc «%v»", q))
-	}
-	if ws.desc.Abstract() {
-		ws.withAbstract.setAbstract()
-	}
-
-	ws.app.wsDesc[q] = ws
-}
-
-func (ws *Workspace) setTypeComment(name QName, c ...string) {
-	t := ws.LocalType(name)
-	if t == NullType {
-		panic(ErrNotFound("type %s", name))
-	}
-	if t, ok := t.(interface{ setComment(...string) }); ok {
-		t.setComment(c...)
-	}
-}
-
-func (ws *Workspace) useWorkspace(name QName, names ...QName) {
-	use := func(n QName) {
-		usedWS := ws.app.Workspace(n)
-		if usedWS == nil {
-			panic(ErrNotFound("Workspace «%v»", n))
+	default:
+		d := appdef.CDoc(ws.LocalType, q)
+		if d == nil {
+			panic(appdef.ErrNotFound("CDoc «%v»", q))
 		}
-		ws.usedWS.add(usedWS)
+		ws.desc = d
+		if d.Abstract() {
+			abstracts.SetAbstract(&ws.WithAbstract)
+		}
+	}
+
+	if app, ok := ws.App().(interface {
+		SetWorkspaceDescriptor(appdef.QName, appdef.QName)
+	}); ok {
+		app.SetWorkspaceDescriptor(ws.QName(), q)
+	}
+}
+
+func (ws *Workspace) setTypeComment(name appdef.QName, c ...string) {
+	t := ws.LocalType(name)
+	if t == appdef.NullType {
+		panic(appdef.ErrNotFound("type %s", name))
+	}
+	if t, ok := t.(*types.Typ); ok {
+		comments.SetComment(&t.WithComments, c...)
+	}
+}
+
+func (ws *Workspace) useWorkspace(name appdef.QName, names ...appdef.QName) {
+	use := func(n appdef.QName) {
+		usedWS := ws.App().Workspace(n)
+		if usedWS == nil {
+			panic(appdef.ErrNotFound("Workspace «%v»", n))
+		}
+		ws.usedWS.Add(usedWS)
 	}
 
 	use(name)
@@ -387,8 +391,8 @@ func (ws *Workspace) useWorkspace(name QName, names ...QName) {
 	}
 }
 
-// # Implements:
-//   - IWorkspaceBuilder
+// # Supports:
+//   - appdef.IWorkspaceBuilder
 type WorkspaceBuilder struct {
 	types.TypeBuilder
 	abstracts.WithAbstractBuilder
@@ -408,11 +412,11 @@ func (wb *WorkspaceBuilder) AddCDoc(name appdef.QName) appdef.ICDocBuilder {
 }
 
 func (wb *WorkspaceBuilder) AddCommand(name appdef.QName) appdef.ICommandBuilder {
-	return wb.Workspace.addCommand(name)
+	return wb.ws.addCommand(name)
 }
 
 func (wb *WorkspaceBuilder) AddCRecord(name appdef.QName) appdef.ICRecordBuilder {
-	return wb.Workspace.addCRecord(name)
+	return wb.ws.addCRecord(name)
 }
 
 func (wb *WorkspaceBuilder) AddData(name appdef.QName, kind appdef.DataKind, ancestor appdef.QName, constraints ...appdef.IConstraint) appdef.IDataBuilder {
@@ -420,105 +424,105 @@ func (wb *WorkspaceBuilder) AddData(name appdef.QName, kind appdef.DataKind, anc
 }
 
 func (wb *WorkspaceBuilder) AddGDoc(name appdef.QName) appdef.IGDocBuilder {
-	return wb.Workspace.addGDoc(name)
+	return wb.ws.addGDoc(name)
 }
 
 func (wb *WorkspaceBuilder) AddGRecord(name appdef.QName) appdef.IGRecordBuilder {
-	return wb.Workspace.addGRecord(name)
+	return wb.ws.addGRecord(name)
 }
 
 func (wb *WorkspaceBuilder) AddJob(name appdef.QName) appdef.IJobBuilder {
-	return wb.Workspace.addJob(name)
+	return wb.ws.addJob(name)
 }
 
 func (wb *WorkspaceBuilder) AddLimit(name appdef.QName, ops []appdef.OperationKind, opt appdef.LimitFilterOption, flt appdef.IFilter, rate appdef.QName, comment ...string) {
-	wb.Workspace.addLimit(name, ops, opt, flt, rate, comment...)
+	wb.ws.addLimit(name, ops, opt, flt, rate, comment...)
 }
 
 func (wb *WorkspaceBuilder) AddObject(name appdef.QName) appdef.IObjectBuilder {
-	return wb.Workspace.addObject(name)
+	return wb.ws.addObject(name)
 }
 
 func (wb *WorkspaceBuilder) AddODoc(name appdef.QName) appdef.IODocBuilder {
-	return wb.Workspace.addODoc(name)
+	return wb.ws.addODoc(name)
 }
 
 func (wb *WorkspaceBuilder) AddORecord(name appdef.QName) appdef.IORecordBuilder {
-	return wb.Workspace.addORecord(name)
+	return wb.ws.addORecord(name)
 }
 
 func (wb *WorkspaceBuilder) AddProjector(name appdef.QName) appdef.IProjectorBuilder {
-	return wb.Workspace.addProjector(name)
+	return wb.ws.addProjector(name)
 }
 
 func (wb *WorkspaceBuilder) AddQuery(name appdef.QName) appdef.IQueryBuilder {
-	return wb.Workspace.addQuery(name)
+	return wb.ws.addQuery(name)
 }
 
 func (wb *WorkspaceBuilder) AddRate(name appdef.QName, count appdef.RateCount, period appdef.RatePeriod, scopes []appdef.RateScope, comment ...string) {
-	wb.Workspace.addRate(name, count, period, scopes, comment...)
+	wb.ws.addRate(name, count, period, scopes, comment...)
 }
 
 func (wb *WorkspaceBuilder) AddRole(name appdef.QName) appdef.IRoleBuilder {
-	return wb.Workspace.addRole(name)
+	return wb.ws.addRole(name)
 }
 
 func (wb *WorkspaceBuilder) AddTag(name appdef.QName, comments ...string) {
-	wb.Workspace.addTag(name, comments...)
+	wb.ws.addTag(name, comments...)
 }
 
 func (wb *WorkspaceBuilder) AddView(name appdef.QName) appdef.IViewBuilder {
-	return wb.Workspace.addView(name)
+	return wb.ws.addView(name)
 }
 
-func (wb *WorkspaceBuilder) AddWDoc(name QName) IWDocBuilder {
-	return wb.Workspace.addWDoc(name)
+func (wb *WorkspaceBuilder) AddWDoc(name appdef.QName) appdef.IWDocBuilder {
+	return wb.ws.addWDoc(name)
 }
 
-func (wb *WorkspaceBuilder) AddWRecord(name QName) IWRecordBuilder {
-	return wb.Workspace.addWRecord(name)
+func (wb *WorkspaceBuilder) AddWRecord(name appdef.QName) appdef.IWRecordBuilder {
+	return wb.ws.addWRecord(name)
 }
 
 func (wb *WorkspaceBuilder) Grant(ops []appdef.OperationKind, flt appdef.IFilter, fields []appdef.FieldName, toRole appdef.QName, comment ...string) appdef.IACLBuilder {
-	wb.Workspace.grant(ops, flt, fields, toRole, comment...)
+	wb.ws.grant(ops, flt, fields, toRole, comment...)
 	return wb
 }
 
 func (wb *WorkspaceBuilder) GrantAll(flt appdef.IFilter, toRole appdef.QName, comment ...string) appdef.IACLBuilder {
-	wb.Workspace.grantAll(flt, toRole, comment...)
+	wb.ws.grantAll(flt, toRole, comment...)
 	return wb
 }
 
 func (wb *WorkspaceBuilder) Revoke(ops []appdef.OperationKind, flt appdef.IFilter, fields []appdef.FieldName, fromRole appdef.QName, comment ...string) appdef.IACLBuilder {
-	wb.Workspace.revoke(ops, flt, fields, fromRole, comment...)
+	wb.ws.revoke(ops, flt, fields, fromRole, comment...)
 	return wb
 }
 
 func (wb *WorkspaceBuilder) RevokeAll(flt appdef.IFilter, fromRole appdef.QName, comment ...string) appdef.IACLBuilder {
-	wb.Workspace.revokeAll(flt, fromRole, comment...)
+	wb.ws.revokeAll(flt, fromRole, comment...)
 	return wb
 }
 
-func (wb *WorkspaceBuilder) SetAncestors(name QName, names ...QName) IWorkspaceBuilder {
-	wb.Workspace.setAncestors(name, names...)
+func (wb *WorkspaceBuilder) SetAncestors(name appdef.QName, names ...appdef.QName) appdef.IWorkspaceBuilder {
+	wb.ws.setAncestors(name, names...)
 	return wb
 }
 
-func (wb *WorkspaceBuilder) SetDescriptor(q QName) IWorkspaceBuilder {
-	wb.Workspace.setDescriptor(q)
+func (wb *WorkspaceBuilder) SetDescriptor(q appdef.QName) appdef.IWorkspaceBuilder {
+	wb.ws.setDescriptor(q)
 	return wb
 }
 
-func (wb *WorkspaceBuilder) SetTypeComment(n QName, c ...string) {
-	wb.Workspace.setTypeComment(n, c...)
+func (wb *WorkspaceBuilder) SetTypeComment(n appdef.QName, c ...string) {
+	wb.ws.setTypeComment(n, c...)
 }
 
-func (wb *WorkspaceBuilder) UseWorkspace(name QName, names ...QName) IWorkspaceBuilder {
-	wb.Workspace.useWorkspace(name, names...)
+func (wb *WorkspaceBuilder) UseWorkspace(name appdef.QName, names ...appdef.QName) appdef.IWorkspaceBuilder {
+	wb.ws.useWorkspace(name, names...)
 	return wb
 }
 
-func (wb *WorkspaceBuilder) Workspace() IWorkspace { return wb.workspace }
+func (wb *WorkspaceBuilder) Workspace() appdef.IWorkspace { return wb.ws }
 
 // List of Workspaces.
 type Workspaces = types.Types[appdef.IWorkspace]

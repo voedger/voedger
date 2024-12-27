@@ -24,7 +24,7 @@ func NewCommand(ws appdef.IWorkspace, name appdef.QName) *Command {
 	return &Command{Function: MakeFunc(ws, name, appdef.TypeKind_Command)}
 }
 
-func (cmd *Command) UnloggedParam() appdef.IType {
+func (cmd Command) UnloggedParam() appdef.IType {
 	return cmd.unl.Target(cmd.App().Type)
 }
 

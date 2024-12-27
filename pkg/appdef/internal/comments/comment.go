@@ -58,6 +58,6 @@ type NullComment struct{}
 func (c *NullComment) Comment() string                { return "" }
 func (c *NullComment) CommentLines() iter.Seq[string] { return func(func(string) bool) {} }
 
-func SetComment(c WithComments, v ...string) {
+func SetComment(c *WithComments, v ...string) {
 	c.setComment(v...)
 }

@@ -123,7 +123,7 @@ func (ev *ProjectorEvents) Add(ops []appdef.OperationKind, flt appdef.IFilter, c
 		ops: set.From(ops...),
 		flt: flt,
 	}
-	comments.SetComment(e.WithComments, comment...)
+	comments.SetComment(&e.WithComments, comment...)
 	ev.events = append(ev.events, e)
 	return ev
 }

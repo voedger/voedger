@@ -30,3 +30,5 @@ func MakeWithAbstractBuilder(a *WithAbstract) WithAbstractBuilder {
 }
 
 func (ab *WithAbstractBuilder) SetAbstract() { ab.setAbstract() }
+
+func SetAbstract(a *WithAbstract) { a.setAbstract() }

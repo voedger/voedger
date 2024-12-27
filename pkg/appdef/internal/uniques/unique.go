@@ -146,7 +146,7 @@ func (uu *Uniques) addUnique(name appdef.QName, fields []appdef.FieldName, comme
 
 	un := NewUnique(name, fields, uu.fields)
 
-	comments.SetComment(un.WithComments, comment...)
+	comments.SetComment(&un.WithComments, comment...)
 
 	uu.uniques[name] = un
 }

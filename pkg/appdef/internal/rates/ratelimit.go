@@ -36,7 +36,7 @@ func NewRate(ws appdef.IWorkspace, name appdef.QName, count appdef.RateCount, pe
 	if r.scopes.Len() == 0 {
 		r.scopes.Set(appdef.DefaultRateScopes...)
 	}
-	comments.SetComment(r.Typ.WithComments, comment...)
+	comments.SetComment(&r.Typ.WithComments, comment...)
 	return r
 }
 
@@ -114,7 +114,7 @@ func NewLimit(ws appdef.IWorkspace, name appdef.QName, ops []appdef.OperationKin
 			panic(err)
 		}
 	}
-	comments.SetComment(l.Typ.WithComments, comment...)
+	comments.SetComment(&l.Typ.WithComments, comment...)
 	return l
 }
 

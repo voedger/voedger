@@ -108,7 +108,7 @@ func (ss *Storages) add(name appdef.QName, names ...appdef.QName) {
 
 func (ss *Storages) setComment(name appdef.QName, comment string) {
 	if s, ok := ss.storages[name]; ok {
-		comments.SetComment(s.WithComments, comment)
+		comments.SetComment(&s.WithComments, comment)
 		return
 	}
 	panic(appdef.ErrNotFound("storage «%v»", name))
