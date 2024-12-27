@@ -44,9 +44,6 @@ type IRecordBuilder interface {
 // Document can contains records.
 type IDoc interface {
 	IRecord
-
-	// Unwanted type assertion stub
-	isDoc()
 }
 
 type IDocBuilder interface {

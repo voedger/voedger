@@ -10,11 +10,11 @@ import "github.com/voedger/voedger/pkg/appdef"
 // # Supports:
 //   - appdef.IWDoc
 type WDoc struct {
-	Singleton
+	SingletonDoc
 }
 
 func NewWDoc(ws appdef.IWorkspace, name appdef.QName) *WDoc {
-	return &WDoc{Singleton: MakeSingleton(ws, name, appdef.TypeKind_WDoc)}
+	return &WDoc{SingletonDoc: MakeSingleton(ws, name, appdef.TypeKind_WDoc)}
 }
 
 // # Supports:
@@ -26,7 +26,7 @@ type WDocBuilder struct {
 
 func NewWDocBuilder(d *WDoc) *WDocBuilder {
 	return &WDocBuilder{
-		SingletonBuilder: MakeSingletonBuilder(&d.Singleton),
+		SingletonBuilder: MakeSingletonBuilder(&d.SingletonDoc),
 		WDoc:             d,
 	}
 }

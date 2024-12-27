@@ -9,34 +9,34 @@ import "github.com/voedger/voedger/pkg/appdef"
 
 // # Supports:
 //   - appdef.ISingleton
-type Singleton struct {
+type SingletonDoc struct {
 	Doc
 	singleton bool
 }
 
 // Makes new singleton
-func MakeSingleton(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) Singleton {
-	return Singleton{Doc: MakeDoc(ws, name, kind)}
+func MakeSingleton(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) SingletonDoc {
+	return SingletonDoc{Doc: MakeDoc(ws, name, kind)}
 }
 
-func (s Singleton) Singleton() bool { return s.singleton }
+func (s SingletonDoc) Singleton() bool { return s.singleton }
 
-func (s *Singleton) setSingleton() { s.singleton = true }
+func (s *SingletonDoc) setSingleton() { s.singleton = true }
 
 // # Supports:
 //   - appdef.ISingletonBuilder
 type SingletonBuilder struct {
 	DocBuilder
-	*Singleton
+	*SingletonDoc
 }
 
-func MakeSingletonBuilder(singleton *Singleton) SingletonBuilder {
+func MakeSingletonBuilder(singleton *SingletonDoc) SingletonBuilder {
 	return SingletonBuilder{
-		DocBuilder: MakeDocBuilder(&singleton.Doc),
-		Singleton:  singleton,
+		DocBuilder:   MakeDocBuilder(&singleton.Doc),
+		SingletonDoc: singleton,
 	}
 }
 
 func (sb *SingletonBuilder) SetSingleton() {
-	sb.Singleton.setSingleton()
+	sb.SingletonDoc.setSingleton()
 }

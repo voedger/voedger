@@ -10,12 +10,12 @@ import "github.com/voedger/voedger/pkg/appdef"
 // # Supports:
 //   - appdef.ICDoc
 type CDoc struct {
-	Singleton
+	SingletonDoc
 }
 
 // Creates a new CDoc
 func NewCDoc(ws appdef.IWorkspace, name appdef.QName) *CDoc {
-	return &CDoc{Singleton: MakeSingleton(ws, name, appdef.TypeKind_CDoc)}
+	return &CDoc{SingletonDoc: MakeSingleton(ws, name, appdef.TypeKind_CDoc)}
 }
 
 // # Supports:
@@ -27,13 +27,13 @@ type CDocBuilder struct {
 
 func NewCDocBuilder(cDoc *CDoc) *CDocBuilder {
 	return &CDocBuilder{
-		SingletonBuilder: MakeSingletonBuilder(&cDoc.Singleton),
+		SingletonBuilder: MakeSingletonBuilder(&cDoc.SingletonDoc),
 		CDoc:             cDoc,
 	}
 }
 
 // # Supports:
-//   - ICRecord
+//   - appdef.ICRecord
 type CRecord struct {
 	ContainedRecord
 }

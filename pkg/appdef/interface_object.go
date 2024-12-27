@@ -8,9 +8,6 @@ package appdef
 // Object type.
 type IObject interface {
 	IStructure
-
-	// Unwanted type assertion stub
-	isObject()
 }
 
 type IObjectBuilder interface {

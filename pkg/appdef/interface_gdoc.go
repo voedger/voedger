@@ -8,9 +8,6 @@ package appdef
 // Global document.
 type IGDoc interface {
 	IDoc
-
-	// unwanted type assertion stub
-	isGDoc()
 }
 
 type IGDocBuilder interface {
@@ -20,9 +17,6 @@ type IGDocBuilder interface {
 // Global document record.
 type IGRecord interface {
 	IContainedRecord
-
-	// unwanted type assertion stub
-	isGRecord()
 }
 
 type IGRecordBuilder interface {

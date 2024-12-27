@@ -58,15 +58,15 @@ func (cont Container) String() string {
 
 // # Supports:
 //   - appdef.IContainers
-type Containers struct {
+type ContainersList struct {
 	ws                appdef.IWorkspace
 	typeKind          appdef.TypeKind
 	containers        map[string]*Container
 	containersOrdered []appdef.IContainer
 }
 
-func MakeContainers(ws appdef.IWorkspace, typeKind appdef.TypeKind) Containers {
-	cc := Containers{
+func MakeContainers(ws appdef.IWorkspace, typeKind appdef.TypeKind) ContainersList {
+	cc := ContainersList{
 		ws:                ws,
 		typeKind:          typeKind,
 		containers:        make(map[string]*Container),
@@ -74,20 +74,20 @@ func MakeContainers(ws appdef.IWorkspace, typeKind appdef.TypeKind) Containers {
 	return cc
 }
 
-func (cc Containers) Container(name string) appdef.IContainer {
+func (cc ContainersList) Container(name string) appdef.IContainer {
 	if c, ok := cc.containers[name]; ok {
 		return c
 	}
 	return nil
 }
 
-func (cc Containers) ContainerCount() int { return len(cc.containersOrdered) }
+func (cc ContainersList) ContainerCount() int { return len(cc.containersOrdered) }
 
-func (cc Containers) Containers() iter.Seq[appdef.IContainer] {
+func (cc ContainersList) Containers() iter.Seq[appdef.IContainer] {
 	return slices.Values(cc.containersOrdered)
 }
 
-func (cc *Containers) addContainer(name string, contType appdef.QName, minOccurs, maxOccurs appdef.Occurs, comment ...string) {
+func (cc *ContainersList) addContainer(name string, contType appdef.QName, minOccurs, maxOccurs appdef.Occurs, comment ...string) {
 	if name == appdef.NullName {
 		panic(appdef.ErrMissed("container name"))
 	}
@@ -152,11 +152,11 @@ func ValidateTypeContainers(t appdef.IType) (err error) {
 // # Supports:
 //   - appdef.IContainersBuilder
 type ContainersBuilder struct {
-	*Containers
+	*ContainersList
 }
 
-func MakeContainersBuilder(containers *Containers) ContainersBuilder {
-	return ContainersBuilder{Containers: containers}
+func MakeContainersBuilder(containers *ContainersList) ContainersBuilder {
+	return ContainersBuilder{ContainersList: containers}
 }
 
 func (cb *ContainersBuilder) AddContainer(name string, typeName appdef.QName, minimum, maximum appdef.Occurs, comment ...string) appdef.IContainersBuilder {

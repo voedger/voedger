@@ -8,9 +8,6 @@ package appdef
 // Configuration document.
 type ICDoc interface {
 	ISingleton
-
-	// Unwanted type assertion stub
-	isCDoc()
 }
 
 type ICDocBuilder interface {
@@ -20,9 +17,6 @@ type ICDocBuilder interface {
 // Configuration document record.
 type ICRecord interface {
 	IContainedRecord
-
-	// Unwanted type assertion stub
-	isCRecord()
 }
 
 type ICRecordBuilder interface {

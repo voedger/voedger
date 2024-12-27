@@ -10,9 +10,6 @@ import "iter"
 // Tag is a type that groups other types.
 type ITag interface {
 	IType
-
-	// Unwanted type assertion stub
-	isTag()
 }
 
 // IWithTags is an interface for types that have tags.

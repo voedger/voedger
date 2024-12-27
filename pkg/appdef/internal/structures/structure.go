@@ -19,21 +19,21 @@ import (
 type Structure struct {
 	types.Typ
 	fields.FieldsList
-	containers.Containers
-	uniques.Uniques
+	containers.ContainersList
+	uniques.UniquesList
 	abstracts.WithAbstract
 }
 
 // Makes new structure
 func MakeStructure(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) Structure {
 	s := Structure{
-		Typ:          types.MakeType(ws.App(), ws, name, kind),
-		FieldsList:   fields.MakeFields(ws, kind),
-		Containers:   containers.MakeContainers(ws, kind),
-		WithAbstract: abstracts.MakeWithAbstract(),
+		Typ:            types.MakeType(ws.App(), ws, name, kind),
+		FieldsList:     fields.MakeFields(ws, kind),
+		ContainersList: containers.MakeContainers(ws, kind),
+		WithAbstract:   abstracts.MakeWithAbstract(),
 	}
 	s.FieldsList.MakeSysFields()
-	s.Uniques = uniques.MakeUniques(ws.App().Type, &s.FieldsList)
+	s.UniquesList = uniques.MakeUniques(ws.App().Type, &s.FieldsList)
 	return s
 }
 
@@ -56,8 +56,8 @@ func MakeStructureBuilder(structure *Structure) StructureBuilder {
 	return StructureBuilder{
 		TypeBuilder:         types.MakeTypeBuilder(&structure.Typ),
 		FieldsBuilder:       fields.MakeFieldsBuilder(&structure.FieldsList),
-		ContainersBuilder:   containers.MakeContainersBuilder(&structure.Containers),
-		UniquesBuilder:      uniques.MakeUniquesBuilder(&structure.Uniques),
+		ContainersBuilder:   containers.MakeContainersBuilder(&structure.ContainersList),
+		UniquesBuilder:      uniques.MakeUniquesBuilder(&structure.UniquesList),
 		WithAbstractBuilder: abstracts.MakeWithAbstractBuilder(&structure.WithAbstract),
 		Structure:           structure,
 	}
