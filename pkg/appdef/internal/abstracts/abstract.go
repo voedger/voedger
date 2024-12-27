@@ -22,13 +22,13 @@ func (a *WithAbstract) setAbstract() { a.abstract = true }
 // # Supports:
 //  - IWithAbstractBuilder
 type WithAbstractBuilder struct {
-	*WithAbstract
+	a *WithAbstract
 }
 
 func MakeWithAbstractBuilder(a *WithAbstract) WithAbstractBuilder {
 	return WithAbstractBuilder{a}
 }
 
-func (ab *WithAbstractBuilder) SetAbstract() { ab.setAbstract() }
+func (ab *WithAbstractBuilder) SetAbstract() { ab.a.setAbstract() }
 
 func SetAbstract(a *WithAbstract) { a.setAbstract() }

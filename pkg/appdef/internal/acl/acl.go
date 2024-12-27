@@ -33,7 +33,7 @@ func (f filter) HasFields() bool { return len(f.fields) > 0 }
 
 func (f filter) String() string {
 	if f.HasFields() {
-		return fmt.Sprintf("%v(%v)", f.IFilter, f.fields)
+		return fmt.Sprintf("%v%v", f.IFilter, f.fields)
 	}
 	return fmt.Sprint(f.IFilter)
 }
@@ -86,8 +86,8 @@ func NewRule(ws appdef.IWorkspace, ops []appdef.OperationKind, policy appdef.Pol
 		}
 	}
 
-	if role, ok := principal.(interface{ appendACL(appdef.IACLRule) }); ok {
-		role.appendACL(acl) // propagate ACL to role, workspace and app
+	if role, ok := principal.(interface{ AppendACL(appdef.IACLRule) }); ok {
+		role.AppendACL(acl) // propagate ACL to role, workspace and app
 	}
 
 	return acl
