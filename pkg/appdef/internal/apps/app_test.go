@@ -15,38 +15,49 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
+	"github.com/voedger/voedger/pkg/appdef/internal/apps"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
-func TestNew(t *testing.T) {
+func Test_NewAppDef(t *testing.T) {
 	require := require.New(t)
 
-	adb := builder.New()
-	require.NotNil(adb)
-
-	require.NotNil(adb.AppDef(), "should be ok get AppDef before build")
-
-	app, err := adb.Build()
-	require.NoError(err)
+	app := apps.NewAppDef()
 	require.NotNil(app)
+	var _ appdef.IAppDef = app // check interface compatibility
 
-	require.Equal(adb.AppDef(), app, "should be ok get AppDef after build")
+	adb := apps.NewAppDefBuilder(app)
+	require.NotNil(adb)
+	var _ appdef.IAppDefBuilder = adb // check interface compatibility
 
-	t.Run("should be ok to read sys package", func(t *testing.T) {
-		require.Equal([]string{appdef.SysPackage}, slices.Collect(app.PackageLocalNames()))
-		require.Equal(appdef.SysPackagePath, app.PackageFullPath(appdef.SysPackage))
-		require.Equal(appdef.SysPackage, app.PackageLocalName(appdef.SysPackagePath))
+	require.Equal(app, adb.AppDef(), "should be ok to obtain AppDef(*) before build")
+
+	t.Run("Should be ok to obtain empty app", func(t *testing.T) {
+		app, err := adb.Build()
+		require.NoError(err)
+		require.NotNil(app)
+
+		t.Run("should be ok to read sys package", func(t *testing.T) {
+			require.Equal([]string{appdef.SysPackage}, slices.Collect(app.PackageLocalNames()))
+			require.Equal(appdef.SysPackagePath, app.PackageFullPath(appdef.SysPackage))
+			require.Equal(appdef.SysPackage, app.PackageLocalName(appdef.SysPackagePath))
+		})
+
+		t.Run("should be ok to read sys types", func(t *testing.T) {
+			require.Equal(appdef.NullType, app.Type(appdef.NullQName))
+			require.Equal(appdef.AnyType, app.Type(appdef.QNameANY))
+		})
+
+		t.Run("should be ok to read sys data types", func(t *testing.T) {
+			require.Equal(appdef.SysData_RecordID, appdef.Data(app.Type, appdef.SysData_RecordID).QName())
+			require.Equal(appdef.SysData_String, appdef.Data(app.Type, appdef.SysData_String).QName())
+			require.Equal(appdef.SysData_bytes, appdef.Data(app.Type, appdef.SysData_bytes).QName())
+		})
 	})
 
-	t.Run("should be ok to read sys types", func(t *testing.T) {
-		require.Equal(appdef.NullType, app.Type(appdef.NullQName))
-		require.Equal(appdef.AnyType, app.Type(appdef.QNameANY))
-	})
-
-	t.Run("should be ok to read sys data types", func(t *testing.T) {
-		require.Equal(appdef.SysData_RecordID, appdef.Data(app.Type, appdef.SysData_RecordID).QName())
-		require.Equal(appdef.SysData_String, appdef.Data(app.Type, appdef.SysData_String).QName())
-		require.Equal(appdef.SysData_bytes, appdef.Data(app.Type, appdef.SysData_bytes).QName())
+	t.Run("Should be ok to alter workspace after build", func(t *testing.T) {
+		wsb := adb.AlterWorkspace(appdef.SysWorkspaceQName)
+		require.NotNil(wsb)
 	})
 }
 
