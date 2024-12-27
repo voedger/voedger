@@ -188,7 +188,8 @@ func (r *implIResponder) InitResponse(rm ResponseMeta) IResponseSenderCloseable 
 	select {
 	case r.responseMetaCh <- rm:
 	default:
-		panic(ErrNoConsumer)
+		// do nothing if no consumer already.
+		// will get ErrNoConsumer on the next Send()
 	}
 	return r.respSender
 }

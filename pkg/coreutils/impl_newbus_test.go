@@ -74,6 +74,8 @@ func TestErrors(t *testing.T) {
 	require := require.New(t)
 	t.Run("response timeout", func(t *testing.T) {
 		requestSender := NewIRequestSender(MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
+			// wait to start response awaiting in request sender
+			time.Sleep(100*time.Millisecond)
 			// force response timeout
 			MockTime.Add(time.Duration(DefaultSendTimeout))
 			sender := responder.InitResponse(ResponseMeta{ContentType: ApplicationJSON, StatusCode: http.StatusOK})
