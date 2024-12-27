@@ -8,7 +8,6 @@ package apps
 import (
 	"errors"
 	"iter"
-	"maps"
 	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -26,21 +25,19 @@ import (
 type AppDef struct {
 	comments.WithComments
 	packages.WithPackages
-	sysWS      *workspaces.Workspace
-	acl        []appdef.IACLRule
-	types      *types.Types[appdef.IType]
-	workspaces *workspaces.Workspaces
-	wsDesc     map[appdef.QName]appdef.IWorkspace
+	workspaces.WithWorkspaces
+	sysWS *workspaces.Workspace
+	acl   []appdef.IACLRule
+	types *types.Types[appdef.IType]
 }
 
 func NewAppDef() *AppDef {
 	app := AppDef{
-		WithComments: comments.MakeWithComments(),
-		WithPackages: packages.MakeWithPackages(),
-		acl:          make([]appdef.IACLRule, 0),
-		types:        types.NewTypes[appdef.IType](),
-		workspaces:   workspaces.NewWorkspaces(),
-		wsDesc:       make(map[appdef.QName]appdef.IWorkspace),
+		WithComments:   comments.MakeWithComments(),
+		WithPackages:   packages.MakeWithPackages(),
+		WithWorkspaces: workspaces.MakeWithWorkspaces(),
+		acl:            make([]appdef.IACLRule, 0),
+		types:          types.NewTypes[appdef.IType](),
 	}
 	app.makeSysPackage()
 	return &app
@@ -57,18 +54,7 @@ func (app *AppDef) AppendType(t appdef.IType) {
 	if name == appdef.NullQName {
 		panic(appdef.ErrMissed("%s type name", t.Kind().TrimString()))
 	}
-	if app.Type(name).Kind() != appdef.TypeKind_null {
-		panic(appdef.ErrAlreadyExists("type «%v»", name))
-	}
-
 	app.types.Add(t)
-}
-
-func (app *AppDef) SetWorkspaceDescriptor(ws, desc appdef.QName) {
-	maps.DeleteFunc(app.wsDesc, func(_ appdef.QName, w appdef.IWorkspace) bool {
-		return w.QName() == ws // remove old descriptor
-	})
-	app.wsDesc[desc] = app.Workspace(ws)
 }
 
 func (app AppDef) Type(name appdef.QName) appdef.IType {
@@ -82,34 +68,6 @@ func (app AppDef) Type(name appdef.QName) appdef.IType {
 }
 
 func (app AppDef) Types() iter.Seq[appdef.IType] { return app.types.Values() }
-
-func (app *AppDef) Workspace(name appdef.QName) appdef.IWorkspace {
-	w := app.workspaces.Find(name)
-	if w != appdef.NullType {
-		return w.(appdef.IWorkspace)
-	}
-	return nil
-}
-
-func (app AppDef) Workspaces() iter.Seq[appdef.IWorkspace] { return app.workspaces.Values() }
-
-func (app AppDef) WorkspaceByDescriptor(name appdef.QName) appdef.IWorkspace {
-	return app.wsDesc[name]
-}
-
-func (app *AppDef) addWorkspace(name appdef.QName) appdef.IWorkspaceBuilder {
-	ws := workspaces.NewWorkspace(app, name)
-	app.workspaces.Add(ws)
-	return workspaces.NewWorkspaceBuilder(ws)
-}
-
-func (app *AppDef) alterWorkspace(name appdef.QName) appdef.IWorkspaceBuilder {
-	ws := app.Workspace(name)
-	if ws == nil {
-		panic(appdef.ErrNotFound("workspace «%v»", name))
-	}
-	return workspaces.NewWorkspaceBuilder(ws.(*workspaces.Workspace))
-}
 
 func (app *AppDef) build() (err error) {
 	for t := range app.Types() {
@@ -128,11 +86,10 @@ func (app *AppDef) makeSysPackage() {
 
 // Makes system workspace.
 func (app *AppDef) makeSysWorkspace() {
-	app.sysWS = workspaces.NewWorkspace(app, appdef.SysWorkspaceQName)
-	app.workspaces.Add(app.sysWS)
+	app.sysWS = workspaces.AddWorkspace(app, &app.WithWorkspaces, appdef.SysWorkspaceQName)
+	app.AppendType(app.sysWS)
 
 	app.makeSysDataTypes()
-
 	app.makeSysStructures()
 }
 
@@ -146,6 +103,7 @@ func (app *AppDef) makeSysDataTypes() {
 
 func (app *AppDef) makeSysStructures() {
 	wsb := workspaces.NewWorkspaceBuilder(app.sysWS)
+
 	// TODO: move this code to sys.vsql (for projectors)
 	viewProjectionOffsets := wsb.AddView(appdef.NewQName(appdef.SysPackage, "projectionOffsets"))
 	viewProjectionOffsets.Key().PartKey().AddField("partition", appdef.DataKind_int32)
@@ -191,23 +149,17 @@ func (app *AppDef) validateType(t appdef.IType) (err error) {
 type AppDefBuilder struct {
 	comments.CommentBuilder
 	packages.PackagesBuilder
+	workspaces.WorkspacesBuilder
 	app *AppDef
 }
 
 func NewAppDefBuilder(app *AppDef) *AppDefBuilder {
 	return &AppDefBuilder{
-		CommentBuilder:  comments.MakeCommentBuilder(&app.WithComments),
-		PackagesBuilder: packages.MakePackagesBuilder(&app.WithPackages),
-		app:             app,
+		CommentBuilder:    comments.MakeCommentBuilder(&app.WithComments),
+		PackagesBuilder:   packages.MakePackagesBuilder(&app.WithPackages),
+		WorkspacesBuilder: workspaces.MakeWorkspacesBuilder(app, &app.WithWorkspaces),
+		app:               app,
 	}
-}
-
-func (ab *AppDefBuilder) AddWorkspace(name appdef.QName) appdef.IWorkspaceBuilder {
-	return ab.app.addWorkspace(name)
-}
-
-func (ab *AppDefBuilder) AlterWorkspace(name appdef.QName) appdef.IWorkspaceBuilder {
-	return ab.app.alterWorkspace(name)
 }
 
 func (ab AppDefBuilder) AppDef() appdef.IAppDef { return ab.app }

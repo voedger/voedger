@@ -34,6 +34,9 @@ func MakeType(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName, kind 
 		if ok, err := appdef.ValidQName(name); !ok {
 			panic(fmt.Errorf("invalid type name «%v»: %w", name, err))
 		}
+		if app.Type(name).Kind() != appdef.TypeKind_null {
+			panic(appdef.ErrAlreadyExists("type «%v»", name))
+		}
 	}
 	find := app.Type
 	if ws != nil {
