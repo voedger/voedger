@@ -24,6 +24,7 @@ type PrincipalPayload struct {
 }
 
 type RoleType struct {
+	// for role is OwnerProfileWSID, not the WSID itself
 	WSID istructs.WSID
 	// E.g. air.LinkedDevice
 	QName appdef.QName
