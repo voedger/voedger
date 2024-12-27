@@ -25,7 +25,7 @@ import (
 //   - appdef.IAppDef
 type AppDef struct {
 	comments.WithComments
-	packages   *packages.Packages
+	packages.WithPackages
 	sysWS      *workspaces.Workspace
 	acl        []appdef.IACLRule
 	types      *types.Types[appdef.IType]
@@ -36,7 +36,7 @@ type AppDef struct {
 func NewAppDef() *AppDef {
 	app := AppDef{
 		WithComments: comments.MakeWithComments(),
-		packages:     packages.NewPackages(),
+		WithPackages: packages.MakeWithPackages(),
 		acl:          make([]appdef.IACLRule, 0),
 		types:        types.NewTypes[appdef.IType](),
 		workspaces:   workspaces.NewWorkspaces(),
@@ -63,26 +63,6 @@ func (app *AppDef) AppendType(t appdef.IType) {
 
 	app.types.Add(t)
 }
-
-func (app AppDef) FullQName(name appdef.QName) appdef.FullQName { return app.packages.FullQName(name) }
-
-func (app AppDef) LocalQName(name appdef.FullQName) appdef.QName {
-	return app.packages.LocalQName(name)
-}
-
-func (app AppDef) PackageLocalName(path string) string {
-	return app.packages.LocalNameByPath(path)
-}
-
-func (app AppDef) PackageFullPath(local string) string {
-	return app.packages.PathByLocalName(local)
-}
-
-func (app AppDef) PackageLocalNames() iter.Seq[string] {
-	return app.packages.PackageLocalNames()
-}
-
-func (app AppDef) Packages() iter.Seq2[string, string] { return app.packages.Packages() }
 
 func (app *AppDef) SetWorkspaceDescriptor(ws, desc appdef.QName) {
 	maps.DeleteFunc(app.wsDesc, func(_ appdef.QName, w appdef.IWorkspace) bool {
@@ -117,10 +97,6 @@ func (app AppDef) WorkspaceByDescriptor(name appdef.QName) appdef.IWorkspace {
 	return app.wsDesc[name]
 }
 
-func (app *AppDef) addPackage(localName, path string) {
-	app.packages.Add(localName, path)
-}
-
 func (app *AppDef) addWorkspace(name appdef.QName) appdef.IWorkspaceBuilder {
 	ws := workspaces.NewWorkspace(app, name)
 	app.workspaces.Add(ws)
@@ -146,7 +122,7 @@ func (app *AppDef) build() (err error) {
 //
 // Should be called after appDef is created.
 func (app *AppDef) makeSysPackage() {
-	app.packages.Add(appdef.SysPackage, appdef.SysPackagePath)
+	packages.AddPackage(&app.WithPackages, appdef.SysPackage, appdef.SysPackagePath)
 	app.makeSysWorkspace()
 }
 
@@ -214,19 +190,16 @@ func (app *AppDef) validateType(t appdef.IType) (err error) {
 //   - appdef.IAppDefBuilder
 type AppDefBuilder struct {
 	comments.CommentBuilder
+	packages.PackagesBuilder
 	app *AppDef
 }
 
 func NewAppDefBuilder(app *AppDef) *AppDefBuilder {
 	return &AppDefBuilder{
-		CommentBuilder: comments.MakeCommentBuilder(&app.WithComments),
-		app:            app,
+		CommentBuilder:  comments.MakeCommentBuilder(&app.WithComments),
+		PackagesBuilder: packages.MakePackagesBuilder(&app.WithPackages),
+		app:             app,
 	}
-}
-
-func (ab *AppDefBuilder) AddPackage(localName, path string) appdef.IAppDefBuilder {
-	ab.app.addPackage(localName, path)
-	return ab
 }
 
 func (ab *AppDefBuilder) AddWorkspace(name appdef.QName) appdef.IWorkspaceBuilder {

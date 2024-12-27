@@ -48,37 +48,6 @@ func TestNew(t *testing.T) {
 	})
 }
 
-func Test_NullAppDef(t *testing.T) {
-	require := require.New(t)
-
-	app := appdef.NullAppDef
-	require.NotNil(app)
-	require.Equal(appdef.NullType, app.Type(appdef.NullQName))
-
-	t.Run("should be ok to get system data types", func(t *testing.T) {
-		for k := appdef.DataKind_null + 1; k < appdef.DataKind_FakeLast; k++ {
-			d := appdef.SysData(app.Type, k)
-			require.NotNil(d)
-			require.True(d.IsSystem())
-			require.Equal(appdef.SysDataName(k), d.QName())
-			require.Equal(k, d.DataKind())
-		}
-	})
-
-	t.Run("should be return sys package only", func(t *testing.T) {
-		require.Equal([]string{appdef.SysPackage}, slices.Collect(app.PackageLocalNames()))
-		require.Equal(appdef.SysPackagePath, app.PackageFullPath(appdef.SysPackage))
-	})
-
-	t.Run("should be null return other members", func(t *testing.T) {
-		for typ := range app.Types() {
-			if !typ.IsSystem() {
-				t.Errorf("unexpected user type %v", typ)
-			}
-		}
-	})
-}
-
 func testBreakable[T any](t *testing.T, name string, seq ...iter.Seq[T]) {
 	for i, s := range seq {
 		t.Run(fmt.Sprintf("%s[%d]", name, i), func(t *testing.T) {

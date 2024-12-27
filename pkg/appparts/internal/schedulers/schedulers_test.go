@@ -142,8 +142,8 @@ func TestSchedulersDeploy(t *testing.T) {
 
 	app := func() appdef.IAppDef {
 		adb := appdef.New()
-		adb.AddPackage("test", "test.com/test").
-			AddWorkspace(appdef.NewQName("test", "workspace")).
+		adb.AddPackage("test", "test.com/test")
+		adb.AddWorkspace(appdef.NewQName("test", "workspace")).
 			AddJob(jobName).SetCronSchedule("@every 5s")
 		return adb.MustBuild()
 	}()

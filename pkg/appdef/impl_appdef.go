@@ -202,7 +202,7 @@ func newAppDefBuilder(app *appDef) *appDefBuilder {
 	}
 }
 
-func (ab *appDefBuilder) AddPackage(localName, path string) IAppDefBuilder {
+func (ab *appDefBuilder) AddPackage(localName, path string) IPackagesBuilder {
 	ab.app.addPackage(localName, path)
 	return ab
 }
