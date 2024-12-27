@@ -247,10 +247,11 @@ func (ab *AppDefBuilder) Build() (appdef.IAppDef, error) {
 }
 
 func (ab *AppDefBuilder) MustBuild() appdef.IAppDef {
-	if err := ab.app.build(); err != nil {
+	a, err := ab.Build()
+	if err != nil {
 		panic(err)
 	}
-	return ab.app
+	return a
 }
 
 func (ab *AppDefBuilder) SetTypeComment(n appdef.QName, c ...string) {
