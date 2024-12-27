@@ -3,7 +3,7 @@
  * @author: Nikolay Nikitin
  */
 
-package slices
+package slicex
 
 import "sort"
 

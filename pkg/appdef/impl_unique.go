@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"slices"
 
-	slicesex "github.com/voedger/voedger/pkg/appdef/internal/slices"
+	"github.com/voedger/voedger/pkg/appdef/internal/slicex"
 )
 
 // # Implements:
@@ -122,7 +122,7 @@ func (uu *uniques) addUnique(name QName, fields []FieldName, comment ...string) 
 	if len(fields) == 0 {
 		panic(ErrMissed("unique «%v» fields", name))
 	}
-	if i, j := slicesex.Duplicates(fields); i >= 0 {
+	if i, j := slicex.Duplicates(fields); i >= 0 {
 		panic(ErrAlreadyExists("fields in unique «%v» has duplicates (fields[%d] == fields[%d] == %q)", name, i, j, fields[i]))
 	}
 
@@ -135,7 +135,7 @@ func (uu *uniques) addUnique(name QName, fields []FieldName, comment ...string) 
 		for _, f := range un.Fields() {
 			ff = append(ff, f.Name())
 		}
-		if slicesex.Overlaps(fields, ff) {
+		if slicex.Overlaps(fields, ff) {
 			panic(ErrAlreadyExists("type already has %v which fields overlaps new unique fields", un))
 		}
 	}

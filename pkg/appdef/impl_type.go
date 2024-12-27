@@ -11,7 +11,7 @@ import (
 	"iter"
 	"slices"
 
-	slicesex "github.com/voedger/voedger/pkg/appdef/internal/slices"
+	"github.com/voedger/voedger/pkg/appdef/internal/slicex"
 )
 
 // # Supports:
@@ -104,7 +104,7 @@ func newTypes[T IType]() *types[T] {
 
 func (tt *types[T]) add(t T) {
 	tt.m[t.QName()] = t
-	tt.s = slicesex.InsertInSort(tt.s, t, func(t1, t2 T) int { return CompareQName(t1.QName(), t2.QName()) })
+	tt.s = slicex.InsertInSort(tt.s, t, func(t1, t2 T) int { return CompareQName(t1.QName(), t2.QName()) })
 }
 
 func (tt *types[T]) clear() {

@@ -11,7 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/comments"
-	slicesex "github.com/voedger/voedger/pkg/appdef/internal/slices"
+	"github.com/voedger/voedger/pkg/appdef/internal/slicex"
 )
 
 // # Supports:
@@ -122,7 +122,7 @@ func (uu *Uniques) addUnique(name appdef.QName, fields []appdef.FieldName, comme
 	if len(fields) == 0 {
 		panic(appdef.ErrMissed("unique «%v» fields", name))
 	}
-	if i, j := slicesex.Duplicates(fields); i >= 0 {
+	if i, j := slicex.Duplicates(fields); i >= 0 {
 		panic(appdef.ErrAlreadyExists("fields in unique «%v» has duplicates (fields[%d] == fields[%d] == %q)", name, i, j, fields[i]))
 	}
 
@@ -135,7 +135,7 @@ func (uu *Uniques) addUnique(name appdef.QName, fields []appdef.FieldName, comme
 		for _, f := range un.Fields() {
 			ff = append(ff, f.Name())
 		}
-		if slicesex.Overlaps(fields, ff) {
+		if slicex.Overlaps(fields, ff) {
 			panic(appdef.ErrAlreadyExists("type already has %v which fields overlaps new unique fields", un))
 		}
 	}

@@ -3,12 +3,12 @@
  * @author: Nikolay Nikitin
  */
 
-package slices_test
+package slicex_test
 
 import (
 	"testing"
 
-	"github.com/voedger/voedger/pkg/appdef/internal/slices"
+	"github.com/voedger/voedger/pkg/appdef/internal/slicex"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
@@ -43,7 +43,7 @@ func Test_Duplicates(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			i, j := slices.Duplicates(tt.slice)
+			i, j := slicex.Duplicates(tt.slice)
 			require.Equal(tt.wantI, i)
 			require.Equal(tt.wantJ, j)
 		})
@@ -93,7 +93,7 @@ func Test_InsertInSort(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(tt.want, slices.InsertInSort(tt.s, tt.v, func(i, j int) int { return i - j }))
+			require.Equal(tt.want, slicex.InsertInSort(tt.s, tt.v, func(i, j int) int { return i - j }))
 		})
 	}
 }
@@ -147,7 +147,7 @@ func Test_SubSet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(tt.want, slices.SubSet(tt.sub, tt.set))
+			require.Equal(tt.want, slicex.SubSet(tt.sub, tt.set))
 		})
 	}
 }
@@ -207,7 +207,7 @@ func Test_Overlaps(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(tt.want, slices.Overlaps(tt.set1, tt.set2))
+			require.Equal(tt.want, slicex.Overlaps(tt.set1, tt.set2))
 		})
 	}
 }
