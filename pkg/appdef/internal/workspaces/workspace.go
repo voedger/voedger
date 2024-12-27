@@ -51,7 +51,7 @@ func NewWorkspace(app appdef.IAppDef, name appdef.QName) *Workspace {
 
 func (ws Workspace) ACL() iter.Seq[appdef.IACLRule] { return slices.Values(ws.acl) }
 
-func (ws *Workspace) Ancestors() iter.Seq[appdef.IWorkspace] {
+func (ws Workspace) Ancestors() iter.Seq[appdef.IWorkspace] {
 	return ws.ancestors.Values()
 }
 
@@ -70,14 +70,14 @@ func (ws *Workspace) AppendType(t appdef.IType) {
 	ws.types.Add(t)
 }
 
-func (ws *Workspace) Descriptor() appdef.QName {
+func (ws Workspace) Descriptor() appdef.QName {
 	if ws.desc != nil {
 		return ws.desc.QName()
 	}
 	return appdef.NullQName
 }
 
-func (ws *Workspace) Inherits(anc appdef.QName) bool {
+func (ws Workspace) Inherits(anc appdef.QName) bool {
 	switch anc {
 	case appdef.SysWorkspaceQName, ws.QName():
 		return true
@@ -91,15 +91,15 @@ func (ws *Workspace) Inherits(anc appdef.QName) bool {
 	return false
 }
 
-func (ws *Workspace) LocalType(name appdef.QName) appdef.IType {
+func (ws Workspace) LocalType(name appdef.QName) appdef.IType {
 	return ws.types.Find(name)
 }
 
-func (ws *Workspace) LocalTypes() iter.Seq[appdef.IType] {
+func (ws Workspace) LocalTypes() iter.Seq[appdef.IType] {
 	return ws.types.Values()
 }
 
-func (ws *Workspace) Type(name appdef.QName) appdef.IType {
+func (ws Workspace) Type(name appdef.QName) appdef.IType {
 	var (
 		find  func(appdef.IWorkspace) appdef.IType
 		chain map[appdef.QName]bool = make(map[appdef.QName]bool) // to prevent stack overflow recursion
@@ -124,14 +124,14 @@ func (ws *Workspace) Type(name appdef.QName) appdef.IType {
 		}
 		return appdef.NullType
 	}
-	return find(ws)
+	return find(&ws)
 }
 
 // Enumeration order:
 //   - ancestor types recursive from far to nearest
 //   - local types
 //   - used Workspaces
-func (ws *Workspace) Types() iter.Seq[appdef.IType] {
+func (ws Workspace) Types() iter.Seq[appdef.IType] {
 	return func(yield func(appdef.IType) bool) {
 		var (
 			visit func(appdef.IWorkspace) bool
@@ -159,11 +159,11 @@ func (ws *Workspace) Types() iter.Seq[appdef.IType] {
 			}
 			return true
 		}
-		visit(ws)
+		visit(&ws)
 	}
 }
 
-func (ws *Workspace) UsedWorkspaces() iter.Seq[appdef.IWorkspace] {
+func (ws Workspace) UsedWorkspaces() iter.Seq[appdef.IWorkspace] {
 	return ws.usedWS.Values()
 }
 
