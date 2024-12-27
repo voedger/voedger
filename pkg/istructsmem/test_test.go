@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -413,7 +414,7 @@ func test() *testDataType {
 
 		var err error
 
-		testData.StorageProvider = istorageimpl.Provide(mem.Provide())
+		testData.StorageProvider = istorageimpl.Provide(mem.Provide(coreutils.MockTime))
 
 		testData.AppStructsProvider = Provide(testData.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), testData.StorageProvider)
 		testData.AppStructs, err = testData.AppStructsProvider.BuiltIn(testData.appName)

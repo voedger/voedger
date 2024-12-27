@@ -210,7 +210,9 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 					return nil
 				},
 			})
-		wsb.AddProjector(failingProjQName).SetSync(true).Events().Add(cudQName, appdef.ProjectorEventKind_Execute)
+		wsb.AddProjector(failingProjQName).SetSync(true).Events().Add(
+			[]appdef.OperationKind{appdef.OperationKind_Execute},
+			filter.QNames(cudQName))
 		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
@@ -708,7 +710,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	ctx, cancel := context.WithCancel(context.Background())
 
 	cfgs := istructsmem.AppConfigsType{}
-	asf := mem.Provide()
+	asf := mem.Provide(coreutils.MockTime)
 	appStorageProvider := istorageimpl.Provide(asf)
 
 	// build application
@@ -755,7 +757,8 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 				AppConfigs:         cfgs,
 				StatelessResources: statelessResources,
 				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
-			}, "", imetrics.Provide()))
+			}, "", imetrics.Provide()),
+		iratesce.TestBucketsFactory)
 	require.NoError(err)
 	defer appPartsClean()
 

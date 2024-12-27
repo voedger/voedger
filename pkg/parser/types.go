@@ -313,8 +313,9 @@ func (s WsDescriptorStmt) GetName() string { return string(s.Name) }
 
 type DefQName struct {
 	Pos     lexer.Position
-	Package Ident `parser:"(@Ident '.')?"`
-	Name    Ident `parser:"@Ident"`
+	Package Ident        `parser:"(@Ident '.')?"`
+	Name    Ident        `parser:"@Ident"`
+	qName   appdef.QName // may be filled on the analysis stage
 }
 
 func (q DefQName) String() string {
@@ -680,33 +681,82 @@ type GrantView struct {
 }
 
 type GrantOrRevoke struct {
-	Command              *DefQName                     `parser:"( (EXECUTEONCOMMAND @@)"`
-	AllCommandsWithTag   *DefQName                     `parser:"  | (EXECUTEONALLCOMMANDSWITHTAG @@)"`
-	Query                *DefQName                     `parser:"  | (EXECUTEONQUERY @@)"`
-	AllQueriesWithTag    *DefQName                     `parser:"  | (EXECUTEONALLQUERIESWITHTAG @@)"`
-	AllViewsWithTag      *DefQName                     `parser:"  | (SELECTONALLVIEWSWITHTAG @@)"`
-	Workspace            *DefQName                     `parser:"  | (INSERTONWORKSPACE @@)"`
-	AllWorkspacesWithTag *DefQName                     `parser:"  | (INSERTONALLWORKSPACESWITHTAG @@)"`
-	View                 *GrantView                    `parser:"  | @@"`
-	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"  | @@"`
-	Table                *GrantTableActions            `parser:"  | @@"`
-	AllCommands          bool                          `parser:"  | @EXECUTEONALLCOMMANDS"`
-	AllQueries           bool                          `parser:"  | @EXECUTEONALLQUERIES"`
-	AllViews             bool                          `parser:"  | @SELECTONALLVIEWS"`
-	AllTables            *GrantAllTables               `parser:"  | @@"`
-	Role                 *DefQName                     `parser:"  | @@)"`
+	Command            *DefQName                     `parser:"( (EXECUTEONCOMMAND @@)"`
+	AllCommandsWithTag *DefQName                     `parser:"  | (EXECUTEONALLCOMMANDSWITHTAG @@)"`
+	Query              *DefQName                     `parser:"  | (EXECUTEONQUERY @@)"`
+	AllQueriesWithTag  *DefQName                     `parser:"  | (EXECUTEONALLQUERIESWITHTAG @@)"`
+	AllViewsWithTag    *DefQName                     `parser:"  | (SELECTONALLVIEWSWITHTAG @@)"`
+	View               *GrantView                    `parser:"  | @@"`
+	AllTablesWithTag   *GrantAllTablesWithTagActions `parser:"  | @@"`
+	Table              *GrantTableActions            `parser:"  | @@"`
+	AllCommands        bool                          `parser:"  | @EXECUTEONALLCOMMANDS"`
+	AllQueries         bool                          `parser:"  | @EXECUTEONALLQUERIES"`
+	AllViews           bool                          `parser:"  | @SELECTONALLVIEWS"`
+	AllTables          *GrantAllTables               `parser:"  | @@"`
+	Role               *DefQName                     `parser:"  | @@)"`
+	//AllWorkspacesWithTag *DefQName                     `parser:"  | (INSERTONALLWORKSPACESWITHTAG @@)"`
+	//Workspace *DefQName `parser:"  | (INSERTONWORKSPACE @@)"`
 
 	/* filled on the analysis stage */
 	toRole    appdef.QName
-	on        []appdef.QName
 	ops       []appdef.OperationKind
 	columns   []appdef.FieldName
 	workspace workspaceAddr
 }
 
 func (g GrantOrRevoke) filter() appdef.IFilter {
-	// TODO: implement support Types, Tags, Or, And, Not
-	return filter.QNames(g.on[0], g.on[1:]...)
+	if g.Role != nil {
+		return filter.QNames(g.Role.qName)
+	}
+	if g.Command != nil {
+		return filter.QNames(g.Command.qName)
+	}
+	if g.Query != nil {
+		return filter.QNames(g.Query.qName)
+	}
+	if g.View != nil {
+		return filter.QNames(g.View.View.qName)
+	}
+	if g.AllCommandsWithTag != nil {
+		return filter.And(
+			filter.Types(appdef.TypeKind_Command),
+			filter.Tags(g.AllCommandsWithTag.qName),
+		)
+	}
+	if g.AllCommands {
+		return filter.WSTypes(g.workspace.qName(), appdef.TypeKind_Command)
+	}
+	if g.AllQueriesWithTag != nil {
+		return filter.And(
+			filter.Types(appdef.TypeKind_Query),
+			filter.Tags(g.AllQueriesWithTag.qName),
+		)
+	}
+	if g.AllQueries {
+		return filter.WSTypes(g.workspace.qName(), appdef.TypeKind_Query)
+	}
+	if g.AllViewsWithTag != nil {
+		return filter.And(
+			filter.Types(appdef.TypeKind_ViewRecord),
+			filter.Tags(g.AllViewsWithTag.qName),
+		)
+	}
+	if g.AllViews {
+		return filter.WSTypes(g.workspace.qName(), appdef.TypeKind_ViewRecord)
+	}
+	if g.AllTablesWithTag != nil {
+		return filter.And(
+			filter.Types(appdef.TypeKind_Records.AsArray()...),
+			filter.Tags(g.AllTablesWithTag.Tag.qName),
+		)
+	}
+	if g.AllTables != nil {
+		return filter.WSTypes(g.workspace.qName(), appdef.TypeKind_Records.AsArray()...)
+	}
+	if g.Table != nil {
+		return filter.QNames(g.Table.Table.qName)
+	}
+	panic("unknown grant/revoke statement")
 }
 
 type GrantStmt struct {

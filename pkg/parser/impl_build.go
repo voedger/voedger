@@ -9,6 +9,8 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type buildContext struct {
@@ -197,13 +199,13 @@ func (c *buildContext) roles() error {
 func (c *buildContext) grantsAndRevokes() error {
 	grants := func(stmts []WorkspaceStatement) {
 		for _, s := range stmts {
-			if s.Grant != nil && len(s.Grant.on) > 0 {
+			if s.Grant != nil {
 				wsb := s.Grant.workspace.mustBuilder(c)
 				comments := s.Grant.GetComments()
 				if (s.Grant.AllTablesWithTag != nil && s.Grant.AllTablesWithTag.All) ||
 					(s.Grant.Table != nil && s.Grant.Table.All != nil) ||
 					(s.Grant.AllTables != nil && s.Grant.AllTables.All) {
-					wsb.GrantAll(s.Grant.filter(), s.Grant.toRole, comments...)
+					wsb.Grant(grantAllToTableOps, s.Grant.filter(), []appdef.FieldName{}, s.Grant.toRole, comments...)
 					continue
 				}
 				wsb.Grant(s.Grant.ops, s.Grant.filter(), s.Grant.columns, s.Grant.toRole, comments...)
@@ -212,13 +214,13 @@ func (c *buildContext) grantsAndRevokes() error {
 	}
 	revokes := func(stmts []WorkspaceStatement) {
 		for _, s := range stmts {
-			if s.Revoke != nil && len(s.Revoke.on) > 0 {
+			if s.Revoke != nil {
 				wsb := s.Revoke.workspace.mustBuilder(c)
 				comments := s.Revoke.GetComments()
 				if (s.Revoke.AllTablesWithTag != nil && s.Revoke.AllTablesWithTag.All) ||
 					(s.Revoke.Table != nil && s.Revoke.Table.All != nil) ||
 					(s.Revoke.AllTables != nil && s.Revoke.AllTables.All) {
-					wsb.RevokeAll(s.Revoke.filter(), s.Revoke.toRole, comments...)
+					wsb.Revoke(grantAllToTableOps, s.Revoke.filter(), []appdef.FieldName{}, s.Revoke.toRole, comments...)
 					continue
 				}
 				wsb.Revoke(s.Revoke.ops, s.Revoke.filter(), s.Revoke.columns, s.Revoke.toRole, comments...)
@@ -284,29 +286,73 @@ func (c *buildContext) projectors() error {
 			builder := wsb.AddProjector(pQname)
 			// Triggers
 			for _, trigger := range proj.Triggers {
-				evKinds := make([]appdef.ProjectorEventKind, 0)
+				ops := make([]appdef.OperationKind, 0)
 				if trigger.ExecuteAction != nil {
 					if trigger.ExecuteAction.WithParam {
-						evKinds = append(evKinds, appdef.ProjectorEventKind_ExecuteWithParam)
+						ops = append(ops, appdef.OperationKind_ExecuteWithParam)
 					} else {
-						evKinds = append(evKinds, appdef.ProjectorEventKind_Execute)
+						ops = append(ops, appdef.OperationKind_Execute)
 					}
 				} else {
 					if trigger.insert() {
-						evKinds = append(evKinds, appdef.ProjectorEventKind_Insert)
+						ops = append(ops, appdef.OperationKind_Insert)
 					}
 					if trigger.update() {
-						evKinds = append(evKinds, appdef.ProjectorEventKind_Update)
+						ops = append(ops, appdef.OperationKind_Update)
 					}
 					if trigger.activate() {
-						evKinds = append(evKinds, appdef.ProjectorEventKind_Activate)
+						ops = append(ops, appdef.OperationKind_Activate)
 					}
 					if trigger.deactivate() {
-						evKinds = append(evKinds, appdef.ProjectorEventKind_Deactivate)
+						ops = append(ops, appdef.OperationKind_Deactivate)
 					}
 				}
-				for _, qn := range trigger.qNames {
-					builder.Events().Add(qn, evKinds...)
+				if len(ops) == 0 {
+					c.errs = append(c.errs, fmt.Errorf("no trigger operations specified for projector %s", proj.Name))
+					return
+				}
+
+				qNames := appdef.QNames{}
+				types := appdef.TypeKindSet{}
+				for _, n := range trigger.qNames {
+					switch n {
+					case istructs.QNameCommand:
+						types.Set(appdef.TypeKind_Command)
+					case istructs.QNameQuery:
+						types.Set(appdef.TypeKind_Query)
+					case istructs.QNameCDoc:
+						types.Set(appdef.TypeKind_CDoc)
+					case istructs.QNameCRecord:
+						types.Set(appdef.TypeKind_CDoc, appdef.TypeKind_CRecord)
+					case istructs.QNameWDoc:
+						types.Set(appdef.TypeKind_WDoc)
+					case istructs.QNameWRecord:
+						types.Set(appdef.TypeKind_WDoc, appdef.TypeKind_WRecord)
+					case istructs.QNameODoc:
+						types.Set(appdef.TypeKind_ODoc)
+					case istructs.QNameORecord:
+						types.Set(appdef.TypeKind_ODoc, appdef.TypeKind_ORecord)
+					default:
+						qNames.Add(n)
+					}
+				}
+
+				flt := []appdef.IFilter{}
+				if len(qNames) > 0 {
+					flt = append(flt, filter.QNames(qNames...))
+				}
+				if types.Len() > 0 {
+					flt = append(flt, filter.Types(types.AsArray()...))
+				}
+
+				switch len(flt) {
+				case 0:
+					c.errs = append(c.errs, fmt.Errorf("no triggers names specified for projector %s", proj.Name))
+					return
+				case 1:
+					builder.Events().Add(ops, flt[0])
+				default:
+					builder.Events().Add(ops, filter.And(flt...))
 				}
 			}
 
@@ -330,7 +376,7 @@ func (c *buildContext) projectors() error {
 			builder.SetSync(proj.Sync)
 		})
 	}
-	return nil
+	return errors.Join(c.errs...)
 }
 
 func (c *buildContext) views() error {
@@ -714,6 +760,7 @@ func (c *buildContext) addNestedTableToDef(schema *PackageSchemaAST, nested *Nes
 	if !c.isExists(contQName, nestedTable.tableTypeKind) {
 		c.pushDef(contQName, nestedTable.tableTypeKind, nestedTable.workspace)
 		c.addTableItems(schema, nestedTable.Items)
+		c.applyTags(nestedTable.With, c.defCtx().defBuilder.(appdef.ITagger))
 		c.popDef()
 	}
 

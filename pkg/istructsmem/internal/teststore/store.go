@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
@@ -41,6 +42,36 @@ type (
 	}
 )
 
+//nolint:revive
+func (s *TestMemStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+//nolint:revive
+func (s *TestMemStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+//nolint:revive
+func (s *TestMemStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+//nolint:revive
+func (s *TestMemStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+//nolint:revive
+func (s *TestMemStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (tsp testStorageProvider) AppStorage(appName appdef.AppQName) (structs istorage.IAppStorage, err error) {
 	if s, ok := tsp.testStorage[appName]; ok {
 		return s, nil
@@ -58,7 +89,7 @@ func NewStorageProvider(ts *TestMemStorage) istorage.IAppStorageProvider {
 // Returns new test storage
 func NewStorage(appName appdef.AppQName) *TestMemStorage {
 	s := &TestMemStorage{name: appName, get: scheduleStorageError{}, put: scheduleStorageError{}}
-	asf := mem.Provide()
+	asf := mem.Provide(coreutils.MockTime)
 	sp := provider.Provide(asf)
 	var err error
 	if s.storage, err = sp.AppStorage(appName); err != nil {

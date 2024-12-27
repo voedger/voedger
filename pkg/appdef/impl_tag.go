@@ -40,7 +40,7 @@ func (t *tags) HasTag(name QName) bool {
 }
 
 func (t *tags) Tags() iter.Seq[ITag] {
-	return t.list.all
+	return t.list.values()
 }
 
 // # Supports:

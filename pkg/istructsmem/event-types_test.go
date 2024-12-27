@@ -433,11 +433,15 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 				for rec := range event.CUDs {
 					if rec.QName() == test.tablePhotos {
 						require.False(rec.IsNew())
+						require.False(rec.IsActivated())
+						require.False(rec.IsDeactivated())
 						require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
 						require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
 					}
 					if rec.QName() == test.tablePhotoRems {
 						require.False(rec.IsNew())
+						require.False(rec.IsActivated())
+						require.False(rec.IsDeactivated())
 						require.Equal(changedRems, rec.AsString(test.remarkIdent))
 					}
 					cudCount++
@@ -568,6 +572,8 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			for rec := range pLogEvent.CUDs {
 				if rec.QName() == test.tablePhotos {
 					require.False(rec.IsNew())
+					require.False(rec.IsActivated())
+					require.False(rec.IsDeactivated())
 					require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
 					require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
 					checked = true

@@ -23,10 +23,11 @@ type qNamesFilter struct {
 	names appdef.QNames
 }
 
-func makeQNamesFilter(name appdef.QName, names ...appdef.QName) appdef.IFilter {
-	f := &qNamesFilter{names: appdef.QNamesFrom(name)}
-	f.names.Add(names...)
-	return f
+func newQNamesFilter(names ...appdef.QName) *qNamesFilter {
+	if len(names) == 0 {
+		panic("no qualified names specified")
+	}
+	return &qNamesFilter{names: appdef.QNamesFrom(names...)}
 }
 
 func (qNamesFilter) Kind() appdef.FilterKind { return appdef.FilterKind_QNames }

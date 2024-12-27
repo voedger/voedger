@@ -513,7 +513,7 @@ func (vit *VIT) NextName() string {
 
 // sets `bs` as state of Buckets for `rateLimitName` in `appQName`
 // will be automatically restored on vit.TearDown() to the state the Bucket was before MockBuckets() call
-func (vit *VIT) MockBuckets(appQName appdef.AppQName, rateLimitName string, bs irates.BucketState) {
+func (vit *VIT) MockBuckets(appQName appdef.AppQName, rateLimitName appdef.QName, bs irates.BucketState) {
 	vit.T.Helper()
 	as, err := vit.IAppStructsProvider.BuiltIn(appQName)
 	require.NoError(vit.T, err)
@@ -549,6 +549,7 @@ func (vit *VIT) Restart() {
 
 // sets delay on IAppStorage.Get() in mem implementation
 // will be automatically reset to 0 on TearDown
+// need to e.g. investigate slow workspace create, see https://github.com/voedger/voedger/issues/1663
 func (vit *VIT) SetMemStorageGetDelay(delay time.Duration) {
 	vit.T.Helper()
 	vit.iterateDelaySetters(func(delaySetter istorage.IStorageDelaySetter) {
@@ -561,6 +562,7 @@ func (vit *VIT) SetMemStorageGetDelay(delay time.Duration) {
 
 // sets delay on IAppStorage.Put() in mem implementation
 // will be automatically reset to 0 on TearDown
+// need to e.g. investigate slow workspace create, see https://github.com/voedger/voedger/issues/1663
 func (vit *VIT) SetMemStoragePutDelay(delay time.Duration) {
 	vit.T.Helper()
 	vit.iterateDelaySetters(func(delaySetter istorage.IStorageDelaySetter) {

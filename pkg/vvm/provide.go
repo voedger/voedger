@@ -324,6 +324,7 @@ func provideAppPartitions(
 	saf appparts.SyncActualizerFactory,
 	act actualizers.IActualizersService,
 	sch appparts.ISchedulerRunner,
+	bf irates.BucketsFactoryType,
 	sr istructsmem.IStatelessResources,
 	builtinAppsArtefacts BuiltInAppsArtefacts,
 	vvmName processors.VVMName,
@@ -345,6 +346,7 @@ func provideAppPartitions(
 		act,
 		sch,
 		eef,
+		bf,
 	)
 }
 

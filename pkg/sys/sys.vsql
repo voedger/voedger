@@ -466,9 +466,7 @@ ABSTRACT WORKSPACE Workspace (
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG WorkspaceOwnerFuncTag TO WorkspaceOwner;
 
 	GRANT EXECUTE ON ALL QUERIES WITH TAG AllowedToEveryoneTag TO Everyone;
-	GRANT EXECUTE ON ALL COMMANDS WITH TAG AllowedToEveryoneTag TO Everyone;
 
-	GRANT EXECUTE ON ALL QUERIES WITH TAG AllowedToAuthenticatedTag TO AuthenticatedUser;
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG AllowedToAuthenticatedTag TO AuthenticatedUser;
 );
 
@@ -575,11 +573,12 @@ EXTENSION ENGINE BUILTIN (
 			Body []byte
 			HTTPClientTimeoutMilliseconds int64
 			Header text (can be called multiple times)
+			HandleErrors bool (do not panic, return error in response)
 		Value:
 			StatusCode int32
 			Body []byte
 			Header text (headers combined)
-
+			Error text (if HandleErrors is true)
 		*/
 		READ SCOPE(QUERIES, PROJECTORS, JOBS)
 	);

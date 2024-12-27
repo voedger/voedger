@@ -12,7 +12,7 @@ import (
 
 type Rate struct {
 	Type
-	Count  uint
+	Count  appdef.RateCount
 	Period time.Duration
 	Scopes []string `json:",omitempty"`
 }

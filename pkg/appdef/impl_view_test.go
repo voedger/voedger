@@ -3,39 +3,40 @@
  * @author: Nikolay Nikitin
  */
 
-package appdef
+package appdef_test
 
 import (
 	"regexp"
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func TestAddView(t *testing.T) {
 	require := require.New(t)
 
-	var app IAppDef
+	var app appdef.IAppDef
 
-	adb := New()
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
-	wsName := NewQName("test", "workspace")
+	wsName := appdef.NewQName("test", "workspace")
 	wsb := adb.AddWorkspace(wsName)
 
-	numName := NewQName("test", "natural")
-	_ = wsb.AddData(numName, DataKind_int64, NullQName, MinExcl(0))
+	numName := appdef.NewQName("test", "natural")
+	_ = wsb.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinExcl(0))
 
-	digsData := NewQName("test", "digs")
-	_ = wsb.AddData(digsData, DataKind_string, NullQName, Pattern(`^\d+$`, "only digits allowed"))
+	digsData := appdef.NewQName("test", "digs")
+	_ = wsb.AddData(digsData, appdef.DataKind_string, appdef.NullQName, appdef.Pattern(`^\d+$`, "only digits allowed"))
 
-	docName := NewQName("test", "doc")
+	docName := appdef.NewQName("test", "doc")
 	_ = wsb.AddCDoc(docName)
 
-	kbName := NewQName("test", "KB")
-	_ = wsb.AddData(kbName, DataKind_bytes, NullQName, MinLen(1), MaxLen(1024, "up to 1 KB"))
+	kbName := appdef.NewQName("test", "KB")
+	_ = wsb.AddData(kbName, appdef.DataKind_bytes, appdef.NullQName, appdef.MinLen(1), appdef.MaxLen(1024, "up to 1 KB"))
 
-	viewName := NewQName("test", "view")
+	viewName := appdef.NewQName("test", "view")
 	vb := wsb.AddView(viewName)
 
 	t.Run("should be ok to build view", func(t *testing.T) {
@@ -44,51 +45,51 @@ func TestAddView(t *testing.T) {
 
 		t.Run("should be ok to add partition key fields", func(t *testing.T) {
 			vb.Key().PartKey().AddDataField("pkF1", numName)
-			vb.Key().PartKey().AddField("pkF2", DataKind_bool)
+			vb.Key().PartKey().AddField("pkF2", appdef.DataKind_bool)
 
 			t.Run("panic if field already exists in view", func(t *testing.T) {
 				require.Panics(func() {
-					vb.Key().PartKey().AddField("pkF1", DataKind_int64)
-				}, require.Is(ErrAlreadyExistsError), require.Has("pkF1"))
+					vb.Key().PartKey().AddField("pkF1", appdef.DataKind_int64)
+				}, require.Is(appdef.ErrAlreadyExistsError), require.Has("pkF1"))
 			})
 
 			t.Run("panic if variable length field added to pk", func(t *testing.T) {
 				require.Panics(func() {
-					vb.Key().PartKey().AddField("pkF3", DataKind_string)
-				}, require.Is(ErrUnsupportedError), require.Has("pkF3"))
+					vb.Key().PartKey().AddField("pkF3", appdef.DataKind_string)
+				}, require.Is(appdef.ErrUnsupportedError), require.Has("pkF3"))
 				require.Panics(func() {
 					vb.Key().PartKey().AddDataField("pkF3", digsData)
-				}, require.Is(ErrUnsupportedError), require.Has("pkF3"))
+				}, require.Is(appdef.ErrUnsupportedError), require.Has("pkF3"))
 			})
 
 			t.Run("panic if unknown data type field added to pk", func(t *testing.T) {
 				require.Panics(func() {
-					vb.Key().PartKey().AddDataField("pkF3", NewQName("test", "unknown"))
-				}, require.Is(ErrNotFoundError), require.Has("test.unknown"))
+					vb.Key().PartKey().AddDataField("pkF3", appdef.NewQName("test", "unknown"))
+				}, require.Is(appdef.ErrNotFoundError), require.Has("test.unknown"))
 			})
 		})
 
 		t.Run("should be ok to add clustering columns fields", func(t *testing.T) {
-			vb.Key().ClustCols().AddField("ccF1", DataKind_int64)
+			vb.Key().ClustCols().AddField("ccF1", appdef.DataKind_int64)
 			vb.Key().ClustCols().AddRefField("ccF2", docName)
 
 			t.Run("panic if field already exists in view", func(t *testing.T) {
 				require.Panics(func() {
-					vb.Key().ClustCols().AddField("ccF1", DataKind_int64)
-				}, require.Is(ErrAlreadyExistsError), require.Has("ccF1"))
+					vb.Key().ClustCols().AddField("ccF1", appdef.DataKind_int64)
+				}, require.Is(appdef.ErrAlreadyExistsError), require.Has("ccF1"))
 			})
 
 			t.Run("panic if unknown data type field added to cc", func(t *testing.T) {
 				require.Panics(func() {
-					vb.Key().ClustCols().AddDataField("ccF3", NewQName("test", "unknown"))
-				}, require.Is(ErrNotFoundError), require.Has("test.unknown"))
+					vb.Key().ClustCols().AddDataField("ccF3", appdef.NewQName("test", "unknown"))
+				}, require.Is(appdef.ErrNotFoundError), require.Has("test.unknown"))
 			})
 		})
 
 		t.Run("should be ok to add value fields", func(t *testing.T) {
 			vb.Value().
-				AddField("valF1", DataKind_bool, true).
-				AddDataField("valF2", digsData, false, MaxLen(100)).SetFieldComment("valF2", "up to 100 digits")
+				AddField("valF1", appdef.DataKind_bool, true).
+				AddDataField("valF2", digsData, false, appdef.MaxLen(100)).SetFieldComment("valF2", "up to 100 digits")
 		})
 
 		a, err := adb.Build()
@@ -98,23 +99,23 @@ func TestAddView(t *testing.T) {
 	})
 
 	testWith_1 := func(tested testedTypes) {
-		view := View(tested.Type, viewName)
+		view := appdef.View(tested.Type, viewName)
 
 		t.Run("should be ok to read view", func(t *testing.T) {
 			require.Equal("test view", view.Comment())
 			require.Equal(viewName, view.QName())
-			require.Equal(TypeKind_ViewRecord, view.Kind())
+			require.Equal(appdef.TypeKind_ViewRecord, view.Kind())
 
-			checkValueValF2 := func(f IField) {
+			checkValueValF2 := func(f appdef.IField) {
 				require.Equal("valF2", f.Name())
 				require.False(f.Required())
 				cnt := 0
 				for k, c := range f.Constraints() {
 					cnt++
 					switch k {
-					case ConstraintKind_MaxLen:
+					case appdef.ConstraintKind_MaxLen:
 						require.EqualValues(100, c.Value())
-					case ConstraintKind_Pattern:
+					case appdef.ConstraintKind_Pattern:
 						require.EqualValues(`^\d+$`, c.Value().(*regexp.Regexp).String())
 						require.Equal("only digits allowed", c.Comment())
 					default:
@@ -130,7 +131,7 @@ func TestAddView(t *testing.T) {
 				cnt++
 				switch cnt {
 				case 1:
-					require.Equal(SystemField_QName, f.Name())
+					require.Equal(appdef.SystemField_QName, f.Name())
 					require.True(f.IsSys())
 				case 2:
 					require.Equal("pkF1", f.Name())
@@ -202,7 +203,6 @@ func TestAddView(t *testing.T) {
 					}
 				}
 				require.Equal(pk.FieldCount(), cnt)
-				require.NotPanics(func() { pk.isPartKey() })
 			})
 
 			t.Run("should be ok to read view clustering columns", func(t *testing.T) {
@@ -223,7 +223,6 @@ func TestAddView(t *testing.T) {
 					}
 				}
 				require.Equal(cc.FieldCount(), cnt)
-				require.NotPanics(func() { cc.isClustCols() })
 			})
 
 			t.Run("should be ok to read view value", func(t *testing.T) {
@@ -234,7 +233,7 @@ func TestAddView(t *testing.T) {
 					cnt++
 					switch cnt {
 					case 1:
-						require.Equal(SystemField_QName, f.Name())
+						require.Equal(appdef.SystemField_QName, f.Name())
 						require.True(f.IsSys())
 					case 2:
 						require.Equal("valF1", f.Name())
@@ -246,35 +245,34 @@ func TestAddView(t *testing.T) {
 					}
 				}
 				require.Equal(val.FieldCount(), cnt)
-				require.NotPanics(func() { val.isViewValue() })
 			})
 
-			t.Run("should be ok to cast Type() as IView", func(t *testing.T) {
+			t.Run("should be ok to cast Type() as appdef.IView", func(t *testing.T) {
 				typ := tested.Type(viewName)
 				require.NotNil(typ)
-				require.Equal(TypeKind_ViewRecord, typ.Kind())
+				require.Equal(appdef.TypeKind_ViewRecord, typ.Kind())
 
-				v, ok := typ.(IView)
+				v, ok := typ.(appdef.IView)
 				require.True(ok)
 				require.Equal(v, view)
 			})
 
-			require.Nil(View(tested.Type, NewQName("test", "unknown")), "should be nil if unknown view")
+			require.Nil(appdef.View(tested.Type, appdef.NewQName("test", "unknown")), "should be nil if unknown view")
 
 			t.Run("should be nil if not view", func(t *testing.T) {
-				require.Nil(View(tested.Type, docName))
+				require.Nil(appdef.View(tested.Type, docName))
 
 				typ := tested.Type(docName)
 				require.NotNil(typ)
-				v, ok := typ.(IView)
+				v, ok := typ.(appdef.IView)
 				require.False(ok)
 				require.Nil(v)
 			})
 		})
 
 		t.Run("should be ok to enum views", func(t *testing.T) {
-			names := QNames{}
-			for v := range Views(tested.Types()) {
+			names := appdef.QNames{}
+			for v := range appdef.Views(tested.Types()) {
 				if !v.IsSystem() {
 					names.Add(v.QName())
 				}
@@ -297,17 +295,17 @@ func TestAddView(t *testing.T) {
 
 		t.Run("panic if add second variable length field", func(t *testing.T) {
 			require.Panics(func() {
-				vb.Key().ClustCols().AddField("ccF3_1", DataKind_bytes)
-			}, require.Is(ErrUnsupportedError), require.Has("ccF3"))
+				vb.Key().ClustCols().AddField("ccF3_1", appdef.DataKind_bytes)
+			}, require.Is(appdef.ErrUnsupportedError), require.Has("ccF3"))
 			require.Panics(func() {
 				vb.Key().ClustCols().AddDataField("ccF3_1", kbName)
-			}, require.Is(ErrUnsupportedError), require.Has("ccF3"))
+			}, require.Is(appdef.ErrUnsupportedError), require.Has("ccF3"))
 		})
 
 		vb.Value().
 			AddRefField("valF3", false, docName).
-			AddField("valF4", DataKind_bytes, false, MaxLen(1024)).SetFieldComment("valF4", "test comment").
-			AddField("valF5", DataKind_bool, false).SetFieldVerify("valF5", VerificationKind_EMail)
+			AddField("valF4", appdef.DataKind_bytes, false, appdef.MaxLen(1024)).SetFieldComment("valF4", "test comment").
+			AddField("valF5", appdef.DataKind_bool, false).SetFieldVerify("valF5", appdef.VerificationKind_EMail)
 
 		a, err := adb.Build()
 		require.NoError(err)
@@ -316,7 +314,7 @@ func TestAddView(t *testing.T) {
 	})
 
 	testWith_2 := func(tested testedTypes) {
-		view := View(tested.Type, viewName)
+		view := appdef.View(tested.Type, viewName)
 
 		require.Equal(3, view.Key().PartKey().FieldCount())
 		require.Equal(3, view.Key().ClustCols().FieldCount())
@@ -333,22 +331,22 @@ func TestAddView(t *testing.T) {
 		for _, f := range view.Value().Fields() {
 			cnt++
 			switch f.Name() {
-			case SystemField_QName:
-				require.Equal(DataKind_QName, f.DataKind())
+			case appdef.SystemField_QName:
+				require.Equal(appdef.DataKind_QName, f.DataKind())
 				require.True(f.IsSys())
 			case "valF1":
-				require.Equal(DataKind_bool, f.DataKind())
+				require.Equal(appdef.DataKind_bool, f.DataKind())
 				require.True(f.Required())
 			case "valF2":
-				require.Equal(DataKind_string, f.DataKind())
+				require.Equal(appdef.DataKind_string, f.DataKind())
 				require.False(f.Required())
 				// valF2 constraints checked above
 			case "valF3":
-				require.Equal(DataKind_RecordID, f.DataKind())
+				require.Equal(appdef.DataKind_RecordID, f.DataKind())
 				require.False(f.Required())
-				require.EqualValues(QNames{docName}, f.(IRefField).Refs())
+				require.EqualValues(appdef.QNames{docName}, f.(appdef.IRefField).Refs())
 			case "valF4":
-				require.Equal(DataKind_bytes, f.DataKind())
+				require.Equal(appdef.DataKind_bytes, f.DataKind())
 				require.False(f.Required())
 				require.Equal("test comment", f.Comment())
 				cnt := 0
@@ -356,7 +354,7 @@ func TestAddView(t *testing.T) {
 					cnt++
 					switch cnt {
 					case 1:
-						require.Equal(ConstraintKind_MaxLen, c.Kind())
+						require.Equal(appdef.ConstraintKind_MaxLen, c.Kind())
 						require.EqualValues(1024, c.Value())
 					default:
 						require.Fail("unexpected constraint", "constraint: %v", c)
@@ -364,11 +362,11 @@ func TestAddView(t *testing.T) {
 				}
 				require.EqualValues(1, cnt)
 			case "valF5":
-				require.Equal(DataKind_bool, f.DataKind())
+				require.Equal(appdef.DataKind_bool, f.DataKind())
 				require.False(f.Required())
 				require.True(f.Verifiable())
-				require.True(f.VerificationKind(VerificationKind_EMail))
-				require.False(f.VerificationKind(VerificationKind_Phone))
+				require.True(f.VerificationKind(appdef.VerificationKind_EMail))
+				require.False(f.VerificationKind(appdef.VerificationKind_Phone))
 			default:
 				require.Fail("unexpected value field", "field name: %s", f.Name())
 			}
@@ -383,25 +381,25 @@ func TestAddView(t *testing.T) {
 func TestViewValidate(t *testing.T) {
 	require := require.New(t)
 
-	viewName := NewQName("test", "view")
+	viewName := appdef.NewQName("test", "view")
 
-	adb := New()
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
-	wsb := adb.AddWorkspace(NewQName("test", "workspace"))
+	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
 	v := wsb.AddView(viewName)
 	require.NotNil(v)
 
 	t.Run("should be error if no pkey fields", func(t *testing.T) {
 		_, err := adb.Build()
-		require.ErrorIs(err, ErrMissedError)
+		require.ErrorIs(err, appdef.ErrMissedError)
 	})
 
-	v.Key().PartKey().AddField("pk1", DataKind_bool)
+	v.Key().PartKey().AddField("pk1", appdef.DataKind_bool)
 
 	t.Run("should be error if no ccols fields", func(t *testing.T) {
 		_, err := adb.Build()
-		require.ErrorIs(err, ErrMissedError)
+		require.ErrorIs(err, appdef.ErrMissedError)
 	})
 }

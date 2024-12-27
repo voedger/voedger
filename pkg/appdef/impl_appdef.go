@@ -68,17 +68,14 @@ func (app *appDef) Type(name QName) IType {
 	switch name {
 	case NullQName:
 		return NullType
+	case QNameANY:
+		return AnyType
 	}
-
-	if t, ok := anyTypes[name]; ok {
-		return t
-	}
-
 	return app.types.find(name)
 }
 
 func (app *appDef) Types() iter.Seq[IType] {
-	return app.types.all
+	return app.types.values()
 }
 
 func (app *appDef) Workspace(name QName) IWorkspace {
@@ -86,7 +83,7 @@ func (app *appDef) Workspace(name QName) IWorkspace {
 }
 
 func (app *appDef) Workspaces() iter.Seq[IWorkspace] {
-	return app.workspaces.all
+	return app.workspaces.values()
 }
 
 func (app *appDef) WorkspaceByDescriptor(name QName) IWorkspace {

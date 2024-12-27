@@ -56,8 +56,6 @@ type IWorkspace interface {
 	// Returns types iterator. All types from ancestors are iterated recursively.
 	//
 	// If the workspace uses other workspaces, these used workspaces (but not the types from them) also iterated.
-	//
-	// Types are enumerated in alphabetical order.
 	Types() iter.Seq[IType]
 
 	// Returns used workspaces.

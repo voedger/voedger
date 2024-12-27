@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/voedger/voedger/pkg/iextengine"
+	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
@@ -24,6 +25,7 @@ func New(structs istructs.IAppStructsProvider) (ap IAppPartitions, cleanup func(
 		NullActualizerRunner,
 		NullSchedulerRunner,
 		NullExtensionEngineFactories,
+		irates.NullBucketsFactory,
 	)
 }
 
@@ -44,6 +46,7 @@ func New2(
 	asyncActualizersRunner IActualizerRunner,
 	jobSchedulerRunner ISchedulerRunner,
 	eef iextengine.ExtensionEngineFactories,
+	bf irates.BucketsFactoryType,
 ) (ap IAppPartitions, cleanup func(), err error) {
-	return newAppPartitions(vvmCtx, structs, syncAct, asyncActualizersRunner, jobSchedulerRunner, eef)
+	return newAppPartitions(vvmCtx, structs, syncAct, asyncActualizersRunner, jobSchedulerRunner, eef, bf)
 }

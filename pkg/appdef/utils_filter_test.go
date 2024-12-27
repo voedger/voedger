@@ -39,7 +39,7 @@ func Test_FilterMatches(t *testing.T) {
 	})
 
 	t.Run("should be ok to filter matches", func(t *testing.T) {
-		filtered := appdef.FilterMatches(filter.AllFunctions(wsName), app.Types())
+		filtered := appdef.FilterMatches(filter.AllWSFunctions(wsName), app.Types())
 		cnt := 0
 		for t := range filtered {
 			switch cnt {

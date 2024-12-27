@@ -172,7 +172,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	cfgFunc ...func(*istructsmem.AppConfigType)) (appParts appparts.IAppPartitions, cleanup func(),
 	appTokens istructs.IAppTokens, statelessResources istructsmem.IStatelessResources) {
 	cfgs := make(istructsmem.AppConfigsType)
-	asf := mem.Provide()
+	asf := mem.Provide(coreutils.MockTime)
 	storageProvider := istorageimpl.Provide(asf)
 
 	qNameFindArticlesByModificationTimeStampRangeParams := appdef.NewQName("bo", "FindArticlesByModificationTimeStampRangeParamsDef")
@@ -339,7 +339,8 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 				AppConfigs:         cfgs,
 				StatelessResources: statelessResources,
 				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
-			}, "", imetrics.Provide()))
+			}, "", imetrics.Provide()),
+		iratesce.TestBucketsFactory)
 	require.NoError(err)
 	appParts.DeployApp(appName, nil, appDef, partCount, appEngines, cfg.NumAppWorkspaces())
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})

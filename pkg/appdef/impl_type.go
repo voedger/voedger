@@ -8,6 +8,7 @@ package appdef
 import (
 	"errors"
 	"fmt"
+	"iter"
 	"maps"
 	"slices"
 )
@@ -106,15 +107,6 @@ func (tt *types[T]) add(t T) {
 	tt.s = nil
 }
 
-func (tt *types[T]) all(visit func(T) bool) {
-	if len(tt.s) != len(tt.m) {
-		tt.s = slices.SortedFunc(maps.Values(tt.m), func(i, j T) int {
-			return CompareQName(i.QName(), j.QName())
-		})
-	}
-	slices.Values(tt.s)(visit)
-}
-
 func (tt *types[T]) clear() {
 	tt.m = make(map[QName]T)
 	tt.s = nil
@@ -127,9 +119,13 @@ func (tt types[T]) find(name QName) IType {
 	return NullType
 }
 
-func (tt *types[T]) remove(name QName) {
-	delete(tt.m, name)
-	tt.s = nil
+func (tt *types[T]) values() iter.Seq[T] {
+	if len(tt.s) != len(tt.m) {
+		tt.s = slices.SortedFunc(maps.Values(tt.m), func(i, j T) int {
+			return CompareQName(i.QName(), j.QName())
+		})
+	}
+	return slices.Values(tt.s)
 }
 
 // Returns type by reference.

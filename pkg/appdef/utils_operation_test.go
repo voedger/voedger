@@ -30,7 +30,7 @@ func Test_AllOperationsForType(t *testing.T) {
 	for i := range tests {
 		tt := tests[i]
 		t.Run(tt.TypeKind.TrimString(), func(t *testing.T) {
-			if got := appdef.AllOperationsForType(tt.TypeKind); !reflect.DeepEqual(got, tt.want) {
+			if got := appdef.ACLOperationsForType(tt.TypeKind); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("AllOperationsForType(%v) = %v, want %v", tt.TypeKind, got, tt.want)
 			}
 		})
