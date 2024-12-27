@@ -19,6 +19,7 @@ const (
 	ApplicationJSON                                            = "application/json"
 	ApplicationXBinary                                         = "application/x-binary"
 	BearerPrefix                                               = "Bearer "
+	Localhost                                                  = "127.0.0.1"
 	shortRetryOn503Delay                                       = 100 * time.Millisecond
 	longRetryOn503Delay                                        = time.Second
 	shortRetriesOn503Amount                                    = 10
