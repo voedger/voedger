@@ -144,95 +144,95 @@ var defaultACL = ACL{
 	// 	},
 	// 	policy: ACPolicy_Allow,
 	// },
-	{
-		// https://github.com/voedger/voedger/issues/125
-		desc: "grant UPDATE on air.UntillPayments to role sys.WorkspaceAdmin",
-		pattern: PatternType{
-			qNamesPattern:     []appdef.QName{qNameCDocUntillPayments},
-			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_UPDATE},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceAdmin}}},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
-		// ACL for portals https://dev.untill.com/projects/#!637208
-		desc: "allow SELECT cdoc.air.ResellerSubscriptionsProfile to air.SubscriptionReseller",
-		pattern: PatternType{
-			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
-			qNamesPattern:  []appdef.QName{qNameCDocResellerSubscriptionsProfile},
-			principalsPattern: [][]iauthnz.Principal{
-				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleAirReseller}}, // deprecated
-				// OR
-				// https://dev.untill.com/projects/#!694587
-				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleSubscriptionReseller}},
-			},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
-		// ACL for portals https://dev.untill.com/projects/#!637208
-		desc: "allow exec few portals-related funcs to air.SubscriptionReseller",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameCmdStoreResellerSubscriptionsProfile,
-				qNameQryGetHostedAirSubscriptions,
-				qNameQryCollection,
+	// { <-------------------------- Тут
+	// 	// https://github.com/voedger/voedger/issues/125
+	// 	desc: "grant UPDATE on air.UntillPayments to role sys.WorkspaceAdmin",
+	// 	pattern: PatternType{
+	// 		qNamesPattern:     []appdef.QName{qNameCDocUntillPayments},
+	// 		opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_UPDATE},
+	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceAdmin}}},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
+	// {
+	// 	// ACL for portals https://dev.untill.com/projects/#!637208
+	// 	desc: "allow SELECT cdoc.air.ResellerSubscriptionsProfile to air.SubscriptionReseller",
+	// 	pattern: PatternType{
+	// 		opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
+	// 		qNamesPattern:  []appdef.QName{qNameCDocResellerSubscriptionsProfile},
+	// 		principalsPattern: [][]iauthnz.Principal{
+	// 			{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleAirReseller}}, // deprecated
+	// 			// OR
+	// 			// https://dev.untill.com/projects/#!694587
+	// 			{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleSubscriptionReseller}},
+	// 		},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
+	// {
+	// 	// ACL for portals https://dev.untill.com/projects/#!637208
+	// 	desc: "allow exec few portals-related funcs to air.SubscriptionReseller",
+	// 	pattern: PatternType{
+	// 		qNamesPattern: []appdef.QName{
+	// 			// qNameCmdStoreResellerSubscriptionsProfile,
+	// 			// qNameQryGetHostedAirSubscriptions,
+	// 			// qNameQryCollection,
 
-				// https://dev.untill.com/projects/#!638320
-				qNameQryGetUPStatus,
-				// https://dev.untill.com/projects/#!673032
-				qNameQryListIssuedSubscriptionInvoices,
-				qNameQryListIssuedSubscriptionResellers,
-				qNameQryListPaidSubscriptionInvoices,
-				qNameQryListPaidSubscriptionResellers,
-				// https://dev.untill.com/projects/#!679811
-				qNameQryIsDirectReseller,
-				// https://dev.untill.com/projects/#!675263
-				qNameQryPaidSubscriptionInvoicesReport,
-			},
-			principalsPattern: [][]iauthnz.Principal{
-				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleAirReseller}}, // deprecated
-				// OR
-				// https://dev.untill.com/projects/#!694587
-				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleSubscriptionReseller}},
-			},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
-		// ACL for portals https://dev.untill.com/projects/#!637208
-		desc: "allow SELECT cdoc.air.UPProfile to air.UntillPaymentsReseller and air.UntillPaymentsUser",
-		pattern: PatternType{
-			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
-			qNamesPattern:  []appdef.QName{qNameCDocUPProfile},
-			principalsPattern: [][]iauthnz.Principal{
-				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
-				// OR
-				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
-			},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
-		// ACL for portals https://dev.untill.com/projects/#!637208
-		desc: "allow few portal-related funcs to air.UntillPaymentsReseller and air.UntillPaymentsUser",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameCmdCreateUPProfile,
-				// qNameQryGetUPOnboardingPage,
-				qNameQryGetUPVerificationStatus,
-				qNameQryGetUPAccountStatus,
-				qNameQryGetUPEventHistory,
-				qNameQryCollection,
-			},
-			principalsPattern: [][]iauthnz.Principal{
-				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
-				// OR
-				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
-			},
-		},
-		policy: ACPolicy_Allow,
-	},
+	// 			// https://dev.untill.com/projects/#!638320
+	// 			// qNameQryGetUPStatus,
+	// 			// https://dev.untill.com/projects/#!673032
+	// 			// qNameQryListIssuedSubscriptionInvoices,
+	// 			// qNameQryListIssuedSubscriptionResellers,
+	// 			// qNameQryListPaidSubscriptionInvoices,
+	// 			// qNameQryListPaidSubscriptionResellers,
+	// 			// https://dev.untill.com/projects/#!679811
+	// 			// qNameQryIsDirectReseller,
+	// 			// https://dev.untill.com/projects/#!675263
+	// 			// qNameQryPaidSubscriptionInvoicesReport,
+	// 		},
+	// 		principalsPattern: [][]iauthnz.Principal{
+	// 			{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleAirReseller}}, // deprecated
+	// 			// OR
+	// 			// https://dev.untill.com/projects/#!694587
+	// 			{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleSubscriptionReseller}},
+	// 		},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
+	// {
+	// 	// ACL for portals https://dev.untill.com/projects/#!637208
+	// 	desc: "allow SELECT cdoc.air.UPProfile to air.UntillPaymentsReseller and air.UntillPaymentsUser",
+	// 	pattern: PatternType{
+	// 		opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
+	// 		qNamesPattern:  []appdef.QName{qNameCDocUPProfile},
+	// 		principalsPattern: [][]iauthnz.Principal{
+	// 			{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
+	// 			// OR
+	// 			{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
+	// 		},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
+	// {
+	// 	// ACL for portals https://dev.untill.com/projects/#!637208
+	// 	desc: "allow few portal-related funcs to air.UntillPaymentsReseller and air.UntillPaymentsUser",
+	// 	pattern: PatternType{
+	// 		qNamesPattern: []appdef.QName{
+	// 			// qNameCmdCreateUPProfile,
+	// 			// qNameQryGetUPOnboardingPage,
+	// 			// qNameQryGetUPVerificationStatus,
+	// 			// qNameQryGetUPAccountStatus,
+	// 			// qNameQryGetUPEventHistory, // missing in code at all
+	// 			// qNameQryCollection,
+	// 		},
+	// 		principalsPattern: [][]iauthnz.Principal{
+	// 			{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
+	// 			// OR
+	// 			{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
+	// 		},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
 	{
 		// ACL for FiscalCloud
 		desc: "allow FiscalCloud onboarding functions to role fiscalcloud.OnboardSite",
@@ -248,122 +248,122 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Allow,
 	},
-	{
-		desc: "grant exec on few funcs to role air.UntillPaymentsUser",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameQryGetUPStatus,
-				qNameCmdCreateUntillPayment,
+	// {
+	// 	desc: "grant exec on few funcs to role air.UntillPaymentsUser",
+	// 	pattern: PatternType{
+	// 		qNamesPattern: []appdef.QName{
+	// 			// qNameQryGetUPStatus,
+	// 			// qNameCmdCreateUntillPayment,
 
-				// https://github.com/voedger/voedger/issues/57
-				qNameCmdEnsureUPPredefinedPaymentModesExist,
+	// 			// https://github.com/voedger/voedger/issues/57
+	// 			// qNameCmdEnsureUPPredefinedPaymentModesExist,
 
-				// https://dev.untill.com/projects/#!641315
-				// qNameQryGetUPTerminals,
-				qNameQryActivateUPTerminal,
-				// qNameQryGetUPPaymentMethods,
-				qNameQryToggleUPPaymentMethod,
-				qNameQryRequestUPPaymentMethod,
-				qNameQryGetUPTransactionsOverview,
-				qNameQryGetUPTransactionReceipts,
-				// https://dev.untill.com/projects/#!664899
-				qNameQryGetUPLocationSubjects,
-				// https://dev.untill.com/projects/#!659825
-				qNameQryGetLocationDailyUPReport,
-				// https://dev.untill.com/projects/#!653069
-				qNameCmdVoidUntillPayment,
-				// https://dev.untill.com/projects/#!683625
-				qNameQryCreateTap2PaySession,
-				// https://dev.untill.com/projects/#!693712
-				qNameCmdSaveTap2PayPayment,
-				// https://untill.atlassian.net/browse/AIR-47
-				qNameQryShowBillOnDisplay,
-				qNameQryShowOrderOnDisplay,
-				qNameQryShowStandbyOnDisplay,
-			},
-			principalsPattern: [][]iauthnz.Principal{
-				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
-			},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
-		// https://dev.untill.com/projects/#!640535
-		desc: "grant exec on c.air.RegenerateUPProfileApiToken to role air.UntillPaymentsReseller and air.UntillPaymentsUser",
-		pattern: PatternType{
-			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_EXECUTE},
-			qNamesPattern:  []appdef.QName{qNameCmdRegenerateUPProfileApiToken},
-			principalsPattern: [][]iauthnz.Principal{
-				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
-				// OR
-				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
-			},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
-		desc: "grant exec on q.air.UPTerminalWebhook to role air.UntillPaymentsTerminal",
-		pattern: PatternType{
-			qNamesPattern:     []appdef.QName{qNameQryUPTerminalWebhook},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsTerminal}}},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
-		// https://github.com/voedger/voedger/issues/422
-		// https://dev.untill.com/projects/#!649352
-		// https://dev.untill.com/projects/#!650998
-		// https://dev.untill.com/projects/#!653137
-		// https://dev.untill.com/projects/#!665805
-		// https://dev.untill.com/projects/#!663035
-		desc: "grant exec on few funcs to role air.UntillPaymentsReseller and role air.UntillPaymentsUser",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameQryGetUPPayouts,
-				qNameQryGetUPInvoiceParties,
-				qNameQryGetUPTransferInstrument,
-				qNameCmdRetryTransferUPPayout,
-				// https://dev.untill.com/projects/#!685617
-				// qNameQryGetUPLocationRates,
-				// https://dev.untill.com/projects/#!685179
-				qNameQryUpdateShopperStatement,
-				// https://dev.untill.com/projects/#!710217
-				qNameQryGetUPPayoutTransfers,
-				// qNameQryGetUPInvoices,
-				qNameCmdUpdateUPProfile,
-			},
-			principalsPattern: [][]iauthnz.Principal{
-				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
-				// OR
-				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
-			},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
-		desc: "grant exec on few funcs to role air.UntillPaymentsReseller",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameCmdUpdateUPLocationRates,
-				qNameQryGetUPFeesOverview,
-				// https://dev.untill.com/projects/#!664876
-				// qNameQryIsDirectReseller,
-				// https://dev.untill.com/projects/#!659825
-				qNameQryGetResellerDailyUPReport,
-			},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}}},
-		},
-		policy: ACPolicy_Allow,
-	},
+	// 			// https://dev.untill.com/projects/#!641315
+	// 			// qNameQryGetUPTerminals,
+	// 			// qNameQryActivateUPTerminal,
+	// 			// qNameQryGetUPPaymentMethods,
+	// 			// qNameQryToggleUPPaymentMethod,
+	// 			// qNameQryRequestUPPaymentMethod,
+	// 			// qNameQryGetUPTransactionsOverview,
+	// 			// qNameQryGetUPTransactionReceipts,
+	// 			// https://dev.untill.com/projects/#!664899
+	// 			// qNameQryGetUPLocationSubjects,
+	// 			// https://dev.untill.com/projects/#!659825
+	// 			// qNameQryGetLocationDailyUPReport,
+	// 			// https://dev.untill.com/projects/#!653069
+	// 			// qNameCmdVoidUntillPayment,
+	// 			// https://dev.untill.com/projects/#!683625
+	// 			// qNameQryCreateTap2PaySession,
+	// 			// https://dev.untill.com/projects/#!693712
+	// 			// qNameCmdSaveTap2PayPayment,
+	// 			// https://untill.atlassian.net/browse/AIR-47
+	// 			// qNameQryShowBillOnDisplay,
+	// 			// qNameQryShowOrderOnDisplay,
+	// 			qNameQryShowStandbyOnDisplay,
+	// 		},
+	// 		principalsPattern: [][]iauthnz.Principal{
+	// 			{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
+	// 		},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
+	// {
+	// 	// https://dev.untill.com/projects/#!640535
+	// 	desc: "grant exec on c.air.RegenerateUPProfileApiToken to role air.UntillPaymentsReseller and air.UntillPaymentsUser",
+	// 	pattern: PatternType{
+	// 		opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_EXECUTE},
+	// 		qNamesPattern:  []appdef.QName{qNameCmdRegenerateUPProfileApiToken},
+	// 		principalsPattern: [][]iauthnz.Principal{
+	// 			{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
+	// 			// OR
+	// 			{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
+	// 		},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
+	// {
+	// 	desc: "grant exec on q.air.UPTerminalWebhook to role air.UntillPaymentsTerminal",
+	// 	pattern: PatternType{
+	// 		qNamesPattern:     []appdef.QName{qNameQryUPTerminalWebhook},
+	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsTerminal}}},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
+	// {
+	// 	// https://github.com/voedger/voedger/issues/422
+	// 	// https://dev.untill.com/projects/#!649352
+	// 	// https://dev.untill.com/projects/#!650998
+	// 	// https://dev.untill.com/projects/#!653137
+	// 	// https://dev.untill.com/projects/#!665805
+	// 	// https://dev.untill.com/projects/#!663035
+	// 	desc: "grant exec on few funcs to role air.UntillPaymentsReseller and role air.UntillPaymentsUser",
+	// 	pattern: PatternType{
+	// 		qNamesPattern: []appdef.QName{
+	// 			// qNameQryGetUPPayouts,
+	// 			// qNameQryGetUPInvoiceParties,
+	// 			// qNameQryGetUPTransferInstrument,
+	// 			// qNameCmdRetryTransferUPPayout,
+	// 			// https://dev.untill.com/projects/#!685617
+	// 			// qNameQryGetUPLocationRates,
+	// 			// https://dev.untill.com/projects/#!685179
+	// 			// qNameQryUpdateShopperStatement,
+	// 			// https://dev.untill.com/projects/#!710217
+	// 			// qNameQryGetUPPayoutTransfers,
+	// 			// qNameQryGetUPInvoices,
+	// 			// qNameCmdUpdateUPProfile,
+	// 		},
+	// 		principalsPattern: [][]iauthnz.Principal{
+	// 			{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
+	// 			// OR
+	// 			{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
+	// 		},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
+	// {
+	// 	desc: "grant exec on few funcs to role air.UntillPaymentsReseller",
+	// 	pattern: PatternType{
+	// 		qNamesPattern: []appdef.QName{
+	// 			// qNameCmdUpdateUPLocationRates,
+	// 			// qNameQryGetUPFeesOverview,
+	// 			// https://dev.untill.com/projects/#!664876
+	// 			// qNameQryIsDirectReseller,
+	// 			// https://dev.untill.com/projects/#!659825
+	// 			// qNameQryGetResellerDailyUPReport,
+	// 		},
+	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}}},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
 	{
 		desc: "grant exec on few funcs to role air.UntillPaymentsManager",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
 				qNameQryGetAllUPPayouts,
-				qNameQryGetUPLocationInvoiceParties,
+				// qNameQryGetUPLocationInvoiceParties,
 				// https://dev.untill.com/projects/#!710217
 				// qNameQryGetAllUPInvoices,
-				qNameQryGetAllUPPayoutTransfers,
+				// qNameQryGetAllUPPayoutTransfers,
 				// https://dev.untill.com/projects/#!711418
 				// qNameQryGetDailyUPReports,
 				// https://dev.untill.com/projects/#!710982
@@ -374,15 +374,15 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Allow,
 	},
-	{
-		desc: "allow update cdoc.air.Reseller to sys.RoleWorkspaceAdmin",
-		pattern: PatternType{
-			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_UPDATE},
-			qNamesPattern:     []appdef.QName{qNameCDocReseller},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceAdmin}}},
-		},
-		policy: ACPolicy_Allow,
-	},
+	// {
+	// 	desc: "allow update cdoc.air.Reseller to sys.RoleWorkspaceAdmin",
+	// 	pattern: PatternType{
+	// 		opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_UPDATE},
+	// 		qNamesPattern:     []appdef.QName{qNameCDocReseller},
+	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceAdmin}}},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
 	// {
 	// 	// https://github.com/voedger/voedger/issues/2470
 	// 	// https://github.com/voedger/voedger/issues/3007
@@ -404,27 +404,27 @@ var defaultACL = ACL{
 	// 	},
 	// 	policy: ACPolicy_Allow,
 	// },
-	{
-		desc: "grant exec on few funcs to role air.ResellerPortalDashboardViewer",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameQryGetAirLocations,
-				qNameQryResellersDashboardSalesMetrics,
-				qNameQryResellersDashboardBackofficeMetrics,
-			},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameResellerPortalDashboardViewer}}},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
-		desc: "grant select on table air.UntillPayments to air.UntillPaymentsUser",
-		pattern: PatternType{
-			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
-			qNamesPattern:     []appdef.QName{qNameCDocUntillPayments},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}}},
-		},
-		policy: ACPolicy_Allow,
-	},
+	// {
+	// 	desc: "grant exec on few funcs to role air.ResellerPortalDashboardViewer",
+	// 	pattern: PatternType{
+	// 		qNamesPattern: []appdef.QName{
+	// 			// qNameQryGetAirLocations,
+	// 			// qNameQryResellersDashboardSalesMetrics,
+	// 			// qNameQryResellersDashboardBackofficeMetrics,
+	// 		},
+	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameResellerPortalDashboardViewer}}},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
+	// {
+	// 	desc: "grant select on table air.UntillPayments to air.UntillPaymentsUser",
+	// 	pattern: PatternType{
+	// 		opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
+	// 		qNamesPattern:     []appdef.QName{qNameCDocUntillPayments},
+	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}}},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
 	{
 		// TODO: carefully check which docs are able to be read by whom
 		desc: "grant select on few tables to air.AirReseller and air.UntillPaymentsReseller and SubscriptionReseller and WorkspaceAdmin",

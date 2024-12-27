@@ -53,7 +53,7 @@ var (
 	qNameQryGetUPOnboardingPage                     = appdef.NewQName(airPackage, "GetUPOnboardingPage")
 	qNameQryGetUPVerificationStatus                 = appdef.NewQName(airPackage, "GetUPVerificationStatus")
 	qNameQryGetUPAccountStatus                      = appdef.NewQName(airPackage, "GetUPAccountStatus")
-	qNameQryGetUPEventHistory                       = appdef.NewQName(airPackage, "GetUPEventHistory")
+	// qNameQryGetUPEventHistory                       = appdef.NewQName(airPackage, "GetUPEventHistory")
 	qNameCmdStoreResellerSubscriptionsProfile       = appdef.NewQName(airPackage, "StoreResellerSubscriptionsProfile")
 	qNameQryGetHostedAirSubscriptions               = appdef.NewQName(airPackage, "GetHostedAirSubscriptions")
 	qNameQryGetUPStatus                             = appdef.NewQName(airPackage, "GetUPStatus")
