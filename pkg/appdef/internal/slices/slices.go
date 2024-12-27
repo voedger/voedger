@@ -5,6 +5,8 @@
 
 package slices
 
+import "sort"
+
 // If the slices have duplicates, then the indices of the first pair are returned, otherwise (-1, -1)
 func Duplicates[T comparable](s []T) (int, int) {
 	for i := range s {
@@ -15,6 +17,19 @@ func Duplicates[T comparable](s []T) (int, int) {
 		}
 	}
 	return -1, -1
+}
+
+// Inserts element v into slice s in sorted order using comp function.
+//
+// If v already exists in s, then it is replaced with v, not added
+func InsertInSort[T any, S ~[]T](s S, v T, comp func(T, T) int) S {
+	i := sort.Search(len(s), func(i int) bool { return comp(s[i], v) >= 0 })
+	if (i >= len(s)) || (comp(s[i], v) != 0) {
+		s = append(s, v)
+		copy(s[i+1:], s[i:])
+	}
+	s[i] = v
+	return s
 }
 
 // Returns is slice sub is a subset of slice set, i.e. all elements from sub exist in set
