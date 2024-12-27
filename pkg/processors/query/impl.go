@@ -527,7 +527,7 @@ func (qw *queryWork) Release() {
 	}
 }
 
-// need or q.sys.EnrichPrincipalToken
+// need for q.sys.EnrichPrincipalToken
 func (qw *queryWork) AppQName() appdef.AppQName {
 	return qw.msg.AppQName()
 }
