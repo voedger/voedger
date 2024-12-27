@@ -229,8 +229,11 @@ func (ff *FieldsList) setFieldComment(name appdef.FieldName, comment ...string) 
 	if fld == nil {
 		panic(appdef.ErrFieldNotFound(name))
 	}
-	if fld, ok := fld.(interface{ setComment(...string) }); ok {
-		fld.setComment(comment...)
+	switch f := fld.(type) {
+	case *Field:
+		comments.SetComment(&f.WithComments, comment...)
+	case *RefField:
+		comments.SetComment(&f.WithComments, comment...)
 	}
 }
 

@@ -28,7 +28,8 @@ func Example() {
 		doc.SetComment("This is example doc")
 		doc.
 			AddField("f1", appdef.DataKind_int64, true).SetFieldComment("f1", "Field may have comments too").
-			AddField("f2", appdef.DataKind_string, false)
+			AddField("f2", appdef.DataKind_string, false).
+			AddRefField("next", false, docName).SetFieldComment("next", "Ref to other document")
 		rec := ws.AddCRecord(recName)
 
 		doc.AddContainer("rec", recName, 0, appdef.Occurs_Unbounded)
@@ -97,13 +98,14 @@ func Example() {
 	// "test.doc" is CDoc: true
 	// CDoc «test.doc» Kind() is TypeKind_CDoc
 	// doc "test.doc": TypeKind_CDoc. This is example doc
-	// doc field count: 2
+	// doc field count: 3
 	// founded int64-field «f1»
 	// *1. QName-field «sys.QName», required: true
 	// *2. RecordID-field «sys.ID», required: true
 	// *3. bool-field «sys.IsActive», required: false
 	//  4. int64-field «f1», required: true. Field may have comments too
 	//  5. string-field «f2», required: false
+	//  6. RecordID-field «next», required: false. Ref to other document
 	// doc container count: 1
 	// founded container «rec: test.rec»
 	// 1. container «rec: test.rec», occurs: 0…unbounded
