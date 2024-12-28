@@ -133,6 +133,8 @@ func NewViewPartKey(v *View) *ViewPartKey {
 	return pKey
 }
 
+func (ViewPartKey) IsViewPK() {}
+
 func (pk *ViewPartKey) addDataField(name appdef.FieldName, dataType appdef.QName, constraints ...appdef.IConstraint) {
 	d := appdef.Data(pk.view.App().Type, dataType)
 	if d == nil {
@@ -219,6 +221,8 @@ func NewViewClustCols(v *View) *ViewClustCols {
 		FieldsList: fields.MakeFields(v.Workspace(), appdef.TypeKind_ViewRecord),
 	}
 }
+
+func (ViewClustCols) IsViewCC() {}
 
 func (cc *ViewClustCols) addDataField(name appdef.FieldName, dataType appdef.QName, constraints ...appdef.IConstraint) {
 	d := appdef.Data(cc.view.App().Type, dataType)
@@ -314,6 +318,8 @@ func NewViewValue(v *View) *ViewValue {
 	val.FieldsList.MakeSysFields()
 	return val
 }
+
+func (ViewValue) IsViewValue() {}
 
 func (v *ViewValue) addDataField(name appdef.FieldName, dataType appdef.QName, required bool, constraints ...appdef.IConstraint) {
 	fields.AddDataField(&v.view.FieldsList, name, dataType, required, constraints...)

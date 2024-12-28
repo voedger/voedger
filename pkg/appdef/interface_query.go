@@ -8,6 +8,9 @@ package appdef
 // Query is a function that returns data from system state.
 type IQuery interface {
 	IFunction
+
+	// Unwanted type assertion stub
+	IsQuery()
 }
 
 type IQueryBuilder interface {

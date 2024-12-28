@@ -8,6 +8,9 @@ package appdef
 // Operation document.
 type IODoc interface {
 	IDoc
+
+	// Unwanted type assertion stub
+	IsODoc()
 }
 
 type IODocBuilder interface {
@@ -17,6 +20,9 @@ type IODocBuilder interface {
 // Operation document record.
 type IORecord interface {
 	IContainedRecord
+
+	// Unwanted type assertion stub
+	IsORecord()
 }
 
 type IORecordBuilder interface {

@@ -16,6 +16,8 @@ type WDoc struct {
 	SingletonDoc
 }
 
+func (WDoc) IsWDoc() {}
+
 func NewWDoc(ws appdef.IWorkspace, name appdef.QName) *WDoc {
 	d := &WDoc{SingletonDoc: MakeSingleton(ws, name, appdef.TypeKind_WDoc)}
 	types.Propagate(d)
@@ -41,6 +43,8 @@ func NewWDocBuilder(d *WDoc) *WDocBuilder {
 type WRecord struct {
 	ContainedRecord
 }
+
+func (WRecord) IsWRecord() {}
 
 func NewWRecord(ws appdef.IWorkspace, name appdef.QName) *WRecord {
 	r := &WRecord{ContainedRecord: MakeContainedRecord(ws, name, appdef.TypeKind_WRecord)}

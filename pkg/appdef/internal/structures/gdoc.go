@@ -13,6 +13,8 @@ type GDoc struct {
 	Doc
 }
 
+func (GDoc) IsGDoc() {}
+
 func NewGDoc(ws appdef.IWorkspace, name appdef.QName) *GDoc {
 	return &GDoc{Doc: MakeDoc(ws, name, appdef.TypeKind_GDoc)}
 }
@@ -36,6 +38,8 @@ func NewGDocBuilder(d *GDoc) *GDocBuilder {
 type GRecord struct {
 	ContainedRecord
 }
+
+func (GRecord) IsGRecord() {}
 
 func NewGRecord(ws appdef.IWorkspace, name appdef.QName) *GRecord {
 	return &GRecord{ContainedRecord: MakeContainedRecord(ws, name, appdef.TypeKind_GRecord)}

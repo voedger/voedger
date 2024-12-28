@@ -8,6 +8,9 @@ package appdef
 // Workflow document.
 type IWDoc interface {
 	ISingleton
+
+	// Unwanted type assertion stub
+	IsWDoc()
 }
 
 type IWDocBuilder interface {
@@ -17,6 +20,9 @@ type IWDocBuilder interface {
 // Workflow document record.
 type IWRecord interface {
 	IContainedRecord
+
+	// Unwanted type assertion stub
+	IsWRecord()
 }
 
 type IWRecordBuilder interface {

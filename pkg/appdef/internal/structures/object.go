@@ -22,6 +22,8 @@ func NewObject(ws appdef.IWorkspace, name appdef.QName) *Object {
 	return o
 }
 
+func (Object) IsObject() {}
+
 // # Supports:
 //   - appdef.IObjectBuilder
 type ObjectBuilder struct {

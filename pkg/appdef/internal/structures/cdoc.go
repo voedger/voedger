@@ -23,6 +23,8 @@ func NewCDoc(ws appdef.IWorkspace, name appdef.QName) *CDoc {
 	return d
 }
 
+func (CDoc) IsCDoc() {}
+
 // # Supports:
 //   - appdef.ICDocBuilder
 type CDocBuilder struct {
@@ -48,6 +50,8 @@ func NewCRecord(ws appdef.IWorkspace, name appdef.QName) *CRecord {
 	types.Propagate(r)
 	return r
 }
+
+func (CRecord) IsCRecord() {}
 
 // # Supports:
 //   - appdef.ICRecordBuilder

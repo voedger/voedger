@@ -70,6 +70,9 @@ type IViewKeyBuilder interface {
 type IViewPartKey interface {
 	// Partition key fields.
 	IFields
+
+	// Unwanted type assertion stub
+	IsViewPK()
 }
 
 type IViewPartKeyBuilder interface {
@@ -95,6 +98,9 @@ type IViewPartKeyBuilder interface {
 type IViewClustCols interface {
 	// Clustering columns fields.
 	IFields
+
+	// Unwanted type assertion stub
+	IsViewCC()
 }
 
 type IViewClustColsBuilder interface {
@@ -122,6 +128,9 @@ type IViewClustColsBuilder interface {
 type IViewValue interface {
 	// View value fields.
 	IFields
+
+	// Unwanted type assertion stub
+	IsViewValue()
 }
 
 type IViewValueBuilder interface {

@@ -22,6 +22,8 @@ func NewODoc(ws appdef.IWorkspace, name appdef.QName) *ODoc {
 	return o
 }
 
+func (ODoc) IsODoc() {}
+
 // # Supports:
 //   - appdef.IODocBuilder
 type ODocBuilder struct {
@@ -41,6 +43,8 @@ func NewODocBuilder(d *ODoc) *ODocBuilder {
 type ORecord struct {
 	ContainedRecord
 }
+
+func (ORecord) IsORecord() {}
 
 func NewORecord(ws appdef.IWorkspace, name appdef.QName) *ORecord {
 	r := &ORecord{ContainedRecord: MakeContainedRecord(ws, name, appdef.TypeKind_ORecord)}
