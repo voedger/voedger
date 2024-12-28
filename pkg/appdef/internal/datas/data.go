@@ -62,17 +62,15 @@ func NewAnonymousData(ws appdef.IWorkspace, kind appdef.DataKind, anc appdef.QNa
 	return d
 }
 
-func (d *Data) Ancestor() appdef.IData {
-	return d.ancestor
-}
+func (d Data) Ancestor() appdef.IData { return d.ancestor }
 
-func (d *Data) Constraints(withInherited bool) iter.Seq2[appdef.ConstraintKind, appdef.IConstraint] {
+func (d Data) Constraints(withInherited bool) iter.Seq2[appdef.ConstraintKind, appdef.IConstraint] {
 	if !withInherited {
 		return maps.All(d.constraints)
 	}
 
 	cc := make(map[appdef.ConstraintKind]appdef.IConstraint)
-	for a := d; a != nil; {
+	for a := &d; a != nil; {
 		for k, c := range a.constraints {
 			if _, ok := cc[k]; !ok {
 				cc[k] = c
@@ -86,12 +84,14 @@ func (d *Data) Constraints(withInherited bool) iter.Seq2[appdef.ConstraintKind, 
 	return maps.All(cc)
 }
 
-func (d *Data) DataKind() appdef.DataKind {
-	return d.dataKind
-}
+func (d Data) DataKind() appdef.DataKind { return d.dataKind }
 
-func (d *Data) String() string {
-	return fmt.Sprintf("%s-data «%v»", d.DataKind().TrimString(), d.QName())
+func (d Data) String() string {
+	s := fmt.Sprintf("%s-data", d.DataKind().TrimString())
+	if n := d.QName(); n != appdef.NullQName {
+		s += fmt.Sprintf(" «%v»", n)
+	}
+	return s
 }
 
 func (d *Data) addConstraints(cc ...appdef.IConstraint) {

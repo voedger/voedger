@@ -179,9 +179,16 @@ func (t NullType) QName() appdef.QName          { return appdef.NullQName }
 func (t NullType) String() string               { return nullTypeString }
 func (t NullType) Workspace() appdef.IWorkspace { return nil }
 
-type WithTypes struct {
-	types *Types[appdef.IType]
-}
+type (
+	IWithTypes interface {
+		Type(appdef.QName) appdef.IType
+		Types() iter.Seq[appdef.IType]
+	}
+
+	WithTypes struct {
+		types *Types[appdef.IType]
+	}
+)
 
 func MakeWithTypes() WithTypes { return WithTypes{types: NewTypes[appdef.IType]()} }
 
