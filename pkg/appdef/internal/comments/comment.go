@@ -40,15 +40,15 @@ func (c *WithComments) setComment(v ...string) {
 // # Supports:
 //   - appdef.ICommenter
 type CommentBuilder struct {
-	*WithComments
+	c *WithComments
 }
 
-func MakeCommentBuilder(comment *WithComments) CommentBuilder {
-	return CommentBuilder{comment}
+func MakeCommentBuilder(c *WithComments) CommentBuilder {
+	return CommentBuilder{c}
 }
 
 func (cb *CommentBuilder) SetComment(v ...string) {
-	cb.WithComments.setComment(v...)
+	cb.c.setComment(v...)
 }
 
 // # Supports
