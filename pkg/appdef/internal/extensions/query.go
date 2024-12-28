@@ -22,6 +22,8 @@ func NewQuery(ws appdef.IWorkspace, name appdef.QName) *Query {
 	return q
 }
 
+func (Query) IsQuery() {}
+
 // # Supports:
 //   - appdef.IQueryBuilder
 type QueryBuilder struct {
