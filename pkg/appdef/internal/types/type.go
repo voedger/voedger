@@ -163,22 +163,6 @@ func (tt Types[T]) Find(name appdef.QName) appdef.IType {
 
 func (tt Types[T]) Values() iter.Seq[T] { return slices.Values(tt.s) }
 
-const nullTypeString = "null type"
-
-// # Supports
-//   - appdef.IType
-type NullType struct {
-	comments.NullComment
-	NullTags
-}
-
-func (t NullType) App() appdef.IAppDef          { return nil }
-func (t NullType) IsSystem() bool               { return false }
-func (t NullType) Kind() appdef.TypeKind        { return appdef.TypeKind_null }
-func (t NullType) QName() appdef.QName          { return appdef.NullQName }
-func (t NullType) String() string               { return nullTypeString }
-func (t NullType) Workspace() appdef.IWorkspace { return nil }
-
 type (
 	IWithTypes interface {
 		Type(appdef.QName) appdef.IType

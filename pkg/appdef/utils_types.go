@@ -368,6 +368,20 @@ func WRecords(types SeqType) func(func(IWRecord) bool) {
 	return TypesByKind[IWRecord](types, TypeKind_WRecord)
 }
 
+const nullTypeString = "null type"
+
+type nullType struct {
+	nullComment
+	nullTags
+}
+
+func (t nullType) App() IAppDef          { return nil }
+func (t nullType) IsSystem() bool        { return false }
+func (t nullType) Kind() TypeKind        { return TypeKind_null }
+func (t nullType) QName() QName          { return NullQName }
+func (t nullType) String() string        { return nullTypeString }
+func (t nullType) Workspace() IWorkspace { return nil }
+
 // Is specified type kind may be used in child containers.
 func (k TypeKind) ContainerKindAvailable(s TypeKind) bool {
 	return structTypeProps(k).containerKinds.Contains(s)
