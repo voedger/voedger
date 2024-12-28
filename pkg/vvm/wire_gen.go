@@ -684,7 +684,7 @@ func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err er
 		if err != nil {
 			return nil, err
 		}
-		appDefBuilder := appdef.New()
+		appDefBuilder := builder.New()
 		if err := parser.BuildAppDefs(appSchemaAST, appDefBuilder); err != nil {
 			return nil, err
 		}

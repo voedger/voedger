@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -150,7 +151,7 @@ func appStructs(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStr
 
 	appName := istructs.AppQName_test1_app1
 
-	appDef := appdef.New()
+	appDef := builder.New()
 
 	err = parser.BuildAppDefs(packages, appDef)
 	if err != nil {

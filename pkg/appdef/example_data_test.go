@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
 )
 
 func ExampleDataTypes() {
@@ -27,22 +29,22 @@ func ExampleDataTypes() {
 
 	// how to build AppDef with data types
 	{
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		ws := adb.AddWorkspace(wsName)
 
-		ws.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinExcl(0)).SetComment("Natural number")
+		ws.AddData(numName, appdef.DataKind_int64, appdef.NullQName, constraints.MinExcl(0)).SetComment("Natural number")
 
 		_ = ws.AddData(floatName, appdef.DataKind_float64, appdef.NullQName)
 
-		_ = ws.AddData(strName, appdef.DataKind_string, appdef.NullQName, appdef.MinLen(1), appdef.MaxLen(4))
+		_ = ws.AddData(strName, appdef.DataKind_string, appdef.NullQName, constraints.MinLen(1), constraints.MaxLen(4))
 
-		_ = ws.AddData(tokenName, appdef.DataKind_string, strName, appdef.Pattern("^[a-z]+$"))
+		_ = ws.AddData(tokenName, appdef.DataKind_string, strName, constraints.Pattern("^[a-z]+$"))
 
-		_ = ws.AddData(weekDayName, appdef.DataKind_string, strName, appdef.Enum("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+		_ = ws.AddData(weekDayName, appdef.DataKind_string, strName, constraints.Enum("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
 
 		ws.AddData(jsonName, appdef.DataKind_string, appdef.NullQName,
-			appdef.MaxLen(appdef.MaxFieldLength)).SetComment("JSON string up to 64K")
+			constraints.MaxLen(appdef.MaxFieldLength)).SetComment("JSON string up to 64K")
 
 		app = adb.MustBuild()
 	}

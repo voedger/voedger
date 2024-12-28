@@ -24,16 +24,6 @@ func IsSysField(n FieldName) bool {
 			(n == SystemField_IsActive))
 }
 
-type nullFields struct{}
-
-func (f *nullFields) Field(FieldName) IField       { return nil }
-func (f *nullFields) FieldCount() int              { return 0 }
-func (f *nullFields) Fields() []IField             { return []IField{} }
-func (f *nullFields) RefField(FieldName) IRefField { return nil }
-func (f *nullFields) RefFields() []IRefField       { return []IRefField{} }
-func (f *nullFields) UserFieldCount() int          { return 0 }
-func (f *nullFields) UserFields() []IField         { return []IField{} }
-
 func (k VerificationKind) MarshalJSON() ([]byte, error) {
 	var s string
 	if k < VerificationKind_FakeLast {

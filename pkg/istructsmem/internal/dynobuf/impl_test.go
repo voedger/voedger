@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/dynobuffers"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
 )
 
 func TestDynoBufSchemes(t *testing.T) {
@@ -19,7 +21,7 @@ func TestDynoBufSchemes(t *testing.T) {
 	var app appdef.IAppDef
 
 	t.Run("should be ok to build application", func(t *testing.T) {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
@@ -57,7 +59,7 @@ func TestDynoBufSchemes(t *testing.T) {
 
 		view := wsb.AddView(appdef.NewQName("test", "view"))
 		view.Key().PartKey().AddField("pk1", appdef.DataKind_int64)
-		view.Key().ClustCols().AddField("cc1", appdef.DataKind_string, appdef.MaxLen(100))
+		view.Key().ClustCols().AddField("cc1", appdef.DataKind_string, constraints.MaxLen(100))
 		view.Value().AddRefField("val1", true)
 
 		a, err := adb.Build()

@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/set"
@@ -36,7 +37,7 @@ func Test_ProjectorEvent(t *testing.T) {
 	tagName := appdef.NewQName("my", "CDocTag")
 
 	newProjector := func(ops appdef.OperationsSet, flt appdef.IFilter, wantErrors bool) appdef.IProjector {
-		adb := appdef.New()
+		adb := builder.New()
 		sysWsb := adb.AlterWorkspace(appdef.SysWorkspaceQName)
 		_ = sysWsb.AddCommand(istructs.QNameCommandCUD) // should be in ancestor
 

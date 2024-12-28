@@ -10,6 +10,8 @@ import (
 	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
@@ -26,7 +28,7 @@ func ExampleProjectors() {
 
 	// how to build AppDef with projectors
 	{
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
@@ -37,7 +39,7 @@ func ExampleProjectors() {
 		v := wsb.AddView(viewName)
 		v.Key().PartKey().AddDataField("id", appdef.SysData_RecordID)
 		v.Key().ClustCols().AddDataField("name", appdef.SysData_String)
-		v.Value().AddDataField("data", appdef.SysData_bytes, false, appdef.MaxLen(1024))
+		v.Value().AddDataField("data", appdef.SysData_bytes, false, constraints.MaxLen(1024))
 		v.SetComment("view is intent for projector")
 
 		prj := wsb.AddProjector(prjName)

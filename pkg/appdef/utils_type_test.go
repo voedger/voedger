@@ -15,24 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
-func Test_NullType(t *testing.T) {
-	require := require.New(t)
-
-	require.Empty(appdef.NullType.Comment())
-	require.Empty(slices.Collect(appdef.NullType.CommentLines()))
-
-	require.False(appdef.NullType.HasTag(appdef.NullQName))
-	appdef.NullType.Tags()(func(appdef.ITag) bool { require.Fail("Tags() should be empty"); return false })
-
-	require.Nil(appdef.NullType.App())
-	require.Nil(appdef.NullType.Workspace())
-	require.Equal(appdef.NullQName, appdef.NullType.QName())
-	require.Equal(appdef.TypeKind_null, appdef.NullType.Kind())
-	require.False(appdef.NullType.IsSystem())
-
-	require.Contains(fmt.Sprint(appdef.NullType), "null type")
-}
-
 func Test_AnyType(t *testing.T) {
 	require := require.New(t)
 

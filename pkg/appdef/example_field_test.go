@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
 )
 
 func ExampleIFields() {
@@ -20,16 +22,16 @@ func ExampleIFields() {
 
 	// how to build doc with string field
 	{
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
 		doc := wsb.AddODoc(docName)
 		doc.
-			AddField("code", appdef.DataKind_string, true, appdef.MinLen(1), appdef.MaxLen(4), appdef.Pattern(`^\d+$`)).
+			AddField("code", appdef.DataKind_string, true, constraints.MinLen(1), constraints.MaxLen(4), constraints.Pattern(`^\d+$`)).
 			SetFieldComment("code", "Code is string containing from one to four digits").
-			AddField("barCode", appdef.DataKind_bytes, false, appdef.MaxLen(4096)).
+			AddField("barCode", appdef.DataKind_bytes, false, constraints.MaxLen(4096)).
 			SetFieldComment("barCode", "Bar code scan data, up to 4 KB")
 
 		app = adb.MustBuild()
@@ -82,20 +84,20 @@ func ExampleIFieldsBuilder_AddDataField() {
 	// how to build doc with string field
 	{
 
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
 		str10name := appdef.NewQName("test", "str10")
-		str10 := wsb.AddData(str10name, appdef.DataKind_string, appdef.NullQName, appdef.MinLen(10), appdef.MaxLen(10))
+		str10 := wsb.AddData(str10name, appdef.DataKind_string, appdef.NullQName, constraints.MinLen(10), constraints.MaxLen(10))
 		str10.SetComment("String with 10 characters exact")
 
 		dig10name := appdef.NewQName("test", "dig10")
-		_ = wsb.AddData(dig10name, appdef.DataKind_string, str10name, appdef.Pattern(`^\d+$`, "only digits"))
+		_ = wsb.AddData(dig10name, appdef.DataKind_string, str10name, constraints.Pattern(`^\d+$`, "only digits"))
 
 		monthName := appdef.NewQName("test", "month")
-		month := wsb.AddData(monthName, appdef.DataKind_int32, appdef.NullQName, appdef.MinExcl(0), appdef.MaxIncl(12))
+		month := wsb.AddData(monthName, appdef.DataKind_int32, appdef.NullQName, constraints.MinExcl(0), constraints.MaxIncl(12))
 		month.SetComment("Month number, left-open range (0-12]")
 
 		doc := wsb.AddCDoc(docName)
@@ -154,14 +156,14 @@ func ExampleIFieldsBuilder_SetFieldVerify() {
 
 	// how to build doc with verified field
 	{
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
 		doc := ws.AddCDoc(docName)
 		doc.
-			AddField("pin", appdef.DataKind_string, true, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\d+$`)).
+			AddField("pin", appdef.DataKind_string, true, constraints.MinLen(4), constraints.MaxLen(4), constraints.Pattern(`^\d+$`)).
 			SetFieldComment("pin", "Secret four digits pin code").
 			SetFieldVerify("pin", appdef.VerificationKind_EMail, appdef.VerificationKind_Phone)
 

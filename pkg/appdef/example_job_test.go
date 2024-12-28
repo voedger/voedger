@@ -9,6 +9,8 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
 )
 
 func ExampleJobs() {
@@ -21,7 +23,7 @@ func ExampleJobs() {
 
 	// how to build AppDef with jobs
 	{
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
@@ -29,7 +31,7 @@ func ExampleJobs() {
 		v := wsb.AddView(viewName)
 		v.Key().PartKey().AddDataField("id", appdef.SysData_RecordID)
 		v.Key().ClustCols().AddDataField("name", appdef.SysData_String)
-		v.Value().AddDataField("data", appdef.SysData_bytes, false, appdef.MaxLen(1024))
+		v.Value().AddDataField("data", appdef.SysData_bytes, false, constraints.MaxLen(1024))
 		v.SetComment("view is state for job")
 
 		job := wsb.AddJob(jobName)

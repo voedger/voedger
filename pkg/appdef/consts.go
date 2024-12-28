@@ -56,6 +56,19 @@ const (
 	SystemField_QName     = SystemPackagePrefix + "QName"
 )
 
+// System data type names
+var (
+	SysData_int32    QName = SysDataName(DataKind_int32)
+	SysData_int64    QName = SysDataName(DataKind_int64)
+	SysData_float32  QName = SysDataName(DataKind_float32)
+	SysData_float64  QName = SysDataName(DataKind_float64)
+	SysData_bytes    QName = SysDataName(DataKind_bytes)
+	SysData_String   QName = SysDataName(DataKind_string)
+	SysData_QName    QName = SysDataName(DataKind_QName)
+	SysData_bool     QName = SysDataName(DataKind_bool)
+	SysData_RecordID QName = SysDataName(DataKind_RecordID)
+)
+
 // Maximum containers per one structured type
 const MaxTypeContainerCount = 65536
 

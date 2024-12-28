@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
 	gojson "encoding/json"
@@ -147,7 +148,7 @@ func Test_RecordsRead(t *testing.T) {
 		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddBuiltInAppConfig(test.appName, appdef.New())
+		cfg := cfgs.AddBuiltInAppConfig(test.appName, builder.New())
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
@@ -173,7 +174,7 @@ func Test_RecordsRead(t *testing.T) {
 		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddBuiltInAppConfig(test.appName, appdef.New())
+		cfg := cfgs.AddBuiltInAppConfig(test.appName, builder.New())
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 

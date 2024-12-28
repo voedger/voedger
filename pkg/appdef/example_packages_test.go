@@ -10,6 +10,7 @@ import (
 	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 )
 
 func ExampleIAppDefBuilder_AddPackage() {
@@ -17,7 +18,7 @@ func ExampleIAppDefBuilder_AddPackage() {
 
 	// how to build AppDef with packages
 	{
-		adb := appdef.New()
+		adb := builder.New()
 
 		adb.AddPackage("test", "test.com/test")
 		adb.AddPackage("example", "example.com/example")

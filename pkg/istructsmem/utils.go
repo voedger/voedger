@@ -8,11 +8,11 @@ package istructsmem
 import (
 	"encoding/binary"
 
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/coreutils"
 
 	"github.com/untillpro/dynobuffers"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -23,7 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/itokensjwt"
 )
 
-var NullAppConfig = newBuiltInAppConfig(istructs.AppQName_null, appdef.New())
+var NullAppConfig = newBuiltInAppConfig(istructs.AppQName_null, builder.New())
 
 var (
 	nullDynoBuffer = dynobuffers.NewBuffer(dynobuffers.NewScheme())

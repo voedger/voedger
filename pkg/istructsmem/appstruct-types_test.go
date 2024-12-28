@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -30,7 +31,7 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 
 	t.Run("should be ok to add config for known builtin app", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
@@ -62,7 +63,7 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 
 	t.Run("misc", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(42)
@@ -75,7 +76,7 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 
 	t.Run("should be error to make invalid changes in appDef after add config", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		cfgs.AddBuiltInAppConfig(appName, adb).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
@@ -98,7 +99,7 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 			cfgs := make(AppConfigsType)
 			appName := appdef.NewAppQName("unknown", "unknown")
 			require.Panics(func() {
-				cfgs.AddBuiltInAppConfig(appName, appdef.New()).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+				cfgs.AddBuiltInAppConfig(appName, builder.New()).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 			}, require.Is(istructs.ErrAppNotFound), require.Has(appName))
 		})
 
@@ -108,7 +109,7 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 			require.Panics(func() {
 				_ = cfgs.AddBuiltInAppConfig(appName,
 					func() appdef.IAppDefBuilder {
-						adb := appdef.New()
+						adb := builder.New()
 						adb.AddPackage("test", "test.com/test")
 						wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 						wsb.AddObject(appdef.NewQName("test", "obj")).
@@ -128,7 +129,7 @@ func TestAppConfigsType_GetConfig(t *testing.T) {
 
 	cfgs := make(AppConfigsType)
 	for app, id := range istructs.ClusterApps {
-		cfg := cfgs.AddBuiltInAppConfig(app, appdef.New())
+		cfg := cfgs.AddBuiltInAppConfig(app, builder.New())
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		require.NotNil(cfg)
 		require.Equal(cfg.Name, app)
@@ -184,7 +185,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 	docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
 
 	appDef := func() appdef.IAppDefBuilder {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		ws := adb.AddWorkspace(wsName)
 		doc := ws.AddCDoc(docName)
@@ -305,7 +306,7 @@ func Test_NewAppStructs(t *testing.T) {
 	structs := Provide(make(AppConfigsType, 1), iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 	t.Run("should be ok to create new AppStructs", func(t *testing.T) {
-		def := appdef.New().MustBuild()
+		def := builder.New().MustBuild()
 		str, err := structs.New(name, def, id, wsCount)
 		require.NoError(err)
 		require.NotNil(str)
@@ -330,7 +331,7 @@ func Test_NewAppStructs(t *testing.T) {
 
 		t.Run("if storage is not exists", func(t *testing.T) {
 			unknown := appdef.NewAppQName("unknown", "unknown")
-			def := appdef.New().MustBuild()
+			def := builder.New().MustBuild()
 			str, err := structs.New(unknown, def, id, wsCount)
 			require.Error(err,
 				require.Is(istorage.ErrStorageDoesNotExist),
@@ -339,7 +340,7 @@ func Test_NewAppStructs(t *testing.T) {
 		})
 
 		t.Run("if workspaces count is omitted", func(t *testing.T) {
-			def := appdef.New().MustBuild()
+			def := builder.New().MustBuild()
 			str, err := structs.New(name, def, id, 0)
 			require.Error(err, require.Is(ErrNumAppWorkspacesNotSetError), require.Has(name))
 			require.Nil(str)
