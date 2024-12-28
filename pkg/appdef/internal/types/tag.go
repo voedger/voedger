@@ -19,7 +19,9 @@ type Tag struct {
 
 // Creates and returns new tag.
 func NewTag(ws appdef.IWorkspace, name appdef.QName) *Tag {
-	return &Tag{Typ: MakeType(ws.App(), ws, name, appdef.TypeKind_Tag)}
+	t := &Tag{Typ: MakeType(ws.App(), ws, name, appdef.TypeKind_Tag)}
+	Propagate(t)
+	return t
 }
 
 // # Supports:
