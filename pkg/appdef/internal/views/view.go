@@ -157,8 +157,8 @@ func (pk *ViewPartKey) addField(name appdef.FieldName, kind appdef.DataKind, con
 
 func (pk *ViewPartKey) addRefField(name appdef.FieldName, ref ...appdef.QName) {
 	fields.AddRefField(&pk.view.FieldsList, name, true, ref...)
-	fields.AddRefField(&pk.view.key.FieldsList, name, false, ref...)
-	fields.AddRefField(&pk.FieldsList, name, false, ref...)
+	fields.AddRefField(&pk.view.key.FieldsList, name, true, ref...)
+	fields.AddRefField(&pk.FieldsList, name, true, ref...)
 }
 
 func (pk *ViewPartKey) setFieldComment(name appdef.FieldName, comment ...string) {
