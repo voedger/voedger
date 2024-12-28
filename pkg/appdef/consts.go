@@ -29,23 +29,7 @@ const SysWorkspaceName = "Workspace"
 
 var SysWorkspaceQName = NewQName(SysPackage, SysWorkspaceName)
 
-// Any names
-const (
-	AnyName          = "ANY"
-	AnyStructureName = "AnyStructure"
-	AnyRecordName    = "AnyRecord"
-	AnyGDocName      = "AnyGDoc"
-	AnyCDocName      = "AnyCDoc"
-	AnyWDocName      = "AnyWDoc"
-	AnySingletonName = "AnySingleton"
-	AnyODocName      = "AnyODoc"
-	AnyObjectName    = "AnyObject"
-	AnyViewName      = "AnyView"
-	AnyExtensionName = "AnyExtension"
-	AnyFunctionName  = "AnyFunction"
-	AnyCommandName   = "AnyCommand"
-	AnyQueryName     = "AnyQuery"
-)
+const AnyName = "ANY"
 
 // QNameANY is substitution denotes that a Function param or result can be any type
 //
