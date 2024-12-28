@@ -61,16 +61,16 @@ func Test_checkConstraints(t *testing.T) {
 			// numeric fields to test exclusive constraints: open range (0, 9)
 			AddField("int32_e", appdef.DataKind_int32, false,
 				constraints.MinExcl(0),
-				appdef.MaxExcl(9)).
+				constraints.MaxExcl(9)).
 			AddField("int64_e", appdef.DataKind_int64, false,
 				constraints.MinExcl(0),
-				appdef.MaxExcl(9)).
+				constraints.MaxExcl(9)).
 			AddField("float32_e", appdef.DataKind_float32, false,
 				constraints.MinExcl(0),
-				appdef.MaxExcl(9)).
+				constraints.MaxExcl(9)).
 			AddField("float64_e", appdef.DataKind_float64, false,
 				constraints.MinExcl(0),
-				appdef.MaxExcl(9))
+				constraints.MaxExcl(9))
 
 		app, err := adb.Build()
 		require.NoError(err)
