@@ -8,9 +8,9 @@ package apps
 import (
 	"errors"
 	"iter"
-	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/internal/acl"
 	"github.com/voedger/voedger/pkg/appdef/internal/comments"
 	"github.com/voedger/voedger/pkg/appdef/internal/containers"
 	"github.com/voedger/voedger/pkg/appdef/internal/datas"
@@ -26,8 +26,8 @@ type AppDef struct {
 	comments.WithComments
 	packages.WithPackages
 	workspaces.WithWorkspaces
+	acl.WithACL
 	sysWS *workspaces.Workspace
-	acl   []appdef.IACLRule
 	types *types.Types[appdef.IType]
 }
 
@@ -36,17 +36,11 @@ func NewAppDef() *AppDef {
 		WithComments:   comments.MakeWithComments(),
 		WithPackages:   packages.MakeWithPackages(),
 		WithWorkspaces: workspaces.MakeWithWorkspaces(),
-		acl:            make([]appdef.IACLRule, 0),
+		WithACL:        acl.MakeWithACL(),
 		types:          types.NewTypes[appdef.IType](),
 	}
 	app.makeSysPackage()
 	return &app
-}
-
-func (app AppDef) ACL() iter.Seq[appdef.IACLRule] { return slices.Values(app.acl) }
-
-func (app *AppDef) AppendACL(acl appdef.IACLRule) {
-	app.acl = append(app.acl, acl)
 }
 
 func (app *AppDef) AppendType(t appdef.IType) {

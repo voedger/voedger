@@ -163,10 +163,7 @@ func (c *buildContext) tags() error {
 		iteratePackageStmt(schema, &c.basicContext, func(tag *TagStmt, ictx *iterateCtx) {
 			qname := schema.NewQName(tag.Name)
 			builder := tag.workspace.mustBuilder(c)
-			builder.AddTag(qname)
-			if len(tag.Comments) > 0 {
-				builder.SetTypeComment(qname, tag.Comments...)
-			}
+			builder.AddTag(qname, tag.Comments...)
 		})
 	}
 	return nil

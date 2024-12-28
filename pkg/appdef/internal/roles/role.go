@@ -19,43 +19,34 @@ import (
 //   - appdef.IRole
 type Role struct {
 	types.Typ
-	acl []appdef.IACLRule
+	acl.WithACL
 }
 
 func NewRole(ws appdef.IWorkspace, name appdef.QName) *Role {
 	return &Role{
-		Typ: types.MakeType(ws.App(), ws, name, appdef.TypeKind_Role),
-		acl: make([]appdef.IACLRule, 0),
+		Typ:     types.MakeType(ws.App(), ws, name, appdef.TypeKind_Role),
+		WithACL: acl.MakeWithACL(),
 	}
 }
 
-func (r Role) ACL() iter.Seq[appdef.IACLRule] { return slices.Values(r.acl) }
-
 func (r *Role) Ancestors() iter.Seq[appdef.QName] {
 	roles := appdef.QNames{}
-	for _, acl := range r.acl {
-		if acl.Op(appdef.OperationKind_Inherits) {
-			switch acl.Filter().Kind() {
+	for rule := range r.WithACL.ACL() {
+		if rule.Op(appdef.OperationKind_Inherits) {
+			switch rule.Filter().Kind() {
 			case appdef.FilterKind_QNames:
-				for q := range acl.Filter().QNames() {
+				for q := range rule.Filter().QNames() {
 					roles.Add(q)
 				}
 			default:
 				// complex filter
-				for role := range appdef.Roles(appdef.FilterMatches(acl.Filter(), r.Workspace().Types())) {
+				for role := range appdef.Roles(appdef.FilterMatches(rule.Filter(), r.Workspace().Types())) {
 					roles.Add(role.QName())
 				}
 			}
 		}
 	}
 	return slices.Values(roles)
-}
-
-func (r *Role) AppendACL(acl appdef.IACLRule) {
-	r.acl = append(r.acl, acl)
-	if ws, ok := r.Workspace().(interface{ AppendACL(appdef.IACLRule) }); ok {
-		ws.AppendACL(acl) // propagate ACL to workspace and app
-	}
 }
 
 func (r *Role) grant(ops []appdef.OperationKind, flt appdef.IFilter, fields []appdef.FieldName, comment ...string) {

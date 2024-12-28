@@ -7,7 +7,6 @@ package workspaces
 
 import (
 	"iter"
-	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/abstracts"
@@ -27,7 +26,7 @@ import (
 type Workspace struct {
 	types.Typ
 	abstracts.WithAbstract
-	acl       []appdef.IACLRule
+	acl.WithACL
 	ancestors *Workspaces
 	types     *types.Types[appdef.IType]
 	usedWS    *Workspaces
@@ -38,7 +37,7 @@ func NewWorkspace(app appdef.IAppDef, name appdef.QName) *Workspace {
 	ws := &Workspace{
 		Typ:          types.MakeType(app, nil, name, appdef.TypeKind_Workspace),
 		WithAbstract: abstracts.MakeWithAbstract(),
-		acl:          make([]appdef.IACLRule, 0),
+		WithACL:      acl.MakeWithACL(),
 		ancestors:    NewWorkspaces(),
 		types:        types.NewTypes[appdef.IType](),
 		usedWS:       NewWorkspaces(),
@@ -49,17 +48,8 @@ func NewWorkspace(app appdef.IAppDef, name appdef.QName) *Workspace {
 	return ws
 }
 
-func (ws Workspace) ACL() iter.Seq[appdef.IACLRule] { return slices.Values(ws.acl) }
-
 func (ws Workspace) Ancestors() iter.Seq[appdef.IWorkspace] {
 	return ws.ancestors.Values()
-}
-
-func (ws *Workspace) AppendACL(acl appdef.IACLRule) {
-	ws.acl = append(ws.acl, acl)
-	if app, ok := ws.App().(interface{ AppendACL(appdef.IACLRule) }); ok {
-		app.AppendACL(acl) // propagate ACL to app
-	}
 }
 
 func (ws *Workspace) AppendType(t appdef.IType) {
