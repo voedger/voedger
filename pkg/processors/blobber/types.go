@@ -8,6 +8,7 @@ package blobprocessor
 import (
 	"context"
 	"net/http"
+	"net/url"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -52,16 +53,11 @@ type WLimiterFactory func() iblobstorage.WLimiterType
 type IBLOBMessage interface {
 	AppQName() appdef.AppQName
 	WSID() istructs.WSID
-	BLOBOperation() BLOBOperation
-	Header() map[string][]string
+	Header() http.Header
 	Sender() ibus.ISender
 	Resp() http.ResponseWriter
 	RequestCtx() context.Context
-	WLimiterFactory() WLimiterFactory
-	Duration() iblobstorage.DurationType // used on write temporary
-	SUUID() iblobstorage.SUUID           // used on read temporary
-	Boundary() string                    // used on write multipart
-	BLOBID() istructs.RecordID           // used on read persistent
+	URL() *url.URL
 }
 
 type ServiceFactory func(serviceChannel iprocbus.ServiceChannel) pipeline.IService

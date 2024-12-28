@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -19,12 +20,13 @@ import (
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
-func writeBLOB(bm IBLOBMessage, blobStorage iblobstorage.IBLOBStorage, busTimeout time.Duration, ibus ibus.IBus) (blobID istructs.RecordID) {
+func writeBLOB(bm IBLOBMessage, blobStorage iblobstorage.IBLOBStorage,
+	busTimeout time.Duration, bus ibus.IBus, name string, mimeType string,
+	body io.Reader) (blobID istructs.RecordID) {
 	// request VVM for check the principalToken and get a blobID
 	ok := false
 	if ok, blobID = registerBLOB(bm.RequestCtx(), bm.WSID(), bm.AppQName().String(), "c.sys.UploadBLOBHelper",
-		bm.Header(), busTimeout, ibus, bm.Sender()); !ok {
-
+		bm.Header(), busTimeout, bus, bm.Sender()); !ok {
 		return
 	}
 
@@ -35,33 +37,38 @@ func writeBLOB(bm IBLOBMessage, blobStorage iblobstorage.IBLOBStorage, busTimeou
 		BlobID:       blobID,
 	}
 
-	wLimiter := bm.WLimiterFactory()
-	if err := blobStorage.WriteBLOB(bm.RequestCtx(), key, bm., body, wLimiter); err != nil {
+	descr := iblobstorage.DescrType{
+		Name:     name,
+		MimeType: mimeType,
+	}
+
+	wLimiter := bm.WLimiterFactory()()
+	if err := blobStorage.WriteBLOB(bm.RequestCtx(), key, descr, body, wLimiter); err != nil {
 		if errors.Is(err, iblobstorage.ErrBLOBSizeQuotaExceeded) {
-			WriteTextResponse(resp, err.Error(), http.StatusForbidden)
+			coreutils.ReplyErrf(bm.Sender(), http.StatusForbidden, err.Error())
 			return 0
 		}
-		WriteTextResponse(resp, err.Error(), http.StatusInternalServerError)
+		coreutils.ReplyErr(bm.Sender(), err)
 		return 0
 	}
 
 	// set WDoc<sys.BLOB>.status = BLOBStatus_Completed
 	req := ibus.Request{
 		Method:   ibus.HTTPMethodPOST,
-		WSID:     wsid,
-		AppQName: appQName,
+		WSID:     bm.WSID(),
+		AppQName: bm.AppQName().String(),
 		Resource: "c.sys.CUD",
 		Body:     []byte(fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"status":%d}}]}`, blobID, iblobstorage.BLOBStatus_Completed)),
-		Header:   header,
-		Host:     localhost,
+		Header:   bm.Header(),
+		Host:     coreutils.Localhost,
 	}
-	cudWDocBLOBUpdateResp, _, _, err := bus.SendRequest2(ctx, req, busTimeout)
+	cudWDocBLOBUpdateResp, _, _, err := bus.SendRequest2(bm.RequestCtx(), req, busTimeout)
 	if err != nil {
-		WriteTextResponse(resp, "failed to exec c.sys.CUD: "+err.Error(), http.StatusInternalServerError)
+		coreutils.ReplyInternalServerError(bm.Sender(), "failed to exec c.sys.CUD", err)
 		return 0
 	}
 	if cudWDocBLOBUpdateResp.StatusCode != http.StatusOK {
-		WriteTextResponse(resp, "c.sys.CUD returned error: "+string(cudWDocBLOBUpdateResp.Data), cudWDocBLOBUpdateResp.StatusCode)
+		coreutils.ReplyErrf(bm.Sender(), cudWDocBLOBUpdateResp.StatusCode, "c.sys.CUD returned error: "+string(cudWDocBLOBUpdateResp.Data))
 		return 0
 	}
 
