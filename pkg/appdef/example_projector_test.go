@@ -7,8 +7,10 @@ package appdef_test
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
 func ExampleProjectors() {
@@ -39,10 +41,11 @@ func ExampleProjectors() {
 		v.SetComment("view is intent for projector")
 
 		prj := wsb.AddProjector(prjName)
+		prj.Events().Add(
+			[]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate},
+			filter.QNames(recName),
+			fmt.Sprintf("run projector every time when %v is changed", recName))
 		prj.SetWantErrors()
-		prj.Events().
-			Add(recName, appdef.ProjectorEventKind_AnyChanges...).
-			SetComment(recName, fmt.Sprintf("run projector every time when %v is changed", recName))
 		prj.States().
 			Add(sysRecords, docName).
 			SetComment(sysRecords, "projector needs to read «test.doc» from «sys.records» storage")
@@ -56,10 +59,12 @@ func ExampleProjectors() {
 	// how to inspect builded AppDef with projector
 	{
 		prj := appdef.Projector(app.Type, prjName)
-		fmt.Println(prj, ":")
-		prj.Events().Enum(func(e appdef.IProjectorEvent) {
-			fmt.Println(" - event:", e, e.Comment())
-		})
+		fmt.Println(prj)
+		fmt.Println(" - events:")
+		for e := range prj.Events() {
+			fmt.Println("   - ops:", slices.Collect(e.Ops()))
+			fmt.Println("   - filter:", e.Filter())
+		}
 		if prj.WantErrors() {
 			fmt.Println(" - want sys.error events")
 		}
@@ -83,8 +88,10 @@ func ExampleProjectors() {
 	}
 
 	// Output:
-	// BuiltIn-Projector «test.projector» :
-	//  - event: CRecord «test.record» [Insert Update Activate Deactivate] run projector every time when test.record is changed
+	// BuiltIn-Projector «test.projector»
+	//  - events:
+	//    - ops: [OperationKind_Insert OperationKind_Update OperationKind_Activate OperationKind_Deactivate]
+	//    - filter: QNAMES(test.record)
 	//  - want sys.error events
 	//  - state: Storage «sys.records» [test.doc] projector needs to read «test.doc» from «sys.records» storage
 	//  - intent: Storage «sys.views» [test.view] projector needs to update «test.view» from «sys.views» storage

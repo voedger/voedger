@@ -42,7 +42,7 @@ func ExampleIAppPartition_IsLimitExceeded() {
 			appdef.NewQName("test", "wsLimit"),
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
 			appdef.LimitFilterOption_ALL,
-			filter.AllFunctions(wsName),
+			filter.AllWSFunctions(wsName),
 			wsRateName)
 
 		// Add rate and limit for IP: 3 commands per minute for each IP address for each command
@@ -52,7 +52,7 @@ func ExampleIAppPartition_IsLimitExceeded() {
 			appdef.NewQName("test", "ipLimit"),
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
 			appdef.LimitFilterOption_EACH,
-			filter.AllFunctions(wsName),
+			filter.AllWSFunctions(wsName),
 			ipRateName)
 
 		return adb, adb.MustBuild()

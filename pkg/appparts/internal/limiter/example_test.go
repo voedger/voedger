@@ -35,7 +35,7 @@ func Example() {
 			appdef.NewQName("test", "wsLimit"),
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
 			appdef.LimitFilterOption_ALL,
-			filter.Types(wsName, appdef.TypeKind_Command),
+			filter.WSTypes(wsName, appdef.TypeKind_Command),
 			wsRateName)
 
 		// Add rate and limit for IP: 3 commands per minute for each IP address for each command
@@ -45,7 +45,7 @@ func Example() {
 			appdef.NewQName("test", "ipLimit"),
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
 			appdef.LimitFilterOption_EACH,
-			filter.Types(wsName, appdef.TypeKind_Command),
+			filter.WSTypes(wsName, appdef.TypeKind_Command),
 			ipRateName)
 
 		return adb.MustBuild()

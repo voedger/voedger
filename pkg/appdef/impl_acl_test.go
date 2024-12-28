@@ -264,12 +264,12 @@ func Test_GrantAndRevokeErrors(t *testing.T) {
 			}, require.Is(appdef.ErrMissedError), require.Has("filter"))
 
 			require.Panics(func() {
-				wsb.GrantAll(filter.Types(wsName, appdef.TypeKind_ViewRecord), // <-- type not found in ws
+				wsb.GrantAll(filter.WSTypes(wsName, appdef.TypeKind_ViewRecord), // <-- type not found in ws
 					readerName)
 			}, require.Is(appdef.ErrNotFoundError), require.HasAll("ViewRecord", wsName))
 
 			require.Panics(func() {
-				wsb.GrantAll(filter.Types(wsName, appdef.TypeKind_Data), // <-- unsupported ACL
+				wsb.GrantAll(filter.WSTypes(wsName, appdef.TypeKind_Data), // <-- unsupported ACL
 					readerName)
 			}, require.Is(appdef.ErrUnsupportedError), require.Has("test.data"))
 		})

@@ -407,30 +407,32 @@ func processITypeObj(
 		iProjectorEvents := t.Events()
 
 		// collecting projector events (Commands, CUDs, etc.)
-		iProjectorEvents.Enum(func(iProjectorEvent appdef.IProjectorEvent) {
-			ormObject := processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, iProjectorEvent.On(), uniqueProjectorCommandEvents)
-			// Avoiding double generation of the same Cmd_ORM object via
-			// checking if it already exists in other projector events
-			cmdOrmObj, ok := ormObject.(ormCommand)
-			skipGeneration := false
-			if ok {
-				skipGeneration = true
-				if _, contains := uniqueProjectorCommandEvents[cmdOrmObj.QName]; !contains {
-					uniqueProjectorCommandEvents[cmdOrmObj.QName] = true
-					skipGeneration = false
+		for event := range iProjectorEvents {
+			for obj := range appdef.FilterMatches(event.Filter(), t.Workspace().Types()) {
+				ormObject := processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, obj, uniqueProjectorCommandEvents)
+				// Avoiding double generation of the same Cmd_ORM object via
+				// checking if it already exists in other projector events
+				cmdOrmObj, ok := ormObject.(ormCommand)
+				skipGeneration := false
+				if ok {
+					skipGeneration = true
+					if _, contains := uniqueProjectorCommandEvents[cmdOrmObj.QName]; !contains {
+						uniqueProjectorCommandEvents[cmdOrmObj.QName] = true
+						skipGeneration = false
+					}
+				}
+
+				if ormObject != nil {
+					ormProjectorItem.On = append(ormProjectorItem.On, ormProjectorEventItem{
+						ormPackageItem: extractOrmPackageItem(ormObject),
+						Projector:      ormProjectorItem,
+						Ops:            slices.Collect(event.Ops()),
+						EventItem:      ormObject,
+						SkipGeneration: skipGeneration,
+					})
 				}
 			}
-
-			if ormObject != nil {
-				ormProjectorItem.On = append(ormProjectorItem.On, ormProjectorEventItem{
-					ormPackageItem: extractOrmPackageItem(ormObject),
-					Projector:      ormProjectorItem,
-					Kinds:          iProjectorEvent.Kind(),
-					EventItem:      ormObject,
-					SkipGeneration: skipGeneration,
-				})
-			}
-		})
+		}
 
 		newItem = ormProjectorItem
 	case appdef.IWorkspace:

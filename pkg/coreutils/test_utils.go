@@ -54,7 +54,31 @@ func (o *TestObject) PutFromJSON(value map[string]any)                 { maps.Co
 func (o *TestObject) ID() istructs.RecordID     { return o.Id }
 func (o *TestObject) QName() appdef.QName       { return o.Name }
 func (o *TestObject) Parent() istructs.RecordID { return o.Parent_ }
-func (o *TestObject) IsNew() bool               { return o.IsNew_ }
+
+func (o *TestObject) IsActivated() bool {
+	if !o.IsNew_ {
+		if d, ok := o.Data[appdef.SystemField_IsActive]; ok {
+			if active, ok := d.(bool); ok {
+				return active
+			}
+		}
+	}
+	return false
+}
+
+func (o *TestObject) IsDeactivated() bool {
+	if !o.IsNew_ {
+		if d, ok := o.Data[appdef.SystemField_IsActive]; ok {
+			if active, ok := d.(bool); ok {
+				return !active
+			}
+		}
+	}
+	return false
+}
+
+func (o *TestObject) IsNew() bool { return o.IsNew_ }
+
 func (o *TestObject) ModifiedFields(cb func(string, interface{}) bool) {
 	for name, value := range o.Data {
 		if !cb(name, value) {

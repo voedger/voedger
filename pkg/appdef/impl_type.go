@@ -8,8 +8,10 @@ package appdef
 import (
 	"errors"
 	"fmt"
-	"maps"
+	"iter"
 	"slices"
+
+	slicesex "github.com/voedger/voedger/pkg/appdef/internal/slices"
 )
 
 // # Supports:
@@ -32,9 +34,13 @@ func makeType(app *appDef, ws *workspace, name QName, kind TypeKind) typ {
 			panic(fmt.Errorf("invalid type name «%v»: %w", name, err))
 		}
 	}
+	find := app.Type
+	if ws != nil {
+		find = ws.LocalType // #2889 $VSQL_TagNonExp: only local tags can be used
+	}
 	t := typ{
 		comment: makeComment(),
-		tags:    makeTags(ws.LocalType), // #2889 $VSQL_TagNonExp: only local tags can be used
+		tags:    makeTags(find),
 		app:     app,
 		ws:      ws,
 		name:    name,
@@ -43,27 +49,27 @@ func makeType(app *appDef, ws *workspace, name QName, kind TypeKind) typ {
 	return t
 }
 
-func (t *typ) App() IAppDef {
+func (t typ) App() IAppDef {
 	return t.app
 }
 
-func (t *typ) IsSystem() bool {
+func (t typ) IsSystem() bool {
 	return t.QName().Pkg() == SysPackage
 }
 
-func (t *typ) Kind() TypeKind {
+func (t typ) Kind() TypeKind {
 	return t.kind
 }
 
-func (t *typ) QName() QName {
+func (t typ) QName() QName {
 	return t.name
 }
 
-func (t *typ) String() string {
+func (t typ) String() string {
 	return fmt.Sprintf("%s «%v»", t.Kind().TrimString(), t.QName())
 }
 
-func (t *typ) Workspace() IWorkspace {
+func (t typ) Workspace() IWorkspace {
 	return t.ws
 }
 
@@ -85,11 +91,6 @@ func makeTypeBuilder(typ *typ) typeBuilder {
 
 func (t *typeBuilder) String() string { return t.typ.String() }
 
-type typeRef struct {
-	name QName
-	typ  IType
-}
-
 // List of types.
 type types[T IType] struct {
 	m map[QName]T
@@ -103,16 +104,7 @@ func newTypes[T IType]() *types[T] {
 
 func (tt *types[T]) add(t T) {
 	tt.m[t.QName()] = t
-	tt.s = nil
-}
-
-func (tt *types[T]) all(visit func(T) bool) {
-	if len(tt.s) != len(tt.m) {
-		tt.s = slices.SortedFunc(maps.Values(tt.m), func(i, j T) int {
-			return CompareQName(i.QName(), j.QName())
-		})
-	}
-	slices.Values(tt.s)(visit)
+	tt.s = slicesex.InsertInSort(tt.s, t, func(t1, t2 T) int { return CompareQName(t1.QName(), t2.QName()) })
 }
 
 func (tt *types[T]) clear() {
@@ -127,28 +119,33 @@ func (tt types[T]) find(name QName) IType {
 	return NullType
 }
 
-func (tt *types[T]) remove(name QName) {
-	delete(tt.m, name)
-	tt.s = nil
+func (tt types[T]) values() iter.Seq[T] {
+	return slices.Values(tt.s)
+}
+
+type typeRef struct {
+	name QName
+	typ  IType
 }
 
 // Returns type by reference.
 //
 // If type is not found then returns nil.
-func (r *typeRef) target(tt FindType) IType {
-	if r.name == NullQName {
+func (r typeRef) target(tt FindType) IType {
+	switch r.name {
+	case NullQName:
 		return nil
-	}
-	if r.name == QNameANY {
+	case QNameANY:
 		return AnyType
-	}
-	if (r.typ == nil) || (r.typ.QName() != r.name) {
-		r.typ = nil
-		if t := tt(r.name); t.Kind() != TypeKind_null {
-			r.typ = t
+	default:
+		if (r.typ != nil) && (r.typ.QName() == r.name) {
+			return r.typ
 		}
 	}
-	return r.typ
+	if t := tt(r.name); t.Kind() != TypeKind_null {
+		return t
+	}
+	return nil
 }
 
 // Sets reference name
@@ -159,9 +156,16 @@ func (r *typeRef) setName(n QName) {
 
 // Returns is reference valid
 func (r *typeRef) valid(tt FindType) (bool, error) {
-	if (r.name == NullQName) || (r.name == QNameANY) || (r.target(tt) != nil) {
+	if (r.name == NullQName) || (r.name == QNameANY) {
 		return true, nil
 	}
+	if t := r.target(tt); t != nil {
+		if r.typ != t {
+			r.typ = t
+		}
+		return true, nil
+	}
+
 	return false, ErrTypeNotFound(r.name)
 }
 

@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
@@ -67,8 +68,12 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 			ProvideViewDef(wsb, incProjectionView, buildProjectionView)
 			ProvideViewDef(wsb, decProjectionView, buildProjectionView)
 			wsb.AddCommand(testQName)
-			wsb.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
-			wsb.AddProjector(decrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			wsb.AddProjector(incrementorName).Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.QNames(testQName))
+			wsb.AddProjector(decrementorName).Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.QNames(testQName))
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -157,7 +162,9 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 			ProvideViewDef(wsb, incProjectionView, buildProjectionView)
 			ProvideViewDef(wsb, decProjectionView, buildProjectionView)
 			wsb.AddCommand(testQName)
-			wsb.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			wsb.AddProjector(incrementorName).Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.QNames(testQName))
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -231,7 +238,9 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 			ProvideViewDef(wsb, incProjectionView, buildProjectionView)
 			ProvideViewDef(wsb, decProjectionView, buildProjectionView)
 			wsb.AddCommand(testQName)
-			wsb.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			wsb.AddProjector(incrementorName).Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.QNames(testQName))
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -330,7 +339,9 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 			wsb.AddCommand(testQName)
 			// add not-View and not-Record state to make the projector NonBuffered
 			prj := wsb.AddProjector(name)
-			prj.Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			prj.Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.QNames(testQName))
 			prj.States().Add(sys.Storage_Http)
 		},
 		func(cfg *istructsmem.AppConfigType) {
@@ -432,7 +443,9 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 			ProvideViewDef(wsb, incProjectionView, buildProjectionView)
 			ProvideViewDef(wsb, decProjectionView, buildProjectionView)
 			wsb.AddCommand(testQName)
-			wsb.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			wsb.AddProjector(incrementorName).Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.QNames(testQName))
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -571,7 +584,9 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 			ProvideViewDef(wsb, incProjectionView, buildProjectionView)
 			ProvideViewDef(wsb, decProjectionView, buildProjectionView)
 			wsb.AddCommand(testQName)
-			wsb.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			wsb.AddProjector(incrementorName).Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.QNames(testQName))
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -654,7 +669,9 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 			wsb.AddCommand(testQName)
 			// add not-View and not-Record intent to make the projector NonBuffered
 			prj := wsb.AddProjector(incrementorName)
-			prj.Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			prj.Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.QNames(testQName))
 			prj.Intents().Add(sys.Storage_Http)
 		},
 		func(cfg *istructsmem.AppConfigType) {
@@ -776,7 +793,9 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 			wsb.AddCommand(testQName)
 			for i := 0; i < projectorsPerPartition; i++ {
 				prj := prjName(i)
-				wsb.AddProjector(prj).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+				wsb.AddProjector(prj).Events().Add(
+					[]appdef.OperationKind{appdef.OperationKind_Execute},
+					filter.QNames(testQName))
 			}
 		},
 		func(cfg *istructsmem.AppConfigType) {
@@ -860,7 +879,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	t.Skip()
 
-	projectorFilter := appdef.NewQName("test", "cmd")
+	projectorCommand := appdef.NewQName("test", "cmd")
 	const totalPartitions = 40
 	const projectorsPerPartition = 5
 	const eventsPerPartition = 20000
@@ -901,15 +920,18 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 		appName, totalPartitions, true,
 		testWorkspace, testWorkspaceDescriptor,
 		func(wsb appdef.IWorkspaceBuilder) {
-			wsb.AddCommand(projectorFilter)
+			wsb.AddCommand(projectorCommand)
 			wsb.AddCommand(testQName)
 			for i := 0; i < projectorsPerPartition; i++ {
 				prj := prjName(i)
-				wsb.AddProjector(prj).Events().Add(projectorFilter, appdef.ProjectorEventKind_Execute)
+
+				wsb.AddProjector(prj).Events().Add(
+					[]appdef.OperationKind{appdef.OperationKind_Execute},
+					filter.QNames(projectorCommand))
 			}
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(projectorFilter, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(projectorCommand, istructsmem.NullCommandExec))
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 			for i := 0; i < projectorsPerPartition; i++ {
 				cfg.AddAsyncProjectors(istructs.Projector{

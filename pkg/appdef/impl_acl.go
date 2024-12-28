@@ -48,6 +48,10 @@ type aclRule struct {
 }
 
 func newACLRule(ws *workspace, ops []OperationKind, policy PolicyKind, flt IFilter, fields []FieldName, principal *role, comment ...string) *aclRule {
+	if !ACLOperations.ContainsAll(ops...) {
+		panic(ErrUnsupported("ACL operations %v", ops))
+	}
+
 	opSet := set.From(ops...)
 	if compatible, err := isCompatibleOperations(opSet); !compatible {
 		panic(err)
@@ -98,10 +102,10 @@ func newACLRuleAll(ws *workspace, policy PolicyKind, flt IFilter, principal *rol
 
 	t := FirstFilterMatch(flt, ws.LocalTypes())
 	if t == nil {
-		panic(ErrFilterHasNoMatches(flt, ws))
+		panic(ErrFilterHasNoMatches("ACL", flt, ws))
 	}
 
-	ops := AllOperationsForType(t.Kind())
+	ops := ACLOperationsForType(t.Kind())
 	if ops.Len() == 0 {
 		panic(ErrACLUnsupportedType(t))
 	}
@@ -156,7 +160,7 @@ func (acl aclRule) validate() (err error) {
 	}
 
 	if (err == nil) && (cnt == 0) {
-		return ErrFilterHasNoMatches(acl.Filter(), acl.Workspace())
+		return ErrFilterHasNoMatches("ACL", acl.Filter(), acl.Workspace())
 	}
 
 	return err
@@ -169,7 +173,7 @@ func (acl aclRule) validate() (err error) {
 //   - ACL operations are not compatible with the filtered type
 //   - some specified field is not found in the filtered type
 func (acl aclRule) validateOnType(t IType) error {
-	allOps := AllOperationsForType(t.Kind())
+	allOps := ACLOperationsForType(t.Kind())
 	if allOps.Len() == 0 {
 		return ErrACLUnsupportedType(t)
 	}

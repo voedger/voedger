@@ -3,13 +3,14 @@
  * @author: Nikolay Nikitin
  */
 
-package acl
+package acl_test
 
 import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/filter"
+	"github.com/voedger/voedger/pkg/appparts/internal/acl"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
@@ -52,7 +53,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 		_ = wsb.AddRole(reader)
 		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Select},
-			filter.And(filter.Types(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
+			filter.And(filter.WSTypes(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
 			nil,
 			reader,
 			"grant select any CDoc with tag to reader")
@@ -72,7 +73,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 		_ = wsb.AddRole(writer)
 		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Insert},
-			filter.And(filter.Types(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
+			filter.And(filter.WSTypes(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
 			nil,
 			writer,
 			"grant insert any CDoc with tag to writer")
@@ -90,18 +91,18 @@ func Test_IsOperationAllowed(t *testing.T) {
 			"revoke update doc.hiddenField from writer")
 		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
-			filter.AllFunctions(wsName),
+			filter.AllWSFunctions(wsName),
 			nil,
 			writer,
 			"grant execute all commands and queries to writer")
 
 		_ = wsb.AddRole(intruder)
 		wsb.RevokeAll(
-			filter.Types(wsName, appdef.TypeKind_CDoc),
+			filter.WSTypes(wsName, appdef.TypeKind_CDoc),
 			intruder,
 			"revoke all access to CDocs from intruder")
 		wsb.RevokeAll(
-			filter.AllFunctions(wsName),
+			filter.AllWSFunctions(wsName),
 			intruder,
 			"revoke all access to functions from intruder")
 
@@ -301,7 +302,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				allowed, allowedFields, err := IsOperationAllowed(app, tt.op, tt.res, tt.fields, []appdef.QName{tt.role})
+				allowed, allowedFields, err := acl.IsOperationAllowed(app, tt.op, tt.res, tt.fields, []appdef.QName{tt.role})
 				require.NoError(err)
 				require.Equal(tt.allowed, allowed)
 				require.EqualValues(tt.allowedFields, allowedFields)
@@ -354,7 +355,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				allowed, allowedFields, err := IsOperationAllowed(app, tt.op, tt.res, tt.fields, tt.role)
+				allowed, allowedFields, err := acl.IsOperationAllowed(app, tt.op, tt.res, tt.fields, tt.role)
 				require.NoError(err)
 				require.Equal(tt.allowed, allowed)
 				require.EqualValues(tt.allowedFields, allowedFields)
@@ -431,7 +432,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				allowed, allowedFields, err := IsOperationAllowed(app, tt.op, tt.res, tt.fields, tt.role)
+				allowed, allowedFields, err := acl.IsOperationAllowed(app, tt.op, tt.res, tt.fields, tt.role)
 				require.Error(err, require.Is(tt.error), require.Has(tt.errHas))
 				require.False(allowed)
 				require.Nil(allowedFields)
@@ -486,7 +487,7 @@ func TestRecursiveRoleAncestors(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.role.String(), func(t *testing.T) {
-				roles := RecursiveRoleAncestors(appdef.Role(app.Type, tt.role))
+				roles := acl.RecursiveRoleAncestors(appdef.Role(app.Type, tt.role))
 				require.ElementsMatch(tt.result, roles)
 			})
 		}

@@ -3,37 +3,38 @@
  * @author: Nikolay Nikitin
  */
 
-package appdef
+package appdef_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 func Test_AppDef_AddObject(t *testing.T) {
 	require := require.New(t)
 
-	wsName := NewQName("test", "workspace")
-	rootName, childName := NewQName("test", "root"), NewQName("test", "child")
+	wsName := appdef.NewQName("test", "workspace")
+	rootName, childName := appdef.NewQName("test", "root"), appdef.NewQName("test", "child")
 
-	var app IAppDef
+	var app appdef.IAppDef
 
 	t.Run("should be ok to add objects", func(t *testing.T) {
-		adb := New()
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
 
 		root := wsb.AddObject(rootName)
 		root.
-			AddField("f1", DataKind_int64, true).
-			AddField("f2", DataKind_string, false)
-		root.AddContainer("child", childName, 0, Occurs_Unbounded)
+			AddField("f1", appdef.DataKind_int64, true).
+			AddField("f2", appdef.DataKind_string, false)
+		root.AddContainer("child", childName, 0, appdef.Occurs_Unbounded)
 		child := wsb.AddObject(childName)
 		child.
-			AddField("f1", DataKind_int64, true).
-			AddField("f2", DataKind_string, false)
+			AddField("f1", appdef.DataKind_int64, true).
+			AddField("f2", appdef.DataKind_string, false)
 
 		a, err := adb.Build()
 		require.NoError(err)
@@ -45,45 +46,44 @@ func Test_AppDef_AddObject(t *testing.T) {
 
 		t.Run("should be ok to find builded root object", func(t *testing.T) {
 			typ := tested.Type(rootName)
-			require.Equal(TypeKind_Object, typ.Kind())
+			require.Equal(appdef.TypeKind_Object, typ.Kind())
 
-			root := Object(tested.Type, rootName)
-			require.Equal(TypeKind_Object, root.Kind())
-			require.Equal(typ.(IObject), root)
-			require.NotPanics(func() { root.isObject() })
+			root := appdef.Object(tested.Type, rootName)
+			require.Equal(appdef.TypeKind_Object, root.Kind())
+			require.Equal(typ.(appdef.IObject), root)
 
 			require.Equal(wsName, root.Workspace().QName())
 
-			require.NotNil(root.Field(SystemField_QName))
+			require.NotNil(root.Field(appdef.SystemField_QName))
 
 			require.Equal(2, root.UserFieldCount())
-			require.Equal(DataKind_int64, root.Field("f1").DataKind())
+			require.Equal(appdef.DataKind_int64, root.Field("f1").DataKind())
 
-			require.Equal(TypeKind_Object, root.Container("child").Type().Kind())
+			require.Equal(appdef.TypeKind_Object, root.Container("child").Type().Kind())
 
 			t.Run("should be ok to find builded child object", func(t *testing.T) {
 				typ := tested.Type(childName)
-				require.Equal(TypeKind_Object, typ.Kind())
+				require.Equal(appdef.TypeKind_Object, typ.Kind())
 
-				child := Object(tested.Type, childName)
-				require.Equal(TypeKind_Object, child.Kind())
-				require.Equal(typ.(IObject), child)
+				child := appdef.Object(tested.Type, childName)
+				require.Equal(appdef.TypeKind_Object, child.Kind())
+				require.Equal(typ.(appdef.IObject), child)
 
 				require.Equal(wsName, child.Workspace().QName())
 
-				require.NotNil(child.Field(SystemField_QName))
-				require.NotNil(child.Field(SystemField_Container))
+				require.NotNil(child.Field(appdef.SystemField_QName))
+				require.NotNil(child.Field(appdef.SystemField_Container))
 
 				require.Equal(2, child.UserFieldCount())
-				require.Equal(DataKind_int64, child.Field("f1").DataKind())
+				require.Equal(appdef.DataKind_int64, child.Field("f1").DataKind())
 
 				require.Zero(child.ContainerCount())
 			})
 		})
 
 		t.Run("should be ok to enumerate objects", func(t *testing.T) {
-			var objects []QName
-			for obj := range Objects(tested.Types()) {
+			var objects []appdef.QName
+			for obj := range appdef.Objects(tested.Types()) {
 				objects = append(objects, obj.QName())
 			}
 			require.Len(objects, 2)
@@ -91,7 +91,7 @@ func Test_AppDef_AddObject(t *testing.T) {
 			require.Equal(rootName, objects[1])
 		})
 
-		require.Nil(Object(tested.Type, NewQName("test", "unknown")), "should be nil if unknown")
+		require.Nil(appdef.Object(tested.Type, appdef.NewQName("test", "unknown")), "should be nil if unknown")
 	}
 
 	testWith(app)

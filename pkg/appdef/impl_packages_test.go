@@ -3,22 +3,23 @@
  * @author: Nikolay Nikitin
  */
 
-package appdef
+package appdef_test
 
 import (
 	"slices"
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func Test_AppDef_AddPackage(t *testing.T) {
 	require := require.New(t)
 
-	var app IAppDef
+	var app appdef.IAppDef
 
 	t.Run("should be ok to add package", func(t *testing.T) {
-		adb := New()
+		adb := appdef.New()
 
 		adb.AddPackage("test", "test.com/path")
 		adb.AddPackage("example", "example.com/path")
@@ -44,8 +45,8 @@ func Test_AppDef_AddPackage(t *testing.T) {
 				require.Equal("example", localName)
 				require.Equal("example.com/path", fullPath)
 			case 1:
-				require.Equal(SysPackage, localName)
-				require.Equal(SysPackagePath, fullPath)
+				require.Equal(appdef.SysPackage, localName)
+				require.Equal(appdef.SysPackagePath, fullPath)
 			case 2:
 				require.Equal("test", localName)
 				require.Equal("test.com/path", fullPath)
@@ -55,29 +56,20 @@ func Test_AppDef_AddPackage(t *testing.T) {
 			cnt++
 		}
 		require.Equal(3, cnt)
-
-		t.Run("range for packages should be breakable", func(t *testing.T) {
-			cnt := 0
-			for _, _ = range app.Packages() {
-				cnt++
-				break
-			}
-			require.Equal(1, cnt)
-		})
 	})
 
 	t.Run("should be reconvert full-local qualified names", func(t *testing.T) {
-		require.Equal(NewQName(SysPackage, "name"), app.LocalQName(NewFullQName(SysPackagePath, "name")))
-		require.Equal(NewFullQName(SysPackagePath, "name"), app.FullQName(NewQName(SysPackage, "name")))
+		require.Equal(appdef.NewQName(appdef.SysPackage, "name"), app.LocalQName(appdef.NewFullQName(appdef.SysPackagePath, "name")))
+		require.Equal(appdef.NewFullQName(appdef.SysPackagePath, "name"), app.FullQName(appdef.NewQName(appdef.SysPackage, "name")))
 
-		require.Equal(NewQName("test", "name"), app.LocalQName(NewFullQName("test.com/path", "name")))
-		require.Equal(NewFullQName("test.com/path", "name"), app.FullQName(NewQName("test", "name")))
+		require.Equal(appdef.NewQName("test", "name"), app.LocalQName(appdef.NewFullQName("test.com/path", "name")))
+		require.Equal(appdef.NewFullQName("test.com/path", "name"), app.FullQName(appdef.NewQName("test", "name")))
 
-		require.Equal(NewQName("example", "name"), app.LocalQName(NewFullQName("example.com/path", "name")))
-		require.Equal(NewFullQName("example.com/path", "name"), app.FullQName(NewQName("example", "name")))
+		require.Equal(appdef.NewQName("example", "name"), app.LocalQName(appdef.NewFullQName("example.com/path", "name")))
+		require.Equal(appdef.NewFullQName("example.com/path", "name"), app.FullQName(appdef.NewQName("example", "name")))
 
-		require.Equal(NullQName, app.LocalQName(NewFullQName("unknown.com/path", "name")))
-		require.Equal(NullFullQName, app.FullQName(NewQName("unknown", "name")))
+		require.Equal(appdef.NullQName, app.LocalQName(appdef.NewFullQName("unknown.com/path", "name")))
+		require.Equal(appdef.NullFullQName, app.FullQName(appdef.NewQName("unknown", "name")))
 	})
 
 	t.Run("should be empties if unknown packages", func(t *testing.T) {
@@ -86,30 +78,30 @@ func Test_AppDef_AddPackage(t *testing.T) {
 	})
 
 	t.Run("test panics", func(t *testing.T) {
-		adb := New()
+		adb := appdef.New()
 
 		require.Panics(func() { adb.AddPackage("", "test.com/path") },
-			require.Is(ErrMissedError))
+			require.Is(appdef.ErrMissedError))
 		require.Panics(func() { adb.AddPackage("naked 🔫", "test.com/path") },
-			require.Is(ErrInvalidError), require.Has("naked 🔫"))
+			require.Is(appdef.ErrInvalidError), require.Has("naked 🔫"))
 		require.Panics(func() { adb.AddPackage("test", "") },
-			require.Is(ErrMissedError))
+			require.Is(appdef.ErrMissedError))
 
 		require.Panics(
 			func() {
 				adb.AddPackage("test", "test1.com/path")
 				adb.AddPackage("test", "test2.com/path")
-			}, require.Is(ErrAlreadyExistsError), require.Has("test"))
+			}, require.Is(appdef.ErrAlreadyExistsError), require.Has("test"))
 
 		require.Panics(
 			func() {
 				adb.AddPackage("test1", "test.com/path")
 				adb.AddPackage("test2", "test.com/path")
-			}, require.Is(ErrAlreadyExistsError), require.Has("test.com/path"))
+			}, require.Is(appdef.ErrAlreadyExistsError), require.Has("test.com/path"))
 
 		require.Panics(
 			func() {
-				adb.AddPackage(SysPackage, "test.com/sys")
-			}, require.Is(ErrAlreadyExistsError), require.Has(SysPackage))
+				adb.AddPackage(appdef.SysPackage, "test.com/sys")
+			}, require.Is(appdef.ErrAlreadyExistsError), require.Has(appdef.SysPackage))
 	})
 }

@@ -1225,7 +1225,9 @@ func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c
 				}
 			}
 			nestedTable.workspace = getCurrentWorkspace(c)
+			analyseWith(&nestedTable.With, nestedTable, c)
 			analyseNestedTables(nestedTable.Items, rootTableKind, c)
+
 		}
 	}
 }

@@ -48,48 +48,49 @@ func (app appDef) FullQName(name QName) FullQName { return app.packages.fullQNam
 
 func (app appDef) LocalQName(name FullQName) QName { return app.packages.localQName(name) }
 
-func (app *appDef) PackageLocalName(path string) string {
+func (app appDef) PackageLocalName(path string) string {
 	return app.packages.localNameByPath(path)
 }
 
-func (app *appDef) PackageFullPath(local string) string {
+func (app appDef) PackageFullPath(local string) string {
 	return app.packages.pathByLocalName(local)
 }
 
-func (app *appDef) PackageLocalNames() iter.Seq[string] {
+func (app appDef) PackageLocalNames() iter.Seq[string] {
 	return slices.Values(app.packages.local)
 }
 
-func (app *appDef) Packages() iter.Seq2[string, string] {
+func (app appDef) Packages() iter.Seq2[string, string] {
 	return app.packages.all()
 }
 
-func (app *appDef) Type(name QName) IType {
+func (app appDef) Type(name QName) IType {
 	switch name {
 	case NullQName:
 		return NullType
+	case QNameANY:
+		return AnyType
 	}
-
-	if t, ok := anyTypes[name]; ok {
-		return t
-	}
-
 	return app.types.find(name)
 }
 
-func (app *appDef) Types() iter.Seq[IType] {
-	return app.types.all
+func (app appDef) Types() iter.Seq[IType] {
+	return app.types.values()
 }
 
-func (app *appDef) Workspace(name QName) IWorkspace {
-	return TypeByNameAndKind[IWorkspace](app.Type, name, TypeKind_Workspace)
+func (app appDef) Workspace(name QName) IWorkspace {
+	w := app.workspaces.find(name)
+	if w != NullType {
+		return w.(IWorkspace)
+	}
+	return nil
 }
 
-func (app *appDef) Workspaces() iter.Seq[IWorkspace] {
-	return app.workspaces.all
+func (app appDef) Workspaces() iter.Seq[IWorkspace] {
+	return app.workspaces.values()
 }
 
-func (app *appDef) WorkspaceByDescriptor(name QName) IWorkspace {
+func (app appDef) WorkspaceByDescriptor(name QName) IWorkspace {
 	return app.wsDesc[name]
 }
 

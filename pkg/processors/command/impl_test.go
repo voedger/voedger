@@ -225,7 +225,9 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 					return nil
 				},
 			})
-		wsb.AddProjector(failingProjQName).SetSync(true).Events().Add(cudQName, appdef.ProjectorEventKind_Execute)
+		wsb.AddProjector(failingProjQName).SetSync(true).Events().Add(
+			[]appdef.OperationKind{appdef.OperationKind_Execute},
+			filter.QNames(cudQName))
 		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)

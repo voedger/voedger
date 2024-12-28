@@ -3,161 +3,148 @@
  * @author: Nikolay Nikitin
  */
 
-package appdef
+package appdef_test
 
 import (
 	"fmt"
-	"iter"
 	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
-
-type testedTypes interface {
-	Type(QName) IType
-	Types() iter.Seq[IType]
-}
 
 func Test_NullType(t *testing.T) {
 	require := require.New(t)
 
-	require.Empty(NullType.Comment())
-	require.Empty(slices.Collect(NullType.CommentLines()))
+	require.Empty(appdef.NullType.Comment())
+	require.Empty(slices.Collect(appdef.NullType.CommentLines()))
 
-	require.False(NullType.HasTag(NullQName))
-	NullType.Tags()(func(ITag) bool { require.Fail("Tags() should be empty"); return false })
+	require.False(appdef.NullType.HasTag(appdef.NullQName))
+	appdef.NullType.Tags()(func(appdef.ITag) bool { require.Fail("Tags() should be empty"); return false })
 
-	require.Nil(NullType.App())
-	require.Nil(NullType.Workspace())
-	require.Equal(NullQName, NullType.QName())
-	require.Equal(TypeKind_null, NullType.Kind())
-	require.False(NullType.IsSystem())
+	require.Nil(appdef.NullType.App())
+	require.Nil(appdef.NullType.Workspace())
+	require.Equal(appdef.NullQName, appdef.NullType.QName())
+	require.Equal(appdef.TypeKind_null, appdef.NullType.Kind())
+	require.False(appdef.NullType.IsSystem())
 
-	require.Contains(fmt.Sprint(NullType), "null type")
+	require.Contains(fmt.Sprint(appdef.NullType), "null type")
 }
 
-func Test_AnyTypes(t *testing.T) {
+func Test_AnyType(t *testing.T) {
 	require := require.New(t)
 
-	require.Empty(AnyType.Comment())
-	require.Empty(slices.Collect(AnyType.CommentLines()))
+	require.Empty(appdef.AnyType.Comment())
+	require.Empty(slices.Collect(appdef.AnyType.CommentLines()))
 
-	require.Nil(AnyType.App())
-	require.Nil(AnyType.Workspace())
-	require.Equal(QNameANY, AnyType.QName())
-	require.Equal(TypeKind_Any, AnyType.Kind())
-	require.True(AnyType.IsSystem())
+	require.Nil(appdef.AnyType.App())
+	require.Nil(appdef.AnyType.Workspace())
+	require.Equal(appdef.QNameANY, appdef.AnyType.QName())
+	require.Equal(appdef.TypeKind_Any, appdef.AnyType.Kind())
+	require.True(appdef.AnyType.IsSystem())
 
-	require.Contains(fmt.Sprint(AnyType), "ANY type")
-
-	for n, t := range anyTypes {
-		require.Empty(t.Comment())
-		require.Nil(t.App())
-		require.Equal(n, t.QName())
-		require.Equal(TypeKind_Any, t.Kind())
-		require.True(t.IsSystem())
-	}
+	require.Contains(fmt.Sprint(appdef.AnyType), "ANY type")
 }
 
 func Test_TypeKind_Records(t *testing.T) {
 	require := require.New(t)
 
-	require.True(TypeKind_Records.ContainsAll(TypeKind_Docs.AsArray()...), "should contain all docs")
+	require.True(appdef.TypeKind_Records.ContainsAll(appdef.TypeKind_Docs.AsArray()...), "should contain all docs")
 
 	var tests = []struct {
 		name string
-		k    TypeKind
+		k    appdef.TypeKind
 		want bool
 	}{
-		{"GDoc", TypeKind_CDoc, true},
-		{"GRecord", TypeKind_CRecord, true},
-		{"CDoc", TypeKind_CDoc, true},
-		{"CRecord", TypeKind_CRecord, true},
-		{"ODoc", TypeKind_ODoc, true},
-		{"ORecord", TypeKind_ORecord, true},
-		{"WDoc", TypeKind_WDoc, true},
-		{"WRecord", TypeKind_WRecord, true},
+		{"GDoc", appdef.TypeKind_CDoc, true},
+		{"GRecord", appdef.TypeKind_CRecord, true},
+		{"CDoc", appdef.TypeKind_CDoc, true},
+		{"CRecord", appdef.TypeKind_CRecord, true},
+		{"ODoc", appdef.TypeKind_ODoc, true},
+		{"ORecord", appdef.TypeKind_ORecord, true},
+		{"WDoc", appdef.TypeKind_WDoc, true},
+		{"WRecord", appdef.TypeKind_WRecord, true},
 
-		{"Any", TypeKind_Any, false},
-		{"null", TypeKind_null, false},
-		{"count", TypeKind_count, false},
-		{"view", TypeKind_ViewRecord, false},
-		{"command", TypeKind_Command, false},
+		{"Any", appdef.TypeKind_Any, false},
+		{"null", appdef.TypeKind_null, false},
+		{"count", appdef.TypeKind_count, false},
+		{"view", appdef.TypeKind_ViewRecord, false},
+		{"command", appdef.TypeKind_Command, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(tt.want, TypeKind_Records.Contains(tt.k))
+			require.Equal(tt.want, appdef.TypeKind_Records.Contains(tt.k))
 		})
 	}
 
 	require.Panics(func() {
-		TypeKind_Records.Set(TypeKind_ViewRecord)
+		appdef.TypeKind_Records.Set(appdef.TypeKind_ViewRecord)
 	}, "should be read-only")
 }
 
 func Test_TypeKind_Docs(t *testing.T) {
 	require := require.New(t)
 
-	require.True(TypeKind_Docs.ContainsAll(TypeKind_GDoc, TypeKind_CDoc, TypeKind_ODoc, TypeKind_WDoc), "should contain all docs")
+	require.True(appdef.TypeKind_Docs.ContainsAll(appdef.TypeKind_GDoc, appdef.TypeKind_CDoc, appdef.TypeKind_ODoc, appdef.TypeKind_WDoc), "should contain all docs")
 
 	var tests = []struct {
 		name string
-		k    TypeKind
+		k    appdef.TypeKind
 		want bool
 	}{
-		{"GDoc", TypeKind_GDoc, true},
-		{"CDoc", TypeKind_CDoc, true},
-		{"ODoc", TypeKind_ODoc, true},
-		{"WDoc", TypeKind_WDoc, true},
+		{"GDoc", appdef.TypeKind_GDoc, true},
+		{"CDoc", appdef.TypeKind_CDoc, true},
+		{"ODoc", appdef.TypeKind_ODoc, true},
+		{"WDoc", appdef.TypeKind_WDoc, true},
 
-		{"Any", TypeKind_Any, false},
-		{"null", TypeKind_null, false},
-		{"count", TypeKind_count, false},
-		{"view", TypeKind_ViewRecord, false},
-		{"command", TypeKind_Command, false},
+		{"Any", appdef.TypeKind_Any, false},
+		{"null", appdef.TypeKind_null, false},
+		{"count", appdef.TypeKind_count, false},
+		{"view", appdef.TypeKind_ViewRecord, false},
+		{"command", appdef.TypeKind_Command, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(tt.want, TypeKind_Docs.Contains(tt.k))
+			require.Equal(tt.want, appdef.TypeKind_Docs.Contains(tt.k))
 		})
 	}
 
 	require.Panics(func() {
-		TypeKind_Docs.Set(TypeKind_ViewRecord)
+		appdef.TypeKind_Docs.Set(appdef.TypeKind_ViewRecord)
 	}, "should be read-only")
 }
 
 func Test_TypeKind_Structures(t *testing.T) {
 	require := require.New(t)
 
-	require.True(TypeKind_Structures.ContainsAll(TypeKind_Records.AsArray()...), "should contain all records")
+	require.True(appdef.TypeKind_Structures.ContainsAll(appdef.TypeKind_Records.AsArray()...), "should contain all records")
 
 	var tests = []struct {
 		name string
-		k    TypeKind
+		k    appdef.TypeKind
 		want bool
 	}{
-		{"Object", TypeKind_Object, true},
+		{"Object", appdef.TypeKind_Object, true},
 
-		{"Any", TypeKind_Any, false},
-		{"null", TypeKind_null, false},
-		{"count", TypeKind_count, false},
-		{"view", TypeKind_ViewRecord, false},
-		{"command", TypeKind_Command, false},
+		{"Any", appdef.TypeKind_Any, false},
+		{"null", appdef.TypeKind_null, false},
+		{"count", appdef.TypeKind_count, false},
+		{"view", appdef.TypeKind_ViewRecord, false},
+		{"command", appdef.TypeKind_Command, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(tt.want, TypeKind_Structures.Contains(tt.k))
+			require.Equal(tt.want, appdef.TypeKind_Structures.Contains(tt.k))
 		})
 	}
 
 	require.Panics(func() {
-		TypeKind_Structures.Set(TypeKind_ViewRecord)
+		appdef.TypeKind_Structures.Set(appdef.TypeKind_ViewRecord)
 	}, "should be read-only")
 }
 
@@ -166,27 +153,27 @@ func Test_TypeKind_Singletons(t *testing.T) {
 
 	var tests = []struct {
 		name string
-		k    TypeKind
+		k    appdef.TypeKind
 		want bool
 	}{
-		{"CDoc", TypeKind_CDoc, true},
-		{"WDoc", TypeKind_WDoc, true},
+		{"CDoc", appdef.TypeKind_CDoc, true},
+		{"WDoc", appdef.TypeKind_WDoc, true},
 
-		{"Any", TypeKind_Any, false},
-		{"null", TypeKind_null, false},
-		{"ODoc", TypeKind_ODoc, false},
-		{"view", TypeKind_ViewRecord, false},
-		{"command", TypeKind_Command, false},
+		{"Any", appdef.TypeKind_Any, false},
+		{"null", appdef.TypeKind_null, false},
+		{"ODoc", appdef.TypeKind_ODoc, false},
+		{"view", appdef.TypeKind_ViewRecord, false},
+		{"command", appdef.TypeKind_Command, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(tt.want, TypeKind_Singletons.Contains(tt.k))
+			require.Equal(tt.want, appdef.TypeKind_Singletons.Contains(tt.k))
 		})
 	}
 
 	require.Panics(func() {
-		TypeKind_Singletons.Clear(TypeKind_CDoc)
+		appdef.TypeKind_Singletons.Clear(appdef.TypeKind_CDoc)
 	}, "should be read-only")
 }
 
@@ -195,27 +182,27 @@ func Test_TypeKind_Functions(t *testing.T) {
 
 	var tests = []struct {
 		name string
-		k    TypeKind
+		k    appdef.TypeKind
 		want bool
 	}{
-		{"Query", TypeKind_Query, true},
-		{"Command", TypeKind_Command, true},
+		{"Query", appdef.TypeKind_Query, true},
+		{"Command", appdef.TypeKind_Command, true},
 
-		{"Any", TypeKind_Any, false},
-		{"null", TypeKind_null, false},
-		{"count", TypeKind_count, false},
-		{"CDoc", TypeKind_CDoc, false},
-		{"Projector", TypeKind_Projector, false},
+		{"Any", appdef.TypeKind_Any, false},
+		{"null", appdef.TypeKind_null, false},
+		{"count", appdef.TypeKind_count, false},
+		{"CDoc", appdef.TypeKind_CDoc, false},
+		{"Projector", appdef.TypeKind_Projector, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(tt.want, TypeKind_Functions.Contains(tt.k))
+			require.Equal(tt.want, appdef.TypeKind_Functions.Contains(tt.k))
 		})
 	}
 
 	require.Panics(func() {
-		TypeKind_Functions.Set(TypeKind_Job)
+		appdef.TypeKind_Functions.Set(appdef.TypeKind_Job)
 	}, "should be read-only")
 }
 
@@ -224,28 +211,28 @@ func Test_TypeKind_Extensions(t *testing.T) {
 
 	var tests = []struct {
 		name string
-		k    TypeKind
+		k    appdef.TypeKind
 		want bool
 	}{
-		{"Query", TypeKind_Query, true},
-		{"Command", TypeKind_Command, true},
-		{"Projector", TypeKind_Projector, true},
-		{"Job", TypeKind_Job, true},
+		{"Query", appdef.TypeKind_Query, true},
+		{"Command", appdef.TypeKind_Command, true},
+		{"Projector", appdef.TypeKind_Projector, true},
+		{"Job", appdef.TypeKind_Job, true},
 
-		{"Any", TypeKind_Any, false},
-		{"null", TypeKind_null, false},
-		{"count", TypeKind_count, false},
-		{"CDoc", TypeKind_CDoc, false},
+		{"Any", appdef.TypeKind_Any, false},
+		{"null", appdef.TypeKind_null, false},
+		{"count", appdef.TypeKind_count, false},
+		{"CDoc", appdef.TypeKind_CDoc, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(tt.want, TypeKind_Extensions.Contains(tt.k))
+			require.Equal(tt.want, appdef.TypeKind_Extensions.Contains(tt.k))
 		})
 	}
 
 	require.Panics(func() {
-		TypeKind_Extensions.ClearAll()
+		appdef.TypeKind_Extensions.ClearAll()
 	}, "should be read-only")
 }
 
@@ -254,71 +241,71 @@ func Test_TypeKind_Limitables(t *testing.T) {
 
 	var tests = []struct {
 		name string
-		k    TypeKind
+		k    appdef.TypeKind
 		want bool
 	}{
-		{"Query", TypeKind_Query, true},
-		{"Command", TypeKind_Command, true},
-		{"CDoc", TypeKind_CDoc, true},
-		{"ORecord", TypeKind_ORecord, true},
+		{"Query", appdef.TypeKind_Query, true},
+		{"Command", appdef.TypeKind_Command, true},
+		{"CDoc", appdef.TypeKind_CDoc, true},
+		{"ORecord", appdef.TypeKind_ORecord, true},
 
-		{"Any", TypeKind_Any, false},
-		{"null", TypeKind_null, false},
-		{"count", TypeKind_count, false},
-		{"Job", TypeKind_Job, false},
-		{"Object", TypeKind_Object, false},
-		{"Role", TypeKind_Role, false},
+		{"Any", appdef.TypeKind_Any, false},
+		{"null", appdef.TypeKind_null, false},
+		{"count", appdef.TypeKind_count, false},
+		{"Job", appdef.TypeKind_Job, false},
+		{"Object", appdef.TypeKind_Object, false},
+		{"Role", appdef.TypeKind_Role, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(tt.want, TypeKind_Limitables.Contains(tt.k))
+			require.Equal(tt.want, appdef.TypeKind_Limitables.Contains(tt.k))
 		})
 	}
 
 	require.Panics(func() {
-		TypeKind_Limitables.ClearAll()
+		appdef.TypeKind_Limitables.ClearAll()
 	}, "should be read-only")
 }
 
 func TestTypeKind_MarshalText(t *testing.T) {
 	tests := []struct {
 		name string
-		k    TypeKind
+		k    appdef.TypeKind
 		want string
 	}{
-		{name: `0 —> "TypeKind_null"`,
-			k:    TypeKind_null,
+		{name: `0 —> "appdef.TypeKind_null"`,
+			k:    appdef.TypeKind_null,
 			want: `TypeKind_null`,
 		},
 		{name: `2 —> "TypeKind_Data"`,
-			k:    TypeKind_Data,
+			k:    appdef.TypeKind_Data,
 			want: `TypeKind_Data`,
 		},
-		{name: `3 —> "TypeKind_GDoc"`,
-			k:    TypeKind_GDoc,
+		{name: `3 —> "appdef.TypeKind_GDoc"`,
+			k:    appdef.TypeKind_GDoc,
 			want: `TypeKind_GDoc`,
 		},
 		{name: `TypeKind_FakeLast —> <number>`,
-			k:    TypeKind_count,
-			want: utils.UintToString(TypeKind_count),
+			k:    appdef.TypeKind_count,
+			want: utils.UintToString(appdef.TypeKind_count),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.k.MarshalText()
 			if err != nil {
-				t.Errorf("TypeKind.MarshalText() unexpected error %v", err)
+				t.Errorf("appdef.TypeKind.MarshalText() unexpected error %v", err)
 				return
 			}
 			if string(got) != tt.want {
-				t.Errorf("TypeKind.MarshalText() = %s, want %v", got, tt.want)
+				t.Errorf("appdef.TypeKind.MarshalText() = %s, want %v", got, tt.want)
 			}
 		})
 	}
 
-	t.Run("100% cover TypeKind.String()", func(t *testing.T) {
-		const tested = TypeKind_count + 1
+	t.Run("100% cover appdef.TypeKind.String()", func(t *testing.T) {
+		const tested = appdef.TypeKind_count + 1
 		want := "TypeKind(" + utils.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
@@ -330,28 +317,18 @@ func TestTypeKind_MarshalText(t *testing.T) {
 func TestTypeKindTrimString(t *testing.T) {
 	tests := []struct {
 		name string
-		k    TypeKind
+		k    appdef.TypeKind
 		want string
 	}{
-		{name: "null", k: TypeKind_null, want: "null"},
-		{name: "basic", k: TypeKind_CDoc, want: "CDoc"},
-		{name: "out of range", k: TypeKind_count + 1, want: (TypeKind_count + 1).String()},
+		{name: "null", k: appdef.TypeKind_null, want: "null"},
+		{name: "basic", k: appdef.TypeKind_CDoc, want: "CDoc"},
+		{name: "out of range", k: appdef.TypeKind_count + 1, want: (appdef.TypeKind_count + 1).String()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.k.TrimString(); got != tt.want {
-				t.Errorf("%v.(TypeKind).TrimString() = %v, want %v", tt.k, got, tt.want)
+				t.Errorf("%v.(appdef.TypeKind).TrimString() = %v, want %v", tt.k, got, tt.want)
 			}
 		})
 	}
 }
-
-// TODO: eliminate this mock
-type mockType struct {
-	IType
-	kind TypeKind
-	name QName
-}
-
-func (m mockType) Kind() TypeKind { return m.kind }
-func (m mockType) QName() QName   { return m.name }

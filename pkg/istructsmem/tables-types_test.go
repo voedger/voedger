@@ -56,6 +56,13 @@ func Test_newRecord(t *testing.T) {
 			require.Equal("", r.AsString(appdef.SystemField_Container))
 			require.True(r.AsBool(appdef.SystemField_IsActive))
 		})
+
+		t.Run("test as ICUDRow", func(t *testing.T) {
+			var r istructs.ICUDRow = rec
+			require.False(r.IsActivated())
+			require.False(r.IsDeactivated())
+			require.False(r.IsNew())
+		})
 	})
 
 	t.Run("newEmptyTestCDoc must return empty, «test.CDoc»", func(t *testing.T) {
@@ -502,7 +509,7 @@ func TestModifiedFields(t *testing.T) {
 
 	t.Run("should has no modifications if new record", func(t *testing.T) {
 		rec := newRecord(test.AppCfg)
-		for _, _ = range rec.ModifiedFields {
+		for range rec.ModifiedFields {
 			t.Fail()
 		}
 	})
@@ -519,7 +526,7 @@ func TestModifiedFields(t *testing.T) {
 		t.Run("breakable", func(t *testing.T) {
 			for stop := range want {
 				cnt := 0
-				for n, _ := range rec.ModifiedFields {
+				for n := range rec.ModifiedFields {
 					if n == stop {
 						break
 					}
