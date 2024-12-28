@@ -135,7 +135,7 @@ func (cc *containers) addContainer(name string, contType QName, minOccurs, maxOc
 //   - every container type must be known,
 //   - every container type kind must be compatible with parent type kind
 func validateTypeContainers(t IType) (err error) {
-	if cnt, ok := t.(IContainers); ok {
+	if cnt, ok := t.(IWithContainers); ok {
 		// resolve containers types
 		for cont := range cnt.Containers() {
 			contType := cont.Type()

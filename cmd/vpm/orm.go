@@ -385,7 +385,7 @@ func processITypeObj(
 			}
 		}
 
-		if iContainers, ok := t.(appdef.IContainers); ok {
+		if iContainers, ok := t.(appdef.IWithContainers); ok {
 			for container := range iContainers.Containers() {
 				containerName := container.Name()
 				tableData.Containers = append(tableData.Containers, ormField{

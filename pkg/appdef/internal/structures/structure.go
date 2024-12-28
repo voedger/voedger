@@ -19,7 +19,7 @@ import (
 type Structure struct {
 	types.Typ
 	fields.FieldsList
-	containers.ContainersList
+	containers.WithContainers
 	uniques.UniquesList
 	abstracts.WithAbstract
 }
@@ -29,7 +29,7 @@ func MakeStructure(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind
 	s := Structure{
 		Typ:            types.MakeType(ws.App(), ws, name, kind),
 		FieldsList:     fields.MakeFields(ws, kind),
-		ContainersList: containers.MakeContainers(ws, kind),
+		WithContainers: containers.MakeWithContainers(ws, kind),
 		WithAbstract:   abstracts.MakeWithAbstract(),
 	}
 	s.FieldsList.MakeSysFields()
@@ -56,7 +56,7 @@ func MakeStructureBuilder(structure *Structure) StructureBuilder {
 	return StructureBuilder{
 		TypeBuilder:         types.MakeTypeBuilder(&structure.Typ),
 		FieldsBuilder:       fields.MakeFieldsBuilder(&structure.FieldsList),
-		ContainersBuilder:   containers.MakeContainersBuilder(&structure.ContainersList),
+		ContainersBuilder:   containers.MakeContainersBuilder(&structure.WithContainers),
 		UniquesBuilder:      uniques.MakeUniquesBuilder(&structure.UniquesList),
 		WithAbstractBuilder: abstracts.MakeWithAbstractBuilder(&structure.WithAbstract),
 		Structure:           structure,

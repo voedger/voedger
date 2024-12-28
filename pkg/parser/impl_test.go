@@ -1928,7 +1928,7 @@ func Test_OdocCmdArgs(t *testing.T) {
 	require.NotNil(cmdOdoc)
 	require.NotNil(cmdOdoc.Param())
 
-	odoc := cmdOdoc.Param().(appdef.IContainers)
+	odoc := cmdOdoc.Param().(appdef.IWithContainers)
 	require.Equal(1, odoc.ContainerCount())
 	require.Equal("orecord1", odoc.Container("orecord1").Name())
 	container := odoc.Container("orecord1")

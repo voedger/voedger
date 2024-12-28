@@ -58,15 +58,15 @@ func (cont Container) String() string {
 
 // # Supports:
 //   - appdef.IContainers
-type ContainersList struct {
+type WithContainers struct {
 	ws                appdef.IWorkspace
 	typeKind          appdef.TypeKind
 	containers        map[string]*Container
 	containersOrdered []appdef.IContainer
 }
 
-func MakeContainers(ws appdef.IWorkspace, typeKind appdef.TypeKind) ContainersList {
-	cc := ContainersList{
+func MakeWithContainers(ws appdef.IWorkspace, typeKind appdef.TypeKind) WithContainers {
+	cc := WithContainers{
 		ws:                ws,
 		typeKind:          typeKind,
 		containers:        make(map[string]*Container),
@@ -74,20 +74,20 @@ func MakeContainers(ws appdef.IWorkspace, typeKind appdef.TypeKind) ContainersLi
 	return cc
 }
 
-func (cc ContainersList) Container(name string) appdef.IContainer {
+func (cc WithContainers) Container(name string) appdef.IContainer {
 	if c, ok := cc.containers[name]; ok {
 		return c
 	}
 	return nil
 }
 
-func (cc ContainersList) ContainerCount() int { return len(cc.containersOrdered) }
+func (cc WithContainers) ContainerCount() int { return len(cc.containersOrdered) }
 
-func (cc ContainersList) Containers() iter.Seq[appdef.IContainer] {
+func (cc WithContainers) Containers() iter.Seq[appdef.IContainer] {
 	return slices.Values(cc.containersOrdered)
 }
 
-func (cc *ContainersList) addContainer(name string, contType appdef.QName, minOccurs, maxOccurs appdef.Occurs, comment ...string) {
+func (cc *WithContainers) addContainer(name string, contType appdef.QName, minOccurs, maxOccurs appdef.Occurs, comment ...string) {
 	if name == appdef.NullName {
 		panic(appdef.ErrMissed("container name"))
 	}
@@ -131,7 +131,7 @@ func (cc *ContainersList) addContainer(name string, contType appdef.QName, minOc
 //   - every container type must be known,
 //   - every container type kind must be compatible with parent type kind
 func ValidateTypeContainers(t appdef.IType) (err error) {
-	if cnt, ok := t.(appdef.IContainers); ok {
+	if cnt, ok := t.(appdef.IWithContainers); ok {
 		// resolve containers types
 		for cont := range cnt.Containers() {
 			contType := cont.Type()
@@ -152,14 +152,14 @@ func ValidateTypeContainers(t appdef.IType) (err error) {
 // # Supports:
 //   - appdef.IContainersBuilder
 type ContainersBuilder struct {
-	*ContainersList
+	cc *WithContainers
 }
 
-func MakeContainersBuilder(containers *ContainersList) ContainersBuilder {
-	return ContainersBuilder{ContainersList: containers}
+func MakeContainersBuilder(cc *WithContainers) ContainersBuilder {
+	return ContainersBuilder{cc}
 }
 
 func (cb *ContainersBuilder) AddContainer(name string, typeName appdef.QName, minimum, maximum appdef.Occurs, comment ...string) appdef.IContainersBuilder {
-	cb.addContainer(name, typeName, minimum, maximum, comment...)
+	cb.cc.addContainer(name, typeName, minimum, maximum, comment...)
 	return cb
 }

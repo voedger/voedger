@@ -184,7 +184,7 @@ func validateType(t IType) (err error) {
 		err = errors.Join(err, validateTypeFields(t))
 	}
 
-	if _, ok := t.(IContainers); ok {
+	if _, ok := t.(IWithContainers); ok {
 		err = errors.Join(err, validateTypeContainers(t))
 	}
 

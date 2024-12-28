@@ -128,7 +128,7 @@ func buildQNameNode(parentNode *CompatibilityTreeNode, item appdef.IType, name s
 		if t, ok := item.(appdef.IFields); ok {
 			node.Props = append(node.Props, buildFieldsNode(node, t, NodeNameFields))
 		}
-		if t, ok := item.(appdef.IContainers); ok {
+		if t, ok := item.(appdef.IWithContainers); ok {
 			node.Props = append(node.Props, buildContainersNode(node, t))
 		}
 	}
@@ -194,7 +194,7 @@ func buildUniquesNode(parentNode *CompatibilityTreeNode, item appdef.IUniques) (
 	return
 }
 
-func buildContainersNode(parentNode *CompatibilityTreeNode, item appdef.IContainers) (node *CompatibilityTreeNode) {
+func buildContainersNode(parentNode *CompatibilityTreeNode, item appdef.IWithContainers) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameContainers, nil)
 	for container := range item.Containers() {
 		node.Props = append(node.Props, buildContainerNode(node, container))

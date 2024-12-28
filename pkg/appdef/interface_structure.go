@@ -9,7 +9,7 @@ package appdef
 type IStructure interface {
 	IType
 	IFields
-	IContainers
+	IWithContainers
 	IUniques
 	IWithAbstract
 
