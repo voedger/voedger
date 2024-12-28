@@ -162,7 +162,7 @@ func (s *httpService) registerReverseProxyHandler() error {
 }
 
 func (s *httpService) registerRouterCheckerHandler() {
-	s.router.HandleFunc("/api/check", corsHandler(checkHandler())).Methods("POST", "OPTIONS").Name("router check")
+	s.router.HandleFunc("/api/check", corsHandler(checkHandler())).Methods("POST", "GET", "OPTIONS").Name("router check")
 }
 
 func (s *httpService) registerHandlersV1() {

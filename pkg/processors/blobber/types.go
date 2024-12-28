@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 type BLOBOperation int
@@ -38,6 +39,7 @@ type blobMessage_base struct {
 	appQName        appdef.AppQName
 	header          map[string][]string
 	wLimiterFactory func() iblobstorage.WLimiterType
+	sender          ibus.ISender
 
 	duration iblobstorage.DurationType // used on write temporary
 	boundary string                    // used on write multipart
@@ -45,12 +47,17 @@ type blobMessage_base struct {
 	blobid   istructs.RecordID         // used on read persistent
 }
 
+type WLimiterFactory func() iblobstorage.WLimiterType
+
 type IBLOBMessage interface {
 	AppQName() appdef.AppQName
 	WSID() istructs.WSID
 	BLOBOperation() BLOBOperation
 	Header() map[string][]string
+	Sender() ibus.ISender
+	Resp() http.ResponseWriter
 	RequestCtx() context.Context
+	WLimiterFactory() WLimiterFactory
 	Duration() iblobstorage.DurationType // used on write temporary
 	SUUID() iblobstorage.SUUID           // used on read temporary
 	Boundary() string                    // used on write multipart

@@ -19,7 +19,7 @@ import (
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
-func blobReadMessageHandler(bm IBLOBMessage, blobStorage iblobstorage.IBLOBStorage, bus ibus.IBus, busTimeout time.Duration) {
+func readBLOB(bm IBLOBMessage, blobStorage iblobstorage.IBLOBStorage, bus ibus.IBus, busTimeout time.Duration) {
 	// request to VVM to check the principalToken
 	req := ibus.Request{
 		Method:   ibus.HTTPMethodPOST,
@@ -32,33 +32,34 @@ func blobReadMessageHandler(bm IBLOBMessage, blobStorage iblobstorage.IBLOBStora
 	}
 	blobHelperResp, _, _, err := bus.SendRequest2(bm.RequestCtx(), req, busTimeout)
 	if err != nil {
-		WriteTextResponse(bbm.resp, "failed to exec q.sys.DownloadBLOBAuthnz: "+err.Error(), http.StatusInternalServerError)
+		coreutils.ReplyInternalServerError(bm.Sender(), "failed to exec q.sys.DownloadBLOBAuthnz", err)
 		return
 	}
 	if blobHelperResp.StatusCode != http.StatusOK {
-		WriteTextResponse(bbm.resp, "q.sys.DownloadBLOBAuthnz returned error: "+string(blobHelperResp.Data), blobHelperResp.StatusCode)
+		coreutils.ReplyErrf(bm.Sender(), blobHelperResp.StatusCode, "q.sys.DownloadBLOBAuthnz returned error: "+string(blobHelperResp.Data))
 		return
 	}
 
 	// read the BLOB
 	var blobKey iblobstorage.IBLOBKey
-	switch typedKey := blobReadDetails.(type) {
-	case blobReadDetails_Persistent:
+	switch bm.BLOBOperation() {
+	case BLOBOperation_Read_Persistent:
 		blobKey = &iblobstorage.PersistentBLOBKeyType{
 			ClusterAppID: istructs.ClusterAppID_sys_blobber,
-			WSID:         bbm.wsid,
-			BlobID:       typedKey.blobID,
+			WSID:         bm.WSID(),
+			BlobID:       bm.BLOBID(),
 		}
-	case blobReadDetails_Temporary:
+	case BLOBOperation_Read_Temporary:
 		blobKey = &iblobstorage.TempBLOBKeyType{
 			ClusterAppID: istructs.ClusterAppID_sys_blobber,
-			WSID:         bbm.wsid,
-			SUUID:        typedKey.suuid,
+			WSID:         bm.WSID(),
+			SUUID:        bm.SUUID(),
 		}
 	default:
 		// notest
-		panic(fmt.Sprintf("unexpected blobReadDetails: %T", blobReadDetails))
+		panic(fmt.Sprintf("unexpected blob operation: %d", bm.BLOBOperation()))
 	}
+
 	stateWriterDiscard := func(state iblobstorage.BLOBState) error {
 		if state.Status != iblobstorage.BLOBStatus_Completed {
 			return errors.New("blob is not completed")
@@ -66,17 +67,17 @@ func blobReadMessageHandler(bm IBLOBMessage, blobStorage iblobstorage.IBLOBStora
 		if len(state.Error) > 0 {
 			return errors.New(state.Error)
 		}
-		bbm.resp.Header().Set(coreutils.ContentType, state.Descr.MimeType)
-		bbm.resp.Header().Add("Content-Disposition", fmt.Sprintf(`attachment;filename="%s"`, state.Descr.Name))
-		bbm.resp.WriteHeader(http.StatusOK)
+		bm.Resp().Header().Set(coreutils.ContentType, state.Descr.MimeType)
+		bm.Resp().Header().Add("Content-Disposition", fmt.Sprintf(`attachment;filename="%s"`, state.Descr.Name))
+		bm.Resp().WriteHeader(http.StatusOK)
 		return nil
 	}
-	if err := blobStorage.ReadBLOB(bbm.req.Context(), blobKey, stateWriterDiscard, bbm.resp, iblobstoragestg.RLimiter_Null); err != nil {
-		logger.Error(fmt.Sprintf("failed to read or send BLOB: id %s, appQName %s, wsid %d: %s", blobKey.ID(), bbm.appQName, bbm.wsid, err.Error()))
+	if err := blobStorage.ReadBLOB(bm.RequestCtx(), blobKey, stateWriterDiscard, bm.Resp(), iblobstoragestg.RLimiter_Null); err != nil {
+		logger.Error(fmt.Sprintf("failed to read or send BLOB: id %s, appQName %s, wsid %d: %s", blobKey.ID(), bm.AppQName(), bm.WSID(), err.Error()))
 		if errors.Is(err, iblobstorage.ErrBLOBNotFound) {
-			WriteTextResponse(bbm.resp, err.Error(), http.StatusNotFound)
+			coreutils.ReplyErrf(bm.Sender(), http.StatusNotFound, err.Error())
 			return
 		}
-		WriteTextResponse(bbm.resp, err.Error(), http.StatusInternalServerError)
+		coreutils.ReplyErr(bm.Sender(), err)
 	}
 }
