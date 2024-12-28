@@ -94,7 +94,7 @@ func ExampleRoles() {
 	// 4 Role «test.writerRole»
 	// overall: 4
 	// Role «test.readerRole» :
-	// - GRANT [Select] ON QNAMES(test.doc)([field1]) TO test.readerRole
+	// - GRANT [Select] ON QNAMES(test.doc)[field1] TO test.readerRole
 	// Role «test.writerRole» :
 	// - GRANT [Insert Update Select] ON QNAMES(test.doc) TO test.writerRole
 	// Role «test.admRole» :
