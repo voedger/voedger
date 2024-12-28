@@ -16,7 +16,7 @@ import (
 )
 
 // # Supports:
-//   - appdef.IContainer
+//   - appdef.Container
 type Container struct {
 	comments.WithComments
 	ws        appdef.IWorkspace
@@ -57,7 +57,7 @@ func (cont Container) String() string {
 }
 
 // # Supports:
-//   - appdef.IContainers
+//   - appdef.IWithContainers
 type WithContainers struct {
 	ws                appdef.IWorkspace
 	typeKind          appdef.TypeKind
