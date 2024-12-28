@@ -37,6 +37,7 @@ func NewRate(ws appdef.IWorkspace, name appdef.QName, count appdef.RateCount, pe
 		r.scopes.Set(appdef.DefaultRateScopes...)
 	}
 	comments.SetComment(&r.Typ.WithComments, comment...)
+	types.Propagate(r)
 	return r
 }
 
@@ -115,6 +116,7 @@ func NewLimit(ws appdef.IWorkspace, name appdef.QName, ops []appdef.OperationKin
 		}
 	}
 	comments.SetComment(&l.Typ.WithComments, comment...)
+	types.Propagate(l)
 	return l
 }
 

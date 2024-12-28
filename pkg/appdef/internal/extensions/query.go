@@ -5,7 +5,10 @@
 
 package extensions
 
-import "github.com/voedger/voedger/pkg/appdef"
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/internal/types"
+)
 
 // # Supports:
 //   - appdef.IQuery
@@ -14,19 +17,21 @@ type Query struct {
 }
 
 func NewQuery(ws appdef.IWorkspace, name appdef.QName) *Query {
-	return &Query{Function: MakeFunc(ws, name, appdef.TypeKind_Query)}
+	q := &Query{Function: MakeFunc(ws, name, appdef.TypeKind_Query)}
+	types.Propagate(q)
+	return q
 }
 
 // # Supports:
 //   - appdef.IQueryBuilder
 type QueryBuilder struct {
 	FunctionBuilder
-	*Query
+	q *Query
 }
 
 func NewQueryBuilder(q *Query) *QueryBuilder {
 	return &QueryBuilder{
 		FunctionBuilder: MakeFunctionBuilder(&q.Function),
-		Query:           q,
+		q:               q,
 	}
 }

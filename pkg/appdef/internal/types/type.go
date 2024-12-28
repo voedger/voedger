@@ -34,9 +34,6 @@ func MakeType(app appdef.IAppDef, ws appdef.IWorkspace, name appdef.QName, kind 
 		if ok, err := appdef.ValidQName(name); !ok {
 			panic(fmt.Errorf("invalid type name «%v»: %w", name, err))
 		}
-		if app.Type(name).Kind() != appdef.TypeKind_null {
-			panic(appdef.ErrAlreadyExists("type «%v»", name))
-		}
 	}
 	find := app.Type
 	if ws != nil {
@@ -181,3 +178,43 @@ func (t NullType) Kind() appdef.TypeKind        { return appdef.TypeKind_null }
 func (t NullType) QName() appdef.QName          { return appdef.NullQName }
 func (t NullType) String() string               { return nullTypeString }
 func (t NullType) Workspace() appdef.IWorkspace { return nil }
+
+type WithTypes struct {
+	types *Types[appdef.IType]
+}
+
+func MakeWithTypes() WithTypes { return WithTypes{types: NewTypes[appdef.IType]()} }
+
+func (tt *WithTypes) AppendType(t appdef.IType) {
+	name := t.QName()
+	if name == appdef.NullQName {
+		panic(appdef.ErrMissed("%s type name", t.Kind().TrimString()))
+	}
+	if tt.Type(name).Kind() != appdef.TypeKind_null {
+		panic(appdef.ErrAlreadyExists("type «%v»", name))
+	}
+	tt.types.Add(t)
+}
+
+func (tt WithTypes) Type(name appdef.QName) appdef.IType {
+	switch name {
+	case appdef.NullQName:
+		return appdef.NullType
+	case appdef.QNameANY:
+		return appdef.AnyType
+	}
+	return tt.types.Find(name)
+}
+
+func (tt WithTypes) Types() iter.Seq[appdef.IType] { return tt.types.Values() }
+
+// Propagate type to workspace and app.
+func Propagate(t appdef.IType) {
+	type I interface{ AppendType(appdef.IType) }
+	if ws := t.Workspace(); ws != nil {
+		ws.(I).AppendType(t)
+	}
+	if app := t.App(); app != nil {
+		app.(I).AppendType(t)
+	}
+}

@@ -29,8 +29,7 @@ func ExampleTags() {
 		wsb.AddTag(tagNames[0], "first tag comment")
 		wsb.AddTag(tagNames[1], "second tag comment")
 
-		wsb.AddTag(tagNames[2])
-		wsb.SetTypeComment(tagNames[2], "unused tag comment")
+		wsb.AddTag(tagNames[2], "unused tag comment")
 
 		obj := wsb.AddObject(objName)
 		obj.SetTag(tagNames[0], tagNames[1])

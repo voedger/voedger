@@ -21,20 +21,22 @@ type Command struct {
 }
 
 func NewCommand(ws appdef.IWorkspace, name appdef.QName) *Command {
-	return &Command{Function: MakeFunc(ws, name, appdef.TypeKind_Command)}
+	c := &Command{Function: MakeFunc(ws, name, appdef.TypeKind_Command)}
+	types.Propagate(c)
+	return c
 }
 
-func (cmd Command) UnloggedParam() appdef.IType {
-	return cmd.unl.Target(cmd.App().Type)
+func (c Command) UnloggedParam() appdef.IType {
+	return c.unl.Target(c.App().Type)
 }
 
 // Validates command
-func (cmd *Command) Validate() (err error) {
-	err = cmd.Function.Validate()
+func (c *Command) Validate() (err error) {
+	err = c.Function.Validate()
 
-	if ok, e := cmd.unl.Valid(cmd.App().Type); !ok {
-		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown unlogged parameter type: %w", cmd, e))
-	} else if typ := cmd.UnloggedParam(); typ != nil {
+	if ok, e := c.unl.Valid(c.App().Type); !ok {
+		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown unlogged parameter type: %w", c, e))
+	} else if typ := c.UnloggedParam(); typ != nil {
 		switch typ.Kind() {
 		case appdef.TypeKind_Any, appdef.TypeKind_Data, appdef.TypeKind_ODoc, appdef.TypeKind_Object: // ok
 		default:
@@ -45,23 +47,23 @@ func (cmd *Command) Validate() (err error) {
 	return err
 }
 
-func (cmd *Command) setUnloggedParam(name appdef.QName) {
-	cmd.unl.SetName(name)
+func (c *Command) setUnloggedParam(name appdef.QName) {
+	c.unl.SetName(name)
 }
 
 type CommandBuilder struct {
 	FunctionBuilder
-	*Command
+	c *Command
 }
 
-func NewCommandBuilder(command *Command) *CommandBuilder {
+func NewCommandBuilder(c *Command) *CommandBuilder {
 	return &CommandBuilder{
-		FunctionBuilder: MakeFunctionBuilder(&command.Function),
-		Command:         command,
+		FunctionBuilder: MakeFunctionBuilder(&c.Function),
+		c:               c,
 	}
 }
 
 func (cb *CommandBuilder) SetUnloggedParam(name appdef.QName) appdef.ICommandBuilder {
-	cb.Command.setUnloggedParam(name)
+	cb.c.setUnloggedParam(name)
 	return cb
 }

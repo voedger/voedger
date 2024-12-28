@@ -5,7 +5,10 @@
 
 package structures
 
-import "github.com/voedger/voedger/pkg/appdef"
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/internal/types"
+)
 
 // # Supports:
 //   - appdef.ICDoc
@@ -15,20 +18,22 @@ type CDoc struct {
 
 // Creates a new CDoc
 func NewCDoc(ws appdef.IWorkspace, name appdef.QName) *CDoc {
-	return &CDoc{SingletonDoc: MakeSingleton(ws, name, appdef.TypeKind_CDoc)}
+	d := &CDoc{SingletonDoc: MakeSingleton(ws, name, appdef.TypeKind_CDoc)}
+	types.Propagate(d)
+	return d
 }
 
 // # Supports:
 //   - appdef.ICDocBuilder
 type CDocBuilder struct {
 	SingletonBuilder
-	*CDoc
+	d *CDoc
 }
 
-func NewCDocBuilder(cDoc *CDoc) *CDocBuilder {
+func NewCDocBuilder(d *CDoc) *CDocBuilder {
 	return &CDocBuilder{
-		SingletonBuilder: MakeSingletonBuilder(&cDoc.SingletonDoc),
-		CDoc:             cDoc,
+		SingletonBuilder: MakeSingletonBuilder(&d.SingletonDoc),
+		d:                d,
 	}
 }
 
@@ -39,7 +44,9 @@ type CRecord struct {
 }
 
 func NewCRecord(ws appdef.IWorkspace, name appdef.QName) *CRecord {
-	return &CRecord{ContainedRecord: MakeContainedRecord(ws, name, appdef.TypeKind_CRecord)}
+	r := &CRecord{ContainedRecord: MakeContainedRecord(ws, name, appdef.TypeKind_CRecord)}
+	types.Propagate(r)
+	return r
 }
 
 // # Supports:

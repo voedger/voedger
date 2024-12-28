@@ -23,13 +23,15 @@ type Role struct {
 }
 
 func NewRole(ws appdef.IWorkspace, name appdef.QName) *Role {
-	return &Role{
+	r := &Role{
 		Typ:     types.MakeType(ws.App(), ws, name, appdef.TypeKind_Role),
 		WithACL: acl.MakeWithACL(),
 	}
+	types.Propagate(r)
+	return r
 }
 
-func (r *Role) Ancestors() iter.Seq[appdef.QName] {
+func (r Role) Ancestors() iter.Seq[appdef.QName] {
 	roles := appdef.QNames{}
 	for rule := range r.WithACL.ACL() {
 		if rule.Op(appdef.OperationKind_Inherits) {
@@ -84,32 +86,32 @@ func (r Role) Validate() (err error) {
 //   - appdef.IRoleBuilder
 type RoleBuilder struct {
 	types.TypeBuilder
-	*Role
+	r *Role
 }
 
-func NewRoleBuilder(role *Role) *RoleBuilder {
+func NewRoleBuilder(r *Role) *RoleBuilder {
 	return &RoleBuilder{
-		TypeBuilder: types.MakeTypeBuilder(&role.Typ),
-		Role:        role,
+		TypeBuilder: types.MakeTypeBuilder(&r.Typ),
+		r:           r,
 	}
 }
 
 func (rb *RoleBuilder) Grant(ops []appdef.OperationKind, flt appdef.IFilter, fields []appdef.FieldName, comment ...string) appdef.IRoleBuilder {
-	rb.Role.grant(ops, flt, fields, comment...)
+	rb.r.grant(ops, flt, fields, comment...)
 	return rb
 }
 
 func (rb *RoleBuilder) GrantAll(flt appdef.IFilter, comment ...string) appdef.IRoleBuilder {
-	rb.Role.grantAll(flt, comment...)
+	rb.r.grantAll(flt, comment...)
 	return rb
 }
 
 func (rb *RoleBuilder) Revoke(ops []appdef.OperationKind, flt appdef.IFilter, fields []appdef.FieldName, comment ...string) appdef.IRoleBuilder {
-	rb.Role.revoke(ops, flt, fields, comment...)
+	rb.r.revoke(ops, flt, fields, comment...)
 	return rb
 }
 
 func (rb *RoleBuilder) RevokeAll(flt appdef.IFilter, comment ...string) appdef.IRoleBuilder {
-	rb.Role.revokeAll(flt, comment...)
+	rb.r.revokeAll(flt, comment...)
 	return rb
 }

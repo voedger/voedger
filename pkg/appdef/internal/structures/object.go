@@ -5,7 +5,10 @@
 
 package structures
 
-import "github.com/voedger/voedger/pkg/appdef"
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/internal/types"
+)
 
 // # Supports:
 //   - appdef.IObject
@@ -14,7 +17,9 @@ type Object struct {
 }
 
 func NewObject(ws appdef.IWorkspace, name appdef.QName) *Object {
-	return &Object{Structure: MakeStructure(ws, name, appdef.TypeKind_Object)}
+	o := &Object{Structure: MakeStructure(ws, name, appdef.TypeKind_Object)}
+	types.Propagate(o)
+	return o
 }
 
 // # Supports:

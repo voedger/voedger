@@ -11,6 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/comments"
+	"github.com/voedger/voedger/pkg/appdef/internal/types"
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
@@ -24,16 +25,17 @@ type Projector struct {
 }
 
 func NewProjector(ws appdef.IWorkspace, name appdef.QName) *Projector {
-	prj := &Projector{
+	p := &Projector{
 		Extension: MakeExtension(ws, name, appdef.TypeKind_Projector),
 	}
-	prj.events = NewProjectorEvents(prj)
-	return prj
+	p.events = NewProjectorEvents(p)
+	types.Propagate(p)
+	return p
 }
 
-func (prj Projector) Events() iter.Seq[appdef.IProjectorEvent] {
+func (p Projector) Events() iter.Seq[appdef.IProjectorEvent] {
 	return func(yield func(appdef.IProjectorEvent) bool) {
-		for _, e := range prj.events.events {
+		for _, e := range p.events.events {
 			if !yield(e) {
 				return
 			}
@@ -41,10 +43,10 @@ func (prj Projector) Events() iter.Seq[appdef.IProjectorEvent] {
 	}
 }
 
-func (prj Projector) Sync() bool { return prj.sync }
+func (p Projector) Sync() bool { return p.sync }
 
-func (prj Projector) Triggers(op appdef.OperationKind, t appdef.IType) bool {
-	for e := range prj.Events() {
+func (p Projector) Triggers(op appdef.OperationKind, t appdef.IType) bool {
+	for e := range p.Events() {
 		if e.Op(op) {
 			if e.Filter().Match(t) {
 				return true
@@ -58,61 +60,61 @@ func (prj Projector) Triggers(op appdef.OperationKind, t appdef.IType) bool {
 //
 // # Error if:
 //   - some event filter has no matches in the workspace
-func (prj *Projector) Validate() error {
+func (p *Projector) Validate() error {
 	return errors.Join(
-		prj.Extension.Validate(),
-		prj.events.Validate())
+		p.Extension.Validate(),
+		p.events.Validate())
 }
 
-func (prj Projector) WantErrors() bool { return prj.sysErrors }
+func (p Projector) WantErrors() bool { return p.sysErrors }
 
-func (prj *Projector) setSync(sync bool) { prj.sync = sync }
+func (p *Projector) setSync(sync bool) { p.sync = sync }
 
-func (prj *Projector) setWantErrors() { prj.sysErrors = true }
+func (p *Projector) setWantErrors() { p.sysErrors = true }
 
 // # Supports:
 //   - appdef.IProjectorBuilder
 type ProjectorBuilder struct {
 	ExtensionBuilder
-	*Projector
+	p *Projector
 }
 
-func NewProjectorBuilder(projector *Projector) *ProjectorBuilder {
+func NewProjectorBuilder(p *Projector) *ProjectorBuilder {
 	return &ProjectorBuilder{
-		ExtensionBuilder: MakeExtensionBuilder(&projector.Extension),
-		Projector:        projector,
+		ExtensionBuilder: MakeExtensionBuilder(&p.Extension),
+		p:                p,
 	}
 }
 
 func (pb *ProjectorBuilder) Events() appdef.IProjectorEventsBuilder {
-	return pb.Projector.events
+	return pb.p.events
 }
 
 func (pb *ProjectorBuilder) SetSync(sync bool) appdef.IProjectorBuilder {
-	pb.Projector.setSync(sync)
+	pb.p.setSync(sync)
 	return pb
 }
 
 func (pb *ProjectorBuilder) SetWantErrors() appdef.IProjectorBuilder {
-	pb.Projector.setWantErrors()
+	pb.p.setWantErrors()
 	return pb
 }
 
 // # Supports:
 //   - appdef.IProjectorEventsBuilder
 type ProjectorEvents struct {
-	prj    *Projector
+	p      *Projector
 	events []*ProjectorEvent
 }
 
-func NewProjectorEvents(prj *Projector) *ProjectorEvents {
+func NewProjectorEvents(p *Projector) *ProjectorEvents {
 	return &ProjectorEvents{
-		prj:    prj,
+		p:      p,
 		events: make([]*ProjectorEvent, 0),
 	}
 }
 
-func (ev *ProjectorEvents) Add(ops []appdef.OperationKind, flt appdef.IFilter, comment ...string) appdef.IProjectorEventsBuilder {
+func (ee *ProjectorEvents) Add(ops []appdef.OperationKind, flt appdef.IFilter, comment ...string) appdef.IProjectorEventsBuilder {
 	if !appdef.ProjectorOperations.ContainsAll(ops...) {
 		panic(appdef.ErrUnsupported("projector operations %v", ops))
 	}
@@ -124,14 +126,14 @@ func (ev *ProjectorEvents) Add(ops []appdef.OperationKind, flt appdef.IFilter, c
 		flt: flt,
 	}
 	comments.SetComment(&e.WithComments, comment...)
-	ev.events = append(ev.events, e)
-	return ev
+	ee.events = append(ee.events, e)
+	return ee
 }
 
 // Validates projector events.
-func (ev ProjectorEvents) Validate() (err error) {
-	for _, e := range ev.events {
-		err = errors.Join(err, e.Validate(ev.prj))
+func (ee ProjectorEvents) Validate() (err error) {
+	for _, e := range ee.events {
+		err = errors.Join(err, e.Validate(ee.p))
 	}
 	return err
 }

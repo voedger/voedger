@@ -30,6 +30,7 @@ func NewView(ws appdef.IWorkspace, name appdef.QName) *View {
 	v.FieldsList.MakeSysFields()
 	v.key = NewViewKey(v)
 	v.value = NewViewValue(v)
+	types.Propagate(v)
 	return v
 }
 

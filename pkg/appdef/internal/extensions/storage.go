@@ -124,19 +124,19 @@ func (ss Storages) Validate() (err error) {
 // # Supports:
 //   - appdef.IStoragesBuilder
 type StoragesBuilder struct {
-	*Storages
+	ss *Storages
 }
 
-func NewStoragesBuilder(storages *Storages) *StoragesBuilder {
-	return &StoragesBuilder{storages}
+func NewStoragesBuilder(ss *Storages) *StoragesBuilder {
+	return &StoragesBuilder{ss}
 }
 
 func (sb *StoragesBuilder) Add(name appdef.QName, names ...appdef.QName) appdef.IStoragesBuilder {
-	sb.Storages.add(name, names...)
+	sb.ss.add(name, names...)
 	return sb
 }
 
 func (sb *StoragesBuilder) SetComment(name appdef.QName, comment string) appdef.IStoragesBuilder {
-	sb.Storages.setComment(name, comment)
+	sb.ss.setComment(name, comment)
 	return sb
 }

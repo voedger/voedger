@@ -10,6 +10,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/internal/types"
 )
 
 // # Supports:
@@ -20,7 +21,9 @@ type Job struct {
 }
 
 func NewJob(ws appdef.IWorkspace, name appdef.QName) *Job {
-	return &Job{Extension: MakeExtension(ws, name, appdef.TypeKind_Job)}
+	j := &Job{Extension: MakeExtension(ws, name, appdef.TypeKind_Job)}
+	types.Propagate(j)
+	return j
 }
 
 func (j Job) CronSchedule() string { return j.cronSchedule }
@@ -46,17 +49,17 @@ func (j *Job) Validate() (err error) {
 //   - appdef.IJobBuilder
 type JobBuilder struct {
 	ExtensionBuilder
-	*Job
+	j *Job
 }
 
 func NewJobBuilder(j *Job) *JobBuilder {
 	return &JobBuilder{
 		ExtensionBuilder: MakeExtensionBuilder(&j.Extension),
-		Job:              j,
+		j:                j,
 	}
 }
 
 func (jb *JobBuilder) SetCronSchedule(cs string) appdef.IJobBuilder {
-	jb.Job.setCronSchedule(cs)
+	jb.j.setCronSchedule(cs)
 	return jb
 }

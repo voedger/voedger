@@ -7,7 +7,6 @@ package apps
 
 import (
 	"errors"
-	"iter"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/acl"
@@ -27,8 +26,8 @@ type AppDef struct {
 	packages.WithPackages
 	workspaces.WithWorkspaces
 	acl.WithACL
+	types.WithTypes
 	sysWS *workspaces.Workspace
-	types *types.Types[appdef.IType]
 }
 
 func NewAppDef() *AppDef {
@@ -37,31 +36,11 @@ func NewAppDef() *AppDef {
 		WithPackages:   packages.MakeWithPackages(),
 		WithWorkspaces: workspaces.MakeWithWorkspaces(),
 		WithACL:        acl.MakeWithACL(),
-		types:          types.NewTypes[appdef.IType](),
+		WithTypes:      types.MakeWithTypes(),
 	}
 	app.makeSysPackage()
 	return &app
 }
-
-func (app *AppDef) AppendType(t appdef.IType) {
-	name := t.QName()
-	if name == appdef.NullQName {
-		panic(appdef.ErrMissed("%s type name", t.Kind().TrimString()))
-	}
-	app.types.Add(t)
-}
-
-func (app AppDef) Type(name appdef.QName) appdef.IType {
-	switch name {
-	case appdef.NullQName:
-		return appdef.NullType
-	case appdef.QNameANY:
-		return appdef.AnyType
-	}
-	return app.types.Find(name)
-}
-
-func (app AppDef) Types() iter.Seq[appdef.IType] { return app.types.Values() }
 
 func (app *AppDef) build() (err error) {
 	for t := range app.Types() {
@@ -80,8 +59,8 @@ func (app *AppDef) makeSysPackage() {
 
 // Makes system workspace.
 func (app *AppDef) makeSysWorkspace() {
-	app.sysWS = workspaces.AddWorkspace(app, &app.WithWorkspaces, appdef.SysWorkspaceQName)
-	app.AppendType(app.sysWS)
+	app.sysWS = workspaces.NewWorkspace(app, appdef.SysWorkspaceQName)
+	app.WithWorkspaces.AppendWorkspace(app.sysWS)
 
 	app.makeSysDataTypes()
 	app.makeSysStructures()
@@ -90,8 +69,7 @@ func (app *AppDef) makeSysWorkspace() {
 // Makes system data types.
 func (app *AppDef) makeSysDataTypes() {
 	for k := appdef.DataKind_null + 1; k < appdef.DataKind_FakeLast; k++ {
-		d := datas.NewSysData(app.sysWS, k)
-		app.sysWS.AppendType(d) // propagate type to ws and app
+		_ = datas.NewSysData(app.sysWS, k)
 	}
 }
 
@@ -111,29 +89,15 @@ func (app *AppDef) makeSysStructures() {
 	viewNextBaseWSID.Value().AddField("NextBaseWSID", appdef.DataKind_int64, true)
 }
 
-func (app *AppDef) setTypeComment(n appdef.QName, comment ...string) {
-	t := app.Type(n)
-	if t == appdef.NullType {
-		panic(appdef.ErrNotFound("type %v", n))
-	}
-
-	if t, ok := t.(*types.Typ); ok {
-		comments.SetComment(&t.WithComments, comment...)
-	}
-}
-
 func (app *AppDef) validateType(t appdef.IType) (err error) {
 	if v, ok := t.(interface{ Validate() error }); ok {
 		err = v.Validate()
 	}
 
-	if _, ok := t.(appdef.IFields); ok {
-		err = errors.Join(err, fields.ValidateTypeFields(t))
-	}
-
-	if _, ok := t.(appdef.IContainers); ok {
-		err = errors.Join(err, containers.ValidateTypeContainers(t))
-	}
+	err = errors.Join(err,
+		fields.ValidateTypeFields(t),
+		containers.ValidateTypeContainers(t),
+	)
 
 	return err
 }
@@ -171,8 +135,4 @@ func (ab *AppDefBuilder) MustBuild() appdef.IAppDef {
 		panic(err)
 	}
 	return a
-}
-
-func (ab *AppDefBuilder) SetTypeComment(n appdef.QName, c ...string) {
-	ab.app.setTypeComment(n, c...)
 }

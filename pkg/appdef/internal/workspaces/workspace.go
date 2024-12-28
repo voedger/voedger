@@ -27,8 +27,8 @@ type Workspace struct {
 	types.Typ
 	abstracts.WithAbstract
 	acl.WithACL
+	types.WithTypes
 	ancestors *Workspaces
-	types     *types.Types[appdef.IType]
 	usedWS    *Workspaces
 	desc      appdef.ICDoc
 }
@@ -38,25 +38,19 @@ func NewWorkspace(app appdef.IAppDef, name appdef.QName) *Workspace {
 		Typ:          types.MakeType(app, nil, name, appdef.TypeKind_Workspace),
 		WithAbstract: abstracts.MakeWithAbstract(),
 		WithACL:      acl.MakeWithACL(),
+		WithTypes:    types.MakeWithTypes(),
 		ancestors:    NewWorkspaces(),
-		types:        types.NewTypes[appdef.IType](),
 		usedWS:       NewWorkspaces(),
 	}
 	if name != appdef.SysWorkspaceQName {
 		ws.ancestors.Add(app.Workspace(appdef.SysWorkspaceQName))
 	}
+	types.Propagate(ws)
 	return ws
 }
 
 func (ws Workspace) Ancestors() iter.Seq[appdef.IWorkspace] {
 	return ws.ancestors.Values()
-}
-
-func (ws *Workspace) AppendType(t appdef.IType) {
-	if app, ok := ws.App().(interface{ AppendType(appdef.IType) }); ok {
-		app.AppendType(t) // propagate type to app
-	}
-	ws.types.Add(t)
 }
 
 func (ws Workspace) Descriptor() appdef.QName {
@@ -81,11 +75,11 @@ func (ws Workspace) Inherits(anc appdef.QName) bool {
 }
 
 func (ws Workspace) LocalType(name appdef.QName) appdef.IType {
-	return ws.types.Find(name)
+	return ws.WithTypes.Type(name)
 }
 
 func (ws Workspace) LocalTypes() iter.Seq[appdef.IType] {
-	return ws.types.Values()
+	return ws.WithTypes.Types()
 }
 
 func (ws Workspace) Type(name appdef.QName) appdef.IType {
@@ -165,25 +159,21 @@ func (ws *Workspace) Validate() error {
 
 func (ws *Workspace) addCDoc(name appdef.QName) appdef.ICDocBuilder {
 	d := structures.NewCDoc(ws, name)
-	ws.AppendType(d)
 	return structures.NewCDocBuilder(d)
 }
 
 func (ws *Workspace) addCommand(name appdef.QName) appdef.ICommandBuilder {
 	c := extensions.NewCommand(ws, name)
-	ws.AppendType(c)
 	return extensions.NewCommandBuilder(c)
 }
 
 func (ws *Workspace) addCRecord(name appdef.QName) appdef.ICRecordBuilder {
 	r := structures.NewCRecord(ws, name)
-	ws.AppendType(r)
 	return structures.NewCRecordBuilder(r)
 }
 
 func (ws *Workspace) addData(name appdef.QName, kind appdef.DataKind, ancestor appdef.QName, constraints ...appdef.IConstraint) appdef.IDataBuilder {
 	d := datas.NewData(ws, name, kind, ancestor)
-	ws.AppendType(d)
 	b := datas.NewDataBuilder(d)
 	b.AddConstraints(constraints...)
 	return b
@@ -191,89 +181,74 @@ func (ws *Workspace) addData(name appdef.QName, kind appdef.DataKind, ancestor a
 
 func (ws *Workspace) addGDoc(name appdef.QName) appdef.IGDocBuilder {
 	d := structures.NewGDoc(ws, name)
-	ws.AppendType(d)
 	return structures.NewGDocBuilder(d)
 }
 
 func (ws *Workspace) addGRecord(name appdef.QName) appdef.IGRecordBuilder {
 	r := structures.NewGRecord(ws, name)
-	ws.AppendType(r)
 	return structures.NewGRecordBuilder(r)
 }
 
 func (ws *Workspace) addJob(name appdef.QName) appdef.IJobBuilder {
 	j := extensions.NewJob(ws, name)
-	ws.AppendType(j)
 	return extensions.NewJobBuilder(j)
 }
 
 func (ws *Workspace) addLimit(name appdef.QName, ops []appdef.OperationKind, opt appdef.LimitFilterOption, flt appdef.IFilter, rate appdef.QName, comment ...string) {
-	l := rates.NewLimit(ws, name, ops, opt, flt, rate, comment...)
-	ws.AppendType(l)
+	rates.NewLimit(ws, name, ops, opt, flt, rate, comment...)
 }
 
 func (ws *Workspace) addObject(name appdef.QName) appdef.IObjectBuilder {
 	o := structures.NewObject(ws, name)
-	ws.AppendType(o)
 	return structures.NewObjectBuilder(o)
 }
 
 func (ws *Workspace) addODoc(name appdef.QName) appdef.IODocBuilder {
 	d := structures.NewODoc(ws, name)
-	ws.AppendType(d)
 	return structures.NewODocBuilder(d)
 }
 
 func (ws *Workspace) addORecord(name appdef.QName) appdef.IORecordBuilder {
 	r := structures.NewORecord(ws, name)
-	ws.AppendType(r)
 	return structures.NewORecordBuilder(r)
 }
 
 func (ws *Workspace) addProjector(name appdef.QName) appdef.IProjectorBuilder {
 	p := extensions.NewProjector(ws, name)
-	ws.AppendType(p)
 	return extensions.NewProjectorBuilder(p)
 }
 
 func (ws *Workspace) addQuery(name appdef.QName) appdef.IQueryBuilder {
 	q := extensions.NewQuery(ws, name)
-	ws.AppendType(q)
 	return extensions.NewQueryBuilder(q)
 }
 
 func (ws *Workspace) addRate(name appdef.QName, count appdef.RateCount, period appdef.RatePeriod, scopes []appdef.RateScope, comment ...string) {
-	r := rates.NewRate(ws, name, count, period, scopes, comment...)
-	ws.AppendType(r)
+	rates.NewRate(ws, name, count, period, scopes, comment...)
 }
 
 func (ws *Workspace) addRole(name appdef.QName) appdef.IRoleBuilder {
 	r := roles.NewRole(ws, name)
-	ws.AppendType(r)
 	return roles.NewRoleBuilder(r)
 }
 
 func (ws *Workspace) addTag(name appdef.QName, comment ...string) {
 	t := types.NewTag(ws, name)
-	ws.AppendType(t)
 	comments.SetComment(&t.WithComments, comment...)
 }
 
 func (ws *Workspace) addView(name appdef.QName) appdef.IViewBuilder {
 	v := views.NewView(ws, name)
-	ws.AppendType(v)
 	return views.NewViewBuilder(v)
 }
 
 func (ws *Workspace) addWDoc(name appdef.QName) appdef.IWDocBuilder {
 	d := structures.NewWDoc(ws, name)
-	ws.AppendType(d)
 	return structures.NewWDocBuilder(d)
 }
 
 func (ws *Workspace) addWRecord(name appdef.QName) appdef.IWRecordBuilder {
 	r := structures.NewWRecord(ws, name)
-	ws.AppendType(r)
 	return structures.NewWRecordBuilder(r)
 }
 

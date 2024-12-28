@@ -28,8 +28,7 @@ func TestTags(t *testing.T) {
 		wsb := adb.AddWorkspace(wsName)
 
 		wsb.AddTag(tagNames[0], "first tag comment")
-		wsb.AddTag(tagNames[1])
-		wsb.SetTypeComment(tagNames[1], "second tag comment")
+		wsb.AddTag(tagNames[1], "second tag comment")
 
 		doc := wsb.AddODoc(docName)
 		doc.AddField("f1", appdef.DataKind_int64, true)

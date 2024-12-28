@@ -5,7 +5,10 @@
 
 package structures
 
-import "github.com/voedger/voedger/pkg/appdef"
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/internal/types"
+)
 
 // # Supports:
 //   - appdef.IWDoc
@@ -14,7 +17,9 @@ type WDoc struct {
 }
 
 func NewWDoc(ws appdef.IWorkspace, name appdef.QName) *WDoc {
-	return &WDoc{SingletonDoc: MakeSingleton(ws, name, appdef.TypeKind_WDoc)}
+	d := &WDoc{SingletonDoc: MakeSingleton(ws, name, appdef.TypeKind_WDoc)}
+	types.Propagate(d)
+	return d
 }
 
 // # Supports:
@@ -38,7 +43,9 @@ type WRecord struct {
 }
 
 func NewWRecord(ws appdef.IWorkspace, name appdef.QName) *WRecord {
-	return &WRecord{ContainedRecord: MakeContainedRecord(ws, name, appdef.TypeKind_WRecord)}
+	r := &WRecord{ContainedRecord: MakeContainedRecord(ws, name, appdef.TypeKind_WRecord)}
+	types.Propagate(r)
+	return r
 }
 
 // # Supports:

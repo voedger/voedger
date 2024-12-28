@@ -47,6 +47,11 @@ func NewData(ws appdef.IWorkspace, name appdef.QName, kind appdef.DataKind, anc 
 		ancestor:    ancestor,
 		constraints: make(map[appdef.ConstraintKind]appdef.IConstraint),
 	}
+
+	if name != appdef.NullQName {
+		types.Propagate(d)
+	}
+
 	return d
 }
 
@@ -144,10 +149,12 @@ func (db *DataBuilder) AddConstraints(cc ...appdef.IConstraint) appdef.IDataBuil
 
 // Creates and returns new system type by data kind.
 func NewSysData(ws appdef.IWorkspace, kind appdef.DataKind) *Data {
-	return &Data{
+	d := &Data{
 		Typ:      types.MakeType(ws.App(), ws, appdef.SysDataName(kind), appdef.TypeKind_Data),
 		dataKind: kind,
 	}
+	types.Propagate(d)
+	return d
 }
 
 // # Supports:

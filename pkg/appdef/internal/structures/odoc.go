@@ -5,7 +5,10 @@
 
 package structures
 
-import "github.com/voedger/voedger/pkg/appdef"
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/internal/types"
+)
 
 // # Supports:
 //   - appdef.IODoc
@@ -14,7 +17,9 @@ type ODoc struct {
 }
 
 func NewODoc(ws appdef.IWorkspace, name appdef.QName) *ODoc {
-	return &ODoc{Doc: MakeDoc(ws, name, appdef.TypeKind_ODoc)}
+	o := &ODoc{Doc: MakeDoc(ws, name, appdef.TypeKind_ODoc)}
+	types.Propagate(o)
+	return o
 }
 
 // # Supports:
@@ -32,13 +37,15 @@ func NewODocBuilder(d *ODoc) *ODocBuilder {
 }
 
 // # Supports:
-//	- appdef.IORecord
+//   - appdef.IORecord
 type ORecord struct {
 	ContainedRecord
 }
 
 func NewORecord(ws appdef.IWorkspace, name appdef.QName) *ORecord {
-	return &ORecord{ContainedRecord: MakeContainedRecord(ws, name, appdef.TypeKind_ORecord)}
+	r := &ORecord{ContainedRecord: MakeContainedRecord(ws, name, appdef.TypeKind_ORecord)}
+	types.Propagate(r)
+	return r
 }
 
 // # Supports:
