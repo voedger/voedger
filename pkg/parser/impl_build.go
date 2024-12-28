@@ -630,14 +630,14 @@ func (c *buildContext) addDataTypeField(field *FieldExpr) {
 			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull)
 		}
 	} else if field.Type.DataType.Varchar != nil {
-		constraints := make([]appdef.IConstraint, 0)
+		cc := make([]appdef.IConstraint, 0)
 		if field.Type.DataType.Varchar.MaxLen != nil {
-			constraints = append(constraints, constraints.MaxLen(uint16(*field.Type.DataType.Varchar.MaxLen))) // nolint G115: checked in [analyseFields]
+			cc = append(cc, constraints.MaxLen(uint16(*field.Type.DataType.Varchar.MaxLen))) // nolint G115: checked in [analyseFields]
 		}
 		if field.CheckRegexp != nil {
-			constraints = append(constraints, constraints.Pattern(field.CheckRegexp.Regexp))
+			cc = append(cc, constraints.Pattern(field.CheckRegexp.Regexp))
 		}
-		bld.AddField(fieldName, appdef.DataKind_string, field.NotNull, constraints...)
+		bld.AddField(fieldName, appdef.DataKind_string, field.NotNull, cc...)
 	} else {
 		bld.AddField(fieldName, sysDataKind, field.NotNull)
 	}
