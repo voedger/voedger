@@ -321,6 +321,8 @@ func (c *buildContext) projectors() error {
 						types = append(types, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord)
 					case istructs.QNameWRecord:
 						types = append(types, appdef.TypeKind_WDoc, appdef.TypeKind_WRecord)
+					case istructs.QNameODoc:
+						types = append(types, appdef.TypeKind_ODoc)
 					default:
 						qNames.Add(n.qName)
 					}
