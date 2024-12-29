@@ -47,18 +47,18 @@ func (ws workspace) ACL() iter.Seq[IACLRule] {
 	}
 }
 
-func (ws *workspace) Ancestors() iter.Seq[IWorkspace] {
+func (ws workspace) Ancestors() iter.Seq[IWorkspace] {
 	return ws.ancestors.values()
 }
 
-func (ws *workspace) Descriptor() QName {
+func (ws workspace) Descriptor() QName {
 	if ws.desc != nil {
 		return ws.desc.QName()
 	}
 	return NullQName
 }
 
-func (ws *workspace) Inherits(anc QName) bool {
+func (ws workspace) Inherits(anc QName) bool {
 	switch anc {
 	case SysWorkspaceQName, ws.QName():
 		return true
@@ -72,15 +72,15 @@ func (ws *workspace) Inherits(anc QName) bool {
 	return false
 }
 
-func (ws *workspace) LocalType(name QName) IType {
+func (ws workspace) LocalType(name QName) IType {
 	return ws.types.find(name)
 }
 
-func (ws *workspace) LocalTypes() iter.Seq[IType] {
+func (ws workspace) LocalTypes() iter.Seq[IType] {
 	return ws.types.values()
 }
 
-func (ws *workspace) Type(name QName) IType {
+func (ws workspace) Type(name QName) IType {
 	var (
 		find  func(IWorkspace) IType
 		chain map[QName]bool = make(map[QName]bool) // to prevent stack overflow recursion
@@ -105,14 +105,14 @@ func (ws *workspace) Type(name QName) IType {
 		}
 		return NullType
 	}
-	return find(ws)
+	return find(&ws)
 }
 
 // Enumeration order:
 //   - ancestor types recursive from far to nearest
 //   - local types
 //   - used workspaces
-func (ws *workspace) Types() iter.Seq[IType] {
+func (ws workspace) Types() iter.Seq[IType] {
 	return func(yield func(IType) bool) {
 		var (
 			visit func(IWorkspace) bool
@@ -140,11 +140,11 @@ func (ws *workspace) Types() iter.Seq[IType] {
 			}
 			return true
 		}
-		visit(ws)
+		visit(&ws)
 	}
 }
 
-func (ws *workspace) UsedWorkspaces() iter.Seq[IWorkspace] {
+func (ws workspace) UsedWorkspaces() iter.Seq[IWorkspace] {
 	return ws.usedWS.values()
 }
 

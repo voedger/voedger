@@ -50,6 +50,54 @@ func Test_Duplicates(t *testing.T) {
 	}
 }
 
+func Test_InsertInSort(t *testing.T) {
+	tests := []struct {
+		name string
+		s    []int
+		v    int
+		want []int
+	}{
+		{
+			name: "empty slice",
+			s:    []int{},
+			v:    1,
+			want: []int{1},
+		},
+		{
+			name: "insert in the beginning",
+			s:    []int{2, 3},
+			v:    1,
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "insert in the middle",
+			s:    []int{1, 3},
+			v:    2,
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "insert in the end",
+			s:    []int{1, 2},
+			v:    3,
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "insert existing value",
+			s:    []int{1, 2, 3},
+			v:    2,
+			want: []int{1, 2, 3},
+		},
+	}
+
+	require := require.New(t)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(tt.want, slices.InsertInSort(tt.s, tt.v, func(i, j int) int { return i - j }))
+		})
+	}
+}
+
 func Test_SubSet(t *testing.T) {
 	tests := []struct {
 		name string

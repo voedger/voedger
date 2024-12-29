@@ -1198,8 +1198,6 @@ func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c
 
 		if item.NestedTable != nil {
 			nestedTable = &item.NestedTable.Table
-			analyseWith(&nestedTable.With, nestedTable, c)
-
 			pos = &item.NestedTable.Pos
 
 			if nestedTable.Abstract {
@@ -1231,7 +1229,9 @@ func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c
 				}
 			}
 			nestedTable.workspace = getCurrentWorkspace(c)
+			analyseWith(&nestedTable.With, nestedTable, c)
 			analyseNestedTables(nestedTable.Items, rootTableKind, c)
+
 		}
 	}
 }
