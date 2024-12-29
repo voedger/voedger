@@ -312,37 +312,25 @@ func (c *buildContext) projectors() error {
 					return
 				}
 
-				qNames := appdef.QNames{}
-				types := appdef.TypeKindSet{}
-				for _, n := range trigger.qNames {
-					switch n {
-					case istructs.QNameCommand:
-						types.Set(appdef.TypeKind_Command)
-					case istructs.QNameQuery:
-						types.Set(appdef.TypeKind_Query)
-					case istructs.QNameCDoc:
-						types.Set(appdef.TypeKind_CDoc)
-					case istructs.QNameCRecord:
-						types.Set(appdef.TypeKind_CDoc, appdef.TypeKind_CRecord)
-					case istructs.QNameWDoc:
-						types.Set(appdef.TypeKind_WDoc)
-					case istructs.QNameWRecord:
-						types.Set(appdef.TypeKind_WDoc, appdef.TypeKind_WRecord)
-					case istructs.QNameODoc:
-						types.Set(appdef.TypeKind_ODoc)
-					case istructs.QNameORecord:
-						types.Set(appdef.TypeKind_ODoc, appdef.TypeKind_ORecord)
-					default:
-						qNames.Add(n)
-					}
-				}
-
 				flt := []appdef.IFilter{}
+				qNames := appdef.QNames{}
+				types := []appdef.TypeKind{}
+				for _, n := range trigger.QNames {
+					switch n.qName {
+					case istructs.QNameCRecord:
+						types = append(types, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord)
+					case istructs.QNameWRecord:
+						types = append(types, appdef.TypeKind_WDoc, appdef.TypeKind_WRecord)
+					default:
+						qNames.Add(n.qName)
+					}
+				} //Trigger qNames
+
 				if len(qNames) > 0 {
 					flt = append(flt, filter.QNames(qNames...))
 				}
-				if types.Len() > 0 {
-					flt = append(flt, filter.Types(types.AsArray()...))
+				if len(types) > 0 {
+					flt = append(flt, filter.Types(types...))
 				}
 
 				switch len(flt) {
@@ -352,9 +340,9 @@ func (c *buildContext) projectors() error {
 				case 1:
 					builder.Events().Add(ops, flt[0])
 				default:
-					builder.Events().Add(ops, filter.And(flt...))
+					builder.Events().Add(ops, filter.Or(flt...))
 				}
-			}
+			} //Triggers
 
 			if proj.IncludingErrors {
 				builder.SetWantErrors()
