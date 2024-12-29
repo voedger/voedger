@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"mime"
+	"net/http"
 	"time"
 
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -40,16 +41,17 @@ func ProvideService(serviceChannel iprocbus.ServiceChannel, blobStorage iblobsto
 }
 
 type blobWorkpiece struct {
-	blobMessage   IBLOBMessage
-	opKind        BLOBOperation
-	duration      iblobstorage.DurationType
-	nameQuery     []string
-	mimeTypeQuery []string
-	ttl           string
-	descr         iblobstorage.DescrType
-	mediaType     string
-	boundary      string
-	contentType   string
+	blobMessage      IBLOBMessage
+	opKind           BLOBOperation
+	duration         iblobstorage.DurationType
+	nameQuery        []string
+	mimeTypeQuery    []string
+	ttl              string
+	descr            iblobstorage.DescrType
+	mediaType        string
+	boundary         string
+	contentType      string
+	blobIDOrSUUIDStr string
 }
 
 func (b *blobWorkpiece) Release() {}
@@ -115,8 +117,35 @@ func validateParams(_ context.Context, work pipeline.IWorkpiece) error {
 	if len(bw.boundary) == 0 {
 		return fmt.Errorf("boundary of %s is not specified", coreutils.MultipartFormData)
 	}
-	pipeline.ISwitch
 	return nil
+}
+
+type badRequestWrapper struct {
+	pipeline.NOOP
+}
+
+func (b *badRequestWrapper) OnErr(err error, _ interface{}, _ pipeline.IWorkpieceContext) (newErr error) {
+	return coreutils.WrapSysError(err, http.StatusBadRequest)
+}
+
+type blobOpSwitch struct {
+}
+
+func (b *blobOpSwitch) Switch(work interface{}) (branchName string, err error) {
+	blobWorkpiece := work.(*blobWorkpiece)
+	switch {
+	case len(blobWorkpiece.blobIDOrSUUIDStr) > 0:
+		if len(blobWorkpiece.blobIDOrSUUIDStr) > temporaryBLOBIDLenTreshold {
+			return "readTemporary", nil
+		}
+		return "readPersistent", nil
+	case len(blobWorkpiece.descr.Name) > 0:
+		return "writeSingle", nil
+	case len(blobWorkpiece.descr.Name) == 0:
+		return "writeMultipart", nil
+	}
+	// notest
+	panic(fmt.Sprintf("unable to determine switch branch: %#v", blobWorkpiece))
 }
 
 func providePipeline(vvmCtx context.Context) pipeline.ISyncPipeline {
@@ -124,7 +153,8 @@ func providePipeline(vvmCtx context.Context) pipeline.ISyncPipeline {
 		pipeline.WireFunc("parseQueryParams", parseQueryParams),
 		pipeline.WireFunc("parseMediaType", parseMediaType),
 		pipeline.WireFunc("validateParams", validateParams),
-		pipeline.WireFunc("checkBadRequest", )
-		pipeline.WireSyncOperator("switch", pipeline.SwitchOperator(pipeline.sw)),
+		pipeline.WireSyncOperator("wrapBadRequest", &badRequestWrapper{}),
+		pipeline.WireSyncOperator("switch", pipeline.SwitchOperator(&blobOpSwitch{},
+			pipeline.SwitchBranch("readTemporary", pipeline.NewSyncOp()))),
 	)
 }
