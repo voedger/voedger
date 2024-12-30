@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"mime"
 	"net/http"
 	"time"
@@ -17,41 +18,50 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/iprocbus"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
-func ProvideService(serviceChannel iprocbus.ServiceChannel, blobStorage iblobstorage.IBLOBStorage,
-	ibus ibus.IBus, busTimeout time.Duration) pipeline.IService {
+func ProvideService(vvmCtx context.Context, serviceChannel iprocbus.ServiceChannel, blobStorage iblobstorage.IBLOBStorage,
+	ibus ibus.IBus, busTimeout time.Duration, wLimiterFactory WLimiterFactory) pipeline.IService {
 	return pipeline.NewService(func(ctx context.Context) {
+		pipeline := providePipeline(vvmCtx, blobStorage, ibus, busTimeout, wLimiterFactory)
 		for ctx.Err() == nil {
 			select {
 			case workIntf := <-serviceChannel:
 				blobMessage := workIntf.(IBLOBMessage)
-				switch blobMessage.BLOBOperation() {
-				case BLOBOperation_Read_Persistent, BLOBOperation_Read_Temporary:
-					readBLOB(blobMessage, blobStorage, ibus, busTimeout)
-				case BLOBOperation_Write_Persistent_Single:
-					writeBLOB(blobMessage, blobStorage, busTimeout, ibus)
+				if err := pipeline.SendSync(blobMessage); err != nil {
+					// notest
+					panic(err)
 				}
+				blobMessage.Release()
 			case <-ctx.Done():
 			}
 		}
+		pipeline.Close()
 	})
 }
 
 type blobWorkpiece struct {
-	blobMessage      IBLOBMessage
-	opKind           BLOBOperation
-	duration         iblobstorage.DurationType
-	nameQuery        []string
-	mimeTypeQuery    []string
-	ttl              string
-	descr            iblobstorage.DescrType
-	mediaType        string
-	boundary         string
-	contentType      string
-	blobIDOrSUUIDStr string
+	blobMessage           IBLOBMessage
+	opKind                BLOBOperation
+	duration              iblobstorage.DurationType
+	nameQuery             []string
+	mimeTypeQuery         []string
+	ttl                   string
+	descr                 iblobstorage.DescrType
+	mediaType             string
+	boundary              string
+	contentType           string
+	existingBLOBIDOrSUUID string
+	newBLOBID             istructs.RecordID
+	doneCh                chan (interface{})
+	blobState             iblobstorage.BLOBState
+	blobKey               iblobstorage.IBLOBKey
+	writer                io.Writer
+	reader                io.Reader
+	registerFuncName      string
 }
 
 func (b *blobWorkpiece) Release() {}
@@ -133,28 +143,38 @@ type blobOpSwitch struct {
 
 func (b *blobOpSwitch) Switch(work interface{}) (branchName string, err error) {
 	blobWorkpiece := work.(*blobWorkpiece)
-	switch {
-	case len(blobWorkpiece.blobIDOrSUUIDStr) > 0:
-		if len(blobWorkpiece.blobIDOrSUUIDStr) > temporaryBLOBIDLenTreshold {
-			return "readTemporary", nil
-		}
-		return "readPersistent", nil
-	case len(blobWorkpiece.descr.Name) > 0:
-		return "writeSingle", nil
-	case len(blobWorkpiece.descr.Name) == 0:
-		return "writeMultipart", nil
+	if blobWorkpiece.blobMessage.IsRead() {
+		return "readBLOB", nil
 	}
-	// notest
-	panic(fmt.Sprintf("unable to determine switch branch: %#v", blobWorkpiece))
+	return "writeBLOB", nil
 }
 
-func providePipeline(vvmCtx context.Context) pipeline.ISyncPipeline {
+func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStorage, bus ibus.IBus, busTimeout time.Duration,
+	wLimiterFactory WLimiterFactory) pipeline.ISyncPipeline {
 	return pipeline.NewSyncPipeline(vvmCtx, "blob processor",
 		pipeline.WireFunc("parseQueryParams", parseQueryParams),
 		pipeline.WireFunc("parseMediaType", parseMediaType),
 		pipeline.WireFunc("validateParams", validateParams),
 		pipeline.WireSyncOperator("wrapBadRequest", &badRequestWrapper{}),
 		pipeline.WireSyncOperator("switch", pipeline.SwitchOperator(&blobOpSwitch{},
-			pipeline.SwitchBranch("readTemporary", pipeline.NewSyncOp()))),
+			pipeline.SwitchBranch("readBLOB", pipeline.NewSyncPipeline(vvmCtx, "readBLOB",
+				pipeline.WireFunc("readBLOBID", readBLOBID),
+				pipeline.WireFunc("downloadBLOBHelper", provideDownloadBLOBHelper(bus, busTimeout)),
+				pipeline.WireFunc("getBLOBKey", getBLOBKey),
+				pipeline.WireFunc("queryBLOBState", provideQueryAndCheckBLOBState(blobStorage)),
+				pipeline.WireFunc("initResponse", initResponse),
+				pipeline.WireFunc("readBLOB", provideReadBLOB(blobStorage)),
+			)),
+			pipeline.SwitchBranch("writeBLOB", pipeline.NewSyncPipeline(vvmCtx, "writeBLOB",
+				pipeline.WireFunc("getRegisterFuncName", getRegisterFuncName),
+				pipeline.WireFunc("registerBLOB", provideRegisterBLOB(bus, busTimeout)),
+				pipeline.WireFunc("writeBLOB", provideWriteBLOB(blobStorage, wLimiterFactory)),
+				pipeline.WireFunc("setBLOBStatusCompleted", provideSetBLOBStatusCompleted(bus, busTimeout)),
+			)),
+		)),
 	)
+}
+
+func (b *blobWorkpiece) isPersistent() bool {
+	return len(w.existingBLOBIDOrSUUID) <= temporaryBLOBIDLenTreshold
 }

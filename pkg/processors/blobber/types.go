@@ -7,6 +7,7 @@ package blobprocessor
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -31,7 +32,6 @@ const (
 )
 
 type blobMessage_base struct {
-	// base
 	blobOperation   BLOBOperation
 	req             *http.Request
 	resp            http.ResponseWriter
@@ -51,13 +51,16 @@ type blobMessage_base struct {
 type WLimiterFactory func() iblobstorage.WLimiterType
 
 type IBLOBMessage interface {
+	pipeline.IWorkpiece
 	AppQName() appdef.AppQName
 	WSID() istructs.WSID
 	Header() http.Header
 	Sender() ibus.ISender
-	Resp() http.ResponseWriter
+	InitOKResponse(headersKeyValue ...string) io.Writer
+	Reader() io.ReadCloser
 	RequestCtx() context.Context
 	URL() *url.URL
+	IsRead() bool // false -> write
 }
 
 type ServiceFactory func(serviceChannel iprocbus.ServiceChannel) pipeline.IService

@@ -5,6 +5,14 @@
 
 package blobprocessor
 
+import "github.com/voedger/voedger/pkg/iblobstorage"
+
 const (
 	temporaryBLOBIDLenTreshold = 40 // greater -> temporary, persistent oherwise
+)
+
+var (
+	durationToRegisterFuncs = map[iblobstorage.DurationType]string{
+		iblobstorage.DurationType_1Day: "c.sys.RegisterTempBLOB1d",
+	}
 )
