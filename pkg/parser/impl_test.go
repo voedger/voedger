@@ -1377,6 +1377,51 @@ func Test_Projectors(t *testing.T) {
 		require.Equal(appdef.FilterKind_QNames, pe[0].Filter().Kind())
 		require.Len(slices.Collect(pe[0].Filter().QNames()), 1)
 	})
+
+	t.Run("Projector filters", func(t *testing.T) {
+		require := assertions(t)
+		schema, err := require.AppSchema(`APPLICATION test();
+		WORKSPACE Ws (
+			TABLE Tbl1 INHERITS sys.CDoc();
+			TABLE Tbl2 INHERITS sys.CDoc();
+			TABLE Tbl3 INHERITS sys.CDoc();
+			EXTENSION ENGINE WASM (
+				PROJECTOR p AFTER INSERT OR UPDATE ON (sys.CRecord, Tbl1, Tbl2) OR AFTER DEACTIVATE ON Tbl3;
+			);
+		);`)
+		require.NoError(err)
+
+		appBld := appdef.New()
+		err = BuildAppDefs(schema, appBld)
+		require.NoError(err)
+
+		app, err := appBld.Build()
+		require.NoError(err)
+
+		proj := appdef.Projector(app.Type, appdef.NewQName("pkg", "p"))
+		require.NotNil(proj)
+		pe := slices.Collect(proj.Events())
+		require.Len(pe, 2)
+		require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update}, slices.Collect((pe[0].Ops())))
+		require.Equal(appdef.FilterKind_Or, pe[0].Filter().Kind())
+		or := slices.Collect(pe[0].Filter().Or())
+		require.Len(or, 2)
+		require.Equal(appdef.FilterKind_QNames, or[0].Kind())
+		require.Equal(appdef.FilterKind_Types, or[1].Kind())
+		qnames := slices.Collect(or[0].QNames())
+		require.Len(qnames, 2)
+		require.Equal("pkg.Tbl1", qnames[0].String())
+		require.Equal("pkg.Tbl2", qnames[1].String())
+		types := slices.Collect(or[1].Types())
+		require.Len(types, 2)
+		require.Equal(appdef.TypeKind_CDoc, types[0])
+		require.Equal(appdef.TypeKind_CRecord, types[1])
+
+		require.Equal([]appdef.OperationKind{appdef.OperationKind_Deactivate}, slices.Collect((pe[1].Ops())))
+		require.Equal(appdef.FilterKind_QNames, pe[1].Filter().Kind())
+		require.Len(slices.Collect(pe[1].Filter().QNames()), 1)
+		require.Equal("pkg.Tbl3", slices.Collect(pe[1].Filter().QNames())[0].String())
+	})
 }
 
 func Test_Tags(t *testing.T) {

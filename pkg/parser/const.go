@@ -8,15 +8,8 @@ package parser
 import "github.com/voedger/voedger/pkg/appdef"
 
 const (
-	nameCdoc       = "CDoc"
-	nameODoc       = "ODoc"
-	nameWDoc       = "WDoc"
-	nameCSingleton = "CSingleton"
-	nameWSingleton = "WSingleton"
-	nameCRecord    = "CRecord"
-	nameORecord    = "ORecord"
-	nameWRecord    = "WRecord"
-
+	nameCSingleton     = "CSingleton"
+	nameWSingleton     = "WSingleton"
 	nameAppWorkspaceWS = "AppWorkspaceWS"
 )
 

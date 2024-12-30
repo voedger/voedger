@@ -466,8 +466,6 @@ type ProjectorTrigger struct {
 	ExecuteAction *ProjectorCommandAction `parser:"'AFTER' (@@"`
 	TableActions  []ProjectionTableAction `parser:"| (@@ ('OR' @@)* ))"`
 	QNames        []DefQName              `parser:"'ON' (('(' @@ (',' @@)* ')') | @@)!)"`
-
-	qNames []appdef.QName // filled on the analysis stage
 }
 
 type ProjectorStmt struct {
