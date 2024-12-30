@@ -56,7 +56,7 @@ var defaultACL = ACL{
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User, WSID: istructs.GuestWSID}}},
 			qNamesPattern: []appdef.QName{
 				qNameCmdProvideCertificatePart, qNameCmdProvideCertificate, qNameQryGetCustomerStatus,
-				qNameCmdFiscalizeDocument, qNameQryFiscalizationResultStatus, qNameCmdCreateExport, qNameQryExportStatus},
+				qNameCmdFiscalizeDocument, qNameQryFiscalizationResultStatus, qNameCmdCreateExport, qNameQryExportStatus, qNameQryValidateDocument},
 		},
 		policy: ACPolicy_Allow,
 	},

@@ -112,6 +112,7 @@ var (
 	qNameQryFiscalizationResultStatus               = appdef.NewQName(fiscalcloudPackage, "FiscalizationResultStatus")
 	qNameCmdCreateExport                            = appdef.NewQName(fiscalcloudPackage, "CreateExport")
 	qNameQryExportStatus                            = appdef.NewQName(fiscalcloudPackage, "ExportStatus")
+	qNameQryValidateDocument                        = appdef.NewQName(fiscalcloudPackage, "ValidateDocument")
 	qNameCmdAddCustomer                             = appdef.NewQName(fiscalcloudPackage, "AddCustomer")
 	qNameCmdUpdateCustomer                          = appdef.NewQName(fiscalcloudPackage, "UpdateCustomer")
 	qNameCmdDeactivateCustomer                      = appdef.NewQName(fiscalcloudPackage, "DeactivateCustomer")
