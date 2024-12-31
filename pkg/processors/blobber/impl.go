@@ -58,6 +58,9 @@ func parseQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 
 func parseMediaType(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
+	if len(bw.nameQuery) > 0 {
+		return nil
+	}
 	bw.contentType = bw.blobMessage.Header().Get(coreutils.ContentType)
 	mediaType, params, err := mime.ParseMediaType(bw.contentType)
 	if err != nil {
@@ -123,6 +126,7 @@ type blobOpSwitch struct {
 func (b *blobOpSwitch) Switch(work interface{}) (branchName string, err error) {
 	blobWorkpiece := work.(*blobWorkpiece)
 	if blobWorkpiece.blobMessage.IsRead() {
+		тут неправильно или перепутано
 		return "readBLOB", nil
 	}
 	return "writeBLOB", nil
