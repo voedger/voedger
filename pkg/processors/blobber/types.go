@@ -139,4 +139,4 @@ type BLOBServiceChannel iprocbus.ServiceChannel
 
 type BLOBServiceChannelGroupIdx uint
 
-type NumBLOBWorkers int
+type NumBLOBProcessors uint

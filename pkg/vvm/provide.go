@@ -138,6 +138,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideServicePipeline,
 		provideCommandProcessors,
 		provideQueryProcessors,
+		provideOpBLOBProcessors,
 		provideBlobAppStoragePtr,
 		provideVVMApps,
 		provideBuiltInAppsArtefacts,
@@ -205,7 +206,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"NumCommandProcessors",
 			"NumQueryProcessors",
 			"Time",
-			"BlobberServiceChannels",
 			"BLOBMaxSize",
 			"Name",
 			"MaxPrepareQueries",
@@ -755,7 +755,7 @@ func provideCommandChannelFactory(sch ServiceChannelFactory) CommandChannelFacto
 	}
 }
 
-func provideOpBLOBProcessors(numBLOBWorkers blobprocessor.NumBLOBWorkers, blobServiceChannel blobprocessor.BLOBServiceChannel,
+func provideOpBLOBProcessors(numBLOBWorkers blobprocessor.NumBLOBProcessors, blobServiceChannel blobprocessor.BLOBServiceChannel,
 	blobStorage iblobstorage.IBLOBStorage, ibus ibus.IBus, busTimeout time.Duration, wLimiterFactory blobprocessor.WLimiterFactory) OperatorBLOBProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, numBLOBWorkers)
 	for i := 0; i < int(numBLOBWorkers); i++ {
