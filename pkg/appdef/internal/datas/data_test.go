@@ -8,7 +8,9 @@ package datas_test
 import (
 	"fmt"
 	"maps"
+	"math"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -281,4 +283,92 @@ func Test_NewAnonymousData(t *testing.T) {
 
 	testWith(app)
 	testWith(app.Workspace(wsName))
+}
+
+func Test_DataBuilder_AddConstraint(t *testing.T) {
+	type args struct {
+		da appdef.DataKind
+		ck appdef.ConstraintKind
+		cv any
+	}
+	tests := []struct {
+		name      string
+		args      args
+		wantPanic bool
+		e         error
+	}{
+		//- appdef.MaxLen
+		{"string: max length constraint should be ok",
+			args{appdef.DataKind_string, appdef.ConstraintKind_MaxLen, uint16(100)}, false, nil},
+		{"bytes: max length constraint should be ok",
+			args{appdef.DataKind_bytes, appdef.ConstraintKind_MaxLen, uint16(1024)}, false, nil},
+		//- Enum
+		{"int32: enum constraint should be ok",
+			args{appdef.DataKind_int32, appdef.ConstraintKind_Enum, []int32{1, 2, 3}}, false, nil},
+		{"int32: enum constraint should fail if incompatible enum type",
+			args{appdef.DataKind_int32, appdef.ConstraintKind_Enum, []int64{1, 2, 3}}, true, appdef.ErrIncompatibleError},
+		{"int64: enum constraint should be ok",
+			args{appdef.DataKind_int64, appdef.ConstraintKind_Enum, []int64{1, 2, 3}}, false, nil},
+		{"int64: enum constraint should fail if incompatible appdef.ErrIncompatibleError type",
+			args{appdef.DataKind_int64, appdef.ConstraintKind_Enum, []string{"1", "2", "3"}}, true, appdef.ErrIncompatibleError},
+		{"float32: enum constraint should be ok",
+			args{appdef.DataKind_float32, appdef.ConstraintKind_Enum, []float32{1.0, 2.0, 3.0}}, false, nil},
+		{"float32: enum constraint should fail if incompatible enum type",
+			args{appdef.DataKind_float32, appdef.ConstraintKind_Enum, []float64{1.0, 2.0, 3.0}}, true, appdef.ErrIncompatibleError},
+		{"float64: enum constraint should be ok",
+			args{appdef.DataKind_float64, appdef.ConstraintKind_Enum, []float64{1.0, 2.0, 3.0}}, false, nil},
+		{"float64: enum constraint should fail if incompatible enum type",
+			args{appdef.DataKind_float64, appdef.ConstraintKind_Enum, []int32{1, 2, 3}}, true, appdef.ErrIncompatibleError},
+		{"string: enum constraint should be ok",
+			args{appdef.DataKind_string, appdef.ConstraintKind_Enum, []string{"a", "b", "c"}}, false, nil},
+		{"string: enum constraint should fail if incompatible enum type",
+			args{appdef.DataKind_float64, appdef.ConstraintKind_Enum, []int32{1, 2, 3}}, true, appdef.ErrIncompatibleError},
+	}
+	require := require.New(t)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			adb := builder.New()
+			adb.AddPackage("test", "test.com/test")
+			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+			d := wsb.AddData(appdef.NewQName("test", "test"), tt.args.da, appdef.NullQName)
+			if tt.wantPanic {
+				if tt.e == nil {
+					require.Panics(func() { d.AddConstraints(constraints.NewConstraint(tt.args.ck, tt.args.cv)) })
+				} else {
+					require.Panics(func() { d.AddConstraints(constraints.NewConstraint(tt.args.ck, tt.args.cv)) },
+						require.Is(tt.e))
+				}
+			} else {
+				require.NotPanics(func() { d.AddConstraints(constraints.NewConstraint(tt.args.ck, tt.args.cv)) })
+			}
+		})
+	}
+}
+
+func Test_DataConstraint_String(t *testing.T) {
+	tests := []struct {
+		name  string
+		c     appdef.IConstraint
+		wantS string
+	}{
+		{"MinLen", constraints.MinLen(1), "MinLen: 1"},
+		{"MaxLen", constraints.MaxLen(100), "MaxLen: 100"},
+		{"Pattern", constraints.Pattern(`^\d+$`), "Pattern: `^\\d+$`"},
+		{"MinIncl", constraints.MinIncl(1), "MinIncl: 1"},
+		{"MinExcl", constraints.MinExcl(0), "MinExcl: 0"},
+		{"MinExcl(-∞)", constraints.MinExcl(math.Inf(-1)), "MinExcl: -Inf"},
+		{"MaxIncl", constraints.MaxIncl(100), "MaxIncl: 100"},
+		{"MaxExcl", constraints.MaxExcl(100), "MaxExcl: 100"},
+		{"MaxExcl(+∞)", constraints.MaxExcl(math.Inf(+1)), "MaxExcl: +Inf"},
+		{"Enum(string)", constraints.Enum("c", "d", "a", "a", "b", "c"), "Enum: [a b c d]"},
+		{"Enum(float64)", constraints.Enum(float64(1), 2, 3, 4, math.Round(100*math.Pi)/100, math.Inf(-1)), "Enum: [-Inf 1 2 3 3.14 4]"},
+		{"Enum(long case)", constraints.Enum("b", "d", "a", strings.Repeat("c", 100)), "Enum: [a b cccccccccccccccccccccccccccccccccccccccccccccccccccc…"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotS := fmt.Sprint(tt.c); gotS != tt.wantS {
+				t.Errorf("DataConstraint.String() = %v, want %v", gotS, tt.wantS)
+			}
+		})
+	}
 }
