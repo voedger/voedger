@@ -613,18 +613,39 @@ func (s RateStmt) GetName() string { return string(s.Name) }
 
 type LimitAction struct {
 	Pos        lexer.Position
-	Table      *DefQName `parser:"(ONTABLE @@)"`
-	Command    *DefQName `parser:"| ('ON' 'COMMAND' @@)"`
-	Query      *DefQName `parser:"| ('ON' 'QUERY' @@)"`
-	Tag        *DefQName `parser:"| ('ON' 'TAG' @@)"`
-	Everything bool      `parser:"| @('ON' 'EVERYTHING')"`
+	Select     bool `parser:"(@'SELECT'"`
+	Execute    bool `parser:"| @'EXECUTE'"`
+	Insert     bool `parser:"| @'INSERT'"`
+	Activate   bool `parser:"| @'ACTIVATE'"`
+	Deactivate bool `parser:"| @'DEACTIVATE'"`
+	Update     bool `parser:"| @'UPDATE')"`
+}
+
+type LimitSingleItemFilter struct {
+	Pos     lexer.Position
+	Command *DefQName `parser:"( ('ON' 'COMMAND' @@)"`
+	Query   *DefQName `parser:"| ('ON' 'QUERY' @@)"`
+	Table   *DefQName `parser:"| (ONTABLE @@)"`
+	View    *DefQName `parser:"| ('ON' 'VIEW' @@) )"`
+}
+
+type LimitMultipleItemsFilter struct {
+	Pos      lexer.Position
+	Commands bool      `parser:"( @('COMMANDS')"`
+	Queries  bool      `parser:"| @('QUERIES')"`
+	Tables   bool      `parser:"| @('TABLES')"`
+	Views    bool      `parser:"| @('VIEWS'))?"`
+	WithTag  *DefQName `parser:"('WITH' 'TAG' @@)?"`
 }
 
 type LimitStmt struct {
 	Statement
-	Name     Ident       `parser:"'LIMIT' @Ident"`
-	Action   LimitAction `parser:"@@"`
-	RateName DefQName    `parser:"'WITH' 'RATE' @@"`
+	Name       Ident                     `parser:"'LIMIT' @Ident"`
+	Actions    []LimitAction             `parser:"(@@ (',' @@)*)?"`
+	SingleItem *LimitSingleItemFilter    `parser:"( @@"`
+	AllItems   *LimitMultipleItemsFilter `parser:"| ('ON' 'ALL' @@)"`
+	EachItem   *LimitMultipleItemsFilter `parser:"| ('ON' 'EVERY' @@) )"`
+	RateName   DefQName                  `parser:"'WITH' 'RATE' @@"`
 }
 
 func (s LimitStmt) GetName() string { return string(s.Name) }

@@ -13,6 +13,7 @@ import (
 	"github.com/robfig/cron/v3"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/set"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -492,27 +493,92 @@ func analyzeRate(r *RateStmt, c *iterateCtx) {
 	}
 }
 
-func analyzeLimit(u *LimitStmt, c *iterateCtx) {
-	err := resolveInCtx(u.RateName, c, func(l *RateStmt, schema *PackageSchemaAST) error { return nil })
+func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
+	err := resolveInCtx(limit.RateName, c, func(l *RateStmt, schema *PackageSchemaAST) error { return nil })
 	if err != nil {
-		c.stmtErr(&u.RateName.Pos, err)
+		c.stmtErr(&limit.RateName.Pos, err)
 	}
-	if u.Action.Tag != nil {
-		if err = resolveInCtx(*u.Action.Tag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&u.Action.Tag.Pos, err)
+	allowedOps := func(ops appdef.OperationsSet) error {
+		for _, op := range limit.Actions {
+			if op.Execute && !ops.Contains(appdef.OperationKind_Execute) {
+				return ErrLimitOperationNotAllowed(OP_EXECUTE)
+			}
+			if op.Insert && !ops.Contains(appdef.OperationKind_Insert) {
+				return ErrLimitOperationNotAllowed(OP_INSERT)
+			}
+			if op.Update && !ops.Contains(appdef.OperationKind_Update) {
+				return ErrLimitOperationNotAllowed(OP_UPDATE)
+			}
+			if op.Select && !ops.Contains(appdef.OperationKind_Select) {
+				return ErrLimitOperationNotAllowed(OP_SELECT)
+			}
+			if op.Activate && !ops.Contains(appdef.OperationKind_Activate) {
+				return ErrLimitOperationNotAllowed(OP_ACTIVATE)
+			}
+			if op.Deactivate && !ops.Contains(appdef.OperationKind_Deactivate) {
+				return ErrLimitOperationNotAllowed(OP_DEACTIVATE)
+			}
 		}
-	} else if u.Action.Command != nil {
-		if err = resolveInCtx(*u.Action.Command, c, func(t *CommandStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&u.Action.Command.Pos, err)
+		return nil
+	}
+	if limit.SingleItem != nil {
+		if limit.SingleItem.Command != nil {
+			if err = resolveInCtx(*limit.SingleItem.Command, c, func(t *CommandStmt, schema *PackageSchemaAST) error {
+				limit.SingleItem.Command.qName = schema.NewQName(t.Name)
+				allowedOps(set.From(appdef.OperationKind_Execute))
+				return nil
+			}); err != nil {
+				c.stmtErr(&limit.SingleItem.Command.Pos, err)
+			}
 		}
+		if limit.SingleItem.Query != nil {
+			if err = resolveInCtx(*limit.SingleItem.Query, c, func(t *QueryStmt, schema *PackageSchemaAST) error {
+				limit.SingleItem.Query.qName = schema.NewQName(t.Name)
+				allowedOps(set.From(appdef.OperationKind_Execute))
+				return nil
+			}); err != nil {
+				c.stmtErr(&limit.SingleItem.Query.Pos, err)
+			}
+		}
+		if limit.SingleItem.View != nil {
+			if err = resolveInCtx(*limit.SingleItem.View, c, func(t *ViewStmt, schema *PackageSchemaAST) error {
+				limit.SingleItem.View.qName = schema.NewQName(t.Name)
+				allowedOps(set.From(appdef.OperationKind_Select))
+				return nil
+			}); err != nil {
+				c.stmtErr(&limit.SingleItem.View.Pos, err)
+			}
+		}
+		if limit.SingleItem.Table != nil {
+			if err = resolveInCtx(*limit.SingleItem.Table, c, func(t *TableStmt, schema *PackageSchemaAST) error {
+				limit.SingleItem.Table.qName = schema.NewQName(t.Name)
+				allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate))
+				return nil
+			}); err != nil {
+				c.stmtErr(&limit.SingleItem.Table.Pos, err)
+			}
+		}
+	}
 
-	} else if u.Action.Query != nil {
-		if err = resolveInCtx(*u.Action.Query, c, func(t *QueryStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&u.Action.Query.Pos, err)
+	if limit.AllItems != nil {
+		if limit.AllItems.WithTag != nil {
+			if err = resolveInCtx(*limit.AllItems.WithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error {
+				limit.AllItems.WithTag.qName = schema.NewQName(t.Name)
+				return nil
+			}); err != nil {
+				c.stmtErr(&limit.AllItems.WithTag.Pos, err)
+			}
 		}
-	} else if u.Action.Table != nil {
-		if err = resolveInCtx(*u.Action.Table, c, func(t *TableStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&u.Action.Table.Pos, err)
+	}
+
+	if limit.EachItem != nil {
+		if limit.EachItem.WithTag != nil {
+			if err = resolveInCtx(*limit.EachItem.WithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error {
+				limit.EachItem.WithTag.qName = schema.NewQName(t.Name)
+				return nil
+			}); err != nil {
+				c.stmtErr(&limit.EachItem.WithTag.Pos, err)
+			}
 		}
 	}
 }
