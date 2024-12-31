@@ -150,6 +150,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideProcessorChannelGroupIdxBLOB,
 		provideQueryChannel,
 		provideCommandChannelFactory,
+		provideBLOBChannel,
 		provideIBus,
 		provideRouterParams,
 		provideRouterAppStoragePtr,
@@ -205,6 +206,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
 			"NumQueryProcessors",
+			"NumBLOBProcessors",
 			"Time",
 			"BLOBMaxSize",
 			"Name",
@@ -747,6 +749,10 @@ func providePublicEndpointServiceOperator(rs RouterServices, metricsServiceOp Me
 
 func provideQueryChannel(sch ServiceChannelFactory) QueryChannel {
 	return QueryChannel(sch(ProcessorChannel_Query, 0))
+}
+
+func provideBLOBChannel(sch ServiceChannelFactory) blobprocessor.BLOBServiceChannel {
+	return blobprocessor.BLOBServiceChannel(sch(ProcessorChannel_BLOB, 0))
 }
 
 func provideCommandChannelFactory(sch ServiceChannelFactory) CommandChannelFactory {

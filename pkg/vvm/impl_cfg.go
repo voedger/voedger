@@ -43,6 +43,7 @@ func NewVVMDefaultConfig() VVMConfig {
 		BusTimeout:             BusTimeout(ibus.DefaultTimeout),
 		NumCommandProcessors:   DefaultNumCommandProcessors,
 		NumQueryProcessors:     DefaultNumQueryProcessors,
+		NumBLOBProcessors:      DefaultNumBLOBProcessors,
 		StorageCacheSize:       DefaultCacheSize,
 		MaxPrepareQueries:      DefaultMaxPrepareQueries,
 		VVMPort:                DefaultVVMPort,
@@ -52,7 +53,6 @@ func NewVVMDefaultConfig() VVMConfig {
 			return mem.Provide(coreutils.MockTime), nil
 		},
 		SecretsReader: isecretsimpl.ProvideSecretReader(),
-		NumBLOBProcessors: ,
 	}
 	if coreutils.IsTest() {
 		res.SecretsReader = itokensjwt.ProvideTestSecretsReader(res.SecretsReader)
