@@ -512,15 +512,14 @@ classDiagram
     +Fields() []IFeld
   }
 
-  class IUniques{
+  class IWithUniques{
     <<Interface>>
     UniqueByName(QName) IUnique
     UniqueCount() int
     Uniques() []IUnique
   }
-  IUniques "1" --* "0..*" IUnique : compose
+  IWithUniques "1" --* "0..*" IUnique : compose
 
-  IUniquesBuilder --|> IUniques : inherits
   class IUniquesBuilder {
     <<Interface>>
     AddUnique(…) IUnique
@@ -541,7 +540,7 @@ classDiagram
   class IView {
     <<Interface>>
     +Kind()* TypeKind_View
-    IFields
+    IWithFields
     +Key() IViewKey
     +Value() IViewValue
   }
@@ -550,7 +549,7 @@ classDiagram
 
   class IViewKey {
     <<Interface>>
-    IFields
+    IWithFields
     +PartKey() IViewPartKey
     +ClustCols() IViewClustCols
   }
@@ -560,19 +559,19 @@ classDiagram
 
   class IViewPartKey {
     <<Interface>>
-    IFields
+    IWithFields
   }
   IViewPartKey "1" *--> "1..*" IField : fields
 
   class IViewClustCols {
     <<Interface>>
-    IFields
+    IWithFields
   }
   IViewClustCols "1" *--> "1..*" IField : fields
 
   class IViewValue {
     <<Interface>>
-    IFields
+    IWithFields
   }
   IViewValue "1" *--> "1..*" IField : fields
 
