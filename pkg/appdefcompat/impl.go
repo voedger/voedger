@@ -186,7 +186,7 @@ func buildUniqueNode(parentNode *CompatibilityTreeNode, item appdef.IUnique) (no
 	return
 }
 
-func buildUniquesNode(parentNode *CompatibilityTreeNode, item appdef.IUniques) (node *CompatibilityTreeNode) {
+func buildUniquesNode(parentNode *CompatibilityTreeNode, item appdef.IWithUniques) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameUniques, nil)
 	for _, unique := range item.Uniques() {
 		node.Props = append(node.Props, buildUniqueNode(node, unique))

@@ -10,7 +10,7 @@ type IStructure interface {
 	IType
 	IWithFields
 	IWithContainers
-	IUniques
+	IWithUniques
 	IWithAbstract
 
 	// Returns definition for «sys.QName» field

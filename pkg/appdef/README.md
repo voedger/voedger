@@ -461,15 +461,14 @@ classDiagram
     +Constraints() []IConstraint
   }
 
-  class IFields{
+  class IWithFields{
     <<Interface>>
     Field(FieldName) IField
     FieldCount() int
     Fields() []IField
   }
-  IFields "1" --* "0..*" IField : compose
+  IWithFields "1" --* "0..*" IField : compose
 
-  IFieldsBuilder --|> IFields : inherits
   class IFieldsBuilder {
     <<Interface>>
     AddField(…)
@@ -493,16 +492,15 @@ classDiagram
     +MaxOccurs() int
   }
 
-  class IContainers{
+  class IWithContainers{
     <<Interface>>
     Container(string) IContainer
     ContainerCount() int
     ContainerDef() [string]IType
     Containers() []IContainer
   }
-  IContainers "1" --* "0..*" IContainer : compose
+  IWithContainers "1" --* "0..*" IContainer : compose
 
-  IContainersBuilder --|> IContainers : inherits
   class IContainersBuilder {
     <<Interface>>
     AddContainer(…) IContainer

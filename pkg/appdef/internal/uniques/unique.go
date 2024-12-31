@@ -51,16 +51,16 @@ func (u Unique) String() string {
 }
 
 // # Supports:
-//   - appdef.IUniques
-type UniquesList struct {
+//   - appdef.IWithUniques
+type WithUniques struct {
 	find    appdef.FindType
 	fields  appdef.IWithFields
 	uniques map[appdef.QName]appdef.IUnique
 	field   appdef.IField
 }
 
-func MakeUniques(find appdef.FindType, fields appdef.IWithFields) UniquesList {
-	uu := UniquesList{
+func MakeWithUniques(find appdef.FindType, fields appdef.IWithFields) WithUniques {
+	uu := WithUniques{
 		find:    find,
 		fields:  fields,
 		uniques: make(map[appdef.QName]appdef.IUnique),
@@ -68,7 +68,7 @@ func MakeUniques(find appdef.FindType, fields appdef.IWithFields) UniquesList {
 	return uu
 }
 
-func (uu *UniquesList) setUniqueField(name appdef.FieldName) {
+func (uu *WithUniques) setUniqueField(name appdef.FieldName) {
 	if name == appdef.NullName {
 		uu.field = nil
 		return
@@ -85,26 +85,26 @@ func (uu *UniquesList) setUniqueField(name appdef.FieldName) {
 	uu.field = fld
 }
 
-func (uu UniquesList) UniqueByName(name appdef.QName) appdef.IUnique {
+func (uu WithUniques) UniqueByName(name appdef.QName) appdef.IUnique {
 	if u, ok := uu.uniques[name]; ok {
 		return u
 	}
 	return nil
 }
 
-func (uu UniquesList) UniqueCount() int {
+func (uu WithUniques) UniqueCount() int {
 	return len(uu.uniques)
 }
 
-func (uu UniquesList) UniqueField() appdef.IField {
+func (uu WithUniques) UniqueField() appdef.IField {
 	return uu.field
 }
 
-func (uu UniquesList) Uniques() map[appdef.QName]appdef.IUnique {
+func (uu WithUniques) Uniques() map[appdef.QName]appdef.IUnique {
 	return uu.uniques
 }
 
-func (uu *UniquesList) addUnique(name appdef.QName, fields []appdef.FieldName, comment ...string) {
+func (uu *WithUniques) addUnique(name appdef.QName, fields []appdef.FieldName, comment ...string) {
 	if name == appdef.NullQName {
 		panic(appdef.ErrMissed("unique name"))
 	}
@@ -154,11 +154,11 @@ func (uu *UniquesList) addUnique(name appdef.QName, fields []appdef.FieldName, c
 // # Supports:
 //   - appdef.IUniquesBuilder
 type UniquesBuilder struct {
-	*UniquesList
+	*WithUniques
 }
 
-func MakeUniquesBuilder(uniques *UniquesList) UniquesBuilder {
-	return UniquesBuilder{UniquesList: uniques}
+func MakeUniquesBuilder(uniques *WithUniques) UniquesBuilder {
+	return UniquesBuilder{WithUniques: uniques}
 }
 
 func (ub *UniquesBuilder) AddUnique(name appdef.QName, fields []appdef.FieldName, comment ...string) appdef.IUniquesBuilder {

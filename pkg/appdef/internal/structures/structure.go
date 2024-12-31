@@ -20,7 +20,7 @@ type Structure struct {
 	types.Typ
 	fields.WithFields
 	containers.WithContainers
-	uniques.UniquesList
+	uniques.WithUniques
 	abstracts.WithAbstract
 }
 
@@ -33,7 +33,7 @@ func MakeStructure(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind
 		WithAbstract:   abstracts.MakeWithAbstract(),
 	}
 	s.WithFields.MakeSysFields()
-	s.UniquesList = uniques.MakeUniques(ws.App().Type, &s.WithFields)
+	s.WithUniques = uniques.MakeWithUniques(ws.App().Type, &s.WithFields)
 	return s
 }
 
@@ -57,7 +57,7 @@ func MakeStructureBuilder(structure *Structure) StructureBuilder {
 		TypeBuilder:         types.MakeTypeBuilder(&structure.Typ),
 		FieldsBuilder:       fields.MakeFieldsBuilder(&structure.WithFields),
 		ContainersBuilder:   containers.MakeContainersBuilder(&structure.WithContainers),
-		UniquesBuilder:      uniques.MakeUniquesBuilder(&structure.UniquesList),
+		UniquesBuilder:      uniques.MakeUniquesBuilder(&structure.WithUniques),
 		WithAbstractBuilder: abstracts.MakeWithAbstractBuilder(&structure.WithAbstract),
 		Structure:           structure,
 	}
