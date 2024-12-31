@@ -98,18 +98,22 @@ func provideRegisterBLOB(bus ibus.IBus, busTimeout time.Duration) func(ctx conte
 				fmt.Sprintf("%s returned error: %s", bw.registerFuncName, string(blobHelperResp.Data)))
 		}
 
-		cmdResp := map[string]interface{}{}
-		if err := json.Unmarshal(blobHelperResp.Data, &cmdResp); err != nil {
-			bw.blobMessage.ReplyError(http.StatusInternalServerError, fmt.Sprintf("failed to json-unmarshal %s :%s", bw.registerFuncName, err))
+		if bw.isPersistent() {
+			cmdResp := map[string]interface{}{}
+			if err := json.Unmarshal(blobHelperResp.Data, &cmdResp); err != nil {
+				bw.blobMessage.ReplyError(http.StatusInternalServerError, fmt.Sprintf("failed to json-unmarshal %s :%s", bw.registerFuncName, err))
+			}
+			newIDsIntf, ok := cmdResp["NewIDs"]
+			if ok {
+				newIDs := newIDsIntf.(map[string]interface{})
+				bw.newBLOBID = istructs.RecordID(newIDs["1"].(float64))
+				return nil
+			}
+			// notest
+			return coreutils.NewHTTPErrorf(http.StatusInternalServerError, "missing NewIDs in "+bw.registerFuncName+" cmd response")
 		}
-		newIDsIntf, ok := cmdResp["NewIDs"]
-		if ok {
-			newIDs := newIDsIntf.(map[string]interface{})
-			bw.newBLOBID = istructs.RecordID(newIDs["1"].(float64))
-			return nil
-		}
-		// notest
-		return coreutils.NewHTTPErrorf(http.StatusInternalServerError, "missing NewIDs in "+bw.registerFuncName+" cmd response")
+		bw.newSUUID = iblobstorage.NewSUUID()
+		return nil
 	}
 }
 func registerBLOB(ctx context.Context, wsid istructs.WSID, appQName string, registerFuncName string, header map[string][]string, busTimeout time.Duration,

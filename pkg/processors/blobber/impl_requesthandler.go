@@ -19,7 +19,8 @@ import (
 type IRequestHandler interface {
 	// false -> service unavailable
 	Handle(appQName appdef.AppQName, wsid istructs.WSID, header http.Header, requestCtx context.Context,
-		urlQueryValues url.Values, okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser, errorResponder ErrorResponder) bool
+		urlQueryValues url.Values, okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
+		errorResponder ErrorResponder, isRead bool) bool
 }
 
 // implemented in e.g. router
@@ -31,7 +32,8 @@ type implIRequestHandler struct {
 }
 
 func (r *implIRequestHandler) Handle(appQName appdef.AppQName, wsid istructs.WSID, header http.Header, requestCtx context.Context,
-	urlQueryValues url.Values, okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser, errorResponder ErrorResponder) bool {
+	urlQueryValues url.Values, okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
+	errorResponder ErrorResponder, isRead bool) bool {
 	msg := &implIBLOBMessage{
 		appQName:         appQName,
 		wsid:             wsid,

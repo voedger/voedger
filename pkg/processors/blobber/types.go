@@ -43,6 +43,7 @@ type blobWorkpiece struct {
 	contentType           string
 	existingBLOBIDOrSUUID string
 	newBLOBID             istructs.RecordID
+	newSUUID              iblobstorage.SUUID
 	doneCh                chan (interface{})
 	blobState             iblobstorage.BLOBState
 	blobKey               iblobstorage.IBLOBKey
@@ -61,6 +62,7 @@ type implIBLOBMessage struct {
 	reader           io.ReadCloser
 	errorResponder   ErrorResponder
 	done             chan interface{}
+	isRead           bool
 }
 
 func NewIBLOBMessage(appQName appdef.AppQName, wsid istructs.WSID, header http.Header, requestCtx context.Context,
@@ -109,7 +111,7 @@ func (m *implIBLOBMessage) Reader() io.ReadCloser {
 }
 
 func (m *implIBLOBMessage) IsRead() bool {
-	return m.reader != nil
+	return m.isRead
 }
 
 func (m *implIBLOBMessage) ReplyError(statusCode int, args ...any) {

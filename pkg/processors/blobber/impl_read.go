@@ -27,25 +27,62 @@ import (
 // TODO: blobStorage - кэшированный или нет? Елси нет, то не надо QueryState выделять в отдельный оператор, а то 2 раза в хранилище будем лазить
 // TODO: blobMessage.Release() должен закрывать io.ReadCloser
 
+// func getBLOBKey(ctx context.Context, work pipeline.IWorkpiece) (err error) {
+// 	bm := work.(*blobWorkpiece)
+// 	if bm.isPersistent() {
+// 		if
+// 		blobID, err := strconv.ParseUint(bm.existingBLOBIDOrSUUID, utils.DecimalBase, utils.BitSize64)
+// 		if err != nil {
+// 			// validated already by router
+// 			// notest
+// 			return err
+// 		}
+// 		bm.blobKey = &iblobstorage.PersistentBLOBKeyType{
+// 			ClusterAppID: istructs.ClusterAppID_sys_blobber,
+// 			WSID:         bm.blobMessage.WSID(),
+// 			BlobID:       istructs.RecordID(blobID),
+// 		}
+// 	} else {
+// 		bm.blobKey = &iblobstorage.TempBLOBKeyType{
+// 			ClusterAppID: istructs.ClusterAppID_sys_blobber,
+// 			WSID:         bm.blobMessage.WSID(),
+// 			SUUID:        iblobstorage.SUUID(bm.existingBLOBIDOrSUUID),
+// 		}
+// 	}
+// 	return nil
+// }
+
 func getBLOBKey(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bm := work.(*blobWorkpiece)
 	if bm.isPersistent() {
-		blobID, err := strconv.ParseUint(bm.existingBLOBIDOrSUUID, utils.DecimalBase, utils.BitSize64)
-		if err != nil {
-			// validated already by router
-			// notest
-			return err
+		var blobID istructs.RecordID
+		if bm.blobMessage.IsRead() {
+			blobIDUint, err := strconv.ParseUint(bm.existingBLOBIDOrSUUID, utils.DecimalBase, utils.BitSize64)
+			if err != nil {
+				// validated already by router
+				// notest
+				return err
+			}
+			blobID = istructs.RecordID(blobIDUint)
+		} else {
+			blobID = bm.newBLOBID
 		}
 		bm.blobKey = &iblobstorage.PersistentBLOBKeyType{
 			ClusterAppID: istructs.ClusterAppID_sys_blobber,
 			WSID:         bm.blobMessage.WSID(),
-			BlobID:       istructs.RecordID(blobID),
+			BlobID:       blobID,
 		}
 	} else {
+		var suuid iblobstorage.SUUID
+		if bm.blobMessage.IsRead() {
+			suuid = iblobstorage.SUUID(bm.existingBLOBIDOrSUUID)
+		} else {
+			suuid = bm.newSUUID
+		}
 		bm.blobKey = &iblobstorage.TempBLOBKeyType{
 			ClusterAppID: istructs.ClusterAppID_sys_blobber,
 			WSID:         bm.blobMessage.WSID(),
-			SUUID:        iblobstorage.SUUID(bm.existingBLOBIDOrSUUID),
+			SUUID:        suuid,
 		}
 	}
 	return nil

@@ -443,7 +443,7 @@ func (s *httpService) blobWriteRequestHandler() http.HandlerFunc {
 				duration: duration,
 			})
 		} else {
-			s.blobRequestHandler(resp, req, blobWriteDetailsMultipart{
+			s.blobRequestHandler(resp, req, {
 				boundary: boundary,
 				duration: duration,
 			})

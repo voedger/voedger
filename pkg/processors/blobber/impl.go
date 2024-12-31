@@ -15,6 +15,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/pipeline"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
@@ -64,10 +65,21 @@ func parseMediaType(_ context.Context, work pipeline.IWorkpiece) error {
 	bw.contentType = bw.blobMessage.Header().Get(coreutils.ContentType)
 	mediaType, params, err := mime.ParseMediaType(bw.contentType)
 	if err != nil {
-		return fmt.Errorf("failed ot parse Content-Type header: %w", err)
+		return fmt.Errorf("failed to parse Content-Type header: %w", err)
 	}
 	bw.mediaType = mediaType
 	bw.boundary = params["boundary"]
+	return nil
+}
+
+func sendNewBLOBIDOrSUUID(_ context.Context, work pipeline.IWorkpiece) error {
+	bw := work.(*blobWorkpiece)
+	writer := bw.blobMessage.InitOKResponse(coreutils.ContentType, "text/plain")
+	if bw.isPersistent() {
+		_, _ = writer.Write([]byte(utils.UintToString(bw.newBLOBID)))
+	} else {
+		_, _ = writer.Write([]byte(bw.newSUUID))
+	}
 	return nil
 }
 
@@ -126,7 +138,6 @@ type blobOpSwitch struct {
 func (b *blobOpSwitch) Switch(work interface{}) (branchName string, err error) {
 	blobWorkpiece := work.(*blobWorkpiece)
 	if blobWorkpiece.blobMessage.IsRead() {
-		тут неправильно или перепутано
 		return "readBLOB", nil
 	}
 	return "writeBLOB", nil
@@ -151,8 +162,10 @@ func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStora
 			pipeline.SwitchBranch("writeBLOB", pipeline.NewSyncPipeline(vvmCtx, "writeBLOB",
 				pipeline.WireFunc("getRegisterFuncName", getRegisterFuncName),
 				pipeline.WireFunc("registerBLOB", provideRegisterBLOB(bus, busTimeout)),
+				pipeline.WireFunc("getBLOBKey", getBLOBKey),
 				pipeline.WireFunc("writeBLOB", provideWriteBLOB(blobStorage, wLimiterFactory)),
 				pipeline.WireFunc("setBLOBStatusCompleted", provideSetBLOBStatusCompleted(bus, busTimeout)),
+				pipeline.WireFunc("sendNewBLOBIDOrSUUID", sendNewBLOBIDOrSUUID),
 			)),
 		)),
 	)

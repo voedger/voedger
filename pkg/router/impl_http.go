@@ -206,10 +206,11 @@ func (s *httpService) blobHTTPRequestHandler() http.HandlerFunc {
 			}
 		}
 		appQName := appdef.NewAppQName(vars[URLPlaceholder_appOwner], vars[URLPlaceholder_appName])
+		isRead := req.Method == http.MethodGet
 		if !s.blobRequestHandler.Handle(appQName, istructs.WSID(wsid), headers, req.Context(), req.URL.Query(),
 			newBLOBOKResponseIniter(resp), req.Body, func(statusCode int, args ...interface{}) {
 				WriteTextResponse(resp, fmt.Sprint(args...), statusCode)
-			}) {
+			}, isRead) {
 			resp.WriteHeader(http.StatusServiceUnavailable)
 			resp.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
 		}
