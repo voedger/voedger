@@ -1392,7 +1392,7 @@ func Test_Projectors(t *testing.T) {
 		);`)
 		require.NoError(err)
 
-		appBld := appdef.New()
+		appBld := builder.New()
 		err = BuildAppDefs(schema, appBld)
 		require.NoError(err)
 
