@@ -163,7 +163,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		in10nmem.ProvideEx2,
 		queryprocessor.ProvideServiceFactory,
 		commandprocessor.ProvideServiceFactory,
-		blobprocessor.ProvideService,
 		metrics.ProvideMetricsService,
 		dbcertcache.ProvideDbCache,
 		imetrics.Provide,
@@ -221,7 +220,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	))
 }
 
-func provideWLimiterFactory(maxSize iblobstorage.BLOBMaxSizeType) func() iblobstorage.WLimiterType {
+func provideWLimiterFactory(maxSize iblobstorage.BLOBMaxSizeType) blobprocessor.WLimiterFactory {
 	return func() iblobstorage.WLimiterType {
 		return iblobstoragestg.NewWLimiter_Size(maxSize)
 	}
@@ -679,8 +678,8 @@ func provideProcessorChannelGroupIdxQuery(vvmCfg *VVMConfig) QueryProcessorsChan
 	return QueryProcessorsChannelGroupIdxType(getChannelGroupIdx(vvmCfg, ProcessorChannel_Query))
 }
 
-func provideProcessorChannelGroupIdxBLOB(vvmCfg *VVMConfig) BLOBProcessorsChannelGroupIdxType {
-	return BLOBProcessorsChannelGroupIdxType(getChannelGroupIdx(vvmCfg, ProcessorChannel_BLOB))
+func provideProcessorChannelGroupIdxBLOB(vvmCfg *VVMConfig) blobprocessor.BLOBServiceChannelGroupIdx {
+	return blobprocessor.BLOBServiceChannelGroupIdx(getChannelGroupIdx(vvmCfg, ProcessorChannel_BLOB))
 }
 
 func getChannelGroupIdx(vvmCfg *VVMConfig, channelType ProcessorChannelType) int {
