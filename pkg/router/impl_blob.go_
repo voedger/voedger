@@ -396,7 +396,7 @@ func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Req
 		},
 		blobDetails: details,
 	}
-	if !s.BlobberParams.procBus.Submit(0, 0, mes) {
+	if !s.iProcBus.Submit(0, 0, mes) {
 		resp.WriteHeader(http.StatusServiceUnavailable)
 		resp.Header().Add("Retry-After", strconv.Itoa(s.BlobberParams.RetryAfterSecondsOn503))
 		return

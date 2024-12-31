@@ -36,6 +36,7 @@ const (
 	URLPlaceholder_workspace        = "workspace"
 	hours24                         = 24 * time.Hour
 	temporaryBLOBIDLenTreshold      = 40 // greater -> temporary, persistent oherwise
+	DefaultRetryAfterSecondsOn503   = 1
 )
 
 var (

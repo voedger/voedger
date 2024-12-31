@@ -91,16 +91,16 @@ func provideRegisterBLOB(bus ibus.IBus, busTimeout time.Duration) func(ctx conte
 		}
 		blobHelperResp, _, _, err := bus.SendRequest2(ctx, req, busTimeout)
 		if err != nil {
-			coreutils.ReplyInternalServerError(bw.blobMessage.Sender(), "failed to exec "+bw.registerFuncName, err)
+			bw.blobMessage.ReplyError(http.StatusInternalServerError, fmt.Sprintf("failed to exec %s: %s", bw.registerFuncName, err))
 		}
 		if blobHelperResp.StatusCode != http.StatusOK {
-			coreutils.ReplyErrf(bw.blobMessage.Sender(), blobHelperResp.StatusCode,
+			bw.blobMessage.ReplyError(blobHelperResp.StatusCode,
 				fmt.Sprintf("%s returned error: %s", bw.registerFuncName, string(blobHelperResp.Data)))
 		}
 
 		cmdResp := map[string]interface{}{}
 		if err := json.Unmarshal(blobHelperResp.Data, &cmdResp); err != nil {
-			coreutils.ReplyInternalServerError(bw.blobMessage.Sender(), "failed to json-unmarshal "+bw.registerFuncName, err)
+			bw.blobMessage.ReplyError(http.StatusInternalServerError, fmt.Sprintf("failed to json-unmarshal %s :%s", bw.registerFuncName, err))
 		}
 		newIDsIntf, ok := cmdResp["NewIDs"]
 		if ok {

@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"mime"
 	"net/http"
 	"time"
@@ -17,62 +16,42 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/iblobstorage"
-	"github.com/voedger/voedger/pkg/iprocbus"
-	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
-func ProvideService(vvmCtx context.Context, serviceChannel iprocbus.ServiceChannel, blobStorage iblobstorage.IBLOBStorage,
+func ProvideService(serviceChannel BLOBServiceChannel, blobStorage iblobstorage.IBLOBStorage,
 	ibus ibus.IBus, busTimeout time.Duration, wLimiterFactory WLimiterFactory) pipeline.IService {
-	return pipeline.NewService(func(ctx context.Context) {
+	return pipeline.NewService(func(vvmCtx context.Context) {
 		pipeline := providePipeline(vvmCtx, blobStorage, ibus, busTimeout, wLimiterFactory)
-		for ctx.Err() == nil {
+		for vvmCtx.Err() == nil {
 			select {
 			case workIntf := <-serviceChannel:
-				blobMessage := workIntf.(IBLOBMessage)
-				if err := pipeline.SendSync(blobMessage); err != nil {
+				blobWorkpiece := &blobWorkpiece{
+					blobMessage: workIntf.(IBLOBMessage),
+				}
+				if err := pipeline.SendSync(blobWorkpiece); err != nil {
 					// notest
 					panic(err)
 				}
-				blobMessage.Release()
-			case <-ctx.Done():
+				blobWorkpiece.Release()
+			case <-vvmCtx.Done():
 			}
 		}
 		pipeline.Close()
 	})
 }
 
-type blobWorkpiece struct {
-	blobMessage           IBLOBMessage
-	opKind                BLOBOperation
-	duration              iblobstorage.DurationType
-	nameQuery             []string
-	mimeTypeQuery         []string
-	ttl                   string
-	descr                 iblobstorage.DescrType
-	mediaType             string
-	boundary              string
-	contentType           string
-	existingBLOBIDOrSUUID string
-	newBLOBID             istructs.RecordID
-	doneCh                chan (interface{})
-	blobState             iblobstorage.BLOBState
-	blobKey               iblobstorage.IBLOBKey
-	writer                io.Writer
-	reader                io.Reader
-	registerFuncName      string
+func (b *blobWorkpiece) Release() {
+	b.blobMessage.Release()
 }
-
-func (b *blobWorkpiece) Release() {}
 
 func parseQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
-	values := bw.blobMessage.URL().Query()
-	bw.nameQuery = values["name"]
-	bw.mimeTypeQuery = values["mimeType"]
-	if len(values["ttl"]) > 0 {
-		bw.ttl = values["ttl"][0]
+	bw.nameQuery = bw.blobMessage.URLQueryValues()["name"]
+	bw.mimeTypeQuery = bw.blobMessage.URLQueryValues()["mimeType"]
+	if len(bw.blobMessage.URLQueryValues()["ttl"]) > 0 {
+		bw.ttl = bw.blobMessage.URLQueryValues()["ttl"][0]
 	}
 	return nil
 }
@@ -176,5 +155,5 @@ func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStora
 }
 
 func (b *blobWorkpiece) isPersistent() bool {
-	return len(w.existingBLOBIDOrSUUID) <= temporaryBLOBIDLenTreshold
+	return len(b.existingBLOBIDOrSUUID) <= temporaryBLOBIDLenTreshold
 }

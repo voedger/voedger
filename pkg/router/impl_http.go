@@ -14,12 +14,14 @@ import (
 	"net"
 	"net/http"
 	"net/http/pprof"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 	"golang.org/x/net/netutil"
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
@@ -85,15 +87,15 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 }
 
 func (s *httpService) preRun(ctx context.Context) {
-	if s.BlobberParams != nil {
-		for i := 0; i < s.BlobberParams.BLOBWorkersNum; i++ {
-			s.blobWG.Add(1)
-			go func() {
-				defer s.blobWG.Done()
-				blobMessageHandler(ctx, s.procBus.ServiceChannel(0, 0), s.BLOBStorage, s.bus, s.busTimeout)
-			}()
-		}
-	}
+	// if s.BlobberParams != nil {
+	// 	for i := 0; i < s.BlobberParams.BLOBWorkersNum; i++ {
+	// 		s.blobWG.Add(1)
+	// 		go func() {
+	// 			defer s.blobWG.Done()
+	// 			blobMessageHandler(ctx, s.procBus.ServiceChannel(0, 0), s.BLOBStorage, s.bus, s.busTimeout)
+	// 		}()
+	// 	}
+	// }
 	s.server.BaseContext = func(l net.Listener) context.Context {
 		return ctx // need to track both client disconnect and app finalize
 	}
@@ -165,19 +167,35 @@ func (s *httpService) registerRouterCheckerHandler() {
 	s.router.HandleFunc("/api/check", corsHandler(checkHandler())).Methods("POST", "GET", "OPTIONS").Name("router check")
 }
 
+func newErrorResponder(w http.ResponseWriter) blobprocessor.ErrorResponder {
+	return func(statusCode int, args ...interface{}) {
+		w.WriteHeader(statusCode)
+		w.Write([]byte(fmt.Sprint(args...)))
+	}
+}
+
+func (s *httpService) blobHTTPRequestHandler() http.HandlerFunc {
+	return func(resp http.ResponseWriter, req *http.Request) {
+		if !s.blobRequestHandler.Handle() {
+			resp.WriteHeader(http.StatusServiceUnavailable)
+			resp.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
+		}
+	}
+}
+
 func (s *httpService) registerHandlersV1() {
 	/*
 		launching app from localhost from browser. Trying to execute POST from web app within browser.
 		Browser sees that hosts differs: from localhost to alpha -> need CORS -> denies POST and executes the same request with OPTIONS header
 		-> need to allow OPTIONS
 	*/
-	if s.BlobberParams != nil {
-		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}", URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid), corsHandler(s.blobWriteRequestHandler())).
+	if s.blobRequestHandler != nil {
+		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}", URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid), corsHandler(s.blobHTTPRequestHandler())).
 			Methods("POST", "OPTIONS").
 			Name("blob write")
 
 		// allowed symbols according to see base64.URLEncoding
-		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9-_]+}", URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobID), corsHandler(s.blobReadRequestHandler())).
+		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9-_]+}", URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobID), corsHandler(s.blobHTTPRequestHandler())).
 			Methods("POST", "GET", "OPTIONS").
 			Name("blob read")
 	}
