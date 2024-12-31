@@ -89,9 +89,9 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.Occurs(0), container.MinOccurs())
 	require.Equal(appdef.Occurs(maxNestedTableContainerOccurrences), container.MaxOccurs())
 	require.Equal(appdef.TypeKind_CRecord, container.Type().Kind())
-	require.Equal(2+5 /* +5 system fields*/, container.Type().(appdef.IFields).FieldCount())
-	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IFields).Field("TableNo").DataKind())
-	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IFields).Field("Chairs").DataKind())
+	require.Equal(2+5 /* +5 system fields*/, container.Type().(appdef.IWithFields).FieldCount())
+	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IWithFields).Field("TableNo").DataKind())
+	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IWithFields).Field("Chairs").DataKind())
 
 	// constraint
 	uniques := cdoc.Uniques()
@@ -383,7 +383,7 @@ func Test_Refs_NestedTables(t *testing.T) {
 	require.NoError(err)
 
 	inner1 := app.Type(appdef.NewQName("pkg1", "inner1"))
-	ref1 := inner1.(appdef.IFields).RefField("ref1")
+	ref1 := inner1.(appdef.IWithFields).RefField("ref1")
 	require.EqualValues(appdef.QNames{appdef.NewQName("pkg1", "table3")}, ref1.Refs())
 }
 
@@ -1702,7 +1702,7 @@ func Test_VRestaurantBasic(t *testing.T) {
 	cdoc := app.Type(appdef.NewQName("vrestaurant", "TablePlan"))
 	require.NotNil(cdoc)
 	require.Equal(appdef.TypeKind_CDoc, cdoc.Kind())
-	require.Equal(appdef.DataKind_RecordID, cdoc.(appdef.IFields).Field("Picture").DataKind())
+	require.Equal(appdef.DataKind_RecordID, cdoc.(appdef.IWithFields).Field("Picture").DataKind())
 
 	cdoc = app.Type(appdef.NewQName("vrestaurant", "Client"))
 	require.NotNil(cdoc)
@@ -1720,7 +1720,7 @@ func Test_VRestaurantBasic(t *testing.T) {
 	crec := app.Type(appdef.NewQName("vrestaurant", "TableItem"))
 	require.NotNil(crec)
 	require.Equal(appdef.TypeKind_CRecord, crec.Kind())
-	require.Equal(appdef.DataKind_int32, crec.(appdef.IFields).Field("Tableno").DataKind())
+	require.Equal(appdef.DataKind_int32, crec.(appdef.IWithFields).Field("Tableno").DataKind())
 
 	// view
 	view := appdef.View(app.Type, appdef.NewQName("vrestaurant", "SalesPerDay"))

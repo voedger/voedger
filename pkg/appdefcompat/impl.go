@@ -125,7 +125,7 @@ func buildQNameNode(parentNode *CompatibilityTreeNode, item appdef.IType, name s
 		if t, ok := item.(appdef.IWithAbstract); ok {
 			node.Props = append(node.Props, buildAbstractNode(node, t))
 		}
-		if t, ok := item.(appdef.IFields); ok {
+		if t, ok := item.(appdef.IWithFields); ok {
 			node.Props = append(node.Props, buildFieldsNode(node, t, NodeNameFields))
 		}
 		if t, ok := item.(appdef.IWithContainers); ok {
@@ -162,7 +162,7 @@ func buildFieldsNode(parentNode *CompatibilityTreeNode, item interface{}, nodeNa
 	if item == nil {
 		return
 	}
-	if fieldsObj, ok := item.(appdef.IFields); ok {
+	if fieldsObj, ok := item.(appdef.IWithFields); ok {
 		for _, field := range fieldsObj.Fields() {
 			node.Props = append(node.Props, buildFieldNode(node, field))
 		}

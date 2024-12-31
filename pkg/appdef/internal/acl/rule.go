@@ -191,7 +191,7 @@ func (r Rule) validateOnType(t appdef.IType) error {
 		}
 	}
 	if r.Filter().HasFields() {
-		if fields, ok := t.(appdef.IFields); ok {
+		if fields, ok := t.(appdef.IWithFields); ok {
 			for f := range r.Filter().Fields() {
 				if fields.Field(f) == nil {
 					return appdef.ErrNotFound("field «%v» in %v", f, t)

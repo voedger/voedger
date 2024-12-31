@@ -22,7 +22,7 @@ type Unique struct {
 	fields []appdef.IField
 }
 
-func NewUnique(name appdef.QName, fieldNames []appdef.FieldName, fields appdef.IFields) *Unique {
+func NewUnique(name appdef.QName, fieldNames []appdef.FieldName, fields appdef.IWithFields) *Unique {
 	u := &Unique{
 		name:   name,
 		fields: make([]appdef.IField, 0),
@@ -54,12 +54,12 @@ func (u Unique) String() string {
 //   - appdef.IUniques
 type UniquesList struct {
 	find    appdef.FindType
-	fields  appdef.IFields
+	fields  appdef.IWithFields
 	uniques map[appdef.QName]appdef.IUnique
 	field   appdef.IField
 }
 
-func MakeUniques(find appdef.FindType, fields appdef.IFields) UniquesList {
+func MakeUniques(find appdef.FindType, fields appdef.IWithFields) UniquesList {
 	uu := UniquesList{
 		find:    find,
 		fields:  fields,

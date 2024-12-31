@@ -712,7 +712,7 @@ func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 	tabName := c.defCtx().qname
 	tab := c.adb.AppDef().Type(tabName)
 	if constraint.UniqueField != nil {
-		f := tab.(appdef.IFields).Field(string(constraint.UniqueField.Field))
+		f := tab.(appdef.IWithFields).Field(string(constraint.UniqueField.Field))
 		if f == nil {
 			c.stmtErr(&constraint.Pos, ErrUndefinedField(string(constraint.UniqueField.Field)))
 			return
@@ -721,7 +721,7 @@ func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 	} else if constraint.Unique != nil {
 		fields := make([]string, len(constraint.Unique.Fields))
 		for i, f := range constraint.Unique.Fields {
-			if tab.(appdef.IFields).Field(string(f)) == nil {
+			if tab.(appdef.IWithFields).Field(string(f)) == nil {
 				c.stmtErr(&constraint.Pos, ErrUndefinedField(string(f)))
 				return
 			}

@@ -8,7 +8,7 @@ package appdef
 // Structure is a type with fields, containers and uniques.
 type IStructure interface {
 	IType
-	IFields
+	IWithFields
 	IWithContainers
 	IUniques
 	IWithAbstract

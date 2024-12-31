@@ -18,7 +18,7 @@ import (
 //   - appdef.IStructure
 type Structure struct {
 	types.Typ
-	fields.FieldsList
+	fields.WithFields
 	containers.WithContainers
 	uniques.UniquesList
 	abstracts.WithAbstract
@@ -28,17 +28,17 @@ type Structure struct {
 func MakeStructure(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) Structure {
 	s := Structure{
 		Typ:            types.MakeType(ws.App(), ws, name, kind),
-		FieldsList:     fields.MakeFields(ws, kind),
+		WithFields:     fields.MakeWithFields(ws, kind),
 		WithContainers: containers.MakeWithContainers(ws, kind),
 		WithAbstract:   abstracts.MakeWithAbstract(),
 	}
-	s.FieldsList.MakeSysFields()
-	s.UniquesList = uniques.MakeUniques(ws.App().Type, &s.FieldsList)
+	s.WithFields.MakeSysFields()
+	s.UniquesList = uniques.MakeUniques(ws.App().Type, &s.WithFields)
 	return s
 }
 
 func (s Structure) SystemField_QName() appdef.IField {
-	return s.FieldsList.Field(appdef.SystemField_QName)
+	return s.WithFields.Field(appdef.SystemField_QName)
 }
 
 // # Supports:
@@ -55,7 +55,7 @@ type StructureBuilder struct {
 func MakeStructureBuilder(structure *Structure) StructureBuilder {
 	return StructureBuilder{
 		TypeBuilder:         types.MakeTypeBuilder(&structure.Typ),
-		FieldsBuilder:       fields.MakeFieldsBuilder(&structure.FieldsList),
+		FieldsBuilder:       fields.MakeFieldsBuilder(&structure.WithFields),
 		ContainersBuilder:   containers.MakeContainersBuilder(&structure.WithContainers),
 		UniquesBuilder:      uniques.MakeUniquesBuilder(&structure.UniquesList),
 		WithAbstractBuilder: abstracts.MakeWithAbstractBuilder(&structure.WithAbstract),
@@ -70,7 +70,7 @@ type Record struct {
 }
 
 func (r Record) SystemField_ID() appdef.IField {
-	return r.FieldsList.Field(appdef.SystemField_ID)
+	return r.WithFields.Field(appdef.SystemField_ID)
 }
 
 // Makes new record
@@ -132,11 +132,11 @@ func MakeContainedRecord(ws appdef.IWorkspace, name appdef.QName, kind appdef.Ty
 }
 
 func (r ContainedRecord) SystemField_ParentID() appdef.IField {
-	return r.FieldsList.Field(appdef.SystemField_ParentID)
+	return r.WithFields.Field(appdef.SystemField_ParentID)
 }
 
 func (r ContainedRecord) SystemField_Container() appdef.IField {
-	return r.FieldsList.Field(appdef.SystemField_Container)
+	return r.WithFields.Field(appdef.SystemField_Container)
 }
 
 // # Supports:

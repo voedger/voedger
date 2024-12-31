@@ -118,7 +118,7 @@ func (p queryParams) validate(rootFieldsKinds FieldsKinds, rootType appdef.IType
 			currentType = nestedContainer.Type()
 			deepestContainer = nestedContainer
 		}
-		deepestContainerFields := deepestContainer.Type().(appdef.IFields)
+		deepestContainerFields := deepestContainer.Type().(appdef.IWithFields)
 		for _, field := range e.ResultFields() {
 			iField := deepestContainerFields.Field(field.Field())
 			if iField == nil {

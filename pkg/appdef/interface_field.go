@@ -27,7 +27,7 @@ type FieldName = string
 //	- TypeKind_WDoc and TypeKind_WRecord,
 //	- TypeKind_Object and TypeKind_Element,
 //	- TypeKind_ViewRecord
-type IFields interface {
+type IWithFields interface {
 	// Finds field by name.
 	//
 	// Returns nil if not found.
