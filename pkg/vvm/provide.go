@@ -762,10 +762,10 @@ func provideCommandChannelFactory(sch ServiceChannelFactory) CommandChannelFacto
 }
 
 func provideOpBLOBProcessors(numBLOBWorkers blobprocessor.NumBLOBProcessors, blobServiceChannel blobprocessor.BLOBServiceChannel,
-	blobStorage iblobstorage.IBLOBStorage, ibus ibus.IBus, busTimeout time.Duration, wLimiterFactory blobprocessor.WLimiterFactory) OperatorBLOBProcessors {
+	blobStorage BlobStorage, ibus ibus.IBus, busTimeout BusTimeout, wLimiterFactory blobprocessor.WLimiterFactory) OperatorBLOBProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, numBLOBWorkers)
 	for i := 0; i < int(numBLOBWorkers); i++ {
-		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(blobprocessor.ProvideService(blobServiceChannel, blobStorage, ibus, busTimeout,
+		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(blobprocessor.ProvideService(blobServiceChannel, blobStorage, ibus, time.Duration(busTimeout),
 			wLimiterFactory)))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
