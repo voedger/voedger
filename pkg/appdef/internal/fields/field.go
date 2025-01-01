@@ -331,16 +331,6 @@ func ValidateTypeFields(t appdef.IType) (err error) {
 	return err
 }
 
-type NullFields struct{}
-
-func (f *NullFields) Field(appdef.FieldName) appdef.IField       { return nil }
-func (f *NullFields) FieldCount() int                            { return 0 }
-func (f *NullFields) Fields() []appdef.IField                    { return []appdef.IField{} }
-func (f *NullFields) RefField(appdef.FieldName) appdef.IRefField { return nil }
-func (f *NullFields) RefFields() []appdef.IRefField              { return []appdef.IRefField{} }
-func (f *NullFields) UserFieldCount() int                        { return 0 }
-func (f *NullFields) UserFields() []appdef.IField                { return []appdef.IField{} }
-
 func AddDataField(fields *WithFields, name appdef.FieldName, data appdef.QName, required bool, constraints ...appdef.IConstraint) {
 	fields.addDataField(name, data, required, constraints...)
 }

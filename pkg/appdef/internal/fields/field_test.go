@@ -12,6 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/constraints"
+	"github.com/voedger/voedger/pkg/appdef/internal/fields"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
@@ -91,7 +92,8 @@ func Test_Fields(t *testing.T) {
 		obj := wsb.AddObject(objName)
 		require.NotNil(obj)
 		obj.AddField("f1", appdef.DataKind_int64, true,
-			constraints.MinIncl(0), constraints.MaxIncl(100))
+			constraints.MinIncl(0), constraints.MaxIncl(100)).
+			AddDataField("f2", appdef.SysData_String, false, constraints.Enum("male", "female"))
 
 		a, err := adb.Build()
 		require.NoError(err)
@@ -101,30 +103,52 @@ func Test_Fields(t *testing.T) {
 
 	t.Run("should be ok to inspect fields", func(t *testing.T) {
 		obj := appdef.Object(app.Type, objName)
-		require.Equal([]appdef.IField{obj.Field("f1")}, obj.UserFields())
-		require.Equal(1, obj.UserFieldCount())
-		require.Equal(obj.UserFieldCount()+2, obj.FieldCount()) // + sys.QName + sys.Container
 
-		f := obj.Field("f1")
-		require.NotNil(f)
-		require.Equal("f1", f.Name())
-		require.False(f.IsSys())
+		t.Run("should be ok to enum fields", func(t *testing.T) {
+			for i, f := range obj.Fields() {
+				switch i {
+				case 0:
+					require.Equal(appdef.SystemField_QName, f.Name())
+				case 1:
+					require.Equal(appdef.SystemField_Container, f.Name())
+				case 2:
+					require.Equal("f1", f.Name())
+				case 3:
+					require.Equal("f2", f.Name())
+				default:
+					require.Fail("unexpected field", "field: %v", f)
+				}
+			}
+		})
 
-		require.Equal(appdef.DataKind_int64, f.DataKind())
-		require.True(f.IsFixedWidth())
-		require.True(f.DataKind().IsFixed())
+		t.Run("should be ok to inspect user fields", func(t *testing.T) {
+			require.Equal([]appdef.IField{obj.Field("f1"), obj.Field("f2")}, obj.UserFields())
+			require.Equal(2, obj.UserFieldCount())
+			require.Equal(obj.UserFieldCount()+2, obj.FieldCount()) // + sys.QName + sys.Container
+		})
 
-		require.True(f.Required())
-		require.False(f.Verifiable())
+		t.Run("should be ok to inspect field", func(t *testing.T) {
+			f := obj.Field("f1")
+			require.NotNil(f)
+			require.Equal("f1", f.Name())
+			require.False(f.IsSys())
 
-		cc := f.Constraints()
-		require.Len(cc, 2)
-		require.Contains(cc, appdef.ConstraintKind_MinIncl)
-		require.Contains(cc, appdef.ConstraintKind_MaxIncl)
-		require.EqualValues(0, cc[appdef.ConstraintKind_MinIncl].Value())
-		require.EqualValues(100, cc[appdef.ConstraintKind_MaxIncl].Value())
+			require.Equal(appdef.DataKind_int64, f.DataKind())
+			require.True(f.IsFixedWidth())
+			require.True(f.DataKind().IsFixed())
 
-		require.Equal(`int64-field «f1»`, fmt.Sprint(f))
+			require.True(f.Required())
+			require.False(f.Verifiable())
+
+			cc := f.Constraints()
+			require.Len(cc, 2)
+			require.Contains(cc, appdef.ConstraintKind_MinIncl)
+			require.Contains(cc, appdef.ConstraintKind_MaxIncl)
+			require.EqualValues(0, cc[appdef.ConstraintKind_MinIncl].Value())
+			require.EqualValues(100, cc[appdef.ConstraintKind_MaxIncl].Value())
+
+			require.Equal(`int64-field «f1»`, fmt.Sprint(f))
+		})
 	})
 }
 
@@ -205,17 +229,17 @@ func Test_SetFieldComment(t *testing.T) {
 	objName := appdef.NewQName("test", "object")
 	wsb.AddObject(objName).
 		AddField("f1", appdef.DataKind_int64, true).
-		SetFieldComment("f1", "test comment")
+		SetFieldComment("f1", "field comment").
+		AddRefField("f2", true).
+		SetFieldComment("f2", "ref comment")
 
 	app, err := adb.Build()
 	require.NoError(err)
 
 	t.Run("should be ok to obtain field comment", func(t *testing.T) {
 		obj := appdef.Object(app.Type, objName)
-		require.Equal(1, obj.UserFieldCount())
-		f1 := obj.Field("f1")
-		require.NotNil(f1)
-		require.Equal("test comment", f1.Comment())
+		require.Equal("field comment", obj.Field("f1").Comment())
+		require.Equal("ref comment", obj.Field("f2").Comment())
 	})
 
 	t.Run("should be panic if unknown field name passed to comment", func(t *testing.T) {
@@ -409,68 +433,38 @@ func TestValidateRefFields(t *testing.T) {
 	})
 }
 
-func Test_UserFields(t *testing.T) {
+func TestExportedRoutines(t *testing.T) {
 	require := require.New(t)
 
-	docName := appdef.NewQName("test", "doc")
-	var app appdef.IAppDef
+	adb := builder.New()
+	adb.AddPackage("test", "test.com/test")
 
-	t.Run("should be ok to add fields", func(t *testing.T) {
-		adb := builder.New()
-		adb.AddPackage("test", "test.com/test")
+	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
-		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	ff := fields.MakeWithFields(wsb.Workspace(), appdef.TypeKind_Object)
 
-		doc := wsb.AddODoc(docName)
-		require.NotNil(doc)
-
-		doc.
-			AddField("f", appdef.DataKind_int64, true).
-			AddField("vf", appdef.DataKind_string, true).SetFieldVerify("vf", appdef.VerificationKind_EMail).
-			AddRefField("rf", true, docName)
-
-		a, err := adb.Build()
-		require.NoError(err)
-
-		app = a
+	t.Run("should be ok to use AddDataField", func(t *testing.T) {
+		fields.AddDataField(&ff, "f1", appdef.SysData_bool, false)
+		require.Equal("f1", ff.Field("f1").Name())
 	})
 
-	t.Run("should be ok to enumerate user fields", func(t *testing.T) {
-		doc := appdef.ODoc(app.Type, docName)
-		require.Equal(3, doc.UserFieldCount())
-
-		require.Equal(doc.UserFieldCount(), func() int {
-			cnt := 0
-			for _, f := range doc.Fields() {
-				if !f.IsSys() {
-					cnt++
-					switch cnt {
-					case 1:
-						require.Equal(doc.Field("f"), f)
-					case 2:
-						require.True(f.VerificationKind(appdef.VerificationKind_EMail))
-					case 3:
-						require.EqualValues(appdef.QNames{docName}, f.(appdef.IRefField).Refs())
-					default:
-						require.Failf("unexpected reference field", "field name: %s", f.Name())
-					}
-				}
-			}
-			return cnt
-		}())
+	t.Run("should be ok to use AddField", func(t *testing.T) {
+		fields.AddField(&ff, "f2", appdef.DataKind_bool, false)
+		require.Equal("f2", ff.Field("f2").Name())
 	})
-}
 
-func TestNullFields(t *testing.T) {
-	require := require.New(t)
+	t.Run("should be ok to use AddRefField", func(t *testing.T) {
+		fields.AddRefField(&ff, "f3", false)
+		require.Equal("f3", ff.Field("f3").Name())
+	})
 
-	require.Nil(appdef.NullFields.Field("field"))
-	require.Zero(appdef.NullFields.FieldCount())
-	require.Empty(appdef.NullFields.Fields())
+	t.Run("should be ok to use SetFieldComment", func(t *testing.T) {
+		fields.SetFieldComment(&ff, "f1", "test")
+		require.Equal("test", ff.Field("f1").Comment())
+	})
 
-	require.Nil(appdef.NullFields.RefField("field"))
-	require.Empty(appdef.NullFields.RefFields())
-
-	require.Zero(appdef.NullFields.UserFieldCount())
-	require.Empty(appdef.NullFields.UserFields())
+	t.Run("should be ok to use SetFieldVerify", func(t *testing.T) {
+		fields.SetFieldVerify(&ff, "f2", appdef.VerificationKind_EMail)
+		require.True(ff.Field("f2").VerificationKind(appdef.VerificationKind_EMail))
+	})
 }
