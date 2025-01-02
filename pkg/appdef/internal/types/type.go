@@ -71,18 +71,18 @@ func (t Typ) Workspace() appdef.IWorkspace { return t.ws }
 type TypeBuilder struct {
 	comments.CommentBuilder
 	TagBuilder
-	*Typ
+	t *Typ
 }
 
 func MakeTypeBuilder(t *Typ) TypeBuilder {
 	return TypeBuilder{
 		CommentBuilder: comments.MakeCommentBuilder(&t.WithComments),
 		TagBuilder:     MakeTagBuilder(&t.WithTags),
-		Typ:            t,
+		t:              t,
 	}
 }
 
-func (t *TypeBuilder) String() string { return t.Typ.String() }
+func (t *TypeBuilder) String() string { return t.t.String() }
 
 type TypeRef struct {
 	name appdef.QName
