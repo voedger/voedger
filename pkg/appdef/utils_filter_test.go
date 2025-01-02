@@ -55,6 +55,9 @@ func Test_FilterMatches(t *testing.T) {
 		}
 		require.Equal(2, cnt)
 
+		require.Equal(cmdName, appdef.FirstFilterMatch(filter.AllWSFunctions(wsName), app.Types()).QName())
+		require.Nil(appdef.FirstFilterMatch(filter.QNames(appdef.NewQName("test", "unknown")), app.Types()))
+
 		t.Run("filter matches iter should be breakable", func(t *testing.T) {
 			cnt := 0
 			for range filtered {

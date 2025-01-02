@@ -106,6 +106,16 @@ func (k DataKind) TrimString() string {
 	return strings.TrimPrefix(k.String(), pref)
 }
 
+func (k ConstraintKind) MarshalText() ([]byte, error) {
+	var s string
+	if k < ConstraintKind_count {
+		s = k.String()
+	} else {
+		s = utils.UintToString(k)
+	}
+	return []byte(s), nil
+}
+
 // Renders an DataConstraintKind in human-readable form, without "DataConstraintKind_" prefix,
 // suitable for debugging or error messages
 func (k ConstraintKind) TrimString() string {
