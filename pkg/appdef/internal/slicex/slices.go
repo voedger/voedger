@@ -8,7 +8,7 @@ package slicex
 import "sort"
 
 // If the slices have duplicates, then the indices of the first pair are returned, otherwise (-1, -1)
-func Duplicates[T comparable](s []T) (int, int) {
+func FindDuplicates[T comparable](s []T) (int, int) {
 	for i := range s {
 		for j := i + 1; j < len(s); j++ {
 			if s[i] == s[j] {
@@ -33,7 +33,7 @@ func InsertInSort[T any, S ~[]T](s S, v T, comp func(T, T) int) S {
 }
 
 // Returns is slice sub is a subset of slice set, i.e. all elements from sub exist in set
-func SubSet[T comparable](sub, set []T) bool {
+func IsSubSet[T comparable](sub, set []T) bool {
 	for _, v1 := range sub {
 		found := false
 		for _, v2 := range set {
@@ -51,5 +51,5 @@ func SubSet[T comparable](sub, set []T) bool {
 
 // Returns is set1 and set2 overlaps, i.e. set1 is subset of set2 or set2 is subset of set1
 func Overlaps[T comparable](set1, set2 []T) bool {
-	return SubSet(set1, set2) || SubSet(set2, set1)
+	return IsSubSet(set1, set2) || IsSubSet(set2, set1)
 }

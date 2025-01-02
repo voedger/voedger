@@ -43,7 +43,7 @@ func Test_Duplicates(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			i, j := slicex.Duplicates(tt.slice)
+			i, j := slicex.FindDuplicates(tt.slice)
 			require.Equal(tt.wantI, i)
 			require.Equal(tt.wantJ, j)
 		})
@@ -147,7 +147,7 @@ func Test_SubSet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(tt.want, slicex.SubSet(tt.sub, tt.set))
+			require.Equal(tt.want, slicex.IsSubSet(tt.sub, tt.set))
 		})
 	}
 }
