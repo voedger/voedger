@@ -5,7 +5,10 @@
 
 package structures
 
-import "github.com/voedger/voedger/pkg/appdef"
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/internal/types"
+)
 
 // # Supports:
 //   - appdef.IGDoc
@@ -16,7 +19,9 @@ type GDoc struct {
 func (GDoc) IsGDoc() {}
 
 func NewGDoc(ws appdef.IWorkspace, name appdef.QName) *GDoc {
-	return &GDoc{Doc: MakeDoc(ws, name, appdef.TypeKind_GDoc)}
+	d := &GDoc{Doc: MakeDoc(ws, name, appdef.TypeKind_GDoc)}
+	types.Propagate(d)
+	return d
 }
 
 // # Supports:
@@ -42,7 +47,9 @@ type GRecord struct {
 func (GRecord) IsGRecord() {}
 
 func NewGRecord(ws appdef.IWorkspace, name appdef.QName) *GRecord {
-	return &GRecord{ContainedRecord: MakeContainedRecord(ws, name, appdef.TypeKind_GRecord)}
+	r := &GRecord{ContainedRecord: MakeContainedRecord(ws, name, appdef.TypeKind_GRecord)}
+	types.Propagate(r)
+	return r
 }
 
 // # Supports:
