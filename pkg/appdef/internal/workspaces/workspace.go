@@ -322,22 +322,6 @@ func (ws *Workspace) setDescriptor(q appdef.QName) {
 			abstracts.SetAbstract(&ws.WithAbstract)
 		}
 	}
-
-	if app, ok := ws.App().(interface {
-		SetWorkspaceDescriptor(appdef.QName, appdef.QName)
-	}); ok {
-		app.SetWorkspaceDescriptor(ws.QName(), q)
-	}
-}
-
-func (ws *Workspace) setTypeComment(name appdef.QName, c ...string) {
-	t := ws.LocalType(name)
-	if t == appdef.NullType {
-		panic(appdef.ErrNotFound("type %s", name))
-	}
-	if t, ok := t.(*types.Typ); ok {
-		comments.SetComment(&t.WithComments, c...)
-	}
 }
 
 func (ws *Workspace) useWorkspace(name appdef.QName, names ...appdef.QName) {
@@ -475,10 +459,6 @@ func (wb *WorkspaceBuilder) SetAncestors(name appdef.QName, names ...appdef.QNam
 func (wb *WorkspaceBuilder) SetDescriptor(q appdef.QName) appdef.IWorkspaceBuilder {
 	wb.ws.setDescriptor(q)
 	return wb
-}
-
-func (wb *WorkspaceBuilder) SetTypeComment(n appdef.QName, c ...string) {
-	wb.ws.setTypeComment(n, c...)
 }
 
 func (wb *WorkspaceBuilder) UseWorkspace(name appdef.QName, names ...appdef.QName) appdef.IWorkspaceBuilder {
