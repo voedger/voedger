@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
-func Test_AppDefCommands(t *testing.T) {
+func Test_Commands(t *testing.T) {
 	require := require.New(t)
 
 	var app appdef.IAppDef

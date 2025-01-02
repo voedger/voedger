@@ -14,7 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
-func Test_AppDefJobs(t *testing.T) {
+func Test_Jobs(t *testing.T) {
 	require := require.New(t)
 
 	var app appdef.IAppDef

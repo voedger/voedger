@@ -20,7 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
-func Test_AppDef_AddData(t *testing.T) {
+func Test_Datas(t *testing.T) {
 	require := require.New(t)
 
 	var app appdef.IAppDef

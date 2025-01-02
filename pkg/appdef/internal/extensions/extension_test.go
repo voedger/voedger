@@ -15,7 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
-func Test_AppDefExtensions(t *testing.T) {
+func Test_Extensions(t *testing.T) {
 
 	require := require.New(t)
 
@@ -98,7 +98,7 @@ func Test_AppDefExtensions(t *testing.T) {
 	require.Nil(appdef.Extension(app.Type, appdef.NewQName("test", "unknown")), "should be nil if unknown")
 }
 
-func Test_AppDefExtensionsPanics(t *testing.T) {
+func Test_ExtensionsPanics(t *testing.T) {
 	require := require.New(t)
 
 	t.Run("should be panics", func(t *testing.T) {

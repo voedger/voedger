@@ -74,9 +74,7 @@ func (r *Role) revokeAll(flt appdef.IFilter, comment ...string) {
 func (r Role) Validate() (err error) {
 	for acl := range r.ACL() {
 		if acl, ok := acl.(interface{ Validate() error }); ok {
-			if e := acl.Validate(); e != nil {
-				err = errors.Join(err, e)
-			}
+			err = errors.Join(err, acl.Validate())
 		}
 	}
 	return err

@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
-func Test_AppDefQueries(t *testing.T) {
+func Test_Queries(t *testing.T) {
 	require := require.New(t)
 
 	var app appdef.IAppDef
@@ -124,7 +124,7 @@ func Test_QueryValidate(t *testing.T) {
 	require.NoError(err)
 }
 
-func Test_AppDef_AddQueryWithAnyResult(t *testing.T) {
+func Test_QueryWithAnyResult(t *testing.T) {
 	require := require.New(t)
 
 	var app appdef.IAppDef

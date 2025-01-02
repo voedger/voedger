@@ -17,7 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
-func Test_AppDefProjectors(t *testing.T) {
+func Test_Projectors(t *testing.T) {
 	require := require.New(t)
 
 	var app appdef.IAppDef

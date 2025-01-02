@@ -66,7 +66,7 @@ func Test_NewAppDef(t *testing.T) {
 	})
 }
 
-func Test_appDefBuilder_MustBuild(t *testing.T) {
+func Test_AppDefBuilder_MustBuild(t *testing.T) {
 	require := require.New(t)
 
 	require.NotNil(builder.New().MustBuild(), "Should be ok if no errors in builder")
