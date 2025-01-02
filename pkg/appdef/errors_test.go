@@ -18,11 +18,20 @@ func TestErrors(t *testing.T) {
 		is  error
 		has string
 	}{
-		{appdef.ErrMissed("field «%s»", "name"), appdef.ErrMissedError, "field «name»"},
-		{appdef.ErrInvalid("field «%s»", "name"), appdef.ErrInvalidError, "field «name»"},
-		{appdef.ErrOutOfBounds("%v percent", 101), appdef.ErrOutOfBoundsError, "101 percent"},
-		{appdef.ErrAlreadyExists("this %v", "message"), appdef.ErrAlreadyExistsError, "this message"},
-		{appdef.ErrNotFound("%v", 1), appdef.ErrNotFoundError, "1"},
+		{appdef.ErrMissed("msg %s", "par"), appdef.ErrMissedError, "msg par"},
+		{appdef.ErrInvalid("msg %s", "par"), appdef.ErrInvalidError, "msg par"},
+		{appdef.ErrOutOfBounds("msg %s", "par"), appdef.ErrOutOfBoundsError, "msg par"},
+		{appdef.ErrAlreadyExists("msg %s", "par"), appdef.ErrAlreadyExistsError, "msg par"},
+		{appdef.ErrNotFound("msg %s", "par"), appdef.ErrNotFoundError, "msg par"},
+		{appdef.ErrFieldNotFound("field"), appdef.ErrNotFoundError, "field"},
+		{appdef.ErrTypeNotFound(appdef.QNameANY), appdef.ErrNotFoundError, appdef.QNameANY.String()},
+		{appdef.ErrRoleNotFound(appdef.QNameANY), appdef.ErrNotFoundError, appdef.QNameANY.String()},
+		{appdef.ErrFilterHasNoMatches("test", nil, "ws"), appdef.ErrNotFoundError, "test"},
+		{appdef.ErrConvert("msg %s", "par"), appdef.ErrConvertError, "msg par"},
+		{appdef.ErrTooMany("msg %s", "par"), appdef.ErrTooManyError, "msg par"},
+		{appdef.ErrIncompatible("msg %s", "par"), appdef.ErrIncompatibleError, "msg par"},
+		{appdef.ErrUnsupported("msg %s", "par"), appdef.ErrUnsupportedError, "msg par"},
+		{appdef.ErrACLUnsupportedType(appdef.NullType), appdef.ErrUnsupportedError, "null"},
 	}
 
 	require := require.New(t)
