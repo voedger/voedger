@@ -25,7 +25,7 @@ const (
 	URLPlaceholder_wsid             = "wsid"
 	URLPlaceholder_appOwner         = "appOwner"
 	URLPlaceholder_appName          = "appName"
-	URLPlaceholder_blobID           = "blobID"
+	URLPlaceholder_blobIDOrSUUID    = "blobIDOrSUUID"
 	URLPlaceholder_resourceName     = "resourceName"
 	URLPlaceholder_pkg              = "pkg"
 	URLPlaceholder_table            = "table"
@@ -35,13 +35,12 @@ const (
 	URLPlaceholder_view             = "view"
 	URLPlaceholder_workspace        = "workspace"
 	hours24                         = 24 * time.Hour
-	temporaryBLOBIDLenTreshold      = 40 // greater -> temporary, persistent oherwise
+	DefaultRetryAfterSecondsOn503   = 1
 )
 
 var (
 	bearerPrefixLen                = len(coreutils.BearerPrefix)
 	onRequestCtxClosed      func() = nil // used in tests
-	elem1                          = map[string]interface{}{"fld1": "fld1Val"}
 	adminEndpoint                  = "127.0.0.1:55555"
 	durationToRegisterFuncs        = map[iblobstorage.DurationType]string{
 		iblobstorage.DurationType_1Day: "c.sys.RegisterTempBLOB1d",
