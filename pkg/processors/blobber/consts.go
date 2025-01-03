@@ -9,6 +9,8 @@ import "github.com/voedger/voedger/pkg/iblobstorage"
 
 const (
 	temporaryBLOBIDLenTreshold = 40 // greater -> temporary, persistent oherwise
+	branchReadBLOB             = "readBLOB"
+	branchWriteBLOB            = "writeBLOB"
 )
 
 var (

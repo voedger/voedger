@@ -185,16 +185,16 @@ type blobOpSwitch struct {
 func (b *blobOpSwitch) Switch(work interface{}) (branchName string, err error) {
 	blobWorkpiece := work.(*blobWorkpiece)
 	if _, ok := blobWorkpiece.blobMessage.(IBLOBMessage_Read); ok {
-		return "readBLOB", nil
+		return branchReadBLOB, nil
 	}
-	return "writeBLOB", nil
+	return branchWriteBLOB, nil
 }
 
 func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStorage, bus ibus.IBus, busTimeout time.Duration,
 	wLimiterFactory WLimiterFactory) pipeline.ISyncPipeline {
 	return pipeline.NewSyncPipeline(vvmCtx, "blob processor",
 		pipeline.WireSyncOperator("switch", pipeline.SwitchOperator(&blobOpSwitch{},
-			pipeline.SwitchBranch("readBLOB", pipeline.NewSyncPipeline(vvmCtx, "readBLOB",
+			pipeline.SwitchBranch(branchReadBLOB, pipeline.NewSyncPipeline(vvmCtx, branchReadBLOB,
 				pipeline.WireFunc("getBLOBMessageRead", getBLOBMessageRead),
 				pipeline.WireFunc("downloadBLOBHelper", provideDownloadBLOBHelper(bus, busTimeout)),
 				pipeline.WireFunc("getBLOBKeyRead", getBLOBKeyRead),
@@ -203,7 +203,7 @@ func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStora
 				pipeline.WireFunc("readBLOB", provideReadBLOB(blobStorage)),
 				pipeline.WireSyncOperator("catchReadError", &catchReadError{}),
 			)),
-			pipeline.SwitchBranch("writeBLOB", pipeline.NewSyncPipeline(vvmCtx, "writeBLOB",
+			pipeline.SwitchBranch(branchWriteBLOB, pipeline.NewSyncPipeline(vvmCtx, branchWriteBLOB,
 				pipeline.WireFunc("getBLOBMessageWrite", getBLOBMessageWrite),
 				pipeline.WireFunc("parseQueryParams", parseQueryParams),
 				pipeline.WireFunc("parseMediaType", parseMediaType),

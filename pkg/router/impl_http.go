@@ -91,15 +91,6 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 }
 
 func (s *httpService) preRun(ctx context.Context) {
-	// if s.BlobberParams != nil {
-	// 	for i := 0; i < s.BlobberParams.BLOBWorkersNum; i++ {
-	// 		s.blobWG.Add(1)
-	// 		go func() {
-	// 			defer s.blobWG.Done()
-	// 			blobMessageHandler(ctx, s.procBus.ServiceChannel(0, 0), s.BLOBStorage, s.bus, s.busTimeout)
-	// 		}()
-	// 	}
-	// }
 	s.server.BaseContext = func(l net.Listener) context.Context {
 		return ctx // need to track both client disconnect and app finalize
 	}
