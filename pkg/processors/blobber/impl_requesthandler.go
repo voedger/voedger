@@ -26,7 +26,7 @@ type IRequestHandler interface {
 		errorResponder ErrorResponder) bool
 }
 
-// implemented in e.g. router
+// implemented in e.g. router package
 type ErrorResponder func(ststusCode int, args ...interface{})
 
 type implIRequestHandler struct {
@@ -77,11 +77,4 @@ func (r *implIRequestHandler) handle(msg any, doneCh <-chan interface{}) bool {
 	}
 	<-doneCh
 	return true
-}
-
-func NewIRequestHandler(procbus iprocbus.IProcBus, chanGroupIdx BLOBServiceChannelGroupIdx) IRequestHandler {
-	return &implIRequestHandler{
-		procbus:      procbus,
-		chanGroupIdx: chanGroupIdx,
-	}
 }

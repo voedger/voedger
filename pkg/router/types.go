@@ -39,7 +39,6 @@ type RouterParams struct {
 
 type httpService struct {
 	RouterParams
-	// *BlobberParams
 	listenAddress      string
 	router             *mux.Router
 	server             *http.Server
@@ -62,17 +61,6 @@ type httpsService struct {
 type acmeService struct {
 	http.Server
 }
-
-// type BlobberServiceChannels []iprocbusmem.ChannelGroup
-
-// type BlobberParams struct {
-// 	ServiceChannels        []iprocbusmem.ChannelGroup
-// 	BLOBStorage            iblobstorage.IBLOBStorage
-// 	BLOBWorkersNum         int
-// 	procBus                iprocbus.IProcBus
-// 	RetryAfterSecondsOn503 int
-// 	WLimiterFactory        func() iblobstorage.WLimiterType
-// }
 
 type route struct {
 	targetURL  *url.URL

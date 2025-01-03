@@ -18,18 +18,6 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
-// type BLOBOperation int
-
-// const (
-// 	BLOBOperation_Null BLOBOperation = iota
-// 	BLOBOperation_Read_Persistent
-// 	BLOBOperation_Read_Temporary
-// 	BLOBOperation_Write_Persistent_Single
-// 	BLOBOperation_Write_Persistent_Multipart
-// 	BLOBOperation_Write_Temporary_Single
-// 	BLOBOperation_Write_Temporary_Multipart
-// )
-
 type blobWorkpiece struct {
 	pipeline.IWorkpiece
 	blobMessage      iBLOBMessage_Base
@@ -73,23 +61,6 @@ type implIBLOBMessage_Write struct {
 	reader         io.ReadCloser
 	urlQueryValues url.Values
 }
-
-// func NewIBLOBMessage(appQName appdef.AppQName, wsid istructs.WSID, header http.Header, requestCtx context.Context,
-// 	urlQueryValues url.Values, okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser, errorResponder ErrorResponder) (msg IBLOBMessage, doneAwaiter func()) {
-// 	msgImpl := &implIBLOBMessage{
-// 		appQName:         appQName,
-// 		wsid:             wsid,
-// 		header:           header,
-// 		requestCtx:       requestCtx,
-// 		urlQueryValues:   urlQueryValues,
-// 		okResponseIniter: okResponseIniter,
-// 		reader:           reader,
-// 		errorResponder:   errorResponder,
-// 		done:             make(chan interface{}),
-// 	}
-// 	return msgImpl, func() {
-// 	}
-// }
 
 func (m *implIBLOBMessage_base) AppQName() appdef.AppQName {
 	return m.appQName
@@ -154,22 +125,25 @@ type IBLOBMessage_Write interface {
 	URLQueryValues() url.Values
 }
 
-// type IBLOBMessage interface {
-// 	pipeline.IWorkpiece
-// 	AppQName() appdef.AppQName
-// 	WSID() istructs.WSID
-// 	Header() http.Header
-// 	InitOKResponse(headersKeyValue ...string) io.Writer
-// 	Reader() io.ReadCloser
-// 	RequestCtx() context.Context
-// 	URLQueryValues() url.Values
-// 	IsRead() bool // false -> write
-// 	ReplyError(statusCode int, args ...any)
-// 	ExistingBLOBIDOrSUUID() string
-// }
-
 type BLOBServiceChannel iprocbus.ServiceChannel
 
 type BLOBServiceChannelGroupIdx uint
 
-type NumBLOBProcessors uint
+type badRequestWrapper struct {
+	pipeline.NOOP
+}
+
+type sendWriteResult struct {
+	pipeline.NOOP
+}
+
+type catchReadError struct {
+	pipeline.NOOP
+}
+
+type blobOpSwitch struct {
+}
+
+func (b *blobWorkpiece) Release() {
+	b.blobMessage.Release()
+}

@@ -10,10 +10,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"mime"
 	"net/http"
 	"time"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -84,23 +87,10 @@ func provideSetBLOBStatusCompleted(bus ibus.IBus, busTimeout time.Duration) func
 func provideRegisterBLOB(bus ibus.IBus, busTimeout time.Duration) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	return func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		bw := work.(*blobWorkpiece)
-		req := ibus.Request{
-			Method:   ibus.HTTPMethodPOST,
-			WSID:     bw.blobMessage.WSID(),
-			AppQName: bw.blobMessage.AppQName().String(),
-			Resource: bw.registerFuncName,
-			Body:     []byte(`{}`),
-			Header:   bw.blobMessage.Header(),
-			Host:     coreutils.Localhost,
-		}
-		blobHelperResp, _, _, err := bus.SendRequest2(ctx, req, busTimeout)
+		blobHelperResp, err := blobHelper(bw, bus, busTimeout, bw.registerFuncName)
 		if err != nil {
-			return fmt.Errorf("failed to exec %s: %w", bw.registerFuncName, err)
+			return err
 		}
-		if blobHelperResp.StatusCode != http.StatusOK {
-			return coreutils.NewHTTPErrorf(blobHelperResp.StatusCode, fmt.Sprintf("%s returned error: %s", bw.registerFuncName, string(blobHelperResp.Data)))
-		}
-
 		if bw.isPersistent() {
 			cmdResp := map[string]interface{}{}
 			if err := json.Unmarshal(blobHelperResp.Data, &cmdResp); err != nil {
@@ -118,4 +108,103 @@ func provideRegisterBLOB(bus ibus.IBus, busTimeout time.Duration) func(ctx conte
 		bw.newSUUID = iblobstorage.NewSUUID()
 		return nil
 	}
+}
+
+func getBLOBMessageWrite(_ context.Context, work pipeline.IWorkpiece) error {
+	bw := work.(*blobWorkpiece)
+	bw.blobMessageWrite = bw.blobMessage.(IBLOBMessage_Write)
+	return nil
+}
+
+func parseQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
+	bw := work.(*blobWorkpiece)
+	bw.nameQuery = bw.blobMessageWrite.URLQueryValues()["name"]
+	bw.mimeTypeQuery = bw.blobMessageWrite.URLQueryValues()["mimeType"]
+	if len(bw.blobMessageWrite.URLQueryValues()["ttl"]) > 0 {
+		bw.ttl = bw.blobMessageWrite.URLQueryValues()["ttl"][0]
+	}
+	return nil
+}
+
+func parseMediaType(_ context.Context, work pipeline.IWorkpiece) error {
+	bw := work.(*blobWorkpiece)
+	bw.contentType = bw.blobMessage.Header().Get(coreutils.ContentType)
+	if len(bw.contentType) == 0 {
+		return nil
+	}
+	mediaType, params, err := mime.ParseMediaType(bw.contentType)
+	if err != nil {
+		return fmt.Errorf("failed to parse Content-Type header: %w", err)
+	}
+	bw.mediaType = mediaType
+	bw.boundary = params["boundary"]
+	return nil
+}
+
+func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
+	bw := work.(*blobWorkpiece)
+
+	if (len(bw.nameQuery) > 0 && len(bw.mimeTypeQuery) == 0) || (len(bw.nameQuery) == 0 && len(bw.mimeTypeQuery) > 0) {
+		return errors.New("both name and mimeType query params must be specified")
+	}
+
+	isSingleBLOB := len(bw.nameQuery) > 0 && len(bw.mimeTypeQuery) > 0
+
+	if len(bw.ttl) > 0 {
+		duration, ttlSupported := federation.TemporaryBLOB_URLTTLToDurationLs[bw.ttl]
+		if !ttlSupported {
+			return errors.New(`"1d" is only supported for now for temporary blob ttl`)
+		}
+		bw.duration = duration
+	}
+
+	if isSingleBLOB {
+		if bw.contentType == coreutils.MultipartFormData {
+			return fmt.Errorf(`name+mimeType query params and "%s" Content-Type header are mutual exclusive`, coreutils.MultipartFormData)
+		}
+		bw.descr.Name = bw.nameQuery[0]
+		bw.descr.MimeType = bw.mimeTypeQuery[0]
+		return nil
+	}
+
+	// not a single BLOB
+	if len(bw.contentType) == 0 {
+		return errors.New(`neither "name"+"mimeType" query params nor Content-Type header is not provided`)
+	}
+
+	if bw.mediaType != coreutils.MultipartFormData {
+		return errors.New("name+mimeType query params are not provided -> Content-Type must be mutipart/form-data but actual is " + bw.contentType)
+	}
+
+	if len(bw.boundary) == 0 {
+		return fmt.Errorf("boundary of %s is not specified", coreutils.MultipartFormData)
+	}
+	return nil
+}
+
+func (b *sendWriteResult) DoSync(_ context.Context, work pipeline.IWorkpiece) (err error) {
+	bw := work.(*blobWorkpiece)
+	if bw.resultErr == nil {
+		writer := bw.blobMessage.InitOKResponse(coreutils.ContentType, "text/plain")
+		if bw.isPersistent() {
+			_, _ = writer.Write([]byte(utils.UintToString(bw.newBLOBID)))
+		} else {
+			_, _ = writer.Write([]byte(bw.newSUUID))
+		}
+		return nil
+	}
+	var sysError coreutils.SysError
+	errors.As(bw.resultErr, &sysError)
+	bw.blobMessage.ReplyError(sysError.HTTPStatus, sysError.Message)
+	return nil
+}
+
+func (b *sendWriteResult) OnErr(err error, work interface{}, _ pipeline.IWorkpieceContext) (newErr error) {
+	bw := work.(*blobWorkpiece)
+	bw.resultErr = coreutils.WrapSysError(err, http.StatusInternalServerError)
+	return nil
+}
+
+func (b *badRequestWrapper) OnErr(err error, _ interface{}, _ pipeline.IWorkpieceContext) (newErr error) {
+	return coreutils.WrapSysError(err, http.StatusBadRequest)
 }

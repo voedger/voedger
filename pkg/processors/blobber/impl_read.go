@@ -23,34 +23,6 @@ import (
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
-// TODO: blobStorage - кэшированный или нет? Елси нет, то не надо QueryState выделять в отдельный оператор, а то 2 раза в хранилище будем лазить
-// TODO: blobMessage.Release() должен закрывать io.ReadCloser
-
-// func getBLOBKey(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-// 	bm := work.(*blobWorkpiece)
-// 	if bm.isPersistent() {
-// 		if
-// 		blobID, err := strconv.ParseUint(bm.existingBLOBIDOrSUUID, utils.DecimalBase, utils.BitSize64)
-// 		if err != nil {
-// 			// validated already by router
-// 			// notest
-// 			return err
-// 		}
-// 		bm.blobKey = &iblobstorage.PersistentBLOBKeyType{
-// 			ClusterAppID: istructs.ClusterAppID_sys_blobber,
-// 			WSID:         bm.blobMessage.WSID(),
-// 			BlobID:       istructs.RecordID(blobID),
-// 		}
-// 	} else {
-// 		bm.blobKey = &iblobstorage.TempBLOBKeyType{
-// 			ClusterAppID: istructs.ClusterAppID_sys_blobber,
-// 			WSID:         bm.blobMessage.WSID(),
-// 			SUUID:        iblobstorage.SUUID(bm.existingBLOBIDOrSUUID),
-// 		}
-// 	}
-// 	return nil
-// }
-
 func getBLOBKeyRead(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
 	if bw.isPersistent() {
@@ -98,17 +70,6 @@ func getBLOBKeyWrite(ctx context.Context, work pipeline.IWorkpiece) (err error) 
 	return nil
 }
 
-// func readBLOBID(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-// 	bw := work.(*blobWorkpiece)
-// 	bodyBytes, err := io.ReadAll(bw.blobMessage.Reader())
-// 	if err != nil {
-// 		// notest
-// 		return fmt.Errorf("failed to read request body: %w", err)
-// 	}
-// 	bw.existingBLOBIDOrSUUID = string(bodyBytes)
-// 	return nil
-// }
-
 func initResponse(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bm := work.(*blobWorkpiece)
 	bm.writer = bm.blobMessage.InitOKResponse(
@@ -138,27 +99,31 @@ func provideQueryAndCheckBLOBState(blobStorage iblobstorage.IBLOBStorage) func(c
 	}
 }
 
+func blobHelper(bw *blobWorkpiece, bus ibus.IBus, busTimeout time.Duration, registerFuncName string) (resp ibus.Response, err error) {
+	req := ibus.Request{
+		Method:   ibus.HTTPMethodPOST,
+		WSID:     bw.blobMessage.WSID(),
+		AppQName: bw.blobMessage.AppQName().String(),
+		Resource: registerFuncName,
+		Header:   bw.blobMessage.Header(),
+		Body:     []byte(`{}`),
+		Host:     coreutils.Localhost,
+	}
+	blobHelperResp, _, _, err := bus.SendRequest2(bw.blobMessage.RequestCtx(), req, busTimeout)
+	if err != nil {
+		return resp, coreutils.NewHTTPErrorf(http.StatusInternalServerError, "failed to exec q.sys.DownloadBLOBAuthnz: ", err)
+	}
+	if blobHelperResp.StatusCode != http.StatusOK {
+		return resp, coreutils.NewHTTPErrorf(blobHelperResp.StatusCode, "q.sys.DownloadBLOBAuthnz returned error: "+string(blobHelperResp.Data))
+	}
+	return blobHelperResp, nil
+}
+
 func provideDownloadBLOBHelper(bus ibus.IBus, busTimeout time.Duration) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	return func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		bm := work.(*blobWorkpiece)
-		// request to VVM to check the principalToken
-		req := ibus.Request{
-			Method:   ibus.HTTPMethodPOST,
-			WSID:     bm.blobMessage.WSID(),
-			AppQName: bm.blobMessage.AppQName().String(),
-			Resource: "q.sys.DownloadBLOBAuthnz",
-			Header:   bm.blobMessage.Header(),
-			Body:     []byte(`{}`),
-			Host:     coreutils.Localhost,
-		}
-		blobHelperResp, _, _, err := bus.SendRequest2(bm.blobMessage.RequestCtx(), req, busTimeout)
-		if err != nil {
-			return coreutils.NewHTTPErrorf(http.StatusInternalServerError, "failed to exec q.sys.DownloadBLOBAuthnz: ", err)
-		}
-		if blobHelperResp.StatusCode != http.StatusOK {
-			return coreutils.NewHTTPErrorf(blobHelperResp.StatusCode, "q.sys.DownloadBLOBAuthnz returned error: "+string(blobHelperResp.Data))
-		}
-		return nil
+		_, err = blobHelper(bm, bus, busTimeout, "q.sys.DownloadBLOBAuthnz")
+		return err
 	}
 }
 
@@ -173,4 +138,25 @@ func provideReadBLOB(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Con
 		}
 		return nil
 	}
+}
+
+func getBLOBMessageRead(_ context.Context, work pipeline.IWorkpiece) error {
+	bw := work.(*blobWorkpiece)
+	bw.blobMessageRead = bw.blobMessage.(IBLOBMessage_Read)
+	return nil
+}
+
+func (b *catchReadError) OnErr(err error, work interface{}, _ pipeline.IWorkpieceContext) (newErr error) {
+	bw := work.(*blobWorkpiece)
+	bw.resultErr = coreutils.WrapSysError(err, http.StatusInternalServerError)
+	return nil
+}
+
+func (b *catchReadError) DoSync(_ context.Context, work pipeline.IWorkpiece) (err error) {
+	bw := work.(*blobWorkpiece)
+	var sysError coreutils.SysError
+	if errors.As(bw.resultErr, &sysError) {
+		bw.blobMessage.ReplyError(sysError.HTTPStatus, sysError.Message)
+	}
+	return nil
 }
