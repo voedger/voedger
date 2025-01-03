@@ -25,7 +25,7 @@ const (
 	URLPlaceholder_wsid             = "wsid"
 	URLPlaceholder_appOwner         = "appOwner"
 	URLPlaceholder_appName          = "appName"
-	URLPlaceholder_blobID           = "blobID"
+	URLPlaceholder_blobIDOrSUUID    = "blobIDOrSUUID"
 	URLPlaceholder_resourceName     = "resourceName"
 	URLPlaceholder_pkg              = "pkg"
 	URLPlaceholder_table            = "table"

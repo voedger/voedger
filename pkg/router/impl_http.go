@@ -178,43 +178,69 @@ func newErrorResponder(w http.ResponseWriter) blobprocessor.ErrorResponder {
 	}
 }
 
-func (s *httpService) blobHTTPRequestHandler() http.HandlerFunc {
+func (s *httpService) blobHTTPRequestHandler_Write() http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
-		vars := mux.Vars(req)
-		wsid, err := strconv.ParseUint(vars[URLPlaceholder_wsid], utils.DecimalBase, utils.BitSize64)
-		if err != nil {
-			// notest: checked by router url rule
-			panic(err)
+		appQName, wsid, headers, ok := parseURLParams(req, resp)
+		if !ok {
+			return
 		}
-		headers := maps.Clone(req.Header)
-		if _, ok := headers[coreutils.Authorization]; !ok {
-			// no token among headers -> look among cookies
-			// no token among cookies as well -> just do nothing, 403 will happen on call helper commands further in BLOBs processor
-			cookie, err := req.Cookie(coreutils.Authorization)
-			if !errors.Is(err, http.ErrNoCookie) {
-				if err != nil {
-					// notest
-					panic(err)
-				}
-				val, err := url.QueryUnescape(cookie.Value)
-				if err != nil {
-					WriteTextResponse(resp, "failed to unescape cookie '"+cookie.Value+"'", http.StatusBadRequest)
-					return
-				}
-				// authorization token in cookies -> q.sys.DownloadBLOBAuthnz requires it in headers
-				headers[coreutils.Authorization] = []string{val}
-			}
-		}
-		appQName := appdef.NewAppQName(vars[URLPlaceholder_appOwner], vars[URLPlaceholder_appName])
-		isRead := req.Method == http.MethodGet
-		if !s.blobRequestHandler.Handle(appQName, istructs.WSID(wsid), headers, req.Context(), req.URL.Query(),
+		if !s.blobRequestHandler.HandleWrite(appQName, wsid, headers, req.Context(), req.URL.Query(),
 			newBLOBOKResponseIniter(resp), req.Body, func(statusCode int, args ...interface{}) {
 				WriteTextResponse(resp, fmt.Sprint(args...), statusCode)
-			}, isRead) {
+			}) {
 			resp.WriteHeader(http.StatusServiceUnavailable)
 			resp.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
 		}
 	}
+}
+
+
+func (s *httpService) blobHTTPRequestHandler_Read() http.HandlerFunc {
+	return func(resp http.ResponseWriter, req *http.Request) {
+		appQName, wsid, headers, ok := parseURLParams(req, resp)
+		if !ok {
+			return
+		}
+		vars := mux.Vars(req)
+		existingBLOBIDOrSUID := vars[URLPlaceholder_blobIDOrSUUID]
+		if !s.blobRequestHandler.HandleRead(appQName, wsid, headers, req.Context(),
+			newBLOBOKResponseIniter(resp), func(statusCode int, args ...interface{}) {
+				WriteTextResponse(resp, fmt.Sprint(args...), statusCode)
+			}, existingBLOBIDOrSUID) {
+			resp.WriteHeader(http.StatusServiceUnavailable)
+			resp.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
+		}
+	}
+}
+
+func parseURLParams(req *http.Request, resp http.ResponseWriter) (appQName appdef.AppQName, wsid istructs.WSID, headers http.Header, ok bool) {
+	vars := mux.Vars(req)
+	wsidUint, err := strconv.ParseUint(vars[URLPlaceholder_wsid], utils.DecimalBase, utils.BitSize64)
+	if err != nil {
+		// notest: checked by router url rule
+		panic(err)
+	}
+	headers = maps.Clone(req.Header)
+	if _, ok := headers[coreutils.Authorization]; !ok {
+		// no token among headers -> look among cookies
+		// no token among cookies as well -> just do nothing, 403 will happen on call helper commands further in BLOBs processor
+		cookie, err := req.Cookie(coreutils.Authorization)
+		if !errors.Is(err, http.ErrNoCookie) {
+			if err != nil {
+				// notest
+				panic(err)
+			}
+			val, err := url.QueryUnescape(cookie.Value)
+			if err != nil {
+				WriteTextResponse(resp, "failed to unescape cookie '"+cookie.Value+"'", http.StatusBadRequest)
+				return appQName, wsid, headers, false
+			}
+			// authorization token in cookies -> q.sys.DownloadBLOBAuthnz requires it in headers
+			headers[coreutils.Authorization] = []string{val}
+		}
+	}
+	appQName = appdef.NewAppQName(vars[URLPlaceholder_appOwner], vars[URLPlaceholder_appName])
+	return appQName, istructs.WSID(wsidUint), headers, true
 }
 
 func newBLOBOKResponseIniter(r http.ResponseWriter) func(headersKV ...string) io.Writer {
@@ -234,12 +260,14 @@ func (s *httpService) registerHandlersV1() {
 		-> need to allow OPTIONS
 	*/
 	if s.blobRequestHandler != nil {
-		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}", URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid), corsHandler(s.blobHTTPRequestHandler())).
+		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}", URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid),
+			corsHandler(s.blobHTTPRequestHandler_Write())).
 			Methods("POST", "OPTIONS").
 			Name("blob write")
 
 		// allowed symbols according to see base64.URLEncoding
-		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9-_]+}", URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobID), corsHandler(s.blobHTTPRequestHandler())).
+		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9-_]+}", URLPlaceholder_appOwner,
+			URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobIDOrSUUID), corsHandler(s.blobHTTPRequestHandler_Read())).
 			Methods("POST", "GET", "OPTIONS").
 			Name("blob read")
 	}

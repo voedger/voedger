@@ -18,9 +18,12 @@ import (
 
 type IRequestHandler interface {
 	// false -> service unavailable
-	Handle(appQName appdef.AppQName, wsid istructs.WSID, header http.Header, requestCtx context.Context,
+	HandleRead(appQName appdef.AppQName, wsid istructs.WSID, header http.Header, requestCtx context.Context,
+		okResponseIniter func(headersKeyValue ...string) io.Writer,
+		errorResponder ErrorResponder, existingBLOBIDOrSUUID string) bool
+	HandleWrite(appQName appdef.AppQName, wsid istructs.WSID, header http.Header, requestCtx context.Context,
 		urlQueryValues url.Values, okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
-		errorResponder ErrorResponder, isRead bool) bool
+		errorResponder ErrorResponder) bool
 }
 
 // implemented in e.g. router
@@ -31,24 +34,48 @@ type implIRequestHandler struct {
 	chanGroupIdx BLOBServiceChannelGroupIdx
 }
 
-func (r *implIRequestHandler) Handle(appQName appdef.AppQName, wsid istructs.WSID, header http.Header, requestCtx context.Context,
+func (r *implIRequestHandler) HandleRead(appQName appdef.AppQName, wsid istructs.WSID, header http.Header, requestCtx context.Context,
+	okResponseIniter func(headersKeyValue ...string) io.Writer,
+	errorResponder ErrorResponder, existingBLOBIDOrSUUID string) bool {
+	doneCh := make(chan interface{})
+	return r.handle(&implIBLOBMessage_Read{
+		implIBLOBMessage_base: implIBLOBMessage_base{
+			appQName:         appQName,
+			wsid:             wsid,
+			header:           header,
+			requestCtx:       requestCtx,
+			okResponseIniter: okResponseIniter,
+			errorResponder:   errorResponder,
+			done:             doneCh,
+		},
+		existingBLOBIDOrSUUID: existingBLOBIDOrSUUID,
+	}, doneCh)
+}
+
+func (r *implIRequestHandler) HandleWrite(appQName appdef.AppQName, wsid istructs.WSID, header http.Header, requestCtx context.Context,
 	urlQueryValues url.Values, okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
-	errorResponder ErrorResponder, isRead bool) bool {
-	msg := &implIBLOBMessage{
-		appQName:         appQName,
-		wsid:             wsid,
-		header:           header,
-		requestCtx:       requestCtx,
-		urlQueryValues:   urlQueryValues,
-		okResponseIniter: okResponseIniter,
-		reader:           reader,
-		errorResponder:   errorResponder,
-		done:             make(chan interface{}),
-	}
+	errorResponder ErrorResponder) bool {
+	doneCh := make(chan interface{})
+	return r.handle(&implIBLOBMessage_Write{
+		implIBLOBMessage_base: implIBLOBMessage_base{
+			appQName:         appQName,
+			wsid:             wsid,
+			header:           header,
+			requestCtx:       requestCtx,
+			okResponseIniter: okResponseIniter,
+			errorResponder:   errorResponder,
+			done:             doneCh,
+		},
+		urlQueryValues: urlQueryValues,
+		reader:         reader,
+	}, doneCh)
+}
+
+func (r *implIRequestHandler) handle(msg any, doneCh <-chan interface{}) bool {
 	if success := r.procbus.Submit(uint(r.chanGroupIdx), 0, msg); !success {
 		return false
 	}
-	<-msg.done
+	<-doneCh
 	return true
 }
 

@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -52,52 +51,63 @@ import (
 // 	return nil
 // }
 
-func getBLOBKey(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	bm := work.(*blobWorkpiece)
-	if bm.isPersistent() {
-		var blobID istructs.RecordID
-		if bm.blobMessage.IsRead() {
-			blobIDUint, err := strconv.ParseUint(bm.existingBLOBIDOrSUUID, utils.DecimalBase, utils.BitSize64)
-			if err != nil {
-				// validated already by router
-				// notest
-				return err
-			}
-			blobID = istructs.RecordID(blobIDUint)
-		} else {
-			blobID = bm.newBLOBID
+func getBLOBKeyRead(ctx context.Context, work pipeline.IWorkpiece) (err error) {
+	bw := work.(*blobWorkpiece)
+	if bw.isPersistent() {
+		existingBLOBIDUint, err := strconv.ParseUint(bw.blobMessageRead.ExistingBLOBIDOrSUUID(), utils.DecimalBase, utils.BitSize64)
+		if err != nil {
+			// validated already by router
+			// notest
+			return err
 		}
-		bm.blobKey = &iblobstorage.PersistentBLOBKeyType{
+		existingBLOBID := istructs.RecordID(existingBLOBIDUint)
+		bw.blobKey = &iblobstorage.PersistentBLOBKeyType{
 			ClusterAppID: istructs.ClusterAppID_sys_blobber,
-			WSID:         bm.blobMessage.WSID(),
-			BlobID:       blobID,
+			WSID:         bw.blobMessage.WSID(),
+			BlobID:       existingBLOBID,
 		}
-	} else {
-		var suuid iblobstorage.SUUID
-		if bm.blobMessage.IsRead() {
-			suuid = iblobstorage.SUUID(bm.existingBLOBIDOrSUUID)
-		} else {
-			suuid = bm.newSUUID
-		}
-		bm.blobKey = &iblobstorage.TempBLOBKeyType{
-			ClusterAppID: istructs.ClusterAppID_sys_blobber,
-			WSID:         bm.blobMessage.WSID(),
-			SUUID:        suuid,
-		}
+		return nil
+	}
+
+	// temp
+	bw.blobKey = &iblobstorage.TempBLOBKeyType{
+		ClusterAppID: istructs.ClusterAppID_sys_blobber,
+		WSID:         bw.blobMessage.WSID(),
+		SUUID:        iblobstorage.SUUID(bw.blobMessageRead.ExistingBLOBIDOrSUUID()),
 	}
 	return nil
 }
 
-func readBLOBID(ctx context.Context, work pipeline.IWorkpiece) (err error) {
+func getBLOBKeyWrite(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
-	bodyBytes, err := io.ReadAll(bw.blobMessage.Reader())
-	if err != nil {
-		// notest
-		return fmt.Errorf("failed to read request body: %w", err)
+	if bw.isPersistent() {
+		bw.blobKey = &iblobstorage.PersistentBLOBKeyType{
+			ClusterAppID: istructs.ClusterAppID_sys_blobber,
+			WSID:         bw.blobMessage.WSID(),
+			BlobID:       bw.newBLOBID,
+		}
+		return nil
 	}
-	bw.existingBLOBIDOrSUUID = string(bodyBytes)
+
+	// temp
+	bw.blobKey = &iblobstorage.TempBLOBKeyType{
+		ClusterAppID: istructs.ClusterAppID_sys_blobber,
+		WSID:         bw.blobMessage.WSID(),
+		SUUID:        bw.newSUUID,
+	}
 	return nil
 }
+
+// func readBLOBID(ctx context.Context, work pipeline.IWorkpiece) (err error) {
+// 	bw := work.(*blobWorkpiece)
+// 	bodyBytes, err := io.ReadAll(bw.blobMessage.Reader())
+// 	if err != nil {
+// 		// notest
+// 		return fmt.Errorf("failed to read request body: %w", err)
+// 	}
+// 	bw.existingBLOBIDOrSUUID = string(bodyBytes)
+// 	return nil
+// }
 
 func initResponse(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bm := work.(*blobWorkpiece)
@@ -113,6 +123,9 @@ func provideQueryAndCheckBLOBState(blobStorage iblobstorage.IBLOBStorage) func(c
 		bm := work.(*blobWorkpiece)
 		bm.blobState, err = blobStorage.QueryBLOBState(bm.blobMessage.RequestCtx(), bm.blobKey)
 		if err != nil {
+			if errors.Is(err, iblobstorage.ErrBLOBNotFound) {
+				return coreutils.NewHTTPError(http.StatusNotFound, err)
+			}
 			return err
 		}
 		if bm.blobState.Status != iblobstorage.BLOBStatus_Completed {
@@ -156,9 +169,6 @@ func provideReadBLOB(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Con
 		if err != nil {
 			logger.Error(fmt.Sprintf("failed to read BLOB: id %s, appQName %s, wsid %d: %s", bm.blobKey.ID(), bm.blobMessage.AppQName(),
 				bm.blobMessage.WSID(), err.Error()))
-			if errors.Is(err, iblobstorage.ErrBLOBNotFound) {
-				return coreutils.NewHTTPError(http.StatusNotFound, err)
-			}
 			return coreutils.NewHTTPError(http.StatusInternalServerError, err)
 		}
 		return nil

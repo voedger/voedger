@@ -32,110 +32,141 @@ import (
 
 type blobWorkpiece struct {
 	pipeline.IWorkpiece
-	blobMessage           IBLOBMessage
-	duration              iblobstorage.DurationType
-	nameQuery             []string
-	mimeTypeQuery         []string
-	ttl                   string
-	descr                 iblobstorage.DescrType
-	mediaType             string
-	boundary              string
-	contentType           string
-	existingBLOBIDOrSUUID string
-	newBLOBID             istructs.RecordID
-	newSUUID              iblobstorage.SUUID
-	doneCh                chan (interface{})
-	blobState             iblobstorage.BLOBState
-	blobKey               iblobstorage.IBLOBKey
-	writer                io.Writer
-	reader                io.Reader
-	registerFuncName      string
+	blobMessage      iBLOBMessage_Base
+	blobMessageWrite IBLOBMessage_Write
+	blobMessageRead  IBLOBMessage_Read
+	duration         iblobstorage.DurationType
+	nameQuery        []string
+	mimeTypeQuery    []string
+	ttl              string
+	descr            iblobstorage.DescrType
+	mediaType        string
+	boundary         string
+	contentType      string
+	newBLOBID        istructs.RecordID
+	newSUUID         iblobstorage.SUUID
+	blobState        iblobstorage.BLOBState
+	blobKey          iblobstorage.IBLOBKey
+	writer           io.Writer
+	reader           io.Reader
+	registerFuncName string
+	resultErr        error
 }
 
-type implIBLOBMessage struct {
+type implIBLOBMessage_base struct {
 	appQName         appdef.AppQName
 	wsid             istructs.WSID
 	header           http.Header
 	requestCtx       context.Context
-	urlQueryValues   url.Values
 	okResponseIniter func(headersKeyValue ...string) io.Writer
-	reader           io.ReadCloser
 	errorResponder   ErrorResponder
 	done             chan interface{}
-	isRead           bool
 }
 
-func NewIBLOBMessage(appQName appdef.AppQName, wsid istructs.WSID, header http.Header, requestCtx context.Context,
-	urlQueryValues url.Values, okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser, errorResponder ErrorResponder) (msg IBLOBMessage, doneAwaiter func()) {
-	msgImpl := &implIBLOBMessage{
-		appQName:         appQName,
-		wsid:             wsid,
-		header:           header,
-		requestCtx:       requestCtx,
-		urlQueryValues:   urlQueryValues,
-		okResponseIniter: okResponseIniter,
-		reader:           reader,
-		errorResponder:   errorResponder,
-		done:             make(chan interface{}),
-	}
-	return msgImpl, func() {
-	}
+type implIBLOBMessage_Read struct {
+	implIBLOBMessage_base
+	existingBLOBIDOrSUUID string
 }
 
-func (m *implIBLOBMessage) AppQName() appdef.AppQName {
+type implIBLOBMessage_Write struct {
+	implIBLOBMessage_base
+	reader         io.ReadCloser
+	urlQueryValues url.Values
+}
+
+// func NewIBLOBMessage(appQName appdef.AppQName, wsid istructs.WSID, header http.Header, requestCtx context.Context,
+// 	urlQueryValues url.Values, okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser, errorResponder ErrorResponder) (msg IBLOBMessage, doneAwaiter func()) {
+// 	msgImpl := &implIBLOBMessage{
+// 		appQName:         appQName,
+// 		wsid:             wsid,
+// 		header:           header,
+// 		requestCtx:       requestCtx,
+// 		urlQueryValues:   urlQueryValues,
+// 		okResponseIniter: okResponseIniter,
+// 		reader:           reader,
+// 		errorResponder:   errorResponder,
+// 		done:             make(chan interface{}),
+// 	}
+// 	return msgImpl, func() {
+// 	}
+// }
+
+func (m *implIBLOBMessage_base) AppQName() appdef.AppQName {
 	return m.appQName
 }
 
-func (m *implIBLOBMessage) WSID() istructs.WSID {
+func (m *implIBLOBMessage_base) WSID() istructs.WSID {
 	return m.wsid
 }
 
-func (m *implIBLOBMessage) Header() http.Header {
+func (m *implIBLOBMessage_base) Header() http.Header {
 	return m.header
 }
 
-func (m *implIBLOBMessage) RequestCtx() context.Context {
+func (m *implIBLOBMessage_base) RequestCtx() context.Context {
 	return m.requestCtx
 }
 
-func (m *implIBLOBMessage) URLQueryValues() url.Values {
+func (m *implIBLOBMessage_Write) URLQueryValues() url.Values {
 	return m.urlQueryValues
 }
 
-func (m *implIBLOBMessage) InitOKResponse(headersKeyValue ...string) io.Writer {
+func (m *implIBLOBMessage_base) InitOKResponse(headersKeyValue ...string) io.Writer {
 	return m.okResponseIniter(headersKeyValue...)
 }
 
-func (m *implIBLOBMessage) Reader() io.ReadCloser {
+func (m *implIBLOBMessage_Write) Reader() io.ReadCloser {
 	return m.reader
 }
 
-func (m *implIBLOBMessage) IsRead() bool {
-	return m.isRead
-}
-
-func (m *implIBLOBMessage) ReplyError(statusCode int, args ...any) {
+func (m *implIBLOBMessage_base) ReplyError(statusCode int, args ...any) {
 	m.errorResponder(statusCode, args)
 }
 
-func (m *implIBLOBMessage) Release() {
+func (m *implIBLOBMessage_Read) ExistingBLOBIDOrSUUID() string {
+	return m.existingBLOBIDOrSUUID
+}
+
+func (m *implIBLOBMessage_base) Release() {
 	close(m.done)
 }
 
 type WLimiterFactory func() iblobstorage.WLimiterType
 
-type IBLOBMessage interface {
+type iBLOBMessage_Base interface {
 	pipeline.IWorkpiece
 	AppQName() appdef.AppQName
 	WSID() istructs.WSID
 	Header() http.Header
 	InitOKResponse(headersKeyValue ...string) io.Writer
-	Reader() io.ReadCloser
 	RequestCtx() context.Context
-	URLQueryValues() url.Values
-	IsRead() bool // false -> write
 	ReplyError(statusCode int, args ...any)
 }
+
+type IBLOBMessage_Read interface {
+	iBLOBMessage_Base
+	ExistingBLOBIDOrSUUID() string
+}
+
+type IBLOBMessage_Write interface {
+	iBLOBMessage_Base
+	Reader() io.ReadCloser
+	URLQueryValues() url.Values
+}
+
+// type IBLOBMessage interface {
+// 	pipeline.IWorkpiece
+// 	AppQName() appdef.AppQName
+// 	WSID() istructs.WSID
+// 	Header() http.Header
+// 	InitOKResponse(headersKeyValue ...string) io.Writer
+// 	Reader() io.ReadCloser
+// 	RequestCtx() context.Context
+// 	URLQueryValues() url.Values
+// 	IsRead() bool // false -> write
+// 	ReplyError(statusCode int, args ...any)
+// 	ExistingBLOBIDOrSUUID() string
+// }
 
 type BLOBServiceChannel iprocbus.ServiceChannel
 

@@ -29,7 +29,7 @@ func ProvideService(serviceChannel BLOBServiceChannel, blobStorage iblobstorage.
 			select {
 			case workIntf := <-serviceChannel:
 				blobWorkpiece := &blobWorkpiece{
-					blobMessage: workIntf.(IBLOBMessage),
+					blobMessage: workIntf.(iBLOBMessage_Base),
 				}
 				if err := pipeline.SendSync(blobWorkpiece); err != nil {
 					// notest
@@ -47,22 +47,34 @@ func (b *blobWorkpiece) Release() {
 	b.blobMessage.Release()
 }
 
+func getBLOBMessageRead(_ context.Context, work pipeline.IWorkpiece) error {
+	bw := work.(*blobWorkpiece)
+	bw.blobMessageRead = bw.blobMessage.(IBLOBMessage_Read)
+	return nil
+}
+
+func getBLOBMessageWrite(_ context.Context, work pipeline.IWorkpiece) error {
+	bw := work.(*blobWorkpiece)
+	bw.blobMessageWrite = bw.blobMessage.(IBLOBMessage_Write)
+	return nil
+}
+
 func parseQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
-	bw.nameQuery = bw.blobMessage.URLQueryValues()["name"]
-	bw.mimeTypeQuery = bw.blobMessage.URLQueryValues()["mimeType"]
-	if len(bw.blobMessage.URLQueryValues()["ttl"]) > 0 {
-		bw.ttl = bw.blobMessage.URLQueryValues()["ttl"][0]
+	bw.nameQuery = bw.blobMessageWrite.URLQueryValues()["name"]
+	bw.mimeTypeQuery = bw.blobMessageWrite.URLQueryValues()["mimeType"]
+	if len(bw.blobMessageWrite.URLQueryValues()["ttl"]) > 0 {
+		bw.ttl = bw.blobMessageWrite.URLQueryValues()["ttl"][0]
 	}
 	return nil
 }
 
 func parseMediaType(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
-	if len(bw.nameQuery) > 0 {
+	bw.contentType = bw.blobMessage.Header().Get(coreutils.ContentType)
+	if len(bw.contentType) == 0 {
 		return nil
 	}
-	bw.contentType = bw.blobMessage.Header().Get(coreutils.ContentType)
 	mediaType, params, err := mime.ParseMediaType(bw.contentType)
 	if err != nil {
 		return fmt.Errorf("failed to parse Content-Type header: %w", err)
@@ -72,18 +84,7 @@ func parseMediaType(_ context.Context, work pipeline.IWorkpiece) error {
 	return nil
 }
 
-func sendNewBLOBIDOrSUUID(_ context.Context, work pipeline.IWorkpiece) error {
-	bw := work.(*blobWorkpiece)
-	writer := bw.blobMessage.InitOKResponse(coreutils.ContentType, "text/plain")
-	if bw.isPersistent() {
-		_, _ = writer.Write([]byte(utils.UintToString(bw.newBLOBID)))
-	} else {
-		_, _ = writer.Write([]byte(bw.newSUUID))
-	}
-	return nil
-}
-
-func validateParams(_ context.Context, work pipeline.IWorkpiece) error {
+func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
 
 	if (len(bw.nameQuery) > 0 && len(bw.mimeTypeQuery) == 0) || (len(bw.nameQuery) == 0 && len(bw.mimeTypeQuery) > 0) {
@@ -128,6 +129,52 @@ type badRequestWrapper struct {
 	pipeline.NOOP
 }
 
+type sendWriteResult struct {
+	pipeline.NOOP
+}
+
+type catchReadError struct {
+	pipeline.NOOP
+}
+
+func (b *catchReadError) OnErr(err error, work interface{}, _ pipeline.IWorkpieceContext) (newErr error) {
+	bw := work.(*blobWorkpiece)
+	bw.resultErr = coreutils.WrapSysError(err, http.StatusInternalServerError)
+	return nil
+}
+
+func (b *catchReadError) DoSync(_ context.Context, work pipeline.IWorkpiece) (err error) {
+	bw := work.(*blobWorkpiece)
+	var sysError coreutils.SysError
+	if errors.As(bw.resultErr, &sysError) {
+		bw.blobMessage.ReplyError(sysError.HTTPStatus, sysError.Message)
+	}
+	return nil
+}
+
+func (b *sendWriteResult) DoSync(_ context.Context, work pipeline.IWorkpiece) (err error) {
+	bw := work.(*blobWorkpiece)
+	if bw.resultErr == nil {
+		writer := bw.blobMessage.InitOKResponse(coreutils.ContentType, "text/plain")
+		if bw.isPersistent() {
+			_, _ = writer.Write([]byte(utils.UintToString(bw.newBLOBID)))
+		} else {
+			_, _ = writer.Write([]byte(bw.newSUUID))
+		}
+		return nil
+	}
+	var sysError coreutils.SysError
+	errors.As(bw.resultErr, &sysError)
+	bw.blobMessage.ReplyError(sysError.HTTPStatus, sysError.Message)
+	return nil
+}
+
+func (b *sendWriteResult) OnErr(err error, work interface{}, _ pipeline.IWorkpieceContext) (newErr error) {
+	bw := work.(*blobWorkpiece)
+	bw.resultErr = coreutils.WrapSysError(err, http.StatusInternalServerError)
+	return nil
+}
+
 func (b *badRequestWrapper) OnErr(err error, _ interface{}, _ pipeline.IWorkpieceContext) (newErr error) {
 	return coreutils.WrapSysError(err, http.StatusBadRequest)
 }
@@ -137,7 +184,7 @@ type blobOpSwitch struct {
 
 func (b *blobOpSwitch) Switch(work interface{}) (branchName string, err error) {
 	blobWorkpiece := work.(*blobWorkpiece)
-	if blobWorkpiece.blobMessage.IsRead() {
+	if _, ok := blobWorkpiece.blobMessage.(IBLOBMessage_Read); ok {
 		return "readBLOB", nil
 	}
 	return "writeBLOB", nil
@@ -146,31 +193,36 @@ func (b *blobOpSwitch) Switch(work interface{}) (branchName string, err error) {
 func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStorage, bus ibus.IBus, busTimeout time.Duration,
 	wLimiterFactory WLimiterFactory) pipeline.ISyncPipeline {
 	return pipeline.NewSyncPipeline(vvmCtx, "blob processor",
-		pipeline.WireFunc("parseQueryParams", parseQueryParams),
-		pipeline.WireFunc("parseMediaType", parseMediaType),
-		pipeline.WireFunc("validateParams", validateParams),
-		pipeline.WireSyncOperator("wrapBadRequest", &badRequestWrapper{}),
 		pipeline.WireSyncOperator("switch", pipeline.SwitchOperator(&blobOpSwitch{},
 			pipeline.SwitchBranch("readBLOB", pipeline.NewSyncPipeline(vvmCtx, "readBLOB",
-				pipeline.WireFunc("readBLOBID", readBLOBID),
+				pipeline.WireFunc("getBLOBMessageRead", getBLOBMessageRead),
 				pipeline.WireFunc("downloadBLOBHelper", provideDownloadBLOBHelper(bus, busTimeout)),
-				pipeline.WireFunc("getBLOBKey", getBLOBKey),
+				pipeline.WireFunc("getBLOBKeyRead", getBLOBKeyRead),
 				pipeline.WireFunc("queryBLOBState", provideQueryAndCheckBLOBState(blobStorage)),
 				pipeline.WireFunc("initResponse", initResponse),
 				pipeline.WireFunc("readBLOB", provideReadBLOB(blobStorage)),
+				pipeline.WireSyncOperator("catchReadError", &catchReadError{}),
 			)),
 			pipeline.SwitchBranch("writeBLOB", pipeline.NewSyncPipeline(vvmCtx, "writeBLOB",
+				pipeline.WireFunc("getBLOBMessageWrite", getBLOBMessageWrite),
+				pipeline.WireFunc("parseQueryParams", parseQueryParams),
+				pipeline.WireFunc("parseMediaType", parseMediaType),
+				pipeline.WireFunc("validateQueryParams", validateQueryParams),
 				pipeline.WireFunc("getRegisterFuncName", getRegisterFuncName),
+				pipeline.WireSyncOperator("wrapBadRequest", &badRequestWrapper{}),
 				pipeline.WireFunc("registerBLOB", provideRegisterBLOB(bus, busTimeout)),
-				pipeline.WireFunc("getBLOBKey", getBLOBKey),
+				pipeline.WireFunc("getBLOBKeyWrite", getBLOBKeyWrite),
 				pipeline.WireFunc("writeBLOB", provideWriteBLOB(blobStorage, wLimiterFactory)),
 				pipeline.WireFunc("setBLOBStatusCompleted", provideSetBLOBStatusCompleted(bus, busTimeout)),
-				pipeline.WireFunc("sendNewBLOBIDOrSUUID", sendNewBLOBIDOrSUUID),
+				pipeline.WireSyncOperator("sendResult", &sendWriteResult{}),
 			)),
 		)),
 	)
 }
 
 func (b *blobWorkpiece) isPersistent() bool {
-	return len(b.existingBLOBIDOrSUUID) <= temporaryBLOBIDLenTreshold
+	if b.blobMessageWrite != nil {
+		return len(b.ttl) == 0
+	}
+	return len(b.blobMessageRead.ExistingBLOBIDOrSUUID()) <= temporaryBLOBIDLenTreshold
 }
