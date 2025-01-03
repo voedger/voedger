@@ -97,30 +97,26 @@ func provideQueryAndCheckBLOBState(blobStorage iblobstorage.IBLOBStorage) func(c
 	}
 }
 
-func blobHelper(bw *blobWorkpiece, registerFuncName string) (resp coreutils.CommandResponse, err error) {
+func downloadBLOBHelper(ctx context.Context, work pipeline.IWorkpiece) (err error) {
+	bw := work.(*blobWorkpiece)
 	req := coreutils.Request{
 		Method:   http.MethodPost,
 		WSID:     bw.blobMessage.WSID(),
 		AppQName: bw.blobMessage.AppQName().String(),
-		Resource: registerFuncName,
+		Resource: "q.sys.DownloadBLOBAuthnz",
 		Header:   bw.blobMessage.Header(),
 		Body:     []byte(`{}`),
 		Host:     coreutils.Localhost,
 	}
-	blobHelperMeta, blobHelperResp, err := coreutils.GetCommandResponse(bw.blobMessage.RequestCtx(), bw.blobMessage.RequestSender(), req)
+	respCh, _, respErr, err := bw.blobMessage.RequestSender().SendRequest(bw.blobMessage.RequestCtx(), req)
 	if err != nil {
-		return resp, coreutils.NewHTTPErrorf(http.StatusInternalServerError, "failed to exec q.sys.DownloadBLOBAuthnz: ", err)
+		return fmt.Errorf("failed to exec q.sys.DownloadBLOBAuthnz: %w", err)
 	}
-	if blobHelperMeta.StatusCode != http.StatusOK {
-		return resp, coreutils.NewHTTPErrorf(blobHelperMeta.StatusCode, "q.sys.DownloadBLOBAuthnz returned error: "+blobHelperResp.SysError.Data)
+	for range respCh {
+		// notest
+		panic("unexpeced result of q.sys.DownloadBLOBAuthnz")
 	}
-	return blobHelperResp, nil
-}
-
-func downloadBLOBHelper(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	bm := work.(*blobWorkpiece)
-	_, err = blobHelper(bm, "q.sys.DownloadBLOBAuthnz")
-	return err
+	return *respErr
 }
 
 func provideReadBLOB(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {

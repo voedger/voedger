@@ -80,9 +80,21 @@ func setBLOBStatusCompleted(ctx context.Context, work pipeline.IWorkpiece) (err 
 
 func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
-	blobHelperResp, err := blobHelper(bw, bw.registerFuncName)
+	req := coreutils.Request{
+		Method:   http.MethodPost,
+		WSID:     bw.blobMessage.WSID(),
+		AppQName: bw.blobMessage.AppQName().String(),
+		Resource: bw.registerFuncName,
+		Header:   bw.blobMessage.Header(),
+		Body:     []byte(`{}`),
+		Host:     coreutils.Localhost,
+	}
+	blobHelperMeta, blobHelperResp, err := coreutils.GetCommandResponse(bw.blobMessage.RequestCtx(), bw.blobMessage.RequestSender(), req)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to exec q.sys.DownloadBLOBAuthnz: %w", err)
+	}
+	if blobHelperMeta.StatusCode != http.StatusOK {
+		return coreutils.NewHTTPErrorf(blobHelperMeta.StatusCode, "q.sys.DownloadBLOBAuthnz returned error: "+blobHelperResp.SysError.Data)
 	}
 	if bw.isPersistent() {
 		bw.newBLOBID, err = coreutils.Int64ToRecordID(blobHelperResp.NewIDs["1"])
