@@ -83,15 +83,6 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 }
 
 func (s *httpService) preRun(ctx context.Context) {
-	if s.BlobberParams != nil {
-		for i := 0; i < s.BlobberParams.BLOBWorkersNum; i++ {
-			s.blobWG.Add(1)
-			go func() {
-				defer s.blobWG.Done()
-				blobMessageHandler(ctx, s.procBus.ServiceChannel(0, 0), s.BLOBStorage, s.requestSender)
-			}()
-		}
-	}
 	s.server.BaseContext = func(l net.Listener) context.Context {
 		return ctx // need to track both client disconnect and app finalize
 	}
@@ -160,7 +151,7 @@ func (s *httpService) registerReverseProxyHandler() error {
 }
 
 func (s *httpService) registerRouterCheckerHandler() {
-	s.router.HandleFunc("/api/check", corsHandler(checkHandler())).Methods("POST", "OPTIONS").Name("router check")
+	s.router.HandleFunc("/api/check", corsHandler(checkHandler())).Methods("POST", "GET", "OPTIONS").Name("router check")
 }
 
 func (s *httpService) registerHandlersV1() {
@@ -169,13 +160,15 @@ func (s *httpService) registerHandlersV1() {
 		Browser sees that hosts differs: from localhost to alpha -> need CORS -> denies POST and executes the same request with OPTIONS header
 		-> need to allow OPTIONS
 	*/
-	if s.BlobberParams != nil {
-		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}", URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid), corsHandler(s.blobWriteRequestHandler())).
+	if s.blobRequestHandler != nil {
+		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}", URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid),
+			corsHandler(s.blobHTTPRequestHandler_Write())).
 			Methods("POST", "OPTIONS").
 			Name("blob write")
 
 		// allowed symbols according to see base64.URLEncoding
-		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9-_]+}", URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobID), corsHandler(s.blobReadRequestHandler())).
+		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9-_]+}", URLPlaceholder_appOwner,
+			URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobIDOrSUUID), corsHandler(s.blobHTTPRequestHandler_Read())).
 			Methods("POST", "GET", "OPTIONS").
 			Name("blob read")
 	}

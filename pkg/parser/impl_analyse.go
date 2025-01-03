@@ -13,6 +13,7 @@ import (
 	"github.com/robfig/cron/v3"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type iterateCtx struct {
@@ -842,23 +843,26 @@ func analyzeProjector(prj *ProjectorStmt, c *iterateCtx) {
 			c.stmtErr(&prj.Pos, ErrScheduledProjectorDeprecated)
 		}
 
-		for _, qname := range trigger.QNames {
+		for i := range trigger.QNames {
+			defQName := &trigger.QNames[i]
 			if len(trigger.TableActions) > 0 {
 
-				wd, pkg, err := lookupInCtx[*WsDescriptorStmt](qname, c)
+				wd, pkg, err := lookupInCtx[*WsDescriptorStmt](*defQName, c)
 				if err != nil {
-					c.stmtErr(&qname.Pos, err)
+					c.stmtErr(&defQName.Pos, err)
 					continue
 				}
 				if wd != nil {
-					trigger.qNames = append(trigger.qNames, pkg.NewQName(wd.Name))
+					defQName.qName = pkg.NewQName(wd.Name)
 					continue
 				}
 
 				resolveFunc := func(table *TableStmt, pkg *PackageSchemaAST) error {
-					sysDoc := (pkg.Path == appdef.SysPackage) && (table.Name == nameCRecord || table.Name == nameWRecord)
+					crecord := (table.Name == Ident(istructs.QNameCRecord.Entity()))
+					wrecord := (table.Name == Ident(istructs.QNameWRecord.Entity()))
+					sysDoc := (pkg.Path == appdef.SysPackage) && (crecord || wrecord)
 					if table.Abstract && !sysDoc {
-						return ErrAbstractTableNotAlowedInProjectors(qname.String())
+						return ErrAbstractTableNotAlowedInProjectors(defQName.String())
 					}
 					k, _, err := getTableTypeKind(table, pkg, c)
 					if err != nil {
@@ -869,40 +873,40 @@ func analyzeProjector(prj *ProjectorStmt, c *iterateCtx) {
 							return ErrOnlyInsertForOdocOrORecord
 						}
 					}
-					trigger.qNames = append(trigger.qNames, pkg.NewQName(table.Name))
+					defQName.qName = pkg.NewQName(table.Name)
 					return nil
 				}
-				if err := resolveInCtx(qname, c, resolveFunc); err != nil {
-					c.stmtErr(&qname.Pos, err)
+				if err := resolveInCtx(*defQName, c, resolveFunc); err != nil {
+					c.stmtErr(&defQName.Pos, err)
 				}
 			} else { // Command
 				if trigger.ExecuteAction.WithParam {
 					var pkg *PackageSchemaAST
 					var odoc *TableStmt
-					typ, pkg, err := lookupInCtx[*TypeStmt](qname, c)
+					typ, pkg, err := lookupInCtx[*TypeStmt](*defQName, c)
 					if err != nil { // type?
-						c.stmtErr(&qname.Pos, err)
+						c.stmtErr(&defQName.Pos, err)
 						continue
 					}
 					if typ == nil { // ODoc?
-						odoc, pkg, err = lookupInCtx[*TableStmt](qname, c)
+						odoc, pkg, err = lookupInCtx[*TableStmt](*defQName, c)
 						if err != nil {
-							c.stmtErr(&qname.Pos, err)
+							c.stmtErr(&defQName.Pos, err)
 							continue
 						}
 						if odoc == nil || odoc.tableTypeKind != appdef.TypeKind_ODoc {
-							c.stmtErr(&qname.Pos, ErrUndefinedTypeOrOdoc(qname))
+							c.stmtErr(&defQName.Pos, ErrUndefinedTypeOrOdoc(*defQName))
 							continue
 						}
 					}
-					trigger.qNames = append(trigger.qNames, pkg.NewQName(qname.Name))
+					defQName.qName = pkg.NewQName(defQName.Name)
 				} else {
-					err := resolveInCtx(qname, c, func(f *CommandStmt, pkg *PackageSchemaAST) error {
-						trigger.qNames = append(trigger.qNames, pkg.NewQName(qname.Name))
+					err := resolveInCtx(*defQName, c, func(f *CommandStmt, pkg *PackageSchemaAST) error {
+						defQName.qName = pkg.NewQName(f.Name)
 						return nil
 					})
 					if err != nil {
-						c.stmtErr(&qname.Pos, err)
+						c.stmtErr(&defQName.Pos, err)
 						continue
 					}
 				}
@@ -1477,17 +1481,17 @@ func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (k
 	check := func(node tableNode) {
 		if node.pkg.Path == appdef.SysPackage {
 			switch node.table.Name {
-			case nameCRecord:
+			case Ident(istructs.QNameCRecord.Entity()):
 				kind = appdef.TypeKind_CRecord
-			case nameORecord:
+			case Ident(istructs.QNameORecord.Entity()):
 				kind = appdef.TypeKind_ORecord
-			case nameWRecord:
+			case Ident(istructs.QNameWRecord.Entity()):
 				kind = appdef.TypeKind_WRecord
-			case nameCdoc:
+			case Ident(istructs.QNameCDoc.Entity()):
 				kind = appdef.TypeKind_CDoc
-			case nameODoc:
+			case Ident(istructs.QNameODoc.Entity()):
 				kind = appdef.TypeKind_ODoc
-			case nameWDoc:
+			case Ident(istructs.QNameWDoc.Entity()):
 				kind = appdef.TypeKind_WDoc
 			case nameCSingleton:
 				kind = appdef.TypeKind_CDoc

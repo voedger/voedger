@@ -106,6 +106,7 @@ type NumAppWorkspaces uint16 // since [MaxNumAppWorkspaces] = 32768
 type NumAppPartitions uint16 // since [PartitionID] is uint16
 type NumCommandProcessors uint
 type NumQueryProcessors uint
+type NumBLOBProcessors uint
 type AppWorkspaceNumber uint
 
 // RowBuilder is a type for function that creates a row reader from a row writer.

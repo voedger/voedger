@@ -17,11 +17,9 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/in10n"
-	"github.com/voedger/voedger/pkg/iprocbus"
-	"github.com/voedger/voedger/pkg/iprocbusmem"
 	"github.com/voedger/voedger/pkg/istructs"
+	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 )
 
 type RouterParams struct {
@@ -39,7 +37,6 @@ type RouterParams struct {
 
 type httpService struct {
 	RouterParams
-	*BlobberParams
 	listenAddress      string
 	router             *mux.Router
 	server             *http.Server
@@ -50,6 +47,7 @@ type httpService struct {
 	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces
 	name               string
 	listeningPort      atomic.Uint32
+	blobRequestHandler blobprocessor.IRequestHandler
 }
 
 type httpsService struct {
@@ -59,17 +57,6 @@ type httpsService struct {
 
 type acmeService struct {
 	http.Server
-}
-
-type BlobberServiceChannels []iprocbusmem.ChannelGroup
-
-type BlobberParams struct {
-	ServiceChannels        []iprocbusmem.ChannelGroup
-	BLOBStorage            iblobstorage.IBLOBStorage
-	BLOBWorkersNum         int
-	procBus                iprocbus.IProcBus
-	RetryAfterSecondsOn503 int
-	WLimiterFactory        func() iblobstorage.WLimiterType
 }
 
 type route struct {
