@@ -7,13 +7,204 @@ package appdef_test
 
 import (
 	"fmt"
+	"iter"
 	"slices"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
+
+func testFind[T appdef.IType](t *testing.T, name string, find func(f appdef.FindType, name appdef.QName) T, app appdef.IAppDef) {
+	require := require.New(t)
+
+	for i := 1; i <= 2; i++ {
+		n := appdef.NewQName("test", fmt.Sprintf("%s%d", name, i))
+		v := find(app.Type, n)
+		require.NotNil(v, "should be found %s «%s», but not", name, n)
+		require.Equal(n, v.QName())
+	}
+
+	require.Nil(find(app.Type, appdef.NewQName("test", "unknown")))
+}
+
+func testIterator[T appdef.IType](t *testing.T, name string, iter iter.Seq[T]) {
+	require := require.New(t)
+
+	t.Run(fmt.Sprintf("should be ok iterate %s", name), func(t *testing.T) {
+		cnt := 0
+		for v := range iter {
+			if v.IsSystem() {
+				continue
+			}
+			require.Contains(fmt.Sprint(v), name)
+			cnt++
+		}
+		require.Equal(2, cnt, "%ss(): got %d iterations, expected 2", name, cnt)
+	})
+
+	t.Run(fmt.Sprintf("should be breakable %s", name), func(t *testing.T) {
+		cnt := 0
+		for range iter {
+			cnt++
+			break
+		}
+		require.Equal(1, cnt, "%ss(): got %d iterations, expected 1", name, cnt)
+	})
+}
+
+func Test_TypeIterators(t *testing.T) {
+	require := require.New(t)
+	adb := builder.New()
+
+	wsName := appdef.NewQName("test", "workspace")
+	wsb := adb.AddWorkspace(wsName)
+
+	qns := func(s string) []appdef.QName {
+		return []appdef.QName{
+			appdef.NewQName("test", s+"1"),
+			appdef.NewQName("test", s+"2"),
+		}
+	}
+
+	tagName := qns("Tag")
+	wsb.AddTag(tagName[0], "tag 1 comment")
+	wsb.AddTag(tagName[1], "tag 2 comment")
+
+	dataName := qns("Data")
+	wsb.AddData(dataName[0], appdef.DataKind_int64, appdef.NullQName).
+		SetTag(tagName[0])
+	wsb.AddData(dataName[1], appdef.DataKind_string, appdef.NullQName)
+
+	gDocName := qns("GDoc")
+	wsb.AddGDoc(gDocName[0])
+	wsb.AddGDoc(gDocName[1])
+	gRecName := qns("GRecord")
+	wsb.AddGRecord(gRecName[0])
+	wsb.AddGRecord(gRecName[1])
+
+	cDocName := qns("CDoc")
+	wsb.AddCDoc(cDocName[0]).SetSingleton()
+	wsb.AddCDoc(cDocName[1]).SetTag(tagName[1])
+	cRecName := qns("CRecord")
+	wsb.AddCRecord(cRecName[0])
+	wsb.AddCRecord(cRecName[1])
+
+	wDocName := qns("WDoc")
+	wsb.AddWDoc(wDocName[0]).SetSingleton()
+	wsb.AddWDoc(wDocName[1]).SetTag(tagName[1])
+	wRecName := qns("WRecord")
+	wsb.AddWRecord(wRecName[0])
+	wsb.AddWRecord(wRecName[1])
+
+	oDocName := qns("ODoc")
+	wsb.AddODoc(oDocName[0])
+	wsb.AddODoc(oDocName[1])
+	oRecName := qns("ORecord")
+	wsb.AddORecord(oRecName[0])
+	wsb.AddORecord(oRecName[1])
+
+	objName := qns("Object")
+	wsb.AddObject(objName[0])
+	wsb.AddObject(objName[1])
+
+	viewName := qns("View")
+	for _, n := range viewName {
+		v := wsb.AddView(n)
+		v.Key().PartKey().AddField("pkf", appdef.DataKind_int64)
+		v.Key().ClustCols().AddField("ccf", appdef.DataKind_string)
+		v.Value().AddField("vf", appdef.DataKind_bytes, false)
+	}
+
+	cmdName := qns("Command")
+	wsb.AddCommand(cmdName[0])
+	wsb.AddCommand(cmdName[1])
+
+	qryName := qns("Query")
+	wsb.AddQuery(qryName[0])
+	wsb.AddQuery(qryName[1])
+
+	prjName := qns("Projector")
+	prj1 := wsb.AddProjector(prjName[0])
+	prj1.Events().Add(
+		[]appdef.OperationKind{appdef.OperationKind_Execute},
+		filter.QNames(cmdName[0]))
+	prj2 := wsb.AddProjector(prjName[1])
+	prj2.Events().Add(
+		[]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update},
+		filter.Tags(tagName[1]))
+
+	jobName := qns("Job")
+	wsb.AddJob(jobName[0]).SetCronSchedule("@every 3s")
+	wsb.AddJob(jobName[1]).SetCronSchedule("@every 10s")
+
+	roleName := qns("Role")
+	wsb.AddRole(roleName[0]).
+		GrantAll(filter.QNames(cmdName...)).
+		Revoke([]appdef.OperationKind{appdef.OperationKind_Execute}, filter.QNames(cmdName[0]), nil)
+	wsb.AddRole(roleName[1]).
+		GrantAll(filter.QNames(cDocName...)).
+		Revoke([]appdef.OperationKind{appdef.OperationKind_Insert}, filter.QNames(cDocName[1]), nil)
+
+	rateName := qns("Rate")
+	wsb.AddRate(rateName[0], 10, time.Second, []appdef.RateScope{appdef.RateScope_AppPartition})
+	wsb.AddRate(rateName[1], 5, time.Second, []appdef.RateScope{appdef.RateScope_AppPartition})
+	limitName := qns("Limit")
+	wsb.AddLimit(limitName[0], []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_ALL, filter.AllFunctions(), rateName[0])
+	wsb.AddLimit(limitName[1], []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_EACH, filter.AllFunctions(), rateName[1])
+
+	app, err := adb.Build()
+	require.NoError(err)
+
+	t.Run("should be ok to iterate types", func(t *testing.T) {
+		// ws := app.Workspace(wsName)
+
+		// unknown := qns("unknown")
+
+		testIterator(t, "Tag", appdef.Tags(app.Types()))
+		testFind(t, "Tag", appdef.Tag, app)
+		testIterator(t, "data", appdef.DataTypes(app.Types()))
+		testFind(t, "Data", appdef.Data, app)
+		testIterator(t, "GDoc", appdef.GDocs(app.Types()))
+		testFind(t, "GDoc", appdef.GDoc, app)
+		testIterator(t, "GRecord", appdef.GRecords(app.Types()))
+		testFind(t, "GRecord", appdef.GRecord, app)
+		testIterator(t, "CDoc", appdef.CDocs(app.Types()))
+		testFind(t, "CDoc", appdef.CDoc, app)
+		testIterator(t, "CRecord", appdef.CRecords(app.Types()))
+		testFind(t, "CRecord", appdef.CRecord, app)
+		testIterator(t, "WDoc", appdef.WDocs(app.Types()))
+		testFind(t, "WDoc", appdef.WDoc, app)
+		testIterator(t, "WRecord", appdef.WRecords(app.Types()))
+		testFind(t, "WRecord", appdef.WRecord, app)
+		testIterator(t, "ODoc", appdef.ODocs(app.Types()))
+		testFind(t, "ODoc", appdef.ODoc, app)
+		testIterator(t, "ORecord", appdef.ORecords(app.Types()))
+		testFind(t, "ORecord", appdef.ORecord, app)
+		testIterator(t, "Object", appdef.Objects(app.Types()))
+		testFind(t, "Object", appdef.Object, app)
+		testIterator(t, "View", appdef.Views(app.Types()))
+		testFind(t, "View", appdef.View, app)
+		testIterator(t, "Command", appdef.Commands(app.Types()))
+		testFind(t, "Command", appdef.Command, app)
+		testIterator(t, "Query", appdef.Queries(app.Types()))
+		testFind(t, "Query", appdef.Query, app)
+		testIterator(t, "Projector", appdef.Projectors(app.Types()))
+		testFind(t, "Projector", appdef.Projector, app)
+		testIterator(t, "Job", appdef.Jobs(app.Types()))
+		testFind(t, "Job", appdef.Job, app)
+		testIterator(t, "Role", appdef.Roles(app.Types()))
+		testFind(t, "Role", appdef.Role, app)
+		testIterator(t, "Rate", appdef.Rates(app.Types()))
+		testFind(t, "Rate", appdef.Rate, app)
+		testIterator(t, "Limit", appdef.Limits(app.Types()))
+		testFind(t, "Limit", appdef.Limit, app)
+	})
+}
 
 func Test_AnyType(t *testing.T) {
 	require := require.New(t)
