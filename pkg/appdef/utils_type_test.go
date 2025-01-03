@@ -160,49 +160,139 @@ func Test_TypeIterators(t *testing.T) {
 	app, err := adb.Build()
 	require.NoError(err)
 
-	t.Run("should be ok to iterate types", func(t *testing.T) {
+	t.Run("should be ok to find and iterate types", func(t *testing.T) {
 		// ws := app.Workspace(wsName)
 
 		// unknown := qns("unknown")
 
-		testIterator(t, "Tag", appdef.Tags(app.Types()))
 		testFind(t, "Tag", appdef.Tag, app)
-		testIterator(t, "data", appdef.DataTypes(app.Types()))
+		testIterator(t, "Tag", appdef.Tags(app.Types()))
 		testFind(t, "Data", appdef.Data, app)
-		testIterator(t, "GDoc", appdef.GDocs(app.Types()))
+		testIterator(t, "data", appdef.DataTypes(app.Types()))
 		testFind(t, "GDoc", appdef.GDoc, app)
-		testIterator(t, "GRecord", appdef.GRecords(app.Types()))
+		testIterator(t, "GDoc", appdef.GDocs(app.Types()))
 		testFind(t, "GRecord", appdef.GRecord, app)
-		testIterator(t, "CDoc", appdef.CDocs(app.Types()))
+		testIterator(t, "GRecord", appdef.GRecords(app.Types()))
 		testFind(t, "CDoc", appdef.CDoc, app)
-		testIterator(t, "CRecord", appdef.CRecords(app.Types()))
+		testIterator(t, "CDoc", appdef.CDocs(app.Types()))
 		testFind(t, "CRecord", appdef.CRecord, app)
-		testIterator(t, "WDoc", appdef.WDocs(app.Types()))
+		testIterator(t, "CRecord", appdef.CRecords(app.Types()))
 		testFind(t, "WDoc", appdef.WDoc, app)
-		testIterator(t, "WRecord", appdef.WRecords(app.Types()))
+		testIterator(t, "WDoc", appdef.WDocs(app.Types()))
 		testFind(t, "WRecord", appdef.WRecord, app)
-		testIterator(t, "ODoc", appdef.ODocs(app.Types()))
+		testIterator(t, "WRecord", appdef.WRecords(app.Types()))
 		testFind(t, "ODoc", appdef.ODoc, app)
-		testIterator(t, "ORecord", appdef.ORecords(app.Types()))
+		testIterator(t, "ODoc", appdef.ODocs(app.Types()))
 		testFind(t, "ORecord", appdef.ORecord, app)
-		testIterator(t, "Object", appdef.Objects(app.Types()))
+		testIterator(t, "ORecord", appdef.ORecords(app.Types()))
 		testFind(t, "Object", appdef.Object, app)
-		testIterator(t, "View", appdef.Views(app.Types()))
+		testIterator(t, "Object", appdef.Objects(app.Types()))
 		testFind(t, "View", appdef.View, app)
-		testIterator(t, "Command", appdef.Commands(app.Types()))
+		testIterator(t, "View", appdef.Views(app.Types()))
 		testFind(t, "Command", appdef.Command, app)
-		testIterator(t, "Query", appdef.Queries(app.Types()))
+		testIterator(t, "Command", appdef.Commands(app.Types()))
 		testFind(t, "Query", appdef.Query, app)
-		testIterator(t, "Projector", appdef.Projectors(app.Types()))
+		testIterator(t, "Query", appdef.Queries(app.Types()))
 		testFind(t, "Projector", appdef.Projector, app)
-		testIterator(t, "Job", appdef.Jobs(app.Types()))
+		testIterator(t, "Projector", appdef.Projectors(app.Types()))
 		testFind(t, "Job", appdef.Job, app)
-		testIterator(t, "Role", appdef.Roles(app.Types()))
+		testIterator(t, "Job", appdef.Jobs(app.Types()))
 		testFind(t, "Role", appdef.Role, app)
-		testIterator(t, "Rate", appdef.Rates(app.Types()))
+		testIterator(t, "Role", appdef.Roles(app.Types()))
 		testFind(t, "Rate", appdef.Rate, app)
-		testIterator(t, "Limit", appdef.Limits(app.Types()))
+		testIterator(t, "Rate", appdef.Rates(app.Types()))
 		testFind(t, "Limit", appdef.Limit, app)
+		testIterator(t, "Limit", appdef.Limits(app.Types()))
+
+		qNames := func(names ...[]appdef.QName) appdef.QNames {
+			nn := appdef.QNames{}
+			for _, n := range names {
+				nn.Add(n...)
+			}
+			return nn
+		}
+
+		t.Run("should be ok to find and iterate extensions", func(t *testing.T) {
+			want := qNames(cmdName, qryName, prjName, jobName)
+			for _, n := range want {
+				require.NotNil(appdef.Extension(app.Type, n))
+			}
+			got := appdef.QNames{}
+			for e := range appdef.Extensions(app.Types()) {
+				if !e.IsSystem() {
+					got.Add(e.QName())
+				}
+			}
+			require.Equal(want, got)
+		})
+
+		t.Run("should be ok to find and iterate extensions", func(t *testing.T) {
+			want := qNames(cmdName, qryName)
+			for _, n := range want {
+				require.NotNil(appdef.Function(app.Type, n))
+			}
+			got := appdef.QNames{}
+			for f := range appdef.Functions(app.Types()) {
+				if !f.IsSystem() {
+					got.Add(f.QName())
+				}
+			}
+			require.Equal(want, got)
+		})
+
+		t.Run("should be ok to find and iterate records", func(t *testing.T) {
+			want := qNames(gDocName, gRecName, cDocName, cRecName, wDocName, wRecName, oDocName, oRecName)
+			for _, n := range want {
+				require.NotNil(appdef.Record(app.Type, n))
+			}
+			got := appdef.QNames{}
+			for f := range appdef.Records(app.Types()) {
+				if !f.IsSystem() {
+					got.Add(f.QName())
+				}
+			}
+			require.Equal(want, got)
+		})
+
+		t.Run("should be ok to find and iterate singletons", func(t *testing.T) {
+			want := appdef.QNamesFrom(cDocName[0], wDocName[0])
+			for _, n := range want {
+				require.NotNil(appdef.Singleton(app.Type, n))
+			}
+
+			require.Nil(appdef.Singleton(app.Type, wDocName[1]))
+
+			got := appdef.QNames{}
+			for f := range appdef.Singletons(app.Types()) {
+				if !f.IsSystem() {
+					got.Add(f.QName())
+				}
+			}
+			require.Equal(want, got)
+
+			t.Run("should be ok to break iterate singletons", func(t *testing.T) {
+				cnt := 0
+				for range appdef.Singletons(app.Types()) {
+					cnt++
+					break
+				}
+				require.Equal(1, cnt)
+			})
+		})
+
+		t.Run("should be ok to find and iterate structures", func(t *testing.T) {
+			want := qNames(gDocName, gRecName, cDocName, cRecName, wDocName, wRecName, oDocName, oRecName, objName)
+			for _, n := range want {
+				require.NotNil(appdef.Structure(app.Type, n))
+			}
+			got := appdef.QNames{}
+			for f := range appdef.Structures(app.Types()) {
+				if !f.IsSystem() {
+					got.Add(f.QName())
+				}
+			}
+			require.Equal(want, got)
+		})
 	})
 }
 
