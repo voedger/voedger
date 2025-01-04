@@ -264,13 +264,11 @@ func Test_NewAnonymousData(t *testing.T) {
 			cnt := 0
 			for k, c := range data.Constraints(false) {
 				cnt++
-				switch cnt {
-				case 1:
-					require.Equal(appdef.ConstraintKind_MinLen, k)
+				switch k {
+				case appdef.ConstraintKind_MinLen:
 					require.EqualValues(1, c.Value())
 					require.Equal(`MinLen: 1`, fmt.Sprint(c))
-				case 2:
-					require.Equal(appdef.ConstraintKind_MaxLen, k)
+				case appdef.ConstraintKind_MaxLen:
 					require.EqualValues(100, c.Value())
 					require.Equal(`MaxLen: 100`, fmt.Sprint(c))
 				default:
