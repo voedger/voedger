@@ -13,6 +13,11 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
+// Returns is string is valid field name and error if not
+func ValidFieldName(ident FieldName) (bool, error) {
+	return ValidIdent(ident)
+}
+
 // Returns is field system
 func IsSysField(n FieldName) bool {
 	return strings.HasPrefix(n, SystemPackagePrefix) && // fast check
