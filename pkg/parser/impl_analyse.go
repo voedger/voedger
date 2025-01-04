@@ -498,7 +498,7 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 	if err != nil {
 		c.stmtErr(&limit.RateName.Pos, err)
 	}
-	allowedOps := func(ops appdef.OperationsSet) error {
+	allowedOps := func(ops appdef.OperationsSet) {
 		for _, op := range limit.Actions {
 			if op.Execute && !ops.Contains(appdef.OperationKind_Execute) {
 				c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_EXECUTE))
@@ -519,7 +519,6 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 				c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_DEACTIVATE))
 			}
 		}
-		return nil
 	}
 	if limit.SingleItem != nil {
 		if limit.SingleItem.Command != nil {
