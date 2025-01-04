@@ -12,19 +12,19 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 	"golang.org/x/crypto/acme/autocert"
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/in10n"
-	"github.com/voedger/voedger/pkg/iprocbusmem"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // port == 443 -> httpsService + ACMEService, otherwise -> HTTPService only, ACMEService is nil
-func Provide(rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker, bp *BlobberParams, autocertCache autocert.Cache,
+func Provide(rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, autocertCache autocert.Cache,
 	bus ibus.IBus, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
-	httpServ := getHttpService("HTTP server", coreutils.ServerAddress(rp.Port), rp, aBusTimeout, broker, bp, bus, numsAppsWorkspaces)
+	httpServ := getHttpService("HTTP server", coreutils.ServerAddress(rp.Port), rp, aBusTimeout, broker, blobRequestHandler, bus, numsAppsWorkspaces)
 
 	if coreutils.IsTest() {
 		adminEndpoint = "127.0.0.1:0"
@@ -75,21 +75,19 @@ func Provide(rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroke
 	return httpsService, acmeService, adminSrv
 }
 
-func getHttpService(name string, listenAddress string, rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker, bp *BlobberParams,
+func getHttpService(name string, listenAddress string, rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker,
+	blobRequestHandler blobprocessor.IRequestHandler,
 	bus ibus.IBus, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) *httpService {
 	httpServ := &httpService{
 		RouterParams:       rp,
 		n10n:               broker,
-		BlobberParams:      bp,
 		bus:                bus,
 		busTimeout:         aBusTimeout,
 		numsAppsWorkspaces: numsAppsWorkspaces,
 		listenAddress:      listenAddress,
 		name:               name,
+		blobRequestHandler: blobRequestHandler,
 	}
 
-	if bp != nil {
-		bp.procBus = iprocbusmem.Provide(bp.ServiceChannels)
-	}
 	return httpServ
 }
