@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/btstrp"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/logger"
@@ -769,7 +770,7 @@ func provideRouterAppStoragePtr(astp istorage.IAppStorageProvider) dbcertcache.R
 }
 
 // port 80 -> [0] is http server, port 443 -> [0] is https server, [1] is acme server
-func provideRouterServices(rp router.RouterParams, sendTimeout coreutils.SendTimeout, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, quotas in10n.Quotas,
+func provideRouterServices(rp router.RouterParams, sendTimeout bus.SendTimeout, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, quotas in10n.Quotas,
 	wLimiterFactory blobprocessor.WLimiterFactory, blobStorage BlobStorage,
 	autocertCache autocert.Cache, requestSender bus.IRequestSender, vvmPortSource *VVMPortSource, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) RouterServices {
 	httpSrv, acmeSrv, adminSrv := router.Provide(rp, broker, blobRequestHandler, autocertCache, requestSender, numsAppsWorkspaces)
