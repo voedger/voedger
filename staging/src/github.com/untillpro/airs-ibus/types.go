@@ -128,7 +128,7 @@ type IResultSenderClosable interface {
 	// Close() must be the last call to the interface
 	Close(err error)
 }
-// type RequestHandler func(requestCtx context.Context, sender ISender, request Request)
+type RequestHandler func(requestCtx context.Context, sender ISender, request Request)
 
 type IElementSender interface {
 	Send(data interface{}) error

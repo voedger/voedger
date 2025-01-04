@@ -13,89 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	"github.com/voedger/voedger/pkg/istructs"
 )
-
-var (
-	ErrSendTimeoutExpired = errors.New("send timeout expired")
-	ErrNoConsumer         = errors.New("no consumer for the stream")
-)
-
-const DefaultSendTimeout = SendTimeout(10 * time.Second)
-
-type Request struct {
-	Method      string
-	WSID        istructs.WSID
-	PartitionID istructs.PartitionID
-	Header      map[string][]string `json:",omitempty"`
-	Resource    string
-	Query       map[string][]string `json:",omitempty"`
-	Body        []byte              `json:",omitempty"`
-	AppQName    string
-	Host        string // used by authenticator to emit Host principal
-}
-
-type IResponder interface {
-	// panics if called >1 times
-	InitResponse(ResponseMeta) IResponseSenderCloseable
-}
-
-type IResponseSender interface {
-	// ErrNoConsumer
-	Send(any) error
-}
-
-type IResponseSenderCloseable interface {
-	IResponseSender
-	Close(error)
-}
-
-type ResponseMeta struct {
-	ContentType string
-	StatusCode  int
-}
-
-type IRequestSender interface {
-	// err != nil -> responseMeta does not matter, responseCh and responseErr must be be touched
-	// resultsCh must be read out
-	// *resultErr must be checked only after reading out the resultCh
-	// caller must eventually close clientCtx
-	SendRequest(clientCtx context.Context, req Request) (responseCh <-chan any, responseMeta ResponseMeta, responseErr *error, err error)
-}
-
-type RequestHandler func(requestCtx context.Context, request Request, responder IResponder)
-
-type implIRequestSender struct {
-	timeout        SendTimeout
-	tm             coreutils.ITime
-	requestHandler RequestHandler
-}
-
-type SendTimeout time.Duration
-
-type implIResponseSenderCloseable struct {
-	ch          chan any
-	clientCtx   context.Context
-	sendTimeout SendTimeout
-	tm          coreutils.ITime
-	resultErr   *error
-}
-
-type implIResponder struct {
-	respSender     IResponseSenderCloseable
-	inited         bool
-	responseMetaCh chan ResponseMeta
-}
-
-func NewIRequestSender(tm coreutils.ITime, sendTimeout SendTimeout, requestHandler RequestHandler) IRequestSender {
-	return &implIRequestSender{
-		timeout:        sendTimeout,
-		tm:             tm,
-		requestHandler: requestHandler,
-	}
-}
 
 func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request) (responseCh <-chan any, responseMeta ResponseMeta, responseErr *error, err error) {
 	timeoutChan := rs.tm.NewTimerChan(time.Duration(rs.timeout))

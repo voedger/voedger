@@ -457,7 +457,6 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 type queryWork struct {
 	// input
 	msg IQueryMessage
-	// elemsSender coreutils.IElementsSender
 	appParts appparts.IAppPartitions
 	// work
 	requestData        map[string]interface{}
@@ -478,7 +477,6 @@ type queryWork struct {
 	iWorkspace         appdef.IWorkspace
 	iQuery             appdef.IQuery
 	wsDesc             istructs.IRecord
-	// queryExec         func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error
 	callbackFunc         istructs.ExecQueryCallback
 	responseSenderGetter func() bus.IResponseSender
 }

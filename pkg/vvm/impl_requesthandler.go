@@ -73,60 +73,6 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 	}
 }
 
-// func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
-// 	cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
-// 	cpAmount istructs.NumCommandProcessors, vvmApps VVMApps) ibus.IBus {
-// 	return ibusmem.Provide(func(requestCtx context.Context, replier coreutils.IReplier, request bus.Request) {
-// 		// Handling Command/Query messages
-// 		// router -> SendRequest2(ctx, ...) -> requestHandler(ctx, ... ) - it is that context. If connection gracefully closed the that ctx is Done()
-// 		// so we need to forward that context
-
-// 		if len(request.Resource) <= ShortestPossibleFunctionNameLen {
-// 			bus.ReplyBadRequest(replier, "wrong function name: "+request.Resource)
-// 			return
-// 		}
-// 		funcQName, err := appdef.ParseQName(request.Resource[2:])
-// 		if err != nil {
-// 			bus.ReplyBadRequest(replier, "wrong function name: "+request.Resource)
-// 			return
-// 		}
-// 		if logger.IsVerbose() {
-// 			// FIXME: eliminate this. Unlogged params are logged
-// 			logger.Verbose("request body:\n", string(request.Body))
-// 		}
-
-// 		appQName, err := appdef.ParseAppQName(request.AppQName)
-// 		if err != nil {
-// 			// protected by router already
-// 			bus.ReplyBadRequest(replier, fmt.Sprintf("failed to parse app qualified name %s: %s", request.AppQName, err.Error()))
-// 			return
-// 		}
-// 		if !vvmApps.Exists(appQName) {
-// 			bus.ReplyBadRequest(replier, "unknown app "+request.AppQName)
-// 			return
-// 		}
-
-// 		token, err := getPrincipalToken(request)
-// 		if err != nil {
-// 			bus.ReplyAccessDeniedUnauthorized(replier, err.Error())
-// 			return
-// 		}
-
-// 		partitionID, err := appParts.AppWorkspacePartitionID(appQName, request.WSID)
-// 		if err != nil {
-// 			if errors.Is(err, appparts.ErrNotFound) {
-// 				bus.ReplyErrf(replier, http.StatusServiceUnavailable, fmt.Sprintf("app %s is not deployed", appQName))
-// 				return
-// 			}
-// 			// notest
-// 			bus.ReplyInternalServerError(replier, "failed to compute the partition number", err)
-// 			return
-// 		}
-
-// 		deliverToProcessors(request, requestCtx, appQName, replier, funcQName, procbus, token, cpchIdx, qpcgIdx, cpAmount, partitionID)
-// 	})
-// }
-
 func deliverToProcessors(request bus.Request, requestCtx context.Context, appQName appdef.AppQName, responder bus.IResponder, funcQName appdef.QName,
 	procbus iprocbus.IProcBus, token string, cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
 	cpCount istructs.NumCommandProcessors, partitionID istructs.PartitionID) {
