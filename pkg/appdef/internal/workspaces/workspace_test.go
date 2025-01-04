@@ -127,6 +127,15 @@ func Test_WorkspacesPanics(t *testing.T) {
 	require := require.New(t)
 
 	t.Run("should be panics", func(t *testing.T) {
+		t.Run("if type from other package added to workspace", func(t *testing.T) {
+			adb := builder.New()
+			adb.AddPackage("test", "test.com/test")
+			adb.AddPackage("other", "test.com/other")
+			ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+			require.Panics(func() { _ = ws.AddObject(appdef.NewQName("other", "doc")) },
+				require.Is(appdef.ErrInvalidError), require.HasAll("other.doc", "same package", "test.workspace"))
+		})
+
 		t.Run("if unknown descriptor assigned to workspace", func(t *testing.T) {
 			adb := builder.New()
 			adb.AddPackage("test", "test.com/test")
