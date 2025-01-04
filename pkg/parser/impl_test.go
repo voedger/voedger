@@ -2394,14 +2394,22 @@ func Test_RatesAndLimits(t *testing.T) {
 			);
 			RATE r 1 PER HOUR;
 			LIMIT l2 ON COMMAND c WITH RATE r;
+			LIMIT l2_1 EXECUTE ON COMMAND c WITH RATE r;
 			LIMIT l3 ON QUERY q WITH RATE r;
+			LIMIT l3_1 EXECUTE ON QUERY q WITH RATE r;
 			LIMIT l4 ON VIEW v WITH RATE r;
+			LIMIT l4_1 SELECT ON VIEW v WITH RATE r;
 			LIMIT l5 ON TABLE t WITH RATE r;
+			LIMIT l5_1 SELECT,INSERT,UPDATE,DEACTIVATE,ACTIVATE ON TABLE t WITH RATE r;
 
 			LIMIT l20 ON ALL COMMANDS WITH TAG tag WITH RATE r;
+			LIMIT l20_1 EXECUTE ON ALL COMMANDS WITH TAG tag WITH RATE r;
 			LIMIT l21 ON ALL QUERIES WITH TAG tag WITH RATE r;
+			LIMIT l21_1 EXECUTE ON ALL QUERIES WITH TAG tag WITH RATE r;
 			LIMIT l22 ON ALL VIEWS WITH TAG tag WITH RATE r;
+			LIMIT l22_1 SELECT ON ALL VIEWS WITH TAG tag WITH RATE r;
 			LIMIT l23 ON ALL TABLES WITH TAG tag WITH RATE r;
+			LIMIT l23_1 SELECT,INSERT,UPDATE,DEACTIVATE,ACTIVATE ON ALL TABLES WITH TAG tag WITH RATE r;
 			LIMIT l24 ON ALL WITH TAG tag WITH RATE r;
 			
 			LIMIT l25 ON ALL COMMANDS WITH RATE r;
@@ -2411,9 +2419,13 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l29 ON ALL WITH RATE r;
 
 			LIMIT l30 ON EACH COMMAND WITH TAG tag WITH RATE r;
+			LIMIT l30_1 EXECUTE ON EACH COMMAND WITH TAG tag WITH RATE r;
 			LIMIT l31 ON EACH QUERY WITH TAG tag WITH RATE r;
+			LIMIT l31_1 EXECUTE ON EACH QUERY WITH TAG tag WITH RATE r;
 			LIMIT l32 ON EACH VIEW WITH TAG tag WITH RATE r;
+			LIMIT l32_1 SELECT ON EACH VIEW WITH TAG tag WITH RATE r;
 			LIMIT l33 ON EACH TABLE WITH TAG tag WITH RATE r;
+			LIMIT l33_1 SELECT,INSERT,UPDATE,DEACTIVATE,ACTIVATE ON EACH TABLE WITH TAG tag WITH RATE r;
 			LIMIT l34 ON EACH WITH TAG tag WITH RATE r;
 
 			LIMIT l35 ON EACH COMMAND WITH RATE r;
@@ -2422,6 +2434,52 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l38 ON EACH TABLE WITH RATE r;
 			LIMIT l39 ON EACH WITH RATE r;
 		);`)
+	})
+
+	t.Run("not allowed operations", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION app1();
+		WORKSPACE w (
+			TABLE t INHERITS sys.CDoc();
+			TAG tag;
+			VIEW v(
+				f1 int,	f2 int, PRIMARY KEY((f1),f2)
+			) AS RESULT OF p;
+
+			EXTENSION ENGINE BUILTIN (
+				PROJECTOR p AFTER EXECUTE ON c INTENTS (sys.View(v));
+				COMMAND c();
+				QUERY q() RETURNS void;
+			);
+			RATE r 1 PER HOUR;
+			LIMIT l2 INSERT ON COMMAND c WITH RATE r;
+			LIMIT l3 UPDATE ON QUERY q WITH RATE r;
+			LIMIT l4 ACTIVATE,DEACTIVATE ON VIEW v WITH RATE r;
+			LIMIT l5 EXECUTE ON TABLE t WITH RATE r;
+
+			LIMIT l20 INSERT ON ALL COMMANDS WITH RATE r;
+			LIMIT l21 UPDATE ON ALL QUERIES WITH RATE r;
+			LIMIT l22 ACTIVATE ON ALL VIEWS WITH RATE r;
+			LIMIT l23 EXECUTE ON ALL TABLES WITH RATE r;
+			
+			LIMIT l35 INSERT ON EACH COMMAND WITH RATE r;
+			LIMIT l36 UPDATE ON EACH QUERY WITH RATE r;
+			LIMIT l37 ACTIVATE ON EACH VIEW WITH RATE r;
+			LIMIT l38 EXECUTE ON EACH TABLE WITH RATE r;
+			LIMIT l39 SELECT ON EACH QUERY WITH RATE r;
+		);`, "file.vsql:15:13: operation INSERT not allowed",
+			"file.vsql:16:13: operation UPDATE not allowed",
+			"file.vsql:17:13: operation ACTIVATE not allowed",
+			"file.vsql:17:22: operation DEACTIVATE not allowed",
+			"file.vsql:18:13: operation EXECUTE not allowed",
+			"file.vsql:20:14: operation INSERT not allowed",
+			"file.vsql:21:14: operation UPDATE not allowed",
+			"file.vsql:22:14: operation ACTIVATE not allowed",
+			"file.vsql:23:14: operation EXECUTE not allowed",
+			"file.vsql:25:14: operation INSERT not allowed",
+			"file.vsql:26:14: operation UPDATE not allowed",
+			"file.vsql:27:14: operation ACTIVATE not allowed",
+			"file.vsql:28:14: operation EXECUTE not allowed",
+			"file.vsql:29:14: operation SELECT not allowed")
 	})
 
 	t.Run("undefined statements", func(t *testing.T) {

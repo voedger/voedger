@@ -501,22 +501,22 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 	allowedOps := func(ops appdef.OperationsSet) error {
 		for _, op := range limit.Actions {
 			if op.Execute && !ops.Contains(appdef.OperationKind_Execute) {
-				return ErrLimitOperationNotAllowed(OP_EXECUTE)
+				c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_EXECUTE))
 			}
 			if op.Insert && !ops.Contains(appdef.OperationKind_Insert) {
-				return ErrLimitOperationNotAllowed(OP_INSERT)
+				c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_INSERT))
 			}
 			if op.Update && !ops.Contains(appdef.OperationKind_Update) {
-				return ErrLimitOperationNotAllowed(OP_UPDATE)
+				c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_UPDATE))
 			}
 			if op.Select && !ops.Contains(appdef.OperationKind_Select) {
-				return ErrLimitOperationNotAllowed(OP_SELECT)
+				c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_SELECT))
 			}
 			if op.Activate && !ops.Contains(appdef.OperationKind_Activate) {
-				return ErrLimitOperationNotAllowed(OP_ACTIVATE)
+				c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_ACTIVATE))
 			}
 			if op.Deactivate && !ops.Contains(appdef.OperationKind_Deactivate) {
-				return ErrLimitOperationNotAllowed(OP_DEACTIVATE)
+				c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_DEACTIVATE))
 			}
 		}
 		return nil
@@ -561,6 +561,15 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 	}
 
 	if limit.AllItems != nil {
+		if limit.AllItems.Commands {
+			allowedOps(set.From(appdef.OperationKind_Execute))
+		} else if limit.AllItems.Queries {
+			allowedOps(set.From(appdef.OperationKind_Execute))
+		} else if limit.AllItems.Views {
+			allowedOps(set.From(appdef.OperationKind_Select))
+		} else if limit.AllItems.Tables {
+			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate))
+		}
 		if limit.AllItems.WithTag != nil {
 			if err = resolveInCtx(*limit.AllItems.WithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error {
 				limit.AllItems.WithTag.qName = schema.NewQName(t.Name)
@@ -572,6 +581,15 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 	}
 
 	if limit.EachItem != nil {
+		if limit.EachItem.Commands {
+			allowedOps(set.From(appdef.OperationKind_Execute))
+		} else if limit.EachItem.Queries {
+			allowedOps(set.From(appdef.OperationKind_Execute))
+		} else if limit.EachItem.Views {
+			allowedOps(set.From(appdef.OperationKind_Select))
+		} else if limit.EachItem.Tables {
+			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate))
+		}
 		if limit.EachItem.WithTag != nil {
 			if err = resolveInCtx(*limit.EachItem.WithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error {
 				limit.EachItem.WithTag.qName = schema.NewQName(t.Name)
