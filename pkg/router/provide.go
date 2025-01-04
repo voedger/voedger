@@ -10,8 +10,8 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/coreutils/bus"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 	"golang.org/x/crypto/acme/autocert"
 

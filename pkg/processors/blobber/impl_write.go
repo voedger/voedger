@@ -12,8 +12,8 @@ import (
 	"mime"
 	"net/http"
 
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -74,7 +74,7 @@ func setBLOBStatusCompleted(ctx context.Context, work pipeline.IWorkpiece) (err 
 		return fmt.Errorf("failed to exec c.sys.CUD: %w", err)
 	}
 	if cudWDocBLOBUpdateMeta.StatusCode != http.StatusOK {
-		return coreutils.NewHTTPErrorf(cudWDocBLOBUpdateMeta.StatusCode, "c.sys.CUD returned error: ", string(cudWDocBLOBUpdateResp.SysError.Data))
+		return coreutils.NewHTTPErrorf(cudWDocBLOBUpdateMeta.StatusCode, "c.sys.CUD returned error: ", cudWDocBLOBUpdateResp.SysError.Data)
 	}
 	return nil
 }

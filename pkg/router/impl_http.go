@@ -19,7 +19,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils/bus"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/net/netutil"
 

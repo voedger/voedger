@@ -16,7 +16,7 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils/bus"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"

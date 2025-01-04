@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/voedger/voedger/pkg/coreutils/bus"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"golang.org/x/exp/maps"

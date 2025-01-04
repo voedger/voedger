@@ -20,7 +20,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/coreutils/bus"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -456,27 +456,27 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 
 type queryWork struct {
 	// input
-	msg IQueryMessage
+	msg      IQueryMessage
 	appParts appparts.IAppPartitions
 	// work
-	requestData        map[string]interface{}
-	state              state.IHostState
-	queryParams        IQueryParams
-	appPart            appparts.IAppPartition
-	appStructs         istructs.IAppStructs
-	resultType         appdef.IType
-	execQueryArgs      istructs.ExecQueryArgs
-	maxPrepareQueries  int
-	rowsProcessor      pipeline.IAsyncPipeline
-	rowsProcessorErrCh chan error // will contain the first error from rowProcessor if any. The rest of errors in rowsProcessor will be just logged
-	metrics            IMetrics
-	principals         []iauthnz.Principal
-	principalPayload   payloads.PrincipalPayload
-	roles              []appdef.QName
-	secretReader       isecrets.ISecretReader
-	iWorkspace         appdef.IWorkspace
-	iQuery             appdef.IQuery
-	wsDesc             istructs.IRecord
+	requestData          map[string]interface{}
+	state                state.IHostState
+	queryParams          IQueryParams
+	appPart              appparts.IAppPartition
+	appStructs           istructs.IAppStructs
+	resultType           appdef.IType
+	execQueryArgs        istructs.ExecQueryArgs
+	maxPrepareQueries    int
+	rowsProcessor        pipeline.IAsyncPipeline
+	rowsProcessorErrCh   chan error // will contain the first error from rowProcessor if any. The rest of errors in rowsProcessor will be just logged
+	metrics              IMetrics
+	principals           []iauthnz.Principal
+	principalPayload     payloads.PrincipalPayload
+	roles                []appdef.QName
+	secretReader         isecrets.ISecretReader
+	iWorkspace           appdef.IWorkspace
+	iQuery               appdef.IQuery
+	wsDesc               istructs.IRecord
 	callbackFunc         istructs.ExecQueryCallback
 	responseSenderGetter func() bus.IResponseSender
 }
