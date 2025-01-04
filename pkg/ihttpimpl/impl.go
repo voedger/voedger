@@ -23,6 +23,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/exp/slices"
@@ -35,7 +36,7 @@ import (
 
 type appInfo struct {
 	numPartitions istructs.NumAppPartitions
-	handlers      map[istructs.PartitionID]coreutils.RequestHandler
+	handlers      map[istructs.PartitionID]bus.RequestHandler
 }
 
 type httpProcessor struct {
@@ -51,7 +52,7 @@ type httpProcessor struct {
 	certManager        *autocert.Manager
 	apps               map[appdef.AppQName]*appInfo
 	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces
-	requestSender      coreutils.IRequestSender
+	requestSender      bus.IRequestSender
 }
 
 type redirectionRoute struct {
@@ -156,7 +157,7 @@ func (p *httpProcessor) DeployStaticContent(resource string, fs fs.FS) {
 	p.router.addStaticContent(resource, fs)
 }
 
-func (p *httpProcessor) DeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID, appPartitionRequestHandler coreutils.RequestHandler) error {
+func (p *httpProcessor) DeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID, appPartitionRequestHandler bus.RequestHandler) error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -178,7 +179,7 @@ func (p *httpProcessor) UndeployAppPartition(app appdef.AppQName, partNo istruct
 	return nil
 }
 
-func (p *httpProcessor) getAppPartHandler(appQName appdef.AppQName, partNo istructs.PartitionID) (coreutils.RequestHandler, error) {
+func (p *httpProcessor) getAppPartHandler(appQName appdef.AppQName, partNo istructs.PartitionID) (bus.RequestHandler, error) {
 	app, ok := p.apps[appQName]
 	if !ok {
 		return nil, ErrAppIsNotDeployed
@@ -202,7 +203,7 @@ func (p *httpProcessor) DeployApp(app appdef.AppQName, numPartitions istructs.Nu
 	}
 	p.apps[app] = &appInfo{
 		numPartitions: numPartitions,
-		handlers:      make(map[istructs.PartitionID]coreutils.RequestHandler),
+		handlers:      make(map[istructs.PartitionID]bus.RequestHandler),
 	}
 	p.numsAppsWorkspaces[app] = numAppWS
 	return nil
@@ -266,21 +267,21 @@ func (p *httpProcessor) httpHandler() http.HandlerFunc {
 	}
 }
 
-func (p *httpProcessor) requestHandler(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+func (p *httpProcessor) requestHandler(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 	appQName, err := appdef.ParseAppQName(request.AppQName)
 	if err != nil {
-		coreutils.ReplyBadRequest(responder, err.Error())
+		bus.ReplyBadRequest(responder, err.Error())
 		return
 	}
 	app, ok := p.apps[appQName]
 	if !ok {
-		coreutils.ReplyBadRequest(responder, ErrAppIsNotDeployed.Error())
+		bus.ReplyBadRequest(responder, ErrAppIsNotDeployed.Error())
 		return
 	}
 	partNo := coreutils.AppPartitionID(request.WSID, app.numPartitions)
 	handler, err := p.getAppPartHandler(appQName, partNo)
 	if err != nil {
-		coreutils.ReplyBadRequest(responder, err.Error())
+		bus.ReplyBadRequest(responder, err.Error())
 		return
 	}
 	handler(requestCtx, request, responder)

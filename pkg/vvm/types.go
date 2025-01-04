@@ -12,6 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -133,7 +134,7 @@ type VVMConfig struct {
 	Routes                     map[string]string
 	RoutesRewrite              map[string]string
 	RouteDomains               map[string]string
-	SendTimeout                coreutils.SendTimeout
+	SendTimeout                bus.SendTimeout
 	StorageFactory             func() (provider istorage.IAppStorageFactory, err error)
 	BLOBMaxSize                iblobstorage.BLOBMaxSizeType
 	Name                       processors.VVMName

@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/isecretsimpl"
@@ -266,10 +267,10 @@ func TestWrongTypes(t *testing.T) {
 	sysToken := getSystemToken(appTokens)
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			requestSender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+			requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 				serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, responder, []byte(test.body), qNameFunction, "", sysToken)
 			})
-			respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), coreutils.Request{})
+			respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 			require.NoError(err)
 			require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
 			require.Equal(http.StatusBadRequest, respMeta.StatusCode)

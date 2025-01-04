@@ -20,6 +20,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -39,7 +40,7 @@ import (
 )
 
 func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state istructs.IState, params IQueryParams,
-	resultMeta appdef.IType, responder coreutils.IResponder, metrics IMetrics, errCh chan<- error) (rowsProcessor pipeline.IAsyncPipeline, iResponseSenderGetter func() coreutils.IResponseSender) {
+	resultMeta appdef.IType, responder bus.IResponder, metrics IMetrics, errCh chan<- error) (rowsProcessor pipeline.IAsyncPipeline, iResponseSenderGetter func() bus.IResponseSender) {
 	operators := make([]*pipeline.WiredOperator, 0)
 	if resultMeta == nil {
 		// happens when the query has no result, e.g. q.air.UpdateSubscriptionDetails
@@ -89,7 +90,7 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 		errCh:     errCh,
 	}
 	operators = append(operators, pipeline.WireAsyncOperator("Send to bus", sendToBusOp))
-	return pipeline.NewAsyncPipeline(ctx, "Rows processor", operators[0], operators[1:]...), func() coreutils.IResponseSender {
+	return pipeline.NewAsyncPipeline(ctx, "Rows processor", operators[0], operators[1:]...), func() bus.IResponseSender {
 		return sendToBusOp.sender
 	}
 }
@@ -141,20 +142,20 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					default:
 					}
 					err = coreutils.WrapSysError(err, http.StatusInternalServerError)
-					var senderCloseable coreutils.IResponseSenderCloseable
+					var senderCloseable bus.IResponseSenderCloseable
 					statusCode := http.StatusOK
 					if err != nil {
 						statusCode = err.(coreutils.SysError).HTTPStatus
 					}
 					if qwork.responseSenderGetter == nil || qwork.responseSenderGetter() == nil {
 						// have an error before 200ok is sent -> send the status from the actual error
-						senderCloseable = msg.Responder().InitResponse(coreutils.ResponseMeta{
+						senderCloseable = msg.Responder().InitResponse(bus.ResponseMeta{
 							ContentType: coreutils.ApplicationJSON,
 							StatusCode:  statusCode,
 						})
 					} else {
 						sender := qwork.responseSenderGetter()
-						senderCloseable = sender.(coreutils.IResponseSenderCloseable)
+						senderCloseable = sender.(bus.IResponseSenderCloseable)
 					}
 					senderCloseable.Close(err)
 				}()
@@ -479,7 +480,7 @@ type queryWork struct {
 	wsDesc             istructs.IRecord
 	// queryExec         func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error
 	callbackFunc         istructs.ExecQueryCallback
-	responseSenderGetter func() coreutils.IResponseSender
+	responseSenderGetter func() bus.IResponseSender
 }
 
 func roleNotFound(err error) bool {
@@ -559,7 +560,7 @@ type queryMessage struct {
 	appQName   appdef.AppQName
 	wsid       istructs.WSID
 	partition  istructs.PartitionID
-	responder  coreutils.IResponder
+	responder  bus.IResponder
 	body       []byte
 	qName      appdef.QName
 	host       string
@@ -568,7 +569,7 @@ type queryMessage struct {
 
 func (m queryMessage) AppQName() appdef.AppQName { return m.appQName }
 func (m queryMessage) WSID() istructs.WSID       { return m.wsid }
-func (m queryMessage) Responder() coreutils.IResponder {
+func (m queryMessage) Responder() bus.IResponder {
 	return m.responder
 }
 func (m queryMessage) RequestCtx() context.Context     { return m.requestCtx }
@@ -584,7 +585,7 @@ func (m queryMessage) Body() []byte {
 }
 
 func NewQueryMessage(requestCtx context.Context, appQName appdef.AppQName, partID istructs.PartitionID, wsid istructs.WSID,
-	responder coreutils.IResponder, body []byte, qName appdef.QName, host string, token string) IQueryMessage {
+	responder bus.IResponder, body []byte, qName appdef.QName, host string, token string) IQueryMessage {
 	return queryMessage{
 		appQName:   appQName,
 		wsid:       wsid,

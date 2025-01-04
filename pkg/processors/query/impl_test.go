@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iextengine"
@@ -142,7 +143,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	result := ""
 
 	rowsProcessorErrCh := make(chan error, 1)
-	requestSender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+	requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go func() {
 			// SendToBus op will send to the respCh chan so let's handle in a separate goroutine
 			processor, senderGetter := ProvideRowsProcessorFactory()(context.Background(), appDef, s, params,
@@ -153,10 +154,10 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 			require.NoError(processor.SendAsync(work(2, "Amaretto", 20)))
 			require.NoError(processor.SendAsync(work(4, "Cake", 40)))
 			processor.Close()
-			senderGetter().(coreutils.IResponseSenderCloseable).Close(nil)
+			senderGetter().(bus.IResponseSenderCloseable).Close(nil)
 		}()
 	})
-	responseCh, respMeta, responseErr, err := requestSender.SendRequest(context.Background(), coreutils.Request{})
+	responseCh, respMeta, responseErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 	require.NoError(err)
 	require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
 	require.Equal(http.StatusOK, respMeta.StatusCode)
@@ -398,10 +399,10 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 		wg.Done()
 	}()
 	systemToken := getSystemToken(appTokens)
-	requestSender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+	requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, responder, body, qNameFunction, "127.0.0.1", systemToken)
 	})
-	respCh, respMeta, respErr, err := requestSender.SendRequest(processorCtx, coreutils.Request{})
+	respCh, respMeta, respErr, err := requestSender.SendRequest(processorCtx, bus.Request{})
 	require.NoError(err)
 	require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
 	require.Equal(http.StatusOK, respMeta.StatusCode)
@@ -453,7 +454,7 @@ func TestRawMode(t *testing.T) {
 
 	result := ""
 	rowsProcessorErrCh := make(chan error, 1)
-	requestSender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+	requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go func() {
 			// SendToBus op will send to the respCh chan so let's handle in a separate goroutine
 			processor, senderGetter := ProvideRowsProcessorFactory()(context.Background(), appDef, &mockState{},
@@ -471,11 +472,11 @@ func TestRawMode(t *testing.T) {
 				},
 			}))
 			processor.Close()
-			senderGetter().(coreutils.IResponseSenderCloseable).Close(nil)
+			senderGetter().(bus.IResponseSenderCloseable).Close(nil)
 		}()
 	})
 
-	responseCh, respMeta, responseErr, err := requestSender.SendRequest(context.Background(), coreutils.Request{})
+	responseCh, respMeta, responseErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 	require.NoError(err)
 	require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
 	require.Equal(http.StatusOK, respMeta.StatusCode)
@@ -1175,13 +1176,13 @@ func TestRateLimiter(t *testing.T) {
 		"args":{},
 		"elements":[{"path":"","fields":["fld"]}]
 	}`)
-	requestSender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+	requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, responder, body, qName, "127.0.0.1", systemToken)
 	})
 
 	// execute query
 	for i := 0; i < 3; i++ {
-		respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), coreutils.Request{})
+		respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 		require.NoError(err)
 		require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
 
@@ -1219,10 +1220,10 @@ func TestAuthnz(t *testing.T) {
 	go queryProcessor.Run(context.Background())
 
 	t.Run("no token for a query that requires authorization -> 403 unauthorized", func(t *testing.T) {
-		requestSender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+		requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 			serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, responder, body, qNameFunction, "127.0.0.1", "")
 		})
-		respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), coreutils.Request{})
+		respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 
 		require.NoError(err)
 		require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
@@ -1238,10 +1239,10 @@ func TestAuthnz(t *testing.T) {
 		systemToken := getSystemToken(appTokens)
 		// make the token be expired
 		coreutils.MockTime.Add(2 * time.Minute)
-		requestSender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+		requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 			serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, responder, body, qNameFunction, "127.0.0.1", systemToken)
 		})
-		respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), coreutils.Request{})
+		respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 		require.NoError(err)
 		require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
 		require.Equal(http.StatusUnauthorized, respMeta.StatusCode)
@@ -1254,10 +1255,10 @@ func TestAuthnz(t *testing.T) {
 
 	t.Run("token provided, query a denied func -> 403 forbidden", func(t *testing.T) {
 		token := getTestToken(appTokens, wsID)
-		requestSender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+		requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 			serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, responder, body, qNameQryDenied, "127.0.0.1", token)
 		})
-		respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), coreutils.Request{})
+		respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 		require.NoError(err)
 		require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
 		require.Equal(http.StatusForbidden, respMeta.StatusCode)

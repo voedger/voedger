@@ -24,31 +24,6 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-// TODO: CP should send CommandResponse struct itself, not CommandResponse marshaled to a string
-func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req Request) (cmdRespMeta ResponseMeta, cmdResp CommandResponse, err error) {
-	responseCh, responseMeta, responseErr, err := requestSender.SendRequest(ctx, req)
-	if err != nil {
-		return cmdRespMeta, cmdResp, err
-	}
-	body := ""
-	for elem := range responseCh {
-		if len(body) > 0 {
-			// notest
-			panic(fmt.Sprintf("unexpected response element: %v", elem))
-		}
-		body = elem.(string)
-	}
-	if *responseErr != nil {
-		cmdResp.SysError = WrapSysErrorToExact(*responseErr, http.StatusInternalServerError)
-		return responseMeta, cmdResp, nil
-	}
-	if err = json.Unmarshal([]byte(body), &cmdResp); err != nil {
-		// notest
-		panic(err)
-	}
-	return responseMeta, cmdResp, nil
-}
-
 func NewHTTPErrorf(httpStatus int, args ...interface{}) SysError {
 	return SysError{
 		HTTPStatus: httpStatus,
@@ -58,63 +33,6 @@ func NewHTTPErrorf(httpStatus int, args ...interface{}) SysError {
 
 func NewHTTPError(httpStatus int, err error) SysError {
 	return NewHTTPErrorf(httpStatus, err.Error())
-}
-
-func ReplyPlainText(responder IResponder, text string) {
-	sender := responder.InitResponse(ResponseMeta{ContentType: TextPlain, StatusCode: http.StatusOK})
-	if err := sender.Send(text); err != nil {
-		logger.Error(err.Error() + ": failed to send response: " + text)
-	}
-	sender.Close(nil)
-}
-
-func ReplyErrf(responder IResponder, status int, args ...interface{}) {
-	ReplyErrDef(responder, NewHTTPErrorf(status, args...), http.StatusInternalServerError)
-}
-
-//nolint:errorlint
-func ReplyErrDef(responder IResponder, err error, defaultStatusCode int) {
-	res := WrapSysError(err, defaultStatusCode).(SysError)
-	sender := responder.InitResponse(ResponseMeta{ApplicationJSON, res.HTTPStatus})
-	sender.Close(res)
-}
-
-func ReplyErr(responder IResponder, err error) {
-	ReplyErrDef(responder, err, http.StatusInternalServerError)
-}
-
-func ReplyJSON(responder IResponder, httpCode int, obj any) {
-	sender := responder.InitResponse(ResponseMeta{ContentType: ApplicationJSON, StatusCode: httpCode})
-	_ = sender.Send(obj)
-	sender.Close(nil)
-}
-
-func ReplyBadRequest(responder IResponder, message string) {
-	ReplyErrf(responder, http.StatusBadRequest, message)
-}
-
-func replyAccessDenied(responder IResponder, code int, message string) {
-	msg := "access denied"
-	if len(message) > 0 {
-		msg += ": " + message
-	}
-	ReplyErrf(responder, code, msg)
-}
-
-func ReplyAccessDeniedUnauthorized(responder IResponder, message string) {
-	replyAccessDenied(responder, http.StatusUnauthorized, message)
-}
-
-func ReplyAccessDeniedForbidden(responder IResponder, message string) {
-	replyAccessDenied(responder, http.StatusForbidden, message)
-}
-
-func ReplyUnauthorized(responder IResponder, message string) {
-	ReplyErrf(responder, http.StatusUnauthorized, message)
-}
-
-func ReplyInternalServerError(responder IResponder, message string, err error) {
-	ReplyErrf(responder, http.StatusInternalServerError, message, ": ", err)
 }
 
 // WithResponseHandler, WithLongPolling and WithDiscardResponse are mutual exclusive

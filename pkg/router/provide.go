@@ -11,6 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 	"golang.org/x/crypto/acme/autocert"
 
@@ -20,7 +21,7 @@ import (
 
 // port == 443 -> httpsService + ACMEService, otherwise -> HTTPService only, ACMEService is nil
 func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, autocertCache autocert.Cache,
-	requestSender coreutils.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
+	requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
 	httpServ := getHttpService("HTTP server", coreutils.ServerAddress(rp.Port), rp, broker, blobRequestHandler,
 		requestSender, numsAppsWorkspaces)
 
@@ -74,7 +75,7 @@ func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobp
 }
 
 func getHttpService(name string, listenAddress string, rp RouterParams, broker in10n.IN10nBroker,
-	blobRequestHandler blobprocessor.IRequestHandler, requestSender coreutils.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) *httpService {
+	blobRequestHandler blobprocessor.IRequestHandler, requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) *httpService {
 	httpServ := &httpService{
 		RouterParams:       rp,
 		n10n:               broker,

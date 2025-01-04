@@ -10,7 +10,7 @@ import (
 	"io/fs"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/iservices"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -46,7 +46,7 @@ type IHTTPProcessor interface {
 	//--	SetAppPartitionsNumber(app appdef.AppQName, partNo istructs.PartitionID, numPartitions istructs.PartitionID) (err error)
 
 	// ErrUnknownApplication
-	DeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID, appPartitionRequestHandler coreutils.RequestHandler) (err error)
+	DeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID, appPartitionRequestHandler bus.RequestHandler) (err error)
 	// ErrUnknownAppPartition
 	//--	UndeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID) (err error)
 

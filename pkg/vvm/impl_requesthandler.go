@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -24,15 +25,15 @@ import (
 
 func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 	cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
-	cpAmount istructs.NumCommandProcessors, vvmApps VVMApps) coreutils.RequestHandler {
-	return func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+	cpAmount istructs.NumCommandProcessors, vvmApps VVMApps) bus.RequestHandler {
+	return func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		if len(request.Resource) <= ShortestPossibleFunctionNameLen {
-			coreutils.ReplyBadRequest(responder, "wrong function name: "+request.Resource)
+			bus.ReplyBadRequest(responder, "wrong function name: "+request.Resource)
 			return
 		}
 		funcQName, err := appdef.ParseQName(request.Resource[2:])
 		if err != nil {
-			coreutils.ReplyBadRequest(responder, "wrong function name: "+request.Resource)
+			bus.ReplyBadRequest(responder, "wrong function name: "+request.Resource)
 			return
 		}
 		if logger.IsVerbose() {
@@ -43,28 +44,28 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 		appQName, err := appdef.ParseAppQName(request.AppQName)
 		if err != nil {
 			// protected by router already
-			coreutils.ReplyBadRequest(responder, fmt.Sprintf("failed to parse app qualified name %s: %s", request.AppQName, err.Error()))
+			bus.ReplyBadRequest(responder, fmt.Sprintf("failed to parse app qualified name %s: %s", request.AppQName, err.Error()))
 			return
 		}
 		if !vvmApps.Exists(appQName) {
-			coreutils.ReplyBadRequest(responder, "unknown app "+request.AppQName)
+			bus.ReplyBadRequest(responder, "unknown app "+request.AppQName)
 			return
 		}
 
 		token, err := getPrincipalToken(request)
 		if err != nil {
-			coreutils.ReplyAccessDeniedUnauthorized(responder, err.Error())
+			bus.ReplyAccessDeniedUnauthorized(responder, err.Error())
 			return
 		}
 
 		partitionID, err := appParts.AppWorkspacePartitionID(appQName, request.WSID)
 		if err != nil {
 			if errors.Is(err, appparts.ErrNotFound) {
-				coreutils.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("app %s is not deployed", appQName))
+				bus.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("app %s is not deployed", appQName))
 				return
 			}
 			// notest
-			coreutils.ReplyInternalServerError(responder, "failed to compute the partition number", err)
+			bus.ReplyInternalServerError(responder, "failed to compute the partition number", err)
 			return
 		}
 
@@ -75,18 +76,18 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 // func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 // 	cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
 // 	cpAmount istructs.NumCommandProcessors, vvmApps VVMApps) ibus.IBus {
-// 	return ibusmem.Provide(func(requestCtx context.Context, replier coreutils.IReplier, request coreutils.Request) {
+// 	return ibusmem.Provide(func(requestCtx context.Context, replier coreutils.IReplier, request bus.Request) {
 // 		// Handling Command/Query messages
 // 		// router -> SendRequest2(ctx, ...) -> requestHandler(ctx, ... ) - it is that context. If connection gracefully closed the that ctx is Done()
 // 		// so we need to forward that context
 
 // 		if len(request.Resource) <= ShortestPossibleFunctionNameLen {
-// 			coreutils.ReplyBadRequest(replier, "wrong function name: "+request.Resource)
+// 			bus.ReplyBadRequest(replier, "wrong function name: "+request.Resource)
 // 			return
 // 		}
 // 		funcQName, err := appdef.ParseQName(request.Resource[2:])
 // 		if err != nil {
-// 			coreutils.ReplyBadRequest(replier, "wrong function name: "+request.Resource)
+// 			bus.ReplyBadRequest(replier, "wrong function name: "+request.Resource)
 // 			return
 // 		}
 // 		if logger.IsVerbose() {
@@ -97,28 +98,28 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 // 		appQName, err := appdef.ParseAppQName(request.AppQName)
 // 		if err != nil {
 // 			// protected by router already
-// 			coreutils.ReplyBadRequest(replier, fmt.Sprintf("failed to parse app qualified name %s: %s", request.AppQName, err.Error()))
+// 			bus.ReplyBadRequest(replier, fmt.Sprintf("failed to parse app qualified name %s: %s", request.AppQName, err.Error()))
 // 			return
 // 		}
 // 		if !vvmApps.Exists(appQName) {
-// 			coreutils.ReplyBadRequest(replier, "unknown app "+request.AppQName)
+// 			bus.ReplyBadRequest(replier, "unknown app "+request.AppQName)
 // 			return
 // 		}
 
 // 		token, err := getPrincipalToken(request)
 // 		if err != nil {
-// 			coreutils.ReplyAccessDeniedUnauthorized(replier, err.Error())
+// 			bus.ReplyAccessDeniedUnauthorized(replier, err.Error())
 // 			return
 // 		}
 
 // 		partitionID, err := appParts.AppWorkspacePartitionID(appQName, request.WSID)
 // 		if err != nil {
 // 			if errors.Is(err, appparts.ErrNotFound) {
-// 				coreutils.ReplyErrf(replier, http.StatusServiceUnavailable, fmt.Sprintf("app %s is not deployed", appQName))
+// 				bus.ReplyErrf(replier, http.StatusServiceUnavailable, fmt.Sprintf("app %s is not deployed", appQName))
 // 				return
 // 			}
 // 			// notest
-// 			coreutils.ReplyInternalServerError(replier, "failed to compute the partition number", err)
+// 			bus.ReplyInternalServerError(replier, "failed to compute the partition number", err)
 // 			return
 // 		}
 
@@ -126,28 +127,28 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 // 	})
 // }
 
-func deliverToProcessors(request coreutils.Request, requestCtx context.Context, appQName appdef.AppQName, responder coreutils.IResponder, funcQName appdef.QName,
+func deliverToProcessors(request bus.Request, requestCtx context.Context, appQName appdef.AppQName, responder bus.IResponder, funcQName appdef.QName,
 	procbus iprocbus.IProcBus, token string, cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
 	cpCount istructs.NumCommandProcessors, partitionID istructs.PartitionID) {
 	switch request.Resource[:1] {
 	case "q":
 		iqm := queryprocessor.NewQueryMessage(requestCtx, appQName, request.PartitionID, request.WSID, responder, request.Body, funcQName, request.Host, token)
 		if !procbus.Submit(uint(qpcgIdx), 0, iqm) {
-			coreutils.ReplyErrf(responder, http.StatusServiceUnavailable, "no query processors available")
+			bus.ReplyErrf(responder, http.StatusServiceUnavailable, "no query processors available")
 		}
 	case "c":
 		// TODO: use appQName to calculate cmdProcessorIdx in solid range [0..cpCount)
 		cmdProcessorIdx := uint(partitionID) % uint(cpCount)
 		icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, appQName, request.WSID, responder, partitionID, funcQName, token, request.Host)
 		if !procbus.Submit(uint(cpchIdx), cmdProcessorIdx, icm) {
-			coreutils.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
+			bus.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
 		}
 	default:
-		coreutils.ReplyBadRequest(responder, fmt.Sprintf(`wrong function mark "%s" for function %s`, request.Resource[:1], funcQName))
+		bus.ReplyBadRequest(responder, fmt.Sprintf(`wrong function mark "%s" for function %s`, request.Resource[:1], funcQName))
 	}
 }
 
-func getPrincipalToken(request coreutils.Request) (token string, err error) {
+func getPrincipalToken(request bus.Request) (token string, err error) {
 	authHeaders := request.Header[coreutils.Authorization]
 	if len(authHeaders) == 0 {
 		return "", nil

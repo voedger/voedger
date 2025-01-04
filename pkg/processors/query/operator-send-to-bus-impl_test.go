@@ -12,12 +12,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 )
 
 func TestSendToBusOperator_DoAsync(t *testing.T) {
 	require := require.New(t)
 	errCh := make(chan error, 1)
-	requestSender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(coreutils.GetTestBusTimeout()), func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+	requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go func() {
 			operator := SendToBusOperator{
 				responder: responder,
@@ -32,11 +33,11 @@ func TestSendToBusOperator_DoAsync(t *testing.T) {
 			require.Equal(work, outWork)
 			require.NoError(err)
 
-			operator.sender.(coreutils.IResponseSenderCloseable).Close(nil)
+			operator.sender.(bus.IResponseSenderCloseable).Close(nil)
 		}()
 	})
 
-	respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), coreutils.Request{})
+	respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 	require.NoError(err)
 	require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
 	require.Equal(http.StatusOK, respMeta.StatusCode)

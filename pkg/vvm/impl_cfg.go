@@ -9,10 +9,9 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/processors"
-
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iprocbusmem"
@@ -40,7 +39,7 @@ func NewVVMDefaultConfig() VVMConfig {
 		Time:                   coreutils.NewITime(),
 		Name:                   processors.VVMName(hostname),
 		VVMAppsBuilder:         VVMAppsBuilder{},
-		SendTimeout:            coreutils.SendTimeout(ibus.DefaultTimeout),
+		SendTimeout:            bus.DefaultSendTimeout,
 		NumCommandProcessors:   DefaultNumCommandProcessors,
 		NumQueryProcessors:     DefaultNumQueryProcessors,
 		NumBLOBProcessors:      DefaultNumBLOBProcessors,

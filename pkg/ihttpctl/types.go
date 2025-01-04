@@ -8,7 +8,7 @@ import (
 	"io/fs"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -19,6 +19,6 @@ type AppRequestHandler struct {
 	AppQName      appdef.AppQName
 	NumPartitions istructs.NumAppPartitions
 	NumAppWS      istructs.NumAppWorkspaces
-	Handlers      map[istructs.PartitionID]coreutils.RequestHandler
+	Handlers      map[istructs.PartitionID]bus.RequestHandler
 }
 type AppRequestHandlers []AppRequestHandler

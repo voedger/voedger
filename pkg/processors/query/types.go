@@ -11,6 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -91,7 +92,7 @@ type IOutputRow interface {
 type IQueryMessage interface {
 	AppQName() appdef.AppQName
 	WSID() istructs.WSID
-	Responder() coreutils.IResponder
+	Responder() bus.IResponder
 	Body() []byte
 	RequestCtx() context.Context
 	QName() appdef.QName

@@ -14,6 +14,7 @@ import (
 
 	sysmonitor "github.com/voedger/voedger/cmd/voedger/sys.monitor"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -59,25 +60,25 @@ func NewAppStorageFactory(params CLIParams) (istorage.IAppStorageFactory, error)
 	return cas.Provide(casParams)
 }
 
-func NewSysRouterRequestHandler(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+func NewSysRouterRequestHandler(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 	go func() {
 		queryParamsBytes, err := json.Marshal(request.Query)
 		if err != nil {
-			coreutils.ReplyBadRequest(responder, err.Error())
+			bus.ReplyBadRequest(responder, err.Error())
 			return
 		}
 
 		switch request.Resource {
 		case "c.EchoCommand":
-			coreutils.ReplyPlainText(responder, fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes)))
+			bus.ReplyPlainText(responder, fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes)))
 		case "q.EchoQuery":
-			sender := responder.InitResponse(coreutils.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+			sender := responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 			if err := sender.Send(fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes))); err != nil {
 				logger.Error(err)
 			}
 			sender.Close(nil)
 		default:
-			coreutils.ReplyBadRequest(responder, "unknown func: "+request.Resource)
+			bus.ReplyBadRequest(responder, "unknown func: "+request.Resource)
 		}
 	}()
 }
@@ -87,7 +88,7 @@ func NewAppRequestHandlers() ihttpctl.AppRequestHandlers {
 		{
 			AppQName:      istructs.AppQName_sys_router,
 			NumPartitions: 1,
-			Handlers: map[istructs.PartitionID]coreutils.RequestHandler{
+			Handlers: map[istructs.PartitionID]bus.RequestHandler{
 				istructs.PartitionID(0): NewSysRouterRequestHandler,
 			},
 		},

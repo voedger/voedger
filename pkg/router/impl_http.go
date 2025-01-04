@@ -19,10 +19,10 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/net/netutil"
 
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -182,7 +182,7 @@ func (s *httpService) registerHandlersV1() {
 	s.router.Handle("/n10n/update/{offset:[0-9]{1,10}}", corsHandler(s.updateHandler()))
 }
 
-func RequestHandler(requestSender coreutils.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+func RequestHandler(requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 		request, ok := createRequest(req.Method, req, resp, numsAppsWorkspaces)
@@ -202,7 +202,7 @@ func RequestHandler(requestSender coreutils.IRequestSender, numsAppsWorkspaces m
 		if err != nil {
 			logger.Error("sending request to VVM on", request.Resource, "is failed:", err, ". Body:\n", string(request.Body))
 			status := http.StatusInternalServerError
-			if errors.Is(err, coreutils.ErrSendTimeoutExpired) {
+			if errors.Is(err, bus.ErrSendTimeoutExpired) {
 				status = http.StatusServiceUnavailable
 			}
 			WriteTextResponse(resp, err.Error(), status)

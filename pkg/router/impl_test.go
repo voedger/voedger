@@ -24,6 +24,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
@@ -42,9 +43,9 @@ var (
 
 func TestBasicUsage_SingleResponse(t *testing.T) {
 	require := require.New(t)
-	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go func() {
-			coreutils.ReplyPlainText(responder, "test resp SingleResponse")
+			bus.ReplyPlainText(responder, "test resp SingleResponse")
 		}()
 	}, ibus.DefaultTimeout)
 	defer tearDown(router)
@@ -60,7 +61,7 @@ func TestBasicUsage_SingleResponse(t *testing.T) {
 }
 
 func TestSectionedSendResponseError(t *testing.T) {
-	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		// bump the mock time to make timeout timer fire
 		coreutils.MockTime.Add(2 * time.Millisecond)
 		// just do not use the responder
@@ -74,7 +75,7 @@ func TestSectionedSendResponseError(t *testing.T) {
 
 	respBodyBytes, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	require.Equal(t, coreutils.ErrSendTimeoutExpired.Error(), string(respBodyBytes))
+	require.Equal(t, bus.ErrSendTimeoutExpired.Error(), string(respBodyBytes))
 	expectResp(t, resp, coreutils.TextPlain, http.StatusServiceUnavailable)
 }
 
@@ -85,9 +86,9 @@ type testObject struct {
 
 func TestBasicUsage_MultiResponse(t *testing.T) {
 	require := require.New(t)
-	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		require.Equal("test body SectionedResponse", string(request.Body))
-		require.Equal(ibus.HTTPMethodPOST, request.Method)
+		require.Equal(http.MethodPost, request.Method)
 		require.Equal(istructs.PartitionID(0), request.PartitionID)
 
 		require.Equal(testWSID, request.WSID)
@@ -102,7 +103,7 @@ func TestBasicUsage_MultiResponse(t *testing.T) {
 
 		// request is normally handled by processors in a separate goroutine so let's send response in a separate goroutine
 		go func() {
-			sender := responder.InitResponse(coreutils.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+			sender := responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 			err := sender.Send(testObject{
 				IntField: 42,
 				StrField: `哇"呀呀`,
@@ -137,8 +138,8 @@ func TestBasicUsage_MultiResponse(t *testing.T) {
 }
 
 func TestEmptySectionedResponse(t *testing.T) {
-	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
-		sender := responder.InitResponse(coreutils.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+		sender := responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 		sender.Close(nil)
 
 	}, ibus.DefaultTimeout)
@@ -154,8 +155,8 @@ func TestEmptySectionedResponse(t *testing.T) {
 }
 
 func TestSimpleErrorSectionedResponse(t *testing.T) {
-	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
-		sender := responder.InitResponse(coreutils.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+		sender := responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 		sender.Close(errors.New("test error SimpleErrorSectionedResponse"))
 	}, ibus.DefaultTimeout)
 	defer tearDown(router)
@@ -172,7 +173,7 @@ func TestSimpleErrorSectionedResponse(t *testing.T) {
 }
 
 func TestHandlerPanic(t *testing.T) {
-	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		panic("test panic HandlerPanic")
 	}, ibus.DefaultTimeout)
 	defer tearDown(router)
@@ -194,9 +195,9 @@ func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
 	clientClosed := make(chan struct{})
 	firstElemSendErrCh := make(chan error)
 	expectedErrCh := make(chan error)
-	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go func() {
-			sender := responder.InitResponse(coreutils.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+			sender := responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 			defer sender.Close(nil)
 			firstElemSendErrCh <- sender.Send(testObject{
 				IntField: 42,
@@ -246,7 +247,7 @@ func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
 }
 
 func TestCheck(t *testing.T) {
-	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 	}, 1*time.Second)
 	defer tearDown(router)
 
@@ -261,7 +262,7 @@ func TestCheck(t *testing.T) {
 }
 
 func Test404(t *testing.T) {
-	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 	}, 1*time.Second)
 	defer tearDown(router)
 
@@ -278,10 +279,10 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 	clientDisconnect := make(chan any)
 	requestCtxCh := make(chan context.Context, 1)
 	expectedErrCh := make(chan error)
-	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
+	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go func() {
 			// handler, on server side
-			sender := responder.InitResponse(coreutils.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+			sender := responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 			defer sender.Close(nil)
 			firstElemSendErrCh <- sender.Send(testObject{
 				IntField: 42,
@@ -361,8 +362,8 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 
 func TestAdminService(t *testing.T) {
 	require := require.New(t)
-	router := setUp(t, func(requestCtx context.Context, request coreutils.Request, responder coreutils.IResponder) {
-		go coreutils.ReplyPlainText(responder, "test resp AdminService")
+	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+		go bus.ReplyPlainText(responder, "test resp AdminService")
 	}, ibus.DefaultTimeout)
 	defer tearDown(router)
 
@@ -406,9 +407,9 @@ type testRouter struct {
 	clientDisconnections chan struct{}
 }
 
-func startRouter(t *testing.T, router *testRouter, rp RouterParams, busTimeout time.Duration, requestHandler coreutils.RequestHandler) {
+func startRouter(t *testing.T, router *testRouter, rp RouterParams, busTimeout time.Duration, requestHandler bus.RequestHandler) {
 	ctx, cancel := context.WithCancel(context.Background())
-	requestSender := coreutils.NewIRequestSender(coreutils.MockTime, coreutils.SendTimeout(busTimeout), requestHandler)
+	requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.SendTimeout(busTimeout), requestHandler)
 	httpSrv, acmeSrv, adminService := Provide(rp, nil, nil, nil, requestSender, map[appdef.AppQName]istructs.NumAppWorkspaces{istructs.AppQName_test1_app1: 10})
 	require.Nil(t, acmeSrv)
 	require.NoError(t, httpSrv.Prepare(nil))
@@ -430,7 +431,7 @@ func startRouter(t *testing.T, router *testRouter, rp RouterParams, busTimeout t
 	}
 }
 
-func setUp(t *testing.T, requestHandler coreutils.RequestHandler, busTimeout time.Duration) *testRouter {
+func setUp(t *testing.T, requestHandler bus.RequestHandler, busTimeout time.Duration) *testRouter {
 	rp := RouterParams{
 		Port:             0,
 		WriteTimeout:     DefaultRouterWriteTimeout,

@@ -16,7 +16,7 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
@@ -43,7 +43,7 @@ type httpService struct {
 	listener           net.Listener
 	n10n               in10n.IN10nBroker
 	blobWG             sync.WaitGroup
-	requestSender      coreutils.IRequestSender
+	requestSender      bus.IRequestSender
 	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces
 	name               string
 	listeningPort      atomic.Uint32

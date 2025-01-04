@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -34,7 +35,7 @@ type ICommandMessage interface {
 	Body() []byte
 	AppQName() appdef.AppQName
 	WSID() istructs.WSID // url WSID
-	Responder() coreutils.IResponder
+	Responder() bus.IResponder
 	PartitionID() istructs.PartitionID
 	RequestCtx() context.Context
 	QName() appdef.QName
@@ -104,7 +105,7 @@ type implICommandMessage struct {
 	body        []byte
 	appQName    appdef.AppQName // need to determine where to send c.sys.Init request on create a new workspace
 	wsid        istructs.WSID
-	responder   coreutils.IResponder
+	responder   bus.IResponder
 	partitionID istructs.PartitionID
 	requestCtx  context.Context
 	qName       appdef.QName

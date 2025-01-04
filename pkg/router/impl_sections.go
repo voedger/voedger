@@ -21,12 +21,13 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/istructs"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
-func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (res coreutils.Request, ok bool) {
+func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (res bus.Request, ok bool) {
 	vars := mux.Vars(req)
 	wsidStr := vars[URLPlaceholder_wsid]
 	wsidUint, err := strconv.ParseUint(wsidStr, utils.DecimalBase, utils.BitSize64)
@@ -45,7 +46,7 @@ func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, 
 			}
 		}
 	}
-	res = coreutils.Request{
+	res = bus.Request{
 		Method:   reqMethod,
 		WSID:     wsid,
 		Query:    req.URL.Query(),

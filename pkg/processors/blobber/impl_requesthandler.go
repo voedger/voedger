@@ -12,7 +12,7 @@ import (
 	"net/url"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -21,10 +21,10 @@ type IRequestHandler interface {
 	// false -> service unavailable
 	HandleRead(appQName appdef.AppQName, wsid istructs.WSID, header http.Header, requestCtx context.Context,
 		okResponseIniter func(headersKeyValue ...string) io.Writer,
-		errorResponder ErrorResponder, existingBLOBIDOrSUUID string, requestSender coreutils.IRequestSender) bool
+		errorResponder ErrorResponder, existingBLOBIDOrSUUID string, requestSender bus.IRequestSender) bool
 	HandleWrite(appQName appdef.AppQName, wsid istructs.WSID, header http.Header, requestCtx context.Context,
 		urlQueryValues url.Values, okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
-		errorResponder ErrorResponder, requestSender coreutils.IRequestSender) bool
+		errorResponder ErrorResponder, requestSender bus.IRequestSender) bool
 }
 
 // implemented in e.g. router package
@@ -37,7 +37,7 @@ type implIRequestHandler struct {
 
 func (r *implIRequestHandler) HandleRead(appQName appdef.AppQName, wsid istructs.WSID, header http.Header, requestCtx context.Context,
 	okResponseIniter func(headersKeyValue ...string) io.Writer,
-	errorResponder ErrorResponder, existingBLOBIDOrSUUID string, requestSender coreutils.IRequestSender) bool {
+	errorResponder ErrorResponder, existingBLOBIDOrSUUID string, requestSender bus.IRequestSender) bool {
 	doneCh := make(chan interface{})
 	return r.handle(&implIBLOBMessage_Read{
 		implIBLOBMessage_base: implIBLOBMessage_base{
@@ -56,7 +56,7 @@ func (r *implIRequestHandler) HandleRead(appQName appdef.AppQName, wsid istructs
 
 func (r *implIRequestHandler) HandleWrite(appQName appdef.AppQName, wsid istructs.WSID, header http.Header, requestCtx context.Context,
 	urlQueryValues url.Values, okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
-	errorResponder ErrorResponder, requestSender coreutils.IRequestSender) bool {
+	errorResponder ErrorResponder, requestSender bus.IRequestSender) bool {
 	doneCh := make(chan interface{})
 	return r.handle(&implIBLOBMessage_Write{
 		implIBLOBMessage_base: implIBLOBMessage_base{

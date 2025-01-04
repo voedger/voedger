@@ -13,6 +13,7 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -59,7 +60,7 @@ func setBLOBStatusCompleted(ctx context.Context, work pipeline.IWorkpiece) (err 
 		return nil
 	}
 	// set WDoc<sys.BLOB>.status = BLOBStatus_Completed
-	req := coreutils.Request{
+	req := bus.Request{
 		Method:   http.MethodPost,
 		WSID:     bw.blobMessage.WSID(),
 		AppQName: bw.blobMessage.AppQName().String(),
@@ -68,7 +69,7 @@ func setBLOBStatusCompleted(ctx context.Context, work pipeline.IWorkpiece) (err 
 		Header:   bw.blobMessage.Header(),
 		Host:     coreutils.Localhost,
 	}
-	cudWDocBLOBUpdateMeta, cudWDocBLOBUpdateResp, err := coreutils.GetCommandResponse(bw.blobMessage.RequestCtx(), bw.blobMessage.RequestSender(), req)
+	cudWDocBLOBUpdateMeta, cudWDocBLOBUpdateResp, err := bus.GetCommandResponse(bw.blobMessage.RequestCtx(), bw.blobMessage.RequestSender(), req)
 	if err != nil {
 		return fmt.Errorf("failed to exec c.sys.CUD: %w", err)
 	}
@@ -80,7 +81,7 @@ func setBLOBStatusCompleted(ctx context.Context, work pipeline.IWorkpiece) (err 
 
 func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
-	req := coreutils.Request{
+	req := bus.Request{
 		Method:   http.MethodPost,
 		WSID:     bw.blobMessage.WSID(),
 		AppQName: bw.blobMessage.AppQName().String(),
@@ -89,7 +90,7 @@ func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		Body:     []byte(`{}`),
 		Host:     coreutils.Localhost,
 	}
-	blobHelperMeta, blobHelperResp, err := coreutils.GetCommandResponse(bw.blobMessage.RequestCtx(), bw.blobMessage.RequestSender(), req)
+	blobHelperMeta, blobHelperResp, err := bus.GetCommandResponse(bw.blobMessage.RequestCtx(), bw.blobMessage.RequestSender(), req)
 	if err != nil {
 		return fmt.Errorf("failed to exec q.sys.DownloadBLOBAuthnz: %w", err)
 	}

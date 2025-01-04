@@ -3,7 +3,7 @@
  * @author Denis Gribanov
  */
 
-package coreutils
+package bus
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -68,7 +69,7 @@ type RequestHandler func(requestCtx context.Context, request Request, responder 
 
 type implIRequestSender struct {
 	timeout        SendTimeout
-	tm             ITime
+	tm             coreutils.ITime
 	requestHandler RequestHandler
 }
 
@@ -78,7 +79,7 @@ type implIResponseSenderCloseable struct {
 	ch          chan any
 	clientCtx   context.Context
 	sendTimeout SendTimeout
-	tm          ITime
+	tm          coreutils.ITime
 	resultErr   *error
 }
 
@@ -88,7 +89,7 @@ type implIResponder struct {
 	responseMetaCh chan ResponseMeta
 }
 
-func NewIRequestSender(tm ITime, sendTimeout SendTimeout, requestHandler RequestHandler) IRequestSender {
+func NewIRequestSender(tm coreutils.ITime, sendTimeout SendTimeout, requestHandler RequestHandler) IRequestSender {
 	return &implIRequestSender{
 		timeout:        sendTimeout,
 		tm:             tm,
