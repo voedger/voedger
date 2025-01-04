@@ -209,6 +209,10 @@ func ErrBytesFieldInCC(name string) error {
 	return fmt.Errorf("bytes field %s can only be the last one in clustering key", name)
 }
 
+func ErrLimitOperationNotAllowed(name string) error {
+	return fmt.Errorf("operation %s not allowed", name)
+}
+
 func errorAt(err error, pos *lexer.Position) error {
 	return fmt.Errorf("%s: %w", pos.String(), err)
 }
