@@ -112,8 +112,6 @@ type RootStatement struct {
 
 	// Also allowed in root
 	Role           *RoleStmt           `parser:"| @@"`
-	Rate           *RateStmt           `parser:"| @@"`
-	Limit          *LimitStmt          `parser:"| @@"`
 	ExtEngine      *RootExtEngineStmt  `parser:"| @@"`
 	Workspace      *WorkspaceStmt      `parser:"| @@"`
 	AlterWorkspace *AlterWorkspaceStmt `parser:"| @@"`
@@ -626,26 +624,36 @@ type LimitSingleItemFilter struct {
 	Command *DefQName `parser:"( ('ON' 'COMMAND' @@)"`
 	Query   *DefQName `parser:"| ('ON' 'QUERY' @@)"`
 	Table   *DefQName `parser:"| (ONTABLE @@)"`
-	View    *DefQName `parser:"| ('ON' 'VIEW' @@) )"`
+	View    *DefQName `parser:"| (ONVIEW @@) )"`
 }
 
-type LimitMultipleItemsFilter struct {
+type LimitAllItemsFilter struct {
 	Pos      lexer.Position
-	Commands bool      `parser:"( @('COMMANDS')"`
-	Queries  bool      `parser:"| @('QUERIES')"`
-	Tables   bool      `parser:"| @('TABLES')"`
-	Views    bool      `parser:"| @('VIEWS'))?"`
+	Commands bool      `parser:"( @('ON' 'ALL' 'COMMANDS')"`
+	Queries  bool      `parser:"| @('ON' 'ALL' 'QUERIES')"`
+	Tables   bool      `parser:"| @ONALLTABLES"`
+	Views    bool      `parser:"| @('ON' 'ALL' 'VIEWS')"`
+	All      bool      `parser:"| @('ON' 'ALL' ) )"`
 	WithTag  *DefQName `parser:"('WITH' 'TAG' @@)?"`
 }
 
+type LimitEachItemFilter struct {
+	Pos      lexer.Position
+	Commands bool      `parser:"( @('ON' 'EACH' 'COMMAND')"`
+	Queries  bool      `parser:"| @('ON' 'EACH' 'QUERY')"`
+	Tables   bool      `parser:"| @('ON' 'EACH' 'TABLE')"`
+	Views    bool      `parser:"| @('ON' 'EACH' 'VIEW')"`
+	Each     bool      `parser:"| @('ON' 'EACH' ) )"`
+	WithTag  *DefQName `parser:"('WITH' 'TAG' @@)?"`
+}
 type LimitStmt struct {
 	Statement
-	Name       Ident                     `parser:"'LIMIT' @Ident"`
-	Actions    []LimitAction             `parser:"(@@ (',' @@)*)?"`
-	SingleItem *LimitSingleItemFilter    `parser:"( @@"`
-	AllItems   *LimitMultipleItemsFilter `parser:"| ('ON' 'ALL' @@)"`
-	EachItem   *LimitMultipleItemsFilter `parser:"| ('ON' 'EVERY' @@) )"`
-	RateName   DefQName                  `parser:"'WITH' 'RATE' @@"`
+	Name       Ident                  `parser:"'LIMIT' @Ident"`
+	Actions    []LimitAction          `parser:"(@@ (',' @@)*)?"`
+	SingleItem *LimitSingleItemFilter `parser:"( @@"`
+	AllItems   *LimitAllItemsFilter   `parser:"| @@"`
+	EachItem   *LimitEachItemFilter   `parser:"| @@ )"`
+	RateName   DefQName               `parser:"'WITH' 'RATE' @@"`
 }
 
 func (s LimitStmt) GetName() string { return string(s.Name) }
@@ -682,7 +690,7 @@ type GrantAllTablesWithTagActions struct {
 	Pos   lexer.Position
 	All   bool                   `parser:"( @'ALL' | "`
 	Items []GrantAllTablesAction `parser:"(@@ (',' @@)*) )"`
-	Tag   DefQName               `parser:"ONALLTABLESWITHTAG @@"`
+	Tag   DefQName               `parser:"ONALLTABLES 'WITH' 'TAG' @@"`
 }
 
 type GrantAllTables struct {

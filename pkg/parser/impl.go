@@ -43,7 +43,6 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "SELECTONALLVIEWS", Pattern: `SELECT[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+VIEWS`},
 		{Name: "INSERTONWORKSPACE", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+WORKSPACE`},
 		{Name: "INSERTONALLWORKSPACESWITHTAG", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+WORKSPACES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
-		{Name: "ONALLTABLESWITHTAG", Pattern: `ON[ \r\n\t]+ALL[ \r\n\t]+TABLES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
 		{Name: "ONALLTABLES", Pattern: `ON[ \r\n\t]+ALL[ \r\n\t]+TABLES`},
 		{Name: "ONTABLE", Pattern: `ON[ \r\n\t]+TABLE`},
 		{Name: "ONVIEW", Pattern: `ON[ \r\n\t]+VIEW`},

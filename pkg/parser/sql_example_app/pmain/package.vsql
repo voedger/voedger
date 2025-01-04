@@ -37,8 +37,6 @@ EXTENSION ENGINE WASM (
 
 );
 
---  Default object scope is PER APP PARTITION and no subject scope
-RATE AppDefaultRate 1000 PER HOUR;
 
 -- WORKSPACE statement declares the Workspace, descriptor and definitions, allowed in this workspace
 WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
@@ -49,6 +47,9 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
         Country varchar(2) CHECK '^[A-Za-z]{2}$',
         Description varchar(100)
     );
+
+    --  Default object scope is PER APP PARTITION and no subject scope
+    RATE AppDefaultRate 1000 PER HOUR;
 
     -- Declare tag to assign it later to definition(s)
     TAG BackofficeTag;
