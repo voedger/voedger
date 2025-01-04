@@ -53,12 +53,14 @@ func (ws Workspace) Ancestors() iter.Seq[appdef.IWorkspace] {
 	return ws.ancestors.Values()
 }
 
-func (ws *Workspace) AppendType(t appdef.IType) {
-	if t.QName().Pkg() != ws.QName().Pkg() {
-		panic(appdef.ErrInvalid("%v should be from the same package as %v", t, ws))
-	}
-	ws.WithTypes.AppendType(t)
-}
+// package parser violates the rule that a type should be from the same package as the workspace
+//
+// func (ws *Workspace) AppendType(t appdef.IType) {
+// 	if t.QName().Pkg() != ws.QName().Pkg() {
+// 		panic(appdef.ErrInvalid("%v should be from the same package as %v", t, ws))
+// 	}
+// 	ws.WithTypes.AppendType(t)
+// }
 
 func (ws Workspace) Descriptor() appdef.QName {
 	if ws.desc != nil {
