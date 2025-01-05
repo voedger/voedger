@@ -21,8 +21,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -38,7 +36,6 @@ var (
 	isRouterStopTested   bool
 	router               *testRouter
 	clientDisconnections = make(chan struct{}, 1)
-	previousBusTimeout   = ibus.DefaultTimeout
 	elem1                = map[string]interface{}{"fld1": "fld1Val"}
 )
 
@@ -48,7 +45,7 @@ func TestBasicUsage_SingleResponse(t *testing.T) {
 		go func() {
 			bus.ReplyPlainText(responder, "test resp SingleResponse")
 		}()
-	}, ibus.DefaultTimeout)
+	}, bus.DefaultSendTimeout)
 	defer tearDown(router)
 
 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/somefunc_SingleResponse", router.port(), testWSID), "application/json", http.NoBody)
@@ -66,7 +63,7 @@ func TestSectionedSendResponseError(t *testing.T) {
 		// bump the mock time to make timeout timer fire
 		coreutils.MockTime.Add(2 * time.Millisecond)
 		// just do not use the responder
-	}, time.Millisecond)
+	}, bus.SendTimeout(time.Millisecond))
 	defer tearDown(router)
 
 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/somefunc_SectionedSendResponseError", router.port(), testWSID), "application/json", http.NoBody)
@@ -117,7 +114,7 @@ func TestBasicUsage_MultiResponse(t *testing.T) {
 			require.NoError(sender.Send(nil))
 			sender.Close(nil)
 		}()
-	}, ibus.DefaultTimeout)
+	}, bus.DefaultSendTimeout)
 	defer tearDown(router)
 
 	body := []byte("test body SectionedResponse")
@@ -143,7 +140,7 @@ func TestEmptySectionedResponse(t *testing.T) {
 		sender := responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 		sender.Close(nil)
 
-	}, ibus.DefaultTimeout)
+	}, bus.DefaultSendTimeout)
 	defer tearDown(router)
 	body := []byte("test body EmptySectionedResponse")
 	bodyReader := bytes.NewReader(body)
@@ -159,7 +156,7 @@ func TestSimpleErrorSectionedResponse(t *testing.T) {
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		sender := responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 		sender.Close(errors.New("test error SimpleErrorSectionedResponse"))
-	}, ibus.DefaultTimeout)
+	}, bus.DefaultSendTimeout)
 	defer tearDown(router)
 
 	body := []byte("")
@@ -176,7 +173,7 @@ func TestSimpleErrorSectionedResponse(t *testing.T) {
 func TestHandlerPanic(t *testing.T) {
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		panic("test panic HandlerPanic")
-	}, ibus.DefaultTimeout)
+	}, bus.DefaultSendTimeout)
 	defer tearDown(router)
 
 	body := []byte("")
@@ -218,7 +215,7 @@ func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
 				StrField: "str1",
 			})
 		}()
-	}, 5*time.Second)
+	}, bus.SendTimeout(5*time.Second))
 	defer tearDown(router)
 
 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc_ClientDisconnect_CtxCanceledOnElemSend", router.port(), URLPlaceholder_appOwner, URLPlaceholder_appName, testWSID), "application/json", http.NoBody)
@@ -249,7 +246,7 @@ func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
 
 func TestCheck(t *testing.T) {
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
-	}, 1*time.Second)
+	}, bus.SendTimeout(1*time.Second))
 	defer tearDown(router)
 
 	bodyReader := bytes.NewReader(nil)
@@ -264,7 +261,7 @@ func TestCheck(t *testing.T) {
 
 func Test404(t *testing.T) {
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
-	}, 1*time.Second)
+	}, bus.SendTimeout(1*time.Second))
 	defer tearDown(router)
 
 	bodyReader := bytes.NewReader(nil)
@@ -309,7 +306,7 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 				StrField: "str2",
 			})
 		}()
-	}, time.Hour) // one hour timeout to eliminate case when client context closes longer than bus timoeut on client disconnect. It could take up to few seconds
+	}, bus.SendTimeout(time.Hour)) // one hour timeout to eliminate case when client context closes longer than bus timoeut on client disconnect. It could take up to few seconds
 	defer tearDown(router)
 
 	// client side
@@ -365,7 +362,7 @@ func TestAdminService(t *testing.T) {
 	require := require.New(t)
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go bus.ReplyPlainText(responder, "test resp AdminService")
-	}, ibus.DefaultTimeout)
+	}, bus.DefaultSendTimeout)
 	defer tearDown(router)
 
 	t.Run("basic", func(t *testing.T) {
@@ -406,13 +403,13 @@ type testRouter struct {
 	wg                   *sync.WaitGroup
 	httpService          pipeline.IService
 	adminService         pipeline.IService
-	busTimeout           time.Duration
+	sendTimeout          bus.SendTimeout
 	clientDisconnections chan struct{}
 }
 
-func startRouter(t *testing.T, router *testRouter, rp RouterParams, busTimeout time.Duration, requestHandler bus.RequestHandler) {
+func startRouter(t *testing.T, router *testRouter, rp RouterParams, sendTimeout bus.SendTimeout, requestHandler bus.RequestHandler) {
 	ctx, cancel := context.WithCancel(context.Background())
-	requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.SendTimeout(busTimeout), requestHandler)
+	requestSender := bus.NewIRequestSender(coreutils.MockTime, sendTimeout, requestHandler)
 	httpSrv, acmeSrv, adminService := Provide(rp, nil, nil, nil, requestSender, map[appdef.AppQName]istructs.NumAppWorkspaces{istructs.AppQName_test1_app1: 10})
 	require.Nil(t, acmeSrv)
 	require.NoError(t, httpSrv.Prepare(nil))
@@ -434,7 +431,7 @@ func startRouter(t *testing.T, router *testRouter, rp RouterParams, busTimeout t
 	}
 }
 
-func setUp(t *testing.T, requestHandler bus.RequestHandler, busTimeout time.Duration) *testRouter {
+func setUp(t *testing.T, requestHandler bus.RequestHandler, sendTimeout bus.SendTimeout) *testRouter {
 	rp := RouterParams{
 		Port:             0,
 		WriteTimeout:     DefaultRouterWriteTimeout,
@@ -443,11 +440,11 @@ func setUp(t *testing.T, requestHandler bus.RequestHandler, busTimeout time.Dura
 	}
 	router := &testRouter{
 		wg:                   &sync.WaitGroup{},
-		busTimeout:           busTimeout,
+		sendTimeout:          sendTimeout,
 		clientDisconnections: make(chan struct{}, 1),
 	}
 
-	startRouter(t, router, rp, busTimeout, requestHandler)
+	startRouter(t, router, rp, sendTimeout, requestHandler)
 	return router
 }
 
