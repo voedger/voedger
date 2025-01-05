@@ -20,7 +20,7 @@ func ProvideService(serviceChannel BLOBServiceChannel, blobStorage iblobstorage.
 			select {
 			case workIntf := <-serviceChannel:
 				blobWorkpiece := &blobWorkpiece{
-					blobMessage: workIntf.(iBLOBMessage_Base),
+					blobMessage: workIntf.(implIBLOBMessage_base),
 				}
 				if err := pipeline.SendSync(blobWorkpiece); err != nil {
 					// notest
