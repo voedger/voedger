@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
 )
@@ -235,7 +236,7 @@ func (w *mockRowWriter) PutRecordID(name string, value istructs.RecordID) { w.Ca
 
 // TODO: copy-pasted from pkg/state/stateprovide. Can this be moved to a common package?
 func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
-	appDef := appdef.New()
+	appDef := builder.New()
 
 	appDef.AddPackage("test", "test.com/test")
 

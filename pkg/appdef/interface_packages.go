@@ -46,5 +46,5 @@ type IPackagesBuilder interface {
 	//   - if package with local name already exists,
 	//   - if path is empty,
 	//   - if package with path already exists.
-	AddPackage(localName, path string) IAppDefBuilder
+	AddPackage(localName, path string) IPackagesBuilder
 }

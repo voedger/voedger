@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -55,7 +56,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	asp := istorageimpl.Provide(mem.Provide(coreutils.MockTime))
 
 	// airs-bp application config. For tests «istructs.AppQName_test1_app1» is used
-	adb := appdef.New()
+	adb := builder.New()
 	statelessResources = istructsmem.NewStatelessResources()
 	cfg := cfgs.AddBuiltInAppConfig(test.appQName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)

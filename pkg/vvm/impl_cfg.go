@@ -41,18 +41,13 @@ func NewVVMDefaultConfig() VVMConfig {
 		Name:                   processors.VVMName(hostname),
 		VVMAppsBuilder:         VVMAppsBuilder{},
 		BusTimeout:             BusTimeout(ibus.DefaultTimeout),
-		BlobberServiceChannels: router.BlobberServiceChannels{
-			{
-				NumChannels:       1,
-				ChannelBufferSize: 0,
-			},
-		},
-		NumCommandProcessors: DefaultNumCommandProcessors,
-		NumQueryProcessors:   DefaultNumQueryProcessors,
-		StorageCacheSize:     DefaultCacheSize,
-		MaxPrepareQueries:    DefaultMaxPrepareQueries,
-		VVMPort:              DefaultVVMPort,
-		MetricsServicePort:   DefaultMetricsServicePort,
+		NumCommandProcessors:   DefaultNumCommandProcessors,
+		NumQueryProcessors:     DefaultNumQueryProcessors,
+		NumBLOBProcessors:      DefaultNumBLOBProcessors,
+		StorageCacheSize:       DefaultCacheSize,
+		MaxPrepareQueries:      DefaultMaxPrepareQueries,
+		VVMPort:                DefaultVVMPort,
+		MetricsServicePort:     DefaultMetricsServicePort,
 		StorageFactory: func() (provider istorage.IAppStorageFactory, err error) {
 			logger.Info("using istoragemem")
 			return mem.Provide(coreutils.MockTime), nil

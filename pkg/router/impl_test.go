@@ -38,6 +38,7 @@ var (
 	router               *testRouter
 	clientDisconnections = make(chan struct{}, 1)
 	previousBusTimeout   = ibus.DefaultTimeout
+	elem1                = map[string]interface{}{"fld1": "fld1Val"}
 )
 
 func TestBasicUsage_SingleResponse(t *testing.T) {

@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/dynobuffers"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
 )
 
 func TestDynoBufSchemes(t *testing.T) {
@@ -19,7 +21,7 @@ func TestDynoBufSchemes(t *testing.T) {
 	var app appdef.IAppDef
 
 	t.Run("should be ok to build application", func(t *testing.T) {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
@@ -57,7 +59,7 @@ func TestDynoBufSchemes(t *testing.T) {
 
 		view := wsb.AddView(appdef.NewQName("test", "view"))
 		view.Key().PartKey().AddField("pk1", appdef.DataKind_int64)
-		view.Key().ClustCols().AddField("cc1", appdef.DataKind_string, appdef.MaxLen(100))
+		view.Key().ClustCols().AddField("cc1", appdef.DataKind_string, constraints.MaxLen(100))
 		view.Value().AddRefField("val1", true)
 
 		a, err := adb.Build()
@@ -71,7 +73,7 @@ func TestDynoBufSchemes(t *testing.T) {
 
 	schemes.Prepare(app)
 
-	checkScheme := func(name appdef.QName, fields appdef.IFields, dynoScheme *dynobuffers.Scheme) {
+	checkScheme := func(name appdef.QName, fields appdef.IWithFields, dynoScheme *dynobuffers.Scheme) {
 		require.NotNil(dynoScheme, "dynobuffer scheme for «%v» not found", name)
 
 		require.EqualValues(len(dynoScheme.FieldsMap), fields.UserFieldCount())
@@ -99,7 +101,7 @@ func TestDynoBufSchemes(t *testing.T) {
 			checkScheme(name, view.Value(), schemes.Scheme(name))
 			continue
 		}
-		if fld, ok := typ.(appdef.IFields); ok {
+		if fld, ok := typ.(appdef.IWithFields); ok {
 			checkScheme(name, fld, schemes.Scheme(name))
 		}
 	}

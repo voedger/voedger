@@ -59,7 +59,7 @@ func (s *httpService) registerHandlersV2() {
 
 	// blobs: replace, upload, download, update meta: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/blobs/{blobId}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/blobs/{%s:[a-zA-Z0-9-_]+}",
-		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobID),
+		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobIDOrSUUID),
 		corsHandler(requestHandlerV2_blobs())).
 		Methods(http.MethodGet, http.MethodPatch, http.MethodPut, http.MethodDelete)
 
@@ -120,7 +120,7 @@ func requestHandlerV2_extension() http.HandlerFunc {
 func requestHandlerV2_blobs() http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
-		blobID, notBLOBCreate := vars[URLPlaceholder_blobID]
+		blobID, notBLOBCreate := vars[URLPlaceholder_blobIDOrSUUID]
 		isBLOBCreate := !notBLOBCreate
 		_ = blobID
 		_ = isBLOBCreate

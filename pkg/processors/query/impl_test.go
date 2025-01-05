@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -83,7 +84,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		resultMeta appdef.IObject
 	)
 	t.Run("should be ok to build appDef and resultMeta", func(t *testing.T) {
-		adb := appdef.New()
+		adb := builder.New()
 		wsb := adb.AddWorkspace(qNameTestWS)
 		wsb.AddObject(qNamePosDepartment).
 			AddField("name", appdef.DataKind_string, false)
@@ -179,7 +180,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	qNameDepartment := appdef.NewQName("bo", "Department")
 	qNameArticle := appdef.NewQName("bo", "Article")
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage(pkgBo, pkgBoPath)
 
 	wsb := adb.AddWorkspace(qNameTestWS)
@@ -435,7 +436,7 @@ func TestRawMode(t *testing.T) {
 		resultMeta appdef.IObject
 	)
 	t.Run("should be ok to build appDef and resultMeta", func(t *testing.T) {
-		adb := appdef.New()
+		adb := builder.New()
 		wsb := adb.AddWorkspace(qNameTestWS)
 		wsb.AddObject(istructs.QNameRaw)
 		app, err := adb.Build()

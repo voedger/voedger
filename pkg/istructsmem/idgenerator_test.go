@@ -11,13 +11,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestIDGenerator(t *testing.T) {
 	require := require.New(t)
 
-	adb := appdef.New()
+	adb := builder.New()
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
 	wsb.AddCDoc(istructs.QNameCDoc)
@@ -83,7 +84,7 @@ func TestIDGenCollision(t *testing.T) {
 	require := require.New(t)
 
 	idGen := NewIDGenerator()
-	adb := appdef.New()
+	adb := builder.New()
 	ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 	ws.AddCDoc(istructs.QNameCDoc)
 	appDef, err := adb.Build()

@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
@@ -21,7 +22,7 @@ func ExampleAnd() {
 	tag := appdef.NewQName("test", "tag")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)

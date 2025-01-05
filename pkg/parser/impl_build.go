@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -163,10 +164,7 @@ func (c *buildContext) tags() error {
 		iteratePackageStmt(schema, &c.basicContext, func(tag *TagStmt, ictx *iterateCtx) {
 			qname := schema.NewQName(tag.Name)
 			builder := tag.workspace.mustBuilder(c)
-			builder.AddTag(qname)
-			if len(tag.Comments) > 0 {
-				builder.SetTypeComment(qname, tag.Comments...)
-			}
+			builder.AddTag(qname, tag.Comments...)
 		})
 	}
 	return nil
@@ -384,11 +382,11 @@ func (c *buildContext) views() error {
 				switch k := dataTypeToDataKind(f.Type); k {
 				case appdef.DataKind_bytes:
 					if (f.Type.Bytes != nil) && (f.Type.Bytes.MaxLen != nil) {
-						cc = append(cc, appdef.MaxLen(uint16(*f.Type.Bytes.MaxLen))) // nolint G115: checked in [analyseFields]
+						cc = append(cc, constraints.MaxLen(uint16(*f.Type.Bytes.MaxLen))) // nolint G115: checked in [analyseFields]
 					}
 				case appdef.DataKind_string:
 					if (f.Type.Varchar != nil) && (f.Type.Varchar.MaxLen != nil) {
-						cc = append(cc, appdef.MaxLen(uint16(*f.Type.Varchar.MaxLen))) // nolint G115: checked in [analyseFields]
+						cc = append(cc, constraints.MaxLen(uint16(*f.Type.Varchar.MaxLen))) // nolint G115: checked in [analyseFields]
 					}
 				}
 				return cc
@@ -617,19 +615,19 @@ func (c *buildContext) addDataTypeField(field *FieldExpr) {
 
 	if field.Type.DataType.Bytes != nil {
 		if field.Type.DataType.Bytes.MaxLen != nil {
-			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull, appdef.MaxLen(uint16(*field.Type.DataType.Bytes.MaxLen))) // nolint G115: checked in [analyseFields]
+			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull, constraints.MaxLen(uint16(*field.Type.DataType.Bytes.MaxLen))) // nolint G115: checked in [analyseFields]
 		} else {
 			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull)
 		}
 	} else if field.Type.DataType.Varchar != nil {
-		constraints := make([]appdef.IConstraint, 0)
+		cc := make([]appdef.IConstraint, 0)
 		if field.Type.DataType.Varchar.MaxLen != nil {
-			constraints = append(constraints, appdef.MaxLen(uint16(*field.Type.DataType.Varchar.MaxLen))) // nolint G115: checked in [analyseFields]
+			cc = append(cc, constraints.MaxLen(uint16(*field.Type.DataType.Varchar.MaxLen))) // nolint G115: checked in [analyseFields]
 		}
 		if field.CheckRegexp != nil {
-			constraints = append(constraints, appdef.Pattern(field.CheckRegexp.Regexp))
+			cc = append(cc, constraints.Pattern(field.CheckRegexp.Regexp))
 		}
-		bld.AddField(fieldName, appdef.DataKind_string, field.NotNull, constraints...)
+		bld.AddField(fieldName, appdef.DataKind_string, field.NotNull, cc...)
 	} else {
 		bld.AddField(fieldName, sysDataKind, field.NotNull)
 	}
@@ -714,7 +712,7 @@ func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 	tabName := c.defCtx().qname
 	tab := c.adb.AppDef().Type(tabName)
 	if constraint.UniqueField != nil {
-		f := tab.(appdef.IFields).Field(string(constraint.UniqueField.Field))
+		f := tab.(appdef.IWithFields).Field(string(constraint.UniqueField.Field))
 		if f == nil {
 			c.stmtErr(&constraint.Pos, ErrUndefinedField(string(constraint.UniqueField.Field)))
 			return
@@ -723,7 +721,7 @@ func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 	} else if constraint.Unique != nil {
 		fields := make([]string, len(constraint.Unique.Fields))
 		for i, f := range constraint.Unique.Fields {
-			if tab.(appdef.IFields).Field(string(f)) == nil {
+			if tab.(appdef.IWithFields).Field(string(f)) == nil {
 				c.stmtErr(&constraint.Pos, ErrUndefinedField(string(f)))
 				return
 			}

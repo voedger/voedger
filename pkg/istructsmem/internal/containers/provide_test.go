@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -28,7 +29,7 @@ func Test_BasicUsage(t *testing.T) {
 	}
 
 	testName := "test"
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 

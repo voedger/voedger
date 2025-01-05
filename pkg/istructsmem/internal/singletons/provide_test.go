@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -37,7 +38,7 @@ func Test_BasicUsage(t *testing.T) {
 	testName := appdef.NewQName("test", "doc")
 
 	testAppDef := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 		doc := ws.AddCDoc(testName)
@@ -110,7 +111,7 @@ func Test_SingletonsGetID(t *testing.T) {
 			err = versions.Prepare(storage)
 			require.NoError(err)
 
-			adb := appdef.New()
+			adb := builder.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
@@ -216,7 +217,7 @@ func Test_Singletons_Errors(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
@@ -240,7 +241,7 @@ func Test_Singletons_Errors(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
@@ -267,7 +268,7 @@ func Test_Singletons_Errors(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		adb := appdef.New()
+		adb := builder.New()
 		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 		doc := ws.AddCDoc(defName)
 		doc.SetSingleton()
@@ -288,7 +289,7 @@ func Test_Singletons_Errors(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		adb := appdef.New()
+		adb := builder.New()
 		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 		doc := ws.AddCDoc(defName)
 		doc.SetSingleton()

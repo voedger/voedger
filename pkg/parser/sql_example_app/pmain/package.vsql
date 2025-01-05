@@ -37,8 +37,6 @@ EXTENSION ENGINE WASM (
 
 );
 
---  Default object scope is PER APP PARTITION and no subject scope
-RATE AppDefaultRate 1000 PER HOUR;
 
 -- WORKSPACE statement declares the Workspace, descriptor and definitions, allowed in this workspace
 WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
@@ -49,6 +47,9 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
         Country varchar(2) CHECK '^[A-Za-z]{2}$',
         Description varchar(100)
     );
+
+    --  Default object scope is PER APP PARTITION and no subject scope
+    RATE AppDefaultRate 1000 PER HOUR;
 
     -- Declare tag to assign it later to definition(s)
     TAG BackofficeTag;
@@ -268,12 +269,10 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
     RATE RestorePasswordRate1 3 PER 5 MINUTES PER APP PARTITION PER IP;
     RATE RestorePasswordRate2 10 PER DAY PER APP PARTITION PER IP;
 
-	LIMIT AntiDDOS ON EVERYTHING WITH RATE AntiDDosRate; -- all commands, queries and CUD
 	LIMIT RestorePasswordLimit1 ON COMMAND RestorePassword WITH RATE RestorePasswordRate1;   -- Single command applied with rate
 	LIMIT RestorePasswordLimit2 ON COMMAND RestorePassword WITH RATE RestorePasswordRate2;   -- Combination of two rates
 	LIMIT Query1Limit ON QUERY Query1 WITH RATE QueryRate; -- Single query applied with rate
 	LIMIT tl1 ON TABLE WsTable WITH RATE CudRate; -- CUD operations on a single table
-	LIMIT BackofficeLimit ON TAG BackofficeTag WITH RATE BackofficeRate; -- Limit on anything with tag
 
     -- GRANTs
     -- Roles

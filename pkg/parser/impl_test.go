@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 )
 
 //go:embed sql_example_app/pmain/*.vsql
@@ -62,7 +63,7 @@ func Test_BasicUsage(t *testing.T) {
 	})
 	require.NoError(err)
 
-	builder := appdef.New()
+	builder := builder.New()
 	err = BuildAppDefs(appSchema, builder)
 	require.NoError(err)
 
@@ -88,9 +89,9 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.Occurs(0), container.MinOccurs())
 	require.Equal(appdef.Occurs(maxNestedTableContainerOccurrences), container.MaxOccurs())
 	require.Equal(appdef.TypeKind_CRecord, container.Type().Kind())
-	require.Equal(2+5 /* +5 system fields*/, container.Type().(appdef.IFields).FieldCount())
-	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IFields).Field("TableNo").DataKind())
-	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IFields).Field("Chairs").DataKind())
+	require.Equal(2+5 /* +5 system fields*/, container.Type().(appdef.IWithFields).FieldCount())
+	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IWithFields).Field("TableNo").DataKind())
+	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IWithFields).Field("Chairs").DataKind())
 
 	// constraint
 	uniques := cdoc.Uniques()
@@ -310,14 +311,14 @@ func (require *ParserAssertions) NoAppSchemaError(sql string) {
 func (require *ParserAssertions) NoBuildError(sql string) {
 	schema, err := require.AppSchema(sql)
 	require.NoError(err)
-	builder := appdef.New()
+	builder := builder.New()
 	BuildAppDefs(schema, builder)
 }
 
 func (require *ParserAssertions) Build(sql string) appdef.IAppDef {
 	schema, err := require.AppSchema(sql)
 	require.NoError(err)
-	builder := appdef.New()
+	builder := builder.New()
 	err = BuildAppDefs(schema, builder)
 	require.NoError(err)
 	appdef, err := builder.Build()
@@ -375,14 +376,14 @@ func Test_Refs_NestedTables(t *testing.T) {
 	})
 	require.NoError(err)
 
-	adb := appdef.New()
+	adb := builder.New()
 	require.NoError(BuildAppDefs(packages, adb))
 
 	app, err := adb.Build()
 	require.NoError(err)
 
 	inner1 := app.Type(appdef.NewQName("pkg1", "inner1"))
-	ref1 := inner1.(appdef.IFields).RefField("ref1")
+	ref1 := inner1.(appdef.IWithFields).RefField("ref1")
 	require.EqualValues(appdef.QNames{appdef.NewQName("pkg1", "table3")}, ref1.Refs())
 }
 
@@ -487,7 +488,7 @@ func Test_Workspace_Defs(t *testing.T) {
 	})
 	require.NoError(err)
 
-	builder := appdef.New()
+	builder := builder.New()
 	require.NoError(BuildAppDefs(packages, builder))
 
 	app, err := builder.Build()
@@ -543,7 +544,7 @@ func Test_Workspace_Defs3(t *testing.T) {
 	})
 	require.NoError(err)
 
-	builder := appdef.New()
+	builder := builder.New()
 	require.NoError(BuildAppDefs(packages, builder))
 
 	_, err = builder.Build()
@@ -633,7 +634,7 @@ func Test_Alter_Workspace(t *testing.T) {
 			pkg2,
 		})
 		require.NoError(err)
-		builder := appdef.New()
+		builder := builder.New()
 		err = BuildAppDefs(schema, builder)
 		require.NoError(err)
 	})
@@ -646,7 +647,7 @@ func Test_Alter_Workspace(t *testing.T) {
 		)
 		`)
 		require.NoError(err)
-		builder := appdef.New()
+		builder := builder.New()
 		err = BuildAppDefs(schema, builder)
 		require.NoError(err)
 	})
@@ -688,7 +689,7 @@ func Test_DupFieldsInTypes(t *testing.T) {
 	})
 	require.NoError(err)
 
-	err = BuildAppDefs(packages, appdef.New())
+	err = BuildAppDefs(packages, builder.New())
 	require.EqualError(err, strings.Join([]string{
 		"file1.vsql:17:4: redefinition of field",
 		"file1.vsql:18:4: redefinition of baseField",
@@ -765,7 +766,7 @@ func Test_DupFieldsInTables(t *testing.T) {
 	})
 	require.NoError(err)
 
-	err = BuildAppDefs(packages, appdef.New())
+	err = BuildAppDefs(packages, builder.New())
 	require.EqualError(err, strings.Join([]string{
 		"file1.vsql:21:3: redefinition of field",
 		"file1.vsql:22:3: redefinition of baseField",
@@ -1166,7 +1167,7 @@ func Test_Views2(t *testing.T) {
 		})
 		require.NoError(err)
 
-		appBld := appdef.New()
+		appBld := builder.New()
 		err = BuildAppDefs(packages, appBld)
 		require.NoError(err)
 
@@ -1203,7 +1204,7 @@ func Test_Views2(t *testing.T) {
 		})
 		require.NoError(err)
 
-		appBld := appdef.New()
+		appBld := builder.New()
 		err = BuildAppDefs(packages, appBld)
 		require.NoError(err)
 
@@ -1362,7 +1363,7 @@ func Test_Projectors(t *testing.T) {
 		);`)
 		require.NoError(err)
 
-		appBld := appdef.New()
+		appBld := builder.New()
 		err = BuildAppDefs(schema, appBld)
 		require.NoError(err)
 
@@ -1391,7 +1392,7 @@ func Test_Projectors(t *testing.T) {
 		);`)
 		require.NoError(err)
 
-		appBld := appdef.New()
+		appBld := builder.New()
 		err = BuildAppDefs(schema, appBld)
 		require.NoError(err)
 
@@ -1538,7 +1539,7 @@ func Test_UniqueFields(t *testing.T) {
 	})
 	require.NoError(err)
 
-	appBld := appdef.New()
+	appBld := builder.New()
 	err = BuildAppDefs(packages, appBld)
 	require.NoError(err)
 
@@ -1575,7 +1576,7 @@ func Test_NestedTables(t *testing.T) {
 	})
 	require.NoError(err)
 
-	appBld := appdef.New()
+	appBld := builder.New()
 	err = BuildAppDefs(packages, appBld)
 	require.NoError(err)
 
@@ -1607,7 +1608,7 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 		})
 		require.NoError(err)
 
-		appBld := appdef.New()
+		appBld := builder.New()
 		err = BuildAppDefs(packages, appBld)
 		require.Error(err)
 		require.Contains(err.Error(), "table test.CTable can not reference to ODoc «test.OTable»")
@@ -1633,7 +1634,7 @@ func Test_1KStringField(t *testing.T) {
 	})
 	require.NoError(err)
 
-	appBld := appdef.New()
+	appBld := builder.New()
 	err = BuildAppDefs(packages, appBld)
 	require.NoError(err)
 
@@ -1690,7 +1691,7 @@ func Test_VRestaurantBasic(t *testing.T) {
 	})
 	require.NoError(err)
 
-	builder := appdef.New()
+	builder := builder.New()
 	err = BuildAppDefs(packages, builder)
 	require.NoError(err)
 
@@ -1701,7 +1702,7 @@ func Test_VRestaurantBasic(t *testing.T) {
 	cdoc := app.Type(appdef.NewQName("vrestaurant", "TablePlan"))
 	require.NotNil(cdoc)
 	require.Equal(appdef.TypeKind_CDoc, cdoc.Kind())
-	require.Equal(appdef.DataKind_RecordID, cdoc.(appdef.IFields).Field("Picture").DataKind())
+	require.Equal(appdef.DataKind_RecordID, cdoc.(appdef.IWithFields).Field("Picture").DataKind())
 
 	cdoc = app.Type(appdef.NewQName("vrestaurant", "Client"))
 	require.NotNil(cdoc)
@@ -1719,7 +1720,7 @@ func Test_VRestaurantBasic(t *testing.T) {
 	crec := app.Type(appdef.NewQName("vrestaurant", "TableItem"))
 	require.NotNil(crec)
 	require.Equal(appdef.TypeKind_CRecord, crec.Kind())
-	require.Equal(appdef.DataKind_int32, crec.(appdef.IFields).Field("Tableno").DataKind())
+	require.Equal(appdef.DataKind_int32, crec.(appdef.IWithFields).Field("Tableno").DataKind())
 
 	// view
 	view := appdef.View(app.Type, appdef.NewQName("vrestaurant", "SalesPerDay"))
@@ -1962,7 +1963,7 @@ func Test_OdocCmdArgs(t *testing.T) {
 	schema, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
 	require.NoError(err)
 
-	builder := appdef.New()
+	builder := builder.New()
 	err = BuildAppDefs(schema, builder)
 	require.NoError(err)
 
@@ -1973,7 +1974,7 @@ func Test_OdocCmdArgs(t *testing.T) {
 	require.NotNil(cmdOdoc)
 	require.NotNil(cmdOdoc.Param())
 
-	odoc := cmdOdoc.Param().(appdef.IContainers)
+	odoc := cmdOdoc.Param().(appdef.IWithContainers)
 	require.Equal(1, odoc.ContainerCount())
 	require.Equal("orecord1", odoc.Container("orecord1").Name())
 	container := odoc.Container("orecord1")
@@ -2019,7 +2020,7 @@ WORKSPACE Workspace1 (
 	schema, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
 	require.NoError(err)
 
-	builder := appdef.New()
+	builder := builder.New()
 	err = BuildAppDefs(schema, builder)
 	require.NoError(err)
 
@@ -2060,7 +2061,7 @@ APPLICATION registry(); WORKSPACE Workspace1 (
 	schema, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
 	require.NoError(err)
 
-	builder := appdef.New()
+	builder := builder.New()
 	err = BuildAppDefs(schema, builder)
 	require.NoError(err)
 
@@ -2211,7 +2212,7 @@ func Test_Grants(t *testing.T) {
 			);
 		`)
 		require.NoError(err)
-		builder := appdef.New()
+		builder := builder.New()
 		err = BuildAppDefs(schema, builder)
 		require.NoError(err)
 
@@ -2246,7 +2247,7 @@ func Test_Grants(t *testing.T) {
 			);
 		`)
 		require.NoError(err)
-		builder := appdef.New()
+		builder := builder.New()
 		err = BuildAppDefs(schema, builder)
 		require.NoError(err)
 
@@ -2287,7 +2288,7 @@ func Test_Grants_Inherit(t *testing.T) {
 				GRANT INSERT ON ALL TABLES TO role1;
 			);`)
 		require.NoError(err)
-		builder := appdef.New()
+		builder := builder.New()
 		err = BuildAppDefs(schema, builder)
 		require.NoError(err)
 
@@ -2359,37 +2360,154 @@ func (t testVarResolver) AsInt32(name appdef.QName) (int32, bool) {
 func Test_Variables(t *testing.T) {
 	require := assertions(t)
 
-	require.AppSchemaError(`APPLICATION app1(); RATE AppDefaultRate variable PER HOUR;`, "file.vsql:1:41: variable undefined")
+	require.AppSchemaError(`APPLICATION app1(); WORKSPACE W( RATE AppDefaultRate variable PER HOUR; )`, "file.vsql:1:54: variable undefined")
 
 	schema, err := require.AppSchema(`APPLICATION app1();
 	DECLARE variable int32 DEFAULT 100;
-	RATE AppDefaultRate variable PER HOUR;
+	WORKSPACE W(
+		RATE AppDefaultRate variable PER HOUR;
+	);
 	`)
 	require.NoError(err)
 
 	resolver := testVarResolver{resolved: make(map[appdef.QName]bool)}
 
-	BuildAppDefs(schema, appdef.New(), WithVariableResolver(&resolver))
+	BuildAppDefs(schema, builder.New(), WithVariableResolver(&resolver))
 	require.True(resolver.resolved[appdef.NewQName("pkg", "variable")])
 }
 
 func Test_RatesAndLimits(t *testing.T) {
 	require := assertions(t)
 
-	require.AppSchemaError(`APPLICATION app1();
-	WORKSPACE w (
-		RATE r 1 PER HOUR;
-		LIMIT l1 ON EVERYTHING WITH RATE x;
-		LIMIT l2 ON COMMAND x WITH RATE r;
-		LIMIT l3 ON QUERY y WITH RATE r;
-		LIMIT l4 ON TAG z WITH RATE r;
-		LIMIT l5 ON TABLE t WITH RATE r;
-	);`,
-		"file.vsql:4:36: undefined rate: x",
-		"file.vsql:5:23: undefined command: x",
-		"file.vsql:6:21: undefined query: y",
-		"file.vsql:7:19: undefined tag: z",
-		"file.vsql:8:21: undefined table: t")
+	t.Run("syntax check", func(t *testing.T) {
+		require.NoAppSchemaError(`APPLICATION app1();
+		WORKSPACE w (
+			TABLE t INHERITS sys.CDoc();
+			TAG tag;
+			VIEW v(
+				f1 int,	f2 int, PRIMARY KEY((f1),f2)
+			) AS RESULT OF p;
+
+			EXTENSION ENGINE BUILTIN (
+				PROJECTOR p AFTER EXECUTE ON c INTENTS (sys.View(v));
+				COMMAND c();
+				QUERY q() RETURNS void;
+			);
+			RATE r 1 PER HOUR;
+			LIMIT l2 ON COMMAND c WITH RATE r;
+			LIMIT l2_1 EXECUTE ON COMMAND c WITH RATE r;
+			LIMIT l3 ON QUERY q WITH RATE r;
+			LIMIT l3_1 EXECUTE ON QUERY q WITH RATE r;
+			LIMIT l4 ON VIEW v WITH RATE r;
+			LIMIT l4_1 SELECT ON VIEW v WITH RATE r;
+			LIMIT l5 ON TABLE t WITH RATE r;
+			LIMIT l5_1 SELECT,INSERT,UPDATE,DEACTIVATE,ACTIVATE ON TABLE t WITH RATE r;
+
+			LIMIT l20 ON ALL COMMANDS WITH TAG tag WITH RATE r;
+			LIMIT l20_1 EXECUTE ON ALL COMMANDS WITH TAG tag WITH RATE r;
+			LIMIT l21 ON ALL QUERIES WITH TAG tag WITH RATE r;
+			LIMIT l21_1 EXECUTE ON ALL QUERIES WITH TAG tag WITH RATE r;
+			LIMIT l22 ON ALL VIEWS WITH TAG tag WITH RATE r;
+			LIMIT l22_1 SELECT ON ALL VIEWS WITH TAG tag WITH RATE r;
+			LIMIT l23 ON ALL TABLES WITH TAG tag WITH RATE r;
+			LIMIT l23_1 SELECT,INSERT,UPDATE,DEACTIVATE,ACTIVATE ON ALL TABLES WITH TAG tag WITH RATE r;
+			LIMIT l24 ON ALL WITH TAG tag WITH RATE r;
+			
+			LIMIT l25 ON ALL COMMANDS WITH RATE r;
+			LIMIT l26 ON ALL QUERIES WITH RATE r;
+			LIMIT l27 ON ALL VIEWS WITH RATE r;
+			LIMIT l28 ON ALL TABLES WITH RATE r;
+			LIMIT l29 ON ALL WITH RATE r;
+
+			LIMIT l30 ON EACH COMMAND WITH TAG tag WITH RATE r;
+			LIMIT l30_1 EXECUTE ON EACH COMMAND WITH TAG tag WITH RATE r;
+			LIMIT l31 ON EACH QUERY WITH TAG tag WITH RATE r;
+			LIMIT l31_1 EXECUTE ON EACH QUERY WITH TAG tag WITH RATE r;
+			LIMIT l32 ON EACH VIEW WITH TAG tag WITH RATE r;
+			LIMIT l32_1 SELECT ON EACH VIEW WITH TAG tag WITH RATE r;
+			LIMIT l33 ON EACH TABLE WITH TAG tag WITH RATE r;
+			LIMIT l33_1 SELECT,INSERT,UPDATE,DEACTIVATE,ACTIVATE ON EACH TABLE WITH TAG tag WITH RATE r;
+			LIMIT l34 ON EACH WITH TAG tag WITH RATE r;
+
+			LIMIT l35 ON EACH COMMAND WITH RATE r;
+			LIMIT l36 ON EACH QUERY WITH RATE r;
+			LIMIT l37 ON EACH VIEW WITH RATE r;
+			LIMIT l38 ON EACH TABLE WITH RATE r;
+			LIMIT l39 ON EACH WITH RATE r;
+		);`)
+	})
+
+	t.Run("not allowed operations", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION app1();
+		WORKSPACE w (
+			TABLE t INHERITS sys.CDoc();
+			TAG tag;
+			VIEW v(
+				f1 int,	f2 int, PRIMARY KEY((f1),f2)
+			) AS RESULT OF p;
+
+			EXTENSION ENGINE BUILTIN (
+				PROJECTOR p AFTER EXECUTE ON c INTENTS (sys.View(v));
+				COMMAND c();
+				QUERY q() RETURNS void;
+			);
+			RATE r 1 PER HOUR;
+			LIMIT l2 INSERT ON COMMAND c WITH RATE r;
+			LIMIT l3 UPDATE ON QUERY q WITH RATE r;
+			LIMIT l4 ACTIVATE,DEACTIVATE ON VIEW v WITH RATE r;
+			LIMIT l5 EXECUTE ON TABLE t WITH RATE r;
+
+			LIMIT l20 INSERT ON ALL COMMANDS WITH RATE r;
+			LIMIT l21 UPDATE ON ALL QUERIES WITH RATE r;
+			LIMIT l22 ACTIVATE ON ALL VIEWS WITH RATE r;
+			LIMIT l23 EXECUTE ON ALL TABLES WITH RATE r;
+			
+			LIMIT l35 INSERT ON EACH COMMAND WITH RATE r;
+			LIMIT l36 UPDATE ON EACH QUERY WITH RATE r;
+			LIMIT l37 ACTIVATE ON EACH VIEW WITH RATE r;
+			LIMIT l38 EXECUTE ON EACH TABLE WITH RATE r;
+			LIMIT l39 SELECT ON EACH QUERY WITH RATE r;
+		);`, "file.vsql:15:13: operation INSERT not allowed",
+			"file.vsql:16:13: operation UPDATE not allowed",
+			"file.vsql:17:13: operation ACTIVATE not allowed",
+			"file.vsql:17:22: operation DEACTIVATE not allowed",
+			"file.vsql:18:13: operation EXECUTE not allowed",
+			"file.vsql:20:14: operation INSERT not allowed",
+			"file.vsql:21:14: operation UPDATE not allowed",
+			"file.vsql:22:14: operation ACTIVATE not allowed",
+			"file.vsql:23:14: operation EXECUTE not allowed",
+			"file.vsql:25:14: operation INSERT not allowed",
+			"file.vsql:26:14: operation UPDATE not allowed",
+			"file.vsql:27:14: operation ACTIVATE not allowed",
+			"file.vsql:28:14: operation EXECUTE not allowed",
+			"file.vsql:29:14: operation SELECT not allowed")
+	})
+
+	t.Run("undefined statements", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION app1();
+		WORKSPACE w (
+			RATE r 1 PER HOUR;
+			LIMIT l2 ON COMMAND x WITH RATE r;
+			LIMIT l3 ON QUERY y WITH RATE r;
+			LIMIT l4 ON VIEW v WITH RATE r;
+			LIMIT l5 ON TABLE t WITH RATE r;
+			LIMIT l20 ON ALL COMMANDS WITH TAG tag WITH RATE r;		
+			LIMIT l29 ON ALL WITH RATE blah;
+			LIMIT l30 ON EACH COMMAND WITH TAG tag WITH RATE r;
+			LIMIT l39 ON EACH WITH RATE blah;
+
+			);`,
+			"file.vsql:4:24: undefined command: x",
+			"file.vsql:5:22: undefined query: y",
+			"file.vsql:6:21: undefined view: v",
+			"file.vsql:7:22: undefined table: t",
+			"file.vsql:8:39: undefined tag: tag",
+			"file.vsql:9:31: undefined rate: blah",
+			"file.vsql:10:39: undefined tag: tag",
+			"file.vsql:11:32: undefined rate: blah",
+		)
+	})
+
 }
 
 func Test_RefsFromInheritedWs(t *testing.T) {
@@ -2621,7 +2739,7 @@ func Test_UniquesFromFieldsets(t *testing.T) {
 	);
 )`)
 	require.NoError(err)
-	require.NoError(BuildAppDefs(schema, appdef.New()))
+	require.NoError(BuildAppDefs(schema, builder.New()))
 }
 
 func Test_CRecordInDescriptor(t *testing.T) {
@@ -2637,7 +2755,7 @@ func Test_CRecordInDescriptor(t *testing.T) {
 	);
 `)
 	require.NoError(err)
-	require.NoError(BuildAppDefs(schema, appdef.New()))
+	require.NoError(BuildAppDefs(schema, builder.New()))
 }
 
 func Test_RefInheritedFromSys(t *testing.T) {

@@ -112,8 +112,6 @@ type RootStatement struct {
 
 	// Also allowed in root
 	Role           *RoleStmt           `parser:"| @@"`
-	Rate           *RateStmt           `parser:"| @@"`
-	Limit          *LimitStmt          `parser:"| @@"`
 	ExtEngine      *RootExtEngineStmt  `parser:"| @@"`
 	Workspace      *WorkspaceStmt      `parser:"| @@"`
 	AlterWorkspace *AlterWorkspaceStmt `parser:"| @@"`
@@ -613,18 +611,49 @@ func (s RateStmt) GetName() string { return string(s.Name) }
 
 type LimitAction struct {
 	Pos        lexer.Position
-	Table      *DefQName `parser:"(ONTABLE @@)"`
-	Command    *DefQName `parser:"| ('ON' 'COMMAND' @@)"`
-	Query      *DefQName `parser:"| ('ON' 'QUERY' @@)"`
-	Tag        *DefQName `parser:"| ('ON' 'TAG' @@)"`
-	Everything bool      `parser:"| @('ON' 'EVERYTHING')"`
+	Select     bool `parser:"(@'SELECT'"`
+	Execute    bool `parser:"| @EXECUTE"`
+	Insert     bool `parser:"| @'INSERT'"`
+	Activate   bool `parser:"| @'ACTIVATE'"`
+	Deactivate bool `parser:"| @'DEACTIVATE'"`
+	Update     bool `parser:"| @'UPDATE')"`
 }
 
+type LimitSingleItemFilter struct {
+	Pos     lexer.Position
+	Command *DefQName `parser:"( (ONCOMMAND @@)"`
+	Query   *DefQName `parser:"| (ONQUERY @@)"`
+	Table   *DefQName `parser:"| (ONTABLE @@)"`
+	View    *DefQName `parser:"| (ONVIEW @@) )"`
+}
+
+type LimitAllItemsFilter struct {
+	Pos      lexer.Position
+	Commands bool      `parser:"( @ONALLCOMMANDS"`
+	Queries  bool      `parser:"| @ONALLQUERIES"`
+	Tables   bool      `parser:"| @ONALLTABLES"`
+	Views    bool      `parser:"| @ONALLVIEWS"`
+	All      bool      `parser:"| @('ON' 'ALL' ) )"`
+	WithTag  *DefQName `parser:"(WITHTAG @@)?"`
+}
+
+type LimitEachItemFilter struct {
+	Pos      lexer.Position
+	Commands bool      `parser:"( @('ON' 'EACH' 'COMMAND')"`
+	Queries  bool      `parser:"| @('ON' 'EACH' 'QUERY')"`
+	Tables   bool      `parser:"| @('ON' 'EACH' 'TABLE')"`
+	Views    bool      `parser:"| @('ON' 'EACH' 'VIEW')"`
+	Each     bool      `parser:"| @('ON' 'EACH' ) )"`
+	WithTag  *DefQName `parser:"(WITHTAG @@)?"`
+}
 type LimitStmt struct {
 	Statement
-	Name     Ident       `parser:"'LIMIT' @Ident"`
-	Action   LimitAction `parser:"@@"`
-	RateName DefQName    `parser:"'WITH' 'RATE' @@"`
+	Name       Ident                  `parser:"'LIMIT' @Ident"`
+	Actions    []LimitAction          `parser:"(@@ (',' @@)*)?"`
+	SingleItem *LimitSingleItemFilter `parser:"( @@"`
+	AllItems   *LimitAllItemsFilter   `parser:"| @@"`
+	EachItem   *LimitEachItemFilter   `parser:"| @@ )"`
+	RateName   DefQName               `parser:"'WITH' 'RATE' @@"`
 }
 
 func (s LimitStmt) GetName() string { return string(s.Name) }
@@ -661,7 +690,7 @@ type GrantAllTablesWithTagActions struct {
 	Pos   lexer.Position
 	All   bool                   `parser:"( @'ALL' | "`
 	Items []GrantAllTablesAction `parser:"(@@ (',' @@)*) )"`
-	Tag   DefQName               `parser:"ONALLTABLESWITHTAG @@"`
+	Tag   DefQName               `parser:"ONALLTABLES WITHTAG @@"`
 }
 
 type GrantAllTables struct {
@@ -673,23 +702,23 @@ type GrantAllTables struct {
 
 type GrantView struct {
 	Pos        lexer.Position
-	AllColumns bool         `parser:"(@SELECTONVIEW | "`
+	AllColumns bool         `parser:"(@(SELECT ONVIEW) | "`
 	Columns    []Identifier `parser:"( SELECT '(' @@ (',' @@)* ')' ONVIEW))"`
 	View       DefQName     `parser:"@@"`
 }
 
 type GrantOrRevoke struct {
-	Command            *DefQName                     `parser:"( (EXECUTEONCOMMAND @@)"`
-	AllCommandsWithTag *DefQName                     `parser:"  | (EXECUTEONALLCOMMANDSWITHTAG @@)"`
-	Query              *DefQName                     `parser:"  | (EXECUTEONQUERY @@)"`
-	AllQueriesWithTag  *DefQName                     `parser:"  | (EXECUTEONALLQUERIESWITHTAG @@)"`
-	AllViewsWithTag    *DefQName                     `parser:"  | (SELECTONALLVIEWSWITHTAG @@)"`
+	Command            *DefQName                     `parser:"( (EXECUTE ONCOMMAND @@)"`
+	AllCommandsWithTag *DefQName                     `parser:"  | (EXECUTE ONALLCOMMANDS WITHTAG @@)"`
+	Query              *DefQName                     `parser:"  | (EXECUTE ONQUERY @@)"`
+	AllQueriesWithTag  *DefQName                     `parser:"  | (EXECUTE ONALLQUERIES WITHTAG @@)"`
+	AllViewsWithTag    *DefQName                     `parser:"  | (SELECT ONALLVIEWS WITHTAG @@)"`
 	View               *GrantView                    `parser:"  | @@"`
 	AllTablesWithTag   *GrantAllTablesWithTagActions `parser:"  | @@"`
 	Table              *GrantTableActions            `parser:"  | @@"`
-	AllCommands        bool                          `parser:"  | @EXECUTEONALLCOMMANDS"`
-	AllQueries         bool                          `parser:"  | @EXECUTEONALLQUERIES"`
-	AllViews           bool                          `parser:"  | @SELECTONALLVIEWS"`
+	AllCommands        bool                          `parser:"  | @(EXECUTE ONALLCOMMANDS)"`
+	AllQueries         bool                          `parser:"  | @(EXECUTE ONALLQUERIES)"`
+	AllViews           bool                          `parser:"  | @(SELECT ONALLVIEWS)"`
 	AllTables          *GrantAllTables               `parser:"  | @@"`
 	Role               *DefQName                     `parser:"  | @@)"`
 	//AllWorkspacesWithTag *DefQName                     `parser:"  | (INSERTONALLWORKSPACESWITHTAG @@)"`

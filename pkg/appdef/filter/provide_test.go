@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
@@ -20,7 +22,7 @@ func Test_QNames(t *testing.T) {
 	docName := appdef.NewQName("test", "doc")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
@@ -56,7 +58,7 @@ func Test_Tags(t *testing.T) {
 	tagName := appdef.NewQName("test", "tag")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
@@ -90,12 +92,12 @@ func Test_Types(t *testing.T) {
 	dataName := appdef.NewQName("test", "data")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
 
-		_ = wsb.AddData(dataName, appdef.DataKind_int32, appdef.NullQName, appdef.MinIncl(0))
+		_ = wsb.AddData(dataName, appdef.DataKind_int32, appdef.NullQName, constraints.MinIncl(0))
 
 		app, err := adb.Build()
 
@@ -131,12 +133,12 @@ func Test_WSTypes(t *testing.T) {
 	dataName := appdef.NewQName("test", "data")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
 
-		_ = wsb.AddData(dataName, appdef.DataKind_int32, appdef.NullQName, appdef.MinIncl(0))
+		_ = wsb.AddData(dataName, appdef.DataKind_int32, appdef.NullQName, constraints.MinIncl(0))
 
 		app, err := adb.Build()
 
@@ -176,7 +178,7 @@ func Test_And(t *testing.T) {
 	tagName := appdef.NewQName("test", "tag")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
@@ -217,7 +219,7 @@ func Test_Or(t *testing.T) {
 	tagName := appdef.NewQName("test", "tag")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)

@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/appparts/internal/schedulers"
@@ -103,7 +104,7 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 	ctx, stop := context.WithCancel(context.Background())
 
 	adb1, appDef1 := func() (appdef.IAppDefBuilder, appdef.IAppDef) {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsName := appdef.NewQName("test", "workspace")
@@ -195,7 +196,7 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 		prj2name := appdef.NewQName("test", "projector2")
 		job2name := appdef.NewQName("test", "job2")
 		appDef2 := func() appdef.IAppDef {
-			adb := appdef.New()
+			adb := builder.New()
 			adb.AddPackage("test", "test.com/test")
 
 			wsName := appdef.NewQName("test", "workspace")

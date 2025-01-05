@@ -23,6 +23,13 @@ const parserLookahead = 10
 const VSqlExt = ".vsql"
 const SqlExt = ".sql"
 
+const OP_SELECT = "SELECT"
+const OP_INSERT = "INSERT"
+const OP_UPDATE = "UPDATE"
+const OP_EXECUTE = "EXECUTE"
+const OP_ACTIVATE = "ACTIVATE"
+const OP_DEACTIVATE = "DEACTIVATE"
+
 var canNotReferenceTo = map[appdef.TypeKind][]appdef.TypeKind{
 	appdef.TypeKind_ODoc:       {},
 	appdef.TypeKind_ORecord:    {},

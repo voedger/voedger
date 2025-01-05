@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -23,7 +24,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 		require := require.New(t)
 
 		appDef := func() appdef.IAppDef {
-			adb := appdef.New()
+			adb := builder.New()
 			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
 			addObject := func(n appdef.QName) {

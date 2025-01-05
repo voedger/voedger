@@ -29,23 +29,7 @@ const SysWorkspaceName = "Workspace"
 
 var SysWorkspaceQName = NewQName(SysPackage, SysWorkspaceName)
 
-// Any names
-const (
-	AnyName          = "ANY"
-	AnyStructureName = "AnyStructure"
-	AnyRecordName    = "AnyRecord"
-	AnyGDocName      = "AnyGDoc"
-	AnyCDocName      = "AnyCDoc"
-	AnyWDocName      = "AnyWDoc"
-	AnySingletonName = "AnySingleton"
-	AnyODocName      = "AnyODoc"
-	AnyObjectName    = "AnyObject"
-	AnyViewName      = "AnyView"
-	AnyExtensionName = "AnyExtension"
-	AnyFunctionName  = "AnyFunction"
-	AnyCommandName   = "AnyCommand"
-	AnyQueryName     = "AnyQuery"
-)
+const AnyName = "ANY"
 
 // QNameANY is substitution denotes that a Function param or result can be any type
 //
@@ -70,6 +54,19 @@ const (
 	SystemField_IsActive  = SystemPackagePrefix + "IsActive"
 	SystemField_Container = SystemPackagePrefix + "Container"
 	SystemField_QName     = SystemPackagePrefix + "QName"
+)
+
+// System data type names
+var (
+	SysData_int32    QName = SysDataName(DataKind_int32)
+	SysData_int64    QName = SysDataName(DataKind_int64)
+	SysData_float32  QName = SysDataName(DataKind_float32)
+	SysData_float64  QName = SysDataName(DataKind_float64)
+	SysData_bytes    QName = SysDataName(DataKind_bytes)
+	SysData_String   QName = SysDataName(DataKind_string)
+	SysData_QName    QName = SysDataName(DataKind_QName)
+	SysData_bool     QName = SysDataName(DataKind_bool)
+	SysData_RecordID QName = SysDataName(DataKind_RecordID)
 )
 
 // Maximum containers per one structured type
