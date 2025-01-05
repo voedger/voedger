@@ -31,8 +31,8 @@ func ACLOperationsForType(t TypeKind) (ops set.Set[OperationKind]) {
 	return ops
 }
 
-// isCompatibleOperations returns true if specified operations set contains compatible operations.
-func isCompatibleOperations(ops set.Set[OperationKind]) (bool, error) {
+// IsCompatibleOperations returns true if specified operations set contains compatible operations.
+func IsCompatibleOperations(ops set.Set[OperationKind]) (bool, error) {
 	op, ok := ops.First()
 	if !ok {
 		return false, ErrMissed("operations")

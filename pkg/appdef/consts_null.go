@@ -23,6 +23,3 @@ var NullType = new(nullType)
 
 // NullFields is used for return then IFields is not supported
 var NullFields = new(nullFields)
-
-// NullAppDef is IAppDef without any user definitions
-var NullAppDef = New().MustBuild()

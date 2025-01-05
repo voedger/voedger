@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -28,7 +29,7 @@ func TestQNamesBasicUsage(t *testing.T) {
 	}
 
 	testName := appdef.NewQName("test", "doc")
-	adb := appdef.New()
+	adb := builder.New()
 	ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 	doc := ws.AddCDoc(testName)
 	doc.AddField("f1", appdef.DataKind_int64, false)

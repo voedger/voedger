@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 )
 
 //go:embed sql_example_app/pmain/*.vsql
@@ -62,7 +63,7 @@ func Test_BasicUsage(t *testing.T) {
 	})
 	require.NoError(err)
 
-	builder := appdef.New()
+	builder := builder.New()
 	err = BuildAppDefs(appSchema, builder)
 	require.NoError(err)
 
@@ -88,9 +89,9 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.Occurs(0), container.MinOccurs())
 	require.Equal(appdef.Occurs(maxNestedTableContainerOccurrences), container.MaxOccurs())
 	require.Equal(appdef.TypeKind_CRecord, container.Type().Kind())
-	require.Equal(2+5 /* +5 system fields*/, container.Type().(appdef.IFields).FieldCount())
-	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IFields).Field("TableNo").DataKind())
-	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IFields).Field("Chairs").DataKind())
+	require.Equal(2+5 /* +5 system fields*/, container.Type().(appdef.IWithFields).FieldCount())
+	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IWithFields).Field("TableNo").DataKind())
+	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IWithFields).Field("Chairs").DataKind())
 
 	// constraint
 	uniques := cdoc.Uniques()
@@ -310,14 +311,14 @@ func (require *ParserAssertions) NoAppSchemaError(sql string) {
 func (require *ParserAssertions) NoBuildError(sql string) {
 	schema, err := require.AppSchema(sql)
 	require.NoError(err)
-	builder := appdef.New()
+	builder := builder.New()
 	BuildAppDefs(schema, builder)
 }
 
 func (require *ParserAssertions) Build(sql string) appdef.IAppDef {
 	schema, err := require.AppSchema(sql)
 	require.NoError(err)
-	builder := appdef.New()
+	builder := builder.New()
 	err = BuildAppDefs(schema, builder)
 	require.NoError(err)
 	appdef, err := builder.Build()
@@ -375,14 +376,14 @@ func Test_Refs_NestedTables(t *testing.T) {
 	})
 	require.NoError(err)
 
-	adb := appdef.New()
+	adb := builder.New()
 	require.NoError(BuildAppDefs(packages, adb))
 
 	app, err := adb.Build()
 	require.NoError(err)
 
 	inner1 := app.Type(appdef.NewQName("pkg1", "inner1"))
-	ref1 := inner1.(appdef.IFields).RefField("ref1")
+	ref1 := inner1.(appdef.IWithFields).RefField("ref1")
 	require.EqualValues(appdef.QNames{appdef.NewQName("pkg1", "table3")}, ref1.Refs())
 }
 
@@ -487,7 +488,7 @@ func Test_Workspace_Defs(t *testing.T) {
 	})
 	require.NoError(err)
 
-	builder := appdef.New()
+	builder := builder.New()
 	require.NoError(BuildAppDefs(packages, builder))
 
 	app, err := builder.Build()
@@ -543,7 +544,7 @@ func Test_Workspace_Defs3(t *testing.T) {
 	})
 	require.NoError(err)
 
-	builder := appdef.New()
+	builder := builder.New()
 	require.NoError(BuildAppDefs(packages, builder))
 
 	_, err = builder.Build()
@@ -633,7 +634,7 @@ func Test_Alter_Workspace(t *testing.T) {
 			pkg2,
 		})
 		require.NoError(err)
-		builder := appdef.New()
+		builder := builder.New()
 		err = BuildAppDefs(schema, builder)
 		require.NoError(err)
 	})
@@ -646,7 +647,7 @@ func Test_Alter_Workspace(t *testing.T) {
 		)
 		`)
 		require.NoError(err)
-		builder := appdef.New()
+		builder := builder.New()
 		err = BuildAppDefs(schema, builder)
 		require.NoError(err)
 	})
@@ -688,7 +689,7 @@ func Test_DupFieldsInTypes(t *testing.T) {
 	})
 	require.NoError(err)
 
-	err = BuildAppDefs(packages, appdef.New())
+	err = BuildAppDefs(packages, builder.New())
 	require.EqualError(err, strings.Join([]string{
 		"file1.vsql:17:4: redefinition of field",
 		"file1.vsql:18:4: redefinition of baseField",
@@ -765,7 +766,7 @@ func Test_DupFieldsInTables(t *testing.T) {
 	})
 	require.NoError(err)
 
-	err = BuildAppDefs(packages, appdef.New())
+	err = BuildAppDefs(packages, builder.New())
 	require.EqualError(err, strings.Join([]string{
 		"file1.vsql:21:3: redefinition of field",
 		"file1.vsql:22:3: redefinition of baseField",
@@ -1166,7 +1167,7 @@ func Test_Views2(t *testing.T) {
 		})
 		require.NoError(err)
 
-		appBld := appdef.New()
+		appBld := builder.New()
 		err = BuildAppDefs(packages, appBld)
 		require.NoError(err)
 
@@ -1203,7 +1204,7 @@ func Test_Views2(t *testing.T) {
 		})
 		require.NoError(err)
 
-		appBld := appdef.New()
+		appBld := builder.New()
 		err = BuildAppDefs(packages, appBld)
 		require.NoError(err)
 
@@ -1362,7 +1363,7 @@ func Test_Projectors(t *testing.T) {
 		);`)
 		require.NoError(err)
 
-		appBld := appdef.New()
+		appBld := builder.New()
 		err = BuildAppDefs(schema, appBld)
 		require.NoError(err)
 
@@ -1391,7 +1392,7 @@ func Test_Projectors(t *testing.T) {
 		);`)
 		require.NoError(err)
 
-		appBld := appdef.New()
+		appBld := builder.New()
 		err = BuildAppDefs(schema, appBld)
 		require.NoError(err)
 
@@ -1538,7 +1539,7 @@ func Test_UniqueFields(t *testing.T) {
 	})
 	require.NoError(err)
 
-	appBld := appdef.New()
+	appBld := builder.New()
 	err = BuildAppDefs(packages, appBld)
 	require.NoError(err)
 
@@ -1575,7 +1576,7 @@ func Test_NestedTables(t *testing.T) {
 	})
 	require.NoError(err)
 
-	appBld := appdef.New()
+	appBld := builder.New()
 	err = BuildAppDefs(packages, appBld)
 	require.NoError(err)
 
@@ -1607,7 +1608,7 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 		})
 		require.NoError(err)
 
-		appBld := appdef.New()
+		appBld := builder.New()
 		err = BuildAppDefs(packages, appBld)
 		require.Error(err)
 		require.Contains(err.Error(), "table test.CTable can not reference to ODoc «test.OTable»")
@@ -1633,7 +1634,7 @@ func Test_1KStringField(t *testing.T) {
 	})
 	require.NoError(err)
 
-	appBld := appdef.New()
+	appBld := builder.New()
 	err = BuildAppDefs(packages, appBld)
 	require.NoError(err)
 
@@ -1690,7 +1691,7 @@ func Test_VRestaurantBasic(t *testing.T) {
 	})
 	require.NoError(err)
 
-	builder := appdef.New()
+	builder := builder.New()
 	err = BuildAppDefs(packages, builder)
 	require.NoError(err)
 
@@ -1701,7 +1702,7 @@ func Test_VRestaurantBasic(t *testing.T) {
 	cdoc := app.Type(appdef.NewQName("vrestaurant", "TablePlan"))
 	require.NotNil(cdoc)
 	require.Equal(appdef.TypeKind_CDoc, cdoc.Kind())
-	require.Equal(appdef.DataKind_RecordID, cdoc.(appdef.IFields).Field("Picture").DataKind())
+	require.Equal(appdef.DataKind_RecordID, cdoc.(appdef.IWithFields).Field("Picture").DataKind())
 
 	cdoc = app.Type(appdef.NewQName("vrestaurant", "Client"))
 	require.NotNil(cdoc)
@@ -1719,7 +1720,7 @@ func Test_VRestaurantBasic(t *testing.T) {
 	crec := app.Type(appdef.NewQName("vrestaurant", "TableItem"))
 	require.NotNil(crec)
 	require.Equal(appdef.TypeKind_CRecord, crec.Kind())
-	require.Equal(appdef.DataKind_int32, crec.(appdef.IFields).Field("Tableno").DataKind())
+	require.Equal(appdef.DataKind_int32, crec.(appdef.IWithFields).Field("Tableno").DataKind())
 
 	// view
 	view := appdef.View(app.Type, appdef.NewQName("vrestaurant", "SalesPerDay"))
@@ -1962,7 +1963,7 @@ func Test_OdocCmdArgs(t *testing.T) {
 	schema, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
 	require.NoError(err)
 
-	builder := appdef.New()
+	builder := builder.New()
 	err = BuildAppDefs(schema, builder)
 	require.NoError(err)
 
@@ -1973,7 +1974,7 @@ func Test_OdocCmdArgs(t *testing.T) {
 	require.NotNil(cmdOdoc)
 	require.NotNil(cmdOdoc.Param())
 
-	odoc := cmdOdoc.Param().(appdef.IContainers)
+	odoc := cmdOdoc.Param().(appdef.IWithContainers)
 	require.Equal(1, odoc.ContainerCount())
 	require.Equal("orecord1", odoc.Container("orecord1").Name())
 	container := odoc.Container("orecord1")
@@ -2019,7 +2020,7 @@ WORKSPACE Workspace1 (
 	schema, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
 	require.NoError(err)
 
-	builder := appdef.New()
+	builder := builder.New()
 	err = BuildAppDefs(schema, builder)
 	require.NoError(err)
 
@@ -2060,7 +2061,7 @@ APPLICATION registry(); WORKSPACE Workspace1 (
 	schema, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
 	require.NoError(err)
 
-	builder := appdef.New()
+	builder := builder.New()
 	err = BuildAppDefs(schema, builder)
 	require.NoError(err)
 
@@ -2211,7 +2212,7 @@ func Test_Grants(t *testing.T) {
 			);
 		`)
 		require.NoError(err)
-		builder := appdef.New()
+		builder := builder.New()
 		err = BuildAppDefs(schema, builder)
 		require.NoError(err)
 
@@ -2246,7 +2247,7 @@ func Test_Grants(t *testing.T) {
 			);
 		`)
 		require.NoError(err)
-		builder := appdef.New()
+		builder := builder.New()
 		err = BuildAppDefs(schema, builder)
 		require.NoError(err)
 
@@ -2287,7 +2288,7 @@ func Test_Grants_Inherit(t *testing.T) {
 				GRANT INSERT ON ALL TABLES TO role1;
 			);`)
 		require.NoError(err)
-		builder := appdef.New()
+		builder := builder.New()
 		err = BuildAppDefs(schema, builder)
 		require.NoError(err)
 
@@ -2371,7 +2372,7 @@ func Test_Variables(t *testing.T) {
 
 	resolver := testVarResolver{resolved: make(map[appdef.QName]bool)}
 
-	BuildAppDefs(schema, appdef.New(), WithVariableResolver(&resolver))
+	BuildAppDefs(schema, builder.New(), WithVariableResolver(&resolver))
 	require.True(resolver.resolved[appdef.NewQName("pkg", "variable")])
 }
 
@@ -2738,7 +2739,7 @@ func Test_UniquesFromFieldsets(t *testing.T) {
 	);
 )`)
 	require.NoError(err)
-	require.NoError(BuildAppDefs(schema, appdef.New()))
+	require.NoError(BuildAppDefs(schema, builder.New()))
 }
 
 func Test_CRecordInDescriptor(t *testing.T) {
@@ -2754,7 +2755,7 @@ func Test_CRecordInDescriptor(t *testing.T) {
 	);
 `)
 	require.NoError(err)
-	require.NoError(BuildAppDefs(schema, appdef.New()))
+	require.NoError(BuildAppDefs(schema, builder.New()))
 }
 
 func Test_RefInheritedFromSys(t *testing.T) {

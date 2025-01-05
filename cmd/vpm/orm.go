@@ -361,7 +361,7 @@ func processITypeObj(
 		}
 
 		// fetching fields
-		for _, field := range t.(appdef.IFields).Fields() {
+		for _, field := range t.(appdef.IWithFields).Fields() {
 			// skip sys fields
 			if slices.Contains(sysFields, field.Name()) {
 				continue
@@ -385,7 +385,7 @@ func processITypeObj(
 			}
 		}
 
-		if iContainers, ok := t.(appdef.IContainers); ok {
+		if iContainers, ok := t.(appdef.IWithContainers); ok {
 			for container := range iContainers.Containers() {
 				containerName := container.Name()
 				tableData.Containers = append(tableData.Containers, ormField{

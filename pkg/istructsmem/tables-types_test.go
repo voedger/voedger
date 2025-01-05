@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	log "github.com/voedger/voedger/pkg/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -378,7 +379,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		newFieldName := func(oldValue string) string { return oldValue + "_1" }
 		oldFieldName := func(newValue string) string { return newValue[:len(newValue)-2] }
 
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		t.Run("should be ok to build new ver of application", func(t *testing.T) {

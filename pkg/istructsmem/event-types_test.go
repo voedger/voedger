@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	log "github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
@@ -743,7 +744,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 	docName := appdef.NewQName("test", "cDoc")
 	recName := appdef.NewQName("test", "cRec")
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("should be ok to construct application", func(t *testing.T) {
@@ -929,7 +930,7 @@ func Test_UpdateCorrupted(t *testing.T) {
 	wsName := appdef.NewQName("test", "workspace")
 	docName := appdef.NewQName("test", "doc")
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("should be ok to build AppDef", func(t *testing.T) {
@@ -1063,7 +1064,7 @@ func Test_BuildPLogEvent(t *testing.T) {
 	wsName := appdef.NewQName("test", "workspace")
 	docName := appdef.NewQName("test", "doc")
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("should be ok to build AppDef", func(t *testing.T) {
@@ -1262,7 +1263,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 	docName, doc2Name := appdef.NewQName("test", "cDoc"), appdef.NewQName("test", "cDoc2")
 	docID := istructs.NullRecordID
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("should be ok to construct singleton CDoc", func(t *testing.T) {

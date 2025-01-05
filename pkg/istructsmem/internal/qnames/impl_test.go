@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -42,7 +43,7 @@ func TestQNames(t *testing.T) {
 	names := New()
 	if err := names.Prepare(storage, versions,
 		func() appdef.IAppDef {
-			adb := appdef.New()
+			adb := builder.New()
 			adb.AddPackage("test", "test.com/test")
 			ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 			ws.AddCDoc(defName)
@@ -92,7 +93,7 @@ func TestQNames(t *testing.T) {
 			names2 := New()
 			if err := names2.Prepare(storage, versions,
 				func() appdef.IAppDef {
-					adb := appdef.New()
+					adb := builder.New()
 					adb.AddPackage("test", "test.com/test")
 					ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 					ws.AddCDoc(defName)
@@ -207,7 +208,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		names := New()
 		err := names.Prepare(storage, versions,
 			func() appdef.IAppDef {
-				adb := appdef.New()
+				adb := builder.New()
 				adb.AddPackage("test", "test.com/test")
 				wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 				for i := 0; i <= MaxAvailableQNameID; i++ {
@@ -240,7 +241,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			names := New()
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
-					adb := appdef.New()
+					adb := builder.New()
 					adb.AddPackage("test", "test.com/test")
 					wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 					wsb.AddObject(qName)
@@ -264,7 +265,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			names := New()
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
-					adb := appdef.New()
+					adb := builder.New()
 					adb.AddPackage("test", "test.com/test")
 					wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 					wsb.AddObject(qName)

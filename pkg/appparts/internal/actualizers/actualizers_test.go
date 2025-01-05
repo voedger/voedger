@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts/internal/actualizers"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
@@ -25,7 +26,7 @@ func TestActualizersWaitTimeout(t *testing.T) {
 	prjNames := appdef.MustParseQNames("test.p1", "test.p2", "test.p3")
 
 	appDef := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(wsName)
 		_ = wsb.AddCommand(appdef.NewQName("test", "command"))

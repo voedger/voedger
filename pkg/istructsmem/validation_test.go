@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -23,7 +25,7 @@ func Test_ValidEventArgs(t *testing.T) {
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
@@ -320,7 +322,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	wsName := appdef.NewQName("test", "workspace")
@@ -555,7 +557,7 @@ func Test_ValidCommandEvent(t *testing.T) {
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
@@ -681,7 +683,7 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
@@ -764,7 +766,7 @@ func Test_VerifiedFields(t *testing.T) {
 
 	objName := appdef.NewQName("test", "obj")
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
@@ -939,7 +941,7 @@ func Test_CharsFieldRestricts(t *testing.T) {
 
 	objName := appdef.NewQName("test", "obj")
 
-	adb := appdef.New()
+	adb := builder.New()
 
 	t.Run("should be ok to build application", func(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
@@ -950,13 +952,13 @@ func Test_CharsFieldRestricts(t *testing.T) {
 		mimeData := appdef.NewQName("test", "mime")
 
 		wsb.AddData(s100Data, appdef.DataKind_string, appdef.NullQName,
-			appdef.MinLen(1), appdef.MaxLen(100)).SetComment("string 1..100")
+			constraints.MinLen(1), constraints.MaxLen(100)).SetComment("string 1..100")
 
 		_ = wsb.AddData(emailData, appdef.DataKind_string, s100Data,
-			appdef.MinLen(6), appdef.Pattern(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`))
+			constraints.MinLen(6), constraints.Pattern(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`))
 
 		_ = wsb.AddData(mimeData, appdef.DataKind_bytes, appdef.NullQName,
-			appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`))
+			constraints.MinLen(4), constraints.MaxLen(4), constraints.Pattern(`^\w+$`))
 
 		wsb.AddObject(objName).
 			AddDataField("email", emailData, true).

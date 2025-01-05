@@ -203,7 +203,8 @@ classDiagram
 
   class IAppDef {
     <<interface>>
-    +Types(func(IType) bool)
+    +Types() iter.Seq[IType]
+    +Workspaces() iter.Seq[IType]
   }
   IAppDef "1" *--> "1" iterator : Types
 
@@ -253,15 +254,6 @@ classDiagram
 ```mermaid
 classDiagram
     direction BT
-
-  class IAppDef {
-    <<Interface>>
-    +DataTypes(inclSys bool) []IData
-    +SysData(DataKind) IData
-  }
-
-  IData "0..*" <--o "1" IAppDef : DataTypes
-  IData "1..DataKind_count" <--o "1" IAppDef : SysData
 
     class IType {
         <<interface>>
@@ -317,8 +309,8 @@ classDiagram
         +Kind() ConstraintKind
         +Value() any
     }
-    note for IConstraint " - minLen() uint
-                           - maxLen() uint
+    note for IConstraint " - MinLen() uint
+                           - MaxLen() uint
                            - Pattern() RegExp
                            - MinInclusive() float
                            - MinExclusive() float
@@ -461,23 +453,13 @@ classDiagram
     +Constraints() []IConstraint
   }
 
-  class IFields{
+  class IWithFields{
     <<Interface>>
     Field(FieldName) IField
     FieldCount() int
     Fields() []IField
   }
-  IFields "1" --* "0..*" IField : compose
-
-  IFieldsBuilder --|> IFields : inherits
-  class IFieldsBuilder {
-    <<Interface>>
-    AddField(…)
-    AddVerifiedField(…)
-    AddRefField(…)
-    AddStringField(…)
-    AddConstraints(IConstraint...)
-  }
+  IWithFields "1" --* "0..*" IField : compose
 
   IRefField --|> IField : inherits
   class IRefField {
@@ -493,20 +475,14 @@ classDiagram
     +MaxOccurs() int
   }
 
-  class IContainers{
+  class IWithContainers{
     <<Interface>>
     Container(string) IContainer
     ContainerCount() int
     ContainerDef() [string]IType
     Containers() []IContainer
   }
-  IContainers "1" --* "0..*" IContainer : compose
-
-  IContainersBuilder --|> IContainers : inherits
-  class IContainersBuilder {
-    <<Interface>>
-    AddContainer(…) IContainer
-  }
+  IWithContainers "1" --* "0..*" IContainer : compose
 
   class IUnique {
     <<Interface>>
@@ -514,19 +490,13 @@ classDiagram
     +Fields() []IFeld
   }
 
-  class IUniques{
+  class IWithUniques{
     <<Interface>>
     UniqueByName(QName) IUnique
     UniqueCount() int
     Uniques() []IUnique
   }
-  IUniques "1" --* "0..*" IUnique : compose
-
-  IUniquesBuilder --|> IUniques : inherits
-  class IUniquesBuilder {
-    <<Interface>>
-    AddUnique(…) IUnique
-  }
+  IWithUniques "1" --* "0..*" IUnique : compose
 ```
 
 ### Views
@@ -543,7 +513,7 @@ classDiagram
   class IView {
     <<Interface>>
     +Kind()* TypeKind_View
-    IFields
+    IWithFields
     +Key() IViewKey
     +Value() IViewValue
   }
@@ -552,7 +522,7 @@ classDiagram
 
   class IViewKey {
     <<Interface>>
-    IFields
+    IWithFields
     +PartKey() IViewPartKey
     +ClustCols() IViewClustCols
   }
@@ -562,19 +532,19 @@ classDiagram
 
   class IViewPartKey {
     <<Interface>>
-    IFields
+    IWithFields
   }
   IViewPartKey "1" *--> "1..*" IField : fields
 
   class IViewClustCols {
     <<Interface>>
-    IFields
+    IWithFields
   }
   IViewClustCols "1" *--> "1..*" IField : fields
 
   class IViewValue {
     <<Interface>>
-    IFields
+    IWithFields
   }
   IViewValue "1" *--> "1..*" IField : fields
 

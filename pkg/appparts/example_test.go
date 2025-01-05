@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -24,7 +25,7 @@ func Example() {
 	wsName := appdef.NewQName("test", "workspace")
 	verInfo := appdef.NewQName("test", "verInfo")
 	buildAppDef := func(ver ...string) (appdef.IAppDefBuilder, appdef.IAppDef) {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		ws := adb.AddWorkspace(wsName)
