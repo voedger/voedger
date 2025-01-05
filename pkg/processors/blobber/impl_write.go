@@ -7,20 +7,17 @@ package blobprocessor
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"mime"
 	"net/http"
-	"time"
 
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/iblobstorage"
-	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func getRegisterFuncName(ctx context.Context, work pipeline.IWorkpiece) (err error) {
@@ -56,58 +53,56 @@ func provideWriteBLOB(blobStorage iblobstorage.IBLOBStorage, wLimiterFactory WLi
 	}
 }
 
-func provideSetBLOBStatusCompleted(bus ibus.IBus, busTimeout time.Duration) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	return func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-		bw := work.(*blobWorkpiece)
-		if !bw.isPersistent() {
-			// do not account statuses for temp blobs
-			return nil
-		}
-		// set WDoc<sys.BLOB>.status = BLOBStatus_Completed
-		req := ibus.Request{
-			Method:   ibus.HTTPMethodPOST,
-			WSID:     bw.blobMessage.WSID(),
-			AppQName: bw.blobMessage.AppQName().String(),
-			Resource: "c.sys.CUD",
-			Body:     []byte(fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"status":%d}}]}`, bw.newBLOBID, iblobstorage.BLOBStatus_Completed)),
-			Header:   bw.blobMessage.Header(),
-			Host:     coreutils.Localhost,
-		}
-		cudWDocBLOBUpdateResp, _, _, err := bus.SendRequest2(bw.blobMessage.RequestCtx(), req, busTimeout)
-		if err != nil {
-			return fmt.Errorf("failed to exec c.sys.CUD: %w", err)
-		}
-		if cudWDocBLOBUpdateResp.StatusCode != http.StatusOK {
-			return coreutils.NewHTTPErrorf(cudWDocBLOBUpdateResp.StatusCode, "c.sys.CUD returned error: ", string(cudWDocBLOBUpdateResp.Data))
-		}
+func setBLOBStatusCompleted(ctx context.Context, work pipeline.IWorkpiece) (err error) {
+	bw := work.(*blobWorkpiece)
+	if !bw.isPersistent() {
+		// do not account statuses for temp blobs
 		return nil
 	}
+	// set WDoc<sys.BLOB>.status = BLOBStatus_Completed
+	req := bus.Request{
+		Method:   http.MethodPost,
+		WSID:     bw.blobMessage.WSID(),
+		AppQName: bw.blobMessage.AppQName().String(),
+		Resource: "c.sys.CUD",
+		Body:     []byte(fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"status":%d}}]}`, bw.newBLOBID, iblobstorage.BLOBStatus_Completed)),
+		Header:   bw.blobMessage.Header(),
+		Host:     coreutils.Localhost,
+	}
+	cudWDocBLOBUpdateMeta, cudWDocBLOBUpdateResp, err := bus.GetCommandResponse(bw.blobMessage.RequestCtx(), bw.blobMessage.RequestSender(), req)
+	if err != nil {
+		return fmt.Errorf("failed to exec c.sys.CUD: %w", err)
+	}
+	if cudWDocBLOBUpdateMeta.StatusCode != http.StatusOK {
+		return coreutils.NewHTTPErrorf(cudWDocBLOBUpdateMeta.StatusCode, "c.sys.CUD returned error: ", cudWDocBLOBUpdateResp.SysError.Data)
+	}
+	return nil
 }
 
-func provideRegisterBLOB(bus ibus.IBus, busTimeout time.Duration) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	return func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-		bw := work.(*blobWorkpiece)
-		blobHelperResp, err := blobHelper(bw, bus, busTimeout, bw.registerFuncName)
-		if err != nil {
-			return err
-		}
-		if bw.isPersistent() {
-			cmdResp := map[string]interface{}{}
-			if err := json.Unmarshal(blobHelperResp.Data, &cmdResp); err != nil {
-				return fmt.Errorf("failed to json-unmarshal %s :%w", bw.registerFuncName, err)
-			}
-			newIDsIntf, ok := cmdResp["NewIDs"]
-			if !ok {
-				// notest
-				return coreutils.NewHTTPErrorf(http.StatusInternalServerError, "missing NewIDs in "+bw.registerFuncName+" cmd response")
-			}
-			newIDs := newIDsIntf.(map[string]interface{})
-			bw.newBLOBID = istructs.RecordID(newIDs["1"].(float64))
-			return nil
-		}
-		bw.newSUUID = iblobstorage.NewSUUID()
-		return nil
+func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
+	bw := work.(*blobWorkpiece)
+	req := bus.Request{
+		Method:   http.MethodPost,
+		WSID:     bw.blobMessage.WSID(),
+		AppQName: bw.blobMessage.AppQName().String(),
+		Resource: bw.registerFuncName,
+		Header:   bw.blobMessage.Header(),
+		Body:     []byte(`{}`),
+		Host:     coreutils.Localhost,
 	}
+	blobHelperMeta, blobHelperResp, err := bus.GetCommandResponse(bw.blobMessage.RequestCtx(), bw.blobMessage.RequestSender(), req)
+	if err != nil {
+		return fmt.Errorf("failed to exec q.sys.DownloadBLOBAuthnz: %w", err)
+	}
+	if blobHelperMeta.StatusCode != http.StatusOK {
+		return coreutils.NewHTTPErrorf(blobHelperMeta.StatusCode, "q.sys.DownloadBLOBAuthnz returned error: "+blobHelperResp.SysError.Data)
+	}
+	if bw.isPersistent() {
+		bw.newBLOBID, err = coreutils.Int64ToRecordID(blobHelperResp.NewIDs["1"])
+		return err
+	}
+	bw.newSUUID = iblobstorage.NewSUUID()
+	return nil
 }
 
 func getBLOBMessageWrite(_ context.Context, work pipeline.IWorkpiece) error {

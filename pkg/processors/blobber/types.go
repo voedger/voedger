@@ -12,6 +12,7 @@ import (
 	"net/url"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -49,6 +50,7 @@ type implIBLOBMessage_base struct {
 	okResponseIniter func(headersKeyValue ...string) io.Writer
 	errorResponder   ErrorResponder
 	done             chan interface{}
+	requestSender    bus.IRequestSender
 }
 
 type implIBLOBMessage_Read struct {
@@ -102,6 +104,10 @@ func (m *implIBLOBMessage_base) Release() {
 	close(m.done)
 }
 
+func (m *implIBLOBMessage_base) RequestSender() bus.IRequestSender {
+	return m.requestSender
+}
+
 type WLimiterFactory func() iblobstorage.WLimiterType
 
 type iBLOBMessage_Base interface {
@@ -112,6 +118,7 @@ type iBLOBMessage_Base interface {
 	InitOKResponse(headersKeyValue ...string) io.Writer
 	RequestCtx() context.Context
 	ReplyError(statusCode int, args ...any)
+	RequestSender() bus.IRequestSender
 }
 
 type IBLOBMessage_Read interface {

@@ -19,12 +19,10 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/net/netutil"
 
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
-
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -175,7 +173,7 @@ func (s *httpService) registerHandlersV1() {
 			Name("blob read")
 	}
 	s.router.HandleFunc(fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}", URLPlaceholder_appOwner, URLPlaceholder_appName,
-		URLPlaceholder_wsid, URLPlaceholder_resourceName), corsHandler(RequestHandler(s.bus, s.busTimeout, s.numsAppsWorkspaces))).
+		URLPlaceholder_wsid, URLPlaceholder_resourceName), corsHandler(RequestHandler(s.requestSender, s.numsAppsWorkspaces))).
 		Methods("POST", "PATCH", "OPTIONS").Name("api")
 
 	s.router.Handle("/n10n/channel", corsHandler(s.subscribeAndWatchHandler())).Methods("GET")
@@ -184,15 +182,15 @@ func (s *httpService) registerHandlersV1() {
 	s.router.Handle("/n10n/update/{offset:[0-9]{1,10}}", corsHandler(s.updateHandler()))
 }
 
-func RequestHandler(bus ibus.IBus, busTimeout time.Duration, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+func RequestHandler(requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
-		queueRequest, ok := createRequest(req.Method, req, resp, numsAppsWorkspaces)
+		request, ok := createRequest(req.Method, req, resp, numsAppsWorkspaces)
 		if !ok {
 			return
 		}
 
-		queueRequest.Resource = vars[URLPlaceholder_resourceName]
+		request.Resource = vars[URLPlaceholder_resourceName]
 
 		// req's BaseContext is router service's context. See service.Start()
 		// router app closing or client disconnected -> req.Context() is done
@@ -200,24 +198,20 @@ func RequestHandler(bus ibus.IBus, busTimeout time.Duration, numsAppsWorkspaces 
 		// requestCtx.Done() -> SendRequest2 implementation will notify the handler that the consumer has left us
 		requestCtx, cancel := context.WithCancel(req.Context())
 		defer cancel() // to avoid context leak
-		res, sections, secErr, err := bus.SendRequest2(requestCtx, queueRequest, busTimeout)
+		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(requestCtx, request)
 		if err != nil {
-			logger.Error("IBus.SendRequest2 failed on ", queueRequest.Resource, ":", err, ". Body:\n", string(queueRequest.Body))
+			logger.Error("sending request to VVM on", request.Resource, "is failed:", err, ". Body:\n", string(request.Body))
 			status := http.StatusInternalServerError
-			if errors.Is(err, ibus.ErrBusTimeoutExpired) {
+			if errors.Is(err, bus.ErrSendTimeoutExpired) {
 				status = http.StatusServiceUnavailable
 			}
 			WriteTextResponse(resp, err.Error(), status)
 			return
 		}
 
-		if sections == nil {
-			resp.Header().Set(coreutils.ContentType, res.ContentType)
-			resp.WriteHeader(res.StatusCode)
-			writeResponse(resp, string(res.Data))
-			return
-		}
-		writeSectionedResponse(requestCtx, resp, sections, secErr, cancel)
+		initResponse(resp, responseMeta.ContentType, responseMeta.StatusCode)
+		isCmd := strings.HasPrefix(request.Resource, "c.")
+		reply(requestCtx, resp, responseCh, responseErr, responseMeta.ContentType, cancel, isCmd)
 	}
 }
 

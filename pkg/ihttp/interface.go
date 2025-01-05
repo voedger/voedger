@@ -10,9 +10,9 @@ import (
 	"io/fs"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/iservices"
 	"github.com/voedger/voedger/pkg/istructs"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 // Proposed factory signature
@@ -46,7 +46,7 @@ type IHTTPProcessor interface {
 	//--	SetAppPartitionsNumber(app appdef.AppQName, partNo istructs.PartitionID, numPartitions istructs.PartitionID) (err error)
 
 	// ErrUnknownApplication
-	DeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID, appPartitionRequestHandler ibus.RequestHandler) (err error)
+	DeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID, appPartitionRequestHandler bus.RequestHandler) (err error)
 	// ErrUnknownAppPartition
 	//--	UndeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID) (err error)
 
@@ -59,7 +59,7 @@ type IHTTPProcessor interface {
 
 type ISender interface {
 	// err.Error() must have QName format:
-	//   var ErrBusTimeoutExpired = errors.New("ibus.ErrBusTimeoutExpired")
+	//   var ErrBusTimeoutExpired = errors.New("coreutils.ErrSendTimeoutExpired")
 	// NullHandler can be used as a reader
 	Send(ctx context.Context, request interface{}, sectionsHandler SectionsHandlerType) (response interface{}, status Status, err error)
 }

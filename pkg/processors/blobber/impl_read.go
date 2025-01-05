@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
@@ -20,7 +20,6 @@ import (
 	"github.com/voedger/voedger/pkg/iblobstoragestg"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func getBLOBKeyRead(ctx context.Context, work pipeline.IWorkpiece) (err error) {
@@ -99,32 +98,26 @@ func provideQueryAndCheckBLOBState(blobStorage iblobstorage.IBLOBStorage) func(c
 	}
 }
 
-func blobHelper(bw *blobWorkpiece, bus ibus.IBus, busTimeout time.Duration, registerFuncName string) (resp ibus.Response, err error) {
-	req := ibus.Request{
-		Method:   ibus.HTTPMethodPOST,
+func downloadBLOBHelper(ctx context.Context, work pipeline.IWorkpiece) (err error) {
+	bw := work.(*blobWorkpiece)
+	req := bus.Request{
+		Method:   http.MethodPost,
 		WSID:     bw.blobMessage.WSID(),
 		AppQName: bw.blobMessage.AppQName().String(),
-		Resource: registerFuncName,
+		Resource: "q.sys.DownloadBLOBAuthnz",
 		Header:   bw.blobMessage.Header(),
 		Body:     []byte(`{}`),
 		Host:     coreutils.Localhost,
 	}
-	blobHelperResp, _, _, err := bus.SendRequest2(bw.blobMessage.RequestCtx(), req, busTimeout)
+	respCh, _, respErr, err := bw.blobMessage.RequestSender().SendRequest(bw.blobMessage.RequestCtx(), req)
 	if err != nil {
-		return resp, coreutils.NewHTTPErrorf(http.StatusInternalServerError, "failed to exec q.sys.DownloadBLOBAuthnz: ", err)
+		return fmt.Errorf("failed to exec q.sys.DownloadBLOBAuthnz: %w", err)
 	}
-	if blobHelperResp.StatusCode != http.StatusOK {
-		return resp, coreutils.NewHTTPErrorf(blobHelperResp.StatusCode, "q.sys.DownloadBLOBAuthnz returned error: "+string(blobHelperResp.Data))
+	for range respCh {
+		// notest
+		panic("unexpeced result of q.sys.DownloadBLOBAuthnz")
 	}
-	return blobHelperResp, nil
-}
-
-func provideDownloadBLOBHelper(bus ibus.IBus, busTimeout time.Duration) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	return func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-		bm := work.(*blobWorkpiece)
-		_, err = blobHelper(bm, bus, busTimeout, "q.sys.DownloadBLOBAuthnz")
-		return err
-	}
+	return *respErr
 }
 
 func provideReadBLOB(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {

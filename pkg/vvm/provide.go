@@ -20,12 +20,9 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/google/wire"
 	"golang.org/x/crypto/acme/autocert"
-
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appparts"
@@ -46,6 +43,7 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/engines"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/iauthnz"
@@ -151,8 +149,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideProcessorChannelGroupIdxBLOB,
 		provideQueryChannel,
 		provideCommandChannelFactory,
+		provideRequestHandler,
 		provideBLOBChannel,
-		provideIBus,
 		provideRouterParams,
 		provideRouterAppStoragePtr,
 		provideIFederation,
@@ -201,6 +199,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideSidecarApps,
 		provideN10NQuotas,
 		provideWLimiterFactory,
+		bus.NewIRequestSender,
 		blobprocessor.NewIRequestHandler,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
@@ -212,7 +211,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"Name",
 			"MaxPrepareQueries",
 			"StorageCacheSize",
-			"BusTimeout",
+			"SendTimeout",
 			"VVMPort",
 			"MetricsServicePort",
 			"ActualizerStateOpts",
@@ -718,10 +717,10 @@ func provideRouterAppStoragePtr(astp istorage.IAppStorageProvider) dbcertcache.R
 }
 
 // port 80 -> [0] is http server, port 443 -> [0] is https server, [1] is acme server
-func provideRouterServices(rp router.RouterParams, busTimeout BusTimeout, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler,
-	autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) RouterServices {
-	httpSrv, acmeSrv, adminSrv := router.Provide(rp, time.Duration(busTimeout), broker, blobRequestHandler,
-		autocertCache, bus, numsAppsWorkspaces)
+func provideRouterServices(rp router.RouterParams, sendTimeout bus.SendTimeout, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, quotas in10n.Quotas,
+	wLimiterFactory blobprocessor.WLimiterFactory, blobStorage BlobStorage,
+	autocertCache autocert.Cache, requestSender bus.IRequestSender, vvmPortSource *VVMPortSource, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) RouterServices {
+	httpSrv, acmeSrv, adminSrv := router.Provide(rp, broker, blobRequestHandler, autocertCache, requestSender, numsAppsWorkspaces)
 	vvmPortSource.getter = func() VVMPortType {
 		return VVMPortType(httpSrv.GetPort())
 	}
@@ -762,10 +761,10 @@ func provideCommandChannelFactory(sch ServiceChannelFactory) CommandChannelFacto
 }
 
 func provideOpBLOBProcessors(numBLOBWorkers istructs.NumBLOBProcessors, blobServiceChannel blobprocessor.BLOBServiceChannel,
-	blobStorage BlobStorage, ibus ibus.IBus, busTimeout BusTimeout, wLimiterFactory blobprocessor.WLimiterFactory) OperatorBLOBProcessors {
+	blobStorage BlobStorage, wLimiterFactory blobprocessor.WLimiterFactory) OperatorBLOBProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, numBLOBWorkers)
 	for i := 0; i < int(numBLOBWorkers); i++ {
-		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(blobprocessor.ProvideService(blobServiceChannel, blobStorage, ibus, time.Duration(busTimeout),
+		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(blobprocessor.ProvideService(blobServiceChannel, blobStorage,
 			wLimiterFactory)))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
@@ -775,14 +774,14 @@ func provideQueryProcessors(qpCount istructs.NumQueryProcessors, qc QueryChannel
 	imetrics imetrics.IMetrics, vvm processors.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
 	tokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) OperatorQueryProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
-	resultSenderFactory := func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
-		return &resultSenderErrorFirst{
-			ctx:    ctx,
-			sender: sender,
-		}
-	}
+	// resultSenderFactory := func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
+	// 	return &resultSenderErrorFirst{
+	// 		ctx:    ctx,
+	// 		sender: sender,
+	// 	}
+	// }
 	for i := 0; i < int(qpCount); i++ {
-		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), resultSenderFactory, appParts, int(mpq), imetrics,
+		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), appParts, int(mpq), imetrics,
 			string(vvm), authn, authz, tokens, federation, statelessResources, secretReader)))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
