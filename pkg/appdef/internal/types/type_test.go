@@ -151,8 +151,8 @@ func Test_TypeRef(t *testing.T) {
 
 		require.True(ref.Valid(app.Type))
 
-		any := ref.Target(app.Type)
-		require.NotNil(any)
-		require.Equal(appdef.TypeKind_Any, any.Kind())
+		anyRef := ref.Target(app.Type)
+		require.NotNil(anyRef)
+		require.Equal(appdef.TypeKind_Any, anyRef.Kind())
 	})
 }
