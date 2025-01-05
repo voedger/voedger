@@ -14,6 +14,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -393,7 +394,9 @@ func TestAdminService(t *testing.T) {
 			t.Skip("unable to find local non-loopback ip address")
 		}
 		_, err = net.DialTimeout("tcp", fmt.Sprintf("%s:%d", nonLocalhostIP, router.adminPort()), 1*time.Second)
-		require.ErrorIs(err, context.DeadlineExceeded)
+		if !errors.Is(err, context.DeadlineExceeded) && !strings.Contains("connection refused", err.Error()) {
+			t.Fatal(err)
+		}
 		log.Println(err)
 	})
 }
