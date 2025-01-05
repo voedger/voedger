@@ -158,7 +158,7 @@ func TestBasicUsage(t *testing.T) {
 		}
 		require.Equal(http.StatusInternalServerError, respMeta.StatusCode)
 		require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
-		require.Equal(`{"sys.Error":{"HTTPStatus":500,"Message":"fire error"}}`, (*respErr).(coreutils.SysError).ToJSON())
+		require.Equal(`{"sys.Error":{"HTTPStatus":500,"Message":"fire error"}}`, (*respErr).(coreutils.SysError).ToJSON()) // nolint:errorlint
 		log.Println((*respErr).Error())
 	})
 }

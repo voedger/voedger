@@ -144,7 +144,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					var senderCloseable bus.IResponseSenderCloseable
 					statusCode := http.StatusOK
 					if err != nil {
-						statusCode = err.(coreutils.SysError).HTTPStatus
+						statusCode = err.(coreutils.SysError).HTTPStatus // nolint:errorlint
 					}
 					if qwork.responseSenderGetter == nil || qwork.responseSenderGetter() == nil {
 						// have an error before 200ok is sent -> send the status from the actual error
