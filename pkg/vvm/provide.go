@@ -27,6 +27,7 @@ import (
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/btstrp"
@@ -642,7 +643,7 @@ func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err er
 		if err != nil {
 			return nil, err
 		}
-		appDefBuilder := appdef.New()
+		appDefBuilder := builder.New()
 		if err := parser.BuildAppDefs(appSchemaAST, appDefBuilder); err != nil {
 			return nil, err
 		}

@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -30,7 +31,7 @@ var (
 	}
 
 	testAppDef = func(t *testing.T) appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 
 		wsb := adb.AddWorkspace(testWS)
 

@@ -8,9 +8,9 @@ package appdef
 // Structure is a type with fields, containers and uniques.
 type IStructure interface {
 	IType
-	IFields
-	IContainers
-	IUniques
+	IWithFields
+	IWithContainers
+	IWithUniques
 	IWithAbstract
 
 	// Returns definition for «sys.QName» field
@@ -44,9 +44,6 @@ type IRecordBuilder interface {
 // Document can contains records.
 type IDoc interface {
 	IRecord
-
-	// Unwanted type assertion stub
-	isDoc()
 }
 
 type IDocBuilder interface {
