@@ -203,7 +203,8 @@ classDiagram
 
   class IAppDef {
     <<interface>>
-    +Types(func(IType) bool)
+    +Types() iter.Seq[IType]
+    +Workspaces() iter.Seq[IType]
   }
   IAppDef "1" *--> "1" iterator : Types
 
@@ -253,15 +254,6 @@ classDiagram
 ```mermaid
 classDiagram
     direction BT
-
-  class IAppDef {
-    <<Interface>>
-    +DataTypes(inclSys bool) []IData
-    +SysData(DataKind) IData
-  }
-
-  IData "0..*" <--o "1" IAppDef : DataTypes
-  IData "1..DataKind_count" <--o "1" IAppDef : SysData
 
     class IType {
         <<interface>>
@@ -317,8 +309,8 @@ classDiagram
         +Kind() ConstraintKind
         +Value() any
     }
-    note for IConstraint " - minLen() uint
-                           - maxLen() uint
+    note for IConstraint " - MinLen() uint
+                           - MaxLen() uint
                            - Pattern() RegExp
                            - MinInclusive() float
                            - MinExclusive() float
@@ -469,15 +461,6 @@ classDiagram
   }
   IWithFields "1" --* "0..*" IField : compose
 
-  class IFieldsBuilder {
-    <<Interface>>
-    AddField(…)
-    AddVerifiedField(…)
-    AddRefField(…)
-    AddStringField(…)
-    AddConstraints(IConstraint...)
-  }
-
   IRefField --|> IField : inherits
   class IRefField {
     <<Interface>>
@@ -501,11 +484,6 @@ classDiagram
   }
   IWithContainers "1" --* "0..*" IContainer : compose
 
-  class IContainersBuilder {
-    <<Interface>>
-    AddContainer(…) IContainer
-  }
-
   class IUnique {
     <<Interface>>
     +Name() QName
@@ -519,11 +497,6 @@ classDiagram
     Uniques() []IUnique
   }
   IWithUniques "1" --* "0..*" IUnique : compose
-
-  class IUniquesBuilder {
-    <<Interface>>
-    AddUnique(…) IUnique
-  }
 ```
 
 ### Views
