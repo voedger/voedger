@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -383,61 +382,61 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				return nil
 			}
 			// TODO: eliminate SELECT rule skipping after implementing ACL in VSQL in Air
-			for _, elem := range qw.queryParams.Elements() {
-				nestedPath := elem.Path().AsArray()
-				nestedType := qw.resultType
-				for _, nestedName := range nestedPath {
-					if len(nestedName) == 0 {
-						// root
-						continue
-					}
-					// incorrectness is excluded already on validation stage in [queryParams.validate]
-					containersOfNested := nestedType.(appdef.IContainers)
-					// container presence is checked already on validation stage in [queryParams.validate]
-					nestedContainer := containersOfNested.Container(nestedName)
-					nestedType = nestedContainer.Type()
-				}
-				requestedfields := []string{}
-				for _, resultField := range elem.ResultFields() {
-					requestedfields = append(requestedfields, resultField.Field())
-				}
+			// for _, elem := range qw.queryParams.Elements() {
+			// 	nestedPath := elem.Path().AsArray()
+			// 	nestedType := qw.resultType
+			// 	for _, nestedName := range nestedPath {
+			// 		if len(nestedName) == 0 {
+			// 			// root
+			// 			continue
+			// 		}
+			// 		// incorrectness is excluded already on validation stage in [queryParams.validate]
+			// 		containersOfNested := nestedType.(appdef.IContainers)
+			// 		// container presence is checked already on validation stage in [queryParams.validate]
+			// 		nestedContainer := containersOfNested.Container(nestedName)
+			// 		nestedType = nestedContainer.Type()
+			// 	}
+			// 	requestedfields := []string{}
+			// 	for _, resultField := range elem.ResultFields() {
+			// 		requestedfields = append(requestedfields, resultField.Field())
+			// 	}
 
-				// TODO: eliminate when all application will use ACL in VSQL
-				req := iauthnz.AuthzRequest{
-					OperationKind: iauthnz.OperationKind_SELECT,
-					Resource:      nestedType.QName(),
-				}
-				for _, elem := range qw.queryParams.Elements() {
-					for _, resultField := range elem.ResultFields() {
-						req.Fields = append(req.Fields, resultField.Field())
-					}
-				}
-				if len(req.Fields) == 0 {
-					return nil
-				}
-				ok, err := authz.Authorize(qw.appStructs, qw.principals, req)
-				if err != nil {
-					return err
-				}
-				if !ok {
-					ok, allowedFields, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
-					if err != nil {
-						// TODO: temporary workaround. Eliminate later
-						if roleNotFound(err) {
-							return coreutils.WrapSysError(err, http.StatusForbidden)
-						}
-						return err
-					}
-					if !ok {
-						return coreutils.NewSysError(http.StatusForbidden)
-					}
-					for _, requestedField := range requestedfields {
-						if !slices.Contains(allowedFields, requestedField) {
-							return coreutils.NewSysError(http.StatusForbidden)
-						}
-					}
-				}
-			}
+			// 	// TODO: eliminate when all application will use ACL in VSQL
+			// 	req := iauthnz.AuthzRequest{
+			// 		OperationKind: iauthnz.OperationKind_SELECT,
+			// 		Resource:      nestedType.QName(),
+			// 	}
+			// 	for _, elem := range qw.queryParams.Elements() {
+			// 		for _, resultField := range elem.ResultFields() {
+			// 			req.Fields = append(req.Fields, resultField.Field())
+			// 		}
+			// 	}
+			// 	if len(req.Fields) == 0 {
+			// 		return nil
+			// 	}
+			// 	ok, err := authz.Authorize(qw.appStructs, qw.principals, req)
+			// 	if err != nil {
+			// 		return err
+			// 	}
+			// 	if !ok {
+			// 		ok, allowedFields, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
+			// 		if err != nil {
+			// 			// TODO: temporary workaround. Eliminate later
+			// 			if roleNotFound(err) {
+			// 				return coreutils.WrapSysError(err, http.StatusForbidden)
+			// 			}
+			// 			return err
+			// 		}
+			// 		if !ok {
+			// 			return coreutils.NewSysError(http.StatusForbidden)
+			// 		}
+			// 		for _, requestedField := range requestedfields {
+			// 			if !slices.Contains(allowedFields, requestedField) {
+			// 				return coreutils.NewSysError(http.StatusForbidden)
+			// 			}
+			// 		}
+			// 	}
+			// }
 			return nil
 		}),
 
