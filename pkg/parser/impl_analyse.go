@@ -491,7 +491,7 @@ func analyzeRate(r *RateStmt, c *iterateCtx) {
 				count, resolved = c.variableResolver.AsInt32(p.NewQName(d.Name))
 			}
 			if !resolved {
-				count = int32(d.DefaultValue)
+				count = d.DefaultValue
 			}
 			if count <= 0 {
 				return ErrPositiveValueOnly
