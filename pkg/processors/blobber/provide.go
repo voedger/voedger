@@ -7,23 +7,24 @@ package blobprocessor
 
 import (
 	"context"
-	"time"
 
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/pipeline"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
-func ProvideService(serviceChannel BLOBServiceChannel, blobStorage iblobstorage.IBLOBStorage,
-	ibus ibus.IBus, busTimeout time.Duration, wLimiterFactory WLimiterFactory) pipeline.IService {
+func ProvideService(serviceChannel BLOBServiceChannel, blobStorage iblobstorage.IBLOBStorage, wLimiterFactory WLimiterFactory) pipeline.IService {
 	return pipeline.NewService(func(vvmCtx context.Context) {
-		pipeline := providePipeline(vvmCtx, blobStorage, ibus, busTimeout, wLimiterFactory)
+		pipeline := providePipeline(vvmCtx, blobStorage, wLimiterFactory)
 		for vvmCtx.Err() == nil {
 			select {
 			case workIntf := <-serviceChannel:
-				blobWorkpiece := &blobWorkpiece{
-					blobMessage: workIntf.(iBLOBMessage_Base),
+				blobWorkpiece := &blobWorkpiece{}
+				switch typed := workIntf.(type) {
+				case *implIBLOBMessage_Read:
+					blobWorkpiece.blobMessage = typed
+				case *implIBLOBMessage_Write:
+					blobWorkpiece.blobMessage = typed
 				}
 				if err := pipeline.SendSync(blobWorkpiece); err != nil {
 					// notest

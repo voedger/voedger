@@ -22,6 +22,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/constraints"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
 	"github.com/voedger/voedger/pkg/iauthnz"
@@ -42,8 +43,6 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"github.com/voedger/voedger/pkg/vvm/engines"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
-	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
 )
 
 var (
@@ -117,7 +116,7 @@ func TestBasicUsage(t *testing.T) {
 
 	t.Run("basic usage", func(t *testing.T) {
 		// command processor works through ibus.SendResponse -> we need a sender -> let's test using ibus.SendRequest2()
-		request := ibus.Request{
+		request := bus.Request{
 			Body:     []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"pass"}}`),
 			AppQName: istructs.AppQName_untill_airs_bp.String(),
 			WSID:     1,
@@ -125,41 +124,48 @@ func TestBasicUsage(t *testing.T) {
 			// need to authorize, otherwise execute will be forbidden
 			Header: app.sysAuthHeader,
 		}
-		resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, request, coreutils.GetTestBusTimeout())
+
+		respCh, respMeta, respErr, err := app.requestSender.SendRequest(app.ctx, request)
 		require.NoError(err)
-		require.Nil(secErr, secErr)
-		require.Nil(sections)
-		log.Println(string(resp.Data))
-		require.Equal(http.StatusOK, resp.StatusCode)
-		require.Equal(coreutils.ApplicationJSON, resp.ContentType)
+		respData := ""
+		for elem := range respCh {
+			require.Empty(respData)
+			respDataBytes, err := json.Marshal(elem)
+			require.NoError(err)
+			respData = string(respDataBytes)
+		}
+		require.NoError(*respErr)
+		log.Println(respData)
+		require.Equal(http.StatusOK, respMeta.StatusCode)
+		require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
 		// check that command is handled and notifications were sent
 		<-check
 		<-check
 	})
 
 	t.Run("500 internal server error command exec error", func(t *testing.T) {
-		request := ibus.Request{
+		request := bus.Request{
 			Body:     []byte(`{"args":{"Text":"fire error"},"unloggedArgs":{"Password":"pass"}}`),
 			AppQName: istructs.AppQName_untill_airs_bp.String(),
 			WSID:     1,
 			Resource: "c.sys.Test",
 			Header:   app.sysAuthHeader,
 		}
-		resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, request, coreutils.GetTestBusTimeout())
+		respCh, respMeta, respErr, err := app.requestSender.SendRequest(app.ctx, request)
 		require.NoError(err)
-		require.Nil(secErr)
-		require.Nil(sections)
-		require.Equal(http.StatusInternalServerError, resp.StatusCode)
-		require.Equal(coreutils.ApplicationJSON, resp.ContentType)
-		require.Equal(`{"sys.Error":{"HTTPStatus":500,"Message":"fire error"}}`, string(resp.Data))
-		require.Contains(string(resp.Data), "fire error")
-		log.Println(string(resp.Data))
+		for range respCh {
+			t.Fail()
+		}
+		require.Equal(http.StatusInternalServerError, respMeta.StatusCode)
+		require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
+		require.Equal(`{"sys.Error":{"HTTPStatus":500,"Message":"fire error"}}`, (*respErr).(coreutils.SysError).ToJSON()) // nolint:errorlint
+		log.Println((*respErr).Error())
 	})
 }
 
 func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int) map[string]interface{} {
 	require := require.New(t)
-	req := ibus.Request{
+	req := bus.Request{
 		WSID:     wsid,
 		AppQName: istructs.AppQName_untill_airs_bp.String(),
 		Resource: "c.sys.CUD",
@@ -170,17 +176,29 @@ func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int)
 		]}`),
 		Header: app.sysAuthHeader,
 	}
-	resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBusTimeout())
+	respCh, respMeta, respErr, err := app.requestSender.SendRequest(app.ctx, req)
 	require.NoError(err)
-	require.Nil(secErr)
-	require.Nil(sections)
-	if len(expectedCode) == 0 {
-		require.Equal(http.StatusOK, resp.StatusCode)
-	} else {
-		require.Equal(expectedCode[0], resp.StatusCode)
+	respDataStr := ""
+	for elem := range respCh {
+		require.Empty(respDataStr)
+		respDataStr = elem.(string)
 	}
+	if len(expectedCode) == 0 {
+		require.Equal(http.StatusOK, respMeta.StatusCode)
+	} else {
+		require.Equal(expectedCode[0], respMeta.StatusCode)
+	}
+
 	respData := map[string]interface{}{}
-	require.NoError(json.Unmarshal(resp.Data, &respData))
+	if len(respDataStr) > 0 {
+		require.NoError(json.Unmarshal([]byte(respDataStr), &respData))
+	}
+	if *respErr != nil {
+		var sysErr coreutils.SysError
+		errors.As(*respErr, &sysErr)
+		sysErrorJSON := sysErr.ToJSON()
+		require.NoError(json.Unmarshal([]byte(sysErrorJSON), &respData))
+	}
 	return respData
 }
 
@@ -322,41 +340,36 @@ func TestCUDUpdate(t *testing.T) {
 	app.cfg.Resources.Add(cmdCUD)
 
 	// insert
-	req := ibus.Request{
+	req := bus.Request{
 		WSID:     1,
 		AppQName: istructs.AppQName_untill_airs_bp.String(),
 		Resource: "c.sys.CUD",
 		Body:     []byte(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.test"}}]}`),
 		Header:   app.sysAuthHeader,
 	}
-	resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBusTimeout())
+	cmdRespMeta, cmdResp, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 	require.NoError(err)
-	require.Nil(secErr, secErr)
-	require.Nil(sections)
-	require.Equal(http.StatusOK, resp.StatusCode)
-	require.Equal(coreutils.ApplicationJSON, resp.ContentType)
-	m := map[string]interface{}{}
-	require.NoError(json.Unmarshal(resp.Data, &m))
+	require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
+	require.Equal(coreutils.ApplicationJSON, cmdRespMeta.ContentType)
+	require.Empty(cmdResp.CmdResult)
+	require.Zero(cmdResp.SysError)
+	newID := cmdResp.NewIDs["1"]
+	require.NotZero(newID)
 
 	t.Run("update", func(t *testing.T) {
-		id := int64(m["NewIDs"].(map[string]interface{})["1"].(float64))
-		req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.test", "IntFld": 42}}]}`, id))
-		resp, sections, secErr, err = app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBusTimeout())
+		req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.test", "IntFld": 42}}]}`, newID))
+		cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 		require.NoError(err)
-		require.Nil(secErr)
-		require.Nil(sections)
-		require.Equal(http.StatusOK, resp.StatusCode)
-		require.Equal(coreutils.ApplicationJSON, resp.ContentType)
+		require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
+		require.Equal(coreutils.ApplicationJSON, cmdRespMeta.ContentType)
 	})
 
 	t.Run("404 not found on update not existing", func(t *testing.T) {
 		req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.test", "IntFld": 42}}]}`, istructs.NonExistingRecordID))
-		resp, sections, secErr, err = app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBusTimeout())
+		cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 		require.NoError(err)
-		require.Nil(secErr)
-		require.Nil(sections)
-		require.Equal(http.StatusNotFound, resp.StatusCode)
-		require.Equal(coreutils.ApplicationJSON, resp.ContentType)
+		require.Equal(http.StatusNotFound, cmdRespMeta.StatusCode)
+		require.Equal(coreutils.ApplicationJSON, cmdRespMeta.ContentType)
 	})
 }
 
@@ -396,21 +409,19 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.desc, func(t *testing.T) {
-			req := ibus.Request{
+			req := bus.Request{
 				WSID:     1,
 				AppQName: istructs.AppQName_untill_airs_bp.String(),
 				Resource: "c.sys.CUD",
 				Body:     []byte("{" + c.bodyAdd + "}"),
 				Header:   app.sysAuthHeader,
 			}
-			resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBusTimeout())
+			cmdRespMeta, cmdResp, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 			require.NoError(err)
-			require.Nil(secErr)
-			require.Nil(sections)
-			require.Equal(http.StatusBadRequest, resp.StatusCode, c.desc)
-			require.Equal(coreutils.ApplicationJSON, resp.ContentType, c.desc)
-			require.Contains(string(resp.Data), jsonEscape(c.expectedMessageLike), c.desc)
-			require.Contains(string(resp.Data), `"HTTPStatus":400`, c.desc)
+			require.Equal(http.StatusBadRequest, cmdRespMeta.StatusCode, c.desc)
+			require.Equal(coreutils.ApplicationJSON, cmdRespMeta.ContentType, c.desc)
+			require.Contains(cmdResp.SysError.Message, c.expectedMessageLike, c.desc)
+			require.Equal(http.StatusBadRequest, cmdResp.SysError.HTTPStatus, c.desc)
 		})
 	}
 }
@@ -439,7 +450,7 @@ func TestErrors(t *testing.T) {
 	})
 	defer tearDown(app)
 
-	baseReq := ibus.Request{
+	baseReq := bus.Request{
 		WSID:     1,
 		AppQName: istructs.AppQName_untill_airs_bp.String(),
 		Resource: "c.sys.Test",
@@ -449,20 +460,20 @@ func TestErrors(t *testing.T) {
 
 	cases := []struct {
 		desc string
-		ibus.Request
+		bus.Request
 		expectedMessageLike string
 		expectedStatusCode  int
 	}{
-		{"unknown app", ibus.Request{AppQName: "untill/unknown"}, "application untill/unknown not found", http.StatusServiceUnavailable},
-		{"bad request body", ibus.Request{Body: []byte("{wrong")}, "failed to unmarshal request body: invalid character 'w' looking for beginning of object key string", http.StatusBadRequest},
-		{"unknown func", ibus.Request{Resource: "c.sys.Unknown"}, "unknown function", http.StatusBadRequest},
-		{"args: field of wrong type provided", ibus.Request{Body: []byte(`{"args":{"Text":42}}`)}, "wrong field type", http.StatusBadRequest},
-		{"args: not an object", ibus.Request{Body: []byte(`{"args":42}`)}, `field "args" must be an object`, http.StatusBadRequest},
-		{"args: missing at all with a required field", ibus.Request{Body: []byte(`{}`)}, "", http.StatusBadRequest},
-		{"unloggedArgs: not an object", ibus.Request{Body: []byte(`{"unloggedArgs":42,"args":{"Text":"txt"}}`)}, `field "unloggedArgs" must be an object`, http.StatusBadRequest},
-		{"unloggedArgs: field of wrong type provided", ibus.Request{Body: []byte(`{"unloggedArgs":{"Password":42},"args":{"Text":"txt"}}`)}, "wrong field type", http.StatusBadRequest},
-		{"unloggedArgs: missing required field of unlogged args, no unlogged args at all", ibus.Request{Body: []byte(`{"args":{"Text":"txt"}}`)}, "", http.StatusBadRequest},
-		{"cuds: not an object", ibus.Request{Body: []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"123"},"cuds":42}`)}, `field "cuds" must be an array of objects`, http.StatusBadRequest},
+		{"unknown app", bus.Request{AppQName: "untill/unknown"}, "application untill/unknown not found", http.StatusServiceUnavailable},
+		{"bad request body", bus.Request{Body: []byte("{wrong")}, "failed to unmarshal request body: invalid character 'w' looking for beginning of object key string", http.StatusBadRequest},
+		{"unknown func", bus.Request{Resource: "c.sys.Unknown"}, "unknown function", http.StatusBadRequest},
+		{"args: field of wrong type provided", bus.Request{Body: []byte(`{"args":{"Text":42}}`)}, "wrong field type", http.StatusBadRequest},
+		{"args: not an object", bus.Request{Body: []byte(`{"args":42}`)}, `field "args" must be an object`, http.StatusBadRequest},
+		{"args: missing at all with a required field", bus.Request{Body: []byte(`{}`)}, "", http.StatusBadRequest},
+		{"unloggedArgs: not an object", bus.Request{Body: []byte(`{"unloggedArgs":42,"args":{"Text":"txt"}}`)}, `field "unloggedArgs" must be an object`, http.StatusBadRequest},
+		{"unloggedArgs: field of wrong type provided", bus.Request{Body: []byte(`{"unloggedArgs":{"Password":42},"args":{"Text":"txt"}}`)}, "wrong field type", http.StatusBadRequest},
+		{"unloggedArgs: missing required field of unlogged args, no unlogged args at all", bus.Request{Body: []byte(`{"args":{"Text":"txt"}}`)}, "", http.StatusBadRequest},
+		{"cuds: not an object", bus.Request{Body: []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"123"},"cuds":42}`)}, `field "cuds" must be an array of objects`, http.StatusBadRequest},
 	}
 
 	for _, c := range cases {
@@ -480,14 +491,12 @@ func TestErrors(t *testing.T) {
 			if len(c.Resource) > 0 {
 				req.Resource = c.Resource
 			}
-			resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBusTimeout())
+			cmdRespMeta, cmdResp, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 			require.NoError(err, c.desc)
-			require.Nil(secErr)
-			require.Nil(sections)
-			require.Equal(c.expectedStatusCode, resp.StatusCode, c.desc)
-			require.Equal(coreutils.ApplicationJSON, resp.ContentType, c.desc)
-			require.Contains(string(resp.Data), jsonEscape(c.expectedMessageLike), c.desc)
-			require.Contains(string(resp.Data), fmt.Sprintf(`"HTTPStatus":%d`, c.expectedStatusCode), c.desc)
+			require.Equal(c.expectedStatusCode, cmdRespMeta.StatusCode, c.desc)
+			require.Equal(coreutils.ApplicationJSON, cmdRespMeta.ContentType, c.desc)
+			require.Contains(cmdResp.SysError.Message, c.expectedMessageLike, c.desc)
+			require.Equal(c.expectedStatusCode, cmdResp.SysError.HTTPStatus, c.desc)
 		})
 	}
 }
@@ -528,12 +537,12 @@ func TestAuthnz(t *testing.T) {
 
 	type testCase struct {
 		desc               string
-		req                ibus.Request
+		req                bus.Request
 		expectedStatusCode int
 	}
 	cases := []testCase{
 		{
-			desc: "403 on cmd EXECUTE forbidden", req: ibus.Request{
+			desc: "403 on cmd EXECUTE forbidden", req: bus.Request{
 				Body:     []byte(`{}`),
 				AppQName: istructs.AppQName_untill_airs_bp.String(),
 				WSID:     1,
@@ -543,7 +552,7 @@ func TestAuthnz(t *testing.T) {
 			expectedStatusCode: http.StatusForbidden,
 		},
 		{
-			desc: "403 on INSERT CUD forbidden", req: ibus.Request{
+			desc: "403 on INSERT CUD forbidden", req: bus.Request{
 				Body:     []byte(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.TestDeniedCDoc"}}]}`),
 				AppQName: istructs.AppQName_untill_airs_bp.String(),
 				WSID:     1,
@@ -553,7 +562,7 @@ func TestAuthnz(t *testing.T) {
 			expectedStatusCode: http.StatusForbidden,
 		},
 		{
-			desc: "403 if no token for a func that requires authentication", req: ibus.Request{
+			desc: "403 if no token for a func that requires authentication", req: bus.Request{
 				Body:     []byte(`{}`),
 				AppQName: istructs.AppQName_untill_airs_bp.String(),
 				WSID:     1,
@@ -565,12 +574,9 @@ func TestAuthnz(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.desc, func(t *testing.T) {
-			resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, c.req, coreutils.GetTestBusTimeout())
+			cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, c.req)
 			require.NoError(err)
-			require.Nil(secErr, secErr)
-			require.Nil(sections)
-			log.Println(string(resp.Data))
-			require.Equal(c.expectedStatusCode, resp.StatusCode, c.desc, string(resp.Data))
+			require.Equal(c.expectedStatusCode, cmdRespMeta.StatusCode, c.desc)
 		})
 	}
 }
@@ -600,19 +606,17 @@ func TestBasicUsage_FuncWithRawArg(t *testing.T) {
 	})
 	defer tearDown(app)
 
-	request := ibus.Request{
+	request := bus.Request{
 		Body:     []byte(`custom content`),
 		AppQName: istructs.AppQName_untill_airs_bp.String(),
 		WSID:     1,
 		Resource: "c.sys.Test",
 		Header:   app.sysAuthHeader,
 	}
-	resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, request, coreutils.GetTestBusTimeout())
+	cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, request)
 	require.NoError(err)
-	require.Nil(secErr)
-	require.Nil(sections)
-	require.Equal(http.StatusOK, resp.StatusCode)
-	require.Equal(coreutils.ApplicationJSON, resp.ContentType)
+	require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
+	require.Equal(coreutils.ApplicationJSON, cmdRespMeta.ContentType)
 	<-ch
 }
 
@@ -638,7 +642,7 @@ func TestRateLimit(t *testing.T) {
 		})
 	defer tearDown(app)
 
-	request := ibus.Request{
+	request := bus.Request{
 		Body:     []byte(`{"args":{}}`),
 		AppQName: istructs.AppQName_untill_airs_bp.String(),
 		WSID:     1,
@@ -648,31 +652,27 @@ func TestRateLimit(t *testing.T) {
 
 	// first 2 calls are ok
 	for i := 0; i < 2; i++ {
-		resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, request, coreutils.GetTestBusTimeout())
+		cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, request)
 		require.NoError(err)
-		require.Nil(secErr)
-		require.Nil(sections)
-		require.Equal(http.StatusOK, resp.StatusCode)
+		require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
 	}
 
 	// 3rd exceeds rate limits
-	resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, request, coreutils.GetTestBusTimeout())
+	cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, request)
 	require.NoError(err)
-	require.Nil(secErr)
-	require.Nil(sections)
-	require.Equal(http.StatusTooManyRequests, resp.StatusCode)
+	require.Equal(http.StatusTooManyRequests, cmdRespMeta.StatusCode)
 }
 
 type testApp struct {
 	ctx               context.Context
 	cfg               *istructsmem.AppConfigType
-	bus               ibus.IBus
 	cancel            context.CancelFunc
 	done              chan struct{}
 	cmdProcService    pipeline.IService
 	serviceChannel    CommandChannel
 	n10nBroker        in10n.IN10nBroker
 	n10nBrokerCleanup func()
+	requestSender     bus.IRequestSender
 
 	appTokens     istructs.IAppTokens
 	sysAuthHeader map[string][]string
@@ -683,16 +683,6 @@ func tearDown(app testApp) {
 	app.n10nBrokerCleanup()
 	app.cancel()
 	<-app.done
-}
-
-// simulate real app behavior
-func replyBadRequest(sender ibus.ISender, message string) {
-	res := coreutils.NewHTTPErrorf(http.StatusBadRequest, message)
-	sender.SendResponse(ibus.Response{
-		ContentType: coreutils.ApplicationJSON,
-		StatusCode:  http.StatusBadRequest,
-		Data:        []byte(res.ToJSON()),
-	})
 }
 
 // test app deployment constants
@@ -768,7 +758,8 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	appParts.DeployAppPartitions(testAppName, []istructs.PartitionID{testAppPartID})
 
 	// command processor works through ibus.SendResponse -> we need ibus implementation
-	bus := ibusmem.Provide(func(ctx context.Context, sender ibus.ISender, request ibus.Request) {
+
+	requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		// simulate handling the command request be a real application
 		cmdQName, err := appdef.ParseQName(request.Resource[2:])
 		require.NoError(err)
@@ -776,14 +767,14 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 		require.NoError(err)
 		tp := appDef.Type(cmdQName)
 		if tp.Kind() == appdef.TypeKind_null {
-			replyBadRequest(sender, "unknown function")
+			bus.ReplyBadRequest(responder, "unknown function")
 			return
 		}
 		token := ""
 		if authHeaders, ok := request.Header[coreutils.Authorization]; ok {
 			token = strings.TrimPrefix(authHeaders[0], "Bearer ")
 		}
-		icm := NewCommandMessage(ctx, request.Body, appQName, request.WSID, sender, testAppPartID, cmdQName, token, "")
+		icm := NewCommandMessage(ctx, request.Body, appQName, request.WSID, responder, testAppPartID, cmdQName, token, "")
 		serviceChannel <- icm
 	})
 
@@ -809,7 +800,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 
 	return testApp{
 		cfg:               cfg,
-		bus:               bus,
+		requestSender:     requestSender,
 		cancel:            cancel,
 		ctx:               ctx,
 		done:              done,

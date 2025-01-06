@@ -7,20 +7,18 @@ package blobprocessor
 
 import (
 	"context"
-	"time"
 
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/pipeline"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
-func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStorage, bus ibus.IBus, busTimeout time.Duration,
+func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStorage,
 	wLimiterFactory WLimiterFactory) pipeline.ISyncPipeline {
 	return pipeline.NewSyncPipeline(vvmCtx, "blob processor",
 		pipeline.WireSyncOperator("switch", pipeline.SwitchOperator(&blobOpSwitch{},
 			pipeline.SwitchBranch(branchReadBLOB, pipeline.NewSyncPipeline(vvmCtx, branchReadBLOB,
 				pipeline.WireFunc("getBLOBMessageRead", getBLOBMessageRead),
-				pipeline.WireFunc("downloadBLOBHelper", provideDownloadBLOBHelper(bus, busTimeout)),
+				pipeline.WireFunc("downloadBLOBHelper", downloadBLOBHelper),
 				pipeline.WireFunc("getBLOBKeyRead", getBLOBKeyRead),
 				pipeline.WireFunc("queryBLOBState", provideQueryAndCheckBLOBState(blobStorage)),
 				pipeline.WireFunc("initResponse", initResponse),
@@ -34,10 +32,10 @@ func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStora
 				pipeline.WireFunc("validateQueryParams", validateQueryParams),
 				pipeline.WireFunc("getRegisterFuncName", getRegisterFuncName),
 				pipeline.WireSyncOperator("wrapBadRequest", &badRequestWrapper{}),
-				pipeline.WireFunc("registerBLOB", provideRegisterBLOB(bus, busTimeout)),
+				pipeline.WireFunc("registerBLOB", registerBLOB),
 				pipeline.WireFunc("getBLOBKeyWrite", getBLOBKeyWrite),
 				pipeline.WireFunc("writeBLOB", provideWriteBLOB(blobStorage, wLimiterFactory)),
-				pipeline.WireFunc("setBLOBStatusCompleted", provideSetBLOBStatusCompleted(bus, busTimeout)),
+				pipeline.WireFunc("setBLOBStatusCompleted", setBLOBStatusCompleted),
 				pipeline.WireSyncOperator("sendResult", &sendWriteResult{}),
 			)),
 		)),
@@ -46,15 +44,15 @@ func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStora
 
 func (b *blobOpSwitch) Switch(work interface{}) (branchName string, err error) {
 	blobWorkpiece := work.(*blobWorkpiece)
-	if _, ok := blobWorkpiece.blobMessage.(IBLOBMessage_Read); ok {
+	if _, ok := blobWorkpiece.blobMessage.(*implIBLOBMessage_Read); ok {
 		return branchReadBLOB, nil
 	}
 	return branchWriteBLOB, nil
 }
 
 func (b *blobWorkpiece) isPersistent() bool {
-	if b.blobMessageWrite != nil {
+	if _, ok := b.blobMessage.(*implIBLOBMessage_Write); ok {
 		return len(b.ttl) == 0
 	}
-	return len(b.blobMessageRead.ExistingBLOBIDOrSUUID()) <= temporaryBLOBIDLenTreshold
+	return len(b.blobMessage.(*implIBLOBMessage_Read).existingBLOBIDOrSUUID) <= temporaryBLOBIDLenTreshold
 }

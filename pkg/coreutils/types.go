@@ -31,15 +31,19 @@ type HTTPResponse struct {
 
 type ReqOptFunc func(opts *reqOpts)
 
-type FuncResponse struct {
-	*HTTPResponse
-	Sections []struct {
-		Elements [][][][]interface{} `json:"elements"`
-	} `json:"sections"`
+type CommandResponse struct {
 	NewIDs            map[string]int64
 	CurrentWLogOffset istructs.Offset
 	SysError          SysError               `json:"sys.Error"`
 	CmdResult         map[string]interface{} `json:"Result"`
+}
+
+type FuncResponse struct {
+	*HTTPResponse
+	CommandResponse
+	Sections []struct {
+		Elements [][][][]interface{} `json:"elements"`
+	} `json:"sections"`
 }
 
 type FuncError struct {
@@ -97,4 +101,3 @@ type IReadFS interface {
 	fs.ReadDirFS
 	fs.ReadFileFS
 }
-

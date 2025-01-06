@@ -7,11 +7,9 @@ package coreutils
 import (
 	"encoding/json"
 	"maps"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 const TooBigNumberStr = "1111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111111111111111111111111111111111111199999999999999999999999999911111111111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111"
@@ -172,11 +170,4 @@ func (o *TestObject) Containers(cb func(string) bool) {
 			break
 		}
 	}
-}
-
-func GetTestBusTimeout() time.Duration {
-	if IsDebug() {
-		return time.Hour
-	}
-	return ibus.DefaultTimeout
 }
