@@ -485,23 +485,18 @@ func analyzeRate(r *RateStmt, c *iterateCtx) {
 	if r.Value.Variable != nil {
 		resolve := func(d *DeclareStmt, p *PackageSchemaAST) error {
 
+			var count int32
+			var resolved bool
 			if c.variableResolver != nil {
-				var resolved bool
-				count, resolved := c.variableResolver.AsInt32(p.NewQName(d.Name))
-				if resolved {
-					if count < 0 {
-						return ErrNegativeValue
-					}
-					r.Value.count = uint32(count)
-					return nil
-				}
+				count, resolved = c.variableResolver.AsInt32(p.NewQName(d.Name))
 			}
-
-			if d.DefaultValue < 0 {
-				return ErrNegativeDefaultValue
-			} else {
-				r.Value.count = uint32(d.DefaultValue)
+			if !resolved {
+				count = int32(d.DefaultValue)
 			}
+			if count <= 0 {
+				return ErrPositiveValueOnly
+			}
+			r.Value.count = uint32(count)
 			return nil
 		}
 		if err := resolveInCtx(*r.Value.Variable, c, resolve); err != nil {
