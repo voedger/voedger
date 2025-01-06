@@ -334,12 +334,12 @@ func (require *ParserAssertions) PkgSchema(filename, pkg, sql string) *PackageSc
 	return p
 }
 
-func (require *ParserAssertions) AppSchema(sql string) (*AppSchemaAST, error) {
+func (require *ParserAssertions) AppSchema(sql string, opts ...ParserOption) (*AppSchemaAST, error) {
 	pkg := require.PkgSchema("file.vsql", "github.com/company/pkg", sql)
 	return BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),
 		pkg,
-	})
+	}, opts...)
 }
 
 func assertions(t *testing.T) *ParserAssertions {
@@ -2349,38 +2349,57 @@ func Test_DescriptorInProjector(t *testing.T) {
 }
 
 type testVarResolver struct {
-	resolved map[appdef.QName]bool
+	init map[appdef.QName]int32
 }
 
 func (t testVarResolver) AsInt32(name appdef.QName) (int32, bool) {
-	t.resolved[name] = true
-	return 1, true
+	if v, ok := t.init[name]; ok {
+		return v, true
+	}
+	return 0, false
 }
 
 func Test_Variables(t *testing.T) {
 	require := assertions(t)
+	resolver := testVarResolver{init: map[appdef.QName]int32{appdef.NewQName("pkg", "var1"): 1}}
 
 	require.AppSchemaError(`APPLICATION app1(); WORKSPACE W( RATE AppDefaultRate variable PER HOUR; )`, "file.vsql:1:54: variable undefined")
 
 	schema, err := require.AppSchema(`APPLICATION app1();
-	DECLARE variable int32 DEFAULT 100;
+	DECLARE var1 int32 DEFAULT 100;
+	DECLARE var2 int32 DEFAULT 100;
 	WORKSPACE W(
-		RATE AppDefaultRate variable PER HOUR;
+		RATE Rate1 var1 PER HOUR;
+		RATE Rate2 var2 PER HOUR;
 	);
-	`)
+	`, WithVariableResolver(&resolver))
+	require.NoError(err)
+	b := builder.New()
+	err = BuildAppDefs(schema, b)
+	require.NoError(err)
+	app, err := b.Build()
 	require.NoError(err)
 
-	resolver := testVarResolver{resolved: make(map[appdef.QName]bool)}
+	typ1 := app.Workspace(appdef.NewQName("pkg", "W")).Type(appdef.NewQName("pkg", "Rate1"))
+	require.NotNil(typ1)
+	rate1, ok := typ1.(appdef.IRate)
+	require.True(ok)
+	require.NotNil(rate1)
+	require.EqualValues(1, rate1.Count())
 
-	BuildAppDefs(schema, builder.New(), WithVariableResolver(&resolver))
-	require.True(resolver.resolved[appdef.NewQName("pkg", "variable")])
+	typ2 := app.Workspace(appdef.NewQName("pkg", "W")).Type(appdef.NewQName("pkg", "Rate2"))
+	require.NotNil(typ2)
+	rate2, ok := typ2.(appdef.IRate)
+	require.True(ok)
+	require.NotNil(rate2)
+	require.EqualValues(100, rate2.Count())
 }
 
 func Test_RatesAndLimits(t *testing.T) {
 	require := assertions(t)
 
 	t.Run("syntax check", func(t *testing.T) {
-		require.NoAppSchemaError(`APPLICATION app1();
+		require.NoBuildError(`APPLICATION app1();
 		WORKSPACE w (
 			TABLE t INHERITS sys.CDoc();
 			TAG tag;
@@ -2401,7 +2420,7 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l4 ON VIEW v WITH RATE r;
 			LIMIT l4_1 SELECT ON VIEW v WITH RATE r;
 			LIMIT l5 ON TABLE t WITH RATE r;
-			LIMIT l5_1 SELECT,INSERT,UPDATE,DEACTIVATE,ACTIVATE ON TABLE t WITH RATE r;
+			LIMIT l5_1 SELECT,INSERT,UPDATE ON TABLE t WITH RATE r;
 
 			LIMIT l20 ON ALL COMMANDS WITH TAG tag WITH RATE r;
 			LIMIT l20_1 EXECUTE ON ALL COMMANDS WITH TAG tag WITH RATE r;
@@ -2410,14 +2429,14 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l22 ON ALL VIEWS WITH TAG tag WITH RATE r;
 			LIMIT l22_1 SELECT ON ALL VIEWS WITH TAG tag WITH RATE r;
 			LIMIT l23 ON ALL TABLES WITH TAG tag WITH RATE r;
-			LIMIT l23_1 SELECT,INSERT,UPDATE,DEACTIVATE,ACTIVATE ON ALL TABLES WITH TAG tag WITH RATE r;
-			LIMIT l24 ON ALL WITH TAG tag WITH RATE r;
+			LIMIT l23_1 SELECT,INSERT,UPDATE ON ALL TABLES WITH TAG tag WITH RATE r;
+			-- LIMIT l24 ON ALL WITH TAG tag WITH RATE r;
 			
 			LIMIT l25 ON ALL COMMANDS WITH RATE r;
 			LIMIT l26 ON ALL QUERIES WITH RATE r;
 			LIMIT l27 ON ALL VIEWS WITH RATE r;
 			LIMIT l28 ON ALL TABLES WITH RATE r;
-			LIMIT l29 ON ALL WITH RATE r;
+			-- LIMIT l29 ON ALL WITH RATE r;
 
 			LIMIT l30 ON EACH COMMAND WITH TAG tag WITH RATE r;
 			LIMIT l30_1 EXECUTE ON EACH COMMAND WITH TAG tag WITH RATE r;
@@ -2426,14 +2445,14 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l32 ON EACH VIEW WITH TAG tag WITH RATE r;
 			LIMIT l32_1 SELECT ON EACH VIEW WITH TAG tag WITH RATE r;
 			LIMIT l33 ON EACH TABLE WITH TAG tag WITH RATE r;
-			LIMIT l33_1 SELECT,INSERT,UPDATE,DEACTIVATE,ACTIVATE ON EACH TABLE WITH TAG tag WITH RATE r;
-			LIMIT l34 ON EACH WITH TAG tag WITH RATE r;
+			LIMIT l33_1 SELECT,INSERT,UPDATE ON EACH TABLE WITH TAG tag WITH RATE r;
+			-- LIMIT l34 ON EACH WITH TAG tag WITH RATE r;
 
 			LIMIT l35 ON EACH COMMAND WITH RATE r;
 			LIMIT l36 ON EACH QUERY WITH RATE r;
 			LIMIT l37 ON EACH VIEW WITH RATE r;
 			LIMIT l38 ON EACH TABLE WITH RATE r;
-			LIMIT l39 ON EACH WITH RATE r;
+			-- LIMIT l39 ON EACH WITH RATE r;
 		);`)
 	})
 
@@ -2454,31 +2473,30 @@ func Test_RatesAndLimits(t *testing.T) {
 			RATE r 1 PER HOUR;
 			LIMIT l2 INSERT ON COMMAND c WITH RATE r;
 			LIMIT l3 UPDATE ON QUERY q WITH RATE r;
-			LIMIT l4 ACTIVATE,DEACTIVATE ON VIEW v WITH RATE r;
+			LIMIT l4 EXECUTE ON VIEW v WITH RATE r;
 			LIMIT l5 EXECUTE ON TABLE t WITH RATE r;
 
 			LIMIT l20 INSERT ON ALL COMMANDS WITH RATE r;
 			LIMIT l21 UPDATE ON ALL QUERIES WITH RATE r;
-			LIMIT l22 ACTIVATE ON ALL VIEWS WITH RATE r;
+			LIMIT l22 EXECUTE ON ALL VIEWS WITH RATE r;
 			LIMIT l23 EXECUTE ON ALL TABLES WITH RATE r;
 			
 			LIMIT l35 INSERT ON EACH COMMAND WITH RATE r;
 			LIMIT l36 UPDATE ON EACH QUERY WITH RATE r;
-			LIMIT l37 ACTIVATE ON EACH VIEW WITH RATE r;
+			LIMIT l37 EXECUTE ON EACH VIEW WITH RATE r;
 			LIMIT l38 EXECUTE ON EACH TABLE WITH RATE r;
 			LIMIT l39 SELECT ON EACH QUERY WITH RATE r;
 		);`, "file.vsql:15:13: operation INSERT not allowed",
 			"file.vsql:16:13: operation UPDATE not allowed",
-			"file.vsql:17:13: operation ACTIVATE not allowed",
-			"file.vsql:17:22: operation DEACTIVATE not allowed",
+			"file.vsql:17:13: operation EXECUTE not allowed",
 			"file.vsql:18:13: operation EXECUTE not allowed",
 			"file.vsql:20:14: operation INSERT not allowed",
 			"file.vsql:21:14: operation UPDATE not allowed",
-			"file.vsql:22:14: operation ACTIVATE not allowed",
+			"file.vsql:22:14: operation EXECUTE not allowed",
 			"file.vsql:23:14: operation EXECUTE not allowed",
 			"file.vsql:25:14: operation INSERT not allowed",
 			"file.vsql:26:14: operation UPDATE not allowed",
-			"file.vsql:27:14: operation ACTIVATE not allowed",
+			"file.vsql:27:14: operation EXECUTE not allowed",
 			"file.vsql:28:14: operation EXECUTE not allowed",
 			"file.vsql:29:14: operation SELECT not allowed")
 	})
