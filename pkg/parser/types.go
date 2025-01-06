@@ -583,10 +583,9 @@ type RateValueTimeUnit struct {
 type RateValue struct {
 	Count           *int              `parser:"(@Int"`
 	Variable        *DefQName         `parser:"| @@) 'PER'"`
-	TimeUnitAmounts *int              `parser:"@Int?"`
+	TimeUnitAmounts *uint32           `parser:"@Int?"`
 	TimeUnit        RateValueTimeUnit `parser:"@@"`
-	variable        appdef.QName      // filled on the analysis stage
-	declare         *DeclareStmt      // filled on the analysis stage
+	count           uint32            // filled on the analysis stage
 }
 
 type RateObjectScope struct {
@@ -1140,11 +1139,5 @@ type IVariableResolver interface {
 	AsInt32(name appdef.QName) (int32, bool)
 }
 
-// BuildAppDefsOption is a function that can be passed to BuildAppDefs to configure it.
-type BuildAppDefsOption = func(*buildContext)
-
-func WithVariableResolver(resolver IVariableResolver) BuildAppDefsOption {
-	return func(c *buildContext) {
-		c.variableResolver = resolver
-	}
-}
+// ParserOption is a function that can be passed to BuildAppDefs to configure it.
+type ParserOption = func(*basicContext)

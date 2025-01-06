@@ -334,12 +334,12 @@ func (require *ParserAssertions) PkgSchema(filename, pkg, sql string) *PackageSc
 	return p
 }
 
-func (require *ParserAssertions) AppSchema(sql string) (*AppSchemaAST, error) {
+func (require *ParserAssertions) AppSchema(sql string, opts ...ParserOption) (*AppSchemaAST, error) {
 	pkg := require.PkgSchema("file.vsql", "github.com/company/pkg", sql)
 	return BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),
 		pkg,
-	})
+	}, opts...)
 }
 
 func assertions(t *testing.T) *ParserAssertions {
@@ -2361,6 +2361,7 @@ func (t testVarResolver) AsInt32(name appdef.QName) (int32, bool) {
 
 func Test_Variables(t *testing.T) {
 	require := assertions(t)
+	resolver := testVarResolver{init: map[appdef.QName]int32{appdef.NewQName("pkg", "var1"): 1}}
 
 	require.AppSchemaError(`APPLICATION app1(); WORKSPACE W( RATE AppDefaultRate variable PER HOUR; )`, "file.vsql:1:54: variable undefined")
 
@@ -2371,11 +2372,10 @@ func Test_Variables(t *testing.T) {
 		RATE Rate1 var1 PER HOUR;
 		RATE Rate2 var2 PER HOUR;
 	);
-	`)
-	resolver := testVarResolver{init: map[appdef.QName]int32{appdef.NewQName("pkg", "var1"): 1}}
+	`, WithVariableResolver(&resolver))
 	require.NoError(err)
 	b := builder.New()
-	err = BuildAppDefs(schema, b, WithVariableResolver(&resolver))
+	err = BuildAppDefs(schema, b)
 	require.NoError(err)
 	app, err := b.Build()
 	require.NoError(err)

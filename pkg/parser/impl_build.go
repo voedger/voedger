@@ -17,9 +17,8 @@ import (
 
 type buildContext struct {
 	basicContext
-	adb              appdef.IAppDefBuilder
-	defs             []defBuildContext
-	variableResolver IVariableResolver
+	adb  appdef.IAppDefBuilder
+	defs []defBuildContext
 }
 
 func newBuildContext(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) *buildContext {
@@ -88,23 +87,12 @@ func (c *buildContext) packages() error {
 func (c *buildContext) rates() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(rate *RateStmt, ictx *iterateCtx) {
-			var count int32
-			var timeUnitAmount int32 = 1
+			var timeUnitAmount uint32 = 1
 			var period time.Duration
 			var rateScopes []appdef.RateScope
-			if rate.Value.Variable != nil {
-				if c.variableResolver != nil {
-					var resolved bool
-					count, resolved = c.variableResolver.AsInt32(rate.Value.variable)
-					if !resolved {
-						count = int32(rate.Value.declare.DefaultValue)
-					}
-				}
-			} else {
-				count = int32(*rate.Value.Count)
-			}
+
 			if rate.Value.TimeUnitAmounts != nil {
-				timeUnitAmount = int32(*rate.Value.TimeUnitAmounts)
+				timeUnitAmount = *rate.Value.TimeUnitAmounts
 			}
 			if rate.Value.TimeUnit.Second {
 				period = time.Duration(timeUnitAmount) * time.Second
@@ -136,7 +124,7 @@ func (c *buildContext) rates() error {
 			} else {
 				rateScopes = append(rateScopes, appdef.RateScope_IP) // default
 			}
-			wsb.AddRate(schema.NewQName(rate.Name), uint32(count), period, rateScopes, rate.Comments...)
+			wsb.AddRate(schema.NewQName(rate.Name), uint32(rate.Value.count), period, rateScopes, rate.Comments...)
 		})
 	}
 	return nil

@@ -43,6 +43,8 @@ var ErrRecordFieldsOnlyInSys = errors.New("record fields are only allowed in sys
 var ErrPkgFolderNotFound = errors.New("pkg folder not found")
 var ErrGrantFollowsRevoke = errors.New("GRANT follows REVOKE in the same container")
 var ErrJobMustBeInAppWorkspace = errors.New("JOB is only allowed in AppWorkspaceWS")
+var ErrNegativeDefaultValue = errors.New("negative default value not allowed")
+var ErrNegativeValue = errors.New("negative value not allowed")
 
 func ErrLocalPackageNameRedeclared(localPkgName, newLocalPkgName string) error {
 	return fmt.Errorf("local package name %s was redeclared as %s", localPkgName, newLocalPkgName)

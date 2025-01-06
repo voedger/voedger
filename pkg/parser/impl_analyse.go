@@ -481,13 +481,29 @@ func analyzeStorage(u *StorageStmt, c *iterateCtx) {
 }
 
 func analyzeRate(r *RateStmt, c *iterateCtx) {
+
 	if r.Value.Variable != nil {
-		resolved := func(d *DeclareStmt, p *PackageSchemaAST) error {
-			r.Value.variable = p.NewQName(d.Name)
-			r.Value.declare = d
+		resolve := func(d *DeclareStmt, p *PackageSchemaAST) error {
+
+			if c.variableResolver != nil {
+				var resolved bool
+				count, resolved := c.variableResolver.AsInt32(p.NewQName(d.Name))
+				if resolved {
+					if count < 0 {
+						return ErrNegativeValue
+					}
+					r.Value.count = uint32(count)
+					return nil
+				}
+			}
+
+			if d.DefaultValue < 0 {
+				return ErrNegativeDefaultValue
+			}
+			r.Value.count = uint32(d.DefaultValue)
 			return nil
 		}
-		if err := resolveInCtx(*r.Value.Variable, c, resolved); err != nil {
+		if err := resolveInCtx(*r.Value.Variable, c, resolve); err != nil {
 			c.stmtErr(&r.Value.Variable.Pos, err)
 		}
 	}
