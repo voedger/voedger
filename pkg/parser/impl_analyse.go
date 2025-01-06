@@ -499,8 +499,9 @@ func analyzeRate(r *RateStmt, c *iterateCtx) {
 
 			if d.DefaultValue < 0 {
 				return ErrNegativeDefaultValue
+			} else {
+				r.Value.count = uint32(d.DefaultValue)
 			}
-			r.Value.count = uint32(d.DefaultValue)
 			return nil
 		}
 		if err := resolveInCtx(*r.Value.Variable, c, resolve); err != nil {

@@ -124,7 +124,7 @@ func (c *buildContext) rates() error {
 			} else {
 				rateScopes = append(rateScopes, appdef.RateScope_IP) // default
 			}
-			wsb.AddRate(schema.NewQName(rate.Name), uint32(rate.Value.count), period, rateScopes, rate.Comments...)
+			wsb.AddRate(schema.NewQName(rate.Name), rate.Value.count, period, rateScopes, rate.Comments...)
 		})
 	}
 	return nil
