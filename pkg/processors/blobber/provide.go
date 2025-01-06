@@ -19,8 +19,12 @@ func ProvideService(serviceChannel BLOBServiceChannel, blobStorage iblobstorage.
 		for vvmCtx.Err() == nil {
 			select {
 			case workIntf := <-serviceChannel:
-				blobWorkpiece := &blobWorkpiece{
-					blobMessage: workIntf.(implIBLOBMessage_base),
+				blobWorkpiece := &blobWorkpiece{}
+				switch typed := workIntf.(type) {
+				case *implIBLOBMessage_Read:
+					blobWorkpiece.blobMessage = typed
+				case *implIBLOBMessage_Write:
+					blobWorkpiece.blobMessage = typed
 				}
 				if err := pipeline.SendSync(blobWorkpiece); err != nil {
 					// notest

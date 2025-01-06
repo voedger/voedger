@@ -44,7 +44,7 @@ func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStora
 
 func (b *blobOpSwitch) Switch(work interface{}) (branchName string, err error) {
 	blobWorkpiece := work.(*blobWorkpiece)
-	if _, ok := blobWorkpiece.blobMessage.(implIBLOBMessage_Read); ok {
+	if _, ok := blobWorkpiece.blobMessage.(*implIBLOBMessage_Read); ok {
 		return branchReadBLOB, nil
 	}
 	return branchWriteBLOB, nil

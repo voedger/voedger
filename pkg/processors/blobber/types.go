@@ -86,7 +86,7 @@ type blobOpSwitch struct {
 }
 
 func (b *blobWorkpiece) Release() {
-	b.blobMessage.(*implIBLOBMessage_base).Release()
+	b.blobMessage.(pipeline.IWorkpiece).Release()
 }
 
 type implIRequestHandler struct {

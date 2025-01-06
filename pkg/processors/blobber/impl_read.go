@@ -54,7 +54,7 @@ func getBLOBKeyWrite(ctx context.Context, work pipeline.IWorkpiece) (err error) 
 	if bw.isPersistent() {
 		bw.blobKey = &iblobstorage.PersistentBLOBKeyType{
 			ClusterAppID: istructs.ClusterAppID_sys_blobber,
-			WSID:         bw.blobMessageRead.wsid,
+			WSID:         bw.blobMessageWrite.wsid,
 			BlobID:       bw.newBLOBID,
 		}
 		return nil
@@ -63,7 +63,7 @@ func getBLOBKeyWrite(ctx context.Context, work pipeline.IWorkpiece) (err error) 
 	// temp
 	bw.blobKey = &iblobstorage.TempBLOBKeyType{
 		ClusterAppID: istructs.ClusterAppID_sys_blobber,
-		WSID:         bw.blobMessageRead.wsid,
+		WSID:         bw.blobMessageWrite.wsid,
 		SUUID:        bw.newSUUID,
 	}
 	return nil
