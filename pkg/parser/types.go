@@ -198,7 +198,7 @@ type DeclareStmt struct {
 	Statement
 	Name         Ident  `parser:"'DECLARE' @Ident"`
 	DataType     string `parser:"@('int' | 'int32')"`
-	DefaultValue *int   `parser:"'DEFAULT' @Int"`
+	DefaultValue int    `parser:"'DEFAULT' @Int"`
 }
 
 func (s DeclareStmt) GetName() string { return string(s.Name) }
@@ -605,18 +605,17 @@ type RateStmt struct {
 	Value        RateValue         `parser:"@@"`
 	ObjectScope  *RateObjectScope  `parser:"@@?"`
 	SubjectScope *RateSubjectScope `parser:"@@?"`
+	workspace    workspaceAddr     // filled on the analysis stage
 }
 
 func (s RateStmt) GetName() string { return string(s.Name) }
 
 type LimitAction struct {
-	Pos        lexer.Position
-	Select     bool `parser:"(@'SELECT'"`
-	Execute    bool `parser:"| @EXECUTE"`
-	Insert     bool `parser:"| @'INSERT'"`
-	Activate   bool `parser:"| @'ACTIVATE'"`
-	Deactivate bool `parser:"| @'DEACTIVATE'"`
-	Update     bool `parser:"| @'UPDATE')"`
+	Pos     lexer.Position
+	Select  bool `parser:"(@'SELECT'"`
+	Execute bool `parser:"| @EXECUTE"`
+	Insert  bool `parser:"| @'INSERT'"`
+	Update  bool `parser:"| @'UPDATE')"`
 }
 
 type LimitSingleItemFilter struct {
@@ -654,6 +653,8 @@ type LimitStmt struct {
 	AllItems   *LimitAllItemsFilter   `parser:"| @@"`
 	EachItem   *LimitEachItemFilter   `parser:"| @@ )"`
 	RateName   DefQName               `parser:"'WITH' 'RATE' @@"`
+	workspace  workspaceAddr          // filled on the analysis stage
+	ops        []appdef.OperationKind // filled on the analysis stage
 }
 
 func (s LimitStmt) GetName() string { return string(s.Name) }

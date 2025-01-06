@@ -491,32 +491,50 @@ func analyzeRate(r *RateStmt, c *iterateCtx) {
 			c.stmtErr(&r.Value.Variable.Pos, err)
 		}
 	}
+	r.workspace = c.mustCurrentWorkspace()
 }
 
 func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
-	err := resolveInCtx(limit.RateName, c, func(l *RateStmt, schema *PackageSchemaAST) error { return nil })
+	err := resolveInCtx(limit.RateName, c, func(l *RateStmt, schema *PackageSchemaAST) error {
+		limit.RateName.qName = schema.NewQName(l.Name)
+		return nil
+	})
 	if err != nil {
 		c.stmtErr(&limit.RateName.Pos, err)
 	}
 	allowedOps := func(ops appdef.OperationsSet) {
+		if len(limit.Actions) == 0 {
+			limit.ops = ops.AsArray()
+			return
+		}
 		for _, op := range limit.Actions {
-			if op.Execute && !ops.Contains(appdef.OperationKind_Execute) {
-				c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_EXECUTE))
+			if op.Execute {
+				if !ops.Contains(appdef.OperationKind_Execute) {
+					c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_EXECUTE))
+				} else {
+					limit.ops = append(limit.ops, appdef.OperationKind_Execute)
+				}
 			}
-			if op.Insert && !ops.Contains(appdef.OperationKind_Insert) {
-				c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_INSERT))
+			if op.Insert {
+				if !ops.Contains(appdef.OperationKind_Insert) {
+					c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_INSERT))
+				} else {
+					limit.ops = append(limit.ops, appdef.OperationKind_Insert)
+				}
 			}
-			if op.Update && !ops.Contains(appdef.OperationKind_Update) {
-				c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_UPDATE))
+			if op.Update {
+				if !ops.Contains(appdef.OperationKind_Update) {
+					c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_UPDATE))
+				} else {
+					limit.ops = append(limit.ops, appdef.OperationKind_Update)
+				}
 			}
-			if op.Select && !ops.Contains(appdef.OperationKind_Select) {
-				c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_SELECT))
-			}
-			if op.Activate && !ops.Contains(appdef.OperationKind_Activate) {
-				c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_ACTIVATE))
-			}
-			if op.Deactivate && !ops.Contains(appdef.OperationKind_Deactivate) {
-				c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_DEACTIVATE))
+			if op.Select {
+				if !ops.Contains(appdef.OperationKind_Select) {
+					c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_SELECT))
+				} else {
+					limit.ops = append(limit.ops, appdef.OperationKind_Select)
+				}
 			}
 		}
 	}
@@ -551,7 +569,7 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 		if limit.SingleItem.Table != nil {
 			if err = resolveInCtx(*limit.SingleItem.Table, c, func(t *TableStmt, schema *PackageSchemaAST) error {
 				limit.SingleItem.Table.qName = schema.NewQName(t.Name)
-				allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate))
+				allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select))
 				return nil
 			}); err != nil {
 				c.stmtErr(&limit.SingleItem.Table.Pos, err)
@@ -567,7 +585,9 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 		} else if limit.AllItems.Views {
 			allowedOps(set.From(appdef.OperationKind_Select))
 		} else if limit.AllItems.Tables {
-			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate))
+			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select))
+		} else {
+			allowedOps(set.From(appdef.OperationKind_Execute, appdef.OperationKind_Select, appdef.OperationKind_Insert, appdef.OperationKind_Update))
 		}
 		if limit.AllItems.WithTag != nil {
 			if err = resolveInCtx(*limit.AllItems.WithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error {
@@ -587,7 +607,9 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 		} else if limit.EachItem.Views {
 			allowedOps(set.From(appdef.OperationKind_Select))
 		} else if limit.EachItem.Tables {
-			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate))
+			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select))
+		} else {
+			allowedOps(set.From(appdef.OperationKind_Execute, appdef.OperationKind_Select, appdef.OperationKind_Insert, appdef.OperationKind_Update))
 		}
 		if limit.EachItem.WithTag != nil {
 			if err = resolveInCtx(*limit.EachItem.WithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error {
@@ -598,6 +620,7 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 			}
 		}
 	}
+	limit.workspace = c.mustCurrentWorkspace()
 }
 
 func analyzeView(view *ViewStmt, c *iterateCtx) {
@@ -1090,9 +1113,7 @@ func analyzeType(v *TypeStmt, c *iterateCtx) {
 
 func useStmtInWs(wsctx *wsCtx, stmtPackage *PackageSchemaAST, stmt interface{}) {
 	if named, ok := stmt.(INamedStatement); ok {
-		if supported(stmt) {
-			wsctx.ws.registerNode(stmtPackage.NewQName(Ident(named.GetName())), statementNode{Pkg: stmtPackage, Stmt: named}, wsctx.ws)
-		}
+		wsctx.ws.registerNode(stmtPackage.NewQName(Ident(named.GetName())), statementNode{Pkg: stmtPackage, Stmt: named}, wsctx.ws)
 	}
 	if useWorkspace, ok := stmt.(*UseWorkspaceStmt); ok {
 		if useWorkspace.useWs != nil {
