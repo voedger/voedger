@@ -198,7 +198,7 @@ type DeclareStmt struct {
 	Statement
 	Name         Ident  `parser:"'DECLARE' @Ident"`
 	DataType     string `parser:"@('int' | 'int32')"`
-	DefaultValue int    `parser:"'DEFAULT' @Int"`
+	DefaultValue int32  `parser:"'DEFAULT' @Int"`
 }
 
 func (s DeclareStmt) GetName() string { return string(s.Name) }
