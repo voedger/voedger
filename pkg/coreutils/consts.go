@@ -18,6 +18,7 @@ const (
 	ContentDisposition                                         = "Content-Disposition"
 	ApplicationJSON                                            = "application/json"
 	ApplicationXBinary                                         = "application/x-binary"
+	TextPlain                                                  = "text/plain"
 	MultipartFormData                                          = "multipart/form-data"
 	BearerPrefix                                               = "Bearer "
 	Localhost                                                  = "127.0.0.1"

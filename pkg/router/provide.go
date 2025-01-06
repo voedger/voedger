@@ -8,23 +8,22 @@ package router
 import (
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 	"golang.org/x/crypto/acme/autocert"
-
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // port == 443 -> httpsService + ACMEService, otherwise -> HTTPService only, ACMEService is nil
-func Provide(rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, autocertCache autocert.Cache,
-	bus ibus.IBus, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
-	httpServ := getHttpService("HTTP server", coreutils.ServerAddress(rp.Port), rp, aBusTimeout, broker, blobRequestHandler, bus, numsAppsWorkspaces)
+func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, autocertCache autocert.Cache,
+	requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
+	httpServ := getHttpService("HTTP server", coreutils.ServerAddress(rp.Port), rp, broker, blobRequestHandler,
+		requestSender, numsAppsWorkspaces)
 
 	if coreutils.IsTest() {
 		adminEndpoint = "127.0.0.1:0"
@@ -33,7 +32,7 @@ func Provide(rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroke
 		WriteTimeout:     rp.WriteTimeout,
 		ReadTimeout:      rp.ReadTimeout,
 		ConnectionsLimit: rp.ConnectionsLimit,
-	}, aBusTimeout, broker, nil, bus, numsAppsWorkspaces)
+	}, broker, nil, requestSender, numsAppsWorkspaces)
 
 	if rp.Port != HTTPSPort {
 		return httpServ, nil, adminSrv
@@ -75,14 +74,12 @@ func Provide(rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroke
 	return httpsService, acmeService, adminSrv
 }
 
-func getHttpService(name string, listenAddress string, rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker,
-	blobRequestHandler blobprocessor.IRequestHandler,
-	bus ibus.IBus, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) *httpService {
+func getHttpService(name string, listenAddress string, rp RouterParams, broker in10n.IN10nBroker,
+	blobRequestHandler blobprocessor.IRequestHandler, requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) *httpService {
 	httpServ := &httpService{
 		RouterParams:       rp,
 		n10n:               broker,
-		bus:                bus,
-		busTimeout:         aBusTimeout,
+		requestSender:      requestSender,
 		numsAppsWorkspaces: numsAppsWorkspaces,
 		listenAddress:      listenAddress,
 		name:               name,

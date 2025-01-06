@@ -7,20 +7,17 @@ package blobprocessor
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"mime"
 	"net/http"
-	"time"
 
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/iblobstorage"
-	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func getRegisterFuncName(ctx context.Context, work pipeline.IWorkpiece) (err error) {
@@ -44,10 +41,10 @@ func provideWriteBLOB(blobStorage iblobstorage.IBLOBStorage, wLimiterFactory WLi
 		wLimiter := wLimiterFactory()
 		if bw.isPersistent() {
 			key := (bw.blobKey).(*iblobstorage.PersistentBLOBKeyType)
-			err = blobStorage.WriteBLOB(bw.blobMessage.RequestCtx(), *key, bw.descr, bw.blobMessageWrite.Reader(), wLimiter)
+			err = blobStorage.WriteBLOB(bw.blobMessageWrite.requestCtx, *key, bw.descr, bw.blobMessageWrite.reader, wLimiter)
 		} else {
 			key := (bw.blobKey).(*iblobstorage.TempBLOBKeyType)
-			err = blobStorage.WriteTempBLOB(ctx, *key, bw.descr, bw.blobMessageWrite.Reader(), wLimiter, bw.duration)
+			err = blobStorage.WriteTempBLOB(ctx, *key, bw.descr, bw.blobMessageWrite.reader, wLimiter, bw.duration)
 		}
 		if errors.Is(err, iblobstorage.ErrBLOBSizeQuotaExceeded) {
 			return coreutils.NewHTTPError(http.StatusForbidden, err)
@@ -56,79 +53,77 @@ func provideWriteBLOB(blobStorage iblobstorage.IBLOBStorage, wLimiterFactory WLi
 	}
 }
 
-func provideSetBLOBStatusCompleted(bus ibus.IBus, busTimeout time.Duration) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	return func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-		bw := work.(*blobWorkpiece)
-		if !bw.isPersistent() {
-			// do not account statuses for temp blobs
-			return nil
-		}
-		// set WDoc<sys.BLOB>.status = BLOBStatus_Completed
-		req := ibus.Request{
-			Method:   ibus.HTTPMethodPOST,
-			WSID:     bw.blobMessage.WSID(),
-			AppQName: bw.blobMessage.AppQName().String(),
-			Resource: "c.sys.CUD",
-			Body:     []byte(fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"status":%d}}]}`, bw.newBLOBID, iblobstorage.BLOBStatus_Completed)),
-			Header:   bw.blobMessage.Header(),
-			Host:     coreutils.Localhost,
-		}
-		cudWDocBLOBUpdateResp, _, _, err := bus.SendRequest2(bw.blobMessage.RequestCtx(), req, busTimeout)
-		if err != nil {
-			return fmt.Errorf("failed to exec c.sys.CUD: %w", err)
-		}
-		if cudWDocBLOBUpdateResp.StatusCode != http.StatusOK {
-			return coreutils.NewHTTPErrorf(cudWDocBLOBUpdateResp.StatusCode, "c.sys.CUD returned error: ", string(cudWDocBLOBUpdateResp.Data))
-		}
+func setBLOBStatusCompleted(ctx context.Context, work pipeline.IWorkpiece) (err error) {
+	bw := work.(*blobWorkpiece)
+	if !bw.isPersistent() {
+		// do not account statuses for temp blobs
 		return nil
 	}
+	// set WDoc<sys.BLOB>.status = BLOBStatus_Completed
+	req := bus.Request{
+		Method:   http.MethodPost,
+		WSID:     bw.blobMessageWrite.wsid,
+		AppQName: bw.blobMessageWrite.appQName.String(),
+		Resource: "c.sys.CUD",
+		Body:     []byte(fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"status":%d}}]}`, bw.newBLOBID, iblobstorage.BLOBStatus_Completed)),
+		Header:   bw.blobMessageWrite.header,
+		Host:     coreutils.Localhost,
+	}
+	cudWDocBLOBUpdateMeta, cudWDocBLOBUpdateResp, err := bus.GetCommandResponse(bw.blobMessageWrite.requestCtx, bw.blobMessageWrite.requestSender, req)
+	if err != nil {
+		return fmt.Errorf("failed to exec c.sys.CUD: %w", err)
+	}
+	if cudWDocBLOBUpdateMeta.StatusCode != http.StatusOK {
+		return coreutils.NewHTTPErrorf(cudWDocBLOBUpdateMeta.StatusCode, "c.sys.CUD returned error: ", cudWDocBLOBUpdateResp.SysError.Data)
+	}
+	return nil
 }
 
-func provideRegisterBLOB(bus ibus.IBus, busTimeout time.Duration) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	return func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-		bw := work.(*blobWorkpiece)
-		blobHelperResp, err := blobHelper(bw, bus, busTimeout, bw.registerFuncName)
-		if err != nil {
-			return err
-		}
-		if bw.isPersistent() {
-			cmdResp := map[string]interface{}{}
-			if err := json.Unmarshal(blobHelperResp.Data, &cmdResp); err != nil {
-				return fmt.Errorf("failed to json-unmarshal %s :%w", bw.registerFuncName, err)
-			}
-			newIDsIntf, ok := cmdResp["NewIDs"]
-			if !ok {
-				// notest
-				return coreutils.NewHTTPErrorf(http.StatusInternalServerError, "missing NewIDs in "+bw.registerFuncName+" cmd response")
-			}
-			newIDs := newIDsIntf.(map[string]interface{})
-			bw.newBLOBID = istructs.RecordID(newIDs["1"].(float64))
-			return nil
-		}
-		bw.newSUUID = iblobstorage.NewSUUID()
-		return nil
+func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
+	bw := work.(*blobWorkpiece)
+	req := bus.Request{
+		Method:   http.MethodPost,
+		WSID:     bw.blobMessageWrite.wsid,
+		AppQName: bw.blobMessageWrite.appQName.String(),
+		Resource: bw.registerFuncName,
+		Header:   bw.blobMessageWrite.header,
+		Body:     []byte(`{}`),
+		Host:     coreutils.Localhost,
 	}
+	blobHelperMeta, blobHelperResp, err := bus.GetCommandResponse(bw.blobMessageWrite.requestCtx, bw.blobMessageWrite.requestSender, req)
+	if err != nil {
+		return fmt.Errorf("failed to exec q.sys.DownloadBLOBAuthnz: %w", err)
+	}
+	if blobHelperMeta.StatusCode != http.StatusOK {
+		return coreutils.NewHTTPErrorf(blobHelperMeta.StatusCode, "q.sys.DownloadBLOBAuthnz returned error: "+blobHelperResp.SysError.Data)
+	}
+	if bw.isPersistent() {
+		bw.newBLOBID, err = coreutils.Int64ToRecordID(blobHelperResp.NewIDs["1"])
+		return err
+	}
+	bw.newSUUID = iblobstorage.NewSUUID()
+	return nil
 }
 
 func getBLOBMessageWrite(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
-	bw.blobMessageWrite = bw.blobMessage.(IBLOBMessage_Write)
+	bw.blobMessageWrite = bw.blobMessage.(*implIBLOBMessage_Write)
 	return nil
 }
 
 func parseQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
-	bw.nameQuery = bw.blobMessageWrite.URLQueryValues()["name"]
-	bw.mimeTypeQuery = bw.blobMessageWrite.URLQueryValues()["mimeType"]
-	if len(bw.blobMessageWrite.URLQueryValues()["ttl"]) > 0 {
-		bw.ttl = bw.blobMessageWrite.URLQueryValues()["ttl"][0]
+	bw.nameQuery = bw.blobMessageWrite.urlQueryValues["name"]
+	bw.mimeTypeQuery = bw.blobMessageWrite.urlQueryValues["mimeType"]
+	if len(bw.blobMessageWrite.urlQueryValues["ttl"]) > 0 {
+		bw.ttl = bw.blobMessageWrite.urlQueryValues["ttl"][0]
 	}
 	return nil
 }
 
 func parseMediaType(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
-	bw.contentType = bw.blobMessage.Header().Get(coreutils.ContentType)
+	bw.contentType = bw.blobMessageWrite.header.Get(coreutils.ContentType)
 	if len(bw.contentType) == 0 {
 		return nil
 	}
@@ -185,7 +180,7 @@ func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 func (b *sendWriteResult) DoSync(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
 	if bw.resultErr == nil {
-		writer := bw.blobMessage.InitOKResponse(coreutils.ContentType, "text/plain")
+		writer := bw.blobMessageWrite.okResponseIniter(coreutils.ContentType, "text/plain")
 		if bw.isPersistent() {
 			_, _ = writer.Write([]byte(utils.UintToString(bw.newBLOBID)))
 		} else {
@@ -195,7 +190,7 @@ func (b *sendWriteResult) DoSync(_ context.Context, work pipeline.IWorkpiece) (e
 	}
 	var sysError coreutils.SysError
 	errors.As(bw.resultErr, &sysError)
-	bw.blobMessage.ReplyError(sysError.HTTPStatus, sysError.Message)
+	bw.blobMessageWrite.errorResponder(sysError.HTTPStatus, sysError.Message)
 	return nil
 }
 

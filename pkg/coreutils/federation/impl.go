@@ -191,9 +191,11 @@ func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, h
 		return nil, funcError
 	}
 	res := &coreutils.FuncResponse{
+		CommandResponse: coreutils.CommandResponse{
+			NewIDs:    map[string]int64{},
+			CmdResult: map[string]interface{}{},
+		},
 		HTTPResponse: httpResp,
-		NewIDs:       map[string]int64{},
-		CmdResult:    map[string]interface{}{},
 	}
 	if len(httpResp.Body) == 0 {
 		return res, nil

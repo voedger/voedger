@@ -11,14 +11,12 @@ import (
 	"net/url"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/acme/autocert"
 
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
-
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
@@ -45,8 +43,7 @@ type httpService struct {
 	listener           net.Listener
 	n10n               in10n.IN10nBroker
 	blobWG             sync.WaitGroup
-	bus                ibus.IBus
-	busTimeout         time.Duration
+	requestSender      bus.IRequestSender
 	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces
 	name               string
 	listeningPort      atomic.Uint32

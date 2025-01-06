@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
@@ -20,13 +20,12 @@ import (
 	"github.com/voedger/voedger/pkg/iblobstoragestg"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func getBLOBKeyRead(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
 	if bw.isPersistent() {
-		existingBLOBIDUint, err := strconv.ParseUint(bw.blobMessageRead.ExistingBLOBIDOrSUUID(), utils.DecimalBase, utils.BitSize64)
+		existingBLOBIDUint, err := strconv.ParseUint(bw.blobMessageRead.existingBLOBIDOrSUUID, utils.DecimalBase, utils.BitSize64)
 		if err != nil {
 			// validated already by router
 			// notest
@@ -35,7 +34,7 @@ func getBLOBKeyRead(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		existingBLOBID := istructs.RecordID(existingBLOBIDUint)
 		bw.blobKey = &iblobstorage.PersistentBLOBKeyType{
 			ClusterAppID: istructs.ClusterAppID_sys_blobber,
-			WSID:         bw.blobMessage.WSID(),
+			WSID:         bw.blobMessageRead.wsid,
 			BlobID:       existingBLOBID,
 		}
 		return nil
@@ -44,8 +43,8 @@ func getBLOBKeyRead(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	// temp
 	bw.blobKey = &iblobstorage.TempBLOBKeyType{
 		ClusterAppID: istructs.ClusterAppID_sys_blobber,
-		WSID:         bw.blobMessage.WSID(),
-		SUUID:        iblobstorage.SUUID(bw.blobMessageRead.ExistingBLOBIDOrSUUID()),
+		WSID:         bw.blobMessageRead.wsid,
+		SUUID:        iblobstorage.SUUID(bw.blobMessageRead.existingBLOBIDOrSUUID),
 	}
 	return nil
 }
@@ -55,7 +54,7 @@ func getBLOBKeyWrite(ctx context.Context, work pipeline.IWorkpiece) (err error) 
 	if bw.isPersistent() {
 		bw.blobKey = &iblobstorage.PersistentBLOBKeyType{
 			ClusterAppID: istructs.ClusterAppID_sys_blobber,
-			WSID:         bw.blobMessage.WSID(),
+			WSID:         bw.blobMessageWrite.wsid,
 			BlobID:       bw.newBLOBID,
 		}
 		return nil
@@ -64,7 +63,7 @@ func getBLOBKeyWrite(ctx context.Context, work pipeline.IWorkpiece) (err error) 
 	// temp
 	bw.blobKey = &iblobstorage.TempBLOBKeyType{
 		ClusterAppID: istructs.ClusterAppID_sys_blobber,
-		WSID:         bw.blobMessage.WSID(),
+		WSID:         bw.blobMessageWrite.wsid,
 		SUUID:        bw.newSUUID,
 	}
 	return nil
@@ -72,7 +71,7 @@ func getBLOBKeyWrite(ctx context.Context, work pipeline.IWorkpiece) (err error) 
 
 func initResponse(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bm := work.(*blobWorkpiece)
-	bm.writer = bm.blobMessage.InitOKResponse(
+	bm.writer = bm.blobMessageRead.okResponseIniter(
 		coreutils.ContentType, bm.blobState.Descr.MimeType,
 		"Content-Disposition", fmt.Sprintf(`attachment;filename="%s"`, bm.blobState.Descr.Name),
 	)
@@ -82,7 +81,7 @@ func initResponse(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 func provideQueryAndCheckBLOBState(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	return func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		bm := work.(*blobWorkpiece)
-		bm.blobState, err = blobStorage.QueryBLOBState(bm.blobMessage.RequestCtx(), bm.blobKey)
+		bm.blobState, err = blobStorage.QueryBLOBState(bm.blobMessageRead.requestCtx, bm.blobKey)
 		if err != nil {
 			if errors.Is(err, iblobstorage.ErrBLOBNotFound) {
 				return coreutils.NewHTTPError(http.StatusNotFound, err)
@@ -99,41 +98,35 @@ func provideQueryAndCheckBLOBState(blobStorage iblobstorage.IBLOBStorage) func(c
 	}
 }
 
-func blobHelper(bw *blobWorkpiece, bus ibus.IBus, busTimeout time.Duration, registerFuncName string) (resp ibus.Response, err error) {
-	req := ibus.Request{
-		Method:   ibus.HTTPMethodPOST,
-		WSID:     bw.blobMessage.WSID(),
-		AppQName: bw.blobMessage.AppQName().String(),
-		Resource: registerFuncName,
-		Header:   bw.blobMessage.Header(),
+func downloadBLOBHelper(ctx context.Context, work pipeline.IWorkpiece) (err error) {
+	bw := work.(*blobWorkpiece)
+	req := bus.Request{
+		Method:   http.MethodPost,
+		WSID:     bw.blobMessageRead.wsid,
+		AppQName: bw.blobMessageRead.appQName.String(),
+		Resource: "q.sys.DownloadBLOBAuthnz",
+		Header:   bw.blobMessageRead.header,
 		Body:     []byte(`{}`),
 		Host:     coreutils.Localhost,
 	}
-	blobHelperResp, _, _, err := bus.SendRequest2(bw.blobMessage.RequestCtx(), req, busTimeout)
+	respCh, _, respErr, err := bw.blobMessageRead.requestSender.SendRequest(bw.blobMessageRead.requestCtx, req)
 	if err != nil {
-		return resp, coreutils.NewHTTPErrorf(http.StatusInternalServerError, "failed to exec q.sys.DownloadBLOBAuthnz: ", err)
+		return fmt.Errorf("failed to exec q.sys.DownloadBLOBAuthnz: %w", err)
 	}
-	if blobHelperResp.StatusCode != http.StatusOK {
-		return resp, coreutils.NewHTTPErrorf(blobHelperResp.StatusCode, "q.sys.DownloadBLOBAuthnz returned error: "+string(blobHelperResp.Data))
+	for range respCh {
+		// notest
+		panic("unexpeced result of q.sys.DownloadBLOBAuthnz")
 	}
-	return blobHelperResp, nil
-}
-
-func provideDownloadBLOBHelper(bus ibus.IBus, busTimeout time.Duration) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	return func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-		bm := work.(*blobWorkpiece)
-		_, err = blobHelper(bm, bus, busTimeout, "q.sys.DownloadBLOBAuthnz")
-		return err
-	}
+	return *respErr
 }
 
 func provideReadBLOB(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	return func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		bm := work.(*blobWorkpiece)
-		err = blobStorage.ReadBLOB(bm.blobMessage.RequestCtx(), bm.blobKey, nil, bm.writer, iblobstoragestg.RLimiter_Null)
+		err = blobStorage.ReadBLOB(bm.blobMessageRead.requestCtx, bm.blobKey, nil, bm.writer, iblobstoragestg.RLimiter_Null)
 		if err != nil {
-			logger.Error(fmt.Sprintf("failed to read BLOB: id %s, appQName %s, wsid %d: %s", bm.blobKey.ID(), bm.blobMessage.AppQName(),
-				bm.blobMessage.WSID(), err.Error()))
+			logger.Error(fmt.Sprintf("failed to read BLOB: id %s, appQName %s, wsid %d: %s", bm.blobKey.ID(), bm.blobMessageRead.appQName,
+				bm.blobMessageRead.wsid, err.Error()))
 			return coreutils.NewHTTPError(http.StatusInternalServerError, err)
 		}
 		return nil
@@ -142,7 +135,7 @@ func provideReadBLOB(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Con
 
 func getBLOBMessageRead(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
-	bw.blobMessageRead = bw.blobMessage.(IBLOBMessage_Read)
+	bw.blobMessageRead = bw.blobMessage.(*implIBLOBMessage_Read)
 	return nil
 }
 
@@ -156,7 +149,7 @@ func (b *catchReadError) DoSync(_ context.Context, work pipeline.IWorkpiece) (er
 	bw := work.(*blobWorkpiece)
 	var sysError coreutils.SysError
 	if errors.As(bw.resultErr, &sysError) {
-		bw.blobMessage.ReplyError(sysError.HTTPStatus, sysError.Message)
+		bw.blobMessageRead.errorResponder(sysError.HTTPStatus, sysError.Message)
 	}
 	return nil
 }

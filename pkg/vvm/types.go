@@ -7,13 +7,11 @@ package vvm
 import (
 	"context"
 	"net/url"
-	"time"
-
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -75,7 +73,6 @@ type BuiltInAppsArtefacts struct {
 	builtInAppPackages []BuiltInAppPackages
 }
 
-type BusTimeout time.Duration
 type FederationURL func() *url.URL
 type VVMIdxType int
 type VVMPortType int
@@ -137,7 +134,7 @@ type VVMConfig struct {
 	Routes                     map[string]string
 	RoutesRewrite              map[string]string
 	RouteDomains               map[string]string
-	BusTimeout                 BusTimeout
+	SendTimeout                bus.SendTimeout
 	StorageFactory             func() (provider istorage.IAppStorageFactory, err error)
 	BLOBMaxSize                iblobstorage.BLOBMaxSizeType
 	Name                       processors.VVMName
@@ -165,12 +162,6 @@ type VVMConfig struct {
 	// normally is empty in VIT. coretuils.IsTest -> UUID is added to the keyspace name at istorage/provider/Provide()
 	// need to e.g. test VVM restart preserving storage
 	KeyspaceNameSuffix string
-}
-
-type resultSenderErrorFirst struct {
-	ctx    context.Context
-	sender ibus.ISender
-	rs     ibus.IResultSenderClosable
 }
 
 type VoedgerVM struct {

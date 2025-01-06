@@ -38,7 +38,7 @@ func (s *httpService) blobHTTPRequestHandler_Write() http.HandlerFunc {
 		if !s.blobRequestHandler.HandleWrite(appQName, wsid, headers, req.Context(), req.URL.Query(),
 			newBLOBOKResponseIniter(resp), req.Body, func(statusCode int, args ...interface{}) {
 				WriteTextResponse(resp, fmt.Sprint(args...), statusCode)
-			}) {
+			}, s.requestSender) {
 			resp.WriteHeader(http.StatusServiceUnavailable)
 			resp.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
 		}
@@ -56,7 +56,7 @@ func (s *httpService) blobHTTPRequestHandler_Read() http.HandlerFunc {
 		if !s.blobRequestHandler.HandleRead(appQName, wsid, headers, req.Context(),
 			newBLOBOKResponseIniter(resp), func(statusCode int, args ...interface{}) {
 				WriteTextResponse(resp, fmt.Sprint(args...), statusCode)
-			}, existingBLOBIDOrSUID) {
+			}, existingBLOBIDOrSUID, s.requestSender) {
 			resp.WriteHeader(http.StatusServiceUnavailable)
 			resp.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
 		}

@@ -16,7 +16,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/pipeline"
-	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 )
 
 type testDataType struct {
@@ -258,48 +257,3 @@ type resultElementRow []interface{}
 type resultElement []resultElementRow
 
 type resultRow []resultElement
-
-type testResultSenderClosable struct {
-	done       chan interface{}
-	resultRows []resultRow
-	handledErr error
-}
-
-func (s *testResultSenderClosable) StartArraySection(sectionType string, path []string) {
-}
-func (s *testResultSenderClosable) StartMapSection(string, []string) { panic("implement me") }
-func (s *testResultSenderClosable) ObjectSection(sectionType string, path []string, element interface{}) (err error) {
-	return nil
-}
-func (s *testResultSenderClosable) SendElement(name string, sentRow interface{}) (err error) {
-	sentElements := sentRow.([]interface{})
-	resultRow := make([]resultElement, len(sentElements))
-
-	for elmIndex, sentElement := range sentElements {
-		sentElemRows := sentElement.([]queryprocessor.IOutputRow)
-		resultElm := make([]resultElementRow, len(sentElemRows))
-		for i, sentElemRow := range sentElemRows {
-			resultElm[i] = sentElemRow.Values()
-		}
-		resultRow[elmIndex] = resultElm
-	}
-
-	s.resultRows = append(s.resultRows, resultRow)
-	return nil
-}
-func (s *testResultSenderClosable) Close(err error) {
-	s.handledErr = err
-	close(s.done)
-}
-func (s *testResultSenderClosable) requireNoError(t *require.Assertions) {
-	if s.handledErr != nil {
-		t.FailNow(s.handledErr.Error())
-	}
-}
-
-func newTestSender() *testResultSenderClosable {
-	return &testResultSenderClosable{
-		done:       make(chan interface{}),
-		resultRows: make([]resultRow, 0), // array of elements, each element is array rows,
-	}
-}
