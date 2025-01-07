@@ -66,7 +66,7 @@ func TestBasicUsage(t *testing.T) {
 		_, err := blobStorage.QueryBLOBState(context.Background(), &key)
 		require.NoError(t, err)
 
-		// cross the blob expiration instant
+		// cross the temp blob expiration instant
 		coreutils.MockTime.Add(time.Second)
 
 		// blob disappeared
