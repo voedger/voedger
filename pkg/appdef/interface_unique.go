@@ -9,7 +9,7 @@ package appdef
 // - TypeKind_GDoc and TypeKind_GRecord,
 // - TypeKind_CDoc and TypeKind_CRecord,
 // - TypeKind_WDoc and TypeKind_WRecord
-type IUniques interface {
+type IWithUniques interface {
 	// Return unique by qualified name.
 	//
 	// Returns nil if not unique found

@@ -25,7 +25,7 @@ import (
 func applyUniques(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
 	for rec := range event.CUDs {
 		appDef := st.AppStructs().AppDef()
-		iUniques, ok := appDef.Type(rec.QName()).(appdef.IUniques)
+		iUniques, ok := appDef.Type(rec.QName()).(appdef.IWithUniques)
 		if !ok {
 			continue
 		}
@@ -316,7 +316,7 @@ func eventUniqueValidator(ctx context.Context, rawEvent istructs.IRawEvent, appS
 	uniquesState := map[appdef.QName]map[appdef.QName]map[string]*uniqueViewRecord{}
 
 	for cudRec := range rawEvent.CUDs {
-		cudUniques, ok := appStructs.AppDef().Type(cudRec.QName()).(appdef.IUniques)
+		cudUniques, ok := appStructs.AppDef().Type(cudRec.QName()).(appdef.IWithUniques)
 		if !ok {
 			continue
 		}

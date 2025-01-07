@@ -24,15 +24,22 @@ func NewSysError(statusCode int) error {
 	return SysError{HTTPStatus: statusCode}
 }
 
-func WrapSysError(err error, defaultStatusCode int) error {
+func WrapSysErrorToExact(err error, defaultStatusCode int) SysError {
 	if err == nil {
-		return nil
+		return SysError{}
 	}
 	var res SysError
 	if !errors.As(err, &res) {
-		res = SysError{Message: err.Error(), HTTPStatus: defaultStatusCode}
+		return SysError{Message: err.Error(), HTTPStatus: defaultStatusCode}
 	}
 	return res
+}
+
+func WrapSysError(err error, defaultStatusCode int) error {
+	if err == nil {
+		return err
+	}
+	return WrapSysErrorToExact(err, defaultStatusCode)
 }
 
 func (he SysError) Error() string {

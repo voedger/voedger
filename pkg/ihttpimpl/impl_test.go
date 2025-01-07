@@ -146,8 +146,8 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		resource := "q.EchoQuery"
 		path := fmt.Sprintf("%s/%s/%d/%s", appOwner, appName, wsid, resource)
 
-		body := testApp.post("/api/"+path, "text/plain", testText, nil)
-		require.Equal([]byte(fmt.Sprintf("{\"sections\":[{\"type\":\"\",\"elements\":[Hello, %s, {}]}]}", testText)), body)
+		body := testApp.post("/api/"+path, coreutils.ApplicationJSON, testText, nil)
+		require.Equal(fmt.Sprintf(`{"sections":[{"type":"","elements":["Hello, %s, {}"]}]}`, testText), string(body))
 	})
 
 	t.Run("call unknown app", func(t *testing.T) {

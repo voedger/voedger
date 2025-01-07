@@ -7,13 +7,11 @@ package vvm
 import (
 	"context"
 	"net/url"
-	"time"
-
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -41,6 +39,7 @@ type ServicePipeline pipeline.ISyncPipeline
 type OperatorCommandProcessors pipeline.ISyncOperator
 type OperatorCommandProcessor pipeline.ISyncOperator
 type OperatorQueryProcessors pipeline.ISyncOperator
+type OperatorBLOBProcessors pipeline.ISyncOperator
 type OperatorQueryProcessor pipeline.ISyncOperator
 type AppPartitionFactory func(ctx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID) pipeline.ISyncOperator
 type AsyncActualizersFactory func(ctx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID,
@@ -55,6 +54,7 @@ type BlobStorage iblobstorage.IBLOBStorage
 type BlobberAppStruct istructs.IAppStructs
 type CommandProcessorsChannelGroupIdxType uint
 type QueryProcessorsChannelGroupIdxType uint
+type BLOBProcessorsChannelGroupIdxType uint
 type MaxPrepareQueriesType int
 type ServiceChannelFactory func(pcgt ProcessorChannelType, channelIdx uint) iprocbus.ServiceChannel
 type AppStorageFactory func(appQName appdef.AppQName, appStorage istorage.IAppStorage) istorage.IAppStorage
@@ -73,7 +73,6 @@ type BuiltInAppsArtefacts struct {
 	builtInAppPackages []BuiltInAppPackages
 }
 
-type BusTimeout time.Duration
 type FederationURL func() *url.URL
 type VVMIdxType int
 type VVMPortType int
@@ -135,13 +134,13 @@ type VVMConfig struct {
 	Routes                     map[string]string
 	RoutesRewrite              map[string]string
 	RouteDomains               map[string]string
-	BusTimeout                 BusTimeout
+	SendTimeout                bus.SendTimeout
 	StorageFactory             func() (provider istorage.IAppStorageFactory, err error)
-	BlobberServiceChannels     router.BlobberServiceChannels
 	BLOBMaxSize                iblobstorage.BLOBMaxSizeType
 	Name                       processors.VVMName
 	NumCommandProcessors       istructs.NumCommandProcessors
 	NumQueryProcessors         istructs.NumQueryProcessors
+	NumBLOBProcessors          istructs.NumBLOBProcessors
 	MaxPrepareQueries          MaxPrepareQueriesType
 	StorageCacheSize           StorageCacheSizeType
 	processorsChannels         []ProcesorChannel
@@ -163,12 +162,6 @@ type VVMConfig struct {
 	// normally is empty in VIT. coretuils.IsTest -> UUID is added to the keyspace name at istorage/provider/Provide()
 	// need to e.g. test VVM restart preserving storage
 	KeyspaceNameSuffix string
-}
-
-type resultSenderErrorFirst struct {
-	ctx    context.Context
-	sender ibus.ISender
-	rs     ibus.IResultSenderClosable
 }
 
 type VoedgerVM struct {

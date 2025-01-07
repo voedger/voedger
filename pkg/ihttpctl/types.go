@@ -8,8 +8,8 @@ import (
 	"io/fs"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/istructs"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 type StaticResourcesType map[string]fs.FS
@@ -19,6 +19,6 @@ type AppRequestHandler struct {
 	AppQName      appdef.AppQName
 	NumPartitions istructs.NumAppPartitions
 	NumAppWS      istructs.NumAppWorkspaces
-	Handlers      map[istructs.PartitionID]ibus.RequestHandler
+	Handlers      map[istructs.PartitionID]bus.RequestHandler
 }
 type AppRequestHandlers []AppRequestHandler

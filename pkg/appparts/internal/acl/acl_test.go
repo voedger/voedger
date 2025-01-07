@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts/internal/acl"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
@@ -30,7 +31,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 	intruder := appdef.NewQName("test", "intruder")
 
 	t.Run("should be ok to build application with ACL with fields", func(t *testing.T) {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
@@ -453,7 +454,7 @@ func TestRecursiveRoleAncestors(t *testing.T) {
 	admin := appdef.NewQName("test", "adm")
 
 	t.Run("should be ok to build application with roles", func(t *testing.T) {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))

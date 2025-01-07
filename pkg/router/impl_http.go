@@ -19,12 +19,10 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/net/netutil"
 
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
-
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -85,15 +83,6 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 }
 
 func (s *httpService) preRun(ctx context.Context) {
-	if s.BlobberParams != nil {
-		for i := 0; i < s.BlobberParams.BLOBWorkersNum; i++ {
-			s.blobWG.Add(1)
-			go func() {
-				defer s.blobWG.Done()
-				blobMessageHandler(ctx, s.procBus.ServiceChannel(0, 0), s.BLOBStorage, s.bus, s.busTimeout)
-			}()
-		}
-	}
 	s.server.BaseContext = func(l net.Listener) context.Context {
 		return ctx // need to track both client disconnect and app finalize
 	}
@@ -162,7 +151,7 @@ func (s *httpService) registerReverseProxyHandler() error {
 }
 
 func (s *httpService) registerRouterCheckerHandler() {
-	s.router.HandleFunc("/api/check", corsHandler(checkHandler())).Methods("POST", "OPTIONS").Name("router check")
+	s.router.HandleFunc("/api/check", corsHandler(checkHandler())).Methods("POST", "GET", "OPTIONS").Name("router check")
 }
 
 func (s *httpService) registerHandlersV1() {
@@ -171,18 +160,20 @@ func (s *httpService) registerHandlersV1() {
 		Browser sees that hosts differs: from localhost to alpha -> need CORS -> denies POST and executes the same request with OPTIONS header
 		-> need to allow OPTIONS
 	*/
-	if s.BlobberParams != nil {
-		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}", URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid), corsHandler(s.blobWriteRequestHandler())).
+	if s.blobRequestHandler != nil {
+		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}", URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid),
+			corsHandler(s.blobHTTPRequestHandler_Write())).
 			Methods("POST", "OPTIONS").
 			Name("blob write")
 
 		// allowed symbols according to see base64.URLEncoding
-		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9-_]+}", URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobID), corsHandler(s.blobReadRequestHandler())).
+		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9-_]+}", URLPlaceholder_appOwner,
+			URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobIDOrSUUID), corsHandler(s.blobHTTPRequestHandler_Read())).
 			Methods("POST", "GET", "OPTIONS").
 			Name("blob read")
 	}
 	s.router.HandleFunc(fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}", URLPlaceholder_appOwner, URLPlaceholder_appName,
-		URLPlaceholder_wsid, URLPlaceholder_resourceName), corsHandler(RequestHandler(s.bus, s.busTimeout, s.numsAppsWorkspaces))).
+		URLPlaceholder_wsid, URLPlaceholder_resourceName), corsHandler(RequestHandler(s.requestSender, s.numsAppsWorkspaces))).
 		Methods("POST", "PATCH", "OPTIONS").Name("api")
 
 	s.router.Handle("/n10n/channel", corsHandler(s.subscribeAndWatchHandler())).Methods("GET")
@@ -191,15 +182,15 @@ func (s *httpService) registerHandlersV1() {
 	s.router.Handle("/n10n/update/{offset:[0-9]{1,10}}", corsHandler(s.updateHandler()))
 }
 
-func RequestHandler(bus ibus.IBus, busTimeout time.Duration, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+func RequestHandler(requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
-		queueRequest, ok := createRequest(req.Method, req, resp, numsAppsWorkspaces)
+		request, ok := createRequest(req.Method, req, resp, numsAppsWorkspaces)
 		if !ok {
 			return
 		}
 
-		queueRequest.Resource = vars[URLPlaceholder_resourceName]
+		request.Resource = vars[URLPlaceholder_resourceName]
 
 		// req's BaseContext is router service's context. See service.Start()
 		// router app closing or client disconnected -> req.Context() is done
@@ -207,24 +198,20 @@ func RequestHandler(bus ibus.IBus, busTimeout time.Duration, numsAppsWorkspaces 
 		// requestCtx.Done() -> SendRequest2 implementation will notify the handler that the consumer has left us
 		requestCtx, cancel := context.WithCancel(req.Context())
 		defer cancel() // to avoid context leak
-		res, sections, secErr, err := bus.SendRequest2(requestCtx, queueRequest, busTimeout)
+		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(requestCtx, request)
 		if err != nil {
-			logger.Error("IBus.SendRequest2 failed on ", queueRequest.Resource, ":", err, ". Body:\n", string(queueRequest.Body))
+			logger.Error("sending request to VVM on", request.Resource, "is failed:", err, ". Body:\n", string(request.Body))
 			status := http.StatusInternalServerError
-			if errors.Is(err, ibus.ErrBusTimeoutExpired) {
+			if errors.Is(err, bus.ErrSendTimeoutExpired) {
 				status = http.StatusServiceUnavailable
 			}
 			WriteTextResponse(resp, err.Error(), status)
 			return
 		}
 
-		if sections == nil {
-			resp.Header().Set(coreutils.ContentType, res.ContentType)
-			resp.WriteHeader(res.StatusCode)
-			writeResponse(resp, string(res.Data))
-			return
-		}
-		writeSectionedResponse(requestCtx, resp, sections, secErr, cancel)
+		initResponse(resp, responseMeta.ContentType, responseMeta.StatusCode)
+		isCmd := strings.HasPrefix(request.Resource, "c.")
+		reply(requestCtx, resp, responseCh, responseErr, responseMeta.ContentType, cancel, isCmd)
 	}
 }
 

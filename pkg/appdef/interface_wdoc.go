@@ -10,7 +10,7 @@ type IWDoc interface {
 	ISingleton
 
 	// Unwanted type assertion stub
-	isWDoc()
+	IsWDoc()
 }
 
 type IWDocBuilder interface {
@@ -22,7 +22,7 @@ type IWRecord interface {
 	IContainedRecord
 
 	// Unwanted type assertion stub
-	isWRecord()
+	IsWRecord()
 }
 
 type IWRecordBuilder interface {

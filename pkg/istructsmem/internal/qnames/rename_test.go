@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
@@ -34,7 +35,7 @@ func TestRenameQName(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
@@ -92,7 +93,7 @@ func TestRenameQName_Errors(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
@@ -178,7 +179,7 @@ func TestRenameQName_Fails(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))

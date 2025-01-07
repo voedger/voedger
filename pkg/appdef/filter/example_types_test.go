@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
@@ -21,7 +22,7 @@ func ExampleTypes() {
 	tag := appdef.NewQName("test", "tag")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
@@ -87,7 +88,7 @@ func ExampleWSTypes() {
 	tag := appdef.NewQName("test", "tag")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
@@ -154,7 +155,7 @@ func ExampleAllTables() {
 	doc2, obj2, cmd2 := appdef.NewQName("test", "doc2"), appdef.NewQName("test", "object2"), appdef.NewQName("test", "command2")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb1 := adb.AddWorkspace(ws1)
@@ -206,7 +207,7 @@ func ExampleAllWSTables() {
 	doc, obj, cmd := appdef.NewQName("test", "doc"), appdef.NewQName("test", "object"), appdef.NewQName("test", "command")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
@@ -248,7 +249,7 @@ func ExampleAllFunctions() {
 	doc2, cmd2, qry2 := appdef.NewQName("test", "doc2"), appdef.NewQName("test", "command2"), appdef.NewQName("test", "query2")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb1 := adb.AddWorkspace(ws1)
@@ -300,7 +301,7 @@ func ExampleAllWSFunctions() {
 	doc, cmd, qry := appdef.NewQName("test", "doc"), appdef.NewQName("test", "command"), appdef.NewQName("test", "query")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)

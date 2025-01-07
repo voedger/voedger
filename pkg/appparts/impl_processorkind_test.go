@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
 )
@@ -24,7 +25,7 @@ func TestProcessorKind_CompatibleWithExtension(t *testing.T) {
 	names := appdef.QNamesFrom(cmd, query, syncPrj, asyncPrj, job)
 
 	appDef := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.test/test")
 
 		wsName := appdef.NewQName("test", "workspace")
