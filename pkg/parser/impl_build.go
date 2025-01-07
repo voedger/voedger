@@ -7,6 +7,7 @@ package parser
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/constraints"
@@ -16,9 +17,8 @@ import (
 
 type buildContext struct {
 	basicContext
-	adb              appdef.IAppDefBuilder
-	defs             []defBuildContext
-	variableResolver IVariableResolver
+	adb  appdef.IAppDefBuilder
+	defs []defBuildContext
 }
 
 func newBuildContext(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) *buildContext {
@@ -51,6 +51,7 @@ func (c *buildContext) build() error {
 		c.workspaces,
 		c.grantsAndRevokes,
 		c.packages,
+		c.limits,
 	}
 	for _, step := range steps {
 		if err := step(); err != nil {
@@ -58,17 +59,6 @@ func (c *buildContext) build() error {
 		}
 	}
 	return errors.Join(c.errs...)
-}
-
-func supported(stmt interface{}) bool {
-	// FIXME: this must be empty in the end
-	if _, ok := stmt.(*RateStmt); ok {
-		return false
-	}
-	if _, ok := stmt.(*LimitStmt); ok {
-		return false
-	}
-	return true
 }
 
 // Prepares workspaces builders.
@@ -97,12 +87,107 @@ func (c *buildContext) packages() error {
 func (c *buildContext) rates() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(rate *RateStmt, ictx *iterateCtx) {
-			if rate.Value.Variable != nil {
-				if c.variableResolver != nil {
-					c.variableResolver.AsInt32(rate.Value.variable)
-					// TODO: use in appdef builder
+			var timeUnitAmount uint32 = 1
+			var period time.Duration
+			var rateScopes []appdef.RateScope
+
+			if rate.Value.TimeUnitAmounts != nil {
+				timeUnitAmount = *rate.Value.TimeUnitAmounts
+			}
+			if rate.Value.TimeUnit.Second {
+				period = time.Duration(timeUnitAmount) * time.Second
+			} else if rate.Value.TimeUnit.Minute {
+				period = time.Duration(timeUnitAmount) * time.Minute
+			} else if rate.Value.TimeUnit.Hour {
+				period = time.Duration(timeUnitAmount) * time.Hour
+			} else if rate.Value.TimeUnit.Day {
+				period = time.Duration(timeUnitAmount) * 24 * time.Hour
+			} else if rate.Value.TimeUnit.Year {
+				period = time.Duration(timeUnitAmount) * 365 * 24 * time.Hour
+			}
+			wsb := rate.workspace.mustBuilder(c)
+			if rate.ObjectScope != nil {
+				if rate.ObjectScope.PerAppPartition {
+					rateScopes = append(rateScopes, appdef.RateScope_AppPartition)
+				} else {
+					rateScopes = append(rateScopes, appdef.RateScope_Workspace) // default
+				}
+			} else {
+				rateScopes = append(rateScopes, appdef.RateScope_Workspace) // default
+			}
+			if rate.SubjectScope != nil {
+				if rate.SubjectScope.PerUser {
+					rateScopes = append(rateScopes, appdef.RateScope_User)
+				} else {
+					rateScopes = append(rateScopes, appdef.RateScope_IP) // default
+				}
+			} else {
+				rateScopes = append(rateScopes, appdef.RateScope_IP) // default
+			}
+			wsb.AddRate(schema.NewQName(rate.Name), rate.Value.count, period, rateScopes, rate.Comments...)
+		})
+	}
+	return nil
+}
+
+func (c *buildContext) limits() error {
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(limit *LimitStmt, ictx *iterateCtx) {
+			wsb := limit.workspace.mustBuilder(c)
+			var opt appdef.LimitFilterOption
+			var types []appdef.TypeKind
+			var limitFilter appdef.IFilter
+			if limit.AllItems != nil {
+				opt = appdef.LimitFilterOption_ALL
+				if limit.AllItems.Commands || limit.AllItems.All {
+					types = append(types, appdef.TypeKind_Command)
+				}
+				if limit.AllItems.Queries || limit.AllItems.All {
+					types = append(types, appdef.TypeKind_Query)
+				}
+				if limit.AllItems.Tables || limit.AllItems.All {
+					types = append(types, appdef.TypeKind_Records.AsArray()...)
+				}
+				if limit.AllItems.Views || limit.AllItems.All {
+					types = append(types, appdef.TypeKind_ViewRecord)
+				}
+				if limit.AllItems.WithTag != nil {
+					limitFilter = filter.And(filter.Types(types...), filter.Tags(limit.AllItems.WithTag.qName))
+				} else {
+					limitFilter = filter.Types(types...)
+				}
+			} else if limit.EachItem != nil {
+				opt = appdef.LimitFilterOption_EACH
+				if limit.EachItem.Commands {
+					types = append(types, appdef.TypeKind_Command)
+				}
+				if limit.EachItem.Queries {
+					types = append(types, appdef.TypeKind_Query)
+				}
+				if limit.EachItem.Tables {
+					types = append(types, appdef.TypeKind_Records.AsArray()...)
+				}
+				if limit.EachItem.Views {
+					types = append(types, appdef.TypeKind_ViewRecord)
+				}
+				if limit.EachItem.WithTag != nil {
+					limitFilter = filter.And(filter.Types(types...), filter.Tags(limit.EachItem.WithTag.qName))
+				} else {
+					limitFilter = filter.Types(types...)
+				}
+			} else {
+				opt = appdef.LimitFilterOption_EACH
+				if limit.SingleItem.Command != nil {
+					limitFilter = filter.And(filter.Types(appdef.TypeKind_Command), filter.QNames(limit.SingleItem.Command.qName))
+				} else if limit.SingleItem.Query != nil {
+					limitFilter = filter.And(filter.Types(appdef.TypeKind_Query), filter.QNames(limit.SingleItem.Query.qName))
+				} else if limit.SingleItem.Table != nil {
+					limitFilter = filter.And(filter.Types(appdef.TypeKind_Records.AsArray()...), filter.QNames(limit.SingleItem.Table.qName))
+				} else if limit.SingleItem.View != nil {
+					limitFilter = filter.And(filter.Types(appdef.TypeKind_ViewRecord), filter.QNames(limit.SingleItem.View.qName))
 				}
 			}
+			wsb.AddLimit(schema.NewQName(limit.Name), limit.ops, opt, limitFilter, limit.RateName.qName, limit.Comments...)
 		})
 	}
 	return nil

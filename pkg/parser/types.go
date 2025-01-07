@@ -198,7 +198,7 @@ type DeclareStmt struct {
 	Statement
 	Name         Ident  `parser:"'DECLARE' @Ident"`
 	DataType     string `parser:"@('int' | 'int32')"`
-	DefaultValue *int   `parser:"'DEFAULT' @Int"`
+	DefaultValue int32  `parser:"'DEFAULT' @Int"`
 }
 
 func (s DeclareStmt) GetName() string { return string(s.Name) }
@@ -583,10 +583,9 @@ type RateValueTimeUnit struct {
 type RateValue struct {
 	Count           *int              `parser:"(@Int"`
 	Variable        *DefQName         `parser:"| @@) 'PER'"`
-	TimeUnitAmounts *int              `parser:"@Int?"`
+	TimeUnitAmounts *uint32           `parser:"@Int?"`
 	TimeUnit        RateValueTimeUnit `parser:"@@"`
-	variable        appdef.QName      // filled on the analysis stage
-	declare         *DeclareStmt      // filled on the analysis stage
+	count           uint32            // filled on the analysis stage
 }
 
 type RateObjectScope struct {
@@ -605,18 +604,17 @@ type RateStmt struct {
 	Value        RateValue         `parser:"@@"`
 	ObjectScope  *RateObjectScope  `parser:"@@?"`
 	SubjectScope *RateSubjectScope `parser:"@@?"`
+	workspace    workspaceAddr     // filled on the analysis stage
 }
 
 func (s RateStmt) GetName() string { return string(s.Name) }
 
 type LimitAction struct {
-	Pos        lexer.Position
-	Select     bool `parser:"(@'SELECT'"`
-	Execute    bool `parser:"| @EXECUTE"`
-	Insert     bool `parser:"| @'INSERT'"`
-	Activate   bool `parser:"| @'ACTIVATE'"`
-	Deactivate bool `parser:"| @'DEACTIVATE'"`
-	Update     bool `parser:"| @'UPDATE')"`
+	Pos     lexer.Position
+	Select  bool `parser:"(@'SELECT'"`
+	Execute bool `parser:"| @EXECUTE"`
+	Insert  bool `parser:"| @'INSERT'"`
+	Update  bool `parser:"| @'UPDATE')"`
 }
 
 type LimitSingleItemFilter struct {
@@ -654,6 +652,8 @@ type LimitStmt struct {
 	AllItems   *LimitAllItemsFilter   `parser:"| @@"`
 	EachItem   *LimitEachItemFilter   `parser:"| @@ )"`
 	RateName   DefQName               `parser:"'WITH' 'RATE' @@"`
+	workspace  workspaceAddr          // filled on the analysis stage
+	ops        []appdef.OperationKind // filled on the analysis stage
 }
 
 func (s LimitStmt) GetName() string { return string(s.Name) }
@@ -1139,11 +1139,5 @@ type IVariableResolver interface {
 	AsInt32(name appdef.QName) (int32, bool)
 }
 
-// BuildAppDefsOption is a function that can be passed to BuildAppDefs to configure it.
-type BuildAppDefsOption = func(*buildContext)
-
-func WithVariableResolver(resolver IVariableResolver) BuildAppDefsOption {
-	return func(c *buildContext) {
-		c.variableResolver = resolver
-	}
-}
+// ParserOption is a function that can be passed to BuildAppDefs to configure it.
+type ParserOption = func(*basicContext)
