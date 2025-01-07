@@ -20,6 +20,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -34,13 +35,12 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state istructs.IState, params IQueryParams,
-	resultMeta appdef.IType, rs IResultSenderClosable, metrics IMetrics, errCh chan<- error) pipeline.IAsyncPipeline {
+	resultMeta appdef.IType, responder bus.IResponder, metrics IMetrics, errCh chan<- error) (rowsProcessor pipeline.IAsyncPipeline, iResponseSenderGetter func() bus.IResponseSender) {
 	operators := make([]*pipeline.WiredOperator, 0)
 	if resultMeta == nil {
 		// happens when the query has no result, e.g. q.air.UpdateSubscriptionDetails
@@ -84,15 +84,18 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 				metrics)))
 		}
 	}
-	operators = append(operators, pipeline.WireAsyncOperator("Send to bus", &SendToBusOperator{
-		rs:      rs,
-		metrics: metrics,
-		errCh:   errCh,
-	}))
-	return pipeline.NewAsyncPipeline(ctx, "Rows processor", operators[0], operators[1:]...)
+	sendToBusOp := &SendToBusOperator{
+		responder: responder,
+		metrics:   metrics,
+		errCh:     errCh,
+	}
+	operators = append(operators, pipeline.WireAsyncOperator("Send to bus", sendToBusOp))
+	return pipeline.NewAsyncPipeline(ctx, "Rows processor", operators[0], operators[1:]...), func() bus.IResponseSender {
+		return sendToBusOp.sender
+	}
 }
 
-func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClosableFactory ResultSenderClosableFactory,
+func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 	appParts appparts.IAppPartitions, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
 	authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer, itokens itokens.ITokens, federation federation.IFederation,
 	statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) pipeline.IService {
@@ -109,8 +112,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 					metrics: metrics,
 				}
 				qpm.Increase(queriesTotal, 1.0)
-				rs := resultSenderClosableFactory(msg.RequestCtx(), msg.Sender())
-				qwork := newQueryWork(msg, rs, appParts, maxPrepareQueries, qpm, secretReader)
+				qwork := newQueryWork(msg, appParts, maxPrepareQueries, qpm, secretReader)
 				func() { // borrowed application partition should be guaranteed to be freed
 					defer qwork.Release()
 					if p == nil {
@@ -140,7 +142,22 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 					default:
 					}
 					err = coreutils.WrapSysError(err, http.StatusInternalServerError)
-					rs.Close(err)
+					var senderCloseable bus.IResponseSenderCloseable
+					statusCode := http.StatusOK
+					if err != nil {
+						statusCode = err.(coreutils.SysError).HTTPStatus // nolint:errorlint
+					}
+					if qwork.responseSenderGetter == nil || qwork.responseSenderGetter() == nil {
+						// have an error before 200ok is sent -> send the status from the actual error
+						senderCloseable = msg.Responder().InitResponse(bus.ResponseMeta{
+							ContentType: coreutils.ApplicationJSON,
+							StatusCode:  statusCode,
+						})
+					} else {
+						sender := qwork.responseSenderGetter()
+						senderCloseable = sender.(bus.IResponseSenderCloseable)
+					}
+					senderCloseable.Close(err)
 				}()
 				metrics.IncreaseApp(queriesSeconds, vvm, msg.AppQName(), time.Since(now).Seconds())
 			case <-ctx.Done():
@@ -414,13 +431,14 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			return nil
 		}),
+
 		operator("build rows processor", func(ctx context.Context, qw *queryWork) error {
 			now := time.Now()
 			defer func() {
 				qw.metrics.Increase(buildSeconds, time.Since(now).Seconds())
 			}()
-			qw.rowsProcessor = ProvideRowsProcessorFactory()(qw.msg.RequestCtx(), qw.appStructs.AppDef(),
-				qw.state, qw.queryParams, qw.resultType, qw.rs, qw.metrics, qw.rowsProcessorErrCh)
+			qw.rowsProcessor, qw.responseSenderGetter = ProvideRowsProcessorFactory()(qw.msg.RequestCtx(), qw.appStructs.AppDef(),
+				qw.state, qw.queryParams, qw.resultType, qw.msg.Responder(), qw.metrics, qw.rowsProcessorErrCh)
 			return nil
 		}),
 	}
@@ -430,40 +448,38 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 type queryWork struct {
 	// input
 	msg      IQueryMessage
-	rs       IResultSenderClosable
 	appParts appparts.IAppPartitions
 	// work
-	requestData        map[string]interface{}
-	state              state.IHostState
-	queryParams        IQueryParams
-	appPart            appparts.IAppPartition
-	appStructs         istructs.IAppStructs
-	resultType         appdef.IType
-	execQueryArgs      istructs.ExecQueryArgs
-	maxPrepareQueries  int
-	rowsProcessor      pipeline.IAsyncPipeline
-	rowsProcessorErrCh chan error // will contain the first error from rowProcessor if any. The rest of errors in rowsProcessor will be just logged
-	metrics            IMetrics
-	principals         []iauthnz.Principal
-	principalPayload   payloads.PrincipalPayload
-	roles              []appdef.QName
-	secretReader       isecrets.ISecretReader
-	iWorkspace         appdef.IWorkspace
-	iQuery             appdef.IQuery
-	wsDesc             istructs.IRecord
-	// queryExec         func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error
-	callbackFunc istructs.ExecQueryCallback
+	requestData          map[string]interface{}
+	state                state.IHostState
+	queryParams          IQueryParams
+	appPart              appparts.IAppPartition
+	appStructs           istructs.IAppStructs
+	resultType           appdef.IType
+	execQueryArgs        istructs.ExecQueryArgs
+	maxPrepareQueries    int
+	rowsProcessor        pipeline.IAsyncPipeline
+	rowsProcessorErrCh   chan error // will contain the first error from rowProcessor if any. The rest of errors in rowsProcessor will be just logged
+	metrics              IMetrics
+	principals           []iauthnz.Principal
+	principalPayload     payloads.PrincipalPayload
+	roles                []appdef.QName
+	secretReader         isecrets.ISecretReader
+	iWorkspace           appdef.IWorkspace
+	iQuery               appdef.IQuery
+	wsDesc               istructs.IRecord
+	callbackFunc         istructs.ExecQueryCallback
+	responseSenderGetter func() bus.IResponseSender
 }
 
 func roleNotFound(err error) bool {
 	return errors.Is(err, appdef.ErrNotFoundError) && strings.Contains(err.Error(), "role")
 }
 
-func newQueryWork(msg IQueryMessage, rs IResultSenderClosable, appParts appparts.IAppPartitions,
+func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
 	maxPrepareQueries int, metrics *queryProcessorMetrics, secretReader isecrets.ISecretReader) *queryWork {
 	return &queryWork{
 		msg:                msg,
-		rs:                 rs,
 		appParts:           appParts,
 		requestData:        make(map[string]interface{}),
 		maxPrepareQueries:  maxPrepareQueries,
@@ -501,7 +517,7 @@ func (qw *queryWork) Release() {
 	}
 }
 
-// need or q.sys.EnrichPrincipalToken
+// need for q.sys.EnrichPrincipalToken
 func (qw *queryWork) AppQName() appdef.AppQName {
 	return qw.msg.AppQName()
 }
@@ -533,16 +549,18 @@ type queryMessage struct {
 	appQName   appdef.AppQName
 	wsid       istructs.WSID
 	partition  istructs.PartitionID
-	sender     ibus.ISender
+	responder  bus.IResponder
 	body       []byte
 	qName      appdef.QName
 	host       string
 	token      string
 }
 
-func (m queryMessage) AppQName() appdef.AppQName       { return m.appQName }
-func (m queryMessage) WSID() istructs.WSID             { return m.wsid }
-func (m queryMessage) Sender() ibus.ISender            { return m.sender }
+func (m queryMessage) AppQName() appdef.AppQName { return m.appQName }
+func (m queryMessage) WSID() istructs.WSID       { return m.wsid }
+func (m queryMessage) Responder() bus.IResponder {
+	return m.responder
+}
 func (m queryMessage) RequestCtx() context.Context     { return m.requestCtx }
 func (m queryMessage) QName() appdef.QName             { return m.qName }
 func (m queryMessage) Host() string                    { return m.host }
@@ -555,13 +573,13 @@ func (m queryMessage) Body() []byte {
 	return []byte("{}")
 }
 
-func NewQueryMessage(requestCtx context.Context, appQName appdef.AppQName, partID istructs.PartitionID, wsid istructs.WSID, sender ibus.ISender, body []byte,
-	qName appdef.QName, host string, token string) IQueryMessage {
+func NewQueryMessage(requestCtx context.Context, appQName appdef.AppQName, partID istructs.PartitionID, wsid istructs.WSID,
+	responder bus.IResponder, body []byte, qName appdef.QName, host string, token string) IQueryMessage {
 	return queryMessage{
 		appQName:   appQName,
 		wsid:       wsid,
 		partition:  partID,
-		sender:     sender,
+		responder:  responder,
 		body:       body,
 		requestCtx: requestCtx,
 		qName:      qName,
@@ -695,7 +713,7 @@ func (m *queryProcessorMetrics) Increase(metricName string, valueDelta float64) 
 
 func newFieldsKinds(t appdef.IType) FieldsKinds {
 	res := FieldsKinds{}
-	if fields, ok := t.(appdef.IFields); ok {
+	if fields, ok := t.(appdef.IWithFields); ok {
 		for _, f := range fields.Fields() {
 			res[f.Name()] = f.DataKind()
 		}

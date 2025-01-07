@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
@@ -90,7 +91,7 @@ func TestKeyBuilder(t *testing.T) {
 }
 
 func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
-	adb := appdef.New()
+	adb := builder.New()
 
 	adb.AddPackage("test", "test.com/test")
 

@@ -8,15 +8,8 @@ package parser
 import "github.com/voedger/voedger/pkg/appdef"
 
 const (
-	nameCdoc       = "CDoc"
-	nameODoc       = "ODoc"
-	nameWDoc       = "WDoc"
-	nameCSingleton = "CSingleton"
-	nameWSingleton = "WSingleton"
-	nameCRecord    = "CRecord"
-	nameORecord    = "ORecord"
-	nameWRecord    = "WRecord"
-
+	nameCSingleton     = "CSingleton"
+	nameWSingleton     = "WSingleton"
 	nameAppWorkspaceWS = "AppWorkspaceWS"
 )
 
@@ -29,6 +22,13 @@ const maxNestedTableContainerOccurrences = 100 // FIXME: 100 container occurrenc
 const parserLookahead = 10
 const VSqlExt = ".vsql"
 const SqlExt = ".sql"
+
+const OP_SELECT = "SELECT"
+const OP_INSERT = "INSERT"
+const OP_UPDATE = "UPDATE"
+const OP_EXECUTE = "EXECUTE"
+const OP_ACTIVATE = "ACTIVATE"
+const OP_DEACTIVATE = "DEACTIVATE"
 
 var canNotReferenceTo = map[appdef.TypeKind][]appdef.TypeKind{
 	appdef.TypeKind_ODoc:       {},

@@ -10,6 +10,8 @@ import (
 	"log"
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
@@ -36,7 +38,7 @@ func TestBasicUsage(t *testing.T) {
 
 	// create app configuration
 	appConfigs := func() AppConfigsType {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
@@ -193,7 +195,7 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 	appName := istructs.AppQName_test1_app1
 
 	appConfigs := func() AppConfigsType {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 		view := wsb.AddView(appdef.NewQName("test", "viewDrinks"))
@@ -201,7 +203,7 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 		view.Key().ClustCols().
 			AddField("clusteringColumn1", appdef.DataKind_int64).
 			AddField("clusteringColumn2", appdef.DataKind_bool).
-			AddField("clusteringColumn3", appdef.DataKind_string, appdef.MaxLen(100))
+			AddField("clusteringColumn3", appdef.DataKind_string, constraints.MaxLen(100))
 		view.Value().
 			AddField("id", appdef.DataKind_int64, true).
 			AddField("name", appdef.DataKind_string, true).
@@ -295,7 +297,7 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 	objName := appdef.NewQName("test", "object")
 
 	appStructs := func() istructs.IAppStructs {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 		obj := wsb.AddObject(objName)
@@ -475,7 +477,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 	appName := istructs.AppQName_test1_app1
 
 	app := func() istructs.IAppStructs {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("structs", "test.com/structs")
 		adb.AddPackage("functions", "test.com/functions")
 		adb.AddPackage("workspaces", "test.com/workspace")
@@ -504,7 +506,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 
 		view := wsb.AddView(viewQName)
 		view.Key().PartKey().AddField("int", appdef.DataKind_int64)
-		view.Key().ClustCols().AddField("str", appdef.DataKind_string, appdef.MaxLen(100))
+		view.Key().ClustCols().AddField("str", appdef.DataKind_string, constraints.MaxLen(100))
 		view.Value().AddField("bool", appdef.DataKind_bool, false)
 
 		arg := wsb.AddObject(argQName)
@@ -561,7 +563,7 @@ func Test_Provide(t *testing.T) {
 
 	t.Run("AppStructs() must error if unknown app name", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, appdef.New())
+		cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, builder.New())
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		p := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), nil)
 		require.NotNil(p)

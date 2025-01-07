@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -207,7 +208,7 @@ func TestIBucketsFromIAppStructs(t *testing.T) {
 	require := require.New(t)
 
 	cfgs := AppConfigsType{}
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 	cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)

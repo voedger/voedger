@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
@@ -24,7 +25,7 @@ func Test_FilterMatches(t *testing.T) {
 	queryName := appdef.NewQName("test", "query")
 
 	t.Run("should be ok to build application", func(t *testing.T) {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
@@ -53,6 +54,9 @@ func Test_FilterMatches(t *testing.T) {
 			cnt++
 		}
 		require.Equal(2, cnt)
+
+		require.Equal(cmdName, appdef.FirstFilterMatch(filter.AllWSFunctions(wsName), app.Types()).QName())
+		require.Nil(appdef.FirstFilterMatch(filter.QNames(appdef.NewQName("test", "unknown")), app.Types()))
 
 		t.Run("filter matches iter should be breakable", func(t *testing.T) {
 			cnt := 0

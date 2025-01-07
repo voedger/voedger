@@ -7,17 +7,18 @@ package parser
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type buildContext struct {
 	basicContext
-	adb              appdef.IAppDefBuilder
-	defs             []defBuildContext
-	variableResolver IVariableResolver
+	adb  appdef.IAppDefBuilder
+	defs []defBuildContext
 }
 
 func newBuildContext(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) *buildContext {
@@ -50,6 +51,7 @@ func (c *buildContext) build() error {
 		c.workspaces,
 		c.grantsAndRevokes,
 		c.packages,
+		c.limits,
 	}
 	for _, step := range steps {
 		if err := step(); err != nil {
@@ -57,17 +59,6 @@ func (c *buildContext) build() error {
 		}
 	}
 	return errors.Join(c.errs...)
-}
-
-func supported(stmt interface{}) bool {
-	// FIXME: this must be empty in the end
-	if _, ok := stmt.(*RateStmt); ok {
-		return false
-	}
-	if _, ok := stmt.(*LimitStmt); ok {
-		return false
-	}
-	return true
 }
 
 // Prepares workspaces builders.
@@ -96,12 +87,107 @@ func (c *buildContext) packages() error {
 func (c *buildContext) rates() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(rate *RateStmt, ictx *iterateCtx) {
-			if rate.Value.Variable != nil {
-				if c.variableResolver != nil {
-					c.variableResolver.AsInt32(rate.Value.variable)
-					// TODO: use in appdef builder
+			var timeUnitAmount uint32 = 1
+			var period time.Duration
+			var rateScopes []appdef.RateScope
+
+			if rate.Value.TimeUnitAmounts != nil {
+				timeUnitAmount = *rate.Value.TimeUnitAmounts
+			}
+			if rate.Value.TimeUnit.Second {
+				period = time.Duration(timeUnitAmount) * time.Second
+			} else if rate.Value.TimeUnit.Minute {
+				period = time.Duration(timeUnitAmount) * time.Minute
+			} else if rate.Value.TimeUnit.Hour {
+				period = time.Duration(timeUnitAmount) * time.Hour
+			} else if rate.Value.TimeUnit.Day {
+				period = time.Duration(timeUnitAmount) * 24 * time.Hour
+			} else if rate.Value.TimeUnit.Year {
+				period = time.Duration(timeUnitAmount) * 365 * 24 * time.Hour
+			}
+			wsb := rate.workspace.mustBuilder(c)
+			if rate.ObjectScope != nil {
+				if rate.ObjectScope.PerAppPartition {
+					rateScopes = append(rateScopes, appdef.RateScope_AppPartition)
+				} else {
+					rateScopes = append(rateScopes, appdef.RateScope_Workspace) // default
+				}
+			} else {
+				rateScopes = append(rateScopes, appdef.RateScope_Workspace) // default
+			}
+			if rate.SubjectScope != nil {
+				if rate.SubjectScope.PerUser {
+					rateScopes = append(rateScopes, appdef.RateScope_User)
+				} else {
+					rateScopes = append(rateScopes, appdef.RateScope_IP) // default
+				}
+			} else {
+				rateScopes = append(rateScopes, appdef.RateScope_IP) // default
+			}
+			wsb.AddRate(schema.NewQName(rate.Name), rate.Value.count, period, rateScopes, rate.Comments...)
+		})
+	}
+	return nil
+}
+
+func (c *buildContext) limits() error {
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(limit *LimitStmt, ictx *iterateCtx) {
+			wsb := limit.workspace.mustBuilder(c)
+			var opt appdef.LimitFilterOption
+			var types []appdef.TypeKind
+			var limitFilter appdef.IFilter
+			if limit.AllItems != nil {
+				opt = appdef.LimitFilterOption_ALL
+				if limit.AllItems.Commands || limit.AllItems.All {
+					types = append(types, appdef.TypeKind_Command)
+				}
+				if limit.AllItems.Queries || limit.AllItems.All {
+					types = append(types, appdef.TypeKind_Query)
+				}
+				if limit.AllItems.Tables || limit.AllItems.All {
+					types = append(types, appdef.TypeKind_Records.AsArray()...)
+				}
+				if limit.AllItems.Views || limit.AllItems.All {
+					types = append(types, appdef.TypeKind_ViewRecord)
+				}
+				if limit.AllItems.WithTag != nil {
+					limitFilter = filter.And(filter.Types(types...), filter.Tags(limit.AllItems.WithTag.qName))
+				} else {
+					limitFilter = filter.Types(types...)
+				}
+			} else if limit.EachItem != nil {
+				opt = appdef.LimitFilterOption_EACH
+				if limit.EachItem.Commands {
+					types = append(types, appdef.TypeKind_Command)
+				}
+				if limit.EachItem.Queries {
+					types = append(types, appdef.TypeKind_Query)
+				}
+				if limit.EachItem.Tables {
+					types = append(types, appdef.TypeKind_Records.AsArray()...)
+				}
+				if limit.EachItem.Views {
+					types = append(types, appdef.TypeKind_ViewRecord)
+				}
+				if limit.EachItem.WithTag != nil {
+					limitFilter = filter.And(filter.Types(types...), filter.Tags(limit.EachItem.WithTag.qName))
+				} else {
+					limitFilter = filter.Types(types...)
+				}
+			} else {
+				opt = appdef.LimitFilterOption_EACH
+				if limit.SingleItem.Command != nil {
+					limitFilter = filter.And(filter.Types(appdef.TypeKind_Command), filter.QNames(limit.SingleItem.Command.qName))
+				} else if limit.SingleItem.Query != nil {
+					limitFilter = filter.And(filter.Types(appdef.TypeKind_Query), filter.QNames(limit.SingleItem.Query.qName))
+				} else if limit.SingleItem.Table != nil {
+					limitFilter = filter.And(filter.Types(appdef.TypeKind_Records.AsArray()...), filter.QNames(limit.SingleItem.Table.qName))
+				} else if limit.SingleItem.View != nil {
+					limitFilter = filter.And(filter.Types(appdef.TypeKind_ViewRecord), filter.QNames(limit.SingleItem.View.qName))
 				}
 			}
+			wsb.AddLimit(schema.NewQName(limit.Name), limit.ops, opt, limitFilter, limit.RateName.qName, limit.Comments...)
 		})
 	}
 	return nil
@@ -163,10 +249,7 @@ func (c *buildContext) tags() error {
 		iteratePackageStmt(schema, &c.basicContext, func(tag *TagStmt, ictx *iterateCtx) {
 			qname := schema.NewQName(tag.Name)
 			builder := tag.workspace.mustBuilder(c)
-			builder.AddTag(qname)
-			if len(tag.Comments) > 0 {
-				builder.SetTypeComment(qname, tag.Comments...)
-			}
+			builder.AddTag(qname, tag.Comments...)
 		})
 	}
 	return nil
@@ -312,37 +395,27 @@ func (c *buildContext) projectors() error {
 					return
 				}
 
-				qNames := appdef.QNames{}
-				types := appdef.TypeKindSet{}
-				for _, n := range trigger.qNames {
-					switch n {
-					case istructs.QNameCommand:
-						types.Set(appdef.TypeKind_Command)
-					case istructs.QNameQuery:
-						types.Set(appdef.TypeKind_Query)
-					case istructs.QNameCDoc:
-						types.Set(appdef.TypeKind_CDoc)
-					case istructs.QNameCRecord:
-						types.Set(appdef.TypeKind_CDoc, appdef.TypeKind_CRecord)
-					case istructs.QNameWDoc:
-						types.Set(appdef.TypeKind_WDoc)
-					case istructs.QNameWRecord:
-						types.Set(appdef.TypeKind_WDoc, appdef.TypeKind_WRecord)
-					case istructs.QNameODoc:
-						types.Set(appdef.TypeKind_ODoc)
-					case istructs.QNameORecord:
-						types.Set(appdef.TypeKind_ODoc, appdef.TypeKind_ORecord)
-					default:
-						qNames.Add(n)
-					}
-				}
-
 				flt := []appdef.IFilter{}
+				qNames := appdef.QNames{}
+				types := []appdef.TypeKind{}
+				for _, n := range trigger.QNames {
+					switch n.qName {
+					case istructs.QNameCRecord:
+						types = append(types, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord)
+					case istructs.QNameWRecord:
+						types = append(types, appdef.TypeKind_WDoc, appdef.TypeKind_WRecord)
+					case istructs.QNameODoc:
+						types = append(types, appdef.TypeKind_ODoc)
+					default:
+						qNames.Add(n.qName)
+					}
+				} //Trigger qNames
+
 				if len(qNames) > 0 {
 					flt = append(flt, filter.QNames(qNames...))
 				}
-				if types.Len() > 0 {
-					flt = append(flt, filter.Types(types.AsArray()...))
+				if len(types) > 0 {
+					flt = append(flt, filter.Types(types...))
 				}
 
 				switch len(flt) {
@@ -352,9 +425,9 @@ func (c *buildContext) projectors() error {
 				case 1:
 					builder.Events().Add(ops, flt[0])
 				default:
-					builder.Events().Add(ops, filter.And(flt...))
+					builder.Events().Add(ops, filter.Or(flt...))
 				}
-			}
+			} //Triggers
 
 			if proj.IncludingErrors {
 				builder.SetWantErrors()
@@ -394,11 +467,11 @@ func (c *buildContext) views() error {
 				switch k := dataTypeToDataKind(f.Type); k {
 				case appdef.DataKind_bytes:
 					if (f.Type.Bytes != nil) && (f.Type.Bytes.MaxLen != nil) {
-						cc = append(cc, appdef.MaxLen(uint16(*f.Type.Bytes.MaxLen))) // nolint G115: checked in [analyseFields]
+						cc = append(cc, constraints.MaxLen(uint16(*f.Type.Bytes.MaxLen))) // nolint G115: checked in [analyseFields]
 					}
 				case appdef.DataKind_string:
 					if (f.Type.Varchar != nil) && (f.Type.Varchar.MaxLen != nil) {
-						cc = append(cc, appdef.MaxLen(uint16(*f.Type.Varchar.MaxLen))) // nolint G115: checked in [analyseFields]
+						cc = append(cc, constraints.MaxLen(uint16(*f.Type.Varchar.MaxLen))) // nolint G115: checked in [analyseFields]
 					}
 				}
 				return cc
@@ -627,19 +700,19 @@ func (c *buildContext) addDataTypeField(field *FieldExpr) {
 
 	if field.Type.DataType.Bytes != nil {
 		if field.Type.DataType.Bytes.MaxLen != nil {
-			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull, appdef.MaxLen(uint16(*field.Type.DataType.Bytes.MaxLen))) // nolint G115: checked in [analyseFields]
+			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull, constraints.MaxLen(uint16(*field.Type.DataType.Bytes.MaxLen))) // nolint G115: checked in [analyseFields]
 		} else {
 			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull)
 		}
 	} else if field.Type.DataType.Varchar != nil {
-		constraints := make([]appdef.IConstraint, 0)
+		cc := make([]appdef.IConstraint, 0)
 		if field.Type.DataType.Varchar.MaxLen != nil {
-			constraints = append(constraints, appdef.MaxLen(uint16(*field.Type.DataType.Varchar.MaxLen))) // nolint G115: checked in [analyseFields]
+			cc = append(cc, constraints.MaxLen(uint16(*field.Type.DataType.Varchar.MaxLen))) // nolint G115: checked in [analyseFields]
 		}
 		if field.CheckRegexp != nil {
-			constraints = append(constraints, appdef.Pattern(field.CheckRegexp.Regexp))
+			cc = append(cc, constraints.Pattern(field.CheckRegexp.Regexp))
 		}
-		bld.AddField(fieldName, appdef.DataKind_string, field.NotNull, constraints...)
+		bld.AddField(fieldName, appdef.DataKind_string, field.NotNull, cc...)
 	} else {
 		bld.AddField(fieldName, sysDataKind, field.NotNull)
 	}
@@ -724,7 +797,7 @@ func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 	tabName := c.defCtx().qname
 	tab := c.adb.AppDef().Type(tabName)
 	if constraint.UniqueField != nil {
-		f := tab.(appdef.IFields).Field(string(constraint.UniqueField.Field))
+		f := tab.(appdef.IWithFields).Field(string(constraint.UniqueField.Field))
 		if f == nil {
 			c.stmtErr(&constraint.Pos, ErrUndefinedField(string(constraint.UniqueField.Field)))
 			return
@@ -733,7 +806,7 @@ func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 	} else if constraint.Unique != nil {
 		fields := make([]string, len(constraint.Unique.Fields))
 		for i, f := range constraint.Unique.Fields {
-			if tab.(appdef.IFields).Field(string(f)) == nil {
+			if tab.(appdef.IWithFields).Field(string(f)) == nil {
 				c.stmtErr(&constraint.Pos, ErrUndefinedField(string(f)))
 				return
 			}

@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/descr"
@@ -21,7 +23,7 @@ func Example() {
 	appName := istructs.AppQName_test1_app1
 
 	appDef := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test/path")
 
 		wsName, wsDescName := appdef.NewQName("test", "ws"), appdef.NewQName("test", "wsDesc")
@@ -40,12 +42,12 @@ func Example() {
 
 		docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
 
-		n := wsb.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinIncl(1))
+		n := wsb.AddData(numName, appdef.DataKind_int64, appdef.NullQName, constraints.MinIncl(1))
 		n.SetComment("natural (positive) integer")
 		n.SetTag(tags[0])
 
 		s := wsb.AddData(strName, appdef.DataKind_string, appdef.NullQName)
-		s.AddConstraints(appdef.MinLen(1), appdef.MaxLen(100), appdef.Pattern(`^\w+$`, "only word characters allowed"))
+		s.AddConstraints(constraints.MinLen(1), constraints.MaxLen(100), constraints.Pattern(`^\w+$`, "only word characters allowed"))
 		s.SetTag(tags[0])
 
 		doc := wsb.AddCDoc(docName)
@@ -53,7 +55,7 @@ func Example() {
 		doc.
 			AddField("f1", appdef.DataKind_int64, true).
 			SetFieldComment("f1", "field comment").
-			AddField("f2", appdef.DataKind_string, false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`)).
+			AddField("f2", appdef.DataKind_string, false, constraints.MinLen(4), constraints.MaxLen(4), constraints.Pattern(`^\w+$`)).
 			AddDataField("numField", numName, false).
 			AddRefField("mainChild", false, recName)
 		doc.AddContainer("rec", recName, 0, 100, "container comment")
@@ -65,7 +67,7 @@ func Example() {
 		rec.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false).
-			AddField("phone", appdef.DataKind_string, true, appdef.MinLen(1), appdef.MaxLen(25)).
+			AddField("phone", appdef.DataKind_string, true, constraints.MinLen(1), constraints.MaxLen(25)).
 			SetFieldVerify("phone", appdef.VerificationKind_Any...)
 		rec.
 			SetUniqueField("phone").
@@ -77,7 +79,7 @@ func Example() {
 		view.Key().PartKey().
 			AddField("pk_1", appdef.DataKind_int64)
 		view.Key().ClustCols().
-			AddField("cc_1", appdef.DataKind_string, appdef.MaxLen(100))
+			AddField("cc_1", appdef.DataKind_string, constraints.MaxLen(100))
 		view.Value().
 			AddDataField("vv_code", strName, true).
 			AddRefField("vv_1", true, docName)

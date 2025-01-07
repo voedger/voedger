@@ -20,7 +20,7 @@ func FieldTypeToString(ft dynobuffers.FieldType) string {
 	return dynobufferFieldTypeToStr[ft]
 }
 
-func NewFieldsScheme(name string, fields appdef.IFields) *dynobuffers.Scheme {
+func NewFieldsScheme(name string, fields appdef.IWithFields) *dynobuffers.Scheme {
 	db := dynobuffers.NewScheme()
 
 	db.Name = name

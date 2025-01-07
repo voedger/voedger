@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -43,7 +44,7 @@ func TestContainers(t *testing.T) {
 	if err := containers.Prepare(storage, versions,
 		func() appdef.IAppDef {
 			objName := appdef.NewQName("test", "object")
-			adb := appdef.New()
+			adb := builder.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 			wsb.AddObject(objName).
@@ -95,7 +96,7 @@ func TestContainers(t *testing.T) {
 			if err := containers2.Prepare(storage, versions,
 				func() appdef.IAppDef {
 					objName := appdef.NewQName("test", "object")
-					adb := appdef.New()
+					adb := builder.New()
 					adb.AddPackage("test", "test.com/test")
 					wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 					wsb.AddObject(objName).
@@ -209,7 +210,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 		names := New()
 		err := names.Prepare(storage, versions,
 			func() appdef.IAppDef {
-				adb := appdef.New()
+				adb := builder.New()
 				adb.AddPackage("test", "test.com/test")
 				wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 				qName := appdef.NewQName("test", "test")
@@ -242,7 +243,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
 					objName := appdef.NewQName("test", "object")
-					adb := appdef.New()
+					adb := builder.New()
 					adb.AddPackage("test", "test.com/test")
 					wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 					wsb.AddObject(objName).
@@ -268,7 +269,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
 					objName := appdef.NewQName("test", "object")
-					adb := appdef.New()
+					adb := builder.New()
 					adb.AddPackage("test", "test.com/test")
 					wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 					wsb.AddObject(objName).
