@@ -134,7 +134,13 @@ type appStorageType struct {
 }
 
 func (s *appStorageType) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
-	q := fmt.Sprintf("insert into %s.values (p_key, c_col, value) values (?,?,?) if not exists using ttl %d", s.keyspace, ttlSeconds)
+	var q string
+	if ttlSeconds > 0 {
+		q = fmt.Sprintf("insert into %s.values (p_key, c_col, value) values (?,?,?) if not exists using ttl %d", s.keyspace, ttlSeconds)
+	} else {
+		q = fmt.Sprintf("insert into %s.values (p_key, c_col, value) values (?,?,?) if not exists", s.keyspace)
+	}
+
 	m := make(map[string]interface{})
 	applied, err := s.session.Query(q, pKey, safeCcols(cCols), value).Consistency(gocql.Quorum).MapScanCAS(m)
 	if err != nil {
@@ -145,7 +151,12 @@ func (s *appStorageType) InsertIfNotExists(pKey []byte, cCols []byte, value []by
 }
 
 func (s *appStorageType) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
-	q := fmt.Sprintf("update %s.values using ttl %d set value = ? where p_key = ? and c_col = ? if value = ?", s.keyspace, ttlSeconds)
+	var q string
+	if ttlSeconds > 0 {
+		q = fmt.Sprintf("update %s.values using ttl %d set value = ? where p_key = ? and c_col = ? if value = ?", s.keyspace, ttlSeconds)
+	} else {
+		q = fmt.Sprintf("update %s.values set value = ? where p_key = ? and c_col = ? if value = ?", s.keyspace)
+	}
 
 	data := make([]byte, 0)
 	applied, err := s.session.Query(q, newValue, pKey, cCols, oldValue).ScanCAS(&data)
