@@ -75,7 +75,7 @@ type IAppStorage interface {
 	//   - pKey: Primary key bytes
 	//   - cCols: Clustering columns bytes (if any)
 	//   - value: Value bytes to be inserted
-	//   - ttlSeconds: Time-to-live in seconds after which the record will be automatically deleted
+	//   - ttlSeconds: Time-to-live in seconds after which the record will be automatically deleted. Ignored if zero.
 	//
 	// Returns:
 	//   - ok: true if insert was successful (record didn't exist), false if record already exists
@@ -90,7 +90,7 @@ type IAppStorage interface {
 	//   - cCols: Clustering columns bytes (if any)
 	//   - oldValue: Expected current value bytes to compare against
 	//   - newValue: New value bytes to swap in if comparison succeeds
-	//   - ttlSeconds: Time-to-live in seconds to set/update on the record
+	//   - ttlSeconds: Time-to-live in seconds to set/update on the record. Ignored if zero.
 	//
 	// Returns:
 	//   - ok: true if swap was successful (record existed and matched oldValue), false otherwise
