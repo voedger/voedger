@@ -360,6 +360,7 @@ var defaultACL = ACL{
 		desc: "grant exec on few funcs to role air.UntillPaymentsManager",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
+				это все в профиле, кроме GetUPLocationInvoiceParties !!!
 				qNameQryGetAllUPPayouts,
 				// qNameQryGetUPLocationInvoiceParties,
 				// https://dev.untill.com/projects/#!710217
