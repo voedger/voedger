@@ -385,6 +385,12 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkp
 		return err
 	}
 	if !ok {
+		for _, prn := range cmd.principals {
+			if prn.Name == "untillchargebeeagent" {
+				// TODO: workaround for untillchargebeeagent legacy rule: false -> do not check VSQL ACL because it is not implemented yet. Eliminate later.
+				return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
+			}
+		}
 		ok, _, err := cmd.appPart.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles)
 		if err != nil {
 			// TODO: temporary workaround. Eliminate later
