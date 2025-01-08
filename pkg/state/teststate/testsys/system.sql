@@ -34,7 +34,7 @@ ABSTRACT WORKSPACE Workspace(
 		InitCompletedAtMs int64,
 		Status int32,
 		OwnerQName2 text
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE ChildWorkspace INHERITS sys.CDoc (
 		WSName varchar NOT NULL,
@@ -45,7 +45,21 @@ ABSTRACT WORKSPACE Workspace(
 		WSClusterID int32 NOT NULL,
 		WSID int64,           -- to be updated afterwards
 		WSError varchar(1024) -- to be updated afterwards
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
+
+	TAG WorkspaceOwnerTableTag;
+
+	ROLE Everyone;
+	ROLE Anonymous;
+	ROLE AuthenticatedUser;
+	ROLE System;
+	ROLE ProfileOwner;
+	ROLE WorkspaceDevice;
+	ROLE RoleWorkspaceOwner;
+	ROLE WorkspaceOwner;
+	ROLE ClusterAdmin;
+	ROLE WorkspaceAdmin;
+
 );
 
 ALTERABLE WORKSPACE Profile();

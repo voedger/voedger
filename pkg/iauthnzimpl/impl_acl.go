@@ -10,7 +10,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iauthnz"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func (acl ACL) IsAllowed(principals []iauthnz.Principal, req iauthnz.AuthzRequest) bool {
@@ -50,19 +49,19 @@ var defaultACL = ACL{
 	// 	},
 	// 	policy: ACPolicy_Allow,
 	// },
-	{
-		// case: location is made Demo. How to allow q.sys.State without token?
-		// Everyone is bad because q.sys.State from all locations must not be allowed for everyone
-		// emit role BOreader if no token provided is bad as well: q.sys.State will be available without token is all locations
-		// we have a tool to append roles from subjects matched by login name -> need to emit sys.Guest principal login
-		desc: "allowed to sys.Guest login, i.e. without principal token at all",
-		pattern: PatternType{
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User, WSID: istructs.GuestWSID}}},
-			qNamesPattern: []appdef.QName{
-				qNameCmdProvideCertificatePart, qNameCmdProvideCertificate, qNameQryGetCustomerStatus,
-				qNameCmdFiscalizeDocument, qNameQryFiscalizationResultStatus, qNameCmdCreateExport, qNameQryExportStatus, qNameQryValidateDocument},
-		},
-	},
+	// {
+	// 	// case: location is made Demo. How to allow q.sys.State without token?
+	// 	// Everyone is bad because q.sys.State from all locations must not be allowed for everyone
+	// 	// emit role BOreader if no token provided is bad as well: q.sys.State will be available without token is all locations
+	// 	// we have a tool to append roles from subjects matched by login name -> need to emit sys.Guest principal login
+	// 	desc: "allowed to sys.Guest login, i.e. without principal token at all",
+	// 	pattern: PatternType{
+	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User, WSID: istructs.GuestWSID}}},
+	// 		qNamesPattern: []appdef.QName{
+	// 			qNameCmdProvideCertificatePart, qNameCmdProvideCertificate, qNameQryGetCustomerStatus,
+	// 			qNameCmdFiscalizeDocument, qNameQryFiscalizationResultStatus, qNameCmdCreateExport, qNameQryExportStatus, qNameQryValidateDocument},
+	// 	},
+	// },
 	// 	policy: ACPolicy_Allow,
 	// },
 	// {
@@ -235,21 +234,21 @@ var defaultACL = ACL{
 	// 	},
 	// 	policy: ACPolicy_Allow,
 	// },
-	{
-		// ACL for FiscalCloud
-		desc: "allow FiscalCloud onboarding functions to role fiscalcloud.OnboardSite",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameCmdAddCustomer,
-				qNameCmdUpdateCustomer,
-				qNameCmdDeactivateCustomer,
-			},
-			principalsPattern: [][]iauthnz.Principal{
-				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleFiscalCloudOnboardSite}},
-			},
-		},
-		policy: ACPolicy_Allow,
-	},
+	// {
+	// 	// ACL for FiscalCloud
+	// 	desc: "allow FiscalCloud onboarding functions to role fiscalcloud.OnboardSite",
+	// 	pattern: PatternType{
+	// 		qNamesPattern: []appdef.QName{
+	// 			qNameCmdAddCustomer,
+	// 			qNameCmdUpdateCustomer,
+	// 			qNameCmdDeactivateCustomer,
+	// 		},
+	// 		principalsPattern: [][]iauthnz.Principal{
+	// 			{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleFiscalCloudOnboardSite}},
+	// 		},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
 	// {
 	// 	desc: "grant exec on few funcs to role air.UntillPaymentsUser",
 	// 	pattern: PatternType{
