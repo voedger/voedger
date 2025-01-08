@@ -387,7 +387,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 						continue
 					}
 					// incorrectness is excluded already on validation stage in [queryParams.validate]
-					containersOfNested := nestedType.(appdef.IContainers)
+					containersOfNested := nestedType.(appdef.IWithContainers)
 					// container presence is checked already on validation stage in [queryParams.validate]
 					nestedContainer := containersOfNested.Container(nestedName)
 					nestedType = nestedContainer.Type()

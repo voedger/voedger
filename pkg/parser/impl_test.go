@@ -16,6 +16,18 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/iextengine"
+	"github.com/voedger/voedger/pkg/irates"
+	"github.com/voedger/voedger/pkg/istorage/mem"
+	"github.com/voedger/voedger/pkg/istorage/provider"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/itokensjwt"
+	imetrics "github.com/voedger/voedger/pkg/metrics"
+	"github.com/voedger/voedger/pkg/vvm/engines"
 )
 
 //go:embed sql_example_app/pmain/*.vsql
@@ -2291,7 +2303,7 @@ func TestIsOperationAllowedOnNestedTable(t *testing.T) {
 			GRANT SELECT, INSERT, UPDATE ON ALL TABLES WITH TAG AllowedTablesTag TO WorkspaceOwner;
 		);`)
 	require.NoError(err)
-	builder := appdef.New()
+	builder := builder.New()
 	err = BuildAppDefs(schema, builder)
 	require.NoError(err)
 
@@ -2488,7 +2500,7 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l23 ON ALL TABLES WITH TAG tag WITH RATE r;
 			LIMIT l23_1 SELECT,INSERT,UPDATE ON ALL TABLES WITH TAG tag WITH RATE r;
 			-- LIMIT l24 ON ALL WITH TAG tag WITH RATE r;
-			
+
 			LIMIT l25 ON ALL COMMANDS WITH RATE r;
 			LIMIT l26 ON ALL QUERIES WITH RATE r;
 			LIMIT l27 ON ALL VIEWS WITH RATE r;
@@ -2537,7 +2549,7 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l21 UPDATE ON ALL QUERIES WITH RATE r;
 			LIMIT l22 EXECUTE ON ALL VIEWS WITH RATE r;
 			LIMIT l23 EXECUTE ON ALL TABLES WITH RATE r;
-			
+
 			LIMIT l35 INSERT ON EACH COMMAND WITH RATE r;
 			LIMIT l36 UPDATE ON EACH QUERY WITH RATE r;
 			LIMIT l37 EXECUTE ON EACH VIEW WITH RATE r;
@@ -2566,7 +2578,7 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l3 ON QUERY y WITH RATE r;
 			LIMIT l4 ON VIEW v WITH RATE r;
 			LIMIT l5 ON TABLE t WITH RATE r;
-			LIMIT l20 ON ALL COMMANDS WITH TAG tag WITH RATE r;		
+			LIMIT l20 ON ALL COMMANDS WITH TAG tag WITH RATE r;
 			LIMIT l29 ON ALL WITH RATE blah;
 			LIMIT l30 ON EACH COMMAND WITH TAG tag WITH RATE r;
 			LIMIT l39 ON EACH WITH RATE blah;
