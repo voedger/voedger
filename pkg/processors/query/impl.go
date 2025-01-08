@@ -272,6 +272,12 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				return err
 			}
 			if !ok {
+				for _, prn := range qw.principals {
+					if prn.Name == "untillchargebeeagent" {
+						// TODO: workaround for untillchargebeeagent legacy rule: false -> do not check VSQL ACL because it is not implemented yet
+						return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
+					}
+				}
 				ok, _, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
 				if err != nil {
 					// TODO: temporary workaround. Eliminate later
