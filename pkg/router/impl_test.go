@@ -391,7 +391,8 @@ func TestAdminService(t *testing.T) {
 			t.Skip("unable to find local non-loopback ip address")
 		}
 		_, err = net.DialTimeout("tcp", fmt.Sprintf("%s:%d", nonLocalhostIP, router.adminPort()), 1*time.Second)
-		if !errors.Is(err, context.DeadlineExceeded) && !strings.Contains(err.Error(), "connection refused") {
+		if !errors.Is(err, context.DeadlineExceeded) && !strings.Contains(err.Error(), "connection refused") &&
+			!strings.Contains(err.Error(), "i/o timeout") {
 			t.Fatal(err)
 		}
 		log.Println(err)
