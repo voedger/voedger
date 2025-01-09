@@ -669,6 +669,23 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iTime c
 		require.True(ok)
 		require.Equal(value, data)
 	})
+
+	t.Run("ttl is zero", func(t *testing.T) {
+		require := require.New(t)
+		pKey := []byte("Vehicles2")
+		ccols := []byte("Cars2")
+		value := []byte("Toyota2")
+
+		ok, err := storage.InsertIfNotExists(pKey, ccols, value, 0)
+		require.NoError(err)
+		require.True(ok)
+
+		iTime.Sleep(2 * time.Second)
+
+		ok, err = storage.InsertIfNotExists(pKey, ccols, value, 0)
+		require.NoError(err)
+		require.False(ok)
+	})
 }
 
 //nolint:revive,goconst
@@ -747,6 +764,30 @@ func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage, iTime core
 		require.NoError(err)
 		require.True(ok)
 		require.Equal(oldValue, data)
+	})
+
+	t.Run("ttl is zero", func(t *testing.T) {
+		require := require.New(t)
+		pKey := []byte("Movies2")
+		ccols := []byte("The Hobbit2")
+		oldValue := []byte("An unexpected journey2")
+
+		ok, err := storage.InsertIfNotExists(pKey, ccols, oldValue, 0)
+		require.NoError(err)
+		require.True(ok)
+
+		iTime.Sleep(3 * time.Second)
+
+		newValue := []byte("The desolation of Smaug")
+		ok, err = storage.CompareAndSwap(pKey, ccols, oldValue, newValue, 2)
+		require.NoError(err)
+		require.True(ok)
+
+		data := make([]byte, 0)
+		ok, err = storage.Get(pKey, ccols, &data)
+		require.NoError(err)
+		require.True(ok)
+		require.Equal(newValue, data)
 	})
 }
 

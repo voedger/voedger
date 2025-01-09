@@ -78,10 +78,14 @@ func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, newValue []byt
 		return false, nil
 	}
 
-	newExpireAt := now.Add(time.Duration(ttlSeconds) * time.Second)
+	var expireAt *time.Time
+	if ttlSeconds > 0 {
+		newExpireAt := now.Add(time.Duration(ttlSeconds) * time.Second)
+		expireAt = &newExpireAt
+	}
 	p[string(cCols)] = dataWithTTL{
 		data:     copySlice(newValue),
-		expireAt: &newExpireAt,
+		expireAt: expireAt,
 	}
 
 	return true, nil
@@ -111,10 +115,14 @@ func (s *appStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValu
 	if !ttlExpired && bytes.Compare(currentValue, oldValue) == 0 {
 		ok = true
 
-		newExpireAt := now.Add(time.Duration(ttlSeconds) * time.Second)
+		var expireAt *time.Time
+		if ttlSeconds > 0 {
+			newExpireAt := now.Add(time.Duration(ttlSeconds) * time.Second)
+			expireAt = &newExpireAt
+		}
 		p[string(cCols)] = dataWithTTL{
 			data:     copySlice(newValue),
-			expireAt: &newExpireAt,
+			expireAt: expireAt,
 		}
 
 		return
