@@ -137,16 +137,16 @@ func (c *buildContext) limits() error {
 			var limitFilter appdef.IFilter
 			if limit.AllItems != nil {
 				opt = appdef.LimitFilterOption_ALL
-				if limit.AllItems.Commands || limit.AllItems.All {
+				if limit.AllItems.Commands {
 					types = append(types, appdef.TypeKind_Command)
 				}
-				if limit.AllItems.Queries || limit.AllItems.All {
+				if limit.AllItems.Queries {
 					types = append(types, appdef.TypeKind_Query)
 				}
-				if limit.AllItems.Tables || limit.AllItems.All {
+				if limit.AllItems.Tables {
 					types = append(types, appdef.TypeKind_Records.AsArray()...)
 				}
-				if limit.AllItems.Views || limit.AllItems.All {
+				if limit.AllItems.Views {
 					types = append(types, appdef.TypeKind_ViewRecord)
 				}
 				if limit.AllItems.WithTag != nil {
