@@ -2526,6 +2526,23 @@ func Test_RatesAndLimits(t *testing.T) {
 		)
 	})
 
+	t.Run("default scopes", func(t *testing.T) {
+		a := require.Build(`APPLICATION app1();
+		WORKSPACE w (
+			TABLE t INHERITS sys.CDoc();
+			RATE r 1 PER HOUR;
+		)`)
+		w := a.Workspace(appdef.NewQName("pkg", "w"))
+		typ := w.Type(appdef.NewQName("pkg", "r"))
+		r, ok := typ.(appdef.IRate)
+		require.True(ok)
+		require.NotNil(r)
+		require.True(r.Scope(appdef.RateScope_AppPartition))
+		require.False(r.Scope(appdef.RateScope_Workspace))
+		require.False(r.Scope(appdef.RateScope_IP))
+		require.False(r.Scope(appdef.RateScope_User))
+	})
+
 }
 
 func Test_RefsFromInheritedWs(t *testing.T) {

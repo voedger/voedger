@@ -110,19 +110,17 @@ func (c *buildContext) rates() error {
 				if rate.ObjectScope.PerAppPartition {
 					rateScopes = append(rateScopes, appdef.RateScope_AppPartition)
 				} else {
-					rateScopes = append(rateScopes, appdef.RateScope_Workspace) // default
+					rateScopes = append(rateScopes, appdef.RateScope_Workspace)
 				}
 			} else {
-				rateScopes = append(rateScopes, appdef.RateScope_Workspace) // default
+				rateScopes = append(rateScopes, appdef.RateScope_AppPartition) // default
 			}
 			if rate.SubjectScope != nil {
-				if rate.SubjectScope.PerUser {
+				if rate.SubjectScope.PerSubject {
 					rateScopes = append(rateScopes, appdef.RateScope_User)
 				} else {
-					rateScopes = append(rateScopes, appdef.RateScope_IP) // default
+					rateScopes = append(rateScopes, appdef.RateScope_IP)
 				}
-			} else {
-				rateScopes = append(rateScopes, appdef.RateScope_IP) // default
 			}
 			wsb.AddRate(schema.NewQName(rate.Name), rate.Value.count, period, rateScopes, rate.Comments...)
 		})
