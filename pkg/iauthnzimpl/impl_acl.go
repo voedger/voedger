@@ -100,29 +100,29 @@ var defaultACL = ACL{
 	// 	},
 	// 	policy: ACPolicy_Deny,
 	// },
-	{
-		// DENY ALL FROM LOGIN 'untillchargebeeagent'
-		desc: "deny all from 'untillchargebeeagent' login",
-		pattern: PatternType{
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User, Name: untillChargebeeAgentLogin}}},
-		},
-		policy: ACPolicy_Deny,
-	},
-	{
-		// GRANT EXEC ON c.air.UpdateSubscription TO ROLE ProfileUser AND LOGIN 'untillchargebeeagent'
-		desc: "c.air.UpdateSubscription is allowed for 'untillchargebeeagent' login only and in its profile only",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{qNameCmdUpdateSubscription},
-			principalsPattern: [][]iauthnz.Principal{
-				{
-					{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleProfileOwner},
-					// AND
-					{Kind: iauthnz.PrincipalKind_User, Name: untillChargebeeAgentLogin},
-				},
-			},
-		},
-		policy: ACPolicy_Allow,
-	},
+	// {
+	// 	// DENY ALL FROM LOGIN 'untillchargebeeagent'
+	// 	desc: "deny all from 'untillchargebeeagent' login",
+	// 	pattern: PatternType{
+	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User, Name: untillChargebeeAgentLogin}}},
+	// 	},
+	// 	policy: ACPolicy_Deny,
+	// },
+	// {
+	// 	// GRANT EXEC ON c.air.UpdateSubscription TO ROLE ProfileUser AND LOGIN 'untillchargebeeagent'
+	// 	desc: "c.air.UpdateSubscription is allowed for 'untillchargebeeagent' login only and in its profile only",
+	// 	pattern: PatternType{
+	// 		qNamesPattern: []appdef.QName{qNameCmdUpdateSubscription},
+	// 		principalsPattern: [][]iauthnz.Principal{
+	// 			{
+	// 				{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleProfileOwner},
+	// 				// AND
+	// 				{Kind: iauthnz.PrincipalKind_User, Name: untillChargebeeAgentLogin},
+	// 			},
+	// 		},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
 	// {
 	// 	// WorkspaceAdmin role asssigned automatically if has e.g. RoleResellersAdmin or RoleUntillPaymentsReseller
 	// 	desc: "allow few reseller-related commands TO sys.WorkspaceAdmin",
@@ -360,7 +360,7 @@ var defaultACL = ACL{
 		desc: "grant exec on few funcs to role air.UntillPaymentsManager",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
-				это все в профиле, кроме GetUPLocationInvoiceParties !!!
+				// это все в профиле, кроме GetUPLocationInvoiceParties !!!
 				qNameQryGetAllUPPayouts,
 				// qNameQryGetUPLocationInvoiceParties,
 				// https://dev.untill.com/projects/#!710217

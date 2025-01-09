@@ -2342,6 +2342,53 @@ func TestIsOperationAllowedOnNestedTable(t *testing.T) {
 	require.True(ok)
 }
 
+func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
+	require := assertions(t)
+	schema, err := require.AppSchema(`APPLICATION test();
+		WORKSPACE MyWS (
+			EXTENSION ENGINE BUILTIN (
+				COMMAND Cmd1;
+			);
+
+			ROLE WorkspaceOwner;
+			ROLE Role1;
+			GRANT WorkspaceOwner TO Role1;
+			GRANT EXECUTE ON COMMAND Cmd1 TO WorkspaceOwner;
+		);`)
+	require.NoError(err)
+	builder := builder.New()
+	err = BuildAppDefs(schema, builder)
+	require.NoError(err)
+
+	appDef, err := builder.Build()
+	require.NoError(err)
+	appQName := appdef.NewAppQName("pkg", "test")
+	cfgs := istructsmem.AppConfigsType{}
+	cfgs.AddAppConfig(appQName, 1, appDef, 1)
+	appStructsProvider := istructsmem.Provide(cfgs, irates.NullBucketsFactory,
+		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.MockTime)),
+		provider.Provide(mem.Provide(coreutils.MockTime)))
+	statelessResources := istructsmem.NewStatelessResources()
+	appParts, cleanup, err := appparts.New2(context.Background(), appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
+		engines.ProvideExtEngineFactories(
+			engines.ExtEngineFactoriesConfig{
+				AppConfigs:         cfgs,
+				StatelessResources: statelessResources,
+				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
+			}, "vvmName", imetrics.Provide()),
+		irates.NullBucketsFactory)
+	require.NoError(err)
+	defer cleanup()
+	appParts.DeployApp(appQName, nil, appDef, 1, [4]uint{1, 1, 1, 1}, 1)
+	appParts.DeployAppPartitions(appQName, []istructs.PartitionID{1})
+	borrowedAppPart, err := appParts.Borrow(appQName, 1, appparts.ProcessorKind_Command)
+	require.NoError(err)
+
+	ok, _, err := borrowedAppPart.IsOperationAllowed(appdef.OperationKind_Execute, appdef.NewQName("pkg", "Cmd1"), nil,
+		[]appdef.QName{appdef.NewQName("pkg", "Role1")})
+	require.NoError(err)
+	require.True(ok)
+}
 func Test_Grants_Inherit(t *testing.T) {
 	require := assertions(t)
 

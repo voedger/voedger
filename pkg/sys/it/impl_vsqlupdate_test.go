@@ -549,7 +549,7 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 
 		// unlogged insert
 		"unlogged insert test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x' where a = 1": "'where' clause is not allowed on view unlogged insert",
-		"unlogged insert test1.app1.1.app1pkg.category set Val = 44, Name = 'x'":                "unlogged insert is not allowed for records (how to get new ID?)",
+		"unlogged insert test1.app1.1.app1pkg.category set Val = 44, Name = 'x'":                "unlogged insert is not allowed for records", //  how to get new ID?
 		"unlogged insert test1.app1.1.app1pkg.MockCmd set Val = 44, Name = 'x'":                 "view, CDoc or WDoc only expected",
 		"unlogged insert test1.app1.1.app1pkg.CategoryIdx set Val = null":                       "null value is not supported",
 	}

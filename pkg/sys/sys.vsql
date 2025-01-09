@@ -455,7 +455,7 @@ ABSTRACT WORKSPACE Workspace (
 
 	GRANT WorkspaceOwner TO ProfileOwner;
 	GRANT WorkspaceOwner TO WorkspaceDevice;
-	GRANT WorkspaceOwner TO RoleWorkspaceOwner;
+	GRANT WorkspaceOwner TO RoleWorkspaceOwner; --backward compatibility
 	GRANT Everyone TO Anonymous;
 	GRANT Everyone TO AuthenticatedUser;
 
