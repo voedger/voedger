@@ -26,6 +26,12 @@ const (
 	nonInitedWSID = 4
 )
 
+эвривана теперь нет, а он ожидается
+
+// var (
+// 	qNameViewDeviceProfileWSIDIdx = appdef.NewQName(airPackage, "DeviceProfileWSIDIdx")
+// )
+
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	logger.SetLogLevel(logger.LogLevelVerbose)
@@ -204,15 +210,15 @@ func TestAuthenticate(t *testing.T) {
 	appStructs := AppStructsWithTestStorage(istructs.AppQName_test1_app1, map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}{
 		// WSID 1 is the user profile
 		istructs.WSID(1): {
-			qNameViewDeviceProfileWSIDIdx: {
-				1: {
-					field_dummy:                 int32(1),
-					field_DeviceProfileWSID:     int64(1),
-					appdef.SystemField_IsActive: true,
-					field_ComputersID:           istructs.RecordID(2),
-					field_RestaurantComputersID: istructs.RecordID(3),
-				},
-			},
+			// qNameViewDeviceProfileWSIDIdx: {
+			// 	1: {
+			// 		field_dummy:                 int32(1),
+			// 		field_DeviceProfileWSID:     int64(1),
+			// 		appdef.SystemField_IsActive: true,
+			// 		field_ComputersID:           istructs.RecordID(2),
+			// 		field_RestaurantComputersID: istructs.RecordID(3),
+			// 	},
+			// },
 			// wrong to store in the user profile wsid, but ok for test
 			qNameCDocComputers: {
 				2: {
@@ -410,323 +416,6 @@ func TestAuthenticate(t *testing.T) {
 	}
 }
 
-func TestACLAllow(t *testing.T) {
-	defer logger.SetLogLevel(logger.LogLevelInfo)
-	require := require.New(t)
-	testQName1 := appdef.NewQName(appdef.SysPackage, "testQName")
-
-	type req struct {
-		req  iauthnz.AuthzRequest
-		prns [][]iauthnz.Principal
-	}
-
-	cases := []struct {
-		acl  ACL
-		reqs []req
-	}{
-		{
-			acl: ACL{
-				{
-					desc: "allow rule",
-					pattern: PatternType{
-						qNamesPattern:  []appdef.QName{testQName1},
-						opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_INSERT},
-						principalsPattern: [][]iauthnz.Principal{
-							// OR
-							{{Kind: iauthnz.PrincipalKind_User, Name: "testname", ID: 1, WSID: 2}},
-							{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}},
-						},
-					},
-					policy: ACPolicy_Allow,
-				},
-			},
-			reqs: []req{
-				{
-					req: iauthnz.AuthzRequest{
-						OperationKind: iauthnz.OperationKind_INSERT,
-						Resource:      testQName1,
-						Fields:        []string{"fld1", "fld2"}, // just an example
-					},
-					prns: [][]iauthnz.Principal{
-						{
-							{
-								Kind: iauthnz.PrincipalKind_User,
-								Name: "wrong",
-							},
-							{
-								Kind: iauthnz.PrincipalKind_User,
-								Name: "testname",
-								ID:   1,
-								WSID: 2,
-							},
-							{
-								Kind: iauthnz.PrincipalKind_Host,
-								Name: "127.0.0.1",
-							},
-							{
-								Kind:  iauthnz.PrincipalKind_Role,
-								QName: iauthnz.QNameRoleProfileOwner,
-							},
-							{
-								Kind:  iauthnz.PrincipalKind_Role,
-								QName: iauthnz.QNameRoleWorkspaceOwner,
-							},
-							{
-								Kind:  iauthnz.PrincipalKind_Group,
-								QName: appdef.NewQName(appdef.SysPackage, "testGroup"),
-							},
-							{
-								Kind: iauthnz.PrincipalKind_Device,
-								Name: "testDevice",
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			acl: ACL{
-				{
-					desc: "non-first principal in the pattern matches",
-					pattern: PatternType{
-						qNamesPattern: []appdef.QName{qNameCmdCreateUPProfile},
-						principalsPattern: [][]iauthnz.Principal{
-							// OR
-							{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
-							{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller, WSID: 42}},
-						},
-					},
-					policy: ACPolicy_Allow,
-				},
-			},
-			reqs: []req{
-				{
-					req: iauthnz.AuthzRequest{
-						OperationKind: iauthnz.OperationKind_EXECUTE,
-						Resource:      qNameCmdCreateUPProfile,
-					},
-					prns: [][]iauthnz.Principal{
-						{
-							{
-								Kind:  iauthnz.PrincipalKind_Role,
-								QName: qNameRoleUntillPaymentsReseller,
-								WSID:  42,
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			acl: ACL{
-				{
-					desc:   "allow everything",
-					policy: ACPolicy_Allow,
-				},
-				{
-					desc: "but deny to select one field",
-					pattern: PatternType{
-						opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
-						qNamesPattern:  []appdef.QName{qNameCDocUntillPayments},
-						fieldsPattern:  [][]string{{appdef.SystemField_IsActive}},
-					},
-					policy: ACPolicy_Deny,
-				},
-			},
-			reqs: []req{
-				{
-					req: iauthnz.AuthzRequest{
-						OperationKind: iauthnz.OperationKind_SELECT,
-						Resource:      qNameCDocUntillPayments,
-						Fields:        []string{appdef.SystemField_ID}, // select non-denied field -> expect allow
-					},
-					prns: [][]iauthnz.Principal{
-						nil,
-					},
-				},
-			},
-		},
-	}
-
-	for _, c := range cases {
-		authz := implIAuthorizer{acl: c.acl}
-		for _, req := range c.reqs {
-			for _, prns := range req.prns {
-				ok, err := authz.Authorize(nil, prns, req.req)
-				require.NoError(err)
-				require.True(ok)
-			}
-		}
-	}
-}
-
-func TestACLDeny(t *testing.T) {
-	logger.SetLogLevel(logger.LogLevelVerbose)
-	defer logger.SetLogLevel(logger.LogLevelInfo)
-	require := require.New(t)
-	testQName1 := appdef.NewQName(appdef.SysPackage, "testQName")
-
-	type req struct {
-		req  iauthnz.AuthzRequest
-		prns [][]iauthnz.Principal
-	}
-
-	cases := []struct {
-		acl  ACL
-		reqs []req
-	}{
-		{
-			acl: ACL{
-				{
-					desc: "deny rule",
-					pattern: PatternType{
-						qNamesPattern:  []appdef.QName{testQName1},
-						opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_INSERT},
-						principalsPattern: [][]iauthnz.Principal{
-							// OR
-							{{Kind: iauthnz.PrincipalKind_User, Name: "testnamefordeny", ID: 1, WSID: 2}},
-							{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}},
-						},
-					},
-					policy: ACPolicy_Deny,
-				},
-			},
-			reqs: []req{
-				{
-					req: iauthnz.AuthzRequest{
-						OperationKind: iauthnz.OperationKind_INSERT,
-						Resource:      testQName1,
-						Fields:        []string{"fld1", "fld2"}, // just an example
-					},
-					prns: [][]iauthnz.Principal{
-						{{}},
-						{
-							{
-								Kind: iauthnz.PrincipalKind_User,
-								Name: "testname",
-							},
-						},
-						{
-							{
-								Kind: iauthnz.PrincipalKind_User,
-								Name: "wrongName",
-							},
-							{
-								Kind:  iauthnz.PrincipalKind_Role,
-								QName: iauthnz.QNameRoleWorkspaceOwner,
-							},
-						},
-						{
-							{
-								Kind: iauthnz.PrincipalKind_User,
-								Name: "testname",
-							},
-							{
-								Kind:  iauthnz.PrincipalKind_Role,
-								QName: iauthnz.QNameRoleWorkspaceOwner,
-							},
-						},
-						{
-							{
-								Kind: iauthnz.PrincipalKind_User,
-								Name: "testname",
-								ID:   1,
-							},
-							{
-								Kind:  iauthnz.PrincipalKind_Role,
-								QName: iauthnz.QNameRoleWorkspaceOwner,
-							},
-						},
-						{
-							{
-								Kind: iauthnz.PrincipalKind_User,
-								Name: "testname",
-								WSID: 2,
-							},
-							{
-								Kind:  iauthnz.PrincipalKind_Role,
-								QName: iauthnz.QNameRoleWorkspaceOwner,
-							},
-						},
-						{
-							{
-								Kind: iauthnz.PrincipalKind_User,
-								Name: "testnamefordeny",
-								ID:   1,
-								WSID: 42,
-							},
-						},
-						{
-							{
-								Kind: iauthnz.PrincipalKind_User,
-								Name: "wrong",
-							},
-							{
-								Kind: iauthnz.PrincipalKind_User,
-								Name: "testnamefordeny",
-								ID:   1,
-								WSID: 2,
-							},
-							{
-								Kind: iauthnz.PrincipalKind_Host,
-								Name: "127.0.0.1",
-							},
-							{
-								Kind:  iauthnz.PrincipalKind_Role,
-								QName: iauthnz.QNameRoleProfileOwner,
-							},
-							{
-								Kind:  iauthnz.PrincipalKind_Role,
-								QName: iauthnz.QNameRoleWorkspaceOwner,
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			acl: ACL{
-				{
-					desc:   "allow all",
-					policy: ACPolicy_Allow,
-				},
-				{
-					desc: "but deny to select one field",
-					pattern: PatternType{
-						opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
-						qNamesPattern:  []appdef.QName{qNameCDocUntillPayments},
-						fieldsPattern:  [][]string{{appdef.SystemField_IsActive}},
-					},
-					policy: ACPolicy_Deny,
-				},
-			},
-			reqs: []req{
-				{
-					req: iauthnz.AuthzRequest{
-						OperationKind: iauthnz.OperationKind_SELECT,
-						Resource:      qNameCDocUntillPayments,
-						Fields:        []string{appdef.SystemField_IsActive, appdef.SystemField_ID},
-					},
-					prns: [][]iauthnz.Principal{
-						nil,
-					},
-				},
-			},
-		},
-	}
-
-	for _, c := range cases {
-		authz := implIAuthorizer{acl: c.acl}
-		for _, req := range c.reqs {
-			for _, prns := range req.prns {
-				ok, err := authz.Authorize(nil, prns, req.req)
-				require.NoError(err)
-				require.False(ok)
-			}
-		}
-	}
-}
-
 func TestErrors(t *testing.T) {
 	require := require.New(t)
 
@@ -775,45 +464,6 @@ func TestErrors(t *testing.T) {
 		require.ErrorIs(err, ErrPersonalAccessTokenOnNullWSID)
 		require.Empty(token)
 	})
-}
-
-// with principals cache:  1455242       782.8 ns/op	     432 B/op	       9 allocs/op
-// without principals cache: 45534	     24370 ns/op	    7964 B/op	     126 allocs/op
-func BenchmarkBasic(b *testing.B) {
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.NewITime())
-	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
-	pp := payloads.PrincipalPayload{
-		Login:       "testlogin",
-		SubjectKind: istructs.SubjectKind_User,
-		ProfileWSID: 1,
-	}
-	token, err := appTokens.IssueToken(time.Minute, &pp)
-	require.NoError(b, err)
-	var principals []iauthnz.Principal
-	appStructs := &implIAppStructs{}
-	authn := NewDefaultAuthenticator(TestSubjectRolesGetter, TestIsDeviceAllowedFuncs)
-	authz := NewDefaultAuthorizer()
-	reqn := iauthnz.AuthnRequest{
-		Host:        "127.0.0.1",
-		RequestWSID: 1,
-		Token:       token,
-	}
-	reqz := iauthnz.AuthzRequest{
-		OperationKind: iauthnz.OperationKind_EXECUTE,
-		Resource:      appdef.NewQName(appdef.SysPackage, "SomeCmd"),
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		principals, _, err = authn.Authenticate(context.Background(), appStructs, appTokens, reqn)
-		if err != nil {
-			b.Fatal()
-		}
-		ok, err := authz.Authorize(appStructs, principals, reqz)
-		if !ok || err != nil {
-			b.Fatal()
-		}
-	}
 }
 
 func AppStructsWithTestStorage(appQName appdef.AppQName, data map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}) istructs.IAppStructs {

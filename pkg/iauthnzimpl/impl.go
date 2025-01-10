@@ -203,13 +203,3 @@ func (i *implIAuthenticator) rolesFromSubjects(requestContext context.Context, n
 	}
 	return res, nil
 }
-
-// principals obtained from IAuhtenticator
-func (i *implIAuthorizer) Authorize(as istructs.IAppStructs, principals []iauthnz.Principal, req iauthnz.AuthzRequest) (ok bool, err error) {
-	for _, prn := range principals {
-		if prn.Kind == iauthnz.PrincipalKind_Role && prn.QName == iauthnz.QNameRoleSystem {
-			return true, nil
-		}
-	}
-	return i.acl.IsAllowed(principals, req), nil
-}
