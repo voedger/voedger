@@ -5,6 +5,8 @@
 
 package appdef
 
+import "iter"
+
 // Final structures with uniques are:
 // - TypeKind_GDoc and TypeKind_GRecord,
 // - TypeKind_CDoc and TypeKind_CRecord,
@@ -19,9 +21,7 @@ type IWithUniques interface {
 	UniqueCount() int
 
 	// All uniques.
-	//
-	// TODO: should be iter.Seq2[QName, IUnique], should be renamed to All()
-	Uniques() map[QName]IUnique
+	Uniques() iter.Seq2[QName, IUnique]
 
 	// Returns single field unique.
 	//

@@ -7,6 +7,8 @@ package uniques
 
 import (
 	"fmt"
+	"iter"
+	"maps"
 	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -100,8 +102,8 @@ func (uu WithUniques) UniqueField() appdef.IField {
 	return uu.field
 }
 
-func (uu WithUniques) Uniques() map[appdef.QName]appdef.IUnique {
-	return uu.uniques
+func (uu WithUniques) Uniques() iter.Seq2[appdef.QName, appdef.IUnique] {
+	return maps.All(uu.uniques)
 }
 
 func (uu *WithUniques) addUnique(name appdef.QName, fields []appdef.FieldName, comment ...string) {

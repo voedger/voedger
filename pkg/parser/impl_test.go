@@ -7,6 +7,7 @@ package parser
 import (
 	"embed"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -94,7 +95,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IWithFields).Field("Chairs").DataKind())
 
 	// constraint
-	uniques := cdoc.Uniques()
+	uniques := maps.Collect(cdoc.Uniques())
 	require.Len(uniques, 2)
 
 	t.Run("first unique, automatically named", func(t *testing.T) {
