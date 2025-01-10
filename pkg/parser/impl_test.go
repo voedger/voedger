@@ -2625,10 +2625,13 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l3 ON QUERY y WITH RATE r;
 			LIMIT l4 ON VIEW v WITH RATE r;
 			LIMIT l5 ON TABLE t WITH RATE r;
+<<<<<<< HEAD
 			LIMIT l20 ON ALL COMMANDS WITH TAG tag WITH RATE r;
 			LIMIT l29 ON ALL WITH RATE blah;
+=======
+			LIMIT l20 ON ALL COMMANDS WITH TAG tag WITH RATE r;		
+>>>>>>> upstreammain
 			LIMIT l30 ON EACH COMMAND WITH TAG tag WITH RATE r;
-			LIMIT l39 ON EACH WITH RATE blah;
 
 			);`,
 			"file.vsql:4:24: undefined command: x",
@@ -2636,10 +2639,25 @@ func Test_RatesAndLimits(t *testing.T) {
 			"file.vsql:6:21: undefined view: v",
 			"file.vsql:7:22: undefined table: t",
 			"file.vsql:8:39: undefined tag: tag",
-			"file.vsql:9:31: undefined rate: blah",
-			"file.vsql:10:39: undefined tag: tag",
-			"file.vsql:11:32: undefined rate: blah",
+			"file.vsql:9:39: undefined tag: tag",
 		)
+	})
+
+	t.Run("default scopes", func(t *testing.T) {
+		a := require.Build(`APPLICATION app1();
+		WORKSPACE w (
+			TABLE t INHERITS sys.CDoc();
+			RATE r 1 PER HOUR;
+		)`)
+		w := a.Workspace(appdef.NewQName("pkg", "w"))
+		typ := w.Type(appdef.NewQName("pkg", "r"))
+		r, ok := typ.(appdef.IRate)
+		require.True(ok)
+		require.NotNil(r)
+		require.True(r.Scope(appdef.RateScope_AppPartition))
+		require.False(r.Scope(appdef.RateScope_Workspace))
+		require.False(r.Scope(appdef.RateScope_IP))
+		require.False(r.Scope(appdef.RateScope_User))
 	})
 
 }

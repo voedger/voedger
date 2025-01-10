@@ -128,6 +128,11 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		QName: iauthnz.QNameRoleWorkspaceOwner,
 	}
 
+	wsDesc, err := as.Records().GetSingleton(req.RequestWSID, qNameCDocWorkspaceDescriptor)
+	if err != nil {
+		return nil, principalPayload, err
+	}
+
 	if req.RequestWSID == profileWSID {
 		// allow user or device to work in its profile
 		prnProfileOwner := iauthnz.Principal{
@@ -145,28 +150,10 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		// not the profile -> check if we could work in that workspace
 		switch pkt {
 		case iauthnz.PrincipalKind_User:
-			wsDesc, err := as.Records().GetSingleton(req.RequestWSID, qNameCDocWorkspaceDescriptor)
-			if err != nil {
-				return nil, principalPayload, err
-			}
 			if wsDesc.QName() != appdef.NullQName {
 				ownerWSID := wsDesc.AsInt64(field_OwnerWSID)
 				if ownerWSID == int64(profileWSID) && !slices.Contains(principals, prnWSOwner) { // nolint G115
 					principals = append(principals, prnWSOwner)
-				}
-				// check roles came from token
-				for _, role := range principalPayload.Roles {
-					if role.WSID != istructs.WSID(ownerWSID) { // nolint G115
-						continue
-					}
-					prn := iauthnz.Principal{
-						Kind:  iauthnz.PrincipalKind_Role,
-						WSID:  req.RequestWSID,
-						QName: role.QName,
-					}
-					if !slices.Contains(principals, prn) {
-						principals = append(principals, prn)
-					}
 				}
 			}
 		case iauthnz.PrincipalKind_Device:
@@ -189,6 +176,24 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		}
 	}
 	сделать добавление ролей из токена в любом случае, если Workspace.OwnerWSID равно PrincipalPayload.Roles[].WSID
+
+	// emit principals from roles from token
+	if wsDesc.QName() != appdef.NullQName {
+		ownerWSID := wsDesc.AsInt64(field_OwnerWSID)
+		for _, role := range principalPayload.Roles {
+			if role.WSID != istructs.WSID(ownerWSID) { // nolint G115
+				continue
+			}
+			prn := iauthnz.Principal{
+				Kind:  iauthnz.PrincipalKind_Role,
+				WSID:  req.RequestWSID,
+				QName: role.QName,
+			}
+			if !slices.Contains(principals, prn) {
+				principals = append(principals, prn)
+			}
+		}
+	}
 
 	// air.ResellersAdmin || air.UntillPaymentsReseller -> WorkspaceAdmin
 	// for _, prn := range principals {

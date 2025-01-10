@@ -110,19 +110,17 @@ func (c *buildContext) rates() error {
 				if rate.ObjectScope.PerAppPartition {
 					rateScopes = append(rateScopes, appdef.RateScope_AppPartition)
 				} else {
-					rateScopes = append(rateScopes, appdef.RateScope_Workspace) // default
+					rateScopes = append(rateScopes, appdef.RateScope_Workspace)
 				}
 			} else {
-				rateScopes = append(rateScopes, appdef.RateScope_Workspace) // default
+				rateScopes = append(rateScopes, appdef.RateScope_AppPartition) // default
 			}
 			if rate.SubjectScope != nil {
-				if rate.SubjectScope.PerUser {
+				if rate.SubjectScope.PerSubject {
 					rateScopes = append(rateScopes, appdef.RateScope_User)
 				} else {
-					rateScopes = append(rateScopes, appdef.RateScope_IP) // default
+					rateScopes = append(rateScopes, appdef.RateScope_IP)
 				}
-			} else {
-				rateScopes = append(rateScopes, appdef.RateScope_IP) // default
 			}
 			wsb.AddRate(schema.NewQName(rate.Name), rate.Value.count, period, rateScopes, rate.Comments...)
 		})
@@ -139,16 +137,16 @@ func (c *buildContext) limits() error {
 			var limitFilter appdef.IFilter
 			if limit.AllItems != nil {
 				opt = appdef.LimitFilterOption_ALL
-				if limit.AllItems.Commands || limit.AllItems.All {
+				if limit.AllItems.Commands {
 					types = append(types, appdef.TypeKind_Command)
 				}
-				if limit.AllItems.Queries || limit.AllItems.All {
+				if limit.AllItems.Queries {
 					types = append(types, appdef.TypeKind_Query)
 				}
-				if limit.AllItems.Tables || limit.AllItems.All {
+				if limit.AllItems.Tables {
 					types = append(types, appdef.TypeKind_Records.AsArray()...)
 				}
-				if limit.AllItems.Views || limit.AllItems.All {
+				if limit.AllItems.Views {
 					types = append(types, appdef.TypeKind_ViewRecord)
 				}
 				if limit.AllItems.WithTag != nil {
