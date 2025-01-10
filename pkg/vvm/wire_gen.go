@@ -11,13 +11,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
+	"os"
+	"path/filepath"
+	"runtime/debug"
+	"slices"
+	"strconv"
+	"strings"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/btstrp"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/logger"
@@ -59,13 +67,6 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/engines"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
 	"golang.org/x/crypto/acme/autocert"
-	"net/url"
-	"os"
-	"path/filepath"
-	"runtime/debug"
-	"slices"
-	"strconv"
-	"strings"
 )
 
 // Injectors from provide.go:
@@ -95,7 +96,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		return nil, nil, err
 	}
 	iAppStorageUncachingProviderFactory := provideIAppStorageUncachingProviderFactory(iAppStorageFactory, vvmConfig)
-	iAppStorageProvider := provideCachingAppStorageProvider(storageCacheSizeType, iMetrics, vvmName, iAppStorageUncachingProviderFactory)
+	iAppStorageProvider := provideCachingAppStorageProvider(storageCacheSizeType, iMetrics, vvmName, iAppStorageUncachingProviderFactory, vvmConfig.Time)
 	iAppStructsProvider := provideIAppStructsProvider(appConfigsTypeEmpty, bucketsFactoryType, iAppTokensFactory, iAppStorageProvider)
 	syncActualizerFactory := actualizers.ProvideSyncActualizerFactory()
 	quotas := provideN10NQuotas(vvmConfig)
@@ -753,9 +754,9 @@ func provideChannelGroups(cfg *VVMConfig) (res []iprocbusmem.ChannelGroup) {
 }
 
 func provideCachingAppStorageProvider(storageCacheSize StorageCacheSizeType, metrics2 imetrics.IMetrics,
-	vvmName processors.VVMName, uncachingProvider IAppStorageUncachingProviderFactory) istorage.IAppStorageProvider {
+	vvmName processors.VVMName, uncachingProvider IAppStorageUncachingProviderFactory, iTime coreutils.ITime) istorage.IAppStorageProvider {
 	aspNonCaching := uncachingProvider()
-	return istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics2, string(vvmName))
+	return istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics2, string(vvmName), iTime)
 }
 
 func provideBlobAppStoragePtr(astp istorage.IAppStorageProvider) iblobstoragestg.BlobAppStoragePtr {
@@ -854,6 +855,5 @@ func provideServicePipeline(
 	adminEndpoint AdminEndpointServiceOperator,
 	publicEndpoint PublicEndpointServiceOperator,
 ) ServicePipeline {
-	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opBLOBProcessors), pipeline.ForkBranch(pipeline.ServiceOperator(opAsyncActualizers)), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)))), pipeline.WireSyncOperator("admin endpoint", adminEndpoint), pipeline.WireSyncOperator("bootstrap", bootstrapSyncOp), pipeline.WireSyncOperator("public endpoint", publicEndpoint),
-	)
+	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opBLOBProcessors), pipeline.ForkBranch(pipeline.ServiceOperator(opAsyncActualizers)), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)))), pipeline.WireSyncOperator("admin endpoint", adminEndpoint), pipeline.WireSyncOperator("bootstrap", bootstrapSyncOp), pipeline.WireSyncOperator("public endpoint", publicEndpoint))
 }
