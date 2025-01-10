@@ -22,7 +22,7 @@ func (s *Structure) read(str appdef.IStructure) {
 
 	s.Kind = str.Kind().TrimString()
 
-	for _, fld := range str.Fields() {
+	for fld := range str.Fields() {
 		f := newField()
 		f.read(fld)
 		s.Fields = append(s.Fields, f)
