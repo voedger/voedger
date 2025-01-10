@@ -175,7 +175,6 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 			}
 		}
 	}
-	сделать добавление ролей из токена в любом случае, если Workspace.OwnerWSID равно PrincipalPayload.Roles[].WSID
 
 	// emit principals from roles from token
 	if wsDesc.QName() != appdef.NullQName {

@@ -609,16 +609,13 @@ func (sr *implVITISecretsReader) ReadSecret(name string) ([]byte, error) {
 	return sr.underlyingReader.ReadSecret(name)
 }
 
-func (vit *VIT) EnrichPrincipalToken(prn *Principal, roles []appdef.QName) (enrichedToken string) {
+func (vit *VIT) EnrichPrincipalToken(prn *Principal, roles []payloads.RoleType) (enrichedToken string) {
 	vit.T.Helper()
 	var pp payloads.PrincipalPayload
 	_, err := vit.ITokens.ValidateToken(prn.Token, &pp)
 	require.NoError(vit.T, err)
 	for _, role := range roles {
-		pp.Roles = append(pp.Roles, payloads.RoleType{
-			WSID:  pp.ProfileWSID,
-			QName: role,
-		})
+		pp.Roles = append(pp.Roles, role)
 	}
 	enrichedToken, err = vit.ITokens.IssueToken(prn.AppQName, authnz.DefaultPrincipalTokenExpiration, &pp)
 	require.NoError(vit.T, err)
