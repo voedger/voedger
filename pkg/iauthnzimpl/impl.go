@@ -25,12 +25,6 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		}
 	}()
 
-	// // role.sys.Everyone
-	// principals = append(principals, iauthnz.Principal{
-	// 	Kind:  iauthnz.PrincipalKind_Role,
-	// 	QName: iauthnz.QNameRoleEveryone,
-	// })
-
 	if len(req.Token) == 0 {
 		// add user with login "sys.Guest"
 		principals = append(principals, iauthnz.Principal{
@@ -143,9 +137,6 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		if !slices.Contains(principals, prnProfileOwner) {
 			principals = append(principals, prnProfileOwner)
 		}
-		// if !slices.Contains(principals, prnWSOwner) {
-		// 	principals = append(principals, prnWSOwner)
-		// }
 	} else {
 		// not the profile -> check if we could work in that workspace
 		switch pkt {
@@ -193,21 +184,6 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 			}
 		}
 	}
-
-	// air.ResellersAdmin || air.UntillPaymentsReseller -> WorkspaceAdmin
-	// for _, prn := range principals {
-	// 	if prn.Kind == iauthnz.PrincipalKind_Role && (prn.QName == qNameRoleResellersAdmin || prn.QName == qNameRoleUntillPaymentsReseller) {
-	// 		prnWSAdmin := iauthnz.Principal{
-	// 			Kind:  iauthnz.PrincipalKind_Role,
-	// 			WSID:  req.RequestWSID,
-	// 			QName: iauthnz.QNameRoleWorkspaceAdmin,
-	// 		}
-	// 		if !slices.Contains(principals, prnWSAdmin) {
-	// 			principals = append(principals, prnWSAdmin)
-	// 			break
-	// 		}
-	// 	}
-	// }
 
 	return principals, principalPayload, nil
 }

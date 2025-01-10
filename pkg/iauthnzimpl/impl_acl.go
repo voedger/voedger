@@ -7,7 +7,6 @@ package iauthnzimpl
 import (
 	"fmt"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iauthnz"
 )
@@ -356,26 +355,26 @@ var defaultACL = ACL{
 	// 	},
 	// 	policy: ACPolicy_Allow,
 	// },
-	{
-		desc: "grant exec on few funcs to role air.UntillPaymentsManager",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				// это все в профиле, кроме GetUPLocationInvoiceParties !!!
-				qNameQryGetAllUPPayouts,
-				// qNameQryGetUPLocationInvoiceParties,
-				// https://dev.untill.com/projects/#!710217
-				// qNameQryGetAllUPInvoices,
-				// qNameQryGetAllUPPayoutTransfers,
-				// https://dev.untill.com/projects/#!711418
-				// qNameQryGetDailyUPReports,
-				// https://dev.untill.com/projects/#!710982
-				qNameQryGetUPVATTransfers,
-				qNameQryGetUPBeneficiaryVATDebts,
-			},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsManager}}},
-		},
-		policy: ACPolicy_Allow,
-	},
+	// {
+	// 	desc: "grant exec on few funcs to role air.UntillPaymentsManager",
+	// 	pattern: PatternType{
+	// 		qNamesPattern: []appdef.QName{
+	// 			// это все в профиле, кроме GetUPLocationInvoiceParties !!!
+	// 			qNameQryGetAllUPPayouts,
+	// 			// qNameQryGetUPLocationInvoiceParties,
+	// 			// https://dev.untill.com/projects/#!710217
+	// 			// qNameQryGetAllUPInvoices,
+	// 			// qNameQryGetAllUPPayoutTransfers,
+	// 			// https://dev.untill.com/projects/#!711418
+	// 			// qNameQryGetDailyUPReports,
+	// 			// https://dev.untill.com/projects/#!710982
+	// 			qNameQryGetUPVATTransfers,
+	// 			qNameQryGetUPBeneficiaryVATDebts,
+	// 		},
+	// 		principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsManager}}},
+	// 	},
+	// 	policy: ACPolicy_Allow,
+	// },
 	// {
 	// 	desc: "allow update cdoc.air.Reseller to sys.RoleWorkspaceAdmin",
 	// 	pattern: PatternType{
