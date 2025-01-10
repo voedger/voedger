@@ -88,7 +88,7 @@ func (u *Unique) read(unique appdef.IUnique) {
 	u.Comment = readComment(unique)
 
 	u.Name = unique.Name()
-	for _, f := range unique.Fields() {
+	for f := range unique.Fields() {
 		u.Fields = append(u.Fields, f.Name())
 	}
 }

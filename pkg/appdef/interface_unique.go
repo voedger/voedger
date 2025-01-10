@@ -62,8 +62,6 @@ type IUnique interface {
 	// Returns qualified name of unique.
 	Name() QName
 
-	// Returns unique fields list. Fields are sorted alphabetically
-	//
-	// TODO: should be iter.Seq[IField]
-	Fields() []IField
+	// Iterate unique fields list in alphabetically order
+	Fields() iter.Seq[IField]
 }

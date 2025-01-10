@@ -102,7 +102,7 @@ func Test_BasicUsage(t *testing.T) {
 		u := uniques[appdef.MustParseQName("main.TablePlan$uniques$01")]
 		require.NotNil(u)
 		cnt := 0
-		for _, f := range u.Fields() {
+		for f := range u.Fields() {
 			cnt++
 			switch n := f.Name(); n {
 			case "FState":
@@ -120,7 +120,7 @@ func Test_BasicUsage(t *testing.T) {
 		u := uniques[appdef.MustParseQName("main.TablePlan$uniques$UniqueTable")]
 		require.NotNil(u)
 		cnt := 0
-		for _, f := range u.Fields() {
+		for f := range u.Fields() {
 			cnt++
 			switch n := f.Name(); n {
 			case "TableNumber":
