@@ -5,16 +5,4 @@
 
 package istoragecache
 
-import "time"
-
-const (
-	stackKeySize = 512
-
-	fmtErrMsgDataWithTTLMarshalBinary   = "dataWithTTL.MarshalBinary: %w"
-	fmtErrMsgDataWithTTLUnmarshalBinary = "dataWithTTL.UnmarshalBinary: %w"
-)
-
-var (
-	// maxTTL is the maximum TTL value that can be set for a key in cache.
-	maxTTL = time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC).UnixMilli()
-)
+const stackKeySize = 512

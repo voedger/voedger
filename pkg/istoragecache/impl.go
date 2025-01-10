@@ -8,8 +8,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"fmt"
-	"io"
 	"time"
 
 	"github.com/VictoriaMetrics/fastcache"
@@ -42,15 +40,10 @@ type cachedAppStorage struct {
 	mReadTotal                  *imetrics.MetricValue
 	mReadSeconds                *imetrics.MetricValue
 	mIncreaseIfNotExistsSeconds *imetrics.MetricValue
-	mIncreaseIfNotExistsTotal   *imetrics.MetricValue
 	mCompareAndSwapSeconds      *imetrics.MetricValue
-	mCompareAndSwapTotal        *imetrics.MetricValue
 	mCompareAndDeleteSeconds    *imetrics.MetricValue
-	mCompareAndDeletepTotal     *imetrics.MetricValue
 	mTTLGetSeconds              *imetrics.MetricValue
-	mTTLGetTotal                *imetrics.MetricValue
 	mTTLReadSeconds             *imetrics.MetricValue
-	mTTLReadTotal               *imetrics.MetricValue
 }
 
 type implCachingAppStorageProvider struct {
@@ -86,50 +79,52 @@ func newCachingAppStorage(
 	iTime coreutils.ITime,
 ) istorage.IAppStorage {
 	return &cachedAppStorage{
-		cache:                fastcache.New(maxBytes),
-		storage:              nonCachingAppStorage,
-		mGetTotal:            metrics.AppMetricAddr(getTotal, vvm, appQName),
-		mGetCachedTotal:      metrics.AppMetricAddr(getCachedTotal, vvm, appQName),
-		mGetSeconds:          metrics.AppMetricAddr(getSeconds, vvm, appQName),
-		mGetBatchSeconds:     metrics.AppMetricAddr(getBatchSeconds, vvm, appQName),
-		mGetBatchTotal:       metrics.AppMetricAddr(getBatchTotal, vvm, appQName),
-		mGetBatchCachedTotal: metrics.AppMetricAddr(getBatchCachedTotal, vvm, appQName),
-		mPutTotal:            metrics.AppMetricAddr(putTotal, vvm, appQName),
-		mPutSeconds:          metrics.AppMetricAddr(putSeconds, vvm, appQName),
-		mPutBatchTotal:       metrics.AppMetricAddr(putBatchTotal, vvm, appQName),
-		mPutBatchSeconds:     metrics.AppMetricAddr(putBatchSeconds, vvm, appQName),
-		mPutBatchItemsTotal:  metrics.AppMetricAddr(putBatchItemsTotal, vvm, appQName),
-		mReadTotal:           metrics.AppMetricAddr(readTotal, vvm, appQName),
-		mReadSeconds:         metrics.AppMetricAddr(readSeconds, vvm, appQName),
-		vvm:                  vvm,
-		appQName:             appQName,
-		iTime:                iTime,
+		cache:                       fastcache.New(maxBytes),
+		storage:                     nonCachingAppStorage,
+		mGetTotal:                   metrics.AppMetricAddr(getTotal, vvm, appQName),
+		mGetCachedTotal:             metrics.AppMetricAddr(getCachedTotal, vvm, appQName),
+		mGetSeconds:                 metrics.AppMetricAddr(getSeconds, vvm, appQName),
+		mGetBatchSeconds:            metrics.AppMetricAddr(getBatchSeconds, vvm, appQName),
+		mGetBatchTotal:              metrics.AppMetricAddr(getBatchTotal, vvm, appQName),
+		mGetBatchCachedTotal:        metrics.AppMetricAddr(getBatchCachedTotal, vvm, appQName),
+		mPutTotal:                   metrics.AppMetricAddr(putTotal, vvm, appQName),
+		mPutSeconds:                 metrics.AppMetricAddr(putSeconds, vvm, appQName),
+		mPutBatchTotal:              metrics.AppMetricAddr(putBatchTotal, vvm, appQName),
+		mPutBatchSeconds:            metrics.AppMetricAddr(putBatchSeconds, vvm, appQName),
+		mPutBatchItemsTotal:         metrics.AppMetricAddr(putBatchItemsTotal, vvm, appQName),
+		mReadTotal:                  metrics.AppMetricAddr(readTotal, vvm, appQName),
+		mReadSeconds:                metrics.AppMetricAddr(readSeconds, vvm, appQName),
+		mIncreaseIfNotExistsSeconds: metrics.AppMetricAddr(insertIfNotExistsSeconds, vvm, appQName),
+		mCompareAndSwapSeconds:      metrics.AppMetricAddr(compareAndSwapSeconds, vvm, appQName),
+		mCompareAndDeleteSeconds:    metrics.AppMetricAddr(compareAndDeleteSeconds, vvm, appQName),
+		mTTLGetSeconds:              metrics.AppMetricAddr(ttlGetSeconds, vvm, appQName),
+		mTTLReadSeconds:             metrics.AppMetricAddr(ttlReadSeconds, vvm, appQName),
+		vvm:                         vvm,
+		appQName:                    appQName,
+		iTime:                       iTime,
 	}
 }
 
 //nolint:revive
 func (s *cachedAppStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
+	start := time.Now()
+	defer func() {
+		s.mIncreaseIfNotExistsSeconds.Increase(time.Since(start).Seconds())
+	}()
+
 	ok, err = s.storage.InsertIfNotExists(pKey, cCols, value, ttlSeconds)
 	if err != nil {
 		return false, err
 	}
 
 	if ok {
-		expireAt := maxTTL
+		expireAt := int64(0)
 		if ttlSeconds > 0 {
 			expireAt = s.iTime.Now().Add(time.Duration(ttlSeconds) * time.Second).UnixMilli()
 		}
 
-		d := dataWithTTL{
-			data: value,
-			ttl:  expireAt,
-		}
-
-		dataToCache, err := d.MarshalBinary()
-		if err != nil {
-			return false, fmt.Errorf(fmtErrMsgDataWithTTLMarshalBinary, err)
-		}
-		s.cache.Set(makeKey(pKey, cCols), dataToCache)
+		d := dataWithExpiration{data: value, expireAt: expireAt}
+		s.cache.Set(makeKey(pKey, cCols), d.pack())
 	}
 
 	return ok, nil
@@ -137,27 +132,24 @@ func (s *cachedAppStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []
 
 //nolint:revive
 func (s *cachedAppStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
+	start := time.Now()
+	defer func() {
+		s.mCompareAndSwapSeconds.Increase(time.Since(start).Seconds())
+	}()
+
 	ok, err = s.storage.CompareAndSwap(pKey, cCols, oldValue, newValue, ttlSeconds)
 	if err != nil {
 		return false, err
 	}
 
 	if ok {
-		expireAt := maxTTL
+		expireAt := int64(0)
 		if ttlSeconds > 0 {
 			expireAt = s.iTime.Now().Add(time.Duration(ttlSeconds) * time.Second).UnixMilli()
 		}
 
-		d := dataWithTTL{
-			data: newValue,
-			ttl:  expireAt,
-		}
-
-		dataToCache, err := d.MarshalBinary()
-		if err != nil {
-			return false, fmt.Errorf(fmtErrMsgDataWithTTLMarshalBinary, err)
-		}
-		s.cache.Set(makeKey(pKey, cCols), dataToCache)
+		d := dataWithExpiration{data: newValue, expireAt: expireAt}
+		s.cache.Set(makeKey(pKey, cCols), d.pack())
 	}
 
 	return ok, nil
@@ -165,9 +157,14 @@ func (s *cachedAppStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, n
 
 //nolint:revive
 func (s *cachedAppStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
+	start := time.Now()
+	defer func() {
+		s.mCompareAndDeleteSeconds.Increase(time.Since(start).Seconds())
+	}()
+
 	ok, err = s.storage.CompareAndDelete(pKey, cCols, expectedValue)
 	if err != nil {
-		return false, fmt.Errorf("storage.CompareAndDelete: %w", err)
+		return false, err
 	}
 
 	if ok {
@@ -179,6 +176,11 @@ func (s *cachedAppStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedV
 
 //nolint:revive
 func (s *cachedAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
+	start := time.Now()
+	defer func() {
+		s.mTTLGetSeconds.Increase(time.Since(start).Seconds())
+	}()
+
 	var found bool
 	var key = makeKey(pKey, cCols)
 
@@ -187,12 +189,10 @@ func (s *cachedAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok b
 	cachedData, found = s.cache.HasGet(*data, key)
 
 	if found {
-		var d dataWithTTL
-		if err := d.UnmarshalBinary(cachedData); err != nil {
-			return false, fmt.Errorf(fmtErrMsgDataWithTTLUnmarshalBinary, err)
-		}
+		var d dataWithExpiration
+		d.unpack(cachedData)
 
-		if isExpired(d.ttl, s.iTime.Now()) {
+		if isExpired(d.expireAt, s.iTime.Now()) {
 			s.cache.Del(key)
 
 			return false, nil
@@ -207,6 +207,10 @@ func (s *cachedAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok b
 
 //nolint:revive
 func (s *cachedAppStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
+	start := time.Now()
+	defer func() {
+		s.mTTLReadSeconds.Increase(time.Since(start).Seconds())
+	}()
 
 	return s.storage.TTLRead(ctx, pKey, startCCols, finishCCols, cb)
 }
@@ -220,13 +224,8 @@ func (s *cachedAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err err
 	err = s.storage.Put(pKey, cCols, value)
 
 	if err == nil {
-		data := dataWithTTL{data: value, ttl: maxTTL}
-		dataToCache, err := data.MarshalBinary()
-
-		if err != nil {
-			return fmt.Errorf(fmtErrMsgDataWithTTLMarshalBinary, err)
-		}
-		s.cache.Set(makeKey(pKey, cCols), dataToCache)
+		data := dataWithExpiration{data: value}
+		s.cache.Set(makeKey(pKey, cCols), data.pack())
 	}
 
 	return err
@@ -243,13 +242,8 @@ func (s *cachedAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 	err = s.storage.PutBatch(items)
 	if err == nil {
 		for _, i := range items {
-			data := dataWithTTL{data: i.Value, ttl: maxTTL}
-			dataToCache, err := data.MarshalBinary()
-
-			if err != nil {
-				return fmt.Errorf(fmtErrMsgDataWithTTLMarshalBinary, err)
-			}
-			s.cache.Set(makeKey(i.PKey, i.CCols), dataToCache)
+			data := dataWithExpiration{data: i.Value}
+			s.cache.Set(makeKey(i.PKey, i.CCols), data.pack())
 		}
 	}
 
@@ -264,9 +258,7 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 	s.mGetTotal.Increase(1.0)
 
 	key := makeKey(pKey, cCols)
-
 	*data = (*data)[0:0]
-
 	cachedData := make([]byte, 0)
 	cachedData, ok = s.cache.HasGet(cachedData, key)
 
@@ -274,10 +266,8 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 		s.mGetCachedTotal.Increase(1.0)
 
 		if len(cachedData) != 0 {
-			var d dataWithTTL
-			if err := d.UnmarshalBinary(cachedData); err != nil {
-				return false, fmt.Errorf(fmtErrMsgDataWithTTLUnmarshalBinary, err)
-			}
+			d := &dataWithExpiration{}
+			d.unpack(cachedData)
 			*data = d.data
 
 			return len(*data) != 0, nil
@@ -286,19 +276,14 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 
 	ok, err = s.storage.Get(pKey, cCols, data)
 	if err != nil {
-		return false, fmt.Errorf("storage.Get: %w", err)
+		return false, err
 	}
 
-	d := dataWithTTL{ttl: maxTTL}
+	d := dataWithExpiration{}
 	if ok {
 		d.data = *data
 	}
-
-	dataToCache, err := d.MarshalBinary()
-	if err != nil {
-		return false, fmt.Errorf(fmtErrMsgDataWithTTLMarshalBinary, err)
-	}
-	s.cache.Set(key, dataToCache)
+	s.cache.Set(key, d.pack())
 
 	return ok, nil
 }
@@ -322,11 +307,9 @@ func (s *cachedAppStorage) getBatchFromCache(pKey []byte, items []istorage.GetBa
 			return false
 		}
 
-		var d dataWithTTL
-		if err := d.UnmarshalBinary(cachedData); err != nil {
-			return false
-		}
+		var d dataWithExpiration
 
+		d.unpack(cachedData)
 		*items[i].Data = d.data
 		items[i].Ok = len(*items[i].Data) != 0
 	}
@@ -341,16 +324,11 @@ func (s *cachedAppStorage) getBatchFromStorage(pKey []byte, items []istorage.Get
 	}
 
 	for _, item := range items {
-		d := dataWithTTL{ttl: maxTTL}
+		d := dataWithExpiration{}
 		if item.Ok {
 			d.data = *item.Data
 		}
-
-		dataToCache, err := d.MarshalBinary()
-		if err != nil {
-			return fmt.Errorf(fmtErrMsgDataWithTTLMarshalBinary, err)
-		}
-		s.cache.Set(makeKey(pKey, item.CCols), dataToCache)
+		s.cache.Set(makeKey(pKey, item.CCols), d.pack())
 	}
 
 	return err
@@ -382,60 +360,42 @@ func makeKey(pKey []byte, cCols []byte) (res []byte) {
 	return res
 }
 
-func isExpired(ttlInMilliseconds int64, now time.Time) bool {
-	return !now.Before(time.UnixMilli(ttlInMilliseconds))
+func isExpired(expireAt int64, now time.Time) bool {
+	return expireAt != 0 && !now.Before(time.UnixMilli(expireAt))
 }
 
-// dataWithTTL holds some byte data and expiration time
-type dataWithTTL struct {
+// dataWithExpiration holds some byte data and expiration time
+type dataWithExpiration struct {
 	// data is the byte data
 	data []byte
-	// ttl is the expiration time in unix milliseconds
-	ttl int64
+	// expireAt is the expiration time in unix milliseconds
+	expireAt int64
 }
 
-// MarshalBinary implements encoding.BinaryMarshaler.
-func (d *dataWithTTL) MarshalBinary() ([]byte, error) {
+// pack encodes the data to a byte slice
+func (d *dataWithExpiration) pack() []byte {
 	buf := new(bytes.Buffer)
 
 	// Write length of Data (8 bytes, big-endian)
 	if err := binary.Write(buf, binary.BigEndian, int64(len(d.data))); err != nil {
-		return nil, err
+		return nil
 	}
 
 	// Write the Data bytes
 	if _, err := buf.Write(d.data); err != nil {
-		return nil, err
+		return nil
 	}
 
 	// Write TTL (8 bytes, big-endian)
-	if err := binary.Write(buf, binary.BigEndian, d.ttl); err != nil {
-		return nil, err
+	if err := binary.Write(buf, binary.BigEndian, d.expireAt); err != nil {
+		return nil
 	}
 
-	return buf.Bytes(), nil
+	return buf.Bytes()
 }
 
-// UnmarshalBinary implements encoding.BinaryUnmarshaler.
-func (d *dataWithTTL) UnmarshalBinary(data []byte) error {
-	buf := bytes.NewReader(data)
-
-	// Read length of Data
-	var dataLen uint64
-	if err := binary.Read(buf, binary.BigEndian, &dataLen); err != nil {
-		return err
-	}
-
-	// Read Data bytes
-	d.data = make([]byte, dataLen)
-	if _, err := io.ReadFull(buf, d.data); err != nil {
-		return err
-	}
-
-	// Read TTL
-	if err := binary.Read(buf, binary.BigEndian, &d.ttl); err != nil {
-		return err
-	}
-
-	return nil
+// unpack decodes the data from the byte slice
+func (d *dataWithExpiration) unpack(data []byte) {
+	d.data = data[8 : len(data)-8]
+	d.expireAt = int64(binary.BigEndian.Uint64(data[len(data)-8:]))
 }
