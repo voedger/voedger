@@ -5,6 +5,8 @@
 
 package appdef
 
+import "iter"
+
 // Numeric with OccursUnbounded value.
 //
 // Ref. occurs.go for constants and methods
@@ -21,7 +23,7 @@ const (
 //	- TypeKind_ODoc and TypeKind_CRecord,
 //	- TypeKind_WDoc and TypeKind_WRecord,
 //	- TypeKind_Object,
-type IContainers interface {
+type IWithContainers interface {
 	// Finds container by name.
 	//
 	// Returns nil if not found.
@@ -31,7 +33,7 @@ type IContainers interface {
 	ContainerCount() int
 
 	// All containers in add order.
-	Containers() []IContainer
+	Containers() iter.Seq[IContainer]
 }
 
 type IContainersBuilder interface {

@@ -9,7 +9,7 @@ package appdef
 // - TypeKind_GDoc and TypeKind_GRecord,
 // - TypeKind_CDoc and TypeKind_CRecord,
 // - TypeKind_WDoc and TypeKind_WRecord
-type IUniques interface {
+type IWithUniques interface {
 	// Return unique by qualified name.
 	//
 	// Returns nil if not unique found
@@ -19,6 +19,8 @@ type IUniques interface {
 	UniqueCount() int
 
 	// All uniques.
+	//
+	// TODO: should be iter.Seq2[QName, IUnique], should be renamed to All()
 	Uniques() map[QName]IUnique
 
 	// Returns single field unique.
@@ -61,5 +63,7 @@ type IUnique interface {
 	Name() QName
 
 	// Returns unique fields list. Fields are sorted alphabetically
+	//
+	// TODO: should be iter.Seq[IField]
 	Fields() []IField
 }

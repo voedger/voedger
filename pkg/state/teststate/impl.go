@@ -15,6 +15,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -359,7 +360,7 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New()
+	adb := builder.New()
 	err = parser.BuildAppDefs(appSchema, adb)
 	if err != nil {
 		panic(err)
@@ -391,7 +392,7 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 		}
 	}
 
-	asf := mem.Provide()
+	asf := mem.Provide(coreutils.MockTime)
 	storageProvider := istorageimpl.Provide(asf)
 	prov := istructsmem.Provide(
 		cfgs,

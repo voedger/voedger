@@ -22,19 +22,29 @@ type cachedAppStorage struct {
 	appQName appdef.AppQName
 
 	/* metrics */
-	mGetSeconds          *imetrics.MetricValue
-	mGetTotal            *imetrics.MetricValue
-	mGetCachedTotal      *imetrics.MetricValue
-	mGetBatchSeconds     *imetrics.MetricValue
-	mGetBatchTotal       *imetrics.MetricValue
-	mGetBatchCachedTotal *imetrics.MetricValue
-	mPutTotal            *imetrics.MetricValue
-	mPutSeconds          *imetrics.MetricValue
-	mPutBatchTotal       *imetrics.MetricValue
-	mPutBatchSeconds     *imetrics.MetricValue
-	mPutBatchItemsTotal  *imetrics.MetricValue
-	mReadTotal           *imetrics.MetricValue
-	mReadSeconds         *imetrics.MetricValue
+	mGetSeconds                 *imetrics.MetricValue
+	mGetTotal                   *imetrics.MetricValue
+	mGetCachedTotal             *imetrics.MetricValue
+	mGetBatchSeconds            *imetrics.MetricValue
+	mGetBatchTotal              *imetrics.MetricValue
+	mGetBatchCachedTotal        *imetrics.MetricValue
+	mPutTotal                   *imetrics.MetricValue
+	mPutSeconds                 *imetrics.MetricValue
+	mPutBatchTotal              *imetrics.MetricValue
+	mPutBatchSeconds            *imetrics.MetricValue
+	mPutBatchItemsTotal         *imetrics.MetricValue
+	mReadTotal                  *imetrics.MetricValue
+	mReadSeconds                *imetrics.MetricValue
+	mIncreaseIfNotExistsSeconds *imetrics.MetricValue
+	mIncreaseIfNotExistsTotal   *imetrics.MetricValue
+	mCompareAndSwapSeconds      *imetrics.MetricValue
+	mCompareAndSwapTotal        *imetrics.MetricValue
+	mCompareAndDeleteSeconds    *imetrics.MetricValue
+	mCompareAndDeletepTotal     *imetrics.MetricValue
+	mTTLGetSeconds              *imetrics.MetricValue
+	mTTLGetTotal                *imetrics.MetricValue
+	mTTLReadSeconds             *imetrics.MetricValue
+	mTTLReadTotal               *imetrics.MetricValue
 }
 
 type implCachingAppStorageProvider struct {
@@ -72,6 +82,36 @@ func newCachingAppStorage(maxBytes int, nonCachingAppStorage istorage.IAppStorag
 		vvm:                  vvm,
 		appQName:             appQName,
 	}
+}
+
+//nolint:revive
+func (s *cachedAppStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+//nolint:revive
+func (s *cachedAppStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+//nolint:revive
+func (s *cachedAppStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+//nolint:revive
+func (s *cachedAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+//nolint:revive
+func (s *cachedAppStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (s *cachedAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {

@@ -172,7 +172,7 @@ func provideIVVTExec(itokens itokens.ITokens, asp istructs.IAppStructsProvider) 
 		rateLimitName := istructsmem.GetFunctionRateLimitName(QNameQueryIssueVerifiedValueToken, istructs.RateLimitKind_byWorkspace)
 		appBuckets.ResetRateBuckets(rateLimitName, irates.BucketState{
 			Period:             RateLimit_IssueVerifiedValueToken.Period,
-			MaxTokensPerPeriod: irates.NumTokensType(RateLimit_IssueVerifiedValueToken.MaxAllowedPerDuration),
+			MaxTokensPerPeriod: RateLimit_IssueVerifiedValueToken.MaxAllowedPerDuration,
 			TakenTokens:        0,
 		})
 

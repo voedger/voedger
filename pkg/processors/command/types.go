@@ -10,6 +10,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -21,7 +22,6 @@ import (
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 type ServiceFactory func(commandsChannel CommandChannel) pipeline.IService
@@ -35,7 +35,7 @@ type ICommandMessage interface {
 	Body() []byte
 	AppQName() appdef.AppQName
 	WSID() istructs.WSID // url WSID
-	Sender() ibus.ISender
+	Responder() bus.IResponder
 	PartitionID() istructs.PartitionID
 	RequestCtx() context.Context
 	QName() appdef.QName
@@ -105,7 +105,7 @@ type implICommandMessage struct {
 	body        []byte
 	appQName    appdef.AppQName // need to determine where to send c.sys.Init request on create a new workspace
 	wsid        istructs.WSID
-	sender      ibus.ISender
+	responder   bus.IResponder
 	partitionID istructs.PartitionID
 	requestCtx  context.Context
 	qName       appdef.QName

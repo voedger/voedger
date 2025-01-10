@@ -10,12 +10,12 @@ import (
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
-	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
 )
 
 func NewProcessor(params ihttp.CLIParams, routerStorage ihttp.IRouterStorage) (server ihttp.IHTTPProcessor, cleanup func()) {
@@ -34,7 +34,7 @@ func NewProcessor(params ihttp.CLIParams, routerStorage ihttp.IRouterStorage) (s
 		apps:               make(map[appdef.AppQName]*appInfo),
 		numsAppsWorkspaces: make(map[appdef.AppQName]istructs.NumAppWorkspaces),
 	}
-	httpProcessor.bus = ibusmem.Provide(httpProcessor.requestHandler)
+	httpProcessor.requestSender = bus.NewIRequestSender(coreutils.NewITime(), bus.DefaultSendTimeout, httpProcessor.requestHandler)
 	if len(params.AcmeDomains) > 0 {
 		for _, domain := range params.AcmeDomains {
 			httpProcessor.AddAcmeDomain(domain)

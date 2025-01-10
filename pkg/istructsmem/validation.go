@@ -195,7 +195,7 @@ func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]*rowType) (er
 	for _, rec := range ev.cud.creates {
 		parId := rec.Parent()
 		if target, ok := ids[parId]; ok {
-			if parentType, ok := ev.appCfg.AppDef.Type(target.QName()).(appdef.IContainers); ok {
+			if parentType, ok := ev.appCfg.AppDef.Type(target.QName()).(appdef.IWithContainers); ok {
 				cont := parentType.Container(rec.Container())
 				if cont == nil {
 					err = errors.Join(err,
@@ -268,12 +268,12 @@ func validateEventArgs(ev *eventType) (err error) {
 func validateObject(o *objectType) (err error) {
 	err = validateRow(&o.rowType)
 
-	t := o.typ.(appdef.IContainers)
+	t := o.typ.(appdef.IWithContainers)
 
 	// validate occurrences
-	for _, cont := range t.Containers() {
+	for cont := range t.Containers() {
 		n, occurs := cont.Name(), appdef.Occurs(0)
-		for _ = range o.Children(n) {
+		for range o.Children(n) {
 			occurs++
 		}
 		if minO := cont.MinOccurs(); occurs < minO {

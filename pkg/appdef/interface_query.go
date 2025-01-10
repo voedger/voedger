@@ -10,7 +10,7 @@ type IQuery interface {
 	IFunction
 
 	// Unwanted type assertion stub
-	isQuery()
+	IsQuery()
 }
 
 type IQueryBuilder interface {

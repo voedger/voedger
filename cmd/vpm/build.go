@@ -39,38 +39,24 @@ func newBuildCmd(params *vpmParams) *cobra.Command {
 			}
 
 			compileRes, err := compile.CompileNoDummyApp(params.Dir)
-			if err := checkAppSchemaNotFoundErr(err); err != nil {
-				return err
+			if err != nil {
+				if errors.Is(err, compile.ErrAppSchemaNotFound) {
+					return errors.New("failed to build, app schema not found")
+				}
+
+				return errors.New("failed to compile, check schemas")
 			}
-			if err := checkCompileResult(compileRes); err != nil {
-				return err
+
+			if len(compileRes.NotFoundDeps) > 0 {
+				return errors.New("failed to compile, missing dependencies. Run 'vpm tidy'")
 			}
+
 			return build(compileRes, params)
 		},
 	}
 	cmd.Flags().StringVarP(&params.Output, "output", "o", "", "output archive name")
+
 	return cmd
-}
-
-func checkAppSchemaNotFoundErr(err error) error {
-	if err != nil {
-		logger.Error(err)
-		if errors.Is(err, compile.ErrAppSchemaNotFound) {
-			return errors.New("failed to build, app schema not found")
-		}
-	}
-	return nil
-}
-
-func checkCompileResult(compileRes *compile.Result) error {
-	switch {
-	case compileRes == nil:
-		return errors.New("failed to compile, check schemas")
-	case len(compileRes.NotFoundDeps) > 0:
-		return errors.New("failed to compile, missing dependencies. Run 'vpm tidy'")
-	default:
-		return nil
-	}
 }
 
 func build(compileRes *compile.Result, params *vpmParams) error {

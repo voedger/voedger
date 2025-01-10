@@ -10,7 +10,7 @@ import (
 	"fmt"
 )
 
-func enrichError(err error, msg string, args ...any) error {
+func EnrichError(err error, msg string, args ...any) error {
 	s := msg
 	if len(args) > 0 {
 		s = fmt.Sprintf(msg, args...)
@@ -21,31 +21,31 @@ func enrichError(err error, msg string, args ...any) error {
 var ErrMissedError = errors.New("missed")
 
 func ErrMissed(msg string, args ...any) error {
-	return enrichError(ErrMissedError, msg, args...)
+	return EnrichError(ErrMissedError, msg, args...)
 }
 
 var ErrInvalidError = errors.New("not valid")
 
 func ErrInvalid(msg string, args ...any) error {
-	return enrichError(ErrInvalidError, msg, args...)
+	return EnrichError(ErrInvalidError, msg, args...)
 }
 
 var ErrOutOfBoundsError = errors.New("out of bounds")
 
 func ErrOutOfBounds(msg string, args ...any) error {
-	return enrichError(ErrOutOfBoundsError, msg, args...)
+	return EnrichError(ErrOutOfBoundsError, msg, args...)
 }
 
 var ErrAlreadyExistsError = errors.New("already exists")
 
 func ErrAlreadyExists(msg string, args ...any) error {
-	return enrichError(ErrAlreadyExistsError, msg, args...)
+	return EnrichError(ErrAlreadyExistsError, msg, args...)
 }
 
 var ErrNotFoundError = errors.New("not found")
 
 func ErrNotFound(msg string, args ...any) error {
-	return enrichError(ErrNotFoundError, msg, args...)
+	return EnrichError(ErrNotFoundError, msg, args...)
 }
 
 func ErrFieldNotFound(f string) error {
@@ -60,26 +60,34 @@ func ErrRoleNotFound(r QName) error {
 	return ErrNotFound("role «%v»", r)
 }
 
+func ErrFilterHasNoMatches(t any, flt IFilter, where any) error {
+	return ErrNotFound("%v filter «%v» has no matches in %v", t, flt, where)
+}
+
 var ErrConvertError = errors.New("convert error")
 
 func ErrConvert(msg string, args ...any) error {
-	return enrichError(ErrConvertError, msg, args...)
+	return EnrichError(ErrConvertError, msg, args...)
 }
 
 var ErrTooManyError = errors.New("too many")
 
 func ErrTooMany(msg string, args ...any) error {
-	return enrichError(ErrTooManyError, msg, args...)
+	return EnrichError(ErrTooManyError, msg, args...)
 }
 
 var ErrIncompatibleError = errors.New("incompatible")
 
 func ErrIncompatible(msg string, args ...any) error {
-	return enrichError(ErrIncompatibleError, msg, args...)
+	return EnrichError(ErrIncompatibleError, msg, args...)
 }
 
 var ErrUnsupportedError = errors.ErrUnsupported
 
 func ErrUnsupported(msg string, args ...any) error {
-	return enrichError(ErrUnsupportedError, msg, args...)
+	return EnrichError(ErrUnsupportedError, msg, args...)
+}
+
+func ErrACLUnsupportedType(t IType) error {
+	return ErrUnsupported("ACL for %v", t)
 }

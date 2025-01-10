@@ -22,8 +22,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/exp/slices"
-
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func NewHTTPErrorf(httpStatus int, args ...interface{}) SysError {
@@ -35,56 +33,6 @@ func NewHTTPErrorf(httpStatus int, args ...interface{}) SysError {
 
 func NewHTTPError(httpStatus int, err error) SysError {
 	return NewHTTPErrorf(httpStatus, err.Error())
-}
-
-func ReplyErrf(sender ibus.ISender, status int, args ...interface{}) {
-	ReplyErrDef(sender, NewHTTPErrorf(status, args...), http.StatusInternalServerError)
-}
-
-//nolint:errorlint
-func ReplyErrDef(sender ibus.ISender, err error, defaultStatusCode int) {
-	res := WrapSysError(err, defaultStatusCode).(SysError)
-	ReplyJSON(sender, res.HTTPStatus, res.ToJSON())
-}
-
-func ReplyErr(sender ibus.ISender, err error) {
-	ReplyErrDef(sender, err, http.StatusInternalServerError)
-}
-
-func ReplyJSON(sender ibus.ISender, httpCode int, body string) {
-	sender.SendResponse(ibus.Response{
-		ContentType: ApplicationJSON,
-		StatusCode:  httpCode,
-		Data:        []byte(body),
-	})
-}
-
-func ReplyBadRequest(sender ibus.ISender, message string) {
-	ReplyErrf(sender, http.StatusBadRequest, message)
-}
-
-func replyAccessDenied(sender ibus.ISender, code int, message string) {
-	msg := "access denied"
-	if len(message) > 0 {
-		msg += ": " + message
-	}
-	ReplyErrf(sender, code, msg)
-}
-
-func ReplyAccessDeniedUnauthorized(sender ibus.ISender, message string) {
-	replyAccessDenied(sender, http.StatusUnauthorized, message)
-}
-
-func ReplyAccessDeniedForbidden(sender ibus.ISender, message string) {
-	replyAccessDenied(sender, http.StatusForbidden, message)
-}
-
-func ReplyUnauthorized(sender ibus.ISender, message string) {
-	ReplyErrf(sender, http.StatusUnauthorized, message)
-}
-
-func ReplyInternalServerError(sender ibus.ISender, message string, err error) {
-	ReplyErrf(sender, http.StatusInternalServerError, message, ": ", err)
 }
 
 // WithResponseHandler, WithLongPolling and WithDiscardResponse are mutual exclusive
@@ -205,6 +153,10 @@ func Expect403(expectedMessages ...string) ReqOptFunc {
 
 func Expect400(expectErrorContains ...string) ReqOptFunc {
 	return WithExpectedCode(http.StatusBadRequest, expectErrorContains...)
+}
+
+func Expect423(expectErrorContains ...string) ReqOptFunc {
+	return WithExpectedCode(http.StatusLocked, expectErrorContains...)
 }
 
 func Expect400RefIntegrity_Existence() ReqOptFunc {

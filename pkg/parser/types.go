@@ -12,6 +12,7 @@ import (
 	"github.com/alecthomas/participle/v2/lexer"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
@@ -111,8 +112,6 @@ type RootStatement struct {
 
 	// Also allowed in root
 	Role           *RoleStmt           `parser:"| @@"`
-	Rate           *RateStmt           `parser:"| @@"`
-	Limit          *LimitStmt          `parser:"| @@"`
 	ExtEngine      *RootExtEngineStmt  `parser:"| @@"`
 	Workspace      *WorkspaceStmt      `parser:"| @@"`
 	AlterWorkspace *AlterWorkspaceStmt `parser:"| @@"`
@@ -199,7 +198,7 @@ type DeclareStmt struct {
 	Statement
 	Name         Ident  `parser:"'DECLARE' @Ident"`
 	DataType     string `parser:"@('int' | 'int32')"`
-	DefaultValue *int   `parser:"'DEFAULT' @Int"`
+	DefaultValue int32  `parser:"'DEFAULT' @Int"`
 }
 
 func (s DeclareStmt) GetName() string { return string(s.Name) }
@@ -312,8 +311,9 @@ func (s WsDescriptorStmt) GetName() string { return string(s.Name) }
 
 type DefQName struct {
 	Pos     lexer.Position
-	Package Ident `parser:"(@Ident '.')?"`
-	Name    Ident `parser:"@Ident"`
+	Package Ident        `parser:"(@Ident '.')?"`
+	Name    Ident        `parser:"@Ident"`
+	qName   appdef.QName // may be filled on the analysis stage
 }
 
 func (q DefQName) String() string {
@@ -464,8 +464,6 @@ type ProjectorTrigger struct {
 	ExecuteAction *ProjectorCommandAction `parser:"'AFTER' (@@"`
 	TableActions  []ProjectionTableAction `parser:"| (@@ ('OR' @@)* ))"`
 	QNames        []DefQName              `parser:"'ON' (('(' @@ (',' @@)* ')') | @@)!)"`
-
-	qNames []appdef.QName // filled on the analysis stage
 }
 
 type ProjectorStmt struct {
@@ -585,10 +583,9 @@ type RateValueTimeUnit struct {
 type RateValue struct {
 	Count           *int              `parser:"(@Int"`
 	Variable        *DefQName         `parser:"| @@) 'PER'"`
-	TimeUnitAmounts *int              `parser:"@Int?"`
+	TimeUnitAmounts *uint32           `parser:"@Int?"`
 	TimeUnit        RateValueTimeUnit `parser:"@@"`
-	variable        appdef.QName      // filled on the analysis stage
-	declare         *DeclareStmt      // filled on the analysis stage
+	count           uint32            // filled on the analysis stage
 }
 
 type RateObjectScope struct {
@@ -597,8 +594,8 @@ type RateObjectScope struct {
 }
 
 type RateSubjectScope struct {
-	PerUser bool `parser:"@('PER' 'USER')"`
-	PerIp   bool `parser:" | @('PER' 'IP')"`
+	PerSubject bool `parser:"@('PER' 'SUBJECT')"`
+	PerIp      bool `parser:" | @('PER' 'IP')"`
 }
 
 type RateStmt struct {
@@ -607,24 +604,54 @@ type RateStmt struct {
 	Value        RateValue         `parser:"@@"`
 	ObjectScope  *RateObjectScope  `parser:"@@?"`
 	SubjectScope *RateSubjectScope `parser:"@@?"`
+	workspace    workspaceAddr     // filled on the analysis stage
 }
 
 func (s RateStmt) GetName() string { return string(s.Name) }
 
 type LimitAction struct {
-	Pos        lexer.Position
-	Table      *DefQName `parser:"(ONTABLE @@)"`
-	Command    *DefQName `parser:"| ('ON' 'COMMAND' @@)"`
-	Query      *DefQName `parser:"| ('ON' 'QUERY' @@)"`
-	Tag        *DefQName `parser:"| ('ON' 'TAG' @@)"`
-	Everything bool      `parser:"| @('ON' 'EVERYTHING')"`
+	Pos     lexer.Position
+	Select  bool `parser:"(@'SELECT'"`
+	Execute bool `parser:"| @EXECUTE"`
+	Insert  bool `parser:"| @'INSERT'"`
+	Update  bool `parser:"| @'UPDATE')"`
 }
 
+type LimitSingleItemFilter struct {
+	Pos     lexer.Position
+	Command *DefQName `parser:"( (ONCOMMAND @@)"`
+	Query   *DefQName `parser:"| (ONQUERY @@)"`
+	Table   *DefQName `parser:"| (ONTABLE @@)"`
+	View    *DefQName `parser:"| (ONVIEW @@) )"`
+}
+
+type LimitAllItemsFilter struct {
+	Pos      lexer.Position
+	Commands bool      `parser:"( @ONALLCOMMANDS"`
+	Queries  bool      `parser:"| @ONALLQUERIES"`
+	Tables   bool      `parser:"| @ONALLTABLES"`
+	Views    bool      `parser:"| @ONALLVIEWS )"`
+	WithTag  *DefQName `parser:"(WITHTAG @@)?"`
+}
+
+type LimitEachItemFilter struct {
+	Pos      lexer.Position
+	Commands bool      `parser:"( @('ON' 'EACH' 'COMMAND')"`
+	Queries  bool      `parser:"| @('ON' 'EACH' 'QUERY')"`
+	Tables   bool      `parser:"| @('ON' 'EACH' 'TABLE')"`
+	Views    bool      `parser:"| @('ON' 'EACH' 'VIEW') )"`
+	WithTag  *DefQName `parser:"(WITHTAG @@)?"`
+}
 type LimitStmt struct {
 	Statement
-	Name     Ident       `parser:"'LIMIT' @Ident"`
-	Action   LimitAction `parser:"@@"`
-	RateName DefQName    `parser:"'WITH' 'RATE' @@"`
+	Name       Ident                  `parser:"'LIMIT' @Ident"`
+	Actions    []LimitAction          `parser:"(@@ (',' @@)*)?"`
+	SingleItem *LimitSingleItemFilter `parser:"( @@"`
+	AllItems   *LimitAllItemsFilter   `parser:"| @@"`
+	EachItem   *LimitEachItemFilter   `parser:"| @@ )"`
+	RateName   DefQName               `parser:"'WITH' 'RATE' @@"`
+	workspace  workspaceAddr          // filled on the analysis stage
+	ops        []appdef.OperationKind // filled on the analysis stage
 }
 
 func (s LimitStmt) GetName() string { return string(s.Name) }
@@ -661,7 +688,7 @@ type GrantAllTablesWithTagActions struct {
 	Pos   lexer.Position
 	All   bool                   `parser:"( @'ALL' | "`
 	Items []GrantAllTablesAction `parser:"(@@ (',' @@)*) )"`
-	Tag   DefQName               `parser:"ONALLTABLESWITHTAG @@"`
+	Tag   DefQName               `parser:"ONALLTABLES WITHTAG @@"`
 }
 
 type GrantAllTables struct {
@@ -673,34 +700,88 @@ type GrantAllTables struct {
 
 type GrantView struct {
 	Pos        lexer.Position
-	AllColumns bool         `parser:"(@SELECTONVIEW | "`
+	AllColumns bool         `parser:"(@(SELECT ONVIEW) | "`
 	Columns    []Identifier `parser:"( SELECT '(' @@ (',' @@)* ')' ONVIEW))"`
 	View       DefQName     `parser:"@@"`
 }
 
 type GrantOrRevoke struct {
-	Command              *DefQName                     `parser:"( (EXECUTEONCOMMAND @@)"`
-	AllCommandsWithTag   *DefQName                     `parser:"  | (EXECUTEONALLCOMMANDSWITHTAG @@)"`
-	Query                *DefQName                     `parser:"  | (EXECUTEONQUERY @@)"`
-	AllQueriesWithTag    *DefQName                     `parser:"  | (EXECUTEONALLQUERIESWITHTAG @@)"`
-	AllViewsWithTag      *DefQName                     `parser:"  | (SELECTONALLVIEWSWITHTAG @@)"`
-	Workspace            *DefQName                     `parser:"  | (INSERTONWORKSPACE @@)"`
-	AllWorkspacesWithTag *DefQName                     `parser:"  | (INSERTONALLWORKSPACESWITHTAG @@)"`
-	View                 *GrantView                    `parser:"  | @@"`
-	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"  | @@"`
-	Table                *GrantTableActions            `parser:"  | @@"`
-	AllCommands          bool                          `parser:"  | @EXECUTEONALLCOMMANDS"`
-	AllQueries           bool                          `parser:"  | @EXECUTEONALLQUERIES"`
-	AllViews             bool                          `parser:"  | @SELECTONALLVIEWS"`
-	AllTables            *GrantAllTables               `parser:"  | @@"`
-	Role                 *DefQName                     `parser:"  | @@)"`
+	Command            *DefQName                     `parser:"( (EXECUTE ONCOMMAND @@)"`
+	AllCommandsWithTag *DefQName                     `parser:"  | (EXECUTE ONALLCOMMANDS WITHTAG @@)"`
+	Query              *DefQName                     `parser:"  | (EXECUTE ONQUERY @@)"`
+	AllQueriesWithTag  *DefQName                     `parser:"  | (EXECUTE ONALLQUERIES WITHTAG @@)"`
+	AllViewsWithTag    *DefQName                     `parser:"  | (SELECT ONALLVIEWS WITHTAG @@)"`
+	View               *GrantView                    `parser:"  | @@"`
+	AllTablesWithTag   *GrantAllTablesWithTagActions `parser:"  | @@"`
+	Table              *GrantTableActions            `parser:"  | @@"`
+	AllCommands        bool                          `parser:"  | @(EXECUTE ONALLCOMMANDS)"`
+	AllQueries         bool                          `parser:"  | @(EXECUTE ONALLQUERIES)"`
+	AllViews           bool                          `parser:"  | @(SELECT ONALLVIEWS)"`
+	AllTables          *GrantAllTables               `parser:"  | @@"`
+	Role               *DefQName                     `parser:"  | @@)"`
+	//AllWorkspacesWithTag *DefQName                     `parser:"  | (INSERTONALLWORKSPACESWITHTAG @@)"`
+	//Workspace *DefQName `parser:"  | (INSERTONWORKSPACE @@)"`
 
 	/* filled on the analysis stage */
 	toRole    appdef.QName
-	on        []appdef.QName
 	ops       []appdef.OperationKind
 	columns   []appdef.FieldName
 	workspace workspaceAddr
+}
+
+func (g GrantOrRevoke) filter() appdef.IFilter {
+	if g.Role != nil {
+		return filter.QNames(g.Role.qName)
+	}
+	if g.Command != nil {
+		return filter.QNames(g.Command.qName)
+	}
+	if g.Query != nil {
+		return filter.QNames(g.Query.qName)
+	}
+	if g.View != nil {
+		return filter.QNames(g.View.View.qName)
+	}
+	if g.AllCommandsWithTag != nil {
+		return filter.And(
+			filter.Types(appdef.TypeKind_Command),
+			filter.Tags(g.AllCommandsWithTag.qName),
+		)
+	}
+	if g.AllCommands {
+		return filter.WSTypes(g.workspace.qName(), appdef.TypeKind_Command)
+	}
+	if g.AllQueriesWithTag != nil {
+		return filter.And(
+			filter.Types(appdef.TypeKind_Query),
+			filter.Tags(g.AllQueriesWithTag.qName),
+		)
+	}
+	if g.AllQueries {
+		return filter.WSTypes(g.workspace.qName(), appdef.TypeKind_Query)
+	}
+	if g.AllViewsWithTag != nil {
+		return filter.And(
+			filter.Types(appdef.TypeKind_ViewRecord),
+			filter.Tags(g.AllViewsWithTag.qName),
+		)
+	}
+	if g.AllViews {
+		return filter.WSTypes(g.workspace.qName(), appdef.TypeKind_ViewRecord)
+	}
+	if g.AllTablesWithTag != nil {
+		return filter.And(
+			filter.Types(appdef.TypeKind_Records.AsArray()...),
+			filter.Tags(g.AllTablesWithTag.Tag.qName),
+		)
+	}
+	if g.AllTables != nil {
+		return filter.WSTypes(g.workspace.qName(), appdef.TypeKind_Records.AsArray()...)
+	}
+	if g.Table != nil {
+		return filter.QNames(g.Table.Table.qName)
+	}
+	panic("unknown grant/revoke statement")
 }
 
 type GrantStmt struct {
@@ -1056,11 +1137,5 @@ type IVariableResolver interface {
 	AsInt32(name appdef.QName) (int32, bool)
 }
 
-// BuildAppDefsOption is a function that can be passed to BuildAppDefs to configure it.
-type BuildAppDefsOption = func(*buildContext)
-
-func WithVariableResolver(resolver IVariableResolver) BuildAppDefsOption {
-	return func(c *buildContext) {
-		c.variableResolver = resolver
-	}
-}
+// ParserOption is a function that can be passed to BuildAppDefs to configure it.
+type ParserOption = func(*basicContext)

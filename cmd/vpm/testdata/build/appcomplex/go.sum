@@ -8,5 +8,7 @@ github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsT
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/voedger/voedger v0.0.0-20241108143238-33e3a259dbe9 h1:6CDxFaDwLO6z+qh4U8UtkOroLnkZl8coeB7dXIglz+k=
 github.com/voedger/voedger v0.0.0-20241108143238-33e3a259dbe9/go.mod h1:XMigq/s2tao7Jn0PPIORDCucZFZFcmuwrYW0uN/q2gc=
+github.com/voedger/voedger v0.0.0-20241210143322-b216a682f6d3 h1:QnM+KFDwKrvGihe5HUSfyPJEsDqQadC/87TrzPydOVI=
+github.com/voedger/voedger v0.0.0-20241210143322-b216a682f6d3/go.mod h1:XMigq/s2tao7Jn0PPIORDCucZFZFcmuwrYW0uN/q2gc=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=

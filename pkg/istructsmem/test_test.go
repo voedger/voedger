@@ -14,6 +14,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -241,17 +244,17 @@ var testData = testDataType{
 func test() *testDataType {
 
 	prepareAppDef := func() appdef.IAppDefBuilder {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage(testData.pkgName, testData.pkgPath)
 
 		wsb := adb.AddWorkspace(testData.wsName)
 
 		{
 			identData := wsb.AddData(testData.dataIdent, appdef.DataKind_string, appdef.NullQName)
-			identData.AddConstraints(appdef.MinLen(1), appdef.MaxLen(50)).SetComment("string from 1 to 50 runes")
+			identData.AddConstraints(constraints.MinLen(1), constraints.MaxLen(50)).SetComment("string from 1 to 50 runes")
 
 			photoData := wsb.AddData(testData.dataPhoto, appdef.DataKind_bytes, appdef.NullQName)
-			photoData.AddConstraints(appdef.MaxLen(1024)).SetComment("up to 1Kb")
+			photoData.AddConstraints(constraints.MaxLen(1024)).SetComment("up to 1Kb")
 
 			saleParams := wsb.AddODoc(testData.saleCmdDocName)
 			saleParams.
@@ -270,7 +273,7 @@ func test() *testDataType {
 			good := wsb.AddORecord(appdef.NewQName(testData.pkgName, testData.goodIdent))
 			good.
 				AddField(testData.saleIdent, appdef.DataKind_RecordID, true).
-				AddField(testData.nameIdent, appdef.DataKind_string, true, appdef.MinLen(1)).
+				AddField(testData.nameIdent, appdef.DataKind_string, true, constraints.MinLen(1)).
 				AddField(testData.codeIdent, appdef.DataKind_int64, true).
 				AddField(testData.weightIdent, appdef.DataKind_float64, false)
 
@@ -280,8 +283,8 @@ func test() *testDataType {
 
 			photoParams := wsb.AddObject(testData.queryPhotoFunctionParamsName)
 			photoParams.
-				AddField(testData.buyerIdent, appdef.DataKind_string, true, appdef.MinLen(1), appdef.MaxLen(50)).
-				AddField(testData.photoRawIdent, appdef.DataKind_bytes, false, appdef.MaxLen(appdef.MaxFieldLength))
+				AddField(testData.buyerIdent, appdef.DataKind_string, true, constraints.MinLen(1), constraints.MaxLen(50)).
+				AddField(testData.photoRawIdent, appdef.DataKind_bytes, false, constraints.MaxLen(appdef.MaxFieldLength))
 		}
 
 		{
@@ -321,7 +324,7 @@ func test() *testDataType {
 				AddField("float64", appdef.DataKind_float64, false).
 				AddField("bytes", appdef.DataKind_bytes, false).
 				AddField("string", appdef.DataKind_string, false).
-				AddField("raw", appdef.DataKind_bytes, false, appdef.MaxLen(appdef.MaxFieldLength)).
+				AddField("raw", appdef.DataKind_bytes, false, constraints.MaxLen(appdef.MaxFieldLength)).
 				AddField("QName", appdef.DataKind_QName, false).
 				AddField("bool", appdef.DataKind_bool, false).
 				AddField("RecordID", appdef.DataKind_RecordID, false).
@@ -337,7 +340,7 @@ func test() *testDataType {
 				AddField("float64", appdef.DataKind_float64, false).
 				AddField("bytes", appdef.DataKind_bytes, false).
 				AddField("string", appdef.DataKind_string, false).
-				AddField("raw", appdef.DataKind_bytes, false, appdef.MaxLen(appdef.MaxFieldLength)).
+				AddField("raw", appdef.DataKind_bytes, false, constraints.MaxLen(appdef.MaxFieldLength)).
 				AddField("QName", appdef.DataKind_QName, false).
 				AddField("bool", appdef.DataKind_bool, false).
 				AddField("RecordID", appdef.DataKind_RecordID, false)
@@ -353,7 +356,7 @@ func test() *testDataType {
 				AddField("float64", appdef.DataKind_float64, false).
 				AddField("bytes", appdef.DataKind_bytes, false).
 				AddField("string", appdef.DataKind_string, false).
-				AddField("raw", appdef.DataKind_bytes, false, appdef.MaxLen(appdef.MaxFieldLength)).
+				AddField("raw", appdef.DataKind_bytes, false, constraints.MaxLen(appdef.MaxFieldLength)).
 				AddField("QName", appdef.DataKind_QName, false).
 				AddField("bool", appdef.DataKind_bool, false).
 				AddField("RecordID", appdef.DataKind_RecordID, false)
@@ -368,7 +371,7 @@ func test() *testDataType {
 				AddField("float64", appdef.DataKind_float64, false).
 				AddField("bytes", appdef.DataKind_bytes, false).
 				AddField("string", appdef.DataKind_string, false).
-				AddField("raw", appdef.DataKind_bytes, false, appdef.MaxLen(appdef.MaxFieldLength)).
+				AddField("raw", appdef.DataKind_bytes, false, constraints.MaxLen(appdef.MaxFieldLength)).
 				AddField("QName", appdef.DataKind_QName, false).
 				AddField("bool", appdef.DataKind_bool, false).
 				AddField("RecordID", appdef.DataKind_RecordID, false)
@@ -381,7 +384,7 @@ func test() *testDataType {
 				AddField(testData.testViewRecord.partFields.workspace, appdef.DataKind_int64)
 			view.Key().ClustCols().
 				AddField(testData.testViewRecord.ccolsFields.device, appdef.DataKind_int32).
-				AddField(testData.testViewRecord.ccolsFields.sorter, appdef.DataKind_string, appdef.MaxLen(100))
+				AddField(testData.testViewRecord.ccolsFields.sorter, appdef.DataKind_string, constraints.MaxLen(100))
 			view.Value().
 				AddField(testData.testViewRecord.valueFields.buyer, appdef.DataKind_string, true).
 				AddField(testData.testViewRecord.valueFields.age, appdef.DataKind_int32, false).
@@ -413,7 +416,7 @@ func test() *testDataType {
 
 		var err error
 
-		testData.StorageProvider = istorageimpl.Provide(mem.Provide())
+		testData.StorageProvider = istorageimpl.Provide(mem.Provide(coreutils.MockTime))
 
 		testData.AppStructsProvider = Provide(testData.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), testData.StorageProvider)
 		testData.AppStructs, err = testData.AppStructsProvider.BuiltIn(testData.appName)

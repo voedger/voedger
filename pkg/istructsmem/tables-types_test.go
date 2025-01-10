@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	log "github.com/voedger/voedger/pkg/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -55,6 +56,13 @@ func Test_newRecord(t *testing.T) {
 			require.Equal(istructs.NullRecordID, r.AsRecordID(appdef.SystemField_ParentID))
 			require.Equal("", r.AsString(appdef.SystemField_Container))
 			require.True(r.AsBool(appdef.SystemField_IsActive))
+		})
+
+		t.Run("test as ICUDRow", func(t *testing.T) {
+			var r istructs.ICUDRow = rec
+			require.False(r.IsActivated())
+			require.False(r.IsDeactivated())
+			require.False(r.IsNew())
 		})
 	})
 
@@ -371,7 +379,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		newFieldName := func(oldValue string) string { return oldValue + "_1" }
 		oldFieldName := func(newValue string) string { return newValue[:len(newValue)-2] }
 
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		t.Run("should be ok to build new ver of application", func(t *testing.T) {
@@ -502,7 +510,7 @@ func TestModifiedFields(t *testing.T) {
 
 	t.Run("should has no modifications if new record", func(t *testing.T) {
 		rec := newRecord(test.AppCfg)
-		for _, _ = range rec.ModifiedFields {
+		for range rec.ModifiedFields {
 			t.Fail()
 		}
 	})
@@ -519,7 +527,7 @@ func TestModifiedFields(t *testing.T) {
 		t.Run("breakable", func(t *testing.T) {
 			for stop := range want {
 				cnt := 0
-				for n, _ := range rec.ModifiedFields {
+				for n := range rec.ModifiedFields {
 					if n == stop {
 						break
 					}

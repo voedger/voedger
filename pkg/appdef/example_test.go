@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 )
 
 func Example() {
@@ -18,7 +19,7 @@ func Example() {
 
 	// how to build AppDef with CDoc
 	{
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
@@ -79,7 +80,7 @@ func Example() {
 		fmt.Println("founded", doc.Container("rec"))
 
 		contCnt := 0
-		for _, c := range doc.Containers() {
+		for c := range doc.Containers() {
 			contCnt++
 			fmt.Printf("%d. %v, occurs: %v…%v\n", contCnt, c, c.MinOccurs(), c.MaxOccurs())
 		}

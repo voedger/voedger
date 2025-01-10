@@ -12,7 +12,7 @@ type ITag interface {
 	IType
 
 	// Unwanted type assertion stub
-	isTag()
+	IsTag()
 }
 
 // IWithTags is an interface for types that have tags.

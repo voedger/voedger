@@ -28,7 +28,7 @@ func provideRefIntegrityValidation(sr istructsmem.IStatelessResources) {
 func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {
 	appDef := appStructs.AppDef()
 	objQName := obj.AsQName(appdef.SystemField_QName)
-	fields := appDef.Type(objQName).(appdef.IFields)
+	fields := appDef.Type(objQName).(appdef.IWithFields)
 
 	for _, refField := range fields.RefFields() {
 		targetID := obj.AsRecordID(refField.Name())

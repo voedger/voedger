@@ -99,7 +99,7 @@ func getPkgAppDefObjs(
 		HeaderFileContent: headerContent,
 	}
 
-	for localName, fullPath := range appDef.Packages {
+	for localName, fullPath := range appDef.Packages() {
 		if fullPath == packagePath {
 			currentPkgLocalName = localName
 		}
@@ -132,7 +132,7 @@ func getPkgAppDefObjs(
 	}
 
 	// gather objects from the current package
-	for workspace := range appDef.Workspaces {
+	for workspace := range appDef.Workspaces() {
 		// add workspace itself to the list of objects as well
 		collectITypeObjs(workspace)(workspace)
 		// then add all types of the workspace
@@ -361,7 +361,7 @@ func processITypeObj(
 		}
 
 		// fetching fields
-		for _, field := range t.(appdef.IFields).Fields() {
+		for _, field := range t.(appdef.IWithFields).Fields() {
 			// skip sys fields
 			if slices.Contains(sysFields, field.Name()) {
 				continue
@@ -385,8 +385,8 @@ func processITypeObj(
 			}
 		}
 
-		if iContainers, ok := t.(appdef.IContainers); ok {
-			for _, container := range iContainers.Containers() {
+		if iContainers, ok := t.(appdef.IWithContainers); ok {
+			for container := range iContainers.Containers() {
 				containerName := container.Name()
 				tableData.Containers = append(tableData.Containers, ormField{
 					Table:         tableData,
@@ -407,30 +407,32 @@ func processITypeObj(
 		iProjectorEvents := t.Events()
 
 		// collecting projector events (Commands, CUDs, etc.)
-		iProjectorEvents.Enum(func(iProjectorEvent appdef.IProjectorEvent) {
-			ormObject := processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, iProjectorEvent.On(), uniqueProjectorCommandEvents)
-			// Avoiding double generation of the same Cmd_ORM object via
-			// checking if it already exists in other projector events
-			cmdOrmObj, ok := ormObject.(ormCommand)
-			skipGeneration := false
-			if ok {
-				skipGeneration = true
-				if _, contains := uniqueProjectorCommandEvents[cmdOrmObj.QName]; !contains {
-					uniqueProjectorCommandEvents[cmdOrmObj.QName] = true
-					skipGeneration = false
+		for event := range iProjectorEvents {
+			for obj := range appdef.FilterMatches(event.Filter(), t.Workspace().Types()) {
+				ormObject := processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, obj, uniqueProjectorCommandEvents)
+				// Avoiding double generation of the same Cmd_ORM object via
+				// checking if it already exists in other projector events
+				cmdOrmObj, ok := ormObject.(ormCommand)
+				skipGeneration := false
+				if ok {
+					skipGeneration = true
+					if _, contains := uniqueProjectorCommandEvents[cmdOrmObj.QName]; !contains {
+						uniqueProjectorCommandEvents[cmdOrmObj.QName] = true
+						skipGeneration = false
+					}
+				}
+
+				if ormObject != nil {
+					ormProjectorItem.On = append(ormProjectorItem.On, ormProjectorEventItem{
+						ormPackageItem: extractOrmPackageItem(ormObject),
+						Projector:      ormProjectorItem,
+						Ops:            slices.Collect(event.Ops()),
+						EventItem:      ormObject,
+						SkipGeneration: skipGeneration,
+					})
 				}
 			}
-
-			if ormObject != nil {
-				ormProjectorItem.On = append(ormProjectorItem.On, ormProjectorEventItem{
-					ormPackageItem: extractOrmPackageItem(ormObject),
-					Projector:      ormProjectorItem,
-					Kinds:          iProjectorEvent.Kind(),
-					EventItem:      ormObject,
-					SkipGeneration: skipGeneration,
-				})
-			}
-		})
+		}
 
 		newItem = ormProjectorItem
 	case appdef.IWorkspace:

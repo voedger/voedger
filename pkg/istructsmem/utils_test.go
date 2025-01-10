@@ -10,10 +10,10 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
@@ -208,7 +208,7 @@ func TestIBucketsFromIAppStructs(t *testing.T) {
 	require := require.New(t)
 
 	cfgs := AppConfigsType{}
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 	cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
@@ -226,5 +226,5 @@ func TestIBucketsFromIAppStructs(t *testing.T) {
 	bsActual, err := buckets.GetDefaultBucketsState(GetFunctionRateLimitName(funcQName, istructs.RateLimitKind_byApp))
 	require.NoError(err)
 	require.Equal(rlExpected.Period, bsActual.Period)
-	require.Equal(irates.NumTokensType(rlExpected.MaxAllowedPerDuration), bsActual.MaxTokensPerPeriod)
+	require.EqualValues(rlExpected.MaxAllowedPerDuration, bsActual.MaxTokensPerPeriod)
 }

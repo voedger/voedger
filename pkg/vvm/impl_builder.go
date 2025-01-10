@@ -6,6 +6,7 @@ package vvm
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -41,7 +42,7 @@ func (ab VVMAppsBuilder) BuildAppsArtefacts(apis builtinapps.APIs, emptyCfgs App
 	builtinAppsArtefacts.AppConfigsType = istructsmem.AppConfigsType(emptyCfgs)
 	for appQName, appBuilder := range ab {
 		appEPs := appsEPs[appQName]
-		adb := appdef.New()
+		adb := builder.New()
 		cfg := builtinAppsArtefacts.AppConfigsType.AddBuiltInAppConfig(appQName, adb)
 		builtInAppDef := appBuilder(apis, cfg, appEPs)
 		cfg.SetNumAppWorkspaces(builtInAppDef.NumAppWorkspaces)
