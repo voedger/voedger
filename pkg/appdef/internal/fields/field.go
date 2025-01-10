@@ -9,7 +9,9 @@ package fields
 import (
 	"errors"
 	"fmt"
+	"iter"
 	"maps"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/comments"
@@ -111,7 +113,7 @@ func (ff WithFields) Field(name appdef.FieldName) appdef.IField {
 
 func (ff WithFields) FieldCount() int { return len(ff.fieldsOrdered) }
 
-func (ff WithFields) Fields() []appdef.IField { return ff.fieldsOrdered }
+func (ff WithFields) Fields() iter.Seq[appdef.IField] { return slices.Values(ff.fieldsOrdered) }
 
 func (ff WithFields) RefField(name appdef.FieldName) (rf appdef.IRefField) {
 	if fld := ff.Field(name); fld != nil {

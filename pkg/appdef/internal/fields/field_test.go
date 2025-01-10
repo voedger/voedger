@@ -104,9 +104,10 @@ func Test_Fields(t *testing.T) {
 	t.Run("should be ok to inspect fields", func(t *testing.T) {
 		obj := appdef.Object(app.Type, objName)
 
+		cnt := 0
 		t.Run("should be ok to enum fields", func(t *testing.T) {
-			for i, f := range obj.Fields() {
-				switch i {
+			for f := range obj.Fields() {
+				switch cnt {
 				case 0:
 					require.Equal(appdef.SystemField_QName, f.Name())
 				case 1:
@@ -118,7 +119,9 @@ func Test_Fields(t *testing.T) {
 				default:
 					require.Fail("unexpected field", "field: %v", f)
 				}
+				cnt++
 			}
+			require.Equal(4, cnt)
 		})
 
 		t.Run("should be ok to inspect user fields", func(t *testing.T) {

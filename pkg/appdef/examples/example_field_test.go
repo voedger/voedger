@@ -43,7 +43,7 @@ func ExampleIFields() {
 		fmt.Printf("%v, user field count: %v\n", doc, doc.UserFieldCount())
 
 		cnt := 0
-		for _, f := range doc.Fields() {
+		for f := range doc.Fields() {
 			if f.IsSys() {
 				continue
 			}
@@ -116,7 +116,7 @@ func ExampleIFieldsBuilder_AddDataField() {
 		fmt.Printf("%v, user field count: %v\n", doc, doc.UserFieldCount())
 
 		cnt := 0
-		for _, f := range doc.Fields() {
+		for f := range doc.Fields() {
 			if f.IsSys() {
 				continue
 			}

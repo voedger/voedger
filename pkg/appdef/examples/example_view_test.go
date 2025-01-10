@@ -7,6 +7,7 @@ package appdef_test
 
 import (
 	"fmt"
+	"iter"
 	"sort"
 	"strings"
 
@@ -67,8 +68,8 @@ func ExampleViews() {
 		view := appdef.View(app.Type, viewName)
 		fmt.Printf("view %q: %v, %s\n", view.QName(), view.Kind(), view.Comment())
 
-		fields := func(ff []appdef.IField) {
-			for _, f := range ff {
+		fields := func(ff iter.Seq[appdef.IField]) {
+			for f := range ff {
 				fmt.Printf("- %s: %s", f.Name(), f.DataKind().TrimString())
 				if f.IsSys() {
 					fmt.Print(", sys")

@@ -5,6 +5,8 @@
 
 package appdef
 
+import "iter"
+
 // Field Verification kind
 type VerificationKind uint8
 
@@ -37,9 +39,7 @@ type IWithFields interface {
 	FieldCount() int
 
 	// All fields in add order.
-	//
-	// TODO: should be iter.Seq2[int, IField] or iter.Seq[IField]
-	Fields() []IField
+	Fields() iter.Seq[IField]
 
 	// Finds reference field by name.
 	//

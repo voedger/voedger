@@ -130,7 +130,7 @@ func Test_Views(t *testing.T) {
 
 			require.Equal(7, view.FieldCount())
 			cnt := 0
-			for _, f := range view.Fields() {
+			for f := range view.Fields() {
 				cnt++
 				switch cnt {
 				case 1:
@@ -164,7 +164,7 @@ func Test_Views(t *testing.T) {
 				key := view.Key()
 				require.Equal(4, key.FieldCount())
 				cnt := 0
-				for _, f := range key.Fields() {
+				for f := range key.Fields() {
 					cnt++
 					switch cnt {
 					case 1:
@@ -191,7 +191,7 @@ func Test_Views(t *testing.T) {
 				pk := view.Key().PartKey()
 				require.Equal(2, pk.FieldCount())
 				cnt := 0
-				for _, f := range pk.Fields() {
+				for f := range pk.Fields() {
 					cnt++
 					switch cnt {
 					case 1:
@@ -212,7 +212,7 @@ func Test_Views(t *testing.T) {
 				cc := view.Key().ClustCols()
 				require.Equal(2, cc.FieldCount())
 				cnt := 0
-				for _, f := range cc.Fields() {
+				for f := range cc.Fields() {
 					cnt++
 					switch cnt {
 					case 1:
@@ -232,7 +232,7 @@ func Test_Views(t *testing.T) {
 				val := view.Value()
 				require.Equal(3, val.FieldCount())
 				cnt := 0
-				for _, f := range val.Fields() {
+				for f := range val.Fields() {
 					cnt++
 					switch cnt {
 					case 1:
@@ -331,7 +331,7 @@ func Test_Views(t *testing.T) {
 		require.Equal(5, view.Value().UserFieldCount())
 
 		cnt := 0
-		for _, f := range view.Value().Fields() {
+		for f := range view.Value().Fields() {
 			cnt++
 			switch f.Name() {
 			case appdef.SystemField_QName:
