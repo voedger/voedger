@@ -81,7 +81,7 @@ func validateObjectIDs(obj *objectType, rawID bool) (ids map[istructs.RecordID]*
 	})
 
 	_ = obj.forEach(func(e *objectType) error {
-		for _, fld := range e.fields.RefFields() {
+		for fld := range e.fields.RefFields() {
 			if id := e.AsRecordID(fld.Name()); id != istructs.NullRecordID {
 				target, exists := ids[id]
 				if !exists {

@@ -30,7 +30,7 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 	objQName := obj.AsQName(appdef.SystemField_QName)
 	fields := appDef.Type(objQName).(appdef.IWithFields)
 
-	for _, refField := range fields.RefFields() {
+	for refField := range fields.RefFields() {
 		targetID := obj.AsRecordID(refField.Name())
 		if targetID == istructs.NullRecordID || targetID.IsRaw() {
 			continue
