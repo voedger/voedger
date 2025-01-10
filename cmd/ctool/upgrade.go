@@ -55,12 +55,7 @@ func upgrade(cmd *cobra.Command, args []string) error {
 	}
 
 	c := newCmd(ckUpgrade, args)
-	defer func(cluster *clusterType) {
-		err = cluster.saveToJSON()
-		if err != nil {
-			loggerError(err.Error())
-		}
-	}(cluster)
+	defer saveClusterToJson(cluster)
 
 	if err = cluster.applyCmd(c); err != nil {
 		return err

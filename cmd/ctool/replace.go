@@ -45,7 +45,7 @@ func replace(cmd *cobra.Command, args []string) error {
 	replacedAddress := args[0]
 
 	// nolint
-	defer cluster.saveToJSON()
+	defer saveClusterToJson(cluster)
 
 	c := newCmd(ckReplace, args)
 	if err = cluster.applyCmd(c); err != nil {
