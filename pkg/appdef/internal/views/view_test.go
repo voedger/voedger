@@ -7,6 +7,7 @@ package views_test
 
 import (
 	"regexp"
+	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -347,7 +348,7 @@ func Test_Views(t *testing.T) {
 			case "valF3":
 				require.Equal(appdef.DataKind_RecordID, f.DataKind())
 				require.False(f.Required())
-				require.EqualValues(appdef.QNames{docName}, f.(appdef.IRefField).Refs())
+				require.EqualValues([]appdef.QName{docName}, slices.Collect(f.(appdef.IRefField).Refs()))
 			case "valF4":
 				require.Equal(appdef.DataKind_bytes, f.DataKind())
 				require.False(f.Required())

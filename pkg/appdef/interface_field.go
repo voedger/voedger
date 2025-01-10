@@ -149,7 +149,7 @@ type IRefField interface {
 	IField
 
 	// Returns list of target references
-	Refs() QNames
+	Refs() iter.Seq[QName]
 
 	// Returns, is the link available
 	Ref(QName) bool

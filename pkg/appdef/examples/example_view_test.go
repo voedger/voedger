@@ -8,6 +8,7 @@ package appdef_test
 import (
 	"fmt"
 	"iter"
+	"slices"
 	"sort"
 	"strings"
 
@@ -78,8 +79,8 @@ func ExampleViews() {
 					fmt.Print(", required")
 				}
 				if r, ok := f.(appdef.IRefField); ok {
-					if len(r.Refs()) != 0 {
-						fmt.Printf(", refs: %v", r.Refs())
+					if refs := slices.Collect(r.Refs()); len(refs) != 0 {
+						fmt.Printf(", refs: %v", refs)
 					}
 				}
 				str := []string{}

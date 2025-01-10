@@ -309,7 +309,7 @@ func (f RefField) Ref(n appdef.QName) bool {
 	return f.refs.Contains(n)
 }
 
-func (f RefField) Refs() appdef.QNames { return f.refs }
+func (f RefField) Refs() iter.Seq[appdef.QName] { return slices.Values(f.refs) }
 
 // Validates specified fields.
 //
@@ -320,7 +320,7 @@ func ValidateTypeFields(t appdef.IType) (err error) {
 	if ff, ok := t.(appdef.IWithFields); ok {
 		// resolve reference types
 		for rf := range ff.RefFields() {
-			for _, n := range rf.Refs() {
+			for n := range rf.Refs() {
 				refType := appdef.Record(t.App().Type, n)
 				if refType == nil {
 					err = errors.Join(err,

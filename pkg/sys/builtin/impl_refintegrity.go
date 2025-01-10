@@ -35,7 +35,8 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 		if targetID == istructs.NullRecordID || targetID.IsRaw() {
 			continue
 		}
-		allowedTargetQNames := refField.Refs()
+		allowedTargetQNames := appdef.CollectQNames(refField.Refs())
+		refField.Refs()
 		kb := appStructs.ViewRecords().KeyBuilder(QNameViewRecordsRegistry)
 		idHi := CrackID(targetID)
 		kb.PutInt64(Field_IDHi, int64(idHi))

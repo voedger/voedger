@@ -65,7 +65,7 @@ func (f *Field) read(field appdef.IField) {
 	f.Required = field.Required()
 	f.Verifiable = field.Verifiable()
 	if ref, ok := field.(appdef.IRefField); ok {
-		for _, r := range ref.Refs() {
+		for r := range ref.Refs() {
 			f.Refs = append(f.Refs, r.String())
 		}
 	}

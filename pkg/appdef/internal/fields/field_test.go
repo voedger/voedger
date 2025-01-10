@@ -347,7 +347,7 @@ func Test_AddRefField(t *testing.T) {
 
 			rf, ok := fld.(appdef.IRefField)
 			require.True(ok)
-			require.Empty(rf.Refs())
+			require.Empty(slices.Collect(rf.Refs()))
 		})
 
 		t.Run("should be ok to obtain reference field", func(t *testing.T) {
@@ -358,7 +358,7 @@ func Test_AddRefField(t *testing.T) {
 			require.Equal(appdef.DataKind_RecordID, rf2.DataKind())
 			require.False(rf2.Required())
 
-			require.EqualValues(appdef.QNames{docName}, rf2.Refs())
+			require.EqualValues([]appdef.QName{docName}, slices.Collect(rf2.Refs()))
 		})
 
 		t.Run("should be nil if unknown reference field", func(t *testing.T) {
@@ -380,7 +380,7 @@ func Test_AddRefField(t *testing.T) {
 						require.True(rf.Ref(docName))
 						require.True(rf.Ref(appdef.NewQName("test", "unknown")), "must be ok because any links are allowed in the field rf1")
 					case 2:
-						require.EqualValues(appdef.QNames{docName}, rf.Refs())
+						require.EqualValues([]appdef.QName{docName}, slices.Collect(rf.Refs()))
 						require.True(rf.Ref(docName))
 						require.False(rf.Ref(appdef.NewQName("test", "unknown")))
 					default:
