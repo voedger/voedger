@@ -122,7 +122,7 @@ func (s *cachedAppStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []
 
 		dataToCache, err := d.MarshalBinary()
 		if err != nil {
-			return false, fmt.Errorf("dataWithTTL.MarshalBinary: %w", err)
+			return false, fmt.Errorf(fmtErrMsgDataWithTTLMarshalBinary, err)
 		}
 		s.cache.Set(makeKey(pKey, cCols), dataToCache)
 	}
@@ -145,7 +145,7 @@ func (s *cachedAppStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, n
 
 		dataToCache, err := d.MarshalBinary()
 		if err != nil {
-			return false, fmt.Errorf("dataWithTTL.MarshalBinary: %w", err)
+			return false, fmt.Errorf(fmtErrMsgDataWithTTLMarshalBinary, err)
 		}
 		s.cache.Set(makeKey(pKey, cCols), dataToCache)
 	}
@@ -179,7 +179,7 @@ func (s *cachedAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok b
 	if found {
 		var d dataWithTTL
 		if err := d.UnmarshalBinary(cachedData); err != nil {
-			return false, fmt.Errorf("dataWithTTL.UnmarshalBinary: %w", err)
+			return false, fmt.Errorf(fmtErrMsgDataWithTTLUnmarshalBinary, err)
 		}
 
 		if isExpired(d.ttl, s.iTime.Now()) {
@@ -214,7 +214,7 @@ func (s *cachedAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err err
 		dataToCache, err := data.MarshalBinary()
 
 		if err != nil {
-			return fmt.Errorf("dataWithTTL.MarshalBinary: %w", err)
+			return fmt.Errorf(fmtErrMsgDataWithTTLMarshalBinary, err)
 		}
 		s.cache.Set(makeKey(pKey, cCols), dataToCache)
 	}
@@ -237,7 +237,7 @@ func (s *cachedAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 			dataToCache, err := data.MarshalBinary()
 
 			if err != nil {
-				return fmt.Errorf("dataWithTTL.MarshalBinary: %w", err)
+				return fmt.Errorf(fmtErrMsgDataWithTTLMarshalBinary, err)
 			}
 			s.cache.Set(makeKey(i.PKey, i.CCols), dataToCache)
 		}
@@ -266,7 +266,7 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 		if len(cachedData) != 0 {
 			var d dataWithTTL
 			if err := d.UnmarshalBinary(cachedData); err != nil {
-				return false, fmt.Errorf("dataWithTTL.UnmarshalBinary: %w", err)
+				return false, fmt.Errorf(fmtErrMsgDataWithTTLUnmarshalBinary, err)
 			}
 			*data = d.data
 
@@ -286,7 +286,7 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 
 	dataToCache, err := d.MarshalBinary()
 	if err != nil {
-		return false, fmt.Errorf("dataWithTTL.MarshalBinary: %w", err)
+		return false, fmt.Errorf(fmtErrMsgDataWithTTLMarshalBinary, err)
 	}
 	s.cache.Set(key, dataToCache)
 
@@ -338,7 +338,7 @@ func (s *cachedAppStorage) getBatchFromStorage(pKey []byte, items []istorage.Get
 
 		dataToCache, err := d.MarshalBinary()
 		if err != nil {
-			return fmt.Errorf("dataWithTTL.MarshalBinary: %w", err)
+			return fmt.Errorf(fmtErrMsgDataWithTTLMarshalBinary, err)
 		}
 		s.cache.Set(makeKey(pKey, item.CCols), dataToCache)
 	}

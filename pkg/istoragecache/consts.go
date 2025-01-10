@@ -7,7 +7,12 @@ package istoragecache
 
 import "time"
 
-const stackKeySize = 512
+const (
+	stackKeySize = 512
+
+	fmtErrMsgDataWithTTLMarshalBinary   = "dataWithTTL.MarshalBinary: %w"
+	fmtErrMsgDataWithTTLUnmarshalBinary = "dataWithTTL.UnmarshalBinary: %w"
+)
 
 var (
 	// maxTTL is the maximum TTL value that can be set for a key in cache.
