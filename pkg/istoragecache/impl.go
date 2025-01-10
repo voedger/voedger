@@ -399,5 +399,6 @@ func (d *dataWithExpiration) unpack(data []byte) {
 	const sizeOfInt64 = 8
 
 	d.data = data[sizeOfInt64 : len(data)-sizeOfInt64]
+	//nolint:gosec
 	d.expireAt = int64(binary.BigEndian.Uint64(data[len(data)-sizeOfInt64:]))
 }
