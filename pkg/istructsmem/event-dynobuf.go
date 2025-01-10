@@ -94,7 +94,7 @@ func storeEventCUD(rec *recordType, buf *bytes.Buffer) {
 	// #2785: store emptied fields
 	emptied := make([]uint16, 0, len(rec.nils))
 	if len(rec.nils) > 0 {
-		fields := rec.fields.UserFields()
+		fields := slices.Collect(rec.fields.UserFields())
 		for _, f := range rec.nils {
 			if idx := slices.Index(fields, f); idx >= 0 {
 				emptied = append(emptied, uint16(idx)) // nolint G115 see [appdef.MaxTypeFieldCount]
@@ -306,25 +306,27 @@ func loadEventCUD(rec *recordType, codecVer byte, buf *bytes.Buffer) error {
 		if err != nil {
 			return enrichError(err, "emptied field count")
 		}
-		if toRead := int(count) * uint16len; toRead > buf.Len() {
-			return enrichError(io.ErrUnexpectedEOF, "emptied fields indexes, expected %d bytes, but only %d bytes is available", toRead, buf.Len())
-		}
-		fields := rec.fields.UserFields()
-		len := uint16(len(fields)) // nolint G115 see [appdef.MaxTypeFieldCount]
-		for i := uint16(0); i < count; i++ {
-			idx, err := utils.ReadUInt16(buf)
-			if err != nil {
-				// no test: possible error (only EOF) is handled above
-				return enrichError(err, "emptied field[%d] index", i)
+		if count > 0 {
+			if toRead := int(count) * uint16len; toRead > buf.Len() {
+				return enrichError(io.ErrUnexpectedEOF, "emptied fields indexes, expected %d bytes, but only %d bytes is available", toRead, buf.Len())
 			}
-			if idx >= len {
-				return ErrOutOfBounds("emptied field[%d] index %d should be less than %d", i, idx, len)
+			fields := slices.Collect(rec.fields.UserFields())
+			len := uint16(len(fields)) // nolint G115 see [appdef.MaxTypeFieldCount]
+			for i := uint16(0); i < count; i++ {
+				idx, err := utils.ReadUInt16(buf)
+				if err != nil {
+					// no test: possible error (only EOF) is handled above
+					return enrichError(err, "emptied field[%d] index", i)
+				}
+				if idx >= len {
+					return ErrOutOfBounds("emptied field[%d] index %d should be less than %d", i, idx, len)
+				}
+				f := fields[idx]
+				if k := f.DataKind(); k != appdef.DataKind_string && k != appdef.DataKind_bytes {
+					return ErrWrongType("emptied %v should be string- (or []byte-) field", f)
+				}
+				rec.checkPutNil(f, nil)
 			}
-			f := fields[idx]
-			if k := f.DataKind(); k != appdef.DataKind_string && k != appdef.DataKind_bytes {
-				return ErrWrongType("emptied %v should be string- (or []byte-) field", f)
-			}
-			rec.checkPutNil(f, nil)
 		}
 	}
 	return nil
