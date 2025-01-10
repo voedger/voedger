@@ -33,10 +33,10 @@ func (t nullType) Workspace() IWorkspace { return nil }
 
 type nullFields struct{}
 
-func (f *nullFields) Field(FieldName) IField       { return nil }
-func (f *nullFields) FieldCount() int              { return 0 }
-func (f *nullFields) Fields() iter.Seq[IField]     { return func(func(IField) bool) {} }
-func (f *nullFields) RefField(FieldName) IRefField { return nil }
-func (f *nullFields) RefFields() []IRefField       { return []IRefField{} }
-func (f *nullFields) UserFieldCount() int          { return 0 }
-func (f *nullFields) UserFields() []IField         { return []IField{} }
+func (f *nullFields) Field(FieldName) IField         { return nil }
+func (f *nullFields) FieldCount() int                { return 0 }
+func (f *nullFields) Fields() iter.Seq[IField]       { return func(func(IField) bool) {} }
+func (f *nullFields) RefField(FieldName) IRefField   { return nil }
+func (f *nullFields) RefFields() iter.Seq[IRefField] { return func(func(IRefField) bool) {} }
+func (f *nullFields) UserFieldCount() int            { return 0 }
+func (f *nullFields) UserFields() []IField           { return []IField{} }

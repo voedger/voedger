@@ -47,9 +47,7 @@ type IWithFields interface {
 	RefField(FieldName) IRefField
 
 	// All reference fields. System field (sys.ParentID) is also included
-	//
-	// TODO: should be iter.Seq[IField]
-	RefFields() []IRefField
+	RefFields() iter.Seq[IRefField]
 
 	// User fields in add order. System fields (sys.QName, sys.ID, …) are excluded
 	//

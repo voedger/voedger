@@ -367,7 +367,7 @@ func Test_AddRefField(t *testing.T) {
 		t.Run("should be ok to enumerate reference fields", func(t *testing.T) {
 			require.Equal(2, func() int {
 				cnt := 0
-				for _, rf := range doc.RefFields() {
+				for rf := range doc.RefFields() {
 					if rf.IsSys() {
 						continue
 					}

@@ -149,7 +149,7 @@ func (ff *WithFields) MakeSysFields() {
 	}
 }
 
-func (ff WithFields) RefFields() []appdef.IRefField { return ff.refFields }
+func (ff WithFields) RefFields() iter.Seq[appdef.IRefField] { return slices.Values(ff.refFields) }
 
 func (ff WithFields) UserFields() []appdef.IField { return ff.userFields }
 
@@ -319,7 +319,7 @@ func (f RefField) Refs() appdef.QNames { return f.refs }
 func ValidateTypeFields(t appdef.IType) (err error) {
 	if ff, ok := t.(appdef.IWithFields); ok {
 		// resolve reference types
-		for _, rf := range ff.RefFields() {
+		for rf := range ff.RefFields() {
 			for _, n := range rf.Refs() {
 				refType := appdef.Record(t.App().Type, n)
 				if refType == nil {
