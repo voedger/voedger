@@ -7,6 +7,7 @@ package fields_test
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"testing"
 
@@ -144,7 +145,7 @@ func Test_Fields(t *testing.T) {
 			require.True(f.Required())
 			require.False(f.Verifiable())
 
-			cc := f.Constraints()
+			cc := maps.Collect(f.Constraints())
 			require.Len(cc, 2)
 			require.Contains(cc, appdef.ConstraintKind_MinIncl)
 			require.Contains(cc, appdef.ConstraintKind_MaxIncl)

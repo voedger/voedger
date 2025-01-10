@@ -139,7 +139,7 @@ type IField interface {
 	// Result contains throughout the data types hierarchy, include all ancestors recursively.
 	// If any constraint (for example `MinLen`) is specified by the ancestor, but redefined in the descendant,
 	// then the constraint from the descendant will include in result.
-	Constraints() map[ConstraintKind]IConstraint
+	Constraints() iter.Seq2[ConstraintKind, IConstraint]
 }
 
 // Reference field. Describe field with DataKind_RecordID.

@@ -47,8 +47,8 @@ func NewField(name appdef.FieldName, data appdef.IData, required bool, comments 
 	return &f
 }
 
-func (fld *Field) Constraints() map[appdef.ConstraintKind]appdef.IConstraint {
-	return fld.constraints
+func (fld *Field) Constraints() iter.Seq2[appdef.ConstraintKind, appdef.IConstraint] {
+	return maps.All(fld.constraints)
 }
 
 func (fld *Field) Data() appdef.IData { return fld.data }
