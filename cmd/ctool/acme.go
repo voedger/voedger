@@ -64,12 +64,7 @@ func acmeAdd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	defer func(cluster *clusterType) {
-		err := cluster.saveToJSON()
-		if err != nil {
-			loggerError(err.Error())
-		}
-	}(cluster)
+	defer saveClusterToJson(cluster)
 
 	if err := mkCommandDirAndLogFile(cmd, cluster); err != nil {
 		return err
@@ -101,12 +96,7 @@ func acmeRemove(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	defer func(cluster *clusterType) {
-		err := cluster.saveToJSON()
-		if err != nil {
-			loggerError(err.Error())
-		}
-	}(cluster)
+	defer saveClusterToJson(cluster)
 
 	if err := mkCommandDirAndLogFile(cmd, cluster); err != nil {
 		return err

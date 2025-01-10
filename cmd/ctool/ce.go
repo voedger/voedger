@@ -93,6 +93,16 @@ func resetMonPassword(c *clusterType) error {
 
 func ceNodeControllerFunction(n *nodeType) error {
 
+	if len(n.Error) > 0 && (n.DesiredNodeState == nil || n.DesiredNodeState.isEmpty()) {
+		n.DesiredNodeState = newNodeState(n.ActualNodeState.Address, n.ActualNodeState.NodeVersion)
+	}
+
+	if n.DesiredNodeState == nil || n.DesiredNodeState.isEmpty() {
+		return nil
+	}
+
+	n.newAttempt()
+
 	loggerInfo(fmt.Sprintf("Deploying docker on a %s %s host...", n.nodeName(), n.address()))
 	if err := newScriptExecuter(n.cluster.sshKey, "").
 		run("ce/docker-install.sh"); err != nil {
