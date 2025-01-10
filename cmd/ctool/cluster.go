@@ -25,6 +25,13 @@ import (
 
 var dryRun bool
 
+func saveClusterToJson(c *clusterType) {
+	err := c.saveToJSON()
+	if err != nil {
+		loggerError(err.Error())
+	}
+}
+
 func newCluster() *clusterType {
 	var cluster = clusterType{
 		DesiredClusterVersion: version,
@@ -354,9 +361,6 @@ func (a *cmdArgsType) replace(sourceValue, destValue string) {
 func (c *cmdType) apply(cluster *clusterType) error {
 
 	var err error
-
-	// nolint
-	defer cluster.saveToJSON()
 
 	if err = cluster.validate(); err != nil {
 		loggerError(err.Error)
@@ -694,7 +698,7 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 	}
 
 	// nolint
-	defer c.saveToJSON()
+	defer saveClusterToJson(c)
 
 	switch cmd.Kind {
 	case ckAcme:
@@ -748,8 +752,11 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 		c.DesiredClusterVersion = version
 		cmd.SkipStacks = c.SkipStacks
 		for i := range c.Nodes {
-			c.Nodes[i].DesiredNodeState.NodeVersion = version
-			c.Nodes[i].DesiredNodeState.Address = c.Nodes[i].ActualNodeState.Address
+			c.Nodes[i].DesiredNodeState = newNodeState(c.Nodes[i].ActualNodeState.Address, version)
+			/*
+				c.Nodes[i].DesiredNodeState.NodeVersion = version
+				c.Nodes[i].DesiredNodeState.Address = c.Nodes[i].ActualNodeState.Address
+			*/
 		}
 	}
 
@@ -766,6 +773,9 @@ func (c *clusterType) updateNodeIndexes() {
 
 // TODO: Filename should be an argument
 func (c *clusterType) saveToJSON() error {
+
+	mu.Lock()
+	defer mu.Unlock()
 
 	if c.Cmd != nil && c.Cmd.isEmpty() {
 		c.Cmd = nil
@@ -919,8 +929,9 @@ func (c *clusterType) setEnv() error {
 func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error {
 
 	defer c.updateNodeIndexes()
+
 	// nolint
-	defer c.saveToJSON()
+	defer saveClusterToJson(c)
 
 	if cmd == initCECmd { // CE args
 		c.Edition = clusterEditionCE
