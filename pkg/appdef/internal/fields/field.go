@@ -151,7 +151,7 @@ func (ff *WithFields) MakeSysFields() {
 
 func (ff WithFields) RefFields() iter.Seq[appdef.IRefField] { return slices.Values(ff.refFields) }
 
-func (ff WithFields) UserFields() []appdef.IField { return ff.userFields }
+func (ff WithFields) UserFields() iter.Seq[appdef.IField] { return slices.Values(ff.userFields) }
 
 func (ff WithFields) UserFieldCount() int { return len(ff.userFields) }
 

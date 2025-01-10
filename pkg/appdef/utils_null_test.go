@@ -47,5 +47,5 @@ func TestNullFields(t *testing.T) {
 	require.Empty(slices.Collect(appdef.NullFields.RefFields()))
 
 	require.Zero(appdef.NullFields.UserFieldCount())
-	require.Empty(appdef.NullFields.UserFields())
+	require.Empty(slices.Collect(appdef.NullFields.UserFields()))
 }

@@ -39,4 +39,4 @@ func (f *nullFields) Fields() iter.Seq[IField]       { return func(func(IField) 
 func (f *nullFields) RefField(FieldName) IRefField   { return nil }
 func (f *nullFields) RefFields() iter.Seq[IRefField] { return func(func(IRefField) bool) {} }
 func (f *nullFields) UserFieldCount() int            { return 0 }
-func (f *nullFields) UserFields() []IField           { return []IField{} }
+func (f *nullFields) UserFields() iter.Seq[IField]   { return func(func(IField) bool) {} }

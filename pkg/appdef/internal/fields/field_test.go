@@ -7,6 +7,7 @@ package fields_test
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -125,7 +126,7 @@ func Test_Fields(t *testing.T) {
 		})
 
 		t.Run("should be ok to inspect user fields", func(t *testing.T) {
-			require.Equal([]appdef.IField{obj.Field("f1"), obj.Field("f2")}, obj.UserFields())
+			require.Equal([]appdef.IField{obj.Field("f1"), obj.Field("f2")}, slices.Collect(obj.UserFields()))
 			require.Equal(2, obj.UserFieldCount())
 			require.Equal(obj.UserFieldCount()+2, obj.FieldCount()) // + sys.QName + sys.Container
 		})

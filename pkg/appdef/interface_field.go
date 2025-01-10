@@ -50,9 +50,7 @@ type IWithFields interface {
 	RefFields() iter.Seq[IRefField]
 
 	// User fields in add order. System fields (sys.QName, sys.ID, …) are excluded
-	//
-	// TODO: should be iter.Seq[IField]
-	UserFields() []IField
+	UserFields() iter.Seq[IField]
 
 	// Returns user fields count. System fields (sys.QName, sys.ID, …) are excluded
 	UserFieldCount() int
