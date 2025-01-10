@@ -115,9 +115,14 @@ func (s *cachedAppStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []
 	}
 
 	if ok {
+		expireAt := maxTTL
+		if ttlSeconds > 0 {
+			expireAt = s.iTime.Now().Add(time.Duration(ttlSeconds) * time.Second).UnixMilli()
+		}
+
 		d := dataWithTTL{
 			data: value,
-			ttl:  s.iTime.Now().Add(time.Duration(ttlSeconds) * time.Second).UnixMilli(),
+			ttl:  expireAt,
 		}
 
 		dataToCache, err := d.MarshalBinary()
@@ -138,9 +143,14 @@ func (s *cachedAppStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, n
 	}
 
 	if ok {
+		expireAt := maxTTL
+		if ttlSeconds > 0 {
+			expireAt = s.iTime.Now().Add(time.Duration(ttlSeconds) * time.Second).UnixMilli()
+		}
+
 		d := dataWithTTL{
 			data: newValue,
-			ttl:  s.iTime.Now().Add(time.Duration(ttlSeconds) * time.Second).UnixMilli(),
+			ttl:  expireAt,
 		}
 
 		dataToCache, err := d.MarshalBinary()
@@ -376,10 +386,12 @@ func isExpired(ttlInMilliseconds int64, now time.Time) bool {
 	return !now.Before(time.UnixMilli(ttlInMilliseconds))
 }
 
-// dataWithTTL holds some byte data and a TTL in unix milleseconds
+// dataWithTTL holds some byte data and expiration time
 type dataWithTTL struct {
+	// data is the byte data
 	data []byte
-	ttl  int64
+	// ttl is the expiration time in unix milliseconds
+	ttl int64
 }
 
 // MarshalBinary implements encoding.BinaryMarshaler.
