@@ -396,6 +396,8 @@ func (d *dataWithExpiration) pack() []byte {
 
 // unpack decodes the data from the byte slice
 func (d *dataWithExpiration) unpack(data []byte) {
-	d.data = data[8 : len(data)-8]
-	d.expireAt = int64(binary.BigEndian.Uint64(data[len(data)-8:]))
+	const sizeOfInt64 = 8
+
+	d.data = data[sizeOfInt64 : len(data)-sizeOfInt64]
+	d.expireAt = int64(binary.BigEndian.Uint64(data[len(data)-sizeOfInt64:]))
 }
