@@ -89,8 +89,8 @@ func resolveInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt
 			return ErrUndefinedType(fn)
 		case *WorkspaceStmt:
 			return ErrUndefinedWorkspace(fn)
-		case *JobStmt:
-			return ErrUndefinedJob(fn)
+		case *ProjectorStmt:
+			return ErrUndefinedProjector(fn)
 		case *RateStmt:
 			return ErrUndefinedRate(fn)
 		case *ViewStmt:

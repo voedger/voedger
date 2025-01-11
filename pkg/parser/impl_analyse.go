@@ -585,10 +585,8 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 			allowedOps(set.From(appdef.OperationKind_Execute))
 		} else if limit.AllItems.Views {
 			allowedOps(set.From(appdef.OperationKind_Select))
-		} else if limit.AllItems.Tables {
-			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select))
 		} else {
-			allowedOps(set.From(appdef.OperationKind_Execute, appdef.OperationKind_Select, appdef.OperationKind_Insert, appdef.OperationKind_Update))
+			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select))
 		}
 		if limit.AllItems.WithTag != nil {
 			if err = resolveInCtx(*limit.AllItems.WithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error {
@@ -607,10 +605,8 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 			allowedOps(set.From(appdef.OperationKind_Execute))
 		} else if limit.EachItem.Views {
 			allowedOps(set.From(appdef.OperationKind_Select))
-		} else if limit.EachItem.Tables {
-			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select))
 		} else {
-			allowedOps(set.From(appdef.OperationKind_Execute, appdef.OperationKind_Select, appdef.OperationKind_Insert, appdef.OperationKind_Update))
+			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select))
 		}
 		if limit.EachItem.WithTag != nil {
 			if err = resolveInCtx(*limit.EachItem.WithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error {
@@ -655,11 +651,7 @@ func analyzeView(view *ViewStmt, c *iterateCtx) {
 				c.stmtErr(&fe.Pos, ErrRecordFieldsOnlyInSys)
 			}
 			rf := fe.RecordField
-			if _, ok := fields[string(rf.Name.Value)]; ok {
-				c.stmtErr(&rf.Name.Pos, ErrRedefined(string(rf.Name.Value)))
-			} else {
-				fields[string(rf.Name.Value)] = i
-			}
+			fields[string(rf.Name.Value)] = i
 		}
 	}
 	if view.pkRef == nil {
@@ -712,10 +704,17 @@ func analyzeView(view *ViewStmt, c *iterateCtx) {
 	var err error
 	var schema *PackageSchemaAST
 
-	projector, schema, err = lookupInCtx[*ProjectorStmt](view.ResultOf, c)
-
-	if projector == nil && err == nil {
-		job, schema, err = lookupInCtx[*JobStmt](view.ResultOf, c)
+	err = resolveInCtx(view.ResultOf, c, func(stmt *ProjectorStmt, pkg *PackageSchemaAST) error {
+		projector = stmt
+		schema = pkg
+		return nil
+	})
+	if err != nil && err.Error() == ErrUndefinedProjector(view.ResultOf).Error() {
+		err = resolveInCtx(view.ResultOf, c, func(stmt *JobStmt, pkg *PackageSchemaAST) error {
+			job = stmt
+			schema = pkg
+			return nil
+		})
 	}
 
 	if err != nil {
@@ -728,24 +727,19 @@ func analyzeView(view *ViewStmt, c *iterateCtx) {
 	if projector != nil {
 		view.asResultOf = schema.NewQName(projector.Name)
 		intents = projector.Intents
-	} else if job != nil {
+	} else {
 		view.asResultOf = schema.NewQName(job.Name)
 		intents = job.Intents
-	} else {
-		c.stmtErr(&view.ResultOf.Pos, ErrUndefined(view.ResultOf.String()))
-		return
 	}
 
 	var intentForView *StateStorage
 	for i := 0; i < len(intents) && intentForView == nil; i++ {
 		var isView bool
 		intent := intents[i]
-		if err := resolveInCtx(intent.Storage, c, func(storage *StorageStmt, _ *PackageSchemaAST) error {
+		_ = resolveInCtx(intent.Storage, c, func(storage *StorageStmt, _ *PackageSchemaAST) error {
 			isView = isView || storage.EntityView
 			return nil
-		}); err != nil {
-			c.stmtErr(&intent.Storage.Pos, err)
-		}
+		}) // ignore error
 
 		if isView {
 			for _, entity := range intent.Entities {
@@ -1260,7 +1254,7 @@ func includeChildWorkspaces(collection IStatementCollection, ws *WorkspaceStmt) 
 }
 
 func analyzeUsedWorkspaces(uws *UseWorkspaceStmt, _ *iterateCtx) {
-	if ws := uws.workspace.workspace; ws != nil {
+	if ws := uws.workspace.workspace; ws != nil && uws.useWs != nil {
 		if usedWS, ok := uws.useWs.Stmt.(*WorkspaceStmt); ok {
 			ws.usedWorkspaces = append(ws.usedWorkspaces, usedWS)
 		}

@@ -984,18 +984,31 @@ func Test_Duplicates(t *testing.T) {
 	}, "\n"))
 
 }
+func Test_Commands(t *testing.T) {
+	require := assertions(t)
+	require.AppSchemaError(`APPLICATION test();
+	WORKSPACE Workspace (
+		EXTENSION ENGINE BUILTIN (
+			COMMAND Orders(fake.Fake, UNLOGGED fake.Fake) RETURNS fake.Fake
+		);
+	)
+	`, "file.vsql:4:19: fake undefined",
+		"file.vsql:4:39: fake undefined",
+		"file.vsql:4:58: fake undefined",
+	)
+}
 
 func Test_DuplicatesInViews(t *testing.T) {
-	require := require.New(t)
-
-	ast, err := ParseFile("file2.vsql", `APPLICATION test();
+	require := assertions(t)
+	require.AppSchemaError(`APPLICATION test();
 	WORKSPACE Workspace (
 		VIEW test(
 			field1 int,
 			field2 int,
 			field1 varchar,
 			PRIMARY KEY(field1),
-			PRIMARY KEY(field2)
+			PRIMARY KEY(field2),
+			field2 ref
 		) AS RESULT OF Proj1;
 
 		EXTENSION ENGINE BUILTIN (
@@ -1003,25 +1016,25 @@ func Test_DuplicatesInViews(t *testing.T) {
 			COMMAND Orders()
 		);
 	)
-	`)
-	require.NoError(err)
-
-	pkg, err := BuildPackageSchema("test/pkg", []*FileSchemaAST{ast})
-	require.NoError(err)
-
-	_, err = BuildAppSchema([]*PackageSchemaAST{
-		pkg,
-		getSysPackageAST(),
-	})
-
-	require.EqualError(err, strings.Join([]string{
-		"file2.vsql:6:4: redefinition of field1",
-		"file2.vsql:8:16: redefinition of primary key",
-	}, "\n"))
-
+	`, "file.vsql:6:4: redefinition of field1",
+		"file.vsql:8:16: redefinition of primary key",
+		"file.vsql:9:4: redefinition of field2",
+	)
 }
 func Test_Views(t *testing.T) {
 	require := assertions(t)
+
+	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
+		VIEW test(
+			field1 int,
+			PRIMARY KEY((field2),field1)
+		) AS RESULT OF Proj1;
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(test));
+			COMMAND Orders()
+		);
+		)
+`, "file.vsql:4:17: undefined field field2")
 
 	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
 			VIEW test(
@@ -1142,6 +1155,16 @@ func Test_Views(t *testing.T) {
 			"file.vsql:5:22: record field field1 not supported in partition key")
 	})
 
+	t.Run("underfined result of", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
+			VIEW test(
+				i int32,
+				field1 int32,
+				PRIMARY KEY((i), field1)
+			) AS RESULT OF Fake;
+			)
+		`, "file.vsql:6:19: Fake undefined")
+	})
 }
 
 func Test_Views2(t *testing.T) {
@@ -2536,7 +2559,7 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l5 ON TABLE t WITH RATE r;
 			LIMIT l20 ON ALL COMMANDS WITH TAG tag WITH RATE r;		
 			LIMIT l30 ON EACH COMMAND WITH TAG tag WITH RATE r;
-
+			LIMIT l40 ON ALL COMMANDS WITH RATE fake;
 			);`,
 			"file.vsql:4:24: undefined command: x",
 			"file.vsql:5:22: undefined query: y",
@@ -2544,6 +2567,7 @@ func Test_RatesAndLimits(t *testing.T) {
 			"file.vsql:7:22: undefined table: t",
 			"file.vsql:8:39: undefined tag: tag",
 			"file.vsql:9:39: undefined tag: tag",
+			"file.vsql:10:40: undefined rate: fake",
 		)
 	})
 
@@ -2562,6 +2586,16 @@ func Test_RatesAndLimits(t *testing.T) {
 		require.False(r.Scope(appdef.RateScope_Workspace))
 		require.False(r.Scope(appdef.RateScope_IP))
 		require.False(r.Scope(appdef.RateScope_User))
+	})
+
+	t.Run("negative rate", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION app1();
+		DECLARE var1 int32 DEFAULT -1;
+		WORKSPACE w (
+			RATE r var1 PER HOUR;
+			);`,
+			"file.vsql:4:11: positive value only allowed",
+		)
 	})
 
 }
@@ -2695,6 +2729,16 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		PROJECTOR ScheduledProjector CRON '1 0 * * *';
 	);
 );`)
+	})
+}
+
+func Test_UseWorkspace(t *testing.T) {
+	require := assertions(t)
+	t.Run("unknown ws", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test(); WORKSPACE ws (USE WORKSPACE fake);`, `file.vsql:1:49: undefined workspace: pkg.fake`)
+	})
+	t.Run("use of abstract ws", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test(); ABSTRACT WORKSPACE ws (); WORKSPACE ws1 (USE WORKSPACE ws);`, `file.vsql:1:76: use of abstract workspace ws`)
 	})
 }
 
