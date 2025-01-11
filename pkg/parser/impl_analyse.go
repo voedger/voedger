@@ -79,6 +79,8 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 		ictx.setPkg(p)
 		iterateContext(ictx, func(stmt interface{}, ictx *iterateCtx) {
 			switch v := stmt.(type) {
+			case *ImportStmt:
+				analyzeImport(v, ictx)
 			case *TagStmt:
 				analyzeTag(v, ictx)
 			case *CommandStmt:
@@ -775,6 +777,30 @@ func analyzeView(view *ViewStmt, c *iterateCtx) {
 	view.workspace = c.mustCurrentWorkspace()
 
 	analyseWith(&view.With, view, c)
+}
+
+func analyzeImport(imp *ImportStmt, c *iterateCtx) {
+	localPkgName := imp.GetLocalPkgName()
+	if !isIdentifier(localPkgName) {
+		c.stmtErr(&imp.Pos, ErrInvalidLocalPackageName(localPkgName))
+		return
+	}
+	if localPkgName == c.pkg.Name {
+		c.stmtErr(&imp.Pos, ErrLocalPackageNameConflict(localPkgName))
+		return
+	}
+	if c.pkg.localNameToPkgPath == nil {
+		c.pkg.localNameToPkgPath = make(map[string]string)
+	}
+	// check if local package name is already used in the package
+	if pkgPath, ok := c.pkg.localNameToPkgPath[localPkgName]; ok {
+		if pkgPath != imp.Name {
+			c.stmtErr(&imp.Pos, ErrLocalPackageNameAlreadyUsed(localPkgName, pkgPath))
+			return
+		}
+	} else {
+		c.pkg.localNameToPkgPath[localPkgName] = imp.Name
+	}
 }
 
 func analyzeTag(tag *TagStmt, c *iterateCtx) {

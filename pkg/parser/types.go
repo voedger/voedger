@@ -22,9 +22,10 @@ type FileSchemaAST struct {
 }
 
 type PackageSchemaAST struct {
-	Name string // Fill on the analysis stage, when the APPLICATION statement is found
-	Path string
-	Ast  *SchemaAST
+	Name               string // Fill on the analysis stage, when the APPLICATION statement is found
+	Path               string
+	Ast                *SchemaAST
+	localNameToPkgPath map[string]string
 }
 
 type AppSchemaAST struct {
@@ -91,6 +92,9 @@ func (p *PackageSchemaAST) NewQName(name Ident) appdef.QName {
 }
 
 func (s *SchemaAST) Iterate(callback func(stmt interface{})) {
+	for i := 0; i < len(s.Imports); i++ {
+		callback(&s.Imports[i])
+	}
 	for i := 0; i < len(s.Statements); i++ {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
@@ -104,6 +108,13 @@ type ImportStmt struct {
 	Pos   lexer.Position
 	Name  string `parser:"'IMPORT' 'SCHEMA' @String"`
 	Alias *Ident `parser:"('AS' @Ident)?"`
+}
+
+func (i *ImportStmt) GetLocalPkgName() string {
+	if i.Alias != nil {
+		return string(*i.Alias)
+	}
+	return ExtractLocalPackageName(i.Name)
 }
 
 type RootStatement struct {

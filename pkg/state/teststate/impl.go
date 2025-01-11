@@ -347,7 +347,7 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 		}
 		packagesAST = append(packagesAST, dummyAppPkgAST)
 	} else {
-		PackageName = parser.GetPackageName(packagePath)
+		PackageName = parser.ExtractLocalPackageName(packagePath)
 	}
 
 	appSchema, err := parser.BuildAppSchema(packagesAST)

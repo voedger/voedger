@@ -8,6 +8,7 @@ package parser
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -284,7 +285,11 @@ func isInternalName(pkgName Ident, pkgAst *PackageSchemaAST) bool {
 	return pkg == "" || pkg == pkgAst.Name
 }
 
-func GetPackageName(pkgPath string) string {
+func isIdentifier(input string) bool {
+	return regexp.MustCompile("^" + identifierRegexp + "$").MatchString(input)
+}
+
+func ExtractLocalPackageName(pkgPath string) string {
 	parts := strings.Split(pkgPath, "/")
 	if len(parts) == 0 {
 		return ""
