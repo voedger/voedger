@@ -9,7 +9,6 @@ import "github.com/voedger/voedger/pkg/iblobstorage"
 const (
 	chunkSize  uint64 = 102400
 	bucketSize uint64 = 100
-	uint64Size        = 8
 )
 
 var (

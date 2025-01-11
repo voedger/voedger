@@ -621,7 +621,7 @@ func testAppStorage_GetBatch(t *testing.T, storage IAppStorage) {
 //nolint:revive,goconst
 func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
 	switch storageImplPkgPath(storage) {
-	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
+	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas", "github.com/voedger/voedger/pkg/istoragecache":
 	default:
 		t.Skip("Unsupported storage type")
 	}
@@ -691,7 +691,7 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iTime c
 //nolint:revive,goconst
 func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
 	switch storageImplPkgPath(storage) {
-	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
+	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas", "github.com/voedger/voedger/pkg/istoragecache":
 	default:
 		t.Skip("Unsupported storage type")
 	}
@@ -712,7 +712,7 @@ func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage, iTime core
 		require.True(ok)
 
 		data := make([]byte, 0)
-		ok, err = storage.Get(pKey, ccols, &data)
+		ok, err = storage.TTLGet(pKey, ccols, &data)
 		require.NoError(err)
 		require.True(ok)
 		require.Equal(newValue, data)
@@ -736,7 +736,7 @@ func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage, iTime core
 		require.False(ok)
 
 		data := make([]byte, 0)
-		ok, err = storage.Get(pKey, ccols, &data)
+		ok, err = storage.TTLGet(pKey, ccols, &data)
 		require.NoError(err)
 		require.False(ok)
 	})
@@ -760,7 +760,7 @@ func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage, iTime core
 		require.False(ok)
 
 		data := make([]byte, 0)
-		ok, err = storage.Get(pKey, ccols, &data)
+		ok, err = storage.TTLGet(pKey, ccols, &data)
 		require.NoError(err)
 		require.True(ok)
 		require.Equal(oldValue, data)
@@ -794,7 +794,7 @@ func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage, iTime core
 //nolint:revive,goconst
 func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
 	switch storageImplPkgPath(storage) {
-	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
+	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas", "github.com/voedger/voedger/pkg/istoragecache":
 	default:
 		t.Skip("Unsupported storage type")
 	}
@@ -814,7 +814,7 @@ func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage, iTime co
 		require.True(ok)
 
 		data := make([]byte, 0)
-		ok, err = storage.Get(pKey, ccols, &data)
+		ok, err = storage.TTLGet(pKey, ccols, &data)
 		require.NoError(err)
 		require.False(ok)
 	})
@@ -836,7 +836,7 @@ func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage, iTime co
 		require.False(ok)
 
 		data := make([]byte, 0)
-		ok, err = storage.Get(pKey, ccols, &data)
+		ok, err = storage.TTLGet(pKey, ccols, &data)
 		require.NoError(err)
 		require.False(ok)
 	})
@@ -867,7 +867,7 @@ func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage, iTime co
 //nolint:revive,goconst
 func testAppStorage_TTLGet(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
 	switch storageImplPkgPath(storage) {
-	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
+	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas", "github.com/voedger/voedger/pkg/istoragecache":
 	default:
 		t.Skip("Unsupported storage type")
 	}
@@ -926,7 +926,7 @@ func testAppStorage_TTLGet(t *testing.T, storage IAppStorage, iTime coreutils.IT
 //nolint:revive,goconst
 func testAppStorage_TTLRead(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
 	switch storageImplPkgPath(storage) {
-	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas":
+	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas", "github.com/voedger/voedger/pkg/istoragecache":
 	default:
 		t.Skip("Unsupported storage type")
 	}
