@@ -176,8 +176,12 @@ func TestBasicUsage_Temporary(t *testing.T) {
 	require.Equal(expBLOB, actualBLOBContent)
 
 	t.Run("expiration", func(t *testing.T) {
-		// make the temp blob almost epired
+		// make the temp blob almost expired
 		coreutils.MockTime.Add(time.Duration(iblobstorage.DurationType_1Day.Seconds()-1) * time.Second)
+
+		// re-issue the system token because it is expired on the previous step
+		systemPrincipal, err = payloads.GetSystemPrincipalTokenApp(as.AppTokens())
+		require.NoError(err)
 
 		// check the temp blob still exists
 		blobReader := vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, blobSUUID, coreutils.WithAuthorizeBy(systemPrincipal))
@@ -189,8 +193,10 @@ func TestBasicUsage_Temporary(t *testing.T) {
 		coreutils.MockTime.Add(time.Second)
 
 		// check the temp blob is disappeared
-		_, err = vit.IFederation.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, blobSUUID, coreutils.WithAuthorizeBy(systemPrincipal))
-		require.NoError(err)
+		vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, blobSUUID,
+			coreutils.WithAuthorizeBy(systemPrincipal),
+			coreutils.Expect404(),
+		)
 	})
 }
 
