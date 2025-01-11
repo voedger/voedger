@@ -42,7 +42,7 @@ func repeat(cmd *cobra.Command, arg []string) error {
 	}
 
 	// nolint
-	defer cluster.saveToJSON()
+	defer saveClusterToJson(cluster)
 
 	// nolint
 	mkCommandDirAndLogFile(cmd, cluster)
