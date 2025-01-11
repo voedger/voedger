@@ -330,9 +330,14 @@ func (require *ParserAssertions) Build(sql string) appdef.IAppDef {
 	return appdef
 }
 
-func (require *ParserAssertions) PkgSchema(filename, pkg, sql string) *PackageSchemaAST {
+func (require *ParserAssertions) FileSchema(filename, sql string) *FileSchemaAST {
 	ast, err := ParseFile(filename, sql)
 	require.NoError(err)
+	return ast
+}
+
+func (require *ParserAssertions) PkgSchema(filename, pkg, sql string) *PackageSchemaAST {
+	ast := require.FileSchema(filename, sql)
 	p, err := BuildPackageSchema(pkg, []*FileSchemaAST{ast})
 	require.NoError(err)
 	return p
@@ -2804,4 +2809,44 @@ func Test_RefInheritedFromSys(t *testing.T) {
 	)
 	`)
 	require.NoError(err)
+}
+
+func Test_LocalPackageNames(t *testing.T) {
+	require := assertions(t)
+	t.Run("local package name must be valid", func(t *testing.T) {
+		require.AppSchemaError(`
+		IMPORT SCHEMA 'github.com/c/1pkg';
+		IMPORT SCHEMA 'github.com/c/2pkg' AS pkg2;
+		APPLICATION test();
+		`, `file.vsql:2:3: invalid local package name 1pkg`)
+	})
+	t.Run("imported package name must not be equal to current package name", func(t *testing.T) {
+		require.AppSchemaError(`
+		IMPORT SCHEMA 'github.com/c/pkg';
+		APPLICATION test();
+		`, `file.vsql:2:3: conflict: local package name pkg equal to current package name`)
+	})
+	t.Run("local package name uniqiness", func(t *testing.T) {
+
+		ast1 := require.FileSchema("file1.vsql", `
+			IMPORT SCHEMA 'github.com/c1/pkg1';
+			IMPORT SCHEMA 'github.com/c2/pkg1';
+			IMPORT SCHEMA 'github.com/c3/pkg11' AS pkg1;
+			IMPORT SCHEMA 'github.com/c4/pkg1' AS pkg2;`)
+
+		ast2 := require.FileSchema("file2.vsql", `IMPORT SCHEMA 'github.com/c5/pkg1';`)
+
+		ast3 := require.FileSchema("file3.vsql", `APPLICATION test();`)
+
+		pkg, err := BuildPackageSchema("github.com/current/pkg", []*FileSchemaAST{ast1, ast2, ast3})
+		require.NoError(err)
+
+		_, err = BuildAppSchema([]*PackageSchemaAST{pkg})
+		expectErrors := []string{
+			`file1.vsql:3:4: local package name pkg1 already used for github.com/c1/pkg1`,
+			`file1.vsql:4:4: local package name pkg1 already used for github.com/c1/pkg1`,
+			`file2.vsql:1:1: local package name pkg1 already used for github.com/c1/pkg1`,
+		}
+		require.EqualError(err, strings.Join(expectErrors, "\n"))
+	})
 }
