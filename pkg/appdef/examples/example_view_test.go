@@ -7,6 +7,8 @@ package appdef_test
 
 import (
 	"fmt"
+	"iter"
+	"slices"
 	"sort"
 	"strings"
 
@@ -67,8 +69,8 @@ func ExampleViews() {
 		view := appdef.View(app.Type, viewName)
 		fmt.Printf("view %q: %v, %s\n", view.QName(), view.Kind(), view.Comment())
 
-		fields := func(ff []appdef.IField) {
-			for _, f := range ff {
+		fields := func(ff iter.Seq[appdef.IField]) {
+			for f := range ff {
 				fmt.Printf("- %s: %s", f.Name(), f.DataKind().TrimString())
 				if f.IsSys() {
 					fmt.Print(", sys")
@@ -77,8 +79,8 @@ func ExampleViews() {
 					fmt.Print(", required")
 				}
 				if r, ok := f.(appdef.IRefField); ok {
-					if len(r.Refs()) != 0 {
-						fmt.Printf(", refs: %v", r.Refs())
+					if refs := slices.Collect(r.Refs()); len(refs) != 0 {
+						fmt.Printf(", refs: %v", refs)
 					}
 				}
 				str := []string{}

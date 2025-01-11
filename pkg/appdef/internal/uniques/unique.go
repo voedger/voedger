@@ -7,6 +7,8 @@ package uniques
 
 import (
 	"fmt"
+	"iter"
+	"maps"
 	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -42,8 +44,8 @@ func (u Unique) Name() appdef.QName {
 	return u.name
 }
 
-func (u Unique) Fields() []appdef.IField {
-	return u.fields
+func (u Unique) Fields() iter.Seq[appdef.IField] {
+	return slices.Values(u.fields)
 }
 
 func (u Unique) String() string {
@@ -100,8 +102,8 @@ func (uu WithUniques) UniqueField() appdef.IField {
 	return uu.field
 }
 
-func (uu WithUniques) Uniques() map[appdef.QName]appdef.IUnique {
-	return uu.uniques
+func (uu WithUniques) Uniques() iter.Seq2[appdef.QName, appdef.IUnique] {
+	return maps.All(uu.uniques)
 }
 
 func (uu *WithUniques) addUnique(name appdef.QName, fields []appdef.FieldName, comment ...string) {
@@ -132,7 +134,7 @@ func (uu *WithUniques) addUnique(name appdef.QName, fields []appdef.FieldName, c
 
 	for _, un := range uu.uniques {
 		ff := make([]appdef.FieldName, 0)
-		for _, f := range un.Fields() {
+		for f := range un.Fields() {
 			ff = append(ff, f.Name())
 		}
 		if slicex.Overlaps(fields, ff) {

@@ -8,6 +8,8 @@ package extensions
 import (
 	"errors"
 	"fmt"
+	"iter"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/comments"
@@ -31,15 +33,15 @@ func NewStorage(app appdef.IAppDef, name appdef.QName, names ...appdef.QName) *S
 	}
 }
 
-func (s Storage) Name() appdef.QName   { return s.QName }
-func (s Storage) Names() appdef.QNames { return s.names }
+func (s Storage) Name() appdef.QName            { return s.QName }
+func (s Storage) Names() iter.Seq[appdef.QName] { return slices.Values(s.names) }
 
 func (s Storage) String() string {
 	return fmt.Sprintf("Storage «%v» %v", s.QName, s.names)
 }
 
 func (s Storage) Validate() (err error) {
-	for _, n := range s.Names() {
+	for n := range s.Names() {
 		if s.app.Type(n).Kind() == appdef.TypeKind_null {
 			err = errors.Join(err,
 				appdef.ErrNotFound("storage «%v» type «%v»", s.QName, n))
@@ -53,7 +55,6 @@ func (s Storage) Validate() (err error) {
 type Storages struct {
 	app      appdef.IAppDef
 	storages map[appdef.QName]*Storage
-	qnames   map[appdef.QName]appdef.QNames
 	ordered  appdef.QNames
 }
 
@@ -61,19 +62,16 @@ func NewStorages(app appdef.IAppDef) *Storages {
 	return &Storages{
 		app:      app,
 		storages: make(map[appdef.QName]*Storage),
-		qnames:   make(map[appdef.QName]appdef.QNames),
 		ordered:  make(appdef.QNames, 0),
 	}
 }
 
-func (ss Storages) Len() int { return len(ss.storages) }
-
-func (ss Storages) Map() map[appdef.QName]appdef.QNames { return ss.qnames }
-
-func (ss Storages) Enum(cb func(appdef.IStorage) bool) {
-	for _, n := range ss.ordered {
-		if !cb(ss.storages[n]) {
-			break
+func (ss Storages) All() iter.Seq2[appdef.QName, appdef.IStorage] {
+	return func(visit func(appdef.QName, appdef.IStorage) bool) {
+		for _, n := range ss.ordered {
+			if !visit(n, ss.storages[n]) {
+				break
+			}
 		}
 	}
 }
@@ -103,7 +101,6 @@ func (ss *Storages) add(name appdef.QName, names ...appdef.QName) {
 		ss.storages[name] = s
 		ss.ordered.Add(name)
 	}
-	ss.qnames[name] = s.names
 }
 
 func (ss *Storages) setComment(name appdef.QName, comment string) {

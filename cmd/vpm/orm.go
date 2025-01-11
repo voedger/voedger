@@ -350,7 +350,7 @@ func processITypeObj(
 
 		iView, isView := t.(appdef.IView)
 		if isView {
-			for _, key := range iView.Key().Fields() {
+			for key := range iView.Key().Fields() {
 				fieldItem := newFieldItem(tableData, key)
 				if fieldItem.Type == unknownType {
 					continue
@@ -361,7 +361,7 @@ func processITypeObj(
 		}
 
 		// fetching fields
-		for _, field := range t.(appdef.IWithFields).Fields() {
+		for field := range t.(appdef.IWithFields).Fields() {
 			// skip sys fields
 			if slices.Contains(sysFields, field.Name()) {
 				continue

@@ -202,6 +202,15 @@ func TestAuthenticate(t *testing.T) {
 	deviceToken, err := appTokens.IssueToken(time.Minute, &pp)
 	require.NoError(err)
 
+	notIncludedRole := appdef.NewQName(appdef.SysPackage, "non-inluded")
+	pp = payloads.PrincipalPayload{
+		Login:       login,
+		SubjectKind: istructs.SubjectKind_User,
+		ProfileWSID: 1,
+		Roles:       []payloads.RoleType{{WSID: 1, QName: testRole}, {WSID: 2, QName: notIncludedRole}},
+	}
+	enrichedToken, err := appTokens.IssueToken(time.Minute, &pp)
+
 	qNameCDocComputers := appdef.NewQName("untill", "computers")
 
 	appStructs := AppStructsWithTestStorage(istructs.AppQName_test1_app1, map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}{
@@ -410,6 +419,36 @@ func TestAuthenticate(t *testing.T) {
 				{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleEveryone},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleAuthenticatedUser},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: testRole},
+			},
+		},
+		{
+			desc: "enriched token -> roles from token taken if its wsid == ownerWSID (one of 2 roles is matched by wsid)",
+			req: iauthnz.AuthnRequest{
+				Host:        "127.0.0.1",
+				RequestWSID: 2,
+				Token:       enrichedToken,
+			},
+			expectedPrincipals: []iauthnz.Principal{
+				{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleEveryone},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleAuthenticatedUser},
+				{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleWorkspaceOwner},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: testRole},
+				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
+			},
+		},
+		{
+			desc: "enriched token -> roles from token taken if its wsid == ownerWSID (no roles matched by wsid)",
+			req: iauthnz.AuthnRequest{
+				Host:        "127.0.0.1",
+				RequestWSID: 42,
+				Token:       enrichedToken,
+			},
+			expectedPrincipals: []iauthnz.Principal{
+				{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleEveryone},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 42, QName: iauthnz.QNameRoleAuthenticatedUser},
+				{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
+				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
 		},
 	}

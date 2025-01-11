@@ -101,7 +101,7 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 								}
 							} else {
 								// allow for all fields
-								for _, f := range str.Fields() {
+								for f := range str.Fields() {
 									allowedFields[f.Name()] = true
 								}
 							}
@@ -142,7 +142,7 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 		}
 		if len(allowedFields) > 0 {
 			allowed = make([]appdef.FieldName, 0, len(allowedFields))
-			for _, fld := range str.Fields() {
+			for fld := range str.Fields() {
 				f := fld.Name()
 				if _, ok := allowedFields[f]; ok {
 					allowed = append(allowed, f)

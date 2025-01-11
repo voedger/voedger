@@ -47,7 +47,7 @@ func ExampleJobs() {
 	{
 		job := appdef.Job(app.Type, jobName)
 		fmt.Println(job, ":")
-		for s := range job.States().Enum {
+		for _, s := range job.States().All() {
 			fmt.Println(" - crone:", job.CronSchedule())
 			fmt.Println(" - state:", s, s.Comment())
 		}

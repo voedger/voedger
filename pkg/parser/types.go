@@ -630,8 +630,7 @@ type LimitAllItemsFilter struct {
 	Commands bool      `parser:"( @ONALLCOMMANDS"`
 	Queries  bool      `parser:"| @ONALLQUERIES"`
 	Tables   bool      `parser:"| @ONALLTABLES"`
-	Views    bool      `parser:"| @ONALLVIEWS"`
-	All      bool      `parser:"| @('ON' 'ALL' ) )"`
+	Views    bool      `parser:"| @ONALLVIEWS )"`
 	WithTag  *DefQName `parser:"(WITHTAG @@)?"`
 }
 
@@ -640,8 +639,7 @@ type LimitEachItemFilter struct {
 	Commands bool      `parser:"( @('ON' 'EACH' 'COMMAND')"`
 	Queries  bool      `parser:"| @('ON' 'EACH' 'QUERY')"`
 	Tables   bool      `parser:"| @('ON' 'EACH' 'TABLE')"`
-	Views    bool      `parser:"| @('ON' 'EACH' 'VIEW')"`
-	Each     bool      `parser:"| @('ON' 'EACH' ) )"`
+	Views    bool      `parser:"| @('ON' 'EACH' 'VIEW') )"`
 	WithTag  *DefQName `parser:"(WITHTAG @@)?"`
 }
 type LimitStmt struct {

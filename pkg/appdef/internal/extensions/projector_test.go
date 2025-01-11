@@ -196,9 +196,6 @@ func Test_Projectors(t *testing.T) {
 					})
 				}
 			})
-
-			require.Empty(prj.States().Map())
-			require.EqualValues(map[appdef.QName]appdef.QNames{sysViews: {viewName}}, prj.Intents().Map())
 		})
 	})
 
