@@ -155,11 +155,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 
 	// returns true if there are custom storages except «sys.View» and «sys.Record»
 	customStorages := func(ss appdef.IStorages) bool {
-		if ss.Len() > 2 {
-			return true
-		}
-		for storage := range ss.Enum {
-			n := storage.Name()
+		for n := range ss.All() {
 			if n != sys.Storage_View && n != sys.Storage_Record {
 				return true
 			}

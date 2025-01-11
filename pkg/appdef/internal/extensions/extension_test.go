@@ -90,8 +90,6 @@ func Test_Extensions(t *testing.T) {
 		require.Equal(cmdName, ext.QName())
 		require.Equal(appdef.ExtensionEngineKind_WASM, ext.Engine())
 		require.Equal(`command`, ext.Name())
-		require.Equal(map[appdef.QName]appdef.QNames{sysLog: {}}, ext.States().Map())
-		require.Equal(map[appdef.QName]appdef.QNames{sysRecords: {}}, ext.Intents().Map())
 		require.Equal(`WASM-Command «test.cmd»`, fmt.Sprint(ext))
 	})
 

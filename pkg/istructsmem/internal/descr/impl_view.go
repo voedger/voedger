@@ -19,7 +19,7 @@ func (v *View) read(view appdef.IView) {
 
 	v.Key.read(view.Key())
 
-	for _, fld := range view.Value().Fields() {
+	for fld := range view.Value().Fields() {
 		f := newField()
 		f.read(fld)
 		v.Value = append(v.Value, f)
@@ -27,12 +27,12 @@ func (v *View) read(view appdef.IView) {
 }
 
 func (k *Key) read(key appdef.IViewKey) {
-	for _, fld := range key.PartKey().Fields() {
+	for fld := range key.PartKey().Fields() {
 		f := newField()
 		f.read(fld)
 		k.Partition = append(k.Partition, f)
 	}
-	for _, fld := range key.ClustCols().Fields() {
+	for fld := range key.ClustCols().Fields() {
 		f := newField()
 		f.read(fld)
 		k.ClustCols = append(k.ClustCols, f)

@@ -5,6 +5,8 @@
 
 package appdef
 
+import "iter"
+
 // Field Verification kind
 type VerificationKind uint8
 
@@ -21,12 +23,12 @@ var VerificationKind_Any = []VerificationKind{VerificationKind_EMail, Verificati
 type FieldName = string
 
 // Final types with fields are:
-//	- TypeKind_GDoc and TypeKind_GRecord,
-//	- TypeKind_CDoc and TypeKind_CRecord,
-//	- TypeKind_ODoc and TypeKind_CRecord,
-//	- TypeKind_WDoc and TypeKind_WRecord,
-//	- TypeKind_Object and TypeKind_Element,
-//	- TypeKind_ViewRecord
+//	- GDoc and GRecord,
+//	- CDoc and CRecord,
+//	- ODoc and ORecord,
+//	- WDoc and WRecord,
+//	- Object,
+//	- ViewRecord
 type IWithFields interface {
 	// Finds field by name.
 	//
@@ -37,9 +39,7 @@ type IWithFields interface {
 	FieldCount() int
 
 	// All fields in add order.
-	//
-	// TODO: should be iter.Seq2[int, IField] or iter.Seq[IField]
-	Fields() []IField
+	Fields() iter.Seq[IField]
 
 	// Finds reference field by name.
 	//
@@ -47,14 +47,10 @@ type IWithFields interface {
 	RefField(FieldName) IRefField
 
 	// All reference fields. System field (sys.ParentID) is also included
-	//
-	// TODO: should be iter.Seq[IField]
-	RefFields() []IRefField
+	RefFields() iter.Seq[IRefField]
 
 	// User fields in add order. System fields (sys.QName, sys.ID, …) are excluded
-	//
-	// TODO: should be iter.Seq[IField]
-	UserFields() []IField
+	UserFields() iter.Seq[IField]
 
 	// Returns user fields count. System fields (sys.QName, sys.ID, …) are excluded
 	UserFieldCount() int
@@ -143,7 +139,7 @@ type IField interface {
 	// Result contains throughout the data types hierarchy, include all ancestors recursively.
 	// If any constraint (for example `MinLen`) is specified by the ancestor, but redefined in the descendant,
 	// then the constraint from the descendant will include in result.
-	Constraints() map[ConstraintKind]IConstraint
+	Constraints() iter.Seq2[ConstraintKind, IConstraint]
 }
 
 // Reference field. Describe field with DataKind_RecordID.
@@ -153,7 +149,7 @@ type IRefField interface {
 	IField
 
 	// Returns list of target references
-	Refs() QNames
+	Refs() iter.Seq[QName]
 
 	// Returns, is the link available
 	Ref(QName) bool
