@@ -8,4 +8,5 @@ package utils
 const (
 	DecimalBase = 10
 	BitSize64   = 64
+	Uint64Size  = 8
 )
