@@ -998,6 +998,19 @@ func Test_Commands(t *testing.T) {
 	)
 }
 
+func Test_Queries(t *testing.T) {
+	require := assertions(t)
+	require.AppSchemaError(`APPLICATION test();
+	WORKSPACE Workspace (
+		EXTENSION ENGINE BUILTIN (
+			QUERY q(fake.Fake) RETURNS fake.Fake
+		);
+	)
+	`, "file.vsql:4:12: fake undefined",
+		"file.vsql:4:31: fake undefined",
+	)
+}
+
 func Test_DuplicatesInViews(t *testing.T) {
 	require := assertions(t)
 	require.AppSchemaError(`APPLICATION test();
@@ -1454,6 +1467,31 @@ func Test_Projectors(t *testing.T) {
 		require.Equal(appdef.FilterKind_QNames, pe[1].Filter().Kind())
 		require.Len(slices.Collect(pe[1].Filter().QNames()), 1)
 		require.Equal("pkg.Tbl3", slices.Collect(pe[1].Filter().QNames())[0].String())
+	})
+
+	t.Run("Intent errors", func(t *testing.T) {
+		require := assertions(t)
+		require.AppSchemaError(`APPLICATION test();
+		WORKSPACE Ws (
+			TABLE Tbl INHERITS sys.CDoc();
+			EXTENSION ENGINE WASM (
+				PROJECTOR p AFTER INSERT ON Tbl INTENTS(sys.Record, sys.View, sys.View(fake), sys.Record(Tbl));
+			);
+		);`, "file.vsql:5:45: storage sys.Record requires entity",
+			"file.vsql:5:57: storage sys.View requires entity",
+			"file.vsql:5:67: undefined view: fake",
+			"file.vsql:5:83: this kind of extension cannot use storage sys.Record in the intents")
+	})
+
+	t.Run("State errors", func(t *testing.T) {
+		require := assertions(t)
+		require.AppSchemaError(`APPLICATION test();
+		WORKSPACE Ws (
+			TABLE Tbl INHERITS sys.CDoc();
+			EXTENSION ENGINE WASM (
+				PROJECTOR p AFTER INSERT ON Tbl  STATE(sys.Subject);
+			);
+		);`, "file.vsql:5:44: this kind of extension cannot use storage sys.Subject in the state")
 	})
 }
 
@@ -1942,23 +1980,15 @@ func Test_Alter_Workspace_In_Package(t *testing.T) {
 }
 
 func Test_Storages(t *testing.T) {
-	require := require.New(t)
-	fs, err := ParseFile("example2.vsql", `APPLICATION test1();
-	EXTENSION ENGINE BUILTIN (
-		STORAGE MyStorage(
-			INSERT SCOPE(PROJECTORS)
-		);
-	)
-	`)
-	require.NoError(err)
-	pkg2, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
-	require.NoError(err)
-
-	schema, err := BuildAppSchema([]*PackageSchemaAST{
-		pkg2,
+	require := assertions(t)
+	t.Run("can be only declared in sys package", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test1();
+		EXTENSION ENGINE BUILTIN (
+			STORAGE MyStorage(
+				INSERT SCOPE(PROJECTORS)
+			);
+		)`, `file.vsql:3:4: storages are only declared in sys package`)
 	})
-	require.ErrorContains(err, "storages are only declared in sys package")
-	require.Nil(schema)
 }
 
 func buildPackage(sql string) *PackageSchemaAST {
