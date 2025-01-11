@@ -81,6 +81,10 @@ func ErrUndefinedJob(name DefQName) error {
 	return fmt.Errorf("undefined job: %s", name)
 }
 
+func ErrUndefinedProjector(name DefQName) error {
+	return fmt.Errorf("undefined projector: %s", name)
+}
+
 func ErrUndefinedRate(name DefQName) error {
 	return fmt.Errorf("undefined rate: %s", name)
 }

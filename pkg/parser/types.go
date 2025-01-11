@@ -48,10 +48,6 @@ type statementNode struct {
 	Stmt INamedStatement
 }
 
-func (s *statementNode) qName() appdef.QName {
-	return s.Pkg.NewQName(Ident(s.Stmt.GetName()))
-}
-
 type Ident string
 
 func (b *Ident) Capture(values []string) error {
@@ -236,35 +232,12 @@ type WorkspaceStmt struct {
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 
 	// filled on the analysis stage
-	nodes               map[appdef.QName]workspaceNode
 	inheritedWorkspaces []*WorkspaceStmt
 	usedWorkspaces      []*WorkspaceStmt
 
 	// filled on build stage
 	qName   appdef.QName
 	builder appdef.IWorkspaceBuilder
-}
-
-type workspaceNode struct {
-	workspace *WorkspaceStmt
-	node      statementNode
-}
-
-func (s *WorkspaceStmt) registerNode(qn appdef.QName, node statementNode, ws *WorkspaceStmt) {
-	wsNode := workspaceNode{workspace: ws, node: node}
-	if s.nodes == nil {
-		s.nodes = make(map[appdef.QName]workspaceNode)
-	}
-	s.nodes[qn] = wsNode
-}
-
-func (s *WorkspaceStmt) containsQName(qName appdef.QName) bool {
-	for k := range s.nodes {
-		if k == qName {
-			return true
-		}
-	}
-	return false
 }
 
 func (s WorkspaceStmt) GetName() string { return string(s.Name) }
