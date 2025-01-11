@@ -2183,9 +2183,21 @@ func Test_Grants(t *testing.T) {
 		GRANT ALL(items2) ON TABLE Tbl2 TO role1;
 		GRANT SELECT ON VIEW Fake TO role1;
 		GRANT SELECT ON ALL VIEWS WITH TAG x TO role1;
+		GRANT fakeRole TO role1;
+		GRANT SELECT(fake) ON VIEW v TO role1;
+		GRANT EXECUTE ON ALL QUERIES WITH TAG fake TO role1;
+		GRANT INSERT ON ALL TABLES WITH TAG fake TO role1;
+		VIEW v(
+			f1 int,	f2 int, PRIMARY KEY((f1),f2)
+		) AS RESULT OF p;
+
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR p AFTER EXECUTE ON c INTENTS (sys.View(v));
+			COMMAND c();
+		);
 	);
 	`, "file.vsql:5:30: undefined role: app1",
-			"file.vsql:5:22: Fake undefined",
+			"file.vsql:5:22: undefined table: Fake",
 			"file.vsql:6:28: undefined command: Fake",
 			"file.vsql:7:26: undefined query: Fake",
 			"file.vsql:9:13: undefined field FakeCol",
@@ -2193,6 +2205,10 @@ func Test_Grants(t *testing.T) {
 			"file.vsql:11:42: undefined tag: x",
 			"file.vsql:21:24: undefined view: Fake",
 			"file.vsql:22:38: undefined tag: x",
+			"file.vsql:23:9: undefined role: fakeRole",
+			"file.vsql:24:16: undefined field fake",
+			"file.vsql:25:41: undefined tag: fake",
+			"file.vsql:26:39: undefined tag: fake",
 		)
 	})
 
