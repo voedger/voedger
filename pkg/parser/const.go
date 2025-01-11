@@ -30,6 +30,8 @@ const OP_EXECUTE = "EXECUTE"
 const OP_ACTIVATE = "ACTIVATE"
 const OP_DEACTIVATE = "DEACTIVATE"
 
+const identifierRegexp = `([a-zA-Z]\w{0,254})|("[a-zA-Z]\w{0,254}")`
+
 var canNotReferenceTo = map[appdef.TypeKind][]appdef.TypeKind{
 	appdef.TypeKind_ODoc:       {},
 	appdef.TypeKind_ORecord:    {},

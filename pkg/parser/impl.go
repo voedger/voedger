@@ -50,7 +50,7 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "TABLE", Pattern: `TABLE`},
 		{Name: "PRIMARYKEY", Pattern: `PRIMARY[ \r\n\t]+KEY`},
 		{Name: "String", Pattern: `('(\\'|[^'])*')`},
-		{Name: "Ident", Pattern: `([a-zA-Z]\w{0,254})|("[a-zA-Z]\w{0,254}")`},
+		{Name: "Ident", Pattern: identifierRegexp},
 		{Name: "Whitespace", Pattern: `[ \r\n\t]+`},
 	})
 
@@ -247,7 +247,7 @@ func defineApp(c *basicContext) {
 	}
 
 	c.app.Name = string(app.Name)
-	appAst.Name = GetPackageName(appAst.Path)
+	appAst.Name = ExtractLocalPackageName(appAst.Path)
 	pkgNames := make(map[string]bool)
 	pkgNames[appAst.Name] = true
 
