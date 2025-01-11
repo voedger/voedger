@@ -172,6 +172,15 @@ func QNamesFrom(n ...QName) QNames {
 	return qq
 }
 
+// Returns slice of QNames from QName iterator.
+//
+// Result slice is sorted and has no duplicates.
+func CollectQNames(names iter.Seq[QName]) QNames {
+	qq := QNames{}
+	qq.Collect(names)
+	return qq
+}
+
 // Parse a qualified names from strings.
 //
 // # Panics:

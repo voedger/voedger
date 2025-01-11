@@ -13,6 +13,7 @@ import (
 	"io"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -52,7 +53,7 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 
 	pKeyWithBucket := newKeyWithBucketNumber(blobKey, bucketNumber)
 
-	cCol := make([]byte, uint64Size)
+	cCol := make([]byte, utils.Uint64Size)
 
 	for ctx.Err() == nil && err == nil {
 		var currentChunkSize int
@@ -111,7 +112,7 @@ func mutateChunkNumber(key []byte, chunkNumber uint64) (mutadedKey []byte) {
 }
 
 func mutateBucketNumber(key []byte, bucketNumber uint64) (mutatedKey []byte) {
-	binary.LittleEndian.PutUint64(key[len(key)-uint64Size:], bucketNumber)
+	binary.LittleEndian.PutUint64(key[len(key)-utils.Uint64Size:], bucketNumber)
 	return key
 }
 

@@ -6,8 +6,6 @@
 package descr
 
 import (
-	"maps"
-
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -45,8 +43,16 @@ func (e *Extension) read(ex appdef.IExtension) {
 	e.Type.read(ex)
 	e.Name = ex.Name()
 	e.Engine = ex.Engine().TrimString()
-	e.States = maps.Clone(ex.States().Map())
-	e.Intents = maps.Clone(ex.Intents().Map())
+	e.States = e.readStorages(ex.States())
+	e.Intents = e.readStorages(ex.Intents())
+}
+
+func (e Extension) readStorages(storages appdef.IStorages) map[appdef.QName]appdef.QNames {
+	s := make(map[appdef.QName]appdef.QNames)
+	for n, storage := range storages.All() {
+		s[n] = appdef.CollectQNames(storage.Names())
+	}
+	return s
 }
 
 func (f *Function) read(fn appdef.IFunction) {

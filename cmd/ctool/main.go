@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -37,8 +38,11 @@ var devMode bool
 var red func(a ...interface{}) string
 var green func(a ...interface{}) string
 
+var mu sync.Mutex
+
 // nolint
 func main() {
+
 	cursorOff()
 	defer cursorOn()
 	ex, err := os.Executable()
@@ -64,6 +68,7 @@ func main() {
 		cursorOn()
 		os.Exit(1)
 	}
+
 }
 
 // adds to the command flag --ssh-key

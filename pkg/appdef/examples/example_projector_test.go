@@ -70,10 +70,10 @@ func ExampleProjectors() {
 		if prj.WantErrors() {
 			fmt.Println(" - want sys.error events")
 		}
-		for s := range prj.States().Enum {
+		for _, s := range prj.States().All() {
 			fmt.Println(" - state:", s, s.Comment())
 		}
-		for i := range prj.Intents().Enum {
+		for _, i := range prj.Intents().All() {
 			fmt.Println(" - intent:", i, i.Comment())
 		}
 
