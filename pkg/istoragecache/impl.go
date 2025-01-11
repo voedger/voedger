@@ -5,7 +5,6 @@
 package istoragecache
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"time"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/istorage"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
@@ -124,7 +124,7 @@ func (s *cachedAppStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []
 		}
 
 		d := dataWithExpiration{data: value, expireAt: expireAt}
-		s.cache.Set(makeKey(pKey, cCols), d.pack())
+		s.cache.Set(makeKey(pKey, cCols), d.toBytes())
 	}
 
 	return ok, nil
@@ -149,7 +149,7 @@ func (s *cachedAppStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, n
 		}
 
 		d := dataWithExpiration{data: newValue, expireAt: expireAt}
-		s.cache.Set(makeKey(pKey, cCols), d.pack())
+		s.cache.Set(makeKey(pKey, cCols), d.toBytes())
 	}
 
 	return ok, nil
@@ -190,7 +190,7 @@ func (s *cachedAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok b
 
 	if found {
 		var d dataWithExpiration
-		d.unpack(cachedData)
+		d.read(cachedData)
 
 		if isExpired(d.expireAt, s.iTime.Now()) {
 			s.cache.Del(key)
@@ -225,7 +225,7 @@ func (s *cachedAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err err
 
 	if err == nil {
 		data := dataWithExpiration{data: value}
-		s.cache.Set(makeKey(pKey, cCols), data.pack())
+		s.cache.Set(makeKey(pKey, cCols), data.toBytes())
 	}
 
 	return err
@@ -243,7 +243,7 @@ func (s *cachedAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 	if err == nil {
 		for _, i := range items {
 			data := dataWithExpiration{data: i.Value}
-			s.cache.Set(makeKey(i.PKey, i.CCols), data.pack())
+			s.cache.Set(makeKey(i.PKey, i.CCols), data.toBytes())
 		}
 	}
 
@@ -267,7 +267,7 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 
 		if len(cachedData) != 0 {
 			d := &dataWithExpiration{}
-			d.unpack(cachedData)
+			d.read(cachedData)
 			*data = d.data
 
 			return len(*data) != 0, nil
@@ -283,7 +283,7 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 	if ok {
 		d.data = *data
 	}
-	s.cache.Set(key, d.pack())
+	s.cache.Set(key, d.toBytes())
 
 	return ok, nil
 }
@@ -309,7 +309,7 @@ func (s *cachedAppStorage) getBatchFromCache(pKey []byte, items []istorage.GetBa
 
 		var d dataWithExpiration
 
-		d.unpack(cachedData)
+		d.read(cachedData)
 		*items[i].Data = d.data
 		items[i].Ok = len(*items[i].Data) != 0
 	}
@@ -328,7 +328,7 @@ func (s *cachedAppStorage) getBatchFromStorage(pKey []byte, items []istorage.Get
 		if item.Ok {
 			d.data = *item.Data
 		}
-		s.cache.Set(makeKey(pKey, item.CCols), d.pack())
+		s.cache.Set(makeKey(pKey, item.CCols), d.toBytes())
 	}
 
 	return err
@@ -364,41 +364,19 @@ func isExpired(expireAt int64, now time.Time) bool {
 	return expireAt != 0 && !now.Before(time.UnixMilli(expireAt))
 }
 
-// dataWithExpiration holds some byte data and expiration time
 type dataWithExpiration struct {
-	// data is the byte data
 	data []byte
-	// expireAt is the expiration time in unix milliseconds
 	expireAt int64
 }
 
-// pack encodes the data to a byte slice
-func (d *dataWithExpiration) pack() []byte {
-	buf := new(bytes.Buffer)
-
-	// Write length of Data (8 bytes, big-endian)
-	if err := binary.Write(buf, binary.BigEndian, int64(len(d.data))); err != nil {
-		return nil
-	}
-
-	// Write the Data bytes
-	if _, err := buf.Write(d.data); err != nil {
-		return nil
-	}
-
-	// Write TTL (8 bytes, big-endian)
-	if err := binary.Write(buf, binary.BigEndian, d.expireAt); err != nil {
-		return nil
-	}
-
-	return buf.Bytes()
+func (d *dataWithExpiration) toBytes() []byte {
+	res := make([]byte, 0, len(d.data)+utils.Uint64Size)
+	res = append(res, d.data...)
+	res = binary.BigEndian.AppendUint64(res, uint64(d.expireAt)) // nolint G115
+	return res
 }
 
-// unpack decodes the data from the byte slice
-func (d *dataWithExpiration) unpack(data []byte) {
-	const sizeOfInt64 = 8
-
-	d.data = data[sizeOfInt64 : len(data)-sizeOfInt64]
-	//nolint:gosec
-	d.expireAt = int64(binary.BigEndian.Uint64(data[len(data)-sizeOfInt64:]))
+func (d *dataWithExpiration) read(data []byte) {
+	d.data = data[:len(data)-utils.Uint64Size]
+	d.expireAt = int64(binary.BigEndian.Uint64(data[len(data)-utils.Uint64Size:])) // nolint G115
 }
