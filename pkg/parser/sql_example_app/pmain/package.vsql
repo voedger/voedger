@@ -300,7 +300,7 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
     GRANT SELECT(Price) ON TABLE untill.Prices TO LocationUser;
     GRANT INSERT(Discount) ON TABLE untill.Promotions TO LocationManager; 
     GRANT SELECT ON VIEW XZReports TO LocationUser;
-    GRANT SELECT(Year) ON VIEW XZReports TO LocationUser;
+    GRANT SELECT(Year,XZReportWDocID) ON VIEW XZReports TO LocationUser;
 
     -- REVOKEs
     -- ALL COMMANDS/QUERIES/TABLES/VIEWS - all resources in the workspace    

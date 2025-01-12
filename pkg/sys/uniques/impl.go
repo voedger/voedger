@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/sys"
 
@@ -30,7 +31,7 @@ func applyUniques(event istructs.IPLogEvent, st istructs.IState, intents istruct
 			continue
 		}
 		for _, unique := range iUniques.Uniques() {
-			if err := handleCUD(rec, st, intents, unique.Fields(), unique.Name()); err != nil {
+			if err := handleCUD(rec, st, intents, slices.Collect(unique.Fields()), unique.Name()); err != nil {
 				return err
 			}
 		}
@@ -321,7 +322,7 @@ func eventUniqueValidator(ctx context.Context, rawEvent istructs.IRawEvent, appS
 			continue
 		}
 		for _, unique := range cudUniques.Uniques() {
-			if err := validateCUD(cudRec, appStructs, wsid, unique.Fields(), unique.Name(), uniquesState); err != nil {
+			if err := validateCUD(cudRec, appStructs, wsid, slices.Collect(unique.Fields()), unique.Name(), uniquesState); err != nil {
 				return err
 			}
 		}

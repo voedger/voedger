@@ -22,9 +22,10 @@ type FileSchemaAST struct {
 }
 
 type PackageSchemaAST struct {
-	Name string // Fill on the analysis stage, when the APPLICATION statement is found
-	Path string
-	Ast  *SchemaAST
+	Name               string // Fill on the analysis stage, when the APPLICATION statement is found
+	Path               string
+	Ast                *SchemaAST
+	localNameToPkgPath map[string]string
 }
 
 type AppSchemaAST struct {
@@ -45,10 +46,6 @@ type PackageFS struct {
 type statementNode struct {
 	Pkg  *PackageSchemaAST
 	Stmt INamedStatement
-}
-
-func (s *statementNode) qName() appdef.QName {
-	return s.Pkg.NewQName(Ident(s.Stmt.GetName()))
 }
 
 type Ident string
@@ -91,6 +88,9 @@ func (p *PackageSchemaAST) NewQName(name Ident) appdef.QName {
 }
 
 func (s *SchemaAST) Iterate(callback func(stmt interface{})) {
+	for i := 0; i < len(s.Imports); i++ {
+		callback(&s.Imports[i])
+	}
 	for i := 0; i < len(s.Statements); i++ {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
@@ -104,6 +104,13 @@ type ImportStmt struct {
 	Pos   lexer.Position
 	Name  string `parser:"'IMPORT' 'SCHEMA' @String"`
 	Alias *Ident `parser:"('AS' @Ident)?"`
+}
+
+func (i *ImportStmt) GetLocalPkgName() string {
+	if i.Alias != nil {
+		return string(*i.Alias)
+	}
+	return ExtractLocalPackageName(i.Name)
 }
 
 type RootStatement struct {
@@ -225,35 +232,12 @@ type WorkspaceStmt struct {
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 
 	// filled on the analysis stage
-	nodes               map[appdef.QName]workspaceNode
 	inheritedWorkspaces []*WorkspaceStmt
 	usedWorkspaces      []*WorkspaceStmt
 
 	// filled on build stage
 	qName   appdef.QName
 	builder appdef.IWorkspaceBuilder
-}
-
-type workspaceNode struct {
-	workspace *WorkspaceStmt
-	node      statementNode
-}
-
-func (s *WorkspaceStmt) registerNode(qn appdef.QName, node statementNode, ws *WorkspaceStmt) {
-	wsNode := workspaceNode{workspace: ws, node: node}
-	if s.nodes == nil {
-		s.nodes = make(map[appdef.QName]workspaceNode)
-	}
-	s.nodes[qn] = wsNode
-}
-
-func (s *WorkspaceStmt) containsQName(qName appdef.QName) bool {
-	for k := range s.nodes {
-		if k == qName {
-			return true
-		}
-	}
-	return false
 }
 
 func (s WorkspaceStmt) GetName() string { return string(s.Name) }

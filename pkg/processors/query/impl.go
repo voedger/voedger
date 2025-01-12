@@ -714,7 +714,7 @@ func (m *queryProcessorMetrics) Increase(metricName string, valueDelta float64) 
 func newFieldsKinds(t appdef.IType) FieldsKinds {
 	res := FieldsKinds{}
 	if fields, ok := t.(appdef.IWithFields); ok {
-		for _, f := range fields.Fields() {
+		for f := range fields.Fields() {
 			res[f.Name()] = f.DataKind()
 		}
 	}

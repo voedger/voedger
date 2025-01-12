@@ -7,6 +7,7 @@ package uniques_test
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -52,26 +53,28 @@ func Test_Uniques(t *testing.T) {
 		require.Equal(2, doc.UniqueCount())
 
 		u := doc.UniqueByName(un2)
-		require.Len(u.Fields(), 3)
-		require.Equal("lastName", u.Fields()[0].Name())
-		require.Equal("name", u.Fields()[1].Name())
-		require.Equal("surname", u.Fields()[2].Name())
+		ff := slices.Collect(u.Fields())
+		require.Len(ff, 3)
+		require.Equal("lastName", ff[0].Name())
+		require.Equal("name", ff[1].Name())
+		require.Equal("surname", ff[2].Name())
 
 		require.Equal(doc.UniqueCount(), func() int {
 			cnt := 0
 			for n, u := range doc.Uniques() {
 				cnt++
 				require.Equal(n, u.Name())
+				ff := slices.Collect(u.Fields())
 				switch n {
 				case un1:
-					require.Len(u.Fields(), 1)
-					require.Equal("eMail", u.Fields()[0].Name())
-					require.Equal(appdef.DataKind_string, u.Fields()[0].DataKind())
+					require.Len(ff, 1)
+					require.Equal("eMail", ff[0].Name())
+					require.Equal(appdef.DataKind_string, ff[0].DataKind())
 				case un2:
-					require.Len(u.Fields(), 3)
-					require.Equal("lastName", u.Fields()[0].Name())
-					require.Equal("name", u.Fields()[1].Name())
-					require.Equal("surname", u.Fields()[2].Name())
+					require.Len(ff, 3)
+					require.Equal("lastName", ff[0].Name())
+					require.Equal("name", ff[1].Name())
+					require.Equal("surname", ff[2].Name())
 				}
 			}
 			return cnt

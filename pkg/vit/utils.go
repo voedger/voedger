@@ -114,7 +114,7 @@ func (vit *VIT) getCDoc(appQName appdef.AppQName, qName appdef.QName, wsid istru
 	as, err := vit.IAppStructsProvider.BuiltIn(appQName)
 	require.NoError(vit.T, err)
 	if doc := appdef.CDoc(as.AppDef().Type, qName); doc != nil {
-		for _, field := range doc.Fields() {
+		for field := range doc.Fields() {
 			if field.IsSys() {
 				continue
 			}

@@ -45,6 +45,18 @@ var ErrGrantFollowsRevoke = errors.New("GRANT follows REVOKE in the same contain
 var ErrJobMustBeInAppWorkspace = errors.New("JOB is only allowed in AppWorkspaceWS")
 var ErrPositiveValueOnly = errors.New("positive value only allowed")
 
+func ErrInvalidLocalPackageName(name string) error {
+	return fmt.Errorf("invalid local package name %s", name)
+}
+
+func ErrLocalPackageNameConflict(name string) error {
+	return fmt.Errorf("conflict: local package name %s equal to current package name", name)
+}
+
+func ErrLocalPackageNameAlreadyUsed(name string, usedFor string) error {
+	return fmt.Errorf("local package name %s already used for %s", name, usedFor)
+}
+
 func ErrLocalPackageNameRedeclared(localPkgName, newLocalPkgName string) error {
 	return fmt.Errorf("local package name %s was redeclared as %s", localPkgName, newLocalPkgName)
 }
@@ -67,6 +79,10 @@ func ErrUndefinedQuery(name DefQName) error {
 
 func ErrUndefinedJob(name DefQName) error {
 	return fmt.Errorf("undefined job: %s", name)
+}
+
+func ErrUndefinedProjector(name DefQName) error {
+	return fmt.Errorf("undefined projector: %s", name)
 }
 
 func ErrUndefinedRate(name DefQName) error {
