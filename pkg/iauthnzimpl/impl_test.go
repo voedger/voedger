@@ -26,12 +26,6 @@ const (
 	nonInitedWSID = 4
 )
 
-эвривана теперь нет, а он ожидается
-
-// var (
-// 	qNameViewDeviceProfileWSIDIdx = appdef.NewQName(airPackage, "DeviceProfileWSIDIdx")
-// )
-
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	logger.SetLogLevel(logger.LogLevelVerbose)
@@ -210,15 +204,6 @@ func TestAuthenticate(t *testing.T) {
 	appStructs := AppStructsWithTestStorage(istructs.AppQName_test1_app1, map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}{
 		// WSID 1 is the user profile
 		istructs.WSID(1): {
-			// qNameViewDeviceProfileWSIDIdx: {
-			// 	1: {
-			// 		field_dummy:                 int32(1),
-			// 		field_DeviceProfileWSID:     int64(1),
-			// 		appdef.SystemField_IsActive: true,
-			// 		field_ComputersID:           istructs.RecordID(2),
-			// 		field_RestaurantComputersID: istructs.RecordID(3),
-			// 	},
-			// },
 			// wrong to store in the user profile wsid, but ok for test
 			qNameCDocComputers: {
 				2: {
@@ -377,7 +362,6 @@ func TestAuthenticate(t *testing.T) {
 				Token:       enrichedToken,
 			},
 			expectedPrincipals: []iauthnz.Principal{
-				{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleEveryone},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleAuthenticatedUser},
 				{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleWorkspaceOwner},
@@ -393,7 +377,6 @@ func TestAuthenticate(t *testing.T) {
 				Token:       enrichedToken,
 			},
 			expectedPrincipals: []iauthnz.Principal{
-				{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleEveryone},
 				{Kind: iauthnz.PrincipalKind_Role, WSID: 42, QName: iauthnz.QNameRoleAuthenticatedUser},
 				{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
