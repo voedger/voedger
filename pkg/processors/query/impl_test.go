@@ -23,6 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
+	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iextengine"
@@ -207,12 +208,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 		AddField("name", appdef.DataKind_string, true).
 		AddField("id_department", appdef.DataKind_int64, true)
 
-	// simplified cdoc.sys.WorkspaceDescriptor
-	wsDescBuilder := wsb.AddCDoc(authnz.QNameCDocWorkspaceDescriptor)
-	wsDescBuilder.
-		AddField(authnz.Field_WSKind, appdef.DataKind_QName, false).
-		AddField(authnz.Field_Status, appdef.DataKind_int32, false)
-	wsDescBuilder.SetSingleton()
+	wsdescutil.AddWorkspaceDescriptorStubDef(wsb)
 
 	wsb.AddQuery(qNameFunction).SetParam(qNameFindArticlesByModificationTimeStampRangeParams).SetResult(appdef.NewQName("bo", "Article"))
 	wsb.AddCommand(istructs.QNameCommandCUD)

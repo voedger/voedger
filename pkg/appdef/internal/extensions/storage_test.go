@@ -7,6 +7,7 @@ package extensions_test
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -72,47 +73,39 @@ func Test_Storages(t *testing.T) {
 
 			t.Run("should be ok enum states", func(t *testing.T) {
 				cnt := 0
-				for s := range prj.States().Enum {
+				for n, s := range prj.States().All() {
 					cnt++
+					require.Equal(n, s.Name())
+					names := appdef.CollectQNames(s.Names())
 					switch cnt {
 					case 1: // "sys.WLog" < "sys.records" (`W` < `r`)
-						require.Equal(sysWLog, s.Name())
-						require.Empty(s.Names())
+						require.Equal(sysWLog, n)
+						require.Empty(names)
 						require.Equal(`Storage «sys.WLog» []`, fmt.Sprint(s))
 					case 2:
-						require.Equal(sysRecords, s.Name())
-						require.EqualValues(appdef.QNames{docName}, s.Names())
+						require.Equal(sysRecords, n)
+						require.EqualValues(appdef.QNames{docName}, names)
 						require.Equal(`Storage «sys.records» [test.document]`, fmt.Sprint(s))
 					default:
 						require.Failf("unexpected state", "state: %v", s)
 					}
 				}
 				require.Equal(2, cnt)
-				require.Equal(cnt, prj.States().Len())
 
 				t.Run("should be ok to break enum states", func(t *testing.T) {
 					cnt := 0
-					for range prj.States().Enum {
+					for range prj.States().All() {
 						cnt++
 						break
 					}
 					require.Equal(1, cnt)
 				})
 
-				t.Run("should be ok to get states as map", func(t *testing.T) {
-					states := prj.States().Map()
-					require.Len(states, 2)
-					require.Contains(states, sysRecords)
-					require.EqualValues(appdef.QNames{docName}, states[sysRecords])
-					require.Contains(states, sysWLog)
-					require.Empty(states[sysWLog])
-				})
-
 				t.Run("should be ok to get state by name", func(t *testing.T) {
 					state := prj.States().Storage(sysRecords)
 					require.NotNil(state)
 					require.Equal(sysRecords, state.Name())
-					require.EqualValues(appdef.QNames{docName}, state.Names())
+					require.EqualValues([]appdef.QName{docName}, slices.Collect(state.Names()))
 
 					require.Nil(prj.States().Storage(appdef.NewQName("test", "unknown")), "should be nil for unknown state")
 				})
@@ -120,12 +113,13 @@ func Test_Storages(t *testing.T) {
 
 			t.Run("should be ok enum intents", func(t *testing.T) {
 				cnt := 0
-				for i := range prj.Intents().Enum {
+				for n, i := range prj.Intents().All() {
 					cnt++
+					require.Equal(n, i.Name())
 					switch cnt {
 					case 1:
-						require.Equal(sysViews, i.Name())
-						require.EqualValues(appdef.QNames{viewName}, i.Names())
+						require.Equal(sysViews, n)
+						require.EqualValues([]appdef.QName{viewName}, slices.Collect(i.Names()))
 						require.Equal("view is intent for projector", i.Comment())
 						require.Equal(`Storage «sys.views» [test.view]`, fmt.Sprint(i))
 					default:
@@ -133,29 +127,21 @@ func Test_Storages(t *testing.T) {
 					}
 				}
 				require.Equal(1, cnt)
-				require.Equal(cnt, prj.Intents().Len())
 
 				t.Run("should be ok to break enum intents", func(t *testing.T) {
 					cnt := 0
-					for range prj.Intents().Enum {
+					for range prj.Intents().All() {
 						cnt++
 						break
 					}
 					require.Equal(1, cnt)
 				})
 
-				t.Run("should be ok to get intents as map", func(t *testing.T) {
-					intents := prj.Intents().Map()
-					require.Len(intents, 1)
-					require.Contains(intents, sysViews)
-					require.EqualValues(appdef.QNames{viewName}, intents[sysViews])
-				})
-
 				t.Run("should be ok to get intent by name", func(t *testing.T) {
 					intent := prj.Intents().Storage(sysViews)
 					require.NotNil(intent)
 					require.Equal(sysViews, intent.Name())
-					require.EqualValues(appdef.QNames{viewName}, intent.Names())
+					require.EqualValues([]appdef.QName{viewName}, slices.Collect(intent.Names()))
 
 					require.Nil(prj.Intents().Storage(appdef.NewQName("test", "unknown")), "should be nil for unknown intent")
 				})

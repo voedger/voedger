@@ -50,7 +50,7 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "TABLE", Pattern: `TABLE`},
 		{Name: "PRIMARYKEY", Pattern: `PRIMARY[ \r\n\t]+KEY`},
 		{Name: "String", Pattern: `('(\\'|[^'])*')`},
-		{Name: "Ident", Pattern: `([a-zA-Z]\w{0,254})|("[a-zA-Z]\w{0,254}")`},
+		{Name: "Ident", Pattern: identifierRegexp},
 		{Name: "Whitespace", Pattern: `[ \r\n\t]+`},
 	})
 
@@ -247,7 +247,7 @@ func defineApp(c *basicContext) {
 	}
 
 	c.app.Name = string(app.Name)
-	appAst.Name = GetPackageName(appAst.Path)
+	appAst.Name = ExtractLocalPackageName(appAst.Path)
 	pkgNames := make(map[string]bool)
 	pkgNames[appAst.Name] = true
 
@@ -290,7 +290,7 @@ func defineApp(c *basicContext) {
 	}
 }
 
-func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
+func buildAppSchemaImpl(packages []*PackageSchemaAST, opts ...ParserOption) (*AppSchemaAST, error) {
 
 	pkgMap := make(map[string]*PackageSchemaAST)
 	pkgPathLocalNames := make(map[string]string, len(packages))
@@ -331,6 +331,10 @@ func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
 		errs: make([]error, 0),
 	}
 
+	for _, opt := range opts {
+		opt(&c)
+	}
+
 	c.errs = append(c.errs, importErrors...)
 
 	defineApp(&c)
@@ -349,8 +353,9 @@ func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
 }
 
 type basicContext struct {
-	app  *AppSchemaAST
-	errs []error
+	variableResolver IVariableResolver
+	app              *AppSchemaAST
+	errs             []error
 }
 
 func (c *basicContext) newStmtErr(pos *lexer.Position, err error) error {
@@ -365,10 +370,13 @@ func (c *basicContext) err(err error) {
 	c.errs = append(c.errs, err)
 }
 
-func buildAppDefs(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder, opts ...BuildAppDefsOption) error {
-	ctx := newBuildContext(appSchema, builder)
-	for _, opt := range opts {
-		opt(ctx)
+func WithVariableResolver(resolver IVariableResolver) ParserOption {
+	return func(c *basicContext) {
+		c.variableResolver = resolver
 	}
+}
+
+func buildAppDefs(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) error {
+	ctx := newBuildContext(appSchema, builder)
 	return ctx.build()
 }

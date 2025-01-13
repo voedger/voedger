@@ -5,7 +5,7 @@ The `filter` package provides a set of utilities for filtering types in the `app
 Filters should be used for building projectors, ACL rules, Rate limits and other.
 
 ## General Example
-  
+
 ```go
 package main
 
@@ -24,7 +24,7 @@ func main() {
 	cmd := appdef.NewQName("test", "command")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)

@@ -6,11 +6,14 @@ package istoragecache
 
 import (
 	"context"
+	"encoding/binary"
 	"time"
 
 	"github.com/VictoriaMetrics/fastcache"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/istorage"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
@@ -20,6 +23,7 @@ type cachedAppStorage struct {
 	storage  istorage.IAppStorage
 	vvm      string
 	appQName appdef.AppQName
+	iTime    coreutils.ITime
 
 	/* metrics */
 	mGetSeconds                 *imetrics.MetricValue
@@ -36,15 +40,10 @@ type cachedAppStorage struct {
 	mReadTotal                  *imetrics.MetricValue
 	mReadSeconds                *imetrics.MetricValue
 	mIncreaseIfNotExistsSeconds *imetrics.MetricValue
-	mIncreaseIfNotExistsTotal   *imetrics.MetricValue
 	mCompareAndSwapSeconds      *imetrics.MetricValue
-	mCompareAndSwapTotal        *imetrics.MetricValue
 	mCompareAndDeleteSeconds    *imetrics.MetricValue
-	mCompareAndDeletepTotal     *imetrics.MetricValue
 	mTTLGetSeconds              *imetrics.MetricValue
-	mTTLGetTotal                *imetrics.MetricValue
 	mTTLReadSeconds             *imetrics.MetricValue
-	mTTLReadTotal               *imetrics.MetricValue
 }
 
 type implCachingAppStorageProvider struct {
@@ -52,6 +51,7 @@ type implCachingAppStorageProvider struct {
 	maxBytes        int
 	metrics         imetrics.IMetrics
 	vvmName         string
+	iTime           coreutils.ITime
 }
 
 func (asp *implCachingAppStorageProvider) AppStorage(appQName appdef.AppQName) (istorage.IAppStorage, error) {
@@ -59,59 +59,160 @@ func (asp *implCachingAppStorageProvider) AppStorage(appQName appdef.AppQName) (
 	if err != nil {
 		return nil, err
 	}
-	return newCachingAppStorage(asp.maxBytes, nonCachingAppStorage, asp.metrics, asp.vvmName, appQName), nil
+
+	return newCachingAppStorage(
+		asp.maxBytes,
+		nonCachingAppStorage,
+		asp.metrics,
+		asp.vvmName,
+		appQName,
+		asp.iTime,
+	), nil
 }
 
-func newCachingAppStorage(maxBytes int, nonCachingAppStorage istorage.IAppStorage, metrics imetrics.IMetrics, vvm string, appQName appdef.AppQName) istorage.IAppStorage {
+func newCachingAppStorage(
+	maxBytes int,
+	nonCachingAppStorage istorage.IAppStorage,
+	metrics imetrics.IMetrics,
+	vvm string,
+	appQName appdef.AppQName,
+	iTime coreutils.ITime,
+) istorage.IAppStorage {
 	return &cachedAppStorage{
-		cache:                fastcache.New(maxBytes),
-		storage:              nonCachingAppStorage,
-		mGetTotal:            metrics.AppMetricAddr(getTotal, vvm, appQName),
-		mGetCachedTotal:      metrics.AppMetricAddr(getCachedTotal, vvm, appQName),
-		mGetSeconds:          metrics.AppMetricAddr(getSeconds, vvm, appQName),
-		mGetBatchSeconds:     metrics.AppMetricAddr(getBatchSeconds, vvm, appQName),
-		mGetBatchTotal:       metrics.AppMetricAddr(getBatchTotal, vvm, appQName),
-		mGetBatchCachedTotal: metrics.AppMetricAddr(getBatchCachedTotal, vvm, appQName),
-		mPutTotal:            metrics.AppMetricAddr(putTotal, vvm, appQName),
-		mPutSeconds:          metrics.AppMetricAddr(putSeconds, vvm, appQName),
-		mPutBatchTotal:       metrics.AppMetricAddr(putBatchTotal, vvm, appQName),
-		mPutBatchSeconds:     metrics.AppMetricAddr(putBatchSeconds, vvm, appQName),
-		mPutBatchItemsTotal:  metrics.AppMetricAddr(putBatchItemsTotal, vvm, appQName),
-		mReadTotal:           metrics.AppMetricAddr(readTotal, vvm, appQName),
-		mReadSeconds:         metrics.AppMetricAddr(readSeconds, vvm, appQName),
-		vvm:                  vvm,
-		appQName:             appQName,
+		cache:                       fastcache.New(maxBytes),
+		storage:                     nonCachingAppStorage,
+		mGetTotal:                   metrics.AppMetricAddr(getTotal, vvm, appQName),
+		mGetCachedTotal:             metrics.AppMetricAddr(getCachedTotal, vvm, appQName),
+		mGetSeconds:                 metrics.AppMetricAddr(getSeconds, vvm, appQName),
+		mGetBatchSeconds:            metrics.AppMetricAddr(getBatchSeconds, vvm, appQName),
+		mGetBatchTotal:              metrics.AppMetricAddr(getBatchTotal, vvm, appQName),
+		mGetBatchCachedTotal:        metrics.AppMetricAddr(getBatchCachedTotal, vvm, appQName),
+		mPutTotal:                   metrics.AppMetricAddr(putTotal, vvm, appQName),
+		mPutSeconds:                 metrics.AppMetricAddr(putSeconds, vvm, appQName),
+		mPutBatchTotal:              metrics.AppMetricAddr(putBatchTotal, vvm, appQName),
+		mPutBatchSeconds:            metrics.AppMetricAddr(putBatchSeconds, vvm, appQName),
+		mPutBatchItemsTotal:         metrics.AppMetricAddr(putBatchItemsTotal, vvm, appQName),
+		mReadTotal:                  metrics.AppMetricAddr(readTotal, vvm, appQName),
+		mReadSeconds:                metrics.AppMetricAddr(readSeconds, vvm, appQName),
+		mIncreaseIfNotExistsSeconds: metrics.AppMetricAddr(insertIfNotExistsSeconds, vvm, appQName),
+		mCompareAndSwapSeconds:      metrics.AppMetricAddr(compareAndSwapSeconds, vvm, appQName),
+		mCompareAndDeleteSeconds:    metrics.AppMetricAddr(compareAndDeleteSeconds, vvm, appQName),
+		mTTLGetSeconds:              metrics.AppMetricAddr(ttlGetSeconds, vvm, appQName),
+		mTTLReadSeconds:             metrics.AppMetricAddr(ttlReadSeconds, vvm, appQName),
+		vvm:                         vvm,
+		appQName:                    appQName,
+		iTime:                       iTime,
 	}
 }
 
 //nolint:revive
 func (s *cachedAppStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
-	//TODO implement me
-	panic("implement me")
+	start := time.Now()
+	defer func() {
+		s.mIncreaseIfNotExistsSeconds.Increase(time.Since(start).Seconds())
+	}()
+
+	ok, err = s.storage.InsertIfNotExists(pKey, cCols, value, ttlSeconds)
+	if err != nil {
+		return false, err
+	}
+
+	if ok {
+		expireAt := int64(0)
+		if ttlSeconds > 0 {
+			expireAt = s.iTime.Now().Add(time.Duration(ttlSeconds) * time.Second).UnixMilli()
+		}
+
+		d := dataWithExpiration{data: value, expireAt: expireAt}
+		s.cache.Set(makeKey(pKey, cCols), d.toBytes())
+	}
+
+	return ok, nil
 }
 
 //nolint:revive
 func (s *cachedAppStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
-	//TODO implement me
-	panic("implement me")
+	start := time.Now()
+	defer func() {
+		s.mCompareAndSwapSeconds.Increase(time.Since(start).Seconds())
+	}()
+
+	ok, err = s.storage.CompareAndSwap(pKey, cCols, oldValue, newValue, ttlSeconds)
+	if err != nil {
+		return false, err
+	}
+
+	if ok {
+		expireAt := int64(0)
+		if ttlSeconds > 0 {
+			expireAt = s.iTime.Now().Add(time.Duration(ttlSeconds) * time.Second).UnixMilli()
+		}
+
+		d := dataWithExpiration{data: newValue, expireAt: expireAt}
+		s.cache.Set(makeKey(pKey, cCols), d.toBytes())
+	}
+
+	return ok, nil
 }
 
 //nolint:revive
 func (s *cachedAppStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
-	//TODO implement me
-	panic("implement me")
+	start := time.Now()
+	defer func() {
+		s.mCompareAndDeleteSeconds.Increase(time.Since(start).Seconds())
+	}()
+
+	ok, err = s.storage.CompareAndDelete(pKey, cCols, expectedValue)
+	if err != nil {
+		return false, err
+	}
+
+	if ok {
+		s.cache.Del(makeKey(pKey, cCols))
+	}
+
+	return ok, nil
 }
 
 //nolint:revive
 func (s *cachedAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
-	//TODO implement me
-	panic("implement me")
+	start := time.Now()
+	defer func() {
+		s.mTTLGetSeconds.Increase(time.Since(start).Seconds())
+	}()
+
+	var found bool
+	var key = makeKey(pKey, cCols)
+
+	*data = (*data)[0:0]
+	cachedData := make([]byte, 0)
+	cachedData, found = s.cache.HasGet(*data, key)
+
+	if found {
+		var d dataWithExpiration
+		d.read(cachedData)
+
+		if isExpired(d.expireAt, s.iTime.Now()) {
+			s.cache.Del(key)
+
+			return false, nil
+		}
+		*data = d.data
+
+		return len(*data) != 0, nil
+	}
+
+	return s.storage.TTLGet(pKey, cCols, data)
 }
 
 //nolint:revive
 func (s *cachedAppStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
-	//TODO implement me
-	panic("implement me")
+	start := time.Now()
+	defer func() {
+		s.mTTLReadSeconds.Increase(time.Since(start).Seconds())
+	}()
+
+	return s.storage.TTLRead(ctx, pKey, startCCols, finishCCols, cb)
 }
 
 func (s *cachedAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
@@ -121,9 +222,12 @@ func (s *cachedAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err err
 	}()
 	s.mPutTotal.Increase(1.0)
 	err = s.storage.Put(pKey, cCols, value)
+
 	if err == nil {
-		s.cache.Set(makeKey(pKey, cCols), value)
+		data := dataWithExpiration{data: value}
+		s.cache.Set(makeKey(pKey, cCols), data.toBytes())
 	}
+
 	return err
 }
 
@@ -138,9 +242,11 @@ func (s *cachedAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 	err = s.storage.PutBatch(items)
 	if err == nil {
 		for _, i := range items {
-			s.cache.Set(makeKey(i.PKey, i.CCols), i.Value)
+			data := dataWithExpiration{data: i.Value}
+			s.cache.Set(makeKey(i.PKey, i.CCols), data.toBytes())
 		}
 	}
+
 	return err
 }
 
@@ -152,22 +258,33 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 	s.mGetTotal.Increase(1.0)
 
 	key := makeKey(pKey, cCols)
-
 	*data = (*data)[0:0]
-	*data, ok = s.cache.HasGet(*data, key)
+	cachedData := make([]byte, 0)
+	cachedData, ok = s.cache.HasGet(cachedData, key)
+
 	if ok {
 		s.mGetCachedTotal.Increase(1.0)
-		return len(*data) != 0, nil
+
+		if len(cachedData) != 0 {
+			d := &dataWithExpiration{}
+			d.read(cachedData)
+			*data = d.data
+
+			return len(*data) != 0, nil
+		}
 	}
+
 	ok, err = s.storage.Get(pKey, cCols, data)
 	if err != nil {
 		return false, err
 	}
+
+	d := dataWithExpiration{}
 	if ok {
-		s.cache.Set(key, *data)
-	} else {
-		s.cache.Set(key, nil)
+		d.data = *data
 	}
+	s.cache.Set(key, d.toBytes())
+
 	return ok, nil
 }
 
@@ -185,10 +302,15 @@ func (s *cachedAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) 
 
 func (s *cachedAppStorage) getBatchFromCache(pKey []byte, items []istorage.GetBatchItem) (ok bool) {
 	for i := range items {
-		*items[i].Data, ok = s.cache.HasGet((*items[i].Data)[0:0], makeKey(pKey, items[i].CCols))
+		cachedData, ok := s.cache.HasGet((*items[i].Data)[0:0], makeKey(pKey, items[i].CCols))
 		if !ok {
 			return false
 		}
+
+		var d dataWithExpiration
+
+		d.read(cachedData)
+		*items[i].Data = d.data
 		items[i].Ok = len(*items[i].Data) != 0
 	}
 	s.mGetBatchCachedTotal.Increase(1.0)
@@ -200,13 +322,15 @@ func (s *cachedAppStorage) getBatchFromStorage(pKey []byte, items []istorage.Get
 	if err != nil {
 		return err
 	}
+
 	for _, item := range items {
+		d := dataWithExpiration{}
 		if item.Ok {
-			s.cache.Set(makeKey(pKey, item.CCols), *item.Data)
-		} else {
-			s.cache.Set(makeKey(pKey, item.CCols), nil)
+			d.data = *item.Data
 		}
+		s.cache.Set(makeKey(pKey, item.CCols), d.toBytes())
 	}
+
 	return err
 }
 
@@ -234,4 +358,25 @@ func makeKey(pKey []byte, cCols []byte) (res []byte) {
 	res = append(res, pKey...)
 	res = append(res, cCols...)
 	return res
+}
+
+func isExpired(expireAt int64, now time.Time) bool {
+	return expireAt != 0 && !now.Before(time.UnixMilli(expireAt))
+}
+
+type dataWithExpiration struct {
+	data []byte
+	expireAt int64
+}
+
+func (d *dataWithExpiration) toBytes() []byte {
+	res := make([]byte, 0, len(d.data)+utils.Uint64Size)
+	res = append(res, d.data...)
+	res = binary.BigEndian.AppendUint64(res, uint64(d.expireAt)) // nolint G115
+	return res
+}
+
+func (d *dataWithExpiration) read(data []byte) {
+	d.data = data[:len(data)-utils.Uint64Size]
+	d.expireAt = int64(binary.BigEndian.Uint64(data[len(data)-utils.Uint64Size:])) // nolint G115
 }

@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -173,6 +174,30 @@ func TestBasicUsage_Temporary(t *testing.T) {
 	require.Equal(coreutils.ApplicationXBinary, blobReader.MimeType)
 	require.Equal("test", blobReader.Name)
 	require.Equal(expBLOB, actualBLOBContent)
+
+	t.Run("expiration", func(t *testing.T) {
+		// make the temp blob almost expired
+		coreutils.MockTime.Add(time.Duration(iblobstorage.DurationType_1Day.Seconds()-1) * time.Second)
+
+		// re-issue the system token because it is expired on the previous step
+		systemPrincipal, err = payloads.GetSystemPrincipalTokenApp(as.AppTokens())
+		require.NoError(err)
+
+		// check the temp blob still exists
+		blobReader := vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, blobSUUID, coreutils.WithAuthorizeBy(systemPrincipal))
+		actualBLOBContent, err := io.ReadAll(blobReader)
+		require.NoError(err)
+		require.Equal(expBLOB, actualBLOBContent)
+
+		// cross the temp blob expiration instant
+		coreutils.MockTime.Add(time.Second)
+
+		// check the temp blob is disappeared
+		vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, blobSUUID,
+			coreutils.WithAuthorizeBy(systemPrincipal),
+			coreutils.Expect404(),
+		)
+	})
 }
 
 func TestTemporaryBLOBErrors(t *testing.T) {

@@ -22,9 +22,10 @@ type FileSchemaAST struct {
 }
 
 type PackageSchemaAST struct {
-	Name string // Fill on the analysis stage, when the APPLICATION statement is found
-	Path string
-	Ast  *SchemaAST
+	Name               string // Fill on the analysis stage, when the APPLICATION statement is found
+	Path               string
+	Ast                *SchemaAST
+	localNameToPkgPath map[string]string
 }
 
 type AppSchemaAST struct {
@@ -45,10 +46,6 @@ type PackageFS struct {
 type statementNode struct {
 	Pkg  *PackageSchemaAST
 	Stmt INamedStatement
-}
-
-func (s *statementNode) qName() appdef.QName {
-	return s.Pkg.NewQName(Ident(s.Stmt.GetName()))
 }
 
 type Ident string
@@ -91,6 +88,9 @@ func (p *PackageSchemaAST) NewQName(name Ident) appdef.QName {
 }
 
 func (s *SchemaAST) Iterate(callback func(stmt interface{})) {
+	for i := 0; i < len(s.Imports); i++ {
+		callback(&s.Imports[i])
+	}
 	for i := 0; i < len(s.Statements); i++ {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
@@ -104,6 +104,13 @@ type ImportStmt struct {
 	Pos   lexer.Position
 	Name  string `parser:"'IMPORT' 'SCHEMA' @String"`
 	Alias *Ident `parser:"('AS' @Ident)?"`
+}
+
+func (i *ImportStmt) GetLocalPkgName() string {
+	if i.Alias != nil {
+		return string(*i.Alias)
+	}
+	return ExtractLocalPackageName(i.Name)
 }
 
 type RootStatement struct {
@@ -198,7 +205,7 @@ type DeclareStmt struct {
 	Statement
 	Name         Ident  `parser:"'DECLARE' @Ident"`
 	DataType     string `parser:"@('int' | 'int32')"`
-	DefaultValue *int   `parser:"'DEFAULT' @Int"`
+	DefaultValue int32  `parser:"'DEFAULT' @Int"`
 }
 
 func (s DeclareStmt) GetName() string { return string(s.Name) }
@@ -225,35 +232,12 @@ type WorkspaceStmt struct {
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 
 	// filled on the analysis stage
-	nodes               map[appdef.QName]workspaceNode
 	inheritedWorkspaces []*WorkspaceStmt
 	usedWorkspaces      []*WorkspaceStmt
 
 	// filled on build stage
 	qName   appdef.QName
 	builder appdef.IWorkspaceBuilder
-}
-
-type workspaceNode struct {
-	workspace *WorkspaceStmt
-	node      statementNode
-}
-
-func (s *WorkspaceStmt) registerNode(qn appdef.QName, node statementNode, ws *WorkspaceStmt) {
-	wsNode := workspaceNode{workspace: ws, node: node}
-	if s.nodes == nil {
-		s.nodes = make(map[appdef.QName]workspaceNode)
-	}
-	s.nodes[qn] = wsNode
-}
-
-func (s *WorkspaceStmt) containsQName(qName appdef.QName) bool {
-	for k := range s.nodes {
-		if k == qName {
-			return true
-		}
-	}
-	return false
 }
 
 func (s WorkspaceStmt) GetName() string { return string(s.Name) }
@@ -583,10 +567,9 @@ type RateValueTimeUnit struct {
 type RateValue struct {
 	Count           *int              `parser:"(@Int"`
 	Variable        *DefQName         `parser:"| @@) 'PER'"`
-	TimeUnitAmounts *int              `parser:"@Int?"`
+	TimeUnitAmounts *uint32           `parser:"@Int?"`
 	TimeUnit        RateValueTimeUnit `parser:"@@"`
-	variable        appdef.QName      // filled on the analysis stage
-	declare         *DeclareStmt      // filled on the analysis stage
+	count           uint32            // filled on the analysis stage
 }
 
 type RateObjectScope struct {
@@ -595,8 +578,8 @@ type RateObjectScope struct {
 }
 
 type RateSubjectScope struct {
-	PerUser bool `parser:"@('PER' 'USER')"`
-	PerIp   bool `parser:" | @('PER' 'IP')"`
+	PerSubject bool `parser:"@('PER' 'SUBJECT')"`
+	PerIp      bool `parser:" | @('PER' 'IP')"`
 }
 
 type RateStmt struct {
@@ -605,18 +588,17 @@ type RateStmt struct {
 	Value        RateValue         `parser:"@@"`
 	ObjectScope  *RateObjectScope  `parser:"@@?"`
 	SubjectScope *RateSubjectScope `parser:"@@?"`
+	workspace    workspaceAddr     // filled on the analysis stage
 }
 
 func (s RateStmt) GetName() string { return string(s.Name) }
 
 type LimitAction struct {
-	Pos        lexer.Position
-	Select     bool `parser:"(@'SELECT'"`
-	Execute    bool `parser:"| @EXECUTE"`
-	Insert     bool `parser:"| @'INSERT'"`
-	Activate   bool `parser:"| @'ACTIVATE'"`
-	Deactivate bool `parser:"| @'DEACTIVATE'"`
-	Update     bool `parser:"| @'UPDATE')"`
+	Pos     lexer.Position
+	Select  bool `parser:"(@'SELECT'"`
+	Execute bool `parser:"| @EXECUTE"`
+	Insert  bool `parser:"| @'INSERT'"`
+	Update  bool `parser:"| @'UPDATE')"`
 }
 
 type LimitSingleItemFilter struct {
@@ -632,8 +614,7 @@ type LimitAllItemsFilter struct {
 	Commands bool      `parser:"( @ONALLCOMMANDS"`
 	Queries  bool      `parser:"| @ONALLQUERIES"`
 	Tables   bool      `parser:"| @ONALLTABLES"`
-	Views    bool      `parser:"| @ONALLVIEWS"`
-	All      bool      `parser:"| @('ON' 'ALL' ) )"`
+	Views    bool      `parser:"| @ONALLVIEWS )"`
 	WithTag  *DefQName `parser:"(WITHTAG @@)?"`
 }
 
@@ -642,8 +623,7 @@ type LimitEachItemFilter struct {
 	Commands bool      `parser:"( @('ON' 'EACH' 'COMMAND')"`
 	Queries  bool      `parser:"| @('ON' 'EACH' 'QUERY')"`
 	Tables   bool      `parser:"| @('ON' 'EACH' 'TABLE')"`
-	Views    bool      `parser:"| @('ON' 'EACH' 'VIEW')"`
-	Each     bool      `parser:"| @('ON' 'EACH' ) )"`
+	Views    bool      `parser:"| @('ON' 'EACH' 'VIEW') )"`
 	WithTag  *DefQName `parser:"(WITHTAG @@)?"`
 }
 type LimitStmt struct {
@@ -654,6 +634,8 @@ type LimitStmt struct {
 	AllItems   *LimitAllItemsFilter   `parser:"| @@"`
 	EachItem   *LimitEachItemFilter   `parser:"| @@ )"`
 	RateName   DefQName               `parser:"'WITH' 'RATE' @@"`
+	workspace  workspaceAddr          // filled on the analysis stage
+	ops        []appdef.OperationKind // filled on the analysis stage
 }
 
 func (s LimitStmt) GetName() string { return string(s.Name) }
@@ -1139,11 +1121,5 @@ type IVariableResolver interface {
 	AsInt32(name appdef.QName) (int32, bool)
 }
 
-// BuildAppDefsOption is a function that can be passed to BuildAppDefs to configure it.
-type BuildAppDefsOption = func(*buildContext)
-
-func WithVariableResolver(resolver IVariableResolver) BuildAppDefsOption {
-	return func(c *buildContext) {
-		c.variableResolver = resolver
-	}
-}
+// ParserOption is a function that can be passed to BuildAppDefs to configure it.
+type ParserOption = func(*basicContext)

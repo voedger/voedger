@@ -7,6 +7,7 @@ package istoragecache
 import (
 	"testing"
 
+	"github.com/voedger/voedger/pkg/coreutils"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
@@ -33,7 +34,7 @@ func BenchmarkAppStorage_Get_Seq(b *testing.B) {
 		return true, nil
 	}}
 	tsp := &testStorageProvider{storage: ts}
-	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
+	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm", coreutils.NewITime())
 	storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 	if err != nil {
 		panic(err)
@@ -62,7 +63,7 @@ func BenchmarkAppStorage_Get_Parallel(b *testing.B) {
 		return true, nil
 	}}
 	tsp := &testStorageProvider{storage: ts}
-	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
+	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm", coreutils.NewITime())
 	storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 	if err != nil {
 		panic(err)

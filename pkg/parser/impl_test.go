@@ -7,6 +7,7 @@ package parser
 import (
 	"embed"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -94,14 +95,14 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IWithFields).Field("Chairs").DataKind())
 
 	// constraint
-	uniques := cdoc.Uniques()
+	uniques := maps.Collect(cdoc.Uniques())
 	require.Len(uniques, 2)
 
 	t.Run("first unique, automatically named", func(t *testing.T) {
 		u := uniques[appdef.MustParseQName("main.TablePlan$uniques$01")]
 		require.NotNil(u)
 		cnt := 0
-		for _, f := range u.Fields() {
+		for f := range u.Fields() {
 			cnt++
 			switch n := f.Name(); n {
 			case "FState":
@@ -119,7 +120,7 @@ func Test_BasicUsage(t *testing.T) {
 		u := uniques[appdef.MustParseQName("main.TablePlan$uniques$UniqueTable")]
 		require.NotNil(u)
 		cnt := 0
-		for _, f := range u.Fields() {
+		for f := range u.Fields() {
 			cnt++
 			switch n := f.Name(); n {
 			case "TableNumber":
@@ -214,56 +215,57 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal([]appdef.QName{appdef.NewQName("main", "NewOrder"), appdef.NewQName("main", "NewOrder2")}, slices.Collect(pe[0].Filter().QNames()))
 
 	stateCount := 0
-	for s := range proj.States().Enum {
+	for n, s := range proj.States().All() {
 		stateCount++
 		switch stateCount {
 		case 1:
-			require.Equal(appdef.NewQName("sys", "AppSecret"), s.Name())
-			require.Empty(s.Names())
+			require.Equal(appdef.NewQName("sys", "AppSecret"), n)
+			require.Empty(slices.Collect(s.Names()))
 		case 2:
-			require.Equal(appdef.NewQName("sys", "Http"), s.Name())
-			require.Empty(s.Names())
+			require.Equal(appdef.NewQName("sys", "Http"), n)
+			require.Empty(slices.Collect(s.Names()))
 		default:
 			require.Fail("unexpected state", "state: %v", s)
 		}
 	}
 	require.Equal(2, stateCount)
-	require.Equal(stateCount, proj.States().Len())
 
 	intentsCount := 0
-	for i := range proj.Intents().Enum {
+	for n, i := range proj.Intents().All() {
 		intentsCount++
 		switch intentsCount {
 		case 1:
-			require.Equal(appdef.NewQName("sys", "View"), i.Name())
-			require.Len(i.Names(), 4)
-			require.Equal(appdef.NewQName("main", "ActiveTablePlansView"), i.Names()[0])
-			require.Equal(appdef.NewQName("main", "DashboardView"), i.Names()[1])
-			require.Equal(appdef.NewQName("main", "NotificationsHistory"), i.Names()[2])
-			require.Equal(appdef.NewQName("main", "XZReports"), i.Names()[3])
+			require.Equal(appdef.NewQName("sys", "View"), n)
+			names := appdef.CollectQNames(i.Names())
+			require.Equal(
+				appdef.MustParseQNames(
+					"main.ActiveTablePlansView",
+					"main.DashboardView",
+					"main.NotificationsHistory",
+					"main.XZReports"),
+				names)
 		default:
 			require.Fail("unexpected intent", "intent: %v", i)
 		}
 	}
 	require.Equal(1, intentsCount)
-	require.Equal(intentsCount, proj.Intents().Len())
 
 	t.Run("Jobs", func(t *testing.T) {
 		job1 := appdef.Job(app.Type, appdef.NewQName("main", "TestJob1"))
 		require.EqualValues(`1 0 * * *`, job1.CronSchedule())
 		t.Run("Job states", func(t *testing.T) {
 			stateCount := 0
-			for s := range proj.States().Enum {
+			for n, s := range proj.States().All() {
 				stateCount++
 				switch stateCount {
 				case 1:
-					require.Equal(appdef.NewQName("sys", "AppSecret"), s.Name())
-					require.Empty(s.Names())
+					require.Equal(appdef.NewQName("sys", "AppSecret"), n)
+					require.Empty(slices.Collect(s.Names()))
 				case 2:
-					require.Equal(appdef.NewQName("sys", "Http"), s.Name())
-					require.Empty(s.Names())
+					require.Equal(appdef.NewQName("sys", "Http"), n)
+					require.Empty(slices.Collect(s.Names()))
 				default:
-					require.Fail("unexpected state", "storage: %v", s.Name())
+					require.Fail("unexpected state", "state: %v", s)
 				}
 			}
 			require.Equal(2, stateCount)
@@ -274,12 +276,14 @@ func Test_BasicUsage(t *testing.T) {
 	})
 
 	cmd = appdef.Command(app.Type, appdef.NewQName("main", "NewOrder2"))
-	require.Equal(1, cmd.States().Len())
+	require.Len(maps.Collect(cmd.States().All()), 1)
 	require.NotNil(cmd.States().Storage(appdef.NewQName("sys", "AppSecret")))
-	require.Equal(1, cmd.States().Len())
+
+	require.Len(maps.Collect(cmd.Intents().All()), 1)
 	intent := cmd.Intents().Storage(appdef.NewQName("sys", "Record"))
 	require.NotNil(intent)
-	require.True(intent.Names().Contains(appdef.NewQName("main", "Transaction")))
+	names := appdef.CollectQNames(intent.Names())
+	require.True(names.Contains(appdef.NewQName("main", "Transaction")))
 
 	localNames := slices.Collect(app.PackageLocalNames())
 	require.Equal([]string{"air", "main", appdef.SysPackage, "untill"}, localNames)
@@ -326,20 +330,25 @@ func (require *ParserAssertions) Build(sql string) appdef.IAppDef {
 	return appdef
 }
 
-func (require *ParserAssertions) PkgSchema(filename, pkg, sql string) *PackageSchemaAST {
+func (require *ParserAssertions) FileSchema(filename, sql string) *FileSchemaAST {
 	ast, err := ParseFile(filename, sql)
 	require.NoError(err)
+	return ast
+}
+
+func (require *ParserAssertions) PkgSchema(filename, pkg, sql string) *PackageSchemaAST {
+	ast := require.FileSchema(filename, sql)
 	p, err := BuildPackageSchema(pkg, []*FileSchemaAST{ast})
 	require.NoError(err)
 	return p
 }
 
-func (require *ParserAssertions) AppSchema(sql string) (*AppSchemaAST, error) {
+func (require *ParserAssertions) AppSchema(sql string, opts ...ParserOption) (*AppSchemaAST, error) {
 	pkg := require.PkgSchema("file.vsql", "github.com/company/pkg", sql)
 	return BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),
 		pkg,
-	})
+	}, opts...)
 }
 
 func assertions(t *testing.T) *ParserAssertions {
@@ -384,7 +393,7 @@ func Test_Refs_NestedTables(t *testing.T) {
 
 	inner1 := app.Type(appdef.NewQName("pkg1", "inner1"))
 	ref1 := inner1.(appdef.IWithFields).RefField("ref1")
-	require.EqualValues(appdef.QNames{appdef.NewQName("pkg1", "table3")}, ref1.Refs())
+	require.EqualValues([]appdef.QName{appdef.NewQName("pkg1", "table3")}, slices.Collect(ref1.Refs()))
 }
 
 func Test_CircularReferencesTables(t *testing.T) {
@@ -975,18 +984,44 @@ func Test_Duplicates(t *testing.T) {
 	}, "\n"))
 
 }
+func Test_Commands(t *testing.T) {
+	require := assertions(t)
+	require.AppSchemaError(`APPLICATION test();
+	WORKSPACE Workspace (
+		EXTENSION ENGINE BUILTIN (
+			COMMAND Orders(fake.Fake, UNLOGGED fake.Fake) RETURNS fake.Fake
+		);
+	)
+	`, "file.vsql:4:19: fake undefined",
+		"file.vsql:4:39: fake undefined",
+		"file.vsql:4:58: fake undefined",
+	)
+}
+
+func Test_Queries(t *testing.T) {
+	require := assertions(t)
+	require.AppSchemaError(`APPLICATION test();
+	WORKSPACE Workspace (
+		EXTENSION ENGINE BUILTIN (
+			QUERY q(fake.Fake) RETURNS fake.Fake
+		);
+	)
+	`, "file.vsql:4:12: fake undefined",
+		"file.vsql:4:31: fake undefined",
+	)
+}
 
 func Test_DuplicatesInViews(t *testing.T) {
-	require := require.New(t)
-
-	ast, err := ParseFile("file2.vsql", `APPLICATION test();
+	require := assertions(t)
+	require.AppSchemaError(`APPLICATION test();
 	WORKSPACE Workspace (
 		VIEW test(
 			field1 int,
 			field2 int,
 			field1 varchar,
 			PRIMARY KEY(field1),
-			PRIMARY KEY(field2)
+			PRIMARY KEY(field2),
+			field2 ref
 		) AS RESULT OF Proj1;
 
 		EXTENSION ENGINE BUILTIN (
@@ -994,25 +1029,25 @@ func Test_DuplicatesInViews(t *testing.T) {
 			COMMAND Orders()
 		);
 	)
-	`)
-	require.NoError(err)
-
-	pkg, err := BuildPackageSchema("test/pkg", []*FileSchemaAST{ast})
-	require.NoError(err)
-
-	_, err = BuildAppSchema([]*PackageSchemaAST{
-		pkg,
-		getSysPackageAST(),
-	})
-
-	require.EqualError(err, strings.Join([]string{
-		"file2.vsql:6:4: redefinition of field1",
-		"file2.vsql:8:16: redefinition of primary key",
-	}, "\n"))
-
+	`, "file.vsql:6:4: redefinition of field1",
+		"file.vsql:8:16: redefinition of primary key",
+		"file.vsql:9:4: redefinition of field2",
+	)
 }
 func Test_Views(t *testing.T) {
 	require := assertions(t)
+
+	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
+		VIEW test(
+			field1 int,
+			PRIMARY KEY((field2),field1)
+		) AS RESULT OF Proj1;
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(test));
+			COMMAND Orders()
+		);
+		)
+`, "file.vsql:4:17: undefined field field2")
 
 	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
 			VIEW test(
@@ -1133,6 +1168,16 @@ func Test_Views(t *testing.T) {
 			"file.vsql:5:22: record field field1 not supported in partition key")
 	})
 
+	t.Run("underfined result of", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
+			VIEW test(
+				i int32,
+				field1 int32,
+				PRIMARY KEY((i), field1)
+			) AS RESULT OF Fake;
+			)
+		`, "file.vsql:6:19: Fake undefined")
+	})
 }
 
 func Test_Views2(t *testing.T) {
@@ -1422,6 +1467,31 @@ func Test_Projectors(t *testing.T) {
 		require.Equal(appdef.FilterKind_QNames, pe[1].Filter().Kind())
 		require.Len(slices.Collect(pe[1].Filter().QNames()), 1)
 		require.Equal("pkg.Tbl3", slices.Collect(pe[1].Filter().QNames())[0].String())
+	})
+
+	t.Run("Intent errors", func(t *testing.T) {
+		require := assertions(t)
+		require.AppSchemaError(`APPLICATION test();
+		WORKSPACE Ws (
+			TABLE Tbl INHERITS sys.CDoc();
+			EXTENSION ENGINE WASM (
+				PROJECTOR p AFTER INSERT ON Tbl INTENTS(sys.Record, sys.View, sys.View(fake), sys.Record(Tbl));
+			);
+		);`, "file.vsql:5:45: storage sys.Record requires entity",
+			"file.vsql:5:57: storage sys.View requires entity",
+			"file.vsql:5:67: undefined view: fake",
+			"file.vsql:5:83: this kind of extension cannot use storage sys.Record in the intents")
+	})
+
+	t.Run("State errors", func(t *testing.T) {
+		require := assertions(t)
+		require.AppSchemaError(`APPLICATION test();
+		WORKSPACE Ws (
+			TABLE Tbl INHERITS sys.CDoc();
+			EXTENSION ENGINE WASM (
+				PROJECTOR p AFTER INSERT ON Tbl  STATE(sys.Subject);
+			);
+		);`, "file.vsql:5:44: this kind of extension cannot use storage sys.Subject in the state")
 	})
 }
 
@@ -1910,23 +1980,15 @@ func Test_Alter_Workspace_In_Package(t *testing.T) {
 }
 
 func Test_Storages(t *testing.T) {
-	require := require.New(t)
-	fs, err := ParseFile("example2.vsql", `APPLICATION test1();
-	EXTENSION ENGINE BUILTIN (
-		STORAGE MyStorage(
-			INSERT SCOPE(PROJECTORS)
-		);
-	)
-	`)
-	require.NoError(err)
-	pkg2, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
-	require.NoError(err)
-
-	schema, err := BuildAppSchema([]*PackageSchemaAST{
-		pkg2,
+	require := assertions(t)
+	t.Run("can be only declared in sys package", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test1();
+		EXTENSION ENGINE BUILTIN (
+			STORAGE MyStorage(
+				INSERT SCOPE(PROJECTORS)
+			);
+		)`, `file.vsql:3:4: storages are only declared in sys package`)
 	})
-	require.ErrorContains(err, "storages are only declared in sys package")
-	require.Nil(schema)
 }
 
 func buildPackage(sql string) *PackageSchemaAST {
@@ -2174,9 +2236,21 @@ func Test_Grants(t *testing.T) {
 		GRANT ALL(items2) ON TABLE Tbl2 TO role1;
 		GRANT SELECT ON VIEW Fake TO role1;
 		GRANT SELECT ON ALL VIEWS WITH TAG x TO role1;
+		GRANT fakeRole TO role1;
+		GRANT SELECT(fake) ON VIEW v TO role1;
+		GRANT EXECUTE ON ALL QUERIES WITH TAG fake TO role1;
+		GRANT INSERT ON ALL TABLES WITH TAG fake TO role1;
+		VIEW v(
+			f1 int,	f2 int, PRIMARY KEY((f1),f2)
+		) AS RESULT OF p;
+
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR p AFTER EXECUTE ON c INTENTS (sys.View(v));
+			COMMAND c();
+		);
 	);
 	`, "file.vsql:5:30: undefined role: app1",
-			"file.vsql:5:22: Fake undefined",
+			"file.vsql:5:22: undefined table: Fake",
 			"file.vsql:6:28: undefined command: Fake",
 			"file.vsql:7:26: undefined query: Fake",
 			"file.vsql:9:13: undefined field FakeCol",
@@ -2184,6 +2258,10 @@ func Test_Grants(t *testing.T) {
 			"file.vsql:11:42: undefined tag: x",
 			"file.vsql:21:24: undefined view: Fake",
 			"file.vsql:22:38: undefined tag: x",
+			"file.vsql:23:9: undefined role: fakeRole",
+			"file.vsql:24:16: undefined field fake",
+			"file.vsql:25:41: undefined tag: fake",
+			"file.vsql:26:39: undefined tag: fake",
 		)
 	})
 
@@ -2349,38 +2427,57 @@ func Test_DescriptorInProjector(t *testing.T) {
 }
 
 type testVarResolver struct {
-	resolved map[appdef.QName]bool
+	init map[appdef.QName]int32
 }
 
 func (t testVarResolver) AsInt32(name appdef.QName) (int32, bool) {
-	t.resolved[name] = true
-	return 1, true
+	if v, ok := t.init[name]; ok {
+		return v, true
+	}
+	return 0, false
 }
 
 func Test_Variables(t *testing.T) {
 	require := assertions(t)
+	resolver := testVarResolver{init: map[appdef.QName]int32{appdef.NewQName("pkg", "var1"): 1}}
 
 	require.AppSchemaError(`APPLICATION app1(); WORKSPACE W( RATE AppDefaultRate variable PER HOUR; )`, "file.vsql:1:54: variable undefined")
 
 	schema, err := require.AppSchema(`APPLICATION app1();
-	DECLARE variable int32 DEFAULT 100;
+	DECLARE var1 int32 DEFAULT 100;
+	DECLARE var2 int32 DEFAULT 100;
 	WORKSPACE W(
-		RATE AppDefaultRate variable PER HOUR;
+		RATE Rate1 var1 PER HOUR;
+		RATE Rate2 var2 PER HOUR;
 	);
-	`)
+	`, WithVariableResolver(&resolver))
+	require.NoError(err)
+	b := builder.New()
+	err = BuildAppDefs(schema, b)
+	require.NoError(err)
+	app, err := b.Build()
 	require.NoError(err)
 
-	resolver := testVarResolver{resolved: make(map[appdef.QName]bool)}
+	typ1 := app.Workspace(appdef.NewQName("pkg", "W")).Type(appdef.NewQName("pkg", "Rate1"))
+	require.NotNil(typ1)
+	rate1, ok := typ1.(appdef.IRate)
+	require.True(ok)
+	require.NotNil(rate1)
+	require.EqualValues(1, rate1.Count())
 
-	BuildAppDefs(schema, builder.New(), WithVariableResolver(&resolver))
-	require.True(resolver.resolved[appdef.NewQName("pkg", "variable")])
+	typ2 := app.Workspace(appdef.NewQName("pkg", "W")).Type(appdef.NewQName("pkg", "Rate2"))
+	require.NotNil(typ2)
+	rate2, ok := typ2.(appdef.IRate)
+	require.True(ok)
+	require.NotNil(rate2)
+	require.EqualValues(100, rate2.Count())
 }
 
 func Test_RatesAndLimits(t *testing.T) {
 	require := assertions(t)
 
 	t.Run("syntax check", func(t *testing.T) {
-		require.NoAppSchemaError(`APPLICATION app1();
+		require.NoBuildError(`APPLICATION app1();
 		WORKSPACE w (
 			TABLE t INHERITS sys.CDoc();
 			TAG tag;
@@ -2401,7 +2498,7 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l4 ON VIEW v WITH RATE r;
 			LIMIT l4_1 SELECT ON VIEW v WITH RATE r;
 			LIMIT l5 ON TABLE t WITH RATE r;
-			LIMIT l5_1 SELECT,INSERT,UPDATE,DEACTIVATE,ACTIVATE ON TABLE t WITH RATE r;
+			LIMIT l5_1 SELECT,INSERT,UPDATE ON TABLE t WITH RATE r;
 
 			LIMIT l20 ON ALL COMMANDS WITH TAG tag WITH RATE r;
 			LIMIT l20_1 EXECUTE ON ALL COMMANDS WITH TAG tag WITH RATE r;
@@ -2410,14 +2507,14 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l22 ON ALL VIEWS WITH TAG tag WITH RATE r;
 			LIMIT l22_1 SELECT ON ALL VIEWS WITH TAG tag WITH RATE r;
 			LIMIT l23 ON ALL TABLES WITH TAG tag WITH RATE r;
-			LIMIT l23_1 SELECT,INSERT,UPDATE,DEACTIVATE,ACTIVATE ON ALL TABLES WITH TAG tag WITH RATE r;
-			LIMIT l24 ON ALL WITH TAG tag WITH RATE r;
+			LIMIT l23_1 SELECT,INSERT,UPDATE ON ALL TABLES WITH TAG tag WITH RATE r;
+			-- LIMIT l24 ON ALL WITH TAG tag WITH RATE r;
 			
 			LIMIT l25 ON ALL COMMANDS WITH RATE r;
 			LIMIT l26 ON ALL QUERIES WITH RATE r;
 			LIMIT l27 ON ALL VIEWS WITH RATE r;
 			LIMIT l28 ON ALL TABLES WITH RATE r;
-			LIMIT l29 ON ALL WITH RATE r;
+			-- LIMIT l29 ON ALL WITH RATE r;
 
 			LIMIT l30 ON EACH COMMAND WITH TAG tag WITH RATE r;
 			LIMIT l30_1 EXECUTE ON EACH COMMAND WITH TAG tag WITH RATE r;
@@ -2426,14 +2523,14 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l32 ON EACH VIEW WITH TAG tag WITH RATE r;
 			LIMIT l32_1 SELECT ON EACH VIEW WITH TAG tag WITH RATE r;
 			LIMIT l33 ON EACH TABLE WITH TAG tag WITH RATE r;
-			LIMIT l33_1 SELECT,INSERT,UPDATE,DEACTIVATE,ACTIVATE ON EACH TABLE WITH TAG tag WITH RATE r;
-			LIMIT l34 ON EACH WITH TAG tag WITH RATE r;
+			LIMIT l33_1 SELECT,INSERT,UPDATE ON EACH TABLE WITH TAG tag WITH RATE r;
+			-- LIMIT l34 ON EACH WITH TAG tag WITH RATE r;
 
 			LIMIT l35 ON EACH COMMAND WITH RATE r;
 			LIMIT l36 ON EACH QUERY WITH RATE r;
 			LIMIT l37 ON EACH VIEW WITH RATE r;
 			LIMIT l38 ON EACH TABLE WITH RATE r;
-			LIMIT l39 ON EACH WITH RATE r;
+			-- LIMIT l39 ON EACH WITH RATE r;
 		);`)
 	})
 
@@ -2454,31 +2551,30 @@ func Test_RatesAndLimits(t *testing.T) {
 			RATE r 1 PER HOUR;
 			LIMIT l2 INSERT ON COMMAND c WITH RATE r;
 			LIMIT l3 UPDATE ON QUERY q WITH RATE r;
-			LIMIT l4 ACTIVATE,DEACTIVATE ON VIEW v WITH RATE r;
+			LIMIT l4 EXECUTE ON VIEW v WITH RATE r;
 			LIMIT l5 EXECUTE ON TABLE t WITH RATE r;
 
 			LIMIT l20 INSERT ON ALL COMMANDS WITH RATE r;
 			LIMIT l21 UPDATE ON ALL QUERIES WITH RATE r;
-			LIMIT l22 ACTIVATE ON ALL VIEWS WITH RATE r;
+			LIMIT l22 EXECUTE ON ALL VIEWS WITH RATE r;
 			LIMIT l23 EXECUTE ON ALL TABLES WITH RATE r;
 			
 			LIMIT l35 INSERT ON EACH COMMAND WITH RATE r;
 			LIMIT l36 UPDATE ON EACH QUERY WITH RATE r;
-			LIMIT l37 ACTIVATE ON EACH VIEW WITH RATE r;
+			LIMIT l37 EXECUTE ON EACH VIEW WITH RATE r;
 			LIMIT l38 EXECUTE ON EACH TABLE WITH RATE r;
 			LIMIT l39 SELECT ON EACH QUERY WITH RATE r;
 		);`, "file.vsql:15:13: operation INSERT not allowed",
 			"file.vsql:16:13: operation UPDATE not allowed",
-			"file.vsql:17:13: operation ACTIVATE not allowed",
-			"file.vsql:17:22: operation DEACTIVATE not allowed",
+			"file.vsql:17:13: operation EXECUTE not allowed",
 			"file.vsql:18:13: operation EXECUTE not allowed",
 			"file.vsql:20:14: operation INSERT not allowed",
 			"file.vsql:21:14: operation UPDATE not allowed",
-			"file.vsql:22:14: operation ACTIVATE not allowed",
+			"file.vsql:22:14: operation EXECUTE not allowed",
 			"file.vsql:23:14: operation EXECUTE not allowed",
 			"file.vsql:25:14: operation INSERT not allowed",
 			"file.vsql:26:14: operation UPDATE not allowed",
-			"file.vsql:27:14: operation ACTIVATE not allowed",
+			"file.vsql:27:14: operation EXECUTE not allowed",
 			"file.vsql:28:14: operation EXECUTE not allowed",
 			"file.vsql:29:14: operation SELECT not allowed")
 	})
@@ -2492,19 +2588,43 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l4 ON VIEW v WITH RATE r;
 			LIMIT l5 ON TABLE t WITH RATE r;
 			LIMIT l20 ON ALL COMMANDS WITH TAG tag WITH RATE r;		
-			LIMIT l29 ON ALL WITH RATE blah;
 			LIMIT l30 ON EACH COMMAND WITH TAG tag WITH RATE r;
-			LIMIT l39 ON EACH WITH RATE blah;
-
+			LIMIT l40 ON ALL COMMANDS WITH RATE fake;
 			);`,
 			"file.vsql:4:24: undefined command: x",
 			"file.vsql:5:22: undefined query: y",
 			"file.vsql:6:21: undefined view: v",
 			"file.vsql:7:22: undefined table: t",
 			"file.vsql:8:39: undefined tag: tag",
-			"file.vsql:9:31: undefined rate: blah",
-			"file.vsql:10:39: undefined tag: tag",
-			"file.vsql:11:32: undefined rate: blah",
+			"file.vsql:9:39: undefined tag: tag",
+			"file.vsql:10:40: undefined rate: fake",
+		)
+	})
+
+	t.Run("default scopes", func(t *testing.T) {
+		a := require.Build(`APPLICATION app1();
+		WORKSPACE w (
+			TABLE t INHERITS sys.CDoc();
+			RATE r 1 PER HOUR;
+		)`)
+		w := a.Workspace(appdef.NewQName("pkg", "w"))
+		typ := w.Type(appdef.NewQName("pkg", "r"))
+		r, ok := typ.(appdef.IRate)
+		require.True(ok)
+		require.NotNil(r)
+		require.True(r.Scope(appdef.RateScope_AppPartition))
+		require.False(r.Scope(appdef.RateScope_Workspace))
+		require.False(r.Scope(appdef.RateScope_IP))
+		require.False(r.Scope(appdef.RateScope_User))
+	})
+
+	t.Run("negative rate", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION app1();
+		DECLARE var1 int32 DEFAULT -1;
+		WORKSPACE w (
+			RATE r var1 PER HOUR;
+			);`,
+			"file.vsql:4:11: positive value only allowed",
 		)
 	})
 
@@ -2642,6 +2762,16 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 	})
 }
 
+func Test_UseWorkspace(t *testing.T) {
+	require := assertions(t)
+	t.Run("unknown ws", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test(); WORKSPACE ws (USE WORKSPACE fake);`, `file.vsql:1:49: undefined workspace: pkg.fake`)
+	})
+	t.Run("use of abstract ws", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test(); ABSTRACT WORKSPACE ws (); WORKSPACE ws1 (USE WORKSPACE ws);`, `file.vsql:1:76: use of abstract workspace ws`)
+	})
+}
+
 func Test_Jobs(t *testing.T) {
 
 	t.Run("bad workspace", func(t *testing.T) {
@@ -2769,4 +2899,44 @@ func Test_RefInheritedFromSys(t *testing.T) {
 	)
 	`)
 	require.NoError(err)
+}
+
+func Test_LocalPackageNames(t *testing.T) {
+	require := assertions(t)
+	t.Run("local package name must be valid", func(t *testing.T) {
+		require.AppSchemaError(`
+		IMPORT SCHEMA 'github.com/c/1pkg';
+		IMPORT SCHEMA 'github.com/c/2pkg' AS pkg2;
+		APPLICATION test();
+		`, `file.vsql:2:3: invalid local package name 1pkg`)
+	})
+	t.Run("imported package name must not be equal to current package name", func(t *testing.T) {
+		require.AppSchemaError(`
+		IMPORT SCHEMA 'github.com/c/pkg';
+		APPLICATION test();
+		`, `file.vsql:2:3: conflict: local package name pkg equal to current package name`)
+	})
+	t.Run("local package name uniqiness", func(t *testing.T) {
+
+		ast1 := require.FileSchema("file1.vsql", `
+			IMPORT SCHEMA 'github.com/c1/pkg1';
+			IMPORT SCHEMA 'github.com/c2/pkg1';
+			IMPORT SCHEMA 'github.com/c3/pkg11' AS pkg1;
+			IMPORT SCHEMA 'github.com/c4/pkg1' AS pkg2;`)
+
+		ast2 := require.FileSchema("file2.vsql", `IMPORT SCHEMA 'github.com/c5/pkg1';`)
+
+		ast3 := require.FileSchema("file3.vsql", `APPLICATION test();`)
+
+		pkg, err := BuildPackageSchema("github.com/current/pkg", []*FileSchemaAST{ast1, ast2, ast3})
+		require.NoError(err)
+
+		_, err = BuildAppSchema([]*PackageSchemaAST{pkg})
+		expectErrors := []string{
+			`file1.vsql:3:4: local package name pkg1 already used for github.com/c1/pkg1`,
+			`file1.vsql:4:4: local package name pkg1 already used for github.com/c1/pkg1`,
+			`file2.vsql:1:1: local package name pkg1 already used for github.com/c1/pkg1`,
+		}
+		require.EqualError(err, strings.Join(expectErrors, "\n"))
+	})
 }

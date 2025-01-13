@@ -401,7 +401,7 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 						}
 					}
 
-					for _, f := range r1.fields.Fields() {
+					for f := range r1.fields.Fields() {
 						if !equalVal(r1.dyB.Get(f.Name()), r2.dyB.Get(f.Name())) {
 							return false
 						}

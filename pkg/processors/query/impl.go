@@ -272,6 +272,12 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				return err
 			}
 			if !ok {
+				for _, prn := range qw.principals {
+					if prn.Name == "untillchargebeeagent" {
+						// TODO: workaround for untillchargebeeagent legacy rule: false -> do not check VSQL ACL because it is not implemented yet. Eliminate later.
+						return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
+					}
+				}
 				ok, _, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
 				if err != nil {
 					// TODO: temporary workaround. Eliminate later
@@ -722,7 +728,7 @@ func (m *queryProcessorMetrics) Increase(metricName string, valueDelta float64) 
 func newFieldsKinds(t appdef.IType) FieldsKinds {
 	res := FieldsKinds{}
 	if fields, ok := t.(appdef.IWithFields); ok {
-		for _, f := range fields.Fields() {
+		for f := range fields.Fields() {
 			res[f.Name()] = f.DataKind()
 		}
 	}

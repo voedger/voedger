@@ -699,9 +699,9 @@ func provideChannelGroups(cfg *VVMConfig) (res []iprocbusmem.ChannelGroup) {
 }
 
 func provideCachingAppStorageProvider(storageCacheSize StorageCacheSizeType, metrics imetrics.IMetrics,
-	vvmName processors.VVMName, uncachingProvider IAppStorageUncachingProviderFactory) istorage.IAppStorageProvider {
+	vvmName processors.VVMName, uncachingProvider IAppStorageUncachingProviderFactory, iTime coreutils.ITime) istorage.IAppStorageProvider {
 	aspNonCaching := uncachingProvider()
-	return istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics, string(vvmName))
+	return istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics, string(vvmName), iTime)
 }
 
 func provideBlobAppStoragePtr(astp istorage.IAppStorageProvider) iblobstoragestg.BlobAppStoragePtr {
@@ -774,12 +774,6 @@ func provideQueryProcessors(qpCount istructs.NumQueryProcessors, qc QueryChannel
 	imetrics imetrics.IMetrics, vvm processors.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
 	tokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) OperatorQueryProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
-	// resultSenderFactory := func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
-	// 	return &resultSenderErrorFirst{
-	// 		ctx:    ctx,
-	// 		sender: sender,
-	// 	}
-	// }
 	for i := 0; i < int(qpCount); i++ {
 		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), appParts, int(mpq), imetrics,
 			string(vvm), authn, authz, tokens, federation, statelessResources, secretReader)))

@@ -9,7 +9,9 @@ package fields
 import (
 	"errors"
 	"fmt"
+	"iter"
 	"maps"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/comments"
@@ -45,8 +47,8 @@ func NewField(name appdef.FieldName, data appdef.IData, required bool, comments 
 	return &f
 }
 
-func (fld *Field) Constraints() map[appdef.ConstraintKind]appdef.IConstraint {
-	return fld.constraints
+func (fld *Field) Constraints() iter.Seq2[appdef.ConstraintKind, appdef.IConstraint] {
+	return maps.All(fld.constraints)
 }
 
 func (fld *Field) Data() appdef.IData { return fld.data }
@@ -111,7 +113,7 @@ func (ff WithFields) Field(name appdef.FieldName) appdef.IField {
 
 func (ff WithFields) FieldCount() int { return len(ff.fieldsOrdered) }
 
-func (ff WithFields) Fields() []appdef.IField { return ff.fieldsOrdered }
+func (ff WithFields) Fields() iter.Seq[appdef.IField] { return slices.Values(ff.fieldsOrdered) }
 
 func (ff WithFields) RefField(name appdef.FieldName) (rf appdef.IRefField) {
 	if fld := ff.Field(name); fld != nil {
@@ -147,9 +149,9 @@ func (ff *WithFields) MakeSysFields() {
 	}
 }
 
-func (ff WithFields) RefFields() []appdef.IRefField { return ff.refFields }
+func (ff WithFields) RefFields() iter.Seq[appdef.IRefField] { return slices.Values(ff.refFields) }
 
-func (ff WithFields) UserFields() []appdef.IField { return ff.userFields }
+func (ff WithFields) UserFields() iter.Seq[appdef.IField] { return slices.Values(ff.userFields) }
 
 func (ff WithFields) UserFieldCount() int { return len(ff.userFields) }
 
@@ -307,7 +309,7 @@ func (f RefField) Ref(n appdef.QName) bool {
 	return f.refs.Contains(n)
 }
 
-func (f RefField) Refs() appdef.QNames { return f.refs }
+func (f RefField) Refs() iter.Seq[appdef.QName] { return slices.Values(f.refs) }
 
 // Validates specified fields.
 //
@@ -317,8 +319,8 @@ func (f RefField) Refs() appdef.QNames { return f.refs }
 func ValidateTypeFields(t appdef.IType) (err error) {
 	if ff, ok := t.(appdef.IWithFields); ok {
 		// resolve reference types
-		for _, rf := range ff.RefFields() {
-			for _, n := range rf.Refs() {
+		for rf := range ff.RefFields() {
+			for n := range rf.Refs() {
 				refType := appdef.Record(t.App().Type, n)
 				if refType == nil {
 					err = errors.Join(err,
