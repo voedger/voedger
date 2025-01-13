@@ -18,7 +18,7 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 	);
 
 	TYPE VSqlUpdateParams (
-		Query varchar NOT NULL
+		Query varchar(65535) NOT NULL
 	);
 
 	TYPE VSqlUpdateResult (
