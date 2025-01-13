@@ -88,6 +88,26 @@ type appStorageType struct {
 
 //nolint:revive
 func (s *appStorageType) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
+	// TTL-keys will be stored in global bucket called "ttl_keys" (name must be configured via constant).
+	// Inside ttl_keys bucket, there are buckets for year, inside year will be months then inside each month will be buckets for days.
+	// Each day stores buckets of cleanup hours. Each cleanup hour stores buckets for keys to be deleted.
+	// year, month, day and cleanup hour will be calculated via cleanup time.
+	// Cleanup time will be calculated as current time + ttlSeconds rounded to next hour.
+	// Cleanup tree:
+	// ttl_keys -> 2025, 2026
+	// 2025 -> 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
+	// 1 -> 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+	// 0 -> key1, key2, key3
+	// 1 -> key4, key5, key6
+	// keys are leaves and cleanup nodes (year, months, days, hours are branches)
+	// each ttl key is stored in ttl_keys bucket for direct read purposes.
+	// The cleanup goroutine must be started  for each appStorageType instance.
+	// The goroutine calculate next cleanup hour and sleep until that time.
+	// When the time comes, it will read all expired keys and removed them directly and from cleanup tree then sleeps till next cleanup hour.
+	// If the goroutine finds expired nodes in cleanup (for example: it is the august of the 2025, but there is july node in 2025 parent then),
+	// then all expired keys must be removed, then expired branches.
+	// So the cleanup goroutine starts each hour.
+
 	//TODO implement me
 	panic("implement me")
 }
