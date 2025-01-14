@@ -12,6 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts/internal/acl"
+	"github.com/voedger/voedger/pkg/goutils/set"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
@@ -119,7 +120,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 	allDocFields := []appdef.FieldName{
 		appdef.SystemField_QName, appdef.SystemField_ID, appdef.SystemField_IsActive,
 		"field1", "hiddenField", "field3"}
-	t.Run("test IsAllowed", func(t *testing.T) {
+	t.Run("test IsOperationAllowed", func(t *testing.T) {
 		var tests = []struct {
 			name          string
 			op            appdef.OperationKind
@@ -343,7 +344,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 		}
 	})
 
-	t.Run("test IsAllowed with multiple roles", func(t *testing.T) {
+	t.Run("test IsOperationAllowed with multiple roles", func(t *testing.T) {
 		var tests = []struct {
 			name          string
 			op            appdef.OperationKind
@@ -397,7 +398,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 		}
 	})
 
-	t.Run("test IsAllowed with errors", func(t *testing.T) {
+	t.Run("test IsOperationAllowed with errors", func(t *testing.T) {
 		var tests = []struct {
 			name   string
 			op     appdef.OperationKind
@@ -516,6 +517,114 @@ func TestRecursiveRoleAncestors(t *testing.T) {
 			t.Run(tt.role.String(), func(t *testing.T) {
 				roles := acl.RecursiveRoleAncestors(appdef.Role(app.Type, tt.role))
 				require.ElementsMatch(tt.result, roles)
+			})
+		}
+	})
+}
+
+func TestWSInheritances(t *testing.T) {
+	// #3113: IsOperationAllowed should use request workspace
+	//
+	// # Test plan:
+	// ┌─────────────────────────┬─────────────┐
+	// │       workspaces        │  resources  │
+	// ├───────────┬─────────────┼──────┬──────┤
+	// │ ancestor  │ descendants │ doc1 │ doc2 │
+	// ├───────────┴─────────────┼──────┼──────┤
+	// │ abstractWS              │ S--  │ S--  │ grant select all tables to role
+	// │     ▲     ┌─◄─ ws1      │ SIU  │ S--  │ grant all on doc1 to role
+	// │     └─————┼─◄─ ws2      │ S--  │ SIU  │ grant all on doc2 to role
+	// │           └─◄─ ws3      │ ---  │ ---  │ revoke all on doc1, doc2 from role
+	// └─────────────────────────┴──────┴──────┘
+
+	require := require.New(t)
+
+	var app appdef.IAppDef
+
+	awsName := appdef.NewQName("test", "abstractWS")
+	ws1Name := appdef.NewQName("test", "ws1")
+	ws2Name := appdef.NewQName("test", "ws2")
+	ws3Name := appdef.NewQName("test", "ws3")
+
+	roleName := appdef.NewQName("test", "role")
+
+	doc1Name := appdef.NewQName("test", "doc1")
+	doc2Name := appdef.NewQName("test", "doc2")
+	docs := []appdef.QName{doc1Name, doc2Name}
+
+	t.Run("should be ok to build application", func(t *testing.T) {
+		adb := builder.New()
+		adb.AddPackage("test", "test.com/test")
+
+		aws := adb.AddWorkspace(awsName)
+		_ = aws.AddCDoc(doc1Name)
+		_ = aws.AddCDoc(doc2Name)
+		_ = aws.AddRole(roleName)
+		aws.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, filter.AllWSTables(awsName), nil, roleName, "grant select all tables to role")
+
+		ws1 := adb.AddWorkspace(ws1Name)
+		ws1.SetAncestors(awsName)
+		ws1.GrantAll(filter.QNames(doc1Name), roleName, "grant all on doc1 to role")
+
+		ws2 := adb.AddWorkspace(ws2Name)
+		ws2.SetAncestors(awsName)
+		ws2.GrantAll(filter.QNames(doc2Name), roleName, "grant all on doc2 to role")
+
+		ws3 := adb.AddWorkspace(ws3Name)
+		ws3.SetAncestors(awsName)
+		ws3.RevokeAll(filter.QNames(doc1Name, doc2Name), roleName, "revoke all on doc1, doc2 from role")
+
+		a, err := adb.Build()
+		require.NoError(err)
+
+		app = a
+	})
+
+	require.NotNil(app)
+
+	t.Run("test IsOperationAllowed", func(t *testing.T) {
+		var tests = []struct {
+			ws      appdef.QName
+			allowed map[appdef.QName]appdef.OperationsSet
+		}{
+			{
+				ws: awsName,
+				allowed: map[appdef.QName]appdef.OperationsSet{
+					doc1Name: set.From(appdef.OperationKind_Select),
+					doc2Name: set.From(appdef.OperationKind_Select),
+				},
+			},
+			{
+				ws: ws1Name,
+				allowed: map[appdef.QName]appdef.OperationsSet{
+					doc1Name: set.From(appdef.OperationKind_Select, appdef.OperationKind_Insert, appdef.OperationKind_Update),
+					doc2Name: set.From(appdef.OperationKind_Select),
+				},
+			},
+			{
+				ws: ws2Name,
+				allowed: map[appdef.QName]appdef.OperationsSet{
+					doc1Name: set.From(appdef.OperationKind_Select),
+					doc2Name: set.From(appdef.OperationKind_Select, appdef.OperationKind_Insert, appdef.OperationKind_Update),
+				},
+			},
+			{
+				ws:      ws3Name,
+				allowed: map[appdef.QName]appdef.OperationsSet{},
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.ws.Entity(), func(t *testing.T) {
+				ws := app.Workspace(tt.ws)
+				ops := []appdef.OperationKind{appdef.OperationKind_Select, appdef.OperationKind_Insert, appdef.OperationKind_Update}
+				for _, op := range ops {
+					for _, doc := range docs {
+						want := tt.allowed[doc].Contains(op)
+						got, _, err := acl.IsOperationAllowed(ws, op, doc, nil, []appdef.QName{roleName})
+						require.NoError(err)
+						require.Equal(want, got, "%s %s", doc, op)
+					}
+				}
 			})
 		}
 	})
