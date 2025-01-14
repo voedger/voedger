@@ -99,7 +99,7 @@ func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		return coreutils.NewHTTPErrorf(blobHelperMeta.StatusCode, "q.sys.DownloadBLOBAuthnz returned error: "+blobHelperResp.SysError.Data)
 	}
 	if bw.isPersistent() {
-		bw.newBLOBID = istructs.RecordID(blobHelperResp.NewIDs["1"])
+		bw.newBLOBID = blobHelperResp.NewIDs["1"]
 	} else {
 		bw.newSUUID = iblobstorage.NewSUUID()
 	}

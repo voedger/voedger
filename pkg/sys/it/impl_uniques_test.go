@@ -63,7 +63,7 @@ func TestBasicUsage_Uniques(t *testing.T) {
 				"Bool":  true,
 			})
 			require.NoError(err)
-			require.Equal(istructs.RecordID(expectedRecID), recordID)
+			require.Equal(expectedRecID, recordID)
 		})
 		t.Run("not found", func(t *testing.T) {
 			recordID, err := uniques.GetRecordIDByUniqueCombination(ws.WSID, it.QNameApp1_DocConstraints, as, map[string]interface{}{
@@ -356,7 +356,7 @@ func TestBasicUsage_UNIQUEFIELD(t *testing.T) {
 			"Int": int32(num),
 		})
 		require.NoError(err)
-		require.Equal(istructs.RecordID(expectedRecID), recordID)
+		require.Equal(expectedRecID, recordID)
 	})
 }
 

@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/istructs"
 	"golang.org/x/exp/slices"
 )
 
@@ -451,7 +452,7 @@ func (resp *FuncResponse) SectionRow(rowIdx ...int) []interface{} {
 }
 
 // returns a new ID for raw ID 1
-func (resp *FuncResponse) NewID() int64 {
+func (resp *FuncResponse) NewID() istructs.RecordID {
 	return resp.NewIDs["1"]
 }
 
