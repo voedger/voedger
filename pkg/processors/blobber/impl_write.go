@@ -17,6 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/iblobstorage"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
@@ -98,10 +99,10 @@ func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		return coreutils.NewHTTPErrorf(blobHelperMeta.StatusCode, "q.sys.DownloadBLOBAuthnz returned error: "+blobHelperResp.SysError.Data)
 	}
 	if bw.isPersistent() {
-		bw.newBLOBID, err = coreutils.Int64ToRecordID(blobHelperResp.NewIDs["1"])
-		return err
+		bw.newBLOBID = istructs.RecordID(blobHelperResp.NewIDs["1"])
+	} else {
+		bw.newSUUID = iblobstorage.NewSUUID()
 	}
-	bw.newSUUID = iblobstorage.NewSUUID()
 	return nil
 }
 
