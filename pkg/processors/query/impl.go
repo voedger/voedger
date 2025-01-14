@@ -263,7 +263,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
-			ok, _, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
+			ok, _, err := qw.appPart.IsOperationAllowed(qw.iWorkspace, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
 			if err != nil {
 				return err
 			}
@@ -385,7 +385,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				for _, resultField := range elem.ResultFields() {
 					requestedfields = append(requestedfields, resultField.Field())
 				}
-				ok, allowedFields, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
+				ok, allowedFields, err := qw.appPart.IsOperationAllowed(qw.iWorkspace, appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
 				if err != nil {
 					return err
 				}
