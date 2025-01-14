@@ -116,6 +116,9 @@ func Test_IsOperationAllowed(t *testing.T) {
 	selectableDocFields := []appdef.FieldName{
 		appdef.SystemField_QName, appdef.SystemField_ID, appdef.SystemField_IsActive,
 		"field1", "field3"}
+	allDocFields := []appdef.FieldName{
+		appdef.SystemField_QName, appdef.SystemField_ID, appdef.SystemField_IsActive,
+		"field1", "hiddenField", "field3"}
 	t.Run("test IsAllowed", func(t *testing.T) {
 		var tests = []struct {
 			name          string
@@ -126,6 +129,34 @@ func Test_IsOperationAllowed(t *testing.T) {
 			allowed       bool
 			allowedFields []appdef.FieldName
 		}{
+			// iauthnz.QNameRoleSystem test
+			{
+				name:          "allow select * from doc for system",
+				op:            appdef.OperationKind_Select,
+				res:           docName,
+				fields:        nil,
+				role:          appdef.QNameRoleSystem,
+				allowed:       true,
+				allowedFields: allDocFields,
+			},
+			{
+				name:          "allow insert to doc for system",
+				op:            appdef.OperationKind_Insert,
+				res:           docName,
+				fields:        nil,
+				role:          appdef.QNameRoleSystem,
+				allowed:       true,
+				allowedFields: allDocFields,
+			},
+			{
+				name:          "allow update doc for system",
+				op:            appdef.OperationKind_Update,
+				res:           docName,
+				fields:        nil,
+				role:          appdef.QNameRoleSystem,
+				allowed:       true,
+				allowedFields: allDocFields,
+			},
 			// reader tests
 			{
 				name:          "allow select doc.field1 for reader",
@@ -216,7 +247,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 				fields:        nil,
 				role:          writer,
 				allowed:       true,
-				allowedFields: []appdef.FieldName{"sys.QName", "sys.ID", "sys.IsActive", "field1", "hiddenField", "field3"},
+				allowedFields: allDocFields,
 			},
 			{
 				name:          "allow update doc for writer",
@@ -301,9 +332,10 @@ func Test_IsOperationAllowed(t *testing.T) {
 				allowedFields: nil,
 			},
 		}
+		ws := app.Workspace(wsName)
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				allowed, allowedFields, err := acl.IsOperationAllowed(app, tt.op, tt.res, tt.fields, []appdef.QName{tt.role})
+				allowed, allowedFields, err := acl.IsOperationAllowed(ws, tt.op, tt.res, tt.fields, []appdef.QName{tt.role})
 				require.NoError(err)
 				require.Equal(tt.allowed, allowed)
 				require.EqualValues(tt.allowedFields, allowedFields)
@@ -354,9 +386,10 @@ func Test_IsOperationAllowed(t *testing.T) {
 				allowedFields: nil,
 			},
 		}
+		ws := app.Workspace(wsName)
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				allowed, allowedFields, err := acl.IsOperationAllowed(app, tt.op, tt.res, tt.fields, tt.role)
+				allowed, allowedFields, err := acl.IsOperationAllowed(ws, tt.op, tt.res, tt.fields, tt.role)
 				require.NoError(err)
 				require.Equal(tt.allowed, allowed)
 				require.EqualValues(tt.allowedFields, allowedFields)
@@ -422,18 +455,11 @@ func Test_IsOperationAllowed(t *testing.T) {
 				error:  appdef.ErrMissedError,
 				errHas: "participant",
 			},
-			{
-				name:   "role not found",
-				op:     appdef.OperationKind_Execute,
-				res:    cmdName,
-				role:   []appdef.QName{appdef.NewQName("test", "unknown")},
-				error:  appdef.ErrNotFoundError,
-				errHas: "test.unknown",
-			},
 		}
+		ws := app.Workspace(wsName)
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				allowed, allowedFields, err := acl.IsOperationAllowed(app, tt.op, tt.res, tt.fields, tt.role)
+				allowed, allowedFields, err := acl.IsOperationAllowed(ws, tt.op, tt.res, tt.fields, tt.role)
 				require.Error(err, require.Is(tt.error), require.Has(tt.errHas))
 				require.False(allowed)
 				require.Nil(allowedFields)

@@ -6,13 +6,9 @@
 package acl
 
 import (
-	"bytes"
-	"fmt"
 	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/goutils/logger"
-	"github.com/voedger/voedger/pkg/iauthnz"
 )
 
 // Returns recursive list of role ancestors for specified role.
@@ -28,7 +24,7 @@ func RecursiveRoleAncestors(role appdef.IRole) (roles appdef.QNames) {
 	return roles
 }
 
-// Returns true if specified operation is allowed on specified resource for any of specified roles.
+// Returns true if specified operation is allowed in specified workspace on specified resource for any of specified roles.
 //
 // If resource is any structure and operation is UPDATE or SELECT, then:
 //   - if fields list specified, then result consider it,
@@ -37,9 +33,9 @@ func RecursiveRoleAncestors(role appdef.IRole) (roles appdef.QNames) {
 // else fields list is ignored and nil allowedFields is returned.
 //
 // If some error in arguments, (resource or role not found, operation is not applicable to resource, etc…) then error is returned.
-func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, rol []appdef.QName) (bool, []appdef.FieldName, error) {
+func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, rol []appdef.QName) (bool, []appdef.FieldName, error) {
 
-	t := app.Type(res)
+	t := ws.Type(res)
 	if t == appdef.NullType {
 		return false, nil, appdef.ErrNotFound("resource «%s»", res)
 	}
@@ -73,59 +69,79 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 		return false, nil, appdef.ErrMissed("participants")
 	}
 	for _, r := range roles {
-		role := appdef.Role(app.Type, r)
-		if role == nil {
-			return false, nil, appdef.ErrNotFound("role «%q»", r)
+		role := appdef.Role(ws.Type, r)
+		if role != nil {
+			roles.Add(RecursiveRoleAncestors(role)...)
 		}
-		roles.Add(RecursiveRoleAncestors(role)...)
-	}
-
-	if slices.Contains(roles, iauthnz.QNameRoleSystem) {
-		// nothung else matters
-		return true, fld, nil
 	}
 
 	result := false
-	for rule := range app.ACL() {
-		if rule.Op(op) {
-			if rule.Filter().Match(t) {
-				if roles.Contains(rule.Principal().QName()) {
-					switch rule.Policy() {
-					case appdef.PolicyKind_Allow:
-						result = true
-						if str != nil {
-							if rule.Filter().HasFields() {
-								// allow for specified fields only
-								for f := range rule.Filter().Fields() {
-									allowedFields[f] = true
-								}
-							} else {
-								// allow for all fields
-								for f := range str.Fields() {
-									allowedFields[f.Name()] = true
+
+	if slices.Contains(roles, appdef.QNameRoleSystem) {
+		// nothung else matters
+		result = true
+		if str != nil {
+			for f := range str.Fields() {
+				allowedFields[f.Name()] = true
+			}
+		}
+	} else {
+		stack := map[appdef.QName]bool{}
+
+		var acl func(ws appdef.IWorkspace)
+
+		acl = func(ws appdef.IWorkspace) {
+			if !stack[ws.QName()] {
+				stack[ws.QName()] = true
+
+				for anc := range ws.Ancestors() {
+					acl(anc)
+				}
+
+				for rule := range ws.ACL() {
+					if rule.Op(op) {
+						if rule.Filter().Match(t) {
+							if roles.Contains(rule.Principal().QName()) {
+								switch rule.Policy() {
+								case appdef.PolicyKind_Allow:
+									result = true
+									if str != nil {
+										if rule.Filter().HasFields() {
+											// allow for specified fields only
+											for f := range rule.Filter().Fields() {
+												allowedFields[f] = true
+											}
+										} else {
+											// allow for all fields
+											for f := range str.Fields() {
+												allowedFields[f.Name()] = true
+											}
+										}
+									}
+								case appdef.PolicyKind_Deny:
+									if str != nil {
+										if rule.Filter().HasFields() {
+											// partially deny, only specified fields
+											for f := range rule.Filter().Fields() {
+												delete(allowedFields, f)
+											}
+											result = len(allowedFields) > 0
+										} else {
+											// full deny, for all fields
+											clear(allowedFields)
+											result = false
+										}
+									} else {
+										result = false
+									}
 								}
 							}
-						}
-					case appdef.PolicyKind_Deny:
-						if str != nil {
-							if rule.Filter().HasFields() {
-								// partially deny, only specified fields
-								for f := range rule.Filter().Fields() {
-									delete(allowedFields, f)
-								}
-								result = len(allowedFields) > 0
-							} else {
-								// full deny, for all fields
-								clear(allowedFields)
-								result = false
-							}
-						} else {
-							result = false
 						}
 					}
 				}
 			}
 		}
+		acl(ws)
 	}
 
 	var allowed []appdef.FieldName
@@ -151,23 +167,13 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 		}
 	}
 
-	if !result && logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("%s for %s: [%s] -> deny", op, res, rolesToString(rol)))
-		for rule := range app.ACL() {
-			logger.Verbose(fmt.Sprintf("ops: %v, filter: %s, policy %s", rule.Ops(), rule.Filter(), rule.Policy()))
-		}
-	}
+	// nnv: logging should be moved to caller
+	// if !result && logger.IsVerbose() {
+	// 	logger.Verbose(fmt.Sprintf("%s for %s: [%s] -> deny", op, res, rolesToString(rol)))
+	// 	for rule := range ws.App().ACL() {
+	// 		logger.Verbose(fmt.Sprintf("%v : %v", rule.Workspace(), rule))
+	// 	}
+	// }
 
 	return result, allowed, nil
-}
-
-func rolesToString(roles []appdef.QName) string {
-	buf := bytes.NewBufferString("")
-	for i, role := range roles {
-		if i > 0 {
-			buf.WriteString(",")
-		}
-		buf.WriteString(role.String())
-	}
-	return buf.String()
 }
