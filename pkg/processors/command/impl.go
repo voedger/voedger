@@ -375,7 +375,7 @@ func getPrincipalsRoles(_ context.Context, work pipeline.IWorkpiece) (err error)
 
 func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	ok, _, err := cmd.appPart.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles)
+	ok, _, err := cmd.appPart.IsOperationAllowed(cmd.iWorkspace, appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles)
 	if err != nil {
 		return err
 	}
@@ -681,7 +681,7 @@ func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work pipeline.IWorkpiec
 	cmd := work.(*cmdWorkpiece)
 	for _, parsedCUD := range cmd.parsedCUDs {
 		fields := maps.Keys(parsedCUD.fields)
-		ok, _, err := cmd.appPart.IsOperationAllowed(parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
+		ok, _, err := cmd.appPart.IsOperationAllowed(cmd.iWorkspace, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
 		if err != nil {
 			return err
 		}
