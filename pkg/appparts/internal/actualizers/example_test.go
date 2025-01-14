@@ -10,6 +10,8 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts/internal/actualizers"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -23,11 +25,17 @@ func Example() {
 	actualizers := actualizers.New(appName, partID)
 
 	appDef := func(prjNames ...appdef.QName) appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
-		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsName := appdef.NewQName("test", "workspace")
+		wsb := adb.AddWorkspace(wsName)
+		_ = wsb.AddCommand(appdef.NewQName("test", "command"))
 		for _, name := range prjNames {
-			wsb.AddProjector(name).SetSync(false).Events().Add(appdef.QNameAnyCommand, appdef.ProjectorEventKind_Execute)
+			prj := wsb.AddProjector(name)
+			prj.Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.AllWSFunctions(wsName))
+			prj.SetSync(false)
 		}
 		return adb.MustBuild()
 	}

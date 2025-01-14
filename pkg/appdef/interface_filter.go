@@ -14,6 +14,8 @@ type FilterKind uint8
 const (
 	FilterKind_null FilterKind = iota
 
+	FilterKind_True
+
 	FilterKind_QNames
 	FilterKind_Types
 	FilterKind_Tags
@@ -38,6 +40,10 @@ type IFilter interface {
 	// Return filtered type kinds.
 	// If kind is not FilterKind_Types, returns empty iterator
 	Types() iter.Seq[TypeKind]
+
+	// Return filtered types workspace.
+	// If kind is not FilterKind_Types or not workspace assigned, returns NullQName.
+	WS() QName
 
 	// Return filtered tags.
 	// If kind is not FilterKind_Tags, returns empty iterator

@@ -98,12 +98,7 @@ func initCE(cmd *cobra.Command, args []string) error {
 	cluster := newCluster()
 	var err error
 
-	defer func(cluster *clusterType) {
-		err = cluster.saveToJSON()
-		if err != nil {
-			loggerError(err.Error())
-		}
-	}(cluster)
+	defer saveClusterToJson(cluster)
 
 	if !cluster.Draft {
 		return ErrClusterConfAlreadyExists
@@ -151,12 +146,8 @@ func initSE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	defer func(cluster *clusterType) {
-		err = cluster.saveToJSON()
-		if err != nil {
-			loggerError(err.Error())
-		}
-	}(cluster)
+	defer saveClusterToJson(cluster)
+
 	err = mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
 		return err

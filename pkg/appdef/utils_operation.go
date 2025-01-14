@@ -11,10 +11,10 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
-// Returns all available operations for specified type.
+// Returns all available ACL operations for specified type.
 //
 // If type can not to be used then returns empty slice.
-func AllOperationsForType(t TypeKind) (ops set.Set[OperationKind]) {
+func ACLOperationsForType(t TypeKind) (ops set.Set[OperationKind]) {
 	switch t {
 	case TypeKind_GRecord, TypeKind_GDoc,
 		TypeKind_CRecord, TypeKind_CDoc,
@@ -31,8 +31,8 @@ func AllOperationsForType(t TypeKind) (ops set.Set[OperationKind]) {
 	return ops
 }
 
-// isCompatibleOperations returns true if specified operations set contains compatible operations.
-func isCompatibleOperations(ops set.Set[OperationKind]) (bool, error) {
+// IsCompatibleOperations returns true if specified operations set contains compatible operations.
+func IsCompatibleOperations(ops set.Set[OperationKind]) (bool, error) {
 	op, ok := ops.First()
 	if !ok {
 		return false, ErrMissed("operations")
@@ -49,16 +49,10 @@ func isCompatibleOperations(ops set.Set[OperationKind]) (bool, error) {
 
 // Returns true if specified operation is compatible with this operation.
 func (k OperationKind) IsCompatible(o OperationKind) bool {
-	switch k {
-	case OperationKind_Insert, OperationKind_Update, OperationKind_Select:
-		return (o == OperationKind_Insert) || (o == OperationKind_Update) || (o == OperationKind_Select)
-	case OperationKind_Execute:
-		return o == OperationKind_Execute
-	case OperationKind_Inherits:
-		return o == OperationKind_Inherits
-	default:
-		panic(ErrUnsupported("operation %v", k))
+	if RecordsOperations.Contains(k) {
+		return RecordsOperations.Contains(o)
 	}
+	return k == o
 }
 
 // Renders an OperationKind in human-readable form, without "OperationKind_" prefix,

@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
@@ -21,7 +22,7 @@ func ExampleOr() {
 	tag := appdef.NewQName("test", "tag")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
@@ -52,14 +53,14 @@ func ExampleOr() {
 
 	example(
 		filter.Or(
-			filter.Types(wsName, appdef.TypeKind_ODoc),
+			filter.WSTypes(wsName, appdef.TypeKind_ODoc),
 			filter.Tags(tag)))
 
 	example(
 		filter.Or(
 			filter.QNames(doc),
 			filter.And(
-				filter.Types(wsName, appdef.TypeKind_Object),
+				filter.WSTypes(wsName, appdef.TypeKind_Object),
 				filter.Tags(tag))))
 
 	// Output:

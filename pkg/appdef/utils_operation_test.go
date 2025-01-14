@@ -6,6 +6,7 @@
 package appdef_test
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -30,9 +31,32 @@ func Test_AllOperationsForType(t *testing.T) {
 	for i := range tests {
 		tt := tests[i]
 		t.Run(tt.TypeKind.TrimString(), func(t *testing.T) {
-			if got := appdef.AllOperationsForType(tt.TypeKind); !reflect.DeepEqual(got, tt.want) {
+			if got := appdef.ACLOperationsForType(tt.TypeKind); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("AllOperationsForType(%v) = %v, want %v", tt.TypeKind, got, tt.want)
 			}
 		})
+	}
+}
+
+func Test_IsCompatibleOperations(t *testing.T) {
+
+	test := []struct {
+		o    set.Set[appdef.OperationKind]
+		want bool
+		err  error
+	}{
+		{set.Set[appdef.OperationKind]{}, false, appdef.ErrMissedError},
+		{set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update), true, nil},
+		{set.From(appdef.OperationKind_Execute), true, nil},
+		{set.From(appdef.OperationKind_Insert, appdef.OperationKind_Execute), false, appdef.ErrIncompatibleError},
+	}
+
+	for _, tt := range test {
+		got, err := appdef.IsCompatibleOperations(tt.o)
+		if got != tt.want {
+			t.Errorf("IsCompatibleOperations(%v) = %v, want %v", tt.o, got, err)
+		} else if tt.err != nil && !errors.Is(err, tt.err) {
+			t.Errorf("IsCompatibleOperations(%v) returns error %v, want %v", tt.o, got, err)
+		}
 	}
 }

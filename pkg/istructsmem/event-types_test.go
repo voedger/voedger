@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	log "github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
@@ -433,11 +434,15 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 				for rec := range event.CUDs {
 					if rec.QName() == test.tablePhotos {
 						require.False(rec.IsNew())
+						require.False(rec.IsActivated())
+						require.False(rec.IsDeactivated())
 						require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
 						require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
 					}
 					if rec.QName() == test.tablePhotoRems {
 						require.False(rec.IsNew())
+						require.False(rec.IsActivated())
+						require.False(rec.IsDeactivated())
 						require.Equal(changedRems, rec.AsString(test.remarkIdent))
 					}
 					cudCount++
@@ -568,6 +573,8 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			for rec := range pLogEvent.CUDs {
 				if rec.QName() == test.tablePhotos {
 					require.False(rec.IsNew())
+					require.False(rec.IsActivated())
+					require.False(rec.IsDeactivated())
 					require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
 					require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
 					checked = true
@@ -737,7 +744,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 	docName := appdef.NewQName("test", "cDoc")
 	recName := appdef.NewQName("test", "cRec")
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("should be ok to construct application", func(t *testing.T) {
@@ -923,7 +930,7 @@ func Test_UpdateCorrupted(t *testing.T) {
 	wsName := appdef.NewQName("test", "workspace")
 	docName := appdef.NewQName("test", "doc")
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("should be ok to build AppDef", func(t *testing.T) {
@@ -1057,7 +1064,7 @@ func Test_BuildPLogEvent(t *testing.T) {
 	wsName := appdef.NewQName("test", "workspace")
 	docName := appdef.NewQName("test", "doc")
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("should be ok to build AppDef", func(t *testing.T) {
@@ -1256,7 +1263,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 	docName, doc2Name := appdef.NewQName("test", "cDoc"), appdef.NewQName("test", "cDoc2")
 	docID := istructs.NullRecordID
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("should be ok to construct singleton CDoc", func(t *testing.T) {

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -27,7 +28,7 @@ func ExampleIAppPartition_IsLimitExceeded() {
 	cmd1Name := appdef.NewQName("test", "cmd1")
 	cmd2Name := appdef.NewQName("test", "cmd2")
 	adb, app := func() (appdef.IAppDefBuilder, appdef.IAppDef) {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsName := appdef.NewQName("test", "workspace")
@@ -42,7 +43,7 @@ func ExampleIAppPartition_IsLimitExceeded() {
 			appdef.NewQName("test", "wsLimit"),
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
 			appdef.LimitFilterOption_ALL,
-			filter.AllFunctions(wsName),
+			filter.AllWSFunctions(wsName),
 			wsRateName)
 
 		// Add rate and limit for IP: 3 commands per minute for each IP address for each command
@@ -52,7 +53,7 @@ func ExampleIAppPartition_IsLimitExceeded() {
 			appdef.NewQName("test", "ipLimit"),
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
 			appdef.LimitFilterOption_EACH,
-			filter.AllFunctions(wsName),
+			filter.AllWSFunctions(wsName),
 			ipRateName)
 
 		return adb, adb.MustBuild()
@@ -65,7 +66,7 @@ func ExampleIAppPartition_IsLimitExceeded() {
 		appConfigs,
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
-		provider.Provide(mem.Provide(), ""))
+		provider.Provide(mem.Provide(coreutils.MockTime), ""))
 
 	appParts, cleanupParts, err := appparts.New2(
 		context.Background(),

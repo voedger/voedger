@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -30,7 +32,7 @@ func Test_KeyType(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
 
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
@@ -55,9 +57,9 @@ func Test_KeyType(t *testing.T) {
 				AddField("cc_bool", appdef.DataKind_bool).
 				AddRefField("cc_recID").
 				AddField("cc_number", appdef.DataKind_float64).
-				AddField("cc_bytes", appdef.DataKind_bytes, appdef.MaxLen(64))
+				AddField("cc_bytes", appdef.DataKind_bytes, constraints.MaxLen(64))
 			view.Value().
-				AddField("val_string", appdef.DataKind_string, false, appdef.MaxLen(1024))
+				AddField("val_string", appdef.DataKind_string, false, constraints.MaxLen(1024))
 		})
 
 		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
@@ -200,7 +202,7 @@ func TestCore_ViewRecords(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
 
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 		t.Run("should be ok to build application", func(t *testing.T) {
@@ -210,7 +212,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			view.Key().ClustCols().
 				AddField("clusteringColumn1", appdef.DataKind_int64).
 				AddField("clusteringColumn2", appdef.DataKind_bool).
-				AddField("clusteringColumn3", appdef.DataKind_string, appdef.MaxLen(64))
+				AddField("clusteringColumn3", appdef.DataKind_string, constraints.MaxLen(64))
 			view.Value().
 				AddField("id", appdef.DataKind_int64, true).
 				AddField("name", appdef.DataKind_string, true).
@@ -222,7 +224,7 @@ func TestCore_ViewRecords(t *testing.T) {
 			otherView.Key().ClustCols().
 				AddField("clusteringColumn1", appdef.DataKind_float32).
 				AddField("clusteringColumn2", appdef.DataKind_float64).
-				AddField("clusteringColumn3", appdef.DataKind_bytes, appdef.MaxLen(128))
+				AddField("clusteringColumn3", appdef.DataKind_bytes, constraints.MaxLen(128))
 			otherView.Value().
 				AddField("valueField1", appdef.DataKind_int64, false)
 		})
@@ -864,7 +866,7 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 	appCfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
 
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 		t.Run("should be ok to build application", func(t *testing.T) {
@@ -873,7 +875,7 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 				AddField("pk1", appdef.DataKind_int64)
 			view.Key().ClustCols().
 				AddField("cc1", appdef.DataKind_int64).
-				AddField("cc2", appdef.DataKind_string, appdef.MaxLen(64))
+				AddField("cc2", appdef.DataKind_string, constraints.MaxLen(64))
 			view.Value().
 				AddField("v1", appdef.DataKind_float32, true).
 				AddField("v2", appdef.DataKind_string, true)
@@ -985,7 +987,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 
 	viewName := appdef.NewQName("test", "view")
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 	t.Run("should be ok to build application", func(t *testing.T) {
@@ -1006,14 +1008,14 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 			AddField("cc_qname", appdef.DataKind_QName).
 			AddField("cc_bool", appdef.DataKind_bool).
 			AddRefField("cc_recID").
-			AddField("cc_bytes", appdef.DataKind_bytes, appdef.MaxLen(8))
+			AddField("cc_bytes", appdef.DataKind_bytes, constraints.MaxLen(8))
 		v.Value().
 			AddField("vf_int32", appdef.DataKind_int32, true).
 			AddField("vf_int64", appdef.DataKind_int64, false).
 			AddField("vf_float32", appdef.DataKind_float32, false).
 			AddField("vf_float64", appdef.DataKind_float64, false).
-			AddField("vf_bytes", appdef.DataKind_bytes, false, appdef.MaxLen(1024)).
-			AddField("vf_string", appdef.DataKind_string, false, appdef.Pattern(`^\w+$`)).
+			AddField("vf_bytes", appdef.DataKind_bytes, false, constraints.MaxLen(1024)).
+			AddField("vf_string", appdef.DataKind_string, false, constraints.Pattern(`^\w+$`)).
 			AddField("vf_qname", appdef.DataKind_QName, false).
 			AddField("vf_bool", appdef.DataKind_bool, false).
 			AddRefField("vf_recID", false).
@@ -1126,7 +1128,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 	//
 	appConfigs := func() AppConfigsType {
 
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 		t.Run("should be ok to build application", func(t *testing.T) {
@@ -1205,7 +1207,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 	championshipsView := appdef.NewQName("test", "championships")
 	championsView := appdef.NewQName("test", "champions")
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 	t.Run("should be ok to build application", func(t *testing.T) {
@@ -1213,7 +1215,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		v.Key().PartKey().
 			AddField("Year", appdef.DataKind_int32)
 		v.Key().ClustCols().
-			AddField("Sport", appdef.DataKind_string, appdef.MaxLen(64))
+			AddField("Sport", appdef.DataKind_string, constraints.MaxLen(64))
 		v.Value().
 			AddField("Country", appdef.DataKind_string, true).
 			AddField("City", appdef.DataKind_string, false)
@@ -1222,7 +1224,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		v.Key().PartKey().
 			AddField("Year", appdef.DataKind_int32)
 		v.Key().ClustCols().
-			AddField("Sport", appdef.DataKind_string, appdef.MaxLen(64))
+			AddField("Sport", appdef.DataKind_string, constraints.MaxLen(64))
 		v.Value().
 			AddField("Winner", appdef.DataKind_string, true)
 	})
@@ -1488,7 +1490,7 @@ func Test_ViewRecordStructure(t *testing.T) {
 
 	viewName := appdef.NewQName("test", "view")
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 	t.Run("should be ok to build application", func(t *testing.T) {
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))

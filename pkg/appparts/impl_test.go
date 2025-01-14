@@ -8,13 +8,18 @@ package appparts_test
 import (
 	"context"
 	"errors"
+	"maps"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/mock"
+
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/appparts/internal/schedulers"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -99,14 +104,20 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 	ctx, stop := context.WithCancel(context.Background())
 
 	adb1, appDef1 := func() (appdef.IAppDefBuilder, appdef.IAppDef) {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
-		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsName := appdef.NewQName("test", "workspace")
+
+		wsb := adb.AddWorkspace(wsName)
+
+		_ = wsb.AddCommand(appdef.NewQName("test", "command"))
 
 		prj := wsb.AddProjector(prj1name)
+		prj.Events().Add(
+			[]appdef.OperationKind{appdef.OperationKind_Execute},
+			filter.WSTypes(wsName, appdef.TypeKind_Command))
 		prj.SetSync(false)
-		prj.Events().Add(appdef.QNameAnyCommand, appdef.ProjectorEventKind_Execute)
 
 		job := wsb.AddJob(job1name)
 		job.SetCronSchedule("@every 1s")
@@ -121,7 +132,7 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 		appConfigs,
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
-		provider.Provide(mem.Provide(), ""))
+		provider.Provide(mem.Provide(coreutils.MockTime), ""))
 
 	mockActualizers := &mockActualizerRunner{}
 	mockActualizers.On("SetAppPartitions", mock.Anything).Once()
@@ -144,7 +155,8 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 			m[pid] = appdef.QNamesFrom(actualizers...)
 		}
 		for pid, schedulers := range appParts.WorkedSchedulers(appName) {
-			names := appdef.QNamesFromMap(schedulers)
+			names := appdef.QNames{}
+			names.Collect(maps.Keys(schedulers))
 			if exists, ok := m[pid]; ok {
 				names.Add(exists...)
 			}
@@ -184,14 +196,20 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 		prj2name := appdef.NewQName("test", "projector2")
 		job2name := appdef.NewQName("test", "job2")
 		appDef2 := func() appdef.IAppDef {
-			adb := appdef.New()
+			adb := builder.New()
 			adb.AddPackage("test", "test.com/test")
 
-			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+			wsName := appdef.NewQName("test", "workspace")
+
+			wsb := adb.AddWorkspace(wsName)
+
+			_ = wsb.AddCommand(appdef.NewQName("test", "command"))
 
 			prj := wsb.AddProjector(prj2name)
+			prj.Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.WSTypes(wsName, appdef.TypeKind_Command))
 			prj.SetSync(false)
-			prj.Events().Add(appdef.QNameAnyCommand, appdef.ProjectorEventKind_Execute)
 
 			job := wsb.AddJob(job2name)
 			job.SetCronSchedule("@every 1s")

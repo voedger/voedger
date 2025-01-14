@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -25,7 +26,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 		)
 
 		t.Run("Should set result fields", func(t *testing.T) {
-			adb := appdef.New()
+			adb := builder.New()
 
 			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 

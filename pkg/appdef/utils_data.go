@@ -6,178 +6,119 @@
 package appdef
 
 import (
-	"math"
-	"regexp"
-	"slices"
+	"strings"
+
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
-// Return new minimum length constraint for string or bytes data types.
-func MinLen(v uint16, c ...string) IConstraint {
-	return newDataConstraint(ConstraintKind_MinLen, v, c...)
+// Returns name of system data type by data kind.
+//
+// Returns NullQName if data kind is out of bounds.
+func SysDataName(k DataKind) QName {
+	if (k > DataKind_null) && (k < DataKind_FakeLast) {
+		return NewQName(SysPackage, k.TrimString())
+	}
+	return NullQName
 }
 
-// Return new maximum length restriction for string or bytes data types.
-//
-// Using MaxLen(), you can both limit the maximum length by a smaller value,
-// and increase it to MaxFieldLength (65535).
-//
-// # Panics:
-//   - if value is zero
-func MaxLen(v uint16, c ...string) IConstraint {
-	if v == 0 {
-		panic(ErrOutOfBounds("maximum field length value is zero"))
+// Returns is fixed width data kind
+func (k DataKind) IsFixed() bool {
+	switch k {
+	case
+		DataKind_int32,
+		DataKind_int64,
+		DataKind_float32,
+		DataKind_float64,
+		DataKind_QName,
+		DataKind_bool,
+		DataKind_RecordID:
+		return true
 	}
-	return newDataConstraint(ConstraintKind_MaxLen, v, c...)
+	return false
 }
 
-// Return new pattern restriction for string or bytes data types.
+// Returns is data kind supports specified constraint kind.
 //
-// # Panics:
-//   - if value is not valid regular expression
-func Pattern(v string, c ...string) IConstraint {
-	re, err := regexp.Compile(v)
-	if err != nil {
-		panic(err)
-	}
-	return newDataConstraint(ConstraintKind_Pattern, re, c...)
-}
-
-// Return new minimum inclusive constraint for numeric data types.
+// # Bytes data supports:
+//   - ConstraintKind_MinLen
+//   - ConstraintKind_MaxLen
+//   - ConstraintKind_Pattern
 //
-// # Panics:
-//   - if value is NaN
-//   - if value is +infinite
-func MinIncl(v float64, c ...string) IConstraint {
-	if math.IsNaN(v) {
-		panic(ErrInvalid("minimum inclusive value is NaN"))
-	}
-	if math.IsInf(v, 1) {
-		panic(ErrOutOfBounds("minimum inclusive value is positive infinity"))
-	}
-	return newDataConstraint(ConstraintKind_MinIncl, v, c...)
-}
-
-// Return new minimum exclusive constraint for numeric data types.
+// # String data supports:
+//   - ConstraintKind_MinLen
+//   - ConstraintKind_MaxLen
+//   - ConstraintKind_Pattern
+//   - ConstraintKind_Enum
 //
-// # Panics:
-//   - if value is NaN
-//   - if value is +infinite
-func MinExcl(v float64, c ...string) IConstraint {
-	if math.IsNaN(v) {
-		panic(ErrInvalid("minimum exclusive value is NaN"))
-	}
-	if math.IsInf(v, 1) {
-		panic(ErrOutOfBounds("minimum inclusive value is positive infinity"))
-	}
-	return newDataConstraint(ConstraintKind_MinExcl, v, c...)
-}
-
-// Return new maximum inclusive constraint for numeric data types.
-//
-// # Panics:
-//   - if value is NaN
-//   - if value is -infinite
-func MaxIncl(v float64, c ...string) IConstraint {
-	if math.IsNaN(v) {
-		panic(ErrInvalid("maximum inclusive value is NaN"))
-	}
-	if math.IsInf(v, -1) {
-		panic(ErrOutOfBounds("maximum inclusive value is negative infinity"))
-	}
-	return newDataConstraint(ConstraintKind_MaxIncl, v, c...)
-}
-
-// Return new maximum exclusive constraint for numeric data types.
-//
-// # Panics:
-//   - if value is NaN
-//   - if value is -infinite
-func MaxExcl(v float64, c ...string) IConstraint {
-	if math.IsNaN(v) {
-		panic(ErrInvalid("maximum exclusive value is NaN"))
-	}
-	if math.IsInf(v, -1) {
-		panic(ErrOutOfBounds("maximum exclusive value is negative infinity"))
-	}
-	return newDataConstraint(ConstraintKind_MaxExcl, v, c...)
-}
-
-type enumerable interface {
-	string | int32 | int64 | float32 | float64
-}
-
-// Return new enumeration constraint for char or numeric data types.
-//
-// Enumeration values must be one of the following types:
-//   - string
-//   - int32
-//   - int64
-//   - float32
-//   - float64
-//
-// Passed values will be sorted and duplicates removed before placing
-// into returning constraint.
-//
-// # Panics:
-//   - if enumeration values list is empty
-func Enum[T enumerable](v ...T) IConstraint {
-	l := len(v)
-	if l == 0 {
-		panic(ErrMissed("enumeration values slice (%T)", v))
-	}
-	c := make([]T, 0, l)
-	for i := 0; i < l; i++ {
-		n := v[i]
-		c = append(c, n)
-	}
-	slices.Sort(c)
-	c = slices.Compact(c)
-	return newDataConstraint(ConstraintKind_Enum, c)
-}
-
-// Creates and returns new constraint.
-//
-// # Panics:
-//   - if kind is unknown,
-//   - id value is not compatible with kind.
-func NewConstraint(kind ConstraintKind, value any, c ...string) IConstraint {
-	switch kind {
-	case ConstraintKind_MinLen:
-		return MinLen(value.(uint16), c...)
-	case ConstraintKind_MaxLen:
-		return MaxLen(value.(uint16), c...)
-	case ConstraintKind_Pattern:
-		return Pattern(value.(string), c...)
-	case ConstraintKind_MinIncl:
-		return MinIncl(value.(float64), c...)
-	case ConstraintKind_MinExcl:
-		return MinExcl(value.(float64), c...)
-	case ConstraintKind_MaxIncl:
-		return MaxIncl(value.(float64), c...)
-	case ConstraintKind_MaxExcl:
-		return MaxExcl(value.(float64), c...)
-	case ConstraintKind_Enum:
-		var enum IConstraint
-		switch v := value.(type) {
-		case []string:
-			enum = Enum(v...)
-		case []int32:
-			enum = Enum(v...)
-		case []int64:
-			enum = Enum(v...)
-		case []float32:
-			enum = Enum(v...)
-		case []float64:
-			enum = Enum(v...)
-		default:
-			panic(ErrUnsupported("enumeration type: %T", value))
+// # Numeric data supports:
+//   - ConstraintKind_MinIncl
+//   - ConstraintKind_MinExcl
+//   - ConstraintKind_MaxIncl
+//   - ConstraintKind_MaxExcl
+//   - ConstraintKind_Enum
+func (k DataKind) IsCompatibleWithConstraint(c ConstraintKind) bool {
+	switch k {
+	case DataKind_bytes:
+		switch c {
+		case
+			ConstraintKind_MinLen,
+			ConstraintKind_MaxLen,
+			ConstraintKind_Pattern:
+			return true
 		}
-		if len(c) > 0 {
-			if enum, ok := enum.(*dataConstraint); ok {
-				enum.comment.setComment(c...)
-			}
+	case DataKind_string:
+		switch c {
+		case
+			ConstraintKind_MinLen,
+			ConstraintKind_MaxLen,
+			ConstraintKind_Pattern,
+			ConstraintKind_Enum:
+			return true
 		}
-		return enum
+	case DataKind_int32, DataKind_int64, DataKind_float32, DataKind_float64:
+		switch c {
+		case
+			ConstraintKind_MinIncl,
+			ConstraintKind_MinExcl,
+			ConstraintKind_MaxIncl,
+			ConstraintKind_MaxExcl,
+			ConstraintKind_Enum:
+			return true
+		}
 	}
-	panic(ErrUnsupported("constraint kind: %v", kind))
+	return false
+}
+
+func (k DataKind) MarshalText() ([]byte, error) {
+	var s string
+	if k < DataKind_FakeLast {
+		s = k.String()
+	} else {
+		s = utils.UintToString(k)
+	}
+	return []byte(s), nil
+}
+
+// Renders an DataKind in human-readable form, without "DataKind_" prefix,
+// suitable for debugging or error messages
+func (k DataKind) TrimString() string {
+	const pref = "DataKind_"
+	return strings.TrimPrefix(k.String(), pref)
+}
+
+func (k ConstraintKind) MarshalText() ([]byte, error) {
+	var s string
+	if k < ConstraintKind_count {
+		s = k.String()
+	} else {
+		s = utils.UintToString(k)
+	}
+	return []byte(s), nil
+}
+
+// Renders an DataConstraintKind in human-readable form, without "DataConstraintKind_" prefix,
+// suitable for debugging or error messages
+func (k ConstraintKind) TrimString() string {
+	const pref = "ConstraintKind_"
+	return strings.TrimPrefix(k.String(), pref)
 }

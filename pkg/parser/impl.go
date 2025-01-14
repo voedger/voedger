@@ -31,19 +31,18 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "DEFAULTNEXTVAL", Pattern: `DEFAULT[ \r\n\t]+NEXTVAL`},
 		{Name: "NOTNULL", Pattern: `NOT[ \r\n\t]+NULL`},
 		{Name: "UNLOGGED", Pattern: `UNLOGGED`},
+		{Name: "EXECUTE", Pattern: `EXECUTE`},
+		{Name: "SELECT", Pattern: `SELECT`},
 		{Name: "EXTENSIONENGINE", Pattern: `EXTENSION[ \r\n\t]+ENGINE`},
-		{Name: "EXECUTEONCOMMAND", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+COMMAND`},
-		{Name: "EXECUTEONALLCOMMANDSWITHTAG", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+COMMANDS[ \r\n\t]+WITH[ \r\n\t]+TAG`},
-		{Name: "EXECUTEONALLCOMMANDS", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+COMMANDS`},
-		{Name: "EXECUTEONQUERY", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+QUERY`},
-		{Name: "EXECUTEONALLQUERIESWITHTAG", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+QUERIES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
-		{Name: "EXECUTEONALLQUERIES", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+QUERIES`},
-		{Name: "SELECTONVIEW", Pattern: `SELECT[ \r\n\t]+ON[ \r\n\t]+VIEW`},
-		{Name: "SELECTONALLVIEWSWITHTAG", Pattern: `SELECT[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+VIEWS[ \r\n\t]+WITH[ \r\n\t]+TAG`},
-		{Name: "SELECTONALLVIEWS", Pattern: `SELECT[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+VIEWS`},
+		{Name: "ONCOMMAND", Pattern: `ON[ \r\n\t]+COMMAND`},
+		{Name: "ONALLCOMMANDS", Pattern: `ON[ \r\n\t]+ALL[ \r\n\t]+COMMANDS`},
+		{Name: "WITHTAG", Pattern: `WITH[ \r\n\t]+TAG`},
+		{Name: "ONQUERY", Pattern: `ON[ \r\n\t]+QUERY`},
+		{Name: "ONALLQUERIES", Pattern: `ON[ \r\n\t]+ALL[ \r\n\t]+QUERIES`},
+		{Name: "ONVIEW", Pattern: `ON[ \r\n\t]+VIEW`},
+		{Name: "ONALLVIEWS", Pattern: `ON[ \r\n\t]+ALL[ \r\n\t]+VIEWS`},
 		{Name: "INSERTONWORKSPACE", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+WORKSPACE`},
 		{Name: "INSERTONALLWORKSPACESWITHTAG", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+WORKSPACES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
-		{Name: "ONALLTABLESWITHTAG", Pattern: `ON[ \r\n\t]+ALL[ \r\n\t]+TABLES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
 		{Name: "ONALLTABLES", Pattern: `ON[ \r\n\t]+ALL[ \r\n\t]+TABLES`},
 		{Name: "ONTABLE", Pattern: `ON[ \r\n\t]+TABLE`},
 		{Name: "ONVIEW", Pattern: `ON[ \r\n\t]+VIEW`},
@@ -51,7 +50,7 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "TABLE", Pattern: `TABLE`},
 		{Name: "PRIMARYKEY", Pattern: `PRIMARY[ \r\n\t]+KEY`},
 		{Name: "String", Pattern: `('(\\'|[^'])*')`},
-		{Name: "Ident", Pattern: `([a-zA-Z]\w{0,254})|("[a-zA-Z]\w{0,254}")`},
+		{Name: "Ident", Pattern: identifierRegexp},
 		{Name: "Whitespace", Pattern: `[ \r\n\t]+`},
 	})
 
@@ -248,7 +247,7 @@ func defineApp(c *basicContext) {
 	}
 
 	c.app.Name = string(app.Name)
-	appAst.Name = GetPackageName(appAst.Path)
+	appAst.Name = ExtractLocalPackageName(appAst.Path)
 	pkgNames := make(map[string]bool)
 	pkgNames[appAst.Name] = true
 
@@ -291,7 +290,7 @@ func defineApp(c *basicContext) {
 	}
 }
 
-func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
+func buildAppSchemaImpl(packages []*PackageSchemaAST, opts ...ParserOption) (*AppSchemaAST, error) {
 
 	pkgMap := make(map[string]*PackageSchemaAST)
 	pkgPathLocalNames := make(map[string]string, len(packages))
@@ -332,6 +331,10 @@ func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
 		errs: make([]error, 0),
 	}
 
+	for _, opt := range opts {
+		opt(&c)
+	}
+
 	c.errs = append(c.errs, importErrors...)
 
 	defineApp(&c)
@@ -350,8 +353,9 @@ func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
 }
 
 type basicContext struct {
-	app  *AppSchemaAST
-	errs []error
+	variableResolver IVariableResolver
+	app              *AppSchemaAST
+	errs             []error
 }
 
 func (c *basicContext) newStmtErr(pos *lexer.Position, err error) error {
@@ -366,10 +370,13 @@ func (c *basicContext) err(err error) {
 	c.errs = append(c.errs, err)
 }
 
-func buildAppDefs(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder, opts ...BuildAppDefsOption) error {
-	ctx := newBuildContext(appSchema, builder)
-	for _, opt := range opts {
-		opt(ctx)
+func WithVariableResolver(resolver IVariableResolver) ParserOption {
+	return func(c *basicContext) {
+		c.variableResolver = resolver
 	}
+}
+
+func buildAppDefs(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) error {
+	ctx := newBuildContext(appSchema, builder)
 	return ctx.build()
 }

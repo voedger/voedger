@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
@@ -21,7 +22,7 @@ func ExampleNot() {
 	tag := appdef.NewQName("test", "tag")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
@@ -47,7 +48,7 @@ func ExampleNot() {
 		fmt.Println()
 	}
 
-	example(filter.Not(filter.Types(wsName, appdef.TypeKind_Command)))
+	example(filter.Not(filter.WSTypes(wsName, appdef.TypeKind_Command)))
 	example(filter.Not(filter.Or(filter.QNames(doc), filter.QNames(obj))))
 
 	// Output:

@@ -10,18 +10,19 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
-	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/sys"
-
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
+	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/parser"
+	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func TestEventStorage_Get(t *testing.T) {
@@ -150,7 +151,7 @@ func appStructs(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStr
 
 	appName := istructs.AppQName_test1_app1
 
-	appDef := appdef.New()
+	appDef := builder.New()
 
 	err = parser.BuildAppDefs(packages, appDef)
 	if err != nil {
@@ -164,7 +165,7 @@ func appStructs(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStr
 		prepareAppCfg(cfg)
 	}
 
-	asf := mem.Provide()
+	asf := mem.Provide(coreutils.MockTime)
 	storageProvider := istorageimpl.Provide(asf)
 	prov := istructsmem.Provide(
 		cfgs,
