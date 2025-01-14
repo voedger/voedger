@@ -11,6 +11,8 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strconv"
+	"time"
 
 	bolt "go.etcd.io/bbolt"
 
@@ -20,6 +22,7 @@ import (
 
 type appStorageFactory struct {
 	bboltParams ParamsType
+	iTime       coreutils.ITime
 }
 
 func (p *appStorageFactory) AppStorage(appName istorage.SafeAppName) (s istorage.IAppStorage, err error) {
@@ -37,7 +40,7 @@ func (p *appStorageFactory) AppStorage(appName istorage.SafeAppName) (s istorage
 		// notest
 		return nil, err
 	}
-	return &appStorageType{db}, nil
+	return &appStorageType{db: db, iTime: p.iTime}, nil
 }
 
 func (p *appStorageFactory) Init(appName istorage.SafeAppName) error {
@@ -83,7 +86,9 @@ func unSafeKey(value []byte) []byte {
 
 // implemetation for istorage.IAppStorage.
 type appStorageType struct {
-	db *bolt.DB
+	db             *bolt.DB
+	iTime          coreutils.ITime
+	chKeysToRemove chan []byte
 }
 
 // Vision about TTL implementation:
@@ -136,6 +141,326 @@ func (s *appStorageType) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok boo
 func (s *appStorageType) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
 	//TODO implement me
 	panic("implement me")
+}
+
+func getCleanupTime(now time.Time) time.Time {
+	// get next hour
+	nextHour := now.Add(time.Hour)
+	return time.Date(nextHour.Year(), nextHour.Month(), nextHour.Day(), nextHour.Hour(), 0, 0, 0, time.UTC)
+}
+
+// cleanup goroutine
+func (s *appStorageType) cleanup(ctx context.Context) {
+	for {
+		now := s.iTime.Now()
+
+		nextCleanupTime := getCleanupTime(now)
+		timer := time.NewTimer(nextCleanupTime.Sub(now))
+
+		select {
+		case <-timer.C:
+			cleanupTime := s.iTime.Now()
+			_ = s.removeExpiredBranchNodesFromCleanupTree(cleanupTime)
+		case key := <-s.chKeysToRemove:
+			_ = s.removeKeyFromCleanupTree(key)
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (s *appStorageType) removeKeyFromCleanupTree(key []byte) error {
+	err := s.db.Update(func(tx *bolt.Tx) error {
+		ttlBucket := tx.Bucket([]byte(ttlBucketName))
+		if ttlBucket == nil {
+			return nil
+		}
+
+		value := ttlBucket.Get(key)
+		if value == nil {
+			return nil
+		}
+
+		if err := ttlBucket.Delete(key); err != nil {
+			return err
+		}
+
+		var d coreutils.DataWithExpiration
+		d.Read(value)
+
+		cleanupTime := getCleanupTime(time.UnixMilli(d.ExpireAt))
+		yearBucketKey, monthBucketKey, dayBucketKey, hourBucketKey := getCleanupNodes(cleanupTime)
+
+		yearBucket := ttlBucket.Bucket(yearBucketKey)
+		if yearBucket == nil {
+			return nil
+		}
+
+		monthBucket := yearBucket.Bucket(monthBucketKey)
+		if monthBucket == nil {
+			return nil
+		}
+
+		dayBucket := monthBucket.Bucket(dayBucketKey)
+		if dayBucket == nil {
+			return nil
+		}
+
+		hourBucket := dayBucket.Bucket(hourBucketKey)
+		if hourBucket == nil {
+			return nil
+		}
+
+		if err := hourBucket.Delete(key); err != nil {
+			return err
+		}
+
+		// remove empty branch node buckets from tree
+		countOfKeys, err := countOfKeysInBucket(hourBucket)
+		if err != nil {
+			return err
+		}
+
+		if countOfKeys == 0 {
+			if err := dayBucket.Delete(hourBucketKey); err != nil {
+				return err
+			}
+
+			countOfKeys, err := countOfKeysInBucket(dayBucket)
+			if err != nil {
+				return err
+			}
+
+			if countOfKeys == 0 {
+				if err := monthBucket.Delete(dayBucketKey); err != nil {
+					return err
+				}
+
+				countOfKeys, err := countOfKeysInBucket(monthBucket)
+				if err != nil {
+					return err
+				}
+
+				if countOfKeys == 0 {
+					if err := yearBucket.Delete(monthBucketKey); err != nil {
+						return err
+					}
+
+					countOfKeys, err := countOfKeysInBucket(yearBucket)
+					if err != nil {
+						return err
+					}
+
+					if countOfKeys == 0 {
+						if err := ttlBucket.Delete(yearBucketKey); err != nil {
+							return err
+						}
+					}
+				}
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func removeNodeBucketFromCleanupTree(rootBucket, parentNodeBucket *bolt.Bucket, nodeBucketKey []byte) error {
+	var nodeBucket *bolt.Bucket
+	if parentNodeBucket != nil {
+		nodeBucket = parentNodeBucket.Bucket(nodeBucketKey)
+	} else {
+		nodeBucket = rootBucket.Bucket(nodeBucketKey)
+	}
+
+	if nodeBucket == nil {
+		return nil
+	}
+
+	childBucketCount := 0
+	err := nodeBucket.ForEachBucket(func(childBucketKey []byte) error {
+		childBucketCount++
+		err := removeNodeBucketFromCleanupTree(rootBucket, nodeBucket, childBucketKey)
+		if err != nil {
+			return err
+		}
+
+		return nodeBucket.DeleteBucket(childBucketKey)
+	})
+	if err != nil {
+		return err
+	}
+
+	// we deal with last branch node, then we must read all leaf nodes (keys) and remove them
+	if childBucketCount == 0 {
+		keys := make([][]byte, 0, nodeBucket.Stats().KeyN)
+
+		err := nodeBucket.ForEach(func(k, _ []byte) error {
+			keys = append(keys, k)
+
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, key := range keys {
+			if err := rootBucket.Delete(key); err != nil {
+				return err
+			}
+
+			if err := nodeBucket.Delete(key); err != nil {
+				return err
+			}
+		}
+	}
+
+	return rootBucket.DeleteBucket(nodeBucketKey)
+}
+
+func (s *appStorageType) removeExpiredBranchNodesFromCleanupTree(cleanupTime time.Time) error {
+	err := s.db.Update(func(tx *bolt.Tx) error {
+		ttlBucket := tx.Bucket([]byte(ttlBucketName))
+		if ttlBucket == nil {
+			return nil
+		}
+
+		yearBucketKey, monthBucketKey, dayBucketKey, _ := getCleanupNodes(cleanupTime)
+
+		previousYear := cleanupTime.Year() - 1
+		previousYearBucketKey := []byte(strconv.Itoa(previousYear))
+
+		if previousYearBucket := ttlBucket.Bucket(previousYearBucketKey); previousYearBucket != nil {
+			if err := removeNodeBucketFromCleanupTree(ttlBucket, nil, previousYearBucketKey); err != nil {
+				return err
+			}
+		}
+
+		previousMonth := cleanupTime.Month() - 1
+		if previousMonth == 0 {
+			previousMonth = 12
+		}
+
+		yearBucket := ttlBucket.Bucket(yearBucketKey)
+		if yearBucket == nil {
+			return nil
+		}
+
+		previousMonthKey := []byte(strconv.Itoa(int(previousMonth)))
+		if previousMonthBucket := yearBucket.Bucket(previousMonthKey); previousMonthBucket != nil {
+			if err := removeNodeBucketFromCleanupTree(ttlBucket, yearBucket, previousMonthKey); err != nil {
+				return err
+			}
+		}
+
+		monthBucket := yearBucket.Bucket(monthBucketKey)
+		if monthBucket == nil {
+			return nil
+		}
+
+		previousDayTime := cleanupTime.AddDate(0, 0, -1)
+		previousDay := previousDayTime.Day()
+
+		previousDayKey := []byte(strconv.Itoa(previousDay))
+		if previousDayBucket := monthBucket.Bucket(previousDayKey); previousDayBucket != nil {
+			if err := removeNodeBucketFromCleanupTree(ttlBucket, monthBucket, previousDayKey); err != nil {
+				return err
+			}
+		}
+
+		dayBucket := monthBucket.Bucket(dayBucketKey)
+		if dayBucket == nil {
+			return nil
+		}
+
+		previousHour := cleanupTime.Hour() - 1
+		if previousHour == -1 {
+			previousHour = 23
+		}
+
+		previousHourKey := []byte(strconv.Itoa(previousHour))
+		if previousHourBucket := dayBucket.Bucket(previousHourKey); previousHourBucket != nil {
+			if err := removeNodeBucketFromCleanupTree(ttlBucket, dayBucket, previousHourKey); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *appStorageType) putKeyInCleanupTree(key, value []byte, ttlSeconds int64) error {
+	err := s.db.Update(func(tx *bolt.Tx) error {
+		ttlBucket, e := tx.CreateBucketIfNotExists([]byte(ttlBucketName))
+		if e != nil {
+			return e
+		}
+
+		expireAt := s.iTime.Now().Add(time.Duration(ttlSeconds) * time.Second)
+		d := coreutils.DataWithExpiration{
+			Data:     value,
+			ExpireAt: expireAt.UnixMilli(),
+		}
+
+		cleanupTime := getCleanupTime(expireAt)
+		yearBucketKey, monthBucketKey, dayBucketKey, hourBucketKey := getCleanupNodes(cleanupTime)
+
+		yearBucket, err := ttlBucket.CreateBucketIfNotExists(yearBucketKey)
+		if err != nil {
+			return err
+		}
+
+		monthBucket, err := yearBucket.CreateBucketIfNotExists(monthBucketKey)
+		if err != nil {
+			return err
+		}
+
+		dayBucket, err := monthBucket.CreateBucketIfNotExists(dayBucketKey)
+		if err != nil {
+			return err
+		}
+
+		hourBucket, err := dayBucket.CreateBucketIfNotExists(hourBucketKey)
+		if err != nil {
+			return err
+		}
+
+		if err := hourBucket.Put(key, []byte{0}); err != nil {
+			return err
+		}
+
+		if err := ttlBucket.Put(key, d.ToBytes()); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getCleanupNodes(cleanupTime time.Time) (year, month, day, hour []byte) {
+	year = []byte(strconv.Itoa(cleanupTime.Year()))
+	month = []byte(strconv.Itoa(int(cleanupTime.Month())))
+	day = []byte(strconv.Itoa(cleanupTime.Day()))
+	hour = []byte(strconv.Itoa(cleanupTime.Hour()))
+
+	return
 }
 
 // istorage.IAppStorage.Put(pKey []byte, cCols []byte, value []byte) (err error)
@@ -275,4 +600,18 @@ func (s *appStorageType) GetBatch(pKey []byte, items []istorage.GetBatchItem) (e
 
 func (p *appStorageFactory) Time() coreutils.ITime {
 	return nil
+}
+
+func countOfKeysInBucket(bucket *bolt.Bucket) (count int, err error) {
+	if bucket == nil {
+		return 0, nil
+	}
+
+	count = 0
+	err = bucket.ForEach(func(k, v []byte) error {
+		count++
+		return nil
+	})
+
+	return
 }
