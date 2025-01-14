@@ -55,7 +55,7 @@ const (
 var (
 	QNameRoleSystem = appdef.NewQName(appdef.SysPackage, "System")
 
-	// Deprecated: use WorkspaceOwner. Kept for backward compatibility
+	// Deprecated: use QNameRoleWorkspaceOwner. Kept for backward compatibility
 	QNameRoleRoleWorkspaceOwner = appdef.NewQName(appdef.SysPackage, "RoleWorkspaceOwner")
 
 	QNameRoleWorkspaceOwner  = appdef.NewQName(appdef.SysPackage, "WorkspaceOwner")
