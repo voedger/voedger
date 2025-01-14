@@ -2334,7 +2334,7 @@ func Test_Grants(t *testing.T) {
 					DisplayName varchar
 				);
 				ROLE ProfileOwner;
-        		GRANT SELECT ON TABLE UserProfile TO ProfileOwner;
+				GRANT SELECT ON TABLE UserProfile TO ProfileOwner;
 			);
 		`)
 		require.NoError(err)
@@ -2364,109 +2364,6 @@ func Test_Grants(t *testing.T) {
 
 }
 
-// https://github.com/voedger/voedger/issues/3060
-func TestIsOperationAllowedOnNestedTable(t *testing.T) {
-	require := assertions(t)
-	schema, err := require.AppSchema(`APPLICATION test();
-		WORKSPACE MyWS (
-			TABLE Table2 INHERITS sys.CDoc(
-				Fld1 int32,
-				Nested TABLE Nested (
-					Fld2 int32
-				) WITH Tags=(AllowedTablesTag)
-			) WITH Tags=(AllowedTablesTag);
-
-			TAG AllowedTablesTag;
-			ROLE WorkspaceOwner;
-			GRANT SELECT, INSERT, UPDATE ON ALL TABLES WITH TAG AllowedTablesTag TO WorkspaceOwner;
-		);`)
-	require.NoError(err)
-	builder := builder.New()
-	err = BuildAppDefs(schema, builder)
-	require.NoError(err)
-
-	appDef, err := builder.Build()
-	require.NoError(err)
-	appQName := appdef.NewAppQName("pkg", "test")
-	cfgs := istructsmem.AppConfigsType{}
-	cfgs.AddAppConfig(appQName, 1, appDef, 1)
-	appStructsProvider := istructsmem.Provide(cfgs, irates.NullBucketsFactory,
-		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.MockTime)),
-		provider.Provide(mem.Provide(coreutils.MockTime)))
-	statelessResources := istructsmem.NewStatelessResources()
-	appParts, cleanup, err := appparts.New2(context.Background(), appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
-		engines.ProvideExtEngineFactories(
-			engines.ExtEngineFactoriesConfig{
-				AppConfigs:         cfgs,
-				StatelessResources: statelessResources,
-				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
-			}, "vvmName", imetrics.Provide()),
-		irates.NullBucketsFactory)
-	require.NoError(err)
-	defer cleanup()
-	appParts.DeployApp(appQName, nil, appDef, 1, [4]uint{1, 1, 1, 1}, 1)
-	appParts.DeployAppPartitions(appQName, []istructs.PartitionID{1})
-	borrowedAppPart, err := appParts.Borrow(appQName, 1, appparts.ProcessorKind_Command)
-	require.NoError(err)
-
-	ok, _, err := borrowedAppPart.IsOperationAllowed(appdef.OperationKind_Insert, appdef.NewQName("pkg", "Table2"), nil,
-		[]appdef.QName{appdef.NewQName("pkg", "WorkspaceOwner")})
-	require.NoError(err)
-	require.True(ok)
-
-	ok, _, err = borrowedAppPart.IsOperationAllowed(appdef.OperationKind_Insert, appdef.NewQName("pkg", "Nested"), nil,
-		[]appdef.QName{appdef.NewQName("pkg", "WorkspaceOwner")})
-	require.NoError(err)
-	require.True(ok)
-}
-
-func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
-	require := assertions(t)
-	schema, err := require.AppSchema(`APPLICATION test();
-		WORKSPACE MyWS (
-			EXTENSION ENGINE BUILTIN (
-				COMMAND Cmd1;
-			);
-
-			ROLE WorkspaceOwner;
-			ROLE Role1;
-			GRANT WorkspaceOwner TO Role1;
-			GRANT EXECUTE ON COMMAND Cmd1 TO WorkspaceOwner;
-		);`)
-	require.NoError(err)
-	builder := builder.New()
-	err = BuildAppDefs(schema, builder)
-	require.NoError(err)
-
-	appDef, err := builder.Build()
-	require.NoError(err)
-	appQName := appdef.NewAppQName("pkg", "test")
-	cfgs := istructsmem.AppConfigsType{}
-	cfgs.AddAppConfig(appQName, 1, appDef, 1)
-	appStructsProvider := istructsmem.Provide(cfgs, irates.NullBucketsFactory,
-		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.MockTime)),
-		provider.Provide(mem.Provide(coreutils.MockTime)))
-	statelessResources := istructsmem.NewStatelessResources()
-	appParts, cleanup, err := appparts.New2(context.Background(), appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
-		engines.ProvideExtEngineFactories(
-			engines.ExtEngineFactoriesConfig{
-				AppConfigs:         cfgs,
-				StatelessResources: statelessResources,
-				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
-			}, "vvmName", imetrics.Provide()),
-		irates.NullBucketsFactory)
-	require.NoError(err)
-	defer cleanup()
-	appParts.DeployApp(appQName, nil, appDef, 1, [4]uint{1, 1, 1, 1}, 1)
-	appParts.DeployAppPartitions(appQName, []istructs.PartitionID{1})
-	borrowedAppPart, err := appParts.Borrow(appQName, 1, appparts.ProcessorKind_Command)
-	require.NoError(err)
-
-	ok, _, err := borrowedAppPart.IsOperationAllowed(appdef.OperationKind_Execute, appdef.NewQName("pkg", "Cmd1"), nil,
-		[]appdef.QName{appdef.NewQName("pkg", "Role1")})
-	require.NoError(err)
-	require.True(ok)
-}
 func Test_Grants_Inherit(t *testing.T) {
 	require := assertions(t)
 
@@ -2703,12 +2600,7 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l3 ON QUERY y WITH RATE r;
 			LIMIT l4 ON VIEW v WITH RATE r;
 			LIMIT l5 ON TABLE t WITH RATE r;
-<<<<<<< HEAD
 			LIMIT l20 ON ALL COMMANDS WITH TAG tag WITH RATE r;
-			LIMIT l29 ON ALL WITH RATE blah;
-=======
-			LIMIT l20 ON ALL COMMANDS WITH TAG tag WITH RATE r;		
->>>>>>> upstreammain
 			LIMIT l30 ON EACH COMMAND WITH TAG tag WITH RATE r;
 			LIMIT l40 ON ALL COMMANDS WITH RATE fake;
 			);`,
@@ -3014,9 +2906,9 @@ func Test_RefInheritedFromSys(t *testing.T) {
 
 	_, err := require.AppSchema(`APPLICATION SomeApp();
 	WORKSPACE SomeWS (
-	    TABLE SomeTable INHERITS sys.CDoc(
-	        ChildWorkspaceID ref(sys.ChildWorkspace)
-    	);
+		TABLE SomeTable INHERITS sys.CDoc(
+			ChildWorkspaceID ref(sys.ChildWorkspace)
+		);
 	)
 	`)
 	require.NoError(err)
@@ -3060,4 +2952,108 @@ func Test_LocalPackageNames(t *testing.T) {
 		}
 		require.EqualError(err, strings.Join(expectErrors, "\n"))
 	})
+}
+
+// https://github.com/voedger/voedger/issues/3060
+func TestIsOperationAllowedOnNestedTable(t *testing.T) {
+	require := assertions(t)
+	schema, err := require.AppSchema(`APPLICATION test();
+		WORKSPACE MyWS (
+			TABLE Table2 INHERITS sys.CDoc(
+				Fld1 int32,
+				Nested TABLE Nested (
+					Fld2 int32
+				) WITH Tags=(AllowedTablesTag)
+			) WITH Tags=(AllowedTablesTag);
+
+			TAG AllowedTablesTag;
+			ROLE WorkspaceOwner;
+			GRANT SELECT, INSERT, UPDATE ON ALL TABLES WITH TAG AllowedTablesTag TO WorkspaceOwner;
+		);`)
+	require.NoError(err)
+	builder := builder.New()
+	err = BuildAppDefs(schema, builder)
+	require.NoError(err)
+
+	appDef, err := builder.Build()
+	require.NoError(err)
+	appQName := appdef.NewAppQName("pkg", "test")
+	cfgs := istructsmem.AppConfigsType{}
+	cfgs.AddAppConfig(appQName, 1, appDef, 1)
+	appStructsProvider := istructsmem.Provide(cfgs, irates.NullBucketsFactory,
+		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.MockTime)),
+		provider.Provide(mem.Provide(coreutils.MockTime)))
+	statelessResources := istructsmem.NewStatelessResources()
+	appParts, cleanup, err := appparts.New2(context.Background(), appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
+		engines.ProvideExtEngineFactories(
+			engines.ExtEngineFactoriesConfig{
+				AppConfigs:         cfgs,
+				StatelessResources: statelessResources,
+				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
+			}, "vvmName", imetrics.Provide()),
+		irates.NullBucketsFactory)
+	require.NoError(err)
+	defer cleanup()
+	appParts.DeployApp(appQName, nil, appDef, 1, [4]uint{1, 1, 1, 1}, 1)
+	appParts.DeployAppPartitions(appQName, []istructs.PartitionID{1})
+	borrowedAppPart, err := appParts.Borrow(appQName, 1, appparts.ProcessorKind_Command)
+	require.NoError(err)
+
+	ok, _, err := borrowedAppPart.IsOperationAllowed(appdef.OperationKind_Insert, appdef.NewQName("pkg", "Table2"), nil,
+		[]appdef.QName{appdef.NewQName("pkg", "WorkspaceOwner")})
+	require.NoError(err)
+	require.True(ok)
+
+	ok, _, err = borrowedAppPart.IsOperationAllowed(appdef.OperationKind_Insert, appdef.NewQName("pkg", "Nested"), nil,
+		[]appdef.QName{appdef.NewQName("pkg", "WorkspaceOwner")})
+	require.NoError(err)
+	require.True(ok)
+}
+
+func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
+	require := assertions(t)
+	schema, err := require.AppSchema(`APPLICATION test();
+		WORKSPACE MyWS (
+			EXTENSION ENGINE BUILTIN (
+				COMMAND Cmd1;
+			);
+
+			ROLE WorkspaceOwner;
+			ROLE Role1;
+			GRANT WorkspaceOwner TO Role1;
+			GRANT EXECUTE ON COMMAND Cmd1 TO WorkspaceOwner;
+		);`)
+	require.NoError(err)
+	builder := builder.New()
+	err = BuildAppDefs(schema, builder)
+	require.NoError(err)
+
+	appDef, err := builder.Build()
+	require.NoError(err)
+	appQName := appdef.NewAppQName("pkg", "test")
+	cfgs := istructsmem.AppConfigsType{}
+	cfgs.AddAppConfig(appQName, 1, appDef, 1)
+	appStructsProvider := istructsmem.Provide(cfgs, irates.NullBucketsFactory,
+		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.MockTime)),
+		provider.Provide(mem.Provide(coreutils.MockTime)))
+	statelessResources := istructsmem.NewStatelessResources()
+	appParts, cleanup, err := appparts.New2(context.Background(), appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
+		engines.ProvideExtEngineFactories(
+			engines.ExtEngineFactoriesConfig{
+				AppConfigs:         cfgs,
+				StatelessResources: statelessResources,
+				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
+			}, "vvmName", imetrics.Provide()),
+		irates.NullBucketsFactory)
+	require.NoError(err)
+	defer cleanup()
+	appParts.DeployApp(appQName, nil, appDef, 1, [4]uint{1, 1, 1, 1}, 1)
+	appParts.DeployAppPartitions(appQName, []istructs.PartitionID{1})
+	borrowedAppPart, err := appParts.Borrow(appQName, 1, appparts.ProcessorKind_Command)
+	require.NoError(err)
+
+	ok, _, err := borrowedAppPart.IsOperationAllowed(appdef.OperationKind_Execute, appdef.NewQName("pkg", "Cmd1"), nil,
+		[]appdef.QName{appdef.NewQName("pkg", "Role1")})
+	require.NoError(err)
+	require.True(ok)
 }

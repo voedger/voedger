@@ -148,6 +148,7 @@ func (b *catchReadError) DoSync(_ context.Context, work pipeline.IWorkpiece) (er
 	var sysError coreutils.SysError
 	if errors.As(bw.resultErr, &sysError) {
 		bw.blobMessageRead.errorResponder(sysError.HTTPStatus, sysError.Message)
+		return nil
 	}
 	return bw.resultErr
 }
