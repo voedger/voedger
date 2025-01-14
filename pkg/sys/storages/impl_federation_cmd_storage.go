@@ -180,7 +180,7 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 
 	var resStatus int
 	var resBody string
-	var newIDs map[string]int64
+	var newIDs map[string]istructs.RecordID
 	var err error
 	var result map[string]interface{}
 
@@ -197,7 +197,6 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 			}
 		}
 	} else {
-
 		if kb.token != "" {
 			opts = append(opts, coreutils.WithAuthorizeBy(kb.token))
 		} else {
@@ -262,12 +261,12 @@ func (v *fcCmdValue) AsValue(name string) istructs.IStateValue {
 
 type fcCmdNewIds struct {
 	baseStateValue
-	newIds map[string]int64
+	newIds map[string]istructs.RecordID
 }
 
 func (v *fcCmdNewIds) AsInt64(name string) int64 {
 	if id, ok := v.newIds[name]; ok {
-		return id
+		return int64(id) // nolint G115
 	}
 	panic(errInt64FieldUndefined(name))
 }

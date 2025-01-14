@@ -298,7 +298,7 @@ func TestVITResetPreservingStorage(t *testing.T) {
 			it.WithChildWorkspace(it.QNameApp1_TestWSKind, "test_ws", "", "", "login", map[string]interface{}{"IntFld": 42}),
 		),
 	)
-	categoryID := int64(0)
+	categoryID := istructs.NullRecordID
 	it.TestRestartPreservingStorage(t, &cfg, func(t *testing.T, vit *it.VIT) {
 		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
