@@ -72,7 +72,7 @@ func TestFederationFunc(t *testing.T) {
 			"sys.Container": "",
 			"sys.QName":     "app1pkg.TestCmdResult",
 		}, resp.CmdResult)
-		require.Equal(int64(2), resp.NewID())
+		require.Equal(istructs.RecordID(2), resp.NewID())
 	})
 
 	t.Run("unexpected error", func(t *testing.T) {
