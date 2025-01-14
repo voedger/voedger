@@ -108,7 +108,7 @@ type IAppPartition interface {
 	// else fields list is ignored and nil allowedFields is returned.
 	//
 	// If some error in arguments, (ws or resource not found, operation is not applicable to resource, etc…) then error is returned.
-	IsOperationAllowed(ws appdef.QName, op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, roles []appdef.QName) (bool, []appdef.FieldName, error)
+	IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, roles []appdef.QName) (bool, []appdef.FieldName, error)
 
 	// Return is specified resource (command, query or structure) usage limit is exceeded.
 	//
