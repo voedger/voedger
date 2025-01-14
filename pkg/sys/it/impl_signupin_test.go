@@ -224,7 +224,6 @@ func TestDeviceProfile(t *testing.T) {
 }
 
 func TestWorkInForeignProfileWithEnrichedToken(t *testing.T) {
-	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -251,12 +250,7 @@ func TestWorkInForeignProfileWithEnrichedToken(t *testing.T) {
 		WSID:  existingLoginOwnerWSID,
 		QName: iauthnz.QNameRoleProfileOwner,
 	}
-	var pp payloads.PrincipalPayload
-	_, err := vit.ITokens.ValidateToken(newLoginPrn.Token, &pp)
-	require.NoError(err)
-	pp.Roles = append(pp.Roles, profileOwnerRole)
-	enrichedToken, err := vit.ITokens.IssueToken(istructs.AppQName_test1_app1, authnz.DefaultPrincipalTokenExpiration, &pp)
-	require.NoError(err)
+	enrichedToken := vit.EnrichPrincipalToken(newLoginPrn, []payloads.RoleType{profileOwnerRole})
 
 	// no newLogin is able to work in the profile of the existingLogin role.sys.ProfileOwner principal is emitted for him there
 	body = `{"args":{"Schema":"sys.UserProfile"},"elements":[{"fields":["sys.ID", "DisplayName"]}]}`

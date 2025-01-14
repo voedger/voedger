@@ -104,4 +104,5 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 	GRANT EXECUTE ON QUERY IssuePrincipalToken TO sys.Anonymous;
 	GRANT EXECUTE ON QUERY InitiateResetPasswordByEmail TO sys.Anonymous;
 	GRANT EXECUTE ON QUERY IssueVerifiedValueTokenForResetPassword TO sys.Anonymous;
+	GRANT SELECT ON TABLE Login TO sys.ProfileOwner;
 );
