@@ -451,7 +451,7 @@ ABSTRACT WORKSPACE Workspace (
 	ROLE RoleWorkspaceOwner; -- Deprecated: use WorkspaceOwner. Kept for backward compatibility only
 	ROLE WorkspaceOwner; -- assigned if user works in a workspace that is owned by his profile
 	ROLE ClusterAdmin; -- TODO: not used for now. Going to allow exec c.cluster.DeployApp to this role
-	ROLE WorkspaceAdmin; -- TODO: sys or air?
+	ROLE WorkspaceAdmin;
 
 	GRANT WorkspaceOwner TO ProfileOwner;
 	GRANT WorkspaceOwner TO WorkspaceDevice;
