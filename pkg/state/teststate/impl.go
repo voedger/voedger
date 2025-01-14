@@ -214,7 +214,7 @@ func (ts *testState) emulateUniquesHandler(entity appdef.QName, wsid istructs.WS
 	return ts.uniquesHandler(entity, wsid, data)
 }
 
-func (ts *testState) emulateFederationCmd(owner, appname string, wsid istructs.WSID, command appdef.QName, body string) (statusCode int, newIDs map[string]int64, result string, err error) {
+func (ts *testState) emulateFederationCmd(owner, appname string, wsid istructs.WSID, command appdef.QName, body string) (statusCode int, newIDs map[string]istructs.RecordID, result string, err error) {
 	if ts.federationCmdHandler == nil {
 		panic("federation command handler not set")
 	}
