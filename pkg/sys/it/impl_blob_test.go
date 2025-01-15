@@ -25,25 +25,20 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	as, err := vit.BuiltIn(istructs.AppQName_test1_app1)
-	require.NoError(err)
-	systemPrincipal, err := payloads.GetSystemPrincipalTokenApp(as.AppTokens())
-	require.NoError(err)
-
 	expBLOB := []byte{1, 2, 3, 4, 5}
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	// write
 	blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, expBLOB,
-		coreutils.WithAuthorizeBy(systemPrincipal),
+		coreutils.WithAuthorizeBy(ws.Owner.Token),
 		coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"), // has name+mimeType query params -> any Content-Type except "multipart/form-data" is allowed
 	)
 	log.Println(blobID)
 
 	// read, authorize over headers
 	blobReader := vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID,
-		coreutils.WithAuthorizeBy(systemPrincipal),
+		coreutils.WithAuthorizeBy(ws.Owner.Token),
 	)
 
 	actualBLOBContent, err := io.ReadAll(blobReader)
@@ -54,7 +49,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 
 	// read, authorize over unescaped cookies
 	blobReader = vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID,
-		coreutils.WithCookies(coreutils.Authorization, "Bearer "+systemPrincipal),
+		coreutils.WithCookies(coreutils.Authorization, "Bearer "+ws.Owner.Token),
 	)
 	actualBLOBContent, err = io.ReadAll(blobReader)
 	require.NoError(err)
@@ -64,7 +59,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 
 	// read, authorize over escaped cookies
 	blobReader = vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID,
-		coreutils.WithCookies(coreutils.Authorization, "Bearer%20"+systemPrincipal),
+		coreutils.WithCookies(coreutils.Authorization, "Bearer%20"+ws.Owner.Token),
 	)
 	actualBLOBContent, err = io.ReadAll(blobReader)
 	require.NoError(err)
