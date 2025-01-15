@@ -99,7 +99,7 @@ type IAppPartition interface {
 	// Invoke extension engine.
 	Invoke(ctx context.Context, name appdef.QName, state istructs.IState, intents istructs.IIntents) error
 
-	// Returns true if specified operation is allowed on specified resource for any of specified roles.
+	// Returns true if specified operation is allowed in specified workspace on specified resource for any of specified roles.
 	//
 	// If resource is any structure and operation is UPDATE or SELECT, then:
 	//   - if fields list specified, then result consider it,
@@ -107,8 +107,8 @@ type IAppPartition interface {
 	//
 	// else fields list is ignored and nil allowedFields is returned.
 	//
-	// If some error in arguments, (resource or role not found, operation is not applicable to resource, etc…) then error is returned.
-	IsOperationAllowed(op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, roles []appdef.QName) (bool, []appdef.FieldName, error)
+	// If some error in arguments, (ws or resource not found, operation is not applicable to resource, etc…) then error is returned.
+	IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, roles []appdef.QName) (bool, []appdef.FieldName, error)
 
 	// Return is specified resource (command, query or structure) usage limit is exceeded.
 	//

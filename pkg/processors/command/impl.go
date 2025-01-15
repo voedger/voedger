@@ -150,9 +150,17 @@ func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work pipeline.IWork
 
 func getIWorkspace(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.cmdMes.QName() != workspacemgmt.QNameCommandCreateWorkspace {
-		cmd.iWorkspace = cmd.appStructs.AppDef().WorkspaceByDescriptor(cmd.wsDesc.AsQName(authnz.Field_WSKind))
+
+	switch cmd.cmdMes.QName() {
+	case workspacemgmt.QNameCommandCreateWorkspace:
+		// cmd.iWorkspace should be nil
+	default:
+		ws := cmd.wsDesc.AsQName(authnz.Field_WSKind)
+		if cmd.iWorkspace = cmd.appStructs.AppDef().WorkspaceByDescriptor(ws); cmd.iWorkspace == nil {
+			panic(fmt.Errorf("workspace %s does not exist", ws))
+		}
 	}
+
 	return nil
 }
 
@@ -375,7 +383,14 @@ func getPrincipalsRoles(_ context.Context, work pipeline.IWorkpiece) (err error)
 
 func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	ok, _, err := cmd.appPart.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles)
+
+	ws := cmd.iWorkspace
+	if ws == nil {
+		// dummy or c.sys.CreateWorkspace
+		ws = cmd.iCommand.Workspace()
+	}
+
+	ok, _, err := cmd.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles)
 	if err != nil {
 		return err
 	}
@@ -679,9 +694,16 @@ func checkIsActiveInCUDs(_ context.Context, work pipeline.IWorkpiece) (err error
 
 func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
+
+	ws := cmd.iWorkspace
+	if ws == nil {
+		// dummy or c.sys.CreateWorkspace
+		ws = cmd.iCommand.Workspace()
+	}
+
 	for _, parsedCUD := range cmd.parsedCUDs {
 		fields := maps.Keys(parsedCUD.fields)
-		ok, _, err := cmd.appPart.IsOperationAllowed(parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
+		ok, _, err := cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
 		if err != nil {
 			return err
 		}

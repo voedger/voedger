@@ -36,6 +36,9 @@ const AnyName = "ANY"
 // See #858 (Support QNameAny as function result)
 var QNameANY = NewQName(SysPackage, AnyName)
 
+// QNameRoleSystem is role for system.
+var QNameRoleSystem = NewQName(SysPackage, "System")
+
 const (
 	// System application owner name
 	SysOwner = "sys"
