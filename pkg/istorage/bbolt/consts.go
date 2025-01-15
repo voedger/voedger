@@ -5,4 +5,7 @@
 
 package bbolt
 
-const ttlBucketName = "ttl_bucket"
+const (
+	ttlBucketName  = "ttlBucket"
+	dataBucketName = "dataBucket"
+)
