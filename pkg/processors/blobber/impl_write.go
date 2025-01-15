@@ -17,6 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/iblobstorage"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
@@ -31,6 +32,25 @@ func getRegisterFuncName(ctx context.Context, work pipeline.IWorkpiece) (err err
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "unsupported blob duration value: ", bw.duration)
 		}
 		bw.registerFuncName = registerFuncName
+	}
+	return nil
+}
+
+func getBLOBKeyWrite(ctx context.Context, work pipeline.IWorkpiece) (err error) {
+	bw := work.(*blobWorkpiece)
+	if bw.isPersistent() {
+		bw.blobKey = &iblobstorage.PersistentBLOBKeyType{
+			ClusterAppID: istructs.ClusterAppID_sys_blobber,
+			WSID:         bw.blobMessageWrite.wsid,
+			BlobID:       bw.newBLOBID,
+		}
+	} else {
+		// temp
+		bw.blobKey = &iblobstorage.TempBLOBKeyType{
+			ClusterAppID: istructs.ClusterAppID_sys_blobber,
+			WSID:         bw.blobMessageWrite.wsid,
+			SUUID:        bw.newSUUID,
+		}
 	}
 	return nil
 }
@@ -74,7 +94,7 @@ func setBLOBStatusCompleted(ctx context.Context, work pipeline.IWorkpiece) (err 
 		return fmt.Errorf("failed to exec c.sys.CUD: %w", err)
 	}
 	if cudWDocBLOBUpdateMeta.StatusCode != http.StatusOK {
-		return coreutils.NewHTTPErrorf(cudWDocBLOBUpdateMeta.StatusCode, "c.sys.CUD returned error: ", cudWDocBLOBUpdateResp.SysError.Data)
+		return coreutils.NewHTTPErrorf(cudWDocBLOBUpdateMeta.StatusCode, "c.sys.CUD returned error: ", cudWDocBLOBUpdateResp.SysError.Message)
 	}
 	return nil
 }
