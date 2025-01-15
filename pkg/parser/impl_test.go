@@ -5,6 +5,7 @@
 package parser
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"maps"
@@ -16,6 +17,18 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/iextengine"
+	"github.com/voedger/voedger/pkg/irates"
+	"github.com/voedger/voedger/pkg/istorage/mem"
+	"github.com/voedger/voedger/pkg/istorage/provider"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/itokensjwt"
+	imetrics "github.com/voedger/voedger/pkg/metrics"
+	"github.com/voedger/voedger/pkg/vvm/engines"
 )
 
 //go:embed sql_example_app/pmain/*.vsql
@@ -984,18 +997,44 @@ func Test_Duplicates(t *testing.T) {
 	}, "\n"))
 
 }
+func Test_Commands(t *testing.T) {
+	require := assertions(t)
+	require.AppSchemaError(`APPLICATION test();
+	WORKSPACE Workspace (
+		EXTENSION ENGINE BUILTIN (
+			COMMAND Orders(fake.Fake, UNLOGGED fake.Fake) RETURNS fake.Fake
+		);
+	)
+	`, "file.vsql:4:19: fake undefined",
+		"file.vsql:4:39: fake undefined",
+		"file.vsql:4:58: fake undefined",
+	)
+}
+
+func Test_Queries(t *testing.T) {
+	require := assertions(t)
+	require.AppSchemaError(`APPLICATION test();
+	WORKSPACE Workspace (
+		EXTENSION ENGINE BUILTIN (
+			QUERY q(fake.Fake) RETURNS fake.Fake
+		);
+	)
+	`, "file.vsql:4:12: fake undefined",
+		"file.vsql:4:31: fake undefined",
+	)
+}
 
 func Test_DuplicatesInViews(t *testing.T) {
-	require := require.New(t)
-
-	ast, err := ParseFile("file2.vsql", `APPLICATION test();
+	require := assertions(t)
+	require.AppSchemaError(`APPLICATION test();
 	WORKSPACE Workspace (
 		VIEW test(
 			field1 int,
 			field2 int,
 			field1 varchar,
 			PRIMARY KEY(field1),
-			PRIMARY KEY(field2)
+			PRIMARY KEY(field2),
+			field2 ref
 		) AS RESULT OF Proj1;
 
 		EXTENSION ENGINE BUILTIN (
@@ -1003,25 +1042,25 @@ func Test_DuplicatesInViews(t *testing.T) {
 			COMMAND Orders()
 		);
 	)
-	`)
-	require.NoError(err)
-
-	pkg, err := BuildPackageSchema("test/pkg", []*FileSchemaAST{ast})
-	require.NoError(err)
-
-	_, err = BuildAppSchema([]*PackageSchemaAST{
-		pkg,
-		getSysPackageAST(),
-	})
-
-	require.EqualError(err, strings.Join([]string{
-		"file2.vsql:6:4: redefinition of field1",
-		"file2.vsql:8:16: redefinition of primary key",
-	}, "\n"))
-
+	`, "file.vsql:6:4: redefinition of field1",
+		"file.vsql:8:16: redefinition of primary key",
+		"file.vsql:9:4: redefinition of field2",
+	)
 }
 func Test_Views(t *testing.T) {
 	require := assertions(t)
+
+	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
+		VIEW test(
+			field1 int,
+			PRIMARY KEY((field2),field1)
+		) AS RESULT OF Proj1;
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(test));
+			COMMAND Orders()
+		);
+		)
+`, "file.vsql:4:17: undefined field field2")
 
 	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
 			VIEW test(
@@ -1142,6 +1181,16 @@ func Test_Views(t *testing.T) {
 			"file.vsql:5:22: record field field1 not supported in partition key")
 	})
 
+	t.Run("underfined result of", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
+			VIEW test(
+				i int32,
+				field1 int32,
+				PRIMARY KEY((i), field1)
+			) AS RESULT OF Fake;
+			)
+		`, "file.vsql:6:19: Fake undefined")
+	})
 }
 
 func Test_Views2(t *testing.T) {
@@ -1432,6 +1481,31 @@ func Test_Projectors(t *testing.T) {
 		require.Len(slices.Collect(pe[1].Filter().QNames()), 1)
 		require.Equal("pkg.Tbl3", slices.Collect(pe[1].Filter().QNames())[0].String())
 	})
+
+	t.Run("Intent errors", func(t *testing.T) {
+		require := assertions(t)
+		require.AppSchemaError(`APPLICATION test();
+		WORKSPACE Ws (
+			TABLE Tbl INHERITS sys.CDoc();
+			EXTENSION ENGINE WASM (
+				PROJECTOR p AFTER INSERT ON Tbl INTENTS(sys.Record, sys.View, sys.View(fake), sys.Record(Tbl));
+			);
+		);`, "file.vsql:5:45: storage sys.Record requires entity",
+			"file.vsql:5:57: storage sys.View requires entity",
+			"file.vsql:5:67: undefined view: fake",
+			"file.vsql:5:83: this kind of extension cannot use storage sys.Record in the intents")
+	})
+
+	t.Run("State errors", func(t *testing.T) {
+		require := assertions(t)
+		require.AppSchemaError(`APPLICATION test();
+		WORKSPACE Ws (
+			TABLE Tbl INHERITS sys.CDoc();
+			EXTENSION ENGINE WASM (
+				PROJECTOR p AFTER INSERT ON Tbl  STATE(sys.Subject);
+			);
+		);`, "file.vsql:5:44: this kind of extension cannot use storage sys.Subject in the state")
+	})
 }
 
 func Test_Tags(t *testing.T) {
@@ -1481,7 +1555,7 @@ func Test_Tags(t *testing.T) {
 	})
 
 	t.Run("Tag namespaces", func(t *testing.T) {
-		require.NoBuildError(`APPLICATION test(); 
+		require.NoBuildError(`APPLICATION test();
 		ALTER WORKSPACE sys.Profile (
 			TABLE t1 INHERITS sys.WDoc(
 				Fld1 int32
@@ -1919,23 +1993,15 @@ func Test_Alter_Workspace_In_Package(t *testing.T) {
 }
 
 func Test_Storages(t *testing.T) {
-	require := require.New(t)
-	fs, err := ParseFile("example2.vsql", `APPLICATION test1();
-	EXTENSION ENGINE BUILTIN (
-		STORAGE MyStorage(
-			INSERT SCOPE(PROJECTORS)
-		);
-	)
-	`)
-	require.NoError(err)
-	pkg2, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
-	require.NoError(err)
-
-	schema, err := BuildAppSchema([]*PackageSchemaAST{
-		pkg2,
+	require := assertions(t)
+	t.Run("can be only declared in sys package", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test1();
+		EXTENSION ENGINE BUILTIN (
+			STORAGE MyStorage(
+				INSERT SCOPE(PROJECTORS)
+			);
+		)`, `file.vsql:3:4: storages are only declared in sys package`)
 	})
-	require.ErrorContains(err, "storages are only declared in sys package")
-	require.Nil(schema)
 }
 
 func buildPackage(sql string) *PackageSchemaAST {
@@ -2183,9 +2249,21 @@ func Test_Grants(t *testing.T) {
 		GRANT ALL(items2) ON TABLE Tbl2 TO role1;
 		GRANT SELECT ON VIEW Fake TO role1;
 		GRANT SELECT ON ALL VIEWS WITH TAG x TO role1;
+		GRANT fakeRole TO role1;
+		GRANT SELECT(fake) ON VIEW v TO role1;
+		GRANT EXECUTE ON ALL QUERIES WITH TAG fake TO role1;
+		GRANT INSERT ON ALL TABLES WITH TAG fake TO role1;
+		VIEW v(
+			f1 int,	f2 int, PRIMARY KEY((f1),f2)
+		) AS RESULT OF p;
+
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR p AFTER EXECUTE ON c INTENTS (sys.View(v));
+			COMMAND c();
+		);
 	);
 	`, "file.vsql:5:30: undefined role: app1",
-			"file.vsql:5:22: Fake undefined",
+			"file.vsql:5:22: undefined table: Fake",
 			"file.vsql:6:28: undefined command: Fake",
 			"file.vsql:7:26: undefined query: Fake",
 			"file.vsql:9:13: undefined field FakeCol",
@@ -2193,6 +2271,10 @@ func Test_Grants(t *testing.T) {
 			"file.vsql:11:42: undefined tag: x",
 			"file.vsql:21:24: undefined view: Fake",
 			"file.vsql:22:38: undefined tag: x",
+			"file.vsql:23:9: undefined role: fakeRole",
+			"file.vsql:24:16: undefined field fake",
+			"file.vsql:25:41: undefined tag: fake",
+			"file.vsql:26:39: undefined tag: fake",
 		)
 	})
 
@@ -2252,7 +2334,7 @@ func Test_Grants(t *testing.T) {
 					DisplayName varchar
 				);
 				ROLE ProfileOwner;
-        		GRANT SELECT ON TABLE UserProfile TO ProfileOwner;
+				GRANT SELECT ON TABLE UserProfile TO ProfileOwner;
 			);
 		`)
 		require.NoError(err)
@@ -2440,7 +2522,7 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l23 ON ALL TABLES WITH TAG tag WITH RATE r;
 			LIMIT l23_1 SELECT,INSERT,UPDATE ON ALL TABLES WITH TAG tag WITH RATE r;
 			-- LIMIT l24 ON ALL WITH TAG tag WITH RATE r;
-			
+
 			LIMIT l25 ON ALL COMMANDS WITH RATE r;
 			LIMIT l26 ON ALL QUERIES WITH RATE r;
 			LIMIT l27 ON ALL VIEWS WITH RATE r;
@@ -2489,7 +2571,7 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l21 UPDATE ON ALL QUERIES WITH RATE r;
 			LIMIT l22 EXECUTE ON ALL VIEWS WITH RATE r;
 			LIMIT l23 EXECUTE ON ALL TABLES WITH RATE r;
-			
+
 			LIMIT l35 INSERT ON EACH COMMAND WITH RATE r;
 			LIMIT l36 UPDATE ON EACH QUERY WITH RATE r;
 			LIMIT l37 EXECUTE ON EACH VIEW WITH RATE r;
@@ -2518,9 +2600,9 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l3 ON QUERY y WITH RATE r;
 			LIMIT l4 ON VIEW v WITH RATE r;
 			LIMIT l5 ON TABLE t WITH RATE r;
-			LIMIT l20 ON ALL COMMANDS WITH TAG tag WITH RATE r;		
+			LIMIT l20 ON ALL COMMANDS WITH TAG tag WITH RATE r;
 			LIMIT l30 ON EACH COMMAND WITH TAG tag WITH RATE r;
-
+			LIMIT l40 ON ALL COMMANDS WITH RATE fake;
 			);`,
 			"file.vsql:4:24: undefined command: x",
 			"file.vsql:5:22: undefined query: y",
@@ -2528,6 +2610,7 @@ func Test_RatesAndLimits(t *testing.T) {
 			"file.vsql:7:22: undefined table: t",
 			"file.vsql:8:39: undefined tag: tag",
 			"file.vsql:9:39: undefined tag: tag",
+			"file.vsql:10:40: undefined rate: fake",
 		)
 	})
 
@@ -2546,6 +2629,16 @@ func Test_RatesAndLimits(t *testing.T) {
 		require.False(r.Scope(appdef.RateScope_Workspace))
 		require.False(r.Scope(appdef.RateScope_IP))
 		require.False(r.Scope(appdef.RateScope_User))
+	})
+
+	t.Run("negative rate", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION app1();
+		DECLARE var1 int32 DEFAULT -1;
+		WORKSPACE w (
+			RATE r var1 PER HOUR;
+			);`,
+			"file.vsql:4:11: positive value only allowed",
+		)
 	})
 
 }
@@ -2682,6 +2775,16 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 	})
 }
 
+func Test_UseWorkspace(t *testing.T) {
+	require := assertions(t)
+	t.Run("unknown ws", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test(); WORKSPACE ws (USE WORKSPACE fake);`, `file.vsql:1:49: undefined workspace: pkg.fake`)
+	})
+	t.Run("use of abstract ws", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test(); ABSTRACT WORKSPACE ws (); WORKSPACE ws1 (USE WORKSPACE ws);`, `file.vsql:1:76: use of abstract workspace ws`)
+	})
+}
+
 func Test_Jobs(t *testing.T) {
 
 	t.Run("bad workspace", func(t *testing.T) {
@@ -2803,9 +2906,9 @@ func Test_RefInheritedFromSys(t *testing.T) {
 
 	_, err := require.AppSchema(`APPLICATION SomeApp();
 	WORKSPACE SomeWS (
-	    TABLE SomeTable INHERITS sys.CDoc(
-	        ChildWorkspaceID ref(sys.ChildWorkspace)
-    	);
+		TABLE SomeTable INHERITS sys.CDoc(
+			ChildWorkspaceID ref(sys.ChildWorkspace)
+		);
 	)
 	`)
 	require.NoError(err)
@@ -2849,4 +2952,110 @@ func Test_LocalPackageNames(t *testing.T) {
 		}
 		require.EqualError(err, strings.Join(expectErrors, "\n"))
 	})
+}
+
+// https://github.com/voedger/voedger/issues/3060
+func TestIsOperationAllowedOnNestedTable(t *testing.T) {
+	require := assertions(t)
+	schema, err := require.AppSchema(`APPLICATION test();
+		WORKSPACE MyWS (
+			TABLE Table2 INHERITS sys.CDoc(
+				Fld1 int32,
+				Nested TABLE Nested (
+					Fld2 int32
+				) WITH Tags=(AllowedTablesTag)
+			) WITH Tags=(AllowedTablesTag);
+
+			TAG AllowedTablesTag;
+			ROLE WorkspaceOwner;
+			GRANT SELECT, INSERT, UPDATE ON ALL TABLES WITH TAG AllowedTablesTag TO WorkspaceOwner;
+		);`)
+	require.NoError(err)
+	builder := builder.New()
+	err = BuildAppDefs(schema, builder)
+	require.NoError(err)
+
+	appDef, err := builder.Build()
+	require.NoError(err)
+	appQName := appdef.NewAppQName("pkg", "test")
+	cfgs := istructsmem.AppConfigsType{}
+	cfgs.AddAppConfig(appQName, 1, appDef, 1)
+	appStructsProvider := istructsmem.Provide(cfgs, irates.NullBucketsFactory,
+		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.MockTime)),
+		provider.Provide(mem.Provide(coreutils.MockTime)))
+	statelessResources := istructsmem.NewStatelessResources()
+	appParts, cleanup, err := appparts.New2(context.Background(), appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
+		engines.ProvideExtEngineFactories(
+			engines.ExtEngineFactoriesConfig{
+				AppConfigs:         cfgs,
+				StatelessResources: statelessResources,
+				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
+			}, "vvmName", imetrics.Provide()),
+		irates.NullBucketsFactory)
+	require.NoError(err)
+	defer cleanup()
+	appParts.DeployApp(appQName, nil, appDef, 1, [4]uint{1, 1, 1, 1}, 1)
+	appParts.DeployAppPartitions(appQName, []istructs.PartitionID{1})
+	borrowedAppPart, err := appParts.Borrow(appQName, 1, appparts.ProcessorKind_Command)
+	require.NoError(err)
+
+	ws := appDef.Workspace(appdef.MustParseQName("pkg.MyWS"))
+	ok, _, err := borrowedAppPart.IsOperationAllowed(ws, appdef.OperationKind_Insert, appdef.NewQName("pkg", "Table2"), nil,
+		[]appdef.QName{appdef.NewQName("pkg", "WorkspaceOwner")})
+	require.NoError(err)
+	require.True(ok)
+
+	ok, _, err = borrowedAppPart.IsOperationAllowed(ws, appdef.OperationKind_Insert, appdef.NewQName("pkg", "Nested"), nil,
+		[]appdef.QName{appdef.NewQName("pkg", "WorkspaceOwner")})
+	require.NoError(err)
+	require.True(ok)
+}
+
+func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
+	require := assertions(t)
+	schema, err := require.AppSchema(`APPLICATION test();
+		WORKSPACE MyWS (
+			EXTENSION ENGINE BUILTIN (
+				COMMAND Cmd1;
+			);
+
+			ROLE WorkspaceOwner;
+			ROLE Role1;
+			GRANT WorkspaceOwner TO Role1;
+			GRANT EXECUTE ON COMMAND Cmd1 TO WorkspaceOwner;
+		);`)
+	require.NoError(err)
+	builder := builder.New()
+	err = BuildAppDefs(schema, builder)
+	require.NoError(err)
+
+	appDef, err := builder.Build()
+	require.NoError(err)
+	appQName := appdef.NewAppQName("pkg", "test")
+	cfgs := istructsmem.AppConfigsType{}
+	cfgs.AddAppConfig(appQName, 1, appDef, 1)
+	appStructsProvider := istructsmem.Provide(cfgs, irates.NullBucketsFactory,
+		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.MockTime)),
+		provider.Provide(mem.Provide(coreutils.MockTime)))
+	statelessResources := istructsmem.NewStatelessResources()
+	appParts, cleanup, err := appparts.New2(context.Background(), appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
+		engines.ProvideExtEngineFactories(
+			engines.ExtEngineFactoriesConfig{
+				AppConfigs:         cfgs,
+				StatelessResources: statelessResources,
+				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
+			}, "vvmName", imetrics.Provide()),
+		irates.NullBucketsFactory)
+	require.NoError(err)
+	defer cleanup()
+	appParts.DeployApp(appQName, nil, appDef, 1, [4]uint{1, 1, 1, 1}, 1)
+	appParts.DeployAppPartitions(appQName, []istructs.PartitionID{1})
+	borrowedAppPart, err := appParts.Borrow(appQName, 1, appparts.ProcessorKind_Command)
+	require.NoError(err)
+
+	ws := appDef.Workspace(appdef.MustParseQName("pkg.MyWS"))
+	ok, _, err := borrowedAppPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, appdef.NewQName("pkg", "Cmd1"), nil,
+		[]appdef.QName{appdef.NewQName("pkg", "Role1")})
+	require.NoError(err)
+	require.True(ok)
 }

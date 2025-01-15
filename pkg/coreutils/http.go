@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/istructs"
 	"golang.org/x/exp/slices"
 )
 
@@ -68,6 +69,12 @@ func WithLongPolling() ReqOptFunc {
 func WithDiscardResponse() ReqOptFunc {
 	return func(opts *reqOpts) {
 		opts.discardResp = true
+	}
+}
+
+func WithoutAuth() ReqOptFunc {
+	return func(opts *reqOpts) {
+		opts.withoutAuth = true
 	}
 }
 
@@ -171,8 +178,8 @@ func Expect429() ReqOptFunc {
 	return WithExpectedCode(http.StatusTooManyRequests)
 }
 
-func Expect500() ReqOptFunc {
-	return WithExpectedCode(http.StatusInternalServerError)
+func Expect500(expectErrorContains ...string) ReqOptFunc {
+	return WithExpectedCode(http.StatusInternalServerError, expectErrorContains...)
 }
 
 func Expect503() ReqOptFunc {
@@ -201,6 +208,7 @@ type reqOpts struct {
 	expectedSysErrorCode  int
 	retriersOnErrors      []retrier
 	bodyReader            io.Reader
+	withoutAuth           bool
 }
 
 // body and bodyReader are mutual exclusive
@@ -275,6 +283,10 @@ func (c *implIHTTPClient) req(urlStr string, body string, optFuncs ...ReqOptFunc
 		}
 		netURL.Path = opts.relativeURL
 		urlStr = netURL.String()
+	}
+	if opts.withoutAuth {
+		delete(opts.headers, Authorization)
+		delete(opts.cookies, Authorization)
 	}
 	var resp *http.Response
 	var err error
@@ -440,7 +452,7 @@ func (resp *FuncResponse) SectionRow(rowIdx ...int) []interface{} {
 }
 
 // returns a new ID for raw ID 1
-func (resp *FuncResponse) NewID() int64 {
+func (resp *FuncResponse) NewID() istructs.RecordID {
 	return resp.NewIDs["1"]
 }
 

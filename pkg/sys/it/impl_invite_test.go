@@ -55,11 +55,11 @@ func TestInvite_BasicUsage(t *testing.T) {
 	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
 	ws := vit.CreateWorkspace(wsParams, prn)
 
-	initiateUpdateInviteRoles := func(inviteID int64) {
+	initiateUpdateInviteRoles := func(inviteID istructs.RecordID) {
 		vit.PostWS(ws, "c.sys.InitiateUpdateInviteRoles", fmt.Sprintf(`{"args":{"InviteID":%d,"Roles":"%s","EmailTemplate":"%s","EmailSubject":"%s"}}`, inviteID, updatedRoles, updateRolesEmailTemplate, updateRolesEmailSubject))
 	}
 
-	findCDocInviteByID := func(inviteID int64) []interface{} {
+	findCDocInviteByID := func(inviteID istructs.RecordID) []interface{} {
 		return vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
 			{"args":{"Schema":"sys.Invite"},
 			"elements":[{"fields":[
@@ -325,7 +325,7 @@ func TestInactiveCDocSubject(t *testing.T) {
 	vit.PostWS(parentWS, "c.sys.CUD", cudBody, coreutils.WithAuthorizeBy(newPrn.Token), coreutils.Expect403())
 }
 
-func testOverwriteRoles(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, email string, inviteID int64) (verificationCode string) {
+func testOverwriteRoles(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, email string, inviteID istructs.RecordID) (verificationCode string) {
 	require := require.New(t)
 
 	// reinvite when invitation is not accepted yet -> roles must be overwritten

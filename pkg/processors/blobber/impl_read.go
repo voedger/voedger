@@ -49,50 +49,30 @@ func getBLOBKeyRead(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	return nil
 }
 
-func getBLOBKeyWrite(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	bw := work.(*blobWorkpiece)
-	if bw.isPersistent() {
-		bw.blobKey = &iblobstorage.PersistentBLOBKeyType{
-			ClusterAppID: istructs.ClusterAppID_sys_blobber,
-			WSID:         bw.blobMessageWrite.wsid,
-			BlobID:       bw.newBLOBID,
-		}
-		return nil
-	}
-
-	// temp
-	bw.blobKey = &iblobstorage.TempBLOBKeyType{
-		ClusterAppID: istructs.ClusterAppID_sys_blobber,
-		WSID:         bw.blobMessageWrite.wsid,
-		SUUID:        bw.newSUUID,
-	}
-	return nil
-}
-
 func initResponse(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	bm := work.(*blobWorkpiece)
-	bm.writer = bm.blobMessageRead.okResponseIniter(
-		coreutils.ContentType, bm.blobState.Descr.MimeType,
-		"Content-Disposition", fmt.Sprintf(`attachment;filename="%s"`, bm.blobState.Descr.Name),
+	bw := work.(*blobWorkpiece)
+	bw.writer = bw.blobMessageRead.okResponseIniter(
+		coreutils.ContentType, bw.blobState.Descr.MimeType,
+		"Content-Disposition", fmt.Sprintf(`attachment;filename="%s"`, bw.blobState.Descr.Name),
 	)
 	return nil
 }
 
 func provideQueryAndCheckBLOBState(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	return func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-		bm := work.(*blobWorkpiece)
-		bm.blobState, err = blobStorage.QueryBLOBState(bm.blobMessageRead.requestCtx, bm.blobKey)
+		bw := work.(*blobWorkpiece)
+		bw.blobState, err = blobStorage.QueryBLOBState(bw.blobMessageRead.requestCtx, bw.blobKey)
 		if err != nil {
 			if errors.Is(err, iblobstorage.ErrBLOBNotFound) {
 				return coreutils.NewHTTPError(http.StatusNotFound, err)
 			}
 			return err
 		}
-		if bm.blobState.Status != iblobstorage.BLOBStatus_Completed {
+		if bw.blobState.Status != iblobstorage.BLOBStatus_Completed {
 			return errors.New("blob is not completed")
 		}
-		if len(bm.blobState.Error) > 0 {
-			return errors.New(bm.blobState.Error)
+		if len(bw.blobState.Error) > 0 {
+			return errors.New(bw.blobState.Error)
 		}
 		return nil
 	}
@@ -122,14 +102,13 @@ func downloadBLOBHelper(ctx context.Context, work pipeline.IWorkpiece) (err erro
 
 func provideReadBLOB(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	return func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-		bm := work.(*blobWorkpiece)
-		err = blobStorage.ReadBLOB(bm.blobMessageRead.requestCtx, bm.blobKey, nil, bm.writer, iblobstoragestg.RLimiter_Null)
+		bw := work.(*blobWorkpiece)
+		err = blobStorage.ReadBLOB(bw.blobMessageRead.requestCtx, bw.blobKey, nil, bw.writer, iblobstoragestg.RLimiter_Null)
 		if err != nil {
-			logger.Error(fmt.Sprintf("failed to read BLOB: id %s, appQName %s, wsid %d: %s", bm.blobKey.ID(), bm.blobMessageRead.appQName,
-				bm.blobMessageRead.wsid, err.Error()))
-			return coreutils.NewHTTPError(http.StatusInternalServerError, err)
+			logger.Error(fmt.Sprintf("failed to read BLOB: id %s, appQName %s, wsid %d: %s", bw.blobKey.ID(), bw.blobMessageRead.appQName,
+				bw.blobMessageRead.wsid, err.Error()))
 		}
-		return nil
+		return err
 	}
 }
 
@@ -149,7 +128,11 @@ func (b *catchReadError) DoSync(_ context.Context, work pipeline.IWorkpiece) (er
 	bw := work.(*blobWorkpiece)
 	var sysError coreutils.SysError
 	if errors.As(bw.resultErr, &sysError) {
+		if logger.IsVerbose() {
+			logger.Verbose("blob read error:", sysError.HTTPStatus, ":", sysError.Message)
+		}
 		bw.blobMessageRead.errorResponder(sysError.HTTPStatus, sysError.Message)
+		return nil
 	}
-	return nil
+	return bw.resultErr
 }

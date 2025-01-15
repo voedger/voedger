@@ -75,7 +75,7 @@ func resolveInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt
 	if item == nil {
 		var value interface{} = item
 		switch value.(type) {
-		case *TableStmt:
+		case *TableStmt, *WsDescriptorStmt:
 			return ErrUndefinedTable(fn)
 		case *CommandStmt:
 			return ErrUndefinedCommand(fn)
@@ -89,8 +89,8 @@ func resolveInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt
 			return ErrUndefinedType(fn)
 		case *WorkspaceStmt:
 			return ErrUndefinedWorkspace(fn)
-		case *JobStmt:
-			return ErrUndefinedJob(fn)
+		case *ProjectorStmt:
+			return ErrUndefinedProjector(fn)
 		case *RateStmt:
 			return ErrUndefinedRate(fn)
 		case *ViewStmt:
