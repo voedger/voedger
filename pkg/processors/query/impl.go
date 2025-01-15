@@ -239,6 +239,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			return nil
 		}),
+
 		operator("get IWorkspace", func(ctx context.Context, qw *queryWork) (err error) {
 			if qw.wsDesc.QName() == appdef.NullQName {
 				// workspace is dummy
@@ -250,20 +251,29 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			return nil
 		}),
+
 		operator("get IQuery", func(ctx context.Context, qw *queryWork) (err error) {
-			queryType := qw.iWorkspace.Type(qw.msg.QName())
-			if queryType.Kind() == appdef.TypeKind_null {
-				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist in workspace %s", qw.msg.QName(), qw.iWorkspace.QName()))
-			}
-			ok := false
-			if qw.iQuery, ok = queryType.(appdef.IQuery); !ok {
-				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("%s is not a query", qw.msg.QName()))
+			switch qw.iWorkspace {
+			case nil:
+				// workspace is dummy
+				if qw.iQuery = appdef.Query(qw.appStructs.AppDef().Type, qw.msg.QName()); qw.iQuery == nil {
+					return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist", qw.msg.QName()))
+				}
+			default:
+				if qw.iQuery = appdef.Query(qw.iWorkspace.Type, qw.msg.QName()); qw.iQuery == nil {
+					return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist in %v", qw.msg.QName(), qw.iWorkspace))
+				}
 			}
 			return nil
 		}),
 
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
-			ok, _, err := qw.appPart.IsOperationAllowed(qw.iWorkspace, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
+			ws := qw.iWorkspace
+			if ws == nil {
+				// workspace is dummy
+				ws = qw.iQuery.Workspace()
+			}
+			ok, _, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
 			if err != nil {
 				return err
 			}
@@ -351,9 +361,15 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				}
 			}
 			qNameResultType := iQueryFunc.ResultType(qw.execQueryArgs.PrepareArgs)
-			qw.resultType = qw.iWorkspace.Type(qNameResultType)
+
+			ws := qw.iWorkspace
+			if ws == nil {
+				// workspace is dummy
+				ws = qw.iQuery.Workspace()
+			}
+			qw.resultType = ws.Type(qNameResultType)
 			if qw.resultType.Kind() == appdef.TypeKind_null {
-				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%s query result type %s does not exist in workspace %s", qw.iQuery.QName(), qNameResultType, qw.iWorkspace.QName()))
+				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%s query result type %s does not exist in %v", qw.iQuery.QName(), qNameResultType, ws))
 			}
 			return nil
 		}),
@@ -366,6 +382,11 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				// will authorize result only if result is sys.Any
 				// otherwise each field is considered as allowed if EXECUTE ON QUERY is allowed
 				return nil
+			}
+			ws := qw.iWorkspace
+			if ws == nil {
+				// workspace is dummy
+				ws = qw.iQuery.Workspace()
 			}
 			for _, elem := range qw.queryParams.Elements() {
 				nestedPath := elem.Path().AsArray()
@@ -385,7 +406,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				for _, resultField := range elem.ResultFields() {
 					requestedfields = append(requestedfields, resultField.Field())
 				}
-				ok, allowedFields, err := qw.appPart.IsOperationAllowed(qw.iWorkspace, appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
+				ok, allowedFields, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
 				if err != nil {
 					return err
 				}
