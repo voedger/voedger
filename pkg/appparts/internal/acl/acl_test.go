@@ -425,19 +425,19 @@ func Test_IsOperationAllowed(t *testing.T) {
 				errHas: "test.unknown",
 			},
 			{
-				name:   "structure not found",
+				name:   "not a structure",
 				op:     appdef.OperationKind_Select,
 				res:    cmdName,
 				role:   []appdef.QName{reader},
-				error:  appdef.ErrNotFoundError,
+				error:  appdef.ErrIncompatibleError,
 				errHas: cmdName.String(),
 			},
 			{
-				name:   "function not found",
+				name:   "not a function",
 				op:     appdef.OperationKind_Execute,
 				res:    docName,
 				role:   []appdef.QName{writer},
-				error:  appdef.ErrNotFoundError,
+				error:  appdef.ErrIncompatibleError,
 				errHas: docName.String(),
 			},
 			{

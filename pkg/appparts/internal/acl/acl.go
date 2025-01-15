@@ -37,7 +37,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 
 	t := ws.Type(res)
 	if t == appdef.NullType {
-		return false, nil, appdef.ErrNotFound("resource «%s»", res)
+		return false, nil, appdef.ErrNotFound("resource «%s» in %v", res, ws)
 	}
 
 	var str appdef.IStructure
@@ -46,7 +46,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 		if s, ok := t.(appdef.IStructure); ok {
 			str = s
 		} else {
-			return false, nil, appdef.ErrNotFound("structure «%q»", res)
+			return false, nil, appdef.ErrIncompatible("%v is not structure", t)
 		}
 		for _, f := range fld {
 			if str.Field(f) == nil {
@@ -55,7 +55,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 		}
 	case appdef.OperationKind_Execute:
 		if _, ok := t.(appdef.IFunction); !ok {
-			return false, nil, appdef.ErrNotFound("function «%q»", res)
+			return false, nil, appdef.ErrIncompatible("%v is not function", t)
 		}
 	default:
 		return false, nil, appdef.ErrUnsupported("operation %q", op)
