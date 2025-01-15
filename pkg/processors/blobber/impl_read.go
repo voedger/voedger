@@ -128,6 +128,9 @@ func (b *catchReadError) DoSync(_ context.Context, work pipeline.IWorkpiece) (er
 	bw := work.(*blobWorkpiece)
 	var sysError coreutils.SysError
 	if errors.As(bw.resultErr, &sysError) {
+		if logger.IsVerbose() {
+			logger.Verbose("blob read error:", sysError.HTTPStatus, ":", sysError.Message)
+		}
 		bw.blobMessageRead.errorResponder(sysError.HTTPStatus, sysError.Message)
 		return nil
 	}
