@@ -178,8 +178,8 @@ func Expect429() ReqOptFunc {
 	return WithExpectedCode(http.StatusTooManyRequests)
 }
 
-func Expect500() ReqOptFunc {
-	return WithExpectedCode(http.StatusInternalServerError)
+func Expect500(expectErrorContains ...string) ReqOptFunc {
+	return WithExpectedCode(http.StatusInternalServerError, expectErrorContains...)
 }
 
 func Expect503() ReqOptFunc {
