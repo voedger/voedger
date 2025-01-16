@@ -34,7 +34,7 @@ type HTTPResponse struct {
 type ReqOptFunc func(opts *reqOpts)
 
 type CommandResponse struct {
-	NewIDs            map[string]int64
+	NewIDs            map[string]istructs.RecordID
 	CurrentWLogOffset istructs.Offset
 	SysError          SysError               `json:"sys.Error"`
 	CmdResult         map[string]interface{} `json:"Result"`

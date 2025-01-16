@@ -192,7 +192,7 @@ func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, h
 	}
 	res := &coreutils.FuncResponse{
 		CommandResponse: coreutils.CommandResponse{
-			NewIDs:    map[string]int64{},
+			NewIDs:    map[string]istructs.RecordID{},
 			CmdResult: map[string]interface{}{},
 		},
 		HTTPResponse: httpResp,

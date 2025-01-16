@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 )
@@ -31,6 +32,9 @@ func newErrorResponder(w http.ResponseWriter) blobprocessor.ErrorResponder {
 
 func (s *httpService) blobHTTPRequestHandler_Write() http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
+		if logger.IsVerbose() {
+			logger.Verbose("blob write request:", req.URL.String())
+		}
 		appQName, wsid, headers, ok := parseURLParams(req, resp)
 		if !ok {
 			return
@@ -47,6 +51,9 @@ func (s *httpService) blobHTTPRequestHandler_Write() http.HandlerFunc {
 
 func (s *httpService) blobHTTPRequestHandler_Read() http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
+		if logger.IsVerbose() {
+			logger.Verbose("blob read request:", req.URL.String())
+		}
 		appQName, wsid, headers, ok := parseURLParams(req, resp)
 		if !ok {
 			return

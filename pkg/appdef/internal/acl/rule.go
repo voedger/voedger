@@ -108,7 +108,7 @@ func NewRuleAll(ws appdef.IWorkspace, policy appdef.PolicyKind, flt appdef.IFilt
 		panic(appdef.ErrMissed("filter"))
 	}
 
-	t := appdef.FirstFilterMatch(flt, ws.LocalTypes())
+	t := appdef.FirstFilterMatch(flt, ws.Types())
 	if t == nil {
 		panic(appdef.ErrFilterHasNoMatches("ACL", flt, ws))
 	}
