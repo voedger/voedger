@@ -56,7 +56,7 @@ type OperationsSet = set.Set[OperationKind]
 
 // RecordsOperations is a set of operations that applicable on records.
 var RecordsOperations = func() OperationsSet {
-	s := set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Activate, OperationKind_Deactivate)
+	s := set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Activate, OperationKind_Deactivate, OperationKind_Select)
 	s.SetReadOnly()
 	return s
 }()
