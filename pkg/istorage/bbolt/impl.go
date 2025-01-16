@@ -218,7 +218,6 @@ func (s *appStorageType) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok boo
 
 		*data = (*data)[:0]
 		*data = d[:len(d)-utils.Uint64Size]
-
 		ok = true
 
 		return nil
@@ -242,7 +241,6 @@ func (s *appStorageType) Put(pKey []byte, cCols []byte, value []byte) (err error
 		if dataBucket == nil {
 			return ErrDataBucketNotFound
 		}
-
 		d := coreutils.DataWithExpiration{Data: value}
 
 		return dataBucket.Put(makeKey(unSafeKey(pKey), unSafeKey(cCols)), d.ToBytes())
@@ -315,12 +313,11 @@ func (s *appStorageType) GetBatch(pKey []byte, items []istorage.GetBatchItem) (e
 		for i := 0; i < len(items); i++ {
 			key := makeKey(safeKey(pKey), safeKey(items[i].CCols))
 			v := dataBucket.Get(key)
-
 			d.Read(v)
-
 			items[i].Ok = d.Data != nil
 			*items[i].Data = append((*items[i].Data)[0:0], d.Data...)
 		}
+
 		return nil
 	})
 }
@@ -354,7 +351,6 @@ func (s *appStorageType) read(ctx context.Context, pKey []byte, startCCols, fini
 		if startCCols == nil {
 			k, v = cr.First()
 		} else {
-
 			startKey := makeKey(pKey, startCCols)
 			k, v = cr.Seek(startKey)
 		}
@@ -427,9 +423,7 @@ func (s *appStorageType) putValue(tx *bolt.Tx, key, value []byte, ttlSeconds int
 		return ErrDataBucketNotFound
 	}
 
-	d := coreutils.DataWithExpiration{
-		Data: value,
-	}
+	d := coreutils.DataWithExpiration{Data: value}
 	if ttlSeconds > 0 {
 		d.ExpireAt = s.iTime.Now().Add(time.Duration(ttlSeconds) * time.Second).UnixMilli()
 	}
@@ -483,24 +477,24 @@ func makeKey(pKey []byte, cCols []byte) []byte {
 // It handles cases where cCols is nil.
 func extractCCols(key []byte) ([]byte, error) {
 	// Ensure the key has at least the size of two uint64 lengths
-	if len(key) < 16 { // 2 * Uint64Size (8 bytes each)
+	if len(key) < 2*utils.Uint64Size { // 2 * Uint64Size (8 bytes each)
 		return nil, fmt.Errorf("invalid key: too short")
 	}
 
 	// Read the length of pKey
-	pKeyLength := binary.BigEndian.Uint64(key[:8])
+	pKeyLength := binary.BigEndian.Uint64(key[:utils.Uint64Size])
 
 	// Calculate offset for cCols length
-	offset := 8 + pKeyLength
-	if len(key) < int(offset+8) { // Additional 8 bytes for len(cCols)
+	offset := utils.Uint64Size + pKeyLength
+	if len(key) < int(offset+utils.Uint64Size) { // Additional 8 bytes for len(cCols)
 		return nil, fmt.Errorf("invalid key: missing data for cCols length")
 	}
 
 	// Read the length of cCols
-	cColsLength := binary.BigEndian.Uint64(key[offset : offset+8])
+	cColsLength := binary.BigEndian.Uint64(key[offset : offset+utils.Uint64Size])
 
 	// Calculate offset for cCols
-	offset += 8
+	offset += utils.Uint64Size
 	if len(key) < int(offset+cColsLength) {
 		return nil, fmt.Errorf("invalid key: missing data for cCols")
 	}
