@@ -10,7 +10,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -18,6 +18,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
@@ -66,6 +67,10 @@ func (p *appStorageFactory) Init(appName istorage.SafeAppName) error {
 	return db.Close()
 }
 
+func (p *appStorageFactory) Time() coreutils.ITime {
+	return nil
+}
+
 // bolt cannot use empty keys so we declare nullKey
 var nullKey = []byte{0}
 
@@ -96,7 +101,7 @@ type appStorageType struct {
 func (s *appStorageType) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
 	found := false
 
-	key := makeKey(pKey, cCols)
+	key := makeKey(unSafeKey(pKey), unSafeKey(cCols))
 	err = s.db.View(func(tx *bolt.Tx) error {
 		dataBucket := tx.Bucket([]byte(dataBucketName))
 		if dataBucket == nil {
@@ -108,8 +113,7 @@ func (s *appStorageType) InsertIfNotExists(pKey []byte, cCols []byte, value []by
 			return nil
 		}
 
-		expireAt := time.UnixMilli(int64(binary.BigEndian.Uint64(d[len(d)-utils.Uint64Size:])))
-		if !expireAt.After(s.iTime.Now()) {
+		if s.isExpired(d) {
 			s.chKeysToRemove <- key
 
 			return nil
@@ -139,7 +143,7 @@ func (s *appStorageType) InsertIfNotExists(pKey []byte, cCols []byte, value []by
 func (s *appStorageType) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
 	found := false
 
-	key := makeKey(pKey, cCols)
+	key := makeKey(unSafeKey(pKey), unSafeKey(cCols))
 	found, err = s.findValue(key, oldValue)
 	if err != nil {
 		return false, err
@@ -163,7 +167,7 @@ func (s *appStorageType) CompareAndSwap(pKey []byte, cCols []byte, oldValue, new
 func (s *appStorageType) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
 	found := false
 
-	key := makeKey(pKey, cCols)
+	key := makeKey(unSafeKey(pKey), unSafeKey(cCols))
 	found, err = s.findValue(key, expectedValue)
 	if err != nil {
 		return false, err
@@ -194,7 +198,7 @@ func (s *appStorageType) CompareAndDelete(pKey []byte, cCols []byte, expectedVal
 
 //nolint:revive
 func (s *appStorageType) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
-	key := makeKey(pKey, cCols)
+	key := makeKey(unSafeKey(pKey), unSafeKey(cCols))
 	err = s.db.View(func(tx *bolt.Tx) error {
 		dataBucket := tx.Bucket([]byte(dataBucketName))
 		if dataBucket == nil {
@@ -206,8 +210,7 @@ func (s *appStorageType) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok boo
 			return nil
 		}
 
-		expireAt := time.UnixMilli(int64(binary.BigEndian.Uint64(d[len(d)-utils.Uint64Size:])))
-		if !expireAt.After(s.iTime.Now()) {
+		if s.isExpired(d) {
 			s.chKeysToRemove <- key
 
 			return nil
@@ -229,46 +232,42 @@ func (s *appStorageType) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok boo
 
 //nolint:revive
 func (s *appStorageType) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
-	//TODO implement me
-	panic("implement me")
+	return s.read(ctx, pKey, startCCols, finishCCols, cb, true)
 }
 
 // istorage.IAppStorage.Put(pKey []byte, cCols []byte, value []byte) (err error)
 func (s *appStorageType) Put(pKey []byte, cCols []byte, value []byte) (err error) {
-	err = s.db.Update(func(tx *bolt.Tx) error {
-		b, e := tx.CreateBucketIfNotExists(pKey)
-		if e != nil {
-			// notest
-			return e
+	return s.db.Update(func(tx *bolt.Tx) error {
+		dataBucket := tx.Bucket([]byte(dataBucketName))
+		if dataBucket == nil {
+			return ErrDataBucketNotFound
 		}
-		return b.Put(safeKey(cCols), unSafeKey(value))
+
+		d := coreutils.DataWithExpiration{Data: value}
+
+		return dataBucket.Put(makeKey(unSafeKey(pKey), unSafeKey(cCols)), d.ToBytes())
 	})
-	return err
 }
 
 // istorage.IAppStorage.PutBatch(items []BatchItem) (err error)
 func (s *appStorageType) PutBatch(items []istorage.BatchItem) (err error) {
-	err = s.db.Update(func(tx *bolt.Tx) error {
+	return s.db.Update(func(tx *bolt.Tx) error {
+		dataBucket := tx.Bucket([]byte(dataBucketName))
+		if dataBucket == nil {
+			return ErrDataBucketNotFound
+		}
 
 		for i := 0; i < len(items); i++ {
+			d := coreutils.DataWithExpiration{Data: items[i].Value}
 
-			PKey := items[i].PKey
-			b, e := tx.CreateBucketIfNotExists(PKey)
-			if e != nil {
-				// notest
-				return e
-			}
-
-			e = b.Put(safeKey(items[i].CCols), items[i].Value)
-			if e != nil {
-				return e
+			key := makeKey(safeKey(items[i].PKey), safeKey(items[i].CCols))
+			if err := dataBucket.Put(key, d.ToBytes()); err != nil {
+				return err
 			}
 		}
 
 		return nil
 	})
-
-	return err
 }
 
 // istorage.IAppStorage.Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error)
@@ -276,18 +275,23 @@ func (s *appStorageType) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, 
 	*data = (*data)[0:0]
 
 	err = s.db.View(func(tx *bolt.Tx) error {
-		ok = false
-		bucket := tx.Bucket(pKey)
-		if bucket == nil {
-			return nil
+		dataBucket := tx.Bucket([]byte(dataBucketName))
+		if dataBucket == nil {
+			return ErrDataBucketNotFound
 		}
 
-		v := bucket.Get(safeKey(cCols))
+		key := makeKey(safeKey(pKey), safeKey(cCols))
+		v := dataBucket.Get(key)
 		if v == nil {
 			return nil
 		}
-		*data = append(*data, v...)
+
+		var d coreutils.DataWithExpiration
+
+		d.Read(v)
+		*data = append(*data, d.Data...)
 		ok = true
+
 		return nil
 	})
 
@@ -296,13 +300,43 @@ func (s *appStorageType) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, 
 
 // istorage.IAppStorage.Read(ctx context.Context, pKey []byte, startCCols []byte, finishCCols []byte, cb ReadCallback) (err error)
 func (s *appStorageType) Read(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
+	return s.read(ctx, pKey, startCCols, finishCCols, cb, false)
+}
 
+// istorage.IAppStorage.GetBatch(pKey []byte, items []GetBatchItem) (err error)
+func (s *appStorageType) GetBatch(pKey []byte, items []istorage.GetBatchItem) (err error) {
+	return s.db.View(func(tx *bolt.Tx) error {
+		dataBucket := tx.Bucket([]byte(dataBucketName))
+		if dataBucket == nil {
+			return ErrDataBucketNotFound
+		}
+
+		var d coreutils.DataWithExpiration
+		for i := 0; i < len(items); i++ {
+			key := makeKey(safeKey(pKey), safeKey(items[i].CCols))
+			v := dataBucket.Get(key)
+
+			d.Read(v)
+
+			items[i].Ok = d.Data != nil
+			*items[i].Data = append((*items[i].Data)[0:0], d.Data...)
+		}
+		return nil
+	})
+}
+
+func (s *appStorageType) read(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback, checkTtl bool) (err error) {
 	if (len(startCCols) > 0) && (len(finishCCols) > 0) && (bytes.Compare(startCCols, finishCCols) >= 0) {
 		return nil // absurd range
 	}
 
-	err = s.db.View(func(tx *bolt.Tx) error {
+	return s.db.View(func(tx *bolt.Tx) error {
+		dataBucket := tx.Bucket([]byte(dataBucketName))
+		if dataBucket == nil {
+			return ErrDataBucketNotFound
+		}
 
+		pKey = unSafeKey(pKey)
 		startCCols = unSafeKey(startCCols)
 		finishCCols = unSafeKey(finishCCols)
 
@@ -316,25 +350,36 @@ func (s *appStorageType) Read(ctx context.Context, pKey []byte, startCCols, fini
 			v []byte
 		)
 
-		cr := bucket.Cursor()
+		cr := dataBucket.Cursor()
 		if startCCols == nil {
 			k, v = cr.First()
 		} else {
-			k, v = cr.Seek(startCCols)
+
+			startKey := makeKey(pKey, startCCols)
+			k, v = cr.Seek(startKey)
 		}
 
-		var e error
-
-		for (k != nil) && (finishCCols == nil || string(k) <= string(finishCCols)) {
+		finishKey := makeKey(pKey, finishCCols)
+		for (k != nil) && (finishCCols == nil || string(k) <= string(finishKey)) {
 
 			if ctx.Err() != nil {
 				return nil
 			}
 
+			if checkTtl && s.isExpired(v) {
+				s.chKeysToRemove <- k
+				k, v = cr.Next()
+				continue
+			}
+
 			if cb != nil {
-				e = cb(unSafeKey(k), unSafeKey(v))
-				if e != nil {
-					return e
+				cCols, err := extractCCols(k)
+				if err != nil {
+					return err
+				}
+
+				if err := cb(unSafeKey(cCols), unSafeKey(v[:len(v)-utils.Uint64Size])); err != nil {
+					return err
 				}
 			}
 			k, v = cr.Next()
@@ -342,30 +387,6 @@ func (s *appStorageType) Read(ctx context.Context, pKey []byte, startCCols, fini
 
 		return nil
 	})
-
-	return err
-}
-
-// istorage.IAppStorage.GetBatch(pKey []byte, items []GetBatchItem) (err error)
-func (s *appStorageType) GetBatch(pKey []byte, items []istorage.GetBatchItem) (err error) {
-	err = s.db.View(func(tx *bolt.Tx) error {
-
-		bucket := tx.Bucket(pKey)
-		if bucket == nil {
-			for i := 0; i < len(items); i++ {
-				items[i].Ok = false
-			}
-			return nil
-		}
-		for i := 0; i < len(items); i++ {
-			v := bucket.Get(safeKey(items[i].CCols))
-			items[i].Ok = v != nil
-			*items[i].Data = append((*items[i].Data)[0:0], v...)
-		}
-		return nil
-	})
-
-	return err
 }
 
 func (s *appStorageType) findValue(key, value []byte) (found bool, err error) {
@@ -431,18 +452,70 @@ func (s *appStorageType) putValue(tx *bolt.Tx, key, value []byte, ttlSeconds int
 	return nil
 }
 
-func (p *appStorageFactory) Time() coreutils.ITime {
-	return nil
+func (s *appStorageType) isExpired(value []byte) bool {
+	expireAtMillisec := int64(binary.BigEndian.Uint64(value[len(value)-utils.Uint64Size:]))
+	if expireAtMillisec == 0 {
+		return false
+	}
+
+	expireAt := time.UnixMilli(expireAtMillisec)
+	if expireAt.After(s.iTime.Now()) {
+		return false
+	}
+
+	return true
 }
 
+// makeKey creates a key from primary key and clustering columns
+// key = len(pKey) + pKey + len(cCols) + cCols
 func makeKey(pKey []byte, cCols []byte) []byte {
-	key := make([]byte, 0, len(pKey)+len(cCols))
+	key := make([]byte, 0, len(pKey)+len(cCols)+2*utils.Uint64Size) // nolint G104
+	binary.BigEndian.AppendUint64(key, uint64(len(pKey)))           // nolint G115
 	key = append(key, pKey...)
+	binary.BigEndian.AppendUint64(key, uint64(len(cCols))) // nolint G115
 	key = append(key, cCols...)
 
 	return key
 }
 
+// extractCCols extracts the clustering columns (cCols) from the composite key.
+// It assumes the key is in the format: len(pKey) + pKey + len(cCols) + cCols.
+// It handles cases where cCols is nil.
+func extractCCols(key []byte) ([]byte, error) {
+	// Ensure the key has at least the size of two uint64 lengths
+	if len(key) < 16 { // 2 * Uint64Size (8 bytes each)
+		return nil, fmt.Errorf("invalid key: too short")
+	}
+
+	// Read the length of pKey
+	pKeyLength := binary.BigEndian.Uint64(key[:8])
+
+	// Calculate offset for cCols length
+	offset := 8 + pKeyLength
+	if len(key) < int(offset+8) { // Additional 8 bytes for len(cCols)
+		return nil, fmt.Errorf("invalid key: missing data for cCols length")
+	}
+
+	// Read the length of cCols
+	cColsLength := binary.BigEndian.Uint64(key[offset : offset+8])
+
+	// Calculate offset for cCols
+	offset += 8
+	if len(key) < int(offset+cColsLength) {
+		return nil, fmt.Errorf("invalid key: missing data for cCols")
+	}
+
+	// Handle case where cCols is nil (length is 0)
+	if cColsLength == 0 {
+		return nil, nil
+	}
+
+	// Extract cCols
+	cCols := key[offset : offset+cColsLength]
+	return cCols, nil
+}
+
+// makeTtlKey creates a key for TTL bucket
 func makeTtlKey(key []byte, expireAt int64) []byte {
 	ttlKey := make([]byte, 0, len(key)+utils.Uint64Size)
 	binary.BigEndian.AppendUint64(ttlKey, uint64(expireAt)) // nolint G115
