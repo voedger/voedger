@@ -19,6 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -264,8 +265,22 @@ func execCmdCreateWorkspace(time coreutils.ITime) istructsmem.ExecCommandClosure
 			return nil
 		}()
 
+		logger.Info("c.sys.CreateWorkspace: wsid", args.Workspace)
+
 		// create CDoc<sys.WorkspaceDescriptor> (singleton)
 		kb, err := args.State.KeyBuilder(sys.Storage_Record, authnz.QNameCDocWorkspaceDescriptor)
+		if err != nil {
+			return err
+		}
+		kb.PutQName(state.Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
+		v, ok, err := args.State.CanExist(kb)
+		if err != nil {
+			return err
+		}
+		if ok {
+			logger.Info("c.sys.CreateWorkspace: wsDesc exists!!!!!!!!: name", v.AsString("WSName"))
+		}
+		kb, err = args.State.KeyBuilder(sys.Storage_Record, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return err
 		}
