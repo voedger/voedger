@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -20,7 +21,8 @@ import (
 func TestBasicUsage(t *testing.T) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
-	factory := Provide(params)
+
+	factory := Provide(params, coreutils.MockTime)
 	istorage.TechnologyCompatibilityKit(t, factory)
 }
 
@@ -31,7 +33,7 @@ func Test_MyTestBasicUsage(t *testing.T) {
 	defer cleanupTestData(params)
 
 	// creating a StorageProvider
-	factory := Provide(params)
+	factory := Provide(params, coreutils.MockTime)
 	storageProvider := istorageimpl.Provide(factory)
 
 	// get the required AppStorage for the app
@@ -72,7 +74,7 @@ func Test_PutGet(t *testing.T) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
 
-	factory := Provide(params)
+	factory := Provide(params, coreutils.MockTime)
 	storageProvider := istorageimpl.Provide(factory)
 
 	appStorage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)

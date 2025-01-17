@@ -113,6 +113,7 @@ func (d *DataWithExpiration) ToBytes() []byte {
 	res := make([]byte, 0, len(d.Data)+utils.Uint64Size)
 	res = append(res, d.Data...)
 	res = binary.BigEndian.AppendUint64(res, uint64(d.ExpireAt)) // nolint G115
+
 	return res
 }
 
