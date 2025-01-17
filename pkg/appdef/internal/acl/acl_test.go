@@ -70,6 +70,12 @@ func Test_GrantAndRevoke(t *testing.T) {
 			filter.QNames(docName, viewName),
 			writerName,
 			"grant all on doc & view to writer")
+		wsb.Revoke(
+			[]appdef.OperationKind{appdef.OperationKind_Activate, appdef.OperationKind_Deactivate},
+			filter.QNames(docName, viewName), nil,
+			writerName,
+			"revoke activate/deactivate on doc & view from writer")
+
 		wsb.GrantAll(
 			filter.QNames(cmdName, queryName),
 			writerName,
@@ -127,18 +133,19 @@ func Test_GrantAndRevoke(t *testing.T) {
 				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName, viewName}, []appdef.FieldName{"field1"}, readerName},
 				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{queryName}, nil, readerName},
 				// writer role
-				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select}, []appdef.QName{docName, viewName}, nil, writerName},
+				{appdef.PolicyKind_Allow, appdef.RecordsOperations.AsArray(), []appdef.QName{docName, viewName}, nil, writerName},
+				{appdef.PolicyKind_Deny, []appdef.OperationKind{appdef.OperationKind_Activate, appdef.OperationKind_Deactivate}, []appdef.QName{docName, viewName}, nil, writerName},
 				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{cmdName, queryName}, nil, writerName},
 				// worker role
 				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Inherits}, []appdef.QName{readerName, writerName}, nil, workerName},
 				// owner role
-				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select}, []appdef.QName{docName, viewName}, nil, ownerName},
+				{appdef.PolicyKind_Allow, appdef.RecordsOperations.AsArray(), []appdef.QName{docName, viewName}, nil, ownerName},
 				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{cmdName, queryName}, nil, ownerName},
 				// admin role
 				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Inherits}, []appdef.QName{ownerName}, nil, adminName},
 				{appdef.PolicyKind_Deny, []appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{cmdName, queryName}, nil, adminName},
 				// intruder role
-				{appdef.PolicyKind_Deny, []appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select}, []appdef.QName{docName, viewName}, nil, intruderRoleName},
+				{appdef.PolicyKind_Deny, appdef.RecordsOperations.AsArray(), []appdef.QName{docName, viewName}, nil, intruderRoleName},
 				{appdef.PolicyKind_Deny, []appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{cmdName, queryName}, nil, intruderRoleName},
 			}
 
@@ -153,7 +160,7 @@ func Test_GrantAndRevoke(t *testing.T) {
 					}
 
 					flt := appdef.QNames{}
-					for t := range appdef.FilterMatches(r.Filter(), r.Principal().Workspace().Types()) {
+					for t := range appdef.FilterMatches(r.Filter(), r.Workspace().Types()) {
 						flt = append(flt, t.QName())
 					}
 					require.EqualValues(want[cnt].flt, flt)

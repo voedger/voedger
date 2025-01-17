@@ -22,7 +22,7 @@ func ACLOperationsForType(t TypeKind) (ops set.Set[OperationKind]) {
 		TypeKind_ORecord, TypeKind_ODoc,
 		TypeKind_Object,
 		TypeKind_ViewRecord:
-		ops = set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)
+		ops = RecordsOperations
 	case TypeKind_Command, TypeKind_Query:
 		ops = set.From(OperationKind_Execute)
 	case TypeKind_Role:

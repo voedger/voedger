@@ -21,9 +21,9 @@ func Test_AllOperationsForType(t *testing.T) {
 		want set.Set[appdef.OperationKind]
 	}{
 		{appdef.TypeKind_null, set.Empty[appdef.OperationKind]()},
-		{appdef.TypeKind_GRecord, set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select)},
-		{appdef.TypeKind_CDoc, set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select)},
-		{appdef.TypeKind_ViewRecord, set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select)},
+		{appdef.TypeKind_GRecord, appdef.RecordsOperations},
+		{appdef.TypeKind_CDoc, appdef.RecordsOperations},
+		{appdef.TypeKind_ViewRecord, appdef.RecordsOperations},
 		{appdef.TypeKind_Command, set.From(appdef.OperationKind_Execute)},
 		{appdef.TypeKind_Role, set.From(appdef.OperationKind_Inherits)},
 		{appdef.TypeKind_Projector, set.Empty[appdef.OperationKind]()},
