@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"strings"
 	"testing"
@@ -183,8 +184,8 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 				}
 				vit.T.Fatalf(`expected ws init error template is [%s] but is "%s"`, strings.Join(expectWSInitErrorChunks, ", "), wsError)
 			}
-		} else if len(wsError) > 0 {
-			vit.T.Fatal(wsError)
+		} else {
+			require.Empty(vit.T, wsError)
 		}
 
 		return &AppWorkspace{
