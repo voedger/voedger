@@ -15,12 +15,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
-	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -93,7 +91,7 @@ func ApplyInvokeCreateWorkspaceID(federation federation.IFederation, appQName ap
 		coreutils.WithExpectedCode(http.StatusOK),
 		coreutils.WithExpectedCode(http.StatusConflict),
 	); createWSIDCmdErr != nil {
-		logger.Error(fmt.Sprintf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %s. Body:\n%s\n, event.WSID: %d, wlogoffset: %d", createWSIDCmdErr.Error(), body, currentWSID, wlogOffset))
+		logger.Error(fmt.Sprintf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %s. Body:\n%s", createWSIDCmdErr.Error(), body))
 		return updateOwnerErr(ownerWSID, ownerID, ownerApp, ownerQName.String(), istructs.NullWSID, createWSIDCmdErr, tokensAPI, federation)
 	}
 	return nil
@@ -213,7 +211,7 @@ func invokeCreateWorkspaceProjector(federation federation.IFederation, tokensAPI
 				return fmt.Errorf("aproj.sys.InvokeCreateWorkspace: %w", err)
 			}
 			if _, err = federation.Func(createWSCmdURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
-			logger.Error("aproj.sys.InvokeCreateWorkspace: c.sys.CreateWorkspace failed: " + err.Error())
+				logger.Error("aproj.sys.InvokeCreateWorkspace: c.sys.CreateWorkspace failed: " + err.Error())
 				// nolint G115 ownerWSID came from WSID so its highest bit is always 0 -> no data loss possible
 				if err := updateOwnerErr(istructs.WSID(ownerWSID), istructs.RecordID(ownerID), ownerApp, ownerQName, istructs.NullWSID, err, tokensAPI, federation); err != nil {
 					return err
@@ -255,9 +253,8 @@ func execCmdCreateWorkspace(time coreutils.ITime) istructsmem.ExecCommandClosure
 			return nil
 		}()
 
-
 		// create CDoc<sys.WorkspaceDescriptor> (singleton)
-		kb, err = args.State.KeyBuilder(sys.Storage_Record, authnz.QNameCDocWorkspaceDescriptor)
+		kb, err := args.State.KeyBuilder(sys.Storage_Record, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return err
 		}
