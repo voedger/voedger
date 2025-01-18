@@ -2376,7 +2376,7 @@ func Test_Grants_Inherit(t *testing.T) {
 			WORKSPACE AppWorkspaceWS INHERITS BaseWs (
 				DESCRIPTOR AppWorkspace();
 				TABLE Table2 INHERITS sys.CDoc();
-				GRANT INSERT ON ALL TABLES TO role1;
+				GRANT INSERT,ACTIVATE,DEACTIVATE ON ALL TABLES TO role1;
 			);`)
 		require.NoError(err)
 		builder := builder.New()
@@ -2389,7 +2389,7 @@ func Test_Grants_Inherit(t *testing.T) {
 
 		// table
 		for acl := range app.ACL() {
-			require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert}, slices.Collect(acl.Ops()))
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate}, slices.Collect(acl.Ops()))
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 
 			require.Equal(appdef.FilterKind_Types, acl.Filter().Kind())
