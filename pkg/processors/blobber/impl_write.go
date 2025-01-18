@@ -144,7 +144,7 @@ func parseQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 
 func parseMediaType(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
-	bw.contentType = bw.blobMessageWrite.header.Get(coreutils.ContentType)
+	bw.contentType = bw.blobMessageWrite.header[coreutils.ContentType]
 	if len(bw.contentType) == 0 {
 		return nil
 	}

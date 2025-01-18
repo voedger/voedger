@@ -581,11 +581,9 @@ func TestAuthnz(t *testing.T) {
 	}
 }
 
-func getAuthHeader(token string) map[string][]string {
-	return map[string][]string{
-		coreutils.Authorization: {
-			"Bearer " + token,
-		},
+func getAuthHeader(token string) map[string]string {
+	return map[string]string{
+		coreutils.Authorization: "Bearer " + token,
 	}
 }
 
@@ -675,7 +673,7 @@ type testApp struct {
 	requestSender     bus.IRequestSender
 
 	appTokens     istructs.IAppTokens
-	sysAuthHeader map[string][]string
+	sysAuthHeader map[string]string
 }
 
 func tearDown(app testApp) {
@@ -771,8 +769,8 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 			return
 		}
 		token := ""
-		if authHeaders, ok := request.Header[coreutils.Authorization]; ok {
-			token = strings.TrimPrefix(authHeaders[0], "Bearer ")
+		if authHeader, ok := request.Header[coreutils.Authorization]; ok {
+			token = strings.TrimPrefix(authHeader, "Bearer ")
 		}
 		icm := NewCommandMessage(ctx, request.Body, appQName, request.WSID, responder, testAppPartID, cmdQName, token, "")
 		serviceChannel <- icm

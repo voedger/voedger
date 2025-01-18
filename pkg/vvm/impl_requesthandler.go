@@ -95,11 +95,10 @@ func deliverToProcessors(request bus.Request, requestCtx context.Context, appQNa
 }
 
 func getPrincipalToken(request bus.Request) (token string, err error) {
-	authHeaders := request.Header[coreutils.Authorization]
-	if len(authHeaders) == 0 {
+	authHeader := request.Header[coreutils.Authorization]
+	if len(authHeader) == 0 {
 		return "", nil
 	}
-	authHeader := authHeaders[0]
 	if strings.HasPrefix(authHeader, coreutils.BearerPrefix) {
 		return strings.ReplaceAll(authHeader, coreutils.BearerPrefix, ""), nil
 	}

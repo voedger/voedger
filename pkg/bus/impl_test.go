@@ -46,12 +46,12 @@ func TestRequestSender_BasicUsage(t *testing.T) {
 		Method:      http.MethodPost,
 		WSID:        1,
 		PartitionID: 2,
-		Header: map[string][]string{
-			coreutils.ContentType: {coreutils.ApplicationJSON},
+		Header: map[string]string{
+			coreutils.ContentType: coreutils.ApplicationJSON,
 		},
 		Resource: "c.sys.CUD",
-		Query: map[string][]string{
-			"param": {"value"},
+		Query: map[string]string{
+			"param": "value",
 		},
 		Body:     []byte("body"),
 		AppQName: istructs.AppQName_test1_app1.String(),

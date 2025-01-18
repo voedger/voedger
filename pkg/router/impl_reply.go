@@ -47,9 +47,16 @@ func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, 
 	res = bus.Request{
 		Method:   reqMethod,
 		WSID:     wsid,
-		Query:    req.URL.Query(),
-		Header:   req.Header,
+		Query:    map[string]string{},
+		Header:   map[string]string{},
 		AppQName: appQNameStr,
+	}
+
+	for k, v := range req.URL.Query() {
+		res.Query[k] = v[0]
+	}
+	for k, v := range req.Header {
+		res.Header[k] = v[0]
 	}
 	if req.Body != nil && req.Body != http.NoBody {
 		if res.Body, err = io.ReadAll(req.Body); err != nil {
