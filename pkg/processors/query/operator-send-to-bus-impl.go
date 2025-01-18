@@ -26,7 +26,7 @@ type SendToBusOperator struct {
 func (o *SendToBusOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
 	begin := time.Now()
 	defer func() {
-		o.metrics.Increase(execSendSeconds, time.Since(begin).Seconds())
+		o.metrics.Increase(Metric_ExecSendSeconds, time.Since(begin).Seconds())
 	}()
 	if o.sender == nil {
 		o.sender = o.responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})

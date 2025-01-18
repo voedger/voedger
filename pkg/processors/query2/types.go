@@ -15,17 +15,17 @@ import (
 type ApiPath int
 
 type QueryParams struct {
-	Constraints *Constraints           `json:"constraints"`
-	Argument    map[string]interface{} `json:"argument,omitempty"`
+	Constraints *Constraints
+	Argument    map[string]interface{}
 }
 
 type Constraints struct {
-	Order   []string               `json:"order"`
-	Limit   int                    `json:"limit"`
-	Skip    int                    `json:"skip"`
-	Include []string               `json:"include"`
-	Keys    []string               `json:"keys"`
-	Where   map[string]interface{} `json:"where"`
+	Order   []string
+	Limit   int
+	Skip    int
+	Include []string
+	Keys    []string
+	Where   map[string]interface{}
 }
 
 type IQueryMessage interface {
