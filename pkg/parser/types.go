@@ -641,18 +641,22 @@ type LimitStmt struct {
 func (s LimitStmt) GetName() string { return string(s.Name) }
 
 type GrantTableAction struct {
-	Pos     lexer.Position
-	Select  bool         `parser:"(@'SELECT'"`
-	Insert  bool         `parser:"| @'INSERT'"`
-	Update  bool         `parser:"| @'UPDATE')"`
-	Columns []Identifier `parser:"( '(' @@ (',' @@)* ')' )?"`
+	Pos        lexer.Position
+	Select     bool         `parser:"(@'SELECT'"`
+	Insert     bool         `parser:"| @'INSERT'"`
+	Update     bool         `parser:"| @'UPDATE'"`
+	Activate   bool         `parser:"| @'ACTIVATE'"`
+	Deactivate bool         `parser:"| @'DEACTIVATE')"`
+	Columns    []Identifier `parser:"( '(' @@ (',' @@)* ')' )?"`
 }
 
 type GrantAllTablesAction struct {
-	Pos    lexer.Position
-	Select bool `parser:"@'SELECT'"`
-	Insert bool `parser:"| @'INSERT'"`
-	Update bool `parser:"| @'UPDATE'"`
+	Pos        lexer.Position
+	Select     bool `parser:"@'SELECT'"`
+	Insert     bool `parser:"| @'INSERT'"`
+	Update     bool `parser:"| @'UPDATE'"`
+	Activate   bool `parser:"| @'ACTIVATE'"`
+	Deactivate bool `parser:"| @'DEACTIVATE'"`
 }
 
 type GrantTableAll struct {
