@@ -272,7 +272,7 @@ func validateObject(o *objectType) (err error) {
 	t := o.typ.(appdef.IWithContainers)
 
 	// validate occurrences
-	for cont := range t.Containers() {
+	for _, cont := range t.Containers() {
 		n, occurs := cont.Name(), appdef.Occurs(0)
 		for range o.Children(n) {
 			occurs++

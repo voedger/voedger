@@ -437,7 +437,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 		require.Equal(appdef.DataKind_bool, fields[test.humanIdent])
 		require.Equal(appdef.DataKind_bytes, fields[test.photoIdent])
 
-		for c := range cmdDoc.Containers() {
+		for _, c := range cmdDoc.Containers() {
 			require.Equal(test.basketIdent, c.Name())
 			require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), c.QName())
 			t.Run("II. test first level nested type (basket)", func(t *testing.T) {
@@ -445,7 +445,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 				require.NotNil(rec)
 				require.Equal(appdef.TypeKind_ORecord, rec.Kind())
 
-				for c := range rec.Containers() {
+				for _, c := range rec.Containers() {
 					require.Equal(test.goodIdent, c.Name())
 					require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), c.QName())
 

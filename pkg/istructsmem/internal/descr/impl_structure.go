@@ -28,7 +28,7 @@ func (s *Structure) read(str appdef.IStructure) {
 		s.Fields = append(s.Fields, f)
 	}
 
-	for cont := range str.Containers() {
+	for _, cont := range str.Containers() {
 		c := newContainer()
 		c.read(cont)
 		s.Containers = append(s.Containers, c)
