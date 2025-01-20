@@ -18,7 +18,7 @@ import (
 func RecursiveRoleAncestors(role appdef.IRole) (roles appdef.QNames) {
 	roles.Add(role.QName())
 	app := role.App()
-	for r := range role.Ancestors() {
+	for _, r := range role.Ancestors() {
 		roles.Add(RecursiveRoleAncestors(appdef.Role(app.Type, r))...)
 	}
 	return roles

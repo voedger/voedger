@@ -7,7 +7,6 @@ package roles_test
 
 import (
 	"fmt"
-	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -189,7 +188,7 @@ func TestRoles(t *testing.T) {
 		})
 
 		t.Run("should be ok to get role inheritance", func(t *testing.T) {
-			roles := slices.Collect(appdef.Role(tested.Type, workerRoleName).Ancestors())
+			roles := appdef.Role(tested.Type, workerRoleName).Ancestors()
 			require.Equal([]appdef.QName{readerRoleName, writerRoleName}, roles)
 		})
 	}
@@ -231,7 +230,7 @@ func Test_RoleInheritanceWithComplexFilter(t *testing.T) {
 	})
 
 	t.Run("should be ok to obtain roles inheritance", func(t *testing.T) {
-		roles := slices.Collect(appdef.Role(app.Workspace(wsName).Type, descRoleName).Ancestors())
+		roles := appdef.Role(app.Workspace(wsName).Type, descRoleName).Ancestors()
 		require.Equal([]appdef.QName{anc1RoleName, anc2RoleName}, roles)
 	})
 }
