@@ -7,7 +7,6 @@ package appdef_test
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
@@ -31,7 +30,7 @@ func ExampleIAppDefBuilder_AddPackage() {
 		fmt.Println(app.PackageLocalName("test.com/test"), app.PackageFullPath("test"))
 		fmt.Println(app.PackageLocalName("example.com/example"), app.PackageFullPath("example"))
 
-		fmt.Println(slices.Collect(app.PackageLocalNames()))
+		fmt.Println(app.PackageLocalNames())
 
 		for localName, fullPath := range app.Packages() {
 			fmt.Println(localName, fullPath)

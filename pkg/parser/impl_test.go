@@ -298,7 +298,7 @@ func Test_BasicUsage(t *testing.T) {
 	names := appdef.CollectQNames(intent.Names())
 	require.True(names.Contains(appdef.NewQName("main", "Transaction")))
 
-	localNames := slices.Collect(app.PackageLocalNames())
+	localNames := app.PackageLocalNames()
 	require.Equal([]string{"air", "main", appdef.SysPackage, "untill"}, localNames)
 
 	require.Equal(appdef.SysPackagePath, app.PackageFullPath(appdef.SysPackage))

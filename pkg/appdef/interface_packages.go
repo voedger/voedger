@@ -5,8 +5,6 @@
 
 package appdef
 
-import "iter"
-
 type IWithPackages interface {
 	// Returns package path by package local name.
 	//
@@ -19,12 +17,12 @@ type IWithPackages interface {
 	PackageLocalName(path string) string
 
 	// Return all local names of packages in alphabetical order
-	PackageLocalNames() iter.Seq[string]
+	PackageLocalNames() []string
 
 	// Enumerates all packages.
 	//
-	// Packages are enumerated in alphabetical order by local name
-	Packages() iter.Seq2[string, string]
+	// Returned map key is local name, value is path.
+	Packages() map[string]string
 
 	// Returns full qualified name by qualified name.
 	//
