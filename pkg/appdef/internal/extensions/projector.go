@@ -7,7 +7,6 @@ package extensions
 
 import (
 	"errors"
-	"iter"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/comments"
@@ -33,20 +32,14 @@ func NewProjector(ws appdef.IWorkspace, name appdef.QName) *Projector {
 	return p
 }
 
-func (p Projector) Events() iter.Seq[appdef.IProjectorEvent] {
-	return func(yield func(appdef.IProjectorEvent) bool) {
-		for _, e := range p.events.events {
-			if !yield(e) {
-				return
-			}
-		}
-	}
+func (p Projector) Events() []appdef.IProjectorEvent {
+	return p.events.events
 }
 
 func (p Projector) Sync() bool { return p.sync }
 
 func (p Projector) Triggers(op appdef.OperationKind, t appdef.IType) bool {
-	for e := range p.Events() {
+	for _, e := range p.Events() {
 		if e.Op(op) {
 			if e.Filter().Match(t) {
 				return true
@@ -104,13 +97,13 @@ func (pb *ProjectorBuilder) SetWantErrors() appdef.IProjectorBuilder {
 //   - appdef.IProjectorEventsBuilder
 type ProjectorEvents struct {
 	p      *Projector
-	events []*ProjectorEvent
+	events []appdef.IProjectorEvent
 }
 
 func NewProjectorEvents(p *Projector) *ProjectorEvents {
 	return &ProjectorEvents{
 		p:      p,
-		events: make([]*ProjectorEvent, 0),
+		events: make([]appdef.IProjectorEvent, 0),
 	}
 }
 
@@ -122,9 +115,10 @@ func (ee *ProjectorEvents) Add(ops []appdef.OperationKind, flt appdef.IFilter, c
 		panic(appdef.ErrMissed("filter"))
 	}
 	e := &ProjectorEvent{
-		ops: set.From(ops...),
-		flt: flt,
+		opSet: set.From(ops...),
+		flt:   flt,
 	}
+	e.ops = e.opSet.AsArray()
 	comments.SetComment(&e.WithComments, comment...)
 	ee.events = append(ee.events, e)
 	return ee
@@ -133,7 +127,9 @@ func (ee *ProjectorEvents) Add(ops []appdef.OperationKind, flt appdef.IFilter, c
 // Validates projector events.
 func (ee ProjectorEvents) Validate() (err error) {
 	for _, e := range ee.events {
-		err = errors.Join(err, e.Validate(ee.p))
+		if e, ok := e.(*ProjectorEvent); ok {
+			err = errors.Join(err, e.Validate(ee.p))
+		}
 	}
 	return err
 }
@@ -142,15 +138,16 @@ func (ee ProjectorEvents) Validate() (err error) {
 //   - appdef.IProjectorEvent
 type ProjectorEvent struct {
 	comments.WithComments
-	ops set.Set[appdef.OperationKind]
-	flt appdef.IFilter
+	ops   []appdef.OperationKind
+	opSet set.Set[appdef.OperationKind]
+	flt   appdef.IFilter
 }
 
 func (e ProjectorEvent) Filter() appdef.IFilter { return e.flt }
 
-func (e ProjectorEvent) Op(o appdef.OperationKind) bool { return e.ops.Contains(o) }
+func (e ProjectorEvent) Op(o appdef.OperationKind) bool { return e.opSet.Contains(o) }
 
-func (e ProjectorEvent) Ops() iter.Seq[appdef.OperationKind] { return e.ops.Values() }
+func (e ProjectorEvent) Ops() []appdef.OperationKind { return e.ops }
 
 // Validates projector event.
 func (e ProjectorEvent) Validate(prj appdef.IProjector) (err error) {

@@ -80,7 +80,7 @@ func (f *CommandFunction) read(fn appdef.ICommand) {
 
 func (p *Projector) read(prj appdef.IProjector) {
 	p.Extension.read(prj)
-	for ev := range prj.Events() {
+	for _, ev := range prj.Events() {
 		e := ProjectorEvent{}
 		e.read(ev)
 		p.Events = append(p.Events, e)
@@ -89,7 +89,7 @@ func (p *Projector) read(prj appdef.IProjector) {
 }
 
 func (e *ProjectorEvent) read(ev appdef.IProjectorEvent) {
-	for o := range ev.Ops() {
+	for _, o := range ev.Ops() {
 		e.Ops = append(e.Ops, o.TrimString())
 	}
 	e.Filter.read(ev.Filter())

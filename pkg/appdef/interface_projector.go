@@ -5,10 +5,6 @@
 
 package appdef
 
-import (
-	"iter"
-)
-
 // Projector is a extension that executes every time when some event is triggered and data need to be updated.
 type IProjector interface {
 	IExtension
@@ -17,7 +13,7 @@ type IProjector interface {
 	Sync() bool
 
 	// Returns events that triggers this projector.
-	Events() iter.Seq[IProjectorEvent]
+	Events() []IProjectorEvent
 
 	// Returns whether this projector triggers with the specified operation and type
 	Triggers(OperationKind, IType) bool
@@ -34,7 +30,7 @@ type IProjectorEvent interface {
 	Op(OperationKind) bool
 
 	// Returns triggered operations.
-	Ops() iter.Seq[OperationKind]
+	Ops() []OperationKind
 
 	// Returns filter of triggered types.
 	Filter() IFilter

@@ -7,7 +7,6 @@ package appdef_test
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
@@ -63,8 +62,8 @@ func ExampleProjectors() {
 		prj := appdef.Projector(app.Type, prjName)
 		fmt.Println(prj)
 		fmt.Println(" - events:")
-		for e := range prj.Events() {
-			fmt.Println("   - ops:", slices.Collect(e.Ops()))
+		for _, e := range prj.Events() {
+			fmt.Println("   - ops:", e.Ops())
 			fmt.Println("   - filter:", e.Filter())
 		}
 		if prj.WantErrors() {

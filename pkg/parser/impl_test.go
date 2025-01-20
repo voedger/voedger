@@ -205,11 +205,11 @@ func Test_BasicUsage(t *testing.T) {
 	// CUD Projector
 	proj := appdef.Projector(app.Type, appdef.NewQName("main", "RecordsRegistryProjector"))
 	require.NotNil(proj)
-	pe := slices.Collect(proj.Events())
+	pe := proj.Events()
 	require.Len(pe, 1)
 	require.Equal(
 		[]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate},
-		slices.Collect(pe[0].Ops()))
+		pe[0].Ops())
 	require.Equal(appdef.FilterKind_Types, pe[0].Filter().Kind())
 	require.Equal([]appdef.TypeKind{
 		appdef.TypeKind_CDoc, appdef.TypeKind_WDoc,
@@ -219,11 +219,11 @@ func Test_BasicUsage(t *testing.T) {
 	// Execute Projector
 	proj = appdef.Projector(app.Type, appdef.NewQName("main", "UpdateDashboard"))
 	require.NotNil(proj)
-	pe = slices.Collect(proj.Events())
+	pe = proj.Events()
 	require.Len(pe, 1)
 	require.Equal(
 		[]appdef.OperationKind{appdef.OperationKind_Execute},
-		slices.Collect(pe[0].Ops()))
+		pe[0].Ops())
 	require.Equal(appdef.FilterKind_QNames, pe[0].Filter().Kind())
 	require.Equal([]appdef.QName{appdef.NewQName("main", "NewOrder"), appdef.NewQName("main", "NewOrder2")}, pe[0].Filter().QNames())
 
@@ -1430,9 +1430,9 @@ func Test_Projectors(t *testing.T) {
 
 		proj := appdef.Projector(app.Type, appdef.NewQName("pkg", "ImProjector"))
 		require.NotNil(proj)
-		pe := slices.Collect(proj.Events())
+		pe := proj.Events()
 		require.Len(pe, 1)
-		require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert}, slices.Collect((pe[0].Ops())))
+		require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert}, pe[0].Ops())
 		require.Equal(appdef.FilterKind_QNames, pe[0].Filter().Kind())
 		require.Len(pe[0].Filter().QNames(), 1)
 	})
@@ -1459,9 +1459,9 @@ func Test_Projectors(t *testing.T) {
 
 		proj := appdef.Projector(app.Type, appdef.NewQName("pkg", "p"))
 		require.NotNil(proj)
-		pe := slices.Collect(proj.Events())
+		pe := proj.Events()
 		require.Len(pe, 2)
-		require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update}, slices.Collect((pe[0].Ops())))
+		require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update}, pe[0].Ops())
 		require.Equal(appdef.FilterKind_Or, pe[0].Filter().Kind())
 		or := pe[0].Filter().Or()
 		require.Len(or, 2)
@@ -1476,7 +1476,7 @@ func Test_Projectors(t *testing.T) {
 		require.Equal(appdef.TypeKind_CDoc, types[0])
 		require.Equal(appdef.TypeKind_CRecord, types[1])
 
-		require.Equal([]appdef.OperationKind{appdef.OperationKind_Deactivate}, slices.Collect((pe[1].Ops())))
+		require.Equal([]appdef.OperationKind{appdef.OperationKind_Deactivate}, pe[1].Ops())
 		require.Equal(appdef.FilterKind_QNames, pe[1].Filter().Kind())
 		require.Len(pe[1].Filter().QNames(), 1)
 		require.Equal("pkg.Tbl3", pe[1].Filter().QNames()[0].String())
