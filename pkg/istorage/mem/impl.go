@@ -16,7 +16,7 @@ import (
 )
 
 type appStorageFactory struct {
-	storages map[string]map[string]map[string]dataWithTTL
+	storages map[string]map[string]map[string]coreutils.DataWithExpiration
 	iTime    coreutils.ITime
 }
 
@@ -33,7 +33,7 @@ func (s *appStorageFactory) Init(appName istorage.SafeAppName) error {
 	if _, ok := s.storages[appName.String()]; ok {
 		return istorage.ErrStorageAlreadyExists
 	}
-	s.storages[appName.String()] = map[string]map[string]dataWithTTL{}
+	s.storages[appName.String()] = map[string]map[string]coreutils.DataWithExpiration{}
 
 	return nil
 }
@@ -43,16 +43,11 @@ func (s *appStorageFactory) Time() coreutils.ITime {
 }
 
 type appStorage struct {
-	storage      map[string]map[string]dataWithTTL
+	storage      map[string]map[string]coreutils.DataWithExpiration
 	lock         sync.RWMutex
 	testDelayGet time.Duration // used in tests only
 	testDelayPut time.Duration // used in tests only
 	iTime        coreutils.ITime
-}
-
-type dataWithTTL struct {
-	data     []byte
-	expireAt *time.Time
 }
 
 func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, newValue []byte, ttlSeconds int) (ok bool, err error) {
@@ -65,7 +60,7 @@ func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, newValue []byt
 
 	p := s.storage[string(pKey)]
 	if p == nil {
-		p = make(map[string]dataWithTTL)
+		p = make(map[string]coreutils.DataWithExpiration)
 		s.storage[string(pKey)] = p
 	}
 
@@ -73,19 +68,18 @@ func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, newValue []byt
 	data, ok := p[string(cCols)]
 	ttlExpired := isExpired(data, now)
 
-	oldValue := p[string(cCols)].data
+	oldValue := p[string(cCols)].Data
 	if !ttlExpired && bytes.Compare(copySlice(oldValue), newValue) == 0 {
 		return false, nil
 	}
 
-	var expireAt *time.Time
+	var expireAt int64
 	if ttlSeconds > 0 {
-		newExpireAt := now.Add(time.Duration(ttlSeconds) * time.Second)
-		expireAt = &newExpireAt
+		expireAt = now.Add(time.Duration(ttlSeconds) * time.Second).UnixMilli()
 	}
-	p[string(cCols)] = dataWithTTL{
-		data:     copySlice(newValue),
-		expireAt: expireAt,
+	p[string(cCols)] = coreutils.DataWithExpiration{
+		Data:     copySlice(newValue),
+		ExpireAt: expireAt,
 	}
 
 	return true, nil
@@ -111,18 +105,17 @@ func (s *appStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValu
 	}
 
 	ttlExpired := isExpired(viewRecord, now)
-	currentValue := copySlice(viewRecord.data)
+	currentValue := copySlice(viewRecord.Data)
 	if !ttlExpired && bytes.Compare(currentValue, oldValue) == 0 {
 		ok = true
 
-		var expireAt *time.Time
+		var expireAt int64
 		if ttlSeconds > 0 {
-			newExpireAt := now.Add(time.Duration(ttlSeconds) * time.Second)
-			expireAt = &newExpireAt
+			expireAt = now.Add(time.Duration(ttlSeconds) * time.Second).UnixMilli()
 		}
-		p[string(cCols)] = dataWithTTL{
-			data:     copySlice(newValue),
-			expireAt: expireAt,
+		p[string(cCols)] = coreutils.DataWithExpiration{
+			Data:     copySlice(newValue),
+			ExpireAt: expireAt,
 		}
 
 		return
@@ -152,7 +145,7 @@ func (s *appStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue [
 	now := s.iTime.Now()
 	ttlExpired := isExpired(viewRecord, now)
 
-	currentValue := copySlice(viewRecord.data)
+	currentValue := copySlice(viewRecord.Data)
 	if !ttlExpired && bytes.Compare(currentValue, expectedValue) == 0 {
 		ok = true
 
@@ -181,10 +174,10 @@ func (s *appStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
 
 	p := s.storage[string(pKey)]
 	if p == nil {
-		p = make(map[string]dataWithTTL)
+		p = make(map[string]coreutils.DataWithExpiration)
 		s.storage[string(pKey)] = p
 	}
-	p[string(cCols)] = dataWithTTL{data: copySlice(value)}
+	p[string(cCols)] = coreutils.DataWithExpiration{Data: copySlice(value)}
 
 	return
 }
@@ -213,7 +206,7 @@ func (s *appStorage) PutBatch(items []istorage.BatchItem) (err error) {
 	return nil
 }
 
-func (s *appStorage) readPartSort(ctx context.Context, part map[string]dataWithTTL, startCCols, finishCCols []byte) (sortKeys []string) {
+func (s *appStorage) readPartSort(ctx context.Context, part map[string]coreutils.DataWithExpiration, startCCols, finishCCols []byte) (sortKeys []string) {
 	sortKeys = make([]string, 0)
 	for col := range part {
 		if ctx.Err() != nil {
@@ -248,7 +241,7 @@ func (s *appStorage) readPart(ctx context.Context, pKey []byte, startCCols, fini
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 	var (
-		v  map[string]dataWithTTL
+		v  map[string]coreutils.DataWithExpiration
 		ok bool
 	)
 	if v, ok = s.storage[string(pKey)]; !ok {
@@ -267,7 +260,7 @@ func (s *appStorage) readPart(ctx context.Context, pKey []byte, startCCols, fini
 			return nil, nil
 		}
 		cCols = append(cCols, copySlice([]byte(col)))
-		values = append(values, copySlice(v[col].data))
+		values = append(values, copySlice(v[col].Data))
 	}
 
 	return cCols, values
@@ -318,7 +311,7 @@ func (s *appStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err 
 		return false, nil
 	}
 
-	*data = append((*data)[0:0], copySlice(viewRecord.data)...)
+	*data = append((*data)[0:0], copySlice(viewRecord.Data)...)
 
 	return
 }
@@ -365,6 +358,6 @@ func (s *appStorage) SetTestDelayPut(delay time.Duration) {
 	s.testDelayPut = delay
 }
 
-func isExpired(data dataWithTTL, now time.Time) bool {
-	return data.expireAt != nil && !now.Before(*data.expireAt)
+func isExpired(data coreutils.DataWithExpiration, now time.Time) bool {
+	return data.ExpireAt > 0 && !now.Before(time.UnixMilli(data.ExpireAt))
 }
