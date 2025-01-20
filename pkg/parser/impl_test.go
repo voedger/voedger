@@ -214,7 +214,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal([]appdef.TypeKind{
 		appdef.TypeKind_CDoc, appdef.TypeKind_WDoc,
 		appdef.TypeKind_CRecord, appdef.TypeKind_WRecord},
-		slices.Collect(pe[0].Filter().Types()))
+		pe[0].Filter().Types())
 
 	// Execute Projector
 	proj = appdef.Projector(app.Type, appdef.NewQName("main", "UpdateDashboard"))
@@ -225,7 +225,7 @@ func Test_BasicUsage(t *testing.T) {
 		[]appdef.OperationKind{appdef.OperationKind_Execute},
 		slices.Collect(pe[0].Ops()))
 	require.Equal(appdef.FilterKind_QNames, pe[0].Filter().Kind())
-	require.Equal([]appdef.QName{appdef.NewQName("main", "NewOrder"), appdef.NewQName("main", "NewOrder2")}, slices.Collect(pe[0].Filter().QNames()))
+	require.Equal([]appdef.QName{appdef.NewQName("main", "NewOrder"), appdef.NewQName("main", "NewOrder2")}, pe[0].Filter().QNames())
 
 	stateCount := 0
 	for n, s := range proj.States().All() {
@@ -1434,7 +1434,7 @@ func Test_Projectors(t *testing.T) {
 		require.Len(pe, 1)
 		require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert}, slices.Collect((pe[0].Ops())))
 		require.Equal(appdef.FilterKind_QNames, pe[0].Filter().Kind())
-		require.Len(slices.Collect(pe[0].Filter().QNames()), 1)
+		require.Len(pe[0].Filter().QNames(), 1)
 	})
 
 	t.Run("Projector filters", func(t *testing.T) {
@@ -1463,23 +1463,23 @@ func Test_Projectors(t *testing.T) {
 		require.Len(pe, 2)
 		require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update}, slices.Collect((pe[0].Ops())))
 		require.Equal(appdef.FilterKind_Or, pe[0].Filter().Kind())
-		or := slices.Collect(pe[0].Filter().Or())
+		or := pe[0].Filter().Or()
 		require.Len(or, 2)
 		require.Equal(appdef.FilterKind_QNames, or[0].Kind())
 		require.Equal(appdef.FilterKind_Types, or[1].Kind())
-		qnames := slices.Collect(or[0].QNames())
+		qnames := or[0].QNames()
 		require.Len(qnames, 2)
 		require.Equal("pkg.Tbl1", qnames[0].String())
 		require.Equal("pkg.Tbl2", qnames[1].String())
-		types := slices.Collect(or[1].Types())
+		types := or[1].Types()
 		require.Len(types, 2)
 		require.Equal(appdef.TypeKind_CDoc, types[0])
 		require.Equal(appdef.TypeKind_CRecord, types[1])
 
 		require.Equal([]appdef.OperationKind{appdef.OperationKind_Deactivate}, slices.Collect((pe[1].Ops())))
 		require.Equal(appdef.FilterKind_QNames, pe[1].Filter().Kind())
-		require.Len(slices.Collect(pe[1].Filter().QNames()), 1)
-		require.Equal("pkg.Tbl3", slices.Collect(pe[1].Filter().QNames())[0].String())
+		require.Len(pe[1].Filter().QNames(), 1)
+		require.Equal("pkg.Tbl3", pe[1].Filter().QNames()[0].String())
 	})
 
 	t.Run("Intent errors", func(t *testing.T) {
@@ -2319,7 +2319,7 @@ func Test_Grants(t *testing.T) {
 			require.Equal(appdef.FilterKind_QNames, acl.Filter().Kind())
 			require.EqualValues(
 				appdef.MustParseQNames("pkg.admin"),
-				slices.Collect(acl.Filter().QNames()))
+				acl.Filter().QNames())
 
 			require.Equal("pkg.mgr", acl.Principal().QName().String())
 			numACLs++
@@ -2354,7 +2354,7 @@ func Test_Grants(t *testing.T) {
 			require.Equal(appdef.FilterKind_QNames, acl.Filter().Kind())
 			require.EqualValues(
 				appdef.MustParseQNames("pkg.UserProfile"),
-				slices.Collect(acl.Filter().QNames()))
+				acl.Filter().QNames())
 
 			require.Equal("pkg.ProfileOwner", acl.Principal().QName().String())
 			numACLs++
@@ -2396,7 +2396,7 @@ func Test_Grants_Inherit(t *testing.T) {
 			require.EqualValues(
 				[]appdef.TypeKind{appdef.TypeKind_GDoc, appdef.TypeKind_CDoc, appdef.TypeKind_ODoc, appdef.TypeKind_WDoc,
 					appdef.TypeKind_GRecord, appdef.TypeKind_CRecord, appdef.TypeKind_ORecord, appdef.TypeKind_WRecord},
-				slices.Collect(acl.Filter().Types()))
+				acl.Filter().Types())
 
 			require.Equal("pkg.role1", acl.Principal().QName().String())
 			numACLs++

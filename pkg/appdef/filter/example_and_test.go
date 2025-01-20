@@ -41,7 +41,7 @@ func ExampleAnd() {
 		fmt.Println(flt)
 		fmt.Println("- kind:", flt.Kind())
 		fmt.Println("- children:")
-		for f := range flt.And() {
+		for _, f := range flt.And() {
 			fmt.Println("  *", f)
 		}
 		fmt.Println("- testing:")

@@ -41,7 +41,7 @@ func ExampleTypes() {
 		fmt.Println(flt)
 		fmt.Println("- kind:", flt.Kind())
 		fmt.Println("- type kinds:")
-		for t := range flt.Types() {
+		for _, t := range flt.Types() {
 			fmt.Println("  *", t)
 		}
 		fmt.Println("- testing:")
@@ -107,7 +107,7 @@ func ExampleWSTypes() {
 		fmt.Println(flt)
 		fmt.Println("- kind:", flt.Kind())
 		fmt.Println("- type kinds:")
-		for t := range flt.Types() {
+		for _, t := range flt.Types() {
 			fmt.Println("  *", t)
 		}
 		fmt.Println("- testing:")

@@ -39,7 +39,7 @@ func ExampleQNames() {
 		fmt.Println(flt)
 		fmt.Println("- kind:", flt.Kind())
 		fmt.Println("- QNames:")
-		for n := range flt.QNames() {
+		for _, n := range flt.QNames() {
 			fmt.Println("  *", n)
 		}
 		fmt.Println("- testing:")

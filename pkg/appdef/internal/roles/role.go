@@ -37,7 +37,7 @@ func (r Role) Ancestors() iter.Seq[appdef.QName] {
 		if rule.Op(appdef.OperationKind_Inherits) {
 			switch rule.Filter().Kind() {
 			case appdef.FilterKind_QNames:
-				for q := range rule.Filter().QNames() {
+				for _, q := range rule.Filter().QNames() {
 					roles.Add(q)
 				}
 			default:

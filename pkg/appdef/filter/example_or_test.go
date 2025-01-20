@@ -41,7 +41,7 @@ func ExampleOr() {
 		fmt.Println(flt)
 		fmt.Println("- kind:", flt.Kind())
 		fmt.Println("- children:")
-		for f := range flt.Or() {
+		for _, f := range flt.Or() {
 			fmt.Println("  *", f)
 		}
 		fmt.Println("- testing:")
