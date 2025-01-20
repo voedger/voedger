@@ -121,3 +121,7 @@ func (d *DataWithExpiration) Read(data []byte) {
 	d.Data = data[:len(data)-utils.Uint64Size]
 	d.ExpireAt = int64(binary.BigEndian.Uint64(data[len(data)-utils.Uint64Size:])) // nolint G115
 }
+
+func (d DataWithExpiration) IsExpired(now time.Time) bool {
+	return d.ExpireAt > 0 && !now.Before(time.UnixMilli(d.ExpireAt))
+}

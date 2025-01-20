@@ -128,12 +128,14 @@ func (s *appStorageType) InsertIfNotExists(pKey []byte, cCols []byte, value []by
 			return nil
 		}
 
-		d := bucket.Get(safeKey(cCols))
-		if d == nil {
+		v := bucket.Get(safeKey(cCols))
+		if v == nil {
 			return nil
 		}
 
-		if s.isExpired(d) {
+		var d coreutils.DataWithExpiration
+		d.Read(v)
+		if d.IsExpired(s.iTime.Now()) {
 			return nil
 		}
 
@@ -236,17 +238,19 @@ func (s *appStorageType) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok boo
 			return nil
 		}
 
-		d := bucket.Get(cCols)
-		if d == nil {
+		v := bucket.Get(cCols)
+		if v == nil {
 			return nil
 		}
 
-		if s.isExpired(d) {
+		var d coreutils.DataWithExpiration
+		d.Read(v)
+		if d.IsExpired(s.iTime.Now()) {
 			return nil
 		}
 
 		*data = (*data)[:0]
-		*data = d[:len(d)-utils.Uint64Size]
+		*data = d.Data
 		ok = true
 
 		return nil
@@ -408,13 +412,15 @@ func (s *appStorageType) read(ctx context.Context, pKey []byte, startCCols, fini
 			k, v = cr.Seek(safeKey(startCCols))
 		}
 
+		var d coreutils.DataWithExpiration
 		for (k != nil) && (finishCCols == nil || string(k) <= string(finishCCols)) {
 
 			if ctx.Err() != nil {
 				return nil
 			}
 
-			if checkTtl && s.isExpired(v) {
+			d.Read(v)
+			if checkTtl && d.IsExpired(s.iTime.Now()) {
 				k, v = cr.Next()
 				continue
 			}
@@ -447,16 +453,18 @@ func (s *appStorageType) findValue(pKey, cCols, value []byte) (found bool, err e
 			return nil
 		}
 
-		d := bucket.Get(cCols)
-		if d == nil {
+		v := bucket.Get(cCols)
+		if v == nil {
 			return nil
 		}
 
-		if s.isExpired(d) {
+		var d coreutils.DataWithExpiration
+		d.Read(v)
+		if d.IsExpired(s.iTime.Now()) {
 			return nil
 		}
 
-		if bytes.Equal(d[:len(d)-utils.Uint64Size], value) {
+		if bytes.Equal(d.Data, value) {
 			found = true
 		}
 
@@ -547,20 +555,6 @@ func (s *appStorageType) removeKey(tx *bolt.Tx, ttlKey []byte) error {
 	}
 
 	return ttlBucket.Delete(ttlKey)
-}
-
-func (s *appStorageType) isExpired(value []byte) bool {
-	expireAtMillisec := int64(binary.BigEndian.Uint64(value[len(value)-utils.Uint64Size:])) //nolint: gosec
-	if expireAtMillisec == 0 {
-		return false
-	}
-
-	expireAt := time.UnixMilli(expireAtMillisec)
-	if expireAt.After(s.iTime.Now()) {
-		return false
-	}
-
-	return true
 }
 
 func (s *appStorageType) backgroundCleaner() {
