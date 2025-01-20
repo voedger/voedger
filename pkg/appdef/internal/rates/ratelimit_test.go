@@ -7,7 +7,6 @@ package rates_test
 
 import (
 	"fmt"
-	"slices"
 	"testing"
 	"time"
 
@@ -60,7 +59,7 @@ func TestRateLimits(t *testing.T) {
 				require.EqualValues(10, r.Count())
 				require.Equal(time.Hour, r.Period())
 
-				require.Equal([]appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, slices.Collect(r.Scopes()))
+				require.Equal([]appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, r.Scopes())
 				require.True(r.Scope(appdef.RateScope_AppPartition))
 				require.True(r.Scope(appdef.RateScope_IP))
 				require.False(r.Scope(appdef.RateScope_Workspace))
@@ -81,7 +80,7 @@ func TestRateLimits(t *testing.T) {
 			case 1:
 				require.Equal(limitAllFunc, l.QName())
 
-				require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, slices.Collect(l.Ops()))
+				require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, l.Ops())
 				require.True(l.Op(appdef.OperationKind_Execute))
 				require.False(l.Op(appdef.OperationKind_Insert))
 
@@ -95,7 +94,7 @@ func TestRateLimits(t *testing.T) {
 				require.Equal("limit all commands and queries execution by test.rate", l.Comment())
 			case 2:
 				require.Equal(limitEachFunc, l.QName())
-				require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, slices.Collect(l.Ops()))
+				require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, l.Ops())
 				require.Equal(appdef.FilterKind_Types, l.Filter().Kind())
 				require.Equal(appdef.LimitFilterOption_EACH, l.Filter().Option())
 				require.Equal([]appdef.TypeKind{appdef.TypeKind_Query, appdef.TypeKind_Command}, l.Filter().Types())
@@ -104,7 +103,7 @@ func TestRateLimits(t *testing.T) {
 				require.Equal("limit each command and query execution by test.rate", l.Comment())
 			case 3:
 				require.Equal(limitEachTag, l.QName())
-				require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, slices.Collect(l.Ops()))
+				require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, l.Ops())
 				require.Equal(appdef.FilterKind_Tags, l.Filter().Kind())
 				require.Equal(appdef.LimitFilterOption_EACH, l.Filter().Option())
 				require.Equal([]appdef.QName{tagName}, l.Filter().Tags())
@@ -151,7 +150,7 @@ func TestRateLimits(t *testing.T) {
 		require.Equal(rateName, r.QName())
 		require.EqualValues(10, r.Count())
 		require.Equal(time.Hour, r.Period())
-		require.Equal(appdef.DefaultRateScopes, slices.Collect(r.Scopes()))
+		require.Equal(appdef.DefaultRateScopes, r.Scopes())
 		require.Equal("10 times per hour", r.Comment())
 	})
 }
@@ -302,14 +301,14 @@ func TestLimitActivateDeactivate(t *testing.T) {
 			switch cnt {
 			case 1:
 				require.Equal(limitActivate, l.QName())
-				require.Equal([]appdef.OperationKind{appdef.OperationKind_Activate}, slices.Collect(l.Ops()))
+				require.Equal([]appdef.OperationKind{appdef.OperationKind_Activate}, l.Ops())
 				require.Equal(appdef.FilterKind_QNames, l.Filter().Kind())
 				require.Equal(appdef.LimitFilterOption_EACH, l.Filter().Option())
 				require.Equal([]appdef.QName{docName}, l.Filter().QNames())
 				require.Equal(rateName, l.Rate().QName())
 			case 2:
 				require.Equal(limitDeactivate, l.QName())
-				require.Equal([]appdef.OperationKind{appdef.OperationKind_Deactivate}, slices.Collect(l.Ops()))
+				require.Equal([]appdef.OperationKind{appdef.OperationKind_Deactivate}, l.Ops())
 				require.Equal(appdef.FilterKind_QNames, l.Filter().Kind())
 				require.Equal(appdef.LimitFilterOption_EACH, l.Filter().Option())
 				require.Equal([]appdef.QName{docName}, l.Filter().QNames())

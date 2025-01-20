@@ -8,7 +8,6 @@ package rates
 import (
 	"errors"
 	"fmt"
-	"iter"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -21,21 +20,23 @@ import (
 //   - appdef.IRate
 type Rate struct {
 	types.Typ
-	count  appdef.RateCount
-	period appdef.RatePeriod
-	scopes set.Set[appdef.RateScope]
+	count    appdef.RateCount
+	period   appdef.RatePeriod
+	scopes   []appdef.RateScope
+	scopeSet set.Set[appdef.RateScope]
 }
 
 func NewRate(ws appdef.IWorkspace, name appdef.QName, count appdef.RateCount, period appdef.RatePeriod, scopes []appdef.RateScope, comment ...string) *Rate {
 	r := &Rate{
-		Typ:    types.MakeType(ws.App(), ws, name, appdef.TypeKind_Rate),
-		count:  count,
-		period: period,
-		scopes: set.From(scopes...),
+		Typ:      types.MakeType(ws.App(), ws, name, appdef.TypeKind_Rate),
+		count:    count,
+		period:   period,
+		scopeSet: set.From(scopes...),
 	}
-	if r.scopes.Len() == 0 {
-		r.scopes.Set(appdef.DefaultRateScopes...)
+	if r.scopeSet.Len() == 0 {
+		r.scopeSet.Set(appdef.DefaultRateScopes...)
 	}
+	r.scopes = r.scopeSet.AsArray()
 	comments.SetComment(&r.Typ.WithComments, comment...)
 	types.Propagate(r)
 	return r
@@ -45,9 +46,9 @@ func (r Rate) Count() appdef.RateCount { return r.count }
 
 func (r Rate) Period() appdef.RatePeriod { return r.period }
 
-func (r Rate) Scope(s appdef.RateScope) bool { return r.scopes.Contains(s) }
+func (r Rate) Scope(s appdef.RateScope) bool { return r.scopeSet.Contains(s) }
 
-func (r Rate) Scopes() iter.Seq[appdef.RateScope] { return r.scopes.Values() }
+func (r Rate) Scopes() []appdef.RateScope { return r.scopes }
 
 // # Supports:
 //   - appdef.ILimitFilter
@@ -84,9 +85,10 @@ func (f LimitFilter) String() string {
 //   - appdef.ILimit
 type Limit struct {
 	types.Typ
-	ops  set.Set[appdef.OperationKind]
-	flt  appdef.ILimitFilter
-	rate appdef.IRate
+	ops   []appdef.OperationKind
+	opSet set.Set[appdef.OperationKind]
+	flt   appdef.ILimitFilter
+	rate  appdef.IRate
 }
 
 func NewLimit(ws appdef.IWorkspace, name appdef.QName, ops []appdef.OperationKind, opt appdef.LimitFilterOption, flt appdef.IFilter, rate appdef.QName, comment ...string) *Limit {
@@ -102,11 +104,12 @@ func NewLimit(ws appdef.IWorkspace, name appdef.QName, ops []appdef.OperationKin
 		panic(appdef.ErrMissed("filter"))
 	}
 	l := &Limit{
-		Typ:  types.MakeType(ws.App(), ws, name, appdef.TypeKind_Limit),
-		ops:  opSet,
-		flt:  NewLimitFilter(opt, flt),
-		rate: appdef.Rate(ws.Type, rate),
+		Typ:   types.MakeType(ws.App(), ws, name, appdef.TypeKind_Limit),
+		opSet: opSet,
+		flt:   NewLimitFilter(opt, flt),
+		rate:  appdef.Rate(ws.Type, rate),
 	}
+	l.ops = l.opSet.AsArray()
 	if l.rate == nil {
 		panic(appdef.ErrNotFound("rate «%v»", rate))
 	}
@@ -122,9 +125,9 @@ func NewLimit(ws appdef.IWorkspace, name appdef.QName, ops []appdef.OperationKin
 
 func (l Limit) Filter() appdef.ILimitFilter { return l.flt }
 
-func (l Limit) Op(o appdef.OperationKind) bool { return l.ops.Contains(o) }
+func (l Limit) Op(o appdef.OperationKind) bool { return l.opSet.Contains(o) }
 
-func (l Limit) Ops() iter.Seq[appdef.OperationKind] { return l.ops.Values() }
+func (l Limit) Ops() []appdef.OperationKind { return l.ops }
 
 func (l Limit) Rate() appdef.IRate { return l.rate }
 
