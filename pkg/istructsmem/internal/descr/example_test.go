@@ -622,6 +622,8 @@ func Example() {
 	//                   "Ops": [
 	//                     "Insert",
 	//                     "Update",
+	//                     "Activate",
+	//                     "Deactivate",
 	//                     "Select"
 	//                   ],
 	//                   "Filter": {
@@ -712,6 +714,8 @@ func Example() {
 	//               "Ops": [
 	//                 "Insert",
 	//                 "Update",
+	//                 "Activate",
+	//                 "Deactivate",
 	//                 "Select"
 	//               ],
 	//               "Filter": {

@@ -309,6 +309,10 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 					grant.ops = append(grant.ops, appdef.OperationKind_Update)
 				} else if item.Select {
 					grant.ops = append(grant.ops, appdef.OperationKind_Select)
+				} else if item.Activate {
+					grant.ops = append(grant.ops, appdef.OperationKind_Activate)
+				} else if item.Deactivate {
+					grant.ops = append(grant.ops, appdef.OperationKind_Deactivate)
 				}
 			}
 			grant.AllTablesWithTag.Tag.qName = tagPkg.NewQName(tag.Name)
@@ -327,6 +331,10 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 				grant.ops = append(grant.ops, appdef.OperationKind_Update)
 			} else if item.Select {
 				grant.ops = append(grant.ops, appdef.OperationKind_Select)
+			} else if item.Activate {
+				grant.ops = append(grant.ops, appdef.OperationKind_Activate)
+			} else if item.Deactivate {
+				grant.ops = append(grant.ops, appdef.OperationKind_Deactivate)
 			}
 		}
 	}
@@ -372,6 +380,10 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 				grant.ops = append(grant.ops, appdef.OperationKind_Update)
 			} else if item.Select {
 				grant.ops = append(grant.ops, appdef.OperationKind_Select)
+			} else if item.Activate {
+				grant.ops = append(grant.ops, appdef.OperationKind_Activate)
+			} else if item.Deactivate {
+				grant.ops = append(grant.ops, appdef.OperationKind_Deactivate)
 			}
 		}
 		checkColumn := func(column Ident) error {

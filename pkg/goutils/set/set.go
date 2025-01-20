@@ -33,6 +33,13 @@ func From[V ~uint8](values ...V) Set[V] {
 	return s
 }
 
+// Makes new Set from specified iterator.
+func Collect[V ~uint8](it iter.Seq[V]) Set[V] {
+	var s Set[V]
+	s.Collect(it)
+	return s
+}
+
 // All returns iterator which calls visit for each value in Set.
 func (s Set[V]) All() iter.Seq2[int, V] {
 	return func(visit func(int, V) bool) {

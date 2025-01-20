@@ -126,11 +126,11 @@ func TestRoles(t *testing.T) {
 					{appdef.PolicyKind_Deny, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.QNames{cmdName, queryName}, nil, admRoleName},
 				}},
 				{intruderRoleName, wantACL{
-					{appdef.PolicyKind_Deny, []appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select}, appdef.QNames{docName, viewName}, nil, intruderRoleName},
+					{appdef.PolicyKind_Deny, appdef.RecordsOperations.AsArray(), appdef.QNames{docName, viewName}, nil, intruderRoleName},
 					{appdef.PolicyKind_Deny, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.QNames{cmdName, queryName}, nil, intruderRoleName},
 				}},
 				{ownerRoleName, wantACL{
-					{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select}, appdef.QNames{docName, viewName}, nil, ownerRoleName},
+					{appdef.PolicyKind_Allow, appdef.RecordsOperations.AsArray(), appdef.QNames{docName, viewName}, nil, ownerRoleName},
 					{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.QNames{cmdName, queryName}, nil, ownerRoleName},
 				}},
 				{readerRoleName, wantACL{
@@ -141,7 +141,7 @@ func TestRoles(t *testing.T) {
 					{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Inherits}, appdef.QNames{readerRoleName, writerRoleName}, nil, workerRoleName},
 				}},
 				{writerRoleName, wantACL{
-					{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select}, appdef.QNames{docName, viewName}, nil, writerRoleName},
+					{appdef.PolicyKind_Allow, appdef.RecordsOperations.AsArray(), appdef.QNames{docName, viewName}, nil, writerRoleName},
 					{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.QNames{cmdName, queryName}, nil, writerRoleName},
 				}},
 			}
