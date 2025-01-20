@@ -57,7 +57,7 @@ func (key *keyType) storeViewPartKey(ws istructs.WSID) []byte {
 	utils.WriteUint16(buf, key.viewID)
 	utils.WriteUint64(buf, uint64(ws))
 
-	for f := range key.partRow.fields.Fields() {
+	for _, f := range key.partRow.fields.Fields() {
 		utils.SafeWriteBuf(buf, key.partRow.dyB.Get(f.Name()))
 	}
 
@@ -68,7 +68,7 @@ func (key *keyType) storeViewPartKey(ws istructs.WSID) []byte {
 func (key *keyType) storeViewClustKey() []byte {
 	buf := new(bytes.Buffer)
 
-	for f := range key.ccolsRow.fields.Fields() {
+	for _, f := range key.ccolsRow.fields.Fields() {
 		utils.SafeWriteBuf(buf, key.ccolsRow.dyB.Get(f.Name()))
 	}
 
@@ -77,7 +77,7 @@ func (key *keyType) storeViewClustKey() []byte {
 
 // Loads clustering columns from buffer
 func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) error {
-	for f := range key.ccolsRow.fields.Fields() {
+	for _, f := range key.ccolsRow.fields.Fields() {
 		if err := loadClustFieldFromBuffer_00(key, f, buf); err != nil {
 			return fmt.Errorf("%v: unable to load clustering columns field «%s»: %w", key.viewName, f.Name(), err)
 		}

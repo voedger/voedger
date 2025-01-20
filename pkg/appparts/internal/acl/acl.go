@@ -81,7 +81,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 		// nothung else matters
 		result = true
 		if str != nil {
-			for f := range str.Fields() {
+			for _, f := range str.Fields() {
 				allowedFields[f.Name()] = true
 			}
 		}
@@ -113,7 +113,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 											}
 										} else {
 											// allow for all fields
-											for f := range str.Fields() {
+											for _, f := range str.Fields() {
 												allowedFields[f.Name()] = true
 											}
 										}
@@ -158,7 +158,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 		}
 		if len(allowedFields) > 0 {
 			allowed = make([]appdef.FieldName, 0, len(allowedFields))
-			for fld := range str.Fields() {
+			for _, fld := range str.Fields() {
 				f := fld.Name()
 				if _, ok := allowedFields[f]; ok {
 					allowed = append(allowed, f)

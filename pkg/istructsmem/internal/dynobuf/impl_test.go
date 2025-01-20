@@ -84,7 +84,7 @@ func TestDynoBufSchemes(t *testing.T) {
 			require.Equal(DataKindToFieldType(fld.DataKind()), f.Ft)
 		}
 
-		for fld := range fields.Fields() {
+		for _, fld := range fields.Fields() {
 			if !fld.IsSys() {
 				f, ok := dynoScheme.FieldsMap[fld.Name()]
 				require.True(ok)

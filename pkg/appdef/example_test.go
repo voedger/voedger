@@ -60,7 +60,7 @@ func Example() {
 		fmt.Println("founded", doc.Field("f1"))
 
 		fldCnt := 0
-		for f := range doc.Fields() {
+		for _, f := range doc.Fields() {
 			fldCnt++
 			if f.IsSys() {
 				fmt.Print("*")

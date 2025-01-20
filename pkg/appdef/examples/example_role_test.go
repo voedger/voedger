@@ -64,25 +64,25 @@ func ExampleRoles() {
 	{
 		reader := appdef.Role(app.Type, readerRoleName)
 		fmt.Println(reader, ":")
-		for r := range reader.ACL() {
-			fmt.Println("-", r)
+		for _, acl := range reader.ACL() {
+			fmt.Println("-", acl)
 		}
 
 		writer := appdef.Role(app.Type, writerRoleName)
 		fmt.Println(writer, ":")
-		for r := range writer.ACL() {
-			fmt.Println("-", r)
+		for _, acl := range writer.ACL() {
+			fmt.Println("-", acl)
 		}
 
 		adm := appdef.Role(app.Type, admRoleName)
 		fmt.Println(adm, ":")
-		for r := range adm.ACL() {
-			fmt.Println("-", r)
+		for _, acl := range adm.ACL() {
+			fmt.Println("-", acl)
 		}
 
 		intruder := appdef.Role(app.Type, intruderRoleName)
 		fmt.Println(intruder, ":")
-		for acl := range intruder.ACL() {
+		for _, acl := range intruder.ACL() {
 			fmt.Println("-", acl)
 		}
 	}

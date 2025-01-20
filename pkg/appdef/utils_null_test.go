@@ -7,7 +7,6 @@ package appdef_test
 
 import (
 	"fmt"
-	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -41,11 +40,11 @@ func TestNullFields(t *testing.T) {
 
 	require.Nil(appdef.NullFields.Field("field"))
 	require.Zero(appdef.NullFields.FieldCount())
-	require.Empty(slices.Collect(appdef.NullFields.Fields()))
+	require.Empty(appdef.NullFields.Fields())
 
 	require.Nil(appdef.NullFields.RefField("field"))
-	require.Empty(slices.Collect(appdef.NullFields.RefFields()))
+	require.Empty(appdef.NullFields.RefFields())
 
 	require.Zero(appdef.NullFields.UserFieldCount())
-	require.Empty(slices.Collect(appdef.NullFields.UserFields()))
+	require.Empty(appdef.NullFields.UserFields())
 }

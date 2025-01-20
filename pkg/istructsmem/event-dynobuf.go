@@ -94,7 +94,7 @@ func storeEventCUD(rec *recordType, buf *bytes.Buffer) {
 	// #2785: store emptied fields
 	emptied := make([]uint16, 0, len(rec.nils))
 	if len(rec.nils) > 0 {
-		fields := slices.Collect(rec.fields.UserFields())
+		fields := rec.fields.UserFields()
 		for _, f := range rec.nils {
 			if idx := slices.Index(fields, f); idx >= 0 {
 				emptied = append(emptied, uint16(idx)) // nolint G115 see [appdef.MaxTypeFieldCount]
@@ -310,7 +310,7 @@ func loadEventCUD(rec *recordType, codecVer byte, buf *bytes.Buffer) error {
 			if toRead := int(count) * uint16len; toRead > buf.Len() {
 				return enrichError(io.ErrUnexpectedEOF, "emptied fields indexes, expected %d bytes, but only %d bytes is available", toRead, buf.Len())
 			}
-			fields := slices.Collect(rec.fields.UserFields())
+			fields := rec.fields.UserFields()
 			len := uint16(len(fields)) // nolint G115 see [appdef.MaxTypeFieldCount]
 			for i := uint16(0); i < count; i++ {
 				idx, err := utils.ReadUInt16(buf)
