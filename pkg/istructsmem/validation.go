@@ -8,6 +8,7 @@ package istructsmem
 import (
 	"errors"
 	"math"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -80,7 +81,7 @@ func validateObjectIDs(obj *objectType, rawID bool) (ids map[istructs.RecordID]*
 	})
 
 	_ = obj.forEach(func(e *objectType) error {
-		for _, fld := range e.fields.RefFields() {
+		for fld := range e.fields.RefFields() {
 			if id := e.AsRecordID(fld.Name()); id != istructs.NullRecordID {
 				target, exists := ids[id]
 				if !exists {
@@ -195,7 +196,7 @@ func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]*rowType) (er
 	for _, rec := range ev.cud.creates {
 		parId := rec.Parent()
 		if target, ok := ids[parId]; ok {
-			if parentType, ok := ev.appCfg.AppDef.Type(target.QName()).(appdef.IContainers); ok {
+			if parentType, ok := ev.appCfg.AppDef.Type(target.QName()).(appdef.IWithContainers); ok {
 				cont := parentType.Container(rec.Container())
 				if cont == nil {
 					err = errors.Join(err,
@@ -268,12 +269,12 @@ func validateEventArgs(ev *eventType) (err error) {
 func validateObject(o *objectType) (err error) {
 	err = validateRow(&o.rowType)
 
-	t := o.typ.(appdef.IContainers)
+	t := o.typ.(appdef.IWithContainers)
 
 	// validate occurrences
 	for cont := range t.Containers() {
 		n, occurs := cont.Name(), appdef.Occurs(0)
-		for _ = range o.Children(n) {
+		for range o.Children(n) {
 			occurs++
 		}
 		if minO := cont.MinOccurs(); occurs < minO {
@@ -341,7 +342,7 @@ func validateObject(o *objectType) (err error) {
 // Checks that all required fields are filled.
 // For required ref fields checks that they are filled with non null IDs.
 func validateRow(row *rowType) (err error) {
-	for _, f := range row.fields.Fields() {
+	for f := range row.fields.Fields() {
 		if f.Required() {
 			if !row.HasValue(f.Name()) {
 				err = errors.Join(err,
@@ -416,14 +417,14 @@ func validateEventCUD(ev *eventType, rec *recordType) error {
 //
 // If partialClust specified then clustering columns row may be partially filled
 func validateViewKey(key *keyType, partialClust bool) (err error) {
-	for _, f := range key.partRow.fields.Fields() {
+	for f := range key.partRow.fields.Fields() {
 		if !key.partRow.HasValue(f.Name()) {
 			err = errors.Join(err,
 				validateError(ECode_EmptyData, ErrFieldMissed(key, f)))
 		}
 	}
 
-	ccFields := key.ccolsRow.fields.Fields()
+	ccFields := slices.Collect(key.ccolsRow.fields.Fields())
 	if partialClust {
 		for i, f := range ccFields {
 			fName := f.Name()

@@ -35,17 +35,17 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 		t.Skip()
 	}
 	require := require.New(t)
-	goOn := make(chan interface{})
+	clientDisconnected := make(chan interface{})
+	expectedErrors := make(chan error)
 	it.MockQryExec = func(input string, _ istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		rr := &rr{res: input}
 		require.NoError(callback(rr))
-		<-goOn // what for http client to receive the first element and disconnect
+		<-clientDisconnected // what for http client to receive the first element and disconnect
 		// now wait for error context.Cancelled. It will be occurred immediately because an async pipeline works within queryprocessor
 		for err == nil {
 			err = callback(rr)
 		}
-		require.Equal(context.Canceled, err)
-		defer func() { goOn <- nil }() // signal that context.Canceled error is caught
+		expectedErrors <- err
 		return err
 	}
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
@@ -71,10 +71,10 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 		// break the connection during request handling
 		httpResp.Request.Body.Close()
 		httpResp.Body.Close()
-		goOn <- nil // the func will start to send the second part. That will be failed because the request context is closed
+		close(clientDisconnected) // the func will start to send the second part. That will be failed because the request context is closed
 	}))
 
-	<-goOn // wait for error check
+	require.ErrorIs(<-expectedErrors, context.Canceled)
 	// expecting that there are no additional errors: nothing hung, queryprocessor is done, router does not try to write to a closed connection etc
 }
 
@@ -123,4 +123,17 @@ func TestWrongFieldReferencedByRefField(t *testing.T) {
 
 	body = `{"args":{"Schema":"app1pkg.cdoc2"},"elements":[{"fields": ["field2","sys.ID"], "refs":[["field2","unexistingFieldInTargetDoc"]]}]}`
 	vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("ref field field2 references to table app1pkg.cdoc1 that does not contain field unexistingFieldInTargetDoc"))
+}
+
+// https://github.com/voedger/voedger/issues/3046
+func TestWSNameCausesMaxPseudoWSID(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	// BaseWSID for entity "2062880497" is 65535 so due of comparing <istructs.MaxPseudoBaseWSID in router the WSID
+	// considered as not pseudo -> panic on try to call AsQName() on a missing workspace descriptor on a non-inited ws
+	deviceLogin := vit.SignUpDevice("2062880497", "1", istructs.AppQName_test1_app1)
+
+	// need to wait for init anyway, otherwise vit.Time.Add(1 day) on next test -> token expired during the device ws init
+	vit.SignIn(deviceLogin)
 }

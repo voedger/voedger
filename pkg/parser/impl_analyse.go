@@ -13,6 +13,8 @@ import (
 	"github.com/robfig/cron/v3"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/set"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type iterateCtx struct {
@@ -77,6 +79,8 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 		ictx.setPkg(p)
 		iterateContext(ictx, func(stmt interface{}, ictx *iterateCtx) {
 			switch v := stmt.(type) {
+			case *ImportStmt:
+				analyzeImport(v, ictx)
 			case *TagStmt:
 				analyzeTag(v, ictx)
 			case *CommandStmt:
@@ -166,33 +170,6 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 	}
 }
 
-func iterateWorkspaceStmts[stmtType INamedStatement](ctx *iterateCtx, onlyCurrentWs bool, callback func(stmt stmtType, schema *PackageSchemaAST, ctx *iterateCtx)) {
-	currentWs := getCurrentWorkspace(ctx)
-	for _, stmt := range currentWs.workspace.nodes {
-		if onlyCurrentWs && currentWs.workspace != stmt.workspace {
-			continue
-		}
-		if s, ok := stmt.node.Stmt.(stmtType); ok {
-			callback(s, stmt.node.Pkg, ctx)
-		}
-	}
-}
-
-func resolveInCurrentWs[stmtType *CommandStmt | *QueryStmt | *ViewStmt | *TableStmt | *RoleStmt | *WsDescriptorStmt](qn DefQName, ctx *iterateCtx) (result stmtType, pkg *PackageSchemaAST, err error) {
-	err = resolveInCtx(qn, ctx, func(f stmtType, p *PackageSchemaAST) error {
-		currentWs := getCurrentWorkspace(ctx)
-		for _, n := range currentWs.workspace.nodes {
-			if n.node.Stmt.GetName() == string(qn.Name) && n.node.Pkg == p {
-				result = f
-				pkg = n.node.Pkg
-				return nil
-			}
-		}
-		return nil
-	})
-	return result, pkg, err
-}
-
 func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx) {
 	// To
 	err := resolveInCtx(toOrFrom, c, func(f *RoleStmt, pkg *PackageSchemaAST) error {
@@ -204,49 +181,43 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 	}
 	// Role
 	if grant.Role != nil {
-		role, pkg, err := resolveInCurrentWs[*RoleStmt](*grant.Role, c)
+		err = resolveInCtx(*grant.Role, c, func(role *RoleStmt, pkg *PackageSchemaAST) error {
+			grant.Role.qName = pkg.NewQName(role.Name)
+			grant.ops = append(grant.ops, appdef.OperationKind_Inherits)
+			return nil
+		})
 		if err != nil {
 			c.stmtErr(&grant.Role.Pos, err)
-		} else if role != nil {
-			grant.on = append(grant.on, pkg.NewQName(role.Name))
-			grant.ops = append(grant.ops, appdef.OperationKind_Inherits)
-		} else {
-			c.stmtErr(&grant.Role.Pos, ErrUndefinedRole(*grant.Role))
 		}
 	}
-	// INSERT ON COMMAND
+	// EXECUTE ON COMMAND
 	if grant.Command != nil {
-		cmd, pkg, err := resolveInCurrentWs[*CommandStmt](*grant.Command, c)
+		err = resolveInCtx(*grant.Command, c, func(cmd *CommandStmt, pkg *PackageSchemaAST) error {
+			grant.Command.qName = pkg.NewQName(cmd.Name)
+			grant.ops = append(grant.ops, appdef.OperationKind_Execute)
+			return nil
+		})
 		if err != nil {
 			c.stmtErr(&grant.Command.Pos, err)
-		} else if cmd != nil {
-			grant.on = append(grant.on, pkg.NewQName(cmd.Name))
-			grant.ops = append(grant.ops, appdef.OperationKind_Execute)
-		} else {
-			c.stmtErr(&grant.Command.Pos, ErrUndefinedCommand(*grant.Command))
 		}
 	}
 
-	// SELECT ON QUERY
+	// EXECUTE ON QUERY
 	if grant.Query != nil {
-		query, pkg, err := resolveInCurrentWs[*QueryStmt](*grant.Query, c)
+		err = resolveInCtx(*grant.Query, c, func(query *QueryStmt, pkg *PackageSchemaAST) error {
+			grant.Query.qName = pkg.NewQName(query.Name)
+			grant.ops = append(grant.ops, appdef.OperationKind_Execute)
+			return nil
+		})
 		if err != nil {
 			c.stmtErr(&grant.Query.Pos, err)
-		} else if query != nil {
-			grant.on = append(grant.on, pkg.NewQName(query.Name))
-			grant.ops = append(grant.ops, appdef.OperationKind_Execute)
-		} else {
-			c.stmtErr(&grant.Query.Pos, ErrUndefinedQuery(*grant.Query))
 		}
 	}
 
 	// SELECT ON VIEW
 	if grant.View != nil {
-		view, pkg, err := resolveInCurrentWs[*ViewStmt](grant.View.View, c)
-		if err != nil {
-			c.stmtErr(&grant.View.View.Pos, err)
-		} else if view != nil {
-			grant.on = append(grant.on, pkg.NewQName(view.Name))
+		err := resolveInCtx(grant.View.View, c, func(view *ViewStmt, pkg *PackageSchemaAST) error {
+			grant.View.View.qName = pkg.NewQName(view.Name)
 			grant.ops = append(grant.ops, appdef.OperationKind_Select)
 			// check columns
 			checkColumn := func(column Identifier) error {
@@ -267,8 +238,10 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 					c.stmtErr(&i.Pos, err)
 				}
 			}
-		} else {
-			c.stmtErr(&grant.View.View.Pos, ErrUndefinedView(grant.View.View))
+			return nil
+		})
+		if err != nil {
+			c.stmtErr(&grant.View.View.Pos, err)
 		}
 	}
 
@@ -283,11 +256,7 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 	if grant.AllCommandsWithTag != nil {
 		if err := resolveInCtx(*grant.AllCommandsWithTag, c, func(tag *TagStmt, tagPkg *PackageSchemaAST) error {
 			grant.ops = append(grant.ops, appdef.OperationKind_Execute)
-			iterateWorkspaceStmts(c, false, func(cmd *CommandStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
-				if hasTags(cmd.With, tag, c) {
-					grant.on = append(grant.on, schema.NewQName(cmd.Name))
-				}
-			})
+			grant.AllCommandsWithTag.qName = tagPkg.NewQName(tag.Name)
 			return nil
 		}); err != nil {
 			c.stmtErr(&grant.AllCommandsWithTag.Pos, err)
@@ -297,43 +266,28 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 	// ALL COMMANDS
 	if grant.AllCommands {
 		grant.ops = append(grant.ops, appdef.OperationKind_Execute)
-		iterateWorkspaceStmts(c, true, func(cmd *CommandStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
-			grant.on = append(grant.on, schema.NewQName(cmd.Name))
-		})
 	}
 
 	// ALL QUERIES WITH TAG
 	if grant.AllQueriesWithTag != nil {
 		if err := resolveInCtx(*grant.AllQueriesWithTag, c, func(tag *TagStmt, tagPkg *PackageSchemaAST) error {
 			grant.ops = append(grant.ops, appdef.OperationKind_Execute)
-			iterateWorkspaceStmts(c, false, func(query *QueryStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
-				if hasTags(query.With, tag, c) {
-					grant.on = append(grant.on, schema.NewQName(query.Name))
-				}
-			})
+			grant.AllQueriesWithTag.qName = tagPkg.NewQName(tag.Name)
 			return nil
 		}); err != nil {
 			c.stmtErr(&grant.AllQueriesWithTag.Pos, err)
 		}
 	}
-
 	// ALL QUERIES
 	if grant.AllQueries {
 		grant.ops = append(grant.ops, appdef.OperationKind_Execute)
-		iterateWorkspaceStmts(c, true, func(query *QueryStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
-			grant.on = append(grant.on, schema.NewQName(query.Name))
-		})
 	}
 
 	// ALL VIEWS WITH TAG
 	if grant.AllViewsWithTag != nil {
 		if err := resolveInCtx(*grant.AllViewsWithTag, c, func(tag *TagStmt, tagPkg *PackageSchemaAST) error {
 			grant.ops = append(grant.ops, appdef.OperationKind_Select)
-			iterateWorkspaceStmts(c, false, func(view *ViewStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
-				if hasTags(view.With, tag, c) {
-					grant.on = append(grant.on, schema.NewQName(view.Name))
-				}
-			})
+			grant.AllViewsWithTag.qName = tagPkg.NewQName(tag.Name)
 			return nil
 		}); err != nil {
 			c.stmtErr(&grant.AllViewsWithTag.Pos, err)
@@ -343,9 +297,6 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 	// ALL VIEWS
 	if grant.AllViews {
 		grant.ops = append(grant.ops, appdef.OperationKind_Select)
-		iterateWorkspaceStmts(c, true, func(view *ViewStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
-			grant.on = append(grant.on, schema.NewQName(view.Name))
-		})
 	}
 
 	// ALL TABLES WITH TAG
@@ -358,13 +309,13 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 					grant.ops = append(grant.ops, appdef.OperationKind_Update)
 				} else if item.Select {
 					grant.ops = append(grant.ops, appdef.OperationKind_Select)
+				} else if item.Activate {
+					grant.ops = append(grant.ops, appdef.OperationKind_Activate)
+				} else if item.Deactivate {
+					grant.ops = append(grant.ops, appdef.OperationKind_Deactivate)
 				}
 			}
-			iterateWorkspaceStmts(c, false, func(tbl *TableStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
-				if hasTags(tbl.With, tag, c) {
-					grant.on = append(grant.on, schema.NewQName(tbl.Name))
-				}
-			})
+			grant.AllTablesWithTag.Tag.qName = tagPkg.NewQName(tag.Name)
 			return nil
 		}); err != nil {
 			c.stmtErr(&grant.AllTablesWithTag.Tag.Pos, err)
@@ -380,14 +331,12 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 				grant.ops = append(grant.ops, appdef.OperationKind_Update)
 			} else if item.Select {
 				grant.ops = append(grant.ops, appdef.OperationKind_Select)
+			} else if item.Activate {
+				grant.ops = append(grant.ops, appdef.OperationKind_Activate)
+			} else if item.Deactivate {
+				grant.ops = append(grant.ops, appdef.OperationKind_Deactivate)
 			}
 		}
-		iterateWorkspaceStmts(c, true, func(tbl *TableStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
-			grant.on = append(grant.on, schema.NewQName(tbl.Name))
-		})
-		iterateWorkspaceStmts(c, true, func(tbl *WsDescriptorStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
-			grant.on = append(grant.on, schema.NewQName(tbl.Name))
-		})
 	}
 
 	// TABLE
@@ -398,24 +347,32 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 		var descriptor *WsDescriptorStmt
 		var pkg *PackageSchemaAST
 		var err error
-		table, pkg, err = resolveInCurrentWs[*TableStmt](grant.Table.Table, c)
+
+		err = resolveInCtx(grant.Table.Table, c, func(t *TableStmt, p *PackageSchemaAST) error {
+			table = t
+			pkg = p
+			return nil
+		})
+
 		if err != nil && err.Error() == ErrUndefinedTable(grant.Table.Table).Error() {
-			descriptor, pkg, err = resolveInCurrentWs[*WsDescriptorStmt](grant.Table.Table, c)
+			err = resolveInCtx(grant.Table.Table, c, func(d *WsDescriptorStmt, p *PackageSchemaAST) error {
+				descriptor = d
+				pkg = p
+				return nil
+			})
 		}
 		if err != nil {
 			c.stmtErr(&grant.Table.Table.Pos, err)
 			return
-		} else if table != nil {
+		}
+		if table != nil {
 			named = table
 			items = table.Items
-		} else if descriptor != nil {
+		} else {
 			named = descriptor
 			items = descriptor.Items
-		} else {
-			c.stmtErr(&grant.Table.Table.Pos, ErrUndefined(grant.Table.Table.String()))
-			return
 		}
-		grant.on = append(grant.on, pkg.NewQName(Ident(named.GetName())))
+		grant.Table.Table.qName = pkg.NewQName(Ident(named.GetName()))
 		for _, item := range grant.Table.Items {
 			if item.Insert {
 				grant.ops = append(grant.ops, appdef.OperationKind_Insert)
@@ -423,6 +380,10 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 				grant.ops = append(grant.ops, appdef.OperationKind_Update)
 			} else if item.Select {
 				grant.ops = append(grant.ops, appdef.OperationKind_Select)
+			} else if item.Activate {
+				grant.ops = append(grant.ops, appdef.OperationKind_Activate)
+			} else if item.Deactivate {
+				grant.ops = append(grant.ops, appdef.OperationKind_Deactivate)
 			}
 		}
 		checkColumn := func(column Ident) error {
@@ -461,20 +422,6 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 	grant.workspace = c.mustCurrentWorkspace()
 }
 
-func hasTags(with []WithItem, tag *TagStmt, c *iterateCtx) bool {
-	for _, w := range with {
-		for _, t := range w.Tags {
-			if t.Name == tag.Name {
-				withTag, _, err := lookupInCtx[*TagStmt](t, c)
-				if err == nil && withTag == tag {
-					return true
-				}
-			}
-		}
-	}
-	return false
-}
-
 func analyseGrant(grant *GrantStmt, c *iterateCtx) {
 	analyseGrantOrRevoke(grant.To, &grant.GrantOrRevoke, c)
 }
@@ -505,7 +452,6 @@ func analyzeAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 	iterTableItems = func(ws *WorkspaceStmt, wsctx *wsCtx, items []TableItemExpr) {
 		for i := range items {
 			if items[i].NestedTable != nil {
-				useStmtInWs(wsctx, wsctx.pkg, &items[i].NestedTable.Table)
 				iterTableItems(ws, wsctx, items[i].NestedTable.Table.Items)
 			}
 		}
@@ -514,7 +460,6 @@ func analyzeAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 	var iter func(wsctx *wsCtx, coll IStatementCollection)
 	iter = func(wsctx *wsCtx, coll IStatementCollection) {
 		coll.Iterate(func(stmt interface{}) {
-			useStmtInWs(wsctx, c.pkg, stmt)
 			if collection, ok := stmt.(IStatementCollection); ok {
 				if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
 					iter(wsctx, collection)
@@ -537,41 +482,154 @@ func analyzeStorage(u *StorageStmt, c *iterateCtx) {
 }
 
 func analyzeRate(r *RateStmt, c *iterateCtx) {
+
 	if r.Value.Variable != nil {
-		resolved := func(d *DeclareStmt, p *PackageSchemaAST) error {
-			r.Value.variable = p.NewQName(d.Name)
-			r.Value.declare = d
+		resolve := func(d *DeclareStmt, p *PackageSchemaAST) error {
+
+			var count int32
+			var resolved bool
+			if c.variableResolver != nil {
+				count, resolved = c.variableResolver.AsInt32(p.NewQName(d.Name))
+			}
+			if !resolved {
+				count = d.DefaultValue
+			}
+			if count <= 0 {
+				return ErrPositiveValueOnly
+			}
+			r.Value.count = uint32(count)
 			return nil
 		}
-		if err := resolveInCtx(*r.Value.Variable, c, resolved); err != nil {
+		if err := resolveInCtx(*r.Value.Variable, c, resolve); err != nil {
 			c.stmtErr(&r.Value.Variable.Pos, err)
 		}
 	}
+	r.workspace = c.mustCurrentWorkspace()
 }
 
-func analyzeLimit(u *LimitStmt, c *iterateCtx) {
-	err := resolveInCtx(u.RateName, c, func(l *RateStmt, schema *PackageSchemaAST) error { return nil })
+func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
+	err := resolveInCtx(limit.RateName, c, func(l *RateStmt, schema *PackageSchemaAST) error {
+		limit.RateName.qName = schema.NewQName(l.Name)
+		return nil
+	})
 	if err != nil {
-		c.stmtErr(&u.RateName.Pos, err)
+		c.stmtErr(&limit.RateName.Pos, err)
 	}
-	if u.Action.Tag != nil {
-		if err = resolveInCtx(*u.Action.Tag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&u.Action.Tag.Pos, err)
+	allowedOps := func(ops appdef.OperationsSet) {
+		if len(limit.Actions) == 0 {
+			limit.ops = ops.AsArray()
+			return
 		}
-	} else if u.Action.Command != nil {
-		if err = resolveInCtx(*u.Action.Command, c, func(t *CommandStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&u.Action.Command.Pos, err)
+		for _, op := range limit.Actions {
+			if op.Execute {
+				if !ops.Contains(appdef.OperationKind_Execute) {
+					c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_EXECUTE))
+				} else {
+					limit.ops = append(limit.ops, appdef.OperationKind_Execute)
+				}
+			}
+			if op.Insert {
+				if !ops.Contains(appdef.OperationKind_Insert) {
+					c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_INSERT))
+				} else {
+					limit.ops = append(limit.ops, appdef.OperationKind_Insert)
+				}
+			}
+			if op.Update {
+				if !ops.Contains(appdef.OperationKind_Update) {
+					c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_UPDATE))
+				} else {
+					limit.ops = append(limit.ops, appdef.OperationKind_Update)
+				}
+			}
+			if op.Select {
+				if !ops.Contains(appdef.OperationKind_Select) {
+					c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_SELECT))
+				} else {
+					limit.ops = append(limit.ops, appdef.OperationKind_Select)
+				}
+			}
 		}
+	}
+	if limit.SingleItem != nil {
+		if limit.SingleItem.Command != nil {
+			if err = resolveInCtx(*limit.SingleItem.Command, c, func(t *CommandStmt, schema *PackageSchemaAST) error {
+				limit.SingleItem.Command.qName = schema.NewQName(t.Name)
+				allowedOps(set.From(appdef.OperationKind_Execute))
+				return nil
+			}); err != nil {
+				c.stmtErr(&limit.SingleItem.Command.Pos, err)
+			}
+		}
+		if limit.SingleItem.Query != nil {
+			if err = resolveInCtx(*limit.SingleItem.Query, c, func(t *QueryStmt, schema *PackageSchemaAST) error {
+				limit.SingleItem.Query.qName = schema.NewQName(t.Name)
+				allowedOps(set.From(appdef.OperationKind_Execute))
+				return nil
+			}); err != nil {
+				c.stmtErr(&limit.SingleItem.Query.Pos, err)
+			}
+		}
+		if limit.SingleItem.View != nil {
+			if err = resolveInCtx(*limit.SingleItem.View, c, func(t *ViewStmt, schema *PackageSchemaAST) error {
+				limit.SingleItem.View.qName = schema.NewQName(t.Name)
+				allowedOps(set.From(appdef.OperationKind_Select))
+				return nil
+			}); err != nil {
+				c.stmtErr(&limit.SingleItem.View.Pos, err)
+			}
+		}
+		if limit.SingleItem.Table != nil {
+			if err = resolveInCtx(*limit.SingleItem.Table, c, func(t *TableStmt, schema *PackageSchemaAST) error {
+				limit.SingleItem.Table.qName = schema.NewQName(t.Name)
+				allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select))
+				return nil
+			}); err != nil {
+				c.stmtErr(&limit.SingleItem.Table.Pos, err)
+			}
+		}
+	}
 
-	} else if u.Action.Query != nil {
-		if err = resolveInCtx(*u.Action.Query, c, func(t *QueryStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&u.Action.Query.Pos, err)
+	if limit.AllItems != nil {
+		if limit.AllItems.Commands {
+			allowedOps(set.From(appdef.OperationKind_Execute))
+		} else if limit.AllItems.Queries {
+			allowedOps(set.From(appdef.OperationKind_Execute))
+		} else if limit.AllItems.Views {
+			allowedOps(set.From(appdef.OperationKind_Select))
+		} else {
+			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select))
 		}
-	} else if u.Action.Table != nil {
-		if err = resolveInCtx(*u.Action.Table, c, func(t *TableStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&u.Action.Table.Pos, err)
+		if limit.AllItems.WithTag != nil {
+			if err = resolveInCtx(*limit.AllItems.WithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error {
+				limit.AllItems.WithTag.qName = schema.NewQName(t.Name)
+				return nil
+			}); err != nil {
+				c.stmtErr(&limit.AllItems.WithTag.Pos, err)
+			}
 		}
 	}
+
+	if limit.EachItem != nil {
+		if limit.EachItem.Commands {
+			allowedOps(set.From(appdef.OperationKind_Execute))
+		} else if limit.EachItem.Queries {
+			allowedOps(set.From(appdef.OperationKind_Execute))
+		} else if limit.EachItem.Views {
+			allowedOps(set.From(appdef.OperationKind_Select))
+		} else {
+			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select))
+		}
+		if limit.EachItem.WithTag != nil {
+			if err = resolveInCtx(*limit.EachItem.WithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error {
+				limit.EachItem.WithTag.qName = schema.NewQName(t.Name)
+				return nil
+			}); err != nil {
+				c.stmtErr(&limit.EachItem.WithTag.Pos, err)
+			}
+		}
+	}
+	limit.workspace = c.mustCurrentWorkspace()
 }
 
 func analyzeView(view *ViewStmt, c *iterateCtx) {
@@ -605,11 +663,7 @@ func analyzeView(view *ViewStmt, c *iterateCtx) {
 				c.stmtErr(&fe.Pos, ErrRecordFieldsOnlyInSys)
 			}
 			rf := fe.RecordField
-			if _, ok := fields[string(rf.Name.Value)]; ok {
-				c.stmtErr(&rf.Name.Pos, ErrRedefined(string(rf.Name.Value)))
-			} else {
-				fields[string(rf.Name.Value)] = i
-			}
+			fields[string(rf.Name.Value)] = i
 		}
 	}
 	if view.pkRef == nil {
@@ -662,10 +716,17 @@ func analyzeView(view *ViewStmt, c *iterateCtx) {
 	var err error
 	var schema *PackageSchemaAST
 
-	projector, schema, err = lookupInCtx[*ProjectorStmt](view.ResultOf, c)
-
-	if projector == nil && err == nil {
-		job, schema, err = lookupInCtx[*JobStmt](view.ResultOf, c)
+	err = resolveInCtx(view.ResultOf, c, func(stmt *ProjectorStmt, pkg *PackageSchemaAST) error {
+		projector = stmt
+		schema = pkg
+		return nil
+	})
+	if err != nil && err.Error() == ErrUndefinedProjector(view.ResultOf).Error() {
+		err = resolveInCtx(view.ResultOf, c, func(stmt *JobStmt, pkg *PackageSchemaAST) error {
+			job = stmt
+			schema = pkg
+			return nil
+		})
 	}
 
 	if err != nil {
@@ -678,24 +739,19 @@ func analyzeView(view *ViewStmt, c *iterateCtx) {
 	if projector != nil {
 		view.asResultOf = schema.NewQName(projector.Name)
 		intents = projector.Intents
-	} else if job != nil {
+	} else {
 		view.asResultOf = schema.NewQName(job.Name)
 		intents = job.Intents
-	} else {
-		c.stmtErr(&view.ResultOf.Pos, ErrUndefined(view.ResultOf.String()))
-		return
 	}
 
 	var intentForView *StateStorage
 	for i := 0; i < len(intents) && intentForView == nil; i++ {
 		var isView bool
 		intent := intents[i]
-		if err := resolveInCtx(intent.Storage, c, func(storage *StorageStmt, _ *PackageSchemaAST) error {
+		_ = resolveInCtx(intent.Storage, c, func(storage *StorageStmt, _ *PackageSchemaAST) error {
 			isView = isView || storage.EntityView
 			return nil
-		}); err != nil {
-			c.stmtErr(&intent.Storage.Pos, err)
-		}
+		}) // ignore error
 
 		if isView {
 			for _, entity := range intent.Entities {
@@ -712,6 +768,32 @@ func analyzeView(view *ViewStmt, c *iterateCtx) {
 	}
 
 	view.workspace = c.mustCurrentWorkspace()
+
+	analyseWith(&view.With, view, c)
+}
+
+func analyzeImport(imp *ImportStmt, c *iterateCtx) {
+	localPkgName := imp.GetLocalPkgName()
+	if !isIdentifier(localPkgName) {
+		c.stmtErr(&imp.Pos, ErrInvalidLocalPackageName(localPkgName))
+		return
+	}
+	if localPkgName == c.pkg.Name {
+		c.stmtErr(&imp.Pos, ErrLocalPackageNameConflict(localPkgName))
+		return
+	}
+	if c.pkg.localNameToPkgPath == nil {
+		c.pkg.localNameToPkgPath = make(map[string]string)
+	}
+	// check if local package name is already used in the package
+	if pkgPath, ok := c.pkg.localNameToPkgPath[localPkgName]; ok {
+		if pkgPath != imp.Name {
+			c.stmtErr(&imp.Pos, ErrLocalPackageNameAlreadyUsed(localPkgName, pkgPath))
+			return
+		}
+	} else {
+		c.pkg.localNameToPkgPath[localPkgName] = imp.Name
+	}
 }
 
 func analyzeTag(tag *TagStmt, c *iterateCtx) {
@@ -898,23 +980,26 @@ func analyzeProjector(prj *ProjectorStmt, c *iterateCtx) {
 			c.stmtErr(&prj.Pos, ErrScheduledProjectorDeprecated)
 		}
 
-		for _, qname := range trigger.QNames {
+		for i := range trigger.QNames {
+			defQName := &trigger.QNames[i]
 			if len(trigger.TableActions) > 0 {
 
-				wd, pkg, err := lookupInCtx[*WsDescriptorStmt](qname, c)
+				wd, pkg, err := lookupInCtx[*WsDescriptorStmt](*defQName, c)
 				if err != nil {
-					c.stmtErr(&qname.Pos, err)
+					c.stmtErr(&defQName.Pos, err)
 					continue
 				}
 				if wd != nil {
-					trigger.qNames = append(trigger.qNames, pkg.NewQName(wd.Name))
+					defQName.qName = pkg.NewQName(wd.Name)
 					continue
 				}
 
 				resolveFunc := func(table *TableStmt, pkg *PackageSchemaAST) error {
-					sysDoc := (pkg.Path == appdef.SysPackage) && (table.Name == nameCRecord || table.Name == nameWRecord)
+					crecord := (table.Name == Ident(istructs.QNameCRecord.Entity()))
+					wrecord := (table.Name == Ident(istructs.QNameWRecord.Entity()))
+					sysDoc := (pkg.Path == appdef.SysPackage) && (crecord || wrecord)
 					if table.Abstract && !sysDoc {
-						return ErrAbstractTableNotAlowedInProjectors(qname.String())
+						return ErrAbstractTableNotAlowedInProjectors(defQName.String())
 					}
 					k, _, err := getTableTypeKind(table, pkg, c)
 					if err != nil {
@@ -925,40 +1010,40 @@ func analyzeProjector(prj *ProjectorStmt, c *iterateCtx) {
 							return ErrOnlyInsertForOdocOrORecord
 						}
 					}
-					trigger.qNames = append(trigger.qNames, pkg.NewQName(table.Name))
+					defQName.qName = pkg.NewQName(table.Name)
 					return nil
 				}
-				if err := resolveInCtx(qname, c, resolveFunc); err != nil {
-					c.stmtErr(&qname.Pos, err)
+				if err := resolveInCtx(*defQName, c, resolveFunc); err != nil {
+					c.stmtErr(&defQName.Pos, err)
 				}
 			} else { // Command
 				if trigger.ExecuteAction.WithParam {
 					var pkg *PackageSchemaAST
 					var odoc *TableStmt
-					typ, pkg, err := lookupInCtx[*TypeStmt](qname, c)
+					typ, pkg, err := lookupInCtx[*TypeStmt](*defQName, c)
 					if err != nil { // type?
-						c.stmtErr(&qname.Pos, err)
+						c.stmtErr(&defQName.Pos, err)
 						continue
 					}
 					if typ == nil { // ODoc?
-						odoc, pkg, err = lookupInCtx[*TableStmt](qname, c)
+						odoc, pkg, err = lookupInCtx[*TableStmt](*defQName, c)
 						if err != nil {
-							c.stmtErr(&qname.Pos, err)
+							c.stmtErr(&defQName.Pos, err)
 							continue
 						}
 						if odoc == nil || odoc.tableTypeKind != appdef.TypeKind_ODoc {
-							c.stmtErr(&qname.Pos, ErrUndefinedTypeOrOdoc(qname))
+							c.stmtErr(&defQName.Pos, ErrUndefinedTypeOrOdoc(*defQName))
 							continue
 						}
 					}
-					trigger.qNames = append(trigger.qNames, pkg.NewQName(qname.Name))
+					defQName.qName = pkg.NewQName(defQName.Name)
 				} else {
-					err := resolveInCtx(qname, c, func(f *CommandStmt, pkg *PackageSchemaAST) error {
-						trigger.qNames = append(trigger.qNames, pkg.NewQName(qname.Name))
+					err := resolveInCtx(*defQName, c, func(f *CommandStmt, pkg *PackageSchemaAST) error {
+						defQName.qName = pkg.NewQName(f.Name)
 						return nil
 					})
 					if err != nil {
-						c.stmtErr(&qname.Pos, err)
+						c.stmtErr(&defQName.Pos, err)
 						continue
 					}
 				}
@@ -1057,19 +1142,6 @@ func analyzeType(v *TypeStmt, c *iterateCtx) {
 	v.workspace = c.mustCurrentWorkspace()
 }
 
-func useStmtInWs(wsctx *wsCtx, stmtPackage *PackageSchemaAST, stmt interface{}) {
-	if named, ok := stmt.(INamedStatement); ok {
-		if supported(stmt) {
-			wsctx.ws.registerNode(stmtPackage.NewQName(Ident(named.GetName())), statementNode{Pkg: stmtPackage, Stmt: named}, wsctx.ws)
-		}
-	}
-	if useWorkspace, ok := stmt.(*UseWorkspaceStmt); ok {
-		if useWorkspace.useWs != nil {
-			wsctx.ws.registerNode(useWorkspace.useWs.qName(), *useWorkspace.useWs, wsctx.ws)
-		}
-	}
-}
-
 func analyzeWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 
 	wsc := &wsCtx{
@@ -1129,35 +1201,6 @@ func analyzeWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 		v.Descriptor.workspace = workspaceAddr{v, c.pkg}
 	}
 
-	// find all included QNames
-	var iter func(ws *WorkspaceStmt, wsctx *wsCtx, coll IStatementCollection)
-
-	var iterTableItems func(ws *WorkspaceStmt, wsctx *wsCtx, items []TableItemExpr)
-	iterTableItems = func(ws *WorkspaceStmt, wsctx *wsCtx, items []TableItemExpr) {
-		for i := range items {
-			if items[i].NestedTable != nil {
-				useStmtInWs(wsctx, wsctx.pkg, &items[i].NestedTable.Table)
-				iterTableItems(ws, wsctx, items[i].NestedTable.Table.Items)
-			}
-		}
-	}
-
-	iter = func(ws *WorkspaceStmt, wsctx *wsCtx, coll IStatementCollection) {
-		coll.Iterate(func(stmt interface{}) {
-			useStmtInWs(wsctx, wsctx.pkg, stmt)
-			if collection, ok := stmt.(IStatementCollection); ok {
-				if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
-					iter(ws, wsctx, collection)
-				}
-			}
-			if t, ok := stmt.(*TableStmt); ok {
-				iterTableItems(ws, wsctx, t.Items)
-			}
-		})
-	}
-
-	iter(v, wsc, v)
-
 	// GRANT shall not follow REVOKE
 	revokeFound := false
 	for _, s := range v.Statements {
@@ -1187,11 +1230,8 @@ func includeFromInheritedWorkspaces(ws *WorkspaceStmt, c *iterateCtx) {
 	var added []*WorkspaceStmt
 
 	addFromInheritedWs = func(ws *WorkspaceStmt, wsctx *wsCtx) {
-		inheritsAnything := false
 		added = append(added, ws)
 		for _, inherits := range ws.Inherits {
-
-			inheritsAnything = true
 			var baseWs *WorkspaceStmt
 			err := resolveInCtx(inherits, wsctx.ictx, func(ws *WorkspaceStmt, _ *PackageSchemaAST) error {
 				baseWs = ws
@@ -1211,15 +1251,7 @@ func includeFromInheritedWorkspaces(ws *WorkspaceStmt, c *iterateCtx) {
 			}
 
 			addFromInheritedWs(baseWs, wsctx)
-			for bws, bwsn := range c.wsCtxs[baseWs].ws.nodes {
-				wsctx.ws.registerNode(bws, bwsn.node, c.wsCtxs[baseWs].ws)
-			}
 			added = append(added, baseWs)
-		}
-		if !inheritsAnything {
-			for sws, swsn := range c.wsCtxs[sysWorkspace].ws.nodes {
-				wsctx.ws.registerNode(sws, swsn.node, c.wsCtxs[sysWorkspace].ws)
-			}
 		}
 	}
 	addFromInheritedWs(ws, c.wsCtxs[ws])
@@ -1234,7 +1266,7 @@ func includeChildWorkspaces(collection IStatementCollection, ws *WorkspaceStmt) 
 }
 
 func analyzeUsedWorkspaces(uws *UseWorkspaceStmt, _ *iterateCtx) {
-	if ws := uws.workspace.workspace; ws != nil {
+	if ws := uws.workspace.workspace; ws != nil && uws.useWs != nil {
 		if usedWS, ok := uws.useWs.Stmt.(*WorkspaceStmt); ok {
 			ws.usedWorkspaces = append(ws.usedWorkspaces, usedWS)
 		}
@@ -1281,7 +1313,9 @@ func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c
 				}
 			}
 			nestedTable.workspace = getCurrentWorkspace(c)
+			analyseWith(&nestedTable.With, nestedTable, c)
 			analyseNestedTables(nestedTable.Items, rootTableKind, c)
+
 		}
 	}
 }
@@ -1437,14 +1471,7 @@ func analyseRefFields(items []TableItemExpr, c *iterateCtx) {
 					if f.Abstract {
 						return ErrReferenceToAbstractTable(rf.RefDocs[i].String())
 					}
-					refQname := tblPkg.NewQName(f.Name)
-					ws := getCurrentWorkspace(c)
-					if ws.workspace != nil {
-						if !ws.workspace.containsQName(refQname) {
-							return ErrReferenceToTableNotInWorkspace(rf.RefDocs[i].String())
-						}
-					}
-					rf.refQNames = append(rf.refQNames, refQname)
+					rf.refQNames = append(rf.refQNames, tblPkg.NewQName(f.Name))
 					rf.refTables = append(rf.refTables, tableAddr{f, tblPkg})
 					return nil
 				}); err != nil {
@@ -1469,13 +1496,6 @@ func analyseViewRefFields(items []ViewItemExpr, c *iterateCtx) {
 				if err := resolveInCtx(rf.RefDocs[i], c, func(f *TableStmt, tblPkg *PackageSchemaAST) error {
 					if f.Abstract {
 						return ErrReferenceToAbstractTable(rf.RefDocs[i].String())
-					}
-					ws := getCurrentWorkspace(c)
-					if ws.workspace != nil {
-						refQname := tblPkg.NewQName(f.Name)
-						if !ws.workspace.containsQName(refQname) {
-							return ErrReferenceToTableNotInWorkspace(rf.RefDocs[i].String())
-						}
 					}
 					return nil
 				}); err != nil {
@@ -1531,17 +1551,17 @@ func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (k
 	check := func(node tableNode) {
 		if node.pkg.Path == appdef.SysPackage {
 			switch node.table.Name {
-			case nameCRecord:
+			case Ident(istructs.QNameCRecord.Entity()):
 				kind = appdef.TypeKind_CRecord
-			case nameORecord:
+			case Ident(istructs.QNameORecord.Entity()):
 				kind = appdef.TypeKind_ORecord
-			case nameWRecord:
+			case Ident(istructs.QNameWRecord.Entity()):
 				kind = appdef.TypeKind_WRecord
-			case nameCdoc:
+			case Ident(istructs.QNameCDoc.Entity()):
 				kind = appdef.TypeKind_CDoc
-			case nameODoc:
+			case Ident(istructs.QNameODoc.Entity()):
 				kind = appdef.TypeKind_ODoc
-			case nameWDoc:
+			case Ident(istructs.QNameWDoc.Entity()):
 				kind = appdef.TypeKind_WDoc
 			case nameCSingleton:
 				kind = appdef.TypeKind_CDoc

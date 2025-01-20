@@ -10,7 +10,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// Implements interfaces:
+// # Supports:
 //
 //	— istructs.IRecord
 //	— istructs.IORecord
@@ -38,21 +38,16 @@ func newRecord(appCfg *AppConfigType) *recordType {
 	return &r
 }
 
-// copyFrom assigns record from specified source record
-func (rec *recordType) copyFrom(src *recordType) {
-	rec.rowType.copyFrom(&src.rowType)
-	rec.isNew = src.isNew
-}
-
-// istructs.ICUDRow.IsNew
-func (rec *recordType) IsNew() bool {
-	return rec.isNew
-}
-
 func NewNullRecord(id istructs.RecordID) istructs.IRecord {
 	rec := newRecord(NullAppConfig)
 	rec.setID(id)
 	return rec
+}
+
+// copyFrom assigns record from specified source record
+func (rec *recordType) copyFrom(src *recordType) {
+	rec.rowType.copyFrom(&src.rowType)
+	rec.isNew = src.isNew
 }
 
 // return field value by field definition.
@@ -96,6 +91,21 @@ func (row *rowType) fieldValue(f appdef.IField) interface{} {
 	panic(ErrWrongFieldType("%v", f))
 }
 
+// istructs.ICUDRow.IsActivated
+func (rec *recordType) IsActivated() bool {
+	return !rec.isNew && rec.isActiveModified && rec.isActive
+}
+
+// istructs.ICUDRow.IsDeactivated
+func (rec *recordType) IsDeactivated() bool {
+	return !rec.isNew && rec.isActiveModified && !rec.isActive
+}
+
+// istructs.ICUDRow.IsNew
+func (rec *recordType) IsNew() bool {
+	return rec.isNew
+}
+
 // istructs.ICUDRow.ModifiedFields
 func (row *rowType) ModifiedFields(cb func(appdef.FieldName, interface{}) bool) {
 	if row.isActiveModified {
@@ -104,7 +114,7 @@ func (row *rowType) ModifiedFields(cb func(appdef.FieldName, interface{}) bool) 
 		}
 	}
 
-	for _, fld := range row.fields.Fields() {
+	for fld := range row.fields.Fields() {
 		n := fld.Name()
 		if row.dyB.HasValue(n) || row.nils[n] != nil {
 			if !cb(n, row.fieldValue(fld)) {

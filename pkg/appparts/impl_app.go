@@ -227,7 +227,7 @@ func (bp *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, stat
 		return errUndefinedExtension(name)
 	}
 
-	if compat, err := bp.kind.compatibleWithExtension(e); !compat {
+	if compat, err := bp.kind.CompatibleWithExtension(e); !compat {
 		return fmt.Errorf("%s: %w", bp, err)
 	}
 
@@ -249,8 +249,8 @@ func (bp *borrowedPartition) IsLimitExceeded(resource appdef.QName, operation ap
 	return bp.part.limiter.Exceeded(resource, operation, workspace, remoteAddr)
 }
 
-func (bp *borrowedPartition) IsOperationAllowed(op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, roles []appdef.QName) (bool, []appdef.FieldName, error) {
-	return acl.IsOperationAllowed(bp.appDef, op, res, fld, roles)
+func (bp *borrowedPartition) IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, roles []appdef.QName) (bool, []appdef.FieldName, error) {
+	return acl.IsOperationAllowed(ws, op, res, fld, roles)
 }
 
 func (bp *borrowedPartition) String() string {

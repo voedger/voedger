@@ -125,10 +125,10 @@ func buildQNameNode(parentNode *CompatibilityTreeNode, item appdef.IType, name s
 		if t, ok := item.(appdef.IWithAbstract); ok {
 			node.Props = append(node.Props, buildAbstractNode(node, t))
 		}
-		if t, ok := item.(appdef.IFields); ok {
+		if t, ok := item.(appdef.IWithFields); ok {
 			node.Props = append(node.Props, buildFieldsNode(node, t, NodeNameFields))
 		}
-		if t, ok := item.(appdef.IContainers); ok {
+		if t, ok := item.(appdef.IWithContainers); ok {
 			node.Props = append(node.Props, buildContainersNode(node, t))
 		}
 	}
@@ -162,8 +162,8 @@ func buildFieldsNode(parentNode *CompatibilityTreeNode, item interface{}, nodeNa
 	if item == nil {
 		return
 	}
-	if fieldsObj, ok := item.(appdef.IFields); ok {
-		for _, field := range fieldsObj.Fields() {
+	if fieldsObj, ok := item.(appdef.IWithFields); ok {
+		for field := range fieldsObj.Fields() {
 			node.Props = append(node.Props, buildFieldNode(node, field))
 		}
 	}
@@ -172,7 +172,7 @@ func buildFieldsNode(parentNode *CompatibilityTreeNode, item interface{}, nodeNa
 
 func buildUniqueFieldsNode(parentNode *CompatibilityTreeNode, item appdef.IUnique) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameUniqueFields, nil)
-	for _, f := range item.Fields() {
+	for f := range item.Fields() {
 		node.Props = append(node.Props, buildFieldNode(node, f))
 	}
 	return
@@ -186,7 +186,7 @@ func buildUniqueNode(parentNode *CompatibilityTreeNode, item appdef.IUnique) (no
 	return
 }
 
-func buildUniquesNode(parentNode *CompatibilityTreeNode, item appdef.IUniques) (node *CompatibilityTreeNode) {
+func buildUniquesNode(parentNode *CompatibilityTreeNode, item appdef.IWithUniques) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameUniques, nil)
 	for _, unique := range item.Uniques() {
 		node.Props = append(node.Props, buildUniqueNode(node, unique))
@@ -194,7 +194,7 @@ func buildUniquesNode(parentNode *CompatibilityTreeNode, item appdef.IUniques) (
 	return
 }
 
-func buildContainersNode(parentNode *CompatibilityTreeNode, item appdef.IContainers) (node *CompatibilityTreeNode) {
+func buildContainersNode(parentNode *CompatibilityTreeNode, item appdef.IWithContainers) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameContainers, nil)
 	for container := range item.Containers() {
 		node.Props = append(node.Props, buildContainerNode(node, container))

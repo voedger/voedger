@@ -12,12 +12,13 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
-	"golang.org/x/exp/slices"
 )
 
 func InitiateEmailVerification(vit *it.VIT, prn *it.Principal, entity appdef.QName, field, email string, targetWSID istructs.WSID, opts ...coreutils.ReqOptFunc) (token, code string) {
@@ -69,20 +70,20 @@ func WaitForIndexOffset(vit *it.VIT, ws *it.AppWorkspace, index appdef.QName, of
 	}
 }
 
-func InitiateInvitationByEMail(vit *it.VIT, ws *it.AppWorkspace, expireDatetime int64, email, initialRoles, inviteEmailTemplate, inviteEmailSubject string) (inviteID int64) {
+func InitiateInvitationByEMail(vit *it.VIT, ws *it.AppWorkspace, expireDatetime int64, email, initialRoles, inviteEmailTemplate, inviteEmailSubject string) (inviteID istructs.RecordID) {
 	vit.T.Helper()
 	body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
 		email, initialRoles, expireDatetime, inviteEmailTemplate, inviteEmailSubject)
 	return vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body).NewID()
 }
 
-func InitiateJoinWorkspace(vit *it.VIT, ws *it.AppWorkspace, inviteID int64, login *it.Principal, verificationCode string, opts ...coreutils.ReqOptFunc) {
+func InitiateJoinWorkspace(vit *it.VIT, ws *it.AppWorkspace, inviteID istructs.RecordID, login *it.Principal, verificationCode string, opts ...coreutils.ReqOptFunc) {
 	vit.T.Helper()
 	opts = append(opts, coreutils.WithAuthorizeBy(login.Token))
 	vit.PostWS(ws, "c.sys.InitiateJoinWorkspace", fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"%s"}}`, inviteID, verificationCode), opts...)
 }
 
-func WaitForInviteState(vit *it.VIT, ws *it.AppWorkspace, inviteID int64, inviteStatesSeq ...int32) {
+func WaitForInviteState(vit *it.VIT, ws *it.AppWorkspace, inviteID istructs.RecordID, inviteStatesSeq ...int32) {
 	deadline := it.TestDeadline()
 	var actualInviteState int32
 	for time.Now().Before(deadline) {

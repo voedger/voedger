@@ -25,6 +25,11 @@ func (t *PersistentBLOBKeyType) ID() string {
 	return utils.UintToString(t.BlobID)
 }
 
+
+func (t *PersistentBLOBKeyType) IsPersistent() bool {
+	return true
+}
+
 // nolint: revive
 func (t *TempBLOBKeyType) Bytes() []byte {
 	res := make([]byte, 20, 20+len(t.SUUID))
@@ -37,4 +42,8 @@ func (t *TempBLOBKeyType) Bytes() []byte {
 
 func (t *TempBLOBKeyType) ID() string {
 	return string(t.SUUID)
+}
+
+func (t *TempBLOBKeyType) IsPersistent() bool {
+	return false
 }

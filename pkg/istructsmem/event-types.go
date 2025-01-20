@@ -378,7 +378,7 @@ func (ev *eventType) WLogOffset() istructs.Offset {
 
 // cudType implements event cud member
 //
-// # Implements:
+// # Supports:
 //
 //	— istructs.ICUD
 type cudType struct {
@@ -849,7 +849,7 @@ func (o *objectType) ChildBuilder(containerName string) istructs.IObjectBuilder 
 	c := newObject(o.appCfg, appdef.NullQName, o)
 	o.child = append(o.child, c)
 	if o.QName() != appdef.NullQName {
-		if cont := o.typ.(appdef.IContainers).Container(containerName); cont != nil {
+		if cont := o.typ.(appdef.IWithContainers).Container(containerName); cont != nil {
 			c.setQName(cont.QName())
 			if c.QName() != appdef.NullQName {
 				if o.ID() != istructs.NullRecordID {
@@ -915,7 +915,7 @@ func (o *objectType) FillFromJSON(data map[string]any) {
 			o.PutBool(n, fv)
 		case []interface{}:
 			// e.g. "order_item": [<2 children>]
-			cont := o.typ.(appdef.IContainers).Container(n)
+			cont := o.typ.(appdef.IWithContainers).Container(n)
 			if cont == nil {
 				o.collectError(ErrContainerNotFound(n, o.typ))
 				continue

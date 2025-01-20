@@ -146,8 +146,8 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		resource := "q.EchoQuery"
 		path := fmt.Sprintf("%s/%s/%d/%s", appOwner, appName, wsid, resource)
 
-		body := testApp.post("/api/"+path, "text/plain", testText, nil)
-		require.Equal([]byte(fmt.Sprintf("{\"sections\":[{\"type\":\"\",\"elements\":[Hello, %s, {}]}]}", testText)), body)
+		body := testApp.post("/api/"+path, coreutils.ApplicationJSON, testText, nil)
+		require.Equal(fmt.Sprintf(`{"sections":[{"type":"","elements":["Hello, %s, {}"]}]}`, testText), string(body))
 	})
 
 	t.Run("call unknown app", func(t *testing.T) {
@@ -379,7 +379,7 @@ func setUp(t *testing.T) *testApp {
 	params := ihttp.CLIParams{
 		Port: 0, // listen using some free port, port value will be taken using API
 	}
-	appStorageProvider := istorageimpl.Provide(mem.Provide())
+	appStorageProvider := istorageimpl.Provide(mem.Provide(coreutils.MockTime))
 	routerStorage, err := ihttp.NewIRouterStorage(appStorageProvider)
 	require.NoError(err)
 	processor, pCleanup := NewProcessor(params, routerStorage)

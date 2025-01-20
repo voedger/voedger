@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -113,7 +114,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	// eliminate timeouts impact for debugging
 	cfg.RouterReadTimeout = int(debugTimeout)
 	cfg.RouterWriteTimeout = int(debugTimeout)
-	cfg.BusTimeout = vvm.BusTimeout(debugTimeout)
+	cfg.SendTimeout = bus.SendTimeout(debugTimeout)
 
 	vvm, err := vvm.ProvideVVM(&cfg, 0)
 	require.NoError(t, err)
@@ -549,6 +550,7 @@ func (vit *VIT) Restart() {
 
 // sets delay on IAppStorage.Get() in mem implementation
 // will be automatically reset to 0 on TearDown
+// need to e.g. investigate slow workspace create, see https://github.com/voedger/voedger/issues/1663
 func (vit *VIT) SetMemStorageGetDelay(delay time.Duration) {
 	vit.T.Helper()
 	vit.iterateDelaySetters(func(delaySetter istorage.IStorageDelaySetter) {
@@ -561,6 +563,7 @@ func (vit *VIT) SetMemStorageGetDelay(delay time.Duration) {
 
 // sets delay on IAppStorage.Put() in mem implementation
 // will be automatically reset to 0 on TearDown
+// need to e.g. investigate slow workspace create, see https://github.com/voedger/voedger/issues/1663
 func (vit *VIT) SetMemStoragePutDelay(delay time.Duration) {
 	vit.T.Helper()
 	vit.iterateDelaySetters(func(delaySetter istorage.IStorageDelaySetter) {
@@ -604,4 +607,17 @@ func (sr *implVITISecretsReader) ReadSecret(name string) ([]byte, error) {
 		return val, nil
 	}
 	return sr.underlyingReader.ReadSecret(name)
+}
+
+func (vit *VIT) EnrichPrincipalToken(prn *Principal, roles []payloads.RoleType) (enrichedToken string) {
+	vit.T.Helper()
+	var pp payloads.PrincipalPayload
+	_, err := vit.ITokens.ValidateToken(prn.Token, &pp)
+	require.NoError(vit.T, err)
+	for _, role := range roles {
+		pp.Roles = append(pp.Roles, role)
+	}
+	enrichedToken, err = vit.ITokens.IssueToken(prn.AppQName, authnz.DefaultPrincipalTokenExpiration, &pp)
+	require.NoError(vit.T, err)
+	return enrichedToken
 }

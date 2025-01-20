@@ -20,11 +20,11 @@ func FieldTypeToString(ft dynobuffers.FieldType) string {
 	return dynobufferFieldTypeToStr[ft]
 }
 
-func NewFieldsScheme(name string, fields appdef.IFields) *dynobuffers.Scheme {
+func NewFieldsScheme(name string, fields appdef.IWithFields) *dynobuffers.Scheme {
 	db := dynobuffers.NewScheme()
 
 	db.Name = name
-	for _, f := range fields.Fields() {
+	for f := range fields.Fields() {
 		if !f.IsSys() { // #18142: extract system fields from dynobuffer
 			ft := DataKindToFieldType(f.DataKind())
 			if ft == dynobuffers.FieldTypeByte {

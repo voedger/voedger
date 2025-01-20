@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts/internal/limiter"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -20,7 +21,7 @@ func Example() {
 	cmd1Name := appdef.NewQName("test", "cmd1")
 	cmd2Name := appdef.NewQName("test", "cmd2")
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsName := appdef.NewQName("test", "workspace")
@@ -35,7 +36,7 @@ func Example() {
 			appdef.NewQName("test", "wsLimit"),
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
 			appdef.LimitFilterOption_ALL,
-			filter.Types(wsName, appdef.TypeKind_Command),
+			filter.WSTypes(wsName, appdef.TypeKind_Command),
 			wsRateName)
 
 		// Add rate and limit for IP: 3 commands per minute for each IP address for each command
@@ -45,7 +46,7 @@ func Example() {
 			appdef.NewQName("test", "ipLimit"),
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
 			appdef.LimitFilterOption_EACH,
-			filter.Types(wsName, appdef.TypeKind_Command),
+			filter.WSTypes(wsName, appdef.TypeKind_Command),
 			ipRateName)
 
 		return adb.MustBuild()

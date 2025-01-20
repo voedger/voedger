@@ -114,7 +114,7 @@ func (vit *VIT) getCDoc(appQName appdef.AppQName, qName appdef.QName, wsid istru
 	as, err := vit.IAppStructsProvider.BuiltIn(appQName)
 	require.NoError(vit.T, err)
 	if doc := appdef.CDoc(as.AppDef().Type, qName); doc != nil {
-		for _, field := range doc.Fields() {
+		for field := range doc.Fields() {
 			if field.IsSys() {
 				continue
 			}
@@ -183,8 +183,8 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 				}
 				vit.T.Fatalf(`expected ws init error template is [%s] but is "%s"`, strings.Join(expectWSInitErrorChunks, ", "), wsError)
 			}
-		} else if len(wsError) > 0 {
-			vit.T.Fatal(wsError)
+		} else {
+			require.Empty(vit.T, wsError)
 		}
 
 		return &AppWorkspace{

@@ -95,13 +95,13 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 		}
 	}
 
-	if fields, ok := t.(appdef.IFields); ok {
+	if fields, ok := t.(appdef.IWithFields); ok {
 		if opts.nonNilsOnly {
 			for fieldName := range obj.FieldNames {
 				proceedField(fieldName, fields.Field(fieldName).DataKind())
 			}
 		} else {
-			for _, f := range fields.Fields() {
+			for f := range fields.Fields() {
 				proceedField(f.Name(), f.DataKind())
 			}
 		}

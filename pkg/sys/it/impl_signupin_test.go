@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -220,5 +221,38 @@ func TestDeviceProfile(t *testing.T) {
 		resp := vit.PostProfile(devicePrn, "q.sys.RefreshPrincipalToken", body)
 		require.NotEqual(devicePrn.Token, resp.SectionRow()[0].(string))
 	})
+}
 
+func TestWorkInForeignProfileWithEnrichedToken(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	// create new login
+	newLoginName := vit.NextName()
+	newLogin := vit.SignUp(newLoginName, "1", istructs.AppQName_test1_app1)
+	newLoginPrn := vit.SignIn(newLogin)
+
+	existingLoginPrn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
+
+	// new login can not work in the profile of the existingLogin
+	body := `{"args":{"Schema":"sys.UserProfile"},"elements":[{"fields":["sys.ID", "DisplayName"]}]}`
+	vit.PostApp(istructs.AppQName_test1_app1, existingLoginPrn.ProfileWSID, "q.sys.Collection", body, coreutils.Expect403(), coreutils.WithAuthorizeBy(newLoginPrn.Token))
+
+	// now enrich the token of the newLogin: make it ProfileOwner in the profile of the existingLogin
+
+	// determine ownerWSID of the existingLogin
+	body = `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["OwnerWSID"]}]}`
+	resp := vit.PostProfile(existingLoginPrn, "q.sys.Collection", body)
+	existingLoginOwnerWSID := istructs.WSID(resp.SectionRow()[0].(float64))
+
+	// enrich the existing token of the newLogin with role.sys.ProfileOwner
+	profileOwnerRole := payloads.RoleType{
+		WSID:  existingLoginOwnerWSID,
+		QName: iauthnz.QNameRoleProfileOwner,
+	}
+	enrichedToken := vit.EnrichPrincipalToken(newLoginPrn, []payloads.RoleType{profileOwnerRole})
+
+	// no newLogin is able to work in the profile of the existingLogin role.sys.ProfileOwner principal is emitted for him there
+	body = `{"args":{"Schema":"sys.UserProfile"},"elements":[{"fields":["sys.ID", "DisplayName"]}]}`
+	vit.PostApp(istructs.AppQName_test1_app1, existingLoginPrn.ProfileWSID, "q.sys.Collection", body, coreutils.WithAuthorizeBy(enrichedToken))
 }

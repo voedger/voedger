@@ -43,6 +43,19 @@ var ErrRecordFieldsOnlyInSys = errors.New("record fields are only allowed in sys
 var ErrPkgFolderNotFound = errors.New("pkg folder not found")
 var ErrGrantFollowsRevoke = errors.New("GRANT follows REVOKE in the same container")
 var ErrJobMustBeInAppWorkspace = errors.New("JOB is only allowed in AppWorkspaceWS")
+var ErrPositiveValueOnly = errors.New("positive value only allowed")
+
+func ErrInvalidLocalPackageName(name string) error {
+	return fmt.Errorf("invalid local package name %s", name)
+}
+
+func ErrLocalPackageNameConflict(name string) error {
+	return fmt.Errorf("conflict: local package name %s equal to current package name", name)
+}
+
+func ErrLocalPackageNameAlreadyUsed(name string, usedFor string) error {
+	return fmt.Errorf("local package name %s already used for %s", name, usedFor)
+}
 
 func ErrLocalPackageNameRedeclared(localPkgName, newLocalPkgName string) error {
 	return fmt.Errorf("local package name %s was redeclared as %s", localPkgName, newLocalPkgName)
@@ -66,6 +79,10 @@ func ErrUndefinedQuery(name DefQName) error {
 
 func ErrUndefinedJob(name DefQName) error {
 	return fmt.Errorf("undefined job: %s", name)
+}
+
+func ErrUndefinedProjector(name DefQName) error {
+	return fmt.Errorf("undefined projector: %s", name)
 }
 
 func ErrUndefinedRate(name DefQName) error {
@@ -207,6 +224,10 @@ func ErrVarcharFieldInCC(name string) error {
 
 func ErrBytesFieldInCC(name string) error {
 	return fmt.Errorf("bytes field %s can only be the last one in clustering key", name)
+}
+
+func ErrLimitOperationNotAllowed(name string) error {
+	return fmt.Errorf("operation %s not allowed", name)
 }
 
 func errorAt(err error, pos *lexer.Position) error {

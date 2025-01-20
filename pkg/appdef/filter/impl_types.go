@@ -20,29 +20,25 @@ import (
 //   - fmt.Stringer
 type typesFilter struct {
 	filter
-	ws    appdef.QName
 	types appdef.TypeKindSet
 }
 
-func makeTypesFilter(ws appdef.QName, t appdef.TypeKind, tt ...appdef.TypeKind) appdef.IFilter {
-	f := &typesFilter{ws: ws, types: set.From(t)}
-	f.types.Set(tt...)
-	return f
+func makeTypesFilter(tt ...appdef.TypeKind) typesFilter {
+	if len(tt) == 0 {
+		panic("types filter should have at least one type")
+	}
+	return typesFilter{types: set.From(tt...)}
+}
+
+func newTypesFilter(tt ...appdef.TypeKind) *typesFilter {
+	f := makeTypesFilter(tt...)
+	return &f
 }
 
 func (typesFilter) Kind() appdef.FilterKind { return appdef.FilterKind_Types }
 
 func (f typesFilter) Match(t appdef.IType) bool {
-	if !f.types.Contains(t.Kind()) {
-		return false
-	}
-
-	if f.ws == appdef.NullQName {
-		return true
-	}
-
-	ws := t.Workspace()
-	return (ws != nil) && (ws.QName() == f.ws)
+	return f.types.Contains(t.Kind())
 }
 
 func (f typesFilter) String() string {
@@ -50,7 +46,6 @@ func (f typesFilter) String() string {
 	if t, ok := typesStringDecorators[string(f.types.AsBytes())]; ok {
 		s = t
 	} else {
-		// TYPES(…)
 		// TYPES(…) FROM …)
 		s = "TYPES("
 		for i, t := range f.types.All() {
@@ -61,9 +56,6 @@ func (f typesFilter) String() string {
 		}
 		s += ")"
 	}
-	if f.ws != appdef.NullQName {
-		s += fmt.Sprintf(" FROM %s", f.ws)
-	}
 	return s
 }
 
@@ -73,3 +65,38 @@ var typesStringDecorators = map[string]string{
 	string(appdef.TypeKind_Structures.AsBytes()): "ALL TABLES",
 	string(appdef.TypeKind_Functions.AsBytes()):  "ALL FUNCTIONS",
 }
+
+// wsTypesFilter is a filter that matches types by their kind.
+// Matched types should be located in the specified workspace.
+//
+// # Supports:
+//   - appdef.IFilter.
+//   - fmt.Stringer
+type wsTypesFilter struct {
+	typesFilter
+	ws appdef.QName
+}
+
+func newWSTypesFilter(ws appdef.QName, tt ...appdef.TypeKind) *wsTypesFilter {
+	if ws == appdef.NullQName {
+		panic("workspace should be specified")
+	}
+	return &wsTypesFilter{
+		typesFilter: makeTypesFilter(tt...),
+		ws:          ws,
+	}
+}
+
+func (f wsTypesFilter) Match(t appdef.IType) bool {
+	if f.typesFilter.Match(t) {
+		ws := t.Workspace()
+		return (ws != nil) && (ws.QName() == f.ws)
+	}
+	return false
+}
+
+func (f wsTypesFilter) String() string {
+	return fmt.Sprintf("%s FROM %s", f.typesFilter.String(), f.ws)
+}
+
+func (f wsTypesFilter) WS() appdef.QName { return f.ws }

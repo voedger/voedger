@@ -29,87 +29,15 @@ const SysWorkspaceName = "Workspace"
 
 var SysWorkspaceQName = NewQName(SysPackage, SysWorkspaceName)
 
-// Any names
-const (
-	AnyName          = "ANY"
-	AnyStructureName = "AnyStructure"
-	AnyRecordName    = "AnyRecord"
-	AnyGDocName      = "AnyGDoc"
-	AnyCDocName      = "AnyCDoc"
-	AnyWDocName      = "AnyWDoc"
-	AnySingletonName = "AnySingleton"
-	AnyODocName      = "AnyODoc"
-	AnyObjectName    = "AnyObject"
-	AnyViewName      = "AnyView"
-	AnyExtensionName = "AnyExtension"
-	AnyFunctionName  = "AnyFunction"
-	AnyCommandName   = "AnyCommand"
-	AnyQueryName     = "AnyQuery"
-)
+const AnyName = "ANY"
 
 // QNameANY is substitution denotes that a Function param or result can be any type
 //
 // See #858 (Support QNameAny as function result)
 var QNameANY = NewQName(SysPackage, AnyName)
 
-// QNameAny××× are substitutions, which used to limit with rates. See #868 (VSQL: Rate limits)
-var (
-	// QNameAnyStructure is a substitution for any structure type (record, object or view record).
-	QNameAnyStructure = NewQName(SysPackage, AnyStructureName)
-
-	// QNameAnyStructure is a substitution for any structure type (record, object or view record).
-	QNameAnyRecord = NewQName(SysPackage, AnyRecordName)
-
-	// QNameAnyGDoc is a substitution for any GDoc type.
-	QNameAnyGDoc = NewQName(SysPackage, AnyGDocName)
-
-	// QNameAnyCDoc is a substitution for any CDoc type.
-	QNameAnyCDoc = NewQName(SysPackage, AnyCDocName)
-
-	// QNameAnyWDoc is a substitution for any WDoc type.
-	QNameAnyWDoc = NewQName(SysPackage, AnyWDocName)
-
-	// QNameAnySingleton is a substitution for any singleton type.
-	QNameAnySingleton = NewQName(SysPackage, AnySingletonName)
-
-	// QNameAnyODoc is a substitution for any ODoc type.
-	QNameAnyODoc = NewQName(SysPackage, AnyODocName)
-
-	// QNameAnyObject is a substitution for any Object type.
-	QNameAnyObject = NewQName(SysPackage, AnyObjectName)
-
-	// QNameAnyView is a substitution for any view record type.
-	QNameAnyView = NewQName(SysPackage, AnyViewName)
-
-	// QNameAnyExtension is a substitution for any extension type (function or projector).
-	QNameAnyExtension = NewQName(SysPackage, AnyExtensionName)
-
-	// QNameAnyFunction is a substitution for any function type (command or query).
-	QNameAnyFunction = NewQName(SysPackage, AnyFunctionName)
-
-	// QNameAnyCommand is a substitution for any command type.
-	QNameAnyCommand = NewQName(SysPackage, AnyCommandName)
-
-	// QNameAnyQuery is a substitution for any query type.
-	QNameAnyQuery = NewQName(SysPackage, AnyQueryName)
-
-	anyTypes = map[QName]IType{
-		QNameANY:          AnyType,
-		QNameAnyStructure: AnyStructureType,
-		QNameAnyRecord:    AnyRecordType,
-		QNameAnyGDoc:      AnyGDocType,
-		QNameAnyCDoc:      AnyCDocType,
-		QNameAnyWDoc:      AnyWDocType,
-		QNameAnyODoc:      AnyODocType,
-		QNameAnyObject:    AnyObjectType,
-		QNameAnySingleton: AnySingletonType,
-		QNameAnyView:      AnyViewType,
-		QNameAnyExtension: AnyExtensionType,
-		QNameAnyFunction:  AnyFunctionType,
-		QNameAnyCommand:   AnyCommandType,
-		QNameAnyQuery:     AnyQueryType,
-	}
-)
+// QNameRoleSystem is role for system.
+var QNameRoleSystem = NewQName(SysPackage, "System")
 
 const (
 	// System application owner name
@@ -129,6 +57,19 @@ const (
 	SystemField_IsActive  = SystemPackagePrefix + "IsActive"
 	SystemField_Container = SystemPackagePrefix + "Container"
 	SystemField_QName     = SystemPackagePrefix + "QName"
+)
+
+// System data type names
+var (
+	SysData_int32    QName = SysDataName(DataKind_int32)
+	SysData_int64    QName = SysDataName(DataKind_int64)
+	SysData_float32  QName = SysDataName(DataKind_float32)
+	SysData_float64  QName = SysDataName(DataKind_float64)
+	SysData_bytes    QName = SysDataName(DataKind_bytes)
+	SysData_String   QName = SysDataName(DataKind_string)
+	SysData_QName    QName = SysDataName(DataKind_QName)
+	SysData_bool     QName = SysDataName(DataKind_bool)
+	SysData_RecordID QName = SysDataName(DataKind_RecordID)
 )
 
 // Maximum containers per one structured type

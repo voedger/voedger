@@ -12,6 +12,8 @@ import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
@@ -20,7 +22,7 @@ func Test_checkConstraints(t *testing.T) {
 
 	obj := func() appdef.IObject {
 		name := appdef.NewQName("test", "obj")
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
@@ -31,44 +33,44 @@ func Test_checkConstraints(t *testing.T) {
 			AddField("bytes", appdef.DataKind_bytes, false).
 			// char fields to test constraints: exactly four digits
 			AddField("str4", appdef.DataKind_string, false,
-				appdef.MinLen(4),
-				appdef.MaxLen(4),
-				appdef.Pattern(`^\d+$`),
-				appdef.Enum(`1111`, `2222`, `3333`, `4444`)).
+				constraints.MinLen(4),
+				constraints.MaxLen(4),
+				constraints.Pattern(`^\d+$`),
+				constraints.Enum(`1111`, `2222`, `3333`, `4444`)).
 			AddField("bytes4", appdef.DataKind_bytes, false,
-				appdef.MinLen(4),
-				appdef.MaxLen(4),
-				appdef.Pattern(`^\d+$`)).
+				constraints.MinLen(4),
+				constraints.MaxLen(4),
+				constraints.Pattern(`^\d+$`)).
 			// numeric fields to test inclusive constraints: closed range [1, 8]
 			AddField("int32_i", appdef.DataKind_int32, false,
-				appdef.MinIncl(1),
-				appdef.MaxIncl(8),
-				appdef.Enum(int32(2), 4, 6, 8)).
+				constraints.MinIncl(1),
+				constraints.MaxIncl(8),
+				constraints.Enum(int32(2), 4, 6, 8)).
 			AddField("int64_i", appdef.DataKind_int64, false,
-				appdef.MinIncl(1),
-				appdef.MaxIncl(8),
-				appdef.Enum(int64(7), 5, 3, 1)).
+				constraints.MinIncl(1),
+				constraints.MaxIncl(8),
+				constraints.Enum(int64(7), 5, 3, 1)).
 			AddField("float32_i", appdef.DataKind_float32, false,
-				appdef.MinIncl(1),
-				appdef.MaxIncl(8),
-				appdef.Enum(float32(7.77), 5.55, 3.33, 1.11, 1.11, 1.11)).
+				constraints.MinIncl(1),
+				constraints.MaxIncl(8),
+				constraints.Enum(float32(7.77), 5.55, 3.33, 1.11, 1.11, 1.11)).
 			AddField("float64_i", appdef.DataKind_float64, false,
-				appdef.MinIncl(1),
-				appdef.MaxIncl(8),
-				appdef.Enum(math.Pi, 2*math.Pi, 1)).
+				constraints.MinIncl(1),
+				constraints.MaxIncl(8),
+				constraints.Enum(math.Pi, 2*math.Pi, 1)).
 			// numeric fields to test exclusive constraints: open range (0, 9)
 			AddField("int32_e", appdef.DataKind_int32, false,
-				appdef.MinExcl(0),
-				appdef.MaxExcl(9)).
+				constraints.MinExcl(0),
+				constraints.MaxExcl(9)).
 			AddField("int64_e", appdef.DataKind_int64, false,
-				appdef.MinExcl(0),
-				appdef.MaxExcl(9)).
+				constraints.MinExcl(0),
+				constraints.MaxExcl(9)).
 			AddField("float32_e", appdef.DataKind_float32, false,
-				appdef.MinExcl(0),
-				appdef.MaxExcl(9)).
+				constraints.MinExcl(0),
+				constraints.MaxExcl(9)).
 			AddField("float64_e", appdef.DataKind_float64, false,
-				appdef.MinExcl(0),
-				appdef.MaxExcl(9))
+				constraints.MinExcl(0),
+				constraints.MaxExcl(9))
 
 		app, err := adb.Build()
 		require.NoError(err)

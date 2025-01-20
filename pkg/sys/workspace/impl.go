@@ -91,18 +91,8 @@ func ApplyInvokeCreateWorkspaceID(federation federation.IFederation, appQName ap
 		coreutils.WithExpectedCode(http.StatusOK),
 		coreutils.WithExpectedCode(http.StatusConflict),
 	); createWSIDCmdErr != nil {
-		logger.Error(fmt.Sprintf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %s. Body:\n%s", createWSIDCmdErr, body))
-		ownerAppQName, err := appdef.ParseAppQName(ownerApp)
-		if err != nil {
-			// notest
-			return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: %w", err)
-		}
-		ownerAppToken, err := payloads.GetSystemPrincipalToken(tokensAPI, ownerAppQName)
-		if err != nil {
-			// notest
-			return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: %w", err)
-		}
-		return updateOwnerErr(ownerWSID, ownerID, ownerApp, ownerQName.String(), istructs.NullWSID, createWSIDCmdErr, ownerAppToken, federation)
+		logger.Error(fmt.Sprintf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %s. Body:\n%s", createWSIDCmdErr.Error(), body))
+		return updateOwnerErr(ownerWSID, ownerID, ownerApp, ownerQName.String(), istructs.NullWSID, createWSIDCmdErr, tokensAPI, federation)
 	}
 	return nil
 }
@@ -222,8 +212,8 @@ func invokeCreateWorkspaceProjector(federation federation.IFederation, tokensAPI
 			}
 			if _, err = federation.Func(createWSCmdURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
 				logger.Error("aproj.sys.InvokeCreateWorkspace: c.sys.CreateWorkspace failed: " + err.Error())
-				// nolint G115 ownerWSID came from WSID so its highest but is always 0 -> no data loss possible
-				if err := updateOwnerErr(istructs.WSID(ownerWSID), istructs.RecordID(ownerID), ownerApp, ownerQName, istructs.NullWSID, err, systemPrincipalToken, federation); err != nil {
+				// nolint G115 ownerWSID came from WSID so its highest bit is always 0 -> no data loss possible
+				if err := updateOwnerErr(istructs.WSID(ownerWSID), istructs.RecordID(ownerID), ownerApp, ownerQName, istructs.NullWSID, err, tokensAPI, federation); err != nil {
 					return err
 				}
 			}
@@ -356,17 +346,6 @@ func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IF
 			if err != nil {
 				return fmt.Errorf("%s: %w", logPrefix, err)
 			}
-			ownerAppQName, err := appdef.ParseAppQName(ownerApp)
-			if err != nil {
-				// parsed already by c.registry.CreateLogin and InitChildWorkspace ?????????
-				// notest
-				return err
-			}
-			systemPrincipalToken_OwnerApp, err := payloads.GetSystemPrincipalToken(tokensAPI, ownerAppQName)
-			if err != nil {
-				// notest
-				return fmt.Errorf("%s: %w", logPrefix, err)
-			}
 
 			// If len(new.createError) > 0 -> UpdateOwner(wsParams, new.WSID, new.createError), return
 			createErrorStr := wsDescr.AsString(Field_CreateError)
@@ -375,7 +354,7 @@ func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IF
 				info("have new.createError, will just updateOwner():", createErrorStr)
 				// nolint G115: highest bit of newWSID is always 0 -> safe to cast to WSID
 				ownerUpdated = updateOwner(istructs.WSID(rec.AsInt64(Field_OwnerWSID)), istructs.RecordID(rec.AsInt64(Field_OwnerID)), ownerApp, rec.AsString(Field_OwnerQName2),
-					istructs.WSID(newWSID), wsError, systemPrincipalToken_OwnerApp, federation)
+					istructs.WSID(newWSID), wsError, tokensAPI, federation)
 				continue
 			}
 
@@ -433,17 +412,28 @@ func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IF
 
 			// nolint G115
 			ownerUpdated = updateOwner(istructs.WSID(rec.AsInt64(Field_OwnerWSID)), istructs.RecordID(rec.AsInt64(Field_OwnerID)), ownerApp, rec.AsString(Field_OwnerQName2),
-				istructs.WSID(newWSID), wsError, systemPrincipalToken_OwnerApp, federation)
+				istructs.WSID(newWSID), wsError, tokensAPI, federation)
 		}
 		return nil
 	}
 }
 
 func updateOwnerErr(ownerWSID istructs.WSID, ownerID istructs.RecordID, ownerApp string, ownerQNameStr string, newWSID istructs.WSID, err error,
-	principalToken string, federation federation.IFederation) error {
+	iTokens itokens.ITokens, federation federation.IFederation) error {
 	errStr := ""
 	if err != nil {
 		errStr = err.Error()
+	}
+
+	ownerAppQName, err := appdef.ParseAppQName(ownerApp)
+	if err != nil {
+		// notest
+		return fmt.Errorf("updateOwner: failed to parse AppQName %s: %w", ownerApp, err)
+	}
+	ownerAppToken, err := payloads.GetSystemPrincipalToken(iTokens, ownerAppQName)
+	if err != nil {
+		// notest
+		return fmt.Errorf("updateOwner: failed to issue system token for app %s: %w", ownerAppQName.String(), err)
 	}
 
 	updateOwnerURL := fmt.Sprintf("api/%s/%d/c.sys.CUD", ownerApp, ownerWSID)
@@ -451,13 +441,13 @@ func updateOwnerErr(ownerWSID istructs.WSID, ownerID istructs.RecordID, ownerApp
 		ownerApp, ownerWSID, newWSID, errStr))
 	body := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"%s":%d,"%s":%q}}]}`,
 		ownerID, authnz.Field_WSID, newWSID, authnz.Field_WSError, errStr)
-	_, err = federation.Func(updateOwnerURL, body, coreutils.WithAuthorizeBy(principalToken), coreutils.WithDiscardResponse())
+	_, err = federation.Func(updateOwnerURL, body, coreutils.WithAuthorizeBy(ownerAppToken), coreutils.WithDiscardResponse())
 	return err
 }
 
 func updateOwner(ownerWSID istructs.WSID, ownerID istructs.RecordID, ownerApp string, ownerQNameStr string, newWSID istructs.WSID, err error,
-	principalToken string, federation federation.IFederation) (ok bool) {
-	updateOwnerErr := updateOwnerErr(ownerWSID, ownerID, ownerApp, ownerQNameStr, newWSID, err, principalToken, federation)
+	iTokens itokens.ITokens, federation federation.IFederation) (ok bool) {
+	updateOwnerErr := updateOwnerErr(ownerWSID, ownerID, ownerApp, ownerQNameStr, newWSID, err, iTokens, federation)
 	if updateOwnerErr != nil {
 		logger.Error("failed to updateOwner:", updateOwnerErr)
 	}

@@ -185,6 +185,22 @@ var (
 		s.SetReadOnly()
 		return s
 	}()
+
+	// Set of types which can trigger projectors.
+	//
+	// # Includes:
+	//	 - Functions (Commands and Queries)
+	//	 - Records (and Documents)
+	//	 - Views
+	//	 - Objects and ODocs
+	TypeKind_ProjectorTriggers = func() TypeKindSet {
+		s := set.From(TypeKind_Functions.AsArray()...)
+		s.Set(TypeKind_Records.AsArray()...)
+		s.Set(TypeKind_ViewRecord)
+		s.Set(TypeKind_Object, TypeKind_ODoc)
+		s.SetReadOnly()
+		return s
+	}()
 )
 
 // # Type
@@ -227,20 +243,3 @@ type ITypeBuilder interface {
 
 // AnyType is used for return then type is any
 var AnyType = newAnyType(QNameANY)
-
-// Any×××Type are used for substitution, e.g. for rate limits, projector events, etc.
-var (
-	AnyStructureType = newAnyType(QNameAnyStructure)
-	AnyRecordType    = newAnyType(QNameAnyRecord)
-	AnyGDocType      = newAnyType(QNameAnyGDoc)
-	AnyCDocType      = newAnyType(QNameAnyCDoc)
-	AnyWDocType      = newAnyType(QNameAnyWDoc)
-	AnySingletonType = newAnyType(QNameAnySingleton)
-	AnyODocType      = newAnyType(QNameAnyODoc)
-	AnyObjectType    = newAnyType(QNameAnyObject)
-	AnyViewType      = newAnyType(QNameAnyView)
-	AnyExtensionType = newAnyType(QNameAnyExtension)
-	AnyFunctionType  = newAnyType(QNameAnyFunction)
-	AnyCommandType   = newAnyType(QNameAnyCommand)
-	AnyQueryType     = newAnyType(QNameAnyQuery)
-)

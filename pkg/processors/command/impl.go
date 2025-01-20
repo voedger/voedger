@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"golang.org/x/exp/maps"
@@ -32,26 +33,25 @@ import (
 	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/builtin"
 	workspacemgmt "github.com/voedger/voedger/pkg/sys/workspace"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func (cm *implICommandMessage) Body() []byte                      { return cm.body }
 func (cm *implICommandMessage) AppQName() appdef.AppQName         { return cm.appQName }
 func (cm *implICommandMessage) WSID() istructs.WSID               { return cm.wsid }
-func (cm *implICommandMessage) Sender() ibus.ISender              { return cm.sender }
+func (cm *implICommandMessage) Responder() bus.IResponder         { return cm.responder }
 func (cm *implICommandMessage) PartitionID() istructs.PartitionID { return cm.partitionID }
 func (cm *implICommandMessage) RequestCtx() context.Context       { return cm.requestCtx }
 func (cm *implICommandMessage) QName() appdef.QName               { return cm.qName }
 func (cm *implICommandMessage) Token() string                     { return cm.token }
 func (cm *implICommandMessage) Host() string                      { return cm.host }
 
-func NewCommandMessage(requestCtx context.Context, body []byte, appQName appdef.AppQName, wsid istructs.WSID, sender ibus.ISender,
-	partitionID istructs.PartitionID, qName appdef.QName, token string, host string) ICommandMessage {
+func NewCommandMessage(requestCtx context.Context, body []byte, appQName appdef.AppQName, wsid istructs.WSID,
+	responder bus.IResponder, partitionID istructs.PartitionID, qName appdef.QName, token string, host string) ICommandMessage {
 	return &implICommandMessage{
 		body:        body,
 		appQName:    appQName,
 		wsid:        wsid,
-		sender:      sender,
+		responder:   responder,
 		partitionID: partitionID,
 		requestCtx:  requestCtx,
 		qName:       qName,
@@ -150,9 +150,17 @@ func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work pipeline.IWork
 
 func getIWorkspace(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.cmdMes.QName() != workspacemgmt.QNameCommandCreateWorkspace {
-		cmd.iWorkspace = cmd.appStructs.AppDef().WorkspaceByDescriptor(cmd.wsDesc.AsQName(authnz.Field_WSKind))
+
+	switch cmd.cmdMes.QName() {
+	case workspacemgmt.QNameCommandCreateWorkspace:
+		// cmd.iWorkspace should be nil
+	default:
+		ws := cmd.wsDesc.AsQName(authnz.Field_WSKind)
+		if cmd.iWorkspace = cmd.appStructs.AppDef().WorkspaceByDescriptor(ws); cmd.iWorkspace == nil {
+			panic(fmt.Errorf("workspace %s does not exist", ws))
+		}
 	}
+
 	return nil
 }
 
@@ -304,9 +312,7 @@ func checkWSInitialized(_ context.Context, work pipeline.IWorkpiece) (err error)
 	cmd := work.(*cmdWorkpiece)
 	wsDesc := work.(*cmdWorkpiece).wsDesc
 	cmdQName := cmd.cmdMes.QName()
-	if cmdQName == workspacemgmt.QNameCommandCreateWorkspace ||
-		cmdQName == workspacemgmt.QNameCommandCreateWorkspaceID || // happens on creating a child of an another workspace
-		cmdQName == builtin.QNameCommandInit {
+	if cmdQName == workspacemgmt.QNameCommandCreateWorkspace || cmdQName == builtin.QNameCommandInit {
 		return nil
 	}
 	if wsDesc.QName() != appdef.NullQName {
@@ -377,27 +383,19 @@ func getPrincipalsRoles(_ context.Context, work pipeline.IWorkpiece) (err error)
 
 func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	// TODO: eliminate when all application will use ACL in VSQL
-	req := iauthnz.AuthzRequest{
-		OperationKind: iauthnz.OperationKind_EXECUTE,
-		Resource:      cmd.cmdMes.QName(),
+
+	ws := cmd.iWorkspace
+	if ws == nil {
+		// dummy or c.sys.CreateWorkspace
+		ws = cmd.iCommand.Workspace()
 	}
-	ok, err := cmdProc.authorizer.Authorize(cmd.appStructs, cmd.principals, req)
+
+	ok, _, err := cmd.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles)
 	if err != nil {
 		return err
 	}
 	if !ok {
-		ok, _, err := cmd.appPart.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles)
-		if err != nil {
-			// TODO: temporary workaround. Eliminate later
-			if roleNotFound(err) {
-				return coreutils.NewHTTPErrorf(http.StatusForbidden)
-			}
-			return err
-		}
-		if !ok {
-			return coreutils.NewHTTPErrorf(http.StatusForbidden)
-		}
+		return coreutils.NewHTTPErrorf(http.StatusForbidden)
 	}
 	return nil
 }
@@ -613,7 +611,6 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		}
 		if isCreate {
 			parsedCUD.opKind = appdef.OperationKind_Insert
-			parsedCUD.opKindOld = iauthnz.OperationKind_INSERT
 			qNameStr, _, err := parsedCUD.fields.AsString(appdef.SystemField_QName)
 			if err != nil {
 				return cudXPath.Error(err)
@@ -623,7 +620,6 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 			}
 		} else {
 			parsedCUD.opKind = appdef.OperationKind_Update
-			parsedCUD.opKindOld = iauthnz.OperationKind_UPDATE
 			if parsedCUD.id, ok, err = cudData.AsInt64(appdef.SystemField_ID); err != nil {
 				return cudXPath.Error(err)
 			}
@@ -698,30 +694,21 @@ func checkIsActiveInCUDs(_ context.Context, work pipeline.IWorkpiece) (err error
 
 func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
+
+	ws := cmd.iWorkspace
+	if ws == nil {
+		// dummy or c.sys.CreateWorkspace
+		ws = cmd.iCommand.Workspace()
+	}
+
 	for _, parsedCUD := range cmd.parsedCUDs {
-		// TODO: eliminate when all application will use ACL in VSQL
-		req := iauthnz.AuthzRequest{
-			OperationKind: parsedCUD.opKindOld,
-			Resource:      parsedCUD.qName,
-			Fields:        maps.Keys(parsedCUD.fields),
-		}
-		if parsedCUD.opKind == appdef.OperationKind_Select {
-			// TODO: eliminate SELECT rule skipping after implementing ACL in VSQL in Air
-			continue
-		}
-		ok, err := cmdProc.authorizer.Authorize(cmd.appStructs, cmd.principals, req)
+		fields := maps.Keys(parsedCUD.fields)
+		ok, _, err := cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
 		if err != nil {
-			return parsedCUD.xPath.Error(err)
+			return err
 		}
 		if !ok {
-			fields := maps.Keys(parsedCUD.fields)
-			ok, _, err := cmd.appPart.IsOperationAllowed(parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
-			if err != nil {
-				return err
-			}
-			if !ok {
-				return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
-			}
+			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
 		}
 	}
 	return
@@ -766,7 +753,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		if !cmd.syncProjectorsStart.IsZero() {
 			cmd.metrics.increase(ProjectorsSeconds, time.Since(cmd.syncProjectorsStart).Seconds())
 		}
-		coreutils.ReplyErr(cmd.cmdMes.Sender(), handlingError)
+		bus.ReplyErr(cmd.cmdMes.Responder(), handlingError)
 		return
 	}
 	body := bytes.NewBufferString(fmt.Sprintf(`{"CurrentWLogOffset":%d`, cmd.pLogEvent.WLogOffset()))
@@ -793,7 +780,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		body.Write(cmdResultBytes)
 	}
 	body.WriteString("}")
-	coreutils.ReplyJSON(cmd.cmdMes.Sender(), http.StatusOK, body.String())
+	bus.ReplyJSON(cmd.cmdMes.Responder(), http.StatusOK, body.String())
 }
 
 func (idGen *implIDGenerator) NextID(rawID istructs.RecordID, t appdef.IType) (storageID istructs.RecordID, err error) {

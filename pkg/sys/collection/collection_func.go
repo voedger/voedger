@@ -19,7 +19,7 @@ func collectionResultQName(args istructs.PrepareArgs) appdef.QName {
 	if args.ArgumentObject == nil {
 		return appdef.NullQName
 	}
-	qnameStr := args.ArgumentObject.AsString(field_Schema)
+	qnameStr := args.ArgumentObject.AsString(Field_Schema)
 	qname, err := appdef.ParseQName(qnameStr)
 	if err != nil {
 		return appdef.NullQName // not provided or incorrect
@@ -31,7 +31,7 @@ func collectionFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callba
 	if args.ArgumentObject == nil {
 		return errors.New("ArgumentObject is not defined in PrepareArgs")
 	}
-	qnameStr := args.ArgumentObject.AsString(field_Schema)
+	qnameStr := args.ArgumentObject.AsString(Field_Schema)
 	resultsQName, err := appdef.ParseQName(qnameStr)
 	if err != nil {
 		return err

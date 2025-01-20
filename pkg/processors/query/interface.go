@@ -11,6 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -26,9 +27,9 @@ import (
 // The pipeline is used to process data fetched by QueryHandler
 // TODO In my opinion we have to remove it from export
 type RowsProcessorFactory func(ctx context.Context, appDef appdef.IAppDef, state istructs.IState,
-	params IQueryParams, resultMeta appdef.IType, rs IResultSenderClosable, metrics IMetrics, errCh chan<- error) pipeline.IAsyncPipeline
+	params IQueryParams, resultMeta appdef.IType, responder bus.IResponder, metrics IMetrics, errCh chan<- error) (rowsProcessor pipeline.IAsyncPipeline, iResponseSenderGetter func() bus.IResponseSender)
 
-type ServiceFactory func(serviceChannel iprocbus.ServiceChannel, resultSenderClosableFactory ResultSenderClosableFactory,
+type ServiceFactory func(serviceChannel iprocbus.ServiceChannel,
 	appParts appparts.IAppPartitions, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
-	authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer, itokens itokens.ITokens, federation federation.IFederation,
+	authn iauthnz.IAuthenticator, itokens itokens.ITokens, federation federation.IFederation,
 	statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) pipeline.IService

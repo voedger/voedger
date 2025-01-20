@@ -7,36 +7,47 @@ package queryprocessor
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 func TestSendToBusOperator_DoAsync(t *testing.T) {
 	require := require.New(t)
-	counter := 0
 	errCh := make(chan error, 1)
-	operator := SendToBusOperator{
-		rs: testResultSenderClosable{
-			sendElement: func(name string, element interface{}) (err error) {
-				require.Equal("hello world", element.([]interface{})[0])
-				return nil
-			},
-			startArraySection: func(sectionType string, path []string) {
-				counter++
-			},
-		},
-		metrics: &testMetrics{},
-		errCh:   errCh,
-	}
-	work := rowsWorkpiece{outputRow: &testOutputRow{values: []interface{}{"hello world"}}}
+	requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+		go func() {
+			operator := SendToBusOperator{
+				responder: responder,
+				metrics:   &testMetrics{},
+				errCh:     errCh,
+			}
+			work := rowsWorkpiece{outputRow: &testOutputRow{values: []interface{}{"hello world"}}}
 
-	outWork, err := operator.DoAsync(context.Background(), work)
-	_, _ = operator.DoAsync(context.Background(), work)
+			outWork, err := operator.DoAsync(context.Background(), work)
+			_, _ = operator.DoAsync(context.Background(), work)
 
-	require.Equal(work, outWork)
+			require.Equal(work, outWork)
+			require.NoError(err)
+
+			operator.sender.(bus.IResponseSenderCloseable).Close(nil)
+		}()
+	})
+
+	respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 	require.NoError(err)
-	require.Equal(1, counter)
+	require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
+	require.Equal(http.StatusOK, respMeta.StatusCode)
+	result := []string{}
+	for elem := range respCh {
+		result = append(result, elem.([]interface{})[0].(string))
+	}
+	require.NoError(*respErr)
+	require.EqualValues([]string{"hello world", "hello world"}, result)
+
 }
 
 func TestSendToBusOperator_OnError(t *testing.T) {
@@ -44,12 +55,6 @@ func TestSendToBusOperator_OnError(t *testing.T) {
 	errCh := make(chan error, 1)
 	testError := errors.New("test error")
 	operator := SendToBusOperator{
-		rs: testResultSenderClosable{
-			sendElement: func(name string, element interface{}) (err error) {
-				return testError
-			},
-			startArraySection: func(sectionType string, path []string) {},
-		},
 		metrics: &testMetrics{},
 		errCh:   errCh,
 	}

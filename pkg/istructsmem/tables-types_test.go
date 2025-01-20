@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	log "github.com/voedger/voedger/pkg/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -56,6 +57,13 @@ func Test_newRecord(t *testing.T) {
 			require.Equal("", r.AsString(appdef.SystemField_Container))
 			require.True(r.AsBool(appdef.SystemField_IsActive))
 		})
+
+		t.Run("test as ICUDRow", func(t *testing.T) {
+			var r istructs.ICUDRow = rec
+			require.False(r.IsActivated())
+			require.False(r.IsDeactivated())
+			require.False(r.IsNew())
+		})
 	})
 
 	t.Run("newEmptyTestCDoc must return empty, «test.CDoc»", func(t *testing.T) {
@@ -90,7 +98,7 @@ func Test_newRecord(t *testing.T) {
 
 		t.Run("system field counters for test CDoc", func(t *testing.T) {
 			sysCnt := 0
-			for _, f := range doc.fields.Fields() {
+			for f := range doc.fields.Fields() {
 				require.True(doc.HasValue(f.Name()))
 				if f.IsSys() {
 					sysCnt++
@@ -110,7 +118,7 @@ func Test_newRecord(t *testing.T) {
 			cnt := 0
 			sysCnt := 0
 
-			for _, f := range doc.fields.Fields() {
+			for f := range doc.fields.Fields() {
 				require.True(doc.HasValue(f.Name()))
 				if f.IsSys() {
 					sysCnt++
@@ -154,7 +162,7 @@ func Test_newRecord(t *testing.T) {
 			t.Run("system field counters for test CRecord", func(t *testing.T) {
 				sysCnt := 0
 
-				for _, f := range rec.fields.Fields() {
+				for f := range rec.fields.Fields() {
 					require.True(rec.HasValue(f.Name()))
 					if f.IsSys() {
 						sysCnt++
@@ -175,7 +183,7 @@ func Test_newRecord(t *testing.T) {
 				cnt := 0
 				sysCnt := 0
 
-				for _, f := range rec.fields.Fields() {
+				for f := range rec.fields.Fields() {
 					require.True(rec.HasValue(f.Name()))
 					if f.IsSys() {
 						sysCnt++
@@ -371,7 +379,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		newFieldName := func(oldValue string) string { return oldValue + "_1" }
 		oldFieldName := func(newValue string) string { return newValue[:len(newValue)-2] }
 
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		t.Run("should be ok to build new ver of application", func(t *testing.T) {
@@ -379,7 +387,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			newCDoc := wsb.AddCDoc(test.testCDoc)
 
 			oldCDoc := appdef.CDoc(rec1.appCfg.AppDef.Type, test.testCDoc)
-			for _, f := range oldCDoc.Fields() {
+			for f := range oldCDoc.Fields() {
 				if !f.IsSys() {
 					newCDoc.AddField(newFieldName(f.Name()), f.DataKind(), f.Required())
 				}
@@ -502,7 +510,7 @@ func TestModifiedFields(t *testing.T) {
 
 	t.Run("should has no modifications if new record", func(t *testing.T) {
 		rec := newRecord(test.AppCfg)
-		for _, _ = range rec.ModifiedFields {
+		for range rec.ModifiedFields {
 			t.Fail()
 		}
 	})
@@ -519,7 +527,7 @@ func TestModifiedFields(t *testing.T) {
 		t.Run("breakable", func(t *testing.T) {
 			for stop := range want {
 				cnt := 0
-				for n, _ := range rec.ModifiedFields {
+				for n := range rec.ModifiedFields {
 					if n == stop {
 						break
 					}

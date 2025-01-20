@@ -85,7 +85,7 @@ func validateQuery_Unlogged(update update) error {
 			return errors.New("full key must be provided on view unlogged update")
 		}
 	case allowedDocsTypeKinds[tp.Kind()]:
-		if containers, ok := tp.(appdef.IContainers); ok {
+		if containers, ok := tp.(appdef.IWithContainers); ok {
 			if containers.ContainerCount() > 0 {
 				// TODO: no design?
 				return fmt.Errorf("impossible to %s a record that has containers", op)

@@ -75,6 +75,12 @@ type ICUDRow interface {
 	//
 	// #2785 - If a string- or bytes- field is emptied, then an empty string (empty byte array) will be passed to the callback iterator
 	ModifiedFields(func(appdef.FieldName, interface{}) bool)
+
+	// Returns is row deactivated.
+	IsDeactivated() bool
+
+	// Returns is previously deactivated record is activated (reactivated).
+	IsActivated() bool
 }
 
 type IIDGenerator interface {

@@ -13,6 +13,7 @@ import (
 	"io"
 	"log"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -24,7 +25,7 @@ import (
 )
 
 var (
-	//go:embed logo.png
+	//go:embed testdata/logo.png
 	blob    []byte
 	maxSize iblobstorage.BLOBMaxSizeType = 19266
 )
@@ -51,16 +52,32 @@ func TestBasicUsage(t *testing.T) {
 			WSID:         2,
 			SUUID:        ssuid,
 		}
-		testBasicUsage(t, func() iblobstorage.IBLOBKey {
+		blobStorage := testBasicUsage(t, func() iblobstorage.IBLOBKey {
 			return &key
 		}, func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, duration iblobstorage.DurationType) error {
 			ctx := context.Background()
 			return blobber.WriteTempBLOB(ctx, key, desc, reader, NewWLimiter_Size(maxSize), duration)
 		}, iblobstorage.DurationType_1Day)
+
+		// make the temp blob almost expired
+		coreutils.MockTime.Add(time.Duration(iblobstorage.DurationType_1Day.Seconds()-1) * time.Second)
+
+		// blob still exists for now
+		_, err := blobStorage.QueryBLOBState(context.Background(), &key)
+		require.NoError(t, err)
+
+		// cross the temp blob expiration instant
+		coreutils.MockTime.Add(time.Second)
+
+		// blob disappeared
+		_, err = blobStorage.QueryBLOBState(context.Background(), &key)
+		require.Error(t, iblobstorage.ErrBLOBNotFound)
 	})
 }
 
-func testBasicUsage(t *testing.T, keyGetter func() iblobstorage.IBLOBKey, blobWriter func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, duration iblobstorage.DurationType) error, duration iblobstorage.DurationType) {
+func testBasicUsage(t *testing.T, keyGetter func() iblobstorage.IBLOBKey,
+	blobWriter func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, duration iblobstorage.DurationType) error,
+	duration iblobstorage.DurationType) iblobstorage.IBLOBStorage {
 	desc := iblobstorage.DescrType{
 		Name:     "logo.png",
 		MimeType: "image/png",
@@ -69,7 +86,7 @@ func testBasicUsage(t *testing.T, keyGetter func() iblobstorage.IBLOBKey, blobWr
 	key := keyGetter()
 	require := require.New(t)
 
-	asf := mem.Provide()
+	asf := mem.Provide(coreutils.MockTime)
 	asp := istorageimpl.Provide(asf)
 	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -136,6 +153,8 @@ func testBasicUsage(t *testing.T, keyGetter func() iblobstorage.IBLOBKey, blobWr
 		// Compare
 		require.Equal(v, buf.Bytes())
 	})
+
+	return blobber
 }
 
 func TestFewBucketsBLOB(t *testing.T) {
@@ -152,7 +171,7 @@ func TestFewBucketsBLOB(t *testing.T) {
 	)
 	require := require.New(t)
 
-	asf := mem.Provide()
+	asf := mem.Provide(coreutils.MockTime)
 	asp := istorageimpl.Provide(asf)
 	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -200,7 +219,7 @@ func TestQuotaExceed(t *testing.T) {
 		}
 	)
 	require := require.New(t)
-	asf := mem.Provide()
+	asf := mem.Provide(coreutils.MockTime)
 	asp := istorageimpl.Provide(asf)
 	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -237,9 +256,4 @@ func readData(ctx context.Context, reader io.Reader) (data []byte, err error) {
 		err = nil
 	}
 	return entity, err
-}
-
-
-func TestBLOBNoFound(t *testing.T) {
-	
 }

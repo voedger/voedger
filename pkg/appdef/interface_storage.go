@@ -5,16 +5,16 @@
 
 package appdef
 
+import "iter"
+
 type IStorage interface {
 	IWithComments
 
 	// Returns storage name.
 	Name() QName
 
-	// Returns names in storage.
-	//
-	// TODO: should be iter.Seq[QName]
-	Names() QNames
+	// Returns names in storage in alphabetical order.
+	Names() iter.Seq[QName]
 }
 
 type IStorages interface {
@@ -23,21 +23,8 @@ type IStorages interface {
 	// Returns nil if storage not found.
 	Storage(name QName) IStorage
 
-	// Enums storages.
-	//
-	// Storages enumerated in alphabetical QNames order.
-	// Names slice in every storage is sorted and deduplicated.
-	//
-	// TODO: should be iter.Seq[IStorage], should be renamed to Values()
-	Enum(func(IStorage) bool)
-
-	// Returns number of storages.
-	Len() int
-
-	// Returns storages as map.
-	//
-	// TODO: should be iter.Seq2[QName, QNames], should be renamed to All()
-	Map() map[QName]QNames
+	// Returns storages in alphabetical order.
+	All() iter.Seq2[QName, IStorage]
 }
 
 type IStoragesBuilder interface {

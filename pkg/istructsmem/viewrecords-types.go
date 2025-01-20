@@ -391,6 +391,10 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 			if err := k.build(); err == nil {
 
 				equalRow := func(r1, r2 rowType) bool {
+					if r1.dyB.Scheme != r2.dyB.Scheme {
+						// notest: key.viewName == k.viewName
+						return false
+					}
 
 					equalVal := func(d1, d2 interface{}) bool {
 						switch v := d1.(type) {
@@ -401,8 +405,9 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 						}
 					}
 
-					for _, f := range r1.fields.Fields() {
-						if !equalVal(r1.dyB.Get(f.Name()), r2.dyB.Get(f.Name())) {
+					// where are no system fields in key, so we can fast iterate over dynobuffer fields
+					for _, f := range r1.dyB.Scheme.Fields {
+						if !equalVal(r1.dyB.GetByField(f), r2.dyB.GetByField(f)) {
 							return false
 						}
 					}

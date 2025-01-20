@@ -255,12 +255,12 @@ func TestTakeQNamesFromWorkspace(t *testing.T) {
 			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
 			body := `{"args":{"Input":"str"}}`
 			// q.app1pkg.MockQry is not defined in test_ws_anotherWS workspace -> 400 bad request
-			vit.PostWS(anotherWS, "q.app1pkg.MockQry", body, coreutils.Expect400("query app1pkg.MockQry does not exist in workspace app1pkg.test_wsWS_another"))
+			vit.PostWS(anotherWS, "q.app1pkg.MockQry", body, coreutils.Expect400("query app1pkg.MockQry does not exist in Workspace «app1pkg.test_wsWS_another»"))
 		})
 		t.Run("type", func(t *testing.T) {
 			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
 			body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 1)
-			vit.PostWS(anotherWS, "q.app1pkg.testCmd", body, coreutils.Expect400("app1pkg.testCmd is not a query"))
+			vit.PostWS(anotherWS, "q.app1pkg.testCmd", body, coreutils.Expect400("query app1pkg.testCmd does not exist in Workspace «app1pkg.test_wsWS_another»"))
 		})
 	})
 
@@ -269,7 +269,7 @@ func TestTakeQNamesFromWorkspace(t *testing.T) {
 			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
 			body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.options"}}]}`
 			// try to insert a QName that does not exist in the workspace -> 403 foribidden ??? or 400 bad request ???
-			vit.PostWS(anotherWS, "c.sys.CUD", body, coreutils.Expect400("app1pkg.options", "does not exist in the workspace app1pkg.test_ws_another"))
+			vit.PostWS(anotherWS, "c.sys.CUD", body, coreutils.Expect500("not found", "app1pkg.options", "Workspace «app1pkg.test_wsWS_another»"))
 		})
 		t.Run("CUD produced by a command", func(t *testing.T) {
 			it.MockCmdExec = func(input string, args istructs.ExecCommandArgs) error {
@@ -298,7 +298,7 @@ func TestVITResetPreservingStorage(t *testing.T) {
 			it.WithChildWorkspace(it.QNameApp1_TestWSKind, "test_ws", "", "", "login", map[string]interface{}{"IntFld": 42}),
 		),
 	)
-	categoryID := int64(0)
+	categoryID := istructs.NullRecordID
 	it.TestRestartPreservingStorage(t, &cfg, func(t *testing.T, vit *it.VIT) {
 		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`

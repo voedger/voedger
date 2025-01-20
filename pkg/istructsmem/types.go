@@ -34,7 +34,7 @@ import (
 type rowType struct {
 	appCfg           *AppConfigType
 	typ              appdef.IType
-	fields           appdef.IFields
+	fields           appdef.IWithFields
 	id               istructs.RecordID
 	parentID         istructs.RecordID
 	container        string
@@ -438,7 +438,7 @@ func (row *rowType) setType(t appdef.IType) {
 			row.fields = v.Value()
 			row.dyB = dynobuffers.NewBuffer(row.appCfg.dynoSchemes.Scheme(t.QName()))
 		} else {
-			if f, ok := t.(appdef.IFields); ok {
+			if f, ok := t.(appdef.IWithFields); ok {
 				row.fields = f
 				row.dyB = dynobuffers.NewBuffer(row.appCfg.dynoSchemes.Scheme(t.QName()))
 			} else {
@@ -989,7 +989,7 @@ func (row *rowType) QName() appdef.QName {
 // istructs.IRowReader.RecordIDs
 func (row *rowType) RecordIDs(includeNulls bool) func(cb func(appdef.FieldName, istructs.RecordID) bool) {
 	return func(cb func(appdef.FieldName, istructs.RecordID) bool) {
-		for _, fld := range row.fields.Fields() {
+		for fld := range row.fields.Fields() {
 			if fld.DataKind() == appdef.DataKind_RecordID {
 				id := row.AsRecordID(fld.Name())
 				if (id != istructs.NullRecordID) || includeNulls {

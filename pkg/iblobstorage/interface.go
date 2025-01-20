@@ -14,6 +14,8 @@ type IBLOBKey interface {
 
 	// blobID for persistent, SUUID for temporary
 	ID() string
+
+	IsPersistent() bool
 }
 
 type IBLOBStorage interface {
