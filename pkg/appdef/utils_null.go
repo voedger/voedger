@@ -9,8 +9,8 @@ import "iter"
 
 type nullComment struct{}
 
-func (c *nullComment) Comment() string                { return "" }
-func (c *nullComment) CommentLines() iter.Seq[string] { return func(func(string) bool) {} }
+func (c *nullComment) Comment() string        { return "" }
+func (c *nullComment) CommentLines() []string { return nil }
 
 const nullTypeString = "null type"
 

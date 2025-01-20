@@ -20,7 +20,7 @@ func Test_NullType(t *testing.T) {
 	var _ appdef.IType = appdef.NullType // compile-time check
 
 	require.Empty(appdef.NullType.Comment())
-	require.Empty(slices.Collect(appdef.NullType.CommentLines()))
+	require.Empty(appdef.NullType.CommentLines())
 
 	require.False(appdef.NullType.HasTag(appdef.NullQName))
 	appdef.NullType.Tags()(func(appdef.ITag) bool { require.Fail("Tags() should be empty"); return false })
