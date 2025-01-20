@@ -7,7 +7,6 @@ package datas_test
 
 import (
 	"fmt"
-	"maps"
 	"math"
 	"regexp"
 	"strings"
@@ -27,8 +26,8 @@ func Test_Datas(t *testing.T) {
 
 	wsName := appdef.NewQName("test", "workspace")
 	intName := appdef.NewQName("test", "int")
-	strName := appdef.NewQName("test", "string")
-	tokenName := appdef.NewQName("test", "token")
+	strName := appdef.NewQName("test", "string")  // [0..255]
+	tokenName := appdef.NewQName("test", "token") // [1..100] ^w+$
 
 	t.Run("should be ok to add data types", func(t *testing.T) {
 		adb := builder.New()
@@ -37,7 +36,7 @@ func Test_Datas(t *testing.T) {
 		wsb := adb.AddWorkspace(wsName)
 
 		_ = wsb.AddData(intName, appdef.DataKind_int64, appdef.NullQName)
-		_ = wsb.AddData(strName, appdef.DataKind_string, appdef.NullQName)
+		_ = wsb.AddData(strName, appdef.DataKind_string, appdef.NullQName, constraints.MaxLen(255))
 		token := wsb.AddData(tokenName, appdef.DataKind_string, strName)
 		token.AddConstraints(constraints.MinLen(1), constraints.MaxLen(100), constraints.Pattern(`^\w+$`, "only word characters allowed"))
 
@@ -66,31 +65,47 @@ func Test_Datas(t *testing.T) {
 			require.Equal(strName, s.QName())
 			require.Equal(appdef.DataKind_string, s.DataKind())
 			require.Equal(appdef.SysData(tested.Type, appdef.DataKind_string), s.Ancestor())
+			require.Equal(1, func() int {
+				cnt := 0
+				for k, c := range s.Constraints(true) {
+					cnt++
+					switch k {
+					case appdef.ConstraintKind_MaxLen:
+						require.Equal(appdef.ConstraintKind_MaxLen, c.Kind())
+						require.EqualValues(255, c.Value())
+					default:
+						require.Failf("unexpected constraint", "data: %v; constraint: %v", s, c)
+					}
+				}
+				return cnt
+			}())
 
 			tk := appdef.Data(tested.Type, tokenName)
 			require.Equal(appdef.TypeKind_Data, tk.Kind())
 			require.Equal(tokenName, tk.QName())
 			require.Equal(appdef.DataKind_string, tk.DataKind())
 			require.Equal(s, tk.Ancestor())
-			cnt := 0
-			for k, c := range tk.Constraints(false) {
-				cnt++
-				switch k {
-				case appdef.ConstraintKind_MinLen:
-					require.Equal(appdef.ConstraintKind_MinLen, c.Kind())
-					require.EqualValues(1, c.Value())
-				case appdef.ConstraintKind_MaxLen:
-					require.Equal(appdef.ConstraintKind_MaxLen, c.Kind())
-					require.EqualValues(100, c.Value())
-				case appdef.ConstraintKind_Pattern:
-					require.Equal(appdef.ConstraintKind_Pattern, c.Kind())
-					require.EqualValues(`^\w+$`, c.Value().(*regexp.Regexp).String())
-					require.Equal("only word characters allowed", c.Comment())
-				default:
-					require.Failf("unexpected constraint", "constraint: %v", c)
+			require.Equal(3, func() int {
+				cnt := 0
+				for k, c := range tk.Constraints(true) {
+					cnt++
+					switch k {
+					case appdef.ConstraintKind_MinLen:
+						require.Equal(appdef.ConstraintKind_MinLen, c.Kind())
+						require.EqualValues(1, c.Value())
+					case appdef.ConstraintKind_MaxLen:
+						require.Equal(appdef.ConstraintKind_MaxLen, c.Kind())
+						require.EqualValues(100, c.Value())
+					case appdef.ConstraintKind_Pattern:
+						require.Equal(appdef.ConstraintKind_Pattern, c.Kind())
+						require.EqualValues(`^\w+$`, c.Value().(*regexp.Regexp).String())
+						require.Equal("only word characters allowed", c.Comment())
+					default:
+						require.Failf("unexpected constraint", "data: %v; constraint: %v", tk, c)
+					}
 				}
-			}
-			require.Equal(3, cnt)
+				return cnt
+			}())
 		})
 
 		t.Run("should be ok to enum data types", func(t *testing.T) {
@@ -211,7 +226,8 @@ func Test_SystemDataTypes(t *testing.T) {
 			require.True(d.IsSystem())
 			require.Equal(k, d.DataKind())
 			require.Nil(d.Ancestor())
-			require.Empty(maps.Collect(d.Constraints(false)))
+			require.Empty(d.Constraints(false))
+			require.Empty(d.Constraints(true))
 		}
 	})
 }

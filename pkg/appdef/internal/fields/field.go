@@ -37,7 +37,7 @@ func MakeField(name appdef.FieldName, data appdef.IData, required bool, c ...str
 		data:         data,
 		required:     required,
 		verifiable:   false,
-		constraints:  maps.Collect(data.Constraints(true)),
+		constraints:  data.Constraints(true),
 	}
 	return f
 }

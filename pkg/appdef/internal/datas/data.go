@@ -7,8 +7,6 @@ package datas
 
 import (
 	"fmt"
-	"iter"
-	"maps"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/comments"
@@ -64,24 +62,20 @@ func NewAnonymousData(ws appdef.IWorkspace, kind appdef.DataKind, anc appdef.QNa
 
 func (d Data) Ancestor() appdef.IData { return d.ancestor }
 
-func (d Data) Constraints(withInherited bool) iter.Seq2[appdef.ConstraintKind, appdef.IConstraint] {
-	if !withInherited {
-		return maps.All(d.constraints)
+func (d Data) Constraints(withInherited bool) map[appdef.ConstraintKind]appdef.IConstraint {
+	if !withInherited || (d.ancestor == nil) || d.ancestor.IsSystem() {
+		return d.constraints
 	}
 
 	cc := make(map[appdef.ConstraintKind]appdef.IConstraint)
-	for a := &d; a != nil; {
+	for a := &d; !a.IsSystem(); a = a.ancestor.(*Data) {
 		for k, c := range a.constraints {
 			if _, ok := cc[k]; !ok {
 				cc[k] = c
 			}
 		}
-		if a.ancestor == nil {
-			break
-		}
-		a = a.ancestor.(*Data)
 	}
-	return maps.All(cc)
+	return cc
 }
 
 func (d Data) DataKind() appdef.DataKind { return d.dataKind }
