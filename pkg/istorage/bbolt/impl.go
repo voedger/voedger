@@ -550,7 +550,7 @@ func (s *appStorageType) removeKey(tx *bolt.Tx, ttlKey []byte) error {
 }
 
 func (s *appStorageType) isExpired(value []byte) bool {
-	expireAtMillisec := int64(binary.BigEndian.Uint64(value[len(value)-utils.Uint64Size:]))
+	expireAtMillisec := int64(binary.BigEndian.Uint64(value[len(value)-utils.Uint64Size:])) //nolint: gosec
 	if expireAtMillisec == 0 {
 		return false
 	}
@@ -580,7 +580,7 @@ func (s *appStorageType) backgroundCleaner() {
 				k, _ := cr.First()
 				for k != nil && s.ctx.Err() == nil {
 					// extract expireAt from the key and check if it is expired
-					expireAt := time.UnixMilli(int64(binary.BigEndian.Uint64(k[:utils.Uint64Size])))
+					expireAt := time.UnixMilli(int64(binary.BigEndian.Uint64(k[:utils.Uint64Size]))) //nolint: gosec
 					if expireAt.After(s.iTime.Now()) {
 						break
 					}
