@@ -265,3 +265,59 @@ func Test_RateLimitErrors(t *testing.T) {
 		})
 	})
 }
+
+func TestLimitActivateDeactivate(t *testing.T) {
+	require := require.New(t)
+
+	var app appdef.IAppDef
+
+	wsName := appdef.NewQName("test", "workspace")
+	docName := appdef.NewQName("test", "document")
+	rateName := appdef.NewQName("test", "rate")
+	limitDeactivate := appdef.NewQName("test", "limitDeactivate")
+	limitActivate := appdef.NewQName("test", "limitActivate")
+
+	t.Run("should be ok to build application with activate/deactivate limits", func(t *testing.T) {
+		adb := builder.New()
+		adb.AddPackage("test", "test.com/test")
+
+		wsb := adb.AddWorkspace(wsName)
+
+		wsb.AddCDoc(docName)
+
+		wsb.AddRate(rateName, 10, time.Hour, []appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, "10 times per hour per partition per IP")
+		wsb.AddLimit(limitDeactivate, []appdef.OperationKind{appdef.OperationKind_Deactivate}, appdef.LimitFilterOption_EACH, filter.QNames(docName), rateName)
+		wsb.AddLimit(limitActivate, []appdef.OperationKind{appdef.OperationKind_Activate}, appdef.LimitFilterOption_EACH, filter.QNames(docName), rateName)
+
+		a, err := adb.Build()
+		require.NoError(err)
+
+		app = a
+	})
+
+	t.Run("should be ok to enum limits", func(t *testing.T) {
+		cnt := 0
+		for l := range appdef.Limits(app.Types()) {
+			cnt++
+			switch cnt {
+			case 1:
+				require.Equal(limitActivate, l.QName())
+				require.Equal([]appdef.OperationKind{appdef.OperationKind_Activate}, slices.Collect(l.Ops()))
+				require.Equal(appdef.FilterKind_QNames, l.Filter().Kind())
+				require.Equal(appdef.LimitFilterOption_EACH, l.Filter().Option())
+				require.Equal([]appdef.QName{docName}, slices.Collect(l.Filter().QNames()))
+				require.Equal(rateName, l.Rate().QName())
+			case 2:
+				require.Equal(limitDeactivate, l.QName())
+				require.Equal([]appdef.OperationKind{appdef.OperationKind_Deactivate}, slices.Collect(l.Ops()))
+				require.Equal(appdef.FilterKind_QNames, l.Filter().Kind())
+				require.Equal(appdef.LimitFilterOption_EACH, l.Filter().Option())
+				require.Equal([]appdef.QName{docName}, slices.Collect(l.Filter().QNames()))
+				require.Equal(rateName, l.Rate().QName())
+			default:
+				require.FailNow("unexpected limit", "limit: %v", l)
+			}
+		}
+		require.Equal(2, cnt)
+	})
+}

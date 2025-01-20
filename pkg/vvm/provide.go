@@ -174,7 +174,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideMetricsServicePort,
 		provideVVMPortSource,
 		iauthnzimpl.NewDefaultAuthenticator,
-		iauthnzimpl.NewDefaultAuthorizer,
 		provideNumsAppsWorkspaces,
 		provideSecretKeyJWT,
 		provideBucketsFactory,
@@ -771,12 +770,12 @@ func provideOpBLOBProcessors(numBLOBWorkers istructs.NumBLOBProcessors, blobServ
 }
 
 func provideQueryProcessors(qpCount istructs.NumQueryProcessors, qc QueryChannel, appParts appparts.IAppPartitions, qpFactory queryprocessor.ServiceFactory,
-	imetrics imetrics.IMetrics, vvm processors.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
+	imetrics imetrics.IMetrics, vvm processors.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator,
 	tokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) OperatorQueryProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
 	for i := 0; i < int(qpCount); i++ {
 		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), appParts, int(mpq), imetrics,
-			string(vvm), authn, authz, tokens, federation, statelessResources, secretReader)))
+			string(vvm), authn, tokens, federation, statelessResources, secretReader)))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }

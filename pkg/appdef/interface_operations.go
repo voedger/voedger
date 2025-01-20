@@ -26,11 +26,11 @@ const (
 	OperationKind_Update
 
 	// Activate records. Operation applicable on records.
-	// Used to describe projectors.
+	// Used to describe ACL rules, limits and projectors.
 	OperationKind_Activate
 
 	// Deactivate records. Operation applicable on records.
-	// Used to describe projectors.
+	// Used to describe ACL rules, limits and projectors.
 	OperationKind_Deactivate
 
 	// Select records or view records. Operation applicable on records, view records.
@@ -54,32 +54,54 @@ const (
 
 type OperationsSet = set.Set[OperationKind]
 
+// RecordsOperations is a set of operations that applicable on records.
+//
+// # Contains:
+//	 - Insert
+//	 - Update
+//	 - Activate
+//	 - Deactivate
+//	 - Select
+var RecordsOperations = func() OperationsSet {
+	s := set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Activate, OperationKind_Deactivate, OperationKind_Select)
+	s.SetReadOnly()
+	return s
+}()
+
 // ACL operations is a set of operations that applicable with ACL rules.
+//
+// # Contains:
+//	- RecordsOperations (Insert, Update, Activate, Deactivate, Select)
+//	- Execute
+//	- Inherits
 var ACLOperations = func() OperationsSet {
-	s := set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute, OperationKind_Inherits)
+	s := set.Collect(RecordsOperations.Values())
+	s.Set(OperationKind_Execute, OperationKind_Inherits)
 	s.SetReadOnly()
 	return s
 }()
 
 // Limitable operations is a set of operations that can be limited.
+//
+// # Contains:
+//	- RecordsOperations (Insert, Update, Activate, Deactivate, Select)
+//	- Execute
 var LimitableOperations = func() OperationsSet {
-	s := set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute)
+	s := set.Collect(RecordsOperations.Values())
+	s.Set(OperationKind_Execute)
 	s.SetReadOnly()
 	return s
 }()
 
 // Projector operations is a set of operations that can trigger a projector.
+//
+// # Contains:
+//	- RecordsOperations (Insert, Update, Activate, Deactivate, Select)
+//	- Execute
+//	- ExecuteWithParam
 var ProjectorOperations = func() OperationsSet {
-	s := set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select,
-		OperationKind_Activate, OperationKind_Deactivate,
-		OperationKind_Execute, OperationKind_ExecuteWithParam)
-	s.SetReadOnly()
-	return s
-}()
-
-// RecordsOperations is a set of operations that applicable on records.
-var RecordsOperations = func() OperationsSet {
-	s := set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Activate, OperationKind_Deactivate)
+	s := set.Collect(RecordsOperations.Values())
+	s.Set(OperationKind_Execute, OperationKind_ExecuteWithParam)
 	s.SetReadOnly()
 	return s
 }()

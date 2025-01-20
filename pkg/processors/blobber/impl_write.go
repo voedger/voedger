@@ -16,7 +16,9 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
@@ -31,6 +33,25 @@ func getRegisterFuncName(ctx context.Context, work pipeline.IWorkpiece) (err err
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "unsupported blob duration value: ", bw.duration)
 		}
 		bw.registerFuncName = registerFuncName
+	}
+	return nil
+}
+
+func getBLOBKeyWrite(ctx context.Context, work pipeline.IWorkpiece) (err error) {
+	bw := work.(*blobWorkpiece)
+	if bw.isPersistent() {
+		bw.blobKey = &iblobstorage.PersistentBLOBKeyType{
+			ClusterAppID: istructs.ClusterAppID_sys_blobber,
+			WSID:         bw.blobMessageWrite.wsid,
+			BlobID:       bw.newBLOBID,
+		}
+	} else {
+		// temp
+		bw.blobKey = &iblobstorage.TempBLOBKeyType{
+			ClusterAppID: istructs.ClusterAppID_sys_blobber,
+			WSID:         bw.blobMessageWrite.wsid,
+			SUUID:        bw.newSUUID,
+		}
 	}
 	return nil
 }
@@ -74,7 +95,7 @@ func setBLOBStatusCompleted(ctx context.Context, work pipeline.IWorkpiece) (err 
 		return fmt.Errorf("failed to exec c.sys.CUD: %w", err)
 	}
 	if cudWDocBLOBUpdateMeta.StatusCode != http.StatusOK {
-		return coreutils.NewHTTPErrorf(cudWDocBLOBUpdateMeta.StatusCode, "c.sys.CUD returned error: ", cudWDocBLOBUpdateResp.SysError.Data)
+		return coreutils.NewHTTPErrorf(cudWDocBLOBUpdateMeta.StatusCode, "c.sys.CUD returned error: ", cudWDocBLOBUpdateResp.SysError.Message)
 	}
 	return nil
 }
@@ -180,6 +201,13 @@ func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 func (b *sendWriteResult) DoSync(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
 	if bw.resultErr == nil {
+		if logger.IsVerbose() {
+			blobIDStr := fmt.Sprint(bw.newBLOBID)
+			if len(blobIDStr) == 0 {
+				blobIDStr = string(bw.newSUUID)
+			}
+			logger.Verbose("blob write success:", bw.nameQuery, ":", bw.newBLOBID)
+		}
 		writer := bw.blobMessageWrite.okResponseIniter(coreutils.ContentType, "text/plain")
 		if bw.isPersistent() {
 			_, _ = writer.Write([]byte(utils.UintToString(bw.newBLOBID)))
@@ -190,6 +218,9 @@ func (b *sendWriteResult) DoSync(_ context.Context, work pipeline.IWorkpiece) (e
 	}
 	var sysError coreutils.SysError
 	errors.As(bw.resultErr, &sysError)
+	if logger.IsVerbose() {
+		logger.Verbose("blob write error:", sysError.HTTPStatus, ":", sysError.Message)
+	}
 	bw.blobMessageWrite.errorResponder(sysError.HTTPStatus, sysError.Message)
 	return nil
 }

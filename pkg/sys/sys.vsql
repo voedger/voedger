@@ -60,7 +60,7 @@ ABSTRACT WORKSPACE Workspace (
 		OwnerQName2 text
 	) WITH Tags=(WorkspaceOwnerTableTag);
 
-	TABLE BLOB INHERITS WDoc (status int32 NOT NULL);
+	TABLE BLOB INHERITS WDoc (status int32 NOT NULL) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE Subject INHERITS sys.CDoc (
 		Login varchar NOT NULL,
@@ -451,10 +451,11 @@ ABSTRACT WORKSPACE Workspace (
 	ROLE RoleWorkspaceOwner; -- Deprecated: use WorkspaceOwner. Kept for backward compatibility only
 	ROLE WorkspaceOwner; -- assigned if user works in a workspace that is owned by his profile
 	ROLE ClusterAdmin; -- TODO: not used for now. Going to allow exec c.cluster.DeployApp to this role
+	ROLE WorkspaceAdmin;
 
 	GRANT WorkspaceOwner TO ProfileOwner;
 	GRANT WorkspaceOwner TO WorkspaceDevice;
-	GRANT WorkspaceOwner TO RoleWorkspaceOwner;
+	GRANT WorkspaceOwner TO RoleWorkspaceOwner; --backward compatibility
 	GRANT Everyone TO Anonymous;
 	GRANT Everyone TO AuthenticatedUser;
 

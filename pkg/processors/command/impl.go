@@ -150,9 +150,17 @@ func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work pipeline.IWork
 
 func getIWorkspace(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.cmdMes.QName() != workspacemgmt.QNameCommandCreateWorkspace {
-		cmd.iWorkspace = cmd.appStructs.AppDef().WorkspaceByDescriptor(cmd.wsDesc.AsQName(authnz.Field_WSKind))
+
+	switch cmd.cmdMes.QName() {
+	case workspacemgmt.QNameCommandCreateWorkspace:
+		// cmd.iWorkspace should be nil
+	default:
+		ws := cmd.wsDesc.AsQName(authnz.Field_WSKind)
+		if cmd.iWorkspace = cmd.appStructs.AppDef().WorkspaceByDescriptor(ws); cmd.iWorkspace == nil {
+			panic(fmt.Errorf("workspace %s does not exist", ws))
+		}
 	}
+
 	return nil
 }
 
@@ -375,33 +383,19 @@ func getPrincipalsRoles(_ context.Context, work pipeline.IWorkpiece) (err error)
 
 func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	// TODO: eliminate when all application will use ACL in VSQL
-	req := iauthnz.AuthzRequest{
-		OperationKind: iauthnz.OperationKind_EXECUTE,
-		Resource:      cmd.cmdMes.QName(),
+
+	ws := cmd.iWorkspace
+	if ws == nil {
+		// dummy or c.sys.CreateWorkspace
+		ws = cmd.iCommand.Workspace()
 	}
-	ok, err := cmdProc.authorizer.Authorize(cmd.appStructs, cmd.principals, req)
+
+	ok, _, err := cmd.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles)
 	if err != nil {
 		return err
 	}
 	if !ok {
-		for _, prn := range cmd.principals {
-			if prn.Name == "untillchargebeeagent" {
-				// TODO: workaround for untillchargebeeagent legacy rule: false -> do not check VSQL ACL because it is not implemented yet. Eliminate later.
-				return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
-			}
-		}
-		ok, _, err := cmd.appPart.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles)
-		if err != nil {
-			// TODO: temporary workaround. Eliminate later
-			if roleNotFound(err) {
-				return coreutils.NewHTTPErrorf(http.StatusForbidden)
-			}
-			return err
-		}
-		if !ok {
-			return coreutils.NewHTTPErrorf(http.StatusForbidden)
-		}
+		return coreutils.NewHTTPErrorf(http.StatusForbidden)
 	}
 	return nil
 }
@@ -617,7 +611,6 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		}
 		if isCreate {
 			parsedCUD.opKind = appdef.OperationKind_Insert
-			parsedCUD.opKindOld = iauthnz.OperationKind_INSERT
 			qNameStr, _, err := parsedCUD.fields.AsString(appdef.SystemField_QName)
 			if err != nil {
 				return cudXPath.Error(err)
@@ -627,7 +620,6 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 			}
 		} else {
 			parsedCUD.opKind = appdef.OperationKind_Update
-			parsedCUD.opKindOld = iauthnz.OperationKind_UPDATE
 			if parsedCUD.id, ok, err = cudData.AsInt64(appdef.SystemField_ID); err != nil {
 				return cudXPath.Error(err)
 			}
@@ -702,30 +694,21 @@ func checkIsActiveInCUDs(_ context.Context, work pipeline.IWorkpiece) (err error
 
 func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
+
+	ws := cmd.iWorkspace
+	if ws == nil {
+		// dummy or c.sys.CreateWorkspace
+		ws = cmd.iCommand.Workspace()
+	}
+
 	for _, parsedCUD := range cmd.parsedCUDs {
-		// TODO: eliminate when all application will use ACL in VSQL
-		req := iauthnz.AuthzRequest{
-			OperationKind: parsedCUD.opKindOld,
-			Resource:      parsedCUD.qName,
-			Fields:        maps.Keys(parsedCUD.fields),
-		}
-		if parsedCUD.opKind == appdef.OperationKind_Select {
-			// TODO: eliminate SELECT rule skipping after implementing ACL in VSQL in Air
-			continue
-		}
-		ok, err := cmdProc.authorizer.Authorize(cmd.appStructs, cmd.principals, req)
+		fields := maps.Keys(parsedCUD.fields)
+		ok, _, err := cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
 		if err != nil {
-			return parsedCUD.xPath.Error(err)
+			return err
 		}
 		if !ok {
-			fields := maps.Keys(parsedCUD.fields)
-			ok, _, err := cmd.appPart.IsOperationAllowed(parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
-			if err != nil {
-				return err
-			}
-			if !ok {
-				return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
-			}
+			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
 		}
 	}
 	return

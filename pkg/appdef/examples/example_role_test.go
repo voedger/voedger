@@ -96,9 +96,9 @@ func ExampleRoles() {
 	// Role «test.readerRole» :
 	// - GRANT [Select] ON QNAMES(test.doc)[field1] TO test.readerRole
 	// Role «test.writerRole» :
-	// - GRANT [Insert Update Select] ON QNAMES(test.doc) TO test.writerRole
+	// - GRANT [Insert Update Activate Deactivate Select] ON QNAMES(test.doc) TO test.writerRole
 	// Role «test.admRole» :
 	// - GRANT [Inherits] ON QNAMES(test.readerRole, test.writerRole) TO test.admRole
 	// Role «test.intruderRole» :
-	// - REVOKE [Insert Update Select] ON QNAMES(test.doc) FROM test.intruderRole
+	// - REVOKE [Insert Update Activate Deactivate Select] ON QNAMES(test.doc) FROM test.intruderRole
 }

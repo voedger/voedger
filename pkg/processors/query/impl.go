@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -96,7 +97,7 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 
 func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 	appParts appparts.IAppPartitions, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
-	authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer, itokens itokens.ITokens, federation federation.IFederation,
+	authn iauthnz.IAuthenticator, itokens itokens.ITokens, federation federation.IFederation,
 	statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) pipeline.IService {
 	return pipeline.NewService(func(ctx context.Context) {
 		var p pipeline.ISyncPipeline
@@ -115,7 +116,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 				func() { // borrowed application partition should be guaranteed to be freed
 					defer qwork.Release()
 					if p == nil {
-						p = newQueryProcessorPipeline(ctx, authn, authz, itokens, federation, statelessResources)
+						p = newQueryProcessorPipeline(ctx, authn, itokens, federation, statelessResources)
 					}
 					err := p.SendSync(qwork)
 					if err != nil {
@@ -181,7 +182,7 @@ func execQuery(ctx context.Context, qw *queryWork) (err error) {
 }
 
 // IStatelessResources need only for determine the exact result type of ANY
-func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
+func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator,
 	itokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources) pipeline.ISyncPipeline {
 	ops := []*pipeline.WiredOperator{
 		operator("borrowAppPart", borrowAppPart),
@@ -238,6 +239,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			return nil
 		}),
+
 		operator("get IWorkspace", func(ctx context.Context, qw *queryWork) (err error) {
 			if qw.wsDesc.QName() == appdef.NullQName {
 				// workspace is dummy
@@ -249,46 +251,34 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			return nil
 		}),
+
 		operator("get IQuery", func(ctx context.Context, qw *queryWork) (err error) {
-			queryType := qw.iWorkspace.Type(qw.msg.QName())
-			if queryType.Kind() == appdef.TypeKind_null {
-				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist in workspace %s", qw.msg.QName(), qw.iWorkspace.QName()))
-			}
-			ok := false
-			if qw.iQuery, ok = queryType.(appdef.IQuery); !ok {
-				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("%s is not a query", qw.msg.QName()))
+			switch qw.iWorkspace {
+			case nil:
+				// workspace is dummy
+				if qw.iQuery = appdef.Query(qw.appStructs.AppDef().Type, qw.msg.QName()); qw.iQuery == nil {
+					return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist", qw.msg.QName()))
+				}
+			default:
+				if qw.iQuery = appdef.Query(qw.iWorkspace.Type, qw.msg.QName()); qw.iQuery == nil {
+					return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist in %v", qw.msg.QName(), qw.iWorkspace))
+				}
 			}
 			return nil
 		}),
 
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
-			// TODO: eliminate when all application will use ACL in VSQL
-			req := iauthnz.AuthzRequest{
-				OperationKind: iauthnz.OperationKind_EXECUTE,
-				Resource:      qw.msg.QName(),
+			ws := qw.iWorkspace
+			if ws == nil {
+				// workspace is dummy
+				ws = qw.iQuery.Workspace()
 			}
-			ok, err := authz.Authorize(qw.appStructs, qw.principals, req)
+			ok, _, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
 			if err != nil {
 				return err
 			}
 			if !ok {
-				for _, prn := range qw.principals {
-					if prn.Name == "untillchargebeeagent" {
-						// TODO: workaround for untillchargebeeagent legacy rule: false -> do not check VSQL ACL because it is not implemented yet. Eliminate later.
-						return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
-					}
-				}
-				ok, _, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
-				if err != nil {
-					// TODO: temporary workaround. Eliminate later
-					if roleNotFound(err) {
-						return coreutils.WrapSysError(err, http.StatusForbidden)
-					}
-					return err
-				}
-				if !ok {
-					return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
-				}
+				return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
 			}
 			return nil
 		}),
@@ -371,9 +361,15 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				}
 			}
 			qNameResultType := iQueryFunc.ResultType(qw.execQueryArgs.PrepareArgs)
-			qw.resultType = qw.iWorkspace.Type(qNameResultType)
+
+			ws := qw.iWorkspace
+			if ws == nil {
+				// workspace is dummy
+				ws = qw.iQuery.Workspace()
+			}
+			qw.resultType = ws.Type(qNameResultType)
 			if qw.resultType.Kind() == appdef.TypeKind_null {
-				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%s query result type %s does not exist in workspace %s", qw.iQuery.QName(), qNameResultType, qw.iWorkspace.QName()))
+				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%s query result type %s does not exist in %v", qw.iQuery.QName(), qNameResultType, ws))
 			}
 			return nil
 		}),
@@ -387,62 +383,42 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				// otherwise each field is considered as allowed if EXECUTE ON QUERY is allowed
 				return nil
 			}
-			// TODO: eliminate SELECT rule skipping after implementing ACL in VSQL in Air
-			// for _, elem := range qw.queryParams.Elements() {
-			// 	nestedPath := elem.Path().AsArray()
-			// 	nestedType := qw.resultType
-			// 	for _, nestedName := range nestedPath {
-			// 		if len(nestedName) == 0 {
-			// 			// root
-			// 			continue
-			// 		}
-			// 		// incorrectness is excluded already on validation stage in [queryParams.validate]
-			// 		containersOfNested := nestedType.(appdef.IContainers)
-			// 		// container presence is checked already on validation stage in [queryParams.validate]
-			// 		nestedContainer := containersOfNested.Container(nestedName)
-			// 		nestedType = nestedContainer.Type()
-			// 	}
-			// 	requestedfields := []string{}
-			// 	for _, resultField := range elem.ResultFields() {
-			// 		requestedfields = append(requestedfields, resultField.Field())
-			// 	}
-
-			// 	// TODO: eliminate when all application will use ACL in VSQL
-			// 	req := iauthnz.AuthzRequest{
-			// 		OperationKind: iauthnz.OperationKind_SELECT,
-			// 		Resource:      nestedType.QName(),
-			// 	}
-			// 	for _, elem := range qw.queryParams.Elements() {
-			// 		for _, resultField := range elem.ResultFields() {
-			// 			req.Fields = append(req.Fields, resultField.Field())
-			// 		}
-			// 	}
-			// 	if len(req.Fields) == 0 {
-			// 		return nil
-			// 	}
-			// 	ok, err := authz.Authorize(qw.appStructs, qw.principals, req)
-			// 	if err != nil {
-			// 		return err
-			// 	}
-			// 	if !ok {
-			// 		ok, allowedFields, err := qw.appPart.IsOperationAllowed(appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
-			// 		if err != nil {
-			// 			// TODO: temporary workaround. Eliminate later
-			// 			if roleNotFound(err) {
-			// 				return coreutils.WrapSysError(err, http.StatusForbidden)
-			// 			}
-			// 			return err
-			// 		}
-			// 		if !ok {
-			// 			return coreutils.NewSysError(http.StatusForbidden)
-			// 		}
-			// 		for _, requestedField := range requestedfields {
-			// 			if !slices.Contains(allowedFields, requestedField) {
-			// 				return coreutils.NewSysError(http.StatusForbidden)
-			// 			}
-			// 		}
-			// 	}
-			// }
+			ws := qw.iWorkspace
+			if ws == nil {
+				// workspace is dummy
+				ws = qw.iQuery.Workspace()
+			}
+			for _, elem := range qw.queryParams.Elements() {
+				nestedPath := elem.Path().AsArray()
+				nestedType := qw.resultType
+				for _, nestedName := range nestedPath {
+					if len(nestedName) == 0 {
+						// root
+						continue
+					}
+					// incorrectness is excluded already on validation stage in [queryParams.validate]
+					containersOfNested := nestedType.(appdef.IWithContainers)
+					// container presence is checked already on validation stage in [queryParams.validate]
+					nestedContainer := containersOfNested.Container(nestedName)
+					nestedType = nestedContainer.Type()
+				}
+				requestedfields := []string{}
+				for _, resultField := range elem.ResultFields() {
+					requestedfields = append(requestedfields, resultField.Field())
+				}
+				ok, allowedFields, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
+				if err != nil {
+					return err
+				}
+				if !ok {
+					return coreutils.NewSysError(http.StatusForbidden)
+				}
+				for _, requestedField := range requestedfields {
+					if !slices.Contains(allowedFields, requestedField) {
+						return coreutils.NewSysError(http.StatusForbidden)
+					}
+				}
+			}
 			return nil
 		}),
 

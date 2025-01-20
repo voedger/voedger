@@ -492,14 +492,13 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 	serviceChannel := make(iprocbus.ServiceChannel)
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
-	authz := iauthnzimpl.NewDefaultAuthorizer()
 	tokens := itokensjwt.TestTokensJWT()
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(
 		serviceChannel,
 		appParts,
 		maxPrepareQueries,
-		imetrics.Provide(), "vvm", authn, authz, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
+		imetrics.Provide(), "vvm", authn, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
@@ -610,11 +609,10 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 	serviceChannel := make(iprocbus.ServiceChannel)
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
-	authz := iauthnzimpl.NewDefaultAuthorizer()
 	tokens := itokensjwt.TestTokensJWT()
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, appParts, maxPrepareQueries, imetrics.Provide(),
-		"vvm", authn, authz, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
+		"vvm", authn, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
 
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
@@ -729,11 +727,10 @@ func TestBasicUsage_State(t *testing.T) {
 	serviceChannel := make(iprocbus.ServiceChannel)
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
-	authz := iauthnzimpl.NewDefaultAuthorizer()
 	tokens := itokensjwt.TestTokensJWT()
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, appParts, maxPrepareQueries, imetrics.Provide(),
-		"vvm", authn, authz, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
+		"vvm", authn, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
 
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
@@ -898,11 +895,10 @@ func TestState_withAfterArgument(t *testing.T) {
 	serviceChannel := make(iprocbus.ServiceChannel)
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
-	authz := iauthnzimpl.NewDefaultAuthorizer()
 	tokens := itokensjwt.TestTokensJWT()
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, appParts, maxPrepareQueries, imetrics.Provide(),
-		"vvm", authn, authz, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
+		"vvm", authn, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
 
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)

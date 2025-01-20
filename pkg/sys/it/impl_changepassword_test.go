@@ -73,6 +73,3 @@ func TestChangePasswordErrors(t *testing.T) {
 	})
 }
 
-func TestTimers(t *testing.T) {
-
-}
