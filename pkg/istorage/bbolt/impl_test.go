@@ -7,8 +7,10 @@
 package bbolt
 
 import (
+	"context"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -22,7 +24,7 @@ func TestBasicUsage(t *testing.T) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
 
-	factory := Provide(params, coreutils.MockTime)
+	factory := Provide(context.Background(), params, coreutils.MockTime)
 	istorage.TechnologyCompatibilityKit(t, factory)
 }
 
@@ -33,7 +35,7 @@ func Test_MyTestBasicUsage(t *testing.T) {
 	defer cleanupTestData(params)
 
 	// creating a StorageProvider
-	factory := Provide(params, coreutils.MockTime)
+	factory := Provide(context.Background(), params, coreutils.MockTime)
 	storageProvider := istorageimpl.Provide(factory)
 
 	// get the required AppStorage for the app
@@ -74,7 +76,7 @@ func Test_PutGet(t *testing.T) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
 
-	factory := Provide(params, coreutils.MockTime)
+	factory := Provide(context.Background(), params, coreutils.MockTime)
 	storageProvider := istorageimpl.Provide(factory)
 
 	appStorage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)
@@ -97,4 +99,39 @@ func Test_PutGet(t *testing.T) {
 	require.NoError(err)
 	require.True(ok)
 	require.Equal("Molchanovsky Dmitry Anatolyevich", string(value))
+}
+
+func TestBackgroundCleaner(t *testing.T) {
+	params := prepareTestData()
+	defer cleanupTestData(params)
+
+	r := require.New(t)
+	iTime := coreutils.MockTime
+	factory := Provide(context.Background(), params, iTime)
+	storageProvider := istorageimpl.Provide(factory)
+
+	// get the required AppStorage for the app
+	storage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)
+	r.NoError(err)
+
+	// cleanup interval is 1 hour
+	// this value expires in 1 hour
+	ok, err := storage.InsertIfNotExists([]byte("pKey"), []byte("cCols1"), []byte("value1"), 50*60)
+	r.True(ok)
+	r.NoError(err)
+	// this value does NOT expire in 1 hour
+	ok, err = storage.InsertIfNotExists([]byte("pKey"), []byte("cCols2"), []byte("value2"), 61*60)
+	r.True(ok)
+	r.NoError(err)
+
+	iTime.Sleep(time.Hour)
+
+	value := make([]byte, 0)
+	ok, err = storage.TTLGet([]byte("pKey"), []byte("cCols2"), &value)
+	r.NoError(err)
+	r.True(ok)
+
+	ok, err = storage.TTLGet([]byte("pKey"), []byte("cCols1"), &value)
+	r.NoError(err)
+	r.False(ok)
 }

@@ -5,7 +5,10 @@
 
 package bbolt
 
+import "time"
+
 const (
-	ttlBucketName  = "ttlBucket"
-	dataBucketName = "dataBucket"
+	ttlBucketName   = "ttlBucket"
+	dataBucketName  = "dataBucket"
+	cleanupInterval = time.Hour
 )

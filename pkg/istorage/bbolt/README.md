@@ -1,3 +1,5 @@
+// TODO: describe structure of the key in the TTL Index Bucket 
+
 ```mermaid
 flowchart LR
     subgraph IAppStorage
@@ -21,8 +23,8 @@ flowchart LR
     E["Periodic Job:<br>cleanupExpired()"]
     end
 
-    E --> D
-    E --> C
+    E -->|Delete| D
+    E -->|Delete| C
 
     click A "#iappstorage-interface" "IAppStorage interface methods"
     click C "#data-bucket" "Data Bucket for storing key/value"

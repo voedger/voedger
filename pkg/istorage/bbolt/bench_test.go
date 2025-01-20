@@ -6,6 +6,7 @@
 package bbolt
 
 import (
+	"context"
 	"encoding/binary"
 	"math/rand"
 	"testing"
@@ -24,7 +25,7 @@ func Benchmark_Put_One_SameBucket_ST(b *testing.B) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
 
-	factory := Provide(params, coreutils.MockTime)
+	factory := Provide(context.Background(), params, coreutils.MockTime)
 	storageProvider := istorageimpl.Provide(factory)
 
 	appStorage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)
@@ -50,7 +51,7 @@ func Benchmark_Put_50_DifferentBuckets_ST(b *testing.B) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
 
-	factory := Provide(params, coreutils.MockTime)
+	factory := Provide(context.Background(), params, coreutils.MockTime)
 	storageProvider := istorageimpl.Provide(factory)
 
 	appStorage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)
@@ -80,7 +81,7 @@ func Benchmark_Put_One_DifferentBuckets_ST(b *testing.B) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
 
-	factory := Provide(params, coreutils.MockTime)
+	factory := Provide(context.Background(), params, coreutils.MockTime)
 	storageProvider := istorageimpl.Provide(factory)
 
 	appStorage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)
@@ -106,7 +107,7 @@ func Benchmark_Put_One_SameBucket_Parallel(b *testing.B) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
 
-	factory := Provide(params, coreutils.MockTime)
+	factory := Provide(context.Background(), params, coreutils.MockTime)
 	storageProvider := istorageimpl.Provide(factory)
 
 	appStorage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)
