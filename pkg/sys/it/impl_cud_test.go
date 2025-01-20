@@ -559,3 +559,18 @@ func TestSelectFromNestedTables(t *testing.T) {
 		})
 	})
 }
+
+func TestFieldsAuthorization(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	t.Run("activate forbidden", func(t *testing.T) {
+		body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.DocActivateDenied"}}]}`
+		id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+		body = fmt.Sprintf(`{"cuds": [{"sys.ID":%d,"fields": {"sys.IsActive":true}}]}`, id)
+		vit.PostWS(ws, "c.sys.CUD", body).NewID()
+	})
+}

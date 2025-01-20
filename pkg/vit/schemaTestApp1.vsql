@@ -552,6 +552,22 @@ ALTERABLE WORKSPACE test_wsWS (
 		DeniedFld2 int32 -- denied field, no grants
 	);
 
+	TABLE DocActivateDenied INHERITS sys.CDoc (
+		Fld1 int32
+	);
+
+	TABLE DocDeactivateDenied INHERITS sys.CDoc (
+		Fld1 int32
+	);
+
+	TABLE DocFieldInsertDenied INHERITS sys.CDoc (
+		Fld1 int32
+	);
+
+	TABLE DocFieldUpdateDenied INHERITS sys.CDoc (
+		Fld1 int32
+	);
+
 	TABLE Root INHERITS sys.CDoc (
 		FldRoot int32,
 		Nested TABLE Nested (
@@ -606,4 +622,13 @@ ALTERABLE WORKSPACE test_wsWS (
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG WorkspaceOwnerFuncTag TO sys.WorkspaceOwner;
 
 	GRANT SELECT(Fld1) ON TABLE TestCDocWithDeniedFields TO sys.WorkspaceOwner;
+
+	GRANT SELECT, INSERT, UPDATE ON TABLE DocActivateDenied TO sys.WorkspaceOwner;
+	GRANT SELECT, INSERT, UPDATE ON TABLE DocDeactivateDenied TO sys.WorkspaceOwner;
+	GRANT SELECT, INSERT, UPDATE ON TABLE DocFieldInsertDenied TO sys.WorkspaceOwner;
+	GRANT SELECT, INSERT, UPDATE ON TABLE DocFieldUpdateDenied TO sys.WorkspaceOwner;
+	REVOKE ACTIVATE ON TABLE DocActivateDenied FROM sys.WorkspaceOwner;
+	REVOKE DEACTIVATE ON TABLE DocDeactivateDenied FROM sys.WorkspaceOwner;
+	REVOKE INSERT(Fld1) ON TABLE DocFieldInsertDenied FROM sys.WorkspaceOwner;
+	REVOKE UPDATE(Fld1) ON TABLE DocFieldUpdateDenied FROM sys.WorkspaceOwner;
 );
