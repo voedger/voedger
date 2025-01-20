@@ -7,7 +7,6 @@ package acl_test
 
 import (
 	"fmt"
-	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -150,11 +149,11 @@ func Test_GrantAndRevoke(t *testing.T) {
 			}
 
 			cnt := 0
-			for r := range tested.ACL() {
+			for _, r := range tested.ACL() {
 				require.Less(cnt, len(want))
 				t.Run(fmt.Sprintf("ACL[%d]", cnt), func(t *testing.T) {
 					require.Equal(want[cnt].policy, r.Policy())
-					require.Equal(want[cnt].ops, slices.Collect(r.Ops()))
+					require.Equal(want[cnt].ops, r.Ops())
 					for _, o := range want[cnt].ops {
 						require.True(r.Op(o))
 					}
@@ -165,7 +164,7 @@ func Test_GrantAndRevoke(t *testing.T) {
 					}
 					require.EqualValues(want[cnt].flt, flt)
 
-					require.Equal(want[cnt].fields, slices.Collect(r.Filter().Fields()))
+					require.Equal(want[cnt].fields, r.Filter().Fields())
 					require.Equal(want[cnt].principal, r.Principal().QName())
 				})
 				cnt++
@@ -425,11 +424,11 @@ func Test_ACLWithFields(t *testing.T) {
 			}
 
 			cnt := 0
-			for r := range tested.ACL() {
+			for _, r := range tested.ACL() {
 				require.Less(cnt, len(want))
 				t.Run(fmt.Sprintf("ACL[%d]", cnt), func(t *testing.T) {
 					require.Equal(want[cnt].policy, r.Policy())
-					require.Equal(want[cnt].ops, slices.Collect(r.Ops()))
+					require.Equal(want[cnt].ops, r.Ops())
 					for _, o := range want[cnt].ops {
 						require.True(r.Op(o))
 					}
@@ -440,7 +439,7 @@ func Test_ACLWithFields(t *testing.T) {
 					}
 					require.EqualValues(want[cnt].flt, flt)
 
-					require.Equal(want[cnt].fields, slices.Collect(r.Filter().Fields()))
+					require.Equal(want[cnt].fields, r.Filter().Fields())
 
 					require.Equal(want[cnt].principal, r.Principal().QName())
 

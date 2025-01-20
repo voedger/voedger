@@ -8,8 +8,6 @@ package acl
 import (
 	"errors"
 	"fmt"
-	"iter"
-	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/comments"
@@ -27,7 +25,7 @@ func newFilter(flt appdef.IFilter, fields []appdef.FieldName) *filter {
 	return &filter{flt, fields}
 }
 
-func (f filter) Fields() iter.Seq[appdef.FieldName] { return slices.Values(f.fields) }
+func (f filter) Fields() []appdef.FieldName { return f.fields }
 
 func (f filter) HasFields() bool { return len(f.fields) > 0 }
 
@@ -42,7 +40,8 @@ func (f filter) String() string {
 //   - appdef.IACLRule
 type Rule struct {
 	comments.WithComments
-	ops       set.Set[appdef.OperationKind]
+	ops       []appdef.OperationKind
+	opSet     set.Set[appdef.OperationKind]
 	policy    appdef.PolicyKind
 	flt       *filter
 	principal appdef.IRole
@@ -74,7 +73,8 @@ func NewRule(ws appdef.IWorkspace, ops []appdef.OperationKind, policy appdef.Pol
 	r := &Rule{
 		WithComments: comments.MakeWithComments(comment...),
 		policy:       policy,
-		ops:          opSet,
+		ops:          opSet.AsArray(),
+		opSet:        opSet,
 		flt:          newFilter(flt, fields),
 		principal:    principal,
 		ws:           ws,
@@ -131,9 +131,9 @@ func NewRevokeAll(ws appdef.IWorkspace, flt appdef.IFilter, principal appdef.IRo
 
 func (r Rule) Filter() appdef.IACLFilter { return r.flt }
 
-func (r Rule) Op(op appdef.OperationKind) bool { return r.ops.Contains(op) }
+func (r Rule) Op(op appdef.OperationKind) bool { return r.opSet.Contains(op) }
 
-func (r Rule) Ops() iter.Seq[appdef.OperationKind] { return r.ops.Values() }
+func (r Rule) Ops() []appdef.OperationKind { return r.ops }
 
 func (r Rule) Policy() appdef.PolicyKind { return r.policy }
 
@@ -142,7 +142,7 @@ func (r Rule) Principal() appdef.IRole { return r.principal }
 func (r Rule) String() string {
 	// GRANT [Select] ON QNAMES(test.doc) TO test.reader
 	// REVOKE [INSERT UPDATE SELECT] QNAMES(test.doc)([field1]) FROM test.writer
-	s := fmt.Sprintf("%s %s ON %s", r.Policy().ActionString(), r.ops, r.Filter())
+	s := fmt.Sprintf("%s %s ON %s", r.Policy().ActionString(), r.opSet, r.Filter())
 	switch r.policy {
 	case appdef.PolicyKind_Deny:
 		s += " FROM "
@@ -185,14 +185,14 @@ func (r Rule) validateOnType(t appdef.IType) error {
 	if allOps.Len() == 0 {
 		return appdef.ErrACLUnsupportedType(t)
 	}
-	for op := range r.Ops() {
+	for _, op := range r.Ops() {
 		if !allOps.Contains(op) {
 			return appdef.ErrIncompatible("operation %v and %v", op.TrimString(), t)
 		}
 	}
 	if r.Filter().HasFields() {
 		if fields, ok := t.(appdef.IWithFields); ok {
-			for f := range r.Filter().Fields() {
+			for _, f := range r.Filter().Fields() {
 				if fields.Field(f) == nil {
 					return appdef.ErrNotFound("field «%v» in %v", f, t)
 				}

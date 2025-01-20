@@ -151,10 +151,10 @@ func TestRoles(t *testing.T) {
 				require.Equal(tt[rolesCount].name, r.QName())
 				wantACL := tt[rolesCount].wantACL
 				aclCount := 0
-				for acl := range r.ACL() {
+				for _, acl := range r.ACL() {
 					t.Run(fmt.Sprintf("%v.ACL[%d]", r, aclCount), func(t *testing.T) {
 						require.Equal(wantACL[aclCount].policy, acl.Policy())
-						require.Equal(wantACL[aclCount].ops, slices.Collect(acl.Ops()))
+						require.Equal(wantACL[aclCount].ops, acl.Ops())
 						for _, o := range wantACL[aclCount].ops {
 							require.True(acl.Op(o))
 						}
@@ -165,7 +165,7 @@ func TestRoles(t *testing.T) {
 						}
 						require.EqualValues(wantACL[aclCount].flt, flt)
 
-						require.Equal(wantACL[aclCount].fld, slices.Collect(acl.Filter().Fields()))
+						require.Equal(wantACL[aclCount].fld, acl.Filter().Fields())
 						require.Equal(wantACL[aclCount].to, acl.Principal().QName())
 					})
 					aclCount++

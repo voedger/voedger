@@ -6,9 +6,6 @@
 package acl
 
 import (
-	"iter"
-	"slices"
-
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -22,6 +19,6 @@ func MakeWithACL() WithACL {
 	return WithACL{acl: make([]appdef.IACLRule, 0)}
 }
 
-func (acl WithACL) ACL() iter.Seq[appdef.IACLRule] { return slices.Values(acl.acl) }
+func (acl WithACL) ACL() []appdef.IACLRule { return acl.acl }
 
 func (acl *WithACL) AppendACL(r appdef.IACLRule) { acl.acl = append(acl.acl, r) }

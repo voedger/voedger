@@ -98,7 +98,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 					acl(anc)
 				}
 
-				for rule := range ws.ACL() {
+				for _, rule := range ws.ACL() {
 					if rule.Op(op) {
 						if rule.Filter().Match(t) {
 							if roles.Contains(rule.Principal().QName()) {
@@ -108,7 +108,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 									if str != nil {
 										if rule.Filter().HasFields() {
 											// allow for specified fields only
-											for f := range rule.Filter().Fields() {
+											for _, f := range rule.Filter().Fields() {
 												allowedFields[f] = true
 											}
 										} else {
@@ -122,7 +122,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 									if str != nil {
 										if rule.Filter().HasFields() {
 											// partially deny, only specified fields
-											for f := range rule.Filter().Fields() {
+											for _, f := range rule.Filter().Fields() {
 												delete(allowedFields, f)
 											}
 											result = len(allowedFields) > 0

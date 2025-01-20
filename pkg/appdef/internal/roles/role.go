@@ -33,7 +33,7 @@ func NewRole(ws appdef.IWorkspace, name appdef.QName) *Role {
 
 func (r Role) Ancestors() iter.Seq[appdef.QName] {
 	roles := appdef.QNames{}
-	for rule := range r.WithACL.ACL() {
+	for _, rule := range r.WithACL.ACL() {
 		if rule.Op(appdef.OperationKind_Inherits) {
 			switch rule.Filter().Kind() {
 			case appdef.FilterKind_QNames:
@@ -72,7 +72,7 @@ func (r *Role) revokeAll(flt appdef.IFilter, comment ...string) {
 // # Error if:
 //   - ACL rule is not valid
 func (r Role) Validate() (err error) {
-	for acl := range r.ACL() {
+	for _, acl := range r.ACL() {
 		if acl, ok := acl.(interface{ Validate() error }); ok {
 			err = errors.Join(err, acl.Validate())
 		}

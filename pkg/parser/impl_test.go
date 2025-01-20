@@ -2312,8 +2312,8 @@ func Test_Grants(t *testing.T) {
 		var numACLs int
 
 		// table
-		for acl := range app.ACL() {
-			require.Equal([]appdef.OperationKind{appdef.OperationKind_Inherits}, slices.Collect(acl.Ops()))
+		for _, acl := range app.ACL() {
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Inherits}, acl.Ops())
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 
 			require.Equal(appdef.FilterKind_QNames, acl.Filter().Kind())
@@ -2347,8 +2347,8 @@ func Test_Grants(t *testing.T) {
 		var numACLs int
 
 		// table
-		for acl := range app.ACL() {
-			require.Equal([]appdef.OperationKind{appdef.OperationKind_Select}, slices.Collect(acl.Ops()))
+		for _, acl := range app.ACL() {
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Select}, acl.Ops())
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 
 			require.Equal(appdef.FilterKind_QNames, acl.Filter().Kind())
@@ -2388,8 +2388,8 @@ func Test_Grants_Inherit(t *testing.T) {
 		var numACLs int
 
 		// table
-		for acl := range app.ACL() {
-			require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate}, slices.Collect(acl.Ops()))
+		for _, acl := range app.ACL() {
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate}, acl.Ops())
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 
 			require.Equal(appdef.FilterKind_Types, acl.Filter().Kind())
