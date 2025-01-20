@@ -117,12 +117,12 @@ func TestBackgroundCleaner(t *testing.T) {
 	// cleanup interval is 1 hour
 	// this value expires in 1 hour
 	ok, err := storage.InsertIfNotExists([]byte("pKey"), []byte("cCols1"), []byte("value1"), 50*60)
-	r.True(ok)
 	r.NoError(err)
+	r.True(ok)
 	// this value does NOT expire in 1 hour
 	ok, err = storage.InsertIfNotExists([]byte("pKey"), []byte("cCols2"), []byte("value2"), 61*60)
-	r.True(ok)
 	r.NoError(err)
+	r.True(ok)
 
 	iTime.Sleep(time.Hour)
 
