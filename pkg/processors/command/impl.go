@@ -619,7 +619,6 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 				return cudXPath.Error(err)
 			}
 		} else {
-			parsedCUD.opKind = appdef.OperationKind_Update
 			if parsedCUD.id, ok, err = cudData.AsInt64(appdef.SystemField_ID); err != nil {
 				return cudXPath.Error(err)
 			}
@@ -631,6 +630,21 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 			}
 			if parsedCUD.qName = parsedCUD.existingRecord.QName(); parsedCUD.qName == appdef.NullQName {
 				return coreutils.NewHTTPError(http.StatusNotFound, cudXPath.Errorf("record with queried id %d does not exist", parsedCUD.id))
+			}
+			// check for activate\deactivate
+			providedIsActiveVal, isActiveModifying, err := parsedCUD.fields.AsBoolean(appdef.SystemField_IsActive)
+			if err != nil {
+				return err
+			}
+			// sys.IsActive is modifying -> other fields are not allowed, see [checkIsActiveInCUDs]
+			if isActiveModifying {
+				if providedIsActiveVal && !parsedCUD.existingRecord.AsBool(appdef.SystemField_IsActive) {
+					parsedCUD.opKind = appdef.OperationKind_Activate
+				} else if !providedIsActiveVal && parsedCUD.existingRecord.AsBool(appdef.SystemField_IsActive) {
+					parsedCUD.opKind = appdef.OperationKind_Deactivate
+				}
+			} else {
+				parsedCUD.opKind = appdef.OperationKind_Update
 			}
 		}
 		opStr := "UPDATE"
@@ -700,7 +714,6 @@ func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work pipeline.IWorkpiec
 		// dummy or c.sys.CreateWorkspace
 		ws = cmd.iCommand.Workspace()
 	}
-
 	for _, parsedCUD := range cmd.parsedCUDs {
 		fields := maps.Keys(parsedCUD.fields)
 		ok, _, err := cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
