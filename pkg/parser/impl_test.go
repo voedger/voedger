@@ -9,7 +9,6 @@ import (
 	"embed"
 	"fmt"
 	"maps"
-	"slices"
 	"strings"
 	"testing"
 
@@ -228,15 +227,16 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal([]appdef.QName{appdef.NewQName("main", "NewOrder"), appdef.NewQName("main", "NewOrder2")}, pe[0].Filter().QNames())
 
 	stateCount := 0
-	for n, s := range proj.States().All() {
+	for _, n := range proj.States().Names() {
 		stateCount++
+		s := proj.States().Storage(n)
 		switch stateCount {
 		case 1:
 			require.Equal(appdef.NewQName("sys", "AppSecret"), n)
-			require.Empty(slices.Collect(s.Names()))
+			require.Empty(s.Names())
 		case 2:
 			require.Equal(appdef.NewQName("sys", "Http"), n)
-			require.Empty(slices.Collect(s.Names()))
+			require.Empty(s.Names())
 		default:
 			require.Fail("unexpected state", "state: %v", s)
 		}
@@ -244,12 +244,13 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(2, stateCount)
 
 	intentsCount := 0
-	for n, i := range proj.Intents().All() {
+	for _, n := range proj.Intents().Names() {
 		intentsCount++
+		i := proj.Intents().Storage(n)
 		switch intentsCount {
 		case 1:
 			require.Equal(appdef.NewQName("sys", "View"), n)
-			names := appdef.CollectQNames(i.Names())
+			names := appdef.QNamesFrom(i.Names()...)
 			require.Equal(
 				appdef.MustParseQNames(
 					"main.ActiveTablePlansView",
@@ -268,15 +269,16 @@ func Test_BasicUsage(t *testing.T) {
 		require.EqualValues(`1 0 * * *`, job1.CronSchedule())
 		t.Run("Job states", func(t *testing.T) {
 			stateCount := 0
-			for n, s := range proj.States().All() {
+			for _, n := range proj.States().Names() {
+				s := proj.States().Storage(n)
 				stateCount++
 				switch stateCount {
 				case 1:
 					require.Equal(appdef.NewQName("sys", "AppSecret"), n)
-					require.Empty(slices.Collect(s.Names()))
+					require.Empty(s.Names())
 				case 2:
 					require.Equal(appdef.NewQName("sys", "Http"), n)
-					require.Empty(slices.Collect(s.Names()))
+					require.Empty(s.Names())
 				default:
 					require.Fail("unexpected state", "state: %v", s)
 				}
@@ -289,13 +291,13 @@ func Test_BasicUsage(t *testing.T) {
 	})
 
 	cmd = appdef.Command(app.Type, appdef.NewQName("main", "NewOrder2"))
-	require.Len(maps.Collect(cmd.States().All()), 1)
+	require.Len(cmd.States().Names(), 1)
 	require.NotNil(cmd.States().Storage(appdef.NewQName("sys", "AppSecret")))
 
-	require.Len(maps.Collect(cmd.Intents().All()), 1)
+	require.Len(cmd.Intents().Names(), 1)
 	intent := cmd.Intents().Storage(appdef.NewQName("sys", "Record"))
 	require.NotNil(intent)
-	names := appdef.CollectQNames(intent.Names())
+	names := appdef.QNamesFrom(intent.Names()...)
 	require.True(names.Contains(appdef.NewQName("main", "Transaction")))
 
 	localNames := app.PackageLocalNames()

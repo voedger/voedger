@@ -49,8 +49,9 @@ func (e *Extension) read(ex appdef.IExtension) {
 
 func (e Extension) readStorages(storages appdef.IStorages) map[appdef.QName]appdef.QNames {
 	s := make(map[appdef.QName]appdef.QNames)
-	for n, storage := range storages.All() {
-		s[n] = appdef.CollectQNames(storage.Names())
+	for _, n := range storages.Names() {
+		st := storages.Storage(n)
+		s[n] = appdef.QNamesFrom(st.Names()...)
 	}
 	return s
 }
