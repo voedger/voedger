@@ -7,7 +7,6 @@ package workspaces
 
 import (
 	"errors"
-	"iter"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -26,7 +25,7 @@ func MakeWithWorkspaces() WithWorkspaces {
 func (ww *WithWorkspaces) AppendWorkspace(ws appdef.IWorkspace) { ww.list.Add(ws) }
 
 func (ww *WithWorkspaces) Build() (err error) {
-	for ws := range ww.Workspaces() {
+	for _, ws := range ww.Workspaces() {
 		err = errors.Join(err,
 			ws.(*Workspace).build())
 	}
@@ -35,7 +34,7 @@ func (ww *WithWorkspaces) Build() (err error) {
 
 // Should be called after successfully built.
 func (ww *WithWorkspaces) Builded() {
-	for ws := range ww.Workspaces() {
+	for _, ws := range ww.Workspaces() {
 		ws.(*Workspace).builded()
 	}
 	ww.changed = false
@@ -44,7 +43,7 @@ func (ww *WithWorkspaces) Builded() {
 func (ww *WithWorkspaces) Changed() {
 	if !ww.changed {
 		ww.changed = true
-		for ws := range ww.Workspaces() {
+		for _, ws := range ww.Workspaces() {
 			ws.(*Workspace).changed()
 		}
 	}
@@ -59,7 +58,7 @@ func (ww WithWorkspaces) Workspace(name appdef.QName) appdef.IWorkspace {
 }
 
 func (ww WithWorkspaces) WorkspaceByDescriptor(desc appdef.QName) appdef.IWorkspace {
-	for ws := range ww.Workspaces() {
+	for _, ws := range ww.Workspaces() {
 		if ws.Descriptor() == desc {
 			return ws
 		}
@@ -67,7 +66,7 @@ func (ww WithWorkspaces) WorkspaceByDescriptor(desc appdef.QName) appdef.IWorksp
 	return nil
 }
 
-func (ww WithWorkspaces) Workspaces() iter.Seq[appdef.IWorkspace] { return ww.list.Values() }
+func (ww WithWorkspaces) Workspaces() []appdef.IWorkspace { return ww.list.AsArray() }
 
 // # Supports:
 //   - appdef.IWorkspacesBuilder

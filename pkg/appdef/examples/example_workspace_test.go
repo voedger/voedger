@@ -47,10 +47,8 @@ func ExampleIWorkspace() {
 	// how to enum workspaces
 	{
 		fmt.Println("App workspaces:")
-		cnt := 0
-		for ws := range app.Workspaces() {
-			cnt++
-			fmt.Println("-", cnt, ":", ws)
+		for i, ws := range app.Workspaces() {
+			fmt.Println("-", i+1, ":", ws)
 		}
 	}
 

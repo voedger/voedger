@@ -56,9 +56,7 @@ func Test_Workspaces(t *testing.T) {
 	})
 
 	t.Run("should be ok to enum workspaces", func(t *testing.T) {
-		cnt := 0
-		for ws := range app.Workspaces() {
-			cnt++
+		for _, ws := range app.Workspaces() {
 			switch ws.QName() {
 			case appdef.SysWorkspaceQName:
 			case wsName:
@@ -67,7 +65,7 @@ func Test_Workspaces(t *testing.T) {
 				require.Fail("unexpected workspace", "unexpected workspace «%v»", ws.QName())
 			}
 		}
-		require.Equal(1+1+1, cnt) // system ws + test ws + parent ws
+		require.Len(app.Workspaces(), 1+1+1) // system ws + test ws + parent ws
 	})
 
 	t.Run("should be ok to find workspace", func(t *testing.T) {
@@ -626,24 +624,6 @@ func Test_WorkspaceUsage(t *testing.T) {
 						require.NotContains(wsTypes, obj, "(%v).Types() should not contain %v", ws, obj)
 					}
 				}
-			})
-			t.Run("should be breakable types enumeration", func(t *testing.T) {
-				ws := app.Workspace(wsName(0))
-
-				breakAt := func(n appdef.QName) {
-					var stop appdef.IType
-					for _, t := range ws.Types() {
-						if t.QName() == n {
-							stop = t
-							break
-						}
-					}
-					require.NotNil(stop)
-				}
-
-				t.Run("from ancestor", func(t *testing.T) { breakAt(appdef.SysData_int32) })
-				t.Run("from local", func(t *testing.T) { breakAt(objName(0)) })
-				t.Run("from used", func(t *testing.T) { breakAt(wsName(1)) })
 			})
 		}
 	})

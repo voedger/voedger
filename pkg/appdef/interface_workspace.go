@@ -5,8 +5,6 @@
 
 package appdef
 
-import "iter"
-
 // Workspace is a set of types.
 type IWorkspace interface {
 	IType
@@ -51,7 +49,7 @@ type IWorkspace interface {
 	// If not found then empty type with TypeKind_null is returned
 	Type(QName) IType
 
-	// Returns all types, include types from all ancestors recursively.
+	// Returns all types, include types from all ancestors recursively, in alphabetical order.
 	//
 	// If the workspace uses other workspaces, these used workspaces (but not the types from them) also returned.
 	Types() []IType
@@ -137,7 +135,7 @@ type IWithWorkspaces interface {
 	// Enumerates all application workspaces.
 	//
 	// Workspaces are enumerated in alphabetical order by QName
-	Workspaces() iter.Seq[IWorkspace]
+	Workspaces() []IWorkspace
 }
 
 type IWorkspacesBuilder interface {
