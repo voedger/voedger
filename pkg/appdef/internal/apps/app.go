@@ -43,7 +43,7 @@ func NewAppDef() *AppDef {
 }
 
 func (app *AppDef) build() (err error) {
-	for t := range app.Types() {
+	for _, t := range app.Types() {
 		err = errors.Join(err, app.validateType(t))
 	}
 	return err

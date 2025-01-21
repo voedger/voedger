@@ -152,7 +152,7 @@ func (e ProjectorEvent) Ops() []appdef.OperationKind { return e.ops }
 // Validates projector event.
 func (e ProjectorEvent) Validate(prj appdef.IProjector) (err error) {
 	cnt := 0
-	for t := range prj.Workspace().Types() {
+	for _, t := range prj.Workspace().Types() {
 		if appdef.TypeKind_ProjectorTriggers.Contains(t.Kind()) {
 			if e.flt.Match(t) {
 				cnt++

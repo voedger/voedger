@@ -113,7 +113,7 @@ func NewLimit(ws appdef.IWorkspace, name appdef.QName, ops []appdef.OperationKin
 	if l.rate == nil {
 		panic(appdef.ErrNotFound("rate «%v»", rate))
 	}
-	for t := range appdef.FilterMatches(l.Filter(), ws.Types()) {
+	for _, t := range appdef.FilterMatches(l.Filter(), ws.Types()) {
 		if err := l.validateOnType(t); err != nil {
 			panic(err)
 		}
@@ -138,7 +138,7 @@ func (l Limit) Rate() appdef.IRate { return l.rate }
 //   - some filtered type can not to be limited. See validateOnType
 func (l Limit) Validate() (err error) {
 	cnt := 0
-	for t := range appdef.FilterMatches(l.Filter(), l.Workspace().Types()) {
+	for _, t := range appdef.FilterMatches(l.Filter(), l.Workspace().Types()) {
 		err = errors.Join(err, l.validateOnType(t))
 		cnt++
 	}

@@ -41,10 +41,8 @@ type IWorkspace interface {
 	// If not found then empty type with TypeKind_null is returned
 	LocalType(QName) IType
 
-	// LocalTypes returns iterator for all types defined in the workspace.
-	//
-	// Types are iterated in alphabetical order.
-	LocalTypes() iter.Seq[IType]
+	// LocalTypes returns all types defined in the workspace in alphabetical order.
+	LocalTypes() []IType
 
 	// Returns a type by name. All ancestor types are searched recursively.
 	//
@@ -53,10 +51,10 @@ type IWorkspace interface {
 	// If not found then empty type with TypeKind_null is returned
 	Type(QName) IType
 
-	// Returns types iterator. All types from ancestors are iterated recursively.
+	// Returns all types, include types from all ancestors recursively.
 	//
-	// If the workspace uses other workspaces, these used workspaces (but not the types from them) also iterated.
-	Types() iter.Seq[IType]
+	// If the workspace uses other workspaces, these used workspaces (but not the types from them) also returned.
+	Types() []IType
 
 	// Returns used workspaces in alphabetic order.
 	//

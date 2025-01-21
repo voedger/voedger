@@ -159,7 +159,7 @@ func Test_GrantAndRevoke(t *testing.T) {
 					}
 
 					flt := appdef.QNames{}
-					for t := range appdef.FilterMatches(r.Filter(), r.Workspace().Types()) {
+					for _, t := range appdef.FilterMatches(r.Filter(), r.Workspace().Types()) {
 						flt = append(flt, t.QName())
 					}
 					require.EqualValues(want[cnt].flt, flt)
@@ -434,7 +434,7 @@ func Test_ACLWithFields(t *testing.T) {
 					}
 
 					flt := appdef.QNames{}
-					for t := range appdef.FilterMatches(r.Filter(), r.Principal().Workspace().Types()) {
+					for _, t := range appdef.FilterMatches(r.Filter(), r.Principal().Workspace().Types()) {
 						flt = append(flt, t.QName())
 					}
 					require.EqualValues(want[cnt].flt, flt)

@@ -43,7 +43,7 @@ func ExampleQNames() {
 			fmt.Println("  *", n)
 		}
 		fmt.Println("- testing:")
-		for t := range ws.LocalTypes() {
+		for _, t := range ws.LocalTypes() {
 			fmt.Println("  *", t, "is matched:", flt.Match(t))
 		}
 		fmt.Println()

@@ -168,7 +168,7 @@ func (tt Types[T]) Values() iter.Seq[T] { return slices.Values(tt.s) }
 type (
 	IWithTypes interface {
 		Type(appdef.QName) appdef.IType
-		Types() iter.Seq[appdef.IType]
+		Types() []appdef.IType
 	}
 
 	WithTypes struct {
@@ -199,7 +199,7 @@ func (tt WithTypes) Type(name appdef.QName) appdef.IType {
 	return tt.types.Find(name)
 }
 
-func (tt WithTypes) Types() iter.Seq[appdef.IType] { return tt.types.Values() }
+func (tt WithTypes) Types() []appdef.IType { return tt.types.AsArray() }
 
 // Propagate type to workspace and app.
 func Propagate(t appdef.IType) {

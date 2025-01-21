@@ -159,7 +159,7 @@ func TestRoles(t *testing.T) {
 						}
 
 						flt := appdef.QNames{}
-						for t := range appdef.FilterMatches(acl.Filter(), tested.Types()) {
+						for _, t := range appdef.FilterMatches(acl.Filter(), tested.Types()) {
 							flt = append(flt, t.QName())
 						}
 						require.EqualValues(wantACL[aclCount].flt, flt)

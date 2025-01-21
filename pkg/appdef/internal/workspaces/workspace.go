@@ -6,7 +6,7 @@
 package workspaces
 
 import (
-	"iter"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/abstracts"
@@ -78,7 +78,7 @@ func (ws Workspace) LocalType(name appdef.QName) appdef.IType {
 	return ws.WithTypes.Type(name)
 }
 
-func (ws Workspace) LocalTypes() iter.Seq[appdef.IType] {
+func (ws Workspace) LocalTypes() []appdef.IType {
 	return ws.WithTypes.Types()
 }
 
@@ -114,36 +114,36 @@ func (ws Workspace) Type(name appdef.QName) appdef.IType {
 //   - ancestor types recursive from far to nearest
 //   - local types
 //   - used Workspaces
-func (ws Workspace) Types() iter.Seq[appdef.IType] {
-	return func(yield func(appdef.IType) bool) {
-		var (
-			visit func(appdef.IWorkspace) bool
-			chain map[appdef.QName]bool = make(map[appdef.QName]bool) // to prevent stack overflow recursion
-		)
-		visit = func(w appdef.IWorkspace) bool {
-			if !chain[w.QName()] {
-				chain[w.QName()] = true
-				for _, a := range w.Ancestors() {
-					if !visit(a) {
-						return false
-					}
-				}
-				for t := range w.LocalTypes() {
-					if !yield(t) {
-						return false
-					}
-				}
-				for _, u := range w.UsedWorkspaces() {
-					// #2872 should enum used Workspaces, but not types from them
-					if !yield(u) {
-						return false
-					}
+func (ws Workspace) Types() []appdef.IType {
+	tt := []appdef.IType{}
+
+	var (
+		visit func(appdef.IWorkspace) bool
+		chain map[appdef.QName]bool = make(map[appdef.QName]bool) // to prevent stack overflow recursion
+	)
+	visit = func(w appdef.IWorkspace) bool {
+		if !chain[w.QName()] {
+			chain[w.QName()] = true
+			for _, a := range w.Ancestors() {
+				if !visit(a) {
+					return false
 				}
 			}
-			return true
+			for _, t := range w.LocalTypes() {
+				tt = append(tt, t)
+			}
+			for _, u := range w.UsedWorkspaces() {
+				// #2872 should enum used Workspaces, but not types from them
+				tt = append(tt, u)
+			}
 		}
-		visit(&ws)
+		return true
 	}
+	visit(&ws)
+
+	slices.SortFunc(tt, func(i, j appdef.IType) int { return appdef.CompareQName(i.QName(), j.QName()) })
+
+	return tt
 }
 
 func (ws Workspace) UsedWorkspaces() []appdef.IWorkspace {

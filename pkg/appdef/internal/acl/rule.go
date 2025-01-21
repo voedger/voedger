@@ -80,7 +80,7 @@ func NewRule(ws appdef.IWorkspace, ops []appdef.OperationKind, policy appdef.Pol
 		ws:           ws,
 	}
 
-	for t := range appdef.FilterMatches(r.Filter(), ws.Types()) {
+	for _, t := range appdef.FilterMatches(r.Filter(), ws.Types()) {
 		if err := r.validateOnType(t); err != nil {
 			panic(err)
 		}
@@ -160,7 +160,7 @@ func (r Rule) String() string {
 //   - some filtered type can not to be proceed with ACL. See validateOnType
 func (r Rule) Validate() (err error) {
 	cnt := 0
-	for t := range appdef.FilterMatches(r.Filter(), r.Workspace().Types()) {
+	for _, t := range appdef.FilterMatches(r.Filter(), r.Workspace().Types()) {
 		err = errors.Join(err, r.validateOnType(t))
 		cnt++
 	}
