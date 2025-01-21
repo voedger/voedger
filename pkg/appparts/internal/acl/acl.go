@@ -54,6 +54,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 			}
 		}
 	case appdef.OperationKind_Activate, appdef.OperationKind_Deactivate:
+		// #3148: appparts: ACTIVATE/DEACTIVATE in IsOperationAllowed
 		if rec, ok := t.(appdef.IRecord); ok {
 			if f := rec.Field(appdef.SystemField_IsActive); f == nil {
 				return false, nil, appdef.ErrNotFound("field «%s» in %v", appdef.SystemField_IsActive, rec)

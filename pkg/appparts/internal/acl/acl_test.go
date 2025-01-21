@@ -278,7 +278,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 				allowed:       false,
 				allowedFields: []appdef.FieldName{"field1", "field3"},
 			},
-			{
+			{ // #3148: appparts: ACTIVATE/DEACTIVATE in IsOperationAllowed
 				name:          "deny deactivate doc for writer",
 				op:            appdef.OperationKind_Deactivate,
 				res:           cDocName,
@@ -333,7 +333,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 				allowed:       true,
 				allowedFields: allDocFields,
 			},
-			{
+			{ // #3148: appparts: ACTIVATE/DEACTIVATE in IsOperationAllowed
 				name:          "allow deactivate doc for admin",
 				op:            appdef.OperationKind_Deactivate,
 				res:           cDocName,
@@ -497,7 +497,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 				error:  appdef.ErrIncompatibleError,
 				errHas: cmdName,
 			},
-			{
+			{ // #3148: appparts: ACTIVATE/DEACTIVATE in IsOperationAllowed
 				name:   "not a record",
 				op:     appdef.OperationKind_Deactivate,
 				res:    queryName,
@@ -505,7 +505,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 				error:  appdef.ErrIncompatibleError,
 				errHas: queryName,
 			},
-			{
+			{ // #3148: appparts: ACTIVATE/DEACTIVATE in IsOperationAllowed
 				name:   "has not sys.Active field",
 				op:     appdef.OperationKind_Deactivate,
 				res:    oDocName,
