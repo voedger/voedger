@@ -49,18 +49,9 @@ func NewWorkspace(app appdef.IAppDef, name appdef.QName) *Workspace {
 	return ws
 }
 
-func (ws Workspace) Ancestors() iter.Seq[appdef.IWorkspace] {
-	return ws.ancestors.Values()
+func (ws Workspace) Ancestors() []appdef.IWorkspace {
+	return ws.ancestors.AsArray()
 }
-
-// package parser violates the rule that a type should be from the same package as the workspace
-//
-// func (ws *Workspace) AppendType(t appdef.IType) {
-// 	if t.QName().Pkg() != ws.QName().Pkg() {
-// 		panic(appdef.ErrInvalid("%v should be from the same package as %v", t, ws))
-// 	}
-// 	ws.WithTypes.AppendType(t)
-// }
 
 func (ws Workspace) Descriptor() appdef.QName {
 	if ws.desc != nil {
@@ -102,7 +93,7 @@ func (ws Workspace) Type(name appdef.QName) appdef.IType {
 			if t := w.LocalType(name); t != appdef.NullType {
 				return t
 			}
-			for a := range w.Ancestors() {
+			for _, a := range w.Ancestors() {
 				if t := find(a); t != appdef.NullType {
 					return t
 				}
@@ -132,7 +123,7 @@ func (ws Workspace) Types() iter.Seq[appdef.IType] {
 		visit = func(w appdef.IWorkspace) bool {
 			if !chain[w.QName()] {
 				chain[w.QName()] = true
-				for a := range w.Ancestors() {
+				for _, a := range w.Ancestors() {
 					if !visit(a) {
 						return false
 					}

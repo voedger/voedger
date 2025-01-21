@@ -370,7 +370,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 				want = []appdef.QName{appdef.SysWorkspaceQName}
 			}
 			i := 0
-			for a := range ws.Ancestors() {
+			for _, a := range ws.Ancestors() {
 				require.EqualValues(want[i], a.QName(), "unexpected ancestor for «%v»: want %v, got: %v", ws, want[i], a.QName())
 				i++
 			}
@@ -407,7 +407,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 	t.Run("should be correspondence between Ancestors() and Inherits()", func(t *testing.T) {
 		for idx := 0; idx < wsCount; idx++ {
 			ws := app.Workspace(wsName(idx))
-			for a := range ws.Ancestors() {
+			for _, a := range ws.Ancestors() {
 				require.True(ws.Inherits(a.QName()), "%v.Inherits(%v) returns false for ancestor workspace", ws, a.QName())
 			}
 		}
@@ -446,7 +446,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 		for wsIdx := 0; wsIdx < wsCount; wsIdx++ {
 			ws := app.Workspace(wsName(wsIdx))
 			types := slices.Collect(ws.Types())
-			for a := range ws.Ancestors() {
+			for _, a := range ws.Ancestors() {
 				for t := range a.Types() {
 					require.Contains(types, t, "%v types should contains type %v from ancestor %v", ws, t, a)
 				}

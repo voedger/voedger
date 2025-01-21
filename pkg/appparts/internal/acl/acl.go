@@ -94,7 +94,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 			if !stack[ws.QName()] {
 				stack[ws.QName()] = true
 
-				for anc := range ws.Ancestors() {
+				for _, anc := range ws.Ancestors() {
 					acl(anc)
 				}
 

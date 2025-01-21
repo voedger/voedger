@@ -149,6 +149,8 @@ func (tt *Types[T]) Add(t T) {
 	tt.s = slicex.InsertInSort(tt.s, t, func(t1, t2 T) int { return appdef.CompareQName(t1.QName(), t2.QName()) })
 }
 
+func (tt *Types[T]) AsArray() []T { return tt.s }
+
 func (tt *Types[T]) Clear() {
 	tt.m = make(map[appdef.QName]T)
 	tt.s = nil

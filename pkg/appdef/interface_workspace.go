@@ -19,7 +19,7 @@ type IWorkspace interface {
 	// Ancestors are enumerated in alphabetic order.
 	// Only direct ancestors are enumerated.
 	// Workspace `sys.Workspace` is default ancestor used then no other ancestor is specified.
-	Ancestors() iter.Seq[IWorkspace]
+	Ancestors() []IWorkspace
 
 	// Workspace descriptor document.
 	// See [#466](https://github.com/voedger/voedger/issues/466)

@@ -42,7 +42,7 @@ func (t WithTags) HasTag(name appdef.QName) bool {
 }
 
 func (t WithTags) Tags() []appdef.ITag {
-	return t.list.s
+	return t.list.AsArray()
 }
 
 func (t *WithTags) setTag(tag ...appdef.QName) {
