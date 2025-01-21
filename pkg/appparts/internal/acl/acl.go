@@ -46,16 +46,24 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 		if s, ok := t.(appdef.IStructure); ok {
 			str = s
 		} else {
-			return false, nil, appdef.ErrIncompatible("%v is not structure", t)
+			return false, nil, appdef.ErrIncompatible("%v is not a structure", t)
 		}
 		for _, f := range fld {
 			if str.Field(f) == nil {
-				return false, nil, appdef.ErrNotFound("field «%q» in %q", f, str)
+				return false, nil, appdef.ErrNotFound("field «%s» in %v", f, str)
 			}
+		}
+	case appdef.OperationKind_Activate, appdef.OperationKind_Deactivate:
+		if rec, ok := t.(appdef.IRecord); ok {
+			if f := rec.Field(appdef.SystemField_IsActive); f == nil {
+				return false, nil, appdef.ErrNotFound("field «%s» in %v", appdef.SystemField_IsActive, rec)
+			}
+		} else {
+			return false, nil, appdef.ErrIncompatible("%v is not a record", t)
 		}
 	case appdef.OperationKind_Execute:
 		if _, ok := t.(appdef.IFunction); !ok {
-			return false, nil, appdef.ErrIncompatible("%v is not function", t)
+			return false, nil, appdef.ErrIncompatible("%v is not a function", t)
 		}
 	default:
 		return false, nil, appdef.ErrUnsupported("operation %q", op)
