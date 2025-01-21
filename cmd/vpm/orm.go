@@ -408,7 +408,7 @@ func processITypeObj(
 
 		// collecting projector events (Commands, CUDs, etc.)
 		for _, event := range iProjectorEvents {
-			for obj := range appdef.FilterMatches(event.Filter(), t.Workspace().Types()) {
+			for _, obj := range appdef.FilterMatches(event.Filter(), t.Workspace().Types()) {
 				ormObject := processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, obj, uniqueProjectorCommandEvents)
 				// Avoiding double generation of the same Cmd_ORM object via
 				// checking if it already exists in other projector events
