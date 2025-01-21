@@ -7,6 +7,7 @@ package coreutils
 
 import (
 	"encoding/binary"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"testing"
 	"time"
 
@@ -24,7 +25,7 @@ func TestDataWithExpiration_ToBytesAndRead(t *testing.T) {
 	encoded := original.ToBytes()
 
 	// Check length: Data bytes + 8 bytes for uint64
-	require.Equal(t, len(original.Data)+8, len(encoded), "encoded length mismatch")
+	require.Len(t, original.Data, len(encoded)-utils.Uint64Size, "encoded length mismatch")
 
 	// Manually check the last 8 bytes match the big-endian expireAt
 	last8 := encoded[len(encoded)-8:]
