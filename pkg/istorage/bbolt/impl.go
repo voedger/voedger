@@ -130,8 +130,7 @@ func (s *appStorageType) InsertIfNotExists(pKey []byte, cCols []byte, value []by
 			return nil
 		}
 
-		var d coreutils.DataWithExpiration
-		d.Read(v)
+		d := coreutils.ReadWithExpiration(v)
 		if d.IsExpired(s.iTime.Now()) {
 			return nil
 		}
@@ -240,8 +239,7 @@ func (s *appStorageType) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok boo
 			return nil
 		}
 
-		var d coreutils.DataWithExpiration
-		d.Read(v)
+		d := coreutils.ReadWithExpiration(v)
 		if d.IsExpired(s.iTime.Now()) {
 			return nil
 		}
@@ -356,7 +354,6 @@ func (s *appStorageType) GetBatch(pKey []byte, items []istorage.GetBatchItem) (e
 			return nil
 		}
 
-		var d coreutils.DataWithExpiration
 		for i := 0; i < len(items); i++ {
 			v := bucket.Get(safeKey(items[i].CCols))
 			if v == nil {
@@ -365,10 +362,8 @@ func (s *appStorageType) GetBatch(pKey []byte, items []istorage.GetBatchItem) (e
 				continue
 			}
 
-			d.Read(v)
-
-			items[i].Ok = d.Data != nil
-			*items[i].Data = append((*items[i].Data)[0:0], d.Data...)
+			items[i].Ok = len(v[utils.Uint64Size:]) > 0
+			*items[i].Data = append((*items[i].Data)[0:0], v[utils.Uint64Size:]...)
 		}
 
 		return nil
@@ -413,7 +408,7 @@ func (s *appStorageType) read(ctx context.Context, pKey []byte, startCCols, fini
 				return nil
 			}
 
-			d.Read(v)
+			d = d.Update(v)
 			if checkTtl && d.IsExpired(s.iTime.Now()) {
 				k, v = cr.Next()
 				continue
@@ -452,8 +447,7 @@ func (s *appStorageType) findValue(pKey, cCols, value []byte) (found bool, err e
 			return nil
 		}
 
-		var d coreutils.DataWithExpiration
-		d.Read(v)
+		d := coreutils.ReadWithExpiration(v)
 		if d.IsExpired(s.iTime.Now()) {
 			return nil
 		}

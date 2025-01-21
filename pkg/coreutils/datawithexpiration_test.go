@@ -28,8 +28,7 @@ func TestDataWithExpiration_BasicUsage(t *testing.T) {
 	bytes := dwe.ToBytes()
 
 	t.Run("read", func(t *testing.T) {
-		dwe_actual := &DataWithExpiration{}
-		dwe_actual.Read(bytes)
+		dwe_actual := ReadWithExpiration(bytes)
 		require.Equal(expireAt_expected, dwe_actual.ExpireAt)
 		require.Equal(data_expected, dwe_actual.Data)
 
@@ -62,8 +61,6 @@ func TestDataWithExpiration_BasicUsage(t *testing.T) {
 	t.Run("internal structure", func(t *testing.T) {
 		expireAt_actual := binary.BigEndian.Uint64(bytes[:utils.Uint64Size])
 		require.Equal(uint64(expireAt_expected), expireAt_actual)
-
 		require.Equal(data_expected, bytes[utils.Uint64Size:])
 	})
-
 }

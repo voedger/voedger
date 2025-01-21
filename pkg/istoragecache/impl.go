@@ -12,6 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/istorage"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
@@ -187,10 +188,9 @@ func (s *cachedAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok b
 	cachedData, found = s.cache.HasGet(*data, key)
 
 	if found {
-		var d coreutils.DataWithExpiration
-		d.Read(cachedData)
+		d := coreutils.ReadWithExpiration(cachedData)
 
-		if isExpired(d.ExpireAt, s.iTime.Now()) {
+		if d.IsExpired(s.iTime.Now()) {
 			s.cache.Del(key)
 
 			return false, nil
@@ -264,10 +264,7 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 		s.mGetCachedTotal.Increase(1.0)
 
 		if len(cachedData) != 0 {
-			d := &coreutils.DataWithExpiration{}
-			d.Read(cachedData)
-			*data = d.Data
-
+			*data = cachedData[utils.Uint64Size:]
 			return len(*data) != 0, nil
 		}
 	}
@@ -305,10 +302,7 @@ func (s *cachedAppStorage) getBatchFromCache(pKey []byte, items []istorage.GetBa
 			return false
 		}
 
-		var d coreutils.DataWithExpiration
-
-		d.Read(cachedData)
-		*items[i].Data = d.Data
+		*items[i].Data = cachedData[utils.Uint64Size:]
 		items[i].Ok = len(*items[i].Data) != 0
 	}
 	s.mGetBatchCachedTotal.Increase(1.0)
@@ -358,6 +352,3 @@ func makeKey(pKey []byte, cCols []byte) (res []byte) {
 	return res
 }
 
-func isExpired(expireAt int64, now time.Time) bool {
-	return expireAt != 0 && !now.Before(time.UnixMilli(expireAt))
-}
