@@ -561,11 +561,13 @@ ALTERABLE WORKSPACE test_wsWS (
 	);
 
 	TABLE DocFieldInsertDenied INHERITS sys.CDoc (
-		Fld1 int32
+		FldDenied int32,
+		FldAllowed int32
 	);
 
 	TABLE DocFieldUpdateDenied INHERITS sys.CDoc (
-		Fld1 int32
+		FldDenied int32,
+		FldAllowed int32
 	);
 
 	TABLE Root INHERITS sys.CDoc (
@@ -629,6 +631,6 @@ ALTERABLE WORKSPACE test_wsWS (
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocFieldUpdateDenied TO sys.WorkspaceOwner;
 	REVOKE ACTIVATE ON TABLE DocActivateDenied FROM sys.WorkspaceOwner;
 	REVOKE DEACTIVATE ON TABLE DocDeactivateDenied FROM sys.WorkspaceOwner;
-	REVOKE INSERT(Fld1) ON TABLE DocFieldInsertDenied FROM sys.WorkspaceOwner;
-	REVOKE UPDATE(Fld1) ON TABLE DocFieldUpdateDenied FROM sys.WorkspaceOwner;
+	REVOKE INSERT(FldDenied) ON TABLE DocFieldInsertDenied FROM sys.WorkspaceOwner;
+	REVOKE UPDATE(FldDenied) ON TABLE DocFieldUpdateDenied FROM sys.WorkspaceOwner;
 );

@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -647,11 +648,8 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 				parsedCUD.opKind = appdef.OperationKind_Update
 			}
 		}
-		opStr := "UPDATE"
-		if isCreate {
-			opStr = "INSERT"
-		}
-		parsedCUD.xPath = xPath(fmt.Sprintf("%s %s %s", cudXPath, opStr, parsedCUD.qName))
+
+		parsedCUD.xPath = xPath(fmt.Sprintf("%s %s %s", cudXPath, opKindDesc[parsedCUD.opKind], parsedCUD.qName))
 
 		cmd.parsedCUDs = append(cmd.parsedCUDs, parsedCUD)
 	}
@@ -716,38 +714,24 @@ func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work pipeline.IWorkpiec
 	}
 	for _, parsedCUD := range cmd.parsedCUDs {
 		fields := maps.Keys(parsedCUD.fields)
-		_ = fields
-		ok, _, err := cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, nil, cmd.roles)
+		ok, allowedFields, err := cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
 		if err != nil {
 			return parsedCUD.xPath.Error(err)
 		}
 		if !ok {
-			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
+			deniedField := ""
+			for reqField := range parsedCUD.fields {
+				if !slices.Contains(allowedFields, reqField) {
+					deniedField = reqField
+					break
+				}
+			}
+			if len(deniedField) > 0 {
+				deniedField += " "
+			}
+			errMes := deniedField + "operation forbidden"
+			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf(errMes))
 		}
-
-		// isActiveVal, isActiveProvided, err := parsedCUD.fields.AsBoolean(appdef.SystemField_IsActive)
-		// if err != nil {
-		// 	return parsedCUD.xPath.Error(err)
-		// }
-		// isActiveUpdating := parsedCUD.opKind == appdef.OperationKind_Update && isActiveProvided
-		// ok := false
-
-		// if isActiveUpdating {
-		// 	if isActiveVal {
-		// 		ok, _, err = cmd.appPart.IsOperationAllowed(ws, appdef.OperationKind_Activate, parsedCUD.qName, nil, cmd.roles)
-		// 	} else {
-		// 		ok, _, err = cmd.appPart.IsOperationAllowed(ws, appdef.OperationKind_Deactivate, parsedCUD.qName, nil, cmd.roles)
-		// 	}
-		// } else {
-		// 	fields := maps.Keys(parsedCUD.fields)
-		// 	ok, _, err = cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
-		// }
-		// if err != nil {
-		// 	return parsedCUD.xPath.Error(err)
-		// }
-		// if !ok {
-		// 	return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
-		// }
 	}
 	return
 }
