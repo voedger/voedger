@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-present Sigma-Soft, Ltd.
+ * Copyright (c) 2025-present unTill Software Development Group B.V.
  * @author: Alisher Nurmanov
  */
 

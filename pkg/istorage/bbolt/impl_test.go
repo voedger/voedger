@@ -7,7 +7,6 @@
 package bbolt
 
 import (
-	"context"
 	"os"
 	"testing"
 	"time"
@@ -27,7 +26,7 @@ func TestBasicUsage(t *testing.T) {
 	defer cleanupTestData(params)
 
 	// creating a StorageProvider
-	factory := Provide(context.Background(), params, coreutils.MockTime)
+	factory := Provide(params, coreutils.MockTime)
 	storageProvider := istorageimpl.Provide(factory)
 
 	// get the required AppStorage for the app
@@ -50,7 +49,7 @@ func TestTCK(t *testing.T) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
 
-	factory := Provide(context.Background(), params, coreutils.MockTime)
+	factory := Provide(params, coreutils.MockTime)
 	istorage.TechnologyCompatibilityKit(t, factory)
 }
 
@@ -60,7 +59,7 @@ func Test_PutGet(t *testing.T) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
 
-	factory := Provide(context.Background(), params, coreutils.MockTime)
+	factory := Provide(params, coreutils.MockTime)
 	storageProvider := istorageimpl.Provide(factory)
 
 	appStorage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)
@@ -91,7 +90,7 @@ func TestBackgroundCleaner(t *testing.T) {
 
 	r := require.New(t)
 	iTime := coreutils.MockTime
-	factory := Provide(context.Background(), params, iTime)
+	factory := Provide(params, iTime)
 	storageProvider := istorageimpl.Provide(factory)
 
 	// get the required AppStorage for the app

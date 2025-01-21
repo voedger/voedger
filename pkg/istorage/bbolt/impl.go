@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	bolt "go.etcd.io/bbolt"
@@ -26,7 +27,8 @@ import (
 type appStorageFactory struct {
 	bboltParams ParamsType
 	iTime       coreutils.ITime
-	ctx         context.Context
+	cancelFunc  context.CancelFunc
+	wg          *sync.WaitGroup
 }
 
 func (p *appStorageFactory) AppStorage(appName istorage.SafeAppName) (s istorage.IAppStorage, err error) {
@@ -49,9 +51,13 @@ func (p *appStorageFactory) AppStorage(appName istorage.SafeAppName) (s istorage
 		return nil, err
 	}
 
-	impl := &appStorageType{db: db, iTime: p.iTime, ctx: p.ctx}
+	ctx, cancel := context.WithCancel(context.Background())
+	p.cancelFunc = cancel
+	p.wg = &sync.WaitGroup{}
+	impl := &appStorageType{db: db, iTime: p.iTime, ctx: ctx}
 	// start background cleaner
-	go impl.backgroundCleaner()
+	p.wg.Add(1)
+	go impl.backgroundCleaner(p.wg)
 
 	return impl, nil
 }
@@ -85,6 +91,11 @@ func (p *appStorageFactory) Init(appName istorage.SafeAppName) error {
 
 func (p *appStorageFactory) Time() coreutils.ITime {
 	return p.iTime
+}
+
+func (p *appStorageFactory) StopGoroutines() {
+	p.cancelFunc()
+	p.wg.Wait()
 }
 
 // if the key is empty or equal to nil, then convert it to nullKey
@@ -545,7 +556,9 @@ func (s *appStorageType) removeKey(tx *bolt.Tx, ttlKey []byte) error {
 	return ttlBucket.Delete(ttlKey)
 }
 
-func (s *appStorageType) backgroundCleaner() {
+func (s *appStorageType) backgroundCleaner(wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	for s.ctx.Err() == nil {
 		timerCh := s.iTime.NewTimerChan(cleanupInterval)
 		select {
