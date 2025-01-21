@@ -30,14 +30,6 @@ func (ww *WithWorkspaces) Build() (err error) {
 		err = errors.Join(err,
 			ws.(*Workspace).build())
 	}
-
-	if err == nil {
-		for ws := range ww.Workspaces() {
-			ws.(*Workspace).builded()
-		}
-		ww.changed = false
-	}
-
 	return err
 }
 

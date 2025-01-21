@@ -6,6 +6,8 @@
 package structures
 
 import (
+	"errors"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/abstracts"
 	"github.com/voedger/voedger/pkg/appdef/internal/containers"
@@ -39,6 +41,13 @@ func MakeStructure(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind
 
 func (s Structure) SystemField_QName() appdef.IField {
 	return s.WithFields.Field(appdef.SystemField_QName)
+}
+
+func (s *Structure) Validate() error {
+	return errors.Join(
+		fields.ValidateTypeFields(s),
+		containers.ValidateTypeContainers(s),
+	)
 }
 
 // # Supports:

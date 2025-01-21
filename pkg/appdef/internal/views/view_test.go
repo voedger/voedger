@@ -405,4 +405,12 @@ func TestViewValidate(t *testing.T) {
 		_, err := adb.Build()
 		require.ErrorIs(err, appdef.ErrMissedError)
 	})
+
+	v.Key().ClustCols().AddField("cc1", appdef.DataKind_bool)
+
+	v.Value().AddRefField("vf1", false, appdef.NewQName("test", "unknown"))
+	t.Run("should be error if errors in fields", func(t *testing.T) {
+		_, err := adb.Build()
+		require.Error(err, require.Is(appdef.ErrNotFoundError), require.HasAll("vf1", "test.unknown"))
+	})
 }
