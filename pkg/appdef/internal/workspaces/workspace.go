@@ -28,6 +28,7 @@ type Workspace struct {
 	abstracts.WithAbstract
 	acl.WithACL
 	types.WithTypes
+	allTypes  []appdef.IType
 	ancestors *Workspaces
 	usedWS    *Workspaces
 	desc      appdef.ICDoc
@@ -110,40 +111,11 @@ func (ws Workspace) Type(name appdef.QName) appdef.IType {
 	return find(&ws)
 }
 
-// Enumeration order:
-//   - ancestor types recursive from far to nearest
-//   - local types
-//   - used Workspaces
 func (ws Workspace) Types() []appdef.IType {
-	tt := []appdef.IType{}
-
-	var (
-		visit func(appdef.IWorkspace) bool
-		chain map[appdef.QName]bool = make(map[appdef.QName]bool) // to prevent stack overflow recursion
-	)
-	visit = func(w appdef.IWorkspace) bool {
-		if !chain[w.QName()] {
-			chain[w.QName()] = true
-			for _, a := range w.Ancestors() {
-				if !visit(a) {
-					return false
-				}
-			}
-			for _, t := range w.LocalTypes() {
-				tt = append(tt, t)
-			}
-			for _, u := range w.UsedWorkspaces() {
-				// #2872 should enum used Workspaces, but not types from them
-				tt = append(tt, u)
-			}
-		}
-		return true
+	if ws.allTypes != nil {
+		return ws.allTypes
 	}
-	visit(&ws)
-
-	slices.SortFunc(tt, func(i, j appdef.IType) int { return appdef.CompareQName(i.QName(), j.QName()) })
-
-	return tt
+	return ws.enumerateTypes()
 }
 
 func (ws Workspace) UsedWorkspaces() []appdef.IWorkspace {
@@ -154,6 +126,9 @@ func (ws *Workspace) Validate() error {
 	if (ws.desc != nil) && ws.desc.Abstract() && !ws.Abstract() {
 		return appdef.ErrIncompatible("%v should be abstract because descriptor %v is abstract", ws, ws.desc)
 	}
+
+	ws.allTypes = ws.enumerateTypes()
+
 	return nil
 }
 
@@ -250,6 +225,35 @@ func (ws *Workspace) addWDoc(name appdef.QName) appdef.IWDocBuilder {
 func (ws *Workspace) addWRecord(name appdef.QName) appdef.IWRecordBuilder {
 	r := structures.NewWRecord(ws, name)
 	return structures.NewWRecordBuilder(r)
+}
+
+func (ws Workspace) enumerateTypes() []appdef.IType {
+	tt := []appdef.IType{}
+
+	var (
+		visit func(appdef.IWorkspace)
+		chain map[appdef.QName]bool = make(map[appdef.QName]bool) // to prevent stack overflow recursion
+	)
+	visit = func(w appdef.IWorkspace) {
+		if !chain[w.QName()] {
+			chain[w.QName()] = true
+			for _, a := range w.Ancestors() {
+				visit(a)
+			}
+			for _, t := range w.LocalTypes() {
+				tt = append(tt, t)
+			}
+			for _, u := range w.UsedWorkspaces() {
+				// #2872 should enum used Workspaces, but not types from them
+				tt = append(tt, u)
+			}
+		}
+	}
+	visit(&ws)
+
+	slices.SortFunc(tt, func(i, j appdef.IType) int { return appdef.CompareQName(i.QName(), j.QName()) })
+
+	return tt
 }
 
 func (ws *Workspace) grant(ops []appdef.OperationKind, flt appdef.IFilter, fields []appdef.FieldName, toRole appdef.QName, comment ...string) {

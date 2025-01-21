@@ -447,7 +447,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 			ws := app.Workspace(wsName(wsIdx))
 			types := ws.Types()
 			for _, a := range ws.Ancestors() {
-				for t := range a.Types() {
+				for _, t := range a.Types() {
 					require.Contains(types, t, "%v types should contains type %v from ancestor %v", ws, t, a)
 				}
 			}

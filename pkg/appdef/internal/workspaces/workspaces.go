@@ -23,6 +23,12 @@ func MakeWithWorkspaces() WithWorkspaces {
 
 func (ww *WithWorkspaces) AppendWorkspace(ws appdef.IWorkspace) { ww.list.Add(ws) }
 
+func (ww *WithWorkspaces) Changed() {
+	for ws := range ww.Workspaces() {
+		ws.(*Workspace).allTypes = nil
+	}
+}
+
 func (ww WithWorkspaces) Workspace(name appdef.QName) appdef.IWorkspace {
 	ws := ww.list.Find(name)
 	if ws != appdef.NullType {

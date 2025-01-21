@@ -136,7 +136,7 @@ func getPkgAppDefObjs(
 		// add workspace itself to the list of objects as well
 		collectITypeObjs(workspace)(workspace)
 		// then add all types of the workspace
-		for typ := range workspace.Types() {
+		for _, typ := range workspace.Types() {
 			collectITypeObjs(workspace)(typ)
 		}
 	}

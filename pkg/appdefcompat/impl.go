@@ -215,7 +215,7 @@ func buildWorkspaceNode(parentNode *CompatibilityTreeNode, ws appdef.IWorkspace)
 
 func buildTypesNode(parentNode *CompatibilityTreeNode, types appdef.TypesSlice, qNamesOnly bool) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameTypes, nil)
-	for t := range types {
+	for _, t := range types {
 		if qNamesOnly {
 			node.Props = append(node.Props, buildQNameNode(node, t, t.QName().String(), true))
 		} else {

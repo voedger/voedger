@@ -42,10 +42,22 @@ func NewAppDef() *AppDef {
 	return &app
 }
 
+func (app *AppDef) AppendType(t appdef.IType) {
+	app.WithTypes.AppendType(t)
+	app.Changed()
+}
+
+func (app *AppDef) Changed() { app.WithWorkspaces.Changed() }
+
 func (app *AppDef) build() (err error) {
 	for _, t := range app.Types() {
 		err = errors.Join(err, app.validateType(t))
 	}
+
+	if err != nil {
+		app.Changed()
+	}
+
 	return err
 }
 
