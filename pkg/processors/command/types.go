@@ -98,7 +98,6 @@ type parsedCUD struct {
 	qName          appdef.QName
 	fields         coreutils.MapObject
 	xPath          xPath
-	isNew          bool
 }
 
 type implICommandMessage struct {

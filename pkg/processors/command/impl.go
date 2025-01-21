@@ -612,7 +612,6 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		}
 		if isCreate {
 			parsedCUD.opKind = appdef.OperationKind_Insert
-			parsedCUD.isNew = true
 			qNameStr, _, err := parsedCUD.fields.AsString(appdef.SystemField_QName)
 			if err != nil {
 				return cudXPath.Error(err)
