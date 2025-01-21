@@ -680,7 +680,7 @@ func checkArgsRefIntegrity(_ context.Context, work pipeline.IWorkpiece) (err err
 func checkIsActiveInCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	for _, cud := range cmd.parsedCUDs {
-		if cud.opKind != appdef.OperationKind_Update {
+		if cud.opKind != appdef.OperationKind_Update && cud.opKind != appdef.OperationKind_Activate && cud.opKind != appdef.OperationKind_Deactivate {
 			continue
 		}
 		hasOnlySystemFields := true
@@ -715,6 +715,9 @@ func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work pipeline.IWorkpiec
 		fields := maps.Keys(parsedCUD.fields)
 		ok, allowedFields, err := cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
 		if err != nil {
+			if errors.Is(err, appdef.ErrNotFoundError) {
+				err = coreutils.WrapSysError(err, http.StatusBadRequest)
+			}
 			return parsedCUD.xPath.Error(err)
 		}
 		if !ok {

@@ -3,6 +3,18 @@
 
 APPLICATION app1();
 
+ALTER WORKSPACE sys.UserProfileWS (
+	TABLE Doc INHERITS sys.CDoc (
+		EmailField varchar NOT NULL VERIFIABLE,
+		PhoneField varchar,
+		NonVerifiedField varchar
+	);
+
+	EXTENSION ENGINE BUILTIN ();
+
+	GRANT SELECT, UPDATE, INSERT ON TABLE Doc TO sys.WorkspaceOwner;
+);
+
 ALTERABLE WORKSPACE test_wsWS_another (
 	DESCRIPTOR test_ws_another ();
 
@@ -400,11 +412,11 @@ ALTERABLE WORKSPACE test_wsWS (
 		int_fld2 int32
 	) WITH Tags=(WorkspaceOwnerTableTag);
 
-	TABLE Doc INHERITS sys.CDoc (
-		EmailField varchar NOT NULL VERIFIABLE,
-		PhoneField varchar,
-		NonVerifiedField varchar
-	) WITH Tags=(WorkspaceOwnerTableTag);
+	-- TABLE Doc INHERITS sys.CDoc (
+	-- 	EmailField varchar NOT NULL VERIFIABLE,
+	-- 	PhoneField varchar,
+	-- 	NonVerifiedField varchar
+	-- ) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE DocConstraints INHERITS sys.CDoc (
 		Int int32,
@@ -618,7 +630,7 @@ ALTERABLE WORKSPACE test_wsWS (
 	GRANT EXECUTE ON QUERY sys.Collection TO SpecialAPITokenRole;
 	GRANT SELECT ON TABLE articles TO SpecialAPITokenRole;
 
-	GRANT SELECT, INSERT, UPDATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO sys.WorkspaceOwner;
+	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO sys.WorkspaceOwner;
 
 	GRANT EXECUTE ON ALL QUERIES WITH TAG WorkspaceOwnerFuncTag TO sys.WorkspaceOwner;
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG WorkspaceOwnerFuncTag TO sys.WorkspaceOwner;
