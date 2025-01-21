@@ -6,14 +6,10 @@
 package apps
 
 import (
-	"errors"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/acl"
 	"github.com/voedger/voedger/pkg/appdef/internal/comments"
-	"github.com/voedger/voedger/pkg/appdef/internal/containers"
 	"github.com/voedger/voedger/pkg/appdef/internal/datas"
-	"github.com/voedger/voedger/pkg/appdef/internal/fields"
 	"github.com/voedger/voedger/pkg/appdef/internal/packages"
 	"github.com/voedger/voedger/pkg/appdef/internal/types"
 	"github.com/voedger/voedger/pkg/appdef/internal/workspaces"
@@ -44,22 +40,18 @@ func NewAppDef() *AppDef {
 
 func (app *AppDef) AppendType(t appdef.IType) {
 	app.WithTypes.AppendType(t)
-	app.Changed()
+	app.changed()
 }
-
-func (app *AppDef) Changed() { app.WithWorkspaces.Changed() }
 
 func (app *AppDef) build() (err error) {
-	for _, t := range app.Types() {
-		err = errors.Join(err, app.validateType(t))
+	err = app.WithWorkspaces.Build()
+	if err == nil {
+		app.WithWorkspaces.Builded()
 	}
-
-	if err != nil {
-		app.Changed()
-	}
-
 	return err
 }
+
+func (app *AppDef) changed() { app.WithWorkspaces.Changed() }
 
 // Makes system package.
 //
@@ -99,19 +91,6 @@ func (app *AppDef) makeSysStructures() {
 	viewNextBaseWSID.Key().PartKey().AddField("dummy1", appdef.DataKind_int32)
 	viewNextBaseWSID.Key().ClustCols().AddField("dummy2", appdef.DataKind_int32)
 	viewNextBaseWSID.Value().AddField("NextBaseWSID", appdef.DataKind_int64, true)
-}
-
-func (app *AppDef) validateType(t appdef.IType) (err error) {
-	if v, ok := t.(interface{ Validate() error }); ok {
-		err = v.Validate()
-	}
-
-	err = errors.Join(err,
-		fields.ValidateTypeFields(t),
-		containers.ValidateTypeContainers(t),
-	)
-
-	return err
 }
 
 // # Supports:

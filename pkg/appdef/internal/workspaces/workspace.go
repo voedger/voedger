@@ -6,14 +6,17 @@
 package workspaces
 
 import (
+	"errors"
 	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/abstracts"
 	"github.com/voedger/voedger/pkg/appdef/internal/acl"
 	"github.com/voedger/voedger/pkg/appdef/internal/comments"
+	"github.com/voedger/voedger/pkg/appdef/internal/containers"
 	"github.com/voedger/voedger/pkg/appdef/internal/datas"
 	"github.com/voedger/voedger/pkg/appdef/internal/extensions"
+	"github.com/voedger/voedger/pkg/appdef/internal/fields"
 	"github.com/voedger/voedger/pkg/appdef/internal/rates"
 	"github.com/voedger/voedger/pkg/appdef/internal/roles"
 	"github.com/voedger/voedger/pkg/appdef/internal/structures"
@@ -126,9 +129,6 @@ func (ws *Workspace) Validate() error {
 	if (ws.desc != nil) && ws.desc.Abstract() && !ws.Abstract() {
 		return appdef.ErrIncompatible("%v should be abstract because descriptor %v is abstract", ws, ws.desc)
 	}
-
-	ws.allTypes = ws.enumerateTypes()
-
 	return nil
 }
 
@@ -226,6 +226,29 @@ func (ws *Workspace) addWRecord(name appdef.QName) appdef.IWRecordBuilder {
 	r := structures.NewWRecord(ws, name)
 	return structures.NewWRecordBuilder(r)
 }
+
+func (ws *Workspace) build() error {
+	err := ws.Validate()
+
+	for _, t := range ws.LocalTypes() {
+		if t, ok := t.(interface{ Validate() error }); ok {
+			err = errors.Join(err, t.Validate())
+		}
+		err = errors.Join(err,
+			fields.ValidateTypeFields(t),
+			containers.ValidateTypeContainers(t),
+		)
+	}
+
+	return err
+}
+
+// Should be called after ws successfully built.
+func (ws *Workspace) builded() {
+	ws.allTypes = ws.enumerateTypes()
+}
+
+func (ws *Workspace) changed() { ws.allTypes = nil }
 
 func (ws Workspace) enumerateTypes() []appdef.IType {
 	tt := []appdef.IType{}

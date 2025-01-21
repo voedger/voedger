@@ -6,6 +6,7 @@
 package workspaces
 
 import (
+	"errors"
 	"iter"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -14,7 +15,8 @@ import (
 // # Supports:
 //   - appdef.IWithWorkspaces
 type WithWorkspaces struct {
-	list *Workspaces
+	list    *Workspaces
+	changed bool
 }
 
 func MakeWithWorkspaces() WithWorkspaces {
@@ -23,9 +25,36 @@ func MakeWithWorkspaces() WithWorkspaces {
 
 func (ww *WithWorkspaces) AppendWorkspace(ws appdef.IWorkspace) { ww.list.Add(ws) }
 
-func (ww *WithWorkspaces) Changed() {
+func (ww *WithWorkspaces) Build() (err error) {
 	for ws := range ww.Workspaces() {
-		ws.(*Workspace).allTypes = nil
+		err = errors.Join(err,
+			ws.(*Workspace).build())
+	}
+
+	if err == nil {
+		for ws := range ww.Workspaces() {
+			ws.(*Workspace).builded()
+		}
+		ww.changed = false
+	}
+
+	return err
+}
+
+// Should be called after successfully built.
+func (ww *WithWorkspaces) Builded() {
+	for ws := range ww.Workspaces() {
+		ws.(*Workspace).builded()
+	}
+	ww.changed = false
+}
+
+func (ww *WithWorkspaces) Changed() {
+	if !ww.changed {
+		ww.changed = true
+		for ws := range ww.Workspaces() {
+			ws.(*Workspace).changed()
+		}
 	}
 }
 
