@@ -6,8 +6,6 @@
 package descr
 
 import (
-	"slices"
-
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -16,7 +14,7 @@ func newACL() *ACL {
 }
 
 func (acl *ACL) read(a appdef.IWithACL, withPrincipals bool) {
-	for r := range a.ACL() {
+	for _, r := range a.ACL() {
 		ar := newACLRule()
 		ar.read(r, withPrincipals)
 		*acl = append(*acl, ar)
@@ -32,7 +30,7 @@ func newACLRule() *ACLRule {
 func (ar *ACLRule) read(acl appdef.IACLRule, withPrincipal bool) {
 	ar.Comment = readComment(acl)
 	ar.Policy = acl.Policy().TrimString()
-	for k := range acl.Ops() {
+	for _, k := range acl.Ops() {
 		ar.Ops = append(ar.Ops, k.TrimString())
 	}
 	ar.Filter.read(acl.Filter())
@@ -45,5 +43,5 @@ func (ar *ACLRule) read(acl appdef.IACLRule, withPrincipal bool) {
 
 func (f *ACLFilter) read(flt appdef.IACLFilter) {
 	f.Filter.read(flt)
-	f.Fields = slices.Collect(flt.Fields())
+	f.Fields = flt.Fields()
 }

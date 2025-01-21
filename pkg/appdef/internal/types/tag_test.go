@@ -78,7 +78,7 @@ func Test_Tags(t *testing.T) {
 
 	t.Run("should be ok to enumerate tags", func(t *testing.T) {
 		got := appdef.QNames{}
-		for t := range doc.Tags() {
+		for _, t := range doc.Tags() {
 			got.Add(t.QName())
 		}
 		require.Equal(appdef.QNamesFrom(tagNames...), got)

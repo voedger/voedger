@@ -98,7 +98,7 @@ func Test_newRecord(t *testing.T) {
 
 		t.Run("system field counters for test CDoc", func(t *testing.T) {
 			sysCnt := 0
-			for f := range doc.fields.Fields() {
+			for _, f := range doc.fields.Fields() {
 				require.True(doc.HasValue(f.Name()))
 				if f.IsSys() {
 					sysCnt++
@@ -118,7 +118,7 @@ func Test_newRecord(t *testing.T) {
 			cnt := 0
 			sysCnt := 0
 
-			for f := range doc.fields.Fields() {
+			for _, f := range doc.fields.Fields() {
 				require.True(doc.HasValue(f.Name()))
 				if f.IsSys() {
 					sysCnt++
@@ -162,7 +162,7 @@ func Test_newRecord(t *testing.T) {
 			t.Run("system field counters for test CRecord", func(t *testing.T) {
 				sysCnt := 0
 
-				for f := range rec.fields.Fields() {
+				for _, f := range rec.fields.Fields() {
 					require.True(rec.HasValue(f.Name()))
 					if f.IsSys() {
 						sysCnt++
@@ -183,7 +183,7 @@ func Test_newRecord(t *testing.T) {
 				cnt := 0
 				sysCnt := 0
 
-				for f := range rec.fields.Fields() {
+				for _, f := range rec.fields.Fields() {
 					require.True(rec.HasValue(f.Name()))
 					if f.IsSys() {
 						sysCnt++
@@ -387,7 +387,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			newCDoc := wsb.AddCDoc(test.testCDoc)
 
 			oldCDoc := appdef.CDoc(rec1.appCfg.AppDef.Type, test.testCDoc)
-			for f := range oldCDoc.Fields() {
+			for _, f := range oldCDoc.Fields() {
 				if !f.IsSys() {
 					newCDoc.AddField(newFieldName(f.Name()), f.DataKind(), f.Required())
 				}

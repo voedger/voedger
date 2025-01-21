@@ -20,8 +20,8 @@ type IWithUniques interface {
 	// Return uniques count
 	UniqueCount() int
 
-	// All uniques.
-	Uniques() iter.Seq2[QName, IUnique]
+	// All uniques as map. Key is unique name. Value is unique.
+	Uniques() map[QName]IUnique
 
 	// Returns single field unique.
 	//

@@ -101,7 +101,7 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 				proceedField(fieldName, fields.Field(fieldName).DataKind())
 			}
 		} else {
-			for f := range fields.Fields() {
+			for _, f := range fields.Fields() {
 				proceedField(f.Name(), f.DataKind())
 			}
 		}

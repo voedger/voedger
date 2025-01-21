@@ -5,8 +5,6 @@
 
 package appdef
 
-import "iter"
-
 type IStorage interface {
 	IWithComments
 
@@ -14,7 +12,7 @@ type IStorage interface {
 	Name() QName
 
 	// Returns names in storage in alphabetical order.
-	Names() iter.Seq[QName]
+	Names() []QName
 }
 
 type IStorages interface {
@@ -23,8 +21,8 @@ type IStorages interface {
 	// Returns nil if storage not found.
 	Storage(name QName) IStorage
 
-	// Returns storages in alphabetical order.
-	All() iter.Seq2[QName, IStorage]
+	// Returns storage names in alphabetical order.
+	Names() []QName
 }
 
 type IStoragesBuilder interface {

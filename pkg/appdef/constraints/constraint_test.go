@@ -8,7 +8,6 @@ package constraints_test
 import (
 	"math"
 	"regexp"
-	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -83,7 +82,7 @@ func TestNewConstraint(t *testing.T) {
 			require.NotNil(c)
 			require.Equal(tt.want.kind, c.Kind())
 			require.EqualValues(tt.want.value, c.Value())
-			require.EqualValues(tt.want.c, slices.Collect(c.CommentLines()))
+			require.EqualValues(tt.want.c, c.CommentLines())
 		})
 	}
 }

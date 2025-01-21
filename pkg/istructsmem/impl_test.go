@@ -427,7 +427,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 
 		// check fields
 		fields := make(map[string]appdef.DataKind)
-		for f := range cmdDoc.Fields() {
+		for _, f := range cmdDoc.Fields() {
 			fields[f.Name()] = f.DataKind()
 		}
 		require.Len(fields, 7) // 2 system {sys.QName, sys.ID} + 5 user
@@ -437,7 +437,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 		require.Equal(appdef.DataKind_bool, fields[test.humanIdent])
 		require.Equal(appdef.DataKind_bytes, fields[test.photoIdent])
 
-		for c := range cmdDoc.Containers() {
+		for _, c := range cmdDoc.Containers() {
 			require.Equal(test.basketIdent, c.Name())
 			require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), c.QName())
 			t.Run("II. test first level nested type (basket)", func(t *testing.T) {
@@ -445,7 +445,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 				require.NotNil(rec)
 				require.Equal(appdef.TypeKind_ORecord, rec.Kind())
 
-				for c := range rec.Containers() {
+				for _, c := range rec.Containers() {
 					require.Equal(test.goodIdent, c.Name())
 					require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), c.QName())
 
@@ -455,7 +455,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 						require.Equal(appdef.TypeKind_ORecord, rec.Kind())
 
 						fields := make(map[string]appdef.DataKind)
-						for f := range rec.Fields() {
+						for _, f := range rec.Fields() {
 							fields[f.Name()] = f.DataKind()
 						}
 						require.Len(fields, 8) // 4 system {sys.QName, sys.ID, sys.ParentID, sys.Container} + 4 user

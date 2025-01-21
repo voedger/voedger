@@ -6,7 +6,6 @@
 package appdef
 
 import (
-	"iter"
 	"time"
 )
 
@@ -41,7 +40,7 @@ type IRate interface {
 	Scope(RateScope) bool
 
 	// Returns rate scopes.
-	Scopes() iter.Seq[RateScope]
+	Scopes() []RateScope
 }
 
 type IRatesBuilder interface {
@@ -89,7 +88,7 @@ type ILimit interface {
 	Op(OperationKind) bool
 
 	// Returns operations that was limited.
-	Ops() iter.Seq[OperationKind]
+	Ops() []OperationKind
 
 	// Returns limited resources filter.
 	Filter() ILimitFilter

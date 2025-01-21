@@ -6,8 +6,6 @@
 package descr
 
 import (
-	"slices"
-
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -18,22 +16,22 @@ func newFilter() *Filter {
 func (f *Filter) read(flt appdef.IFilter) {
 	switch flt.Kind() {
 	case appdef.FilterKind_QNames:
-		f.QNames = slices.Collect(flt.QNames())
+		f.QNames = flt.QNames()
 	case appdef.FilterKind_Types:
-		f.Types = slices.Collect(flt.Types())
+		f.Types = flt.Types()
 		if n := flt.WS(); n != appdef.NullQName {
 			f.Workspace = &n
 		}
 	case appdef.FilterKind_Tags:
-		f.Tags = slices.Collect(flt.Tags())
+		f.Tags = flt.Tags()
 	case appdef.FilterKind_And:
-		for cf := range flt.And() {
+		for _, cf := range flt.And() {
 			c := newFilter()
 			c.read(cf)
 			f.And = append(f.And, c)
 		}
 	case appdef.FilterKind_Or:
-		for cf := range flt.Or() {
+		for _, cf := range flt.Or() {
 			c := newFilter()
 			c.read(cf)
 			f.Or = append(f.Or, c)
