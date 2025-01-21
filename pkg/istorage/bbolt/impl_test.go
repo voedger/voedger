@@ -21,14 +21,6 @@ import (
 )
 
 func TestBasicUsage(t *testing.T) {
-	params := prepareTestData()
-	defer cleanupTestData(params)
-
-	factory := Provide(context.Background(), params, coreutils.MockTime)
-	istorage.TechnologyCompatibilityKit(t, factory)
-}
-
-func Test_MyTestBasicUsage(t *testing.T) {
 	require := require.New(t)
 
 	params := prepareTestData()
@@ -54,20 +46,12 @@ func Test_MyTestBasicUsage(t *testing.T) {
 	require.Equal([]byte("test data string"), value)
 }
 
-func prepareTestData() (params ParamsType) {
-	dbDir, err := os.MkdirTemp("", "bolt")
-	if err != nil {
-		panic(err)
-	}
-	params.DBDir = dbDir
-	return
-}
+func TestTCK(t *testing.T) {
+	params := prepareTestData()
+	defer cleanupTestData(params)
 
-func cleanupTestData(params ParamsType) {
-	if params.DBDir != "" {
-		os.RemoveAll(params.DBDir)
-		params.DBDir = ""
-	}
+	factory := Provide(context.Background(), params, coreutils.MockTime)
+	istorage.TechnologyCompatibilityKit(t, factory)
 }
 
 func Test_PutGet(t *testing.T) {
@@ -134,4 +118,20 @@ func TestBackgroundCleaner(t *testing.T) {
 	ok, err = storage.TTLGet([]byte("pKey"), []byte("cCols1"), &value)
 	r.NoError(err)
 	r.False(ok)
+}
+
+func prepareTestData() (params ParamsType) {
+	dbDir, err := os.MkdirTemp("", "bolt")
+	if err != nil {
+		panic(err)
+	}
+	params.DBDir = dbDir
+	return
+}
+
+func cleanupTestData(params ParamsType) {
+	if params.DBDir != "" {
+		os.RemoveAll(params.DBDir)
+		params.DBDir = ""
+	}
 }

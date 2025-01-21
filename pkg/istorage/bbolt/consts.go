@@ -12,3 +12,6 @@ const (
 	dataBucketName  = "dataBucket"
 	cleanupInterval = time.Hour
 )
+
+// bolt cannot use empty keys so we declare nullKey
+var nullKey = []byte{0}

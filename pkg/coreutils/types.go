@@ -6,8 +6,6 @@
 package coreutils
 
 import (
-	"encoding/binary"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"io"
 	"io/fs"
 	"net/http"
@@ -102,26 +100,4 @@ type CUDs struct {
 type IReadFS interface {
 	fs.ReadDirFS
 	fs.ReadFileFS
-}
-
-type DataWithExpiration struct {
-	Data     []byte
-	ExpireAt int64
-}
-
-func (d *DataWithExpiration) ToBytes() []byte {
-	res := make([]byte, 0, len(d.Data)+utils.Uint64Size)
-	res = append(res, d.Data...)
-	res = binary.BigEndian.AppendUint64(res, uint64(d.ExpireAt)) // nolint G115
-
-	return res
-}
-
-func (d *DataWithExpiration) Read(data []byte) {
-	d.Data = data[:len(data)-utils.Uint64Size]
-	d.ExpireAt = int64(binary.BigEndian.Uint64(data[len(data)-utils.Uint64Size:])) // nolint G115
-}
-
-func (d DataWithExpiration) IsExpired(now time.Time) bool {
-	return d.ExpireAt > 0 && !now.Before(time.UnixMilli(d.ExpireAt))
 }

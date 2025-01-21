@@ -19,6 +19,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
@@ -86,9 +87,6 @@ func (p *appStorageFactory) Time() coreutils.ITime {
 	return p.iTime
 }
 
-// bolt cannot use empty keys so we declare nullKey
-var nullKey = []byte{0}
-
 // if the key is empty or equal to nil, then convert it to nullKey
 func safeKey(value []byte) []byte {
 	if len(value) == 0 {
@@ -105,7 +103,6 @@ func unSafeKey(value []byte) []byte {
 	return value
 }
 
-// TODO: add test for backgroundCleaner
 // implemetation for istorage.IAppStorage.
 type appStorageType struct {
 	db    *bolt.DB
@@ -329,10 +326,7 @@ func (s *appStorageType) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, 
 			return nil
 		}
 
-		var d coreutils.DataWithExpiration
-
-		d.Read(v)
-		*data = append(*data, d.Data...)
+		*data = append(*data, v[utils.Uint64Size:]...)
 		ok = true
 
 		return nil
@@ -430,7 +424,7 @@ func (s *appStorageType) read(ctx context.Context, pKey []byte, startCCols, fini
 					return err
 				}
 
-				if err := cb(unSafeKey(k), v[:len(v)-utils.Uint64Size]); err != nil {
+				if err := cb(unSafeKey(k), d.Data); err != nil {
 					return err
 				}
 			}
@@ -579,8 +573,7 @@ func (s *appStorageType) backgroundCleaner() {
 						break
 					}
 
-					err := s.removeKey(tx, k)
-					if err != nil {
+					if err := s.removeKey(tx, k); err != nil {
 						return err
 					}
 
@@ -590,7 +583,7 @@ func (s *appStorageType) backgroundCleaner() {
 				return nil
 			})
 			if err != nil {
-				panic(err)
+				logger.Error("bbolt storage: failed to cleanup expired records: " + err.Error())
 			}
 		}
 	}
