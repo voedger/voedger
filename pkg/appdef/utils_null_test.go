@@ -22,7 +22,7 @@ func Test_NullType(t *testing.T) {
 	require.Empty(appdef.NullType.CommentLines())
 
 	require.False(appdef.NullType.HasTag(appdef.NullQName))
-	appdef.NullType.Tags()(func(appdef.ITag) bool { require.Fail("Tags() should be empty"); return false })
+	require.Empty(appdef.NullType.Tags())
 
 	require.Nil(appdef.NullType.App())
 	require.Nil(appdef.NullType.Workspace())

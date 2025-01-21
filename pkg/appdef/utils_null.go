@@ -5,8 +5,6 @@
 
 package appdef
 
-import "iter"
-
 type nullComment struct{}
 
 func (c *nullComment) Comment() string        { return "" }
@@ -16,8 +14,8 @@ const nullTypeString = "null type"
 
 type nullTags struct{}
 
-func (t nullTags) HasTag(QName) bool    { return false }
-func (t nullTags) Tags() iter.Seq[ITag] { return func(func(ITag) bool) {} }
+func (t nullTags) HasTag(QName) bool { return false }
+func (t nullTags) Tags() []ITag      { return nil }
 
 type nullType struct {
 	nullComment
