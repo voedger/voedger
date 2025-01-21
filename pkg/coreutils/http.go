@@ -56,7 +56,7 @@ func WithLongPolling() ReqOptFunc {
 			if !slices.Contains(ro.expectedHTTPCodes, resp.StatusCode) {
 				body, err := readBody(resp)
 				if err != nil {
-					panic("failed to read response body in custom response handler: " + err.Error())
+					panic("failed to Read response body in custom response handler: " + err.Error())
 				}
 				panic(fmt.Sprintf("actual status code %d, expected %v. Body: %s", resp.StatusCode, ro.expectedHTTPCodes, body))
 			}
