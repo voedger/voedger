@@ -58,11 +58,10 @@ type IWorkspace interface {
 	// If the workspace uses other workspaces, these used workspaces (but not the types from them) also iterated.
 	Types() iter.Seq[IType]
 
-	// Returns used workspaces.
+	// Returns used workspaces in alphabetic order.
 	//
-	// Used workspaces enumerated in alphabetic order.
 	// Only direct used workspaces are enumerated.
-	UsedWorkspaces() iter.Seq[IWorkspace]
+	UsedWorkspaces() []IWorkspace
 }
 
 type IWorkspaceBuilder interface {

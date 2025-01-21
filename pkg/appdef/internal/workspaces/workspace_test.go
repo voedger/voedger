@@ -587,7 +587,7 @@ func Test_WorkspaceUsage(t *testing.T) {
 				want[i] = wsName(u)
 			}
 			i := 0
-			for u := range ws.UsedWorkspaces() {
+			for _, u := range ws.UsedWorkspaces() {
 				require.Equal(want[i], u.QName(), "unexpected %v UsedWorkspaces[%d] for: want %v, got: %v", ws, i, want[i], u.QName())
 				i++
 			}

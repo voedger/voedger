@@ -98,7 +98,7 @@ func (ws Workspace) Type(name appdef.QName) appdef.IType {
 					return t
 				}
 			}
-			for u := range w.UsedWorkspaces() {
+			for _, u := range w.UsedWorkspaces() {
 				// #2872 should find used Workspaces, but not types from them
 				if u.QName() == name {
 					return u
@@ -133,7 +133,7 @@ func (ws Workspace) Types() iter.Seq[appdef.IType] {
 						return false
 					}
 				}
-				for u := range w.UsedWorkspaces() {
+				for _, u := range w.UsedWorkspaces() {
 					// #2872 should enum used Workspaces, but not types from them
 					if !yield(u) {
 						return false
@@ -146,8 +146,8 @@ func (ws Workspace) Types() iter.Seq[appdef.IType] {
 	}
 }
 
-func (ws Workspace) UsedWorkspaces() iter.Seq[appdef.IWorkspace] {
-	return ws.usedWS.Values()
+func (ws Workspace) UsedWorkspaces() []appdef.IWorkspace {
+	return ws.usedWS.AsArray()
 }
 
 func (ws *Workspace) Validate() error {
