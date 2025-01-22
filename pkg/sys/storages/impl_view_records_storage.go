@@ -13,6 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
@@ -139,6 +140,9 @@ func (s *viewRecordsStorage) ApplyBatch(items []state.ApplyBatchItem) (err error
 		}
 	}
 	for n, newOffset := range nn {
+		if logger.IsVerbose() {
+			logger.Verbose(fmt.Sprintf("viewRecordStorage: sending n10n view: %s, wsid: %d, newOffset: %d", n.view, n.wsid, newOffset))
+		}
 		s.n10nFunc(n.view, n.wsid, newOffset)
 	}
 	return err
