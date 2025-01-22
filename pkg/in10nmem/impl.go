@@ -15,7 +15,6 @@ package in10nmem
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
@@ -200,10 +199,11 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 	updateUnits := make([]UpdateUnit, 0)
 
 	// cycle for channel.cchan and ctx
+forctx:
 	for ctx.Err() == nil {
 		select {
 		case <-ctx.Done():
-			break
+			break forctx
 		case <-channel.cchan:
 			if logger.IsTrace() {
 				logger.Trace(channelID)
@@ -242,16 +242,14 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 }
 
 func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
-	defer func() {
-		logger.Info("notifier goroutine stopped")
-		wg.Done()
-	}()
+
 	logger.Info("notifier goroutine started")
 
+forcycle:
 	for ctx.Err() == nil {
 		select {
 		case <-ctx.Done():
-			return
+			break forcycle
 		case eve := <-events:
 			prj := eve.prj
 
@@ -269,9 +267,6 @@ func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
 			}
 
 			// Notify subscribers
-			if logger.IsVerbose() {
-				logger.Verbose("notifier goroutine: len(prj.subscribedChannels):",strconv.Itoa(len(prj.subscribedChannels)))
-			}
 			for _, ch := range prj.subscribedChannels {
 				select {
 				case ch.cchan <- struct{}{}:
@@ -280,6 +275,8 @@ func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
 			}
 		}
 	}
+	logger.Info("notifier goroutine stopped")
+	wg.Done()
 }
 
 func guaranteeProjection(projections map[in10n.ProjectionKey]*projection, projectionKey in10n.ProjectionKey) (offsetPointer *istructs.Offset) {

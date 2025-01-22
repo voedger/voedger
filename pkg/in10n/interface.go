@@ -5,12 +5,10 @@
 package in10n
 
 import (
-	"bytes"
 	"context"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -75,15 +73,4 @@ type Quotas struct {
 	ChannelsPerSubject      int
 	Subscriptions           int
 	SubscriptionsPerSubject int
-}
-
-func (pk ProjectionKey) ToJSON() string {
-	buf := bytes.NewBufferString(`{"App":"}`)
-	buf.WriteString(pk.App.String())
-	buf.WriteString(`","Projection":"`)
-	buf.WriteString(pk.Projection.String())
-	buf.WriteString(`","WS":`)
-	buf.WriteString(utils.UintToString(pk.WS))
-	buf.WriteString("}")
-	return buf.String()
 }

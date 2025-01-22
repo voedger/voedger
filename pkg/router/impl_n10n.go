@@ -5,7 +5,6 @@
 package router
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -39,28 +38,28 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 		rw.Header().Set("Connection", "keep-alive")
 		jsonParam, ok := req.URL.Query()["payload"]
 		if !ok || len(jsonParam[0]) < 1 {
-			errMsg := "query parameter with payload (SubjectLogin id and ProjectionKey) is missing"
-			logger.Error(errMsg)
-			WriteTextResponse(rw, errMsg, http.StatusBadRequest)
+			err = errors.New("query parameter with payload (SubjectLogin id and ProjectionKey) is missing")
+			logger.Error(err)
+			http.Error(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
-		if err = json.Unmarshal([]byte(jsonParam[0]), &urlParams); err != nil {
+		err = json.Unmarshal([]byte(jsonParam[0]), &urlParams)
+		if err != nil {
 			err = fmt.Errorf("cannot unmarshal input payload %w", err)
 			logger.Error(err)
-			WriteTextResponse(rw, err.Error(), http.StatusBadRequest)
+			http.Error(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
 		logger.Info("n10n subscribeAndWatch: ", urlParams)
 		flusher, ok = rw.(http.Flusher)
 		if !ok {
-			// notest
-			WriteTextResponse(rw, "streaming unsupported!", http.StatusInternalServerError)
+			http.Error(rw, "Streaming unsupported!", http.StatusInternalServerError)
 			return
 		}
 		channel, err = s.n10n.NewChannel(urlParams.SubjectLogin, hours24)
 		if err != nil {
 			logger.Error(err)
-			WriteTextResponse(rw, "create new channel failed: "+err.Error(), n10nErrorToStatusCode(err))
+			http.Error(rw, "create new channel failed: "+err.Error(), n10nErrorToStatusCode(err))
 			return
 		}
 		if _, err = fmt.Fprintf(rw, "event: channelId\ndata: %s\n\n", channel); err != nil {
@@ -68,18 +67,18 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 			return
 		}
 		for _, projection := range urlParams.ProjectionKey {
-			if err = s.n10n.Subscribe(channel, projection); err != nil {
+			err = s.n10n.Subscribe(channel, projection)
+			if err != nil {
 				logger.Error(err)
-				WriteTextResponse(rw, "subscribe failed: "+err.Error(), n10nErrorToStatusCode(err))
+				http.Error(rw, "subscribe failed: "+err.Error(), n10nErrorToStatusCode(err))
 				return
 			}
 		}
 		flusher.Flush()
 		ch := make(chan in10nmem.UpdateUnit)
-		watchChannelContext, cancel := context.WithCancel(req.Context())
 		go func() {
 			defer close(ch)
-			s.n10n.WatchChannel(watchChannelContext, channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {
+			s.n10n.WatchChannel(req.Context(), channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {
 				var unit = in10nmem.UpdateUnit{
 					Projection: projection,
 					Offset:     offset,
@@ -87,23 +86,26 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 				ch <- unit
 			})
 		}()
-		defer logger.Info("watch done")
 		for req.Context().Err() == nil {
+			var (
+				projection, offset []byte
+			)
 			result, ok := <-ch
 			if !ok {
+				logger.Info("watch done")
 				break
 			}
-			if _, err = fmt.Fprintf(rw, "event: %s\ndata: %s\n\n", result.Projection.ToJSON(), utils.UintToString(result.Offset)); err != nil {
-				logger.Error("failed to write sse message to client:", err)
-
-				break // WatchChannel will be finish
+			projection, err = json.Marshal(&result.Projection)
+			if err == nil {
+				if _, err = fmt.Fprintf(rw, "event: %s\n", projection); err != nil {
+					logger.Error("failed to write projection key event to client:", err)
+				}
+			}
+			offset, _ = json.Marshal(&result.Offset) // error impossible
+			if _, err = fmt.Fprintf(rw, "data: %s\n\n", offset); err != nil {
+				logger.Error("failed to write projection key offset to client:", err)
 			}
 			flusher.Flush()
-		}
-		// graceful client disconnect -> req.Context() closed
-		// failed to write sse message -> need to close watchChannelContext
-		cancel()
-		for range ch {
 		}
 	}
 }
