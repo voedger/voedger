@@ -120,13 +120,3 @@ func Test_TagsPanics(t *testing.T) {
 		})
 	})
 }
-
-func Test_NullTags(t *testing.T) {
-	require := require.New(t)
-
-	null := types.NullTags{}
-	require.False(null.HasTag(appdef.NewQName("test", "tag")))
-	for range null.Tags() {
-		require.Fail("NullTags should not have tags")
-	}
-}
