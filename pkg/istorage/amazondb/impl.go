@@ -9,6 +9,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"strconv"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -34,7 +36,7 @@ func (d implIAppStorageFactory) AppStorage(appName istorage.SafeAppName) (storag
 	if !exist {
 		return nil, istorage.ErrStorageDoesNotExist
 	}
-	return newStorage(cfg, appName.String()), nil
+	return newStorage(cfg, appName.String(), d.iTime), nil
 }
 
 func (d implIAppStorageFactory) Init(appName istorage.SafeAppName) error {
@@ -58,53 +60,102 @@ func (d implIAppStorageFactory) Time() coreutils.ITime {
 	return nil
 }
 
-//nolint:revive
 func (s *implIAppStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
-	//TODO implement me
-	panic("implement me")
+	response, err := s.getItem(pKey, cCols, true)
+	if err != nil {
+		return false, err
+	}
+
+	if response.Item == nil {
+		return false, nil
+	}
+
+	if !isExpired(response.Item[expireAtAttributeName], s.iTime.Now()) {
+		return false, nil
+	}
+
+	err = s.put(pKey, cCols, value, ttlSeconds)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
-//nolint:revive
 func (s *implIAppStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
-	//TODO implement me
-	panic("implement me")
+	response, err := s.getItem(pKey, cCols, true)
+	if err != nil {
+		return false, err
+	}
+
+	if response.Item == nil {
+		return false, nil
+	}
+
+	value := response.Item[valueAttributeName].(*types.AttributeValueMemberB).Value
+	if !bytes.Equal(value, oldValue) {
+		return false, nil
+	}
+
+	if isExpired(response.Item[expireAtAttributeName], s.iTime.Now()) {
+		return false, nil
+	}
+
+	err = s.put(pKey, cCols, newValue, ttlSeconds)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
-//nolint:revive
 func (s *implIAppStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
-	//TODO implement me
-	panic("implement me")
-}
+	response, err := s.getItem(pKey, cCols, true)
+	if err != nil {
+		return false, err
+	}
 
-//nolint:revive
-func (s *implIAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
-	//TODO implement me
-	panic("implement me")
-}
+	if response.Item == nil {
+		return false, nil
+	}
 
-//nolint:revive
-func (s *implIAppStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
-	//TODO implement me
-	panic("implement me")
-}
+	value := response.Item[valueAttributeName].(*types.AttributeValueMemberB).Value
+	if !bytes.Equal(value, expectedValue) {
+		return false, nil
+	}
 
-func (s *implIAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
-	params := dynamodb.PutItemInput{
+	if isExpired(response.Item[expireAtAttributeName], s.iTime.Now()) {
+		return false, nil
+	}
+
+	_, err = s.client.DeleteItem(context.Background(), &dynamodb.DeleteItemInput{
 		TableName: aws.String(s.keySpace),
-		Item: map[string]types.AttributeValue{
+		Key: map[string]types.AttributeValue{
 			partitionKeyAttributeName: &types.AttributeValueMemberB{
 				Value: pKey,
 			},
 			sortKeyAttributeName: &types.AttributeValueMemberB{
 				Value: prefixZero(cCols),
 			},
-			valueAttributeName: &types.AttributeValueMemberB{
-				Value: value,
-			},
 		},
+	})
+	if err != nil {
+		return false, err
 	}
-	_, err = s.client.PutItem(context.Background(), &params)
-	return err
+
+	return true, nil
+}
+
+func (s *implIAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
+	return s.get(pKey, cCols, data, true)
+}
+
+func (s *implIAppStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
+	return s.read(ctx, pKey, startCCols, finishCCols, cb, true)
+}
+
+func (s *implIAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
+	return s.put(pKey, cCols, value, 0)
 }
 
 func (s *implIAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
@@ -134,38 +185,7 @@ func (s *implIAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 }
 
 func (s *implIAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
-	// arranging request payload
-	params := dynamodb.GetItemInput{
-		TableName: aws.String(s.keySpace),
-		Key: map[string]types.AttributeValue{
-			partitionKeyAttributeName: &types.AttributeValueMemberB{
-				Value: pKey,
-			},
-			sortKeyAttributeName: &types.AttributeValueMemberB{
-				Value: prefixZero(cCols),
-			},
-		},
-		ProjectionExpression:     aws.String(sortKeyAttributeName + ", #v"),
-		ExpressionAttributeNames: map[string]string{"#v": valueAttributeName},
-	}
-
-	// making request to DynamoDB
-	// GetItem method returns response (pointer to GetItemOutput struct) and error
-	response, err := s.client.GetItem(context.Background(), &params)
-	if err != nil {
-		return false, err
-	}
-
-	// Check if any items were found
-	if response.Item == nil {
-		return false, nil
-	}
-
-	// Extract the value attribute from the response
-	valueAttribute := response.Item[valueAttributeName]
-	*data = (*data)[:0] // Reset the data slice
-	*data = valueAttribute.(*types.AttributeValueMemberB).Value
-	return true, nil
+	return s.get(pKey, cCols, data, false)
 }
 
 func (s *implIAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) error {
@@ -226,6 +246,88 @@ func (s *implIAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) e
 }
 
 func (s *implIAppStorage) Read(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
+	return s.read(ctx, pKey, startCCols, finishCCols, cb, false)
+}
+
+func (s *implIAppStorage) get(pKey []byte, cCols []byte, data *[]byte, checkTtl bool) (ok bool, err error) {
+	response, err := s.getItem(pKey, cCols, checkTtl)
+	if err != nil {
+		return false, err
+	}
+
+	if response.Item == nil {
+		return false, nil
+	}
+
+	*data = (*data)[:0] // Reset the data slice
+	if checkTtl && isExpired(response.Item[expireAtAttributeName], s.iTime.Now()) {
+		return false, nil
+	}
+
+	// Extract the value attribute from the response
+	valueAttribute := response.Item[valueAttributeName]
+	*data = valueAttribute.(*types.AttributeValueMemberB).Value
+
+	return true, nil
+}
+
+func (s *implIAppStorage) getItem(pKey []byte, cCols []byte, getTtl bool) (*dynamodb.GetItemOutput, error) {
+	// arranging request payload
+	params := dynamodb.GetItemInput{
+		TableName: aws.String(s.keySpace),
+		Key: map[string]types.AttributeValue{
+			partitionKeyAttributeName: &types.AttributeValueMemberB{
+				Value: pKey,
+			},
+			sortKeyAttributeName: &types.AttributeValueMemberB{
+				Value: prefixZero(cCols),
+			},
+		},
+		ProjectionExpression:     aws.String(sortKeyAttributeName + ", #v"),
+		ExpressionAttributeNames: map[string]string{"#v": valueAttributeName},
+	}
+
+	if getTtl {
+		params.ProjectionExpression = aws.String(sortKeyAttributeName + ", #v, #e")
+		params.ExpressionAttributeNames["#e"] = expireAtAttributeName
+	}
+
+	// making request to DynamoDB
+	// GetItem method returns response (pointer to GetItemOutput struct) and error
+	return s.client.GetItem(context.Background(), &params)
+}
+
+func (s *implIAppStorage) put(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (err error) {
+	putItemParams := dynamodb.PutItemInput{
+		TableName: aws.String(s.keySpace),
+		Item: map[string]types.AttributeValue{
+			partitionKeyAttributeName: &types.AttributeValueMemberB{
+				Value: pKey,
+			},
+			sortKeyAttributeName: &types.AttributeValueMemberB{
+				Value: prefixZero(cCols),
+			},
+			valueAttributeName: &types.AttributeValueMemberB{
+				Value: value,
+			},
+		},
+	}
+
+	if ttlSeconds > 0 {
+		putItemParams.Item[expireAtAttributeName] = &types.AttributeValueMemberN{
+			Value: strconv.FormatInt(s.iTime.Now().Add(time.Duration(ttlSeconds)*time.Second).Unix(), 10),
+		}
+	}
+
+	_, err = s.client.PutItem(context.Background(), &putItemParams)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *implIAppStorage) read(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback, checkTtl bool) (err error) {
 	if (len(startCCols) > 0) && (len(finishCCols) > 0) && (bytes.Compare(startCCols, finishCCols) >= 0) {
 		return nil // absurd range
 	}
@@ -240,7 +342,9 @@ func (s *implIAppStorage) Read(ctx context.Context, pKey []byte, startCCols, fin
 			},
 		},
 	}
-	if len(startCCols) == 0 {
+
+	switch {
+	case len(startCCols) == 0:
 		if len(finishCCols) != 0 {
 			keyConditions[sortKeyAttributeName] = types.Condition{
 				ComparisonOperator: types.ComparisonOperatorLe,
@@ -251,7 +355,7 @@ func (s *implIAppStorage) Read(ctx context.Context, pKey []byte, startCCols, fin
 				},
 			}
 		}
-	} else if len(finishCCols) == 0 {
+	case len(finishCCols) == 0:
 		// right-opened range
 		keyConditions[sortKeyAttributeName] = types.Condition{
 			ComparisonOperator: types.ComparisonOperatorGe,
@@ -261,7 +365,7 @@ func (s *implIAppStorage) Read(ctx context.Context, pKey []byte, startCCols, fin
 				},
 			},
 		}
-	} else {
+	default:
 		// closed range
 		keyConditions[sortKeyAttributeName] = types.Condition{
 			ComparisonOperator: types.ComparisonOperatorBetween,
@@ -275,6 +379,7 @@ func (s *implIAppStorage) Read(ctx context.Context, pKey []byte, startCCols, fin
 			},
 		}
 	}
+
 	params := dynamodb.QueryInput{
 		TableName:                aws.String(s.keySpace),
 		ProjectionExpression:     aws.String(sortKeyAttributeName + ", #v"),
@@ -282,21 +387,36 @@ func (s *implIAppStorage) Read(ctx context.Context, pKey []byte, startCCols, fin
 		KeyConditions:            keyConditions,
 	}
 
+	if checkTtl {
+		params.ProjectionExpression = aws.String(sortKeyAttributeName + ", #v, #e")
+		params.ExpressionAttributeNames["#e"] = expireAtAttributeName
+	}
+
 	result, err := s.client.Query(ctx, &params)
 	if err != nil {
 		return err
 	}
 
+	now := s.iTime.Now()
 	if len(result.Items) > 0 {
 		for _, item := range result.Items {
 			if ctx.Err() != nil {
 				return nil // TCK contract
 			}
-			if err := cb(unprefixZero(item[sortKeyAttributeName].(*types.AttributeValueMemberB).Value), item[valueAttributeName].(*types.AttributeValueMemberB).Value); err != nil {
+
+			if checkTtl && isExpired(item[expireAtAttributeName], now) {
+				continue
+			}
+
+			if err := cb(
+				unprefixZero(item[sortKeyAttributeName].(*types.AttributeValueMemberB).Value),
+				item[valueAttributeName].(*types.AttributeValueMemberB).Value,
+			); err != nil {
 				return err
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -305,12 +425,8 @@ func getClient(cfg aws.Config) *dynamodb.Client {
 	return client
 }
 
-func newStorage(cfg aws.Config, keySpace string) (storage istorage.IAppStorage) {
-	client := getClient(cfg)
-	return &implIAppStorage{
-		client:   client,
-		keySpace: dynamoDBTableName(keySpace),
-	}
+func newStorage(cfg aws.Config, keySpace string, iTime coreutils.ITime) (storage istorage.IAppStorage) {
+	return &implIAppStorage{client: getClient(cfg), keySpace: dynamoDBTableName(keySpace), iTime: iTime}
 }
 
 func newAwsCfg(params DynamoDBParams) (aws.Config, error) {
@@ -330,6 +446,7 @@ func newAwsCfg(params DynamoDBParams) (aws.Config, error) {
 }
 
 func newTableExistsWaiter(name string, client *dynamodb.Client) error {
+	ctx := context.Background()
 	createTableInput := &dynamodb.CreateTableInput{
 		AttributeDefinitions: []types.AttributeDefinition{
 			{
@@ -358,10 +475,46 @@ func newTableExistsWaiter(name string, client *dynamodb.Client) error {
 		TableName: aws.String(dynamoDBTableName(name)),
 	}
 
-	if _, err := client.CreateTable(context.TODO(), createTableInput); err != nil {
+	if _, err := client.CreateTable(ctx, createTableInput); err != nil {
 		return err
 	}
+
+	// Enable ttl for the table
+	input := &dynamodb.UpdateTimeToLiveInput{
+		TableName: aws.String("MyTable"),
+		TimeToLiveSpecification: &types.TimeToLiveSpecification{
+			AttributeName: aws.String(expireAtAttributeName),
+			Enabled:       aws.Bool(true),
+		},
+	}
+
+	if _, err := client.UpdateTimeToLive(ctx, input); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func isExpired(expireAtValue types.AttributeValue, now time.Time) bool {
+	if expireAtValue == nil {
+		return false
+	}
+
+	if len(expireAtValue.(*types.AttributeValueMemberN).Value) == 0 {
+		return false
+	}
+
+	expireAtInSeconds, err := strconv.ParseInt(
+		expireAtValue.(*types.AttributeValueMemberN).Value,
+		10,
+		64,
+	)
+	if err != nil {
+		return false
+	}
+	expireAt := time.Unix(expireAtInSeconds, 0)
+
+	return !expireAt.After(now)
 }
 
 func doesTableExist(name string, client *dynamodb.Client) (bool, error) {
