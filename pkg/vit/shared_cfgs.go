@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/parser"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	"github.com/voedger/voedger/pkg/sys/sysprovide"
 	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
@@ -249,6 +250,7 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 					}
 					b.PutInt32("Val", 42)
 					b.PutString("Name", cud.AsString("name"))
+					b.PutInt64(state.ColOffset, int64(event.WLogOffset()))
 				}
 				return nil
 			},
