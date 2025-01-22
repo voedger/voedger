@@ -641,8 +641,6 @@ ALTERABLE WORKSPACE test_wsWS (
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocDeactivateDenied TO sys.WorkspaceOwner;
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocFieldInsertDenied TO sys.WorkspaceOwner;
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocFieldUpdateDenied TO sys.WorkspaceOwner;
-	REVOKE ACTIVATE ON TABLE DocActivateDenied FROM sys.WorkspaceOwner;
-	REVOKE DEACTIVATE ON TABLE DocDeactivateDenied FROM sys.WorkspaceOwner;
 	REVOKE INSERT(FldDenied) ON TABLE DocFieldInsertDenied FROM sys.WorkspaceOwner;
 	REVOKE UPDATE(FldDenied) ON TABLE DocFieldUpdateDenied FROM sys.WorkspaceOwner;
 );
