@@ -95,7 +95,6 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 			}
 			if _, err = fmt.Fprintf(rw, "event: %s\ndata: %s\n\n", result.Projection.ToJSON(), utils.UintToString(result.Offset)); err != nil {
 				logger.Error("failed to write sse message to client:", err)
-
 				break // WatchChannel will be finish
 			}
 			flusher.Flush()
