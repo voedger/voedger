@@ -263,7 +263,7 @@ func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey) (offs
 				}
 			}
 			if logger.IsVerbose() {
-				logger.Verbose(fmt.Sprintf("received event: %s, data: %s", event, data))
+				logger.Verbose(fmt.Sprintf("received event from server: %s, data: %s", event, data))
 			}
 			if event == "channelId" {
 				channelID = data

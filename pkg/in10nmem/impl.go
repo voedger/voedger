@@ -15,6 +15,7 @@ package in10nmem
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -267,6 +268,9 @@ forcycle:
 			}
 
 			// Notify subscribers
+			if logger.IsVerbose() {
+				logger.Verbose("notifier goroutine: len(prj.subscribedChannels):",strconv.Itoa(len(prj.subscribedChannels)))
+			}
 			for _, ch := range prj.subscribedChannels {
 				select {
 				case ch.cchan <- struct{}{}:
