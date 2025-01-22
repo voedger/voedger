@@ -250,7 +250,7 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 					}
 					b.PutInt32("Val", 42)
 					b.PutString("Name", cud.AsString("name"))
-					b.PutInt64(state.ColOffset, int64(event.WLogOffset()))
+					b.PutInt64(state.ColOffset, int64(event.WLogOffset())) // nolint G115
 				}
 				return nil
 			},
