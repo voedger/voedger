@@ -97,6 +97,9 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 			}
 			projection, err = json.Marshal(&result.Projection)
 			if err == nil {
+				if logger.IsVerbose() {
+					logger.Verbose("writing n10n to http client: projection: "+string(projection), ", offset: "+utils.UintToString(result.Offset))
+				}
 				if _, err = fmt.Fprintf(rw, "event: %s\n", projection); err != nil {
 					logger.Error("failed to write projection key event to client:", err)
 				}
