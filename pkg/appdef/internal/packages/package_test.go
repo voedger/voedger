@@ -74,7 +74,7 @@ func Test_Packages(t *testing.T) {
 
 		t.Run("should be ok to enum package local names", func(t *testing.T) {
 			cnt := 0
-			for l := range pkg.PackageLocalNames() {
+			for _, l := range pkg.PackageLocalNames() {
 				require.Equal(tests[cnt].l, l)
 				cnt++
 			}

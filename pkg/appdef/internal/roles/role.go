@@ -7,8 +7,6 @@ package roles
 
 import (
 	"errors"
-	"iter"
-	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/acl"
@@ -31,13 +29,13 @@ func NewRole(ws appdef.IWorkspace, name appdef.QName) *Role {
 	return r
 }
 
-func (r Role) Ancestors() iter.Seq[appdef.QName] {
+func (r Role) Ancestors() []appdef.QName {
 	roles := appdef.QNames{}
-	for rule := range r.WithACL.ACL() {
+	for _, rule := range r.WithACL.ACL() {
 		if rule.Op(appdef.OperationKind_Inherits) {
 			switch rule.Filter().Kind() {
 			case appdef.FilterKind_QNames:
-				for q := range rule.Filter().QNames() {
+				for _, q := range rule.Filter().QNames() {
 					roles.Add(q)
 				}
 			default:
@@ -48,7 +46,7 @@ func (r Role) Ancestors() iter.Seq[appdef.QName] {
 			}
 		}
 	}
-	return slices.Values(roles)
+	return roles
 }
 
 func (r *Role) grant(ops []appdef.OperationKind, flt appdef.IFilter, fields []appdef.FieldName, comment ...string) {
@@ -72,7 +70,7 @@ func (r *Role) revokeAll(flt appdef.IFilter, comment ...string) {
 // # Error if:
 //   - ACL rule is not valid
 func (r Role) Validate() (err error) {
-	for acl := range r.ACL() {
+	for _, acl := range r.ACL() {
 		if acl, ok := acl.(interface{ Validate() error }); ok {
 			err = errors.Join(err, acl.Validate())
 		}

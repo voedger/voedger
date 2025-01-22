@@ -49,8 +49,9 @@ func (e *Extension) read(ex appdef.IExtension) {
 
 func (e Extension) readStorages(storages appdef.IStorages) map[appdef.QName]appdef.QNames {
 	s := make(map[appdef.QName]appdef.QNames)
-	for n, storage := range storages.All() {
-		s[n] = appdef.CollectQNames(storage.Names())
+	for _, n := range storages.Names() {
+		st := storages.Storage(n)
+		s[n] = appdef.QNamesFrom(st.Names()...)
 	}
 	return s
 }
@@ -80,7 +81,7 @@ func (f *CommandFunction) read(fn appdef.ICommand) {
 
 func (p *Projector) read(prj appdef.IProjector) {
 	p.Extension.read(prj)
-	for ev := range prj.Events() {
+	for _, ev := range prj.Events() {
 		e := ProjectorEvent{}
 		e.read(ev)
 		p.Events = append(p.Events, e)
@@ -89,7 +90,7 @@ func (p *Projector) read(prj appdef.IProjector) {
 }
 
 func (e *ProjectorEvent) read(ev appdef.IProjectorEvent) {
-	for o := range ev.Ops() {
+	for _, o := range ev.Ops() {
 		e.Ops = append(e.Ops, o.TrimString())
 	}
 	e.Filter.read(ev.Filter())

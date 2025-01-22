@@ -18,7 +18,7 @@ import (
 func RecursiveRoleAncestors(role appdef.IRole) (roles appdef.QNames) {
 	roles.Add(role.QName())
 	app := role.App()
-	for r := range role.Ancestors() {
+	for _, r := range role.Ancestors() {
 		roles.Add(RecursiveRoleAncestors(appdef.Role(app.Type, r))...)
 	}
 	return roles
@@ -46,16 +46,25 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 		if s, ok := t.(appdef.IStructure); ok {
 			str = s
 		} else {
-			return false, nil, appdef.ErrIncompatible("%v is not structure", t)
+			return false, nil, appdef.ErrIncompatible("%v is not a structure", t)
 		}
 		for _, f := range fld {
 			if str.Field(f) == nil {
-				return false, nil, appdef.ErrNotFound("field «%q» in %q", f, str)
+				return false, nil, appdef.ErrNotFound("field «%s» in %v", f, str)
 			}
+		}
+	case appdef.OperationKind_Activate, appdef.OperationKind_Deactivate:
+		// #3148: appparts: ACTIVATE/DEACTIVATE in IsOperationAllowed
+		if rec, ok := t.(appdef.IRecord); ok {
+			if f := rec.Field(appdef.SystemField_IsActive); f == nil {
+				return false, nil, appdef.ErrNotFound("field «%s» in %v", appdef.SystemField_IsActive, rec)
+			}
+		} else {
+			return false, nil, appdef.ErrIncompatible("%v is not a record", t)
 		}
 	case appdef.OperationKind_Execute:
 		if _, ok := t.(appdef.IFunction); !ok {
-			return false, nil, appdef.ErrIncompatible("%v is not function", t)
+			return false, nil, appdef.ErrIncompatible("%v is not a function", t)
 		}
 	default:
 		return false, nil, appdef.ErrUnsupported("operation %q", op)
@@ -81,7 +90,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 		// nothung else matters
 		result = true
 		if str != nil {
-			for f := range str.Fields() {
+			for _, f := range str.Fields() {
 				allowedFields[f.Name()] = true
 			}
 		}
@@ -94,11 +103,11 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 			if !stack[ws.QName()] {
 				stack[ws.QName()] = true
 
-				for anc := range ws.Ancestors() {
+				for _, anc := range ws.Ancestors() {
 					acl(anc)
 				}
 
-				for rule := range ws.ACL() {
+				for _, rule := range ws.ACL() {
 					if rule.Op(op) {
 						if rule.Filter().Match(t) {
 							if roles.Contains(rule.Principal().QName()) {
@@ -108,12 +117,12 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 									if str != nil {
 										if rule.Filter().HasFields() {
 											// allow for specified fields only
-											for f := range rule.Filter().Fields() {
+											for _, f := range rule.Filter().Fields() {
 												allowedFields[f] = true
 											}
 										} else {
 											// allow for all fields
-											for f := range str.Fields() {
+											for _, f := range str.Fields() {
 												allowedFields[f.Name()] = true
 											}
 										}
@@ -122,7 +131,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 									if str != nil {
 										if rule.Filter().HasFields() {
 											// partially deny, only specified fields
-											for f := range rule.Filter().Fields() {
+											for _, f := range rule.Filter().Fields() {
 												delete(allowedFields, f)
 											}
 											result = len(allowedFields) > 0
@@ -158,7 +167,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 		}
 		if len(allowedFields) > 0 {
 			allowed = make([]appdef.FieldName, 0, len(allowedFields))
-			for fld := range str.Fields() {
+			for _, fld := range str.Fields() {
 				f := fld.Name()
 				if _, ok := allowedFields[f]; ok {
 					allowed = append(allowed, f)

@@ -24,7 +24,7 @@ func NewFieldsScheme(name string, fields appdef.IWithFields) *dynobuffers.Scheme
 	db := dynobuffers.NewScheme()
 
 	db.Name = name
-	for f := range fields.Fields() {
+	for _, f := range fields.Fields() {
 		if !f.IsSys() { // #18142: extract system fields from dynobuffer
 			ft := DataKindToFieldType(f.DataKind())
 			if ft == dynobuffers.FieldTypeByte {

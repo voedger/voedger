@@ -6,8 +6,6 @@
 package comments
 
 import (
-	"iter"
-	"slices"
 	"strings"
 )
 
@@ -26,11 +24,11 @@ func (c *WithComments) Comment() string {
 	return c.string
 }
 
-func (c *WithComments) CommentLines() iter.Seq[string] {
+func (c *WithComments) CommentLines() []string {
 	if len(c.string) == 0 {
-		return func(func(string) bool) {}
+		return nil
 	}
-	return slices.Values(strings.Split(c.string, "\n"))
+	return strings.Split(c.string, "\n")
 }
 
 func (c *WithComments) setComment(v ...string) {
@@ -50,13 +48,6 @@ func MakeCommentBuilder(c *WithComments) CommentBuilder {
 func (cb *CommentBuilder) SetComment(v ...string) {
 	cb.c.setComment(v...)
 }
-
-// # Supports
-//   - appdef.IWithComments
-type NullComment struct{}
-
-func (c *NullComment) Comment() string                { return "" }
-func (c *NullComment) CommentLines() iter.Seq[string] { return func(func(string) bool) {} }
 
 func SetComment(c *WithComments, v ...string) {
 	c.setComment(v...)

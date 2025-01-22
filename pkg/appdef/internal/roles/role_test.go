@@ -7,7 +7,6 @@ package roles_test
 
 import (
 	"fmt"
-	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -151,21 +150,21 @@ func TestRoles(t *testing.T) {
 				require.Equal(tt[rolesCount].name, r.QName())
 				wantACL := tt[rolesCount].wantACL
 				aclCount := 0
-				for acl := range r.ACL() {
+				for _, acl := range r.ACL() {
 					t.Run(fmt.Sprintf("%v.ACL[%d]", r, aclCount), func(t *testing.T) {
 						require.Equal(wantACL[aclCount].policy, acl.Policy())
-						require.Equal(wantACL[aclCount].ops, slices.Collect(acl.Ops()))
+						require.Equal(wantACL[aclCount].ops, acl.Ops())
 						for _, o := range wantACL[aclCount].ops {
 							require.True(acl.Op(o))
 						}
 
 						flt := appdef.QNames{}
-						for t := range appdef.FilterMatches(acl.Filter(), tested.Types()) {
+						for _, t := range appdef.FilterMatches(acl.Filter(), tested.Types()) {
 							flt = append(flt, t.QName())
 						}
 						require.EqualValues(wantACL[aclCount].flt, flt)
 
-						require.Equal(wantACL[aclCount].fld, slices.Collect(acl.Filter().Fields()))
+						require.Equal(wantACL[aclCount].fld, acl.Filter().Fields())
 						require.Equal(wantACL[aclCount].to, acl.Principal().QName())
 					})
 					aclCount++
@@ -189,7 +188,7 @@ func TestRoles(t *testing.T) {
 		})
 
 		t.Run("should be ok to get role inheritance", func(t *testing.T) {
-			roles := slices.Collect(appdef.Role(tested.Type, workerRoleName).Ancestors())
+			roles := appdef.Role(tested.Type, workerRoleName).Ancestors()
 			require.Equal([]appdef.QName{readerRoleName, writerRoleName}, roles)
 		})
 	}
@@ -231,7 +230,7 @@ func Test_RoleInheritanceWithComplexFilter(t *testing.T) {
 	})
 
 	t.Run("should be ok to obtain roles inheritance", func(t *testing.T) {
-		roles := slices.Collect(appdef.Role(app.Workspace(wsName).Type, descRoleName).Ancestors())
+		roles := appdef.Role(app.Workspace(wsName).Type, descRoleName).Ancestors()
 		require.Equal([]appdef.QName{anc1RoleName, anc2RoleName}, roles)
 	})
 }

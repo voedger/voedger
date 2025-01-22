@@ -8,7 +8,6 @@ package appdef_test
 import (
 	"fmt"
 	"iter"
-	"slices"
 	"testing"
 	"time"
 
@@ -300,7 +299,7 @@ func Test_AnyType(t *testing.T) {
 	require := require.New(t)
 
 	require.Empty(appdef.AnyType.Comment())
-	require.Empty(slices.Collect(appdef.AnyType.CommentLines()))
+	require.Empty(appdef.AnyType.CommentLines())
 
 	require.Nil(appdef.AnyType.App())
 	require.Nil(appdef.AnyType.Workspace())

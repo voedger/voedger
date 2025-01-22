@@ -6,7 +6,8 @@
 package workspaces
 
 import (
-	"iter"
+	"errors"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/abstracts"
@@ -28,6 +29,7 @@ type Workspace struct {
 	abstracts.WithAbstract
 	acl.WithACL
 	types.WithTypes
+	allTypes  []appdef.IType
 	ancestors *Workspaces
 	usedWS    *Workspaces
 	desc      appdef.ICDoc
@@ -49,18 +51,9 @@ func NewWorkspace(app appdef.IAppDef, name appdef.QName) *Workspace {
 	return ws
 }
 
-func (ws Workspace) Ancestors() iter.Seq[appdef.IWorkspace] {
-	return ws.ancestors.Values()
+func (ws Workspace) Ancestors() []appdef.IWorkspace {
+	return ws.ancestors.AsArray()
 }
-
-// package parser violates the rule that a type should be from the same package as the workspace
-//
-// func (ws *Workspace) AppendType(t appdef.IType) {
-// 	if t.QName().Pkg() != ws.QName().Pkg() {
-// 		panic(appdef.ErrInvalid("%v should be from the same package as %v", t, ws))
-// 	}
-// 	ws.WithTypes.AppendType(t)
-// }
 
 func (ws Workspace) Descriptor() appdef.QName {
 	if ws.desc != nil {
@@ -87,7 +80,7 @@ func (ws Workspace) LocalType(name appdef.QName) appdef.IType {
 	return ws.WithTypes.Type(name)
 }
 
-func (ws Workspace) LocalTypes() iter.Seq[appdef.IType] {
+func (ws Workspace) LocalTypes() []appdef.IType {
 	return ws.WithTypes.Types()
 }
 
@@ -102,12 +95,12 @@ func (ws Workspace) Type(name appdef.QName) appdef.IType {
 			if t := w.LocalType(name); t != appdef.NullType {
 				return t
 			}
-			for a := range w.Ancestors() {
+			for _, a := range w.Ancestors() {
 				if t := find(a); t != appdef.NullType {
 					return t
 				}
 			}
-			for u := range w.UsedWorkspaces() {
+			for _, u := range w.UsedWorkspaces() {
 				// #2872 should find used Workspaces, but not types from them
 				if u.QName() == name {
 					return u
@@ -119,51 +112,27 @@ func (ws Workspace) Type(name appdef.QName) appdef.IType {
 	return find(&ws)
 }
 
-// Enumeration order:
-//   - ancestor types recursive from far to nearest
-//   - local types
-//   - used Workspaces
-func (ws Workspace) Types() iter.Seq[appdef.IType] {
-	return func(yield func(appdef.IType) bool) {
-		var (
-			visit func(appdef.IWorkspace) bool
-			chain map[appdef.QName]bool = make(map[appdef.QName]bool) // to prevent stack overflow recursion
-		)
-		visit = func(w appdef.IWorkspace) bool {
-			if !chain[w.QName()] {
-				chain[w.QName()] = true
-				for a := range w.Ancestors() {
-					if !visit(a) {
-						return false
-					}
-				}
-				for t := range w.LocalTypes() {
-					if !yield(t) {
-						return false
-					}
-				}
-				for u := range w.UsedWorkspaces() {
-					// #2872 should enum used Workspaces, but not types from them
-					if !yield(u) {
-						return false
-					}
-				}
-			}
-			return true
+func (ws Workspace) Types() []appdef.IType {
+	if ws.allTypes != nil {
+		return ws.allTypes
+	}
+	return ws.enumerateTypes()
+}
+
+func (ws Workspace) UsedWorkspaces() []appdef.IWorkspace {
+	return ws.usedWS.AsArray()
+}
+
+func (ws *Workspace) Validate() (err error) {
+	for _, t := range ws.LocalTypes() {
+		if t, ok := t.(interface{ Validate() error }); ok {
+			err = errors.Join(err, t.Validate())
 		}
-		visit(&ws)
 	}
-}
-
-func (ws Workspace) UsedWorkspaces() iter.Seq[appdef.IWorkspace] {
-	return ws.usedWS.Values()
-}
-
-func (ws *Workspace) Validate() error {
 	if (ws.desc != nil) && ws.desc.Abstract() && !ws.Abstract() {
-		return appdef.ErrIncompatible("%v should be abstract because descriptor %v is abstract", ws, ws.desc)
+		err = errors.Join(err, appdef.ErrIncompatible("%v should be abstract because descriptor %v is abstract", ws, ws.desc))
 	}
-	return nil
+	return err
 }
 
 func (ws *Workspace) addCDoc(name appdef.QName) appdef.ICDocBuilder {
@@ -259,6 +228,46 @@ func (ws *Workspace) addWDoc(name appdef.QName) appdef.IWDocBuilder {
 func (ws *Workspace) addWRecord(name appdef.QName) appdef.IWRecordBuilder {
 	r := structures.NewWRecord(ws, name)
 	return structures.NewWRecordBuilder(r)
+}
+
+func (ws *Workspace) build() error {
+	return ws.Validate()
+}
+
+// Should be called after ws successfully built.
+func (ws *Workspace) builded() {
+	ws.allTypes = ws.enumerateTypes()
+}
+
+func (ws *Workspace) changed() { ws.allTypes = nil }
+
+func (ws Workspace) enumerateTypes() []appdef.IType {
+	tt := []appdef.IType{}
+
+	var (
+		visit func(appdef.IWorkspace)
+		chain map[appdef.QName]bool = make(map[appdef.QName]bool) // to prevent stack overflow recursion
+	)
+	visit = func(w appdef.IWorkspace) {
+		if !chain[w.QName()] {
+			chain[w.QName()] = true
+			for _, a := range w.Ancestors() {
+				visit(a)
+			}
+			for _, t := range w.LocalTypes() {
+				tt = append(tt, t)
+			}
+			for _, u := range w.UsedWorkspaces() {
+				// #2872 should enum used Workspaces, but not types from them
+				tt = append(tt, u)
+			}
+		}
+	}
+	visit(&ws)
+
+	slices.SortFunc(tt, func(i, j appdef.IType) int { return appdef.CompareQName(i.QName(), j.QName()) })
+
+	return tt
 }
 
 func (ws *Workspace) grant(ops []appdef.OperationKind, flt appdef.IFilter, fields []appdef.FieldName, toRole appdef.QName, comment ...string) {

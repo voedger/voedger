@@ -6,8 +6,6 @@
 package appdef
 
 import (
-	"iter"
-
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
@@ -232,8 +230,8 @@ type (
 	// If not found then empty type with TypeKind_null is returned
 	FindType func(QName) IType
 
-	// Types iterator.
-	SeqType = iter.Seq[IType]
+	// Types slice.
+	TypesSlice = []IType
 )
 
 type ITypeBuilder interface {

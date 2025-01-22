@@ -7,8 +7,6 @@ package filter
 
 import (
 	"fmt"
-	"iter"
-	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -53,6 +51,4 @@ func (f tagsFilter) String() string {
 	return s + ")"
 }
 
-func (f tagsFilter) Tags() iter.Seq[appdef.QName] {
-	return slices.Values(f.tags)
-}
+func (f tagsFilter) Tags() []appdef.QName { return f.tags }

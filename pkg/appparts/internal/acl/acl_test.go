@@ -22,13 +22,15 @@ func Test_IsOperationAllowed(t *testing.T) {
 	var app appdef.IAppDef
 
 	wsName := appdef.NewQName("test", "workspace")
-	docName := appdef.NewQName("test", "doc")
+	cDocName := appdef.NewQName("test", "cDoc")
+	oDocName := appdef.NewQName("test", "oDoc")
 	queryName := appdef.NewQName("test", "qry")
 	cmdName := appdef.NewQName("test", "cmd")
 	tagName := appdef.NewQName("test", "tag")
 
 	reader := appdef.NewQName("test", "reader")
 	writer := appdef.NewQName("test", "writer")
+	admin := appdef.NewQName("test", "admin")
 	intruder := appdef.NewQName("test", "intruder")
 
 	t.Run("should be ok to build application with ACL with fields", func(t *testing.T) {
@@ -39,15 +41,19 @@ func Test_IsOperationAllowed(t *testing.T) {
 
 		wsb.AddTag(tagName, "test tag")
 
-		doc := wsb.AddCDoc(docName)
-		doc.
+		cDoc := wsb.AddCDoc(cDocName)
+		cDoc.
 			AddField("field1", appdef.DataKind_int32, true).
 			AddField("hiddenField", appdef.DataKind_int32, false).
 			AddField("field3", appdef.DataKind_int32, false)
-		doc.SetTag(tagName)
+		cDoc.SetTag(tagName)
+
+		oDoc := wsb.AddODoc(oDocName)
+		oDoc.AddField("field1", appdef.DataKind_int32, true)
+		oDoc.SetTag(tagName)
 
 		qry := wsb.AddQuery(queryName)
-		qry.SetResult(docName)
+		qry.SetResult(cDocName)
 
 		cmd := wsb.AddCommand(cmdName)
 		cmd.SetParam(appdef.QNameANY)
@@ -61,7 +67,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			"grant select any CDoc with tag to reader")
 		wsb.Revoke(
 			[]appdef.OperationKind{appdef.OperationKind_Select},
-			filter.QNames(docName),
+			filter.QNames(cDocName),
 			[]appdef.FieldName{"hiddenField"},
 			reader,
 			"revoke select doc.field1 from reader")
@@ -81,13 +87,13 @@ func Test_IsOperationAllowed(t *testing.T) {
 			"grant insert any CDoc with tag to writer")
 		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Update},
-			filter.QNames(docName),
+			filter.QNames(cDocName),
 			[]appdef.FieldName{"field1", "hiddenField", "field3"},
 			writer,
 			"grant update doc.field[1,2,3] to writer")
 		wsb.Revoke(
 			[]appdef.OperationKind{appdef.OperationKind_Update},
-			filter.QNames(docName),
+			filter.QNames(cDocName),
 			[]appdef.FieldName{"hiddenField"},
 			writer,
 			"revoke update doc.hiddenField from writer")
@@ -97,6 +103,10 @@ func Test_IsOperationAllowed(t *testing.T) {
 			nil,
 			writer,
 			"grant execute all commands and queries to writer")
+
+		_ = wsb.AddRole(admin)
+		wsb.GrantAll(filter.AllWSTables(wsName), admin)
+		wsb.GrantAll(filter.AllWSFunctions(wsName), admin)
 
 		_ = wsb.AddRole(intruder)
 		wsb.RevokeAll(
@@ -134,7 +144,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			{
 				name:          "allow select * from doc for system",
 				op:            appdef.OperationKind_Select,
-				res:           docName,
+				res:           cDocName,
 				fields:        nil,
 				role:          appdef.QNameRoleSystem,
 				allowed:       true,
@@ -143,7 +153,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			{
 				name:          "allow insert to doc for system",
 				op:            appdef.OperationKind_Insert,
-				res:           docName,
+				res:           cDocName,
 				fields:        nil,
 				role:          appdef.QNameRoleSystem,
 				allowed:       true,
@@ -152,7 +162,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			{
 				name:          "allow update doc for system",
 				op:            appdef.OperationKind_Update,
-				res:           docName,
+				res:           cDocName,
 				fields:        nil,
 				role:          appdef.QNameRoleSystem,
 				allowed:       true,
@@ -162,7 +172,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			{
 				name:          "allow select doc.field1 for reader",
 				op:            appdef.OperationKind_Select,
-				res:           docName,
+				res:           cDocName,
 				fields:        []appdef.FieldName{"field1"},
 				role:          reader,
 				allowed:       true,
@@ -171,7 +181,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			{
 				name:          "deny select doc.hiddenField for reader",
 				op:            appdef.OperationKind_Select,
-				res:           docName,
+				res:           cDocName,
 				fields:        []appdef.FieldName{"hiddenField"},
 				role:          reader,
 				allowed:       false,
@@ -180,7 +190,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			{
 				name:          "allow select ? from doc for reader",
 				op:            appdef.OperationKind_Select,
-				res:           docName,
+				res:           cDocName,
 				fields:        nil,
 				role:          reader,
 				allowed:       true,
@@ -189,7 +199,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			{
 				name:          "deny select * from doc for reader",
 				op:            appdef.OperationKind_Select,
-				res:           docName,
+				res:           cDocName,
 				fields:        []appdef.FieldName{"field1", "hiddenField", "field3"},
 				role:          reader,
 				allowed:       false,
@@ -198,7 +208,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			{
 				name:          "deny insert doc for reader",
 				op:            appdef.OperationKind_Insert,
-				res:           docName,
+				res:           cDocName,
 				fields:        nil,
 				role:          reader,
 				allowed:       false,
@@ -207,7 +217,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			{
 				name:          "deny update doc for reader",
 				op:            appdef.OperationKind_Update,
-				res:           docName,
+				res:           cDocName,
 				fields:        nil,
 				role:          reader,
 				allowed:       false,
@@ -235,7 +245,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			{
 				name:          "deny select ? from doc for writer",
 				op:            appdef.OperationKind_Select,
-				res:           docName,
+				res:           cDocName,
 				fields:        nil,
 				role:          writer,
 				allowed:       false,
@@ -244,7 +254,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			{
 				name:          "allow insert to doc for writer",
 				op:            appdef.OperationKind_Insert,
-				res:           docName,
+				res:           cDocName,
 				fields:        nil,
 				role:          writer,
 				allowed:       true,
@@ -253,7 +263,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			{
 				name:          "allow update doc for writer",
 				op:            appdef.OperationKind_Update,
-				res:           docName,
+				res:           cDocName,
 				fields:        nil,
 				role:          writer,
 				allowed:       true,
@@ -262,11 +272,20 @@ func Test_IsOperationAllowed(t *testing.T) {
 			{
 				name:          "deny update doc.hiddenField for writer",
 				op:            appdef.OperationKind_Update,
-				res:           docName,
+				res:           cDocName,
 				fields:        []appdef.FieldName{"hiddenField"},
 				role:          writer,
 				allowed:       false,
 				allowedFields: []appdef.FieldName{"field1", "field3"},
+			},
+			{ // #3148: appparts: ACTIVATE/DEACTIVATE in IsOperationAllowed
+				name:          "deny deactivate doc for writer",
+				op:            appdef.OperationKind_Deactivate,
+				res:           cDocName,
+				fields:        nil,
+				role:          writer,
+				allowed:       false,
+				allowedFields: nil,
 			},
 			{
 				name:          "allow execute cmd for writer",
@@ -286,11 +305,57 @@ func Test_IsOperationAllowed(t *testing.T) {
 				allowed:       true,
 				allowedFields: nil,
 			},
+			// admin tests
+			{
+				name:          "allow select ? from doc for admin",
+				op:            appdef.OperationKind_Select,
+				res:           cDocName,
+				fields:        nil,
+				role:          admin,
+				allowed:       true,
+				allowedFields: allDocFields,
+			},
+			{
+				name:          "allow insert to doc for admin",
+				op:            appdef.OperationKind_Insert,
+				res:           cDocName,
+				fields:        nil,
+				role:          admin,
+				allowed:       true,
+				allowedFields: allDocFields,
+			},
+			{
+				name:          "allow update doc for admin",
+				op:            appdef.OperationKind_Update,
+				res:           cDocName,
+				fields:        nil,
+				role:          admin,
+				allowed:       true,
+				allowedFields: allDocFields,
+			},
+			{ // #3148: appparts: ACTIVATE/DEACTIVATE in IsOperationAllowed
+				name:          "allow deactivate doc for admin",
+				op:            appdef.OperationKind_Deactivate,
+				res:           cDocName,
+				fields:        nil,
+				role:          admin,
+				allowed:       true,
+				allowedFields: nil,
+			},
+			{
+				name:          "allow execute cmd for admin",
+				op:            appdef.OperationKind_Execute,
+				res:           cmdName,
+				fields:        nil,
+				role:          admin,
+				allowed:       true,
+				allowedFields: nil,
+			},
 			// intruder tests
 			{
 				name:          "deny select ? from doc for intruder",
 				op:            appdef.OperationKind_Select,
-				res:           docName,
+				res:           cDocName,
 				fields:        nil,
 				role:          intruder,
 				allowed:       false,
@@ -299,7 +364,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			{
 				name:          "deny insert doc for intruder",
 				op:            appdef.OperationKind_Insert,
-				res:           docName,
+				res:           cDocName,
 				fields:        nil,
 				role:          intruder,
 				allowed:       false,
@@ -308,7 +373,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			{
 				name:          "deny update doc for intruder",
 				op:            appdef.OperationKind_Update,
-				res:           docName,
+				res:           cDocName,
 				fields:        nil,
 				role:          intruder,
 				allowed:       false,
@@ -357,7 +422,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			{
 				name:          "allow select doc for [reader, writer]",
 				op:            appdef.OperationKind_Select,
-				res:           docName,
+				res:           cDocName,
 				role:          []appdef.QName{reader, writer},
 				allowed:       true,
 				allowedFields: selectableDocFields,
@@ -365,7 +430,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			{
 				name:          "deny select doc for [reader, intruder]",
 				op:            appdef.OperationKind_Select,
-				res:           docName,
+				res:           cDocName,
 				role:          []appdef.QName{reader, intruder},
 				allowed:       false,
 				allowedFields: nil,
@@ -406,12 +471,12 @@ func Test_IsOperationAllowed(t *testing.T) {
 			fields []appdef.FieldName
 			role   []appdef.QName
 			error  error
-			errHas string
+			errHas interface{}
 		}{
 			{
 				name:   "unsupported operation",
 				op:     appdef.OperationKind_Inherits,
-				res:    docName,
+				res:    cDocName,
 				role:   []appdef.QName{reader},
 				error:  appdef.ErrUnsupportedError,
 				errHas: "Inherits",
@@ -430,20 +495,36 @@ func Test_IsOperationAllowed(t *testing.T) {
 				res:    cmdName,
 				role:   []appdef.QName{reader},
 				error:  appdef.ErrIncompatibleError,
-				errHas: cmdName.String(),
+				errHas: cmdName,
+			},
+			{ // #3148: appparts: ACTIVATE/DEACTIVATE in IsOperationAllowed
+				name:   "not a record",
+				op:     appdef.OperationKind_Deactivate,
+				res:    queryName,
+				role:   []appdef.QName{admin},
+				error:  appdef.ErrIncompatibleError,
+				errHas: queryName,
+			},
+			{ // #3148: appparts: ACTIVATE/DEACTIVATE in IsOperationAllowed
+				name:   "has not sys.Active field",
+				op:     appdef.OperationKind_Deactivate,
+				res:    oDocName,
+				role:   []appdef.QName{admin},
+				error:  appdef.ErrNotFoundError,
+				errHas: appdef.SystemField_IsActive,
 			},
 			{
 				name:   "not a function",
 				op:     appdef.OperationKind_Execute,
-				res:    docName,
+				res:    cDocName,
 				role:   []appdef.QName{writer},
 				error:  appdef.ErrIncompatibleError,
-				errHas: docName.String(),
+				errHas: cDocName,
 			},
 			{
 				name:   "field not found",
 				op:     appdef.OperationKind_Update,
-				res:    docName,
+				res:    cDocName,
 				fields: []appdef.FieldName{"unknown"},
 				role:   []appdef.QName{writer},
 				error:  appdef.ErrNotFoundError,
