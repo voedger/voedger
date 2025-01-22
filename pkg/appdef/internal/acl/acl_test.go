@@ -377,30 +377,36 @@ func Test_ACLWithFields(t *testing.T) {
 			AddField("field_u", appdef.DataKind_int32, false).
 			AddField("field_s", appdef.DataKind_int32, false)
 
-		wsb.AddRole(creatorName).
-			// #2747{Test plan}
-			Grant(
-				[]appdef.OperationKind{appdef.OperationKind_Insert},
-				filter.QNames(docName),
-				[]appdef.FieldName{"field_i"},
-				`GRANT [Insert] ON QNAMES(test.doc)[field_i] TO test.creator`)
-		wsb.AddRole(writerName).
-			Grant(
-				[]appdef.OperationKind{appdef.OperationKind_Update},
-				filter.QNames(docName),
-				nil,
-				`GRANT [Update] ON QNAMES(test.doc) TO test.writer`).
-			Revoke(
-				[]appdef.OperationKind{appdef.OperationKind_Update},
-				filter.QNames(docName),
-				[]appdef.FieldName{"field_i"},
-				`REVOKE [Update] ON QNAMES(test.doc)[field_i] FROM test.writer`)
-		wsb.AddRole(readerName).
-			Grant(
-				[]appdef.OperationKind{appdef.OperationKind_Select},
-				filter.QNames(docName),
-				[]appdef.FieldName{"field_s"},
-				`GRANT [Select] ON QNAMES(test.doc)[field_s] TO test.reader`)
+		_ = wsb.AddRole(creatorName)
+		// #2747{Test plan}
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Insert},
+			filter.QNames(docName),
+			[]appdef.FieldName{"field_i"},
+			creatorName,
+			`GRANT [Insert] ON QNAMES(test.doc)[field_i] TO test.creator`)
+
+		_ = wsb.AddRole(writerName)
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Update},
+			filter.QNames(docName),
+			nil,
+			writerName,
+			`GRANT [Update] ON QNAMES(test.doc) TO test.writer`)
+		wsb.Revoke(
+			[]appdef.OperationKind{appdef.OperationKind_Update},
+			filter.QNames(docName),
+			[]appdef.FieldName{"field_i"},
+			writerName,
+			`REVOKE [Update] ON QNAMES(test.doc)[field_i] FROM test.writer`)
+
+		_ = wsb.AddRole(readerName)
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Select},
+			filter.QNames(docName),
+			[]appdef.FieldName{"field_s"},
+			readerName,
+			`GRANT [Select] ON QNAMES(test.doc)[field_s] TO test.reader`)
 
 		var err error
 		app, err = adb.Build()
@@ -434,7 +440,7 @@ func Test_ACLWithFields(t *testing.T) {
 					}
 
 					flt := appdef.QNames{}
-					for _, t := range appdef.FilterMatches(r.Filter(), r.Principal().Workspace().Types()) {
+					for _, t := range appdef.FilterMatches(r.Filter(), r.Workspace().Types()) {
 						flt = append(flt, t.QName())
 					}
 					require.EqualValues(want[cnt].flt, flt)

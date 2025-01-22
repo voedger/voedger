@@ -572,15 +572,18 @@ func TestRecursiveRoleAncestors(t *testing.T) {
 		_ = wsb.AddRole(reader)
 		_ = wsb.AddRole(writer)
 
-		wsb.AddRole(worker).Grant(
+		_ = wsb.AddRole(worker)
+		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Inherits},
-			filter.QNames(reader, writer), nil, "grant reader and writer roles to worker")
+			filter.QNames(reader, writer), nil, worker, "grant reader and writer roles to worker")
 
-		wsb.AddRole(owner).GrantAll(
-			filter.QNames(worker), "grant worker role to owner")
+		_ = wsb.AddRole(owner)
+		wsb.GrantAll(
+			filter.QNames(worker), owner, "grant worker role to owner")
 
-		wsb.AddRole(admin).GrantAll(
-			filter.QNames(owner), "grant owner role to admin")
+		_ = wsb.AddRole(admin)
+		wsb.GrantAll(
+			filter.QNames(owner), admin, "grant owner role to admin")
 
 		app = adb.MustBuild()
 	})

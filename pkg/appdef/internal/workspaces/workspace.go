@@ -129,6 +129,9 @@ func (ws *Workspace) Validate() (err error) {
 			err = errors.Join(err, t.Validate())
 		}
 	}
+
+	err = errors.Join(err, ws.ValidateACL())
+
 	if (ws.desc != nil) && ws.desc.Abstract() && !ws.Abstract() {
 		err = errors.Join(err, appdef.ErrIncompatible("%v should be abstract because descriptor %v is abstract", ws, ws.desc))
 	}
