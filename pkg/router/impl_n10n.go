@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
@@ -93,9 +94,13 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 			if !ok {
 				break
 			}
-			if _, err = fmt.Fprintf(rw, "event: %s\ndata: %s\n\n", result.Projection.ToJSON(), utils.UintToString(result.Offset)); err != nil {
-				logger.Error("failed to write sse message to client:", err)
+			sseMessage := fmt.Sprintf("event: %s\ndata: %s\n\n", result.Projection.ToJSON(), utils.UintToString(result.Offset))
+			if _, err = fmt.Fprint(rw, sseMessage); err != nil {
+				logger.Error("failed to write sse message to client:", sseMessage, ":", err.Error())
 				break // WatchChannel will be finished on cancel()
+			}
+			if logger.IsVerbose() {
+				logger.Verbose("sse message sent:", strings.ReplaceAll(sseMessage, "\n", " "))
 			}
 			flusher.Flush()
 		}
