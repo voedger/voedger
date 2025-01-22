@@ -265,13 +265,12 @@ func TestTakeQNamesFromWorkspace(t *testing.T) {
 	})
 
 	t.Run("CUDs QNames", func(t *testing.T) {
-		t.Run("CUD in the request", func(t *testing.T) {
+		t.Run("CUD in the request -> 400 bad request", func(t *testing.T) {
 			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
 			body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.options"}}]}`
-			// try to insert a QName that does not exist in the workspace -> 403 foribidden ??? or 400 bad request ???
-			vit.PostWS(anotherWS, "c.sys.CUD", body, coreutils.Expect500("not found", "app1pkg.options", "Workspace «app1pkg.test_wsWS_another»"))
+			vit.PostWS(anotherWS, "c.sys.CUD", body, coreutils.Expect400("not found", "app1pkg.options", "Workspace «app1pkg.test_wsWS_another»"))
 		})
-		t.Run("CUD produced by a command", func(t *testing.T) {
+		t.Run("CUD produced by a command -> 500 internal server error", func(t *testing.T) {
 			it.MockCmdExec = func(input string, args istructs.ExecCommandArgs) error {
 				kb, err := args.State.KeyBuilder(sys.Storage_Record, appdef.NewQName("app1pkg", "docInAnotherWS"))
 				if err != nil {
@@ -348,7 +347,7 @@ func TestErrorFromResponseIntent(t *testing.T) {
 	})
 }
 
-func TestDeniedResources(t *testing.T) {
+func TestDeniedResourcesAuthorization(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")

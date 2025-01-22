@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -619,7 +620,6 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 				return cudXPath.Error(err)
 			}
 		} else {
-			parsedCUD.opKind = appdef.OperationKind_Update
 			if parsedCUD.id, ok, err = cudData.AsInt64(appdef.SystemField_ID); err != nil {
 				return cudXPath.Error(err)
 			}
@@ -632,12 +632,23 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 			if parsedCUD.qName = parsedCUD.existingRecord.QName(); parsedCUD.qName == appdef.NullQName {
 				return coreutils.NewHTTPError(http.StatusNotFound, cudXPath.Errorf("record with queried id %d does not exist", parsedCUD.id))
 			}
+			// check for activate\deactivate
+			providedIsActiveVal, isActiveModifying, err := parsedCUD.fields.AsBoolean(appdef.SystemField_IsActive)
+			if err != nil {
+				return err
+			}
+			// sys.IsActive is modifying -> other fields are not allowed, see [checkIsActiveInCUDs]
+			if isActiveModifying {
+				parsedCUD.opKind = appdef.OperationKind_Deactivate
+				if providedIsActiveVal {
+					parsedCUD.opKind = appdef.OperationKind_Activate
+				}
+			} else {
+				parsedCUD.opKind = appdef.OperationKind_Update
+			}
 		}
-		opStr := "UPDATE"
-		if isCreate {
-			opStr = "INSERT"
-		}
-		parsedCUD.xPath = xPath(fmt.Sprintf("%s %s %s", cudXPath, opStr, parsedCUD.qName))
+
+		parsedCUD.xPath = xPath(fmt.Sprintf("%s %s %s", cudXPath, opKindDesc[parsedCUD.opKind], parsedCUD.qName))
 
 		cmd.parsedCUDs = append(cmd.parsedCUDs, parsedCUD)
 	}
@@ -669,7 +680,7 @@ func checkArgsRefIntegrity(_ context.Context, work pipeline.IWorkpiece) (err err
 func checkIsActiveInCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	for _, cud := range cmd.parsedCUDs {
-		if cud.opKind != appdef.OperationKind_Update {
+		if cud.opKind != appdef.OperationKind_Update && cud.opKind != appdef.OperationKind_Activate && cud.opKind != appdef.OperationKind_Deactivate {
 			continue
 		}
 		hasOnlySystemFields := true
@@ -700,15 +711,28 @@ func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work pipeline.IWorkpiec
 		// dummy or c.sys.CreateWorkspace
 		ws = cmd.iCommand.Workspace()
 	}
-
 	for _, parsedCUD := range cmd.parsedCUDs {
 		fields := maps.Keys(parsedCUD.fields)
-		ok, _, err := cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
+		ok, allowedFields, err := cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
 		if err != nil {
-			return err
+			if errors.Is(err, appdef.ErrNotFoundError) {
+				err = coreutils.WrapSysError(err, http.StatusBadRequest)
+			}
+			return parsedCUD.xPath.Error(err)
 		}
 		if !ok {
-			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
+			deniedField := ""
+			for reqField := range parsedCUD.fields {
+				if !slices.Contains(allowedFields, reqField) {
+					deniedField = reqField
+					break
+				}
+			}
+			if len(deniedField) > 0 {
+				deniedField += " "
+			}
+			errMes := deniedField + "operation forbidden"
+			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf(errMes))
 		}
 	}
 	return
