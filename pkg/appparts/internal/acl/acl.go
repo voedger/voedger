@@ -11,16 +11,30 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-// Returns recursive list of role ancestors for specified role.
+// Returns recursive list of role ancestors for specified role in the specified workspace.
+//
+// Role inheritance provided by `GRANT <role> TO <role>` statement.
+// These inheritances statements can be provided in the specified workspace or in any of its ancestors.
 //
 // If role has no ancestors, then result contains only specified role.
 // Result is alphabetically sorted list of role names.
-func RecursiveRoleAncestors(role appdef.IRole) (roles appdef.QNames) {
+func RecursiveRoleAncestors(role appdef.IRole, ws appdef.IWorkspace) (roles appdef.QNames) {
 	roles.Add(role.QName())
-	app := role.App()
-	for _, r := range role.Ancestors() {
-		roles.Add(RecursiveRoleAncestors(appdef.Role(app.Type, r))...)
+
+	for _, acl := range ws.ACL() {
+		if acl.Op(appdef.OperationKind_Inherits) && (acl.Principal() == role) {
+			for _, t := range appdef.FilterMatches(acl.Filter(), ws.Types()) {
+				if r, ok := t.(appdef.IRole); ok {
+					roles.Add(RecursiveRoleAncestors(r, ws)...)
+				}
+			}
+		}
 	}
+
+	for _, w := range ws.Ancestors() {
+		roles.Add(RecursiveRoleAncestors(role, w)...)
+	}
+
 	return roles
 }
 
@@ -80,14 +94,14 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 	for _, r := range roles {
 		role := appdef.Role(ws.Type, r)
 		if role != nil {
-			roles.Add(RecursiveRoleAncestors(role)...)
+			roles.Add(RecursiveRoleAncestors(role, ws)...)
 		}
 	}
 
 	result := false
 
 	if slices.Contains(roles, appdef.QNameRoleSystem) {
-		// nothung else matters
+		// nothing else matters
 		result = true
 		if str != nil {
 			for _, f := range str.Fields() {
