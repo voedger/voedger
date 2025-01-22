@@ -190,13 +190,5 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 		}
 	}
 
-	// nnv: logging should be moved to caller
-	// if !result && logger.IsVerbose() {
-	// 	logger.Verbose(fmt.Sprintf("%s for %s: [%s] -> deny", op, res, rolesToString(rol)))
-	// 	for rule := range ws.App().ACL() {
-	// 		logger.Verbose(fmt.Sprintf("%v : %v", rule.Workspace(), rule))
-	// 	}
-	// }
-
 	return result, allowed, nil
 }
