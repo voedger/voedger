@@ -6,6 +6,8 @@
 package acl
 
 import (
+	"errors"
+
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -22,3 +24,10 @@ func MakeWithACL() WithACL {
 func (acl WithACL) ACL() []appdef.IACLRule { return acl.acl }
 
 func (acl *WithACL) AppendACL(r appdef.IACLRule) { acl.acl = append(acl.acl, r) }
+
+func (acl *WithACL) ValidateACL() (err error) {
+	for _, r := range acl.acl {
+		err = errors.Join(err, r.(*Rule).Validate())
+	}
+	return err
+}
