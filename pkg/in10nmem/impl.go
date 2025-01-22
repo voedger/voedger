@@ -215,6 +215,7 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 
 			err := nb.validateChannel(channel)
 			if err != nil {
+				logger.Error(fmt.Sprintf("%s: subjectlogin %s", err.Error(), channel.subject))
 				return
 			}
 
@@ -238,16 +239,10 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 		}
 
 	}
-
 }
 
 func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
-	defer func() {
-		logger.Info("notifier goroutine stopped")
-		wg.Done()
-	}()
-	logger.Info("notifier goroutine started")
-
+	defer wg.Done()
 	for ctx.Err() == nil {
 		select {
 		case <-ctx.Done():
@@ -270,7 +265,7 @@ func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
 
 			// Notify subscribers
 			if logger.IsVerbose() {
-				logger.Verbose("notifier goroutine: len(prj.subscribedChannels):",strconv.Itoa(len(prj.subscribedChannels)))
+				logger.Verbose("notifier goroutine: len(prj.subscribedChannels):", strconv.Itoa(len(prj.subscribedChannels)))
 			}
 			for _, ch := range prj.subscribedChannels {
 				select {
@@ -366,12 +361,8 @@ func (nb *N10nBroker) validateChannel(channel *channelType) error {
 	nb.RLock()
 	defer nb.RUnlock()
 	// if channel lifetime > channelDuration defined in NewChannel when create channel - must exit
-	if nb.Since(channel.createTime) > channel.channelDuration {
+	if time.Since(channel.createTime) > channel.channelDuration {
 		return ErrChannelExpired
 	}
 	return nil
-}
-
-func (nb *N10nBroker) Since(t time.Time) time.Duration {
-	return nb.time.Now().Sub(t)
 }
