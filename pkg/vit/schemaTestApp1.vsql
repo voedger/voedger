@@ -535,6 +535,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		Dummy int32,
 		IntFld int32,
 		Val int32,
+		offs int64,
 		PRIMARY KEY ((IntFld), Dummy)
 	) AS RESULT OF ApplyCategoryIdx WITH Tags=(WorkspaceOwnerTableTag);
 
