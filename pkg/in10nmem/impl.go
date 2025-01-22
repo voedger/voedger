@@ -233,6 +233,9 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 			}
 			nb.Unlock()
 			for _, unit := range updateUnits {
+				if logger.IsVerbose() {
+					logVerbose("before notifySubscriber", unit.Projection, unit.Offset)
+				}
 				notifySubscriber(unit.Projection, unit.Offset)
 			}
 			updateUnits = updateUnits[:0]
@@ -301,6 +304,9 @@ func (nb *N10nBroker) Update(projection in10n.ProjectionKey, offset istructs.Off
 
 	e := event{prj: prj}
 	nb.events <- e
+	if logger.IsVerbose() {
+		logVerbose("Update() completed", projection, offset)
+	}
 }
 
 // MetricNumChannels @ConcurrentAccess

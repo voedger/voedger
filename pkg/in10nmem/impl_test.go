@@ -53,12 +53,12 @@ func Test_SubscribeUnsubscribe(t *testing.T) {
 	projectionKey1 := in10n.ProjectionKey{
 		App:        istructs.AppQName_test1_app1,
 		Projection: appdef.NewQName("test", "restaurant"),
-		WS:         istructs.WSID(0),
+		WS:         istructs.WSID(8),
 	}
 	projectionKey2 := in10n.ProjectionKey{
 		App:        istructs.AppQName_test1_app1,
 		Projection: appdef.NewQName("test", "restaurant2"),
-		WS:         istructs.WSID(0),
+		WS:         istructs.WSID(9),
 	}
 
 	quotasExample := in10n.Quotas{
