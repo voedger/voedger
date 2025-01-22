@@ -659,7 +659,7 @@ func TestRecursiveRoleAncestorsWSInheritance(t *testing.T) {
 		ws3 := adb.AddWorkspace(wsName[2])
 		ws3.SetAncestors(wsName[0], wsName[1])
 		_ = ws3.AddRole(wsRole[2])
-		ws3.GrantAll(filter.QNames(wsRole[2]), awsRole, "grant r2 to awsRole")
+		ws3.GrantAll(filter.QNames(wsRole[2]), awsRole, "grant r3 to awsRole")
 
 		app = adb.MustBuild()
 	})
