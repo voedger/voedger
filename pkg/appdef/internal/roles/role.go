@@ -29,25 +29,7 @@ func NewRole(ws appdef.IWorkspace, name appdef.QName) *Role {
 	return r
 }
 
-func (r Role) Ancestors() []appdef.QName {
-	roles := appdef.QNames{}
-	for _, rule := range r.WithACL.ACL() {
-		if rule.Op(appdef.OperationKind_Inherits) {
-			switch rule.Filter().Kind() {
-			case appdef.FilterKind_QNames:
-				for _, q := range rule.Filter().QNames() {
-					roles.Add(q)
-				}
-			default:
-				// complex filter
-				for role := range appdef.Roles(appdef.FilterMatches(rule.Filter(), r.Workspace().Types())) {
-					roles.Add(role.QName())
-				}
-			}
-		}
-	}
-	return roles
-}
+func (Role) IsRole() {}
 
 func (r *Role) grant(ops []appdef.OperationKind, flt appdef.IFilter, fields []appdef.FieldName, comment ...string) {
 	acl.NewGrant(r.Workspace(), ops, flt, fields, r, comment...)

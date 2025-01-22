@@ -186,11 +186,6 @@ func TestRoles(t *testing.T) {
 
 			require.Nil(appdef.Role(tested.Type, appdef.NewQName("test", "unknown")), "should be nil if not found")
 		})
-
-		t.Run("should be ok to get role inheritance", func(t *testing.T) {
-			roles := appdef.Role(tested.Type, workerRoleName).Ancestors()
-			require.Equal([]appdef.QName{readerRoleName, writerRoleName}, roles)
-		})
 	}
 
 	testWith(app)
@@ -227,10 +222,5 @@ func Test_RoleInheritanceWithComplexFilter(t *testing.T) {
 		app, err = adb.Build()
 		require.NoError(err)
 		require.NotNil(app)
-	})
-
-	t.Run("should be ok to obtain roles inheritance", func(t *testing.T) {
-		roles := appdef.Role(app.Workspace(wsName).Type, descRoleName).Ancestors()
-		require.Equal([]appdef.QName{anc1RoleName, anc2RoleName}, roles)
 	})
 }

@@ -10,12 +10,8 @@ type IRole interface {
 
 	IWithACL
 
-	// Returns all roles that this role inherits.
-	//
-	// Role inheritance provided by `GRANT <role> TO <role>` statement.
-	//
-	// Only direct inheritance is returned. If role inherits another role, which inherits another role, then only direct ancestor is returned.
-	Ancestors() []QName
+	// Unwanted type assertion stub
+	IsRole()
 }
 
 type IRoleBuilder interface {
