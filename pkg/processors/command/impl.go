@@ -87,6 +87,16 @@ func (c *cmdWorkpiece) GetAppStructs() istructs.IAppStructs {
 	return c.appStructs
 }
 
+// https://github.com/voedger/voedger/issues/3163
+func (c *cmdWorkpiece) GetUserPrincipalName() string {
+	for _, prn := range c.principals {
+		if prn.Kind == iauthnz.PrincipalKind_User {
+			return prn.Name
+		}
+	}
+	return ""
+}
+
 // borrows app partition for command
 func (c *cmdWorkpiece) borrow() (err error) {
 	if c.appPart, err = c.appParts.Borrow(c.cmdMes.AppQName(), c.cmdMes.PartitionID(), appparts.ProcessorKind_Command); err != nil {
