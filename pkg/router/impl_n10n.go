@@ -96,11 +96,11 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 			}
 			sseMessage := fmt.Sprintf("event: %s\ndata: %s\n\n", result.Projection.ToJSON(), utils.UintToString(result.Offset))
 			if _, err = fmt.Fprint(rw, sseMessage); err != nil {
-				logger.Error("failed to write sse message to client:", sseMessage, ":", err.Error())
+				logger.Error("failed to write sse message for subjectLogin", urlParams.SubjectLogin, "to client:", sseMessage, ":", err.Error())
 				break // WatchChannel will be finished on cancel()
 			}
 			if logger.IsVerbose() {
-				logger.Verbose("sse message sent:", strings.ReplaceAll(sseMessage, "\n", " "))
+				logger.Verbose("sse message sent for subjectLogin %s:", urlParams.SubjectLogin, strings.ReplaceAll(sseMessage, "\n", " "))
 			}
 			flusher.Flush()
 		}
