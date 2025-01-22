@@ -179,19 +179,30 @@ classDiagram
         +CronSchedule() string
     }
 
+    IRole --|> IType : inherits
+    class IRole {
+        <<interface>>
+        +Kind()* TypeKind_Role
+    }
+
+    IRate --|> IType : inherits
+    class IRole {
+        <<interface>>
+        +Kind()* TypeKind_Rate
+    }
+
+    ILimit --|> IType : inherits
+    class IRole {
+        <<interface>>
+        +Kind()* TypeKind_Limit
+    }
+
     IWorkspace --|> IType : inherits
     class IWorkspace {
         <<interface>>
         +Kind()* TypeKind_Workspace
         +Types()[]IType
         ...
-    }
-
-    IRole --|> IType : inherits
-    class IRole {
-        <<interface>>
-        +Kind()* TypeKind_Role
-        +ACL() []IACLRule
     }
 ```
 
@@ -664,10 +675,7 @@ classDiagram
     class IRole {
         <<interface>>
         +Kind()* TypeKind_Role
-        +ACL() []IACLRule
     }
-
-    IRole "1" *--> "1..*" IACLRule : ACL for role
 
     class IACLRule {
         <<interface>>
@@ -702,12 +710,14 @@ classDiagram
 
     class IACLFilter {
         <<interface>>
-        +Fields()[]FieldName]
+        +Fields()[]FieldName
     }
 
     IFilter <|-- IACLFilter : inherits
 
     note for IFilter "see filter/readme.md"
+
+    IACLRule "1" *--> "1" IRole : principal
 ```
 
 ### Filters
