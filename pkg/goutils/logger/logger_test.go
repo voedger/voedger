@@ -65,6 +65,25 @@ func Test_BasicUsage(t *testing.T) {
 	}
 }
 
+func Test_BasicUsage_SetLogLevelWithRestore(t *testing.T) {
+
+	// Log level is set to LogLevelTrace and then restored to the previous value
+	defer logger.SetLogLevelWithRestore(logger.LogLevelTrace)()
+
+	logger.Trace("You SHOULD see this trace")
+
+}
+
+func Test_SetLogLevelWithRestore(t *testing.T) {
+
+	trySetLevelWithRestore := func() {
+		defer logger.SetLogLevelWithRestore(logger.LogLevelTrace)()
+		logger.Trace("You SHOULD see this trace")
+	}
+	trySetLevelWithRestore()
+	logger.Trace("You should NOT see this trace")
+}
+
 func loggerHelperWithSkipStackFrames(skipStackFrames int, msg string) error {
 	logger.Log(skipStackFrames, logger.LogLevelTrace, "myStunningPrefix:", msg)
 	return nil
