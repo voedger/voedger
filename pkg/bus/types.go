@@ -20,7 +20,7 @@ type Request struct {
 	Header      map[string]string `json:",omitempty"`
 	Resource    string
 	Query       map[string]string `json:",omitempty"`
-	Body        []byte              `json:",omitempty"`
+	Body        []byte            `json:",omitempty"`
 	AppQName    string
 	Host        string // used by authenticator to emit Host principal
 }

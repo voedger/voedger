@@ -20,6 +20,7 @@ import (
 )
 
 // port == 443 -> httpsService + ACMEService, otherwise -> HTTPService only, ACMEService is nil
+// where is VVM RequestHandler? bus.RequestHandler
 func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, autocertCache autocert.Cache,
 	requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
 	httpServ := getHttpService("HTTP server", coreutils.ServerAddress(rp.Port), rp, broker, blobRequestHandler,
