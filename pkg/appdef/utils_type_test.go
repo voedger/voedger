@@ -142,12 +142,13 @@ func Test_TypeIterators(t *testing.T) {
 	wsb.AddJob(jobName[1]).SetCronSchedule("@every 10s")
 
 	roleName := qns("Role")
-	wsb.AddRole(roleName[0]).
-		GrantAll(filter.QNames(cmdName...)).
-		Revoke([]appdef.OperationKind{appdef.OperationKind_Execute}, filter.QNames(cmdName[0]), nil)
-	wsb.AddRole(roleName[1]).
-		GrantAll(filter.QNames(cDocName...)).
-		Revoke([]appdef.OperationKind{appdef.OperationKind_Insert}, filter.QNames(cDocName[1]), nil)
+	_ = wsb.AddRole(roleName[0])
+	wsb.GrantAll(filter.QNames(cmdName...), roleName[0])
+	wsb.Revoke([]appdef.OperationKind{appdef.OperationKind_Execute}, filter.QNames(cmdName[0]), nil, roleName[0])
+
+	_ = wsb.AddRole(roleName[1])
+	wsb.GrantAll(filter.QNames(cDocName...), roleName[1])
+	wsb.Revoke([]appdef.OperationKind{appdef.OperationKind_Insert}, filter.QNames(cDocName[1]), nil, roleName[1])
 
 	rateName := qns("Rate")
 	wsb.AddRate(rateName[0], 10, time.Second, []appdef.RateScope{appdef.RateScope_AppPartition})
