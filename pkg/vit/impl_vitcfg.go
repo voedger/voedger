@@ -129,12 +129,20 @@ func WithDoc(name appdef.QName, data map[string]interface{}) PostConstructFunc {
 
 func WithSubject(login string, subjectKind istructs.SubjectKindType, roles []appdef.QName) PostConstructFunc {
 	return func(intf interface{}) {
-		wsParams := intf.(*WSParams)
-		wsParams.subjects = append(wsParams.subjects, subject{
-			login:       login,
-			subjectKind: subjectKind,
-			roles:       roles,
-		})
+		switch withSubjects := intf.(type) {
+		case *WSParams:
+			withSubjects.subjects = append(withSubjects.subjects, subject{
+				login:       login,
+				subjectKind: subjectKind,
+				roles:       roles,
+			})
+		case *Login:
+			withSubjects.subjects = append(withSubjects.subjects, subject{
+				login:       login,
+				subjectKind: subjectKind,
+				roles:       roles,
+			})
+		}
 	}
 }
 
