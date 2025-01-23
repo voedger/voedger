@@ -125,6 +125,8 @@ func Test400BadRequests(t *testing.T) {
 		{desc: "unknown app", funcName: "c.sys.CUD", appName: "un/known"},
 	}
 
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
 	for _, c := range cases {
 		t.Run(c.desc, func(t *testing.T) {
 			appQName := istructs.AppQName_test1_app1
@@ -132,7 +134,7 @@ func Test400BadRequests(t *testing.T) {
 				appQName, err = appdef.ParseAppQName(c.appName)
 				require.NoError(t, err)
 			}
-			vit.PostApp(appQName, 1, c.funcName, "", coreutils.Expect400()).Println()
+			vit.PostApp(appQName, ws.WSID, c.funcName, "", coreutils.Expect400()).Println()
 		})
 	}
 }

@@ -610,3 +610,15 @@ func TestFieldsAuthorization_OpForbidden(t *testing.T) {
 
 	// note: select authorization is tested in [TestDeniedResourcesAuthorization]
 }
+
+func TestErrors(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	t.Run("no QName on insert -> 400 bad request", func(t *testing.T) {
+		body := `{"cuds": [{"fields": {"sys.ID": 1,"FldAllowed":42}}]}`
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("failed to parse sys.QName"))
+	})
+}
