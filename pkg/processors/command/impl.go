@@ -626,7 +626,7 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 				return cudXPath.Error(err)
 			}
 			if parsedCUD.qName, err = appdef.ParseQName(qNameStr); err != nil {
-				return cudXPath.Error(err)
+				return cudXPath.Error(fmt.Errorf("failed to parse sys.QName: %w", err))
 			}
 		} else {
 			if parsedCUD.id, ok, err = cudData.AsInt64(appdef.SystemField_ID); err != nil {
