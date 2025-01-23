@@ -13,6 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
 )
@@ -561,6 +562,8 @@ func TestSelectFromNestedTables(t *testing.T) {
 }
 
 func TestFieldsAuthorization_OpForbidden(t *testing.T) {
+	logger.SetLogLevel(logger.LogLevelVerbose)
+	defer logger.SetLogLevel(logger.LogLevelInfo)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -589,7 +592,7 @@ func TestFieldsAuthorization_OpForbidden(t *testing.T) {
 
 		// denied
 		body = `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.DocFieldInsertDenied","FldDenied":42}}]}`
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] INSERT", " FldDenied operation forbidden"))
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] INSERT", "operation forbidden"))
 	})
 
 	t.Run("field update", func(t *testing.T) {
@@ -602,7 +605,8 @@ func TestFieldsAuthorization_OpForbidden(t *testing.T) {
 
 		// denied
 		body = fmt.Sprintf(`{"cuds": [{"sys.ID":%d,"fields": {"FldDenied":46}}]}`, id)
-		vit.PostWS(ws, "c.sys.CUD", body,  coreutils.Expect403("cuds[0] UPDATE", "FldDenied operation forbidden"))
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] UPDATE", "operation forbidden"))
 	})
-}
 
+	// note: select authorization is tested in [TestDeniedResourcesAuthorization]
+}

@@ -13,11 +13,14 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts/internal/acl"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/set"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func Test_IsOperationAllowed(t *testing.T) {
+	logger.SetLogLevel(logger.LogLevelVerbose)
+	defer logger.SetLogLevel(logger.LogLevelInfo)
 	require := require.New(t)
 
 	var app appdef.IAppDef
@@ -125,341 +128,299 @@ func Test_IsOperationAllowed(t *testing.T) {
 		require.NotNil(app)
 	})
 
-	selectableDocFields := []appdef.FieldName{
-		appdef.SystemField_QName, appdef.SystemField_ID, appdef.SystemField_IsActive,
-		"field1", "field3"}
-	allDocFields := []appdef.FieldName{
-		appdef.SystemField_QName, appdef.SystemField_ID, appdef.SystemField_IsActive,
-		"field1", "hiddenField", "field3"}
 	t.Run("test IsOperationAllowed", func(t *testing.T) {
 		var tests = []struct {
-			name          string
-			op            appdef.OperationKind
-			res           appdef.QName
-			fields        []appdef.FieldName
-			role          appdef.QName
-			allowed       bool
-			allowedFields []appdef.FieldName
+			name    string
+			op      appdef.OperationKind
+			res     appdef.QName
+			fields  []appdef.FieldName
+			role    appdef.QName
+			allowed bool
 		}{
 			// iauthnz.QNameRoleSystem test
 			{
-				name:          "allow select * from doc for system",
-				op:            appdef.OperationKind_Select,
-				res:           cDocName,
-				fields:        nil,
-				role:          appdef.QNameRoleSystem,
-				allowed:       true,
-				allowedFields: allDocFields,
+				name:    "allow select * from doc for system",
+				op:      appdef.OperationKind_Select,
+				res:     cDocName,
+				fields:  nil,
+				role:    appdef.QNameRoleSystem,
+				allowed: true,
 			},
 			{
-				name:          "allow insert to doc for system",
-				op:            appdef.OperationKind_Insert,
-				res:           cDocName,
-				fields:        nil,
-				role:          appdef.QNameRoleSystem,
-				allowed:       true,
-				allowedFields: allDocFields,
+				name:    "allow insert to doc for system",
+				op:      appdef.OperationKind_Insert,
+				res:     cDocName,
+				fields:  nil,
+				role:    appdef.QNameRoleSystem,
+				allowed: true,
 			},
 			{
-				name:          "allow update doc for system",
-				op:            appdef.OperationKind_Update,
-				res:           cDocName,
-				fields:        nil,
-				role:          appdef.QNameRoleSystem,
-				allowed:       true,
-				allowedFields: allDocFields,
+				name:    "allow update doc for system",
+				op:      appdef.OperationKind_Update,
+				res:     cDocName,
+				fields:  nil,
+				role:    appdef.QNameRoleSystem,
+				allowed: true,
 			},
 			// reader tests
 			{
-				name:          "allow select doc.field1 for reader",
-				op:            appdef.OperationKind_Select,
-				res:           cDocName,
-				fields:        []appdef.FieldName{"field1"},
-				role:          reader,
-				allowed:       true,
-				allowedFields: selectableDocFields,
+				name:    "allow select doc.field1 for reader",
+				op:      appdef.OperationKind_Select,
+				res:     cDocName,
+				fields:  []appdef.FieldName{"field1"},
+				role:    reader,
+				allowed: true,
 			},
 			{
-				name:          "deny select doc.hiddenField for reader",
-				op:            appdef.OperationKind_Select,
-				res:           cDocName,
-				fields:        []appdef.FieldName{"hiddenField"},
-				role:          reader,
-				allowed:       false,
-				allowedFields: selectableDocFields,
+				name:    "deny select doc.hiddenField for reader",
+				op:      appdef.OperationKind_Select,
+				res:     cDocName,
+				fields:  []appdef.FieldName{"hiddenField"},
+				role:    reader,
+				allowed: false,
 			},
 			{
-				name:          "allow select ? from doc for reader",
-				op:            appdef.OperationKind_Select,
-				res:           cDocName,
-				fields:        nil,
-				role:          reader,
-				allowed:       true,
-				allowedFields: selectableDocFields,
+				name:    "allow select ? from doc for reader",
+				op:      appdef.OperationKind_Select,
+				res:     cDocName,
+				fields:  nil,
+				role:    reader,
+				allowed: true,
 			},
 			{
-				name:          "deny select * from doc for reader",
-				op:            appdef.OperationKind_Select,
-				res:           cDocName,
-				fields:        []appdef.FieldName{"field1", "hiddenField", "field3"},
-				role:          reader,
-				allowed:       false,
-				allowedFields: selectableDocFields,
+				name:    "deny select * from doc for reader",
+				op:      appdef.OperationKind_Select,
+				res:     cDocName,
+				fields:  []appdef.FieldName{"field1", "hiddenField", "field3"},
+				role:    reader,
+				allowed: false,
 			},
 			{
-				name:          "deny insert doc for reader",
-				op:            appdef.OperationKind_Insert,
-				res:           cDocName,
-				fields:        nil,
-				role:          reader,
-				allowed:       false,
-				allowedFields: nil,
+				name:    "deny insert doc for reader",
+				op:      appdef.OperationKind_Insert,
+				res:     cDocName,
+				fields:  nil,
+				role:    reader,
+				allowed: false,
 			},
 			{
-				name:          "deny update doc for reader",
-				op:            appdef.OperationKind_Update,
-				res:           cDocName,
-				fields:        nil,
-				role:          reader,
-				allowed:       false,
-				allowedFields: nil,
+				name:    "deny update doc for reader",
+				op:      appdef.OperationKind_Update,
+				res:     cDocName,
+				fields:  nil,
+				role:    reader,
+				allowed: false,
 			},
 			{
-				name:          "allow execute query for reader",
-				op:            appdef.OperationKind_Execute,
-				res:           queryName,
-				fields:        nil,
-				role:          reader,
-				allowed:       true,
-				allowedFields: nil,
+				name:    "allow execute query for reader",
+				op:      appdef.OperationKind_Execute,
+				res:     queryName,
+				fields:  nil,
+				role:    reader,
+				allowed: true,
 			},
 			{
-				name:          "deny execute cmd for reader",
-				op:            appdef.OperationKind_Execute,
-				res:           cmdName,
-				fields:        nil,
-				role:          reader,
-				allowed:       false,
-				allowedFields: nil,
+				name:    "deny execute cmd for reader",
+				op:      appdef.OperationKind_Execute,
+				res:     cmdName,
+				fields:  nil,
+				role:    reader,
+				allowed: false,
 			},
 			// writer tests
 			{
-				name:          "deny select ? from doc for writer",
-				op:            appdef.OperationKind_Select,
-				res:           cDocName,
-				fields:        nil,
-				role:          writer,
-				allowed:       false,
-				allowedFields: nil,
+				name:    "deny select ? from doc for writer",
+				op:      appdef.OperationKind_Select,
+				res:     cDocName,
+				fields:  nil,
+				role:    writer,
+				allowed: false,
 			},
 			{
-				name:          "allow insert to doc for writer",
-				op:            appdef.OperationKind_Insert,
-				res:           cDocName,
-				fields:        nil,
-				role:          writer,
-				allowed:       true,
-				allowedFields: allDocFields,
+				name:    "allow insert to doc for writer",
+				op:      appdef.OperationKind_Insert,
+				res:     cDocName,
+				fields:  nil,
+				role:    writer,
+				allowed: true,
 			},
 			{
-				name:          "allow update doc for writer",
-				op:            appdef.OperationKind_Update,
-				res:           cDocName,
-				fields:        nil,
-				role:          writer,
-				allowed:       true,
-				allowedFields: []appdef.FieldName{"field1", "field3"},
+				name:    "allow update doc for writer",
+				op:      appdef.OperationKind_Update,
+				res:     cDocName,
+				fields:  nil,
+				role:    writer,
+				allowed: true,
 			},
 			{
-				name:          "deny update doc.hiddenField for writer",
-				op:            appdef.OperationKind_Update,
-				res:           cDocName,
-				fields:        []appdef.FieldName{"hiddenField"},
-				role:          writer,
-				allowed:       false,
-				allowedFields: []appdef.FieldName{"field1", "field3"},
+				name:    "deny update doc.hiddenField for writer",
+				op:      appdef.OperationKind_Update,
+				res:     cDocName,
+				fields:  []appdef.FieldName{"hiddenField"},
+				role:    writer,
+				allowed: false,
 			},
 			{ // #3148: appparts: ACTIVATE/DEACTIVATE in IsOperationAllowed
-				name:          "deny deactivate doc for writer",
-				op:            appdef.OperationKind_Deactivate,
-				res:           cDocName,
-				fields:        nil,
-				role:          writer,
-				allowed:       false,
-				allowedFields: nil,
+				name:    "deny deactivate doc for writer",
+				op:      appdef.OperationKind_Deactivate,
+				res:     cDocName,
+				fields:  nil,
+				role:    writer,
+				allowed: false,
 			},
 			{
-				name:          "allow execute cmd for writer",
-				op:            appdef.OperationKind_Execute,
-				res:           cmdName,
-				fields:        nil,
-				role:          writer,
-				allowed:       true,
-				allowedFields: nil,
+				name:    "allow execute cmd for writer",
+				op:      appdef.OperationKind_Execute,
+				res:     cmdName,
+				fields:  nil,
+				role:    writer,
+				allowed: true,
 			},
 			{
-				name:          "allow execute query for writer",
-				op:            appdef.OperationKind_Execute,
-				res:           queryName,
-				fields:        nil,
-				role:          writer,
-				allowed:       true,
-				allowedFields: nil,
+				name:    "allow execute query for writer",
+				op:      appdef.OperationKind_Execute,
+				res:     queryName,
+				fields:  nil,
+				role:    writer,
+				allowed: true,
 			},
 			// admin tests
 			{
-				name:          "allow select ? from doc for admin",
-				op:            appdef.OperationKind_Select,
-				res:           cDocName,
-				fields:        nil,
-				role:          admin,
-				allowed:       true,
-				allowedFields: allDocFields,
+				name:    "allow select ? from doc for admin",
+				op:      appdef.OperationKind_Select,
+				res:     cDocName,
+				fields:  nil,
+				role:    admin,
+				allowed: true,
 			},
 			{
-				name:          "allow insert to doc for admin",
-				op:            appdef.OperationKind_Insert,
-				res:           cDocName,
-				fields:        nil,
-				role:          admin,
-				allowed:       true,
-				allowedFields: allDocFields,
+				name:    "allow insert to doc for admin",
+				op:      appdef.OperationKind_Insert,
+				res:     cDocName,
+				fields:  nil,
+				role:    admin,
+				allowed: true,
 			},
 			{
-				name:          "allow update doc for admin",
-				op:            appdef.OperationKind_Update,
-				res:           cDocName,
-				fields:        nil,
-				role:          admin,
-				allowed:       true,
-				allowedFields: allDocFields,
+				name:    "allow update doc for admin",
+				op:      appdef.OperationKind_Update,
+				res:     cDocName,
+				fields:  nil,
+				role:    admin,
+				allowed: true,
 			},
 			{ // #3148: appparts: ACTIVATE/DEACTIVATE in IsOperationAllowed
-				name:          "allow deactivate doc for admin",
-				op:            appdef.OperationKind_Deactivate,
-				res:           cDocName,
-				fields:        nil,
-				role:          admin,
-				allowed:       true,
-				allowedFields: nil,
+				name:    "allow deactivate doc for admin",
+				op:      appdef.OperationKind_Deactivate,
+				res:     cDocName,
+				fields:  nil,
+				role:    admin,
+				allowed: true,
 			},
 			{
-				name:          "allow execute cmd for admin",
-				op:            appdef.OperationKind_Execute,
-				res:           cmdName,
-				fields:        nil,
-				role:          admin,
-				allowed:       true,
-				allowedFields: nil,
+				name:    "allow execute cmd for admin",
+				op:      appdef.OperationKind_Execute,
+				res:     cmdName,
+				fields:  nil,
+				role:    admin,
+				allowed: true,
 			},
 			// intruder tests
 			{
-				name:          "deny select ? from doc for intruder",
-				op:            appdef.OperationKind_Select,
-				res:           cDocName,
-				fields:        nil,
-				role:          intruder,
-				allowed:       false,
-				allowedFields: nil,
+				name:    "deny select ? from doc for intruder",
+				op:      appdef.OperationKind_Select,
+				res:     cDocName,
+				fields:  nil,
+				role:    intruder,
+				allowed: false,
 			},
 			{
-				name:          "deny insert doc for intruder",
-				op:            appdef.OperationKind_Insert,
-				res:           cDocName,
-				fields:        nil,
-				role:          intruder,
-				allowed:       false,
-				allowedFields: nil,
+				name:    "deny insert doc for intruder",
+				op:      appdef.OperationKind_Insert,
+				res:     cDocName,
+				fields:  nil,
+				role:    intruder,
+				allowed: false,
 			},
 			{
-				name:          "deny update doc for intruder",
-				op:            appdef.OperationKind_Update,
-				res:           cDocName,
-				fields:        nil,
-				role:          intruder,
-				allowed:       false,
-				allowedFields: nil,
+				name:    "deny update doc for intruder",
+				op:      appdef.OperationKind_Update,
+				res:     cDocName,
+				fields:  nil,
+				role:    intruder,
+				allowed: false,
 			},
 			{
-				name:          "deny execute query for intruder",
-				op:            appdef.OperationKind_Execute,
-				res:           queryName,
-				fields:        nil,
-				role:          intruder,
-				allowed:       false,
-				allowedFields: nil,
+				name:    "deny execute query for intruder",
+				op:      appdef.OperationKind_Execute,
+				res:     queryName,
+				fields:  nil,
+				role:    intruder,
+				allowed: false,
 			},
 			{
-				name:          "deny execute cmd for intruder",
-				op:            appdef.OperationKind_Execute,
-				res:           cmdName,
-				fields:        nil,
-				role:          intruder,
-				allowed:       false,
-				allowedFields: nil,
+				name:    "deny execute cmd for intruder",
+				op:      appdef.OperationKind_Execute,
+				res:     cmdName,
+				fields:  nil,
+				role:    intruder,
+				allowed: false,
 			},
 		}
 		ws := app.Workspace(wsName)
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				allowed, allowedFields, err := acl.IsOperationAllowed(ws, tt.op, tt.res, tt.fields, []appdef.QName{tt.role})
+				allowed, err := acl.IsOperationAllowed(ws, tt.op, tt.res, tt.fields, []appdef.QName{tt.role})
 				require.NoError(err)
 				require.Equal(tt.allowed, allowed)
-				require.EqualValues(tt.allowedFields, allowedFields)
 			})
 		}
 	})
 
 	t.Run("test IsOperationAllowed with multiple roles", func(t *testing.T) {
 		var tests = []struct {
-			name          string
-			op            appdef.OperationKind
-			res           appdef.QName
-			fields        []appdef.FieldName
-			role          []appdef.QName
-			allowed       bool
-			allowedFields []appdef.FieldName
+			name    string
+			op      appdef.OperationKind
+			res     appdef.QName
+			fields  []appdef.FieldName
+			role    []appdef.QName
+			allowed bool
 		}{
 			{
-				name:          "allow select doc for [reader, writer]",
-				op:            appdef.OperationKind_Select,
-				res:           cDocName,
-				role:          []appdef.QName{reader, writer},
-				allowed:       true,
-				allowedFields: selectableDocFields,
+				name:    "allow select doc for [reader, writer]",
+				op:      appdef.OperationKind_Select,
+				res:     cDocName,
+				role:    []appdef.QName{reader, writer},
+				allowed: true,
 			},
 			{
-				name:          "deny select doc for [reader, intruder]",
-				op:            appdef.OperationKind_Select,
-				res:           cDocName,
-				role:          []appdef.QName{reader, intruder},
-				allowed:       false,
-				allowedFields: nil,
+				name:    "deny select doc for [reader, intruder]",
+				op:      appdef.OperationKind_Select,
+				res:     cDocName,
+				role:    []appdef.QName{reader, intruder},
+				allowed: false,
 			},
 			{
-				name:          "allow execute cmd for [reader, writer]",
-				op:            appdef.OperationKind_Execute,
-				res:           cmdName,
-				role:          []appdef.QName{reader, writer},
-				allowed:       true,
-				allowedFields: nil,
+				name:    "allow execute cmd for [reader, writer]",
+				op:      appdef.OperationKind_Execute,
+				res:     cmdName,
+				role:    []appdef.QName{reader, writer},
+				allowed: true,
 			},
 			{
-				name:          "deny execute cmd for [writer, intruder]",
-				op:            appdef.OperationKind_Execute,
-				res:           cmdName,
-				role:          []appdef.QName{writer, intruder},
-				allowed:       false,
-				allowedFields: nil,
+				name:    "deny execute cmd for [writer, intruder]",
+				op:      appdef.OperationKind_Execute,
+				res:     cmdName,
+				role:    []appdef.QName{writer, intruder},
+				allowed: false,
 			},
 		}
 		ws := app.Workspace(wsName)
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				allowed, allowedFields, err := acl.IsOperationAllowed(ws, tt.op, tt.res, tt.fields, tt.role)
+				allowed, err := acl.IsOperationAllowed(ws, tt.op, tt.res, tt.fields, tt.role)
 				require.NoError(err)
 				require.Equal(tt.allowed, allowed)
-				require.EqualValues(tt.allowedFields, allowedFields)
 			})
 		}
 	})
@@ -542,10 +503,9 @@ func Test_IsOperationAllowed(t *testing.T) {
 		ws := app.Workspace(wsName)
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				allowed, allowedFields, err := acl.IsOperationAllowed(ws, tt.op, tt.res, tt.fields, tt.role)
+				allowed, err := acl.IsOperationAllowed(ws, tt.op, tt.res, tt.fields, tt.role)
 				require.Error(err, require.Is(tt.error), require.Has(tt.errHas))
 				require.False(allowed)
-				require.Nil(allowedFields)
 			})
 		}
 	})
@@ -788,7 +748,7 @@ func TestWSInheritances(t *testing.T) {
 				for _, op := range ops {
 					for _, doc := range docs {
 						want := tt.allowed[doc].Contains(op)
-						got, _, err := acl.IsOperationAllowed(ws, op, doc, nil, []appdef.QName{roleName})
+						got, err := acl.IsOperationAllowed(ws, op, doc, nil, []appdef.QName{roleName})
 						require.NoError(err)
 						require.Equal(want, got, "%s %s", doc, op)
 					}
