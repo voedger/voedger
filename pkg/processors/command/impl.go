@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -401,7 +400,7 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkp
 		ws = cmd.iCommand.Workspace()
 	}
 
-	ok, _, err := cmd.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles)
+	ok, err := cmd.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles)
 	if err != nil {
 		return err
 	}
@@ -713,7 +712,7 @@ func checkIsActiveInCUDs(_ context.Context, work pipeline.IWorkpiece) (err error
 	return nil
 }
 
-func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
+func (cmdProc *cmdProc) authorizeRequestCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 
 	ws := cmd.iWorkspace
@@ -723,7 +722,7 @@ func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work pipeline.IWorkpiec
 	}
 	for _, parsedCUD := range cmd.parsedCUDs {
 		fields := maps.Keys(parsedCUD.fields)
-		ok, allowedFields, err := cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
+		ok, err := cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
 		if err != nil {
 			if errors.Is(err, appdef.ErrNotFoundError) {
 				err = coreutils.WrapSysError(err, http.StatusBadRequest)
@@ -731,18 +730,7 @@ func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work pipeline.IWorkpiec
 			return parsedCUD.xPath.Error(err)
 		}
 		if !ok {
-			deniedField := ""
-			for reqField := range parsedCUD.fields {
-				if !slices.Contains(allowedFields, reqField) {
-					deniedField = reqField
-					break
-				}
-			}
-			if len(deniedField) > 0 {
-				deniedField += " "
-			}
-			errMes := deniedField + "operation forbidden"
-			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf(errMes))
+			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
 		}
 	}
 	return
