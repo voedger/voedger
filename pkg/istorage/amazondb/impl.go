@@ -57,20 +57,21 @@ func (d implIAppStorageFactory) Init(appName istorage.SafeAppName) error {
 }
 
 func (d implIAppStorageFactory) Time() coreutils.ITime {
-	return nil
+	return d.iTime
 }
 
 func (s *implIAppStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
-	response, err := s.getItem(pKey, cCols, true)
+	found := false
+	response, err := s.getItem(pKey, cCols, ttlSeconds > 0)
 	if err != nil {
 		return false, err
 	}
 
-	if response.Item == nil {
-		return false, nil
+	if response.Item != nil {
+		found = true
 	}
 
-	if !isExpired(response.Item[expireAtAttributeName], s.iTime.Now()) {
+	if found && !isExpired(response.Item[expireAtAttributeName], s.iTime.Now()) {
 		return false, nil
 	}
 
@@ -481,7 +482,7 @@ func newTableExistsWaiter(name string, client *dynamodb.Client) error {
 
 	// Enable ttl for the table
 	input := &dynamodb.UpdateTimeToLiveInput{
-		TableName: aws.String("MyTable"),
+		TableName: aws.String(dynamoDBTableName(name)),
 		TimeToLiveSpecification: &types.TimeToLiveSpecification{
 			AttributeName: aws.String(expireAtAttributeName),
 			Enabled:       aws.Bool(true),
