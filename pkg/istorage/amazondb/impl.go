@@ -316,7 +316,7 @@ func (s *implIAppStorage) put(pKey []byte, cCols []byte, value []byte, ttlSecond
 
 	if ttlSeconds > 0 {
 		putItemParams.Item[expireAtAttributeName] = &types.AttributeValueMemberN{
-			Value: strconv.FormatInt(s.iTime.Now().Add(time.Duration(ttlSeconds)*time.Second).Unix(), 10),
+			Value: strconv.FormatInt(s.iTime.Now().Add(time.Duration(ttlSeconds)*time.Second).Unix(), decimalBase),
 		}
 	}
 
@@ -505,11 +505,7 @@ func isExpired(expireAtValue types.AttributeValue, now time.Time) bool {
 		return false
 	}
 
-	expireAtInSeconds, err := strconv.ParseInt(
-		expireAtValue.(*types.AttributeValueMemberN).Value,
-		10,
-		64,
-	)
+	expireAtInSeconds, err := strconv.ParseInt(expireAtValue.(*types.AttributeValueMemberN).Value, decimalBase, bit64Size)
 	if err != nil {
 		return false
 	}

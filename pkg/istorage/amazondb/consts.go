@@ -13,3 +13,8 @@ const (
 	valueAttributeName        = "value"
 	expireAtAttributeName     = "expire_at"
 )
+
+const (
+	decimalBase = 10
+	bit64Size   = 64
+)
