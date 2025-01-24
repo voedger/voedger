@@ -144,26 +144,29 @@ func Example() {
 		readerName := appdef.NewQName("test", "reader")
 		reader := wsb.AddRole(readerName)
 		reader.SetComment("read-only role")
-		reader.Grant(
+		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Select},
 			filter.QNames(docName, recName), []appdef.FieldName{"f1", "f2"},
+			readerName,
 			"allow reader to select some fields from test.doc and test.rec")
-		reader.Grant(
+		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Select},
 			filter.QNames(viewName), nil,
+			readerName,
 			"allow reader to select all fields from test.view")
-		reader.GrantAll(filter.QNames(queryName), "allow reader to execute test.query")
+		wsb.GrantAll(filter.QNames(queryName), readerName, "allow reader to execute test.query")
 
 		writerName := appdef.NewQName("test", "writer")
 		writer := wsb.AddRole(writerName)
 		writer.SetComment("read-write role")
-		writer.GrantAll(filter.QNames(docName, recName, viewName), "allow writer to do anything with test.doc, test.rec and test.view")
-		writer.Revoke(
+		wsb.GrantAll(filter.QNames(docName, recName, viewName), writerName, "allow writer to do anything with test.doc, test.rec and test.view")
+		wsb.Revoke(
 			[]appdef.OperationKind{appdef.OperationKind_Update},
 			filter.QNames(docName),
 			nil,
+			writerName,
 			"disable writer to update test.doc")
-		writer.GrantAll(filter.AllWSFunctions(wsName), "allow writer to execute all test functions")
+		wsb.GrantAll(filter.AllWSFunctions(wsName), writerName, "allow writer to execute all test functions")
 
 		rateName := appdef.NewQName("test", "rate")
 		wsb.AddRate(rateName, 10, time.Minute, []appdef.RateScope{appdef.RateScope_AppPartition}, "rate 10 times per second per partition")
@@ -568,99 +571,10 @@ func Example() {
 	//           },
 	//           "Roles": {
 	//             "test.reader": {
-	//               "Comment": "read-only role",
-	//               "ACL": [
-	//                 {
-	//                   "Comment": "allow reader to select some fields from test.doc and test.rec",
-	//                   "Policy": "Allow",
-	//                   "Ops": [
-	//                     "Select"
-	//                   ],
-	//                   "Filter": {
-	//                     "QNames": [
-	//                       "test.doc",
-	//                       "test.rec"
-	//                     ],
-	//                     "Fields": [
-	//                       "f1",
-	//                       "f2"
-	//                     ]
-	//                   }
-	//                 },
-	//                 {
-	//                   "Comment": "allow reader to select all fields from test.view",
-	//                   "Policy": "Allow",
-	//                   "Ops": [
-	//                     "Select"
-	//                   ],
-	//                   "Filter": {
-	//                     "QNames": [
-	//                       "test.view"
-	//                     ]
-	//                   }
-	//                 },
-	//                 {
-	//                   "Comment": "allow reader to execute test.query",
-	//                   "Policy": "Allow",
-	//                   "Ops": [
-	//                     "Execute"
-	//                   ],
-	//                   "Filter": {
-	//                     "QNames": [
-	//                       "test.query"
-	//                     ]
-	//                   }
-	//                 }
-	//               ]
+	//               "Comment": "read-only role"
 	//             },
 	//             "test.writer": {
-	//               "Comment": "read-write role",
-	//               "ACL": [
-	//                 {
-	//                   "Comment": "allow writer to do anything with test.doc, test.rec and test.view",
-	//                   "Policy": "Allow",
-	//                   "Ops": [
-	//                     "Insert",
-	//                     "Update",
-	//                     "Activate",
-	//                     "Deactivate",
-	//                     "Select"
-	//                   ],
-	//                   "Filter": {
-	//                     "QNames": [
-	//                       "test.doc",
-	//                       "test.rec",
-	//                       "test.view"
-	//                     ]
-	//                   }
-	//                 },
-	//                 {
-	//                   "Comment": "disable writer to update test.doc",
-	//                   "Policy": "Deny",
-	//                   "Ops": [
-	//                     "Update"
-	//                   ],
-	//                   "Filter": {
-	//                     "QNames": [
-	//                       "test.doc"
-	//                     ]
-	//                   }
-	//                 },
-	//                 {
-	//                   "Comment": "allow writer to execute all test functions",
-	//                   "Policy": "Allow",
-	//                   "Ops": [
-	//                     "Execute"
-	//                   ],
-	//                   "Filter": {
-	//                     "Types": [
-	//                       "TypeKind_Query",
-	//                       "TypeKind_Command"
-	//                     ],
-	//                     "Workspace": "test.ws"
-	//                   }
-	//                 }
-	//               ]
+	//               "Comment": "read-write role"
 	//             }
 	//           },
 	//           "ACL": [

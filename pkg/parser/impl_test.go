@@ -113,7 +113,7 @@ func Test_BasicUsage(t *testing.T) {
 		u := uniques[appdef.MustParseQName("main.TablePlan$uniques$01")]
 		require.NotNil(u)
 		cnt := 0
-		for f := range u.Fields() {
+		for _, f := range u.Fields() {
 			cnt++
 			switch n := f.Name(); n {
 			case "FState":
@@ -131,7 +131,7 @@ func Test_BasicUsage(t *testing.T) {
 		u := uniques[appdef.MustParseQName("main.TablePlan$uniques$UniqueTable")]
 		require.NotNil(u)
 		cnt := 0
-		for f := range u.Fields() {
+		for _, f := range u.Fields() {
 			cnt++
 			switch n := f.Name(); n {
 			case "TableNumber":
@@ -3001,12 +3001,12 @@ func TestIsOperationAllowedOnNestedTable(t *testing.T) {
 	require.NoError(err)
 
 	ws := appDef.Workspace(appdef.MustParseQName("pkg.MyWS"))
-	ok, _, err := borrowedAppPart.IsOperationAllowed(ws, appdef.OperationKind_Insert, appdef.NewQName("pkg", "Table2"), nil,
+	ok, err := borrowedAppPart.IsOperationAllowed(ws, appdef.OperationKind_Insert, appdef.NewQName("pkg", "Table2"), nil,
 		[]appdef.QName{appdef.NewQName("pkg", "WorkspaceOwner")})
 	require.NoError(err)
 	require.True(ok)
 
-	ok, _, err = borrowedAppPart.IsOperationAllowed(ws, appdef.OperationKind_Insert, appdef.NewQName("pkg", "Nested"), nil,
+	ok, err = borrowedAppPart.IsOperationAllowed(ws, appdef.OperationKind_Insert, appdef.NewQName("pkg", "Nested"), nil,
 		[]appdef.QName{appdef.NewQName("pkg", "WorkspaceOwner")})
 	require.NoError(err)
 	require.True(ok)
@@ -3055,7 +3055,7 @@ func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
 	require.NoError(err)
 
 	ws := appDef.Workspace(appdef.MustParseQName("pkg.MyWS"))
-	ok, _, err := borrowedAppPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, appdef.NewQName("pkg", "Cmd1"), nil,
+	ok, err := borrowedAppPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, appdef.NewQName("pkg", "Cmd1"), nil,
 		[]appdef.QName{appdef.NewQName("pkg", "Role1")})
 	require.NoError(err)
 	require.True(ok)

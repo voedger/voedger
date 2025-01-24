@@ -6,7 +6,6 @@
 package roles_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -52,53 +51,66 @@ func TestRoles(t *testing.T) {
 		_ = wsb.AddCommand(cmdName)
 		_ = wsb.AddQuery(queryName)
 
-		reader := wsb.AddRole(readerRoleName)
-		reader.Grant(
+		_ = wsb.AddRole(readerRoleName)
+		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Select},
 			filter.QNames(docName, viewName),
 			[]appdef.FieldName{"field1"},
+			readerRoleName,
 			"grant select from doc & view to reader")
-		reader.Grant(
+		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
 			filter.QNames(queryName),
 			nil,
+			readerRoleName,
 			"grant execute query to reader")
 
-		writer := wsb.AddRole(writerRoleName)
-		writer.GrantAll(
+		_ = wsb.AddRole(writerRoleName)
+		wsb.GrantAll(
 			filter.QNames(docName, viewName),
+			writerRoleName,
 			"grant all on doc & view to writer")
-		writer.GrantAll(
+		wsb.GrantAll(
 			filter.QNames(cmdName, queryName),
+			writerRoleName,
 			"grant execute all functions to writer")
 
-		worker := wsb.AddRole(workerRoleName)
-		worker.GrantAll(
+		_ = wsb.AddRole(workerRoleName)
+		wsb.GrantAll(
 			filter.QNames(readerRoleName, writerRoleName),
+			workerRoleName,
 			"grant reader and writer roles to worker")
 
-		owner := wsb.AddRole(ownerRoleName)
-		owner.GrantAll(
+		_ = wsb.AddRole(ownerRoleName)
+		wsb.GrantAll(
 			filter.QNames(docName, viewName),
+			ownerRoleName,
 			"grant all on doc & view to owner")
-		owner.GrantAll(
+		wsb.GrantAll(
 			filter.QNames(cmdName, queryName),
+			ownerRoleName,
 			"grant execute all functions to owner")
 
-		adm := wsb.AddRole(admRoleName)
-		adm.GrantAll(filter.QNames(ownerRoleName))
-		adm.Revoke(
+		_ = wsb.AddRole(admRoleName)
+		wsb.GrantAll(
+			filter.QNames(ownerRoleName),
+			admRoleName,
+			"grant owner to admin")
+		wsb.Revoke(
 			[]appdef.OperationKind{appdef.OperationKind_Execute},
 			filter.QNames(cmdName, queryName),
 			nil,
+			admRoleName,
 			"revoke execute from admin")
 
-		intruder := wsb.AddRole(intruderRoleName)
-		intruder.RevokeAll(
+		_ = wsb.AddRole(intruderRoleName)
+		wsb.RevokeAll(
 			filter.QNames(docName, viewName),
+			intruderRoleName,
 			"revoke all from intruder")
-		intruder.RevokeAll(
+		wsb.RevokeAll(
 			filter.QNames(cmdName, queryName),
+			intruderRoleName,
 			"revoke all from intruder")
 
 		var err error
@@ -107,74 +119,18 @@ func TestRoles(t *testing.T) {
 		require.NotNil(app)
 	})
 
-	testWith := func(tested types.IWithTypes) {
+	testWith := func(tested interface {
+		types.IWithTypes
+		appdef.IWithACL
+	}) {
 		t.Run("should be ok to enum roles", func(t *testing.T) {
-			type wantACL []struct {
-				policy appdef.PolicyKind
-				ops    []appdef.OperationKind
-				flt    []appdef.QName
-				fld    []appdef.FieldName
-				to     appdef.QName
-			}
-			tt := []struct {
-				name appdef.QName
-				wantACL
-			}{ // sorted by name
-				{admRoleName, wantACL{
-					{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Inherits}, appdef.QNames{ownerRoleName}, nil, admRoleName},
-					{appdef.PolicyKind_Deny, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.QNames{cmdName, queryName}, nil, admRoleName},
-				}},
-				{intruderRoleName, wantACL{
-					{appdef.PolicyKind_Deny, appdef.RecordsOperations.AsArray(), appdef.QNames{docName, viewName}, nil, intruderRoleName},
-					{appdef.PolicyKind_Deny, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.QNames{cmdName, queryName}, nil, intruderRoleName},
-				}},
-				{ownerRoleName, wantACL{
-					{appdef.PolicyKind_Allow, appdef.RecordsOperations.AsArray(), appdef.QNames{docName, viewName}, nil, ownerRoleName},
-					{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.QNames{cmdName, queryName}, nil, ownerRoleName},
-				}},
-				{readerRoleName, wantACL{
-					{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Select}, appdef.QNames{docName, viewName}, []appdef.FieldName{"field1"}, readerRoleName},
-					{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.QNames{queryName}, nil, readerRoleName},
-				}},
-				{workerRoleName, wantACL{
-					{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Inherits}, appdef.QNames{readerRoleName, writerRoleName}, nil, workerRoleName},
-				}},
-				{writerRoleName, wantACL{
-					{appdef.PolicyKind_Allow, appdef.RecordsOperations.AsArray(), appdef.QNames{docName, viewName}, nil, writerRoleName},
-					{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Execute}, appdef.QNames{cmdName, queryName}, nil, writerRoleName},
-				}},
-			}
-
-			rolesCount := 0
+			want := appdef.QNamesFrom(readerRoleName, writerRoleName, workerRoleName, ownerRoleName, admRoleName, intruderRoleName)
+			got := appdef.QNames{}
 			for r := range appdef.Roles(tested.Types()) {
-				require.Equal(tt[rolesCount].name, r.QName())
-				wantACL := tt[rolesCount].wantACL
-				aclCount := 0
-				for _, acl := range r.ACL() {
-					t.Run(fmt.Sprintf("%v.ACL[%d]", r, aclCount), func(t *testing.T) {
-						require.Equal(wantACL[aclCount].policy, acl.Policy())
-						require.Equal(wantACL[aclCount].ops, acl.Ops())
-						for _, o := range wantACL[aclCount].ops {
-							require.True(acl.Op(o))
-						}
-
-						flt := appdef.QNames{}
-						for _, t := range appdef.FilterMatches(acl.Filter(), tested.Types()) {
-							flt = append(flt, t.QName())
-						}
-						require.EqualValues(wantACL[aclCount].flt, flt)
-
-						require.Equal(wantACL[aclCount].fld, acl.Filter().Fields())
-						require.Equal(wantACL[aclCount].to, acl.Principal().QName())
-					})
-					aclCount++
-				}
-				require.Len(wantACL, aclCount)
-				rolesCount++
+				got.Add(r.QName())
 			}
-			require.Equal(6, rolesCount)
+			require.Equal(want, got)
 		})
-
 		t.Run("should be ok to find role", func(t *testing.T) {
 			r := tested.Type(workerRoleName)
 			require.Equal(appdef.TypeKind_Role, r.Kind())
@@ -185,11 +141,6 @@ func TestRoles(t *testing.T) {
 			require.Equal(wsName, role.Workspace().QName())
 
 			require.Nil(appdef.Role(tested.Type, appdef.NewQName("test", "unknown")), "should be nil if not found")
-		})
-
-		t.Run("should be ok to get role inheritance", func(t *testing.T) {
-			roles := appdef.Role(tested.Type, workerRoleName).Ancestors()
-			require.Equal([]appdef.QName{readerRoleName, writerRoleName}, roles)
 		})
 	}
 
@@ -221,16 +172,12 @@ func Test_RoleInheritanceWithComplexFilter(t *testing.T) {
 		wsb.AddRole(anc1RoleName).SetTag(ancTag)
 		wsb.AddRole(anc2RoleName).SetTag(ancTag)
 
-		wsb.AddRole(descRoleName).GrantAll(filter.Tags(ancTag))
+		_ = wsb.AddRole(descRoleName)
+		wsb.GrantAll(filter.Tags(ancTag), descRoleName, "grant all ancestor roles to descendant")
 
 		var err error
 		app, err = adb.Build()
 		require.NoError(err)
 		require.NotNil(app)
-	})
-
-	t.Run("should be ok to obtain roles inheritance", func(t *testing.T) {
-		roles := appdef.Role(app.Workspace(wsName).Type, descRoleName).Ancestors()
-		require.Equal([]appdef.QName{anc1RoleName, anc2RoleName}, roles)
 	})
 }

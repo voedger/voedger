@@ -7,5 +7,4 @@ package descr
 
 type Role struct {
 	Type
-	ACL *ACL `json:",omitempty"`
 }

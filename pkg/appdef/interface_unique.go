@@ -5,8 +5,6 @@
 
 package appdef
 
-import "iter"
-
 // Final structures with uniques are:
 // - TypeKind_GDoc and TypeKind_GRecord,
 // - TypeKind_CDoc and TypeKind_CRecord,
@@ -62,6 +60,6 @@ type IUnique interface {
 	// Returns qualified name of unique.
 	Name() QName
 
-	// Iterate unique fields list in alphabetically order
-	Fields() iter.Seq[IField]
+	// Returns unique fields list in alphabetically order
+	Fields() []IField
 }

@@ -6,38 +6,51 @@
 package acl
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
-// Returns recursive list of role ancestors for specified role.
+// Returns recursive list of role ancestors for specified role in the specified workspace.
+//
+// Role inheritance provided by `GRANT <role> TO <role>` statement.
+// These inheritances statements can be provided in the specified workspace or in any of its ancestors.
 //
 // If role has no ancestors, then result contains only specified role.
 // Result is alphabetically sorted list of role names.
-func RecursiveRoleAncestors(role appdef.IRole) (roles appdef.QNames) {
+func RecursiveRoleAncestors(role appdef.IRole, ws appdef.IWorkspace) (roles appdef.QNames) {
 	roles.Add(role.QName())
-	app := role.App()
-	for _, r := range role.Ancestors() {
-		roles.Add(RecursiveRoleAncestors(appdef.Role(app.Type, r))...)
+
+	for _, acl := range ws.ACL() {
+		if acl.Op(appdef.OperationKind_Inherits) && (acl.Principal() == role) {
+			for _, t := range appdef.FilterMatches(acl.Filter(), ws.Types()) {
+				if r, ok := t.(appdef.IRole); ok {
+					roles.Add(RecursiveRoleAncestors(r, ws)...)
+				}
+			}
+		}
 	}
+
+	for _, w := range ws.Ancestors() {
+		roles.Add(RecursiveRoleAncestors(role, w)...)
+	}
+
 	return roles
 }
 
 // Returns true if specified operation is allowed in specified workspace on specified resource for any of specified roles.
 //
-// If resource is any structure and operation is UPDATE or SELECT, then:
-//   - if fields list specified, then result consider it,
-//   - full list of allowed fields also returned,
+// If resource is any structure and operation is UPDATE, INSERT or SELECT, then if fields list specified, then result consider it,
+// else fields list is ignored.
 //
-// else fields list is ignored and nil allowedFields is returned.
-//
-// If some error in arguments, (resource or role not found, operation is not applicable to resource, etc…) then error is returned.
-func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, rol []appdef.QName) (bool, []appdef.FieldName, error) {
+// If some error in arguments, (ws or resource not found, operation is not applicable to resource, etc…) then error is returned.
+func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, rol []appdef.QName) (bool, error) {
 
 	t := ws.Type(res)
 	if t == appdef.NullType {
-		return false, nil, appdef.ErrNotFound("resource «%s» in %v", res, ws)
+		return false, appdef.ErrNotFound("resource «%s» in %v", res, ws)
 	}
 
 	var str appdef.IStructure
@@ -46,28 +59,28 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 		if s, ok := t.(appdef.IStructure); ok {
 			str = s
 		} else {
-			return false, nil, appdef.ErrIncompatible("%v is not a structure", t)
+			return false, appdef.ErrIncompatible("%v is not a structure", t)
 		}
 		for _, f := range fld {
 			if str.Field(f) == nil {
-				return false, nil, appdef.ErrNotFound("field «%s» in %v", f, str)
+				return false, appdef.ErrNotFound("field «%s» in %v", f, str)
 			}
 		}
 	case appdef.OperationKind_Activate, appdef.OperationKind_Deactivate:
 		// #3148: appparts: ACTIVATE/DEACTIVATE in IsOperationAllowed
 		if rec, ok := t.(appdef.IRecord); ok {
 			if f := rec.Field(appdef.SystemField_IsActive); f == nil {
-				return false, nil, appdef.ErrNotFound("field «%s» in %v", appdef.SystemField_IsActive, rec)
+				return false, appdef.ErrNotFound("field «%s» in %v", appdef.SystemField_IsActive, rec)
 			}
 		} else {
-			return false, nil, appdef.ErrIncompatible("%v is not a record", t)
+			return false, appdef.ErrIncompatible("%v is not a record", t)
 		}
 	case appdef.OperationKind_Execute:
 		if _, ok := t.(appdef.IFunction); !ok {
-			return false, nil, appdef.ErrIncompatible("%v is not a function", t)
+			return false, appdef.ErrIncompatible("%v is not a function", t)
 		}
 	default:
-		return false, nil, appdef.ErrUnsupported("operation %q", op)
+		return false, appdef.ErrUnsupported("operation %q", op)
 	}
 
 	allowedFields := map[appdef.FieldName]any{}
@@ -75,19 +88,19 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 	roles := appdef.QNamesFrom(rol...)
 
 	if len(roles) == 0 {
-		return false, nil, appdef.ErrMissed("participants")
+		return false, appdef.ErrMissed("participants")
 	}
 	for _, r := range roles {
 		role := appdef.Role(ws.Type, r)
 		if role != nil {
-			roles.Add(RecursiveRoleAncestors(role)...)
+			roles.Add(RecursiveRoleAncestors(role, ws)...)
 		}
 	}
 
 	result := false
 
 	if slices.Contains(roles, appdef.QNameRoleSystem) {
-		// nothung else matters
+		// nothing else matters
 		result = true
 		if str != nil {
 			for _, f := range str.Fields() {
@@ -176,13 +189,21 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 		}
 	}
 
-	// nnv: logging should be moved to caller
-	// if !result && logger.IsVerbose() {
-	// 	logger.Verbose(fmt.Sprintf("%s for %s: [%s] -> deny", op, res, rolesToString(rol)))
-	// 	for rule := range ws.App().ACL() {
-	// 		logger.Verbose(fmt.Sprintf("%v : %v", rule.Workspace(), rule))
-	// 	}
-	// }
+	if !result && logger.IsVerbose() {
+		logVerboseDenyReason(op, res, allowed, fld, roles)
+	}
 
-	return result, allowed, nil
+	return result, nil
+}
+
+// here to avid memory consumption for returning []allowedField and []effectiveRole
+func logVerboseDenyReason(op appdef.OperationKind, resource appdef.QName, allowed []appdef.FieldName, requestedFields []string, roles []appdef.QName) {
+	entity := resource.String()
+	for _, reqField := range requestedFields {
+		if !slices.Contains(allowed, reqField) {
+			entity += "." + reqField
+			break
+		}
+	}
+	logger.Verbose(fmt.Sprintf("%s on %s by %s -> deny", op, entity, roles))
 }

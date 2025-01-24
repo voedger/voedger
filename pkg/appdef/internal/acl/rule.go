@@ -88,7 +88,6 @@ func NewRule(ws appdef.IWorkspace, ops []appdef.OperationKind, policy appdef.Pol
 
 	// propagate ACL to role, workspace and app
 	type I interface{ AppendACL(appdef.IACLRule) }
-	principal.(I).AppendACL(r)
 	ws.(I).AppendACL(r)
 	ws.App().(I).AppendACL(r)
 
