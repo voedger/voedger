@@ -623,15 +623,6 @@ func testAppStorage_GetBatch(t *testing.T, storage IAppStorage) {
 
 //nolint:revive,goconst
 func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
-	switch storageImplPkgPath(storage) {
-	case "github.com/voedger/voedger/pkg/istorage/mem",
-		"github.com/voedger/voedger/pkg/istorage/cas",
-		"github.com/voedger/voedger/pkg/istorage/bbolt",
-		"github.com/voedger/voedger/pkg/istoragecache":
-	default:
-		t.Skip("Unsupported storage type")
-	}
-
 	t.Run("Should insert if not exists", func(t *testing.T) {
 		require := require.New(t)
 		pKey := []byte("Vehicles")
@@ -649,7 +640,7 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iTime c
 		require.True(ok)
 
 		data := make([]byte, 0)
-		ok, err = storage.Get(pKey, ccols, &data)
+		ok, err = storage.TTLGet(pKey, ccols, &data)
 		require.NoError(err)
 		require.True(ok)
 		require.Equal(value, data)
@@ -696,15 +687,6 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iTime c
 
 //nolint:revive,goconst
 func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
-	switch storageImplPkgPath(storage) {
-	case "github.com/voedger/voedger/pkg/istorage/mem",
-		"github.com/voedger/voedger/pkg/istorage/cas",
-		"github.com/voedger/voedger/pkg/istorage/bbolt",
-		"github.com/voedger/voedger/pkg/istoragecache":
-	default:
-		t.Skip("Unsupported storage type")
-	}
-
 	t.Run("Should swap if exists", func(t *testing.T) {
 		require := require.New(t)
 		pKey := []byte("Games")
@@ -802,15 +784,6 @@ func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage, iTime core
 
 //nolint:revive,goconst
 func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
-	switch storageImplPkgPath(storage) {
-	case "github.com/voedger/voedger/pkg/istorage/mem",
-		"github.com/voedger/voedger/pkg/istorage/cas",
-		"github.com/voedger/voedger/pkg/istorage/bbolt",
-		"github.com/voedger/voedger/pkg/istoragecache":
-	default:
-		t.Skip("Unsupported storage type")
-	}
-
 	t.Run("Should delete if exists", func(t *testing.T) {
 		require := require.New(t)
 		pKey := []byte("Comics")
@@ -878,15 +851,6 @@ func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage, iTime co
 
 //nolint:revive,goconst
 func testAppStorage_TTLGet(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
-	switch storageImplPkgPath(storage) {
-	case "github.com/voedger/voedger/pkg/istorage/mem",
-		"github.com/voedger/voedger/pkg/istorage/cas",
-		"github.com/voedger/voedger/pkg/istorage/bbolt",
-		"github.com/voedger/voedger/pkg/istoragecache":
-	default:
-		t.Skip("Unsupported storage type")
-	}
-
 	t.Run("Should get ttl record if exists", func(t *testing.T) {
 		require := require.New(t)
 		pKey := []byte("Books")
@@ -940,15 +904,6 @@ func testAppStorage_TTLGet(t *testing.T, storage IAppStorage, iTime coreutils.IT
 
 //nolint:revive,goconst
 func testAppStorage_TTLRead(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
-	switch storageImplPkgPath(storage) {
-	case "github.com/voedger/voedger/pkg/istorage/mem",
-		"github.com/voedger/voedger/pkg/istorage/cas",
-		"github.com/voedger/voedger/pkg/istorage/bbolt",
-		"github.com/voedger/voedger/pkg/istoragecache":
-	default:
-		t.Skip("Unsupported storage type")
-	}
-
 	t.Run("Should read ttl records", func(t *testing.T) {
 		require := require.New(t)
 		pKey := []byte("Key1")
