@@ -9,6 +9,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -17,12 +18,13 @@ type Request struct {
 	Method      string
 	WSID        istructs.WSID
 	PartitionID istructs.PartitionID
-	Header      map[string]string `json:",omitempty"`
+	Header      map[string]string
 	Resource    string
-	Query       map[string]string `json:",omitempty"`
-	Body        []byte            `json:",omitempty"`
-	AppQName    string
+	Query       map[string]string
+	Body        []byte
+	AppQName    appdef.AppQName
 	Host        string // used by authenticator to emit Host principal
+	ApiPath     string
 }
 
 type ResponseMeta struct {

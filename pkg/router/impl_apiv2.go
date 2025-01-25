@@ -8,9 +8,12 @@ package router
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
 func (s *httpService) registerHandlersV2() {
@@ -160,4 +163,32 @@ func requestHandlerV2_table() http.HandlerFunc {
 		// note: request lead to create -> 201 Created
 		writeNotImplemented(resp)
 	}
+}
+
+func createRequestV2(req *http.Request) (res bus.Request, ok bool) {
+	vars := mux.Vars(req)
+	wsidStr := vars[URLPlaceholder_wsid]
+	wsidUint, err := strconv.ParseUint(wsidStr, utils.DecimalBase, utils.BitSize64)
+	if err != nil {
+		// notest: parsed already by regexp in the route
+		panic(err)
+	}
+	appQNameStr := vars[URLPlaceholder_appOwner] + appdef.AppQNameQualifierChar + vars[URLPlaceholder_appName]
+	appQName, err = appdef.ParseAppQName(appQNameStr)
+	if err != nil {
+		// notest: parsed already by regexp in the route
+		panic(err)
+	}
+	docQName, err := appdef.ParseQName(vars[URLPlaceholder_pkg+"."+URLPlaceholder_table])
+	if err != nil {
+		// notest: parsed already by regexp in the route
+		panic(err)
+	}
+
+	res = bus.Request{
+		Method: req.Method,
+		WSID: istructs.WSID(wsidUint),
+		
+	}
+
 }

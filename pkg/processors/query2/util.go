@@ -76,7 +76,7 @@ func (qw *queryWork) Release() {
 
 // borrows app partition for query
 func (qw *queryWork) borrow() (err error) {
-	if qw.appPart, err = qw.appParts.Borrow(qw.msg.AppQName(), qw.msg.Partition(), appparts.ProcessorKind_Query); err != nil {
+	if qw.appPart, err = qw.appParts.Borrow(qw.msg.AppQName(), qw.msg.PartitionID(), appparts.ProcessorKind_Query); err != nil {
 		return err
 	}
 	qw.appStructs = qw.appPart.AppStructs()
@@ -112,4 +112,22 @@ func operator(name string, doSync func(ctx context.Context, qw *queryWork) (err 
 	return pipeline.WireFunc(name, func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		return doSync(ctx, work.(*queryWork))
 	})
+}
+
+func NewIQueryMessage(appQName appdef.AppQName, wsid istructs.WSID, responder bus.IResponder,
+	queryParams QueryParams, docID istructs.IDType, apiPath ApiPath, requestCtx context.Context,
+	qName appdef.QName, partition istructs.PartitionID, host string, token string) IQueryMessage {
+	return &implIQueryMessage{
+		appQName:    appQName,
+		wsid:        wsid,
+		responder:   responder,
+		queryParams: queryParams,
+		docID:       docID,
+		apiPath:     apiPath,
+		requestCtx:  requestCtx,
+		qName:       qName,
+		partition:   partition,
+		host:        host,
+		token:       token,
+	}
 }
