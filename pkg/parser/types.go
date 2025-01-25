@@ -594,11 +594,13 @@ type RateStmt struct {
 func (s RateStmt) GetName() string { return string(s.Name) }
 
 type LimitAction struct {
-	Pos     lexer.Position
-	Select  bool `parser:"(@'SELECT'"`
-	Execute bool `parser:"| @EXECUTE"`
-	Insert  bool `parser:"| @'INSERT'"`
-	Update  bool `parser:"| @'UPDATE')"`
+	Pos        lexer.Position
+	Select     bool `parser:"(@'SELECT'"`
+	Execute    bool `parser:"| @EXECUTE"`
+	Activate   bool `parser:"| @'ACTIVATE'"`
+	Deactivate bool `parser:"| @'DEACTIVATE'"`
+	Insert     bool `parser:"| @'INSERT'"`
+	Update     bool `parser:"| @'UPDATE')"`
 }
 
 type LimitSingleItemFilter struct {
