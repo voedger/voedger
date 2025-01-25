@@ -431,10 +431,8 @@ func newStorage(cfg aws.Config, keySpace string, iTime coreutils.ITime) (storage
 }
 
 func newAwsCfg(params DynamoDBParams) (aws.Config, error) {
-	return config.LoadDefaultConfig(context.TODO(),
-		config.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-			return aws.Endpoint{URL: params.EndpointURL}, nil
-		})),
+	return config.LoadDefaultConfig(context.Background(),
+		config.WithBaseEndpoint(params.EndpointURL),
 		config.WithRegion(params.Region),
 		config.WithCredentialsProvider(
 			credentials.NewStaticCredentialsProvider(
@@ -519,7 +517,7 @@ func doesTableExist(name string, client *dynamodb.Client) (bool, error) {
 		TableName: aws.String(dynamoDBTableName(name)),
 	}
 
-	if _, err := client.DescribeTable(context.TODO(), describeTableInput); err != nil {
+	if _, err := client.DescribeTable(context.Background(), describeTableInput); err != nil {
 		// Check if the error indicates that the table doesn't exist
 		var resourceNotFoundException *types.ResourceNotFoundException
 		if errors.As(err, &resourceNotFoundException) {
