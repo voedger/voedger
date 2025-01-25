@@ -10,6 +10,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
 type ApiPath int
@@ -40,4 +41,14 @@ type IQueryMessage interface {
 	Partition() istructs.PartitionID
 	Host() string
 	Token() string
+}
+
+type IApiPathHandler interface {
+	CheckRateLimit(ctx context.Context, qw *queryWork) error
+	CheckType(ctx context.Context, qw *queryWork) error
+	ResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error
+	AuthorizeRequest(ctx context.Context, qw *queryWork) error
+	AuthorizeResult(ctx context.Context, qw *queryWork) error
+	RowsProcessor(ctx context.Context, qw *queryWork) error
+	Exec(ctx context.Context, qw *queryWork) error
 }

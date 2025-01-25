@@ -59,13 +59,11 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 						p.Close()
 						p = nil
 					} else {
-						/* TODO: implement
-							if err = execQuery(ctx, qwork); err == nil {
+						if err = qwork.apiPathHandler.Exec(ctx, qwork); err == nil {
 							if err = processors.CheckResponseIntent(qwork.state); err == nil {
 								err = qwork.state.ApplyIntents()
 							}
 						}
-						*/
 					}
 					if qwork.rowsProcessor != nil {
 						// wait until all rows are sent
@@ -110,21 +108,21 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator,
 	itokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources) pipeline.ISyncPipeline {
 	ops := []*pipeline.WiredOperator{
-		operator("borrowAppPart", borrowAppPart),
-		operator("check rate", func(ctx context.Context, qw *queryWork) (err error) {
+		operator("get api path handler", func(ctx context.Context, qw *queryWork) (err error) {
 			switch qw.msg.ApiPath() {
 			case ApiPath_Queries:
-				if qw.appStructs.IsFunctionRateLimitsExceeded(qw.msg.QName(), qw.msg.WSID()) {
-					return coreutils.NewSysError(http.StatusTooManyRequests)
-				}
-				break
-			case ApiPath_Docs:
-			case ApiPath_CDocs:
+				qw.apiPathHandler = &queryHandler{}
 			case ApiPath_Views:
-				// TODO: implement rate limits for other paths
-				break
+				qw.apiPathHandler = &viewHandler{}
+			default:
+				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("unsupported api path %v", qw.msg.ApiPath()))
 			}
 			return nil
+		}),
+
+		operator("borrowAppPart", borrowAppPart),
+		operator("check rate limit", func(ctx context.Context, qw *queryWork) (err error) {
+			return qw.apiPathHandler.CheckRateLimit(ctx, qw)
 		}),
 		operator("authenticate query request", func(ctx context.Context, qw *queryWork) (err error) {
 			req := iauthnz.AuthnRequest{
@@ -173,7 +171,6 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			return nil
 		}),
-
 		operator("get IWorkspace", func(ctx context.Context, qw *queryWork) (err error) {
 			if qw.wsDesc.QName() == appdef.NullQName {
 				// workspace is dummy
@@ -185,62 +182,11 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			return nil
 		}),
-
-		operator("get IQuery", func(ctx context.Context, qw *queryWork) (err error) {
-			switch qw.msg.ApiPath() {
-			case ApiPath_Queries:
-				switch qw.iWorkspace {
-				case nil:
-					// workspace is dummy
-					if qw.iQuery = appdef.Query(qw.appStructs.AppDef().Type, qw.msg.QName()); qw.iQuery == nil {
-						return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist", qw.msg.QName()))
-					}
-				default:
-					if qw.iQuery = appdef.Query(qw.iWorkspace.Type, qw.msg.QName()); qw.iQuery == nil {
-						return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist in %v", qw.msg.QName(), qw.iWorkspace))
-					}
-				}
-			case ApiPath_Views:
-			case ApiPath_Docs:
-			case ApiPath_CDocs:
-				// TODO: implement
-			}
-			return nil
+		operator("get type", func(ctx context.Context, qw *queryWork) (err error) {
+			return qw.apiPathHandler.CheckType(ctx, qw)
 		}),
-
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
-			// TODO: implement
-			/*
-				ws := qw.iWorkspace
-				if ws == nil {
-					// workspace is dummy
-					ws = qw.iQuery.Workspace()
-				}
-				ok, _, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
-				if err != nil {
-					return err
-				}
-				if !ok {
-					return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
-				};*/
-			return nil
-		}),
-		operator("unmarshal request", func(ctx context.Context, qw *queryWork) (err error) {
-			/* TODO: implement
-			parsType := qw.iQuery.Param()
-			if parsType != nil && parsType.QName() == istructs.QNameRaw {
-				qw.requestData["args"] = map[string]interface{}{
-					processors.Field_RawObject_Body: string(qw.msg.Body()),
-				}
-				return nil
-			}
-			err = coreutils.JSONUnmarshal(qw.msg.Body(), &qw.requestData)\*/
-			return coreutils.WrapSysError(err, http.StatusBadRequest)
-		}),
-		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
-			// TODO: implement
-			// 	qw.execQueryArgs, err = newExecQueryArgs(qw.requestData, qw.msg.WSID(), qw)
-			return coreutils.WrapSysError(err, http.StatusBadRequest)
+			return qw.apiPathHandler.AuthorizeRequest(ctx, qw)
 		}),
 		operator("create callback func", func(ctx context.Context, qw *queryWork) (err error) {
 			/* TODO: implement
@@ -289,100 +235,17 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return
 		}),
 		operator("validate: get result type", func(ctx context.Context, qw *queryWork) (err error) {
-			/* TODO: implement
-			qw.resultType = qw.iQuery.Result()
-			if qw.resultType == nil || qw.resultType.QName() != appdef.QNameANY {
-				return nil
-			}
-			// ANY -> exact type according to PrepareArgs
-			iResource := qw.appStructs.Resources().QueryResource(qw.msg.QName())
-			var iQueryFunc istructs.IQueryFunction
-			if iResource.Kind() != istructs.ResourceKind_null {
-				iQueryFunc = iResource.(istructs.IQueryFunction)
-			} else {
-				for _, qry := range statelessResources.Queries {
-					if qry.QName() == qw.msg.QName() {
-						iQueryFunc = qry
-						break
-					}
-				}
-			}
-			qNameResultType := iQueryFunc.ResultType(qw.execQueryArgs.PrepareArgs)
-
-			ws := qw.iWorkspace
-			if ws == nil {
-				// workspace is dummy
-				ws = qw.iQuery.Workspace()
-			}
-			qw.resultType = ws.Type(qNameResultType)
-			if qw.resultType.Kind() == appdef.TypeKind_null {
-				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%s query result type %s does not exist in %v", qw.iQuery.QName(), qNameResultType, ws))
-			}*/
-			return nil
-		}),
-		operator("validate: get query params", func(ctx context.Context, qw *queryWork) (err error) {
-			/* TODO: implement
-			qw.queryParams, err = newQueryParams(qw.requestData, NewElement, NewFilter, NewOrderBy, newFieldsKinds(qw.resultType), qw.resultType)
-			*/
-			return coreutils.WrapSysError(err, http.StatusBadRequest)
+			return qw.apiPathHandler.ResultType(ctx, qw, statelessResources)
 		}),
 		operator("authorize actual sys.Any result", func(ctx context.Context, qw *queryWork) (err error) {
-			/* TODO: implement
-			if qw.iQuery.Result() != appdef.AnyType {
-				// will authorize result only if result is sys.Any
-				// otherwise each field is considered as allowed if EXECUTE ON QUERY is allowed
-				return nil
-			}
-			ws := qw.iWorkspace
-			if ws == nil {
-				// workspace is dummy
-				ws = qw.iQuery.Workspace()
-			}
-			for _, elem := range qw.queryParams.Elements() {
-				nestedPath := elem.Path().AsArray()
-				nestedType := qw.resultType
-				for _, nestedName := range nestedPath {
-					if len(nestedName) == 0 {
-						// root
-						continue
-					}
-					// incorrectness is excluded already on validation stage in [queryParams.validate]
-					containersOfNested := nestedType.(appdef.IWithContainers)
-					// container presence is checked already on validation stage in [queryParams.validate]
-					nestedContainer := containersOfNested.Container(nestedName)
-					nestedType = nestedContainer.Type()
-				}
-				requestedfields := []string{}
-				for _, resultField := range elem.ResultFields() {
-					requestedfields = append(requestedfields, resultField.Field())
-				}
-				ok, allowedFields, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
-				if err != nil {
-					return err
-				}
-				if !ok {
-					return coreutils.NewSysError(http.StatusForbidden)
-				}
-				for _, requestedField := range requestedfields {
-					if !slices.Contains(allowedFields, requestedField) {
-						return coreutils.NewSysError(http.StatusForbidden)
-					}
-				}
-			}
-			*/
-			return nil
+			return qw.apiPathHandler.AuthorizeResult(ctx, qw)
 		}),
-
 		operator("build rows processor", func(ctx context.Context, qw *queryWork) error {
 			now := time.Now()
 			defer func() {
 				qw.metrics.Increase(queryprocessor.Metric_BuildSeconds, time.Since(now).Seconds())
 			}()
-			/*
-				TODO: implement
-				qw.rowsProcessor, qw.responseSenderGetter = ProvideRowsProcessorFactory()(qw.msg.RequestCtx(), qw.appStructs.AppDef(),
-					qw.state, qw.queryParams, qw.resultType, qw.msg.Responder(), qw.metrics, qw.rowsProcessorErrCh)
-			*/
+			qw.apiPathHandler.RowsProcessor(ctx, qw)
 			return nil
 		}),
 	}
