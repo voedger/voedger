@@ -57,9 +57,11 @@ type queryWork struct {
 	secretReader         isecrets.ISecretReader
 	iWorkspace           appdef.IWorkspace
 	iQuery               appdef.IQuery
+	iView                appdef.IView
 	wsDesc               istructs.IRecord
 	callbackFunc         istructs.ExecQueryCallback
 	responseSenderGetter func() bus.IResponseSender
+	apiPathHandler       IApiPathHandler
 }
 
 var _ pipeline.IWorkpiece = (*queryWork)(nil) // ensure that queryWork implements pipeline.IWorkpiece
@@ -91,6 +93,7 @@ func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
 		metrics:            metrics,
 		secretReader:       secretReader,
 		rowsProcessorErrCh: make(chan error, 1),
+		queryParams:        msg.QueryParams(),
 	}
 }
 
