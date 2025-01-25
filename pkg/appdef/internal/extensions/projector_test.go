@@ -7,7 +7,6 @@ package extensions_test
 
 import (
 	"fmt"
-	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -119,13 +118,13 @@ func Test_Projectors(t *testing.T) {
 
 			t.Run("should be ok enum events", func(t *testing.T) {
 				cnt := 0
-				for ev := range prj.Events() {
+				for _, ev := range prj.Events() {
 					cnt++
 					switch cnt {
 					case 1:
-						require.EqualValues([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate}, slices.Collect(ev.Ops()))
+						require.EqualValues([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate}, ev.Ops())
 						require.Equal(appdef.FilterKind_QNames, ev.Filter().Kind())
-						require.EqualValues([]appdef.QName{recName}, slices.Collect(ev.Filter().QNames()))
+						require.EqualValues([]appdef.QName{recName}, ev.Filter().QNames())
 						require.Equal("run projector every time when test.record is changed", ev.Comment())
 					default:
 						require.Failf("unexpected event", "event: %v", ev)
@@ -160,18 +159,18 @@ func Test_Projectors(t *testing.T) {
 
 			t.Run("should be ok enum events", func(t *testing.T) {
 				cnt := 0
-				for ev := range prj.Events() {
+				for _, ev := range prj.Events() {
 					cnt++
 					switch cnt {
 					case 1:
-						require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, slices.Collect(ev.Ops()))
+						require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, ev.Ops())
 						require.Equal(appdef.FilterKind_QNames, ev.Filter().Kind())
-						require.EqualValues([]appdef.QName{cmdName}, slices.Collect(ev.Filter().QNames()))
+						require.EqualValues([]appdef.QName{cmdName}, ev.Filter().QNames())
 						require.Equal("run projector every time when test.command is executed", ev.Comment())
 					case 2:
-						require.Equal([]appdef.OperationKind{appdef.OperationKind_ExecuteWithParam}, slices.Collect(ev.Ops()))
+						require.Equal([]appdef.OperationKind{appdef.OperationKind_ExecuteWithParam}, ev.Ops())
 						require.Equal(appdef.FilterKind_QNames, ev.Filter().Kind())
-						require.EqualValues([]appdef.QName{objName}, slices.Collect(ev.Filter().QNames()))
+						require.EqualValues([]appdef.QName{objName}, ev.Filter().QNames())
 						require.Equal("run projector every time when command with test.object is executed", ev.Comment())
 					default:
 						require.Failf("unexpected event", "event: %v", ev)

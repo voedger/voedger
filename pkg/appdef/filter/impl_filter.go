@@ -6,27 +6,19 @@
 package filter
 
 import (
-	"iter"
-
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
 // abstract filter.
 type filter struct{}
 
-func (filter) And() iter.Seq[appdef.IFilter] { return func(func(appdef.IFilter) bool) {} }
-
-func (filter) Not() appdef.IFilter { return nil }
-
-func (filter) Or() iter.Seq[appdef.IFilter] { return func(func(appdef.IFilter) bool) {} }
-
-func (filter) QNames() iter.Seq[appdef.QName] { return func(func(appdef.QName) bool) {} }
-
-func (filter) Tags() iter.Seq[appdef.QName] { return func(func(appdef.QName) bool) {} }
-
-func (filter) Types() iter.Seq[appdef.TypeKind] { return func(func(appdef.TypeKind) bool) {} }
-
-func (filter) WS() appdef.QName { return appdef.NullQName }
+func (filter) And() []appdef.IFilter    { return nil }
+func (filter) Not() appdef.IFilter      { return nil }
+func (filter) Or() []appdef.IFilter     { return nil }
+func (filter) QNames() []appdef.QName   { return nil }
+func (filter) Tags() []appdef.QName     { return nil }
+func (filter) Types() []appdef.TypeKind { return nil }
+func (filter) WS() appdef.QName         { return appdef.NullQName }
 
 // trueFilter realizes filter what always matches any type.
 //

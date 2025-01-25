@@ -5,8 +5,6 @@
 
 package appdef
 
-import "iter"
-
 // Tag is a type that groups other types.
 type ITag interface {
 	IType
@@ -20,10 +18,8 @@ type IWithTags interface {
 	// HasTag returns has type specified tag.
 	HasTag(QName) bool
 
-	// Returns tags.
-	//
-	// Tags are returned in alphabetical order.
-	Tags() iter.Seq[ITag]
+	// Returns tags in alphabetical order.
+	Tags() []ITag
 }
 
 // ITagger is an interface to set tags for type.

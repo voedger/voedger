@@ -7,7 +7,6 @@ package filter
 
 import (
 	"fmt"
-	"iter"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/set"
@@ -20,14 +19,17 @@ import (
 //   - fmt.Stringer
 type typesFilter struct {
 	filter
-	types appdef.TypeKindSet
+	types   []appdef.TypeKind
+	typeSet appdef.TypeKindSet
 }
 
 func makeTypesFilter(tt ...appdef.TypeKind) typesFilter {
 	if len(tt) == 0 {
 		panic("types filter should have at least one type")
 	}
-	return typesFilter{types: set.From(tt...)}
+	f := typesFilter{typeSet: set.From(tt...)}
+	f.types = f.typeSet.AsArray()
+	return f
 }
 
 func newTypesFilter(tt ...appdef.TypeKind) *typesFilter {
@@ -38,17 +40,17 @@ func newTypesFilter(tt ...appdef.TypeKind) *typesFilter {
 func (typesFilter) Kind() appdef.FilterKind { return appdef.FilterKind_Types }
 
 func (f typesFilter) Match(t appdef.IType) bool {
-	return f.types.Contains(t.Kind())
+	return f.typeSet.Contains(t.Kind())
 }
 
 func (f typesFilter) String() string {
 	var s string
-	if t, ok := typesStringDecorators[string(f.types.AsBytes())]; ok {
+	if t, ok := typesStringDecorators[string(f.typeSet.AsBytes())]; ok {
 		s = t
 	} else {
 		// TYPES(…) FROM …)
 		s = "TYPES("
-		for i, t := range f.types.All() {
+		for i, t := range f.types {
 			if i > 0 {
 				s += ", "
 			}
@@ -59,7 +61,7 @@ func (f typesFilter) String() string {
 	return s
 }
 
-func (f typesFilter) Types() iter.Seq[appdef.TypeKind] { return f.types.Values() }
+func (f typesFilter) Types() []appdef.TypeKind { return f.types }
 
 var typesStringDecorators = map[string]string{
 	string(appdef.TypeKind_Structures.AsBytes()): "ALL TABLES",

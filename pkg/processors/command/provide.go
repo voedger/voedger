@@ -114,13 +114,13 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm coreutils.ITime,
 				pipeline.WireFunc("checkCUDsAllowedInCUDCmdOnly", checkCUDsAllowedInCUDCmdOnly),
 				pipeline.WireSyncOperator("wrongArgsCatcher", &wrongArgsCatcher{}), // any error before -> wrap error into bad request http error
 				pipeline.WireFunc("checkIsActiveInCUDs", checkIsActiveInCUDs),
+				pipeline.WireFunc("authorizeRequestCUDs", cmdProc.authorizeRequestCUDs),
 				pipeline.WireFunc("writeCUDs", cmdProc.writeCUDs),
 				pipeline.WireFunc("getCmdResultBuilder", cmdProc.getCmdResultBuilder),
 				pipeline.WireFunc("buildCommandArgs", cmdProc.buildCommandArgs),
 				pipeline.WireFunc("execCommand", execCommand),
 				pipeline.WireFunc("checkResponseIntent", checkResponseIntent),
 				pipeline.WireFunc("build raw event", buildRawEvent),
-				pipeline.WireFunc("authorizeCUDs", cmdProc.authorizeCUDs),
 				pipeline.WireFunc("eventValidators", cmdProc.eventValidators),
 				pipeline.WireFunc("validateCUDsQNames", cmdProc.validateCUDsQNames),
 				pipeline.WireFunc("cudsValidators", cmdProc.cudsValidators),
@@ -128,7 +128,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm coreutils.ITime,
 				pipeline.WireFunc("getIDGenerator", getIDGenerator),
 				pipeline.WireFunc("putPLog", cmdProc.putPLog),
 				pipeline.WireFunc("store", cmdProc.storeOp.DoSync),
-				pipeline.WireFunc("n10n", cmdProc.n10n),
+				pipeline.WireFunc("notifyAsyncActualizers", cmdProc.notifyAsyncActualizers),
 			)
 			// TODO: later make so that each partition has its own plogOffset, wsid has its own wlogOffset
 			defer cmdPipeline.Close()

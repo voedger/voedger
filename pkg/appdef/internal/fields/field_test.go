@@ -7,8 +7,6 @@ package fields_test
 
 import (
 	"fmt"
-	"maps"
-	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -108,7 +106,7 @@ func Test_Fields(t *testing.T) {
 
 		cnt := 0
 		t.Run("should be ok to enum fields", func(t *testing.T) {
-			for f := range obj.Fields() {
+			for _, f := range obj.Fields() {
 				switch cnt {
 				case 0:
 					require.Equal(appdef.SystemField_QName, f.Name())
@@ -127,7 +125,7 @@ func Test_Fields(t *testing.T) {
 		})
 
 		t.Run("should be ok to inspect user fields", func(t *testing.T) {
-			require.Equal([]appdef.IField{obj.Field("f1"), obj.Field("f2")}, slices.Collect(obj.UserFields()))
+			require.Equal([]appdef.IField{obj.Field("f1"), obj.Field("f2")}, obj.UserFields())
 			require.Equal(2, obj.UserFieldCount())
 			require.Equal(obj.UserFieldCount()+2, obj.FieldCount()) // + sys.QName + sys.Container
 		})
@@ -145,7 +143,7 @@ func Test_Fields(t *testing.T) {
 			require.True(f.Required())
 			require.False(f.Verifiable())
 
-			cc := maps.Collect(f.Constraints())
+			cc := f.Constraints()
 			require.Len(cc, 2)
 			require.Contains(cc, appdef.ConstraintKind_MinIncl)
 			require.Contains(cc, appdef.ConstraintKind_MaxIncl)
@@ -347,7 +345,7 @@ func Test_AddRefField(t *testing.T) {
 
 			rf, ok := fld.(appdef.IRefField)
 			require.True(ok)
-			require.Empty(slices.Collect(rf.Refs()))
+			require.Empty(rf.Refs())
 		})
 
 		t.Run("should be ok to obtain reference field", func(t *testing.T) {
@@ -358,7 +356,7 @@ func Test_AddRefField(t *testing.T) {
 			require.Equal(appdef.DataKind_RecordID, rf2.DataKind())
 			require.False(rf2.Required())
 
-			require.EqualValues([]appdef.QName{docName}, slices.Collect(rf2.Refs()))
+			require.EqualValues([]appdef.QName{docName}, rf2.Refs())
 		})
 
 		t.Run("should be nil if unknown reference field", func(t *testing.T) {
@@ -369,7 +367,7 @@ func Test_AddRefField(t *testing.T) {
 		t.Run("should be ok to enumerate reference fields", func(t *testing.T) {
 			require.Equal(2, func() int {
 				cnt := 0
-				for rf := range doc.RefFields() {
+				for _, rf := range doc.RefFields() {
 					if rf.IsSys() {
 						continue
 					}
@@ -380,7 +378,7 @@ func Test_AddRefField(t *testing.T) {
 						require.True(rf.Ref(docName))
 						require.True(rf.Ref(appdef.NewQName("test", "unknown")), "must be ok because any links are allowed in the field rf1")
 					case 2:
-						require.EqualValues([]appdef.QName{docName}, slices.Collect(rf.Refs()))
+						require.EqualValues([]appdef.QName{docName}, rf.Refs())
 						require.True(rf.Ref(docName))
 						require.False(rf.Ref(appdef.NewQName("test", "unknown")))
 					default:

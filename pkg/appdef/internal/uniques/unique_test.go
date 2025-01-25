@@ -7,7 +7,6 @@ package uniques_test
 
 import (
 	"fmt"
-	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -53,7 +52,7 @@ func Test_Uniques(t *testing.T) {
 		require.Equal(2, doc.UniqueCount())
 
 		u := doc.UniqueByName(un2)
-		ff := slices.Collect(u.Fields())
+		ff := u.Fields()
 		require.Len(ff, 3)
 		require.Equal("lastName", ff[0].Name())
 		require.Equal("name", ff[1].Name())
@@ -64,7 +63,7 @@ func Test_Uniques(t *testing.T) {
 			for n, u := range doc.Uniques() {
 				cnt++
 				require.Equal(n, u.Name())
-				ff := slices.Collect(u.Fields())
+				ff := u.Fields()
 				switch n {
 				case un1:
 					require.Len(ff, 1)

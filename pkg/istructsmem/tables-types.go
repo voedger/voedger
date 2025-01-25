@@ -114,7 +114,7 @@ func (row *rowType) ModifiedFields(cb func(appdef.FieldName, interface{}) bool) 
 		}
 	}
 
-	for fld := range row.fields.Fields() {
+	for _, fld := range row.fields.Fields() {
 		n := fld.Name()
 		if row.dyB.HasValue(n) || row.nils[n] != nil {
 			if !cb(n, row.fieldValue(fld)) {

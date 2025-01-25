@@ -22,13 +22,13 @@ func (s *Structure) read(str appdef.IStructure) {
 
 	s.Kind = str.Kind().TrimString()
 
-	for fld := range str.Fields() {
+	for _, fld := range str.Fields() {
 		f := newField()
 		f.read(fld)
 		s.Fields = append(s.Fields, f)
 	}
 
-	for cont := range str.Containers() {
+	for _, cont := range str.Containers() {
 		c := newContainer()
 		c.read(cont)
 		s.Containers = append(s.Containers, c)
@@ -65,7 +65,7 @@ func (f *Field) read(field appdef.IField) {
 	f.Required = field.Required()
 	f.Verifiable = field.Verifiable()
 	if ref, ok := field.(appdef.IRefField); ok {
-		for r := range ref.Refs() {
+		for _, r := range ref.Refs() {
 			f.Refs = append(f.Refs, r.String())
 		}
 	}
@@ -88,7 +88,7 @@ func (u *Unique) read(unique appdef.IUnique) {
 	u.Comment = readComment(unique)
 
 	u.Name = unique.Name()
-	for f := range unique.Fields() {
+	for _, f := range unique.Fields() {
 		u.Fields = append(u.Fields, f.Name())
 	}
 }

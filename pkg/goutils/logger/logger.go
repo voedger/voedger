@@ -28,8 +28,17 @@ const (
 	LogLevelTrace
 )
 
-func SetLogLevel(logLevel TLogLevel) {
-	atomic.StoreInt32((*int32)(&globalLogPrinter.logLevel), int32(logLevel))
+func SetLogLevel(logLevel TLogLevel) (old TLogLevel) {
+	old = TLogLevel(atomic.SwapInt32((*int32)(&globalLogPrinter.logLevel), int32(logLevel)))
+	return
+}
+
+func SetLogLevelWithRestore(logLevel TLogLevel) (restore func()) {
+	old := SetLogLevel(logLevel)
+	return func() {
+		SetLogLevel(old)
+		Info("LogLevel restored to", old)
+	}
 }
 
 func Error(args ...interface{}) {
