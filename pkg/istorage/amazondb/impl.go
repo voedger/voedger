@@ -30,9 +30,9 @@ func (d implIAppStorageFactory) AppStorage(appName istorage.SafeAppName) (storag
 	}
 
 	keySpace := appName.String()
-	session := getClient(cfg)
+	client := getClient(cfg)
 
-	exist, err := doesTableExist(keySpace, session)
+	exist, err := doesTableExist(keySpace, client)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (d implIAppStorageFactory) AppStorage(appName istorage.SafeAppName) (storag
 		return nil, istorage.ErrStorageDoesNotExist
 	}
 
-	return newStorage(cfg, appName.String(), d.iTime), nil
+	return &implIAppStorage{client: client, keySpace: dynamoDBTableName(keySpace), iTime: d.iTime}, nil
 }
 
 func (d implIAppStorageFactory) Init(appName istorage.SafeAppName) error {
@@ -51,8 +51,8 @@ func (d implIAppStorageFactory) Init(appName istorage.SafeAppName) error {
 	}
 
 	keySpace := appName.String()
-	session := getClient(cfg)
-	if err := newTableExistsWaiter(keySpace, session); err != nil {
+	client := getClient(cfg)
+	if err := newTableExistsWaiter(keySpace, client); err != nil {
 		var awsErr *types.ResourceInUseException
 		if errors.As(err, &awsErr) {
 			return istorage.ErrStorageAlreadyExists
@@ -419,12 +419,7 @@ func (s *implIAppStorage) read(ctx context.Context, pKey []byte, startCCols, fin
 }
 
 func getClient(cfg aws.Config) *dynamodb.Client {
-	client := dynamodb.NewFromConfig(cfg)
-	return client
-}
-
-func newStorage(cfg aws.Config, keySpace string, iTime coreutils.ITime) (storage istorage.IAppStorage) {
-	return &implIAppStorage{client: getClient(cfg), keySpace: dynamoDBTableName(keySpace), iTime: iTime}
+	return dynamodb.NewFromConfig(cfg)
 }
 
 func newAwsCfg(params DynamoDBParams) (aws.Config, error) {
