@@ -6,7 +6,6 @@
 package extensions_test
 
 import (
-	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -77,13 +76,14 @@ func Test_Jobs(t *testing.T) {
 		// #2810 Job may have intents
 		t.Run("should be ok enum intents", func(t *testing.T) {
 			cnt := 0
-			for n, i := range job.Intents().All() {
+			for _, n := range job.Intents().Names() {
 				cnt++
+				i := job.Intents().Storage(n)
 				require.Equal(n, i.Name())
 				switch cnt {
 				case 1:
 					require.Equal(sysViews, n)
-					require.EqualValues([]appdef.QName{resultName}, slices.Collect(i.Names()))
+					require.EqualValues([]appdef.QName{resultName}, i.Names())
 				default:
 					require.Failf("unexpected intent", "intent: %v", i)
 				}
@@ -94,7 +94,7 @@ func Test_Jobs(t *testing.T) {
 				intent := job.Intents().Storage(sysViews)
 				require.NotNil(intent)
 				require.Equal(sysViews, intent.Name())
-				require.EqualValues([]appdef.QName{resultName}, slices.Collect(intent.Names()))
+				require.EqualValues([]appdef.QName{resultName}, intent.Names())
 
 				require.Nil(job.Intents().Storage(appdef.NewQName("test", "unknown")), "should be nil for unknown intent")
 			})

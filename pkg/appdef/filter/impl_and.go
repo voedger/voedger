@@ -7,7 +7,6 @@ package filter
 
 import (
 	"fmt"
-	"iter"
 	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -30,12 +29,12 @@ func newAndFilter(ff ...appdef.IFilter) *andFilter {
 	return &andFilter{children: slices.Clone(ff)}
 }
 
-func (f andFilter) And() iter.Seq[appdef.IFilter] { return slices.Values(f.children) }
+func (f andFilter) And() []appdef.IFilter { return f.children }
 
 func (andFilter) Kind() appdef.FilterKind { return appdef.FilterKind_And }
 
 func (f andFilter) Match(t appdef.IType) bool {
-	for c := range f.And() {
+	for _, c := range f.And() {
 		if !c.Match(t) {
 			return false
 		}

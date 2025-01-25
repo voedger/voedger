@@ -3,6 +3,18 @@
 
 APPLICATION app1();
 
+ALTER WORKSPACE sys.UserProfileWS (
+	TABLE Doc INHERITS sys.CDoc (
+		EmailField varchar NOT NULL VERIFIABLE,
+		PhoneField varchar,
+		NonVerifiedField varchar
+	);
+
+	EXTENSION ENGINE BUILTIN ();
+
+	GRANT SELECT, UPDATE, INSERT ON TABLE Doc TO sys.WorkspaceOwner;
+);
+
 ALTERABLE WORKSPACE test_wsWS_another (
 	DESCRIPTOR test_ws_another ();
 
@@ -400,11 +412,11 @@ ALTERABLE WORKSPACE test_wsWS (
 		int_fld2 int32
 	) WITH Tags=(WorkspaceOwnerTableTag);
 
-	TABLE Doc INHERITS sys.CDoc (
-		EmailField varchar NOT NULL VERIFIABLE,
-		PhoneField varchar,
-		NonVerifiedField varchar
-	) WITH Tags=(WorkspaceOwnerTableTag);
+	-- TABLE Doc INHERITS sys.CDoc (
+	-- 	EmailField varchar NOT NULL VERIFIABLE,
+	-- 	PhoneField varchar,
+	-- 	NonVerifiedField varchar
+	-- ) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE DocConstraints INHERITS sys.CDoc (
 		Int int32,
@@ -523,6 +535,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		Dummy int32,
 		IntFld int32,
 		Val int32,
+		offs int64,
 		PRIMARY KEY ((IntFld), Dummy)
 	) AS RESULT OF ApplyCategoryIdx WITH Tags=(WorkspaceOwnerTableTag);
 
@@ -550,6 +563,24 @@ ALTERABLE WORKSPACE test_wsWS (
 	TABLE TestCDocWithDeniedFields INHERITS sys.CDoc (
 		Fld1 int32,
 		DeniedFld2 int32 -- denied field, no grants
+	);
+
+	TABLE DocActivateDenied INHERITS sys.CDoc (
+		Fld1 int32
+	);
+
+	TABLE DocDeactivateDenied INHERITS sys.CDoc (
+		Fld1 int32
+	);
+
+	TABLE DocFieldInsertDenied INHERITS sys.CDoc (
+		FldDenied int32,
+		FldAllowed int32
+	);
+
+	TABLE DocFieldUpdateDenied INHERITS sys.CDoc (
+		FldDenied int32,
+		FldAllowed int32
 	);
 
 	TABLE Root INHERITS sys.CDoc (
@@ -600,10 +631,17 @@ ALTERABLE WORKSPACE test_wsWS (
 	GRANT EXECUTE ON QUERY sys.Collection TO SpecialAPITokenRole;
 	GRANT SELECT ON TABLE articles TO SpecialAPITokenRole;
 
-	GRANT SELECT, INSERT, UPDATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO sys.WorkspaceOwner;
+	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO sys.WorkspaceOwner;
 
 	GRANT EXECUTE ON ALL QUERIES WITH TAG WorkspaceOwnerFuncTag TO sys.WorkspaceOwner;
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG WorkspaceOwnerFuncTag TO sys.WorkspaceOwner;
 
 	GRANT SELECT(Fld1) ON TABLE TestCDocWithDeniedFields TO sys.WorkspaceOwner;
+
+	GRANT SELECT, INSERT, UPDATE ON TABLE DocActivateDenied TO sys.WorkspaceOwner;
+	GRANT SELECT, INSERT, UPDATE ON TABLE DocDeactivateDenied TO sys.WorkspaceOwner;
+	GRANT SELECT, INSERT, UPDATE ON TABLE DocFieldInsertDenied TO sys.WorkspaceOwner;
+	GRANT SELECT, INSERT, UPDATE ON TABLE DocFieldUpdateDenied TO sys.WorkspaceOwner;
+	REVOKE INSERT(FldDenied) ON TABLE DocFieldInsertDenied FROM sys.WorkspaceOwner;
+	REVOKE UPDATE(FldDenied) ON TABLE DocFieldUpdateDenied FROM sys.WorkspaceOwner;
 );

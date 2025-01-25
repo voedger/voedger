@@ -67,7 +67,7 @@ func (l *Limiter) init() {
 	}
 
 	// initialize limits cache
-	for t := range l.app.Types() {
+	for _, t := range l.app.Types() {
 		if appdef.TypeKind_Limitables.Contains(t.Kind()) {
 			for limit := range appdef.Limits(l.app.Types()) {
 				if limit.Filter().Match(t) {

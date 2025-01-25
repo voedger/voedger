@@ -60,7 +60,7 @@ func Example() {
 		fmt.Println("founded", doc.Field("f1"))
 
 		fldCnt := 0
-		for f := range doc.Fields() {
+		for _, f := range doc.Fields() {
 			fldCnt++
 			if f.IsSys() {
 				fmt.Print("*")
@@ -80,7 +80,7 @@ func Example() {
 		fmt.Println("founded", doc.Container("rec"))
 
 		contCnt := 0
-		for c := range doc.Containers() {
+		for _, c := range doc.Containers() {
 			contCnt++
 			fmt.Printf("%d. %v, occurs: %v…%v\n", contCnt, c, c.MinOccurs(), c.MaxOccurs())
 		}

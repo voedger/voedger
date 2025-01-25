@@ -13,6 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
 )
@@ -342,7 +343,7 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, app ap
 	idCDoc := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 	t.Run("ref to unexisting -> 400 bad request", func(t *testing.T) {
 		oDoc := appdef.ODoc(app.Type, it.QNameODoc2)
-		for oDoc1RefField := range oDoc.RefFields() {
+		for _, oDoc1RefField := range oDoc.RefFields() {
 			t.Run(oDoc1RefField.Name(), func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"%s":%d`, oDoc1RefField.Name(), istructs.NonExistingRecordID))
 				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_Existence()).Println()
@@ -557,5 +558,67 @@ func TestSelectFromNestedTables(t *testing.T) {
 			]}`
 			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("unknown nested table Fld1"))
 		})
+	})
+}
+
+func TestFieldsAuthorization_OpForbidden(t *testing.T) {
+	logger.SetLogLevel(logger.LogLevelVerbose)
+	defer logger.SetLogLevel(logger.LogLevelInfo)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	t.Run("activate", func(t *testing.T) {
+		body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.DocActivateDenied"}}]}`
+		id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+		body = fmt.Sprintf(`{"cuds": [{"sys.ID":%d,"fields": {"sys.IsActive":true}}]}`, id)
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] ACTIVATE", "operation forbidden"))
+	})
+
+	t.Run("deactivate", func(t *testing.T) {
+		body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.DocDeactivateDenied"}}]}`
+		id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+		body = fmt.Sprintf(`{"cuds": [{"sys.ID":%d,"fields": {"sys.IsActive":false}}]}`, id)
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] DEACTIVATE", "operation forbidden"))
+	})
+
+	t.Run("field insert", func(t *testing.T) {
+		// allowed
+		body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.DocFieldInsertDenied","FldAllowed":42}}]}`
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		// denied
+		body = `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.DocFieldInsertDenied","FldDenied":42}}]}`
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] INSERT", "operation forbidden"))
+	})
+
+	t.Run("field update", func(t *testing.T) {
+		body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.DocFieldUpdateDenied", "FldAllowed":42,"FldDenied":43}}]}`
+		id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+		// allowed
+		body = fmt.Sprintf(`{"cuds": [{"sys.ID":%d,"fields": {"FldAllowed":45}}]}`, id)
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		// denied
+		body = fmt.Sprintf(`{"cuds": [{"sys.ID":%d,"fields": {"FldDenied":46}}]}`, id)
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] UPDATE", "operation forbidden"))
+	})
+
+	// note: select authorization is tested in [TestDeniedResourcesAuthorization]
+}
+
+func TestErrors(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	t.Run("no QName on insert -> 400 bad request", func(t *testing.T) {
+		body := `{"cuds": [{"fields": {"sys.ID": 1,"FldAllowed":42}}]}`
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("failed to parse sys.QName"))
 	})
 }

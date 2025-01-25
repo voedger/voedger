@@ -12,22 +12,20 @@ import (
 )
 
 // Returns all types that match the filter.
-func FilterMatches(f IFilter, types SeqType) SeqType {
-	return func(yield func(IType) bool) {
-		for t := range types {
-			if f.Match(t) {
-				if !yield(t) {
-					return
-				}
-			}
+func FilterMatches(f IFilter, types TypesSlice) TypesSlice {
+	tt := []IType{}
+	for _, t := range types {
+		if f.Match(t) {
+			tt = append(tt, t)
 		}
 	}
+	return tt
 }
 
 // Returns the first type that matches the filter.
 // Returns nil if no types match the filter.
-func FirstFilterMatch(f IFilter, types SeqType) IType {
-	for t := range types {
+func FirstFilterMatch(f IFilter, types TypesSlice) IType {
+	for _, t := range types {
 		if f.Match(t) {
 			return t
 		}

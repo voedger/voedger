@@ -7,7 +7,6 @@ package appdef_test
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
@@ -63,17 +62,19 @@ func ExampleProjectors() {
 		prj := appdef.Projector(app.Type, prjName)
 		fmt.Println(prj)
 		fmt.Println(" - events:")
-		for e := range prj.Events() {
-			fmt.Println("   - ops:", slices.Collect(e.Ops()))
+		for _, e := range prj.Events() {
+			fmt.Println("   - ops:", e.Ops())
 			fmt.Println("   - filter:", e.Filter())
 		}
 		if prj.WantErrors() {
 			fmt.Println(" - want sys.error events")
 		}
-		for _, s := range prj.States().All() {
+		for _, n := range prj.States().Names() {
+			s := prj.States().Storage(n)
 			fmt.Println(" - state:", s, s.Comment())
 		}
-		for _, i := range prj.Intents().All() {
+		for _, n := range prj.Intents().Names() {
+			i := prj.Intents().Storage(n)
 			fmt.Println(" - intent:", i, i.Comment())
 		}
 

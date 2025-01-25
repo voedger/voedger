@@ -8,8 +8,6 @@ package containers
 import (
 	"errors"
 	"fmt"
-	"iter"
-	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/comments"
@@ -83,8 +81,8 @@ func (cc WithContainers) Container(name string) appdef.IContainer {
 
 func (cc WithContainers) ContainerCount() int { return len(cc.containersOrdered) }
 
-func (cc WithContainers) Containers() iter.Seq[appdef.IContainer] {
-	return slices.Values(cc.containersOrdered)
+func (cc WithContainers) Containers() []appdef.IContainer {
+	return cc.containersOrdered
 }
 
 func (cc *WithContainers) addContainer(name string, contType appdef.QName, minOccurs, maxOccurs appdef.Occurs, comment ...string) {
@@ -133,7 +131,7 @@ func (cc *WithContainers) addContainer(name string, contType appdef.QName, minOc
 func ValidateTypeContainers(t appdef.IType) (err error) {
 	if cnt, ok := t.(appdef.IWithContainers); ok {
 		// resolve containers types
-		for cont := range cnt.Containers() {
+		for _, cont := range cnt.Containers() {
 			contType := cont.Type()
 			if contType == nil {
 				err = errors.Join(err,

@@ -5,8 +5,6 @@
 
 package appdef
 
-import "iter"
-
 // Filter kind enumeration
 type FilterKind uint8
 
@@ -35,11 +33,11 @@ type IFilter interface {
 
 	// Return filtered QNames.
 	// If kind is not FilterKind_QNames, returns empty iterator
-	QNames() iter.Seq[QName]
+	QNames() []QName
 
 	// Return filtered type kinds.
 	// If kind is not FilterKind_Types, returns empty iterator
-	Types() iter.Seq[TypeKind]
+	Types() []TypeKind
 
 	// Return filtered types workspace.
 	// If kind is not FilterKind_Types or not workspace assigned, returns NullQName.
@@ -47,15 +45,15 @@ type IFilter interface {
 
 	// Return filtered tags.
 	// If kind is not FilterKind_Tags, returns empty iterator
-	Tags() iter.Seq[QName]
+	Tags() []QName
 
 	// Returns sub-filters to conjunct
 	// If kind is not FilterKind_And, returns empty iterator
-	And() iter.Seq[IFilter]
+	And() []IFilter
 
 	// Returns sub-filters to disjunct
 	// If kind is not FilterKind_Or, returns empty iterator
-	Or() iter.Seq[IFilter]
+	Or() []IFilter
 
 	// Return negative sub-filter
 	// If kind is not FilterKind_Not, returns nil

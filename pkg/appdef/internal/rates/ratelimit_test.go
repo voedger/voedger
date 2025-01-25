@@ -7,7 +7,6 @@ package rates_test
 
 import (
 	"fmt"
-	"slices"
 	"testing"
 	"time"
 
@@ -60,7 +59,7 @@ func TestRateLimits(t *testing.T) {
 				require.EqualValues(10, r.Count())
 				require.Equal(time.Hour, r.Period())
 
-				require.Equal([]appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, slices.Collect(r.Scopes()))
+				require.Equal([]appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, r.Scopes())
 				require.True(r.Scope(appdef.RateScope_AppPartition))
 				require.True(r.Scope(appdef.RateScope_IP))
 				require.False(r.Scope(appdef.RateScope_Workspace))
@@ -81,13 +80,13 @@ func TestRateLimits(t *testing.T) {
 			case 1:
 				require.Equal(limitAllFunc, l.QName())
 
-				require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, slices.Collect(l.Ops()))
+				require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, l.Ops())
 				require.True(l.Op(appdef.OperationKind_Execute))
 				require.False(l.Op(appdef.OperationKind_Insert))
 
 				require.Equal(appdef.FilterKind_Types, l.Filter().Kind())
 				require.Equal(appdef.LimitFilterOption_ALL, l.Filter().Option())
-				require.Equal([]appdef.TypeKind{appdef.TypeKind_Query, appdef.TypeKind_Command}, slices.Collect(l.Filter().Types()))
+				require.Equal([]appdef.TypeKind{appdef.TypeKind_Query, appdef.TypeKind_Command}, l.Filter().Types())
 				require.Equal("ALL FUNCTIONS FROM test.workspace", fmt.Sprint(l.Filter()))
 
 				require.Equal(rateName, l.Rate().QName())
@@ -95,19 +94,19 @@ func TestRateLimits(t *testing.T) {
 				require.Equal("limit all commands and queries execution by test.rate", l.Comment())
 			case 2:
 				require.Equal(limitEachFunc, l.QName())
-				require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, slices.Collect(l.Ops()))
+				require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, l.Ops())
 				require.Equal(appdef.FilterKind_Types, l.Filter().Kind())
 				require.Equal(appdef.LimitFilterOption_EACH, l.Filter().Option())
-				require.Equal([]appdef.TypeKind{appdef.TypeKind_Query, appdef.TypeKind_Command}, slices.Collect(l.Filter().Types()))
+				require.Equal([]appdef.TypeKind{appdef.TypeKind_Query, appdef.TypeKind_Command}, l.Filter().Types())
 				require.Equal("EACH FUNCTIONS FROM test.workspace", fmt.Sprint(l.Filter()))
 				require.Equal(rateName, l.Rate().QName())
 				require.Equal("limit each command and query execution by test.rate", l.Comment())
 			case 3:
 				require.Equal(limitEachTag, l.QName())
-				require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, slices.Collect(l.Ops()))
+				require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, l.Ops())
 				require.Equal(appdef.FilterKind_Tags, l.Filter().Kind())
 				require.Equal(appdef.LimitFilterOption_EACH, l.Filter().Option())
-				require.Equal([]appdef.QName{tagName}, slices.Collect(l.Filter().Tags()))
+				require.Equal([]appdef.QName{tagName}, l.Filter().Tags())
 				require.Equal("EACH TAGS(test.tag)", fmt.Sprint(l.Filter()))
 				require.Equal(rateName, l.Rate().QName())
 				require.Equal("limit each with test.tag by test.rate", l.Comment())
@@ -151,7 +150,7 @@ func TestRateLimits(t *testing.T) {
 		require.Equal(rateName, r.QName())
 		require.EqualValues(10, r.Count())
 		require.Equal(time.Hour, r.Period())
-		require.Equal(appdef.DefaultRateScopes, slices.Collect(r.Scopes()))
+		require.Equal(appdef.DefaultRateScopes, r.Scopes())
 		require.Equal("10 times per hour", r.Comment())
 	})
 }
@@ -263,5 +262,61 @@ func Test_RateLimitErrors(t *testing.T) {
 			_, err := adb.Build()
 			require.Error(err, require.Is(appdef.ErrUnsupportedError), require.Has(testName))
 		})
+	})
+}
+
+func TestLimitActivateDeactivate(t *testing.T) {
+	require := require.New(t)
+
+	var app appdef.IAppDef
+
+	wsName := appdef.NewQName("test", "workspace")
+	docName := appdef.NewQName("test", "document")
+	rateName := appdef.NewQName("test", "rate")
+	limitDeactivate := appdef.NewQName("test", "limitDeactivate")
+	limitActivate := appdef.NewQName("test", "limitActivate")
+
+	t.Run("should be ok to build application with activate/deactivate limits", func(t *testing.T) {
+		adb := builder.New()
+		adb.AddPackage("test", "test.com/test")
+
+		wsb := adb.AddWorkspace(wsName)
+
+		wsb.AddCDoc(docName)
+
+		wsb.AddRate(rateName, 10, time.Hour, []appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, "10 times per hour per partition per IP")
+		wsb.AddLimit(limitDeactivate, []appdef.OperationKind{appdef.OperationKind_Deactivate}, appdef.LimitFilterOption_EACH, filter.QNames(docName), rateName)
+		wsb.AddLimit(limitActivate, []appdef.OperationKind{appdef.OperationKind_Activate}, appdef.LimitFilterOption_EACH, filter.QNames(docName), rateName)
+
+		a, err := adb.Build()
+		require.NoError(err)
+
+		app = a
+	})
+
+	t.Run("should be ok to enum limits", func(t *testing.T) {
+		cnt := 0
+		for l := range appdef.Limits(app.Types()) {
+			cnt++
+			switch cnt {
+			case 1:
+				require.Equal(limitActivate, l.QName())
+				require.Equal([]appdef.OperationKind{appdef.OperationKind_Activate}, l.Ops())
+				require.Equal(appdef.FilterKind_QNames, l.Filter().Kind())
+				require.Equal(appdef.LimitFilterOption_EACH, l.Filter().Option())
+				require.Equal([]appdef.QName{docName}, l.Filter().QNames())
+				require.Equal(rateName, l.Rate().QName())
+			case 2:
+				require.Equal(limitDeactivate, l.QName())
+				require.Equal([]appdef.OperationKind{appdef.OperationKind_Deactivate}, l.Ops())
+				require.Equal(appdef.FilterKind_QNames, l.Filter().Kind())
+				require.Equal(appdef.LimitFilterOption_EACH, l.Filter().Option())
+				require.Equal([]appdef.QName{docName}, l.Filter().QNames())
+				require.Equal(rateName, l.Rate().QName())
+			default:
+				require.FailNow("unexpected limit", "limit: %v", l)
+			}
+		}
+		require.Equal(2, cnt)
 	})
 }
