@@ -21,7 +21,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -87,7 +86,6 @@ func TestBasicUsage_MultiResponse(t *testing.T) {
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		require.Equal("test body SectionedResponse", string(request.Body))
 		require.Equal(http.MethodPost, request.Method)
-		require.Equal(istructs.PartitionID(0), request.PartitionID)
 
 		require.Equal(testWSID, request.WSID)
 		require.Equal("somefunc_SectionedResponse", request.Resource)
@@ -411,7 +409,7 @@ type testRouter struct {
 func startRouter(t *testing.T, router *testRouter, rp RouterParams, sendTimeout bus.SendTimeout, requestHandler bus.RequestHandler) {
 	ctx, cancel := context.WithCancel(context.Background())
 	requestSender := bus.NewIRequestSender(coreutils.MockTime, sendTimeout, requestHandler)
-	httpSrv, acmeSrv, adminService := Provide(rp, nil, nil, nil, requestSender, map[appdef.AppQName]istructs.NumAppWorkspaces{istructs.AppQName_test1_app1: 10})
+	httpSrv, acmeSrv, adminService := Provide(rp, nil, nil, nil, requestSender)
 	require.Nil(t, acmeSrv)
 	require.NoError(t, httpSrv.Prepare(nil))
 	require.NoError(t, adminService.Prepare(nil))

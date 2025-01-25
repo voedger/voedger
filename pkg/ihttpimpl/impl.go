@@ -263,7 +263,7 @@ func (p *httpProcessor) registerRoutes() {
 
 func (p *httpProcessor) httpHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		routerpkg.RequestHandler(p.requestSender, p.numsAppsWorkspaces)(w, r)
+		routerpkg.RequestHandler(p.requestSender)(w, r)
 	}
 }
 
