@@ -7,7 +7,6 @@ package appdef_test
 
 import (
 	"fmt"
-	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -20,10 +19,10 @@ func Test_NullType(t *testing.T) {
 	var _ appdef.IType = appdef.NullType // compile-time check
 
 	require.Empty(appdef.NullType.Comment())
-	require.Empty(slices.Collect(appdef.NullType.CommentLines()))
+	require.Empty(appdef.NullType.CommentLines())
 
 	require.False(appdef.NullType.HasTag(appdef.NullQName))
-	appdef.NullType.Tags()(func(appdef.ITag) bool { require.Fail("Tags() should be empty"); return false })
+	require.Empty(appdef.NullType.Tags())
 
 	require.Nil(appdef.NullType.App())
 	require.Nil(appdef.NullType.Workspace())
@@ -41,11 +40,11 @@ func TestNullFields(t *testing.T) {
 
 	require.Nil(appdef.NullFields.Field("field"))
 	require.Zero(appdef.NullFields.FieldCount())
-	require.Empty(slices.Collect(appdef.NullFields.Fields()))
+	require.Empty(appdef.NullFields.Fields())
 
 	require.Nil(appdef.NullFields.RefField("field"))
-	require.Empty(slices.Collect(appdef.NullFields.RefFields()))
+	require.Empty(appdef.NullFields.RefFields())
 
 	require.Zero(appdef.NullFields.UserFieldCount())
-	require.Empty(slices.Collect(appdef.NullFields.UserFields()))
+	require.Empty(appdef.NullFields.UserFields())
 }

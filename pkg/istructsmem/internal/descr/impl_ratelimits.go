@@ -15,7 +15,7 @@ func (r *Rate) read(rate appdef.IRate) {
 	r.Type.read(rate)
 	r.Count = rate.Count()
 	r.Period = rate.Period()
-	for scope := range rate.Scopes() {
+	for _, scope := range rate.Scopes() {
 		r.Scopes = append(r.Scopes, scope.TrimString())
 	}
 }
@@ -26,7 +26,7 @@ func newLimit() *Limit {
 
 func (l *Limit) read(limit appdef.ILimit) {
 	l.Type.read(limit)
-	for op := range limit.Ops() {
+	for _, op := range limit.Ops() {
 		l.Ops = append(l.Ops, op.TrimString())
 	}
 	l.Filter.read(limit.Filter())

@@ -8,7 +8,6 @@ package uniques
 import (
 	"errors"
 	"fmt"
-	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -31,7 +30,7 @@ func GetRecordIDByUniqueCombination(wsid istructs.WSID, tableQName appdef.QName,
 	matchedUniqueQName := appdef.NullQName
 	matchedUniqueFields := []appdef.IField{}
 	for _, iUnique := range table.Uniques() {
-		fields := slices.Collect(iUnique.Fields())
+		fields := iUnique.Fields()
 		if len(values) != len(fields) {
 			continue
 		}

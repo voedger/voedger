@@ -5,8 +5,6 @@
 
 package appdef
 
-import "iter"
-
 // Data kind enumeration.
 //
 // Ref. data-kind.go for constants and methods
@@ -53,7 +51,7 @@ type IData interface {
 	// All data type constraints.
 	//
 	// To obtain all constraints include ancestor data types, pass true to withInherited parameter.
-	Constraints(withInherited bool) iter.Seq2[ConstraintKind, IConstraint]
+	Constraints(withInherited bool) map[ConstraintKind]IConstraint
 }
 
 type IDataBuilder interface {

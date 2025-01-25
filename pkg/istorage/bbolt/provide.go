@@ -6,11 +6,13 @@
 package bbolt
 
 import (
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
-func Provide(params ParamsType) istorage.IAppStorageFactory {
+func Provide(params ParamsType, iTime coreutils.ITime) istorage.IAppStorageFactory {
 	return &appStorageFactory{
 		bboltParams: params,
+		iTime:       iTime,
 	}
 }

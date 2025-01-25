@@ -103,19 +103,19 @@ func TestBasicUsage_Verifier(t *testing.T) {
 				]
 			}`, it.QNameApp1_TestEmailVerificationDoc, verifiedValueToken)
 		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-		vit.PostWS(ws, "c.sys.CUD", body)
+		vit.PostProfile(ws.Owner, "c.sys.CUD", body)
 	})
 
 	t.Run("bug: one token could be used in any wsid", func(t *testing.T) {
 		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, verifiedValueToken)
 		ws2 := vit.CreateWorkspace(it.SimpleWSParams("testws"+vit.NextName()), userPrincipal)
-		vit.PostWS(ws2, "c.sys.CUD", body)
+		vit.PostProfile(ws2.Owner, "c.sys.CUD", body)
 	})
 
 	t.Run("read the actual verified field value - it should be the value decoded from the token", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Schema":"%s"},"elements":[{"fields": ["EmailField"]}]}`, it.QNameApp1_TestEmailVerificationDoc)
 		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-		resp := vit.PostWS(ws, "q.sys.Collection", body)
+		resp := vit.PostProfile(ws.Owner, "q.sys.Collection", body)
 		require.Equal(it.TestEmail, resp.SectionRow()[0])
 	})
 }
@@ -126,14 +126,13 @@ func TestVerifierErrors(t *testing.T) {
 
 	// funcs should be called in the user profile
 	userPrincipal := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
-	// ws := vit.DummyWS(istructs.AppQName_test1_app1, userPrincipal.ProfileWSID)
 
 	verificationToken, verificationCode := InitiateEmailVerification(vit, userPrincipal, it.QNameApp1_TestEmailVerificationDoc,
 		"EmailField", it.TestEmail, userPrincipal.ProfileWSID, coreutils.WithAuthorizeBy(userPrincipal.Token))
 
 	t.Run("error 400 on set the raw value instead of verified value token for the verified field", func(t *testing.T) {
 		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, it.TestEmail)
-		vit.PostProfile(userPrincipal, "c.sys.CUD", body, coreutils.Expect400()).Println()
+		vit.PostProfile(userPrincipal, "c.sys.CUD", body, coreutils.Expect400("invalid token")).Println()
 	})
 
 	emailVerifiedValueToken := ""

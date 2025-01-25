@@ -6,8 +6,6 @@
 package types
 
 import (
-	"iter"
-
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -41,8 +39,8 @@ func (t WithTags) HasTag(name appdef.QName) bool {
 	return t.list.Find(name) != appdef.NullType
 }
 
-func (t WithTags) Tags() iter.Seq[appdef.ITag] {
-	return t.list.Values()
+func (t WithTags) Tags() []appdef.ITag {
+	return t.list.AsArray()
 }
 
 func (t *WithTags) setTag(tag ...appdef.QName) {
@@ -67,10 +65,3 @@ func MakeTagBuilder(tags *WithTags) TagBuilder {
 }
 
 func (t *TagBuilder) SetTag(tag ...appdef.QName) { t.WithTags.setTag(tag...) }
-
-// # Supports:
-//   - appdef.IWithTags
-type NullTags struct{}
-
-func (t NullTags) HasTag(appdef.QName) bool    { return false }
-func (t NullTags) Tags() iter.Seq[appdef.ITag] { return func(func(appdef.ITag) bool) {} }

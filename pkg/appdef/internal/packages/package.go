@@ -6,7 +6,6 @@
 package packages
 
 import (
-	"iter"
 	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -46,17 +45,9 @@ func (p WithPackages) PackageFullPath(localName string) string { return p.pathBy
 
 func (p WithPackages) PackageLocalName(path string) string { return p.localByPath[path] }
 
-func (p WithPackages) PackageLocalNames() iter.Seq[string] { return slices.Values(p.local) }
+func (p WithPackages) PackageLocalNames() []string { return p.local }
 
-func (p WithPackages) Packages() iter.Seq2[string, string] {
-	return func(yield func(string, string) bool) {
-		for _, local := range p.local {
-			if !yield(local, p.pathByLocal[local]) {
-				break
-			}
-		}
-	}
-}
+func (p WithPackages) Packages() map[string]string { return p.pathByLocal }
 
 func (p *WithPackages) add(local, path string) {
 	if ok, err := appdef.ValidIdent(local); !ok {

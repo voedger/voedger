@@ -41,6 +41,7 @@ func (v View) Value() appdef.IViewValue { return v.value }
 // Validates view
 func (v *View) Validate() error {
 	return errors.Join(
+		fields.ValidateTypeFields(v),
 		v.key.Validate(),
 		v.value.Validate(),
 	)

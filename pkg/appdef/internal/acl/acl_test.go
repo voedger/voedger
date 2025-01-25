@@ -7,7 +7,6 @@ package acl_test
 
 import (
 	"fmt"
-	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -150,22 +149,22 @@ func Test_GrantAndRevoke(t *testing.T) {
 			}
 
 			cnt := 0
-			for r := range tested.ACL() {
+			for _, r := range tested.ACL() {
 				require.Less(cnt, len(want))
 				t.Run(fmt.Sprintf("ACL[%d]", cnt), func(t *testing.T) {
 					require.Equal(want[cnt].policy, r.Policy())
-					require.Equal(want[cnt].ops, slices.Collect(r.Ops()))
+					require.Equal(want[cnt].ops, r.Ops())
 					for _, o := range want[cnt].ops {
 						require.True(r.Op(o))
 					}
 
 					flt := appdef.QNames{}
-					for t := range appdef.FilterMatches(r.Filter(), r.Workspace().Types()) {
+					for _, t := range appdef.FilterMatches(r.Filter(), r.Workspace().Types()) {
 						flt = append(flt, t.QName())
 					}
 					require.EqualValues(want[cnt].flt, flt)
 
-					require.Equal(want[cnt].fields, slices.Collect(r.Filter().Fields()))
+					require.Equal(want[cnt].fields, r.Filter().Fields())
 					require.Equal(want[cnt].principal, r.Principal().QName())
 				})
 				cnt++
@@ -378,30 +377,36 @@ func Test_ACLWithFields(t *testing.T) {
 			AddField("field_u", appdef.DataKind_int32, false).
 			AddField("field_s", appdef.DataKind_int32, false)
 
-		wsb.AddRole(creatorName).
-			// #2747{Test plan}
-			Grant(
-				[]appdef.OperationKind{appdef.OperationKind_Insert},
-				filter.QNames(docName),
-				[]appdef.FieldName{"field_i"},
-				`GRANT [Insert] ON QNAMES(test.doc)[field_i] TO test.creator`)
-		wsb.AddRole(writerName).
-			Grant(
-				[]appdef.OperationKind{appdef.OperationKind_Update},
-				filter.QNames(docName),
-				nil,
-				`GRANT [Update] ON QNAMES(test.doc) TO test.writer`).
-			Revoke(
-				[]appdef.OperationKind{appdef.OperationKind_Update},
-				filter.QNames(docName),
-				[]appdef.FieldName{"field_i"},
-				`REVOKE [Update] ON QNAMES(test.doc)[field_i] FROM test.writer`)
-		wsb.AddRole(readerName).
-			Grant(
-				[]appdef.OperationKind{appdef.OperationKind_Select},
-				filter.QNames(docName),
-				[]appdef.FieldName{"field_s"},
-				`GRANT [Select] ON QNAMES(test.doc)[field_s] TO test.reader`)
+		_ = wsb.AddRole(creatorName)
+		// #2747{Test plan}
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Insert},
+			filter.QNames(docName),
+			[]appdef.FieldName{"field_i"},
+			creatorName,
+			`GRANT [Insert] ON QNAMES(test.doc)[field_i] TO test.creator`)
+
+		_ = wsb.AddRole(writerName)
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Update},
+			filter.QNames(docName),
+			nil,
+			writerName,
+			`GRANT [Update] ON QNAMES(test.doc) TO test.writer`)
+		wsb.Revoke(
+			[]appdef.OperationKind{appdef.OperationKind_Update},
+			filter.QNames(docName),
+			[]appdef.FieldName{"field_i"},
+			writerName,
+			`REVOKE [Update] ON QNAMES(test.doc)[field_i] FROM test.writer`)
+
+		_ = wsb.AddRole(readerName)
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Select},
+			filter.QNames(docName),
+			[]appdef.FieldName{"field_s"},
+			readerName,
+			`GRANT [Select] ON QNAMES(test.doc)[field_s] TO test.reader`)
 
 		var err error
 		app, err = adb.Build()
@@ -425,22 +430,22 @@ func Test_ACLWithFields(t *testing.T) {
 			}
 
 			cnt := 0
-			for r := range tested.ACL() {
+			for _, r := range tested.ACL() {
 				require.Less(cnt, len(want))
 				t.Run(fmt.Sprintf("ACL[%d]", cnt), func(t *testing.T) {
 					require.Equal(want[cnt].policy, r.Policy())
-					require.Equal(want[cnt].ops, slices.Collect(r.Ops()))
+					require.Equal(want[cnt].ops, r.Ops())
 					for _, o := range want[cnt].ops {
 						require.True(r.Op(o))
 					}
 
 					flt := appdef.QNames{}
-					for t := range appdef.FilterMatches(r.Filter(), r.Principal().Workspace().Types()) {
+					for _, t := range appdef.FilterMatches(r.Filter(), r.Workspace().Types()) {
 						flt = append(flt, t.QName())
 					}
 					require.EqualValues(want[cnt].flt, flt)
 
-					require.Equal(want[cnt].fields, slices.Collect(r.Filter().Fields()))
+					require.Equal(want[cnt].fields, r.Filter().Fields())
 
 					require.Equal(want[cnt].principal, r.Principal().QName())
 
