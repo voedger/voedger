@@ -59,12 +59,11 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 		}
 
 		// replace pseudoWSID -> appWSID
-		wsid := request.WSID
 		if numAppWorkspaces, ok := numsAppsWorkspaces[appQName]; ok {
-			baseWSID := request.WSID.BaseWSID()
-			if baseWSID <= istructs.MaxPseudoBaseWSID {
-				wsid = coreutils.GetAppWSID(wsid, numAppWorkspaces)
-			}
+			request.WSID = coreutils.WSIDToAppWSIDIfPseudo(request.WSID, numAppWorkspaces)
+		} else {
+			bus.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("no ApplicationWorkspaces record for app %s", appQName))
+			return
 		}
 
 		partitionID, err := appParts.AppWorkspacePartitionID(appQName, request.WSID)
@@ -81,14 +80,14 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 		// deliver to processors
 		switch request.Resource[:1] {
 		case "q":
-			iqm := queryprocessor.NewQueryMessage(requestCtx, appQName, partitionID, wsid, responder, request.Body, funcQName, request.Host, token)
+			iqm := queryprocessor.NewQueryMessage(requestCtx, appQName, partitionID, request.WSID, responder, request.Body, funcQName, request.Host, token)
 			if !procbus.Submit(uint(qpcgIdx), 0, iqm) {
 				bus.ReplyErrf(responder, http.StatusServiceUnavailable, "no query processors available")
 			}
 		case "c":
 			// TODO: use appQName to calculate cmdProcessorIdx in solid range [0..cpCount)
 			cmdProcessorIdx := uint(partitionID) % uint(cpAmount)
-			icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, appQName, wsid, responder, partitionID, funcQName, token, request.Host)
+			icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, appQName, request.WSID, responder, partitionID, funcQName, token, request.Host)
 			if !procbus.Submit(uint(cpchIdx), cmdProcessorIdx, icm) {
 				bus.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
 			}

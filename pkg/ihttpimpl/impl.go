@@ -278,6 +278,12 @@ func (p *httpProcessor) requestHandler(requestCtx context.Context, request bus.R
 		bus.ReplyBadRequest(responder, ErrAppIsNotDeployed.Error())
 		return
 	}
+	if numAppWorkspaces, ok := p.numsAppsWorkspaces[appQName]; ok {
+		request.WSID = coreutils.WSIDToAppWSIDIfPseudo(request.WSID, numAppWorkspaces)
+	} else {
+		bus.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("no ApplicationWorkspaces record for app %s", appQName))
+		return
+	}
 	partNo := coreutils.AppPartitionID(request.WSID, app.numPartitions)
 	handler, err := p.getAppPartHandler(appQName, partNo)
 	if err != nil {
