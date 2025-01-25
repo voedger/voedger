@@ -149,6 +149,8 @@ func (tt *Types[T]) Add(t T) {
 	tt.s = slicex.InsertInSort(tt.s, t, func(t1, t2 T) int { return appdef.CompareQName(t1.QName(), t2.QName()) })
 }
 
+func (tt *Types[T]) AsArray() []T { return tt.s }
+
 func (tt *Types[T]) Clear() {
 	tt.m = make(map[appdef.QName]T)
 	tt.s = nil
@@ -166,7 +168,7 @@ func (tt Types[T]) Values() iter.Seq[T] { return slices.Values(tt.s) }
 type (
 	IWithTypes interface {
 		Type(appdef.QName) appdef.IType
-		Types() iter.Seq[appdef.IType]
+		Types() []appdef.IType
 	}
 
 	WithTypes struct {
@@ -197,7 +199,7 @@ func (tt WithTypes) Type(name appdef.QName) appdef.IType {
 	return tt.types.Find(name)
 }
 
-func (tt WithTypes) Types() iter.Seq[appdef.IType] { return tt.types.Values() }
+func (tt WithTypes) Types() []appdef.IType { return tt.types.AsArray() }
 
 // Propagate type to workspace and app.
 func Propagate(t appdef.IType) {

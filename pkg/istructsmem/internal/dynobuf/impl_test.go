@@ -84,7 +84,7 @@ func TestDynoBufSchemes(t *testing.T) {
 			require.Equal(DataKindToFieldType(fld.DataKind()), f.Ft)
 		}
 
-		for fld := range fields.Fields() {
+		for _, fld := range fields.Fields() {
 			if !fld.IsSys() {
 				f, ok := dynoScheme.FieldsMap[fld.Name()]
 				require.True(ok)
@@ -93,7 +93,7 @@ func TestDynoBufSchemes(t *testing.T) {
 		}
 	}
 
-	for typ := range app.Types() {
+	for _, typ := range app.Types() {
 		name := typ.QName()
 		if view, ok := typ.(appdef.IView); ok {
 			checkScheme(name, view.Key().PartKey(), schemes.ViewPartKeyScheme(name))

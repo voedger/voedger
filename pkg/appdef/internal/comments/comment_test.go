@@ -6,7 +6,6 @@
 package comments_test
 
 import (
-	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -45,7 +44,7 @@ func Test_WithComments(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			c := comments.MakeWithComments(tt.c...)
 			require.Equal(t, tt.text, c.Comment())
-			require.Equal(t, tt.c, slices.Collect(c.CommentLines()))
+			require.Equal(t, tt.c, c.CommentLines())
 		})
 	}
 
@@ -56,7 +55,7 @@ func Test_WithComments(t *testing.T) {
 				cb := comments.MakeCommentBuilder(&c)
 				cb.SetComment(tt.c...)
 				require.Equal(t, tt.text, c.Comment())
-				require.Equal(t, tt.c, slices.Collect(c.CommentLines()))
+				require.Equal(t, tt.c, c.CommentLines())
 			})
 		}
 	})
@@ -67,17 +66,8 @@ func Test_WithComments(t *testing.T) {
 				c := comments.MakeWithComments()
 				comments.SetComment(&c, tt.c...)
 				require.Equal(t, tt.text, c.Comment())
-				require.Equal(t, tt.c, slices.Collect(c.CommentLines()))
+				require.Equal(t, tt.c, c.CommentLines())
 			})
 		}
 	})
-}
-
-func Test_NullComment(t *testing.T) {
-	// check interface compatibility
-	var c comments.NullComment
-	var _ appdef.IWithComments = &c
-
-	require.Equal(t, "", c.Comment())
-	require.Empty(t, slices.Collect(c.CommentLines()))
 }

@@ -7,7 +7,6 @@ package extensions_test
 
 import (
 	"fmt"
-	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -73,10 +72,11 @@ func Test_Storages(t *testing.T) {
 
 			t.Run("should be ok enum states", func(t *testing.T) {
 				cnt := 0
-				for n, s := range prj.States().All() {
+				for _, n := range prj.States().Names() {
 					cnt++
+					s := prj.States().Storage(n)
 					require.Equal(n, s.Name())
-					names := appdef.CollectQNames(s.Names())
+					names := appdef.QNamesFrom(s.Names()...)
 					switch cnt {
 					case 1: // "sys.WLog" < "sys.records" (`W` < `r`)
 						require.Equal(sysWLog, n)
@@ -94,7 +94,7 @@ func Test_Storages(t *testing.T) {
 
 				t.Run("should be ok to break enum states", func(t *testing.T) {
 					cnt := 0
-					for range prj.States().All() {
+					for range prj.States().Names() {
 						cnt++
 						break
 					}
@@ -105,7 +105,7 @@ func Test_Storages(t *testing.T) {
 					state := prj.States().Storage(sysRecords)
 					require.NotNil(state)
 					require.Equal(sysRecords, state.Name())
-					require.EqualValues([]appdef.QName{docName}, slices.Collect(state.Names()))
+					require.EqualValues([]appdef.QName{docName}, state.Names())
 
 					require.Nil(prj.States().Storage(appdef.NewQName("test", "unknown")), "should be nil for unknown state")
 				})
@@ -113,24 +113,25 @@ func Test_Storages(t *testing.T) {
 
 			t.Run("should be ok enum intents", func(t *testing.T) {
 				cnt := 0
-				for n, i := range prj.Intents().All() {
+				for _, n := range prj.Intents().Names() {
 					cnt++
-					require.Equal(n, i.Name())
+					s := prj.Intents().Storage(n)
+					require.Equal(n, s.Name())
 					switch cnt {
 					case 1:
 						require.Equal(sysViews, n)
-						require.EqualValues([]appdef.QName{viewName}, slices.Collect(i.Names()))
-						require.Equal("view is intent for projector", i.Comment())
-						require.Equal(`Storage «sys.views» [test.view]`, fmt.Sprint(i))
+						require.EqualValues([]appdef.QName{viewName}, s.Names())
+						require.Equal("view is intent for projector", s.Comment())
+						require.Equal(`Storage «sys.views» [test.view]`, fmt.Sprint(s))
 					default:
-						require.Failf("unexpected intent", "intent: %v", i)
+						require.Failf("unexpected intent", "intent: %v", s)
 					}
 				}
 				require.Equal(1, cnt)
 
 				t.Run("should be ok to break enum intents", func(t *testing.T) {
 					cnt := 0
-					for range prj.Intents().All() {
+					for range prj.Intents().Names() {
 						cnt++
 						break
 					}
@@ -141,7 +142,7 @@ func Test_Storages(t *testing.T) {
 					intent := prj.Intents().Storage(sysViews)
 					require.NotNil(intent)
 					require.Equal(sysViews, intent.Name())
-					require.EqualValues([]appdef.QName{viewName}, slices.Collect(intent.Names()))
+					require.EqualValues([]appdef.QName{viewName}, intent.Names())
 
 					require.Nil(prj.Intents().Storage(appdef.NewQName("test", "unknown")), "should be nil for unknown intent")
 				})

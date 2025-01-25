@@ -13,7 +13,7 @@ classDiagram
         +QName() QName
         +Kind()* TypeKind
         +Comment() string
-        +Tags() iter.Seq[ITag]
+        +Tags() []ITag
     }
 
     ITag --|> IType : inherits
@@ -179,19 +179,30 @@ classDiagram
         +CronSchedule() string
     }
 
-    IWorkspace --|> IType : inherits
-    class IWorkspace {
-        <<interface>>
-        +Kind()* TypeKind_Workspace
-        +Types()iter.Seq[IType]
-        ...
-    }
-
     IRole --|> IType : inherits
     class IRole {
         <<interface>>
         +Kind()* TypeKind_Role
-        +ACL() iter.Seq[IACLRule]
+    }
+
+    IRate --|> IType : inherits
+    class IRole {
+        <<interface>>
+        +Kind()* TypeKind_Rate
+    }
+
+    ILimit --|> IType : inherits
+    class IRole {
+        <<interface>>
+        +Kind()* TypeKind_Limit
+    }
+
+    IWorkspace --|> IType : inherits
+    class IWorkspace {
+        <<interface>>
+        +Kind()* TypeKind_Workspace
+        +Types()[]IType
+        ...
     }
 ```
 
@@ -202,50 +213,50 @@ classDiagram
 
   class IAppDef {
     <<interface>>
-    +Types() iter.Seq[IType]
-    +Workspaces() iter.Seq[IType]
+    +Types() []IType
+    +Workspaces() []IWorkspace
     ...
   }
   IAppDef "1" *--> "1" iterator : Types
 
   class IWorkspace {
     <<interface>>
-    +LocalTypes()iter.Seq[IType]
-    +Types()iter.Seq[IType]
+    +LocalTypes()[]IType
+    +Types()[]IType
     …
   }
   IWorkspace "1" *--> "2" iterator : LocalTypes and Types
 
   class iterator {
-    <<func(iter.Seq[IType])iter.Seq[T]>>
+    <<func([]IType)iter.Seq[T]>>
     
-    +CDocs(iter.Seq[IType]) iter.Seq[ICDoc]
-    +Commands(iter.Seq[IType]) iter.Seq[ICommand]
-    +CRecords(iter.Seq[IType]) iter.Seq[ICRecord]
-    +DataTypes(iter.Seq[IType]) iter.Seq[IData]
-    +Extensions(iter.Seq[IType]) iter.Seq[IExtension]
-    +Functions(iter.Seq[IType]) iter.Seq[IFunction]
-    +GDocs(iter.Seq[IType]) iter.Seq[IGDoc]
-    +GRecords(iter.Seq[IType]) iter.Seq[IGRecord]
-    +Jobs(iter.Seq[IType]) iter.Seq[IJob]
-    +Limits(iter.Seq[IType]) iter.Seq[ILimit]
-    +Objects(iter.Seq[IType]) iter.Seq[IObject]
-    +ODocs(iter.Seq[IType]) iter.Seq[IODoc]
-    +ORecords(iter.Seq[IType]) iter.Seq[IORecord]
-    +Projectors(iter.Seq[IType]) iter.Seq[IProjector]
-    +Queries(iter.Seq[IType]) iter.Seq[IQuery]
-    +Rates(iter.Seq[IType]) iter.Seq[IRate]
-    +Records(iter.Seq[IType]) iter.Seq[IRecord]
-    +Roles(iter.Seq[IType]) iter.Seq[IRole]
-    +Singletons(iter.Seq[IType]) iter.Seq[ISingleton]
-    +Structures(iter.Seq[IType]) iter.Seq[IStructure]
-    +Tags(iter.Seq[IType]) iter.Seq[ITag]
-    +Views(iter.Seq[IType]) iter.Seq[IView]
-    +WDocs(iter.Seq[IType]) iter.Seq[IWDoc]
-    +WRecords(iter.Seq[IType]) iter.Seq[IWRecord]
+    +CDocs([]IType) iter.Seq[ICDoc]
+    +Commands([]IType) iter.Seq[ICommand]
+    +CRecords([]IType) iter.Seq[ICRecord]
+    +DataTypes([]IType) iter.Seq[IData]
+    +Extensions([]IType) iter.Seq[IExtension]
+    +Functions([]IType) iter.Seq[IFunction]
+    +GDocs([]IType) iter.Seq[IGDoc]
+    +GRecords([]IType) iter.Seq[IGRecord]
+    +Jobs([]IType) iter.Seq[IJob]
+    +Limits([]IType) iter.Seq[ILimit]
+    +Objects([]IType) iter.Seq[IObject]
+    +ODocs([]IType) iter.Seq[IODoc]
+    +ORecords([]IType) iter.Seq[IORecord]
+    +Projectors([]IType) iter.Seq[IProjector]
+    +Queries([]IType) iter.Seq[IQuery]
+    +Rates([]IType) iter.Seq[IRate]
+    +Records([]IType) iter.Seq[IRecord]
+    +Roles([]IType) iter.Seq[IRole]
+    +Singletons([]IType) iter.Seq[ISingleton]
+    +Structures([]IType) iter.Seq[IStructure]
+    +Tags([]IType) iter.Seq[ITag]
+    +Views([]IType) iter.Seq[IView]
+    +WDocs([]IType) iter.Seq[IWDoc]
+    +WRecords([]IType) iter.Seq[IWRecord]
 
-    +TypesByKind(iter.Seq[IType],TypeKind) iter.Seq[T]
-    +TypesByKinds(iter.Seq[IType],TypeKinds) iter.Seq[T]
+    +TypesByKind([]IType,TypeKind) []T
+    +TypesByKinds([]IType,TypeKinds) iter.Seq[T]
   }
 
 ```
@@ -271,7 +282,7 @@ classDiagram
         +Kind()* TypeKind_Data
         +DataKind() DataKind
         +Ancestor() IData
-        +Constraints() iter.Seq[IConstraint]
+        +Constraints() []IConstraint
     }
 
     Name "1" <--* "1" IData : Name
@@ -453,7 +464,7 @@ classDiagram
     +DataKind() DataKind
     +Required() bool
     +Verified() bool
-    +VerificationKind() iter.Seq[VerificationKind]
+    +VerificationKind() []VerificationKind]
     +Constraints() iter.Seq2[ConstraintKind, IConstraint]
   }
 
@@ -461,14 +472,14 @@ classDiagram
     <<Interface>>
     Field(FieldName) IField
     FieldCount() int
-    Fields() iter.Seq[IField]
+    Fields() []IField
   }
   IWithFields "1" --* "0..*" IField : compose
 
   IRefField --|> IField : inherits
   class IRefField {
     <<Interface>>
-    Refs() iter.Seq[QName]
+    Refs() []QName
   }
 
   class IContainer {
@@ -483,21 +494,21 @@ classDiagram
     <<Interface>>
     Container(string) IContainer
     ContainerCount() int
-    Containers() iter.Seq[IContainer]
+    Containers() []IContainer
   }
   IWithContainers "1" --* "0..*" IContainer : compose
 
   class IUnique {
     <<Interface>>
     +Name() QName
-    +Fields() iter.Seq[IField]
+    +Fields() []IField
   }
 
   class IWithUniques{
     <<Interface>>
     UniqueByName(QName) IUnique
     UniqueCount() int
-    Uniques() iter.Seq2[QName, IUnique]
+    Uniques() map[QName] IUnique
   }
   IWithUniques "1" --* "0..*" IUnique : compose
 ```
@@ -573,7 +584,7 @@ classDiagram
     IExtension "1" *--> "1" IStorages : Intents
     class IStorages {
         <<interface>>
-        +All()iter.Seq[IStorage]
+        +Names()[]QName
         +Storage(QName) IStorage
     }
     IStorages "1" *--> "0..*" IStorage : Storages
@@ -581,7 +592,7 @@ classDiagram
         <<interface>>
         +Comment() : string
         +Name(): QName
-        +QNames() iter.Seq[QName]
+        +QNames() []QName
     }
 
     IExtension <|-- IFunction : inherits
@@ -609,14 +620,14 @@ classDiagram
         <<interface>>
         +Kind()* TypeKind_Projector
         +WantErrors() bool
-        +Events()iter.Seq[IProjectorEvent]
+        +Events()[]IProjectorEvent
     }
 
     IProjector "1" *--> "1..*" IProjectorEvent : events
     class IProjectorEvent {
         <<interface>>
         +Comment() string
-        +Ops() iter.Seq[OperationKind]
+        +Ops() []OperationKind]
         +Filter() IFilter
     }
 
@@ -655,7 +666,7 @@ classDiagram
         <<interface>>
         +Kind()* TypeKind_Workspace
         ...
-        +ACL() iter.Seq[IACLRule]
+        +ACL() []IACLRule
     }
     IWorkspace "1" *--> "0..*" IACLRule : ACL for workspace
     IWorkspace "1" *--> "0..*" IRole : roles
@@ -664,15 +675,12 @@ classDiagram
     class IRole {
         <<interface>>
         +Kind()* TypeKind_Role
-        +ACL() iter.Seq[IACLRule]
     }
-
-    IRole "1" *--> "1..*" IACLRule : ACL for role
 
     class IACLRule {
         <<interface>>
         +Comment() string
-        +Ops() iter.Seq[OperationKind]
+        +Ops() []OperationKind]
         +Policy() PolicyKind
         +Filter() IACLFilter
         +Principal() IRole
@@ -702,12 +710,14 @@ classDiagram
 
     class IACLFilter {
         <<interface>>
-        +Fields()iter.Seq[FieldName]
+        +Fields()[]FieldName
     }
 
     IFilter <|-- IACLFilter : inherits
 
     note for IFilter "see filter/readme.md"
+
+    IACLRule "1" *--> "1" IRole : principal
 ```
 
 ### Filters

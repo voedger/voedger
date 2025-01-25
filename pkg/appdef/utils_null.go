@@ -5,19 +5,17 @@
 
 package appdef
 
-import "iter"
-
 type nullComment struct{}
 
-func (c *nullComment) Comment() string                { return "" }
-func (c *nullComment) CommentLines() iter.Seq[string] { return func(func(string) bool) {} }
+func (c *nullComment) Comment() string        { return "" }
+func (c *nullComment) CommentLines() []string { return nil }
 
 const nullTypeString = "null type"
 
 type nullTags struct{}
 
-func (t nullTags) HasTag(QName) bool    { return false }
-func (t nullTags) Tags() iter.Seq[ITag] { return func(func(ITag) bool) {} }
+func (t nullTags) HasTag(QName) bool { return false }
+func (t nullTags) Tags() []ITag      { return nil }
 
 type nullType struct {
 	nullComment
@@ -33,10 +31,10 @@ func (t nullType) Workspace() IWorkspace { return nil }
 
 type nullFields struct{}
 
-func (f *nullFields) Field(FieldName) IField         { return nil }
-func (f *nullFields) FieldCount() int                { return 0 }
-func (f *nullFields) Fields() iter.Seq[IField]       { return func(func(IField) bool) {} }
-func (f *nullFields) RefField(FieldName) IRefField   { return nil }
-func (f *nullFields) RefFields() iter.Seq[IRefField] { return func(func(IRefField) bool) {} }
-func (f *nullFields) UserFieldCount() int            { return 0 }
-func (f *nullFields) UserFields() iter.Seq[IField]   { return func(func(IField) bool) {} }
+func (f *nullFields) Field(FieldName) IField       { return nil }
+func (f *nullFields) FieldCount() int              { return 0 }
+func (f *nullFields) Fields() []IField             { return nil }
+func (f *nullFields) RefField(FieldName) IRefField { return nil }
+func (f *nullFields) RefFields() []IRefField       { return nil }
+func (f *nullFields) UserFieldCount() int          { return 0 }
+func (f *nullFields) UserFields() []IField         { return nil }

@@ -7,8 +7,6 @@ package filter
 
 import (
 	"fmt"
-	"iter"
-	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -36,8 +34,8 @@ func (f qNamesFilter) Match(t appdef.IType) bool {
 	return f.names.Contains(t.QName())
 }
 
-func (f qNamesFilter) QNames() iter.Seq[appdef.QName] {
-	return slices.Values(f.names)
+func (f qNamesFilter) QNames() []appdef.QName {
+	return f.names
 }
 
 func (f qNamesFilter) String() string {

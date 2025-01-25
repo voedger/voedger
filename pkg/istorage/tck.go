@@ -63,9 +63,8 @@ func testAppStorageFactory(t *testing.T, sf IAppStorageFactory, testAppQName app
 // nolint
 func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 
-	ctx := context.Background()
-
 	t.Run("Should read not existing", func(t *testing.T) {
+		ctx := context.Background()
 		err := storage.Read(ctx, []byte{1}, nil, nil, nil)
 		require.NoError(t, err, err)
 	})
@@ -89,6 +88,7 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 		require.NoError(err)
 	})
 	t.Run("Read method should read partition", func(t *testing.T) {
+		ctx := context.Background()
 		require := require.New(t)
 		viewRecords := make([]string, 0, 2)
 		resultCcols := []string{}
@@ -112,6 +112,7 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 	})
 
 	t.Run("Read method should read by clustering columns range", func(t *testing.T) {
+		ctx := context.Background()
 		require := require.New(t)
 		require.NoError(storage.Put([]byte{0x0}, []byte{0x10, 0x11, 0x17}, []byte("100$")))
 		require.NoError(storage.Put([]byte{0x0}, []byte{0x10, 0x12, 0x12}, []byte("200$")))
@@ -213,6 +214,7 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 		})
 	})
 	t.Run("Read method should handle callback error", func(t *testing.T) {
+		ctx := context.Background()
 		require := require.New(t)
 		errCb := errors.New("callback error")
 		var times int
@@ -292,6 +294,7 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 	})
 
 	t.Run("Should be able to pass nil clustering columns to Get / Put", func(t *testing.T) {
+		ctx := context.Background()
 		require := require.New(t)
 
 		viewRecords := make(map[string][]byte)
@@ -313,8 +316,8 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 
 		var data []byte
 		ok, err = storage.Get([]byte{0xaa}, nil, &data)
-		require.True(ok)
 		require.NoError(err)
+		require.True(ok)
 		require.Equal([]byte("Cola"), data)
 
 		t.Run("zero-length clust columns must be same as nil", func(t *testing.T) {
@@ -621,7 +624,10 @@ func testAppStorage_GetBatch(t *testing.T, storage IAppStorage) {
 //nolint:revive,goconst
 func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
 	switch storageImplPkgPath(storage) {
-	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas", "github.com/voedger/voedger/pkg/istoragecache":
+	case "github.com/voedger/voedger/pkg/istorage/mem",
+		"github.com/voedger/voedger/pkg/istorage/cas",
+		"github.com/voedger/voedger/pkg/istorage/bbolt",
+		"github.com/voedger/voedger/pkg/istoragecache":
 	default:
 		t.Skip("Unsupported storage type")
 	}
@@ -691,7 +697,10 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iTime c
 //nolint:revive,goconst
 func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
 	switch storageImplPkgPath(storage) {
-	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas", "github.com/voedger/voedger/pkg/istoragecache":
+	case "github.com/voedger/voedger/pkg/istorage/mem",
+		"github.com/voedger/voedger/pkg/istorage/cas",
+		"github.com/voedger/voedger/pkg/istorage/bbolt",
+		"github.com/voedger/voedger/pkg/istoragecache":
 	default:
 		t.Skip("Unsupported storage type")
 	}
@@ -794,7 +803,10 @@ func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage, iTime core
 //nolint:revive,goconst
 func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
 	switch storageImplPkgPath(storage) {
-	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas", "github.com/voedger/voedger/pkg/istoragecache":
+	case "github.com/voedger/voedger/pkg/istorage/mem",
+		"github.com/voedger/voedger/pkg/istorage/cas",
+		"github.com/voedger/voedger/pkg/istorage/bbolt",
+		"github.com/voedger/voedger/pkg/istoragecache":
 	default:
 		t.Skip("Unsupported storage type")
 	}
@@ -867,7 +879,10 @@ func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage, iTime co
 //nolint:revive,goconst
 func testAppStorage_TTLGet(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
 	switch storageImplPkgPath(storage) {
-	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas", "github.com/voedger/voedger/pkg/istoragecache":
+	case "github.com/voedger/voedger/pkg/istorage/mem",
+		"github.com/voedger/voedger/pkg/istorage/cas",
+		"github.com/voedger/voedger/pkg/istorage/bbolt",
+		"github.com/voedger/voedger/pkg/istoragecache":
 	default:
 		t.Skip("Unsupported storage type")
 	}
@@ -926,7 +941,10 @@ func testAppStorage_TTLGet(t *testing.T, storage IAppStorage, iTime coreutils.IT
 //nolint:revive,goconst
 func testAppStorage_TTLRead(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
 	switch storageImplPkgPath(storage) {
-	case "github.com/voedger/voedger/pkg/istorage/mem", "github.com/voedger/voedger/pkg/istorage/cas", "github.com/voedger/voedger/pkg/istoragecache":
+	case "github.com/voedger/voedger/pkg/istorage/mem",
+		"github.com/voedger/voedger/pkg/istorage/cas",
+		"github.com/voedger/voedger/pkg/istorage/bbolt",
+		"github.com/voedger/voedger/pkg/istoragecache":
 	default:
 		t.Skip("Unsupported storage type")
 	}

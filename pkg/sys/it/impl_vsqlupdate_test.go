@@ -194,7 +194,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_View(t *testing.T) {
 	// p.ap1pkg.ApplyCategoryIdx will insert the single hardcoded record view.CategoryIdx(Name = category.Name, IntFld = 43, Dummy = 1, Val = 42) (see shared_cfgs.go)
 	categoryName := vit.NextName()
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
-	vit.PostWS(ws, "c.sys.CUD", body)
+	lastTest1App1Offset := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
 
 	// check view values
 	body = `{"args":{"Query":"select * from app1pkg.CategoryIdx where IntFld = 43 and Dummy = 1"}, "elements":[{"fields":["Result"]}]}`
@@ -223,6 +223,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_View(t *testing.T) {
 			"Name":      newName,     // new value
 			"Val":       float64(42), // old value (hardcoded by the projector)
 			"sys.QName": "app1pkg.CategoryIdx",
+			"offs":      float64(lastTest1App1Offset),
 		}, m)
 	})
 

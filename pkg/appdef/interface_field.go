@@ -5,8 +5,6 @@
 
 package appdef
 
-import "iter"
-
 // Field Verification kind
 type VerificationKind uint8
 
@@ -39,7 +37,7 @@ type IWithFields interface {
 	FieldCount() int
 
 	// All fields in add order.
-	Fields() iter.Seq[IField]
+	Fields() []IField
 
 	// Finds reference field by name.
 	//
@@ -47,10 +45,10 @@ type IWithFields interface {
 	RefField(FieldName) IRefField
 
 	// All reference fields. System field (sys.ParentID) is also included
-	RefFields() iter.Seq[IRefField]
+	RefFields() []IRefField
 
 	// User fields in add order. System fields (sys.QName, sys.ID, …) are excluded
-	UserFields() iter.Seq[IField]
+	UserFields() []IField
 
 	// Returns user fields count. System fields (sys.QName, sys.ID, …) are excluded
 	UserFieldCount() int
@@ -139,7 +137,7 @@ type IField interface {
 	// Result contains throughout the data types hierarchy, include all ancestors recursively.
 	// If any constraint (for example `MinLen`) is specified by the ancestor, but redefined in the descendant,
 	// then the constraint from the descendant will include in result.
-	Constraints() iter.Seq2[ConstraintKind, IConstraint]
+	Constraints() map[ConstraintKind]IConstraint
 }
 
 // Reference field. Describe field with DataKind_RecordID.
@@ -149,7 +147,7 @@ type IRefField interface {
 	IField
 
 	// Returns list of target references
-	Refs() iter.Seq[QName]
+	Refs() []QName
 
 	// Returns, is the link available
 	Ref(QName) bool

@@ -5,8 +5,6 @@
 
 package appdef
 
-import "iter"
-
 // Numeric with OccursUnbounded value.
 //
 // Ref. occurs.go for constants and methods
@@ -33,7 +31,7 @@ type IWithContainers interface {
 	ContainerCount() int
 
 	// All containers in add order.
-	Containers() iter.Seq[IContainer]
+	Containers() []IContainer
 }
 
 type IContainersBuilder interface {

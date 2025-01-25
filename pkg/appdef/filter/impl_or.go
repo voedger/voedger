@@ -7,7 +7,6 @@ package filter
 
 import (
 	"fmt"
-	"iter"
 	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -33,7 +32,7 @@ func newOrFilter(ff ...appdef.IFilter) *orFilter {
 func (orFilter) Kind() appdef.FilterKind { return appdef.FilterKind_Or }
 
 func (f orFilter) Match(t appdef.IType) bool {
-	for c := range f.Or() {
+	for _, c := range f.Or() {
 		if c.Match(t) {
 			return true
 		}
@@ -41,7 +40,7 @@ func (f orFilter) Match(t appdef.IType) bool {
 	return false
 }
 
-func (f orFilter) Or() iter.Seq[appdef.IFilter] { return slices.Values(f.children) }
+func (f orFilter) Or() []appdef.IFilter { return f.children }
 
 func (f orFilter) String() string {
 	// QNAMES(…) OR TAGS(…)

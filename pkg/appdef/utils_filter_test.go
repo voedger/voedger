@@ -41,9 +41,9 @@ func Test_FilterMatches(t *testing.T) {
 
 	t.Run("should be ok to filter matches", func(t *testing.T) {
 		filtered := appdef.FilterMatches(filter.AllWSFunctions(wsName), app.Types())
-		cnt := 0
-		for t := range filtered {
-			switch cnt {
+		require.Len(filtered, 2)
+		for i, t := range filtered {
+			switch i {
 			case 0:
 				require.Equal(cmdName, t.QName())
 			case 1:
@@ -51,9 +51,7 @@ func Test_FilterMatches(t *testing.T) {
 			default:
 				require.Fail("unexpected type", "type: %v", t)
 			}
-			cnt++
 		}
-		require.Equal(2, cnt)
 
 		require.Equal(cmdName, appdef.FirstFilterMatch(filter.AllWSFunctions(wsName), app.Types()).QName())
 		require.Nil(appdef.FirstFilterMatch(filter.QNames(appdef.NewQName("test", "unknown")), app.Types()))
