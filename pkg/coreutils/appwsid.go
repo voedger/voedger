@@ -49,3 +49,11 @@ func AppPartitionID(wsid istructs.WSID, numAppPartitions istructs.NumAppPartitio
 	// so data loss is not possible on casting to PartitionID
 	return istructs.PartitionID(wsid % istructs.WSID(numAppPartitions)) // nolint G115
 }
+
+func WSIDToAppWSIDIfPseudo(wsid istructs.WSID, numAppWorkspaces istructs.NumAppWorkspaces) istructs.WSID {
+	baseWSID := wsid.BaseWSID()
+	if baseWSID <= istructs.MaxPseudoBaseWSID {
+		return GetAppWSID(wsid, numAppWorkspaces)
+	}
+	return wsid
+}

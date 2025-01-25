@@ -2512,7 +2512,7 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l4 ON VIEW v WITH RATE r;
 			LIMIT l4_1 SELECT ON VIEW v WITH RATE r;
 			LIMIT l5 ON TABLE t WITH RATE r;
-			LIMIT l5_1 SELECT,INSERT,UPDATE ON TABLE t WITH RATE r;
+			LIMIT l5_1 SELECT,INSERT,UPDATE,ACTIVATE,DEACTIVATE ON TABLE t WITH RATE r;
 
 			LIMIT l20 ON ALL COMMANDS WITH TAG tag WITH RATE r;
 			LIMIT l20_1 EXECUTE ON ALL COMMANDS WITH TAG tag WITH RATE r;
@@ -2521,7 +2521,7 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l22 ON ALL VIEWS WITH TAG tag WITH RATE r;
 			LIMIT l22_1 SELECT ON ALL VIEWS WITH TAG tag WITH RATE r;
 			LIMIT l23 ON ALL TABLES WITH TAG tag WITH RATE r;
-			LIMIT l23_1 SELECT,INSERT,UPDATE ON ALL TABLES WITH TAG tag WITH RATE r;
+			LIMIT l23_1 SELECT,INSERT,UPDATE,ACTIVATE,DEACTIVATE ON ALL TABLES WITH TAG tag WITH RATE r;
 			-- LIMIT l24 ON ALL WITH TAG tag WITH RATE r;
 
 			LIMIT l25 ON ALL COMMANDS WITH RATE r;
@@ -2537,7 +2537,7 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l32 ON EACH VIEW WITH TAG tag WITH RATE r;
 			LIMIT l32_1 SELECT ON EACH VIEW WITH TAG tag WITH RATE r;
 			LIMIT l33 ON EACH TABLE WITH TAG tag WITH RATE r;
-			LIMIT l33_1 SELECT,INSERT,UPDATE ON EACH TABLE WITH TAG tag WITH RATE r;
+			LIMIT l33_1 SELECT,INSERT,UPDATE,ACTIVATE,DEACTIVATE ON EACH TABLE WITH TAG tag WITH RATE r;
 			-- LIMIT l34 ON EACH WITH TAG tag WITH RATE r;
 
 			LIMIT l35 ON EACH COMMAND WITH RATE r;
@@ -2578,6 +2578,8 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l37 EXECUTE ON EACH VIEW WITH RATE r;
 			LIMIT l38 EXECUTE ON EACH TABLE WITH RATE r;
 			LIMIT l39 SELECT ON EACH QUERY WITH RATE r;
+			LIMIT l40 ACTIVATE ON EACH COMMAND WITH RATE r;
+			LIMIT l41 DEACTIVATE ON EACH QUERY WITH RATE r;
 		);`, "file.vsql:15:13: operation INSERT not allowed",
 			"file.vsql:16:13: operation UPDATE not allowed",
 			"file.vsql:17:13: operation EXECUTE not allowed",
@@ -2590,7 +2592,9 @@ func Test_RatesAndLimits(t *testing.T) {
 			"file.vsql:26:14: operation UPDATE not allowed",
 			"file.vsql:27:14: operation EXECUTE not allowed",
 			"file.vsql:28:14: operation EXECUTE not allowed",
-			"file.vsql:29:14: operation SELECT not allowed")
+			"file.vsql:29:14: operation SELECT not allowed",
+			"file.vsql:30:14: operation ACTIVATE not allowed",
+			"file.vsql:31:14: operation DEACTIVATE not allowed")
 	})
 
 	t.Run("undefined statements", func(t *testing.T) {
