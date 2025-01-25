@@ -19,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
@@ -27,15 +28,19 @@ func (d implIAppStorageFactory) AppStorage(appName istorage.SafeAppName) (storag
 	if err != nil {
 		return nil, err
 	}
+
 	keySpace := appName.String()
 	session := getClient(cfg)
+
 	exist, err := doesTableExist(keySpace, session)
 	if err != nil {
 		return nil, err
 	}
+
 	if !exist {
 		return nil, istorage.ErrStorageDoesNotExist
 	}
+
 	return newStorage(cfg, appName.String(), d.iTime), nil
 }
 
@@ -44,6 +49,7 @@ func (d implIAppStorageFactory) Init(appName istorage.SafeAppName) error {
 	if err != nil {
 		return err
 	}
+
 	keySpace := appName.String()
 	session := getClient(cfg)
 	if err := newTableExistsWaiter(keySpace, session); err != nil {
@@ -53,6 +59,7 @@ func (d implIAppStorageFactory) Init(appName istorage.SafeAppName) error {
 		}
 		return err
 	}
+
 	return nil
 }
 
@@ -182,6 +189,7 @@ func (s *implIAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 		},
 	}
 	_, err = s.client.BatchWriteItem(context.Background(), &params)
+
 	return err
 }
 
@@ -243,6 +251,7 @@ func (s *implIAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) e
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -316,16 +325,12 @@ func (s *implIAppStorage) put(pKey []byte, cCols []byte, value []byte, ttlSecond
 
 	if ttlSeconds > 0 {
 		putItemParams.Item[expireAtAttributeName] = &types.AttributeValueMemberN{
-			Value: strconv.FormatInt(s.iTime.Now().Add(time.Duration(ttlSeconds)*time.Second).Unix(), decimalBase),
+			Value: strconv.FormatInt(s.iTime.Now().Add(time.Duration(ttlSeconds)*time.Second).Unix(), utils.DecimalBase),
 		}
 	}
-
 	_, err = s.client.PutItem(context.Background(), &putItemParams)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 func (s *implIAppStorage) read(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback, checkTtl bool) (err error) {
@@ -344,40 +349,32 @@ func (s *implIAppStorage) read(ctx context.Context, pKey []byte, startCCols, fin
 		},
 	}
 
+	rightBorder := &types.AttributeValueMemberB{
+		Value: prefixZero(finishCCols),
+	}
+	leftBorder := &types.AttributeValueMemberB{
+		Value: prefixZero(startCCols),
+	}
+
 	switch {
 	case len(startCCols) == 0:
 		if len(finishCCols) != 0 {
 			keyConditions[sortKeyAttributeName] = types.Condition{
 				ComparisonOperator: types.ComparisonOperatorLe,
-				AttributeValueList: []types.AttributeValue{
-					&types.AttributeValueMemberB{
-						Value: prefixZero(finishCCols),
-					},
-				},
+				AttributeValueList: []types.AttributeValue{rightBorder},
 			}
 		}
 	case len(finishCCols) == 0:
 		// right-opened range
 		keyConditions[sortKeyAttributeName] = types.Condition{
 			ComparisonOperator: types.ComparisonOperatorGe,
-			AttributeValueList: []types.AttributeValue{
-				&types.AttributeValueMemberB{
-					Value: prefixZero(startCCols),
-				},
-			},
+			AttributeValueList: []types.AttributeValue{leftBorder},
 		}
 	default:
 		// closed range
 		keyConditions[sortKeyAttributeName] = types.Condition{
 			ComparisonOperator: types.ComparisonOperatorBetween,
-			AttributeValueList: []types.AttributeValue{
-				&types.AttributeValueMemberB{
-					Value: prefixZero(startCCols),
-				},
-				&types.AttributeValueMemberB{
-					Value: prefixZero(finishCCols),
-				},
-			},
+			AttributeValueList: []types.AttributeValue{leftBorder, rightBorder},
 		}
 	}
 
@@ -487,11 +484,9 @@ func newTableExistsWaiter(name string, client *dynamodb.Client) error {
 		},
 	}
 
-	if _, err := client.UpdateTimeToLive(ctx, input); err != nil {
-		return err
-	}
+	_, err := client.UpdateTimeToLive(ctx, input)
 
-	return nil
+	return err
 }
 
 func isExpired(expireAtValue types.AttributeValue, now time.Time) bool {
@@ -503,7 +498,7 @@ func isExpired(expireAtValue types.AttributeValue, now time.Time) bool {
 		return false
 	}
 
-	expireAtInSeconds, err := strconv.ParseInt(expireAtValue.(*types.AttributeValueMemberN).Value, decimalBase, bit64Size)
+	expireAtInSeconds, err := strconv.ParseInt(expireAtValue.(*types.AttributeValueMemberN).Value, utils.DecimalBase, utils.BitSize64)
 	if err != nil {
 		return false
 	}
