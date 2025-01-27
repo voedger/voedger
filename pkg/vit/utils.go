@@ -397,7 +397,7 @@ func (vit *VIT) GetAny(entity string, ws *AppWorkspace) istructs.RecordID {
 
 func NewLogin(name, pwd string, appQName appdef.AppQName, subjectKind istructs.SubjectKindType, clusterID istructs.ClusterID) Login {
 	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, name, istructs.CurrentClusterID())
-	return Login{name, pwd, pseudoWSID, appQName, subjectKind, clusterID, map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}{}}
+	return Login{name, pwd, pseudoWSID, appQName, subjectKind, clusterID, map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}{}, []subject{}}
 }
 
 func TestDeadline() time.Time {

@@ -183,6 +183,8 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 			}
 			appPrincipals[login.Name] = prn
 
+			createSubjects(vit, prn.Token, login.subjects, login.AppQName, prn.ProfileWSID)
+
 			for doc, dataFactory := range login.docs {
 				if !vit.PostProfile(prn, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, doc)).IsEmpty() {
 					continue
@@ -237,18 +239,8 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppW
 
 		vit.PostWS(appWS, "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb), coreutils.WithAuthorizeBy(token))
 	}
-	for _, subject := range appWS.subjects {
-		roles := ""
-		for i, role := range subject.roles {
-			if i > 0 {
-				roles += ","
-			}
-			roles += role.String()
-		}
-		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
-			subject.login, roles, subject.subjectKind, vit.principals[appWS.AppQName()][subject.login].ProfileWSID)
-		vit.PostWS(appWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(token))
-	}
+
+	createSubjects(vit, token, appWS.subjects, appWS.AppQName(), appWS.WSID)
 
 	for _, childWSParams := range appWS.childs {
 		vit.InitChildWorkspace(childWSParams, appWS)
@@ -261,6 +253,21 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppW
 		childAppWS.Owner = vit.GetPrincipal(appWS.AppQName(), childWSParams.ownerLoginName)
 		appWorkspaces[childWSParams.Name] = childAppWS
 		handleWSParam(vit, childAppWS, appWorkspaces, verifiedValues, token)
+	}
+}
+
+func createSubjects(vit *VIT, token string, subjects []subject, appQName appdef.AppQName, wsid istructs.WSID) {
+	for _, subject := range subjects {
+		roles := ""
+		for i, role := range subject.roles {
+			if i > 0 {
+				roles += ","
+			}
+			roles += role.String()
+		}
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
+			subject.login, roles, subject.subjectKind, vit.principals[appQName][subject.login].ProfileWSID)
+		vit.PostApp(appQName, wsid, "c.sys.CUD", body, coreutils.WithAuthorizeBy(token))
 	}
 }
 

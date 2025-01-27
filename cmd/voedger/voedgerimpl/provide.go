@@ -68,6 +68,9 @@ func NewSysRouterRequestHandler(requestCtx context.Context, request bus.Request,
 			return
 		}
 
+		// note: no pseudoWSID->appWSID convertation
+		// that could be taken from vvm.provideRequestHandler()
+
 		switch request.Resource {
 		case "c.EchoCommand":
 			bus.ReplyPlainText(responder, fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes)))

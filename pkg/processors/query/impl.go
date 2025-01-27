@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -273,7 +272,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				// workspace is dummy
 				ws = qw.iQuery.Workspace()
 			}
-			ok, _, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
+			ok, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
 			if err != nil {
 				return err
 			}
@@ -406,17 +405,12 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				for _, resultField := range elem.ResultFields() {
 					requestedfields = append(requestedfields, resultField.Field())
 				}
-				ok, allowedFields, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
+				ok, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
 				if err != nil {
 					return err
 				}
 				if !ok {
 					return coreutils.NewSysError(http.StatusForbidden)
-				}
-				for _, requestedField := range requestedfields {
-					if !slices.Contains(allowedFields, requestedField) {
-						return coreutils.NewSysError(http.StatusForbidden)
-					}
 				}
 			}
 			return nil

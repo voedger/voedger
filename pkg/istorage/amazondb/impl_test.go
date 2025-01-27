@@ -23,6 +23,6 @@ func TestBasicUsage(t *testing.T) {
 		SecretAccessKey: "local",
 		SessionToken:    "",
 	}
-	asf := Provide(params)
+	asf := Provide(params, coreutils.MockTime)
 	istorage.TechnologyCompatibilityKit(t, asf)
 }

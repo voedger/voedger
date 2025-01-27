@@ -18,12 +18,9 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/net/netutil"
-
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func (s *httpsService) Prepare(work interface{}) error {
@@ -173,7 +170,7 @@ func (s *httpService) registerHandlersV1() {
 			Name("blob read")
 	}
 	s.router.HandleFunc(fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}", URLPlaceholder_appOwner, URLPlaceholder_appName,
-		URLPlaceholder_wsid, URLPlaceholder_resourceName), corsHandler(RequestHandler(s.requestSender, s.numsAppsWorkspaces))).
+		URLPlaceholder_wsid, URLPlaceholder_resourceName), corsHandler(RequestHandler(s.requestSender))).
 		Methods("POST", "PATCH", "OPTIONS").Name("api")
 
 	s.router.Handle("/n10n/channel", corsHandler(s.subscribeAndWatchHandler())).Methods("GET")
@@ -182,10 +179,10 @@ func (s *httpService) registerHandlersV1() {
 	s.router.Handle("/n10n/update/{offset:[0-9]{1,10}}", corsHandler(s.updateHandler()))
 }
 
-func RequestHandler(requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+func RequestHandler(requestSender bus.IRequestSender) http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
-		request, ok := createRequest(req.Method, req, resp, numsAppsWorkspaces)
+		request, ok := createRequest(req.Method, req, resp)
 		if !ok {
 			return
 		}

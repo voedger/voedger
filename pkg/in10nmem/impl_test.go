@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 )
@@ -39,6 +40,7 @@ func (c *callbackMock) updatesMock(projection in10n.ProjectionKey, offset istruc
 }
 
 func Test_SubscribeUnsubscribe(t *testing.T) {
+	defer logger.SetLogLevelWithRestore(logger.LogLevelTrace)()
 
 	var wg sync.WaitGroup
 

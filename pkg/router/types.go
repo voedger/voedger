@@ -15,10 +15,8 @@ import (
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/acme/autocert"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/in10n"
-	"github.com/voedger/voedger/pkg/istructs"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 )
 
@@ -37,14 +35,14 @@ type RouterParams struct {
 
 type httpService struct {
 	RouterParams
-	listenAddress      string
-	router             *mux.Router
-	server             *http.Server
-	listener           net.Listener
-	n10n               in10n.IN10nBroker
-	blobWG             sync.WaitGroup
-	requestSender      bus.IRequestSender
-	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces
+	listenAddress string
+	router        *mux.Router
+	server        *http.Server
+	listener      net.Listener
+	n10n          in10n.IN10nBroker
+	blobWG        sync.WaitGroup
+	requestSender bus.IRequestSender
+
 	name               string
 	listeningPort      atomic.Uint32
 	blobRequestHandler blobprocessor.IRequestHandler
