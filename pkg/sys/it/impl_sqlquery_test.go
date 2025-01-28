@@ -442,7 +442,7 @@ func TestSqlQuery(t *testing.T) {
 		body := `{"args":{"Query":"select * from git.hub"}}`
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
-		resp.RequireError(t, "unsupported source: git.hub")
+		resp.RequireError(t, "do not know how to read from the requested git.hub, TypeKind_null")
 	})
 	t.Run("Should read sys.wlog from other workspace", func(t *testing.T) {
 		wsOne := vit.PostWS(ws, "q.sys.SqlQuery", fmt.Sprintf(`{"args":{"Query":"select * from %d.sys.wlog"}}`, ws.Owner.ProfileWSID))
