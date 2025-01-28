@@ -66,11 +66,11 @@ func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, newValue []byt
 
 	now := s.iTime.Now()
 	data, ok := p[string(cCols)]
-	ttlExpired := data.IsExpired(now)
-
-	oldValue := p[string(cCols)].Data
-	if !ttlExpired && bytes.Compare(copySlice(oldValue), newValue) == 0 {
-		return false, nil
+	if ok {
+		ttlExpired := data.IsExpired(now)
+		if !ttlExpired {
+			return false, nil
+		}
 	}
 
 	var expireAt int64
@@ -105,8 +105,7 @@ func (s *appStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValu
 	}
 
 	ttlExpired := viewRecord.IsExpired(now)
-	currentValue := copySlice(viewRecord.Data)
-	if !ttlExpired && bytes.Compare(currentValue, oldValue) == 0 {
+	if !ttlExpired && bytes.Compare(viewRecord.Data, oldValue) == 0 {
 		ok = true
 
 		var expireAt int64
@@ -144,9 +143,7 @@ func (s *appStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue [
 
 	now := s.iTime.Now()
 	ttlExpired := viewRecord.IsExpired(now)
-
-	currentValue := copySlice(viewRecord.Data)
-	if !ttlExpired && bytes.Compare(currentValue, expectedValue) == 0 {
+	if !ttlExpired && bytes.Compare(viewRecord.Data, expectedValue) == 0 {
 		ok = true
 
 		delete(s.storage[string(pKey)], string(cCols))
