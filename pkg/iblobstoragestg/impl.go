@@ -24,7 +24,7 @@ type bStorageType struct {
 	time       coreutils.ITime
 }
 
-type storageWriter func(pKey, cCols, val []byte, duration iblobstorage.DurationType) error
+type storageWriter func(pKey, cCols, val []byte, duration iblobstorage.DurationType, oldValue []byte) error
 
 // key does not cotain the bucket number
 func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblobstorage.DescrType, reader io.Reader,
@@ -69,7 +69,7 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 				pKeyWithBucket = mutateBucketNumber(pKeyWithBucket, bucketNumber)
 			}
 			cCol = mutateChunkNumber(cCol, chunkNumber)
-			if err = inserter(pKeyWithBucket, cCol, chunkBuf, duration); err != nil {
+			if err = inserter(pKeyWithBucket, cCol, chunkBuf, duration, nil); err != nil {
 				// notest
 				break
 			}
@@ -122,15 +122,14 @@ func getStateKeys(blobKey []byte) (pKeyState, cColSt []byte) {
 }
 
 func (b *bStorageType) WriteBLOB(ctx context.Context, key iblobstorage.PersistentBLOBKeyType, descr iblobstorage.DescrType, reader io.Reader, limiter iblobstorage.WLimiterType) (err error) {
-	inserterAndUpdater := func(pKey, cCols, val []byte, _ iblobstorage.DurationType) error {
+	inserterAndUpdater := func(pKey, cCols, val []byte, _ iblobstorage.DurationType, _ []byte) error {
 		return (*(b.appStorage)).Put(pKey, cCols, val)
 	}
 	return b.writeBLOB(ctx, key.Bytes(), descr, reader, limiter, 0, inserterAndUpdater, inserterAndUpdater)
 }
 
 func (b *bStorageType) WriteTempBLOB(ctx context.Context, key iblobstorage.TempBLOBKeyType, descr iblobstorage.DescrType, reader io.Reader, limiter iblobstorage.WLimiterType, duration iblobstorage.DurationType) (err error) {
-	var oldVal []byte
-	inserter := func(pKey, cCols, val []byte, duration iblobstorage.DurationType) error {
+	inserter := func(pKey, cCols, val []byte, duration iblobstorage.DurationType, _ []byte) error {
 		ok, err := (*(b.appStorage)).InsertIfNotExists(pKey, cCols, val, duration.Seconds())
 		if err != nil {
 			// notest
@@ -140,11 +139,10 @@ func (b *bStorageType) WriteTempBLOB(ctx context.Context, key iblobstorage.TempB
 			// notest
 			return fmt.Errorf("InsertIfNotExists false. Looks like a part of a blob is not expired yet.\npKey: 0x%x\ncCol: 0x%x", pKey, cCols)
 		}
-		oldVal = val
 		return nil
 	}
-	updater := func(pKey, cCols, val []byte, duration iblobstorage.DurationType) error {
-		ok, err := (*(b.appStorage)).CompareAndSwap(pKey, cCols, oldVal, val, duration.Seconds())
+	updater := func(pKey, cCols, val []byte, duration iblobstorage.DurationType, oldValue []byte) error {
+		ok, err := (*(b.appStorage)).CompareAndSwap(pKey, cCols, oldValue, val, duration.Seconds())
 		if err != nil {
 			// notest
 			return err
@@ -254,13 +252,13 @@ func (b *bStorageType) readState(pKey, cCol []byte, isPersistent bool) (state ib
 }
 
 func (b *bStorageType) writeState(state iblobstorage.BLOBState, pKey, cCol []byte, storageWriter storageWriter, duration iblobstorage.DurationType,
-	initialStateBytes []byte) (stateBytes []byte, err error) {
+	oldValue []byte) (stateBytes []byte, err error) {
 	value, err := json.Marshal(state)
 	if err != nil {
 		// notest
 		return nil, err
 	}
-	return value, storageWriter(pKey, cCol, value, duration)
+	return value, storageWriter(pKey, cCol, value, duration, oldValue)
 }
 
 func newKeyWithBucketNumber(blobKey []byte, bucket uint64) []byte {
