@@ -31,6 +31,7 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
+	"github.com/voedger/voedger/pkg/processors/oldacl"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -272,9 +273,12 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				// workspace is dummy
 				ws = qw.iQuery.Workspace()
 			}
-			ok, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
-			if err != nil {
-				return err
+			// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
+			ok := oldacl.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, oldacl.EnrichPrincipals(qw.principals, qw.msg.WSID()))
+			if !ok {
+				if ok, err = qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles); err != nil {
+					return err
+				}
 			}
 			if !ok {
 				return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
@@ -405,9 +409,13 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				for _, resultField := range elem.ResultFields() {
 					requestedfields = append(requestedfields, resultField.Field())
 				}
-				ok, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
-				if err != nil {
-					return err
+
+				// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
+				ok := oldacl.IsOperationAllowed(appdef.OperationKind_Select, nestedType.QName(), requestedfields, oldacl.EnrichPrincipals(qw.principals, qw.msg.WSID()))
+				if !ok {
+					if ok, err = qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles); err != nil {
+						return err
+					}
 				}
 				if !ok {
 					return coreutils.NewSysError(http.StatusForbidden)

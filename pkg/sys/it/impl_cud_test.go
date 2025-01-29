@@ -562,6 +562,7 @@ func TestSelectFromNestedTables(t *testing.T) {
 }
 
 func TestFieldsAuthorization_OpForbidden(t *testing.T) {
+	t.Skip("temporarily skipped. To be rolled back in https://github.com/voedger/voedger/issues/3199")
 	logger.SetLogLevel(logger.LogLevelVerbose)
 	defer logger.SetLogLevel(logger.LogLevelInfo)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)

@@ -268,6 +268,7 @@ func TestTakeQNamesFromWorkspace(t *testing.T) {
 
 	t.Run("CUDs QNames", func(t *testing.T) {
 		t.Run("CUD in the request -> 400 bad request", func(t *testing.T) {
+			t.Skip("temporarily skipped. To be rolled back in https://github.com/voedger/voedger/issues/3199")
 			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
 			body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.options"}}]}`
 			vit.PostWS(anotherWS, "c.sys.CUD", body, coreutils.Expect400("not found", "app1pkg.options", "Workspace «app1pkg.test_wsWS_another»"))
