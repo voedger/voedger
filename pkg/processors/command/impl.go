@@ -402,7 +402,7 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkp
 	}
 
 	// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
-	ok := oldacl.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.principals)
+	ok := oldacl.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, oldacl.EnrichPrincipals(cmd.principals, cmd.cmdMes.WSID()))
 	if !ok {
 		if ok, err = cmd.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles); err != nil {
 			return err
@@ -728,7 +728,7 @@ func (cmdProc *cmdProc) authorizeRequestCUDs(_ context.Context, work pipeline.IW
 		fields := maps.Keys(parsedCUD.fields)
 
 		// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
-		ok := oldacl.IsOperationAllowed(parsedCUD.opKind, cmd.cmdMes.QName(), fields, cmd.principals)
+		ok := oldacl.IsOperationAllowed(parsedCUD.opKind, cmd.cmdMes.QName(), fields, oldacl.EnrichPrincipals(cmd.principals, cmd.cmdMes.WSID()))
 		if !ok {
 			if ok, err = cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles);  err != nil {
 				if errors.Is(err, appdef.ErrNotFoundError) {

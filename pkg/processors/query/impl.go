@@ -274,7 +274,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				ws = qw.iQuery.Workspace()
 			}
 			// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
-			ok := oldacl.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.principals)
+			ok := oldacl.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, oldacl.EnrichPrincipals(qw.principals, qw.msg.WSID()))
 			if !ok {
 				if ok, err = qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles); err != nil {
 					return err
@@ -409,9 +409,9 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				for _, resultField := range elem.ResultFields() {
 					requestedfields = append(requestedfields, resultField.Field())
 				}
-				
+
 				// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
-				ok := oldacl.IsOperationAllowed(appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.principals)
+				ok := oldacl.IsOperationAllowed(appdef.OperationKind_Select, nestedType.QName(), requestedfields, oldacl.EnrichPrincipals(qw.principals, qw.msg.WSID()))
 				if !ok {
 					if ok, err = qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles); err != nil {
 						return err

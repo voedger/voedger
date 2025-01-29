@@ -11,6 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func prnsToString(prns []iauthnz.Principal) string {
@@ -52,4 +53,31 @@ func prnsToString(prns []iauthnz.Principal) string {
 	}
 	res.WriteString("]")
 	return res.String()
+}
+
+// need to follow old-style principals generation rules
+func EnrichPrincipals(prns []iauthnz.Principal, requestWSID istructs.WSID) []iauthnz.Principal {
+	res := []iauthnz.Principal{}
+	for _, prn := range prns {
+		if prn.Kind == iauthnz.PrincipalKind_Role {
+			if prn.QName == qNameRoleResellersAdmin || prn.QName == qNameRoleUntillPaymentsReseller {
+				// air.ResellersAdmin || air.UntillPaymentsReseller -> WorkspaceAdmin
+				res = append(res, iauthnz.Principal{
+					Kind:  iauthnz.PrincipalKind_Role,
+					WSID:  requestWSID,
+					QName: iauthnz.QNameRoleWorkspaceAdmin,
+				})
+			}
+			if prn.QName == iauthnz.QNameRoleProfileOwner {
+				// ProfileOwner -> WorksapceOwner
+				res = append(res, iauthnz.Principal{
+					Kind:  iauthnz.PrincipalKind_Role,
+					WSID:  requestWSID,
+					QName: iauthnz.QNameRoleWorkspaceOwner,
+				})
+			}
+		}
+		res = append(res, prn)
+	}
+	return res
 }
