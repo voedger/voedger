@@ -27,7 +27,7 @@ func IsOperationAllowed(opKind appdef.OperationKind, qName appdef.QName, fields 
 		}
 	}
 	if policy == appdef.PolicyKind_Deny && logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("old-style %s for %s: %s -> deny", opKind, prnsToString(principals), lastDenyingACElem.desc))
+		logger.Verbose(fmt.Sprintf("old-style %s %s for %s: %s -> deny", opKind, qName, prnsToString(principals), lastDenyingACElem.desc))
 	}
 	return policy == appdef.PolicyKind_Allow
 }
