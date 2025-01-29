@@ -6,6 +6,7 @@
 package provider
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -81,6 +82,14 @@ func (asp *implIAppStorageProvider) clarifyKeyspaceName(sn istorage.SafeAppName)
 		sn = istorage.NewTestSafeName(newName)
 	}
 	return sn
+}
+
+func (asp *implIAppStorageProvider) Prepare(_ any) error { return nil }
+
+func (asp *implIAppStorageProvider) Run(_ context.Context) {}
+
+func (asp *implIAppStorageProvider) Stop() {
+	asp.asf.StopGoroutines()
 }
 
 func storeAppDesc(appQName appdef.AppQName, appDesc istorage.AppStorageDesc, metaStorage istorage.IAppStorage) error {

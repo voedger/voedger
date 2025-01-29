@@ -12,7 +12,8 @@ import (
 
 func Provide(params ParamsType, iTime coreutils.ITime) istorage.IAppStorageFactory {
 	return &appStorageFactory{
-		bboltParams: params,
-		iTime:       iTime,
+		bboltParams:    params,
+		iTime:          iTime,
+		syncGoroutines: make(map[istorage.SafeAppName]syncGoroutineMechanism),
 	}
 }

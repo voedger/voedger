@@ -7,6 +7,7 @@ package istorage
 
 import (
 	"context"
+	"github.com/voedger/voedger/pkg/pipeline"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -15,6 +16,7 @@ import (
 // Same as IAppStructsProvider, called per request or frequently inside services
 // implemented in istorageimpl
 type IAppStorageProvider interface {
+	pipeline.IService
 	// converts AppQname to string and calls internal IAppStorageFactory.AppStorage
 	// storage for a brand new app is queried and failed to create the storage for it -> storage init error is persisted and returned until admin is handle with that incident
 	// could return ErrStorageNotFound, ErrStorageExistsAlready
@@ -33,6 +35,9 @@ type IAppStorageFactory interface {
 
 	// used by TCK in tests
 	Time() coreutils.ITime
+
+	// stops all goroutines started by the factory
+	StopGoroutines()
 }
 
 type IAppStorage interface {

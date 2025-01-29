@@ -24,11 +24,16 @@ import (
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
+type syncGoroutineMechanism struct {
+	ctx        context.Context
+	cancelFunc context.CancelFunc
+	wg         *sync.WaitGroup
+}
+
 type appStorageFactory struct {
-	bboltParams ParamsType
-	iTime       coreutils.ITime
-	cancelFunc  context.CancelFunc
-	wg          *sync.WaitGroup
+	bboltParams    ParamsType
+	iTime          coreutils.ITime
+	syncGoroutines map[istorage.SafeAppName]syncGoroutineMechanism
 }
 
 func (p *appStorageFactory) AppStorage(appName istorage.SafeAppName) (s istorage.IAppStorage, err error) {
@@ -52,12 +57,11 @@ func (p *appStorageFactory) AppStorage(appName istorage.SafeAppName) (s istorage
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	p.cancelFunc = cancel
-	p.wg = &sync.WaitGroup{}
+	p.syncGoroutines[appName] = syncGoroutineMechanism{ctx: ctx, cancelFunc: cancel, wg: &sync.WaitGroup{}}
 	impl := &appStorageType{db: db, iTime: p.iTime, ctx: ctx}
 	// start background cleaner
-	p.wg.Add(1)
-	go impl.backgroundCleaner(p.wg)
+	p.syncGoroutines[appName].wg.Add(1)
+	go impl.backgroundCleaner(p.syncGoroutines[appName].wg)
 
 	return impl, nil
 }
@@ -94,8 +98,12 @@ func (p *appStorageFactory) Time() coreutils.ITime {
 }
 
 func (p *appStorageFactory) StopGoroutines() {
-	p.cancelFunc()
-	p.wg.Wait()
+	for safeAppName, syncMechanism := range p.syncGoroutines {
+		logger.Verbose("Stopping goroutine for app storage: " + safeAppName.String())
+		syncMechanism.cancelFunc()
+		syncMechanism.wg.Wait()
+		logger.Verbose("Goroutine for app storage stopped: " + safeAppName.String())
+	}
 }
 
 // if the key is empty or equal to nil, then convert it to nullKey
