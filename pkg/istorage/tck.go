@@ -5,6 +5,7 @@
 package istorage
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"reflect"
@@ -658,6 +659,12 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iTime c
 		require.True(ok)
 
 		ok, err = storage.InsertIfNotExists(pKey, ccols, value, 1)
+		require.NoError(err)
+		require.False(ok)
+
+		differentValue := bytes.Clone(value)
+		differentValue = append(differentValue, []byte{42}...)
+		ok, err = storage.InsertIfNotExists(pKey, ccols, differentValue, 1)
 		require.NoError(err)
 		require.False(ok)
 
