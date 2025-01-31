@@ -30,18 +30,17 @@ func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter) 
 	wsidStr := vars[URLPlaceholder_wsid]
 	wsid, err := strconv.ParseUint(wsidStr, utils.DecimalBase, utils.BitSize64)
 	if err != nil {
-		// impossible because of regexp in a handler
-		// notest
+		// notest: impossible because of regexp in a handler
 		panic(err)
 	}
-	appQNameStr := vars[URLPlaceholder_appOwner] + appdef.AppQNameQualifierChar + vars[URLPlaceholder_appName]
 
 	res = bus.Request{
 		Method:   reqMethod,
 		WSID:     istructs.WSID(wsid),
 		Query:    map[string]string{},
 		Header:   map[string]string{},
-		AppQName: appQNameStr,
+		AppQName: appdef.NewAppQName(vars[URLPlaceholder_appOwner], vars[URLPlaceholder_appName]),
+		QName:    appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_table]),
 	}
 
 	for k, v := range req.URL.Query() {

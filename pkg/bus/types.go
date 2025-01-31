@@ -17,13 +17,14 @@ import (
 type Request struct {
 	Method   string
 	WSID     istructs.WSID // as it came in the request, could be pseudo
-	Header   map[string][]string
+	Header   map[string]string
 	Resource string
-	Query    map[string][]string
+	Query    map[string]string
 	Body     []byte
 	AppQName appdef.AppQName
 	Host     string // used by authenticator to emit Host principal
-	ApiPath     string
+	ApiPath  string
+	QName    appdef.QName // e.g. DocName
 }
 
 type ResponseMeta struct {

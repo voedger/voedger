@@ -6,21 +6,21 @@
 package router
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 func (s *httpService) registerHandlersV2() {
 	// create: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/{pkg}.{table}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/docs/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table),
-		corsHandler(requestHandlerV2_table())).
+		corsHandler(requestHandlerV2_table(s.requestSender))).
 		Methods(http.MethodPost)
 
 	// update, deactivate, read single doc: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/{pkg}.{table}/{id}
@@ -139,8 +139,8 @@ func requestHandlerV2_blobs() http.HandlerFunc {
 	}
 }
 
-func requestHandlerV2_table() http.HandlerFunc {
-	return func(resp http.ResponseWriter, req *http.Request) {
+func requestHandlerV2_table(reqSender bus.IRequestSender) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 		switch req.Method {
 		case http.MethodGet:
@@ -152,43 +152,22 @@ func requestHandlerV2_table() http.HandlerFunc {
 		case http.MethodPatch:
 		case http.MethodDelete:
 		}
-		docQName, err := appdef.ParseQName(vars[URLPlaceholder_pkg+"."+URLPlaceholder_table])
-		if err != nil {
-			// protected already by url regexp
-			// notest
-			WriteTextResponse(resp, "failed to parse doc QName: "+err.Error(), http.StatusBadRequest)
+		// note: request lead to create -> 201 Created
+		busRequest, handled := createRequest(req.Method, req, rw)
+		if handled {
 			return
 		}
-		_ = docQName
-		// note: request lead to create -> 201 Created
-		writeNotImplemented(resp)
-	}
-}
+		respCh, respMeta, respErr, err := reqSender.SendRequest(req.Context(), busRequest)
+		if err != nil {
+			logger.Error("sending request to VVM on", request.Resource, "is failed:", err, ". Body:\n", string(request.Body))
+			status := http.StatusInternalServerError
+			if errors.Is(err, bus.ErrSendTimeoutExpired) {
+				status = http.StatusServiceUnavailable
+			}
+			WriteTextResponse(resp, err.Error(), status)
+			return
+		}
 
-func createRequestV2(req *http.Request) (res bus.Request, ok bool) {
-	vars := mux.Vars(req)
-	wsidStr := vars[URLPlaceholder_wsid]
-	wsidUint, err := strconv.ParseUint(wsidStr, utils.DecimalBase, utils.BitSize64)
-	if err != nil {
-		// notest: parsed already by regexp in the route
-		panic(err)
+		writeNotImplemented(rw)
 	}
-	appQNameStr := vars[URLPlaceholder_appOwner] + appdef.AppQNameQualifierChar + vars[URLPlaceholder_appName]
-	appQName, err = appdef.ParseAppQName(appQNameStr)
-	if err != nil {
-		// notest: parsed already by regexp in the route
-		panic(err)
-	}
-	docQName, err := appdef.ParseQName(vars[URLPlaceholder_pkg+"."+URLPlaceholder_table])
-	if err != nil {
-		// notest: parsed already by regexp in the route
-		panic(err)
-	}
-
-	res = bus.Request{
-		Method: req.Method,
-		WSID: istructs.WSID(wsidUint),
-		
-	}
-
 }
