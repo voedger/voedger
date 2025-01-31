@@ -29,13 +29,13 @@ func (s *httpService) registerHandlersV2() {
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/docs/{%s}.{%s}/{%s:[0-9]+}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table,
 		URLPlaceholder_id),
-		corsHandler(requestHandlerV2_table(s.requestSender))).
+		corsHandler(requestHandlerV2_table(s.requestSender, query2.ApiPath_Docs))).
 		Methods(http.MethodPatch, http.MethodDelete, http.MethodGet)
 
 	// read collection: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/cdocs/{pkg}.{table}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/cdocs/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table),
-		corsHandler(requestHandlerV2_table(s.requestSender))).
+		corsHandler(requestHandlerV2_table(s.requestSender, query2.ApiPath_CDocs))).
 		Methods(http.MethodGet)
 
 	// execute cmd: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/commands/{pkg}.{command}
@@ -141,7 +141,7 @@ func requestHandlerV2_blobs() http.HandlerFunc {
 	}
 }
 
-func requestHandlerV2_table(reqSender bus.IRequestSender) http.HandlerFunc {
+func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath query2.ApiPath) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 		switch req.Method {
@@ -155,15 +155,17 @@ func requestHandlerV2_table(reqSender bus.IRequestSender) http.HandlerFunc {
 		case http.MethodDelete:
 		}
 		// note: request lead to create -> 201 Created
-		busRequest, handled := createRequest(req.Method, req, rw)
-		if handled {
+		busRequest, ok := createRequest(req.Method, req, rw)
+		if !ok {
 			return
 		}
 		busRequest.IsAPIV2 = true
+		busRequest.ApiPath = int(apiPath)
+
 		// req's BaseContext is router service's context. See service.Start()
 		// router app closing or client disconnected -> req.Context() is done
 		// will create new cancellable context and cancel it if http section send is failed.
-		// requestCtx.Done() -> SendRequest2 implementation will notify the handler that the consumer has left us
+			// requestCtx.Done() -> SendRequest implementation will notify the handler that the consumer has left us
 		requestCtx, cancel := context.WithCancel(req.Context())
 		defer cancel() // to avoid context leak
 		respCh, respMeta, respErr, err := reqSender.SendRequest(requestCtx, busRequest)
@@ -178,6 +180,6 @@ func requestHandlerV2_table(reqSender bus.IRequestSender) http.HandlerFunc {
 		}
 
 		initResponse(rw, respMeta.ContentType, respMeta.StatusCode)
-		reply(requestCtx, rw, respCh, respErr, respMeta.ContentType, cancel, false)
+		reply(requestCtx, rw, respCh, respErr, respMeta.ContentType, cancel, true, false)
 	}
 }

@@ -118,7 +118,7 @@ func TestBasicUsage(t *testing.T) {
 		// command processor works through ibus.SendResponse -> we need a sender -> let's test using ibus.SendRequest2()
 		request := bus.Request{
 			Body:     []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"pass"}}`),
-			AppQName: istructs.AppQName_untill_airs_bp.String(),
+			AppQName: istructs.AppQName_untill_airs_bp,
 			WSID:     1,
 			Resource: "c.sys.Test",
 			// need to authorize, otherwise execute will be forbidden
@@ -146,7 +146,7 @@ func TestBasicUsage(t *testing.T) {
 	t.Run("500 internal server error command exec error", func(t *testing.T) {
 		request := bus.Request{
 			Body:     []byte(`{"args":{"Text":"fire error"},"unloggedArgs":{"Password":"pass"}}`),
-			AppQName: istructs.AppQName_untill_airs_bp.String(),
+			AppQName: istructs.AppQName_untill_airs_bp,
 			WSID:     1,
 			Resource: "c.sys.Test",
 			Header:   app.sysAuthHeader,
@@ -167,7 +167,7 @@ func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int)
 	require := require.New(t)
 	req := bus.Request{
 		WSID:     wsid,
-		AppQName: istructs.AppQName_untill_airs_bp.String(),
+		AppQName: istructs.AppQName_untill_airs_bp,
 		Resource: "c.sys.CUD",
 		Body: []byte(`{"cuds":[
 			{"fields":{"sys.ID":1,"sys.QName":"test.TestCDoc"}},
@@ -342,7 +342,7 @@ func TestCUDUpdate(t *testing.T) {
 	// insert
 	req := bus.Request{
 		WSID:     1,
-		AppQName: istructs.AppQName_untill_airs_bp.String(),
+		AppQName: istructs.AppQName_untill_airs_bp,
 		Resource: "c.sys.CUD",
 		Body:     []byte(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.test"}}]}`),
 		Header:   app.sysAuthHeader,
@@ -411,7 +411,7 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 		t.Run(c.desc, func(t *testing.T) {
 			req := bus.Request{
 				WSID:     1,
-				AppQName: istructs.AppQName_untill_airs_bp.String(),
+				AppQName: istructs.AppQName_untill_airs_bp,
 				Resource: "c.sys.CUD",
 				Body:     []byte("{" + c.bodyAdd + "}"),
 				Header:   app.sysAuthHeader,
@@ -452,7 +452,7 @@ func TestErrors(t *testing.T) {
 
 	baseReq := bus.Request{
 		WSID:     1,
-		AppQName: istructs.AppQName_untill_airs_bp.String(),
+		AppQName: istructs.AppQName_untill_airs_bp,
 		Resource: "c.sys.Test",
 		Body:     []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"123"}}`),
 		Header:   app.sysAuthHeader,
@@ -464,7 +464,7 @@ func TestErrors(t *testing.T) {
 		expectedMessageLike string
 		expectedStatusCode  int
 	}{
-		{"unknown app", bus.Request{AppQName: "untill/unknown"}, "application untill/unknown not found", http.StatusServiceUnavailable},
+		{"unknown app", bus.Request{AppQName: appdef.NewAppQName("untill", "unknown")}, "application untill/unknown not found", http.StatusServiceUnavailable},
 		{"bad request body", bus.Request{Body: []byte("{wrong")}, "failed to unmarshal request body: invalid character 'w' looking for beginning of object key string", http.StatusBadRequest},
 		{"unknown func", bus.Request{Resource: "c.sys.Unknown"}, "unknown function", http.StatusBadRequest},
 		{"args: field of wrong type provided", bus.Request{Body: []byte(`{"args":{"Text":42}}`)}, "wrong field type", http.StatusBadRequest},
@@ -481,7 +481,7 @@ func TestErrors(t *testing.T) {
 			req := baseReq
 			req.Body = make([]byte, len(baseReq.Body))
 			copy(req.Body, baseReq.Body)
-			if len(c.AppQName) > 0 {
+			if c.AppQName != appdef.NullAppQName {
 				req.AppQName = c.AppQName
 			}
 			if len(c.Body) > 0 {
@@ -545,7 +545,7 @@ func TestAuthnz(t *testing.T) {
 		{
 			desc: "403 on cmd EXECUTE forbidden", req: bus.Request{
 				Body:     []byte(`{}`),
-				AppQName: istructs.AppQName_untill_airs_bp.String(),
+				AppQName: istructs.AppQName_untill_airs_bp,
 				WSID:     1,
 				Resource: "c.sys.TestDeniedCmd",
 				Header:   getAuthHeader(token),
@@ -555,7 +555,7 @@ func TestAuthnz(t *testing.T) {
 		{
 			desc: "403 on INSERT CUD forbidden", req: bus.Request{
 				Body:     []byte(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.TestDeniedCDoc"}}]}`),
-				AppQName: istructs.AppQName_untill_airs_bp.String(),
+				AppQName: istructs.AppQName_untill_airs_bp,
 				WSID:     1,
 				Resource: "c.sys.CUD",
 				Header:   getAuthHeader(token),
@@ -565,7 +565,7 @@ func TestAuthnz(t *testing.T) {
 		{
 			desc: "403 if no token for a func that requires authentication", req: bus.Request{
 				Body:     []byte(`{}`),
-				AppQName: istructs.AppQName_untill_airs_bp.String(),
+				AppQName: istructs.AppQName_untill_airs_bp,
 				WSID:     1,
 				Resource: "c.sys.TestAllowedCmd",
 			},
@@ -607,7 +607,7 @@ func TestBasicUsage_FuncWithRawArg(t *testing.T) {
 
 	request := bus.Request{
 		Body:     []byte(`custom content`),
-		AppQName: istructs.AppQName_untill_airs_bp.String(),
+		AppQName: istructs.AppQName_untill_airs_bp,
 		WSID:     1,
 		Resource: "c.sys.Test",
 		Header:   app.sysAuthHeader,
@@ -643,7 +643,7 @@ func TestRateLimit(t *testing.T) {
 
 	request := bus.Request{
 		Body:     []byte(`{"args":{}}`),
-		AppQName: istructs.AppQName_untill_airs_bp.String(),
+		AppQName: istructs.AppQName_untill_airs_bp,
 		WSID:     1,
 		Resource: "c.sys.MyCmd",
 		Header:   app.sysAuthHeader,
@@ -762,8 +762,6 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 		// simulate handling the command request be a real application
 		cmdQName, err := appdef.ParseQName(request.Resource[2:])
 		require.NoError(err)
-		appQName, err := appdef.ParseAppQName(request.AppQName)
-		require.NoError(err)
 		tp := appDef.Type(cmdQName)
 		if tp.Kind() == appdef.TypeKind_null {
 			bus.ReplyBadRequest(responder, "unknown function")
@@ -773,7 +771,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 		if authHeader, ok := request.Header[coreutils.Authorization]; ok {
 			token = strings.TrimPrefix(authHeader, "Bearer ")
 		}
-		icm := NewCommandMessage(ctx, request.Body, appQName, request.WSID, responder, testAppPartID, cmdQName, token, "")
+		icm := NewCommandMessage(ctx, request.Body, request.AppQName, request.WSID, responder, testAppPartID, cmdQName, token, "")
 		serviceChannel <- icm
 	})
 

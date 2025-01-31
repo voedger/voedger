@@ -84,7 +84,7 @@ func setBLOBStatusCompleted(ctx context.Context, work pipeline.IWorkpiece) (err 
 	req := bus.Request{
 		Method:   http.MethodPost,
 		WSID:     bw.blobMessageWrite.wsid,
-		AppQName: bw.blobMessageWrite.appQName.String(),
+		AppQName: bw.blobMessageWrite.appQName,
 		Resource: "c.sys.CUD",
 		Body:     []byte(fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"status":%d}}]}`, bw.newBLOBID, iblobstorage.BLOBStatus_Completed)),
 		Header:   bw.blobMessageWrite.header,
@@ -105,7 +105,7 @@ func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	req := bus.Request{
 		Method:   http.MethodPost,
 		WSID:     bw.blobMessageWrite.wsid,
-		AppQName: bw.blobMessageWrite.appQName.String(),
+		AppQName: bw.blobMessageWrite.appQName,
 		Resource: bw.registerFuncName,
 		Header:   bw.blobMessageWrite.header,
 		Body:     []byte(`{}`),

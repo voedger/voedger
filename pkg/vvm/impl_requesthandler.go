@@ -25,15 +25,16 @@ import (
 )
 
 func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
-	cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
+	cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx_v1 QueryProcessorsChannelGroupIdxType_V1,
+	qpcgIdx_v2 QueryProcessorsChannelGroupIdxType_V2,
 	cpAmount istructs.NumCommandProcessors, vvmApps VVMApps, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) bus.RequestHandler {
 	return func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
-		if len(request.Resource) <= ShortestPossibleFunctionNameLen {
-			bus.ReplyBadRequest(responder, "wrong function name: "+request.Resource)
-			return
-		}
 		funcQName := request.QName
-		if request.IsAPIV2 {
+		if !request.IsAPIV2 {
+			if len(request.Resource) <= ShortestPossibleFunctionNameLen {
+				bus.ReplyBadRequest(responder, "wrong function name: "+request.Resource)
+				return
+			}
 			var err error
 			funcQName, err = appdef.ParseQName(request.Resource[2:])
 			if err != nil {
@@ -83,14 +84,17 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 				bus.ReplyBadRequest(responder, "parse query params failed: "+err.Error())
 				return
 			}
-			query2.NewIQueryMessage(requestCtx, request.AppQName, request.WSID, responder, *queryParams, request.DocID, query2.ApiPath(request.ApiPath), request.QName,
+			iqm := query2.NewIQueryMessage(requestCtx, request.AppQName, request.WSID, responder, *queryParams, request.DocID, query2.ApiPath(request.ApiPath), request.QName,
 				partitionID, request.Host, token)
+			if !procbus.Submit(uint(qpcgIdx_v2), 0, iqm) {
+				bus.ReplyErrf(responder, http.StatusServiceUnavailable, "no query_v2 processors available")
+			}
 		} else {
 			switch request.Resource[:1] {
 			case "q":
 				iqm := queryprocessor.NewQueryMessage(requestCtx, request.AppQName, partitionID, request.WSID, responder, request.Body, funcQName, request.Host, token)
-				if !procbus.Submit(uint(qpcgIdx), 0, iqm) {
-					bus.ReplyErrf(responder, http.StatusServiceUnavailable, "no query processors available")
+				if !procbus.Submit(uint(qpcgIdx_v1), 0, iqm) {
+					bus.ReplyErrf(responder, http.StatusServiceUnavailable, "no query_v1 processors available")
 				}
 			case "c":
 				// TODO: use appQName to calculate cmdProcessorIdx in solid range [0..cpCount)

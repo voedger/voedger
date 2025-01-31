@@ -52,7 +52,7 @@ func TestRequestSender_BasicUsage(t *testing.T) {
 			"param": "value",
 		},
 		Body:     []byte("body"),
-		AppQName: istructs.AppQName_test1_app1.String(),
+		AppQName: istructs.AppQName_test1_app1,
 		Host:     "localhost",
 	})
 	require.NoError(err)

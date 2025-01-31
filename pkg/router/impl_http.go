@@ -205,7 +205,7 @@ func RequestHandler(requestSender bus.IRequestSender) http.HandlerFunc {
 
 		initResponse(resp, responseMeta.ContentType, responseMeta.StatusCode)
 		isCmd := strings.HasPrefix(request.Resource, "c.")
-		reply(requestCtx, resp, responseCh, responseErr, responseMeta.ContentType, cancel, isCmd)
+		reply(requestCtx, resp, responseCh, responseErr, responseMeta.ContentType, cancel, !request.IsAPIV2, isCmd)
 	}
 }
 

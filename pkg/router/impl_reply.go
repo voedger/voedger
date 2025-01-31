@@ -66,7 +66,7 @@ func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter) 
 	return res, err == nil
 }
 
-func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error, contentType string, onSendFailed func(), isCmd bool) {
+func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error, contentType string, onSendFailed func(), isAPIV1 bool, isCmd bool) {
 	sendSuccess := true
 	defer func() {
 		if requestCtx.Err() != nil {
@@ -91,7 +91,7 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 			// ctx.Done() must have the priority
 			return
 		}
-		if elemsCount == 0 {
+		if isAPIV1 && elemsCount == 0 {
 			if isCmd || contentType == coreutils.TextPlain {
 				sendSuccess = writeResponse(w, elem.(string))
 			} else {
@@ -108,7 +108,7 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 			return
 		}
 
-		if isCmd || contentType == coreutils.TextPlain {
+		if isAPIV1 && (isCmd || contentType == coreutils.TextPlain) {
 			continue
 		}
 
