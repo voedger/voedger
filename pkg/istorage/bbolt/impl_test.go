@@ -147,8 +147,11 @@ func TestAppStorageFactory_StopGoroutines(t *testing.T) {
 	_, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
-	factory.StopGoroutines()
+	storageProvider.Stop()
 
 	implFactory := factory.(*appStorageFactory)
 	require.Error(implFactory.ctx.Err())
+
+	_, err = storageProvider.AppStorage(istructs.AppQName_test1_app1)
+	require.ErrorIs(err, istorageimpl.ErrStoppingState)
 }
