@@ -11,4 +11,5 @@ const (
 	partitionKeyAttributeName = "p_key"
 	sortKeyAttributeName      = "c_col"
 	valueAttributeName        = "value"
+	expireAtAttributeName     = "expire_at"
 )

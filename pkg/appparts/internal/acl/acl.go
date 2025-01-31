@@ -190,14 +190,14 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 	}
 
 	if !result && logger.IsVerbose() {
-		logVerboseDenyReason(op, res, allowed, fld, roles)
+		logVerboseDenyReason(op, res, allowed, fld, roles, ws)
 	}
 
 	return result, nil
 }
 
 // here to avid memory consumption for returning []allowedField and []effectiveRole
-func logVerboseDenyReason(op appdef.OperationKind, resource appdef.QName, allowed []appdef.FieldName, requestedFields []string, roles []appdef.QName) {
+func logVerboseDenyReason(op appdef.OperationKind, resource appdef.QName, allowed []appdef.FieldName, requestedFields []string, roles []appdef.QName, ws appdef.IWorkspace) {
 	entity := resource.String()
 	for _, reqField := range requestedFields {
 		if !slices.Contains(allowed, reqField) {
@@ -205,5 +205,5 @@ func logVerboseDenyReason(op appdef.OperationKind, resource appdef.QName, allowe
 			break
 		}
 	}
-	logger.Verbose(fmt.Sprintf("%s on %s by %s -> deny", op, entity, roles))
+	logger.Verbose(fmt.Sprintf("ws %s: %s on %s by %s -> deny", ws.Descriptor(), op, entity, roles))
 }

@@ -11,8 +11,8 @@ import (
 
 func Provide(storage BlobAppStoragePtr, time coreutils.ITime) iblobstorage.IBLOBStorage {
 	return &bStorageType{
-		appStorage: storage,
-		time:       time,
+		blobStorage: storage,
+		time:        time,
 	}
 }
 

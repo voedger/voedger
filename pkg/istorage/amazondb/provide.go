@@ -5,10 +5,14 @@
 
 package amazondb
 
-import "github.com/voedger/voedger/pkg/istorage"
+import (
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/istorage"
+)
 
-func Provide(params DynamoDBParams) istorage.IAppStorageFactory {
+func Provide(params DynamoDBParams, iTime coreutils.ITime) istorage.IAppStorageFactory {
 	return &implIAppStorageFactory{
 		params: params,
+		iTime:  iTime,
 	}
 }

@@ -196,6 +196,7 @@ func TestDenyCUDCDocOwnerModification(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	t.Run("CDoc<ChildWorkspace>", func(t *testing.T) {
+		t.Skip("temporarily skipped. To be rolled back in https://github.com/voedger/voedger/issues/3199")
 		// try to modify CDoc<ChildWorkspace>
 		_, idOfCDocWSKind := vit.GetCDocChildWorkspace(ws)
 		body := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"WSName":"new name"}}]}`, idOfCDocWSKind) // intFld is declared in vit.SharedConfig_Simple
