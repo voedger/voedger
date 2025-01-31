@@ -181,13 +181,10 @@ func (s *httpService) registerHandlersV1() {
 
 func RequestHandler(requestSender bus.IRequestSender) http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
-		vars := mux.Vars(req)
 		request, ok := createRequest(req.Method, req, resp)
 		if !ok {
 			return
 		}
-
-		request.Resource = vars[URLPlaceholder_resourceName]
 
 		// req's BaseContext is router service's context. See service.Start()
 		// router app closing or client disconnected -> req.Context() is done

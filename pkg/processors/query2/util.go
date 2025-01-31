@@ -114,8 +114,8 @@ func operator(name string, doSync func(ctx context.Context, qw *queryWork) (err 
 	})
 }
 
-func NewIQueryMessage(appQName appdef.AppQName, wsid istructs.WSID, responder bus.IResponder,
-	queryParams QueryParams, docID istructs.IDType, apiPath ApiPath, requestCtx context.Context,
+func NewIQueryMessage(requestCtx context.Context, appQName appdef.AppQName, wsid istructs.WSID, responder bus.IResponder,
+	queryParams QueryParams, docID istructs.IDType, apiPath ApiPath,
 	qName appdef.QName, partition istructs.PartitionID, host string, token string) IQueryMessage {
 	return &implIQueryMessage{
 		appQName:    appQName,

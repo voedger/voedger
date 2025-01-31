@@ -41,8 +41,17 @@ func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter) 
 		Header:   map[string]string{},
 		AppQName: appdef.NewAppQName(vars[URLPlaceholder_appOwner], vars[URLPlaceholder_appName]),
 		QName:    appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_table]),
+		Resource: vars[URLPlaceholder_resourceName],
 	}
 
+	if docIDStr, hasDocID := vars[URLPlaceholder_id]; hasDocID {
+		docIDUint64, err := strconv.ParseUint(docIDStr, utils.DecimalBase, utils.BitSize64)
+		if err != nil {
+			// notest: prased already by route regexp
+			panic(err)
+		}
+		res.DocID = istructs.IDType(docIDUint64)
+	}
 	for k, v := range req.URL.Query() {
 		res.Query[k] = v[0]
 	}
