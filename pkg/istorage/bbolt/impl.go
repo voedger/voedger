@@ -24,16 +24,12 @@ import (
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
-type syncGoroutineMechanism struct {
-	ctx        context.Context
-	cancelFunc context.CancelFunc
-	wg         *sync.WaitGroup
-}
-
 type appStorageFactory struct {
-	bboltParams    ParamsType
-	iTime          coreutils.ITime
-	syncGoroutines map[istorage.SafeAppName]syncGoroutineMechanism
+	bboltParams ParamsType
+	iTime       coreutils.ITime
+	ctx         context.Context
+	cancel      context.CancelFunc
+	wg          *sync.WaitGroup
 }
 
 func (p *appStorageFactory) AppStorage(appName istorage.SafeAppName) (s istorage.IAppStorage, err error) {
@@ -56,12 +52,10 @@ func (p *appStorageFactory) AppStorage(appName istorage.SafeAppName) (s istorage
 		return nil, err
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	p.syncGoroutines[appName] = syncGoroutineMechanism{ctx: ctx, cancelFunc: cancel, wg: &sync.WaitGroup{}}
-	impl := &appStorageType{db: db, iTime: p.iTime, ctx: ctx}
+	impl := &appStorageType{db: db, iTime: p.iTime}
 	// start background cleaner
-	p.syncGoroutines[appName].wg.Add(1)
-	go impl.backgroundCleaner(p.syncGoroutines[appName].wg)
+	p.wg.Add(1)
+	go impl.backgroundCleaner(p.ctx, p.wg)
 
 	return impl, nil
 }
@@ -98,12 +92,8 @@ func (p *appStorageFactory) Time() coreutils.ITime {
 }
 
 func (p *appStorageFactory) StopGoroutines() {
-	for safeAppName, syncMechanism := range p.syncGoroutines {
-		logger.Verbose("Stopping goroutine for app storage: " + safeAppName.String())
-		syncMechanism.cancelFunc()
-		syncMechanism.wg.Wait()
-		logger.Verbose("Goroutine for app storage stopped: " + safeAppName.String())
-	}
+	p.cancel()
+	p.wg.Wait()
 }
 
 // if the key is empty or equal to nil, then convert it to nullKey
@@ -126,7 +116,6 @@ func unSafeKey(value []byte) []byte {
 type appStorageType struct {
 	db    *bolt.DB
 	iTime coreutils.ITime
-	ctx   context.Context
 }
 
 //nolint:revive
@@ -564,13 +553,13 @@ func (s *appStorageType) removeKey(tx *bolt.Tx, ttlKey []byte) error {
 	return ttlBucket.Delete(ttlKey)
 }
 
-func (s *appStorageType) backgroundCleaner(wg *sync.WaitGroup) {
+func (s *appStorageType) backgroundCleaner(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	for s.ctx.Err() == nil {
+	for ctx.Err() == nil {
 		timerCh := s.iTime.NewTimerChan(cleanupInterval)
 		select {
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			return
 		case <-timerCh:
 			err := s.db.Update(func(tx *bolt.Tx) error {
@@ -581,7 +570,7 @@ func (s *appStorageType) backgroundCleaner(wg *sync.WaitGroup) {
 
 				cr := ttlBucket.Cursor()
 				k, _ := cr.First()
-				for k != nil && s.ctx.Err() == nil {
+				for k != nil && ctx.Err() == nil {
 					// extract expireAt from the key and check if it is expired
 					expireAt := time.UnixMilli(int64(binary.BigEndian.Uint64(k[:utils.Uint64Size]))) //nolint: gosec
 					if expireAt.After(s.iTime.Now()) {

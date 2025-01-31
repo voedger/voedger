@@ -150,7 +150,5 @@ func TestAppStorageFactory_StopGoroutines(t *testing.T) {
 	factory.StopGoroutines()
 
 	implFactory := factory.(*appStorageFactory)
-	for san := range implFactory.syncGoroutines {
-		require.Error(implFactory.syncGoroutines[san].ctx.Err())
-	}
+	require.Error(implFactory.ctx.Err())
 }
