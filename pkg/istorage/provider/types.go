@@ -17,4 +17,5 @@ type implIAppStorageProvider struct {
 	lock        sync.Mutex
 	metaStorage istorage.IAppStorage
 	suffix      string // used in tests only
+	isStopping  bool
 }
