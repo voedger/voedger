@@ -65,6 +65,8 @@ func (asp *implCachingAppStorageProvider) Stop() {
 	asp.storageProvider.Stop()
 }
 
+// normally must be called once per app
+// Currently is called once in appStructsProviderType.Builtin() on VVMAppsBuilder.BuildAppsArtefacts() stage
 func (asp *implCachingAppStorageProvider) AppStorage(appQName appdef.AppQName) (istorage.IAppStorage, error) {
 	nonCachingAppStorage, err := asp.storageProvider.AppStorage(appQName)
 	if err != nil {

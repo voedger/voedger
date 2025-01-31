@@ -13,23 +13,23 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
-// Same as IAppStructsProvider, called per request or frequently inside services
-// implemented in istorageimpl
+// used by cached app storage and in bootstrap to create storages for sys/router and sys/bobber applications
 type IAppStorageProvider interface {
 	pipeline.IService
 	// converts AppQname to string and calls internal IAppStorageFactory.AppStorage
 	// storage for a brand new app is queried and failed to create the storage for it -> storage init error is persisted and returned until admin is handle with that incident
+	// result is cached, the new isntance is created if there is no in the cache yet
 	// could return ErrStorageNotFound, ErrStorageExistsAlready
 	AppStorage(appName appdef.AppQName) (storage IAppStorage, err error)
 }
 
 // implemented by a certain driver
 type IAppStorageFactory interface {
-	// returns IAppStorage for an existing storage
+	// creates new instance on each call. Init() must be called for the provided appName
 	// returns ErrStorageNotFound
 	AppStorage(appName SafeAppName) (storage IAppStorage, err error)
 
-	// creates new storage
+	// initializes the new underlying storage (cassandra keyspace, bbolt file etc)
 	// returns ErrStorageExistsAlready
 	Init(appName SafeAppName) error
 

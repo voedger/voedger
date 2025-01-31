@@ -100,7 +100,7 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 				break // WatchChannel will be finished on cancel()
 			}
 			if logger.IsVerbose() {
-				logger.Verbose("sse message sent for subjectLogin %s:", urlParams.SubjectLogin, strings.ReplaceAll(sseMessage, "\n", " "))
+				logger.Verbose(fmt.Sprintf("sse message sent for subjectLogin %s:", urlParams.SubjectLogin), strings.ReplaceAll(sseMessage, "\n", " "))
 			}
 			flusher.Flush()
 		}
