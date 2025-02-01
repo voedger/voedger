@@ -53,6 +53,8 @@ type implCachingAppStorageProvider struct {
 	iTime           coreutils.ITime
 }
 
+// normally must be called once per app
+// Currently is called once in appStructsProviderType.Builtin() on VVMAppsBuilder.BuildAppsArtefacts() stage
 func (asp *implCachingAppStorageProvider) AppStorage(appQName appdef.AppQName) (istorage.IAppStorage, error) {
 	nonCachingAppStorage, err := asp.storageProvider.AppStorage(appQName)
 	if err != nil {
