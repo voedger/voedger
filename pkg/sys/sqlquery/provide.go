@@ -14,6 +14,6 @@ import (
 func Provide(sr istructsmem.IStatelessResources, federation federation.IFederation, itokens itokens.ITokens) {
 	sr.AddQueries(appdef.SysPackagePath, istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "SqlQuery"),
-		provideEexecQrySqlQuery(federation, itokens),
+		provideExecQrySqlQuery(federation, itokens),
 	))
 }

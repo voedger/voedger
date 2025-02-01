@@ -21,7 +21,6 @@ func TestRequestSender_BasicUsage(t *testing.T) {
 	requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 		require.Equal(http.MethodPost, request.Method)
 		require.Equal(istructs.WSID(1), request.WSID)
-		require.Equal(istructs.PartitionID(2), request.PartitionID)
 		require.Equal(map[string][]string{coreutils.ContentType: {coreutils.ApplicationJSON}}, request.Header)
 		require.Equal(map[string][]string{"param": {"value"}}, request.Query)
 		require.Equal("c.sys.CUD", request.Resource)
@@ -43,9 +42,8 @@ func TestRequestSender_BasicUsage(t *testing.T) {
 	})
 
 	respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), Request{
-		Method:      http.MethodPost,
-		WSID:        1,
-		PartitionID: 2,
+		Method: http.MethodPost,
+		WSID:   1,
 		Header: map[string][]string{
 			coreutils.ContentType: {coreutils.ApplicationJSON},
 		},
