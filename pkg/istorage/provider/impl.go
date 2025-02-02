@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
+// returns ErrStoppingState if Stop() was called
 func (asp *implIAppStorageProvider) AppStorage(appQName appdef.AppQName) (storage istorage.IAppStorage, err error) {
 	asp.lock.Lock()
 	defer asp.lock.Unlock()
