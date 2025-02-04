@@ -273,13 +273,22 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				// workspace is dummy
 				ws = qw.iQuery.Workspace()
 			}
-			// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
-			ok := oldacl.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, oldacl.EnrichPrincipals(qw.principals, qw.msg.WSID()))
-			if !ok {
-				if ok, err = qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles); err != nil {
-					return err
-				}
+
+			ok, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
+			if err != nil {
+				return err
 			}
+			if !ok {
+				// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
+				ok = oldacl.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, oldacl.EnrichPrincipals(qw.principals, qw.msg.WSID()))
+			}
+
+			// ok := oldacl.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, oldacl.EnrichPrincipals(qw.principals, qw.msg.WSID()))
+			// if !ok {
+			// 	if ok, err = qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles); err != nil {
+			// 		return err
+			// 	}
+			// }
 			if !ok {
 				return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
 			}
