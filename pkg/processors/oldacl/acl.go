@@ -440,4 +440,22 @@ var defaultACL = ACL{
 		},
 		policy: appdef.PolicyKind_Allow,
 	},
+	{
+		desc: "do not grant exec on c.air.TestSubscriptionProfile to anyone",
+		pattern: PatternType{
+			opKindsPattern: []appdef.OperationKind{appdef.OperationKind_Execute},
+			qNamesPattern: []appdef.QName{appdef.NewQName(airPackage, "TestSubscriptionProfile")},
+		},
+		policy: appdef.PolicyKind_Deny,
+	},
+	{
+		desc: "do not grant insert and update on cdoc.air.SubscriptionProfile to anyone",
+		pattern: PatternType{
+			opKindsPattern: []appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update},
+			qNamesPattern: []appdef.QName{appdef.NewQName(airPackage, "SubscriptionProfile")},
+		},
+		policy: appdef.PolicyKind_Deny,
+	},
+
+	// SubscriptionProfile
 }
