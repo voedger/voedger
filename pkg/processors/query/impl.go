@@ -282,13 +282,6 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
 				ok = oldacl.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, oldacl.EnrichPrincipals(qw.principals, qw.msg.WSID()))
 			}
-
-			// ok := oldacl.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, oldacl.EnrichPrincipals(qw.principals, qw.msg.WSID()))
-			// if !ok {
-			// 	if ok, err = qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles); err != nil {
-			// 		return err
-			// 	}
-			// }
 			if !ok {
 				return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
 			}
@@ -395,44 +388,38 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				// otherwise each field is considered as allowed if EXECUTE ON QUERY is allowed
 				return nil
 			}
-			// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
-			// do not check opKindSelect while the correct ACL in VSQ is implementing
+			ws := qw.iWorkspace
+			if ws == nil {
+				// workspace is dummy
+				ws = qw.iQuery.Workspace()
+			}
+			for _, elem := range qw.queryParams.Elements() {
+				nestedPath := elem.Path().AsArray()
+				nestedType := qw.resultType
+				for _, nestedName := range nestedPath {
+					if len(nestedName) == 0 {
+						// root
+						continue
+					}
+					// incorrectness is excluded already on validation stage in [queryParams.validate]
+					containersOfNested := nestedType.(appdef.IWithContainers)
+					// container presence is checked already on validation stage in [queryParams.validate]
+					nestedContainer := containersOfNested.Container(nestedName)
+					nestedType = nestedContainer.Type()
+				}
+				requestedfields := []string{}
+				for _, resultField := range elem.ResultFields() {
+					requestedfields = append(requestedfields, resultField.Field())
+				}
 
-			// ws := qw.iWorkspace
-			// if ws == nil {
-			// 	// workspace is dummy
-			// 	ws = qw.iQuery.Workspace()
-			// }
-			// for _, elem := range qw.queryParams.Elements() {
-			// 	nestedPath := elem.Path().AsArray()
-			// 	nestedType := qw.resultType
-			// 	for _, nestedName := range nestedPath {
-			// 		if len(nestedName) == 0 {
-			// 			// root
-			// 			continue
-			// 		}
-			// 		// incorrectness is excluded already on validation stage in [queryParams.validate]
-			// 		containersOfNested := nestedType.(appdef.IWithContainers)
-			// 		// container presence is checked already on validation stage in [queryParams.validate]
-			// 		nestedContainer := containersOfNested.Container(nestedName)
-			// 		nestedType = nestedContainer.Type()
-			// 	}
-			// 	requestedfields := []string{}
-			// 	for _, resultField := range elem.ResultFields() {
-			// 		requestedfields = append(requestedfields, resultField.Field())
-			// 	}
-
-			// 	// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
-			// 	ok := oldacl.IsOperationAllowed(appdef.OperationKind_Select, nestedType.QName(), requestedfields, oldacl.EnrichPrincipals(qw.principals, qw.msg.WSID()))
-			// 	if !ok {
-			// 		if ok, err = qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles); err != nil {
-			// 			return err
-			// 		}
-			// 	}
-			// 	if !ok {
-			// 		return coreutils.NewSysError(http.StatusForbidden)
-			// 	}
-			// }
+				// TODO: temporary do not check if allowed or not. Deny -> just verbose log, then collect denies,
+				// investigate and implement according grants in vsql
+				// see https://github.com/voedger/voedger/issues/3223
+				_, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
+				if err != nil {
+					return err
+				}
+			}
 			return nil
 		}),
 
