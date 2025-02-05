@@ -47,6 +47,8 @@ ALTERABLE WORKSPACE test_wsWS (
 		pc_fix_button int32 NOT NULL,
 		rm_fix_button int32 NOT NULL,
 		id_food_group ref,
+		department_options_2 TABLE department_options_2 (
+		) WITH Tags=(WorkspaceOwnerTableTag),
 		department_options TABLE department_options (
 			id_department ref NOT NULL,
 			id_options ref,
