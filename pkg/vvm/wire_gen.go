@@ -112,7 +112,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	v3 := actualizers.NewSyncActualizerFactoryFactory(syncActualizerFactory, iSecretReader, in10nBroker, iStatelessResources)
 	v4 := vvmConfig.ActualizerStateOpts
 	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, v4...)
-	iActualizersService := provideAsyncActualizersService(basicAsyncActualizerConfig)
+	iActualizersService := actualizers.ProvideActualizers(basicAsyncActualizerConfig)
 	basicSchedulerConfig := schedulers.BasicSchedulerConfig{
 		VvmName:      vvmName,
 		SecretReader: iSecretReader,
@@ -357,10 +357,6 @@ func provideBasicAsyncActualizerConfig(
 		IntentsLimit:  actualizers.DefaultIntentsLimit,
 		FlushInterval: actualizerFlushInterval,
 	}
-}
-
-func provideAsyncActualizersService(cfg actualizers.BasicAsyncActualizerConfig) actualizers.IActualizersService {
-	return actualizers.ProvideActualizers(cfg)
 }
 
 func provideBuildInfo() (*debug.BuildInfo, error) {
@@ -853,5 +849,6 @@ func provideServicePipeline(
 	publicEndpoint PublicEndpointServiceOperator,
 	appStorageProvider istorage.IAppStorageProvider,
 ) ServicePipeline {
-	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opBLOBProcessors), pipeline.ForkBranch(pipeline.ServiceOperator(opAsyncActualizers)), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)), pipeline.ForkBranch(pipeline.ServiceOperator(appStorageProvider)))), pipeline.WireSyncOperator("admin endpoint", adminEndpoint), pipeline.WireSyncOperator("bootstrap", bootstrapSyncOp), pipeline.WireSyncOperator("public endpoint", publicEndpoint))
+	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opBLOBProcessors), pipeline.ForkBranch(pipeline.ServiceOperator(opAsyncActualizers)), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)), pipeline.ForkBranch(pipeline.ServiceOperator(appStorageProvider)))), pipeline.WireSyncOperator("admin endpoint", adminEndpoint), pipeline.WireSyncOperator("bootstrap", bootstrapSyncOp), pipeline.WireSyncOperator("public endpoint", publicEndpoint),
+	)
 }

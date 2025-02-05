@@ -401,7 +401,7 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 		{`element is not an object`, `"cuds":[42]`, `cuds[0]: not an object`},
 		{`missing fields`, `"cuds":[{}]`, `cuds[0]: "fields" missing`},
 		{`fields is not an object`, `"cuds":[{"fields":42}]`, `cuds[0]: field "fields" must be an object`},
-		{`fields: sys.ID missing`, `"cuds":[{"fields":{"sys.QName":"test.Test"}}]`, `cuds[0]: "sys.ID" missing`},
+		{`fields: sys.ID missing`, `"cuds":[{"fields":{"sys.QName":"test.Test"}}]`, `cuds[0]: "sys.ID" field missing`},
 		{`fields: sys.ID is not a number (create)`, `"cuds":[{"sys.ID":"wrong","fields":{"sys.QName":"test.Test"}}]`, `cuds[0]: field "sys.ID" must be json.Number`},
 		{`fields: sys.ID is not a number (update)`, `"cuds":[{"fields":{"sys.ID":"wrong","sys.QName":"test.Test"}}]`, `cuds[0]: field "sys.ID" must be json.Number`},
 		{`fields: wrong qName`, `"cuds":[{"fields":{"sys.ID":1,"sys.QName":"wrong"}},{"fields":{"sys.ID":1,"sys.QName":"test.Test"}}]`, `convert error: string «wrong»`},
