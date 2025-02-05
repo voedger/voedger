@@ -616,30 +616,18 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 			return cudXPath.Errorf(`"fields" missing`)
 		}
 		// sys.ID inside -> create, outside -> update
-		isCreate := false
-		if parsedCUD.id, isCreate, err = parsedCUD.fields.AsInt64(appdef.SystemField_ID); err != nil {
+		var idToUpdate int64
+		if idToUpdate, _, err = cudData.AsInt64(appdef.SystemField_ID); err != nil {
 			return cudXPath.Error(err)
 		}
-		if parsedCUD.id < 0 {
-			// TODO: cover by tests
-			return cudXPath.Errorf("id can not be negative")
+		var rawID int64
+		if rawID, _, err = parsedCUD.fields.AsInt64(appdef.SystemField_ID); err != nil {
+			return cudXPath.Error(err)
 		}
-		if isCreate {
-			parsedCUD.opKind = appdef.OperationKind_Insert
-			qNameStr, _, err := parsedCUD.fields.AsString(appdef.SystemField_QName)
-			if err != nil {
-				return cudXPath.Error(err)
-			}
-			if parsedCUD.qName, err = appdef.ParseQName(qNameStr); err != nil {
-				return cudXPath.Error(fmt.Errorf("failed to parse sys.QName: %w", err))
-			}
-		} else {
-			if parsedCUD.id, ok, err = cudData.AsInt64(appdef.SystemField_ID); err != nil {
-				return cudXPath.Error(err)
-			}
-			if !ok {
-				return cudXPath.Errorf(`"sys.ID" missing`)
-			}
+
+		// update should have priority to e.g. return error if we trying to modify sys.ID
+		if idToUpdate > 0 {
+			parsedCUD.id = idToUpdate
 			if parsedCUD.existingRecord, err = cmd.appStructs.Records().Get(cmd.cmdMes.WSID(), true, istructs.RecordID(parsedCUD.id)); err != nil { // nolint G115
 				return
 			}
@@ -660,6 +648,19 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 			} else {
 				parsedCUD.opKind = appdef.OperationKind_Update
 			}
+		} else if rawID > 0 {
+			// create
+			parsedCUD.id = rawID
+			parsedCUD.opKind = appdef.OperationKind_Insert
+			qNameStr, _, err := parsedCUD.fields.AsString(appdef.SystemField_QName)
+			if err != nil {
+				return cudXPath.Error(err)
+			}
+			if parsedCUD.qName, err = appdef.ParseQName(qNameStr); err != nil {
+				return cudXPath.Error(fmt.Errorf("failed to parse sys.QName: %w", err))
+			}
+		} else {
+			return cudXPath.Error(fmt.Errorf(`"sys.ID" field missing`))
 		}
 
 		parsedCUD.xPath = xPath(fmt.Sprintf("%s %s %s", cudXPath, opKindDesc[parsedCUD.opKind], parsedCUD.qName))

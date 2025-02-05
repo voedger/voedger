@@ -466,3 +466,63 @@ func TestNullability_SetEmptyObject(t *testing.T) {
 	require.EqualValues(expectedNestedDocID, fields["id_air_table_plan"])
 	require.EqualValues(15, fields["form"])
 }
+
+func TestSysFieldsModification(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	body := `
+		{
+			"cuds": [
+				{
+					"fields": {
+						"sys.ID": 2,
+						"sys.QName": "app1pkg.department",
+						"pc_fix_button": 1,
+						"rm_fix_button": 1
+					}
+				},
+				{
+					"fields": {
+						"sys.ID": 3,
+						"sys.QName": "app1pkg.department_options",
+						"id_department": 2,
+						"sys.ParentID": 2,
+						"sys.Container": "department_options"
+					}
+				}
+			]
+		}`
+	resp := vit.PostWS(ws, "c.sys.CUD", body)
+	idDep := resp.NewIDs["2"]
+	idDepOpts := resp.NewIDs["3"]
+
+	t.Run("deny", func(t *testing.T) {
+		t.Run("sys.ID", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"sys.ID": 90000}}]}`, idDep)
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("unable to update system field", "sys.ID")).Println()
+		})
+
+		t.Run("sys.ParentID", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d, "fields": {"sys.ParentID": 90000}}]}`, idDepOpts)
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("unable to update system field", "sys.ParentID")).Println()
+		})
+
+		t.Run("sys.Container", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d, "fields": {"sys.Container": "department_options_2"}}]}`, idDepOpts)
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("unable to update system field", "sys.Container")).Println()
+		})
+
+		t.Run("sys.QName", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d, "fields": {"sys.QName": "app1pkg.department"}}]}`, idDepOpts)
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("unable to update system field", "sys.QName")).Println()
+		})
+	})
+
+	t.Run("allow", func(t *testing.T) {
+		t.Run("sys.IsActive", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d, "fields": {"sys.IsActive": false}}]}`, idDepOpts)
+			vit.PostWS(ws, "c.sys.CUD", body)
+		})
+	})
+}
