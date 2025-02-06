@@ -25,20 +25,28 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter) (res bus.Request, ok bool) {
+func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (res bus.Request, ok bool) {
 	vars := mux.Vars(req)
 	wsidStr := vars[URLPlaceholder_wsid]
-	wsid, err := strconv.ParseUint(wsidStr, utils.DecimalBase, utils.BitSize64)
+	wsidUint, err := strconv.ParseUint(wsidStr, utils.DecimalBase, utils.BitSize64)
 	if err != nil {
 		// impossible because of regexp in a handler
 		// notest
 		panic(err)
 	}
 	appQNameStr := vars[URLPlaceholder_appOwner] + appdef.AppQNameQualifierChar + vars[URLPlaceholder_appName]
-
+	wsid := istructs.WSID(wsidUint)
+	if appQName, err := appdef.ParseAppQName(appQNameStr); err == nil {
+		if numAppWorkspaces, ok := numsAppsWorkspaces[appQName]; ok {
+			baseWSID := wsid.BaseWSID()
+			if baseWSID <= istructs.MaxPseudoBaseWSID {
+				wsid = coreutils.GetAppWSID(wsid, numAppWorkspaces)
+			}
+		}
+	}
 	res = bus.Request{
 		Method:   reqMethod,
-		WSID:     istructs.WSID(wsid),
+		WSID:     wsid,
 		Query:    req.URL.Query(),
 		Header:   req.Header,
 		AppQName: appQNameStr,
