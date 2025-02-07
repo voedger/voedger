@@ -32,7 +32,7 @@ func newBackupCmd() *cobra.Command {
 
 	var backupNodeCmd *cobra.Command
 
-	if c.Edition == clusterEditionCE {
+	if c.Edition == clusterEditionN1 {
 		backupNodeCmd = &cobra.Command{
 			Use:   "node [<target folder>]",
 			Short: "Backup a database node",
@@ -106,7 +106,7 @@ func newBackupCmd() *cobra.Command {
 		Short: "Backup the database",
 	}
 
-	if c.Edition != clusterEditionCE && !addSshKeyFlag(backupCmd) {
+	if c.Edition != clusterEditionN1 && !addSshKeyFlag(backupCmd) {
 		return nil
 	}
 	backupCmd.AddCommand(backupNodeCmd, backupCronCmd, backupListCmd, backupNowCmd)
@@ -333,7 +333,7 @@ func backupNow(cmd *cobra.Command, args []string) error {
 				return err
 			}
 		}
-		if n.NodeRole == nrCENode {
+		if n.NodeRole == nrN1Node {
 			loggerInfo(sBackupNode, n.nodeName(), n.address())
 			if err = newScriptExecuter("", "").
 				run("ce/backup-node.sh", folder); err != nil {
@@ -400,7 +400,7 @@ func checkBackupFolders(cluster *clusterType) error {
 				err = errors.Join(err, fmt.Errorf(errBackupFolderIsNotPrepared, n.nodeName()+" "+n.address(), ErrBackupFolderIsNotPrepared))
 			}
 		}
-		if n.NodeRole == nrCENode {
+		if n.NodeRole == nrN1Node {
 			if e := newScriptExecuter("", "").
 				run("ce/check-folder.sh", backupFolder); e != nil {
 				err = errors.Join(err, fmt.Errorf(errBackupFolderIsNotPrepared, n.nodeName()+" "+n.address(), ErrBackupFolderIsNotPrepared))
@@ -459,7 +459,7 @@ func getBackupList(cluster *clusterType) (string, error) {
 		args = []string{"json"}
 	}
 
-	if cluster.Edition == clusterEditionCE {
+	if cluster.Edition == clusterEditionN1 {
 		if err = newScriptExecuter("", "").run("ce/backup-list.sh", args...); err != nil {
 			return "", nil
 		}

@@ -213,7 +213,7 @@ func initSeCluster(cluster *clusterType) error {
 			err = errors.Join(err, e)
 		}
 	} else {
-		loggerInfo("Skipping se stack deployment")
+		loggerInfo("Skipping app stack deployment")
 	}
 
 	if ok := isSkipStack(cluster.Cmd.SkipStacks, "mon"); !ok {
@@ -322,7 +322,7 @@ func deploySeSwarm(cluster *clusterType) error {
 
 func deploySeDockerStack(cluster *clusterType) error {
 
-	loggerInfo("Starting a SE docker stack deployment.")
+	loggerInfo("Starting a app docker stack deployment.")
 
 	conf := newSeConfigType(cluster)
 
@@ -332,7 +332,7 @@ func deploySeDockerStack(cluster *clusterType) error {
 		return err
 	}
 
-	loggerInfo("SE docker stack deployed successfully")
+	loggerInfo("App docker stack deployed successfully")
 	return nil
 }
 
@@ -392,8 +392,8 @@ func deployDbmsDockerStack(cluster *clusterType) error {
 func setNodeSwarmLabels(cluster *clusterType, node *nodeType) error {
 
 	var err error
-	// swarm labels for cluster SE edition
-	if cluster.Edition == clusterEditionSE {
+	// swarm labels for cluster N5 (SE) edition
+	if cluster.Edition == clusterEditionN5 {
 		switch node.NodeRole {
 		case nrAppNode:
 			loggerInfo("Swarm set label", node.label(swarmDbmsLabelKey), "on", node.nodeName(), node.address())
@@ -468,7 +468,7 @@ func deployMonDockerStack(cluster *clusterType) error {
 		return err
 	}
 
-	loggerInfo("SE docker mon docker stack deployed successfully")
+	loggerInfo("Mon docker stack deployed successfully")
 	return err
 }
 
@@ -498,30 +498,17 @@ func newSeConfigType(cluster *clusterType) *seConfigType {
 
 	var err error
 
-	if cluster.Edition == clusterEditionSE {
-		if cluster.SubEdition == clusterSubEditionSE3 {
-			config.AppNode1 = cluster.Nodes[idxSENode1].ActualNodeState.Address
-			config.AppNode2 = cluster.Nodes[idxSENode2].ActualNodeState.Address
-			config.DBNode1 = cluster.Nodes[idxSENode1].ActualNodeState.Address
-			config.DBNode2 = cluster.Nodes[idxSENode2].ActualNodeState.Address
-			config.DBNode3 = cluster.Nodes[idxDBNode1].ActualNodeState.Address
-			config.AppNode1Name = cluster.Nodes[idxSENode1].hostNames()[0]
-			config.AppNode2Name = cluster.Nodes[idxSENode2].hostNames()[0]
-			config.DBNode1Name = cluster.Nodes[idxSENode1].hostNames()[1]
-			config.DBNode2Name = cluster.Nodes[idxSENode2].hostNames()[1]
-			config.DBNode3Name = cluster.Nodes[idxDBNode1].hostNames()[0]
-		} else {
-			config.AppNode1 = cluster.Nodes[idxSENode1].ActualNodeState.Address
-			config.AppNode2 = cluster.Nodes[idxSENode2].ActualNodeState.Address
-			config.DBNode1 = cluster.Nodes[idxDBNode1].ActualNodeState.Address
-			config.DBNode2 = cluster.Nodes[idxDBNode2].ActualNodeState.Address
-			config.DBNode3 = cluster.Nodes[idxDBNode3].ActualNodeState.Address
-			config.AppNode1Name = cluster.Nodes[idxSENode1].hostNames()[0]
-			config.AppNode2Name = cluster.Nodes[idxSENode2].hostNames()[0]
-			config.DBNode1Name = cluster.Nodes[idxDBNode1].hostNames()[0]
-			config.DBNode2Name = cluster.Nodes[idxDBNode2].hostNames()[0]
-			config.DBNode3Name = cluster.Nodes[idxDBNode3].hostNames()[0]
-		}
+	if cluster.Edition == clusterEditionN5 {
+		config.AppNode1 = cluster.Nodes[idxSENode1].ActualNodeState.Address
+		config.AppNode2 = cluster.Nodes[idxSENode2].ActualNodeState.Address
+		config.DBNode1 = cluster.Nodes[idxDBNode1].ActualNodeState.Address
+		config.DBNode2 = cluster.Nodes[idxDBNode2].ActualNodeState.Address
+		config.DBNode3 = cluster.Nodes[idxDBNode3].ActualNodeState.Address
+		config.AppNode1Name = cluster.Nodes[idxSENode1].hostNames()[0]
+		config.AppNode2Name = cluster.Nodes[idxSENode2].hostNames()[0]
+		config.DBNode1Name = cluster.Nodes[idxDBNode1].hostNames()[0]
+		config.DBNode2Name = cluster.Nodes[idxDBNode2].hostNames()[0]
+		config.DBNode3Name = cluster.Nodes[idxDBNode3].hostNames()[0]
 
 		if config.DBNode1DC, err = resolveDC(cluster, config.DBNode1); err != nil {
 			loggerError(err.Error())
@@ -769,7 +756,7 @@ func setCronBackup(cluster *clusterType, backupTime string) error {
 
 	loggerInfo("Setting a cron schedule for database backup ", backupTime)
 
-	if cluster.Edition == clusterEditionCE {
+	if cluster.Edition == clusterEditionN1 {
 		args := []string{backupTime}
 		if cluster.Cron.ExpireTime != "" {
 			args = append(args, cluster.Cron.ExpireTime)

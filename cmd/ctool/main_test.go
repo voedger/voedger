@@ -206,14 +206,14 @@ func TestEnvSshKey(t *testing.T) {
 	}()
 
 	// missing the obligatory option --ssh-key
-	err := execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--acme-domain", "domain1,domain2,domain3"}, version)
+	err := execRootCmd([]string{"./ctool", "init", "n5", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--acme-domain", "domain1,domain2,domain3"}, version)
 	require.Error(err)
 
 	err = os.Setenv(envVoedgerSshKey, "key")
 	require.NoError(err)
 
 	// now the option --ssh-key can be omitted
-	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--acme-domain", "domain1,domain2,domain3"}, version)
+	err = execRootCmd([]string{"./ctool", "init", "n5", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--acme-domain", "domain1,domain2,domain3"}, version)
 	require.NoError(err)
 
 }
@@ -249,7 +249,7 @@ func TestCtoolCommands(t *testing.T) {
 	require.Error(err)
 
 	// execute the init command
-	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key", "--acme-domain", "domain1,domain2,domain3"}, version)
+	err = execRootCmd([]string{"./ctool", "init", "n5", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key", "--acme-domain", "domain1,domain2,domain3"}, version)
 	require.NoError(err)
 
 	dryRun = true
@@ -257,7 +257,7 @@ func TestCtoolCommands(t *testing.T) {
 	require.Equal("domain1,domain2,domain3", cluster.Acme.domains())
 
 	// repeat command init should give an error
-	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key"}, version)
+	err = execRootCmd([]string{"./ctool", "init", "n5", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key"}, version)
 	require.Error(err)
 
 	// execute the replace command
