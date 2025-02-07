@@ -7,52 +7,65 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"net"
 
 	"github.com/spf13/cobra"
 )
 
 var (
-	initCECmd, initSECmd *cobra.Command
+	initN1Cmd, initN5Cmd, initN3Cmd *cobra.Command
 )
 var skipStacks []string
 
 func newInitCmd() *cobra.Command {
-	initCECmd = &cobra.Command{
-		Use:   "CE [<ipaddr>...]",
-		Short: "Create the cluster.json file for the CE edition cluster",
+	initN1Cmd = &cobra.Command{
+		Use:   "n1 [<ipaddr>...]",
+		Short: "Deploy the N1 cluster",
 		Args:  cobra.MaximumNArgs(1),
-		RunE:  initCE,
+		RunE:  initN1,
 	}
 
-	initSECmd = &cobra.Command{
-		Use:   "SE [<ipaddr>...]",
-		Short: "Create the cluster.json file for the SE edition cluster",
+	initN5Cmd = &cobra.Command{
+		Use:   "n5 [<ipaddr>...]",
+		Short: "Deploy the N5 cluster",
 		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) != se3NodeCount && len(args) != se5NodeCount {
+			if len(args) != se5NodeCount {
 				return ErrInvalidNumberOfArguments
 			}
 			return nil
 		},
-		RunE: initSE,
+		RunE: initN5,
 	}
 
-	if !addSshKeyFlag(initSECmd) {
+	initN3Cmd = &cobra.Command{
+		Use:   "n3 [<ipaddr>...]",
+		Short: "Deploy the N3 cluster",
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) != se3NodeCount {
+				return ErrInvalidNumberOfArguments
+			}
+			return nil
+		},
+		RunE: initN3,
+	}
+
+	if !addSshKeyFlag(initN5Cmd) {
 		return nil
 	}
 
-	initSECmd.Flags().StringSliceVar(&skipStacks, "skip-stack", []string{}, "Specify docker compose stacks to skip")
+	initN5Cmd.Flags().StringSliceVar(&skipStacks, "skip-stack", []string{}, "Specify docker compose stacks to skip")
 
 	initCmd := &cobra.Command{
 		Use:   "init",
-		Short: "Creates the file cluster.json for cluster",
+		Short: "Deploy cluster",
 	}
 
 	initCmd.PersistentFlags().StringVar(&acmeDomains, "acme-domain", "", "ACME domains <comma separated list>")
 
 	initCmd.PersistentFlags().StringVarP(&sshPort, "ssh-port", "p", "22", "SSH port")
 
-	initCmd.AddCommand(initCECmd, initSECmd)
+	initCmd.AddCommand(initN1Cmd, initN5Cmd, initN3Cmd)
 
 	return initCmd
 
@@ -92,7 +105,7 @@ func parseDeployArgs(args []string) error {
 }
 
 // nolint
-func initCE(cmd *cobra.Command, args []string) error {
+func initN1(cmd *cobra.Command, args []string) error {
 
 	currentCmd = cmd
 	cluster := newCluster()
@@ -104,7 +117,7 @@ func initCE(cmd *cobra.Command, args []string) error {
 		return ErrClusterConfAlreadyExists
 	}
 
-	c := newCmd(ckInit, append([]string{"CE"}, args...))
+	c := newCmd(ckInit, append([]string{"N1"}, args...))
 	if err = cluster.applyCmd(c); err != nil {
 		loggerError(err.Error())
 		return err
@@ -130,7 +143,7 @@ func initCE(cmd *cobra.Command, args []string) error {
 }
 
 // nolint
-func initSE(cmd *cobra.Command, args []string) error {
+func initN5(cmd *cobra.Command, args []string) error {
 
 	currentCmd = cmd
 	cluster := newCluster()
@@ -139,7 +152,7 @@ func initSE(cmd *cobra.Command, args []string) error {
 		return ErrClusterConfAlreadyExists
 	}
 
-	c := newCmd(ckInit, append([]string{"SE"}, args...))
+	c := newCmd(ckInit, append([]string{"n5"}, args...))
 	c.SkipStacks = skipStacks
 	if err = cluster.applyCmd(c); err != nil {
 		loggerError(err.Error())
@@ -168,4 +181,8 @@ func initSE(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+func initN3(cmd *cobra.Command, args []string) error {
+	return fmt.Errorf("deploy N3 cluster not yet implemented")
 }
