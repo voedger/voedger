@@ -518,6 +518,16 @@ func (qw *queryWork) AppPartitions() appparts.IAppPartitions {
 	return qw.appParts
 }
 
+// need for q.sys.SqlQuery to authnz the result
+func (qw *queryWork) AppPartition() appparts.IAppPartition {
+	return qw.appPart
+}
+
+// need for q.sys.SqlQuery to authnz the result
+func (qw *queryWork) Roles() []appdef.QName {
+	return qw.roles
+}
+
 func borrowAppPart(_ context.Context, qw *queryWork) error {
 	switch err := qw.borrow(); {
 	case err == nil:
