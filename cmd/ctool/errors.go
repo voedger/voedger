@@ -12,7 +12,7 @@ import (
 
 // nolint
 var (
-	ErrInvalidClusterEdition                = errors.New("invalid cluster edition (expected SE or CE)")
+	ErrInvalidClusterEdition                = errors.New("invalid cluster edition (expected n1 or n5)")
 	ErrInvalidNumberOfDataCenters           = errors.New("invalid number of data centers")
 	ErrClusterConfNotFound                  = errors.New("cluster configuration not found")
 	ErrClusterConfAlreadyExists             = errors.New("the cluster configuration already exists")

@@ -8,12 +8,22 @@ package main
 // nolint
 const (
 	// edition types
-	clusterEditionCE     = "CE"
+	clusterEditionCE = "CE"
+	clusterEditionN1 = "n1"
+
 	clusterEditionSE     = "SE"
 	clusterSubEditionSE3 = "SE3"
+	clusterEditionN3     = "n3"
+
 	clusterSubEditionSE5 = "SE5"
-	se3NodeCount         = 3
-	se5NodeCount         = 5
+	clusterEditionN5     = "n5"
+
+	se3NodeCount = 3
+	se5NodeCount = 5
+
+	n1NodeCount = 1
+	n3NodeCount = 3
+	n5NodeCount = 5
 
 	// name of the cluster configuration file
 	clusterConfFileName  = "cluster.json"
@@ -37,7 +47,8 @@ const (
 	dbNodeOffset = 2
 
 	// node Roles
-	nrCENode    = "CENode"
+	nrN1Node = "N1Node"
+
 	nrAppNode   = "AppNode"
 	nrAppDbNode = "AppDbNode"
 	nrDBNode    = "DBNode"
@@ -108,4 +119,4 @@ const (
 
 const emptyDiscordWebhookUrl = "http://discord_webhook_url"
 
-const ceNodeName = "ce-node"
+const n1NodeName = "n1-node"
