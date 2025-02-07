@@ -113,6 +113,29 @@ func provideExecQrySqlQuery(federation federation.IFederation, itokens itokens.I
 		source := appdef.NewQName(table.Qualifier.String(), table.Name.String())
 
 		kind := appStructs.AppDef().Type(source).Kind()
+		if _, ok := appStructs.AppDef().Type(source).(appdef.IStructure); ok {
+			// is a structure -> check ACL
+			switch kind {
+			case appdef.TypeKind_ViewRecord, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord, appdef.TypeKind_WDoc:
+				fields := make([]string, 0, len(f.fields))
+				for f := range f.fields {
+					fields = append(fields, f)
+				}
+				apppart := args.Workpiece.(interface{ AppPartition() appparts.IAppPartition }).AppPartition()
+				roles := args.Workpiece.(interface{ Roles() []appdef.QName }).Roles()
+				ok, err := apppart.IsOperationAllowed(args.Workspace, appdef.OperationKind_Select, source, fields, roles)
+				if err != nil {
+					// notest
+					if errors.Is(err, appdef.ErrNotFoundError) {
+						return coreutils.WrapSysError(err, http.StatusBadRequest)
+					}
+					return err
+				}
+				if !ok {
+					return coreutils.NewHTTPErrorf(http.StatusForbidden)
+				}
+			}
+		}
 		switch kind {
 		case appdef.TypeKind_ViewRecord:
 			if op.EntityID > 0 {
