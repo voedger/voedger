@@ -8,7 +8,6 @@ package blobprocessor
 import (
 	"context"
 	"io"
-	"net/http"
 	"net/url"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -45,7 +44,7 @@ type blobWorkpiece struct {
 type implIBLOBMessage_base struct {
 	appQName         appdef.AppQName
 	wsid             istructs.WSID
-	header           http.Header
+	header           map[string]string
 	requestCtx       context.Context
 	okResponseIniter func(headersKeyValue ...string) io.Writer
 	errorResponder   ErrorResponder

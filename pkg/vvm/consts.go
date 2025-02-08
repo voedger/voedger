@@ -33,8 +33,9 @@ const (
 
 const (
 	ProcessorChannel_Command ProcessorChannelType = iota
-	ProcessorChannel_Query
+	ProcessorChannel_Query_V1
 	ProcessorChannel_BLOB
+	ProcessorChannel_Query_V2
 )
 
 var (

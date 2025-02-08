@@ -66,6 +66,7 @@ type Login struct {
 	subjectKind       istructs.SubjectKindType
 	clusterID         istructs.ClusterID
 	docs              map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}
+	subjects          []subject
 }
 
 type WSParams struct {

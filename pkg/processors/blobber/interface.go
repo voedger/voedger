@@ -8,7 +8,6 @@ package blobprocessor
 import (
 	"context"
 	"io"
-	"net/http"
 	"net/url"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -18,10 +17,10 @@ import (
 
 type IRequestHandler interface {
 	// false -> service unavailable
-	HandleRead(appQName appdef.AppQName, wsid istructs.WSID, header http.Header, requestCtx context.Context,
+	HandleRead(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
 		okResponseIniter func(headersKeyValue ...string) io.Writer,
 		errorResponder ErrorResponder, existingBLOBIDOrSUUID string, requestSender bus.IRequestSender) bool
-	HandleWrite(appQName appdef.AppQName, wsid istructs.WSID, header http.Header, requestCtx context.Context,
+	HandleWrite(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
 		urlQueryValues url.Values, okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
 		errorResponder ErrorResponder, requestSender bus.IRequestSender) bool
 }

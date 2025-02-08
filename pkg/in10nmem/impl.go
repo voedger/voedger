@@ -15,6 +15,7 @@ package in10nmem
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -199,11 +200,10 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 	updateUnits := make([]UpdateUnit, 0)
 
 	// cycle for channel.cchan and ctx
-forctx:
 	for ctx.Err() == nil {
 		select {
 		case <-ctx.Done():
-			break forctx
+			break
 		case <-channel.cchan:
 			if logger.IsTrace() {
 				logger.Trace(channelID)
@@ -215,6 +215,7 @@ forctx:
 
 			err := nb.validateChannel(channel)
 			if err != nil {
+				logger.Error(fmt.Sprintf("%s: subjectlogin %s", err.Error(), channel.subject))
 				return
 			}
 
@@ -232,24 +233,23 @@ forctx:
 			}
 			nb.Unlock()
 			for _, unit := range updateUnits {
+				if logger.IsVerbose() {
+					logVerbose("before notifySubscriber", unit.Projection, unit.Offset)
+				}
 				notifySubscriber(unit.Projection, unit.Offset)
 			}
 			updateUnits = updateUnits[:0]
 		}
 
 	}
-
 }
 
 func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
-
-	logger.Info("notifier goroutine started")
-
-forcycle:
+	defer wg.Done()
 	for ctx.Err() == nil {
 		select {
 		case <-ctx.Done():
-			break forcycle
+			return
 		case eve := <-events:
 			prj := eve.prj
 
@@ -267,6 +267,9 @@ forcycle:
 			}
 
 			// Notify subscribers
+			if logger.IsVerbose() {
+				logger.Verbose("notifier goroutine: len(prj.subscribedChannels):", strconv.Itoa(len(prj.subscribedChannels)))
+			}
 			for _, ch := range prj.subscribedChannels {
 				select {
 				case ch.cchan <- struct{}{}:
@@ -275,8 +278,6 @@ forcycle:
 			}
 		}
 	}
-	logger.Info("notifier goroutine stopped")
-	wg.Done()
 }
 
 func guaranteeProjection(projections map[in10n.ProjectionKey]*projection, projectionKey in10n.ProjectionKey) (offsetPointer *istructs.Offset) {
@@ -303,6 +304,9 @@ func (nb *N10nBroker) Update(projection in10n.ProjectionKey, offset istructs.Off
 
 	e := event{prj: prj}
 	nb.events <- e
+	if logger.IsVerbose() {
+		logVerbose("Update() completed", projection, offset)
+	}
 }
 
 // MetricNumChannels @ConcurrentAccess
@@ -363,12 +367,8 @@ func (nb *N10nBroker) validateChannel(channel *channelType) error {
 	nb.RLock()
 	defer nb.RUnlock()
 	// if channel lifetime > channelDuration defined in NewChannel when create channel - must exit
-	if nb.Since(channel.createTime) > channel.channelDuration {
+	if time.Since(channel.createTime) > channel.channelDuration {
 		return ErrChannelExpired
 	}
 	return nil
-}
-
-func (nb *N10nBroker) Since(t time.Time) time.Duration {
-	return nb.time.Now().Sub(t)
 }

@@ -54,27 +54,16 @@ func Test_Packages(t *testing.T) {
 		require.Equal(appdef.NullQName, pkg.LocalQName(appdef.NewFullQName("test/unknown", "unknown")))
 
 		t.Run("should be ok to enum packages", func(t *testing.T) {
-			cnt := 0
-			for l, p := range pkg.Packages() {
-				require.Equal(tests[cnt].l, l)
-				require.Equal(tests[cnt].p, p)
-				cnt++
+			p := pkg.Packages()
+			require.Len(p, len(tests))
+			for _, t := range tests {
+				require.Equal(t.p, p[t.l])
 			}
-			require.Equal(len(tests), cnt)
-
-			t.Run("should be ok to iterate enum packages", func(t *testing.T) {
-				cnt := 0
-				for range pkg.Packages() {
-					cnt++
-					break
-				}
-				require.Equal(1, cnt)
-			})
 		})
 
 		t.Run("should be ok to enum package local names", func(t *testing.T) {
 			cnt := 0
-			for l := range pkg.PackageLocalNames() {
+			for _, l := range pkg.PackageLocalNames() {
 				require.Equal(tests[cnt].l, l)
 				cnt++
 			}

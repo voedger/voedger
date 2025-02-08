@@ -83,7 +83,7 @@ func downloadBLOBHelper(ctx context.Context, work pipeline.IWorkpiece) (err erro
 	req := bus.Request{
 		Method:   http.MethodPost,
 		WSID:     bw.blobMessageRead.wsid,
-		AppQName: bw.blobMessageRead.appQName.String(),
+		AppQName: bw.blobMessageRead.appQName,
 		Resource: "q.sys.DownloadBLOBAuthnz",
 		Header:   bw.blobMessageRead.header,
 		Body:     []byte(`{}`),

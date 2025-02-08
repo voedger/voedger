@@ -44,7 +44,7 @@ func ExampleTags() {
 		fmt.Println(flt)
 		fmt.Println("- kind:", flt.Kind())
 		fmt.Println("- tags:")
-		for t := range flt.Tags() {
+		for _, t := range flt.Tags() {
 			fmt.Println("  *", t)
 		}
 		fmt.Println("- testing:")

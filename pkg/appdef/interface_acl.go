@@ -5,8 +5,6 @@
 
 package appdef
 
-import "iter"
-
 // Enumeration of ACL operation policy.
 type PolicyKind uint8
 
@@ -26,7 +24,7 @@ type IACLFilter interface {
 	IFilter
 
 	// Returns fields iterator then insert, update or select operation is described.
-	Fields() iter.Seq[FieldName]
+	Fields() []FieldName
 
 	// Resturns true if fields are specified.
 	HasFields() bool
@@ -40,7 +38,7 @@ type IACLRule interface {
 	Op(OperationKind) bool
 
 	// Returns operations that was described (granted or revoked).
-	Ops() iter.Seq[OperationKind]
+	Ops() []OperationKind
 
 	// Returns the policy: operations are granted (policy is allow) or revoked (policy is deny).
 	Policy() PolicyKind
@@ -62,7 +60,7 @@ type IWithACL interface {
 	// Enumerates all ACL rules.
 	//
 	// Rules are enumerated in the order they are added.
-	ACL() iter.Seq[IACLRule]
+	ACL() []IACLRule
 }
 
 type IACLBuilder interface {

@@ -38,7 +38,7 @@ type IQueryMessage interface {
 	ApiPath() ApiPath
 	RequestCtx() context.Context
 	QName() appdef.QName
-	Partition() istructs.PartitionID
+	PartitionID() istructs.PartitionID
 	Host() string
 	Token() string
 }
@@ -51,4 +51,60 @@ type IApiPathHandler interface {
 	AuthorizeResult(ctx context.Context, qw *queryWork) error
 	RowsProcessor(ctx context.Context, qw *queryWork) error
 	Exec(ctx context.Context, qw *queryWork) error
+}
+
+type implIQueryMessage struct {
+	appQName    appdef.AppQName
+	wsid        istructs.WSID
+	responder   bus.IResponder
+	queryParams QueryParams
+	docID       istructs.IDType
+	apiPath     ApiPath
+	requestCtx  context.Context
+	qName       appdef.QName
+	partition   istructs.PartitionID
+	host        string
+	token       string
+}
+
+func (qm *implIQueryMessage) AppQName() appdef.AppQName {
+	return qm.appQName
+}
+
+func (qm *implIQueryMessage) WSID() istructs.WSID {
+	return qm.wsid
+}
+
+func (qm *implIQueryMessage) Responder() bus.IResponder {
+	return qm.responder
+}
+
+func (qm *implIQueryMessage) QueryParams() QueryParams {
+	return qm.queryParams
+}
+func (qm *implIQueryMessage) DocID() istructs.IDType {
+	return qm.docID
+}
+
+func (qm *implIQueryMessage) ApiPath() ApiPath {
+	return qm.apiPath
+}
+
+func (qm *implIQueryMessage) RequestCtx() context.Context {
+	return qm.requestCtx
+}
+func (qm *implIQueryMessage) QName() appdef.QName {
+	return qm.qName
+}
+
+func (qm *implIQueryMessage) PartitionID() istructs.PartitionID {
+	return qm.partition
+}
+
+func (qm *implIQueryMessage) Host() string {
+	return qm.host
+}
+
+func (qm *implIQueryMessage) Token() string {
+	return qm.token
 }

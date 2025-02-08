@@ -8,8 +8,6 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"maps"
-	"slices"
 	"strings"
 	"testing"
 
@@ -108,14 +106,14 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IWithFields).Field("Chairs").DataKind())
 
 	// constraint
-	uniques := maps.Collect(cdoc.Uniques())
+	uniques := cdoc.Uniques()
 	require.Len(uniques, 2)
 
 	t.Run("first unique, automatically named", func(t *testing.T) {
 		u := uniques[appdef.MustParseQName("main.TablePlan$uniques$01")]
 		require.NotNil(u)
 		cnt := 0
-		for f := range u.Fields() {
+		for _, f := range u.Fields() {
 			cnt++
 			switch n := f.Name(); n {
 			case "FState":
@@ -133,7 +131,7 @@ func Test_BasicUsage(t *testing.T) {
 		u := uniques[appdef.MustParseQName("main.TablePlan$uniques$UniqueTable")]
 		require.NotNil(u)
 		cnt := 0
-		for f := range u.Fields() {
+		for _, f := range u.Fields() {
 			cnt++
 			switch n := f.Name(); n {
 			case "TableNumber":
@@ -205,38 +203,39 @@ func Test_BasicUsage(t *testing.T) {
 	// CUD Projector
 	proj := appdef.Projector(app.Type, appdef.NewQName("main", "RecordsRegistryProjector"))
 	require.NotNil(proj)
-	pe := slices.Collect(proj.Events())
+	pe := proj.Events()
 	require.Len(pe, 1)
 	require.Equal(
 		[]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate},
-		slices.Collect(pe[0].Ops()))
+		pe[0].Ops())
 	require.Equal(appdef.FilterKind_Types, pe[0].Filter().Kind())
 	require.Equal([]appdef.TypeKind{
 		appdef.TypeKind_CDoc, appdef.TypeKind_WDoc,
 		appdef.TypeKind_CRecord, appdef.TypeKind_WRecord},
-		slices.Collect(pe[0].Filter().Types()))
+		pe[0].Filter().Types())
 
 	// Execute Projector
 	proj = appdef.Projector(app.Type, appdef.NewQName("main", "UpdateDashboard"))
 	require.NotNil(proj)
-	pe = slices.Collect(proj.Events())
+	pe = proj.Events()
 	require.Len(pe, 1)
 	require.Equal(
 		[]appdef.OperationKind{appdef.OperationKind_Execute},
-		slices.Collect(pe[0].Ops()))
+		pe[0].Ops())
 	require.Equal(appdef.FilterKind_QNames, pe[0].Filter().Kind())
-	require.Equal([]appdef.QName{appdef.NewQName("main", "NewOrder"), appdef.NewQName("main", "NewOrder2")}, slices.Collect(pe[0].Filter().QNames()))
+	require.Equal([]appdef.QName{appdef.NewQName("main", "NewOrder"), appdef.NewQName("main", "NewOrder2")}, pe[0].Filter().QNames())
 
 	stateCount := 0
-	for n, s := range proj.States().All() {
+	for _, n := range proj.States().Names() {
 		stateCount++
+		s := proj.States().Storage(n)
 		switch stateCount {
 		case 1:
 			require.Equal(appdef.NewQName("sys", "AppSecret"), n)
-			require.Empty(slices.Collect(s.Names()))
+			require.Empty(s.Names())
 		case 2:
 			require.Equal(appdef.NewQName("sys", "Http"), n)
-			require.Empty(slices.Collect(s.Names()))
+			require.Empty(s.Names())
 		default:
 			require.Fail("unexpected state", "state: %v", s)
 		}
@@ -244,12 +243,13 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(2, stateCount)
 
 	intentsCount := 0
-	for n, i := range proj.Intents().All() {
+	for _, n := range proj.Intents().Names() {
 		intentsCount++
+		i := proj.Intents().Storage(n)
 		switch intentsCount {
 		case 1:
 			require.Equal(appdef.NewQName("sys", "View"), n)
-			names := appdef.CollectQNames(i.Names())
+			names := appdef.QNamesFrom(i.Names()...)
 			require.Equal(
 				appdef.MustParseQNames(
 					"main.ActiveTablePlansView",
@@ -268,15 +268,16 @@ func Test_BasicUsage(t *testing.T) {
 		require.EqualValues(`1 0 * * *`, job1.CronSchedule())
 		t.Run("Job states", func(t *testing.T) {
 			stateCount := 0
-			for n, s := range proj.States().All() {
+			for _, n := range proj.States().Names() {
+				s := proj.States().Storage(n)
 				stateCount++
 				switch stateCount {
 				case 1:
 					require.Equal(appdef.NewQName("sys", "AppSecret"), n)
-					require.Empty(slices.Collect(s.Names()))
+					require.Empty(s.Names())
 				case 2:
 					require.Equal(appdef.NewQName("sys", "Http"), n)
-					require.Empty(slices.Collect(s.Names()))
+					require.Empty(s.Names())
 				default:
 					require.Fail("unexpected state", "state: %v", s)
 				}
@@ -289,16 +290,16 @@ func Test_BasicUsage(t *testing.T) {
 	})
 
 	cmd = appdef.Command(app.Type, appdef.NewQName("main", "NewOrder2"))
-	require.Len(maps.Collect(cmd.States().All()), 1)
+	require.Len(cmd.States().Names(), 1)
 	require.NotNil(cmd.States().Storage(appdef.NewQName("sys", "AppSecret")))
 
-	require.Len(maps.Collect(cmd.Intents().All()), 1)
+	require.Len(cmd.Intents().Names(), 1)
 	intent := cmd.Intents().Storage(appdef.NewQName("sys", "Record"))
 	require.NotNil(intent)
-	names := appdef.CollectQNames(intent.Names())
+	names := appdef.QNamesFrom(intent.Names()...)
 	require.True(names.Contains(appdef.NewQName("main", "Transaction")))
 
-	localNames := slices.Collect(app.PackageLocalNames())
+	localNames := app.PackageLocalNames()
 	require.Equal([]string{"air", "main", appdef.SysPackage, "untill"}, localNames)
 
 	require.Equal(appdef.SysPackagePath, app.PackageFullPath(appdef.SysPackage))
@@ -406,7 +407,7 @@ func Test_Refs_NestedTables(t *testing.T) {
 
 	inner1 := app.Type(appdef.NewQName("pkg1", "inner1"))
 	ref1 := inner1.(appdef.IWithFields).RefField("ref1")
-	require.EqualValues([]appdef.QName{appdef.NewQName("pkg1", "table3")}, slices.Collect(ref1.Refs()))
+	require.EqualValues([]appdef.QName{appdef.NewQName("pkg1", "table3")}, ref1.Refs())
 }
 
 func Test_CircularReferencesTables(t *testing.T) {
@@ -586,7 +587,7 @@ func Test_Workspaces(t *testing.T) {
 		w := def.Workspace(appdef.NewQName("pkg", "W"))
 		require.NotNil(w)
 		actualAncestors := []appdef.IWorkspace{}
-		for a := range w.Ancestors() {
+		for _, a := range w.Ancestors() {
 			actualAncestors = append(actualAncestors, a)
 		}
 		require.Len(actualAncestors, 2)
@@ -1430,11 +1431,11 @@ func Test_Projectors(t *testing.T) {
 
 		proj := appdef.Projector(app.Type, appdef.NewQName("pkg", "ImProjector"))
 		require.NotNil(proj)
-		pe := slices.Collect(proj.Events())
+		pe := proj.Events()
 		require.Len(pe, 1)
-		require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert}, slices.Collect((pe[0].Ops())))
+		require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert}, pe[0].Ops())
 		require.Equal(appdef.FilterKind_QNames, pe[0].Filter().Kind())
-		require.Len(slices.Collect(pe[0].Filter().QNames()), 1)
+		require.Len(pe[0].Filter().QNames(), 1)
 	})
 
 	t.Run("Projector filters", func(t *testing.T) {
@@ -1459,27 +1460,27 @@ func Test_Projectors(t *testing.T) {
 
 		proj := appdef.Projector(app.Type, appdef.NewQName("pkg", "p"))
 		require.NotNil(proj)
-		pe := slices.Collect(proj.Events())
+		pe := proj.Events()
 		require.Len(pe, 2)
-		require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update}, slices.Collect((pe[0].Ops())))
+		require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update}, pe[0].Ops())
 		require.Equal(appdef.FilterKind_Or, pe[0].Filter().Kind())
-		or := slices.Collect(pe[0].Filter().Or())
+		or := pe[0].Filter().Or()
 		require.Len(or, 2)
 		require.Equal(appdef.FilterKind_QNames, or[0].Kind())
 		require.Equal(appdef.FilterKind_Types, or[1].Kind())
-		qnames := slices.Collect(or[0].QNames())
+		qnames := or[0].QNames()
 		require.Len(qnames, 2)
 		require.Equal("pkg.Tbl1", qnames[0].String())
 		require.Equal("pkg.Tbl2", qnames[1].String())
-		types := slices.Collect(or[1].Types())
+		types := or[1].Types()
 		require.Len(types, 2)
 		require.Equal(appdef.TypeKind_CDoc, types[0])
 		require.Equal(appdef.TypeKind_CRecord, types[1])
 
-		require.Equal([]appdef.OperationKind{appdef.OperationKind_Deactivate}, slices.Collect((pe[1].Ops())))
+		require.Equal([]appdef.OperationKind{appdef.OperationKind_Deactivate}, pe[1].Ops())
 		require.Equal(appdef.FilterKind_QNames, pe[1].Filter().Kind())
-		require.Len(slices.Collect(pe[1].Filter().QNames()), 1)
-		require.Equal("pkg.Tbl3", slices.Collect(pe[1].Filter().QNames())[0].String())
+		require.Len(pe[1].Filter().QNames(), 1)
+		require.Equal("pkg.Tbl3", pe[1].Filter().QNames()[0].String())
 	})
 
 	t.Run("Intent errors", func(t *testing.T) {
@@ -2312,14 +2313,14 @@ func Test_Grants(t *testing.T) {
 		var numACLs int
 
 		// table
-		for acl := range app.ACL() {
-			require.Equal([]appdef.OperationKind{appdef.OperationKind_Inherits}, slices.Collect(acl.Ops()))
+		for _, acl := range app.ACL() {
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Inherits}, acl.Ops())
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 
 			require.Equal(appdef.FilterKind_QNames, acl.Filter().Kind())
 			require.EqualValues(
 				appdef.MustParseQNames("pkg.admin"),
-				slices.Collect(acl.Filter().QNames()))
+				acl.Filter().QNames())
 
 			require.Equal("pkg.mgr", acl.Principal().QName().String())
 			numACLs++
@@ -2347,14 +2348,14 @@ func Test_Grants(t *testing.T) {
 		var numACLs int
 
 		// table
-		for acl := range app.ACL() {
-			require.Equal([]appdef.OperationKind{appdef.OperationKind_Select}, slices.Collect(acl.Ops()))
+		for _, acl := range app.ACL() {
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Select}, acl.Ops())
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 
 			require.Equal(appdef.FilterKind_QNames, acl.Filter().Kind())
 			require.EqualValues(
 				appdef.MustParseQNames("pkg.UserProfile"),
-				slices.Collect(acl.Filter().QNames()))
+				acl.Filter().QNames())
 
 			require.Equal("pkg.ProfileOwner", acl.Principal().QName().String())
 			numACLs++
@@ -2388,15 +2389,15 @@ func Test_Grants_Inherit(t *testing.T) {
 		var numACLs int
 
 		// table
-		for acl := range app.ACL() {
-			require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate}, slices.Collect(acl.Ops()))
+		for _, acl := range app.ACL() {
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate}, acl.Ops())
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 
 			require.Equal(appdef.FilterKind_Types, acl.Filter().Kind())
 			require.EqualValues(
 				[]appdef.TypeKind{appdef.TypeKind_GDoc, appdef.TypeKind_CDoc, appdef.TypeKind_ODoc, appdef.TypeKind_WDoc,
 					appdef.TypeKind_GRecord, appdef.TypeKind_CRecord, appdef.TypeKind_ORecord, appdef.TypeKind_WRecord},
-				slices.Collect(acl.Filter().Types()))
+				acl.Filter().Types())
 
 			require.Equal("pkg.role1", acl.Principal().QName().String())
 			numACLs++
@@ -2511,7 +2512,7 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l4 ON VIEW v WITH RATE r;
 			LIMIT l4_1 SELECT ON VIEW v WITH RATE r;
 			LIMIT l5 ON TABLE t WITH RATE r;
-			LIMIT l5_1 SELECT,INSERT,UPDATE ON TABLE t WITH RATE r;
+			LIMIT l5_1 SELECT,INSERT,UPDATE,ACTIVATE,DEACTIVATE ON TABLE t WITH RATE r;
 
 			LIMIT l20 ON ALL COMMANDS WITH TAG tag WITH RATE r;
 			LIMIT l20_1 EXECUTE ON ALL COMMANDS WITH TAG tag WITH RATE r;
@@ -2520,7 +2521,7 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l22 ON ALL VIEWS WITH TAG tag WITH RATE r;
 			LIMIT l22_1 SELECT ON ALL VIEWS WITH TAG tag WITH RATE r;
 			LIMIT l23 ON ALL TABLES WITH TAG tag WITH RATE r;
-			LIMIT l23_1 SELECT,INSERT,UPDATE ON ALL TABLES WITH TAG tag WITH RATE r;
+			LIMIT l23_1 SELECT,INSERT,UPDATE,ACTIVATE,DEACTIVATE ON ALL TABLES WITH TAG tag WITH RATE r;
 			-- LIMIT l24 ON ALL WITH TAG tag WITH RATE r;
 
 			LIMIT l25 ON ALL COMMANDS WITH RATE r;
@@ -2536,7 +2537,7 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l32 ON EACH VIEW WITH TAG tag WITH RATE r;
 			LIMIT l32_1 SELECT ON EACH VIEW WITH TAG tag WITH RATE r;
 			LIMIT l33 ON EACH TABLE WITH TAG tag WITH RATE r;
-			LIMIT l33_1 SELECT,INSERT,UPDATE ON EACH TABLE WITH TAG tag WITH RATE r;
+			LIMIT l33_1 SELECT,INSERT,UPDATE,ACTIVATE,DEACTIVATE ON EACH TABLE WITH TAG tag WITH RATE r;
 			-- LIMIT l34 ON EACH WITH TAG tag WITH RATE r;
 
 			LIMIT l35 ON EACH COMMAND WITH RATE r;
@@ -2577,6 +2578,8 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l37 EXECUTE ON EACH VIEW WITH RATE r;
 			LIMIT l38 EXECUTE ON EACH TABLE WITH RATE r;
 			LIMIT l39 SELECT ON EACH QUERY WITH RATE r;
+			LIMIT l40 ACTIVATE ON EACH COMMAND WITH RATE r;
+			LIMIT l41 DEACTIVATE ON EACH QUERY WITH RATE r;
 		);`, "file.vsql:15:13: operation INSERT not allowed",
 			"file.vsql:16:13: operation UPDATE not allowed",
 			"file.vsql:17:13: operation EXECUTE not allowed",
@@ -2589,7 +2592,9 @@ func Test_RatesAndLimits(t *testing.T) {
 			"file.vsql:26:14: operation UPDATE not allowed",
 			"file.vsql:27:14: operation EXECUTE not allowed",
 			"file.vsql:28:14: operation EXECUTE not allowed",
-			"file.vsql:29:14: operation SELECT not allowed")
+			"file.vsql:29:14: operation SELECT not allowed",
+			"file.vsql:30:14: operation ACTIVATE not allowed",
+			"file.vsql:31:14: operation DEACTIVATE not allowed")
 	})
 
 	t.Run("undefined statements", func(t *testing.T) {
@@ -3000,12 +3005,12 @@ func TestIsOperationAllowedOnNestedTable(t *testing.T) {
 	require.NoError(err)
 
 	ws := appDef.Workspace(appdef.MustParseQName("pkg.MyWS"))
-	ok, _, err := borrowedAppPart.IsOperationAllowed(ws, appdef.OperationKind_Insert, appdef.NewQName("pkg", "Table2"), nil,
+	ok, err := borrowedAppPart.IsOperationAllowed(ws, appdef.OperationKind_Insert, appdef.NewQName("pkg", "Table2"), nil,
 		[]appdef.QName{appdef.NewQName("pkg", "WorkspaceOwner")})
 	require.NoError(err)
 	require.True(ok)
 
-	ok, _, err = borrowedAppPart.IsOperationAllowed(ws, appdef.OperationKind_Insert, appdef.NewQName("pkg", "Nested"), nil,
+	ok, err = borrowedAppPart.IsOperationAllowed(ws, appdef.OperationKind_Insert, appdef.NewQName("pkg", "Nested"), nil,
 		[]appdef.QName{appdef.NewQName("pkg", "WorkspaceOwner")})
 	require.NoError(err)
 	require.True(ok)
@@ -3054,7 +3059,7 @@ func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
 	require.NoError(err)
 
 	ws := appDef.Workspace(appdef.MustParseQName("pkg.MyWS"))
-	ok, _, err := borrowedAppPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, appdef.NewQName("pkg", "Cmd1"), nil,
+	ok, err := borrowedAppPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, appdef.NewQName("pkg", "Cmd1"), nil,
 		[]appdef.QName{appdef.NewQName("pkg", "Role1")})
 	require.NoError(err)
 	require.True(ok)

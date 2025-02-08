@@ -41,11 +41,11 @@ func ExampleTypes() {
 		fmt.Println(flt)
 		fmt.Println("- kind:", flt.Kind())
 		fmt.Println("- type kinds:")
-		for t := range flt.Types() {
+		for _, t := range flt.Types() {
 			fmt.Println("  *", t)
 		}
 		fmt.Println("- testing:")
-		for t := range ws.LocalTypes() {
+		for _, t := range ws.LocalTypes() {
 			fmt.Println("  *", t, "is matched:", flt.Match(t))
 		}
 		fmt.Println()
@@ -107,11 +107,11 @@ func ExampleWSTypes() {
 		fmt.Println(flt)
 		fmt.Println("- kind:", flt.Kind())
 		fmt.Println("- type kinds:")
-		for t := range flt.Types() {
+		for _, t := range flt.Types() {
 			fmt.Println("  *", t)
 		}
 		fmt.Println("- testing:")
-		for t := range ws.LocalTypes() {
+		for _, t := range ws.LocalTypes() {
 			fmt.Println("  *", t, "is matched:", flt.Match(t))
 		}
 		fmt.Println()
@@ -177,7 +177,7 @@ func ExampleAllTables() {
 	fmt.Println(flt)
 	fmt.Println("- kind:", flt.Kind())
 	fmt.Println("- testing:")
-	for t := range app.Types() {
+	for _, t := range app.Types() {
 		if !t.IsSystem() {
 			fmt.Println("  *", t, "is matched:", flt.Match(t))
 		}
@@ -224,7 +224,7 @@ func ExampleAllWSTables() {
 	fmt.Println(flt)
 	fmt.Println("- kind:", flt.Kind())
 	fmt.Println("- testing:")
-	for t := range ws.LocalTypes() {
+	for _, t := range ws.LocalTypes() {
 		fmt.Println("  *", t, "is matched:", flt.Match(t))
 	}
 
@@ -271,7 +271,7 @@ func ExampleAllFunctions() {
 	fmt.Println(flt)
 	fmt.Println("- kind:", flt.Kind())
 	fmt.Println("- testing:")
-	for t := range app.Types() {
+	for _, t := range app.Types() {
 		if !t.IsSystem() {
 			fmt.Println("  *", t, "is matched:", flt.Match(t))
 		}
@@ -318,7 +318,7 @@ func ExampleAllWSFunctions() {
 	fmt.Println(flt)
 	fmt.Println("- kind:", flt.Kind())
 	fmt.Println("- testing:")
-	for t := range ws.LocalTypes() {
+	for _, t := range ws.LocalTypes() {
 		fmt.Println("  *", t, "is matched:", flt.Match(t))
 	}
 

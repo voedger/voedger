@@ -26,7 +26,7 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 )
 
-func provideEexecQrySqlQuery(federation federation.IFederation, itokens itokens.ITokens) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func provideExecQrySqlQuery(federation federation.IFederation, itokens itokens.ITokens) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 
 		query := args.ArgumentObject.AsString(field_Query)
@@ -143,7 +143,7 @@ func provideEexecQrySqlQuery(federation federation.IFederation, itokens itokens.
 			return readWlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef())
 		}
 
-		return fmt.Errorf("unsupported source: %s", source)
+		return fmt.Errorf("do not know how to read from the requested %s, %s", source, kind)
 	}
 }
 

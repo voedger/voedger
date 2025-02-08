@@ -84,7 +84,7 @@ func setBLOBStatusCompleted(ctx context.Context, work pipeline.IWorkpiece) (err 
 	req := bus.Request{
 		Method:   http.MethodPost,
 		WSID:     bw.blobMessageWrite.wsid,
-		AppQName: bw.blobMessageWrite.appQName.String(),
+		AppQName: bw.blobMessageWrite.appQName,
 		Resource: "c.sys.CUD",
 		Body:     []byte(fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"status":%d}}]}`, bw.newBLOBID, iblobstorage.BLOBStatus_Completed)),
 		Header:   bw.blobMessageWrite.header,
@@ -105,7 +105,7 @@ func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	req := bus.Request{
 		Method:   http.MethodPost,
 		WSID:     bw.blobMessageWrite.wsid,
-		AppQName: bw.blobMessageWrite.appQName.String(),
+		AppQName: bw.blobMessageWrite.appQName,
 		Resource: bw.registerFuncName,
 		Header:   bw.blobMessageWrite.header,
 		Body:     []byte(`{}`),
@@ -144,7 +144,7 @@ func parseQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 
 func parseMediaType(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
-	bw.contentType = bw.blobMessageWrite.header.Get(coreutils.ContentType)
+	bw.contentType = bw.blobMessageWrite.header[coreutils.ContentType]
 	if len(bw.contentType) == 0 {
 		return nil
 	}

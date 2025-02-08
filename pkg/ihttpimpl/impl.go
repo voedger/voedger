@@ -263,23 +263,24 @@ func (p *httpProcessor) registerRoutes() {
 
 func (p *httpProcessor) httpHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		routerpkg.RequestHandler(p.requestSender, p.numsAppsWorkspaces)(w, r)
+		routerpkg.RequestHandler(p.requestSender)(w, r)
 	}
 }
 
 func (p *httpProcessor) requestHandler(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
-	appQName, err := appdef.ParseAppQName(request.AppQName)
-	if err != nil {
-		bus.ReplyBadRequest(responder, err.Error())
-		return
-	}
-	app, ok := p.apps[appQName]
+	app, ok := p.apps[request.AppQName]
 	if !ok {
 		bus.ReplyBadRequest(responder, ErrAppIsNotDeployed.Error())
 		return
 	}
+	if numAppWorkspaces, ok := p.numsAppsWorkspaces[request.AppQName]; ok {
+		request.WSID = coreutils.WSIDToAppWSIDIfPseudo(request.WSID, numAppWorkspaces)
+	} else {
+		bus.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("no ApplicationWorkspaces record for app %s", request.AppQName))
+		return
+	}
 	partNo := coreutils.AppPartitionID(request.WSID, app.numPartitions)
-	handler, err := p.getAppPartHandler(appQName, partNo)
+	handler, err := p.getAppPartHandler(request.AppQName, partNo)
 	if err != nil {
 		bus.ReplyBadRequest(responder, err.Error())
 		return

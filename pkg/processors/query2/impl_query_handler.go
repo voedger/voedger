@@ -84,7 +84,7 @@ func (h *queryHandler) AuthorizeRequest(ctx context.Context, qw *queryWork) erro
 		// workspace is dummy
 		ws = qw.iQuery.Workspace()
 	}
-	ok, _, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
+	ok, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
 	if err != nil {
 		return err
 	}

@@ -78,7 +78,7 @@ func Test_Tags(t *testing.T) {
 
 	t.Run("should be ok to enumerate tags", func(t *testing.T) {
 		got := appdef.QNames{}
-		for t := range doc.Tags() {
+		for _, t := range doc.Tags() {
 			got.Add(t.QName())
 		}
 		require.Equal(appdef.QNamesFrom(tagNames...), got)
@@ -119,14 +119,4 @@ func Test_TagsPanics(t *testing.T) {
 			require.Panics(func() { doc.SetTag(tagName) })
 		})
 	})
-}
-
-func Test_NullTags(t *testing.T) {
-	require := require.New(t)
-
-	null := types.NullTags{}
-	require.False(null.HasTag(appdef.NewQName("test", "tag")))
-	for range null.Tags() {
-		require.Fail("NullTags should not have tags")
-	}
 }

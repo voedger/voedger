@@ -6,31 +6,36 @@
 package router
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/processors/query2"
 )
 
 func (s *httpService) registerHandlersV2() {
 	// create: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/{pkg}.{table}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/docs/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table),
-		corsHandler(requestHandlerV2_table())).
+		corsHandler(requestHandlerV2_table(s.requestSender, query2.ApiPath_Docs))).
 		Methods(http.MethodPost)
 
 	// update, deactivate, read single doc: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/{pkg}.{table}/{id}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/docs/{%s}.{%s}/{%s:[0-9]+}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table,
 		URLPlaceholder_id),
-		corsHandler(requestHandlerV2_table())).
+		corsHandler(requestHandlerV2_table(s.requestSender, query2.ApiPath_Docs))).
 		Methods(http.MethodPatch, http.MethodDelete, http.MethodGet)
 
 	// read collection: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/cdocs/{pkg}.{table}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/cdocs/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table),
-		corsHandler(requestHandlerV2_table())).
+		corsHandler(requestHandlerV2_table(s.requestSender, query2.ApiPath_CDocs))).
 		Methods(http.MethodGet)
 
 	// execute cmd: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/commands/{pkg}.{command}
@@ -136,8 +141,8 @@ func requestHandlerV2_blobs() http.HandlerFunc {
 	}
 }
 
-func requestHandlerV2_table() http.HandlerFunc {
-	return func(resp http.ResponseWriter, req *http.Request) {
+func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath query2.ApiPath) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 		switch req.Method {
 		case http.MethodGet:
@@ -149,15 +154,32 @@ func requestHandlerV2_table() http.HandlerFunc {
 		case http.MethodPatch:
 		case http.MethodDelete:
 		}
-		docQName, err := appdef.ParseQName(vars[URLPlaceholder_pkg+"."+URLPlaceholder_table])
-		if err != nil {
-			// protected already by url regexp
-			// notest
-			WriteTextResponse(resp, "failed to parse doc QName: "+err.Error(), http.StatusBadRequest)
+		// note: request lead to create -> 201 Created
+		busRequest, ok := createRequest(req.Method, req, rw)
+		if !ok {
 			return
 		}
-		_ = docQName
-		// note: request lead to create -> 201 Created
-		writeNotImplemented(resp)
+		busRequest.IsAPIV2 = true
+		busRequest.ApiPath = int(apiPath)
+
+		// req's BaseContext is router service's context. See service.Start()
+		// router app closing or client disconnected -> req.Context() is done
+		// will create new cancellable context and cancel it if http section send is failed.
+			// requestCtx.Done() -> SendRequest implementation will notify the handler that the consumer has left us
+		requestCtx, cancel := context.WithCancel(req.Context())
+		defer cancel() // to avoid context leak
+		respCh, respMeta, respErr, err := reqSender.SendRequest(requestCtx, busRequest)
+		if err != nil {
+			logger.Error("sending request to VVM on", busRequest.QName, "is failed:", err, ". Body:\n", string(busRequest.Body))
+			status := http.StatusInternalServerError
+			if errors.Is(err, bus.ErrSendTimeoutExpired) {
+				status = http.StatusServiceUnavailable
+			}
+			WriteTextResponse(rw, err.Error(), status)
+			return
+		}
+
+		initResponse(rw, respMeta.ContentType, respMeta.StatusCode)
+		reply(requestCtx, rw, respCh, respErr, respMeta.ContentType, cancel, true, false)
 	}
 }

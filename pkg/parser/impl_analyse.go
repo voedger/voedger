@@ -535,6 +535,20 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 					limit.ops = append(limit.ops, appdef.OperationKind_Insert)
 				}
 			}
+			if op.Activate {
+				if !ops.Contains(appdef.OperationKind_Activate) {
+					c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_ACTIVATE))
+				} else {
+					limit.ops = append(limit.ops, appdef.OperationKind_Activate)
+				}
+			}
+			if op.Deactivate {
+				if !ops.Contains(appdef.OperationKind_Deactivate) {
+					c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_DEACTIVATE))
+				} else {
+					limit.ops = append(limit.ops, appdef.OperationKind_Deactivate)
+				}
+			}
 			if op.Update {
 				if !ops.Contains(appdef.OperationKind_Update) {
 					c.stmtErr(&op.Pos, ErrLimitOperationNotAllowed(OP_UPDATE))
@@ -582,7 +596,7 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 		if limit.SingleItem.Table != nil {
 			if err = resolveInCtx(*limit.SingleItem.Table, c, func(t *TableStmt, schema *PackageSchemaAST) error {
 				limit.SingleItem.Table.qName = schema.NewQName(t.Name)
-				allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select))
+				allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate))
 				return nil
 			}); err != nil {
 				c.stmtErr(&limit.SingleItem.Table.Pos, err)
@@ -598,7 +612,7 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 		} else if limit.AllItems.Views {
 			allowedOps(set.From(appdef.OperationKind_Select))
 		} else {
-			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select))
+			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate))
 		}
 		if limit.AllItems.WithTag != nil {
 			if err = resolveInCtx(*limit.AllItems.WithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error {
@@ -618,7 +632,7 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 		} else if limit.EachItem.Views {
 			allowedOps(set.From(appdef.OperationKind_Select))
 		} else {
-			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select))
+			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate))
 		}
 		if limit.EachItem.WithTag != nil {
 			if err = resolveInCtx(*limit.EachItem.WithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error {

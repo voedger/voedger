@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"maps"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -70,14 +69,17 @@ func (s *httpService) blobHTTPRequestHandler_Read() http.HandlerFunc {
 	}
 }
 
-func parseURLParams(req *http.Request, resp http.ResponseWriter) (appQName appdef.AppQName, wsid istructs.WSID, headers http.Header, ok bool) {
+func parseURLParams(req *http.Request, resp http.ResponseWriter) (appQName appdef.AppQName, wsid istructs.WSID, headers map[string]string, ok bool) {
 	vars := mux.Vars(req)
 	wsidUint, err := strconv.ParseUint(vars[URLPlaceholder_wsid], utils.DecimalBase, utils.BitSize64)
 	if err != nil {
 		// notest: checked by router url rule
 		panic(err)
 	}
-	headers = maps.Clone(req.Header)
+	headers = map[string]string{}
+	for k, v := range req.Header {
+		headers[k] = v[0]
+	}
 	if _, ok := headers[coreutils.Authorization]; !ok {
 		// no token among headers -> look among cookies
 		// no token among cookies as well -> just do nothing, 403 will happen on call helper commands further in BLOBs processor
@@ -93,7 +95,7 @@ func parseURLParams(req *http.Request, resp http.ResponseWriter) (appQName appde
 				return appQName, wsid, headers, false
 			}
 			// authorization token in cookies -> q.sys.DownloadBLOBAuthnz requires it in headers
-			headers[coreutils.Authorization] = []string{val}
+			headers[coreutils.Authorization] = val
 		}
 	}
 	appQName = appdef.NewAppQName(vars[URLPlaceholder_appOwner], vars[URLPlaceholder_appName])

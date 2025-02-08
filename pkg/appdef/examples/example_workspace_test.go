@@ -47,10 +47,8 @@ func ExampleIWorkspace() {
 	// how to enum workspaces
 	{
 		fmt.Println("App workspaces:")
-		cnt := 0
-		for ws := range app.Workspaces() {
-			cnt++
-			fmt.Println("-", cnt, ":", ws)
+		for i, ws := range app.Workspaces() {
+			fmt.Println("-", i+1, ":", ws)
 		}
 	}
 
@@ -63,10 +61,8 @@ func ExampleIWorkspace() {
 		// how to inspect workspace
 		fmt.Println("Workspace descriptor is", ws.Descriptor())
 		fmt.Println("Workspace local types:")
-		cnt := 0
-		for t := range ws.LocalTypes() {
-			cnt++
-			fmt.Println("-", cnt, ":", t)
+		for i, t := range ws.LocalTypes() {
+			fmt.Println("-", i+1, ":", t)
 		}
 	}
 

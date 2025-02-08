@@ -31,7 +31,7 @@ func (a *Application) read(name appdef.AppQName, app appdef.IAppDef) {
 
 	a.Name = name
 
-	for ws := range app.Workspaces() {
+	for _, ws := range app.Workspaces() {
 		if ws.IsSystem() {
 			continue
 		}

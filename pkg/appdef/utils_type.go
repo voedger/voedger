@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"iter"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/coreutils/utils"
@@ -20,9 +21,7 @@ func CDoc(f FindType, name QName) ICDoc {
 }
 
 // Returns iterator over CDocs.
-//
-// TODO: here and further according to the code: should return iter.Seq[I×××]
-func CDocs(types SeqType) func(func(ICDoc) bool) {
+func CDocs(types TypesSlice) iter.Seq[ICDoc] {
 	return TypesByKind[ICDoc](types, TypeKind_CDoc)
 }
 
@@ -34,7 +33,7 @@ func Command(f FindType, name QName) ICommand {
 }
 
 // Returns iterator over Commands.
-func Commands(types SeqType) func(func(ICommand) bool) {
+func Commands(types TypesSlice) iter.Seq[ICommand] {
 	return TypesByKind[ICommand](types, TypeKind_Command)
 }
 
@@ -46,7 +45,7 @@ func CRecord(f FindType, name QName) ICRecord {
 }
 
 // Returns iterator over CRecords.
-func CRecords(types SeqType) func(func(ICRecord) bool) {
+func CRecords(types TypesSlice) iter.Seq[ICRecord] {
 	return TypesByKind[ICRecord](types, TypeKind_CRecord)
 }
 
@@ -58,7 +57,7 @@ func Data(f FindType, name QName) IData {
 }
 
 // Returns iterator over Data types.
-func DataTypes(types SeqType) func(func(IData) bool) {
+func DataTypes(types TypesSlice) iter.Seq[IData] {
 	return TypesByKind[IData](types, TypeKind_Data)
 }
 
@@ -70,7 +69,7 @@ func Extension(f FindType, name QName) IExtension {
 }
 
 // Returns iterator over Extensions.
-func Extensions(types SeqType) func(func(IExtension) bool) {
+func Extensions(types TypesSlice) iter.Seq[IExtension] {
 	return TypesByKinds[IExtension](types, TypeKind_Extensions)
 }
 
@@ -82,7 +81,7 @@ func Function(f FindType, name QName) IFunction {
 }
 
 // Returns iterator over Functions.
-func Functions(types SeqType) func(func(IFunction) bool) {
+func Functions(types TypesSlice) iter.Seq[IFunction] {
 	return TypesByKinds[IFunction](types, TypeKind_Functions)
 }
 
@@ -94,7 +93,7 @@ func GDoc(f FindType, name QName) IGDoc {
 }
 
 // Returns iterator over GDocs.
-func GDocs(types SeqType) func(func(IGDoc) bool) {
+func GDocs(types TypesSlice) iter.Seq[IGDoc] {
 	return TypesByKind[IGDoc](types, TypeKind_GDoc)
 }
 
@@ -106,7 +105,7 @@ func GRecord(f FindType, name QName) IGRecord {
 }
 
 // Returns iterator over GRecords.
-func GRecords(types SeqType) func(func(IGRecord) bool) {
+func GRecords(types TypesSlice) iter.Seq[IGRecord] {
 	return TypesByKind[IGRecord](types, TypeKind_GRecord)
 }
 
@@ -118,7 +117,7 @@ func Job(f FindType, name QName) IJob {
 }
 
 // Returns iterator over Jobs.
-func Jobs(types SeqType) func(func(IJob) bool) {
+func Jobs(types TypesSlice) iter.Seq[IJob] {
 	return TypesByKind[IJob](types, TypeKind_Job)
 }
 
@@ -130,7 +129,7 @@ func Limit(f FindType, name QName) ILimit {
 }
 
 // Returns iterator over Limits.
-func Limits(types SeqType) func(func(ILimit) bool) {
+func Limits(types TypesSlice) iter.Seq[ILimit] {
 	return TypesByKind[ILimit](types, TypeKind_Limit)
 }
 
@@ -142,7 +141,7 @@ func Object(f FindType, name QName) IObject {
 }
 
 // Returns iterator over Objects.
-func Objects(types SeqType) func(func(IObject) bool) {
+func Objects(types TypesSlice) iter.Seq[IObject] {
 	return TypesByKind[IObject](types, TypeKind_Object)
 }
 
@@ -154,7 +153,7 @@ func ODoc(f FindType, name QName) IODoc {
 }
 
 // Returns iterator over ODocs.
-func ODocs(types SeqType) func(func(IODoc) bool) {
+func ODocs(types TypesSlice) iter.Seq[IODoc] {
 	return TypesByKind[IODoc](types, TypeKind_ODoc)
 }
 
@@ -166,7 +165,7 @@ func ORecord(f FindType, name QName) IORecord {
 }
 
 // Returns iterator over ORecords.
-func ORecords(types SeqType) func(func(IORecord) bool) {
+func ORecords(types TypesSlice) iter.Seq[IORecord] {
 	return TypesByKind[IORecord](types, TypeKind_ORecord)
 }
 
@@ -178,7 +177,7 @@ func Projector(f FindType, name QName) IProjector {
 }
 
 // Returns iterator over Projectors.
-func Projectors(types SeqType) func(func(IProjector) bool) {
+func Projectors(types TypesSlice) iter.Seq[IProjector] {
 	return TypesByKind[IProjector](types, TypeKind_Projector)
 }
 
@@ -190,7 +189,7 @@ func Query(f FindType, name QName) IQuery {
 }
 
 // Returns iterator over Queries.
-func Queries(types SeqType) func(func(IQuery) bool) {
+func Queries(types TypesSlice) iter.Seq[IQuery] {
 	return TypesByKind[IQuery](types, TypeKind_Query)
 }
 
@@ -202,7 +201,7 @@ func Rate(f FindType, name QName) IRate {
 }
 
 // Returns iterator over Rates.
-func Rates(types SeqType) func(func(IRate) bool) {
+func Rates(types TypesSlice) iter.Seq[IRate] {
 	return TypesByKind[IRate](types, TypeKind_Rate)
 }
 
@@ -214,7 +213,7 @@ func Record(f FindType, name QName) IRecord {
 }
 
 // Returns iterator over Records.
-func Records(types SeqType) func(func(IRecord) bool) {
+func Records(types TypesSlice) iter.Seq[IRecord] {
 	return TypesByKinds[IRecord](types, TypeKind_Records)
 }
 
@@ -226,7 +225,7 @@ func Role(f FindType, name QName) IRole {
 }
 
 // Returns iterator over Roles.
-func Roles(types SeqType) func(func(IRole) bool) {
+func Roles(types TypesSlice) iter.Seq[IRole] {
 	return TypesByKind[IRole](types, TypeKind_Role)
 }
 
@@ -241,7 +240,7 @@ func Singleton(f FindType, name QName) ISingleton {
 }
 
 // Returns iterator over Singletons.
-func Singletons(types SeqType) func(func(ISingleton) bool) {
+func Singletons(types TypesSlice) iter.Seq[ISingleton] {
 	return func(visit func(ISingleton) bool) {
 		for s := range TypesByKinds[ISingleton](types, TypeKind_Singletons) {
 			if s.Singleton() {
@@ -261,7 +260,7 @@ func Structure(f FindType, name QName) IStructure {
 }
 
 // Returns iterator over Structures.
-func Structures(types SeqType) func(func(IStructure) bool) {
+func Structures(types TypesSlice) iter.Seq[IStructure] {
 	return TypesByKinds[IStructure](types, TypeKind_Structures)
 }
 
@@ -280,7 +279,7 @@ func Tag(f FindType, name QName) ITag {
 }
 
 // Returns iterator over Tags.
-func Tags(types SeqType) func(func(ITag) bool) {
+func Tags(types TypesSlice) iter.Seq[ITag] {
 	return TypesByKind[ITag](types, TypeKind_Tag)
 }
 
@@ -307,9 +306,9 @@ func TypeByNameAndKind[T IType](f FindType, name QName, kind TypeKind) (found T)
 }
 
 // Returns iterator over types by kind.
-func TypesByKind[T IType](types SeqType, kind TypeKind) func(func(T) bool) {
+func TypesByKind[T IType](types TypesSlice, kind TypeKind) iter.Seq[T] {
 	return func(visit func(T) bool) {
-		for t := range types {
+		for _, t := range types {
 			if t.Kind() == kind {
 				if !visit(t.(T)) {
 					break
@@ -320,9 +319,9 @@ func TypesByKind[T IType](types SeqType, kind TypeKind) func(func(T) bool) {
 }
 
 // Returns iterator over types by kinds set.
-func TypesByKinds[T IType](types SeqType, kinds TypeKindSet) func(func(T) bool) {
+func TypesByKinds[T IType](types TypesSlice, kinds TypeKindSet) iter.Seq[T] {
 	return func(visit func(T) bool) {
-		for t := range types {
+		for _, t := range types {
 			if kinds.Contains(t.Kind()) {
 				if !visit(t.(T)) {
 					break
@@ -340,7 +339,7 @@ func View(f FindType, name QName) IView {
 }
 
 // Returns iterator over Views.
-func Views(types SeqType) func(func(IView) bool) {
+func Views(types TypesSlice) iter.Seq[IView] {
 	return TypesByKind[IView](types, TypeKind_ViewRecord)
 }
 
@@ -352,7 +351,7 @@ func WDoc(f FindType, name QName) IWDoc {
 }
 
 // Returns iterator over WDocs.
-func WDocs(types SeqType) func(func(IWDoc) bool) {
+func WDocs(types TypesSlice) iter.Seq[IWDoc] {
 	return TypesByKind[IWDoc](types, TypeKind_WDoc)
 }
 
@@ -364,7 +363,7 @@ func WRecord(f FindType, name QName) IWRecord {
 }
 
 // Returns iterator over WRecords.
-func WRecords(types SeqType) func(func(IWRecord) bool) {
+func WRecords(types TypesSlice) iter.Seq[IWRecord] {
 	return TypesByKind[IWRecord](types, TypeKind_WRecord)
 }
 

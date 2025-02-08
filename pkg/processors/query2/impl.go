@@ -214,7 +214,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			qw.state = stateprovide.ProvideQueryProcessorStateFactory()(
 				qw.msg.RequestCtx(),
 				func() istructs.IAppStructs { return qw.appStructs },
-				state.SimplePartitionIDFunc(qw.msg.Partition()),
+				state.SimplePartitionIDFunc(qw.msg.PartitionID()),
 				state.SimpleWSIDFunc(qw.msg.WSID()),
 				qw.secretReader,
 				func() []iauthnz.Principal { return qw.principals },
@@ -245,8 +245,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			defer func() {
 				qw.metrics.Increase(queryprocessor.Metric_BuildSeconds, time.Since(now).Seconds())
 			}()
-			qw.apiPathHandler.RowsProcessor(ctx, qw)
-			return nil
+			return qw.apiPathHandler.RowsProcessor(ctx, qw)
 		}),
 	}
 	return pipeline.NewSyncPipeline(requestCtx, "Query Processor", ops[0], ops[1:]...)

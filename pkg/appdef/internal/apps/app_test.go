@@ -6,7 +6,6 @@
 package apps_test
 
 import (
-	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -34,7 +33,7 @@ func Test_NewAppDef(t *testing.T) {
 		require.NotNil(app)
 
 		t.Run("should be ok to read sys package", func(t *testing.T) {
-			require.Equal([]string{appdef.SysPackage}, slices.Collect(app.PackageLocalNames()))
+			require.Equal([]string{appdef.SysPackage}, app.PackageLocalNames())
 			require.Equal(appdef.SysPackagePath, app.PackageFullPath(appdef.SysPackage))
 			require.Equal(appdef.SysPackage, app.PackageLocalName(appdef.SysPackagePath))
 		})

@@ -25,31 +25,38 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (res bus.Request, ok bool) {
+func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter) (res bus.Request, ok bool) {
 	vars := mux.Vars(req)
 	wsidStr := vars[URLPlaceholder_wsid]
-	wsidUint, err := strconv.ParseUint(wsidStr, utils.DecimalBase, utils.BitSize64)
+	wsid, err := strconv.ParseUint(wsidStr, utils.DecimalBase, utils.BitSize64)
 	if err != nil {
-		// impossible because of regexp in a handler
-		// notest
+		// notest: impossible because of regexp in a handler
 		panic(err)
 	}
-	appQNameStr := vars[URLPlaceholder_appOwner] + appdef.AppQNameQualifierChar + vars[URLPlaceholder_appName]
-	wsid := istructs.WSID(wsidUint)
-	if appQName, err := appdef.ParseAppQName(appQNameStr); err == nil {
-		if numAppWorkspaces, ok := numsAppsWorkspaces[appQName]; ok {
-			baseWSID := wsid.BaseWSID()
-			if baseWSID <= istructs.MaxPseudoBaseWSID {
-				wsid = coreutils.GetAppWSID(wsid, numAppWorkspaces)
-			}
-		}
-	}
+
 	res = bus.Request{
 		Method:   reqMethod,
-		WSID:     wsid,
-		Query:    req.URL.Query(),
-		Header:   req.Header,
-		AppQName: appQNameStr,
+		WSID:     istructs.WSID(wsid),
+		Query:    map[string]string{},
+		Header:   map[string]string{},
+		AppQName: appdef.NewAppQName(vars[URLPlaceholder_appOwner], vars[URLPlaceholder_appName]),
+		QName:    appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_table]),
+		Resource: vars[URLPlaceholder_resourceName],
+	}
+
+	if docIDStr, hasDocID := vars[URLPlaceholder_id]; hasDocID {
+		docIDUint64, err := strconv.ParseUint(docIDStr, utils.DecimalBase, utils.BitSize64)
+		if err != nil {
+			// notest: prased already by route regexp
+			panic(err)
+		}
+		res.DocID = istructs.IDType(docIDUint64)
+	}
+	for k, v := range req.URL.Query() {
+		res.Query[k] = v[0]
+	}
+	for k, v := range req.Header {
+		res.Header[k] = v[0]
 	}
 	if req.Body != nil && req.Body != http.NoBody {
 		if res.Body, err = io.ReadAll(req.Body); err != nil {
@@ -59,7 +66,7 @@ func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, 
 	return res, err == nil
 }
 
-func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error, contentType string, onSendFailed func(), isCmd bool) {
+func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error, contentType string, onSendFailed func(), isAPIV1 bool, isCmd bool) {
 	sendSuccess := true
 	defer func() {
 		if requestCtx.Err() != nil {
@@ -84,7 +91,7 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 			// ctx.Done() must have the priority
 			return
 		}
-		if elemsCount == 0 {
+		if isAPIV1 && elemsCount == 0 {
 			if isCmd || contentType == coreutils.TextPlain {
 				sendSuccess = writeResponse(w, elem.(string))
 			} else {
@@ -101,7 +108,7 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 			return
 		}
 
-		if isCmd || contentType == coreutils.TextPlain {
+		if isAPIV1 && (isCmd || contentType == coreutils.TextPlain) {
 			continue
 		}
 

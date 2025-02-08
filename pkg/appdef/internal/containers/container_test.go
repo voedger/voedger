@@ -7,7 +7,6 @@ package containers_test
 
 import (
 	"fmt"
-	"slices"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -55,7 +54,7 @@ func Test_Containers(t *testing.T) {
 
 		require.Equal(1, doc.ContainerCount())
 
-		require.Equal([]appdef.IContainer{cont}, slices.Collect(doc.Containers()))
+		require.Equal([]appdef.IContainer{cont}, doc.Containers())
 	})
 }
 

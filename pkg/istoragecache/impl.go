@@ -6,7 +6,6 @@ package istoragecache
 
 import (
 	"context"
-	"encoding/binary"
 	"time"
 
 	"github.com/VictoriaMetrics/fastcache"
@@ -54,6 +53,8 @@ type implCachingAppStorageProvider struct {
 	iTime           coreutils.ITime
 }
 
+// normally must be called once per app
+// Currently is called once in appStructsProviderType.Builtin() on VVMAppsBuilder.BuildAppsArtefacts() stage
 func (asp *implCachingAppStorageProvider) AppStorage(appQName appdef.AppQName) (istorage.IAppStorage, error) {
 	nonCachingAppStorage, err := asp.storageProvider.AppStorage(appQName)
 	if err != nil {
@@ -123,8 +124,8 @@ func (s *cachedAppStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []
 			expireAt = s.iTime.Now().Add(time.Duration(ttlSeconds) * time.Second).UnixMilli()
 		}
 
-		d := dataWithExpiration{data: value, expireAt: expireAt}
-		s.cache.Set(makeKey(pKey, cCols), d.toBytes())
+		d := coreutils.DataWithExpiration{Data: value, ExpireAt: expireAt}
+		s.cache.Set(makeKey(pKey, cCols), d.ToBytes())
 	}
 
 	return ok, nil
@@ -148,8 +149,8 @@ func (s *cachedAppStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, n
 			expireAt = s.iTime.Now().Add(time.Duration(ttlSeconds) * time.Second).UnixMilli()
 		}
 
-		d := dataWithExpiration{data: newValue, expireAt: expireAt}
-		s.cache.Set(makeKey(pKey, cCols), d.toBytes())
+		d := coreutils.DataWithExpiration{Data: newValue, ExpireAt: expireAt}
+		s.cache.Set(makeKey(pKey, cCols), d.ToBytes())
 	}
 
 	return ok, nil
@@ -189,15 +190,14 @@ func (s *cachedAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok b
 	cachedData, found = s.cache.HasGet(*data, key)
 
 	if found {
-		var d dataWithExpiration
-		d.read(cachedData)
+		d := coreutils.ReadWithExpiration(cachedData)
 
-		if isExpired(d.expireAt, s.iTime.Now()) {
+		if d.IsExpired(s.iTime.Now()) {
 			s.cache.Del(key)
 
 			return false, nil
 		}
-		*data = d.data
+		*data = d.Data
 
 		return len(*data) != 0, nil
 	}
@@ -224,8 +224,8 @@ func (s *cachedAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err err
 	err = s.storage.Put(pKey, cCols, value)
 
 	if err == nil {
-		data := dataWithExpiration{data: value}
-		s.cache.Set(makeKey(pKey, cCols), data.toBytes())
+		data := coreutils.DataWithExpiration{Data: value}
+		s.cache.Set(makeKey(pKey, cCols), data.ToBytes())
 	}
 
 	return err
@@ -242,8 +242,8 @@ func (s *cachedAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 	err = s.storage.PutBatch(items)
 	if err == nil {
 		for _, i := range items {
-			data := dataWithExpiration{data: i.Value}
-			s.cache.Set(makeKey(i.PKey, i.CCols), data.toBytes())
+			data := coreutils.DataWithExpiration{Data: i.Value}
+			s.cache.Set(makeKey(i.PKey, i.CCols), data.ToBytes())
 		}
 	}
 
@@ -266,10 +266,7 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 		s.mGetCachedTotal.Increase(1.0)
 
 		if len(cachedData) != 0 {
-			d := &dataWithExpiration{}
-			d.read(cachedData)
-			*data = d.data
-
+			*data = cachedData[utils.Uint64Size:]
 			return len(*data) != 0, nil
 		}
 	}
@@ -279,11 +276,11 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 		return false, err
 	}
 
-	d := dataWithExpiration{}
+	d := coreutils.DataWithExpiration{}
 	if ok {
-		d.data = *data
+		d.Data = *data
 	}
-	s.cache.Set(key, d.toBytes())
+	s.cache.Set(key, d.ToBytes())
 
 	return ok, nil
 }
@@ -307,10 +304,7 @@ func (s *cachedAppStorage) getBatchFromCache(pKey []byte, items []istorage.GetBa
 			return false
 		}
 
-		var d dataWithExpiration
-
-		d.read(cachedData)
-		*items[i].Data = d.data
+		*items[i].Data = cachedData[utils.Uint64Size:]
 		items[i].Ok = len(*items[i].Data) != 0
 	}
 	s.mGetBatchCachedTotal.Increase(1.0)
@@ -324,11 +318,11 @@ func (s *cachedAppStorage) getBatchFromStorage(pKey []byte, items []istorage.Get
 	}
 
 	for _, item := range items {
-		d := dataWithExpiration{}
+		d := coreutils.DataWithExpiration{}
 		if item.Ok {
-			d.data = *item.Data
+			d.Data = *item.Data
 		}
-		s.cache.Set(makeKey(pKey, item.CCols), d.toBytes())
+		s.cache.Set(makeKey(pKey, item.CCols), d.ToBytes())
 	}
 
 	return err
@@ -360,23 +354,3 @@ func makeKey(pKey []byte, cCols []byte) (res []byte) {
 	return res
 }
 
-func isExpired(expireAt int64, now time.Time) bool {
-	return expireAt != 0 && !now.Before(time.UnixMilli(expireAt))
-}
-
-type dataWithExpiration struct {
-	data []byte
-	expireAt int64
-}
-
-func (d *dataWithExpiration) toBytes() []byte {
-	res := make([]byte, 0, len(d.data)+utils.Uint64Size)
-	res = append(res, d.data...)
-	res = binary.BigEndian.AppendUint64(res, uint64(d.expireAt)) // nolint G115
-	return res
-}
-
-func (d *dataWithExpiration) read(data []byte) {
-	d.data = data[:len(data)-utils.Uint64Size]
-	d.expireAt = int64(binary.BigEndian.Uint64(data[len(data)-utils.Uint64Size:])) // nolint G115
-}
