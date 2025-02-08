@@ -6,6 +6,7 @@
 package sys_it
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -37,7 +38,8 @@ func TestQueryProcessor_V2(t *testing.T) {
 	unsubscribe()
 
 	// execute query
-	resp, err := vit.IFederation.Func("api/v2/users/test1/apps/app1/workspaces/123/views/app1pkg.CategoryIdx", "{}")
+	url := fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/views/app1pkg.CategoryIdx", ws.WSID)
+	resp, err := vit.IFederation.Query(url)
 	require.NoError(err)
 	require.Nil(resp.SysError)
 }

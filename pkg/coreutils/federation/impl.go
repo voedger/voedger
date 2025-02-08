@@ -139,7 +139,7 @@ func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...core
 	return f.httpRespToFuncResp(httpResp, err)
 }
 
-func (f *implIFederation) Query(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
+func (f *implIFederation) Query(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
 	httpResp, err := f.get(relativeURL, optFuncs...)
 	return f.httpRespToFuncResp(httpResp, err)
 }
