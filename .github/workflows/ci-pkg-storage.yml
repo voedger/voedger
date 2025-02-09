@@ -9,42 +9,71 @@ on:
       - 'pkg/istorage/**'
 
 jobs:
+
   determine_changes:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     outputs:
-      cas_changed: ${{ steps.filter.outputs.cas }}
-      amazon_changed: ${{ steps.filter.outputs.amazon }}
+      cas_changed: ${{ steps.filter.outputs.cas_changed }}
+      amazon_changed: ${{ steps.filter.outputs.amazon_changed }}
+      others_changed: ${{ steps.filter.outputs.others_changed }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Ensure we have history for comparison
 
-      - name: Check modified files
+      - name: Check changed files
         id: filter
         run: |
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
-          echo "Changed files: $CHANGED_FILES"
+          CAS_CHANGED=false
+          AMAZON_CHANGED=false
 
-          if echo "$CHANGED_FILES" | grep -q '^pkg/istorage/cas/'; then
-            echo "cas=true" >> $GITHUB_ENV
+          # Ensure we have a valid previous commit
+          if git rev-parse HEAD^ >/dev/null 2>&1; then
+            BEFORE_COMMIT=HEAD^
+          else
+            BEFORE_COMMIT=HEAD  # In case it's the first commit
           fi
 
-          if echo "$CHANGED_FILES" | grep -q '^pkg/istorage/amazondb/'; then
-            echo "amazon=true" >> $GITHUB_ENV
+          # Get changed files
+          CHANGED_FILES=$(git diff --name-only $BEFORE_COMMIT HEAD)
+
+          # Check if files were changed in respective folders
+          OTHERS_CHANGED=true
+          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/cas/"; then
+            CAS_CHANGED=true
+            OTHERS_CHANGED=false
           fi
 
-          echo "cas=${{ env.cas }}" >> $GITHUB_OUTPUT
-          echo "amazon=${{ env.amazon }}" >> $GITHUB_OUTPUT
+          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/amazondb/"; then
+            AMAZON_CHANGED=true
+            OTHERS_CHANGED=false
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/bbolt/"; then
+            OTHERS_CHANGED=false
+          fi
+          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/mem/"; then
+            OTHERS_CHANGED=false
+          fi
+          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/provider/"; then
+            OTHERS_CHANGED=false
+          fi
+          
+          echo "cas_changed=$CAS_CHANGED" >> $GITHUB_OUTPUT
+          echo "amazon_changed=$AMAZON_CHANGED" >> $GITHUB_OUTPUT
+          echo "others_changed=$OTHERS_CHANGED" >> $GITHUB_OUTPUT
 
   trigger_cas:
     needs: determine_changes
-    if: needs.determine_changes.outputs.cas_changed == 'true'
-    uses: ./.github/workflows/ci_cas.yaml
+    if: (needs.determine_changes.outputs.cas_changed == 'true') || (needs.determine_changes.outputs.others_changed == 'true') 
+    uses: ./.github/workflows/ci_cas.yml
     secrets:
       personaltoken: ${{ secrets.REPOREADING_TOKEN }}
 
   trigger_amazon:
     needs: determine_changes
-    if: needs.determine_changes.outputs.amazon_changed == 'true'
-    uses: ./.github/workflows/ci_amazon.yaml
+    if: (needs.determine_changes.outputs.amazon_changed == 'true') || (needs.determine_changes.outputs.others_changed == 'true') 
+    uses: ./.github/workflows/ci_amazon.yml
     secrets:
       personaltoken: ${{ secrets.REPOREADING_TOKEN }}

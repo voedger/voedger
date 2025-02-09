@@ -5,6 +5,13 @@ on:
     secrets:
       personaltoken:
         required: true
+#on:
+#  push:
+#    paths:
+#      - 'pkg/istorage/amazondb/**'
+#  pull_request:
+#    paths:
+#      - 'pkg/istorage/amazondb/**'
 
 jobs:
 
@@ -32,14 +39,6 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: 'stable'
-
-    - name: Cache Go Modules
-      uses: actions/cache@v4
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
 
     - name: Run Amazon DynamoDB Tests
       working-directory: pkg/istorage/amazondb

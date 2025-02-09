@@ -5,6 +5,13 @@ on:
     secrets:
       personaltoken:
         required: true
+#on:
+#  push:
+#    paths:
+#      - 'pkg/istorage/cas/**'
+#  pull_request:
+#    paths:
+#      - 'pkg/istorage/cas/**'
 
 jobs:
 
