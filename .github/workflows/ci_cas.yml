@@ -1,0 +1,63 @@
+name: Run Cassandra Tests
+
+on:
+  workflow_call:
+    secrets:
+      personaltoken:
+        required: true
+
+jobs:
+
+  build:
+    name: Build & Test
+    runs-on: ubuntu-22.04
+    outputs:
+      failure_url: ${{ steps.set_failure_url.outputs.failure_url }}
+
+    services:
+      scylladb:
+        image: scylladb/scylla
+        ports:
+          - 9042:9042
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 'stable'
+        cache: false  # Disables default caching (may be unnecessary)
+
+    - name: Cache Go Modules
+      uses: actions/cache@v4
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Run Go Tests on Cassandra
+      working-directory: pkg/istorage/cas
+      run: go test ./... -v -race
+      env:
+        CASSANDRA_TESTS_ENABLED: true
+
+    - name: Set Failure URL
+      if: failure()  # Corrected syntax
+      id: set_failure_url
+      run: echo "failure_url=https://github.com/voedger/actions/runs/${{ github.run_id }}" >> $GITHUB_OUTPUT
+
+  call-workflow-create-issue:
+    needs: build
+    if: ${{ failure() }}
+    uses: untillpro/ci-action/.github/workflows/create_issue.yml@master
+    with: 
+      repo: 'voedger/voedger' 
+      assignee: 'host6'
+      name: 'Cassandra test failed on'
+      body: ${{ needs.build.outputs.failure_url }}
+      label: 'prty/blocker'
+    secrets:
+      personaltoken: ${{ secrets.personaltoken }}  # Match with `workflow_call`

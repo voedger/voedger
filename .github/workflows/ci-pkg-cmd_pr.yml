@@ -1,6 +1,9 @@
 name: CI pkg-cmd PR
 
-on: pull_request_target
+on: 
+  pull_request_target:
+    paths-ignore:
+      - 'pkg/istorage/**'
 
 jobs:
   call-workflow-ci-pkg:
