@@ -37,7 +37,7 @@ type VIT struct {
 }
 
 type VITConfig struct {
-	opts     []vitConfigOptFunc
+	opts     []VITConfigOptFunc
 	isShared bool
 }
 
@@ -52,7 +52,7 @@ type vitPreConfig struct {
 	secrets      map[string][]byte
 }
 
-type vitConfigOptFunc func(*vitPreConfig)
+type VITConfigOptFunc func(*vitPreConfig)
 type AppOptFunc func(app *app, cfg *vvm.VVMConfig)
 type vitOptFunc func(vit *VIT)
 type signInOptFunc func(opts *signInOpts)
