@@ -77,3 +77,10 @@ jobs:
     uses: ./.github/workflows/ci_amazon.yml
     secrets:
       personaltoken: ${{ secrets.REPOREADING_TOKEN }}
+
+  auto-merge-pr:
+    needs: [trigger_amazon, trigger_cas]
+    if: ${{ needs.trigger_amazon.result == 'success' || needs.trigger_cas.result == 'success' }}
+    uses: voedger/voedger/.github/workflows/merge.yml@main
+    secrets:
+      personaltoken: ${{ secrets.REPOREADING_TOKEN }}
