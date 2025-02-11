@@ -80,7 +80,7 @@ jobs:
 
   auto-merge-pr:
     needs: [trigger_amazon, trigger_cas]
-    if: ${{ github.event_name == 'pull_request' && (needs.trigger_amazon.result == 'success' || needs.trigger_cas.result == 'success') }}
+    if: ${{ github.event_name == 'pull_request' }}
     uses: voedger/voedger/.github/workflows/merge.yml@main
     secrets:
       personaltoken: ${{ secrets.REPOREADING_TOKEN }}
