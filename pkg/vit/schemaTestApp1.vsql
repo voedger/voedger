@@ -595,6 +595,14 @@ ALTERABLE WORKSPACE test_wsWS (
 		)
 	);
 
+	TYPE QryReturnsCategoryResult (
+		CategoryID ref(category)
+	);
+
+	TYPE QryReturnsCategoryParams (
+		CategoryID int64
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY MockQry(MockQryParams) RETURNS MockQryResult WITH Tags=(WorkspaceOwnerFuncTag);
@@ -616,6 +624,7 @@ ALTERABLE WORKSPACE test_wsWS (
 
 		COMMAND CmdWithResponseIntent(WithResponseIntentParams) WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY QryWithResponseIntent(WithResponseIntentParams) RETURNS QryWithResponseIntentResult WITH Tags=(WorkspaceOwnerFuncTag);
+		QUERY QryReturnsCategory(QryReturnsCategoryParams) RETURNS QryReturnsCategoryResult WITH Tags=(WorkspaceOwnerFuncTag);
 	);
 
 	ROLE Updated; -- need for invite tests
