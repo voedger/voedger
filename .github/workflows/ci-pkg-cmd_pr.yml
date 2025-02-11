@@ -24,6 +24,6 @@ jobs:
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   auto-merge-pr:
     needs: call-workflow-ci-pkg
-    uses: voedger/voedger/.github/workflows/merge.yml@main
+    uses: ./.github/workflows/merge.yml
     secrets:
       personaltoken: ${{ secrets.REPOREADING_TOKEN }}

@@ -81,14 +81,14 @@ jobs:
   auto-merge-pr-amazon:
     needs: [trigger_amazon]
     if: ${{ github.event_name == 'pull_request' && needs.trigger_amazon.result == 'success' }}
-    uses: voedger/voedger/.github/workflows/merge.yml@main
+    uses: ./.github/workflows/merge.yml
     secrets:
-      personaltoken: ${{ secrets.REPOREADING_TOKEN }}
+      personaltoken: ${{ secrets.PERSONAL_TOKEN }}
 
   auto-merge-pr-cas:
     needs: [trigger_cas, trigger_amazon]
     if: ${{ github.event_name == 'pull_request' && needs.trigger_cas.result == 'success' && needs.trigger_amazon.result == 'skipped'}}
-    uses: voedger/voedger/.github/workflows/merge.yml@main
+    uses: ./.github/workflows/merge.yml
     secrets:
-      personaltoken: ${{ secrets.REPOREADING_TOKEN }}
+      personaltoken: ${{ secrets.PERSONAL_TOKEN }}
 
