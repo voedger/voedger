@@ -625,7 +625,7 @@ func TestErrors(t *testing.T) {
 }
 
 func TestUnnaming(t *testing.T) {
-	t.Skip()
+	t.Skip("to be fixed in https://github.com/voedger/voedger/issues/3253")
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 

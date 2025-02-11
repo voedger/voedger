@@ -303,7 +303,7 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 		if err != nil {
 			return err
 		}
-		kb.PutRecordID(sys.Storage_Record_Field_ID, istructs.RecordID(args.ArgumentObject.AsInt64("CategoryID")))
+		kb.PutRecordID(sys.Storage_Record_Field_ID, istructs.RecordID(args.ArgumentObject.AsInt64("CategoryID"))) // nolint G115
 		_, err = args.State.MustExist(kb)
 		if err != nil {
 			return err
@@ -332,5 +332,5 @@ func (q *qryCategory) AsInt64(name appdef.FieldName) int64 {
 }
 
 func (q *qryCategory) AsRecordID(name appdef.FieldName) istructs.RecordID {
-	return istructs.RecordID(q.id)
+	return istructs.RecordID(q.id) // nolint G115
 }
