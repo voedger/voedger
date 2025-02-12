@@ -32,9 +32,9 @@ go get github.com/voedger/voedger/pkg/elections
 
 ```go
 type ITTLStorage[K comparable, V any] interface {
-    InsertIfNotExist(key K, val V) bool
-    CompareAndSwap(key K, oldVal V, newVal V) bool
-    CompareAndDelete(key K, val V) bool
+    InsertIfNotExist(key K, val V) (bool, error)
+    CompareAndSwap(key K, oldVal V, newVal V) (bool, error)
+    CompareAndDelete(key K, val V) (bool, error)
 }
 ```
 
@@ -47,11 +47,11 @@ type ITTLStorage[K comparable, V any] interface {
 ```go
 type IElections[K comparable, V any] interface {
     AcquireLeadership(key K, val V, duration time.Duration) context.Context
-    ReleaseLeadership(key K) error
+    ReleaseLeadership(key K)
 }
 ```
 
-- AcquireLeadership: tries to become leader for key with value val. If successful, returns a live context.Context that stays active until leadership is lost or explicitly released. If unsuccessful (storage insert fails or the system has been cleaned up), it immediately returns a canceled context and logs any error.
+- AcquireLeadership: tries to become leader for key with value val. If successful, returns a live context.Context that stays active until leadership is lost or explicitly released. If unsuccessful (storage insert fails or the system has been cleaned up), it immediately returns nil.
 - ReleaseLeadership: removes leadership for key, stops the background renewal goroutine, and calls CompareAndDelete on the underlying storage.
 
 ## Usage
@@ -74,10 +74,10 @@ func Provide[K comparable, V any](storage ITTLStorage[K, V], clock ITime) (IElec
 ### Acquiring and Releasing Leadership
 
 ```go
-elections, cleanup := elections.Provide(myStorage, myClock)
+e, cleanup := elections.Provide(myStorage, myClock)
 
 // Acquire leadership
-ctx := elections.AcquireLeadership("myKey", "myValue", 5*time.Second)
+ctx := e.AcquireLeadership("myKey", "myValue", 5*time.Second)
 select {
 case <-ctx.Done():
     fmt.Println("Failed to acquire leadership or it ended unexpectedly.")
@@ -87,7 +87,7 @@ default:
 
 // Perform your leader tasks...
 // If you want to stop being leader:
-if err := elections.ReleaseLeadership("myKey"); err != nil {
+if err := e.ReleaseLeadership("myKey"); err != nil {
     log.Printf("Release error: %v", err)
 }
 ```
