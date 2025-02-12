@@ -1,0 +1,94 @@
+name: CI changes in pkg/istorage
+
+on:
+  push:
+    paths:
+      - 'pkg/istorage/**'
+  pull_request:
+    paths:
+      - 'pkg/istorage/**'
+
+jobs:
+
+  determine_changes:
+    runs-on: ubuntu-latest
+    outputs:
+      cas_changed: ${{ steps.filter.outputs.cas_changed }}
+      amazon_changed: ${{ steps.filter.outputs.amazon_changed }}
+      others_changed: ${{ steps.filter.outputs.others_changed }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Ensure we have history for comparison
+
+      - name: Check changed files
+        id: filter
+        run: |
+          CAS_CHANGED=false
+          AMAZON_CHANGED=false
+
+          # Ensure we have a valid previous commit
+          if git rev-parse HEAD^ >/dev/null 2>&1; then
+            BEFORE_COMMIT=HEAD^
+          else
+            BEFORE_COMMIT=HEAD  # In case it's the first commit
+          fi
+
+          # Get changed files
+          CHANGED_FILES=$(git diff --name-only $BEFORE_COMMIT HEAD)
+
+          # Check if files were changed in respective folders
+          OTHERS_CHANGED=true
+          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/cas/"; then
+            CAS_CHANGED=true
+            OTHERS_CHANGED=false
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/amazondb/"; then
+            AMAZON_CHANGED=true
+            OTHERS_CHANGED=false
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/bbolt/"; then
+            OTHERS_CHANGED=false
+          fi
+          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/mem/"; then
+            OTHERS_CHANGED=false
+          fi
+          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/provider/"; then
+            OTHERS_CHANGED=false
+          fi
+          
+          echo "cas_changed=$CAS_CHANGED" >> $GITHUB_OUTPUT
+          echo "amazon_changed=$AMAZON_CHANGED" >> $GITHUB_OUTPUT
+          echo "others_changed=$OTHERS_CHANGED" >> $GITHUB_OUTPUT
+
+  trigger_cas:
+    needs: determine_changes
+    if: (needs.determine_changes.outputs.cas_changed == 'true') || (needs.determine_changes.outputs.others_changed == 'true') 
+    uses: ./.github/workflows/ci_cas.yml
+    secrets:
+      personaltoken: ${{ secrets.REPOREADING_TOKEN }}
+
+  trigger_amazon:
+    needs: determine_changes
+    if: (needs.determine_changes.outputs.amazon_changed == 'true') || (needs.determine_changes.outputs.others_changed == 'true') 
+    uses: ./.github/workflows/ci_amazon.yml
+    secrets:
+      personaltoken: ${{ secrets.REPOREADING_TOKEN }}
+
+  auto-merge-pr-amazon:
+    needs: [trigger_amazon]
+    if: ${{ github.event_name == 'pull_request' && needs.trigger_amazon.result == 'success' }}
+    uses: ./.github/workflows/merge.yml
+    secrets:
+      personaltoken: ${{ secrets.PERSONAL_TOKEN }}
+
+  auto-merge-pr-cas:
+    needs: [trigger_cas, trigger_amazon]
+    if: ${{ github.event_name == 'pull_request' && needs.trigger_cas.result == 'success' && needs.trigger_amazon.result == 'skipped'}}
+    uses: ./.github/workflows/merge.yml
+    secrets:
+      personaltoken: ${{ secrets.PERSONAL_TOKEN }}
+

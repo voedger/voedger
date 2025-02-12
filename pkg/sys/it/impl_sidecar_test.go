@@ -25,6 +25,7 @@ func TestSidecarApps_BasicUsage(t *testing.T) {
 			// configure VVM to read sidecar apps from /testdata
 			cfg.DataPath = filepath.Join(wd, "testdata")
 		}),
+
 	)
 
 	vit := it.NewVIT(t, &cfg)
