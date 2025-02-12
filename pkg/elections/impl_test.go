@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 // mockStorage is a simple thread-safe in-memory mock of ITTLStorage for testing.
@@ -77,53 +79,9 @@ func (m *mockStorage[K, V]) CompareAndDelete(key K, val V) (bool, error) {
 	return true, nil
 }
 
-// fakeTime is used for controlling the "timer" channels manually.
-type fakeTime struct {
-	now time.Time
-
-	mu      sync.Mutex
-	tickers []*chan time.Time
-}
-
-func newFakeTime(start time.Time) *fakeTime {
-	return &fakeTime{now: start}
-}
-
-func (f *fakeTime) Now() time.Time {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	return f.now
-}
-
-func (f *fakeTime) NewTimerChan(d time.Duration) <-chan time.Time {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	ch := make(chan time.Time, 1)
-	f.tickers = append(f.tickers, &ch)
-	return ch
-}
-
-func (f *fakeTime) Sleep(d time.Duration) {
-	f.mu.Lock()
-	f.now = f.now.Add(d)
-	f.mu.Unlock()
-}
-
-func (f *fakeTime) tickAll() {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	for _, chPtr := range f.tickers {
-		select {
-		case (*chPtr) <- f.now:
-		default:
-		}
-	}
-}
-
 func TestElections_AcquireLeadership_Success(t *testing.T) {
 	storage := newMockStorage[string, string]()
-	clock := newFakeTime(time.Now())
+	clock := coreutils.MockTime
 
 	elector, cleanup := Provide[string, string](storage, clock)
 	defer cleanup()
@@ -139,7 +97,7 @@ func TestElections_AcquireLeadership_Success(t *testing.T) {
 
 func TestElections_AcquireLeadership_AlreadyLeader(t *testing.T) {
 	storage := newMockStorage[string, string]()
-	clock := newFakeTime(time.Now())
+	clock := coreutils.MockTime
 
 	elector, cleanup := Provide[string, string](storage, clock)
 	defer cleanup()
@@ -159,7 +117,7 @@ func TestElections_AcquireLeadership_StorageInsertBlocked(t *testing.T) {
 	storage := newMockStorage[string, string]()
 	storage.store["occupiedKey"] = "existingVal"
 
-	clock := newFakeTime(time.Now())
+	clock := coreutils.MockTime
 	elector, cleanup := Provide[string, string](storage, clock)
 	defer cleanup()
 
@@ -172,7 +130,7 @@ func TestElections_AcquireLeadership_ErrorOnInsert(t *testing.T) {
 	storage := newMockStorage[string, string]()
 	storage.errorTrigger["errKey"] = true
 
-	clock := newFakeTime(time.Now())
+	clock := coreutils.MockTime
 	elector, cleanup := Provide[string, string](storage, clock)
 	defer cleanup()
 
@@ -182,7 +140,7 @@ func TestElections_AcquireLeadership_ErrorOnInsert(t *testing.T) {
 
 func TestElections_ReleaseLeadership_NoLeader(t *testing.T) {
 	storage := newMockStorage[string, string]()
-	clock := newFakeTime(time.Now())
+	clock := coreutils.MockTime
 
 	elector, cleanup := Provide[string, string](storage, clock)
 	defer cleanup()
@@ -193,7 +151,7 @@ func TestElections_ReleaseLeadership_NoLeader(t *testing.T) {
 
 func TestElections_CloseFunc_StopsAllLeadership(t *testing.T) {
 	storage := newMockStorage[string, string]()
-	clock := newFakeTime(time.Now())
+	clock := coreutils.MockTime
 
 	elector, closeFunc := Provide[string, string](storage, clock)
 
@@ -212,7 +170,7 @@ func TestElections_CloseFunc_StopsAllLeadership(t *testing.T) {
 
 func TestElections_CompareAndSwapFailure(t *testing.T) {
 	storage := newMockStorage[string, string]()
-	clock := newFakeTime(time.Now())
+	clock := coreutils.MockTime
 
 	elector, cleanup := Provide[string, string](storage, clock)
 	defer cleanup()
@@ -226,7 +184,7 @@ func TestElections_CompareAndSwapFailure(t *testing.T) {
 	storage.mu.Unlock()
 
 	// Trigger renewal
-	clock.tickAll()
+	clock.Sleep(2 * time.Second)
 
 	// The renewal goroutine calls ReleaseLeadership if CompareAndSwap fails.
 	// We can't verify AcquireLeadership's return was nil (we already got a context).
