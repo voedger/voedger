@@ -625,7 +625,6 @@ func TestErrors(t *testing.T) {
 }
 
 func TestUnnaming(t *testing.T) {
-	t.Skip("to be fixed in https://github.com/voedger/voedger/issues/3253")
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -635,5 +634,5 @@ func TestUnnaming(t *testing.T) {
 	catID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 	body = fmt.Sprintf(`{"args": {"CategoryID":%d},"elements": [{"fields": [["CategoryID", "name"],["CategoryID", "int_fld1"]]}]}`, catID)
-	vit.PostWS(ws, "q.app1pkg.QryReturnsCategory", body)
+	vit.PostWS(ws, "q.app1pkg.QryReturnsCategory", body, coreutils.Expect400("it accepts only array of strings"))
 }
