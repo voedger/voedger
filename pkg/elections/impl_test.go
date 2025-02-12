@@ -170,12 +170,13 @@ func TestElections_CloseFunc_StopsAllLeadership(t *testing.T) {
 
 func TestElections_CompareAndSwapFailure(t *testing.T) {
 	storage := newMockStorage[string, string]()
-	clock := coreutils.MockTime
+	clock := coreutils.NewITime()
 
 	elector, cleanup := Provide[string, string](storage, clock)
 	defer cleanup()
 
-	ctx := elector.AcquireLeadership("keyRenew", "valRenew", 2*time.Second)
+	duration := 200 * time.Millisecond
+	ctx := elector.AcquireLeadership("keyRenew", "valRenew", duration)
 	require.NotNil(t, ctx, "Expected to acquire leadership => non-nil context")
 
 	// Overwrite stored value => CompareAndSwap will fail on the next renewal
@@ -184,7 +185,7 @@ func TestElections_CompareAndSwapFailure(t *testing.T) {
 	storage.mu.Unlock()
 
 	// Trigger renewal
-	clock.Sleep(2 * time.Second)
+	clock.Sleep(duration)
 
 	// The renewal goroutine calls ReleaseLeadership if CompareAndSwap fails.
 	// We can't verify AcquireLeadership's return was nil (we already got a context).
@@ -194,6 +195,7 @@ func TestElections_CompareAndSwapFailure(t *testing.T) {
 	v, exists := storage.store["keyRenew"]
 	storage.mu.Unlock()
 
+	require.Error(t, ctx.Err(), "Context should be canceled after CompareAndSwap fails.")
 	require.True(t, exists)
 	require.Equal(t, "otherVal", v, "Key remains with 'otherVal' => forced leadership loss.")
 }
