@@ -6,37 +6,10 @@ package elections
 
 import (
 	"context"
-	"sync"
 	"time"
 
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 )
-
-type elections[K comparable, V any] struct {
-	storage ITTLStorage[K, V]
-	clock   coreutils.ITime
-
-	mu         sync.Mutex
-	cleanedUp  bool
-	leadership map[K]*leaderInfo[K, V]
-}
-
-// leaderInfo holds per-key tracking data for a leadership.
-type leaderInfo[K comparable, V any] struct {
-	val    V
-	ctx    context.Context
-	cancel context.CancelFunc
-	wg     sync.WaitGroup // used to wait for the renewal goroutine
-}
-
-func newElections[K comparable, V any](storage ITTLStorage[K, V], clock coreutils.ITime) *elections[K, V] {
-	return &elections[K, V]{
-		storage:    storage,
-		clock:      clock,
-		leadership: make(map[K]*leaderInfo[K, V]),
-	}
-}
 
 // AcquireLeadership attempts to become the leader for `key` using `val`. It returns
 // a context that remains valid while leadership is held. If leadership is not
@@ -50,7 +23,7 @@ func (e *elections[K, V]) AcquireLeadership(key K, val V, duration time.Duration
 	defer e.mu.Unlock()
 
 	// If elections were cleaned up, we cannot acquire new leadership.
-	if e.cleanedUp {
+	if e.isFinalized {
 		logger.Verbose("[AcquireLeadership] Failed for key=%v: elections already cleaned up.", key)
 		cancel()
 		return ctx
@@ -97,7 +70,7 @@ func (e *elections[K, V]) maintainLeadership(key K, val V, duration time.Duratio
 	renewInterval := duration / 2
 	ticker := e.clock.NewTimerChan(renewInterval)
 
-	for {
+	for li.ctx.Err() == nil {
 		select {
 		case <-li.ctx.Done():
 			// If context is canceled, leadership was voluntarily released
@@ -143,11 +116,11 @@ func (e *elections[K, V]) ReleaseLeadership(key K) error {
 // and waits for them to terminate.
 func (e *elections[K, V]) cleanup() {
 	e.mu.Lock()
-	if e.cleanedUp {
+	if e.isFinalized {
 		e.mu.Unlock()
 		return
 	}
-	e.cleanedUp = true
+	e.isFinalized = true
 
 	toRelease := make([]K, 0, len(e.leadership))
 	for key := range e.leadership {

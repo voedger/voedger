@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/coreutils"
 )
@@ -132,6 +131,7 @@ func TestElections_AcquireLeadership_AlreadyLeader(t *testing.T) {
 	ctx2 := e.AcquireLeadership("duplicateKey", "val2", 2*time.Second)
 	select {
 	case <-ctx2.Done():
+		require.NoError(t, ctx1.Err()) // ctx1 is still active because first leadership is still held
 		// Expected, because we are already leader for "duplicateKey" in this instance.
 	default:
 		t.Fatal("Expected second AcquireLeadership to return canceled context for same key.")
@@ -237,6 +237,9 @@ func TestElections_CompareAndSwapFailure(t *testing.T) {
 	default:
 	}
 
+	// force reset the timer just to cover this case
+	clock.Sleep(duration)
+
 	// Overwrite the stored value so that next CompareAndSwap("valRenew","valRenew") fails
 	storage.mu.Lock()
 	storage.store["keyRenew"] = "otherVal"
@@ -251,9 +254,8 @@ func TestElections_CompareAndSwapFailure(t *testing.T) {
 	// Check if "keyRenew" is still in storage
 	storage.mu.Lock()
 	defer storage.mu.Unlock()
-	_, exists := storage.store["keyRenew"]
 	// We expect that CompareAndSwap failed, so ReleaseLeadership was called.
 	// ReleaseLeadership does CompareAndDelete with "valRenew". That won't match the new "otherVal",
 	// so the key won't get deleted from storage. The main effect is that the local leadership is lost.
-	assert.True(t, exists, "Key is likely still there with 'otherVal'. Leadership is lost, but the key remains.")
+	require.Contains(t, storage.store, "keyRenew", "Key is likely still there with 'otherVal'. Leadership is lost, but the key remains.")
 }
