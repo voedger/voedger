@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -168,7 +167,7 @@ func TestElections_AcquireLeadership_Failure(t *testing.T) {
 	storage.mu.Unlock()
 
 	ctx := elector.AcquireLeadership("occupied", "myVal", 3*time.Second)
-	assert.Nil(t, ctx, "Should return nil if the key is already in storage")
+	require.Nil(t, ctx, "Should return nil if the key is already in storage")
 }
 
 func TestElections_AcquireLeadership_Error(t *testing.T) {
@@ -182,7 +181,7 @@ func TestElections_AcquireLeadership_Error(t *testing.T) {
 	defer cleanup()
 
 	ctx := elector.AcquireLeadership("badKey", "val", 10*time.Second)
-	assert.Nil(t, ctx, "Should return nil if a storage error occurs")
+	require.Nil(t, ctx, "Should return nil if a storage error occurs")
 }
 
 func TestElections_CompareAndSwap_RenewFails(t *testing.T) {
@@ -270,7 +269,7 @@ func TestElections_CleanupDisallowsNew(t *testing.T) {
 
 	require.ErrorIs(t, ctx1.Err(), context.Canceled, "Context should be canceled after cleanup")
 	ctx2 := elector.AcquireLeadership("keyB", "valB", 2*time.Second)
-	assert.Nil(t, ctx2, "No new leadership after cleanup")
+	require.Nil(t, ctx2, "No new leadership after cleanup")
 }
 
 // TestElections_LeadershipExpires ensures that if time passes beyond the TTL and we do not renew,
