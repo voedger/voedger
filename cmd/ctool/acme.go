@@ -36,7 +36,7 @@ func newAcmeCmd() *cobra.Command {
 		Short: "Manage ACME settings",
 	}
 
-	if newCluster().Edition != clusterEditionCE && !addSshKeyFlag(acmeAddCmd, acmeRemoveCmd) {
+	if newCluster().Edition != clusterEditionN1 && !addSshKeyFlag(acmeAddCmd, acmeRemoveCmd) {
 		return nil
 	}
 

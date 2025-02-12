@@ -55,7 +55,7 @@ func newAlertCmd() *cobra.Command {
 		Short: "Manage alerts",
 	}
 
-	if newCluster().Edition != clusterEditionCE {
+	if newCluster().Edition != clusterEditionN1 {
 		alertConfigsCmd := &cobra.Command{
 			Use:   "configs",
 			Short: "Manage alert configuration",
@@ -156,7 +156,7 @@ func setDiscordWebhookCe(cluster *clusterType, webhook string) error {
 
 	remoteDir := filepath.Join(homeDir, alertmanager)
 	remoteFile := filepath.Join(remoteDir, configFileName)
-	host := ceNodeName
+	host := n1NodeName
 
 	if webhook == emptyDiscordWebhookUrl {
 		loggerInfo("Removing Discord webhook from " + host)
@@ -221,7 +221,7 @@ func alertAddDiscord(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if cluster.Edition == clusterEditionCE {
+	if cluster.Edition == clusterEditionN1 {
 		if err = setDiscordWebhookCe(cluster, args[0]); err != nil {
 			return err
 		}
@@ -250,7 +250,7 @@ func alertRemoveDiscord(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if cluster.Edition != clusterEditionCE {
+	if cluster.Edition != clusterEditionN1 {
 		if err = setDiscordWebhook(cluster, emptyDiscordWebhookUrl); err != nil {
 			return err
 		}
@@ -370,7 +370,7 @@ func (e *eventType) postAlert(cluster *clusterType) error {
 
 	script := "post-alert.sh"
 	dir := scriptsTempDir
-	if cluster.Edition == clusterEditionCE {
+	if cluster.Edition == clusterEditionN1 {
 		dir = filepath.Join(dir, "ce")
 		script = filepath.Join("ce", "post-alert.sh")
 	}

@@ -623,3 +623,17 @@ func TestErrors(t *testing.T) {
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("failed to parse sys.QName"))
 	})
 }
+
+func TestUnnaming(t *testing.T) {
+	t.Skip("to be fixed in https://github.com/voedger/voedger/issues/3253")
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
+	catID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+	body = fmt.Sprintf(`{"args": {"CategoryID":%d},"elements": [{"fields": [["CategoryID", "name"],["CategoryID", "int_fld1"]]}]}`, catID)
+	vit.PostWS(ws, "q.app1pkg.QryReturnsCategory", body)
+}

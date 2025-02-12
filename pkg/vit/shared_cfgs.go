@@ -297,6 +297,20 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 		return funcWithResponseIntents(args.PrepareArgs, args.State, args.Intents)
 	}))
 
+	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryReturnsCategory"), func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+		q := appdef.NewQName(app1PkgName, "category")
+		kb, err := args.State.KeyBuilder(sys.Storage_Record, q)
+		if err != nil {
+			return err
+		}
+		kb.PutRecordID(sys.Storage_Record_Field_ID, istructs.RecordID(args.ArgumentObject.AsInt64("CategoryID"))) // nolint G115
+		_, err = args.State.MustExist(kb)
+		if err != nil {
+			return err
+		}
+		return callback(&qryCategory{id: args.ArgumentObject.AsInt64("CategoryID")})
+	}))
+
 	app1PackageFS := parser.PackageFS{
 		Path: App1PkgPath,
 		FS:   SchemaTestApp1FS,
@@ -306,4 +320,17 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 		Packages:                []parser.PackageFS{sysPackageFS, app1PackageFS},
 		AppDeploymentDescriptor: TestAppDeploymentDescriptor,
 	}
+}
+
+type qryCategory struct {
+	istructs.NullObject
+	id int64
+}
+
+func (q *qryCategory) AsInt64(name appdef.FieldName) int64 {
+	return q.id
+}
+
+func (q *qryCategory) AsRecordID(name appdef.FieldName) istructs.RecordID {
+	return istructs.RecordID(q.id) // nolint G115
 }
