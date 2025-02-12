@@ -135,7 +135,7 @@ func (e *elections[K, V]) cleanup() {
 	}
 	e.cleanedUp = true
 
-	var keys []K
+	keys := make([]K, 0, len(e.leadership))
 	for k := range e.leadership {
 		keys = append(keys, k)
 	}
