@@ -13,17 +13,19 @@ import (
 )
 
 type elections[K comparable, V any] struct {
-	storage     ITTLStorage[K, V]
-	clock       coreutils.ITime
-	mu          sync.Mutex
-	isFinalized bool
-	leadership  map[K]*leaderInfo[K, V]
+	storage       ITTLStorage[K, V]
+	leadership    map[K]*leaderInfo[K, V]
+	clock         coreutils.ITime
+	mu            sync.Mutex
+	isFinalized   bool
+	finalizeMutex sync.Mutex
+	wg            sync.WaitGroup
 }
 
 // leaderInfo holds per-key tracking data for a leadership.
 type leaderInfo[K comparable, V any] struct {
-	val    V
-	ctx    context.Context
-	cancel context.CancelFunc
-	wg     sync.WaitGroup // used to wait for the renewal goroutine
+	val              V
+	ctx              context.Context
+	cancel           context.CancelFunc
+	renewalIsStarted chan struct{}
 }

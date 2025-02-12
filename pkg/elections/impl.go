@@ -6,7 +6,6 @@ package elections
 
 import (
 	"context"
-	"maps"
 	"time"
 
 	"github.com/voedger/voedger/pkg/goutils/logger"
@@ -15,20 +14,15 @@ import (
 // AcquireLeadership returns nil if leadership is *not* acquired (e.g., error in storage,
 // already local leader, or elections cleaned up), otherwise returns a *non-nil* context.
 func (e *elections[K, V]) AcquireLeadership(key K, val V, duration time.Duration) context.Context {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
+	e.finalizeMutex.Lock()
 	if e.isFinalized {
 		logger.Verbose("[AcquireLeadership] Key=%v: elections cleaned up; cannot acquire leadership.", key)
+		e.finalizeMutex.Unlock()
 		return nil
 	}
-	if _, exists := e.leadership[key]; exists {
-		logger.Verbose("[AcquireLeadership] Key=%v: already leader in this instance.", key)
-		return nil
-	}
+	e.finalizeMutex.Unlock()
 
-	// Try InsertIfNotExist
-	inserted, err := e.storage.InsertIfNotExist(key, val)
+	inserted, err := e.storage.InsertIfNotExist(key, val, duration)
 	if err != nil {
 		logger.Verbose("[AcquireLeadership] Key=%v: storage error: %v", key, err)
 		return nil
@@ -38,25 +32,29 @@ func (e *elections[K, V]) AcquireLeadership(key K, val V, duration time.Duration
 		return nil
 	}
 
-	// Succeeded: create a live context
-	ctx, cancel := context.WithCancel(context.Background())
+	e.mu.Lock()
+	ctx, cancel := context.WithCancel(context.TODO())
 	li := &leaderInfo[K, V]{
-		val:    val,
-		ctx:    ctx,
-		cancel: cancel,
+		val:              val,
+		ctx:              ctx,
+		cancel:           cancel,
+		renewalIsStarted: make(chan struct{}, 1),
 	}
-	li.wg.Add(1)
 	e.leadership[key] = li
+	e.mu.Unlock()
 
+	e.wg.Add(1)
 	go e.maintainLeadership(key, val, duration, li)
 	return ctx
 }
 
 func (e *elections[K, V]) maintainLeadership(key K, val V, duration time.Duration, li *leaderInfo[K, V]) {
-	defer li.wg.Done()
+	defer e.wg.Done()
 
 	tickerInterval := duration / 2
 	ticker := e.clock.NewTimerChan(tickerInterval)
+	// Signal that the renewal goroutine has started
+	li.renewalIsStarted <- struct{}{}
 
 	for li.ctx.Err() == nil {
 		select {
@@ -64,19 +62,30 @@ func (e *elections[K, V]) maintainLeadership(key K, val V, duration time.Duratio
 			// Voluntarily released or forcibly canceled
 			return
 		case <-ticker:
-			ok, err := e.storage.CompareAndSwap(key, val, val)
+			ticker = e.clock.NewTimerChan(tickerInterval)
+			logger.Verbose("[maintainLeadership] Key=%v: renewing leadership.", key)
+			e.mu.Lock()
+			_, stillLeader := e.leadership[key]
+			e.mu.Unlock()
+
+			if !stillLeader {
+				li.cancel()
+				return
+			}
+
+			ok, err := e.storage.CompareAndSwap(key, val, val, duration)
 			if err != nil {
 				logger.Verbose("[maintainLeadership] Key=%v: storage error => release", key)
-				e.ReleaseLeadership(key)
-				return
 			}
+
 			if !ok {
 				logger.Verbose("[maintainLeadership] Key=%v: compareAndSwap failed => release", key)
+			}
+
+			if !ok || err != nil {
 				e.ReleaseLeadership(key)
 				return
 			}
-			// Re-arm the ticker
-			ticker = e.clock.NewTimerChan(tickerInterval)
 		}
 	}
 }
@@ -89,32 +98,30 @@ func (e *elections[K, V]) ReleaseLeadership(key K) {
 		logger.Verbose("[ReleaseLeadership] Key=%v: not locally held.", key)
 		return
 	}
+	defer li.cancel()
 	delete(e.leadership, key)
 	e.mu.Unlock()
 
-	_, err := e.storage.CompareAndDelete(key, li.val)
-	if err != nil {
+	if _, err := e.storage.CompareAndDelete(key, li.val); err != nil {
 		logger.Verbose("[ReleaseLeadership] Key=%v: storage CompareAndDelete error: %v", key, err)
 	}
-	li.cancel()
-	li.wg.Wait()
+
 	logger.Verbose("[ReleaseLeadership] Key=%v: leadership released.", key)
 }
 
 // cleanup disallows new acquisitions, releases all ongoing leadership, and waits for them to finish.
 func (e *elections[K, V]) cleanup() {
-	e.mu.Lock()
-	if e.isFinalized {
-		e.mu.Unlock()
-		return
-	}
+	e.finalizeMutex.Lock()
 	e.isFinalized = true
+	e.finalizeMutex.Unlock()
 
-	keys := maps.Keys(e.leadership)
+	e.mu.Lock()
+	// Release each leadership so renewal goroutines stop
+	for key, li := range e.leadership {
+		li.cancel()
+		delete(e.leadership, key)
+	}
 	e.mu.Unlock()
 
-	// Release each leadership so renewal goroutines stop
-	for k := range keys {
-		e.ReleaseLeadership(k)
-	}
+	e.wg.Wait()
 }

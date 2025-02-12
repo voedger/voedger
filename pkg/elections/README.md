@@ -1,5 +1,31 @@
 # Elections Package
 
+```mermaid
+flowchart TB
+    A((Start)) --> B["Caller calls <br/>AcquireLeadership(key,val,duration)"]
+    B --> C{"Elections finalized?"}
+    C -- Yes --> D["Return nil (no leadership)"]
+    C -- No  --> E["InsertIfNotExist(key,val,ttl)"]
+    E -- "Fail or Err" --> D
+    E -- "Succeed" --> F["Create leadership ctx <br/> Return ctx to caller"]
+    F --> G["Spawn renewal goroutine"]
+
+    subgraph Renewal Loop
+    direction TB
+    G --> H["Wait (duration/2)"]
+    H --> I["CompareAndSwap(key,val,val,ttl)"]
+    I -- "Fail or Err" --> J["ReleaseLeadership(key)"]
+    I -- "OK" --> H
+    J --> H
+    end
+
+    R(("Caller calls<br/>ReleaseLeadership(key)")) --> S{"Key held locally?"}
+    S -- No --> T["Logs not held, done"]
+    S -- Yes --> U["CompareAndDelete(key,val)"]
+    U --> V["Cancel leadership context<br/>End leadership"]
+    V --> W[Done]
+```
+
 The **elections** package provides a simple, pluggable **leader election** mechanism using:
 
 - **`ITTLStorage`**: A time-to-live (TTL) based storage interface for storing and refreshing leadership claims.
@@ -32,15 +58,15 @@ go get github.com/voedger/voedger/pkg/elections
 
 ```go
 type ITTLStorage[K comparable, V any] interface {
-    InsertIfNotExist(key K, val V) (bool, error)
-    CompareAndSwap(key K, oldVal V, newVal V) (bool, error)
+    InsertIfNotExist(key K, val V, duration time.Duration) (bool, error)
+    CompareAndSwap(key K, oldVal V, newVal V, duration time.Duration) (bool, error)
     CompareAndDelete(key K, val V) (bool, error)
 }
 ```
 
-- InsertIfNotExist: attempts to place (key, val) in storage only if the key does not exist. Returns true if successful, or false if the key is already present.
-- CompareAndSwap: checks the current value for key and if it matches oldVal, replaces it with newVal. Returns true if swapped successfully, otherwise false.
-- CompareAndDelete: removes the key only if its current value matches val, returning true on success.
+- InsertIfNotExist: tries to insert (key, val) with a TTL only if key does not exist.
+- CompareAndSwap: checks if the current value for `key` is `oldVal`. If it matches, sets it to `newVal` and updates the TTL to `ttl`.
+- CompareAndDelete: compares the current value for `key` with `val` and if they match, deletes the key, returning (true, nil). Otherwise, (false, nil).
 
 ### IElections
 
@@ -74,10 +100,10 @@ func Provide[K comparable, V any](storage ITTLStorage[K, V], clock ITime) (IElec
 ### Acquiring and Releasing Leadership
 
 ```go
-e, cleanup := elections.Provide(myStorage, myClock)
+elector, cleanup := elections.Provide(myStorage, myClock)
 
 // Acquire leadership
-ctx := e.AcquireLeadership("myKey", "myValue", 5*time.Second)
+ctx := elector.AcquireLeadership("myKey", "myValue", 5*time.Second)
 select {
 case <-ctx.Done():
     fmt.Println("Failed to acquire leadership or it ended unexpectedly.")
@@ -87,9 +113,7 @@ default:
 
 // Perform your leader tasks...
 // If you want to stop being leader:
-if err := e.ReleaseLeadership("myKey"); err != nil {
-    log.Printf("Release error: %v", err)
-}
+elector.ReleaseLeadership("myKey")
 ```
 
 1.	AcquireLeadership("myKey", "myValue", 5 * time.Second) tries to insert "myKey" into storage with the value "myValue".

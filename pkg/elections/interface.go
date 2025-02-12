@@ -9,20 +9,22 @@ import (
 	"time"
 )
 
-// ITTLStorage defines the minimal TTL-based storage required by the elections.
+// ITTLStorage defines a TTL-based storage layer with explicit durations.
 type ITTLStorage[K comparable, V any] interface {
-	// InsertIfNotExist tries to insert (key, val) only if key does not exist
-	// and returns true if inserted successfully; false otherwise.
-	InsertIfNotExist(key K, val V) (bool, error)
+	// InsertIfNotExist tries to insert (key, val) with a TTL only if key does not exist.
+	// Returns (true, nil) if inserted successfully,
+	// (false, nil) if the key already exists,
+	// or (false, err) if a storage error occurs.
+	InsertIfNotExist(key K, val V, ttl time.Duration) (bool, error)
 
-	// CompareAndSwap compares the current value for key with oldVal;
-	// if they match, it swaps the value to newVal and returns true.
-	// Otherwise, returns false.
-	CompareAndSwap(key K, oldVal V, newVal V) (bool, error)
+	// CompareAndSwap checks if the current value for `key` is `oldVal`.
+	// If it matches, sets it to `newVal` and updates the TTL to `ttl`.
+	// Returns (true, nil) on success, (false, nil) if values do not match, or (false, err) on error.
+	CompareAndSwap(key K, oldVal V, newVal V, ttl time.Duration) (bool, error)
 
-	// CompareAndDelete compares the current value for key with val,
-	// and if they match, it deletes the key and returns true;
-	// otherwise, returns false.
+	// CompareAndDelete compares the current value for `key` with `val`,
+	// and if they match, deletes the key, returning (true, nil). Otherwise, (false, nil).
+	// On storage error, returns (false, err).
 	CompareAndDelete(key K, val V) (bool, error)
 }
 
