@@ -118,9 +118,42 @@ func (vvm *VoedgerVM) Shutdown() {
 	vvm.vvmCleanup()
 }
 
+func (vvm *VoedgerVM) Shutdown_() error {
+	vvm.vvmShutCtxOnce.Do(vvm.vvmShutCtxCancel)
+	<-vvm.shutdownedCtx.Done()
+	return vvm.problemCtx.Err()
+}
+
+func (vvm *VoedgerVM) Launch_() (problemCtx context.Context) {
+	// craete a storage for ITTLStorage
+	
+	launcher := func() {
+		// wait for leadership
+		ignition := ignition{}
+		err := vvm.ServicePipeline.SendSync(ignition)
+		if err != nil {
+			err = errors.Join(err, ErrVVMLaunchFailure)
+			logger.Error(err)
+			vvm.problemCtxCancel(err)
+			return
+		}
+	}
+	go launcher()
+
+	shutdowner := func() {
+		<-vvm.vvmShutCtx.Done()
+		vvm.servicesShutCtxCancel()
+		vvm.ServicePipeline.Close()
+		vvm.vvmCleanup()
+		vvm.shutdownedCtxCancel()
+	}
+	go shutdowner()
+	return vvm.problemCtx
+}
+
 func (vvm *VoedgerVM) Launch() error {
-	ign := ignition{}
-	err := vvm.ServicePipeline.SendSync(ign)
+	ignition := ignition{}
+	err := vvm.ServicePipeline.SendSync(ignition)
 	if err != nil {
 		err = errors.Join(err, ErrVVMLaunchFailure)
 		logger.Error(err)

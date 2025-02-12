@@ -7,6 +7,7 @@ package vvm
 import (
 	"context"
 	"net/url"
+	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
@@ -168,6 +169,26 @@ type VoedgerVM struct {
 	*VVM
 	vvmCtxCancel func()
 	vvmCleanup   func()
+
+	// closed when some problem occurs, VVM terminates itself due to leadership loss or problems with the launching
+	problemCtx       context.Context
+	problemCtxCancel context.CancelCauseFunc
+
+	// closed when VVM should be stopped outside
+	vvmShutCtx       context.Context
+	vvmShutCtxCancel context.CancelFunc
+	vvmShutCtxOnce   sync.Once
+
+	// closed when VVM services should be stopped (but LeadershipMonitor)
+	servicesShutCtx       context.Context
+	servicesShutCtxCancel context.CancelFunc
+
+	// closed after all services are stopped and LeadershipMonitor should be stopped
+	monitorShutCtx context.Context
+
+	// closed after all (services and LeadershipMonitor) is topped
+	shutdownedCtx       context.Context
+	shutdownedCtxCancel context.CancelFunc
 }
 
 type ignition struct{}
