@@ -15,7 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/constraints"
 )
 
-func ExampleIFields() {
+func ExampleIFieldsBuilder() {
 
 	var app appdef.IAppDef
 	docName := appdef.NewQName("test", "doc")
