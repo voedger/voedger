@@ -13,28 +13,28 @@ import (
 type ITTLStorage[K comparable, V any] interface {
 	// InsertIfNotExist tries to insert (key, val) only if key does not exist
 	// and returns true if inserted successfully; false otherwise.
-	InsertIfNotExist(key K, val V) bool
+	InsertIfNotExist(key K, val V) (bool, error)
 
 	// CompareAndSwap compares the current value for key with oldVal;
 	// if they match, it swaps the value to newVal and returns true.
 	// Otherwise, returns false.
-	CompareAndSwap(key K, oldVal V, newVal V) bool
+	CompareAndSwap(key K, oldVal V, newVal V) (bool, error)
 
 	// CompareAndDelete compares the current value for key with val,
 	// and if they match, it deletes the key and returns true;
 	// otherwise, returns false.
-	CompareAndDelete(key K, val V) bool
+	CompareAndDelete(key K, val V) (bool, error)
 }
 
-// IElections defines the leader-election interface.
+// IElections has AcquireLeadership returning nil if leadership is not acquired or error.
 type IElections[K comparable, V any] interface {
-	// AcquireLeadership attempts to become the leader for `key` with value `val`,
-	// for at most `duration`. If successful, returns a context that remains
-	// active while we hold leadership. If leadership fails or is immediately
-	// unavailable, a canceled context is returned. Any errors are logged.
+	// AcquireLeadership attempts to become leader for `key` with `val`.
+	//  - Returns a non-nil context if leadership is acquired successfully.
+	//  - Returns nil if leadership cannot be acquired or an error occurs.
+	// The background goroutine is spawned only on success.
 	AcquireLeadership(key K, val V, duration time.Duration) (ctx context.Context)
 
-	// ReleaseLeadership releases the leader position for `key` immediately,
-	// stops the background renewal goroutine for this key, and cleans up storage.
-	ReleaseLeadership(key K) error
+	// ReleaseLeadership stops the background renewal goroutine for `key` and
+	// CompareAndDeletes from storage if we still hold it. No return value.
+	ReleaseLeadership(key K)
 }

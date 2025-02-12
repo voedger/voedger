@@ -1,7 +1,3 @@
-/*
- * Copyright (c) 2025-present unTill Software Development Group B.V.
- * @author Alisher Nurmanov
- */
 package elections
 
 import (
@@ -19,128 +15,114 @@ type elections[K comparable, V any] struct {
 
 	mu         sync.Mutex
 	cleanedUp  bool
-	leadership map[K]*leaderInfo[K, V]
+	leadership map[K]*leaderInfo[V]
 }
 
-// leaderInfo holds per-key tracking data for a leadership.
-type leaderInfo[K comparable, V any] struct {
+type leaderInfo[V any] struct {
 	val    V
 	ctx    context.Context
 	cancel context.CancelFunc
-	wg     sync.WaitGroup // used to wait for the renewal goroutine
+	wg     sync.WaitGroup
 }
 
 func newElections[K comparable, V any](storage ITTLStorage[K, V], clock coreutils.ITime) *elections[K, V] {
 	return &elections[K, V]{
 		storage:    storage,
 		clock:      clock,
-		leadership: make(map[K]*leaderInfo[K, V]),
+		leadership: make(map[K]*leaderInfo[V]),
 	}
 }
 
-// AcquireLeadership attempts to become the leader for `key` using `val`. It returns
-// a context that remains valid while leadership is held. If leadership is not
-// acquired (due to cleanup, already holding, or insert failing), it returns a
-// canceled context immediately and logs the corresponding error message.
+// AcquireLeadership returns nil if leadership is *not* acquired (e.g., error in storage,
+// already local leader, or elections cleaned up), otherwise returns a *non-nil* context.
 func (e *elections[K, V]) AcquireLeadership(key K, val V, duration time.Duration) context.Context {
-	// Always create a new context for this attempt
-	ctx, cancel := context.WithCancel(context.Background())
-
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	// If elections were cleaned up, we cannot acquire new leadership.
 	if e.cleanedUp {
-		logger.Verbose("[AcquireLeadership] Failed for key=%v: elections already cleaned up.", key)
-		cancel()
-		return ctx
+		logger.Verbose("[AcquireLeadership] Key=%v: elections cleaned up; cannot acquire leadership.", key)
+		return nil
 	}
-
-	// If we already hold leadership for this key in our local instance, do not re-acquire.
 	if _, exists := e.leadership[key]; exists {
-		logger.Verbose("[AcquireLeadership] Failed for key=%v: already leader in current instance.", key)
-		cancel()
-		return ctx
+		logger.Verbose("[AcquireLeadership] Key=%v: already leader in this instance.", key)
+		return nil
 	}
 
-	// Attempt to insert (key,val) in storage. If insertion fails, someone else holds leadership.
-	inserted := e.storage.InsertIfNotExist(key, val)
+	// Try InsertIfNotExist
+	inserted, err := e.storage.InsertIfNotExist(key, val)
+	if err != nil {
+		logger.Verbose("[AcquireLeadership] Key=%v: storage error: %v", key, err)
+		return nil
+	}
 	if !inserted {
-		logger.Verbose("[AcquireLeadership] Failed for key=%v: storage insert blocked (held by another?).", key)
-		cancel()
-		return ctx
+		logger.Verbose("[AcquireLeadership] Key=%v: already held or blocked by storage.", key)
+		return nil
 	}
 
-	// Successfully inserted the key; we are now the leader until proven otherwise.
-	li := &leaderInfo[K, V]{
+	// Succeeded: create a live context
+	ctx, cancel := context.WithCancel(context.Background())
+	li := &leaderInfo[V]{
 		val:    val,
 		ctx:    ctx,
 		cancel: cancel,
 	}
-	// We'll run 1 background goroutine for periodic renewal
 	li.wg.Add(1)
-
 	e.leadership[key] = li
 
-	// Start background renewal
 	go e.maintainLeadership(key, val, duration, li)
-
-	// Return the context that remains active while leadership is held
 	return ctx
 }
 
-// maintainLeadership periodically calls CompareAndSwap to confirm
-// that we still hold leadership. If that fails, we release leadership.
-func (e *elections[K, V]) maintainLeadership(key K, val V, duration time.Duration, li *leaderInfo[K, V]) {
+func (e *elections[K, V]) maintainLeadership(key K, val V, duration time.Duration, li *leaderInfo[V]) {
 	defer li.wg.Done()
 
-	renewInterval := duration / 2
-	ticker := e.clock.NewTimerChan(renewInterval)
+	tickerInterval := duration / 2
+	ticker := e.clock.NewTimerChan(tickerInterval)
 
 	for {
 		select {
 		case <-li.ctx.Done():
-			// If context is canceled, leadership was voluntarily released
+			// Voluntarily released or forcibly canceled
 			return
 		case <-ticker:
-			// Attempt to renew leadership by CompareAndSwap(key, oldVal, newVal).
-			ok := e.storage.CompareAndSwap(key, val, val)
-			if !ok {
-				logger.Verbose("[maintainLeadership] Leadership lost for key=%v. Releasing...", key)
-				_ = e.ReleaseLeadership(key)
+			ok, err := e.storage.CompareAndSwap(key, val, val)
+			if err != nil {
+				logger.Verbose("[maintainLeadership] Key=%v: storage error => release", key)
+				e.ReleaseLeadership(key)
 				return
 			}
-			// Refresh the ticker
-			ticker = e.clock.NewTimerChan(renewInterval)
+			if !ok {
+				logger.Verbose("[maintainLeadership] Key=%v: compareAndSwap failed => release", key)
+				e.ReleaseLeadership(key)
+				return
+			}
+			// Re-arm the ticker
+			ticker = e.clock.NewTimerChan(tickerInterval)
 		}
 	}
 }
 
-// ReleaseLeadership releases the leader position for `key`, stops the
-// renewal goroutine, and attempts to CompareAndDelete the key in storage.
-func (e *elections[K, V]) ReleaseLeadership(key K) error {
+func (e *elections[K, V]) ReleaseLeadership(key K) {
 	e.mu.Lock()
-	li, ok := e.leadership[key]
-	if !ok {
+	li, found := e.leadership[key]
+	if !found {
 		e.mu.Unlock()
-		logger.Verbose("[ReleaseLeadership] No leadership found for key=%v", key)
-		return nil // Not an error: we simply have no leadership to release
+		logger.Verbose("[ReleaseLeadership] Key=%v: not locally held.", key)
+		return
 	}
 	delete(e.leadership, key)
 	e.mu.Unlock()
 
-	// Remove from storage if still matching the original val
-	e.storage.CompareAndDelete(key, li.val)
-
-	// Signal the background goroutine to stop and wait for it
+	_, err := e.storage.CompareAndDelete(key, li.val)
+	if err != nil {
+		logger.Verbose("[ReleaseLeadership] Key=%v: storage CompareAndDelete error: %v", key, err)
+	}
 	li.cancel()
 	li.wg.Wait()
-	logger.Verbose("[ReleaseLeadership] Released leadership for key=%v", key)
-	return nil
+	logger.Verbose("[ReleaseLeadership] Key=%v: leadership released.", key)
 }
 
-// cleanup marks the election instance as done, stops all renewal goroutines,
-// and waits for them to terminate.
+// cleanup disallows new acquisitions, releases all ongoing leadership, and waits for them to finish.
 func (e *elections[K, V]) cleanup() {
 	e.mu.Lock()
 	if e.cleanedUp {
@@ -149,14 +131,14 @@ func (e *elections[K, V]) cleanup() {
 	}
 	e.cleanedUp = true
 
-	toRelease := make([]K, 0, len(e.leadership))
-	for key := range e.leadership {
-		toRelease = append(toRelease, key)
+	var keys []K
+	for k := range e.leadership {
+		keys = append(keys, k)
 	}
 	e.mu.Unlock()
 
-	// Release each leadership in turn. This cancels goroutines, clears storage.
-	for _, key := range toRelease {
-		_ = e.ReleaseLeadership(key)
+	// Release each leadership so renewal goroutines stop
+	for _, k := range keys {
+		e.ReleaseLeadership(k)
 	}
 }
