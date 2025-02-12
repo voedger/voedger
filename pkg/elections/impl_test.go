@@ -175,7 +175,7 @@ func TestElections_CompareAndSwapFailure(t *testing.T) {
 	elector, cleanup := Provide[string, string](storage, clock)
 	defer cleanup()
 
-	duration := 200 * time.Millisecond
+	duration := 20 * time.Millisecond
 	ctx := elector.AcquireLeadership("keyRenew", "valRenew", duration)
 	require.NotNil(t, ctx, "Expected to acquire leadership => non-nil context")
 
