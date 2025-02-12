@@ -149,7 +149,7 @@ func (e *elections[K, V]) cleanup() {
 	}
 	e.cleanedUp = true
 
-	var toRelease []K
+	toRelease := make([]K, 0, len(e.leadership))
 	for key := range e.leadership {
 		toRelease = append(toRelease, key)
 	}
