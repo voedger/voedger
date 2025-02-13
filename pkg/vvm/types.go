@@ -99,11 +99,16 @@ type AppPartsCtlPipelineService struct {
 	apppartsctl.IAppPartitionsController
 }
 type IAppPartsCtlPipelineService pipeline.IService
+
 type IVVMAppTTLStorage interface {
 	InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error)
 	CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error)
 	CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error)
 }
+
+type ClusterSize int
+
+type TTLStorageImplKey = uint32
 
 type PostDocFieldType struct {
 	Kind              appdef.DataKind
@@ -126,6 +131,7 @@ type VVM struct {
 	MetricsServicePort  func() metrics.MetricsServicePort
 	BuiltInAppsPackages []BuiltInAppPackages
 	VVMAppTTLStorage    IVVMAppTTLStorage // just to wire, will be used on wire stage only after https://github.com/voedger/voedger/issues/3265
+	ClusterSize         ClusterSize
 }
 
 type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
@@ -157,6 +163,7 @@ type VVMConfig struct {
 	WSPostInitFunc             workspace.WSPostInitFunc
 	DataPath                   string
 	MetricsServicePort         MetricsServicePortInitial
+	ClusterSize                int // amount of VVMs in the cluster
 
 	// 0 -> dynamic port will be used, new on each vvmIdx
 	// >0 -> vVMPort+vvmIdx will be actually used
@@ -190,7 +197,8 @@ type VoedgerVM struct {
 	servicesShutCtxCancel context.CancelFunc
 
 	// closed after all services are stopped and LeadershipMonitor should be stopped
-	monitorShutCtx context.Context
+	monitorShutCtx       context.Context
+	monitorShutCtxCancel context.CancelFunc
 
 	// closed after all (services and LeadershipMonitor) is topped
 	shutdownedCtx       context.Context

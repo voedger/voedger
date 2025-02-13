@@ -8,4 +8,4 @@ package vvm
 import "errors"
 
 var ErrVVMLaunchFailure = errors.New("VVM failed to launch")
-
+var ErrVVMLeadershipAcquisition = errors.New("failed to acquire leadership")

@@ -20,6 +20,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/wire"
 	"golang.org/x/crypto/acme/autocert"
@@ -28,6 +29,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/btstrp"
+	"github.com/voedger/voedger/pkg/elections"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -124,11 +126,27 @@ func (vvm *VoedgerVM) Shutdown_() error {
 	return vvm.problemCtx.Err()
 }
 
-func (vvm *VoedgerVM) Launch_() (problemCtx context.Context) {
-	// craete a storage for ITTLStorage
-	
+func (vvm *VoedgerVM) Launch_(leadershipAcquisitionDuration time.Duration) (problemCtx context.Context) {
+	// elections, cleanup := elections.Provide(vvm.VVMAppTTLStorage, vvm.ITime)
+	var elections elections.IElections[TTLStorageImplKey, string] // to be provided after https://github.com/voedger/voedger/issues/3265
+	var electionsCleanup func() = func() {}
 	launcher := func() {
-		// wait for leadership
+		leadershipAcquisitionDeadline := vvm.ITime.Now().Add(leadershipAcquisitionDuration)
+		for vvmIdx := 1; vvmIdx <= int(vvm.ClusterSize); vvmIdx++ {
+			leadershipCtx := elections.AcquireLeadership(TTLStorageImplKey(vvmIdx), "127.0.0.1", time.Hour)
+			if leadershipCtx == nil {
+				if vvm.ITime.Now().After(leadershipAcquisitionDeadline) {
+					vvm.problemCtxCancel(ErrVVMLeadershipAcquisition)
+					return
+				}
+				if vvmIdx == int(vvm.ClusterSize) {
+					vvmIdx = 1
+				}
+				continue
+			} else {
+				break
+			}
+		}
 		ignition := ignition{}
 		err := vvm.ServicePipeline.SendSync(ignition)
 		if err != nil {
@@ -145,7 +163,7 @@ func (vvm *VoedgerVM) Launch_() (problemCtx context.Context) {
 		vvm.servicesShutCtxCancel()
 		vvm.ServicePipeline.Close()
 		vvm.vvmCleanup()
-		vvm.shutdownedCtxCancel()
+		vvm.monitorShutCtxCancel()
 	}
 	go shutdowner()
 	return vvm.problemCtx
@@ -249,12 +267,17 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"MetricsServicePort",
 			"ActualizerStateOpts",
 			"SecretsReader",
+			"ClusterSize",
 		),
 	))
 }
 
 func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (IVVMAppTTLStorage, error) {
-	return prov.AppStorage(istructs.AppQName_sys_cluster)
+	st, err := prov.AppStorage(istructs.AppQName_sys_cluster)
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
 }
 
 func provideWLimiterFactory(maxSize iblobstorage.BLOBMaxSizeType) blobprocessor.WLimiterFactory {
