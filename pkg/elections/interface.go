@@ -36,7 +36,7 @@ type IElections[K comparable, V any] interface {
 	// The background goroutine is spawned only on success.
 	AcquireLeadership(key K, val V, duration time.Duration) (ctx context.Context)
 
-	// ReleaseLeadership stops the background renewal goroutine for `key` and
+	// ReleaseLeadership stops the background renewal goroutine for `key` and wait till it finished
 	// CompareAndDeletes from storage if we still hold it. No return value.
 	ReleaseLeadership(key K)
 }

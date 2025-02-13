@@ -14,13 +14,13 @@ import (
 // AcquireLeadership returns nil if leadership is *not* acquired (e.g., error in storage,
 // already local leader, or elections cleaned up), otherwise returns a *non-nil* context.
 func (e *elections[K, V]) AcquireLeadership(key K, val V, duration time.Duration) context.Context {
-	e.finalizeMutex.Lock()
+	e.mu.Lock()
 	if e.isFinalized {
 		logger.Verbose("[AcquireLeadership] Key=%v: elections cleaned up; cannot acquire leadership.", key)
-		e.finalizeMutex.Unlock()
+		e.mu.Unlock()
 		return nil
 	}
-	e.finalizeMutex.Unlock()
+	e.mu.Unlock()
 
 	inserted, err := e.storage.InsertIfNotExist(key, val, duration)
 	if err != nil {
@@ -42,13 +42,15 @@ func (e *elections[K, V]) AcquireLeadership(key K, val V, duration time.Duration
 	e.leadership[key] = li
 	e.mu.Unlock()
 
-	e.wg.Add(1)
+	li.wg.Add(1) // For the renewal goroutine
 	go e.maintainLeadership(key, val, duration, li)
+	// Wait for the renewal goroutine to start
+	<-li.renewalIsStarted
 	return ctx
 }
 
 func (e *elections[K, V]) maintainLeadership(key K, val V, duration time.Duration, li *leaderInfo[K, V]) {
-	defer e.wg.Done()
+	defer li.wg.Done()
 
 	tickerInterval := duration / 2
 	ticker := e.clock.NewTimerChan(tickerInterval)
@@ -59,17 +61,7 @@ func (e *elections[K, V]) maintainLeadership(key K, val V, duration time.Duratio
 			// Voluntarily released or forcibly canceled
 			return
 		case <-ticker:
-			ticker = e.clock.NewTimerChan(tickerInterval)
 			logger.Verbose("[maintainLeadership] Key=%v: renewing leadership.", key)
-			e.mu.Lock()
-			_, stillLeader := e.leadership[key]
-			e.mu.Unlock()
-
-			if !stillLeader {
-				li.cancel()
-				return
-			}
-
 			ok, err := e.storage.CompareAndSwap(key, val, val, duration)
 			if err != nil {
 				logger.Verbose("[maintainLeadership] Key=%v: storage error => release", key)
@@ -80,7 +72,7 @@ func (e *elections[K, V]) maintainLeadership(key K, val V, duration time.Duratio
 			}
 
 			if !ok || err != nil {
-				e.ReleaseLeadership(key)
+				e.releaseLeadership(key)
 				return
 			}
 		}
@@ -88,14 +80,23 @@ func (e *elections[K, V]) maintainLeadership(key K, val V, duration time.Duratio
 }
 
 func (e *elections[K, V]) ReleaseLeadership(key K) {
+	li := e.releaseLeadership(key)
+	if li == nil {
+		return
+	}
+
+	li.wg.Wait()
+}
+
+func (e *elections[K, V]) releaseLeadership(key K) *leaderInfo[K, V] {
 	e.mu.Lock()
 	li, found := e.leadership[key]
 	if !found {
 		e.mu.Unlock()
 		logger.Verbose("[ReleaseLeadership] Key=%v: not locally held.", key)
-		return
+		return nil
 	}
-	defer li.cancel()
+	li.cancel()
 	delete(e.leadership, key)
 	e.mu.Unlock()
 
@@ -104,21 +105,19 @@ func (e *elections[K, V]) ReleaseLeadership(key K) {
 	}
 
 	logger.Verbose("[ReleaseLeadership] Key=%v: leadership released.", key)
+	return li
 }
 
 // cleanup disallows new acquisitions, releases all ongoing leadership, and waits for them to finish.
 func (e *elections[K, V]) cleanup() {
-	e.finalizeMutex.Lock()
-	e.isFinalized = true
-	e.finalizeMutex.Unlock()
-
 	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	e.isFinalized = true
 	// Release each leadership so renewal goroutines stop
 	for key, li := range e.leadership {
 		li.cancel()
+		li.wg.Wait()
 		delete(e.leadership, key)
 	}
-	e.mu.Unlock()
-
-	e.wg.Wait()
 }
