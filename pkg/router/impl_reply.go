@@ -40,7 +40,6 @@ func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter) 
 		Query:    map[string]string{},
 		Header:   map[string]string{},
 		AppQName: appdef.NewAppQName(vars[URLPlaceholder_appOwner], vars[URLPlaceholder_appName]),
-		QName:    appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_table]),
 		Resource: vars[URLPlaceholder_resourceName],
 	}
 

@@ -188,6 +188,10 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
 			return qw.apiPathHandler.AuthorizeRequest(ctx, qw)
 		}),
+		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
+			qw.execQueryArgs, err = newExecQueryArgs(qw.msg.WSID(), qw)
+			return coreutils.WrapSysError(err, http.StatusBadRequest)
+		}),
 		operator("create callback func", func(ctx context.Context, qw *queryWork) (err error) {
 			/* TODO: implement
 			qw.callbackFunc = func(object istructs.IObject) error {
@@ -249,4 +253,25 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 	}
 	return pipeline.NewSyncPipeline(requestCtx, "Query Processor", ops[0], ops[1:]...)
+}
+
+func newExecQueryArgs(wsid istructs.WSID, qw *queryWork) (execQueryArgs istructs.ExecQueryArgs, err error) {
+	argsType := qw.iQuery.Param()
+	requestArgs := istructs.NewNullObject()
+	if argsType != nil {
+		requestArgsBuilder := qw.appStructs.ObjectBuilder(argsType.QName())
+		requestArgsBuilder.FillFromJSON(qw.msg.QueryParams().Argument["args"].(map[string]interface{})) // TODO: test that we could cast that
+		requestArgs, err = requestArgsBuilder.Build()
+		if err != nil {
+			return execQueryArgs, err
+		}
+	}
+	return istructs.ExecQueryArgs{
+		PrepareArgs: istructs.PrepareArgs{
+			ArgumentObject: requestArgs,
+			WSID:           wsid,
+			Workpiece:      qw,
+			Workspace:      qw.iWorkspace,
+		},
+	}, nil
 }
