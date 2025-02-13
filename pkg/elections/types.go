@@ -13,13 +13,11 @@ import (
 )
 
 type elections[K comparable, V any] struct {
-	storage       ITTLStorage[K, V]
-	leadership    map[K]*leaderInfo[K, V]
-	clock         coreutils.ITime
-	mu            sync.Mutex
-	isFinalized   bool
-	finalizeMutex sync.Mutex
-	wg            sync.WaitGroup
+	storage     ITTLStorage[K, V]
+	leadership  map[K]*leaderInfo[K, V]
+	clock       coreutils.ITime
+	mu          sync.Mutex
+	isFinalized bool
 }
 
 // leaderInfo holds per-key tracking data for a leadership.
@@ -28,4 +26,5 @@ type leaderInfo[K comparable, V any] struct {
 	ctx              context.Context
 	cancel           context.CancelFunc
 	renewalIsStarted chan struct{}
+	wg               sync.WaitGroup
 }

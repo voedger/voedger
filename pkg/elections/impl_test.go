@@ -139,8 +139,6 @@ func TestElections_AcquireLeadership_Success(t *testing.T) {
 	exp := storage.expirations["testKey"]
 	storage.mu.Unlock()
 
-	// wait for moment when renewal goroutine started
-	<-elector.(*elections[string, string]).leadership["testKey"].renewalIsStarted
 	clock.Sleep(1 * time.Second)
 
 	require.True(t, ok, "Key should be in store")
@@ -195,8 +193,6 @@ func TestElections_CompareAndSwap_RenewFails(t *testing.T) {
 	ctx := elector.AcquireLeadership("renewKey", "renewVal", 4*time.Second)
 	require.NotNil(t, ctx)
 
-	// wait for moment when renewal goroutine started
-	<-elector.(*elections[string, string]).leadership["renewKey"].renewalIsStarted
 	// trigger the renewal
 	clock.Sleep(1 * time.Second)
 
@@ -229,8 +225,6 @@ func TestElections_TTLStoredOnSwap(t *testing.T) {
 	ctx := elector.AcquireLeadership("ttlKey", "ttlVal", 10*time.Second)
 	require.NotNil(t, ctx)
 
-	// wait for moment when renewal goroutine started
-	<-elector.(*elections[string, string]).leadership["ttlKey"].renewalIsStarted
 	// Trigger renewal
 	clock.Sleep(5 * time.Second)
 
@@ -291,8 +285,6 @@ func TestElections_LeadershipExpires(t *testing.T) {
 	delete(storage.store, "expireKey") // simulate a key expiration
 	storage.mu.Unlock()
 
-	// wait for moment when renewal goroutine started
-	<-elector.(*elections[string, string]).leadership["expireKey"].renewalIsStarted
 	clock.Sleep(duration)
 
 	<-ctx.Done()
