@@ -214,6 +214,14 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorBLOBProcessors, iActualizersService, iAppPartsCtlPipelineService, bootstrapOperator, adminEndpointServiceOperator, publicEndpointServiceOperator, iAppStorageProvider)
 	v9 := provideMetricsServicePortGetter(metricsService)
 	v10 := provideBuiltInAppPackages(builtInAppsArtefacts)
+	ivvmAppTTLStorage, err := provideIVVMAppTTLStorage(iAppStorageProvider)
+	if err != nil {
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
 	vvm := &VVM{
 		ServicePipeline:     servicePipeline,
 		APIs:                apIs,
@@ -221,6 +229,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		AppsExtensionPoints: v2,
 		MetricsServicePort:  v9,
 		BuiltInAppsPackages: v10,
+		VVMAppTTLStorage:    ivvmAppTTLStorage,
 	}
 	return vvm, func() {
 		cleanup4()
@@ -274,6 +283,10 @@ func (vvm *VoedgerVM) Launch() error {
 		logger.Error(err)
 	}
 	return err
+}
+
+func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (IVVMAppTTLStorage, error) {
+	return prov.AppStorage(istructs.AppQName_sys_cluster)
 }
 
 func provideWLimiterFactory(maxSize iblobstorage.BLOBMaxSizeType) blobprocessor.WLimiterFactory {

@@ -98,6 +98,11 @@ type AppPartsCtlPipelineService struct {
 	apppartsctl.IAppPartitionsController
 }
 type IAppPartsCtlPipelineService pipeline.IService
+type IVVMAppTTLStorage interface {
+	InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error)
+	CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error)
+	CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error)
+}
 
 type PostDocFieldType struct {
 	Kind              appdef.DataKind
@@ -119,6 +124,7 @@ type VVM struct {
 	AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
 	BuiltInAppsPackages []BuiltInAppPackages
+	VVMAppTTLStorage    IVVMAppTTLStorage // just to wire, will be used on wire stage only after https://github.com/voedger/voedger/issues/3265
 }
 
 type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
