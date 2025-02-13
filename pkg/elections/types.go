@@ -8,16 +8,16 @@ package elections
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 type elections[K comparable, V any] struct {
 	storage     ITTLStorage[K, V]
-	leadership  map[K]*leaderInfo[K, V]
+	leadership  sync.Map
 	clock       coreutils.ITime
-	mu          sync.Mutex
-	isFinalized bool
+	isFinalized atomic.Bool
 }
 
 // leaderInfo holds per-key tracking data for a leadership.
@@ -25,6 +25,5 @@ type leaderInfo[K comparable, V any] struct {
 	val    V
 	ctx    context.Context
 	cancel context.CancelFunc
-	// renewalIsStarted chan struct{}
-	wg               sync.WaitGroup
+	wg     sync.WaitGroup
 }

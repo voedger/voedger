@@ -16,109 +16,6 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
-// mockStorage is a thread-safe in-memory mock of ITTLStorage that supports key expiration.
-type mockStorage[K comparable, V comparable] struct {
-	mu           sync.Mutex
-	data         map[K]V
-	expirations  map[K]time.Time // expiration time for each key
-	errorTrigger map[K]bool
-	tm           coreutils.ITime
-}
-
-// newMockStorage builds a storage mock with expiration support. By default,
-// tm.Now uses the real time, but in tests we'll often set it to fakeTime.Now.
-func newMockStorage[K comparable, V comparable]() *mockStorage[K, V] {
-	return &mockStorage[K, V]{
-		data:         make(map[K]V),
-		expirations:  make(map[K]time.Time),
-		errorTrigger: make(map[K]bool),
-		tm:           coreutils.MockTime,
-	}
-}
-
-func (m *mockStorage[K, V]) pruneExpired() {
-	now := m.tm.Now()
-	for k, exp := range m.expirations {
-		if now.After(exp) {
-			// Key has expired
-			delete(m.data, k)
-			delete(m.expirations, k)
-		}
-	}
-}
-
-// causeErrorIfNeeded simulates a forced error for specific keys
-func (m *mockStorage[K, V]) causeErrorIfNeeded(key K) error {
-	if m.errorTrigger[key] {
-		return errors.New("forced storage error for test")
-	}
-	return nil
-}
-
-// InsertIfNotExist checks for expiration, then inserts key if absent, setting its TTL.
-func (m *mockStorage[K, V]) InsertIfNotExist(key K, val V, ttl time.Duration) (bool, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.pruneExpired()
-	if err := m.causeErrorIfNeeded(key); err != nil {
-		return false, err
-	}
-
-	if _, exists := m.data[key]; exists {
-		return false, nil
-	}
-	m.data[key] = val
-	m.expirations[key] = m.tm.Now().Add(ttl)
-	return true, nil
-}
-
-// CompareAndSwap refreshes TTL if oldVal matches the current value. Otherwise fails.
-func (m *mockStorage[K, V]) CompareAndSwap(key K, oldVal V, newVal V, ttl time.Duration) (bool, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.pruneExpired()
-	if err := m.causeErrorIfNeeded(key); err != nil {
-		return false, err
-	}
-
-	curr, exists := m.data[key]
-	if !exists {
-		return false, nil
-	}
-	if curr != oldVal {
-		return false, nil
-	}
-	m.data[key] = newVal
-	m.expirations[key] = m.tm.Now().Add(ttl)
-	return true, nil
-}
-
-// CompareAndDelete removes the key if current value matches val. Expiration is also removed.
-func (m *mockStorage[K, V]) CompareAndDelete(key K, val V) (bool, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.pruneExpired()
-	if err := m.causeErrorIfNeeded(key); err != nil {
-		return false, err
-	}
-
-	curr, exists := m.data[key]
-	if !exists {
-		return false, nil
-	}
-	if curr != val {
-		return false, nil
-	}
-	delete(m.data, key)
-	delete(m.expirations, key)
-	return true, nil
-}
-
-// fakeTime allows us to manually control "current time" in tests, which is essential for TTL checks.
-
 func TestElections_BasicUsage(t *testing.T) {
 	storage := newMockStorage[string, string]()
 	clock := coreutils.MockTime
@@ -251,4 +148,143 @@ func TestElections_LeadershipExpires(t *testing.T) {
 	clock.Sleep(duration)
 
 	<-ctx.Done()
+}
+
+func TestCleanupDuringRenewal(t *testing.T) {
+	storage := newMockStorage[string, string]()
+	clock := coreutils.MockTime
+	compareAndSwapCalled := make(chan interface{})
+	storage.onCompareAndSwap = func() {
+		close(compareAndSwapCalled)
+	}
+
+	elector, cleanup := Provide[string, string](storage, clock)
+	defer cleanup()
+
+	duration := 20 * time.Millisecond
+	ctx := elector.AcquireLeadership("expireKey", "expireVal", duration)
+
+	{
+		storage.mu.Lock()
+		delete(storage.data, "expireKey") // simulate a key expiration
+		storage.mu.Unlock()
+
+		clock.Sleep(duration)
+
+		// gauarantee that <-ticker case is fired, not <-li.ctx.Done()
+		// otherwise we do not know which case will fire on cleanup()
+		<-compareAndSwapCalled
+
+		// now force cancel everything.
+		// successful finalizing after that shows that there are no deadlocks caused by simultaneous locks in
+		// cleanup() and in releaseLeadership() after leadership loss
+		cleanup()
+		<-ctx.Done()
+	}
+}
+
+// mockStorage is a thread-safe in-memory mock of ITTLStorage that supports key expiration.
+type mockStorage[K comparable, V comparable] struct {
+	mu               sync.Mutex
+	data             map[K]V
+	expirations      map[K]time.Time // expiration time for each key
+	errorTrigger     map[K]bool
+	tm               coreutils.ITime
+	onCompareAndSwap func() // != nil -> called right before CompareAndSwap. Need to implement hook in tests
+}
+
+// newMockStorage builds a storage mock with expiration support. By default,
+// tm.Now uses the real time, but in tests we'll often set it to fakeTime.Now.
+func newMockStorage[K comparable, V comparable]() *mockStorage[K, V] {
+	return &mockStorage[K, V]{
+		data:         make(map[K]V),
+		expirations:  make(map[K]time.Time),
+		errorTrigger: make(map[K]bool),
+		tm:           coreutils.MockTime,
+	}
+}
+
+func (m *mockStorage[K, V]) pruneExpired() {
+	now := m.tm.Now()
+	for k, exp := range m.expirations {
+		if now.After(exp) {
+			// Key has expired
+			delete(m.data, k)
+			delete(m.expirations, k)
+		}
+	}
+}
+
+// causeErrorIfNeeded simulates a forced error for specific keys
+func (m *mockStorage[K, V]) causeErrorIfNeeded(key K) error {
+	if m.errorTrigger[key] {
+		return errors.New("forced storage error for test")
+	}
+	return nil
+}
+
+// InsertIfNotExist checks for expiration, then inserts key if absent, setting its TTL.
+func (m *mockStorage[K, V]) InsertIfNotExist(key K, val V, ttl time.Duration) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.pruneExpired()
+	if err := m.causeErrorIfNeeded(key); err != nil {
+		return false, err
+	}
+
+	if _, exists := m.data[key]; exists {
+		return false, nil
+	}
+	m.data[key] = val
+	m.expirations[key] = m.tm.Now().Add(ttl)
+	return true, nil
+}
+
+// CompareAndSwap refreshes TTL if oldVal matches the current value. Otherwise fails.
+func (m *mockStorage[K, V]) CompareAndSwap(key K, oldVal V, newVal V, ttl time.Duration) (bool, error) {
+	if m.onCompareAndSwap != nil {
+		m.onCompareAndSwap()
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.pruneExpired()
+	if err := m.causeErrorIfNeeded(key); err != nil {
+		return false, err
+	}
+
+	curr, exists := m.data[key]
+	if !exists {
+		return false, nil
+	}
+	if curr != oldVal {
+		return false, nil
+	}
+	m.data[key] = newVal
+	m.expirations[key] = m.tm.Now().Add(ttl)
+	return true, nil
+}
+
+// CompareAndDelete removes the key if current value matches val. Expiration is also removed.
+func (m *mockStorage[K, V]) CompareAndDelete(key K, val V) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.pruneExpired()
+	if err := m.causeErrorIfNeeded(key); err != nil {
+		return false, err
+	}
+
+	curr, exists := m.data[key]
+	if !exists {
+		return false, nil
+	}
+	if curr != val {
+		return false, nil
+	}
+	delete(m.data, key)
+	delete(m.expirations, key)
+	return true, nil
 }

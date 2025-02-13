@@ -6,6 +6,7 @@ package elections
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/voedger/voedger/pkg/goutils/logger"
@@ -14,17 +15,14 @@ import (
 // AcquireLeadership returns nil if leadership is *not* acquired (e.g., error in storage,
 // already local leader, or elections cleaned up), otherwise returns a *non-nil* context.
 func (e *elections[K, V]) AcquireLeadership(key K, val V, duration time.Duration) context.Context {
-	e.mu.Lock()
-	if e.isFinalized {
+	if e.isFinalized.Load() {
 		logger.Verbose("[AcquireLeadership] Key=%v: elections cleaned up; cannot acquire leadership.", key)
-		e.mu.Unlock()
 		return nil
 	}
-	e.mu.Unlock()
 
 	inserted, err := e.storage.InsertIfNotExist(key, val, duration)
 	if err != nil {
-		logger.Verbose("[AcquireLeadership] Key=%v: storage error: %v", key, err)
+		logger.Error("[AcquireLeadership] Key=%v: storage error: %v", key, err)
 		return nil
 	}
 	if !inserted {
@@ -32,28 +30,28 @@ func (e *elections[K, V]) AcquireLeadership(key K, val V, duration time.Duration
 		return nil
 	}
 
-	e.mu.Lock()
 	ctx, cancel := context.WithCancel(context.Background())
 	li := &leaderInfo[K, V]{
 		val:    val,
 		ctx:    ctx,
 		cancel: cancel,
 	}
-	e.leadership[key] = li
-	e.mu.Unlock()
+	e.leadership.Store(key, li)
 
-	li.wg.Add(1) // For the renewal goroutine
-	go e.maintainLeadership(key, val, duration, li)
-	// Wait for the renewal goroutine to start
-	<-li.renewalIsStarted
+	li.wg.Add(1)
+	maintainLeadershipStarted := sync.WaitGroup{}
+	maintainLeadershipStarted.Add(1)
+	go e.maintainLeadership(key, val, duration, li, &maintainLeadershipStarted)
+	maintainLeadershipStarted.Wait()
 	return ctx
 }
 
-func (e *elections[K, V]) maintainLeadership(key K, val V, duration time.Duration, li *leaderInfo[K, V]) {
+func (e *elections[K, V]) maintainLeadership(key K, val V, duration time.Duration, li *leaderInfo[K, V], maintainLeadershipStarted *sync.WaitGroup) {
 	defer li.wg.Done()
 
 	tickerInterval := duration / 2
 	ticker := e.clock.NewTimerChan(tickerInterval)
+	maintainLeadershipStarted.Done()
 
 	for li.ctx.Err() == nil {
 		select {
@@ -64,11 +62,11 @@ func (e *elections[K, V]) maintainLeadership(key K, val V, duration time.Duratio
 			logger.Verbose("[maintainLeadership] Key=%v: renewing leadership.", key)
 			ok, err := e.storage.CompareAndSwap(key, val, val, duration)
 			if err != nil {
-				logger.Verbose("[maintainLeadership] Key=%v: storage error => release", key)
+				logger.Error("[maintainLeadership] Key=%v: compareAndSwap error => release", key)
 			}
 
 			if !ok {
-				logger.Verbose("[maintainLeadership] Key=%v: compareAndSwap failed => release", key)
+				logger.Error("[maintainLeadership] Key=%v: compareAndSwap failed => release", key)
 			}
 
 			if !ok || err != nil {
@@ -89,20 +87,18 @@ func (e *elections[K, V]) ReleaseLeadership(key K) {
 }
 
 func (e *elections[K, V]) releaseLeadership(key K) *leaderInfo[K, V] {
-	e.mu.Lock()
-	li, found := e.leadership[key]
+	liIntf, found := e.leadership.LoadAndDelete(key)
 	if !found {
-		e.mu.Unlock()
 		logger.Verbose("[ReleaseLeadership] Key=%v: not locally held.", key)
 		return nil
 	}
-	li.cancel()
-	delete(e.leadership, key)
-	e.mu.Unlock()
 
+	li := liIntf.(*leaderInfo[K, V])
 	if _, err := e.storage.CompareAndDelete(key, li.val); err != nil {
-		logger.Verbose("[ReleaseLeadership] Key=%v: storage CompareAndDelete error: %v", key, err)
+		logger.Error("[ReleaseLeadership] Key=%v: storage CompareAndDelete error: %v", key, err)
 	}
+
+	li.cancel()
 
 	logger.Verbose("[ReleaseLeadership] Key=%v: leadership released.", key)
 	return li
@@ -110,14 +106,14 @@ func (e *elections[K, V]) releaseLeadership(key K) *leaderInfo[K, V] {
 
 // cleanup disallows new acquisitions, releases all ongoing leadership, and waits for them to finish.
 func (e *elections[K, V]) cleanup() {
-	e.mu.Lock()
-	defer e.mu.Unlock()
+	e.isFinalized.Store(true)
 
-	e.isFinalized = true
 	// Release each leadership so renewal goroutines stop
-	for key, li := range e.leadership {
+	e.leadership.Range(func(key, liIntf any) bool {
+		li := liIntf.(*leaderInfo[K, V])
 		li.cancel()
 		li.wg.Wait()
-		delete(e.leadership, key)
-	}
+		e.leadership.Delete(key)
+		return true
+	})
 }
