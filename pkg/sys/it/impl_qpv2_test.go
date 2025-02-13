@@ -7,6 +7,7 @@ package sys_it
 
 import (
 	"fmt"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -37,9 +38,19 @@ func TestQueryProcessor_V2(t *testing.T) {
 	require.EqualValues(resultOffsetOfCUD, <-offsetsChan)
 	unsubscribe()
 
-	// execute query
-	url := fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/views/app1pkg.CategoryIdx", ws.WSID)
-	resp, err := vit.IFederation.Query(url)
-	require.NoError(err)
-	require.Nil(resp.SysError)
+	t.Run("view", func(t *testing.T) {
+		url := fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/views/app1pkg.CategoryIdx", ws.WSID)
+		resp, err := vit.IFederation.Query(url)
+		require.NoError(err)
+		require.Nil(resp.SysError)
+	})
+
+	t.Run("query", func(t *testing.T) {
+		args := `{"args": {"Text": "world"},"elements":[{"fields":["Res"]}]}`
+		args = url.QueryEscape(args)
+		url := fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/query/sys.Echo?arg=%s`, ws.WSID, args)
+		resp, err := vit.IFederation.Query(url)
+		require.NoError(err)
+		resp.Println()
+	})
 }

@@ -41,19 +41,19 @@ func (s *httpService) registerHandlersV2() {
 	// execute cmd: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/commands/{pkg}.{command}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/commands/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_command),
-		corsHandler(requestHandlerV2_extension())).
+		corsHandler(requestHandlerV2_extension(s.requestSender, query2.ApiPath_Commands))).
 		Methods(http.MethodPost)
 
 	// execute query: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/queries/{pkg}.{query}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/query/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_query),
-		corsHandler(requestHandlerV2_extension())).
+		corsHandler(requestHandlerV2_extension(s.requestSender, query2.ApiPath_Queries))).
 		Methods(http.MethodGet)
 
 	// view: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/views/{pkg}.{view}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/views/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_view),
-		corsHandler(requestHandlerV2_view())).
+		corsHandler(requestHandlerV2_view(s.requestSender))).
 		Methods(http.MethodGet)
 
 	// blobs: create /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/blobs
@@ -94,31 +94,40 @@ func requestHandlerV2_schemas() http.HandlerFunc {
 	}
 }
 
-func requestHandlerV2_view() http.HandlerFunc {
-	return func(resp http.ResponseWriter, req *http.Request) {
-		writeNotImplemented(resp)
+func requestHandlerV2_view(reqSender bus.IRequestSender) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+		busRequest, ok := createRequest(req.Method, req, rw)
+		if !ok {
+			return
+		}
+
+		busRequest.IsAPIV2 = true
+		busRequest.ApiPath = int(query2.ApiPath_Views)
+		busRequest.QName = appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_view])
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	}
 }
 
-func requestHandlerV2_extension() http.HandlerFunc {
-	return func(resp http.ResponseWriter, req *http.Request) {
+func requestHandlerV2_extension(reqSender bus.IRequestSender, apiPath query2.ApiPath) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
-		funcQNameStr := vars[URLPlaceholder_pkg] + "."
-		switch req.Method {
-		case http.MethodPost: // command
-			funcQNameStr += vars[URLPlaceholder_command]
-		case http.MethodGet: // query
-			funcQNameStr += vars[URLPlaceholder_query]
+		entity := ""
+		switch apiPath {
+		case query2.ApiPath_Commands:
+			entity = vars[URLPlaceholder_command]
+		case query2.ApiPath_Queries:
+			entity = vars[URLPlaceholder_query]
 		}
-		funcQName, err := appdef.ParseQName(funcQNameStr)
-		if err != nil {
-			// protected already by url regexp
-			// notest
-			WriteTextResponse(resp, "failed to parse func QName: "+err.Error(), http.StatusBadRequest)
+		busRequest, ok := createRequest(req.Method, req, rw)
+		if !ok {
 			return
 		}
-		_ = funcQName
-		writeNotImplemented(resp)
+
+		busRequest.IsAPIV2 = true
+		busRequest.ApiPath = int(apiPath)
+		busRequest.QName = appdef.NewQName(vars[URLPlaceholder_pkg], entity)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	}
 }
 
@@ -161,25 +170,29 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath query2.ApiPath
 		}
 		busRequest.IsAPIV2 = true
 		busRequest.ApiPath = int(apiPath)
-
-		// req's BaseContext is router service's context. See service.Start()
-		// router app closing or client disconnected -> req.Context() is done
-		// will create new cancellable context and cancel it if http section send is failed.
-			// requestCtx.Done() -> SendRequest implementation will notify the handler that the consumer has left us
-		requestCtx, cancel := context.WithCancel(req.Context())
-		defer cancel() // to avoid context leak
-		respCh, respMeta, respErr, err := reqSender.SendRequest(requestCtx, busRequest)
-		if err != nil {
-			logger.Error("sending request to VVM on", busRequest.QName, "is failed:", err, ". Body:\n", string(busRequest.Body))
-			status := http.StatusInternalServerError
-			if errors.Is(err, bus.ErrSendTimeoutExpired) {
-				status = http.StatusServiceUnavailable
-			}
-			WriteTextResponse(rw, err.Error(), status)
-			return
-		}
-
-		initResponse(rw, respMeta.ContentType, respMeta.StatusCode)
-		reply(requestCtx, rw, respCh, respErr, respMeta.ContentType, cancel, true, false)
+		busRequest.QName = appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_table])
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	}
+}
+
+func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSender bus.IRequestSender, rw http.ResponseWriter) {
+	// req's BaseContext is router service's context. See service.Start()
+	// router app closing or client disconnected -> req.Context() is done
+	// will create new cancellable context and cancel it if http section send is failed.
+	// requestCtx.Done() -> SendRequest implementation will notify the handler that the consumer has left us
+	requestCtx, cancel := context.WithCancel(req.Context())
+	defer cancel() // to avoid context leak
+	respCh, respMeta, respErr, err := reqSender.SendRequest(requestCtx, busRequest)
+	if err != nil {
+		logger.Error("sending request to VVM on", busRequest.QName, "is failed:", err, ". Body:\n", string(busRequest.Body))
+		status := http.StatusInternalServerError
+		if errors.Is(err, bus.ErrSendTimeoutExpired) {
+			status = http.StatusServiceUnavailable
+		}
+		WriteTextResponse(rw, err.Error(), status)
+		return
+	}
+
+	initResponse(rw, respMeta.ContentType, respMeta.StatusCode)
+	reply(requestCtx, rw, respCh, respErr, respMeta.ContentType, cancel, true, false)
 }

@@ -9,4 +9,5 @@ const (
 	ApiPath_CDocs
 	ApiPath_Queries
 	ApiPath_Views
+	ApiPath_Commands
 )
