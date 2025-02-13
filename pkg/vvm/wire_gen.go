@@ -214,7 +214,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorBLOBProcessors, iActualizersService, iAppPartsCtlPipelineService, bootstrapOperator, adminEndpointServiceOperator, publicEndpointServiceOperator, iAppStorageProvider)
 	v9 := provideMetricsServicePortGetter(metricsService)
 	v10 := provideBuiltInAppPackages(builtInAppsArtefacts)
-	ivvmAppTTLStorage, err := provideITTLStorage(iAppStorageProvider)
+	ivvmAppTTLStorage, err := provideIVVMAppTTLStorage(iAppStorageProvider)
 	if err != nil {
 		cleanup4()
 		cleanup3()
@@ -285,7 +285,7 @@ func (vvm *VoedgerVM) Launch() error {
 	return err
 }
 
-func provideITTLStorage(prov istorage.IAppStorageProvider) (IVVMAppTTLStorage, error) {
+func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (IVVMAppTTLStorage, error) {
 	return prov.AppStorage(istructs.AppQName_sys_cluster)
 }
 
