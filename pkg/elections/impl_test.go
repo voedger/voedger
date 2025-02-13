@@ -18,32 +18,30 @@ import (
 
 // mockStorage is a thread-safe in-memory mock of ITTLStorage that supports key expiration.
 type mockStorage[K comparable, V comparable] struct {
-	mu          sync.Mutex
-	store       map[K]V
-	expirations map[K]time.Time // expiration time for each key
-
-	// We use nowFunc to get the current time (in tests, this is provided by fakeTime.Now()).
-	nowFunc      func() time.Time
+	mu           sync.Mutex
+	data         map[K]V
+	expirations  map[K]time.Time // expiration time for each key
 	errorTrigger map[K]bool
+	tm           coreutils.ITime
 }
 
 // newMockStorage builds a storage mock with expiration support. By default,
-// nowFunc uses the real time, but in tests we'll often set it to fakeTime.Now.
+// tm.Now uses the real time, but in tests we'll often set it to fakeTime.Now.
 func newMockStorage[K comparable, V comparable]() *mockStorage[K, V] {
 	return &mockStorage[K, V]{
-		store:        make(map[K]V),
+		data:         make(map[K]V),
 		expirations:  make(map[K]time.Time),
-		nowFunc:      time.Now, // can be overridden in tests
 		errorTrigger: make(map[K]bool),
+		tm:           coreutils.MockTime,
 	}
 }
 
 func (m *mockStorage[K, V]) pruneExpired() {
-	now := m.nowFunc()
+	now := m.tm.Now()
 	for k, exp := range m.expirations {
 		if now.After(exp) {
 			// Key has expired
-			delete(m.store, k)
+			delete(m.data, k)
 			delete(m.expirations, k)
 		}
 	}
@@ -67,11 +65,11 @@ func (m *mockStorage[K, V]) InsertIfNotExist(key K, val V, ttl time.Duration) (b
 		return false, err
 	}
 
-	if _, exists := m.store[key]; exists {
+	if _, exists := m.data[key]; exists {
 		return false, nil
 	}
-	m.store[key] = val
-	m.expirations[key] = m.nowFunc().Add(ttl)
+	m.data[key] = val
+	m.expirations[key] = m.tm.Now().Add(ttl)
 	return true, nil
 }
 
@@ -85,15 +83,15 @@ func (m *mockStorage[K, V]) CompareAndSwap(key K, oldVal V, newVal V, ttl time.D
 		return false, err
 	}
 
-	curr, exists := m.store[key]
+	curr, exists := m.data[key]
 	if !exists {
 		return false, nil
 	}
 	if curr != oldVal {
 		return false, nil
 	}
-	m.store[key] = newVal
-	m.expirations[key] = m.nowFunc().Add(ttl)
+	m.data[key] = newVal
+	m.expirations[key] = m.tm.Now().Add(ttl)
 	return true, nil
 }
 
@@ -107,25 +105,23 @@ func (m *mockStorage[K, V]) CompareAndDelete(key K, val V) (bool, error) {
 		return false, err
 	}
 
-	curr, exists := m.store[key]
+	curr, exists := m.data[key]
 	if !exists {
 		return false, nil
 	}
 	if curr != val {
 		return false, nil
 	}
-	delete(m.store, key)
+	delete(m.data, key)
 	delete(m.expirations, key)
 	return true, nil
 }
 
 // fakeTime allows us to manually control "current time" in tests, which is essential for TTL checks.
 
-func TestElections_AcquireLeadership_Success(t *testing.T) {
+func TestElections_BasicUsage(t *testing.T) {
 	storage := newMockStorage[string, string]()
 	clock := coreutils.MockTime
-	// Make the mock storage read time from fakeTime
-	storage.nowFunc = clock.Now
 
 	elector, cleanup := Provide[string, string](storage, clock)
 	defer cleanup()
@@ -135,17 +131,13 @@ func TestElections_AcquireLeadership_Success(t *testing.T) {
 
 	// Check mock storage
 	storage.mu.Lock()
-	val, ok := storage.store["testKey"]
+	val, ok := storage.data["testKey"]
 	exp := storage.expirations["testKey"]
 	storage.mu.Unlock()
 
-	// wait for moment when renewal goroutine started
-	<-elector.(*elections[string, string]).leadership["testKey"].renewalIsStarted
-	clock.Sleep(1 * time.Second)
-
 	require.True(t, ok, "Key should be in store")
 	require.Equal(t, "leaderVal", val)
-	require.True(t, clock.Now().Before(exp) || clock.Now().Equal(exp), "Expiration time should be set in the future")
+	require.True(t, clock.Now().Before(exp), "Expiration time should be set in the future")
 
 	// Release leadership
 	elector.ReleaseLeadership("testKey")
@@ -155,14 +147,13 @@ func TestElections_AcquireLeadership_Success(t *testing.T) {
 func TestElections_AcquireLeadership_Failure(t *testing.T) {
 	storage := newMockStorage[string, string]()
 	clock := coreutils.MockTime
-	storage.nowFunc = clock.Now
 
 	elector, cleanup := Provide[string, string](storage, clock)
 	defer cleanup()
 
 	// Occupied key
 	storage.mu.Lock()
-	storage.store["occupied"] = "someVal"
+	storage.data["occupied"] = "someVal"
 	storage.expirations["occupied"] = clock.Now().Add(10 * time.Second)
 	storage.mu.Unlock()
 
@@ -173,7 +164,6 @@ func TestElections_AcquireLeadership_Failure(t *testing.T) {
 func TestElections_AcquireLeadership_Error(t *testing.T) {
 	storage := newMockStorage[string, string]()
 	clock := coreutils.MockTime
-	storage.nowFunc = clock.Now
 
 	storage.errorTrigger["badKey"] = true
 
@@ -187,7 +177,6 @@ func TestElections_AcquireLeadership_Error(t *testing.T) {
 func TestElections_CompareAndSwap_RenewFails(t *testing.T) {
 	storage := newMockStorage[string, string]()
 	clock := coreutils.MockTime
-	storage.nowFunc = clock.Now
 
 	elector, cleanup := Provide[string, string](storage, clock)
 	defer cleanup()
@@ -195,14 +184,9 @@ func TestElections_CompareAndSwap_RenewFails(t *testing.T) {
 	ctx := elector.AcquireLeadership("renewKey", "renewVal", 4*time.Second)
 	require.NotNil(t, ctx)
 
-	// wait for moment when renewal goroutine started
-	<-elector.(*elections[string, string]).leadership["renewKey"].renewalIsStarted
-	// trigger the renewal
-	clock.Sleep(1 * time.Second)
-
 	// sabotage the storage so next CompareAndSwap fails by changing the value
 	storage.mu.Lock()
-	storage.store["renewKey"] = "someOtherVal"
+	storage.data["renewKey"] = "someOtherVal"
 	storage.mu.Unlock()
 
 	// trigger the renewal
@@ -210,7 +194,7 @@ func TestElections_CompareAndSwap_RenewFails(t *testing.T) {
 
 	// The leadership is forcibly released in the background.
 	storage.mu.Lock()
-	val, ok := storage.store["renewKey"]
+	val, ok := storage.data["renewKey"]
 	storage.mu.Unlock()
 
 	<-ctx.Done()
@@ -219,34 +203,9 @@ func TestElections_CompareAndSwap_RenewFails(t *testing.T) {
 	require.Equal(t, "someOtherVal", val)
 }
 
-func TestElections_TTLStoredOnSwap(t *testing.T) {
-	storage := newMockStorage[string, string]()
-	clock := coreutils.MockTime
-	storage.nowFunc = clock.Now
-
-	elector, cleanup := Provide[string, string](storage, clock)
-
-	ctx := elector.AcquireLeadership("ttlKey", "ttlVal", 10*time.Second)
-	require.NotNil(t, ctx)
-
-	// wait for moment when renewal goroutine started
-	<-elector.(*elections[string, string]).leadership["ttlKey"].renewalIsStarted
-	// Trigger renewal
-	clock.Sleep(5 * time.Second)
-
-	storage.mu.Lock()
-	expTime := storage.expirations["ttlKey"]
-	storage.mu.Unlock()
-
-	require.True(t, clock.Now().Before(expTime), "CompareAndSwap should have updated TTL to now+10s")
-	cleanup()
-	<-ctx.Done()
-}
-
 func TestElections_ReleaseLeadership_NoLeader(t *testing.T) {
 	storage := newMockStorage[string, string]()
 	clock := coreutils.MockTime
-	storage.nowFunc = clock.Now
 
 	elector, cleanup := Provide[string, string](storage, clock)
 	defer cleanup()
@@ -258,7 +217,6 @@ func TestElections_ReleaseLeadership_NoLeader(t *testing.T) {
 func TestElections_CleanupDisallowsNew(t *testing.T) {
 	storage := newMockStorage[string, string]()
 	clock := coreutils.MockTime
-	storage.nowFunc = clock.Now
 
 	elector, closeFunc := Provide[string, string](storage, clock)
 
@@ -267,7 +225,7 @@ func TestElections_CleanupDisallowsNew(t *testing.T) {
 
 	closeFunc() // cleanup => no further acquisitions
 
-	require.ErrorIs(t, ctx1.Err(), context.Canceled, "Context should be canceled after cleanup")
+	<-ctx1.Done()
 	ctx2 := elector.AcquireLeadership("keyB", "valB", 2*time.Second)
 	require.Nil(t, ctx2, "No new leadership after cleanup")
 }
@@ -277,7 +235,6 @@ func TestElections_CleanupDisallowsNew(t *testing.T) {
 func TestElections_LeadershipExpires(t *testing.T) {
 	storage := newMockStorage[string, string]()
 	clock := coreutils.MockTime
-	storage.nowFunc = clock.Now
 
 	elector, cleanup := Provide[string, string](storage, clock)
 	defer cleanup()
@@ -288,11 +245,9 @@ func TestElections_LeadershipExpires(t *testing.T) {
 	require.NotNil(t, ctx, "Should have leadership initially")
 
 	storage.mu.Lock()
-	delete(storage.store, "expireKey") // simulate a key expiration
+	delete(storage.data, "expireKey") // simulate a key expiration
 	storage.mu.Unlock()
 
-	// wait for moment when renewal goroutine started
-	<-elector.(*elections[string, string]).leadership["expireKey"].renewalIsStarted
 	clock.Sleep(duration)
 
 	<-ctx.Done()

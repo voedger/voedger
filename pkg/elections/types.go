@@ -24,8 +24,8 @@ type elections[K comparable, V any] struct {
 
 // leaderInfo holds per-key tracking data for a leadership.
 type leaderInfo[K comparable, V any] struct {
-	val              V
-	ctx              context.Context
-	cancel           context.CancelFunc
-	renewalIsStarted chan struct{}
+	val    V
+	ctx    context.Context
+	cancel context.CancelFunc
+	// renewalIsStarted chan struct{}
 }

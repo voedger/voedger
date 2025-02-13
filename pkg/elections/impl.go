@@ -33,12 +33,11 @@ func (e *elections[K, V]) AcquireLeadership(key K, val V, duration time.Duration
 	}
 
 	e.mu.Lock()
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(context.Background())
 	li := &leaderInfo[K, V]{
-		val:              val,
-		ctx:              ctx,
-		cancel:           cancel,
-		renewalIsStarted: make(chan struct{}, 1),
+		val:    val,
+		ctx:    ctx,
+		cancel: cancel,
 	}
 	e.leadership[key] = li
 	e.mu.Unlock()
@@ -53,8 +52,6 @@ func (e *elections[K, V]) maintainLeadership(key K, val V, duration time.Duratio
 
 	tickerInterval := duration / 2
 	ticker := e.clock.NewTimerChan(tickerInterval)
-	// Signal that the renewal goroutine has started
-	li.renewalIsStarted <- struct{}{}
 
 	for li.ctx.Err() == nil {
 		select {
