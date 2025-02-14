@@ -166,6 +166,7 @@ func (vvm *VoedgerVM) Launch_(leadershipAcquisitionDuration time.Duration) (prob
 				vvm.problemCtxCancel(ErrLeadershipLost)
 			case <-vvm.monitorShutCtx.Done():
 				return
+			// case timer 30 seconds: leadershipCtx = elections.AcquireLeadership(TTLStorageImplKey(vvmIdx), vvm.ip.String(), defaultLeadershipDuration)
 			}
 		}
 		go leadershipMonitor()
