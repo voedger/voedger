@@ -7,6 +7,7 @@ package query2
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -189,29 +190,22 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return qw.apiPathHandler.AuthorizeRequest(ctx, qw)
 		}),
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.execQueryArgs, err = newExecQueryArgs(qw.msg.WSID(), qw)
-			return coreutils.WrapSysError(err, http.StatusBadRequest)
+			if qw.msg.ApiPath() == ApiPath_Queries {
+				qw.execQueryArgs, err = newExecQueryArgs(qw.msg.WSID(), qw)
+				return coreutils.WrapSysError(err, http.StatusBadRequest)
+			}
+			return nil
 		}),
 		operator("create callback func", func(ctx context.Context, qw *queryWork) (err error) {
-			/* TODO: implement
-			qw.callbackFunc = func(object istructs.IObject) error {
-				pathToIdx := make(map[string]int)
-				if qw.resultType.QName() == istructs.QNameRaw {
-					pathToIdx[processors.Field_RawObject_Body] = 0
-				} else {
-					for i, element := range qw.queryParams.Elements() {
-						pathToIdx[element.Path().Name()] = i
-					}
+			qw.callbackFunc = func(istructs.IObject) (err error) {
+				oo, err := readView(ctx, qw.appStructs.AppDef(), qw.appStructs.ViewRecords(), qw.queryParams, qw.msg.WSID(), qw.msg.QName())
+				if err != nil {
+					return
 				}
-				return qw.rowsProcessor.SendAsync(rowsWorkpiece{
-					object: object,
-					outputRow: &outputRow{
-						keyToIdx: pathToIdx,
-						values:   make([]interface{}, len(pathToIdx)),
-					},
-					enrichedRootFieldsKinds: make(map[string]appdef.DataKind),
-				})
-			}*/
+				// TODO how to handle
+				log.Println(oo)
+				return
+			}
 			return nil
 		}),
 		operator("create state", func(ctx context.Context, qw *queryWork) (err error) {
