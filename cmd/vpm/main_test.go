@@ -317,7 +317,7 @@ func TestOrmBasicUsage(t *testing.T) {
 
 			headerFile := filepath.Join(dir, "header.txt")
 			err = execRootCmd([]string{"vpm", "orm", "-C", dir, "--header-file", headerFile}, "1.0.0")
-			require.NoError(err)
+			require.NoError(err, tc.dir)
 
 			if logger.IsVerbose() {
 				logger.Verbose("orm directory: " + filepath.Join(dir, wasmDirName, ormDirName))
