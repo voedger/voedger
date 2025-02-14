@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"time"
 
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
@@ -17,8 +18,8 @@ type storageImpl struct {
 }
 
 func (s *storageImpl) buildKeys(key TTLStorageImplKey) (pKey, cCols []byte) {
-	pKey = make([]byte, 4)
-	cCols = make([]byte, 4)
+	pKey = make([]byte, utils.Uint32Size)
+	cCols = make([]byte, utils.Uint32Size)
 
 	binary.BigEndian.PutUint32(pKey, s.prefix)
 	binary.BigEndian.PutUint32(cCols, key)
