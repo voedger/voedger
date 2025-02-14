@@ -27,7 +27,7 @@ func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert(id ID) Intent_{{.Type}}_{{
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
 	newVal := exttinygo.NewValue(kb)
 	newVal.PutInt64(FieldNameSysID, int64(id))
-	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: newVal)}
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: newVal}
 }
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Update(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
@@ -126,7 +126,7 @@ func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert(id ID) Intent_{{.Type}}_{{
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
 	newVal := exttinygo.NewValue(kb)
 	newVal.PutInt64(FieldNameSysID, int64(id))
-	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: newVal)}
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: newVal}
 }
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Update(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
@@ -158,7 +158,7 @@ func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert(id ID) Intent_{{.Type}}_{{
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
 	newVal := exttinygo.NewValue(kb)
 	newVal.PutInt64(FieldNameSysID, int64(id))
-	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: newVal)}
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: newVal}
 }
 {{end}}
 
