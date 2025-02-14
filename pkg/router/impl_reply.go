@@ -25,7 +25,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter) (res bus.Request, ok bool) {
+func createBusRequest(reqMethod string, req *http.Request, rw http.ResponseWriter) (res bus.Request, ok bool) {
 	vars := mux.Vars(req)
 	wsidStr := vars[URLPlaceholder_wsid]
 	wsid, err := strconv.ParseUint(wsidStr, utils.DecimalBase, utils.BitSize64)

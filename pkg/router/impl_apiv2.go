@@ -97,7 +97,7 @@ func requestHandlerV2_schemas() http.HandlerFunc {
 func requestHandlerV2_view(reqSender bus.IRequestSender) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
-		busRequest, ok := createRequest(req.Method, req, rw)
+		busRequest, ok := createBusRequest(req.Method, req, rw)
 		if !ok {
 			return
 		}
@@ -119,7 +119,7 @@ func requestHandlerV2_extension(reqSender bus.IRequestSender, apiPath query2.Api
 		case query2.ApiPath_Queries:
 			entity = vars[URLPlaceholder_query]
 		}
-		busRequest, ok := createRequest(req.Method, req, rw)
+		busRequest, ok := createBusRequest(req.Method, req, rw)
 		if !ok {
 			return
 		}
@@ -164,7 +164,7 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath query2.ApiPath
 		case http.MethodDelete:
 		}
 		// note: request lead to create -> 201 Created
-		busRequest, ok := createRequest(req.Method, req, rw)
+		busRequest, ok := createBusRequest(req.Method, req, rw)
 		if !ok {
 			return
 		}
