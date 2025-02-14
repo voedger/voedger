@@ -9,12 +9,11 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/coreutils/utils"
-	"github.com/voedger/voedger/pkg/vvm"
 )
 
 type storageImpl struct {
 	prefix        PKeyPrefix
-	vvmttlstorage vvm.IVVMAppTTLStorage
+	vvmttlstorage IVVMAppTTLStorage
 }
 
 func (s *storageImpl) buildKeys(key TTLStorageImplKey) (pKey, cCols []byte) {

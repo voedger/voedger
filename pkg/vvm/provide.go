@@ -43,6 +43,7 @@ import (
 	"github.com/voedger/voedger/pkg/router"
 	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
 	"github.com/voedger/voedger/pkg/vvm/engines"
+	"github.com/voedger/voedger/pkg/vvm/ttlstorage"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
@@ -78,7 +79,11 @@ import (
 
 func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	voedgerVM = &VoedgerVM{vvmCtxCancel: cancel}
+	voedgerVM = &VoedgerVM{
+		vvmCtxCancel: cancel,
+		clusterSize:  vvmCfg.ClusterSize,
+		ip:           vvmCfg.IP,
+	}
 	vvmCfg.addProcessorChannel(
 		// command processors
 		// each restaurant must go to the same cmd proc -> one single cmd processor behind the each command service channel
@@ -126,27 +131,44 @@ func (vvm *VoedgerVM) Shutdown_() error {
 	return vvm.problemCtx.Err()
 }
 
+// leadershipAcquisitionDuration - default 120 sec
 func (vvm *VoedgerVM) Launch_(leadershipAcquisitionDuration time.Duration) (problemCtx context.Context) {
-	// elections, cleanup := elections.Provide(vvm.VVMAppTTLStorage, vvm.ITime)
-	var elections elections.IElections[TTLStorageImplKey, string] // to be provided after https://github.com/voedger/voedger/issues/3265
-	var electionsCleanup func() = func() {}
+	ttlStorage := ttlstorage.New(VVMLeaderKeyPrefix, vvm.VVMAppTTLStorage)
+	elections, electionsCleanup := elections.Provide(ttlStorage, vvm.ITime)
+	vvm.electionsCleanup = electionsCleanup
 	launcher := func() {
+		var leadershipCtx context.Context
 		leadershipAcquisitionDeadline := vvm.ITime.Now().Add(leadershipAcquisitionDuration)
-		for vvmIdx := 1; vvmIdx <= int(vvm.ClusterSize); vvmIdx++ {
-			leadershipCtx := elections.AcquireLeadership(TTLStorageImplKey(vvmIdx), "127.0.0.1", time.Hour)
+		for vvmIdx := 1; vvmIdx <= int(vvm.clusterSize); vvmIdx++ {
+			leadershipCtx = elections.AcquireLeadership(TTLStorageImplKey(vvmIdx), vvm.ip.String(), defaultLeadershipDuration)
 			if leadershipCtx == nil {
 				if vvm.ITime.Now().After(leadershipAcquisitionDeadline) {
 					vvm.problemCtxCancel(ErrVVMLeadershipAcquisition)
 					return
 				}
-				if vvmIdx == int(vvm.ClusterSize) {
-					vvmIdx = 1
+				if vvmIdx == int(vvm.clusterSize) {
+					vvmIdx = 1 // not sure that works
 				}
 				continue
 			} else {
 				break
 			}
 		}
+		killerRoutine := func() {
+			time.Sleep(30 * time.Second)
+			os.Exit(1)
+		}
+		leadershipMonitor := func() {
+			select {
+			case <-leadershipCtx.Done():
+				// leadership is lost
+				go killerRoutine()
+				vvm.problemCtxCancel(ErrLeadershipLost)
+			case <-vvm.monitorShutCtx.Done():
+				return
+			}
+		}
+		go leadershipMonitor()
 		ignition := ignition{}
 		err := vvm.ServicePipeline.SendSync(ignition)
 		if err != nil {
@@ -272,7 +294,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	))
 }
 
-func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (IVVMAppTTLStorage, error) {
+func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (ttlstorage.IVVMAppTTLStorage, error) {
 	st, err := prov.AppStorage(istructs.AppQName_sys_cluster)
 	if err != nil {
 		return nil, err

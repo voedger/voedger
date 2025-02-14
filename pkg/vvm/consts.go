@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/istorage/cas"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/router"
+	"github.com/voedger/voedger/pkg/vvm/ttlstorage"
 )
 
 const (
@@ -29,6 +30,8 @@ const (
 	DefaultVVMPort                                                     = router.DefaultPort
 	actualizerFlushInterval                                            = time.Millisecond * 500
 	defaultCassandraPort                                               = 9042
+	VVMLeaderKeyPrefix                   ttlstorage.PKeyPrefix         = 1
+	defaultLeadershipDuration                                          = 20 * time.Second
 )
 
 const (
