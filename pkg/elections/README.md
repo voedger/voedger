@@ -1,30 +1,4 @@
-# Elections Package
-
-```mermaid
-flowchart TB
-    A((Start)) --> B["Caller calls <br/>AcquireLeadership(key,val,duration)"]
-    B --> C{"Elections finalized?"}
-    C -- Yes --> D["Return nil (no leadership)"]
-    C -- No  --> E["InsertIfNotExist(key,val,ttl)"]
-    E -- "Fail or Err" --> D
-    E -- "Succeed" --> F["Create leadership ctx <br/> Return ctx to caller"]
-    F --> G["Spawn renewal goroutine"]
-
-    subgraph Renewal Loop
-    direction TB
-    G --> H["Wait (duration/2)"]
-    H --> I["CompareAndSwap(key,val,val,ttl)"]
-    I -- "Fail or Err" --> J["ReleaseLeadership(key)"]
-    I -- "OK" --> H
-    J --> H
-    end
-
-    R(("Caller calls<br/>ReleaseLeadership(key)")) --> S{"Key held locally?"}
-    S -- No --> T["Logs not held, done"]
-    S -- Yes --> U["CompareAndDelete(key,val)"]
-    U --> V["Cancel leadership context<br/>End leadership"]
-    V --> W[Done]
-```
+# elections package
 
 The **elections** package provides a simple, pluggable **leader election** mechanism using:
 
@@ -43,7 +17,7 @@ This design allows clean injection of custom storage implementations (e.g., in-m
     - [Providing the Elections Implementation](#providing-the-elections-implementation)
     - [Acquiring and Releasing Leadership](#acquiring-and-releasing-leadership)
     - [Performing Cleanup](#performing-cleanup)
-
+- [Flowchart](#flowchart)
 ---
 
 ## Installation
@@ -130,3 +104,31 @@ cleanup()
 
 - The second return value from Provide(...), which we are calling cleanup(), stops all renewal goroutines and disallows any future calls to AcquireLeadership.
 - Any existing leadership contexts will be canceled.
+
+### Flowchart
+```mermaid
+flowchart TB
+    A((Start)) --> B["Caller calls <br/>AcquireLeadership(key,val,duration)"]
+    B --> C{"Elections finalized?"}
+    C -- Yes --> D["Return nil (no leadership)"]
+    C -- No  --> E["InsertIfNotExist(key,val,ttl)"]
+    E -- "Fail or Err" --> D
+    E -- "Succeed" --> F["Create leadership ctx <br/> Return ctx to caller"]
+    F --> G["Spawn renewal goroutine"]
+
+    subgraph Renewal Loop
+    direction TB
+    G --> H["Wait (duration/2)"]
+    H --> I["CompareAndSwap(key,val,val,ttl)"]
+    I -- "Fail or Err" --> J["ReleaseLeadership(key)"]
+    I -- "OK" --> H
+    J --> H
+    end
+
+    R(("Caller calls<br/>ReleaseLeadership(key)")) --> S{"Key held locally?"}
+    S -- No --> T["Logs not held, done"]
+    S -- Yes --> U["CompareAndDelete(key,val)"]
+    U --> V["Cancel leadership context<br/>End leadership"]
+    V --> W[Done]
+```
+
