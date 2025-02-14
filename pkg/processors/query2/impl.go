@@ -7,7 +7,6 @@ package query2
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -202,11 +201,13 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				if err != nil {
 					return
 				}
-				// TODO how to handle
-				log.Println(oo)
-				return
+				resp := qw.msg.Responder().InitResponse(bus.ResponseMeta{
+					ContentType: coreutils.ApplicationJSON,
+					StatusCode:  http.StatusOK,
+				})
+				return resp.Send(oo)
 			}
-			return nil
+			return
 		}),
 		operator("create state", func(ctx context.Context, qw *queryWork) (err error) {
 			qw.state = stateprovide.ProvideQueryProcessorStateFactory()(

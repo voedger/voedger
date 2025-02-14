@@ -68,9 +68,8 @@ func (h *viewHandler) AuthorizeResult(ctx context.Context, qw *queryWork) error 
 	return nil
 }
 
-func (h *viewHandler) RowsProcessor(ctx context.Context, qw *queryWork) error {
-	// TODO: implement rows processor
-	return nil
+func (h *viewHandler) RowsProcessor(_ context.Context, qw *queryWork) error {
+	return qw.callbackFunc(nil)
 }
 
 func (h *viewHandler) Exec(ctx context.Context, qw *queryWork) error {
