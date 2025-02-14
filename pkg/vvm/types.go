@@ -6,7 +6,9 @@ package vvm
 
 import (
 	"context"
+	"net"
 	"net/url"
+	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
@@ -33,6 +35,7 @@ import (
 	"github.com/voedger/voedger/pkg/sys/workspace"
 	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
+	"github.com/voedger/voedger/pkg/vvm/ttlstorage"
 )
 
 type ServicePipeline pipeline.ISyncPipeline
@@ -98,11 +101,10 @@ type AppPartsCtlPipelineService struct {
 	apppartsctl.IAppPartitionsController
 }
 type IAppPartsCtlPipelineService pipeline.IService
-type IVVMAppTTLStorage interface {
-	InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error)
-	CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error)
-	CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error)
-}
+
+type ClusterSize int
+
+type TTLStorageImplKey = uint32
 
 type PostDocFieldType struct {
 	Kind              appdef.DataKind
@@ -124,7 +126,7 @@ type VVM struct {
 	AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
 	BuiltInAppsPackages []BuiltInAppPackages
-	VVMAppTTLStorage    IVVMAppTTLStorage // just to wire, will be used on wire stage only after https://github.com/voedger/voedger/issues/3265
+	VVMAppTTLStorage    ttlstorage.IVVMAppTTLStorage // just to wire, will be used on wire stage only after https://github.com/voedger/voedger/issues/3265
 }
 
 type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
@@ -156,6 +158,8 @@ type VVMConfig struct {
 	WSPostInitFunc             workspace.WSPostInitFunc
 	DataPath                   string
 	MetricsServicePort         MetricsServicePortInitial
+	ClusterSize                ClusterSize // amount of VVMs in the cluster
+	IP                         net.IP
 
 	// 0 -> dynamic port will be used, new on each vvmIdx
 	// >0 -> vVMPort+vvmIdx will be actually used
@@ -172,8 +176,32 @@ type VVMConfig struct {
 
 type VoedgerVM struct {
 	*VVM
-	vvmCtxCancel func()
-	vvmCleanup   func()
+	vvmCtxCancel     func()
+	vvmCleanup       func()
+	electionsCleanup func()
+
+	// closed when some problem occurs, VVM terminates itself due to leadership loss or problems with the launching
+	problemCtx       context.Context
+	problemCtxCancel context.CancelCauseFunc
+
+	// closed when VVM should be stopped outside
+	vvmShutCtx       context.Context
+	vvmShutCtxCancel context.CancelFunc
+	vvmShutCtxOnce   sync.Once
+
+	// closed when VVM services should be stopped (but LeadershipMonitor)
+	servicesShutCtx       context.Context
+	servicesShutCtxCancel context.CancelFunc
+
+	// closed after all services are stopped and LeadershipMonitor should be stopped
+	monitorShutCtx       context.Context
+	monitorShutCtxCancel context.CancelFunc
+
+	// closed after all (services and LeadershipMonitor) is topped
+	shutdownedCtx       context.Context
+	shutdownedCtxCancel context.CancelFunc
+	clusterSize         ClusterSize
+	ip                  net.IP
 }
 
 type ignition struct{}

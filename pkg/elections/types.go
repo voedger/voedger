@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
-type elections[K comparable, V any] struct {
+type elections[K any, V any] struct {
 	storage     ITTLStorage[K, V]
 	leadership  sync.Map
 	clock       coreutils.ITime
@@ -21,7 +21,7 @@ type elections[K comparable, V any] struct {
 }
 
 // leaderInfo holds per-key tracking data for a leadership.
-type leaderInfo[K comparable, V any] struct {
+type leaderInfo[K any, V any] struct {
 	val    V
 	ctx    context.Context
 	cancel context.CancelFunc

@@ -20,6 +20,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/wire"
 	"golang.org/x/crypto/acme/autocert"
@@ -28,6 +29,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/btstrp"
+	"github.com/voedger/voedger/pkg/elections"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -41,6 +43,7 @@ import (
 	"github.com/voedger/voedger/pkg/router"
 	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
 	"github.com/voedger/voedger/pkg/vvm/engines"
+	"github.com/voedger/voedger/pkg/vvm/ttlstorage"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
@@ -76,7 +79,11 @@ import (
 
 func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	voedgerVM = &VoedgerVM{vvmCtxCancel: cancel}
+	voedgerVM = &VoedgerVM{
+		vvmCtxCancel: cancel,
+		clusterSize:  vvmCfg.ClusterSize,
+		ip:           vvmCfg.IP,
+	}
 	vvmCfg.addProcessorChannel(
 		// command processors
 		// each restaurant must go to the same cmd proc -> one single cmd processor behind the each command service channel
@@ -118,9 +125,76 @@ func (vvm *VoedgerVM) Shutdown() {
 	vvm.vvmCleanup()
 }
 
+func (vvm *VoedgerVM) Shutdown_() error {
+	vvm.vvmShutCtxOnce.Do(vvm.vvmShutCtxCancel)
+	<-vvm.shutdownedCtx.Done()
+	return vvm.problemCtx.Err()
+}
+
+// leadershipAcquisitionDuration - default 120 sec
+func (vvm *VoedgerVM) Launch_(leadershipAcquisitionDuration time.Duration) (problemCtx context.Context) {
+	ttlStorage := ttlstorage.New(VVMLeaderKeyPrefix, vvm.VVMAppTTLStorage)
+	elections, electionsCleanup := elections.Provide(ttlStorage, vvm.ITime)
+	vvm.electionsCleanup = electionsCleanup
+	launcher := func() {
+		var leadershipCtx context.Context
+		leadershipAcquisitionDeadline := vvm.ITime.Now().Add(leadershipAcquisitionDuration)
+		for vvmIdx := 1; vvmIdx <= int(vvm.clusterSize); vvmIdx++ {
+			leadershipCtx = elections.AcquireLeadership(TTLStorageImplKey(vvmIdx), vvm.ip.String(), defaultLeadershipDuration)
+			if leadershipCtx == nil {
+				if vvm.ITime.Now().After(leadershipAcquisitionDeadline) {
+					vvm.problemCtxCancel(ErrVVMLeadershipAcquisition)
+					return
+				}
+				if vvmIdx == int(vvm.clusterSize) {
+					vvmIdx = 1 // not sure that works
+				}
+				continue
+			} else {
+				break
+			}
+		}
+		killerRoutine := func() {
+			time.Sleep(30 * time.Second)
+			os.Exit(1)
+		}
+		leadershipMonitor := func() {
+			select {
+			case <-leadershipCtx.Done():
+				// leadership is lost
+				go killerRoutine()
+				vvm.problemCtxCancel(ErrLeadershipLost)
+			case <-vvm.monitorShutCtx.Done():
+				return
+			// case timer 30 seconds: leadershipCtx = elections.AcquireLeadership(TTLStorageImplKey(vvmIdx), vvm.ip.String(), defaultLeadershipDuration)
+			}
+		}
+		go leadershipMonitor()
+		ignition := ignition{}
+		err := vvm.ServicePipeline.SendSync(ignition)
+		if err != nil {
+			err = errors.Join(err, ErrVVMLaunchFailure)
+			logger.Error(err)
+			vvm.problemCtxCancel(err)
+			return
+		}
+	}
+	go launcher()
+
+	shutdowner := func() {
+		<-vvm.vvmShutCtx.Done()
+		vvm.servicesShutCtxCancel()
+		vvm.ServicePipeline.Close()
+		vvm.vvmCleanup()
+		vvm.monitorShutCtxCancel()
+	}
+	go shutdowner()
+	return vvm.problemCtx
+}
+
 func (vvm *VoedgerVM) Launch() error {
-	ign := ignition{}
-	err := vvm.ServicePipeline.SendSync(ign)
+	ignition := ignition{}
+	err := vvm.ServicePipeline.SendSync(ignition)
 	if err != nil {
 		err = errors.Join(err, ErrVVMLaunchFailure)
 		logger.Error(err)
@@ -216,12 +290,17 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"MetricsServicePort",
 			"ActualizerStateOpts",
 			"SecretsReader",
+			"ClusterSize",
 		),
 	))
 }
 
-func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (IVVMAppTTLStorage, error) {
-	return prov.AppStorage(istructs.AppQName_sys_cluster)
+func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (ttlstorage.IVVMAppTTLStorage, error) {
+	st, err := prov.AppStorage(istructs.AppQName_sys_cluster)
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
 }
 
 func provideWLimiterFactory(maxSize iblobstorage.BLOBMaxSizeType) blobprocessor.WLimiterFactory {
