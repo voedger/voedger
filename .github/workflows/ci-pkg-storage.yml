@@ -27,6 +27,7 @@ jobs:
         run: |
           CAS_CHANGED=false
           AMAZON_CHANGED=false
+          OTHERS_CHANGED=false
 
           # Ensure we have a valid previous commit
           if git rev-parse HEAD^ >/dev/null 2>&1; then
@@ -38,42 +39,39 @@ jobs:
           # Get changed files
           CHANGED_FILES=$(git diff --name-only $BEFORE_COMMIT HEAD)
 
-          # Check if files were changed in respective folders
-          OTHERS_CHANGED=true
-          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/cas/"; then
-            CAS_CHANGED=true
-            OTHERS_CHANGED=false
-          fi
+          for FILE in $CHANGED_FILES; do
+            case "$FILE" in
+              pkg/istorage/cas/*)
+                CAS_CHANGED=true
+                ;;
+              pkg/istorage/amazondb/*)
+                AMAZON_CHANGED=true
+                ;;
+              pkg/istorage/*) 
+                # If changes are in another subdirectory under pkg/istorage (e.g., bbolt, mem, provider)
+                OTHERS_CHANGED=true
+                ;;
+              *)
+                # If any change is outside pkg/istorage, mark others_changed as true
+                OTHERS_CHANGED=true
+                ;;
+            esac
+          done
 
-          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/amazondb/"; then
-            AMAZON_CHANGED=true
-            OTHERS_CHANGED=false
-          fi
-
-          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/bbolt/"; then
-            OTHERS_CHANGED=false
-          fi
-          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/mem/"; then
-            OTHERS_CHANGED=false
-          fi
-          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/provider/"; then
-            OTHERS_CHANGED=false
-          fi
-          
           echo "cas_changed=$CAS_CHANGED" >> $GITHUB_OUTPUT
           echo "amazon_changed=$AMAZON_CHANGED" >> $GITHUB_OUTPUT
           echo "others_changed=$OTHERS_CHANGED" >> $GITHUB_OUTPUT
 
   trigger_cas:
     needs: determine_changes
-    if: (needs.determine_changes.outputs.cas_changed == 'true') || (needs.determine_changes.outputs.others_changed == 'true') 
+    if: (needs.determine_changes.outputs.cas_changed == 'true') || (needs.determine_changes.outputs.others_changed == 'true' && needs.determine_changes.outputs.amazon_changed == 'false')
     uses: ./.github/workflows/ci_cas.yml
     secrets:
       personaltoken: ${{ secrets.REPOREADING_TOKEN }}
 
   trigger_amazon:
     needs: determine_changes
-    if: (needs.determine_changes.outputs.amazon_changed == 'true') || (needs.determine_changes.outputs.others_changed == 'true') 
+    if: (needs.determine_changes.outputs.amazon_changed == 'true') || (needs.determine_changes.outputs.others_changed == 'true' && needs.determine_changes.outputs.cas_changed == 'false')
     uses: ./.github/workflows/ci_amazon.yml
     secrets:
       personaltoken: ${{ secrets.REPOREADING_TOKEN }}
@@ -91,3 +89,4 @@ jobs:
     uses: ./.github/workflows/merge.yml
     secrets:
       personaltoken: ${{ secrets.REPOREADING_TOKEN }}
+
