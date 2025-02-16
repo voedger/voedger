@@ -10,14 +10,22 @@ on:
 
 jobs:
 
-  determine_changes:
+  determine_changes:         
     runs-on: ubuntu-latest
     outputs:
       cas_changed: ${{ steps.filter.outputs.cas_changed }}
       amazon_changed: ${{ steps.filter.outputs.amazon_changed }}
       others_changed: ${{ steps.filter.outputs.others_changed }}
     steps:
-      - name: Checkout repository
+      - name: Checkout repository (for PRs)
+        if: github.event_name == 'pull_request_target'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 2  # Fetch history for diff
+
+      - name: Checkout repository (for pushes)
+        if: github.event_name == 'push'
         uses: actions/checkout@v4
         with:
           fetch-depth: 2  # Ensure we have history for comparison
@@ -29,15 +37,12 @@ jobs:
           AMAZON_CHANGED=false
           OTHERS_CHANGED=false
 
-          # Ensure we have a valid previous commit
-          if git rev-parse HEAD^ >/dev/null 2>&1; then
-            BEFORE_COMMIT=HEAD^
+          # Get changed files between PR branch and base branch
+          if [ "${{ github.event_name }}" = "pull_request_target" ]; then
+            CHANGED_FILES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }} ${{ github.event.pull_request.head.sha }})
           else
-            BEFORE_COMMIT=HEAD  # In case it's the first commit
+            CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
           fi
-
-          # Get changed files
-          CHANGED_FILES=$(git diff --name-only $BEFORE_COMMIT HEAD)
 
           for FILE in $CHANGED_FILES; do
             case "$FILE" in
