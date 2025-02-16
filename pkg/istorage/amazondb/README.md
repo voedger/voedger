@@ -36,3 +36,4 @@ Partition key and sort key attributes of base tables continue to require non-emp
 
 
 
+
