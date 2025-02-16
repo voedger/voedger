@@ -10,19 +10,25 @@ on:
 
 jobs:
 
-  determine_changes:         
+  determine_changes:
     runs-on: ubuntu-latest
     outputs:
       cas_changed: ${{ steps.filter.outputs.cas_changed }}
       amazon_changed: ${{ steps.filter.outputs.amazon_changed }}
       others_changed: ${{ steps.filter.outputs.others_changed }}
     steps:
-      - name: Checkout repository (for PRs)
+      - name: Checkout base branch (for PRs)
         if: github.event_name == 'pull_request_target'
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 2  # Fetch history for diff
+          ref: ${{ github.event.pull_request.base.ref }}  # Base branch (e.g., main)
+          fetch-depth: 2  # Fetch minimal history
+
+      - name: Fetch PR branch (for PRs)
+        if: github.event_name == 'pull_request_target'
+        run: |
+          git fetch origin ${{ github.event.pull_request.head.ref }} --depth=1
+          git checkout ${{ github.event.pull_request.head.ref }}
 
       - name: Checkout repository (for pushes)
         if: github.event_name == 'push'
@@ -37,12 +43,15 @@ jobs:
           AMAZON_CHANGED=false
           OTHERS_CHANGED=false
 
-          # Get changed files between PR branch and base branch
+          # Determine how to compare changes
           if [ "${{ github.event_name }}" = "pull_request_target" ]; then
-            CHANGED_FILES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }} ${{ github.event.pull_request.head.sha }})
+            CHANGED_FILES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }})
           else
             CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
           fi
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
 
           for FILE in $CHANGED_FILES; do
             case "$FILE" in
@@ -53,7 +62,6 @@ jobs:
                 AMAZON_CHANGED=true
                 ;;
               pkg/istorage/*) 
-                # If changes are in another subdirectory under pkg/istorage (e.g., bbolt, mem, provider)
                 OTHERS_CHANGED=true
                 ;;
             esac
