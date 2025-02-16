@@ -22,7 +22,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 2  # Fetch history for diff
+          fetch-depth: 2  # Fetch history
+          fetch-tags: false  # Avoid unnecessary tag fetch
+          fetch-depth: 0  # Ensures full history for diff
+          
+      - name: Fetch base branch
+        if: github.event_name == 'pull_request_target'
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
 
       - name: Checkout repository (for pushes)
         if: github.event_name == 'push'
@@ -39,7 +46,7 @@ jobs:
 
           # Get changed files between PR branch and base branch
           if [ "${{ github.event_name }}" = "pull_request_target" ]; then
-            CHANGED_FILES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }} ${{ github.event.pull_request.head.sha }})
+            CHANGED_FILES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }})
           else
             CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
           fi
