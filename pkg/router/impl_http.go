@@ -181,7 +181,7 @@ func (s *httpService) registerHandlers_V1() {
 
 func RequestHandler_V1(requestSender bus.IRequestSender) http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
-		request, ok := createRequest(req.Method, req, resp)
+		request, ok := createBusRequest(req.Method, req, resp)
 		if !ok {
 			return
 		}

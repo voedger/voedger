@@ -24,7 +24,7 @@ type Request struct {
 	Host     string // used by authenticator to emit Host principal
 	// apiV2
 	Query   map[string]string
-	QName   appdef.QName // e.g. DocName
+	QName   appdef.QName // e.g. DocName, extension QName
 	IsAPIV2 bool
 	DocID   istructs.IDType
 	ApiPath int

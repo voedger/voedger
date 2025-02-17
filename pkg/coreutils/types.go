@@ -44,6 +44,7 @@ type FuncResponse struct {
 	Sections []struct {
 		Elements [][][][]interface{} `json:"elements"`
 	} `json:"sections"`
+	APIV2Response interface{} // TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
 }
 
 type FuncError struct {
