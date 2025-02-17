@@ -108,3 +108,23 @@ func (qm *implIQueryMessage) Host() string {
 func (qm *implIQueryMessage) Token() string {
 	return qm.token
 }
+
+type objectBackedByMap struct {
+	istructs.IObject
+	data map[string]interface{}
+}
+
+func (o objectBackedByMap) Release()                                { /*Do nothing*/ }
+func (o objectBackedByMap) AsInt32(name appdef.FieldName) int32     { return o.data[name].(int32) }
+func (o objectBackedByMap) AsInt64(name appdef.FieldName) int64     { return o.data[name].(int64) }
+func (o objectBackedByMap) AsFloat32(name appdef.FieldName) float32 { return o.data[name].(float32) }
+func (o objectBackedByMap) AsFloat64(name appdef.FieldName) float64 { return o.data[name].(float64) }
+func (o objectBackedByMap) AsBytes(name appdef.FieldName) []byte    { return o.data[name].([]byte) }
+func (o objectBackedByMap) AsString(name appdef.FieldName) string   { return o.data[name].(string) }
+func (o objectBackedByMap) AsQName(name appdef.FieldName) appdef.QName {
+	return o.data[name].(appdef.QName)
+}
+func (o objectBackedByMap) AsBool(name appdef.FieldName) bool { return o.data[name].(bool) }
+func (o objectBackedByMap) AsRecordID(name appdef.FieldName) istructs.RecordID {
+	return o.data[name].(istructs.RecordID)
+}
