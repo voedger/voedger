@@ -96,14 +96,27 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 	}
 
 	if fields, ok := t.(appdef.IWithFields); ok {
-		if opts.nonNilsOnly {
-			for fieldName := range obj.FieldNames {
-				proceedField(fieldName, fields.Field(fieldName).DataKind())
+		iFieldsToProcess := fields.Fields()
+		if view, ok := t.(appdef.IView); ok {
+			if opts.nonNilsOnly {
+				panic("WithNonNilsOnly option is not supported for views (nil fields info is not exposed)")
+			}
+			if _, ok := obj.(istructs.IValue); ok {
+				iFieldsToProcess = view.Value().Fields()
+			} else {
+				iFieldsToProcess = view.Key().Fields()
 			}
 		} else {
-			for _, f := range fields.Fields() {
-				proceedField(f.Name(), f.DataKind())
+			if opts.nonNilsOnly {
+				for fieldName := range obj.FieldNames {
+					proceedField(fieldName, fields.Field(fieldName).DataKind())
+				}
+				return
 			}
+			iFieldsToProcess = fields.Fields()
+		}
+		for _, iField := range iFieldsToProcess {
+			proceedField(iField.Name(), iField.DataKind())
 		}
 	}
 

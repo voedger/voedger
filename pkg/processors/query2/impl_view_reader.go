@@ -34,12 +34,8 @@ func read(ctx context.Context, appDef appdef.IAppDef, viewRecords istructs.IView
 	kb.PutFromJSON(params.Constraints.Where)
 	objects = make([]map[string]interface{}, 0)
 	err = viewRecords.Read(ctx, wsid, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
-		// TODO: eliminate WithNonNilsOnly after https://github.com/voedger/voedger/issues/3300
-		// FieldsToMap in this case will use FieldNames() instead of Fields().
-		// FieldNames implementation for view key run on key fields only, for view value - on value fields only.
-		// Fields() implementation for both view key and value run on all fields of the view -> panic on touch the value field in the key
-		object := coreutils.FieldsToMap(key, appDef, coreutils.WithNonNilsOnly())
-		for k, v := range coreutils.FieldsToMap(value, appDef, coreutils.WithNonNilsOnly()) {
+		object := coreutils.FieldsToMap(key, appDef)
+		for k, v := range coreutils.FieldsToMap(value, appDef) {
 			object[k] = v
 		}
 		objects = append(objects, object)
