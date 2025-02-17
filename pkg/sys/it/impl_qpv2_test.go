@@ -38,7 +38,7 @@ func TestQueryProcessor_V2(t *testing.T) {
 	unsubscribe()
 
 	t.Run("view", func(t *testing.T) {
-		url := fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/views/app1pkg.CategoryIdx?where={"IntFld":42}`, ws.WSID)
+		url := fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/views/app1pkg.CategoryIdx?where={"IntFld":43}`, ws.WSID)
 		resp, err := vit.IFederation.Query(url)
 		require.NoError(err)
 		resp.Println()
