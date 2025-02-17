@@ -24,6 +24,8 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
 func provideExecQrySqlQuery(federation federation.IFederation, itokens itokens.ITokens) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
@@ -60,15 +62,33 @@ func provideExecQrySqlQuery(federation federation.IFederation, itokens itokens.I
 			if targetAppQName == appdef.NullAppQName {
 				targetAppQName = args.State.App()
 			}
-			sysTokenForTargetApp, err := payloads.GetSystemPrincipalToken(itokens, targetAppQName)
+			subjKB, err := args.State.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
+			if err != nil {
+				//notest
+				return err
+			}
+			subj, err := args.State.MustExist(subjKB)
 			if err != nil {
 				// notest
 				return err
 			}
+
+			tokenForTargetApp := subj.AsString(sys.Storage_RequestSubject_Field_Token)
+			if targetAppQName != args.State.App() {
+				// query is for a foreign app -> re-issue token for the target app
+				var pp payloads.PrincipalPayload
+				if _, err = itokens.ValidateToken(tokenForTargetApp, &pp); err != nil {
+					// notest: validated already by the processor
+					return err
+				}
+				if tokenForTargetApp, err = itokens.IssueToken(targetAppQName, authnz.DefaultPrincipalTokenExpiration, &pp); err != nil {
+					return err
+				}
+			}
 			logger.Info(fmt.Sprintf("forwarding query to %s/%d", targetAppQName, targetWSID))
 			body := fmt.Sprintf(`{"args":{"Query":%q},"elements":[{"fields":["Result"]}]}`, op.VSQLWithoutAppAndWSID)
 			resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.sys.SqlQuery", targetAppQName, targetWSID),
-				body, coreutils.WithAuthorizeBy(sysTokenForTargetApp))
+				body, coreutils.WithAuthorizeBy(tokenForTargetApp))
 			if err != nil {
 				return err
 			}
