@@ -23,6 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/processors/query2"
 )
 
 func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter) (res bus.Request, ok bool) {
@@ -65,7 +66,8 @@ func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter) 
 	return res, err == nil
 }
 
-func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error, contentType string, onSendFailed func(), isAPIV1 bool, isCmd bool) {
+func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error,
+	contentType string, onSendFailed func(), busRequest bus.Request) {
 	sendSuccess := true
 	defer func() {
 		if requestCtx.Err() != nil {
@@ -83,6 +85,12 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 	}()
 	elemsCount := 0
 	closer := ""
+	isCmd := false
+	if busRequest.IsAPIV2 {
+		isCmd = busRequest.ApiPath == int(query2.ApiPath_Commands)
+	} else {
+		isCmd = strings.HasPrefix(busRequest.Resource, "c.")
+	}
 	for elem := range responseCh {
 		// http client disconnected -> ErrNoConsumer on IMultiResponseSender.SendElement() -> QP will call Close()
 		if requestCtx.Err() != nil {
@@ -90,15 +98,20 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 			// ctx.Done() must have the priority
 			return
 		}
-		if isAPIV1 && elemsCount == 0 {
+		if busRequest.IsAPIV2 {
+			if elemsCount == 0 {
+				sendSuccess = writeResponse(w, "[")
+				closer = "]"
+			} else {
+				sendSuccess = writeResponse(w, ",")
+			}
+		} else {
 			if isCmd || contentType == coreutils.TextPlain {
 				sendSuccess = writeResponse(w, elem.(string))
 			} else {
 				sendSuccess = writeResponse(w, `{"sections":[{"type":"","elements":[`)
 				closer = "]}]"
 			}
-		} else {
-			sendSuccess = writeResponse(w, ",")
 		}
 
 		elemsCount++
@@ -107,7 +120,7 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 			return
 		}
 
-		if isAPIV1 && (isCmd || contentType == coreutils.TextPlain) {
+		if !busRequest.IsAPIV2 && (isCmd || contentType == coreutils.TextPlain) {
 			continue
 		}
 

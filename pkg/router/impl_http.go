@@ -48,7 +48,7 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 
 	s.registerRouterCheckerHandler()
 
-	s.registerHandlersV1()
+	s.registerHandlers_V1()
 
 	s.registerHandlersV2()
 
@@ -151,7 +151,7 @@ func (s *httpService) registerRouterCheckerHandler() {
 	s.router.HandleFunc("/api/check", corsHandler(checkHandler())).Methods("POST", "GET", "OPTIONS").Name("router check")
 }
 
-func (s *httpService) registerHandlersV1() {
+func (s *httpService) registerHandlers_V1() {
 	/*
 		launching app from localhost from browser. Trying to execute POST from web app within browser.
 		Browser sees that hosts differs: from localhost to alpha -> need CORS -> denies POST and executes the same request with OPTIONS header
@@ -170,7 +170,7 @@ func (s *httpService) registerHandlersV1() {
 			Name("blob read")
 	}
 	s.router.HandleFunc(fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}", URLPlaceholder_appOwner, URLPlaceholder_appName,
-		URLPlaceholder_wsid, URLPlaceholder_resourceName), corsHandler(RequestHandler(s.requestSender))).
+		URLPlaceholder_wsid, URLPlaceholder_resourceName), corsHandler(RequestHandler_V1(s.requestSender))).
 		Methods("POST", "PATCH", "OPTIONS").Name("api")
 
 	s.router.Handle("/n10n/channel", corsHandler(s.subscribeAndWatchHandler())).Methods("GET")
@@ -179,7 +179,7 @@ func (s *httpService) registerHandlersV1() {
 	s.router.Handle("/n10n/update/{offset:[0-9]{1,10}}", corsHandler(s.updateHandler()))
 }
 
-func RequestHandler(requestSender bus.IRequestSender) http.HandlerFunc {
+func RequestHandler_V1(requestSender bus.IRequestSender) http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		request, ok := createRequest(req.Method, req, resp)
 		if !ok {
@@ -204,8 +204,7 @@ func RequestHandler(requestSender bus.IRequestSender) http.HandlerFunc {
 		}
 
 		initResponse(resp, responseMeta.ContentType, responseMeta.StatusCode)
-		isCmd := strings.HasPrefix(request.Resource, "c.")
-		reply(requestCtx, resp, responseCh, responseErr, responseMeta.ContentType, cancel, !request.IsAPIV2, isCmd)
+		reply(requestCtx, resp, responseCh, responseErr, responseMeta.ContentType, cancel, request)
 	}
 }
 
