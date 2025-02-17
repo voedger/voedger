@@ -17,7 +17,6 @@ import (
 )
 
 func TestQueryProcessor_V2(t *testing.T) {
-	//t.Skip()
 	require := require.New(t)
 	vit := vit.NewVIT(t, &vit.SharedConfig_App1)
 	defer vit.TearDown()
@@ -41,8 +40,7 @@ func TestQueryProcessor_V2(t *testing.T) {
 		url := fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/views/app1pkg.CategoryIdx?where={"IntFld":43}`, ws.WSID)
 		resp, err := vit.IFederation.Query(url)
 		require.NoError(err)
-		resp.Println()
-		// TODO: verify result
+		require.JSONEq(`[{"Dummy":1,"IntFld":43,"Name":"Awesome food","Val":42,"offs":15,"sys.QName":"app1pkg.CategoryIdx"}]`, resp.Body)
 	})
 
 	/* TODO: next
