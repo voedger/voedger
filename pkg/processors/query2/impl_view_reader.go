@@ -34,8 +34,8 @@ func read(ctx context.Context, appDef appdef.IAppDef, viewRecords istructs.IView
 	kb.PutFromJSON(params.Constraints.Where)
 	objects = make([]map[string]interface{}, 0)
 	err = viewRecords.Read(ctx, wsid, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
-		object := coreutils.FieldsToMap(key, appDef)
-		for k, v := range coreutils.FieldsToMap(value, appDef) {
+		object := coreutils.FieldsToMap(key, appDef, coreutils.WithNonNilsOnly())
+		for k, v := range coreutils.FieldsToMap(value, appDef, coreutils.WithNonNilsOnly()) {
 			object[k] = v
 		}
 		objects = append(objects, object)
