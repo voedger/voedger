@@ -180,7 +180,7 @@ func getFuncError(httpResp *coreutils.HTTPResponse) (funcError coreutils.FuncErr
 	return funcError, nil
 }
 
-func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (*coreutils.FuncResponse, error) {
+func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (res *coreutils.FuncResponse, err error) {
 	isUnexpectedCode := errors.Is(httpRespErr, coreutils.ErrUnexpectedStatusCode)
 	if httpRespErr != nil && !isUnexpectedCode {
 		return nil, httpRespErr
@@ -195,7 +195,7 @@ func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, h
 		}
 		return nil, funcError
 	}
-	res := &coreutils.FuncResponse{
+	res = &coreutils.FuncResponse{
 		CommandResponse: coreutils.CommandResponse{
 			NewIDs:    map[string]istructs.RecordID{},
 			CmdResult: map[string]interface{}{},
@@ -205,7 +205,13 @@ func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, h
 	if len(httpResp.Body) == 0 {
 		return res, nil
 	}
-	if err := json.Unmarshal([]byte(httpResp.Body), &res); err != nil {
+	if strings.HasPrefix(httpResp.HTTPResp.Request.URL.Path, "/api/v2/") {
+		// TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
+		err = json.Unmarshal([]byte(httpResp.Body), &res.APIV2Response)
+	} else {
+		err = json.Unmarshal([]byte(httpResp.Body), &res)
+	}
+	if err != nil {
 		return nil, err
 	}
 	if res.SysError.HTTPStatus > 0 && res.ExpectedSysErrorCode() > 0 && res.ExpectedSysErrorCode() != res.SysError.HTTPStatus {

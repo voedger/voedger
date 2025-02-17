@@ -84,7 +84,8 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 		}
 	}()
 	elemsCount := 0
-	closer := ""
+	sectionsCloser := ""
+	responseCloser := ""
 	isCmd := false
 	if busRequest.IsAPIV2 {
 		isCmd = busRequest.ApiPath == int(query2.ApiPath_Commands)
@@ -101,7 +102,7 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 		if busRequest.IsAPIV2 {
 			if elemsCount == 0 {
 				sendSuccess = writeResponse(w, "[")
-				closer = "]"
+				responseCloser = "]"
 			} else {
 				sendSuccess = writeResponse(w, ",")
 			}
@@ -110,7 +111,8 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 				sendSuccess = writeResponse(w, elem.(string))
 			} else {
 				sendSuccess = writeResponse(w, `{"sections":[{"type":"","elements":[`)
-				closer = "]}]"
+				sectionsCloser = "]}]"
+				responseCloser = "}"
 			}
 		}
 
@@ -133,8 +135,8 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 			return
 		}
 	}
-	if len(closer) > 0 {
-		if sendSuccess = writeResponse(w, closer); !sendSuccess {
+	if len(sectionsCloser) > 0 {
+		if sendSuccess = writeResponse(w, sectionsCloser); !sendSuccess {
 			return
 		}
 	}
@@ -155,12 +157,12 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 		} else {
 			sendSuccess = writeResponse(w, fmt.Sprintf(`"status":%d,"errorDescription":"%s"}`, http.StatusInternalServerError, *responseErr))
 		}
-	} else if sendSuccess && contentType == coreutils.ApplicationJSON && !isCmd {
-		if elemsCount == 0 {
-			sendSuccess = writeResponse(w, "{}")
-		} else {
-			sendSuccess = writeResponse(w, "}")
-		}
+	}
+
+	if elemsCount == 0 {
+		sendSuccess = writeResponse(w, "{}")
+	} else if len(responseCloser) > 0 {
+		sendSuccess = writeResponse(w, responseCloser)
 	}
 }
 
