@@ -205,7 +205,13 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 					ContentType: coreutils.ApplicationJSON,
 					StatusCode:  http.StatusOK,
 				})
-				return resp.Send(oo)
+				for _, o := range oo {
+					e := resp.Send(o)
+					if e != nil {
+						return e
+					}
+				}
+				return
 			}
 			return
 		}),
