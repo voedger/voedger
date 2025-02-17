@@ -184,6 +184,11 @@ type VoedgerVM struct {
 	problemCtx       context.Context
 	problemCtxCancel context.CancelCauseFunc
 
+	// single error channel for critical problems
+	problemErrCh chan error
+	// used to ensure we publish the error only once
+	problemErrOnce sync.Once
+
 	// closed when VVM should be stopped outside
 	vvmShutCtx       context.Context
 	vvmShutCtxCancel context.CancelFunc
@@ -197,7 +202,7 @@ type VoedgerVM struct {
 	monitorShutCtx       context.Context
 	monitorShutCtxCancel context.CancelFunc
 
-	// closed after all (services and LeadershipMonitor) is topped
+	// closed after all (services and LeadershipMonitor) is stopped
 	shutdownedCtx       context.Context
 	shutdownedCtxCancel context.CancelFunc
 	clusterSize         ClusterSize

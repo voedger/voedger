@@ -7,6 +7,9 @@ package vvm
 
 import "errors"
 
-var ErrVVMLaunchFailure = errors.New("VVM failed to launch")
-var ErrVVMLeadershipAcquisition = errors.New("failed to acquire leadership")
-var ErrLeadershipLost = errors.New("leadership lost")
+var (
+	ErrVVMLaunchFailure             = errors.New("VVM failed to launch")
+	ErrVVMLeadershipAcquisition     = errors.New("failed to acquire leadership")
+	ErrLeadershipLost               = errors.New("leadership lost")
+	ErrLeadershipAcquisitionTimeout = errors.New("leadership acquisition timeout")
+)
