@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/elections"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -183,11 +184,10 @@ type VoedgerVM struct {
 	// closed when some problem occurs, VVM terminates itself due to leadership loss or problems with the launching
 	problemCtx       context.Context
 	problemCtxCancel context.CancelCauseFunc
+	problemErrCh     chan error
 
-	// single error channel for critical problems
-	problemErrCh chan error
 	// used to ensure we publish the error only once
-	problemErrOnce sync.Once
+	problemCtxErrOnce sync.Once
 
 	// closed when VVM should be stopped outside
 	vvmShutCtx       context.Context
@@ -201,13 +201,17 @@ type VoedgerVM struct {
 	// closed after all services are stopped and LeadershipMonitor should be stopped
 	monitorShutCtx       context.Context
 	monitorShutCtxCancel context.CancelFunc
+	monitorShutWg        sync.WaitGroup
 
 	// closed after all (services and LeadershipMonitor) is stopped
 	shutdownedCtx       context.Context
 	shutdownedCtxCancel context.CancelFunc
 	clusterSize         ClusterSize
 	ip                  net.IP
+	leadershipCtx       context.Context
 }
+
+type IVVMElections elections.IElections[TTLStorageImplKey, string]
 
 type ignition struct{}
 

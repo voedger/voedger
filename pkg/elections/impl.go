@@ -59,6 +59,7 @@ func (e *elections[K, V]) maintainLeadership(key K, val V, duration time.Duratio
 			// Voluntarily released or forcibly canceled
 			return
 		case <-ticker:
+			ticker = e.clock.NewTimerChan(tickerInterval)
 			logger.Verbose("[maintainLeadership] Key=%v: renewing leadership.", key)
 			ok, err := e.storage.CompareAndSwap(key, val, val, duration)
 			if err != nil {
@@ -111,6 +112,9 @@ func (e *elections[K, V]) cleanup() {
 	// Release each leadership so renewal goroutines stop
 	e.leadership.Range(func(key, liIntf any) bool {
 		li := liIntf.(*leaderInfo[K, V])
+		if _, err := e.storage.CompareAndDelete(key.(K), li.val); err != nil {
+			logger.Error("[ReleaseLeadership] Key=%v: storage CompareAndDelete error: %v", key, err)
+		}
 		li.cancel()
 		li.wg.Wait()
 		e.leadership.Delete(key)

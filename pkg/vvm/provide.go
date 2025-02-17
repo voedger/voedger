@@ -20,7 +20,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/wire"
@@ -30,7 +29,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/btstrp"
-	"github.com/voedger/voedger/pkg/elections"
+	electionsPkg "github.com/voedger/voedger/pkg/elections"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -80,7 +79,7 @@ import (
 
 func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err error) {
 	// old context
-	ctx, cancel := context.WithCancel(context.Background())
+	vvmCtx, vvmCtxCancel := context.WithCancel(context.Background())
 	// new contexts
 	problemCtx, problemCtxCancel := context.WithCancelCause(context.Background())
 	vvmShutCtx, vvmShutCtxCancel := context.WithCancel(context.Background())
@@ -88,25 +87,20 @@ func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err
 	monitorShutCtx, monitorShutCtxCancel := context.WithCancel(context.Background())
 	shutdownedCtx, shutdownedCtxCancel := context.WithCancel(context.Background())
 	voedgerVM = &VoedgerVM{
-		vvmCtxCancel:     cancel,
-		clusterSize:      vvmCfg.ClusterSize,
-		ip:               vvmCfg.IP,
-		problemCtx:       problemCtx,
-		problemCtxCancel: problemCtxCancel,
-
-		vvmShutCtx:       vvmShutCtx,
-		vvmShutCtxCancel: vvmShutCtxCancel,
-
+		vvmCtxCancel:          vvmCtxCancel,
+		clusterSize:           vvmCfg.ClusterSize,
+		ip:                    vvmCfg.IP,
+		problemCtx:            problemCtx,
+		problemCtxCancel:      problemCtxCancel,
+		problemErrCh:          make(chan error, 1),
+		vvmShutCtx:            vvmShutCtx,
+		vvmShutCtxCancel:      vvmShutCtxCancel,
 		servicesShutCtx:       servicesShutCtx,
 		servicesShutCtxCancel: servicesShutCtxCancel,
-
-		monitorShutCtx:       monitorShutCtx,
-		monitorShutCtxCancel: monitorShutCtxCancel,
-
-		shutdownedCtx:       shutdownedCtx,
-		shutdownedCtxCancel: shutdownedCtxCancel,
-
-		problemErrCh: make(chan error, 1),
+		monitorShutCtx:        monitorShutCtx,
+		monitorShutCtxCancel:  monitorShutCtxCancel,
+		shutdownedCtx:         shutdownedCtx,
+		shutdownedCtxCancel:   shutdownedCtxCancel,
 	}
 	vvmCfg.addProcessorChannel(
 		// command processors
@@ -135,8 +129,7 @@ func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err
 		},
 		ProcessorChannel_BLOB,
 	)
-
-	voedgerVM.VVM, voedgerVM.vvmCleanup, err = ProvideCluster(ctx, vvmCfg, vvmIdx)
+	voedgerVM.VVM, voedgerVM.vvmCleanup, err = ProvideCluster(vvmCtx, vvmCfg, vvmIdx)
 	if err != nil {
 		return nil, err
 	}
@@ -150,16 +143,14 @@ func (vvm *VoedgerVM) Shutdown() {
 	vvm.vvmCleanup()
 }
 
-func (vvm *VoedgerVM) Shutdown_() error {
+// ShutdownNew shuts down the VVM process.
+func (vvm *VoedgerVM) ShutdownNew() error {
 	// Ensure we only close the vvmShutCtx once
-	vvm.vvmShutCtxOnce.Do(func() {
-		vvm.vvmShutCtxCancel()
-	})
+	vvm.vvmShutCtxCancel()
 
 	// Block until everything is fully shutdown
 	<-vvm.shutdownedCtx.Done()
 
-	// Non-blocking read from problemErrCh to return a final error if any
 	select {
 	case err := <-vvm.problemErrCh:
 		return err
@@ -168,26 +159,28 @@ func (vvm *VoedgerVM) Shutdown_() error {
 	}
 }
 
-// Launch_ launches the VVM process.
+// LaunchNew launches the VVM process.
 // leadershipAcquisitionDuration - default 120 sec
-func (vvm *VoedgerVM) Launch_(leadershipAcquisitionDuration time.Duration) (problemCtx context.Context) {
-	ttlStorage := ttlstorage.New(VVMLeaderKeyPrefix, vvm.VVMAppTTLStorage)
-	elector, electionsCleanup := elections.Provide(ttlStorage, vvm.ITime)
-	vvm.electionsCleanup = electionsCleanup
-
-	launcherWG := sync.WaitGroup{}
-	launcherWG.Add(1)
-	go vvm.launcher(elector, leadershipAcquisitionDuration, &launcherWG)
-
+func (vvm *VoedgerVM) LaunchNew(leadershipAcquisitionDuration time.Duration) context.Context {
 	go vvm.shutdowner()
 
-	launcherWG.Wait()
+	if err := vvm.tryToAcquireLeadershipInLoop(leadershipAcquisitionDuration); err != nil {
+		vvm.updateProblem(err)
+		return vvm.problemCtx
+	}
+
+	if err := vvm.ServicePipeline.SendSync(ignition{}); err != nil {
+		logger.Error(err)
+		vvm.updateProblem(err)
+		return vvm.problemCtx
+	}
+
 	return vvm.problemCtx
 }
 
 // shutdowner is a routine that waits for the VVM to be shut down.
 func (vvm *VoedgerVM) shutdowner() {
-	// Wait until vvmShutCtx is closed
+	// Wait for VVM.vvmShutCtx
 	<-vvm.vvmShutCtx.Done()
 
 	// Close servicesShutCtx so any running services can stop gracefully
@@ -195,43 +188,29 @@ func (vvm *VoedgerVM) shutdowner() {
 
 	// Wait for all services to stop ...
 	// (Implementation detail depends on your ServicePipeline)
+	vvm.vvmCtxCancel()
 	vvm.ServicePipeline.Close()
+	// Shutdown everything but LeadershipMonitor (close VVM.servicesShutCtx and wait for services to stop)
 	vvm.vvmCleanup()
-	vvm.electionsCleanup()
 
-	// Close monitorShutCtx to signal LeadershipMonitor to exit
+	// Shutdown LeadershipMonitor (close VVM.monitorShutCtx and wait for LeadershipMonitor to stop)
 	vvm.monitorShutCtxCancel()
-
-	// Finally, close shutdownedCtx to signal “everything is done”
+	vvm.monitorShutWg.Wait()
+	// Cleanup elections
+	vvm.electionsCleanup()
+	// Close VVM.shutdownedCtx
 	vvm.shutdownedCtxCancel()
 }
 
-// launcher is a routine that launches the VVM process.
-func (vvm *VoedgerVM) launcher(
-	e elections.IElections[TTLStorageImplKey, string],
-	leadershipAcquisitionDuration time.Duration,
-	wg *sync.WaitGroup,
-) {
-	defer wg.Done()
-
-	leadershipCtx := vvm.acquireLeadership(e, leadershipAcquisitionDuration)
-	if leadershipCtx == nil {
-		vvm.updateProblem(ErrVVMLeadershipAcquisition)
-		return
-	}
-
-	go vvm.leadershipMonitor(leadershipCtx)
-
-	vvm.runServicePipeline()
-}
-
 // leadershipMonitor is a routine that monitors the leadership context.
-func (vvm *VoedgerVM) leadershipMonitor(leadershipCtx context.Context) {
+func (vvm *VoedgerVM) leadershipMonitor() {
+	defer vvm.monitorShutWg.Done()
+
 	select {
-	case <-leadershipCtx.Done():
+	case <-vvm.leadershipCtx.Done():
 		// leadership is lost
-		vvm.updateProblem(ErrLeadershipLost)
 		go vvm.killerRoutine()
+		vvm.updateProblem(ErrLeadershipLost)
 	case <-vvm.monitorShutCtx.Done():
 		return
 	}
@@ -243,39 +222,30 @@ func (vvm *VoedgerVM) killerRoutine() {
 	os.Exit(1)
 }
 
-// runServicePipeline runs the VVM service pipeline.
-func (vvm *VoedgerVM) runServicePipeline() {
-	ignition := ignition{}
-	err := vvm.ServicePipeline.SendSync(ignition)
-	if err != nil {
-		err = errors.Join(err, ErrVVMLaunchFailure)
-		logger.Error(err)
-		vvm.updateProblem(err)
-		return
-	}
-}
+// tryToAcquireLeadershipInLoop tries to acquire leadership in loop
+func (vvm *VoedgerVM) tryToAcquireLeadershipInLoop(leadershipAcquisitionDuration time.Duration) error {
+	ttlStorage := ttlstorage.New(VVMLeaderKeyPrefix, vvm.VVMAppTTLStorage)
+	elections, electionsCleanup := electionsPkg.Provide(ttlStorage, vvm.ITime)
+	vvm.electionsCleanup = electionsCleanup
 
-// acquireLeadership tries to acquire leadership for the VVM.
-func (vvm *VoedgerVM) acquireLeadership(
-	e elections.IElections[TTLStorageImplKey, string],
-	leadershipAcquisitionDuration time.Duration,
-) (leadershipCtx context.Context) {
-	timer := vvm.ITime.NewTimerChan(leadershipAcquisitionDuration)
+	timerCh := vvm.ITime.NewTimerChan(leadershipAcquisitionDuration)
 	vvmIdx := 1
 	for {
 		select {
-		case <-timer:
-			vvm.updateProblem(ErrLeadershipAcquisitionTimeout)
-			return
+		case <-timerCh:
+			return ErrVVMLeadershipAcquisition
 		default:
 			// Try to acquire leadership
-			leadershipCtx = e.AcquireLeadership(TTLStorageImplKey(vvmIdx), vvm.ip.String(), defaultLeadershipDuration)
+			leadershipCtx := elections.AcquireLeadership(TTLStorageImplKey(vvmIdx), vvm.ip.String(), leadershipAcquisitionDuration)
 			if leadershipCtx != nil {
-				break
+				vvm.leadershipCtx = leadershipCtx
+				vvm.monitorShutWg.Add(1)
+				go vvm.leadershipMonitor()
+				return nil
 			}
 			// Try the next VVM index in the cluster from 1 to clusterSize
 			vvmIdx++
-			if vvmIdx == int(vvm.clusterSize) {
+			if vvmIdx > int(vvm.clusterSize) {
 				vvmIdx = 1
 			}
 		}
@@ -286,18 +256,10 @@ func (vvm *VoedgerVM) acquireLeadership(
 // and sets the cause on problemCtx. This ensures no double-writes of errors.
 func (vvm *VoedgerVM) updateProblem(err error) {
 	// The sync.Once ensures we only do this logic once
-	vvm.problemErrOnce.Do(func() {
-		// Try to put the error into the channel (non-blocking).
-		// If the channel is full or closed, the select will simply skip.
-		select {
-		case vvm.problemErrCh <- err:
-		default:
-		}
-		// Attach the error cause to problemCtx, so any goroutine
-		// waiting on problemCtx.Done() can retrieve the cause.
-		if vvm.problemCtxCancel != nil {
-			vvm.problemCtxCancel(err)
-		}
+	vvm.problemCtxCancel(err)
+
+	vvm.problemCtxErrOnce.Do(func() {
+		vvm.problemErrCh <- err
 	})
 }
 
@@ -313,7 +275,11 @@ func (vvm *VoedgerVM) Launch() error {
 }
 
 // vvmCtx must be cancelled by the caller right before vvm.ServicePipeline.Close()
-func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxType) (*VVM, func(), error) {
+func ProvideCluster(
+	vvmCtx context.Context,
+	vvmConfig *VVMConfig,
+	vvmIdx VVMIdxType,
+) (*VVM, func(), error) {
 	panic(wire.Build(
 		wire.Struct(new(VVM), "*"),
 		wire.Struct(new(builtinapps.APIs), "*"),
@@ -400,7 +366,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"MetricsServicePort",
 			"ActualizerStateOpts",
 			"SecretsReader",
-			"ClusterSize",
 		),
 	))
 }

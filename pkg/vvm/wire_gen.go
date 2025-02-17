@@ -11,14 +11,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
-	"os"
-	"path/filepath"
-	"runtime/debug"
-	"slices"
-	"strconv"
-	"strings"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appparts"
@@ -27,6 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/elections"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iauthnz"
@@ -68,6 +61,14 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/metrics"
 	"github.com/voedger/voedger/pkg/vvm/ttlstorage"
 	"golang.org/x/crypto/acme/autocert"
+	"net/url"
+	"os"
+	"path/filepath"
+	"runtime/debug"
+	"slices"
+	"strconv"
+	"strings"
+	"time"
 )
 
 // Injectors from provide.go:
@@ -244,8 +245,30 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 // provide.go:
 
 func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	voedgerVM = &VoedgerVM{vvmCtxCancel: cancel}
+
+	vvmCtx, vvmCtxCancel := context.WithCancel(context.Background())
+
+	problemCtx, problemCtxCancel := context.WithCancelCause(context.Background())
+	vvmShutCtx, vvmShutCtxCancel := context.WithCancel(context.Background())
+	servicesShutCtx, servicesShutCtxCancel := context.WithCancel(context.Background())
+	monitorShutCtx, monitorShutCtxCancel := context.WithCancel(context.Background())
+	shutdownedCtx, shutdownedCtxCancel := context.WithCancel(context.Background())
+	voedgerVM = &VoedgerVM{
+		vvmCtxCancel:          vvmCtxCancel,
+		clusterSize:           vvmCfg.ClusterSize,
+		ip:                    vvmCfg.IP,
+		problemCtx:            problemCtx,
+		problemCtxCancel:      problemCtxCancel,
+		problemErrCh:          make(chan error, 1),
+		vvmShutCtx:            vvmShutCtx,
+		vvmShutCtxCancel:      vvmShutCtxCancel,
+		servicesShutCtx:       servicesShutCtx,
+		servicesShutCtxCancel: servicesShutCtxCancel,
+		monitorShutCtx:        monitorShutCtx,
+		monitorShutCtxCancel:  monitorShutCtxCancel,
+		shutdownedCtx:         shutdownedCtx,
+		shutdownedCtxCancel:   shutdownedCtxCancel,
+	}
 	vvmCfg.addProcessorChannel(iprocbusmem.ChannelGroup{
 		NumChannels:       uint(vvmCfg.NumCommandProcessors),
 		ChannelBufferSize: uint(DefaultNumCommandProcessors),
@@ -263,23 +286,139 @@ func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err
 		ChannelBufferSize: 0,
 	}, ProcessorChannel_BLOB,
 	)
-
-	voedgerVM.VVM, voedgerVM.vvmCleanup, err = ProvideCluster(ctx, vvmCfg, vvmIdx)
+	voedgerVM.VVM, voedgerVM.vvmCleanup, err = ProvideCluster(vvmCtx, vvmCfg, vvmIdx)
 	if err != nil {
 		return nil, err
 	}
 	return voedgerVM, nil
 }
 
+// deprecated
 func (vvm *VoedgerVM) Shutdown() {
 	vvm.vvmCtxCancel()
 	vvm.ServicePipeline.Close()
 	vvm.vvmCleanup()
 }
 
+// ShutdownNew shuts down the VVM process.
+func (vvm *VoedgerVM) ShutdownNew() error {
+
+	vvm.vvmShutCtxCancel()
+
+	<-vvm.shutdownedCtx.Done()
+
+	select {
+	case err := <-vvm.problemErrCh:
+		return err
+	default:
+		return nil
+	}
+}
+
+// LaunchNew launches the VVM process.
+// leadershipAcquisitionDuration - default 120 sec
+func (vvm *VoedgerVM) LaunchNew(leadershipAcquisitionDuration time.Duration) context.Context {
+	go vvm.shutdowner()
+
+	if err := vvm.tryToAcquireLeadershipInLoop(leadershipAcquisitionDuration); err != nil {
+		vvm.updateProblem(err)
+		return vvm.problemCtx
+	}
+
+	if err := vvm.ServicePipeline.SendSync(ignition{}); err != nil {
+		logger.Error(err)
+		vvm.updateProblem(err)
+		return vvm.problemCtx
+	}
+
+	return vvm.problemCtx
+}
+
+// shutdowner is a routine that waits for the VVM to be shut down.
+func (vvm *VoedgerVM) shutdowner() {
+
+	<-vvm.vvmShutCtx.Done()
+
+	vvm.servicesShutCtxCancel()
+
+	vvm.vvmCtxCancel()
+	vvm.ServicePipeline.Close()
+
+	vvm.vvmCleanup()
+
+	vvm.monitorShutCtxCancel()
+	vvm.monitorShutWg.Wait()
+
+	vvm.electionsCleanup()
+
+	vvm.shutdownedCtxCancel()
+}
+
+// leadershipMonitor is a routine that monitors the leadership context.
+func (vvm *VoedgerVM) leadershipMonitor() {
+	defer vvm.monitorShutWg.Done()
+
+	select {
+	case <-vvm.leadershipCtx.Done():
+
+		go vvm.killerRoutine()
+		vvm.updateProblem(ErrLeadershipLost)
+	case <-vvm.monitorShutCtx.Done():
+		return
+	}
+}
+
+// killerRoutine is a routine that kills the VVM process after a quarter of the leadership duration
+func (vvm *VoedgerVM) killerRoutine() {
+	time.Sleep(defaultLeadershipDuration / 4)
+	os.Exit(1)
+}
+
+// tryToAcquireLeadershipInLoop tries to acquire leadership in loop
+func (vvm *VoedgerVM) tryToAcquireLeadershipInLoop(leadershipAcquisitionDuration time.Duration) error {
+	ttlStorage := ttlstorage.New(VVMLeaderKeyPrefix, vvm.VVMAppTTLStorage)
+	elections2, electionsCleanup := elections.Provide(ttlStorage, vvm.ITime)
+	vvm.electionsCleanup = electionsCleanup
+
+	timerCh := vvm.ITime.NewTimerChan(leadershipAcquisitionDuration)
+	vvmIdx := 1
+	for {
+		select {
+		case <-timerCh:
+			return ErrVVMLeadershipAcquisition
+		default:
+
+			leadershipCtx := elections2.AcquireLeadership(TTLStorageImplKey(vvmIdx), vvm.ip.String(), leadershipAcquisitionDuration)
+			if leadershipCtx != nil {
+				vvm.leadershipCtx = leadershipCtx
+				vvm.monitorShutWg.Add(1)
+				go vvm.leadershipMonitor()
+				return nil
+			}
+
+			vvmIdx++
+			if vvmIdx > int(vvm.clusterSize) {
+				vvmIdx = 1
+			}
+		}
+	}
+}
+
+// updateProblem writes a critical error into problemErrCh exactly once
+// and sets the cause on problemCtx. This ensures no double-writes of errors.
+func (vvm *VoedgerVM) updateProblem(err error) {
+
+	vvm.problemCtxCancel(err)
+
+	vvm.problemCtxErrOnce.Do(func() {
+		vvm.problemErrCh <- err
+	})
+}
+
+// deprecated
 func (vvm *VoedgerVM) Launch() error {
-	ign := ignition{}
-	err := vvm.ServicePipeline.SendSync(ign)
+	ignition2 := ignition{}
+	err := vvm.ServicePipeline.SendSync(ignition2)
 	if err != nil {
 		err = errors.Join(err, ErrVVMLaunchFailure)
 		logger.Error(err)
@@ -288,7 +427,11 @@ func (vvm *VoedgerVM) Launch() error {
 }
 
 func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (ttlstorage.IVVMAppTTLStorage, error) {
-	return prov.AppStorage(istructs.AppQName_sys_cluster)
+	st, err := prov.AppStorage(istructs.AppQName_sys_cluster)
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
 }
 
 func provideWLimiterFactory(maxSize iblobstorage.BLOBMaxSizeType) blobprocessor.WLimiterFactory {
@@ -310,7 +453,7 @@ func provideSchedulerRunner(cfg schedulers.BasicSchedulerConfig) appparts.ISched
 	return schedulers.ProvideSchedulers(cfg)
 }
 
-func provideBootstrapOperator(federation2 federation.IFederation, asp istructs.IAppStructsProvider, time coreutils.ITime, apppar appparts.IAppPartitions,
+func provideBootstrapOperator(federation2 federation.IFederation, asp istructs.IAppStructsProvider, time2 coreutils.ITime, apppar appparts.IAppPartitions,
 	builtinApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens2 itokens.ITokens, storageProvider istorage.IAppStorageProvider, blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr,
 	routerAppStoragePtr dbcertcache.RouterAppStoragePtr) (BootstrapOperator, error) {
 	var clusterBuiltinApp btstrp.ClusterBuiltInApp
@@ -331,7 +474,7 @@ func provideBootstrapOperator(federation2 federation.IFederation, asp istructs.I
 		return nil, fmt.Errorf("%s app should be added to VVM builtin apps", istructs.AppQName_sys_cluster)
 	}
 	return pipeline.NewSyncOp(func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-		return btstrp.Bootstrap(federation2, asp, time, apppar, clusterBuiltinApp, otherApps, sidecarApps, itokens2, storageProvider, blobberAppStoragePtr, routerAppStoragePtr)
+		return btstrp.Bootstrap(federation2, asp, time2, apppar, clusterBuiltinApp, otherApps, sidecarApps, itokens2, storageProvider, blobberAppStoragePtr, routerAppStoragePtr)
 	}), nil
 }
 
@@ -506,9 +649,9 @@ func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
 	}
 }
 
-func provideBucketsFactory(time coreutils.ITime) irates.BucketsFactoryType {
+func provideBucketsFactory(time2 coreutils.ITime) irates.BucketsFactoryType {
 	return func() irates.IBuckets {
-		return iratesce.Provide(time)
+		return iratesce.Provide(time2)
 	}
 }
 
@@ -772,8 +915,8 @@ func provideBlobAppStoragePtr(astp istorage.IAppStorageProvider) iblobstoragestg
 	return new(istorage.IAppStorage)
 }
 
-func provideBlobStorage(bas iblobstoragestg.BlobAppStoragePtr, time coreutils.ITime) BlobStorage {
-	return iblobstoragestg.Provide(bas, time)
+func provideBlobStorage(bas iblobstoragestg.BlobAppStoragePtr, time2 coreutils.ITime) BlobStorage {
+	return iblobstoragestg.Provide(bas, time2)
 }
 
 func provideRouterAppStoragePtr(astp istorage.IAppStorageProvider) dbcertcache.RouterAppStoragePtr {
