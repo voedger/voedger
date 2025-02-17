@@ -103,7 +103,7 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 			}
 			if _, ok := obj.(istructs.IValue); ok {
 				iFieldsToProcess = view.Value().Fields()
-			} else {
+			} else if _, ok := obj.(istructs.IKey); ok {
 				iFieldsToProcess = view.Key().Fields()
 			}
 		} else {
