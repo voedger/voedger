@@ -262,3 +262,6 @@ func newExecQueryArgs(wsid istructs.WSID, qw *queryWork) (execQueryArgs istructs
 		},
 	}, nil
 }
+func compare[E int32 | int64 | float32 | float64 | string | uint64](v1, v2 E) bool {
+	return v1 < v2
+}
