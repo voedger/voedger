@@ -92,6 +92,9 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 	} else {
 		isCmd = strings.HasPrefix(busRequest.Resource, "c.")
 	}
+	if sendSuccess = writeResponse(w, "{"); !sendSuccess {
+		return
+	}
 	for elem := range responseCh {
 		// http client disconnected -> ErrNoConsumer on IMultiResponseSender.SendElement() -> QP will call Close()
 		if requestCtx.Err() != nil {
@@ -101,18 +104,20 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 		}
 		if busRequest.IsAPIV2 {
 			if elemsCount == 0 {
-				sendSuccess = writeResponse(w, `{"results":[`)
-				responseCloser = "]}"
+				sendSuccess = writeResponse(w, `"results":[`)
+				responseCloser = "]"
 			} else {
 				sendSuccess = writeResponse(w, ",")
 			}
 		} else {
 			if isCmd || contentType == coreutils.TextPlain {
-				sendSuccess = writeResponse(w, elem.(string))
+				res := elem.(string)
+				res = strings.TrimPrefix(res, "{")
+				res = strings.TrimSuffix(res, "}")
+				sendSuccess = writeResponse(w, res)
 			} else {
-				sendSuccess = writeResponse(w, `{"sections":[{"type":"","elements":[`)
+				sendSuccess = writeResponse(w, `"sections":[{"type":"","elements":[`)
 				sectionsCloser = "]}]"
-				responseCloser = "}"
 			}
 		}
 
@@ -143,8 +148,6 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 	if *responseErr != nil {
 		if elemsCount > 0 {
 			sendSuccess = writeResponse(w, ",")
-		} else {
-			sendSuccess = writeResponse(w, "{")
 		}
 		if !sendSuccess {
 			return
@@ -152,18 +155,26 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 		var jsonableErr interface{ ToJSON() string }
 		if errors.As(*responseErr, &jsonableErr) {
 			jsonErr := jsonableErr.ToJSON()
-			jsonErr = strings.TrimPrefix(jsonErr, "{")
+			jsonErr = strings.TrimPrefix(jsonErr, "{") // need to make "sys.Error" a top-level field within {}
+			jsonErr = strings.TrimSuffix(jsonErr, "}") // need to make "sys.Error" a top-level field within {}
 			sendSuccess = writeResponse(w, jsonErr)
 		} else {
 			sendSuccess = writeResponse(w, fmt.Sprintf(`"status":%d,"errorDescription":"%s"}`, http.StatusInternalServerError, *responseErr))
 		}
 	}
 
-	if elemsCount == 0 {
-		sendSuccess = writeResponse(w, "{}")
-	} else if len(responseCloser) > 0 {
+	if len(responseCloser) > 0 {
 		sendSuccess = writeResponse(w, responseCloser)
 	}
+	if sendSuccess {
+		sendSuccess = writeResponse(w, "}")
+	}
+
+	// if elemsCount == 0 {
+	// 	sendSuccess = writeResponse(w, "{}")
+	// } else if len(responseCloser) > 0 {
+	// 	sendSuccess = writeResponse(w, responseCloser)
+	// }
 }
 
 func initResponse(w http.ResponseWriter, contentType string, statusCode int) {

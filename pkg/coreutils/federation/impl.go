@@ -163,7 +163,7 @@ func getFuncError(httpResp *coreutils.HTTPResponse) (funcError coreutils.FuncErr
 	}
 	m := map[string]interface{}{}
 	if err := json.Unmarshal([]byte(httpResp.Body), &m); err != nil {
-		return funcError, err
+		return funcError, fmt.Errorf("IFederation: failed to unmarshal response body to FuncErr: %w. Body:\n%s", err, httpResp.Body)
 	}
 	sysErrorMap := m["sys.Error"].(map[string]interface{})
 	errQNameStr, ok := sysErrorMap["QName"].(string)
@@ -212,7 +212,7 @@ func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, h
 		err = json.Unmarshal([]byte(httpResp.Body), &res)
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("IFederation: failed to unmarshal response body to FuncResponse: %w. Body:\n%s", err, httpResp.Body)
 	}
 	if res.SysError.HTTPStatus > 0 && res.ExpectedSysErrorCode() > 0 && res.ExpectedSysErrorCode() != res.SysError.HTTPStatus {
 		return nil, fmt.Errorf("sys.Error actual status %d, expected %v: %s", res.SysError.HTTPStatus, res.ExpectedSysErrorCode(), res.SysError.Message)
