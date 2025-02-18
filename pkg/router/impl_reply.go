@@ -101,8 +101,8 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 		}
 		if busRequest.IsAPIV2 {
 			if elemsCount == 0 {
-				sendSuccess = writeResponse(w, "[")
-				responseCloser = "]"
+				sendSuccess = writeResponse(w, `{"results":[`)
+				responseCloser = "]}"
 			} else {
 				sendSuccess = writeResponse(w, ",")
 			}
