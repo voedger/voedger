@@ -13,7 +13,7 @@ import (
 )
 
 type storageImpl struct {
-	prefix        PKeyPrefix
+	prefix        PKeyPrefix // вот этот прфеикс 1 - leader elections, 2 - appQName->safeAppName и т.д.
 	vvmttlstorage vvm.IVVMAppTTLStorage
 }
 
