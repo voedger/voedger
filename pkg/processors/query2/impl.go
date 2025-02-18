@@ -196,22 +196,8 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("create callback func", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.callbackFunc = func(istructs.IObject) (err error) {
-				oo, err := readView(ctx, qw.appStructs.AppDef(), qw.appStructs.ViewRecords(), qw.queryParams, qw.msg.WSID(), qw.msg.QName())
-				if err != nil {
-					return
-				}
-				resp := qw.msg.Responder().InitResponse(bus.ResponseMeta{
-					ContentType: coreutils.ApplicationJSON,
-					StatusCode:  http.StatusOK,
-				})
-				for _, o := range oo {
-					e := resp.Send(o)
-					if e != nil {
-						return e
-					}
-				}
-				return
+			qw.callbackFunc = func(o istructs.IObject) (err error) {
+				return qw.rowsProcessor.SendAsync(o.(pipeline.IWorkpiece))
 			}
 			return
 		}),
