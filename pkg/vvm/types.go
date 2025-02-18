@@ -74,7 +74,6 @@ type BuiltInAppsArtefacts struct {
 }
 
 type FederationURL func() *url.URL
-type VVMIdxType int
 type VVMPortType int
 type ProcessorChannelType int
 type ProcesorChannel struct {
@@ -88,7 +87,6 @@ type RouterServices struct {
 	router.IAdminService
 }
 type MetricsServiceOperator pipeline.ISyncOperator
-type MetricsServicePortInitial int
 type VVMPortSource struct {
 	getter      func() VVMPortType
 	adminGetter func() int
@@ -155,7 +153,7 @@ type VVMConfig struct {
 	SmtpConfig                 smtp.Cfg
 	WSPostInitFunc             workspace.WSPostInitFunc
 	DataPath                   string
-	MetricsServicePort         MetricsServicePortInitial
+	MetricsServicePort         metrics.MetricsServicePort
 
 	// 0 -> dynamic port will be used, new on each vvmIdx
 	// >0 -> vVMPort+vvmIdx will be actually used
