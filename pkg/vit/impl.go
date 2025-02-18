@@ -116,7 +116,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	cfg.RouterWriteTimeout = int(debugTimeout)
 	cfg.SendTimeout = bus.SendTimeout(debugTimeout)
 
-	vvm, err := vvm.ProvideVVM(&cfg, 0)
+	vvm, err := vvm.ProvideVVM(&cfg)
 	require.NoError(t, err)
 
 	// register workspace templates
