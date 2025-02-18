@@ -6,11 +6,16 @@ package query2
 
 import (
 	"context"
+	"errors"
+	"net/http"
+	"sort"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/pipeline"
 )
 
 type ApiPath int
@@ -127,4 +132,119 @@ func (o objectBackedByMap) AsQName(name appdef.FieldName) appdef.QName {
 func (o objectBackedByMap) AsBool(name appdef.FieldName) bool { return o.data[name].(bool) }
 func (o objectBackedByMap) AsRecordID(name appdef.FieldName) istructs.RecordID {
 	return o.data[name].(istructs.RecordID)
+}
+
+type keys struct {
+	pipeline.AsyncNOOP
+	keys map[string]bool
+}
+
+func newKeys(ss []string) (o pipeline.IAsyncOperator) {
+	k := &keys{keys: make(map[string]bool)}
+	for _, s := range ss {
+		k.keys[s] = true
+	}
+	return k
+}
+
+func (f *keys) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
+	for k := range work.(objectBackedByMap).data {
+		if f.keys[k] {
+			continue
+		}
+		delete(work.(objectBackedByMap).data, k)
+	}
+	return work, nil
+}
+
+type aggregator struct {
+	pipeline.AsyncNOOP
+	params QueryParams
+	ww     []pipeline.IWorkpiece
+}
+
+func newAggregator(params QueryParams) pipeline.IAsyncOperator {
+	return &aggregator{
+		params: params,
+		ww:     make([]pipeline.IWorkpiece, 0),
+	}
+}
+
+func (a *aggregator) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
+	a.ww = append(a.ww, work)
+	return
+}
+func (a *aggregator) Flush(callback pipeline.OpFuncFlush) (err error) {
+	err = a.order()
+	if err != nil {
+		return
+	}
+	a.subList()
+	for _, w := range a.ww {
+		callback(w)
+	}
+	return
+}
+func (a *aggregator) order() (err error) {
+	if len(a.params.Constraints.Order) == 0 {
+		return
+	}
+	sort.Slice(a.ww, func(i, j int) bool {
+		for _, orderBy := range a.params.Constraints.Order {
+			vi := a.ww[i].(objectBackedByMap).data[orderBy]
+			vj := a.ww[j].(objectBackedByMap).data[orderBy]
+			switch vi.(type) {
+			case int32:
+				return compare(vi.(int32), vj.(int32))
+			case int64:
+				return compare(vi.(int64), vj.(int64))
+			case float32:
+				return compare(vi.(float32), vj.(float32))
+			case float64:
+				return compare(vi.(float64), vj.(float64))
+			case []byte:
+				return compare(string(vi.([]byte)), string(vi.([]byte)))
+			case string:
+				return compare(vi.(string), vj.(string))
+			case appdef.QName:
+				return compare(vi.(appdef.QName).String(), vj.(appdef.QName).String())
+			case bool:
+				return vi.(bool) != vj.(bool)
+			case istructs.RecordID:
+				return compare(uint64(vi.(istructs.RecordID)), uint64(vj.(istructs.RecordID)))
+			default:
+				err = errors.New("unsupported type")
+			}
+		}
+		return false
+	})
+	return
+}
+func (a *aggregator) subList() {
+	if a.params.Constraints.Limit == 0 && a.params.Constraints.Skip == 0 {
+		return
+	}
+	if a.params.Constraints.Skip >= len(a.ww) {
+		a.ww = []pipeline.IWorkpiece{}
+		return
+	}
+	if a.params.Constraints.Skip+a.params.Constraints.Limit > len(a.ww) {
+		a.ww = a.ww[a.params.Constraints.Skip:]
+		return
+	}
+	a.ww = a.ww[a.params.Constraints.Skip:a.params.Constraints.Limit]
+	return
+}
+
+type sender struct {
+	pipeline.AsyncNOOP
+	responder bus.IResponder
+	sender    bus.IResponseSender
+}
+
+func (s *sender) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
+	if s.sender == nil {
+		s.sender = s.responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+	}
+	return work, s.sender.Send(work.(objectBackedByMap).data)
 }

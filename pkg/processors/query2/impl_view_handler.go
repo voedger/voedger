@@ -10,7 +10,6 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -72,13 +71,15 @@ func (h *viewHandler) AuthorizeResult(ctx context.Context, qw *queryWork) error 
 }
 
 func (h *viewHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err error) {
-	resp := qw.msg.Responder().InitResponse(bus.ResponseMeta{
-		ContentType: coreutils.ApplicationJSON,
-		StatusCode:  http.StatusOK,
-	})
-	qw.rowsProcessor = pipeline.NewAsyncPipeline(ctx, "View rows processor", pipeline.WireAsyncFunc("Send object", func(ctx context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
-		return nil, resp.Send(work.(objectBackedByMap).data)
-	}))
+	oo := make([]*pipeline.WiredOperator, 0)
+	if len(qw.queryParams.Constraints.Order) != 0 || qw.queryParams.Constraints.Skip > 0 || qw.queryParams.Constraints.Limit > 0 {
+		oo = append(oo, pipeline.WireAsyncOperator("Aggregator", newAggregator(qw.queryParams)))
+	}
+	if len(qw.queryParams.Constraints.Keys) != 0 {
+		oo = append(oo, pipeline.WireAsyncOperator("Keys", newKeys(qw.queryParams.Constraints.Keys)))
+	}
+	oo = append(oo, pipeline.WireAsyncOperator("Sender", &sender{responder: qw.msg.Responder()}))
+	qw.rowsProcessor = pipeline.NewAsyncPipeline(ctx, "View rows processor", oo[0], oo[1:]...)
 	return
 }
 func (h *viewHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
