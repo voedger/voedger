@@ -86,8 +86,8 @@ func (h *viewHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
 	kb.PutFromJSON(qw.queryParams.Constraints.Where)
 	return qw.appStructs.ViewRecords().Read(ctx, qw.msg.WSID(), kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 		obj := objectBackedByMap{}
-		obj.data = coreutils.FieldsToMap(key, qw.appStructs.AppDef(), coreutils.WithNonNilsOnly())
-		for k, v := range coreutils.FieldsToMap(value, qw.appStructs.AppDef(), coreutils.WithNonNilsOnly()) {
+		obj.data = coreutils.FieldsToMap(key, qw.appStructs.AppDef())
+		for k, v := range coreutils.FieldsToMap(value, qw.appStructs.AppDef()) {
 			obj.data[k] = v
 		}
 		return qw.callbackFunc(obj)
