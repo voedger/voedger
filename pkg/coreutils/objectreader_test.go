@@ -268,61 +268,26 @@ func TestToMap_Filter(t *testing.T) {
 // 		)
 // 	})
 
-<<<<<<< Updated upstream
-	t.Run("FieldsToMap non-nils only", func(t *testing.T) {
-		m := FieldsToMap(iValue, appDef, WithNonNilsOnly())
-		testBasic(testQNameView, m, require)
-		require.Equal(
-			map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple"},
-			m["record"],
-		)
-	})
+// t.Run("FieldsToMap non-nils only", func(t *testing.T) {
+// 	m := FieldsToMap(iValue, appDef, WithNonNilsOnly())
+// 	testBasic(testQNameView, m, require)
+// 	require.Equal(
+// 		map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple"},
+// 		m["record"],
+// 	)
+// })
 
-	t.Run("panic if an object contains DataKind_Record field but is not IValue", func(t *testing.T) {
-		obj := &TestObject{
-			Name: testQName,
-			Data: iValueValues,
-		}
-		require.Panics(func() { FieldsToMap(obj, appDef) })
-		require.Panics(func() { FieldsToMap(obj, appDef, WithNonNilsOnly()) })
-	})
-}
-=======
+// t.Run("panic if an object contains DataKind_Record field but is not IValue", func(t *testing.T) {
+// 	obj := &TestObject{
+// 		Name: testQName,
+// 		Data: iValueValues,
+// 	}
+// 	require.Panics(func() { FieldsToMap(obj, appDef) })
+// 	require.Panics(func() { FieldsToMap(obj, appDef, WithNonNilsOnly()) })
+// })
 // 	t.Run("FieldsToMap non-nils only is not supported for view key or value", func(t *testing.T) {
 // 		require.Panics(func() { FieldsToMap(iValue, appDef, WithNonNilsOnly()) })
 // 	})
-
-// 	t.Run("FieldsToMap non-nils only", func(t *testing.T) {
-// 		cdoc := &TestValue{
-// 			TestObject: &TestObject{
-// 				Name: testQNameCDoc,
-// 				Id:   42,
-// 				Data: map[string]interface{}{
-// 					"StrFld":                 "str",
-// 					appdef.SystemField_QName: testQNameCDoc,
-// 				},
-// 			},
-// 		}
-// 		m := FieldsToMap(cdoc, appDef)
-// 		require.Equal("str", m["StrFld"])
-// 		require.Zero(m["IntFld"])
-
-// 		m = FieldsToMap(cdoc, appDef, WithNonNilsOnly())
-// 		require.Equal("str", m["StrFld"])
-// 		require.Nil(m["IntFld"])
-// 	})
-
-// 	t.Run("panic if an object contains DataKind_Record field but is not IValue", func(t *testing.T) {
-// 		obj := &TestObject{
-// 			Name: testQName,
-// 			Data: iValueValues,
-// 		}
-// 		// TODO: fix it after https://github.com/voedger/voedger/issues/1313
-// 		// require.Panics(func() { FieldsToMap(obj, appDef) })
-// 		require.Panics(func() { FieldsToMap(obj, appDef, WithNonNilsOnly()) })
-// 	})
-// }
->>>>>>> Stashed changes
 
 func TestObjectReaderErrors(t *testing.T) {
 	require := require.New(t)

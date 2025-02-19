@@ -84,12 +84,7 @@ func (o *TestObject) ModifiedFields(cb func(string, interface{}) bool) {
 		}
 	}
 }
-<<<<<<< Updated upstream
 func (o *TestObject) AsRecord() istructs.IRecord { return o }
-=======
-func (o *TestObject) AsRecord() istructs.IRecord                 { return o }
-func (o *TestObject) AsEvent(appdef.FieldName) istructs.IDbEvent { panic("not implemented") }
->>>>>>> Stashed changes
 func (o *TestObject) AsInt32(name string) int32 {
 	if resIntf, ok := o.Data[name]; ok {
 		return resIntf.(int32)
