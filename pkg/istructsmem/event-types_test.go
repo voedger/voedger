@@ -683,11 +683,12 @@ func testUnloggedObject(t *testing.T, cmd istructs.IObject) {
 	test := test()
 
 	hasPassword := false
-	for fieldName := range cmd.FieldNames {
-		if hasPassword = fieldName == test.passwordIdent; hasPassword {
-			break
+	cmd.Fields(func(iField appdef.IField) bool {
+		if hasPassword = iField.Name() == test.passwordIdent; hasPassword {
+			return false
 		}
-	}
+		return true
+	})
 	require.True(hasPassword)
 
 	require.Equal(maskString, cmd.AsString(test.passwordIdent))

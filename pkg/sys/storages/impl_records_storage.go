@@ -320,5 +320,5 @@ func (v *recordsValue) AsBool(name string) bool          { return v.record.AsBoo
 func (v *recordsValue) AsRecordID(name string) istructs.RecordID {
 	return v.record.AsRecordID(name)
 }
-func (v *recordsValue) AsRecord() (record istructs.IRecord)       { return v.record }
-func (v *recordsValue) FieldNames(cb func(fieldName string) bool) { v.record.FieldNames(cb) }
+func (v *recordsValue) AsRecord() (record istructs.IRecord)           { return v.record }
+func (v *recordsValue) FieldNames(cb func(iField appdef.IField) bool) { v.record.Fields(cb) }

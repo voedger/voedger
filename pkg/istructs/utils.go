@@ -87,7 +87,7 @@ func (*NullObject) QName() appdef.QName                         { return appdef.
 func (*NullObject) Children(...string) func(func(IObject) bool) { return func(func(IObject) bool) {} }
 func (*NullObject) Containers(func(string) bool)                {}
 func (no *NullObject) AsRecord() IRecord                        { return no }
-func (no *NullObject) FieldNames(func(string) bool)             {}
+func (no *NullObject) Fields(func(appdef.IField) bool)          {}
 func (no *NullObject) Container() string                        { return "" }
 func (no *NullObject) ID() RecordID                             { return NullRecordID }
 func (no *NullObject) Parent() RecordID                         { return NullRecordID }

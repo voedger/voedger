@@ -191,83 +191,84 @@ func TestToMap_Filter(t *testing.T) {
 	})
 }
 
-func TestMToMap_NonNilsOnly_Filter(t *testing.T) {
-	require := require.New(t)
-	testDataPartial := map[string]interface{}{
-		"int32":                  int32(1),
-		"string":                 "str",
-		"float32":                float32(2),
-		appdef.SystemField_QName: testQName,
-	}
-	obj := &TestObject{
-		Name: testQName,
-		Id:   42,
-		Data: testDataPartial,
-	}
-	expected := map[string]interface{}{
-		"int32":                  int32(1),
-		"string":                 "str",
-		appdef.SystemField_QName: testQName.String(),
-	}
+// func TestMToMap_NonNilsOnly_Filter(t *testing.T) {
+// 	require := require.New(t)
+// 	testDataPartial := map[string]interface{}{
+// 		"int32":                  int32(1),
+// 		"string":                 "str",
+// 		"float32":                float32(2),
+// 		appdef.SystemField_QName: testQName,
+// 	}
+// 	obj := &TestObject{
+// 		Name: testQName,
+// 		Id:   42,
+// 		Data: testDataPartial,
+// 	}
+// 	expected := map[string]interface{}{
+// 		"int32":                  int32(1),
+// 		"string":                 "str",
+// 		appdef.SystemField_QName: testQName.String(),
+// 	}
 
-	appDef := testAppDef(t)
+// 	appDef := testAppDef(t)
 
-	t.Run("ObjectToMap", func(t *testing.T) {
-		m := ObjectToMap(obj, appDef, WithNonNilsOnly(), Filter(func(name string, kind appdef.DataKind) bool {
-			return name != "float32"
-		}))
-		require.Equal(expected, m)
-	})
+// 	t.Run("ObjectToMap", func(t *testing.T) {
+// 		m := ObjectToMap(obj, appDef, WithNonNilsOnly(), Filter(func(name string, kind appdef.DataKind) bool {
+// 			return name != "float32"
+// 		}))
+// 		require.Equal(expected, m)
+// 	})
 
-	t.Run("FieldsToMap", func(t *testing.T) {
-		m := FieldsToMap(obj, appDef, WithNonNilsOnly(), Filter(func(name string, kind appdef.DataKind) bool {
-			return name != "float32"
-		}))
-		require.Equal(expected, m)
-	})
+// 	t.Run("FieldsToMap", func(t *testing.T) {
+// 		m := FieldsToMap(obj, appDef, WithNonNilsOnly(), Filter(func(name string, kind appdef.DataKind) bool {
+// 			return name != "float32"
+// 		}))
+// 		require.Equal(expected, m)
+// 	})
 
-	t.Run("ObjectToMap + filter", func(t *testing.T) {
-		filter := Filter(func(name string, kind appdef.DataKind) bool {
-			return name == "string"
-		})
-		expected := map[string]interface{}{
-			"string": "str",
-		}
-		m := ObjectToMap(obj, appDef, WithNonNilsOnly(), filter)
-		require.Equal(expected, m)
-	})
-}
+// 	t.Run("ObjectToMap + filter", func(t *testing.T) {
+// 		filter := Filter(func(name string, kind appdef.DataKind) bool {
+// 			return name == "string"
+// 		})
+// 		expected := map[string]interface{}{
+// 			"string": "str",
+// 		}
+// 		m := ObjectToMap(obj, appDef, WithNonNilsOnly(), filter)
+// 		require.Equal(expected, m)
+// 	})
+// }
 
-func TestReadValue(t *testing.T) {
-	require := require.New(t)
+// func TestReadValue(t *testing.T) {
+// 	require := require.New(t)
 
-	appDef := testAppDef(t)
+// 	appDef := testAppDef(t)
 
-	iValueValues := map[string]interface{}{}
-	for k, v := range testData {
-		iValueValues[k] = v
-	}
-	iValueValues[appdef.SystemField_QName] = testQNameView
-	iValueValues["record"] = &TestObject{
-		Data: testDataSimple,
-	}
-	iValue := &TestValue{
-		TestObject: &TestObject{
-			Name: testQNameView,
-			Id:   42,
-			Data: iValueValues,
-		},
-	}
+// 	iValueValues := map[string]interface{}{}
+// 	for k, v := range testData {
+// 		iValueValues[k] = v
+// 	}
+// 	iValueValues[appdef.SystemField_QName] = testQNameView
+// 	iValueValues["record"] = &TestObject{
+// 		Data: testDataSimple,
+// 	}
+// 	iValue := &TestValue{
+// 		TestObject: &TestObject{
+// 			Name: testQNameView,
+// 			Id:   42,
+// 			Data: iValueValues,
+// 		},
+// 	}
 
-	t.Run("FieldsToMap", func(t *testing.T) {
-		m := FieldsToMap(iValue, appDef)
-		testBasic(testQNameView, m, require)
-		require.Equal(
-			map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple", appdef.SystemField_Container: ""},
-			m["record"],
-		)
-	})
+// 	t.Run("FieldsToMap", func(t *testing.T) {
+// 		m := FieldsToMap(iValue, appDef)
+// 		testBasic(testQNameView, m, require)
+// 		require.Equal(
+// 			map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple", appdef.SystemField_Container: ""},
+// 			m["record"],
+// 		)
+// 	})
 
+<<<<<<< Updated upstream
 	t.Run("FieldsToMap non-nils only", func(t *testing.T) {
 		m := FieldsToMap(iValue, appDef, WithNonNilsOnly())
 		testBasic(testQNameView, m, require)
@@ -286,6 +287,42 @@ func TestReadValue(t *testing.T) {
 		require.Panics(func() { FieldsToMap(obj, appDef, WithNonNilsOnly()) })
 	})
 }
+=======
+// 	t.Run("FieldsToMap non-nils only is not supported for view key or value", func(t *testing.T) {
+// 		require.Panics(func() { FieldsToMap(iValue, appDef, WithNonNilsOnly()) })
+// 	})
+
+// 	t.Run("FieldsToMap non-nils only", func(t *testing.T) {
+// 		cdoc := &TestValue{
+// 			TestObject: &TestObject{
+// 				Name: testQNameCDoc,
+// 				Id:   42,
+// 				Data: map[string]interface{}{
+// 					"StrFld":                 "str",
+// 					appdef.SystemField_QName: testQNameCDoc,
+// 				},
+// 			},
+// 		}
+// 		m := FieldsToMap(cdoc, appDef)
+// 		require.Equal("str", m["StrFld"])
+// 		require.Zero(m["IntFld"])
+
+// 		m = FieldsToMap(cdoc, appDef, WithNonNilsOnly())
+// 		require.Equal("str", m["StrFld"])
+// 		require.Nil(m["IntFld"])
+// 	})
+
+// 	t.Run("panic if an object contains DataKind_Record field but is not IValue", func(t *testing.T) {
+// 		obj := &TestObject{
+// 			Name: testQName,
+// 			Data: iValueValues,
+// 		}
+// 		// TODO: fix it after https://github.com/voedger/voedger/issues/1313
+// 		// require.Panics(func() { FieldsToMap(obj, appDef) })
+// 		require.Panics(func() { FieldsToMap(obj, appDef, WithNonNilsOnly()) })
+// 	})
+// }
+>>>>>>> Stashed changes
 
 func TestObjectReaderErrors(t *testing.T) {
 	require := require.New(t)

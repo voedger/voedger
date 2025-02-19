@@ -671,9 +671,10 @@ func Test_rowType_FieldNames(t *testing.T) {
 
 	t.Run("new [or null] row must have hot fields", func(t *testing.T) {
 		row := makeRow(test.AppCfg)
-		for fieldName := range row.FieldNames {
-			require.Fail("unexpected field", "name: «%s»", fieldName)
-		}
+		row.Fields(func(iField appdef.IField) bool {
+			require.Fail("unexpected field", "name: «%s»", iField.Name())
+			return true
+		})
 	})
 
 	t.Run("new test row must have only QName field", func(t *testing.T) {
@@ -681,10 +682,11 @@ func Test_rowType_FieldNames(t *testing.T) {
 		row.setQName(test.testRow)
 
 		cnt := 0
-		for fieldName := range row.FieldNames {
-			require.Equal(appdef.SystemField_QName, fieldName)
+		row.Fields(func(iField appdef.IField) bool {
+			require.Equal(appdef.SystemField_QName, iField.Name())
 			cnt++
-		}
+			return true
+		})
 		require.Equal(1, cnt)
 	})
 
@@ -693,11 +695,12 @@ func Test_rowType_FieldNames(t *testing.T) {
 
 		cnt := 0
 		names := make(map[appdef.FieldName]bool)
-		for fieldName := range row.FieldNames {
-			require.False(names[fieldName])
-			names[fieldName] = true
+		row.Fields(func(iField appdef.IField) bool {
+			require.False(names[iField.Name()])
+			names[iField.Name()] = true
 			cnt++
-		}
+			return true
+		})
 		require.Equal(11, cnt) // sys.QName + ten user fields for simple types
 	})
 
@@ -707,22 +710,23 @@ func Test_rowType_FieldNames(t *testing.T) {
 		rec.PutString(appdef.SystemField_Container, "rec")
 
 		sys := make(map[appdef.FieldName]interface{})
-		for fieldName := range rec.FieldNames {
-			if appdef.IsSysField(fieldName) {
-				switch rec.fieldDef(fieldName).DataKind() {
+		rec.Fields(func(iField appdef.IField) bool {
+			if iField.IsSys() {
+				switch rec.fieldDef(iField.Name()).DataKind() {
 				case appdef.DataKind_QName:
-					sys[fieldName] = rec.AsQName(fieldName)
+					sys[iField.Name()] = rec.AsQName(iField.Name())
 				case appdef.DataKind_RecordID:
-					sys[fieldName] = rec.AsRecordID(fieldName)
+					sys[iField.Name()] = rec.AsRecordID(iField.Name())
 				case appdef.DataKind_string:
-					sys[fieldName] = rec.AsString(fieldName)
+					sys[iField.Name()] = rec.AsString(iField.Name())
 				case appdef.DataKind_bool:
-					sys[fieldName] = rec.AsBool(fieldName)
+					sys[iField.Name()] = rec.AsBool(iField.Name())
 				default:
-					require.Fail("unexpected system field", "field name: «%s»", fieldName)
+					require.Fail("unexpected system field", "field name: «%s»", iField.Name())
 				}
 			}
-		}
+			return true
+		})
 		require.Len(sys, 5)
 		require.EqualValues(test.testCRec, sys[appdef.SystemField_QName])
 		require.EqualValues(7, sys[appdef.SystemField_ID])

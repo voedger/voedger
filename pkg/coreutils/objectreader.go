@@ -46,8 +46,7 @@ func ReadByKind(name appdef.FieldName, kind appdef.DataKind, rr istructs.IRowRea
 }
 
 type mapperOpts struct {
-	filter      func(name string, kind appdef.DataKind) bool
-	nonNilsOnly bool
+	filter func(name string, kind appdef.DataKind) bool
 }
 
 type MapperOpt func(opt *mapperOpts)
@@ -55,12 +54,6 @@ type MapperOpt func(opt *mapperOpts)
 func Filter(filterFunc func(name string, kind appdef.DataKind) bool) MapperOpt {
 	return func(opts *mapperOpts) {
 		opts.filter = filterFunc
-	}
-}
-
-func WithNonNilsOnly() MapperOpt {
-	return func(opts *mapperOpts) {
-		opts.nonNilsOnly = true
 	}
 }
 
@@ -96,6 +89,7 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 	}
 
 	if fields, ok := t.(appdef.IWithFields); ok {
+<<<<<<< Updated upstream
 		if opts.nonNilsOnly {
 			for fieldName := range obj.FieldNames {
 				proceedField(fieldName, fields.Field(fieldName).DataKind())
@@ -104,6 +98,20 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 			for _, f := range fields.Fields() {
 				proceedField(f.Name(), f.DataKind())
 			}
+=======
+		iFieldsToProcess := fields.Fields()
+		if view, ok := t.(appdef.IView); ok {
+			if _, ok := obj.(istructs.IValue); ok {
+				iFieldsToProcess = view.Value().Fields()
+			} else if _, ok := obj.(istructs.IKey); ok {
+				iFieldsToProcess = view.Key().Fields()
+			}
+		} else {
+			iFieldsToProcess = fields.Fields()
+		}
+		for _, iField := range iFieldsToProcess {
+			proceedField(iField.Name(), iField.DataKind())
+>>>>>>> Stashed changes
 		}
 	}
 

@@ -709,40 +709,44 @@ func (row *rowType) Container() string {
 	return row.container
 }
 
-// istructs.IRowReader.FieldNames
-func (row *rowType) FieldNames(cb func(appdef.FieldName) bool) {
-	// system fields
-	if row.fieldDef(appdef.SystemField_QName) != nil {
-		if !cb(appdef.SystemField_QName) {
+// istructs.IRowReader.Fields
+func (row *rowType) Fields(cb func(appdef.IField) bool) {
+	for _, iField := range row.fields.Fields() {
+		if !cb(iField) {
 			return
 		}
 	}
-	if row.id != istructs.NullRecordID {
-		if !cb(appdef.SystemField_ID) {
-			return
-		}
-	}
-	if row.parentID != istructs.NullRecordID {
-		if !cb(appdef.SystemField_ParentID) {
-			return
-		}
-	}
-	if row.container != "" {
-		if !cb(appdef.SystemField_Container) {
-			return
-		}
-	}
-	if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_IsActive); exists {
-		if !cb(appdef.SystemField_IsActive) {
-			return
-		}
-	}
+	// if row.fieldDef(appdef.SystemField_QName) != nil {
+	// 	if !cb(appdef.SystemField_QName) {
+	// 		return
+	// 	}
+	// }
+	// if row.id != istructs.NullRecordID {
+	// 	if !cb(appdef.SystemField_ID) {
+	// 		return
+	// 	}
+	// }
+	// if row.parentID != istructs.NullRecordID {
+	// 	if !cb(appdef.SystemField_ParentID) {
+	// 		return
+	// 	}
+	// }
+	// if row.container != "" {
+	// 	if !cb(appdef.SystemField_Container) {
+	// 		return
+	// 	}
+	// }
+	// if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_IsActive); exists {
+	// 	if !cb(appdef.SystemField_IsActive) {
+	// 		return
+	// 	}
+	// }
 
-	// user fields
-	row.dyB.IterateFields(nil,
-		func(name string, _ interface{}) bool {
-			return cb(name)
-		})
+	// // user fields
+	// row.dyB.IterateFields(nil,
+	// 	func(name string, _ interface{}) bool {
+	// 		return cb(name)
+	// 	})
 }
 
 // FIXME: remove when no longer in use

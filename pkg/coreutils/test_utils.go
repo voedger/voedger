@@ -84,7 +84,12 @@ func (o *TestObject) ModifiedFields(cb func(string, interface{}) bool) {
 		}
 	}
 }
+<<<<<<< Updated upstream
 func (o *TestObject) AsRecord() istructs.IRecord { return o }
+=======
+func (o *TestObject) AsRecord() istructs.IRecord                 { return o }
+func (o *TestObject) AsEvent(appdef.FieldName) istructs.IDbEvent { panic("not implemented") }
+>>>>>>> Stashed changes
 func (o *TestObject) AsInt32(name string) int32 {
 	if resIntf, ok := o.Data[name]; ok {
 		return resIntf.(int32)
@@ -157,9 +162,29 @@ func (o *TestObject) Children(container ...string) func(func(istructs.IObject) b
 		}
 	}
 }
-func (o *TestObject) FieldNames(cb func(name string) bool) {
+
+type MockIField struct {
+	appdef.IField
+	name string
+}
+
+func (f *MockIField) Comment() string                               { panic("not implemented") }
+func (f *MockIField) CommentLines() []string                        { panic("not implemented") }
+func (f *MockIField) Name() appdef.FieldName                        { return f.name }
+func (f *MockIField) Data() appdef.IData                            { panic("not implemented") }
+func (f *MockIField) DataKind() appdef.DataKind                     { panic("not implemented") }
+func (f *MockIField) Required() bool                                { return false }
+func (f *MockIField) Verifiable() bool                              { panic("not implemented") }
+func (f *MockIField) VerificationKind(appdef.VerificationKind) bool { panic("not implemented") }
+func (f *MockIField) IsFixedWidth() bool                            { panic("not implemented") }
+func (f *MockIField) IsSys() bool                                   { panic("not implemented") }
+func (f *MockIField) Constraints() map[appdef.ConstraintKind]appdef.IConstraint {
+	panic("not implemented")
+}
+
+func (o *TestObject) Fields(cb func(iField appdef.IField) bool) {
 	for name := range o.Data {
-		if !cb(name) {
+		if !cb(&MockIField{name: name}) {
 			break
 		}
 	}
