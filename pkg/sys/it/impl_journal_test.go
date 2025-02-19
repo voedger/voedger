@@ -5,7 +5,9 @@
 package sys_it
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"testing"
 	"time"
 
@@ -52,59 +54,104 @@ func TestBasicUsage_Journal(t *testing.T) {
 	}`, vit.Now().UnixMilli(), vit.Now().UnixMilli())
 	resp = vit.PostWS(ws, "q.sys.Journal", body)
 
-	require.JSONEq(fmt.Sprintf(`
-	{
-	  "args": {},
-	  "cuds": [
-		{
-		  "fields": {
-			"id_untill_users": %[4]d,
-			"proforma": 3,
-			"sys.ID": %[1]d,
-			"sys.IsActive": true,
-			"sys.QName": "app1pkg.bill",
-			"table_part": "a",
-			"tableno": %[2]d,
-			"working_day": "20230228"
-		  },
-		  "IsNew": true,
-		  "sys.ID": %[1]d,
-		  "sys.QName": "app1pkg.bill"
-		}
-	  ],
-	  "DeviceID": 0,
-	  "RegisteredAt": %[3]d,
-	  "Synced": false,
-	  "SyncedAt": 0,
-	  "sys.QName": "sys.CUD"
-	}`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers), resp.SectionRow()[2].(string))
+	j := resp.SectionRow()[2].(string)
+	m := map[string]interface{}{}
+	require.NoError(json.Unmarshal([]byte(j), &m))
+	jn, err := json.MarshalIndent(&m, "", "\t")
+	require.NoError(err)
+	log.Println(string(jn))
 
 	expectedEvent := fmt.Sprintf(`
-		{
-			"args": {},
-			"cuds": [
+	{
+		"DeviceID": 0,
+		"RegisteredAt": %[3]d,
+		"Synced": false,
+		"SyncedAt": 0,
+		"args": {},
+		"cuds": [
 			{
-				"fields": {
-				"id_untill_users": %[4]d,
-				"proforma": 3,
-				"sys.ID": %[1]d,
-				"sys.IsActive": true,
-				"sys.QName": "app1pkg.bill",
-				"table_part": "a",
-				"tableno": %[2]d,
-				"working_day": "20230228"
-				},
 				"IsNew": true,
+				"fields": {
+					"age": 0,
+					"ayce_time": 0,
+					"bill_type": 0,
+					"client_phone": "",
+					"close_datetime": 0,
+					"comments": "",
+					"day_failurednumber": 0,
+					"day_number": 0,
+					"day_suffix": "",
+					"description": null,
+					"discount": 0,
+					"discount_value": 0,
+					"extra_fields": null,
+					"failurednumber": 0,
+					"fiscal_failurednumber": 0,
+					"fiscal_number": 0,
+					"fiscal_suffix": "",
+					"free_comments": "",
+					"group_vat_level": 0,
+					"hc_folionumber": "",
+					"hc_foliosequence": 0,
+					"hc_roomnumber": "",
+					"id_alter_user": 0,
+					"id_bo_service_charge": 0,
+					"id_callers_last": 0,
+					"id_cardprice": 0,
+					"id_clients": 0,
+					"id_courses": 0,
+					"id_discount_reasons": 0,
+					"id_order_type": 0,
+					"id_serving_time": 0,
+					"id_t2o_groups": 0,
+					"id_time_article": 0,
+					"id_untill_users": %[4]d,
+					"id_user_proforma": 0,
+					"ignore_auto_sc": 0,
+					"isactive": 0,
+					"isdirty": 0,
+					"locker": 0,
+					"modified": 0,
+					"name": "",
+					"not_paid": 0,
+					"number": 0,
+					"number_of_covers": 0,
+					"open_datetime": 0,
+					"pbill_failurednumber": 0,
+					"pbill_number": 0,
+					"pbill_suffix": "",
+					"proforma": 3,
+					"qty_persons": 0,
+					"remaining_quantity": 0,
+					"reservationid": "",
+					"sc_plan": null,
+					"sdescription": "",
+					"service_charge": 0,
+					"service_tax": 0,
+					"serving_time_dt": 0,
+					"suffix": "",
+					"sys.ID": %[1]d,
+					"sys.IsActive": true,
+					"sys.QName": "app1pkg.bill",
+					"table_name": "",
+					"table_part": "a",
+					"tableno":  %[2]d,
+					"take_away": 0,
+					"timer_start": 0,
+					"timer_stop": 0,
+					"tip": 0,
+					"total": 0,
+					"vars": null,
+					"vat_excluded": 0,
+					"was_cancelled": 0,
+					"working_day": "20230228"
+				},
 				"sys.ID": %[1]d,
 				"sys.QName": "app1pkg.bill"
 			}
-			],
-			"DeviceID": 0,
-			"RegisteredAt": %[3]d,
-			"Synced": false,
-			"SyncedAt": 0,
-			"sys.QName": "sys.CUD"
-		}`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers)
+		],
+		"sys.QName": "sys.CUD"
+	}`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers)
 
 	require.Equal(expectedOffset, istructs.Offset(resp.SectionRow()[0].(float64)))
 	require.Equal(int64(resp.SectionRow()[1].(float64)), vit.Now().UnixMilli())

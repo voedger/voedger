@@ -89,8 +89,18 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 	}
 
 	if fields, ok := t.(appdef.IWithFields); ok {
-		for _, f := range fields.Fields() {
-			proceedField(f.Name(), f.DataKind())
+		iFieldsToProcess := fields.Fields()
+		if view, ok := t.(appdef.IView); ok {
+			if _, ok := obj.(istructs.IValue); ok {
+				iFieldsToProcess = view.Value().Fields()
+			} else if _, ok := obj.(istructs.IKey); ok {
+				iFieldsToProcess = view.Key().Fields()
+			}
+		} else {
+			iFieldsToProcess = fields.Fields()
+		}
+		for _, iField := range iFieldsToProcess {
+			proceedField(iField.Name(), iField.DataKind())
 		}
 	}
 
