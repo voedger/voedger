@@ -539,6 +539,22 @@ ALTERABLE WORKSPACE test_wsWS (
 		PRIMARY KEY ((IntFld), Dummy)
 	) AS RESULT OF ApplyCategoryIdx WITH Tags=(WorkspaceOwnerTableTag);
 
+	VIEW DailyIdx (
+    	Year int32,
+    	Month int32,
+    	Day int32,
+    	StringValue text,
+    	offs int64,
+    	PRIMARY KEY ((Year), Month, Day)
+    ) AS RESULT OF ApplyDailyIdx WITH Tags=(WorkspaceOwnerTableTag);
+
+    TABLE Daily INHERITS sys.CDoc (
+    	Year int32,
+    	Month int32,
+    	Day int32,
+    	StringValue text
+    ) WITH Tags=(WorkspaceOwnerTableTag);
+
 	TYPE QryIntentsResult (
 		Fld1 varchar
 	);
@@ -611,6 +627,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		COMMAND TestCmdRawArg(sys.Raw) WITH Tags=(WorkspaceOwnerFuncTag);
 		PROJECTOR ProjDummy AFTER INSERT ON (sys.CRecord) INTENTS(sys.View(View)); -- does nothing, only to define view.app1pkg.View
 		SYNC PROJECTOR ApplyCategoryIdx AFTER INSERT ON (category) INTENTS(sys.View(CategoryIdx));
+		SYNC PROJECTOR ApplyDailyIdx AFTER INSERT ON (Daily) INTENTS(sys.View(DailyIdx));
 
 		COMMAND CmdWithResponseIntent(WithResponseIntentParams) WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY QryWithResponseIntent(WithResponseIntentParams) RETURNS QryWithResponseIntentResult WITH Tags=(WorkspaceOwnerFuncTag);
@@ -639,6 +656,7 @@ ALTERABLE WORKSPACE test_wsWS (
 	GRANT SELECT(Fld1) ON TABLE TestCDocWithDeniedFields TO sys.WorkspaceOwner;
 
 	GRANT SELECT ON VIEW CategoryIdx TO sys.WorkspaceOwner;
+	GRANT SELECT ON VIEW DailyIdx TO sys.WorkspaceOwner;
 
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocActivateDenied TO sys.WorkspaceOwner;
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocDeactivateDenied TO sys.WorkspaceOwner;

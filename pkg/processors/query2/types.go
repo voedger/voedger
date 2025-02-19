@@ -6,9 +6,11 @@ package query2
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"sort"
+	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
@@ -31,7 +33,7 @@ type Constraints struct {
 	Skip    int
 	Include []string
 	Keys    []string
-	Where   map[string]interface{}
+	Where   Where
 }
 
 type IQueryMessage interface {
@@ -159,15 +161,25 @@ func (f *keys) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pip
 
 type aggregator struct {
 	pipeline.AsyncNOOP
-	params QueryParams
-	ww     []pipeline.IWorkpiece
+	params      QueryParams
+	orderParams map[string]bool
+	ww          []pipeline.IWorkpiece
 }
 
 func newAggregator(params QueryParams) pipeline.IAsyncOperator {
-	return &aggregator{
-		params: params,
-		ww:     make([]pipeline.IWorkpiece, 0),
+	a := &aggregator{
+		params:      params,
+		orderParams: make(map[string]bool),
+		ww:          make([]pipeline.IWorkpiece, 0),
 	}
+	for _, s := range params.Constraints.Order {
+		if strings.HasPrefix(s, "-") {
+			a.orderParams[strings.ReplaceAll(s, "-", "")] = false
+		} else {
+			a.orderParams[s] = true
+		}
+	}
+	return a
 }
 
 func (a *aggregator) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
@@ -186,32 +198,32 @@ func (a *aggregator) Flush(callback pipeline.OpFuncFlush) (err error) {
 	return
 }
 func (a *aggregator) order() (err error) {
-	if len(a.params.Constraints.Order) == 0 {
+	if len(a.orderParams) == 0 {
 		return
 	}
 	sort.Slice(a.ww, func(i, j int) bool {
-		for _, orderBy := range a.params.Constraints.Order {
+		for orderBy, asc := range a.orderParams {
 			vi := a.ww[i].(objectBackedByMap).data[orderBy]
 			vj := a.ww[j].(objectBackedByMap).data[orderBy]
 			switch vi.(type) {
 			case int32:
-				return compare(vi.(int32), vj.(int32))
+				return a.compareInt32(vi.(int32), vj.(int32), asc)
 			case int64:
-				return compare(vi.(int64), vj.(int64))
+				return a.compareInt64(vi.(int64), vj.(int64), asc)
 			case float32:
-				return compare(vi.(float32), vj.(float32))
+				return a.compareFloat32(vi.(float32), vj.(float32), asc)
 			case float64:
-				return compare(vi.(float64), vj.(float64))
+				return a.compareFloat64(vi.(float64), vj.(float64), asc)
 			case []byte:
-				return compare(string(vi.([]byte)), string(vi.([]byte)))
+				return a.compareString(string(vi.([]byte)), string(vi.([]byte)), asc)
 			case string:
-				return compare(vi.(string), vj.(string))
+				return a.compareString(vi.(string), vj.(string), asc)
 			case appdef.QName:
-				return compare(vi.(appdef.QName).String(), vj.(appdef.QName).String())
+				return a.compareString(vi.(appdef.QName).String(), vj.(appdef.QName).String(), asc)
 			case bool:
 				return vi.(bool) != vj.(bool)
 			case istructs.RecordID:
-				return compare(uint64(vi.(istructs.RecordID)), uint64(vj.(istructs.RecordID)))
+				return a.compareUint64(uint64(vi.(istructs.RecordID)), uint64(vj.(istructs.RecordID)), asc)
 			default:
 				err = errors.New("unsupported type")
 			}
@@ -235,6 +247,42 @@ func (a *aggregator) subList() {
 	a.ww = a.ww[a.params.Constraints.Skip:a.params.Constraints.Limit]
 	return
 }
+func (a *aggregator) compareInt32(v1, v2 int32, asc bool) bool {
+	if asc {
+		return v1 < v2
+	}
+	return v1 > v2
+}
+func (a *aggregator) compareInt64(v1, v2 int64, asc bool) bool {
+	if asc {
+		return v1 < v2
+	}
+	return v1 > v2
+}
+func (a *aggregator) compareFloat32(v1, v2 float32, asc bool) bool {
+	if asc {
+		return v1 < v2
+	}
+	return v1 > v2
+}
+func (a *aggregator) compareFloat64(v1, v2 float64, asc bool) bool {
+	if asc {
+		return v1 < v2
+	}
+	return v1 > v2
+}
+func (a *aggregator) compareString(v1, v2 string, asc bool) bool {
+	if asc {
+		return v1 < v2
+	}
+	return v1 > v2
+}
+func (a *aggregator) compareUint64(v1, v2 uint64, asc bool) bool {
+	if asc {
+		return v1 < v2
+	}
+	return v1 > v2
+}
 
 type sender struct {
 	pipeline.AsyncNOOP
@@ -247,4 +295,126 @@ func (s *sender) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork p
 		s.sender = s.responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 	}
 	return work, s.sender.Send(work.(objectBackedByMap).data)
+}
+
+type filter struct {
+	pipeline.AsyncNOOP
+	Int32  map[string]map[int32]bool
+	String map[string]map[string]bool
+}
+
+func newFilter(qw *queryWork) (o pipeline.IAsyncOperator, err error) {
+	f := &filter{
+		Int32:  make(map[string]map[int32]bool),
+		String: make(map[string]map[string]bool),
+	}
+	fields := make([]appdef.IField, 0)
+	fields = append(fields, qw.appStructs.AppDef().Type(qw.iView.QName()).(appdef.IView).Key().ClustCols().Fields()...)
+	fields = append(fields, qw.appStructs.AppDef().Type(qw.iView.QName()).(appdef.IView).Value().Fields()...)
+	for _, field := range qw.appStructs.AppDef().Type(qw.iView.QName()).(appdef.IView).Fields() {
+		switch field.DataKind() {
+		case appdef.DataKind_int32:
+			vv, err := qw.queryParams.Constraints.Where.getAsInt32(field.Name())
+			if err != nil {
+				return nil, err
+			}
+			for _, v := range vv {
+				m, ok := f.Int32[field.Name()]
+				if !ok {
+					m = make(map[int32]bool)
+					f.Int32[field.Name()] = m
+				}
+				m[v] = true
+			}
+		case appdef.DataKind_string:
+			vv, err := qw.queryParams.Constraints.Where.getAsString(field.Name())
+			if err != nil {
+				return nil, err
+			}
+			for _, v := range vv {
+				m, ok := f.String[field.Name()]
+				if !ok {
+					m = make(map[string]bool)
+					f.String[field.Name()] = m
+				}
+				m[v] = true
+			}
+		default:
+			// Do nothing
+		}
+	}
+	return f, nil
+}
+
+func (f filter) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
+	for fieldName, values := range f.Int32 {
+		if !values[work.(istructs.IRowReader).AsInt32(fieldName)] {
+			return nil, nil
+		}
+	}
+	for fieldName, values := range f.String {
+		if !values[work.(istructs.IRowReader).AsString(fieldName)] {
+			return nil, nil
+		}
+	}
+	return work, nil
+}
+
+type Where map[string]interface{}
+
+func (w Where) getAsInt32(k string) (vv []int32, err error) {
+	switch v := w[k].(type) {
+	case json.Number:
+		i, err := v.Int64()
+		if err != nil {
+			return nil, err
+		}
+		vv = append(vv, int32(i))
+		return vv, nil
+	case map[string]interface{}:
+		in, ok := v["$in"]
+		if !ok {
+			return nil, errUnsupportedConstraint
+		}
+		params, ok := in.([]interface{})
+		if !ok {
+			return nil, errUnexpectedParams
+		}
+		for _, param := range params {
+			i, err := param.(json.Number).Int64()
+			if err != nil {
+				return nil, err
+			}
+			vv = append(vv, int32(i))
+		}
+		return vv, nil
+	case nil:
+		return
+	default:
+		return nil, errUnsupportedType
+	}
+}
+func (w Where) getAsString(k string) (vv []string, err error) {
+	switch v := w[k].(type) {
+	case string:
+		vv = append(vv, v)
+		return
+	case map[string]interface{}:
+		in, ok := v["$in"]
+		if !ok {
+			return nil, errUnsupportedConstraint
+		}
+		params, ok := in.([]interface{})
+		if !ok {
+			return nil, errUnexpectedParams
+		}
+		for _, param := range params {
+			vv = append(vv, param.(string))
+		}
+		return
+	case nil:
+		return
+	default:
+		return nil, errUnsupportedType
+	}
 }

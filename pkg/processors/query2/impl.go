@@ -262,6 +262,24 @@ func newExecQueryArgs(wsid istructs.WSID, qw *queryWork) (execQueryArgs istructs
 		},
 	}, nil
 }
-func compare[E int32 | int64 | float32 | float64 | string | uint64](v1, v2 E) bool {
-	return v1 < v2
+func getCombinations(arrays [][]interface{}) [][]interface{} {
+	if len(arrays) == 0 {
+		return [][]interface{}{}
+	}
+	return combine(arrays, 0)
+}
+
+func combine(arrays [][]interface{}, index int) [][]interface{} {
+	if index == len(arrays) {
+		return [][]interface{}{{}}
+	}
+	subCombinations := combine(arrays, index+1)
+	var result [][]interface{}
+	for _, elem := range arrays[index] {
+		for _, subComb := range subCombinations {
+			newComb := append([]interface{}{elem}, subComb...)
+			result = append(result, newComb)
+		}
+	}
+	return result
 }
