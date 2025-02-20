@@ -94,12 +94,18 @@ func (h *viewHandler) AuthorizeResult(ctx context.Context, qw *queryWork) (err e
 	// 		requestedfields = append(requestedfields, resultField.Field())
 	// 	}
 
-	// TODO: Daniil, provide the correct requestedFields here
-	requestedfields := []string{}
+	var requestedFields []string
+	if len(qw.queryParams.Constraints.Keys) != 0 {
+		requestedFields = qw.queryParams.Constraints.Keys
+	} else {
+		for _, field := range qw.appStructs.AppDef().Type(qw.iView.QName()).(appdef.IView).Key().Fields() {
+			requestedFields = append(requestedFields, field.Name())
+		}
+	}
 	// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
-	ok := oldacl.IsOperationAllowed(appdef.OperationKind_Select, qw.resultType.QName(), requestedfields, oldacl.EnrichPrincipals(qw.principals, qw.msg.WSID()))
+	ok := oldacl.IsOperationAllowed(appdef.OperationKind_Select, qw.resultType.QName(), requestedFields, oldacl.EnrichPrincipals(qw.principals, qw.msg.WSID()))
 	if !ok {
-		if ok, err = qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, qw.resultType.QName(), requestedfields, qw.roles); err != nil {
+		if ok, err = qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, qw.resultType.QName(), requestedFields, qw.roles); err != nil {
 			return err
 		}
 	}
