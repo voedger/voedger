@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/processors/oldacl"
 )
 
 type viewHandler struct {
@@ -63,17 +64,17 @@ func (h *viewHandler) AuthorizeRequest(ctx context.Context, qw *queryWork) error
 	return nil
 }
 
-func (h *viewHandler) AuthorizeResult(ctx context.Context, qw *queryWork) error {
-	// if qw.iQuery.Result() != appdef.AnyType {
-	// 	// will authorize result only if result is sys.Any
-	// 	// otherwise each field is considered as allowed if EXECUTE ON QUERY is allowed
-	// 	return nil
-	// }
-	// ws := qw.iWorkspace
-	// if ws == nil {
-	// 	// workspace is dummy
-	// 	ws = qw.iQuery.Workspace()
-	// }
+func (h *viewHandler) AuthorizeResult(ctx context.Context, qw *queryWork) (err error) {
+	if qw.resultType != appdef.AnyType {
+		// will authorize result only if result is sys.Any
+		// otherwise each field is considered as allowed if EXECUTE ON QUERY is allowed
+		return nil
+	}
+	ws := qw.iWorkspace
+	if ws == nil {
+		// workspace is dummy
+		// ws = qw.iQuery.Workspace()
+	}
 	// for _, elem := range qw.queryParams.Elements() {
 	// 	nestedPath := elem.Path().AsArray()
 	// 	nestedType := qw.resultType
@@ -93,16 +94,18 @@ func (h *viewHandler) AuthorizeResult(ctx context.Context, qw *queryWork) error 
 	// 		requestedfields = append(requestedfields, resultField.Field())
 	// 	}
 
-	// 	// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
-	// 	ok := oldacl.IsOperationAllowed(appdef.OperationKind_Select, nestedType.QName(), requestedfields, oldacl.EnrichPrincipals(qw.principals, qw.msg.WSID()))
-	// 	if !ok {
-	// 		if ok, err = qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles); err != nil {
-	// 			return err
-	// 		}
-	// 	}
-	// 	if !ok {
-	// 		return coreutils.NewSysError(http.StatusForbidden)
-	// 	}
+	// TODO: Daniil, provide the correct requestedFields here
+	requestedfields := []string{}
+	// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
+	ok := oldacl.IsOperationAllowed(appdef.OperationKind_Select, qw.resultType.QName(), requestedfields, oldacl.EnrichPrincipals(qw.principals, qw.msg.WSID()))
+	if !ok {
+		if ok, err = qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, qw.resultType.QName(), requestedfields, qw.roles); err != nil {
+			return err
+		}
+	}
+	if !ok {
+		return coreutils.NewSysError(http.StatusForbidden)
+	}
 	// }
 	return nil
 }
