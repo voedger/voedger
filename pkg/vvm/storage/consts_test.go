@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	_ = uint32(pKeyPrefix_Elections - 1)
-	_ = uint32(1 - pKeyPrefix_Elections)
+	_ = uint32(pKeyPrefix_Elections - 1) //nolint:unconvert
+	_ = uint32(1 - pKeyPrefix_Elections) //nolint:unconvert
 )
 
 func TestConsts(t *testing.T) {
