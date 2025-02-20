@@ -2,7 +2,7 @@
  * Copyright (c) 2025-present unTill Software Development Group B.V.
  * @author Alisher Nurmanov
  */
-package ttlstorage
+package storage
 
 import (
 	"encoding/binary"
@@ -17,15 +17,15 @@ import (
 func TestInsertIfNotExist(t *testing.T) {
 	mockVVMAppTTLStorage := new(MockIVVMAppTTLStorage)
 	const (
-		pKeyPrefix        PKeyPrefix        = 0xABCD1234
 		ttlStorageImplKey TTLStorageImplKey = 12345
 		val                                 = "some-value"
 	)
-	ttlStorage := New(pKeyPrefix, mockVVMAppTTLStorage)
+	ttlStorage := NewElectionsTTLStorage(mockVVMAppTTLStorage)
+
+	require.Equal(t, pKeyPrefix_Elections, ttlStorage.(*implITTLStorageElections).prefix)
 
 	// Preallocate and check slices for non-empty
-	pKey := uint32ToBytes(pKeyPrefix)
-	require.Len(t, pKey, 4, "pKey should have length 4")
+	pKey := uint32ToBytes(pKeyPrefix_Elections)
 
 	cCols := uint32ToBytes(ttlStorageImplKey)
 	require.Len(t, cCols, 4, "cCols should have length 4")
@@ -45,15 +45,13 @@ func TestInsertIfNotExist(t *testing.T) {
 func TestCompareAndSwap(t *testing.T) {
 	mockVVMAppTTLStorage := new(MockIVVMAppTTLStorage)
 	const (
-		pKeyPrefix        PKeyPrefix        = 0xABCD1234
 		ttlStorageImplKey TTLStorageImplKey = 12345
 		oldVal                              = "old-val"
 		newVal                              = "new-val"
 	)
-	ttlStorage := New(pKeyPrefix, mockVVMAppTTLStorage)
+	ttlStorage := NewElectionsTTLStorage(mockVVMAppTTLStorage)
 
-	pKey := uint32ToBytes(pKeyPrefix)
-	require.Len(t, pKey, 4)
+	pKey := uint32ToBytes(pKeyPrefix_Elections)
 	cCols := uint32ToBytes(ttlStorageImplKey)
 	require.Len(t, cCols, 4)
 
@@ -72,14 +70,12 @@ func TestCompareAndSwap(t *testing.T) {
 func TestCompareAndDelete(t *testing.T) {
 	mockVVMAppTTLStorage := new(MockIVVMAppTTLStorage)
 	const (
-		pKeyPrefix        PKeyPrefix        = 0xABCD1234
 		ttlStorageImplKey TTLStorageImplKey = 12345
 		val                                 = "val"
 	)
-	ttlStorage := New(pKeyPrefix, mockVVMAppTTLStorage)
+	ttlStorage := NewElectionsTTLStorage(mockVVMAppTTLStorage)
 
-	pKey := uint32ToBytes(pKeyPrefix)
-	require.Len(t, pKey, 4)
+	pKey := uint32ToBytes(pKeyPrefix_Elections)
 	cCols := uint32ToBytes(ttlStorageImplKey)
 	require.Len(t, cCols, 4)
 
