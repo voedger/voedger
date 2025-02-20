@@ -36,16 +36,26 @@ const (
 	app2PkgPath = "github.com/voedger/voedger/pkg/vit/app2pkg"
 )
 
+const (
+	Field_Year        = "Year"
+	Field_Month       = "Month"
+	Field_Day         = "Day"
+	Field_StringValue = "StringValue"
+)
+
 var (
 	QNameApp1_TestWSKind                     = appdef.NewQName(app1PkgName, "test_ws")
 	QNameApp1_TestWSKind_another             = appdef.NewQName(app1PkgName, "test_ws_another")
 	QNameTestView                            = appdef.NewQName(app1PkgName, "View")
+	QNameApp1_ViewCategoryIdx                = appdef.NewQName(app1PkgName, "CategoryIdx")
+	QNameApp1_ViewDailyIdx                   = appdef.NewQName(app1PkgName, "DailyIdx")
 	QNameApp1_TestEmailVerificationDoc       = appdef.NewQName(app1PkgName, "Doc")
 	QNameApp1_DocConstraints                 = appdef.NewQName(app1PkgName, "DocConstraints")
 	QNameApp1_DocConstraintsString           = appdef.NewQName(app1PkgName, "DocConstraintsString")
 	QNameApp1_DocConstraintsFewUniques       = appdef.NewQName(app1PkgName, "DocConstraintsFewUniques")
 	QNameApp1_DocConstraintsOldAndNewUniques = appdef.NewQName(app1PkgName, "DocConstraintsOldAndNewUniques")
 	QNameApp1_CDocCategory                   = appdef.NewQName(app1PkgName, "category")
+	QNameApp1_CDocDaily                      = appdef.NewQName(app1PkgName, "Daily")
 	QNameCmdRated                            = appdef.NewQName(app1PkgName, "RatedCmd")
 	QNameQryRated                            = appdef.NewQName(app1PkgName, "RatedQry")
 	QNameODoc1                               = appdef.NewQName(app1PkgName, "odoc1")
@@ -229,7 +239,6 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 		},
 	)
 
-	qNameViewCategoryIdx := appdef.NewQName(app1PkgName, "CategoryIdx")
 	cfg.AddSyncProjectors(
 		istructs.Projector{
 			Name: appdef.NewQName(app1PkgName, "ApplyCategoryIdx"),
@@ -238,7 +247,7 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 					if cud.QName() != QNameApp1_CDocCategory {
 						continue
 					}
-					kb, err := st.KeyBuilder(sys.Storage_View, qNameViewCategoryIdx)
+					kb, err := st.KeyBuilder(sys.Storage_View, QNameApp1_ViewCategoryIdx)
 					if err != nil {
 						return err
 					}
@@ -253,6 +262,30 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 					b.PutInt64(state.ColOffset, int64(event.WLogOffset())) // nolint G115
 				}
 				return nil
+			},
+		},
+		istructs.Projector{
+			Name: appdef.NewQName(app1PkgName, "ApplyDailyIdx"),
+			Func: func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+				for cud := range event.CUDs {
+					if cud.QName() != QNameApp1_CDocDaily {
+						continue
+					}
+					skbViewDailyIdx, err := s.KeyBuilder(sys.Storage_View, QNameApp1_ViewDailyIdx)
+					if err != nil {
+						return err
+					}
+					skbViewDailyIdx.PutInt32(Field_Year, cud.AsInt32(Field_Year))
+					skbViewDailyIdx.PutInt32(Field_Month, cud.AsInt32(Field_Month))
+					skbViewDailyIdx.PutInt32(Field_Day, cud.AsInt32(Field_Day))
+					svbViewDailyIdx, err := intents.NewValue(skbViewDailyIdx)
+					if err != nil {
+						return err
+					}
+					svbViewDailyIdx.PutString(Field_StringValue, cud.AsString(Field_StringValue))
+					svbViewDailyIdx.PutInt64(state.ColOffset, int64(event.WLogOffset())) // nolint G115
+				}
+				return
 			},
 		},
 	)
