@@ -9,12 +9,11 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/coreutils/utils"
-	"github.com/voedger/voedger/pkg/vvm"
 )
 
 type implITTLStorageElections struct {
 	prefix        pKeyPrefix
-	vvmttlstorage vvm.IVVMAppTTLStorage
+	vvmttlstorage IVVMAppTTLStorage
 }
 
 func (s *implITTLStorageElections) buildKeys(key TTLStorageImplKey) (pKey, cCols []byte) {

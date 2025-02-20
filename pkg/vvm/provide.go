@@ -74,32 +74,32 @@ import (
 	"github.com/voedger/voedger/pkg/sys/sysprovide"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
+	"github.com/voedger/voedger/pkg/vvm/storage"
 )
 
 func ProvideVVM(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
-	// old context
 	vvmCtx, vvmCtxCancel := context.WithCancel(context.Background())
-	// new contexts
 	problemCtx, problemCtxCancel := context.WithCancelCause(context.Background())
 	vvmShutCtx, vvmShutCtxCancel := context.WithCancel(context.Background())
 	servicesShutCtx, servicesShutCtxCancel := context.WithCancel(context.Background())
 	monitorShutCtx, monitorShutCtxCancel := context.WithCancel(context.Background())
 	shutdownedCtx, shutdownedCtxCancel := context.WithCancel(context.Background())
 	voedgerVM = &VoedgerVM{
-		vvmCtxCancel:          vvmCtxCancel,
-		clusterSize:           vvmCfg.ClusterSize,
-		ip:                    vvmCfg.IP,
-		problemCtx:            problemCtx,
-		problemCtxCancel:      problemCtxCancel,
-		problemErrCh:          make(chan error, 1),
-		vvmShutCtx:            vvmShutCtx,
-		vvmShutCtxCancel:      vvmShutCtxCancel,
-		servicesShutCtx:       servicesShutCtx,
-		servicesShutCtxCancel: servicesShutCtxCancel,
-		monitorShutCtx:        monitorShutCtx,
-		monitorShutCtxCancel:  monitorShutCtxCancel,
-		shutdownedCtx:         shutdownedCtx,
-		shutdownedCtxCancel:   shutdownedCtxCancel,
+		vvmCtxCancel:                 vvmCtxCancel,
+		clusterSize:                  vvmCfg.ClusterSize,
+		ip:                           vvmCfg.IP,
+		problemCtx:                   problemCtx,
+		problemCtxCancel:             problemCtxCancel,
+		problemErrCh:                 make(chan error, 1),
+		vvmShutCtx:                   vvmShutCtx,
+		vvmShutCtxCancel:             vvmShutCtxCancel,
+		servicesShutCtx:              servicesShutCtx,
+		servicesShutCtxCancel:        servicesShutCtxCancel,
+		monitorShutCtx:               monitorShutCtx,
+		monitorShutCtxCancel:         monitorShutCtxCancel,
+		shutdownedCtx:                shutdownedCtx,
+		shutdownedCtxCancel:          shutdownedCtxCancel,
+		startedLeadershipAcquisition: make(chan struct{}, 1),
 	}
 	vvmCfg.addProcessorChannel(
 		// command processors
@@ -129,7 +129,7 @@ func ProvideVVM(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 		ProcessorChannel_BLOB,
 	)
 
-	voedgerVM.VVM, voedgerVM.vvmCleanup, err = ProvideCluster(ctx, vvmCfg)
+	voedgerVM.VVM, voedgerVM.vvmCleanup, err = ProvideCluster(vvmCtx, vvmCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -203,13 +203,13 @@ func (vvm *VoedgerVM) shutdowner() {
 }
 
 // leadershipMonitor is a routine that monitors the leadership context.
-func (vvm *VoedgerVM) leadershipMonitor() {
+func (vvm *VoedgerVM) leadershipMonitor(leadershipAcquisitionDuration time.Duration) {
 	defer vvm.monitorShutWg.Done()
 
 	select {
 	case <-vvm.leadershipCtx.Done():
 		// leadership is lost
-		go vvm.killerRoutine()
+		go vvm.killerRoutine(leadershipAcquisitionDuration)
 		vvm.updateProblem(ErrLeadershipLost)
 	case <-vvm.monitorShutCtx.Done():
 		return
@@ -217,18 +217,21 @@ func (vvm *VoedgerVM) leadershipMonitor() {
 }
 
 // killerRoutine is a routine that kills the VVM process after a quarter of the leadership duration
-func (vvm *VoedgerVM) killerRoutine() {
-	time.Sleep(defaultLeadershipDuration / 4)
+func (vvm *VoedgerVM) killerRoutine(leadershipAcquisitionDuration time.Duration) {
+	time.Sleep(leadershipAcquisitionDuration / 4)
 	os.Exit(1)
 }
 
 // tryToAcquireLeadershipInLoop tries to acquire leadership in loop
 func (vvm *VoedgerVM) tryToAcquireLeadershipInLoop(leadershipAcquisitionDuration time.Duration) error {
-	ttlStorage := ttlstorage.New(VVMLeaderKeyPrefix, vvm.VVMAppTTLStorage)
+	ttlStorage := storage.NewElectionsTTLStorage(vvm.VVMAppTTLStorage)
 	elections, electionsCleanup := electionsPkg.Provide(ttlStorage, vvm.ITime)
 	vvm.electionsCleanup = electionsCleanup
 
 	timerCh := vvm.ITime.NewTimerChan(leadershipAcquisitionDuration)
+	// to inform the test that the leadership acquisition has started
+	vvm.startedLeadershipAcquisition <- struct{}{}
+
 	vvmIdx := 1
 	for {
 		select {
@@ -240,7 +243,7 @@ func (vvm *VoedgerVM) tryToAcquireLeadershipInLoop(leadershipAcquisitionDuration
 			if leadershipCtx != nil {
 				vvm.leadershipCtx = leadershipCtx
 				vvm.monitorShutWg.Add(1)
-				go vvm.leadershipMonitor()
+				go vvm.leadershipMonitor(leadershipAcquisitionDuration)
 				return nil
 			}
 			// Try the next VVM index in the cluster from 1 to clusterSize
@@ -365,7 +368,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(),
 	))
 }
 
-func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (IVVMAppTTLStorage, error) {
+func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.IVVMAppTTLStorage, error) {
 	return prov.AppStorage(appdef.NewAppQName(istructs.SysOwner, "vvm"))
 }
 

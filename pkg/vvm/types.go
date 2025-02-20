@@ -36,7 +36,7 @@ import (
 	"github.com/voedger/voedger/pkg/sys/workspace"
 	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
-	"github.com/voedger/voedger/pkg/vvm/ttlstorage"
+	"github.com/voedger/voedger/pkg/vvm/storage"
 )
 
 type ServicePipeline pipeline.ISyncPipeline
@@ -100,11 +100,6 @@ type AppPartsCtlPipelineService struct {
 	apppartsctl.IAppPartitionsController
 }
 type IAppPartsCtlPipelineService pipeline.IService
-type IVVMAppTTLStorage interface {
-	InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error)
-	CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error)
-	CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error)
-}
 
 type ClusterSize int
 
@@ -130,7 +125,7 @@ type VVM struct {
 	AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
 	BuiltInAppsPackages []BuiltInAppPackages
-	VVMAppTTLStorage    IVVMAppTTLStorage // just to wire, will be used on wire stage only after https://github.com/voedger/voedger/issues/3265
+	VVMAppTTLStorage    storage.IVVMAppTTLStorage // just to wire, will be used on wire stage only after https://github.com/voedger/voedger/issues/3265
 }
 
 type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
@@ -207,11 +202,12 @@ type VoedgerVM struct {
 	monitorShutWg        sync.WaitGroup
 
 	// closed after all (services and LeadershipMonitor) is stopped
-	shutdownedCtx       context.Context
-	shutdownedCtxCancel context.CancelFunc
-	clusterSize         ClusterSize
-	ip                  net.IP
-	leadershipCtx       context.Context
+	shutdownedCtx                context.Context
+	shutdownedCtxCancel          context.CancelFunc
+	clusterSize                  ClusterSize
+	ip                           net.IP
+	leadershipCtx                context.Context
+	startedLeadershipAcquisition chan struct{}
 }
 
 type IVVMElections elections.IElections[TTLStorageImplKey, string]

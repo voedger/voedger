@@ -59,7 +59,7 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
-	"github.com/voedger/voedger/pkg/vvm/ttlstorage"
+	"github.com/voedger/voedger/pkg/vvm/storage"
 	"golang.org/x/crypto/acme/autocert"
 	"net/url"
 	"os"
@@ -74,7 +74,7 @@ import (
 // Injectors from provide.go:
 
 // vvmCtx must be cancelled by the caller right before vvm.ServicePipeline.Close()
-func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxType) (*VVM, func(), error) {
+func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error) {
 	numCommandProcessors := vvmConfig.NumCommandProcessors
 	v := provideChannelGroups(vvmConfig)
 	iProcBus := iprocbusmem.Provide(v)
@@ -189,7 +189,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		return nil, nil, err
 	}
 	vvmPortType := vvmConfig.VVMPort
-	routerParams := provideRouterParams(vvmConfig, vvmPortType, vvmIdx)
+	routerParams := provideRouterParams(vvmConfig, vvmPortType)
 	sendTimeout := vvmConfig.SendTimeout
 	blobServiceChannelGroupIdx := provideProcessorChannelGroupIdxBLOB(vvmConfig)
 	iRequestHandler := blobprocessor.NewIRequestHandler(iProcBus, blobServiceChannelGroupIdx)
@@ -209,8 +209,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	}
 	routerServices := provideRouterServices(routerParams, sendTimeout, in10nBroker, iRequestHandler, quotas, wLimiterFactory, blobStorage, cache, iRequestSender, vvmPortSource, v8)
 	adminEndpointServiceOperator := provideAdminEndpointServiceOperator(routerServices)
-	metricsServicePortInitial := vvmConfig.MetricsServicePort
-	metricsServicePort := provideMetricsServicePort(metricsServicePortInitial, vvmIdx)
+	metricsServicePort := vvmConfig.MetricsServicePort
 	metricsService := metrics.ProvideMetricsService(vvmCtx, metricsServicePort, iMetrics)
 	metricsServiceOperator := provideMetricsServiceOperator(metricsService)
 	publicEndpointServiceOperator := providePublicEndpointServiceOperator(routerServices, metricsServiceOperator)
@@ -244,30 +243,29 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 
 // provide.go:
 
-func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err error) {
-
+func ProvideVVM(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 	vvmCtx, vvmCtxCancel := context.WithCancel(context.Background())
-
 	problemCtx, problemCtxCancel := context.WithCancelCause(context.Background())
 	vvmShutCtx, vvmShutCtxCancel := context.WithCancel(context.Background())
 	servicesShutCtx, servicesShutCtxCancel := context.WithCancel(context.Background())
 	monitorShutCtx, monitorShutCtxCancel := context.WithCancel(context.Background())
 	shutdownedCtx, shutdownedCtxCancel := context.WithCancel(context.Background())
 	voedgerVM = &VoedgerVM{
-		vvmCtxCancel:          vvmCtxCancel,
-		clusterSize:           vvmCfg.ClusterSize,
-		ip:                    vvmCfg.IP,
-		problemCtx:            problemCtx,
-		problemCtxCancel:      problemCtxCancel,
-		problemErrCh:          make(chan error, 1),
-		vvmShutCtx:            vvmShutCtx,
-		vvmShutCtxCancel:      vvmShutCtxCancel,
-		servicesShutCtx:       servicesShutCtx,
-		servicesShutCtxCancel: servicesShutCtxCancel,
-		monitorShutCtx:        monitorShutCtx,
-		monitorShutCtxCancel:  monitorShutCtxCancel,
-		shutdownedCtx:         shutdownedCtx,
-		shutdownedCtxCancel:   shutdownedCtxCancel,
+		vvmCtxCancel:                 vvmCtxCancel,
+		clusterSize:                  vvmCfg.ClusterSize,
+		ip:                           vvmCfg.IP,
+		problemCtx:                   problemCtx,
+		problemCtxCancel:             problemCtxCancel,
+		problemErrCh:                 make(chan error, 1),
+		vvmShutCtx:                   vvmShutCtx,
+		vvmShutCtxCancel:             vvmShutCtxCancel,
+		servicesShutCtx:              servicesShutCtx,
+		servicesShutCtxCancel:        servicesShutCtxCancel,
+		monitorShutCtx:               monitorShutCtx,
+		monitorShutCtxCancel:         monitorShutCtxCancel,
+		shutdownedCtx:                shutdownedCtx,
+		shutdownedCtxCancel:          shutdownedCtxCancel,
+		startedLeadershipAcquisition: make(chan struct{}, 1),
 	}
 	vvmCfg.addProcessorChannel(iprocbusmem.ChannelGroup{
 		NumChannels:       uint(vvmCfg.NumCommandProcessors),
@@ -286,7 +284,8 @@ func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err
 		ChannelBufferSize: 0,
 	}, ProcessorChannel_BLOB,
 	)
-	voedgerVM.VVM, voedgerVM.vvmCleanup, err = ProvideCluster(vvmCtx, vvmCfg, vvmIdx)
+
+	voedgerVM.VVM, voedgerVM.vvmCleanup, err = ProvideCluster(vvmCtx, vvmCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -355,13 +354,13 @@ func (vvm *VoedgerVM) shutdowner() {
 }
 
 // leadershipMonitor is a routine that monitors the leadership context.
-func (vvm *VoedgerVM) leadershipMonitor() {
+func (vvm *VoedgerVM) leadershipMonitor(leadershipAcquisitionDuration time.Duration) {
 	defer vvm.monitorShutWg.Done()
 
 	select {
 	case <-vvm.leadershipCtx.Done():
 
-		go vvm.killerRoutine()
+		go vvm.killerRoutine(leadershipAcquisitionDuration)
 		vvm.updateProblem(ErrLeadershipLost)
 	case <-vvm.monitorShutCtx.Done():
 		return
@@ -369,18 +368,21 @@ func (vvm *VoedgerVM) leadershipMonitor() {
 }
 
 // killerRoutine is a routine that kills the VVM process after a quarter of the leadership duration
-func (vvm *VoedgerVM) killerRoutine() {
-	time.Sleep(defaultLeadershipDuration / 4)
+func (vvm *VoedgerVM) killerRoutine(leadershipAcquisitionDuration time.Duration) {
+	time.Sleep(leadershipAcquisitionDuration / 4)
 	os.Exit(1)
 }
 
 // tryToAcquireLeadershipInLoop tries to acquire leadership in loop
 func (vvm *VoedgerVM) tryToAcquireLeadershipInLoop(leadershipAcquisitionDuration time.Duration) error {
-	ttlStorage := ttlstorage.New(VVMLeaderKeyPrefix, vvm.VVMAppTTLStorage)
+	ttlStorage := storage.NewElectionsTTLStorage(vvm.VVMAppTTLStorage)
 	elections2, electionsCleanup := elections.Provide(ttlStorage, vvm.ITime)
 	vvm.electionsCleanup = electionsCleanup
 
 	timerCh := vvm.ITime.NewTimerChan(leadershipAcquisitionDuration)
+
+	vvm.startedLeadershipAcquisition <- struct{}{}
+
 	vvmIdx := 1
 	for {
 		select {
@@ -392,7 +394,7 @@ func (vvm *VoedgerVM) tryToAcquireLeadershipInLoop(leadershipAcquisitionDuration
 			if leadershipCtx != nil {
 				vvm.leadershipCtx = leadershipCtx
 				vvm.monitorShutWg.Add(1)
-				go vvm.leadershipMonitor()
+				go vvm.leadershipMonitor(leadershipAcquisitionDuration)
 				return nil
 			}
 
@@ -426,12 +428,8 @@ func (vvm *VoedgerVM) Launch() error {
 	return err
 }
 
-func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (ttlstorage.IVVMAppTTLStorage, error) {
-	st, err := prov.AppStorage(istructs.AppQName_sys_cluster)
-	if err != nil {
-		return nil, err
-	}
-	return st, nil
+func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.IVVMAppTTLStorage, error) {
+	return prov.AppStorage(appdef.NewAppQName(istructs.SysOwner, "vvm"))
 }
 
 func provideWLimiterFactory(maxSize iblobstorage.BLOBMaxSizeType) blobprocessor.WLimiterFactory {
@@ -457,7 +455,7 @@ func provideBootstrapOperator(federation2 federation.IFederation, asp istructs.I
 	builtinApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens2 itokens.ITokens, storageProvider istorage.IAppStorageProvider, blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr,
 	routerAppStoragePtr dbcertcache.RouterAppStoragePtr) (BootstrapOperator, error) {
 	var clusterBuiltinApp btstrp.ClusterBuiltInApp
-	otherApps := make([]appparts.BuiltInApp, 0, len(builtinApps)-1)
+	otherApps := make([]appparts.BuiltInApp, 0, len(builtinApps))
 	for _, app := range builtinApps {
 		if app.Name == istructs.AppQName_sys_cluster {
 			clusterBuiltinApp = btstrp.ClusterBuiltInApp(app)
@@ -684,13 +682,6 @@ func provideNumsAppsWorkspaces(vvmApps VVMApps, asp istructs.IAppStructsProvider
 	return res, nil
 }
 
-func provideMetricsServicePort(msp MetricsServicePortInitial, vvmIdx VVMIdxType) metrics.MetricsServicePort {
-	if msp != 0 {
-		return metrics.MetricsServicePort(msp) + metrics.MetricsServicePort(vvmIdx)
-	}
-	return metrics.MetricsServicePort(msp)
-}
-
 // VVMPort could be dynamic -> need a source to get the actual port later
 // just calling RouterService.GetPort() causes wire cycle: RouterService requires IBus->VVMApps->FederationURL->VVMPort->RouterService
 // so we need something in the middle of FederationURL and RouterService: FederationURL reads VVMPortSource, RouterService writes it.
@@ -724,7 +715,7 @@ func provideMetricsServicePortGetter(ms metrics.MetricsService) func() metrics.M
 	}
 }
 
-func provideRouterParams(cfg *VVMConfig, port VVMPortType, vvmIdx VVMIdxType) router.RouterParams {
+func provideRouterParams(cfg *VVMConfig, port VVMPortType) router.RouterParams {
 	res := router.RouterParams{
 		WriteTimeout:         cfg.RouterWriteTimeout,
 		ReadTimeout:          cfg.RouterReadTimeout,
@@ -734,9 +725,7 @@ func provideRouterParams(cfg *VVMConfig, port VVMPortType, vvmIdx VVMIdxType) ro
 		Routes:               cfg.Routes,
 		RoutesRewrite:        cfg.RoutesRewrite,
 		RouteDomains:         cfg.RouteDomains,
-	}
-	if port != 0 {
-		res.Port = int(port) + int(vvmIdx)
+		Port:                 int(port),
 	}
 	return res
 }
