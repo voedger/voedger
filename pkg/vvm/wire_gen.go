@@ -285,7 +285,7 @@ func (vvm *VoedgerVM) Launch() error {
 }
 
 func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (IVVMAppTTLStorage, error) {
-	return prov.AppStorage(istructs.AppQName_sys_cluster)
+	return prov.AppStorage(appdef.NewAppQName(istructs.SysOwner, "vvm"))
 }
 
 func provideWLimiterFactory(maxSize iblobstorage.BLOBMaxSizeType) blobprocessor.WLimiterFactory {
