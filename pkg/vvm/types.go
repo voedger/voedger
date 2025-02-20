@@ -78,7 +78,6 @@ type BuiltInAppsArtefacts struct {
 }
 
 type FederationURL func() *url.URL
-type VVMIdxType int
 type VVMPortType int
 type ProcessorChannelType int
 type ProcesorChannel struct {
@@ -92,7 +91,6 @@ type RouterServices struct {
 	router.IAdminService
 }
 type MetricsServiceOperator pipeline.ISyncOperator
-type MetricsServicePortInitial int
 type VVMPortSource struct {
 	getter      func() VVMPortType
 	adminGetter func() int
@@ -102,6 +100,11 @@ type AppPartsCtlPipelineService struct {
 	apppartsctl.IAppPartitionsController
 }
 type IAppPartsCtlPipelineService pipeline.IService
+type IVVMAppTTLStorage interface {
+	InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error)
+	CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error)
+	CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error)
+}
 
 type ClusterSize int
 
@@ -127,7 +130,7 @@ type VVM struct {
 	AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
 	BuiltInAppsPackages []BuiltInAppPackages
-	VVMAppTTLStorage    ttlstorage.IVVMAppTTLStorage // just to wire, will be used on wire stage only after https://github.com/voedger/voedger/issues/3265
+	VVMAppTTLStorage    IVVMAppTTLStorage // just to wire, will be used on wire stage only after https://github.com/voedger/voedger/issues/3265
 }
 
 type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
@@ -158,7 +161,7 @@ type VVMConfig struct {
 	SmtpConfig                 smtp.Cfg
 	WSPostInitFunc             workspace.WSPostInitFunc
 	DataPath                   string
-	MetricsServicePort         MetricsServicePortInitial
+	MetricsServicePort         metrics.MetricsServicePort
 	ClusterSize                ClusterSize // amount of VVMs in the cluster
 	IP                         net.IP
 
