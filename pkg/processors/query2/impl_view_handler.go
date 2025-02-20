@@ -6,6 +6,7 @@ package query2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -47,18 +48,18 @@ func (h *viewHandler) ResultType(ctx context.Context, qw *queryWork, statelessRe
 }
 
 func (h *viewHandler) AuthorizeRequest(ctx context.Context, qw *queryWork) error {
-	// ws := qw.iWorkspace
-	// if ws == nil {
-	// 	// workspace is dummy
-	// 	ws = qw.iView.Workspace()
-	// }
-	// ok, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, qw.msg.QName(), nil, qw.roles)
-	// if err != nil {
-	// 	return err
-	// }
-	// if !ok {
-	// 	return coreutils.NewHTTPError(http.StatusForbidden, errors.New(""))
-	// }
+	ws := qw.iWorkspace
+	if ws == nil {
+		// workspace is dummy
+		ws = qw.iView.Workspace()
+	}
+	ok, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, qw.msg.QName(), nil, qw.roles)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return coreutils.NewHTTPError(http.StatusForbidden, errors.New(""))
+	}
 	return nil
 }
 

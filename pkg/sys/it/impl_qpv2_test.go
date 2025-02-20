@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/vit"
@@ -37,7 +38,8 @@ func TestQueryProcessor_V2(t *testing.T) {
 	unsubscribe()
 
 	t.Run("view", func(t *testing.T) {
-		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/views/app1pkg.CategoryIdx?where={"IntFld":43}`, ws.WSID))
+		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/views/app1pkg.CategoryIdx?where={"IntFld":43}`, ws.WSID),
+			coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
 		require.JSONEq(`{
 			"results":[

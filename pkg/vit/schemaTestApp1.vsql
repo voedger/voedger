@@ -638,6 +638,8 @@ ALTERABLE WORKSPACE test_wsWS (
 
 	GRANT SELECT(Fld1) ON TABLE TestCDocWithDeniedFields TO sys.WorkspaceOwner;
 
+	GRANT SELECT ON VIEW CategoryIdx TO sys.WorkspaceOwner;
+
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocActivateDenied TO sys.WorkspaceOwner;
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocDeactivateDenied TO sys.WorkspaceOwner;
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocFieldInsertDenied TO sys.WorkspaceOwner;

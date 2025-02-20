@@ -28,10 +28,12 @@ func Test_IsOperationAllowed(t *testing.T) {
 	wsName := appdef.NewQName("test", "workspace")
 	cDocName := appdef.NewQName("test", "cDoc")
 	oDocName := appdef.NewQName("test", "oDoc")
+	viewName := appdef.NewQName("test", "view")
 	queryName := appdef.NewQName("test", "qry")
 	cmdName := appdef.NewQName("test", "cmd")
 	tagName := appdef.NewQName("test", "tag")
 
+	everyone := appdef.NewQName("test", "everyone")
 	reader := appdef.NewQName("test", "reader")
 	writer := appdef.NewQName("test", "writer")
 	admin := appdef.NewQName("test", "admin")
@@ -56,13 +58,32 @@ func Test_IsOperationAllowed(t *testing.T) {
 		oDoc.AddField("field1", appdef.DataKind_int32, true)
 		oDoc.SetTag(tagName)
 
+		view := wsb.AddView(viewName)
+		view.Key().PartKey().AddField("field1", appdef.DataKind_int32)
+		view.Key().ClustCols().AddField("field2", appdef.DataKind_int32)
+		view.Value().AddField("field3", appdef.DataKind_int32, false)
+
 		qry := wsb.AddQuery(queryName)
 		qry.SetResult(cDocName)
 
 		cmd := wsb.AddCommand(cmdName)
 		cmd.SetParam(appdef.QNameANY)
 
+		_ = wsb.AddRole(everyone)
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Select},
+			filter.QNames(viewName),
+			nil,
+			everyone,
+			"grant select view to everyone")
+
 		_ = wsb.AddRole(reader)
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Inherits},
+			filter.QNames(everyone),
+			nil,
+			reader,
+			"grant inherits everyone to reader")
 		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Select},
 			filter.And(filter.WSTypes(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
@@ -83,6 +104,12 @@ func Test_IsOperationAllowed(t *testing.T) {
 			"grant execute query to reader")
 
 		_ = wsb.AddRole(writer)
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Inherits},
+			filter.QNames(everyone),
+			nil,
+			writer,
+			"grant inherits everyone to writer")
 		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Insert},
 			filter.And(filter.WSTypes(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
@@ -109,10 +136,22 @@ func Test_IsOperationAllowed(t *testing.T) {
 			"grant execute all commands and queries to writer")
 
 		_ = wsb.AddRole(admin)
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Inherits},
+			filter.QNames(everyone),
+			nil,
+			admin,
+			"grant inherits everyone to admin")
 		wsb.GrantAll(filter.AllWSTables(wsName), admin)
 		wsb.GrantAll(filter.AllWSFunctions(wsName), admin)
 
 		_ = wsb.AddRole(intruder)
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Inherits},
+			filter.QNames(everyone),
+			nil,
+			intruder,
+			"grant inherits everyone to intruder")
 		wsb.RevokeAll(
 			filter.WSTypes(wsName, appdef.TypeKind_CDoc),
 			intruder,
@@ -162,6 +201,23 @@ func Test_IsOperationAllowed(t *testing.T) {
 				role:    appdef.QNameRoleSystem,
 				allowed: true,
 			},
+			{
+				name:    "allow select ? from view for system",
+				op:      appdef.OperationKind_Select,
+				res:     viewName,
+				fields:  nil,
+				role:    appdef.QNameRoleSystem,
+				allowed: true,
+			},
+			// everyone test
+			{
+				name:    "allow select ? from view for everyone",
+				op:      appdef.OperationKind_Select,
+				res:     viewName,
+				fields:  nil,
+				role:    writer,
+				allowed: true,
+			},
 			// reader tests
 			{
 				name:    "allow select doc.field1 for reader",
@@ -183,6 +239,14 @@ func Test_IsOperationAllowed(t *testing.T) {
 				name:    "allow select ? from doc for reader",
 				op:      appdef.OperationKind_Select,
 				res:     cDocName,
+				fields:  nil,
+				role:    reader,
+				allowed: true,
+			},
+			{
+				name:    "allow select ? from view for reader",
+				op:      appdef.OperationKind_Select,
+				res:     viewName,
 				fields:  nil,
 				role:    reader,
 				allowed: true,
@@ -248,6 +312,14 @@ func Test_IsOperationAllowed(t *testing.T) {
 				name:    "allow update doc for writer",
 				op:      appdef.OperationKind_Update,
 				res:     cDocName,
+				fields:  nil,
+				role:    writer,
+				allowed: true,
+			},
+			{
+				name:    "allow select ? from view for writer",
+				op:      appdef.OperationKind_Select,
+				res:     viewName,
 				fields:  nil,
 				role:    writer,
 				allowed: true,
@@ -325,7 +397,23 @@ func Test_IsOperationAllowed(t *testing.T) {
 				role:    admin,
 				allowed: true,
 			},
+			{
+				name:    "allow select ? from view for admin",
+				op:      appdef.OperationKind_Select,
+				res:     viewName,
+				fields:  nil,
+				role:    admin,
+				allowed: true,
+			},
 			// intruder tests
+			{
+				name:    "allow select ? from view for intruder",
+				op:      appdef.OperationKind_Select,
+				res:     viewName,
+				fields:  nil,
+				role:    intruder,
+				allowed: true,
+			},
 			{
 				name:    "deny select ? from doc for intruder",
 				op:      appdef.OperationKind_Select,
