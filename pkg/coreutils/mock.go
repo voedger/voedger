@@ -36,7 +36,7 @@ func (m *MockCUDRow) IsDeactivated() bool                { return m.Called().Get
 func (m *MockCUDRow) IsNew() bool                        { return m.Called().Get(0).(bool) }
 func (m *MockCUDRow) QName() appdef.QName                { return m.Called().Get(0).(appdef.QName) }
 func (m *MockCUDRow) ID() istructs.RecordID              { return m.Called().Get(0).(istructs.RecordID) }
-func (m *MockCUDRow) ModifiedFields(cb func(appdef.FieldName, interface{}) bool) {
+func (m *MockCUDRow) ModifiedFields(cb func(appdef.IField, any) bool) {
 	m.Called(cb)
 }
 func (m *MockCUDRow) AsRecordID(name appdef.FieldName) istructs.RecordID {
@@ -99,6 +99,7 @@ func (m *MockObject) Children(container ...string) func(func(istructs.IObject) b
 	args := m.Called(container)
 	return args.Get(0).(func(func(istructs.IObject) bool))
 }
+func (m *MockObject) ModifiedFields(cb func(appdef.IField, any) bool) { m.Called(cb) }
 
 type MockState struct {
 	mock.Mock
@@ -281,6 +282,7 @@ func (m *MockStateValue) GetAsBool(index int) bool { return m.Called(index).Get(
 func (m *MockStateValue) GetAsValue(index int) istructs.IStateValue {
 	return m.Called(index).Get(0).(istructs.IStateValue)
 }
+func (m *MockStateValue) ModifiedFields(cb func(appdef.IField, any) bool) { m.Called(cb) }
 
 type MockStateValueBuilder struct {
 	mock.Mock
@@ -390,6 +392,7 @@ func (m *MockKey) AsRecordID(name appdef.FieldName) istructs.RecordID {
 func (m *MockKey) RecordIDs(includeNulls bool) func(func(appdef.FieldName, istructs.RecordID) bool) {
 	return m.Called(includeNulls).Get(0).(func(func(appdef.FieldName, istructs.RecordID) bool))
 }
+func (m *MockKey) ModifiedFields(cb func(appdef.IField, any) bool) { m.Called(cb) }
 
 type MockIntents struct {
 	mock.Mock

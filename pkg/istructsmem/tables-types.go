@@ -107,9 +107,9 @@ func (rec *recordType) IsNew() bool {
 }
 
 // istructs.ICUDRow.ModifiedFields
-func (row *rowType) ModifiedFields(cb func(appdef.FieldName, interface{}) bool) {
+func (row *rowType) ModifiedFields(cb func(appdef.IField, any) bool) {
 	if row.isActiveModified {
-		if !cb(appdef.SystemField_IsActive, row.isActive) {
+		if !cb(row.fields.Field(appdef.SystemField_IsActive), row.isActive) {
 			return
 		}
 	}
@@ -117,7 +117,7 @@ func (row *rowType) ModifiedFields(cb func(appdef.FieldName, interface{}) bool) 
 	for _, fld := range row.fields.Fields() {
 		n := fld.Name()
 		if row.dyB.HasValue(n) || row.nils[n] != nil {
-			if !cb(n, row.fieldValue(fld)) {
+			if !cb(fld, row.fieldValue(fld)) {
 				return
 			}
 		}

@@ -43,21 +43,23 @@ type rowType struct {
 	dyB              *dynobuffers.Buffer
 	nils             map[string]appdef.IField // emptied string- and []bytes- fields, which values are not stored in dynobuffer
 	err              error
+	modifiedFields   map[string]bool
 }
 
 // Makes new empty row (QName is appdef.NullQName)
 func makeRow(appCfg *AppConfigType) rowType {
 	return rowType{
-		appCfg:    appCfg,
-		typ:       appdef.NullType,
-		fields:    appdef.NullFields,
-		id:        istructs.NullRecordID,
-		parentID:  istructs.NullRecordID,
-		container: "",
-		isActive:  true,
-		dyB:       nullDynoBuffer,
-		nils:      nil,
-		err:       nil,
+		appCfg:         appCfg,
+		typ:            appdef.NullType,
+		fields:         appdef.NullFields,
+		id:             istructs.NullRecordID,
+		parentID:       istructs.NullRecordID,
+		container:      "",
+		isActive:       true,
+		dyB:            nullDynoBuffer,
+		nils:           nil,
+		err:            nil,
+		modifiedFields: map[string]bool{},
 	}
 }
 
@@ -316,6 +318,7 @@ func (row *rowType) putValue(name appdef.FieldName, kind dynobuffers.FieldType, 
 	row.checkPutNil(fld, fieldValue) // #2785
 
 	row.dyB.Set(name, fieldValue)
+	row.modifiedFields[name] = true
 }
 
 // qNameID returns storage ID of row QName

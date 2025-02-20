@@ -427,6 +427,12 @@ func (key *keyType) Fields(cb func(appdef.IField) bool) {
 	key.ccolsRow.Fields(cb)
 }
 
+// istructs.IRowReader.ModifiedFields
+func (key *keyType) ModifiedFields(cb func(appdef.IField, any) bool) {
+	key.partRow.ModifiedFields(cb)
+	key.ccolsRow.ModifiedFields(cb)
+}
+
 // istructs.IKeyBuilder.PartitionKey
 func (key *keyType) PartitionKey() istructs.IRowWriter {
 	return &key.partRow

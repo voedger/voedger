@@ -77,7 +77,7 @@ func (o *TestObject) IsDeactivated() bool {
 
 func (o *TestObject) IsNew() bool { return o.IsNew_ }
 
-func (o *TestObject) ModifiedFields(cb func(string, interface{}) bool) {
+func (o *TestObject) ModifiedFieldsCUD(cb func(string, interface{}) bool) {
 	for name, value := range o.Data {
 		if !cb(name, value) {
 			break

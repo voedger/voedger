@@ -945,6 +945,16 @@ func (o *objectType) AsRecord() istructs.IRecord {
 	return o
 }
 
+// istructs.IObject.ModifiedFields()
+func (o *objectType) ModifiedFields(cb func(iField appdef.IField, val any) bool) {
+	o.recordType.ModifiedFields(cb)
+	for fieldName := range o.recordType.modifiedFields {
+		if !cb(o.fields.Field(fieldName)) {
+			return
+		}
+	}
+}
+
 // Implements interfaces:
 //
 //	— istructs.IEventError
