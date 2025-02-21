@@ -6,7 +6,6 @@ package storage
 
 import (
 	"encoding/binary"
-	"time"
 
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
@@ -25,14 +24,14 @@ func (s *implITTLStorageElections) buildKeys(key TTLStorageImplKey) (pKey, cCols
 	return
 }
 
-func (s *implITTLStorageElections) InsertIfNotExist(key TTLStorageImplKey, val string, ttl time.Duration) (bool, error) {
+func (s *implITTLStorageElections) InsertIfNotExist(key TTLStorageImplKey, val string, ttlSeconds int) (bool, error) {
 	pKey, cCols := s.buildKeys(key)
-	return s.vvmttlstorage.InsertIfNotExists(pKey, cCols, []byte(val), int(ttl.Seconds()))
+	return s.vvmttlstorage.InsertIfNotExists(pKey, cCols, []byte(val), ttlSeconds)
 }
 
-func (s *implITTLStorageElections) CompareAndSwap(key TTLStorageImplKey, oldVal, newVal string, ttl time.Duration) (bool, error) {
+func (s *implITTLStorageElections) CompareAndSwap(key TTLStorageImplKey, oldVal, newVal string, ttlSeconds int) (bool, error) {
 	pKey, cCols := s.buildKeys(key)
-	return s.vvmttlstorage.CompareAndSwap(pKey, cCols, []byte(oldVal), []byte(newVal), int(ttl.Seconds()))
+	return s.vvmttlstorage.CompareAndSwap(pKey, cCols, []byte(oldVal), []byte(newVal), ttlSeconds)
 }
 
 func (s *implITTLStorageElections) CompareAndDelete(key TTLStorageImplKey, val string) (bool, error) {

@@ -16,7 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/storage"
 )
 
-func (vvm *VoedgerVM) Launch(leadershipDuration elections.LeadershipDuration, leadershipAcquisitionDuration LeadershipAcquisitionDuration) context.Context {
+func (vvm *VoedgerVM) Launch(leadershipDuration elections.LeadershipDurationSeconds, leadershipAcquisitionDuration LeadershipAcquisitionDuration) context.Context {
 	go vvm.shutdowner()
 	err := vvm.tryToAcquireLeadership(leadershipDuration, leadershipAcquisitionDuration)
 	if err == nil {
@@ -77,7 +77,7 @@ func (vvm *VoedgerVM) shutdowner() {
 }
 
 // leadershipMonitor is a routine that monitors the leadership context.
-func (vvm *VoedgerVM) leadershipMonitor(leadershipDuration elections.LeadershipDuration) {
+func (vvm *VoedgerVM) leadershipMonitor(leadershipDuration elections.LeadershipDurationSeconds) {
 	defer vvm.monitorShutWg.Done()
 
 	select {
@@ -90,14 +90,14 @@ func (vvm *VoedgerVM) leadershipMonitor(leadershipDuration elections.LeadershipD
 }
 
 // killerRoutine is a routine that kills the VVM process after a quarter of the leadership duration
-func (vvm *VoedgerVM) killerRoutine(leadershipDuration elections.LeadershipDuration) {
+func (vvm *VoedgerVM) killerRoutine(leadershipDuration elections.LeadershipDurationSeconds) {
 	time.Sleep(time.Duration(leadershipDuration) / 4)
 	logger.Error("the process is still alive after the time alloted for graceful shutdown -> terminating...")
 	os.Exit(1)
 }
 
 // tryToAcquireLeadership tries to acquire leadership in loop
-func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipDuration elections.LeadershipDuration, leadershipAcquisitionDuration LeadershipAcquisitionDuration) error {
+func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipDuration elections.LeadershipDurationSeconds, leadershipAcquisitionDuration LeadershipAcquisitionDuration) error {
 	ttlStorage := storage.NewElectionsTTLStorage(vvm.VVMAppTTLStorage)
 	elections, electionsCleanup := elections.Provide(ttlStorage, vvm.ITime)
 	vvm.electionsCleanup = electionsCleanup
@@ -107,7 +107,7 @@ func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipDuration elections.Leader
 	// to inform the test that the leadership acquisition has started
 	vvm.leadershipAcquisitionTimeArmed <- struct{}{}
 
-	vvmIdx := TTLStorageImplKey(1)
+	vvmIdx := storage.TTLStorageImplKey(1)
 	for {
 		select {
 		case <-leadershipAcquistionTimerCh:
