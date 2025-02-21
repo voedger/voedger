@@ -609,6 +609,19 @@ ALTERABLE WORKSPACE test_wsWS (
 		)
 	);
 
+	TYPE QryDailyIdxParams (
+    	Year int32 NOT NULL,
+    	Month int32,
+    	Day int32
+    );
+
+	TYPE QryDailyIdxResult (
+    	Year int32,
+    	Month int32,
+    	Day int32,
+    	StringValue text
+    );
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY MockQry(MockQryParams) RETURNS MockQryResult WITH Tags=(WorkspaceOwnerFuncTag);
@@ -631,6 +644,7 @@ ALTERABLE WORKSPACE test_wsWS (
 
 		COMMAND CmdWithResponseIntent(WithResponseIntentParams) WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY QryWithResponseIntent(WithResponseIntentParams) RETURNS QryWithResponseIntentResult WITH Tags=(WorkspaceOwnerFuncTag);
+		QUERY QryDailyIdx(QryDailyIdxParams) RETURNS QryDailyIdxResult WITH Tags=(WorkspaceOwnerFuncTag);
 	);
 
 	ROLE Updated; -- need for invite tests

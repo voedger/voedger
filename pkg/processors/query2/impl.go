@@ -197,6 +197,14 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 		operator("create callback func", func(ctx context.Context, qw *queryWork) (err error) {
 			qw.callbackFunc = func(o istructs.IObject) (err error) {
+				if _, ok := o.(objectBackedByMap); !ok {
+					o = objectBackedByMap{
+						data: coreutils.FieldsToMap(queryResultWrapper{
+							IObject: o,
+							qName:   qw.appStructs.AppDef().Type(qw.iQuery.QName()).(appdef.IQuery).Result().QName(),
+						}, qw.appStructs.AppDef()),
+					}
+				}
 				return qw.rowsProcessor.SendAsync(o.(pipeline.IWorkpiece))
 			}
 			return

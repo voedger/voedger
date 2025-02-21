@@ -303,15 +303,15 @@ type filter struct {
 	String map[string]map[string]bool
 }
 
-func newFilter(qw *queryWork) (o pipeline.IAsyncOperator, err error) {
+func newFilter(qw *queryWork, fields []appdef.IField) (o pipeline.IAsyncOperator, err error) {
 	f := &filter{
 		Int32:  make(map[string]map[int32]bool),
 		String: make(map[string]map[string]bool),
 	}
-	fields := make([]appdef.IField, 0)
-	fields = append(fields, qw.appStructs.AppDef().Type(qw.iView.QName()).(appdef.IView).Key().ClustCols().Fields()...)
-	fields = append(fields, qw.appStructs.AppDef().Type(qw.iView.QName()).(appdef.IView).Value().Fields()...)
-	for _, field := range qw.appStructs.AppDef().Type(qw.iView.QName()).(appdef.IView).Fields() {
+	if qw.queryParams.Constraints == nil || qw.queryParams.Constraints.Where == nil || len(qw.queryParams.Constraints.Where) == 0 {
+		return nil, nil
+	}
+	for _, field := range fields {
 		switch field.DataKind() {
 		case appdef.DataKind_int32:
 			vv, err := qw.queryParams.Constraints.Where.getAsInt32(field.Name())
@@ -417,4 +417,16 @@ func (w Where) getAsString(k string) (vv []string, err error) {
 	default:
 		return nil, errUnsupportedType
 	}
+}
+
+type queryResultWrapper struct {
+	istructs.IObject
+	qName appdef.QName
+}
+
+func (w queryResultWrapper) AsQName(name appdef.FieldName) appdef.QName {
+	if name == appdef.SystemField_QName {
+		return w.qName
+	}
+	return w.IObject.AsQName(name)
 }
