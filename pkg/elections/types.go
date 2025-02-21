@@ -9,6 +9,7 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/voedger/voedger/pkg/coreutils"
 )
@@ -27,3 +28,5 @@ type leaderInfo[K any, V any] struct {
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 }
+
+type LeadershipDuration time.Duration

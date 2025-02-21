@@ -32,14 +32,15 @@ func (vvm *VoedgerVM) ShutdownNew() error {
 	}
 }
 
-func (vvm *VoedgerVM) LaunchNew(leadershipAcquisitionDuration time.Duration) context.Context {
+func (vvm *VoedgerVM) LaunchNew(leadershipDuration elections.LeadershipDuration, leadershipAcquisitionDuration LeadershipAcquisitionDuration) context.Context {
 	go vvm.shutdowner()
-	if err := vvm.tryToAcquireLeadership(leadershipAcquisitionDuration); err != nil {
+	if err := vvm.tryToAcquireLeadership(leadershipDuration, leadershipAcquisitionDuration); err != nil {
 		vvm.updateProblem(err)
 		return vvm.problemCtx
 	}
 
 	if pipelineErr := vvm.ServicePipeline.SendSync(ignition{}); pipelineErr != nil {
+		pipelineErr = errors.Join(pipelineErr, ErrVVMServicesLaunch)
 		vvm.updateProblem(pipelineErr)
 		return vvm.problemCtx
 	}
@@ -74,33 +75,33 @@ func (vvm *VoedgerVM) shutdowner() {
 }
 
 // leadershipMonitor is a routine that monitors the leadership context.
-func (vvm *VoedgerVM) leadershipMonitor(leadershipAcquisitionDuration time.Duration) {
+func (vvm *VoedgerVM) leadershipMonitor(leadershipDuration elections.LeadershipDuration) {
 	defer vvm.monitorShutWg.Done()
 
 	select {
 	case <-vvm.leadershipCtx.Done():
 		// leadership is lost
-		go vvm.killerRoutine(leadershipAcquisitionDuration)
+		go vvm.killerRoutine(leadershipDuration)
 		vvm.updateProblem(ErrLeadershipLost)
 	case <-vvm.monitorShutCtx.Done():
 	}
 }
 
 // killerRoutine is a routine that kills the VVM process after a quarter of the leadership duration
-func (vvm *VoedgerVM) killerRoutine(leadershipAcquisitionDuration time.Duration) {
-	time.Sleep(leadershipAcquisitionDuration / 4)
+func (vvm *VoedgerVM) killerRoutine(leadershipDuration elections.LeadershipDuration) {
+	time.Sleep(time.Duration(leadershipDuration) / 4)
 	logger.Error("the process is still alive after the time alloted for graceful shutdown -> terminating...")
 	os.Exit(1)
 }
 
 // tryToAcquireLeadership tries to acquire leadership in loop
-func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipAcquisitionDuration time.Duration) error {
+func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipDuration elections.LeadershipDuration, leadershipAcquisitionDuration LeadershipAcquisitionDuration) error {
 	ttlStorage := storage.NewElectionsTTLStorage(vvm.VVMAppTTLStorage)
 	elections, electionsCleanup := elections.Provide(ttlStorage, vvm.ITime)
 	vvm.electionsCleanup = electionsCleanup
 
-	leadershipAcquistionTimerCh := vvm.ITime.NewTimerChan(leadershipAcquisitionDuration)
-	
+	leadershipAcquistionTimerCh := vvm.ITime.NewTimerChan(time.Duration(leadershipAcquisitionDuration))
+
 	// to inform the test that the leadership acquisition has started
 	vvm.startedLeadershipAcquisition <- struct{}{}
 
@@ -111,11 +112,11 @@ func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipAcquisitionDuration time.
 			return ErrVVMLeadershipAcquisition
 		default:
 			// Try to acquire leadership
-			vvm.leadershipCtx = elections.AcquireLeadership(vvmIdx, vvm.ip.String(), defaultLeadershipDuration)
+			vvm.leadershipCtx = elections.AcquireLeadership(vvmIdx, vvm.ip.String(), leadershipDuration)
 			if vvm.leadershipCtx != nil {
 				// If leadership is acquired
 				vvm.monitorShutWg.Add(1)
-				go vvm.leadershipMonitor(leadershipAcquisitionDuration)
+				go vvm.leadershipMonitor(leadershipDuration)
 				return nil
 			}
 			// Try the next VVM index in the cluster from 1 to numVVM
@@ -150,7 +151,7 @@ func (vvm *VoedgerVM) Launch() error {
 	ignition := ignition{}
 	err := vvm.ServicePipeline.SendSync(ignition)
 	if err != nil {
-		err = errors.Join(err, ErrVVMLaunchFailure)
+		err = errors.Join(err, ErrVVMServicesLaunch)
 		logger.Error(err)
 	}
 	return err

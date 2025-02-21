@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/url"
 	"sync"
+	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
@@ -117,6 +118,7 @@ type PostDocDesc struct {
 }
 
 type VVMAppsBuilder map[appdef.AppQName]builtinapps.Builder
+type LeadershipAcquisitionDuration time.Duration
 
 type VVM struct {
 	ServicePipeline

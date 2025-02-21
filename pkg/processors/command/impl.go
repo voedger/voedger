@@ -374,6 +374,7 @@ func (cmdProc *cmdProc) authenticate(_ context.Context, work pipeline.IWorkpiece
 		RequestWSID: cmd.cmdMes.WSID(),
 		Token:       cmd.cmdMes.Token(),
 	}
+	iauthnz.QNameRoleProfileOwner
 	if cmd.principals, cmd.principalPayload, err = cmdProc.authenticator.Authenticate(cmd.cmdMes.RequestCtx(), cmd.appStructs,
 		cmd.appStructs.AppTokens(), req); err != nil {
 		return coreutils.NewHTTPError(http.StatusUnauthorized, err)

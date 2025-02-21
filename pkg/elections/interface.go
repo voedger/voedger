@@ -34,7 +34,7 @@ type IElections[K any, V any] interface {
 	//  - Returns a non-nil context if leadership is acquired successfully.
 	//  - Returns nil if leadership cannot be acquired or an error occurs.
 	// The background goroutine is spawned only on success.
-	AcquireLeadership(key K, val V, duration time.Duration) (ctx context.Context)
+	AcquireLeadership(key K, val V, duration LeadershipDuration) (ctx context.Context)
 
 	// ReleaseLeadership stops the background renewal goroutine for `key` and wait till it finished
 	// CompareAndDeletes from storage if we still hold it. No return value.

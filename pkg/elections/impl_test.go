@@ -23,7 +23,8 @@ func TestElections_BasicUsage(t *testing.T) {
 	elector, cleanup := Provide[string, string](storage, clock)
 	defer cleanup()
 
-	ctx := elector.AcquireLeadership("testKey", "leaderVal", 5*time.Second)
+	leadershipDuration := LeadershipDuration(5 * time.Second)
+	ctx := elector.AcquireLeadership("testKey", "leaderVal", leadershipDuration)
 	require.NotNil(t, ctx, "Should return a non-nil context on successful acquisition")
 
 	// Check mock storage
@@ -54,7 +55,8 @@ func TestElections_AcquireLeadership_Failure(t *testing.T) {
 	storage.expirations["occupied"] = clock.Now().Add(10 * time.Second)
 	storage.mu.Unlock()
 
-	ctx := elector.AcquireLeadership("occupied", "myVal", 3*time.Second)
+	leadershipDuration := LeadershipDuration(3 * time.Second)
+	ctx := elector.AcquireLeadership("occupied", "myVal", leadershipDuration)
 	require.Nil(t, ctx, "Should return nil if the key is already in storage")
 }
 
@@ -67,7 +69,8 @@ func TestElections_AcquireLeadership_Error(t *testing.T) {
 	elector, cleanup := Provide[string, string](storage, clock)
 	defer cleanup()
 
-	ctx := elector.AcquireLeadership("badKey", "val", 10*time.Second)
+	leadershipDuration := LeadershipDuration(10 * time.Second)
+	ctx := elector.AcquireLeadership("badKey", "val", leadershipDuration)
 	require.Nil(t, ctx, "Should return nil if a storage error occurs")
 }
 
@@ -78,7 +81,8 @@ func TestElections_CompareAndSwap_RenewFails(t *testing.T) {
 	elector, cleanup := Provide[string, string](storage, clock)
 	defer cleanup()
 
-	ctx := elector.AcquireLeadership("renewKey", "renewVal", 4*time.Second)
+	leadershipDuration := LeadershipDuration(4 * time.Second)
+	ctx := elector.AcquireLeadership("renewKey", "renewVal", leadershipDuration)
 	require.NotNil(t, ctx)
 
 	// sabotage the storage so next CompareAndSwap fails by changing the value
@@ -117,13 +121,14 @@ func TestElections_CleanupDisallowsNew(t *testing.T) {
 
 	elector, closeFunc := Provide[string, string](storage, clock)
 
-	ctx1 := elector.AcquireLeadership("keyA", "valA", 2*time.Second)
+	leadershipDuration := LeadershipDuration(2 * time.Second)
+	ctx1 := elector.AcquireLeadership("keyA", "valA", leadershipDuration)
 	require.NotNil(t, ctx1)
 
 	closeFunc() // cleanup => no further acquisitions
 
 	<-ctx1.Done()
-	ctx2 := elector.AcquireLeadership("keyB", "valB", 2*time.Second)
+	ctx2 := elector.AcquireLeadership("keyB", "valB", leadershipDuration)
 	require.Nil(t, ctx2, "No new leadership after cleanup")
 }
 
@@ -136,16 +141,17 @@ func TestElections_LeadershipExpires(t *testing.T) {
 	elector, cleanup := Provide[string, string](storage, clock)
 	defer cleanup()
 
-	duration := 20 * time.Millisecond
+	leadershipDuration := LeadershipDuration(20 * time.Millisecond)
+
 	// Acquire leadership with a short TTL
-	ctx := elector.AcquireLeadership("expireKey", "expireVal", duration)
+	ctx := elector.AcquireLeadership("expireKey", "expireVal", leadershipDuration)
 	require.NotNil(t, ctx, "Should have leadership initially")
 
 	storage.mu.Lock()
 	delete(storage.data, "expireKey") // simulate a key expiration
 	storage.mu.Unlock()
 
-	clock.Sleep(duration)
+	clock.Sleep(time.Duration(leadershipDuration))
 
 	<-ctx.Done()
 }
@@ -161,15 +167,15 @@ func TestCleanupDuringRenewal(t *testing.T) {
 	elector, cleanup := Provide[string, string](storage, clock)
 	defer cleanup()
 
-	duration := 20 * time.Millisecond
-	ctx := elector.AcquireLeadership("expireKey", "expireVal", duration)
+	leadershipDuration := LeadershipDuration(20 * time.Millisecond)
+	ctx := elector.AcquireLeadership("expireKey", "expireVal", leadershipDuration)
 
 	{
 		storage.mu.Lock()
 		delete(storage.data, "expireKey") // simulate a key expiration
 		storage.mu.Unlock()
 
-		clock.Sleep(duration)
+		clock.Sleep(time.Duration(leadershipDuration))
 
 		// gauarantee that <-ticker case is fired, not <-li.ctx.Done()
 		// otherwise we do not know which case will fire on cleanup()
