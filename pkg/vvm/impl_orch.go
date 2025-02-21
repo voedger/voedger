@@ -16,6 +16,22 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/storage"
 )
 
+func (vvm *VoedgerVM) LaunchNew(leadershipDuration elections.LeadershipDuration, leadershipAcquisitionDuration LeadershipAcquisitionDuration) context.Context {
+	go vvm.shutdowner()
+	err := vvm.tryToAcquireLeadership(leadershipDuration, leadershipAcquisitionDuration)
+	if err == nil {
+		if err = vvm.ServicePipeline.SendSync(ignition{}); err != nil {
+			err = errors.Join(err, ErrVVMServicesLaunch)
+		}
+	}
+
+	if err != nil {
+		vvm.updateProblem(err)
+	}
+
+	return vvm.problemCtx
+}
+
 // ShutdownNew shuts down the VVM process.
 func (vvm *VoedgerVM) ShutdownNew() error {
 	// Ensure we only close the vvmShutCtx once
@@ -24,28 +40,15 @@ func (vvm *VoedgerVM) ShutdownNew() error {
 	// Block until everything is fully shutdown
 	<-vvm.shutdownedCtx.Done()
 
+	// additionally close problemCtx for the case when we call vvm.Shutdown when problemCtx is not closed yet to avoid context leak
+	vvm.problemCtxCancel()
+
 	select {
 	case err := <-vvm.problemErrCh:
 		return err
 	default:
 		return nil
 	}
-}
-
-func (vvm *VoedgerVM) LaunchNew(leadershipDuration elections.LeadershipDuration, leadershipAcquisitionDuration LeadershipAcquisitionDuration) context.Context {
-	go vvm.shutdowner()
-	if err := vvm.tryToAcquireLeadership(leadershipDuration, leadershipAcquisitionDuration); err != nil {
-		vvm.updateProblem(err)
-		return vvm.problemCtx
-	}
-
-	if pipelineErr := vvm.ServicePipeline.SendSync(ignition{}); pipelineErr != nil {
-		pipelineErr = errors.Join(pipelineErr, ErrVVMServicesLaunch)
-		vvm.updateProblem(pipelineErr)
-		return vvm.problemCtx
-	}
-
-	return vvm.problemCtx
 }
 
 func (vvm *VoedgerVM) shutdowner() {

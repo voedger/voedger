@@ -36,7 +36,7 @@ func TestBasic(t *testing.T) {
 		r := require.New(t)
 
 		vvmCfg1 := getTestVVMCfg(net.IPv4(192, 168, 0, 1))
-		vvm1, err := ProvideVVM(vvmCfg1)
+		vvm1, err := Provide(vvmCfg1)
 		r.NoError(err)
 
 		// Launch VVM1
@@ -61,7 +61,7 @@ func TestBasic(t *testing.T) {
 			return sharedStorageFactory, nil
 		}
 
-		vvm1, err := ProvideVVM(vvmCfg1)
+		vvm1, err := Provide(vvmCfg1)
 		r.NoError(err)
 
 		// Launch VVM1
@@ -82,7 +82,7 @@ func TestBasic(t *testing.T) {
 			}
 			vvmCfg2.KeyspaceNameSuffix = suffix
 
-			vvm2, err := ProvideVVM(vvmCfg2)
+			vvm2, err := Provide(vvmCfg2)
 			r.NoError(err)
 
 			go func() {
@@ -108,7 +108,7 @@ func TestAutomaticShutdownOnLeadershipLost(t *testing.T) {
 	r := require.New(t)
 
 	vvmCfg := getTestVVMCfg(net.IPv4(192, 168, 0, 1))
-	vvm1, err := ProvideVVM(vvmCfg)
+	vvm1, err := Provide(vvmCfg)
 	r.NoError(err)
 
 	// Launch VVM1
@@ -143,7 +143,7 @@ func TestCancelLeadershipOnManualShutdown(t *testing.T) {
 	r := require.New(t)
 
 	vvmCfg := getTestVVMCfg(net.IPv4(192, 168, 0, 1))
-	vvm, err := ProvideVVM(vvmCfg)
+	vvm, err := Provide(vvmCfg)
 	r.NoError(err)
 
 	// Launch VVM1
@@ -177,7 +177,7 @@ func TestServicePipelineStartFailure(t *testing.T) {
 
 	vvmCfg := getTestVVMCfg(net.IPv4(192, 168, 0, 1))
 	vvmCfg.VVMPort = -1
-	vvm, err := ProvideVVM(vvmCfg)
+	vvm, err := Provide(vvmCfg)
 	require.NoError(err)
 
 	problemCtx := vvm.LaunchNew(DefaultLeadershipDuration, DefaultLeadershipAcquisitionDuration)

@@ -72,7 +72,7 @@ import (
 // Injectors from provide.go:
 
 // vvmCtx must be cancelled by the caller right before vvm.ServicePipeline.Close()
-func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error) {
+func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error) {
 	numCommandProcessors := vvmConfig.NumCommandProcessors
 	v := provideChannelGroups(vvmConfig)
 	iProcBus := iprocbusmem.Provide(v)
@@ -241,7 +241,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(),
 
 // provide.go:
 
-func ProvideVVM(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
+func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 	vvmCtx, vvmCtxCancel := context.WithCancel(context.Background())
 	problemCtx, problemCtxCancel := context.WithCancel(context.Background())
 	vvmShutCtx, vvmShutCtxCancel := context.WithCancel(context.Background())
@@ -249,21 +249,21 @@ func ProvideVVM(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 	monitorShutCtx, monitorShutCtxCancel := context.WithCancel(context.Background())
 	shutdownedCtx, shutdownedCtxCancel := context.WithCancel(context.Background())
 	voedgerVM = &VoedgerVM{
-		vvmCtxCancel:                 vvmCtxCancel,
-		numVVM:                       vvmCfg.NumVVM,
-		ip:                           vvmCfg.IP,
-		problemCtx:                   problemCtx,
-		problemCtxCancel:             problemCtxCancel,
-		problemErrCh:                 make(chan error, 1),
-		vvmShutCtx:                   vvmShutCtx,
-		vvmShutCtxCancel:             vvmShutCtxCancel,
-		servicesShutCtx:              servicesShutCtx,
-		servicesShutCtxCancel:        servicesShutCtxCancel,
-		monitorShutCtx:               monitorShutCtx,
-		monitorShutCtxCancel:         monitorShutCtxCancel,
-		shutdownedCtx:                shutdownedCtx,
-		shutdownedCtxCancel:          shutdownedCtxCancel,
-		startedLeadershipAcquisition: make(chan struct{}, 1),
+		vvmCtxCancel:                   vvmCtxCancel,
+		numVVM:                         vvmCfg.NumVVM,
+		ip:                             vvmCfg.IP,
+		problemCtx:                     problemCtx,
+		problemCtxCancel:               problemCtxCancel,
+		problemErrCh:                   make(chan error, 1),
+		vvmShutCtx:                     vvmShutCtx,
+		vvmShutCtxCancel:               vvmShutCtxCancel,
+		servicesShutCtx:                servicesShutCtx,
+		servicesShutCtxCancel:          servicesShutCtxCancel,
+		monitorShutCtx:                 monitorShutCtx,
+		monitorShutCtxCancel:           monitorShutCtxCancel,
+		shutdownedCtx:                  shutdownedCtx,
+		shutdownedCtxCancel:            shutdownedCtxCancel,
+		leadershipAcquisitionTimeArmed: make(chan struct{}, 1),
 	}
 	vvmCfg.addProcessorChannel(iprocbusmem.ChannelGroup{
 		NumChannels:       uint(vvmCfg.NumCommandProcessors),
@@ -283,7 +283,7 @@ func ProvideVVM(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 	}, ProcessorChannel_BLOB,
 	)
 
-	voedgerVM.VVM, voedgerVM.vvmCleanup, err = ProvideCluster(vvmCtx, vvmCfg)
+	voedgerVM.VVM, voedgerVM.vvmCleanup, err = wireVVM(vvmCtx, vvmCfg)
 	if err != nil {
 		return nil, err
 	}
