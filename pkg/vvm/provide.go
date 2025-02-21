@@ -83,21 +83,21 @@ func ProvideVVM(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 	monitorShutCtx, monitorShutCtxCancel := context.WithCancel(context.Background())
 	shutdownedCtx, shutdownedCtxCancel := context.WithCancel(context.Background())
 	voedgerVM = &VoedgerVM{
-		vvmCtxCancel:                 vvmCtxCancel,
-		numVVM:                       vvmCfg.NumVVM,
-		ip:                           vvmCfg.IP,
-		problemCtx:                   problemCtx,
-		problemCtxCancel:             problemCtxCancel,
-		problemErrCh:                 make(chan error, 1),
-		vvmShutCtx:                   vvmShutCtx,
-		vvmShutCtxCancel:             vvmShutCtxCancel,
-		servicesShutCtx:              servicesShutCtx,
-		servicesShutCtxCancel:        servicesShutCtxCancel,
-		monitorShutCtx:               monitorShutCtx,
-		monitorShutCtxCancel:         monitorShutCtxCancel,
-		shutdownedCtx:                shutdownedCtx,
-		shutdownedCtxCancel:          shutdownedCtxCancel,
-		startedLeadershipAcquisition: make(chan struct{}, 1),
+		vvmCtxCancel:                   vvmCtxCancel,
+		numVVM:                         vvmCfg.NumVVM,
+		ip:                             vvmCfg.IP,
+		problemCtx:                     problemCtx,
+		problemCtxCancel:               problemCtxCancel,
+		problemErrCh:                   make(chan error, 1),
+		vvmShutCtx:                     vvmShutCtx,
+		vvmShutCtxCancel:               vvmShutCtxCancel,
+		servicesShutCtx:                servicesShutCtx,
+		servicesShutCtxCancel:          servicesShutCtxCancel,
+		monitorShutCtx:                 monitorShutCtx,
+		monitorShutCtxCancel:           monitorShutCtxCancel,
+		shutdownedCtx:                  shutdownedCtx,
+		shutdownedCtxCancel:            shutdownedCtxCancel,
+		leadershipAcquisitionTimeArmed: make(chan struct{}, 1),
 	}
 	vvmCfg.addProcessorChannel(
 		// command processors

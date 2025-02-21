@@ -47,10 +47,6 @@ func TestBasic(t *testing.T) {
 	})
 
 	t.Run("LeadershipCollision", func(t *testing.T) {
-		if testing.Short() {
-			t.Skip("skipping test in short mode.")
-		}
-
 		r := require.New(t)
 
 		iTime := coreutils.MockTime
@@ -91,10 +87,11 @@ func TestBasic(t *testing.T) {
 
 			go func() {
 				// force case <-leadershipAcquistionTimerCh to fire in tryToAcquireLeadership()
-				<-vvm2.startedLeadershipAcquisition
-				iTime.Sleep(time.Duration(DefaultLeadershipDuration))
+				<-vvm2.leadershipAcquisitionTimeArmed
+				iTime.Sleep(2 * time.Second)
 			}()
-			problemCtx2 := vvm2.LaunchNew(DefaultLeadershipDuration, DefaultLeadershipAcquisitionDuration)
+
+			problemCtx2 := vvm2.LaunchNew(DefaultLeadershipDuration, LeadershipAcquisitionDuration(time.Second))
 
 			<-problemCtx2.Done()
 

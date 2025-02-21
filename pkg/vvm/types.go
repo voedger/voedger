@@ -204,12 +204,14 @@ type VoedgerVM struct {
 	monitorShutWg        sync.WaitGroup
 
 	// closed after all (services and LeadershipMonitor) is stopped
-	shutdownedCtx                context.Context
-	shutdownedCtxCancel          context.CancelFunc
-	numVVM                       NumVVM
-	ip                           net.IP
-	leadershipCtx                context.Context
-	startedLeadershipAcquisition chan struct{}
+	shutdownedCtx       context.Context
+	shutdownedCtxCancel context.CancelFunc
+	numVVM              NumVVM
+	ip                  net.IP
+	leadershipCtx       context.Context
+
+	// used in tests only
+	leadershipAcquisitionTimeArmed chan struct{}
 }
 
 type IVVMElections elections.IElections[TTLStorageImplKey, string]
