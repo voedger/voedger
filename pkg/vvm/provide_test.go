@@ -181,7 +181,7 @@ func TestAutomaticShutdownOnLeadershipLost(t *testing.T) {
 
 	duration := 5 * time.Second
 	// Launch VVM1
-	problemCtx1 := vvm1.LaunchNew(duration)
+	problemCtx1 := vvm1.LaunchNew(2 * duration)
 	r.NoError(problemCtx1.Err(), "VVM1 should start without errors")
 
 	// Simulate leadership loss
@@ -238,8 +238,6 @@ func TestCancelLeadershipOnManualShutdown(t *testing.T) {
 	// Shutdown VVM1
 	problemErr := vvm1.ShutdownNew()
 	r.NoError(problemErr)
-
-	coreutils.MockTime.Sleep(duration)
 
 	// Leadership key doesn't exist
 	ok, err = vvm1.VVMAppTTLStorage.(istorage.IAppStorage).Get(pKey, cCols, &data)
