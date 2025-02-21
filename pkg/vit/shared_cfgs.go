@@ -8,20 +8,19 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iauthnz"
-	"github.com/voedger/voedger/pkg/parser"
-	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/sys/smtp"
-	"github.com/voedger/voedger/pkg/sys/sysprovide"
-	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
-
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/parser"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/sys/smtp"
+	"github.com/voedger/voedger/pkg/sys/sysprovide"
 	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
 	"github.com/voedger/voedger/pkg/vvm"
+	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
 )
 
 const (
@@ -330,6 +329,30 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 		return funcWithResponseIntents(args.PrepareArgs, args.State, args.Intents)
 	}))
 
+	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryDailyIdx"), func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+		skbViewDailyIdx, err := args.State.KeyBuilder(sys.Storage_View, QNameApp1_ViewDailyIdx)
+		if err != nil {
+			return
+		}
+		if year := args.ArgumentObject.AsInt32(Field_Year); year > 0 {
+			skbViewDailyIdx.PutInt32(Field_Year, year)
+		}
+		if month := args.ArgumentObject.AsInt32(Field_Month); month > 0 {
+			skbViewDailyIdx.PutInt32(Field_Month, month)
+		}
+		if day := args.ArgumentObject.AsInt32(Field_Day); day > 0 {
+			skbViewDailyIdx.PutInt32(Field_Day, day)
+		}
+		return args.State.Read(skbViewDailyIdx, func(key istructs.IKey, value istructs.IStateValue) (err error) {
+			return callback(&qryDailyIdxResult{
+				year:        key.AsInt32(Field_Year),
+				month:       key.AsInt32(Field_Month),
+				day:         key.AsInt32(Field_Day),
+				stringValue: value.AsString(Field_StringValue),
+			})
+		})
+	}))
+
 	app1PackageFS := parser.PackageFS{
 		Path: App1PkgPath,
 		FS:   SchemaTestApp1FS,
@@ -338,5 +361,34 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 		AppQName:                istructs.AppQName_test1_app1,
 		Packages:                []parser.PackageFS{sysPackageFS, app1PackageFS},
 		AppDeploymentDescriptor: TestAppDeploymentDescriptor,
+	}
+}
+
+type qryDailyIdxResult struct {
+	istructs.IObject
+	year        int32
+	month       int32
+	day         int32
+	stringValue string
+}
+
+func (r qryDailyIdxResult) AsInt32(name appdef.FieldName) int32 {
+	switch name {
+	case Field_Year:
+		return r.year
+	case Field_Month:
+		return r.month
+	case Field_Day:
+		return r.day
+	default:
+		return 0
+	}
+}
+func (r qryDailyIdxResult) AsString(name appdef.FieldName) string {
+	switch name {
+	case Field_StringValue:
+		return r.stringValue
+	default:
+		return ""
 	}
 }

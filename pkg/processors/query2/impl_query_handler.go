@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/pipeline"
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 )
 
@@ -141,12 +142,24 @@ func (h *queryHandler) AuthorizeResult(ctx context.Context, qw *queryWork) error
 	return nil
 }
 
-func (h *queryHandler) RowsProcessor(ctx context.Context, qw *queryWork) error {
-	/*
-		qw.rowsProcessor, qw.responseSenderGetter = ProvideRowsProcessorFactory()(qw.msg.RequestCtx(), qw.appStructs.AppDef(),
-		qw.state, qw.queryParams, qw.resultType, qw.msg.Responder(), qw.metrics, qw.rowsProcessorErrCh)
-	*/
-	return nil
+func (h *queryHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err error) {
+	oo := make([]*pipeline.WiredOperator, 0)
+	if qw.queryParams.Constraints != nil && (len(qw.queryParams.Constraints.Order) != 0 || qw.queryParams.Constraints.Skip > 0 || qw.queryParams.Constraints.Limit > 0) {
+		oo = append(oo, pipeline.WireAsyncOperator("Aggregator", newAggregator(qw.queryParams)))
+	}
+	o, err := newFilter(qw, qw.appStructs.AppDef().Type(qw.appStructs.AppDef().Type(qw.iQuery.QName()).(appdef.IQuery).Result().QName()).(appdef.IWithFields).Fields())
+	if err != nil {
+		return
+	}
+	if o != nil {
+		oo = append(oo, pipeline.WireAsyncOperator("Filter", o))
+	}
+	if qw.queryParams.Constraints != nil && len(qw.queryParams.Constraints.Keys) != 0 {
+		oo = append(oo, pipeline.WireAsyncOperator("Keys", newKeys(qw.queryParams.Constraints.Keys)))
+	}
+	oo = append(oo, pipeline.WireAsyncOperator("Sender", &sender{responder: qw.msg.Responder()}))
+	qw.rowsProcessor = pipeline.NewAsyncPipeline(ctx, "View rows processor", oo[0], oo[1:]...)
+	return
 }
 
 func (h *queryHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
