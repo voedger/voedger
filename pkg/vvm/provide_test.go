@@ -122,6 +122,7 @@ func TestBasic(t *testing.T) {
 		vvm1, err := ProvideVVM(vvmCfg1)
 		r.NoError(err)
 		r.NotNil(vvm1)
+		// patch VVM1 with memStorage
 		patchVVM(vvm1, memStorage)
 
 		vvmCfg2 := getTestVVMCfg(1, net.IPv4(192, 168, 0, 2), iTime)
@@ -141,6 +142,7 @@ func TestBasic(t *testing.T) {
 			vvm2, err := ProvideVVM(vvmCfg2)
 			r.NoError(err)
 			r.NotNil(vvm2)
+			// patch VVM2 with the same memStorage as VVM1
 			patchVVM(vvm2, memStorage)
 
 			// goroutine for ticking time after VVM2 starts leadership acquisition
