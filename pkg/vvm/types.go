@@ -101,7 +101,7 @@ type AppPartsCtlPipelineService struct {
 }
 type IAppPartsCtlPipelineService pipeline.IService
 
-type ClusterSize int
+type NumVVM = uint32
 
 type TTLStorageImplKey = uint32
 
@@ -157,7 +157,7 @@ type VVMConfig struct {
 	WSPostInitFunc             workspace.WSPostInitFunc
 	DataPath                   string
 	MetricsServicePort         metrics.MetricsServicePort
-	ClusterSize                ClusterSize // amount of VVMs in the cluster
+	NumVVM                     NumVVM // amount of VVMs in the cluster
 	IP                         net.IP
 
 	// 0 -> dynamic port will be used, new on each vvmIdx
@@ -181,7 +181,7 @@ type VoedgerVM struct {
 
 	// closed when some problem occurs, VVM terminates itself due to leadership loss or problems with the launching
 	problemCtx       context.Context
-	problemCtxCancel context.CancelCauseFunc
+	problemCtxCancel context.CancelFunc
 	problemErrCh     chan error
 
 	// used to ensure we publish the error only once
@@ -204,7 +204,7 @@ type VoedgerVM struct {
 	// closed after all (services and LeadershipMonitor) is stopped
 	shutdownedCtx                context.Context
 	shutdownedCtxCancel          context.CancelFunc
-	clusterSize                  ClusterSize
+	numVVM                       NumVVM
 	ip                           net.IP
 	leadershipCtx                context.Context
 	startedLeadershipAcquisition chan struct{}
