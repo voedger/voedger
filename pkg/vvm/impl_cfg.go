@@ -5,7 +5,6 @@
 package vvm
 
 import (
-	"net"
 	"os"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -53,7 +52,7 @@ func NewVVMDefaultConfig() VVMConfig {
 			return mem.Provide(coreutils.MockTime), nil
 		},
 		SecretsReader: isecretsimpl.ProvideSecretReader(),
-		IP:            net.IPv4(127, 0, 0, 1),
+		IP:            coreutils.LocalhostIP,
 		NumVVM:        1,
 	}
 	if coreutils.IsTest() {
