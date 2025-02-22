@@ -31,6 +31,8 @@ func (e *elections[K, V]) AcquireLeadership(key K, val V, ttlSeconds LeadershipD
 		return nil
 	}
 
+	logger.Info(fmt.Sprintf("Key=%v: leadership acquired", key))
+
 	ctx, cancel := context.WithCancel(context.Background())
 	li := &leaderInfo[K, V]{
 		val:    val,
@@ -53,6 +55,7 @@ func (e *elections[K, V]) maintainLeadership(key K, val V, ttlSeconds Leadership
 	tickerInterval := time.Duration(ttlSeconds) * time.Second / 2
 	ticker := e.clock.NewTimerChan(tickerInterval)
 	maintainLeadershipStarted.Done()
+	tickerCounter := int64(0)
 
 	for li.ctx.Err() == nil {
 		select {
@@ -61,7 +64,7 @@ func (e *elections[K, V]) maintainLeadership(key K, val V, ttlSeconds Leadership
 			return
 		case <-ticker:
 			ticker = e.clock.NewTimerChan(tickerInterval)
-			logger.Verbose(fmt.Sprintf("Key=%v: renewing leadership.", key))
+			tickerCounter = bumpTickerCounter(tickerCounter, key, tickerInterval)
 			ok, err := e.storage.CompareAndSwap(key, val, val, int(ttlSeconds))
 			if err != nil {
 				logger.Error(fmt.Sprintf("Key=%v: compareAndSwap error => release", key))
@@ -77,6 +80,17 @@ func (e *elections[K, V]) maintainLeadership(key K, val V, ttlSeconds Leadership
 			}
 		}
 	}
+}
+
+// nolint: revive
+func bumpTickerCounter[K any](tickerCounter int64, key K, tickerInterval time.Duration) (tickerCounterPlus1 int64) {
+	tickerCounterPlus1 = tickerCounter + 1
+	if tickerCounter < 10 {
+		logger.Verbose(fmt.Sprintf("Key=%v: renewing leadership", key))
+	} else if tickerCounter%200 == 0 {
+		logger.Verbose(fmt.Sprintf("Key=%v: still leader for %s", key, tickerInterval*time.Duration(tickerCounter)))
+	}
+	return tickerCounterPlus1
 }
 
 func (e *elections[K, V]) ReleaseLeadership(key K) {
