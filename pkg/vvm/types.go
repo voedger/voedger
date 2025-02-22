@@ -104,8 +104,6 @@ type IAppPartsCtlPipelineService pipeline.IService
 
 type NumVVM = uint32
 
-type TTLStorageImplKey = uint32
-
 type PostDocFieldType struct {
 	Kind              appdef.DataKind
 	Required          bool
@@ -214,7 +212,7 @@ type VoedgerVM struct {
 	leadershipAcquisitionTimeArmed chan struct{}
 }
 
-type IVVMElections elections.IElections[TTLStorageImplKey, string]
+type IVVMElections elections.IElections[storage.TTLStorageImplKey, string]
 
 type ignition struct{}
 

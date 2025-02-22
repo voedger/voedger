@@ -30,7 +30,7 @@ const (
 	DefaultVVMPort                                                     = router.DefaultPort
 	actualizerFlushInterval                                            = time.Millisecond * 500
 	defaultCassandraPort                                               = 9042
-	DefaultLeadershipDuration                                          = elections.LeadershipDuration(20 * time.Second)
+	DefaultLeadershipDurationSeconds                                   = elections.LeadershipDurationSeconds(20)
 	DefaultLeadershipAcquisitionDuration                               = LeadershipAcquisitionDuration(120 * time.Second)
 )
 
