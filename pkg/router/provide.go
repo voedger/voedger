@@ -9,19 +9,21 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/voedger/voedger/pkg/in10n"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // port == 443 -> httpsService + ACMEService, otherwise -> HTTPService only, ACMEService is nil
 func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, autocertCache autocert.Cache,
-	requestSender bus.IRequestSender) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
+	requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
 	httpServ := getHttpService("HTTP server", coreutils.ServerAddress(rp.Port), rp, broker, blobRequestHandler,
-		requestSender)
+		requestSender, numsAppsWorkspaces)
 
 	if coreutils.IsTest() {
 		adminEndpoint = "127.0.0.1:0"
@@ -30,7 +32,7 @@ func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobp
 		WriteTimeout:     rp.WriteTimeout,
 		ReadTimeout:      rp.ReadTimeout,
 		ConnectionsLimit: rp.ConnectionsLimit,
-	}, broker, nil, requestSender)
+	}, broker, nil, requestSender, numsAppsWorkspaces)
 
 	if rp.Port != HTTPSPort {
 		return httpServ, nil, adminSrv
@@ -73,11 +75,12 @@ func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobp
 }
 
 func getHttpService(name string, listenAddress string, rp RouterParams, broker in10n.IN10nBroker,
-	blobRequestHandler blobprocessor.IRequestHandler, requestSender bus.IRequestSender) *httpService {
+	blobRequestHandler blobprocessor.IRequestHandler, requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) *httpService {
 	httpServ := &httpService{
 		RouterParams:       rp,
 		n10n:               broker,
 		requestSender:      requestSender,
+		numsAppsWorkspaces: numsAppsWorkspaces,
 		listenAddress:      listenAddress,
 		name:               name,
 		blobRequestHandler: blobRequestHandler,

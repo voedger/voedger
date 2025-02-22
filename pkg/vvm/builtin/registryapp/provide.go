@@ -46,6 +46,7 @@ func Provide(smtpCfg smtp.Cfg, numCP istructs.NumCommandProcessors) builtinapps.
 				EnginePoolSize:   appparts.PoolSize(uint(numCP), DefDeploymentQPCount, uint(numCP), DefDeploymentSPCount),
 				NumAppWorkspaces: istructs.DefaultNumAppWorkspaces,
 			},
+			CacheAppSchemASTInTests: true,
 		}
 	}
 }

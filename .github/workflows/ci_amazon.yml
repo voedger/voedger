@@ -1,0 +1,69 @@
+name: Run Amazon Tests
+
+on:
+  workflow_call:
+    secrets:
+      personaltoken:
+        required: true
+#on:
+#  push:
+#    paths:
+#      - 'pkg/istorage/amazondb/**'
+#  pull_request:
+#    paths:
+#      - 'pkg/istorage/amazondb/**'
+
+jobs:
+
+  build:
+    name: Build & Test
+    runs-on: ubuntu-22.04
+    outputs:
+      failure_url: ${{ steps.set_failure_url.outputs.failure_url }}
+
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local
+        ports:
+          - 8000:8000
+        env:
+          AWS_REGION: eu-west-1
+          AWS_ACCESS_KEY_ID: local
+          AWS_SECRET_ACCESS_KEY: local
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 'stable'
+
+    - name: Run Amazon DynamoDB Tests
+      working-directory: pkg/istorage/amazondb
+      run: go test ./... -v -race
+      env:
+        AWS_REGION: eu-west-1
+        AWS_ACCESS_KEY_ID: local
+        AWS_SECRET_ACCESS_KEY: local
+        DYNAMODB_ENDPOINT: http://localhost:8000  # Set endpoint for local testing
+        DYNAMODB_TESTS_ENABLED: true
+
+    - name: Set Failure URL
+      if: failure()
+      id: set_failure_url
+      run: echo "failure_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_OUTPUT
+
+  call-workflow-create-issue:
+    needs: build
+    if: ${{ failure() }}
+    uses: untillpro/ci-action/.github/workflows/create_issue.yml@master
+    with: 
+      repo: 'voedger/voedger' 
+      assignee: 'host6'
+      name: 'Amazon DynamoDB test failed on'  # ✅ Fixed title
+      body: ${{ needs.build.outputs.failure_url }}
+      label: 'prty/blocker'
+    secrets:
+      personaltoken: ${{ secrets.personaltoken }}  # Match with `workflow_call`

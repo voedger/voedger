@@ -198,7 +198,7 @@ func formatOrmFiles(ormFiles []string) error {
 			return err
 		}
 
-		formattedContent, err := imports.Process("", ormFileContent, nil)
+		formattedContent, err := imports.Process(ormFile, ormFileContent, nil)
 		if err != nil {
 			return err
 		}

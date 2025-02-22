@@ -32,3 +32,4 @@ AWS DynamoDB does not have a concept of KeySpace. Keyspaces are emulated using t
 ## Notes
 
 Partition key and sort key attributes of base tables continue to require non-empty values for all data types, including String and Binary. To make a workaround `byte(0)` is prefixed to each sort key value. See `prefixZero()` and `unprefixZero() functions.
+

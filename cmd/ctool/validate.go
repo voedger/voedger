@@ -23,7 +23,6 @@ func validate(cmd *cobra.Command, arg []string) error {
 
 	currentCmd = cmd
 	cluster := newCluster()
-
 	// nolint
 	mkCommandDirAndLogFile(cmd, cluster)
 

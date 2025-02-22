@@ -20,7 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/builtin/registryapp"
 )
 
-func NewOwnVITConfig(opts ...vitConfigOptFunc) VITConfig {
+func NewOwnVITConfig(opts ...VITConfigOptFunc) VITConfig {
 	// helper: implicitly append sys apps
 	opts = append(opts,
 		WithApp(istructs.AppQName_sys_registry, registryapp.Provide(smtp.Cfg{}, vvm.DefaultNumCommandProcessors)),
@@ -29,7 +29,7 @@ func NewOwnVITConfig(opts ...vitConfigOptFunc) VITConfig {
 	return VITConfig{opts: opts}
 }
 
-func NewSharedVITConfig(opts ...vitConfigOptFunc) VITConfig {
+func NewSharedVITConfig(opts ...VITConfigOptFunc) VITConfig {
 	cfg := NewOwnVITConfig(opts...)
 	cfg.isShared = true
 	return cfg
@@ -146,31 +146,31 @@ func WithSubject(login string, subjectKind istructs.SubjectKindType, roles []app
 	}
 }
 
-func WithVVMConfig(configurer func(cfg *vvm.VVMConfig)) vitConfigOptFunc {
+func WithVVMConfig(configurer func(cfg *vvm.VVMConfig)) VITConfigOptFunc {
 	return func(hpc *vitPreConfig) {
 		configurer(hpc.vvmCfg)
 	}
 }
 
-func WithCleanup(cleanup func(*VIT)) vitConfigOptFunc {
+func WithCleanup(cleanup func(*VIT)) VITConfigOptFunc {
 	return func(hpc *vitPreConfig) {
 		hpc.cleanups = append(hpc.cleanups, cleanup)
 	}
 }
 
-func WithInit(initFunc func()) vitConfigOptFunc {
+func WithInit(initFunc func()) VITConfigOptFunc {
 	return func(vpc *vitPreConfig) {
 		vpc.initFuncs = append(vpc.initFuncs, initFunc)
 	}
 }
 
-func WithPostInit(postInitFunc func(vit *VIT)) vitConfigOptFunc {
+func WithPostInit(postInitFunc func(vit *VIT)) VITConfigOptFunc {
 	return func(vpc *vitPreConfig) {
 		vpc.postInitFunc = postInitFunc
 	}
 }
 
-func WithApp(appQName appdef.AppQName, updater builtinapps.Builder, appOpts ...AppOptFunc) vitConfigOptFunc {
+func WithApp(appQName appdef.AppQName, updater builtinapps.Builder, appOpts ...AppOptFunc) VITConfigOptFunc {
 	return func(vpc *vitPreConfig) {
 		_, ok := vpc.vitApps[appQName]
 		if ok {
@@ -199,7 +199,7 @@ func WithVerifiedValue(docQName appdef.QName, fieldName string, desiredValue str
 	}
 }
 
-func WithSecret(name string, value []byte) vitConfigOptFunc {
+func WithSecret(name string, value []byte) VITConfigOptFunc {
 	return func(vpc *vitPreConfig) {
 		vpc.secrets[name] = value
 	}

@@ -401,12 +401,13 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkp
 		ws = cmd.iCommand.Workspace()
 	}
 
-	// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
-	ok := oldacl.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, oldacl.EnrichPrincipals(cmd.principals, cmd.cmdMes.WSID()))
+	ok, err := cmd.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles)
+	if err != nil {
+		return err
+	}
 	if !ok {
-		if ok, err = cmd.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, cmd.roles); err != nil {
-			return err
-		}
+		// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
+		ok = oldacl.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdMes.QName(), nil, oldacl.EnrichPrincipals(cmd.principals, cmd.cmdMes.WSID()))
 	}
 	if !ok {
 		return coreutils.NewHTTPErrorf(http.StatusForbidden)
@@ -615,30 +616,18 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 			return cudXPath.Errorf(`"fields" missing`)
 		}
 		// sys.ID inside -> create, outside -> update
-		isCreate := false
-		if parsedCUD.id, isCreate, err = parsedCUD.fields.AsInt64(appdef.SystemField_ID); err != nil {
+		var idToUpdate int64
+		if idToUpdate, _, err = cudData.AsInt64(appdef.SystemField_ID); err != nil {
 			return cudXPath.Error(err)
 		}
-		if parsedCUD.id < 0 {
-			// TODO: cover by tests
-			return cudXPath.Errorf("id can not be negative")
+		var rawID int64
+		if rawID, _, err = parsedCUD.fields.AsInt64(appdef.SystemField_ID); err != nil {
+			return cudXPath.Error(err)
 		}
-		if isCreate {
-			parsedCUD.opKind = appdef.OperationKind_Insert
-			qNameStr, _, err := parsedCUD.fields.AsString(appdef.SystemField_QName)
-			if err != nil {
-				return cudXPath.Error(err)
-			}
-			if parsedCUD.qName, err = appdef.ParseQName(qNameStr); err != nil {
-				return cudXPath.Error(fmt.Errorf("failed to parse sys.QName: %w", err))
-			}
-		} else {
-			if parsedCUD.id, ok, err = cudData.AsInt64(appdef.SystemField_ID); err != nil {
-				return cudXPath.Error(err)
-			}
-			if !ok {
-				return cudXPath.Errorf(`"sys.ID" missing`)
-			}
+
+		// update should have priority to e.g. return error if we trying to modify sys.ID
+		if idToUpdate > 0 {
+			parsedCUD.id = idToUpdate
 			if parsedCUD.existingRecord, err = cmd.appStructs.Records().Get(cmd.cmdMes.WSID(), true, istructs.RecordID(parsedCUD.id)); err != nil { // nolint G115
 				return
 			}
@@ -659,6 +648,19 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 			} else {
 				parsedCUD.opKind = appdef.OperationKind_Update
 			}
+		} else if rawID > 0 {
+			// create
+			parsedCUD.id = rawID
+			parsedCUD.opKind = appdef.OperationKind_Insert
+			qNameStr, _, err := parsedCUD.fields.AsString(appdef.SystemField_QName)
+			if err != nil {
+				return cudXPath.Error(err)
+			}
+			if parsedCUD.qName, err = appdef.ParseQName(qNameStr); err != nil {
+				return cudXPath.Error(fmt.Errorf("failed to parse sys.QName: %w", err))
+			}
+		} else {
+			return cudXPath.Error(fmt.Errorf(`"sys.ID" field missing`))
 		}
 
 		parsedCUD.xPath = xPath(fmt.Sprintf("%s %s %s", cudXPath, opKindDesc[parsedCUD.opKind], parsedCUD.qName))
@@ -727,15 +729,13 @@ func (cmdProc *cmdProc) authorizeRequestCUDs(_ context.Context, work pipeline.IW
 	for _, parsedCUD := range cmd.parsedCUDs {
 		fields := maps.Keys(parsedCUD.fields)
 
-		// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
-		ok := oldacl.IsOperationAllowed(parsedCUD.opKind, cmd.cmdMes.QName(), fields, oldacl.EnrichPrincipals(cmd.principals, cmd.cmdMes.WSID()))
+		ok, err := cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
+		if err != nil {
+			return err
+		}
 		if !ok {
-			if ok, err = cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles);  err != nil {
-				if errors.Is(err, appdef.ErrNotFoundError) {
-					err = coreutils.WrapSysError(err, http.StatusBadRequest)
-				}
-				return parsedCUD.xPath.Error(err)
-			}
+			// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
+			ok = oldacl.IsOperationAllowed(parsedCUD.opKind, parsedCUD.qName, fields, oldacl.EnrichPrincipals(cmd.principals, cmd.cmdMes.WSID()))
 		}
 		if !ok {
 			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))

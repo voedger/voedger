@@ -20,6 +20,9 @@ func NewElement(data coreutils.MapObject) (IElement, error) {
 	e.path = strings.Split(path, "/")
 	if err := fillArray(data, "fields", func(elem interface{}) error {
 		resultField, err := NewField(elem)
+		if _, ok := resultField.(IRefField); ok {
+			return fmt.Errorf("fields: it accepts only array of strings")
+		}
 		if err == nil {
 			e.fields = append(e.fields, resultField.(IResultField))
 		}

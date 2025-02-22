@@ -53,17 +53,17 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 		return false, appdef.ErrNotFound("resource «%s» in %v", res, ws)
 	}
 
-	var str appdef.IStructure
+	var resFields appdef.IWithFields
 	switch op {
 	case appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select:
-		if s, ok := t.(appdef.IStructure); ok {
-			str = s
+		if wf, ok := t.(appdef.IWithFields); ok {
+			resFields = wf
 		} else {
-			return false, appdef.ErrIncompatible("%v is not a structure", t)
+			return false, appdef.ErrIncompatible("%v has no fields", t)
 		}
 		for _, f := range fld {
-			if str.Field(f) == nil {
-				return false, appdef.ErrNotFound("field «%s» in %v", f, str)
+			if resFields.Field(f) == nil {
+				return false, appdef.ErrNotFound("field «%s» in %v", f, t)
 			}
 		}
 	case appdef.OperationKind_Activate, appdef.OperationKind_Deactivate:
@@ -102,8 +102,8 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 	if slices.Contains(roles, appdef.QNameRoleSystem) {
 		// nothing else matters
 		result = true
-		if str != nil {
-			for _, f := range str.Fields() {
+		if resFields != nil {
+			for _, f := range resFields.Fields() {
 				allowedFields[f.Name()] = true
 			}
 		}
@@ -127,7 +127,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 								switch rule.Policy() {
 								case appdef.PolicyKind_Allow:
 									result = true
-									if str != nil {
+									if resFields != nil {
 										if rule.Filter().HasFields() {
 											// allow for specified fields only
 											for _, f := range rule.Filter().Fields() {
@@ -135,13 +135,13 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 											}
 										} else {
 											// allow for all fields
-											for _, f := range str.Fields() {
+											for _, f := range resFields.Fields() {
 												allowedFields[f.Name()] = true
 											}
 										}
 									}
 								case appdef.PolicyKind_Deny:
-									if str != nil {
+									if resFields != nil {
 										if rule.Filter().HasFields() {
 											// partially deny, only specified fields
 											for _, f := range rule.Filter().Fields() {
@@ -167,7 +167,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 	}
 
 	var allowed []appdef.FieldName
-	if str != nil {
+	if resFields != nil {
 		if result {
 			if len(fld) > 0 {
 				for _, f := range fld {
@@ -180,7 +180,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 		}
 		if len(allowedFields) > 0 {
 			allowed = make([]appdef.FieldName, 0, len(allowedFields))
-			for _, fld := range str.Fields() {
+			for _, fld := range resFields.Fields() {
 				f := fld.Name()
 				if _, ok := allowedFields[f]; ok {
 					allowed = append(allowed, f)

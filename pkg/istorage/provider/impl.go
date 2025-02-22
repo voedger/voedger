@@ -6,6 +6,7 @@
 package provider
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -15,9 +16,15 @@ import (
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
+// returns ErrStoppingState if Stop() was called
 func (asp *implIAppStorageProvider) AppStorage(appQName appdef.AppQName) (storage istorage.IAppStorage, err error) {
 	asp.lock.Lock()
 	defer asp.lock.Unlock()
+
+	if asp.isStopping {
+		return nil, ErrStoppingState
+	}
+
 	if storage, ok := asp.cache[appQName]; ok {
 		return storage, nil
 	}
@@ -81,6 +88,17 @@ func (asp *implIAppStorageProvider) clarifyKeyspaceName(sn istorage.SafeAppName)
 		sn = istorage.NewTestSafeName(newName)
 	}
 	return sn
+}
+
+func (asp *implIAppStorageProvider) Prepare(_ any) error { return nil }
+
+func (asp *implIAppStorageProvider) Run(_ context.Context) {}
+
+func (asp *implIAppStorageProvider) Stop() {
+	asp.lock.Lock()
+	defer asp.lock.Unlock()
+	asp.isStopping = true
+	asp.asf.StopGoroutines()
 }
 
 func storeAppDesc(appQName appdef.AppQName, appDesc istorage.AppStorageDesc, metaStorage istorage.IAppStorage) error {

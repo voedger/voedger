@@ -25,8 +25,9 @@ func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) QName() exttinygo.QName {
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
-	kb.PutRecordID(sys.Storage_Record_Field_ID, int64(id))
-	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(kb)}
+	newVal := exttinygo.NewValue(kb)
+	newVal.PutInt64(FieldNameSysID, int64(id))
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: newVal}
 }
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Update(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
@@ -123,8 +124,9 @@ func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get(id ID) (Value_{{.Type}}_{{.Pa
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
-	kb.PutRecordID(sys.Storage_Record_Field_ID, int64(id))
-	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(kb)}
+	newVal := exttinygo.NewValue(kb)
+	newVal.PutInt64(FieldNameSysID, int64(id))
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: newVal}
 }
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Update(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
@@ -154,8 +156,9 @@ func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) QName() exttinygo.QName {
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
-	kb.PutRecordID(sys.Storage_Record_Field_ID, int64(id))
-	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(kb)}
+	newVal := exttinygo.NewValue(kb)
+	newVal.PutInt64(FieldNameSysID, int64(id))
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: newVal}
 }
 {{end}}
 
@@ -280,12 +283,12 @@ type Cmd_{{.Projector.Package.Name}}_{{.Name}} struct {
 
 {{if .EventItem.ArgumentObject}}
 func (c Cmd_{{.Projector.Package.Name}}_{{.Name}}) Arg() (Value_{{.EventItem.ArgumentObject.Type}}_{{.EventItem.ArgumentObject.Package.Name}}_{{.EventItem.ArgumentObject.Name}}, bool) {
-	qname := c.event.AsQName("QName")
+	qname := c.event.AsQName(sys.Storage_Event_Field_QName)
 	if qname.FullPkgName != Package_{{.EventItem.Package.Name}}.{{.EventItem.Type}}_{{.EventItem.Name}}.PkgPath() || qname.Entity != Package_{{.EventItem.Package.Name}}.{{.EventItem.Type}}_{{.EventItem.Name}}.Entity() {
 		return Value_{{.EventItem.ArgumentObject.Type}}_{{.EventItem.ArgumentObject.Package.Name}}_{{.EventItem.ArgumentObject.Name}}{}, false
 	}
 
-	return Value_{{.EventItem.ArgumentObject.Type}}_{{.EventItem.ArgumentObject.Package.Name}}_{{.EventItem.ArgumentObject.Name}}{tv: c.event.AsValue("ArgumentObject")}, true
+	return Value_{{.EventItem.ArgumentObject.Type}}_{{.EventItem.ArgumentObject.Package.Name}}_{{.EventItem.ArgumentObject.Name}}{tv: c.event.AsValue(sys.Storage_Event_Field_ArgumentObject)}, true
 }
 
 func (c Cmd_{{.Projector.Package.Name}}_{{.Name}}) Event() Event {
@@ -309,10 +312,10 @@ func (p *Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Cmd_{{.Name}
 
 func (p *Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) CUDs_{{.Package.Name}}_{{.Name}}() iter.Seq[Value_{{.Type}}_{{.Package.Name}}_{{.Name}}] {
 	return func(yield func(Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) bool) {
-		cudsValue := p.event().AsValue("CUDs")
+		cudsValue := p.event().AsValue(sys.Storage_WLog_Field_CUDs)
 		for i := 0; i < cudsValue.Len(); i++ {
 			cudValue := cudsValue.GetAsValue(i)
-			cudQName := cudValue.AsQName("sys.QName")
+			cudQName := cudValue.AsQName(FieldNameSysQName)
 			if cudQName.FullPkgName == Package_{{.Package.Name}}.{{.Type}}_{{.Name}}.PkgPath() && cudQName.Entity == Package_{{.Package.Name}}.{{.Type}}_{{.Name}}.Entity() {
 				if !yield(Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: cudValue}) {
 					return
@@ -327,8 +330,8 @@ func (p *Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) CUDs_{{.Pack
 {{if (doesExecuteWithParam .)}}
 
 func (p *Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Arg_{{.Package.Name}}_{{.Name}}() (Value_{{.Type}}_{{.Package.Name}}_{{.Name}}, bool) {
-	arg := p.event().AsValue("ArgumentObject")
-	argQName := arg.AsQName("sys.QName")
+	arg := p.event().AsValue(sys.Storage_Event_Field_ArgumentObject)
+	argQName := arg.AsQName(FieldNameSysQName)
 	if argQName.FullPkgName != Package_{{.Package.Name}}.{{.Type}}_{{.Name}}.PkgPath() || argQName.Entity != Package_{{.Package.Name}}.{{.Type}}_{{.Name}}.Entity() {
 		return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{}, false
 	}
