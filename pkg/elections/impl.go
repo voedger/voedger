@@ -15,13 +15,13 @@ import (
 
 // AcquireLeadership returns nil if leadership is *not* acquired (e.g., error in storage,
 // already local leader, or elections cleaned up), otherwise returns a *non-nil* context.
-func (e *elections[K, V]) AcquireLeadership(key K, val V, ttlSeconds LeadershipDurationSeconds) context.Context {
+func (e *elections[K, V]) AcquireLeadership(key K, val V, duration LeadershipDuration) context.Context {
 	if e.isFinalized.Load() {
 		logger.Verbose(fmt.Sprintf("Key=%v: elections cleaned up; cannot acquire leadership.", key))
 		return nil
 	}
 
-	inserted, err := e.storage.InsertIfNotExist(key, val, int(ttlSeconds))
+	inserted, err := e.storage.InsertIfNotExist(key, val, time.Duration(duration))
 	if err != nil {
 		logger.Error(fmt.Sprintf("Key=%v: storage error: %v", key, err))
 		return nil
@@ -42,15 +42,15 @@ func (e *elections[K, V]) AcquireLeadership(key K, val V, ttlSeconds LeadershipD
 	li.wg.Add(1)
 	maintainLeadershipStarted := sync.WaitGroup{}
 	maintainLeadershipStarted.Add(1)
-	go e.maintainLeadership(key, val, ttlSeconds, li, &maintainLeadershipStarted)
+	go e.maintainLeadership(key, val, duration, li, &maintainLeadershipStarted)
 	maintainLeadershipStarted.Wait()
 	return ctx
 }
 
-func (e *elections[K, V]) maintainLeadership(key K, val V, ttlSeconds LeadershipDurationSeconds, li *leaderInfo[K, V], maintainLeadershipStarted *sync.WaitGroup) {
+func (e *elections[K, V]) maintainLeadership(key K, val V, duration LeadershipDuration, li *leaderInfo[K, V], maintainLeadershipStarted *sync.WaitGroup) {
 	defer li.wg.Done()
 
-	tickerInterval := time.Duration(time.Duration(ttlSeconds)*time.Second) / 2
+	tickerInterval := time.Duration(duration) / 2
 	ticker := e.clock.NewTimerChan(tickerInterval)
 	maintainLeadershipStarted.Done()
 
@@ -62,7 +62,7 @@ func (e *elections[K, V]) maintainLeadership(key K, val V, ttlSeconds Leadership
 		case <-ticker:
 			ticker = e.clock.NewTimerChan(tickerInterval)
 			logger.Verbose(fmt.Sprintf("Key=%v: renewing leadership.", key))
-			ok, err := e.storage.CompareAndSwap(key, val, val, int(ttlSeconds))
+			ok, err := e.storage.CompareAndSwap(key, val, val, time.Duration(duration))
 			if err != nil {
 				logger.Error(fmt.Sprintf("Key=%v: compareAndSwap error => release", key))
 			}

@@ -20,7 +20,7 @@ import (
 
 func TestBasicUsage_CUD(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVITLocalCassandra(t, &it.SharedConfig_App1)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -143,7 +143,7 @@ func TestBasicUsage_CUD(t *testing.T) {
 // Deprecated: use c.sys.CUD. Kept to not to break the exitsing events only
 func TestBasicUsage_Init(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVITLocalCassandra(t, &it.SharedConfig_App1)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")

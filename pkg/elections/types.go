@@ -9,13 +9,13 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/vvm/storage"
 )
 
 type elections[K any, V any] struct {
-	storage     storage.ITTLStorage[K, V]
+	storage     ITTLStorage[K, V]
 	leadership  sync.Map
 	clock       coreutils.ITime
 	isFinalized atomic.Bool
@@ -29,4 +29,4 @@ type leaderInfo[K any, V any] struct {
 	wg     sync.WaitGroup
 }
 
-type LeadershipDurationSeconds int
+type LeadershipDuration time.Duration

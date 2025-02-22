@@ -7,6 +7,7 @@ package storage
 import (
 	"encoding/binary"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -34,7 +35,7 @@ func TestInsertIfNotExist(t *testing.T) {
 	mockVVMAppTTLStorage.On("InsertIfNotExists", pKey, cCols, []byte(val), ttlSeconds).
 		Return(true, nil)
 
-	ok, err := ttlStorage.InsertIfNotExist(ttlStorageImplKey, val, ttlSeconds)
+	ok, err := ttlStorage.InsertIfNotExist(ttlStorageImplKey, val, time.Duration(ttlSeconds)*time.Second)
 	require.NoError(t, err)
 	require.True(t, ok)
 
@@ -59,7 +60,7 @@ func TestCompareAndSwap(t *testing.T) {
 	mockVVMAppTTLStorage.On("CompareAndSwap", pKey, cCols, []byte(oldVal), []byte(newVal), ttlSeconds).
 		Return(true, nil)
 
-	ok, err := ttlStorage.CompareAndSwap(ttlStorageImplKey, oldVal, newVal, ttlSeconds)
+	ok, err := ttlStorage.CompareAndSwap(ttlStorageImplKey, oldVal, newVal, time.Duration(ttlSeconds)*time.Second)
 	require.NoError(t, err)
 	require.True(t, ok)
 
