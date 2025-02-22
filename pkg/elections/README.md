@@ -31,22 +31,23 @@ go get github.com/voedger/voedger/pkg/elections
 ### ITTLStorage
 
 ```go
-type ITTLStorage[K comparable, V any] interface {
-    InsertIfNotExist(key K, val V, duration time.Duration) (bool, error)
-    CompareAndSwap(key K, oldVal V, newVal V, duration time.Duration) (bool, error)
-    CompareAndDelete(key K, val V) (bool, error)
+type ITTLStorage[K any, V any] interface {
+	InsertIfNotExist(key K, val V, ttlSeconds int) (bool, error)
+	CompareAndSwap(key K, oldVal V, newVal V, ttlSeconds int) (bool, error)
+	CompareAndDelete(key K, val V) (bool, error)
 }
 ```
 
 - InsertIfNotExist: tries to insert (key, val) with a TTL only if key does not exist.
-- CompareAndSwap: checks if the current value for `key` is `oldVal`. If it matches, sets it to `newVal` and updates the TTL to `ttl`.
+- CompareAndSwap: checks if the current value for `key` is `oldVal`. If it matches, sets it to `newVal` and updates the TTL to `ttlSeconds`.
 - CompareAndDelete: compares the current value for `key` with `val` and if they match, deletes the key, returning (true, nil). Otherwise, (false, nil).
 
 ### IElections
 
 ```go
+type LeadershipDurationSeconds int
 type IElections[K comparable, V any] interface {
-    AcquireLeadership(key K, val V, duration time.Duration) context.Context
+    AcquireLeadership(key K, val V, leadershipDurationSecods LeadershipDurationSeconds) context.Context
     ReleaseLeadership(key K)
 }
 ```
@@ -77,7 +78,7 @@ func Provide[K comparable, V any](storage ITTLStorage[K, V], clock ITime) (IElec
 elector, cleanup := elections.Provide(myStorage, myClock)
 
 // Acquire leadership
-ctx := elector.AcquireLeadership("myKey", "myValue", 5*time.Second)
+ctx := elector.AcquireLeadership("myKey", "myValue", 5) // 5 seconds
 select {
 case <-ctx.Done():
     fmt.Println("Failed to acquire leadership or it ended unexpectedly.")
