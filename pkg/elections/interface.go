@@ -10,7 +10,7 @@ import (
 )
 
 // ITTLStorage defines a TTL-based storage layer with explicit durations.
-type ITTLStorage[K comparable, V any] interface {
+type ITTLStorage[K any, V any] interface {
 	// InsertIfNotExist tries to insert (key, val) with a TTL only if key does not exist.
 	// Returns (true, nil) if inserted successfully,
 	// (false, nil) if the key already exists,
@@ -29,12 +29,12 @@ type ITTLStorage[K comparable, V any] interface {
 }
 
 // IElections has AcquireLeadership returning nil if leadership is not acquired or error.
-type IElections[K comparable, V any] interface {
+type IElections[K any, V any] interface {
 	// AcquireLeadership attempts to become leader for `key` with `val`.
 	//  - Returns a non-nil context if leadership is acquired successfully.
 	//  - Returns nil if leadership cannot be acquired or an error occurs.
 	// The background goroutine is spawned only on success.
-	AcquireLeadership(key K, val V, duration time.Duration) (ctx context.Context)
+	AcquireLeadership(key K, val V, duration LeadershipDuration) (ctx context.Context)
 
 	// ReleaseLeadership stops the background renewal goroutine for `key` and wait till it finished
 	// CompareAndDeletes from storage if we still hold it. No return value.

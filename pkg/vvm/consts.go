@@ -7,6 +7,7 @@ package vvm
 import (
 	"time"
 
+	"github.com/voedger/voedger/pkg/elections"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istorage/cas"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -29,6 +30,8 @@ const (
 	DefaultVVMPort                                                     = router.DefaultPort
 	actualizerFlushInterval                                            = time.Millisecond * 500
 	defaultCassandraPort                                               = 9042
+	DefaultLeadershipDuration                                          = elections.LeadershipDuration(20 * time.Second)
+	DefaultLeadershipAcquisitionDuration                               = LeadershipAcquisitionDuration(120 * time.Second)
 )
 
 const (

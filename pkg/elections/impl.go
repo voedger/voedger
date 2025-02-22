@@ -6,6 +6,7 @@ package elections
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -14,19 +15,19 @@ import (
 
 // AcquireLeadership returns nil if leadership is *not* acquired (e.g., error in storage,
 // already local leader, or elections cleaned up), otherwise returns a *non-nil* context.
-func (e *elections[K, V]) AcquireLeadership(key K, val V, duration time.Duration) context.Context {
+func (e *elections[K, V]) AcquireLeadership(key K, val V, duration LeadershipDuration) context.Context {
 	if e.isFinalized.Load() {
-		logger.Verbose("[AcquireLeadership] Key=%v: elections cleaned up; cannot acquire leadership.", key)
+		logger.Verbose(fmt.Sprintf("Key=%v: elections cleaned up; cannot acquire leadership.", key))
 		return nil
 	}
 
-	inserted, err := e.storage.InsertIfNotExist(key, val, duration)
+	inserted, err := e.storage.InsertIfNotExist(key, val, time.Duration(duration))
 	if err != nil {
-		logger.Error("[AcquireLeadership] Key=%v: storage error: %v", key, err)
+		logger.Error(fmt.Sprintf("Key=%v: storage error: %v", key, err))
 		return nil
 	}
 	if !inserted {
-		logger.Verbose("[AcquireLeadership] Key=%v: already held or blocked by storage.", key)
+		logger.Verbose(fmt.Sprintf("Key=%v: already held or blocked by storage.", key))
 		return nil
 	}
 
@@ -46,10 +47,10 @@ func (e *elections[K, V]) AcquireLeadership(key K, val V, duration time.Duration
 	return ctx
 }
 
-func (e *elections[K, V]) maintainLeadership(key K, val V, duration time.Duration, li *leaderInfo[K, V], maintainLeadershipStarted *sync.WaitGroup) {
+func (e *elections[K, V]) maintainLeadership(key K, val V, duration LeadershipDuration, li *leaderInfo[K, V], maintainLeadershipStarted *sync.WaitGroup) {
 	defer li.wg.Done()
 
-	tickerInterval := duration / 2
+	tickerInterval := time.Duration(duration) / 2
 	ticker := e.clock.NewTimerChan(tickerInterval)
 	maintainLeadershipStarted.Done()
 
@@ -59,14 +60,15 @@ func (e *elections[K, V]) maintainLeadership(key K, val V, duration time.Duratio
 			// Voluntarily released or forcibly canceled
 			return
 		case <-ticker:
-			logger.Verbose("[maintainLeadership] Key=%v: renewing leadership.", key)
-			ok, err := e.storage.CompareAndSwap(key, val, val, duration)
+			ticker = e.clock.NewTimerChan(tickerInterval)
+			logger.Verbose(fmt.Sprintf("Key=%v: renewing leadership.", key))
+			ok, err := e.storage.CompareAndSwap(key, val, val, time.Duration(duration))
 			if err != nil {
-				logger.Error("[maintainLeadership] Key=%v: compareAndSwap error => release", key)
+				logger.Error(fmt.Sprintf("Key=%v: compareAndSwap error => release", key))
 			}
 
 			if !ok {
-				logger.Error("[maintainLeadership] Key=%v: compareAndSwap failed => release", key)
+				logger.Error(fmt.Sprintf("Key=%v: compareAndSwap failed => release", key))
 			}
 
 			if !ok || err != nil {
@@ -89,18 +91,18 @@ func (e *elections[K, V]) ReleaseLeadership(key K) {
 func (e *elections[K, V]) releaseLeadership(key K) *leaderInfo[K, V] {
 	liIntf, found := e.leadership.LoadAndDelete(key)
 	if !found {
-		logger.Verbose("[ReleaseLeadership] Key=%v: not locally held.", key)
+		logger.Verbose(fmt.Sprintf("Key=%v: not locally held.", key))
 		return nil
 	}
 
 	li := liIntf.(*leaderInfo[K, V])
 	if _, err := e.storage.CompareAndDelete(key, li.val); err != nil {
-		logger.Error("[ReleaseLeadership] Key=%v: storage CompareAndDelete error: %v", key, err)
+		logger.Error(fmt.Sprintf("Key=%v: storage CompareAndDelete error: %v", key, err))
 	}
 
 	li.cancel()
 
-	logger.Verbose("[ReleaseLeadership] Key=%v: leadership released.", key)
+	logger.Verbose(fmt.Sprintf("Key=%v: leadership released.", key))
 	return li
 }
 
@@ -111,6 +113,9 @@ func (e *elections[K, V]) cleanup() {
 	// Release each leadership so renewal goroutines stop
 	e.leadership.Range(func(key, liIntf any) bool {
 		li := liIntf.(*leaderInfo[K, V])
+		if _, err := e.storage.CompareAndDelete(key.(K), li.val); err != nil {
+			logger.Error(fmt.Sprintf("Key=%v: storage CompareAndDelete error: %v", key, err))
+		}
 		li.cancel()
 		li.wg.Wait()
 		e.leadership.Delete(key)
