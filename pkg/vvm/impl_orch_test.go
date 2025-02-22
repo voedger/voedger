@@ -40,9 +40,9 @@ func TestBasic(t *testing.T) {
 		r.NoError(err)
 
 		// Launch VVM1
-		problemCtx := vvm1.LaunchNew(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration)
+		problemCtx := vvm1.Launch(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration)
 		r.NoError(problemCtx.Err())
-		r.NoError(vvm1.ShutdownNew())
+		r.NoError(vvm1.Shutdown())
 		<-vvm1.shutdownedCtx.Done()
 	})
 
@@ -65,7 +65,7 @@ func TestBasic(t *testing.T) {
 		r.NoError(err)
 
 		// Launch VVM1
-		problemCtx1 := vvm1.LaunchNew(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration)
+		problemCtx1 := vvm1.Launch(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration)
 		r.NoError(problemCtx1.Err())
 
 		// Launch VVM2, expecting leadership acquisition to fail
@@ -91,16 +91,16 @@ func TestBasic(t *testing.T) {
 				iTime.Sleep(2 * time.Second)
 			}()
 
-			problemCtx2 := vvm2.LaunchNew(DefaultLeadershipDurationSeconds, LeadershipAcquisitionDuration(time.Second))
+			problemCtx2 := vvm2.Launch(DefaultLeadershipDurationSeconds, LeadershipAcquisitionDuration(time.Second))
 
 			<-problemCtx2.Done()
 
 			r.Error(problemCtx2.Err(), "VVM2 should not acquire leadership")
-			r.ErrorIs(vvm2.ShutdownNew(), ErrVVMLeadershipAcquisition)
+			r.ErrorIs(vvm2.Shutdown(), ErrVVMLeadershipAcquisition)
 		}()
 
 		wg.Wait()
-		r.NoError(vvm1.ShutdownNew())
+		r.NoError(vvm1.Shutdown())
 	})
 }
 
@@ -112,7 +112,7 @@ func TestAutomaticShutdownOnLeadershipLost(t *testing.T) {
 	r.NoError(err)
 
 	// Launch VVM1
-	problemCtx := vvm1.LaunchNew(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration)
+	problemCtx := vvm1.Launch(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration)
 	r.NoError(problemCtx.Err())
 
 	// Simulate leadership loss
@@ -132,11 +132,11 @@ func TestAutomaticShutdownOnLeadershipLost(t *testing.T) {
 	r.True(ok)
 
 	// Bump mock time
-	coreutils.MockTime.Sleep(time.Duration(DefaultLeadershipDurationSeconds)*time.Second)
+	coreutils.MockTime.Sleep(time.Duration(DefaultLeadershipDurationSeconds) * time.Second)
 
 	// Check problem context
 	<-problemCtx.Done()
-	r.ErrorIs(vvm1.ShutdownNew(), ErrLeadershipLost)
+	r.ErrorIs(vvm1.Shutdown(), ErrLeadershipLost)
 }
 
 func TestCancelLeadershipOnManualShutdown(t *testing.T) {
@@ -147,7 +147,7 @@ func TestCancelLeadershipOnManualShutdown(t *testing.T) {
 	r.NoError(err)
 
 	// Launch VVM1
-	problemCtx1 := vvm.LaunchNew(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration)
+	problemCtx1 := vvm.Launch(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration)
 	r.NoError(problemCtx1.Err(), "VVM1 should start without errors")
 
 	// Get pKey and cCols for leadership key
@@ -163,7 +163,7 @@ func TestCancelLeadershipOnManualShutdown(t *testing.T) {
 	r.True(ok)
 
 	// Shutdown VVM
-	problemErr := vvm.ShutdownNew()
+	problemErr := vvm.Shutdown()
 	r.NoError(problemErr)
 
 	// Leadership key doesn't exist
@@ -180,10 +180,10 @@ func TestServicePipelineStartFailure(t *testing.T) {
 	vvm, err := Provide(vvmCfg)
 	require.NoError(err)
 
-	problemCtx := vvm.LaunchNew(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration)
+	problemCtx := vvm.Launch(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration)
 	<-problemCtx.Done()
 
-	err = vvm.ShutdownNew()
+	err = vvm.Shutdown()
 	require.Error(err)
 	log.Println(err)
 }

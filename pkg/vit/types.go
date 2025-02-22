@@ -5,6 +5,7 @@
 package vit
 
 import (
+	"context"
 	"sync"
 	"testing"
 
@@ -34,6 +35,7 @@ type VIT struct {
 	emailCaptor          emailCaptor
 	httpClient           coreutils.IHTTPClient
 	mockTime             coreutils.IMockTime
+	vvmProblemCtx        context.Context
 }
 
 type VITConfig struct {
