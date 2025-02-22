@@ -75,25 +75,6 @@ func (h *viewHandler) AuthorizeResult(ctx context.Context, qw *queryWork) (err e
 		// workspace is dummy
 		// ws = qw.iQuery.Workspace()
 	}
-	// for _, elem := range qw.queryParams.Elements() {
-	// 	nestedPath := elem.Path().AsArray()
-	// 	nestedType := qw.resultType
-	// 	for _, nestedName := range nestedPath {
-	// 		if len(nestedName) == 0 {
-	// 			// root
-	// 			continue
-	// 		}
-	// 		// incorrectness is excluded already on validation stage in [queryParams.validate]
-	// 		containersOfNested := nestedType.(appdef.IWithContainers)
-	// 		// container presence is checked already on validation stage in [queryParams.validate]
-	// 		nestedContainer := containersOfNested.Container(nestedName)
-	// 		nestedType = nestedContainer.Type()
-	// 	}
-	// 	requestedfields := []string{}
-	// 	for _, resultField := range elem.ResultFields() {
-	// 		requestedfields = append(requestedfields, resultField.Field())
-	// 	}
-
 	var requestedFields []string
 	if len(qw.queryParams.Constraints.Keys) != 0 {
 		requestedFields = qw.queryParams.Constraints.Keys
@@ -112,7 +93,6 @@ func (h *viewHandler) AuthorizeResult(ctx context.Context, qw *queryWork) (err e
 	if !ok {
 		return coreutils.NewSysError(http.StatusForbidden)
 	}
-	// }
 	return nil
 }
 func (h *viewHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err error) {
