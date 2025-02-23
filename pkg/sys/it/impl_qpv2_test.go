@@ -21,7 +21,7 @@ import (
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
-func prepareDailyIdx(require *require.Assertions, vit *it.VIT, ws *it.AppWorkspace) {
+func prepareDailyIdx(require *require.Assertions, vit *it.VIT, ws *it.AppWorkspace) (resultOffset istructs.Offset) {
 	testProjectionKey := in10n.ProjectionKey{
 		App:        istructs.AppQName_test1_app1,
 		Projection: it.QNameApp1_ViewCategoryIdx,
@@ -117,7 +117,7 @@ func prepareDailyIdx(require *require.Assertions, vit *it.VIT, ws *it.AppWorkspa
 	resultOffsetOfCUD := vit.PostWS(ws, "c.sys.CUD", cuds.MustToJSON()).CurrentWLogOffset
 	require.EqualValues(resultOffsetOfCUD, <-offsetsChan)
 	unsubscribe()
-
+	return resultOffsetOfCUD
 }
 
 func TestQueryProcessor2_Views(t *testing.T) {
@@ -125,71 +125,71 @@ func TestQueryProcessor2_Views(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	prepareDailyIdx(require, vit, ws)
+	expectedOffset := prepareDailyIdx(require, vit, ws)
 	t.Run("Read by PK with eq", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/views/%s?where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
-		require.JSONEq(`{"results":[
-			{"Day":1,"Month":1,"StringValue":"2025-01-01","Year":2025,"offs":15,"sys.QName":"app1pkg.DailyIdx"},
-			{"Day":1,"Month":2,"StringValue":"2025-02-01","Year":2025,"offs":15,"sys.QName":"app1pkg.DailyIdx"}
-		]}`, resp.Body)
+		require.JSONEq(fmt.Sprintf(`{"results":[
+			{"Day":1,"Month":1,"StringValue":"2025-01-01","Year":2025,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
+			{"Day":1,"Month":2,"StringValue":"2025-02-01","Year":2025,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"}
+		]}`, expectedOffset), resp.Body)
 	})
 	t.Run("Read by PK with in", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2024,2025]}}`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
-		require.JSONEq(`{"results":[
-			{"Day":1,"Month":1,"StringValue":"2024-01-01","Year":2024,"offs":15,"sys.QName":"app1pkg.DailyIdx"},
-			{"Day":1,"Month":1,"StringValue":"2025-01-01","Year":2025,"offs":15,"sys.QName":"app1pkg.DailyIdx"},
-			{"Day":1,"Month":2,"StringValue":"2025-02-01","Year":2025,"offs":15,"sys.QName":"app1pkg.DailyIdx"}
-		]}`, resp.Body)
+		require.JSONEq(fmt.Sprintf(`{"results":[
+			{"Day":1,"Month":1,"StringValue":"2024-01-01","Year":2024,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
+			{"Day":1,"Month":1,"StringValue":"2025-01-01","Year":2025,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
+			{"Day":1,"Month":2,"StringValue":"2025-02-01","Year":2025,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"}
+		]}`, expectedOffset), resp.Body)
 	})
 	t.Run("Read by PK and CC with eq", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/views/%s?where={"Year":2025,"Month":2}`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
-		require.JSONEq(`{"results":[
-			{"Day":1,"Month":2,"StringValue":"2025-02-01","Year":2025,"offs":15,"sys.QName":"app1pkg.DailyIdx"}
-		]}`, resp.Body)
+		require.JSONEq(fmt.Sprintf(`{"results":[
+			{"Day":1,"Month":2,"StringValue":"2025-02-01","Year":2025,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"}
+		]}`, expectedOffset), resp.Body)
 	})
 	t.Run("Read by PK and CC with in", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2022,2023]},"Month":{"$in":[2,4]},"Day":{"$in":[3,5]}}`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
-		require.JSONEq(`{"results":[
-			{"Day":3,"Month":2,"StringValue":"2022-02-03","Year":2022,"offs":15,"sys.QName":"app1pkg.DailyIdx"},
-			{"Day":5,"Month":2,"StringValue":"2022-02-05","Year":2022,"offs":15,"sys.QName":"app1pkg.DailyIdx"},
-			{"Day":3,"Month":4,"StringValue":"2022-04-03","Year":2022,"offs":15,"sys.QName":"app1pkg.DailyIdx"},
-			{"Day":5,"Month":4,"StringValue":"2022-04-05","Year":2022,"offs":15,"sys.QName":"app1pkg.DailyIdx"},
-			{"Day":3,"Month":2,"StringValue":"2023-02-03","Year":2023,"offs":15,"sys.QName":"app1pkg.DailyIdx"},
-			{"Day":5,"Month":2,"StringValue":"2023-02-05","Year":2023,"offs":15,"sys.QName":"app1pkg.DailyIdx"},
-			{"Day":3,"Month":4,"StringValue":"2023-04-03","Year":2023,"offs":15,"sys.QName":"app1pkg.DailyIdx"},
-			{"Day":5,"Month":4,"StringValue":"2023-04-05","Year":2023,"offs":15,"sys.QName":"app1pkg.DailyIdx"}
-		]}`, resp.Body)
+		require.JSONEq(fmt.Sprintf(`{"results":[
+			{"Day":3,"Month":2,"StringValue":"2022-02-03","Year":2022,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
+			{"Day":5,"Month":2,"StringValue":"2022-02-05","Year":2022,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
+			{"Day":3,"Month":4,"StringValue":"2022-04-03","Year":2022,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
+			{"Day":5,"Month":4,"StringValue":"2022-04-05","Year":2022,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
+			{"Day":3,"Month":2,"StringValue":"2023-02-03","Year":2023,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
+			{"Day":5,"Month":2,"StringValue":"2023-02-05","Year":2023,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
+			{"Day":3,"Month":4,"StringValue":"2023-04-03","Year":2023,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
+			{"Day":5,"Month":4,"StringValue":"2023-04-05","Year":2023,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"}
+		]}`, expectedOffset), resp.Body)
 	})
 	t.Run("Read without order", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2021,2022,2023,2024,2025]},"Month":1,"Day":2}`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
-		require.JSONEq(`{"results":[
-			{"Day":2,"Month":1,"StringValue":"2021-01-02","Year":2021,"offs":15,"sys.QName":"app1pkg.DailyIdx"},
-			{"Day":2,"Month":1,"StringValue":"2022-01-02","Year":2022,"offs":15,"sys.QName":"app1pkg.DailyIdx"},
-			{"Day":2,"Month":1,"StringValue":"2023-01-02","Year":2023,"offs":15,"sys.QName":"app1pkg.DailyIdx"}
-		]}`, resp.Body)
+		require.JSONEq(fmt.Sprintf(`{"results":[
+			{"Day":2,"Month":1,"StringValue":"2021-01-02","Year":2021,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
+			{"Day":2,"Month":1,"StringValue":"2022-01-02","Year":2022,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
+			{"Day":2,"Month":1,"StringValue":"2023-01-02","Year":2023,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"}
+		]}`, expectedOffset), resp.Body)
 	})
 	t.Run("Read with order desc", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2021,2022,2023,2024,2025]},"Month":1,"Day":2}&order=-Year`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
-		require.JSONEq(`{"results":[
-			{"Day":2,"Month":1,"StringValue":"2023-01-02","Year":2023,"offs":15,"sys.QName":"app1pkg.DailyIdx"},
-			{"Day":2,"Month":1,"StringValue":"2022-01-02","Year":2022,"offs":15,"sys.QName":"app1pkg.DailyIdx"},
-			{"Day":2,"Month":1,"StringValue":"2021-01-02","Year":2021,"offs":15,"sys.QName":"app1pkg.DailyIdx"}
-		]}`, resp.Body)
+		require.JSONEq(fmt.Sprintf(`{"results":[
+			{"Day":2,"Month":1,"StringValue":"2023-01-02","Year":2023,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
+			{"Day":2,"Month":1,"StringValue":"2022-01-02","Year":2022,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
+			{"Day":2,"Month":1,"StringValue":"2021-01-02","Year":2021,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"}
+		]}`, expectedOffset), resp.Body)
 	})
 	t.Run("Read with order asc", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2021,2022,2023,2024,2025]},"Month":1,"Day":2}&order=Year`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
-		require.JSONEq(`{"results":[
-			{"Day":2,"Month":1,"StringValue":"2021-01-02","Year":2021,"offs":15,"sys.QName":"app1pkg.DailyIdx"},
-			{"Day":2,"Month":1,"StringValue":"2022-01-02","Year":2022,"offs":15,"sys.QName":"app1pkg.DailyIdx"},
-			{"Day":2,"Month":1,"StringValue":"2023-01-02","Year":2023,"offs":15,"sys.QName":"app1pkg.DailyIdx"}
-		]}`, resp.Body)
+		require.JSONEq(fmt.Sprintf(`{"results":[
+			{"Day":2,"Month":1,"StringValue":"2021-01-02","Year":2021,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
+			{"Day":2,"Month":1,"StringValue":"2022-01-02","Year":2022,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
+			{"Day":2,"Month":1,"StringValue":"2023-01-02","Year":2023,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"}
+		]}`, expectedOffset), resp.Body)
 	})
 	t.Run("Use keys constraint", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2021,2022,2023,2024,2025]},"Month":1,"Day":2}&keys=Year,Month,Day`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
@@ -223,10 +223,10 @@ func TestQueryProcessor2_Views(t *testing.T) {
 		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/views/%s?where={"Year":2025}&keys=Year,Month,Day,offs`, ws.WSID, it.QNameApp1_ViewDailyIdx),
 			coreutils.WithAuthorizeBy(apiToken))
 		require.NoError(err)
-		require.JSONEq(`{"results":[		
-				{"Day":1,"Month":1,"Year":2025,"offs":15},
-				{"Day":1,"Month":2,"Year":2025,"offs":15}
-			]}`, resp.Body)
+		require.JSONEq(fmt.Sprintf(`{"results":[
+				{"Day":1,"Month":1,"Year":2025,"offs":%[1]d},
+				{"Day":1,"Month":2,"Year":2025,"offs":%[1]d}
+			]}`, expectedOffset), resp.Body)
 
 		// LimitedAccessRole has no access to read CategoryIdx
 		vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/views/%s?where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewCategoryIdx),

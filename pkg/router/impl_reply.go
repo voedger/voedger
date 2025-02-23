@@ -106,8 +106,6 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 			if elemsCount == 0 {
 				sendSuccess = writeResponse(w, `"results":[`)
 				responseCloser = "]"
-			} else {
-				sendSuccess = writeResponse(w, ",")
 			}
 		} else {
 			if isCmd || contentType == coreutils.TextPlain {
@@ -116,9 +114,15 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 				res = strings.TrimSuffix(res, "}")
 				sendSuccess = writeResponse(w, res)
 			} else {
-				sendSuccess = writeResponse(w, `"sections":[{"type":"","elements":[`)
-				sectionsCloser = "]}]"
+				if elemsCount == 0 {
+					sendSuccess = writeResponse(w, `"sections":[{"type":"","elements":[`)
+					sectionsCloser = "]}]"
+				}
 			}
+		}
+
+		if sendSuccess && elemsCount > 0 {
+			sendSuccess = writeResponse(w, ",")
 		}
 
 		elemsCount++

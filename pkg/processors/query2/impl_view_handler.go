@@ -72,6 +72,7 @@ func (h *viewHandler) AuthorizeResult(ctx context.Context, qw *queryWork) (err e
 	}
 	ws := qw.iWorkspace
 	if ws == nil {
+		panic("")
 		// workspace is dummy
 		// ws = qw.iQuery.Workspace()
 	}
