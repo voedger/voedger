@@ -108,18 +108,38 @@ func (rec *recordType) IsNew() bool {
 
 // istructs.ICUDRow.ModifiedFields
 func (row *rowType) ModifiedFields(cb func(appdef.IField, any) bool) {
-	if row.isActiveModified {
-		if !cb(row.fields.Field(appdef.SystemField_IsActive), row.isActive) {
+	if row.modifiedFields[appdef.SystemField_QName] {
+		if !cb(row.fieldDef(appdef.SystemField_QName), row.QName()) {
 			return
 		}
 	}
 
-	for _, fld := range row.fields.Fields() {
-		n := fld.Name()
-		if row.dyB.HasValue(n) || row.nils[n] != nil {
-			if !cb(fld, row.fieldValue(fld)) {
-				return
-			}
+	if row.modifiedFields[appdef.SystemField_ID] {
+		if !cb(row.fieldDef(appdef.SystemField_ID), row.id) {
+			return
 		}
 	}
+
+	if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_ParentID); exists {
+		if !cb(row.fieldDef(appdef.SystemField_ParentID), row.parentID) {
+			return
+		}
+	}
+	if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_Container); exists {
+		if !cb(row.fieldDef(appdef.SystemField_Container), row.container) {
+			return
+		}
+	}
+
+	if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_IsActive); exists {
+		if !cb(row.fieldDef(appdef.SystemField_IsActive), row.isActive) {
+			return
+		}
+	}
+
+	// user fields
+	row.dyB.IterateFields(nil, func(name string, value interface{}) bool {
+		return cb(row.fieldDef(name), value)
+	})
+
 }

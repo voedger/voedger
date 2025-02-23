@@ -166,6 +166,7 @@ func (row *rowType) copyFrom(src *rowType) {
 		src.dyB.IterateFields(nil,
 			func(name string, data interface{}) bool {
 				row.dyB.Set(name, data)
+				row.modifiedFields[name] = true
 				return true
 			})
 	}
@@ -341,6 +342,7 @@ func (row *rowType) release() {
 // setActive sets record IsActive activity flag
 func (row *rowType) setActive(value bool) {
 	row.isActive = value
+	row.modifiedFields[appdef.SystemField_IsActive] = true
 }
 
 // setContainer sets record container
@@ -368,11 +370,13 @@ func (row *rowType) setContainerID(value containers.ContainerID) (err error) {
 // setID sets record ID
 func (row *rowType) setID(value istructs.RecordID) {
 	row.id = value
+	row.modifiedFields[appdef.SystemField_ID] = true
 }
 
 // setParent sets record parent ID
 func (row *rowType) setParent(value istructs.RecordID) {
 	row.parentID = value
+	row.modifiedFields[appdef.SystemField_ParentID] = true
 }
 
 // setQName sets new specified QName for row. It resets all data from row
@@ -418,6 +422,7 @@ func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
 			return err
 		}
 		row.setType(t)
+		row.modifiedFields[appdef.SystemField_QName] = true
 	}
 
 	return nil
