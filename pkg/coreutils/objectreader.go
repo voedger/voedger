@@ -46,7 +46,8 @@ func ReadByKind(name appdef.FieldName, kind appdef.DataKind, rr istructs.IRowRea
 }
 
 type mapperOpts struct {
-	filter func(name string, kind appdef.DataKind) bool
+	filter      func(name string, kind appdef.DataKind) bool
+	nonNilsOnly bool
 }
 
 type MapperOpt func(opt *mapperOpts)
@@ -54,6 +55,12 @@ type MapperOpt func(opt *mapperOpts)
 func Filter(filterFunc func(name string, kind appdef.DataKind) bool) MapperOpt {
 	return func(opts *mapperOpts) {
 		opts.filter = filterFunc
+	}
+}
+
+func WithNonNilsOnly() MapperOpt {
+	return func(opts *mapperOpts) {
+		opts.nonNilsOnly = true
 	}
 }
 
@@ -69,6 +76,25 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 	opts := &mapperOpts{}
 	for _, optFunc := range optFuncs {
 		optFunc(opts)
+	}
+
+	if opts.nonNilsOnly {
+		modifiedFieldsNames := map[string]bool{}
+		obj.ModifiedFields(func(iField appdef.IField, a any) bool {
+			modifiedFieldsNames[iField.Name()] = true
+			return true
+		})
+		specifiedFilter := opts.filter
+		nonNilsFilter := func(name string, kind appdef.DataKind) bool {
+			if !modifiedFieldsNames[name] {
+				return false
+			}
+			if specifiedFilter != nil {
+				return specifiedFilter(name, kind)
+			}
+			return true
+		}
+		opts.filter = nonNilsFilter
 	}
 
 	proceedField := func(fieldName appdef.FieldName, kind appdef.DataKind) {

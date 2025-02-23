@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -54,7 +55,7 @@ func qryJournalExec(eps map[appdef.AppQName]extensionpoints.IExtensionPoint) ist
 			if fo == int64(0) {
 				return
 			}
-			eo, err := NewEventObject(value.(istructs.IStateWLogValue).AsEvent(), appDef, f)
+			eo, err := NewEventObject(value.(istructs.IStateWLogValue).AsEvent(), appDef, f, coreutils.WithNonNilsOnly())
 			if err != nil {
 				return err
 			}
