@@ -2,12 +2,11 @@
  * Copyright (c) 2025-present unTill Software Development Group B.V.
  * @author Alisher Nurmanov
  */
-package ttlstorage
+package storage
 
 import (
 	"encoding/binary"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -17,15 +16,15 @@ import (
 func TestInsertIfNotExist(t *testing.T) {
 	mockVVMAppTTLStorage := new(MockIVVMAppTTLStorage)
 	const (
-		pKeyPrefix        PKeyPrefix        = 0xABCD1234
 		ttlStorageImplKey TTLStorageImplKey = 12345
 		val                                 = "some-value"
 	)
-	ttlStorage := New(pKeyPrefix, mockVVMAppTTLStorage)
+	ttlStorage := NewElectionsTTLStorage(mockVVMAppTTLStorage)
+
+	require.Equal(t, pKeyPrefix_Elections, ttlStorage.(*implITTLStorageElections).prefix)
 
 	// Preallocate and check slices for non-empty
-	pKey := uint32ToBytes(pKeyPrefix)
-	require.Len(t, pKey, 4, "pKey should have length 4")
+	pKey := uint32ToBytes(pKeyPrefix_Elections)
 
 	cCols := uint32ToBytes(ttlStorageImplKey)
 	require.Len(t, cCols, 4, "cCols should have length 4")
@@ -35,7 +34,7 @@ func TestInsertIfNotExist(t *testing.T) {
 	mockVVMAppTTLStorage.On("InsertIfNotExists", pKey, cCols, []byte(val), ttlSeconds).
 		Return(true, nil)
 
-	ok, err := ttlStorage.InsertIfNotExist(ttlStorageImplKey, val, time.Duration(ttlSeconds)*time.Second)
+	ok, err := ttlStorage.InsertIfNotExist(ttlStorageImplKey, val, ttlSeconds)
 	require.NoError(t, err)
 	require.True(t, ok)
 
@@ -45,15 +44,13 @@ func TestInsertIfNotExist(t *testing.T) {
 func TestCompareAndSwap(t *testing.T) {
 	mockVVMAppTTLStorage := new(MockIVVMAppTTLStorage)
 	const (
-		pKeyPrefix        PKeyPrefix        = 0xABCD1234
 		ttlStorageImplKey TTLStorageImplKey = 12345
 		oldVal                              = "old-val"
 		newVal                              = "new-val"
 	)
-	ttlStorage := New(pKeyPrefix, mockVVMAppTTLStorage)
+	ttlStorage := NewElectionsTTLStorage(mockVVMAppTTLStorage)
 
-	pKey := uint32ToBytes(pKeyPrefix)
-	require.Len(t, pKey, 4)
+	pKey := uint32ToBytes(pKeyPrefix_Elections)
 	cCols := uint32ToBytes(ttlStorageImplKey)
 	require.Len(t, cCols, 4)
 
@@ -62,7 +59,7 @@ func TestCompareAndSwap(t *testing.T) {
 	mockVVMAppTTLStorage.On("CompareAndSwap", pKey, cCols, []byte(oldVal), []byte(newVal), ttlSeconds).
 		Return(true, nil)
 
-	ok, err := ttlStorage.CompareAndSwap(ttlStorageImplKey, oldVal, newVal, time.Duration(ttlSeconds)*time.Second)
+	ok, err := ttlStorage.CompareAndSwap(ttlStorageImplKey, oldVal, newVal, ttlSeconds)
 	require.NoError(t, err)
 	require.True(t, ok)
 
@@ -72,14 +69,12 @@ func TestCompareAndSwap(t *testing.T) {
 func TestCompareAndDelete(t *testing.T) {
 	mockVVMAppTTLStorage := new(MockIVVMAppTTLStorage)
 	const (
-		pKeyPrefix        PKeyPrefix        = 0xABCD1234
 		ttlStorageImplKey TTLStorageImplKey = 12345
 		val                                 = "val"
 	)
-	ttlStorage := New(pKeyPrefix, mockVVMAppTTLStorage)
+	ttlStorage := NewElectionsTTLStorage(mockVVMAppTTLStorage)
 
-	pKey := uint32ToBytes(pKeyPrefix)
-	require.Len(t, pKey, 4)
+	pKey := uint32ToBytes(pKeyPrefix_Elections)
 	cCols := uint32ToBytes(ttlStorageImplKey)
 	require.Len(t, cCols, 4)
 

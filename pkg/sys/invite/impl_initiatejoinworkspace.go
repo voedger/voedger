@@ -23,6 +23,7 @@ func provideCmdInitiateJoinWorkspace(sr istructsmem.IStatelessResources, time co
 	))
 }
 
+// [~server.invites/Join.InitiateJoinWorkspace~impl]
 func execCmdInitiateJoinWorkspace(tm coreutils.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, qNameCDocInvite)

@@ -52,6 +52,8 @@ func NewVVMDefaultConfig() VVMConfig {
 			return mem.Provide(coreutils.MockTime), nil
 		},
 		SecretsReader: isecretsimpl.ProvideSecretReader(),
+		IP:            coreutils.LocalhostIP,
+		NumVVM:        1,
 	}
 	if coreutils.IsTest() {
 		res.SecretsReader = itokensjwt.ProvideTestSecretsReader(res.SecretsReader)

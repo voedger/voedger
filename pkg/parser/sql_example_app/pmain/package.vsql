@@ -138,6 +138,7 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
     ROLE LocationManager;
     ROLE LocationUser;
     ROLE LocationGuest;
+    PUBLISHED ROLE ApiRole;
 
     TYPE TypeWithKind (
         Kind int

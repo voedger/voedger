@@ -525,6 +525,7 @@ func (s TemplateStmt) GetName() string { return string(s.Name) }
 
 type RoleStmt struct {
 	Statement
+	Published bool          `parser:"@'PUBLISHED'?"`
 	Name      Ident         `parser:"'ROLE' @Ident"`
 	workspace workspaceAddr // filled on the analysis stage
 }

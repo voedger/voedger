@@ -273,8 +273,7 @@ func Test404(t *testing.T) {
 func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 	require := require.New(t)
 	firstElemSendErrCh := make(chan error)
-	clientDisconnect := make(chan any)
-	requestCtxCh := make(chan context.Context, 1)
+	setDisconnectOnWriteResponse := make(chan any)
 	expectedErrCh := make(chan error)
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go func() {
@@ -286,20 +285,16 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 				StrField: "str",
 			})
 
-			// capture the request context so that it will be able to check if it is closed indeed right before
-			// write to the socket on next writeResponse() call
-			requestCtxCh <- requestCtx
-
 			// now let's wait for client disconnect
-			<-clientDisconnect
+			<-setDisconnectOnWriteResponse
 
-			// next elem send will be succuessful but router will fail to send in on next writeResponse() call
+			// this object must be successfully sent to bus but the router will fail to send in on next writeResponse() call
 			expectedErrCh <- sender.Send(testObject{
 				IntField: 43,
 				StrField: "str1",
 			})
 
-			// next section should be failed because the client is disconnected
+			// this sending to bus must be failed because requestCtx stored in IResponseSender is closed
 			expectedErrCh <- sender.Send(testObject{
 				IntField: 44,
 				StrField: "str2",
@@ -336,25 +331,26 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 
 			// wait for write to the socket will be failed indeed. It happens not at once
 			// that will guarantee context.Canceled error on next sending instead of possible ErrNoConsumer
-			requestCtx := <-requestCtxCh
-			for requestCtx.Err() == nil {
+			for _, err := w.Write([]byte{0}); err == nil; _, err = w.Write([]byte{0}) {
 			}
 		})
 	}
-	defer func() {
-		onBeforeWriteResponse = nil
-	}()
 
 	// signal to the handler it could try to send the next section
-	close(clientDisconnect)
+	// that send will be successful from bus point of view (not disconnected yet)
+	// but will be failed in router (will be disconnected right on writeResponse)
+	close(setDisconnectOnWriteResponse)
 
 	// first elem send after client disconnect should be successful, next one should fail
 	require.NoError(<-expectedErrCh)
 
-	// ensure the next writeResponse call is failed with the expected context.Canceled error
+	// next sending to the bus must be failed because the requestCtx is closed
 	require.ErrorIs(<-expectedErrCh, context.Canceled)
 
 	router.expectClientDisconnection(t)
+
+	// moved here to avoid data race on require.* failures
+	onBeforeWriteResponse = nil
 }
 
 func TestAdminService(t *testing.T) {

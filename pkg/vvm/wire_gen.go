@@ -58,6 +58,7 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
+	"github.com/voedger/voedger/pkg/vvm/storage"
 	"golang.org/x/crypto/acme/autocert"
 	"net/url"
 	"os"
@@ -71,7 +72,7 @@ import (
 // Injectors from provide.go:
 
 // vvmCtx must be cancelled by the caller right before vvm.ServicePipeline.Close()
-func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error) {
+func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error) {
 	numCommandProcessors := vvmConfig.NumCommandProcessors
 	v := provideChannelGroups(vvmConfig)
 	iProcBus := iprocbusmem.Provide(v)
@@ -221,6 +222,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(),
 		cleanup()
 		return nil, nil, err
 	}
+	ittlStorage := storage.NewElectionsTTLStorage(ivvmAppTTLStorage)
 	vvm := &VVM{
 		ServicePipeline:     servicePipeline,
 		APIs:                apIs,
@@ -228,7 +230,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(),
 		AppsExtensionPoints: v2,
 		MetricsServicePort:  v9,
 		BuiltInAppsPackages: v10,
-		VVMAppTTLStorage:    ivvmAppTTLStorage,
+		TTLStorage:          ittlStorage,
 	}
 	return vvm, func() {
 		cleanup4()
@@ -240,9 +242,30 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(),
 
 // provide.go:
 
-func ProvideVVM(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	voedgerVM = &VoedgerVM{vvmCtxCancel: cancel}
+func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
+	vvmCtx, vvmCtxCancel := context.WithCancel(context.Background())
+	problemCtx, problemCtxCancel := context.WithCancel(context.Background())
+	vvmShutCtx, vvmShutCtxCancel := context.WithCancel(context.Background())
+	servicesShutCtx, servicesShutCtxCancel := context.WithCancel(context.Background())
+	monitorShutCtx, monitorShutCtxCancel := context.WithCancel(context.Background())
+	shutdownedCtx, shutdownedCtxCancel := context.WithCancel(context.Background())
+	voedgerVM = &VoedgerVM{
+		vvmCtxCancel:                   vvmCtxCancel,
+		numVVM:                         vvmCfg.NumVVM,
+		ip:                             vvmCfg.IP,
+		problemCtx:                     problemCtx,
+		problemCtxCancel:               problemCtxCancel,
+		problemErrCh:                   make(chan error, 1),
+		vvmShutCtx:                     vvmShutCtx,
+		vvmShutCtxCancel:               vvmShutCtxCancel,
+		servicesShutCtx:                servicesShutCtx,
+		servicesShutCtxCancel:          servicesShutCtxCancel,
+		monitorShutCtx:                 monitorShutCtx,
+		monitorShutCtxCancel:           monitorShutCtxCancel,
+		shutdownedCtx:                  shutdownedCtx,
+		shutdownedCtxCancel:            shutdownedCtxCancel,
+		leadershipAcquisitionTimeArmed: make(chan struct{}, 1),
+	}
 	vvmCfg.addProcessorChannel(iprocbusmem.ChannelGroup{
 		NumChannels:       uint(vvmCfg.NumCommandProcessors),
 		ChannelBufferSize: uint(DefaultNumCommandProcessors),
@@ -261,31 +284,15 @@ func ProvideVVM(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 	}, ProcessorChannel_BLOB,
 	)
 
-	voedgerVM.VVM, voedgerVM.vvmCleanup, err = ProvideCluster(ctx, vvmCfg)
+	voedgerVM.VVM, voedgerVM.vvmCleanup, err = wireVVM(vvmCtx, vvmCfg)
 	if err != nil {
 		return nil, err
 	}
 	return voedgerVM, nil
 }
 
-func (vvm *VoedgerVM) Shutdown() {
-	vvm.vvmCtxCancel()
-	vvm.ServicePipeline.Close()
-	vvm.vvmCleanup()
-}
-
-func (vvm *VoedgerVM) Launch() error {
-	ign := ignition{}
-	err := vvm.ServicePipeline.SendSync(ign)
-	if err != nil {
-		err = errors.Join(err, ErrVVMLaunchFailure)
-		logger.Error(err)
-	}
-	return err
-}
-
-func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (IVVMAppTTLStorage, error) {
-	return prov.AppStorage(istructs.AppQName_sys_cluster)
+func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.IVVMAppTTLStorage, error) {
+	return prov.AppStorage(appdef.NewAppQName(istructs.SysOwner, "vvm"))
 }
 
 func provideWLimiterFactory(maxSize iblobstorage.BLOBMaxSizeType) blobprocessor.WLimiterFactory {
