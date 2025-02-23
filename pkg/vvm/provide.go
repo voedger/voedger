@@ -206,6 +206,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		bus.NewIRequestSender,
 		blobprocessor.NewIRequestHandler,
 		provideIVVMAppTTLStorage,
+		storage.NewElectionsTTLStorage,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",

@@ -97,9 +97,9 @@ func (vvm *VoedgerVM) killerRoutine(leadershipDurationSeconds elections.Leadersh
 }
 
 // tryToAcquireLeadership tries to acquire leadership in loop
-func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipDurationSeconds elections.LeadershipDurationSeconds, leadershipAcquisitionDuration LeadershipAcquisitionDuration) error {
-	ttlStorage := storage.NewElectionsTTLStorage(vvm.VVMAppTTLStorage)
-	elections, electionsCleanup := elections.Provide(ttlStorage, vvm.ITime)
+func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipDurationSeconds elections.LeadershipDurationSeconds,
+	leadershipAcquisitionDuration LeadershipAcquisitionDuration) error {
+	elections, electionsCleanup := elections.Provide(vvm.TTLStorage, vvm.ITime)
 	vvm.electionsCleanup = electionsCleanup
 
 	leadershipAcquistionTimerCh := vvm.ITime.NewTimerChan(time.Duration(leadershipAcquisitionDuration))
@@ -108,7 +108,8 @@ func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipDurationSeconds elections
 	vvm.leadershipAcquisitionTimeArmed <- struct{}{}
 
 	vvmIdx := storage.TTLStorageImplKey(1)
-	for {
+	leadershipAcquisitionDeadline := vvm.ITime.Now().Add(time.Duration(leadershipAcquisitionDuration))
+	for vvm.ITime.Now().Before(leadershipAcquisitionDeadline) {
 		select {
 		case <-leadershipAcquistionTimerCh:
 			return ErrVVMLeadershipAcquisition
@@ -126,8 +127,11 @@ func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipDurationSeconds elections
 			if vvmIdx > vvm.numVVM {
 				vvmIdx = 1
 			}
+			time.Sleep(time.Second)
 		}
 	}
+	// notest
+	return ErrVVMLeadershipAcquisition
 }
 
 // updateProblem writes a critical error into problemErrCh exactly once

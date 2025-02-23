@@ -146,7 +146,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	vit.cleanups = append(vit.cleanups, func(vit *VIT) { httpClientCleanup() })
 
 	// launch the server
-	// ten years
+	// leadership duration - ten years to avoid leadership expiration when time bumps in tests (including 1 day add on each test)
 	vit.vvmProblemCtx = vit.Launch(10*365*24*60*60, vvmpkg.DefaultLeadershipAcquisitionDuration)
 	vit.checkVVMProblemCtx()
 
