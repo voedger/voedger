@@ -222,6 +222,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		cleanup()
 		return nil, nil, err
 	}
+	ittlStorage := storage.NewElectionsTTLStorage(ivvmAppTTLStorage)
 	vvm := &VVM{
 		ServicePipeline:     servicePipeline,
 		APIs:                apIs,
@@ -229,7 +230,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		AppsExtensionPoints: v2,
 		MetricsServicePort:  v9,
 		BuiltInAppsPackages: v10,
-		VVMAppTTLStorage:    ivvmAppTTLStorage,
+		TTLStorage:          ittlStorage,
 	}
 	return vvm, func() {
 		cleanup4()
