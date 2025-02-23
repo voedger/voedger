@@ -668,6 +668,10 @@ func (m *mockedStateValue) RecordIDs(includeNulls bool) func(func(appdef.FieldNa
 	panic(errNotImplemented)
 }
 
+func (m *mockedStateValue) ModifiedFields(f func(appdef.IField, any) bool) {
+	panic(errNotImplemented)
+}
+
 func (m *mockedStateValue) Fields(f func(appdef.IField) bool) {
 	panic(errNotImplemented)
 }

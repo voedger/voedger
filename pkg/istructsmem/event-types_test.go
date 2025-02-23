@@ -1857,7 +1857,7 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 				case emptiedPhotoID:
 					fields := make(map[appdef.FieldName]interface{})
 					for fld, val := range cud.ModifiedFields {
-						fields[fld] = val
+						fields[fld.Name()] = val
 					}
 					require.Equal(
 						map[appdef.FieldName]interface{}{
@@ -1869,7 +1869,7 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 				case emptiedRemarkID:
 					fields := make(map[appdef.FieldName]interface{})
 					for fld, val := range cud.ModifiedFields {
-						fields[fld] = val
+						fields[fld.Name()] = val
 					}
 					require.Equal(
 						map[appdef.FieldName]interface{}{

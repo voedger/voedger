@@ -401,12 +401,12 @@ func TestNullability_SetEmptyString(t *testing.T) {
 	checked := false
 	as.Events().ReadWLog(context.Background(), ws.WSID, offsCreate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		for cud := range event.CUDs {
-			cud.ModifiedFields(func(fn appdef.FieldName, i interface{}) bool {
+			cud.ModifiedFields(func(f appdef.IField, i interface{}) bool {
 				if checked {
 					t.Fail()
 				}
 				checked = true
-				require.Equal("name", fn)
+				require.Equal("name", f.Name())
 				require.EqualValues("test", i)
 				return true
 			})
@@ -423,12 +423,12 @@ func TestNullability_SetEmptyString(t *testing.T) {
 	// #2785 - istructs.ICUDRow.ModifiedFields also iterate emptied string- and bytes- fields
 	as.Events().ReadWLog(context.Background(), ws.WSID, offsUpdate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		for cud := range event.CUDs {
-			for fn, fv := range cud.ModifiedFields {
-				switch fn {
+			for iField, fv := range cud.ModifiedFields {
+				switch iField.Name() {
 				case "name":
 					require.Equal("", fv)
 				default:
-					require.Fail("unexpected modified field", "%v: %v", fn, fv)
+					require.Fail("unexpected modified field", "%v: %v", iField, fv)
 				}
 			}
 		}
@@ -455,8 +455,8 @@ func TestNullability_SetEmptyObject(t *testing.T) {
 	expectedNestedDocID := resp.NewIDs["1"]
 	as.Events().ReadWLog(context.Background(), ws.WSID, offsCreate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		for cud := range event.CUDs {
-			cud.ModifiedFields(func(fn appdef.FieldName, i interface{}) bool {
-				fields[fn] = i
+			cud.ModifiedFields(func(f appdef.IField, i interface{}) bool {
+				fields[f.Name()] = i
 				return true
 			})
 		}

@@ -519,7 +519,7 @@ func TestModifiedFields(t *testing.T) {
 		t.Run("enum", func(t *testing.T) {
 			got := make(map[appdef.FieldName]interface{})
 			for n, v := range rec.ModifiedFields {
-				got[n] = v
+				got[n.Name()] = v
 			}
 			require.Equal(want, got)
 		})
@@ -528,7 +528,7 @@ func TestModifiedFields(t *testing.T) {
 			for stop := range want {
 				cnt := 0
 				for n := range rec.ModifiedFields {
-					if n == stop {
+					if n.Name() == stop {
 						break
 					}
 					cnt++
