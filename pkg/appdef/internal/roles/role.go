@@ -14,6 +14,7 @@ import (
 //   - appdef.IRole
 type Role struct {
 	types.Typ
+	published bool
 }
 
 func NewRole(ws appdef.IWorkspace, name appdef.QName) *Role {
@@ -24,7 +25,9 @@ func NewRole(ws appdef.IWorkspace, name appdef.QName) *Role {
 	return r
 }
 
-func (Role) IsRole() {}
+func (r Role) Published() bool { return r.published }
+
+func (r *Role) setPublished(value bool) { r.published = value }
 
 // # Supports:
 //   - appdef.IRoleBuilder
@@ -32,6 +35,8 @@ type RoleBuilder struct {
 	types.TypeBuilder
 	r *Role
 }
+
+func (b *RoleBuilder) SetPublished(value bool) { b.r.setPublished(value) }
 
 func NewRoleBuilder(r *Role) *RoleBuilder {
 	return &RoleBuilder{

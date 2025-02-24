@@ -7,4 +7,7 @@ package descr
 
 type Role struct {
 	Type
+
+	// #3335: is role published
+	Published bool `json:",omitempty,omitzero"`
 }

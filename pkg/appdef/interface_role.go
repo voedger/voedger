@@ -8,12 +8,15 @@ package appdef
 type IRole interface {
 	IType
 
-	// Unwanted type assertion stub
-	IsRole()
+	// #3335: returns is role published
+	Published() bool
 }
 
 type IRoleBuilder interface {
 	ITypeBuilder
+
+	// #3335: Sets (or clear) is role published
+	SetPublished(bool)
 }
 
 type IRolesBuilder interface {
