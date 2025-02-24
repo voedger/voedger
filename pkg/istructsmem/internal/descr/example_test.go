@@ -143,7 +143,8 @@ func Example() {
 
 		readerName := appdef.NewQName("test", "reader")
 		reader := wsb.AddRole(readerName)
-		reader.SetComment("read-only role")
+		reader.SetComment("read-only published role")
+		reader.SetPublished(true)
 		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Select},
 			filter.QNames(docName, recName), []appdef.FieldName{"f1", "f2"},
@@ -571,7 +572,8 @@ func Example() {
 	//           },
 	//           "Roles": {
 	//             "test.reader": {
-	//               "Comment": "read-only role"
+	//               "Comment": "read-only published role",
+	//               "Published": true
 	//             },
 	//             "test.writer": {
 	//               "Comment": "read-write role"
