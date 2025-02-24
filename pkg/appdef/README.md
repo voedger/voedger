@@ -27,7 +27,7 @@ classDiagram
         <<interface>>
         +Kind()* TypeKind_Data
         +Ancestor() IData
-        +Constraints() iter.Seq2[ConstraintKind, IConstraint]
+        +Constraints() map[ConstraintKind]IConstraint
     }
 
     IArray --|> IType : inherits
@@ -183,16 +183,17 @@ classDiagram
     class IRole {
         <<interface>>
         +Kind()* TypeKind_Role
+        +Published() bool
     }
 
     IRate --|> IType : inherits
-    class IRole {
+    class IRate {
         <<interface>>
         +Kind()* TypeKind_Rate
     }
 
     ILimit --|> IType : inherits
-    class IRole {
+    class ILimit {
         <<interface>>
         +Kind()* TypeKind_Limit
     }
@@ -465,7 +466,7 @@ classDiagram
     +Required() bool
     +Verified() bool
     +VerificationKind() []VerificationKind]
-    +Constraints() iter.Seq2[ConstraintKind, IConstraint]
+    +Constraints() map[ConstraintKind]IConstraint
   }
 
   class IWithFields{
@@ -675,6 +676,7 @@ classDiagram
     class IRole {
         <<interface>>
         +Kind()* TypeKind_Role
+        +Published() bool
     }
 
     class IACLRule {
