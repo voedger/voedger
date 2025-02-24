@@ -108,11 +108,11 @@ func (rec *recordType) IsNew() bool {
 
 // istructs.ICUDRow.ModifiedFields
 func (row *rowType) ModifiedFields(cb func(appdef.IField, any) bool) {
-	if row.modifiedFields[appdef.SystemField_QName] {
-		if !cb(row.fieldDef(appdef.SystemField_QName), row.QName()) {
-			return
-		}
-	}
+	// if row.modifiedFields[appdef.SystemField_QName] {
+	// 	if !cb(row.fieldDef(appdef.SystemField_QName), row.QName()) {
+	// 		return
+	// 	}
+	// }
 
 	if row.modifiedFields[appdef.SystemField_ID] {
 		if !cb(row.fieldDef(appdef.SystemField_ID), row.id) {
@@ -120,22 +120,28 @@ func (row *rowType) ModifiedFields(cb func(appdef.IField, any) bool) {
 		}
 	}
 
-	if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_ParentID); exists {
-		if !cb(row.fieldDef(appdef.SystemField_ParentID), row.parentID) {
-			return
-		}
-	}
-	if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_Container); exists {
-		if !cb(row.fieldDef(appdef.SystemField_Container), row.container) {
-			return
-		}
-	}
+	// if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_ParentID); exists {
+	// 	if !cb(row.fieldDef(appdef.SystemField_ParentID), row.parentID) {
+	// 		return
+	// 	}
+	// }
+	// if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_Container); exists {
+	// 	if !cb(row.fieldDef(appdef.SystemField_Container), row.container) {
+	// 		return
+	// 	}
+	// }
 
-	if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_IsActive); exists {
+	if row.isActiveModified {
 		if !cb(row.fieldDef(appdef.SystemField_IsActive), row.isActive) {
 			return
 		}
 	}
+
+	// if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_IsActive); exists {
+	// 	if !cb(row.fieldDef(appdef.SystemField_IsActive), row.isActive) {
+	// 		return
+	// 	}
+	// }
 
 	// user fields
 	row.dyB.IterateFields(nil, func(name string, value interface{}) bool {

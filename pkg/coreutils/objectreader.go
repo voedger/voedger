@@ -64,6 +64,8 @@ func WithNonNilsOnly() MapperOpt {
 	}
 }
 
+
+
 func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...MapperOpt) (res map[string]interface{}) {
 	res = map[string]interface{}{}
 
