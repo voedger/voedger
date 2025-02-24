@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
@@ -121,7 +122,9 @@ func TestAutomaticShutdownOnLeadershipLost(t *testing.T) {
 	binary.BigEndian.PutUint32(pKey, 1)
 	binary.BigEndian.PutUint32(cCols, uint32(1))
 
-	ok, err := vvm1.VVMAppTTLStorage.CompareAndSwap(
+	vvmAppTTLStorage, err := vvm1.APIs.IAppStorageProvider.AppStorage(appdef.NewAppQName(istructs.SysOwner, "vvm"))
+	require.NoError(t, err)
+	ok, err := vvmAppTTLStorage.CompareAndSwap(
 		pKey,
 		cCols,
 		[]byte(vvmCfg.IP.String()),
@@ -156,9 +159,12 @@ func TestCancelLeadershipOnManualShutdown(t *testing.T) {
 	binary.BigEndian.PutUint32(pKey, 1)
 	binary.BigEndian.PutUint32(cCols, uint32(1))
 
+	vvmAppTTLStorage, err := vvm.APIs.IAppStorageProvider.AppStorage(appdef.NewAppQName(istructs.SysOwner, "vvm"))
+	require.NoError(t, err)
+
 	// Leadership key exists
 	data := make([]byte, 0)
-	ok, err := vvm.VVMAppTTLStorage.(istorage.IAppStorage).Get(pKey, cCols, &data)
+	ok, err := vvmAppTTLStorage.TTLGet(pKey, cCols, &data)
 	r.NoError(err)
 	r.True(ok)
 
@@ -167,7 +173,7 @@ func TestCancelLeadershipOnManualShutdown(t *testing.T) {
 	r.NoError(problemErr)
 
 	// Leadership key doesn't exist
-	ok, err = vvm.VVMAppTTLStorage.(istorage.IAppStorage).Get(pKey, cCols, &data)
+	ok, err = vvmAppTTLStorage.TTLGet(pKey, cCols, &data)
 	r.NoError(err)
 	r.False(ok)
 }

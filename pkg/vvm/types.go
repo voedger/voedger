@@ -125,7 +125,7 @@ type VVM struct {
 	AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
 	BuiltInAppsPackages []BuiltInAppPackages
-	VVMAppTTLStorage    storage.IVVMAppTTLStorage // just to wire, will be used on wire stage only after https://github.com/voedger/voedger/issues/3265
+	TTLStorage          storage.ITTLStorage[storage.TTLStorageImplKey, string]
 }
 
 type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
