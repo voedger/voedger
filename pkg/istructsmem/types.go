@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/untillpro/dynobuffers"
 
@@ -132,6 +133,7 @@ func (row *rowType) clear() {
 	row.release()
 	row.nils = nil
 	row.err = nil
+	row.modifiedFields = map[string]bool{}
 }
 
 // collectError collects errors that occur when puts data into a row
@@ -166,10 +168,11 @@ func (row *rowType) copyFrom(src *rowType) {
 		src.dyB.IterateFields(nil,
 			func(name string, data interface{}) bool {
 				row.dyB.Set(name, data)
-				row.modifiedFields[name] = true
 				return true
 			})
 	}
+
+	maps.Copy(row.modifiedFields, src.modifiedFields)
 
 	_ = row.build()
 }

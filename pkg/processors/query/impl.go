@@ -463,10 +463,6 @@ type queryWork struct {
 	responseSenderGetter func() bus.IResponseSender
 }
 
-func roleNotFound(err error) bool {
-	return errors.Is(err, appdef.ErrNotFoundError) && strings.Contains(err.Error(), "role")
-}
-
 func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
 	maxPrepareQueries int, metrics *queryProcessorMetrics, secretReader isecrets.ISecretReader) *queryWork {
 	return &queryWork{

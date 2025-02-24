@@ -52,6 +52,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 	 }`, vit.Now().UnixMilli(), vit.Now().UnixMilli())
 	resp = vit.PostWS(ws, "q.sys.Journal", body)
 
+	// "sys.IsActive": true,
 	require.JSONEq(fmt.Sprintf(`
 	 {
 	   "args": {},
@@ -61,7 +62,6 @@ func TestBasicUsage_Journal(t *testing.T) {
 			 "id_untill_users": %[4]d,
 			 "proforma": 3,
 			 "sys.ID": %[1]d,
-			 "sys.IsActive": true,
 			 "sys.QName": "app1pkg.bill",
 			 "table_part": "a",
 			 "tableno": %[2]d,
@@ -88,7 +88,6 @@ func TestBasicUsage_Journal(t *testing.T) {
 				 "id_untill_users": %[4]d,
 				 "proforma": 3,
 				 "sys.ID": %[1]d,
-				 "sys.IsActive": true,
 				 "sys.QName": "app1pkg.bill",
 				 "table_part": "a",
 				 "tableno": %[2]d,
@@ -127,7 +126,6 @@ func TestBasicUsage_Journal(t *testing.T) {
 			 "id_untill_users": %[4]d,
 			 "proforma": 3,
 			 "sys.ID": %[1]d,
-			 "sys.IsActive": true,
 			 "sys.QName": "app1pkg.bill",
 			 "table_part": "a",
 			 "tableno": %[2]d,
@@ -154,7 +152,6 @@ func TestBasicUsage_Journal(t *testing.T) {
 				 "id_untill_users": %[4]d,
 				 "proforma": 3,
 				 "sys.ID": %[1]d,
-				 "sys.IsActive": true,
 				 "sys.QName": "app1pkg.bill",
 				 "table_part": "a",
 				 "tableno": %[2]d,

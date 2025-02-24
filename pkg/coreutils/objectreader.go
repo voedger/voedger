@@ -46,8 +46,8 @@ func ReadByKind(name appdef.FieldName, kind appdef.DataKind, rr istructs.IRowRea
 }
 
 type mapperOpts struct {
-	filter      func(name string, kind appdef.DataKind) bool
-	nonNilsOnly bool
+	filter              func(name string, kind appdef.DataKind) bool
+	specifiedValuesOnly bool
 }
 
 type MapperOpt func(opt *mapperOpts)
@@ -58,9 +58,9 @@ func Filter(filterFunc func(name string, kind appdef.DataKind) bool) MapperOpt {
 	}
 }
 
-func WithNonNilsOnly() MapperOpt {
+func WithSpecifiedValuesOnly() MapperOpt {
 	return func(opts *mapperOpts) {
-		opts.nonNilsOnly = true
+		opts.specifiedValuesOnly = true
 	}
 }
 
@@ -80,24 +80,24 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 		optFunc(opts)
 	}
 
-	if opts.nonNilsOnly {
-		modifiedFieldsNames := map[string]bool{}
-		obj.ModifiedFields(func(iField appdef.IField, a any) bool {
-			modifiedFieldsNames[iField.Name()] = true
-			return true
-		})
-		specifiedFilter := opts.filter
-		nonNilsFilter := func(name string, kind appdef.DataKind) bool {
-			if !modifiedFieldsNames[name] {
-				return false
-			}
-			if specifiedFilter != nil {
-				return specifiedFilter(name, kind)
-			}
-			return true
-		}
-		opts.filter = nonNilsFilter
-	}
+	// if opts.specifiedValuesOnly {
+	// 	modifiedFieldsNames := map[string]bool{}
+	// 	obj.SpecifiedValues(func(iField appdef.IField, a any) bool {
+	// 		modifiedFieldsNames[iField.Name()] = true
+	// 		return true
+	// 	})
+	// 	specifiedFilter := opts.filter
+	// 	nonNilsFilter := func(name string, kind appdef.DataKind) bool {
+	// 		if !modifiedFieldsNames[name] {
+	// 			return false
+	// 		}
+	// 		if specifiedFilter != nil {
+	// 			return specifiedFilter(name, kind)
+	// 		}
+	// 		return true
+	// 	}
+	// 	opts.filter = nonNilsFilter
+	// }
 
 	proceedField := func(fieldName appdef.FieldName, kind appdef.DataKind) {
 		if opts.filter != nil {
@@ -125,7 +125,23 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 				iFieldsToProcess = view.Key().Fields()
 			}
 		} else {
-			iFieldsToProcess = fields.Fields()
+			// if opts.specifiedValuesOnly {
+			// зачем следить за specifiedValuesOnly? пусть объект все всегда о себе вохвращает
+			// когда нужно, чтобы все поля с нулевыми значениями были?
+			// есть разница, когда мы хотим прочесть документ как его клиент передал, например, ArgumentsObject,
+			// а можем хотеть прочесть документ как он хранится в бд. Тогда надо Поля типа IsActive
+				obj.SpecifiedValues(func(iField appdef.IField, val any) bool {
+					if opts.filter != nil {
+						if !opts.filter(iField.Name(), iField.DataKind()) {
+							return true
+						}
+					}
+					res[iField.Name()] = val
+					return true
+				})
+				return res
+			// }
+			// iFieldsToProcess = fields.Fields()
 		}
 		for _, iField := range iFieldsToProcess {
 			proceedField(iField.Name(), iField.DataKind())

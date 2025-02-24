@@ -1856,7 +1856,7 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 				switch cud.AsRecordID(appdef.SystemField_ID) {
 				case emptiedPhotoID:
 					fields := make(map[appdef.FieldName]interface{})
-					for fld, val := range cud.ModifiedFields {
+					for fld, val := range cud.SpecifiedValues {
 						fields[fld.Name()] = val
 					}
 					require.Equal(
@@ -1868,7 +1868,7 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 						fields)
 				case emptiedRemarkID:
 					fields := make(map[appdef.FieldName]interface{})
-					for fld, val := range cud.ModifiedFields {
+					for fld, val := range cud.SpecifiedValues {
 						fields[fld.Name()] = val
 					}
 					require.Equal(

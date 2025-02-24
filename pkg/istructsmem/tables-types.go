@@ -106,13 +106,64 @@ func (rec *recordType) IsNew() bool {
 	return rec.isNew
 }
 
-// istructs.ICUDRow.ModifiedFields
-func (row *rowType) ModifiedFields(cb func(appdef.IField, any) bool) {
-	// if row.modifiedFields[appdef.SystemField_QName] {
-	// 	if !cb(row.fieldDef(appdef.SystemField_QName), row.QName()) {
-	// 		return
-	// 	}
-	// }
+// нельзя использовать, если мы хотим прочесть все. т.к. тут зависит от isNew
+// нельзя использовать для уникальностей, т.к. там надо именно все поля, которые были реально присланы в запросе
+
+// func (rec *recordType) SpecifiedValues(cb func(appdef.IField, any) bool) {
+// 	if rec.isNew {
+// 		// если так, то GetCDoc не возвращает id, qname и т.д.
+// 		if rec.id != istructs.NullRecordID {
+// 			if !cb(rec.fieldDef(appdef.SystemField_ID), rec.id) {
+// 				return
+// 			}
+// 		}
+// 		if !cb(rec.fieldDef(appdef.SystemField_IsActive), rec.isActive) {
+// 			return
+// 		}
+// 		if !cb(rec.fieldDef(appdef.SystemField_QName), rec.QName()) {
+// 			return
+// 		}
+// 	}
+
+// 	// если читаем cudRow, у которого isNew, то рендерим все, мы там все задавали, кроме IsActive
+// 	// если читаем cudRow,
+
+// 	// а если так, то я бегу по cudRow, где я указал только name =
+// 	// if exists, _ := rec.typ.Kind().HasSystemField(appdef.SystemField_ID); exists && rec.id != istructs.NullRecordID {
+// 	// 	if !cb(rec.fieldDef(appdef.SystemField_ID), rec.id) {
+// 	// 		return
+// 	// 	}
+// 	// }
+
+// 	// if exists, _ := rec.typ.Kind().HasSystemField(appdef.SystemField_IsActive); exists {
+// 	// 	if !rec.isNew {
+// 	// 		// а если так, то я получу IsActive даже если я не указал IsActive, но обновляю запись
+// 	// 		if !cb(rec.fieldDef(appdef.SystemField_IsActive), rec.isActive) {
+// 	// 			return
+// 	// 		}
+// 	// 	}
+// 	// }
+
+// 	if !cb(rec.fieldDef(appdef.SystemField_QName), rec.QName()) {
+// 		return
+// 	}
+
+// 	rec.dyB.IterateFields(nil, func(name string, value interface{}) bool {
+// 		return cb(rec.fieldDef(name), value)
+// 	})
+
+// }
+
+// istructs.ICUDRow.SpecifiedValues
+// зачем тут думать что я задал или не задал?
+// пусть объект сам выдает что у нег выставлено, а что нет
+
+func (row *rowType) SpecifiedValues(cb func(appdef.IField, any) bool) {
+	if row.modifiedFields[appdef.SystemField_QName] {
+		if !cb(row.fieldDef(appdef.SystemField_QName), row.QName()) {
+			return
+		}
+	}
 
 	if row.modifiedFields[appdef.SystemField_ID] {
 		if !cb(row.fieldDef(appdef.SystemField_ID), row.id) {
@@ -131,17 +182,20 @@ func (row *rowType) ModifiedFields(cb func(appdef.IField, any) bool) {
 	// 	}
 	// }
 
-	if row.isActiveModified {
-		if !cb(row.fieldDef(appdef.SystemField_IsActive), row.isActive) {
-			return
-		}
-	}
+	// if row.isActiveModified {
 
-	// if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_IsActive); exists {
+	// if row.modifiedFields[appdef.SystemField_IsActive] {
 	// 	if !cb(row.fieldDef(appdef.SystemField_IsActive), row.isActive) {
 	// 		return
 	// 	}
 	// }
+
+	// попробуем так, а то если row.modifiedFields[appdef.SystemField_IsActive] , то не будет IsActive, если мы его запросили в sqlquery
+	if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_IsActive); exists {
+		if !cb(row.fieldDef(appdef.SystemField_IsActive), row.isActive) {
+			return
+		}
+	}
 
 	// user fields
 	row.dyB.IterateFields(nil, func(name string, value interface{}) bool {

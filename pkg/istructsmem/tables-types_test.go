@@ -510,7 +510,7 @@ func TestModifiedFields(t *testing.T) {
 
 	t.Run("should has no modifications if new record", func(t *testing.T) {
 		rec := newRecord(test.AppCfg)
-		for range rec.ModifiedFields {
+		for range rec.SpecifiedValues {
 			t.Fail()
 		}
 	})
@@ -518,7 +518,7 @@ func TestModifiedFields(t *testing.T) {
 	testEnum := func(rec istructs.ICUDRow, want map[appdef.FieldName]interface{}) {
 		t.Run("enum", func(t *testing.T) {
 			got := make(map[appdef.FieldName]interface{})
-			for n, v := range rec.ModifiedFields {
+			for n, v := range rec.SpecifiedValues {
 				got[n.Name()] = v
 			}
 			require.Equal(want, got)
@@ -527,7 +527,7 @@ func TestModifiedFields(t *testing.T) {
 		t.Run("breakable", func(t *testing.T) {
 			for stop := range want {
 				cnt := 0
-				for n := range rec.ModifiedFields {
+				for n := range rec.SpecifiedValues {
 					if n.Name() == stop {
 						break
 					}

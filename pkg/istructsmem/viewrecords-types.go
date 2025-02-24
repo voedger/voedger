@@ -427,10 +427,10 @@ func (key *keyType) Fields(cb func(appdef.IField) bool) {
 	key.ccolsRow.Fields(cb)
 }
 
-// istructs.IRowReader.ModifiedFields
-func (key *keyType) ModifiedFields(cb func(appdef.IField, any) bool) {
-	key.partRow.ModifiedFields(cb)
-	key.ccolsRow.ModifiedFields(cb)
+// istructs.IRowReader.SpecifiedValues
+func (key *keyType) SpecifiedValues(cb func(appdef.IField, any) bool) {
+	key.partRow.SpecifiedValues(cb)
+	key.ccolsRow.SpecifiedValues(cb)
 }
 
 // istructs.IKeyBuilder.PartitionKey

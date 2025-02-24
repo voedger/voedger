@@ -946,14 +946,19 @@ func (o *objectType) AsRecord() istructs.IRecord {
 }
 
 // istructs.IObject.ModifiedFields()
-// func (o *objectType) ModifiedFields(cb func(iField appdef.IField, val any) bool) {
-// 	o.recordType.ModifiedFields(cb)
-// 	for fieldName := range o.recordType.modifiedFields {
-// 		if !cb(o.fields.Field(fieldName)) {
-// 			return
-// 		}
-// 	}
-// }
+func (o *objectType) SpecifiedValues(cb func(iField appdef.IField, val any) bool) {
+	if exists, _ := o.typ.Kind().HasSystemField(appdef.SystemField_ID); exists {
+		if !cb(o.fieldDef(appdef.SystemField_ID), o.id) {
+			return
+		}
+	}
+	if !cb(o.fieldDef(appdef.SystemField_QName), o.QName()) {
+		return
+	}
+	o.dyB.IterateFields(nil, func(name string, value interface{}) bool {
+		return cb(o.fieldDef(name), value)
+	})
+}
 
 // Implements interfaces:
 //

@@ -45,7 +45,7 @@ func updateUnlogged_View(update update) (err error) {
 		return err
 	}
 
-	existingFields := coreutils.FieldsToMap(existingViewRec, update.appStructs.AppDef(), coreutils.WithNonNilsOnly())
+	existingFields := coreutils.FieldsToMap(existingViewRec, update.appStructs.AppDef(), coreutils.WithSpecifiedValuesOnly())
 
 	mergedFields := coreutils.MergeMaps(existingFields, update.setFields, update.key)
 	mergedFields[appdef.SystemField_QName] = update.QName.String() // missing on unlogged insert

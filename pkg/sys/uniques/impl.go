@@ -283,7 +283,7 @@ func validateCUD(cudRec istructs.ICUDRow, appStructs istructs.IAppStructs, wsid 
 		// update
 		// unique view record exists because all unique fields are required.
 		// let's deny to update unique fields and handle IsActive state
-		for cudModifiedField, newValue := range cudRec.ModifiedFields {
+		for cudModifiedField, newValue := range cudRec.SpecifiedValues {
 			for _, uniqueField := range uniqueFields {
 				if uniqueField.Name() == cudModifiedField.Name() {
 					return fmt.Errorf("%v: unique field «%s» can not be changed: %w", cudQName, uniqueField.Name(), ErrUniqueFieldUpdateDeny)

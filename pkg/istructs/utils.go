@@ -83,15 +83,15 @@ type NullObject struct{ NullRowReader }
 
 func NewNullObject() IObject { return &NullObject{} }
 
-func (*NullObject) QName() appdef.QName                             { return appdef.NullQName }
-func (*NullObject) Children(...string) func(func(IObject) bool)     { return func(func(IObject) bool) {} }
-func (*NullObject) Containers(func(string) bool)                    {}
-func (no *NullObject) AsRecord() IRecord                            { return no }
-func (no *NullObject) Fields(func(appdef.IField) bool)              {}
-func (no *NullObject) Container() string                            { return "" }
-func (no *NullObject) ID() RecordID                                 { return NullRecordID }
-func (no *NullObject) Parent() RecordID                             { return NullRecordID }
-func (no *NullObject) ModifiedFields(func(appdef.IField, any) bool) {}
+func (*NullObject) QName() appdef.QName                              { return appdef.NullQName }
+func (*NullObject) Children(...string) func(func(IObject) bool)      { return func(func(IObject) bool) {} }
+func (*NullObject) Containers(func(string) bool)                     {}
+func (no *NullObject) AsRecord() IRecord                             { return no }
+func (no *NullObject) Fields(func(appdef.IField) bool)               {}
+func (no *NullObject) Container() string                             { return "" }
+func (no *NullObject) ID() RecordID                                  { return NullRecordID }
+func (no *NullObject) Parent() RecordID                              { return NullRecordID }
+func (no *NullObject) SpecifiedValues(func(appdef.IField, any) bool) {}
 
 // Implements IRowWriter
 type NullRowWriter struct{}
