@@ -166,6 +166,11 @@ func Test_BasicUsage(t *testing.T) {
 	cmd := appdef.Command(app.Type, appdef.NewQName("main", "NewOrder"))
 	require.Equal("Commands can only be declared in workspaces\nCommand can have optional argument and/or unlogged argument\nCommand can return TYPE", cmd.Comment())
 
+	// published role
+	r := appdef.Role(app.Type, appdef.NewQName("main", "ApiRole"))
+	require.NotNil(r)
+	require.True(r.Published())
+
 	// type
 	obj := appdef.Object(app.Type, appdef.NewQName("main", "SubscriptionEvent"))
 	require.Equal(appdef.TypeKind_Object, obj.Kind())
