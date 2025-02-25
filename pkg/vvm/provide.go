@@ -226,7 +226,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	))
 }
 
-func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.IVVMAppTTLStorage, error) {
+func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.ISysVvmStorage, error) {
 	return prov.AppStorage(appdef.NewAppQName(istructs.SysOwner, "vvm"))
 }
 
