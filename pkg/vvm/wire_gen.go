@@ -214,7 +214,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorBLOBProcessors, iActualizersService, iAppPartsCtlPipelineService, bootstrapOperator, adminEndpointServiceOperator, publicEndpointServiceOperator, iAppStorageProvider)
 	v9 := provideMetricsServicePortGetter(metricsService)
 	v10 := provideBuiltInAppPackages(builtInAppsArtefacts)
-	ivvmAppTTLStorage, err := provideIVVMAppTTLStorage(iAppStorageProvider)
+	iSysVvmStorage, err := provideIVVMAppTTLStorage(iAppStorageProvider)
 	if err != nil {
 		cleanup4()
 		cleanup3()
@@ -222,7 +222,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		cleanup()
 		return nil, nil, err
 	}
-	ittlStorage := storage.NewElectionsTTLStorage(ivvmAppTTLStorage)
+	ittlStorage := storage.NewElectionsTTLStorage(iSysVvmStorage)
 	vvm := &VVM{
 		ServicePipeline:     servicePipeline,
 		APIs:                apIs,
@@ -291,7 +291,7 @@ func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 	return voedgerVM, nil
 }
 
-func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.IVVMAppTTLStorage, error) {
+func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.ISysVvmStorage, error) {
 	return prov.AppStorage(appdef.NewAppQName(istructs.SysOwner, "vvm"))
 }
 
