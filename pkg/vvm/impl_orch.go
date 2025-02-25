@@ -17,6 +17,9 @@ import (
 )
 
 func (vvm *VoedgerVM) Launch(leadershipDurationSeconds elections.LeadershipDurationSeconds, leadershipAcquisitionDuration LeadershipAcquisitionDuration) context.Context {
+	if vvm.leadershipCtx != nil {
+		panic("VVM is launched already")
+	}
 	go vvm.shutdowner()
 	err := vvm.tryToAcquireLeadership(leadershipDurationSeconds, leadershipAcquisitionDuration)
 	if err == nil {
@@ -33,6 +36,9 @@ func (vvm *VoedgerVM) Launch(leadershipDurationSeconds elections.LeadershipDurat
 }
 
 func (vvm *VoedgerVM) Shutdown() error {
+	if vvm.leadershipCtx == nil {
+		panic("VVM must be launched before shutdown")
+	}
 	// Ensure we only close the vvmShutCtx once
 	vvm.vvmShutCtxCancel()
 
@@ -42,6 +48,7 @@ func (vvm *VoedgerVM) Shutdown() error {
 	// additionally close problemCtx for the case when we call vvm.Shutdown when problemCtx is not closed yet to avoid context leak
 	vvm.problemCtxCancel()
 
+	vvm.leadershipCtx = nil
 	select {
 	case err := <-vvm.problemErrCh:
 		return err

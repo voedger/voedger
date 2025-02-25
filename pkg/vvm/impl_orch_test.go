@@ -194,6 +194,24 @@ func TestServicePipelineStartFailure(t *testing.T) {
 	log.Println(err)
 }
 
+func TestWrongLaunchAndShutdownUsage(t *testing.T) {
+	require := require.New(t)
+
+	vvmCfg := getTestVVMCfg(net.IPv4(192, 168, 0, 1))
+	vvm, err := Provide(vvmCfg)
+	require.NoError(err)
+
+	t.Run("panic on Shutdown() if not launched", func(t *testing.T) {
+		require.Panics(func() { vvm.Shutdown() })
+	})
+
+	t.Run("panic on Launch() if launched already", func(t *testing.T) {
+		vvm.Launch(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration)
+		defer vvm.Shutdown()
+		require.Panics(func() { vvm.Launch(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration) })
+	})
+}
+
 func getTestVVMCfg(ip net.IP) *VVMConfig {
 	vvmCfg := NewVVMDefaultConfig()
 	vvmCfg.VVMPort = 0
