@@ -37,7 +37,11 @@ func (vvm *VoedgerVM) Launch(leadershipDurationSeconds elections.LeadershipDurat
 
 func (vvm *VoedgerVM) Shutdown() error {
 	if vvm.leadershipCtx == nil {
-		panic("VVM must be launched before shutdown")
+		select {
+		case <-vvm.problemCtx.Done():
+		default:
+			panic("VVM must be launched before shutdown")
+		}
 	}
 	// Ensure we only close the vvmShutCtx once
 	vvm.vvmShutCtxCancel()
