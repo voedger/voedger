@@ -270,6 +270,9 @@ func (c *buildContext) roles() error {
 		iteratePackageStmt(schema, &c.basicContext, func(role *RoleStmt, ictx *iterateCtx) {
 			wsb := role.workspace.mustBuilder(c)
 			rb := wsb.AddRole(schema.NewQName(role.Name))
+			if role.Published {
+				rb.SetPublished(true)
+			}
 			c.addComments(role, rb)
 		})
 	}
