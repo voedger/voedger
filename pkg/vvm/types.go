@@ -125,7 +125,7 @@ type VVM struct {
 	AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
 	BuiltInAppsPackages []BuiltInAppPackages
-	TTLStorage          storage.ITTLStorage[storage.TTLStorageImplKey, string]
+	TTLStorage          elections.ITTLStorage[storage.TTLStorageImplKey, string]
 }
 
 type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint

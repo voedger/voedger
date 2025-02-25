@@ -20,7 +20,6 @@ import (
 	"github.com/voedger/voedger/pkg/istorage/cas"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
-	"github.com/voedger/voedger/pkg/vvm/storage"
 )
 
 // this used as pKey. Actual value does not matter in tests
@@ -197,7 +196,7 @@ func TestCleanupDuringRenewal(t *testing.T) {
 // mockStorage is a thread-safe in-memory mock of ITTLStorage that supports key expiration.
 type mockStorage struct {
 	pKeyPrefix             []byte
-	storage                storage.ISysVvmStorage
+	storage                istorage.IAppStorage
 	errorTrigger           map[string]bool
 	onBeforeCompareAndSwap func() // != nil -> called right before CompareAndSwap. Need to implement hook in tests
 	requiresRealTime       bool   // true -> real time should be used on awaiting, otherwise MockTime.Sleep()
@@ -242,13 +241,13 @@ func (m *mockStorage) CompareAndDelete(key string, val string) (bool, error) {
 	return m.storage.CompareAndDelete(m.pKeyPrefix, []byte(key), []byte(val))
 }
 
-func newMockStorage() (storage.ITTLStorage[string, string], istorage.IAppStorage) {
+func newMockStorage() (ITTLStorage[string, string], istorage.IAppStorage) {
 	return newMockStorage_mem()
 	// return newMockStorage_cas()
 	// return newMockStorage_bbolt()
 }
 
-func newMockStorage_bbolt() (storage.ITTLStorage[string, string], istorage.IAppStorage) {
+func newMockStorage_bbolt() (ITTLStorage[string, string], istorage.IAppStorage) {
 	asp := provider.Provide(bbolt.Provide(bbolt.ParamsType{
 		DBDir: "c:/workspace/bbolttest",
 	}, coreutils.MockTime))
@@ -263,7 +262,7 @@ func newMockStorage_bbolt() (storage.ITTLStorage[string, string], istorage.IAppS
 	}, appStorage
 }
 
-func newMockStorage_mem() (storage.ITTLStorage[string, string], istorage.IAppStorage) {
+func newMockStorage_mem() (ITTLStorage[string, string], istorage.IAppStorage) {
 	asp := provider.Provide(mem.Provide(coreutils.MockTime))
 	appStorage, err := asp.AppStorage(appdef.NewAppQName(appdef.SysOwner, "vvm"))
 	if err != nil {
@@ -276,7 +275,7 @@ func newMockStorage_mem() (storage.ITTLStorage[string, string], istorage.IAppSto
 	}, appStorage
 }
 
-func newMockStorage_cas() (storage.ITTLStorage[string, string], istorage.IAppStorage) {
+func newMockStorage_cas() (ITTLStorage[string, string], istorage.IAppStorage) {
 	appStorageFactory, err := cas.Provide(cas.CassandraParamsType{
 		Hosts:                   "127.0.0.1",
 		Port:                    9042,

@@ -11,11 +11,10 @@ import (
 	"sync/atomic"
 
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/vvm/storage"
 )
 
 type elections[K any, V any] struct {
-	storage     storage.ITTLStorage[K, V]
+	storage     ITTLStorage[K, V]
 	leadership  sync.Map
 	clock       coreutils.ITime
 	isFinalized atomic.Bool
