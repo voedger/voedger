@@ -7,19 +7,14 @@ package elections
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorage/bbolt"
-	"github.com/voedger/voedger/pkg/istorage/cas"
-	"github.com/voedger/voedger/pkg/istorage/mem"
-	"github.com/voedger/voedger/pkg/istorage/provider"
 )
 
 // this used as pKey. Actual value does not matter in tests
@@ -31,18 +26,15 @@ func TestElections_BasicUsage(t *testing.T) {
 	restore := logger.SetLogLevelWithRestore(logger.LogLevelVerbose)
 	defer restore()
 
-	iTTLStorage, appStorage := newMockStorage()
+	iTTLStorage := newMockStorage[string, string]()
 	elector, cleanup := Provide(iTTLStorage, coreutils.MockTime)
 	defer cleanup()
 
 	ctx := elector.AcquireLeadership("testKey", "leaderVal", seconds10)
 	require.NotNil(t, ctx, "Should return a non-nil context on successful acquisition")
 
-	storedData := []byte{}
-	ok, err := appStorage.TTLGet(pKeyPrefix, []byte("testKey"), &storedData)
-	require.NoError(t, err)
-	require.True(t, ok, "Key should be in store")
-	require.Equal(t, "leaderVal", string(storedData))
+	storedData := iTTLStorage.data["testKey"]
+	require.Equal(t, "leaderVal", storedData.value)
 
 	// Release leadership
 	elector.ReleaseLeadership("testKey")
@@ -53,12 +45,15 @@ func TestElections_AcquireLeadership_Failure(t *testing.T) {
 	restore := logger.SetLogLevelWithRestore(logger.LogLevelVerbose)
 	defer restore()
 
-	iTTLStorage, appStorage := newMockStorage()
+	iTTLStorage := newMockStorage[string, string]()
 
 	elector, cleanup := Provide(iTTLStorage, coreutils.MockTime)
 	defer cleanup()
 
-	require.NoError(t, appStorage.Put(pKeyPrefix, []byte("occupied"), []byte("someVal")))
+	iTTLStorage.data["occupied"] = valueWithTTL[string]{
+		value:     "someVal",
+		expiresAt: coreutils.MockTime.Now().Add(seconds10 * time.Second),
+	}
 
 	ctx := elector.AcquireLeadership("occupied", "myVal", seconds10)
 	require.Nil(t, ctx, "Should return nil if the key is already in storage")
@@ -68,9 +63,9 @@ func TestElections_AcquireLeadership_Error(t *testing.T) {
 	restore := logger.SetLogLevelWithRestore(logger.LogLevelVerbose)
 	defer restore()
 
-	iTTLStorage, _ := newMockStorage()
+	iTTLStorage := newMockStorage[string, string]()
 
-	iTTLStorage.(*mockStorage).errorTrigger["badKey"] = true
+	iTTLStorage.errorTrigger["badKey"] = true
 
 	elector, cleanup := Provide(iTTLStorage, coreutils.MockTime)
 	defer cleanup()
@@ -83,7 +78,7 @@ func TestElections_CompareAndSwap_RenewFails(t *testing.T) {
 	restore := logger.SetLogLevelWithRestore(logger.LogLevelVerbose)
 	defer restore()
 
-	iTTLStorage, appStorage := newMockStorage()
+	iTTLStorage := newMockStorage[string, string]()
 
 	elector, cleanup := Provide(iTTLStorage, coreutils.MockTime)
 	defer cleanup()
@@ -92,7 +87,10 @@ func TestElections_CompareAndSwap_RenewFails(t *testing.T) {
 	require.NotNil(t, ctx)
 
 	// sabotage the storage so next CompareAndSwap fails by changing the value
-	require.NoError(t, appStorage.Put(pKeyPrefix, []byte("renewKey"), []byte("someOtherVal")))
+	iTTLStorage.data["renewKey"] = valueWithTTL[string]{
+		value:     "someOtherVal",
+		expiresAt: coreutils.MockTime.Now().Add(seconds10 * 2 * time.Second),
+	}
 
 	// trigger the renewal
 	coreutils.MockTime.Sleep((seconds10 + 1) * time.Second)
@@ -101,18 +99,15 @@ func TestElections_CompareAndSwap_RenewFails(t *testing.T) {
 	<-ctx.Done()
 	require.ErrorIs(t, ctx.Err(), context.Canceled, "Context should be canceled after renewal failure")
 
-	keptValue := []byte{}
-	ok, err := appStorage.Get(pKeyPrefix, []byte("renewKey"), &keptValue)
-	require.NoError(t, err)
-	require.True(t, ok, "Key should remain but with different value => we lost leadership.")
-	require.Equal(t, "someOtherVal", string(keptValue))
+	keptValue := iTTLStorage.data["renewKey"]
+	require.Equal(t, "someOtherVal", keptValue.value)
 }
 
 func TestElections_ReleaseLeadership_NoLeader(t *testing.T) {
 	restore := logger.SetLogLevelWithRestore(logger.LogLevelVerbose)
 	defer restore()
 
-	iTTLStorage, _ := newMockStorage()
+	iTTLStorage := newMockStorage[string, string]()
 
 	elector, cleanup := Provide(iTTLStorage, coreutils.MockTime)
 	defer cleanup()
@@ -125,7 +120,7 @@ func TestElections_CleanupDisallowsNew(t *testing.T) {
 	restore := logger.SetLogLevelWithRestore(logger.LogLevelVerbose)
 	defer restore()
 
-	iTTLStorage, _ := newMockStorage()
+	iTTLStorage := newMockStorage[string, string]()
 
 	elector, closeFunc := Provide(iTTLStorage, coreutils.MockTime)
 
@@ -145,13 +140,11 @@ func TestElections_LeadershipExpires(t *testing.T) {
 	restore := logger.SetLogLevelWithRestore(logger.LogLevelVerbose)
 	defer restore()
 
-	iTTLStorage, _ := newMockStorage()
+	iTTLStorage := newMockStorage[string, string]()
 	elector, cleanup := Provide(iTTLStorage, coreutils.MockTime)
 	defer cleanup()
-	iTTLStorage.(*mockStorage).onBeforeCompareAndSwap = func() {
-		if iTTLStorage.(*mockStorage).requiresRealTime {
-			time.Sleep(seconds10 * time.Second)
-		}
+	iTTLStorage.onBeforeCompareAndSwap = func() {
+		coreutils.MockTime.Sleep(seconds10 * time.Second)
 	}
 
 	// Acquire leadership with a short TTL
@@ -167,12 +160,12 @@ func TestCleanupDuringRenewal(t *testing.T) {
 	restore := logger.SetLogLevelWithRestore(logger.LogLevelVerbose)
 	defer restore()
 
-	iTTLStorage, _ := newMockStorage()
+	iTTLStorage := newMockStorage[string, string]()
 	compareAndSwapCalled := make(chan interface{})
 	elector, cleanup := Provide(iTTLStorage, coreutils.MockTime)
 	defer cleanup()
 
-	iTTLStorage.(*mockStorage).onBeforeCompareAndSwap = func() {
+	iTTLStorage.onBeforeCompareAndSwap = func() {
 		close(compareAndSwapCalled)
 	}
 
@@ -194,102 +187,115 @@ func TestCleanupDuringRenewal(t *testing.T) {
 }
 
 // mockStorage is a thread-safe in-memory mock of ITTLStorage that supports key expiration.
-type mockStorage struct {
-	pKeyPrefix             []byte
-	storage                istorage.IAppStorage
-	errorTrigger           map[string]bool
+type mockStorage[K comparable, V comparable] struct {
+	mu                     sync.Mutex
+	data                   map[K]valueWithTTL[V]
+	expirations            map[K]time.Time // expiration time for each key
+	errorTrigger           map[K]bool
+	tm                     coreutils.ITime
 	onBeforeCompareAndSwap func() // != nil -> called right before CompareAndSwap. Need to implement hook in tests
-	requiresRealTime       bool   // true -> real time should be used on awaiting, otherwise MockTime.Sleep()
+}
+
+func newMockStorage[K comparable, V comparable]() *mockStorage[K, V] {
+	return &mockStorage[K, V]{
+		data:         make(map[K]valueWithTTL[V]),
+		expirations:  make(map[K]time.Time),
+		errorTrigger: make(map[K]bool),
+		tm:           coreutils.MockTime,
+	}
+}
+
+func (m *mockStorage[K, V]) pruneExpired() {
+	now := m.tm.Now()
+	for k, v := range m.data {
+		if now.After(v.expiresAt) {
+			delete(m.data, k)
+		}
+	}
+}
+
+type valueWithTTL[V any] struct {
+	value     V
+	expiresAt time.Time
 }
 
 // causeErrorIfNeeded simulates a forced error for specific keys
-func (m *mockStorage) causeErrorIfNeeded(key string) error {
+func (m *mockStorage[K, V]) causeErrorIfNeeded(key K) error {
 	if m.errorTrigger[key] {
 		return errors.New("forced storage error for test")
 	}
 	return nil
 }
 
-// InsertIfNotExist checks for expiration, then inserts key if absent, setting its TTL.
-func (m *mockStorage) InsertIfNotExist(key string, val string, ttlSeconds int) (bool, error) {
+func (m *mockStorage[K, V]) InsertIfNotExist(key K, val V, ttlSeconds int) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.pruneExpired()
 	if err := m.causeErrorIfNeeded(key); err != nil {
 		return false, err
 	}
 
-	return m.storage.InsertIfNotExists(m.pKeyPrefix, []byte(key), []byte(val), ttlSeconds)
+	// Check if key exists
+	if _, exists := m.data[key]; exists {
+		return false, nil
+	}
+
+	// Insert new value with TTL
+	m.data[key] = valueWithTTL[V]{
+		value:     val,
+		expiresAt: m.tm.Now().Add(time.Duration(ttlSeconds) * time.Second),
+	}
+
+	return true, nil
 }
 
-// CompareAndSwap refreshes TTL if oldVal matches the current value. Otherwise fails.
-func (m *mockStorage) CompareAndSwap(key string, oldVal string, newVal string, ttlSeconds int) (bool, error) {
+func (m *mockStorage[K, V]) CompareAndSwap(key K, oldVal V, newVal V, ttlSeconds int) (bool, error) {
 	if m.onBeforeCompareAndSwap != nil {
 		m.onBeforeCompareAndSwap()
 	}
 
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.pruneExpired()
 	if err := m.causeErrorIfNeeded(key); err != nil {
 		return false, err
 	}
 
-	return m.storage.CompareAndSwap(m.pKeyPrefix, []byte(key), []byte(oldVal), []byte(newVal), ttlSeconds)
+	// Check if key exists and value matches
+	if entry, exists := m.data[key]; !exists || entry.value != oldVal {
+		return false, nil
+	}
+
+	// Update value and TTL
+	m.data[key] = valueWithTTL[V]{
+		value:     newVal,
+		expiresAt: m.tm.Now().Add(time.Duration(ttlSeconds) * time.Second),
+	}
+
+	return true, nil
 }
 
 // CompareAndDelete removes the key if current value matches val. Expiration is also removed.
-func (m *mockStorage) CompareAndDelete(key string, val string) (bool, error) {
+func (m *mockStorage[K, V]) CompareAndDelete(key K, val V) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.pruneExpired()
 	if err := m.causeErrorIfNeeded(key); err != nil {
 		return false, err
 	}
 
-	return m.storage.CompareAndDelete(m.pKeyPrefix, []byte(key), []byte(val))
-}
-
-func newMockStorage() (ITTLStorage[string, string], istorage.IAppStorage) {
-	return newMockStorage_mem()
-	// return newMockStorage_cas()
-	// return newMockStorage_bbolt()
-}
-
-func newMockStorage_bbolt() (ITTLStorage[string, string], istorage.IAppStorage) {
-	asp := provider.Provide(bbolt.Provide(bbolt.ParamsType{
-		DBDir: "c:/workspace/bbolttest",
-	}, coreutils.MockTime))
-	appStorage, err := asp.AppStorage(appdef.NewAppQName(appdef.SysOwner, "vvm"))
-	if err != nil {
-		panic(err)
+	entry, exists := m.data[key]
+	if !exists {
+		return false, nil
 	}
-	return &mockStorage{
-		pKeyPrefix:   pKeyPrefix,
-		storage:      appStorage,
-		errorTrigger: map[string]bool{},
-	}, appStorage
-}
-
-func newMockStorage_mem() (ITTLStorage[string, string], istorage.IAppStorage) {
-	asp := provider.Provide(mem.Provide(coreutils.MockTime))
-	appStorage, err := asp.AppStorage(appdef.NewAppQName(appdef.SysOwner, "vvm"))
-	if err != nil {
-		panic(err)
+	if entry.value != val {
+		return false, nil
 	}
-	return &mockStorage{
-		pKeyPrefix:   pKeyPrefix,
-		storage:      appStorage,
-		errorTrigger: map[string]bool{},
-	}, appStorage
-}
 
-func newMockStorage_cas() (ITTLStorage[string, string], istorage.IAppStorage) {
-	appStorageFactory, err := cas.Provide(cas.CassandraParamsType{
-		Hosts:                   "127.0.0.1",
-		Port:                    9042,
-		KeyspaceWithReplication: cas.SimpleWithReplication,
-	})
-	asp := provider.Provide(appStorageFactory)
-	appStorage, err := asp.AppStorage(appdef.NewAppQName(appdef.SysOwner, "vvm"))
-	if err != nil {
-		panic(err)
-	}
-	return &mockStorage{
-		pKeyPrefix:       pKeyPrefix,
-		storage:          appStorage,
-		errorTrigger:     map[string]bool{},
-		requiresRealTime: true,
-	}, appStorage
+	delete(m.data, key)
+	delete(m.expirations, key)
+	return true, nil
 }
