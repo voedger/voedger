@@ -4,10 +4,11 @@
  */
 package storage
 
-func NewElectionsTTLStorage(vs IVVMAppTTLStorage) ITTLStorage[TTLStorageImplKey, string] {
-	return &implITTLStorageElections{
-		prefix:        pKeyPrefix_Elections,
+import "github.com/voedger/voedger/pkg/elections"
+
+func NewElectionsTTLStorage(vs ISysVvmStorage) elections.ITTLStorage[TTLStorageImplKey, string] {
+	return &implElectionsITTLStorage{
+		prefix:        pKeyPrefix_VVMLeader,
 		vvmttlstorage: vs,
 	}
 }
-

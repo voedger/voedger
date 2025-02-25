@@ -7,5 +7,5 @@ package storage
 
 const (
 	pKeyPrefix_null pKeyPrefix = iota
-	pKeyPrefix_Elections
+	pKeyPrefix_VVMLeader
 )

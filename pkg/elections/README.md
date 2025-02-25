@@ -9,7 +9,6 @@ This design allows clean injection of custom storage implementations (e.g., in-m
 
 ## Table of Contents
 
-- [Installation](#installation)
 - [Interfaces](#interfaces)
     - [ITTLStorage](#ittlstorage)
     - [IElections](#ielections)
@@ -19,12 +18,6 @@ This design allows clean injection of custom storage implementations (e.g., in-m
     - [Performing Cleanup](#performing-cleanup)
 - [Flowchart](#flowchart)
 ---
-
-## Installation
-
-```bash
-go get github.com/voedger/voedger/pkg/elections
-```
 
 ## Interfaces
 
@@ -61,7 +54,7 @@ type IElections[K comparable, V any] interface {
 
 ```go
 // Provide returns an IElections[K, V] interface plus a cleanup function.
-func Provide[K comparable, V any](storage ITTLStorage[K, V], clock ITime) (IElections[K, V], func()) {
+func Provide[K any, V any](storage ITTLStorage[K, V], clock ITime) (IElections[K, V], func()) {
     // ...
 }
 ```

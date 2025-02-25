@@ -10,12 +10,12 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
-type implITTLStorageElections struct {
+type implElectionsITTLStorage struct {
 	prefix        pKeyPrefix
-	vvmttlstorage IVVMAppTTLStorage
+	vvmttlstorage ISysVvmStorage
 }
 
-func (s *implITTLStorageElections) buildKeys(key TTLStorageImplKey) (pKey, cCols []byte) {
+func (s *implElectionsITTLStorage) buildKeys(key TTLStorageImplKey) (pKey, cCols []byte) {
 	pKey = make([]byte, utils.Uint32Size)
 	cCols = make([]byte, utils.Uint32Size)
 
@@ -24,17 +24,17 @@ func (s *implITTLStorageElections) buildKeys(key TTLStorageImplKey) (pKey, cCols
 	return
 }
 
-func (s *implITTLStorageElections) InsertIfNotExist(key TTLStorageImplKey, val string, ttlSeconds int) (bool, error) {
+func (s *implElectionsITTLStorage) InsertIfNotExist(key TTLStorageImplKey, val string, ttlSeconds int) (bool, error) {
 	pKey, cCols := s.buildKeys(key)
 	return s.vvmttlstorage.InsertIfNotExists(pKey, cCols, []byte(val), ttlSeconds)
 }
 
-func (s *implITTLStorageElections) CompareAndSwap(key TTLStorageImplKey, oldVal, newVal string, ttlSeconds int) (bool, error) {
+func (s *implElectionsITTLStorage) CompareAndSwap(key TTLStorageImplKey, oldVal, newVal string, ttlSeconds int) (bool, error) {
 	pKey, cCols := s.buildKeys(key)
 	return s.vvmttlstorage.CompareAndSwap(pKey, cCols, []byte(oldVal), []byte(newVal), ttlSeconds)
 }
 
-func (s *implITTLStorageElections) CompareAndDelete(key TTLStorageImplKey, val string) (bool, error) {
+func (s *implElectionsITTLStorage) CompareAndDelete(key TTLStorageImplKey, val string) (bool, error) {
 	pKey, cCols := s.buildKeys(key)
 	return s.vvmttlstorage.CompareAndDelete(pKey, cCols, []byte(val))
 }
