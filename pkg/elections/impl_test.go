@@ -197,7 +197,7 @@ func TestCleanupDuringRenewal(t *testing.T) {
 // mockStorage is a thread-safe in-memory mock of ITTLStorage that supports key expiration.
 type mockStorage struct {
 	pKeyPrefix             []byte
-	storage                storage.IVVMAppTTLStorage
+	storage                storage.ISysVvmStorage
 	errorTrigger           map[string]bool
 	onBeforeCompareAndSwap func() // != nil -> called right before CompareAndSwap. Need to implement hook in tests
 	requiresRealTime       bool   // true -> real time should be used on awaiting, otherwise MockTime.Sleep()

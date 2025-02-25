@@ -21,10 +21,10 @@ func TestInsertIfNotExist(t *testing.T) {
 	)
 	ttlStorage := NewElectionsTTLStorage(mockVVMAppTTLStorage)
 
-	require.Equal(t, pKeyPrefix_Elections, ttlStorage.(*implITTLStorageElections).prefix)
+	require.Equal(t, pKeyPrefix_VVMLeader, ttlStorage.(*implElectionsITTLStorage).prefix)
 
 	// Preallocate and check slices for non-empty
-	pKey := uint32ToBytes(pKeyPrefix_Elections)
+	pKey := uint32ToBytes(pKeyPrefix_VVMLeader)
 
 	cCols := uint32ToBytes(ttlStorageImplKey)
 	require.Len(t, cCols, 4, "cCols should have length 4")
@@ -50,7 +50,7 @@ func TestCompareAndSwap(t *testing.T) {
 	)
 	ttlStorage := NewElectionsTTLStorage(mockVVMAppTTLStorage)
 
-	pKey := uint32ToBytes(pKeyPrefix_Elections)
+	pKey := uint32ToBytes(pKeyPrefix_VVMLeader)
 	cCols := uint32ToBytes(ttlStorageImplKey)
 	require.Len(t, cCols, 4)
 
@@ -74,7 +74,7 @@ func TestCompareAndDelete(t *testing.T) {
 	)
 	ttlStorage := NewElectionsTTLStorage(mockVVMAppTTLStorage)
 
-	pKey := uint32ToBytes(pKeyPrefix_Elections)
+	pKey := uint32ToBytes(pKeyPrefix_VVMLeader)
 	cCols := uint32ToBytes(ttlStorageImplKey)
 	require.Len(t, cCols, 4)
 

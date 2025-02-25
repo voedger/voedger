@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	_ = uint32(pKeyPrefix_Elections - 1) //nolint:unconvert
-	_ = uint32(1 - pKeyPrefix_Elections) //nolint:unconvert
+	_ = uint32(pKeyPrefix_VVMLeader - 1) //nolint:unconvert
+	_ = uint32(1 - pKeyPrefix_VVMLeader) //nolint:unconvert
 )
 
 func TestConsts(t *testing.T) {
-	require.Equal(t, uint32(1), pKeyPrefix_Elections)
+	require.Equal(t, uint32(1), pKeyPrefix_VVMLeader)
 }
