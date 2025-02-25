@@ -534,7 +534,8 @@ func (s RoleStmt) GetName() string { return string(s.Name) }
 
 type TagStmt struct {
 	Statement
-	Name      Ident `parser:"'TAG' @Ident"`
+	Name      Ident  `parser:"'TAG' @Ident"`
+	Feature   string `parser:"('FEATURE' @String)?"`
 	workspace workspaceAddr
 }
 
