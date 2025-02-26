@@ -27,10 +27,10 @@ func ExampleTags() {
 
 		wsb := adb.AddWorkspace(wsName)
 
-		wsb.AddTag(tagNames[0], "first tag comment")
-		wsb.AddTag(tagNames[1], "second tag comment")
+		wsb.AddTag(tagNames[0], "first tag feature")
+		wsb.AddTag(tagNames[1], "second tag feature")
 
-		wsb.AddTag(tagNames[2], "unused tag comment")
+		wsb.AddTag(tagNames[2], "unused tag feature")
 
 		obj := wsb.AddObject(objName)
 		obj.SetTag(tagNames[0], tagNames[1])
@@ -42,7 +42,7 @@ func ExampleTags() {
 	{
 		fmt.Println("Find tag in application:")
 		tag := appdef.Tag(app.Type, tagNames[0])
-		fmt.Println("-", tag, tag.Comment())
+		fmt.Println("-", tag, tag.Feature())
 		fmt.Println("-", appdef.Tag(app.Type, appdef.NewQName("test", "unknown")))
 	}
 
@@ -50,7 +50,7 @@ func ExampleTags() {
 	{
 		fmt.Println("All application tags:")
 		for tag := range appdef.Tags(app.Types()) {
-			fmt.Println("-", tag, tag.Comment())
+			fmt.Println("-", tag, tag.Feature())
 		}
 	}
 
@@ -68,23 +68,23 @@ func ExampleTags() {
 		obj := appdef.Object(app.Type, objName)
 		fmt.Println(obj, "tags:")
 		for _, tag := range obj.Tags() {
-			fmt.Println("-", tag, tag.Comment())
+			fmt.Println("-", tag, tag.Feature())
 		}
 	}
 
 	// Output:
 	// Find tag in application:
-	// - Tag «test.tag1» first tag comment
+	// - Tag «test.tag1» first tag feature
 	// - <nil>
 	// All application tags:
-	// - Tag «test.tag1» first tag comment
-	// - Tag «test.tag2» second tag comment
-	// - Tag «test.unusedTag» unused tag comment
+	// - Tag «test.tag1» first tag feature
+	// - Tag «test.tag2» second tag feature
+	// - Tag «test.unusedTag» unused tag feature
 	// Object «test.object» has tags:
 	// - test.tag1 true
 	// - test.tag2 true
 	// - test.unusedTag false
 	// Object «test.object» tags:
-	// - Tag «test.tag1» first tag comment
-	// - Tag «test.tag2» second tag comment
+	// - Tag «test.tag1» first tag feature
+	// - Tag «test.tag2» second tag feature
 }
