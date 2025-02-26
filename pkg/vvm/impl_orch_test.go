@@ -105,43 +105,6 @@ func TestBasic(t *testing.T) {
 	})
 }
 
-func TestAutomaticShutdownOnLeadershipLost(t *testing.T) {
-	r := require.New(t)
-
-	vvmCfg := getTestVVMCfg(net.IPv4(192, 168, 0, 1))
-	vvm1, err := Provide(vvmCfg)
-	r.NoError(err)
-
-	// Launch VVM1
-	problemCtx := vvm1.Launch(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration)
-	r.NoError(problemCtx.Err())
-
-	// Simulate leadership loss
-	pKey := make([]byte, utils.Uint32Size)
-	cCols := make([]byte, utils.Uint32Size)
-	binary.BigEndian.PutUint32(pKey, 1)
-	binary.BigEndian.PutUint32(cCols, uint32(1))
-
-	vvmAppTTLStorage, err := vvm1.APIs.IAppStorageProvider.AppStorage(appdef.NewAppQName(istructs.SysOwner, "vvm"))
-	require.NoError(t, err)
-	ok, err := vvmAppTTLStorage.CompareAndSwap(
-		pKey,
-		cCols,
-		[]byte(vvmCfg.IP.String()),
-		[]byte("another_value"),
-		50,
-	)
-	r.NoError(err)
-	r.True(ok)
-
-	// Bump mock time
-	coreutils.MockTime.Sleep(time.Duration(DefaultLeadershipDurationSeconds) * time.Second)
-
-	// Check problem context
-	<-problemCtx.Done()
-	r.ErrorIs(vvm1.Shutdown(), ErrLeadershipLost)
-}
-
 func TestCancelLeadershipOnManualShutdown(t *testing.T) {
 	r := require.New(t)
 
@@ -210,6 +173,46 @@ func TestWrongLaunchAndShutdownUsage(t *testing.T) {
 		defer vvm.Shutdown()
 		require.Panics(func() { vvm.Launch(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration) })
 	})
+}
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// note: this test must be the last in the entire PACKAGE, not the just last in the file
+// otherwise killerRoutine will kill the entire test process if the rest of test will last longer than 5 seconds
+func TestAutomaticShutdownOnLeadershipLoss(t *testing.T) {
+	r := require.New(t)
+
+	vvmCfg := getTestVVMCfg(net.IPv4(192, 168, 0, 1))
+	vvm1, err := Provide(vvmCfg)
+	r.NoError(err)
+
+	// Launch VVM1
+	problemCtx := vvm1.Launch(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration)
+	r.NoError(problemCtx.Err())
+
+	// Simulate leadership loss
+	pKey := make([]byte, utils.Uint32Size)
+	cCols := make([]byte, utils.Uint32Size)
+	binary.BigEndian.PutUint32(pKey, 1)
+	binary.BigEndian.PutUint32(cCols, uint32(1))
+
+	vvmAppTTLStorage, err := vvm1.APIs.IAppStorageProvider.AppStorage(appdef.NewAppQName(istructs.SysOwner, "vvm"))
+	require.NoError(t, err)
+	ok, err := vvmAppTTLStorage.CompareAndSwap(
+		pKey,
+		cCols,
+		[]byte(vvmCfg.IP.String()),
+		[]byte("another_value"),
+		50,
+	)
+	r.NoError(err)
+	r.True(ok)
+
+	// Bump mock time
+	coreutils.MockTime.Sleep(time.Duration(DefaultLeadershipDurationSeconds) * time.Second)
+
+	// Check problem context
+	<-problemCtx.Done()
+	r.ErrorIs(vvm1.Shutdown(), ErrLeadershipLost)
 }
 
 func getTestVVMCfg(ip net.IP) *VVMConfig {
