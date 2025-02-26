@@ -90,6 +90,12 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal("Backoffice Table", cdoc.Comment())
 	require.True(cdoc.HasTag(appdef.NewQName("main", "BackofficeTag")))
 
+	// tag
+	tag := appdef.Tag(app.Type, appdef.NewQName("main", "BackofficeTag"))
+	require.NotNil(tag)
+	require.Equal("Declare tag to assign it later to definition(s)", tag.Comment())
+	require.Equal("Backoffice Management", tag.Feature())
+
 	// TODO: sf := cdoc.Field("CheckedField").(appdef.IStringField)
 	// TODO: require.Equal(uint16(8), sf.Restricts().MaxLen())
 	// TODO: require.NotNil(sf.Restricts().Pattern())
