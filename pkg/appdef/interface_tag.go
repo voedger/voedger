@@ -9,8 +9,8 @@ package appdef
 type ITag interface {
 	IType
 
-	// Unwanted type assertion stub
-	IsTag()
+	// #3363:
+	Feature() string
 }
 
 // IWithTags is an interface for types that have tags.
@@ -35,9 +35,12 @@ type ITagger interface {
 type ITagsBuilder interface {
 	// Adds new tags with specified name.
 	//
+	// #3363:
+	// If variadic arguments are not empty, then first is feature, and other arguments are comments.
+	//
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
 	//   - if type with name already exists.
-	AddTag(name QName, comments ...string)
+	AddTag(name QName, featureAndComments ...string)
 }

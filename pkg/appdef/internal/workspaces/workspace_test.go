@@ -652,7 +652,7 @@ func Test_WorkspaceAddTypes(t *testing.T) {
 	wsb := adb.AddWorkspace(wsName)
 
 	tagName := appdef.NewQName("test", "Tag")
-	wsb.AddTag(tagName, "tag 1 comment")
+	wsb.AddTag(tagName, "tag 1 feature", "tag 1 comment")
 
 	dataName := appdef.NewQName("test", "Data")
 	wsb.AddData(dataName, appdef.DataKind_int64, appdef.NullQName).

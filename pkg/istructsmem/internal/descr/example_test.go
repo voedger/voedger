@@ -31,7 +31,7 @@ func Example() {
 
 		tags := appdef.MustParseQNames("test.dataTag", "test.engineTag", "test.structTag")
 		for _, tag := range tags {
-			wsb.AddTag(tag)
+			wsb.AddTag(tag, tag.Entity()) // #3363: let use entity name to test tag feature
 		}
 
 		numName := appdef.NewQName("test", "number")
@@ -206,9 +206,15 @@ func Example() {
 	//         "test.ws": {
 	//           "Descriptor": "test.wsDesc",
 	//           "Tags": {
-	//             "test.dataTag": {},
-	//             "test.engineTag": {},
-	//             "test.structTag": {}
+	//             "test.dataTag": {
+	//               "Feature": "dataTag"
+	//             },
+	//             "test.engineTag": {
+	//               "Feature": "engineTag"
+	//             },
+	//             "test.structTag": {
+	//               "Feature": "structTag"
+	//             }
 	//           },
 	//           "DataTypes": {
 	//             "test.number": {

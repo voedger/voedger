@@ -13,4 +13,5 @@ func newTag() *Tag {
 
 func (t *Tag) read(tag appdef.ITag) {
 	t.Type.read(tag)
+	t.Feature = tag.Feature()
 }
