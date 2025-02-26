@@ -213,9 +213,15 @@ func (ws *Workspace) addRole(name appdef.QName) appdef.IRoleBuilder {
 	return roles.NewRoleBuilder(r)
 }
 
-func (ws *Workspace) addTag(name appdef.QName, comment ...string) {
-	t := types.NewTag(ws, name)
-	comments.SetComment(&t.WithComments, comment...)
+func (ws *Workspace) addTag(name appdef.QName, featureAndComment ...string) {
+	feature := ""
+	if len(featureAndComment) > 0 {
+		feature = featureAndComment[0]
+	}
+	t := types.NewTag(ws, name, feature)
+	if len(featureAndComment) > 1 {
+		comments.SetComment(&t.WithComments, featureAndComment[1:]...)
+	}
 }
 
 func (ws *Workspace) addView(name appdef.QName) appdef.IViewBuilder {
@@ -436,8 +442,8 @@ func (wb *WorkspaceBuilder) AddRole(name appdef.QName) appdef.IRoleBuilder {
 	return wb.ws.addRole(name)
 }
 
-func (wb *WorkspaceBuilder) AddTag(name appdef.QName, comments ...string) {
-	wb.ws.addTag(name, comments...)
+func (wb *WorkspaceBuilder) AddTag(name appdef.QName, featureAndComment ...string) {
+	wb.ws.addTag(name, featureAndComment...)
 }
 
 func (wb *WorkspaceBuilder) AddView(name appdef.QName) appdef.IViewBuilder {

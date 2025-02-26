@@ -71,8 +71,8 @@ func Test_TypeIterators(t *testing.T) {
 	}
 
 	tagName := qns("Tag")
-	wsb.AddTag(tagName[0], "tag 1 comment")
-	wsb.AddTag(tagName[1], "tag 2 comment")
+	wsb.AddTag(tagName[0], "tag 1 feature")
+	wsb.AddTag(tagName[1], "tag 2 feature")
 
 	dataName := qns("Data")
 	wsb.AddData(dataName[0], appdef.DataKind_int64, appdef.NullQName).
