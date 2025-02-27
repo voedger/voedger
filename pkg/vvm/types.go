@@ -130,6 +130,7 @@ type VVM struct {
 
 type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 
+// [~server.design.orch/VVMConfig~impl]
 type VVMConfig struct {
 	VVMAppsBuilder             VVMAppsBuilder // is a map
 	Time                       coreutils.ITime
