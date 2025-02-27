@@ -10,8 +10,27 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/ielections"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage/mem"
+	"github.com/voedger/voedger/pkg/istorage/provider"
+	"github.com/voedger/voedger/pkg/istructs"
 )
+
+func TestTTLStorageMem(t *testing.T) {
+	storageFactory := mem.Provide(coreutils.MockTime)
+	TTLStorageTestSuite(t, storageFactory)
+}
+
+func TTLStorageTestSuite(t *testing.T, appStorageFactory istorage.IAppStorageFactory) {
+	appStroageProvider := provider.Provide(appStorageFactory)
+	sysVVMAppStorage, err := appStroageProvider.AppStorage(istructs.AppQName_sys_vvm)
+	require.NoError(t, err)
+	electionsTTLStorage := NewElectionsTTLStorage(sysVVMAppStorage)
+	ielections.ElectionsTestSuite(t, electionsTTLStorage)
+}
 
 func TestInsertIfNotExist(t *testing.T) {
 	mockVVMAppTTLStorage := new(MockIVVMAppTTLStorage)

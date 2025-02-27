@@ -292,7 +292,7 @@ func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 }
 
 func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.ISysVvmStorage, error) {
-	return prov.AppStorage(appdef.NewAppQName(istructs.SysOwner, "vvm"))
+	return prov.AppStorage(AppQName_SysVvm)
 }
 
 func provideWLimiterFactory(maxSize iblobstorage.BLOBMaxSizeType) blobprocessor.WLimiterFactory {

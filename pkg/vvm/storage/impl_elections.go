@@ -38,3 +38,13 @@ func (s *implElectionsITTLStorage) CompareAndDelete(key TTLStorageImplKey, val s
 	pKey, cCols := s.buildKeys(key)
 	return s.vvmttlstorage.CompareAndDelete(pKey, cCols, []byte(val))
 }
+
+func (s *implElectionsITTLStorage) Get(key TTLStorageImplKey) (bool, string, error) {
+	pKey, cCols := s.buildKeys(key)
+	data := []byte{}
+	ok, err := s.vvmttlstorage.Get(pKey, cCols, &data)
+	if err != nil {
+		return false, "", err
+	}
+	return ok, string(data), err
+}

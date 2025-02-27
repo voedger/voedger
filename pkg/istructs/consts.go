@@ -177,6 +177,7 @@ var AppQName_sys_router = appdef.NewAppQName(SysOwner, "router")   // Deprecated
 var AppQName_untill_resellerportal = appdef.NewAppQName("untill", "resellerportal")
 var AppQName_sys_cluster = appdef.NewAppQName(SysOwner, "cluster")
 var AppQName_untill_fiscalcloud = appdef.NewAppQName("untill", "fiscalcloud")
+var AppQName_sys_vvm = appdef.NewAppQName(SysOwner, "vvm") // used for storage only
 
 // Cluster applications
 

@@ -3,7 +3,7 @@
  * @author Denis Gribanov
  */
 
-package elections
+package ielections
 
 import (
 	"context"
