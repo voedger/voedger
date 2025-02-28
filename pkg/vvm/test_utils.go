@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/builtin/registryapp"
 )
 
+// nolint:revive
 func GetTestVVMCfg(ip net.IP) *VVMConfig {
 	vvmCfg := NewVVMDefaultConfig()
 	vvmCfg.VVMPort = 0
