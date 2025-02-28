@@ -96,8 +96,8 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 
 	if useCas {
 		cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
-			logger.Info("using istoragecas ", fmt.Sprint(vvmpkg.DefaultCasParams))
-			return cas.Provide(vvmpkg.DefaultCasParams)
+			logger.Info("using istoragecas ", fmt.Sprint(cas.DefaultCasParams))
+			return cas.Provide(cas.DefaultCasParams)
 		}
 	}
 

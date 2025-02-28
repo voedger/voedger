@@ -17,9 +17,9 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/elections"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iblobstorage"
+	"github.com/voedger/voedger/pkg/ielections"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iprocbusmem"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -125,7 +125,7 @@ type VVM struct {
 	AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
 	BuiltInAppsPackages []BuiltInAppPackages
-	TTLStorage          elections.ITTLStorage[storage.TTLStorageImplKey, string]
+	TTLStorage          ielections.ITTLStorage[storage.TTLStorageImplKey, string]
 }
 
 type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
@@ -191,7 +191,6 @@ type VoedgerVM struct {
 	// closed when VVM should be stopped outside
 	vvmShutCtx       context.Context
 	vvmShutCtxCancel context.CancelFunc
-	vvmShutCtxOnce   sync.Once
 
 	// closed when VVM services should be stopped (but LeadershipMonitor)
 	servicesShutCtx       context.Context
@@ -213,7 +212,7 @@ type VoedgerVM struct {
 	leadershipAcquisitionTimeArmed chan struct{}
 }
 
-type IVVMElections elections.IElections[storage.TTLStorageImplKey, string]
+type IVVMElections ielections.IElections[storage.TTLStorageImplKey, string]
 
 type ignition struct{}
 

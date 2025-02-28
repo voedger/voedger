@@ -38,11 +38,18 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Run Go Tests on Cassandra
+    - name: Run Cassandra Implementation Tests
       working-directory: pkg/istorage/cas
       run: go test ./... -v -race
       env:
         CASSANDRA_TESTS_ENABLED: true
+
+    - name: Run Cassandra TTLStorage and Elections Tests
+      working-directory: pkg/vvm/storage
+      run: go test ./... -v -race
+      env:
+        CASSANDRA_TESTS_ENABLED: true
+
 
     - name: Set Failure URL
       if: failure()  # Corrected syntax
@@ -53,8 +60,8 @@ jobs:
     needs: build
     if: ${{ failure() }}
     uses: untillpro/ci-action/.github/workflows/create_issue.yml@master
-    with: 
-      repo: 'voedger/voedger' 
+    with:
+      repo: 'voedger/voedger'
       assignee: 'host6'
       name: 'Cassandra test failed on'
       body: ${{ needs.build.outputs.failure_url }}

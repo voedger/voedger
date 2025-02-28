@@ -16,9 +16,13 @@ jobs:
       cas_changed: ${{ steps.pr_files.outputs.cas_changed }}
       amazon_changed: ${{ steps.pr_files.outputs.amazon_changed }}
       others_changed: ${{ steps.pr_files.outputs.others_changed }}
+      ttlstorage_changed: ${{ steps.pr_files.outputs.ttlstorage_changed }}
+      elections_changed: ${{ steps.pr_files.outputs.elections_changed }}
       cas_changed_push: ${{ steps.push_files.outputs.cas_changed }}
       amazon_changed_push: ${{ steps.push_files.outputs.amazon_changed }}
       others_changed_push: ${{ steps.push_files.outputs.others_changed }}
+      ttlstorage_changed_push: ${{ steps.push_files.outputs.ttlstorage_changed }}
+      elections_changed_push: ${{ steps.push_files.outputs.elections_changed }}
     steps:
 
       - name: Install GitHub CLI
@@ -37,6 +41,8 @@ jobs:
           CAS_CHANGED=false
           AMAZON_CHANGED=false
           OTHERS_CHANGED=false
+          TTLSTORAGE_CHANGED=false
+          ELECTIONS_CHANGED=false
 
           for FILE in $CHANGED_FILES; do
             case "$FILE" in
@@ -46,8 +52,14 @@ jobs:
               pkg/istorage/amazondb/*)
                 AMAZON_CHANGED=true
                 ;;
-              pkg/istorage/*) 
+              pkg/istorage/*)
                 OTHERS_CHANGED=true
+                ;;
+              pkg/vvm/storage/*)
+                TTLSTORAGE_CHANGED=true
+                ;;
+              pkg/ielections/*)
+                ELECTIONS_CHANGED=true
                 ;;
             esac
           done
@@ -55,6 +67,8 @@ jobs:
           echo "cas_changed=$CAS_CHANGED" >> "$GITHUB_OUTPUT"
           echo "amazon_changed=$AMAZON_CHANGED" >> "$GITHUB_OUTPUT"
           echo "others_changed=$OTHERS_CHANGED" >> "$GITHUB_OUTPUT"
+          echo "ttlstorage_changed=$TTLSTORAGE_CHANGED" >> "$GITHUB_OUTPUT"
+          echo "elections_changed=$ELECTIONS_CHANGED" >> "$GITHUB_OUTPUT"
 
         env:
           GH_TOKEN: ${{ secrets.REPOREADING_TOKEN }}
@@ -71,6 +85,8 @@ jobs:
         run: |
           CAS_CHANGED=false
           AMAZON_CHANGED=false
+          TTLSTORAGE_CHANGED=false
+          ELECTIONS_CHANGED=false
 
           # Ensure we have a valid previous commit
           if git rev-parse HEAD^ >/dev/null 2>&1; then
@@ -103,21 +119,57 @@ jobs:
           if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/provider/"; then
             OTHERS_CHANGED=false
           fi
-          
+
+          if echo "$CHANGED_FILES" | grep -q "^pkg/vvm/storage/"; then
+            TTLSTORAGE_CHANGED=true
+            OTHERS_CHANGED=false
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "^pkg/ielections/"; then
+            ELECTIONS_CHANGED=true
+            OTHERS_CHANGED=false
+          fi
+
           echo "cas_changed=$CAS_CHANGED" >> $GITHUB_OUTPUT
           echo "amazon_changed=$AMAZON_CHANGED" >> $GITHUB_OUTPUT
           echo "others_changed=$OTHERS_CHANGED" >> $GITHUB_OUTPUT
+          echo "ttlstorage_changed=$TTLSTORAGE_CHANGED" >> $GITHUB_OUTPUT
+          echo "elections_changed=$ELECTIONS_CHANGED" >> $GITHUB_OUTPUT
 
   trigger_cas:
     needs: determine_changes
-    if: ((needs.determine_changes.outputs.cas_changed == 'true' || needs.determine_changes.outputs.cas_changed_push == 'true')) && ((needs.determine_changes.outputs.amazon_changed == 'false' || needs.determine_changes.outputs.amazon_changed_push == 'false')) || ((needs.determine_changes.outputs.others_changed == 'true' || needs.determine_changes.outputs.others_changed_push == 'true'))
+    if: |
+      (
+        (needs.determine_changes.outputs.cas_changed == 'true' ||
+        needs.determine_changes.outputs.cas_changed_push == 'true' ||
+        needs.determine_changes.outputs.ttlstorage_changed == 'true' ||
+        needs.determine_changes.outputs.elections_changed == 'true')
+      ) && (
+        (needs.determine_changes.outputs.amazon_changed == 'false' ||
+        needs.determine_changes.outputs.amazon_changed_push == 'false')
+      ) || (
+        (needs.determine_changes.outputs.others_changed == 'true' ||
+        needs.determine_changes.outputs.others_changed_push == 'true')
+      )
     uses: ./.github/workflows/ci_cas.yml
     secrets:
       personaltoken: ${{ secrets.REPOREADING_TOKEN }}
 
   trigger_amazon:
     needs: determine_changes
-    if: ((needs.determine_changes.outputs.amazon_changed == 'true' || needs.determine_changes.outputs.amazon_changed_push == 'true')) && ((needs.determine_changes.outputs.cas_changed == 'false' || needs.determine_changes.outputs.cas_changed_push == 'false')) || ((needs.determine_changes.outputs.others_changed == 'true' || needs.determine_changes.outputs.others_changed_push == 'true'))
+    if: |
+      (
+        (needs.determine_changes.outputs.amazon_changed == 'true' ||
+        needs.determine_changes.outputs.amazon_changed_push == 'true' ||
+        needs.determine_changes.outputs.ttlstorage_changed == 'true' ||
+        needs.determine_changes.outputs.elections_changed == 'true')
+      ) && (
+        (needs.determine_changes.outputs.cas_changed == 'false' ||
+        needs.determine_changes.outputs.cas_changed_push == 'false')
+      ) || (
+        (needs.determine_changes.outputs.others_changed == 'true' ||
+        needs.determine_changes.outputs.others_changed_push == 'true')
+      )
     uses: ./.github/workflows/ci_amazon.yml
     secrets:
       personaltoken: ${{ secrets.REPOREADING_TOKEN }}

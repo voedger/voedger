@@ -7,9 +7,8 @@ package vvm
 import (
 	"time"
 
-	"github.com/voedger/voedger/pkg/elections"
 	"github.com/voedger/voedger/pkg/iblobstorage"
-	"github.com/voedger/voedger/pkg/istorage/cas"
+	"github.com/voedger/voedger/pkg/ielections"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/router"
 )
@@ -29,8 +28,7 @@ const (
 	DefaultBLOBMaxSize                                                 = iblobstorage.BLOBMaxSizeType(20971520) // 20Mb
 	DefaultVVMPort                                                     = router.DefaultPort
 	actualizerFlushInterval                                            = time.Millisecond * 500
-	defaultCassandraPort                                               = 9042
-	DefaultLeadershipDurationSeconds                                   = elections.LeadershipDurationSeconds(20)
+	DefaultLeadershipDurationSeconds                                   = ielections.LeadershipDurationSeconds(20)
 	DefaultLeadershipAcquisitionDuration                               = LeadershipAcquisitionDuration(120 * time.Second)
 )
 
@@ -41,10 +39,5 @@ const (
 )
 
 var (
-	LocalHost        = "http://127.0.0.1"
-	DefaultCasParams = cas.CassandraParamsType{
-		Hosts:                   "127.0.0.1",
-		Port:                    defaultCassandraPort,
-		KeyspaceWithReplication: cas.SimpleWithReplication,
-	}
+	LocalHost = "http://127.0.0.1"
 )

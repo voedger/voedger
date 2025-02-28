@@ -7,9 +7,6 @@ package router
 
 import (
 	"time"
-
-	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/iblobstorage"
 )
 
 const (
@@ -39,10 +36,6 @@ const (
 )
 
 var (
-	bearerPrefixLen                = len(coreutils.BearerPrefix)
-	onRequestCtxClosed      func() = nil // used in tests
-	adminEndpoint                  = "127.0.0.1:55555"
-	durationToRegisterFuncs        = map[iblobstorage.DurationType]string{
-		iblobstorage.DurationType_1Day: "c.sys.RegisterTempBLOB1d",
-	}
+	onRequestCtxClosed func() = nil // used in tests
+	adminEndpoint             = "127.0.0.1:55555"
 )
