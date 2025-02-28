@@ -106,7 +106,7 @@ func (vvm *VoedgerVM) leadershipMonitor(leadershipDurationSeconds ielections.Lea
 
 // killerRoutine is a routine that kills the VVM process after a quarter of the leadership duration
 func (vvm *VoedgerVM) killerRoutine(leadershipDurationSeconds ielections.LeadershipDurationSeconds) {
-	// [~server.design.orch/processKillThreshold~impl
+	// [~server.design.orch/processKillThreshold~impl]
 	// nolint:revive
 	processKillThreshold := time.Duration(leadershipDurationSeconds) * time.Second / 4
 	time.Sleep(processKillThreshold)
