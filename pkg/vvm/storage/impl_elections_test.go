@@ -5,143 +5,147 @@
 package storage
 
 import (
-	"encoding/binary"
-	"strconv"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
-	"github.com/voedger/voedger/pkg/ielections"
-	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func TestTTLStorageMem(t *testing.T) {
-	storageFactory := mem.Provide(coreutils.MockTime)
-	TTLStorageTestSuite(t, storageFactory)
-}
-
-func TTLStorageTestSuite(t *testing.T, appStorageFactory istorage.IAppStorageFactory) {
-	appStroageProvider := provider.Provide(appStorageFactory)
-	sysVVMAppStorage, err := appStroageProvider.AppStorage(istructs.AppQName_sys_vvm)
-	require.NoError(t, err)
-	electionsTTLStorage := NewElectionsTTLStorage(sysVVMAppStorage)
-	counter := 0
-	ielections.ElectionsTestSuite(t, electionsTTLStorage, ielections.TestDataGen[TTLStorageImplKey, string]{
-		NextKey: func() TTLStorageImplKey {
-			counter++
-			return TTLStorageImplKey(counter)
-		},
-		NextVal: func() string {
-			counter++
-			return "testVal" + strconv.Itoa(counter)
-		},
-	})
-}
+const seconds10 = 10
 
 func TestInsertIfNotExist(t *testing.T) {
+	require := require.New(t)
 	appStorageProvider := provider.Provide(mem.Provide(coreutils.MockTime))
 	sysVvmAppStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
-	require.NoError(t, err)
+	require.NoError(err)
 	const (
 		ttlStorageImplKey TTLStorageImplKey = 12345
-		val                                 = "some-value"
+		expectedVal                         = "some-value"
 	)
 	ttlStorage := NewElectionsTTLStorage(sysVvmAppStorage)
 
-	require.Equal(t, pKeyPrefix_VVMLeader, ttlStorage.(*implElectionsITTLStorage).prefix)
+	// basic usage
+	ok, err := ttlStorage.InsertIfNotExist(ttlStorageImplKey, "some-value", seconds10)
+	require.NoError(err)
+	require.True(ok)
 
-	// Preallocate and check slices for non-empty
-	// pKey := uint32ToBytes(pKeyPrefix_VVMLeader)
+	// check the underlying storage
+	pKey, cCols := ttlStorage.(*implElectionsITTLStorage).buildKeys(ttlStorageImplKey)
+	valBytes := []byte{}
+	ok, err = sysVvmAppStorage.TTLGet(pKey, cCols, &valBytes)
+	require.NoError(err)
+	require.True(ok)
+	require.Equal(expectedVal, string(expectedVal))
 
-	// cCols := uint32ToBytes(ttlStorageImplKey)
-	// require.Len(t, cCols, 4, "cCols should have length 4")
+	// check using ITTLStorage.Get
+	ok, storedVal, err := ttlStorage.Get(ttlStorageImplKey)
+	require.NoError(err)
+	require.True(ok)
+	require.Equal(expectedVal, storedVal)
 
-	ttlSeconds := 5
-
-	// mockVVMAppTTLStorage.On("InsertIfNotExists", pKey, cCols, []byte(val), ttlSeconds).
-	// 	Return(true, nil)
-
-	ok, err := ttlStorage.InsertIfNotExist(ttlStorageImplKey, val, ttlSeconds)
-	require.NoError(t, err)
-	require.True(t, ok)
-
-	// mockVVMAppTTLStorage.AssertExpectations(t)
+	// expire the value
+	coreutils.MockTime.Sleep(seconds10 * time.Second)
+	ok, err = sysVvmAppStorage.TTLGet(pKey, cCols, &valBytes)
+	require.NoError(err)
+	require.False(ok)
 }
 
-// func TestCompareAndSwap(t *testing.T) {
-// 	mockVVMAppTTLStorage := new(MockIVVMAppTTLStorage)
-// 	const (
-// 		ttlStorageImplKey TTLStorageImplKey = 12345
-// 		oldVal                              = "old-val"
-// 		newVal                              = "new-val"
-// 	)
-// 	ttlStorage := NewElectionsTTLStorage(mockVVMAppTTLStorage)
+func TestCompareAndSwap(t *testing.T) {
+	require := require.New(t)
+	appStorageProvider := provider.Provide(mem.Provide(coreutils.MockTime))
+	sysVvmAppStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
+	require.NoError(err)
+	const (
+		ttlStorageImplKey TTLStorageImplKey = 12345
+		oldVal                              = "old-val"
+		newVal                              = "new-val"
+	)
+	ttlStorage := NewElectionsTTLStorage(sysVvmAppStorage)
 
-// 	pKey := uint32ToBytes(pKeyPrefix_VVMLeader)
-// 	cCols := uint32ToBytes(ttlStorageImplKey)
-// 	require.Len(t, cCols, 4)
+	// no stored value -> !ok
+	t.Run("no stored value -> !ok", func(t *testing.T) {
+		ok, err := ttlStorage.CompareAndSwap(ttlStorageImplKey, oldVal, newVal, seconds10)
+		require.NoError(err)
+		require.False(ok)
+	})
 
-// 	ttlSeconds := 10
+	// insert a value
+	ok, err := ttlStorage.InsertIfNotExist(ttlStorageImplKey, oldVal, seconds10)
+	require.NoError(err)
+	require.True(ok)
 
-// 	mockVVMAppTTLStorage.On("CompareAndSwap", pKey, cCols, []byte(oldVal), []byte(newVal), ttlSeconds).
-// 		Return(true, nil)
+	pKey, cCols := ttlStorage.(*implElectionsITTLStorage).buildKeys(ttlStorageImplKey)
 
-// 	ok, err := ttlStorage.CompareAndSwap(ttlStorageImplKey, oldVal, newVal, ttlSeconds)
-// 	require.NoError(t, err)
-// 	require.True(t, ok)
+	t.Run("basic usage", func(t *testing.T) {
+		// swap stored oldVal->newVal -> ok
+		ok, err = ttlStorage.CompareAndSwap(ttlStorageImplKey, oldVal, newVal, seconds10)
+		require.NoError(err)
+		require.True(ok)
 
-// 	mockVVMAppTTLStorage.AssertExpectations(t)
-// }
+		// check the newVal is stored indeed after CompareAndSwap
+		valBytes := []byte{}
+		ok, err = sysVvmAppStorage.TTLGet(pKey, cCols, &valBytes)
+		require.NoError(err)
+		require.True(ok)
+		require.Equal(newVal, string(valBytes))
+	})
 
-// func TestCompareAndDelete(t *testing.T) {
-// 	mockVVMAppTTLStorage := new(MockIVVMAppTTLStorage)
-// 	const (
-// 		ttlStorageImplKey TTLStorageImplKey = 12345
-// 		val                                 = "val"
-// 	)
-// 	ttlStorage := NewElectionsTTLStorage(mockVVMAppTTLStorage)
+	t.Run("CompareAndSwap failure if the stored value is modified", func(t *testing.T) {
+		modifiedVal := "sdfsdfsd"
+		// remove+insert new to simulate the value has changed
+		// do not check ok for the case this test is run separately
+		_, err := ttlStorage.CompareAndDelete(ttlStorageImplKey, newVal)
+		require.NoError(err)
+		_, err = ttlStorage.CompareAndDelete(ttlStorageImplKey, oldVal)
+		require.NoError(err)
 
-// 	pKey := uint32ToBytes(pKeyPrefix_VVMLeader)
-// 	cCols := uint32ToBytes(ttlStorageImplKey)
-// 	require.Len(t, cCols, 4)
+		ok, err = ttlStorage.InsertIfNotExist(ttlStorageImplKey, modifiedVal, seconds10)
+		require.NoError(err)
+		require.True(ok)
 
-// 	mockVVMAppTTLStorage.On("CompareAndDelete", pKey, cCols, []byte(val)).
-// 		Return(true, nil)
-
-// 	ok, err := ttlStorage.CompareAndDelete(ttlStorageImplKey, val)
-// 	require.NoError(t, err)
-// 	require.True(t, ok)
-
-// 	mockVVMAppTTLStorage.AssertExpectations(t)
-// }
-
-func uint32ToBytes(val uint32) []byte {
-	res := make([]byte, utils.Uint32Size)
-	binary.BigEndian.PutUint32(res, val)
-	return res
+		// stored modifiedVal, trying to update oldVal->newVal -> fail
+		ok, err = ttlStorage.CompareAndSwap(ttlStorageImplKey, oldVal, newVal, seconds10)
+		require.NoError(err)
+		require.False(ok)
+	})
 }
 
-// MockIVVMAppTTLStorage is a mock for the IVVMAppTTLStorage interface
-type MockIVVMAppTTLStorage struct {
-	mock.Mock
-}
+func TestCompareAndDelete(t *testing.T) {
+	require := require.New(t)
+	appStorageProvider := provider.Provide(mem.Provide(coreutils.MockTime))
+	sysVvmAppStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
+	require.NoError(err)
+	const (
+		ttlStorageImplKey TTLStorageImplKey = 12345
+		val                                 = "val"
+	)
+	ttlStorage := NewElectionsTTLStorage(sysVvmAppStorage)
 
-func (m *MockIVVMAppTTLStorage) InsertIfNotExists(pKey, cCols, value []byte, ttlSeconds int) (bool, error) {
-	args := m.Called(pKey, cCols, value, ttlSeconds)
-	return args.Bool(0), args.Error(1)
-}
+	t.Run("no stored value -> !ok", func(t *testing.T) {
+		ok, err := ttlStorage.CompareAndDelete(ttlStorageImplKey, val)
+		require.NoError(err)
+		require.False(ok)
+	})
 
-func (m *MockIVVMAppTTLStorage) CompareAndSwap(pKey, cCols, oldValue, newValue []byte, ttlSeconds int) (bool, error) {
-	args := m.Called(pKey, cCols, oldValue, newValue, ttlSeconds)
-	return args.Bool(0), args.Error(1)
-}
+	t.Run("basic usage", func(t *testing.T) {
+		ok, err := ttlStorage.InsertIfNotExist(ttlStorageImplKey, val, seconds10)
+		require.NoError(err)
+		require.True(ok)
 
-func (m *MockIVVMAppTTLStorage) CompareAndDelete(pKey, cCols, expectedValue []byte) (bool, error) {
-	args := m.Called(pKey, cCols, expectedValue)
-	return args.Bool(0), args.Error(1)
+		ok, err = ttlStorage.CompareAndDelete(ttlStorageImplKey, val)
+		require.NoError(err)
+		require.True(ok)
+
+		// check the value is removed indeed from the underlying storage
+		pKey, cCols := ttlStorage.(*implElectionsITTLStorage).buildKeys(ttlStorageImplKey)
+		valBytes := []byte{}
+		ok, err = sysVvmAppStorage.TTLGet(pKey, cCols, &valBytes)
+		require.NoError(err)
+		require.False(ok)
+	})
+
 }
