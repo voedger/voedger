@@ -22,36 +22,42 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+// [~server.design.orch/ElectionsByDriverTests~impl]
+
+// [~server.design.orch/VVM.test.TTLStorageMem~impl]
 func TestTTLStorageMem(t *testing.T) {
 	storageFactory := mem.Provide(coreutils.MockTime)
-	TTLStorageTestSuite(t, storageFactory)
+	testElectionsByDriver(t, storageFactory)
 }
 
+// [~server.design.orch/VVM.test.TTLStorageCas~impl]
 func TestTTStorageCas(t *testing.T) {
 	if !coreutils.IsCassandraStorage() {
 		t.Skip()
 	}
 	storagePactory, err := cas.Provide(cas.DefaultCasParams)
 	require.NoError(t, err)
-	TTLStorageTestSuite(t, storagePactory)
+	testElectionsByDriver(t, storagePactory)
 }
 
+// [~server.design.orch/VVM.test.TTLStorageBbolt~impl]
 func TestTTLStorageBbolt(t *testing.T) {
 	storagePactory := bbolt.Provide(bbolt.ParamsType{
 		DBDir: os.TempDir(),
 	}, coreutils.MockTime)
-	TTLStorageTestSuite(t, storagePactory)
+	testElectionsByDriver(t, storagePactory)
 }
 
+// [~server.design.orch/VVM.test.TTLStorageDyn~impl]
 func TestTTLStorageDynamoDB(t *testing.T) {
 	if !coreutils.IsDynamoDBStorage() {
 		t.Skip()
 	}
 	storagePactory := amazondb.Provide(amazondb.DefaultDynamoDBParams, coreutils.MockTime)
-	TTLStorageTestSuite(t, storagePactory)
+	testElectionsByDriver(t, storagePactory)
 }
 
-func TTLStorageTestSuite(t *testing.T, appStorageFactory istorage.IAppStorageFactory) {
+func testElectionsByDriver(t *testing.T, appStorageFactory istorage.IAppStorageFactory) {
 	appStroageProvider := provider.Provide(appStorageFactory)
 	sysVVMAppStorage, err := appStroageProvider.AppStorage(istructs.AppQName_sys_vvm)
 	require.NoError(t, err)

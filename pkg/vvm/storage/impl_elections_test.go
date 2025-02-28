@@ -15,6 +15,8 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+// [~server.design.orch/TTLStorageTest~impl]
+
 const seconds10 = 10
 
 func TestInsertIfNotExist(t *testing.T) {

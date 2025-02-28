@@ -9,6 +9,7 @@ import (
 )
 
 // IElections has AcquireLeadership returning nil if leadership is not acquired or error.
+// [~server.design.orch/IElections~impl]
 type IElections[K any, V any] interface {
 	// AcquireLeadership attempts to become leader for `key` with `val`.
 	//  - Returns a non-nil context if leadership is acquired successfully.
@@ -22,6 +23,7 @@ type IElections[K any, V any] interface {
 }
 
 // ITTLStorage defines a TTL-based storage layer with explicit durations.
+// [~server.design.orch/ITTLStorage~impl]
 type ITTLStorage[K any, V any] interface {
 	// InsertIfNotExist tries to insert (key, val) with a TTL only if key does not exist.
 	// Returns (true, nil) if inserted successfully,
