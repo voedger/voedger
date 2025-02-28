@@ -2,7 +2,7 @@
  * Copyright (c) 2025-present unTill Software Development Group B.V.
  * @author Alisher Nurmanov
  */
-package elections
+package ielections
 
 import (
 	"context"
@@ -38,4 +38,7 @@ type ITTLStorage[K any, V any] interface {
 	// and if they match, deletes the key, returning (true, nil). Otherwise, (false, nil).
 	// On storage error, returns (false, err).
 	CompareAndDelete(key K, val V) (bool, error)
+
+	// used in tests only
+	Get(key K) (ok bool, val V, err error)
 }

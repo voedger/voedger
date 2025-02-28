@@ -11,12 +11,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/voedger/voedger/pkg/elections"
+	"github.com/voedger/voedger/pkg/ielections"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/vvm/storage"
 )
 
-func (vvm *VoedgerVM) Launch(leadershipDurationSeconds elections.LeadershipDurationSeconds, leadershipAcquisitionDuration LeadershipAcquisitionDuration) context.Context {
+func (vvm *VoedgerVM) Launch(leadershipDurationSeconds ielections.LeadershipDurationSeconds, leadershipAcquisitionDuration LeadershipAcquisitionDuration) context.Context {
 	if vvm.leadershipCtx != nil {
 		panic("VVM is launched already")
 	}
@@ -88,7 +88,7 @@ func (vvm *VoedgerVM) shutdowner() {
 }
 
 // leadershipMonitor is a routine that monitors the leadership context.
-func (vvm *VoedgerVM) leadershipMonitor(leadershipDurationSeconds elections.LeadershipDurationSeconds) {
+func (vvm *VoedgerVM) leadershipMonitor(leadershipDurationSeconds ielections.LeadershipDurationSeconds) {
 	defer vvm.monitorShutWg.Done()
 
 	select {
@@ -101,16 +101,16 @@ func (vvm *VoedgerVM) leadershipMonitor(leadershipDurationSeconds elections.Lead
 }
 
 // killerRoutine is a routine that kills the VVM process after a quarter of the leadership duration
-func (vvm *VoedgerVM) killerRoutine(leadershipDurationSeconds elections.LeadershipDurationSeconds) {
+func (vvm *VoedgerVM) killerRoutine(leadershipDurationSeconds ielections.LeadershipDurationSeconds) {
 	time.Sleep(time.Duration(leadershipDurationSeconds) * time.Second / 4)
 	logger.Error("the process is still alive after the time alloted for graceful shutdown -> terminating...")
 	os.Exit(1)
 }
 
 // tryToAcquireLeadership tries to acquire leadership in loop
-func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipDurationSeconds elections.LeadershipDurationSeconds,
+func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipDurationSeconds ielections.LeadershipDurationSeconds,
 	leadershipAcquisitionDuration LeadershipAcquisitionDuration) error {
-	elections, electionsCleanup := elections.Provide(vvm.TTLStorage, vvm.ITime)
+	elections, electionsCleanup := ielections.Provide(vvm.TTLStorage, vvm.ITime)
 	vvm.electionsCleanup = electionsCleanup
 
 	leadershipAcquistionTimerCh := vvm.ITime.NewTimerChan(time.Duration(leadershipAcquisitionDuration))

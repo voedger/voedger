@@ -16,6 +16,14 @@ const (
 	ConnectionTimeout        = 30 * time.Second
 	retryAttempt             = 3
 	SimpleWithReplication    = "{'class': 'SimpleStrategy', 'replication_factor': '1'}"
+	DefaultCassandraPort     = 9042
 )
 
-var DefaultConsistency = gocql.Quorum
+var (
+	DefaultConsistency = gocql.Quorum
+	DefaultCasParams   = CassandraParamsType{
+		Hosts:                   "127.0.0.1",
+		Port:                    DefaultCassandraPort,
+		KeyspaceWithReplication: SimpleWithReplication,
+	}
+)
