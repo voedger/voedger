@@ -13,9 +13,6 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
-// this used as pKey. Actual value does not matter in tests
-var pKeyPrefix = []byte{1}
-
 // mockStorage is a thread-safe in-memory mock of ITTLStorage that supports key expiration.
 type mockStorage[K comparable, V comparable] struct {
 	mu                     sync.Mutex

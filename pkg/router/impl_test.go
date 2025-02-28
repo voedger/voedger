@@ -32,13 +32,6 @@ const (
 	testWSID = istructs.MaxPseudoBaseWSID + 1
 )
 
-var (
-	isRouterStopTested   bool
-	router               *testRouter
-	clientDisconnections = make(chan struct{}, 1)
-	elem1                = map[string]interface{}{"fld1": "fld1Val"}
-)
-
 func TestBasicUsage_SingleResponse(t *testing.T) {
 	require := require.New(t)
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {

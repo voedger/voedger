@@ -20,15 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
-	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 )
-
-func newErrorResponder(w http.ResponseWriter) blobprocessor.ErrorResponder {
-	return func(statusCode int, args ...interface{}) {
-		w.WriteHeader(statusCode)
-		_, _ = w.Write([]byte(fmt.Sprint(args...)))
-	}
-}
 
 func (s *httpService) blobHTTPRequestHandler_Write() http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {

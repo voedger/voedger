@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"reflect"
 	"testing"
 	"time"
 
@@ -975,14 +974,4 @@ func testAppStorage_TTLRead(t *testing.T, storage IAppStorage, iTime coreutils.I
 		require.NoError(err)
 		require.Len(subjects, 3)
 	})
-}
-
-// storageImplPkgPath returns package path of storage implementation
-// it is used to skip tests for unsupported storage types
-func storageImplPkgPath(storage IAppStorage) string {
-	t := reflect.TypeOf(storage)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-	return t.PkgPath()
 }
