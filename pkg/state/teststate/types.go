@@ -5,12 +5,10 @@
 package teststate
 
 import (
-	"fmt"
 	"io"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -56,18 +54,4 @@ type intentItem struct {
 	key   istructs.IStateKeyBuilder
 	value istructs.IStateValueBuilder
 	isNew bool
-}
-
-func (ri recordItem) toIRecord() istructs.IRecord {
-	kvMap, err := parseKeyValues(ri.keyValueList)
-	if err != nil {
-		panic(fmt.Errorf("recordItem.toObject: %w", err))
-	}
-
-	return &coreutils.TestObject{
-		Id:     ri.id,
-		Name:   appdef.NewQName(ri.entity.PkgPath(), ri.entity.Entity()),
-		Data:   kvMap,
-		IsNew_: ri.isNew,
-	}
 }

@@ -7,7 +7,6 @@ package oldacl
 
 import (
 	"slices"
-	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
@@ -93,30 +92,4 @@ or:
 		return true
 	}
 	return false
-}
-
-func authNZToString(opKind appdef.OperationKind, qName appdef.QName, fields []string) string {
-	res := strings.Builder{}
-	switch opKind {
-	case appdef.OperationKind_Insert:
-		res.WriteString("INSERT")
-	case appdef.OperationKind_Update:
-		res.WriteString("UPDATE")
-	case appdef.OperationKind_Execute:
-		res.WriteString("EXECUTE")
-	case appdef.OperationKind_Select:
-		res.WriteString("SELECT")
-	default:
-		res.WriteString("<unknown>")
-	}
-	res.WriteString(" ")
-	res.WriteString(qName.String())
-	if len(fields) > 0 {
-		res.WriteString(" [" + fields[0])
-		for _, fld := range fields[1:] {
-			res.WriteString(", " + fld)
-		}
-		res.WriteString("]")
-	}
-	return res.String()
 }

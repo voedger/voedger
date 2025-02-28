@@ -190,7 +190,6 @@ type VoedgerVM struct {
 	// closed when VVM should be stopped outside
 	vvmShutCtx       context.Context
 	vvmShutCtxCancel context.CancelFunc
-	vvmShutCtxOnce   sync.Once
 
 	// closed when VVM services should be stopped (but LeadershipMonitor)
 	servicesShutCtx       context.Context
