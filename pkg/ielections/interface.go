@@ -39,5 +39,6 @@ type ITTLStorage[K any, V any] interface {
 	// On storage error, returns (false, err).
 	CompareAndDelete(key K, val V) (bool, error)
 
+	// used in tests only
 	Get(key K) (ok bool, val V, err error)
 }

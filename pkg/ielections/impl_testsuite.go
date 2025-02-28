@@ -6,9 +6,6 @@
 package ielections
 
 import (
-	"reflect"
-	"runtime"
-	"strings"
 	"testing"
 	"time"
 
@@ -19,65 +16,70 @@ import (
 
 const seconds10 = 10
 
-func ElectionsTestSuite(t *testing.T, ttlStorage ITTLStorage[string, string]) {
+func ElectionsTestSuite[K any, V any](t *testing.T, ttlStorage ITTLStorage[K, V], testData TestDataGen[K, V]) {
 	restore := logger.SetLogLevelWithRestore(logger.LogLevelVerbose)
 	defer restore()
-	tests := []func(*require.Assertions, IElections[string, string], ITTLStorage[string, string], func()){
-		basicUsage,
-		acquireLeadershipIfAcquiredAlready,
-		closeContextOnCompareAndSwapFailure_KeyChanged,
-		closeContextOnCompareAndSwapFailure_KeyDeleted,
-		releaseLeadershipWithoutAcquire,
-		acquireFailingAfterCleanup,
-		testCleanupDuringRenewal,
+	tests := map[string]func(*require.Assertions, IElections[K, V], ITTLStorage[K, V], func(), TestDataGen[K, V]){
+		"BasicUsage":                                     basicUsage[K, V],
+		"AcquireLeadershipIfAcquiredAlready":             acquireLeadershipIfAcquiredAlready[K, V],
+		"CloseContextOnCompareAndSwapFailure_KeyChanged": closeContextOnCompareAndSwapFailure_KeyChanged[K, V],
+		"CloseContextOnCompareAndSwapFailure_KeyDeleted": closeContextOnCompareAndSwapFailure_KeyDeleted[K, V],
+		"ReleaseLeadershipWithoutAcquire":                releaseLeadershipWithoutAcquire[K, V],
+		"AcquireFailingAfterCleanup":                     acquireFailingAfterCleanup[K, V],
+		"CleanupDuringRenewal":                           cleanupDuringRenewal[K, V],
 	}
 	// note: testing the case when ttl record is expired is nonsense because it is renewing, can not be expired. Key deletion case is covered
-	for _, test := range tests {
-		name := runtime.FuncForPC(reflect.ValueOf(test).Pointer()).Name()
-		name = name[strings.LastIndex(name, ".")+1:]
+	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			elections, cleanup := Provide(ttlStorage, coreutils.MockTime)
 			defer cleanup()
 			require := require.New(t)
-			test(require, elections, ttlStorage, cleanup)
+			test(require, elections, ttlStorage, cleanup, testData)
 		})
 	}
 }
 
-func basicUsage(require *require.Assertions, elections IElections[string, string], iTTLStorage ITTLStorage[string, string], _ func()) {
-	ctx := elections.AcquireLeadership("testKey", "leaderVal", seconds10)
+type TestDataGen[K any, V any] struct {
+	NextKey func() K
+	NextVal func() V
+}
+
+func basicUsage[K any, V any](require *require.Assertions, elections IElections[K, V], iTTLStorage ITTLStorage[K, V], _ func(), dataGen TestDataGen[K, V]) {
+	key := dataGen.NextKey()
+	val := dataGen.NextVal()
+	ctx := elections.AcquireLeadership(key, val, seconds10)
 	require.NotNil(ctx, "Should return a non-nil context on successful acquisition")
 
-	ok, storedData, err := iTTLStorage.Get("testKey")
+	ok, storedData, err := iTTLStorage.Get(key)
 	require.NoError(err)
 	require.True(ok)
-	require.Equal("leaderVal", storedData)
+	require.Equal(val, storedData)
 
 	// Release leadership
-	elections.ReleaseLeadership("testKey")
+	elections.ReleaseLeadership(key)
 	<-ctx.Done()
 }
 
-func acquireLeadershipIfAcquiredAlready(require *require.Assertions, elections IElections[string, string], iTTLStorage ITTLStorage[string, string], _ func()) {
-	ok, err := iTTLStorage.InsertIfNotExist("occupied", "someVal", seconds10)
+func acquireLeadershipIfAcquiredAlready[K any, V any](require *require.Assertions, elections IElections[K, V], iTTLStorage ITTLStorage[K, V], _ func(), dataGen TestDataGen[K, V]) {
+	key := dataGen.NextKey()
+	val1 := dataGen.NextVal()
+	val2 := dataGen.NextVal()
+	ok, err := iTTLStorage.InsertIfNotExist(key, val1, seconds10)
 	require.NoError(err)
 	require.True(ok)
-	ctx := elections.AcquireLeadership("occupied", "myVal", seconds10)
+	ctx := elections.AcquireLeadership(key, val2, seconds10)
 	require.Nil(ctx, "Should return nil if the key is already in storage")
 }
 
-// func testElections_AcquireLeadership_Error(t *testing.T, elections IElections[string, string], iTTLStorage ITTLStorage[string, string]) {
-// 	iTTLStorage.errorTrigger["badKey"] = true
-// 	ctx := elector.AcquireLeadership("badKey", "val", seconds10)
-// 	require.Nil(t, ctx, "Should return nil if a storage error occurs")
-// }
-
-func closeContextOnCompareAndSwapFailure_KeyChanged(require *require.Assertions, elections IElections[string, string], iTTLStorage ITTLStorage[string, string], _ func()) {
-	ctx := elections.AcquireLeadership("renewKey", "renewVal", seconds10)
+func closeContextOnCompareAndSwapFailure_KeyChanged[K any, V any](require *require.Assertions, elections IElections[K, V], iTTLStorage ITTLStorage[K, V], _ func(), dataGen TestDataGen[K, V]) {
+	key := dataGen.NextKey()
+	val1 := dataGen.NextVal()
+	val2 := dataGen.NextVal()
+	ctx := elections.AcquireLeadership(key, val1, seconds10)
 	require.NotNil(ctx)
 
 	// sabotage the storage so next CompareAndSwap fails by changing the value
-	ok, err := iTTLStorage.CompareAndSwap("renewKey", "renewVal", "someOtherVal", seconds10*2)
+	ok, err := iTTLStorage.CompareAndSwap(key, val1, val2, seconds10*2)
 	require.NoError(err)
 	require.True(ok)
 
@@ -88,21 +90,23 @@ func closeContextOnCompareAndSwapFailure_KeyChanged(require *require.Assertions,
 	<-ctx.Done()
 
 	// expect that the new value is still stored in the storage
-	ok, keptValue, err := iTTLStorage.Get("renewKey")
+	ok, keptValue, err := iTTLStorage.Get(key)
 	require.NoError(err)
 	require.True(ok)
-	require.Equal("someOtherVal", keptValue)
+	require.Equal(val2, keptValue)
 
 	// make the sabotaged key be expired
 	coreutils.MockTime.Sleep((seconds10 + 1) * time.Second)
 }
 
-func closeContextOnCompareAndSwapFailure_KeyDeleted(require *require.Assertions, elections IElections[string, string], iTTLStorage ITTLStorage[string, string], _ func()) {
-	ctx := elections.AcquireLeadership("renewKey", "renewVal", seconds10)
+func closeContextOnCompareAndSwapFailure_KeyDeleted[K any, V any](require *require.Assertions, elections IElections[K, V], iTTLStorage ITTLStorage[K, V], _ func(), dataGen TestDataGen[K, V]) {
+	key := dataGen.NextKey()
+	val := dataGen.NextVal()
+	ctx := elections.AcquireLeadership(key, val, seconds10)
 	require.NotNil(ctx)
 
 	// sabotage the storage so next CompareAndSwap fails by changing the value
-	ok, err := iTTLStorage.CompareAndDelete("renewKey", "renewVal")
+	ok, err := iTTLStorage.CompareAndDelete(key, val)
 	require.NoError(err)
 	require.True(ok)
 
@@ -113,41 +117,38 @@ func closeContextOnCompareAndSwapFailure_KeyDeleted(require *require.Assertions,
 	<-ctx.Done()
 
 	// just check the key is deleted indeed
-	ok, _, err = iTTLStorage.Get("renewKey")
+	ok, _, err = iTTLStorage.Get(key)
 	require.NoError(err)
 	require.False(ok)
 }
 
-func releaseLeadershipWithoutAcquire(require *require.Assertions, elections IElections[string, string], iTTLStorage ITTLStorage[string, string], _ func()) {
+func releaseLeadershipWithoutAcquire[K any, V any](require *require.Assertions, elections IElections[K, V], iTTLStorage ITTLStorage[K, V], _ func(), dataGen TestDataGen[K, V]) {
 	// Releasing unknown key => nothing happens, no errors
-	elections.ReleaseLeadership("unknownKey")
+	elections.ReleaseLeadership(dataGen.NextKey())
 }
 
-func acquireFailingAfterCleanup(require *require.Assertions, elections IElections[string, string], iTTLStorage ITTLStorage[string, string], cleanup func()) {
-	ctx1 := elections.AcquireLeadership("keyA", "valA", seconds10)
+func acquireFailingAfterCleanup[K any, V any](require *require.Assertions, elections IElections[K, V], iTTLStorage ITTLStorage[K, V], cleanup func(), dataGen TestDataGen[K, V]) {
+	key1 := dataGen.NextKey()
+	val1 := dataGen.NextVal()
+	key2 := dataGen.NextKey()
+	val2 := dataGen.NextVal()
+	ctx1 := elections.AcquireLeadership(key1, val1, seconds10)
 	require.NotNil(ctx1)
 
 	cleanup() // cleanup => no further acquisitions
 
 	<-ctx1.Done()
-	ctx2 := elections.AcquireLeadership("keyB", "valB", seconds10)
+	ctx2 := elections.AcquireLeadership(key2, val2, seconds10)
 	require.Nil(ctx2, "No new leadership after cleanup")
 }
 
-func testCleanupDuringRenewal(_ *require.Assertions, elections IElections[string, string], _ ITTLStorage[string, string], cleanup func()) {
-	// compareAndSwapCalled := make(chan interface{})
-	// iTTLStorage.onBeforeCompareAndSwap = func() {
-	// 	close(compareAndSwapCalled)
-	// }
-
-	ctx := elections.AcquireLeadership("expireKey", "expireVal", seconds10)
+func cleanupDuringRenewal[K any, V any](_ *require.Assertions, elections IElections[K, V], _ ITTLStorage[K, V], cleanup func(), dataGen TestDataGen[K, V]) {
+	key := dataGen.NextKey()
+	val := dataGen.NextVal()
+	ctx := elections.AcquireLeadership(key, val, seconds10)
 
 	{
 		coreutils.MockTime.Sleep(time.Duration(seconds10/2) * time.Second)
-
-		// gauarantee that <-ticker case is fired, not <-li.ctx.Done()
-		// otherwise we do not know which case will fire on cleanup()
-		// <-compareAndSwapCalled
 
 		// now force cancel everything.
 		// successful finalizing after that shows that there are no deadlocks caused by simultaneous locks in
