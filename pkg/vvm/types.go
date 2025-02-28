@@ -130,7 +130,6 @@ type VVM struct {
 
 type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 
-// [~server.design.orch/VVMConfig~impl]
 type VVMConfig struct {
 	VVMAppsBuilder             VVMAppsBuilder // is a map
 	Time                       coreutils.ITime
@@ -158,8 +157,6 @@ type VVMConfig struct {
 	WSPostInitFunc             workspace.WSPostInitFunc
 	DataPath                   string
 	MetricsServicePort         metrics.MetricsServicePort
-	NumVVM                     NumVVM // amount of VVMs in the cluster
-	IP                         net.IP
 
 	// 0 -> dynamic port will be used, new on each vvmIdx
 	// >0 -> vVMPort+vvmIdx will be actually used
@@ -172,6 +169,10 @@ type VVMConfig struct {
 	// normally is empty in VIT. coretuils.IsTest -> UUID is added to the keyspace name at istorage/provider/Provide()
 	// need to e.g. test VVM restart preserving storage
 	KeyspaceNameSuffix string
+
+	// [~server.design.orch/VVMConfig.Orch~impl]
+	NumVVM NumVVM // amount of VVMs in the cluster
+	IP     net.IP
 }
 
 type VoedgerVM struct {
