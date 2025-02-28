@@ -7,5 +7,7 @@ package storage
 
 const (
 	pKeyPrefix_null pKeyPrefix = iota
+
+	// [~server.design.orch/KeyPrefix_VVMLeader~impl]
 	pKeyPrefix_VVMLeader
 )

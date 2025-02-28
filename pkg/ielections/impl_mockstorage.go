@@ -13,8 +13,9 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
-// mockStorage is a thread-safe in-memory mock of ITTLStorage that supports key expiration.
-type mockStorage[K comparable, V comparable] struct {
+// ttlStorageMock is a thread-safe in-memory mock of ITTLStorage that supports key expiration.
+// [~server.design.orch/ttlStorageMock~impl]
+type ttlStorageMock[K comparable, V comparable] struct {
 	mu                     sync.Mutex
 	data                   map[K]valueWithTTL[V]
 	expirations            map[K]time.Time // expiration time for each key
@@ -23,8 +24,8 @@ type mockStorage[K comparable, V comparable] struct {
 	onBeforeCompareAndSwap func() // != nil -> called right before CompareAndSwap. Need to implement hook in tests
 }
 
-func newMockStorage[K comparable, V comparable]() *mockStorage[K, V] {
-	return &mockStorage[K, V]{
+func newTTLStorageMock[K comparable, V comparable]() *ttlStorageMock[K, V] {
+	return &ttlStorageMock[K, V]{
 		data:         make(map[K]valueWithTTL[V]),
 		expirations:  make(map[K]time.Time),
 		errorTrigger: make(map[K]bool),
@@ -32,7 +33,7 @@ func newMockStorage[K comparable, V comparable]() *mockStorage[K, V] {
 	}
 }
 
-func (m *mockStorage[K, V]) pruneExpired() {
+func (m *ttlStorageMock[K, V]) pruneExpired() {
 	now := m.tm.Now()
 	for k, v := range m.data {
 		if now.After(v.expiresAt) {
@@ -47,14 +48,14 @@ type valueWithTTL[V any] struct {
 }
 
 // causeErrorIfNeeded simulates a forced error for specific keys
-func (m *mockStorage[K, V]) causeErrorIfNeeded(key K) error {
+func (m *ttlStorageMock[K, V]) causeErrorIfNeeded(key K) error {
 	if m.errorTrigger[key] {
 		return errors.New("forced storage error for test")
 	}
 	return nil
 }
 
-func (m *mockStorage[K, V]) InsertIfNotExist(key K, val V, ttlSeconds int) (bool, error) {
+func (m *ttlStorageMock[K, V]) InsertIfNotExist(key K, val V, ttlSeconds int) (bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -77,7 +78,7 @@ func (m *mockStorage[K, V]) InsertIfNotExist(key K, val V, ttlSeconds int) (bool
 	return true, nil
 }
 
-func (m *mockStorage[K, V]) CompareAndSwap(key K, oldVal V, newVal V, ttlSeconds int) (bool, error) {
+func (m *ttlStorageMock[K, V]) CompareAndSwap(key K, oldVal V, newVal V, ttlSeconds int) (bool, error) {
 	if m.onBeforeCompareAndSwap != nil {
 		m.onBeforeCompareAndSwap()
 	}
@@ -105,7 +106,7 @@ func (m *mockStorage[K, V]) CompareAndSwap(key K, oldVal V, newVal V, ttlSeconds
 }
 
 // CompareAndDelete removes the key if current value matches val. Expiration is also removed.
-func (m *mockStorage[K, V]) CompareAndDelete(key K, val V) (bool, error) {
+func (m *ttlStorageMock[K, V]) CompareAndDelete(key K, val V) (bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -127,7 +128,7 @@ func (m *mockStorage[K, V]) CompareAndDelete(key K, val V) (bool, error) {
 	return true, nil
 }
 
-func (m *mockStorage[K, V]) Get(key K) (ok bool, val V, err error) {
+func (m *ttlStorageMock[K, V]) Get(key K) (ok bool, val V, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

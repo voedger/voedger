@@ -46,6 +46,7 @@ func TestBasic(t *testing.T) {
 		<-vvm1.shutdownedCtx.Done()
 	})
 
+	// [~server.design.orch/VVM.test.Basic~impl]
 	t.Run("LeadershipCollision", func(t *testing.T) {
 		r := require.New(t)
 
@@ -104,6 +105,7 @@ func TestBasic(t *testing.T) {
 	})
 }
 
+// [~server.design.orch/VVM.test.CancelLeadership~impl]
 func TestCancelLeadershipOnManualShutdown(t *testing.T) {
 	r := require.New(t)
 
@@ -177,6 +179,7 @@ func TestWrongLaunchAndShutdownUsage(t *testing.T) {
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // note: this test must be the last in the entire PACKAGE, not the just last in the file
 // otherwise killerRoutine will kill the entire test process if the rest of test will last longer than 5 seconds
+// [~server.design.orch/VVM.test.Shutdown~impl]
 func TestAutomaticShutdownOnLeadershipLoss(t *testing.T) {
 	r := require.New(t)
 

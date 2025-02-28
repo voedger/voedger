@@ -9,8 +9,9 @@ import (
 	"testing"
 )
 
+// [~server.design.orch/ElectionsTest~impl]
 func TestElections(t *testing.T) {
-	ttlStorage := newMockStorage[string, string]()
+	ttlStorage := newTTLStorageMock[string, string]()
 	counter := 0
 	ElectionsTestSuite(t, ttlStorage, TestDataGen[string, string]{
 		NextKey: func() string {

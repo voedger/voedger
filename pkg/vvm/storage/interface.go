@@ -4,6 +4,7 @@
  */
 package storage
 
+// [~server.design.orch/ISysVvmStorage~impl]
 type ISysVvmStorage interface {
 	InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error)
 	CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error)

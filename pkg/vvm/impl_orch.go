@@ -11,11 +11,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/voedger/voedger/pkg/ielections"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/ielections"
 	"github.com/voedger/voedger/pkg/vvm/storage"
 )
 
+// [~server.design.orch/VVM.LaunchVVM~impl]
 func (vvm *VoedgerVM) Launch(leadershipDurationSeconds ielections.LeadershipDurationSeconds, leadershipAcquisitionDuration LeadershipAcquisitionDuration) context.Context {
 	if vvm.leadershipCtx != nil {
 		panic("VVM is launched already")
@@ -35,6 +36,7 @@ func (vvm *VoedgerVM) Launch(leadershipDurationSeconds ielections.LeadershipDura
 	return vvm.problemCtx
 }
 
+// [~server.design.orch/VVM.Shutdown~impl]
 func (vvm *VoedgerVM) Shutdown() error {
 	if vvm.leadershipCtx == nil {
 		select {
@@ -61,6 +63,7 @@ func (vvm *VoedgerVM) Shutdown() error {
 	}
 }
 
+// [~server.design.orch/VVM.Shutdowner~impl]
 func (vvm *VoedgerVM) shutdowner() {
 	// Wait for VVM.vvmShutCtx
 	<-vvm.vvmShutCtx.Done()
@@ -88,6 +91,7 @@ func (vvm *VoedgerVM) shutdowner() {
 }
 
 // leadershipMonitor is a routine that monitors the leadership context.
+// [~server.design.orch/LeadershipMonitor~impl]
 func (vvm *VoedgerVM) leadershipMonitor(leadershipDurationSeconds ielections.LeadershipDurationSeconds) {
 	defer vvm.monitorShutWg.Done()
 
@@ -102,12 +106,15 @@ func (vvm *VoedgerVM) leadershipMonitor(leadershipDurationSeconds ielections.Lea
 
 // killerRoutine is a routine that kills the VVM process after a quarter of the leadership duration
 func (vvm *VoedgerVM) killerRoutine(leadershipDurationSeconds ielections.LeadershipDurationSeconds) {
-	time.Sleep(time.Duration(leadershipDurationSeconds) * time.Second / 4)
+	// [~server.design.orch/processKillThreshold~impl
+	processKillThreshold := time.Duration(leadershipDurationSeconds) * time.Second / 4
+	time.Sleep(processKillThreshold)
 	logger.Error("the process is still alive after the time alloted for graceful shutdown -> terminating...")
 	os.Exit(1)
 }
 
 // tryToAcquireLeadership tries to acquire leadership in loop
+// [~server.design.orch/VVM.tryToAcquireLeadership~impl]
 func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipDurationSeconds ielections.LeadershipDurationSeconds,
 	leadershipAcquisitionDuration LeadershipAcquisitionDuration) error {
 	elections, electionsCleanup := ielections.Provide(vvm.TTLStorage, vvm.ITime)
@@ -147,6 +154,7 @@ func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipDurationSeconds ielection
 
 // updateProblem writes a critical error into problemErrCh exactly once
 // and sets the cause on problemCtx. This ensures no double-writes of errors.
+// [~server.design.orch/VVM.updateProblem~impl]
 func (vvm *VoedgerVM) updateProblem(err error) {
 	// The sync.Once ensures we only do this logic once
 	vvm.problemCtxCancel()

@@ -16,6 +16,7 @@ import (
 
 const seconds10 = 10
 
+// [~server.design.orch/ElectionsTestSuite~impl]
 func ElectionsTestSuite[K any, V any](t *testing.T, ttlStorage ITTLStorage[K, V], testData TestDataGen[K, V]) {
 	restore := logger.SetLogLevelWithRestore(logger.LogLevelVerbose)
 	defer restore()

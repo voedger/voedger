@@ -13,6 +13,8 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
+// [~server.design.orch/elections~impl]
+
 // AcquireLeadership returns nil if leadership is *not* acquired (e.g., error in storage,
 // already local leader, or elections cleaned up), otherwise returns a *non-nil* context.
 func (e *elections[K, V]) AcquireLeadership(key K, val V, ttlSeconds LeadershipDurationSeconds) context.Context {

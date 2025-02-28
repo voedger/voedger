@@ -75,6 +75,7 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/storage"
 )
 
+// [~server.design.orch/VVM.Provide~impl]
 func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 	vvmCtx, vvmCtxCancel := context.WithCancel(context.Background())
 	problemCtx, problemCtxCancel := context.WithCancel(context.Background())
