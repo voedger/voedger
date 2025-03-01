@@ -64,7 +64,6 @@ type IRowReader interface {
 	RecordIDs(includeNulls bool) func(func(appdef.FieldName, RecordID) bool)
 	Fields(func(appdef.IField) bool)
 	SpecifiedValues(func(appdef.IField, any) bool)
-	// FieldNames(func(appdef.FieldName) bool)
 }
 
 type IRowWriter interface {
