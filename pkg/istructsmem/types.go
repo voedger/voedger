@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 
 	"github.com/untillpro/dynobuffers"
 
@@ -44,23 +43,21 @@ type rowType struct {
 	dyB              *dynobuffers.Buffer
 	nils             map[string]appdef.IField // emptied string- and []bytes- fields, which values are not stored in dynobuffer
 	err              error
-	modifiedFields   map[string]bool
 }
 
 // Makes new empty row (QName is appdef.NullQName)
 func makeRow(appCfg *AppConfigType) rowType {
 	return rowType{
-		appCfg:         appCfg,
-		typ:            appdef.NullType,
-		fields:         appdef.NullFields,
-		id:             istructs.NullRecordID,
-		parentID:       istructs.NullRecordID,
-		container:      "",
-		isActive:       true,
-		dyB:            nullDynoBuffer,
-		nils:           nil,
-		err:            nil,
-		modifiedFields: map[string]bool{},
+		appCfg:    appCfg,
+		typ:       appdef.NullType,
+		fields:    appdef.NullFields,
+		id:        istructs.NullRecordID,
+		parentID:  istructs.NullRecordID,
+		container: "",
+		isActive:  true,
+		dyB:       nullDynoBuffer,
+		nils:      nil,
+		err:       nil,
 	}
 }
 
@@ -133,7 +130,6 @@ func (row *rowType) clear() {
 	row.release()
 	row.nils = nil
 	row.err = nil
-	row.modifiedFields = map[string]bool{}
 }
 
 // collectError collects errors that occur when puts data into a row
@@ -171,8 +167,6 @@ func (row *rowType) copyFrom(src *rowType) {
 				return true
 			})
 	}
-
-	maps.Copy(row.modifiedFields, src.modifiedFields)
 
 	_ = row.build()
 }
@@ -322,7 +316,6 @@ func (row *rowType) putValue(name appdef.FieldName, kind dynobuffers.FieldType, 
 	row.checkPutNil(fld, fieldValue) // #2785
 
 	row.dyB.Set(name, fieldValue)
-	row.modifiedFields[name] = true
 }
 
 // qNameID returns storage ID of row QName
@@ -345,7 +338,6 @@ func (row *rowType) release() {
 // setActive sets record IsActive activity flag
 func (row *rowType) setActive(value bool) {
 	row.isActive = value
-	row.modifiedFields[appdef.SystemField_IsActive] = true
 }
 
 // setContainer sets record container
@@ -373,13 +365,11 @@ func (row *rowType) setContainerID(value containers.ContainerID) (err error) {
 // setID sets record ID
 func (row *rowType) setID(value istructs.RecordID) {
 	row.id = value
-	row.modifiedFields[appdef.SystemField_ID] = true
 }
 
 // setParent sets record parent ID
 func (row *rowType) setParent(value istructs.RecordID) {
 	row.parentID = value
-	row.modifiedFields[appdef.SystemField_ParentID] = true
 }
 
 // setQName sets new specified QName for row. It resets all data from row
@@ -425,7 +415,6 @@ func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
 			return err
 		}
 		row.setType(t)
-		row.modifiedFields[appdef.SystemField_QName] = true
 	}
 
 	return nil
@@ -824,14 +813,17 @@ func (row *rowType) PutFloat64(name appdef.FieldName, value float64) {
 // istructs.IRowWriter.PutFromJSON
 func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 	if v, ok := j[appdef.SystemField_QName]; ok {
-		if value, ok := v.(string); ok {
-			qName, err := appdef.ParseQName(value)
+		switch qNameFieldValue := v.(type) {
+		case string:
+			qName, err := appdef.ParseQName(qNameFieldValue)
 			if err != nil {
 				row.collectError(enrichError(err, "can not parse value for field «%s»", appdef.SystemField_QName))
 				return
 			}
 			row.setQName(qName)
-		} else {
+		case appdef.QName:
+			row.setQName(qNameFieldValue)
+		default:
 			row.collectError(ErrWrongFieldType("can not put «%T» to field «%s»", v, appdef.SystemField_QName))
 			return
 		}
@@ -863,6 +855,11 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 		case []byte:
 			// happens e.g. on IRowWriter.PutJSON() after read from the storage
 			row.PutBytes(n, fv)
+		case appdef.QName:
+			// happens if `j` is got from coreutils.FieldsToMap()
+			if n != appdef.SystemField_QName {
+				row.PutQName(n, fv)
+			}
 		default:
 			row.collectError(ErrWrongType(`%#T for field "%s" with value %v`, v, n, v))
 		}

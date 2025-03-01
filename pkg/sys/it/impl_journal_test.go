@@ -62,6 +62,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 			 "id_untill_users": %[4]d,
 			 "proforma": 3,
 			 "sys.ID": %[1]d,
+			 "sys.IsActive": true,
 			 "sys.QName": "app1pkg.bill",
 			 "table_part": "a",
 			 "tableno": %[2]d,
@@ -83,20 +84,21 @@ func TestBasicUsage_Journal(t *testing.T) {
 		 {
 			 "args": {},
 			 "cuds": [
-			 {
-				 "fields": {
-				 "id_untill_users": %[4]d,
-				 "proforma": 3,
-				 "sys.ID": %[1]d,
-				 "sys.QName": "app1pkg.bill",
-				 "table_part": "a",
-				 "tableno": %[2]d,
-				 "working_day": "20230228"
-				 },
-				 "IsNew": true,
-				 "sys.ID": %[1]d,
-				 "sys.QName": "app1pkg.bill"
-			 }
+				{
+					"fields": {
+						"id_untill_users": %[4]d,
+						"proforma": 3,
+						"sys.ID": %[1]d,
+						"sys.IsActive": true,
+						"sys.QName": "app1pkg.bill",
+						"table_part": "a",
+						"tableno": %[2]d,
+						"working_day": "20230228"
+					},
+					"IsNew": true,
+					"sys.ID": %[1]d,
+					"sys.QName": "app1pkg.bill"
+				}
 			 ],
 			 "DeviceID": 0,
 			 "RegisteredAt": %[3]d,
@@ -126,6 +128,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 			 "id_untill_users": %[4]d,
 			 "proforma": 3,
 			 "sys.ID": %[1]d,
+			 "sys.IsActive": true,
 			 "sys.QName": "app1pkg.bill",
 			 "table_part": "a",
 			 "tableno": %[2]d,
@@ -152,6 +155,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 				 "id_untill_users": %[4]d,
 				 "proforma": 3,
 				 "sys.ID": %[1]d,
+				 "sys.IsActive": true,
 				 "sys.QName": "app1pkg.bill",
 				 "table_part": "a",
 				 "tableno": %[2]d,

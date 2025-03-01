@@ -46,8 +46,8 @@ func ReadByKind(name appdef.FieldName, kind appdef.DataKind, rr istructs.IRowRea
 }
 
 type mapperOpts struct {
-	filter              func(name string, kind appdef.DataKind) bool
-	specifiedValuesOnly bool
+	filter    func(name string, kind appdef.DataKind) bool
+	allFields bool
 }
 
 type MapperOpt func(opt *mapperOpts)
@@ -58,13 +58,11 @@ func Filter(filterFunc func(name string, kind appdef.DataKind) bool) MapperOpt {
 	}
 }
 
-func WithSpecifiedValuesOnly() MapperOpt {
-	return func(opts *mapperOpts) {
-		opts.specifiedValuesOnly = true
+func WithAllFields() MapperOpt {
+	return func(opt *mapperOpts) {
+		opt.allFields = true
 	}
 }
-
-
 
 func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...MapperOpt) (res map[string]interface{}) {
 	res = map[string]interface{}{}
@@ -79,25 +77,6 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 	for _, optFunc := range optFuncs {
 		optFunc(opts)
 	}
-
-	// if opts.specifiedValuesOnly {
-	// 	modifiedFieldsNames := map[string]bool{}
-	// 	obj.SpecifiedValues(func(iField appdef.IField, a any) bool {
-	// 		modifiedFieldsNames[iField.Name()] = true
-	// 		return true
-	// 	})
-	// 	specifiedFilter := opts.filter
-	// 	nonNilsFilter := func(name string, kind appdef.DataKind) bool {
-	// 		if !modifiedFieldsNames[name] {
-	// 			return false
-	// 		}
-	// 		if specifiedFilter != nil {
-	// 			return specifiedFilter(name, kind)
-	// 		}
-	// 		return true
-	// 	}
-	// 	opts.filter = nonNilsFilter
-	// }
 
 	proceedField := func(fieldName appdef.FieldName, kind appdef.DataKind) {
 		if opts.filter != nil {
@@ -130,6 +109,7 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 			// когда нужно, чтобы все поля с нулевыми значениями были?
 			// есть разница, когда мы хотим прочесть документ как его клиент передал, например, ArgumentsObject,
 			// а можем хотеть прочесть документ как он хранится в бд. Тогда надо Поля типа IsActive
+			if !opts.allFields {
 				obj.SpecifiedValues(func(iField appdef.IField, val any) bool {
 					if opts.filter != nil {
 						if !opts.filter(iField.Name(), iField.DataKind()) {
@@ -140,6 +120,7 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 					return true
 				})
 				return res
+			}
 			// }
 			// iFieldsToProcess = fields.Fields()
 		}

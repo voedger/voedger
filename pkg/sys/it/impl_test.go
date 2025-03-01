@@ -461,7 +461,7 @@ func TestNullability_SetEmptyObject(t *testing.T) {
 		}
 		return nil
 	})
-	require.Len(fields, 4) // 3rd and 4th are sys.ID and sys.QName
+	require.Len(fields, 5) // id_air_table_plan, form, sys.ID, sys,IsActive, sys.QName
 	require.EqualValues(expectedNestedDocID, fields["id_air_table_plan"])
 	require.EqualValues(15, fields["form"])
 }

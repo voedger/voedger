@@ -158,14 +158,18 @@ func (rec *recordType) IsNew() bool {
 // зачем тут думать что я задал или не задал?
 // пусть объект сам выдает что у нег выставлено, а что нет
 
+
+// кароч, так. Тут только те поля, которые реально хранятся. Если сделали Put*, то тут поля не будет
+// иными словами, под капотом rowType, который и writer и reader, но SpecifiedFields - это только про хранимые значения,
+// а не те,которые Put, но не saved
 func (row *rowType) SpecifiedValues(cb func(appdef.IField, any) bool) {
-	if row.modifiedFields[appdef.SystemField_QName] {
+	if row.QName() != appdef.NullQName {
 		if !cb(row.fieldDef(appdef.SystemField_QName), row.QName()) {
 			return
 		}
 	}
 
-	if row.modifiedFields[appdef.SystemField_ID] {
+	if row.id != istructs.NullRecordID {
 		if !cb(row.fieldDef(appdef.SystemField_ID), row.id) {
 			return
 		}
@@ -190,7 +194,6 @@ func (row *rowType) SpecifiedValues(cb func(appdef.IField, any) bool) {
 	// 	}
 	// }
 
-	// попробуем так, а то если row.modifiedFields[appdef.SystemField_IsActive] , то не будет IsActive, если мы его запросили в sqlquery
 	if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_IsActive); exists {
 		if !cb(row.fieldDef(appdef.SystemField_IsActive), row.isActive) {
 			return
