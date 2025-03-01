@@ -58,6 +58,8 @@ func Filter(filterFunc func(name string, kind appdef.DataKind) bool) MapperOpt {
 	}
 }
 
+// will run through fields independing on wether the value is specified or not
+// Unspecified -> callback will be called with the zero value
 func WithAllFields() MapperOpt {
 	return func(opt *mapperOpts) {
 		opt.allFields = true
@@ -104,11 +106,6 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 				iFieldsToProcess = view.Key().Fields()
 			}
 		} else {
-			// if opts.specifiedValuesOnly {
-			// зачем следить за specifiedValuesOnly? пусть объект все всегда о себе вохвращает
-			// когда нужно, чтобы все поля с нулевыми значениями были?
-			// есть разница, когда мы хотим прочесть документ как его клиент передал, например, ArgumentsObject,
-			// а можем хотеть прочесть документ как он хранится в бд. Тогда надо Поля типа IsActive
 			if !opts.allFields {
 				obj.SpecifiedValues(func(iField appdef.IField, val any) bool {
 					if opts.filter != nil {
@@ -121,8 +118,6 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 				})
 				return res
 			}
-			// }
-			// iFieldsToProcess = fields.Fields()
 		}
 		for _, iField := range iFieldsToProcess {
 			proceedField(iField.Name(), iField.DataKind())

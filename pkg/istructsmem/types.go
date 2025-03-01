@@ -711,11 +711,6 @@ func (row *rowType) Container() string {
 
 // istructs.IRowReader.Fields
 func (row *rowType) Fields(cb func(appdef.IField) bool) {
-	// for _, iField := range row.fields.Fields() {
-	// 	if !cb(iField) {
-	// 		return
-	// 	}
-	// }
 	qNameField := row.fieldDef(appdef.SystemField_QName)
 	if qNameField != nil {
 		if !cb(qNameField) {

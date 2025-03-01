@@ -77,7 +77,16 @@ func (o *TestObject) IsDeactivated() bool {
 
 func (o *TestObject) IsNew() bool { return o.IsNew_ }
 
-func (o *TestObject) ModifiedFieldsCUD(cb func(string, interface{}) bool) {
+func (o *TestObject) SpecifiedFields(cb func(string, interface{}) bool) {
+	if !cb(appdef.SystemField_ID, o.Id) {
+		return
+	}
+	if !cb(appdef.SystemField_IsActive, true) {
+		return
+	}
+	if !cb(appdef.SystemField_QName, o.Name) {
+		return
+	}
 	for name, value := range o.Data {
 		if !cb(name, value) {
 			break
