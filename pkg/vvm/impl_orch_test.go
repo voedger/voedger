@@ -78,7 +78,7 @@ func TestBasic(t *testing.T) {
 
 			go func() {
 				// force case <-leadershipAcquistionTimerCh to fire in tryToAcquireLeadership()
-				<-vvm2.leadershipAcquisitionTimeArmed
+				<-vvm2.leadershipAcquisitionTimerArmed
 				iTime.Sleep(2 * time.Second)
 			}()
 

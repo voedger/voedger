@@ -242,6 +242,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 
 // provide.go:
 
+// [~server.design.orch/VVM.Provide~impl]
 func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 	vvmCtx, vvmCtxCancel := context.WithCancel(context.Background())
 	problemCtx, problemCtxCancel := context.WithCancel(context.Background())
@@ -250,21 +251,21 @@ func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 	monitorShutCtx, monitorShutCtxCancel := context.WithCancel(context.Background())
 	shutdownedCtx, shutdownedCtxCancel := context.WithCancel(context.Background())
 	voedgerVM = &VoedgerVM{
-		vvmCtxCancel:                   vvmCtxCancel,
-		numVVM:                         vvmCfg.NumVVM,
-		ip:                             vvmCfg.IP,
-		problemCtx:                     problemCtx,
-		problemCtxCancel:               problemCtxCancel,
-		problemErrCh:                   make(chan error, 1),
-		vvmShutCtx:                     vvmShutCtx,
-		vvmShutCtxCancel:               vvmShutCtxCancel,
-		servicesShutCtx:                servicesShutCtx,
-		servicesShutCtxCancel:          servicesShutCtxCancel,
-		monitorShutCtx:                 monitorShutCtx,
-		monitorShutCtxCancel:           monitorShutCtxCancel,
-		shutdownedCtx:                  shutdownedCtx,
-		shutdownedCtxCancel:            shutdownedCtxCancel,
-		leadershipAcquisitionTimeArmed: make(chan struct{}, 1),
+		vvmCtxCancel:                    vvmCtxCancel,
+		numVVM:                          vvmCfg.NumVVM,
+		ip:                              vvmCfg.IP,
+		problemCtx:                      problemCtx,
+		problemCtxCancel:                problemCtxCancel,
+		problemErrCh:                    make(chan error, 1),
+		vvmShutCtx:                      vvmShutCtx,
+		vvmShutCtxCancel:                vvmShutCtxCancel,
+		servicesShutCtx:                 servicesShutCtx,
+		servicesShutCtxCancel:           servicesShutCtxCancel,
+		monitorShutCtx:                  monitorShutCtx,
+		monitorShutCtxCancel:            monitorShutCtxCancel,
+		shutdownedCtx:                   shutdownedCtx,
+		shutdownedCtxCancel:             shutdownedCtxCancel,
+		leadershipAcquisitionTimerArmed: make(chan struct{}, 1),
 	}
 	vvmCfg.addProcessorChannel(iprocbusmem.ChannelGroup{
 		NumChannels:       uint(vvmCfg.NumCommandProcessors),

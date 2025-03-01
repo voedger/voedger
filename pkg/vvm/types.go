@@ -210,7 +210,7 @@ type VoedgerVM struct {
 	leadershipCtx       context.Context
 
 	// used in tests only
-	leadershipAcquisitionTimeArmed chan struct{}
+	leadershipAcquisitionTimerArmed chan struct{}
 }
 
 type IVVMElections ielections.IElections[storage.TTLStorageImplKey, string]

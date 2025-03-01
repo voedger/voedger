@@ -124,7 +124,7 @@ func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipDurationSeconds ielection
 	leadershipAcquistionTimerCh := vvm.ITime.NewTimerChan(time.Duration(leadershipAcquisitionDuration))
 
 	// to inform the test that the leadership acquisition has started
-	vvm.leadershipAcquisitionTimeArmed <- struct{}{}
+	vvm.leadershipAcquisitionTimerArmed <- struct{}{}
 
 	vvmIdx := storage.TTLStorageImplKey(1)
 	leadershipAcquisitionDeadline := vvm.ITime.Now().Add(time.Duration(leadershipAcquisitionDuration))
