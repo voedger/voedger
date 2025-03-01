@@ -40,7 +40,7 @@ func (s *httpService) registerHandlersV2() {
 		Methods(http.MethodPost)
 
 	// execute query: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/queries/{pkg}.{query}
-	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/query/{%s}.{%s}",
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/queries/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_query),
 		corsHandler(requestHandlerV2_extension())).
 		Methods(http.MethodGet)

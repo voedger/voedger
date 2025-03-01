@@ -11,12 +11,16 @@ import (
 	"os"
 	"time"
 
-	"github.com/voedger/voedger/pkg/elections"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/ielections"
 	"github.com/voedger/voedger/pkg/vvm/storage"
 )
 
-func (vvm *VoedgerVM) Launch(leadershipDurationSeconds elections.LeadershipDurationSeconds, leadershipAcquisitionDuration LeadershipAcquisitionDuration) context.Context {
+// [~server.design.orch/VVM.LaunchVVM~impl]
+func (vvm *VoedgerVM) Launch(leadershipDurationSeconds ielections.LeadershipDurationSeconds, leadershipAcquisitionDuration LeadershipAcquisitionDuration) context.Context {
+	if vvm.leadershipCtx != nil {
+		panic("VVM is launched already")
+	}
 	go vvm.shutdowner()
 	err := vvm.tryToAcquireLeadership(leadershipDurationSeconds, leadershipAcquisitionDuration)
 	if err == nil {
@@ -32,7 +36,15 @@ func (vvm *VoedgerVM) Launch(leadershipDurationSeconds elections.LeadershipDurat
 	return vvm.problemCtx
 }
 
+// [~server.design.orch/VVM.Shutdown~impl]
 func (vvm *VoedgerVM) Shutdown() error {
+	if vvm.leadershipCtx == nil {
+		select {
+		case <-vvm.problemCtx.Done():
+		default:
+			panic("VVM must be launched before shutdown")
+		}
+	}
 	// Ensure we only close the vvmShutCtx once
 	vvm.vvmShutCtxCancel()
 
@@ -42,6 +54,7 @@ func (vvm *VoedgerVM) Shutdown() error {
 	// additionally close problemCtx for the case when we call vvm.Shutdown when problemCtx is not closed yet to avoid context leak
 	vvm.problemCtxCancel()
 
+	vvm.leadershipCtx = nil
 	select {
 	case err := <-vvm.problemErrCh:
 		return err
@@ -50,6 +63,7 @@ func (vvm *VoedgerVM) Shutdown() error {
 	}
 }
 
+// [~server.design.orch/VVM.Shutdowner~impl]
 func (vvm *VoedgerVM) shutdowner() {
 	// Wait for VVM.vvmShutCtx
 	<-vvm.vvmShutCtx.Done()
@@ -77,7 +91,8 @@ func (vvm *VoedgerVM) shutdowner() {
 }
 
 // leadershipMonitor is a routine that monitors the leadership context.
-func (vvm *VoedgerVM) leadershipMonitor(leadershipDurationSeconds elections.LeadershipDurationSeconds) {
+// [~server.design.orch/LeadershipMonitor~impl]
+func (vvm *VoedgerVM) leadershipMonitor(leadershipDurationSeconds ielections.LeadershipDurationSeconds) {
 	defer vvm.monitorShutWg.Done()
 
 	select {
@@ -90,22 +105,26 @@ func (vvm *VoedgerVM) leadershipMonitor(leadershipDurationSeconds elections.Lead
 }
 
 // killerRoutine is a routine that kills the VVM process after a quarter of the leadership duration
-func (vvm *VoedgerVM) killerRoutine(leadershipDurationSeconds elections.LeadershipDurationSeconds) {
-	time.Sleep(time.Duration(leadershipDurationSeconds) * time.Second / 4)
+func (vvm *VoedgerVM) killerRoutine(leadershipDurationSeconds ielections.LeadershipDurationSeconds) {
+	// [~server.design.orch/processKillThreshold~impl]
+	// nolint:revive
+	processKillThreshold := time.Duration(leadershipDurationSeconds) * time.Second / 4
+	time.Sleep(processKillThreshold)
 	logger.Error("the process is still alive after the time alloted for graceful shutdown -> terminating...")
 	os.Exit(1)
 }
 
 // tryToAcquireLeadership tries to acquire leadership in loop
-func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipDurationSeconds elections.LeadershipDurationSeconds,
+// [~server.design.orch/VVM.tryToAcquireLeadership~impl]
+func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipDurationSeconds ielections.LeadershipDurationSeconds,
 	leadershipAcquisitionDuration LeadershipAcquisitionDuration) error {
-	elections, electionsCleanup := elections.Provide(vvm.TTLStorage, vvm.ITime)
+	elections, electionsCleanup := ielections.Provide(vvm.TTLStorage, vvm.ITime)
 	vvm.electionsCleanup = electionsCleanup
 
 	leadershipAcquistionTimerCh := vvm.ITime.NewTimerChan(time.Duration(leadershipAcquisitionDuration))
 
 	// to inform the test that the leadership acquisition has started
-	vvm.leadershipAcquisitionTimeArmed <- struct{}{}
+	vvm.leadershipAcquisitionTimerArmed <- struct{}{}
 
 	vvmIdx := storage.TTLStorageImplKey(1)
 	leadershipAcquisitionDeadline := vvm.ITime.Now().Add(time.Duration(leadershipAcquisitionDuration))
@@ -136,6 +155,7 @@ func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipDurationSeconds elections
 
 // updateProblem writes a critical error into problemErrCh exactly once
 // and sets the cause on problemCtx. This ensures no double-writes of errors.
+// [~server.design.orch/VVM.updateProblem~impl]
 func (vvm *VoedgerVM) updateProblem(err error) {
 	// The sync.Once ensures we only do this logic once
 	vvm.problemCtxCancel()

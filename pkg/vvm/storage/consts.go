@@ -6,6 +6,9 @@
 package storage
 
 const (
+	// nolint: unused
 	pKeyPrefix_null pKeyPrefix = iota
-	pKeyPrefix_Elections
+
+	// [~server.design.orch/KeyPrefix_VVMLeader~impl]
+	pKeyPrefix_VVMLeader
 )

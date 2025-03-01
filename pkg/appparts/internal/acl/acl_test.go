@@ -45,7 +45,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 
 		wsb := adb.AddWorkspace(wsName)
 
-		wsb.AddTag(tagName, "test tag")
+		wsb.AddTag(tagName)
 
 		cDoc := wsb.AddCDoc(cDocName)
 		cDoc.

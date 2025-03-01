@@ -75,6 +75,7 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/storage"
 )
 
+// [~server.design.orch/VVM.Provide~impl]
 func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 	vvmCtx, vvmCtxCancel := context.WithCancel(context.Background())
 	problemCtx, problemCtxCancel := context.WithCancel(context.Background())
@@ -83,21 +84,21 @@ func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 	monitorShutCtx, monitorShutCtxCancel := context.WithCancel(context.Background())
 	shutdownedCtx, shutdownedCtxCancel := context.WithCancel(context.Background())
 	voedgerVM = &VoedgerVM{
-		vvmCtxCancel:                   vvmCtxCancel,
-		numVVM:                         vvmCfg.NumVVM,
-		ip:                             vvmCfg.IP,
-		problemCtx:                     problemCtx,
-		problemCtxCancel:               problemCtxCancel,
-		problemErrCh:                   make(chan error, 1),
-		vvmShutCtx:                     vvmShutCtx,
-		vvmShutCtxCancel:               vvmShutCtxCancel,
-		servicesShutCtx:                servicesShutCtx,
-		servicesShutCtxCancel:          servicesShutCtxCancel,
-		monitorShutCtx:                 monitorShutCtx,
-		monitorShutCtxCancel:           monitorShutCtxCancel,
-		shutdownedCtx:                  shutdownedCtx,
-		shutdownedCtxCancel:            shutdownedCtxCancel,
-		leadershipAcquisitionTimeArmed: make(chan struct{}, 1),
+		vvmCtxCancel:                    vvmCtxCancel,
+		numVVM:                          vvmCfg.NumVVM,
+		ip:                              vvmCfg.IP,
+		problemCtx:                      problemCtx,
+		problemCtxCancel:                problemCtxCancel,
+		problemErrCh:                    make(chan error, 1),
+		vvmShutCtx:                      vvmShutCtx,
+		vvmShutCtxCancel:                vvmShutCtxCancel,
+		servicesShutCtx:                 servicesShutCtx,
+		servicesShutCtxCancel:           servicesShutCtxCancel,
+		monitorShutCtx:                  monitorShutCtx,
+		monitorShutCtxCancel:            monitorShutCtxCancel,
+		shutdownedCtx:                   shutdownedCtx,
+		shutdownedCtxCancel:             shutdownedCtxCancel,
+		leadershipAcquisitionTimerArmed: make(chan struct{}, 1),
 	}
 	vvmCfg.addProcessorChannel(
 		// command processors
@@ -226,8 +227,8 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	))
 }
 
-func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.IVVMAppTTLStorage, error) {
-	return prov.AppStorage(appdef.NewAppQName(istructs.SysOwner, "vvm"))
+func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.ISysVvmStorage, error) {
+	return prov.AppStorage(istructs.AppQName_sys_vvm)
 }
 
 func provideWLimiterFactory(maxSize iblobstorage.BLOBMaxSizeType) blobprocessor.WLimiterFactory {

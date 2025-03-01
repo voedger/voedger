@@ -40,8 +40,18 @@ jobs:
       with:
         go-version: 'stable'
 
-    - name: Run Amazon DynamoDB Tests
+    - name: Run Amazon DynamoDB Implementation Tests
       working-directory: pkg/istorage/amazondb
+      run: go test ./... -v -race
+      env:
+        AWS_REGION: eu-west-1
+        AWS_ACCESS_KEY_ID: local
+        AWS_SECRET_ACCESS_KEY: local
+        DYNAMODB_ENDPOINT: http://localhost:8000  # Set endpoint for local testing
+        DYNAMODB_TESTS_ENABLED: true
+
+    - name: Run Amazon DynamoDB TTLStorage and Elections Tests
+      working-directory: pkg/vvm/storage
       run: go test ./... -v -race
       env:
         AWS_REGION: eu-west-1
@@ -59,8 +69,8 @@ jobs:
     needs: build
     if: ${{ failure() }}
     uses: untillpro/ci-action/.github/workflows/create_issue.yml@master
-    with: 
-      repo: 'voedger/voedger' 
+    with:
+      repo: 'voedger/voedger'
       assignee: 'host6'
       name: 'Amazon DynamoDB test failed on'  # ✅ Fixed title
       body: ${{ needs.build.outputs.failure_url }}

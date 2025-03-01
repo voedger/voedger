@@ -37,7 +37,6 @@ type blobWorkpiece struct {
 	blobState        iblobstorage.BLOBState
 	blobKey          iblobstorage.IBLOBKey
 	writer           io.Writer
-	reader           io.Reader
 	registerFuncName string
 	resultErr        error
 }

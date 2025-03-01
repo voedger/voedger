@@ -36,10 +36,6 @@ func writeResponse(w http.ResponseWriter, data string) bool {
 	return true
 }
 
-func writeUnauthorized(rw http.ResponseWriter) {
-	WriteTextResponse(rw, "not authorized", http.StatusUnauthorized)
-}
-
 func writeNotImplemented(rw http.ResponseWriter) {
 	WriteTextResponse(rw, "not implemented", http.StatusNotImplemented)
 }

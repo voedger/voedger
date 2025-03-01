@@ -120,7 +120,3 @@ var (
 		State_Left:      true,
 	}
 )
-
-const (
-	base = 10
-)

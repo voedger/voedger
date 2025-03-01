@@ -17,9 +17,9 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/elections"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iblobstorage"
+	"github.com/voedger/voedger/pkg/ielections"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iprocbusmem"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -125,7 +125,7 @@ type VVM struct {
 	AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
 	BuiltInAppsPackages []BuiltInAppPackages
-	TTLStorage          storage.ITTLStorage[storage.TTLStorageImplKey, string]
+	TTLStorage          ielections.ITTLStorage[storage.TTLStorageImplKey, string]
 }
 
 type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
@@ -157,8 +157,6 @@ type VVMConfig struct {
 	WSPostInitFunc             workspace.WSPostInitFunc
 	DataPath                   string
 	MetricsServicePort         metrics.MetricsServicePort
-	NumVVM                     NumVVM // amount of VVMs in the cluster
-	IP                         net.IP
 
 	// 0 -> dynamic port will be used, new on each vvmIdx
 	// >0 -> vVMPort+vvmIdx will be actually used
@@ -171,6 +169,10 @@ type VVMConfig struct {
 	// normally is empty in VIT. coretuils.IsTest -> UUID is added to the keyspace name at istorage/provider/Provide()
 	// need to e.g. test VVM restart preserving storage
 	KeyspaceNameSuffix string
+
+	// [~server.design.orch/VVMConfig.Orch~impl]
+	NumVVM NumVVM // amount of VVMs in the cluster. Default 1
+	IP     net.IP // current IP of the VVM. Used as the value for leaderhsip elections
 }
 
 type VoedgerVM struct {
@@ -190,7 +192,6 @@ type VoedgerVM struct {
 	// closed when VVM should be stopped outside
 	vvmShutCtx       context.Context
 	vvmShutCtxCancel context.CancelFunc
-	vvmShutCtxOnce   sync.Once
 
 	// closed when VVM services should be stopped (but LeadershipMonitor)
 	servicesShutCtx       context.Context
@@ -209,10 +210,10 @@ type VoedgerVM struct {
 	leadershipCtx       context.Context
 
 	// used in tests only
-	leadershipAcquisitionTimeArmed chan struct{}
+	leadershipAcquisitionTimerArmed chan struct{}
 }
 
-type IVVMElections elections.IElections[storage.TTLStorageImplKey, string]
+type IVVMElections ielections.IElections[storage.TTLStorageImplKey, string]
 
 type ignition struct{}
 

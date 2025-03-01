@@ -90,6 +90,12 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal("Backoffice Table", cdoc.Comment())
 	require.True(cdoc.HasTag(appdef.NewQName("main", "BackofficeTag")))
 
+	// tag
+	tag := appdef.Tag(app.Type, appdef.NewQName("main", "BackofficeTag"))
+	require.NotNil(tag)
+	require.Equal("Declare tag to assign it later to definition(s)", tag.Comment())
+	require.Equal("Backoffice Management", tag.Feature())
+
 	// TODO: sf := cdoc.Field("CheckedField").(appdef.IStringField)
 	// TODO: require.Equal(uint16(8), sf.Restricts().MaxLen())
 	// TODO: require.NotNil(sf.Restricts().Pattern())
@@ -165,6 +171,11 @@ func Test_BasicUsage(t *testing.T) {
 
 	cmd := appdef.Command(app.Type, appdef.NewQName("main", "NewOrder"))
 	require.Equal("Commands can only be declared in workspaces\nCommand can have optional argument and/or unlogged argument\nCommand can return TYPE", cmd.Comment())
+
+	// published role
+	r := appdef.Role(app.Type, appdef.NewQName("main", "ApiRole"))
+	require.NotNil(r)
+	require.True(r.Published())
 
 	// type
 	obj := appdef.Object(app.Type, appdef.NewQName("main", "SubscriptionEvent"))

@@ -214,7 +214,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorBLOBProcessors, iActualizersService, iAppPartsCtlPipelineService, bootstrapOperator, adminEndpointServiceOperator, publicEndpointServiceOperator, iAppStorageProvider)
 	v9 := provideMetricsServicePortGetter(metricsService)
 	v10 := provideBuiltInAppPackages(builtInAppsArtefacts)
-	ivvmAppTTLStorage, err := provideIVVMAppTTLStorage(iAppStorageProvider)
+	iSysVvmStorage, err := provideIVVMAppTTLStorage(iAppStorageProvider)
 	if err != nil {
 		cleanup4()
 		cleanup3()
@@ -222,7 +222,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		cleanup()
 		return nil, nil, err
 	}
-	ittlStorage := storage.NewElectionsTTLStorage(ivvmAppTTLStorage)
+	ittlStorage := storage.NewElectionsTTLStorage(iSysVvmStorage)
 	vvm := &VVM{
 		ServicePipeline:     servicePipeline,
 		APIs:                apIs,
@@ -242,6 +242,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 
 // provide.go:
 
+// [~server.design.orch/VVM.Provide~impl]
 func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 	vvmCtx, vvmCtxCancel := context.WithCancel(context.Background())
 	problemCtx, problemCtxCancel := context.WithCancel(context.Background())
@@ -250,21 +251,21 @@ func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 	monitorShutCtx, monitorShutCtxCancel := context.WithCancel(context.Background())
 	shutdownedCtx, shutdownedCtxCancel := context.WithCancel(context.Background())
 	voedgerVM = &VoedgerVM{
-		vvmCtxCancel:                   vvmCtxCancel,
-		numVVM:                         vvmCfg.NumVVM,
-		ip:                             vvmCfg.IP,
-		problemCtx:                     problemCtx,
-		problemCtxCancel:               problemCtxCancel,
-		problemErrCh:                   make(chan error, 1),
-		vvmShutCtx:                     vvmShutCtx,
-		vvmShutCtxCancel:               vvmShutCtxCancel,
-		servicesShutCtx:                servicesShutCtx,
-		servicesShutCtxCancel:          servicesShutCtxCancel,
-		monitorShutCtx:                 monitorShutCtx,
-		monitorShutCtxCancel:           monitorShutCtxCancel,
-		shutdownedCtx:                  shutdownedCtx,
-		shutdownedCtxCancel:            shutdownedCtxCancel,
-		leadershipAcquisitionTimeArmed: make(chan struct{}, 1),
+		vvmCtxCancel:                    vvmCtxCancel,
+		numVVM:                          vvmCfg.NumVVM,
+		ip:                              vvmCfg.IP,
+		problemCtx:                      problemCtx,
+		problemCtxCancel:                problemCtxCancel,
+		problemErrCh:                    make(chan error, 1),
+		vvmShutCtx:                      vvmShutCtx,
+		vvmShutCtxCancel:                vvmShutCtxCancel,
+		servicesShutCtx:                 servicesShutCtx,
+		servicesShutCtxCancel:           servicesShutCtxCancel,
+		monitorShutCtx:                  monitorShutCtx,
+		monitorShutCtxCancel:            monitorShutCtxCancel,
+		shutdownedCtx:                   shutdownedCtx,
+		shutdownedCtxCancel:             shutdownedCtxCancel,
+		leadershipAcquisitionTimerArmed: make(chan struct{}, 1),
 	}
 	vvmCfg.addProcessorChannel(iprocbusmem.ChannelGroup{
 		NumChannels:       uint(vvmCfg.NumCommandProcessors),
@@ -291,8 +292,8 @@ func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 	return voedgerVM, nil
 }
 
-func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.IVVMAppTTLStorage, error) {
-	return prov.AppStorage(appdef.NewAppQName(istructs.SysOwner, "vvm"))
+func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.ISysVvmStorage, error) {
+	return prov.AppStorage(istructs.AppQName_sys_vvm)
 }
 
 func provideWLimiterFactory(maxSize iblobstorage.BLOBMaxSizeType) blobprocessor.WLimiterFactory {

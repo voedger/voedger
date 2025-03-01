@@ -160,7 +160,6 @@ func TestSet_Backward(t *testing.T) {
 func TestSet_Chunk(t *testing.T) {
 	require := require.New(t)
 
-	type byteSet = set.Set[byte]
 	s := set.From[uint8](0, 1, 2, 3, 126, 127, 128, 129, 253, 254, 255)
 	s.SetReadOnly()
 	i := 0

@@ -31,7 +31,7 @@ func Example() {
 
 		tags := appdef.MustParseQNames("test.dataTag", "test.engineTag", "test.structTag")
 		for _, tag := range tags {
-			wsb.AddTag(tag)
+			wsb.AddTag(tag, tag.Entity()) // #3363: let use entity name to test tag feature
 		}
 
 		numName := appdef.NewQName("test", "number")
@@ -143,7 +143,8 @@ func Example() {
 
 		readerName := appdef.NewQName("test", "reader")
 		reader := wsb.AddRole(readerName)
-		reader.SetComment("read-only role")
+		reader.SetComment("read-only published role")
+		reader.SetPublished(true)
 		wsb.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Select},
 			filter.QNames(docName, recName), []appdef.FieldName{"f1", "f2"},
@@ -205,9 +206,15 @@ func Example() {
 	//         "test.ws": {
 	//           "Descriptor": "test.wsDesc",
 	//           "Tags": {
-	//             "test.dataTag": {},
-	//             "test.engineTag": {},
-	//             "test.structTag": {}
+	//             "test.dataTag": {
+	//               "Feature": "dataTag"
+	//             },
+	//             "test.engineTag": {
+	//               "Feature": "engineTag"
+	//             },
+	//             "test.structTag": {
+	//               "Feature": "structTag"
+	//             }
 	//           },
 	//           "DataTypes": {
 	//             "test.number": {
@@ -571,7 +578,8 @@ func Example() {
 	//           },
 	//           "Roles": {
 	//             "test.reader": {
-	//               "Comment": "read-only role"
+	//               "Comment": "read-only published role",
+	//               "Published": true
 	//             },
 	//             "test.writer": {
 	//               "Comment": "read-write role"

@@ -2,7 +2,7 @@
  * Copyright (c) 2025-present unTill Software Development Group B.V.
  * @author Alisher Nurmanov
  */
-package elections
+package ielections
 
 import (
 	"context"
@@ -12,6 +12,8 @@ import (
 
 	"github.com/voedger/voedger/pkg/goutils/logger"
 )
+
+// [~server.design.orch/elections~impl]
 
 // AcquireLeadership returns nil if leadership is *not* acquired (e.g., error in storage,
 // already local leader, or elections cleaned up), otherwise returns a *non-nil* context.
@@ -23,6 +25,7 @@ func (e *elections[K, V]) AcquireLeadership(key K, val V, ttlSeconds LeadershipD
 
 	inserted, err := e.storage.InsertIfNotExist(key, val, int(ttlSeconds))
 	if err != nil {
+		// notest
 		logger.Error(fmt.Sprintf("Key=%v: storage error: %v", key, err))
 		return nil
 	}
@@ -88,6 +91,7 @@ func bumpTickerCounter[K any](tickerCounter int64, key K, tickerInterval time.Du
 	if tickerCounter < 10 {
 		logger.Verbose(fmt.Sprintf("Key=%v: renewing leadership", key))
 	} else if tickerCounter%200 == 0 {
+		// notest
 		logger.Verbose(fmt.Sprintf("Key=%v: still leader for %s", key, tickerInterval*time.Duration(tickerCounter)))
 	}
 	return tickerCounterPlus1
@@ -111,6 +115,7 @@ func (e *elections[K, V]) releaseLeadership(key K) *leaderInfo[K, V] {
 
 	li := liIntf.(*leaderInfo[K, V])
 	if _, err := e.storage.CompareAndDelete(key, li.val); err != nil {
+		// notest
 		logger.Error(fmt.Sprintf("Key=%v: storage CompareAndDelete error: %v", key, err))
 	}
 
@@ -128,6 +133,7 @@ func (e *elections[K, V]) cleanup() {
 	e.leadership.Range(func(key, liIntf any) bool {
 		li := liIntf.(*leaderInfo[K, V])
 		if _, err := e.storage.CompareAndDelete(key.(K), li.val); err != nil {
+			// notest
 			logger.Error(fmt.Sprintf("Key=%v: storage CompareAndDelete error: %v", key, err))
 		}
 		li.cancel()

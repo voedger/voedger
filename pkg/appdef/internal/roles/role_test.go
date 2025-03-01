@@ -181,3 +181,34 @@ func Test_RoleInheritanceWithComplexFilter(t *testing.T) {
 		require.NotNil(app)
 	})
 }
+
+// #3335: Test for published role
+func Test_RolePublished(t *testing.T) {
+	require := require.New(t)
+
+	var app appdef.IAppDef
+
+	wsName := appdef.NewQName("test", "ws")
+
+	roleName := appdef.NewQName("test", "role")
+
+	t.Run("should be ok to build application with published role", func(t *testing.T) {
+		adb := builder.New()
+		adb.AddPackage("test", "test.com/test")
+
+		wsb := adb.AddWorkspace(wsName)
+
+		wsb.AddRole(roleName).SetPublished(true)
+
+		var err error
+		app, err = adb.Build()
+		require.NoError(err)
+		require.NotNil(app)
+	})
+
+	t.Run("should be ok to find published role", func(t *testing.T) {
+		role := appdef.Role(app.Workspace(wsName).Type, roleName)
+		require.NotNil(role)
+		require.True(role.Published())
+	})
+}

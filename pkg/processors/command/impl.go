@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/voedger/voedger/pkg/bus"
@@ -413,10 +412,6 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkp
 		return coreutils.NewHTTPErrorf(http.StatusForbidden)
 	}
 	return nil
-}
-
-func roleNotFound(err error) bool {
-	return errors.Is(err, appdef.ErrNotFoundError) && strings.Contains(err.Error(), "role")
 }
 
 func unmarshalRequestBody(_ context.Context, work pipeline.IWorkpiece) (err error) {

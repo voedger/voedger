@@ -29,8 +29,8 @@ func Test_Tags(t *testing.T) {
 
 		wsb := adb.AddWorkspace(wsName)
 
-		wsb.AddTag(tagNames[0], "first tag comment")
-		wsb.AddTag(tagNames[1], "second tag comment")
+		wsb.AddTag(tagNames[0], "first feature", "first tag comment")
+		wsb.AddTag(tagNames[1], "second feature", "second tag comment")
 
 		doc := wsb.AddODoc(docName)
 		doc.AddField("f1", appdef.DataKind_int64, true)
@@ -48,8 +48,8 @@ func Test_Tags(t *testing.T) {
 			require.NotNil(tag)
 			require.Equal(tagNames[0], tag.QName())
 			require.Equal(appdef.TypeKind_Tag, tag.Kind())
+			require.Equal("first feature", tag.Feature())
 			require.Equal("first tag comment", tag.Comment())
-			tag.IsTag()
 
 			require.Nil(appdef.Tag(tested.Type, appdef.NewQName("test", "unknown")), "should nil if unknown tag")
 		})
