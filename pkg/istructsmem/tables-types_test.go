@@ -504,7 +504,7 @@ func Test_fieldValue(t *testing.T) {
 	})
 }
 
-func TestModifiedFields(t *testing.T) {
+func TestSpecifiedValues(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
@@ -549,10 +549,12 @@ func TestModifiedFields(t *testing.T) {
 
 		testEnum(rec,
 			map[appdef.FieldName]interface{}{
-				"int32":  int32(1),
-				"string": "test",
-				"int64":  int64(0),
-				"bool":   false,
+				"int32":                     int32(1),
+				"string":                    "test",
+				"int64":                     int64(0),
+				"bool":                      false,
+				appdef.SystemField_QName:    test.testCDoc,
+				appdef.SystemField_IsActive: true,
 			})
 	})
 
@@ -565,6 +567,7 @@ func TestModifiedFields(t *testing.T) {
 		testEnum(rec,
 			map[appdef.FieldName]interface{}{
 				appdef.SystemField_IsActive: false,
+				appdef.SystemField_QName:    test.testCDoc,
 			})
 	})
 
@@ -582,6 +585,8 @@ func TestModifiedFields(t *testing.T) {
 				"bytes":  []byte{},
 				"string": "",
 				"raw":    []byte{},
+				appdef.SystemField_QName:    test.testCDoc,
+				appdef.SystemField_IsActive: true,
 			})
 	})
 }

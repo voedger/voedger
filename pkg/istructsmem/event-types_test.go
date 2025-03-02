@@ -1861,9 +1861,12 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 					}
 					require.Equal(
 						map[appdef.FieldName]interface{}{
-							test.buyerIdent: test.buyerValue,
-							test.ageIdent:   test.ageValue,
-							test.photoIdent: []byte{}, // emptied bytes-field
+							test.buyerIdent:             test.buyerValue,
+							test.ageIdent:               test.ageValue,
+							test.photoIdent:             []byte{}, // emptied bytes-field
+							appdef.SystemField_ID:       emptiedPhotoID,
+							appdef.SystemField_IsActive: true,
+							appdef.SystemField_QName:    test.tablePhotos,
 						},
 						fields)
 				case emptiedRemarkID:
@@ -1873,8 +1876,13 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 					}
 					require.Equal(
 						map[appdef.FieldName]interface{}{
-							test.photoIdent:  test.tempPhotoID,
-							test.remarkIdent: "", // emptied string-field
+							test.photoIdent:              int64(test.tempPhotoID),
+							test.remarkIdent:             "", // emptied string-field
+							appdef.SystemField_ID:        emptiedRemarkID,
+							appdef.SystemField_IsActive:  true,
+							appdef.SystemField_QName:     test.tablePhotoRems,
+							appdef.SystemField_Container: test.remarkIdent,
+							appdef.SystemField_ParentID:  emptiedPhotoID,
 						},
 						fields)
 				}

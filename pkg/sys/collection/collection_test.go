@@ -10,7 +10,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -881,7 +880,6 @@ func TestBasicUsage_State(t *testing.T) {
 			}
 		}
 	}`
-	log.Println(resultRows[0][0][0][0].(string))
 	require.JSONEq(expected, resultRows[0][0][0][0].(string))
 }
 
