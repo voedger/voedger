@@ -4,9 +4,15 @@ on:
   push:
     paths:
       - 'pkg/istorage/**'
+      - 'pkg/vvm/storage/**'
+      - 'pkg/vvm/storage/**'
+      - 'pkg/elections/**'
   pull_request_target:
     paths:
       - 'pkg/istorage/**'
+      - 'pkg/vvm/storage/**'
+      - 'pkg/vvm/storage/**'
+      - 'pkg/elections/**'
 
 jobs:
 
@@ -58,7 +64,7 @@ jobs:
               pkg/vvm/storage/*)
                 TTLSTORAGE_CHANGED=true
                 ;;
-              pkg/ielections/*)
+              pkg/elections/*)
                 ELECTIONS_CHANGED=true
                 ;;
             esac
@@ -125,7 +131,7 @@ jobs:
             OTHERS_CHANGED=false
           fi
 
-          if echo "$CHANGED_FILES" | grep -q "^pkg/ielections/"; then
+          if echo "$CHANGED_FILES" | grep -q "^pkg/elections/"; then
             ELECTIONS_CHANGED=true
             OTHERS_CHANGED=false
           fi
@@ -174,16 +180,17 @@ jobs:
     secrets:
       personaltoken: ${{ secrets.REPOREADING_TOKEN }}
 
-  auto-merge-pr-amazon:
-    needs: trigger_amazon
-    if: ${{ github.event_name == 'pull_request_target'  }}
+  auto-merge-pr:
     uses: ./.github/workflows/merge.yml
     secrets:
       personaltoken: ${{ secrets.REPOREADING_TOKEN }}
+    needs:
+      - determine_changes
+      - trigger_cas
+      - trigger_amazon
+    if: always() &&       
+      (
+        (needs.trigger_cas.result == 'success' && (needs.trigger_amazon.result == 'success' || needs.trigger_amazon.result == 'skipped')) ||
+        (needs.trigger_amazon.result == 'success' && (needs.trigger_cas.result == 'success' || needs.trigger_cas.result == 'skipped'))
+      )                                                                                                                               
 
-  auto-merge-pr-cas:
-    needs: trigger_cas
-    if: ${{ github.event_name == 'pull_request_target'}}
-    uses: ./.github/workflows/merge.yml
-    secrets:
-      personaltoken: ${{ secrets.REPOREADING_TOKEN }}
