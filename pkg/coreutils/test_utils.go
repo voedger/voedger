@@ -77,18 +77,21 @@ func (o *TestObject) IsDeactivated() bool {
 
 func (o *TestObject) IsNew() bool { return o.IsNew_ }
 
-func (o *TestObject) SpecifiedFields(cb func(string, interface{}) bool) {
-	if !cb(appdef.SystemField_ID, o.Id) {
+func (o *TestObject) SpecifiedValues(cb func(appdef.IField, any) bool) {
+	if !cb(&MockIField{name: appdef.SystemField_ID, dataKind: appdef.DataKind_RecordID}, o.Id) {
 		return
 	}
-	if !cb(appdef.SystemField_IsActive, true) {
+	if !cb(&MockIField{name: appdef.SystemField_IsActive, dataKind: appdef.DataKind_bool}, true) {
 		return
 	}
-	if !cb(appdef.SystemField_QName, o.Name) {
+	if !cb(&MockIField{name: appdef.SystemField_QName, dataKind: appdef.DataKind_QName}, o.Name) {
 		return
 	}
 	for name, value := range o.Data {
-		if !cb(name, value) {
+		if name == appdef.SystemField_ID || name == appdef.SystemField_QName || name == appdef.SystemField_IsActive {
+			continue
+		}
+		if !cb(&MockIField{name: name, dataKind: intfToDataKind(value)}, value) {
 			break
 		}
 	}
@@ -167,16 +170,40 @@ func (o *TestObject) Children(container ...string) func(func(istructs.IObject) b
 	}
 }
 
+func intfToDataKind(value interface{}) appdef.DataKind {
+	switch value.(type) {
+	case string:
+		return appdef.DataKind_string
+	case int32:
+		return appdef.DataKind_int32
+	case int64:
+		return appdef.DataKind_int64
+	case float32:
+		return appdef.DataKind_float32
+	case float64:
+		return appdef.DataKind_float64
+	case bool:
+		return appdef.DataKind_bool
+	case appdef.QName:
+		return appdef.DataKind_QName
+	case map[string]interface{}:
+		return appdef.DataKind_Record
+	default:
+		return appdef.DataKind_null
+	}
+}
+
 type MockIField struct {
 	appdef.IField
-	name string
+	name     string
+	dataKind appdef.DataKind
 }
 
 func (f *MockIField) Comment() string                               { panic("not implemented") }
 func (f *MockIField) CommentLines() []string                        { panic("not implemented") }
 func (f *MockIField) Name() appdef.FieldName                        { return f.name }
 func (f *MockIField) Data() appdef.IData                            { panic("not implemented") }
-func (f *MockIField) DataKind() appdef.DataKind                     { panic("not implemented") }
+func (f *MockIField) DataKind() appdef.DataKind                     { return f.dataKind }
 func (f *MockIField) Required() bool                                { return false }
 func (f *MockIField) Verifiable() bool                              { panic("not implemented") }
 func (f *MockIField) VerificationKind(appdef.VerificationKind) bool { panic("not implemented") }
