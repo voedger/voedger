@@ -98,12 +98,15 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 	}
 
 	if fields, ok := t.(appdef.IWithFields); ok {
-		iFieldsToProcess := fields.Fields()
 		if view, ok := t.(appdef.IView); ok {
+			iFieldsToProcess := fields.Fields()
 			if _, ok := obj.(istructs.IValue); ok {
 				iFieldsToProcess = view.Value().Fields()
 			} else if _, ok := obj.(istructs.IKey); ok {
 				iFieldsToProcess = view.Key().Fields()
+			}
+			for _, iField := range iFieldsToProcess {
+				proceedField(iField.Name(), iField.DataKind())
 			}
 		} else {
 			if !opts.allFields {
@@ -119,9 +122,7 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 				return res
 			}
 		}
-		for _, iField := range iFieldsToProcess {
-			proceedField(iField.Name(), iField.DataKind())
-		}
+
 	}
 
 	return res
