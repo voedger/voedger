@@ -98,31 +98,30 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 	}
 
 	if fields, ok := t.(appdef.IWithFields); ok {
+		var iFieldsToProcess []appdef.IField
 		if view, ok := t.(appdef.IView); ok {
-			iFieldsToProcess := fields.Fields()
 			if _, ok := obj.(istructs.IValue); ok {
 				iFieldsToProcess = view.Value().Fields()
 			} else if _, ok := obj.(istructs.IKey); ok {
 				iFieldsToProcess = view.Key().Fields()
 			}
-			for _, iField := range iFieldsToProcess {
-				proceedField(iField.Name(), iField.DataKind())
-			}
+		} else if opts.allFields {
+			iFieldsToProcess = fields.Fields()
 		} else {
-			if !opts.allFields {
-				obj.SpecifiedValues(func(iField appdef.IField, val any) bool {
-					if opts.filter != nil {
-						if !opts.filter(iField.Name(), iField.DataKind()) {
-							return true
-						}
+			obj.SpecifiedValues(func(iField appdef.IField, val any) bool {
+				if opts.filter != nil {
+					if !opts.filter(iField.Name(), iField.DataKind()) {
+						return true
 					}
-					res[iField.Name()] = val
-					return true
-				})
-				return res
-			}
+				}
+				res[iField.Name()] = val
+				return true
+			})
+			return res
 		}
-
+		for _, iField := range iFieldsToProcess {
+			proceedField(iField.Name(), iField.DataKind())
+		}
 	}
 
 	return res
