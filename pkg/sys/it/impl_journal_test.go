@@ -26,18 +26,18 @@ func TestBasicUsage_Journal(t *testing.T) {
 	idUntillUsers := vit.GetAny("app1pkg.untill_users", ws)
 
 	bill := fmt.Sprintf(`{
-				 "cuds": [{
-				   "fields": {
-					 "sys.ID": 1,
-					 "sys.QName": "app1pkg.bill",
-					 "tableno": %d,
-					 "id_untill_users": %d,
-					 "table_part": "a",
-					 "proforma": 3,
-					 "working_day": "20230228"
-				   }
-				 }]
-			 }`, tableNum, idUntillUsers)
+				"cuds": [{
+				"fields": {
+					"sys.ID": 1,
+					"sys.QName": "app1pkg.bill",
+					"tableno": %d,
+					"id_untill_users": %d,
+					"table_part": "a",
+					"proforma": 3,
+					"working_day": "20230228"
+				}
+				}]
+			}`, tableNum, idUntillUsers)
 	resp := vit.PostWS(ws, "c.sys.CUD", bill)
 	ID := resp.NewID()
 	expectedOffset := resp.CurrentWLogOffset
@@ -46,44 +46,43 @@ func TestBasicUsage_Journal(t *testing.T) {
 
 	//Read by unix timestamp
 	body := fmt.Sprintf(`
-	 {
-		 "args":{"From":%d,"Till":%d,"EventTypes":"all"},
-		 "elements":[{"fields":["Offset","EventTime","Event"]}]
-	 }`, vit.Now().UnixMilli(), vit.Now().UnixMilli())
+	{
+		"args":{"From":%d,"Till":%d,"EventTypes":"all"},
+		"elements":[{"fields":["Offset","EventTime","Event"]}]
+	}`, vit.Now().UnixMilli(), vit.Now().UnixMilli())
 	resp = vit.PostWS(ws, "q.sys.Journal", body)
 
-	// "sys.IsActive": true,
 	require.JSONEq(fmt.Sprintf(`
-	 {
-	   "args": {},
-	   "cuds": [
-		 {
-		   "fields": {
-			 "id_untill_users": %[4]d,
-			 "proforma": 3,
-			 "sys.ID": %[1]d,
-			 "sys.IsActive": true,
-			 "sys.QName": "app1pkg.bill",
-			 "table_part": "a",
-			 "tableno": %[2]d,
-			 "working_day": "20230228"
-		   },
-		   "IsNew": true,
-		   "sys.ID": %[1]d,
-		   "sys.QName": "app1pkg.bill"
-		 }
-	   ],
-	   "DeviceID": 0,
-	   "RegisteredAt": %[3]d,
-	   "Synced": false,
-	   "SyncedAt": 0,
-	   "sys.QName": "sys.CUD"
-	 }`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers), resp.SectionRow()[2].(string))
+	{
+	"args": {},
+	"cuds": [
+		{
+		"fields": {
+			"id_untill_users": %[4]d,
+			"proforma": 3,
+			"sys.ID": %[1]d,
+			"sys.IsActive": true,
+			"sys.QName": "app1pkg.bill",
+			"table_part": "a",
+			"tableno": %[2]d,
+			"working_day": "20230228"
+		},
+		"IsNew": true,
+		"sys.ID": %[1]d,
+		"sys.QName": "app1pkg.bill"
+		}
+	],
+	"DeviceID": 0,
+	"RegisteredAt": %[3]d,
+	"Synced": false,
+	"SyncedAt": 0,
+	"sys.QName": "sys.CUD"
+	}`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers), resp.SectionRow()[2].(string))
 
 	expectedEvent := fmt.Sprintf(`
-		 {
-			 "args": {},
-			 "cuds": [
+		{
+			"args": {},
+			"cuds": [
 				{
 					"fields": {
 						"id_untill_users": %[4]d,
@@ -99,13 +98,13 @@ func TestBasicUsage_Journal(t *testing.T) {
 					"sys.ID": %[1]d,
 					"sys.QName": "app1pkg.bill"
 				}
-			 ],
-			 "DeviceID": 0,
-			 "RegisteredAt": %[3]d,
-			 "Synced": false,
-			 "SyncedAt": 0,
-			 "sys.QName": "sys.CUD"
-		 }`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers)
+			],
+			"DeviceID": 0,
+			"RegisteredAt": %[3]d,
+			"Synced": false,
+			"SyncedAt": 0,
+			"sys.QName": "sys.CUD"
+		}`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers)
 
 	require.Equal(expectedOffset, istructs.Offset(resp.SectionRow()[0].(float64)))
 	require.Equal(int64(resp.SectionRow()[1].(float64)), vit.Now().UnixMilli())
@@ -113,65 +112,65 @@ func TestBasicUsage_Journal(t *testing.T) {
 
 	//Read by offset
 	body = fmt.Sprintf(`
-	 {
-		 "args":{"From":%d,"Till":%d,"EventTypes":"all","RangeUnit":"Offset"},
-		 "elements":[{"fields":["Offset","EventTime","Event"]}]
-	 }`, expectedOffset, expectedOffset)
+	{
+		"args":{"From":%d,"Till":%d,"EventTypes":"all","RangeUnit":"Offset"},
+		"elements":[{"fields":["Offset","EventTime","Event"]}]
+	}`, expectedOffset, expectedOffset)
 	resp = vit.PostWS(ws, "q.sys.Journal", body)
 
 	require.JSONEq(fmt.Sprintf(`
-	 {
-	   "args": {},
-	   "cuds": [
-		 {
-		   "fields": {
-			 "id_untill_users": %[4]d,
-			 "proforma": 3,
-			 "sys.ID": %[1]d,
-			 "sys.IsActive": true,
-			 "sys.QName": "app1pkg.bill",
-			 "table_part": "a",
-			 "tableno": %[2]d,
-			 "working_day": "20230228"
-		   },
-		   "IsNew": true,
-		   "sys.ID": %[1]d,
-		   "sys.QName": "app1pkg.bill"
-		 }
-	   ],
-	   "DeviceID": 0,
-	   "RegisteredAt": %[3]d,
-	   "Synced": false,
-	   "SyncedAt": 0,
-	   "sys.QName": "sys.CUD"
-	 }`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers), resp.SectionRow()[2].(string))
+	{
+	"args": {},
+	"cuds": [
+		{
+		"fields": {
+			"id_untill_users": %[4]d,
+			"proforma": 3,
+			"sys.ID": %[1]d,
+			"sys.IsActive": true,
+			"sys.QName": "app1pkg.bill",
+			"table_part": "a",
+			"tableno": %[2]d,
+			"working_day": "20230228"
+		},
+		"IsNew": true,
+		"sys.ID": %[1]d,
+		"sys.QName": "app1pkg.bill"
+		}
+	],
+	"DeviceID": 0,
+	"RegisteredAt": %[3]d,
+	"Synced": false,
+	"SyncedAt": 0,
+	"sys.QName": "sys.CUD"
+	}`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers), resp.SectionRow()[2].(string))
 
 	expectedEvent = fmt.Sprintf(`
-		 {
-			 "args": {},
-			 "cuds": [
-			 {
-				 "fields": {
-				 "id_untill_users": %[4]d,
-				 "proforma": 3,
-				 "sys.ID": %[1]d,
-				 "sys.IsActive": true,
-				 "sys.QName": "app1pkg.bill",
-				 "table_part": "a",
-				 "tableno": %[2]d,
-				 "working_day": "20230228"
-				 },
-				 "IsNew": true,
-				 "sys.ID": %[1]d,
-				 "sys.QName": "app1pkg.bill"
-			 }
-			 ],
-			 "DeviceID": 0,
-			 "RegisteredAt": %[3]d,
-			 "Synced": false,
-			 "SyncedAt": 0,
-			 "sys.QName": "sys.CUD"
-		 }`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers)
+		{
+			"args": {},
+			"cuds": [
+			{
+				"fields": {
+				"id_untill_users": %[4]d,
+				"proforma": 3,
+				"sys.ID": %[1]d,
+				"sys.IsActive": true,
+				"sys.QName": "app1pkg.bill",
+				"table_part": "a",
+				"tableno": %[2]d,
+				"working_day": "20230228"
+				},
+				"IsNew": true,
+				"sys.ID": %[1]d,
+				"sys.QName": "app1pkg.bill"
+			}
+			],
+			"DeviceID": 0,
+			"RegisteredAt": %[3]d,
+			"Synced": false,
+			"SyncedAt": 0,
+			"sys.QName": "sys.CUD"
+		}`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers)
 
 	require.Equal(expectedOffset, istructs.Offset(resp.SectionRow()[0].(float64)))
 	require.Equal(int64(resp.SectionRow()[1].(float64)), vit.Now().UnixMilli())
@@ -235,10 +234,10 @@ func TestJournal_read_in_years_range_1(t *testing.T) {
 	from := time.Date(startYear+2, startNow.Month(), startNow.Day(), startNow.Hour(), startNow.Minute(), startNow.Second()+1, startNow.Nanosecond(), time.UTC).UnixMilli()
 	till := vit.Now().UnixMilli()
 	body := fmt.Sprintf(`
-			 {
-				 "args":{"From":%d,"Till":%d,"EventTypes":"all"},
-				 "elements":[{"fields":["Offset","EventTime","Event"]}]
-			 }`, from, till)
+			{
+				"args":{"From":%d,"Till":%d,"EventTypes":"all"},
+				"elements":[{"fields":["Offset","EventTime","Event"]}]
+			}`, from, till)
 
 	resp := vit.PostWS(ws, "q.sys.Journal", body)
 

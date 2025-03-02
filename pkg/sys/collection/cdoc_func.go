@@ -93,7 +93,6 @@ func convert(doc istructs.IObject, appDef appdef.IAppDef, refs map[istructs.Reco
 	}
 	// unable to use ObjectToMap because of filter:
 	// field of the root is filtering -> no problem, field of a container is filtering -> `doc` var here ir root, it does not contain fields of container -> panic
-	// тут надо все поля
 	obj = coreutils.FieldsToMap(doc, appDef, coreutils.Filter(func(fieldName string, kind appdef.DataKind) bool {
 		if skipField(fieldName) {
 			return false
