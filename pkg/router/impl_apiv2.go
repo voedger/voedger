@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/processors/query2"
 )
 
@@ -22,38 +23,38 @@ func (s *httpService) registerHandlersV2() {
 	// create: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/{pkg}.{table}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/docs/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table),
-		corsHandler(requestHandlerV2_table(s.requestSender, query2.ApiPath_Docs))).
+		corsHandler(requestHandlerV2_table(s.requestSender, query2.ApiPath_Docs, s.numsAppsWorkspaces))).
 		Methods(http.MethodPost)
 
 	// update, deactivate, read single doc: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/{pkg}.{table}/{id}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/docs/{%s}.{%s}/{%s:[0-9]+}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table,
 		URLPlaceholder_id),
-		corsHandler(requestHandlerV2_table(s.requestSender, query2.ApiPath_Docs))).
+		corsHandler(requestHandlerV2_table(s.requestSender, query2.ApiPath_Docs, s.numsAppsWorkspaces))).
 		Methods(http.MethodPatch, http.MethodDelete, http.MethodGet)
 
 	// read collection: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/cdocs/{pkg}.{table}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/cdocs/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table),
-		corsHandler(requestHandlerV2_table(s.requestSender, query2.ApiPath_CDocs))).
+		corsHandler(requestHandlerV2_table(s.requestSender, query2.ApiPath_CDocs, s.numsAppsWorkspaces))).
 		Methods(http.MethodGet)
 
 	// execute cmd: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/commands/{pkg}.{command}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/commands/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_command),
-		corsHandler(requestHandlerV2_extension(s.requestSender, query2.ApiPath_Commands))).
+		corsHandler(requestHandlerV2_extension(s.requestSender, query2.ApiPath_Commands, s.numsAppsWorkspaces))).
 		Methods(http.MethodPost)
 
 	// execute query: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/queries/{pkg}.{query}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/queries/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_query),
-		corsHandler(requestHandlerV2_extension(s.requestSender, query2.ApiPath_Queries))).
+		corsHandler(requestHandlerV2_extension(s.requestSender, query2.ApiPath_Queries, s.numsAppsWorkspaces))).
 		Methods(http.MethodGet)
 
 	// view: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/views/{pkg}.{view}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/views/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_view),
-		corsHandler(requestHandlerV2_view(s.requestSender))).
+		corsHandler(requestHandlerV2_view(s.requestSender, s.numsAppsWorkspaces))).
 		Methods(http.MethodGet)
 
 	// blobs: create /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/blobs
@@ -94,10 +95,10 @@ func requestHandlerV2_schemas() http.HandlerFunc {
 	}
 }
 
-func requestHandlerV2_view(reqSender bus.IRequestSender) http.HandlerFunc {
+func requestHandlerV2_view(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
-		busRequest, ok := createBusRequest(req.Method, req, rw)
+		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
 		if !ok {
 			return
 		}
@@ -109,7 +110,7 @@ func requestHandlerV2_view(reqSender bus.IRequestSender) http.HandlerFunc {
 	}
 }
 
-func requestHandlerV2_extension(reqSender bus.IRequestSender, apiPath query2.ApiPath) http.HandlerFunc {
+func requestHandlerV2_extension(reqSender bus.IRequestSender, apiPath query2.ApiPath, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 		entity := ""
@@ -119,7 +120,7 @@ func requestHandlerV2_extension(reqSender bus.IRequestSender, apiPath query2.Api
 		case query2.ApiPath_Queries:
 			entity = vars[URLPlaceholder_query]
 		}
-		busRequest, ok := createBusRequest(req.Method, req, rw)
+		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
 		if !ok {
 			return
 		}
@@ -150,7 +151,7 @@ func requestHandlerV2_blobs() http.HandlerFunc {
 	}
 }
 
-func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath query2.ApiPath) http.HandlerFunc {
+func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath query2.ApiPath, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 		switch req.Method {
@@ -164,7 +165,7 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath query2.ApiPath
 		case http.MethodDelete:
 		}
 		// note: request lead to create -> 201 Created
-		busRequest, ok := createBusRequest(req.Method, req, rw)
+		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
 		if !ok {
 			return
 		}
