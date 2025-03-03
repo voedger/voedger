@@ -101,8 +101,10 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 	} else {
 		isCmd = strings.HasPrefix(busRequest.Resource, "c.")
 	}
-	if sendSuccess = writeResponse(w, "{"); !sendSuccess {
-		return
+	if contentType == coreutils.ApplicationJSON {
+		if sendSuccess = writeResponse(w, "{"); !sendSuccess {
+			return
+		}
 	}
 	for elem := range responseCh {
 		// http client disconnected -> ErrNoConsumer on IMultiResponseSender.SendElement() -> QP will call Close()
@@ -117,16 +119,18 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 				responseCloser = "]"
 			}
 		} else {
-			if isCmd || contentType == coreutils.TextPlain {
+			if isCmd {
 				res := elem.(string)
-				res = strings.TrimPrefix(res, "{")
-				res = strings.TrimSuffix(res, "}")
-				sendSuccess = writeResponse(w, res)
-			} else {
-				if elemsCount == 0 {
-					sendSuccess = writeResponse(w, `"sections":[{"type":"","elements":[`)
-					sectionsCloser = "]}]"
+				if contentType == coreutils.ApplicationJSON {
+					res = strings.TrimPrefix(res, "{")
+					res = strings.TrimSuffix(res, "}")
 				}
+				sendSuccess = writeResponse(w, res)
+			} else if contentType == coreutils.TextPlain {
+				sendSuccess = writeResponse(w, elem.(string))
+			} else if elemsCount == 0 {
+				sendSuccess = writeResponse(w, `"sections":[{"type":"","elements":[`)
+				sectionsCloser = "]}]"
 			}
 		}
 
@@ -172,22 +176,16 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 			jsonErr = strings.TrimSuffix(jsonErr, "}") // need to make "sys.Error" a top-level field within {}
 			sendSuccess = writeResponse(w, jsonErr)
 		} else {
-			sendSuccess = writeResponse(w, fmt.Sprintf(`"status":%d,"errorDescription":"%s"}`, http.StatusInternalServerError, *responseErr))
+			sendSuccess = writeResponse(w, fmt.Sprintf(`"status":%d,"errorDescription":"%s"`, http.StatusInternalServerError, *responseErr))
 		}
 	}
 
 	if len(responseCloser) > 0 {
 		sendSuccess = writeResponse(w, responseCloser)
 	}
-	if sendSuccess {
+	if sendSuccess && contentType == coreutils.ApplicationJSON {
 		sendSuccess = writeResponse(w, "}")
 	}
-
-	// if elemsCount == 0 {
-	// 	sendSuccess = writeResponse(w, "{}")
-	// } else if len(responseCloser) > 0 {
-	// 	sendSuccess = writeResponse(w, responseCloser)
-	// }
 }
 
 func initResponse(w http.ResponseWriter, contentType string, statusCode int) {

@@ -120,7 +120,7 @@ func TestFederationFunc(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 					w.Write([]byte(`wrong JSON`))
 				},
-				expectedErr: errors.New("invalid character 'w' looking for beginning of value"),
+				expectedErr: errors.New("IFederation: failed to unmarshal response body to FuncErr: invalid character 'w' looking for beginning of value. Body:\nwrong JSON"),
 			},
 			{
 				name: "non-OK status is expected",
@@ -148,9 +148,9 @@ func TestFederationFunc(t *testing.T) {
 				resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, c.opts...)
 				var fe coreutils.FuncError
 				if errors.As(err, &fe) {
-					require.Equal(c.expectedErr, err)
+					require.Equal(c.expectedErr, err, c.name)
 				} else {
-					require.Equal(c.expectedErr.Error(), err.Error())
+					require.Equal(c.expectedErr.Error(), err.Error(), c.name)
 				}
 				log.Println(err.Error())
 				require.Nil(resp)

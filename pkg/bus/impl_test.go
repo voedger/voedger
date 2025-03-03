@@ -21,11 +21,11 @@ func TestRequestSender_BasicUsage(t *testing.T) {
 	requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 		require.Equal(http.MethodPost, request.Method)
 		require.Equal(istructs.WSID(1), request.WSID)
-		require.Equal(map[string][]string{coreutils.ContentType: {coreutils.ApplicationJSON}}, request.Header)
-		require.Equal(map[string][]string{"param": {"value"}}, request.Query)
+		require.Equal(map[string]string{coreutils.ContentType: coreutils.ApplicationJSON}, request.Header)
+		require.Equal(map[string]string{"param": "value"}, request.Query)
 		require.Equal("c.sys.CUD", request.Resource)
 		require.Equal([]byte("body"), request.Body)
-		require.Equal(istructs.AppQName_test1_app1.String(), request.AppQName)
+		require.Equal(istructs.AppQName_test1_app1, request.AppQName)
 		require.Equal("localhost", request.Host)
 
 		//response must be made in a separate thread
