@@ -62,7 +62,8 @@ type IRowReader interface {
 
 	// consts.NullRecord will be returned as null-values
 	RecordIDs(includeNulls bool) func(func(appdef.FieldName, RecordID) bool)
-	FieldNames(func(appdef.FieldName) bool)
+	Fields(func(appdef.IField) bool)
+	SpecifiedValues(func(appdef.IField, any) bool)
 }
 
 type IRowWriter interface {

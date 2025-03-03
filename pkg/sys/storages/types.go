@@ -138,16 +138,17 @@ func (v *baseStateValue) AsRecordID(name string) istructs.RecordID {
 func (v *baseStateValue) RecordIDs(bool) func(func(string, istructs.RecordID) bool) {
 	panic(errNotImplemented)
 }
-func (v *baseStateValue) FieldNames(func(string) bool) { panic(errNotImplemented) }
-func (v *baseStateValue) Length() int                  { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsString(int) string       { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsBytes(int) []byte        { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsInt32(int) int32         { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsInt64(int) int64         { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsFloat32(int) float32     { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsFloat64(int) float64     { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsQName(int) appdef.QName  { panic(errCurrentValueIsNotAnArray) }
-func (v *baseStateValue) GetAsBool(int) bool           { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) SpecifiedValues(func(appdef.IField, any) bool) { panic(errNotImplemented) }
+func (v *baseStateValue) Fields(func(appdef.IField) bool)               { panic(errNotImplemented) }
+func (v *baseStateValue) Length() int                                   { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsString(int) string                        { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsBytes(int) []byte                         { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsInt32(int) int32                          { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsInt64(int) int64                          { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsFloat32(int) float32                      { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsFloat64(int) float64                      { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsQName(int) appdef.QName                   { panic(errCurrentValueIsNotAnArray) }
+func (v *baseStateValue) GetAsBool(int) bool                            { panic(errCurrentValueIsNotAnArray) }
 func (v *baseStateValue) GetAsValue(int) istructs.IStateValue {
 	panic(errFieldByIndexIsNotAnObjectOrArray)
 }
@@ -204,7 +205,9 @@ func (v *ObjectStateValue) AsRecordID(name string) istructs.RecordID {
 func (v *ObjectStateValue) RecordIDs(includeNulls bool) func(func(string, istructs.RecordID) bool) {
 	return v.object.RecordIDs(includeNulls)
 }
-func (v *ObjectStateValue) FieldNames(cb func(string) bool) { v.object.FieldNames(cb) }
+func (v *ObjectStateValue) SpecifiedValues(cb func(appdef.IField, any) bool) {
+	v.object.SpecifiedValues(cb)
+}
 func (v *ObjectStateValue) AsValue(name string) (result istructs.IStateValue) {
 	for n := range v.object.Containers {
 		if n == name {

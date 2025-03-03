@@ -46,8 +46,8 @@ func ReadByKind(name appdef.FieldName, kind appdef.DataKind, rr istructs.IRowRea
 }
 
 type mapperOpts struct {
-	filter      func(name string, kind appdef.DataKind) bool
-	nonNilsOnly bool
+	filter    func(name string, kind appdef.DataKind) bool
+	allFields bool
 }
 
 type MapperOpt func(opt *mapperOpts)
@@ -58,9 +58,11 @@ func Filter(filterFunc func(name string, kind appdef.DataKind) bool) MapperOpt {
 	}
 }
 
-func WithNonNilsOnly() MapperOpt {
-	return func(opts *mapperOpts) {
-		opts.nonNilsOnly = true
+// will run through fields independing on wether the value is specified or not
+// Unspecified -> callback will be called with the zero value
+func WithAllFields() MapperOpt {
+	return func(opt *mapperOpts) {
+		opt.allFields = true
 	}
 }
 
@@ -96,14 +98,29 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 	}
 
 	if fields, ok := t.(appdef.IWithFields); ok {
-		if opts.nonNilsOnly {
-			for fieldName := range obj.FieldNames {
-				proceedField(fieldName, fields.Field(fieldName).DataKind())
+		var iFieldsToProcess []appdef.IField
+		if view, ok := t.(appdef.IView); ok {
+			if _, ok := obj.(istructs.IValue); ok {
+				iFieldsToProcess = view.Value().Fields()
+			} else if _, ok := obj.(istructs.IKey); ok {
+				iFieldsToProcess = view.Key().Fields()
 			}
+		} else if opts.allFields {
+			iFieldsToProcess = fields.Fields()
 		} else {
-			for _, f := range fields.Fields() {
-				proceedField(f.Name(), f.DataKind())
-			}
+			obj.SpecifiedValues(func(iField appdef.IField, val any) bool {
+				if opts.filter != nil {
+					if !opts.filter(iField.Name(), iField.DataKind()) {
+						return true
+					}
+				}
+				res[iField.Name()] = val
+				return true
+			})
+			return res
+		}
+		for _, iField := range iFieldsToProcess {
+			proceedField(iField.Name(), iField.DataKind())
 		}
 	}
 

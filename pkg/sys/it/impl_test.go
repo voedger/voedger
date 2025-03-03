@@ -401,13 +401,11 @@ func TestNullability_SetEmptyString(t *testing.T) {
 	checked := false
 	as.Events().ReadWLog(context.Background(), ws.WSID, offsCreate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		for cud := range event.CUDs {
-			cud.ModifiedFields(func(fn appdef.FieldName, i interface{}) bool {
-				if checked {
-					t.Fail()
+			cud.SpecifiedValues(func(field appdef.IField, val interface{}) bool {
+				if field.Name() == "name" {
+					require.EqualValues("test", val)
+					checked = true
 				}
-				checked = true
-				require.Equal("name", fn)
-				require.EqualValues("test", i)
 				return true
 			})
 		}
@@ -423,12 +421,13 @@ func TestNullability_SetEmptyString(t *testing.T) {
 	// #2785 - istructs.ICUDRow.ModifiedFields also iterate emptied string- and bytes- fields
 	as.Events().ReadWLog(context.Background(), ws.WSID, offsUpdate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		for cud := range event.CUDs {
-			for fn, fv := range cud.ModifiedFields {
-				switch fn {
+			for iField, fv := range cud.SpecifiedValues {
+				switch iField.Name() {
 				case "name":
 					require.Equal("", fv)
+				case appdef.SystemField_ID, appdef.SystemField_QName, appdef.SystemField_IsActive:
 				default:
-					require.Fail("unexpected modified field", "%v: %v", fn, fv)
+					require.Fail("unexpected modified field", "%v: %v", iField, fv)
 				}
 			}
 		}
@@ -455,14 +454,14 @@ func TestNullability_SetEmptyObject(t *testing.T) {
 	expectedNestedDocID := resp.NewIDs["1"]
 	as.Events().ReadWLog(context.Background(), ws.WSID, offsCreate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		for cud := range event.CUDs {
-			cud.ModifiedFields(func(fn appdef.FieldName, i interface{}) bool {
-				fields[fn] = i
+			cud.SpecifiedValues(func(f appdef.IField, val interface{}) bool {
+				fields[f.Name()] = val
 				return true
 			})
 		}
 		return nil
 	})
-	require.Len(fields, 2)
+	require.Len(fields, 7) // id_air_table_plan, form, sys.ID, sys,IsActive, sys.QName, sys.ParentID, sys.Container
 	require.EqualValues(expectedNestedDocID, fields["id_air_table_plan"])
 	require.EqualValues(15, fields["form"])
 }
