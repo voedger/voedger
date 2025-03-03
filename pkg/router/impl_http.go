@@ -184,7 +184,6 @@ func (s *httpService) registerHandlers_V1() {
 
 func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
-		vars := mux.Vars(req)
 		request, ok := createBusRequest(req.Method, req, resp, numsAppsWorkspaces)
 		if !ok {
 			return

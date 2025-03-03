@@ -202,7 +202,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 						data: coreutils.FieldsToMap(queryResultWrapper{
 							IObject: o,
 							qName:   qw.appStructs.AppDef().Type(qw.iQuery.QName()).(appdef.IQuery).Result().QName(),
-						}, qw.appStructs.AppDef()),
+						}, qw.appStructs.AppDef(), coreutils.WithAllFields()), // we do not know which fields are specified because `o` is different on each query -> read all fields of the result
 					}
 				}
 				return qw.rowsProcessor.SendAsync(o.(pipeline.IWorkpiece))

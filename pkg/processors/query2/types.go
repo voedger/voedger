@@ -135,6 +135,13 @@ func (o objectBackedByMap) AsBool(name appdef.FieldName) bool { return o.data[na
 func (o objectBackedByMap) AsRecordID(name appdef.FieldName) istructs.RecordID {
 	return o.data[name].(istructs.RecordID)
 }
+func (o objectBackedByMap) SpecifiedValues(cb func(appdef.IField, interface{}) bool) {
+	for fieldName, val := range o.data {
+		if !cb(&coreutils.MockIField{FieldName: fieldName}, val) {
+			return
+		}
+	}
+}
 
 type keys struct {
 	pipeline.AsyncNOOP

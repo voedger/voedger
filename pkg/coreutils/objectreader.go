@@ -118,7 +118,6 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 				return true
 			})
 			return res
-			iFieldsToProcess = fields.Fields()
 		}
 		for _, iField := range iFieldsToProcess {
 			proceedField(iField.Name(), iField.DataKind())

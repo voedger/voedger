@@ -34,6 +34,7 @@ func createBusRequest(reqMethod string, req *http.Request, rw http.ResponseWrite
 		// notest: impossible because of regexp in a handler
 		panic(err)
 	}
+	appQNameStr := vars[URLPlaceholder_appOwner] + appdef.AppQNameQualifierChar + vars[URLPlaceholder_appName]
 	wsid := istructs.WSID(wsidUint)
 	if appQName, err := appdef.ParseAppQName(appQNameStr); err == nil {
 		if numAppWorkspaces, ok := numsAppsWorkspaces[appQName]; ok {

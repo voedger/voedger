@@ -99,15 +99,6 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 				bus.ReplyBadRequest(responder, fmt.Sprintf(`wrong function mark "%s" for function %s`, request.Resource[:1], funcQName))
 			}
 		}
-	case "c":
-		// TODO: use appQName to calculate cmdProcessorIdx in solid range [0..cpCount)
-		cmdProcessorIdx := uint(partitionID) % uint(cpCount)
-		icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, appQName, request.WSID, responder, partitionID, funcQName, token, request.Host)
-		if !procbus.Submit(uint(cpchIdx), cmdProcessorIdx, icm) {
-			bus.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
-		}
-	default:
-		bus.ReplyBadRequest(responder, fmt.Sprintf(`wrong function mark "%s" for function %s`, request.Resource[:1], funcQName))
 	}
 }
 
