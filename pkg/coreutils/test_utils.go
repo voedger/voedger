@@ -78,20 +78,20 @@ func (o *TestObject) IsDeactivated() bool {
 func (o *TestObject) IsNew() bool { return o.IsNew_ }
 
 func (o *TestObject) SpecifiedValues(cb func(appdef.IField, any) bool) {
-	if !cb(&MockIField{name: appdef.SystemField_ID, dataKind: appdef.DataKind_RecordID}, o.Id) {
+	if !cb(&MockIField{FieldName: appdef.SystemField_ID, FieldDataKind: appdef.DataKind_RecordID}, o.Id) {
 		return
 	}
-	if !cb(&MockIField{name: appdef.SystemField_IsActive, dataKind: appdef.DataKind_bool}, true) {
+	if !cb(&MockIField{FieldName: appdef.SystemField_IsActive, FieldDataKind: appdef.DataKind_bool}, true) {
 		return
 	}
-	if !cb(&MockIField{name: appdef.SystemField_QName, dataKind: appdef.DataKind_QName}, o.Name) {
+	if !cb(&MockIField{FieldName: appdef.SystemField_QName, FieldDataKind: appdef.DataKind_QName}, o.Name) {
 		return
 	}
 	for name, value := range o.Data {
 		if name == appdef.SystemField_ID || name == appdef.SystemField_QName || name == appdef.SystemField_IsActive {
 			continue
 		}
-		if !cb(&MockIField{name: name, dataKind: intfToDataKind(value)}, value) {
+		if !cb(&MockIField{FieldName: name, FieldDataKind: intfToDataKind(value)}, value) {
 			break
 		}
 	}
@@ -195,15 +195,17 @@ func intfToDataKind(value interface{}) appdef.DataKind {
 
 type MockIField struct {
 	appdef.IField
-	name     string
-	dataKind appdef.DataKind
+	FieldName     string
+	FieldDataKind appdef.DataKind
 }
+
 const notImplemented = "not implemented"
+
 func (f *MockIField) Comment() string                               { panic(notImplemented) }
 func (f *MockIField) CommentLines() []string                        { panic(notImplemented) }
-func (f *MockIField) Name() appdef.FieldName                        { return f.name }
+func (f *MockIField) Name() appdef.FieldName                        { return f.FieldName }
 func (f *MockIField) Data() appdef.IData                            { panic(notImplemented) }
-func (f *MockIField) DataKind() appdef.DataKind                     { return f.dataKind }
+func (f *MockIField) DataKind() appdef.DataKind                     { return f.FieldDataKind }
 func (f *MockIField) Required() bool                                { return false }
 func (f *MockIField) Verifiable() bool                              { panic(notImplemented) }
 func (f *MockIField) VerificationKind(appdef.VerificationKind) bool { panic(notImplemented) }
@@ -215,7 +217,7 @@ func (f *MockIField) Constraints() map[appdef.ConstraintKind]appdef.IConstraint 
 
 func (o *TestObject) Fields(cb func(iField appdef.IField) bool) {
 	for name := range o.Data {
-		if !cb(&MockIField{name: name}) {
+		if !cb(&MockIField{FieldName: name}) {
 			break
 		}
 	}
