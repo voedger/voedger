@@ -198,19 +198,19 @@ type MockIField struct {
 	name     string
 	dataKind appdef.DataKind
 }
-
-func (f *MockIField) Comment() string                               { panic("not implemented") }
-func (f *MockIField) CommentLines() []string                        { panic("not implemented") }
+const notImplemented = "not implemented"
+func (f *MockIField) Comment() string                               { panic(notImplemented) }
+func (f *MockIField) CommentLines() []string                        { panic(notImplemented) }
 func (f *MockIField) Name() appdef.FieldName                        { return f.name }
-func (f *MockIField) Data() appdef.IData                            { panic("not implemented") }
+func (f *MockIField) Data() appdef.IData                            { panic(notImplemented) }
 func (f *MockIField) DataKind() appdef.DataKind                     { return f.dataKind }
 func (f *MockIField) Required() bool                                { return false }
-func (f *MockIField) Verifiable() bool                              { panic("not implemented") }
-func (f *MockIField) VerificationKind(appdef.VerificationKind) bool { panic("not implemented") }
-func (f *MockIField) IsFixedWidth() bool                            { panic("not implemented") }
-func (f *MockIField) IsSys() bool                                   { panic("not implemented") }
+func (f *MockIField) Verifiable() bool                              { panic(notImplemented) }
+func (f *MockIField) VerificationKind(appdef.VerificationKind) bool { panic(notImplemented) }
+func (f *MockIField) IsFixedWidth() bool                            { panic(notImplemented) }
+func (f *MockIField) IsSys() bool                                   { panic(notImplemented) }
 func (f *MockIField) Constraints() map[appdef.ConstraintKind]appdef.IConstraint {
-	panic("not implemented")
+	panic(notImplemented)
 }
 
 func (o *TestObject) Fields(cb func(iField appdef.IField) bool) {
