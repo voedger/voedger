@@ -96,49 +96,7 @@ func (h *queryHandler) AuthorizeRequest(ctx context.Context, qw *queryWork) erro
 }
 
 func (h *queryHandler) AuthorizeResult(ctx context.Context, qw *queryWork) error {
-	/* TODO: implement this
-
-	if qw.iQuery.Result() != appdef.AnyType {
-		// will authorize result only if result is sys.Any
-		// otherwise each field is considered as allowed if EXECUTE ON QUERY is allowed
-		return nil
-	}
-	ws := qw.iWorkspace
-	if ws == nil {
-		// workspace is dummy
-		ws = qw.iQuery.Workspace()
-	}
-	for _, elem := range qw.queryParams.Elements() {
-		nestedPath := elem.Path().AsArray()
-		nestedType := qw.resultType
-		for _, nestedName := range nestedPath {
-			if len(nestedName) == 0 {
-				// root
-				continue
-			}
-			// incorrectness is excluded already on validation stage in [queryParams.validate]
-			containersOfNested := nestedType.(appdef.IWithContainers)
-			// container presence is checked already on validation stage in [queryParams.validate]
-			nestedContainer := containersOfNested.Container(nestedName)
-			nestedType = nestedContainer.Type()
-		}
-		requestedfields := []string{}
-		for _, resultField := range elem.ResultFields() {
-			requestedfields = append(requestedfields, resultField.Field())
-		}
-		ok, allowedFields, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, nestedType.QName(), requestedfields, qw.roles)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return coreutils.NewSysError(http.StatusForbidden)
-		}
-		for _, requestedField := range requestedfields {
-			if !slices.Contains(allowedFields, requestedField) {
-				return coreutils.NewSysError(http.StatusForbidden)
-			}
-		}
-	}*/
+	// the entire result is allowed if execute on query is granted
 	return nil
 }
 
