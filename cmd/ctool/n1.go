@@ -13,8 +13,8 @@ import (
 )
 
 var ceSuccessPhrases = map[string]string{
-	ckInit:    "CE cluster is deployed successfully.",
-	ckUpgrade: "CE cluster is upgraded successfully.",
+	ckInit:    "N1 cluster is deployed successfully.",
+	ckUpgrade: "N1 cluster is upgraded successfully.",
 	ckAcme:    "ACME domain list successfully modified",
 }
 
@@ -67,14 +67,14 @@ func deployCeMonStack() error {
 
 func deployVoedgerCe() error {
 
-	loggerInfo("Deploying voedger CE...")
+	loggerInfo("Deploying voedger N1 cluster...")
 	return newScriptExecuter("", "").run("ce/ce-start.sh")
 }
 
 func addVoedgerUser(c *clusterType) error {
 
-	loggerInfo("Adding user voedger to Grafana on ce-node")
-	if err := addGrafanUser(c.nodeByHost(ceNodeName), voedger); err != nil {
+	loggerInfo("Adding user voedger to Grafana")
+	if err := addGrafanUser(c.nodeByHost(n1NodeName), voedger); err != nil {
 		return err
 	}
 

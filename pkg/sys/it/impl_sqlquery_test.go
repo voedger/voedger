@@ -354,7 +354,7 @@ func TestSqlQuery_records(t *testing.T) {
 			`{"args":{"Query":"select * from app1pkg.payments"}}`:                                                          "'app1pkg.payments' is not a singleton. At least one record ID must be provided",
 			fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments where id = %d"}}`, emailId):                      fmt.Sprintf("record with ID '%d' has mismatching QName 'app1pkg.pos_emails'", emailId),
 			fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments where id = %d"}}`, istructs.NonExistingRecordID): fmt.Sprintf("record with ID '%d' not found", istructs.NonExistingRecordID),
-			fmt.Sprintf(`{"args":{"Query":"select abracadabra from app1pkg.pos_emails where id = %d"}}`, emailId):          "field 'abracadabra' not found in def",
+			fmt.Sprintf(`{"args":{"Query":"select abracadabra from app1pkg.pos_emails where id = %d"}}`, emailId):          "not found: field «abracadabra» in CDoc «app1pkg.pos_emails»",
 			`{"args":{"Query":"select * from app1pkg.payments.2 where id = 2"}}`:                                           "record ID and 'where id ...' clause can not be used in one query",
 			`{"args":{"Query":"select sys.QName from app1pkg.test_ws.1"}}`:                                                 "conditions are not allowed to query a singleton",
 			`{"args":{"Query":"select sys.QName from app1pkg.test_ws where id = 1"}}`:                                      "conditions are not allowed to query a singleton",
@@ -515,8 +515,10 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 
 		// for example read cdoc.registry.Login.LoginHash from the app workspace
 		loginID := vit.GetCDocLoginID(prn.Login)
+		// request to the different app -> use sys token to avoid 403
+		sysPrincipal := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
 		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.registry.a%d.registry.Login where id = %d"},"elements":[{"fields":["Result"]}]}`, appWSNumber, loginID)
-		resp := vit.PostWS(oneAppWS, "q.sys.SqlQuery", body)
+		resp := vit.PostWS(oneAppWS, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(sysPrincipal.Token))
 		loginHash := registry.GetLoginHash(prn.Login.Name)
 		require.Contains(resp.SectionRow()[0].(string), fmt.Sprintf(`"LoginHash":"%s"`, loginHash))
 	})
@@ -525,8 +527,10 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		// for example read cdoc.registry.Login.LoginHash from the app workspace determined by the login name
 		prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login") // from VIT shared config
 		loginID := vit.GetCDocLoginID(prn.Login)
+		// request to the different app -> use sys token to avoid 403
+		sysPrincipal := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
 		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.registry.\"login\".registry.Login where id = %d"},"elements":[{"fields":["Result"]}]}`, loginID)
-		resp := vit.PostWS(oneAppWS, "q.sys.SqlQuery", body)
+		resp := vit.PostWS(oneAppWS, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(sysPrincipal.Token))
 		loginHash := registry.GetLoginHash(prn.Login.Name)
 		require.Contains(resp.SectionRow()[0].(string), fmt.Sprintf(`"LoginHash":"%s"`, loginHash))
 	})
@@ -546,5 +550,36 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Query":"select * from %d.sys.wlog where offset = %d"},"elements":[{"fields":["Result"]}]}`, ws.WSID, istructs.NonExistingRecordID)
 		resp := vit.PostWS(wsAnother, "q.sys.SqlQuery", body)
 		require.True(resp.IsEmpty())
+	})
+}
+
+func TestAuthnz(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	t.Run("foreign app", func(t *testing.T) {
+		loginID := vit.GetCDocLoginID(ws.Owner.Login)
+		registryAppStructs, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_sys_registry)
+		require.NoError(t, err)
+		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, ws.Owner.Name, istructs.CurrentClusterID())
+		appWSNumber := pseudoWSID.BaseWSID() % istructs.WSID(registryAppStructs.NumAppWorkspaces())
+		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.registry.a%d.registry.Login where id = %d"},"elements":[{"fields":["Result"]}]}`, appWSNumber, loginID)
+		vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect403())
+	})
+
+	t.Run("doc", func(t *testing.T) {
+		body := `{"args":{"Query":"select * from app1pkg.TestDeniedCDoc.123"},"elements":[{"fields":["Result"]}]}`
+		vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect403())
+	})
+
+	t.Run("field", func(t *testing.T) {
+		// denied
+		body := `{"args":{"Query":"select DeniedFld2 from app1pkg.TestCDocWithDeniedFields.123"},"elements":[{"fields":["Result"]}]}`
+		vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect403())
+
+		// allowed, just expect 400 not found
+		body = `{"args":{"Query":"select Fld1 from app1pkg.TestCDocWithDeniedFields.123"},"elements":[{"fields":["Result"]}]}`
+		vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect400("record with ID '123' not found"))
 	})
 }

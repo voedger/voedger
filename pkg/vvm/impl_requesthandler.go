@@ -27,7 +27,7 @@ import (
 func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 	cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx_v1 QueryProcessorsChannelGroupIdxType_V1,
 	qpcgIdx_v2 QueryProcessorsChannelGroupIdxType_V2,
-	cpAmount istructs.NumCommandProcessors, vvmApps VVMApps, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) bus.RequestHandler {
+	cpAmount istructs.NumCommandProcessors, vvmApps VVMApps) bus.RequestHandler {
 	return func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		funcQName := request.QName
 		if !request.IsAPIV2 {
@@ -55,14 +55,6 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 		token, err := getPrincipalToken(request)
 		if err != nil {
 			bus.ReplyAccessDeniedUnauthorized(responder, err.Error())
-			return
-		}
-
-		// replace pseudoWSID -> appWSID
-		if numAppWorkspaces, ok := numsAppsWorkspaces[request.AppQName]; ok {
-			request.WSID = coreutils.WSIDToAppWSIDIfPseudo(request.WSID, numAppWorkspaces)
-		} else {
-			bus.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("no ApplicationWorkspaces record for app %s", request.AppQName))
 			return
 		}
 
@@ -107,6 +99,15 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 				bus.ReplyBadRequest(responder, fmt.Sprintf(`wrong function mark "%s" for function %s`, request.Resource[:1], funcQName))
 			}
 		}
+	case "c":
+		// TODO: use appQName to calculate cmdProcessorIdx in solid range [0..cpCount)
+		cmdProcessorIdx := uint(partitionID) % uint(cpCount)
+		icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, appQName, request.WSID, responder, partitionID, funcQName, token, request.Host)
+		if !procbus.Submit(uint(cpchIdx), cmdProcessorIdx, icm) {
+			bus.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
+		}
+	default:
+		bus.ReplyBadRequest(responder, fmt.Sprintf(`wrong function mark "%s" for function %s`, request.Resource[:1], funcQName))
 	}
 }
 

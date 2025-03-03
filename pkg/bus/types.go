@@ -53,6 +53,5 @@ type implIResponseSenderCloseable struct {
 
 type implIResponder struct {
 	respSender     IResponseSenderCloseable
-	inited         bool
 	responseMetaCh chan ResponseMeta
 }

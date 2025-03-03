@@ -5,6 +5,7 @@
 package vit
 
 import (
+	"context"
 	"sync"
 	"testing"
 
@@ -34,10 +35,11 @@ type VIT struct {
 	emailCaptor          emailCaptor
 	httpClient           coreutils.IHTTPClient
 	mockTime             coreutils.IMockTime
+	vvmProblemCtx        context.Context
 }
 
 type VITConfig struct {
-	opts     []vitConfigOptFunc
+	opts     []VITConfigOptFunc
 	isShared bool
 }
 
@@ -52,7 +54,7 @@ type vitPreConfig struct {
 	secrets      map[string][]byte
 }
 
-type vitConfigOptFunc func(*vitPreConfig)
+type VITConfigOptFunc func(*vitPreConfig)
 type AppOptFunc func(app *app, cfg *vvm.VVMConfig)
 type vitOptFunc func(vit *VIT)
 type signInOptFunc func(opts *signInOpts)

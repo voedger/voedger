@@ -815,6 +815,7 @@ func (pts *ProjectorTestState) Run() {
 	pts.require()
 }
 
+//nolint:unused
 func (pts *ProjectorTestState) putArgument() {
 	if pts.rawEvent.argumentObject == nil {
 		return

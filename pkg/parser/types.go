@@ -525,6 +525,7 @@ func (s TemplateStmt) GetName() string { return string(s.Name) }
 
 type RoleStmt struct {
 	Statement
+	Published bool          `parser:"@'PUBLISHED'?"`
 	Name      Ident         `parser:"'ROLE' @Ident"`
 	workspace workspaceAddr // filled on the analysis stage
 }
@@ -533,7 +534,8 @@ func (s RoleStmt) GetName() string { return string(s.Name) }
 
 type TagStmt struct {
 	Statement
-	Name      Ident `parser:"'TAG' @Ident"`
+	Name      Ident  `parser:"'TAG' @Ident"`
+	Feature   string `parser:"('FEATURE' @String)?"`
 	workspace workspaceAddr
 }
 

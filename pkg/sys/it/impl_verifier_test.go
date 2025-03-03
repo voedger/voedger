@@ -135,23 +135,17 @@ func TestVerifierErrors(t *testing.T) {
 		vit.PostProfile(userPrincipal, "c.sys.CUD", body, coreutils.Expect400("invalid token")).Println()
 	})
 
-	emailVerifiedValueToken := ""
+	// issue a token for email field
+	body := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, verificationToken, verificationCode)
+	resp := vit.PostProfile(userPrincipal, "q.sys.IssueVerifiedValueToken", body)
+	emailVerifiedValueToken := resp.SectionRow()[0].(string)
 	t.Run("error 400 on different verification algorithm", func(t *testing.T) {
-		// issue a token for email field
-		body := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, verificationToken, verificationCode)
-		resp := vit.PostProfile(userPrincipal, "q.sys.IssueVerifiedValueToken", body)
-		emailVerifiedValueToken = resp.SectionRow()[0].(string)
-
 		// use the email token for the phone field
 		body = fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","PhoneField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, emailVerifiedValueToken)
 		vit.PostProfile(userPrincipal, "c.sys.CUD", body, coreutils.Expect400()).Println()
 	})
 
-	t.Run("error 400 on wrong app", func(t *testing.T) {
-		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, emailVerifiedValueToken)
-		userPrincipal := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
-		vit.PostProfile(userPrincipal, "c.sys.CUD", body, coreutils.Expect400()).Println()
-	})
+	// test usage the token in a diffrerent app is senceless because the target doc does not exists in the different app
 
 	t.Run("error 400 issue token for one WSID but use it in different WSID", func(t *testing.T) {
 		t.Skip("WSID check is not implemented in istructsmem yet")

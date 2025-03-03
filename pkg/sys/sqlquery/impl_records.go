@@ -108,7 +108,7 @@ func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, ap
 			return fmt.Errorf("record with ID '%d' has mismatching QName '%s'", r.Record.ID(), r.Record.QName())
 		}
 
-		data := coreutils.FieldsToMap(r.Record, appStructs.AppDef(), getFilter(f.filter))
+		data := coreutils.FieldsToMap(r.Record, appStructs.AppDef(), getFilter(f.filter), coreutils.WithAllFields())
 		bb, e := json.Marshal(data)
 		if e != nil {
 			// notest

@@ -683,11 +683,12 @@ func testUnloggedObject(t *testing.T, cmd istructs.IObject) {
 	test := test()
 
 	hasPassword := false
-	for fieldName := range cmd.FieldNames {
-		if hasPassword = fieldName == test.passwordIdent; hasPassword {
-			break
+	cmd.Fields(func(iField appdef.IField) bool {
+		if hasPassword = iField.Name() == test.passwordIdent; hasPassword {
+			return false
 		}
-	}
+		return true
+	})
 	require.True(hasPassword)
 
 	require.Equal(maskString, cmd.AsString(test.passwordIdent))
@@ -1855,25 +1856,33 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 				switch cud.AsRecordID(appdef.SystemField_ID) {
 				case emptiedPhotoID:
 					fields := make(map[appdef.FieldName]interface{})
-					for fld, val := range cud.ModifiedFields {
-						fields[fld] = val
+					for fld, val := range cud.SpecifiedValues {
+						fields[fld.Name()] = val
 					}
 					require.Equal(
 						map[appdef.FieldName]interface{}{
-							test.buyerIdent: test.buyerValue,
-							test.ageIdent:   test.ageValue,
-							test.photoIdent: []byte{}, // emptied bytes-field
+							test.buyerIdent:             test.buyerValue,
+							test.ageIdent:               test.ageValue,
+							test.photoIdent:             []byte{}, // emptied bytes-field
+							appdef.SystemField_ID:       emptiedPhotoID,
+							appdef.SystemField_IsActive: true,
+							appdef.SystemField_QName:    test.tablePhotos,
 						},
 						fields)
 				case emptiedRemarkID:
 					fields := make(map[appdef.FieldName]interface{})
-					for fld, val := range cud.ModifiedFields {
-						fields[fld] = val
+					for fld, val := range cud.SpecifiedValues {
+						fields[fld.Name()] = val
 					}
 					require.Equal(
 						map[appdef.FieldName]interface{}{
-							test.photoIdent:  test.tempPhotoID,
-							test.remarkIdent: "", // emptied string-field
+							test.photoIdent:              int64(test.tempPhotoID),
+							test.remarkIdent:             "", // emptied string-field
+							appdef.SystemField_ID:        emptiedRemarkID,
+							appdef.SystemField_IsActive:  true,
+							appdef.SystemField_QName:     test.tablePhotoRems,
+							appdef.SystemField_Container: test.remarkIdent,
+							appdef.SystemField_ParentID:  emptiedPhotoID,
 						},
 						fields)
 				}

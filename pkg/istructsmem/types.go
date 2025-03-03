@@ -709,31 +709,31 @@ func (row *rowType) Container() string {
 	return row.container
 }
 
-// istructs.IRowReader.FieldNames
-func (row *rowType) FieldNames(cb func(appdef.FieldName) bool) {
-	// system fields
-	if row.fieldDef(appdef.SystemField_QName) != nil {
-		if !cb(appdef.SystemField_QName) {
+// istructs.IRowReader.Fields
+func (row *rowType) Fields(cb func(appdef.IField) bool) {
+	qNameField := row.fieldDef(appdef.SystemField_QName)
+	if qNameField != nil {
+		if !cb(qNameField) {
 			return
 		}
 	}
 	if row.id != istructs.NullRecordID {
-		if !cb(appdef.SystemField_ID) {
+		if !cb(row.fieldDef(appdef.SystemField_ID)) {
 			return
 		}
 	}
 	if row.parentID != istructs.NullRecordID {
-		if !cb(appdef.SystemField_ParentID) {
+		if !cb(row.fieldDef(appdef.SystemField_ParentID)) {
 			return
 		}
 	}
 	if row.container != "" {
-		if !cb(appdef.SystemField_Container) {
+		if !cb(row.fieldDef(appdef.SystemField_Container)) {
 			return
 		}
 	}
 	if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_IsActive); exists {
-		if !cb(appdef.SystemField_IsActive) {
+		if !cb(row.fieldDef(appdef.SystemField_IsActive)) {
 			return
 		}
 	}
@@ -741,7 +741,7 @@ func (row *rowType) FieldNames(cb func(appdef.FieldName) bool) {
 	// user fields
 	row.dyB.IterateFields(nil,
 		func(name string, _ interface{}) bool {
-			return cb(name)
+			return cb(row.fieldDef(name))
 		})
 }
 
@@ -808,14 +808,17 @@ func (row *rowType) PutFloat64(name appdef.FieldName, value float64) {
 // istructs.IRowWriter.PutFromJSON
 func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 	if v, ok := j[appdef.SystemField_QName]; ok {
-		if value, ok := v.(string); ok {
-			qName, err := appdef.ParseQName(value)
+		switch qNameFieldValue := v.(type) {
+		case string:
+			qName, err := appdef.ParseQName(qNameFieldValue)
 			if err != nil {
 				row.collectError(enrichError(err, "can not parse value for field «%s»", appdef.SystemField_QName))
 				return
 			}
 			row.setQName(qName)
-		} else {
+		case appdef.QName:
+			row.setQName(qNameFieldValue)
+		default:
 			row.collectError(ErrWrongFieldType("can not put «%T» to field «%s»", v, appdef.SystemField_QName))
 			return
 		}
@@ -847,6 +850,11 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 		case []byte:
 			// happens e.g. on IRowWriter.PutJSON() after read from the storage
 			row.PutBytes(n, fv)
+		case appdef.QName:
+			// happens if `j` is got from coreutils.FieldsToMap()
+			if n != appdef.SystemField_QName {
+				row.PutQName(n, fv)
+			}
 		default:
 			row.collectError(ErrWrongType(`%#T for field "%s" with value %v`, v, n, v))
 		}

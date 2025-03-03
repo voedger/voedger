@@ -338,6 +338,7 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 			"IntFld":    float64(intFld),
 			"Name":      newName,
 			"Val":       float64(123),
+			"offs":      float64(0),
 			"sys.QName": "app1pkg.CategoryIdx",
 		}, m)
 	})

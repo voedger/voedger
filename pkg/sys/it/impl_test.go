@@ -401,13 +401,11 @@ func TestNullability_SetEmptyString(t *testing.T) {
 	checked := false
 	as.Events().ReadWLog(context.Background(), ws.WSID, offsCreate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		for cud := range event.CUDs {
-			cud.ModifiedFields(func(fn appdef.FieldName, i interface{}) bool {
-				if checked {
-					t.Fail()
+			cud.SpecifiedValues(func(field appdef.IField, val interface{}) bool {
+				if field.Name() == "name" {
+					require.EqualValues("test", val)
+					checked = true
 				}
-				checked = true
-				require.Equal("name", fn)
-				require.EqualValues("test", i)
 				return true
 			})
 		}
@@ -423,12 +421,13 @@ func TestNullability_SetEmptyString(t *testing.T) {
 	// #2785 - istructs.ICUDRow.ModifiedFields also iterate emptied string- and bytes- fields
 	as.Events().ReadWLog(context.Background(), ws.WSID, offsUpdate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		for cud := range event.CUDs {
-			for fn, fv := range cud.ModifiedFields {
-				switch fn {
+			for iField, fv := range cud.SpecifiedValues {
+				switch iField.Name() {
 				case "name":
 					require.Equal("", fv)
+				case appdef.SystemField_ID, appdef.SystemField_QName, appdef.SystemField_IsActive:
 				default:
-					require.Fail("unexpected modified field", "%v: %v", fn, fv)
+					require.Fail("unexpected modified field", "%v: %v", iField, fv)
 				}
 			}
 		}
@@ -455,14 +454,74 @@ func TestNullability_SetEmptyObject(t *testing.T) {
 	expectedNestedDocID := resp.NewIDs["1"]
 	as.Events().ReadWLog(context.Background(), ws.WSID, offsCreate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		for cud := range event.CUDs {
-			cud.ModifiedFields(func(fn appdef.FieldName, i interface{}) bool {
-				fields[fn] = i
+			cud.SpecifiedValues(func(f appdef.IField, val interface{}) bool {
+				fields[f.Name()] = val
 				return true
 			})
 		}
 		return nil
 	})
-	require.Len(fields, 2)
+	require.Len(fields, 7) // id_air_table_plan, form, sys.ID, sys,IsActive, sys.QName, sys.ParentID, sys.Container
 	require.EqualValues(expectedNestedDocID, fields["id_air_table_plan"])
 	require.EqualValues(15, fields["form"])
+}
+
+func TestSysFieldsModification(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	body := `
+		{
+			"cuds": [
+				{
+					"fields": {
+						"sys.ID": 2,
+						"sys.QName": "app1pkg.department",
+						"pc_fix_button": 1,
+						"rm_fix_button": 1
+					}
+				},
+				{
+					"fields": {
+						"sys.ID": 3,
+						"sys.QName": "app1pkg.department_options",
+						"id_department": 2,
+						"sys.ParentID": 2,
+						"sys.Container": "department_options"
+					}
+				}
+			]
+		}`
+	resp := vit.PostWS(ws, "c.sys.CUD", body)
+	idDep := resp.NewIDs["2"]
+	idDepOpts := resp.NewIDs["3"]
+
+	t.Run("deny", func(t *testing.T) {
+		t.Run("sys.ID", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"sys.ID": 90000}}]}`, idDep)
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("unable to update system field", "sys.ID")).Println()
+		})
+
+		t.Run("sys.ParentID", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d, "fields": {"sys.ParentID": 90000}}]}`, idDepOpts)
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("unable to update system field", "sys.ParentID")).Println()
+		})
+
+		t.Run("sys.Container", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d, "fields": {"sys.Container": "department_options_2"}}]}`, idDepOpts)
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("unable to update system field", "sys.Container")).Println()
+		})
+
+		t.Run("sys.QName", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d, "fields": {"sys.QName": "app1pkg.department"}}]}`, idDepOpts)
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("unable to update system field", "sys.QName")).Println()
+		})
+	})
+
+	t.Run("allow", func(t *testing.T) {
+		t.Run("sys.IsActive", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d, "fields": {"sys.IsActive": false}}]}`, idDepOpts)
+			vit.PostWS(ws, "c.sys.CUD", body)
+		})
+	})
 }

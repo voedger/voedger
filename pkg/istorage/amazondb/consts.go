@@ -13,3 +13,11 @@ const (
 	valueAttributeName        = "value"
 	expireAtAttributeName     = "expire_at"
 )
+
+var DefaultDynamoDBParams = DynamoDBParams{
+	EndpointURL:     "http://127.0.0.1:8000",
+	Region:          "eu-west-1",
+	AccessKeyID:     "local",
+	SecretAccessKey: "local",
+	SessionToken:    "",
+}

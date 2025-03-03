@@ -338,7 +338,7 @@ func (v *mockValue) AsValue(name string) istructs.IStateValue {
 func (v *mockValue) RecordIDs(bool) func(func(string, istructs.RecordID) bool) {
 	return func(func(name string, value istructs.RecordID) bool) {}
 }
-func (v *mockValue) FieldNames(cb func(fieldName string) bool) { v.TestObject.FieldNames(cb) }
+func (v *mockValue) Fields(cb func(iField appdef.IField) bool) { v.TestObject.Fields(cb) }
 
 type intent struct {
 	key   istructs.IStateKeyBuilder

@@ -504,13 +504,13 @@ func Test_fieldValue(t *testing.T) {
 	})
 }
 
-func TestModifiedFields(t *testing.T) {
+func TestSpecifiedValues(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
 	t.Run("should has no modifications if new record", func(t *testing.T) {
 		rec := newRecord(test.AppCfg)
-		for range rec.ModifiedFields {
+		for range rec.SpecifiedValues {
 			t.Fail()
 		}
 	})
@@ -518,8 +518,8 @@ func TestModifiedFields(t *testing.T) {
 	testEnum := func(rec istructs.ICUDRow, want map[appdef.FieldName]interface{}) {
 		t.Run("enum", func(t *testing.T) {
 			got := make(map[appdef.FieldName]interface{})
-			for n, v := range rec.ModifiedFields {
-				got[n] = v
+			for n, v := range rec.SpecifiedValues {
+				got[n.Name()] = v
 			}
 			require.Equal(want, got)
 		})
@@ -527,8 +527,8 @@ func TestModifiedFields(t *testing.T) {
 		t.Run("breakable", func(t *testing.T) {
 			for stop := range want {
 				cnt := 0
-				for n := range rec.ModifiedFields {
-					if n == stop {
+				for n := range rec.SpecifiedValues {
+					if n.Name() == stop {
 						break
 					}
 					cnt++
@@ -549,10 +549,12 @@ func TestModifiedFields(t *testing.T) {
 
 		testEnum(rec,
 			map[appdef.FieldName]interface{}{
-				"int32":  int32(1),
-				"string": "test",
-				"int64":  int64(0),
-				"bool":   false,
+				"int32":                     int32(1),
+				"string":                    "test",
+				"int64":                     int64(0),
+				"bool":                      false,
+				appdef.SystemField_QName:    test.testCDoc,
+				appdef.SystemField_IsActive: true,
 			})
 	})
 
@@ -565,6 +567,7 @@ func TestModifiedFields(t *testing.T) {
 		testEnum(rec,
 			map[appdef.FieldName]interface{}{
 				appdef.SystemField_IsActive: false,
+				appdef.SystemField_QName:    test.testCDoc,
 			})
 	})
 
@@ -582,6 +585,8 @@ func TestModifiedFields(t *testing.T) {
 				"bytes":  []byte{},
 				"string": "",
 				"raw":    []byte{},
+				appdef.SystemField_QName:    test.testCDoc,
+				appdef.SystemField_IsActive: true,
 			})
 	})
 }

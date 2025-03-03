@@ -6,6 +6,8 @@
 package istructsmem
 
 import (
+	"fmt"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -106,20 +108,76 @@ func (rec *recordType) IsNew() bool {
 	return rec.isNew
 }
 
-// istructs.ICUDRow.ModifiedFields
-func (row *rowType) ModifiedFields(cb func(appdef.FieldName, interface{}) bool) {
-	if row.isActiveModified {
-		if !cb(appdef.SystemField_IsActive, row.isActive) {
+func (row *rowType) SpecifiedValues(cb func(appdef.IField, any) bool) {
+	if row.QName() != appdef.NullQName {
+		if !cb(row.fieldDef(appdef.SystemField_QName), row.QName()) {
 			return
 		}
 	}
 
-	for _, fld := range row.fields.Fields() {
-		n := fld.Name()
-		if row.dyB.HasValue(n) || row.nils[n] != nil {
-			if !cb(n, row.fieldValue(fld)) {
-				return
-			}
+	if row.id != istructs.NullRecordID {
+		if !cb(row.fieldDef(appdef.SystemField_ID), row.id) {
+			return
 		}
+	}
+
+	if row.parentID != istructs.NullRecordID {
+		if !cb(row.fieldDef(appdef.SystemField_ParentID), row.parentID) {
+			return
+		}
+	}
+
+	if len(row.container) > 0 {
+		if !cb(row.fieldDef(appdef.SystemField_Container), row.container) {
+			return
+		}
+	}
+
+	if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_IsActive); exists {
+		if !cb(row.fieldDef(appdef.SystemField_IsActive), row.isActive) {
+			return
+		}
+	}
+
+	// user fields
+	goOn := true
+	row.dyB.IterateFields(nil, func(name string, value interface{}) bool {
+		goOn = cb(row.fieldDef(name), value)
+		return goOn
+	})
+
+	if !goOn {
+		return
+	}
+
+	for _, nilledIField := range row.nils {
+		if !cb(nilledIField, nilToZeroValue(nilledIField.DataKind())) {
+			return
+		}
+	}
+}
+
+func nilToZeroValue(kind appdef.DataKind) any {
+	switch kind {
+	case appdef.DataKind_int32:
+		return int32(0)
+	case appdef.DataKind_int64:
+		return int64(0)
+	case appdef.DataKind_float32:
+		return float32(0)
+	case appdef.DataKind_float64:
+		return float64(0)
+	case appdef.DataKind_string:
+		return ""
+	case appdef.DataKind_RecordID:
+		return istructs.RecordID(0)
+	case appdef.DataKind_QName:
+		return appdef.NullQName
+	case appdef.DataKind_bool:
+		return false
+	case appdef.DataKind_bytes:
+		return []byte{}
+	default:
+		panic(fmt.Sprintf("unsupported nilled field kind: %s", kind))
 	}
 }

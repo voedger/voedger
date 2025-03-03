@@ -37,7 +37,7 @@ import (
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/verifier"
-	"github.com/voedger/voedger/pkg/vvm"
+	vvmpkg "github.com/voedger/voedger/pkg/vvm"
 )
 
 func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
@@ -74,7 +74,7 @@ func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 }
 
 func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *VIT {
-	cfg := vvm.NewVVMDefaultConfig()
+	cfg := vvmpkg.NewVVMDefaultConfig()
 
 	// only dynamic ports are used in tests
 	cfg.VVMPort = 0
@@ -96,8 +96,8 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 
 	if useCas {
 		cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
-			logger.Info("using istoragecas ", fmt.Sprint(vvm.DefaultCasParams))
-			return cas.Provide(vvm.DefaultCasParams)
+			logger.Info("using istoragecas ", fmt.Sprint(cas.DefaultCasParams))
+			return cas.Provide(cas.DefaultCasParams)
 		}
 	}
 
@@ -116,7 +116,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	cfg.RouterWriteTimeout = int(debugTimeout)
 	cfg.SendTimeout = bus.SendTimeout(debugTimeout)
 
-	vvm, err := vvm.ProvideVVM(&cfg, 0)
+	vvm, err := vvmpkg.Provide(&cfg)
 	require.NoError(t, err)
 
 	// register workspace templates
@@ -146,7 +146,9 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	vit.cleanups = append(vit.cleanups, func(vit *VIT) { httpClientCleanup() })
 
 	// launch the server
-	require.NoError(t, vit.Launch())
+	// leadership duration - ten years to avoid leadership expiration when time bumps in tests (including 1 day add on each test)
+	vit.vvmProblemCtx = vit.Launch(10*365*24*60*60, vvmpkg.DefaultLeadershipAcquisitionDuration)
+	vit.checkVVMProblemCtx()
 
 	if vvmLaunchOnly {
 		return vit
@@ -222,6 +224,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	if vitPreConfig.postInitFunc != nil {
 		vitPreConfig.postInitFunc(vit)
 	}
+	vit.checkVVMProblemCtx()
 	return vit
 }
 
@@ -303,11 +306,12 @@ func (vit *VIT) TearDown() {
 		vit.T.Logf("!!! goroutines leak: was %d on VIT setup, now %d after teardown", vit.initialGoroutinesNum, grNum)
 	}
 	vit.emailCaptor.checkEmpty(vit.T)
+	vit.checkVVMProblemCtx()
 	if vit.isOnSharedConfig {
 		return
 	}
 	vit.emailCaptor.shutDown()
-	vit.Shutdown()
+	require.NoError(vit.T, vit.Shutdown())
 }
 
 func (vit *VIT) MetricsServicePort() int {
@@ -551,10 +555,6 @@ func (vit *VIT) CaptureEmail() (msg smtptest.Message) {
 	return
 }
 
-func (vit *VIT) Restart() {
-	vit.VoedgerVM.Shutdown()
-}
-
 // sets delay on IAppStorage.Get() in mem implementation
 // will be automatically reset to 0 on TearDown
 // need to e.g. investigate slow workspace create, see https://github.com/voedger/voedger/issues/1663
@@ -627,4 +627,13 @@ func (vit *VIT) EnrichPrincipalToken(prn *Principal, roles []payloads.RoleType) 
 	enrichedToken, err = vit.ITokens.IssueToken(prn.AppQName, authnz.DefaultPrincipalTokenExpiration, &pp)
 	require.NoError(vit.T, err)
 	return enrichedToken
+}
+
+func (vit *VIT) checkVVMProblemCtx() {
+	select {
+	case <-vit.vvmProblemCtx.Done():
+		require.NoError(vit.T, vit.Shutdown())
+		vit.T.Fatal("vvmProblemCtx is closed but no error on vvm.Shutdown()")
+	default:
+	}
 }

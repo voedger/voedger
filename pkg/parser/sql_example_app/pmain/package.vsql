@@ -52,7 +52,7 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
     RATE AppDefaultRate 1000 PER HOUR;
 
     -- Declare tag to assign it later to definition(s)
-    TAG BackofficeTag;
+    TAG BackofficeTag FEATURE 'Backoffice Management';
 
     /*
         Abstract tables can only be used for INHERITance by other tables.
@@ -138,6 +138,7 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
     ROLE LocationManager;
     ROLE LocationUser;
     ROLE LocationGuest;
+    PUBLISHED ROLE ApiRole;
 
     TYPE TypeWithKind (
         Kind int

@@ -139,10 +139,11 @@ func Test_KeyType(t *testing.T) {
 		t.Run("should be ok to enum IKey.FieldNames", func(t *testing.T) {
 			view := appdef.View(appCfg.AppDef.Type, viewName)
 			cnt := 0
-			for n := range k.FieldNames {
-				require.NotNil(view.Key().Field(n), "unknown field name passed in callback from IKey.FieldNames(): %q", n)
+			k.Fields(func(iField appdef.IField) bool {
+				require.NotNil(view.Key().Field(iField.Name()), "unknown field name passed in callback from IKey.FieldNames(): %q", iField.Name())
 				cnt++
-			}
+				return true
+			})
 			require.Positive(cnt)
 			require.Equal(view.Key().FieldCount(), cnt)
 		})

@@ -945,6 +945,7 @@ func (o *objectType) AsRecord() istructs.IRecord {
 	return o
 }
 
+
 // Implements interfaces:
 //
 //	— istructs.IEventError

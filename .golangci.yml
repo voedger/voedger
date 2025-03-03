@@ -23,6 +23,10 @@ linters:
     - gocritic
     - errorlint
     - goconst
+    - unused
+    - nosprintfhostport
+#    - gosimple
+#    - ineffassign
   fast: true
 linters-settings:
   gosec:

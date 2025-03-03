@@ -6,6 +6,11 @@ package orm
 
 import "github.com/voedger/voedger/pkg/exttinygo"
 
+const (
+    FieldNameSysID          = "sys.ID"
+    FieldNameSysQName       = "sys.QName"
+)
+
 type FQName = string
 type ID int64
 type Bytes []byte

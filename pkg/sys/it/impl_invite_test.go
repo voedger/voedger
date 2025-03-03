@@ -169,7 +169,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	_ = vit.CaptureEmail()
 	WaitForInviteState(vit, ws, inviteID3, invite.State_ToBeInvited, invite.State_Invited)
 
-	//Join workspaces
+	// [~server.invites/Join.InitiateJoinWorkspace~itest]
 	InitiateJoinWorkspace(vit, ws, inviteID, login1Prn, verificationCodeEmail)
 	InitiateJoinWorkspace(vit, ws, inviteID2, login2Prn, verificationCodeEmail2)
 

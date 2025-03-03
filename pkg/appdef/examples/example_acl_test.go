@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
-func ExampleACL() {
+func ExampleIWithACL() {
 
 	var app appdef.IAppDef
 

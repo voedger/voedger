@@ -13,16 +13,20 @@ import (
 //   - appdef.ITag
 type Tag struct {
 	Typ
+	feature string
 }
 
 // Creates and returns new tag.
-func NewTag(ws appdef.IWorkspace, name appdef.QName) *Tag {
-	t := &Tag{Typ: MakeType(ws.App(), ws, name, appdef.TypeKind_Tag)}
+func NewTag(ws appdef.IWorkspace, name appdef.QName, feature string) *Tag {
+	t := &Tag{
+		Typ:     MakeType(ws.App(), ws, name, appdef.TypeKind_Tag),
+		feature: feature,
+	}
 	Propagate(t)
 	return t
 }
 
-func (Tag) IsTag() {}
+func (t Tag) Feature() string { return t.feature }
 
 // # Supports:
 //   - IWithTags
