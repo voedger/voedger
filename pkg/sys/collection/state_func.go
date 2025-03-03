@@ -44,7 +44,7 @@ func stateFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callback is
 		}
 		recordData := coreutils.FieldsToMap(record, appDef, coreutils.Filter(func(name string, kind appdef.DataKind) bool {
 			return name != appdef.SystemField_QName && name != appdef.SystemField_Container
-		}))
+		}), coreutils.WithAllFields())
 		data[record.QName().String()][record.ID()] = recordData
 		return err
 	}); err != nil {
