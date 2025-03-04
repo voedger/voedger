@@ -47,7 +47,9 @@ func stateFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callback is
 			return name != appdef.SystemField_QName && name != appdef.SystemField_Container
 		}), coreutils.WithAllFields())
 		data[record.QName().String()][record.ID()] = recordData
-		maxRelevantOffset = value.AsInt64(state.ColOffset)
+		if value.AsInt64(state.ColOffset) > maxRelevantOffset {
+			maxRelevantOffset = value.AsInt64(state.ColOffset)
+		}
 		return err
 	}); err != nil {
 		return

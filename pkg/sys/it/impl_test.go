@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -533,21 +532,18 @@ func TestStateMaxRelevantOffset(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	viewN10N := vit.SubscribeForN10n(ws, collection.QNameCollectionView)
+	collectionViewOffsetsChan := vit.SubscribeForN10n(ws, collection.QNameCollectionView)
 
 	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
 	expecteMaxRelevantOffset := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
-	_ = expecteMaxRelevantOffset
-	for offset := range viewN10N {
+	for offset := range collectionViewOffsetsChan {
 		if expecteMaxRelevantOffset == offset {
 			break
 		}
 	}
 
-	time.Sleep(2 * time.Second)
-
 	body = `{"args":{"After":0},"elements":[{"fields":["State", "MaxRelevantOffset"]}]}`
 	resp := vit.PostWS(ws, "q.sys.State", body)
-	actualOffset := istructs.Offset(resp.SectionRow()[1].(float64))
-	require.EqualValues(t, expecteMaxRelevantOffset, actualOffset)
+	actualMaxRelevantOffsetOffset := istructs.Offset(resp.SectionRow()[1].(float64))
+	require.Equal(t, expecteMaxRelevantOffset, actualMaxRelevantOffsetOffset)
 }
