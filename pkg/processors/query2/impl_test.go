@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2023-present unTill Pro, Ltd.
+ *
+ * @author Daniil Solovyov
+ */
+
 package query2
 
 import (
