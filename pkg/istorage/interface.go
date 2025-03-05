@@ -124,6 +124,11 @@ type IAppStorage interface {
 	// The TTL information is not returned in the callback.
 	// Only existing and non-expired records are returned through the callback.
 	TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb ReadCallback) (err error)
+
+	// TTLGetTTL retrieves the TTL of a record that might have been written with a TTL.
+	// ok == false means that record does not exist or has expired
+	// ttlInSeconds == 0 means that record exists but has no TTL set
+	QueryTTL(pKey []byte, cCols []byte) (ttlInSeconds int, ok bool, err error)
 }
 
 // ccols and viewRecord are temporary internal values, must NOT be changed
