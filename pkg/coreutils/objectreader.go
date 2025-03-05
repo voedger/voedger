@@ -58,8 +58,8 @@ func Filter(filterFunc func(name string, kind appdef.DataKind) bool) MapperOpt {
 	}
 }
 
-// will run through fields independing on wether the value is specified or not
-// Unspecified -> callback will be called with the zero value
+// will run on all fields independing on wether is has value or not
+// zero values will be emitted for fields that has no value
 func WithAllFields() MapperOpt {
 	return func(opt *mapperOpts) {
 		opt.allFields = true

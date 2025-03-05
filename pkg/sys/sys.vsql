@@ -135,7 +135,8 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE StateResult (
-		State varchar(32768) NOT NULL
+		State varchar(32768) NOT NULL,
+		MaxRelevantOffset int64 -- is max view.sys.CollectionView.offs among taken in account records of the collection
 	);
 
 	TYPE InitiateInvitationByEMailParams (
