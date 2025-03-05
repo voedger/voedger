@@ -43,6 +43,8 @@ type cachedAppStorage struct {
 	mCompareAndDeleteSeconds    *imetrics.MetricValue
 	mTTLGetSeconds              *imetrics.MetricValue
 	mTTLReadSeconds             *imetrics.MetricValue
+	mQueryTTLSeconds            *imetrics.MetricValue
+	mQueryTTLTotal              *imetrics.MetricValue
 }
 
 type implCachingAppStorageProvider struct {
@@ -112,6 +114,8 @@ func newCachingAppStorage(
 		mCompareAndDeleteSeconds:    metrics.AppMetricAddr(compareAndDeleteSeconds, vvm, appQName),
 		mTTLGetSeconds:              metrics.AppMetricAddr(ttlGetSeconds, vvm, appQName),
 		mTTLReadSeconds:             metrics.AppMetricAddr(ttlReadSeconds, vvm, appQName),
+		mQueryTTLSeconds:            metrics.AppMetricAddr(queryTTLSeconds, vvm, appQName),
+		mQueryTTLTotal:              metrics.AppMetricAddr(queryTTLTotal, vvm, appQName),
 		vvm:                         vvm,
 		appQName:                    appQName,
 		iTime:                       iTime,
@@ -225,6 +229,17 @@ func (s *cachedAppStorage) TTLRead(ctx context.Context, pKey []byte, startCCols,
 	}()
 
 	return s.storage.TTLRead(ctx, pKey, startCCols, finishCCols, cb)
+}
+
+//nolint:revive
+func (s *cachedAppStorage) QueryTTL(pKey []byte, cCols []byte) (ttlInSeconds int, ok bool, err error) {
+	start := time.Now()
+	defer func() {
+		s.mQueryTTLSeconds.Increase(time.Since(start).Seconds())
+	}()
+	s.mQueryTTLTotal.Increase(1.0)
+
+	return s.storage.QueryTTL(pKey, cCols)
 }
 
 func (s *cachedAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {

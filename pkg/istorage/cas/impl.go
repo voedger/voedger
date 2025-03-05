@@ -189,6 +189,26 @@ func (s *appStorageType) TTLRead(ctx context.Context, pKey []byte, startCCols, f
 	return s.Read(ctx, pKey, startCCols, finishCCols, cb)
 }
 
+func (s *appStorageType) QueryTTL(pKey []byte, cCols []byte) (ttlInSeconds int, ok bool, err error) {
+	q := fmt.Sprintf("SELECT TTL(value) FROM %s.values WHERE p_key = ? AND c_col = ?", s.keyspace)
+
+	// Initialize ttlInSeconds to handle the case where TTL is not set (will return 0)
+	ttlInSeconds = 0
+
+	err = s.session.Query(q, pKey, safeCcols(cCols)).
+		Consistency(gocql.Quorum).
+		Scan(&ttlInSeconds)
+
+	if errors.Is(err, gocql.ErrNotFound) {
+		return 0, false, nil
+	}
+	if err != nil {
+		return 0, false, err
+	}
+
+	return ttlInSeconds, true, nil
+}
+
 func getSession(cluster *gocql.ClusterConfig) (*gocql.Session, error) {
 	session, err := cluster.CreateSession()
 	if err != nil {

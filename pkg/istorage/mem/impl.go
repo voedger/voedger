@@ -163,6 +163,48 @@ func (s *appStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finis
 	return s.Read(ctx, pKey, startCCols, finishCCols, cb)
 }
 
+func (s *appStorage) QueryTTL(pKey []byte, cCols []byte) (ttlInSeconds int, ok bool, err error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	// Get the partition
+	p, exists := s.storage[string(pKey)]
+	if !exists {
+		return 0, false, nil
+	}
+
+	// Get the record
+	record, exists := p[string(cCols)]
+	if !exists {
+		return 0, false, nil
+	}
+
+	// Get current time
+	now := s.iTime.Now()
+
+	// Check if record has expired
+	if record.IsExpired(now) {
+		return 0, false, nil
+	}
+
+	// If ExpireAt is 0, the record has no TTL
+	if record.ExpireAt == 0 {
+		return 0, true, nil
+	}
+
+	// Calculate remaining TTL in seconds
+	expireTime := time.UnixMilli(record.ExpireAt)
+	remainingTime := expireTime.Sub(now)
+	ttlInSeconds = int(remainingTime.Seconds())
+
+	// If TTL has gone negative, treat as expired
+	if ttlInSeconds <= 0 {
+		return 0, false, nil
+	}
+
+	return ttlInSeconds, true, nil
+}
+
 func (s *appStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()

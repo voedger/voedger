@@ -23,4 +23,6 @@ const (
 	compareAndDeleteSeconds  = "voedger_istoragecache_compareanddelete_seconds"
 	ttlReadSeconds           = "voedger_istoragecache_ttlread_seconds"
 	ttlGetSeconds            = "voedger_istoragecache_ttlget_seconds"
+	queryTTLSeconds          = "voedger_istoragecache_queryttl_seconds"
+	queryTTLTotal            = "voedger_istoragecache_queryttl_total"
 )

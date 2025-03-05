@@ -270,6 +270,50 @@ func (s *appStorageType) TTLRead(ctx context.Context, pKey []byte, startCCols, f
 	return s.read(ctx, pKey, startCCols, finishCCols, cb, true)
 }
 
+//nolint:revive
+func (s *appStorageType) QueryTTL(pKey []byte, cCols []byte) (ttlInSeconds int, ok bool, err error) {
+	err = s.db.View(func(tx *bolt.Tx) error {
+		dataBucket := tx.Bucket([]byte(dataBucketName))
+		if dataBucket == nil {
+			return ErrDataBucketNotFound
+		}
+
+		bucket := dataBucket.Bucket(pKey)
+		if bucket == nil {
+			return nil
+		}
+
+		v := bucket.Get(safeKey(cCols))
+		if v == nil {
+			return nil
+		}
+
+		d := coreutils.ReadWithExpiration(v)
+		if d.IsExpired(s.iTime.Now()) {
+			return nil
+		}
+
+		// If no expiration is set
+		if d.ExpireAt == 0 {
+			ok = true
+			ttlInSeconds = 0
+			return nil
+		}
+
+		// Calculate remaining TTL
+		remaining := time.UnixMilli(d.ExpireAt).Sub(s.iTime.Now())
+		if remaining <= 0 {
+			return nil
+		}
+
+		ok = true
+		ttlInSeconds = int(remaining.Seconds())
+		return nil
+	})
+
+	return
+}
+
 // istorage.IAppStorage.Put(pKey []byte, cCols []byte, value []byte) (err error)
 func (s *appStorageType) Put(pKey []byte, cCols []byte, value []byte) (err error) {
 	return s.db.Update(func(tx *bolt.Tx) error {

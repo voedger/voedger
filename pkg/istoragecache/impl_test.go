@@ -420,6 +420,7 @@ type testStorage struct {
 	compareAndDelete  func(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error)
 	ttlGet            func(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error)
 	ttlRead           func(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error)
+	queryTTL          func(pKey []byte, cCols []byte) (ttlInSeconds int, ok bool, err error)
 	put               func(pKey []byte, cCols []byte, value []byte) (err error)
 	putBatch          func(items []istorage.BatchItem) (err error)
 	get               func(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error)
@@ -444,6 +445,10 @@ func (s *testStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, 
 
 func (s *testStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
 	return s.ttlRead(ctx, pKey, startCCols, finishCCols, cb)
+}
+
+func (s *testStorage) QueryTTL(pKey []byte, cCols []byte) (ttlInSeconds int, ok bool, err error) {
+	return s.queryTTL(pKey, cCols)
 }
 
 func (s *testStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
