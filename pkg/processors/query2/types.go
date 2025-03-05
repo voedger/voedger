@@ -350,6 +350,9 @@ func newFilter(qw *queryWork, fields []appdef.IField) (o pipeline.IAsyncOperator
 			// Do nothing
 		}
 	}
+	if len(f.Int32) == 0 && len(f.String) == 0 {
+		return nil, nil
+	}
 	return f, nil
 }
 
@@ -436,4 +439,67 @@ func (w queryResultWrapper) AsQName(name appdef.FieldName) appdef.QName {
 		return w.qName
 	}
 	return w.IObject.AsQName(name)
+}
+
+type include struct {
+	pipeline.AsyncNOOP
+	sss     [][]string
+	wsid    istructs.WSID
+	records istructs.IRecords
+	ad      appdef.IAppDef
+}
+
+func newInclude(qw *queryWork) (o pipeline.IAsyncOperator) {
+	i := &include{
+		sss:     make([][]string, 0),
+		records: qw.appStructs.Records(),
+		wsid:    qw.msg.WSID(),
+		ad:      qw.appStructs.AppDef(),
+	}
+	for _, s := range qw.queryParams.Constraints.Include {
+		i.sss = append(i.sss, strings.Split(s, "."))
+	}
+	return i
+}
+
+func (i include) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
+	for _, ss := range i.sss {
+		err = i.fill(work.(objectBackedByMap).data, ss)
+		if err != nil {
+			return
+		}
+	}
+	return work, nil
+}
+func (i include) recordToMap(id istructs.RecordID) (obj map[string]interface{}, err error) {
+	record, err := i.records.Get(i.wsid, true, id)
+	if err != nil {
+		return
+	}
+	return coreutils.FieldsToMap(record, i.ad), nil
+}
+func (i include) fill(parent map[string]interface{}, ss []string) (err error) {
+	if len(ss) == 0 {
+		return nil
+	}
+	switch v := parent[ss[0]].(type) {
+	case istructs.RecordID:
+		child, e := i.recordToMap(v)
+		if e != nil {
+			return e
+		}
+		parent[ss[0]] = child
+		e = i.fill(child, ss[1:])
+		if e != nil {
+			return e
+		}
+	case map[string]interface{}:
+		e := i.fill(v, ss[1:])
+		if e != nil {
+			return e
+		}
+	default:
+		return errUnsupportedType
+	}
+	return
 }

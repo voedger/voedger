@@ -632,6 +632,43 @@ ALTERABLE WORKSPACE test_wsWS (
 		CategoryID int64
 	);
 
+    TABLE Country INHERITS sys.CDoc (
+        Name text
+    );
+
+    TABLE Currency INHERITS sys.CDoc (
+        CharCode text,
+        Code int32
+    );
+
+    TABLE Wallet INHERITS sys.WDoc (
+        Balance int64,
+        Currency ref(Currency),
+        Capabilities ref(Capabilities)
+    );
+
+    TABLE Capabilities INHERITS sys.WDoc (
+        Withdraw bool,
+        Deposit bool
+    );
+
+    TABLE Client INHERITS sys.WDoc (
+        FirstName text,
+        LastName text,
+        DOB int64,
+        Wallet ref(Wallet),
+        Country ref(Country)
+    );
+
+    VIEW Clients (
+        Year int32,
+        Month int32,
+        Day int32,
+        Client ref(Client),
+        offs int64,
+        PRIMARY KEY ((Year, Month), Day, Client)
+    ) AS RESULT OF ApplyClient WITH Tags=(WorkspaceOwnerTableTag);
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY MockQry(MockQryParams) RETURNS MockQryResult WITH Tags=(WorkspaceOwnerFuncTag);
@@ -651,6 +688,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		PROJECTOR ProjDummy AFTER INSERT ON (sys.CRecord) INTENTS(sys.View(View)); -- does nothing, only to define view.app1pkg.View
 		SYNC PROJECTOR ApplyCategoryIdx AFTER INSERT ON (category) INTENTS(sys.View(CategoryIdx));
 		SYNC PROJECTOR ApplyDailyIdx AFTER INSERT ON (Daily) INTENTS(sys.View(DailyIdx));
+		PROJECTOR ApplyClient AFTER INSERT ON (Client) INTENTS(sys.View(Clients));
 
 		COMMAND CmdWithResponseIntent(WithResponseIntentParams) WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY QryWithResponseIntent(WithResponseIntentParams) RETURNS QryWithResponseIntentResult WITH Tags=(WorkspaceOwnerFuncTag);
@@ -683,6 +721,7 @@ ALTERABLE WORKSPACE test_wsWS (
 
 	GRANT SELECT ON VIEW CategoryIdx TO sys.WorkspaceOwner;
 	GRANT SELECT ON VIEW DailyIdx TO sys.WorkspaceOwner;
+	GRANT SELECT ON VIEW Clients TO sys.WorkspaceOwner;
 	GRANT SELECT(Year, Month, Day, offs) ON VIEW DailyIdx TO LimitedAccessRole;
 
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocActivateDenied TO sys.WorkspaceOwner;

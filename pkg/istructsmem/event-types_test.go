@@ -1876,7 +1876,7 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 					}
 					require.Equal(
 						map[appdef.FieldName]interface{}{
-							test.photoIdent:              int64(test.tempPhotoID),
+							test.photoIdent:              test.tempPhotoID,
 							test.remarkIdent:             "", // emptied string-field
 							appdef.SystemField_ID:        emptiedRemarkID,
 							appdef.SystemField_IsActive:  true,

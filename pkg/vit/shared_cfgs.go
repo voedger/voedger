@@ -7,6 +7,7 @@ package vit
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -36,10 +37,25 @@ const (
 )
 
 const (
-	Field_Year        = "Year"
-	Field_Month       = "Month"
-	Field_Day         = "Day"
-	Field_StringValue = "StringValue"
+	Field_Year         = "Year"
+	Field_Month        = "Month"
+	Field_Day          = "Day"
+	Field_StringValue  = "StringValue"
+	Field_Number       = "Number"
+	Field_CharCode     = "CharCode"
+	Field_Code         = "Code"
+	Field_FirstName    = "FirstName"
+	Field_LastName     = "LastName"
+	Field_DOB          = "DOB"
+	Field_Wallet       = "Wallet"
+	Field_Balance      = "Balance"
+	Field_Currency     = "Currency"
+	Field_Name         = "Name"
+	Field_Country      = "Country"
+	Field_Client       = "Client"
+	Field_Withdraw     = "Withdraw"
+	Field_Deposit      = "Deposit"
+	Field_Capabilities = "Capabilities"
 )
 
 var (
@@ -48,6 +64,7 @@ var (
 	QNameTestView                            = appdef.NewQName(app1PkgName, "View")
 	QNameApp1_ViewCategoryIdx                = appdef.NewQName(app1PkgName, "CategoryIdx")
 	QNameApp1_ViewDailyIdx                   = appdef.NewQName(app1PkgName, "DailyIdx")
+	QNameApp1_ViewClients                    = appdef.NewQName(app1PkgName, "Clients")
 	QNameApp1_TestEmailVerificationDoc       = appdef.NewQName(app1PkgName, "Doc")
 	QNameApp1_DocConstraints                 = appdef.NewQName(app1PkgName, "DocConstraints")
 	QNameApp1_DocConstraintsString           = appdef.NewQName(app1PkgName, "DocConstraintsString")
@@ -55,6 +72,11 @@ var (
 	QNameApp1_DocConstraintsOldAndNewUniques = appdef.NewQName(app1PkgName, "DocConstraintsOldAndNewUniques")
 	QNameApp1_CDocCategory                   = appdef.NewQName(app1PkgName, "category")
 	QNameApp1_CDocDaily                      = appdef.NewQName(app1PkgName, "Daily")
+	QNameApp1_CDocCurrency                   = appdef.NewQName(app1PkgName, "Currency")
+	QNameApp1_CDocCountry                    = appdef.NewQName(app1PkgName, "Country")
+	QNameApp1_WDocClient                     = appdef.NewQName(app1PkgName, "Client")
+	QNameApp1_WDocWallet                     = appdef.NewQName(app1PkgName, "Wallet")
+	QNameApp1_WDocCapabilities               = appdef.NewQName(app1PkgName, "Capabilities")
 	QNameCmdRated                            = appdef.NewQName(app1PkgName, "RatedCmd")
 	QNameQryRated                            = appdef.NewQName(app1PkgName, "RatedQry")
 	QNameODoc1                               = appdef.NewQName(app1PkgName, "odoc1")
@@ -76,6 +98,7 @@ var (
 				WithChild(QNameApp1_TestWSKind, "test_ws2", "test_template", "", "login", map[string]interface{}{"IntFld": 42},
 					WithSubject(TestEmail, istructs.SubjectKind_User, []appdef.QName{iauthnz.QNameRoleWorkspaceOwner}))),
 			WithChildWorkspace(QNameApp1_TestWSKind_another, "test_ws_another", "", "", "login", map[string]interface{}{}),
+			WithChildWorkspace(QNameApp1_TestWSKind, "test_ws_qp2", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
 		),
 		WithApp(istructs.AppQName_test1_app2, ProvideApp2, WithUserLogin("login", "1")),
 		WithVVMConfig(func(cfg *vvm.VVMConfig) {
@@ -235,6 +258,31 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 		istructs.Projector{
 			Name: appdef.NewQName(app1PkgName, "ProjDummy"),
 			Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) (err error) { return nil },
+		},
+		istructs.Projector{
+			Name: appdef.NewQName(app1PkgName, "ApplyClient"),
+			Func: func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+				for cud := range event.CUDs {
+					if cud.QName() != QNameApp1_WDocClient {
+						continue
+					}
+					dob := time.UnixMilli(cud.AsInt64(Field_DOB))
+					skbViewClients, err := s.KeyBuilder(sys.Storage_View, QNameApp1_ViewClients)
+					if err != nil {
+						return err
+					}
+					skbViewClients.PutInt32(Field_Year, int32(dob.Year()))   // nolint G115
+					skbViewClients.PutInt32(Field_Month, int32(dob.Month())) // nolint G115
+					skbViewClients.PutInt32(Field_Day, int32(dob.Day()))     // nolint G115
+					skbViewClients.PutRecordID(Field_Client, cud.ID())
+					svbViewClients, err := intents.NewValue(skbViewClients)
+					if err != nil {
+						return err
+					}
+					svbViewClients.PutInt64(state.ColOffset, int64(event.WLogOffset())) // nolint G115
+				}
+				return
+			},
 		},
 	)
 

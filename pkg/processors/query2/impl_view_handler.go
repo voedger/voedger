@@ -101,6 +101,9 @@ func (h *viewHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err err
 		return
 	}
 	oo := make([]*pipeline.WiredOperator, 0)
+	if len(qw.queryParams.Constraints.Include) != 0 {
+		oo = append(oo, pipeline.WireAsyncOperator("Include", newInclude(qw)))
+	}
 	if len(qw.queryParams.Constraints.Order) != 0 || qw.queryParams.Constraints.Skip > 0 || qw.queryParams.Constraints.Limit > 0 {
 		oo = append(oo, pipeline.WireAsyncOperator("Aggregator", newAggregator(qw.queryParams)))
 	}
@@ -111,7 +114,9 @@ func (h *viewHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err err
 	if err != nil {
 		return
 	}
-	oo = append(oo, pipeline.WireAsyncOperator("Filter", o))
+	if o != nil {
+		oo = append(oo, pipeline.WireAsyncOperator("Filter", o))
+	}
 	if len(qw.queryParams.Constraints.Keys) != 0 {
 		oo = append(oo, pipeline.WireAsyncOperator("Keys", newKeys(qw.queryParams.Constraints.Keys)))
 	}

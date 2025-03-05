@@ -102,6 +102,9 @@ func (h *queryHandler) AuthorizeResult(ctx context.Context, qw *queryWork) error
 
 func (h *queryHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 	oo := make([]*pipeline.WiredOperator, 0)
+	if len(qw.queryParams.Constraints.Include) != 0 {
+		oo = append(oo, pipeline.WireAsyncOperator("Include", newInclude(qw)))
+	}
 	if qw.queryParams.Constraints != nil && (len(qw.queryParams.Constraints.Order) != 0 || qw.queryParams.Constraints.Skip > 0 || qw.queryParams.Constraints.Limit > 0) {
 		oo = append(oo, pipeline.WireAsyncOperator("Aggregator", newAggregator(qw.queryParams)))
 	}
