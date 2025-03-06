@@ -156,6 +156,51 @@ func (s *implIAppStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedVa
 	return true, nil
 }
 
+func (s *implIAppStorage) QueryTTL(pKey []byte, cCols []byte) (ttlInSeconds int, ok bool, err error) {
+	response, err := s.getItem(pKey, cCols, true)
+	if err != nil {
+		return 0, false, err
+	}
+
+	if response.Item == nil {
+		return 0, false, nil
+	}
+
+	// Check if item exists but has no TTL
+	if response.Item[expireAtAttributeName] == nil {
+		return 0, true, nil
+	}
+
+	// Get expireAt value
+	expireAtStr := response.Item[expireAtAttributeName].(*types.AttributeValueMemberN).Value
+	if len(expireAtStr) == 0 {
+		return 0, true, nil
+	}
+
+	// Parse expireAt timestamp
+	expireAtInSeconds, err := strconv.ParseInt(expireAtStr, utils.DecimalBase, utils.BitSize64)
+	if err != nil {
+		return 0, false, err
+	}
+
+	// Calculate remaining TTL
+	now := s.iTime.Now()
+	expireAt := time.Unix(expireAtInSeconds, 0)
+
+	if !expireAt.After(now) {
+		// Item has expired
+		return 0, false, nil
+	}
+
+	// Return remaining TTL in seconds
+	ttlInSeconds = int(expireAt.Sub(now).Seconds())
+	if ttlInSeconds < 0 {
+		ttlInSeconds = 0
+	}
+
+	return ttlInSeconds, true, nil
+}
+
 func (s *implIAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
 	return s.get(pKey, cCols, data, true)
 }
