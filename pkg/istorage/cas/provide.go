@@ -16,6 +16,6 @@ func Provide(casPar CassandraParamsType) (asf istorage.IAppStorageFactory, err e
 		return nil, errors.New("casPar.KeyspaceWithReplication can not be empty")
 	}
 	casPar.KeyspaceWithReplication = html.UnescapeString(casPar.KeyspaceWithReplication) // https://dev.untill.com/projects/#!643010
-	provider := newStorageProvider(casPar)
-	return provider, nil
+	factory := newCasStorageFactory(casPar)
+	return factory, nil
 }
