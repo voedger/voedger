@@ -18,13 +18,13 @@ import (
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
-type appStorageProviderType struct {
+type implIAppStorageFactory struct {
 	casPar  CassandraParamsType
 	cluster *gocql.ClusterConfig
 }
 
-func newStorageProvider(casPar CassandraParamsType) (prov *appStorageProviderType) {
-	provider := appStorageProviderType{
+func newCasStorageFactory(casPar CassandraParamsType) istorage.IAppStorageFactory {
+	provider := implIAppStorageFactory{
 		casPar: casPar,
 	}
 	provider.cluster = gocql.NewCluster(strings.Split(casPar.Hosts, ",")...)
@@ -48,7 +48,7 @@ func newStorageProvider(casPar CassandraParamsType) (prov *appStorageProviderTyp
 	return &provider
 }
 
-func (p appStorageProviderType) AppStorage(appName istorage.SafeAppName) (storage istorage.IAppStorage, err error) {
+func (p implIAppStorageFactory) AppStorage(appName istorage.SafeAppName) (storage istorage.IAppStorage, err error) {
 	session, err := getSession(p.cluster)
 	if err != nil {
 		// notest
@@ -88,7 +88,7 @@ func logScript(q string) {
 	}
 }
 
-func (p appStorageProviderType) Init(appName istorage.SafeAppName) error {
+func (p implIAppStorageFactory) Init(appName istorage.SafeAppName) error {
 	session, err := getSession(p.cluster)
 	if err != nil {
 		// notest
@@ -127,7 +127,7 @@ func (p appStorageProviderType) Init(appName istorage.SafeAppName) error {
 	return nil
 }
 
-func (p appStorageProviderType) StopGoroutines() { return }
+func (p implIAppStorageFactory) StopGoroutines() { return }
 
 type appStorageType struct {
 	cluster  *gocql.ClusterConfig
@@ -364,7 +364,7 @@ func (s *appStorageType) GetBatch(pKey []byte, items []istorage.GetBatchItem) (e
 	return scannerCloser(scanner, nil)
 }
 
-func (p appStorageProviderType) Time() coreutils.ITime {
+func (p implIAppStorageFactory) Time() coreutils.ITime {
 	return coreutils.NewITime()
 }
 
