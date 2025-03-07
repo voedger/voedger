@@ -213,13 +213,6 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 		value = initialValue
 	}
 
-	// Write all numbers to LRU
-	for i, number := range numbers {
-		if number != 0 {
-			s.lru.Add(NumberKey{WSID: s.currentWSID, SeqID: SeqID(uint16(i))}, number)
-		}
-	}
-
 	return incrementNumber(value), nil
 }
 
