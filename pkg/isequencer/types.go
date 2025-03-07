@@ -58,7 +58,9 @@ type sequencer struct {
 	flusherCtx       context.Context
 	flusherCtxCancel context.CancelFunc
 	// Used to wait for flusher goroutine to exit
-	flusherWg            sync.WaitGroup
+	flusherWg sync.WaitGroup
+	// Used in tests to signal that flusher is started
+	flusherStartedCh     chan struct{}
 	actualizerInProgress atomic.Bool
 	actualizerWg         sync.WaitGroup
 

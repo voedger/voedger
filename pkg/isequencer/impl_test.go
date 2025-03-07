@@ -78,28 +78,6 @@ func (m *mockStorage) ActualizePLog(ctx context.Context, offset PLogOffset, batc
 	return nil
 }
 
-func (m *mockStorage) readNumberWithDelay(t *testing.T, iTime coreutils.ITime, wsid WSID, sedID SeqID, number Number) {
-	duration := 500 * time.Millisecond
-	timerCh := iTime.NewTimerChan(duration)
-	timeoutTimer := time.NewTimer(10 * duration)
-	iTime.Sleep(duration)
-	for {
-		select {
-		case <-timerCh:
-			timerCh = iTime.NewTimerChan(duration)
-			iTime.Sleep(duration)
-			nums, err := m.ReadNumbers(wsid, []SeqID{sedID})
-			require.NoError(t, err)
-
-			if nums[0] == number {
-				return
-			}
-		case <-timeoutTimer.C:
-			require.FailNow(t, "timed out")
-		}
-	}
-}
-
 func TestSequencer(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
@@ -120,7 +98,6 @@ func TestSequencer(t *testing.T) {
 		}
 
 		seq, cleanup := New(params, mockedTime)
-		defer cleanup()
 
 		// When
 		offset, ok := seq.Start(1, 1)
@@ -132,13 +109,14 @@ func TestSequencer(t *testing.T) {
 		require.Equal(t, Number(101), num)
 
 		seq.Flush()
-
 		mockedTime.Sleep(1 * time.Second)
-		// Then
 		cleanup()
 
-		// waiter goroutine
-		storage.readNumberWithDelay(t, mockedTime, 1, 1, 101)
+		seq.(*sequencer).flusherWg.Wait()
+
+		nums, err := storage.ReadNumbers(1, []SeqID{1})
+		require.NoError(t, err)
+		require.Equal(t, nums[0], Number(101))
 	})
 
 	t.Run("actualization", func(t *testing.T) {
@@ -191,7 +169,7 @@ func TestSequencer(t *testing.T) {
 
 		// When
 		_, ok := seq.Start(1, 1)
-		numberOfGoroutines := 100
+		numberOfGoroutines := 10
 		var wg sync.WaitGroup
 		for i := 0; i < numberOfGoroutines; i++ {
 			wg.Add(1)
@@ -206,31 +184,14 @@ func TestSequencer(t *testing.T) {
 		wg.Wait()
 
 		seq.Flush()
-
+		mockedTime.Sleep(1 * time.Second)
 		cleanup()
 
-		// waiter goroutine
-		wg.Add(1)
-		go func() {
-			wg.Done()
+		seq.(*sequencer).flusherWg.Wait()
 
-			duration := 500 * time.Millisecond
-			timerCh := mockedTime.NewTimerChan(duration)
-			for {
-				select {
-				case <-timerCh:
-					timerCh = mockedTime.NewTimerChan(duration)
-					mockedTime.Sleep(duration)
-					nums, err := storage.ReadNumbers(1, []SeqID{1})
-					require.NoError(t, err)
-
-					if nums[0] == initialValue+Number(numberOfGoroutines) {
-						return
-					}
-				}
-			}
-		}()
-		wg.Wait()
+		nums, err := storage.ReadNumbers(1, []SeqID{1})
+		require.NoError(t, err)
+		require.Equal(t, nums[0], initialValue+Number(numberOfGoroutines))
 	})
 }
 

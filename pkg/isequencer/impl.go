@@ -28,9 +28,11 @@ func New(params *Params, iTime coreutils.ITime) (ISequencer, context.CancelFunc)
 		cleanupCtx:       cleanupCtx,
 		cleanupCtxCancel: cleanupCtxCancel,
 		iTime:            iTime,
+		flusherStartedCh: make(chan struct{}, 1),
 	}
 
 	s.startFlusher()
+	<-s.flusherStartedCh
 
 	return s, s.cleanup
 }
@@ -98,8 +100,8 @@ func (s *sequencer) startFlusher() {
 // flusher runs in a goroutine to periodically flush values from toBeFlushed to storage
 func (s *sequencer) flusher() {
 	defer s.flusherWg.Done()
-
 	tickerCh := s.iTime.NewTimerChan(s.params.MaxFlushingInterval)
+	s.flusherStartedCh <- struct{}{}
 	for {
 		select {
 		case <-s.cleanupCtx.Done():

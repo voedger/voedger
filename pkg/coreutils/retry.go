@@ -10,6 +10,15 @@ import (
 	"time"
 )
 
+// Retry attempts to execute the function f until it returns nil or the context is done.
+// Parameters:
+// ctx - context
+// iTime - time interface
+// retryDelay - delay between retries
+// retryCount - number of retries
+// f - function to execute
+// Returns:
+// error - error returned by the function f
 func Retry(ctx context.Context, iTime ITime, retryDelay time.Duration, retryCount int, f func() error) error {
 	var err error
 
