@@ -12,7 +12,7 @@ import (
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/appparts/internal/acl"
+	"github.com/voedger/voedger/pkg/appdef/acl"
 	"github.com/voedger/voedger/pkg/appparts/internal/actualizers"
 	"github.com/voedger/voedger/pkg/appparts/internal/limiter"
 	"github.com/voedger/voedger/pkg/appparts/internal/pool"
