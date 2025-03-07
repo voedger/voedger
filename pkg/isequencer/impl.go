@@ -216,7 +216,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	// Write all numbers to LRU
 	for i, number := range numbers {
 		if number != 0 {
-			s.lru.Add(NumberKey{WSID: s.currentWSID, SeqID: SeqID(i)}, number)
+			s.lru.Add(NumberKey{WSID: s.currentWSID, SeqID: SeqID(uint16(i))}, number)
 		}
 	}
 
