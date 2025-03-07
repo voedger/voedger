@@ -391,11 +391,11 @@ func (w Where) getAsInt32(k string) (vv []int32, err error) {
 			return nil, errUnexpectedParams
 		}
 		for _, param := range params {
-			i, err := param.(json.Number).Int64()
+			int32Val, err := coreutils.ClarifyJSONNumber(param.(json.Number), appdef.DataKind_int32)
 			if err != nil {
 				return nil, err
 			}
-			vv = append(vv, int32(i))
+			vv = append(vv, int32Val.(int32))
 		}
 		return vv, nil
 	case nil:
