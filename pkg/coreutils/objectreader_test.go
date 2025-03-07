@@ -19,7 +19,6 @@ var (
 	testQName       = appdef.NewQName("test", "QName")
 	testQNameSimple = appdef.NewQName("test", "QNameSimple")
 	testQNameView   = appdef.NewQName("test", "view")
-	testQNameCDoc   = appdef.NewQName("test", "CDoc")
 	testFieldDefs   = map[string]appdef.DataKind{
 		"int32":    appdef.DataKind_int32,
 		"int64":    appdef.DataKind_int64,

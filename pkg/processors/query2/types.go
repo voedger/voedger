@@ -52,12 +52,12 @@ type IQueryMessage interface {
 
 type IApiPathHandler interface {
 	CheckRateLimit(ctx context.Context, qw *queryWork) error
-	CheckType(ctx context.Context, qw *queryWork) error
-	ResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error
-	AuthorizeRequest(ctx context.Context, qw *queryWork) error
+	SetRequestType(ctx context.Context, qw *queryWork) error
+	SetResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error
 	AuthorizeResult(ctx context.Context, qw *queryWork) error
 	RowsProcessor(ctx context.Context, qw *queryWork) error
 	Exec(ctx context.Context, qw *queryWork) error
+	RequestOpKind() appdef.OperationKind
 }
 
 type implIQueryMessage struct {
@@ -212,25 +212,25 @@ func (a *aggregator) order() (err error) {
 		for orderBy, asc := range a.orderParams {
 			vi := a.ww[i].(objectBackedByMap).data[orderBy]
 			vj := a.ww[j].(objectBackedByMap).data[orderBy]
-			switch vi.(type) {
+			switch typed := vi.(type) {
 			case int32:
-				return a.compareInt32(vi.(int32), vj.(int32), asc)
+				return a.compareInt32(typed, vj.(int32), asc)
 			case int64:
-				return a.compareInt64(vi.(int64), vj.(int64), asc)
+				return a.compareInt64(typed, vj.(int64), asc)
 			case float32:
-				return a.compareFloat32(vi.(float32), vj.(float32), asc)
+				return a.compareFloat32(typed, vj.(float32), asc)
 			case float64:
-				return a.compareFloat64(vi.(float64), vj.(float64), asc)
+				return a.compareFloat64(typed, vj.(float64), asc)
 			case []byte:
-				return a.compareString(string(vi.([]byte)), string(vi.([]byte)), asc)
+				return a.compareString(string(typed), string(vi.([]byte)), asc)
 			case string:
-				return a.compareString(vi.(string), vj.(string), asc)
+				return a.compareString(typed, vj.(string), asc)
 			case appdef.QName:
-				return a.compareString(vi.(appdef.QName).String(), vj.(appdef.QName).String(), asc)
+				return a.compareString(typed.String(), vj.(appdef.QName).String(), asc)
 			case bool:
-				return vi.(bool) != vj.(bool)
+				return typed != vj.(bool)
 			case istructs.RecordID:
-				return a.compareUint64(uint64(vi.(istructs.RecordID)), uint64(vj.(istructs.RecordID)), asc)
+				return a.compareUint64(uint64(typed), uint64(vj.(istructs.RecordID)), asc)
 			default:
 				err = errors.New("unsupported type")
 			}
@@ -375,11 +375,11 @@ type Where map[string]interface{}
 func (w Where) getAsInt32(k string) (vv []int32, err error) {
 	switch v := w[k].(type) {
 	case json.Number:
-		i, err := v.Int64()
+		int32Val, err := coreutils.ClarifyJSONNumber(v, appdef.DataKind_int32)
 		if err != nil {
 			return nil, err
 		}
-		vv = append(vv, int32(i))
+		vv = append(vv, int32Val.(int32))
 		return vv, nil
 	case map[string]interface{}:
 		in, ok := v["$in"]

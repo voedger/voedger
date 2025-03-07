@@ -6,6 +6,7 @@ package query2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -130,10 +131,8 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				RequestWSID: qw.msg.WSID(),
 				Token:       qw.msg.Token(),
 			}
-			if qw.principals, qw.principalPayload, err = authn.Authenticate(qw.msg.RequestCtx(), qw.appStructs, qw.appStructs.AppTokens(), req); err != nil {
-				return coreutils.WrapSysError(err, http.StatusUnauthorized)
-			}
-			return
+			qw.principals, qw.principalPayload, err = authn.Authenticate(qw.msg.RequestCtx(), qw.appStructs, qw.appStructs.AppTokens(), req)
+			return coreutils.WrapSysError(err, http.StatusUnauthorized)
 		}),
 		operator("get workspace descriptor", func(ctx context.Context, qw *queryWork) (err error) {
 			qw.wsDesc, err = qw.appStructs.Records().GetSingleton(qw.msg.WSID(), authnz.QNameCDocWorkspaceDescriptor)
@@ -141,7 +140,6 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 		operator("check cdoc.sys.WorkspaceDescriptor existence", func(ctx context.Context, qw *queryWork) (err error) {
 			if qw.wsDesc.QName() == appdef.NullQName {
-				// TODO: ws init check is simplified here because we need just IWorkspace to get the query from it.
 				return processors.ErrWSNotInited
 			}
 			return nil
@@ -162,10 +160,6 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 					return nil
 				}
 			}
-			if qw.wsDesc.QName() == appdef.NullQName {
-				// TODO: query prcessor currently does not check the workspace active state
-				return nil
-			}
 			if qw.wsDesc.AsInt32(authnz.Field_Status) != int32(authnz.WorkspaceStatus_Active) {
 				return processors.ErrWSInactive
 			}
@@ -182,18 +176,24 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			return nil
 		}),
-		operator("get type", func(ctx context.Context, qw *queryWork) (err error) {
-			return qw.apiPathHandler.CheckType(ctx, qw)
+		operator("set request type (view, query etc)", func(ctx context.Context, qw *queryWork) (err error) {
+			return qw.apiPathHandler.SetRequestType(ctx, qw)
 		}),
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
-			return qw.apiPathHandler.AuthorizeRequest(ctx, qw)
+			ok, err := qw.appPart.IsOperationAllowed(qw.iWorkspace, qw.apiPathHandler.RequestOpKind(), qw.msg.QName(), nil, qw.roles)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
+			}
+			return nil
 		}),
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
 			if qw.msg.ApiPath() == ApiPath_Queries {
 				qw.execQueryArgs, err = newExecQueryArgs(qw.msg.WSID(), qw)
-				return coreutils.WrapSysError(err, http.StatusBadRequest)
 			}
-			return nil
+			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("create callback func", func(ctx context.Context, qw *queryWork) (err error) {
 			qw.callbackFunc = func(o istructs.IObject) (err error) {
@@ -234,7 +234,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return
 		}),
 		operator("validate: get result type", func(ctx context.Context, qw *queryWork) (err error) {
-			return qw.apiPathHandler.ResultType(ctx, qw, statelessResources)
+			return qw.apiPathHandler.SetResultType(ctx, qw, statelessResources)
 		}),
 		operator("authorize actual sys.Any result", func(ctx context.Context, qw *queryWork) (err error) {
 			return qw.apiPathHandler.AuthorizeResult(ctx, qw)

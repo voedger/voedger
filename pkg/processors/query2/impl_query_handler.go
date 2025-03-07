@@ -6,7 +6,6 @@ package query2
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"runtime/debug"
@@ -32,7 +31,7 @@ func (h *queryHandler) CheckRateLimit(ctx context.Context, qw *queryWork) error 
 	return nil
 }
 
-func (h *queryHandler) CheckType(ctx context.Context, qw *queryWork) error {
+func (h *queryHandler) SetRequestType(ctx context.Context, qw *queryWork) error {
 	switch qw.iWorkspace {
 	case nil:
 		// workspace is dummy
@@ -47,7 +46,7 @@ func (h *queryHandler) CheckType(ctx context.Context, qw *queryWork) error {
 	return nil
 }
 
-func (h *queryHandler) ResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error {
+func (h *queryHandler) SetResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error {
 	qw.resultType = qw.iQuery.Result()
 	if qw.resultType == nil || qw.resultType.QName() != appdef.QNameANY {
 		return nil
@@ -79,20 +78,8 @@ func (h *queryHandler) ResultType(ctx context.Context, qw *queryWork, statelessR
 	return nil
 }
 
-func (h *queryHandler) AuthorizeRequest(ctx context.Context, qw *queryWork) error {
-	ws := qw.iWorkspace
-	if ws == nil {
-		// workspace is dummy
-		ws = qw.iQuery.Workspace()
-	}
-	ok, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
-	}
-	return nil
+func (h *queryHandler) RequestOpKind() appdef.OperationKind {
+	return appdef.OperationKind_Execute
 }
 
 func (h *queryHandler) AuthorizeResult(ctx context.Context, qw *queryWork) error {
