@@ -21,8 +21,8 @@ import (
 // TechnologyCompatibilityKit test suit
 func TechnologyCompatibilityKit(t *testing.T, storageFactory IAppStorageFactory) {
 	testAppQName := appdef.NewAppQName("tcktest", uuid.NewString())
-	storage := testAppStorageFactory(t, storageFactory, testAppQName)
-	TechnologyCompatibilityKit_Storage(t, storage, storageFactory.Time())
+	testIAppStorage := testAppStorageFactory(t, storageFactory, testAppQName)
+	TechnologyCompatibilityKit_Storage(t, testIAppStorage, storageFactory.Time())
 	storageFactory.StopGoroutines()
 }
 
@@ -36,6 +36,7 @@ func TechnologyCompatibilityKit_Storage(t *testing.T, storage IAppStorage, iTime
 	t.Run("TestAppStorage_CompareAndDelete", func(t *testing.T) { testAppStorage_CompareAndDelete(t, storage, iTime) })
 	t.Run("TestAppStorage_TTLGet", func(t *testing.T) { testAppStorage_TTLGet(t, storage, iTime) })
 	t.Run("TestAppStorage_TTLRead", func(t *testing.T) { testAppStorage_TTLRead(t, storage, iTime) })
+	t.Run("TestAppStorage_QueryTTL", func(t *testing.T) { testAppStorage_QueryTTL(t, storage, iTime) })
 }
 
 func testAppStorageFactory(t *testing.T, sf IAppStorageFactory, testAppQName appdef.AppQName) IAppStorage {
@@ -653,17 +654,18 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iTime c
 		ccols := []byte("Non-alcohol")
 		value := []byte("Tea")
 
-		ok, err := storage.InsertIfNotExists(pKey, ccols, value, 1)
+		ok, err := storage.InsertIfNotExists(pKey, ccols, value, 3)
+		
 		require.NoError(err)
 		require.True(ok)
 
-		ok, err = storage.InsertIfNotExists(pKey, ccols, value, 1)
+		ok, err = storage.InsertIfNotExists(pKey, ccols, value, 3)
 		require.NoError(err)
 		require.False(ok)
 
 		differentValue := bytes.Clone(value)
 		differentValue = append(differentValue, []byte{42}...)
-		ok, err = storage.InsertIfNotExists(pKey, ccols, differentValue, 1)
+		ok, err = storage.InsertIfNotExists(pKey, ccols, differentValue, 3)
 		require.NoError(err)
 		require.False(ok)
 
@@ -674,7 +676,7 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iTime c
 		require.Equal(value, data)
 	})
 
-	t.Run("ttl is zero", func(t *testing.T) {
+	t.Run("ttl is zero -> insert without TTL", func(t *testing.T) {
 		require := require.New(t)
 		pKey := []byte("Vehicles2")
 		ccols := []byte("Cars2")
@@ -689,6 +691,11 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iTime c
 		ok, err = storage.InsertIfNotExists(pKey, ccols, value, 0)
 		require.NoError(err)
 		require.False(ok)
+
+		ttlInSeconds, ok, err := storage.QueryTTL(pKey, ccols)
+		require.NoError(err)
+		require.True(ok)
+		require.Zero(ttlInSeconds)
 	})
 }
 
@@ -973,5 +980,102 @@ func testAppStorage_TTLRead(t *testing.T, storage IAppStorage, iTime coreutils.I
 		})
 		require.NoError(err)
 		require.Len(subjects, 3)
+	})
+}
+
+//nolint:revive,goconst
+func testAppStorage_QueryTTL(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
+	t.Run("Should return TTL for TTL records", func(t *testing.T) {
+		require := require.New(t)
+		pKey := []byte("TTLKey1")
+		ccols := []byte("Col1")
+		value := []byte("TTLValue1")
+		ttl := 5
+
+		ok, err := storage.InsertIfNotExists(pKey, ccols, value, ttl)
+		require.NoError(err)
+		require.True(ok)
+
+		// Query immediately after insert
+		seconds, exists, err := storage.QueryTTL(pKey, ccols)
+		require.NoError(err)
+		require.True(exists)
+		require.Greater(seconds, 0)
+		require.LessOrEqual(seconds, ttl)
+
+		// Wait and check decreasing TTL
+		iTime.Sleep(2 * time.Second)
+		seconds, exists, err = storage.QueryTTL(pKey, ccols)
+		require.NoError(err)
+		require.True(exists)
+		require.Greater(seconds, 0)
+		require.Less(seconds, ttl-1)
+
+		// Wait until expiration
+		iTime.Sleep(4 * time.Second)
+		seconds, exists, err = storage.QueryTTL(pKey, ccols)
+		require.NoError(err)
+		require.False(exists)
+		require.Equal(0, seconds)
+	})
+
+	t.Run("Should return zero TTL for non-TTL records", func(t *testing.T) {
+		require := require.New(t)
+		pKey := []byte("RegularKey1")
+		ccols := []byte("Col1")
+		value := []byte("RegularValue1")
+
+		err := storage.Put(pKey, ccols, value)
+		require.NoError(err)
+
+		seconds, exists, err := storage.QueryTTL(pKey, ccols)
+		require.NoError(err)
+		require.True(exists)
+		require.Equal(0, seconds)
+	})
+
+	t.Run("Should handle non-existent records", func(t *testing.T) {
+		require := require.New(t)
+		pKey := []byte("NonExistentKey")
+		ccols := []byte("NonExistentCol")
+
+		seconds, exists, err := storage.QueryTTL(pKey, ccols)
+		require.NoError(err)
+		require.False(exists)
+		require.Equal(0, seconds)
+	})
+
+	t.Run("Should update TTL on CompareAndSwap", func(t *testing.T) {
+		require := require.New(t)
+		pKey := []byte("SwapKey")
+		ccols := []byte("Col1")
+		oldValue := []byte("OldValue")
+		newValue := []byte("NewValue")
+		initialTTL := 5
+		newTTL := 10
+
+		// Insert with initial TTL
+		ok, err := storage.InsertIfNotExists(pKey, ccols, oldValue, initialTTL)
+		require.NoError(err)
+		require.True(ok)
+
+		// Verify initial TTL
+		seconds, exists, err := storage.QueryTTL(pKey, ccols)
+		require.NoError(err)
+		require.True(exists)
+		require.Greater(seconds, 0)
+		require.LessOrEqual(seconds, initialTTL)
+
+		// Swap with new TTL
+		ok, err = storage.CompareAndSwap(pKey, ccols, oldValue, newValue, newTTL)
+		require.NoError(err)
+		require.True(ok)
+
+		// Verify updated TTL
+		seconds, exists, err = storage.QueryTTL(pKey, ccols)
+		require.NoError(err)
+		require.True(exists)
+		require.Greater(seconds, initialTTL)
+		require.LessOrEqual(seconds, newTTL)
 	})
 }
