@@ -263,23 +263,18 @@ func (p *httpProcessor) registerRoutes() {
 
 func (p *httpProcessor) httpHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		routerpkg.RequestHandler(p.requestSender, p.numsAppsWorkspaces)(w, r)
+		routerpkg.RequestHandler_V1(p.requestSender, p.numsAppsWorkspaces)(w, r)
 	}
 }
 
 func (p *httpProcessor) requestHandler(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
-	appQName, err := appdef.ParseAppQName(request.AppQName)
-	if err != nil {
-		bus.ReplyBadRequest(responder, err.Error())
-		return
-	}
-	app, ok := p.apps[appQName]
+	app, ok := p.apps[request.AppQName]
 	if !ok {
 		bus.ReplyBadRequest(responder, ErrAppIsNotDeployed.Error())
 		return
 	}
 	partNo := coreutils.AppPartitionID(request.WSID, app.numPartitions)
-	handler, err := p.getAppPartHandler(appQName, partNo)
+	handler, err := p.getAppPartHandler(request.AppQName, partNo)
 	if err != nil {
 		bus.ReplyBadRequest(responder, err.Error())
 		return

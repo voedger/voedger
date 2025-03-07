@@ -41,7 +41,7 @@ func TestBasicUsage_SingleResponse(t *testing.T) {
 	}, bus.DefaultSendTimeout)
 	defer tearDown(router)
 
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/somefunc_SingleResponse", router.port(), testWSID), "application/json", http.NoBody)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/somefunc_SingleResponse", router.port(), testWSID), coreutils.TextPlain, http.NoBody)
 	require.NoError(err)
 	defer resp.Body.Close()
 
@@ -83,11 +83,11 @@ func TestBasicUsage_MultiResponse(t *testing.T) {
 
 		require.Equal(testWSID, request.WSID)
 		require.Equal("somefunc_SectionedResponse", request.Resource)
-		require.Equal(map[string][]string{
-			"Accept-Encoding": {"gzip"},
-			"Content-Length":  {"27"}, // len("test body SectionedResponse")
-			"Content-Type":    {"application/json"},
-			"User-Agent":      {"Go-http-client/1.1"},
+		require.Equal(map[string]string{
+			"Accept-Encoding": "gzip",
+			"Content-Length":  "27", // len("test body SectionedResponse")
+			"Content-Type":    "application/json",
+			"User-Agent":      "Go-http-client/1.1",
 		}, request.Header)
 		require.Empty(request.Query)
 
@@ -153,7 +153,7 @@ func TestSimpleErrorSectionedResponse(t *testing.T) {
 
 	body := []byte("")
 	bodyReader := bytes.NewReader(body)
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/untill/airs-bp/%d/somefunc_SimpleErrorSectionedResponse", router.port(), testWSID), "application/json", bodyReader)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/untill/airs-bp/%d/somefunc_SimpleErrorSectionedResponse", router.port(), testWSID), coreutils.ApplicationJSON, bodyReader)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 

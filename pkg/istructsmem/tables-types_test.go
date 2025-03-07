@@ -127,7 +127,7 @@ func Test_newRecord(t *testing.T) {
 			}
 
 			require.Equal(3, sysCnt) // sys.QName, sys.ID and sys.IsActive
-			require.Equal(sysCnt+10, cnt)
+			require.Equal(sysCnt+11, cnt)
 			require.Equal(doc.fields.FieldCount(), cnt)
 		})
 
@@ -192,7 +192,7 @@ func Test_newRecord(t *testing.T) {
 				}
 
 				require.Equal(5, sysCnt) // sys.QName, sys.ID sys.ParentID, sys.Container and sys.IsActive
-				require.Equal(sysCnt+10, cnt)
+				require.Equal(sysCnt+11, cnt)
 				require.Equal(rec.fields.FieldCount(), cnt)
 			})
 		})
@@ -545,6 +545,9 @@ func TestSpecifiedValues(t *testing.T) {
 		rec.PutString("string", "test")
 		rec.PutInt64("int64", 0)   // zero (0) value should be enumerated too
 		rec.PutBool("bool", false) // zero (false) value should be enumerated too
+		rec.PutRecordID("RecordID", 3)
+		rec.PutInt64("RecordID_2", 4)
+		rec.PutQName("QName", qNameMyQName)
 		require.NoError(rec.build())
 
 		testEnum(rec,
@@ -555,6 +558,9 @@ func TestSpecifiedValues(t *testing.T) {
 				"bool":                      false,
 				appdef.SystemField_QName:    test.testCDoc,
 				appdef.SystemField_IsActive: true,
+				"RecordID":                  istructs.RecordID(3),
+				"RecordID_2":                istructs.RecordID(4),
+				"QName":                     qNameMyQName,
 			})
 	})
 
@@ -582,9 +588,9 @@ func TestSpecifiedValues(t *testing.T) {
 
 		testEnum(rec,
 			map[appdef.FieldName]interface{}{
-				"bytes":  []byte{},
-				"string": "",
-				"raw":    []byte{},
+				"bytes":                     []byte{},
+				"string":                    "",
+				"raw":                       []byte{},
 				appdef.SystemField_QName:    test.testCDoc,
 				appdef.SystemField_IsActive: true,
 			})

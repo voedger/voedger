@@ -31,7 +31,7 @@ func newOrderOperator(orderBys []IOrderBy, metrics IMetrics) pipeline.IAsyncOper
 func (o *OrderOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
 	begin := time.Now()
 	defer func() {
-		o.metrics.Increase(execOrderSeconds, time.Since(begin).Seconds())
+		o.metrics.Increase(Metric_ExecOrderSeconds, time.Since(begin).Seconds())
 	}()
 	o.rows = append(o.rows, work.(IWorkpiece).OutputRow())
 	work.Release()
@@ -41,7 +41,7 @@ func (o *OrderOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece) (ou
 func (o OrderOperator) Flush(callback pipeline.OpFuncFlush) (err error) {
 	begin := time.Now()
 	defer func() {
-		o.metrics.Increase(execOrderSeconds, time.Since(begin).Seconds())
+		o.metrics.Increase(Metric_ExecOrderSeconds, time.Since(begin).Seconds())
 	}()
 	sort.Slice(o.rows, func(i, j int) bool {
 		for _, orderBy := range o.orderBys {

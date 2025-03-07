@@ -111,7 +111,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					app:     msg.AppQName(),
 					metrics: metrics,
 				}
-				qpm.Increase(queriesTotal, 1.0)
+				qpm.Increase(Metric_QueriesTotal, 1.0)
 				qwork := newQueryWork(msg, appParts, maxPrepareQueries, qpm, secretReader)
 				func() { // borrowed application partition should be guaranteed to be freed
 					defer qwork.Release()
@@ -120,7 +120,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					}
 					err := p.SendSync(qwork)
 					if err != nil {
-						qpm.Increase(errorsTotal, 1.0)
+						qpm.Increase(Metric_ErrorsTotal, 1.0)
 						p.Close()
 						p = nil
 					} else {
@@ -159,7 +159,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					}
 					senderCloseable.Close(err)
 				}()
-				metrics.IncreaseApp(queriesSeconds, vvm, msg.AppQName(), time.Since(now).Seconds())
+				metrics.IncreaseApp(Metric_QueriesSeconds, vvm, msg.AppQName(), time.Since(now).Seconds())
 			case <-ctx.Done():
 			}
 		}
@@ -176,7 +176,7 @@ func execQuery(ctx context.Context, qw *queryWork) (err error) {
 			stack := string(debug.Stack())
 			err = fmt.Errorf("%v\n%s", r, stack)
 		}
-		qw.metrics.Increase(execSeconds, time.Since(now).Seconds())
+		qw.metrics.Increase(Metric_ExecSeconds, time.Since(now).Seconds())
 	}()
 	return qw.appPart.Invoke(ctx, qw.msg.QName(), qw.state, qw.state)
 }
@@ -426,7 +426,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		operator("build rows processor", func(ctx context.Context, qw *queryWork) error {
 			now := time.Now()
 			defer func() {
-				qw.metrics.Increase(buildSeconds, time.Since(now).Seconds())
+				qw.metrics.Increase(Metric_BuildSeconds, time.Since(now).Seconds())
 			}()
 			qw.rowsProcessor, qw.responseSenderGetter = ProvideRowsProcessorFactory()(qw.msg.RequestCtx(), qw.appStructs.AppDef(),
 				qw.state, qw.queryParams, qw.resultType, qw.msg.Responder(), qw.metrics, qw.rowsProcessorErrCh)

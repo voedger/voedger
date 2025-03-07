@@ -701,7 +701,7 @@ func Test_rowType_FieldNames(t *testing.T) {
 			cnt++
 			return true
 		})
-		require.Equal(11, cnt) // sys.QName + ten user fields for simple types
+		require.Equal(12, cnt) // sys.QName + ten user fields for simple types
 	})
 
 	t.Run("should be ok iterate with filled system fields", func(t *testing.T) {

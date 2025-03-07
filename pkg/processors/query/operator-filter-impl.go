@@ -22,7 +22,7 @@ type FilterOperator struct {
 func (o FilterOperator) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
 	begin := time.Now()
 	defer func() {
-		o.metrics.Increase(execFilterSeconds, time.Since(begin).Seconds())
+		o.metrics.Increase(Metric_ExecFilterSeconds, time.Since(begin).Seconds())
 	}()
 	outputRow := work.(IWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0]
 	mergedFields := make(map[string]appdef.DataKind)

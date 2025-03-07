@@ -192,7 +192,7 @@ func JSONMapToCUDBody(data []map[string]interface{}) string {
 		}
 		cuds = append(cuds, c)
 	}
-	bb, err := json.Marshal(CUDs{Cuds: cuds})
+	bb, err := json.Marshal(CUDs{Values: cuds})
 	if err != nil {
 		panic(err)
 	}

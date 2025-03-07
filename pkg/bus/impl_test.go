@@ -21,11 +21,11 @@ func TestRequestSender_BasicUsage(t *testing.T) {
 	requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 		require.Equal(http.MethodPost, request.Method)
 		require.Equal(istructs.WSID(1), request.WSID)
-		require.Equal(map[string][]string{coreutils.ContentType: {coreutils.ApplicationJSON}}, request.Header)
-		require.Equal(map[string][]string{"param": {"value"}}, request.Query)
+		require.Equal(map[string]string{coreutils.ContentType: coreutils.ApplicationJSON}, request.Header)
+		require.Equal(map[string]string{"param": "value"}, request.Query)
 		require.Equal("c.sys.CUD", request.Resource)
 		require.Equal([]byte("body"), request.Body)
-		require.Equal(istructs.AppQName_test1_app1.String(), request.AppQName)
+		require.Equal(istructs.AppQName_test1_app1, request.AppQName)
 		require.Equal("localhost", request.Host)
 
 		//response must be made in a separate thread
@@ -44,15 +44,15 @@ func TestRequestSender_BasicUsage(t *testing.T) {
 	respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), Request{
 		Method: http.MethodPost,
 		WSID:   1,
-		Header: map[string][]string{
-			coreutils.ContentType: {coreutils.ApplicationJSON},
+		Header: map[string]string{
+			coreutils.ContentType: coreutils.ApplicationJSON,
 		},
 		Resource: "c.sys.CUD",
-		Query: map[string][]string{
-			"param": {"value"},
+		Query: map[string]string{
+			"param": "value",
 		},
 		Body:     []byte("body"),
-		AppQName: istructs.AppQName_test1_app1.String(),
+		AppQName: istructs.AppQName_test1_app1,
 		Host:     "localhost",
 	})
 	require.NoError(err)
