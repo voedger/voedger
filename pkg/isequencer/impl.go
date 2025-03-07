@@ -7,6 +7,7 @@ package isequencer
 
 import (
 	"context"
+	"maps"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -47,6 +48,7 @@ type sequencer struct {
 func NewSequencer(params *Params) (ISequencer, context.CancelFunc) {
 	lru, err := lruPkg.New[NumberKey, Number](params.LRUCacheSize)
 	if err != nil {
+		// notest
 		panic("failed to create LRU cache: " + err.Error())
 	}
 
@@ -123,7 +125,7 @@ func (s *sequencer) flusher() {
 	defer ticker.Stop()
 	defer s.flusherWg.Done()
 
-	for {
+	for s.flusherCtx.Err() == nil {
 		select {
 		case <-s.flusherCtx.Done():
 			return // Stop flusher when context is cancelled
@@ -177,7 +179,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	if !exists {
 		panic("unknown wsKind")
 	}
-	initialValue, exists := seqTypes[seqID]
+	lastNumber, exists := seqTypes[seqID]
 	if !exists {
 		panic("unknown seqID")
 	}
@@ -195,41 +197,39 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 		return nextValue
 	}
 
+	ok := false
+
 	// 3. Try to obtain next value using cache hierarchy
-	if value, ok := s.lru.Get(key); ok {
-		return incrementNumber(value), nil
+	if lastNumber, ok = s.lru.Get(key); ok {
+		return incrementNumber(lastNumber), nil
 	}
 
-	if value, ok := s.inproc[key]; ok {
-		return incrementNumber(value), nil
+	if lastNumber, ok = s.inproc[key]; ok {
+		return incrementNumber(lastNumber), nil
 	}
 
 	s.toBeFlushedMu.RLock()
-	value, ok := s.toBeFlushed[key]
+	lastNumber, ok = s.toBeFlushed[key]
 	s.toBeFlushedMu.RUnlock()
 	if ok {
-		return incrementNumber(value), nil
+		return incrementNumber(lastNumber), nil
 	}
 
 	// Try storage as last resort
-	numbers, err := s.params.SeqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
+	lastNumbers, err := s.params.SeqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
 	if err != nil {
 		return 0, err
 	}
 
-	value = numbers[0]
-	if value == 0 {
-		value = initialValue
+	if len(lastNumbers) > 1 {
+		// notest
+		panic("")
+	}
+	if len(lastNumbers) != 0 {
+		lastNumber = lastNumbers[0]
 	}
 
-	// Write all numbers to LRU
-	for i, number := range numbers {
-		if number != 0 {
-			s.lru.Add(NumberKey{WSID: s.currentWSID, SeqID: SeqID(i)}, number)
-		}
-	}
-
-	return incrementNumber(value), nil
+	return incrementNumber(lastNumber), nil
 }
 
 func (s *sequencer) Flush() {
@@ -247,9 +247,7 @@ func (s *sequencer) Flush() {
 	defer s.toBeFlushedMu.Unlock()
 
 	// Copy inproc values to toBeFlushed
-	for key, value := range s.inproc {
-		s.toBeFlushed[key] = value
-	}
+	maps.Copy(s.toBeFlushed, s.inproc)
 
 	// Update toBeFlushedOffset
 	s.toBeFlushedOffset = s.inprocOffset
@@ -270,21 +268,20 @@ func (s *sequencer) actualizer() {
 	// Retry delay on errors
 	const retryDelay = 500 * time.Millisecond
 
-	// Get last written offset to start actualization from
-	offset, err := s.params.SeqStorage.ReadLastWrittenPLogOffset()
-	if err != nil {
-		time.Sleep(retryDelay)
-		return
-	}
-
-	for {
+	for s.cleanupCtx.Err() == nil {
 		select {
 		case <-s.cleanupCtx.Done():
 			return // Stop actualization when context is cancelled
-
 		default:
+			// Get last written offset to start actualization from
+			offset, err := s.params.SeqStorage.ReadLastWrittenPLogOffset()
+			if err != nil {
+				time.Sleep(retryDelay)
+				continue
+			}
+
 			// Build batch and process PLog entries
-			err := s.params.SeqStorage.ActualizePLog(s.cleanupCtx, offset, func(batch []SeqValue, batchOffset PLogOffset) error {
+			err = s.params.SeqStorage.ActualizePLog(s.cleanupCtx, offset, func(batch []SeqValue, batchOffset PLogOffset) error {
 				// Aggregate max values per key
 				maxValues := make(map[NumberKey]Number)
 				for _, sv := range batch {
