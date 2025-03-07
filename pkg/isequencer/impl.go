@@ -7,59 +7,35 @@ package isequencer
 
 import (
 	"context"
-	"sync"
-	"sync/atomic"
-	"time"
-
 	lruPkg "github.com/hashicorp/golang-lru/v2"
+
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
-type sequencer struct {
-	params *Params
-
-	// If cleanupCtx is Done, then actualization should stop immediately
-	cleanupCtx context.Context
-	// Closes when flusher needs to be stopped
-	flusherCtx       context.Context
-	flusherCtxCancel context.CancelFunc
-	// Used to wait for flusher goroutine to exit
-	flusherWg            sync.WaitGroup
-	actualizerInProgress atomic.Bool
-
-	lru *lruPkg.Cache[NumberKey, Number]
-
-	// To be flushed
-	toBeFlushed       map[NumberKey]Number
-	toBeFlushedOffset PLogOffset
-	// Protects toBeFlushed and toBeFlushedOffset
-	toBeFlushedMu sync.RWMutex
-
-	// Written by Next()
-	inproc       map[NumberKey]Number
-	inprocOffset PLogOffset
-
-	// Initialized by Start()
-	currentWSID   WSID
-	currentWSKind WSKind
-}
-
-// NewSequencer creates a new sequencer
-func NewSequencer(params *Params) (ISequencer, context.CancelFunc) {
+// New creates a new sequencer
+func New(params *Params, iTime coreutils.ITime) (ISequencer, context.CancelFunc) {
 	lru, err := lruPkg.New[NumberKey, Number](params.LRUCacheSize)
 	if err != nil {
 		panic("failed to create LRU cache: " + err.Error())
 	}
 
-	cleanupCtx, cleanup := context.WithCancel(context.Background())
-	return &sequencer{
-		params:      params,
-		lru:         lru,
-		toBeFlushed: make(map[NumberKey]Number),
-		inproc:      make(map[NumberKey]Number),
-		cleanupCtx:  cleanupCtx,
-	}, cleanup
+	cleanupCtx, cleanupCtxCancel := context.WithCancel(context.Background())
+	s := &sequencer{
+		params:           params,
+		lru:              lru,
+		toBeFlushed:      make(map[NumberKey]Number),
+		inproc:           make(map[NumberKey]Number),
+		cleanupCtx:       cleanupCtx,
+		cleanupCtxCancel: cleanupCtxCancel,
+		iTime:            iTime,
+	}
+
+	s.startFlusher()
+
+	return s, s.cleanup
 }
 
+// checkCleanupState panics if cleanup is in progress
 func (s *sequencer) checkCleanupState() {
 	select {
 	case <-s.cleanupCtx.Done():
@@ -88,9 +64,12 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 	}
 
 	// Check unflushed values threshold
+	s.inprocMu.RLock()
 	if len(s.inproc) >= s.params.MaxNumUnflushedValues {
+		s.inprocMu.RUnlock()
 		return 0, false
 	}
+	s.inprocMu.RUnlock()
 
 	// Read last offset
 	lastOffset, err := s.params.SeqStorage.ReadLastWrittenPLogOffset()
@@ -103,7 +82,6 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 	s.currentWSKind = wsKind
 	s.inprocOffset = lastOffset + 1
 
-	s.startFlusher()
 	return s.inprocOffset, true
 }
 
@@ -119,16 +97,17 @@ func (s *sequencer) startFlusher() {
 
 // flusher runs in a goroutine to periodically flush values from toBeFlushed to storage
 func (s *sequencer) flusher() {
-	ticker := time.NewTicker(s.params.MaxFlushingInterval)
-	defer ticker.Stop()
 	defer s.flusherWg.Done()
 
+	tickerCh := s.iTime.NewTimerChan(s.params.MaxFlushingInterval)
 	for {
 		select {
+		case <-s.cleanupCtx.Done():
+			return // Stop flusher when cleanup is in progress
 		case <-s.flusherCtx.Done():
-			return // Stop flusher when context is cancelled
-
-		case <-ticker.C:
+			return // Stop flusher when flusher is cancelled
+		case <-tickerCh:
+			tickerCh = s.iTime.NewTimerChan(s.params.MaxFlushingInterval)
 			// Lock toBeFlushed while creating a batch
 			s.toBeFlushedMu.Lock()
 			if len(s.toBeFlushed) == 0 {
@@ -147,22 +126,26 @@ func (s *sequencer) flusher() {
 				})
 			}
 
+			// Write batch to storage
+			// Call Actualize on error
+			err := coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() error {
+				return s.params.SeqStorage.WriteValues(batch)
+			})
+			if err != nil {
+				s.Actualize()
+			}
+
 			// Clear toBeFlushed before unlocking
 			s.toBeFlushed = make(map[NumberKey]Number)
 			s.toBeFlushedMu.Unlock()
 
-			// Write batch to storage
-			// Call Actualize on error
-			if err := s.params.SeqStorage.WriteValues(batch); err != nil {
-				s.Actualize()
-				return
-			}
-
 			// Write offset after successful values write
 			// Call Actualize on error
-			if err := s.params.SeqStorage.WritePLogOffset(offset); err != nil {
+			err = coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() error {
+				return s.params.SeqStorage.WritePLogOffset(offset)
+			})
+			if err != nil {
 				s.Actualize()
-				return
 			}
 		}
 	}
@@ -189,6 +172,9 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 
 	// Helper function to increment and store value
 	incrementNumber := func(value Number) Number {
+		s.inprocMu.Lock()
+		defer s.inprocMu.Unlock()
+
 		nextValue := value + 1
 		s.lru.Add(key, nextValue)
 		s.inproc[key] = nextValue
@@ -200,9 +186,12 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 		return incrementNumber(value), nil
 	}
 
+	s.inprocMu.RLock()
 	if value, ok := s.inproc[key]; ok {
+		s.inprocMu.RUnlock()
 		return incrementNumber(value), nil
 	}
+	s.inprocMu.RUnlock()
 
 	s.toBeFlushedMu.RLock()
 	value, ok := s.toBeFlushed[key]
@@ -237,19 +226,25 @@ func (s *sequencer) Flush() {
 	s.checkEventState()
 
 	// Skip if no values to flush
+
+	s.inprocMu.RLock()
 	if len(s.inproc) == 0 {
+		s.inprocMu.RUnlock()
 		s.finishEventState()
 		return
 	}
+	s.inprocMu.RUnlock()
 
 	// Lock toBeFlushed while copying values
 	s.toBeFlushedMu.Lock()
 	defer s.toBeFlushedMu.Unlock()
 
 	// Copy inproc values to toBeFlushed
+	s.inprocMu.RLock()
 	for key, value := range s.inproc {
 		s.toBeFlushed[key] = value
 	}
+	s.inprocMu.RUnlock()
 
 	// Update toBeFlushedOffset
 	s.toBeFlushedOffset = s.inprocOffset
@@ -259,6 +254,9 @@ func (s *sequencer) Flush() {
 }
 
 func (s *sequencer) finishEventState() {
+	s.inprocMu.Lock()
+	defer s.inprocMu.Unlock()
+
 	if len(s.inproc) > 0 {
 		s.inproc = make(map[NumberKey]Number)
 	}
@@ -266,14 +264,55 @@ func (s *sequencer) finishEventState() {
 	s.currentWSKind = 0
 }
 
-func (s *sequencer) actualizer() {
-	// Retry delay on errors
-	const retryDelay = 500 * time.Millisecond
+// Flow:
+// - Build maxValues: max Number for each SeqValue.Key
+// - Write maxValues using s.params.SeqStorage.WriteValues()
+func (s *sequencer) batcher(batch []SeqValue, batchOffset PLogOffset) error {
+	// Aggregate max values per key
+	maxValues := make(map[NumberKey]Number)
+	for _, sv := range batch {
+		if current, exists := maxValues[sv.Key]; !exists || sv.Value > current {
+			maxValues[sv.Key] = sv.Value
+		}
+	}
 
+	// Convert maxValues to batch
+	valueBatch := make([]SeqValue, 0, len(maxValues))
+	for key, value := range maxValues {
+		valueBatch = append(valueBatch, SeqValue{
+			Key:   key,
+			Value: value,
+		})
+	}
+
+	// Write max values to storage
+	if err := s.params.SeqStorage.WriteValues(valueBatch); err != nil {
+		return err
+	}
+
+	// Update offset after successful write
+	if err := s.params.SeqStorage.WritePLogOffset(batchOffset); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *sequencer) actualizer() {
+	defer s.actualizerWg.Done()
+
+	// Retry delay on errors
 	// Get last written offset to start actualization from
-	offset, err := s.params.SeqStorage.ReadLastWrittenPLogOffset()
+	var (
+		offset PLogOffset
+		err    error
+	)
+
+	err = coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() error {
+		offset, err = s.params.SeqStorage.ReadLastWrittenPLogOffset()
+		return err
+	})
 	if err != nil {
-		time.Sleep(retryDelay)
 		return
 	}
 
@@ -281,50 +320,15 @@ func (s *sequencer) actualizer() {
 		select {
 		case <-s.cleanupCtx.Done():
 			return // Stop actualization when context is cancelled
-
 		default:
-			// Build batch and process PLog entries
-			err := s.params.SeqStorage.ActualizePLog(s.cleanupCtx, offset, func(batch []SeqValue, batchOffset PLogOffset) error {
-				// Aggregate max values per key
-				maxValues := make(map[NumberKey]Number)
-				for _, sv := range batch {
-					if current, exists := maxValues[sv.Key]; !exists || sv.Value > current {
-						maxValues[sv.Key] = sv.Value
-					}
-				}
-
-				// Convert maxValues to batch
-				valueBatch := make([]SeqValue, 0, len(maxValues))
-				for key, value := range maxValues {
-					valueBatch = append(valueBatch, SeqValue{
-						Key:   key,
-						Value: value,
-					})
-				}
-
-				// Write max values to storage
-				if err := s.params.SeqStorage.WriteValues(valueBatch); err != nil {
-					return err
-				}
-
-				// Update offset after successful write
-				if err := s.params.SeqStorage.WritePLogOffset(batchOffset); err != nil {
-					return err
-				}
-
-				offset = batchOffset
-				return nil
+			err := coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() error {
+				return s.params.SeqStorage.ActualizePLog(s.cleanupCtx, offset, s.batcher)
 			})
-
-			if err != nil {
-				// On error, wait and retry
-				time.Sleep(retryDelay)
-				continue
+			if err == nil {
+				// Start flusher after successful actualization
+				s.startFlusher()
+				return
 			}
-
-			// Start flusher after successful actualization
-			s.startFlusher()
-			return
 		}
 	}
 }
@@ -361,10 +365,14 @@ func (s *sequencer) Actualize() {
 
 	// Copy current values to toBeFlushed
 	s.toBeFlushedMu.Lock()
+
+	s.inprocMu.RLock()
 	for key, value := range s.inproc {
 		s.toBeFlushed[key] = value
 	}
+	s.inprocMu.RUnlock()
 	s.toBeFlushedOffset = s.inprocOffset
+
 	s.toBeFlushedMu.Unlock()
 
 	// Reset current state
@@ -372,6 +380,20 @@ func (s *sequencer) Actualize() {
 
 	// Start actualization
 	s.actualizerInProgress.Store(true)
-
+	s.actualizerWg.Add(1)
 	go s.actualizer()
+}
+
+func (s *sequencer) cleanup() {
+	// Stop flusher if running
+	if s.flusherCtx != nil {
+		s.flusherCtxCancel()
+		s.flusherWg.Wait()
+	}
+
+	s.cleanupCtxCancel()
+
+	// Stop actualizer if running
+	s.actualizerInProgress.Store(false)
+	s.actualizerWg.Wait()
 }

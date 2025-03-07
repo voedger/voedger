@@ -7,18 +7,21 @@ package isequencer
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 type mockStorage struct {
-	mu      sync.RWMutex
-	numbers map[WSID]map[SeqID]Number
-	offset  PLogOffset
+	mu               sync.RWMutex
+	numbers          map[WSID]map[SeqID]Number
+	offset           PLogOffset
+	writeValuesError error
 }
 
 func newMockStorage() *mockStorage {
@@ -42,6 +45,10 @@ func (m *mockStorage) ReadNumbers(wsid WSID, seqIDs []SeqID) ([]Number, error) {
 }
 
 func (m *mockStorage) WriteValues(batch []SeqValue) error {
+	if m.writeValuesError != nil {
+		return m.writeValuesError
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -71,10 +78,35 @@ func (m *mockStorage) ActualizePLog(ctx context.Context, offset PLogOffset, batc
 	return nil
 }
 
+func (m *mockStorage) readNumberWithDelay(t *testing.T, iTime coreutils.ITime, wsid WSID, sedID SeqID, number Number) {
+	duration := 500 * time.Millisecond
+	timerCh := iTime.NewTimerChan(duration)
+	timeoutTimer := time.NewTimer(10 * duration)
+	iTime.Sleep(duration)
+	for {
+		select {
+		case <-timerCh:
+			timerCh = iTime.NewTimerChan(duration)
+			iTime.Sleep(duration)
+			nums, err := m.ReadNumbers(wsid, []SeqID{sedID})
+			require.NoError(t, err)
+
+			if nums[0] == number {
+				return
+			}
+		case <-timeoutTimer.C:
+			require.FailNow(t, "timed out")
+		}
+	}
+}
+
 func TestSequencer(t *testing.T) {
-	mockedTime := coreutils.NewITime()
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
 
 	t.Run("basic flow", func(t *testing.T) {
+		mockedTime := coreutils.MockTime
 		// Given
 		storage := newMockStorage()
 		params := &Params{
@@ -87,7 +119,7 @@ func TestSequencer(t *testing.T) {
 			LRUCacheSize:          1000,
 		}
 
-		seq, cleanup := NewSequencer(params)
+		seq, cleanup := New(params, mockedTime)
 		defer cleanup()
 
 		// When
@@ -101,15 +133,16 @@ func TestSequencer(t *testing.T) {
 
 		seq.Flush()
 
-		// Then
 		mockedTime.Sleep(1 * time.Second)
+		// Then
+		cleanup()
 
-		nums, err := storage.ReadNumbers(1, []SeqID{1})
-		require.NoError(t, err)
-		require.Equal(t, Number(101), nums[0])
+		// waiter goroutine
+		storage.readNumberWithDelay(t, mockedTime, 1, 1, 101)
 	})
 
 	t.Run("actualization", func(t *testing.T) {
+		mockedTime := coreutils.MockTime
 		// Given
 		storage := newMockStorage()
 		params := &Params{
@@ -122,7 +155,7 @@ func TestSequencer(t *testing.T) {
 			LRUCacheSize:          1000,
 		}
 
-		seq, cleanup := NewSequencer(params)
+		seq, cleanup := New(params, mockedTime)
 		defer cleanup()
 
 		// When
@@ -137,5 +170,163 @@ func TestSequencer(t *testing.T) {
 		// Then
 		_, ok = seq.Start(1, 1)
 		require.False(t, ok, "should not start during actualization")
+	})
+
+	t.Run("concurrent sequence generation", func(t *testing.T) {
+		mockedTime := coreutils.MockTime
+		// Given
+		initialValue := Number(100)
+		storage := newMockStorage()
+		params := &Params{
+			SeqTypes: map[WSKind]map[SeqID]Number{
+				1: {1: initialValue},
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 500,
+			MaxFlushingInterval:   500 * time.Millisecond,
+			LRUCacheSize:          1000,
+		}
+
+		seq, cleanup := New(params, mockedTime)
+
+		// When
+		_, ok := seq.Start(1, 1)
+		numberOfGoroutines := 100
+		var wg sync.WaitGroup
+		for i := 0; i < numberOfGoroutines; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+
+				require.True(t, ok)
+				_, err := seq.Next(1)
+				require.NoError(t, err)
+			}()
+		}
+		wg.Wait()
+
+		seq.Flush()
+
+		cleanup()
+
+		// waiter goroutine
+		wg.Add(1)
+		go func() {
+			wg.Done()
+
+			duration := 500 * time.Millisecond
+			timerCh := mockedTime.NewTimerChan(duration)
+			for {
+				select {
+				case <-timerCh:
+					timerCh = mockedTime.NewTimerChan(duration)
+					mockedTime.Sleep(duration)
+					nums, err := storage.ReadNumbers(1, []SeqID{1})
+					require.NoError(t, err)
+
+					if nums[0] == initialValue+Number(numberOfGoroutines) {
+						return
+					}
+				}
+			}
+		}()
+		wg.Wait()
+	})
+}
+
+func TestBatcher(t *testing.T) {
+	t.Run("should aggregate max values and write to storage", func(t *testing.T) {
+		// Given
+		storage := newMockStorage()
+		params := &Params{
+			SeqTypes: map[WSKind]map[SeqID]Number{
+				1: {1: 100, 2: 200},
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 500,
+			MaxFlushingInterval:   500 * time.Millisecond,
+			LRUCacheSize:          1000,
+		}
+
+		seq, cleanup := New(params, coreutils.MockTime)
+		defer cleanup()
+
+		// When
+		batch := []SeqValue{
+			{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 101},
+			{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 102}, // Higher value for same key
+			{Key: NumberKey{WSID: 1, SeqID: 2}, Value: 201},
+			{Key: NumberKey{WSID: 1, SeqID: 2}, Value: 200}, // Lower value for same key
+		}
+		batchOffset := PLogOffset(10)
+
+		err := seq.(*sequencer).batcher(batch, batchOffset)
+		require.NoError(t, err)
+
+		// Then
+		// Verify storage received max values
+		nums, err := storage.ReadNumbers(1, []SeqID{1, 2})
+		require.NoError(t, err)
+		require.Equal(t, []Number{102, 201}, nums)
+
+		// Verify offset was written
+		offset, err := storage.ReadLastWrittenPLogOffset()
+		require.NoError(t, err)
+		require.Equal(t, PLogOffset(10), offset)
+	})
+
+	t.Run("should handle empty batch", func(t *testing.T) {
+		// Given
+		storage := newMockStorage()
+		params := &Params{
+			SeqTypes: map[WSKind]map[SeqID]Number{
+				1: {1: 100},
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 500,
+			MaxFlushingInterval:   500 * time.Millisecond,
+			LRUCacheSize:          1000,
+		}
+
+		seq, cleanup := New(params, coreutils.MockTime)
+		defer cleanup()
+
+		// When
+		err := seq.(*sequencer).batcher([]SeqValue{}, PLogOffset(1))
+		require.NoError(t, err)
+
+		// Then
+		offset, err := storage.ReadLastWrittenPLogOffset()
+		require.NoError(t, err)
+		require.Equal(t, PLogOffset(1), offset)
+	})
+
+	t.Run("should handle storage write errors", func(t *testing.T) {
+		// Given
+		storage := newMockStorage()
+		storage.writeValuesError = errors.New("write error")
+		params := &Params{
+			SeqTypes: map[WSKind]map[SeqID]Number{
+				1: {1: 100},
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 500,
+			MaxFlushingInterval:   500 * time.Millisecond,
+			LRUCacheSize:          1000,
+		}
+
+		seq, cleanup := New(params, coreutils.MockTime)
+		defer cleanup()
+
+		batch := []SeqValue{
+			{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 101},
+		}
+
+		// When
+		err := seq.(*sequencer).batcher(batch, PLogOffset(1))
+
+		// Then
+		require.Error(t, err)
+		require.Equal(t, "write error", err.Error())
 	})
 }
