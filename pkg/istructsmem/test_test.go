@@ -241,6 +241,8 @@ var testData = testDataType{
 	},
 }
 
+var qNameMyQName = appdef.NewQName("test", "MyQName")
+
 func test() *testDataType {
 
 	prepareAppDef := func() appdef.IAppDefBuilder {
@@ -343,7 +345,8 @@ func test() *testDataType {
 				AddField("raw", appdef.DataKind_bytes, false, constraints.MaxLen(appdef.MaxFieldLength)).
 				AddField("QName", appdef.DataKind_QName, false).
 				AddField("bool", appdef.DataKind_bool, false).
-				AddField("RecordID", appdef.DataKind_RecordID, false)
+				AddField("RecordID", appdef.DataKind_RecordID, false).
+				AddField("RecordID_2", appdef.DataKind_RecordID, false)
 			obj.AddContainer("child", testData.testObj, 0, appdef.Occurs_Unbounded)
 		}
 
@@ -359,7 +362,8 @@ func test() *testDataType {
 				AddField("raw", appdef.DataKind_bytes, false, constraints.MaxLen(appdef.MaxFieldLength)).
 				AddField("QName", appdef.DataKind_QName, false).
 				AddField("bool", appdef.DataKind_bool, false).
-				AddField("RecordID", appdef.DataKind_RecordID, false)
+				AddField("RecordID", appdef.DataKind_RecordID, false).
+				AddField("RecordID_2", appdef.DataKind_RecordID, false)
 			cDoc.
 				AddContainer("record", testData.testCRec, 0, appdef.Occurs_Unbounded)
 
@@ -374,7 +378,8 @@ func test() *testDataType {
 				AddField("raw", appdef.DataKind_bytes, false, constraints.MaxLen(appdef.MaxFieldLength)).
 				AddField("QName", appdef.DataKind_QName, false).
 				AddField("bool", appdef.DataKind_bool, false).
-				AddField("RecordID", appdef.DataKind_RecordID, false)
+				AddField("RecordID", appdef.DataKind_RecordID, false).
+				AddField("RecordID_2", appdef.DataKind_RecordID, false)
 		}
 
 		{
@@ -400,6 +405,8 @@ func test() *testDataType {
 			wsb.AddCommand(testData.changeCmdName)
 			wsb.AddQuery(testData.queryPhotoFunctionName).SetParam(testData.queryPhotoFunctionParamsName)
 		}
+
+		wsb.AddCDoc(qNameMyQName)
 
 		return adb
 	}
@@ -457,6 +464,7 @@ func fillTestRow(row *rowType) {
 	row.PutQName("QName", test.tablePhotos)
 	row.PutBool("bool", true)
 	row.PutRecordID("RecordID", 7777777)
+	row.PutRecordID("RecordID_2", 8888888)
 
 	if err := row.build(); err != nil {
 		panic(err)

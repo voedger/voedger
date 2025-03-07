@@ -6,6 +6,7 @@
 package istructsmem
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -142,6 +143,19 @@ func (row *rowType) SpecifiedValues(cb func(appdef.IField, any) bool) {
 	// user fields
 	goOn := true
 	row.dyB.IterateFields(nil, func(name string, value interface{}) bool {
+		field := row.fieldDef(name)
+		switch field.DataKind() {
+		case appdef.DataKind_RecordID:
+			value = istructs.RecordID(value.(int64)) //nolint:gosec
+		case appdef.DataKind_QName:
+			qNameID := binary.BigEndian.Uint16(value.([]byte))
+			qName, err := row.appCfg.qNames.QName(qNameID)
+			if err != nil {
+				// notest
+				panic(err)
+			}
+			value = qName
+		}
 		goOn = cb(row.fieldDef(name), value)
 		return goOn
 	})

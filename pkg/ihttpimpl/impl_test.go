@@ -113,14 +113,14 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		path := fmt.Sprintf("%s/%s/%d/%s?par1=val1&par2=val2", appOwner, appName, wsid, resource)
 
 		body := testApp.post("/api/"+path, "text/plain", testText, nil)
-		require.Equal([]byte("Hello, Test, {\"par1\":[\"val1\"],\"par2\":[\"val2\"]}"), body)
+		require.Equal(`Hello, Test, {"par1":"val1","par2":"val2"}`, string(body))
 
 		body = testApp.post("/api/"+path, "application/json", "", map[string]string{"text": testText})
-		require.Equal([]byte(fmt.Sprintf("Hello, {\"text\":\"%s\"}, {\"par1\":[\"val1\"],\"par2\":[\"val2\"]}", testText)), body)
+		require.Equal(fmt.Sprintf(`Hello, {"text":"%s"}, {"par1":"val1","par2":"val2"}`, testText), string(body))
 
 		testText = ""
 		body = testApp.post("/api/"+path, "text/plain", testText, nil)
-		require.Equal([]byte(fmt.Sprintf("Hello, %s, {\"par1\":[\"val1\"],\"par2\":[\"val2\"]}", testText)), body)
+		require.Equal(fmt.Sprintf(`Hello, %s, {"par1":"val1","par2":"val2"}`, testText), string(body))
 	})
 
 	t.Run("q.EchoQuery", func(t *testing.T) {

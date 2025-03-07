@@ -9,6 +9,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -16,12 +17,17 @@ import (
 type Request struct {
 	Method   string
 	WSID     istructs.WSID // as it came in the request, could be pseudo
-	Header   map[string][]string
+	Header   map[string]string
 	Resource string
-	Query    map[string][]string
 	Body     []byte
-	AppQName string
+	AppQName appdef.AppQName
 	Host     string // used by authenticator to emit Host principal
+	// apiV2
+	Query   map[string]string
+	QName   appdef.QName // e.g. DocName, extension QName
+	IsAPIV2 bool
+	DocID   istructs.IDType
+	ApiPath int
 }
 
 type ResponseMeta struct {

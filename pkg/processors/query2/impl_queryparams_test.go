@@ -5,6 +5,7 @@
 package query2
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
@@ -33,11 +34,11 @@ func Test_BasicUsage(t *testing.T) {
 		require.Equal(5, parsedParams.Constraints.Skip)
 		require.Equal([]string{"name", "email"}, parsedParams.Constraints.Include)
 		require.Equal([]string{"id", "name"}, parsedParams.Constraints.Keys)
-		require.Equal(map[string]interface{}{
-			"id_department": float64(123456),
+		require.Equal(Where{
+			"id_department": json.Number("123456"),
 			"number": map[string]interface{}{
-				"$gte": float64(100),
-				"$lte": float64(200),
+				"$gte": json.Number("100"),
+				"$lte": json.Number("200"),
 			},
 		}, parsedParams.Constraints.Where)
 		require.Equal(map[string]interface{}{

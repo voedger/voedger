@@ -5,15 +5,15 @@
 package queryprocessor
 
 const (
-	queriesTotal      = "voedger_qp_queries_total"
-	queriesSeconds    = "voedger_qp_queries_seconds"
-	errorsTotal       = "voedger_qp_errors_total"
-	buildSeconds      = "voedger_qp_build_seconds"
-	execSeconds       = "voedger_qp_exec_seconds"
-	execFieldsSeconds = "voedger_qp_exec_fields_seconds"
-	execEnrichSeconds = "voedger_qp_exec_enrich_seconds"
-	execFilterSeconds = "voedger_qp_exec_filter_seconds"
-	execOrderSeconds  = "voedger_qp_exec_order_seconds"
-	execCountSeconds  = "voedger_qp_exec_count_seconds"
-	execSendSeconds   = "voedger_qp_exec_send_seconds"
+	Metric_QueriesTotal      = "voedger_qp_queries_total"
+	Metric_QueriesSeconds    = "voedger_qp_queries_seconds"
+	Metric_ErrorsTotal       = "voedger_qp_errors_total"
+	Metric_BuildSeconds      = "voedger_qp_build_seconds"
+	Metric_ExecSeconds       = "voedger_qp_exec_seconds"
+	Metric_ExecFieldsSeconds = "voedger_qp_exec_fields_seconds"
+	Metric_ExecEnrichSeconds = "voedger_qp_exec_enrich_seconds"
+	Metric_ExecFilterSeconds = "voedger_qp_exec_filter_seconds"
+	Metric_ExecOrderSeconds  = "voedger_qp_exec_order_seconds"
+	Metric_ExecCountSeconds  = "voedger_qp_exec_count_seconds"
+	Metric_ExecSendSeconds   = "voedger_qp_exec_send_seconds"
 )

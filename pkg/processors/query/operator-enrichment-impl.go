@@ -28,7 +28,7 @@ type EnrichmentOperator struct {
 func (o *EnrichmentOperator) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
 	begin := time.Now()
 	defer func() {
-		o.metrics.Increase(execEnrichSeconds, time.Since(begin).Seconds())
+		o.metrics.Increase(Metric_ExecEnrichSeconds, time.Since(begin).Seconds())
 	}()
 	outputRow := work.(IWorkpiece).OutputRow()
 	for _, element := range o.elements {

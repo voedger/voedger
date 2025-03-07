@@ -139,6 +139,11 @@ func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...core
 	return f.httpRespToFuncResp(httpResp, err)
 }
 
+func (f *implIFederation) Query(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
+	httpResp, err := f.get(relativeURL, optFuncs...)
+	return f.httpRespToFuncResp(httpResp, err)
+}
+
 func (f *implIFederation) AdminFunc(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
 	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodPost))
 	url := fmt.Sprintf("http://127.0.0.1:%d/%s", f.adminPortGetter(), relativeURL)
@@ -158,7 +163,7 @@ func getFuncError(httpResp *coreutils.HTTPResponse) (funcError coreutils.FuncErr
 	}
 	m := map[string]interface{}{}
 	if err := json.Unmarshal([]byte(httpResp.Body), &m); err != nil {
-		return funcError, err
+		return funcError, fmt.Errorf("IFederation: failed to unmarshal response body to FuncErr: %w. Body:\n%s", err, httpResp.Body)
 	}
 	sysErrorMap := m["sys.Error"].(map[string]interface{})
 	errQNameStr, ok := sysErrorMap["QName"].(string)
@@ -175,7 +180,7 @@ func getFuncError(httpResp *coreutils.HTTPResponse) (funcError coreutils.FuncErr
 	return funcError, nil
 }
 
-func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (*coreutils.FuncResponse, error) {
+func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (res *coreutils.FuncResponse, err error) {
 	isUnexpectedCode := errors.Is(httpRespErr, coreutils.ErrUnexpectedStatusCode)
 	if httpRespErr != nil && !isUnexpectedCode {
 		return nil, httpRespErr
@@ -190,7 +195,7 @@ func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, h
 		}
 		return nil, funcError
 	}
-	res := &coreutils.FuncResponse{
+	res = &coreutils.FuncResponse{
 		CommandResponse: coreutils.CommandResponse{
 			NewIDs:    map[string]istructs.RecordID{},
 			CmdResult: map[string]interface{}{},
@@ -200,8 +205,14 @@ func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, h
 	if len(httpResp.Body) == 0 {
 		return res, nil
 	}
-	if err := json.Unmarshal([]byte(httpResp.Body), &res); err != nil {
-		return nil, err
+	if strings.HasPrefix(httpResp.HTTPResp.Request.URL.Path, "/api/v2/") {
+		// TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
+		err = json.Unmarshal([]byte(httpResp.Body), &res.APIV2Response)
+	} else {
+		err = json.Unmarshal([]byte(httpResp.Body), &res)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("IFederation: failed to unmarshal response body to FuncResponse: %w. Body:\n%s", err, httpResp.Body)
 	}
 	if res.SysError.HTTPStatus > 0 && res.ExpectedSysErrorCode() > 0 && res.ExpectedSysErrorCode() != res.SysError.HTTPStatus {
 		return nil, fmt.Errorf("sys.Error actual status %d, expected %v: %s", res.SysError.HTTPStatus, res.ExpectedSysErrorCode(), res.SysError.Message)

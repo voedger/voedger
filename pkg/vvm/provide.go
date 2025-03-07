@@ -37,6 +37,7 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
+	"github.com/voedger/voedger/pkg/processors/query2"
 	"github.com/voedger/voedger/pkg/processors/schedulers"
 	"github.com/voedger/voedger/pkg/router"
 	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
@@ -117,7 +118,17 @@ func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 			NumChannels:       1,
 			ChannelBufferSize: 0,
 		},
-		ProcessorChannel_Query,
+		ProcessorChannel_Query_V1,
+	)
+
+	vvmCfg.addProcessorChannel(
+		// query processors
+		// all query processors sits on a single channel because any restaurant could be served by any query proc
+		iprocbusmem.ChannelGroup{
+			NumChannels:       1,
+			ChannelBufferSize: 0,
+		},
+		ProcessorChannel_Query_V2,
 	)
 
 	vvmCfg.addProcessorChannel(
@@ -143,7 +154,8 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		wire.Struct(new(schedulers.BasicSchedulerConfig), "VvmName", "SecretReader", "Tokens", "Metrics", "Broker", "Federation", "Time"),
 		provideServicePipeline,
 		provideCommandProcessors,
-		provideQueryProcessors,
+		provideQueryProcessors_V1,
+		provideQueryProcessors_V2,
 		provideOpBLOBProcessors,
 		provideBlobAppStoragePtr,
 		provideVVMApps,
@@ -152,9 +164,11 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		provideBlobStorage,
 		provideChannelGroups,
 		provideProcessorChannelGroupIdxCommand,
-		provideProcessorChannelGroupIdxQuery,
+		provideProcessorChannelGroupIdxQuery_V1,
+		provideProcessorChannelGroupIdxQuery_V2,
 		provideProcessorChannelGroupIdxBLOB,
-		provideQueryChannel,
+		provideQueryChannel_V1,
+		provideQueryChannel_V2,
 		provideCommandChannelFactory,
 		provideRequestHandler,
 		provideBLOBChannel,
@@ -168,6 +182,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		provideAppPartitions,
 		in10nmem.ProvideEx2,
 		queryprocessor.ProvideServiceFactory,
+		query2.ProvideServiceFactory,
 		commandprocessor.ProvideServiceFactory,
 		metrics.ProvideMetricsService,
 		dbcertcache.ProvideDbCache,
@@ -672,8 +687,12 @@ func provideProcessorChannelGroupIdxCommand(vvmCfg *VVMConfig) CommandProcessors
 	return CommandProcessorsChannelGroupIdxType(getChannelGroupIdx(vvmCfg, ProcessorChannel_Command))
 }
 
-func provideProcessorChannelGroupIdxQuery(vvmCfg *VVMConfig) QueryProcessorsChannelGroupIdxType {
-	return QueryProcessorsChannelGroupIdxType(getChannelGroupIdx(vvmCfg, ProcessorChannel_Query))
+func provideProcessorChannelGroupIdxQuery_V1(vvmCfg *VVMConfig) QueryProcessorsChannelGroupIdxType_V1 {
+	return QueryProcessorsChannelGroupIdxType_V1(getChannelGroupIdx(vvmCfg, ProcessorChannel_Query_V1))
+}
+
+func provideProcessorChannelGroupIdxQuery_V2(vvmCfg *VVMConfig) QueryProcessorsChannelGroupIdxType_V2 {
+	return QueryProcessorsChannelGroupIdxType_V2(getChannelGroupIdx(vvmCfg, ProcessorChannel_Query_V2))
 }
 
 func provideProcessorChannelGroupIdxBLOB(vvmCfg *VVMConfig) blobprocessor.BLOBServiceChannelGroupIdx {
@@ -744,8 +763,12 @@ func providePublicEndpointServiceOperator(rs RouterServices, metricsServiceOp Me
 	return pipeline.ForkOperator(pipeline.ForkSame, funcs[0], funcs[1:]...)
 }
 
-func provideQueryChannel(sch ServiceChannelFactory) QueryChannel {
-	return QueryChannel(sch(ProcessorChannel_Query, 0))
+func provideQueryChannel_V1(sch ServiceChannelFactory) QueryChannel_V1 {
+	return QueryChannel_V1(sch(ProcessorChannel_Query_V1, 0))
+}
+
+func provideQueryChannel_V2(sch ServiceChannelFactory) QueryChannel_V2 {
+	return QueryChannel_V2(sch(ProcessorChannel_Query_V2, 0))
 }
 
 func provideBLOBChannel(sch ServiceChannelFactory) blobprocessor.BLOBServiceChannel {
@@ -768,9 +791,20 @@ func provideOpBLOBProcessors(numBLOBWorkers istructs.NumBLOBProcessors, blobServ
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }
 
-func provideQueryProcessors(qpCount istructs.NumQueryProcessors, qc QueryChannel, appParts appparts.IAppPartitions, qpFactory queryprocessor.ServiceFactory,
+func provideQueryProcessors_V1(qpCount istructs.NumQueryProcessors, qc QueryChannel_V1, appParts appparts.IAppPartitions, qpFactory queryprocessor.ServiceFactory,
 	imetrics imetrics.IMetrics, vvm processors.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator,
-	tokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) OperatorQueryProcessors {
+	tokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) OperatorQueryProcessors_V1 {
+	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
+	for i := 0; i < int(qpCount); i++ {
+		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), appParts, int(mpq), imetrics,
+			string(vvm), authn, tokens, federation, statelessResources, secretReader)))
+	}
+	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
+}
+
+func provideQueryProcessors_V2(qpCount istructs.NumQueryProcessors, qc QueryChannel_V2, appParts appparts.IAppPartitions, qpFactory query2.ServiceFactory,
+	imetrics imetrics.IMetrics, vvm processors.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator,
+	tokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) OperatorQueryProcessors_V2 {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
 	for i := 0; i < int(qpCount); i++ {
 		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), appParts, int(mpq), imetrics,
@@ -790,7 +824,8 @@ func provideCommandProcessors(cpCount istructs.NumCommandProcessors, ccf Command
 func provideServicePipeline(
 	vvmCtx context.Context,
 	opCommandProcessors OperatorCommandProcessors,
-	opQueryProcessors OperatorQueryProcessors,
+	opQueryProcessors_v1 OperatorQueryProcessors_V1,
+	opQueryProcessors_v2 OperatorQueryProcessors_V2,
 	opBLOBProcessors OperatorBLOBProcessors,
 	opAsyncActualizers actualizers.IActualizersService,
 	appPartsCtl IAppPartsCtlPipelineService,
@@ -801,7 +836,8 @@ func provideServicePipeline(
 ) ServicePipeline {
 	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline",
 		pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame,
-			pipeline.ForkBranch(opQueryProcessors),
+			pipeline.ForkBranch(opQueryProcessors_v1),
+			pipeline.ForkBranch(opQueryProcessors_v2),
 			pipeline.ForkBranch(opCommandProcessors),
 			pipeline.ForkBranch(opBLOBProcessors),
 			pipeline.ForkBranch(pipeline.ServiceOperator(opAsyncActualizers)),

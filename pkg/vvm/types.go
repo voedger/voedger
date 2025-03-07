@@ -43,7 +43,8 @@ import (
 type ServicePipeline pipeline.ISyncPipeline
 type OperatorCommandProcessors pipeline.ISyncOperator
 type OperatorCommandProcessor pipeline.ISyncOperator
-type OperatorQueryProcessors pipeline.ISyncOperator
+type OperatorQueryProcessors_V1 pipeline.ISyncOperator
+type OperatorQueryProcessors_V2 pipeline.ISyncOperator
 type OperatorBLOBProcessors pipeline.ISyncOperator
 type OperatorQueryProcessor pipeline.ISyncOperator
 type AppPartitionFactory func(ctx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID) pipeline.ISyncOperator
@@ -51,14 +52,16 @@ type AsyncActualizersFactory func(ctx context.Context, appQName appdef.AppQName,
 	tokens itokens.ITokens, federation federation.IFederation, opts []state.StateOptFunc) pipeline.ISyncOperator
 type OperatorAppServicesFactory func(ctx context.Context) pipeline.ISyncOperator
 type CommandChannelFactory func(channelIdx uint) commandprocessor.CommandChannel
-type QueryChannel iprocbus.ServiceChannel
+type QueryChannel_V1 iprocbus.ServiceChannel
+type QueryChannel_V2 iprocbus.ServiceChannel
 type AdminEndpointServiceOperator pipeline.ISyncOperator
 type PublicEndpointServiceOperator pipeline.ISyncOperator
 type BlobberAppClusterID istructs.ClusterAppID
 type BlobStorage iblobstorage.IBLOBStorage
 type BlobberAppStruct istructs.IAppStructs
 type CommandProcessorsChannelGroupIdxType uint
-type QueryProcessorsChannelGroupIdxType uint
+type QueryProcessorsChannelGroupIdxType_V1 uint
+type QueryProcessorsChannelGroupIdxType_V2 uint
 type BLOBProcessorsChannelGroupIdxType uint
 type MaxPrepareQueriesType int
 type ServiceChannelFactory func(pcgt ProcessorChannelType, channelIdx uint) iprocbus.ServiceChannel

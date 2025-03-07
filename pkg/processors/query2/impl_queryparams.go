@@ -5,10 +5,11 @@
 package query2
 
 import (
-	"encoding/json"
 	"errors"
 	"strconv"
 	"strings"
+
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 func ParseQueryParams(params map[string]string) (*QueryParams, error) {
@@ -60,7 +61,7 @@ func ParseQueryParams(params map[string]string) (*QueryParams, error) {
 	// Parse "where"
 	if where, exists := params["where"]; exists && where != "" {
 		var whereMap map[string]interface{}
-		if err := json.Unmarshal([]byte(where), &whereMap); err != nil {
+		if err := coreutils.JSONUnmarshal([]byte(where), &whereMap); err != nil {
 			return nil, errors.New("invalid 'where' parameter")
 		}
 		constraints.Where = whereMap
@@ -69,7 +70,7 @@ func ParseQueryParams(params map[string]string) (*QueryParams, error) {
 	// Parse "arg"
 	if arg, exists := params["arg"]; exists && arg != "" {
 		var argMap map[string]interface{}
-		if err := json.Unmarshal([]byte(arg), &argMap); err != nil {
+		if err := coreutils.JSONUnmarshal([]byte(arg), &argMap); err != nil {
 			return nil, errors.New("invalid 'arg' parameter")
 		}
 		qp.Argument = argMap

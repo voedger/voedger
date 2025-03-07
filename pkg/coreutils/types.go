@@ -6,6 +6,7 @@
 package coreutils
 
 import (
+	"encoding/json"
 	"io"
 	"io/fs"
 	"net/http"
@@ -44,6 +45,7 @@ type FuncResponse struct {
 	Sections []struct {
 		Elements [][][][]interface{} `json:"elements"`
 	} `json:"sections"`
+	APIV2Response interface{} // TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
 }
 
 type FuncError struct {
@@ -89,12 +91,28 @@ type IErrUnwrapper interface {
 	Unwrap() []error
 }
 
-type CUD struct {
-	Fields map[string]interface{} `json:"fields"`
+type CUDs struct {
+	Values []CUD `json:"cuds"`
 }
 
-type CUDs struct {
-	Cuds []CUD `json:"cuds"`
+func (c CUDs) MustToJSON() string {
+	v, err := c.ToJSON()
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+func (c CUDs) ToJSON() (v string, err error) {
+	bb, err := json.Marshal(c)
+	if err != nil {
+		return
+	}
+	return string(bb), nil
+}
+
+type CUD struct {
+	ID     istructs.RecordID      `json:"sys.ID,omitempty"`
+	Fields map[string]interface{} `json:"fields"`
 }
 
 type IReadFS interface {
