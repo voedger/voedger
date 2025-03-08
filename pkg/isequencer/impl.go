@@ -7,6 +7,7 @@ package isequencer
 
 import (
 	"context"
+
 	lruPkg "github.com/hashicorp/golang-lru/v2"
 
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -16,6 +17,7 @@ import (
 func New(params *Params, iTime coreutils.ITime) (ISequencer, context.CancelFunc) {
 	lru, err := lruPkg.New[NumberKey, Number](params.LRUCacheSize)
 	if err != nil {
+		// notest
 		panic("failed to create LRU cache: " + err.Error())
 	}
 
@@ -102,7 +104,7 @@ func (s *sequencer) flusher() {
 	defer s.flusherWg.Done()
 	tickerCh := s.iTime.NewTimerChan(s.params.MaxFlushingInterval)
 	s.flusherStartedCh <- struct{}{}
-	for {
+	for s.flusherCtx.Err() == nil {
 		select {
 		case <-s.cleanupCtx.Done():
 			return // Stop flusher when cleanup is in progress
@@ -162,7 +164,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	if !exists {
 		panic("unknown wsKind")
 	}
-	initialValue, exists := seqTypes[seqID]
+	lastNumber, exists := seqTypes[seqID]
 	if !exists {
 		panic("unknown seqID")
 	}
@@ -183,9 +185,11 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 		return nextValue
 	}
 
+	ok := false
+
 	// 3. Try to obtain next value using cache hierarchy
-	if value, ok := s.lru.Get(key); ok {
-		return incrementNumber(value), nil
+	if lastNumber, ok = s.lru.Get(key); ok {
+		return incrementNumber(lastNumber), nil
 	}
 
 	s.inprocMu.RLock()
@@ -196,24 +200,27 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	s.inprocMu.RUnlock()
 
 	s.toBeFlushedMu.RLock()
-	value, ok := s.toBeFlushed[key]
+	lastNumber, ok = s.toBeFlushed[key]
 	s.toBeFlushedMu.RUnlock()
 	if ok {
-		return incrementNumber(value), nil
+		return incrementNumber(lastNumber), nil
 	}
 
 	// Try storage as last resort
-	numbers, err := s.params.SeqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
+	lastNumbers, err := s.params.SeqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
 	if err != nil {
 		return 0, err
 	}
 
-	value = numbers[0]
-	if value == 0 {
-		value = initialValue
+	if len(lastNumbers) > 1 {
+		// notest
+		panic("")
+	}
+	if len(lastNumbers) != 0 {
+		lastNumber = lastNumbers[0]
 	}
 
-	return incrementNumber(value), nil
+	return incrementNumber(lastNumber), nil
 }
 
 func (s *sequencer) Flush() {
@@ -311,7 +318,7 @@ func (s *sequencer) actualizer() {
 		return
 	}
 
-	for {
+	for s.cleanupCtx.Err() == nil {
 		select {
 		case <-s.cleanupCtx.Done():
 			return // Stop actualization when context is cancelled

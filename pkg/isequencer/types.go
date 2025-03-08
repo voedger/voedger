@@ -16,10 +16,10 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
-type PartitionID uint64
-type SeqID uint16
-type WSKind uint16
-type WSID uint16
+type PartitionID uint16
+type SeqID uint16  // QNameID
+type WSKind uint16 // QNameID
+type WSID uint64
 type Number uint64
 type PLogOffset uint64
 
