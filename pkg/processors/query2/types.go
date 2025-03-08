@@ -252,7 +252,6 @@ func (a *aggregator) subList() {
 		return
 	}
 	a.ww = a.ww[a.params.Constraints.Skip:a.params.Constraints.Limit]
-	return
 }
 func (a *aggregator) compareInt32(v1, v2 int32, asc bool) bool {
 	if asc {

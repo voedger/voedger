@@ -58,6 +58,8 @@ type queryWork struct {
 	iWorkspace           appdef.IWorkspace
 	iQuery               appdef.IQuery
 	iView                appdef.IView
+	iDoc                 appdef.ISingleton
+	iRecord              appdef.IContainedRecord
 	wsDesc               istructs.IRecord
 	callbackFunc         istructs.ExecQueryCallback
 	responseSenderGetter func() bus.IResponseSender
