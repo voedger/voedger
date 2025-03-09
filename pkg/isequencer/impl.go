@@ -32,8 +32,9 @@ func New(params *Params, iTime coreutils.ITime) (ISequencer, context.CancelFunc)
 		iTime:            iTime,
 		flusherStartedCh: make(chan struct{}, 1),
 	}
+	s.actualizerInProgress.Store(false)
 
-	s.startFlusher()
+	s.startActualizer()
 	<-s.flusherStartedCh
 
 	return s, s.cleanup
@@ -41,10 +42,8 @@ func New(params *Params, iTime coreutils.ITime) (ISequencer, context.CancelFunc)
 
 // checkCleanupState panics if cleanup is in progress
 func (s *sequencer) checkCleanupState() {
-	select {
-	case <-s.cleanupCtx.Done():
+	if s.cleanupCtx.Err() != nil {
 		panic("sequencer is in cleanup state")
-	default:
 	}
 }
 
@@ -76,7 +75,13 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 	s.inprocMu.RUnlock()
 
 	// Read last offset
-	lastOffset, err := s.params.SeqStorage.ReadLastWrittenPLogOffset()
+	var lastOffset PLogOffset
+	err := coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() error {
+		var err error
+		lastOffset, err = s.params.SeqStorage.ReadLastWrittenPLogOffset()
+
+		return err
+	})
 	if err != nil {
 		panic("failed to read last PLog offset: " + err.Error())
 	}
@@ -99,9 +104,33 @@ func (s *sequencer) startFlusher() {
 	go s.flusher()
 }
 
+func (s *sequencer) startActualizer() {
+	// Check if actualization is in progress
+	if !s.actualizerInProgress.CompareAndSwap(false, true) {
+		return
+	}
+	s.actualizerWg.Add(1)
+	go s.actualizer()
+}
+
+func (s *sequencer) stopFlusher() {
+	if s.flusherCtx == nil {
+		return
+	}
+
+	// Stop flusher if running
+	if s.flusherCtx.Err() == nil {
+		s.flusherCtxCancel()
+		s.flusherWg.Wait()
+	}
+
+	s.flusherCtx = nil
+}
+
 // flusher runs in a goroutine to periodically flush values from toBeFlushed to storage
 func (s *sequencer) flusher() {
 	defer s.flusherWg.Done()
+
 	tickerCh := s.iTime.NewTimerChan(s.params.MaxFlushingInterval)
 	s.flusherStartedCh <- struct{}{}
 	for s.flusherCtx.Err() == nil {
@@ -156,16 +185,17 @@ func (s *sequencer) flusher() {
 }
 
 func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
-	// 1. Validate processing status
+	// Validate processing status
 	s.checkEventState()
 
-	// 2. Get initialValue and verify seqID exists
+	// Get initialValue and verify seqID exists
 	seqTypes, exists := s.params.SeqTypes[s.currentWSKind]
 	if !exists {
 		panic("unknown wsKind")
 	}
-	lastNumber, exists := seqTypes[seqID]
-	if !exists {
+
+	initialLastNumber, ok := seqTypes[seqID]
+	if !ok {
 		panic("unknown seqID")
 	}
 
@@ -173,54 +203,62 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 		WSID:  s.currentWSID,
 		SeqID: seqID,
 	}
-
-	// Helper function to increment and store value
-	incrementNumber := func(value Number) Number {
-		s.inprocMu.Lock()
-		defer s.inprocMu.Unlock()
-
-		nextValue := value + 1
-		s.lru.Add(key, nextValue)
-		s.inproc[key] = nextValue
-		return nextValue
+	// Try to obtain next value using cache hierarchy
+	if lastNumber, ok := s.lru.Get(key); ok {
+		return s.incrementNumber(key, lastNumber), nil
 	}
 
-	ok := false
-
-	// 3. Try to obtain next value using cache hierarchy
-	if lastNumber, ok = s.lru.Get(key); ok {
-		return incrementNumber(lastNumber), nil
-	}
-
+	// Try inproc
 	s.inprocMu.RLock()
-	if value, ok := s.inproc[key]; ok {
+	if lastNumber, ok := s.inproc[key]; ok {
 		s.inprocMu.RUnlock()
-		return incrementNumber(value), nil
+
+		return s.incrementNumber(key, lastNumber), nil
 	}
 	s.inprocMu.RUnlock()
 
+	// Try toBeFlushed
 	s.toBeFlushedMu.RLock()
-	lastNumber, ok = s.toBeFlushed[key]
+	lastNumber, ok := s.toBeFlushed[key]
 	s.toBeFlushedMu.RUnlock()
 	if ok {
-		return incrementNumber(lastNumber), nil
+		return s.incrementNumber(key, lastNumber), nil
 	}
 
-	// Try storage as last resort
-	lastNumbers, err := s.params.SeqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
+	// Try storage as last source
+	var lastNumbers []Number
+	err = coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() error {
+		var err error
+		lastNumbers, err = s.params.SeqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
+
+		return err
+	})
 	if err != nil {
 		return 0, err
 	}
 
-	if len(lastNumbers) > 1 {
-		// notest
+	switch {
+	case len(lastNumbers) > 1:
 		panic("")
-	}
-	if len(lastNumbers) != 0 {
+	case len(lastNumbers) == 0:
+		lastNumber = initialLastNumber
+	default:
 		lastNumber = lastNumbers[0]
 	}
 
-	return incrementNumber(lastNumber), nil
+	return s.incrementNumber(key, lastNumber), nil
+}
+
+// incrementNumber increments the number for the given key and returns the next number
+func (s *sequencer) incrementNumber(key NumberKey, number Number) Number {
+	s.inprocMu.Lock()
+	defer s.inprocMu.Unlock()
+
+	nextNumber := number + 1
+	s.lru.Add(key, nextNumber)
+	s.inproc[key] = nextNumber
+
+	return nextNumber
 }
 
 func (s *sequencer) Flush() {
@@ -228,11 +266,11 @@ func (s *sequencer) Flush() {
 	s.checkEventState()
 
 	// Skip if no values to flush
-
 	s.inprocMu.RLock()
 	if len(s.inproc) == 0 {
 		s.inprocMu.RUnlock()
 		s.finishEventState()
+
 		return
 	}
 	s.inprocMu.RUnlock()
@@ -255,6 +293,7 @@ func (s *sequencer) Flush() {
 	s.finishEventState()
 }
 
+// finishEventState resets the current event processing state
 func (s *sequencer) finishEventState() {
 	s.inprocMu.Lock()
 	defer s.inprocMu.Unlock()
@@ -297,25 +336,33 @@ func (s *sequencer) batcher(batch []SeqValue, batchOffset PLogOffset) error {
 		return err
 	}
 
+	// Update LRU cache
+	for key, value := range maxValues {
+		s.lru.Add(key, value)
+	}
+
 	return nil
 }
 
 func (s *sequencer) actualizer() {
 	defer s.actualizerWg.Done()
+	defer func() {
+		s.actualizerInProgress.Store(false)
+	}()
 
-	// Retry delay on errors
-	// Get last written offset to start actualization from
 	var (
 		offset PLogOffset
 		err    error
 	)
 
+	// Get last written offset to start actualization from
 	err = coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() error {
-		offset, err = s.params.SeqStorage.ReadLastWrittenPLogOffset()
+		s.inprocOffset, err = s.params.SeqStorage.ReadLastWrittenPLogOffset()
+
 		return err
 	})
 	if err != nil {
-		return
+		panic("failed to read last PLog offset: " + err.Error())
 	}
 
 	for s.cleanupCtx.Err() == nil {
@@ -327,43 +374,37 @@ func (s *sequencer) actualizer() {
 				return s.params.SeqStorage.ActualizePLog(s.cleanupCtx, offset, s.batcher)
 			})
 			if err == nil {
-				// Start flusher after successful actualization
+				// Restart flusher after successful actualization
+				s.stopFlusher()
 				s.startFlusher()
+
 				return
 			}
+
+			panic("failed to actualize PLog: " + err.Error())
 		}
 	}
 }
 
+// checkEventState panics if event processing is not started
 func (s *sequencer) checkEventState() {
 	if s.currentWSID == 0 || s.currentWSKind == 0 {
 		panic("event processing is not started")
 	}
 }
 
+// Actualize starts actualization process
 func (s *sequencer) Actualize() {
 	// Verify processing is started
 	s.checkEventState()
 
+	// Check if actualization is in progress
 	if s.actualizerInProgress.Load() {
 		panic("actualization is already in progress")
 	}
 
 	// Check if cleanup process is in progress
 	s.checkCleanupState()
-
-	// Stop flusher if running
-	if s.flusherCtx != nil {
-		select {
-		case <-s.flusherCtx.Done():
-			// Flusher already stopped
-		default:
-			// Cancel flusher context and wait
-			s.flusherCtxCancel()
-			s.flusherWg.Wait()
-			s.flusherCtx = nil
-		}
-	}
 
 	// Copy current values to toBeFlushed
 	s.toBeFlushedMu.Lock()
@@ -381,9 +422,7 @@ func (s *sequencer) Actualize() {
 	s.finishEventState()
 
 	// Start actualization
-	s.actualizerInProgress.Store(true)
-	s.actualizerWg.Add(1)
-	go s.actualizer()
+	s.startActualizer()
 }
 
 func (s *sequencer) cleanup() {

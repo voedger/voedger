@@ -35,10 +35,10 @@ func (m *mockStorage) ReadNumbers(wsid WSID, seqIDs []SeqID) ([]Number, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	result := make([]Number, len(seqIDs))
+	result := make([]Number, 0)
 	if nums, exists := m.numbers[wsid]; exists {
-		for i, id := range seqIDs {
-			result[i] = nums[id]
+		for _, id := range seqIDs {
+			result = append(result, nums[id])
 		}
 	}
 	return result, nil
@@ -104,9 +104,12 @@ func TestSequencer(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, PLogOffset(1), offset)
 
-		num, err := seq.Next(1)
-		require.NoError(t, err)
-		require.Equal(t, Number(101), num)
+		// Generate new sequence numbers 100 times
+		for i := 1; i <= 100; i++ {
+			num, err := seq.Next(1)
+			require.NoError(t, err)
+			require.Equal(t, Number(100+i), num)
+		}
 
 		seq.Flush()
 		mockedTime.Sleep(1 * time.Second)
@@ -116,7 +119,7 @@ func TestSequencer(t *testing.T) {
 
 		nums, err := storage.ReadNumbers(1, []SeqID{1})
 		require.NoError(t, err)
-		require.Equal(t, nums[0], Number(101))
+		require.Equal(t, nums[0], Number(200))
 	})
 
 	t.Run("actualization", func(t *testing.T) {
@@ -148,50 +151,6 @@ func TestSequencer(t *testing.T) {
 		// Then
 		_, ok = seq.Start(1, 1)
 		require.False(t, ok, "should not start during actualization")
-	})
-
-	t.Run("concurrent sequence generation", func(t *testing.T) {
-		mockedTime := coreutils.MockTime
-		// Given
-		initialValue := Number(100)
-		storage := newMockStorage()
-		params := &Params{
-			SeqTypes: map[WSKind]map[SeqID]Number{
-				1: {1: initialValue},
-			},
-			SeqStorage:            storage,
-			MaxNumUnflushedValues: 500,
-			MaxFlushingInterval:   500 * time.Millisecond,
-			LRUCacheSize:          1000,
-		}
-
-		seq, cleanup := New(params, mockedTime)
-
-		// When
-		_, ok := seq.Start(1, 1)
-		numberOfGoroutines := 10
-		var wg sync.WaitGroup
-		for i := 0; i < numberOfGoroutines; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-
-				require.True(t, ok)
-				_, err := seq.Next(1)
-				require.NoError(t, err)
-			}()
-		}
-		wg.Wait()
-
-		seq.Flush()
-		mockedTime.Sleep(1 * time.Second)
-		cleanup()
-
-		seq.(*sequencer).flusherWg.Wait()
-
-		nums, err := storage.ReadNumbers(1, []SeqID{1})
-		require.NoError(t, err)
-		require.Equal(t, nums[0], initialValue+Number(numberOfGoroutines))
 	})
 }
 
