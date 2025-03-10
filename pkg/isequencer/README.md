@@ -1,4 +1,7 @@
 # Overview
+
+## Workflow
+
 - Partition is deployed -> `ISequences.New()` is called
   - `go actualizer()` is called
 - `actualizer()`
@@ -58,8 +61,8 @@
     - `inprocOffset` = 0
     - `go actualizer()`, it reads actual data from PLog, restarts `flusher()` etc
 
+## Test plan
 
-# Test plan
 - Basic usage
   - storage contains an event with PLogOffset=42
     - i.e. ActualizeSequencesFromPLog should call batcher() []SeqValue{ Key: wsid, seqID; Value: 13}, offset = 42
