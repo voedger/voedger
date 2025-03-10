@@ -44,11 +44,11 @@ type IQueryMessage interface {
 	DocID() istructs.IDType
 	ApiPath() ApiPath
 	RequestCtx() context.Context
-	QName() appdef.QName // e.g. Doc, View, Workspace
+	QName() appdef.QName // e.g. Doc, View, Role
 	PartitionID() istructs.PartitionID
 	Host() string
 	Token() string
-	EntityQName() appdef.QName // e.g. role QName
+	WorkspaceQName() appdef.QName // actually wsKind
 }
 
 type IApiPathHandler interface {
@@ -62,18 +62,18 @@ type IApiPathHandler interface {
 }
 
 type implIQueryMessage struct {
-	appQName    appdef.AppQName
-	wsid        istructs.WSID
-	responder   bus.IResponder
-	queryParams QueryParams
-	docID       istructs.IDType
-	apiPath     ApiPath
-	requestCtx  context.Context
-	qName       appdef.QName
-	partition   istructs.PartitionID
-	host        string
-	token       string
-	entityQName appdef.QName
+	appQName       appdef.AppQName
+	wsid           istructs.WSID
+	responder      bus.IResponder
+	queryParams    QueryParams
+	docID          istructs.IDType
+	apiPath        ApiPath
+	requestCtx     context.Context
+	qName          appdef.QName
+	partition      istructs.PartitionID
+	host           string
+	token          string
+	workspaceQName appdef.QName
 }
 
 func (qm *implIQueryMessage) AppQName() appdef.AppQName {
@@ -118,8 +118,8 @@ func (qm *implIQueryMessage) Token() string {
 	return qm.token
 }
 
-func (qm *implIQueryMessage) EntityQName() appdef.QName {
-	return qm.entityQName
+func (qm *implIQueryMessage) WorkspaceQName() appdef.QName {
+	return qm.workspaceQName
 }
 
 type objectBackedByMap struct {
