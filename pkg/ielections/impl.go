@@ -19,18 +19,18 @@ import (
 // already local leader, or elections cleaned up), otherwise returns a *non-nil* context.
 func (e *elections[K, V]) AcquireLeadership(key K, val V, ttlSeconds LeadershipDurationSeconds) context.Context {
 	if e.isFinalized.Load() {
-		logger.Verbose(fmt.Sprintf("Key=%v: elections cleaned up; cannot acquire leadership.", key))
+		logger.Verbose(fmt.Sprintf("Key=%v: elections cleaned up; cannot acquire leadership", key))
 		return nil
 	}
 
 	inserted, err := e.storage.InsertIfNotExist(key, val, int(ttlSeconds))
 	if err != nil {
 		// notest
-		logger.Error(fmt.Sprintf("Key=%v: storage error: %v", key, err))
+		logger.Error(fmt.Sprintf("Key=%v: InsertIfNotExist failed: %v", key, err))
 		return nil
 	}
 	if !inserted {
-		logger.Verbose(fmt.Sprintf("Key=%v: already held or blocked by storage.", key))
+		logger.Verbose(fmt.Sprintf("Key=%v: leadership already acquired by someone else", key))
 		return nil
 	}
 
@@ -70,11 +70,11 @@ func (e *elections[K, V]) maintainLeadership(key K, val V, ttlSeconds Leadership
 			tickerCounter = bumpTickerCounter(tickerCounter, key, tickerInterval)
 			ok, err := e.storage.CompareAndSwap(key, val, val, int(ttlSeconds))
 			if err != nil {
-				logger.Error(fmt.Sprintf("Key=%v: compareAndSwap error => release", key))
+				logger.Error(fmt.Sprintf("Key=%v: compareAndSwap failed, will release: %v", key, err))
 			}
 
 			if !ok {
-				logger.Error(fmt.Sprintf("Key=%v: compareAndSwap failed => release", key))
+				logger.Error(fmt.Sprintf("Key=%v: compareAndSwap !ok => release", key))
 			}
 
 			if !ok || err != nil {
@@ -109,19 +109,19 @@ func (e *elections[K, V]) ReleaseLeadership(key K) {
 func (e *elections[K, V]) releaseLeadership(key K) *leaderInfo[K, V] {
 	liIntf, found := e.leadership.LoadAndDelete(key)
 	if !found {
-		logger.Verbose(fmt.Sprintf("Key=%v: not locally held.", key))
+		logger.Verbose(fmt.Sprintf("Key=%v: we're not the leader", key))
 		return nil
 	}
 
 	li := liIntf.(*leaderInfo[K, V])
 	if _, err := e.storage.CompareAndDelete(key, li.val); err != nil {
 		// notest
-		logger.Error(fmt.Sprintf("Key=%v: storage CompareAndDelete error: %v", key, err))
+		logger.Error(fmt.Sprintf("Key=%v: CompareAndDelete failed: %v", key, err))
 	}
 
 	li.cancel()
 
-	logger.Verbose(fmt.Sprintf("Key=%v: leadership released.", key))
+	logger.Verbose(fmt.Sprintf("Key=%v: leadership released", key))
 	return li
 }
 
@@ -134,7 +134,7 @@ func (e *elections[K, V]) cleanup() {
 		li := liIntf.(*leaderInfo[K, V])
 		if _, err := e.storage.CompareAndDelete(key.(K), li.val); err != nil {
 			// notest
-			logger.Error(fmt.Sprintf("Key=%v: storage CompareAndDelete error: %v", key, err))
+			logger.Error(fmt.Sprintf("Key=%v: CompareAndDelete failed: %v", key, err))
 		}
 		li.cancel()
 		li.wg.Wait()
