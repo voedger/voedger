@@ -31,6 +31,8 @@ const (
 	URLPlaceholder_query            = "query"
 	URLPlaceholder_view             = "view"
 	URLPlaceholder_workspace        = "workspace"
+	URLPlaceholder_rolePkg          = "rolePkg"
+	URLPlaceholder_role             = "role"
 	hours24                         = 24 * time.Hour
 	DefaultRetryAfterSecondsOn503   = 1
 )

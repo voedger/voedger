@@ -44,10 +44,11 @@ type IQueryMessage interface {
 	DocID() istructs.IDType
 	ApiPath() ApiPath
 	RequestCtx() context.Context
-	QName() appdef.QName
+	QName() appdef.QName // e.g. Doc, View, Workspace
 	PartitionID() istructs.PartitionID
 	Host() string
 	Token() string
+	EntityQName() appdef.QName // e.g. role QName
 }
 
 type IApiPathHandler interface {
@@ -72,6 +73,7 @@ type implIQueryMessage struct {
 	partition   istructs.PartitionID
 	host        string
 	token       string
+	entityQName appdef.QName
 }
 
 func (qm *implIQueryMessage) AppQName() appdef.AppQName {
@@ -114,6 +116,10 @@ func (qm *implIQueryMessage) Host() string {
 
 func (qm *implIQueryMessage) Token() string {
 	return qm.token
+}
+
+func (qm *implIQueryMessage) EntityQName() appdef.QName {
+	return qm.entityQName
 }
 
 type objectBackedByMap struct {
