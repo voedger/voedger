@@ -47,6 +47,7 @@ func (s *sequencer) checkCleanupState() {
 	}
 }
 
+// TODO: Add description and flow
 func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok bool) {
 	// Check if cleanup is in progress
 	s.checkCleanupState()
@@ -128,6 +129,7 @@ func (s *sequencer) stopFlusher() {
 }
 
 // flusher runs in a goroutine to periodically flush values from toBeFlushed to storage
+// TODO: Add low
 func (s *sequencer) flusher() {
 	defer s.flusherWg.Done()
 
@@ -184,6 +186,7 @@ func (s *sequencer) flusher() {
 	}
 }
 
+// TODO: Add description and flow
 func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	// Validate processing status
 	s.checkEventState()
@@ -261,6 +264,7 @@ func (s *sequencer) incrementNumber(key NumberKey, number Number) Number {
 	return nextNumber
 }
 
+// TODO: Add description and flow
 func (s *sequencer) Flush() {
 	// Verify processing is started
 	s.checkEventState()
@@ -308,6 +312,7 @@ func (s *sequencer) finishEventState() {
 // Flow:
 // - Build maxValues: max Number for each SeqValue.Key
 // - Write maxValues using s.params.SeqStorage.WriteValues()
+// TODO: Add description and flow
 func (s *sequencer) batcher(batch []SeqValue, batchOffset PLogOffset) error {
 	// Aggregate max values per key
 	maxValues := make(map[NumberKey]Number)
@@ -344,6 +349,7 @@ func (s *sequencer) batcher(batch []SeqValue, batchOffset PLogOffset) error {
 	return nil
 }
 
+// TODO: Add description and flow
 func (s *sequencer) actualizer() {
 	defer s.actualizerWg.Done()
 	defer func() {
@@ -394,6 +400,7 @@ func (s *sequencer) checkEventState() {
 }
 
 // Actualize starts actualization process
+// TODO: Add flow
 func (s *sequencer) Actualize() {
 	// Verify processing is started
 	s.checkEventState()
