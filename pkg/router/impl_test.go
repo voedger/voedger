@@ -32,7 +32,74 @@ const (
 	testWSID = istructs.MaxPseudoBaseWSID + 1
 )
 
-func TestBasicUsage_SingleResponse(t *testing.T) {
+func TestSingleResponse(t *testing.T) {
+	require := require.New(t)
+	cases := []struct {
+		name                string
+		obj                 interface{}
+		expectedBody        string
+		expectedContentType string
+	}{
+		{
+			name:         "simple string",
+			obj:          "test object",
+			expectedBody: "test object",
+		},
+		{
+			name: "object",
+			obj: struct {
+				FldInt32  int32
+				FldString string
+			}{42, "test str"},
+			expectedBody:        `{"FldInt32":42,"FldString":"test str"}`,
+			expectedContentType: coreutils.ApplicationJSON,
+		},
+		{
+			name: "SysError",
+			obj: coreutils.SysError{
+				HTTPStatus: http.StatusBadRequest,
+				QName:      appdef.NewQName("my", "qname"),
+				Message:    "test message",
+				Data:       "test data",
+			},
+			expectedBody:        `{"HTTPStatus":400,"QName":"my.qname","Message":"test message","Data":"test data"}`,
+			expectedContentType: coreutils.ApplicationJSON,
+		},
+		{
+			name:         "common error",
+			obj:          errors.New("my test error"),
+			expectedBody: "my test error",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+
+			router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+				go func() {
+					require.NoError(responder.Respond(http.StatusOK, c.obj))
+				}()
+			}, bus.DefaultSendTimeout)
+			defer tearDown(router)
+
+			resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/somefunc_SingleResponse", router.port(), testWSID), coreutils.TextPlain, http.NoBody)
+			require.NoError(err)
+			defer resp.Body.Close()
+
+			respBodyBytes, err := io.ReadAll(resp.Body)
+			require.NoError(err)
+			require.Equal(c.expectedBody, string(respBodyBytes))
+			expectedContentType := coreutils.TextPlain
+			if len(c.expectedContentType) > 0 {
+				expectedContentType = c.expectedContentType
+			}
+			expectResp(t, resp, expectedContentType, http.StatusOK)
+		})
+	}
+
+}
+
+func TestBasicUsage_Streaming_OneElem(t *testing.T) {
 	require := require.New(t)
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go func() {
@@ -75,7 +142,7 @@ type testObject struct {
 	StrField string
 }
 
-func TestBasicUsage_MultiResponse(t *testing.T) {
+func TestBasicUsage_Streaming_FewElems(t *testing.T) {
 	require := require.New(t)
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		require.Equal("test body SectionedResponse", string(request.Body))
@@ -93,7 +160,7 @@ func TestBasicUsage_MultiResponse(t *testing.T) {
 
 		// request is normally handled by processors in a separate goroutine so let's send response in a separate goroutine
 		go func() {
-			sender := responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+			sender := responder.BeginStreamingResponse(http.StatusOK)
 			err := sender.Send(testObject{
 				IntField: 42,
 				StrField: `哇"呀呀`,
@@ -129,7 +196,7 @@ func TestBasicUsage_MultiResponse(t *testing.T) {
 
 func TestEmptySectionedResponse(t *testing.T) {
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
-		sender := responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+		sender := responder.BeginStreamingResponse(http.StatusOK)
 		sender.Close(nil)
 
 	}, bus.DefaultSendTimeout)
@@ -146,7 +213,7 @@ func TestEmptySectionedResponse(t *testing.T) {
 
 func TestSimpleErrorSectionedResponse(t *testing.T) {
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
-		sender := responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+		sender := responder.BeginStreamingResponse(http.StatusOK)
 		sender.Close(errors.New("test error SimpleErrorSectionedResponse"))
 	}, bus.DefaultSendTimeout)
 	defer tearDown(router)
@@ -187,7 +254,7 @@ func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
 	expectedErrCh := make(chan error)
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go func() {
-			sender := responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+			sender := responder.BeginStreamingResponse(http.StatusOK)
 			defer sender.Close(nil)
 			firstElemSendErrCh <- sender.Send(testObject{
 				IntField: 42,
@@ -271,7 +338,7 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go func() {
 			// handler, on server side
-			sender := responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+			sender := responder.BeginStreamingResponse(http.StatusOK)
 			defer sender.Close(nil)
 			firstElemSendErrCh <- sender.Send(testObject{
 				IntField: 42,

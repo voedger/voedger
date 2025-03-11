@@ -300,12 +300,12 @@ func (a *aggregator) compareUint64(v1, v2 uint64, asc bool) bool {
 type sender struct {
 	pipeline.AsyncNOOP
 	responder bus.IResponder
-	sender    bus.IResponseSender
+	sender    bus.IStreamingResponseSender
 }
 
 func (s *sender) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
 	if s.sender == nil {
-		s.sender = s.responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+		s.sender = s.responder.BeginStreamingResponse(http.StatusOK)
 	}
 	return work, s.sender.Send(work.(objectBackedByMap).data)
 }

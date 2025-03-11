@@ -40,7 +40,7 @@ import (
 )
 
 func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state istructs.IState, params IQueryParams,
-	resultMeta appdef.IType, responder bus.IResponder, metrics IMetrics, errCh chan<- error) (rowsProcessor pipeline.IAsyncPipeline, iResponseSenderGetter func() bus.IResponseSender) {
+	resultMeta appdef.IType, responder bus.IResponder, metrics IMetrics, errCh chan<- error) (rowsProcessor pipeline.IAsyncPipeline, iResponseSenderGetter func() bus.IStreamingResponseSender) {
 	operators := make([]*pipeline.WiredOperator, 0)
 	if resultMeta == nil {
 		// happens when the query has no result, e.g. q.air.UpdateSubscriptionDetails
@@ -90,7 +90,7 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 		errCh:     errCh,
 	}
 	operators = append(operators, pipeline.WireAsyncOperator("Send to bus", sendToBusOp))
-	return pipeline.NewAsyncPipeline(ctx, "Rows processor", operators[0], operators[1:]...), func() bus.IResponseSender {
+	return pipeline.NewAsyncPipeline(ctx, "Rows processor", operators[0], operators[1:]...), func() bus.IStreamingResponseSender {
 		return sendToBusOp.sender
 	}
 }
@@ -142,20 +142,17 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					default:
 					}
 					err = coreutils.WrapSysError(err, http.StatusInternalServerError)
-					var senderCloseable bus.IResponseSenderCloseable
+					var senderCloseable bus.IStreamingResponseSenderCloseable
 					statusCode := http.StatusOK
 					if err != nil {
 						statusCode = err.(coreutils.SysError).HTTPStatus // nolint:errorlint
 					}
 					if qwork.responseSenderGetter == nil || qwork.responseSenderGetter() == nil {
 						// have an error before 200ok is sent -> send the status from the actual error
-						senderCloseable = msg.Responder().InitResponse(bus.ResponseMeta{
-							ContentType: coreutils.ApplicationJSON,
-							StatusCode:  statusCode,
-						})
+						senderCloseable = msg.Responder().BeginStreamingResponse(statusCode)
 					} else {
 						sender := qwork.responseSenderGetter()
-						senderCloseable = sender.(bus.IResponseSenderCloseable)
+						senderCloseable = sender.(bus.IStreamingResponseSenderCloseable)
 					}
 					senderCloseable.Close(err)
 				}()
@@ -460,7 +457,7 @@ type queryWork struct {
 	iQuery               appdef.IQuery
 	wsDesc               istructs.IRecord
 	callbackFunc         istructs.ExecQueryCallback
-	responseSenderGetter func() bus.IResponseSender
+	responseSenderGetter func() bus.IStreamingResponseSender
 }
 
 func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,

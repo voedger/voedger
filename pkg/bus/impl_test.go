@@ -16,60 +16,85 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func TestRequestSender_BasicUsage(t *testing.T) {
+func TestRequestSender_Streaming_BasicUsage(t *testing.T) {
 	require := require.New(t)
-	requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
-		require.Equal(http.MethodPost, request.Method)
-		require.Equal(istructs.WSID(1), request.WSID)
-		require.Equal(map[string]string{coreutils.ContentType: coreutils.ApplicationJSON}, request.Header)
-		require.Equal(map[string]string{"param": "value"}, request.Query)
-		require.Equal("c.sys.CUD", request.Resource)
-		require.Equal([]byte("body"), request.Body)
-		require.Equal(istructs.AppQName_test1_app1, request.AppQName)
-		require.Equal("localhost", request.Host)
 
-		//response must be made in a separate thread
-		go func() {
-			sender := responder.InitResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
-			result := map[string]interface{}{
-				"fld1": 42,
-				"fld2": "str",
-			}
-			err := sender.Send(result)
-			require.NoError(err)
-			sender.Close(nil)
-		}()
-	})
-
-	respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), Request{
-		Method: http.MethodPost,
-		WSID:   1,
-		Header: map[string]string{
-			coreutils.ContentType: coreutils.ApplicationJSON,
+	cases := []struct {
+		name    string
+		handler func(responder IResponder)
+	}{
+		{
+			name: "multi response",
+			handler: func(responder IResponder) {
+				sender := responder.BeginStreamingResponse(http.StatusOK)
+				result := map[string]interface{}{
+					"fld1": 42,
+					"fld2": "str",
+				}
+				err := sender.Send(result)
+				require.NoError(err)
+				sender.Close(nil)
+			},
 		},
-		Resource: "c.sys.CUD",
-		Query: map[string]string{
-			"param": "value",
+		{
+			name: "single response",
+			handler: func(responder IResponder) {
+				err := responder.Respond(http.StatusOK, map[string]interface{}{
+					"fld1": 42,
+					"fld2": "str",
+				})
+				require.NoError(err)
+			},
 		},
-		Body:     []byte("body"),
-		AppQName: istructs.AppQName_test1_app1,
-		Host:     "localhost",
-	})
-	require.NoError(err)
-
-	// respCh must be read out
-	for elem := range respCh {
-		require.Equal(map[string]interface{}{"fld1": 42, "fld2": "str"}, elem)
 	}
 
-	// respErr must be checked right after respCh read out
-	require.NoError(*respErr)
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
+				require.Equal(http.MethodPost, request.Method)
+				require.Equal(istructs.WSID(1), request.WSID)
+				require.Equal(map[string]string{coreutils.ContentType: coreutils.ApplicationJSON}, request.Header)
+				require.Equal(map[string]string{"param": "value"}, request.Query)
+				require.Equal("c.sys.CUD", request.Resource)
+				require.Equal([]byte("body"), request.Body)
+				require.Equal(istructs.AppQName_test1_app1, request.AppQName)
+				require.Equal("localhost", request.Host)
 
-	require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
-	require.Equal(http.StatusOK, respMeta.StatusCode)
+				//response must be made in a separate thread
+				go c.handler(responder)
+			})
+
+			respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), Request{
+				Method: http.MethodPost,
+				WSID:   1,
+				Header: map[string]string{
+					coreutils.ContentType: coreutils.ApplicationJSON,
+				},
+				Resource: "c.sys.CUD",
+				Query: map[string]string{
+					"param": "value",
+				},
+				Body:     []byte("body"),
+				AppQName: istructs.AppQName_test1_app1,
+				Host:     "localhost",
+			})
+			require.NoError(err)
+
+			// respCh must be read out
+			for elem := range respCh {
+				require.Equal(map[string]interface{}{"fld1": 42, "fld2": "str"}, elem)
+			}
+
+			// respErr must be checked right after respCh read out
+			require.NoError(*respErr)
+
+			require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
+			require.Equal(http.StatusOK, respMeta.StatusCode)
+		})
+	}
 }
 
-func TestErrors(t *testing.T) {
+func TestErrors_Multi(t *testing.T) {
 	require := require.New(t)
 	t.Run("response timeout", func(t *testing.T) {
 		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
@@ -77,7 +102,7 @@ func TestErrors(t *testing.T) {
 			time.Sleep(100 * time.Millisecond)
 			// force response timeout
 			coreutils.MockTime.Add(time.Duration(DefaultSendTimeout))
-			sender := responder.InitResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+			sender := responder.BeginStreamingResponse(http.StatusOK)
 			sender.Close(nil)
 		})
 
@@ -91,7 +116,7 @@ func TestErrors(t *testing.T) {
 		clientCtx, disconnectClient := context.WithCancel(context.Background())
 		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 			go func() {
-				sender := responder.InitResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+				sender := responder.BeginStreamingResponse(http.StatusOK)
 				<-maySendAfterDisconnect
 				sendErrCh <- sender.Send("test")
 				sender.Close(nil)
@@ -117,7 +142,7 @@ func TestErrors(t *testing.T) {
 			close(requestHandlerStarted)
 			go func() {
 				<-clientCtx.Done()
-				sender := responder.InitResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+				sender := responder.BeginStreamingResponse(http.StatusOK)
 				sendErrCh <- sender.Send("test")
 				sender.Close(nil)
 			}()
@@ -142,7 +167,7 @@ func TestErrors(t *testing.T) {
 		maySend := make(chan interface{})
 		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 			go func() {
-				sender := responder.InitResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+				sender := responder.BeginStreamingResponse(http.StatusOK)
 				<-maySend
 				sendErrCh <- sender.Send("test")
 				sender.Close(nil)
@@ -165,14 +190,68 @@ func TestErrors(t *testing.T) {
 		}
 		require.NoError(*respErr)
 	})
+}
 
-	t.Run("hander panic", func(t *testing.T) {
+func TestErrors_Single(t *testing.T) {
+	require := require.New(t)
+	var testObject = "test"
+	t.Run("response timeout", func(t *testing.T) {
+		sendErrCh := make(chan error)
 		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
-			panic("test panic")
+			// wait to start response awaiting in request sender
+			time.Sleep(100 * time.Millisecond)
+			// force response timeout
+			coreutils.MockTime.Add(time.Duration(DefaultSendTimeout))
+			go func() {
+				forceTimeoutOnSend()
+				sendErrCh <- responder.Respond(http.StatusOK, testObject)
+			}()
 		})
 
 		_, _, _, err := requestSender.SendRequest(context.Background(), Request{})
-		require.ErrorContains(err, "test panic")
+		require.ErrorIs(err, ErrSendTimeoutExpired)
+		require.ErrorIs(<-sendErrCh, ErrNoConsumer)
 	})
 
+	t.Run("client disconnect on send request", func(t *testing.T) {
+		requestHandlerStarted := make(chan interface{})
+		sendErrCh := make(chan error)
+		clientCtx, disconnectClient := context.WithCancel(context.Background())
+		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
+			close(requestHandlerStarted)
+			go func() {
+				<-clientCtx.Done()
+				forceTimeoutOnSend()
+				sendErrCh <- responder.Respond(http.StatusOK, testObject)
+			}()
+		})
+
+		go func() {
+			<-requestHandlerStarted
+			disconnectClient()
+		}()
+
+		_, _, respErr, err := requestSender.SendRequest(clientCtx, Request{})
+		require.ErrorIs(err, context.Canceled)
+		err = <-sendErrCh
+		require.ErrorIs(err, context.Canceled)
+		require.NoError(*respErr)
+	})
+}
+
+func TestHandlerPanic(t *testing.T) {
+	requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
+		panic("test panic")
+	})
+
+	_, _, _, err := requestSender.SendRequest(context.Background(), Request{})
+	require.ErrorContains(t, err, "test panic")
+}
+
+// force trigger timeout case on Send under the hood of responder.Respond
+func forceTimeoutOnSend() {
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		coreutils.MockTime.Add(time.Duration(DefaultSendTimeout))
+	}()
 }

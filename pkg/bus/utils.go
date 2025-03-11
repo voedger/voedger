@@ -28,7 +28,12 @@ func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req R
 			// notest
 			panic(fmt.Sprintf("unexpected response element: %v", elem))
 		}
-		body = elem.(string)
+		switch typed := elem.(type) {
+		case string:
+			body = typed
+		case interface{ ToJSON() string }:
+			body = typed.ToJSON()
+		}
 	}
 	if *responseErr != nil {
 		cmdResp.SysError = coreutils.WrapSysErrorToExact(*responseErr, http.StatusInternalServerError)
@@ -42,11 +47,9 @@ func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req R
 }
 
 func ReplyPlainText(responder IResponder, text string) {
-	sender := responder.InitResponse(ResponseMeta{ContentType: coreutils.TextPlain, StatusCode: http.StatusOK})
-	if err := sender.Send(text); err != nil {
+	if err := responder.Respond(http.StatusOK, text); err != nil {
 		logger.Error(err.Error() + ": failed to send response: " + text)
 	}
-	sender.Close(nil)
 }
 
 func ReplyErrf(responder IResponder, status int, args ...interface{}) {
@@ -56,8 +59,9 @@ func ReplyErrf(responder IResponder, status int, args ...interface{}) {
 //nolint:errorlint
 func ReplyErrDef(responder IResponder, err error, defaultStatusCode int) {
 	res := coreutils.WrapSysError(err, defaultStatusCode).(coreutils.SysError)
-	sender := responder.InitResponse(ResponseMeta{coreutils.ApplicationJSON, res.HTTPStatus})
-	sender.Close(res)
+	if err := responder.Respond(res.HTTPStatus, res); err != nil {
+		logger.Error(fmt.Sprintf("failed to send error %s: %s", res, err))
+	}
 }
 
 func ReplyErr(responder IResponder, err error) {
@@ -65,9 +69,9 @@ func ReplyErr(responder IResponder, err error) {
 }
 
 func ReplyJSON(responder IResponder, httpCode int, obj any) {
-	sender := responder.InitResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: httpCode})
-	_ = sender.Send(obj)
-	sender.Close(nil)
+	if err := responder.Respond(httpCode, obj); err != nil {
+		logger.Error(fmt.Sprintf("failed to send %v: %s", obj, err))
+	}
 }
 
 func ReplyBadRequest(responder IResponder, message string) {

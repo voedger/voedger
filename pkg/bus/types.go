@@ -35,6 +35,7 @@ type Request struct {
 type ResponseMeta struct {
 	ContentType string
 	StatusCode  int
+	IsSingle    bool
 }
 
 type implIRequestSender struct {
@@ -45,7 +46,7 @@ type implIRequestSender struct {
 
 type SendTimeout time.Duration
 
-type implIResponseSenderCloseable struct {
+type implIStreamingResponseSenderCloseable struct {
 	ch          chan any
 	clientCtx   context.Context
 	sendTimeout SendTimeout
@@ -54,6 +55,6 @@ type implIResponseSenderCloseable struct {
 }
 
 type implIResponder struct {
-	respSender     IResponseSenderCloseable
+	respSender     IStreamingResponseSenderCloseable
 	responseMetaCh chan ResponseMeta
 }

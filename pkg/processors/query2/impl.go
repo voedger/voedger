@@ -78,20 +78,17 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					default:
 					}
 					err = coreutils.WrapSysError(err, http.StatusInternalServerError)
-					var senderCloseable bus.IResponseSenderCloseable
+					var senderCloseable bus.IStreamingResponseSenderCloseable
 					statusCode := http.StatusOK
 					if err != nil {
 						statusCode = err.(coreutils.SysError).HTTPStatus // nolint:errorlint
 					}
 					if qwork.responseSenderGetter == nil || qwork.responseSenderGetter() == nil {
 						// have an error before 200ok is sent -> send the status from the actual error
-						senderCloseable = msg.Responder().InitResponse(bus.ResponseMeta{
-							ContentType: coreutils.ApplicationJSON,
-							StatusCode:  statusCode,
-						})
+						senderCloseable = msg.Responder().BeginStreamingResponse(statusCode)
 					} else {
 						sender := qwork.responseSenderGetter()
-						senderCloseable = sender.(bus.IResponseSenderCloseable)
+						senderCloseable = sender.(bus.IStreamingResponseSenderCloseable)
 					}
 					senderCloseable.Close(err)
 				}()

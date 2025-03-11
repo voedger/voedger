@@ -89,7 +89,7 @@ func TestReply(t *testing.T) {
 		for _, c := range cases {
 			t.Run(c.desc, func(t *testing.T) {
 				requestSender := NewIRequestSender(coreutils.MockTime, GetTestSendTimeout(), func(requestCtx context.Context, request Request, responder IResponder) {
-					c.f(responder)
+					go c.f(responder)
 				})
 				cmdRespMeta, cmdResp, err := GetCommandResponse(context.Background(), requestSender, Request{})
 				require.NoError(err)
@@ -118,7 +118,7 @@ func TestReply(t *testing.T) {
 			name = name[strings.LastIndex(name, ".")+1:]
 			t.Run(name, func(t *testing.T) {
 				requestSender := NewIRequestSender(coreutils.MockTime, GetTestSendTimeout(), func(requestCtx context.Context, request Request, responder IResponder) {
-					c.f(responder, "test message")
+					go c.f(responder, "test message")
 				})
 				expectedMessage := "test message"
 				if len(c.expectedMessage) > 0 {

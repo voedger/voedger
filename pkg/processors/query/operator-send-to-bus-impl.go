@@ -10,14 +10,13 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/bus"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
 type SendToBusOperator struct {
 	pipeline.AsyncNOOP
-	sender    bus.IResponseSender
+	sender    bus.IStreamingResponseSender
 	responder bus.IResponder
 	metrics   IMetrics
 	errCh     chan<- error
@@ -29,7 +28,7 @@ func (o *SendToBusOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece)
 		o.metrics.Increase(Metric_ExecSendSeconds, time.Since(begin).Seconds())
 	}()
 	if o.sender == nil {
-		o.sender = o.responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+		o.sender = o.responder.BeginStreamingResponse(http.StatusOK)
 	}
 	return work, o.sender.Send(work.(rowsWorkpiece).OutputRow().Values())
 }

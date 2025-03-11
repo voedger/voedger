@@ -156,7 +156,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 			require.NoError(processor.SendAsync(work(2, "Amaretto", 20)))
 			require.NoError(processor.SendAsync(work(4, "Cake", 40)))
 			processor.Close()
-			senderGetter().(bus.IResponseSenderCloseable).Close(nil)
+			senderGetter().(bus.IStreamingResponseSenderCloseable).Close(nil)
 		}()
 	})
 	responseCh, respMeta, responseErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
@@ -468,7 +468,7 @@ func TestRawMode(t *testing.T) {
 				},
 			}))
 			processor.Close()
-			senderGetter().(bus.IResponseSenderCloseable).Close(nil)
+			senderGetter().(bus.IStreamingResponseSenderCloseable).Close(nil)
 		}()
 	})
 

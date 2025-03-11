@@ -13,12 +13,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request) (responseCh <-chan any, responseMeta ResponseMeta, responseErr *error, err error) {
 	timeoutChan := rs.tm.NewTimerChan(time.Duration(rs.timeout))
-	respSender := &implIResponseSenderCloseable{
+	respSender := &implIStreamingResponseSenderCloseable{
 		ch:          make(chan any),
 		clientCtx:   clientCtx,
 		sendTimeout: rs.timeout,
@@ -88,7 +89,7 @@ func handlePanic(r interface{}) error {
 	}
 }
 
-func (rs *implIResponseSenderCloseable) Send(obj any) error {
+func (rs *implIStreamingResponseSenderCloseable) Send(obj any) error {
 	sendTimeoutTimerChan := rs.tm.NewTimerChan(time.Duration(rs.sendTimeout))
 	select {
 	case rs.ch <- obj:
@@ -99,17 +100,35 @@ func (rs *implIResponseSenderCloseable) Send(obj any) error {
 	return rs.clientCtx.Err()
 }
 
-func (rs *implIResponseSenderCloseable) Close(err error) {
+func (rs *implIStreamingResponseSenderCloseable) Close(err error) {
 	*rs.resultErr = err
 	close(rs.ch)
 }
 
-func (r *implIResponder) InitResponse(rm ResponseMeta) IResponseSenderCloseable {
+func (r *implIResponder) BeginStreamingResponse(statusCode int) IStreamingResponseSenderCloseable {
 	select {
-	case r.responseMetaCh <- rm:
+	case r.responseMetaCh <- ResponseMeta{StatusCode: statusCode, ContentType: coreutils.ApplicationJSON}:
 	default:
 		// do nothing if no consumer already.
 		// will get ErrNoConsumer on the next Send()
 	}
 	return r.respSender
+}
+
+func (r *implIResponder) Respond(statusCode int, obj any) (err error) {
+	rm := ResponseMeta{StatusCode: statusCode, ContentType: coreutils.ApplicationJSON, IsSingle: true}
+	switch obj.(type) {
+	case coreutils.SysError:
+	case string, error:
+		rm.ContentType = coreutils.TextPlain
+	}
+	select {
+	case r.responseMetaCh <- rm:
+		if err = r.respSender.Send(obj); err == nil {
+			r.respSender.Close(nil)
+		}
+	default:
+		return ErrNoConsumer
+	}
+	return err
 }

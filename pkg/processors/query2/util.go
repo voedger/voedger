@@ -60,7 +60,7 @@ type queryWork struct {
 	iView                appdef.IView
 	wsDesc               istructs.IRecord
 	callbackFunc         istructs.ExecQueryCallback
-	responseSenderGetter func() bus.IResponseSender
+	responseSenderGetter func() bus.IStreamingResponseSender
 	apiPathHandler       IApiPathHandler
 }
 

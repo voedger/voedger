@@ -75,8 +75,10 @@ func createBusRequest(reqMethod string, req *http.Request, rw http.ResponseWrite
 	return res, err == nil
 }
 
+
+
 func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error,
-	contentType string, onSendFailed func(), busRequest bus.Request) {
+	contentType string, onSendFailed func(), busRequest bus.Request, isSingle bool) {
 	sendSuccess := true
 	defer func() {
 		if requestCtx.Err() != nil {
@@ -101,7 +103,7 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 	} else {
 		isCmd = strings.HasPrefix(busRequest.Resource, "c.")
 	}
-	if contentType == coreutils.ApplicationJSON {
+	if contentType == coreutils.ApplicationJSON && !isSingle {
 		if sendSuccess = writeResponse(w, "{"); !sendSuccess {
 			return
 		}
@@ -114,7 +116,7 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 			return
 		}
 		if busRequest.IsAPIV2 {
-			if elemsCount == 0 {
+			if elemsCount == 0 && !isSingle {
 				sendSuccess = writeResponse(w, `"results":[`)
 				responseCloser = "]"
 			}
@@ -127,10 +129,17 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 				}
 				sendSuccess = writeResponse(w, res)
 			} else if contentType == coreutils.TextPlain {
-				sendSuccess = writeResponse(w, elem.(string))
+				switch typed := elem.(type) {
+				case error:
+					sendSuccess = writeResponse(w, typed.Error())
+				default:
+					sendSuccess = writeResponse(w, elem.(string))
+				}
 			} else if elemsCount == 0 {
-				sendSuccess = writeResponse(w, `"sections":[{"type":"","elements":[`)
-				sectionsCloser = "]}]"
+				if !isSingle {
+					sendSuccess = writeResponse(w, `"sections":[{"type":"","elements":[`)
+					sectionsCloser = "]}]"
+				}
 			}
 		}
 
@@ -183,7 +192,7 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 	if len(responseCloser) > 0 {
 		sendSuccess = writeResponse(w, responseCloser)
 	}
-	if sendSuccess && contentType == coreutils.ApplicationJSON {
+	if sendSuccess && contentType == coreutils.ApplicationJSON && !isSingle {
 		sendSuccess = writeResponse(w, "}")
 	}
 }

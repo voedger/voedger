@@ -19,16 +19,24 @@ type IRequestSender interface {
 type RequestHandler func(requestCtx context.Context, request Request, responder IResponder)
 
 type IResponder interface {
-	// panics if called >1 times
-	InitResponse(ResponseMeta) IResponseSenderCloseable
+	// panics if called >1 times or after Respond()
+	BeginStreamingResponse(statusCode int) IStreamingResponseSenderCloseable
+
+	// panic if called >1 times or after BeginStreamingResponse()
+	// obj is string, []byte - text/plain is emitted,
+	// obj is error:
+	//   complies to interface { ToJSON() string } -> application/json
+	//   otherwise -> text/plain
+	// otherwise -> application/json
+	Respond(statusCode int, obj any) error
 }
 
-type IResponseSenderCloseable interface {
-	IResponseSender
+type IStreamingResponseSenderCloseable interface {
+	IStreamingResponseSender
 	Close(error)
 }
 
-type IResponseSender interface {
+type IStreamingResponseSender interface {
 	// ErrNoConsumer
 	Send(any) error
 }
