@@ -61,23 +61,24 @@ func (m *mockStorage) WriteValues(batch []SeqValue) error {
 	return nil
 }
 
-func (m *mockStorage) WritePLogOffset(offset PLogOffset) error {
+func (m *mockStorage) WriteNextPLogOffset(offset PLogOffset) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.offset = offset
 	return nil
 }
 
-func (m *mockStorage) ReadLastWrittenPLogOffset() (PLogOffset, error) {
+func (m *mockStorage) ReadNextPLogOffset() (PLogOffset, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.offset, nil
 }
 
-func (m *mockStorage) ActualizePLog(ctx context.Context, offset PLogOffset, batcher func([]SeqValue, PLogOffset) error) error {
+func (m *mockStorage) ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func([]SeqValue, PLogOffset) error) error {
 	return nil
 }
 
+// TODO: Fix the test
 func TestSequencer(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
@@ -115,7 +116,7 @@ func TestSequencer(t *testing.T) {
 		mockedTime.Sleep(1 * time.Second)
 		cleanup()
 
-		seq.(*sequencer).flusherWg.Wait()
+		seq.(*sequencer).flusherWG.Wait()
 
 		nums, err := storage.ReadNumbers(1, []SeqID{1})
 		require.NoError(t, err)
@@ -154,6 +155,7 @@ func TestSequencer(t *testing.T) {
 	})
 }
 
+// TODO: Fix the test
 func TestBatcher(t *testing.T) {
 	t.Run("should aggregate max values and write to storage", func(t *testing.T) {
 		// Given
@@ -190,7 +192,7 @@ func TestBatcher(t *testing.T) {
 		require.Equal(t, []Number{102, 201}, nums)
 
 		// Verify offset was written
-		offset, err := storage.ReadLastWrittenPLogOffset()
+		offset, err := storage.ReadNextPLogOffset()
 		require.NoError(t, err)
 		require.Equal(t, PLogOffset(10), offset)
 	})
@@ -216,7 +218,7 @@ func TestBatcher(t *testing.T) {
 		require.NoError(t, err)
 
 		// Then
-		offset, err := storage.ReadLastWrittenPLogOffset()
+		offset, err := storage.ReadNextPLogOffset()
 		require.NoError(t, err)
 		require.Equal(t, PLogOffset(1), offset)
 	})
