@@ -19,7 +19,7 @@ import (
 
 func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request) (responseCh <-chan any, responseMeta ResponseMeta, responseErr *error, err error) {
 	timeoutChan := rs.tm.NewTimerChan(time.Duration(rs.timeout))
-	respSender := &implIStreamingResponseSenderCloseable{
+	respWriter := &implResponseWriter{
 		ch:          make(chan any),
 		clientCtx:   clientCtx,
 		sendTimeout: rs.timeout,
@@ -27,7 +27,7 @@ func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request
 		resultErr:   new(error),
 	}
 	responder := &implIResponder{
-		respSender:     respSender,
+		respWriter: respWriter,
 		responseMetaCh: make(chan ResponseMeta, 1),
 	}
 	handlerPanic := make(chan interface{})
@@ -65,7 +65,7 @@ func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request
 		rs.requestHandler(clientCtx, req, responder)
 	}()
 	wg.Wait()
-	return respSender.ch, responseMeta, respSender.resultErr, err
+	return respWriter.ch, responseMeta, respWriter.resultErr, err
 }
 
 func checkHandlerPanic(ch <-chan interface{}) error {
@@ -89,7 +89,7 @@ func handlePanic(r interface{}) error {
 	}
 }
 
-func (rs *implIStreamingResponseSenderCloseable) Send(obj any) error {
+func (rs *implResponseWriter) Write(obj any) error {
 	sendTimeoutTimerChan := rs.tm.NewTimerChan(time.Duration(rs.sendTimeout))
 	select {
 	case rs.ch <- obj:
@@ -100,35 +100,42 @@ func (rs *implIStreamingResponseSenderCloseable) Send(obj any) error {
 	return rs.clientCtx.Err()
 }
 
-func (rs *implIStreamingResponseSenderCloseable) Close(err error) {
+func (rs *implResponseWriter) Close() {
 	*rs.resultErr = err
 	close(rs.ch)
 }
 
-func (r *implIResponder) BeginStreamingResponse(statusCode int) IStreamingResponseSenderCloseable {
+func (rs *implResponseWriter) Close(err error) {
+	*rs.resultErr = err
+	close(rs.ch)
+}
+
+func (r *implIResponder) BeginApiArrayResponse(statusCode int) IApiArrayResponseWriter {
 	select {
-	case r.responseMetaCh <- ResponseMeta{StatusCode: statusCode, ContentType: coreutils.ApplicationJSON}:
+	case r.responseMetaCh <- ResponseMeta{StatusCode: statusCode, ContentType: coreutils.ApplicationJSON, mode: respondMode_ApiArray}:
 	default:
 		// do nothing if no consumer already.
 		// will get ErrNoConsumer on the next Send()
 	}
-	return r.respSender
+	return r.respWriter
 }
 
-func (r *implIResponder) Respond(statusCode int, obj any) (err error) {
-	rm := ResponseMeta{StatusCode: statusCode, ContentType: coreutils.ApplicationJSON, IsSingle: true}
-	switch obj.(type) {
-	case coreutils.SysError:
-	case string, error:
-		rm.ContentType = coreutils.TextPlain
-	}
-	select {
-	case r.responseMetaCh <- rm:
-		if err = r.respSender.Send(obj); err == nil {
-			r.respSender.Close(nil)
-		}
-	default:
-		return ErrNoConsumer
-	}
-	return err
-}
+
+
+// func (r *implIResponder) Respond(statusCode int, obj any) (err error) {
+// 	rm := ResponseMeta{StatusCode: statusCode, ContentType: coreutils.ApplicationJSON, IsSin}
+// 	switch obj.(type) {
+// 	case coreutils.SysError:
+// 	case string, error:
+// 		rm.ContentType = coreutils.TextPlain
+// 	}
+// 	select {
+// 	case r.responseMetaCh <- rm:
+// 		if err = r.respSender.Send(obj); err == nil {
+// 			r.respSender.Close(nil)
+// 		}
+// 	default:
+// 		return ErrNoConsumer
+// 	}
+// 	return err
+// }

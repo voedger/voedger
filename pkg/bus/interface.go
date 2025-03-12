@@ -19,24 +19,29 @@ type IRequestSender interface {
 type RequestHandler func(requestCtx context.Context, request Request, responder IResponder)
 
 type IResponder interface {
-	// panics if called >1 times or after Respond()
-	BeginStreamingResponse(statusCode int) IStreamingResponseSenderCloseable
+	// panics if called >1 times or after BeginCustomResponse()
+	BeginApiArrayResponse(statusCode int) IApiArrayResponseWriter
 
 	// panic if called >1 times or after BeginStreamingResponse()
-	// obj is string, []byte - text/plain is emitted,
-	// obj is error:
-	//   complies to interface { ToJSON() string } -> application/json
-	//   otherwise -> text/plain
-	// otherwise -> application/json
-	Respond(statusCode int, obj any) error
+	BeginCustomResponse(meta ResponseMeta) ICustomResponseWriter
 }
 
-type IStreamingResponseSenderCloseable interface {
-	IStreamingResponseSender
-	Close(error)
+type IApiArrayResponseWriter interface {
+	// Write send item over the bus
+	// item -> json.Marshal
+	// may may return ErrNoConsumer
+	Write(item any) error
+
+	// must be called in the end
+	Close(err error)
 }
 
-type IStreamingResponseSender interface {
-	// ErrNoConsumer
-	Send(any) error
+type ICustomResponseWriter interface {
+	// Write sends item over the bus
+	// item: payload is []byte or string
+	// may ErrNoConsumer
+	Write(item any) error
+
+	// must be called in the end
+	Close()
 }
