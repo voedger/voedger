@@ -1,0 +1,91 @@
+/*
+ * Copyright (c) 2024-present Sigma-Soft, Ltd.
+ * @author: Nikolay Nikitin
+ */
+
+package acl
+
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+)
+
+// if returned fields is nil, then all fields are allowed
+func isOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, t appdef.IType, roles appdef.QNames) (allowed bool, fields map[appdef.FieldName]bool) {
+
+	if roles.Contains(appdef.QNameRoleSystem) {
+		// nothing else matters
+		return true, nil
+	}
+
+	var resFields appdef.IWithFields
+	if wf, ok := t.(appdef.IWithFields); ok {
+		resFields = wf
+	}
+
+	result := false
+	allowedFields := map[appdef.FieldName]bool{}
+
+	stack := map[appdef.QName]bool{}
+
+	var acl func(ws appdef.IWorkspace)
+
+	acl = func(ws appdef.IWorkspace) {
+		if !stack[ws.QName()] {
+			stack[ws.QName()] = true
+
+			for _, anc := range ws.Ancestors() {
+				acl(anc)
+			}
+
+			for _, rule := range ws.ACL() {
+				if rule.Op(op) {
+					if rule.Filter().Match(t) {
+						if roles.Contains(rule.Principal().QName()) {
+							switch rule.Policy() {
+							case appdef.PolicyKind_Allow:
+								result = true
+								if resFields != nil {
+									if rule.Filter().HasFields() {
+										// allow for specified fields only
+										for _, f := range rule.Filter().Fields() {
+											allowedFields[f] = true
+										}
+									} else {
+										// allow for all fields
+										for _, f := range resFields.Fields() {
+											allowedFields[f.Name()] = true
+										}
+									}
+								}
+							case appdef.PolicyKind_Deny:
+								if resFields != nil {
+									if rule.Filter().HasFields() {
+										// partially deny, only specified fields
+										for _, f := range rule.Filter().Fields() {
+											delete(allowedFields, f)
+										}
+										result = len(allowedFields) > 0
+									} else {
+										// full deny, for all fields
+										clear(allowedFields)
+										result = false
+									}
+								} else {
+									result = false
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	acl(ws)
+
+	if (resFields != nil) && (allowedFields != nil) && (len(allowedFields) == resFields.FieldCount()) {
+		// all fields are allowed
+		allowedFields = nil
+	}
+
+	return result, allowedFields
+}
