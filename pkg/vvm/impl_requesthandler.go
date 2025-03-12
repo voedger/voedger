@@ -77,7 +77,7 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 				return
 			}
 			iqm := query2.NewIQueryMessage(requestCtx, request.AppQName, request.WSID, responder, *queryParams, request.DocID, query2.ApiPath(request.ApiPath), request.QName,
-				partitionID, request.Host, token)
+				partitionID, request.Host, token, request.WorkspaceQName)
 			if !procbus.Submit(uint(qpcgIdx_v2), 0, iqm) {
 				bus.ReplyErrf(responder, http.StatusServiceUnavailable, "no query_v2 processors available")
 			}
