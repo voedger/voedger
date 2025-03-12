@@ -33,7 +33,6 @@ func New(params *Params, iTime coreutils.ITime) (ISequencer, context.CancelFunc)
 		iTime:            iTime,
 		flusherStartedCh: make(chan struct{}, 1),
 		flusherSig:       make(chan struct{}, 1),
-		flusherWG:        &sync.WaitGroup{},
 	}
 	s.actualizerInProgress.Store(false)
 	// Instance has actualizer() goroutine started.
@@ -174,9 +173,11 @@ func (s *sequencer) flusher(ctx context.Context) {
 	// Wait for ctx.Done()
 	for ctx.Err() == nil {
 		select {
+		case <-ctx.Done():
+			return
 		// Wait for s.flusherSig
 		case <-s.flusherSig:
-			return
+			s.flushValues(false)
 		// Wait for s.params.MaxFlushingInterval
 		case <-tickerCh:
 			tickerCh = s.iTime.NewTimerChan(s.params.MaxFlushingInterval)
@@ -448,7 +449,8 @@ func (s *sequencer) batcher(values []SeqValue, offset PLogOffset) error {
 // -  Handle errors with retry mechanism (500ms wait)
 // ctx handling:
 // - if ctx is closed exit
-func (s *sequencer) actualizer(actualizerCtx context.Context) {
+// TODO: It is not clear where we should wait the ctx.Done() signal
+func (s *sequencer) actualizer(ctx context.Context) {
 	defer func() {
 		s.actualizerInProgress.Store(false)
 		s.actualizerWg.Done()
@@ -458,10 +460,7 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 		s.stopFlusher()
 	}
 
-	var (
-		offset PLogOffset
-		err    error
-	)
+	var err error
 
 	// Read nextPLogOffset from s.params.SeqStorage.ReadNextPLogOffset()
 	err = coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() error {
@@ -475,7 +474,7 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 
 	// Use s.params.SeqStorage.ActualizeSequencesFromPLog() and s.batcher()
 	err = coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() error {
-		return s.params.SeqStorage.ActualizeSequencesFromPLog(s.cleanupCtx, offset, s.batcher)
+		return s.params.SeqStorage.ActualizeSequencesFromPLog(s.cleanupCtx, s.nextOffset, s.batcher)
 	})
 	if err != nil {
 		panic("failed to actualize PLog: " + err.Error())
