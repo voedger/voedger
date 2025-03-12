@@ -69,29 +69,63 @@ func (s *httpService) registerHandlersV2() {
 		corsHandler(requestHandlerV2_blobs())).
 		Methods(http.MethodGet, http.MethodPatch, http.MethodPut, http.MethodDelete)
 
-	// schemas: read app workspaces: /api/v2/users/{owner}/apps/{app}/workspaceschemas
-	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaceschemas",
+	// schemas: get workspace schema: /api/v2/users/{owner}/apps/{app}/schemas
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/schemas",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
-		corsHandler(requestHandlerV2_schemas())).
+		corsHandler(requestHandlerV2_schemas(s.requestSender, s.numsAppsWorkspaces))).
 		Methods(http.MethodGet)
 
-	// schemas: get workspace schema: /api/v2/users/{owner}/apps/{app}/workspaceschemas
-	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaceschemas/{%s}.{%s}",
+	// schemas, workspace roles: get workspace schema: /api/v2/users/{owner}/apps/{app}/schemas/{pkg}.{workspace}/roles
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/schemas/{%s}.{%s}/roles",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_pkg, URLPlaceholder_workspace),
-		corsHandler(requestHandlerV2_schemas())).
+		corsHandler(requestHandlerV2_schemas_wsRoles(s.requestSender, s.numsAppsWorkspaces))).
+		Methods(http.MethodGet)
+
+	// schemas, workspace role: get workspace schema: /api/v2/users/{owner}/apps/{app}/schemas/{pkg}.{workspace}/roles/{pkg}.{role}
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/schemas/{%s}.{%s}/roles/{%s}.{%s}",
+		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_pkg, URLPlaceholder_workspace, URLPlaceholder_rolePkg, URLPlaceholder_role),
+		corsHandler(requestHandlerV2_schemas_wsRole(s.requestSender, s.numsAppsWorkspaces))).
 		Methods(http.MethodGet)
 }
 
-func requestHandlerV2_schemas() http.HandlerFunc {
-	return func(resp http.ResponseWriter, req *http.Request) {
-		vars := mux.Vars(req)
-		workspaceName, isSingleWorkspace := vars[URLPlaceholder_workspace]
-		if isSingleWorkspace {
-			workspacePkg := vars[URLPlaceholder_pkg]
-			_ = workspacePkg
+func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
+		if !ok {
+			return
 		}
-		_ = workspaceName
-		writeNotImplemented(resp)
+		busRequest.IsAPIV2 = true
+		busRequest.ApiPath = int(query2.ApiPaths_Schemas)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+	}
+}
+
+func requestHandlerV2_schemas_wsRoles(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
+		if !ok {
+			return
+		}
+		vars := mux.Vars(req)
+		busRequest.IsAPIV2 = true
+		busRequest.ApiPath = int(query2.ApiPaths_Schemas_WorkspaceRoles)
+		busRequest.WorkspaceQName = appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_workspace])
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+	}
+}
+
+func requestHandlerV2_schemas_wsRole(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
+		if !ok {
+			return
+		}
+		vars := mux.Vars(req)
+		busRequest.IsAPIV2 = true
+		busRequest.ApiPath = int(query2.ApiPaths_Schemas_WorkspaceRoles)
+		busRequest.WorkspaceQName = appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_workspace])
+		busRequest.QName = appdef.NewQName(vars[URLPlaceholder_rolePkg], vars[URLPlaceholder_role])
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	}
 }
 

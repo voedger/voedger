@@ -22,12 +22,14 @@ type Request struct {
 	Body     []byte
 	AppQName appdef.AppQName
 	Host     string // used by authenticator to emit Host principal
+
 	// apiV2
-	Query   map[string]string
-	QName   appdef.QName // e.g. DocName, extension QName
-	IsAPIV2 bool
-	DocID   istructs.IDType
-	ApiPath int
+	Query          map[string]string
+	QName          appdef.QName // e.g. DocName, extension QName, role Qname
+	WorkspaceQName appdef.QName // actually wsKind
+	IsAPIV2        bool
+	DocID          istructs.IDType
+	ApiPath        int
 }
 
 type ResponseMeta struct {
