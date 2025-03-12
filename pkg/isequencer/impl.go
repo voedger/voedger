@@ -177,11 +177,11 @@ func (s *sequencer) flusher(ctx context.Context) {
 			return
 		// Wait for s.flusherSig
 		case <-s.flusherSig:
-			s.flushValues(false)
+			s.flushValues(false, false)
 		// Wait for s.params.MaxFlushingInterval
 		case <-tickerCh:
 			tickerCh = s.iTime.NewTimerChan(s.params.MaxFlushingInterval)
-			s.flushValues(false)
+			s.flushValues(false, false)
 		}
 	}
 }
@@ -392,37 +392,7 @@ func (s *sequencer) batcher(values []SeqValue, offset PLogOffset) error {
 
 	// If s.params.MaxNumUnflushedValues is reached
 	if len(s.toBeFlushed) >= s.params.MaxNumUnflushedValues {
-		// Convert maxValues to values
-		s.toBeFlushedMu.RLock()
-		flushValues := make([]SeqValue, 0, len(s.toBeFlushed))
-		for key, flushValue := range s.toBeFlushed {
-			flushValues = append(flushValues, SeqValue{
-				Key:   key,
-				Value: flushValue,
-			})
-		}
-		s.toBeFlushedMu.RUnlock()
-
-		// Flush s.toBeFlushed using s.params.SeqStorage.WriteValues()
-		err := coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() error {
-			return s.params.SeqStorage.WriteValues(flushValues)
-		})
-		if err != nil {
-			return err
-		}
-
-		// s.params.SeqStorage.WriteNextPLogOffset(s.nextOffset + 1)
-		err = coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() error {
-			return s.params.SeqStorage.WriteNextPLogOffset(s.nextOffset + 1)
-		})
-		if err != nil {
-			return err
-		}
-
-		// Clean s.toBeFlushed
-		s.toBeFlushedMu.Lock()
-		s.toBeFlushed = make(map[NumberKey]Number)
-		s.toBeFlushedMu.Unlock()
+		s.flushValues(true, true)
 	}
 
 	return nil
@@ -482,7 +452,7 @@ func (s *sequencer) actualizer(ctx context.Context) {
 	// Increment s.nextOffset
 	s.nextOffset++
 
-	s.flushValues(true)
+	s.flushValues(false, true)
 	// s.flusherWG, s.flusherCtxCancel + start flusher() goroutine
 	s.startFlusher()
 }
@@ -499,8 +469,9 @@ func (s *sequencer) actualizer(ctx context.Context) {
 // - Clean s.toBeFlushed
 // - Unlock s.toBeFlushedMu
 // Parameters:
-// clearToBeFlushed - if true, clears s.toBeFlushed after writing values. Otherwise, only removes values that were written.
-func (s *sequencer) flushValues(clearToBeFlushed bool) {
+// - flushNextOffsetPlus - if true, writes s.nextOffset + 1 to the storage. Otherwise, writes s.toBeFlushedOffset.
+// - clearToBeFlushed - if true, clears s.toBeFlushed after writing values. Otherwise, only removes values that were written.
+func (s *sequencer) flushValues(flushNextOffsetPlus bool, clearToBeFlushed bool) {
 	s.toBeFlushedMu.RLock()
 	if len(s.toBeFlushed) == 0 {
 		s.toBeFlushedMu.RUnlock()
@@ -532,7 +503,11 @@ func (s *sequencer) flushValues(clearToBeFlushed bool) {
 	// s.params.SeqStorage.WriteNextPLogOffset(flushOffset)
 	// Error handling: Handle errors with retry mechanism (500ms wait)
 	err = coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() error {
-		return s.params.SeqStorage.WriteNextPLogOffset(flushedOffset)
+		offsetToFlush := flushedOffset
+		if flushNextOffsetPlus {
+			offsetToFlush = s.nextOffset + 1
+		}
+		return s.params.SeqStorage.WriteNextPLogOffset(offsetToFlush)
 	})
 	if err != nil {
 		panic("failed to write next PLog offset: " + err.Error())
