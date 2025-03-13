@@ -69,7 +69,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 		}
 	}
 
-	result, allowedFields := isOperationAllowed(ws, op, t, roles)
+	result, allowedFields := checkOperationOnTypeForRoles(ws, op, t, roles)
 	failedField := ""
 
 	if result && len(allowedFields) > 0 {
@@ -113,7 +113,7 @@ func PublishedTypes(ws appdef.IWorkspace, role appdef.QName) iter.Seq2[appdef.IT
 	for _, t := range ws.Types() {
 		if k := t.Kind(); publushedTypes.Contains(k) {
 			for o := range appdef.ACLOperationsForType(k).Values() {
-				if ok, fields := isOperationAllowed(ws, o, t, roles); ok {
+				if ok, fields := checkOperationOnTypeForRoles(ws, o, t, roles); ok {
 					if _, found := types[t]; !found {
 						types[t] = map[appdef.OperationKind]*[]appdef.FieldName{}
 					}

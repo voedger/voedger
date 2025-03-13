@@ -9,8 +9,12 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-// if returned fields is nil, then all fields are allowed
-func isOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, t appdef.IType, roles appdef.QNames) (allowed bool, fields map[appdef.FieldName]bool) {
+// Returns is operation allowed on type for specified roles in specified workspace.
+//
+// Roles list should be expanded to include all inherited roles by caller.
+//
+// If operation is allowed, but with some fields restriction, then returns map of allowed fields, else returned fields map is nil.
+func checkOperationOnTypeForRoles(ws appdef.IWorkspace, op appdef.OperationKind, t appdef.IType, roles appdef.QNames) (allowed bool, fields map[appdef.FieldName]bool) {
 
 	if roles.Contains(appdef.QNameRoleSystem) {
 		// nothing else matters
