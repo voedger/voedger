@@ -74,7 +74,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 
 	if result && len(allowedFields) > 0 {
 		for _, f := range fld {
-			if _, ok := allowedFields[f]; !ok {
+			if !allowedFields[f] {
 				result = false
 				failedField = f
 				break
@@ -93,32 +93,26 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 //
 // Types enumerated in alphabetical order.
 //
-// When fields is empty, it means all fields are allowed.
+// When returned fields is nil, it means all fields are allowed.
 //
 // Resources are:
 //   - Documents and records
-//   - Objects, function arguments
+//   - Objects (function arguments)
 //   - Views
-//   - Commands
-//   - Queries
-//
-// # Panics:
-//   - if role is not found in the workspace
+//   - Commands and queries
 func PublishedTypes(ws appdef.IWorkspace, role appdef.QName) iter.Seq2[appdef.IType,
 	iter.Seq2[appdef.OperationKind, *[]appdef.FieldName]] {
 
-	r := appdef.Role(ws.Type, role)
-	if r == nil {
-		panic(appdef.ErrNotFound("role «%s» in %v", role, ws))
+	roles := appdef.QNamesFrom(role)
+	if r := appdef.Role(ws.Type, role); r != nil {
+		roles = RecursiveRoleAncestors(r, ws)
 	}
-
-	roles := RecursiveRoleAncestors(r, ws)
 
 	types := map[appdef.IType]map[appdef.OperationKind]*[]appdef.FieldName{}
 
 	for _, t := range ws.Types() {
 		if k := t.Kind(); publushedTypes.Contains(k) {
-			for o := range publishedOperations.Values() {
+			for o := range appdef.ACLOperationsForType(k).Values() {
 				if ok, fields := isOperationAllowed(ws, o, t, roles); ok {
 					if _, found := types[t]; !found {
 						types[t] = map[appdef.OperationKind]*[]appdef.FieldName{}
@@ -146,7 +140,7 @@ func PublishedTypes(ws appdef.IWorkspace, role appdef.QName) iter.Seq2[appdef.IT
 			if ops, ok := types[t]; ok && (len(ops) > 0) {
 				if !visitType(t,
 					func(visitOp func(appdef.OperationKind, *[]appdef.FieldName) bool) {
-						for o := range publishedOperations.Values() {
+						for o := range appdef.ACLOperationsForType(t.Kind()).Values() {
 							if fields, ok := ops[o]; ok {
 								if !visitOp(o, fields) {
 									return

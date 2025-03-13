@@ -17,13 +17,16 @@ func isOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, t appdef.
 		return true, nil
 	}
 
-	var resFields appdef.IWithFields
+	var (
+		resFields     appdef.IWithFields
+		allowedFields map[appdef.FieldName]bool
+	)
 	if wf, ok := t.(appdef.IWithFields); ok {
 		resFields = wf
+		allowedFields = map[appdef.FieldName]bool{}
 	}
 
 	result := false
-	allowedFields := map[appdef.FieldName]bool{}
 
 	stack := map[appdef.QName]bool{}
 
@@ -82,8 +85,8 @@ func isOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, t appdef.
 	}
 	acl(ws)
 
-	if (resFields != nil) && (allowedFields != nil) && (len(allowedFields) == resFields.FieldCount()) {
-		// all fields are allowed
+	if result && (resFields != nil) && (allowedFields != nil) && (len(allowedFields) == resFields.FieldCount()) {
+		// all fields are allowed, should return nil
 		allowedFields = nil
 	}
 

@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"testing"
 
+	"maps"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/acl"
 	"github.com/voedger/voedger/pkg/appdef/builder"
@@ -256,7 +258,7 @@ func TestIsOperationAllowed(t *testing.T) {
 			filter.QNames(cDocName),
 			[]appdef.FieldName{"field1", "hiddenField", "field3"},
 			writer,
-			"grant update doc.field[1,2,3] to writer")
+			"grant update doc.field[1,hidden,3] to writer")
 		wsb.Revoke(
 			[]appdef.OperationKind{appdef.OperationKind_Update},
 			filter.QNames(cDocName),
@@ -843,5 +845,315 @@ func TestIsOperationAllowedWSInheritances(t *testing.T) {
 				}
 			})
 		}
+	})
+}
+
+func TestPublishedTypes(t *testing.T) {
+	require := require.New(t)
+
+	var app appdef.IAppDef
+
+	wsName := appdef.NewQName("test", "workspace")
+	cDocName := appdef.NewQName("test", "cDoc")
+	oDocName := appdef.NewQName("test", "oDoc")
+	viewName := appdef.NewQName("test", "view")
+	queryName := appdef.NewQName("test", "qry")
+	cmdName := appdef.NewQName("test", "cmd")
+	tagName := appdef.NewQName("test", "tag")
+
+	everyone := appdef.NewQName("test", "everyone") // can select from view
+	reader := appdef.NewQName("test", "reader")     // everyone + select from CDoc without hiddenfield + execute query
+	writer := appdef.NewQName("test", "writer")     // everyone + insert CDoc + update CDoc without hiddenfield + execute all commands and queries
+	admin := appdef.NewQName("test", "admin")       // everyone + all access to all tables and functions
+	intruder := appdef.NewQName("test", "intruder") // everyone - all access to all tables and functions
+
+	t.Run("should be ok to build application with ACL with fields", func(t *testing.T) {
+		adb := builder.New()
+		adb.AddPackage("test", "test.com/test")
+
+		wsb := adb.AddWorkspace(wsName)
+
+		wsb.AddTag(tagName)
+
+		cDoc := wsb.AddCDoc(cDocName)
+		cDoc.
+			AddField("field1", appdef.DataKind_int32, true).
+			AddField("hiddenField", appdef.DataKind_int32, false).
+			AddField("field3", appdef.DataKind_int32, false)
+		cDoc.SetTag(tagName)
+
+		oDoc := wsb.AddODoc(oDocName)
+		oDoc.AddField("field1", appdef.DataKind_int32, true)
+		oDoc.SetTag(tagName)
+
+		view := wsb.AddView(viewName)
+		view.Key().PartKey().AddField("field1", appdef.DataKind_int32)
+		view.Key().ClustCols().AddField("field2", appdef.DataKind_int32)
+		view.Value().AddField("field3", appdef.DataKind_int32, false)
+
+		qry := wsb.AddQuery(queryName)
+		qry.SetResult(cDocName)
+
+		cmd := wsb.AddCommand(cmdName)
+		cmd.SetParam(appdef.QNameANY)
+
+		_ = wsb.AddRole(everyone)
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Select},
+			filter.QNames(viewName),
+			nil,
+			everyone,
+			"grant select view to everyone")
+
+		_ = wsb.AddRole(reader)
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Inherits},
+			filter.QNames(everyone),
+			nil,
+			reader,
+			"grant inherits everyone to reader")
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Select},
+			filter.And(filter.WSTypes(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
+			nil,
+			reader,
+			"grant select any CDoc with tag to reader")
+		wsb.Revoke(
+			[]appdef.OperationKind{appdef.OperationKind_Select},
+			filter.QNames(cDocName),
+			[]appdef.FieldName{"hiddenField"},
+			reader,
+			"revoke select doc.field1 from reader")
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Execute},
+			filter.QNames(queryName),
+			nil,
+			reader,
+			"grant execute query to reader")
+
+		_ = wsb.AddRole(writer)
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Inherits},
+			filter.QNames(everyone),
+			nil,
+			writer,
+			"grant inherits everyone to writer")
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Insert},
+			filter.And(filter.WSTypes(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
+			nil,
+			writer,
+			"grant insert any CDoc with tag to writer")
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Update},
+			filter.QNames(cDocName),
+			[]appdef.FieldName{"field1", "hiddenField", "field3"},
+			writer,
+			"grant update doc.field[1,hidden,3] to writer")
+		wsb.Revoke(
+			[]appdef.OperationKind{appdef.OperationKind_Update},
+			filter.QNames(cDocName),
+			[]appdef.FieldName{"hiddenField"},
+			writer,
+			"revoke update doc.hiddenField from writer")
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Execute},
+			filter.AllWSFunctions(wsName),
+			nil,
+			writer,
+			"grant execute all commands and queries to writer")
+
+		_ = wsb.AddRole(admin)
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Inherits},
+			filter.QNames(everyone),
+			nil,
+			admin,
+			"grant inherits everyone to admin")
+		wsb.GrantAll(filter.AllWSTables(wsName), admin)
+		wsb.GrantAll(filter.AllWSFunctions(wsName), admin)
+
+		_ = wsb.AddRole(intruder)
+		wsb.Grant(
+			[]appdef.OperationKind{appdef.OperationKind_Inherits},
+			filter.QNames(everyone),
+			nil,
+			intruder,
+			"grant inherits everyone to intruder")
+		wsb.RevokeAll(
+			filter.WSTypes(wsName, appdef.TypeKind_CDoc),
+			intruder,
+			"revoke all access to CDocs from intruder")
+		wsb.RevokeAll(
+			filter.AllWSFunctions(wsName),
+			intruder,
+			"revoke all access to functions from intruder")
+
+		var err error
+		app, err = adb.Build()
+		require.NoError(err)
+		require.NotNil(app)
+	})
+
+	t.Run("test PublishedTypes", func(t *testing.T) {
+		var tests = []struct {
+			role appdef.QName
+			want map[appdef.QName]map[appdef.OperationKind]*[]appdef.FieldName
+		}{
+			// iauthnz.QNameRoleSystem test
+			{
+				role: appdef.QNameRoleSystem,
+				want: map[appdef.QName]map[appdef.OperationKind]*[]appdef.FieldName{
+					cDocName: {
+						appdef.OperationKind_Select:     nil,
+						appdef.OperationKind_Insert:     nil,
+						appdef.OperationKind_Update:     nil,
+						appdef.OperationKind_Activate:   nil,
+						appdef.OperationKind_Deactivate: nil,
+					},
+					oDocName: {
+						appdef.OperationKind_Select:     nil,
+						appdef.OperationKind_Insert:     nil,
+						appdef.OperationKind_Update:     nil,
+						appdef.OperationKind_Activate:   nil,
+						appdef.OperationKind_Deactivate: nil,
+					},
+					viewName: {
+						appdef.OperationKind_Select: nil,
+						appdef.OperationKind_Insert: nil,
+						appdef.OperationKind_Update: nil,
+					},
+					queryName: {
+						appdef.OperationKind_Execute: nil,
+					},
+					cmdName: {
+						appdef.OperationKind_Execute: nil,
+					},
+				},
+			},
+			// everyone test
+			{
+				role: everyone,
+				want: map[appdef.QName]map[appdef.OperationKind]*[]appdef.FieldName{
+					viewName: {
+						appdef.OperationKind_Select: nil,
+					},
+				},
+			},
+			// reader test
+			{
+				role: reader,
+				want: map[appdef.QName]map[appdef.OperationKind]*[]appdef.FieldName{
+					viewName: {
+						appdef.OperationKind_Select: nil,
+					},
+					cDocName: {
+						appdef.OperationKind_Select: {
+							appdef.SystemField_QName,
+							appdef.SystemField_ID,
+							appdef.SystemField_IsActive,
+							appdef.FieldName("field1"),
+							appdef.FieldName("field3"),
+						},
+					},
+					queryName: {
+						appdef.OperationKind_Execute: nil,
+					},
+				},
+			},
+			// writer test
+			{
+				role: writer,
+				want: map[appdef.QName]map[appdef.OperationKind]*[]appdef.FieldName{
+					viewName: {
+						appdef.OperationKind_Select: nil,
+					},
+					cDocName: {
+						appdef.OperationKind_Insert: nil,
+						appdef.OperationKind_Update: {
+							appdef.FieldName("field1"),
+							appdef.FieldName("field3"),
+						},
+					},
+					cmdName: {
+						appdef.OperationKind_Execute: nil,
+					},
+					queryName: {
+						appdef.OperationKind_Execute: nil,
+					},
+				},
+			},
+			// admin test
+			{
+				role: admin,
+				want: map[appdef.QName]map[appdef.OperationKind]*[]appdef.FieldName{
+					viewName: {
+						appdef.OperationKind_Select: nil,
+					},
+					cDocName: {
+						appdef.OperationKind_Select:     nil,
+						appdef.OperationKind_Insert:     nil,
+						appdef.OperationKind_Update:     nil,
+						appdef.OperationKind_Activate:   nil,
+						appdef.OperationKind_Deactivate: nil,
+					},
+					oDocName: {
+						appdef.OperationKind_Select:     nil,
+						appdef.OperationKind_Insert:     nil,
+						appdef.OperationKind_Update:     nil,
+						appdef.OperationKind_Activate:   nil,
+						appdef.OperationKind_Deactivate: nil,
+					},
+					queryName: {
+						appdef.OperationKind_Execute: nil,
+					},
+					cmdName: {
+						appdef.OperationKind_Execute: nil,
+					},
+				},
+			},
+			// intruder test
+			{
+				role: intruder,
+				want: map[appdef.QName]map[appdef.OperationKind]*[]appdef.FieldName{
+					viewName: {
+						appdef.OperationKind_Select: nil,
+					},
+				},
+			},
+			// unknown test
+			{
+				role: appdef.NewQName("test", "unknown"),
+				want: map[appdef.QName]map[appdef.OperationKind]*[]appdef.FieldName{},
+			},
+		}
+		ws := app.Workspace(wsName)
+		for _, tt := range tests {
+			t.Run(tt.role.String(), func(t *testing.T) {
+				got := map[appdef.QName]map[appdef.OperationKind]*[]appdef.FieldName{}
+				for typ, ops := range acl.PublishedTypes(ws, tt.role) {
+					if typ.QName().Pkg() == appdef.SysPackage {
+						continue // skip system types
+					}
+					got[typ.QName()] = maps.Collect(ops)
+				}
+				require.Equal(tt.want, got)
+			})
+		}
+	})
+
+	t.Run("PublishedTypes should be breakable", func(t *testing.T) {
+		typesCnt := 0
+		for _, ops := range acl.PublishedTypes(app.Workspace(wsName), admin) {
+			typesCnt++
+			opsCnt := 0
+			for range ops {
+				opsCnt++
+				break
+			}
+			require.Equal(1, opsCnt)
+			break
+		}
+		require.Equal(1, typesCnt)
 	})
 }

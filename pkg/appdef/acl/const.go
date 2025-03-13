@@ -17,10 +17,3 @@ var publushedTypes = func() appdef.TypeKindSet {
 	s.SetReadOnly()
 	return s
 }()
-
-var publishedOperations = func() appdef.OperationsSet {
-	s := set.Collect(appdef.RecordsOperations.Values())
-	s.Set(appdef.OperationKind_Execute)
-	s.SetReadOnly()
-	return s
-}()
