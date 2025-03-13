@@ -62,7 +62,7 @@ func ReplyErrf(responder IResponder, status int, args ...interface{}) {
 func ReplyErrDef(responder IResponder, err error, defaultStatusCode int) {
 	res := coreutils.WrapSysErrorToExact(err, defaultStatusCode)
 	respWriter := responder.BeginCustomResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: res.HTTPStatus})
-	if err := respWriter.Write(res); err != nil {
+	if err := respWriter.Write(res.ToJSON()); err != nil {
 		logger.Error(fmt.Sprintf("failed to send error %s: %s", res, err))
 	}
 }
