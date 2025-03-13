@@ -19,7 +19,7 @@ import (
 
 func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request) (responseCh <-chan any, responseMeta ResponseMeta, responseErr *error, err error) {
 	timeoutChan := rs.tm.NewTimerChan(time.Duration(rs.timeout))
-	respWriter := &implResponseWriter{
+	respWriter := &implResponseWriter_base{
 		ch:          make(chan any),
 		clientCtx:   clientCtx,
 		sendTimeout: rs.timeout,
@@ -27,7 +27,7 @@ func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request
 		resultErr:   new(error),
 	}
 	responder := &implIResponder{
-		respWriter: respWriter,
+		respWriter:     respWriter,
 		responseMetaCh: make(chan ResponseMeta, 1),
 	}
 	handlerPanic := make(chan interface{})
@@ -89,7 +89,7 @@ func handlePanic(r interface{}) error {
 	}
 }
 
-func (rs *implResponseWriter) Write(obj any) error {
+func (rs *implResponseWriter_base) Write(obj any) error {
 	sendTimeoutTimerChan := rs.tm.NewTimerChan(time.Duration(rs.sendTimeout))
 	select {
 	case rs.ch <- obj:
@@ -100,42 +100,41 @@ func (rs *implResponseWriter) Write(obj any) error {
 	return rs.clientCtx.Err()
 }
 
-func (rs *implResponseWriter) Close() {
-	*rs.resultErr = err
+func (rs *implResponseWriter_Custom) Close() {
 	close(rs.ch)
 }
 
-func (rs *implResponseWriter) Close(err error) {
+func (rs *implResponseWriter_ApiArray) Close(err error) {
 	*rs.resultErr = err
 	close(rs.ch)
 }
 
 func (r *implIResponder) BeginApiArrayResponse(statusCode int) IApiArrayResponseWriter {
+	r.checkStrated()
 	select {
 	case r.responseMetaCh <- ResponseMeta{StatusCode: statusCode, ContentType: coreutils.ApplicationJSON, mode: respondMode_ApiArray}:
 	default:
 		// do nothing if no consumer already.
 		// will get ErrNoConsumer on the next Send()
 	}
-	return r.respWriter
+	return &implResponseWriter_ApiArray{r.respWriter}
 }
 
+func (r *implIResponder) BeginCustomResponse(meta ResponseMeta) ICustomResponseWriter {
+	r.checkStrated()
+	meta.mode = respondMode_Custom
+	select {
+	case r.responseMetaCh <- meta:
+	default:
+		// do nothing if no consumer already.
+		// will get ErrNoConsumer on the next Send()
+	}
+	return &implResponseWriter_Custom{r.respWriter}
+}
 
-
-// func (r *implIResponder) Respond(statusCode int, obj any) (err error) {
-// 	rm := ResponseMeta{StatusCode: statusCode, ContentType: coreutils.ApplicationJSON, IsSin}
-// 	switch obj.(type) {
-// 	case coreutils.SysError:
-// 	case string, error:
-// 		rm.ContentType = coreutils.TextPlain
-// 	}
-// 	select {
-// 	case r.responseMetaCh <- rm:
-// 		if err = r.respSender.Send(obj); err == nil {
-// 			r.respSender.Close(nil)
-// 		}
-// 	default:
-// 		return ErrNoConsumer
-// 	}
-// 	return err
-// }
+func (r *implIResponder) checkStrated() {
+	if r.started {
+		panic("unable to start the response more than once")
+	}
+	r.started = true
+}

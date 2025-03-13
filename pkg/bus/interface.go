@@ -32,7 +32,7 @@ type IApiArrayResponseWriter interface {
 	// may may return ErrNoConsumer
 	Write(item any) error
 
-	// must be called in the end
+	// must be called after last Write() call
 	Close(err error)
 }
 
@@ -42,6 +42,6 @@ type ICustomResponseWriter interface {
 	// may ErrNoConsumer
 	Write(item any) error
 
-	// must be called in the end
+	// must be called after last Write() call
 	Close()
 }
