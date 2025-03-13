@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2024-present Sigma-Soft, Ltd.
- * @author: Nikolay Nikitin
+ * Copyright (c) 2024-present unTill Pro, Ltd.
+ * @author Denis Gribanov
  */
 
 package acl
