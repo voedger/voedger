@@ -16,10 +16,10 @@ import (
 
 type SendToBusOperator struct {
 	pipeline.AsyncNOOP
-	sender    bus.IStreamingResponseSender
-	responder bus.IResponder
-	metrics   IMetrics
-	errCh     chan<- error
+	resposeWriter bus.IApiArrayResponseWriter
+	responder     bus.IResponder
+	metrics       IMetrics
+	errCh         chan<- error
 }
 
 func (o *SendToBusOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
@@ -27,10 +27,10 @@ func (o *SendToBusOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece)
 	defer func() {
 		o.metrics.Increase(Metric_ExecSendSeconds, time.Since(begin).Seconds())
 	}()
-	if o.sender == nil {
-		o.sender = o.responder.BeginStreamingResponse(http.StatusOK)
+	if o.resposeWriter == nil {
+		o.resposeWriter = o.responder.BeginApiArrayResponse(http.StatusOK)
 	}
-	return work, o.sender.Send(work.(rowsWorkpiece).OutputRow().Values())
+	return work, o.resposeWriter.Write(work.(rowsWorkpiece).OutputRow().Values())
 }
 
 func (o *SendToBusOperator) OnError(_ context.Context, err error) {

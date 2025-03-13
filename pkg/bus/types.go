@@ -35,14 +35,14 @@ type Request struct {
 type ResponseMeta struct {
 	ContentType string
 	StatusCode  int
-	mode        respondMode
+	mode        RespondMode
 }
 
-type respondMode int
+type RespondMode int
 
 const (
-	respondMode_ApiArray respondMode = iota
-	respondMode_Custom
+	RespondMode_ApiArray RespondMode = iota
+	RespondMode_Custom
 )
 
 type implIRequestSender struct {

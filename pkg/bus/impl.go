@@ -112,7 +112,7 @@ func (rs *implResponseWriter_ApiArray) Close(err error) {
 func (r *implIResponder) BeginApiArrayResponse(statusCode int) IApiArrayResponseWriter {
 	r.checkStrated()
 	select {
-	case r.responseMetaCh <- ResponseMeta{StatusCode: statusCode, ContentType: coreutils.ApplicationJSON, mode: respondMode_ApiArray}:
+	case r.responseMetaCh <- ResponseMeta{StatusCode: statusCode, ContentType: coreutils.ApplicationJSON, mode: RespondMode_ApiArray}:
 	default:
 		// do nothing if no consumer already.
 		// will get ErrNoConsumer on the next Send()
@@ -122,7 +122,7 @@ func (r *implIResponder) BeginApiArrayResponse(statusCode int) IApiArrayResponse
 
 func (r *implIResponder) BeginCustomResponse(meta ResponseMeta) ICustomResponseWriter {
 	r.checkStrated()
-	meta.mode = respondMode_Custom
+	meta.mode = RespondMode_Custom
 	select {
 	case r.responseMetaCh <- meta:
 	default:
@@ -137,4 +137,8 @@ func (r *implIResponder) checkStrated() {
 		panic("unable to start the response more than once")
 	}
 	r.started = true
+}
+
+func (r ResponseMeta) Mode() RespondMode {
+	return r.mode
 }

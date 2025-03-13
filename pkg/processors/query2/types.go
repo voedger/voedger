@@ -299,15 +299,15 @@ func (a *aggregator) compareUint64(v1, v2 uint64, asc bool) bool {
 
 type sender struct {
 	pipeline.AsyncNOOP
-	responder bus.IResponder
-	sender    bus.IStreamingResponseSender
+	responder  bus.IResponder
+	respWriter bus.IApiArrayResponseWriter
 }
 
 func (s *sender) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
-	if s.sender == nil {
-		s.sender = s.responder.BeginStreamingResponse(http.StatusOK)
+	if s.respWriter == nil {
+		s.respWriter = s.responder.BeginApiArrayResponse(http.StatusOK)
 	}
-	return work, s.sender.Send(work.(objectBackedByMap).data)
+	return work, s.respWriter.Write(work.(objectBackedByMap).data)
 }
 
 type filter struct {
