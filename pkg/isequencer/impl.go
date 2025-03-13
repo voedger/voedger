@@ -470,8 +470,8 @@ func (s *sequencer) actualizer(ctx context.Context) {
 // - Unlock s.toBeFlushedMu
 // Parameters:
 // - initiator - enum value that indicates the caller of the method: flusher, actualizer, batcher
-// - clearToBeFlushed - if true, clears s.toBeFlushed after writing values. Otherwise, only removes values that were written.
-func (s *sequencer) flushValues(initiator flushInitiator, clearToBeFlushed bool) {
+// - needToCleanToBeFlushed - if true, clears s.toBeFlushed after writing values. Otherwise, only removes values that were written.
+func (s *sequencer) flushValues(initiator flushInitiator, needToCleanToBeFlushed bool) {
 	s.toBeFlushedMu.RLock()
 	if len(s.toBeFlushed) == 0 {
 		s.toBeFlushedMu.RUnlock()
@@ -520,7 +520,7 @@ func (s *sequencer) flushValues(initiator flushInitiator, clearToBeFlushed bool)
 	}
 	// for each key in flushValues remove key from s.toBeFlushed if values are the same
 	s.toBeFlushedMu.Lock()
-	if clearToBeFlushed {
+	if needToCleanToBeFlushed {
 		s.toBeFlushed = make(map[NumberKey]Number)
 	} else {
 		for _, fv := range flushValues {
