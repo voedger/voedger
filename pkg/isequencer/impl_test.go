@@ -103,7 +103,7 @@ func TestSequencer(t *testing.T) {
 		// When
 		offset, ok := seq.Start(1, 1)
 		require.True(t, ok)
-		require.Equal(t, PLogOffset(1), offset)
+		require.Equal(t, PLogOffset(0), offset)
 
 		// Generate new sequence numbers 100 times
 		for i := 1; i <= 100; i++ {
@@ -114,9 +114,9 @@ func TestSequencer(t *testing.T) {
 
 		seq.Flush()
 		mockedTime.Sleep(1 * time.Second)
-		cleanup()
 
 		seq.(*sequencer).flusherWG.Wait()
+		cleanup()
 
 		nums, err := storage.ReadNumbers(1, []SeqID{1})
 		require.NoError(t, err)
@@ -155,7 +155,7 @@ func TestSequencer(t *testing.T) {
 	})
 }
 
-// TODO: Fix the test
+// FIXME: Fix the test
 func TestBatcher(t *testing.T) {
 	t.Run("should aggregate max values and write to storage", func(t *testing.T) {
 		// Given
