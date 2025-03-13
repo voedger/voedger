@@ -37,13 +37,12 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 	}()
 	elemsCount := 0
 	sectionsCloser := ""
-	responseCloser := ""
 	isCmd := strings.HasPrefix(busRequest.Resource, "c.")
-	if !isCmd {
-		if sendSuccess = writeResponse(w, "{"); !sendSuccess {
-			return
-		}
-	}
+	// if !isCmd {
+	// 	if sendSuccess = writeResponse(w, "{"); !sendSuccess {
+	// 		return
+	// 	}
+	// }
 	for elem := range responseCh {
 		// http client disconnected -> ErrNoConsumer on IMultiResponseSender.SendElement() -> QP will call Close()
 		if requestCtx.Err() != nil {
@@ -52,40 +51,58 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 			return
 		}
 
-		if isCmd {
-			res := elem.(string)
-			if contentType == coreutils.ApplicationJSON {
-				res = strings.TrimPrefix(res, "{")
-				res = strings.TrimSuffix(res, "}")
+		if !isCmd && elemsCount == 0 {
+			if sendSuccess = writeResponse(w, `"sections":[{"type":"","elements":[`); !sendSuccess {
+				return
 			}
-			sendSuccess = writeResponse(w, res)
-		} else if contentType == coreutils.TextPlain {
-			switch typed := elem.(type) {
-			case error:
-				sendSuccess = writeResponse(w, typed.Error())
-			default:
-				sendSuccess = writeResponse(w, elem.(string))
-			}
-		} else if elemsCount == 0 {
-			if !isSingle {
-				sendSuccess = writeResponse(w, `"sections":[{"type":"","elements":[`)
-				sectionsCloser = "]}]"
-			}
+			sectionsCloser = "]}]"
 		}
 
-		if sendSuccess && elemsCount > 0 {
+		if elemsCount > 0 {
 			sendSuccess = writeResponse(w, ",")
 		}
 
 		elemsCount++
 
-		if !sendSuccess {
-			return
-		}
-
-		if !busRequest.IsAPIV2 && (isCmd || contentType == coreutils.TextPlain) {
+		if isCmd || contentType == coreutils.TextPlain {
+			sendSuccess = writeResponse(w, elem.(string))
 			continue
 		}
+
+		// if isCmd {
+		// 	res := elem.(string)
+		// 	if contentType == coreutils.ApplicationJSON {
+		// 		res = strings.TrimPrefix(res, "{")
+		// 		res = strings.TrimSuffix(res, "}")
+		// 	}
+		// 	sendSuccess = writeResponse(w, res)
+		// } else if contentType == coreutils.TextPlain {
+		// 	switch typed := elem.(type) {
+		// 	case error:
+		// 		sendSuccess = writeResponse(w, typed.Error())
+		// 	default:
+		// 		sendSuccess = writeResponse(w, elem.(string))
+		// 	}
+		// } else if elemsCount == 0 {
+		// 	if !isSingle {
+		// 		sendSuccess = writeResponse(w, `"sections":[{"type":"","elements":[`)
+		// 		sectionsCloser = "]}]"
+		// 	}
+		// }
+
+		// if sendSuccess && elemsCount > 0 {
+		// 	sendSuccess = writeResponse(w, ",")
+		// }
+
+		// elemsCount++
+
+		// if !sendSuccess {
+		// 	return
+		// }
+
+		// if !busRequest.IsAPIV2 && (isCmd || contentType == coreutils.TextPlain) {
+		// 	continue
+		// }
 
 		elemBytes, err := json.Marshal(&elem)
 		if err != nil {
@@ -96,6 +113,7 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 			return
 		}
 	}
+
 	if len(sectionsCloser) > 0 {
 		if sendSuccess = writeResponse(w, sectionsCloser); !sendSuccess {
 			return
@@ -108,21 +126,14 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 		if !sendSuccess {
 			return
 		}
-		var jsonableErr interface{ ToJSON() string }
-		if errors.As(*responseErr, &jsonableErr) {
-			jsonErr := jsonableErr.ToJSON()
+		var sysError coreutils.SysError
+		if errors.As(*responseErr, &sysError) {
+			jsonErr := sysError.ToJSON_APIV1()
 			jsonErr = strings.TrimPrefix(jsonErr, "{") // need to make "sys.Error" a top-level field within {}
 			jsonErr = strings.TrimSuffix(jsonErr, "}") // need to make "sys.Error" a top-level field within {}
 			sendSuccess = writeResponse(w, jsonErr)
 		} else {
 			sendSuccess = writeResponse(w, fmt.Sprintf(`"status":%d,"errorDescription":"%s"`, http.StatusInternalServerError, *responseErr))
 		}
-	}
-
-	if len(responseCloser) > 0 {
-		sendSuccess = writeResponse(w, responseCloser)
-	}
-	if sendSuccess && contentType == coreutils.ApplicationJSON && !isSingle {
-		sendSuccess = writeResponse(w, "}")
 	}
 }

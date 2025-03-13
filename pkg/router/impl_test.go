@@ -90,7 +90,7 @@ func TestBasicUsage_ApiArray(t *testing.T) {
 			}, bus.DefaultSendTimeout)
 			defer tearDown(router)
 
-			resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/somefunc_SingleResponse", router.port(), testWSID), coreutils.TextPlain, http.NoBody)
+			resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/v2/users/test1/apps/app1/workspaces/%d/queries/test.query", router.port(), testWSID), coreutils.TextPlain, http.NoBody)
 			require.NoError(err)
 			defer resp.Body.Close()
 

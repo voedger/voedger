@@ -229,5 +229,5 @@ func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSe
 	}
 
 	initResponse(rw, respMeta.ContentType, respMeta.StatusCode)
-	reply(requestCtx, rw, respCh, respErr, cancel, respMeta.Mode())
+	reply_v2(requestCtx, rw, respCh, respErr, cancel, respMeta.Mode())
 }

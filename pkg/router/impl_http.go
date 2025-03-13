@@ -207,7 +207,7 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 		}
 
 		initResponse(resp, responseMeta.ContentType, responseMeta.StatusCode)
-		reply(requestCtx, resp, responseCh, responseErr, cancel, responseMeta.Mode())
+		reply_v1(requestCtx, resp, responseCh, responseErr, responseMeta.ContentType, cancel, request)
 	}
 }
 
