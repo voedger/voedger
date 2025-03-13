@@ -20,14 +20,14 @@ import (
 type mockStorage struct {
 	mu               sync.RWMutex
 	numbers          map[WSID]map[SeqID]Number
-	offset           PLogOffset
+	nextOffset           PLogOffset
 	writeValuesError error
 }
 
 func newMockStorage() *mockStorage {
 	return &mockStorage{
 		numbers: make(map[WSID]map[SeqID]Number),
-		offset:  0,
+		nextOffset:  0,
 	}
 }
 
@@ -61,17 +61,17 @@ func (m *mockStorage) WriteValues(batch []SeqValue) error {
 	return nil
 }
 
-func (m *mockStorage) WriteNextPLogOffset(offset PLogOffset) error {
+func (m *mockStorage) WriteNextPLogOffset(nextOffset PLogOffset) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.offset = offset
+	m.nextOffset = nextOffset
 	return nil
 }
 
 func (m *mockStorage) ReadNextPLogOffset() (PLogOffset, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.offset, nil
+	return m.nextOffset, nil
 }
 
 func (m *mockStorage) ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func([]SeqValue, PLogOffset) error) error {

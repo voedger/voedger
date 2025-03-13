@@ -35,6 +35,7 @@ func New(params *Params, iTime coreutils.ITime) (ISequencer, context.CancelFunc)
 		flusherSig:       make(chan struct{}, 1),
 	}
 	s.actualizerInProgress.Store(false)
+
 	// Instance has actualizer() goroutine started.
 	s.startActualizer()
 	<-s.flusherStartedCh
@@ -235,12 +236,11 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 
 	// Try s.inproc
 	s.inprocMu.RLock()
-	if lastNumber, ok := s.inproc[key]; ok {
-		s.inprocMu.RUnlock()
-
+	lastNumber, ok := s.inproc[key]
+	s.inprocMu.RUnlock()
+	if ok {
 		return s.incrementNumber(key, lastNumber), nil
 	}
-	s.inprocMu.RUnlock()
 
 	// Try s.toBeFlushed (use s.toBeFlushedMu to synchronize)
 	s.toBeFlushedMu.RLock()
@@ -430,7 +430,7 @@ Error handling:
 - Handle errors with retry mechanism (500ms wait)
 - Retry mechanism must check `ctx` parameter, if exists
 */
-func (s *sequencer) actualizer(ctx context.Context) {
+func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	defer func() {
 		s.actualizerInProgress.Store(false)
 		s.actualizerWG.Done()
@@ -443,7 +443,7 @@ func (s *sequencer) actualizer(ctx context.Context) {
 	var err error
 
 	// Read nextPLogOffset from s.params.SeqStorage.ReadNextPLogOffset()
-	err = coreutils.Retry(ctx, s.iTime, retryDelay, retryCount, func() error {
+	err = coreutils.Retry(actualizerCtx, s.iTime, retryDelay, retryCount, func() error {
 		s.nextOffset, err = s.params.SeqStorage.ReadNextPLogOffset()
 
 		return err
@@ -454,7 +454,7 @@ func (s *sequencer) actualizer(ctx context.Context) {
 	}
 
 	// Use s.params.SeqStorage.ActualizeSequencesFromPLog() and s.batcher()
-	err = coreutils.Retry(ctx, s.iTime, retryDelay, retryCount, func() error {
+	err = coreutils.Retry(actualizerCtx, s.iTime, retryDelay, retryCount, func() error {
 		return s.params.SeqStorage.ActualizeSequencesFromPLog(s.cleanupCtx, s.nextOffset, s.batcher)
 	})
 	if err != nil {
