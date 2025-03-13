@@ -14,3 +14,11 @@ const (
 	retryDelay                   = 500 * time.Millisecond
 	retryCount                   = 2
 )
+
+type flushInitiator int
+
+const (
+	flusher flushInitiator = iota
+	actualizer
+	batcher
+)
