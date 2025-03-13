@@ -14,7 +14,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/gorilla/mux"
 
@@ -74,8 +73,7 @@ func createBusRequest(reqMethod string, req *http.Request, rw http.ResponseWrite
 	return res, err == nil
 }
 
-func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error,
-	contentType string, onSendFailed func(), busRequest bus.Request, respMode bus.RespondMode) {
+func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error, onSendFailed func(), respMode bus.RespondMode) {
 	sendSuccess := true
 	defer func() {
 		if requestCtx.Err() != nil {
@@ -94,12 +92,10 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 
 	// ApiArray and no elems -> {"results":[]}
 
-	closer := ""
 	if respMode == bus.RespondMode_ApiArray {
 		if sendSuccess = writeResponse(w, `{"results":[`); !sendSuccess {
 			return
 		}
-		closer = "]}"
 	}
 	elemsCount := 0
 	for elem := range responseCh {
@@ -139,26 +135,28 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 		elemsCount++
 	}
 
-	if *responseErr != nil {
-		// actual for ApiArray mode only
-		if elemsCount > 0 {
-			if sendSuccess = writeResponse(w, ","); !sendSuccess {
-				return
-			}
-		}
-		var jsonableErr interface{ ToJSON() string }
-		if errors.As(*responseErr, &jsonableErr) {
-			jsonErr := jsonableErr.ToJSON()
-			jsonErr = strings.TrimPrefix(jsonErr, "{") // need to make "sys.Error" a top-level field within {}
-			jsonErr = strings.TrimSuffix(jsonErr, "}") // need to make "sys.Error" a top-level field within {}
-			sendSuccess = writeResponse(w, jsonErr)
-		} else {
-			sendSuccess = writeResponse(w, fmt.Sprintf(`"status":%d,"errorDescription":"%s"`, http.StatusInternalServerError, *responseErr))
+	if respMode == bus.RespondMode_ApiArray {
+		if sendSuccess = writeResponse(w, "]"); !sendSuccess {
+			return
 		}
 	}
 
-	if sendSuccess && len(closer) > 0 {
-		sendSuccess = writeResponse(w, closer)
+	if *responseErr != nil {
+		// actual for ApiArray mode only
+		if sendSuccess = writeResponse(w, ","); !sendSuccess {
+			return
+		}
+		var sysError coreutils.SysError
+		if errors.As(*responseErr, &sysError) {
+			jsonErr := sysError.ToJSON_APIV2()
+			sendSuccess = writeResponse(w, `"error":`+jsonErr)
+		} else {
+			sendSuccess = writeResponse(w, fmt.Sprintf(`"error":{"status":%d,"message":"%s"}`, http.StatusInternalServerError, *responseErr))
+		}
+	}
+
+	if sendSuccess && respMode == bus.RespondMode_ApiArray {
+		sendSuccess = writeResponse(w, "}")
 	}
 }
 

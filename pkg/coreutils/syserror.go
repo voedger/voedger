@@ -49,7 +49,7 @@ func (he SysError) Error() string {
 	return he.Message
 }
 
-func (he SysError) ToJSON() string {
+func (he SysError) ToJSON_APIV1() string {
 	b := bytes.NewBuffer(nil)
 	b.WriteString(fmt.Sprintf(`{"sys.Error":{"HTTPStatus":%d,"Message":%q`, he.HTTPStatus, he.Message))
 	if he.QName != appdef.NullQName {
@@ -59,5 +59,17 @@ func (he SysError) ToJSON() string {
 		b.WriteString(fmt.Sprintf(`,"Data":%q`, he.Data))
 	}
 	b.WriteString("}}")
+	return b.String()
+}
+
+func (he SysError) ToJSON_APIV2() string {
+	b := bytes.NewBufferString(fmt.Sprintf(`{"status":%d,"message":%q`, he.HTTPStatus, he.Message))
+	if he.QName != appdef.NullQName {
+		b.WriteString(fmt.Sprintf(`,"qname":"%s"`, he.QName.String()))
+	}
+	if len(he.Data) > 0 {
+		b.WriteString(fmt.Sprintf(`,"data":%q`, he.Data))
+	}
+	b.WriteString("}")
 	return b.String()
 }

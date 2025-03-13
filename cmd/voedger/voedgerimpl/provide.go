@@ -75,11 +75,11 @@ func NewSysRouterRequestHandler(requestCtx context.Context, request bus.Request,
 		case "c.EchoCommand":
 			bus.ReplyPlainText(responder, fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes)))
 		case "q.EchoQuery":
-			sender := responder.BeginStreamingResponse(http.StatusOK)
-			if err := sender.Send(fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes))); err != nil {
+			respWriter := responder.BeginApiArrayResponse(http.StatusOK)
+			if err := respWriter.Write(fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes))); err != nil {
 				logger.Error(err)
 			}
-			sender.Close(nil)
+			respWriter.Close(nil)
 		default:
 			bus.ReplyBadRequest(responder, "unknown func: "+request.Resource)
 		}

@@ -95,7 +95,7 @@ func TestReply(t *testing.T) {
 				require.NoError(err)
 				require.Equal(coreutils.ApplicationJSON, cmdRespMeta.ContentType)
 				require.Equal(c.expected.code, cmdRespMeta.StatusCode)
-				require.Equal(c.expected.error, cmdResp.SysError.ToJSON())
+				require.Equal(c.expected.error, cmdResp.SysError.ToJSON_APIV1())
 			})
 		}
 
