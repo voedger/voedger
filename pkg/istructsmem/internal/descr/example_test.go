@@ -160,13 +160,14 @@ func Example() {
 		writerName := appdef.NewQName("test", "writer")
 		writer := wsb.AddRole(writerName)
 		writer.SetComment("read-write role")
-		wsb.GrantAll(filter.QNames(docName, recName, viewName), writerName, "allow writer to do anything with test.doc, test.rec and test.view")
+		wsb.GrantAll(filter.QNames(docName, recName), writerName, "allow writer to do anything with test.doc and test.rec")
 		wsb.Revoke(
 			[]appdef.OperationKind{appdef.OperationKind_Update},
 			filter.QNames(docName),
 			nil,
 			writerName,
 			"disable writer to update test.doc")
+		wsb.GrantAll(filter.QNames(viewName), writerName, "allow writer to do anything with test.view")
 		wsb.GrantAll(filter.AllWSFunctions(wsName), writerName, "allow writer to execute all test functions")
 
 		rateName := appdef.NewQName("test", "rate")
@@ -631,7 +632,7 @@ func Example() {
 	//               "Principal": "test.reader"
 	//             },
 	//             {
-	//               "Comment": "allow writer to do anything with test.doc, test.rec and test.view",
+	//               "Comment": "allow writer to do anything with test.doc and test.rec",
 	//               "Policy": "Allow",
 	//               "Ops": [
 	//                 "Insert",
@@ -643,8 +644,7 @@ func Example() {
 	//               "Filter": {
 	//                 "QNames": [
 	//                   "test.doc",
-	//                   "test.rec",
-	//                   "test.view"
+	//                   "test.rec"
 	//                 ]
 	//               },
 	//               "Principal": "test.writer"
@@ -658,6 +658,21 @@ func Example() {
 	//               "Filter": {
 	//                 "QNames": [
 	//                   "test.doc"
+	//                 ]
+	//               },
+	//               "Principal": "test.writer"
+	//             },
+	//             {
+	//               "Comment": "allow writer to do anything with test.view",
+	//               "Policy": "Allow",
+	//               "Ops": [
+	//                 "Insert",
+	//                 "Update",
+	//                 "Select"
+	//               ],
+	//               "Filter": {
+	//                 "QNames": [
+	//                   "test.view"
 	//                 ]
 	//               },
 	//               "Principal": "test.writer"

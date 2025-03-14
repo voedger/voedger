@@ -68,6 +68,18 @@ var RecordsOperations = func() OperationsSet {
 	return s
 }()
 
+// ViewRecordsOperations is a set of operations that applicable on view.
+//
+// # Contains:
+//	 - Insert
+//	 - Update
+//	 - Select
+var ViewRecordsOperations = func() OperationsSet {
+	s := set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)
+	s.SetReadOnly()
+	return s
+}()
+
 // ACL operations is a set of operations that applicable with ACL rules.
 //
 // # Contains:
