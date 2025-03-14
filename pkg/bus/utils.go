@@ -65,6 +65,7 @@ func ReplyErrDef(responder IResponder, err error, defaultStatusCode int) {
 	if err := respWriter.Write(res.ToJSON_APIV1()); err != nil {
 		logger.Error(fmt.Sprintf("failed to send error %s: %s", res, err))
 	}
+	respWriter.Close()
 }
 
 func ReplyErr(responder IResponder, err error) {
@@ -76,6 +77,7 @@ func ReplyJSON(responder IResponder, httpCode int, obj any) {
 	if err := respWriter.Write(obj); err != nil {
 		logger.Error(fmt.Sprintf("failed to send %v: %s", obj, err))
 	}
+	respWriter.Close()
 }
 
 func ReplyBadRequest(responder IResponder, message string) {

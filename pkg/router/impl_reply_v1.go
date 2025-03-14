@@ -37,6 +37,7 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 	}()
 	elemsCount := 0
 	sectionsCloser := ""
+	responseCloser := ""
 	isCmd := strings.HasPrefix(busRequest.Resource, "c.")
 	// if !isCmd {
 	// 	if sendSuccess = writeResponse(w, "{"); !sendSuccess {
@@ -52,10 +53,11 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 		}
 
 		if !isCmd && elemsCount == 0 {
-			if sendSuccess = writeResponse(w, `"sections":[{"type":"","elements":[`); !sendSuccess {
+			if sendSuccess = writeResponse(w, `{"sections":[{"type":"","elements":[`); !sendSuccess {
 				return
 			}
 			sectionsCloser = "]}]"
+			responseCloser = "}"
 		}
 
 		if elemsCount > 0 {
@@ -129,11 +131,16 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 		var sysError coreutils.SysError
 		if errors.As(*responseErr, &sysError) {
 			jsonErr := sysError.ToJSON_APIV1()
-			jsonErr = strings.TrimPrefix(jsonErr, "{") // need to make "sys.Error" a top-level field within {}
-			jsonErr = strings.TrimSuffix(jsonErr, "}") // need to make "sys.Error" a top-level field within {}
+			if elemsCount > 0 {
+				jsonErr = strings.TrimPrefix(jsonErr, "{") // need to make "sys.Error" a top-level field within {}
+				jsonErr = strings.TrimSuffix(jsonErr, "}") // need to make "sys.Error" a top-level field within {}
+			}
 			sendSuccess = writeResponse(w, jsonErr)
 		} else {
 			sendSuccess = writeResponse(w, fmt.Sprintf(`"status":%d,"errorDescription":"%s"`, http.StatusInternalServerError, *responseErr))
 		}
+	}
+	if sendSuccess && len(responseCloser) > 0 {
+		sendSuccess = writeResponse(w, responseCloser)
 	}
 }

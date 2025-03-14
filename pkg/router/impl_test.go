@@ -90,7 +90,7 @@ func TestBasicUsage_ApiArray(t *testing.T) {
 			}, bus.DefaultSendTimeout)
 			defer tearDown(router)
 
-			resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/v2/users/test1/apps/app1/workspaces/%d/queries/test.query", router.port(), testWSID), coreutils.TextPlain, http.NoBody)
+			resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/users/test1/apps/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
 			require.NoError(err)
 			defer resp.Body.Close()
 
@@ -136,7 +136,7 @@ func TestBasicUsage_Custom(t *testing.T) {
 			}, bus.DefaultSendTimeout)
 			defer tearDown(router)
 
-			resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/somefunc_SingleResponse", router.port(), testWSID), coreutils.TextPlain, http.NoBody)
+			resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/users/test1/apps/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
 			require.NoError(err)
 			defer resp.Body.Close()
 
@@ -220,7 +220,7 @@ func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
 	}, bus.SendTimeout(5*time.Second))
 	defer tearDown(router)
 
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc_ClientDisconnect_CtxCanceledOnElemSend", router.port(), URLPlaceholder_appOwner, URLPlaceholder_appName, testWSID), "application/json", http.NoBody)
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/users/test1/apps/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
 	require.NoError(err)
 
 	// ensure the first element is sent successfully
@@ -237,7 +237,6 @@ func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
 	}
 
 	// close the request and signal to the handler to try to send to the disconnected client
-	resp.Request.Body.Close()
 	resp.Body.Close()
 	close(clientClosed)
 
@@ -307,9 +306,7 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 	defer tearDown(router)
 
 	// client side
-	body := []byte("")
-	bodyReader := bytes.NewReader(body)
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc_ClientDisconnect_FailedToWriteResponse", router.port(), URLPlaceholder_appOwner, URLPlaceholder_appName, testWSID), "application/json", bodyReader)
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/users/test1/apps/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
 	require.NoError(err)
 
 	// ensure the first element is sent successfully
@@ -329,7 +326,6 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 	once := sync.Once{}
 	onBeforeWriteResponse = func(w http.ResponseWriter) {
 		once.Do(func() {
-			resp.Request.Body.Close()
 			resp.Body.Close()
 
 			// wait for write to the socket will be failed indeed. It happens not at once
@@ -364,7 +360,7 @@ func TestAdminService(t *testing.T) {
 	defer tearDown(router)
 
 	t.Run("basic", func(t *testing.T) {
-		resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/somefunc_AdminService", router.adminPort(), testWSID), "application/json", http.NoBody)
+		resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/c.somefunc_AdminService", router.adminPort(), testWSID), "application/json", http.NoBody)
 		require.NoError(err)
 		defer resp.Body.Close()
 
