@@ -1157,3 +1157,130 @@ func TestPublishedTypes(t *testing.T) {
 		require.Equal(1, typesCnt)
 	})
 }
+
+func TestPublishedTypesWSInheritances(t *testing.T) {
+	// # Test plan:
+	// ┌─────────────────────────┬─────────────┐
+	// │       workspaces        │  resources  │
+	// ├───────────┬─────────────┼──────┬──────┤
+	// │ ancestor  │ descendants │ doc1 │ doc2 │
+	// ├───────────┴─────────────┼──────┼──────┤
+	// │ abstractWS              │ S--  │ S--  │ grant select all tables to role
+	// │     ▲     ┌─◄─ ws1      │ SIU  │ S--  │ grant all on doc1 to role
+	// │     └─————┼─◄─ ws2      │ S--  │ SIU  │ grant all on doc2 to r2, grant r2 to role (#3127)
+	// │           └─◄─ ws3      │ ---  │ ---  │ revoke all on doc1, doc2 from role
+	// └─────────────────────────┴──────┴──────┘
+
+	require := require.New(t)
+
+	var app appdef.IAppDef
+
+	awsName := appdef.NewQName("test", "abstractWS")
+	ws1Name := appdef.NewQName("test", "ws1")
+	ws2Name := appdef.NewQName("test", "ws2")
+	ws3Name := appdef.NewQName("test", "ws3")
+
+	roleName := appdef.NewQName("test", "role")
+	r2Name := appdef.NewQName("test", "r2")
+
+	doc1Name := appdef.NewQName("test", "doc1")
+	doc2Name := appdef.NewQName("test", "doc2")
+
+	t.Run("should be ok to build application", func(t *testing.T) {
+		adb := builder.New()
+		adb.AddPackage("test", "test.com/test")
+
+		aws := adb.AddWorkspace(awsName)
+		_ = aws.AddCDoc(doc1Name)
+		_ = aws.AddCDoc(doc2Name)
+		_ = aws.AddRole(roleName)
+		aws.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, filter.AllWSTables(awsName), nil, roleName, "grant select all tables to role")
+
+		ws1 := adb.AddWorkspace(ws1Name)
+		ws1.SetAncestors(awsName)
+		ws1.GrantAll(filter.QNames(doc1Name), roleName, "grant all on doc1 to role")
+
+		ws2 := adb.AddWorkspace(ws2Name)
+		ws2.SetAncestors(awsName)
+		_ = ws2.AddRole(r2Name)
+		ws2.GrantAll(filter.QNames(doc2Name), r2Name, "grant all on doc2 to r2")
+		ws2.GrantAll(filter.WSTypes(ws2Name, appdef.TypeKind_Role), roleName, "grant {ALL WS ROLES} to role") // #3127
+
+		ws3 := adb.AddWorkspace(ws3Name)
+		ws3.SetAncestors(awsName)
+		ws3.RevokeAll(filter.QNames(doc1Name, doc2Name), roleName, "revoke all on doc1, doc2 from role")
+
+		a, err := adb.Build()
+		require.NoError(err)
+
+		app = a
+	})
+
+	require.NotNil(app)
+
+	t.Run("test PublishedTypes", func(t *testing.T) {
+		var tests = []struct {
+			ws   appdef.QName
+			want map[appdef.QName]map[appdef.OperationKind]*[]appdef.FieldName
+		}{
+			{
+				ws: awsName,
+				want: map[appdef.QName]map[appdef.OperationKind]*[]appdef.FieldName{
+					doc1Name: {
+						appdef.OperationKind_Select: nil,
+					},
+					doc2Name: {
+						appdef.OperationKind_Select: nil,
+					},
+				},
+			},
+			{
+				ws: ws1Name,
+				want: map[appdef.QName]map[appdef.OperationKind]*[]appdef.FieldName{
+					doc1Name: {
+						appdef.OperationKind_Select:     nil,
+						appdef.OperationKind_Insert:     nil,
+						appdef.OperationKind_Update:     nil,
+						appdef.OperationKind_Activate:   nil,
+						appdef.OperationKind_Deactivate: nil,
+					},
+					doc2Name: {
+						appdef.OperationKind_Select: nil,
+					},
+				},
+			},
+			{
+				ws: ws2Name,
+				want: map[appdef.QName]map[appdef.OperationKind]*[]appdef.FieldName{
+					doc1Name: {
+						appdef.OperationKind_Select: nil,
+					},
+					doc2Name: {
+						appdef.OperationKind_Select:     nil,
+						appdef.OperationKind_Insert:     nil,
+						appdef.OperationKind_Update:     nil,
+						appdef.OperationKind_Activate:   nil,
+						appdef.OperationKind_Deactivate: nil,
+					},
+				},
+			},
+			{
+				ws:   ws3Name,
+				want: map[appdef.QName]map[appdef.OperationKind]*[]appdef.FieldName{},
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.ws.Entity(), func(t *testing.T) {
+				ws := app.Workspace(tt.ws)
+				got := map[appdef.QName]map[appdef.OperationKind]*[]appdef.FieldName{}
+				for typ, ops := range acl.PublishedTypes(ws, roleName) {
+					if typ.QName().Pkg() == appdef.SysPackage {
+						continue // skip system types
+					}
+					got[typ.QName()] = maps.Collect(ops)
+				}
+				require.Equal(tt.want, got)
+			})
+		}
+	})
+}
