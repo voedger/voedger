@@ -19,7 +19,7 @@ import (
 )
 
 func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error,
-	contentType string, onSendFailed func(), busRequest bus.Request) {
+	contentType string, onSendFailed func(), busRequest bus.Request, mode bus.RespondMode) {
 	sendSuccess := true
 	defer func() {
 		if requestCtx.Err() != nil {
@@ -35,6 +35,32 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 			}
 		}
 	}()
+
+	if mode == bus.RespondMode_Single {
+		select {
+		case data := <-responseCh:
+			if requestCtx.Err() != nil {
+				// possible: ctx is done but on select {sections<-section, <-ctx.Done()} write to sections channel is triggered.
+				// ctx.Done() must have the priority
+				return
+			}
+			switch typed := data.(type) {
+			case string:
+				sendSuccess = writeResponse(w, typed)
+			case []byte:
+				sendSuccess = writeResponse(w, string(typed))
+			default:
+				elemBytes, err := json.Marshal(data)
+				if err != nil {
+					// notest
+					panic(err)
+				}
+				sendSuccess = writeResponse(w, string(elemBytes))
+			}
+		case <-requestCtx.Done():
+		}
+		return
+	}
 	elemsCount := 0
 	sectionsCloser := ""
 	responseCloser := ""

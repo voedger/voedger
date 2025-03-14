@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 // TODO: CP should send CommandResponse struct itself, not CommandResponse marshaled to a string
@@ -47,11 +46,7 @@ func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req R
 }
 
 func ReplyPlainText(responder IResponder, text string) {
-	respWriter := responder.BeginCustomResponse(ResponseMeta{ContentType: coreutils.TextPlain, StatusCode: http.StatusOK})
-	if err := respWriter.Write(text); err != nil {
-		logger.Error(err.Error() + ": failed to send response: " + text)
-	}
-	respWriter.Close()
+	responder.Close(ResponseMeta{ContentType: coreutils.TextPlain, StatusCode: http.StatusOK}, text)
 }
 
 func ReplyErrf(responder IResponder, status int, args ...interface{}) {
@@ -61,11 +56,7 @@ func ReplyErrf(responder IResponder, status int, args ...interface{}) {
 //nolint:errorlint
 func ReplyErrDef(responder IResponder, err error, defaultStatusCode int) {
 	res := coreutils.WrapSysErrorToExact(err, defaultStatusCode)
-	respWriter := responder.BeginCustomResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: res.HTTPStatus})
-	if err := respWriter.Write(res.ToJSON_APIV1()); err != nil {
-		logger.Error(fmt.Sprintf("failed to send error %s: %s", res, err))
-	}
-	respWriter.Close()
+	responder.Close(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: res.HTTPStatus}, res.ToJSON_APIV1())
 }
 
 func ReplyErr(responder IResponder, err error) {
@@ -73,11 +64,7 @@ func ReplyErr(responder IResponder, err error) {
 }
 
 func ReplyJSON(responder IResponder, httpCode int, obj any) {
-	respWriter := responder.BeginCustomResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: httpCode})
-	if err := respWriter.Write(obj); err != nil {
-		logger.Error(fmt.Sprintf("failed to send %v: %s", obj, err))
-	}
-	respWriter.Close()
+	responder.Close(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: httpCode}, obj)
 }
 
 func ReplyBadRequest(responder IResponder, message string) {

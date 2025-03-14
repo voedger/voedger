@@ -134,6 +134,21 @@ func (r *implIResponder) BeginCustomResponse(meta ResponseMeta) ICustomResponseW
 	return &implResponseWriter_Custom{r.respWriter}
 }
 
+func (r *implIResponder) Close(meta ResponseMeta, data any) {
+	r.checkStrated()
+	meta.mode = RespondMode_Single
+	select {
+	case r.responseMetaCh <- meta:
+	default:
+		// do nothing if no consumer already.
+		// will get ErrNoConsumer on the next Send()
+	}
+	go func() {
+		_ = r.respWriter.Write(data)
+		close(r.respWriter.ch)
+	}()
+}
+
 func (r *implIResponder) checkStrated() {
 	if r.started {
 		panic("unable to start the response more than once")
