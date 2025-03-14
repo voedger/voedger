@@ -20,16 +20,15 @@ type RequestHandler func(requestCtx context.Context, request Request, responder 
 
 type IResponder interface {
 	// panics if called >1 times or after BeginCustomResponse()
-	// `Write()` must be called outside the `bus.RequestHandler()` or in a goroutine
+	// `IApiArrayResponseWriter.Write()` must be called outside the `bus.RequestHandler()` or in a goroutine
 	BeginApiArrayResponse(statusCode int) IApiArrayResponseWriter
 
 	// panic if called >1 times or after BeginStreamingResponse()
-	// `Write()` must be called outside the `bus.RequestHandler()` or in a goroutine
+	// `ICustomResponseWriter.Write()` must be called outside the `bus.RequestHandler()` or in a goroutine
 	BeginCustomResponse(meta ResponseMeta) ICustomResponseWriter
 
 	// sends data and closes the communication
 	// need for the case when need to reply by a single object from inside `bus.RequestHandler()`
-	// obj is string or []byte -> send as is, otherwise -> send `json.Mashal()` result
 	Close(meta ResponseMeta, data any)
 }
 

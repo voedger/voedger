@@ -144,7 +144,9 @@ func (r *implIResponder) Close(meta ResponseMeta, data any) {
 		// will get ErrNoConsumer on the next Send()
 	}
 	go func() {
-		_ = r.respWriter.Write(data)
+		if err := r.respWriter.Write(data); err != nil {
+			logger.Error(err, data)
+		}
 		close(r.respWriter.ch)
 	}()
 }
