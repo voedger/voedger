@@ -153,13 +153,15 @@ func TestBasicUsage(t *testing.T) {
 		}
 		respCh, respMeta, respErr, err := app.requestSender.SendRequest(app.ctx, request)
 		require.NoError(err)
-		for range respCh {
-			t.Fail()
+		counter := 0
+		for elem := range respCh {
+			require.Zero(counter)
+			require.Equal(http.StatusInternalServerError, respMeta.StatusCode)
+			require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
+			require.Equal(`{"sys.Error":{"HTTPStatus":500,"Message":"fire error"}}`, elem.(string)) // nolint:errorlint
+			counter++
 		}
-		require.Equal(http.StatusInternalServerError, respMeta.StatusCode)
-		require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
-		require.Equal(`{"sys.Error":{"HTTPStatus":500,"Message":"fire error"}}`, (*respErr).(coreutils.SysError).ToJSON_APIV1()) // nolint:errorlint
-		log.Println((*respErr).Error())
+		require.NoError(*respErr)
 	})
 }
 
