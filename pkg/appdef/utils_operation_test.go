@@ -23,7 +23,7 @@ func Test_AllOperationsForType(t *testing.T) {
 		{appdef.TypeKind_null, set.Empty[appdef.OperationKind]()},
 		{appdef.TypeKind_GRecord, appdef.RecordsOperations},
 		{appdef.TypeKind_CDoc, appdef.RecordsOperations},
-		{appdef.TypeKind_ViewRecord, appdef.RecordsOperations},
+		{appdef.TypeKind_ViewRecord, appdef.ViewRecordsOperations},
 		{appdef.TypeKind_Command, set.From(appdef.OperationKind_Execute)},
 		{appdef.TypeKind_Role, set.From(appdef.OperationKind_Inherits)},
 		{appdef.TypeKind_Projector, set.Empty[appdef.OperationKind]()},
