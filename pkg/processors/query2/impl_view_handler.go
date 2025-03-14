@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -107,8 +108,12 @@ func (h *viewHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err err
 	if len(qw.queryParams.Constraints.Keys) != 0 {
 		oo = append(oo, pipeline.WireAsyncOperator("Keys", newKeys(qw.queryParams.Constraints.Keys)))
 	}
-	oo = append(oo, pipeline.WireAsyncOperator("Sender", &sender{responder: qw.msg.Responder()}))
+	sender := &sender{responder: qw.msg.Responder()}
+	oo = append(oo, pipeline.WireAsyncOperator("Sender", sender))
 	qw.rowsProcessor = pipeline.NewAsyncPipeline(ctx, "View rows processor", oo[0], oo[1:]...)
+	qw.responseWriterGetter = func() bus.IApiArrayResponseWriter {
+		return sender.respWriter
+	}
 	return
 }
 func (h *viewHandler) Exec(ctx context.Context, qw *queryWork) (err error) {

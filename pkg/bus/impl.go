@@ -34,7 +34,9 @@ func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		defer wg.Done()
+		defer func() {
+			wg.Done()
+		}()
 		select {
 		case <-timeoutChan:
 			if err = checkHandlerPanic(handlerPanic); err == nil {
