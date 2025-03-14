@@ -86,6 +86,8 @@ type sequencer struct {
 	// Buffered channel [1] to signal flusher to flush
 	// Written (non-blocking) by Flush()
 	flusherSig chan struct{}
+	// sync mechanism to prevent multiple flusher goroutines
+	flusherInProgress atomic.Bool
 
 	// To be flushed
 	toBeFlushed map[NumberKey]Number

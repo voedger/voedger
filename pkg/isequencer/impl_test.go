@@ -20,14 +20,14 @@ import (
 type mockStorage struct {
 	mu               sync.RWMutex
 	numbers          map[WSID]map[SeqID]Number
-	nextOffset           PLogOffset
+	nextOffset       PLogOffset
 	writeValuesError error
 }
 
 func newMockStorage() *mockStorage {
 	return &mockStorage{
-		numbers: make(map[WSID]map[SeqID]Number),
-		nextOffset:  0,
+		numbers:    make(map[WSID]map[SeqID]Number),
+		nextOffset: 0,
 	}
 }
 
@@ -35,7 +35,7 @@ func (m *mockStorage) ReadNumbers(wsid WSID, seqIDs []SeqID) ([]Number, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	result := make([]Number, 0)
+	result := make([]Number, 0, len(seqIDs))
 	if nums, exists := m.numbers[wsid]; exists {
 		for _, id := range seqIDs {
 			result = append(result, nums[id])
@@ -53,11 +53,17 @@ func (m *mockStorage) WriteValues(batch []SeqValue) error {
 	defer m.mu.Unlock()
 
 	for _, sv := range batch {
-		if m.numbers[sv.Key.WSID] == nil {
-			m.numbers[sv.Key.WSID] = make(map[SeqID]Number)
+		wsNums, exists := m.numbers[sv.Key.WSID]
+		if !exists {
+			wsNums = make(map[SeqID]Number)
+			m.numbers[sv.Key.WSID] = wsNums
 		}
-		m.numbers[sv.Key.WSID][sv.Key.SeqID] = sv.Value
+		// Only update if new value is greater
+		if sv.Value > wsNums[sv.Key.SeqID] {
+			wsNums[sv.Key.SeqID] = sv.Value
+		}
 	}
+
 	return nil
 }
 
@@ -78,7 +84,6 @@ func (m *mockStorage) ActualizeSequencesFromPLog(ctx context.Context, offset PLo
 	return nil
 }
 
-// TODO: Fix the test
 func TestSequencer(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
@@ -115,8 +120,8 @@ func TestSequencer(t *testing.T) {
 		seq.Flush()
 		mockedTime.Sleep(1 * time.Second)
 
-		seq.(*sequencer).flusherWG.Wait()
 		cleanup()
+		seq.(*sequencer).flusherWG.Wait()
 
 		nums, err := storage.ReadNumbers(1, []SeqID{1})
 		require.NoError(t, err)
@@ -139,6 +144,7 @@ func TestSequencer(t *testing.T) {
 
 		seq, cleanup := New(params, mockedTime)
 		defer cleanup()
+		seq.(*sequencer).actualizerWG.Wait()
 
 		// When
 		_, ok := seq.Start(1, 1)

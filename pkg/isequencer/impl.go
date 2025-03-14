@@ -38,6 +38,7 @@ func New(params *Params, iTime coreutils.ITime) (ISequencer, context.CancelFunc)
 
 	// Instance has actualizer() goroutine started.
 	s.startActualizer()
+	s.actualizerWG.Wait()
 	<-s.flusherStartedCh
 
 	return s, s.cleanup
@@ -107,7 +108,7 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 }
 
 func (s *sequencer) startFlusher() {
-	if s.flusherCtxCancel != nil {
+	if !s.flusherInProgress.CompareAndSwap(false, true) {
 		panic("flusher already started")
 	}
 
@@ -167,7 +168,10 @@ Error handling:
 - Retry mechanism must check `ctx` parameter, if exists
 */
 func (s *sequencer) flusher(ctx context.Context) {
-	defer s.flusherWG.Done()
+	defer func() {
+		s.flusherInProgress.Store(false)
+		s.flusherWG.Done()
+	}()
 
 	tickerCh := s.iTime.NewTimerChan(s.params.MaxFlushingInterval)
 	// Non-blocking write to flusherStartedCh for tests
@@ -549,12 +553,6 @@ func (s *sequencer) Actualize() {
 	// Validate Sequencing Transaction status (s.currentWSID != 0)
 	s.checkEventState()
 
-	// Validate Actualization status (s.actualizerInProgress is false)
-	// Set s.actualizerInProgress to true
-	if !s.actualizerInProgress.CompareAndSwap(false, true) {
-		panic("actualization is already in progress")
-	}
-
 	// Clean s.lru, s.nextOffset, s.currentWSID, s.currentWSKind, s.toBeFlushed, s.inproc, s.toBeFlushedOffset
 	s.finishEventState()
 
@@ -573,6 +571,5 @@ func (s *sequencer) cleanup() {
 	if s.flusherWG != nil {
 		s.flusherCtxCancel()
 		s.flusherWG.Wait()
-		s.flusherWG = nil
 	}
 }
