@@ -1,51 +1,17 @@
 /*
- * Copyright (c) 2024-present unTill Software Development Group B.V.
+ * Copyright (c) 2025-present unTill Software Development Group B.V.
+ * @author Michael Saigachenko
  */
-
 package openapi
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"iter"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
-
-type SchemaMeta struct {
-	SchemaTitle   string
-	SchemaVersion string
-}
-
-/*
-PublishedTypes lists the resources allowed to the published role in the workspace and ancestors (including resources available to non-authenticated requests):
-
-  - Documents
-
-  - Views
-
-  - Commands
-
-  - Queries
-
-    When fieldNames is empty, it means all fields are allowed
-
-Usage:
-
-	for t, ops := range acl.PublishedTypes(ws, role) {
-	  for op, fields := range ops {
-	    if fields == nil {
-	      fmt.Println(t, op, "all fields")
-	    } else {
-	      fmt.Println(t, op, *fields...)
-	    }
-	  }
-	}
-*/
-type PublishedTypesFunc func(ws appdef.IWorkspace, role appdef.QName) iter.Seq2[appdef.IType,
-	iter.Seq2[appdef.OperationKind, *[]appdef.FieldName]]
 
 // CreateOpenApiSchema generates an OpenAPI schema document for the given workspace and role
 func CreateOpenApiSchema(writer io.Writer, ws appdef.IWorkspace, role appdef.QName,
@@ -112,9 +78,57 @@ func (g *schemaGenerator) generateComponents() error {
 			if err := g.generateSchemaComponent(t, op, fields, schemas); err != nil {
 				return err
 			}
+			if t.Kind() == appdef.TypeKind_Command && op == appdef.OperationKind_Execute {
+				// If command param is an ODoc, generate a schema for it
+				cmd := t.(appdef.ICommand)
+				param := cmd.Param()
+				if _, ok := param.(appdef.IODoc); ok {
+					if err := g.generateSchemaComponent(param.(ISchema), op, nil, schemas); err != nil {
+						return err
+					}
+				}
+				if result := cmd.Result(); result != nil {
+					if err := g.generateSchemaComponent(result.(ISchema), op, nil, schemas); err != nil {
+						return err
+					}
+				}
+			}
+			if t.Kind() == appdef.TypeKind_Query && op == appdef.OperationKind_Execute {
+				qry := t.(appdef.IQuery)
+				if param := qry.Param(); param != nil {
+					if err := g.generateSchemaComponent(param.(ISchema), op, nil, schemas); err != nil {
+						return err
+					}
+				}
+				if result := qry.Result(); result != nil {
+					if err := g.generateSchemaComponent(result.(ISchema), op, nil, schemas); err != nil {
+						return err
+					}
+				}
+			}
 		}
 
 		g.processedTypes[typeName] = true
+	}
+
+	// generate error schema
+	schemas[errorSchemaName] = map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"message": map[string]interface{}{
+				"type": "string",
+			},
+			"status": map[string]interface{}{
+				"type": "integer",
+			},
+			"qname": map[string]interface{}{
+				"type": "string",
+			},
+			"data": map[string]interface{}{
+				"type": "string",
+			},
+		},
+		"required": []string{"message"},
 	}
 
 	return nil
@@ -124,7 +138,7 @@ func (g *schemaGenerator) generateComponents() error {
 func (g *schemaGenerator) generateSchemaComponent(typ appdef.IType, op appdef.OperationKind,
 	fieldNames *[]appdef.FieldName, schemas map[string]interface{}) error {
 
-	typeName := fmt.Sprintf("%s.%s", typ.QName().Pkg(), typ.QName().Entity())
+	typeName := typ.QName().String()
 
 	// If no field constraints (all fields allowed) or fieldNames is nil
 	useAllFields := fieldNames == nil || len(*fieldNames) == 0
@@ -142,122 +156,25 @@ func (g *schemaGenerator) generateSchemaComponent(typ appdef.IType, op appdef.Op
 	g.schemasByType[typeName][op] = componentName
 
 	// Create the schema component
-	withFields, ok := typ.(appdef.IWithFields)
+	withFields, ok := typ.(ISchema)
 	if !ok {
 		return nil // Type doesn't have fields, skip
 	}
 
-	properties := make(map[string]interface{})
-	required := make([]string, 0)
+	schemas[componentName] = g.generateSchema(withFields, op, fieldNames)
 
-	// Add fields to schema
-	for _, field := range withFields.Fields() {
-		// Skip system fields in schema
-		if field.IsSys() {
-			continue
-		}
-
-		// Check if this field is allowed for this operation
-		if !useAllFields && !containsFieldName(*fieldNames, field.Name()) {
-			continue
-		}
-
-		fieldSchema := g.generateFieldSchema(field)
-
-		properties[field.Name()] = fieldSchema
-
-		if field.Required() {
-			required = append(required, field.Name())
+	if typ.Kind() == appdef.TypeKind_ODoc || typ.Kind() == appdef.TypeKind_ORecord {
+		// Generate schema components ODoc inner containers
+		withContainers := typ.(appdef.IWithContainers)
+		for _, container := range withContainers.Containers() {
+			err := g.generateSchemaComponent(container.Type(), op, nil, schemas)
+			if err != nil {
+				return err
+			}
 		}
 	}
-
-	schema := map[string]interface{}{
-		"type":       "object",
-		"properties": properties,
-	}
-
-	if len(required) > 0 {
-		schema["required"] = required
-	}
-
-	if typ.Comment() != "" {
-		schema["description"] = typ.Comment()
-	}
-
-	schemas[componentName] = schema
 
 	return nil
-}
-
-// generateFieldSchema creates a schema for a specific field
-func (g *schemaGenerator) generateFieldSchema(field appdef.IField) map[string]interface{} {
-	schema := make(map[string]interface{})
-
-	// Handle reference fields
-	if refField, isRef := field.(appdef.IRefField); isRef {
-		schema["type"] = "integer"
-		schema["format"] = "int64"
-
-		if len(refField.Refs()) > 0 {
-			refNames := make([]string, 0, len(refField.Refs()))
-			for _, ref := range refField.Refs() {
-				refNames = append(refNames, fmt.Sprintf("%s.%s", ref.Pkg(), ref.Entity()))
-			}
-			schema["description"] = fmt.Sprintf("Reference to: %s", strings.Join(refNames, ", "))
-		} else {
-			schema["description"] = "Reference to any document/record"
-		}
-
-		return schema
-	}
-
-	// Handle regular fields based on data kind
-	switch field.DataKind() {
-	case appdef.DataKind_int32:
-		schema["type"] = "integer"
-		schema["format"] = "int32"
-	case appdef.DataKind_int64:
-		schema["type"] = "integer"
-		schema["format"] = "int64"
-	case appdef.DataKind_float32:
-		schema["type"] = "number"
-		schema["format"] = "float"
-	case appdef.DataKind_float64:
-		schema["type"] = "number"
-		schema["format"] = "double"
-	case appdef.DataKind_bool:
-		schema["type"] = "boolean"
-	case appdef.DataKind_string:
-		schema["type"] = "string"
-		// Add max length constraint if exists
-		if constraint, ok := field.Constraints()[appdef.ConstraintKind_MaxLen]; ok {
-			maxLen, _ := constraint.Value().(uint16)
-			schema["maxLength"] = maxLen
-		}
-	case appdef.DataKind_bytes:
-		schema["type"] = "string"
-		schema["format"] = "byte"
-		// Add max length constraint if exists
-		if constraint, ok := field.Constraints()[appdef.ConstraintKind_MaxLen]; ok {
-			maxLen, _ := constraint.Value().(uint16)
-			schema["maxLength"] = maxLen
-		}
-	case appdef.DataKind_QName:
-		schema["type"] = "string"
-		schema["pattern"] = "^[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+$"
-	case appdef.DataKind_RecordID:
-		schema["type"] = "integer"
-		schema["format"] = "int64"
-	default:
-		schema["type"] = "string"
-	}
-
-	// Add field comment as description
-	if field.Comment() != "" {
-		schema["description"] = field.Comment()
-	}
-
-	return schema
 }
 
 // generatePaths creates path items for all published types and their operations
@@ -575,16 +492,33 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 	return parameters
 }
 
-// generateRequestBody creates a request body for a type and operation
-func (g *schemaGenerator) generateRequestBody(typ appdef.IType, op appdef.OperationKind) map[string]interface{} {
-	typeName := fmt.Sprintf("%s.%s", typ.QName().Pkg(), typ.QName().Entity())
-
-	// Get the schema for this type and operation
-	schemaName := typeName
+func (g *schemaGenerator) schemaNameByTypeName(typeName string, op appdef.OperationKind) string {
 	if typeSchemas, ok := g.schemasByType[typeName]; ok {
 		if opSchema, ok := typeSchemas[op]; ok {
-			schemaName = opSchema
+			return opSchema
 		}
+	}
+	return typeName
+}
+
+// generateRequestBody creates a request body for a type and operation
+func (g *schemaGenerator) generateRequestBody(typ appdef.IType, op appdef.OperationKind) map[string]interface{} {
+	typeName := typ.QName().String()
+
+	if typ.Kind() == appdef.TypeKind_Command {
+		cmd := typ.(appdef.ICommand)
+		param := cmd.Param()
+		if _, ok := param.(appdef.IODoc); !ok {
+			return map[string]interface{}{
+				"required": true,
+				"content": map[string]interface{}{
+					"application/json": map[string]interface{}{
+						"schema": g.generateSchema(param.(ISchema), op, nil),
+					},
+				},
+			}
+		}
+		typeName = param.QName().String()
 	}
 
 	return map[string]interface{}{
@@ -592,7 +526,7 @@ func (g *schemaGenerator) generateRequestBody(typ appdef.IType, op appdef.Operat
 		"content": map[string]interface{}{
 			"application/json": map[string]interface{}{
 				"schema": map[string]interface{}{
-					"$ref": "#/components/schemas/" + schemaName,
+					"$ref": "#/components/schemas/" + g.schemaNameByTypeName(typeName, op),
 				},
 			},
 		},
@@ -610,22 +544,7 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 		"content": map[string]interface{}{
 			"application/json": map[string]interface{}{
 				"schema": map[string]interface{}{
-					"type": "object",
-					"properties": map[string]interface{}{
-						"message": map[string]interface{}{
-							"type": "string",
-						},
-						"status": map[string]interface{}{
-							"type": "integer",
-						},
-						"qname": map[string]interface{}{
-							"type": "string",
-						},
-						"data": map[string]interface{}{
-							"type": "string",
-						},
-					},
-					"required": []string{"message"},
+					"$ref": fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
 				},
 			},
 		},
@@ -636,7 +555,7 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 		"content": map[string]interface{}{
 			"application/json": map[string]interface{}{
 				"schema": map[string]interface{}{
-					"$ref": "#/components/responses/401/content/application~1json/schema",
+					"$ref": fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
 				},
 			},
 		},
@@ -647,7 +566,7 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 		"content": map[string]interface{}{
 			"application/json": map[string]interface{}{
 				"schema": map[string]interface{}{
-					"$ref": "#/components/responses/401/content/application~1json/schema",
+					"$ref": fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
 				},
 			},
 		},
@@ -685,7 +604,7 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 			"content": map[string]interface{}{
 				"application/json": map[string]interface{}{
 					"schema": map[string]interface{}{
-						"$ref": "#/components/responses/401/content/application~1json/schema",
+						"$ref": fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
 					},
 				},
 			},
@@ -731,42 +650,27 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 			"content": map[string]interface{}{
 				"application/json": map[string]interface{}{
 					"schema": map[string]interface{}{
-						"$ref": "#/components/responses/401/content/application~1json/schema",
+						"$ref": fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
 					},
 				},
 			},
 		}
 
 	case op == appdef.OperationKind_Select && appdef.TypeKind_Records.Contains(typ.Kind()):
-		// Get schema reference for this type
-		schemaRef := "#/components/schemas/" + typeName
-		if typeSchemas, ok := g.schemasByType[typeName]; ok {
-			if opSchema, ok := typeSchemas[op]; ok {
-				schemaRef = "#/components/schemas/" + opSchema
-			}
-		}
-
 		responses["200"] = map[string]interface{}{
 			"description": "OK",
 			"content": map[string]interface{}{
 				"application/json": map[string]interface{}{
 					"schema": map[string]interface{}{
-						"$ref": schemaRef,
+						"$ref": "#/components/schemas/" + g.schemaNameByTypeName(typeName, op),
 					},
 				},
 			},
 		}
 
 	case (op == appdef.OperationKind_Select && typ.Kind() == appdef.TypeKind_CDoc) ||
-		(op == appdef.OperationKind_Select && typ.Kind() == appdef.TypeKind_ViewRecord) ||
-		(op == appdef.OperationKind_Execute && typ.Kind() == appdef.TypeKind_Query):
+		(op == appdef.OperationKind_Select && typ.Kind() == appdef.TypeKind_ViewRecord):
 		// Collection response with results array
-		schemaRef := "#/components/schemas/" + typeName
-		if typeSchemas, ok := g.schemasByType[typeName]; ok {
-			if opSchema, ok := typeSchemas[op]; ok {
-				schemaRef = "#/components/schemas/" + opSchema
-			}
-		}
 
 		responses["200"] = map[string]interface{}{
 			"description": "OK",
@@ -778,11 +682,37 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 							"results": map[string]interface{}{
 								"type": "array",
 								"items": map[string]interface{}{
-									"$ref": schemaRef,
+									"$ref": "#/components/schemas/" + g.schemaNameByTypeName(typeName, op),
 								},
 							},
 							"error": map[string]interface{}{
-								"$ref": "#/components/responses/401/content/application~1json/schema",
+								"$ref": fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
+							},
+						},
+					},
+				},
+			},
+		}
+
+	case (op == appdef.OperationKind_Execute && typ.Kind() == appdef.TypeKind_Query):
+		// Collection response with results array
+		schemaRef := g.schemaNameByTypeName(typ.(appdef.IQuery).Result().QName().String(), op)
+
+		responses["200"] = map[string]interface{}{
+			"description": "OK",
+			"content": map[string]interface{}{
+				"application/json": map[string]interface{}{
+					"schema": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"results": map[string]interface{}{
+								"type": "array",
+								"items": map[string]interface{}{
+									"$ref": "#/components/schemas/" + schemaRef,
+								},
+							},
+							"error": map[string]interface{}{
+								"$ref": fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
 							},
 						},
 					},
@@ -790,7 +720,6 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 			},
 		}
 	}
-
 	return responses
 }
 
@@ -811,14 +740,4 @@ func (g *schemaGenerator) write(writer io.Writer) error {
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(schema)
-}
-
-// Helper function to check if a field name is in a list of field names
-func containsFieldName(fieldNames []appdef.FieldName, name appdef.FieldName) bool {
-	for _, n := range fieldNames {
-		if n == name {
-			return true
-		}
-	}
-	return false
 }

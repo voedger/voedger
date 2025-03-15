@@ -699,10 +699,15 @@ ALTERABLE WORKSPACE test_wsWS (
 	ROLE Updated; -- need for invite tests
 	ROLE SpecialAPITokenRole; -- need to test foreign auth using APIToken
 	ROLE LimitedAccessRole; -- need to test ACL
-	PUBLISHED ROLE ApiRole;
 
 	TAG WorkspaceOwnerTableTag;
 	TAG WorkspaceOwnerFuncTag;
+
+	PUBLISHED ROLE ApiRole;
+	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON TABLE Currency TO ApiRole;
+	GRANT SELECT ON TABLE category TO ApiRole;
+	GRANT EXECUTE ON COMMAND CmdODocOne TO ApiRole;
+	GRANT EXECUTE ON QUERY QryReturnsCategory TO ApiRole;
 
 	GRANT SELECT, UPDATE, INSERT ON TABLE Root TO sys.WorkspaceOwner;
 	GRANT SELECT, UPDATE, INSERT ON TABLE Nested TO sys.WorkspaceOwner;
@@ -714,7 +719,6 @@ ALTERABLE WORKSPACE test_wsWS (
 	GRANT SELECT ON TABLE articles TO SpecialAPITokenRole;
 
 	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO sys.WorkspaceOwner;
-	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO ApiRole;
 
 	GRANT EXECUTE ON ALL QUERIES WITH TAG WorkspaceOwnerFuncTag TO sys.WorkspaceOwner;
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG WorkspaceOwnerFuncTag TO sys.WorkspaceOwner;
@@ -732,4 +736,5 @@ ALTERABLE WORKSPACE test_wsWS (
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocFieldUpdateDenied TO sys.WorkspaceOwner;
 	REVOKE INSERT(FldDenied) ON TABLE DocFieldInsertDenied FROM sys.WorkspaceOwner;
 	REVOKE UPDATE(FldDenied) ON TABLE DocFieldUpdateDenied FROM sys.WorkspaceOwner;
+
 );

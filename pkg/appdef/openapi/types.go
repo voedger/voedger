@@ -1,0 +1,24 @@
+/*
+ * Copyright (c) 2025-present unTill Software Development Group B.V.
+ * @author Michael Saigachenko
+ */
+package openapi
+
+import (
+	"iter"
+
+	"github.com/voedger/voedger/pkg/appdef"
+)
+
+type SchemaMeta struct {
+	SchemaTitle   string
+	SchemaVersion string
+}
+
+type PublishedTypesFunc func(ws appdef.IWorkspace, role appdef.QName) iter.Seq2[appdef.IType,
+	iter.Seq2[appdef.OperationKind, *[]appdef.FieldName]]
+
+type ISchema interface {
+	appdef.IType
+	appdef.IWithFields
+}

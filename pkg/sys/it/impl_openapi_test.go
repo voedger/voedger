@@ -2,6 +2,7 @@ package sys_it
 
 import (
 	"bytes"
+	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -30,7 +31,9 @@ func TestOpenAPI(t *testing.T) {
 
 	require.NoError(err)
 
-	t.Log(writer.String())
+	// t.Log(writer.String())
+	// save to file schema.json
+	ioutil.WriteFile("schema.json", writer.Bytes(), 0644)
 
 	require.True(false)
 }
