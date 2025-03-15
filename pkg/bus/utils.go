@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 // TODO: CP should send CommandResponse struct itself, not CommandResponse marshaled to a string
@@ -45,10 +46,6 @@ func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req R
 	return responseMeta, cmdResp, nil
 }
 
-func ReplyPlainText(responder IResponder, text string) {
-	responder.Close(ResponseMeta{ContentType: coreutils.TextPlain, StatusCode: http.StatusOK}, text)
-}
-
 func ReplyErrf(responder IResponder, status int, args ...interface{}) {
 	ReplyErrDef(responder, coreutils.NewHTTPErrorf(status, args...), http.StatusInternalServerError)
 }
@@ -56,7 +53,9 @@ func ReplyErrf(responder IResponder, status int, args ...interface{}) {
 //nolint:errorlint
 func ReplyErrDef(responder IResponder, err error, defaultStatusCode int) {
 	res := coreutils.WrapSysErrorToExact(err, defaultStatusCode)
-	responder.Close(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: res.HTTPStatus}, res.ToJSON_APIV1())
+	if err := responder.Respond(res.HTTPStatus, res); err != nil {
+		logger.Error(err)
+	}
 }
 
 func ReplyErr(responder IResponder, err error) {
@@ -64,7 +63,9 @@ func ReplyErr(responder IResponder, err error) {
 }
 
 func ReplyJSON(responder IResponder, httpCode int, obj any) {
-	responder.Close(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: httpCode}, obj)
+	if err := responder.Respond(httpCode, obj); err != nil {
+		logger.Error(err)
+	}
 }
 
 func ReplyBadRequest(responder IResponder, message string) {

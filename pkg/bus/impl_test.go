@@ -16,7 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func TestRequestSender_Streaming_BasicUsage(t *testing.T) {
+func TestRequestSender_ApiArray_BasicUsage(t *testing.T) {
 	require := require.New(t)
 
 	cases := []struct {
@@ -26,7 +26,7 @@ func TestRequestSender_Streaming_BasicUsage(t *testing.T) {
 		{
 			name: "api array response",
 			handler: func(responder IResponder) {
-				respWriter := responder.BeginApiArrayResponse(http.StatusOK)
+				respWriter := responder.InitResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 				result := map[string]interface{}{
 					"fld1": 42,
 					"fld2": "str",
@@ -46,7 +46,7 @@ func TestRequestSender_Streaming_BasicUsage(t *testing.T) {
 		{
 			name: "custom response",
 			handler: func(responder IResponder) {
-				respWriter := responder.BeginCustomResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+				respWriter := responder.InitResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 				result := map[string]interface{}{
 					"fld1": 42,
 					"fld2": "str",
@@ -60,7 +60,7 @@ func TestRequestSender_Streaming_BasicUsage(t *testing.T) {
 				}
 				err = respWriter.Write(result)
 				require.NoError(err)
-				respWriter.Close()
+				respWriter.Close(nil)
 			},
 		},
 	}
@@ -119,7 +119,7 @@ func TestRequestSender_Streaming_BasicUsage(t *testing.T) {
 	}
 }
 
-func TestErrors_ApiArrayResponse(t *testing.T) {
+func TestErrors(t *testing.T) {
 	require := require.New(t)
 	t.Run("response timeout ", func(t *testing.T) {
 		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
@@ -127,7 +127,7 @@ func TestErrors_ApiArrayResponse(t *testing.T) {
 			time.Sleep(100 * time.Millisecond)
 			// force response timeout
 			coreutils.MockTime.Add(time.Duration(DefaultSendTimeout))
-			respWriter := responder.BeginApiArrayResponse(http.StatusOK)
+			respWriter := responder.InitResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 			respWriter.Close(nil)
 		})
 
@@ -141,7 +141,7 @@ func TestErrors_ApiArrayResponse(t *testing.T) {
 		clientCtx, disconnectClient := context.WithCancel(context.Background())
 		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 			go func() {
-				respWriter := responder.BeginApiArrayResponse(http.StatusOK)
+				respWriter := responder.InitResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 				<-maySendAfterDisconnect
 				writeErrCh <- respWriter.Write("test")
 				respWriter.Close(nil)
@@ -167,7 +167,7 @@ func TestErrors_ApiArrayResponse(t *testing.T) {
 			close(requestHandlerStarted)
 			go func() {
 				<-clientCtx.Done()
-				respWriter := responder.BeginApiArrayResponse(http.StatusOK)
+				respWriter := responder.InitResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 				writeErrCh <- respWriter.Write("test")
 				respWriter.Close(nil)
 			}()
@@ -192,105 +192,7 @@ func TestErrors_ApiArrayResponse(t *testing.T) {
 		maySend := make(chan interface{})
 		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 			go func() {
-				respWriter := responder.BeginApiArrayResponse(http.StatusOK)
-				<-maySend
-				writeErrCh <- respWriter.Write("test")
-				respWriter.Close(nil)
-			}()
-		})
-
-		respCh, _, respErr, err := requestSender.SendRequest(context.Background(), Request{})
-		require.NoError(err)
-		close(maySend)
-
-		// sleep to make sure we're in select in Send()
-		time.Sleep(100 * time.Millisecond)
-
-		// force send timeout
-		coreutils.MockTime.Add(time.Duration(DefaultSendTimeout + SendTimeout(time.Second)))
-
-		err = <-writeErrCh
-		require.ErrorIs(err, ErrNoConsumer)
-		for range respCh {
-		}
-		require.NoError(*respErr)
-	})
-}
-
-func TestErrors_CustomResponse(t *testing.T) {
-	require := require.New(t)
-	t.Run("response timeout ", func(t *testing.T) {
-		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
-			// wait to start response awaiting in request sender
-			time.Sleep(100 * time.Millisecond)
-			// force response timeout
-			coreutils.MockTime.Add(time.Duration(DefaultSendTimeout))
-			respWriter := responder.BeginApiArrayResponse(http.StatusOK)
-			respWriter.Close(nil)
-		})
-
-		_, _, _, err := requestSender.SendRequest(context.Background(), Request{})
-		require.ErrorIs(err, ErrSendTimeoutExpired)
-	})
-
-	t.Run("client disconnect on send response", func(t *testing.T) {
-		maySendAfterDisconnect := make(chan interface{})
-		writeErrCh := make(chan error)
-		clientCtx, disconnectClient := context.WithCancel(context.Background())
-		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
-			go func() {
-				respWriter := responder.BeginApiArrayResponse(http.StatusOK)
-				<-maySendAfterDisconnect
-				writeErrCh <- respWriter.Write("test")
-				respWriter.Close(nil)
-			}()
-		})
-
-		respCh, _, respErr, err := requestSender.SendRequest(clientCtx, Request{})
-		require.NoError(err)
-		disconnectClient()
-		close(maySendAfterDisconnect)
-		err = <-writeErrCh
-		require.ErrorIs(err, context.Canceled)
-		for range respCh {
-		}
-		require.NoError(*respErr)
-	})
-
-	t.Run("client disconnect on send request", func(t *testing.T) {
-		requestHandlerStarted := make(chan interface{})
-		writeErrCh := make(chan error)
-		clientCtx, disconnectClient := context.WithCancel(context.Background())
-		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
-			close(requestHandlerStarted)
-			go func() {
-				<-clientCtx.Done()
-				respWriter := responder.BeginApiArrayResponse(http.StatusOK)
-				writeErrCh <- respWriter.Write("test")
-				respWriter.Close(nil)
-			}()
-		})
-
-		go func() {
-			<-requestHandlerStarted
-			disconnectClient()
-		}()
-
-		respCh, _, respErr, err := requestSender.SendRequest(clientCtx, Request{})
-		require.ErrorIs(err, context.Canceled)
-		err = <-writeErrCh
-		require.ErrorIs(err, context.Canceled)
-		for range respCh {
-		}
-		require.NoError(*respErr)
-	})
-
-	t.Run("no consumer", func(t *testing.T) {
-		writeErrCh := make(chan error)
-		maySend := make(chan interface{})
-		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
-			go func() {
-				respWriter := responder.BeginApiArrayResponse(http.StatusOK)
+				respWriter := responder.InitResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 				<-maySend
 				writeErrCh <- respWriter.Write("test")
 				respWriter.Close(nil)
@@ -319,9 +221,11 @@ func TestPanicOnBeginResponseAgain(t *testing.T) {
 	require := require.New(t)
 	t.Run("api array response", func(t *testing.T) {
 		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
-			respWriter := responder.BeginApiArrayResponse(http.StatusOK)
-			require.Panics(func() { responder.BeginApiArrayResponse(http.StatusOK) })
-			require.Panics(func() { responder.BeginCustomResponse(ResponseMeta{}) })
+			respWriter := responder.InitResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+			require.Panics(func() {
+				responder.InitResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+			})
+			require.Panics(func() { responder.Respond(http.StatusOK, nil) })
 			respWriter.Close(nil)
 		})
 
@@ -329,12 +233,13 @@ func TestPanicOnBeginResponseAgain(t *testing.T) {
 		require.NoError(err)
 	})
 
-	t.Run("custom response", func(t *testing.T) {
+	t.Run("respond", func(t *testing.T) {
 		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
-			respWriter := responder.BeginCustomResponse(ResponseMeta{})
-			require.Panics(func() { responder.BeginApiArrayResponse(http.StatusOK) })
-			require.Panics(func() { responder.BeginCustomResponse(ResponseMeta{}) })
-			respWriter.Close()
+			responder.Respond(http.StatusOK, nil)
+			require.Panics(func() {
+				responder.InitResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+			})
+			require.Panics(func() { responder.Respond(http.StatusOK, nil) })
 		})
 
 		_, _, _, err := requestSender.SendRequest(context.Background(), Request{})

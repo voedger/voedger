@@ -19,35 +19,14 @@ type IRequestSender interface {
 type RequestHandler func(requestCtx context.Context, request Request, responder IResponder)
 
 type IResponder interface {
-	// panics if called >1 times or after BeginCustomResponse()
-	// `IApiArrayResponseWriter.Write()` must be called outside the `bus.RequestHandler()` or in a goroutine
-	BeginApiArrayResponse(statusCode int) IApiArrayResponseWriter
+	// panics if called >1 times or after Respond
+	InitResponse(responseMeta ResponseMeta) IResponseWriter
 
-	// panic if called >1 times or after BeginStreamingResponse()
-	// `ICustomResponseWriter.Write()` must be called outside the `bus.RequestHandler()` or in a goroutine
-	BeginCustomResponse(meta ResponseMeta) ICustomResponseWriter
-
-	// sends data and closes the communication
-	// need for the case when need to reply by a single object from inside `bus.RequestHandler()`
-	Close(meta ResponseMeta, data any)
+	// panics if called >1 times or after InitResponse
+	Respond(statusCode int, obj any) error
 }
 
-type IApiArrayResponseWriter interface {
-	// Write send item over the bus
-	// item -> json.Marshal
-	// may may return ErrNoConsumer
-	Write(item any) error
-
-	// must be called after last Write() call
+type IResponseWriter interface {
+	Write(obj any) error
 	Close(err error)
-}
-
-type ICustomResponseWriter interface {
-	// Write sends item over the bus
-	// item: payload is []byte or string
-	// may ErrNoConsumer
-	Write(item any) error
-
-	// must be called after last Write() call
-	Close()
 }

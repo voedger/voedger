@@ -54,7 +54,7 @@ type implIRequestSender struct {
 
 type SendTimeout time.Duration
 
-type implResponseWriter_base struct {
+type implResponseWriter struct {
 	ch          chan any
 	clientCtx   context.Context
 	sendTimeout SendTimeout
@@ -62,17 +62,9 @@ type implResponseWriter_base struct {
 	resultErr   *error
 }
 
-type implResponseWriter_ApiArray struct {
-	*implResponseWriter_base
-}
-
-type implResponseWriter_Custom struct {
-	*implResponseWriter_base
-}
-
 // тут только begin
 type implIResponder struct {
-	respWriter     *implResponseWriter_base
+	respWriter     *implResponseWriter
 	responseMetaCh chan ResponseMeta
 	started        bool
 }

@@ -19,8 +19,8 @@ import (
 
 func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request) (responseCh <-chan any, responseMeta ResponseMeta, responseErr *error, err error) {
 	timeoutChan := rs.tm.NewTimerChan(time.Duration(rs.timeout))
-	respWriter := &implResponseWriter_base{
-		ch:          make(chan any),
+	respWriter := &implResponseWriter{
+		ch:          make(chan any, 1), // buf size 1 to make single write on Respond()
 		clientCtx:   clientCtx,
 		sendTimeout: rs.timeout,
 		tm:          rs.tm,
@@ -91,7 +91,30 @@ func handlePanic(r interface{}) error {
 	}
 }
 
-func (rs *implResponseWriter_base) Write(obj any) error {
+func (r *implIResponder) InitResponse(meta ResponseMeta) IResponseWriter {
+	r.checkStrated()
+	select {
+	case r.responseMetaCh <- meta:
+	default:
+		// do nothing if no consumer already.
+		// will get ErrNoConsumer on the next Write()
+	}
+	return r.respWriter
+}
+
+func (r *implIResponder) Respond(statusCode int, obj any) error {
+	r.checkStrated()
+	select {
+	case r.responseMetaCh <- ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: statusCode}:
+		r.respWriter.ch <- obj // buf size 1
+		close(r.respWriter.ch)
+	default:
+		return ErrNoConsumer
+	}
+	return nil
+}
+
+func (rs *implResponseWriter) Write(obj any) error {
 	sendTimeoutTimerChan := rs.tm.NewTimerChan(time.Duration(rs.sendTimeout))
 	select {
 	case rs.ch <- obj:
@@ -102,53 +125,9 @@ func (rs *implResponseWriter_base) Write(obj any) error {
 	return rs.clientCtx.Err()
 }
 
-func (rs *implResponseWriter_Custom) Close() {
-	close(rs.ch)
-}
-
-func (rs *implResponseWriter_ApiArray) Close(err error) {
+func (rs *implResponseWriter) Close(err error) {
 	*rs.resultErr = err
 	close(rs.ch)
-}
-
-func (r *implIResponder) BeginApiArrayResponse(statusCode int) IApiArrayResponseWriter {
-	r.checkStrated()
-	select {
-	case r.responseMetaCh <- ResponseMeta{StatusCode: statusCode, ContentType: coreutils.ApplicationJSON, mode: RespondMode_ApiArray}:
-	default:
-		// do nothing if no consumer already.
-		// will get ErrNoConsumer on the next Send()
-	}
-	return &implResponseWriter_ApiArray{r.respWriter}
-}
-
-func (r *implIResponder) BeginCustomResponse(meta ResponseMeta) ICustomResponseWriter {
-	r.checkStrated()
-	meta.mode = RespondMode_Custom
-	select {
-	case r.responseMetaCh <- meta:
-	default:
-		// do nothing if no consumer already.
-		// will get ErrNoConsumer on the next Send()
-	}
-	return &implResponseWriter_Custom{r.respWriter}
-}
-
-func (r *implIResponder) Close(meta ResponseMeta, data any) {
-	r.checkStrated()
-	meta.mode = RespondMode_Single
-	select {
-	case r.responseMetaCh <- meta:
-	default:
-		// do nothing if no consumer already.
-		// will get ErrNoConsumer on the next Send()
-	}
-	go func() {
-		if err := r.respWriter.Write(data); err != nil {
-			logger.Error(err, data)
-		}
-		close(r.respWriter.ch)
-	}()
 }
 
 func (r *implIResponder) checkStrated() {
