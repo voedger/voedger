@@ -699,6 +699,7 @@ ALTERABLE WORKSPACE test_wsWS (
 	ROLE Updated; -- need for invite tests
 	ROLE SpecialAPITokenRole; -- need to test foreign auth using APIToken
 	ROLE LimitedAccessRole; -- need to test ACL
+	PUBLISHED ROLE ApiRole;
 
 	TAG WorkspaceOwnerTableTag;
 	TAG WorkspaceOwnerFuncTag;
@@ -713,6 +714,7 @@ ALTERABLE WORKSPACE test_wsWS (
 	GRANT SELECT ON TABLE articles TO SpecialAPITokenRole;
 
 	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO sys.WorkspaceOwner;
+	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO ApiRole;
 
 	GRANT EXECUTE ON ALL QUERIES WITH TAG WorkspaceOwnerFuncTag TO sys.WorkspaceOwner;
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG WorkspaceOwnerFuncTag TO sys.WorkspaceOwner;
