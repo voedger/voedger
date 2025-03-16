@@ -66,14 +66,18 @@ func Test_GrantAndRevoke(t *testing.T) {
 
 		_ = wsb.AddRole(writerName)
 		wsb.GrantAll(
-			filter.QNames(docName, viewName),
+			filter.QNames(docName),
 			writerName,
-			"grant all on doc & view to writer")
+			"grant all on doc to writer")
+		wsb.GrantAll(
+			filter.QNames(viewName),
+			writerName,
+			"grant all on view to writer")
 		wsb.Revoke(
 			[]appdef.OperationKind{appdef.OperationKind_Activate, appdef.OperationKind_Deactivate},
-			filter.QNames(docName, viewName), nil,
+			filter.QNames(docName), nil,
 			writerName,
-			"revoke activate/deactivate on doc & view from writer")
+			"revoke activate/deactivate on doc from writer")
 
 		wsb.GrantAll(
 			filter.QNames(cmdName, queryName),
@@ -88,7 +92,10 @@ func Test_GrantAndRevoke(t *testing.T) {
 
 		_ = wsb.AddRole(ownerName)
 		wsb.GrantAll(
-			filter.QNames(docName, viewName),
+			filter.QNames(docName),
+			ownerName)
+		wsb.GrantAll(
+			filter.QNames(viewName),
 			ownerName)
 		wsb.GrantAll(
 			filter.QNames(cmdName, queryName),
@@ -107,7 +114,10 @@ func Test_GrantAndRevoke(t *testing.T) {
 
 		_ = wsb.AddRole(intruderRoleName)
 		wsb.RevokeAll(
-			filter.QNames(docName, viewName),
+			filter.QNames(docName),
+			intruderRoleName)
+		wsb.RevokeAll(
+			filter.QNames(viewName),
 			intruderRoleName)
 		wsb.RevokeAll(
 			filter.QNames(cmdName, queryName),
@@ -132,19 +142,22 @@ func Test_GrantAndRevoke(t *testing.T) {
 				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName, viewName}, []appdef.FieldName{"field1"}, readerName},
 				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{queryName}, nil, readerName},
 				// writer role
-				{appdef.PolicyKind_Allow, appdef.RecordsOperations.AsArray(), []appdef.QName{docName, viewName}, nil, writerName},
-				{appdef.PolicyKind_Deny, []appdef.OperationKind{appdef.OperationKind_Activate, appdef.OperationKind_Deactivate}, []appdef.QName{docName, viewName}, nil, writerName},
+				{appdef.PolicyKind_Allow, appdef.RecordsOperations.AsArray(), []appdef.QName{docName}, nil, writerName},
+				{appdef.PolicyKind_Allow, appdef.ViewRecordsOperations.AsArray(), []appdef.QName{viewName}, nil, writerName},
+				{appdef.PolicyKind_Deny, []appdef.OperationKind{appdef.OperationKind_Activate, appdef.OperationKind_Deactivate}, []appdef.QName{docName}, nil, writerName},
 				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{cmdName, queryName}, nil, writerName},
 				// worker role
 				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Inherits}, []appdef.QName{readerName, writerName}, nil, workerName},
 				// owner role
-				{appdef.PolicyKind_Allow, appdef.RecordsOperations.AsArray(), []appdef.QName{docName, viewName}, nil, ownerName},
+				{appdef.PolicyKind_Allow, appdef.RecordsOperations.AsArray(), []appdef.QName{docName}, nil, ownerName},
+				{appdef.PolicyKind_Allow, appdef.ViewRecordsOperations.AsArray(), []appdef.QName{viewName}, nil, ownerName},
 				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{cmdName, queryName}, nil, ownerName},
 				// admin role
 				{appdef.PolicyKind_Allow, []appdef.OperationKind{appdef.OperationKind_Inherits}, []appdef.QName{ownerName}, nil, adminName},
 				{appdef.PolicyKind_Deny, []appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{cmdName, queryName}, nil, adminName},
 				// intruder role
-				{appdef.PolicyKind_Deny, appdef.RecordsOperations.AsArray(), []appdef.QName{docName, viewName}, nil, intruderRoleName},
+				{appdef.PolicyKind_Deny, appdef.RecordsOperations.AsArray(), []appdef.QName{docName}, nil, intruderRoleName},
+				{appdef.PolicyKind_Deny, appdef.ViewRecordsOperations.AsArray(), []appdef.QName{viewName}, nil, intruderRoleName},
 				{appdef.PolicyKind_Deny, []appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{cmdName, queryName}, nil, intruderRoleName},
 			}
 

@@ -67,9 +67,13 @@ func TestRoles(t *testing.T) {
 
 		_ = wsb.AddRole(writerRoleName)
 		wsb.GrantAll(
-			filter.QNames(docName, viewName),
+			filter.QNames(docName),
 			writerRoleName,
-			"grant all on doc & view to writer")
+			"grant all on doc to writer")
+		wsb.GrantAll(
+			filter.QNames(viewName),
+			writerRoleName,
+			"grant all on view to writer")
 		wsb.GrantAll(
 			filter.QNames(cmdName, queryName),
 			writerRoleName,
@@ -83,9 +87,13 @@ func TestRoles(t *testing.T) {
 
 		_ = wsb.AddRole(ownerRoleName)
 		wsb.GrantAll(
-			filter.QNames(docName, viewName),
+			filter.QNames(docName),
 			ownerRoleName,
-			"grant all on doc & view to owner")
+			"grant all on doc to owner")
+		wsb.GrantAll(
+			filter.QNames(viewName),
+			ownerRoleName,
+			"grant all on view to owner")
 		wsb.GrantAll(
 			filter.QNames(cmdName, queryName),
 			ownerRoleName,
@@ -105,13 +113,17 @@ func TestRoles(t *testing.T) {
 
 		_ = wsb.AddRole(intruderRoleName)
 		wsb.RevokeAll(
-			filter.QNames(docName, viewName),
+			filter.QNames(docName),
 			intruderRoleName,
-			"revoke all from intruder")
+			"revoke doc from intruder")
+		wsb.RevokeAll(
+			filter.QNames(viewName),
+			intruderRoleName,
+			"revoke view from intruder")
 		wsb.RevokeAll(
 			filter.QNames(cmdName, queryName),
 			intruderRoleName,
-			"revoke all from intruder")
+			"revoke funcs from intruder")
 
 		var err error
 		app, err = adb.Build()
