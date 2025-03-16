@@ -54,7 +54,7 @@ type sequencer struct {
 	actualizerInProgress atomic.Bool
 	// actualizerCtxCancel is used by cleanup() function
 	actualizerCtxCancel context.CancelFunc
-	actualizerWG        sync.WaitGroup
+	actualizerWG        *sync.WaitGroup
 
 	lru *lruPkg.Cache[NumberKey, Number]
 

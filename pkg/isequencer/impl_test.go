@@ -35,12 +35,13 @@ func (m *mockStorage) ReadNumbers(wsid WSID, seqIDs []SeqID) ([]Number, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	result := make([]Number, 0, len(seqIDs))
+	result := make([]Number, len(seqIDs))
 	if nums, exists := m.numbers[wsid]; exists {
-		for _, id := range seqIDs {
-			result = append(result, nums[id])
+		for i, id := range seqIDs {
+			result[i] = nums[id] // Will be 0 if not found
 		}
 	}
+
 	return result, nil
 }
 
@@ -108,7 +109,7 @@ func TestSequencer(t *testing.T) {
 		// When
 		offset, ok := seq.Start(1, 1)
 		require.True(t, ok)
-		require.Equal(t, PLogOffset(0), offset)
+		require.Equal(t, PLogOffset(1), offset)
 
 		// Generate new sequence numbers 100 times
 		for i := 1; i <= 100; i++ {
@@ -171,7 +172,7 @@ func TestBatcher(t *testing.T) {
 				1: {1: 100, 2: 200},
 			},
 			SeqStorage:            storage,
-			MaxNumUnflushedValues: 500,
+			MaxNumUnflushedValues: 0,
 			MaxFlushingInterval:   500 * time.Millisecond,
 			LRUCacheSize:          1000,
 		}
@@ -200,7 +201,7 @@ func TestBatcher(t *testing.T) {
 		// Verify offset was written
 		offset, err := storage.ReadNextPLogOffset()
 		require.NoError(t, err)
-		require.Equal(t, PLogOffset(10), offset)
+		require.Equal(t, PLogOffset(11), offset)
 	})
 
 	t.Run("should handle empty batch", func(t *testing.T) {
@@ -211,7 +212,7 @@ func TestBatcher(t *testing.T) {
 				1: {1: 100},
 			},
 			SeqStorage:            storage,
-			MaxNumUnflushedValues: 500,
+			MaxNumUnflushedValues: 0,
 			MaxFlushingInterval:   500 * time.Millisecond,
 			LRUCacheSize:          1000,
 		}
@@ -226,35 +227,36 @@ func TestBatcher(t *testing.T) {
 		// Then
 		offset, err := storage.ReadNextPLogOffset()
 		require.NoError(t, err)
-		require.Equal(t, PLogOffset(1), offset)
+		require.Equal(t, PLogOffset(2), offset)
 	})
 
 	t.Run("should handle storage write errors", func(t *testing.T) {
+		//t.Skip()
 		// Given
 		storage := newMockStorage()
-		storage.writeValuesError = errors.New("write error")
 		params := &Params{
 			SeqTypes: map[WSKind]map[SeqID]Number{
 				1: {1: 100},
 			},
 			SeqStorage:            storage,
-			MaxNumUnflushedValues: 500,
+			MaxNumUnflushedValues: 0,
 			MaxFlushingInterval:   500 * time.Millisecond,
 			LRUCacheSize:          1000,
 		}
 
-		seq, cleanup := New(params, coreutils.MockTime)
-		defer cleanup()
+		retryCount = 2
+		seq, cleanup := New(params, coreutils.NewITime())
+		cleanup()
 
 		batch := []SeqValue{
 			{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 101},
 		}
 
+		storage.writeValuesError = errors.New("write error")
 		// When
 		err := seq.(*sequencer).batcher(batch, PLogOffset(1))
 
 		// Then
-		require.Error(t, err)
-		require.Equal(t, "write error", err.Error())
+		require.ErrorIs(t, err, coreutils.ErrRetryAttemptsExceeded)
 	})
 }

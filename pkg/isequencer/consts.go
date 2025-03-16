@@ -11,6 +11,6 @@ const (
 	DefaultLRUCacheSize          = 100_000
 	DefaultMaxNumUnflushedValues = 500
 	DefaultMaxFlushingInterval   = 500 * time.Millisecond
-	retryDelay                   = 500 * time.Millisecond
-	retryCount                   = 2
+	defaultRetryDelay            = 500 * time.Millisecond
+	defaultRetryCount            = 0
 )

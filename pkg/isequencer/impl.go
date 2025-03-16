@@ -14,6 +14,12 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
+var (
+	// variables for retry mechanism
+	retryDelay = defaultRetryDelay
+	retryCount = defaultRetryCount
+)
+
 // New creates a new sequencer
 func New(params *Params, iTime coreutils.ITime) (ISequencer, context.CancelFunc) {
 	lru, err := lruPkg.New[NumberKey, Number](params.LRUCacheSize)
@@ -33,13 +39,13 @@ func New(params *Params, iTime coreutils.ITime) (ISequencer, context.CancelFunc)
 		iTime:            iTime,
 		flusherStartedCh: make(chan struct{}, 1),
 		flusherSig:       make(chan struct{}, 1),
+		actualizerWG:     &sync.WaitGroup{},
 	}
 	s.actualizerInProgress.Store(false)
 
 	// Instance has actualizer() goroutine started.
 	s.startActualizer()
 	s.actualizerWG.Wait()
-	<-s.flusherStartedCh
 
 	return s, s.cleanup
 }
@@ -186,11 +192,14 @@ func (s *sequencer) flusher(ctx context.Context) {
 			return
 		// Wait for s.flusherSig
 		case <-s.flusherSig:
-			s.flushValues(s.toBeFlushedOffset, false)
 		// Wait for s.params.MaxFlushingInterval
 		case <-tickerCh:
 			tickerCh = s.iTime.NewTimerChan(s.params.MaxFlushingInterval)
-			s.flushValues(s.toBeFlushedOffset, false)
+		}
+
+		if err := s.flushValues(s.toBeFlushedOffset, false); err != nil {
+			// notest
+			panic("failed to flush values: " + err.Error())
 		}
 	}
 }
@@ -265,7 +274,6 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 			if number == 0 {
 				continue
 			}
-
 			s.lru.Add(key, number)
 		}
 
@@ -275,12 +283,10 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 		return 0, err
 	}
 
-	switch {
-	case len(knownNumbers) == 0:
-		// If number is 0 then initial value is used
+	// If number is 0 then initial value is used
+	nextNumber = knownNumbers[0]
+	if nextNumber == 0 {
 		nextNumber = initialValue
-	default:
-		nextNumber = knownNumbers[0]
 	}
 
 	// Write value+1 to s.lru
@@ -401,7 +407,7 @@ func (s *sequencer) batcher(values []SeqValue, offset PLogOffset) error {
 
 	// If s.params.MaxNumUnflushedValues is reached
 	if len(s.toBeFlushed) >= s.params.MaxNumUnflushedValues {
-		s.flushValues(s.nextOffset+1, true)
+		return s.flushValues(s.nextOffset+1, true)
 	}
 
 	return nil
@@ -432,12 +438,12 @@ ctx handling:
 
 Error handling:
 - Handle errors with retry mechanism (500ms wait)
-- Retry mechanism must check `ctx` parameter, if exists
+- Retry mechanism must check `actualizerCtx` parameter, if exists
 */
 func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	defer func() {
-		s.actualizerInProgress.Store(false)
 		s.actualizerWG.Done()
+		s.actualizerInProgress.Store(false)
 	}()
 
 	if s.flusherWG != nil {
@@ -468,7 +474,10 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	// Increment s.nextOffset
 	s.nextOffset++
 
-	s.flushValues(s.nextOffset, true)
+	if err := s.flushValues(s.nextOffset, true); err != nil {
+		// notest
+		panic("failed to flush values: " + err.Error())
+	}
 	// s.flusherWG, s.flusherCtxCancel + start flusher() goroutine
 	s.startFlusher()
 }
@@ -487,13 +496,8 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 // Parameters:
 // - offset - PLogOffset to be written
 // - needToCleanToBeFlushed - if true, clears s.toBeFlushed after writing values. Otherwise, only removes values that were written.
-func (s *sequencer) flushValues(offset PLogOffset, needToCleanToBeFlushed bool) {
+func (s *sequencer) flushValues(offset PLogOffset, needToCleanToBeFlushed bool) error {
 	s.toBeFlushedMu.RLock()
-	if len(s.toBeFlushed) == 0 {
-		s.toBeFlushedMu.RUnlock()
-		return
-	}
-
 	// Copy s.toBeFlushed to flushValues []SeqValue (local variable)
 	flushValues := make([]SeqValue, 0, len(s.toBeFlushed))
 	for key, value := range s.toBeFlushed {
@@ -510,7 +514,7 @@ func (s *sequencer) flushValues(offset PLogOffset, needToCleanToBeFlushed bool) 
 		return s.params.SeqStorage.WriteValues(flushValues)
 	})
 	if err != nil {
-		panic("failed to write values: " + err.Error())
+		return err
 	}
 
 	// s.params.SeqStorage.WriteNextPLogOffset(flushOffset)
@@ -519,20 +523,24 @@ func (s *sequencer) flushValues(offset PLogOffset, needToCleanToBeFlushed bool) 
 		return s.params.SeqStorage.WriteNextPLogOffset(offset)
 	})
 	if err != nil {
-		panic("failed to write next PLog offset: " + err.Error())
+		return err
 	}
 	// for each key in flushValues remove key from s.toBeFlushed if values are the same
 	s.toBeFlushedMu.Lock()
 	if needToCleanToBeFlushed {
 		s.toBeFlushed = make(map[NumberKey]Number)
-	} else {
-		for _, fv := range flushValues {
-			if v, exist := s.toBeFlushed[fv.Key]; exist && v == fv.Value {
-				delete(s.toBeFlushed, fv.Key)
-			}
+		s.toBeFlushedMu.Unlock()
+		return nil
+	}
+
+	for _, fv := range flushValues {
+		if v, exist := s.toBeFlushed[fv.Key]; exist && v == fv.Value {
+			delete(s.toBeFlushed, fv.Key)
 		}
 	}
 	s.toBeFlushedMu.Unlock()
+
+	return nil
 }
 
 // checkEventState validates sequencing Transaction status
