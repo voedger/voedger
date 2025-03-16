@@ -328,7 +328,7 @@ func (g *schemaGenerator) generateDescription(typ appdef.IType, op appdef.Operat
 	case typ.Kind() == appdef.TypeKind_CDoc:
 		if op == appdef.OperationKind_Select {
 			// TODO: Read vs List ?
-			return fmt.Sprintf("Returns a collection of %s", typeName)
+			return fmt.Sprintf("Reads %s", typeName)
 		}
 	}
 
