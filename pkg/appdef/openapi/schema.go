@@ -37,6 +37,9 @@ func (g *schemaGenerator) generateSchema(ischema ISchema, op appdef.OperationKin
 
 	if hasContainers := ischema.(appdef.IWithContainers); hasContainers != nil {
 		for _, container := range hasContainers.Containers() {
+			if _, ok := g.docTypes[container.QName()]; !ok {
+				continue // container not available to this role
+			}
 			properties[container.Name()] = map[string]interface{}{
 				"type": "array",
 				"items": map[string]interface{}{
@@ -71,20 +74,27 @@ func (g *schemaGenerator) generateFieldSchema(field appdef.IField, op appdef.Ope
 	// Handle reference fields
 	if refField, isRef := field.(appdef.IRefField); isRef {
 
+		oneOf := make([]map[string]interface{}, 0, len(refField.Refs())+1)
+		oneOf = append(oneOf, map[string]interface{}{
+			"type":   "integer",
+			"format": "int64",
+		})
+		refNames := make([]string, 0, len(refField.Refs()))
+
 		if len(refField.Refs()) > 0 {
-			oneOf := make([]map[string]interface{}, 0, len(refField.Refs())+1)
-			oneOf = append(oneOf, map[string]interface{}{
-				"type":   "integer",
-				"format": "int64",
-			})
-			refNames := make([]string, 0, len(refField.Refs()))
 			for i := 0; i < len(refField.Refs()); i++ {
+				if _, ok := g.docTypes[refField.Refs()[i]]; !ok {
+					continue // referenced document not available to this role
+				}
 				typeName := refField.Refs()[i].String()
 				oneOf = append(oneOf, map[string]interface{}{
 					"$ref": fmt.Sprintf("#/components/schemas/%s", g.schemaNameByTypeName(typeName, op)),
 				})
 				refNames = append(refNames, typeName)
 			}
+		}
+
+		if len(oneOf) > 1 {
 			schema["oneOf"] = oneOf
 			schema["description"] = fmt.Sprintf("ID of: %s", strings.Join(refNames, ", "))
 		} else {

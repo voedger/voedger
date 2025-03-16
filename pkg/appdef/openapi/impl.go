@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"iter"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -36,20 +37,26 @@ func CreateOpenApiSchema(writer io.Writer, ws appdef.IWorkspace, role appdef.QNa
 }
 
 type schemaGenerator struct {
-	ws             appdef.IWorkspace
-	role           appdef.QName
-	pubTypesFunc   PublishedTypesFunc
-	meta           SchemaMeta
+	ws           appdef.IWorkspace
+	role         appdef.QName
+	pubTypesFunc PublishedTypesFunc
+	meta         SchemaMeta
+	types        iter.Seq2[appdef.IType,
+		iter.Seq2[appdef.OperationKind, *[]appdef.FieldName]]
 	components     map[string]interface{}
 	paths          map[string]map[string]interface{}
 	schemasByType  map[string]map[appdef.OperationKind]string
+	docTypes       map[appdef.QName]bool
 	processedTypes map[string]bool
 }
 
 // generate performs the schema generation process
 func (g *schemaGenerator) generate() error {
+	g.types = g.pubTypesFunc(g.ws, g.role)
 	// TODO: take care about references to schemas which are not available for the specified operation
 	// fill schemasByType with the additionall pass
+
+	g.collectDocSchemaTypes()
 
 	// First pass - generate schema components for types
 	if err := g.generateComponents(); err != nil {
@@ -69,8 +76,8 @@ func (g *schemaGenerator) generateComponents() error {
 	schemas := make(map[string]interface{})
 	g.components["schemas"] = schemas
 
-	for t, ops := range g.pubTypesFunc(g.ws, g.role) {
-		typeName := fmt.Sprintf("%s.%s", t.QName().Pkg(), t.QName().Entity())
+	for t, ops := range g.types {
+		typeName := t.QName().String()
 
 		// Skip if already processed
 		if g.processedTypes[typeName] {
@@ -137,6 +144,15 @@ func (g *schemaGenerator) generateComponents() error {
 	return nil
 }
 
+func (g *schemaGenerator) collectDocSchemaTypes() {
+	g.docTypes = make(map[appdef.QName]bool)
+	for t, _ := range g.types {
+		if appdef.TypeKind_Docs.Contains(t.Kind()) {
+			g.docTypes[t.QName()] = true
+		}
+	}
+}
+
 // generateSchemaComponent creates a schema component for a specific type and operation
 func (g *schemaGenerator) generateSchemaComponent(typ appdef.IType, op appdef.OperationKind,
 	fieldNames *[]appdef.FieldName, schemas map[string]interface{}) error {
@@ -182,7 +198,7 @@ func (g *schemaGenerator) generateSchemaComponent(typ appdef.IType, op appdef.Op
 
 // generatePaths creates path items for all published types and their operations
 func (g *schemaGenerator) generatePaths() error {
-	for t, ops := range g.pubTypesFunc(g.ws, g.role) {
+	for t, ops := range g.types {
 		for op, _ := range ops {
 			path, method, err := g.getPathAndMethod(t, op)
 			if err != nil {
