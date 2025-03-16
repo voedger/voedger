@@ -48,6 +48,9 @@ type schemaGenerator struct {
 
 // generate performs the schema generation process
 func (g *schemaGenerator) generate() error {
+	// TODO: take care about references to schemas which are not available for the specified operation
+	// fill schemasByType with the additionall pass
+
 	// First pass - generate schema components for types
 	if err := g.generateComponents(); err != nil {
 		return err
@@ -324,6 +327,7 @@ func (g *schemaGenerator) generateDescription(typ appdef.IType, op appdef.Operat
 
 	case typ.Kind() == appdef.TypeKind_CDoc:
 		if op == appdef.OperationKind_Select {
+			// TODO: Read vs List ?
 			return fmt.Sprintf("Returns a collection of %s", typeName)
 		}
 	}
