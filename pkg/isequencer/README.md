@@ -13,9 +13,9 @@
     - batcher is callback, func of the sequencer
       - Build maxValues: max Number for each `SeqValue.Key`
   - write maxValues using `ISeqStorage.WriteValues()`
-    - ??? should it `ISeqStorage.WritePLogOffset`?
+    - ??? should it `ISeqStorage.WriteNextPLogOffset`?
   - determined maxValues goes to LRU cache
-  - `inprocOffset` := `ISeqStroage.ReadLastWrittenPLogOffset()`
+  - `inprocOffset` := `ISeqStorage.ReadLastWrittenPLogOffset()`
   - `cleanpCtx` closed -> exit immediately
   - create and store new `flusherCtx`
   - `go flusher()`
