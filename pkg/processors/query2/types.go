@@ -305,7 +305,7 @@ type sender struct {
 
 func (s *sender) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
 	if s.respWriter == nil {
-		s.respWriter = s.responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+		s.respWriter = s.responder.InitResponse(http.StatusOK)
 	}
 	return work, s.respWriter.Write(work.(objectBackedByMap).data)
 }

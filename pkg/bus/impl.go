@@ -91,10 +91,10 @@ func handlePanic(r interface{}) error {
 	}
 }
 
-func (r *implIResponder) InitResponse(meta ResponseMeta) IResponseWriter {
+func (r *implIResponder) InitResponse(statusCode int) IResponseWriter {
 	r.checkStrated()
 	select {
-	case r.responseMetaCh <- meta:
+	case r.responseMetaCh <- ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: statusCode}:
 	default:
 		// do nothing if no consumer already.
 		// will get ErrNoConsumer on the next Write()

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/bus"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
@@ -29,7 +28,7 @@ func (o *SendToBusOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece)
 		o.metrics.Increase(Metric_ExecSendSeconds, time.Since(begin).Seconds())
 	}()
 	if o.resposeWriter == nil {
-		o.resposeWriter = o.responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+		o.resposeWriter = o.responder.InitResponse(http.StatusOK)
 	}
 	return work, o.resposeWriter.Write(work.(rowsWorkpiece).OutputRow().Values())
 }

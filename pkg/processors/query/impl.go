@@ -149,7 +149,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					}
 					if qwork.responseWriterGetter == nil || qwork.responseWriterGetter() == nil {
 						// have an error before 200ok is sent -> send the status from the actual error
-						respWriter = msg.Responder().InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: statusCode})
+						respWriter = msg.Responder().InitResponse(statusCode)
 					} else {
 						respWriter = qwork.responseWriterGetter()
 					}

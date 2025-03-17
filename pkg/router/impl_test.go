@@ -78,7 +78,7 @@ func TestBasicUsage_ApiArray(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 				go func() {
-					respWriter := responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+					respWriter := responder.InitResponse(http.StatusOK)
 					for _, obj := range c.objs {
 						require.NoError(respWriter.Write(obj))
 					}
