@@ -100,22 +100,22 @@ func (g *schemaGenerator) generateComponents() {
 
 	// generate error schema
 	schemas[errorSchemaName] = map[string]interface{}{
-		"type": "object",
-		"properties": map[string]interface{}{
+		schemaKeyType: schemaTypeObject,
+		schemaKeyProperties: map[string]interface{}{
 			"message": map[string]interface{}{
-				"type": "string",
+				schemaKeyType: schemaTypeString,
 			},
 			"status": map[string]interface{}{
-				"type": "integer",
+				schemaKeyType: schemaTypeInteger,
 			},
 			"qname": map[string]interface{}{
-				"type": "string",
+				schemaKeyType: schemaTypeString,
 			},
 			"data": map[string]interface{}{
-				"type": "string",
+				schemaKeyType: schemaTypeString,
 			},
 		},
-		"required": []string{"message"},
+		schemaKeyRequired: []string{"message"},
 	}
 }
 
@@ -544,7 +544,7 @@ func (g *schemaGenerator) generateRequestBody(typ appdef.IType, op appdef.Operat
 
 		if _, ok := param.(appdef.IODoc); !ok {
 			properties["args"] = map[string]interface{}{
-				"$ref": fmt.Sprintf("#/components/schemas/%s", g.schemaNameByTypeName(param.QName().String(), op)),
+				schemaKeyRef: fmt.Sprintf("#/components/schemas/%s", g.schemaNameByTypeName(param.QName().String(), op)),
 			}
 		} else if param != nil {
 			properties["args"] = g.generateSchema(param.(ischema), op, nil)
@@ -556,11 +556,11 @@ func (g *schemaGenerator) generateRequestBody(typ appdef.IType, op appdef.Operat
 
 		return map[string]interface{}{
 			"required": true,
-			"content": map[string]interface{}{
+			schemaKeyContent: map[string]interface{}{
 				"application/json": map[string]interface{}{
-					"schema": map[string]interface{}{
-						"type":       "object",
-						"properties": properties,
+					schemaKeySchema: map[string]interface{}{
+						schemaKeyType:       schemaTypeObject,
+						schemaKeyProperties: properties,
 					},
 				},
 			},
@@ -569,10 +569,10 @@ func (g *schemaGenerator) generateRequestBody(typ appdef.IType, op appdef.Operat
 
 	return map[string]interface{}{
 		"required": true,
-		"content": map[string]interface{}{
+		schemaKeyContent: map[string]interface{}{
 			"application/json": map[string]interface{}{
-				"schema": map[string]interface{}{
-					"$ref": "#/components/schemas/" + g.schemaNameByTypeName(typeName, op),
+				schemaKeySchema: map[string]interface{}{
+					schemaKeyRef: "#/components/schemas/" + g.schemaNameByTypeName(typeName, op),
 				},
 			},
 		},
@@ -586,33 +586,33 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 
 	// Add standard error responses
 	responses["401"] = map[string]interface{}{
-		"description": "Unauthorized",
-		"content": map[string]interface{}{
+		schemaKeyDescription: "Unauthorized",
+		schemaKeyContent: map[string]interface{}{
 			"application/json": map[string]interface{}{
-				"schema": map[string]interface{}{
-					"$ref": fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
+				schemaKeySchema: map[string]interface{}{
+					schemaKeyRef: fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
 				},
 			},
 		},
 	}
 
 	responses["403"] = map[string]interface{}{
-		"description": "Forbidden",
-		"content": map[string]interface{}{
+		schemaKeyDescription: "Forbidden",
+		schemaKeyContent: map[string]interface{}{
 			"application/json": map[string]interface{}{
-				"schema": map[string]interface{}{
-					"$ref": fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
+				schemaKeySchema: map[string]interface{}{
+					schemaKeyRef: fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
 				},
 			},
 		},
 	}
 
 	responses["404"] = map[string]interface{}{
-		"description": "Not Found",
-		"content": map[string]interface{}{
+		schemaKeyDescription: "Not Found",
+		schemaKeyContent: map[string]interface{}{
 			"application/json": map[string]interface{}{
-				"schema": map[string]interface{}{
-					"$ref": fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
+				schemaKeySchema: map[string]interface{}{
+					schemaKeyRef: fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
 				},
 			},
 		},
@@ -622,20 +622,20 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 	switch {
 	case op == appdef.OperationKind_Insert:
 		responses["201"] = map[string]interface{}{
-			"description": "Created",
-			"content": map[string]interface{}{
+			schemaKeyDescription: "Created",
+			schemaKeyContent: map[string]interface{}{
 				"application/json": map[string]interface{}{
-					"schema": map[string]interface{}{
-						"type": "object",
-						"properties": map[string]interface{}{
+					schemaKeySchema: map[string]interface{}{
+						schemaKeyType: schemaTypeObject,
+						schemaKeyProperties: map[string]interface{}{
 							"CurrentWLogOffset": map[string]interface{}{
-								"type": "integer",
+								schemaKeyType: schemaTypeInteger,
 							},
 							"NewIDs": map[string]interface{}{
-								"type": "object",
+								schemaKeyType: schemaTypeObject,
 								"additionalProperties": map[string]interface{}{
-									"type":   "integer",
-									"format": "int64",
+									schemaKeyType:   schemaTypeInteger,
+									schemaKeyFormat: schemaFormatInt64,
 								},
 							},
 						},
@@ -646,11 +646,11 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 
 		// Add bad request response for create operations
 		responses["400"] = map[string]interface{}{
-			"description": "Bad Request",
-			"content": map[string]interface{}{
+			schemaKeyDescription: "Bad Request",
+			schemaKeyContent: map[string]interface{}{
 				"application/json": map[string]interface{}{
-					"schema": map[string]interface{}{
-						"$ref": fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
+					schemaKeySchema: map[string]interface{}{
+						schemaKeyRef: fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
 					},
 				},
 			},
@@ -658,14 +658,14 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 
 	case op == appdef.OperationKind_Update || op == appdef.OperationKind_Deactivate:
 		responses["200"] = map[string]interface{}{
-			"description": "OK",
-			"content": map[string]interface{}{
+			schemaKeyDescription: "OK",
+			schemaKeyContent: map[string]interface{}{
 				"application/json": map[string]interface{}{
-					"schema": map[string]interface{}{
-						"type": "object",
-						"properties": map[string]interface{}{
+					schemaKeySchema: map[string]interface{}{
+						schemaKeyType: schemaTypeObject,
+						schemaKeyProperties: map[string]interface{}{
 							"CurrentWLogOffset": map[string]interface{}{
-								"type": "integer",
+								schemaKeyType: schemaTypeInteger,
 							},
 						},
 					},
@@ -675,14 +675,14 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 
 	case op == appdef.OperationKind_Execute && typ.Kind() == appdef.TypeKind_Command:
 		responses["200"] = map[string]interface{}{
-			"description": "OK",
-			"content": map[string]interface{}{
+			schemaKeyDescription: "OK",
+			schemaKeyContent: map[string]interface{}{
 				"application/json": map[string]interface{}{
-					"schema": map[string]interface{}{
-						"type": "object",
-						"properties": map[string]interface{}{
+					schemaKeySchema: map[string]interface{}{
+						schemaKeyType: schemaTypeObject,
+						schemaKeyProperties: map[string]interface{}{
 							"CurrentWLogOffset": map[string]interface{}{
-								"type": "integer",
+								schemaKeyType: schemaTypeInteger,
 							},
 						},
 					},
@@ -692,11 +692,11 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 
 		// Add bad request response for command execution
 		responses["400"] = map[string]interface{}{
-			"description": "Bad Request",
-			"content": map[string]interface{}{
+			schemaKeyDescription: "Bad Request",
+			schemaKeyContent: map[string]interface{}{
 				"application/json": map[string]interface{}{
-					"schema": map[string]interface{}{
-						"$ref": fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
+					schemaKeySchema: map[string]interface{}{
+						schemaKeyRef: fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
 					},
 				},
 			},
@@ -704,11 +704,11 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 
 	case op == appdef.OperationKind_Select && appdef.TypeKind_Records.Contains(typ.Kind()):
 		responses["200"] = map[string]interface{}{
-			"description": "OK",
-			"content": map[string]interface{}{
+			schemaKeyDescription: "OK",
+			schemaKeyContent: map[string]interface{}{
 				"application/json": map[string]interface{}{
-					"schema": map[string]interface{}{
-						"$ref": "#/components/schemas/" + g.schemaNameByTypeName(typeName, op),
+					schemaKeySchema: map[string]interface{}{
+						schemaKeyRef: "#/components/schemas/" + g.schemaNameByTypeName(typeName, op),
 					},
 				},
 			},
@@ -719,20 +719,20 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 		// Collection response with results array
 
 		responses["200"] = map[string]interface{}{
-			"description": "OK",
-			"content": map[string]interface{}{
+			schemaKeyDescription: "OK",
+			schemaKeyContent: map[string]interface{}{
 				"application/json": map[string]interface{}{
-					"schema": map[string]interface{}{
-						"type": "object",
-						"properties": map[string]interface{}{
+					schemaKeySchema: map[string]interface{}{
+						schemaKeyType: schemaTypeObject,
+						schemaKeyProperties: map[string]interface{}{
 							"results": map[string]interface{}{
-								"type": "array",
-								"items": map[string]interface{}{
-									"$ref": "#/components/schemas/" + g.schemaNameByTypeName(typeName, op),
+								schemaKeyType: schemaTypeArray,
+								schemaKeyItems: map[string]interface{}{
+									schemaKeyRef: "#/components/schemas/" + g.schemaNameByTypeName(typeName, op),
 								},
 							},
 							"error": map[string]interface{}{
-								"$ref": fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
+								schemaKeyRef: fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
 							},
 						},
 					},
@@ -745,20 +745,20 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 		schemaRef := g.schemaNameByTypeName(typ.(appdef.IQuery).Result().QName().String(), op)
 
 		responses["200"] = map[string]interface{}{
-			"description": "OK",
-			"content": map[string]interface{}{
+			schemaKeyDescription: "OK",
+			schemaKeyContent: map[string]interface{}{
 				"application/json": map[string]interface{}{
-					"schema": map[string]interface{}{
-						"type": "object",
-						"properties": map[string]interface{}{
+					schemaKeySchema: map[string]interface{}{
+						schemaKeyType: schemaTypeObject,
+						schemaKeyProperties: map[string]interface{}{
 							"results": map[string]interface{}{
-								"type": "array",
-								"items": map[string]interface{}{
-									"$ref": "#/components/schemas/" + schemaRef,
+								schemaKeyType: schemaTypeArray,
+								schemaKeyItems: map[string]interface{}{
+									schemaKeyRef: "#/components/schemas/" + schemaRef,
 								},
 							},
 							"error": map[string]interface{}{
-								"$ref": fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
+								schemaKeyRef: fmt.Sprintf("#/components/schemas/%s", errorSchemaName),
 							},
 						},
 					},

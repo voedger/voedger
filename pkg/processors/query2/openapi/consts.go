@@ -13,3 +13,30 @@ const (
 	methodDelete = "delete"
 	methodPatch  = "patch"
 )
+
+// OpenAPI schema constants
+const (
+	schemaTypeObject  = "object"
+	schemaTypeString  = "string"
+	schemaTypeInteger = "integer"
+	schemaTypeNumber  = "number"
+	schemaTypeBoolean = "boolean"
+	schemaTypeArray   = "array"
+
+	schemaFormatInt32  = "int32"
+	schemaFormatInt64  = "int64"
+	schemaFormatFloat  = "float"
+	schemaFormatDouble = "double"
+	schemaFormatByte   = "byte"
+
+	schemaKeyType        = "type"
+	schemaKeyFormat      = "format"
+	schemaKeyDescription = "description"
+	schemaKeyProperties  = "properties"
+	schemaKeyRequired    = "required"
+	schemaKeyContent     = "content"
+	schemaKeySchema      = "schema"
+	schemaKeyItems       = "items"
+	schemaKeyOneOf       = "oneOf"
+	schemaKeyRef         = "$ref"
+)

@@ -41,9 +41,9 @@ func (g *schemaGenerator) generateSchema(ischema ischema, op appdef.OperationKin
 				continue // container not available to this role
 			}
 			properties[container.Name()] = map[string]interface{}{
-				"type": "array",
-				"items": map[string]interface{}{
-					"$ref": fmt.Sprintf("#/components/schemas/%s", g.schemaNameByTypeName(container.QName().String(), op)),
+				schemaKeyType: schemaTypeArray,
+				schemaKeyItems: map[string]interface{}{
+					schemaKeyRef: fmt.Sprintf("#/components/schemas/%s", g.schemaNameByTypeName(container.QName().String(), op)),
 				},
 				"minItems": container.MinOccurs(),
 				"maxItems": container.MaxOccurs(),
@@ -52,16 +52,16 @@ func (g *schemaGenerator) generateSchema(ischema ischema, op appdef.OperationKin
 	}
 
 	schema := map[string]interface{}{
-		"type":       "object",
-		"properties": properties,
+		schemaKeyType:       schemaTypeObject,
+		schemaKeyProperties: properties,
 	}
 
 	if len(required) > 0 {
-		schema["required"] = required
+		schema[schemaKeyRequired] = required
 	}
 
 	if ischema.Comment() != "" {
-		schema["description"] = ischema.Comment()
+		schema[schemaKeyDescription] = ischema.Comment()
 	}
 
 	return schema
@@ -76,8 +76,8 @@ func (g *schemaGenerator) generateFieldSchema(field appdef.IField, op appdef.Ope
 
 		oneOf := make([]map[string]interface{}, 0, len(refField.Refs())+1)
 		oneOf = append(oneOf, map[string]interface{}{
-			"type":   "integer",
-			"format": "int64",
+			schemaKeyType:   schemaTypeInteger,
+			schemaKeyFormat: schemaFormatInt64,
 		})
 		refNames := make([]string, 0, len(refField.Refs()))
 
@@ -88,19 +88,19 @@ func (g *schemaGenerator) generateFieldSchema(field appdef.IField, op appdef.Ope
 				}
 				typeName := refField.Refs()[i].String()
 				oneOf = append(oneOf, map[string]interface{}{
-					"$ref": fmt.Sprintf("#/components/schemas/%s", g.schemaNameByTypeName(typeName, op)),
+					schemaKeyRef: fmt.Sprintf("#/components/schemas/%s", g.schemaNameByTypeName(typeName, op)),
 				})
 				refNames = append(refNames, typeName)
 			}
 		}
 
 		if len(oneOf) > 1 {
-			schema["oneOf"] = oneOf
-			schema["description"] = fmt.Sprintf("ID of: %s", strings.Join(refNames, ", "))
+			schema[schemaKeyOneOf] = oneOf
+			schema[schemaKeyDescription] = fmt.Sprintf("ID of: %s", strings.Join(refNames, ", "))
 		} else {
-			schema["type"] = "integer"
-			schema["format"] = "int64"
-			schema["description"] = "Reference to a document or record"
+			schema[schemaKeyType] = schemaTypeInteger
+			schema[schemaKeyFormat] = schemaFormatInt64
+			schema[schemaKeyDescription] = "Reference to a document or record"
 		}
 
 		return schema
@@ -109,48 +109,48 @@ func (g *schemaGenerator) generateFieldSchema(field appdef.IField, op appdef.Ope
 	// Handle regular fields based on data kind
 	switch field.DataKind() {
 	case appdef.DataKind_int32:
-		schema["type"] = "integer"
-		schema["format"] = "int32"
+		schema[schemaKeyType] = schemaTypeInteger
+		schema[schemaKeyFormat] = schemaFormatInt32
 	case appdef.DataKind_int64:
-		schema["type"] = "integer"
-		schema["format"] = "int64"
+		schema[schemaKeyType] = schemaTypeInteger
+		schema[schemaKeyFormat] = schemaFormatInt64
 	case appdef.DataKind_float32:
-		schema["type"] = "number"
-		schema["format"] = "float"
+		schema[schemaKeyType] = schemaTypeNumber
+		schema[schemaKeyFormat] = schemaFormatFloat
 	case appdef.DataKind_float64:
-		schema["type"] = "number"
-		schema["format"] = "double"
+		schema[schemaKeyType] = schemaTypeNumber
+		schema[schemaKeyFormat] = schemaFormatDouble
 	case appdef.DataKind_bool:
-		schema["type"] = "boolean"
+		schema[schemaKeyType] = schemaTypeBoolean
 	case appdef.DataKind_string:
-		schema["type"] = "string"
+		schema[schemaKeyType] = schemaTypeString
 		// Add max length constraint if exists
 		if constraint, ok := field.Constraints()[appdef.ConstraintKind_MaxLen]; ok {
 			maxLen, _ := constraint.Value().(uint16)
 			schema["maxLength"] = maxLen
 		}
 	case appdef.DataKind_bytes:
-		schema["type"] = "string"
-		schema["format"] = "byte"
+		schema[schemaKeyType] = schemaTypeString
+		schema[schemaKeyFormat] = schemaFormatByte
 		// Add max length constraint if exists
 		if constraint, ok := field.Constraints()[appdef.ConstraintKind_MaxLen]; ok {
 			maxLen, _ := constraint.Value().(uint16)
 			schema["maxLength"] = maxLen
 		}
 	case appdef.DataKind_QName:
-		schema["type"] = "string"
+		schema[schemaKeyType] = schemaTypeString
 		schema["pattern"] = "^[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+$"
 		schema["example"] = "app1pkg.MyType"
 	case appdef.DataKind_RecordID:
-		schema["type"] = "integer"
-		schema["format"] = "int64"
+		schema[schemaKeyType] = schemaTypeInteger
+		schema[schemaKeyFormat] = schemaFormatInt64
 	default:
-		schema["type"] = "string"
+		schema[schemaKeyType] = schemaTypeString
 	}
 
 	// Add field comment as description
 	if field.Comment() != "" {
-		schema["description"] = field.Comment()
+		schema[schemaKeyDescription] = field.Comment()
 	}
 
 	return schema
