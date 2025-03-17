@@ -20,6 +20,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/net/netutil"
 
@@ -207,7 +208,7 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 		}
 
 		initResponse(resp, responseMeta.ContentType, responseMeta.StatusCode)
-		reply(requestCtx, resp, responseCh, responseErr, responseMeta.ContentType, cancel, request)
+		reply_v1(requestCtx, resp, responseCh, responseErr, responseMeta.ContentType, cancel, request, responseMeta.Mode())
 	}
 }
 
@@ -231,4 +232,10 @@ func checkHandler() http.HandlerFunc {
 			log.Println("failed to write 'ok' response:", err)
 		}
 	}
+}
+
+func initResponse(w http.ResponseWriter, contentType string, statusCode int) {
+	w.Header().Set(coreutils.ContentType, contentType)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(statusCode)
 }

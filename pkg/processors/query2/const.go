@@ -10,4 +10,7 @@ const (
 	ApiPath_Queries
 	ApiPath_Views
 	ApiPath_Commands
+	ApiPaths_Schemas
+	ApiPaths_Schemas_WorkspaceRoles
+	ApiPaths_Schemas_WorkspaceRole
 )

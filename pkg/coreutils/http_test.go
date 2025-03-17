@@ -28,7 +28,7 @@ func TestNewHTTPError(t *testing.T) {
 		require.Equal(http.StatusInternalServerError, sysErr.HTTPStatus)
 		require.Equal("test error", sysErr.Message)
 		require.Equal(appdef.NullQName, sysErr.QName)
-		require.Equal(`{"sys.Error":{"HTTPStatus":500,"Message":"test error"}}`, sysErr.ToJSON())
+		require.Equal(`{"sys.Error":{"HTTPStatus":500,"Message":"test error"}}`, sysErr.ToJSON_APIV1())
 	})
 
 	t.Run("formatted", func(t *testing.T) {
@@ -37,7 +37,7 @@ func TestNewHTTPError(t *testing.T) {
 		require.Equal(http.StatusInternalServerError, sysErr.HTTPStatus)
 		require.Equal("test error", sysErr.Message)
 		require.Equal(appdef.NullQName, sysErr.QName)
-		require.Equal(`{"sys.Error":{"HTTPStatus":500,"Message":"test error"}}`, sysErr.ToJSON())
+		require.Equal(`{"sys.Error":{"HTTPStatus":500,"Message":"test error"}}`, sysErr.ToJSON_APIV1())
 	})
 }
 

@@ -14,7 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
-func Test_AllOperationsForType(t *testing.T) {
+func Test_ACLOperationsForType(t *testing.T) {
 
 	tests := []struct {
 		appdef.TypeKind
@@ -23,7 +23,7 @@ func Test_AllOperationsForType(t *testing.T) {
 		{appdef.TypeKind_null, set.Empty[appdef.OperationKind]()},
 		{appdef.TypeKind_GRecord, appdef.RecordsOperations},
 		{appdef.TypeKind_CDoc, appdef.RecordsOperations},
-		{appdef.TypeKind_ViewRecord, appdef.RecordsOperations},
+		{appdef.TypeKind_ViewRecord, appdef.ViewRecordsOperations},
 		{appdef.TypeKind_Command, set.From(appdef.OperationKind_Execute)},
 		{appdef.TypeKind_Role, set.From(appdef.OperationKind_Inherits)},
 		{appdef.TypeKind_Projector, set.Empty[appdef.OperationKind]()},
@@ -32,7 +32,7 @@ func Test_AllOperationsForType(t *testing.T) {
 		tt := tests[i]
 		t.Run(tt.TypeKind.TrimString(), func(t *testing.T) {
 			if got := appdef.ACLOperationsForType(tt.TypeKind); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("AllOperationsForType(%v) = %v, want %v", tt.TypeKind, got, tt.want)
+				t.Errorf("ACLOperationsForType(%v) = %v, want %v", tt.TypeKind, got, tt.want)
 			}
 		})
 	}

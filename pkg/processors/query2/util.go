@@ -62,7 +62,7 @@ type queryWork struct {
 	iRecord              appdef.IContainedRecord
 	wsDesc               istructs.IRecord
 	callbackFunc         istructs.ExecQueryCallback
-	responseSenderGetter func() bus.IResponseSender
+	responseWriterGetter func() bus.IResponseWriter
 	apiPathHandler       IApiPathHandler
 }
 
@@ -118,18 +118,19 @@ func operator(name string, doSync func(ctx context.Context, qw *queryWork) (err 
 
 func NewIQueryMessage(requestCtx context.Context, appQName appdef.AppQName, wsid istructs.WSID, responder bus.IResponder,
 	queryParams QueryParams, docID istructs.IDType, apiPath ApiPath,
-	qName appdef.QName, partition istructs.PartitionID, host string, token string) IQueryMessage {
+	qName appdef.QName, partition istructs.PartitionID, host string, token string, workspaceQName appdef.QName) IQueryMessage {
 	return &implIQueryMessage{
-		appQName:    appQName,
-		wsid:        wsid,
-		responder:   responder,
-		queryParams: queryParams,
-		docID:       docID,
-		apiPath:     apiPath,
-		requestCtx:  requestCtx,
-		qName:       qName,
-		partition:   partition,
-		host:        host,
-		token:       token,
+		appQName:       appQName,
+		wsid:           wsid,
+		responder:      responder,
+		queryParams:    queryParams,
+		docID:          docID,
+		apiPath:        apiPath,
+		requestCtx:     requestCtx,
+		qName:          qName,
+		partition:      partition,
+		host:           host,
+		token:          token,
+		workspaceQName: workspaceQName,
 	}
 }
