@@ -1,0 +1,167 @@
+/*
+ * Copyright (c) 2025-present unTill Software Development Group B.V.
+ * @author Michael Saigachenko
+ */
+package openapi
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/voedger/voedger/pkg/appdef"
+)
+
+func (g *schemaGenerator) generateSchema(ischema ischema, op appdef.OperationKind, fieldNames *[]appdef.FieldName) map[string]interface{} {
+	properties := make(map[string]interface{})
+	required := make([]string, 0)
+
+	// Add fields to schema
+	for _, field := range ischema.Fields() {
+		// Do not skip system fields in schema
+		// if field.IsSys() {
+		// 	continue
+		// }
+
+		if fieldNames != nil && len(*fieldNames) > 0 && !containsFieldName(*fieldNames, field.Name()) {
+			continue
+		}
+
+		fieldSchema := g.generateFieldSchema(field, op)
+
+		properties[field.Name()] = fieldSchema
+
+		if field.Required() {
+			required = append(required, field.Name())
+		}
+	}
+
+	if hasContainers, ok := ischema.(appdef.IWithContainers); ok {
+		for _, container := range hasContainers.Containers() {
+			if _, ok := g.docTypes[container.QName()]; !ok {
+				continue // container not available to this role
+			}
+			properties[container.Name()] = map[string]interface{}{
+				schemaKeyType: schemaTypeArray,
+				schemaKeyItems: map[string]interface{}{
+					schemaKeyRef: g.schemaRef(container.Type(), op),
+				},
+				"minItems": container.MinOccurs(),
+				"maxItems": container.MaxOccurs(),
+			}
+		}
+	}
+
+	schema := map[string]interface{}{
+		schemaKeyType:       schemaTypeObject,
+		schemaKeyProperties: properties,
+	}
+
+	if len(required) > 0 {
+		schema[schemaKeyRequired] = required
+	}
+
+	if ischema.Comment() != "" {
+		schema[schemaKeyDescription] = ischema.Comment()
+	}
+
+	return schema
+}
+
+// generateFieldSchema creates a schema for a specific field
+func (g *schemaGenerator) generateFieldSchema(field appdef.IField, op appdef.OperationKind) map[string]interface{} {
+	schema := make(map[string]interface{})
+
+	// Handle reference fields
+	if refField, isRef := field.(appdef.IRefField); isRef {
+
+		oneOf := make([]map[string]interface{}, 0, len(refField.Refs())+1)
+		oneOf = append(oneOf, map[string]interface{}{
+			schemaKeyType:   schemaTypeInteger,
+			schemaKeyFormat: schemaFormatInt64,
+		})
+		refNames := make([]string, 0, len(refField.Refs()))
+
+		if len(refField.Refs()) > 0 {
+			for i := 0; i < len(refField.Refs()); i++ {
+				if _, ok := g.docTypes[refField.Refs()[i]]; !ok {
+					continue // referenced document not available to this role
+				}
+				typeName := refField.Refs()[i].String()
+				oneOf = append(oneOf, map[string]interface{}{
+					schemaKeyRef: fmt.Sprintf("#/components/schemas/%s", g.schemaNameByTypeName(typeName, op)),
+				})
+				refNames = append(refNames, typeName)
+			}
+		}
+
+		if len(oneOf) > 1 {
+			schema[schemaKeyOneOf] = oneOf
+			schema[schemaKeyDescription] = fmt.Sprintf("ID of: %s", strings.Join(refNames, ", "))
+		} else {
+			schema[schemaKeyType] = schemaTypeInteger
+			schema[schemaKeyFormat] = schemaFormatInt64
+			schema[schemaKeyDescription] = "Reference to a document or record"
+		}
+
+		return schema
+	}
+
+	// Handle regular fields based on data kind
+	switch field.DataKind() {
+	case appdef.DataKind_int32:
+		schema[schemaKeyType] = schemaTypeInteger
+		schema[schemaKeyFormat] = schemaFormatInt32
+	case appdef.DataKind_int64:
+		schema[schemaKeyType] = schemaTypeInteger
+		schema[schemaKeyFormat] = schemaFormatInt64
+	case appdef.DataKind_float32:
+		schema[schemaKeyType] = schemaTypeNumber
+		schema[schemaKeyFormat] = schemaFormatFloat
+	case appdef.DataKind_float64:
+		schema[schemaKeyType] = schemaTypeNumber
+		schema[schemaKeyFormat] = schemaFormatDouble
+	case appdef.DataKind_bool:
+		schema[schemaKeyType] = schemaTypeBoolean
+	case appdef.DataKind_string:
+		schema[schemaKeyType] = schemaTypeString
+		// Add max length constraint if exists
+		if constraint, ok := field.Constraints()[appdef.ConstraintKind_MaxLen]; ok {
+			maxLen, _ := constraint.Value().(uint16)
+			schema["maxLength"] = maxLen
+		}
+	case appdef.DataKind_bytes:
+		schema[schemaKeyType] = schemaTypeString
+		schema[schemaKeyFormat] = schemaFormatByte
+		// Add max length constraint if exists
+		if constraint, ok := field.Constraints()[appdef.ConstraintKind_MaxLen]; ok {
+			maxLen, _ := constraint.Value().(uint16)
+			schema["maxLength"] = maxLen
+		}
+	case appdef.DataKind_QName:
+		schema[schemaKeyType] = schemaTypeString
+		schema["pattern"] = "^[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+$"
+		schema["example"] = "app1pkg.MyType"
+	case appdef.DataKind_RecordID:
+		schema[schemaKeyType] = schemaTypeInteger
+		schema[schemaKeyFormat] = schemaFormatInt64
+	default:
+		schema[schemaKeyType] = schemaTypeString
+	}
+
+	// Add field comment as description
+	if field.Comment() != "" {
+		schema[schemaKeyDescription] = field.Comment()
+	}
+
+	return schema
+}
+
+// Helper function to check if a field name is in a list of field names
+func containsFieldName(fieldNames []appdef.FieldName, name appdef.FieldName) bool {
+	for _, n := range fieldNames {
+		if n == name {
+			return true
+		}
+	}
+	return false
+}
