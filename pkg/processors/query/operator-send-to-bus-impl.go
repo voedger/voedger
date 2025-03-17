@@ -27,10 +27,10 @@ func (o *SendToBusOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece)
 	defer func() {
 		o.metrics.Increase(Metric_ExecSendSeconds, time.Since(begin).Seconds())
 	}()
-	if o.resposeWriter == nil {
-		o.resposeWriter = o.responder.InitResponse(http.StatusOK)
+	if o.responseWriter == nil {
+		o.responseWriter = o.responder.InitResponse(http.StatusOK)
 	}
-	return work, o.resposeWriter.Write(work.(rowsWorkpiece).OutputRow().Values())
+	return work, o.responseWriter.Write(work.(rowsWorkpiece).OutputRow().Values())
 }
 
 func (o *SendToBusOperator) OnError(_ context.Context, err error) {

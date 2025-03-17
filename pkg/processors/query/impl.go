@@ -91,7 +91,7 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 	}
 	operators = append(operators, pipeline.WireAsyncOperator("Send to bus", sendToBusOp))
 	return pipeline.NewAsyncPipeline(ctx, "Rows processor", operators[0], operators[1:]...), func() bus.IResponseWriter {
-		return sendToBusOp.resposeWriter
+		return sendToBusOp.responseWriter
 	}
 }
 

@@ -33,7 +33,7 @@ func TestSendToBusOperator_DoAsync(t *testing.T) {
 			require.Equal(work, outWork)
 			require.NoError(err)
 
-			operator.resposeWriter.Close(nil)
+			operator.responseWriter.Close(nil)
 		}()
 	})
 

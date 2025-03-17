@@ -92,7 +92,7 @@ func handlePanic(r interface{}) error {
 }
 
 func (r *implIResponder) InitResponse(statusCode int) IResponseWriter {
-	r.checkStrated()
+	r.checkStarted()
 	select {
 	case r.responseMetaCh <- ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: statusCode}:
 	default:
@@ -103,7 +103,7 @@ func (r *implIResponder) InitResponse(statusCode int) IResponseWriter {
 }
 
 func (r *implIResponder) Respond(statusCode int, obj any) error {
-	r.checkStrated()
+	r.checkStarted()
 	select {
 	case r.responseMetaCh <- ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: statusCode, mode: RespondMode_Single}:
 		// TODO: rework here: possible: http client disconnected, write to r.respWriter.ch successful, we're thinking that we're replied, but it is not, no socket to write to
