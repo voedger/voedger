@@ -2,7 +2,6 @@ package sys_it
 
 import (
 	"bytes"
-	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -35,9 +34,12 @@ func TestOpenAPI(t *testing.T) {
 
 	require.NoError(err)
 
-	// t.Log(writer.String())
-	// save to file schema.json
-	ioutil.WriteFile("schema.json", writer.Bytes(), 0644)
+	json := writer.String()
+	require.Contains(json, "\"components\": {")
+	require.Contains(json, "\"app1pkg.Currency\": {")
+	require.Contains(json, "\"paths\": {")
+	require.Contains(json, "/api/v2/users/voedger/apps/testapp/workspaces/{wsid}/docs/app1pkg.Currency")
 
-	require.True(false)
+	//ioutil.WriteFile("schema.json", writer.Bytes(), 0644)
+	//require.True(false)
 }

@@ -30,9 +30,7 @@ func CreateOpenApiSchema(writer io.Writer, ws appdef.IWorkspace, role appdef.QNa
 		processedTypes: make(map[string]bool),
 	}
 
-	if err := generator.generate(); err != nil {
-		return err
-	}
+	generator.generate()
 
 	return generator.write(writer)
 }
@@ -52,25 +50,19 @@ type schemaGenerator struct {
 }
 
 // generate performs the schema generation process
-func (g *schemaGenerator) generate() error {
+func (g *schemaGenerator) generate() {
 	g.types = g.pubTypesFunc(g.ws, g.role)
 	g.collectDocSchemaTypes()
 
 	// First pass - generate schema components for types
-	if err := g.generateComponents(); err != nil {
-		return err
-	}
+	g.generateComponents()
 
 	// Second pass - generate paths using components
-	if err := g.generatePaths(); err != nil {
-		return err
-	}
-
-	return nil
+	g.generatePaths()
 }
 
 // generateComponents creates schema components for all published types
-func (g *schemaGenerator) generateComponents() error {
+func (g *schemaGenerator) generateComponents() {
 	schemas := make(map[string]interface{})
 	g.components["schemas"] = schemas
 
@@ -83,30 +75,22 @@ func (g *schemaGenerator) generateComponents() error {
 		}
 
 		for op, fields := range ops {
-			if err := g.generateSchemaComponent(t, op, fields, schemas); err != nil {
-				return err
-			}
+			g.generateSchemaComponent(t, op, fields, schemas)
 			if t.Kind() == appdef.TypeKind_Command && op == appdef.OperationKind_Execute {
 				// If command param is an ODoc, generate a schema for it
 				cmd := t.(appdef.ICommand)
 				param := cmd.Param()
 				if _, ok := param.(appdef.IODoc); ok {
-					if err := g.generateSchemaComponent(param.(ischema), op, nil, schemas); err != nil {
-						return err
-					}
+					g.generateSchemaComponent(param.(ischema), op, nil, schemas)
 				}
 				if result := cmd.Result(); result != nil {
-					if err := g.generateSchemaComponent(result.(ischema), op, nil, schemas); err != nil {
-						return err
-					}
+					g.generateSchemaComponent(result.(ischema), op, nil, schemas)
 				}
 			}
 			if t.Kind() == appdef.TypeKind_Query && op == appdef.OperationKind_Execute {
 				qry := t.(appdef.IQuery)
 				if result := qry.Result(); result != nil {
-					if err := g.generateSchemaComponent(result.(ischema), op, nil, schemas); err != nil {
-						return err
-					}
+					g.generateSchemaComponent(result.(ischema), op, nil, schemas)
 				}
 			}
 		}
@@ -133,8 +117,6 @@ func (g *schemaGenerator) generateComponents() error {
 		},
 		"required": []string{"message"},
 	}
-
-	return nil
 }
 
 func (g *schemaGenerator) collectDocSchemaTypes() {
@@ -148,7 +130,7 @@ func (g *schemaGenerator) collectDocSchemaTypes() {
 
 // generateSchemaComponent creates a schema component for a specific type and operation
 func (g *schemaGenerator) generateSchemaComponent(typ appdef.IType, op appdef.OperationKind,
-	fieldNames *[]appdef.FieldName, schemas map[string]interface{}) error {
+	fieldNames *[]appdef.FieldName, schemas map[string]interface{}) {
 
 	typeName := typ.QName().String()
 
@@ -170,7 +152,7 @@ func (g *schemaGenerator) generateSchemaComponent(typ appdef.IType, op appdef.Op
 	// Create the schema component
 	withFields, ok := typ.(ischema)
 	if !ok {
-		return nil // Type doesn't have fields, skip
+		return // Type doesn't have fields, skip
 	}
 
 	schemas[componentName] = g.generateSchema(withFields, op, fieldNames)
@@ -179,29 +161,21 @@ func (g *schemaGenerator) generateSchemaComponent(typ appdef.IType, op appdef.Op
 		// Generate schema components ODoc inner containers
 		withContainers := typ.(appdef.IWithContainers)
 		for _, container := range withContainers.Containers() {
-			err := g.generateSchemaComponent(container.Type(), op, nil, schemas)
-			if err != nil {
-				return err
-			}
+			g.generateSchemaComponent(container.Type(), op, nil, schemas)
 		}
 	}
-
-	return nil
 }
 
 // generatePaths creates path items for all published types and their operations
-func (g *schemaGenerator) generatePaths() error {
+func (g *schemaGenerator) generatePaths() {
 	for t, ops := range g.types {
 		for op := range ops {
 			paths := g.getPaths(t, op)
 			for _, path := range paths {
-				if err := g.addPathItem(path.Path, path.Method, t, op, path.ApiPath); err != nil {
-					return err
-				}
+				g.addPathItem(path.Path, path.Method, t, op, path.ApiPath)
 			}
 		}
 	}
-	return nil
 }
 
 // getPathAndMethod returns the API path and HTTP method for a given type and operation
@@ -293,7 +267,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 }
 
 // addPathItem adds a path item to the OpenAPI schema
-func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op appdef.OperationKind, apiPath query2.ApiPath) error {
+func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op appdef.OperationKind, apiPath query2.ApiPath) {
 	//typeName := fmt.Sprintf("%s.%s", typ.QName().Pkg(), typ.QName().Entity())
 
 	// Create path if it doesn't exist
@@ -332,8 +306,6 @@ func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op 
 
 	// Add the operation to the path
 	g.paths[path][method] = operation
-
-	return nil
 }
 
 // generateTags creates tags for a specific type
