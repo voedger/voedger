@@ -34,7 +34,9 @@ func TestRetry(t *testing.T) {
 	})
 
 	t.Run("should retry and succeed", func(t *testing.T) {
-		ctx, _ := context.WithTimeout(context.Background(), 20*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+		defer cancel()
+
 		iTime := MockTime
 		retryDelay := 5 * time.Millisecond
 		retryCount := 3
