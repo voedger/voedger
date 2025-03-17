@@ -35,7 +35,7 @@ func (g *schemaGenerator) generateSchema(ischema ischema, op appdef.OperationKin
 		}
 	}
 
-	if hasContainers := ischema.(appdef.IWithContainers); hasContainers != nil {
+	if hasContainers, ok := ischema.(appdef.IWithContainers); ok {
 		for _, container := range hasContainers.Containers() {
 			if _, ok := g.docTypes[container.QName()]; !ok {
 				continue // container not available to this role

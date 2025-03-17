@@ -25,7 +25,11 @@ func TestOpenAPI(t *testing.T) {
 
 	writer := new(bytes.Buffer)
 
-	schemaMeta := openapi.SchemaMeta{}
+	schemaMeta := openapi.SchemaMeta{
+		SchemaTitle:   "Test Schema",
+		SchemaVersion: "1.0.0",
+		AppName:       appdef.NewAppQName("voedger", "testapp"),
+	}
 
 	err = openapi.CreateOpenApiSchema(writer, ws, appdef.NewQName("app1pkg", "ApiRole"), acl.PublishedTypes, schemaMeta)
 

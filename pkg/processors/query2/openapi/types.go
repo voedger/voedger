@@ -14,6 +14,7 @@ import (
 type SchemaMeta struct {
 	SchemaTitle   string
 	SchemaVersion string
+	AppName       appdef.AppQName
 }
 
 type PublishedTypesFunc func(ws appdef.IWorkspace, role appdef.QName) iter.Seq2[appdef.IType,
