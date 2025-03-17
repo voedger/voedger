@@ -43,7 +43,7 @@ func (g *schemaGenerator) generateSchema(ischema ischema, op appdef.OperationKin
 			properties[container.Name()] = map[string]interface{}{
 				schemaKeyType: schemaTypeArray,
 				schemaKeyItems: map[string]interface{}{
-					schemaKeyRef: fmt.Sprintf("#/components/schemas/%s", g.schemaNameByTypeName(container.QName().String(), op)),
+					schemaKeyRef: g.schemaRef(container.Type(), op),
 				},
 				"minItems": container.MinOccurs(),
 				"maxItems": container.MaxOccurs(),

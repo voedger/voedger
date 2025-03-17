@@ -4,7 +4,10 @@
  */
 package openapi
 
-const errorSchemaName = "Error"
+const (
+	errorSchemaName = "Error"
+	errorSchemaRef  = "#/components/schemas/" + errorSchemaName
+)
 
 const (
 	methodGet    = "get"
@@ -12,6 +15,21 @@ const (
 	methodPut    = "put"
 	methodDelete = "delete"
 	methodPatch  = "patch"
+)
+
+// Content types
+const (
+	applicationJSON = "application/json"
+)
+
+// Descriptions
+const (
+	descrOK = "OK"
+)
+
+// Status codes
+const (
+	statusCode200 = "200"
 )
 
 // OpenAPI schema constants
