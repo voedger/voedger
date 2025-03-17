@@ -78,22 +78,23 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					default:
 					}
 					err = coreutils.WrapSysError(err, http.StatusInternalServerError)
-					var senderCloseable bus.IResponseSenderCloseable
+					var respWriter bus.IResponseWriter
 					statusCode := http.StatusOK
 					if err != nil {
 						statusCode = err.(coreutils.SysError).HTTPStatus // nolint:errorlint
 					}
-					if qwork.responseSenderGetter == nil || qwork.responseSenderGetter() == nil {
-						// have an error before 200ok is sent -> send the status from the actual error
-						senderCloseable = msg.Responder().InitResponse(bus.ResponseMeta{
-							ContentType: coreutils.ApplicationJSON,
-							StatusCode:  statusCode,
-						})
-					} else {
-						sender := qwork.responseSenderGetter()
-						senderCloseable = sender.(bus.IResponseSenderCloseable)
+					if qwork.msg.ApiPath() != ApiPath_Docs {
+						// FIXME: determine is it need to close better way
+						if qwork.responseWriterGetter == nil || qwork.responseWriterGetter() == nil {
+							// have an error before 200ok is sent -> send the status from the actual error
+							respWriter = msg.Responder().InitResponse(statusCode)
+						} else {
+							respWriter = qwork.responseWriterGetter()
+						}
+						respWriter.Close(err)
+					} else if err != nil {
+						qwork.msg.Responder().Respond(statusCode, err)
 					}
-					senderCloseable.Close(err)
 				}()
 				metrics.IncreaseApp(queryprocessor.Metric_QueriesSeconds, vvm, msg.AppQName(), time.Since(now).Seconds())
 			case <-ctx.Done():

@@ -292,15 +292,20 @@ func (a *aggregator) compareUint64(v1, v2 uint64, asc bool) bool {
 
 type sender struct {
 	pipeline.AsyncNOOP
-	responder bus.IResponder
-	sender    bus.IResponseSender
+	responder        bus.IResponder
+	respWriter       bus.IResponseWriter
+	isSingleResponse bool
 }
 
 func (s *sender) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
-	if s.sender == nil {
-		s.sender = s.responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+	if s.isSingleResponse {
+		// FIXME: improve  this
+		return work, s.responder.Respond(http.StatusOK, work.(objectBackedByMap).data)
 	}
-	return work, s.sender.Send(work.(objectBackedByMap).data)
+	if s.respWriter == nil {
+		s.respWriter = s.responder.InitResponse(http.StatusOK)
+	}
+	return work, s.respWriter.Write(work.(objectBackedByMap).data)
 }
 
 type filter struct {
