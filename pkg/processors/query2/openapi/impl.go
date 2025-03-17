@@ -140,7 +140,7 @@ func (g *schemaGenerator) generateComponents() error {
 func (g *schemaGenerator) collectDocSchemaTypes() {
 	g.docTypes = make(map[appdef.QName]bool)
 	for t := range g.types {
-		if appdef.TypeKind_Docs.Contains(t.Kind()) {
+		if appdef.TypeKind_Docs.Contains(t.Kind()) || appdef.TypeKind_Records.Contains(t.Kind()) {
 			g.docTypes[t.QName()] = true
 		}
 	}
@@ -567,17 +567,32 @@ func (g *schemaGenerator) generateRequestBody(typ appdef.IType, op appdef.Operat
 	if typ.Kind() == appdef.TypeKind_Command {
 		cmd := typ.(appdef.ICommand)
 		param := cmd.Param()
+		unloggedParam := cmd.UnloggedParam()
+		properties := make(map[string]interface{})
+
 		if _, ok := param.(appdef.IODoc); !ok {
-			return map[string]interface{}{
-				"required": true,
-				"content": map[string]interface{}{
-					"application/json": map[string]interface{}{
-						"schema": g.generateSchema(param.(ischema), op, nil),
+			properties["args"] = map[string]interface{}{
+				"$ref": fmt.Sprintf("#/components/schemas/%s", g.schemaNameByTypeName(param.QName().String(), op)),
+			}
+		} else if param != nil {
+			properties["args"] = g.generateSchema(param.(ischema), op, nil)
+		}
+
+		if unloggedParam != nil {
+			properties["unloggedArgs"] = g.generateSchema(unloggedParam.(ischema), op, nil)
+		}
+
+		return map[string]interface{}{
+			"required": true,
+			"content": map[string]interface{}{
+				"application/json": map[string]interface{}{
+					"schema": map[string]interface{}{
+						"type":       "object",
+						"properties": properties,
 					},
 				},
-			}
+			},
 		}
-		typeName = param.QName().String()
 	}
 
 	return map[string]interface{}{
