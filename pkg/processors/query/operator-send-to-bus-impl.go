@@ -16,7 +16,7 @@ import (
 
 type SendToBusOperator struct {
 	pipeline.AsyncNOOP
-	resposeWriter bus.IResponseWriter
+	responseWriter bus.IResponseWriter
 	responder     bus.IResponder
 	metrics       IMetrics
 	errCh         chan<- error
