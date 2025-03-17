@@ -94,7 +94,62 @@ func TestBasicUsage_ApiArray(t *testing.T) {
 			require.NoError(err)
 			defer resp.Body.Close()
 
-			expectJSONResp(t, c.expectedJSON, resp)
+			expectJSONResp(t, c.expectedJSON, "", resp)
+		})
+	}
+}
+
+func TestBasicUsage_Respond(t *testing.T) {
+	require := require.New(t)
+	cases := []struct {
+		name           string
+		obj            any
+		expectedJSON   string
+		expectedString string
+	}{
+		{
+			name:         "empty",
+			expectedJSON: "{}",
+		},
+		{
+			name:           "string",
+			obj:            "test text",
+			expectedString: "test text",
+		},
+		{
+			name:           "bytes",
+			obj:            []byte("test text"),
+			expectedString: "test text",
+		},
+		{
+			name: "object",
+			obj: struct {
+				Fld3 int
+				Fld4 string
+			}{Fld3: 43, Fld4: `哇"呀呀`},
+			expectedJSON: `{"Fld3":43, "Fld4":"哇\"呀呀"}`,
+		},
+		{
+			name:         "SysError",
+			obj:          coreutils.SysError{HTTPStatus: http.StatusBadRequest, QName: appdef.NewQName("sys", "errQName"), Message: "test error", Data: "more data"},
+			expectedJSON: `{"error":{"status":400,"message":"test error","qname":"sys.errQName","data":"more data"}}`,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+				go func() {
+					err := responder.Respond(http.StatusOK, c.obj)
+					require.NoError(err)
+				}()
+			}, bus.DefaultSendTimeout)
+			defer tearDown(router)
+
+			resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/users/test1/apps/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
+			require.NoError(err)
+			defer resp.Body.Close()
+
+			expectJSONResp(t, c.expectedJSON, c.expectedString, resp)
 		})
 	}
 }
@@ -428,10 +483,14 @@ func (t testRouter) expectClientDisconnection(tst *testing.T) {
 	}
 }
 
-func expectJSONResp(t *testing.T, expectedJSON string, resp *http.Response) {
+func expectJSONResp(t *testing.T, expectedJSON string, expectedString string, resp *http.Response) {
 	b, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	require.JSONEq(t, expectedJSON, string(b))
+	if len(expectedJSON) > 0 {
+		require.JSONEq(t, expectedJSON, string(b))
+	} else {
+		require.Equal(t, expectedString, string(b))
+	}
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	require.Contains(t, resp.Header["Content-Type"][0], "application/json", resp.Header)
 	require.Equal(t, []string{"*"}, resp.Header["Access-Control-Allow-Origin"])

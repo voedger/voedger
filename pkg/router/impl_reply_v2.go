@@ -14,6 +14,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 
@@ -121,10 +122,21 @@ func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 			toSend = string(toSendBytes)
 		} else {
 			switch typed := elem.(type) {
+			case nil:
+				toSend = "{}"
 			case string:
 				toSend = typed
 			case []byte:
 				toSend = string(typed)
+			case coreutils.SysError:
+				toSend = typed.ToJSON_APIV2()
+			default:
+				elemBytes, err := json.Marshal(elem)
+				if err != nil {
+					// notest
+					panic(err)
+				}
+				toSend = string(elemBytes)
 			}
 		}
 
@@ -149,7 +161,9 @@ func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 		var sysError coreutils.SysError
 		if errors.As(*responseErr, &sysError) {
 			jsonErr := sysError.ToJSON_APIV2()
-			sendSuccess = writeResponse(w, `"error":`+jsonErr)
+			jsonErr = strings.TrimPrefix(jsonErr, "{")
+			jsonErr = strings.TrimSuffix(jsonErr, "}")
+			sendSuccess = writeResponse(w, jsonErr)
 		} else {
 			sendSuccess = writeResponse(w, fmt.Sprintf(`"error":{"status":%d,"message":"%s"}`, http.StatusInternalServerError, *responseErr))
 		}
