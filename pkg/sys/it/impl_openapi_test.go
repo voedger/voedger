@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2025-present unTill Software Development Group B.V.
+ * @author Michael Saigachenko
+ */
 package sys_it
 
 import (
