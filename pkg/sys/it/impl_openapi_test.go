@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/acl"
-	"github.com/voedger/voedger/pkg/appdef/openapi"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/processors/query2/openapi"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 

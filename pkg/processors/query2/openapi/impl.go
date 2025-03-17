@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/processors/query2"
 )
 
 // CreateOpenApiSchema generates an OpenAPI schema document for the given workspace and role
@@ -53,9 +54,6 @@ type schemaGenerator struct {
 // generate performs the schema generation process
 func (g *schemaGenerator) generate() error {
 	g.types = g.pubTypesFunc(g.ws, g.role)
-	// TODO: take care about references to schemas which are not available for the specified operation
-	// fill schemasByType with the additionall pass
-
 	g.collectDocSchemaTypes()
 
 	// First pass - generate schema components for types
@@ -93,25 +91,20 @@ func (g *schemaGenerator) generateComponents() error {
 				cmd := t.(appdef.ICommand)
 				param := cmd.Param()
 				if _, ok := param.(appdef.IODoc); ok {
-					if err := g.generateSchemaComponent(param.(ISchema), op, nil, schemas); err != nil {
+					if err := g.generateSchemaComponent(param.(ischema), op, nil, schemas); err != nil {
 						return err
 					}
 				}
 				if result := cmd.Result(); result != nil {
-					if err := g.generateSchemaComponent(result.(ISchema), op, nil, schemas); err != nil {
+					if err := g.generateSchemaComponent(result.(ischema), op, nil, schemas); err != nil {
 						return err
 					}
 				}
 			}
 			if t.Kind() == appdef.TypeKind_Query && op == appdef.OperationKind_Execute {
 				qry := t.(appdef.IQuery)
-				if param := qry.Param(); param != nil {
-					if err := g.generateSchemaComponent(param.(ISchema), op, nil, schemas); err != nil {
-						return err
-					}
-				}
 				if result := qry.Result(); result != nil {
-					if err := g.generateSchemaComponent(result.(ISchema), op, nil, schemas); err != nil {
+					if err := g.generateSchemaComponent(result.(ischema), op, nil, schemas); err != nil {
 						return err
 					}
 				}
@@ -146,7 +139,7 @@ func (g *schemaGenerator) generateComponents() error {
 
 func (g *schemaGenerator) collectDocSchemaTypes() {
 	g.docTypes = make(map[appdef.QName]bool)
-	for t, _ := range g.types {
+	for t := range g.types {
 		if appdef.TypeKind_Docs.Contains(t.Kind()) {
 			g.docTypes[t.QName()] = true
 		}
@@ -175,7 +168,7 @@ func (g *schemaGenerator) generateSchemaComponent(typ appdef.IType, op appdef.Op
 	g.schemasByType[typeName][op] = componentName
 
 	// Create the schema component
-	withFields, ok := typ.(ISchema)
+	withFields, ok := typ.(ischema)
 	if !ok {
 		return nil // Type doesn't have fields, skip
 	}
@@ -199,64 +192,101 @@ func (g *schemaGenerator) generateSchemaComponent(typ appdef.IType, op appdef.Op
 // generatePaths creates path items for all published types and their operations
 func (g *schemaGenerator) generatePaths() error {
 	for t, ops := range g.types {
-		for op, _ := range ops {
-			path, method, err := g.getPathAndMethod(t, op)
-			if err != nil {
-				continue // Skip operations we cannot map to paths
+		for op := range ops {
+			paths := g.getPaths(t, op)
+			for _, path := range paths {
+				if err := g.addPathItem(path.Path, path.Method, t, op, path.ApiPath); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// getPathAndMethod returns the API path and HTTP method for a given type and operation
+func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []pathItem {
+	typeName := typ.QName().String()
+
+	switch typ.Kind() {
+	case appdef.TypeKind_CDoc, appdef.TypeKind_WDoc, appdef.TypeKind_CRecord, appdef.TypeKind_WRecord:
+		switch op {
+		case appdef.OperationKind_Insert:
+			return []pathItem{
+				{
+					Method:  methodPost,
+					Path:    fmt.Sprintf("/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/%s", typeName),
+					ApiPath: query2.ApiPath_Docs,
+				},
+			}
+		case appdef.OperationKind_Update:
+			return []pathItem{
+				{
+					Method:  methodPatch,
+					Path:    fmt.Sprintf("/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/%s/{id}", typeName),
+					ApiPath: query2.ApiPath_Docs,
+				},
+			}
+		case appdef.OperationKind_Deactivate:
+			return []pathItem{
+				{
+					Method:  methodDelete,
+					Path:    fmt.Sprintf("/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/%s/{id}", typeName),
+					ApiPath: query2.ApiPath_Docs,
+				},
+			}
+		case appdef.OperationKind_Select:
+			return []pathItem{
+				{
+					Method:  methodGet,
+					Path:    fmt.Sprintf("/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/%s/{id}", typeName),
+					ApiPath: query2.ApiPath_Docs,
+				},
+				{
+					Method:  methodGet,
+					Path:    fmt.Sprintf("/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/cdocs/%s", typeName),
+					ApiPath: query2.ApiPath_CDocs,
+				},
 			}
 
-			if err := g.addPathItem(path, method, t, op); err != nil {
-				return err
-			}
+		}
+	}
+
+	if _, ok := typ.(appdef.ICommand); ok && op == appdef.OperationKind_Execute {
+		return []pathItem{
+			{
+				Method:  methodPost,
+				Path:    fmt.Sprintf("/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/commands/%s", typeName),
+				ApiPath: query2.ApiPath_Commands,
+			},
+		}
+	}
+
+	if _, ok := typ.(appdef.IQuery); ok && op == appdef.OperationKind_Execute {
+		return []pathItem{
+			{
+				Method:  methodGet,
+				Path:    fmt.Sprintf("/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/queries/%s", typeName),
+				ApiPath: query2.ApiPath_Queries,
+			},
+		}
+	}
+
+	if _, ok := typ.(appdef.IView); ok && op == appdef.OperationKind_Select {
+		return []pathItem{
+			{
+				Method:  methodGet,
+				Path:    fmt.Sprintf("/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/views/%s", typeName),
+				ApiPath: query2.ApiPath_Views,
+			},
 		}
 	}
 
 	return nil
 }
 
-// getPathAndMethod returns the API path and HTTP method for a given type and operation
-func (g *schemaGenerator) getPathAndMethod(typ appdef.IType, op appdef.OperationKind) (string, string, error) {
-	typeName := fmt.Sprintf("%s.%s", typ.QName().Pkg(), typ.QName().Entity())
-
-	switch typ.Kind() {
-	case appdef.TypeKind_CDoc, appdef.TypeKind_WDoc, appdef.TypeKind_CRecord, appdef.TypeKind_WRecord:
-		switch op {
-		case appdef.OperationKind_Insert:
-			return fmt.Sprintf("/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/%s", typeName), "post", nil
-		case appdef.OperationKind_Update:
-			return fmt.Sprintf("/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/%s/{id}", typeName), "patch", nil
-		case appdef.OperationKind_Deactivate:
-			return fmt.Sprintf("/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/%s/{id}", typeName), "delete", nil
-		case appdef.OperationKind_Select:
-			return fmt.Sprintf("/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/%s/{id}", typeName), "get", nil
-		}
-	}
-
-	// Special handling for CDoc collection reading
-	if typ.Kind() == appdef.TypeKind_CDoc && op == appdef.OperationKind_Select {
-		return fmt.Sprintf("/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/cdocs/%s", typeName), "get", nil
-	}
-
-	// Special handling for commands
-	if _, ok := typ.(appdef.ICommand); ok && op == appdef.OperationKind_Execute {
-		return fmt.Sprintf("/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/commands/%s", typeName), "post", nil
-	}
-
-	// Special handling for queries
-	if _, ok := typ.(appdef.IQuery); ok && op == appdef.OperationKind_Execute {
-		return fmt.Sprintf("/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/queries/%s", typeName), "get", nil
-	}
-
-	// Special handling for views
-	if _, ok := typ.(appdef.IView); ok && op == appdef.OperationKind_Select {
-		return fmt.Sprintf("/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/views/%s", typeName), "get", nil
-	}
-
-	return "", "", fmt.Errorf("unsupported type %s for operation %s", typ.Kind().String(), op.String())
-}
-
 // addPathItem adds a path item to the OpenAPI schema
-func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op appdef.OperationKind) error {
+func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op appdef.OperationKind, apiPath query2.ApiPath) error {
 	//typeName := fmt.Sprintf("%s.%s", typ.QName().Pkg(), typ.QName().Entity())
 
 	// Create path if it doesn't exist
@@ -274,7 +304,7 @@ func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op 
 	}
 
 	// Add operation description
-	operation["description"] = g.generateDescription(typ, op)
+	operation["description"] = g.generateDescription(typ, op, apiPath)
 
 	// Add operation parameters
 	parameters := g.generateParameters(path)
@@ -319,7 +349,7 @@ func (g *schemaGenerator) generateTags(typ appdef.IType) []string {
 }
 
 // generateDescription creates description for an operation on a type
-func (g *schemaGenerator) generateDescription(typ appdef.IType, op appdef.OperationKind) string {
+func (g *schemaGenerator) generateDescription(typ appdef.IType, op appdef.OperationKind, apiPath query2.ApiPath) string {
 	// Use type's comment if available
 	if typ.Comment() != "" {
 		return typ.Comment()
@@ -343,7 +373,9 @@ func (g *schemaGenerator) generateDescription(typ appdef.IType, op appdef.Operat
 
 	case typ.Kind() == appdef.TypeKind_CDoc:
 		if op == appdef.OperationKind_Select {
-			// TODO: Read vs List ?
+			if apiPath == query2.ApiPath_CDocs {
+				return fmt.Sprintf("Reads the collection of %s", typeName)
+			}
 			return fmt.Sprintf("Reads %s", typeName)
 		}
 	}
@@ -533,7 +565,7 @@ func (g *schemaGenerator) generateRequestBody(typ appdef.IType, op appdef.Operat
 				"required": true,
 				"content": map[string]interface{}{
 					"application/json": map[string]interface{}{
-						"schema": g.generateSchema(param.(ISchema), op, nil),
+						"schema": g.generateSchema(param.(ischema), op, nil),
 					},
 				},
 			}

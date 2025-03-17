@@ -5,3 +5,11 @@
 package openapi
 
 const errorSchemaName = "Error"
+
+const (
+	methodGet    = "get"
+	methodPost   = "post"
+	methodPut    = "put"
+	methodDelete = "delete"
+	methodPatch  = "patch"
+)

@@ -8,6 +8,7 @@ import (
 	"iter"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/processors/query2"
 )
 
 type SchemaMeta struct {
@@ -18,7 +19,13 @@ type SchemaMeta struct {
 type PublishedTypesFunc func(ws appdef.IWorkspace, role appdef.QName) iter.Seq2[appdef.IType,
 	iter.Seq2[appdef.OperationKind, *[]appdef.FieldName]]
 
-type ISchema interface {
+type ischema interface {
 	appdef.IType
 	appdef.IWithFields
+}
+
+type pathItem struct {
+	Method  string
+	Path    string
+	ApiPath query2.ApiPath
 }

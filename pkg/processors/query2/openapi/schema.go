@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func (g *schemaGenerator) generateSchema(ischema ISchema, op appdef.OperationKind, fieldNames *[]appdef.FieldName) map[string]interface{} {
+func (g *schemaGenerator) generateSchema(ischema ischema, op appdef.OperationKind, fieldNames *[]appdef.FieldName) map[string]interface{} {
 	properties := make(map[string]interface{})
 	required := make([]string, 0)
 
@@ -140,6 +140,7 @@ func (g *schemaGenerator) generateFieldSchema(field appdef.IField, op appdef.Ope
 	case appdef.DataKind_QName:
 		schema["type"] = "string"
 		schema["pattern"] = "^[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+$"
+		schema["example"] = "app1pkg.MyType"
 	case appdef.DataKind_RecordID:
 		schema["type"] = "integer"
 		schema["format"] = "int64"
