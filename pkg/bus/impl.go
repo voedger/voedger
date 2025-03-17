@@ -131,7 +131,7 @@ func (rs *implResponseWriter) Close(err error) {
 	close(rs.ch)
 }
 
-func (r *implIResponder) checkStrated() {
+func (r *implIResponder) checkStarted() {
 	if r.started {
 		panic("unable to start the response more than once")
 	}
