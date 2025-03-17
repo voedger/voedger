@@ -42,7 +42,6 @@ type RespondMode int
 
 const (
 	RespondMode_ApiArray RespondMode = iota
-	RespondMode_Custom
 	RespondMode_Single
 )
 
