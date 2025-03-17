@@ -25,10 +25,8 @@ type IResponder interface {
 	InitResponse(responseMeta ResponseMeta) IResponseWriter
 
 	// panics if called >1 times or after InitResponse
+	// ContentType is ApplicationJSON
 	Respond(statusCode int, obj any) error
-
-	// need to distinguish cmd normal reply with SysError in body from cmd error
-	// RespondSysError(sysError coreutils.SysError) error
 }
 
 type IResponseWriter interface {

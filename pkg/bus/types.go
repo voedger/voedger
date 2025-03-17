@@ -61,7 +61,6 @@ type implResponseWriter struct {
 	resultErr   *error
 }
 
-// тут только begin
 type implIResponder struct {
 	respWriter     *implResponseWriter
 	responseMetaCh chan ResponseMeta
