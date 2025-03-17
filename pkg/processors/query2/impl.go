@@ -78,22 +78,18 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					default:
 					}
 					err = coreutils.WrapSysError(err, http.StatusInternalServerError)
-					var senderCloseable bus.IResponseSenderCloseable
+					var respWriter bus.IResponseWriter
 					statusCode := http.StatusOK
 					if err != nil {
 						statusCode = err.(coreutils.SysError).HTTPStatus // nolint:errorlint
 					}
-					if qwork.responseSenderGetter == nil || qwork.responseSenderGetter() == nil {
+					if qwork.responseWriterGetter == nil || qwork.responseWriterGetter() == nil {
 						// have an error before 200ok is sent -> send the status from the actual error
-						senderCloseable = msg.Responder().InitResponse(bus.ResponseMeta{
-							ContentType: coreutils.ApplicationJSON,
-							StatusCode:  statusCode,
-						})
+						respWriter = msg.Responder().InitResponse(statusCode)
 					} else {
-						sender := qwork.responseSenderGetter()
-						senderCloseable = sender.(bus.IResponseSenderCloseable)
+						respWriter = qwork.responseWriterGetter()
 					}
-					senderCloseable.Close(err)
+					respWriter.Close(err)
 				}()
 				metrics.IncreaseApp(queryprocessor.Metric_QueriesSeconds, vvm, msg.AppQName(), time.Since(now).Seconds())
 			case <-ctx.Done():

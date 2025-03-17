@@ -23,7 +23,6 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/processors/query2"
 )
 
 func createBusRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (res bus.Request, ok bool) {
@@ -75,8 +74,7 @@ func createBusRequest(reqMethod string, req *http.Request, rw http.ResponseWrite
 	return res, err == nil
 }
 
-func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error,
-	contentType string, onSendFailed func(), busRequest bus.Request) {
+func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error, onSendFailed func(), respMode bus.RespondMode) {
 	sendSuccess := true
 	defer func() {
 		if requestCtx.Err() != nil {
@@ -92,104 +90,86 @@ func reply(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan 
 			}
 		}
 	}()
-	elemsCount := 0
-	sectionsCloser := ""
-	responseCloser := ""
-	isCmd := false
-	if busRequest.IsAPIV2 {
-		isCmd = busRequest.ApiPath == int(query2.ApiPath_Commands)
-	} else {
-		isCmd = strings.HasPrefix(busRequest.Resource, "c.")
-	}
-	if contentType == coreutils.ApplicationJSON {
-		if sendSuccess = writeResponse(w, "{"); !sendSuccess {
+
+	// ApiArray and no elems -> {"results":[]}
+
+	if respMode == bus.RespondMode_ApiArray {
+		if sendSuccess = writeResponse(w, `{"results":[`); !sendSuccess {
 			return
 		}
 	}
+	elemsCount := 0
 	for elem := range responseCh {
-		// http client disconnected -> ErrNoConsumer on IMultiResponseSender.SendElement() -> QP will call Close()
 		if requestCtx.Err() != nil {
 			// possible: ctx is done but on select {sections<-section, <-ctx.Done()} write to sections channel is triggered.
 			// ctx.Done() must have the priority
 			return
 		}
-		if busRequest.IsAPIV2 {
-			if elemsCount == 0 {
-				sendSuccess = writeResponse(w, `"results":[`)
-				responseCloser = "]"
-			}
-		} else {
-			if isCmd {
-				res := elem.(string)
-				if contentType == coreutils.ApplicationJSON {
-					res = strings.TrimPrefix(res, "{")
-					res = strings.TrimSuffix(res, "}")
+
+		toSend := ""
+
+		if respMode == bus.RespondMode_ApiArray {
+			if elemsCount > 0 {
+				if sendSuccess = writeResponse(w, ","); !sendSuccess {
+					return
 				}
-				sendSuccess = writeResponse(w, res)
-			} else if contentType == coreutils.TextPlain {
-				sendSuccess = writeResponse(w, elem.(string))
-			} else if elemsCount == 0 {
-				sendSuccess = writeResponse(w, `"sections":[{"type":"","elements":[`)
-				sectionsCloser = "]}]"
+			}
+			toSendBytes, err := json.Marshal(&elem)
+			if err != nil {
+				panic(err)
+			}
+
+			toSend = string(toSendBytes)
+		} else {
+			switch typed := elem.(type) {
+			case nil:
+				toSend = "{}"
+			case string:
+				toSend = typed
+			case []byte:
+				toSend = string(typed)
+			case coreutils.SysError:
+				toSend = typed.ToJSON_APIV2()
+			default:
+				elemBytes, err := json.Marshal(elem)
+				if err != nil {
+					// notest
+					panic(err)
+				}
+				toSend = string(elemBytes)
 			}
 		}
 
-		if sendSuccess && elemsCount > 0 {
-			sendSuccess = writeResponse(w, ",")
+		if sendSuccess = writeResponse(w, toSend); !sendSuccess {
+			return
 		}
 
 		elemsCount++
+	}
 
-		if !sendSuccess {
-			return
-		}
-
-		if !busRequest.IsAPIV2 && (isCmd || contentType == coreutils.TextPlain) {
-			continue
-		}
-
-		elemBytes, err := json.Marshal(&elem)
-		if err != nil {
-			panic(err)
-		}
-
-		if sendSuccess = writeResponse(w, string(elemBytes)); !sendSuccess {
+	if respMode == bus.RespondMode_ApiArray {
+		if sendSuccess = writeResponse(w, "]"); !sendSuccess {
 			return
 		}
 	}
-	if len(sectionsCloser) > 0 {
-		if sendSuccess = writeResponse(w, sectionsCloser); !sendSuccess {
-			return
-		}
-	}
+
 	if *responseErr != nil {
-		if elemsCount > 0 {
-			sendSuccess = writeResponse(w, ",")
-		}
-		if !sendSuccess {
+		// actual for ApiArray mode only
+		if sendSuccess = writeResponse(w, ","); !sendSuccess {
 			return
 		}
-		var jsonableErr interface{ ToJSON() string }
-		if errors.As(*responseErr, &jsonableErr) {
-			jsonErr := jsonableErr.ToJSON()
-			jsonErr = strings.TrimPrefix(jsonErr, "{") // need to make "sys.Error" a top-level field within {}
-			jsonErr = strings.TrimSuffix(jsonErr, "}") // need to make "sys.Error" a top-level field within {}
+		var sysError coreutils.SysError
+		if errors.As(*responseErr, &sysError) {
+			jsonErr := sysError.ToJSON_APIV2()
+			jsonErr = strings.TrimPrefix(jsonErr, "{")
+			jsonErr = strings.TrimSuffix(jsonErr, "}")
 			sendSuccess = writeResponse(w, jsonErr)
 		} else {
-			sendSuccess = writeResponse(w, fmt.Sprintf(`"status":%d,"errorDescription":"%s"`, http.StatusInternalServerError, *responseErr))
+			sendSuccess = writeResponse(w, fmt.Sprintf(`"error":{"status":%d,"message":"%s"}`, http.StatusInternalServerError, *responseErr))
 		}
 	}
 
-	if len(responseCloser) > 0 {
-		sendSuccess = writeResponse(w, responseCloser)
-	}
-	if sendSuccess && contentType == coreutils.ApplicationJSON {
+	if sendSuccess && respMode == bus.RespondMode_ApiArray {
 		sendSuccess = writeResponse(w, "}")
 	}
-}
-
-func initResponse(w http.ResponseWriter, contentType string, statusCode int) {
-	w.Header().Set(coreutils.ContentType, contentType)
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.WriteHeader(statusCode)
 }

@@ -35,7 +35,15 @@ type Request struct {
 type ResponseMeta struct {
 	ContentType string
 	StatusCode  int
+	mode        RespondMode
 }
+
+type RespondMode int
+
+const (
+	RespondMode_ApiArray RespondMode = iota
+	RespondMode_Single
+)
 
 type implIRequestSender struct {
 	timeout        SendTimeout
@@ -45,7 +53,7 @@ type implIRequestSender struct {
 
 type SendTimeout time.Duration
 
-type implIResponseSenderCloseable struct {
+type implResponseWriter struct {
 	ch          chan any
 	clientCtx   context.Context
 	sendTimeout SendTimeout
@@ -54,6 +62,7 @@ type implIResponseSenderCloseable struct {
 }
 
 type implIResponder struct {
-	respSender     IResponseSenderCloseable
+	respWriter     *implResponseWriter
 	responseMetaCh chan ResponseMeta
+	started        bool
 }
