@@ -78,14 +78,14 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					default:
 					}
 					err = coreutils.WrapSysError(err, http.StatusInternalServerError)
-					var respWriter bus.IApiArrayResponseWriter
+					var respWriter bus.IResponseWriter
 					statusCode := http.StatusOK
 					if err != nil {
 						statusCode = err.(coreutils.SysError).HTTPStatus // nolint:errorlint
 					}
 					if qwork.responseWriterGetter == nil || qwork.responseWriterGetter() == nil {
 						// have an error before 200ok is sent -> send the status from the actual error
-						respWriter = msg.Responder().BeginApiArrayResponse(statusCode)
+						respWriter = msg.Responder().InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: statusCode})
 					} else {
 						respWriter = qwork.responseWriterGetter()
 					}

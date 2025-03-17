@@ -10,13 +10,14 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
 type SendToBusOperator struct {
 	pipeline.AsyncNOOP
-	resposeWriter bus.IApiArrayResponseWriter
+	resposeWriter bus.IResponseWriter
 	responder     bus.IResponder
 	metrics       IMetrics
 	errCh         chan<- error
@@ -28,7 +29,7 @@ func (o *SendToBusOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece)
 		o.metrics.Increase(Metric_ExecSendSeconds, time.Since(begin).Seconds())
 	}()
 	if o.resposeWriter == nil {
-		o.resposeWriter = o.responder.BeginApiArrayResponse(http.StatusOK)
+		o.resposeWriter = o.responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 	}
 	return work, o.resposeWriter.Write(work.(rowsWorkpiece).OutputRow().Values())
 }

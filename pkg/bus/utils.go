@@ -33,6 +33,12 @@ func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req R
 			body = typed
 		case interface{ ToJSON() string }:
 			body = typed.ToJSON()
+		case coreutils.SysError:
+			if req.IsAPIV2 {
+				body = typed.ToJSON_APIV2()
+			} else {
+				body = typed.ToJSON_APIV1()
+			}
 		}
 	}
 	if *responseErr != nil {

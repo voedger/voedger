@@ -5,7 +5,9 @@
 
 package bus
 
-import "context"
+import (
+	"context"
+)
 
 type IRequestSender interface {
 	// err != nil -> responseMeta does not matter, responseCh and responseErr must not be touched
@@ -24,6 +26,9 @@ type IResponder interface {
 
 	// panics if called >1 times or after InitResponse
 	Respond(statusCode int, obj any) error
+
+	// need to distinguish cmd normal reply with SysError in body from cmd error
+	// RespondSysError(sysError coreutils.SysError) error
 }
 
 type IResponseWriter interface {

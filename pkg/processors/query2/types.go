@@ -300,12 +300,12 @@ func (a *aggregator) compareUint64(v1, v2 uint64, asc bool) bool {
 type sender struct {
 	pipeline.AsyncNOOP
 	responder  bus.IResponder
-	respWriter bus.IApiArrayResponseWriter
+	respWriter bus.IResponseWriter
 }
 
 func (s *sender) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
 	if s.respWriter == nil {
-		s.respWriter = s.responder.BeginApiArrayResponse(http.StatusOK)
+		s.respWriter = s.responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 	}
 	return work, s.respWriter.Write(work.(objectBackedByMap).data)
 }

@@ -40,7 +40,7 @@ import (
 )
 
 func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state istructs.IState, params IQueryParams,
-	resultMeta appdef.IType, responder bus.IResponder, metrics IMetrics, errCh chan<- error) (rowsProcessor pipeline.IAsyncPipeline, iResponseWriterGetter func() bus.IApiArrayResponseWriter) {
+	resultMeta appdef.IType, responder bus.IResponder, metrics IMetrics, errCh chan<- error) (rowsProcessor pipeline.IAsyncPipeline, iResponseWriterGetter func() bus.IResponseWriter) {
 	operators := make([]*pipeline.WiredOperator, 0)
 	if resultMeta == nil {
 		// happens when the query has no result, e.g. q.air.UpdateSubscriptionDetails
@@ -90,7 +90,7 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 		errCh:     errCh,
 	}
 	operators = append(operators, pipeline.WireAsyncOperator("Send to bus", sendToBusOp))
-	return pipeline.NewAsyncPipeline(ctx, "Rows processor", operators[0], operators[1:]...), func() bus.IApiArrayResponseWriter {
+	return pipeline.NewAsyncPipeline(ctx, "Rows processor", operators[0], operators[1:]...), func() bus.IResponseWriter {
 		return sendToBusOp.resposeWriter
 	}
 }
@@ -142,14 +142,14 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					default:
 					}
 					err = coreutils.WrapSysError(err, http.StatusInternalServerError)
-					var respWriter bus.IApiArrayResponseWriter
+					var respWriter bus.IResponseWriter
 					statusCode := http.StatusOK
 					if err != nil {
 						statusCode = err.(coreutils.SysError).HTTPStatus // nolint:errorlint
 					}
 					if qwork.responseWriterGetter == nil || qwork.responseWriterGetter() == nil {
 						// have an error before 200ok is sent -> send the status from the actual error
-						respWriter = msg.Responder().BeginApiArrayResponse(statusCode)
+						respWriter = msg.Responder().InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: statusCode})
 					} else {
 						respWriter = qwork.responseWriterGetter()
 					}
@@ -456,7 +456,7 @@ type queryWork struct {
 	iQuery               appdef.IQuery
 	wsDesc               istructs.IRecord
 	callbackFunc         istructs.ExecQueryCallback
-	responseWriterGetter func() bus.IApiArrayResponseWriter
+	responseWriterGetter func() bus.IResponseWriter
 }
 
 func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,

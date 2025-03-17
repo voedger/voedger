@@ -106,6 +106,7 @@ func (r *implIResponder) Respond(statusCode int, obj any) error {
 	r.checkStrated()
 	select {
 	case r.responseMetaCh <- ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: statusCode}:
+		// TODO: rework here: possible: http client disconnected, write to r.respWriter.ch successful, we're thinking that we're replied, but it is not, no socket to write to
 		r.respWriter.ch <- obj // buf size 1
 		close(r.respWriter.ch)
 	default:

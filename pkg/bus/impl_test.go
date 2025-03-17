@@ -194,6 +194,7 @@ func TestErrors(t *testing.T) {
 			go func() {
 				respWriter := responder.InitResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
 				<-maySend
+				_ = respWriter.Write("test") // first succeed because chan buf is 1
 				writeErrCh <- respWriter.Write("test")
 				respWriter.Close(nil)
 			}()
