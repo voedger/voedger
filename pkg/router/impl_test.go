@@ -11,7 +11,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
+	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -96,55 +99,6 @@ func TestBasicUsage_ApiArray(t *testing.T) {
 	}
 }
 
-// func TestBasicUsage_Custom(t *testing.T) {
-// 	require := require.New(t)
-// 	cases := []struct {
-// 		name         string
-// 		objs         []any
-// 		expectedBody []byte
-// 	}{
-// 		{
-// 			name:         "empty",
-// 			objs:         nil,
-// 			expectedBody: nil,
-// 		},
-// 		{
-// 			name:         "one elem",
-// 			objs:         []any{"text 1"},
-// 			expectedBody: []byte("text 1"),
-// 		},
-// 		{
-// 			name:         "2 elems",
-// 			objs:         []any{`哇"呀呀`, []byte("abc")},
-// 			expectedBody: []byte(`哇"呀呀abc`),
-// 		},
-// 	}
-
-// 	for _, c := range cases {
-// 		t.Run(c.name, func(t *testing.T) {
-// 			router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
-// 				go func() {
-// 					respWriter := responder.BeginCustomResponse(bus.ResponseMeta{ContentType: coreutils.TextPlain, StatusCode: http.StatusOK})
-// 					for _, obj := range c.objs {
-// 						require.NoError(respWriter.Write(obj))
-// 					}
-// 					respWriter.Close()
-// 				}()
-// 			}, bus.DefaultSendTimeout)
-// 			defer tearDown(router)
-
-// 			resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/users/test1/apps/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
-// 			require.NoError(err)
-// 			defer resp.Body.Close()
-
-// 			actualJSON, err := io.ReadAll(resp.Body)
-// 			require.NoError(err)
-// 			require.Equal(string(c.expectedBody), string(actualJSON))
-// 			expectResp(t, resp, coreutils.TextPlain, http.StatusOK)
-// 		})
-// 	}
-// }
-
 func TestBeginResponseTimeout(t *testing.T) {
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		// bump the mock time to make timeout timer fire
@@ -187,60 +141,60 @@ func TestHandlerPanic(t *testing.T) {
 	expectResp(t, resp, "text/plain", http.StatusInternalServerError)
 }
 
-// func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
-// 	require := require.New(t)
-// 	clientClosed := make(chan struct{})
-// 	firstElemSendErrCh := make(chan error)
-// 	expectedErrCh := make(chan error)
-// 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
-// 		go func() {
-// 			respWriter := responder.BeginApiArrayResponse(http.StatusOK)
-// 			defer respWriter.Close(nil)
-// 			firstElemSendErrCh <- respWriter.Write(testObject{
-// 				IntField: 42,
-// 				StrField: "str",
-// 			})
+func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
+	require := require.New(t)
+	clientClosed := make(chan struct{})
+	firstElemSendErrCh := make(chan error)
+	expectedErrCh := make(chan error)
+	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+		go func() {
+			respWriter := responder.InitResponse(http.StatusOK)
+			defer respWriter.Close(nil)
+			firstElemSendErrCh <- respWriter.Write(testObject{
+				IntField: 42,
+				StrField: "str",
+			})
 
-// 			// let's wait for the client close
-// 			<-clientClosed
+			// let's wait for the client close
+			<-clientClosed
 
-// 			// requestCtx closes not immediately after resp.Body.Close(). So let's wait for ctx close
-// 			for requestCtx.Err() == nil {
-// 			}
+			// requestCtx closes not immediately after resp.Body.Close(). So let's wait for ctx close
+			for requestCtx.Err() == nil {
+			}
 
-// 			// the request is closed -> the next section should fail with context.ContextCanceled error. Check it in the test
-// 			expectedErrCh <- respWriter.Write(testObject{
-// 				IntField: 43,
-// 				StrField: "str1",
-// 			})
-// 		}()
-// 	}, bus.SendTimeout(5*time.Second))
-// 	defer tearDown(router)
+			// the request is closed -> the next section should fail with context.ContextCanceled error. Check it in the test
+			expectedErrCh <- respWriter.Write(testObject{
+				IntField: 43,
+				StrField: "str1",
+			})
+		}()
+	}, bus.SendTimeout(5*time.Second))
+	defer tearDown(router)
 
-// 	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/users/test1/apps/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
-// 	require.NoError(err)
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/users/test1/apps/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
+	require.NoError(err)
 
-// 	// ensure the first element is sent successfully
-// 	require.NoError(<-firstElemSendErrCh)
+	// ensure the first element is sent successfully
+	require.NoError(<-firstElemSendErrCh)
 
-// 	// read out the the first element
-// 	entireResp := []byte{}
-// 	for string(entireResp) != `{"results":[{"IntField":42,"StrField":"str"}` {
-// 		buf := make([]byte, 512)
-// 		n, err := resp.Body.Read(buf)
-// 		require.NoError(err)
-// 		entireResp = append(entireResp, buf[:n]...)
-// 		log.Println(string(entireResp))
-// 	}
+	// read out the the first element
+	entireResp := []byte{}
+	for string(entireResp) != `{"results":[{"IntField":42,"StrField":"str"}` {
+		buf := make([]byte, 512)
+		n, err := resp.Body.Read(buf)
+		require.NoError(err)
+		entireResp = append(entireResp, buf[:n]...)
+		log.Println(string(entireResp))
+	}
 
-// 	// close the request and signal to the handler to try to send to the disconnected client
-// 	resp.Body.Close()
-// 	close(clientClosed)
+	// close the request and signal to the handler to try to send to the disconnected client
+	resp.Body.Close()
+	close(clientClosed)
 
-// 	// expect the handler got context.Canceled error on try to send to the disconnected client
-// 	require.ErrorIs(<-expectedErrCh, context.Canceled)
-// 	router.expectClientDisconnection(t)
-// }
+	// expect the handler got context.Canceled error on try to send to the disconnected client
+	require.ErrorIs(<-expectedErrCh, context.Canceled)
+	router.expectClientDisconnection(t)
+}
 
 func TestCheck(t *testing.T) {
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
@@ -269,126 +223,132 @@ func Test404(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
-// func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
-// 	require := require.New(t)
-// 	firstElemSendErrCh := make(chan error)
-// 	setDisconnectOnWriteResponse := make(chan any)
-// 	expectedErrCh := make(chan error)
-// 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
-// 		go func() {
-// 			// handler, on server side
-// 			respWriter := responder.BeginApiArrayResponse(http.StatusOK)
-// 			defer respWriter.Close(nil)
-// 			firstElemSendErrCh <- respWriter.Write(testObject{
-// 				IntField: 42,
-// 				StrField: "str",
-// 			})
+func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
+	require := require.New(t)
+	firstElemSendErrCh := make(chan error)
+	setDisconnectOnWriteResponse := make(chan any)
+	expectedErrCh := make(chan error)
+	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+		go func() {
+			// handler, on server side
+			respWriter := responder.InitResponse(http.StatusOK)
+			defer respWriter.Close(nil)
+			firstElemSendErrCh <- respWriter.Write(testObject{
+				IntField: 42,
+				StrField: "str",
+			})
 
-// 			// now let's wait for client disconnect
-// 			<-setDisconnectOnWriteResponse
+			// now let's wait for client disconnect
+			<-setDisconnectOnWriteResponse
 
-// 			// this object must be successfully sent to bus but the router will fail to send in on next writeResponse() call
-// 			expectedErrCh <- respWriter.Write(testObject{
-// 				IntField: 43,
-// 				StrField: "str1",
-// 			})
+			expectedErrCh <- respWriter.Write(testObject{
+				IntField: 42,
+				StrField: "str0",
+			})
 
-// 			// this sending to bus must be failed because requestCtx stored in IResponseSender is closed
-// 			expectedErrCh <- respWriter.Write(testObject{
-// 				IntField: 44,
-// 				StrField: "str2",
-// 			})
-// 		}()
-// 	}, bus.SendTimeout(time.Hour)) // one hour timeout to eliminate case when client context closes longer than bus timoeut on client disconnect. It could take up to few seconds
-// 	defer tearDown(router)
+			// this object must be successfully sent to bus but the router will fail to send in on next writeResponse() call
+			expectedErrCh <- respWriter.Write(testObject{
+				IntField: 43,
+				StrField: "str1",
+			})
 
-// 	// client side
-// 	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/users/test1/apps/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
-// 	require.NoError(err)
+			// this sending to bus must be failed because requestCtx stored in IResponseSender is closed
+			expectedErrCh <- respWriter.Write(testObject{
+				IntField: 44,
+				StrField: "str2",
+			})
+		}()
+	}, bus.SendTimeout(time.Hour)) // one hour timeout to eliminate case when client context closes longer than bus timoeut on client disconnect. It could take up to few seconds
+	defer tearDown(router)
 
-// 	// ensure the first element is sent successfully
-// 	require.NoError(<-firstElemSendErrCh)
+	// client side
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/users/test1/apps/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
+	require.NoError(err)
 
-// 	// read out the first section
-// 	entireResp := []byte{}
-// 	for string(entireResp) != `{"results":[{"IntField":42,"StrField":"str"}` {
-// 		buf := make([]byte, 512)
-// 		n, err := resp.Body.Read(buf)
-// 		require.NoError(err)
-// 		entireResp = append(entireResp, buf[:n]...)
-// 		log.Println(string(entireResp))
-// 	}
+	// ensure the first element is sent successfully
+	require.NoError(<-firstElemSendErrCh)
 
-// 	// force client disconnect right before write to the socket on the next writeResponse() call
-// 	once := sync.Once{}
-// 	onBeforeWriteResponse = func(w http.ResponseWriter) {
-// 		once.Do(func() {
-// 			resp.Body.Close()
+	// read out the first section
+	entireResp := []byte{}
+	for string(entireResp) != `{"results":[{"IntField":42,"StrField":"str"}` {
+		buf := make([]byte, 512)
+		n, err := resp.Body.Read(buf)
+		require.NoError(err)
+		entireResp = append(entireResp, buf[:n]...)
+		log.Println(string(entireResp))
+	}
 
-// 			// wait for write to the socket will be failed indeed. It happens not at once
-// 			// that will guarantee context.Canceled error on next sending instead of possible ErrNoConsumer
-// 			for _, err := w.Write([]byte{0}); err == nil; _, err = w.Write([]byte{0}) {
-// 			}
-// 		})
-// 	}
+	// force client disconnect right before write to the socket on the next writeResponse() call
+	once := sync.Once{}
+	onBeforeWriteResponse = func(w http.ResponseWriter) {
+		once.Do(func() {
+			resp.Body.Close()
 
-// 	// signal to the handler it could try to send the next section
-// 	// that send will be successful from bus point of view (not disconnected yet)
-// 	// but will be failed in router (will be disconnected right on writeResponse)
-// 	close(setDisconnectOnWriteResponse)
+			// wait for write to the socket will be failed indeed. It happens not at once
+			// that will guarantee context.Canceled error on next sending instead of possible ErrNoConsumer
+			for _, err := w.Write([]byte{0}); err == nil; _, err = w.Write([]byte{0}) {
+			}
+		})
+	}
 
-// 	// first elem send after client disconnect should be successful, next one should fail
-// 	require.NoError(<-expectedErrCh)
+	// signal to the handler it could try to send the next section
+	// that send will be successful from bus point of view (not disconnected yet)
+	// but will be failed in router (will be disconnected right on writeResponse)
+	close(setDisconnectOnWriteResponse)
 
-// 	// next sending to the bus must be failed because the requestCtx is closed
-// 	require.ErrorIs(<-expectedErrCh, context.Canceled)
+	// first elem send after client disconnect should be successful, next one should fail
+	require.NoError(<-expectedErrCh)
+	require.NoError(<-expectedErrCh)
 
-// 	router.expectClientDisconnection(t)
+	// next sending to the bus must be failed because the requestCtx is closed
+	require.ErrorIs(<-expectedErrCh, context.Canceled)
 
-// 	// moved here to avoid data race on require.* failures
-// 	onBeforeWriteResponse = nil
-// }
+	router.expectClientDisconnection(t)
 
-// func TestAdminService(t *testing.T) {
-// 	require := require.New(t)
-// 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
-// 		go bus.ReplyPlainText(responder, "test resp AdminService")
-// 	}, bus.DefaultSendTimeout)
-// 	defer tearDown(router)
+	// moved here to avoid data race on require.* failures
+	onBeforeWriteResponse = nil
+}
 
-// 	t.Run("basic", func(t *testing.T) {
-// 		resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/c.somefunc_AdminService", router.adminPort(), testWSID), "application/json", http.NoBody)
-// 		require.NoError(err)
-// 		defer resp.Body.Close()
+func TestAdminService(t *testing.T) {
+	require := require.New(t)
+	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+		go bus.ReplyJSON(responder, http.StatusOK, "test resp AdminService")
+	}, bus.DefaultSendTimeout)
+	defer tearDown(router)
 
-// 		respBodyBytes, err := io.ReadAll(resp.Body)
-// 		require.NoError(err)
-// 		require.Equal("test resp AdminService", string(respBodyBytes))
-// 	})
+	t.Run("basic", func(t *testing.T) {
+		resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/c.somefunc_AdminService", router.adminPort(), testWSID), "application/json", http.NoBody)
+		require.NoError(err)
+		defer resp.Body.Close()
 
-// 	t.Run("unable to work from non-127.0.0.1", func(t *testing.T) {
-// 		nonLocalhostIP := ""
-// 		addrs, err := net.InterfaceAddrs()
-// 		require.NoError(err)
-// 		for _, address := range addrs {
-// 			if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-// 				if ipnet.IP.To4() != nil {
-// 					nonLocalhostIP = ipnet.IP.To4().String()
-// 					break
-// 				}
-// 			}
-// 		}
-// 		if len(nonLocalhostIP) == 0 {
-// 			t.Skip("unable to find local non-loopback ip address")
-// 		}
-// 		_, err = net.DialTimeout("tcp", fmt.Sprintf("%s:%d", nonLocalhostIP, router.adminPort()), 1*time.Second)
-// 		if !errors.Is(err, context.DeadlineExceeded) && !strings.Contains(err.Error(), "connection refused") &&
-// 			!strings.Contains(err.Error(), "i/o timeout") {
-// 			t.Fatal(err)
-// 		}
-// 		log.Println(err)
-// 	})
-// }
+		respBodyBytes, err := io.ReadAll(resp.Body)
+		require.NoError(err)
+		require.Equal("test resp AdminService", string(respBodyBytes))
+	})
+
+	t.Run("unable to work from non-127.0.0.1", func(t *testing.T) {
+		nonLocalhostIP := ""
+		addrs, err := net.InterfaceAddrs()
+		require.NoError(err)
+		for _, address := range addrs {
+			if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+				if ipnet.IP.To4() != nil {
+					nonLocalhostIP = ipnet.IP.To4().String()
+					break
+				}
+			}
+		}
+		if len(nonLocalhostIP) == 0 {
+			t.Skip("unable to find local non-loopback ip address")
+		}
+		_, err = net.DialTimeout("tcp", fmt.Sprintf("%s:%d", nonLocalhostIP, router.adminPort()), 1*time.Second)
+		if !errors.Is(err, context.DeadlineExceeded) && !strings.Contains(err.Error(), "connection refused") &&
+			!strings.Contains(err.Error(), "i/o timeout") {
+			t.Fatal(err)
+		}
+		log.Println(err)
+	})
+}
 
 type testRouter struct {
 	cancel               context.CancelFunc
