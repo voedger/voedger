@@ -10,17 +10,16 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/bus"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
 type SendToBusOperator struct {
 	pipeline.AsyncNOOP
-	sender    bus.IResponseSender
-	responder bus.IResponder
-	metrics   IMetrics
-	errCh     chan<- error
+	responseWriter bus.IResponseWriter
+	responder     bus.IResponder
+	metrics       IMetrics
+	errCh         chan<- error
 }
 
 func (o *SendToBusOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
@@ -28,10 +27,10 @@ func (o *SendToBusOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece)
 	defer func() {
 		o.metrics.Increase(Metric_ExecSendSeconds, time.Since(begin).Seconds())
 	}()
-	if o.sender == nil {
-		o.sender = o.responder.InitResponse(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK})
+	if o.responseWriter == nil {
+		o.responseWriter = o.responder.InitResponse(http.StatusOK)
 	}
-	return work, o.sender.Send(work.(rowsWorkpiece).OutputRow().Values())
+	return work, o.responseWriter.Write(work.(rowsWorkpiece).OutputRow().Values())
 }
 
 func (o *SendToBusOperator) OnError(_ context.Context, err error) {

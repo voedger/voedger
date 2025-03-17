@@ -27,7 +27,7 @@ func TestBasicUsage_SysError(t *testing.T) {
 		require.Empty(sysError.Data)
 		require.Empty(sysError.QName)
 		require.Equal("test", sysError.Error())
-		require.Equal(`{"sys.Error":{"HTTPStatus":500,"Message":"test"}}`, sysError.ToJSON())
+		require.Equal(`{"sys.Error":{"HTTPStatus":500,"Message":"test"}}`, sysError.ToJSON_APIV1())
 	})
 
 	t.Run("nil on nil", func(t *testing.T) {
@@ -52,7 +52,7 @@ func TestBasicUsage_SysError(t *testing.T) {
 			Message:    "test",
 			Data:       "data",
 		}
-		require.Equal(`{"sys.Error":{"HTTPStatus":200,"Message":"test","QName":"my.test","Data":"data"}}`, err.ToJSON())
+		require.Equal(`{"sys.Error":{"HTTPStatus":200,"Message":"test","QName":"my.test","Data":"data"}}`, err.ToJSON_APIV1())
 	})
 
 	t.Run("NewSysError", func(t *testing.T) {

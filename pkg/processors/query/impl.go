@@ -40,7 +40,7 @@ import (
 )
 
 func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state istructs.IState, params IQueryParams,
-	resultMeta appdef.IType, responder bus.IResponder, metrics IMetrics, errCh chan<- error) (rowsProcessor pipeline.IAsyncPipeline, iResponseSenderGetter func() bus.IResponseSender) {
+	resultMeta appdef.IType, responder bus.IResponder, metrics IMetrics, errCh chan<- error) (rowsProcessor pipeline.IAsyncPipeline, iResponseWriterGetter func() bus.IResponseWriter) {
 	operators := make([]*pipeline.WiredOperator, 0)
 	if resultMeta == nil {
 		// happens when the query has no result, e.g. q.air.UpdateSubscriptionDetails
@@ -90,8 +90,8 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 		errCh:     errCh,
 	}
 	operators = append(operators, pipeline.WireAsyncOperator("Send to bus", sendToBusOp))
-	return pipeline.NewAsyncPipeline(ctx, "Rows processor", operators[0], operators[1:]...), func() bus.IResponseSender {
-		return sendToBusOp.sender
+	return pipeline.NewAsyncPipeline(ctx, "Rows processor", operators[0], operators[1:]...), func() bus.IResponseWriter {
+		return sendToBusOp.responseWriter
 	}
 }
 
@@ -142,22 +142,18 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					default:
 					}
 					err = coreutils.WrapSysError(err, http.StatusInternalServerError)
-					var senderCloseable bus.IResponseSenderCloseable
+					var respWriter bus.IResponseWriter
 					statusCode := http.StatusOK
 					if err != nil {
 						statusCode = err.(coreutils.SysError).HTTPStatus // nolint:errorlint
 					}
-					if qwork.responseSenderGetter == nil || qwork.responseSenderGetter() == nil {
+					if qwork.responseWriterGetter == nil || qwork.responseWriterGetter() == nil {
 						// have an error before 200ok is sent -> send the status from the actual error
-						senderCloseable = msg.Responder().InitResponse(bus.ResponseMeta{
-							ContentType: coreutils.ApplicationJSON,
-							StatusCode:  statusCode,
-						})
+						respWriter = msg.Responder().InitResponse(statusCode)
 					} else {
-						sender := qwork.responseSenderGetter()
-						senderCloseable = sender.(bus.IResponseSenderCloseable)
+						respWriter = qwork.responseWriterGetter()
 					}
-					senderCloseable.Close(err)
+					respWriter.Close(err)
 				}()
 				metrics.IncreaseApp(Metric_QueriesSeconds, vvm, msg.AppQName(), time.Since(now).Seconds())
 			case <-ctx.Done():
@@ -428,7 +424,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			defer func() {
 				qw.metrics.Increase(Metric_BuildSeconds, time.Since(now).Seconds())
 			}()
-			qw.rowsProcessor, qw.responseSenderGetter = ProvideRowsProcessorFactory()(qw.msg.RequestCtx(), qw.appStructs.AppDef(),
+			qw.rowsProcessor, qw.responseWriterGetter = ProvideRowsProcessorFactory()(qw.msg.RequestCtx(), qw.appStructs.AppDef(),
 				qw.state, qw.queryParams, qw.resultType, qw.msg.Responder(), qw.metrics, qw.rowsProcessorErrCh)
 			return nil
 		}),
@@ -460,7 +456,7 @@ type queryWork struct {
 	iQuery               appdef.IQuery
 	wsDesc               istructs.IRecord
 	callbackFunc         istructs.ExecQueryCallback
-	responseSenderGetter func() bus.IResponseSender
+	responseWriterGetter func() bus.IResponseWriter
 }
 
 func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
