@@ -20,6 +20,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/net/netutil"
 
@@ -231,4 +232,10 @@ func checkHandler() http.HandlerFunc {
 			log.Println("failed to write 'ok' response:", err)
 		}
 	}
+}
+
+func initResponse(w http.ResponseWriter, contentType string, statusCode int) {
+	w.Header().Set(coreutils.ContentType, contentType)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(statusCode)
 }

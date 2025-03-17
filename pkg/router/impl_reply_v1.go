@@ -49,6 +49,12 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 				sendSuccess = writeResponse(w, typed)
 			case []byte:
 				sendSuccess = writeResponse(w, string(typed))
+			case coreutils.SysError:
+				if busRequest.IsAPIV2 {
+					sendSuccess = writeResponse(w, typed.ToJSON_APIV2())
+				} else {
+					sendSuccess = writeResponse(w, typed.ToJSON_APIV1())
+				}
 			default:
 				elemBytes, err := json.Marshal(data)
 				if err != nil {
@@ -65,11 +71,6 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 	sectionsCloser := ""
 	responseCloser := ""
 	isCmd := strings.HasPrefix(busRequest.Resource, "c.")
-	// if !isCmd {
-	// 	if sendSuccess = writeResponse(w, "{"); !sendSuccess {
-	// 		return
-	// 	}
-	// }
 	for elem := range responseCh {
 		// http client disconnected -> ErrNoConsumer on IMultiResponseSender.SendElement() -> QP will call Close()
 		if requestCtx.Err() != nil {
@@ -96,41 +97,6 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 			sendSuccess = writeResponse(w, elem.(string))
 			continue
 		}
-
-		// if isCmd {
-		// 	res := elem.(string)
-		// 	if contentType == coreutils.ApplicationJSON {
-		// 		res = strings.TrimPrefix(res, "{")
-		// 		res = strings.TrimSuffix(res, "}")
-		// 	}
-		// 	sendSuccess = writeResponse(w, res)
-		// } else if contentType == coreutils.TextPlain {
-		// 	switch typed := elem.(type) {
-		// 	case error:
-		// 		sendSuccess = writeResponse(w, typed.Error())
-		// 	default:
-		// 		sendSuccess = writeResponse(w, elem.(string))
-		// 	}
-		// } else if elemsCount == 0 {
-		// 	if !isSingle {
-		// 		sendSuccess = writeResponse(w, `"sections":[{"type":"","elements":[`)
-		// 		sectionsCloser = "]}]"
-		// 	}
-		// }
-
-		// if sendSuccess && elemsCount > 0 {
-		// 	sendSuccess = writeResponse(w, ",")
-		// }
-
-		// elemsCount++
-
-		// if !sendSuccess {
-		// 	return
-		// }
-
-		// if !busRequest.IsAPIV2 && (isCmd || contentType == coreutils.TextPlain) {
-		// 	continue
-		// }
 
 		elemBytes, err := json.Marshal(&elem)
 		if err != nil {

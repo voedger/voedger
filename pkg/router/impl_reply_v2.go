@@ -159,9 +159,3 @@ func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 		sendSuccess = writeResponse(w, "}")
 	}
 }
-
-func initResponse(w http.ResponseWriter, contentType string, statusCode int) {
-	w.Header().Set(coreutils.ContentType, contentType)
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.WriteHeader(statusCode)
-}
