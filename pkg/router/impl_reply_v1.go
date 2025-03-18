@@ -69,7 +69,7 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 	}
 	elemsCount := 0
 	sectionsCloser := ""
-	responseCloser := ""
+	responseCloser := "{}"
 	isCmd := strings.HasPrefix(busRequest.Resource, "c.")
 	for elem := range responseCh {
 		// http client disconnected -> ErrNoConsumer on IMultiResponseSender.SendElement() -> QP will call Close()
@@ -116,6 +116,8 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 	if *responseErr != nil {
 		if elemsCount > 0 {
 			sendSuccess = writeResponse(w, ",")
+		} else {
+			responseCloser = ""
 		}
 		if !sendSuccess {
 			return
