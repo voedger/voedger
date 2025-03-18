@@ -102,10 +102,14 @@ func (r *implIResponder) InitResponse(statusCode int) IResponseWriter {
 	return r.respWriter
 }
 
-func (r *implIResponder) Respond(statusCode int, obj any) error {
+func (r *implIResponder) Respond(responseMeta ResponseMeta, obj any) error {
 	r.checkStarted()
+	if responseMeta.mode != 0 {
+		panic("responseMeta.mode is set by someone else!")
+	}
+	responseMeta.mode = RespondMode_Single
 	select {
-	case r.responseMetaCh <- ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: statusCode, mode: RespondMode_Single}:
+	case r.responseMetaCh <- responseMeta:
 		// TODO: rework here: possible: http client disconnected, write to r.respWriter.ch successful, we're thinking that we're replied, but it is not, no socket to write to
 		r.respWriter.ch <- obj // buf size 1
 		close(r.respWriter.ch)

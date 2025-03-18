@@ -139,7 +139,7 @@ func TestBasicUsage_Respond(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 				go func() {
-					err := responder.Respond(http.StatusOK, c.obj)
+					err := responder.Respond(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK}, c.obj)
 					require.NoError(err)
 				}()
 			}, bus.DefaultSendTimeout)

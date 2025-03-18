@@ -226,7 +226,7 @@ func TestPanicOnBeginResponseAgain(t *testing.T) {
 			require.Panics(func() {
 				responder.InitResponse(http.StatusOK)
 			})
-			require.Panics(func() { responder.Respond(http.StatusOK, nil) })
+			require.Panics(func() { responder.Respond(ResponseMeta{}, nil) })
 			respWriter.Close(nil)
 		})
 
@@ -236,11 +236,11 @@ func TestPanicOnBeginResponseAgain(t *testing.T) {
 
 	t.Run("respond", func(t *testing.T) {
 		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
-			responder.Respond(http.StatusOK, nil)
+			responder.Respond(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK}, nil)
 			require.Panics(func() {
 				responder.InitResponse(http.StatusOK)
 			})
-			require.Panics(func() { responder.Respond(http.StatusOK, nil) })
+			require.Panics(func() { responder.Respond(ResponseMeta{}, nil) })
 		})
 
 		_, _, _, err := requestSender.SendRequest(context.Background(), Request{})
