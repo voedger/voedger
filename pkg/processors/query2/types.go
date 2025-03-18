@@ -306,7 +306,7 @@ type sender struct {
 func (s *sender) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
 	if s.isSingleResponse {
 		// FIXME: improve  this
-		return work, s.responder.Respond(http.StatusOK, work.(objectBackedByMap).data)
+		return work, s.responder.Respond(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK}, work.(objectBackedByMap).data)
 	}
 	if s.respWriter == nil {
 		s.respWriter = s.responder.InitResponse(http.StatusOK)
