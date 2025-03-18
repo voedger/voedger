@@ -104,6 +104,9 @@ func (r *implIResponder) InitResponse(statusCode int) IResponseWriter {
 
 func (r *implIResponder) Respond(responseMeta ResponseMeta, obj any) error {
 	r.checkStarted()
+	if responseMeta.mode != 0 {
+		panic("responseMeta.mode is set by someone else!")
+	}
 	responseMeta.mode = RespondMode_Single
 	select {
 	case r.responseMetaCh <- responseMeta:
