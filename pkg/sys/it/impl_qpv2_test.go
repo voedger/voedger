@@ -506,8 +506,14 @@ func TestQueryProcessor2_Docs(t *testing.T) {
 		require.JSONEq(`{"name":"Awesome food", "sys.ID":3.22685000131081e+14, "sys.IsActive":true, "sys.QName":"app1pkg.category"}`, resp.Body)
 	})
 
-	t.Run("not authorized", func(t *testing.T) {
+	t.Run("403 not authorized", func(t *testing.T) {
 		path := fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/docs/%s/%d`, ws.WSID, it.QNameApp1_CDocCategory, ids["1"])
 		vit.IFederation.Query(path, coreutils.Expect403())
 	})
+
+	t.Run("404 not found", func(t *testing.T) {
+		path := fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/docs/%s/%d`, ws.WSID, it.QNameApp1_CDocCategory, 123)
+		vit.IFederation.Query(path, coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect404())
+	})
+
 }
