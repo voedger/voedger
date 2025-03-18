@@ -59,7 +59,7 @@ func ReplyErrf(responder IResponder, status int, args ...interface{}) {
 //nolint:errorlint
 func ReplyErrDef(responder IResponder, err error, defaultStatusCode int) {
 	res := coreutils.WrapSysErrorToExact(err, defaultStatusCode)
-	if err := responder.Respond(res.HTTPStatus, res); err != nil {
+	if err := responder.Respond(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: res.HTTPStatus}, res); err != nil {
 		logger.Error(err)
 	}
 }
@@ -69,7 +69,7 @@ func ReplyErr(responder IResponder, err error) {
 }
 
 func ReplyJSON(responder IResponder, httpCode int, obj any) {
-	if err := responder.Respond(httpCode, obj); err != nil {
+	if err := responder.Respond(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: httpCode}, obj); err != nil {
 		logger.Error(err)
 	}
 }

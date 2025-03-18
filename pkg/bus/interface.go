@@ -26,8 +26,7 @@ type IResponder interface {
 	InitResponse(statusCode int) IResponseWriter
 
 	// panics if called >1 times or after InitResponse
-	// ContentType is ApplicationJSON
-	Respond(statusCode int, obj any) error
+	Respond(responseMeta ResponseMeta, obj any) error
 }
 
 type IResponseWriter interface {
