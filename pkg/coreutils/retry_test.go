@@ -76,7 +76,7 @@ func TestRetry(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		iTime := MockTime
 		retryDelay := time.Millisecond
-		retryCount := 5
+		retryCount := 0
 		var attempts int32 = 0
 		f := func() error {
 			atomic.AddInt32(&attempts, 1)

@@ -23,6 +23,7 @@ type mockStorage struct {
 	nextOffset               PLogOffset
 	writeValuesError         error
 	writeNextPLogOffsetError error
+	PLog                     [][]SeqValue
 }
 
 func newMockStorage() *mockStorage {
@@ -60,10 +61,7 @@ func (m *mockStorage) WriteValues(batch []SeqValue) error {
 			wsNums = make(map[SeqID]Number)
 			m.numbers[sv.Key.WSID] = wsNums
 		}
-		// Only update if new value is greater
-		if sv.Value > wsNums[sv.Key.SeqID] {
-			wsNums[sv.Key.SeqID] = sv.Value
-		}
+		wsNums[sv.Key.SeqID] = sv.Value
 	}
 
 	return nil
@@ -86,6 +84,12 @@ func (m *mockStorage) ReadNextPLogOffset() (PLogOffset, error) {
 }
 
 func (m *mockStorage) ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func([]SeqValue, PLogOffset) error) error {
+	for i := int(offset); i < len(m.PLog); i++ {
+		if err := batcher(m.PLog[i], PLogOffset(i)); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
