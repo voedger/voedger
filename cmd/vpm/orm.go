@@ -659,6 +659,10 @@ func getFieldType(field appdef.IField) string {
 	switch field.DataKind() {
 	case appdef.DataKind_bool:
 		return "bool"
+	case appdef.DataKind_int8:
+		return "int8"
+	case appdef.DataKind_int16:
+		return "int16"
 	case appdef.DataKind_int32:
 		return "int32"
 	case appdef.DataKind_int64:
