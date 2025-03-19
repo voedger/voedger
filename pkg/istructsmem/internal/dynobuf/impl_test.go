@@ -29,7 +29,9 @@ func TestDynoBufSchemes(t *testing.T) {
 
 		root := wsb.AddObject(appdef.NewQName("test", "root"))
 		root.
-			AddField("int32Field", appdef.DataKind_int32, true).
+			AddField("int8Field", appdef.DataKind_int8, true).    // #3434 [small integers]
+			AddField("int16Field", appdef.DataKind_int16, false). // #3434 [small integers]
+			AddField("int32Field", appdef.DataKind_int32, false).
 			AddField("int64Field", appdef.DataKind_int64, false).
 			AddField("float32Field", appdef.DataKind_float32, false).
 			AddField("float64Field", appdef.DataKind_float64, false).
@@ -42,7 +44,9 @@ func TestDynoBufSchemes(t *testing.T) {
 
 		child := wsb.AddObject(appdef.NewQName("test", "child"))
 		child.
-			AddField("int32Field", appdef.DataKind_int32, true).
+			AddField("int8Field", appdef.DataKind_int8, true).    // #3434 [small integers]
+			AddField("int16Field", appdef.DataKind_int16, false). // #3434 [small integers]
+			AddField("int32Field", appdef.DataKind_int32, false).
 			AddField("int64Field", appdef.DataKind_int64, false).
 			AddField("float32Field", appdef.DataKind_float32, false).
 			AddField("float64Field", appdef.DataKind_float64, false).
@@ -60,8 +64,12 @@ func TestDynoBufSchemes(t *testing.T) {
 
 		view := wsb.AddView(appdef.NewQName("test", "view"))
 		view.Key().PartKey().AddField("pk1", appdef.DataKind_int64)
-		view.Key().ClustCols().AddField("cc1", appdef.DataKind_string, constraints.MaxLen(100))
-		view.Value().AddRefField("val1", true)
+		view.Key().ClustCols().
+			AddField("cc1", appdef.DataKind_int8). // #3434 [small integers]
+			AddField("cc2", appdef.DataKind_string, constraints.MaxLen(100))
+		view.Value().
+			AddField("val1", appdef.DataKind_int16, true). // #3434 [small integers]
+			AddRefField("val2", false)
 
 		a, err := adb.Build()
 		require.NoError(err)
