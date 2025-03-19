@@ -19,12 +19,19 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
-func TestReply(t *testing.T) {
+func TestReplyError(t *testing.T) {
 	require := require.New(t)
 
 	type expected struct {
 		code  int
-		error string
+		error coreutils.SysError
+	}
+
+	testSysError := coreutils.SysError{
+		HTTPStatus: http.StatusAlreadyReported,
+		Message:    "test error",
+		Data:       "dddfd",
+		QName:      appdef.NewQName("my", "qname"),
 	}
 
 	t.Run("reply errors", func(t *testing.T) {
@@ -39,7 +46,7 @@ func TestReply(t *testing.T) {
 				f:    func(responder IResponder) { ReplyErr(responder, err) },
 				expected: expected{
 					code:  http.StatusInternalServerError,
-					error: `{"sys.Error":{"HTTPStatus":500,"Message":"test error"}}`,
+					error: coreutils.SysError{HTTPStatus: http.StatusInternalServerError, Message: err.Error()},
 				},
 			},
 			{
@@ -47,7 +54,7 @@ func TestReply(t *testing.T) {
 				f:    func(responder IResponder) { ReplyErrf(responder, http.StatusAccepted, "test ", "message") },
 				expected: expected{
 					code:  http.StatusAccepted,
-					error: `{"sys.Error":{"HTTPStatus":202,"Message":"test message"}}`,
+					error: coreutils.SysError{HTTPStatus: http.StatusAccepted, Message: "test message"},
 				},
 			},
 			{
@@ -55,23 +62,17 @@ func TestReply(t *testing.T) {
 				f:    func(responder IResponder) { ReplyErrDef(responder, err, http.StatusAccepted) },
 				expected: expected{
 					code:  http.StatusAccepted,
-					error: `{"sys.Error":{"HTTPStatus":202,"Message":"test error"}}`,
+					error: coreutils.SysError{HTTPStatus: http.StatusAccepted, Message: err.Error()},
 				},
 			},
 			{
 				desc: "SysError",
 				f: func(responder IResponder) {
-					err := coreutils.SysError{
-						HTTPStatus: http.StatusAlreadyReported,
-						Message:    "test error",
-						Data:       "dddfd",
-						QName:      appdef.NewQName("my", "qname"),
-					}
-					ReplyErrDef(responder, err, http.StatusAccepted)
+					ReplyErrDef(responder, testSysError, http.StatusAccepted)
 				},
 				expected: expected{
 					code:  http.StatusAlreadyReported,
-					error: `{"sys.Error":{"HTTPStatus":208,"Message":"test error","QName":"my.qname","Data":"dddfd"}}`,
+					error: testSysError,
 				},
 			},
 			{
@@ -81,7 +82,7 @@ func TestReply(t *testing.T) {
 				},
 				expected: expected{
 					code:  http.StatusInternalServerError,
-					error: `{"sys.Error":{"HTTPStatus":500,"Message":"test: test error"}}`,
+					error: coreutils.SysError{HTTPStatus: http.StatusInternalServerError, Message: "test: test error"},
 				},
 			},
 		}
@@ -95,7 +96,7 @@ func TestReply(t *testing.T) {
 				require.NoError(err)
 				require.Equal(coreutils.ApplicationJSON, cmdRespMeta.ContentType)
 				require.Equal(c.expected.code, cmdRespMeta.StatusCode)
-				require.Equal(c.expected.error, cmdResp.SysError.ToJSON())
+				require.Equal(c.expected.error, cmdResp.SysError)
 			})
 		}
 
@@ -118,7 +119,7 @@ func TestReply(t *testing.T) {
 			name = name[strings.LastIndex(name, ".")+1:]
 			t.Run(name, func(t *testing.T) {
 				requestSender := NewIRequestSender(coreutils.MockTime, GetTestSendTimeout(), func(requestCtx context.Context, request Request, responder IResponder) {
-					c.f(responder, "test message")
+					go c.f(responder, "test message")
 				})
 				expectedMessage := "test message"
 				if len(c.expectedMessage) > 0 {
@@ -131,6 +132,27 @@ func TestReply(t *testing.T) {
 				require.Equal(expectedMessage, resp.SysError.Message)
 			})
 		}
+	})
 
+	t.Run("reply json", func(t *testing.T) {
+		testObj := struct {
+			Fld1 int
+			Fld2 string
+		}{Fld1: 42, Fld2: "str"}
+		requestSender := NewIRequestSender(coreutils.MockTime, GetTestSendTimeout(), func(requestCtx context.Context, request Request, responder IResponder) {
+			ReplyJSON(responder, http.StatusOK, testObj)
+		})
+		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(context.Background(), Request{})
+		require.NoError(err)
+		counter := 0
+		for elem := range responseCh {
+			require.Zero(counter)
+			require.Equal(http.StatusOK, responseMeta.StatusCode)
+			require.Equal(coreutils.ApplicationJSON, responseMeta.ContentType)
+			require.Equal(testObj, elem)
+			counter++
+		}
+		require.Equal(1, counter)
+		require.NoError(*responseErr)
 	})
 }

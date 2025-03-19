@@ -153,13 +153,15 @@ func TestBasicUsage(t *testing.T) {
 		}
 		respCh, respMeta, respErr, err := app.requestSender.SendRequest(app.ctx, request)
 		require.NoError(err)
-		for range respCh {
-			t.Fail()
+		counter := 0
+		for elem := range respCh {
+			require.Zero(counter)
+			require.Equal(http.StatusInternalServerError, respMeta.StatusCode)
+			require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
+			require.Equal(coreutils.SysError{HTTPStatus: http.StatusInternalServerError, Message: "fire error"}, elem) // nolint:errorlint
+			counter++
 		}
-		require.Equal(http.StatusInternalServerError, respMeta.StatusCode)
-		require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
-		require.Equal(`{"sys.Error":{"HTTPStatus":500,"Message":"fire error"}}`, (*respErr).(coreutils.SysError).ToJSON()) // nolint:errorlint
-		log.Println((*respErr).Error())
+		require.NoError(*respErr)
 	})
 }
 
@@ -181,7 +183,12 @@ func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int)
 	respDataStr := ""
 	for elem := range respCh {
 		require.Empty(respDataStr)
-		respDataStr = elem.(string)
+		switch typed := elem.(type) {
+		case string:
+			respDataStr = typed
+		case coreutils.SysError:
+			respDataStr = typed.ToJSON_APIV1()
+		}
 	}
 	if len(expectedCode) == 0 {
 		require.Equal(http.StatusOK, respMeta.StatusCode)
@@ -193,12 +200,7 @@ func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int)
 	if len(respDataStr) > 0 {
 		require.NoError(json.Unmarshal([]byte(respDataStr), &respData))
 	}
-	if *respErr != nil {
-		var sysErr coreutils.SysError
-		errors.As(*respErr, &sysErr)
-		sysErrorJSON := sysErr.ToJSON()
-		require.NoError(json.Unmarshal([]byte(sysErrorJSON), &respData))
-	}
+	require.NoError(*respErr)
 	return respData
 }
 

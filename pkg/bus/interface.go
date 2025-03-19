@@ -5,7 +5,9 @@
 
 package bus
 
-import "context"
+import (
+	"context"
+)
 
 type IRequestSender interface {
 	// err != nil -> responseMeta does not matter, responseCh and responseErr must not be touched
@@ -19,16 +21,15 @@ type IRequestSender interface {
 type RequestHandler func(requestCtx context.Context, request Request, responder IResponder)
 
 type IResponder interface {
-	// panics if called >1 times
-	InitResponse(ResponseMeta) IResponseSenderCloseable
+	// panics if called >1 times or after Respond
+	// ContentType is ApplicationJSON
+	InitResponse(statusCode int) IResponseWriter
+
+	// panics if called >1 times or after InitResponse
+	Respond(responseMeta ResponseMeta, obj any) error
 }
 
-type IResponseSenderCloseable interface {
-	IResponseSender
-	Close(error)
-}
-
-type IResponseSender interface {
-	// ErrNoConsumer
-	Send(any) error
+type IResponseWriter interface {
+	Write(obj any) error
+	Close(err error)
 }

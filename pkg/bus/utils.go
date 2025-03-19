@@ -28,7 +28,18 @@ func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req R
 			// notest
 			panic(fmt.Sprintf("unexpected response element: %v", elem))
 		}
-		body = elem.(string)
+		switch typed := elem.(type) {
+		case string:
+			body = typed
+		case interface{ ToJSON() string }:
+			body = typed.ToJSON()
+		case coreutils.SysError:
+			if req.IsAPIV2 {
+				body = typed.ToJSON_APIV2()
+			} else {
+				body = typed.ToJSON_APIV1()
+			}
+		}
 	}
 	if *responseErr != nil {
 		cmdResp.SysError = coreutils.WrapSysErrorToExact(*responseErr, http.StatusInternalServerError)
@@ -41,23 +52,16 @@ func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req R
 	return responseMeta, cmdResp, nil
 }
 
-func ReplyPlainText(responder IResponder, text string) {
-	sender := responder.InitResponse(ResponseMeta{ContentType: coreutils.TextPlain, StatusCode: http.StatusOK})
-	if err := sender.Send(text); err != nil {
-		logger.Error(err.Error() + ": failed to send response: " + text)
-	}
-	sender.Close(nil)
-}
-
 func ReplyErrf(responder IResponder, status int, args ...interface{}) {
 	ReplyErrDef(responder, coreutils.NewHTTPErrorf(status, args...), http.StatusInternalServerError)
 }
 
 //nolint:errorlint
 func ReplyErrDef(responder IResponder, err error, defaultStatusCode int) {
-	res := coreutils.WrapSysError(err, defaultStatusCode).(coreutils.SysError)
-	sender := responder.InitResponse(ResponseMeta{coreutils.ApplicationJSON, res.HTTPStatus})
-	sender.Close(res)
+	res := coreutils.WrapSysErrorToExact(err, defaultStatusCode)
+	if err := responder.Respond(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: res.HTTPStatus}, res); err != nil {
+		logger.Error(err)
+	}
 }
 
 func ReplyErr(responder IResponder, err error) {
@@ -65,9 +69,9 @@ func ReplyErr(responder IResponder, err error) {
 }
 
 func ReplyJSON(responder IResponder, httpCode int, obj any) {
-	sender := responder.InitResponse(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: httpCode})
-	_ = sender.Send(obj)
-	sender.Close(nil)
+	if err := responder.Respond(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: httpCode}, obj); err != nil {
+		logger.Error(err)
+	}
 }
 
 func ReplyBadRequest(responder IResponder, message string) {
