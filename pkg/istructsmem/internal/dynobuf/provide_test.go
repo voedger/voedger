@@ -28,12 +28,12 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
 			wsb.AddODoc(docName).
-				AddField("f1", appdef.DataKind_int8, true).   // #3434 [small integers: int8]
-				AddField("f2", appdef.DataKind_int16, false). // #3434 [small integers: int16]
-				AddField("f3", appdef.DataKind_int32, false).
-				AddField("f4", appdef.DataKind_QName, false).
-				AddField("f5", appdef.DataKind_string, false).
-				AddField("f6", appdef.DataKind_bytes, false)
+				AddField("f_int8", appdef.DataKind_int8, true).    // #3434 [small integers: int8]
+				AddField("f_int16", appdef.DataKind_int16, false). // #3434 [small integers: int16]
+				AddField("f_int32", appdef.DataKind_int32, false).
+				AddField("f_QName", appdef.DataKind_QName, false).
+				AddField("f_String", appdef.DataKind_string, false).
+				AddField("f_Bytes", appdef.DataKind_bytes, false)
 
 			v := wsb.AddView(viewName)
 			v.Key().PartKey().AddField("pkF1", appdef.DataKind_int32)
@@ -56,25 +56,25 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 			require.Len(scheme.Fields, 6)
 
 			// #3434 [small integers: int8]
-			require.Equal("f1", scheme.Fields[0].Name)
+			require.Equal("f_int8", scheme.Fields[0].Name)
 			require.Equal(dynobuffers.FieldTypeByte, scheme.Fields[0].Ft)
 
 			// #3434 [small integers: int16]
-			require.Equal("f2", scheme.Fields[1].Name)
+			require.Equal("f_int16", scheme.Fields[1].Name)
 			require.Equal(dynobuffers.FieldTypeByte, scheme.Fields[1].Ft)
 			require.True(scheme.Fields[1].IsArray)
 
-			require.Equal("f3", scheme.Fields[2].Name)
+			require.Equal("f_int32", scheme.Fields[2].Name)
 			require.Equal(dynobuffers.FieldTypeInt32, scheme.Fields[2].Ft)
 
-			require.Equal("f4", scheme.Fields[3].Name)
+			require.Equal("f_QName", scheme.Fields[3].Name)
 			require.Equal(dynobuffers.FieldTypeByte, scheme.Fields[3].Ft)
 			require.True(scheme.Fields[1].IsArray)
 
-			require.Equal("f5", scheme.Fields[4].Name)
+			require.Equal("f_String", scheme.Fields[4].Name)
 			require.Equal(dynobuffers.FieldTypeString, scheme.Fields[4].Ft)
 
-			require.Equal("f6", scheme.Fields[5].Name)
+			require.Equal("f_Bytes", scheme.Fields[5].Name)
 			require.Equal(dynobuffers.FieldTypeByte, scheme.Fields[5].Ft)
 			require.True(scheme.Fields[5].IsArray)
 		})

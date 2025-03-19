@@ -29,8 +29,8 @@ func TestDynoBufSchemes(t *testing.T) {
 
 		root := wsb.AddObject(appdef.NewQName("test", "root"))
 		root.
-			AddField("int8Field", appdef.DataKind_int8, true).    // #3434 [small integers]
-			AddField("int16Field", appdef.DataKind_int16, false). // #3434 [small integers]
+			AddField("int8Field", appdef.DataKind_int8, true).    // #3434 [small integers: int8]
+			AddField("int16Field", appdef.DataKind_int16, false). // #3434 [small integers: int16]
 			AddField("int32Field", appdef.DataKind_int32, false).
 			AddField("int64Field", appdef.DataKind_int64, false).
 			AddField("float32Field", appdef.DataKind_float32, false).
