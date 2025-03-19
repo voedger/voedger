@@ -18,13 +18,6 @@ var (
 	retryCount = defaultRetryCount
 )
 
-// checkCleanupState panics if cleanup is in progress
-func (s *sequencer) checkCleanupState() {
-	if s.cleanupCtx.Err() != nil {
-		panic("sequencer is in cleanup state")
-	}
-}
-
 // Start starts Sequencing Transaction for the given WSID.
 // Marks Sequencing Transaction as in progress.
 // Panics if Sequencing Transaction is already started.
@@ -35,7 +28,10 @@ func (s *sequencer) checkCleanupState() {
 // If ok is true, the caller must call Flush() or Actualize() to complete the Sequencing Transaction.
 func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok bool) {
 	// Check if cleanup is in progress
-	s.checkCleanupState()
+	if s.cleanupCtx.Err() != nil {
+		// notest
+		panic("sequencer is in cleanup state")
+	}
 
 	// Check if Actualization is in progress
 	if s.actualizerInProgress.Load() {
@@ -44,11 +40,13 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 
 	// Panics if Sequencing Transaction is already started.
 	if s.currentWSID != 0 || s.currentWSKind != 0 {
+		// notest
 		panic("event processing is already started")
 	}
 
 	// Verify wsKind exists in supported types
 	if _, exists := s.params.SeqTypes[wsKind]; !exists {
+		// notest
 		panic("unknown wsKind")
 	}
 
@@ -70,10 +68,15 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 		return err
 	})
 	if err != nil {
+		// notest
 		panic("failed to read last PLog offset: " + err.Error())
 	}
 
 	// Marks Sequencing Transaction as in progress.
+	if !s.transactionIsInProgress.CompareAndSwap(false, true) {
+		// notest
+		panic("unexpected transaction in progress")
+	}
 	s.currentWSID = wsID
 	s.currentWSKind = wsKind
 	s.nextOffset = nextOffset
@@ -83,6 +86,7 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 
 func (s *sequencer) startFlusher() {
 	if !s.flusherInProgress.CompareAndSwap(false, true) {
+		// notest
 		panic("flusher already started")
 	}
 
@@ -108,10 +112,6 @@ func (s *sequencer) startActualizer() {
 }
 
 func (s *sequencer) stopFlusher() {
-	if s.flusherCtxCancel == nil {
-		return
-	}
-
 	if s.flusherWG != nil {
 		s.flusherCtxCancel()
 		s.flusherWG.Wait()
@@ -197,11 +197,13 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	// Get initialValue from s.params.SeqTypes and ensure that SeqID is known
 	seqTypes, exists := s.params.SeqTypes[s.currentWSKind]
 	if !exists {
+		// notest
 		panic("unknown wsKind")
 	}
 
 	initialValue, ok := seqTypes[seqID]
 	if !ok {
+		// notest
 		panic("unknown seqID")
 	}
 
@@ -291,7 +293,7 @@ func (s *sequencer) Flush() {
 	s.inprocMu.RLock()
 	if len(s.inproc) == 0 {
 		s.inprocMu.RUnlock()
-		s.finishEventState()
+		s.finishSequencingTransaction()
 
 		return
 	}
@@ -324,12 +326,15 @@ func (s *sequencer) Flush() {
 	}
 
 	// Finish Sequencing Transaction
-	s.finishEventState()
+	s.finishSequencingTransaction()
 }
 
-// finishEventState finishes the Sequencing Transaction.
 // Cleans s.lru, s.nextOffset, s.currentWSID, s.currentWSKind, s.toBeFlushed, s.inproc, s.toBeFlushedOffset
-func (s *sequencer) finishEventState() {
+func (s *sequencer) finishSequencingTransaction() {
+	if !s.transactionIsInProgress.CompareAndSwap(true, false) {
+		// notest
+		panic("unexpected transaction in progress")
+	}
 	s.toBeFlushedOffset = 0
 	s.nextOffset = 0
 	s.currentWSID = 0
@@ -518,21 +523,27 @@ func (s *sequencer) Actualize() {
 	// Validate Sequencing Transaction status (s.currentWSID != 0)
 	s.checkEventState()
 
-	// Clean s.lru, s.nextOffset, s.currentWSID, s.currentWSKind, s.toBeFlushed, s.inproc, s.toBeFlushedOffset
+	// Clean s.inproc
 	s.inprocMu.Lock()
 	if len(s.inproc) > 0 {
 		s.inproc = make(map[NumberKey]Number)
 	}
 	s.inprocMu.Unlock()
 
+	// Cleans s.toBeFlushed
 	s.toBeFlushedMu.Lock()
 	if len(s.toBeFlushed) > 0 {
 		s.toBeFlushed = make(map[NumberKey]Number)
 	}
 	s.toBeFlushedMu.Unlock()
 
+	// Cleans s.toBeFlushedOffset
 	s.toBeFlushedOffset = 0
+	// Cleans s.lru
 	s.lru.Purge()
+
+	// Cleans s.currentWSID, s.currentWSKind
+	s.finishSequencingTransaction()
 
 	// Start the actualizer() goroutine
 	s.startActualizer()
@@ -550,4 +561,6 @@ func (s *sequencer) cleanup() {
 		s.flusherCtxCancel()
 		s.flusherWG.Wait()
 	}
+
+	s.cleanupCtxCancel()
 }

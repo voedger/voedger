@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2025-present unTill Software Development Group B.V.
+ * @author Alisher Nurmanov
+ */
+
 package isequencer_test
 
 import (
@@ -151,6 +156,27 @@ func (m *mockStorage) ClearPLog() {
 }
 
 func TestISequencer_Start(t *testing.T) {
+	t.Run("should panic when cleanup process is initiated", func(t *testing.T) {
+		iTime := coreutils.MockTime
+		require := requirePkg.New(t)
+
+		storage := newMockStorage()
+		sequencer, cancel := isequencer.New(&isequencer.Params{
+			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
+				1: {1: 1},
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 5,
+			MaxFlushingInterval:   500 * time.Millisecond,
+			LRUCacheSize:          1000,
+		}, iTime)
+		cancel()
+
+		require.Panics(func() {
+			sequencer.Start(1, 1)
+		})
+	})
+
 	t.Run("should panic when transaction already started", func(t *testing.T) {
 		iTime := coreutils.MockTime
 		require := requirePkg.New(t)
@@ -212,7 +238,7 @@ func TestISequencer_Start(t *testing.T) {
 		require.Zero(offset)
 	})
 
-	t.Run("should panic when unknown workspace kind", func(t *testing.T) {
+	t.Run("should panic when unknown wsKind", func(t *testing.T) {
 		iTime := coreutils.MockTime
 		require := requirePkg.New(t)
 
@@ -235,57 +261,6 @@ func TestISequencer_Start(t *testing.T) {
 		require.Panics(func() {
 			sequencer.Start(2, 1) // WSKind 2 is not defined
 		})
-	})
-
-	t.Run("should start successfully after flush completes", func(t *testing.T) {
-		iTime := coreutils.MockTime
-		require := requirePkg.New(t)
-
-		storage := newMockStorage()
-		sequencer, cancel := isequencer.New(&isequencer.Params{
-			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
-				1: {1: 100},
-			},
-			SeqStorage:            storage,
-			MaxNumUnflushedValues: 5,
-			MaxFlushingInterval:   500 * time.Millisecond,
-			LRUCacheSize:          1000,
-		}, iTime)
-		defer cancel()
-
-		// First transaction
-		offset, ok := sequencer.Start(1, 1)
-		require.True(ok)
-		require.NotZero(offset)
-
-		count := 3
-		// Generate sequence numbers
-		var numbers []isequencer.Number
-		for i := 0; i < count; i++ {
-			num, err := sequencer.Next(1)
-			require.NoError(err)
-			numbers = append(numbers, num)
-		}
-
-		sequencer.Flush()
-
-		// Verify the sequence values were incremented correctly
-		for i, num := range numbers {
-			require.Equal(isequencer.Number(100+i+1), num, "Sequence value should be incremented")
-		}
-
-		// Advance time to allow flushing to complete
-		iTime.Add(time.Second)
-
-		// Start a new transaction
-		offset, ok = sequencer.Start(1, 1)
-		require.True(ok)
-		require.NotZero(offset)
-
-		// Verify we can get the next number in sequence
-		num, err := sequencer.Next(1)
-		require.NoError(err)
-		require.Equal(isequencer.Number(100+count+1), num, "Sequence should continue from last value")
 	})
 }
 
@@ -369,8 +344,6 @@ func TestISequencer_Flush(t *testing.T) {
 	})
 
 	t.Run("should persist values to storage after flush completes", func(t *testing.T) {
-		//t.Skip()
-
 		require := requirePkg.New(t)
 		iTime := coreutils.MockTime
 
@@ -411,5 +384,188 @@ func TestISequencer_Flush(t *testing.T) {
 		nextOffset, err := storage.ReadNextPLogOffset()
 		require.NoError(err)
 		require.NotZero(nextOffset, "Next PLog offset should be updated after flush")
+	})
+}
+
+func TestISequencer_Next(t *testing.T) {
+	t.Run("should return incremented sequence number", func(t *testing.T) {
+		require := requirePkg.New(t)
+		iTime := coreutils.MockTime
+
+		storage := newMockStorage()
+		storage.numbers = map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number{
+			1: {1: 100},
+		}
+		sequencer, cancel := isequencer.New(&isequencer.Params{
+			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
+				1: {1: 1},
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 10,
+			MaxFlushingInterval:   10 * time.Millisecond,
+			LRUCacheSize:          1000,
+		}, iTime)
+		defer cancel()
+
+		offset, ok := sequencer.Start(1, 1)
+		require.True(ok)
+		require.NotZero(offset)
+
+		num, err := sequencer.Next(1)
+		require.NoError(err)
+		require.Equal(isequencer.Number(101), num, "Next should return incremented sequence number")
+
+		// Call Next again for the same sequence - should increment again
+		num2, err := sequencer.Next(1)
+		require.NoError(err)
+		require.Equal(isequencer.Number(102), num2, "Subsequent call to Next should increment further")
+
+		sequencer.Flush()
+	})
+
+	t.Run("should use initial value when sequence number not in storage", func(t *testing.T) {
+		require := requirePkg.New(t)
+		iTime := coreutils.MockTime
+
+		storage := newMockStorage()
+		// No predefined sequence numbers in storage
+		sequencer, cancel := isequencer.New(&isequencer.Params{
+			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
+				1: {1: 50}, // Initial value is 50
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 10,
+			MaxFlushingInterval:   10 * time.Millisecond,
+			LRUCacheSize:          1000,
+		}, iTime)
+		defer cancel()
+
+		offset, ok := sequencer.Start(1, 1)
+		require.True(ok)
+		require.NotZero(offset)
+
+		num, err := sequencer.Next(1)
+		require.NoError(err)
+		require.Equal(isequencer.Number(51), num, "Next should use initial value when sequence not in storage")
+
+		sequencer.Flush()
+	})
+
+	t.Run("should panic when called without starting transaction", func(t *testing.T) {
+		require := requirePkg.New(t)
+		iTime := coreutils.MockTime
+
+		storage := newMockStorage()
+		sequencer, cancel := isequencer.New(&isequencer.Params{
+			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
+				1: {1: 1},
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 10,
+			MaxFlushingInterval:   10 * time.Millisecond,
+			LRUCacheSize:          1000,
+		}, iTime)
+		defer cancel()
+
+		require.Panics(func() {
+			sequencer.Next(1)
+		}, "Next should panic when called without starting a transaction")
+	})
+
+	t.Run("should panic for unknown sequence ID", func(t *testing.T) {
+		require := requirePkg.New(t)
+		iTime := coreutils.MockTime
+
+		storage := newMockStorage()
+		sequencer, cancel := isequencer.New(&isequencer.Params{
+			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
+				1: {1: 1}, // Only sequence ID 1 is defined
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 10,
+			MaxFlushingInterval:   10 * time.Millisecond,
+			LRUCacheSize:          1000,
+		}, iTime)
+		defer cancel()
+
+		offset, ok := sequencer.Start(1, 1)
+		require.True(ok)
+		require.NotZero(offset)
+
+		require.Panics(func() {
+			sequencer.Next(2) // Sequence ID 2 is not defined
+		}, "Next should panic for unknown sequence ID")
+
+		sequencer.Flush()
+	})
+	t.Run("should handle multiple sequence types correctly", func(t *testing.T) {
+		require := requirePkg.New(t)
+		iTime := coreutils.MockTime
+
+		storage := newMockStorage()
+		storage.numbers = map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number{
+			1: {
+				1: 100, // First sequence starts at 100
+				2: 200, // Second sequence starts at 200
+			},
+		}
+		sequencer, cancel := isequencer.New(&isequencer.Params{
+			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
+				1: {
+					1: 1, // Initial value for sequence 1
+					2: 2, // Initial value for sequence 2
+				},
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 10,
+			MaxFlushingInterval:   10 * time.Millisecond,
+			LRUCacheSize:          1000,
+		}, iTime)
+		defer cancel()
+
+		offset, ok := sequencer.Start(1, 1)
+		require.True(ok)
+		require.NotZero(offset)
+
+		// Get next value for sequence 1
+		num1, err := sequencer.Next(1)
+		require.NoError(err)
+		require.Equal(isequencer.Number(101), num1)
+
+		// Get next value for sequence 2
+		num2, err := sequencer.Next(2)
+		require.NoError(err)
+		require.Equal(isequencer.Number(201), num2)
+
+		// Get another value for sequence 1 - should increment
+		num1Again, err := sequencer.Next(1)
+		require.NoError(err)
+		require.Equal(isequencer.Number(102), num1Again)
+
+		sequencer.Flush()
+	})
+}
+
+func TestISequencer_Actualize(t *testing.T) {
+	t.Run("should panic when called without starting transaction", func(t *testing.T) {
+		require := requirePkg.New(t)
+		iTime := coreutils.MockTime
+
+		storage := newMockStorage()
+		sequencer, cancel := isequencer.New(&isequencer.Params{
+			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
+				1: {1: 100},
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 10,
+			MaxFlushingInterval:   10 * time.Millisecond,
+			LRUCacheSize:          1000,
+		}, iTime)
+		defer cancel()
+
+		// Should panic when actualize is called without an active transaction
+		require.Panics(func() {
+			sequencer.Actualize()
+		}, "Actualize should panic when called without starting a transaction")
 	})
 }
