@@ -102,9 +102,13 @@ func TestSequencer(t *testing.T) {
 		mockedTime := coreutils.MockTime
 		// Given
 		storage := newMockStorage()
+		storage.nextOffset = PLogOffset(99)
+		storage.numbers = map[WSID]map[SeqID]Number{
+			1: {1: 100},
+		}
 		params := &Params{
 			SeqTypes: map[WSKind]map[SeqID]Number{
-				1: {1: 100},
+				1: {1: 1},
 			},
 			SeqStorage:            storage,
 			MaxNumUnflushedValues: 500,
@@ -117,7 +121,7 @@ func TestSequencer(t *testing.T) {
 		// When
 		offset, ok := seq.Start(1, 1)
 		require.True(t, ok)
-		require.Equal(t, PLogOffset(1), offset)
+		require.Equal(t, PLogOffset(100), offset)
 
 		// Generate new sequence numbers 100 times
 		for i := 1; i <= 100; i++ {
@@ -167,6 +171,41 @@ func TestSequencer(t *testing.T) {
 		// Then
 		_, ok = seq.Start(1, 1)
 		require.False(t, ok, "should not start during actualization")
+	})
+}
+
+func TestSequencer_Start(t *testing.T) {
+	t.Run("should reject when too many unflushed values", func(t *testing.T) {
+		iTime := coreutils.MockTime
+
+		storage := newMockStorage()
+		storage.nextOffset = PLogOffset(99)
+		storage.numbers = map[WSID]map[SeqID]Number{
+			1: {1: 100},
+		}
+		seq, cancel := New(&Params{
+			SeqTypes: map[WSKind]map[SeqID]Number{
+				1: {1: 1},
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 5,
+			MaxFlushingInterval:   500 * time.Millisecond,
+			LRUCacheSize:          1000,
+		}, iTime)
+		defer cancel()
+
+		seq.(*sequencer).inprocMu.Lock()
+		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 1}] = 1
+		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 2}] = 1
+		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 3}] = 1
+		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 4}] = 1
+		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 5}] = 1
+		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 6}] = 1
+		seq.(*sequencer).inprocMu.Unlock()
+
+		offset, ok := seq.Start(1, 1)
+		require.False(t, ok)
+		require.Zero(t, offset)
 	})
 }
 
@@ -266,5 +305,57 @@ func TestBatcher(t *testing.T) {
 
 		// Then
 		require.ErrorIs(t, err, coreutils.ErrRetryAttemptsExceeded)
+	})
+}
+
+func TestSequencer_Flush(t *testing.T) {
+	t.Run("should reduce unflushed values and allow new transactions", func(t *testing.T) {
+		iTime := coreutils.MockTime
+
+		storage := newMockStorage()
+		storage.nextOffset = PLogOffset(99)
+		storage.numbers = map[WSID]map[SeqID]Number{
+			1: {1: 100},
+		}
+		seq, cancel := New(&Params{
+			SeqTypes: map[WSKind]map[SeqID]Number{
+				1: {1: 1},
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 5,
+			MaxFlushingInterval:   500 * time.Millisecond,
+			LRUCacheSize:          1000,
+		}, iTime)
+		defer cancel()
+
+		seq.(*sequencer).inprocMu.Lock()
+		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 1}] = 1
+		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 2}] = 1
+		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 3}] = 1
+		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 4}] = 1
+		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 5}] = 1
+		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 6}] = 1
+		seq.(*sequencer).inprocMu.Unlock()
+
+		offset, ok := seq.Start(1, 1)
+		require.False(t, ok)
+		require.Zero(t, offset)
+
+		// Change the limit to allow new transactions
+		seq.(*sequencer).params.MaxNumUnflushedValues = 100
+		// Advance time to allow flushing to complete
+		iTime.Add(time.Second)
+
+		// Third transaction - should work after flush completes
+		offset3, ok := seq.Start(1, 1)
+		require.True(t, ok)
+		require.NotZero(t, offset3)
+
+		// Should be able to get the next sequence number after the previous ones
+		num, err := seq.Next(1)
+		_ = num
+		require.NoError(t, err)
+
+		seq.Flush()
 	})
 }

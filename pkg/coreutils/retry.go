@@ -8,6 +8,8 @@ package coreutils
 import (
 	"context"
 	"time"
+
+	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 // FIXME: Cover with tests
@@ -28,6 +30,8 @@ func Retry(ctx context.Context, iTime ITime, retryDelay time.Duration, retryCoun
 		if err = f(); err == nil {
 			return nil
 		}
+
+		logger.Verbose(err)
 
 		select {
 		case <-ctx.Done():

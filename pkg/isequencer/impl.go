@@ -9,8 +9,6 @@ import (
 	"context"
 	"sync"
 
-	lruPkg "github.com/hashicorp/golang-lru/v2"
-
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
@@ -19,36 +17,6 @@ var (
 	retryDelay = defaultRetryDelay
 	retryCount = defaultRetryCount
 )
-
-// New creates a new sequencer
-func New(params *Params, iTime coreutils.ITime) (ISequencer, context.CancelFunc) {
-	lru, err := lruPkg.New[NumberKey, Number](params.LRUCacheSize)
-	if err != nil {
-		// notest
-		panic("failed to create LRU cache: " + err.Error())
-	}
-
-	cleanupCtx, cleanupCtxCancel := context.WithCancel(context.Background())
-	s := &sequencer{
-		params:           params,
-		lru:              lru,
-		toBeFlushed:      make(map[NumberKey]Number),
-		inproc:           make(map[NumberKey]Number),
-		cleanupCtx:       cleanupCtx,
-		cleanupCtxCancel: cleanupCtxCancel,
-		iTime:            iTime,
-		flusherStartedCh: make(chan struct{}, 1),
-		flusherSig:       make(chan struct{}, 1),
-		actualizerWG:     &sync.WaitGroup{},
-	}
-	s.actualizerInProgress.Store(false)
-
-	// Instance has actualizer() goroutine started.
-	s.startActualizer()
-	s.actualizerWG.Wait()
-
-	return s, s.cleanup
-}
 
 // checkCleanupState panics if cleanup is in progress
 func (s *sequencer) checkCleanupState() {
@@ -344,8 +312,8 @@ func (s *sequencer) Flush() {
 
 	// Clear s.inproc
 	s.inprocMu.Lock()
-	defer s.inprocMu.Unlock()
 	s.inproc = make(map[NumberKey]Number)
+	s.inprocMu.Unlock()
 
 	// Increase s.nextOffset
 	s.nextOffset++
@@ -354,26 +322,15 @@ func (s *sequencer) Flush() {
 	case s.flusherSig <- struct{}{}:
 	default:
 	}
+
+	// Finish Sequencing Transaction
+	s.finishEventState()
 }
 
-// finishEventState resets the current event processing state
+// finishEventState finishes the Sequencing Transaction.
 // Cleans s.lru, s.nextOffset, s.currentWSID, s.currentWSKind, s.toBeFlushed, s.inproc, s.toBeFlushedOffset
 func (s *sequencer) finishEventState() {
-	s.toBeFlushedMu.Lock()
-	s.inprocMu.Lock()
-	defer s.toBeFlushedMu.Unlock()
-	defer s.inprocMu.Unlock()
-
-	if len(s.inproc) > 0 {
-		s.inproc = make(map[NumberKey]Number)
-	}
-
-	if len(s.toBeFlushed) > 0 {
-		s.toBeFlushed = make(map[NumberKey]Number)
-	}
-
 	s.toBeFlushedOffset = 0
-	s.lru.Purge()
 	s.nextOffset = 0
 	s.currentWSID = 0
 	s.currentWSKind = 0
@@ -562,7 +519,20 @@ func (s *sequencer) Actualize() {
 	s.checkEventState()
 
 	// Clean s.lru, s.nextOffset, s.currentWSID, s.currentWSKind, s.toBeFlushed, s.inproc, s.toBeFlushedOffset
-	s.finishEventState()
+	s.inprocMu.Lock()
+	if len(s.inproc) > 0 {
+		s.inproc = make(map[NumberKey]Number)
+	}
+	s.inprocMu.Unlock()
+
+	s.toBeFlushedMu.Lock()
+	if len(s.toBeFlushed) > 0 {
+		s.toBeFlushed = make(map[NumberKey]Number)
+	}
+	s.toBeFlushedMu.Unlock()
+
+	s.toBeFlushedOffset = 0
+	s.lru.Purge()
 
 	// Start the actualizer() goroutine
 	s.startActualizer()
