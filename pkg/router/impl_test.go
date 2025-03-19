@@ -132,7 +132,7 @@ func TestBasicUsage_Respond(t *testing.T) {
 		{
 			name:         "SysError",
 			obj:          coreutils.SysError{HTTPStatus: http.StatusBadRequest, QName: appdef.NewQName("sys", "errQName"), Message: "test error", Data: "more data"},
-			expectedJSON: `{"error":{"status":400,"message":"test error","qname":"sys.errQName","data":"more data"}}`,
+			expectedJSON: `{"status":400,"message":"test error","qname":"sys.errQName","data":"more data"}`,
 		},
 	}
 	for _, c := range cases {
