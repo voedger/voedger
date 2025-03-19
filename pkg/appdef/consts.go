@@ -61,6 +61,8 @@ const (
 
 // System data type names
 var (
+	SysData_int8     QName = SysDataName(DataKind_int8)  // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
+	SysData_int16    QName = SysDataName(DataKind_int16) // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
 	SysData_int32    QName = SysDataName(DataKind_int32)
 	SysData_int64    QName = SysDataName(DataKind_int64)
 	SysData_float32  QName = SysDataName(DataKind_float32)
