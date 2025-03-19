@@ -3,7 +3,7 @@
  * @author: Nikolay Nikitin
  */
 
-package dynobuf
+package dynobuf_test
 
 import (
 	"testing"
@@ -13,13 +13,14 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/constraints"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/dynobuf"
 )
 
 func TestDynoBufSchemesBasicUsage(t *testing.T) {
 	docName := appdef.NewQName("test", "doc")
 	viewName := appdef.NewQName("test", "view")
 
-	schemes := New()
+	schemes := dynobuf.New()
 
 	schemes.Prepare(
 		func() appdef.IAppDef {

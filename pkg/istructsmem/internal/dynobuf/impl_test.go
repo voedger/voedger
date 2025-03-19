@@ -3,7 +3,7 @@
  * @author: Nikolay Nikitin
  */
 
-package dynobuf
+package dynobuf_test
 
 import (
 	"testing"
@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/constraints"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/dynobuf"
 )
 
 func TestDynoBufSchemes(t *testing.T) {
@@ -68,7 +69,7 @@ func TestDynoBufSchemes(t *testing.T) {
 		app = a
 	})
 
-	schemes := newSchemes()
+	schemes := dynobuf.New()
 	require.NotNil(schemes)
 
 	schemes.Prepare(app)
@@ -81,14 +82,14 @@ func TestDynoBufSchemes(t *testing.T) {
 		for _, f := range dynoScheme.Fields {
 			fld := fields.Field(f.Name)
 			require.NotNil(fld)
-			require.Equal(DataKindToFieldType(fld.DataKind()), f.Ft)
+			require.Equal(dynobuf.DataKindToFieldType(fld.DataKind()), f.Ft)
 		}
 
 		for _, fld := range fields.Fields() {
 			if !fld.IsSys() {
 				f, ok := dynoScheme.FieldsMap[fld.Name()]
 				require.True(ok)
-				require.Equal(DataKindToFieldType(fld.DataKind()), f.Ft)
+				require.Equal(dynobuf.DataKindToFieldType(fld.DataKind()), f.Ft)
 			}
 		}
 	}

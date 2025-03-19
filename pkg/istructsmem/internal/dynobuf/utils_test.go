@@ -3,12 +3,13 @@
  * @author: Nikolay Nikitin
  */
 
-package dynobuf
+package dynobuf_test
 
 import (
 	"testing"
 
 	"github.com/untillpro/dynobuffers"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/dynobuf"
 )
 
 func TestFieldTypeToString(t *testing.T) {
@@ -25,7 +26,7 @@ func TestFieldTypeToString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := FieldTypeToString(tt.args.ft); got != tt.want {
+			if got := dynobuf.FieldTypeToString(tt.args.ft); got != tt.want {
 				t.Errorf("FieldTypeToString() = %v, want %v", got, tt.want)
 			}
 		})
