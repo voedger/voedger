@@ -12,8 +12,8 @@ import (
 
 var dataKindToDynoFieldType = map[appdef.DataKind]dynobuffers.FieldType{
 	appdef.DataKind_null:     dynobuffers.FieldTypeUnspecified,
-	appdef.DataKind_int8:     dynobuffers.FieldTypeByte, // #3434 [small integers]
-	appdef.DataKind_int16:    dynobuffers.FieldTypeByte, // #3434 [small integers] two fixed bytes LittleEndian
+	appdef.DataKind_int8:     dynobuffers.FieldTypeByte, // #3434 [small integers : int8]
+	appdef.DataKind_int16:    dynobuffers.FieldTypeByte, // #3434 [small integers : int16] two fixed bytes LittleEndian
 	appdef.DataKind_int32:    dynobuffers.FieldTypeInt32,
 	appdef.DataKind_int64:    dynobuffers.FieldTypeInt64,
 	appdef.DataKind_float32:  dynobuffers.FieldTypeFloat32,
