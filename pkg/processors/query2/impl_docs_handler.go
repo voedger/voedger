@@ -25,6 +25,10 @@ type docsHandler struct {
 
 var _ IApiPathHandler = (*docsHandler)(nil) // ensure that queryHandler implements IApiPathHandler
 
+func (h *docsHandler) IsArrayResult() bool {
+	return false
+}
+
 func (h *docsHandler) CheckRateLimit(ctx context.Context, qw *queryWork) error {
 	// TODO: implement rate limits check
 	return nil
@@ -120,7 +124,7 @@ func (h *docsHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err err
 	if qw.queryParams.Constraints != nil && len(qw.queryParams.Constraints.Keys) != 0 {
 		oo = append(oo, pipeline.WireAsyncOperator("Keys", newKeys(qw.queryParams.Constraints.Keys)))
 	}
-	sender := &sender{responder: qw.msg.Responder(), isSingleResponse: true}
+	sender := &sender{responder: qw.msg.Responder(), isArrayResponse: false, contentType: coreutils.ApplicationJSON}
 	oo = append(oo, pipeline.WireAsyncOperator("Sender", sender))
 	qw.rowsProcessor = pipeline.NewAsyncPipeline(ctx, "View rows processor", oo[0], oo[1:]...)
 	qw.responseWriterGetter = func() bus.IResponseWriter {

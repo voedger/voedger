@@ -23,6 +23,10 @@ type viewHandler struct {
 
 var _ IApiPathHandler = (*viewHandler)(nil) // ensure that viewHandler implements IApiPathHandler
 
+func (h *viewHandler) IsArrayResult() bool {
+	return true
+}
+
 func (h *viewHandler) CheckRateLimit(ctx context.Context, qw *queryWork) error {
 	// TODO: implement rate limits check
 	return nil
@@ -108,7 +112,7 @@ func (h *viewHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err err
 	if len(qw.queryParams.Constraints.Keys) != 0 {
 		oo = append(oo, pipeline.WireAsyncOperator("Keys", newKeys(qw.queryParams.Constraints.Keys)))
 	}
-	sender := &sender{responder: qw.msg.Responder()}
+	sender := &sender{responder: qw.msg.Responder(), isArrayResponse: true}
 	oo = append(oo, pipeline.WireAsyncOperator("Sender", sender))
 	qw.rowsProcessor = pipeline.NewAsyncPipeline(ctx, "View rows processor", oo[0], oo[1:]...)
 	qw.responseWriterGetter = func() bus.IResponseWriter {
