@@ -24,6 +24,24 @@ func JSONUnmarshal(b []byte, ptrToPayload interface{}) error {
 
 func ClarifyJSONNumber(value json.Number, kind appdef.DataKind) (val interface{}, err error) {
 	switch kind {
+	case appdef.DataKind_int8: // #3434 [small integers]
+		int64Val, err := value.Int64()
+		if err != nil {
+			return nil, fmt.Errorf("failed to cast %s to int*: %w", value.String(), err)
+		}
+		if int64Val < math.MinInt8 || int64Val > math.MaxInt8 {
+			return nil, fmt.Errorf("cast %s to int8: %w", value.String(), ErrNumberOverflow)
+		}
+		return int8(int64Val), nil
+	case appdef.DataKind_int16: // #3434 [small integers]
+		int64Val, err := value.Int64()
+		if err != nil {
+			return nil, fmt.Errorf("failed to cast %s to int*: %w", value.String(), err)
+		}
+		if int64Val < math.MinInt16 || int64Val > math.MaxInt16 {
+			return nil, fmt.Errorf("cast %s to int16: %w", value.String(), ErrNumberOverflow)
+		}
+		return int16(int64Val), nil
 	case appdef.DataKind_int32:
 		int64Val, err := value.Int64()
 		if err != nil {

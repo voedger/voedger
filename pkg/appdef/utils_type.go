@@ -431,7 +431,6 @@ var (
 
 	structFieldKinds = set.FromRO(
 		DataKind_int8, DataKind_int16, // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
-
 		DataKind_int32,
 		DataKind_int64,
 		DataKind_float32,
@@ -542,7 +541,6 @@ var (
 		TypeKind_ViewRecord: {
 			fieldKinds: set.FromRO(
 				DataKind_int8, DataKind_int16, // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
-
 				DataKind_int32,
 				DataKind_int64,
 				DataKind_float32,
