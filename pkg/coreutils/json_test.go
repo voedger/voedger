@@ -34,7 +34,7 @@ func TestClarifyJSONNumber(t *testing.T) {
 		expectedVal interface{}
 	}{
 		{json.Number("1"), appdef.DataKind_int8, int8(1)},   // #3434 [small integers]
-		{json.Number("1"), appdef.DataKind_int16, int8(16)}, // #3434 [small integers]
+		{json.Number("1"), appdef.DataKind_int16, int16(1)}, // #3434 [small integers]
 		{json.Number("1"), appdef.DataKind_int32, int32(1)},
 		{json.Number("1"), appdef.DataKind_int64, int64(1)},
 		{json.Number("1"), appdef.DataKind_float32, float32(1)},
