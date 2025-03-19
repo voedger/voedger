@@ -509,7 +509,7 @@ func TestQueryProcessor2_Docs(t *testing.T) {
 	t.Run("400 document type not defined", func(t *testing.T) {
 		path := fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/docs/%s/%d`, ws.WSID, it.QNameODoc1, 123)
 		resp, _ := vit.IFederation.Query(path, coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect400())
-		require.JSONEq(`{"error": "document or record app1pkg.odoc1 is not defined in Workspace"}`, resp.Body)
+		require.JSONEq(`{"status":400,"message":"document or record app1pkg.odoc1 is not defined in Workspace «app1pkg.test_wsWS»"}`, resp.Body)
 	})
 
 	t.Run("403 not authorized", func(t *testing.T) {
