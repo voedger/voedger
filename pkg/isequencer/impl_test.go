@@ -6,9 +6,7 @@
 package isequencer
 
 import (
-	"context"
 	"errors"
-	"sync"
 	"testing"
 	"time"
 
@@ -16,82 +14,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/coreutils"
 )
-
-type mockStorage struct {
-	mu                       sync.RWMutex
-	numbers                  map[WSID]map[SeqID]Number
-	nextOffset               PLogOffset
-	writeValuesError         error
-	writeNextPLogOffsetError error
-	PLog                     [][]SeqValue
-}
-
-func newMockStorage() *mockStorage {
-	return &mockStorage{
-		numbers:    make(map[WSID]map[SeqID]Number),
-		nextOffset: 0,
-	}
-}
-
-func (m *mockStorage) ReadNumbers(wsid WSID, seqIDs []SeqID) ([]Number, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	result := make([]Number, len(seqIDs))
-	if nums, exists := m.numbers[wsid]; exists {
-		for i, id := range seqIDs {
-			result[i] = nums[id] // Will be 0 if not found
-		}
-	}
-
-	return result, nil
-}
-
-func (m *mockStorage) WriteValues(batch []SeqValue) error {
-	if m.writeValuesError != nil {
-		return m.writeValuesError
-	}
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	for _, sv := range batch {
-		wsNums, exists := m.numbers[sv.Key.WSID]
-		if !exists {
-			wsNums = make(map[SeqID]Number)
-			m.numbers[sv.Key.WSID] = wsNums
-		}
-		wsNums[sv.Key.SeqID] = sv.Value
-	}
-
-	return nil
-}
-
-func (m *mockStorage) WriteNextPLogOffset(nextOffset PLogOffset) error {
-	if m.writeNextPLogOffsetError != nil {
-		return m.writeNextPLogOffsetError
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.nextOffset = nextOffset
-	return nil
-}
-
-func (m *mockStorage) ReadNextPLogOffset() (PLogOffset, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.nextOffset, nil
-}
-
-func (m *mockStorage) ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func([]SeqValue, PLogOffset) error) error {
-	for i := int(offset); i < len(m.PLog); i++ {
-		if err := batcher(m.PLog[i], PLogOffset(i)); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
 
 func TestSequencer(t *testing.T) {
 	if testing.Short() {
@@ -101,9 +23,9 @@ func TestSequencer(t *testing.T) {
 	t.Run("basic flow", func(t *testing.T) {
 		mockedTime := coreutils.MockTime
 		// Given
-		storage := newMockStorage()
+		storage := NewMockStorage()
 		storage.nextOffset = PLogOffset(99)
-		storage.numbers = map[WSID]map[SeqID]Number{
+		storage.Numbers = map[WSID]map[SeqID]Number{
 			1: {1: 100},
 		}
 		params := &Params{
@@ -123,7 +45,7 @@ func TestSequencer(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, PLogOffset(100), offset)
 
-		// Generate new sequence numbers 100 times
+		// Generate new sequence Numbers 100 times
 		for i := 1; i <= 100; i++ {
 			num, err := seq.Next(1)
 			require.NoError(t, err)
@@ -144,7 +66,7 @@ func TestSequencer(t *testing.T) {
 	t.Run("actualization", func(t *testing.T) {
 		mockedTime := coreutils.MockTime
 		// Given
-		storage := newMockStorage()
+		storage := NewMockStorage()
 		params := &Params{
 			SeqTypes: map[WSKind]map[SeqID]Number{
 				1: {1: 100},
@@ -180,9 +102,9 @@ func TestSequencer_Start(t *testing.T) {
 	t.Run("should reject when too many unflushed values", func(t *testing.T) {
 		iTime := coreutils.MockTime
 
-		storage := newMockStorage()
+		storage := NewMockStorage()
 		storage.nextOffset = PLogOffset(99)
-		storage.numbers = map[WSID]map[SeqID]Number{
+		storage.Numbers = map[WSID]map[SeqID]Number{
 			1: {1: 100},
 		}
 		seq, cancel := New(&Params{
@@ -214,7 +136,7 @@ func TestSequencer_Start(t *testing.T) {
 		iTime := coreutils.MockTime
 		require := require.New(t)
 
-		storage := newMockStorage()
+		storage := NewMockStorage()
 		seq, cancel := New(&Params{
 			SeqTypes: map[WSKind]map[SeqID]Number{
 				1: {1: 100},
@@ -232,7 +154,7 @@ func TestSequencer_Start(t *testing.T) {
 		require.Equal(PLogOffset(1), offset)
 
 		count := 3
-		// Generate sequence numbers
+		// Generate sequence Numbers
 		for i := 0; i < count; i++ {
 			num, err := seq.Next(1)
 			require.NoError(err)
@@ -256,7 +178,7 @@ func TestSequencer_Start(t *testing.T) {
 func TestBatcher(t *testing.T) {
 	t.Run("should aggregate max values and write to storage", func(t *testing.T) {
 		// Given
-		storage := newMockStorage()
+		storage := NewMockStorage()
 		params := &Params{
 			SeqTypes: map[WSKind]map[SeqID]Number{
 				1: {1: 100, 2: 200},
@@ -296,7 +218,7 @@ func TestBatcher(t *testing.T) {
 
 	t.Run("should handle empty batch", func(t *testing.T) {
 		// Given
-		storage := newMockStorage()
+		storage := NewMockStorage()
 		params := &Params{
 			SeqTypes: map[WSKind]map[SeqID]Number{
 				1: {1: 100},
@@ -323,7 +245,7 @@ func TestBatcher(t *testing.T) {
 	t.Run("should handle storage write errors", func(t *testing.T) {
 		//t.Skip()
 		// Given
-		storage := newMockStorage()
+		storage := NewMockStorage()
 		params := &Params{
 			SeqTypes: map[WSKind]map[SeqID]Number{
 				1: {1: 100},
@@ -342,7 +264,7 @@ func TestBatcher(t *testing.T) {
 			{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 101},
 		}
 
-		storage.writeValuesError = errors.New("write error")
+		storage.writeValuesAndOffsetError = errors.New("write error")
 		// When
 		err := seq.(*sequencer).batcher(batch, PLogOffset(1))
 
@@ -355,9 +277,9 @@ func TestSequencer_Flush(t *testing.T) {
 	t.Run("should reduce unflushed values and allow new transactions", func(t *testing.T) {
 		iTime := coreutils.MockTime
 
-		storage := newMockStorage()
+		storage := NewMockStorage()
 		storage.nextOffset = PLogOffset(99)
-		storage.numbers = map[WSID]map[SeqID]Number{
+		storage.Numbers = map[WSID]map[SeqID]Number{
 			1: {1: 100},
 		}
 		seq, cancel := New(&Params{
@@ -408,13 +330,13 @@ func TestSequencer_Actualize(t *testing.T) {
 		require := require.New(t)
 		iTime := coreutils.MockTime
 
-		storage := newMockStorage()
-		storage.numbers = map[WSID]map[SeqID]Number{
+		storage := NewMockStorage()
+		storage.Numbers = map[WSID]map[SeqID]Number{
 			1: {1: 100},
 		}
 
 		// Add entries to the mock PLog to simulate actualization
-		storage.PLog = [][]SeqValue{
+		storage.pLog = [][]SeqValue{
 			{
 				{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 200},
 			},
@@ -477,13 +399,13 @@ func TestSequencer_Actualize(t *testing.T) {
 		require := require.New(t)
 		iTime := coreutils.MockTime
 
-		storage := newMockStorage()
-		storage.numbers = map[WSID]map[SeqID]Number{
+		storage := NewMockStorage()
+		storage.Numbers = map[WSID]map[SeqID]Number{
 			1: {1: 100},
 		}
 
 		// Empty PLog
-		storage.PLog = [][]SeqValue{}
+		storage.pLog = [][]SeqValue{}
 
 		seq, cancel := New(&Params{
 			SeqTypes: map[WSKind]map[SeqID]Number{
@@ -521,17 +443,17 @@ func TestSequencer_Actualize(t *testing.T) {
 		seq.Flush()
 	})
 
-	t.Run("should update sequence numbers to match PLog after actualization", func(t *testing.T) {
+	t.Run("should update sequence Numbers to match PLog after actualization", func(t *testing.T) {
 		require := require.New(t)
 		iTime := coreutils.MockTime
 
-		storage := newMockStorage()
-		storage.numbers = map[WSID]map[SeqID]Number{
+		storage := NewMockStorage()
+		storage.Numbers = map[WSID]map[SeqID]Number{
 			1: {1: 100, 2: 200},
 		}
 
 		// Set up PLog with higher sequence values
-		storage.PLog = [][]SeqValue{
+		storage.pLog = [][]SeqValue{
 			{
 				{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 150},
 				{Key: NumberKey{WSID: 1, SeqID: 2}, Value: 250},
@@ -579,13 +501,13 @@ func TestSequencer_Actualize(t *testing.T) {
 		require := require.New(t)
 		iTime := coreutils.MockTime
 
-		storage := newMockStorage()
-		storage.numbers = map[WSID]map[SeqID]Number{
+		storage := NewMockStorage()
+		storage.Numbers = map[WSID]map[SeqID]Number{
 			1: {1: 100},
 		}
 
 		// First set of PLog entries
-		storage.PLog = [][]SeqValue{
+		storage.pLog = [][]SeqValue{
 			{
 				{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 150},
 			},
@@ -609,7 +531,7 @@ func TestSequencer_Actualize(t *testing.T) {
 		seq.(*sequencer).actualizerWG.Wait()
 
 		// Update PLog with new entries
-		storage.PLog = [][]SeqValue{
+		storage.pLog = [][]SeqValue{
 			{
 				{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 200},
 			},
@@ -636,13 +558,13 @@ func TestSequencer_Actualize(t *testing.T) {
 		require := require.New(t)
 		iTime := coreutils.MockTime
 
-		storage := newMockStorage()
-		storage.numbers = map[WSID]map[SeqID]Number{
+		storage := NewMockStorage()
+		storage.Numbers = map[WSID]map[SeqID]Number{
 			1: {1: 100},
 		}
 
 		// First set of PLog entries
-		storage.PLog = [][]SeqValue{
+		storage.pLog = [][]SeqValue{
 			{
 				{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 150},
 			},
@@ -694,13 +616,13 @@ func TestSequencer_Next(t *testing.T) {
 		require := require.New(t)
 		iTime := coreutils.MockTime
 
-		storage := newMockStorage()
-		storage.numbers = map[WSID]map[SeqID]Number{
+		storage := NewMockStorage()
+		storage.Numbers = map[WSID]map[SeqID]Number{
 			1: {1: 200},
 		}
 
 		// Add entries to the mock PLog to simulate actualization
-		storage.PLog = [][]SeqValue{
+		storage.pLog = [][]SeqValue{
 			{
 				{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 250},
 			},
@@ -748,8 +670,8 @@ func TestSequencer_Next(t *testing.T) {
 		require := require.New(t)
 		iTime := coreutils.MockTime
 
-		storage := newMockStorage()
-		storage.numbers = map[WSID]map[SeqID]Number{
+		storage := NewMockStorage()
+		storage.Numbers = map[WSID]map[SeqID]Number{
 			1: {1: 400},
 		}
 
@@ -792,8 +714,8 @@ func TestSequencer_Next(t *testing.T) {
 		require := require.New(t)
 		iTime := coreutils.MockTime
 
-		storage := newMockStorage()
-		storage.numbers = map[WSID]map[SeqID]Number{
+		storage := NewMockStorage()
+		storage.Numbers = map[WSID]map[SeqID]Number{
 			1: {1: 300},
 		}
 		seq, cancel := New(&Params{

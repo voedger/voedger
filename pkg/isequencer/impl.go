@@ -116,8 +116,7 @@ Flow:
 - Copy s.toBeFlushedOffset to flushOffset (local variable)
 - Copy s.toBeFlushed to flushValues []SeqValue (local variable)
 - Unlock s.toBeFlushedMu
-- s.params.SeqStorage.WriteValues(flushValues)
-- s.params.SeqStorage.WriteNextPLogOffset(flushOffset)
+- s.params.SeqStorage.WriteValuesAndOffset(flushValues, flushOffset)
 - Lock s.toBeFlushedMu
 - for each key in flushValues remove key from s.toBeFlushed if values are the same
 - Unlock s.toBeFlushedMu
@@ -171,9 +170,9 @@ func (s *sequencer) flusher(ctx context.Context) {
 //   - Try s.inproc
 //   - Try s.toBeFlushed (use s.toBeFlushedMu to synchronize)
 //   - Try s.params.SeqStorage.ReadNumber()
-//   - Read all known numbers for wsKind, wsID
+//   - Read all known Numbers for wsKind, wsID
 //   - If number is 0 then initial value is used
-//   - Write all numbers to s.lru
+//   - Write all Numbers to s.lru
 //
 // - Write value+1 to s.lru
 // - Write value+1 to s.inproc
@@ -225,9 +224,9 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	var knownNumbers []Number
 	err = coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() error {
 		var err error
-		// Read all known numbers for wsKind, wsID
+		// Read all known Numbers for wsKind, wsID
 		knownNumbers, err = s.params.SeqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
-		// Write all numbers to s.lru
+		// Write all Numbers to s.lru
 		for _, number := range knownNumbers {
 			if number == 0 {
 				continue
@@ -318,11 +317,7 @@ func (s *sequencer) Flush() {
 }
 
 func (s *sequencer) finishSequencingTransaction() {
-	if !s.transactionIsInProgress.CompareAndSwap(true, false) {
-		// FIXME: when that happens?
-		// notest
-		panic("ransaction was unexpectedly terminated during processing")
-	}
+	s.transactionIsInProgress.Store(false)
 	s.currentWSID = 0
 	s.currentWSKind = 0
 }
@@ -332,8 +327,7 @@ func (s *sequencer) finishSequencingTransaction() {
 // - Copy offset to s.nextOffset
 // - Store maxValues in s.toBeFlushed: max Number for each SeqValue.Key
 // - If s.params.MaxNumUnflushedValues is reached
-//   - Flush s.toBeFlushed using s.params.SeqStorage.WriteValues()
-//   - s.params.SeqStorage.WriteNextPLogOffset(s.nextOffset + 1)
+//   - Flush s.toBeFlushed using s.params.SeqStorage.WriteValuesAndOffset(toBeFlushedValues, s.nextOffset + 1)
 //   - Clean s.toBeFlushed
 func (s *sequencer) batcher(values []SeqValue, offset PLogOffset) error {
 	// Copy offset to s.nextOffset
@@ -375,8 +369,7 @@ Flow:
 - Use s.params.SeqStorage.ActualizeSequencesFromPLog() and s.batcher()
 - Increment s.nextOffset
 - If s.toBeFlushed is not empty
-  - Write toBeFlushed using s.params.SeqStorage.WriteValues()
-  - s.params.SeqStorage.WriteNextPLogOffset(s.nextOffset)
+  - Write toBeFlushed using s.params.SeqStorage.WriteValuesAndOffset(toBeFlushedValues, s.nextOffset)
   - Clean s.toBeFlushed
 
 - s.flusherWG, s.flusherCtxCancel + start flusher() goroutine
@@ -436,8 +429,7 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 // - Copy s.toBeFlushedOffset to flushOffset (local variable)
 // - Copy s.toBeFlushed to flushValues []SeqValue (local variable)
 // - Unlock s.toBeFlushedMu
-// - s.params.SeqStorage.WriteValues(flushValues)
-// - s.params.SeqStorage.WriteNextPLogOffset(flushOffset)
+// - s.params.SeqStorage.WriteValuesAndOffset(flushValues, flushOffset)
 // - Lock s.toBeFlushedMu
 // - Clean s.toBeFlushed
 // - Unlock s.toBeFlushedMu
@@ -456,23 +448,15 @@ func (s *sequencer) flushValues(offset PLogOffset, needToCleanToBeFlushed bool) 
 	}
 	s.toBeFlushedMu.RUnlock()
 
-	// s.params.SeqStorage.WriteValues(flushValues)
+	// s.params.SeqStorage.WriteValuesAndOffset(flushValues, offset)
 	// Error handling: Handle errors with retry mechanism (500ms wait)
 	err := coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() error {
-		return s.params.SeqStorage.WriteValues(flushValues)
+		return s.params.SeqStorage.WriteValuesAndOffset(flushValues, offset)
 	})
 	if err != nil {
 		return err
 	}
 
-	// s.params.SeqStorage.WriteNextPLogOffset(flushOffset)
-	// Error handling: Handle errors with retry mechanism (500ms wait)
-	err = coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() error {
-		return s.params.SeqStorage.WriteNextPLogOffset(offset)
-	})
-	if err != nil {
-		return err
-	}
 	// for each key in flushValues remove key from s.toBeFlushed if values are the same
 	s.toBeFlushedMu.Lock()
 	if needToCleanToBeFlushed {
