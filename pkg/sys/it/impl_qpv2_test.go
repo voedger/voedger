@@ -519,6 +519,7 @@ func TestQueryProcessor2_Docs(t *testing.T) {
 
 	t.Run("404 not found", func(t *testing.T) {
 		path := fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/docs/%s/%d`, ws.WSID, it.QNameApp1_CDocCategory, 123)
-		vit.IFederation.Query(path, coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect404())
+		resp, _ := vit.IFederation.Query(path, coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect404())
+		require.JSONEq(`{"status":404,"message":"document app1pkg.category with ID 123 not found"}`, resp.Body)
 	})
 }

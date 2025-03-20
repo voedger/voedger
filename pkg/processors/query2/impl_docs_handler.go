@@ -159,9 +159,9 @@ func (h *docsHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
 		}
 		if rec.QName() == appdef.NullQName {
 			if qw.iDoc != nil {
-				return coreutils.NewHTTPErrorf(http.StatusNotFound, fmt.Errorf("document %s not found", qw.msg.QName()))
+				return coreutils.NewHTTPErrorf(http.StatusNotFound, fmt.Errorf("document %s with ID %d not found", qw.msg.QName(), qw.msg.DocID()))
 			}
-			return coreutils.NewHTTPErrorf(http.StatusNotFound, fmt.Errorf("record %s not found", qw.msg.QName()))
+			return coreutils.NewHTTPErrorf(http.StatusNotFound, fmt.Errorf("record %s with ID %d not found", qw.msg.QName(), qw.msg.DocID()))
 		}
 	}
 
