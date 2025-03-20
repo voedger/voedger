@@ -25,6 +25,10 @@ type queryHandler struct {
 
 var _ IApiPathHandler = (*queryHandler)(nil) // ensure that queryHandler implements IApiPathHandler
 
+func (h *queryHandler) IsArrayResult() bool {
+	return true
+}
+
 func (h *queryHandler) CheckRateLimit(ctx context.Context, qw *queryWork) error {
 	if qw.appStructs.IsFunctionRateLimitsExceeded(qw.msg.QName(), qw.msg.WSID()) {
 		return coreutils.NewSysError(http.StatusTooManyRequests)
@@ -106,7 +110,7 @@ func (h *queryHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err er
 	if qw.queryParams.Constraints != nil && len(qw.queryParams.Constraints.Keys) != 0 {
 		oo = append(oo, pipeline.WireAsyncOperator("Keys", newKeys(qw.queryParams.Constraints.Keys)))
 	}
-	sender := &sender{responder: qw.msg.Responder()}
+	sender := &sender{responder: qw.msg.Responder(), isArrayResponse: true}
 	oo = append(oo, pipeline.WireAsyncOperator("Sender", sender))
 	qw.rowsProcessor = pipeline.NewAsyncPipeline(ctx, "View rows processor", oo[0], oo[1:]...)
 	qw.responseWriterGetter = func() bus.IResponseWriter {

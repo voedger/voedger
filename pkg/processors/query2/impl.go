@@ -83,13 +83,17 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					if err != nil {
 						statusCode = err.(coreutils.SysError).HTTPStatus // nolint:errorlint
 					}
-					if qwork.responseWriterGetter == nil || qwork.responseWriterGetter() == nil {
-						// have an error before 200ok is sent -> send the status from the actual error
-						respWriter = msg.Responder().InitResponse(statusCode)
-					} else {
-						respWriter = qwork.responseWriterGetter()
+					if qwork.apiPathHandler.IsArrayResult() {
+						if qwork.responseWriterGetter == nil || qwork.responseWriterGetter() == nil {
+							// have an error before 200ok is sent -> send the status from the actual error
+							respWriter = msg.Responder().InitResponse(statusCode)
+						} else {
+							respWriter = qwork.responseWriterGetter()
+						}
+						respWriter.Close(err)
+					} else if err != nil {
+						err = qwork.msg.Responder().Respond(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: statusCode}, err)
 					}
-					respWriter.Close(err)
 				}()
 				metrics.IncreaseApp(queryprocessor.Metric_QueriesSeconds, vvm, msg.AppQName(), time.Since(now).Seconds())
 			case <-ctx.Done():
@@ -111,6 +115,8 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				qw.apiPathHandler = &queryHandler{}
 			case ApiPath_Views:
 				qw.apiPathHandler = &viewHandler{}
+			case ApiPath_Docs:
+				qw.apiPathHandler = &docsHandler{}
 			default:
 				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("unsupported api path %v", qw.msg.ApiPath()))
 			}

@@ -21,7 +21,7 @@ import (
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
-func prepareDailyIdx(require *require.Assertions, vit *it.VIT, ws *it.AppWorkspace) (resultOffset istructs.Offset) {
+func prepareDailyIdx(require *require.Assertions, vit *it.VIT, ws *it.AppWorkspace) (resultOffset istructs.Offset, newIDs map[string]istructs.RecordID) {
 	testProjectionKey := in10n.ProjectionKey{
 		App:        istructs.AppQName_test1_app1,
 		Projection: it.QNameApp1_ViewCategoryIdx,
@@ -114,10 +114,11 @@ func prepareDailyIdx(require *require.Assertions, vit *it.VIT, ws *it.AppWorkspa
 		cuds.Values = append(cuds.Values, dd[i](i+2))
 	}
 	// force projection update
-	resultOffsetOfCUD := vit.PostWS(ws, "c.sys.CUD", cuds.MustToJSON()).CurrentWLogOffset
+	resp := vit.PostWS(ws, "c.sys.CUD", cuds.MustToJSON())
+	resultOffsetOfCUD := resp.CurrentWLogOffset
 	require.EqualValues(resultOffsetOfCUD, <-offsetsChan)
 	unsubscribe()
-	return resultOffsetOfCUD
+	return resultOffsetOfCUD, resp.NewIDs
 }
 
 func TestQueryProcessor2_Views(t *testing.T) {
@@ -125,7 +126,7 @@ func TestQueryProcessor2_Views(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	expectedOffset := prepareDailyIdx(require, vit, ws)
+	expectedOffset, _ := prepareDailyIdx(require, vit, ws)
 	t.Run("Read by PK with eq", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/views/%s?where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
@@ -335,6 +336,7 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 				{"Day":5,"Month":4,"Year":2023}
 			]}`, resp.Body)
 	})
+
 }
 func TestQueryProcessor2_IncludeView(t *testing.T) {
 	require := require.New(t)
@@ -486,5 +488,38 @@ func TestQueryProcessor2_IncludeView(t *testing.T) {
 					"offs":13,
 					"sys.QName":"app1pkg.Clients"
 		}]}`, resp.Body)
+	})
+}
+
+func TestQueryProcessor2_Docs(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	_, ids := prepareDailyIdx(require, vit, ws)
+
+	t.Run("read document", func(t *testing.T) {
+		path := fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/docs/%s/%d`, ws.WSID, it.QNameApp1_CDocCategory, ids["1"])
+		resp, err := vit.IFederation.Query(path, coreutils.WithAuthorizeBy(ws.Owner.Token))
+		require.NoError(err)
+		require.JSONEq(fmt.Sprintf(`{"name":"Awesome food", "sys.ID":%d, "sys.IsActive":true, "sys.QName":"app1pkg.category"}`, ids["1"]), resp.Body)
+	})
+
+	t.Run("400 document type not defined", func(t *testing.T) {
+		path := fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/docs/%s/%d`, ws.WSID, it.QNameODoc1, 123)
+		resp, _ := vit.IFederation.Query(path, coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect400())
+		require.JSONEq(`{"status":400,"message":"document or record app1pkg.odoc1 is not defined in Workspace «app1pkg.test_wsWS»"}`, resp.Body)
+	})
+
+	t.Run("403 not authorized", func(t *testing.T) {
+		path := fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/docs/%s/%d`, ws.WSID, it.QNameApp1_CDocCategory, ids["1"])
+		vit.IFederation.Query(path, coreutils.Expect403())
+	})
+
+	t.Run("404 not found", func(t *testing.T) {
+		path := fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/docs/%s/%d`, ws.WSID, it.QNameApp1_CDocCategory, 123)
+		resp, _ := vit.IFederation.Query(path, coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect404())
+		require.JSONEq(`{"status":404,"message":"document app1pkg.category with ID 123 not found"}`, resp.Body)
 	})
 }

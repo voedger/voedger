@@ -59,6 +59,7 @@ type IApiPathHandler interface {
 	RowsProcessor(ctx context.Context, qw *queryWork) error
 	Exec(ctx context.Context, qw *queryWork) error
 	RequestOpKind() appdef.OperationKind
+	IsArrayResult() bool
 }
 
 type implIQueryMessage struct {
@@ -258,7 +259,6 @@ func (a *aggregator) subList() {
 		return
 	}
 	a.ww = a.ww[a.params.Constraints.Skip:a.params.Constraints.Limit]
-	return
 }
 func (a *aggregator) compareInt32(v1, v2 int32, asc bool) bool {
 	if asc {
@@ -299,11 +299,16 @@ func (a *aggregator) compareUint64(v1, v2 uint64, asc bool) bool {
 
 type sender struct {
 	pipeline.AsyncNOOP
-	responder  bus.IResponder
-	respWriter bus.IResponseWriter
+	responder       bus.IResponder
+	respWriter      bus.IResponseWriter
+	isArrayResponse bool
+	contentType     string
 }
 
 func (s *sender) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
+	if !s.isArrayResponse {
+		return work, s.responder.Respond(bus.ResponseMeta{ContentType: s.contentType, StatusCode: http.StatusOK}, work.(objectBackedByMap).data)
+	}
 	if s.respWriter == nil {
 		s.respWriter = s.responder.InitResponse(http.StatusOK)
 	}
