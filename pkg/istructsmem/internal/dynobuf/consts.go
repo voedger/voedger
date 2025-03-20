@@ -27,17 +27,6 @@ var dataKindToDynoFieldType = map[appdef.DataKind]dynobuffers.FieldType{
 	appdef.DataKind_Event:    dynobuffers.FieldTypeByte,
 }
 
-var dynobufferFieldTypeToStr = map[dynobuffers.FieldType]string{
-	dynobuffers.FieldTypeUnspecified: "null",
-	dynobuffers.FieldTypeInt32:       "int32",
-	dynobuffers.FieldTypeInt64:       "int64",
-	dynobuffers.FieldTypeFloat32:     "float32",
-	dynobuffers.FieldTypeFloat64:     "float64",
-	dynobuffers.FieldTypeString:      "string",
-	dynobuffers.FieldTypeBool:        "bool",
-	dynobuffers.FieldTypeByte:        "[]byte",
-}
-
 const (
 	viewPartKeySuffix   = "$pkey"
 	viewClustColsSuffix = "$ccols"
