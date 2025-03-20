@@ -92,7 +92,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 						}
 						respWriter.Close(err)
 					} else if err != nil {
-						qwork.msg.Responder().Respond(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: statusCode}, err)
+						err = qwork.msg.Responder().Respond(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: statusCode}, err)
 					}
 				}()
 				metrics.IncreaseApp(queryprocessor.Metric_QueriesSeconds, vvm, msg.AppQName(), time.Since(now).Seconds())
