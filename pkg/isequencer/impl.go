@@ -59,18 +59,6 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 	}
 	s.inprocMu.RUnlock()
 
-	// Read next offset
-	if s.nextOffset == 0 {
-		err := coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() (err error) {
-			s.nextOffset, err = s.params.SeqStorage.ReadNextPLogOffset()
-			return err
-		})
-		if err != nil {
-			// notest
-			panic("failed to read last PLog offset: " + err.Error())
-		}
-	}
-
 	// Marks Sequencing Transaction as in progress.
 	if !s.transactionIsInProgress.CompareAndSwap(false, true) {
 		// notest
@@ -307,7 +295,7 @@ func (s *sequencer) Flush() {
 		s.toBeFlushed[key] = value
 	}
 	s.inprocMu.RUnlock()
-	
+
 	// Copy s.nextOffset to s.toBeFlushedOffset
 	s.toBeFlushedOffset = s.nextOffset
 	s.toBeFlushedMu.Unlock()
