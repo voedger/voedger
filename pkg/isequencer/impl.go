@@ -336,7 +336,6 @@ func (s *sequencer) finishSequencingTransaction() {
 		panic("unexpected transaction in progress")
 	}
 	s.toBeFlushedOffset = 0
-	s.nextOffset = 0
 	s.currentWSID = 0
 	s.currentWSKind = 0
 }
