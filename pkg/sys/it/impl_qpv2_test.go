@@ -503,7 +503,7 @@ func TestQueryProcessor2_Docs(t *testing.T) {
 		path := fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/docs/%s/%d`, ws.WSID, it.QNameApp1_CDocCategory, ids["1"])
 		resp, err := vit.IFederation.Query(path, coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
-		require.JSONEq(`{"name":"Awesome food", "sys.ID":3.22685000131081e+14, "sys.IsActive":true, "sys.QName":"app1pkg.category"}`, resp.Body)
+		require.JSONEq(fmt.Sprintf(`{"name":"Awesome food", "sys.ID":%d, "sys.IsActive":true, "sys.QName":"app1pkg.category"}`, ids["1"]), resp.Body)
 	})
 
 	t.Run("400 document type not defined", func(t *testing.T) {
