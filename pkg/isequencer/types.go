@@ -99,7 +99,7 @@ type sequencer struct {
 	// Written by Next()
 	inproc   map[NumberKey]Number
 	inprocMu sync.RWMutex
-	// Marks Sequencing Transaction as in progress
+	// need to check if Flush or Actualize was called after previous Start
 	transactionIsInProgress atomic.Bool
 
 	iTime coreutils.ITime

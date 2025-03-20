@@ -17,6 +17,7 @@ import (
 )
 
 // mockStorage implements isequencer.ISeqStorage for testing purposes
+// FIXME: use it in impl_test
 type mockStorage struct {
 	mu                   sync.RWMutex
 	numbers              map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number
@@ -156,46 +157,30 @@ func (m *mockStorage) ClearPLog() {
 }
 
 func TestISequencer_Start(t *testing.T) {
+	require := requirePkg.New(t)
+	iTime := coreutils.MockTime
+	storage := newMockStorage()
+	params := &isequencer.Params{
+		SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
+			1: {1: 1},
+		},
+		SeqStorage:            storage,
+		MaxNumUnflushedValues: 5,
+		MaxFlushingInterval:   500 * time.Millisecond,
+		LRUCacheSize:          1000,
+	}
+
 	t.Run("should panic when cleanup process is initiated", func(t *testing.T) {
-		iTime := coreutils.MockTime
-		require := requirePkg.New(t)
-
-		storage := newMockStorage()
-		sequencer, cancel := isequencer.New(&isequencer.Params{
-			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
-				1: {1: 1},
-			},
-			SeqStorage:            storage,
-			MaxNumUnflushedValues: 5,
-			MaxFlushingInterval:   500 * time.Millisecond,
-			LRUCacheSize:          1000,
-		}, iTime)
-		cancel()
-
+		sequencer, cleanup := isequencer.New(params, iTime)
+		cleanup()
 		require.Panics(func() {
 			sequencer.Start(1, 1)
 		})
 	})
 
 	t.Run("should panic when transaction already started", func(t *testing.T) {
-		iTime := coreutils.MockTime
-		require := requirePkg.New(t)
-
-		storage := newMockStorage()
-		storage.nextOffset = isequencer.PLogOffset(99)
-		storage.numbers = map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number{
-			1: {1: 100},
-		}
-		sequencer, cancel := isequencer.New(&isequencer.Params{
-			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
-				1: {1: 1},
-			},
-			SeqStorage:            storage,
-			MaxNumUnflushedValues: 5,
-			MaxFlushingInterval:   500 * time.Millisecond,
-			LRUCacheSize:          1000,
-		}, iTime)
-		defer cancel()
+		sequencer, cleanup := isequencer.New(params, iTime)
+		defer cleanup()
 
 		offset, ok := sequencer.Start(1, 1)
 		require.True(ok)
@@ -207,24 +192,8 @@ func TestISequencer_Start(t *testing.T) {
 	})
 
 	t.Run("should reject when actualization in progress", func(t *testing.T) {
-		iTime := coreutils.MockTime
-		require := requirePkg.New(t)
-
-		storage := newMockStorage()
-		storage.nextOffset = isequencer.PLogOffset(99)
-		storage.numbers = map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number{
-			1: {1: 100},
-		}
-		sequencer, cancel := isequencer.New(&isequencer.Params{
-			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
-				1: {1: 1},
-			},
-			SeqStorage:            storage,
-			MaxNumUnflushedValues: 5,
-			MaxFlushingInterval:   500 * time.Millisecond,
-			LRUCacheSize:          1000,
-		}, iTime)
-		defer cancel()
+		sequencer, cleanup := isequencer.New(params, iTime)
+		defer cleanup()
 
 		offset, ok := sequencer.Start(1, 1)
 		require.True(ok)
@@ -239,24 +208,8 @@ func TestISequencer_Start(t *testing.T) {
 	})
 
 	t.Run("should panic when unknown wsKind", func(t *testing.T) {
-		iTime := coreutils.MockTime
-		require := requirePkg.New(t)
-
-		storage := newMockStorage()
-		storage.nextOffset = isequencer.PLogOffset(99)
-		storage.numbers = map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number{
-			1: {1: 100},
-		}
-		sequencer, cancel := isequencer.New(&isequencer.Params{
-			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
-				1: {1: 1},
-			},
-			SeqStorage:            storage,
-			MaxNumUnflushedValues: 5,
-			MaxFlushingInterval:   500 * time.Millisecond,
-			LRUCacheSize:          1000,
-		}, iTime)
-		defer cancel()
+		sequencer, cleanup := isequencer.New(params, iTime)
+		defer cleanup()
 
 		require.Panics(func() {
 			sequencer.Start(2, 1) // WSKind 2 is not defined
@@ -303,6 +256,7 @@ func TestISequencer_Flush(t *testing.T) {
 
 		// Advance time to ensure flush completes
 		iTime.Add(time.Second)
+		// FIXME: no guarantee here that the flush is actually completed (better check storage)
 
 		// Start a new transaction
 		offset, ok = seq.Start(1, 1)

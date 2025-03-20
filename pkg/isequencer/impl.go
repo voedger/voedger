@@ -59,6 +59,18 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 	}
 	s.inprocMu.RUnlock()
 
+	// Read next offset
+	if s.nextOffset == 0 {
+		err := coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() (err error) {
+			s.nextOffset, err = s.params.SeqStorage.ReadNextPLogOffset()
+			return err
+		})
+		if err != nil {
+			// notest
+			panic("failed to read last PLog offset: " + err.Error())
+		}
+	}
+
 	// Marks Sequencing Transaction as in progress.
 	if !s.transactionIsInProgress.CompareAndSwap(false, true) {
 		// notest
@@ -148,13 +160,15 @@ func (s *sequencer) flusher(ctx context.Context) {
 		case <-s.flusherSig:
 		// Wait for s.params.MaxFlushingInterval
 		case <-tickerCh:
-			tickerCh = s.iTime.NewTimerChan(s.params.MaxFlushingInterval)
 		}
-
-		if err := s.flushValues(s.toBeFlushedOffset, false); err != nil {
+		s.toBeFlushedMu.Lock()
+		toBeFlushedOffset := s.toBeFlushedOffset
+		s.toBeFlushedMu.Unlock()
+		if err := s.flushValues(toBeFlushedOffset, false); err != nil {
 			// notest
 			panic("failed to flush values: " + err.Error())
 		}
+		tickerCh = s.iTime.NewTimerChan(s.params.MaxFlushingInterval)
 	}
 }
 
@@ -293,10 +307,10 @@ func (s *sequencer) Flush() {
 		s.toBeFlushed[key] = value
 	}
 	s.inprocMu.RUnlock()
-	s.toBeFlushedMu.Unlock()
-
+	
 	// Copy s.nextOffset to s.toBeFlushedOffset
 	s.toBeFlushedOffset = s.nextOffset
+	s.toBeFlushedMu.Unlock()
 
 	// Clear s.inproc
 	s.inprocMu.Lock()
@@ -315,13 +329,12 @@ func (s *sequencer) Flush() {
 	s.finishSequencingTransaction()
 }
 
-// Cleans s.lru, s.nextOffset, s.currentWSID, s.currentWSKind, s.toBeFlushed, s.inproc, s.toBeFlushedOffset
 func (s *sequencer) finishSequencingTransaction() {
 	if !s.transactionIsInProgress.CompareAndSwap(true, false) {
+		// FIXME: when that happens?
 		// notest
-		panic("unexpected transaction in progress")
+		panic("ransaction was unexpectedly terminated during processing")
 	}
-	s.toBeFlushedOffset = 0
 	s.currentWSID = 0
 	s.currentWSKind = 0
 }

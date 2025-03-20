@@ -171,6 +171,8 @@ func TestSequencer(t *testing.T) {
 		// Then
 		_, ok = seq.Start(1, 1)
 		require.False(t, ok, "should not start during actualization")
+
+		// FIXME: check further New, Start, Next will return 1 again after Actuazlier
 	})
 }
 
@@ -227,42 +229,22 @@ func TestSequencer_Start(t *testing.T) {
 		// First transaction
 		offset, ok := seq.Start(1, 1)
 		require.True(ok)
-		require.NotZero(offset)
+		require.Equal(PLogOffset(1), offset)
 
 		count := 3
 		// Generate sequence numbers
-		var numbers []Number
 		for i := 0; i < count; i++ {
 			num, err := seq.Next(1)
 			require.NoError(err)
-			numbers = append(numbers, num)
+			require.Equal(Number(100+i+1), num)
 		}
 
 		seq.Flush()
 
-		// Verify the sequence values were incremented correctly
-		for i, num := range numbers {
-			require.Equal(Number(100+i+1), num, "Sequence value should be incremented")
-		}
-
-		// Advance time to allow flushing to complete
-		// Wait for transaction to complete
-		wg := sync.WaitGroup{}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			for {
-				if !seq.(*sequencer).transactionIsInProgress.Load() {
-					return
-				}
-			}
-		}()
-		wg.Wait()
-
 		// Start a new transaction
 		offset, ok = seq.Start(1, 1)
 		require.True(ok)
+		require.Equal(PLogOffset(2), offset)
 
 		// Verify we can get the next number in sequence
 		num, err := seq.Next(1)
@@ -462,15 +444,20 @@ func TestSequencer_Actualize(t *testing.T) {
 		// Start actualization
 		seq.Actualize()
 
-		// Wait for actualization to complete
-		iTime.Add(100 * time.Millisecond)
+		// Wait for actualization to start
+		for {
+			if seq.(*sequencer).actualizerInProgress.Load() {
+				break
+			}
+			time.Sleep(time.Millisecond)
+		}
 
 		// Try to start a new transaction - should be rejected during actualization
 		offset, ok = seq.Start(1, 1)
 		require.False(ok, "Start should be rejected while actualization is in progress")
 		require.Zero(offset)
 
-		// Wait longer for actualization to really complete
+		// Wait for actualization to complete
 		seq.(*sequencer).actualizerWG.Wait()
 
 		// Now should be able to start a transaction
@@ -789,20 +776,6 @@ func TestSequencer_Next(t *testing.T) {
 
 		seq.Flush()
 
-		// Wait for transaction to complete
-		wg := sync.WaitGroup{}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			for {
-				if !seq.(*sequencer).transactionIsInProgress.Load() {
-					return
-				}
-			}
-		}()
-		wg.Wait()
-
 		// Second transaction - should still work even if LRU cache evicted the entry
 		offset, ok = seq.Start(1, 1)
 		require.True(ok)
@@ -844,19 +817,6 @@ func TestSequencer_Next(t *testing.T) {
 		require.Equal(Number(301), num, "Sequence should continue from last value")
 
 		seq.Flush()
-		// Wait for transaction to complete
-		wg := sync.WaitGroup{}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			for {
-				if !seq.(*sequencer).transactionIsInProgress.Load() {
-					return
-				}
-			}
-		}()
-		wg.Wait()
 
 		// Transaction 2
 		offset, ok = seq.Start(1, 1)
