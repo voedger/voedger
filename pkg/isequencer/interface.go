@@ -13,11 +13,11 @@ type ISeqStorage interface {
 	ReadNumbers(WSID, []SeqID) ([]Number, error)
 
 	// IDs in batch.Values are unique
-	// Values must be written first, then Offset
-	WriteValues(batch []SeqValue) error
+	// len(batch) may be 0
+	// offset: Next offset to be used
+	// batch MUST be written first, then offset
+	WriteValuesAndOffset(batch []SeqValue, offset PLogOffset) error
 
-	// Next offset to be used
-	WriteNextPLogOffset(offset PLogOffset) error
 	ReadNextPLogOffset() (PLogOffset, error)
 
 	// ActualizeSequencesFromPLog scans PLog from the given offset and send values to the batcher.
