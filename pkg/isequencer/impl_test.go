@@ -644,6 +644,62 @@ func TestSequencer_Actualize(t *testing.T) {
 
 		seq.Flush()
 	})
+
+	t.Run("cleaning up toBeFlushed and inproc after Actualize", func(t *testing.T) {
+		require := require.New(t)
+		iTime := coreutils.MockTime
+
+		storage := newMockStorage()
+		storage.numbers = map[WSID]map[SeqID]Number{
+			1: {1: 100},
+		}
+
+		// First set of PLog entries
+		storage.PLog = [][]SeqValue{
+			{
+				{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 150},
+			},
+		}
+
+		seq, cancel := New(&Params{
+			SeqTypes: map[WSKind]map[SeqID]Number{
+				1: {1: 50},
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 10,
+			MaxFlushingInterval:   10 * time.Millisecond,
+			LRUCacheSize:          1000,
+		}, iTime)
+		defer cancel()
+
+		// Set up inproc and toBeFlushed
+		seq.(*sequencer).inprocMu.Lock()
+		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 1}] = 1
+		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 2}] = 1
+		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 3}] = 1
+		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 4}] = 1
+		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 5}] = 1
+		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 6}] = 1
+		seq.(*sequencer).inprocMu.Unlock()
+
+		seq.(*sequencer).toBeFlushedMu.Lock()
+		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 1}] = 1
+		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 2}] = 1
+		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 3}] = 1
+		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 4}] = 1
+		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 5}] = 1
+		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 5}] = 1
+		seq.(*sequencer).toBeFlushedMu.Unlock()
+		// First transaction and actualization
+		_, ok := seq.Start(1, 1)
+		require.True(ok)
+		seq.Actualize()
+		seq.(*sequencer).actualizerWG.Wait()
+
+		// Verify inproc and toBeFlushed are empty after Actualize
+		require.Empty(seq.(*sequencer).inproc)
+		require.Empty(seq.(*sequencer).toBeFlushed)
+	})
 }
 
 func TestSequencer_Next(t *testing.T) {
