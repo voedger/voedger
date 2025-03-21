@@ -497,8 +497,9 @@ func TestQueryProcessor2_Schemas(t *testing.T) {
 	defer vit.TearDown()
 
 	t.Run("read app schema", func(t *testing.T) {
-		_, err := vit.IFederation.Query(`api/v2/users/test1/apps/app1/schemas`)
+		resp, err := vit.IFederation.Query(`api/v2/users/test1/apps/app1/schemas`)
 		require.NoError(err)
+		resp.Println()
 		//require.Equal(fmt.Sprintf(`{"name":"Awesome food", "sys.ID":%d, "sys.IsActive":true, "sys.QName":"app1pkg.category"}`, 123), resp.Body)
 	})
 
