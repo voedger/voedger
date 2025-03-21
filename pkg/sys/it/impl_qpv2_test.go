@@ -491,6 +491,19 @@ func TestQueryProcessor2_IncludeView(t *testing.T) {
 	})
 }
 
+func TestQueryProcessor2_Schemas(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	t.Run("read app schema", func(t *testing.T) {
+		_, err := vit.IFederation.Query(`api/v2/users/test1/apps/app1/schemas`)
+		require.NoError(err)
+		//require.Equal(fmt.Sprintf(`{"name":"Awesome food", "sys.ID":%d, "sys.IsActive":true, "sys.QName":"app1pkg.category"}`, 123), resp.Body)
+	})
+
+}
+
 func TestQueryProcessor2_Docs(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
