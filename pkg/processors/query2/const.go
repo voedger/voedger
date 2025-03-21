@@ -10,7 +10,11 @@ const (
 	ApiPath_Queries
 	ApiPath_Views
 	ApiPath_Commands
-	ApiPaths_Schemas
-	ApiPaths_Schemas_WorkspaceRoles
-	ApiPaths_Schemas_WorkspaceRole
+	ApiPaths_Schema
+	ApiPath_Schemas_WorkspaceRoles
+	ApiPath_Schemas_WorkspaceRole
+)
+
+const (
+	contentTypeHtml = "text/html"
 )

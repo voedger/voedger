@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
@@ -17,7 +16,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors/oldacl"
-	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 )
 
 type docsHandler struct {
@@ -133,11 +131,6 @@ func (h *docsHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err err
 }
 
 func (h *docsHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
-	now := time.Now()
-	defer func() {
-		qw.metrics.Increase(queryprocessor.Metric_ExecSeconds, time.Since(now).Seconds())
-	}()
-
 	var rec istructs.IRecord
 
 	if qw.iDoc != nil && qw.iDoc.Singleton() {
