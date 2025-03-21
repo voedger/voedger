@@ -60,7 +60,10 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 						p.Close()
 						p = nil
 					} else {
-						if err = qwork.apiPathHandler.Exec(ctx, qwork); err == nil {
+						now := time.Now()
+						err = qwork.apiPathHandler.Exec(ctx, qwork)
+						qwork.metrics.Increase(queryprocessor.Metric_ExecSeconds, time.Since(now).Seconds())
+						if err == nil {
 							if err = processors.CheckResponseIntent(qwork.state); err == nil {
 								err = qwork.state.ApplyIntents()
 							}

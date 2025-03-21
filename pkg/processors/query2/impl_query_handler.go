@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
@@ -17,7 +16,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/pipeline"
-	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 )
 
 type queryHandler struct {
@@ -120,13 +118,11 @@ func (h *queryHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err er
 }
 
 func (h *queryHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
-	now := time.Now()
 	defer func() {
 		if r := recover(); r != nil {
 			stack := string(debug.Stack())
 			err = fmt.Errorf("%v\n%s", r, stack)
 		}
-		qw.metrics.Increase(queryprocessor.Metric_ExecSeconds, time.Since(now).Seconds())
 	}()
 	return qw.appPart.Invoke(ctx, qw.msg.QName(), qw.state, qw.state)
 }
