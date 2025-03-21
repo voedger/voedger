@@ -27,10 +27,13 @@ import (
 func createBusRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (res bus.Request, ok bool) {
 	vars := mux.Vars(req)
 	wsidStr := vars[URLPlaceholder_wsid]
-	wsidUint, err := strconv.ParseUint(wsidStr, utils.DecimalBase, utils.BitSize64)
-	if err != nil {
-		// notest: impossible because of regexp in a handler
-		panic(err)
+	var wsidUint uint64
+	var err error
+	if len(wsidStr) > 0 {
+		if wsidUint, err = strconv.ParseUint(wsidStr, utils.DecimalBase, utils.BitSize64); err != nil {
+			// notest: impossible because of regexp in a handler
+			panic(err)
+		}
 	}
 	appQNameStr := vars[URLPlaceholder_appOwner] + appdef.AppQNameQualifierChar + vars[URLPlaceholder_appName]
 	wsid := istructs.WSID(wsidUint)

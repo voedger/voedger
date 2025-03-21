@@ -187,6 +187,10 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return qw.apiPathHandler.SetRequestType(ctx, qw)
 		}),
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
+			switch qw.msg.ApiPath() {
+			case ApiPaths_Schemas, ApiPaths_Schemas_WorkspaceRole, ApiPaths_Schemas_WorkspaceRoles:
+				return nil
+			}
 			ok, err := qw.appPart.IsOperationAllowed(qw.iWorkspace, qw.apiPathHandler.RequestOpKind(), qw.msg.QName(), nil, qw.roles)
 			if err != nil {
 				return err
