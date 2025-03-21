@@ -57,8 +57,8 @@ func (h *schemasHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
 	// if wsQname == appdef.NullQName {
 	// 	return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Errorf("workspace is not specified"))
 	// }
-	generatedHtml := "<html><head><title>Schema</title></head><body>"
-	generatedHtml += "<h1>Schema</h1>"
+	generatedHtml := fmt.Sprintf("<html><head><title>App %s schema</title></head><body>", qw.msg.AppQName().String())
+	generatedHtml += fmt.Sprintf("<h1>App %s schema</h1>", qw.msg.AppQName().String())
 
 	workspaces := make([]appdef.IWorkspace, 0)
 
@@ -84,10 +84,11 @@ func (h *schemasHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
 		generatedHtml += "<ul>"
 		for _, ws := range workspaces {
 			ref := fmt.Sprintf("/api/v2/users/%s/apps/%s/schemas/%s/roles", qw.msg.AppQName().Owner(), qw.msg.AppQName().Name(), ws.QName().String())
-			generatedHtml += fmt.Sprintf(`<li><a href="%s">"%s"</a></li>`, ref, ws.QName().String())
+			generatedHtml += fmt.Sprintf(`<li><a href="%s">%s</a></li>`, ref, ws.QName().String())
 		}
 		generatedHtml += "</ul>"
 	}
+	generatedHtml += "</body></html>"
 
 	return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: contentTypeHtml, StatusCode: http.StatusOK}, generatedHtml)
 }

@@ -86,7 +86,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					if err != nil {
 						statusCode = err.(coreutils.SysError).HTTPStatus // nolint:errorlint
 					}
-					if qwork.apiPathHandler.IsArrayResult() {
+					if qwork.apiPathHandler != nil && qwork.apiPathHandler.IsArrayResult() {
 						if qwork.responseWriterGetter == nil || qwork.responseWriterGetter() == nil {
 							// have an error before 200ok is sent -> send the status from the actual error
 							respWriter = msg.Responder().InitResponse(statusCode)

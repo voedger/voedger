@@ -495,12 +495,12 @@ func TestQueryProcessor2_Schemas(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
-
+	//	fmt.Printf("Port: %d\n", vit.Port())
 	t.Run("read app schema", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(`api/v2/users/test1/apps/app1/schemas`)
 		require.NoError(err)
 		resp.Println()
-		//require.Equal(fmt.Sprintf(`{"name":"Awesome food", "sys.ID":%d, "sys.IsActive":true, "sys.QName":"app1pkg.category"}`, 123), resp.Body)
+		require.Equal(`<html><head><title>App test1/app1 schema</title></head><body><h1>App test1/app1 schema</h1><ul><li><a href="/api/v2/users/test1/apps/app1/schemas/app1pkg.test_wsWS/roles">app1pkg.test_wsWS</a></li></ul></body></html>`, resp.Body)
 	})
 
 }
