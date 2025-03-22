@@ -15,11 +15,6 @@ func DataKindToFieldType(kind appdef.DataKind) dynobuffers.FieldType {
 	return dataKindToDynoFieldType[kind]
 }
 
-// Converts dynobuffers FieldType to string
-func FieldTypeToString(ft dynobuffers.FieldType) string {
-	return dynobufferFieldTypeToStr[ft]
-}
-
 func NewFieldsScheme(name string, fields appdef.IWithFields) *dynobuffers.Scheme {
 	db := dynobuffers.NewScheme()
 
@@ -28,7 +23,16 @@ func NewFieldsScheme(name string, fields appdef.IWithFields) *dynobuffers.Scheme
 		if !f.IsSys() { // #18142: extract system fields from dynobuffer
 			ft := DataKindToFieldType(f.DataKind())
 			if ft == dynobuffers.FieldTypeByte {
-				db.AddArray(f.Name(), ft, false)
+				switch f.DataKind() {
+				case appdef.DataKind_int8: // #3434 [small integers : int8]
+					db.AddField(f.Name(), ft, false)
+				case appdef.DataKind_int16: // #3434 [small integers : int16]
+					db.AddArray(f.Name(), ft, false) // two fixed bytes LittleEndian
+				case appdef.DataKind_QName:
+					db.AddArray(f.Name(), ft, false) // two fixed bytes LittleEndian
+				default: // bytes, record, event
+					db.AddArray(f.Name(), ft, false) // variable length
+				}
 			} else {
 				db.AddField(f.Name(), ft, false)
 			}

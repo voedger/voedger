@@ -16,12 +16,16 @@ import (
 )
 
 // Checks value by field constraints. Return error if constraints violated
-func checkConstraints(fld appdef.IField, value interface{}) (err error) {
+func checkConstraints(fld appdef.IField, value any) (err error) {
 	switch fld.DataKind() {
 	case appdef.DataKind_string:
 		err = checkCharsConstraints(fld, value.(string))
 	case appdef.DataKind_bytes:
 		err = checkCharsConstraints(fld, value.([]byte))
+	case appdef.DataKind_int8:
+		err = checkNumberConstraints(fld, value.(int8))
+	case appdef.DataKind_int16:
+		err = checkNumberConstraints(fld, value.(int16))
 	case appdef.DataKind_int32:
 		err = checkNumberConstraints(fld, value.(int32))
 	case appdef.DataKind_int64:
@@ -86,7 +90,7 @@ func checkCharsConstraints[T chars](fld appdef.IField, value T) (err error) {
 
 // Checks value by number field constraints. Return error if constraints violated
 type number = interface {
-	int32 | int64 | float32 | float64
+	int8 | int16 | int32 | int64 | float32 | float64
 }
 
 func checkNumberConstraints[T number](fld appdef.IField, value T) (err error) {

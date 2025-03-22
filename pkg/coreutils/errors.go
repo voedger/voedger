@@ -4,7 +4,10 @@
 
 package coreutils
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
 	ErrFieldsMissed          = errors.New("fields are missed")
@@ -13,3 +16,11 @@ var (
 	ErrNumberOverflow        = errors.New("number overflow")
 	ErrRetryAttemptsExceeded = errors.New("retry attempts exceeded")
 )
+
+func errFailedToCast(value any, to string, err error) error {
+	return fmt.Errorf("failed to cast %v to %s: %w", value, to, err)
+}
+
+func errNumberOverflow(value any, to string) error {
+	return fmt.Errorf("%w: %v to %s", ErrNumberOverflow, value, to)
+}
