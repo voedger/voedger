@@ -122,7 +122,7 @@ func requestHandlerV2_schemas_wsRole(reqSender bus.IRequestSender, numsAppsWorks
 		}
 		vars := mux.Vars(req)
 		busRequest.IsAPIV2 = true
-		busRequest.ApiPath = int(query2.ApiPath_Schemas_WorkspaceRoles)
+		busRequest.ApiPath = int(query2.ApiPath_Schemas_WorkspaceRole)
 		busRequest.WorkspaceQName = appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_workspace])
 		busRequest.QName = appdef.NewQName(vars[URLPlaceholder_rolePkg], vars[URLPlaceholder_role])
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw)

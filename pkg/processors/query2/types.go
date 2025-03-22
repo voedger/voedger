@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"iter"
 	"net/http"
 	"sort"
 	"strings"
@@ -49,6 +50,7 @@ type IQueryMessage interface {
 	Host() string
 	Token() string
 	WorkspaceQName() appdef.QName // actually wsKind
+	Accept() string
 }
 
 type IApiPathHandler interface {
@@ -60,6 +62,27 @@ type IApiPathHandler interface {
 	Exec(ctx context.Context, qw *queryWork) error
 	RequestOpKind() appdef.OperationKind
 	IsArrayResult() bool
+}
+
+type SchemaMeta struct {
+	SchemaTitle   string
+	SchemaVersion string
+	Description   string
+	AppName       appdef.AppQName
+}
+
+type PublishedTypesFunc func(ws appdef.IWorkspace, role appdef.QName) iter.Seq2[appdef.IType,
+	iter.Seq2[appdef.OperationKind, *[]appdef.FieldName]]
+
+type ischema interface {
+	appdef.IType
+	appdef.IWithFields
+}
+
+type pathItem struct {
+	Method  string
+	Path    string
+	ApiPath ApiPath
 }
 
 type implIQueryMessage struct {
@@ -75,6 +98,13 @@ type implIQueryMessage struct {
 	host           string
 	token          string
 	workspaceQName appdef.QName
+	headerAccept   string
+}
+
+var _ IQueryMessage = (*implIQueryMessage)(nil)
+
+func (qm *implIQueryMessage) Accept() string {
+	return qm.headerAccept
 }
 
 func (qm *implIQueryMessage) AppQName() appdef.AppQName {

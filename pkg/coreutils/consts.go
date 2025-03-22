@@ -17,6 +17,7 @@ const (
 	Authorization                                              = "Authorization"
 	ContentType                                                = "Content-Type"
 	ContentDisposition                                         = "Content-Disposition"
+	Accept                                                     = "Accept"
 	ApplicationJSON                                            = "application/json"
 	ApplicationXBinary                                         = "application/x-binary"
 	TextPlain                                                  = "text/plain"
