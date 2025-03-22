@@ -150,8 +150,9 @@ func (g *schemaGenerator) opString(op appdef.OperationKind) string {
 		return "Select"
 	case appdef.OperationKind_Execute:
 		return "Execute"
+	default:
+		return "Unknown"
 	}
-	return ""
 }
 
 // generateSchemaComponent creates a schema component for a specific type and operation
