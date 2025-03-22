@@ -37,8 +37,12 @@ func (g *schemaGenerator) generateSchema(ischema ischema, op appdef.OperationKin
 
 	if hasContainers, ok := ischema.(appdef.IWithContainers); ok {
 		for _, container := range hasContainers.Containers() {
-			if _, ok := g.docTypes[container.QName()]; !ok {
+			typeOps, ok := g.docTypes[container.QName()]
+			if !ok {
 				continue // container not available to this role
+			}
+			if _, ok := typeOps[op]; !ok {
+				continue // operation not available to this role
 			}
 			properties[container.Name()] = map[string]interface{}{
 				schemaKeyType: schemaTypeArray,
@@ -83,8 +87,12 @@ func (g *schemaGenerator) generateFieldSchema(field appdef.IField, op appdef.Ope
 
 		if len(refField.Refs()) > 0 {
 			for i := 0; i < len(refField.Refs()); i++ {
-				if _, ok := g.docTypes[refField.Refs()[i]]; !ok {
+				ops, ok := g.docTypes[refField.Refs()[i]]
+				if !ok {
 					continue // referenced document not available to this role
+				}
+				if _, ok := ops[op]; !ok {
+					continue // operation not available to this role
 				}
 				typeName := refField.Refs()[i].String()
 				oneOf = append(oneOf, map[string]interface{}{

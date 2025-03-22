@@ -44,7 +44,7 @@ type schemaGenerator struct {
 	components     map[string]interface{}
 	paths          map[string]map[string]interface{}
 	schemasByType  map[string]map[appdef.OperationKind]string
-	docTypes       map[appdef.QName]bool
+	docTypes       map[appdef.QName]map[appdef.OperationKind]bool
 	processedTypes map[string]bool
 }
 
@@ -126,11 +126,32 @@ func (g *schemaGenerator) generateComponents() {
 }
 
 func (g *schemaGenerator) collectDocSchemaTypes() {
-	g.docTypes = make(map[appdef.QName]bool)
-	for t := range g.types {
+	g.docTypes = make(map[appdef.QName]map[appdef.OperationKind]bool)
+	for t, ops := range g.types {
 		if appdef.TypeKind_Docs.Contains(t.Kind()) || appdef.TypeKind_Records.Contains(t.Kind()) {
-			g.docTypes[t.QName()] = true
+			opsa := make(map[appdef.OperationKind]bool)
+			for op := range ops {
+				opsa[op] = true
+			}
+			g.docTypes[t.QName()] = opsa
 		}
+	}
+}
+
+func (g *schemaGenerator) opString(op appdef.OperationKind) string {
+	switch op {
+	case appdef.OperationKind_Insert:
+		return "Insert"
+	case appdef.OperationKind_Update:
+		return "Update"
+	case appdef.OperationKind_Deactivate:
+		return "Deactivate"
+	case appdef.OperationKind_Select:
+		return "Select"
+	case appdef.OperationKind_Execute:
+		return "Execute"
+	default:
+		return "Unknown"
 	}
 }
 
@@ -146,7 +167,7 @@ func (g *schemaGenerator) generateSchemaComponent(typ appdef.IType, op appdef.Op
 	// Create a component schema name based on type and operation if fields are restricted
 	componentName := typeName
 	if !useAllFields {
-		componentName = fmt.Sprintf("%s_%s", typeName, op.String())
+		componentName = fmt.Sprintf("%s_%s", typeName, g.opString(op))
 	}
 
 	// Save the schema reference for this type and operation
