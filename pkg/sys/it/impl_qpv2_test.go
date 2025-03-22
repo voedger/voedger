@@ -513,7 +513,13 @@ func TestQueryProcessor2_SchemasRoles(t *testing.T) {
 		resp, err := vit.IFederation.Query(`api/v2/users/test1/apps/app1/schemas/app1pkg.test_wsWS/roles`)
 		require.NoError(err)
 		resp.Println()
-		require.Equal(`<html><head><title>App test1/app1 schema</title></head><body><h1>App test1/app1 schema</h1><ul><li><a href="/api/v2/users/test1/apps/app1/schemas/app1pkg.test_wsWS/roles">app1pkg.test_wsWS</a></li></ul></body></html>`, resp.Body)
+		require.Equal(`<html><head><title>App test1/app1: workspace app1pkg.test_wsWS published roles</title></head><body><h1>App test1/app1</h1><h2>Workspace app1pkg.test_wsWS published roles</h2><ul><li><a href="/api/v2/users/test1/apps/app1/schemas/app1pkg.test_wsWS/roles/app1pkg.ApiRole">app1pkg.ApiRole</a></li></ul></body></html>`, resp.Body)
+	})
+
+	t.Run("unknown ws", func(t *testing.T) {
+		resp, err := vit.IFederation.Query(`api/v2/users/test1/apps/app1/schemas/pkg.unknown/roles`, coreutils.Expect404())
+		require.NoError(err)
+		require.JSONEq(`{"status":404,"message":"workspace pkg.unknown not found"}`, resp.Body)
 	})
 }
 
