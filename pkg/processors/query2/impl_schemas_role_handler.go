@@ -74,7 +74,7 @@ func (h *schemasRoleHandler) Exec(ctx context.Context, qw *queryWork) (err error
 	schemaMeta := SchemaMeta{
 		SchemaTitle:   fmt.Sprintf("%s: %s OpenAPI 3.0", qw.msg.AppQName().Name(), role.QName().Entity()),
 		SchemaVersion: "1.0.0", // TODO: get app name and version from appdef
-		Description:   workspace.Comment(),
+		Description:   role.Comment(),
 		AppName:       qw.msg.AppQName(),
 	}
 

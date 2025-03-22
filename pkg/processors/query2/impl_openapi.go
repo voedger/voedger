@@ -784,7 +784,6 @@ func (g *schemaGenerator) write(writer io.Writer) error {
 		"openapi": "3.0.0",
 		"info": map[string]interface{}{
 			"title":              g.meta.SchemaTitle,
-			"summary":            "Summary",
 			"version":            g.meta.SchemaVersion,
 			schemaKeyDescription: g.meta.Description,
 		},
@@ -792,7 +791,7 @@ func (g *schemaGenerator) write(writer io.Writer) error {
 			"name": g.meta.AppName.Owner(),
 		},
 		"externalDocs": map[string]interface{}{
-			schemaKeyDescription: "Built with Voedger: distributed cloud application platform",
+			schemaKeyDescription: "Powered by Voedger: distributed cloud application platform",
 			"url":                "https://voedger.io",
 		},
 		"servers": []map[string]interface{}{
