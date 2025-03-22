@@ -44,19 +44,10 @@ func (h *schemasHandler) AuthorizeResult(ctx context.Context, qw *queryWork) (er
 }
 
 func (h *schemasHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err error) {
-	// sender := &sender{responder: qw.msg.Responder(), isArrayResponse: false, contentType: contentTypeHtml}
-	// qw.rowsProcessor = pipeline.NewAsyncPipeline(ctx, "View rows processor", pipeline.WireAsyncOperator("Sender", sender))
-	// qw.responseWriterGetter = func() bus.IResponseWriter {
-	// 	return sender.respWriter
-	// }
 	return nil
 }
 
 func (h *schemasHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
-	// wsQname := qw.msg.WorkspaceQName()
-	// if wsQname == appdef.NullQName {
-	// 	return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Errorf("workspace is not specified"))
-	// }
 	generatedHtml := fmt.Sprintf("<html><head><title>App %s schema</title></head><body>", qw.msg.AppQName().String())
 	generatedHtml += fmt.Sprintf("<h1>App %s schema</h1>", qw.msg.AppQName().String())
 
