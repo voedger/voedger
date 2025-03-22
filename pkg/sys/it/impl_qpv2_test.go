@@ -6,18 +6,22 @@
 package sys_it
 
 import (
+	"bytes"
 	"fmt"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/acl"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/processors/query2"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -499,7 +503,6 @@ func TestQueryProcessor2_Schemas(t *testing.T) {
 	t.Run("read app schema", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(`api/v2/users/test1/apps/app1/schemas`)
 		require.NoError(err)
-		resp.Println()
 		require.Equal(`<html><head><title>App test1/app1 schema</title></head><body><h1>App test1/app1 schema</h1><ul><li><a href="/api/v2/users/test1/apps/app1/schemas/app1pkg.test_wsWS/roles">app1pkg.test_wsWS</a></li></ul></body></html>`, resp.Body)
 	})
 }
@@ -508,16 +511,46 @@ func TestQueryProcessor2_SchemasRoles(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
-	//	fmt.Printf("Port: %d\n", vit.Port())
+
+	// fmt.Printf("Port: %d\n", vit.Port())
+
 	t.Run("read app workspace roles", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(`api/v2/users/test1/apps/app1/schemas/app1pkg.test_wsWS/roles`)
 		require.NoError(err)
-		resp.Println()
 		require.Equal(`<html><head><title>App test1/app1: workspace app1pkg.test_wsWS published roles</title></head><body><h1>App test1/app1</h1><h2>Workspace app1pkg.test_wsWS published roles</h2><ul><li><a href="/api/v2/users/test1/apps/app1/schemas/app1pkg.test_wsWS/roles/app1pkg.ApiRole">app1pkg.ApiRole</a></li></ul></body></html>`, resp.Body)
 	})
 
 	t.Run("unknown ws", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(`api/v2/users/test1/apps/app1/schemas/pkg.unknown/roles`, coreutils.Expect404())
+		require.NoError(err)
+		require.JSONEq(`{"status":404,"message":"workspace pkg.unknown not found"}`, resp.Body)
+	})
+}
+
+func TestQueryProcessor2_SchemasWorkspaceRole(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	t.Run("read app workspace role in JSON", func(t *testing.T) {
+		resp, err := vit.IFederation.Query(`api/v2/users/test1/apps/app1/schemas/app1pkg.test_wsWS/roles/app1pkg.ApiRole`,
+			coreutils.WithHeaders("Accept", "application/json"))
+		require.NoError(err)
+		require.True(strings.HasPrefix(resp.Body, `{`))
+	})
+	t.Run("read app workspace role in HTML", func(t *testing.T) {
+		resp, err := vit.IFederation.Query(`api/v2/users/test1/apps/app1/schemas/app1pkg.test_wsWS/roles/app1pkg.ApiRole`,
+			coreutils.WithHeaders("Accept", "text/html"))
+		require.NoError(err)
+		require.True(strings.HasPrefix(resp.Body, `<`))
+	})
+	t.Run("unknown role", func(t *testing.T) {
+		resp, err := vit.IFederation.Query(`api/v2/users/test1/apps/app1/schemas/app1pkg.test_wsWS/roles/app1pkg.UnknownRole`, coreutils.Expect404())
+		require.NoError(err)
+		require.JSONEq(`{"status":404,"message":"role app1pkg.UnknownRole not found in workspace app1pkg.test_wsWS"}`, resp.Body)
+	})
+
+	t.Run("unknown ws", func(t *testing.T) {
+		resp, err := vit.IFederation.Query(`api/v2/users/test1/apps/app1/schemas/pkg.unknown/roles/app1pkg.ApiRole`, coreutils.Expect404())
 		require.NoError(err)
 		require.JSONEq(`{"status":404,"message":"workspace pkg.unknown not found"}`, resp.Body)
 	})
@@ -554,4 +587,32 @@ func TestQueryProcessor2_Docs(t *testing.T) {
 		resp, _ := vit.IFederation.Query(path, coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect404())
 		require.JSONEq(`{"status":404,"message":"document app1pkg.category with ID 123 not found"}`, resp.Body)
 	})
+}
+
+func TestOpenAPI(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	require := require.New(t)
+	appDef, err := vit.AppDef(istructs.AppQName_test1_app1)
+	ws := appDef.Workspace(appdef.NewQName("app1pkg", "test_wsWS"))
+	require.NotNil(ws)
+	require.NoError(err)
+
+	writer := new(bytes.Buffer)
+
+	schemaMeta := query2.SchemaMeta{
+		SchemaTitle:   "Test Schema",
+		SchemaVersion: "1.0.0",
+		AppName:       appdef.NewAppQName("voedger", "testapp"),
+	}
+
+	err = query2.CreateOpenApiSchema(writer, ws, appdef.NewQName("app1pkg", "ApiRole"), acl.PublishedTypes, schemaMeta)
+
+	require.NoError(err)
+
+	json := writer.String()
+	require.Contains(json, "\"components\": {")
+	require.Contains(json, "\"app1pkg.Currency\": {")
+	require.Contains(json, "\"paths\": {")
+	require.Contains(json, "/users/voedger/apps/testapp/workspaces/{wsid}/docs/app1pkg.Currency")
 }

@@ -25,6 +25,8 @@ ALTERABLE WORKSPACE test_wsWS_another (
 	);
 );
 
+/* Workspace for testing
+   Contains tables with different fields and constraints */
 ALTERABLE WORKSPACE test_wsWS (
 
 	DESCRIPTOR test_ws (

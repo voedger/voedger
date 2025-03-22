@@ -2,7 +2,7 @@
  * Copyright (c) 2025-present unTill Software Development Group B.V.
  * @author Michael Saigachenko
  */
-package openapi
+package query2
 
 import (
 	"encoding/json"
@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/processors/query2"
 )
 
 // CreateOpenApiSchema generates an OpenAPI schema document for the given workspace and role
@@ -64,6 +63,13 @@ func (g *schemaGenerator) generate() {
 // generateComponents creates schema components for all published types
 func (g *schemaGenerator) generateComponents() {
 	schemas := make(map[string]interface{})
+	g.components["securitySchemes"] = map[string]interface{}{
+		bearerAuth: map[string]interface{}{
+			"type":         "http",
+			"scheme":       "bearer",
+			"bearerFormat": "JWT",
+		},
+	}
 	g.components["schemas"] = schemas
 
 	for t, ops := range g.types {
@@ -196,37 +202,37 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 			return []pathItem{
 				{
 					Method:  methodPost,
-					Path:    fmt.Sprintf("/api/v2/users/%s/apps/%s/workspaces/{wsid}/docs/%s", owner, app, typeName),
-					ApiPath: query2.ApiPath_Docs,
+					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/docs/%s", owner, app, typeName),
+					ApiPath: ApiPath_Docs,
 				},
 			}
 		case appdef.OperationKind_Update:
 			return []pathItem{
 				{
 					Method:  methodPatch,
-					Path:    fmt.Sprintf("/api/v2/users/%s/apps/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
-					ApiPath: query2.ApiPath_Docs,
+					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
+					ApiPath: ApiPath_Docs,
 				},
 			}
 		case appdef.OperationKind_Deactivate:
 			return []pathItem{
 				{
 					Method:  methodDelete,
-					Path:    fmt.Sprintf("/api/v2/users/%s/apps/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
-					ApiPath: query2.ApiPath_Docs,
+					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
+					ApiPath: ApiPath_Docs,
 				},
 			}
 		case appdef.OperationKind_Select:
 			return []pathItem{
 				{
 					Method:  methodGet,
-					Path:    fmt.Sprintf("/api/v2/users/%s/apps/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
-					ApiPath: query2.ApiPath_Docs,
+					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
+					ApiPath: ApiPath_Docs,
 				},
 				{
 					Method:  methodGet,
-					Path:    fmt.Sprintf("/api/v2/users/%s/apps/%s/workspaces/{wsid}/cdocs/%s", owner, app, typeName),
-					ApiPath: query2.ApiPath_CDocs,
+					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/cdocs/%s", owner, app, typeName),
+					ApiPath: ApiPath_CDocs,
 				},
 			}
 
@@ -237,8 +243,8 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 		return []pathItem{
 			{
 				Method:  methodPost,
-				Path:    fmt.Sprintf("/api/v2/users/%s/apps/%s/workspaces/{wsid}/commands/%s", owner, app, typeName),
-				ApiPath: query2.ApiPath_Commands,
+				Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/commands/%s", owner, app, typeName),
+				ApiPath: ApiPath_Commands,
 			},
 		}
 	}
@@ -247,8 +253,8 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 		return []pathItem{
 			{
 				Method:  methodGet,
-				Path:    fmt.Sprintf("/api/v2/users/%s/apps/%s/workspaces/{wsid}/queries/%s", owner, app, typeName),
-				ApiPath: query2.ApiPath_Queries,
+				Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/queries/%s", owner, app, typeName),
+				ApiPath: ApiPath_Queries,
 			},
 		}
 	}
@@ -257,8 +263,8 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 		return []pathItem{
 			{
 				Method:  methodGet,
-				Path:    fmt.Sprintf("/api/v2/users/%s/apps/%s/workspaces/{wsid}/views/%s", owner, app, typeName),
-				ApiPath: query2.ApiPath_Views,
+				Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/views/%s", owner, app, typeName),
+				ApiPath: ApiPath_Views,
 			},
 		}
 	}
@@ -267,7 +273,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 }
 
 // addPathItem adds a path item to the OpenAPI schema
-func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op appdef.OperationKind, apiPath query2.ApiPath) {
+func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op appdef.OperationKind, apiPath ApiPath) {
 	//typeName := fmt.Sprintf("%s.%s", typ.QName().Pkg(), typ.QName().Entity())
 
 	// Create path if it doesn't exist
@@ -285,7 +291,12 @@ func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op 
 	}
 
 	// Add operation description
-	operation["description"] = g.generateDescription(typ, op, apiPath)
+	operation[schemaKeyDescription] = g.generateDescription(typ, op, apiPath)
+	operation["security"] = []map[string]interface{}{
+		{
+			bearerAuth: []string{},
+		},
+	}
 
 	// Add operation parameters
 	parameters := g.generateParameters(path)
@@ -328,7 +339,7 @@ func (g *schemaGenerator) generateTags(typ appdef.IType) []string {
 }
 
 // generateDescription creates description for an operation on a type
-func (g *schemaGenerator) generateDescription(typ appdef.IType, op appdef.OperationKind, apiPath query2.ApiPath) string {
+func (g *schemaGenerator) generateDescription(typ appdef.IType, op appdef.OperationKind, apiPath ApiPath) string {
 	// Use type's comment if available
 	if typ.Comment() != "" {
 		return typ.Comment()
@@ -351,7 +362,7 @@ func (g *schemaGenerator) generateDescription(typ appdef.IType, op appdef.Operat
 
 	case typ.Kind() == appdef.TypeKind_CDoc:
 		if op == appdef.OperationKind_Select {
-			if apiPath == query2.ApiPath_CDocs {
+			if apiPath == ApiPath_CDocs {
 				return fmt.Sprintf("Reads the collection of %s", typeName)
 			}
 			return fmt.Sprintf("Reads %s", typeName)
@@ -400,7 +411,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 			"schema": map[string]interface{}{
 				"type": "string",
 			},
-			"description": "Name of a user who owns the application",
+			schemaKeyDescription: "Name of a user who owns the application",
 		})
 	}
 
@@ -412,7 +423,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 			"schema": map[string]interface{}{
 				"type": "string",
 			},
-			"description": "Name of an application",
+			schemaKeyDescription: "Name of an application",
 		})
 	}
 
@@ -425,7 +436,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 				"type":   "integer",
 				"format": "int64",
 			},
-			"description": "The ID of workspace",
+			schemaKeyDescription: "The ID of workspace",
 		})
 	}
 
@@ -438,7 +449,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 				"type":   "integer",
 				"format": "int64",
 			},
-			"description": "ID of a document or record",
+			schemaKeyDescription: "ID of a document or record",
 		})
 	}
 
@@ -452,7 +463,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 			"schema": map[string]interface{}{
 				"type": "string",
 			},
-			"description": "Filter criteria in JSON format",
+			schemaKeyDescription: "Filter criteria in JSON format",
 		})
 
 		parameters = append(parameters, map[string]interface{}{
@@ -462,7 +473,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 			"schema": map[string]interface{}{
 				"type": "string",
 			},
-			"description": "Field to order results by",
+			schemaKeyDescription: "Field to order results by",
 		})
 
 		parameters = append(parameters, map[string]interface{}{
@@ -472,7 +483,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 			"schema": map[string]interface{}{
 				"type": "integer",
 			},
-			"description": "Maximum number of results to return",
+			schemaKeyDescription: "Maximum number of results to return",
 		})
 
 		parameters = append(parameters, map[string]interface{}{
@@ -482,7 +493,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 			"schema": map[string]interface{}{
 				"type": "integer",
 			},
-			"description": "Number of results to skip",
+			schemaKeyDescription: "Number of results to skip",
 		})
 
 		parameters = append(parameters, map[string]interface{}{
@@ -492,7 +503,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 			"schema": map[string]interface{}{
 				"type": "string",
 			},
-			"description": "Referenced objects to include in response",
+			schemaKeyDescription: "Referenced objects to include in response",
 		})
 
 		parameters = append(parameters, map[string]interface{}{
@@ -502,7 +513,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 			"schema": map[string]interface{}{
 				"type": "string",
 			},
-			"description": "Specific fields to include in response",
+			schemaKeyDescription: "Specific fields to include in response",
 		})
 	}
 
@@ -515,7 +526,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 			"schema": map[string]interface{}{
 				"type": "string",
 			},
-			"description": "Query argument in JSON format",
+			schemaKeyDescription: "Query argument in JSON format",
 		})
 	}
 
@@ -772,8 +783,22 @@ func (g *schemaGenerator) write(writer io.Writer) error {
 	schema := map[string]interface{}{
 		"openapi": "3.0.0",
 		"info": map[string]interface{}{
-			"title":   g.meta.SchemaTitle,
-			"version": g.meta.SchemaVersion,
+			"title":              g.meta.SchemaTitle,
+			"summary":            "Summary",
+			"version":            g.meta.SchemaVersion,
+			schemaKeyDescription: g.meta.Description,
+		},
+		"contact": map[string]interface{}{
+			"name": g.meta.AppName.Owner(),
+		},
+		"externalDocs": map[string]interface{}{
+			schemaKeyDescription: "Built with Voedger: distributed cloud application platform",
+			"url":                "https://voedger.io",
+		},
+		"servers": []map[string]interface{}{
+			{
+				"url": "/api/v2",
+			},
 		},
 		"paths":      g.paths,
 		"components": g.components,
