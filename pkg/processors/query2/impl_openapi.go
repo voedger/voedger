@@ -291,7 +291,7 @@ func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op 
 	}
 
 	// Add operation description
-	operation["description"] = g.generateDescription(typ, op, apiPath)
+	operation[schemaKeyDescription] = g.generateDescription(typ, op, apiPath)
 	operation["security"] = []map[string]interface{}{
 		{
 			bearerAuth: []string{},
@@ -411,7 +411,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 			"schema": map[string]interface{}{
 				"type": "string",
 			},
-			"description": "Name of a user who owns the application",
+			schemaKeyDescription: "Name of a user who owns the application",
 		})
 	}
 
@@ -423,7 +423,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 			"schema": map[string]interface{}{
 				"type": "string",
 			},
-			"description": "Name of an application",
+			schemaKeyDescription: "Name of an application",
 		})
 	}
 
@@ -436,7 +436,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 				"type":   "integer",
 				"format": "int64",
 			},
-			"description": "The ID of workspace",
+			schemaKeyDescription: "The ID of workspace",
 		})
 	}
 
@@ -449,7 +449,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 				"type":   "integer",
 				"format": "int64",
 			},
-			"description": "ID of a document or record",
+			schemaKeyDescription: "ID of a document or record",
 		})
 	}
 
@@ -463,7 +463,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 			"schema": map[string]interface{}{
 				"type": "string",
 			},
-			"description": "Filter criteria in JSON format",
+			schemaKeyDescription: "Filter criteria in JSON format",
 		})
 
 		parameters = append(parameters, map[string]interface{}{
@@ -473,7 +473,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 			"schema": map[string]interface{}{
 				"type": "string",
 			},
-			"description": "Field to order results by",
+			schemaKeyDescription: "Field to order results by",
 		})
 
 		parameters = append(parameters, map[string]interface{}{
@@ -483,7 +483,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 			"schema": map[string]interface{}{
 				"type": "integer",
 			},
-			"description": "Maximum number of results to return",
+			schemaKeyDescription: "Maximum number of results to return",
 		})
 
 		parameters = append(parameters, map[string]interface{}{
@@ -493,7 +493,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 			"schema": map[string]interface{}{
 				"type": "integer",
 			},
-			"description": "Number of results to skip",
+			schemaKeyDescription: "Number of results to skip",
 		})
 
 		parameters = append(parameters, map[string]interface{}{
@@ -503,7 +503,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 			"schema": map[string]interface{}{
 				"type": "string",
 			},
-			"description": "Referenced objects to include in response",
+			schemaKeyDescription: "Referenced objects to include in response",
 		})
 
 		parameters = append(parameters, map[string]interface{}{
@@ -513,7 +513,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 			"schema": map[string]interface{}{
 				"type": "string",
 			},
-			"description": "Specific fields to include in response",
+			schemaKeyDescription: "Specific fields to include in response",
 		})
 	}
 
@@ -526,7 +526,7 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 			"schema": map[string]interface{}{
 				"type": "string",
 			},
-			"description": "Query argument in JSON format",
+			schemaKeyDescription: "Query argument in JSON format",
 		})
 	}
 
@@ -783,22 +783,21 @@ func (g *schemaGenerator) write(writer io.Writer) error {
 	schema := map[string]interface{}{
 		"openapi": "3.0.0",
 		"info": map[string]interface{}{
-			"title":       g.meta.SchemaTitle,
-			"summary":     "Summary",
-			"version":     g.meta.SchemaVersion,
-			"description": g.meta.Description,
+			"title":              g.meta.SchemaTitle,
+			"summary":            "Summary",
+			"version":            g.meta.SchemaVersion,
+			schemaKeyDescription: g.meta.Description,
 		},
 		"contact": map[string]interface{}{
 			"name": g.meta.AppName.Owner(),
 		},
 		"externalDocs": map[string]interface{}{
-			"description": "Built with Voedger: distributed cloud application platform",
-			"url":         "https://voedger.io",
+			schemaKeyDescription: "Built with Voedger: distributed cloud application platform",
+			"url":                "https://voedger.io",
 		},
 		"servers": []map[string]interface{}{
 			{
-				"url":         "/api/v2",
-				"description": "API v2",
+				"url": "/api/v2",
 			},
 		},
 		"paths":      g.paths,
