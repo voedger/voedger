@@ -25,8 +25,6 @@ ALTERABLE WORKSPACE test_wsWS_another (
 	);
 );
 
-/* Workspace for testing
-   Contains tables with different fields and constraints */
 ALTERABLE WORKSPACE test_wsWS (
 
 	DESCRIPTOR test_ws (
@@ -706,6 +704,7 @@ ALTERABLE WORKSPACE test_wsWS (
 	TAG WorkspaceOwnerFuncTag;
 	TAG ApiFeatureTag FEATURE 'Backoffice API';
 
+	/* ApiRole is used for testing API access */
 	PUBLISHED ROLE ApiRole;
 	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON TABLE Currency TO ApiRole;
 	GRANT SELECT ON TABLE category TO ApiRole;

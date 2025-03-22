@@ -512,7 +512,7 @@ func TestQueryProcessor2_SchemasRoles(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	// fmt.Printf("Port: %d\n", vit.Port())
+	//fmt.Printf("Port: %d\n", vit.Port())
 
 	t.Run("read app workspace roles", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(`api/v2/users/test1/apps/app1/schemas/app1pkg.test_wsWS/roles`)
