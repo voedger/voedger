@@ -477,8 +477,7 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 	if strings.Contains(path, "/views/") || strings.Contains(path, "/queries/") || strings.Contains(path, "/cdocs/") {
 		// Add query constraints parameters
 		pkFields := make([]string, 0)
-		if strings.Contains(path, "/views/") {
-			view := typ.(appdef.IView)
+		if view, ok := typ.(appdef.IView); ok {
 			for _, pk := range view.Key().PartKey().Fields() {
 				pkFields = append(pkFields, pk.Name())
 			}
