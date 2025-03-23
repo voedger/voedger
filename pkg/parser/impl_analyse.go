@@ -411,8 +411,12 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 		}
 		for _, i := range grant.Table.Items {
 			for _, column := range i.Columns {
-				if err := checkColumn(column.Value); err != nil {
-					c.stmtErr(&column.Pos, err)
+				if column.Name != nil {
+					if err := checkColumn(column.Name.Value); err != nil {
+						c.stmtErr(&column.Pos, err)
+					}
+				} else {
+					grant.columns = append(grant.columns, column.SysName)
 				}
 			}
 		}

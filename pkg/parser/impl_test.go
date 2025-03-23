@@ -598,9 +598,7 @@ func Test_Workspaces(t *testing.T) {
 		w := def.Workspace(appdef.NewQName("pkg", "W"))
 		require.NotNil(w)
 		actualAncestors := []appdef.IWorkspace{}
-		for _, a := range w.Ancestors() {
-			actualAncestors = append(actualAncestors, a)
-		}
+		actualAncestors = append(actualAncestors, w.Ancestors()...)
 		require.Len(actualAncestors, 2)
 	})
 }
