@@ -484,7 +484,7 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 		}
 		descr := "A JSON-encoded string used to filter query results. The value must be URL-encoded"
 		if len(pkFields) > 0 {
-			descr = descr + fmt.Sprintf(". Required fields: %s", strings.Join(pkFields, ", "))
+			descr += fmt.Sprintf(". Required fields: %s", strings.Join(pkFields, ", "))
 		}
 		parameters = append(parameters, map[string]interface{}{
 			"name":     "where",
