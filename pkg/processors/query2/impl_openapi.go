@@ -44,7 +44,7 @@ type schemaGenerator struct {
 	components     map[string]interface{}
 	paths          map[string]map[string]interface{}
 	schemasByType  map[string]map[appdef.OperationKind]string
-	docTypes       map[appdef.QName]map[appdef.OperationKind]bool
+	docTypes       map[appdef.QName]map[appdef.OperationKind]bool // bool: true when operation is allowed on limited fields
 	processedTypes map[string]bool
 }
 
@@ -130,8 +130,8 @@ func (g *schemaGenerator) collectDocSchemaTypes() {
 	for t, ops := range g.types {
 		if appdef.TypeKind_Docs.Contains(t.Kind()) || appdef.TypeKind_Records.Contains(t.Kind()) {
 			opsa := make(map[appdef.OperationKind]bool)
-			for op := range ops {
-				opsa[op] = true
+			for op, fields := range ops {
+				opsa[op] = fields != nil && len(*fields) > 0
 			}
 			g.docTypes[t.QName()] = opsa
 		}
@@ -554,17 +554,27 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 	return parameters
 }
 
-func (g *schemaGenerator) schemaNameByTypeName(typeName string, op appdef.OperationKind) string {
-	if typeSchemas, ok := g.schemasByType[typeName]; ok {
-		if opSchema, ok := typeSchemas[op]; ok {
-			return opSchema
-		}
+func (g *schemaGenerator) docSchemaRefIfExist(typ appdef.QName, op appdef.OperationKind) (string, bool) {
+	ops, ok := g.docTypes[typ]
+	if !ok {
+		return "", false
 	}
-	return typeName
+	if limited, ok := ops[op]; ok {
+		if limited {
+			return fmt.Sprintf("#/components/schemas/%s_%s", typ.String(), g.opString(op)), true
+		}
+		return fmt.Sprintf("#/components/schemas/%s", typ.String()), true
+	}
+	return "", false
 }
 
 func (g *schemaGenerator) schemaRef(typ appdef.IType, op appdef.OperationKind) string {
-	return fmt.Sprintf("#/components/schemas/%s", g.schemaNameByTypeName(typ.QName().String(), op))
+	if typeSchemas, ok := g.schemasByType[typ.QName().String()]; ok {
+		if opSchema, ok := typeSchemas[op]; ok {
+			return fmt.Sprintf("#/components/schemas/%s", opSchema)
+		}
+	}
+	return fmt.Sprintf("#/components/schemas/%s", typ.QName().String())
 }
 
 // generateRequestBody creates a request body for a type and operation
