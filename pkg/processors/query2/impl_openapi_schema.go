@@ -37,17 +37,14 @@ func (g *schemaGenerator) generateSchema(ischema ischema, op appdef.OperationKin
 
 	if hasContainers, ok := ischema.(appdef.IWithContainers); ok {
 		for _, container := range hasContainers.Containers() {
-			typeOps, ok := g.docTypes[container.QName()]
+			schemaName, ok := g.docSchemaRefIfExist(container.QName(), op)
 			if !ok {
-				continue // container not available to this role
-			}
-			if _, ok := typeOps[op]; !ok {
-				continue // operation not available to this role
+				continue // doc and/or operation not available to this role
 			}
 			properties[container.Name()] = map[string]interface{}{
 				schemaKeyType: schemaTypeArray,
 				schemaKeyItems: map[string]interface{}{
-					schemaKeyRef: g.schemaRef(container.Type(), op),
+					schemaKeyRef: schemaName,
 				},
 				"minItems": container.MinOccurs(),
 				"maxItems": container.MaxOccurs(),
@@ -85,18 +82,15 @@ func (g *schemaGenerator) generateFieldSchema(field appdef.IField, op appdef.Ope
 		})
 		refNames := make([]string, 0, len(refField.Refs()))
 
-		if len(refField.Refs()) > 0 {
+		if len(refField.Refs()) > 0 && op == appdef.OperationKind_Select {
 			for i := 0; i < len(refField.Refs()); i++ {
-				ops, ok := g.docTypes[refField.Refs()[i]]
+				schemaRef, ok := g.docSchemaRefIfExist(refField.Refs()[i], op)
 				if !ok {
 					continue // referenced document not available to this role
 				}
-				if _, ok := ops[op]; !ok {
-					continue // operation not available to this role
-				}
 				typeName := refField.Refs()[i].String()
 				oneOf = append(oneOf, map[string]interface{}{
-					schemaKeyRef: fmt.Sprintf("#/components/schemas/%s", g.schemaNameByTypeName(typeName, op)),
+					schemaKeyRef: schemaRef,
 				})
 				refNames = append(refNames, typeName)
 			}
