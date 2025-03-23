@@ -298,7 +298,7 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
     GRANT EXECUTE ON COMMAND NewOrder TO LocationUser;
     GRANT EXECUTE ON QUERY Query1 TO LocationUser;
     GRANT SELECT ON TABLE untill.Prices TO LocationUser;
-    GRANT SELECT(Price) ON TABLE untill.Prices TO LocationUser;
+    GRANT SELECT(Price, sys.ID) ON TABLE untill.Prices TO LocationUser;
     GRANT INSERT(Discount) ON TABLE untill.Promotions TO LocationManager; 
     GRANT SELECT ON VIEW XZReports TO LocationUser;
     GRANT SELECT(Year,XZReportWDocID) ON VIEW XZReports TO LocationUser;
