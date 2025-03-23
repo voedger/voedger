@@ -295,7 +295,6 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 
 // addPathItem adds a path item to the OpenAPI schema
 func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op appdef.OperationKind, apiPath ApiPath) {
-	//typeName := fmt.Sprintf("%s.%s", typ.QName().Pkg(), typ.QName().Entity())
 
 	// Create path if it doesn't exist
 	if _, exists := g.paths[path]; !exists {
@@ -320,7 +319,7 @@ func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op 
 	}
 
 	// Add operation parameters
-	parameters := g.generateParameters(path)
+	parameters := g.generateParameters(path, typ)
 	if len(parameters) > 0 {
 		operation["parameters"] = parameters
 	}
@@ -420,7 +419,7 @@ func (g *schemaGenerator) generateDescription(typ appdef.IType, op appdef.Operat
 }
 
 // generateParameters creates parameters for a path
-func (g *schemaGenerator) generateParameters(path string) []map[string]interface{} {
+func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []map[string]interface{} {
 	parameters := make([]map[string]interface{}, 0)
 
 	// Common parameters for all paths
@@ -477,14 +476,26 @@ func (g *schemaGenerator) generateParameters(path string) []map[string]interface
 	// Add query parameters for GET methods
 	if strings.Contains(path, "/views/") || strings.Contains(path, "/queries/") || strings.Contains(path, "/cdocs/") {
 		// Add query constraints parameters
+		pkFields := make([]string, 0)
+		if strings.Contains(path, "/views/") {
+			view := typ.(appdef.IView)
+			for _, pk := range view.Key().PartKey().Fields() {
+				pkFields = append(pkFields, pk.Name())
+			}
+		}
+		descr := "A JSON-encoded string used to filter query results. The value must be URL-encoded"
+		if len(pkFields) > 0 {
+			descr = descr + fmt.Sprintf(". Required fields: %s", strings.Join(pkFields, ", "))
+		}
 		parameters = append(parameters, map[string]interface{}{
 			"name":     "where",
 			"in":       "query",
-			"required": false,
+			"required": len(pkFields) > 0,
 			"schema": map[string]interface{}{
 				"type": "string",
 			},
-			schemaKeyDescription: "Filter criteria in JSON format",
+			schemaKeyDescription: descr,
+			"example":            `{"Country": "Spain", "Age": {"$gt": 30}}`,
 		})
 
 		parameters = append(parameters, map[string]interface{}{
