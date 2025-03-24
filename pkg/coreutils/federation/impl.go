@@ -165,18 +165,28 @@ func getFuncError(httpResp *coreutils.HTTPResponse) (funcError coreutils.FuncErr
 	if err := json.Unmarshal([]byte(httpResp.Body), &m); err != nil {
 		return funcError, fmt.Errorf("IFederation: failed to unmarshal response body to FuncErr: %w. Body:\n%s", err, httpResp.Body)
 	}
-	sysErrorMap := m["sys.Error"].(map[string]interface{})
-	errQNameStr, ok := sysErrorMap["QName"].(string)
-	if ok {
-		errQName, err := appdef.ParseQName(errQNameStr)
-		if err != nil {
-			errQName = appdef.NewQName("<err>", sysErrorMap["QName"].(string))
+	sysErrorIntf, hasSysError := m["sys.Error"]
+	if hasSysError {
+		sysErrorMap := sysErrorIntf.(map[string]interface{})
+		errQNameStr, ok := sysErrorMap["QName"].(string)
+		if ok {
+			errQName, err := appdef.ParseQName(errQNameStr)
+			if err != nil {
+				errQName = appdef.NewQName("<err>", sysErrorMap["QName"].(string))
+			}
+			funcError.SysError.QName = errQName
 		}
-		funcError.SysError.QName = errQName
+		funcError.SysError.HTTPStatus = int(sysErrorMap["HTTPStatus"].(float64))
+		funcError.SysError.Message = sysErrorMap["Message"].(string)
+		funcError.SysError.Data, _ = sysErrorMap["Data"].(string)
+	} else {
+		if commonErrorStatusIntf, ok := m["status"]; ok {
+			funcError.SysError.HTTPStatus = int(commonErrorStatusIntf.(float64))
+		}
+		if commonErrorMessageIntf, ok := m["message"]; ok {
+			funcError.SysError.Message = commonErrorMessageIntf.(string)
+		}
 	}
-	funcError.SysError.HTTPStatus = int(sysErrorMap["HTTPStatus"].(float64))
-	funcError.SysError.Message = sysErrorMap["Message"].(string)
-	funcError.SysError.Data, _ = sysErrorMap["Data"].(string)
 	return funcError, nil
 }
 

@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"iter"
 	"net/http"
 	"sort"
@@ -19,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/sys/collection"
 )
 
 type ApiPath int
@@ -329,10 +331,11 @@ func (a *aggregator) compareUint64(v1, v2 uint64, asc bool) bool {
 
 type sender struct {
 	pipeline.AsyncNOOP
-	responder       bus.IResponder
-	respWriter      bus.IResponseWriter
-	isArrayResponse bool
-	contentType     string
+	responder          bus.IResponder
+	respWriter         bus.IResponseWriter
+	isArrayResponse    bool
+	contentType        string
+	rowsProcessorErrCh chan error
 }
 
 func (s *sender) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
@@ -343,6 +346,9 @@ func (s *sender) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork p
 		s.respWriter = s.responder.InitResponse(http.StatusOK)
 	}
 	return work, s.respWriter.Write(work.(objectBackedByMap).data)
+}
+func (s *sender) OnError(_ context.Context, err error) {
+	s.rowsProcessorErrCh <- coreutils.WrapSysError(err, http.StatusBadRequest)
 }
 
 type filter struct {
@@ -484,28 +490,36 @@ func (w queryResultWrapper) AsQName(name appdef.FieldName) appdef.QName {
 
 type include struct {
 	pipeline.AsyncNOOP
-	sss     [][]string
-	wsid    istructs.WSID
-	records istructs.IRecords
-	ad      appdef.IAppDef
+	refFieldsAndContainers [][]string
+	wsid                   istructs.WSID
+	ad                     appdef.IAppDef
+	records                istructs.IRecords
+	viewRecords            istructs.IViewRecords
+	cdoc                   bool
 }
 
-func newInclude(qw *queryWork) (o pipeline.IAsyncOperator) {
+func newInclude(qw *queryWork, cdoc bool) (o pipeline.IAsyncOperator) {
 	i := &include{
-		sss:     make([][]string, 0),
-		records: qw.appStructs.Records(),
-		wsid:    qw.msg.WSID(),
-		ad:      qw.appStructs.AppDef(),
+		refFieldsAndContainers: make([][]string, 0),
+		wsid:                   qw.msg.WSID(),
+		ad:                     qw.appStructs.AppDef(),
+		records:                qw.appStructs.Records(),
+		viewRecords:            qw.appStructs.ViewRecords(),
+		cdoc:                   cdoc,
 	}
 	for _, s := range qw.queryParams.Constraints.Include {
-		i.sss = append(i.sss, strings.Split(s, "."))
+		i.refFieldsAndContainers = append(i.refFieldsAndContainers, strings.Split(s, "."))
 	}
 	return i
 }
 
-func (i include) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
-	for _, ss := range i.sss {
-		err = i.fill(work.(objectBackedByMap).data, ss)
+func (i include) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
+	relations, err := i.getRelations(ctx, work)
+	if err != nil {
+		return
+	}
+	for _, refFieldsAndContainers := range i.refFieldsAndContainers {
+		err = i.fill(work.(objectBackedByMap).data, refFieldsAndContainers, relations, refFieldsAndContainers)
 		if err != nil {
 			return
 		}
@@ -519,28 +533,117 @@ func (i include) recordToMap(id istructs.RecordID) (obj map[string]interface{}, 
 	}
 	return coreutils.FieldsToMap(record, i.ad), nil
 }
-func (i include) fill(parent map[string]interface{}, ss []string) (err error) {
-	if len(ss) == 0 {
+func (i include) fill(parent map[string]interface{}, refFieldsAndContainers []string, relations map[istructs.RecordID]map[string][]istructs.RecordID, fieldExpression []string) (err error) {
+	if len(refFieldsAndContainers) == 0 {
 		return nil
 	}
-	switch v := parent[ss[0]].(type) {
+
+	err = i.checkField(parent, refFieldsAndContainers[0], fieldExpression)
+	if err != nil {
+		return
+	}
+
+	if id, ok := parent[appdef.SystemField_ID].(istructs.RecordID); ok {
+		for container, ids := range relations[id] {
+			if container != refFieldsAndContainers[0] {
+				continue
+			}
+			_, hasChildren := parent[container]
+			if hasChildren {
+				continue
+			}
+			parent[container] = ids
+		}
+	}
+
+	switch v := parent[refFieldsAndContainers[0]].(type) {
 	case istructs.RecordID:
 		child, e := i.recordToMap(v)
 		if e != nil {
 			return e
 		}
-		parent[ss[0]] = child
-		e = i.fill(child, ss[1:])
+		parent[refFieldsAndContainers[0]] = child
+		e = i.fill(child, refFieldsAndContainers[1:], relations, fieldExpression)
 		if e != nil {
 			return e
 		}
 	case map[string]interface{}:
-		e := i.fill(v, ss[1:])
+		e := i.fill(v, refFieldsAndContainers[1:], relations, fieldExpression)
 		if e != nil {
 			return e
 		}
+	case []istructs.RecordID:
+		items := make([]map[string]interface{}, 0)
+		for _, id := range v {
+			item, e := i.recordToMap(id)
+			if e != nil {
+				return e
+			}
+			e = i.fill(item, refFieldsAndContainers[1:], relations, fieldExpression)
+			if e != nil {
+				return e
+			}
+			items = append(items, item)
+		}
+		parent[refFieldsAndContainers[0]] = items
+	case []map[string]interface{}:
+		items := make([]map[string]interface{}, 0)
+		for _, item := range v {
+			err = i.fill(item, refFieldsAndContainers[1:], relations, fieldExpression)
+			if err != nil {
+				return
+			}
+			items = append(items, item)
+		}
+		parent[refFieldsAndContainers[0]] = items
+	case nil:
+		// Do nothing
 	default:
 		return errUnsupportedType
 	}
 	return
+}
+func (i include) getRelations(ctx context.Context, work pipeline.IWorkpiece) (relations map[istructs.RecordID]map[string][]istructs.RecordID, err error) {
+	relations = make(map[istructs.RecordID]map[string][]istructs.RecordID)
+	if !i.cdoc {
+		return
+	}
+	kbCollectionView := i.viewRecords.KeyBuilder(collection.QNameCollectionView)
+	kbCollectionView.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
+	kbCollectionView.PutQName(collection.Field_DocQName, work.(objectBackedByMap).data[appdef.SystemField_QName].(appdef.QName))
+	kbCollectionView.PutRecordID(collection.Field_DocID, work.(objectBackedByMap).data[appdef.SystemField_ID].(istructs.RecordID))
+	err = i.viewRecords.Read(ctx, i.wsid, kbCollectionView, func(key istructs.IKey, value istructs.IValue) (err error) {
+		record := value.AsRecord(collection.Field_Record)
+		if record.AsRecordID(appdef.SystemField_ParentID) == istructs.NullRecordID {
+			return
+		}
+
+		containers, okContainers := relations[record.AsRecordID(appdef.SystemField_ParentID)]
+		if !okContainers {
+			containers = make(map[string][]istructs.RecordID)
+		}
+		container, okContainer := containers[record.AsString(appdef.SystemField_Container)]
+		if !okContainer {
+			container = make([]istructs.RecordID, 0)
+		}
+		container = append(container, record.ID())
+
+		containers[record.AsString(appdef.SystemField_Container)] = container
+		relations[record.AsRecordID(appdef.SystemField_ParentID)] = containers
+		return
+	})
+	return
+}
+func (i include) checkField(parent map[string]interface{}, filed string, fieldExpression []string) (err error) {
+	for _, field := range i.ad.Type(parent[appdef.SystemField_QName].(appdef.QName)).(appdef.IWithFields).RefFields() {
+		if field.Name() == filed {
+			return nil
+		}
+	}
+	for _, container := range i.ad.Type(parent[appdef.SystemField_QName].(appdef.QName)).(appdef.IWithContainers).Containers() {
+		if container.Name() == filed {
+			return nil
+		}
+	}
+	return fmt.Errorf("field expression - '%s', '%s' - %w", strings.Join(fieldExpression, "."), filed, errUnexpectedField)
 }

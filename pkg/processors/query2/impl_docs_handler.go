@@ -116,12 +116,17 @@ func (h *docsHandler) AuthorizeResult(ctx context.Context, qw *queryWork) (err e
 func (h *docsHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 	oo := make([]*pipeline.WiredOperator, 0)
 	if qw.queryParams.Constraints != nil && len(qw.queryParams.Constraints.Include) != 0 {
-		oo = append(oo, pipeline.WireAsyncOperator("Include", newInclude(qw)))
+		oo = append(oo, pipeline.WireAsyncOperator("Include", newInclude(qw, true)))
 	}
 	if qw.queryParams.Constraints != nil && len(qw.queryParams.Constraints.Keys) != 0 {
 		oo = append(oo, pipeline.WireAsyncOperator("Keys", newKeys(qw.queryParams.Constraints.Keys)))
 	}
-	sender := &sender{responder: qw.msg.Responder(), isArrayResponse: false, contentType: coreutils.ApplicationJSON}
+	sender := &sender{
+		responder:          qw.msg.Responder(),
+		isArrayResponse:    false,
+		contentType:        coreutils.ApplicationJSON,
+		rowsProcessorErrCh: qw.rowsProcessorErrCh,
+	}
 	oo = append(oo, pipeline.WireAsyncOperator("Sender", sender))
 	qw.rowsProcessor = pipeline.NewAsyncPipeline(ctx, "View rows processor", oo[0], oo[1:]...)
 	qw.responseWriterGetter = func() bus.IResponseWriter {
@@ -130,7 +135,7 @@ func (h *docsHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err err
 	return
 }
 
-func (h *docsHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
+func (h *docsHandler) Exec(_ context.Context, qw *queryWork) (err error) {
 	var rec istructs.IRecord
 
 	if qw.iDoc != nil && qw.iDoc.Singleton() {
@@ -156,7 +161,6 @@ func (h *docsHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
 			return coreutils.NewHTTPErrorf(http.StatusNotFound, fmt.Errorf("record %s with ID %d not found", qw.msg.QName(), qw.msg.DocID()))
 		}
 	}
-
 	obj := objectBackedByMap{}
 	obj.data = coreutils.FieldsToMap(rec, qw.appStructs.AppDef())
 	return qw.callbackFunc(obj)

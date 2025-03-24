@@ -176,7 +176,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		b.Key().PartKey().AddField(Field_PartKey, appdef.DataKind_int32)
 		b.Key().ClustCols().
 			AddField(Field_DocQName, appdef.DataKind_QName).
-			AddRefField(field_DocID).
+			AddRefField(Field_DocID).
 			AddRefField(field_ElementID)
 		b.Value().
 			AddField(Field_Record, appdef.DataKind_Record, true).

@@ -45,14 +45,14 @@ func collectionFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callba
 	kb.PutQName(Field_DocQName, resultsQName)
 	id := args.ArgumentObject.AsRecordID(field_ID)
 	if id != istructs.NullRecordID {
-		kb.PutRecordID(field_DocID, id)
+		kb.PutRecordID(Field_DocID, id)
 	}
 
 	var lastDoc *collectionObject
 
 	err = args.State.Read(kb, func(key istructs.IKey, value istructs.IStateValue) (err error) {
 		rec := value.(istructs.IStateViewValue).AsRecord(Field_Record)
-		docId := key.AsRecordID(field_DocID)
+		docId := key.AsRecordID(Field_DocID)
 
 		if lastDoc != nil && lastDoc.ID() == docId {
 			lastDoc.addRawRecord(rec)
