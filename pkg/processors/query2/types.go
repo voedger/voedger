@@ -533,12 +533,12 @@ func (i include) recordToMap(id istructs.RecordID) (obj map[string]interface{}, 
 	}
 	return coreutils.FieldsToMap(record, i.ad), nil
 }
-func (i include) fill(parent map[string]interface{}, refFieldsAndContainers []string, relations map[istructs.RecordID]map[string][]istructs.RecordID, fieldExpression []string) (err error) {
+func (i include) fill(parent map[string]interface{}, refFieldsAndContainers []string, relations map[istructs.RecordID]map[string][]istructs.RecordID, refFieldOrContainerExpression []string) (err error) {
 	if len(refFieldsAndContainers) == 0 {
 		return nil
 	}
 
-	err = i.checkField(parent, refFieldsAndContainers[0], fieldExpression)
+	err = i.checkField(parent, refFieldsAndContainers[0], refFieldOrContainerExpression)
 	if err != nil {
 		return
 	}
@@ -563,12 +563,12 @@ func (i include) fill(parent map[string]interface{}, refFieldsAndContainers []st
 			return e
 		}
 		parent[refFieldsAndContainers[0]] = child
-		e = i.fill(child, refFieldsAndContainers[1:], relations, fieldExpression)
+		e = i.fill(child, refFieldsAndContainers[1:], relations, refFieldOrContainerExpression)
 		if e != nil {
 			return e
 		}
 	case map[string]interface{}:
-		e := i.fill(v, refFieldsAndContainers[1:], relations, fieldExpression)
+		e := i.fill(v, refFieldsAndContainers[1:], relations, refFieldOrContainerExpression)
 		if e != nil {
 			return e
 		}
@@ -579,7 +579,7 @@ func (i include) fill(parent map[string]interface{}, refFieldsAndContainers []st
 			if e != nil {
 				return e
 			}
-			e = i.fill(item, refFieldsAndContainers[1:], relations, fieldExpression)
+			e = i.fill(item, refFieldsAndContainers[1:], relations, refFieldOrContainerExpression)
 			if e != nil {
 				return e
 			}
@@ -589,7 +589,7 @@ func (i include) fill(parent map[string]interface{}, refFieldsAndContainers []st
 	case []map[string]interface{}:
 		items := make([]map[string]interface{}, 0)
 		for _, item := range v {
-			err = i.fill(item, refFieldsAndContainers[1:], relations, fieldExpression)
+			err = i.fill(item, refFieldsAndContainers[1:], relations, refFieldOrContainerExpression)
 			if err != nil {
 				return
 			}
@@ -634,16 +634,16 @@ func (i include) getRelations(ctx context.Context, work pipeline.IWorkpiece) (re
 	})
 	return
 }
-func (i include) checkField(parent map[string]interface{}, filed string, fieldExpression []string) (err error) {
+func (i include) checkField(parent map[string]interface{}, refFieldOrContainer string, refFieldOrContainerExpression []string) (err error) {
 	for _, field := range i.ad.Type(parent[appdef.SystemField_QName].(appdef.QName)).(appdef.IWithFields).RefFields() {
-		if field.Name() == filed {
+		if field.Name() == refFieldOrContainer {
 			return nil
 		}
 	}
 	for _, container := range i.ad.Type(parent[appdef.SystemField_QName].(appdef.QName)).(appdef.IWithContainers).Containers() {
-		if container.Name() == filed {
+		if container.Name() == refFieldOrContainer {
 			return nil
 		}
 	}
-	return fmt.Errorf("field expression - '%s', '%s' - %w", strings.Join(fieldExpression, "."), filed, errUnexpectedField)
+	return fmt.Errorf("field expression - '%s', '%s' - %w", strings.Join(refFieldOrContainerExpression, "."), refFieldOrContainer, errUnexpectedField)
 }

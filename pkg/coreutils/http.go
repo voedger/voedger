@@ -394,11 +394,11 @@ func (resp *HTTPResponse) PrintJSON() {
 	obj := make(map[string]interface{})
 	err := json.Unmarshal([]byte(resp.Body), &obj)
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 	bb, err := json.MarshalIndent(obj, "", "	")
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 	log.Println("\n", string(bb))
 }
