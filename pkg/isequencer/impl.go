@@ -149,9 +149,9 @@ func (s *sequencer) flusher(ctx context.Context) {
 		case <-tickerCh:
 		}
 		s.toBeFlushedMu.Lock()
-		toBeFlushedOffset := s.toBeFlushedOffset
+		flushOffset := s.toBeFlushedOffset
 		s.toBeFlushedMu.Unlock()
-		if err := s.flushValues(toBeFlushedOffset, false); err != nil {
+		if err := s.flushValues(flushOffset, false); err != nil {
 			// notest
 			panic("failed to flush values: " + err.Error())
 		}
