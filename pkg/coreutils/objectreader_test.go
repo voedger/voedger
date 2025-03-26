@@ -228,14 +228,7 @@ func testBasic(expectedQName appdef.QName, m map[string]interface{}, require *re
 	require.True(v)
 	require.Equal([]byte{5, 6}, m["bytes"])
 	require.Equal(istructs.RecordID(7), m["recordID"])
-	var actualQName appdef.QName
-	if _, ok := m[appdef.SystemField_QName].(string); ok {
-		var err error
-		actualQName, err = appdef.ParseQName(m[appdef.SystemField_QName].(string))
-		require.NoError(err)
-	} else {
-		actualQName = m[appdef.SystemField_QName].(appdef.QName)
-	}
+	actualQName := m[appdef.SystemField_QName].(appdef.QName)
 	require.Equal(expectedQName, actualQName)
 }
 
