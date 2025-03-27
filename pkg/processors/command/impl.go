@@ -44,9 +44,12 @@ func (cm *implICommandMessage) RequestCtx() context.Context       { return cm.re
 func (cm *implICommandMessage) QName() appdef.QName               { return cm.qName }
 func (cm *implICommandMessage) Token() string                     { return cm.token }
 func (cm *implICommandMessage) Host() string                      { return cm.host }
+func (cm *implICommandMessage) ApiPath() processors.ApiPath       { return cm.apiPath }
+func (cm *implICommandMessage) DocID() istructs.RecordID          { return cm.docID }
 
 func NewCommandMessage(requestCtx context.Context, body []byte, appQName appdef.AppQName, wsid istructs.WSID,
-	responder bus.IResponder, partitionID istructs.PartitionID, qName appdef.QName, token string, host string) ICommandMessage {
+	responder bus.IResponder, partitionID istructs.PartitionID, qName appdef.QName, token string, host string, apiPath processors.ApiPath,
+	docID istructs.RecordID) ICommandMessage {
 	return &implICommandMessage{
 		body:        body,
 		appQName:    appQName,
@@ -57,6 +60,8 @@ func NewCommandMessage(requestCtx context.Context, body []byte, appQName appdef.
 		qName:       qName,
 		token:       token,
 		host:        host,
+		apiPath:     apiPath,
+		docID:       docID,
 	}
 }
 
@@ -511,7 +516,12 @@ func execCommand(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	begin := time.Now()
 
-	err = cmd.appPart.Invoke(ctx, cmd.cmdMes.QName(), cmd.eca.State, cmd.eca.Intents)
+	cmdQName := cmd.cmdMes.QName()
+	if work.(ICommandMessage).ApiPath() == processors.ApiPath_Docs {
+		cmdQName = istructs.QNameCommandCUD
+	}
+
+	err = cmd.appPart.Invoke(ctx, cmdQName, cmd.eca.State, cmd.eca.Intents)
 
 	cmd.metrics.increase(ExecSeconds, time.Since(begin).Seconds())
 	return err

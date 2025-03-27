@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/processors"
 )
 
 // CreateOpenApiSchema generates an OpenAPI schema document for the given workspace and role
@@ -224,7 +225,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 				{
 					Method:  methodPost,
 					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/docs/%s", owner, app, typeName),
-					ApiPath: ApiPath_Docs,
+					ApiPath: processors.ApiPath_Docs,
 				},
 			}
 		case appdef.OperationKind_Update:
@@ -232,7 +233,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 				{
 					Method:  methodPatch,
 					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
-					ApiPath: ApiPath_Docs,
+					ApiPath: processors.ApiPath_Docs,
 				},
 			}
 		case appdef.OperationKind_Deactivate:
@@ -240,7 +241,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 				{
 					Method:  methodDelete,
 					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
-					ApiPath: ApiPath_Docs,
+					ApiPath: processors.ApiPath_Docs,
 				},
 			}
 		case appdef.OperationKind_Select:
@@ -248,12 +249,12 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 				{
 					Method:  methodGet,
 					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
-					ApiPath: ApiPath_Docs,
+					ApiPath: processors.ApiPath_Docs,
 				},
 				{
 					Method:  methodGet,
 					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/cdocs/%s", owner, app, typeName),
-					ApiPath: ApiPath_CDocs,
+					ApiPath: processors.ApiPath_CDocs,
 				},
 			}
 
@@ -265,7 +266,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 			{
 				Method:  methodPost,
 				Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/commands/%s", owner, app, typeName),
-				ApiPath: ApiPath_Commands,
+				ApiPath: processors.ApiPath_Commands,
 			},
 		}
 	}
@@ -275,7 +276,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 			{
 				Method:  methodGet,
 				Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/queries/%s", owner, app, typeName),
-				ApiPath: ApiPath_Queries,
+				ApiPath: processors.ApiPath_Queries,
 			},
 		}
 	}
@@ -285,7 +286,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 			{
 				Method:  methodGet,
 				Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/views/%s", owner, app, typeName),
-				ApiPath: ApiPath_Views,
+				ApiPath: processors.ApiPath_Views,
 			},
 		}
 	}
@@ -294,7 +295,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 }
 
 // addPathItem adds a path item to the OpenAPI schema
-func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op appdef.OperationKind, apiPath ApiPath) {
+func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op appdef.OperationKind, apiPath processors.ApiPath) {
 
 	// Create path if it doesn't exist
 	if _, exists := g.paths[path]; !exists {
@@ -359,7 +360,7 @@ func (g *schemaGenerator) generateTags(typ appdef.IType) []string {
 }
 
 // generateDescription creates description for an operation on a type
-func (g *schemaGenerator) generateDescription(typ appdef.IType, op appdef.OperationKind, apiPath ApiPath) string {
+func (g *schemaGenerator) generateDescription(typ appdef.IType, op appdef.OperationKind, apiPath processors.ApiPath) string {
 	// Use type's comment if available
 	if typ.Comment() != "" {
 		return typ.Comment()
@@ -382,7 +383,7 @@ func (g *schemaGenerator) generateDescription(typ appdef.IType, op appdef.Operat
 
 	case typ.Kind() == appdef.TypeKind_CDoc:
 		if op == appdef.OperationKind_Select {
-			if apiPath == ApiPath_CDocs {
+			if apiPath == processors.ApiPath_CDocs {
 				return fmt.Sprintf("Reads the collection of %s", typeName)
 			}
 			return fmt.Sprintf("Reads %s", typeName)

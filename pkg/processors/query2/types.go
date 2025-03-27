@@ -20,10 +20,9 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/sys/collection"
 )
-
-type ApiPath int
 
 type QueryParams struct {
 	Constraints *Constraints
@@ -45,7 +44,7 @@ type IQueryMessage interface {
 	Responder() bus.IResponder
 	QueryParams() QueryParams
 	DocID() istructs.IDType
-	ApiPath() ApiPath
+	ApiPath() processors.ApiPath
 	RequestCtx() context.Context
 	QName() appdef.QName // e.g. Doc, View, Role
 	PartitionID() istructs.PartitionID
@@ -84,7 +83,7 @@ type ischema interface {
 type pathItem struct {
 	Method  string
 	Path    string
-	ApiPath ApiPath
+	ApiPath processors.ApiPath
 }
 
 type implIQueryMessage struct {
@@ -93,7 +92,7 @@ type implIQueryMessage struct {
 	responder      bus.IResponder
 	queryParams    QueryParams
 	docID          istructs.IDType
-	apiPath        ApiPath
+	apiPath        processors.ApiPath
 	requestCtx     context.Context
 	qName          appdef.QName
 	partition      istructs.PartitionID
@@ -128,7 +127,7 @@ func (qm *implIQueryMessage) DocID() istructs.IDType {
 	return qm.docID
 }
 
-func (qm *implIQueryMessage) ApiPath() ApiPath {
+func (qm *implIQueryMessage) ApiPath() processors.ApiPath {
 	return qm.apiPath
 }
 

@@ -19,6 +19,7 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
@@ -41,6 +42,8 @@ type ICommandMessage interface {
 	QName() appdef.QName
 	Token() string
 	Host() string
+	ApiPath() processors.ApiPath
+	DocID() istructs.RecordID
 }
 
 type xPath string
@@ -110,6 +113,8 @@ type implICommandMessage struct {
 	qName       appdef.QName
 	token       string
 	host        string
+	apiPath     processors.ApiPath
+	docID       istructs.RecordID
 }
 
 type wrongArgsCatcher struct {
