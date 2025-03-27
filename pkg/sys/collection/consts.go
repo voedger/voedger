@@ -16,7 +16,7 @@ import (
 const (
 	Field_PartKey          = "PartKey"
 	Field_DocQName         = "DocQName"
-	field_DocID            = "DocID"
+	Field_DocID            = "DocID"
 	field_ElementID        = "ElementID"
 	Field_Record           = "Record"
 	PartitionKeyCollection = 1 // Always put the BO in the fixed partition
