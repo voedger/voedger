@@ -30,9 +30,9 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 	batch := []isequencer.SeqValue{}
 	return ss.events.ReadPLog(ctx, istructs.PartitionID(ss.partitionID), istructs.Offset(offset), istructs.ReadToTheEnd, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		var appDef appdef.IAppDef
-
 		argType := appDef.Type(event.ArgumentObject().QName())
 		if argType.Kind() == appdef.TypeKind_ODoc {
+			event.ArgumentObject().IDs
 			batch = append(batch, isequencer.SeqValue{
 				Key: isequencer.NumberKey{
 					WSID: isequencer.WSID(event.Workspace()),
