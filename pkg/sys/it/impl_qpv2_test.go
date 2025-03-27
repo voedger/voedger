@@ -342,7 +342,7 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 	})
 
 }
-func TestQueryProcessor2_IncludeView(t *testing.T) {
+func TestQueryProcessor2_Include(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
@@ -448,10 +448,226 @@ func TestQueryProcessor2_IncludeView(t *testing.T) {
 	require.EqualValues(offset, <-offsetsChan)
 	unsubscribe()
 
-	t.Run("Read by PK and include all", func(t *testing.T) {
-		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=Client.Wallet.Currency,Client.Country,Client.Wallet.Capabilities`, ws.WSID, it.QNameApp1_ViewClients), coreutils.WithAuthorizeBy(ws.Owner.Token))
-		require.NoError(err)
-		require.JSONEq(`{"results":[{
+	cuds = coreutils.CUDs{
+		Values: []coreutils.CUD{
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:    istructs.RecordID(1),
+					appdef.SystemField_QName: it.QNameApp1_CDocCfg,
+					it.Field_Name:            "CfgA",
+				},
+			},
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:    istructs.RecordID(2),
+					appdef.SystemField_QName: it.QNameApp1_CDocCfg,
+					it.Field_Name:            "CfgB",
+				},
+			},
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:    istructs.RecordID(3),
+					appdef.SystemField_QName: it.QNameApp1_CDocCfg,
+					it.Field_Name:            "CfgBatch",
+				},
+			},
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:    istructs.RecordID(4),
+					appdef.SystemField_QName: it.QNameApp1_CDocBatch,
+					it.Field_Number:          101,
+					it.Field_Cfg:             istructs.RecordID(3),
+				},
+			},
+		},
+	}
+	resp := vit.PostWS(ws, "c.sys.CUD", cuds.MustToJSON())
+
+	cfgAID := resp.NewIDs["1"]
+	cfgBID := resp.NewIDs["2"]
+	batchID := resp.NewIDs["4"]
+
+	cuds = coreutils.CUDs{
+		Values: []coreutils.CUD{
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:        istructs.RecordID(1),
+					appdef.SystemField_QName:     it.QNameApp1_CRecordTask,
+					appdef.SystemField_ParentID:  batchID,
+					appdef.SystemField_Container: it.Field_GroupA,
+					it.Field_Cfg:                 cfgAID,
+					it.Field_Name:                "TaskA1",
+				},
+			},
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:        istructs.RecordID(2),
+					appdef.SystemField_QName:     it.QNameApp1_CRecordTask,
+					appdef.SystemField_ParentID:  batchID,
+					appdef.SystemField_Container: it.Field_GroupA,
+					it.Field_Cfg:                 cfgAID,
+					it.Field_Name:                "TaskA2",
+				},
+			},
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:        istructs.RecordID(3),
+					appdef.SystemField_QName:     it.QNameApp1_CRecordTask,
+					appdef.SystemField_ParentID:  batchID,
+					appdef.SystemField_Container: it.Field_GroupB,
+					it.Field_Cfg:                 cfgBID,
+					it.Field_Name:                "TaskB1",
+				},
+			},
+		},
+	}
+	resp = vit.PostWS(ws, "c.sys.CUD", cuds.MustToJSON())
+
+	taskA1ID := resp.NewIDs["1"]
+	taskA2ID := resp.NewIDs["2"]
+	taskB1ID := resp.NewIDs["3"]
+
+	cuds = coreutils.CUDs{
+		Values: []coreutils.CUD{
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:        istructs.RecordID(1),
+					appdef.SystemField_QName:     it.QNameApp1_CRecordTask,
+					appdef.SystemField_ParentID:  taskA1ID,
+					appdef.SystemField_Container: it.Field_GroupA,
+					it.Field_Cfg:                 cfgAID,
+					it.Field_Name:                "SubTaskA1_TaskA1",
+				},
+			},
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:        istructs.RecordID(2),
+					appdef.SystemField_QName:     it.QNameApp1_CRecordTask,
+					appdef.SystemField_ParentID:  taskA1ID,
+					appdef.SystemField_Container: it.Field_GroupA,
+					it.Field_Cfg:                 cfgAID,
+					it.Field_Name:                "SubTaskA2_TaskA1",
+				},
+			},
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:        istructs.RecordID(3),
+					appdef.SystemField_QName:     it.QNameApp1_CRecordTask,
+					appdef.SystemField_ParentID:  taskA1ID,
+					appdef.SystemField_Container: it.Field_GroupB,
+					it.Field_Cfg:                 cfgBID,
+					it.Field_Name:                "SubTaskB1_TaskA1",
+				},
+			},
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:        istructs.RecordID(4),
+					appdef.SystemField_QName:     it.QNameApp1_CRecordTask,
+					appdef.SystemField_ParentID:  taskA1ID,
+					appdef.SystemField_Container: it.Field_GroupB,
+					it.Field_Cfg:                 cfgBID,
+					it.Field_Name:                "SubTaskB2_TaskA1",
+				},
+			},
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:        istructs.RecordID(5),
+					appdef.SystemField_QName:     it.QNameApp1_CRecordTask,
+					appdef.SystemField_ParentID:  taskA2ID,
+					appdef.SystemField_Container: it.Field_GroupA,
+					it.Field_Cfg:                 cfgAID,
+					it.Field_Name:                "SubTaskA1_TaskA2",
+				},
+			},
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:        istructs.RecordID(6),
+					appdef.SystemField_QName:     it.QNameApp1_CRecordTask,
+					appdef.SystemField_ParentID:  taskB1ID,
+					appdef.SystemField_Container: it.Field_GroupB,
+					it.Field_Cfg:                 cfgBID,
+					it.Field_Name:                "SubTaskB1_TaskB1",
+				},
+			},
+		},
+	}
+	subTaskB1TaskB1ID := vit.PostWS(ws, "c.sys.CUD", cuds.MustToJSON()).NewIDs["6"]
+	cuds = coreutils.CUDs{
+		Values: []coreutils.CUD{
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:        istructs.RecordID(1),
+					appdef.SystemField_QName:     it.QNameApp1_CRecordTask,
+					appdef.SystemField_ParentID:  subTaskB1TaskB1ID,
+					appdef.SystemField_Container: it.Field_GroupA,
+					it.Field_Cfg:                 cfgAID,
+					it.Field_Name:                "SubSubTaskA1_SubTaskB1_TaskB1",
+				},
+			},
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:        istructs.RecordID(2),
+					appdef.SystemField_QName:     it.QNameApp1_CRecordTask,
+					appdef.SystemField_ParentID:  subTaskB1TaskB1ID,
+					appdef.SystemField_Container: it.Field_GroupA,
+					it.Field_Cfg:                 cfgAID,
+					it.Field_Name:                "SubSubTaskA2_SubTaskB1_TaskB1",
+				},
+			},
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:        istructs.RecordID(3),
+					appdef.SystemField_QName:     it.QNameApp1_CRecordTask,
+					appdef.SystemField_ParentID:  subTaskB1TaskB1ID,
+					appdef.SystemField_Container: it.Field_GroupB,
+					it.Field_Cfg:                 cfgBID,
+					it.Field_Name:                "SubSubTaskB1_SubTaskB1_TaskB1",
+				},
+			},
+		},
+	}
+	subSubTaskB1SubTaskB1TaskB1ID := vit.PostWS(ws, "c.sys.CUD", cuds.MustToJSON()).NewIDs["3"]
+	cuds = coreutils.CUDs{
+		Values: []coreutils.CUD{
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:        istructs.RecordID(1),
+					appdef.SystemField_QName:     it.QNameApp1_CRecordTask,
+					appdef.SystemField_ParentID:  subSubTaskB1SubTaskB1TaskB1ID,
+					appdef.SystemField_Container: it.Field_GroupA,
+					it.Field_Cfg:                 cfgAID,
+					it.Field_Name:                "SubSubSubTaskA1_SubSubTaskB1_SubTaskB1_TaskB1",
+				},
+			},
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:        istructs.RecordID(2),
+					appdef.SystemField_QName:     it.QNameApp1_CRecordTask,
+					appdef.SystemField_ParentID:  subSubTaskB1SubTaskB1TaskB1ID,
+					appdef.SystemField_Container: it.Field_GroupA,
+					it.Field_Cfg:                 cfgAID,
+					it.Field_Name:                "SubSubSubTaskA2_SubSubTaskB1_SubTaskB1_TaskB1",
+				},
+			},
+			{
+				Fields: map[string]interface{}{
+					appdef.SystemField_ID:        istructs.RecordID(3),
+					appdef.SystemField_QName:     it.QNameApp1_CRecordTask,
+					appdef.SystemField_ParentID:  subSubTaskB1SubTaskB1TaskB1ID,
+					appdef.SystemField_Container: it.Field_GroupB,
+					it.Field_Cfg:                 cfgBID,
+					it.Field_Name:                "SubSubSubTaskB1_SubSubTaskB1_SubTaskB1_TaskB1",
+				},
+			},
+		},
+	}
+	vit.PostWS(ws, "c.sys.CUD", cuds.MustToJSON())
+
+	t.Run("View", func(t *testing.T) {
+		t.Run("Read by PK and include all", func(t *testing.T) {
+			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=Client.Wallet.Currency,Client.Country,Client.Wallet.Capabilities`, ws.WSID, it.QNameApp1_ViewClients), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			require.NoError(err)
+			require.JSONEq(`{"results":[{
 					"Client":{
 						"Country":{
 							"Name":"Spain",
@@ -491,7 +707,658 @@ func TestQueryProcessor2_IncludeView(t *testing.T) {
 					"Year":1988,
 					"offs":13,
 					"sys.QName":"app1pkg.Clients"
-		}]}`, resp.Body)
+			}]}`, resp.Body)
+		})
+	})
+	t.Run("Document", func(t *testing.T) {
+		t.Run("Read by ID and include all", func(t *testing.T) {
+			include := []string{
+				"Cfg",
+				"GroupA.Cfg",
+				"GroupB.Cfg",
+				"GroupA.GroupA.Cfg",
+				"GroupA.GroupB.Cfg",
+				"GroupB.GroupB.Cfg",
+				"GroupB.GroupB.GroupA.Cfg",
+				"GroupB.GroupB.GroupB.Cfg",
+				"GroupB.GroupB.GroupB.GroupB.Cfg",
+			}
+			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batchID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			require.NoError(err)
+			require.JSONEq(`{
+										"Cfg": {
+											"Name": "CfgBatch",
+											"sys.ID": 322685000131086,
+											"sys.IsActive": true,
+											"sys.QName": "app1pkg.Cfg"
+										},
+										"GroupA": [
+											{
+												"Cfg": {
+													"Name": "CfgA",
+													"sys.ID": 322685000131084,
+													"sys.IsActive": true,
+													"sys.QName": "app1pkg.Cfg"
+												},
+												"GroupA": [
+													{
+														"Cfg": {
+															"Name": "CfgA",
+															"sys.ID": 322685000131084,
+															"sys.IsActive": true,
+															"sys.QName": "app1pkg.Cfg"
+														},
+														"Name": "SubTaskA1_TaskA1",
+														"sys.Container": "GroupA",
+														"sys.ID": 322685000131091,
+														"sys.IsActive": true,
+														"sys.ParentID": 322685000131088,
+														"sys.QName": "app1pkg.Task"
+													},
+													{
+														"Cfg": {
+															"Name": "CfgA",
+															"sys.ID": 322685000131084,
+															"sys.IsActive": true,
+															"sys.QName": "app1pkg.Cfg"
+														},
+														"Name": "SubTaskA2_TaskA1",
+														"sys.Container": "GroupA",
+														"sys.ID": 322685000131092,
+														"sys.IsActive": true,
+														"sys.ParentID": 322685000131088,
+														"sys.QName": "app1pkg.Task"
+													}
+												],
+												"GroupB": [
+													{
+														"Cfg": {
+															"Name": "CfgB",
+															"sys.ID": 322685000131085,
+															"sys.IsActive": true,
+															"sys.QName": "app1pkg.Cfg"
+														},
+														"Name": "SubTaskB1_TaskA1",
+														"sys.Container": "GroupB",
+														"sys.ID": 322685000131093,
+														"sys.IsActive": true,
+														"sys.ParentID": 322685000131088,
+														"sys.QName": "app1pkg.Task"
+													},
+													{
+														"Cfg": {
+															"Name": "CfgB",
+															"sys.ID": 322685000131085,
+															"sys.IsActive": true,
+															"sys.QName": "app1pkg.Cfg"
+														},
+														"Name": "SubTaskB2_TaskA1",
+														"sys.Container": "GroupB",
+														"sys.ID": 322685000131094,
+														"sys.IsActive": true,
+														"sys.ParentID": 322685000131088,
+														"sys.QName": "app1pkg.Task"
+													}
+												],
+												"Name": "TaskA1",
+												"sys.Container": "GroupA",
+												"sys.ID": 322685000131088,
+												"sys.IsActive": true,
+												"sys.ParentID": 322685000131087,
+												"sys.QName": "app1pkg.Task"
+											},
+											{
+												"Cfg": {
+													"Name": "CfgA",
+													"sys.ID": 322685000131084,
+													"sys.IsActive": true,
+													"sys.QName": "app1pkg.Cfg"
+												},
+												"GroupA": [
+													{
+														"Cfg": {
+															"Name": "CfgA",
+															"sys.ID": 322685000131084,
+															"sys.IsActive": true,
+															"sys.QName": "app1pkg.Cfg"
+														},
+														"Name": "SubTaskA1_TaskA2",
+														"sys.Container": "GroupA",
+														"sys.ID": 322685000131095,
+														"sys.IsActive": true,
+														"sys.ParentID": 322685000131089,
+														"sys.QName": "app1pkg.Task"
+													}
+												],
+												"Name": "TaskA2",
+												"sys.Container": "GroupA",
+												"sys.ID": 322685000131089,
+												"sys.IsActive": true,
+												"sys.ParentID": 322685000131087,
+												"sys.QName": "app1pkg.Task"
+											}
+										],
+										"GroupB": [
+											{
+												"Cfg": {
+													"Name": "CfgB",
+													"sys.ID": 322685000131085,
+													"sys.IsActive": true,
+													"sys.QName": "app1pkg.Cfg"
+												},
+												"GroupB": [
+													{
+														"Cfg": {
+															"Name": "CfgB",
+															"sys.ID": 322685000131085,
+															"sys.IsActive": true,
+															"sys.QName": "app1pkg.Cfg"
+														},
+														"GroupA": [
+															{
+																"Cfg": {
+																	"Name": "CfgA",
+																	"sys.ID": 322685000131084,
+																	"sys.IsActive": true,
+																	"sys.QName": "app1pkg.Cfg"
+																},
+																"Name": "SubSubTaskA1_SubTaskB1_TaskB1",
+																"sys.Container": "GroupA",
+																"sys.ID": 322685000131097,
+																"sys.IsActive": true,
+																"sys.ParentID": 322685000131096,
+																"sys.QName": "app1pkg.Task"
+															},
+															{
+																"Cfg": {
+																	"Name": "CfgA",
+																	"sys.ID": 322685000131084,
+																	"sys.IsActive": true,
+																	"sys.QName": "app1pkg.Cfg"
+																},
+																"Name": "SubSubTaskA2_SubTaskB1_TaskB1",
+																"sys.Container": "GroupA",
+																"sys.ID": 322685000131098,
+																"sys.IsActive": true,
+																"sys.ParentID": 322685000131096,
+																"sys.QName": "app1pkg.Task"
+															}
+														],
+														"GroupB": [
+															{
+																"Cfg": {
+																	"Name": "CfgB",
+																	"sys.ID": 322685000131085,
+																	"sys.IsActive": true,
+																	"sys.QName": "app1pkg.Cfg"
+																},
+																"GroupB": [
+																	{
+																		"Cfg": {
+																			"Name": "CfgB",
+																			"sys.ID": 322685000131085,
+																			"sys.IsActive": true,
+																			"sys.QName": "app1pkg.Cfg"
+																		},
+																		"Name": "SubSubSubTaskB1_SubSubTaskB1_SubTaskB1_TaskB1",
+																		"sys.Container": "GroupB",
+																		"sys.ID": 322685000131102,
+																		"sys.IsActive": true,
+																		"sys.ParentID": 322685000131099,
+																		"sys.QName": "app1pkg.Task"
+																	}
+																],
+																"Name": "SubSubTaskB1_SubTaskB1_TaskB1",
+																"sys.Container": "GroupB",
+																"sys.ID": 322685000131099,
+																"sys.IsActive": true,
+																"sys.ParentID": 322685000131096,
+																"sys.QName": "app1pkg.Task"
+															}
+														],
+														"Name": "SubTaskB1_TaskB1",
+														"sys.Container": "GroupB",
+														"sys.ID": 322685000131096,
+														"sys.IsActive": true,
+														"sys.ParentID": 322685000131090,
+														"sys.QName": "app1pkg.Task"
+													}
+												],
+												"Name": "TaskB1",
+												"sys.Container": "GroupB",
+												"sys.ID": 322685000131090,
+												"sys.IsActive": true,
+												"sys.ParentID": 322685000131087,
+												"sys.QName": "app1pkg.Task"
+											}
+										],
+										"Number": 101,
+										"sys.ID": 322685000131087,
+										"sys.IsActive": true,
+										"sys.QName": "app1pkg.Batch"
+									}`, resp.Body)
+		})
+		t.Run("Read by ID and include level 0 reference field", func(t *testing.T) {
+			include := []string{
+				"Cfg",
+			}
+			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batchID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			require.NoError(err)
+			require.JSONEq(`{
+										"Cfg": {
+											"Name": "CfgBatch",
+											"sys.ID": 322685000131086,
+											"sys.IsActive": true,
+											"sys.QName": "app1pkg.Cfg"
+										},
+										"Number": 101,
+										"sys.ID": 322685000131087,
+										"sys.IsActive": true,
+										"sys.QName": "app1pkg.Batch"
+									}`, resp.Body)
+		})
+		t.Run("Read by ID and include level 0 container field", func(t *testing.T) {
+			include := []string{
+				"GroupA",
+			}
+			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batchID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			require.NoError(err)
+			require.JSONEq(`{
+										"Cfg": 322685000131086,
+										"GroupA": [
+											{
+												"Cfg": 322685000131084,
+												"Name": "TaskA1",
+												"sys.Container": "GroupA",
+												"sys.ID": 322685000131088,
+												"sys.IsActive": true,
+												"sys.ParentID": 322685000131087,
+												"sys.QName": "app1pkg.Task"
+											},
+											{
+												"Cfg": 322685000131084,
+												"Name": "TaskA2",
+												"sys.Container": "GroupA",
+												"sys.ID": 322685000131089,
+												"sys.IsActive": true,
+												"sys.ParentID": 322685000131087,
+												"sys.QName": "app1pkg.Task"
+											}
+										],
+										"Number": 101,
+										"sys.ID": 322685000131087,
+										"sys.IsActive": true,
+										"sys.QName": "app1pkg.Batch"
+									}`, resp.Body)
+		})
+		t.Run("Read by ID and include level 0 container field and level 0 reference field", func(t *testing.T) {
+			include := []string{
+				"Cfg",
+				"GroupA",
+			}
+			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batchID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			require.NoError(err)
+			require.JSONEq(`{
+										"Cfg": {
+											"Name": "CfgBatch",
+											"sys.ID": 322685000131086,
+											"sys.IsActive": true,
+											"sys.QName": "app1pkg.Cfg"
+										},
+										"GroupA": [
+											{
+												"Cfg": 322685000131084,
+												"Name": "TaskA1",
+												"sys.Container": "GroupA",
+												"sys.ID": 322685000131088,
+												"sys.IsActive": true,
+												"sys.ParentID": 322685000131087,
+												"sys.QName": "app1pkg.Task"
+											},
+											{
+												"Cfg": 322685000131084,
+												"Name": "TaskA2",
+												"sys.Container": "GroupA",
+												"sys.ID": 322685000131089,
+												"sys.IsActive": true,
+												"sys.ParentID": 322685000131087,
+												"sys.QName": "app1pkg.Task"
+											}
+										],
+										"Number": 101,
+										"sys.ID": 322685000131087,
+										"sys.IsActive": true,
+										"sys.QName": "app1pkg.Batch"
+									}`, resp.Body)
+		})
+		t.Run("Read by ID and include level 1 reference field", func(t *testing.T) {
+			include := []string{
+				"GroupA.Cfg",
+			}
+			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batchID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			require.NoError(err)
+			require.JSONEq(`{
+										"Cfg": 322685000131086,
+										"GroupA": [
+											{
+												"Cfg": {
+													"Name": "CfgA",
+													"sys.ID": 322685000131084,
+													"sys.IsActive": true,
+													"sys.QName": "app1pkg.Cfg"
+												},
+												"Name": "TaskA1",
+												"sys.Container": "GroupA",
+												"sys.ID": 322685000131088,
+												"sys.IsActive": true,
+												"sys.ParentID": 322685000131087,
+												"sys.QName": "app1pkg.Task"
+											},
+											{
+												"Cfg": {
+													"Name": "CfgA",
+													"sys.ID": 322685000131084,
+													"sys.IsActive": true,
+													"sys.QName": "app1pkg.Cfg"
+												},
+												"Name": "TaskA2",
+												"sys.Container": "GroupA",
+												"sys.ID": 322685000131089,
+												"sys.IsActive": true,
+												"sys.ParentID": 322685000131087,
+												"sys.QName": "app1pkg.Task"
+											}
+										],
+										"Number": 101,
+										"sys.ID": 322685000131087,
+										"sys.IsActive": true,
+										"sys.QName": "app1pkg.Batch"
+									}`, resp.Body)
+		})
+		t.Run("Read by ID and include level 1 container field", func(t *testing.T) {
+			include := []string{
+				"GroupA.GroupA",
+			}
+			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batchID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			require.NoError(err)
+			require.JSONEq(`{
+										"Cfg": 322685000131086,
+										"GroupA": [
+											{
+												"Cfg": 322685000131084,
+												"GroupA": [
+													{
+														"Cfg": 322685000131084,
+														"Name": "SubTaskA1_TaskA1",
+														"sys.Container": "GroupA",
+														"sys.ID": 322685000131091,
+														"sys.IsActive": true,
+														"sys.ParentID": 322685000131088,
+														"sys.QName": "app1pkg.Task"
+													},
+													{
+														"Cfg": 322685000131084,
+														"Name": "SubTaskA2_TaskA1",
+														"sys.Container": "GroupA",
+														"sys.ID": 322685000131092,
+														"sys.IsActive": true,
+														"sys.ParentID": 322685000131088,
+														"sys.QName": "app1pkg.Task"
+													}
+												],
+												"Name": "TaskA1",
+												"sys.Container": "GroupA",
+												"sys.ID": 322685000131088,
+												"sys.IsActive": true,
+												"sys.ParentID": 322685000131087,
+												"sys.QName": "app1pkg.Task"
+											},
+											{
+												"Cfg": 322685000131084,
+												"GroupA": [
+													{
+														"Cfg": 322685000131084,
+														"Name": "SubTaskA1_TaskA2",
+														"sys.Container": "GroupA",
+														"sys.ID": 322685000131095,
+														"sys.IsActive": true,
+														"sys.ParentID": 322685000131089,
+														"sys.QName": "app1pkg.Task"
+													}
+												],
+												"Name": "TaskA2",
+												"sys.Container": "GroupA",
+												"sys.ID": 322685000131089,
+												"sys.IsActive": true,
+												"sys.ParentID": 322685000131087,
+												"sys.QName": "app1pkg.Task"
+											}
+										],
+										"Number": 101,
+										"sys.ID": 322685000131087,
+										"sys.IsActive": true,
+										"sys.QName": "app1pkg.Batch"
+									}`, resp.Body)
+		})
+		t.Run("Read by ID and include level 1 container field and level 1 reference field", func(t *testing.T) {
+			include := []string{
+				"GroupA.Cfg",
+				"GroupA.GroupA",
+			}
+			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batchID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			require.NoError(err)
+			require.JSONEq(`{
+										"Cfg": 322685000131086,
+										"GroupA": [
+											{
+												"Cfg": {
+													"Name": "CfgA",
+													"sys.ID": 322685000131084,
+													"sys.IsActive": true,
+													"sys.QName": "app1pkg.Cfg"
+												},
+												"GroupA": [
+													{
+														"Cfg": 322685000131084,
+														"Name": "SubTaskA1_TaskA1",
+														"sys.Container": "GroupA",
+														"sys.ID": 322685000131091,
+														"sys.IsActive": true,
+														"sys.ParentID": 322685000131088,
+														"sys.QName": "app1pkg.Task"
+													},
+													{
+														"Cfg": 322685000131084,
+														"Name": "SubTaskA2_TaskA1",
+														"sys.Container": "GroupA",
+														"sys.ID": 322685000131092,
+														"sys.IsActive": true,
+														"sys.ParentID": 322685000131088,
+														"sys.QName": "app1pkg.Task"
+													}
+												],
+												"Name": "TaskA1",
+												"sys.Container": "GroupA",
+												"sys.ID": 322685000131088,
+												"sys.IsActive": true,
+												"sys.ParentID": 322685000131087,
+												"sys.QName": "app1pkg.Task"
+											},
+											{
+												"Cfg": {
+													"Name": "CfgA",
+													"sys.ID": 322685000131084,
+													"sys.IsActive": true,
+													"sys.QName": "app1pkg.Cfg"
+												},
+												"GroupA": [
+													{
+														"Cfg": 322685000131084,
+														"Name": "SubTaskA1_TaskA2",
+														"sys.Container": "GroupA",
+														"sys.ID": 322685000131095,
+														"sys.IsActive": true,
+														"sys.ParentID": 322685000131089,
+														"sys.QName": "app1pkg.Task"
+													}
+												],
+												"Name": "TaskA2",
+												"sys.Container": "GroupA",
+												"sys.ID": 322685000131089,
+												"sys.IsActive": true,
+												"sys.ParentID": 322685000131087,
+												"sys.QName": "app1pkg.Task"
+											}
+										],
+										"Number": 101,
+										"sys.ID": 322685000131087,
+										"sys.IsActive": true,
+										"sys.QName": "app1pkg.Batch"
+									}`, resp.Body)
+		})
+		t.Run("Read by ID include level 6 container field, level 5 and level 6 are empty", func(t *testing.T) {
+			include := []string{
+				"GroupB.GroupB.GroupB.GroupB.GroupB.GroupB.GroupB",
+			}
+			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batchID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			require.NoError(err)
+			require.JSONEq(`{
+										"Cfg": 322685000131086,
+										"GroupB": [
+											{
+												"Cfg": 322685000131085,
+												"GroupB": [
+													{
+														"Cfg": 322685000131085,
+														"GroupB": [
+															{
+																"Cfg": 322685000131085,
+																"GroupB": [
+																	{
+																		"Cfg": 322685000131085,
+																		"Name": "SubSubSubTaskB1_SubSubTaskB1_SubTaskB1_TaskB1",
+																		"sys.Container": "GroupB",
+																		"sys.ID": 322685000131102,
+																		"sys.IsActive": true,
+																		"sys.ParentID": 322685000131099,
+																		"sys.QName": "app1pkg.Task"
+																	}
+																],
+																"Name": "SubSubTaskB1_SubTaskB1_TaskB1",
+																"sys.Container": "GroupB",
+																"sys.ID": 322685000131099,
+																"sys.IsActive": true,
+																"sys.ParentID": 322685000131096,
+																"sys.QName": "app1pkg.Task"
+															}
+														],
+														"Name": "SubTaskB1_TaskB1",
+														"sys.Container": "GroupB",
+														"sys.ID": 322685000131096,
+														"sys.IsActive": true,
+														"sys.ParentID": 322685000131090,
+														"sys.QName": "app1pkg.Task"
+													}
+												],
+												"Name": "TaskB1",
+												"sys.Container": "GroupB",
+												"sys.ID": 322685000131090,
+												"sys.IsActive": true,
+												"sys.ParentID": 322685000131087,
+												"sys.QName": "app1pkg.Task"
+											}
+										],
+										"Number": 101,
+										"sys.ID": 322685000131087,
+										"sys.IsActive": true,
+										"sys.QName": "app1pkg.Batch"
+									}`, resp.Body)
+		})
+		t.Run("Read by ID and get unexpected field error on level 0", func(t *testing.T) {
+			include := []string{
+				"Level0",
+			}
+			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batchID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect400())
+
+			require.NoError(err)
+			require.JSONEq(`{"status":400,"message":"field expression - 'Level0', 'Level0' - unexpected field"}`, resp.Body)
+		})
+		t.Run("Read by ID and get unexpected field error on level 1", func(t *testing.T) {
+			include := []string{
+				"Cfg",
+				"GroupA",
+				"GroupA.Level1",
+			}
+			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batchID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect400())
+
+			require.NoError(err)
+			require.JSONEq(`{"status":400,"message":"field expression - 'GroupA.Level1', 'Level1' - unexpected field"}`, resp.Body)
+		})
+		t.Run("Read by ID and get unexpected field error on level 2", func(t *testing.T) {
+			include := []string{
+				"Cfg",
+				"GroupA",
+				"GroupA.Cfg",
+				"GroupB",
+				"GroupB.Cfg",
+				"GroupA.GroupA",
+				"GroupA.GroupB",
+				"GroupB.GroupB",
+				"GroupA.GroupA.Level2",
+			}
+			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batchID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect400())
+
+			require.NoError(err)
+			require.JSONEq(`{"status":400,"message":"field expression - 'GroupA.GroupA.Level2', 'Level2' - unexpected field"}`, resp.Body)
+		})
+		t.Run("Read by ID and get unexpected field error on level 3", func(t *testing.T) {
+			include := []string{
+				"Cfg",
+				"GroupA",
+				"GroupA.Cfg",
+				"GroupB",
+				"GroupB.Cfg",
+				"GroupA.GroupA",
+				"GroupA.GroupB",
+				"GroupB.GroupB",
+				"GroupA.GroupA.Cfg",
+				"GroupA.GroupB.Cfg",
+				"GroupB.GroupB.Cfg",
+				"GroupB.GroupB.GroupA",
+				"GroupB.GroupB.GroupB",
+				"GroupB.GroupB.GroupA.Cfg",
+				"GroupB.GroupB.GroupB.Level3",
+			}
+			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batchID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect400())
+
+			require.NoError(err)
+			require.JSONEq(`{"status":400,"message":"field expression - 'GroupB.GroupB.GroupB.Level3', 'Level3' - unexpected field"}`, resp.Body)
+		})
+		t.Run("Read by ID and get unexpected field error on level 4", func(t *testing.T) {
+			include := []string{
+				"Cfg",
+				"GroupA",
+				"GroupA.Cfg",
+				"GroupB",
+				"GroupB.Cfg",
+				"GroupA.GroupA",
+				"GroupA.GroupB",
+				"GroupB.GroupB",
+				"GroupA.GroupA.Cfg",
+				"GroupA.GroupB.Cfg",
+				"GroupB.GroupB.Cfg",
+				"GroupB.GroupB.GroupA",
+				"GroupB.GroupB.GroupB",
+				"GroupB.GroupB.GroupA.Cfg",
+				"GroupB.GroupB.GroupB.Cfg",
+				"GroupB.GroupB.GroupB.GroupB",
+				"GroupB.GroupB.GroupB.GroupB.Level4",
+			}
+			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batchID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect400())
+
+			require.NoError(err)
+			require.JSONEq(`{"status":400,"message":"field expression - 'GroupB.GroupB.GroupB.GroupB.Level4', 'Level4' - unexpected field"}`, resp.Body)
+		})
 	})
 }
 

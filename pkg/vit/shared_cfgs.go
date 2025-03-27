@@ -56,6 +56,9 @@ const (
 	Field_Withdraw     = "Withdraw"
 	Field_Deposit      = "Deposit"
 	Field_Capabilities = "Capabilities"
+	Field_Cfg          = "Cfg"
+	Field_GroupA       = "GroupA"
+	Field_GroupB       = "GroupB"
 )
 
 var (
@@ -74,6 +77,9 @@ var (
 	QNameApp1_CDocDaily                      = appdef.NewQName(app1PkgName, "Daily")
 	QNameApp1_CDocCurrency                   = appdef.NewQName(app1PkgName, "Currency")
 	QNameApp1_CDocCountry                    = appdef.NewQName(app1PkgName, "Country")
+	QNameApp1_CDocCfg                        = appdef.NewQName(app1PkgName, "Cfg")
+	QNameApp1_CDocBatch                      = appdef.NewQName(app1PkgName, "Batch")
+	QNameApp1_CRecordTask                    = appdef.NewQName(app1PkgName, "Task")
 	QNameApp1_WDocClient                     = appdef.NewQName(app1PkgName, "Client")
 	QNameApp1_WDocWallet                     = appdef.NewQName(app1PkgName, "Wallet")
 	QNameApp1_WDocCapabilities               = appdef.NewQName(app1PkgName, "Capabilities")

@@ -669,6 +669,24 @@ ALTERABLE WORKSPACE test_wsWS (
         PRIMARY KEY ((Year, Month), Day, Client)
     ) AS RESULT OF ApplyClient WITH Tags=(WorkspaceOwnerTableTag, ApiFeatureTag);
 
+    TABLE Batch INHERITS sys.CDoc (
+        Cfg ref(Cfg),
+        Number int32,
+        GroupA Task,
+        GroupB Task
+    ) WITH Tags=(WorkspaceOwnerTableTag, ApiFeatureTag);
+
+    TABLE Cfg INHERITS sys.CDoc (
+        Name text
+    );
+
+    TABLE Task INHERITS sys.CRecord (
+        Cfg ref(Cfg),
+        Name text,
+        GroupA Task,
+        GroupB Task
+    );
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY MockQry(MockQryParams) RETURNS MockQryResult WITH Tags=(WorkspaceOwnerFuncTag);

@@ -390,6 +390,19 @@ func (resp *HTTPResponse) Println() {
 	log.Println(resp.Body)
 }
 
+func (resp *HTTPResponse) PrintJSON() {
+	obj := make(map[string]interface{})
+	err := json.Unmarshal([]byte(resp.Body), &obj)
+	if err != nil {
+		panic(err)
+	}
+	bb, err := json.MarshalIndent(obj, "", "	")
+	if err != nil {
+		panic(err)
+	}
+	log.Println("\n", string(bb))
+}
+
 func (resp *HTTPResponse) getError(t *testing.T) map[string]interface{} {
 	t.Helper()
 	m := map[string]interface{}{}

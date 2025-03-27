@@ -36,7 +36,7 @@ var collectionProjector = istructs.Projector{
 			}
 			kb.PutInt32(Field_PartKey, PartitionKeyCollection)
 			kb.PutQName(Field_DocQName, docQname)
-			kb.PutRecordID(field_DocID, docID)
+			kb.PutRecordID(Field_DocID, docID)
 			kb.PutRecordID(field_ElementID, elementID)
 			return
 		}
