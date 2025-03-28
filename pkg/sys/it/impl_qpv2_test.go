@@ -1423,6 +1423,7 @@ func TestQueryProcessor2_SchemasWorkspaceRole(t *testing.T) {
 	})
 }
 
+// [~server.apiv2.docs/it.TestQueryProcessor2_Docs~impl]
 func TestQueryProcessor2_Docs(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
