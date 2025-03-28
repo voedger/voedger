@@ -23,6 +23,11 @@ func Test_SysDataName(t *testing.T) {
 		want appdef.QName
 	}{
 		{"null", args{k: appdef.DataKind_null}, appdef.NullQName},
+
+		// #3434 [~server.vsql.smallints/cmp.AppDef~impl]
+		{"int8", args{k: appdef.DataKind_int8}, appdef.MustParseQName("sys.int8")},
+		{"int16", args{k: appdef.DataKind_int16}, appdef.MustParseQName("sys.int16")},
+
 		{"int32", args{k: appdef.DataKind_int32}, appdef.MustParseQName("sys.int32")},
 		{"string", args{k: appdef.DataKind_string}, appdef.MustParseQName("sys.string")},
 		{"out of bounds", args{k: appdef.DataKind_FakeLast}, appdef.NullQName},
@@ -108,6 +113,12 @@ func TestDataKindType_IsFixed(t *testing.T) {
 		args args
 		want bool
 	}{
+		{name: "int8 must be fixed", // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
+			args: args{kind: appdef.DataKind_int8},
+			want: true},
+		{name: "int16 must be fixed", // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
+			args: args{kind: appdef.DataKind_int16},
+			want: true},
 		{name: "int32 must be fixed",
 			args: args{kind: appdef.DataKind_int32},
 			want: true},
@@ -136,7 +147,12 @@ func TestDataKindType_MarshalText(t *testing.T) {
 			want: `DataKind_null`,
 		},
 		{
-			name: `1 —> "DataKind_int32"`,
+			name: `1 —> "DataKind_int8"`, // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
+			k:    appdef.DataKind_int8,
+			want: `DataKind_int8`,
+		},
+		{
+			name: `3 —> "DataKind_int32"`,
 			k:    appdef.DataKind_int32,
 			want: `DataKind_int32`,
 		},
@@ -214,6 +230,24 @@ func TestDataKind_IsSupportedConstraint(t *testing.T) {
 		{"bytes: MaxIncl", appdef.DataKind_bytes, args{appdef.ConstraintKind_MaxIncl}, false},
 		{"bytes: MaxExcl", appdef.DataKind_bytes, args{appdef.ConstraintKind_MaxExcl}, false},
 		{"bytes: Enum", appdef.DataKind_bytes, args{appdef.ConstraintKind_Enum}, false},
+		//- // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
+		{"int8: MinLen", appdef.DataKind_int8, args{appdef.ConstraintKind_MinLen}, false},
+		{"int8: MaxLen", appdef.DataKind_int8, args{appdef.ConstraintKind_MaxLen}, false},
+		{"int8: Pattern", appdef.DataKind_int8, args{appdef.ConstraintKind_Pattern}, false},
+		{"int8: MinIncl", appdef.DataKind_int8, args{appdef.ConstraintKind_MinIncl}, true},
+		{"int8: MinExcl", appdef.DataKind_int8, args{appdef.ConstraintKind_MinExcl}, true},
+		{"int8: MaxIncl", appdef.DataKind_int8, args{appdef.ConstraintKind_MaxIncl}, true},
+		{"int8: MaxExcl", appdef.DataKind_int8, args{appdef.ConstraintKind_MaxExcl}, true},
+		{"int8: Enum", appdef.DataKind_int8, args{appdef.ConstraintKind_Enum}, true},
+		//- // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
+		{"int16: MinLen", appdef.DataKind_int16, args{appdef.ConstraintKind_MinLen}, false},
+		{"int16: MaxLen", appdef.DataKind_int16, args{appdef.ConstraintKind_MaxLen}, false},
+		{"int16: Pattern", appdef.DataKind_int16, args{appdef.ConstraintKind_Pattern}, false},
+		{"int16: MinIncl", appdef.DataKind_int16, args{appdef.ConstraintKind_MinIncl}, true},
+		{"int16: MinExcl", appdef.DataKind_int16, args{appdef.ConstraintKind_MinExcl}, true},
+		{"int16: MaxIncl", appdef.DataKind_int16, args{appdef.ConstraintKind_MaxIncl}, true},
+		{"int16: MaxExcl", appdef.DataKind_int16, args{appdef.ConstraintKind_MaxExcl}, true},
+		{"int16: Enum", appdef.DataKind_int16, args{appdef.ConstraintKind_Enum}, true},
 		//-
 		{"int32: MinLen", appdef.DataKind_int32, args{appdef.ConstraintKind_MinLen}, false},
 		{"int32: MaxLen", appdef.DataKind_int32, args{appdef.ConstraintKind_MaxLen}, false},

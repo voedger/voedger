@@ -97,7 +97,8 @@ func ExampleIFieldsBuilder_AddDataField() {
 		_ = wsb.AddData(dig10name, appdef.DataKind_string, str10name, constraints.Pattern(`^\d+$`, "only digits"))
 
 		monthName := appdef.NewQName("test", "month")
-		month := wsb.AddData(monthName, appdef.DataKind_int32, appdef.NullQName, constraints.MinExcl(0), constraints.MaxIncl(12))
+		// #3434 [~server.vsql.smallints/cmp.AppDef~impl]
+		month := wsb.AddData(monthName, appdef.DataKind_int8, appdef.NullQName, constraints.MinExcl(0), constraints.MaxIncl(12))
 		month.SetComment("Month number, left-open range (0-12]")
 
 		doc := wsb.AddCDoc(docName)
@@ -145,7 +146,7 @@ func ExampleIFieldsBuilder_AddDataField() {
 	// CDoc «test.doc», user field count: 2
 	// 1. string-field «code», required. Code is string containing 10 digits
 	//   - constraints: [MaxLen: 10, MinLen: 10, Pattern: `^\d+$`]
-	// 2. int32-field «month», required. Month number natural up to 12
+	// 2. int8-field «month», required. Month number natural up to 12
 	//   - constraints: [MaxIncl: 12, MinExcl: 0]
 }
 

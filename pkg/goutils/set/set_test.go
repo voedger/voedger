@@ -45,6 +45,23 @@ func TestFrom(t *testing.T) {
 	}
 }
 
+func TestFromRO(t *testing.T) {
+	require := require.New(t)
+
+	tests := []struct {
+		name string
+		set  set.Set[uint8]
+	}{
+		{"empty", set.FromRO[uint8]()},
+		{"1 63 64 127 128 255", set.FromRO(uint8(1), 63, 64, 127, 128, 255)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Panics(func() { tt.set.Set(2) }, "Set")
+		})
+	}
+}
+
 func TestCollect(t *testing.T) {
 	require := require.New(t)
 

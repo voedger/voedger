@@ -96,7 +96,7 @@ func (o *TestObject) SpecifiedValues(cb func(appdef.IField, any) bool) {
 		}
 	}
 }
-func (o *TestObject) AsRecord() istructs.IRecord { return o }
+func (o *TestObject) AsRecord() istructs.IRecord                 { return o }
 func (o *TestObject) AsEvent(appdef.FieldName) istructs.IDbEvent { panic("not implemented") }
 func (o *TestObject) AsInt32(name string) int32 {
 	if resIntf, ok := o.Data[name]; ok {
@@ -175,6 +175,10 @@ func intfToDataKind(value interface{}) appdef.DataKind {
 	switch value.(type) {
 	case string:
 		return appdef.DataKind_string
+	case int8: // #3434 : small integers
+		return appdef.DataKind_int8
+	case int16: // #3434 : small integers
+		return appdef.DataKind_int16
 	case int32:
 		return appdef.DataKind_int32
 	case int64:

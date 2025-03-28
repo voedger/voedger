@@ -16,6 +16,8 @@ const (
 	// null - no-value type. Returned when the requested type does not exist
 	DataKind_null DataKind = iota
 
+	DataKind_int8  // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
+	DataKind_int16 // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
 	DataKind_int32
 	DataKind_int64
 	DataKind_float32

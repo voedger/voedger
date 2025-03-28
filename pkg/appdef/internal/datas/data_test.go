@@ -317,6 +317,15 @@ func Test_DataBuilder_AddConstraint(t *testing.T) {
 		{"bytes: max length constraint should be ok",
 			args{appdef.DataKind_bytes, appdef.ConstraintKind_MaxLen, uint16(1024)}, false, nil},
 		//- Enum
+		//	#3434 [~server.vsql.smallints/cmp.AppDef~impl]
+		{"int8: enum constraint should be ok",
+			args{appdef.DataKind_int8, appdef.ConstraintKind_Enum, []int8{1, 2, 3}}, false, nil},
+		{"int8: enum constraint should fail if incompatible enum type",
+			args{appdef.DataKind_int8, appdef.ConstraintKind_Enum, []int16{1, 2, 3}}, true, appdef.ErrIncompatibleError},
+		{"int16: enum constraint should be ok",
+			args{appdef.DataKind_int16, appdef.ConstraintKind_Enum, []int16{1, 2, 3}}, false, nil},
+		{"int16: enum constraint should fail if incompatible enum type",
+			args{appdef.DataKind_int16, appdef.ConstraintKind_Enum, []int32{1, 2, 3}}, true, appdef.ErrIncompatibleError},
 		{"int32: enum constraint should be ok",
 			args{appdef.DataKind_int32, appdef.ConstraintKind_Enum, []int32{1, 2, 3}}, false, nil},
 		{"int32: enum constraint should fail if incompatible enum type",
