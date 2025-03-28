@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/processors/oldacl"
 )
 
+// [~server.apiv2.docs/cmp.docsHandler~impl]
 type docsHandler struct {
 }
 

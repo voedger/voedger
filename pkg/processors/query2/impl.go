@@ -119,6 +119,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			case ApiPath_Views:
 				qw.apiPathHandler = &viewHandler{}
 			case ApiPath_Docs:
+				// [~server.apiv2.docs/cmp.provideDocsHandler~impl]
 				qw.apiPathHandler = &docsHandler{}
 			case ApiPaths_Schema:
 				qw.apiPathHandler = &schemasHandler{}
