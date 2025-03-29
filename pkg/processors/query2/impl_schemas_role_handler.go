@@ -22,6 +22,7 @@ func swaggerUI(url string) string {
 	return fmt.Sprintf(swaggerUi, url)
 }
 
+// [~server.apiv2.role/cmp.schemasRoleHandler~impl]
 type schemasRoleHandler struct {
 }
 

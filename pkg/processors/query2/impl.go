@@ -126,6 +126,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			case ApiPath_Schemas_WorkspaceRoles:
 				qw.apiPathHandler = &schemasRolesHandler{}
 			case ApiPath_Schemas_WorkspaceRole:
+				// [~server.apiv2.role/cmp.provideSchemasRoleHandler~impl]
 				qw.apiPathHandler = &schemasRoleHandler{}
 			default:
 				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("unsupported api path %v", qw.msg.ApiPath()))

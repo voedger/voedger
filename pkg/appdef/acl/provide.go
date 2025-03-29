@@ -89,6 +89,7 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 	return result, nil
 }
 
+// [~server.apiv2.role/cmp.publishedTypes~impl]
 // PublishedTypes lists the resources allowed to the published role in the workspace and ancestors (including resources available to non-authenticated requests).
 //
 // Types enumerated in alphabetical order.
