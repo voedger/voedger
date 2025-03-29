@@ -37,7 +37,7 @@ func ReadByKind(name appdef.FieldName, kind appdef.DataKind, rr istructs.IRowRea
 	case appdef.DataKind_RecordID:
 		return rr.AsRecordID(name)
 	case appdef.DataKind_QName:
-		return rr.AsQName(name).String()
+		return rr.AsQName(name) // not .String(), see https://github.com/voedger/voedger/issues/3477
 	case appdef.DataKind_bool:
 		return rr.AsBool(name)
 	default:

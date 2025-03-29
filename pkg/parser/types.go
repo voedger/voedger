@@ -644,14 +644,19 @@ type LimitStmt struct {
 
 func (s LimitStmt) GetName() string { return string(s.Name) }
 
+type GrantColumn struct {
+	Pos     lexer.Position
+	SysName string      `parser:"@(('sys' '.' 'ID') | 'sys' '.' 'ParentID' | 'sys' '.' 'IsActive' | 'sys' '.' 'QName' | 'sys' '.' 'Container')"`
+	Name    *Identifier `parser:"| @@"`
+}
 type GrantTableAction struct {
 	Pos        lexer.Position
-	Select     bool         `parser:"(@'SELECT'"`
-	Insert     bool         `parser:"| @'INSERT'"`
-	Update     bool         `parser:"| @'UPDATE'"`
-	Activate   bool         `parser:"| @'ACTIVATE'"`
-	Deactivate bool         `parser:"| @'DEACTIVATE')"`
-	Columns    []Identifier `parser:"( '(' @@ (',' @@)* ')' )?"`
+	Select     bool          `parser:"(@'SELECT'"`
+	Insert     bool          `parser:"| @'INSERT'"`
+	Update     bool          `parser:"| @'UPDATE'"`
+	Activate   bool          `parser:"| @'ACTIVATE'"`
+	Deactivate bool          `parser:"| @'DEACTIVATE')"`
+	Columns    []GrantColumn `parser:"( '(' @@ (',' @@)* ')' )?"`
 }
 
 type GrantAllTablesAction struct {

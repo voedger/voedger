@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
@@ -17,13 +16,16 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/pipeline"
-	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 )
 
 type queryHandler struct {
 }
 
 var _ IApiPathHandler = (*queryHandler)(nil) // ensure that queryHandler implements IApiPathHandler
+
+func (h *queryHandler) IsArrayResult() bool {
+	return true
+}
 
 func (h *queryHandler) CheckRateLimit(ctx context.Context, qw *queryWork) error {
 	if qw.appStructs.IsFunctionRateLimitsExceeded(qw.msg.QName(), qw.msg.WSID()) {
@@ -91,7 +93,7 @@ func (h *queryHandler) AuthorizeResult(ctx context.Context, qw *queryWork) error
 func (h *queryHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 	oo := make([]*pipeline.WiredOperator, 0)
 	if qw.queryParams.Constraints != nil && len(qw.queryParams.Constraints.Include) != 0 {
-		oo = append(oo, pipeline.WireAsyncOperator("Include", newInclude(qw)))
+		oo = append(oo, pipeline.WireAsyncOperator("Include", newInclude(qw, false)))
 	}
 	if qw.queryParams.Constraints != nil && (len(qw.queryParams.Constraints.Order) != 0 || qw.queryParams.Constraints.Skip > 0 || qw.queryParams.Constraints.Limit > 0) {
 		oo = append(oo, pipeline.WireAsyncOperator("Aggregator", newAggregator(qw.queryParams)))
@@ -106,7 +108,7 @@ func (h *queryHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err er
 	if qw.queryParams.Constraints != nil && len(qw.queryParams.Constraints.Keys) != 0 {
 		oo = append(oo, pipeline.WireAsyncOperator("Keys", newKeys(qw.queryParams.Constraints.Keys)))
 	}
-	sender := &sender{responder: qw.msg.Responder()}
+	sender := &sender{responder: qw.msg.Responder(), isArrayResponse: true}
 	oo = append(oo, pipeline.WireAsyncOperator("Sender", sender))
 	qw.rowsProcessor = pipeline.NewAsyncPipeline(ctx, "View rows processor", oo[0], oo[1:]...)
 	qw.responseWriterGetter = func() bus.IResponseWriter {
@@ -116,13 +118,11 @@ func (h *queryHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err er
 }
 
 func (h *queryHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
-	now := time.Now()
 	defer func() {
 		if r := recover(); r != nil {
 			stack := string(debug.Stack())
 			err = fmt.Errorf("%v\n%s", r, stack)
 		}
-		qw.metrics.Increase(queryprocessor.Metric_ExecSeconds, time.Since(now).Seconds())
 	}()
 	return qw.appPart.Invoke(ctx, qw.msg.QName(), qw.state, qw.state)
 }

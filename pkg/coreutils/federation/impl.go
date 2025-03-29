@@ -165,18 +165,28 @@ func getFuncError(httpResp *coreutils.HTTPResponse) (funcError coreutils.FuncErr
 	if err := json.Unmarshal([]byte(httpResp.Body), &m); err != nil {
 		return funcError, fmt.Errorf("IFederation: failed to unmarshal response body to FuncErr: %w. Body:\n%s", err, httpResp.Body)
 	}
-	sysErrorMap := m["sys.Error"].(map[string]interface{})
-	errQNameStr, ok := sysErrorMap["QName"].(string)
-	if ok {
-		errQName, err := appdef.ParseQName(errQNameStr)
-		if err != nil {
-			errQName = appdef.NewQName("<err>", sysErrorMap["QName"].(string))
+	sysErrorIntf, hasSysError := m["sys.Error"]
+	if hasSysError {
+		sysErrorMap := sysErrorIntf.(map[string]interface{})
+		errQNameStr, ok := sysErrorMap["QName"].(string)
+		if ok {
+			errQName, err := appdef.ParseQName(errQNameStr)
+			if err != nil {
+				errQName = appdef.NewQName("<err>", sysErrorMap["QName"].(string))
+			}
+			funcError.SysError.QName = errQName
 		}
-		funcError.SysError.QName = errQName
+		funcError.SysError.HTTPStatus = int(sysErrorMap["HTTPStatus"].(float64))
+		funcError.SysError.Message = sysErrorMap["Message"].(string)
+		funcError.SysError.Data, _ = sysErrorMap["Data"].(string)
+	} else {
+		if commonErrorStatusIntf, ok := m["status"]; ok {
+			funcError.SysError.HTTPStatus = int(commonErrorStatusIntf.(float64))
+		}
+		if commonErrorMessageIntf, ok := m["message"]; ok {
+			funcError.SysError.Message = commonErrorMessageIntf.(string)
+		}
 	}
-	funcError.SysError.HTTPStatus = int(sysErrorMap["HTTPStatus"].(float64))
-	funcError.SysError.Message = sysErrorMap["Message"].(string)
-	funcError.SysError.Data, _ = sysErrorMap["Data"].(string)
 	return funcError, nil
 }
 
@@ -207,7 +217,11 @@ func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, h
 	}
 	if strings.HasPrefix(httpResp.HTTPResp.Request.URL.Path, "/api/v2/") {
 		// TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
-		err = json.Unmarshal([]byte(httpResp.Body), &res.APIV2Response)
+		if httpResp.HTTPResp.Header.Get(coreutils.ContentType) == coreutils.ApplicationJSON {
+			err = json.Unmarshal([]byte(httpResp.Body), &res.APIV2Response)
+		} else {
+			res.APIV2Response = httpResp.Body
+		}
 	} else {
 		err = json.Unmarshal([]byte(httpResp.Body), &res)
 	}
