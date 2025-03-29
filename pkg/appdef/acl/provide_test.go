@@ -848,6 +848,7 @@ func TestIsOperationAllowedWSInheritances(t *testing.T) {
 	})
 }
 
+// [~server.apiv2.role/cmp.publishedTypes~test]
 func TestPublishedTypes(t *testing.T) {
 	require := require.New(t)
 

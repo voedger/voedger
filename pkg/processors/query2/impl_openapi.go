@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
+// [~server.apiv2.role/cmp.CreateOpenApiSchema~impl]
 // CreateOpenApiSchema generates an OpenAPI schema document for the given workspace and role
 func CreateOpenApiSchema(writer io.Writer, ws appdef.IWorkspace, role appdef.QName,
 	pubTypesFunc PublishedTypesFunc, meta SchemaMeta) error {
