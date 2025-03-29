@@ -251,7 +251,6 @@ func TestISequencer_Next(t *testing.T) {
 
 		_, ok := sequencer.Start(1, 1)
 		require.True(ok)
-		//require.NotZero(offset)
 
 		num, err := sequencer.Next(1)
 		require.NoError(err)
@@ -292,7 +291,6 @@ func TestISequencer_Next(t *testing.T) {
 
 		_, ok := sequencer.Start(1, 1)
 		require.True(ok)
-		//require.NotZero(offset)
 
 		num, err := sequencer.Next(1)
 		require.NoError(err)

@@ -345,7 +345,6 @@ func TestSequencer_Actualize(t *testing.T) {
 		// Should be able to start a new transaction
 		_, ok = seq.Start(1, 1)
 		require.True(ok)
-		//require.NotZero(offset)
 
 		// Value should remain unchanged since PLog is empty
 		num, err = seq.Next(1)
@@ -586,7 +585,6 @@ func TestSequencer_Next(t *testing.T) {
 		// Transaction 1
 		offset, ok := seq.Start(1, 1)
 		require.True(ok)
-		//require.NotZero(offset)
 
 		num, err := seq.Next(1)
 		require.NoError(err)
