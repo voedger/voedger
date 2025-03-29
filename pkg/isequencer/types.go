@@ -45,7 +45,8 @@ type Params struct {
 	MaxNumUnflushedValues int           // 500
 	MaxFlushingInterval   time.Duration // 500 * time.Millisecond
 	// Size of the LRU cache, NumberKey -> Number.
-	LRUCacheSize int // 100_000
+	LRUCacheSize int           // 100_000
+	BatcherDelay time.Duration // 5 * time.Millisecond
 }
 
 type sequencer struct {
@@ -99,6 +100,154 @@ type sequencer struct {
 	// Written by Next()
 	inproc   map[NumberKey]Number
 	inprocMu sync.RWMutex
+	// need to check if Flush or Actualize was called after previous Start
+	transactionIsInProgress atomic.Bool
 
 	iTime coreutils.ITime
+}
+
+// MockStorage implements ISeqStorage for testing purposes
+type MockStorage struct {
+	mu                        sync.RWMutex
+	Numbers                   map[WSID]map[SeqID]Number
+	nextOffset                PLogOffset
+	pLog                      map[PLogOffset][]SeqValue // Simulated PLog entries
+	readNextOffsetError       error
+	readNumbersError          error
+	WriteValuesAndOffsetError error
+	readTimeout               time.Duration
+	writeTimeout              time.Duration
+}
+
+// newMockStorage creates a new MockStorage instance
+func NewMockStorage(readTimeout, writeTimeout time.Duration) *MockStorage {
+	// notest
+	return &MockStorage{
+		pLog:         make(map[PLogOffset][]SeqValue, 0),
+		readTimeout:  readTimeout,
+		writeTimeout: writeTimeout,
+	}
+}
+
+// ReadNumbers implements isequencer.ISeqStorage.ReadNumbers
+func (m *MockStorage) ReadNumbers(wsid WSID, seqIDs []SeqID) ([]Number, error) {
+	// notest
+	if m.readTimeout > 0 {
+		time.Sleep(m.readTimeout)
+	}
+
+	if m.readNumbersError != nil {
+		return nil, m.readNumbersError
+	}
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	numbers := make([]Number, len(seqIDs))
+	for i := m.nextOffset; i > PLogOffset(0); i-- {
+		if _, ok := m.pLog[i]; !ok {
+			continue
+		}
+
+		for _, seqValue := range m.pLog[i] {
+			for j, seqID := range seqIDs {
+				if numbers[j] != 0 {
+					continue // Skip if already found
+				}
+
+				if seqValue.Key.SeqID == seqID && seqValue.Key.WSID == wsid {
+					numbers[j] = seqValue.Value
+					break
+				}
+			}
+		}
+	}
+
+	return numbers, nil
+}
+
+// WriteValues implements isequencer.ISeqStorage.WriteValuesAndOffset
+func (m *MockStorage) WriteValuesAndOffset(batch []SeqValue, offset PLogOffset) error {
+	// notest
+	if m.writeTimeout > 0 {
+		time.Sleep(m.writeTimeout)
+	}
+
+	if m.WriteValuesAndOffsetError != nil {
+		return m.WriteValuesAndOffsetError
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.pLog[offset] = batch
+	m.nextOffset = offset
+
+	return nil
+}
+
+// ReadNextPLogOffset implements isequencer.ISeqStorage.ReadNextPLogOffset
+func (m *MockStorage) ReadNextPLogOffset() (PLogOffset, error) {
+	// notest
+	if m.readTimeout > 0 {
+		time.Sleep(m.readTimeout)
+	}
+
+	if m.readNextOffsetError != nil {
+		return 0, m.readNextOffsetError
+	}
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	return m.nextOffset, nil
+}
+
+// ActualizeSequencesFromPLog implements isequencer.ISeqStorage.ActualizeSequencesFromPLog
+func (m *MockStorage) ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func(ctx context.Context, batch []SeqValue, offset PLogOffset) error) error {
+	// notest
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	// Process entries in the mocked PLog from the provided offset
+	for i, batch := range m.pLog {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			// Continue processing
+		}
+
+		// Skip entries before the requested offset
+		currentOffset := PLogOffset(i)
+		if currentOffset < offset {
+			continue
+		}
+
+		if m.writeTimeout > 0 {
+			time.Sleep(m.writeTimeout)
+		}
+
+		if err := batcher(ctx, batch, currentOffset); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// SetPLog sets the entire PLog contents for testing
+func (m *MockStorage) SetPLog(plog map[PLogOffset][]SeqValue) {
+	// notest
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.pLog = plog
+}
+
+// ClearPLog removes all entries from the mock PLog
+func (m *MockStorage) ClearPLog() {
+	// notest
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.pLog = make(map[PLogOffset][]SeqValue)
 }
