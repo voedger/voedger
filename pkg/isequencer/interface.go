@@ -25,6 +25,11 @@ type ISeqStorage interface {
 	ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func(batch []SeqValue, offset PLogOffset) error) error
 }
 
+type ISeqSysVVMStorage interface {
+	Get(cCols []byte, data *[]byte) (ok bool, err error)
+	Put(cCols []byte, value []byte) (err error)
+}
+
 // ISequencer defines the interface for working with sequences.
 // ISequencer methods must not be called concurrently.
 // Use: { Start {Next} ( Flush | Actualize ) }

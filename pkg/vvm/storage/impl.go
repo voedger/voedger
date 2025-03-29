@@ -10,12 +10,12 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
-type impl_base struct {
+type implStorageBase struct {
 	prefix        pKeyPrefix
 	sysVVMStorage ISysVvmStorage
 }
 
-func (s *impl_base) getPKey() (pKey []byte) {
+func (s *implStorageBase) getPKey() (pKey []byte) {
 	pKey = make([]byte, utils.Uint32Size, utils.Uint32Size)
 	binary.BigEndian.PutUint32(pKey, s.prefix)
 	return pKey

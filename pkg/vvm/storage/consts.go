@@ -11,4 +11,6 @@ const (
 
 	// [~server.design.orch/KeyPrefix_VVMLeader~impl]
 	pKeyPrefix_VVMLeader
+
+	pKeyPrefix_SeqStorage
 )

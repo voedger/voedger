@@ -10,33 +10,33 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
-type implIelections struct {
-	impl_base
+type implIElectionsTTLStorage struct {
+	implStorageBase
 }
 
-func (s *implIelections) buildKeys(key TTLStorageImplKey) (pKey, cCols []byte) {
+func (s *implIElectionsTTLStorage) buildKeys(key TTLStorageImplKey) (pKey, cCols []byte) {
 	pKey = s.getPKey()
 	cCols = make([]byte, utils.Uint32Size)
 	binary.BigEndian.PutUint32(cCols, key)
 	return
 }
 
-func (s *implIelections) InsertIfNotExist(key TTLStorageImplKey, val string, ttlSeconds int) (bool, error) {
+func (s *implIElectionsTTLStorage) InsertIfNotExist(key TTLStorageImplKey, val string, ttlSeconds int) (bool, error) {
 	pKey, cCols := s.buildKeys(key)
 	return s.sysVVMStorage.InsertIfNotExists(pKey, cCols, []byte(val), ttlSeconds)
 }
 
-func (s *implIelections) CompareAndSwap(key TTLStorageImplKey, oldVal, newVal string, ttlSeconds int) (bool, error) {
+func (s *implIElectionsTTLStorage) CompareAndSwap(key TTLStorageImplKey, oldVal, newVal string, ttlSeconds int) (bool, error) {
 	pKey, cCols := s.buildKeys(key)
 	return s.sysVVMStorage.CompareAndSwap(pKey, cCols, []byte(oldVal), []byte(newVal), ttlSeconds)
 }
 
-func (s *implIelections) CompareAndDelete(key TTLStorageImplKey, val string) (bool, error) {
+func (s *implIElectionsTTLStorage) CompareAndDelete(key TTLStorageImplKey, val string) (bool, error) {
 	pKey, cCols := s.buildKeys(key)
 	return s.sysVVMStorage.CompareAndDelete(pKey, cCols, []byte(val))
 }
 
-func (s *implIelections) Get(key TTLStorageImplKey) (bool, string, error) {
+func (s *implIElectionsTTLStorage) Get(key TTLStorageImplKey) (bool, string, error) {
 	pKey, cCols := s.buildKeys(key)
 	data := []byte{}
 	ok, err := s.sysVVMStorage.Get(pKey, cCols, &data)

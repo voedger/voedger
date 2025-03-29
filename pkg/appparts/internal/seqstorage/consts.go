@@ -5,6 +5,7 @@
 
 package seqstorage
 
-type ISeqSysVVMStorage interface {
-	
-}
+var (
+	cColsNumbers = []byte{1}
+	cColsOffset  = []byte{2}
+)

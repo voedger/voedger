@@ -36,7 +36,7 @@ func TestInsertIfNotExist(t *testing.T) {
 	require.True(ok)
 
 	// check the underlying storage
-	pKey, cCols := ttlStorage.(*implElectionsITTLStorage).buildKeys(ttlStorageImplKey)
+	pKey, cCols := ttlStorage.(*implIElectionsTTLStorage).buildKeys(ttlStorageImplKey)
 	valBytes := []byte{}
 	ok, err = sysVvmAppStorage.TTLGet(pKey, cCols, &valBytes)
 	require.NoError(err)
@@ -80,7 +80,7 @@ func TestCompareAndSwap(t *testing.T) {
 	require.NoError(err)
 	require.True(ok)
 
-	pKey, cCols := ttlStorage.(*implElectionsITTLStorage).buildKeys(ttlStorageImplKey)
+	pKey, cCols := ttlStorage.(*implIElectionsTTLStorage).buildKeys(ttlStorageImplKey)
 
 	t.Run("basic usage", func(t *testing.T) {
 		// swap stored oldVal->newVal -> ok
@@ -143,7 +143,7 @@ func TestCompareAndDelete(t *testing.T) {
 		require.True(ok)
 
 		// check the value is removed indeed from the underlying storage
-		pKey, cCols := ttlStorage.(*implElectionsITTLStorage).buildKeys(ttlStorageImplKey)
+		pKey, cCols := ttlStorage.(*implIElectionsTTLStorage).buildKeys(ttlStorageImplKey)
 		valBytes := []byte{}
 		ok, err = sysVvmAppStorage.TTLGet(pKey, cCols, &valBytes)
 		require.NoError(err)
