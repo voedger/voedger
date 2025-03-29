@@ -45,7 +45,8 @@ type Params struct {
 	MaxNumUnflushedValues int           // 500
 	MaxFlushingInterval   time.Duration // 500 * time.Millisecond
 	// Size of the LRU cache, NumberKey -> Number.
-	LRUCacheSize int // 100_000
+	LRUCacheSize int           // 100_000
+	BatcherDelay time.Duration // 5 * time.Millisecond
 }
 
 type sequencer struct {
@@ -110,22 +111,31 @@ type MockStorage struct {
 	mu                        sync.RWMutex
 	Numbers                   map[WSID]map[SeqID]Number
 	nextOffset                PLogOffset
-	pLog                      [][]SeqValue // Simulated PLog entries
+	pLog                      map[PLogOffset][]SeqValue // Simulated PLog entries
 	readNextOffsetError       error
 	readNumbersError          error
-	writeValuesAndOffsetError error
+	WriteValuesAndOffsetError error
+	readTimeout               time.Duration
+	writeTimeout              time.Duration
 }
 
 // newMockStorage creates a new MockStorage instance
-func NewMockStorage() *MockStorage {
+func NewMockStorage(readTimeout, writeTimeout time.Duration) *MockStorage {
+	// notest
 	return &MockStorage{
-		Numbers: make(map[WSID]map[SeqID]Number),
-		pLog:    make([][]SeqValue, 0),
+		pLog:         make(map[PLogOffset][]SeqValue, 0),
+		readTimeout:  readTimeout,
+		writeTimeout: writeTimeout,
 	}
 }
 
 // ReadNumbers implements isequencer.ISeqStorage.ReadNumbers
 func (m *MockStorage) ReadNumbers(wsid WSID, seqIDs []SeqID) ([]Number, error) {
+	// notest
+	if m.readTimeout > 0 {
+		time.Sleep(m.readTimeout)
+	}
+
 	if m.readNumbersError != nil {
 		return nil, m.readNumbersError
 	}
@@ -133,39 +143,44 @@ func (m *MockStorage) ReadNumbers(wsid WSID, seqIDs []SeqID) ([]Number, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	result := make([]Number, len(seqIDs))
-	wsNumbers, exists := m.Numbers[wsid]
-	if !exists {
-		return result, nil // Return zeros if workspace not found
-	}
+	numbers := make([]Number, len(seqIDs))
+	for i := m.nextOffset; i > PLogOffset(0); i-- {
+		if _, ok := m.pLog[i]; !ok {
+			continue
+		}
 
-	for i, seqID := range seqIDs {
-		if num, ok := wsNumbers[seqID]; ok {
-			result[i] = num
+		for _, seqValue := range m.pLog[i] {
+			for j, seqID := range seqIDs {
+				if numbers[j] != 0 {
+					continue // Skip if already found
+				}
+
+				if seqValue.Key.SeqID == seqID && seqValue.Key.WSID == wsid {
+					numbers[j] = seqValue.Value
+					break
+				}
+			}
 		}
 	}
 
-	return result, nil
+	return numbers, nil
 }
 
 // WriteValues implements isequencer.ISeqStorage.WriteValuesAndOffset
 func (m *MockStorage) WriteValuesAndOffset(batch []SeqValue, offset PLogOffset) error {
-	if m.writeValuesAndOffsetError != nil {
-		return m.writeValuesAndOffsetError
+	// notest
+	if m.writeTimeout > 0 {
+		time.Sleep(m.writeTimeout)
+	}
+
+	if m.WriteValuesAndOffsetError != nil {
+		return m.WriteValuesAndOffsetError
 	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	for _, sv := range batch {
-		wsNumbers, exists := m.Numbers[sv.Key.WSID]
-		if !exists {
-			wsNumbers = make(map[SeqID]Number)
-			m.Numbers[sv.Key.WSID] = wsNumbers
-		}
-		wsNumbers[sv.Key.SeqID] = sv.Value
-	}
-
+	m.pLog[offset] = batch
 	m.nextOffset = offset
 
 	return nil
@@ -173,6 +188,11 @@ func (m *MockStorage) WriteValuesAndOffset(batch []SeqValue, offset PLogOffset) 
 
 // ReadNextPLogOffset implements isequencer.ISeqStorage.ReadNextPLogOffset
 func (m *MockStorage) ReadNextPLogOffset() (PLogOffset, error) {
+	// notest
+	if m.readTimeout > 0 {
+		time.Sleep(m.readTimeout)
+	}
+
 	if m.readNextOffsetError != nil {
 		return 0, m.readNextOffsetError
 	}
@@ -184,7 +204,8 @@ func (m *MockStorage) ReadNextPLogOffset() (PLogOffset, error) {
 }
 
 // ActualizeSequencesFromPLog implements isequencer.ISeqStorage.ActualizeSequencesFromPLog
-func (m *MockStorage) ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func(batch []SeqValue, offset PLogOffset) error) error {
+func (m *MockStorage) ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func(ctx context.Context, batch []SeqValue, offset PLogOffset) error) error {
+	// notest
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -203,7 +224,11 @@ func (m *MockStorage) ActualizeSequencesFromPLog(ctx context.Context, offset PLo
 			continue
 		}
 
-		if err := batcher(batch, currentOffset); err != nil {
+		if m.writeTimeout > 0 {
+			time.Sleep(m.writeTimeout)
+		}
+
+		if err := batcher(ctx, batch, currentOffset); err != nil {
 			return err
 		}
 	}
@@ -211,15 +236,9 @@ func (m *MockStorage) ActualizeSequencesFromPLog(ctx context.Context, offset PLo
 	return nil
 }
 
-// AddPLogEntry adds a batch of sequence values to the mock PLog for testing
-func (m *MockStorage) AddPLogEntry(batch []SeqValue) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.pLog = append(m.pLog, batch)
-}
-
 // SetPLog sets the entire PLog contents for testing
-func (m *MockStorage) SetPLog(plog [][]SeqValue) {
+func (m *MockStorage) SetPLog(plog map[PLogOffset][]SeqValue) {
+	// notest
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.pLog = plog
@@ -227,7 +246,8 @@ func (m *MockStorage) SetPLog(plog [][]SeqValue) {
 
 // ClearPLog removes all entries from the mock PLog
 func (m *MockStorage) ClearPLog() {
+	// notest
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.pLog = make([][]SeqValue, 0)
+	m.pLog = make(map[PLogOffset][]SeqValue)
 }

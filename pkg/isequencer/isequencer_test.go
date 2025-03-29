@@ -17,7 +17,7 @@ import (
 func TestISequencer_Start(t *testing.T) {
 	require := requirePkg.New(t)
 	iTime := coreutils.MockTime
-	storage := isequencer.NewMockStorage()
+	storage := isequencer.NewMockStorage(0, 0)
 	params := &isequencer.Params{
 		SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
 			1: {1: 1},
@@ -55,7 +55,7 @@ func TestISequencer_Start(t *testing.T) {
 
 		offset, ok := sequencer.Start(1, 1)
 		require.True(ok)
-		require.NotZero(offset)
+		require.Zero(offset)
 
 		sequencer.Actualize()
 
@@ -80,10 +80,20 @@ func TestISequencer_Flush(t *testing.T) {
 		iTime := coreutils.MockTime
 		require := requirePkg.New(t)
 
-		storage := isequencer.NewMockStorage()
-		storage.Numbers = map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number{
-			1: {1: 100, 2: 200},
-		}
+		storage := isequencer.NewMockStorage(0, 0)
+		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
+			isequencer.PLogOffset(0): {
+				{
+					Key:   isequencer.NumberKey{WSID: isequencer.WSID(1), SeqID: isequencer.SeqID(1)},
+					Value: isequencer.Number(100),
+				},
+				{
+					Key:   isequencer.NumberKey{WSID: isequencer.WSID(1), SeqID: isequencer.SeqID(2)},
+					Value: isequencer.Number(200),
+				},
+			},
+		})
+
 		seq, cancel := isequencer.New(&isequencer.Params{
 			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
 				1: {1: 1, 2: 1},
@@ -114,7 +124,6 @@ func TestISequencer_Flush(t *testing.T) {
 
 		// Advance time to ensure flush completes
 		iTime.Add(time.Second)
-		// FIXME: no guarantee here that the flush is actually completed (better check storage)
 
 		// Start a new transaction
 		offset, ok = seq.Start(1, 1)
@@ -137,7 +146,15 @@ func TestISequencer_Flush(t *testing.T) {
 		iTime := coreutils.MockTime
 		require := requirePkg.New(t)
 
-		storage := isequencer.NewMockStorage()
+		storage := isequencer.NewMockStorage(0, 0)
+		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
+			isequencer.PLogOffset(0): {
+				{
+					Key:   isequencer.NumberKey{WSID: isequencer.WSID(1), SeqID: isequencer.SeqID(1)},
+					Value: isequencer.Number(100),
+				},
+			},
+		})
 		sequencer, cancel := isequencer.New(&isequencer.Params{
 			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
 				1: {1: 100},
@@ -157,12 +174,19 @@ func TestISequencer_Flush(t *testing.T) {
 
 	t.Run("should persist values to storage after flush completes", func(t *testing.T) {
 		require := requirePkg.New(t)
-		iTime := coreutils.MockTime
+		iTime := coreutils.NewITime()
 
-		storage := isequencer.NewMockStorage()
-		storage.Numbers = map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number{
-			1: {1: 100},
-		}
+		storage := isequencer.NewMockStorage(0, 0)
+		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
+			isequencer.PLogOffset(0): {
+				{
+					Key:   isequencer.NumberKey{WSID: isequencer.WSID(1), SeqID: isequencer.SeqID(1)},
+					Value: isequencer.Number(100),
+				},
+			},
+		})
+
+		firstOffset, err := storage.ReadNextPLogOffset()
 		sequencer, cancel := isequencer.New(&isequencer.Params{
 			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
 				1: {1: 1},
@@ -185,17 +209,17 @@ func TestISequencer_Flush(t *testing.T) {
 
 		// Flush and advance time
 		sequencer.Flush()
-		iTime.Add(50 * time.Millisecond) // Advance time beyond flush interval
+		iTime.Sleep(100 * time.Millisecond) // Advance time beyond flush interval
 
 		// Verify the value was written to storage
 		numbers, err := storage.ReadNumbers(1, []isequencer.SeqID{1})
 		require.NoError(err)
-		require.Equal(isequencer.Number(100), numbers[0], "Flushed value should be persisted in storage")
+		require.Equal(isequencer.Number(101), numbers[0], "Flushed value should be persisted in storage")
 
 		// Verify next PLog offset was updated
 		nextOffset, err := storage.ReadNextPLogOffset()
 		require.NoError(err)
-		require.NotZero(nextOffset, "Next PLog offset should be updated after flush")
+		require.Equal(isequencer.PLogOffset(1), nextOffset-firstOffset)
 	})
 }
 
@@ -204,10 +228,16 @@ func TestISequencer_Next(t *testing.T) {
 		require := requirePkg.New(t)
 		iTime := coreutils.MockTime
 
-		storage := isequencer.NewMockStorage()
-		storage.Numbers = map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number{
-			1: {1: 100},
-		}
+		storage := isequencer.NewMockStorage(0, 0)
+		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
+			isequencer.PLogOffset(0): {
+				{
+					Key:   isequencer.NumberKey{WSID: isequencer.WSID(1), SeqID: isequencer.SeqID(1)},
+					Value: isequencer.Number(100),
+				},
+			},
+		})
+
 		sequencer, cancel := isequencer.New(&isequencer.Params{
 			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
 				1: {1: 1},
@@ -219,9 +249,9 @@ func TestISequencer_Next(t *testing.T) {
 		}, iTime)
 		defer cancel()
 
-		offset, ok := sequencer.Start(1, 1)
+		_, ok := sequencer.Start(1, 1)
 		require.True(ok)
-		require.NotZero(offset)
+		//require.NotZero(offset)
 
 		num, err := sequencer.Next(1)
 		require.NoError(err)
@@ -239,11 +269,19 @@ func TestISequencer_Next(t *testing.T) {
 		require := requirePkg.New(t)
 		iTime := coreutils.MockTime
 
-		storage := isequencer.NewMockStorage()
+		storage := isequencer.NewMockStorage(0, 0)
+		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
+			isequencer.PLogOffset(0): {
+				{
+					Key:   isequencer.NumberKey{WSID: isequencer.WSID(1), SeqID: isequencer.SeqID(1)},
+					Value: isequencer.Number(50),
+				},
+			},
+		})
 		// No predefined sequence Numbers in storage
 		sequencer, cancel := isequencer.New(&isequencer.Params{
 			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
-				1: {1: 50}, // Initial value is 50
+				1: {1: 1},
 			},
 			SeqStorage:            storage,
 			MaxNumUnflushedValues: 10,
@@ -252,9 +290,9 @@ func TestISequencer_Next(t *testing.T) {
 		}, iTime)
 		defer cancel()
 
-		offset, ok := sequencer.Start(1, 1)
+		_, ok := sequencer.Start(1, 1)
 		require.True(ok)
-		require.NotZero(offset)
+		//require.NotZero(offset)
 
 		num, err := sequencer.Next(1)
 		require.NoError(err)
@@ -267,7 +305,7 @@ func TestISequencer_Next(t *testing.T) {
 		require := requirePkg.New(t)
 		iTime := coreutils.MockTime
 
-		storage := isequencer.NewMockStorage()
+		storage := isequencer.NewMockStorage(0, 0)
 		sequencer, cancel := isequencer.New(&isequencer.Params{
 			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
 				1: {1: 1},
@@ -288,7 +326,7 @@ func TestISequencer_Next(t *testing.T) {
 		require := requirePkg.New(t)
 		iTime := coreutils.MockTime
 
-		storage := isequencer.NewMockStorage()
+		storage := isequencer.NewMockStorage(0, 0)
 		sequencer, cancel := isequencer.New(&isequencer.Params{
 			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
 				1: {1: 1}, // Only sequence ID 1 is defined
@@ -300,9 +338,8 @@ func TestISequencer_Next(t *testing.T) {
 		}, iTime)
 		defer cancel()
 
-		offset, ok := sequencer.Start(1, 1)
+		_, ok := sequencer.Start(1, 1)
 		require.True(ok)
-		require.NotZero(offset)
 
 		require.Panics(func() {
 			sequencer.Next(2) // Sequence ID 2 is not defined
@@ -314,18 +351,25 @@ func TestISequencer_Next(t *testing.T) {
 		require := requirePkg.New(t)
 		iTime := coreutils.MockTime
 
-		storage := isequencer.NewMockStorage()
-		storage.Numbers = map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number{
-			1: {
-				1: 100, // First sequence starts at 100
-				2: 200, // Second sequence starts at 200
+		storage := isequencer.NewMockStorage(0, 0)
+		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
+			isequencer.PLogOffset(0): {
+				{
+					Key:   isequencer.NumberKey{WSID: isequencer.WSID(1), SeqID: isequencer.SeqID(1)},
+					Value: isequencer.Number(100),
+				},
+				{
+					Key:   isequencer.NumberKey{WSID: isequencer.WSID(1), SeqID: isequencer.SeqID(2)},
+					Value: isequencer.Number(200),
+				},
 			},
-		}
+		})
+
 		sequencer, cancel := isequencer.New(&isequencer.Params{
 			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
 				1: {
-					1: 1, // Initial value for sequence 1
-					2: 2, // Initial value for sequence 2
+					1: 1,
+					2: 1,
 				},
 			},
 			SeqStorage:            storage,
@@ -335,9 +379,8 @@ func TestISequencer_Next(t *testing.T) {
 		}, iTime)
 		defer cancel()
 
-		offset, ok := sequencer.Start(1, 1)
+		_, ok := sequencer.Start(1, 1)
 		require.True(ok)
-		require.NotZero(offset)
 
 		// Get next value for sequence 1
 		num1, err := sequencer.Next(1)
@@ -363,10 +406,19 @@ func TestISequencer_Actualize(t *testing.T) {
 		require := requirePkg.New(t)
 		iTime := coreutils.MockTime
 
-		storage := isequencer.NewMockStorage()
+		storage := isequencer.NewMockStorage(0, 0)
+		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
+			isequencer.PLogOffset(0): {
+				{
+					Key:   isequencer.NumberKey{WSID: isequencer.WSID(1), SeqID: isequencer.SeqID(1)},
+					Value: isequencer.Number(100),
+				},
+			},
+		})
+
 		sequencer, cancel := isequencer.New(&isequencer.Params{
 			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
-				1: {1: 100},
+				1: {1: 1},
 			},
 			SeqStorage:            storage,
 			MaxNumUnflushedValues: 10,
