@@ -110,10 +110,10 @@ type sequencer struct {
 type MockStorage struct {
 	mu                        sync.RWMutex
 	Numbers                   map[WSID]map[SeqID]Number
-	nextOffset                PLogOffset
+	NextOffset                PLogOffset
 	pLog                      map[PLogOffset][]SeqValue // Simulated PLog entries
 	readNextOffsetError       error
-	readNumbersError          error
+	ReadNumbersError          error
 	WriteValuesAndOffsetError error
 	readTimeout               time.Duration
 	writeTimeout              time.Duration
@@ -136,15 +136,15 @@ func (m *MockStorage) ReadNumbers(wsid WSID, seqIDs []SeqID) ([]Number, error) {
 		time.Sleep(m.readTimeout)
 	}
 
-	if m.readNumbersError != nil {
-		return nil, m.readNumbersError
+	if m.ReadNumbersError != nil {
+		return nil, m.ReadNumbersError
 	}
 
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	numbers := make([]Number, len(seqIDs))
-	for i := m.nextOffset; i > PLogOffset(0); i-- {
+	for i := m.NextOffset; i > PLogOffset(0); i-- {
 		if _, ok := m.pLog[i]; !ok {
 			continue
 		}
@@ -181,7 +181,7 @@ func (m *MockStorage) WriteValuesAndOffset(batch []SeqValue, offset PLogOffset) 
 	defer m.mu.Unlock()
 
 	m.pLog[offset] = batch
-	m.nextOffset = offset
+	m.NextOffset = offset
 
 	return nil
 }
@@ -200,7 +200,7 @@ func (m *MockStorage) ReadNextPLogOffset() (PLogOffset, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	return m.nextOffset, nil
+	return m.NextOffset, nil
 }
 
 // ActualizeSequencesFromPLog implements isequencer.ISeqStorage.ActualizeSequencesFromPLog
@@ -219,7 +219,7 @@ func (m *MockStorage) ActualizeSequencesFromPLog(ctx context.Context, offset PLo
 		}
 
 		// Skip entries before the requested offset
-		currentOffset := PLogOffset(i)
+		currentOffset := i
 		if currentOffset < offset {
 			continue
 		}

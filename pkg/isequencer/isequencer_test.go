@@ -269,6 +269,7 @@ func TestISequencer_Next(t *testing.T) {
 		iTime := coreutils.MockTime
 
 		storage := isequencer.NewMockStorage(0, 0)
+		storage.NextOffset = 1
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
 			isequencer.PLogOffset(0): {
 				{
@@ -278,9 +279,10 @@ func TestISequencer_Next(t *testing.T) {
 			},
 		})
 		// No predefined sequence Numbers in storage
+		initialValue := isequencer.Number(1)
 		sequencer, cancel := isequencer.New(&isequencer.Params{
 			SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
-				1: {1: 1},
+				1: {1: initialValue},
 			},
 			SeqStorage:            storage,
 			MaxNumUnflushedValues: 10,
@@ -294,7 +296,7 @@ func TestISequencer_Next(t *testing.T) {
 
 		num, err := sequencer.Next(1)
 		require.NoError(err)
-		require.Equal(isequencer.Number(51), num, "Next should use initial value when sequence not in storage")
+		require.Equal(initialValue+1, num, "Next should use initial value when sequence not in storage")
 
 		sequencer.Flush()
 	})
@@ -345,6 +347,7 @@ func TestISequencer_Next(t *testing.T) {
 
 		sequencer.Flush()
 	})
+
 	t.Run("should handle multiple sequence types correctly", func(t *testing.T) {
 		require := requirePkg.New(t)
 		iTime := coreutils.MockTime

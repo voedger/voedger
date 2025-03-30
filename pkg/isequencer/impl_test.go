@@ -26,7 +26,7 @@ func TestSequencer(t *testing.T) {
 		mockedTime := coreutils.MockTime
 		// Given
 		storage := NewMockStorage(0, 0)
-		storage.nextOffset = PLogOffset(100)
+		storage.NextOffset = PLogOffset(100)
 		storage.SetPLog(map[PLogOffset][]SeqValue{
 			PLogOffset(99): {
 				{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 100},
@@ -72,9 +72,17 @@ func TestSequencer(t *testing.T) {
 		mockedTime := coreutils.MockTime
 		// Given
 		storage := NewMockStorage(0, 0)
+		storage.SetPLog(map[PLogOffset][]SeqValue{
+			PLogOffset(0): {
+				{
+					Key:   NumberKey{WSID: 1, SeqID: 1},
+					Value: 100,
+				},
+			},
+		})
 		params := &Params{
 			SeqTypes: map[WSKind]map[SeqID]Number{
-				1: {1: 100},
+				1: {1: 1},
 			},
 			SeqStorage:            storage,
 			MaxNumUnflushedValues: 500,
@@ -83,11 +91,10 @@ func TestSequencer(t *testing.T) {
 		}
 
 		seq, cleanup := New(params, mockedTime)
-		defer cleanup()
-		seq.(*sequencer).actualizerWG.Wait()
 
 		// When
-		_, ok := seq.Start(1, 1)
+		offsetBegin, ok := seq.Start(1, 1)
+		_ = offsetBegin
 		require.True(t, ok)
 
 		_, err := seq.Next(1)
@@ -99,7 +106,22 @@ func TestSequencer(t *testing.T) {
 		_, ok = seq.Start(1, 1)
 		require.False(t, ok, "should not start during actualization")
 
-		// FIXME: check further New, Start, Next will return 1 again after Actuazlier
+		// Wait for actualization to complete
+		seq.(*sequencer).actualizerWG.Wait()
+		cleanup()
+
+		seq2, cleanup2 := New(params, mockedTime)
+		defer cleanup2()
+
+		offsetAfter, ok := seq2.Start(1, 1)
+		_ = offsetAfter
+		require.True(t, ok)
+
+		_, err = seq2.Next(1)
+		require.NoError(t, err)
+
+		require.Equal(t, PLogOffset(1), offsetAfter)
+		require.Equal(t, offsetAfter, offsetBegin)
 	})
 }
 
@@ -108,7 +130,7 @@ func TestSequencer_Start(t *testing.T) {
 		iTime := coreutils.MockTime
 
 		storage := NewMockStorage(0, 0)
-		storage.nextOffset = PLogOffset(99)
+		storage.NextOffset = PLogOffset(99)
 		storage.Numbers = map[WSID]map[SeqID]Number{
 			1: {1: 100},
 		}
@@ -191,7 +213,7 @@ func TestSequencer_Flush(t *testing.T) {
 		iTime := coreutils.MockTime
 
 		storage := NewMockStorage(0, 0)
-		storage.nextOffset = PLogOffset(99)
+		storage.NextOffset = PLogOffset(99)
 		storage.Numbers = map[WSID]map[SeqID]Number{
 			1: {1: 100},
 		}
@@ -604,6 +626,45 @@ func TestSequencer_Next(t *testing.T) {
 		seq.Flush()
 	})
 
+	t.Run("should return 0 when ReadNumbers() fails", func(t *testing.T) {
+		require := require.New(t)
+		iTime := coreutils.MockTime
+
+		storage := NewMockStorage(0, 0)
+		storage.SetPLog(map[PLogOffset][]SeqValue{
+			PLogOffset(0): {
+				{
+					Key:   NumberKey{WSID: WSID(1), SeqID: SeqID(1)},
+					Value: Number(50),
+				},
+			},
+		})
+		// No predefined sequence Numbers in storage
+		initialValue := Number(1)
+		seq, cancel := New(&Params{
+			SeqTypes: map[WSKind]map[SeqID]Number{
+				1: {1: initialValue},
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 10,
+			MaxFlushingInterval:   10 * time.Millisecond,
+			LRUCacheSize:          1000,
+		}, iTime)
+
+		_, ok := seq.Start(1, 1)
+		require.True(ok)
+
+		cancel()
+		retryCount = 1
+		storage.ReadNumbersError = errors.New("ReadNumbersError")
+		seq.(*sequencer).toBeFlushedMu.Lock()
+		seq.(*sequencer).toBeFlushed = make(map[NumberKey]Number)
+		seq.(*sequencer).toBeFlushedMu.Unlock()
+
+		num, err := seq.Next(1)
+		require.ErrorIs(err, storage.ReadNumbersError)
+		require.Zero(num)
+	})
 }
 
 func TestBatcher(t *testing.T) {
