@@ -9,6 +9,7 @@
 package coreutils
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/stretchr/testify/mock"
@@ -44,6 +45,18 @@ func (m *MockCUDRow) AsRecordID(name appdef.FieldName) istructs.RecordID {
 }
 func (m *MockCUDRow) RecordIDs(includeNulls bool) func(func(appdef.FieldName, istructs.RecordID) bool) {
 	return m.Called(includeNulls).Get(0).(func(func(appdef.FieldName, istructs.RecordID) bool))
+}
+
+type MockEvents struct {
+	istructs.IEvents
+	mock.Mock
+}
+
+func (e *MockEvents) ReadPLog(ctx context.Context, partition istructs.PartitionID, offset istructs.Offset, toReadCount int, cb istructs.PLogEventsReaderCallback) (err error) {
+	return e.Called(ctx, partition, offset, toReadCount, cb).Error(0)
+}
+func (e *MockEvents) ReadWLog(ctx context.Context, workspace istructs.WSID, offset istructs.Offset, toReadCount int, cb istructs.WLogEventsReaderCallback) (err error) {
+	return e.Called(ctx, workspace, offset, toReadCount, cb).Error(0)
 }
 
 type MockPLogEvent struct {
