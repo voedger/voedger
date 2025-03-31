@@ -83,8 +83,8 @@ func handleTimestamps(args istructs.IObject, epJornalIndices extensionpoints.IEx
 		return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 	}
 
-	from := resetTime(args.AsInt64(field_From))
-	till := resetTime(args.AsInt64(field_Till))
+	from := resetTime(args.AsInt64(Field_From))
+	till := resetTime(args.AsInt64(Field_Till))
 
 	idxIntf, ok := epJornalIndices.Find(args.AsString(field_IndexForTimestamps))
 	if !ok {
@@ -95,8 +95,8 @@ func handleTimestamps(args istructs.IObject, epJornalIndices extensionpoints.IEx
 	return FindOffsetsByTimeRange(from, till, idx, state)
 }
 func handleOffsets(args istructs.IObject) (fo, lo int64, err error) {
-	fo = args.AsInt64(field_From)
-	lo = args.AsInt64(field_Till)
+	fo = args.AsInt64(Field_From)
+	lo = args.AsInt64(Field_Till)
 	errs := make([]error, 0)
 	if fo <= 0 {
 		errs = append(errs, fmt.Errorf("'from' %w", errOffsetMustBePositive))
