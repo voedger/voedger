@@ -29,7 +29,6 @@ var (
 func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok bool) {
 	// Check if cleanup is in progress
 	if s.cleanupCtx.Err() != nil {
-		// notest
 		panic("sequencer is in cleanup state")
 	}
 
@@ -40,13 +39,11 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 
 	// Panics if Sequencing Transaction is already started.
 	if s.currentWSID != 0 || s.currentWSKind != 0 {
-		// notest
 		panic("event processing is already started")
 	}
 
 	// Verify wsKind exists in supported types
 	if _, exists := s.params.SeqTypes[wsKind]; !exists {
-		// notest
 		panic("unknown wsKind")
 	}
 
@@ -186,7 +183,6 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 
 	initialValue, ok := seqTypes[seqID]
 	if !ok {
-		// notest
 		panic("unknown seqID")
 	}
 
