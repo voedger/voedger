@@ -65,7 +65,7 @@ func TestSequencer(t *testing.T) {
 
 		nums, err := storage.ReadNumbers(1, []SeqID{1})
 		require.NoError(t, err)
-		require.Equal(t, nums[0], Number(200))
+		require.Equal(t, Number(200), nums[0])
 	})
 }
 
