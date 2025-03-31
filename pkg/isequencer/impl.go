@@ -192,7 +192,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	}
 	// Try to obtain the next value using:
 	// Try s.lru (can be evicted)
-	if nextNumber, ok := s.lru.Get(key); ok {
+	if nextNumber, ok := s.cache.Get(key); ok {
 		return s.incrementNumber(key, nextNumber), nil
 	}
 
@@ -223,7 +223,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 			if number == 0 {
 				continue
 			}
-			s.lru.Add(key, number)
+			s.cache.Add(key, number)
 		}
 
 		return err
@@ -250,7 +250,7 @@ func (s *sequencer) incrementNumber(key NumberKey, number Number) Number {
 
 	nextNumber := number + 1
 	// Write value+1 to s.lru
-	s.lru.Add(key, nextNumber)
+	s.cache.Add(key, nextNumber)
 	// Write value+1 to s.inproc
 	s.inproc[key] = nextNumber
 	// Return value
@@ -515,7 +515,7 @@ func (s *sequencer) Actualize() {
 	// Cleans s.toBeFlushedOffset
 	s.toBeFlushedOffset = 0
 	// Cleans s.lru
-	s.lru.Purge()
+	s.cache.Purge()
 
 	// Cleans s.currentWSID, s.currentWSKind
 	s.finishSequencingTransaction()

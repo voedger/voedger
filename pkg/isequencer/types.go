@@ -57,7 +57,7 @@ type sequencer struct {
 	actualizerCtxCancel context.CancelFunc
 	actualizerWG        *sync.WaitGroup
 
-	lru *lruPkg.Cache[NumberKey, Number]
+	cache *lruPkg.Cache[NumberKey, Number]
 
 	// Initialized by Start()
 	// Example:
@@ -117,6 +117,7 @@ type MockStorage struct {
 	WriteValuesAndOffsetError error
 	readTimeout               time.Duration
 	writeTimeout              time.Duration
+	onWriteValuesAndOffset    func()
 }
 
 // newMockStorage creates a new MockStorage instance
@@ -175,6 +176,10 @@ func (m *MockStorage) WriteValuesAndOffset(batch []SeqValue, offset PLogOffset) 
 
 	if m.WriteValuesAndOffsetError != nil {
 		return m.WriteValuesAndOffsetError
+	}
+
+	if m.onWriteValuesAndOffset != nil {
+		m.onWriteValuesAndOffset()
 	}
 
 	m.mu.Lock()

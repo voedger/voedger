@@ -421,3 +421,126 @@ func TestSequencer_FlushValues(t *testing.T) {
 		require.Error(err)
 	})
 }
+
+func TestNextNumberSourceOrder(t *testing.T) {
+	require := require.New(t)
+
+	// Set up mock storage and sequencer
+	storage := NewMockStorage(0, 0)
+	storage.SetPLog(map[PLogOffset][]SeqValue{
+		PLogOffset(5): {
+			{
+				Key:   NumberKey{WSID: 1, SeqID: 1},
+				Value: 100,
+			},
+		},
+	})
+	mockTime := coreutils.MockTime
+
+	params := &Params{
+		SeqTypes: map[WSKind]map[SeqID]Number{
+			1: {1: 100},
+		},
+		SeqStorage:            storage,
+		MaxNumUnflushedValues: 10,
+		MaxFlushingInterval:   500 * time.Millisecond,
+		LRUCacheSize:          1000,
+	}
+
+	seq, cleanup := New(params, mockTime)
+	defer cleanup()
+
+	numberKey := NumberKey{WSID: 1, SeqID: 1}
+
+	t.Run("check the value is cached after next", func(t *testing.T) {
+		offset := WaitForStart(t, seq, 1, 1)
+		require.Equal(PLogOffset(6), offset)
+		numInitial, err := seq.Next(1)
+		require.NoError(err)
+		require.NotZero(numInitial)
+		numCached, ok := seq.(*sequencer).cache.Get(numberKey)
+		require.True(ok)
+		require.Equal(numInitial, numCached)
+
+		seq.Actualize()
+	})
+
+	t.Run("check taken from cache on next", func(t *testing.T) {
+		offset := WaitForStart(t, seq, 1, 1)
+		require.Equal(PLogOffset(6), offset)
+
+		// tamper the cache to ensure we'll use cache on Next
+		seq.(*sequencer).cache.Add(numberKey, 10001)
+
+		// expect read from cache first on normal Next call
+		numFromCache, err := seq.Next(1)
+		require.NoError(err)
+		require.Equal(Number(10002), numFromCache)
+
+		seq.Actualize()
+	})
+
+	t.Run("missing in cache -> take from inproc", func(t *testing.T) {
+		// start
+		offset := WaitForStart(t, seq, 1, 1)
+		require.Equal(PLogOffset(6), offset)
+
+		// fill the cache
+		numInitial, err := seq.Next(1)
+		require.NoError(err)
+		require.NotZero(numInitial)
+
+		// evict the cached number
+		require.True(seq.(*sequencer).cache.Remove(numberKey))
+
+		// tamper inproc to be sure we'll read exactly from inproc in this case
+		seq.(*sequencer).inproc[numberKey] = 20001
+
+		// missing in cache -> expect read from inproc
+		numActual, err := seq.Next(1)
+		require.NoError(err)
+		require.Equal(Number(20002), numActual)
+
+		seq.Actualize()
+	})
+
+	t.Run("missing in cache and in inproc -> take from toBeFlushed", func(t *testing.T) {
+		// start
+		offset := WaitForStart(t, seq, 1, 1)
+		require.Equal(PLogOffset(6), offset)
+
+		// fill the cache and inproc
+		numInitial, err := seq.Next(1)
+		require.NoError(err)
+		require.NotZero(numInitial)
+
+		// clear inproc + keep toBeFlushed filled by making flusher() stuck
+		continueCh := make(chan any)
+		storage.onWriteValuesAndOffset = func() {
+			<-continueCh
+		}
+		defer func() {
+			storage.onWriteValuesAndOffset = nil
+		}()
+		seq.Flush()
+		seq.(*sequencer).inproc = map[NumberKey]Number{}
+
+		// clear cache
+		removed := seq.(*sequencer).cache.Remove(numberKey)
+		require.True(removed)
+
+		// tamper toBeFlushed to ensure we'll read exactly from toBeFlushed in this case
+		seq.(*sequencer).toBeFlushed[numberKey] = 30001
+
+		offset = WaitForStart(t, seq, 1, 1)
+		require.Equal(PLogOffset(7), offset)
+
+		// missing in cache and in inproc -> expect read from toBeFlushed
+		numFromToBeFlushed, err := seq.Next(1)
+		require.NoError(err)
+		require.Equal(Number(30002), numFromToBeFlushed)
+		close(continueCh)
+
+		seq.Actualize()
+	})
+}

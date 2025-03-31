@@ -25,7 +25,7 @@ func New(params *Params, iTime coreutils.ITime) (ISequencer, context.CancelFunc)
 	cleanupCtx, cleanupCtxCancel := context.WithCancel(context.Background())
 	s := &sequencer{
 		params:           params,
-		lru:              lru,
+		cache:            lru,
 		toBeFlushed:      make(map[NumberKey]Number),
 		inproc:           make(map[NumberKey]Number),
 		cleanupCtx:       cleanupCtx,
