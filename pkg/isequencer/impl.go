@@ -336,7 +336,6 @@ func (s *sequencer) batcher(ctx context.Context, values []SeqValue, offset PLogO
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		// notest
 		case <-delayCh:
 		}
 
