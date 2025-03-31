@@ -10,6 +10,7 @@ import "context"
 type ISeqStorage interface {
 
 	// If number is not found, returns 0
+	// Each Number matches its SeqID by array index
 	ReadNumbers(WSID, []SeqID) ([]Number, error)
 
 	// IDs in batch.Values are unique

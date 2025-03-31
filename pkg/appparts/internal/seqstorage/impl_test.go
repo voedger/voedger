@@ -35,28 +35,89 @@ func TestBasicUsage(t *testing.T) {
 	seqSysVVMStorage := storage.NewSeqStorage(appStorage)
 	seqStorage := New(istructs.PartitionID(1), mockEvents, appDef, seqSysVVMStorage)
 
-	err = seqStorage.WriteValues([]isequencer.SeqValue{
-		{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 1},
-		{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 2},
-		{Key: isequencer.NumberKey{WSID: 2, SeqID: 1}, Value: 3},
-		{Key: isequencer.NumberKey{WSID: 2, SeqID: 2}, Value: 1},
+	t.Run("Write and Read Offset", func(t *testing.T) {
+		actualOffset, err  := seqStorage.ReadNextPLogOffset()
+		require.NoError(err)
+		require.Zero(actualOffset)
+
+		err = seqStorage.WriteNextPLogOffset(isequencer.PLogOffset(5))
+		require.NoError(err)
+
+		actualOffset, err  = seqStorage.ReadNextPLogOffset()
+		require.NoError(err)
+		require.Equal(isequencer.PLogOffset(5), actualOffset)
+
+		err = seqStorage.WriteNextPLogOffset(isequencer.PLogOffset(6))
+		require.NoError(err)
+
+		actualOffset, err  = seqStorage.ReadNextPLogOffset()
+		require.NoError(err)
+		require.Equal(isequencer.PLogOffset(6), actualOffset)
 	})
-	require.NoError(err)
 
-	err = seqStorage.WriteNextPLogOffset(isequencer.PLogOffset(5))
-	require.NoError(err)
+	// ReadNumbers
+	t.Run("Write and Read Numbers", func(t *testing.T) {
+		err = seqStorage.WriteValues([]isequencer.SeqValue{
+			{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 1},
+			{Key: isequencer.NumberKey{WSID: 1, SeqID: 2}, Value: 6},
+			{Key: isequencer.NumberKey{WSID: 1, SeqID: 3}, Value: 8},
+			{Key: isequencer.NumberKey{WSID: 2, SeqID: 1}, Value: 3},
+			{Key: isequencer.NumberKey{WSID: 2, SeqID: 2}, Value: 1},
+		})
+		require.NoError(err)
 
-	numbers, err := seqStorage.ReadNumbers(1, []isequencer.SeqID{1})
-	require.NoError(err)
-	require.Equal()
-
-
-	// t.Run("read empty", func(t *testing.T) {
-	// 	t.Run("ReadNumbers", func(t *testing.T) {
-	// 		numbers, err := seqStorage.ReadNumbers(1, nil)
-	// 		require.NoError(err)
-	// 		require.Empty(numbers)
-	// 	})
+		cases := []struct {
+			wsid            isequencer.WSID
+			seqIDs          [][]isequencer.SeqID
+			expectedNumbers [][]isequencer.Number
+		}{
+			{
+				wsid: 1,
+				seqIDs: [][]isequencer.SeqID{
+					{},
+					{1},
+					{2},
+					{3},
+					{4},
+					{1, 2},
+					{1, 2, 3},
+					{1, 2, 3, 4},
+					{4, 3, 2, 1},
+				},
+				expectedNumbers: [][]isequencer.Number{
+					{},
+					{1},
+					{6},
+					{8},
+					{0},
+					{1, 6},
+					{1, 6, 8},
+					{1, 6, 8, 0},
+					{0, 8, 6, 1},
+				},
+			},
+			{
+				wsid: 2,
+				seqIDs: [][]isequencer.SeqID{
+					{1},
+					{2},
+					{3},
+				},
+				expectedNumbers: [][]isequencer.Number{
+					{3},
+					{1},
+					{0},
+				},
+			},
+		}
+		for _, c := range cases {
+			for i, seqIDs := range c.seqIDs {
+				numbers, err := seqStorage.ReadNumbers(c.wsid, seqIDs)
+				require.NoError(err)
+				require.Equal(c.expectedNumbers[i], numbers, seqIDs)
+			}
+		}
+	})
 
 	// 	t.Run("ReadPLogOffset", func(t *testing.T) {
 	// 		offset, err := seqStorage.ReadNextPLogOffset()
