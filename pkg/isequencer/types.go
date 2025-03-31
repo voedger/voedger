@@ -117,6 +117,7 @@ type MockStorage struct {
 	WriteValuesAndOffsetError error
 	readTimeout               time.Duration
 	writeTimeout              time.Duration
+	OnBeforeActualize         func()
 }
 
 // newMockStorage creates a new MockStorage instance
@@ -208,6 +209,10 @@ func (m *MockStorage) ActualizeSequencesFromPLog(ctx context.Context, offset PLo
 	// notest
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+
+	if m.OnBeforeActualize != nil {
+		m.OnBeforeActualize()
+	}
 
 	// Process entries in the mocked PLog from the provided offset
 	for i, batch := range m.pLog {
