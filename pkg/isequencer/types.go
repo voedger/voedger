@@ -7,6 +7,7 @@ package isequencer
 
 import (
 	"context"
+	"math"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -42,8 +43,7 @@ type Params struct {
 
 	SeqStorage ISeqStorage
 
-	MaxNumUnflushedValues int           // 500
-	MaxFlushingInterval   time.Duration // 500 * time.Millisecond
+	MaxNumUnflushedValues int // 500
 	// Size of the LRU cache, NumberKey -> Number.
 	LRUCacheSize int           // 100_000
 	BatcherDelay time.Duration // 5 * time.Millisecond
@@ -208,6 +208,23 @@ func (m *MockStorage) ReadNextPLogOffset() (PLogOffset, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	if len(m.pLog) == 0 {
+		return m.NextOffset, nil
+	}
+
+	// Find the maximum offset in the PLog
+	maxOffset := PLogOffset(0)
+	for offset := range m.pLog {
+		if offset > maxOffset {
+			maxOffset = offset
+		}
+	}
+
+	// If the maximum offset is greater than the current NextOffset, update it
+	if maxOffset > m.NextOffset {
+		m.NextOffset = maxOffset
+	}
+
 	return m.NextOffset, nil
 }
 
@@ -217,8 +234,13 @@ func (m *MockStorage) ActualizeSequencesFromPLog(ctx context.Context, offset PLo
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	// Process entries in the mocked PLog from the provided offset
-	for i, batch := range m.pLog {
+	for offsetProbe := offset; offsetProbe < math.MaxInt; offsetProbe++ {
+		batch, ok := m.pLog[offsetProbe]
+		if !ok {
+			// end of PLog is reached
+			return nil
+		}
+		// Process entries in the mocked PLog from the provided offset
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -227,7 +249,7 @@ func (m *MockStorage) ActualizeSequencesFromPLog(ctx context.Context, offset PLo
 		}
 
 		// Skip entries before the requested offset
-		currentOffset := i
+		currentOffset := offsetProbe
 		if currentOffset < offset {
 			continue
 		}

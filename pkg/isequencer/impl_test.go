@@ -39,7 +39,6 @@ func TestSequencer(t *testing.T) {
 			},
 			SeqStorage:            storage,
 			MaxNumUnflushedValues: 500,
-			MaxFlushingInterval:   500 * time.Millisecond,
 			LRUCacheSize:          1000,
 		}
 
@@ -89,7 +88,6 @@ func TestSequencer_Start(t *testing.T) {
 			},
 			SeqStorage:            storage,
 			MaxNumUnflushedValues: 5,
-			MaxFlushingInterval:   500 * time.Millisecond,
 			LRUCacheSize:          1000,
 		}, iTime)
 		defer cancel()
@@ -130,7 +128,6 @@ func TestSequencer_Flush(t *testing.T) {
 			},
 			SeqStorage:            storage,
 			MaxNumUnflushedValues: 5,
-			MaxFlushingInterval:   500 * time.Millisecond,
 			LRUCacheSize:          1000,
 		}, iTime)
 		defer cancel()
@@ -189,7 +186,6 @@ func TestSequencer_Next(t *testing.T) {
 			},
 			SeqStorage:            storage,
 			MaxNumUnflushedValues: 10,
-			MaxFlushingInterval:   10 * time.Millisecond,
 			LRUCacheSize:          1000,
 		}, iTime)
 
@@ -197,7 +193,7 @@ func TestSequencer_Next(t *testing.T) {
 		require.True(ok)
 
 		cancel()
-		retryCount = 1
+		RetryCount = 1
 		storage.ReadNumbersError = errors.New("ReadNumbersError")
 		seq.(*sequencer).toBeFlushedMu.Lock()
 		seq.(*sequencer).toBeFlushed = make(map[NumberKey]Number)
@@ -233,7 +229,6 @@ func TestBatcher(t *testing.T) {
 		params := &Params{
 			SeqStorage:            storage,
 			MaxNumUnflushedValues: 3, // Small threshold to test waiting
-			MaxFlushingInterval:   500 * time.Millisecond,
 			LRUCacheSize:          1000,
 			BatcherDelay:          10 * time.Millisecond,
 		}
@@ -309,7 +304,6 @@ func TestBatcher(t *testing.T) {
 			},
 			SeqStorage:            storage,
 			MaxNumUnflushedValues: 1, // Small threshold to force waiting
-			MaxFlushingInterval:   500 * time.Millisecond,
 			LRUCacheSize:          1000,
 			BatcherDelay:          100 * time.Millisecond,
 		}
@@ -376,7 +370,6 @@ func TestSequencer_FlushValues(t *testing.T) {
 		params := &Params{
 			SeqStorage:            storage,
 			MaxNumUnflushedValues: 10,
-			MaxFlushingInterval:   500 * time.Millisecond,
 			LRUCacheSize:          1000,
 		}
 
@@ -415,13 +408,12 @@ func TestSequencer_FlushValues(t *testing.T) {
 			},
 		})
 		storage.WriteValuesAndOffsetError = errors.New("storage write error")
-		retryCount = 1
+		RetryCount = 1
 		mockTime := coreutils.MockTime
 
 		params := &Params{
 			SeqStorage:            storage,
 			MaxNumUnflushedValues: 10,
-			MaxFlushingInterval:   500 * time.Millisecond,
 			LRUCacheSize:          1000,
 		}
 
@@ -463,7 +455,6 @@ func TestNextNumberSourceOrder(t *testing.T) {
 		},
 		SeqStorage:            storage,
 		MaxNumUnflushedValues: 10,
-		MaxFlushingInterval:   500 * time.Millisecond,
 		LRUCacheSize:          1000,
 	}
 
@@ -473,7 +464,7 @@ func TestNextNumberSourceOrder(t *testing.T) {
 	numberKey := NumberKey{WSID: 1, SeqID: 1}
 
 	t.Run("check the value is cached after next", func(t *testing.T) {
-		offset := WaitForStart(t, seq, 1, 1)
+		offset := WaitForStart(t, seq, 1, 1, true)
 		require.Equal(PLogOffset(6), offset)
 		numInitial, err := seq.Next(1)
 		require.NoError(err)
@@ -486,7 +477,7 @@ func TestNextNumberSourceOrder(t *testing.T) {
 	})
 
 	t.Run("check taken from cache on next", func(t *testing.T) {
-		offset := WaitForStart(t, seq, 1, 1)
+		offset := WaitForStart(t, seq, 1, 1, true)
 		require.Equal(PLogOffset(6), offset)
 
 		// tamper the cache to ensure we'll use cache on Next
@@ -502,7 +493,7 @@ func TestNextNumberSourceOrder(t *testing.T) {
 
 	t.Run("missing in cache -> take from inproc", func(t *testing.T) {
 		// start
-		offset := WaitForStart(t, seq, 1, 1)
+		offset := WaitForStart(t, seq, 1, 1, true)
 		require.Equal(PLogOffset(6), offset)
 
 		// fill the cache
@@ -526,7 +517,7 @@ func TestNextNumberSourceOrder(t *testing.T) {
 
 	t.Run("missing in cache and in inproc -> take from toBeFlushed", func(t *testing.T) {
 		// start
-		offset := WaitForStart(t, seq, 1, 1)
+		offset := WaitForStart(t, seq, 1, 1, true)
 		require.Equal(PLogOffset(6), offset)
 
 		// fill the cache and inproc
@@ -552,7 +543,7 @@ func TestNextNumberSourceOrder(t *testing.T) {
 		// tamper toBeFlushed to ensure we'll read exactly from toBeFlushed in this case
 		seq.(*sequencer).toBeFlushed[numberKey] = 30001
 
-		offset = WaitForStart(t, seq, 1, 1)
+		offset = WaitForStart(t, seq, 1, 1, true)
 		require.Equal(PLogOffset(7), offset)
 
 		// missing in cache and in inproc -> expect read from toBeFlushed

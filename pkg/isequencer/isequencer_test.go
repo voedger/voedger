@@ -6,6 +6,8 @@
 package isequencer_test
 
 import (
+	"errors"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -501,7 +503,7 @@ func TestISequencer_Next(t *testing.T) {
 		seq.Actualize()
 
 		// Wait for actualization to complete
-		isequencer.WaitForStart(t, seq, 1, 1)
+		isequencer.WaitForStart(t, seq, 1, 1, true)
 
 		// This should now get value 251 (250+1) after actualization
 		num, err = seq.Next(1)
@@ -538,7 +540,7 @@ func TestISequencer_Actualize(t *testing.T) {
 		params := createDefaultParams(storage)
 		seq, cleanup := isequencer.New(params, mockedTime)
 		defer cleanup()
-		initialOffset := isequencer.WaitForStart(t, seq, 1, 1)
+		initialOffset := isequencer.WaitForStart(t, seq, 1, 1, true)
 
 		num, err := seq.Next(1)
 		require.NoError(err)
@@ -548,7 +550,7 @@ func TestISequencer_Actualize(t *testing.T) {
 		seq.Actualize()
 
 		// Should be able to start a new transaction
-		nextOffset := isequencer.WaitForStart(t, seq, 1, 1)
+		nextOffset := isequencer.WaitForStart(t, seq, 1, 1, true)
 		require.Equal(initialOffset, nextOffset)
 
 		num, err = seq.Next(1)
@@ -576,7 +578,7 @@ func TestISequencer_Actualize(t *testing.T) {
 
 		seq, cleanup := isequencer.New(params, mockedTime)
 		defer cleanup()
-		initialOffset := isequencer.WaitForStart(t, seq, 1, 1)
+		initialOffset := isequencer.WaitForStart(t, seq, 1, 1, true)
 
 		num, err := seq.Next(1)
 		require.NoError(err)
@@ -586,7 +588,7 @@ func TestISequencer_Actualize(t *testing.T) {
 		seq.Actualize()
 
 		// Should be able to start a new transaction
-		nextOffset := isequencer.WaitForStart(t, seq, 1, 1)
+		nextOffset := isequencer.WaitForStart(t, seq, 1, 1, true)
 		require.Equal(initialOffset, nextOffset)
 
 		num, err = seq.Next(1)
@@ -598,6 +600,118 @@ func TestISequencer_Actualize(t *testing.T) {
 		require.Equal(isequencer.Number(201), num2)
 	})
 
+}
+
+// [~test.isequencer.MultipleActualizes~]
+func TestISequencer_MultipleActualizes(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	require := requirePkg.New(t)
+	iTime := coreutils.NewITime()
+
+	initialNumber := isequencer.Number(100)
+	initialOffset := isequencer.PLogOffset(0)
+	// Set up storage with initial values
+	storage := isequencer.NewMockStorage(0, 0)
+	storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
+		initialOffset: {
+			{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: initialNumber},
+		},
+	})
+
+	params := createDefaultParams(storage)
+	params.MaxNumUnflushedValues = 10
+	params.LRUCacheSize = 100
+
+	seq, cleanup := isequencer.New(params, iTime)
+	defer cleanup()
+
+	var currentOffset isequencer.PLogOffset
+	prevOffset := initialOffset
+	prevNumber := initialNumber
+	countOfFlushes := 0
+	// Run 100 cycles of operations
+	const cycles = 100
+	for i := 0; i < cycles; i++ {
+		// Start transaction
+		currentOffset = isequencer.WaitForStart(t, seq, 1, 1, true)
+		currentNumber, err := seq.Next(1)
+		require.NoError(err, "Failed to get next value in cycle %d", i)
+
+		// Randomly choose between Flush and Actualize (with equal probability)
+		if rand.Int()%2 == 0 {
+			seq.Flush()
+			// Simulate some time passing
+			iTime.Sleep(50 * time.Millisecond)
+			// Check if the offset and sequence number are incremented correctly
+			require.Equal(currentOffset, prevOffset+1, "PLog offset should be incremented by 1 after flush")
+			require.Equal(currentNumber, prevNumber+1, "Sequence number should be incremented by 1 after flush")
+			// Update previous values
+			prevOffset = currentOffset
+			prevNumber = currentNumber
+			countOfFlushes++
+		} else {
+			seq.Actualize()
+		}
+
+	}
+	// Wait for all transactions to complete
+	isequencer.WaitForStart(t, seq, 1, 1, true)
+	// Check if the last offset in storage is equal to initial offset + count of flushes
+	numbers, err := storage.ReadNumbers(1, []isequencer.SeqID{1})
+	require.NoError(err)
+	require.Equal(initialNumber+isequencer.Number(countOfFlushes), numbers[0], "Final number should be equal to initial number + count of flushes")
+}
+
+// [~test.isequencer.FlushPermanentlyFails~]
+func TestISequencer_FlushPermanentlyFails(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	require := requirePkg.New(t)
+	iTime := coreutils.NewITime()
+
+	initialNumber := isequencer.Number(100)
+	initialOffset := isequencer.PLogOffset(0)
+	// Set up storage with initial values
+	storage := isequencer.NewMockStorage(0, 0)
+	storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
+		initialOffset: {
+			{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: initialNumber},
+		},
+	})
+
+	params := createDefaultParams(storage)
+	params.SeqTypes = map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
+		1: {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1},
+	}
+	params.MaxNumUnflushedValues = 5
+
+	seq, cleanup := isequencer.New(params, iTime)
+	defer cleanup()
+
+	previousRetryCount := isequencer.RetryCount
+	isequencer.RetryCount = 0
+	storage.WriteValuesAndOffsetError = errors.New("some error")
+
+	// first 6 sequence transaction will be ok
+	for seqID := 1; seqID <= 6; seqID++ {
+		isequencer.WaitForStart(t, seq, 1, 1, true)
+		_, err := seq.Next(isequencer.SeqID(seqID))
+		require.NoError(err)
+
+		seq.Flush()
+		// Simulate some time passing
+		iTime.Sleep(50 * time.Millisecond)
+	}
+
+	isequencer.WaitForStart(t, seq, 1, 1, false)
+	storage.WriteValuesAndOffsetError = nil
+
+	isequencer.RetryCount = previousRetryCount
 }
 
 // createDefaultStorage creates a storage with default configuration and common test data
@@ -615,7 +729,6 @@ func createDefaultParams(storage *isequencer.MockStorage) *isequencer.Params {
 		},
 		SeqStorage:            storage,
 		MaxNumUnflushedValues: 5,
-		MaxFlushingInterval:   500 * time.Millisecond,
 		LRUCacheSize:          1000,
 		BatcherDelay:          5 * time.Millisecond,
 	}

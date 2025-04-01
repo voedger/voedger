@@ -14,8 +14,8 @@ import (
 
 var (
 	// variables for retry mechanism
-	retryDelay = defaultRetryDelay
-	retryCount = defaultRetryCount
+	RetryDelay = defaultRetryDelay
+	RetryCount = defaultRetryCount
 )
 
 // Start starts Sequencing Transaction for the given WSID.
@@ -49,7 +49,7 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 
 	// Check unflushed values threshold
 	s.toBeFlushedMu.RLock()
-	if len(s.toBeFlushed) >= s.params.MaxNumUnflushedValues {
+	if len(s.toBeFlushed) > s.params.MaxNumUnflushedValues {
 		// The number of unflushed values exceeds the maximum threshold
 		s.toBeFlushedMu.RUnlock()
 		return 0, false
@@ -214,7 +214,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 
 	// Try s.params.SeqStorage.ReadNumber()
 	var knownNumbers []Number
-	err = coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() error {
+	err = coreutils.Retry(s.cleanupCtx, s.iTime, RetryDelay, RetryCount, func() error {
 		var err error
 		// Read all known Numbers for wsKind, wsID
 		knownNumbers, err = s.params.SeqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
@@ -407,7 +407,7 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 
 	var err error
 	// Read nextPLogOffset from s.params.SeqStorage.ReadNextPLogOffset()
-	err = coreutils.Retry(actualizerCtx, s.iTime, retryDelay, retryCount, func() error {
+	err = coreutils.Retry(actualizerCtx, s.iTime, RetryDelay, RetryCount, func() error {
 		s.nextOffset, err = s.params.SeqStorage.ReadNextPLogOffset()
 
 		return err
@@ -418,7 +418,7 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	}
 
 	// Use s.params.SeqStorage.ActualizeSequencesFromPLog() and s.batcher()
-	err = coreutils.Retry(actualizerCtx, s.iTime, retryDelay, retryCount, func() error {
+	err = coreutils.Retry(actualizerCtx, s.iTime, RetryDelay, RetryCount, func() error {
 		return s.params.SeqStorage.ActualizeSequencesFromPLog(s.cleanupCtx, s.nextOffset, s.batcher)
 	})
 	if err != nil {
@@ -441,6 +441,15 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 // - offset - PLogOffset to be written
 // - needToCleanToBeFlushed - if true, clears s.toBeFlushed after writing values. Otherwise, only removes values that were written.
 func (s *sequencer) flushValues(offset PLogOffset, needToCleanToBeFlushed bool) error {
+	// TODO: Ask Denis about this step, because flow does not have it
+	// Skip if no values to flush to zero offset
+	s.toBeFlushedMu.RLock()
+	if len(s.toBeFlushed) == 0 && s.toBeFlushedOffset == 0 {
+		s.toBeFlushedMu.RUnlock()
+		return nil
+	}
+	s.toBeFlushedMu.RUnlock()
+
 	// Copy s.toBeFlushed to flushValues []SeqValue (local variable)
 	s.toBeFlushedMu.RLock()
 	flushValues := make([]SeqValue, 0, len(s.toBeFlushed))
@@ -451,10 +460,9 @@ func (s *sequencer) flushValues(offset PLogOffset, needToCleanToBeFlushed bool) 
 		})
 	}
 	s.toBeFlushedMu.RUnlock()
-
 	// s.params.SeqStorage.WriteValuesAndOffset(flushValues, offset)
 	// Error handling: Handle errors with retry mechanism (500ms wait)
-	err := coreutils.Retry(s.cleanupCtx, s.iTime, retryDelay, retryCount, func() error {
+	err := coreutils.Retry(s.cleanupCtx, s.iTime, RetryDelay, RetryCount, func() error {
 		return s.params.SeqStorage.WriteValuesAndOffset(flushValues, offset)
 	})
 	if err != nil {
