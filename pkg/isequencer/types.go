@@ -109,7 +109,6 @@ type sequencer struct {
 // MockStorage implements ISeqStorage for testing purposes
 type MockStorage struct {
 	mu                        sync.RWMutex
-	Numbers                   map[WSID]map[SeqID]Number
 	NextOffset                PLogOffset
 	pLog                      map[PLogOffset][]SeqValue // Simulated PLog entries
 	readNextOffsetError       error

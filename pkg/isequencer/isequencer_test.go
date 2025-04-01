@@ -564,14 +564,11 @@ func TestISequencer_Actualize(t *testing.T) {
 		storage := createDefaultStorage()
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
 			isequencer.PLogOffset(0): {
-				{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 150},
-				{Key: isequencer.NumberKey{WSID: 1, SeqID: 2}, Value: 250},
+				{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 100},
+				{Key: isequencer.NumberKey{WSID: 1, SeqID: 2}, Value: 200},
 			},
 		})
 
-		storage.Numbers = map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number{
-			1: {1: 100, 2: 200},
-		}
 		params := createDefaultParams(storage)
 		params.SeqTypes = map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
 			1: {1: 1, 2: 1},
@@ -583,7 +580,7 @@ func TestISequencer_Actualize(t *testing.T) {
 
 		num, err := seq.Next(1)
 		require.NoError(err)
-		require.Equal(isequencer.Number(151), num)
+		require.Equal(isequencer.Number(101), num)
 
 		// Actualize with empty PLog
 		seq.Actualize()
@@ -594,11 +591,11 @@ func TestISequencer_Actualize(t *testing.T) {
 
 		num, err = seq.Next(1)
 		require.NoError(err)
-		require.Equal(isequencer.Number(151), num)
+		require.Equal(isequencer.Number(101), num)
 
 		num2, err := seq.Next(2)
 		require.NoError(err)
-		require.Equal(isequencer.Number(251), num2)
+		require.Equal(isequencer.Number(201), num2)
 	})
 
 }
