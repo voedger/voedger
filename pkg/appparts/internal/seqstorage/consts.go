@@ -7,5 +7,4 @@ package seqstorage
 
 var (
 	cColsNumbers = []byte{1}
-	cColsOffset  = []byte{2}
 )

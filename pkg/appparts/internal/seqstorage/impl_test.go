@@ -36,21 +36,21 @@ func TestBasicUsage(t *testing.T) {
 	seqStorage := New(istructs.PartitionID(1), mockEvents, appDef, seqSysVVMStorage)
 
 	t.Run("Write and Read Offset", func(t *testing.T) {
-		actualOffset, err  := seqStorage.ReadNextPLogOffset()
+		actualOffset, err := seqStorage.ReadNextPLogOffset()
 		require.NoError(err)
 		require.Zero(actualOffset)
 
 		err = seqStorage.WriteNextPLogOffset(isequencer.PLogOffset(5))
 		require.NoError(err)
 
-		actualOffset, err  = seqStorage.ReadNextPLogOffset()
+		actualOffset, err = seqStorage.ReadNextPLogOffset()
 		require.NoError(err)
 		require.Equal(isequencer.PLogOffset(5), actualOffset)
 
 		err = seqStorage.WriteNextPLogOffset(isequencer.PLogOffset(6))
 		require.NoError(err)
 
-		actualOffset, err  = seqStorage.ReadNextPLogOffset()
+		actualOffset, err = seqStorage.ReadNextPLogOffset()
 		require.NoError(err)
 		require.Equal(isequencer.PLogOffset(6), actualOffset)
 	})
@@ -134,4 +134,20 @@ func TestBasicUsage(t *testing.T) {
 	// 		require.NoError(err)
 	// 	})
 	// })
+}
+
+func TestSeqIDMapping(t *testing.T) {
+	require := require.New(t)
+	mockEvents := &coreutils.MockEvents{}
+	appDefBuilder := builder.New()
+	appDef, err := appDefBuilder.Build()
+	require.NoError(err)
+	appStorageProvider := provider.Provide(mem.Provide(coreutils.MockTime))
+	appStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
+	require.NoError(err)
+	seqSysVVMStorage := storage.NewSeqStorage(appStorage)
+	seqStorage := New(istructs.PartitionID(1), mockEvents, appDef, seqSysVVMStorage)
+	require.Equal(istructs.QNameIDWLogOffsetSequence, seqStorage.(*implISeqStorage).seqIDs[istructs.QNameWLogOffsetSequence])
+	require.Equal(istructs.QNameIDCRecordIDSequence, seqStorage.(*implISeqStorage).seqIDs[istructs.QNameCRecordIDSequence])
+	require.Equal(istructs.QNameIDCRecordIDSequence, seqStorage.(*implISeqStorage).seqIDs[istructs.QNameCRecordIDSequence])
 }

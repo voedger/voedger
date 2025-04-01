@@ -14,12 +14,14 @@ import (
 func New(partitionID istructs.PartitionID, events istructs.IEvents, appDef appdef.IAppDef,
 	seqStorage isequencer.ISeqSysVVMStorage) isequencer.ISeqStorage {
 	return &implISeqStorage{
-		events:      events,
-		partitionID: isequencer.PartitionID(partitionID),
-		appDef:      appDef,
-		storage:     seqStorage,
+		events:  events,
+		appId:   AppID,
+		appDef:  appDef,
+		storage: seqStorage,
 		seqIDs: map[appdef.QName]uint16{
-			appdef.NullQName: istructs.QNameIDForWLogOffsetSequence,
+			istructs.QNameWLogOffsetSequence: istructs.QNameIDWLogOffsetSequence,
+			istructs.QNameCRecordIDSequence:  istructs.QNameIDCRecordIDSequence,
+			istructs.QNameOWRecordIDSequence: istructs.QNameIDOWRecordIDSequence,
 		},
 	}
 }

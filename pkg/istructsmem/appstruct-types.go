@@ -123,7 +123,7 @@ func newBuiltInAppConfig(appName appdef.AppQName, appDef appdef.IAppDefBuilder) 
 
 // prepare: prepares application configuration to use. It creates config globals and must be called from thread-safe code
 func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.IAppStorage) error {
-	// if cfg.QNameID == istructs.NullClusterAppID {…} — unnecessary check. QNameIDmust be checked before prepare()
+	// if cfg.istructs.QNameID == istructs.NullClusterAppID {…} — unnecessary check. QNameIDmust be checked before prepare()
 
 	if cfg.prepared {
 		return nil

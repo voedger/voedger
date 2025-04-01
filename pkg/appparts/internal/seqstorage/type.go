@@ -14,7 +14,7 @@ import (
 type implISeqStorage struct {
 	partitionID isequencer.PartitionID
 	events      istructs.IEvents
-	seqIDs      map[appdef.QName]uint16
+	seqIDs      map[appdef.QName]istructs.QNameID
 	storage     isequencer.ISeqSysVVMStorage
 	appDef      appdef.IAppDef
 }

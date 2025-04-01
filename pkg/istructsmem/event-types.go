@@ -16,7 +16,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	"github.com/voedger/voedger/pkg/objcache"
 )
@@ -177,12 +176,12 @@ func (ev *eventType) loadFromBytes(in []byte) (err error) {
 }
 
 // Retrieves ID for event command name
-func (ev *eventType) qNameID() (id qnames.QNameID) {
+func (ev *eventType) QNameID() (id istructs.QNameID) {
 	if id, err := ev.appCfg.qNames.ID(ev.QName()); err == nil {
 		return id
 	}
 	// no test
-	return qnames.QNameIDForError
+	return istructs.QNameIDForError
 }
 
 // Regenerates all raw IDs in event arguments and CUDs using specified generator
@@ -944,7 +943,6 @@ func (o *objectType) QName() appdef.QName {
 func (o *objectType) AsRecord() istructs.IRecord {
 	return o
 }
-
 
 // Implements interfaces:
 //

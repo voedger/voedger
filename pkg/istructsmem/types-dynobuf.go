@@ -148,7 +148,7 @@ func dynoBufGetWord(dyB *dynobuffers.Buffer, fieldName appdef.FieldName) (value 
 }
 
 func storeRow(row *rowType, buf *bytes.Buffer) {
-	id, err := row.qNameID()
+	id, err := row.QNameID()
 	if err != nil {
 		// no test
 		panic(enrichError(err, row))
@@ -209,11 +209,11 @@ func storeRowSysFields(row *rowType, buf *bytes.Buffer) {
 func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 	row.clear()
 
-	var qnameId uint16
-	if qnameId, err = utils.ReadUInt16(buf); err != nil {
-		return fmt.Errorf("error read row QNameID: %w", err)
+	var QNameID uint16
+	if QNameID, err = utils.ReadUInt16(buf); err != nil {
+		return fmt.Errorf("error read row istructs.QNameID: %w", err)
 	}
-	if err = row.setQNameID(qnameId); err != nil {
+	if err = row.setQNameID(QNameID); err != nil {
 		return err
 	}
 	if row.QName() == appdef.NullQName {

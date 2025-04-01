@@ -17,12 +17,13 @@ import (
 func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offset isequencer.PLogOffset, batcher func(batch []isequencer.SeqValue, offset isequencer.PLogOffset) error) error {
 	return ss.events.ReadPLog(ctx, istructs.PartitionID(ss.partitionID), istructs.Offset(offset), istructs.ReadToTheEnd,
 		func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+			// FIXME: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! не вызываем batcher если <32268000... (issue 688)
 			batch := []isequencer.SeqValue{}
 			argType := ss.appDef.Type(event.ArgumentObject().QName())
 
 			// odocs
 			if argType.Kind() == appdef.TypeKind_ODoc {
-				ss.getNumbersFromIObject(event.ArgumentObject(), event.Workspace(), &batch)
+				ss.getNumbersFromArgument(event.ArgumentObject(), event.Workspace(), &batch)
 			}
 
 			// cuds
@@ -30,10 +31,15 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 				if !cud.IsNew() {
 					continue
 				}
+				cudType := ss.appDef.Type(cud.QName())
+				seqQName := istructs.QNameCRecordIDSequence
+				if cudType.Kind() == appdef.TypeKind_WDoc {
+					seqQName = istructs.QNameOWRecordIDSequence
+				}
 				batch = append(batch, isequencer.SeqValue{
 					Key: isequencer.NumberKey{
 						WSID:  isequencer.WSID(event.Workspace()),
-						SeqID: isequencer.SeqID(ss.seqIDs[cud.QName()]),
+						SeqID: isequencer.SeqID(ss.seqIDs[seqQName]),
 					},
 					Value: isequencer.Number(cud.ID()),
 				})
@@ -50,7 +56,7 @@ func (ss *implISeqStorage) WriteValues(batch []isequencer.SeqValue) error {
 	cCols = binary.BigEndian.AppendUint16(cCols, uint16(ss.partitionID))
 
 	numbersToWriteBytes := []byte{} // FIXME: avoid escape to heap
-	ok, err := ss.storage.Get(cCols, &numbersToWriteBytes)
+	ok, err := ss.storage.Get(1, &numbersToWriteBytes) // appID here
 	if err != nil {
 		return err
 	}
@@ -86,7 +92,7 @@ func (ss *implISeqStorage) ReadNumbers(wsid isequencer.WSID, seqIDs []isequencer
 	cCols = append(cCols, cColsNumbers...)
 	cCols = binary.BigEndian.AppendUint16(cCols, uint16(ss.partitionID))
 	data := []byte{} // FIXME: avoid escape to heap
-	ok, err := ss.storage.Get(cCols, &data)
+	ok, err := ss.storage.Get(1, &data) // appID here
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +117,7 @@ func (ss *implISeqStorage) ReadNumbers(wsid isequencer.WSID, seqIDs []isequencer
 
 func (ss *implISeqStorage) WriteNextPLogOffset(offset isequencer.PLogOffset) error {
 	const valueSize = 8
-	const cColsSize = 1+2 // prefix + partitionID
+	const cColsSize = 1 + 2 // prefix + partitionID
 	cColsBytes := make([]byte, 0, cColsSize)
 	cColsBytes = append(cColsBytes, cColsOffset...)
 	cColsBytes = binary.BigEndian.AppendUint16(cColsBytes, uint16(ss.partitionID))
@@ -122,12 +128,13 @@ func (ss *implISeqStorage) WriteNextPLogOffset(offset isequencer.PLogOffset) err
 
 func (ss *implISeqStorage) ReadNextPLogOffset() (isequencer.PLogOffset, error) {
 	const valueSize = 8
-	const cColsSize = 1+2 // prefix + partitionID
+	const cColsSize = 1 + 2 // prefix + partitionID
 	cColsBytes := make([]byte, 0, cColsSize)
+	// FIXME:!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! QNameOffsetSequence here, do not store offset separately!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	cColsBytes = append(cColsBytes, cColsOffset...)
 	cColsBytes = binary.BigEndian.AppendUint16(cColsBytes, uint16(ss.partitionID))
 	valueBytes := make([]byte, valueSize)
-	ok, err := ss.storage.Get(cColsBytes, &valueBytes)
+	ok, err := ss.storage.Get(1, &valueBytes) // appID here
 	if !ok {
 		return 0, err
 	}
@@ -135,17 +142,17 @@ func (ss *implISeqStorage) ReadNextPLogOffset() (isequencer.PLogOffset, error) {
 	return isequencer.PLogOffset(offsetUint64), nil
 }
 
-func (ss *implISeqStorage) getNumbersFromIObject(root istructs.IObject, wsid istructs.WSID, batch *[]isequencer.SeqValue) {
+func (ss *implISeqStorage) getNumbersFromArgument(root istructs.IObject, wsid istructs.WSID, batch *[]isequencer.SeqValue) {
 	*batch = append(*batch, isequencer.SeqValue{
 		Key: isequencer.NumberKey{
 			WSID:  isequencer.WSID(wsid),
-			SeqID: isequencer.SeqID(ss.seqIDs[root.QName()]),
+			SeqID: isequencer.SeqID(ss.seqIDs[istructs.QNameOWRecordIDSequence]),
 		},
 		Value: isequencer.Number(root.AsRecordID(appdef.SystemField_ID)),
 	})
 	for container := range root.Containers {
 		for c := range root.Children(container) {
-			ss.getNumbersFromIObject(c, wsid, batch)
+			ss.getNumbersFromArgument(c, wsid, batch)
 		}
 	}
 }

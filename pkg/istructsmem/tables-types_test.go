@@ -235,7 +235,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		store_codec_RawDynoBuffer := func(row *recordType) (out []byte) {
 			buf := new(bytes.Buffer)
 			_ = binary.Write(buf, binary.BigEndian, codec_RawDynoBuffer)
-			id, err := row.qNameID()
+			id, err := row.QNameID()
 			require.NoError(err)
 			_ = binary.Write(buf, binary.BigEndian, int16(id))
 			if row.QName() == appdef.NullQName {

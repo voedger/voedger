@@ -72,7 +72,7 @@ func (ab VVMAppsBuilder) BuildAppsArtefacts(apis builtinapps.APIs, emptyCfgs App
 
 		// query IAppStructs to build IAppDef only once - on AppConfigType.prepare()
 		// that need to catch errors from IAppDefBuilder etc here, not after VVM launch
-		// also we need ready-to-use IAppStorage to read a dictionary QName->QNameID
+		// also we need ready-to-use IAppStorage to read a dictionary QName->istructs.QNameID
 		if _, err = apis.IAppStructsProvider.BuiltIn(appQName); err != nil {
 			return builtinAppsArtefacts, err
 		}

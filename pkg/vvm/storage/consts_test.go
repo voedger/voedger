@@ -11,11 +11,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+//nolint:unconvert
 const (
-	_ = uint32(pKeyPrefix_VVMLeader - 1)  //nolint:unconvert
-	_ = uint32(1 - pKeyPrefix_VVMLeader)  //nolint:unconvert
-	_ = uint32(pKeyPrefix_SeqStorage - 2) //nolint:unconvert
-	_ = uint32(2 - pKeyPrefix_SeqStorage) //nolint:unconvert
+	_ = uint32(pKeyPrefix_VVMLeader - 1)
+	_ = uint32(1 - pKeyPrefix_VVMLeader)
+	_ = uint32(pKeyPrefix_SeqStorage - 2)
+	_ = uint32(2 - pKeyPrefix_SeqStorage)
 )
 
 func TestConsts(t *testing.T) {

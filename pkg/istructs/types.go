@@ -35,6 +35,9 @@ type ClusterAppID = uint32
 
 type SubjectKindType int32 // not uint8 because it is written to int32 fields, so int32 is better to avoid data loss
 
+// Identifier for QNames
+type QNameID = uint16
+
 const (
 	SubjectKind_null SubjectKindType = iota
 	SubjectKind_User

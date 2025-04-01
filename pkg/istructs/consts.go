@@ -42,6 +42,11 @@ var (
 	QNameCRecord = appdef.NewQName(appdef.SysPackage, "CRecord")
 	QNameWRecord = appdef.NewQName(appdef.SysPackage, "WRecord")
 	QNameORecord = appdef.NewQName(appdef.SysPackage, "ORecord")
+
+	// sequences QNames has hardcoded QNameIDs: [QNameIDWLogOffsetSequence] etc
+	QNameWLogOffsetSequence = appdef.NewQName(appdef.SysPackage, "WLogOffsetSequence")
+	QNameCRecordIDSequence  = appdef.NewQName(appdef.SysPackage, "CRecordIDSequence")
+	QNameOWRecordIDSequence = appdef.NewQName(appdef.SysPackage, "OWRecordIDSequence")
 )
 
 // *********************************************************************************************************
@@ -211,3 +216,16 @@ const SysGuestLogin = appdef.SysPackage + ".Guest"
 func CurrentClusterID() ClusterID {
 	return MainClusterID_useWithCare
 }
+
+// IDs for wellknown QNames
+const (
+	NullQNameID QNameID = 0 + iota
+	QNameIDForError
+	QNameIDCommandCUD
+	QNameIDForCorruptedData
+	QNameIDWLogOffsetSequence
+	QNameIDCRecordIDSequence
+	QNameIDOWRecordIDSequence
+
+	QNameIDSysLast QNameID = 0xFF
+)

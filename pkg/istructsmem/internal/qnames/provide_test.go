@@ -45,7 +45,7 @@ func TestQNamesBasicUsage(t *testing.T) {
 	t.Run("basic QNames methods", func(t *testing.T) {
 		id, err := names.ID(testName)
 		require.NoError(err)
-		require.NotEqual(NullQNameID, id)
+		require.NotEqual(istructs.NullQNameID, id)
 
 		n, err := names.QName(id)
 		require.NoError(err)
