@@ -75,9 +75,14 @@ func TestSequencer_Start(t *testing.T) {
 
 		storage := NewMockStorage(0, 0)
 		storage.NextOffset = PLogOffset(99)
-		storage.Numbers = map[WSID]map[SeqID]Number{
-			1: {1: 100},
-		}
+		storage.SetPLog(map[PLogOffset][]SeqValue{
+			PLogOffset(100): {
+				{
+					Key:   NumberKey{WSID: 1, SeqID: 1},
+					Value: 100,
+				},
+			},
+		})
 		seq, cancel := New(&Params{
 			SeqTypes: map[WSKind]map[SeqID]Number{
 				1: {1: 1},
@@ -110,9 +115,15 @@ func TestSequencer_Flush(t *testing.T) {
 
 		storage := NewMockStorage(0, 0)
 		storage.NextOffset = PLogOffset(99)
-		storage.Numbers = map[WSID]map[SeqID]Number{
-			1: {1: 100},
-		}
+		storage.SetPLog(map[PLogOffset][]SeqValue{
+			PLogOffset(100): {
+				{
+					Key:   NumberKey{WSID: WSID(1), SeqID: SeqID(1)},
+					Value: Number(100),
+				},
+			},
+		})
+
 		seq, cancel := New(&Params{
 			SeqTypes: map[WSKind]map[SeqID]Number{
 				1: {1: 1},
@@ -205,9 +216,18 @@ func TestBatcher(t *testing.T) {
 		// Given
 		ctx := context.Background()
 		storage := NewMockStorage(0, 0)
-		storage.Numbers = map[WSID]map[SeqID]Number{
-			1: {1: 100, 2: 200},
-		}
+		storage.SetPLog(map[PLogOffset][]SeqValue{
+			PLogOffset(0): {
+				{
+					Key:   NumberKey{WSID: 1, SeqID: 1},
+					Value: Number(100),
+				},
+				{
+					Key:   NumberKey{WSID: 1, SeqID: 2},
+					Value: Number(200),
+				},
+			},
+		})
 		mockTime := coreutils.MockTime
 
 		params := &Params{
@@ -439,7 +459,7 @@ func TestNextNumberSourceOrder(t *testing.T) {
 
 	params := &Params{
 		SeqTypes: map[WSKind]map[SeqID]Number{
-			1: {1: 100},
+			1: {1: 1},
 		},
 		SeqStorage:            storage,
 		MaxNumUnflushedValues: 10,

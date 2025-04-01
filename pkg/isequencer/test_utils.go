@@ -25,5 +25,6 @@ func WaitForStart(t *testing.T, seq ISequencer, wsKind WSKind, wsID WSID) PLogOf
 		offset, ok = seq.Start(wsKind, wsID)
 	}
 	require.True(t, ok)
+
 	return offset
 }

@@ -344,8 +344,8 @@ func (s *sequencer) batcher(ctx context.Context, values []SeqValue, offset PLogO
 	}
 	s.toBeFlushedMu.RUnlock()
 
-	s.toBeFlushedOffset = offset + 1
 	s.nextOffset = offset + 1
+	s.toBeFlushedOffset = s.nextOffset
 
 	// Store maxValues in s.toBeFlushed: max Number for each SeqValue.Key
 	maxValues := make(map[NumberKey]Number)

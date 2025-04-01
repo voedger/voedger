@@ -185,6 +185,10 @@ func (m *MockStorage) WriteValuesAndOffset(batch []SeqValue, offset PLogOffset) 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	if _, ok := m.pLog[offset]; ok {
+		panic("WriteValuesAndOffset: offset already exists")
+	}
+
 	m.pLog[offset] = batch
 	m.NextOffset = offset
 
