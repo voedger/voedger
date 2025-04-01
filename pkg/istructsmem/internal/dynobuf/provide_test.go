@@ -3,7 +3,7 @@
  * @author: Nikolay Nikitin
  */
 
-package dynobuf
+package dynobuf_test
 
 import (
 	"testing"
@@ -13,13 +13,14 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/constraints"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/dynobuf"
 )
 
 func TestDynoBufSchemesBasicUsage(t *testing.T) {
 	docName := appdef.NewQName("test", "doc")
 	viewName := appdef.NewQName("test", "view")
 
-	schemes := New()
+	schemes := dynobuf.New()
 
 	schemes.Prepare(
 		func() appdef.IAppDef {
@@ -27,14 +28,19 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
 			wsb.AddODoc(docName).
-				AddField("f1", appdef.DataKind_int32, true).
-				AddField("f2", appdef.DataKind_QName, false).
-				AddField("f3", appdef.DataKind_string, false).
-				AddField("f4", appdef.DataKind_bytes, false)
+				AddField("f_int8", appdef.DataKind_int8, true).    // #3434 [small integers: int8]
+				AddField("f_int16", appdef.DataKind_int16, false). // #3434 [small integers: int16]
+				AddField("f_int32", appdef.DataKind_int32, false).
+				AddField("f_QName", appdef.DataKind_QName, false).
+				AddField("f_String", appdef.DataKind_string, false).
+				AddField("f_Bytes", appdef.DataKind_bytes, false)
 
 			v := wsb.AddView(viewName)
 			v.Key().PartKey().AddField("pkF1", appdef.DataKind_int32)
-			v.Key().ClustCols().AddField("ccF1", appdef.DataKind_string, constraints.MaxLen(100))
+			v.Key().ClustCols().
+				AddField("ccInt8", appdef.DataKind_int8).   // #3434 [small integers: int8]
+				AddField("ccInt16", appdef.DataKind_int16). // #3434 [small integers: int16]
+				AddField("ccString", appdef.DataKind_string, constraints.MaxLen(100))
 			v.Value().AddField("valF1", appdef.DataKind_Event, true)
 
 			return adb.MustBuild()
@@ -47,21 +53,30 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 			scheme := schemes.Scheme(docName)
 			require.NotNil(scheme, "schemes.Scheme returns nil", "docName: %q", docName)
 
-			require.Len(scheme.Fields, 4)
+			require.Len(scheme.Fields, 6)
 
-			require.Equal("f1", scheme.Fields[0].Name)
-			require.Equal(dynobuffers.FieldTypeInt32, scheme.Fields[0].Ft)
+			// #3434 [small integers: int8]
+			require.Equal("f_int8", scheme.Fields[0].Name)
+			require.Equal(dynobuffers.FieldTypeByte, scheme.Fields[0].Ft)
 
-			require.Equal("f2", scheme.Fields[1].Name)
+			// #3434 [small integers: int16]
+			require.Equal("f_int16", scheme.Fields[1].Name)
 			require.Equal(dynobuffers.FieldTypeByte, scheme.Fields[1].Ft)
 			require.True(scheme.Fields[1].IsArray)
 
-			require.Equal("f3", scheme.Fields[2].Name)
-			require.Equal(dynobuffers.FieldTypeString, scheme.Fields[2].Ft)
+			require.Equal("f_int32", scheme.Fields[2].Name)
+			require.Equal(dynobuffers.FieldTypeInt32, scheme.Fields[2].Ft)
 
-			require.Equal("f4", scheme.Fields[3].Name)
+			require.Equal("f_QName", scheme.Fields[3].Name)
 			require.Equal(dynobuffers.FieldTypeByte, scheme.Fields[3].Ft)
 			require.True(scheme.Fields[1].IsArray)
+
+			require.Equal("f_String", scheme.Fields[4].Name)
+			require.Equal(dynobuffers.FieldTypeString, scheme.Fields[4].Ft)
+
+			require.Equal("f_Bytes", scheme.Fields[5].Name)
+			require.Equal(dynobuffers.FieldTypeByte, scheme.Fields[5].Ft)
+			require.True(scheme.Fields[5].IsArray)
 		})
 
 		t.Run("view scheme", func(t *testing.T) {
@@ -82,10 +97,20 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 					ccols := schemes.ViewClustColsScheme(viewName)
 					require.NotNil(ccols, "schemes.ViewClustColsScheme returns nil", "viewName: %q", viewName)
 
-					require.Len(ccols.Fields, 1)
+					require.Len(ccols.Fields, 3)
 
-					require.Equal("ccF1", ccols.Fields[0].Name)
-					require.Equal(dynobuffers.FieldTypeString, ccols.Fields[0].Ft)
+					// #3434 [small integers: int8]
+					require.Equal("ccInt8", ccols.Fields[0].Name)
+					require.Equal(dynobuffers.FieldTypeByte, ccols.Fields[0].Ft)
+					require.False(ccols.Fields[0].IsArray)
+
+					// #3434 [small integers: int16]
+					require.Equal("ccInt16", ccols.Fields[1].Name)
+					require.Equal(dynobuffers.FieldTypeByte, ccols.Fields[1].Ft)
+					require.True(ccols.Fields[1].IsArray)
+
+					require.Equal("ccString", ccols.Fields[2].Name)
+					require.Equal(dynobuffers.FieldTypeString, ccols.Fields[2].Ft)
 				})
 			})
 

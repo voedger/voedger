@@ -252,7 +252,7 @@ func (row *rowType) maskValues() {
 // If field has restricts (length, pattern, etc.) then checks value by field restricts.
 //
 // If field must be verified before put then collects error «field must be verified».
-func (row *rowType) putValue(name appdef.FieldName, kind dynobuffers.FieldType, value interface{}) {
+func (row *rowType) putValue(name appdef.FieldName, kind appdef.DataKind, value any) {
 
 	if a, ok := row.typ.(appdef.IWithAbstract); ok {
 		if a.Abstract() {
@@ -300,8 +300,8 @@ func (row *rowType) putValue(name appdef.FieldName, kind dynobuffers.FieldType, 
 		}
 	} else {
 		if f, ok := row.dyB.Scheme.FieldsMap[name]; ok {
-			if (kind != dynobuffers.FieldTypeUnspecified) && (f.Ft != kind) {
-				row.collectError(ErrWrongFieldType("can not put %s to %v", dynobuf.FieldTypeToString(kind), fld))
+			if k := dynobuf.DataKindToFieldType(kind); f.Ft != k {
+				row.collectError(ErrWrongFieldType("can not put %s to %v", kind.TrimString(), fld))
 				return
 			}
 		}
@@ -786,22 +786,22 @@ func (row *rowType) Parent() istructs.RecordID {
 
 // istructs.IRowWriter.PutInt32
 func (row *rowType) PutInt32(name appdef.FieldName, value int32) {
-	row.putValue(name, dynobuffers.FieldTypeInt32, value)
+	row.putValue(name, appdef.DataKind_int32, value)
 }
 
 // istructs.IRowWriter.PutInt64
 func (row *rowType) PutInt64(name appdef.FieldName, value int64) {
-	row.putValue(name, dynobuffers.FieldTypeInt64, value)
+	row.putValue(name, appdef.DataKind_int64, value)
 }
 
 // istructs.IRowWriter.PutFloat32
 func (row *rowType) PutFloat32(name appdef.FieldName, value float32) {
-	row.putValue(name, dynobuffers.FieldTypeFloat32, value)
+	row.putValue(name, appdef.DataKind_float32, value)
 }
 
 // istructs.IRowWriter.PutFloat64
 func (row *rowType) PutFloat64(name appdef.FieldName, value float64) {
-	row.putValue(name, dynobuffers.FieldTypeFloat64, value)
+	row.putValue(name, appdef.DataKind_float64, value)
 }
 
 // istructs.IRowWriter.PutFromJSON
@@ -891,7 +891,7 @@ func (row *rowType) PutNumber(name appdef.FieldName, value json.Number) {
 
 // istructs.IRowWriter.PutBytes
 func (row *rowType) PutBytes(name appdef.FieldName, value []byte) {
-	row.putValue(name, dynobuffers.FieldTypeByte, value)
+	row.putValue(name, appdef.DataKind_bytes, value)
 }
 
 // istructs.IRowWriter.PutString
@@ -900,7 +900,7 @@ func (row *rowType) PutString(name appdef.FieldName, value string) {
 		row.setContainer(value)
 		return
 	}
-	row.putValue(name, dynobuffers.FieldTypeString, value)
+	row.putValue(name, appdef.DataKind_string, value)
 }
 
 // istructs.IRowWriter.PutQName
@@ -923,7 +923,7 @@ func (row *rowType) PutQName(name appdef.FieldName, value appdef.QName) {
 	b := make([]byte, 2)
 	binary.BigEndian.PutUint16(b, id)
 
-	row.putValue(name, dynobuffers.FieldTypeByte, b)
+	row.putValue(name, appdef.DataKind_QName, b)
 }
 
 // istructs.IRowWriter.PutChars
@@ -964,19 +964,19 @@ func (row *rowType) PutBool(name appdef.FieldName, value bool) {
 		return
 	}
 
-	row.putValue(name, dynobuffers.FieldTypeBool, value)
+	row.putValue(name, appdef.DataKind_bool, value)
 }
 
 // istructs.IRowWriter.PutRecordID
 func (row *rowType) PutRecordID(name appdef.FieldName, value istructs.RecordID) {
-	row.putValue(name, dynobuffers.FieldTypeInt64, int64(value)) // nolint G115
+	row.putValue(name, appdef.DataKind_RecordID, int64(value)) // nolint G115
 }
 
 // istructs.IValueBuilder.PutRecord
 func (row *rowType) PutRecord(name appdef.FieldName, record istructs.IRecord) {
 	if rec, ok := record.(*recordType); ok {
 		bytes := rec.storeToBytes()
-		row.putValue(name, dynobuffers.FieldTypeByte, bytes)
+		row.putValue(name, appdef.DataKind_Record, bytes)
 	}
 }
 
@@ -984,7 +984,7 @@ func (row *rowType) PutRecord(name appdef.FieldName, record istructs.IRecord) {
 func (row *rowType) PutEvent(name appdef.FieldName, event istructs.IDbEvent) {
 	if ev, ok := event.(*eventType); ok {
 		bytes := ev.storeToBytes()
-		row.putValue(name, dynobuffers.FieldTypeByte, bytes)
+		row.putValue(name, appdef.DataKind_Event, bytes)
 	}
 }
 

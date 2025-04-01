@@ -33,6 +33,14 @@ func From[V ~uint8](values ...V) Set[V] {
 	return s
 }
 
+// Makes new read only Set from specified values.
+func FromRO[V ~uint8](values ...V) Set[V] {
+	var s Set[V]
+	s.Set(values...)
+	s.SetReadOnly()
+	return s
+}
+
 // Makes new Set from specified iterator.
 func Collect[V ~uint8](it iter.Seq[V]) Set[V] {
 	var s Set[V]
