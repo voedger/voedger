@@ -48,13 +48,13 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 	}
 
 	// Check unflushed values threshold
-	s.inprocMu.RLock()
-	if len(s.inproc) >= s.params.MaxNumUnflushedValues {
+	s.toBeFlushedMu.RLock()
+	if len(s.toBeFlushed) >= s.params.MaxNumUnflushedValues {
 		// The number of unflushed values exceeds the maximum threshold
-		s.inprocMu.RUnlock()
+		s.toBeFlushedMu.RUnlock()
 		return 0, false
 	}
-	s.inprocMu.RUnlock()
+	s.toBeFlushedMu.RUnlock()
 
 	// Marks Sequencing Transaction as in progress.
 	if !s.transactionIsInProgress.CompareAndSwap(false, true) {

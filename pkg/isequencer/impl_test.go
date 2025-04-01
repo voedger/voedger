@@ -94,14 +94,14 @@ func TestSequencer_Start(t *testing.T) {
 		}, iTime)
 		defer cancel()
 
-		seq.(*sequencer).inprocMu.Lock()
-		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 1}] = 1
-		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 2}] = 1
-		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 3}] = 1
-		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 4}] = 1
-		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 5}] = 1
-		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 6}] = 1
-		seq.(*sequencer).inprocMu.Unlock()
+		seq.(*sequencer).toBeFlushedMu.Lock()
+		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 1}] = 1
+		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 2}] = 1
+		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 3}] = 1
+		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 4}] = 1
+		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 5}] = 1
+		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 6}] = 1
+		seq.(*sequencer).toBeFlushedMu.Unlock()
 
 		offset, ok := seq.Start(1, 1)
 		require.False(t, ok)
@@ -135,14 +135,14 @@ func TestSequencer_Flush(t *testing.T) {
 		}, iTime)
 		defer cancel()
 
-		seq.(*sequencer).inprocMu.Lock()
-		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 1}] = 1
-		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 2}] = 1
-		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 3}] = 1
-		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 4}] = 1
-		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 5}] = 1
-		seq.(*sequencer).inproc[NumberKey{WSID: 1, SeqID: 6}] = 1
-		seq.(*sequencer).inprocMu.Unlock()
+		seq.(*sequencer).toBeFlushedMu.Lock()
+		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 1}] = 1
+		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 2}] = 1
+		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 3}] = 1
+		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 4}] = 1
+		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 5}] = 1
+		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 6}] = 1
+		seq.(*sequencer).toBeFlushedMu.Unlock()
 
 		offset, ok := seq.Start(1, 1)
 		require.False(t, ok)
