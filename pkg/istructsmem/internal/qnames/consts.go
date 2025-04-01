@@ -13,6 +13,10 @@ const (
 	QNameIDForError
 	QNameIDCommandCUD
 	QNameIDForCorruptedData
+	QNameIDForWLogOffsetSequence
+	QNameIDForCRecordSequence
+	QNameIDForCDocSequence
+	// FIXME: add test for consts
 
 	QNameIDSysLast QNameID = 0xFF
 )
