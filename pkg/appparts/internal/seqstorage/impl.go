@@ -44,7 +44,7 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 }
 
 func (ss *implISeqStorage) WriteValues(batch []isequencer.SeqValue) error {
-	const size = 1 + 3 // numbers prefix + size(partitionID)
+	const size = 1 + 2 // numbers prefix + size(partitionID)
 	cCols := make([]byte, 0, size)
 	cCols = append(cCols, cColsNumbers...)
 	cCols = binary.BigEndian.AppendUint16(cCols, uint16(ss.partitionID))

@@ -26,8 +26,9 @@ type ISeqStorage interface {
 	ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func(batch []SeqValue, offset PLogOffset) error) error
 }
 
+// FIXME: move to vvm/storage
 type ISeqSysVVMStorage interface {
-	Get(cCols []byte, data *[]byte) (ok bool, err error)
+	Get(appID uint16,  data *[]byte) (ok bool, err error)
 	Put(cCols []byte, value []byte) (err error)
 }
 

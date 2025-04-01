@@ -9,6 +9,7 @@ type implISeqSysVVMStorage struct {
 	implStorageBase
 }
 
+// FIXME: 
 func (s *implISeqSysVVMStorage) Get(cCols []byte, data *[]byte) (ok bool, err error) {
 	pKey := s.getPKey()
 	return s.sysVVMStorage.Get(pKey, cCols, data)

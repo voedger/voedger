@@ -18,5 +18,8 @@ func New(partitionID istructs.PartitionID, events istructs.IEvents, appDef appde
 		partitionID: isequencer.PartitionID(partitionID),
 		appDef:      appDef,
 		storage:     seqStorage,
+		seqIDs: map[appdef.QName]uint16{
+			appdef.NullQName: istructs.QNameIDForWLogOffsetSequence,
+		},
 	}
 }
