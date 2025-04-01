@@ -21,7 +21,7 @@ func WaitForStart(t *testing.T, seq ISequencer, wsKind WSKind, wsID WSID) PLogOf
 	defer timeoutCtxCancel()
 
 	offset, ok := seq.Start(wsKind, wsID)
-	for offset == 0 && timeoutCtx.Err() == nil {
+	for !ok && timeoutCtx.Err() == nil {
 		offset, ok = seq.Start(wsKind, wsID)
 	}
 	require.True(t, ok)

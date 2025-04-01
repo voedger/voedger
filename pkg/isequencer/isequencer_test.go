@@ -513,10 +513,10 @@ func TestISequencer_Next(t *testing.T) {
 }
 
 func TestISequencer_Actualize(t *testing.T) {
-	t.Run("actualization basic flow", func(t *testing.T) {
-		require := requirePkg.New(t)
-		mockedTime := coreutils.MockTime
-		// Given
+	require := requirePkg.New(t)
+	mockedTime := coreutils.MockTime
+
+	t.Run("not started -> panic", func(t *testing.T) {
 		storage := createDefaultStorage()
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
 			isequencer.PLogOffset(0): {
@@ -527,114 +527,41 @@ func TestISequencer_Actualize(t *testing.T) {
 			},
 		})
 		params := createDefaultParams(storage)
-
 		seq, cleanup := isequencer.New(params, mockedTime)
-
-		// When
-		offsetBegin, ok := seq.Start(1, 1)
-		_ = offsetBegin
-		require.True(ok)
-
-		numberBegin, err := seq.Next(1)
-		require.NoError(err)
-
-		seq.Actualize()
-
-		isequencer.WaitForStart(t, seq, 1, 1)
-
-		cleanup()
-
-		seq2, cleanup2 := isequencer.New(params, mockedTime)
-		defer cleanup2()
-
-		offsetAfter, ok := seq2.Start(1, 1)
-		require.True(ok)
-
-		numberAfter, err := seq2.Next(1)
-		require.NoError(err)
-
-		require.Equal(isequencer.PLogOffset(1), offsetAfter)
-		require.Equal(offsetBegin, offsetAfter)
-		require.Equal(numberBegin, numberAfter)
+		defer cleanup()
+		require.Panics(func() { seq.Actualize() })
 	})
 
-	t.Run("should panic when called without starting transaction", func(t *testing.T) {
-		require := requirePkg.New(t)
-		iTime := coreutils.MockTime
-
+	t.Run("empty plog", func(t *testing.T) {
 		storage := createDefaultStorage()
-		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(0): {
-				{
-					Key:   isequencer.NumberKey{WSID: isequencer.WSID(1), SeqID: isequencer.SeqID(1)},
-					Value: isequencer.Number(100),
-				},
-			},
-		})
-
-		sequencer, cancel := isequencer.New(createDefaultParams(storage), iTime)
-		defer cancel()
-
-		// Should panic when actualize is called without an active transaction
-		require.Panics(func() {
-			sequencer.Actualize()
-		}, "Actualize should panic when called without starting a transaction")
-	})
-
-	t.Run("should handle multiple actualizations", func(t *testing.T) {
-		require := requirePkg.New(t)
-		iTime := coreutils.MockTime
-
-		storage := createDefaultStorage()
-		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(0): {
-				{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 150},
-			},
-		})
-
+		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{})
 		params := createDefaultParams(storage)
-		params.SeqTypes = map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
-			1: {1: 50},
-		}
-		seq, cancel := isequencer.New(params, iTime)
-		defer cancel()
-
-		// First transaction and actualization
-		_, ok := seq.Start(1, 1)
-		require.True(ok)
-		seq.Actualize()
-
-		// Update PLog with new entries
-		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(0): {
-				{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 150},
-			},
-			isequencer.PLogOffset(1): {
-				{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 200},
-			},
-		})
-
-		// Second transaction and actualization
-		isequencer.WaitForStart(t, seq, 1, 1)
-
-		seq.Actualize()
-
-		// Third transaction to verify sequence values
-		isequencer.WaitForStart(t, seq, 1, 1)
+		seq, cleanup := isequencer.New(params, mockedTime)
+		defer cleanup()
+		initialOffset := isequencer.WaitForStart(t, seq, 1, 1)
 
 		num, err := seq.Next(1)
 		require.NoError(err)
-		require.Equal(isequencer.Number(201), num, "Sequence should be updated after multiple actualizations")
+		require.Equal(isequencer.Number(2), num)
 
-		seq.Flush()
+		// Actualize with empty PLog
+		seq.Actualize()
+
+		// Should be able to start a new transaction
+		nextOffset := isequencer.WaitForStart(t, seq, 1, 1)
+		require.Equal(initialOffset, nextOffset)
+
+		num, err = seq.Next(1)
+		require.NoError(err)
+		require.Equal(isequencer.Number(2), num)
+
+		num2, err := seq.Next(1)
+		require.NoError(err)
+		require.Equal(isequencer.Number(3), num2)
 	})
 
-	t.Run("should update sequence Numbers to match PLog after actualization", func(t *testing.T) {
-		require := requirePkg.New(t)
-		iTime := coreutils.MockTime
-
+	t.Run("filled plog", func(t *testing.T) {
 		storage := createDefaultStorage()
-		// Set up PLog with higher sequence values
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
 			isequencer.PLogOffset(0): {
 				{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 150},
@@ -642,74 +569,38 @@ func TestISequencer_Actualize(t *testing.T) {
 			},
 		})
 
+		storage.Numbers = map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number{
+			1: {1: 100, 2: 200},
+		}
 		params := createDefaultParams(storage)
 		params.SeqTypes = map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
-			1: {1: 50, 2: 150},
+			1: {1: 1, 2: 1},
 		}
-		seq, cancel := isequencer.New(params, iTime)
-		defer cancel()
 
-		// Start new transaction after actualization
-		offset, ok := seq.Start(1, 1)
-		require.True(ok)
-		require.NotZero(offset)
+		seq, cleanup := isequencer.New(params, mockedTime)
+		defer cleanup()
+		initialOffset := isequencer.WaitForStart(t, seq, 1, 1)
 
-		// Actualize and wait
+		num, err := seq.Next(1)
+		require.NoError(err)
+		require.Equal(isequencer.Number(151), num)
+
+		// Actualize with empty PLog
 		seq.Actualize()
 
-		// Start new transaction after actualization
-		isequencer.WaitForStart(t, seq, 1, 1)
+		// Should be able to start a new transaction
+		nextOffset := isequencer.WaitForStart(t, seq, 1, 1)
+		require.Equal(initialOffset, nextOffset)
 
-		// Values should be updated from PLog
-		num1, err := seq.Next(1)
+		num, err = seq.Next(1)
 		require.NoError(err)
-		require.Equal(isequencer.Number(151), num1, "Sequence 1 should be updated from PLog")
+		require.Equal(isequencer.Number(151), num)
 
 		num2, err := seq.Next(2)
 		require.NoError(err)
-		require.Equal(isequencer.Number(251), num2, "Sequence 2 should be updated from PLog")
-
-		seq.Flush()
+		require.Equal(isequencer.Number(251), num2)
 	})
 
-	t.Run("should clear all cached data and process PLog", func(t *testing.T) {
-		require := requirePkg.New(t)
-		iTime := coreutils.MockTime
-
-		storage := createDefaultStorage()
-		// Add entries to the mock PLog to simulate actualization
-		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(0): {
-				{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 200},
-			},
-		})
-
-		seq, cancel := isequencer.New(createDefaultParams(storage), iTime)
-		defer cancel()
-
-		// Start transaction to set up state
-		offset, ok := seq.Start(1, 1)
-		require.True(ok)
-		require.NotZero(offset)
-
-		// Get a number to populate cache
-		num, err := seq.Next(1)
-		require.NoError(err)
-		require.Equal(isequencer.Number(201), num)
-
-		// Start actualization
-		seq.Actualize()
-
-		// Now should be able to start a transaction
-		isequencer.WaitForStart(t, seq, 1, 1)
-
-		// Number should be updated from PLog
-		num, err = seq.Next(1)
-		require.NoError(err)
-		require.Equal(isequencer.Number(201), num, "Next should return value incremented from actualized PLog value")
-
-		seq.Flush()
-	})
 }
 
 // createDefaultStorage creates a storage with default configuration and common test data

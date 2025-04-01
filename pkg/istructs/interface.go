@@ -65,7 +65,7 @@ type IAppStructs interface {
 	ClusterAppID() ClusterAppID
 	AppQName() appdef.AppQName
 
-	IsFunctionRateLimitsExceeded(funcQName appdef.QName, wsid WSID) bool
+	IsFunctionRateLimitsExceeded(funcQName appdef.QName, wsid WSID) bool // FIXME: eliminate, use the one from iappparts?
 
 	// Describe package names
 	DescribePackageNames() []string
@@ -81,7 +81,9 @@ type IAppStructs interface {
 
 	NumAppWorkspaces() NumAppWorkspaces
 
-	AppTokens() IAppTokens
+	AppTokens() IAppTokens // FIXME: check what is for?
+
+	QNames() 
 }
 
 type IEvents interface {
