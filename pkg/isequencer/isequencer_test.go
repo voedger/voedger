@@ -453,9 +453,7 @@ func TestISequencer_Next(t *testing.T) {
 		defer cancel()
 
 		// First transaction
-		offset, ok := seq.Start(1, 1)
-		require.True(ok)
-		require.NotZero(offset)
+		isequencer.WaitForStart(t, seq, 1, 1, true)
 
 		num, err := seq.Next(1)
 		require.NoError(err)
@@ -464,9 +462,7 @@ func TestISequencer_Next(t *testing.T) {
 		seq.Flush()
 
 		// Second transaction - should still work even if LRU cache evicted the entry
-		offset, ok = seq.Start(1, 1)
-		require.True(ok)
-		require.NotZero(offset)
+		isequencer.WaitForStart(t, seq, 1, 1, true)
 
 		num, err = seq.Next(1)
 		require.NoError(err)

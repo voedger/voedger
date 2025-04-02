@@ -248,17 +248,11 @@ func (m *MockStorage) ActualizeSequencesFromPLog(ctx context.Context, offset PLo
 			// Continue processing
 		}
 
-		// Skip entries before the requested offset
-		currentOffset := offsetProbe
-		if currentOffset < offset {
-			continue
-		}
-
 		if m.writeTimeout > 0 {
 			time.Sleep(m.writeTimeout)
 		}
 
-		if err := batcher(ctx, batch, currentOffset); err != nil {
+		if err := batcher(ctx, batch, offsetProbe); err != nil {
 			return err
 		}
 	}
