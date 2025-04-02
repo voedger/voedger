@@ -5,7 +5,11 @@
 
 package isequencer
 
-import "context"
+import (
+	"context"
+
+	"github.com/voedger/voedger/pkg/istructs"
+)
 
 type ISeqStorage interface {
 
@@ -26,10 +30,9 @@ type ISeqStorage interface {
 	ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func(batch []SeqValue, offset PLogOffset) error) error
 }
 
-// FIXME: move to vvm/storage
 type ISeqSysVVMStorage interface {
-	Get(appID uint16,  data *[]byte) (ok bool, err error)
-	Put(cCols []byte, value []byte) (err error)
+	Get(appID istructs.ClusterAppID, wsid WSID, seqID SeqID, data *[]byte) (ok bool, err error)
+	Put(appID istructs.ClusterAppID, wsid WSID, seqID SeqID, value []byte) (err error)
 }
 
 // ISequencer defines the interface for working with sequences.
