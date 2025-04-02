@@ -140,6 +140,26 @@ func TestBasicUsage(t *testing.T) {
 	// })
 }
 
+type expectedSeqValue struct {
+	wsid   uint64
+	seqID  uint16
+	number uint64
+}
+
+type obj struct {
+	qName      appdef.QName
+	id         uint64 // >0 -> will be passed to NewRecordID, <0 -> abs(id) will be used. Need to test "old" ids according to issue 688
+	containers []obj
+}
+
+type testPLogEvent struct {
+	qName         appdef.QName
+	offset        istructs.Offset
+	wsid          uint64
+	cuds          []obj
+	expectedBatch []expectedSeqValue
+}
+
 func TestActualizeFromPLog(t *testing.T) {
 	require := require.New(t)
 	testWSQName := appdef.NewQName("test", "ws")
@@ -167,58 +187,51 @@ func TestActualizeFromPLog(t *testing.T) {
 	require.NoError(err)
 	seqSysVVMStorage := storage.NewVVMSeqStorageAdapter(appStorage)
 
-	type expectedSeqValue struct {
-		wsid   uint64
-		seqID  uint16
-		number uint64
-	}
-
-	type obj struct {
-		qName      appdef.QName
-		id         uint64 // >0 -> will be passed to NewRecordID, <0 -> abs(id) will be used. Need to test "old" ids according to issue 688
-		containers []obj
-	}
-
-	cases := [][]struct {
-		qName         appdef.QName
-		offset        istructs.Offset
-		wsid          uint64
-		cuds          []obj
-		expectedBatch []expectedSeqValue
-	}{
+	plogs := [][]testPLogEvent{
 		{
 			{qName: testCmdQName, wsid: 1, offset: 1, cuds: []obj{{qName: testCDocQName, id: 1}}, expectedBatch: []expectedSeqValue{
 				{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 1},
 			}},
 		},
+		{
+			{qName: testCmdQName, wsid: 1, offset: 1, cuds: []obj{{qName: testCDocQName, id: 1}}, expectedBatch: []expectedSeqValue{
+				{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 1},
+			}},
+			{qName: testCmdQName, wsid: 2, offset: 1, cuds: []obj{{qName: testCDocQName, id: 2}}, expectedBatch: []expectedSeqValue{
+				{wsid: 2, seqID: istructs.QNameIDCRecordIDSequence, number: 2},
+			}},
+			{qName: testCmdQName, wsid: 3, offset: 1, cuds: []obj{{qName: testCDocQName, id: 3}}, expectedBatch: []expectedSeqValue{
+				{wsid: 3, seqID: istructs.QNameIDCRecordIDSequence, number: 3},
+			}},
+		},
+		{
+			{qName: testCmdQName, wsid: 1, offset: 1, cuds: []obj{
+				{qName: testCDocQName, id: 1, containers: []obj{
+					{qName: testCRecordQName, id: 2},
+					{qName: testCRecordQName, id: 3},
+				}},
+				{qName: testWDocQName, id: 4, containers: []obj{
+					{qName: testWRecordQName, id: 5},
+				},
+			}}, expectedBatch: []expectedSeqValue{
+				{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 4},
+				{wsid: 1, seqID: istructs.QNameIDOWRecordIDSequence, number: 5},
+			}},
+		},
 	}
 
-	for i, plogEvents := range cases {
+	for i, plogEvents := range plogs {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			mockEvents := &coreutils.MockEvents{}
-			mockEvents.On("ReadPLog", gomock.Anything, gomock.Anything, gomock.Anything, gomock.Anything, gomock.Anything).Run(func(args gomock.Arguments) {
-				cb := args.Get(4).(istructs.PLogEventsReaderCallback)
-				for _, pLogEvent := range plogEvents {
-					mockEvent := coreutils.MockPLogEvent{}
-					mockEvent.On("CUDs", mock.Anything).Run(func(args gomock.Arguments) {
-						cudCallback := args[0].(func(istructs.ICUDRow) bool)
-						for _, cudTemplate := range pLogEvent.cuds {
-							cud := coreutils.TestObject{
-								Name:   cudTemplate.qName,
-								Id:     istructs.NewCDocCRecordID(istructs.RecordID(cudTemplate.id)),
-								IsNew_: true,
-							}
-							require.True(cudCallback(&cud))
-						}
-					})
-					argObj := coreutils.TestObject{
-						Name: pLogEvent.qName,
+			mockEvents.On("ReadPLog", gomock.Anything, gomock.Anything, gomock.Anything, gomock.Anything, gomock.Anything).
+				Return(nil).
+				Run(func(args gomock.Arguments) {
+					cb := args.Get(4).(istructs.PLogEventsReaderCallback)
+					for _, pLogEvent := range plogEvents {
+						iPLogEvent := testPLogEventToIPlogEvent(pLogEvent)
+						require.NoError(cb(1, iPLogEvent))
 					}
-					mockEvent.On("Workspace").Return(istructs.WSID(pLogEvent.wsid))
-					mockEvent.On("ArgumentObject").Return(&argObj)
-					require.NoError(cb(1, &mockEvent))
-				}
-			})
+				})
 			seqStorage := New(istructs.ClusterApps[istructs.AppQName_test1_app1], istructs.PartitionID(1), mockEvents, appDef, seqSysVVMStorage)
 			numEvent := 0
 			seqStorage.ActualizeSequencesFromPLog(context.Background(), 1, func(batch []isequencer.SeqValue, offset isequencer.PLogOffset) error {
@@ -234,10 +247,33 @@ func TestActualizeFromPLog(t *testing.T) {
 				numEvent++
 				return nil
 			})
-			require.Len(len(plogEvents), numEvent)
+			require.Len(plogEvents, numEvent)
 		})
 	}
 
+}
+
+func testPLogEventToIPlogEvent(pLogEvent testPLogEvent) istructs.IPLogEvent {
+	mockEvent := coreutils.MockPLogEvent{}
+	mockEvent.On("CUDs", mock.Anything).Run(func(args gomock.Arguments) {
+		cudCallback := args[0].(func(istructs.ICUDRow) bool)
+		for _, cudTemplate := range pLogEvent.cuds {
+			cud := coreutils.TestObject{
+				Name:   cudTemplate.qName,
+				Id:     istructs.NewCDocCRecordID(istructs.RecordID(cudTemplate.id)),
+				IsNew_: true,
+			}
+			if !cudCallback(&cud) {
+				panic("")
+			}
+		}
+	})
+	argObj := coreutils.TestObject{
+		Name: pLogEvent.qName,
+	}
+	mockEvent.On("Workspace").Return(istructs.WSID(pLogEvent.wsid))
+	mockEvent.On("ArgumentObject").Return(&argObj)
+	return &mockEvent
 }
 
 func TestSeqIDMapping(t *testing.T) {
