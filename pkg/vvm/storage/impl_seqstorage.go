@@ -12,13 +12,14 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-type implISeqSysVVMStorage struct {
+// [~server.design.sequences/cmp.VVMStorageAdapter~impl]
+type implVVMSeqStorageAdapter struct {
 	implStorageBase
 }
 
 const cColsSize = 8 + 2
 
-func (s *implISeqSysVVMStorage) Get(appID istructs.ClusterAppID, wsid isequencer.WSID, seqID isequencer.SeqID, data *[]byte) (ok bool, err error) {
+func (s *implVVMSeqStorageAdapter) Get(appID istructs.ClusterAppID, wsid isequencer.WSID, seqID isequencer.SeqID, data *[]byte) (ok bool, err error) {
 	pKey := s.getPKey()
 	pKey = binary.BigEndian.AppendUint32(pKey, appID)
 	cCols := make([]byte, cColsSize)
@@ -27,7 +28,7 @@ func (s *implISeqSysVVMStorage) Get(appID istructs.ClusterAppID, wsid isequencer
 	return s.sysVVMStorage.Get(pKey, cCols, data)
 }
 
-func (s *implISeqSysVVMStorage) Put(appID istructs.ClusterAppID, wsid isequencer.WSID, seqID isequencer.SeqID, value []byte) (err error) {
+func (s *implVVMSeqStorageAdapter) Put(appID istructs.ClusterAppID, wsid isequencer.WSID, seqID isequencer.SeqID, value []byte) (err error) {
 	pKey := s.getPKey()
 	pKey = binary.BigEndian.AppendUint32(pKey, appID)
 	cCols := make([]byte, cColsSize)

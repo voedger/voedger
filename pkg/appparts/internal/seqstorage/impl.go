@@ -7,7 +7,6 @@ package seqstorage
 import (
 	"context"
 	"encoding/binary"
-	"encoding/json"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/isequencer"
@@ -15,15 +14,14 @@ import (
 )
 
 func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offset isequencer.PLogOffset, batcher func(batch []isequencer.SeqValue, offset isequencer.PLogOffset) error) error {
-	return ss.events.ReadPLog(ctx, istructs.PartitionID(ss.partitionID), istructs.Offset(offset), istructs.ReadToTheEnd,
+	return ss.events.ReadPLog(ctx, ss.partitionID, istructs.Offset(offset), istructs.ReadToTheEnd,
 		func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
-			// FIXME: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! не вызываем batcher если <32268000... (issue 688)
-			batch := []isequencer.SeqValue{}
+			batchProbe := []isequencer.SeqValue{}
 			argType := ss.appDef.Type(event.ArgumentObject().QName())
 
 			// odocs
 			if argType.Kind() == appdef.TypeKind_ODoc {
-				ss.getNumbersFromArgument(event.ArgumentObject(), event.Workspace(), &batch)
+				ss.getNumbersFromArgument(event.ArgumentObject(), event.Workspace(), &batchProbe)
 			}
 
 			// cuds
@@ -36,7 +34,7 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 				if cudType.Kind() == appdef.TypeKind_WDoc {
 					seqQName = istructs.QNameOWRecordIDSequence
 				}
-				batch = append(batch, isequencer.SeqValue{
+				batchProbe = append(batchProbe, isequencer.SeqValue{
 					Key: isequencer.NumberKey{
 						WSID:  isequencer.WSID(event.Workspace()),
 						SeqID: isequencer.SeqID(ss.seqIDs[seqQName]),
@@ -45,101 +43,66 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 				})
 			}
 
+			batch := make([]isequencer.SeqValue, 0, len(batchProbe))
+			for _, b := range batchProbe {
+				if b.Value < isequencer.Number(istructs.MinClusterRecordID) {
+					// syncID<322680000000000 -> consider the syncID is from an old template.
+					// ignore IDs from external registers
+					// see https://github.com/voedger/voedger/issues/688
+					// [~server.design.sequences/cmp.appparts.internal.seqStorage.i688~impl]
+					continue
+				}
+				batch = append(batch, b)
+			}
+
 			return batcher(batch, isequencer.PLogOffset(plogOffset))
 		})
 }
 
 func (ss *implISeqStorage) WriteValues(batch []isequencer.SeqValue) error {
-	const size = 1 + 2 // numbers prefix + size(partitionID)
-	cCols := make([]byte, 0, size)
-	cCols = append(cCols, cColsNumbers...)
-	cCols = binary.BigEndian.AppendUint16(cCols, uint16(ss.partitionID))
-
-	numbersToWriteBytes := []byte{} // FIXME: avoid escape to heap
-	ok, err := ss.storage.Get(1, &numbersToWriteBytes) // appID here
-	if err != nil {
-		return err
-	}
-	if !ok {
-		numbersToWriteBytes = []byte("{}")
-	}
-
-	numbersToWrite := map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number{}
-	if err := json.Unmarshal(numbersToWriteBytes, &numbersToWrite); err != nil {
-		// notest
-		return err
-	}
-
-	for _, sv := range batch {
-		numbersOfWSID, ok := numbersToWrite[sv.Key.WSID]
-		if !ok {
-			numbersOfWSID = map[isequencer.SeqID]isequencer.Number{}
-			numbersToWrite[sv.Key.WSID] = numbersOfWSID
+	for _, b := range batch {
+		numberBytes := make([]byte, sizeInt64)
+		binary.BigEndian.PutUint64(numberBytes, uint64(b.Value))
+		if err := ss.storage.Put(ss.appID, b.Key.WSID, b.Key.SeqID, numberBytes); err != nil {
+			return err
 		}
-		numbersOfWSID[sv.Key.SeqID] = sv.Value
 	}
-
-	if numbersToWriteBytes, err = json.Marshal(&numbersToWrite); err != nil {
-		// notest
-		return err
-	}
-	return ss.storage.Put(cCols, numbersToWriteBytes)
+	return nil
 }
 
 func (ss *implISeqStorage) ReadNumbers(wsid isequencer.WSID, seqIDs []isequencer.SeqID) ([]isequencer.Number, error) {
-	const size = 1 + 3 // numbers prefix + size(partitionID)
-	cCols := make([]byte, 0, size)
-	cCols = append(cCols, cColsNumbers...)
-	cCols = binary.BigEndian.AppendUint16(cCols, uint16(ss.partitionID))
-	data := []byte{} // FIXME: avoid escape to heap
-	ok, err := ss.storage.Get(1, &data) // appID here
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		data = []byte("{}")
-	}
-	storedNumbers := map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number{}
-	if err := json.Unmarshal(data, &storedNumbers); err != nil {
-		return nil, err
-	}
-
-	storedNumbersOfWSID := storedNumbers[wsid]
-	if storedNumbersOfWSID == nil {
-		storedNumbersOfWSID = map[isequencer.SeqID]isequencer.Number{}
-	}
 	res := make([]isequencer.Number, len(seqIDs))
-	for i, queriedSeqID := range seqIDs {
-		res[i] = storedNumbersOfWSID[queriedSeqID]
+	for i, seqID := range seqIDs {
+		data := make([]byte, sizeInt64)
+		ok, err := ss.storage.Get(ss.appID, wsid, seqID, &data)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			res[i] = isequencer.Number(binary.BigEndian.Uint64(data))
+		}
 	}
 	return res, nil
 }
 
 func (ss *implISeqStorage) WriteNextPLogOffset(offset isequencer.PLogOffset) error {
-	const valueSize = 8
-	const cColsSize = 1 + 2 // prefix + partitionID
-	cColsBytes := make([]byte, 0, cColsSize)
-	cColsBytes = append(cColsBytes, cColsOffset...)
-	cColsBytes = binary.BigEndian.AppendUint16(cColsBytes, uint16(ss.partitionID))
-	valueBytes := make([]byte, valueSize)
-	binary.BigEndian.PutUint64(valueBytes, uint64(offset))
-	return ss.storage.Put(cColsBytes, valueBytes)
+	return ss.WriteValues([]isequencer.SeqValue{
+		{
+			Key: isequencer.NumberKey{
+				WSID:  isequencer.WSID(istructs.NullWSID), // for offset
+				SeqID: isequencer.SeqID(istructs.QNameIDWLogOffsetSequence),
+			},
+			Value: isequencer.Number(offset),
+		},
+	})
 }
 
 func (ss *implISeqStorage) ReadNextPLogOffset() (isequencer.PLogOffset, error) {
-	const valueSize = 8
-	const cColsSize = 1 + 2 // prefix + partitionID
-	cColsBytes := make([]byte, 0, cColsSize)
-	// FIXME:!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! QNameOffsetSequence here, do not store offset separately!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	cColsBytes = append(cColsBytes, cColsOffset...)
-	cColsBytes = binary.BigEndian.AppendUint16(cColsBytes, uint16(ss.partitionID))
-	valueBytes := make([]byte, valueSize)
-	ok, err := ss.storage.Get(1, &valueBytes) // appID here
-	if !ok {
+	numbers, err := ss.ReadNumbers(isequencer.WSID(istructs.NullWSID), []isequencer.SeqID{isequencer.SeqID(istructs.QNameIDWLogOffsetSequence)})
+	if err != nil {
 		return 0, err
 	}
-	offsetUint64 := binary.BigEndian.Uint64(valueBytes)
-	return isequencer.PLogOffset(offsetUint64), nil
+	return isequencer.PLogOffset(numbers[0]), nil
 }
 
 func (ss *implISeqStorage) getNumbersFromArgument(root istructs.IObject, wsid istructs.WSID, batch *[]isequencer.SeqValue) {

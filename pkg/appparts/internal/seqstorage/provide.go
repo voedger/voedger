@@ -11,13 +11,14 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func New(partitionID istructs.PartitionID, events istructs.IEvents, appDef appdef.IAppDef,
-	seqStorage isequencer.ISeqSysVVMStorage) isequencer.ISeqStorage {
+func New(appID istructs.ClusterAppID, partitionID istructs.PartitionID, events istructs.IEvents, appDef appdef.IAppDef,
+	seqStorage isequencer.IVVMSeqStorageAdapter) isequencer.ISeqStorage {
 	return &implISeqStorage{
-		events:  events,
-		appId:   AppID,
-		appDef:  appDef,
-		storage: seqStorage,
+		events:      events,
+		partitionID: partitionID,
+		appID:       appID,
+		appDef:      appDef,
+		storage:     seqStorage,
 		seqIDs: map[appdef.QName]uint16{
 			istructs.QNameWLogOffsetSequence: istructs.QNameIDWLogOffsetSequence,
 			istructs.QNameCRecordIDSequence:  istructs.QNameIDCRecordIDSequence,

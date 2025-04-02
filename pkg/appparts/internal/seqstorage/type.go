@@ -12,9 +12,10 @@ import (
 )
 
 type implISeqStorage struct {
-	partitionID isequencer.PartitionID
+	appID       istructs.ClusterAppID
+	partitionID istructs.PartitionID
 	events      istructs.IEvents
 	seqIDs      map[appdef.QName]istructs.QNameID
-	storage     isequencer.ISeqSysVVMStorage
+	storage     isequencer.IVVMSeqStorageAdapter
 	appDef      appdef.IAppDef
 }

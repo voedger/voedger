@@ -6,5 +6,5 @@
 package seqstorage
 
 var (
-	cColsNumbers = []byte{1}
+	sizeInt64 = 8
 )

@@ -60,6 +60,7 @@ func (e *MockEvents) ReadWLog(ctx context.Context, workspace istructs.WSID, offs
 }
 
 type MockPLogEvent struct {
+	istructs.IPLogEvent
 	mock.Mock
 }
 

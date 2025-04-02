@@ -6,6 +6,7 @@
 package storage
 
 import (
+	"encoding/binary"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -21,7 +22,7 @@ func TestSeqStorage(t *testing.T) {
 	appStorageProvider := provider.Provide(mem.Provide(coreutils.MockTime))
 	sysVvmAppStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
 	require.NoError(err)
-	seqStorage := NewSeqStorage(sysVvmAppStorage)
+	seqStorage := NewVVMSeqStorageAdapter(sysVvmAppStorage)
 
 	// Base test data
 	baseAppID := istructs.ClusterApps[istructs.AppQName_test1_app1]
@@ -122,6 +123,19 @@ func TestSeqStorage(t *testing.T) {
 			// Verify value after Put
 			data = []byte{}
 			ok, err = seqStorage.Get(tt.appID+istructs.ClusterAppID(i), tt.wsid+isequencer.WSID(i), tt.seqID+isequencer.SeqID(i), &data)
+			require.NoError(err)
+			require.True(ok)
+			require.Equal(tt.expected, data)
+
+			// check the key structure using the underlying storage
+			pKey := []byte{}
+			pKey = binary.BigEndian.AppendUint32(pKey, pKeyPrefix_SeqStorage)
+			pKey = binary.BigEndian.AppendUint32(pKey, tt.appID+istructs.ClusterAppID(i))
+			cCols := []byte{}
+			cCols = binary.BigEndian.AppendUint64(cCols, uint64(tt.wsid+isequencer.WSID(i)))
+			cCols = binary.BigEndian.AppendUint16(cCols, uint16(tt.seqID+isequencer.SeqID(i)))
+			data = []byte{}
+			ok, err = sysVvmAppStorage.Get(pKey, cCols, &data)
 			require.NoError(err)
 			require.True(ok)
 			require.Equal(tt.expected, data)

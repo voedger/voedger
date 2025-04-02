@@ -19,8 +19,8 @@ func NewElectionsTTLStorage(vs ISysVvmStorage) ielections.ITTLStorage[TTLStorage
 	}
 }
 
-func NewSeqStorage(vs ISysVvmStorage) isequencer.ISeqSysVVMStorage {
-	return &implISeqSysVVMStorage{
+func NewVVMSeqStorageAdapter(vs ISysVvmStorage) isequencer.IVVMSeqStorageAdapter {
+	return &implVVMSeqStorageAdapter{
 		implStorageBase: implStorageBase{
 			prefix:        pKeyPrefix_SeqStorage,
 			sysVVMStorage: vs,

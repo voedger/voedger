@@ -30,7 +30,7 @@ type ISeqStorage interface {
 	ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func(batch []SeqValue, offset PLogOffset) error) error
 }
 
-type ISeqSysVVMStorage interface {
+type IVVMSeqStorageAdapter interface {
 	Get(appID istructs.ClusterAppID, wsid WSID, seqID SeqID, data *[]byte) (ok bool, err error)
 	Put(appID istructs.ClusterAppID, wsid WSID, seqID SeqID, value []byte) (err error)
 }
