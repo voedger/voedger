@@ -268,6 +268,23 @@ func (m *MockStorage) SetPLog(plog map[PLogOffset][]SeqValue) {
 	m.pLog = plog
 }
 
+func (m *MockStorage) AddPLogEntry(offset, wsid, seqID, number int) {
+	// notest
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if _, ok := m.pLog[PLogOffset(offset)]; ok {
+		panic("AddPLogEntry: offset already exists")
+	}
+	// Add the new entry to the PLog
+	m.pLog[PLogOffset(offset)] = []SeqValue{
+		{
+			Key:   NumberKey{WSID: WSID(wsid), SeqID: SeqID(seqID)},
+			Value: Number(number),
+		},
+	}
+}
+
 // ClearPLog removes all entries from the mock PLog
 func (m *MockStorage) ClearPLog() {
 	// notest
