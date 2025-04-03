@@ -59,7 +59,7 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 		})
 }
 
-func (ss *implISeqStorage) WriteValues(batch []isequencer.SeqValue) error {
+func (ss *implISeqStorage) WriteValues(batch []isequencer.SeqValue, offset PLogOffset) error {
 	for _, b := range batch {
 		numberBytes := make([]byte, sizeInt64)
 		binary.BigEndian.PutUint64(numberBytes, uint64(b.Value))
@@ -67,6 +67,7 @@ func (ss *implISeqStorage) WriteValues(batch []isequencer.SeqValue) error {
 			return err
 		}
 	}
+	// тут после offset записать
 	return nil
 }
 

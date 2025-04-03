@@ -91,6 +91,29 @@ const ReadToTheEnd = int(^uint(0) >> 1)
 //				Workspace-related constants
 //
 
+// RecordIDs range layout
+//
+// ────────────────────┼──────────────────────────┐
+// 0                   | NullRecordID             |
+// ────────────────────┼──────────────────────────┤
+// 1                   | MinRawRecordID           |
+//                     |                          |
+// 65535               | MaxRawRecordID           |
+// ────────────────────┼──────────────────────────┤
+// 65536               | MinReservedBaseRecordID  |
+//                     |                          |
+//                     |  ┌───────────────────────┤
+// 65537               |  | FirstSingletonID      |
+//                     |  |                       |
+// 66047               |  | MaxSingletonID        |
+//                     |  └───────────────────────┤
+//                     |                          |
+// 66048               |  NonExistingRecordID     |
+//                     |                          |
+// 131071              | MaxReservedBaseRecordID  |
+// ────────────────────┼──────────────────────────┤
+// 131072              | FirstBaseRecordID        |
+
 const NullWSID = WSID(0)
 
 // WSID = ClusterID << WSIDClusterLShift + NextWSID()
@@ -223,6 +246,7 @@ const (
 	QNameIDForError
 	QNameIDCommandCUD
 	QNameIDForCorruptedData
+	QNameIDPLogOffsetSequence
 	QNameIDWLogOffsetSequence
 	QNameIDCRecordIDSequence
 	QNameIDOWRecordIDSequence
