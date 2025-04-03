@@ -329,7 +329,7 @@ func (vit *VIT) GetSystemPrincipal(appQName appdef.AppQName) *Principal {
 	}
 	prn, ok := appPrincipals["___sys"]
 	if !ok {
-		as, err := vit.IAppStructsProvider.BuiltIn(appQName)
+		as, err := vit.BuiltIn(appQName)
 		require.NoError(vit.T, err)
 		sysToken, err := payloads.GetSystemPrincipalTokenApp(as.AppTokens())
 		require.NoError(vit.T, err)
@@ -454,7 +454,7 @@ func (vit *VIT) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobS
 func (vit *VIT) POST(relativeURL string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
 	opts = append(opts, coreutils.WithMethod(http.MethodPost))
-	url := vit.IFederation.URLStr() + "/" + relativeURL
+	url := vit.URLStr() + "/" + relativeURL
 	res, err := vit.httpClient.Req(url, body, opts...)
 	require.NoError(vit.T, err)
 	return res
@@ -489,11 +489,11 @@ func (vit *VIT) refreshTokens() {
 		for _, prn := range appPrns {
 			// issue principal token
 			principalPayload := payloads.PrincipalPayload{
-				Login:       prn.Login.Name,
+				Login:       prn.Name,
 				SubjectKind: istructs.SubjectKind_User,
 				ProfileWSID: prn.ProfileWSID,
 			}
-			as, err := vit.IAppStructsProvider.BuiltIn(prn.AppQName)
+			as, err := vit.BuiltIn(prn.AppQName)
 			require.NoError(vit.T, err) // notest
 			newToken, err := as.AppTokens().IssueToken(authnz.DefaultPrincipalTokenExpiration, &principalPayload)
 			require.NoError(vit.T, err)
@@ -527,7 +527,7 @@ func (vit *VIT) NextName() string {
 // will be automatically restored on vit.TearDown() to the state the Bucket was before MockBuckets() call
 func (vit *VIT) MockBuckets(appQName appdef.AppQName, rateLimitName appdef.QName, bs irates.BucketState) {
 	vit.T.Helper()
-	as, err := vit.IAppStructsProvider.BuiltIn(appQName)
+	as, err := vit.BuiltIn(appQName)
 	require.NoError(vit.T, err)
 	appBuckets := istructsmem.IBucketsFromIAppStructs(as)
 	initialState, err := appBuckets.GetDefaultBucketsState(rateLimitName)
@@ -584,7 +584,7 @@ func (vit *VIT) SetMemStoragePutDelay(delay time.Duration) {
 func (vit *VIT) iterateDelaySetters(cb func(delaySetter istorage.IStorageDelaySetter)) {
 	vit.T.Helper()
 	for anyAppQName := range vit.VVMAppsBuilder {
-		as, err := vit.IAppStorageProvider.AppStorage(anyAppQName)
+		as, err := vit.AppStorage(anyAppQName)
 		require.NoError(vit.T, err)
 		delaySetter, ok := as.(istorage.IStorageDelaySetter)
 		if !ok {
@@ -619,7 +619,7 @@ func (sr *implVITISecretsReader) ReadSecret(name string) ([]byte, error) {
 func (vit *VIT) EnrichPrincipalToken(prn *Principal, roles []payloads.RoleType) (enrichedToken string) {
 	vit.T.Helper()
 	var pp payloads.PrincipalPayload
-	_, err := vit.ITokens.ValidateToken(prn.Token, &pp)
+	_, err := vit.ValidateToken(prn.Token, &pp)
 	require.NoError(vit.T, err)
 	for _, role := range roles {
 		pp.Roles = append(pp.Roles, role)

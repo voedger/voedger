@@ -100,8 +100,8 @@ func TestHttpStorage_NewKeyBuilder_should_refresh_key_builder(t *testing.T) {
 	k.PutBytes(sys.Storage_Http_Field_Body, []byte(`{"hello":"api"}`))
 	hskb := s.NewKeyBuilder(appdef.NullQName, k).(*httpStorageKeyBuilder)
 	require.Equal(sys.Storage_Http, hskb.Storage())
-	require.Equal("", hskb.url)
-	require.Equal("", hskb.method)
+	require.Empty(hskb.url)
+	require.Empty(hskb.method)
 	require.Empty(hskb.headers)
 	require.Empty(hskb.body)
 }

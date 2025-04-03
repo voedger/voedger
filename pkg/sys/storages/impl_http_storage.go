@@ -24,10 +24,10 @@ import (
 var requestNumber int64
 
 type httpStorage struct {
-	customClient state.IHttpClient
+	customClient state.IHTTPClient
 }
 
-func NewHttpStorage(customClient state.IHttpClient) state.IStateStorage {
+func NewHttpStorage(customClient state.IHTTPClient) state.IStateStorage {
 	return &httpStorage{
 		customClient: customClient,
 	}

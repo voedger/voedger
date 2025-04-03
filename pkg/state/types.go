@@ -54,7 +54,7 @@ type RecordsFunc func() istructs.IRecords
 
 type StateOptFunc func(opts *StateOpts)
 
-type IHttpClient interface {
+type IHTTPClient interface {
 	Request(timeout time.Duration, method, url string, body io.Reader, headers map[string]string) (statusCode int, resBody []byte, resHeaders map[string][]string, err error)
 }
 
@@ -62,7 +62,7 @@ type StateOpts struct {
 	Messages                 chan smtptest.Message
 	FederationCommandHandler FederationCommandHandler
 	FederationBlobHandler    FederationBlobHandler
-	CustomHttpClient         IHttpClient
+	CustomHTTPClient         IHTTPClient
 	UniquesHandler           UniquesHandler
 }
 
@@ -72,9 +72,9 @@ func WithEmailMessagesChan(messages chan smtptest.Message) StateOptFunc {
 	}
 }
 
-func WithCustomHttpClient(client IHttpClient) StateOptFunc {
+func WithCustomHTTPClient(client IHTTPClient) StateOptFunc {
 	return func(opts *StateOpts) {
-		opts.CustomHttpClient = client
+		opts.CustomHTTPClient = client
 	}
 }
 

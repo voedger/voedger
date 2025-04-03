@@ -86,7 +86,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 			cdoc, id := vit.GetCDocWSKind(ws)
 			idOfCDocWSKind = id
 			require.Equal(float64(10), cdoc["IntFld"])
-			require.Equal("", cdoc["StrFld"])
+			require.Empty(cdoc["StrFld"])
 			require.Len(cdoc, 2)
 		})
 

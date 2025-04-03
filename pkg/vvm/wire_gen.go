@@ -195,7 +195,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	sendTimeout := vvmConfig.SendTimeout
 	blobServiceChannelGroupIdx := provideProcessorChannelGroupIdxBLOB(vvmConfig)
 	iRequestHandler := blobprocessor.NewIRequestHandler(iProcBus, blobServiceChannelGroupIdx)
-	cache := dbcertcache.ProvideDbCache(routerAppStoragePtr)
+	cache := dbcertcache.ProvideDBCache(routerAppStoragePtr)
 	commandProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxCommand(vvmConfig)
 	queryProcessorsChannelGroupIdxType_V1 := provideProcessorChannelGroupIdxQuery_V1(vvmConfig)
 	queryProcessorsChannelGroupIdxType_V2 := provideProcessorChannelGroupIdxQuery_V2(vvmConfig)

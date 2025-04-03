@@ -966,7 +966,7 @@ func saveEvent(require *require.Assertions, app istructs.IAppStructs, generator 
 	pLogEvent = createEvent(require, app, generator, bld)
 	err := app.Records().Apply(pLogEvent)
 	require.NoError(err)
-	require.Equal("", pLogEvent.Error().ErrStr())
+	require.Empty(pLogEvent.Error().ErrStr())
 	return
 }
 

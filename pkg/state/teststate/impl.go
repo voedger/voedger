@@ -46,7 +46,7 @@ type testState struct {
 	wsOffsets             map[istructs.WSID]istructs.Offset
 	plogOffset            istructs.Offset
 	secretReader          isecrets.ISecretReader
-	httpHandler           HttpHandlerFunc
+	httpHandler           HTTPHandlerFunc
 	federationCmdHandler  state.FederationCommandHandler
 	federationBlobHandler state.FederationBlobHandler
 	uniquesHandler        state.UniquesHandler
@@ -156,7 +156,7 @@ func (ts *testState) Request(timeout time.Duration, method, url string, body io.
 	if ts.httpHandler == nil {
 		panic("http handler not set")
 	}
-	req := HttpRequest{
+	req := HTTPRequest{
 		Timeout: timeout,
 		Method:  method,
 		URL:     url,
@@ -292,14 +292,14 @@ func (ts *testState) buildState(processorKind int) {
 	switch processorKind {
 	case ProcKind_Actualizer:
 		ts.IState = stateprovide.ProvideAsyncActualizerStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ts.secretReader, eventFunc, nil, nil,
-			IntentsLimit, BundlesLimit, state.WithCustomHttpClient(ts), state.WithFedearationCommandHandler(ts.emulateFederationCmd), state.WithUniquesHandler(ts.emulateUniquesHandler), state.WithFederationBlobHandler(ts.emulateFederationBlob))
+			IntentsLimit, BundlesLimit, state.WithCustomHTTPClient(ts), state.WithFedearationCommandHandler(ts.emulateFederationCmd), state.WithUniquesHandler(ts.emulateUniquesHandler), state.WithFederationBlobHandler(ts.emulateFederationBlob))
 	case ProcKind_CommandProcessor:
 		ts.IState = stateprovide.ProvideCommandProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, cudFunc, principalsFunc, tokenFunc,
 			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc, state.WithUniquesHandler(ts.emulateUniquesHandler))
 	case ProcKind_QueryProcessor:
 		ts.IState = stateprovide.ProvideQueryProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, principalsFunc, tokenFunc, nil,
 			execQueryArgsFunc, argFunc, qryResultBuilderFunc, nil, execQueryCallback,
-			state.WithCustomHttpClient(ts), state.WithFedearationCommandHandler(ts.emulateFederationCmd), state.WithUniquesHandler(ts.emulateUniquesHandler), state.WithFederationBlobHandler(ts.emulateFederationBlob))
+			state.WithCustomHTTPClient(ts), state.WithFedearationCommandHandler(ts.emulateFederationCmd), state.WithUniquesHandler(ts.emulateUniquesHandler), state.WithFederationBlobHandler(ts.emulateFederationBlob))
 	}
 }
 
@@ -430,7 +430,7 @@ func (ts *testState) nextWSOffs(ws istructs.WSID) istructs.Offset {
 	return offs
 }
 
-func (ts *testState) PutHttpHandler(handler HttpHandlerFunc) {
+func (ts *testState) PutHttpHandler(handler HTTPHandlerFunc) {
 	ts.httpHandler = handler
 
 }

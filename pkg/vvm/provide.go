@@ -185,7 +185,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		query2.ProvideServiceFactory,
 		commandprocessor.ProvideServiceFactory,
 		metrics.ProvideMetricsService,
-		dbcertcache.ProvideDbCache,
+		dbcertcache.ProvideDBCache,
 		imetrics.Provide,
 		actualizers.ProvideSyncActualizerFactory,
 		actualizers.NewSyncActualizerFactoryFactory,
