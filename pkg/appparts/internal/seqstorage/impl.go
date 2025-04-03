@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offset isequencer.PLogOffset, batcher func(batch []isequencer.SeqValue, offset isequencer.PLogOffset) error) error {
+func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offset isequencer.PLogOffset, batcher func(ctx context.Context, batch []isequencer.SeqValue, offset isequencer.PLogOffset) error) error {
 	return ss.events.ReadPLog(ctx, ss.partitionID, istructs.Offset(offset), istructs.ReadToTheEnd,
 		func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 			batchProbe := []isequencer.SeqValue{}
@@ -55,20 +55,25 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 				batch = append(batch, b)
 			}
 
-			return batcher(batch, isequencer.PLogOffset(plogOffset))
+			return batcher(ctx, batch, isequencer.PLogOffset(plogOffset))
 		})
 }
 
-func (ss *implISeqStorage) WriteValues(batch []isequencer.SeqValue, offset PLogOffset) error {
+func (ss *implISeqStorage) WriteValuesAndOffset(batch []isequencer.SeqValue, pLogOffset isequencer.PLogOffset) error {
 	for _, b := range batch {
+		if b.Key.SeqID == isequencer.SeqID(istructs.QNameIDPLogOffsetSequence) {
+			panic("can not write QNameIDPLogOffsetSequence as value")
+		}
 		numberBytes := make([]byte, sizeInt64)
 		binary.BigEndian.PutUint64(numberBytes, uint64(b.Value))
 		if err := ss.storage.Put(ss.appID, b.Key.WSID, b.Key.SeqID, numberBytes); err != nil {
 			return err
 		}
 	}
-	// тут после offset записать
-	return nil
+
+	pLogOffsetBytes := make([]byte, sizeInt64)
+	binary.BigEndian.PutUint64(pLogOffsetBytes, uint64(pLogOffset))
+	return ss.storage.Put(ss.appID, isequencer.WSID(istructs.NullWSID), isequencer.SeqID(istructs.QNameIDPLogOffsetSequence), pLogOffsetBytes)
 }
 
 func (ss *implISeqStorage) ReadNumbers(wsid isequencer.WSID, seqIDs []isequencer.SeqID) ([]isequencer.Number, error) {
@@ -86,20 +91,8 @@ func (ss *implISeqStorage) ReadNumbers(wsid isequencer.WSID, seqIDs []isequencer
 	return res, nil
 }
 
-func (ss *implISeqStorage) WriteNextPLogOffset(offset isequencer.PLogOffset) error {
-	return ss.WriteValues([]isequencer.SeqValue{
-		{
-			Key: isequencer.NumberKey{
-				WSID:  isequencer.WSID(istructs.NullWSID), // for offset
-				SeqID: isequencer.SeqID(istructs.QNameIDWLogOffsetSequence),
-			},
-			Value: isequencer.Number(offset),
-		},
-	})
-}
-
 func (ss *implISeqStorage) ReadNextPLogOffset() (isequencer.PLogOffset, error) {
-	numbers, err := ss.ReadNumbers(isequencer.WSID(istructs.NullWSID), []isequencer.SeqID{isequencer.SeqID(istructs.QNameIDWLogOffsetSequence)})
+	numbers, err := ss.ReadNumbers(isequencer.WSID(istructs.NullWSID), []isequencer.SeqID{isequencer.SeqID(istructs.QNameIDPLogOffsetSequence)})
 	if err != nil {
 		return 0, err
 	}

@@ -23,7 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/storage"
 )
 
-func TestBasicUsage(t *testing.T) {
+func TestReadWrite(t *testing.T) {
 	require := require.New(t)
 	testWSQName := appdef.NewQName("test", "ws")
 	testCDocQName := appdef.NewQName("test", "cdoc")
@@ -39,37 +39,31 @@ func TestBasicUsage(t *testing.T) {
 	seqSysVVMStorage := storage.NewVVMSeqStorageAdapter(appStorage)
 	seqStorage := New(istructs.ClusterApps[istructs.AppQName_test1_app1], istructs.PartitionID(1), mockEvents, appDef, seqSysVVMStorage)
 
-	t.Run("Write and Read Offset", func(t *testing.T) {
-		actualOffset, err := seqStorage.ReadNextPLogOffset()
-		require.NoError(err)
-		require.Zero(actualOffset)
+	// read from empty storage
+	actualOffset, err := seqStorage.ReadNextPLogOffset()
+	require.NoError(err)
+	require.Zero(actualOffset)
 
-		err = seqStorage.WriteNextPLogOffset(isequencer.PLogOffset(5))
-		require.NoError(err)
+	numbers, err := seqStorage.ReadNumbers(1, []isequencer.SeqID{})
+	require.NoError(err)
+	require.Empty(numbers)
+	numbers, err = seqStorage.ReadNumbers(1, []isequencer.SeqID{1})
+	require.NoError(err)
+	require.Zero(numbers[0])
 
-		actualOffset, err = seqStorage.ReadNextPLogOffset()
-		require.NoError(err)
-		require.Equal(isequencer.PLogOffset(5), actualOffset)
+	require.NoError(err)
 
-		err = seqStorage.WriteNextPLogOffset(isequencer.PLogOffset(6))
-		require.NoError(err)
-
-		actualOffset, err = seqStorage.ReadNextPLogOffset()
-		require.NoError(err)
-		require.Equal(isequencer.PLogOffset(6), actualOffset)
-	})
-
-	// ReadNumbers
-	t.Run("Write and Read Numbers", func(t *testing.T) {
-		err = seqStorage.WriteValues([]isequencer.SeqValue{
-			{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 1},
-			{Key: isequencer.NumberKey{WSID: 1, SeqID: 2}, Value: 6},
-			{Key: isequencer.NumberKey{WSID: 1, SeqID: 3}, Value: 8},
-			{Key: isequencer.NumberKey{WSID: 2, SeqID: 1}, Value: 3},
-			{Key: isequencer.NumberKey{WSID: 2, SeqID: 2}, Value: 1},
-		})
-		require.NoError(err)
-
+	// will overwrite sequences and offset 5 times with new value
+	for counter := 0; counter < 5; counter++ {
+		numberBump := isequencer.Number(counter)
+		expectedPLogOffset := isequencer.PLogOffset(42 + counter)
+		err = seqStorage.WriteValuesAndOffset([]isequencer.SeqValue{
+			{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 1 + numberBump},
+			{Key: isequencer.NumberKey{WSID: 1, SeqID: 2}, Value: 6 + numberBump},
+			{Key: isequencer.NumberKey{WSID: 1, SeqID: 3}, Value: 8 + numberBump},
+			{Key: isequencer.NumberKey{WSID: 2, SeqID: 1}, Value: 3 + numberBump},
+			{Key: isequencer.NumberKey{WSID: 2, SeqID: 2}, Value: 1 + numberBump},
+		}, expectedPLogOffset)
 		cases := []struct {
 			wsid            isequencer.WSID
 			seqIDs          [][]isequencer.SeqID
@@ -115,29 +109,25 @@ func TestBasicUsage(t *testing.T) {
 			},
 		}
 		for _, c := range cases {
-			for i, seqIDs := range c.seqIDs {
-				numbers, err := seqStorage.ReadNumbers(c.wsid, seqIDs)
+			for i, seqIDsTemplate := range c.seqIDs {
+				numbers, err := seqStorage.ReadNumbers(c.wsid, seqIDsTemplate)
 				require.NoError(err)
-				require.Equal(c.expectedNumbers[i], numbers, seqIDs)
+				expectedNumbers := []isequencer.Number{}
+				for _, expectedNumber := range c.expectedNumbers[i] {
+					if expectedNumber == 0 {
+						expectedNumbers = append(expectedNumbers, expectedNumber)
+					} else {
+						expectedNumbers = append(expectedNumbers, expectedNumber+isequencer.Number(counter))
+					}
+				}
+				require.Equal(expectedNumbers, numbers, seqIDsTemplate)
+
+				actualPLogOffset, err := seqStorage.ReadNextPLogOffset()
+				require.NoError(err)
+				require.Equal(expectedPLogOffset, actualPLogOffset)
 			}
 		}
-	})
-
-	// 	t.Run("ReadPLogOffset", func(t *testing.T) {
-	// 		offset, err := seqStorage.ReadNextPLogOffset()
-	// 		require.NoError(err)
-	// 		require.Equal(isequencer.PLogOffset(0), offset)
-	// 	})
-
-	// 	t.Run("Actualize", func(t *testing.T) {
-	// 		ctx := context.Background()
-	// 		err := seqStorage.ActualizeSequencesFromPLog(ctx, isequencer.PLogOffset(1), func(batch []isequencer.SeqValue, offset isequencer.PLogOffset) error {
-	// 			t.Fail()
-	// 			return nil
-	// 		})
-	// 		require.NoError(err)
-	// 	})
-	// })
+	}
 }
 
 type expectedSeqValue struct {
@@ -213,7 +203,7 @@ func TestActualizeFromPLog(t *testing.T) {
 				{qName: testWDocQName, id: 4, containers: []obj{
 					{qName: testWRecordQName, id: 5},
 				},
-			}}, expectedBatch: []expectedSeqValue{
+				}}, expectedBatch: []expectedSeqValue{
 				{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 3},
 				{wsid: 1, seqID: istructs.QNameIDOWRecordIDSequence, number: 5},
 			}},
@@ -228,16 +218,17 @@ func TestActualizeFromPLog(t *testing.T) {
 				Run(func(args gomock.Arguments) {
 					cb := args.Get(4).(istructs.PLogEventsReaderCallback)
 					for _, pLogEvent := range plogEvents {
-						iPLogEvent := testPLogEventToIPlogEvent(pLogEvent)
+						iPLogEvent := testPLogEventToIPlogEvent(pLogEvent, appDef)
 						require.NoError(cb(pLogEvent.offset, iPLogEvent))
 					}
 				})
 			seqStorage := New(istructs.ClusterApps[istructs.AppQName_test1_app1], istructs.PartitionID(1), mockEvents, appDef, seqSysVVMStorage)
 			numEvent := 0
-			seqStorage.ActualizeSequencesFromPLog(context.Background(), 1, func(batch []isequencer.SeqValue, offset isequencer.PLogOffset) error {
+			seqStorage.ActualizeSequencesFromPLog(context.Background(), 1, func(ctx context.Context, batch []isequencer.SeqValue, offset isequencer.PLogOffset) error {
 				require.Equal(isequencer.PLogOffset(plogEvents[numEvent].offset), offset)
 				expectedBatch := []isequencer.SeqValue{}
 				for _, eb := range plogEvents[numEvent].expectedBatch {
+					var id 
 					expectedBatch = append(expectedBatch, isequencer.SeqValue{
 						Key:   isequencer.NumberKey{WSID: isequencer.WSID(eb.wsid), SeqID: isequencer.SeqID(eb.seqID)},
 						Value: isequencer.Number(istructs.NewCDocCRecordID(istructs.RecordID(eb.number))),
@@ -253,14 +244,22 @@ func TestActualizeFromPLog(t *testing.T) {
 
 }
 
-func testPLogEventToIPlogEvent(pLogEvent testPLogEvent) istructs.IPLogEvent {
+func testPLogEventToIPlogEvent(pLogEvent testPLogEvent, appDef appdef.IAppDef) istructs.IPLogEvent {
 	mockEvent := coreutils.MockPLogEvent{}
 	mockEvent.On("CUDs", mock.Anything).Run(func(args gomock.Arguments) {
 		cudCallback := args[0].(func(istructs.ICUDRow) bool)
 		for _, cudTemplate := range pLogEvent.cuds {
+			var id istructs.RecordID
+			cudKind := appDef.Type(cudTemplate.qName).Kind()
+			if cudKind == appdef.TypeKind_CDoc || cudKind == appdef.TypeKind_CRecord {
+				id = istructs.NewCDocCRecordID(istructs.RecordID(cudTemplate.id))
+			} else {
+				id = istructs.NewRecordID(istructs.RecordID(cudTemplate.id))
+			}
+
 			cud := coreutils.TestObject{
 				Name:   cudTemplate.qName,
-				Id:     istructs.NewCDocCRecordID(istructs.RecordID(cudTemplate.id)),
+				Id:     id,
 				IsNew_: true,
 			}
 			if !cudCallback(&cud) {
