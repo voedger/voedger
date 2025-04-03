@@ -2689,7 +2689,7 @@ func Test_Identifiers(t *testing.T) {
 	WORKSPACE w (
 		ROLE _role;
 	);`)
-	require.ErrorContains(err, "file1.vsql:3:8: invalid input text")
+	require.ErrorContains(err, "file1.vsql:3:8: lexer: invalid input text")
 
 	_, err = ParseFile("file1.vsql", `APPLICATION app1();
 	WORKSPACE w (
@@ -2701,7 +2701,7 @@ func Test_Identifiers(t *testing.T) {
 	WORKSPACE w (
 		ROLE r世界;
 	);`)
-	require.ErrorContains(err, "file1.vsql:3:9: invalid input text")
+	require.ErrorContains(err, "file1.vsql:3:9: lexer: invalid input text")
 }
 
 func Test_RefsWorkspaces(t *testing.T) {
