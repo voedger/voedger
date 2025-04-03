@@ -1,7 +1,5 @@
 module mypkg2
 
-go 1.23.2
+go 1.24.2
 
-require github.com/voedger/voedger v0.0.0-20241210143322-b216a682f6d3
-
-require github.com/robfig/cron/v3 v3.0.1 // indirect
+require github.com/voedger/voedger v0.0.0-20250401154149-84babc48d631
