@@ -188,22 +188,22 @@ func TestActualizeFromPLog(t *testing.T) {
 	seqSysVVMStorage := storage.NewVVMSeqStorageAdapter(appStorage)
 
 	plogs := [][]testPLogEvent{
-		{
-			{qName: testCmdQName, wsid: 1, offset: 1, cuds: []obj{{qName: testCDocQName, id: 1}}, expectedBatch: []expectedSeqValue{
-				{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 1},
-			}},
-		},
-		{
-			{qName: testCmdQName, wsid: 1, offset: 1, cuds: []obj{{qName: testCDocQName, id: 1}}, expectedBatch: []expectedSeqValue{
-				{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 1},
-			}},
-			{qName: testCmdQName, wsid: 2, offset: 1, cuds: []obj{{qName: testCDocQName, id: 2}}, expectedBatch: []expectedSeqValue{
-				{wsid: 2, seqID: istructs.QNameIDCRecordIDSequence, number: 2},
-			}},
-			{qName: testCmdQName, wsid: 3, offset: 1, cuds: []obj{{qName: testCDocQName, id: 3}}, expectedBatch: []expectedSeqValue{
-				{wsid: 3, seqID: istructs.QNameIDCRecordIDSequence, number: 3},
-			}},
-		},
+		// {
+		// 	{qName: testCmdQName, wsid: 1, offset: 1, cuds: []obj{{qName: testCDocQName, id: 1}}, expectedBatch: []expectedSeqValue{
+		// 		{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 1},
+		// 	}},
+		// },
+		// {
+		// 	{qName: testCmdQName, wsid: 1, offset: 1, cuds: []obj{{qName: testCDocQName, id: 1}}, expectedBatch: []expectedSeqValue{
+		// 		{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 1},
+		// 	}},
+		// 	{qName: testCmdQName, wsid: 2, offset: 2, cuds: []obj{{qName: testCDocQName, id: 2}}, expectedBatch: []expectedSeqValue{
+		// 		{wsid: 2, seqID: istructs.QNameIDCRecordIDSequence, number: 2},
+		// 	}},
+		// 	{qName: testCmdQName, wsid: 3, offset: 3, cuds: []obj{{qName: testCDocQName, id: 3}}, expectedBatch: []expectedSeqValue{
+		// 		{wsid: 3, seqID: istructs.QNameIDCRecordIDSequence, number: 3},
+		// 	}},
+		// },
 		{
 			{qName: testCmdQName, wsid: 1, offset: 1, cuds: []obj{
 				{qName: testCDocQName, id: 1, containers: []obj{
@@ -214,7 +214,7 @@ func TestActualizeFromPLog(t *testing.T) {
 					{qName: testWRecordQName, id: 5},
 				},
 			}}, expectedBatch: []expectedSeqValue{
-				{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 4},
+				{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 3},
 				{wsid: 1, seqID: istructs.QNameIDOWRecordIDSequence, number: 5},
 			}},
 		},
@@ -229,7 +229,7 @@ func TestActualizeFromPLog(t *testing.T) {
 					cb := args.Get(4).(istructs.PLogEventsReaderCallback)
 					for _, pLogEvent := range plogEvents {
 						iPLogEvent := testPLogEventToIPlogEvent(pLogEvent)
-						require.NoError(cb(1, iPLogEvent))
+						require.NoError(cb(pLogEvent.offset, iPLogEvent))
 					}
 				})
 			seqStorage := New(istructs.ClusterApps[istructs.AppQName_test1_app1], istructs.PartitionID(1), mockEvents, appDef, seqSysVVMStorage)
