@@ -1,0 +1,97 @@
+# options for analysis running
+# https://golangci-lint.run/usage/linters/
+
+linters:
+  disable-all: true
+  enable:
+    - govet
+    - revive
+    - gosec
+    - stylecheck
+    - misspell
+    - errcheck
+    - bidichk
+    - asciicheck
+    - durationcheck
+    - gochecknoinits
+    - unconvert
+    - predeclared
+    - mirror
+    - testifylint
+    - prealloc
+    - nilnil
+    - gocritic
+    - errorlint
+    - goconst
+    - unused
+    - nosprintfhostport
+#    - gosimple
+#    - ineffassign
+  fast: true
+linters-settings:
+  gosec:
+    excludes:
+      - G101
+      - G601
+      - G602
+  staticcheck:
+    checks: ["all", "-SA1019"]
+  stylecheck:
+    checks: ["all", "-ST1003", "-ST1023"]
+  unparam:
+    check-exported: true
+  misspell:
+    ignore-words:
+      - untill
+  revive:
+    # see https://github.com/mgechev/revive#available-rules for details.
+    ignore-generated-header: true
+    severity: warning
+    rules:
+      - name: indent-error-flow
+        severity: warning
+      - name: add-constant
+        severity: warning
+        arguments:
+          - maxLitCount: "3"
+            allowStrs: '""'
+            allowInts: "0,1,2"
+            allowFloats: "0.0,0.,1.0,1.,2.0,2."
+  testifylint:
+    disable-all: true
+    enable:
+      - bool-compare
+      - compares
+      - empty
+      - error-is-as
+      - error-nil
+      - expected-actual
+      - len
+      - require-error
+      - suite-dont-use-pkg
+      - suite-extra-assert-call
+      - suite-thelper
+  gocritic:
+    disabled-checks:
+      - appendAssign
+      - dupArg
+      - ifElseChain
+      - singleCaseSwitch
+      - exitAfterDefer
+      - commentFormatting
+  nilnil:
+    checked-types:
+      - func
+  goconst:
+    ignore-tests: true
+issues:
+  exclude:
+    - underscore
+    - underscores
+  exclude-rules:
+    - path: _test.go
+      linters:
+        - revive
+        - gosec
+        - errcheck
+        - forcetypeassert
