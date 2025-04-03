@@ -7,7 +7,6 @@ package seqstorage
 
 import (
 	"context"
-	"strconv"
 	"testing"
 
 	gomock "github.com/stretchr/testify/mock"
@@ -136,9 +135,13 @@ type expectedSeqValue struct {
 	number uint64
 }
 
+type cud struct {
+	qName appdef.QName
+	id    uint64 // >0 -> will be passed to NewRecordID, <0 -> abs(id) will be used. Need to test "old" ids according to issue 688
+}
+
 type obj struct {
-	qName      appdef.QName
-	id         uint64 // >0 -> will be passed to NewRecordID, <0 -> abs(id) will be used. Need to test "old" ids according to issue 688
+	cud
 	containers []obj
 }
 
@@ -146,7 +149,8 @@ type testPLogEvent struct {
 	qName         appdef.QName
 	offset        istructs.Offset
 	wsid          uint64
-	cuds          []obj
+	cuds          []cud
+	arg           obj
 	expectedBatch []expectedSeqValue
 }
 
@@ -177,47 +181,63 @@ func TestActualizeFromPLog(t *testing.T) {
 	require.NoError(err)
 	seqSysVVMStorage := storage.NewVVMSeqStorageAdapter(appStorage)
 
-	plogs := [][]testPLogEvent{
-		// {
-		// 	{qName: testCmdQName, wsid: 1, offset: 1, cuds: []obj{{qName: testCDocQName, id: 1}}, expectedBatch: []expectedSeqValue{
-		// 		{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 1},
-		// 	}},
-		// },
-		// {
-		// 	{qName: testCmdQName, wsid: 1, offset: 1, cuds: []obj{{qName: testCDocQName, id: 1}}, expectedBatch: []expectedSeqValue{
-		// 		{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 1},
-		// 	}},
-		// 	{qName: testCmdQName, wsid: 2, offset: 2, cuds: []obj{{qName: testCDocQName, id: 2}}, expectedBatch: []expectedSeqValue{
-		// 		{wsid: 2, seqID: istructs.QNameIDCRecordIDSequence, number: 2},
-		// 	}},
-		// 	{qName: testCmdQName, wsid: 3, offset: 3, cuds: []obj{{qName: testCDocQName, id: 3}}, expectedBatch: []expectedSeqValue{
-		// 		{wsid: 3, seqID: istructs.QNameIDCRecordIDSequence, number: 3},
-		// 	}},
-		// },
+	cases := []struct {
+		name string
+		plog []testPLogEvent
+	}{
 		{
-			{qName: testCmdQName, wsid: 1, offset: 1, cuds: []obj{
-				{qName: testCDocQName, id: 1, containers: []obj{
+			name: "one event with one cud",
+			plog: []testPLogEvent{{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{{qName: testCDocQName, id: 1}}, expectedBatch: []expectedSeqValue{
+				{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 1},
+			}}},
+		},
+		{
+			name: "3 events, 2nd has 2 cuds, other - 1 cud",
+			plog: []testPLogEvent{
+				// 1st event
+				{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{{qName: testCDocQName, id: 1}},
+					expectedBatch: []expectedSeqValue{{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 1}}},
+				// 2nd event
+				{qName: testCmdQName, wsid: 2, offset: 2, cuds: []cud{
+					{qName: testCDocQName, id: 2},
+					{qName: testWDocQName, id: 3},
+				}, expectedBatch: []expectedSeqValue{
+					{wsid: 2, seqID: istructs.QNameIDCRecordIDSequence, number: 2},
+					{wsid: 2, seqID: istructs.QNameIDOWRecordIDSequence, number: 3},
+				}},
+				// 3rd event
+				{qName: testCmdQName, wsid: 3, offset: 3, cuds: []cud{{qName: testCDocQName, id: 3}},
+					expectedBatch: []expectedSeqValue{{wsid: 3, seqID: istructs.QNameIDCRecordIDSequence, number: 3}}},
+			},
+		},
+		{
+			name: "1 event with few cdocs, wdocs and records",
+			plog: []testPLogEvent{
+				{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{
+					{qName: testCDocQName, id: 1},
 					{qName: testCRecordQName, id: 2},
 					{qName: testCRecordQName, id: 3},
-				}},
-				{qName: testWDocQName, id: 4, containers: []obj{
+					{qName: testWDocQName, id: 4},
 					{qName: testWRecordQName, id: 5},
-				},
-				}}, expectedBatch: []expectedSeqValue{
-				{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 3},
-				{wsid: 1, seqID: istructs.QNameIDOWRecordIDSequence, number: 5},
-			}},
+				}, expectedBatch: []expectedSeqValue{
+					{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 1},
+					{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 2},
+					{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 3},
+					{wsid: 1, seqID: istructs.QNameIDOWRecordIDSequence, number: 4},
+					{wsid: 1, seqID: istructs.QNameIDOWRecordIDSequence, number: 5},
+				}},
+			},
 		},
 	}
 
-	for i, plogEvents := range plogs {
-		t.Run(strconv.Itoa(i), func(t *testing.T) {
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
 			mockEvents := &coreutils.MockEvents{}
 			mockEvents.On("ReadPLog", gomock.Anything, gomock.Anything, gomock.Anything, gomock.Anything, gomock.Anything).
 				Return(nil).
 				Run(func(args gomock.Arguments) {
 					cb := args.Get(4).(istructs.PLogEventsReaderCallback)
-					for _, pLogEvent := range plogEvents {
+					for _, pLogEvent := range c.plog {
 						iPLogEvent := testPLogEventToIPlogEvent(pLogEvent, appDef)
 						require.NoError(cb(pLogEvent.offset, iPLogEvent))
 					}
@@ -225,20 +245,25 @@ func TestActualizeFromPLog(t *testing.T) {
 			seqStorage := New(istructs.ClusterApps[istructs.AppQName_test1_app1], istructs.PartitionID(1), mockEvents, appDef, seqSysVVMStorage)
 			numEvent := 0
 			seqStorage.ActualizeSequencesFromPLog(context.Background(), 1, func(ctx context.Context, batch []isequencer.SeqValue, offset isequencer.PLogOffset) error {
-				require.Equal(isequencer.PLogOffset(plogEvents[numEvent].offset), offset)
+				require.Equal(isequencer.PLogOffset(c.plog[numEvent].offset), offset)
 				expectedBatch := []isequencer.SeqValue{}
-				for _, eb := range plogEvents[numEvent].expectedBatch {
-					var id 
+				for _, eb := range c.plog[numEvent].expectedBatch {
+					var id istructs.RecordID
+					if eb.seqID == istructs.QNameIDCRecordIDSequence {
+						id = istructs.NewCDocCRecordID(istructs.RecordID(eb.number))
+					} else {
+						id = istructs.NewRecordID(istructs.RecordID(eb.number))
+					}
 					expectedBatch = append(expectedBatch, isequencer.SeqValue{
 						Key:   isequencer.NumberKey{WSID: isequencer.WSID(eb.wsid), SeqID: isequencer.SeqID(eb.seqID)},
-						Value: isequencer.Number(istructs.NewCDocCRecordID(istructs.RecordID(eb.number))),
+						Value: isequencer.Number(id),
 					})
 				}
 				require.Equal(expectedBatch, batch)
 				numEvent++
 				return nil
 			})
-			require.Len(plogEvents, numEvent)
+			require.Len(c.plog, numEvent)
 		})
 	}
 

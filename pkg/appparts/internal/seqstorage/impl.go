@@ -21,7 +21,7 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 
 			// odocs
 			if argType.Kind() == appdef.TypeKind_ODoc {
-				ss.getNumbersFromArgument(event.ArgumentObject(), event.Workspace(), &batchProbe)
+				ss.getNumbersFromObject(event.ArgumentObject(), event.Workspace(), &batchProbe)
 			}
 
 			// cuds
@@ -31,7 +31,7 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 				}
 				cudType := ss.appDef.Type(cud.QName())
 				seqQName := istructs.QNameCRecordIDSequence
-				if cudType.Kind() == appdef.TypeKind_WDoc {
+				if cudType.Kind() == appdef.TypeKind_WDoc || cudType.Kind() == appdef.TypeKind_WRecord {
 					seqQName = istructs.QNameOWRecordIDSequence
 				}
 				batchProbe = append(batchProbe, isequencer.SeqValue{
@@ -99,7 +99,7 @@ func (ss *implISeqStorage) ReadNextPLogOffset() (isequencer.PLogOffset, error) {
 	return isequencer.PLogOffset(numbers[0]), nil
 }
 
-func (ss *implISeqStorage) getNumbersFromArgument(root istructs.IObject, wsid istructs.WSID, batch *[]isequencer.SeqValue) {
+func (ss *implISeqStorage) getNumbersFromObject(root istructs.IObject, wsid istructs.WSID, batch *[]isequencer.SeqValue) {
 	*batch = append(*batch, isequencer.SeqValue{
 		Key: isequencer.NumberKey{
 			WSID:  isequencer.WSID(wsid),
@@ -109,7 +109,7 @@ func (ss *implISeqStorage) getNumbersFromArgument(root istructs.IObject, wsid is
 	})
 	for container := range root.Containers {
 		for c := range root.Children(container) {
-			ss.getNumbersFromArgument(c, wsid, batch)
+			ss.getNumbersFromObject(c, wsid, batch)
 		}
 	}
 }
