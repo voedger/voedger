@@ -176,8 +176,8 @@ func Test_RunToStrings(t *testing.T) {
 			Command("itmustbeawrongcommandPipedExecRunToStrings").
 			RunToStrings()
 		require.Error(err)
-		require.Empty(t, stdouts)
-		require.Empty(t, stderrs)
+		require.Empty(stdouts)
+		require.Empty(stderrs)
 	}
 
 }
