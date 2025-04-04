@@ -6,8 +6,8 @@ package dbcertcache
 
 import "golang.org/x/crypto/acme/autocert"
 
-func ProvideDbCache(storage RouterAppStoragePtr) autocert.Cache {
-	return &autoCertDbCache{
+func ProvideDBCache(storage RouterAppStoragePtr) autocert.Cache {
+	return &autoCertDBCache{
 		appStorage: storage,
 	}
 }

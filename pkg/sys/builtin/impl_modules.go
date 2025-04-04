@@ -32,7 +32,7 @@ func provideQryModulesExec(buildInfo *debug.BuildInfo) istructsmem.ExecQueryClos
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		sb := bytes.NewBufferString("")
 		for _, mod := range buildInfo.Deps {
-			sb.WriteString(fmt.Sprintf("path: %s version: %s\n", mod.Path, mod.Version))
+			fmt.Fprintf(sb, "path: %s version: %s\n", mod.Path, mod.Version)
 		}
 		return callback(&qryModulesRR{modules: sb.String()})
 	}

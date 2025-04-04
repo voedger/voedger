@@ -25,7 +25,7 @@ type packageFiles map[string][]string
 
 // baselineInfo is a struct that is saved to baseline.json file
 type baselineInfo struct {
-	BaselinePackageUrl string
+	BaselinePackageURL string
 	Timestamp          string
 	GitCommitHash      string `json:",omitempty"`
 }
@@ -55,7 +55,7 @@ type ormPackageItem struct {
 	Name         string
 	Type         string
 	// TODO: find a way to extract sql-code of the package item from parser/appdef
-	SqlContent string
+	SQLContent string
 }
 
 type ormTableItem struct {

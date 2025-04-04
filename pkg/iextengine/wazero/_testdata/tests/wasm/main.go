@@ -221,7 +221,7 @@ func ProjectorTestStorages() {
 	smtpPassword := ext.MustGetValue(secret)
 
 	var userName string
-	http := ext.KeyBuilder(ext.StorageHttp, ext.NullEntity)
+	http := ext.KeyBuilder(ext.StorageHTTP, ext.NullEntity)
 	http.PutString("Method", "GET")
 	http.PutString("Url", "/getUsername")
 	http.PutInt64("HTTPClientTimeoutMilliseconds", 1000)

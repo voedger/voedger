@@ -125,7 +125,7 @@ func (h *docsHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err err
 	sender := &sender{
 		responder:          qw.msg.Responder(),
 		isArrayResponse:    false,
-		contentType:        coreutils.ApplicationJSON,
+		contentType:        coreutils.ContentType_ApplicationJSON,
 		rowsProcessorErrCh: qw.rowsProcessorErrCh,
 	}
 	oo = append(oo, pipeline.WireAsyncOperator("Sender", sender))

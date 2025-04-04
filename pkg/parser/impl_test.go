@@ -2195,11 +2195,11 @@ TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL ));
 }
 
 //go:embed package.vsql
-var pkgSqlFS embed.FS
+var pkgSQLFS embed.FS
 
 func TestParseFilesFromFSRoot(t *testing.T) {
 	t.Run("dot", func(t *testing.T) {
-		_, err := ParsePackageDir("github.com/untillpro/main", pkgSqlFS, ".")
+		_, err := ParsePackageDir("github.com/untillpro/main", pkgSQLFS, ".")
 		require.NoError(t, err)
 	})
 }

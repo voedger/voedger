@@ -156,7 +156,7 @@ type VVMConfig struct {
 	processorsChannels         []ProcesorChannel
 	ActualizerStateOpts        []state.StateOptFunc
 	SecretsReader              isecrets.ISecretReader
-	SmtpConfig                 smtp.Cfg
+	SMTPConfig                 smtp.Cfg
 	WSPostInitFunc             workspace.WSPostInitFunc
 	DataPath                   string
 	MetricsServicePort         metrics.MetricsServicePort

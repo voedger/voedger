@@ -37,7 +37,7 @@ func (frl *functionRateLimits) AddWorkspaceLimit(funcQName appdef.QName, rl istr
 
 func (frl *functionRateLimits) prepare(buckets irates.IBuckets) {
 	for funcQName, rls := range frl.limits {
-		rateLimitName := appdef.NullQName
+		var rateLimitName appdef.QName
 		for rlKind, rl := range rls {
 			rateLimitName = GetFunctionRateLimitName(funcQName, rlKind)
 			buckets.SetDefaultBucketState(rateLimitName, irates.BucketState{

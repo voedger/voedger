@@ -141,7 +141,7 @@ func NewDataBuilder(data *Data) *DataBuilder {
 }
 
 func (db *DataBuilder) AddConstraints(cc ...appdef.IConstraint) appdef.IDataBuilder {
-	db.Data.addConstraints(cc...)
+	db.addConstraints(cc...)
 	return db
 }
 

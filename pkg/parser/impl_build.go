@@ -726,7 +726,7 @@ func (c *buildContext) addDataTypeField(field *FieldExpr) {
 		// TODO: Support different verification kindsbuilder, &c
 	}
 
-	comments := field.Statement.GetComments()
+	comments := field.GetComments()
 	if len(comments) > 0 {
 		bld.SetFieldComment(fieldName, comments...)
 	}

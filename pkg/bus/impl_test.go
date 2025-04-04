@@ -70,7 +70,7 @@ func TestRequestSender_ApiArray_BasicUsage(t *testing.T) {
 			requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 				require.Equal(http.MethodPost, request.Method)
 				require.Equal(istructs.WSID(1), request.WSID)
-				require.Equal(map[string]string{coreutils.ContentType: coreutils.ApplicationJSON}, request.Header)
+				require.Equal(map[string]string{coreutils.ContentType: coreutils.ContentType_ApplicationJSON}, request.Header)
 				require.Equal(map[string]string{"param": "value"}, request.Query)
 				require.Equal("c.sys.CUD", request.Resource)
 				require.Equal([]byte("body"), request.Body)
@@ -85,7 +85,7 @@ func TestRequestSender_ApiArray_BasicUsage(t *testing.T) {
 				Method: http.MethodPost,
 				WSID:   1,
 				Header: map[string]string{
-					coreutils.ContentType: coreutils.ApplicationJSON,
+					coreutils.ContentType: coreutils.ContentType_ApplicationJSON,
 				},
 				Resource: "c.sys.CUD",
 				Query: map[string]string{
@@ -100,11 +100,12 @@ func TestRequestSender_ApiArray_BasicUsage(t *testing.T) {
 			// respCh must be read out
 			counter := 0
 			for elem := range respCh {
-				if counter == 0 {
+				switch counter {
+				case 0:
 					require.Equal(map[string]interface{}{"fld1": 42, "fld2": "str"}, elem)
-				} else if counter == 1 {
+				case 1:
 					require.Equal(map[string]interface{}{"fld1": 43, "fld2": "str1"}, elem)
-				} else {
+				default:
 					t.Fail()
 				}
 				counter++
@@ -113,7 +114,7 @@ func TestRequestSender_ApiArray_BasicUsage(t *testing.T) {
 			// respErr must be checked right after respCh read out
 			require.NoError(*respErr)
 
-			require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
+			require.Equal(coreutils.ContentType_ApplicationJSON, respMeta.ContentType)
 			require.Equal(http.StatusOK, respMeta.StatusCode)
 		})
 	}
@@ -236,7 +237,7 @@ func TestPanicOnBeginResponseAgain(t *testing.T) {
 
 	t.Run("respond", func(t *testing.T) {
 		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
-			responder.Respond(ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK}, nil)
+			responder.Respond(ResponseMeta{ContentType: coreutils.ContentType_ApplicationJSON, StatusCode: http.StatusOK}, nil)
 			require.Panics(func() {
 				responder.InitResponse(http.StatusOK)
 			})

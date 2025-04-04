@@ -103,7 +103,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 		work := func() pipeline.IWorkpiece {
 			o := &coreutils.TestObject{
 				Name:    appdef.NewQName("", "root"),
-				Id:      istructs.RecordID(1),
+				ID_:     istructs.RecordID(1),
 				Parent_: istructs.NullRecordID,
 				Data: map[string]interface{}{
 					"id_lower_case_name": istructs.RecordID(2001),
@@ -113,7 +113,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 					"first_children_1": {
 						{
 							Name:    appdef.NewQName("f", "first_children_1"),
-							Id:      istructs.RecordID(101),
+							ID_:     istructs.RecordID(101),
 							Parent_: istructs.RecordID(1),
 							Data: map[string]interface{}{
 								"id_lower_case_name": istructs.RecordID(200101),
@@ -123,7 +123,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 								"deep_children_1": {
 									{
 										Name:    appdef.NewQName("f", "deep_children_1"),
-										Id:      istructs.RecordID(201),
+										ID_:     istructs.RecordID(201),
 										Parent_: istructs.RecordID(101),
 										Data: map[string]interface{}{
 											"id_lower_case_name": istructs.RecordID(200201),
@@ -133,7 +133,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 											"very_deep_children_1": {
 												{
 													Name:    appdef.NewQName("f", "very_deep_children_1"),
-													Id:      istructs.RecordID(301),
+													ID_:     istructs.RecordID(301),
 													Parent_: istructs.RecordID(201),
 													Data: map[string]interface{}{
 														"id_lower_case_name": istructs.RecordID(200301),
@@ -148,7 +148,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 						},
 						{
 							Name:    appdef.NewQName("f", "first_children_1"),
-							Id:      istructs.RecordID(102),
+							ID_:     istructs.RecordID(102),
 							Parent_: istructs.RecordID(1),
 							Data: map[string]interface{}{
 								"id_lower_case_name": istructs.RecordID(200102),
@@ -159,7 +159,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 					"first_children_2": {
 						{
 							Name:    appdef.NewQName("s", "first_children_2"),
-							Id:      istructs.RecordID(401),
+							ID_:     istructs.RecordID(401),
 							Parent_: istructs.RecordID(1),
 							Data: map[string]interface{}{
 								"id_lower_case_name": istructs.RecordID(200401),
@@ -169,7 +169,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 								"deep_children_1": {
 									{
 										Name:    appdef.NewQName("s", "deep_children_1"),
-										Id:      istructs.RecordID(501),
+										ID_:     istructs.RecordID(501),
 										Parent_: istructs.RecordID(401),
 										Data: map[string]interface{}{
 											"id_lower_case_name": istructs.RecordID(200501),
@@ -179,7 +179,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 											"very_deep_children_1": {
 												{
 													Name:    appdef.NewQName("s", "very_deep_children_1"),
-													Id:      istructs.RecordID(601),
+													ID_:     istructs.RecordID(601),
 													Parent_: istructs.RecordID(501),
 													Data: map[string]interface{}{
 														"id_lower_case_name": istructs.RecordID(200601),
@@ -188,7 +188,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 												},
 												{
 													Name:    appdef.NewQName("s", "very_deep_children_1"),
-													Id:      istructs.RecordID(602),
+													ID_:     istructs.RecordID(602),
 													Parent_: istructs.RecordID(501),
 													Data: map[string]interface{}{
 														"id_lower_case_name": istructs.RecordID(200602),

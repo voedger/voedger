@@ -175,8 +175,8 @@ func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 	}
 
 	if isSingleBLOB {
-		if bw.contentType == coreutils.MultipartFormData {
-			return fmt.Errorf(`name+mimeType query params and "%s" Content-Type header are mutual exclusive`, coreutils.MultipartFormData)
+		if bw.contentType == coreutils.ContentType_MultipartFormData {
+			return fmt.Errorf(`name+mimeType query params and "%s" Content-Type header are mutual exclusive`, coreutils.ContentType_MultipartFormData)
 		}
 		bw.descr.Name = bw.nameQuery[0]
 		bw.descr.MimeType = bw.mimeTypeQuery[0]
@@ -188,12 +188,12 @@ func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 		return errors.New(`neither "name"+"mimeType" query params nor Content-Type header is not provided`)
 	}
 
-	if bw.mediaType != coreutils.MultipartFormData {
+	if bw.mediaType != coreutils.ContentType_MultipartFormData {
 		return errors.New("name+mimeType query params are not provided -> Content-Type must be mutipart/form-data but actual is " + bw.contentType)
 	}
 
 	if len(bw.boundary) == 0 {
-		return fmt.Errorf("boundary of %s is not specified", coreutils.MultipartFormData)
+		return fmt.Errorf("boundary of %s is not specified", coreutils.ContentType_MultipartFormData)
 	}
 	return nil
 }
@@ -206,7 +206,7 @@ func (b *sendWriteResult) DoSync(_ context.Context, work pipeline.IWorkpiece) (e
 			if len(blobIDStr) == 0 {
 				blobIDStr = string(bw.newSUUID)
 			}
-			logger.Verbose("blob write success:", bw.nameQuery, ":", bw.newBLOBID)
+			logger.Verbose("blob write success:", bw.nameQuery, ":", blobIDStr)
 		}
 		writer := bw.blobMessageWrite.okResponseIniter(coreutils.ContentType, "text/plain")
 		if bw.isPersistent() {

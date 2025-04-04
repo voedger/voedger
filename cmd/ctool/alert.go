@@ -113,7 +113,7 @@ func setDiscordWebhook(cluster *clusterType, webhook string) error {
 	appNode1 := cluster.nodeByHost("app-node-1").address()
 	appNode2 := cluster.nodeByHost("app-node-2").address()
 
-	if webhook == emptyDiscordWebhookUrl {
+	if webhook == emptyDiscordWebhookURL {
 		loggerInfo(fmt.Sprintf("Removing Discord webhook from %s and %s", appNode1, appNode2))
 	} else {
 		loggerInfo(fmt.Sprintf("Adding Discord webhook %s to %s and %s", webhook, appNode1, appNode2))
@@ -158,7 +158,7 @@ func setDiscordWebhookCe(cluster *clusterType, webhook string) error {
 	remoteFile := filepath.Join(remoteDir, configFileName)
 	host := n1NodeName
 
-	if webhook == emptyDiscordWebhookUrl {
+	if webhook == emptyDiscordWebhookURL {
 		loggerInfo("Removing Discord webhook from " + host)
 	} else {
 		loggerInfo(fmt.Sprintf("Adding Discord webhook %s to %s", webhook, host))
@@ -199,7 +199,7 @@ func checkURL(s string) error {
 		return nil
 	}
 
-	return fmt.Errorf(errIsNotValidUrl, s, ErrIsNotValidUrl)
+	return fmt.Errorf(errIsNotValidURL, s, ErrIsNotValidURL)
 }
 
 func alertAddDiscord(cmd *cobra.Command, args []string) error {
@@ -251,11 +251,11 @@ func alertRemoveDiscord(cmd *cobra.Command, args []string) error {
 	}
 
 	if cluster.Edition != clusterEditionN1 {
-		if err = setDiscordWebhook(cluster, emptyDiscordWebhookUrl); err != nil {
+		if err = setDiscordWebhook(cluster, emptyDiscordWebhookURL); err != nil {
 			return err
 		}
 	} else {
-		if err = setDiscordWebhookCe(cluster, emptyDiscordWebhookUrl); err != nil {
+		if err = setDiscordWebhookCe(cluster, emptyDiscordWebhookURL); err != nil {
 			return err
 		}
 	}

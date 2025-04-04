@@ -171,7 +171,7 @@ func TestErrorProcessing(t *testing.T) {
 		defer testEnvOff()
 		principalToken, err = signer.IssueToken(istructs.AppQName_test1_app1, 1*time.Minute, &principalPayload)
 		require.ErrorIs(err, itokens.ErrInvalidPayload)
-		require.Equal("", principalToken)
+		require.Empty(principalToken)
 	})
 
 	t.Run("Issue tokens. Check error on signing token.", func(t *testing.T) {
@@ -183,14 +183,14 @@ func TestErrorProcessing(t *testing.T) {
 		defer testEnvOff()
 		principalToken, err = signer.IssueToken(istructs.AppQName_test1_app1, 1*time.Minute, &principalPayload)
 		require.ErrorIs(err, itokens.ErrSignerError)
-		require.Equal("", principalToken)
+		require.Empty(principalToken)
 	})
 
 	t.Run("Issue tokens. Send incorrect type of payload. Must receive error", func(t *testing.T) {
 		var err error
 		wrongTypePayload := make(chan int)
 		principalToken, err = signer.IssueToken(istructs.AppQName_test1_app1, 1*time.Minute, wrongTypePayload)
-		require.Equal("", principalToken)
+		require.Empty(principalToken)
 		require.ErrorIs(err, itokens.ErrInvalidPayload)
 	})
 

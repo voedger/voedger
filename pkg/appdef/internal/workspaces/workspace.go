@@ -87,7 +87,7 @@ func (ws Workspace) LocalTypes() []appdef.IType {
 func (ws Workspace) Type(name appdef.QName) appdef.IType {
 	var (
 		find  func(appdef.IWorkspace) appdef.IType
-		chain map[appdef.QName]bool = make(map[appdef.QName]bool) // to prevent stack overflow recursion
+		chain = make(map[appdef.QName]bool) // to prevent stack overflow recursion
 	)
 	find = func(w appdef.IWorkspace) appdef.IType {
 		if !chain[w.QName()] {
@@ -255,7 +255,7 @@ func (ws Workspace) enumerateTypes() []appdef.IType {
 
 	var (
 		visit func(appdef.IWorkspace)
-		chain map[appdef.QName]bool = make(map[appdef.QName]bool) // to prevent stack overflow recursion
+		chain = make(map[appdef.QName]bool) // to prevent stack overflow recursion
 	)
 	visit = func(w appdef.IWorkspace) {
 		if !chain[w.QName()] {
@@ -263,9 +263,7 @@ func (ws Workspace) enumerateTypes() []appdef.IType {
 			for _, a := range w.Ancestors() {
 				visit(a)
 			}
-			for _, t := range w.LocalTypes() {
-				tt = append(tt, t)
-			}
+			tt = append(tt, w.LocalTypes()...)
 			for _, u := range w.UsedWorkspaces() {
 				// #2872 should enum used Workspaces, but not types from them
 				tt = append(tt, u)

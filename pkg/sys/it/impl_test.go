@@ -425,7 +425,7 @@ func TestNullability_SetEmptyString(t *testing.T) {
 			for iField, fv := range cud.SpecifiedValues {
 				switch iField.Name() {
 				case "name":
-					require.Equal("", fv)
+					require.Empty(fv)
 				case appdef.SystemField_ID, appdef.SystemField_QName, appdef.SystemField_IsActive:
 				default:
 					require.Fail("unexpected modified field", "%v: %v", iField, fv)

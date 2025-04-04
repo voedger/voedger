@@ -23,7 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/sys/collection"
 )
 
-type ApiPath int
+type APIPath int
 
 type QueryParams struct {
 	Constraints *Constraints
@@ -45,7 +45,7 @@ type IQueryMessage interface {
 	Responder() bus.IResponder
 	QueryParams() QueryParams
 	DocID() istructs.IDType
-	ApiPath() ApiPath
+	APIPath() APIPath
 	RequestCtx() context.Context
 	QName() appdef.QName // e.g. Doc, View, Role
 	PartitionID() istructs.PartitionID
@@ -84,7 +84,7 @@ type ischema interface {
 type pathItem struct {
 	Method  string
 	Path    string
-	ApiPath ApiPath
+	APIPath APIPath
 }
 
 type implIQueryMessage struct {
@@ -93,7 +93,7 @@ type implIQueryMessage struct {
 	responder      bus.IResponder
 	queryParams    QueryParams
 	docID          istructs.IDType
-	apiPath        ApiPath
+	apiPath        APIPath
 	requestCtx     context.Context
 	qName          appdef.QName
 	partition      istructs.PartitionID
@@ -128,7 +128,7 @@ func (qm *implIQueryMessage) DocID() istructs.IDType {
 	return qm.docID
 }
 
-func (qm *implIQueryMessage) ApiPath() ApiPath {
+func (qm *implIQueryMessage) APIPath() APIPath {
 	return qm.apiPath
 }
 

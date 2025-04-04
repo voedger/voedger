@@ -127,7 +127,7 @@ func (p implIAppStorageFactory) Init(appName istorage.SafeAppName) error {
 	return nil
 }
 
-func (p implIAppStorageFactory) StopGoroutines() { return }
+func (p implIAppStorageFactory) StopGoroutines() {}
 
 type appStorageType struct {
 	cluster  *gocql.ClusterConfig

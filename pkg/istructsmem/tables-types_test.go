@@ -29,7 +29,7 @@ func Test_newRecord(t *testing.T) {
 		require.Equal(appdef.NullQName, rec.QName())
 		require.Equal(istructs.RecordID(100500), rec.ID())
 		require.Equal(istructs.NullRecordID, rec.Parent())
-		require.Equal("", rec.Container())
+		require.Empty(rec.Container())
 	})
 
 	t.Run("newRecord must return empty, nullQName record", func(t *testing.T) {
@@ -41,7 +41,7 @@ func Test_newRecord(t *testing.T) {
 			require.Equal(appdef.NullQName, r.QName())
 			require.Equal(istructs.NullRecordID, r.ID())
 			require.Equal(istructs.NullRecordID, r.Parent())
-			require.Equal("", r.Container())
+			require.Empty(r.Container())
 		})
 
 		t.Run("test as ICRecord", func(t *testing.T) {
@@ -54,7 +54,7 @@ func Test_newRecord(t *testing.T) {
 			require.Equal(appdef.NullQName, r.AsQName(appdef.SystemField_QName))
 			require.Equal(istructs.NullRecordID, r.AsRecordID(appdef.SystemField_ID))
 			require.Equal(istructs.NullRecordID, r.AsRecordID(appdef.SystemField_ParentID))
-			require.Equal("", r.AsString(appdef.SystemField_Container))
+			require.Empty(r.AsString(appdef.SystemField_Container))
 			require.True(r.AsBool(appdef.SystemField_IsActive))
 		})
 
@@ -79,7 +79,7 @@ func Test_newRecord(t *testing.T) {
 			require.Equal(test.testCRec, rec.QName())
 			require.Equal(istructs.NullRecordID, rec.ID())
 			require.Equal(istructs.NullRecordID, rec.Parent())
-			require.Equal("", rec.Container())
+			require.Empty(rec.Container())
 			require.True(rec.IsActive())
 		})
 	})
@@ -91,7 +91,7 @@ func Test_newRecord(t *testing.T) {
 		require.Equal(istructs.RecordID(100500), doc.ID())
 		require.Equal(istructs.RecordID(100500), doc.AsRecordID(appdef.SystemField_ID))
 		require.Equal(istructs.NullRecordID, doc.Parent())
-		require.Equal("", doc.Container())
+		require.Empty(doc.Container())
 		require.True(doc.IsActive())
 
 		testTestCDoc(t, doc, 100500)
@@ -139,7 +139,7 @@ func Test_newRecord(t *testing.T) {
 			require.Equal(recID, rec.ID())
 			require.Equal(recID, rec.AsRecordID(appdef.SystemField_ID))
 			require.Equal(istructs.NullRecordID, rec.Parent())
-			require.Equal("", rec.Container())
+			require.Empty(rec.Container())
 			require.True(rec.IsActive())
 
 			testTestCRec(t, rec, recID)

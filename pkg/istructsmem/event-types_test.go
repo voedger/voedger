@@ -162,7 +162,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 		require.False(goodsID[1].IsRaw())
 		defer pLogEvent.Release()
 
-		testDbEvent(t, pLogEvent)
+		testDBEvent(t, pLogEvent)
 		require.Equal(test.workspace, pLogEvent.Workspace())
 		require.Equal(test.wlogOfs, pLogEvent.WLogOffset())
 
@@ -199,7 +199,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 				require.NoError(err)
 				require.NotNil(event)
 
-				testDbEvent(t, event)
+				testDBEvent(t, event)
 				require.Equal(test.workspace, event.Workspace())
 				require.Equal(test.wlogOfs, event.WLogOffset())
 
@@ -283,7 +283,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 				require.NoError(err)
 				require.NotNil(event)
 				defer event.Release()
-				testDbEvent(t, event)
+				testDBEvent(t, event)
 			})
 
 			t.Run("test sequential reading", func(t *testing.T) {
@@ -298,7 +298,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 				require.NoError(err)
 				require.NotNil(event)
 				defer event.Release()
-				testDbEvent(t, event)
+				testDBEvent(t, event)
 			})
 		})
 
@@ -353,9 +353,9 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 	})
 
 	var (
-		changedHeights float32 = test.heightValue + 0.1
-		changedPhoto           = []byte{10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-		changedRems    string  = "changes"
+		changedHeights = test.heightValue + 0.1
+		changedPhoto   = []byte{10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+		changedRems    = "changes"
 	)
 
 	t.Run("VI. Build change event", func(t *testing.T) {
@@ -703,7 +703,7 @@ func testPhotoRow(t *testing.T, photo istructs.IRowReader) {
 	require.Equal(test.photoValue, photo.AsBytes(test.photoIdent))
 }
 
-func testDbEvent(t *testing.T, event istructs.IDbEvent) {
+func testDBEvent(t *testing.T, event istructs.IDbEvent) {
 	require := require.New(t)
 	test := test()
 
@@ -1803,7 +1803,7 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 	require := require.New(t)
 
 	ev1 := newTestEvent(100500, 500)
-	testDbEvent(t, ev1)
+	testDBEvent(t, ev1)
 
 	ev1.argUnlObj.maskValues()
 
@@ -1816,7 +1816,7 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 	require.Equal(istructs.Offset(100500), ev2.pLogOffs)
 	require.Equal(istructs.Offset(500), ev2.wLogOffs)
 
-	testDbEvent(t, ev2)
+	testDBEvent(t, ev2)
 	testUnloggedObject(t, ev2.ArgumentUnloggedObject())
 
 	// #2785

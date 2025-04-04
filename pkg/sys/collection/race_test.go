@@ -26,12 +26,12 @@ type TSidsGeneratorType struct {
 	nextPlogOffset istructs.Offset
 }
 
-func (me *TSidsGeneratorType) NextID(tempId istructs.RecordID, _ appdef.IType) (storageID istructs.RecordID, err error) {
+func (me *TSidsGeneratorType) NextID(tempID istructs.RecordID, _ appdef.IType) (storageID istructs.RecordID, err error) {
 	me.lock.Lock()
 	defer me.lock.Unlock()
 	storageID = me.nextID
 	me.nextID++
-	me.idmap[tempId] = storageID
+	me.idmap[tempID] = storageID
 	return storageID, nil
 }
 

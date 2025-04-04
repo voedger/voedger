@@ -24,7 +24,7 @@ func NewProcessor(params ihttp.CLIParams, routerStorage ihttp.IRouterStorage) (s
 	httpProcessor := &httpProcessor{
 		params:      params,
 		router:      r,
-		certCache:   dbcertcache.ProvideDbCache(&routerAppStorage),
+		certCache:   dbcertcache.ProvideDBCache(&routerAppStorage),
 		acmeDomains: &sync.Map{},
 		server: &http.Server{
 			Addr:              coreutils.ServerAddress(params.Port),

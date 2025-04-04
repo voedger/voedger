@@ -28,7 +28,7 @@ import (
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
-func provideExecQrySqlQuery(federation federation.IFederation, itokens itokens.ITokens) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.ITokens) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 
 		query := args.ArgumentObject.AsString(field_Query)
@@ -275,7 +275,7 @@ func getFilter(f func(string) bool) coreutils.MapperOpt {
 	})
 }
 
-func renderDbEvent(data map[string]interface{}, f *filter, event istructs.IDbEvent, appDef appdef.IAppDef, offset istructs.Offset) {
+func renderDBEvent(data map[string]interface{}, f *filter, event istructs.IDbEvent, appDef appdef.IAppDef, offset istructs.Offset) {
 	defer func() {
 		if r := recover(); r != nil {
 			eventKind := "plog"

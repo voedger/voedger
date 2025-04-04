@@ -1080,7 +1080,7 @@ func analyzeJob(j *JobStmt, c *iterateCtx) {
 	if ws.workspace == nil {
 		panic("workspace not found for JOB" + j.Name)
 	}
-	if !(ws.workspace.GetName() == nameAppWorkspaceWS && ws.pkg.Name == appdef.SysPackage) {
+	if ws.workspace.GetName() != nameAppWorkspaceWS || ws.pkg.Name != appdef.SysPackage {
 		c.stmtErr(&j.Pos, ErrJobMustBeInAppWorkspace)
 	}
 
