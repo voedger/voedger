@@ -748,8 +748,8 @@ func (f *wazeroExtEngine) hostNewValue(keyID uint64) uint64 {
 	return uint64(f.safeApi.NewValue(safe.TKeyBuilder(keyID)))
 }
 
-func (f *wazeroExtEngine) hostUpdateValue(keyId, existingValueID uint64) (result uint64) {
-	return uint64(f.safeApi.UpdateValue(safe.TKeyBuilder(keyId), safe.TValue(existingValueID)))
+func (f *wazeroExtEngine) hostUpdateValue(keyID, existingValueID uint64) (result uint64) {
+	return uint64(f.safeApi.UpdateValue(safe.TKeyBuilder(keyID), safe.TValue(existingValueID)))
 }
 
 func (f *wazeroExtEngine) hostRowWriterPutString(id uint64, typ uint32, namePtr uint32, nameSize, valuePtr, valueSize uint32) {
