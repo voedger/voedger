@@ -66,8 +66,7 @@ type sequencer struct {
 	// - 4 is the last processed event
 	// - nextOffset keeps 5
 	// - Start() returns 5 and increments nextOffset to 6
-	nextOffset   PLogOffset
-	nextOffsetMu sync.RWMutex
+	nextOffset PLogOffset
 
 	// If Sequencing Transaction is in progress then currentWSID has non-zero value.
 	currentWSID   WSID
@@ -135,14 +134,6 @@ func NewMockStorage(readTimeout, writeTimeout time.Duration) *MockStorage {
 		readTimeout:  readTimeout,
 		writeTimeout: writeTimeout,
 	}
-}
-
-func (m *MockStorage) SetOnWriteValuesAndOffset(f func()) {
-	// notest
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.onWriteValuesAndOffset = f
 }
 
 func (m *MockStorage) SetWriteValuesAndOffset(err error) {

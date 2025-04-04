@@ -14,9 +14,8 @@ import (
 
 var (
 	// variables for retry mechanism
-	RetryDelay   = defaultRetryDelay
-	RetryCount   = defaultRetryCount
-	RetryCountMu = &sync.RWMutex{}
+	RetryDelay = defaultRetryDelay
+	RetryCount = defaultRetryCount
 )
 
 // Start starts Sequencing Transaction for the given WSID.
@@ -68,11 +67,7 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 	s.currentWSID = wsID
 	s.currentWSKind = wsKind
 
-	s.nextOffsetMu.RLock()
-	nextOffset := s.nextOffset
-	s.nextOffsetMu.RUnlock()
-
-	return nextOffset, true
+	return s.nextOffset, true
 }
 
 func (s *sequencer) startFlusher() {
@@ -162,9 +157,9 @@ func (s *sequencer) flusher(ctx context.Context) {
 		case <-s.flusherSig:
 		}
 
-		s.toBeFlushedMu.RLock()
+		s.toBeFlushedMu.Lock()
 		flushOffset := s.toBeFlushedOffset
-		s.toBeFlushedMu.RUnlock()
+		s.toBeFlushedMu.Unlock()
 
 		if err := s.flushValues(flushOffset); err != nil {
 			// notest
@@ -236,7 +231,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 
 	// Try s.params.SeqStorage.ReadNumber()
 	var knownNumbers []Number
-	err = coreutils.Retry(s.cleanupCtx, s.iTime, RetryDelay, getRetryCount(), func() error {
+	err = coreutils.Retry(s.cleanupCtx, s.iTime, RetryDelay, RetryCount, func() error {
 		var err error
 		// Read all known Numbers for wsKind, wsID
 		knownNumbers, err = s.params.SeqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
@@ -312,10 +307,7 @@ func (s *sequencer) Flush() {
 	s.inprocMu.RUnlock()
 
 	// Copy s.nextOffset to s.toBeFlushedOffset
-	s.nextOffsetMu.RLock()
 	s.toBeFlushedOffset = s.nextOffset
-	s.nextOffsetMu.RUnlock()
-
 	s.toBeFlushedMu.Unlock()
 
 	// Clear s.inproc
@@ -324,9 +316,7 @@ func (s *sequencer) Flush() {
 	s.inprocMu.Unlock()
 
 	// Increase s.nextOffset
-	s.nextOffsetMu.Lock()
 	s.nextOffset++
-	s.nextOffsetMu.Unlock()
 	//  Non-blocking write to s.flusherSig
 	s.signalToFlushing()
 
@@ -369,14 +359,8 @@ func (s *sequencer) batcher(ctx context.Context, values []SeqValue, offset PLogO
 	}
 	s.toBeFlushedMu.RUnlock()
 
-	s.nextOffsetMu.Lock()
 	s.nextOffset = offset + 1
-
-	s.toBeFlushedMu.Lock()
 	s.toBeFlushedOffset = s.nextOffset
-
-	s.toBeFlushedMu.Unlock()
-	s.nextOffsetMu.Unlock()
 
 	// Store maxValues in s.toBeFlushed: max Number for each SeqValue.Key
 	maxValues := make(map[NumberKey]Number)
@@ -438,12 +422,8 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 
 	var err error
 	// Read nextPLogOffset from s.params.SeqStorage.ReadNextPLogOffset()
-	err = coreutils.Retry(actualizerCtx, s.iTime, RetryDelay, getRetryCount(), func() error {
-		nextOffset, err := s.params.SeqStorage.ReadNextPLogOffset()
-
-		s.nextOffsetMu.Lock()
-		s.nextOffset = nextOffset
-		s.nextOffsetMu.Unlock()
+	err = coreutils.Retry(actualizerCtx, s.iTime, RetryDelay, RetryCount, func() error {
+		s.nextOffset, err = s.params.SeqStorage.ReadNextPLogOffset()
 
 		return err
 	})
@@ -453,12 +433,8 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	}
 
 	// Use s.params.SeqStorage.ActualizeSequencesFromPLog() and s.batcher()
-	err = coreutils.Retry(actualizerCtx, s.iTime, RetryDelay, getRetryCount(), func() error {
-		s.nextOffsetMu.RLock()
-		nextOffset := s.nextOffset
-		s.nextOffsetMu.RUnlock()
-
-		return s.params.SeqStorage.ActualizeSequencesFromPLog(s.cleanupCtx, nextOffset, s.batcher)
+	err = coreutils.Retry(actualizerCtx, s.iTime, RetryDelay, RetryCount, func() error {
+		return s.params.SeqStorage.ActualizeSequencesFromPLog(s.cleanupCtx, s.nextOffset, s.batcher)
 	})
 	if err != nil {
 		// notest
@@ -499,7 +475,7 @@ func (s *sequencer) flushValues(offset PLogOffset) error {
 	s.toBeFlushedMu.RUnlock()
 	// s.params.SeqStorage.WriteValuesAndNextPLogOffset(flushValues, offset)
 	// Error handling: Handle errors with retry mechanism (500ms wait)
-	err := coreutils.Retry(s.cleanupCtx, s.iTime, RetryDelay, getRetryCount(), func() error {
+	err := coreutils.Retry(s.cleanupCtx, s.iTime, RetryDelay, RetryCount, func() error {
 		return s.params.SeqStorage.WriteValuesAndNextPLogOffset(flushValues, offset)
 	})
 	if err != nil {
@@ -549,10 +525,10 @@ func (s *sequencer) Actualize() {
 	if len(s.toBeFlushed) > 0 {
 		s.toBeFlushed = make(map[NumberKey]Number)
 	}
-	// Cleans s.toBeFlushedOffset
-	s.toBeFlushedOffset = 0
 	s.toBeFlushedMu.Unlock()
 
+	// Cleans s.toBeFlushedOffset
+	s.toBeFlushedOffset = 0
 	// Cleans s.lru
 	s.lru.Purge()
 
@@ -577,11 +553,4 @@ func (s *sequencer) cleanup() {
 	}
 
 	s.cleanupCtxCancel()
-}
-
-func getRetryCount() int {
-	RetryCountMu.RLock()
-	defer RetryCountMu.RUnlock()
-
-	return RetryCount
 }
