@@ -22,7 +22,7 @@ func TestISequencer_Start(t *testing.T) {
 	iTime := coreutils.MockTime
 	storage := createDefaultStorage()
 	storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-		isequencer.PLogOffset(0): {
+		isequencer.PLogOffset(1): {
 			{
 				Key:   isequencer.NumberKey{WSID: 1, SeqID: 1},
 				Value: 100,
@@ -53,18 +53,16 @@ func TestISequencer_Start(t *testing.T) {
 	})
 
 	t.Run("should reject when actualization in progress", func(t *testing.T) {
-		sequencer, cleanup := isequencer.New(params, iTime)
+		seq, cleanup := isequencer.New(params, iTime)
 		defer cleanup()
 
-		// <-actualizeStartCh
-		offset, ok := sequencer.Start(1, 1)
-		require.True(ok)
-		require.Equal(isequencer.PLogOffset(1), offset)
+		offset := isequencer.WaitForStart(t, seq, 1, 1, true)
+		require.Equal(isequencer.PLogOffset(2), offset)
 
-		sequencer.Actualize()
+		seq.Actualize()
 
 		// Should be rejected while actualization is in progress
-		offset, ok = sequencer.Start(1, 1)
+		offset, ok := seq.Start(1, 1)
 		require.False(ok)
 		require.Zero(offset)
 	})
@@ -83,7 +81,7 @@ func TestISequencer_Start(t *testing.T) {
 
 		storage := createDefaultStorage()
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(0): {
+			isequencer.PLogOffset(1): {
 				{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 100},
 			},
 		})
@@ -96,7 +94,7 @@ func TestISequencer_Start(t *testing.T) {
 		// First transaction
 		offset, ok := seq.Start(1, 1)
 		require.True(ok)
-		require.Equal(isequencer.PLogOffset(1), offset)
+		require.Equal(isequencer.PLogOffset(2), offset)
 
 		count := 3
 		// Generate sequence Numbers
@@ -111,7 +109,7 @@ func TestISequencer_Start(t *testing.T) {
 		// Start a new transaction
 		offset, ok = seq.Start(1, 1)
 		require.True(ok)
-		require.Equal(isequencer.PLogOffset(2), offset)
+		require.Equal(isequencer.PLogOffset(3), offset)
 
 		// Verify we can get the next number in sequence
 		num, err := seq.Next(1)
@@ -127,7 +125,7 @@ func TestISequencer_Flush(t *testing.T) {
 
 		storage := createDefaultStorage()
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(0): {
+			isequencer.PLogOffset(1): {
 				{
 					Key:   isequencer.NumberKey{WSID: isequencer.WSID(1), SeqID: isequencer.SeqID(1)},
 					Value: isequencer.Number(100),
@@ -189,7 +187,7 @@ func TestISequencer_Flush(t *testing.T) {
 
 		storage := createDefaultStorage()
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(0): {
+			isequencer.PLogOffset(1): {
 				{
 					Key:   isequencer.NumberKey{WSID: isequencer.WSID(1), SeqID: isequencer.SeqID(1)},
 					Value: isequencer.Number(100),
@@ -215,7 +213,7 @@ func TestISequencer_Flush(t *testing.T) {
 
 		storage := createDefaultStorage()
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(0): {
+			isequencer.PLogOffset(1): {
 				{
 					Key:   isequencer.NumberKey{WSID: isequencer.WSID(1), SeqID: isequencer.SeqID(1)},
 					Value: isequencer.Number(100),
@@ -260,7 +258,7 @@ func TestISequencer_Next(t *testing.T) {
 
 		storage := createDefaultStorage()
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(0): {
+			isequencer.PLogOffset(1): {
 				{
 					Key:   isequencer.NumberKey{WSID: isequencer.WSID(1), SeqID: isequencer.SeqID(1)},
 					Value: isequencer.Number(100),
@@ -290,21 +288,20 @@ func TestISequencer_Next(t *testing.T) {
 		require := requirePkg.New(t)
 		iTime := coreutils.MockTime
 
+		initialValue := isequencer.Number(50)
 		storage := createDefaultStorage()
-		storage.NextOffset = 1
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(0): {
+			isequencer.PLogOffset(1): {
 				{
 					Key:   isequencer.NumberKey{WSID: isequencer.WSID(1), SeqID: isequencer.SeqID(1)},
-					Value: isequencer.Number(50),
+					Value: initialValue,
 				},
 			},
 		})
 		// No predefined sequence Numbers in storage
-		initialValue := isequencer.Number(1)
 		params := createDefaultParams(storage)
 		params.SeqTypes = map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
-			1: {1: initialValue},
+			1: {1: 1},
 		}
 		sequencer, cancel := isequencer.New(params, iTime)
 		defer cancel()
@@ -356,7 +353,7 @@ func TestISequencer_Next(t *testing.T) {
 
 		storage := createDefaultStorage()
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(0): {
+			isequencer.PLogOffset(1): {
 				{
 					Key:   isequencer.NumberKey{WSID: isequencer.WSID(1), SeqID: isequencer.SeqID(1)},
 					Value: isequencer.Number(100),
@@ -405,7 +402,7 @@ func TestISequencer_Next(t *testing.T) {
 
 		storage := createDefaultStorage()
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(0): {
+			isequencer.PLogOffset(1): {
 				{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 300},
 			},
 		})
@@ -435,13 +432,13 @@ func TestISequencer_Next(t *testing.T) {
 		seq.Flush()
 	})
 
-	t.Run("should handle LRU cache eviction correctly", func(t *testing.T) {
+	t.Run("should handle LRU lru eviction correctly", func(t *testing.T) {
 		require := requirePkg.New(t)
 		iTime := coreutils.MockTime
 
 		storage := createDefaultStorage()
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(0): {
+			isequencer.PLogOffset(1): {
 				{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 400},
 			},
 		})
@@ -466,7 +463,7 @@ func TestISequencer_Next(t *testing.T) {
 
 		num, err = seq.Next(1)
 		require.NoError(err)
-		require.Equal(isequencer.Number(402), num, "Next should handle LRU cache eviction correctly")
+		require.Equal(isequencer.Number(402), num, "Next should handle LRU lru eviction correctly")
 
 		seq.Flush()
 	})
@@ -477,7 +474,7 @@ func TestISequencer_Next(t *testing.T) {
 
 		storage := createDefaultStorage()
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(0): {
+			isequencer.PLogOffset(1): {
 				{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 250},
 			},
 		})
@@ -517,7 +514,7 @@ func TestISequencer_Actualize(t *testing.T) {
 	t.Run("not started -> panic", func(t *testing.T) {
 		storage := createDefaultStorage()
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(0): {
+			isequencer.PLogOffset(1): {
 				{
 					Key:   isequencer.NumberKey{WSID: 1, SeqID: 1},
 					Value: 100,
@@ -557,11 +554,10 @@ func TestISequencer_Actualize(t *testing.T) {
 		require.NoError(err)
 		require.Equal(isequencer.Number(3), num2)
 	})
-
 	t.Run("filled plog", func(t *testing.T) {
 		storage := createDefaultStorage()
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(0): {
+			isequencer.PLogOffset(1): {
 				{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 100},
 				{Key: isequencer.NumberKey{WSID: 1, SeqID: 2}, Value: 200},
 			},
@@ -598,7 +594,7 @@ func TestISequencer_Actualize(t *testing.T) {
 
 }
 
-// [~test.isequencer.MultipleActualizes~]
+// [~server.design.sequences/test.isequencer.MultipleActualizes~impl]
 func TestISequencer_MultipleActualizes(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
@@ -608,7 +604,7 @@ func TestISequencer_MultipleActualizes(t *testing.T) {
 	iTime := coreutils.NewITime()
 
 	initialNumber := isequencer.Number(100)
-	initialOffset := isequencer.PLogOffset(0)
+	initialOffset := isequencer.PLogOffset(1)
 	// Set up storage with initial values
 	storage := isequencer.NewMockStorage(0, 0)
 	storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
@@ -624,58 +620,69 @@ func TestISequencer_MultipleActualizes(t *testing.T) {
 	seq, cleanup := isequencer.New(params, iTime)
 	defer cleanup()
 
-	var currentOffset isequencer.PLogOffset
+	var nextOffset isequencer.PLogOffset
 	prevOffset := initialOffset
 	prevNumber := initialNumber
 	countOfFlushes := 0
-	// Run 100 cycles of operations
+	flushCalled := -1
+	// Run 100 transactions
 	const cycles = 100
 	for i := 0; i < cycles; i++ {
 		// Start transaction
-		currentOffset = isequencer.WaitForStart(t, seq, 1, 1, true)
-		currentNumber, err := seq.Next(1)
+		nextOffset = isequencer.WaitForStart(t, seq, 1, 1, true)
+		nextNumber, err := seq.Next(1)
 		require.NoError(err, "Failed to get next value in cycle %d", i)
 
+		// Check out offset and number in dependence of Flush or Actualize was called
+		switch flushCalled {
+		case 1:
+			// If Flush was called, check if offset and number are incremented
+			require.Equal(nextOffset, prevOffset+1, "PLog offset should be incremented by 1 after Flush")
+			require.Equal(nextNumber, prevNumber+1, "Sequence number should be incremented by 1 after Flush")
+		case 0:
+			// If Actualize was called, check if number and offset remain the same
+			require.Equal(nextOffset, prevOffset, "PLog offset should not be incremented after Actualize")
+			require.Equal(nextNumber, prevNumber, "Sequence number should not be incremented after Actualize")
+		}
+
+		// Finish transaction via Flush or Actualize
 		// Randomly choose between Flush and Actualize (with equal probability)
+		flushCalled = 0
 		if rand.Int()%2 == 0 {
 			seq.Flush()
-			// Simulate some time passing
-			iTime.Sleep(50 * time.Millisecond)
-			// Check if the offset and sequence number are incremented correctly
-			require.Equal(currentOffset, prevOffset+1, "PLog offset should be incremented by 1 after flush")
-			require.Equal(currentNumber, prevNumber+1, "Sequence number should be incremented by 1 after flush")
-			// Update previous values
-			prevOffset = currentOffset
-			prevNumber = currentNumber
+			flushCalled = 1
+			// Simulate write to pLog as CP does
+			storage.AddPLogEntry(int(nextOffset), 1, 1, int(nextNumber))
 			countOfFlushes++
+			// Simulate some time passing to ensure that flusher finished
+			iTime.Sleep(10 * time.Millisecond)
 		} else {
 			seq.Actualize()
 		}
-
+		// Update previous offset and number
+		prevOffset = nextOffset
+		prevNumber = nextNumber
 	}
-	// Wait for all transactions to complete
-	isequencer.WaitForStart(t, seq, 1, 1, true)
 	// Check if the last offset in storage is equal to initial offset + count of flushes
 	numbers, err := storage.ReadNumbers(1, []isequencer.SeqID{1})
 	require.NoError(err)
 	require.Equal(initialNumber+isequencer.Number(countOfFlushes), numbers[0], "Final number should be equal to initial number + count of flushes")
 }
 
-// [~test.isequencer.FlushPermanentlyFails~]
+// [~server.design.sequences/test.isequencer.FlushPermanentlyFails~impl]
 func TestISequencer_FlushPermanentlyFails(t *testing.T) {
 	if testing.Short() {
-		t.Skip("skipping test in short mode.")
+		t.Skip()
 	}
 
 	require := requirePkg.New(t)
 	iTime := coreutils.NewITime()
 
 	initialNumber := isequencer.Number(100)
-	initialOffset := isequencer.PLogOffset(0)
 	// Set up storage with initial values
 	storage := isequencer.NewMockStorage(0, 0)
 	storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-		initialOffset: {
+		isequencer.PLogOffset(1): {
 			{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: initialNumber},
 		},
 	})
@@ -692,27 +699,55 @@ func TestISequencer_FlushPermanentlyFails(t *testing.T) {
 	previousRetryCount := isequencer.RetryCount
 	isequencer.RetryCount = 0
 	// Set up storage to simulate a permanent failure
-	storage.WriteValuesAndOffsetError = errors.New("some error")
+	storage.SetWriteValuesAndOffset(errors.New("some error"))
 
+	var num isequencer.Number
+	var offset isequencer.PLogOffset
+	var err error
 	// first 6 sequence transaction will be ok
-	for seqID := 1; seqID <= 6; seqID++ {
+	// start 1st transaction for sequence = 1
+	isequencer.WaitForStart(t, seq, 1, 1, true)
+
+	num, err = seq.Next(isequencer.SeqID(1))
+	require.NoError(err)
+	require.Equal(initialNumber+1, num)
+
+	seq.Flush()
+
+	// start 5 more transactions for sequences from 2th to 6th
+	for seqID := 2; seqID <= 6; seqID++ {
 		isequencer.WaitForStart(t, seq, 1, 1, true)
-		_, err := seq.Next(isequencer.SeqID(seqID))
+
+		num, err = seq.Next(isequencer.SeqID(seqID))
 		require.NoError(err)
+		require.Equal(isequencer.Number(2), num)
 
 		seq.Flush()
-		// Simulate some time passing
-		iTime.Sleep(50 * time.Millisecond)
 	}
 	// The 7th transaction should fail
-	isequencer.WaitForStart(t, seq, 1, 1, false)
+	offset = isequencer.WaitForStart(t, seq, 1, 1, false)
+	require.Zero(offset)
 	// Turn off the error simulation for correct cleanup
-	storage.WriteValuesAndOffsetError = nil
+	storage.SetWriteValuesAndOffset(nil)
+	// After the error has gone, the transaction should be ok
+	offset = isequencer.WaitForStart(t, seq, 1, 1, true)
+	require.Equal(isequencer.PLogOffset(7)+1, offset)
+	// Next number for sequence = 1 should be initialNumber + 2
+	num, err = seq.Next(isequencer.SeqID(1))
+	require.NoError(err)
+	require.Equal(initialNumber+isequencer.Number(2), num)
+	// Next number for sequences from 2 for 6 should be 3, because we flushed numbers 2 for them before
+	for i := 2; i <= 6; i++ {
+		num, err = seq.Next(isequencer.SeqID(i))
+		require.NoError(err)
+		require.Equal(isequencer.Number(3), num)
+	}
+
 	// Reset the retry count to its original value
 	isequencer.RetryCount = previousRetryCount
 }
 
-// [~test.isequencer.LongRecovery~]
+// [~server.design.sequences/test.isequencer.LongRecovery~impl]
 func TestISequencer_LongRecovery(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
@@ -721,77 +756,73 @@ func TestISequencer_LongRecovery(t *testing.T) {
 	require := requirePkg.New(t)
 	iTime := coreutils.NewITime()
 
-	// Set up storage plog entries from 0 to 50
-	// Generated by AI
-	storage := isequencer.NewMockStorage(0, 0)
-	storage.AddPLogEntry(0, 1, 1, 0)
-	storage.AddPLogEntry(1, 1, 1, 1)
-	storage.AddPLogEntry(2, 1, 1, 2)
-	storage.AddPLogEntry(3, 1, 1, 3)
-	storage.AddPLogEntry(4, 1, 1, 4)
-	storage.AddPLogEntry(5, 1, 1, 5)
-	storage.AddPLogEntry(6, 1, 1, 6)
-	storage.AddPLogEntry(7, 1, 1, 7)
-	storage.AddPLogEntry(8, 1, 1, 8)
-	storage.AddPLogEntry(9, 1, 1, 9)
-	storage.AddPLogEntry(10, 1, 1, 10)
-	storage.AddPLogEntry(11, 1, 1, 11)
-	storage.AddPLogEntry(12, 1, 1, 12)
-	storage.AddPLogEntry(13, 1, 1, 13)
-	storage.AddPLogEntry(14, 1, 1, 14)
-	storage.AddPLogEntry(15, 1, 1, 15)
-	storage.AddPLogEntry(16, 1, 1, 16)
-	storage.AddPLogEntry(17, 1, 1, 17)
-	storage.AddPLogEntry(18, 1, 1, 18)
-	storage.AddPLogEntry(19, 1, 1, 19)
-	storage.AddPLogEntry(20, 1, 1, 20)
-	storage.AddPLogEntry(21, 1, 1, 21)
-	storage.AddPLogEntry(22, 1, 1, 22)
-	storage.AddPLogEntry(23, 1, 1, 23)
-	storage.AddPLogEntry(24, 1, 1, 24)
-	storage.AddPLogEntry(25, 1, 1, 25)
-	storage.AddPLogEntry(26, 1, 1, 26)
-	storage.AddPLogEntry(27, 1, 1, 27)
-	storage.AddPLogEntry(28, 1, 1, 28)
-	storage.AddPLogEntry(29, 1, 1, 29)
-	storage.AddPLogEntry(30, 1, 1, 30)
-	storage.AddPLogEntry(31, 1, 1, 31)
-	storage.AddPLogEntry(32, 1, 1, 32)
-	storage.AddPLogEntry(33, 1, 1, 33)
-	storage.AddPLogEntry(34, 1, 1, 34)
-	storage.AddPLogEntry(35, 1, 1, 35)
-	storage.AddPLogEntry(36, 1, 1, 36)
-	storage.AddPLogEntry(37, 1, 1, 37)
-	storage.AddPLogEntry(38, 1, 1, 38)
-	storage.AddPLogEntry(39, 1, 1, 39)
-	storage.AddPLogEntry(40, 1, 1, 40)
-	storage.AddPLogEntry(41, 1, 1, 41)
-	storage.AddPLogEntry(42, 1, 1, 42)
-	storage.AddPLogEntry(43, 1, 1, 43)
-	storage.AddPLogEntry(44, 1, 1, 44)
-	storage.AddPLogEntry(45, 1, 1, 45)
-	storage.AddPLogEntry(46, 1, 1, 46)
-	storage.AddPLogEntry(47, 1, 1, 47)
-	storage.AddPLogEntry(48, 1, 1, 48)
-	storage.AddPLogEntry(49, 1, 1, 49)
-	storage.AddPLogEntry(50, 1, 1, 50)
+	seqID_1 := isequencer.SeqID(1)
+	seqID_2 := isequencer.SeqID(2)
+	// Simulate a long recovery process gradually from 0 to 50 numEvents
+	const wsidCount = 10
+	for numEvents := 1; numEvents <= 50; numEvents++ {
+		// Fulfill pLog with data
+		storage := isequencer.NewMockStorage(0, 0)
 
-	params := createDefaultParams(storage)
-	params.SeqTypes = map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
-		1: {1: 1},
-	}
-	params.MaxNumUnflushedValues = 5
-	// Simulate a long recovery process gradually from 0 to 50 offset
-	for i := 0; i < 50; i++ {
+		pLogOffset := 1
+		number := 1
+		wsid := 1
+		for i := 0; i < numEvents; i++ {
+			storage.AddPLogEntry(pLogOffset, wsid, seqID_1, number)
+			number++
+			storage.AddPLogEntry(pLogOffset, wsid, seqID_2, number)
+
+			// we use one single seqID_1 for all wsids so numbers must grow monotonically
+			number++
+			pLogOffset++
+		}
+
+		params := createDefaultParams(storage)
+		params.SeqTypes = map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
+			1: {seqID_1: 1, seqID_2: 1},
+		}
 		seq, cleanup := isequencer.New(params, iTime)
-		storage.NextOffset = isequencer.PLogOffset(i)
 
-		isequencer.WaitForStart(t, seq, 1, 1, true)
+		nextOffset := isequencer.WaitForStart(t, seq, 1, isequencer.WSID(wsid), true)
+		require.Equal(isequencer.PLogOffset(numEvents)+1, nextOffset)
 
-		num, err := seq.Next(isequencer.SeqID(1))
+		num1, err := seq.Next(seqID_1)
 		require.NoError(err)
+		require.Equal(isequencer.Number(number)-1, num1, numEvents)
 
-		require.Equal(isequencer.Number(51), num)
+		num2, err := seq.Next(seqID_2)
+		require.NoError(err)
+		require.Equal(isequencer.Number(number), num2)
+
+		seq.Flush()
+
+		// Simulate write to pLog as CP does
+		storage.AddPLogEntry(int(nextOffset), wsid, seqID_1, int(num1))
+		storage.AddPLogEntry(int(nextOffset), wsid, seqID_2, int(num2))
+
+		nextOffset = isequencer.WaitForStart(t, seq, 1, isequencer.WSID(wsid), true)
+		require.Equal(isequencer.PLogOffset(numEvents)+2, nextOffset)
+
+		num1, err = seq.Next(seqID_1)
+		require.NoError(err)
+		require.Equal(isequencer.Number(number), num1)
+
+		num2, err = seq.Next(seqID_2)
+		require.NoError(err)
+		require.Equal(isequencer.Number(number)+1, num2)
+
+		seq.Actualize()
+
+		nextOffset = isequencer.WaitForStart(t, seq, 1, isequencer.WSID(wsid), true)
+		require.Equal(isequencer.PLogOffset(numEvents)+2, nextOffset)
+
+		num1, err = seq.Next(seqID_1)
+		require.NoError(err)
+		require.Equal(isequencer.Number(number), num1)
+
+		num2, err = seq.Next(seqID_2)
+		require.NoError(err)
+		require.Equal(isequencer.Number(number)+1, num2)
 
 		cleanup()
 	}

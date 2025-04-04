@@ -16,7 +16,7 @@ type ISeqStorage interface {
 	// len(batch) may be 0
 	// offset: Next offset to be used
 	// batch MUST be written first, then offset
-	WriteValuesAndOffset(batch []SeqValue, offset PLogOffset) error
+	WriteValuesAndNextPLogOffset(batch []SeqValue, offset PLogOffset) error
 
 	ReadNextPLogOffset() (PLogOffset, error)
 
@@ -34,6 +34,7 @@ type ISeqStorage interface {
 // - Actualization: Making the persistent state of the sequences consistent with the PLog.
 // - Flushing: Writing the accumulated sequence values to the storage.
 // - LRU: Least Recently Used cache that keep the most recent next sequence values in memory.
+// [~server.design.sequences/cmp.ISequencer~impl]
 type ISequencer interface {
 
 	// Start starts Sequencing Transaction for the given WSID.
@@ -44,6 +45,7 @@ type ISequencer interface {
 	// - Actualization is in progress
 	// - The number of unflushed values exceeds the maximum threshold
 	// If ok is true, the caller must call Flush() or Actualize() to complete the Sequencing Transaction.
+	// [~server.design.sequences/cmp.ISequencer.Start~impl]
 	Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok bool)
 
 	// Next returns the next sequence number for the given SeqID.

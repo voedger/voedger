@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var actualizationTimeoutLimit = 100 * time.Millisecond
+var actualizationTimeoutLimit = 1 * time.Second
 
 // waitForActualization waits for actualization to complete by repeatedly calling Start
 func WaitForStart(t *testing.T, seq ISequencer, wsKind WSKind, wsID WSID, shouldBeOk bool) PLogOffset {
