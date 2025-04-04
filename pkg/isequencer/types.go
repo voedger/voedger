@@ -293,7 +293,7 @@ func (m *MockStorage) AddPLogEntry(offset, wsid int, seqID SeqID, number int) {
 		m.pLog[PLogOffset(offset)], //nolint:gosec
 		SeqValue{
 			Key:   NumberKey{WSID: WSID(wsid), SeqID: seqID}, //nolint:gosec
-			Value: Number(number),
+			Value: Number(number),                            //nolint:gosec
 		},
 	)
 }
