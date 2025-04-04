@@ -55,7 +55,6 @@ func TestSequencer(t *testing.T) {
 		}
 
 		seq.Flush()
-		mockedTime.Sleep(1 * time.Second)
 
 		cleanup()
 		seq.(*sequencer).flusherWG.Wait()
@@ -373,7 +372,7 @@ func TestBatcher(t *testing.T) {
 		}()
 
 		// Wait briefly to ensure batcher is waiting
-		time.Sleep(20 * time.Millisecond)
+		// time.Sleep(20 * time.Millisecond)
 
 		// Cancel the context
 		cancel()

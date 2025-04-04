@@ -432,7 +432,7 @@ func TestISequencer_Next(t *testing.T) {
 		seq.Flush()
 	})
 
-	t.Run("should handle LRU lru eviction correctly", func(t *testing.T) {
+	t.Run("should handle cache eviction correctly", func(t *testing.T) {
 		require := requirePkg.New(t)
 		iTime := coreutils.MockTime
 
@@ -463,7 +463,7 @@ func TestISequencer_Next(t *testing.T) {
 
 		num, err = seq.Next(1)
 		require.NoError(err)
-		require.Equal(isequencer.Number(402), num, "Next should handle LRU lru eviction correctly")
+		require.Equal(isequencer.Number(402), num, "Next should handle cache eviction correctly")
 
 		seq.Flush()
 	})
@@ -800,6 +800,8 @@ func TestISequencer_LongRecovery(t *testing.T) {
 		storage.AddPLogEntry(int(nextOffset), wsid, seqID_1, int(num1))
 		storage.AddPLogEntry(int(nextOffset), wsid, seqID_2, int(num2))
 
+		// one more transaction after Flush
+
 		nextOffset = isequencer.WaitForStart(t, seq, 1, isequencer.WSID(wsid), true)
 		require.Equal(isequencer.PLogOffset(numEvents)+2, nextOffset)
 
@@ -812,6 +814,8 @@ func TestISequencer_LongRecovery(t *testing.T) {
 		require.Equal(isequencer.Number(number)+1, num2)
 
 		seq.Actualize()
+
+		// one more transaction after Actualize
 
 		nextOffset = isequencer.WaitForStart(t, seq, 1, isequencer.WSID(wsid), true)
 		require.Equal(isequencer.PLogOffset(numEvents)+2, nextOffset)
