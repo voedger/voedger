@@ -154,11 +154,11 @@ func Test_BasicUsage(t *testing.T) {
 
 	// Create extension package from WASM
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/basicusage/pkg.wasm")
+	moduleURL := testModuleURL("./_testdata/basicusage/pkg.wasm")
 	packages := []iextengine.ExtensionModule{
 		{
 			Path:           testPkg,
-			ModuleUrl:      moduleUrl,
+			ModuleURL:      moduleURL,
 			ExtensionNames: []string{calcOrderedItemsProjector.Entity(), newOrderCmd.Entity()},
 		},
 	}
@@ -291,11 +291,11 @@ func requireMemStatEx(t *testing.T, wasmEngine *wazeroExtEngine, mallocs, frees,
 	require.Equal(heapSys, uint32(h))
 }
 
-func testFactoryHelperWithMetrics(ctx context.Context, moduleUrl *url.URL, funcs []string, cfg iextengine.ExtEngineConfig, compile bool) (iextengine.IExtensionEngine, imetrics.IMetrics, error) {
+func testFactoryHelperWithMetrics(ctx context.Context, moduleURL *url.URL, funcs []string, cfg iextengine.ExtEngineConfig, compile bool) (iextengine.IExtensionEngine, imetrics.IMetrics, error) {
 	packages := []iextengine.ExtensionModule{
 		{
 			Path:           testPkg,
-			ModuleUrl:      moduleUrl,
+			ModuleURL:      moduleURL,
 			ExtensionNames: funcs,
 		},
 	}
@@ -307,8 +307,8 @@ func testFactoryHelperWithMetrics(ctx context.Context, moduleUrl *url.URL, funcs
 	return engines[0], imetrics, nil
 }
 
-func testFactoryHelper(ctx context.Context, moduleUrl *url.URL, funcs []string, cfg iextengine.ExtEngineConfig, compile bool) (iextengine.IExtensionEngine, error) {
-	extEngine, _, err := testFactoryHelperWithMetrics(ctx, moduleUrl, funcs, cfg, compile)
+func testFactoryHelper(ctx context.Context, moduleURL *url.URL, funcs []string, cfg iextengine.ExtEngineConfig, compile bool) (iextengine.IExtensionEngine, error) {
+	extEngine, _, err := testFactoryHelperWithMetrics(ctx, moduleURL, funcs, cfg, compile)
 	return extEngine, err
 }
 
@@ -323,8 +323,8 @@ func Test_Allocs_ManualGC(t *testing.T) {
 	require := require.New(t)
 	ctx := context.Background()
 	WasmPreallocatedBufferSize = 1000000
-	moduleUrl := testModuleURL("./_testdata/allocs/pkggc.wasm")
-	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend, arrReset}, iextengine.ExtEngineConfig{}, false)
+	moduleURL := testModuleURL("./_testdata/allocs/pkggc.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleURL, []string{arrAppend, arrReset}, iextengine.ExtEngineConfig{}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
 
@@ -360,8 +360,8 @@ func Test_Allocs_AutoGC(t *testing.T) {
 	WasmPreallocatedBufferSize = 1000000
 	require := require.New(t)
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/allocs/pkggc.wasm")
-	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend, arrReset}, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff}, false)
+	moduleURL := testModuleURL("./_testdata/allocs/pkggc.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleURL, []string{arrAppend, arrReset}, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
 
@@ -407,12 +407,12 @@ func Test_NoGc_MemoryOverflow(t *testing.T) {
 	require := require.New(t)
 	ctx := context.Background()
 
-	moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x10}, false)
+	moduleURL := testModuleURL("./_testdata/allocs/pkg.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleURL, []string{}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x10}, false)
 	require.ErrorContains(err, "the minimum limit of memory is: 1700000.0 bytes, requested limit is: 1048576.0")
 	require.Nil(extEngine)
 
-	extEngine, err = testFactoryHelper(ctx, moduleUrl, []string{arrAppend, arrReset}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, false)
+	extEngine, err = testFactoryHelper(ctx, moduleURL, []string{arrAppend, arrReset}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
 
@@ -444,8 +444,8 @@ func Test_SetLimitsExecutionInterval(t *testing.T) {
 
 	require := require.New(t)
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{"longFunc"}, iextengine.ExtEngineConfig{}, false)
+	moduleURL := testModuleURL("./_testdata/allocs/pkg.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleURL, []string{"longFunc"}, iextengine.ExtEngineConfig{}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
 
@@ -500,8 +500,8 @@ func Test_HandlePanics(t *testing.T) {
 
 	require := require.New(t)
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/panics/pkg.wasm")
-	extEngine, err := testFactoryHelper(ctx, moduleUrl, extNames, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, false)
+	moduleURL := testModuleURL("./_testdata/panics/pkg.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleURL, extNames, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
 
@@ -515,8 +515,8 @@ func Test_ResetStdout(t *testing.T) {
 	const testResetStdout = "TestPanic"
 	require := require.New(t)
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/panics/pkg.wasm")
-	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{testResetStdout}, iextengine.ExtEngineConfig{}, false)
+	moduleURL := testModuleURL("./_testdata/panics/pkg.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleURL, []string{testResetStdout}, iextengine.ExtEngineConfig{}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
 	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, testResetStdout), extIO)
@@ -532,8 +532,8 @@ func Test_QueryValue(t *testing.T) {
 
 	require := require.New(t)
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/tests/wasm/pkg.wasm")
-	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{testQueryValue}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, false)
+	moduleURL := testModuleURL("./_testdata/tests/wasm/pkg.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleURL, []string{testQueryValue}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
 
@@ -558,8 +558,8 @@ func Test_RecoverEngine(t *testing.T) {
 			const arrAppend2 = "arrAppend2"
 			require := require.New(t)
 			ctx := context.Background()
-			moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-			extEngine, metrics, err := testFactoryHelperWithMetrics(ctx, moduleUrl, []string{arrAppend2}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, true)
+			moduleURL := testModuleURL("./_testdata/allocs/pkg.wasm")
+			extEngine, metrics, err := testFactoryHelperWithMetrics(ctx, moduleURL, []string{arrAppend2}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, true)
 			require.NoError(err)
 			defer extEngine.Close(ctx)
 			we := extEngine.(*wazeroExtEngine)
@@ -621,8 +621,8 @@ func Test_RecoverEngine2(t *testing.T) {
 	const arrAppend2 = "arrAppend2"
 	require := require.New(t)
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend2}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, true)
+	moduleURL := testModuleURL("./_testdata/allocs/pkg.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleURL, []string{arrAppend2}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, true)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
 	we := extEngine.(*wazeroExtEngine)
@@ -660,8 +660,8 @@ func Test_Read(t *testing.T) {
 	const testRead = "testRead"
 	require := require.New(t)
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/tests/wasm/pkg.wasm")
-	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{testRead}, iextengine.ExtEngineConfig{}, false)
+	moduleURL := testModuleURL("./_testdata/tests/wasm/pkg.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleURL, []string{testRead}, iextengine.ExtEngineConfig{}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
 	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, testRead), extIO)
@@ -672,8 +672,8 @@ func Test_AsBytes(t *testing.T) {
 	const asBytes = "asBytes"
 	require := require.New(t)
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/tests/wasm/pkg.wasm")
-	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{asBytes}, iextengine.ExtEngineConfig{}, false)
+	moduleURL := testModuleURL("./_testdata/tests/wasm/pkg.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleURL, []string{asBytes}, iextengine.ExtEngineConfig{}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
 	wasmEngine := extEngine.(*wazeroExtEngine)
@@ -688,8 +688,8 @@ func Test_AsBytesOverflow(t *testing.T) {
 	const asBytes = "asBytes"
 	require := require.New(t)
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/tests/wasm/pkg.wasm")
-	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{asBytes}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, false)
+	moduleURL := testModuleURL("./_testdata/tests/wasm/pkg.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleURL, []string{asBytes}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
 	wasmEngine := extEngine.(*wazeroExtEngine)
@@ -702,8 +702,8 @@ func Test_KeyPutQName(t *testing.T) {
 	const putQName = "keyPutQName"
 	require := require.New(t)
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/tests/wasm/pkg.wasm")
-	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{putQName}, iextengine.ExtEngineConfig{}, false)
+	moduleURL := testModuleURL("./_testdata/tests/wasm/pkg.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleURL, []string{putQName}, iextengine.ExtEngineConfig{}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
 	wasmEngine := extEngine.(*wazeroExtEngine)
@@ -718,8 +718,8 @@ func Test_NoAllocs(t *testing.T) {
 	projectorMode = false
 	require := require.New(t)
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/tests/wasm/pkg.wasm")
-	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{testNoAllocs}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, false)
+	moduleURL := testModuleURL("./_testdata/tests/wasm/pkg.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleURL, []string{testNoAllocs}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
 
@@ -782,11 +782,11 @@ func Test_WithState(t *testing.T) {
 	state := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, nil, nil, intentsLimit, bundlesLimit)
 
 	// build packages
-	moduleUrl := testModuleURL("./_testdata/basicusage/pkg.wasm")
+	moduleURL := testModuleURL("./_testdata/basicusage/pkg.wasm")
 	packages := []iextengine.ExtensionModule{
 		{
 			Path:           testPkg,
-			ModuleUrl:      moduleUrl,
+			ModuleURL:      moduleURL,
 			ExtensionNames: []string{extension},
 		},
 	}
@@ -860,11 +860,11 @@ func Test_StatePanic(t *testing.T) {
 	require := require.New(t)
 	ctx := context.Background()
 
-	moduleUrl := testModuleURL("./_testdata/panics/pkg.wasm")
+	moduleURL := testModuleURL("./_testdata/panics/pkg.wasm")
 	packages := []iextengine.ExtensionModule{
 		{
 			Path:           testPkg,
-			ModuleUrl:      moduleUrl,
+			ModuleURL:      moduleURL,
 			ExtensionNames: []string{extname, undefinedPackage},
 		},
 	}
@@ -896,12 +896,12 @@ type (
 //go:embed sql_example_syspkg/*.vsql
 var sfs embed.FS
 
-func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
+func appStructsFromSQL(packagePath string, appdefSQL string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	plogOffset = istructs.Offset(123)
 	wlogOffset = istructs.Offset(42)
 	appDef := builder.New()
 
-	fs, err := parser.ParseFile("file1.vsql", appdefSql)
+	fs, err := parser.ParseFile("file1.vsql", appdefSQL)
 	if err != nil {
 		panic(err)
 	}
@@ -963,8 +963,8 @@ func Test_Panics(t *testing.T) {
 	invoke := func(name string) (imetrics.IMetrics, error) {
 		ctx := context.Background()
 		WasmPreallocatedBufferSize = 1000000
-		moduleUrl := testModuleURL("./_testdata/panics/pkg.wasm")
-		extEngine, metrics, err := testFactoryHelperWithMetrics(ctx, moduleUrl, []string{name}, iextengine.ExtEngineConfig{}, false)
+		moduleURL := testModuleURL("./_testdata/panics/pkg.wasm")
+		extEngine, metrics, err := testFactoryHelperWithMetrics(ctx, moduleURL, []string{name}, iextengine.ExtEngineConfig{}, false)
 		require.NoError(err)
 		defer extEngine.Close(ctx)
 		return metrics, extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, name), extIO)

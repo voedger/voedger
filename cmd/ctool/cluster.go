@@ -46,7 +46,7 @@ func newCluster() *clusterType {
 		ReplacedAddresses:     make([]string, 0),
 		Cron:                  &cronType{},
 		Acme:                  &acmeType{Domains: make([]string, 0)},
-		Alert:                 &alertType{DiscordWebhook: emptyDiscordWebhookUrl},
+		Alert:                 &alertType{DiscordWebhook: emptyDiscordWebhookURL},
 	}
 
 	sshKey, exists := os.LookupEnv(envVoedgerSshKey)
@@ -917,8 +917,8 @@ func (c *clusterType) setEnv() error {
 			port = httpPort
 		}
 
-		logger.Verbose(fmt.Sprintf(setEnv, envVoedgerHttpPort, port))
-		if err := os.Setenv(envVoedgerHttpPort, port); err != nil {
+		logger.Verbose(fmt.Sprintf(setEnv, envVoedgerHTTPPort, port))
+		if err := os.Setenv(envVoedgerHTTPPort, port); err != nil {
 			return err
 		}
 

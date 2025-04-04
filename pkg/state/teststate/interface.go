@@ -29,7 +29,7 @@ type ITestAPI interface {
 	PutRecords(wsid istructs.WSID, cb NewRecordsCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID)
 	PutView(testWSID istructs.WSID, entity appdef.FullQName, callback ViewValueCallback)
 	PutSecret(name string, secret []byte)
-	PutHttpHandler(HTTPHandlerFunc)
+	PutHTTPHandler(HTTPHandlerFunc)
 	PutFederationCmdHandler(state.FederationCommandHandler)
 	PutFederationBlobHandler(state.FederationBlobHandler)
 	PutUniquesHandler(state.UniquesHandler)

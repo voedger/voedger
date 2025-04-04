@@ -17,7 +17,7 @@ import (
 )
 
 func TestBasicUsage_db_cache(t *testing.T) {
-	var domain string = "test.domain.com"
+	domain := "test.domain.com"
 	ctx := context.TODO()
 	require := require.New(t)
 

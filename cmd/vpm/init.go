@@ -144,7 +144,7 @@ func createPackagesGen(imports []string, dir, modulePath string, recreate bool) 
 		if imp == sys.PackagePath {
 			continue
 		}
-		strBuffer.WriteString(fmt.Sprintf("_ %q\n", imp))
+		fmt.Fprintf(strBuffer, "_ %q\n", imp)
 	}
 
 	packageName := strings.ReplaceAll(filepath.Base(modulePath), "-", "_")

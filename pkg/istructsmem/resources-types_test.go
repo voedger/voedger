@@ -30,15 +30,15 @@ func TestResourceEnumerator(t *testing.T) {
 		cfg *AppConfigType
 		app istructs.IAppStructs
 
-		wsName       appdef.QName = appdef.NewQName("test", "workspace")
-		cmdCreateDoc appdef.QName = appdef.NewQName("test", "CreateDoc")
-		oDocName     appdef.QName = appdef.NewQName("test", "ODoc")
+		wsName       = appdef.NewQName("test", "workspace")
+		cmdCreateDoc = appdef.NewQName("test", "CreateDoc")
+		oDocName     = appdef.NewQName("test", "ODoc")
 
-		cmdCreateObj         appdef.QName = appdef.NewQName("test", "CreateObj")
-		cmdCreateObjUnlogged appdef.QName = appdef.NewQName("test", "CreateObjUnlogged")
-		oObjName             appdef.QName = appdef.NewQName("test", "Object")
+		cmdCreateObj         = appdef.NewQName("test", "CreateObj")
+		cmdCreateObjUnlogged = appdef.NewQName("test", "CreateObjUnlogged")
+		oObjName             = appdef.NewQName("test", "Object")
 
-		cmdCUD appdef.QName = appdef.NewQName("test", "cudEvent")
+		cmdCUD = appdef.NewQName("test", "cudEvent")
 	)
 
 	t.Run("builds app", func(t *testing.T) {

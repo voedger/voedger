@@ -621,9 +621,7 @@ func (vit *VIT) EnrichPrincipalToken(prn *Principal, roles []payloads.RoleType) 
 	var pp payloads.PrincipalPayload
 	_, err := vit.ValidateToken(prn.Token, &pp)
 	require.NoError(vit.T, err)
-	for _, role := range roles {
-		pp.Roles = append(pp.Roles, role)
-	}
+	pp.Roles = append(pp.Roles, roles...)
 	enrichedToken, err = vit.ITokens.IssueToken(prn.AppQName, authnz.DefaultPrincipalTokenExpiration, &pp)
 	require.NoError(vit.T, err)
 	return enrichedToken

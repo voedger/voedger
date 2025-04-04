@@ -38,5 +38,5 @@ func MakeSingletonBuilder(singleton *SingletonDoc) SingletonBuilder {
 }
 
 func (sb *SingletonBuilder) SetSingleton() {
-	sb.SingletonDoc.setSingleton()
+	sb.setSingleton()
 }

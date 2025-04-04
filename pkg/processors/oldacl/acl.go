@@ -289,7 +289,7 @@ var defaultACL = ACL{
 		desc: "grant exec on c.air.RegenerateUPProfileApiToken to role air.UntillPaymentsReseller and air.UntillPaymentsUser",
 		pattern: PatternType{
 			opKindsPattern: []appdef.OperationKind{appdef.OperationKind_Execute},
-			qNamesPattern:  []appdef.QName{qNameCmdRegenerateUPProfileApiToken},
+			qNamesPattern:  []appdef.QName{qNameCmdRegenerateUPProfileAPIToken},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
 				// OR
@@ -444,7 +444,7 @@ var defaultACL = ACL{
 		desc: "do not grant exec on c.air.TestSubscriptionProfile to anyone",
 		pattern: PatternType{
 			opKindsPattern: []appdef.OperationKind{appdef.OperationKind_Execute},
-			qNamesPattern: []appdef.QName{appdef.NewQName(airPackage, "TestSubscriptionProfile")},
+			qNamesPattern:  []appdef.QName{appdef.NewQName(airPackage, "TestSubscriptionProfile")},
 		},
 		policy: appdef.PolicyKind_Deny,
 	},
@@ -452,7 +452,7 @@ var defaultACL = ACL{
 		desc: "do not grant insert and update on cdoc.air.SubscriptionProfile to anyone",
 		pattern: PatternType{
 			opKindsPattern: []appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update},
-			qNamesPattern: []appdef.QName{appdef.NewQName(airPackage, "SubscriptionProfile")},
+			qNamesPattern:  []appdef.QName{appdef.NewQName(airPackage, "SubscriptionProfile")},
 		},
 		policy: appdef.PolicyKind_Deny,
 	},

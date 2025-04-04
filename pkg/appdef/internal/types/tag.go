@@ -68,4 +68,4 @@ func MakeTagBuilder(tags *WithTags) TagBuilder {
 	return TagBuilder{tags}
 }
 
-func (t *TagBuilder) SetTag(tag ...appdef.QName) { t.WithTags.setTag(tag...) }
+func (t *TagBuilder) SetTag(tag ...appdef.QName) { t.setTag(tag...) }

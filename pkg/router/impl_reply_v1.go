@@ -93,7 +93,7 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 
 		elemsCount++
 
-		if isCmd || contentType == coreutils.TextPlain {
+		if isCmd || contentType == coreutils.ContentType_TextPlain {
 			sendSuccess = writeResponse(w, elem.(string))
 			continue
 		}

@@ -30,7 +30,7 @@ func Test_ACLOperationsForType(t *testing.T) {
 	}
 	for i := range tests {
 		tt := tests[i]
-		t.Run(tt.TypeKind.TrimString(), func(t *testing.T) {
+		t.Run(tt.TrimString(), func(t *testing.T) {
 			if got := appdef.ACLOperationsForType(tt.TypeKind); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ACLOperationsForType(%v) = %v, want %v", tt.TypeKind, got, tt.want)
 			}

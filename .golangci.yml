@@ -57,10 +57,10 @@ linters:
           severity: warning
     staticcheck:
       checks:
-        - -SA1019
-        - -ST1003
-        - -ST1023
         - all
+        - '-SA1019'
+        - '-ST1003'
+        - '-QF1008' # possibly dangerous: could remove embedded field ... from selector
     testifylint:
       disable-all: true
       enable:

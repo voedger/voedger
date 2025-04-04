@@ -691,7 +691,7 @@ func Test_DupFieldsInTypes(t *testing.T) {
 	fs, err := ParseFile("file1.vsql", `APPLICATION test();
 	WORKSPACE MyWorkspace(
 		TYPE RootType (
-			Id int32
+			ID int32
 		);
 		TYPE BaseType(
 			RootType,
@@ -707,7 +707,7 @@ func Test_DupFieldsInTypes(t *testing.T) {
 			field varchar,
 			baseField varchar,
 			someField int,
-			Id varchar
+			ID varchar
 		)
 	)
 	`)
@@ -2195,11 +2195,11 @@ TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL ));
 }
 
 //go:embed package.vsql
-var pkgSqlFS embed.FS
+var pkgSQLFS embed.FS
 
 func TestParseFilesFromFSRoot(t *testing.T) {
 	t.Run("dot", func(t *testing.T) {
-		_, err := ParsePackageDir("github.com/untillpro/main", pkgSqlFS, ".")
+		_, err := ParsePackageDir("github.com/untillpro/main", pkgSQLFS, ".")
 		require.NoError(t, err)
 	})
 }
@@ -2433,7 +2433,7 @@ func Test_DescriptorInProjector(t *testing.T) {
 	require.AppSchemaError(`APPLICATION app1();
 	WORKSPACE w (
 		EXTENSION ENGINE BUILTIN (
-		  PROJECTOR x AFTER INSERT ON (unknown.z) STATE(sys.Http);
+		  PROJECTOR x AFTER INSERT ON (unknown.z) STATE(sys.HTTP);
 		);
 	  );
 	`,
@@ -2443,7 +2443,7 @@ func Test_DescriptorInProjector(t *testing.T) {
 	WORKSPACE RestaurantWS (
 		DESCRIPTOR Restaurant ();
 		EXTENSION ENGINE BUILTIN (
-		  PROJECTOR NewRestaurantVat AFTER INSERT OR UPDATE ON (Restaurant) STATE(sys.AppSecret, sys.Http) INTENTS(sys.SendMail);
+		  PROJECTOR NewRestaurantVat AFTER INSERT OR UPDATE ON (Restaurant) STATE(sys.AppSecret, sys.HTTP) INTENTS(sys.SendMail);
 		);
 	  );
 	`)

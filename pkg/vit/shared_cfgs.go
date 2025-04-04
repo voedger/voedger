@@ -117,7 +117,7 @@ var (
 			const app1_BLOBMaxSize = 5
 			cfg.BLOBMaxSize = app1_BLOBMaxSize
 
-			cfg.SmtpConfig = TestSMTPCfg
+			cfg.SMTPConfig = TestSMTPCfg
 		}),
 		WithCleanup(func(_ *VIT) {
 			MockCmdExec = func(input string, args istructs.ExecCommandArgs) error { panic("") }

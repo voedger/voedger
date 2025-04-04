@@ -176,9 +176,9 @@ func getFuncError(httpResp *coreutils.HTTPResponse) (funcError coreutils.FuncErr
 			}
 			funcError.SysError.QName = errQName
 		}
-		funcError.SysError.HTTPStatus = int(sysErrorMap["HTTPStatus"].(float64))
-		funcError.SysError.Message = sysErrorMap["Message"].(string)
-		funcError.SysError.Data, _ = sysErrorMap["Data"].(string)
+		funcError.HTTPStatus = int(sysErrorMap["HTTPStatus"].(float64))
+		funcError.Message = sysErrorMap["Message"].(string)
+		funcError.Data, _ = sysErrorMap["Data"].(string)
 	} else {
 		if commonErrorStatusIntf, ok := m["status"]; ok {
 			funcError.SysError.HTTPStatus = int(commonErrorStatusIntf.(float64))
@@ -217,7 +217,7 @@ func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, h
 	}
 	if strings.HasPrefix(httpResp.HTTPResp.Request.URL.Path, "/api/v2/") {
 		// TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
-		if httpResp.HTTPResp.Header.Get(coreutils.ContentType) == coreutils.ApplicationJSON {
+		if httpResp.HTTPResp.Header.Get(coreutils.ContentType) == coreutils.ContentType_ApplicationJSON {
 			err = json.Unmarshal([]byte(httpResp.Body), &res.APIV2Response)
 		} else {
 			res.APIV2Response = httpResp.Body

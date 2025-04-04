@@ -271,7 +271,7 @@ func Test_Race_CUDManyReadCheckResult(t *testing.T) {
 	vit := it.NewVIT(t, &cfg)
 	defer vit.TearDown()
 
-	var cntWS int = readCnt
+	cntWS := readCnt
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
 
 	wg := sync.WaitGroup{}
@@ -295,7 +295,7 @@ func Test_Race_CUDManyWriteCheckResult(t *testing.T) {
 	vit := it.NewVIT(t, &cfg)
 	defer vit.TearDown()
 
-	var cntWS int = writeCnt
+	cntWS := writeCnt
 	var prtIdx istructs.WSID
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
 
@@ -323,7 +323,7 @@ func Test_Race_CUDManyWriteReadCheckResult(t *testing.T) {
 	vit := it.NewVIT(t, &cfg)
 	defer vit.TearDown()
 
-	var cntWS int = writeCnt
+	cntWS := writeCnt
 	var prtIdx istructs.WSID
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
 

@@ -319,25 +319,25 @@ func TestSqlQuery_records(t *testing.T) {
 					   {"fields":{"sys.ID":3,"sys.QName":"app1pkg.pos_emails","description":"invite"}}]}`
 	res := vit.PostWS(ws, "c.sys.CUD", body)
 
-	eftId := res.NewID()
-	cashId := res.NewIDs["2"]
-	emailId := res.NewIDs["3"]
+	eftID := res.NewID()
+	cashID := res.NewIDs["2"]
+	emailID := res.NewIDs["3"]
 
 	t.Run("Should read record with all fields by ID", func(t *testing.T) {
 		require := require.New(t)
-		body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments where id = %d"},"elements":[{"fields":["Result"]}]}`, eftId)
+		body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments where id = %d"},"elements":[{"fields":["Result"]}]}`, eftID)
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
 
 		resStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
 		require.Contains(resStr, `"sys.QName":"app1pkg.payments"`)
-		require.Contains(resStr, fmt.Sprintf(`"sys.ID":%d`, eftId))
+		require.Contains(resStr, fmt.Sprintf(`"sys.ID":%d`, eftID))
 		require.Contains(resStr, `"guid":"guidEFT"`)
 		require.Contains(resStr, `"name":"EFT"`)
 		require.Contains(resStr, `"sys.IsActive":true`)
 	})
 	t.Run("Should read records with one field by IDs range", func(t *testing.T) {
 		require := require.New(t)
-		body = fmt.Sprintf(`{"args":{"Query":"select name, sys.IsActive from app1pkg.payments where id in (%d,%d)"}, "elements":[{"fields":["Result"]}]}`, eftId, cashId)
+		body = fmt.Sprintf(`{"args":{"Query":"select name, sys.IsActive from app1pkg.payments where id in (%d,%d)"}, "elements":[{"fields":["Result"]}]}`, eftID, cashID)
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
 
 		require.Equal(`{"name":"EFT","sys.IsActive":true}`, resp.SectionRow()[0])
@@ -352,9 +352,9 @@ func TestSqlQuery_records(t *testing.T) {
 			`{"args":{"Query":"select * from app1pkg.payments where id >= 2"}}`:                                            "unsupported operation: >=",
 			`{"args":{"Query":"select * from app1pkg.payments where id = 2 and something = 2"}}`:                           "unsupported expression: *sqlparser.AndExpr",
 			`{"args":{"Query":"select * from app1pkg.payments"}}`:                                                          "'app1pkg.payments' is not a singleton. At least one record ID must be provided",
-			fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments where id = %d"}}`, emailId):                      fmt.Sprintf("record with ID '%d' has mismatching QName 'app1pkg.pos_emails'", emailId),
+			fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments where id = %d"}}`, emailID):                      fmt.Sprintf("record with ID '%d' has mismatching QName 'app1pkg.pos_emails'", emailID),
 			fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments where id = %d"}}`, istructs.NonExistingRecordID): fmt.Sprintf("record with ID '%d' not found", istructs.NonExistingRecordID),
-			fmt.Sprintf(`{"args":{"Query":"select abracadabra from app1pkg.pos_emails where id = %d"}}`, emailId):          "not found: field «abracadabra» in CDoc «app1pkg.pos_emails»",
+			fmt.Sprintf(`{"args":{"Query":"select abracadabra from app1pkg.pos_emails where id = %d"}}`, emailID):          "not found: field «abracadabra» in CDoc «app1pkg.pos_emails»",
 			`{"args":{"Query":"select * from app1pkg.payments.2 where id = 2"}}`:                                           "record ID and 'where id ...' clause can not be used in one query",
 			`{"args":{"Query":"select sys.QName from app1pkg.test_ws.1"}}`:                                                 "conditions are not allowed to query a singleton",
 			`{"args":{"Query":"select sys.QName from app1pkg.test_ws where id = 1"}}`:                                      "conditions are not allowed to query a singleton",

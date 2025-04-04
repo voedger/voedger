@@ -18,7 +18,7 @@ const TooBigNumberStr = "1111111111111111111111111111111111999999999999999999999
 type TestObject struct {
 	istructs.NullObject
 	Name        appdef.QName
-	Id          istructs.RecordID
+	ID_         istructs.RecordID
 	Parent_     istructs.RecordID
 	Data        map[string]interface{}
 	Containers_ map[string][]*TestObject
@@ -49,7 +49,7 @@ func (o *TestObject) PutNumber(name string, value json.Number)         { o.Data[
 func (o *TestObject) PutChars(name string, value string)               { o.Data[name] = value }
 func (o *TestObject) PutFromJSON(value map[string]any)                 { maps.Copy(o.Data, value) }
 
-func (o *TestObject) ID() istructs.RecordID     { return o.Id }
+func (o *TestObject) ID() istructs.RecordID     { return o.ID_ }
 func (o *TestObject) QName() appdef.QName       { return o.Name }
 func (o *TestObject) Parent() istructs.RecordID { return o.Parent_ }
 
@@ -78,7 +78,7 @@ func (o *TestObject) IsDeactivated() bool {
 func (o *TestObject) IsNew() bool { return o.IsNew_ }
 
 func (o *TestObject) SpecifiedValues(cb func(appdef.IField, any) bool) {
-	if !cb(&MockIField{FieldName: appdef.SystemField_ID, FieldDataKind: appdef.DataKind_RecordID}, o.Id) {
+	if !cb(&MockIField{FieldName: appdef.SystemField_ID, FieldDataKind: appdef.DataKind_RecordID}, o.ID_) {
 		return
 	}
 	if !cb(&MockIField{FieldName: appdef.SystemField_IsActive, FieldDataKind: appdef.DataKind_bool}, true) {
