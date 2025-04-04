@@ -158,9 +158,9 @@ func (s *sequencer) flusher(ctx context.Context) {
 		case <-s.flusherSig:
 		}
 
-		s.toBeFlushedMu.Lock()
+		s.toBeFlushedMu.RLock()
 		flushOffset := s.toBeFlushedOffset
-		s.toBeFlushedMu.Unlock()
+		s.toBeFlushedMu.RUnlock()
 
 		if err := s.flushValues(flushOffset); err != nil {
 			// notest
