@@ -32,16 +32,11 @@ func TestSequencer(t *testing.T) {
 			},
 		})
 
-		params := &Params{
-			SeqTypes: map[WSKind]map[SeqID]Number{
-				1: {1: 1},
-			},
-			SeqStorage:            storage,
-			MaxNumUnflushedValues: 500,
-			LRUCacheSize:          1000,
-		}
+		params := NewDefaultParams(map[WSKind]map[SeqID]Number{
+			1: {1: 1},
+		})
 
-		seq, cleanup := New(params, mockedTime)
+		seq, cleanup := New(params, storage, mockedTime)
 
 		// When
 		offset := WaitForStart(t, seq, 1, 1, true)
@@ -84,14 +79,11 @@ func TestSequencer_Start(t *testing.T) {
 				},
 			},
 		})
-		seq, cancel := New(&Params{
-			SeqTypes: map[WSKind]map[SeqID]Number{
-				1: {1: 1},
-			},
-			SeqStorage:            storage,
-			MaxNumUnflushedValues: 5,
-			LRUCacheSize:          1000,
-		}, iTime)
+		params := NewDefaultParams(map[WSKind]map[SeqID]Number{
+			1: {1: 1},
+		})
+		params.MaxNumUnflushedValues = 5
+		seq, cancel := New(params, storage, iTime)
 		defer cancel()
 
 		seq.(*sequencer).toBeFlushedMu.Lock()
@@ -124,14 +116,11 @@ func TestSequencer_Flush(t *testing.T) {
 			},
 		})
 
-		seq, cancel := New(&Params{
-			SeqTypes: map[WSKind]map[SeqID]Number{
-				1: {1: 1},
-			},
-			SeqStorage:            storage,
-			MaxNumUnflushedValues: 5,
-			LRUCacheSize:          1000,
-		}, iTime)
+		params := NewDefaultParams(map[WSKind]map[SeqID]Number{
+			1: {1: 1},
+		})
+		params.MaxNumUnflushedValues = 5
+		seq, cancel := New(params, storage, iTime)
 		defer cancel()
 
 		seq.(*sequencer).toBeFlushedMu.Lock()
@@ -183,19 +172,15 @@ func TestSequencer_Next(t *testing.T) {
 		})
 		// No predefined sequence Numbers in storage
 		initialValue := Number(1)
-		seq, cancel := New(&Params{
-			SeqTypes: map[WSKind]map[SeqID]Number{
-				1: {1: initialValue},
-			},
-			SeqStorage:            storage,
-			MaxNumUnflushedValues: 10,
-			LRUCacheSize:          1000,
-		}, iTime)
+		params := NewDefaultParams(map[WSKind]map[SeqID]Number{
+			1: {1: initialValue},
+		})
+		params.RetryCount = 1
+		seq, cancel := New(params, storage, iTime)
 
 		WaitForStart(t, seq, 1, 1, true)
 
 		cancel()
-		RetryCount = 1
 		storage.SetReadNumbersError(errors.New("ReadNumbersError"))
 		seq.(*sequencer).toBeFlushedMu.Lock()
 		seq.(*sequencer).toBeFlushed = make(map[NumberKey]Number)
@@ -206,7 +191,7 @@ func TestSequencer_Next(t *testing.T) {
 		require.Zero(num)
 	})
 
-	t.Run("should update lru ", func(t *testing.T) {
+	t.Run("should update cache ", func(t *testing.T) {
 		require := require.New(t)
 		iTime := coreutils.MockTime
 
@@ -222,14 +207,9 @@ func TestSequencer_Next(t *testing.T) {
 		})
 		// No predefined sequence Numbers in storage
 		initialValue := Number(1)
-		seq, cancel := New(&Params{
-			SeqTypes: map[WSKind]map[SeqID]Number{
-				1: {1: initialValue},
-			},
-			SeqStorage:            storage,
-			MaxNumUnflushedValues: 10,
-			LRUCacheSize:          1000,
-		}, iTime)
+		seq, cancel := New(NewDefaultParams(map[WSKind]map[SeqID]Number{
+			1: {1: initialValue},
+		}), storage, iTime)
 		defer cancel()
 
 		_, ok := seq.Start(1, 1)
@@ -266,14 +246,13 @@ func TestBatcher(t *testing.T) {
 		})
 		mockTime := coreutils.MockTime
 
-		params := &Params{
-			SeqStorage:            storage,
+		params := Params{
 			MaxNumUnflushedValues: 3, // Small threshold to test waiting
 			LRUCacheSize:          1000,
 			BatcherDelay:          10 * time.Millisecond,
 		}
 
-		seq, cleanup := New(params, mockTime)
+		seq, cleanup := New(params, storage, mockTime)
 		defer cleanup()
 		s := seq.(*sequencer)
 
@@ -338,17 +317,12 @@ func TestBatcher(t *testing.T) {
 		storage := NewMockStorage(0, 0)
 		mockTime := coreutils.MockTime
 
-		params := &Params{
-			SeqTypes: map[WSKind]map[SeqID]Number{
-				1: {1: 100},
-			},
-			SeqStorage:            storage,
-			MaxNumUnflushedValues: 1, // Small threshold to force waiting
-			LRUCacheSize:          1000,
-			BatcherDelay:          100 * time.Millisecond,
-		}
+		params := NewDefaultParams(map[WSKind]map[SeqID]Number{
+			1: {1: 100},
+		})
+		params.MaxNumUnflushedValues = 1 // Small threshold to force waiting
 
-		seq, cleanup := New(params, mockTime)
+		seq, cleanup := New(params, storage, mockTime)
 		defer cleanup()
 		s := seq.(*sequencer)
 
@@ -412,13 +386,7 @@ func TestSequencer_FlushValues(t *testing.T) {
 		})
 		mockTime := coreutils.MockTime
 
-		params := &Params{
-			SeqStorage:            storage,
-			MaxNumUnflushedValues: 10,
-			LRUCacheSize:          1000,
-		}
-
-		seq, cleanup := New(params, mockTime)
+		seq, cleanup := New(NewDefaultParams(nil), storage, mockTime)
 		defer cleanup()
 		s := seq.(*sequencer)
 
@@ -457,16 +425,12 @@ func TestSequencer_FlushValues(t *testing.T) {
 			},
 		})
 		storage.SetWriteValuesAndOffset(errors.New("storage write error"))
-		RetryCount = 1
 		mockTime := coreutils.MockTime
 
-		params := &Params{
-			SeqStorage:            storage,
-			MaxNumUnflushedValues: 10,
-			LRUCacheSize:          1000,
-		}
+		params := NewDefaultParams(nil)
+		params.RetryCount = 1
 
-		seq, cleanup := New(params, mockTime)
+		seq, cleanup := New(params, storage, mockTime)
 		s := seq.(*sequencer)
 
 		// Set empty toBeFlushed
@@ -503,16 +467,11 @@ func TestNextNumberSourceOrder(t *testing.T) {
 	})
 	mockTime := coreutils.MockTime
 
-	params := &Params{
-		SeqTypes: map[WSKind]map[SeqID]Number{
-			1: {1: 1},
-		},
-		SeqStorage:            storage,
-		MaxNumUnflushedValues: 10,
-		LRUCacheSize:          1000,
-	}
+	params := NewDefaultParams(map[WSKind]map[SeqID]Number{
+		1: {1: 1},
+	})
 
-	seq, cleanup := New(params, mockTime)
+	seq, cleanup := New(params, storage, mockTime)
 	defer cleanup()
 
 	numberKey := NumberKey{WSID: 1, SeqID: 1}
@@ -530,7 +489,7 @@ func TestNextNumberSourceOrder(t *testing.T) {
 		seq.Actualize()
 	})
 
-	t.Run("check taken from lru on next", func(t *testing.T) {
+	t.Run("check taken from cache on next", func(t *testing.T) {
 		offset := WaitForStart(t, seq, 1, 1, true)
 		require.Equal(PLogOffset(6), offset)
 
@@ -545,7 +504,7 @@ func TestNextNumberSourceOrder(t *testing.T) {
 		seq.Actualize()
 	})
 
-	t.Run("missing in lru -> take from inproc", func(t *testing.T) {
+	t.Run("missing in cache -> take from inproc", func(t *testing.T) {
 		// start
 		offset := WaitForStart(t, seq, 1, 1, true)
 		require.Equal(PLogOffset(6), offset)
@@ -569,7 +528,7 @@ func TestNextNumberSourceOrder(t *testing.T) {
 		seq.Actualize()
 	})
 
-	t.Run("missing in lru and in inproc -> take from toBeFlushed", func(t *testing.T) {
+	t.Run("missing in cache and in inproc -> take from toBeFlushed", func(t *testing.T) {
 		// start
 		offset := WaitForStart(t, seq, 1, 1, true)
 		require.Equal(PLogOffset(6), offset)
@@ -581,7 +540,9 @@ func TestNextNumberSourceOrder(t *testing.T) {
 
 		// clear inproc + keep toBeFlushed filled by making flusher() stuck
 		continueCh := make(chan any)
+		writeValuesAndOffsetCh := make(chan any)
 		storage.onWriteValuesAndOffset = func() {
+			close(writeValuesAndOffsetCh)
 			<-continueCh
 		}
 		defer func() {
@@ -595,6 +556,7 @@ func TestNextNumberSourceOrder(t *testing.T) {
 		require.True(removed)
 
 		// tamper toBeFlushed to ensure we'll read exactly from toBeFlushed in this case
+		<-writeValuesAndOffsetCh // avoid data race on toBeFlushed
 		seq.(*sequencer).toBeFlushed[numberKey] = 30001
 
 		offset = WaitForStart(t, seq, 1, 1, true)

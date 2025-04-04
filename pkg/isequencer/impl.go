@@ -12,12 +12,6 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
-var (
-	// variables for retry mechanism
-	RetryDelay = defaultRetryDelay
-	RetryCount = defaultRetryCount
-)
-
 // Start starts Sequencing Transaction for the given WSID.
 // Marks Sequencing Transaction as in progress.
 // Panics if Sequencing Transaction is already started.
@@ -157,9 +151,9 @@ func (s *sequencer) flusher(ctx context.Context) {
 		case <-s.flusherSig:
 		}
 
-		s.toBeFlushedMu.Lock()
+		s.toBeFlushedMu.RLock()
 		flushOffset := s.toBeFlushedOffset
-		s.toBeFlushedMu.Unlock()
+		s.toBeFlushedMu.RUnlock()
 
 		if err := s.flushValues(flushOffset); err != nil {
 			// notest
@@ -231,10 +225,10 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 
 	// Try s.params.SeqStorage.ReadNumber()
 	var knownNumbers []Number
-	err = coreutils.Retry(s.cleanupCtx, s.iTime, RetryDelay, RetryCount, func() error {
+	err = coreutils.Retry(s.cleanupCtx, s.iTime, s.params.RetryDelay, s.params.RetryCount, func() error {
 		var err error
 		// Read all known Numbers for wsKind, wsID
-		knownNumbers, err = s.params.SeqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
+		knownNumbers, err = s.seqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
 		// Write all Numbers to s.lru
 		for _, number := range knownNumbers {
 			if number == 0 {
@@ -422,8 +416,8 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 
 	var err error
 	// Read nextPLogOffset from s.params.SeqStorage.ReadNextPLogOffset()
-	err = coreutils.Retry(actualizerCtx, s.iTime, RetryDelay, RetryCount, func() error {
-		s.nextOffset, err = s.params.SeqStorage.ReadNextPLogOffset()
+	err = coreutils.Retry(actualizerCtx, s.iTime, s.params.RetryDelay, s.params.RetryCount, func() error {
+		s.nextOffset, err = s.seqStorage.ReadNextPLogOffset()
 
 		return err
 	})
@@ -433,8 +427,8 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	}
 
 	// Use s.params.SeqStorage.ActualizeSequencesFromPLog() and s.batcher()
-	err = coreutils.Retry(actualizerCtx, s.iTime, RetryDelay, RetryCount, func() error {
-		return s.params.SeqStorage.ActualizeSequencesFromPLog(s.cleanupCtx, s.nextOffset, s.batcher)
+	err = coreutils.Retry(actualizerCtx, s.iTime, s.params.RetryDelay, s.params.RetryCount, func() error {
+		return s.seqStorage.ActualizeSequencesFromPLog(s.cleanupCtx, s.nextOffset, s.batcher)
 	})
 	if err != nil {
 		// notest
@@ -475,8 +469,8 @@ func (s *sequencer) flushValues(offset PLogOffset) error {
 	s.toBeFlushedMu.RUnlock()
 	// s.params.SeqStorage.WriteValuesAndNextPLogOffset(flushValues, offset)
 	// Error handling: Handle errors with retry mechanism (500ms wait)
-	err := coreutils.Retry(s.cleanupCtx, s.iTime, RetryDelay, RetryCount, func() error {
-		return s.params.SeqStorage.WriteValuesAndNextPLogOffset(flushValues, offset)
+	err := coreutils.Retry(s.cleanupCtx, s.iTime, s.params.RetryDelay, s.params.RetryCount, func() error {
+		return s.seqStorage.WriteValuesAndNextPLogOffset(flushValues, offset)
 	})
 	if err != nil {
 		return err
@@ -528,7 +522,9 @@ func (s *sequencer) Actualize() {
 	s.toBeFlushedMu.Unlock()
 
 	// Cleans s.toBeFlushedOffset
+	s.toBeFlushedMu.Lock()
 	s.toBeFlushedOffset = 0
+	s.toBeFlushedMu.Unlock()
 	// Cleans s.lru
 	s.lru.Purge()
 

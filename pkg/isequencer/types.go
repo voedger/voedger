@@ -41,18 +41,20 @@ type Params struct {
 	// Only these sequences are managed by the sequencer (ref. ErrUnknownSeqID).
 	SeqTypes map[WSKind]map[SeqID]Number
 
-	SeqStorage ISeqStorage
-
 	MaxNumUnflushedValues int // 500
 	// Size of the LRU cache, NumberKey -> Number.
 	LRUCacheSize int           // 100_000
 	BatcherDelay time.Duration // 5 * time.Millisecond
+
+	RetryCount int
+	RetryDelay time.Duration
 }
 
 // sequencer implements ISequencer
 // [~server.design.sequences/cmp.sequencer~impl]
 type sequencer struct {
-	params *Params
+	params     Params
+	seqStorage ISeqStorage
 
 	actualizerInProgress atomic.Bool
 	// actualizerCtxCancel is used by cleanup() function
@@ -274,17 +276,17 @@ func (m *MockStorage) SetPLog(plog map[PLogOffset][]SeqValue) {
 	m.pLog = plog
 }
 
-func (m *MockStorage) AddPLogEntry(offset, wsid int, seqID SeqID, number int) {
+func (m *MockStorage) AddPLogEntry(offset PLogOffset, wsid WSID, seqID SeqID, number Number) {
 	// notest
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	// Add the new entry to the PLog
-	m.pLog[PLogOffset(offset)] = append( //nolint:gosec
-		m.pLog[PLogOffset(offset)], //nolint:gosec
+	m.pLog[offset] = append(
+		m.pLog[offset],
 		SeqValue{
-			Key:   NumberKey{WSID: WSID(wsid), SeqID: seqID}, //nolint:gosec
-			Value: Number(number),                            //nolint:gosec
+			Key:   NumberKey{WSID: wsid, SeqID: seqID},
+			Value: number,
 		},
 	)
 }

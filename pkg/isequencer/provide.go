@@ -14,8 +14,17 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
+func NewDefaultParams(seqTypes map[WSKind]map[SeqID]Number) Params {
+	return Params{
+		SeqTypes:              seqTypes,
+		MaxNumUnflushedValues: DefaultMaxNumUnflushedValues,
+		LRUCacheSize:          DefaultLRUCacheSize,
+		RetryDelay:            defaultRetryDelay,
+	}
+}
+
 // New creates a new sequencer
-func New(params *Params, iTime coreutils.ITime) (ISequencer, context.CancelFunc) {
+func New(params Params, seqStorage ISeqStorage, iTime coreutils.ITime) (ISequencer, context.CancelFunc) {
 	lru, err := lruPkg.New[NumberKey, Number](params.LRUCacheSize)
 	if err != nil {
 		// notest
@@ -34,6 +43,7 @@ func New(params *Params, iTime coreutils.ITime) (ISequencer, context.CancelFunc)
 		flusherStartedCh: make(chan struct{}, 1),
 		flusherSig:       make(chan struct{}, 1),
 		actualizerWG:     &sync.WaitGroup{},
+		seqStorage:       seqStorage,
 	}
 	s.actualizerInProgress.Store(false)
 

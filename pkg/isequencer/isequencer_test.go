@@ -29,10 +29,10 @@ func TestISequencer_Start(t *testing.T) {
 			},
 		},
 	})
-	params := createDefaultParams(storage)
+	params := createDefaultParams()
 
 	t.Run("should panic when cleanup process is initiated", func(t *testing.T) {
-		sequencer, cleanup := isequencer.New(params, iTime)
+		sequencer, cleanup := isequencer.New(params, storage, iTime)
 		cleanup()
 		require.Panics(func() {
 			sequencer.Start(1, 1)
@@ -40,7 +40,7 @@ func TestISequencer_Start(t *testing.T) {
 	})
 
 	t.Run("should panic when transaction already started", func(t *testing.T) {
-		sequencer, cleanup := isequencer.New(params, iTime)
+		sequencer, cleanup := isequencer.New(params, storage, iTime)
 		defer cleanup()
 
 		offset, ok := sequencer.Start(1, 1)
@@ -53,7 +53,7 @@ func TestISequencer_Start(t *testing.T) {
 	})
 
 	t.Run("should reject when actualization in progress", func(t *testing.T) {
-		seq, cleanup := isequencer.New(params, iTime)
+		seq, cleanup := isequencer.New(params, storage, iTime)
 		defer cleanup()
 
 		offset := isequencer.WaitForStart(t, seq, 1, 1, true)
@@ -68,7 +68,7 @@ func TestISequencer_Start(t *testing.T) {
 	})
 
 	t.Run("should panic when unknown wsKind", func(t *testing.T) {
-		sequencer, cleanup := isequencer.New(params, iTime)
+		sequencer, cleanup := isequencer.New(params, storage, iTime)
 		defer cleanup()
 
 		require.Panics(func() {
@@ -86,9 +86,9 @@ func TestISequencer_Start(t *testing.T) {
 			},
 		})
 
-		params := createDefaultParams(storage)
+		params := createDefaultParams()
 		params.MaxNumUnflushedValues = 5
-		seq, cancel := isequencer.New(params, iTime)
+		seq, cancel := isequencer.New(params, storage, iTime)
 		defer cancel()
 
 		// First transaction
@@ -137,11 +137,11 @@ func TestISequencer_Flush(t *testing.T) {
 			},
 		})
 
-		params := createDefaultParams(storage)
+		params := createDefaultParams()
 		params.SeqTypes = map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
 			1: {1: 1, 2: 1},
 		}
-		seq, cancel := isequencer.New(params, iTime)
+		seq, cancel := isequencer.New(params, storage, iTime)
 		defer cancel()
 
 		// Start transaction and get some values
@@ -194,11 +194,11 @@ func TestISequencer_Flush(t *testing.T) {
 				},
 			},
 		})
-		params := createDefaultParams(storage)
+		params := createDefaultParams()
 		params.SeqTypes = map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
 			1: {1: 100},
 		}
-		sequencer, cancel := isequencer.New(params, iTime)
+		sequencer, cancel := isequencer.New(params, storage, iTime)
 		defer cancel()
 
 		// Should panic when flush is called without an active transaction
@@ -221,8 +221,8 @@ func TestISequencer_Flush(t *testing.T) {
 			},
 		})
 
-		params := createDefaultParams(storage)
-		sequencer, cancel := isequencer.New(params, iTime)
+		params := createDefaultParams()
+		sequencer, cancel := isequencer.New(params, storage, iTime)
 		defer cancel()
 
 		firstOffset, err := storage.ReadNextPLogOffset()
@@ -267,7 +267,7 @@ func TestISequencer_Next(t *testing.T) {
 			},
 		})
 
-		sequencer, cancel := isequencer.New(createDefaultParams(storage), iTime)
+		sequencer, cancel := isequencer.New(createDefaultParams(), storage, iTime)
 		defer cancel()
 
 		_, ok := sequencer.Start(1, 1)
@@ -300,11 +300,11 @@ func TestISequencer_Next(t *testing.T) {
 			},
 		})
 		// No predefined sequence Numbers in storage
-		params := createDefaultParams(storage)
+		params := createDefaultParams()
 		params.SeqTypes = map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
 			1: {1: 1},
 		}
-		sequencer, cancel := isequencer.New(params, iTime)
+		sequencer, cancel := isequencer.New(params, storage, iTime)
 		defer cancel()
 
 		_, ok := sequencer.Start(1, 1)
@@ -322,7 +322,7 @@ func TestISequencer_Next(t *testing.T) {
 		iTime := coreutils.MockTime
 
 		storage := createDefaultStorage()
-		sequencer, cancel := isequencer.New(createDefaultParams(storage), iTime)
+		sequencer, cancel := isequencer.New(createDefaultParams(), storage, iTime)
 		defer cancel()
 
 		require.Panics(func() {
@@ -335,7 +335,7 @@ func TestISequencer_Next(t *testing.T) {
 		iTime := coreutils.MockTime
 
 		storage := createDefaultStorage()
-		sequencer, cancel := isequencer.New(createDefaultParams(storage), iTime)
+		sequencer, cancel := isequencer.New(createDefaultParams(), storage, iTime)
 		defer cancel()
 
 		_, ok := sequencer.Start(1, 1)
@@ -366,14 +366,14 @@ func TestISequencer_Next(t *testing.T) {
 			},
 		})
 
-		params := createDefaultParams(storage)
+		params := createDefaultParams()
 		params.SeqTypes = map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
 			1: {
 				1: 1,
 				2: 1,
 			},
 		}
-		sequencer, cancel := isequencer.New(params, iTime)
+		sequencer, cancel := isequencer.New(params, storage, iTime)
 		defer cancel()
 
 		_, ok := sequencer.Start(1, 1)
@@ -408,7 +408,7 @@ func TestISequencer_Next(t *testing.T) {
 			},
 		})
 
-		seq, cancel := isequencer.New(createDefaultParams(storage), iTime)
+		seq, cancel := isequencer.New(createDefaultParams(), storage, iTime)
 		defer cancel()
 
 		// Transaction 1
@@ -446,9 +446,9 @@ func TestISequencer_Next(t *testing.T) {
 		})
 
 		// Use a tiny LRU cache that will definitely cause evictions
-		params := createDefaultParams(storage)
+		params := createDefaultParams()
 		params.LRUCacheSize = 1 // Tiny cache to force evictions
-		seq, cancel := isequencer.New(params, iTime)
+		seq, cancel := isequencer.New(params, storage, iTime)
 		defer cancel()
 
 		// First transaction
@@ -481,7 +481,7 @@ func TestISequencer_Next(t *testing.T) {
 			},
 		})
 
-		seq, cleanup := isequencer.New(createDefaultParams(storage), iTime)
+		seq, cleanup := isequencer.New(createDefaultParams(), storage, iTime)
 		defer cleanup()
 
 		// First transaction
@@ -523,8 +523,8 @@ func TestISequencer_Actualize(t *testing.T) {
 				},
 			},
 		})
-		params := createDefaultParams(storage)
-		seq, cleanup := isequencer.New(params, mockedTime)
+		params := createDefaultParams()
+		seq, cleanup := isequencer.New(params, storage, mockedTime)
 		defer cleanup()
 		require.Panics(func() { seq.Actualize() })
 	})
@@ -532,8 +532,8 @@ func TestISequencer_Actualize(t *testing.T) {
 	t.Run("empty plog", func(t *testing.T) {
 		storage := createDefaultStorage()
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{})
-		params := createDefaultParams(storage)
-		seq, cleanup := isequencer.New(params, mockedTime)
+		params := createDefaultParams()
+		seq, cleanup := isequencer.New(params, storage, mockedTime)
 		defer cleanup()
 		initialOffset := isequencer.WaitForStart(t, seq, 1, 1, true)
 
@@ -565,12 +565,12 @@ func TestISequencer_Actualize(t *testing.T) {
 			},
 		})
 
-		params := createDefaultParams(storage)
+		params := createDefaultParams()
 		params.SeqTypes = map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
 			1: {1: 1, 2: 1},
 		}
 
-		seq, cleanup := isequencer.New(params, mockedTime)
+		seq, cleanup := isequencer.New(params, storage, mockedTime)
 		defer cleanup()
 		initialOffset := isequencer.WaitForStart(t, seq, 1, 1, true)
 
@@ -615,11 +615,11 @@ func TestISequencer_MultipleActualizes(t *testing.T) {
 		},
 	})
 
-	params := createDefaultParams(storage)
+	params := createDefaultParams()
 	params.MaxNumUnflushedValues = 10
 	params.LRUCacheSize = 100
 
-	seq, cleanup := isequencer.New(params, iTime)
+	seq, cleanup := isequencer.New(params, storage, iTime)
 	defer cleanup()
 
 	var nextOffset isequencer.PLogOffset
@@ -654,7 +654,7 @@ func TestISequencer_MultipleActualizes(t *testing.T) {
 			seq.Flush()
 			flushCalled = 1
 			// Simulate write to pLog as CP does
-			storage.AddPLogEntry(int(nextOffset), 1, 1, int(nextNumber))
+			storage.AddPLogEntry(nextOffset, 1, 1, nextNumber)
 			countOfFlushes++
 			// Simulate some time passing to ensure that flusher finished
 			iTime.Sleep(10 * time.Millisecond)
@@ -689,17 +689,17 @@ func TestISequencer_FlushPermanentlyFails(t *testing.T) {
 		},
 	})
 
-	params := createDefaultParams(storage)
+	params := createDefaultParams()
 	params.SeqTypes = map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
 		1: {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1},
 	}
 	params.MaxNumUnflushedValues = 5
-
-	seq, cleanup := isequencer.New(params, iTime)
-	defer cleanup()
 	// Set up retry count for infinite retry
-	previousRetryCount := isequencer.RetryCount
-	isequencer.RetryCount = 0
+	params.RetryCount = 0
+
+	seq, cleanup := isequencer.New(params, storage, iTime)
+	defer cleanup()
+
 	// Set up storage to simulate a permanent failure
 	storage.SetWriteValuesAndOffset(errors.New("some error"))
 
@@ -744,9 +744,6 @@ func TestISequencer_FlushPermanentlyFails(t *testing.T) {
 		require.NoError(err)
 		require.Equal(isequencer.Number(3), num)
 	}
-
-	// Reset the retry count to its original value
-	isequencer.RetryCount = previousRetryCount
 }
 
 // [~server.design.sequences/test.isequencer.LongRecovery~impl]
@@ -765,9 +762,9 @@ func TestISequencer_LongRecovery(t *testing.T) {
 		// Fulfill pLog with data
 		storage := isequencer.NewMockStorage(0, 0)
 
-		pLogOffset := 1
-		number := 1
-		wsid := 1
+		pLogOffset := isequencer.PLogOffset(1)
+		number := isequencer.Number(1)
+		wsid := isequencer.WSID(1)
 		for i := 0; i < numEvents; i++ {
 			storage.AddPLogEntry(pLogOffset, wsid, seqID_1, number)
 			number++
@@ -778,56 +775,56 @@ func TestISequencer_LongRecovery(t *testing.T) {
 			pLogOffset++
 		}
 
-		params := createDefaultParams(storage)
+		params := createDefaultParams()
 		params.SeqTypes = map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
 			1: {seqID_1: 1, seqID_2: 1},
 		}
-		seq, cleanup := isequencer.New(params, iTime)
+		seq, cleanup := isequencer.New(params, storage, iTime)
 
-		nextOffset := isequencer.WaitForStart(t, seq, 1, isequencer.WSID(wsid), true)
+		nextOffset := isequencer.WaitForStart(t, seq, 1, wsid, true)
 		require.Equal(isequencer.PLogOffset(numEvents)+1, nextOffset)
 
 		num1, err := seq.Next(seqID_1)
 		require.NoError(err)
-		require.Equal(isequencer.Number(number)-1, num1, numEvents)
+		require.Equal(number-1, num1, numEvents)
 
 		num2, err := seq.Next(seqID_2)
 		require.NoError(err)
-		require.Equal(isequencer.Number(number), num2)
+		require.Equal(number, num2)
 
 		seq.Flush()
 
 		// Simulate write to pLog as CP does
-		storage.AddPLogEntry(int(nextOffset), wsid, seqID_1, int(num1))
-		storage.AddPLogEntry(int(nextOffset), wsid, seqID_2, int(num2))
+		storage.AddPLogEntry(nextOffset, wsid, seqID_1, num1)
+		storage.AddPLogEntry(nextOffset, wsid, seqID_2, num2)
 
 		// one more transaction after Flush
 
-		nextOffset = isequencer.WaitForStart(t, seq, 1, isequencer.WSID(wsid), true)
+		nextOffset = isequencer.WaitForStart(t, seq, 1, wsid, true)
 		require.Equal(isequencer.PLogOffset(numEvents)+2, nextOffset)
 
 		num1, err = seq.Next(seqID_1)
 		require.NoError(err)
-		require.Equal(isequencer.Number(number), num1)
+		require.Equal(number, num1)
 
 		num2, err = seq.Next(seqID_2)
 		require.NoError(err)
-		require.Equal(isequencer.Number(number)+1, num2)
+		require.Equal(number+1, num2)
 
 		seq.Actualize()
 
 		// one more transaction after Actualize
 
-		nextOffset = isequencer.WaitForStart(t, seq, 1, isequencer.WSID(wsid), true)
+		nextOffset = isequencer.WaitForStart(t, seq, 1, wsid, true)
 		require.Equal(isequencer.PLogOffset(numEvents)+2, nextOffset)
 
 		num1, err = seq.Next(seqID_1)
 		require.NoError(err)
-		require.Equal(isequencer.Number(number), num1)
+		require.Equal(number, num1)
 
 		num2, err = seq.Next(seqID_2)
 		require.NoError(err)
-		require.Equal(isequencer.Number(number)+1, num2)
+		require.Equal(number+1, num2)
 
 		cleanup()
 	}
@@ -840,15 +837,8 @@ func createDefaultStorage() *isequencer.MockStorage {
 	return storage
 }
 
-// createDefaultParams creates default parameters for sequencer tests
-func createDefaultParams(storage *isequencer.MockStorage) *isequencer.Params {
-	return &isequencer.Params{
-		SeqTypes: map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
-			1: {1: 1},
-		},
-		SeqStorage:            storage,
-		MaxNumUnflushedValues: 5,
-		LRUCacheSize:          1000,
-		BatcherDelay:          5 * time.Millisecond,
-	}
+func createDefaultParams() isequencer.Params {
+	return isequencer.NewDefaultParams(map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
+		1: {1: 1},
+	})
 }
