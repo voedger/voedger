@@ -696,8 +696,17 @@ func TestISequencer_FlushPermanentlyFails(t *testing.T) {
 	seq, cleanup := isequencer.New(params, iTime)
 	defer cleanup()
 	// Set up retry count for infinite retry
+	isequencer.RetryCountMu.Lock()
 	previousRetryCount := isequencer.RetryCount
 	isequencer.RetryCount = 0
+	isequencer.RetryCountMu.Unlock()
+
+	defer func() {
+		isequencer.RetryCountMu.Lock()
+		isequencer.RetryCount = previousRetryCount
+		isequencer.RetryCountMu.Unlock()
+	}()
+
 	// Set up storage to simulate a permanent failure
 	storage.SetWriteValuesAndOffset(errors.New("some error"))
 
@@ -742,9 +751,6 @@ func TestISequencer_FlushPermanentlyFails(t *testing.T) {
 		require.NoError(err)
 		require.Equal(isequencer.Number(3), num)
 	}
-
-	// Reset the retry count to its original value
-	isequencer.RetryCount = previousRetryCount
 }
 
 // [~server.design.sequences/test.isequencer.LongRecovery~impl]

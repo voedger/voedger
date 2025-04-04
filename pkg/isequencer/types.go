@@ -136,6 +136,14 @@ func NewMockStorage(readTimeout, writeTimeout time.Duration) *MockStorage {
 	}
 }
 
+func (m *MockStorage) SetOnWriteValuesAndOffset(f func()) {
+	// notest
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.onWriteValuesAndOffset = f
+}
+
 func (m *MockStorage) SetWriteValuesAndOffset(err error) {
 	// notest
 	m.mu.Lock()

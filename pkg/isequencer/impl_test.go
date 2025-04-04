@@ -195,7 +195,18 @@ func TestSequencer_Next(t *testing.T) {
 		WaitForStart(t, seq, 1, 1, true)
 
 		cancel()
+		// Simulate a failure in ReadNumbers
+		RetryCountMu.Lock()
+		prevRetryCount := RetryCount
 		RetryCount = 1
+		RetryCountMu.Unlock()
+
+		defer func() {
+			RetryCountMu.Lock()
+			RetryCount = prevRetryCount
+			RetryCountMu.Unlock()
+		}()
+
 		storage.SetReadNumbersError(errors.New("ReadNumbersError"))
 		seq.(*sequencer).toBeFlushedMu.Lock()
 		seq.(*sequencer).toBeFlushed = make(map[NumberKey]Number)
@@ -204,6 +215,7 @@ func TestSequencer_Next(t *testing.T) {
 		num, err := seq.Next(1)
 		require.ErrorIs(err, storage.ReadNumbersError)
 		require.Zero(num)
+
 	})
 
 	t.Run("should update lru ", func(t *testing.T) {
@@ -457,7 +469,17 @@ func TestSequencer_FlushValues(t *testing.T) {
 			},
 		})
 		storage.SetWriteValuesAndOffset(errors.New("storage write error"))
+
+		RetryCountMu.Lock()
+		prevRetryCount := RetryCount
 		RetryCount = 1
+		RetryCountMu.Unlock()
+
+		defer func() {
+			RetryCountMu.Lock()
+			RetryCount = prevRetryCount
+			RetryCountMu.Unlock()
+		}()
 		mockTime := coreutils.MockTime
 
 		params := &Params{
@@ -484,40 +506,40 @@ func TestSequencer_FlushValues(t *testing.T) {
 }
 
 func TestNextNumberSourceOrder(t *testing.T) {
-	require := require.New(t)
-
-	// Set up mock storage and sequencer
-	storage := NewMockStorage(0, 0)
-	storage.SetPLog(map[PLogOffset][]SeqValue{
-		PLogOffset(0): nil,
-		PLogOffset(1): nil,
-		PLogOffset(2): nil,
-		PLogOffset(3): nil,
-		PLogOffset(4): nil,
-		PLogOffset(5): {
-			{
-				Key:   NumberKey{WSID: 1, SeqID: 1},
-				Value: 100,
-			},
-		},
-	})
-	mockTime := coreutils.MockTime
-
-	params := &Params{
-		SeqTypes: map[WSKind]map[SeqID]Number{
-			1: {1: 1},
-		},
-		SeqStorage:            storage,
-		MaxNumUnflushedValues: 10,
-		LRUCacheSize:          1000,
-	}
-
-	seq, cleanup := New(params, mockTime)
-	defer cleanup()
-
-	numberKey := NumberKey{WSID: 1, SeqID: 1}
-
 	t.Run("check the value is cached after next", func(t *testing.T) {
+		require := require.New(t)
+
+		// Set up mock storage and sequencer
+		storage := NewMockStorage(0, 0)
+		storage.SetPLog(map[PLogOffset][]SeqValue{
+			PLogOffset(0): nil,
+			PLogOffset(1): nil,
+			PLogOffset(2): nil,
+			PLogOffset(3): nil,
+			PLogOffset(4): nil,
+			PLogOffset(5): {
+				{
+					Key:   NumberKey{WSID: 1, SeqID: 1},
+					Value: 100,
+				},
+			},
+		})
+		mockTime := coreutils.MockTime
+
+		params := &Params{
+			SeqTypes: map[WSKind]map[SeqID]Number{
+				1: {1: 1},
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 10,
+			LRUCacheSize:          1000,
+		}
+
+		seq, cleanup := New(params, mockTime)
+		defer cleanup()
+
+		numberKey := NumberKey{WSID: 1, SeqID: 1}
+
 		offset := WaitForStart(t, seq, 1, 1, true)
 		require.Equal(PLogOffset(6), offset)
 		numInitial, err := seq.Next(1)
@@ -531,6 +553,39 @@ func TestNextNumberSourceOrder(t *testing.T) {
 	})
 
 	t.Run("check taken from lru on next", func(t *testing.T) {
+		require := require.New(t)
+
+		// Set up mock storage and sequencer
+		storage := NewMockStorage(0, 0)
+		storage.SetPLog(map[PLogOffset][]SeqValue{
+			PLogOffset(0): nil,
+			PLogOffset(1): nil,
+			PLogOffset(2): nil,
+			PLogOffset(3): nil,
+			PLogOffset(4): nil,
+			PLogOffset(5): {
+				{
+					Key:   NumberKey{WSID: 1, SeqID: 1},
+					Value: 100,
+				},
+			},
+		})
+		mockTime := coreutils.MockTime
+
+		params := &Params{
+			SeqTypes: map[WSKind]map[SeqID]Number{
+				1: {1: 1},
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 10,
+			LRUCacheSize:          1000,
+		}
+
+		seq, cleanup := New(params, mockTime)
+		defer cleanup()
+
+		numberKey := NumberKey{WSID: 1, SeqID: 1}
+
 		offset := WaitForStart(t, seq, 1, 1, true)
 		require.Equal(PLogOffset(6), offset)
 
@@ -546,6 +601,39 @@ func TestNextNumberSourceOrder(t *testing.T) {
 	})
 
 	t.Run("missing in lru -> take from inproc", func(t *testing.T) {
+		require := require.New(t)
+
+		// Set up mock storage and sequencer
+		storage := NewMockStorage(0, 0)
+		storage.SetPLog(map[PLogOffset][]SeqValue{
+			PLogOffset(0): nil,
+			PLogOffset(1): nil,
+			PLogOffset(2): nil,
+			PLogOffset(3): nil,
+			PLogOffset(4): nil,
+			PLogOffset(5): {
+				{
+					Key:   NumberKey{WSID: 1, SeqID: 1},
+					Value: 100,
+				},
+			},
+		})
+		mockTime := coreutils.MockTime
+
+		params := &Params{
+			SeqTypes: map[WSKind]map[SeqID]Number{
+				1: {1: 1},
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 10,
+			LRUCacheSize:          1000,
+		}
+
+		seq, cleanup := New(params, mockTime)
+		defer cleanup()
+
+		numberKey := NumberKey{WSID: 1, SeqID: 1}
+
 		// start
 		offset := WaitForStart(t, seq, 1, 1, true)
 		require.Equal(PLogOffset(6), offset)
@@ -570,6 +658,39 @@ func TestNextNumberSourceOrder(t *testing.T) {
 	})
 
 	t.Run("missing in lru and in inproc -> take from toBeFlushed", func(t *testing.T) {
+		require := require.New(t)
+
+		// Set up mock storage and sequencer
+		storage := NewMockStorage(0, 0)
+		storage.SetPLog(map[PLogOffset][]SeqValue{
+			PLogOffset(0): nil,
+			PLogOffset(1): nil,
+			PLogOffset(2): nil,
+			PLogOffset(3): nil,
+			PLogOffset(4): nil,
+			PLogOffset(5): {
+				{
+					Key:   NumberKey{WSID: 1, SeqID: 1},
+					Value: 100,
+				},
+			},
+		})
+		mockTime := coreutils.MockTime
+
+		params := &Params{
+			SeqTypes: map[WSKind]map[SeqID]Number{
+				1: {1: 1},
+			},
+			SeqStorage:            storage,
+			MaxNumUnflushedValues: 10,
+			LRUCacheSize:          1000,
+		}
+
+		seq, cleanup := New(params, mockTime)
+		defer cleanup()
+
+		numberKey := NumberKey{WSID: 1, SeqID: 1}
+
 		// start
 		offset := WaitForStart(t, seq, 1, 1, true)
 		require.Equal(PLogOffset(6), offset)
@@ -581,11 +702,11 @@ func TestNextNumberSourceOrder(t *testing.T) {
 
 		// clear inproc + keep toBeFlushed filled by making flusher() stuck
 		continueCh := make(chan any)
-		storage.onWriteValuesAndOffset = func() {
+		storage.SetOnWriteValuesAndOffset(func() {
 			<-continueCh
-		}
+		})
 		defer func() {
-			storage.onWriteValuesAndOffset = nil
+			storage.SetOnWriteValuesAndOffset(nil)
 		}()
 		seq.Flush()
 		seq.(*sequencer).inproc = map[NumberKey]Number{}
