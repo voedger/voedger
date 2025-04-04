@@ -25,6 +25,8 @@ func SysDataName(k DataKind) QName {
 func (k DataKind) IsFixed() bool {
 	switch k {
 	case
+		DataKind_int8, DataKind_int16, // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
+
 		DataKind_int32,
 		DataKind_int64,
 		DataKind_float32,
@@ -75,7 +77,8 @@ func (k DataKind) IsCompatibleWithConstraint(c ConstraintKind) bool {
 			ConstraintKind_Enum:
 			return true
 		}
-	case DataKind_int32, DataKind_int64, DataKind_float32, DataKind_float64:
+	case DataKind_int8, DataKind_int16, // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
+		DataKind_int32, DataKind_int64, DataKind_float32, DataKind_float64:
 		switch c {
 		case
 			ConstraintKind_MinIncl,

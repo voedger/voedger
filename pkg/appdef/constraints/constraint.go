@@ -106,14 +106,17 @@ func MaxExcl(v float64, c ...string) appdef.IConstraint {
 	return datas.NewDataConstraint(appdef.ConstraintKind_MaxExcl, v, c...)
 }
 
+// #3434 [~server.vsql.smallints/cmp.AppDef~impl]
 type enumerable interface {
-	string | int32 | int64 | float32 | float64
+	string | int8 | int16 | int32 | int64 | float32 | float64
 }
 
 // Return new enumeration constraint for char or numeric data types.
 //
 // Enumeration values must be one of the following types:
 //   - string
+//   - int8
+//   - int16
 //   - int32
 //   - int64
 //   - float32
@@ -130,7 +133,7 @@ func Enum[T enumerable](v ...T) appdef.IConstraint {
 		panic(appdef.ErrMissed("enumeration values slice (%T)", v))
 	}
 	c := make([]T, 0, l)
-	for i := 0; i < l; i++ {
+	for i := range l {
 		n := v[i]
 		c = append(c, n)
 	}
@@ -164,6 +167,10 @@ func NewConstraint(kind appdef.ConstraintKind, value any, c ...string) appdef.IC
 		var enum appdef.IConstraint
 		switch v := value.(type) {
 		case []string:
+			enum = Enum(v...)
+		case []int8: // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
+			enum = Enum(v...)
+		case []int16: // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
 			enum = Enum(v...)
 		case []int32:
 			enum = Enum(v...)

@@ -450,10 +450,10 @@ func Test_rowType_PutErrors(t *testing.T) {
 				{func(row istructs.IRowWriter) { row.PutInt64("float32", 2) }, "float32", "int64"},
 				{func(row istructs.IRowWriter) { row.PutFloat32("int32", 3) }, "int32", "float32"},
 				{func(row istructs.IRowWriter) { row.PutFloat64("string", 4) }, "string", "float64"},
-				{func(row istructs.IRowWriter) { row.PutRecordID("raw", 4) }, "raw", "int64"},
-				{func(row istructs.IRowWriter) { row.PutBytes("float64", []byte{1, 2, 3}) }, "float64", "[]byte"},
+				{func(row istructs.IRowWriter) { row.PutRecordID("raw", 4) }, "raw", "RecordID"},
+				{func(row istructs.IRowWriter) { row.PutBytes("float64", []byte{1, 2, 3}) }, "float64", "bytes"},
 				{func(row istructs.IRowWriter) { row.PutString("bytes", "abc") }, "bytes", "string"},
-				{func(row istructs.IRowWriter) { row.PutQName("RecordID", istructs.QNameForError) }, "RecordID", "[]byte"},
+				{func(row istructs.IRowWriter) { row.PutQName("RecordID", istructs.QNameForError) }, "RecordID", "QName"},
 				{func(row istructs.IRowWriter) { row.PutBool("QName", true) }, "QName", "bool"},
 				{func(row istructs.IRowWriter) { row.PutString("bool", "foo") }, "bool", "string"},
 			}

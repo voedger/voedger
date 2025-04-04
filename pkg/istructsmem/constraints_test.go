@@ -42,6 +42,14 @@ func Test_checkConstraints(t *testing.T) {
 				constraints.MaxLen(4),
 				constraints.Pattern(`^\d+$`)).
 			// numeric fields to test inclusive constraints: closed range [1, 8]
+			AddField("int8_i", appdef.DataKind_int8, false, // #3434 [small integers]
+										constraints.MinIncl(1),
+										constraints.MaxIncl(8),
+										constraints.Enum(int8(2), 4, 6, 8)).
+			AddField("int16_i", appdef.DataKind_int16, false, // #3434 [small integers]
+				constraints.MinIncl(1),
+				constraints.MaxIncl(8),
+				constraints.Enum(int16(2), 4, 6, 8)).
 			AddField("int32_i", appdef.DataKind_int32, false,
 				constraints.MinIncl(1),
 				constraints.MaxIncl(8),
@@ -59,6 +67,12 @@ func Test_checkConstraints(t *testing.T) {
 				constraints.MaxIncl(8),
 				constraints.Enum(math.Pi, 2*math.Pi, 1)).
 			// numeric fields to test exclusive constraints: open range (0, 9)
+			AddField("int8_e", appdef.DataKind_int8, false, // #3434 [small integers]
+										constraints.MinExcl(0),
+										constraints.MaxExcl(9)).
+			AddField("int16_e", appdef.DataKind_int16, false, // #3434 [small integers]
+				constraints.MinExcl(0),
+				constraints.MaxExcl(9)).
 			AddField("int32_e", appdef.DataKind_int32, false,
 				constraints.MinExcl(0),
 				constraints.MaxExcl(9)).
@@ -100,6 +114,20 @@ func Test_checkConstraints(t *testing.T) {
 		{"[]byte: max len", args{"bytes4", []byte("12345")}, "MaxLen: 4"},
 		{"[]byte: pattern", args{"bytes4", []byte("abcd")}, "Pattern: `^\\d+$`"},
 		{"[]byte: ok", args{"bytes4", []byte("1234")}, ""},
+		//- // #3434 [small integers]
+		{"int8_i: min inclusive", args{"int8_i", int8(0)}, "MinIncl: 1"},
+		{"int8_i: max inclusive", args{"int8_i", int8(9)}, "MaxIncl: 8"},
+		{"int8_e: min exclusive", args{"int8_e", int8(0)}, "MinExcl: 0"},
+		{"int8_e: max exclusive", args{"int8_e", int8(9)}, "MaxExcl: 9"},
+		{"int8_i: enum", args{"int8_i", int8(5)}, "Enum: [2 4 6 8]"},
+		{"int8_i: ok", args{"int8_i", int8(4)}, ""},
+		//- // #3434 [small integers]
+		{"int16_i: min inclusive", args{"int16_i", int16(0)}, "MinIncl: 1"},
+		{"int16_i: max inclusive", args{"int16_i", int16(9)}, "MaxIncl: 8"},
+		{"int16_e: min exclusive", args{"int16_e", int16(0)}, "MinExcl: 0"},
+		{"int16_e: max exclusive", args{"int16_e", int16(9)}, "MaxExcl: 9"},
+		{"int16_i: enum", args{"int16_i", int16(5)}, "Enum: [2 4 6 8]"},
+		{"int16_i: ok", args{"int16_i", int16(4)}, ""},
 		//-
 		{"int32_i: min inclusive", args{"int32_i", int32(0)}, "MinIncl: 1"},
 		{"int32_i: max inclusive", args{"int32_i", int32(9)}, "MaxIncl: 8"},

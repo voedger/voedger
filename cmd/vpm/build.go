@@ -157,6 +157,7 @@ func execTinyGoBuild(dir, appName string) (wasmFilePath string, err error) {
 		"-opt=2",
 		"-gc=leaking",
 		"-target=wasi",
+		"-buildmode=wasi-legacy", // see https://github.com/tinygo-org/tinygo/pull/4734
 		".",
 	).WorkingDir(dir).Run(stdout, os.Stderr); err != nil {
 		// checking compatibility of the tinygo with go version
