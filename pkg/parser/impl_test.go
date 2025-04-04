@@ -691,7 +691,7 @@ func Test_DupFieldsInTypes(t *testing.T) {
 	fs, err := ParseFile("file1.vsql", `APPLICATION test();
 	WORKSPACE MyWorkspace(
 		TYPE RootType (
-			ID int32
+			Id int32
 		);
 		TYPE BaseType(
 			RootType,
@@ -707,7 +707,7 @@ func Test_DupFieldsInTypes(t *testing.T) {
 			field varchar,
 			baseField varchar,
 			someField int,
-			ID varchar
+			Id varchar
 		)
 	)
 	`)
@@ -2433,7 +2433,7 @@ func Test_DescriptorInProjector(t *testing.T) {
 	require.AppSchemaError(`APPLICATION app1();
 	WORKSPACE w (
 		EXTENSION ENGINE BUILTIN (
-		  PROJECTOR x AFTER INSERT ON (unknown.z) STATE(sys.HTTP);
+		  PROJECTOR x AFTER INSERT ON (unknown.z) STATE(sys.Http);
 		);
 	  );
 	`,
@@ -2443,7 +2443,7 @@ func Test_DescriptorInProjector(t *testing.T) {
 	WORKSPACE RestaurantWS (
 		DESCRIPTOR Restaurant ();
 		EXTENSION ENGINE BUILTIN (
-		  PROJECTOR NewRestaurantVat AFTER INSERT OR UPDATE ON (Restaurant) STATE(sys.AppSecret, sys.HTTP) INTENTS(sys.SendMail);
+		  PROJECTOR NewRestaurantVat AFTER INSERT OR UPDATE ON (Restaurant) STATE(sys.AppSecret, sys.Http) INTENTS(sys.SendMail);
 		);
 	  );
 	`)

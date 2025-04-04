@@ -60,6 +60,7 @@ linters:
         - all
         - '-SA1019'
         - '-ST1003'
+        - '-ST1003'
         - '-QF1008' # possibly dangerous: could remove embedded field ... from selector
     testifylint:
       disable-all: true
@@ -85,9 +86,6 @@ linters:
       - legacy
       - std-error-handling
     rules:
-      - linters:
-          - staticcheck
-        text: "ST1003: should not use ALL_CAPS"
       - linters:
           - errcheck
           - forcetypeassert
