@@ -198,6 +198,7 @@ func TestAuthenticate(t *testing.T) {
 		Roles:       []payloads.RoleType{{WSID: 1, QName: testRole}, {WSID: 2, QName: notIncludedRole}},
 	}
 	enrichedToken, err := appTokens.IssueToken(time.Minute, &pp)
+	require.NoError(err)
 
 	qNameCDocComputers := appdef.NewQName("untill", "computers")
 

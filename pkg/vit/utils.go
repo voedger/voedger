@@ -118,7 +118,7 @@ func (vit *VIT) getCDoc(appQName appdef.AppQName, qName appdef.QName, wsid istru
 			if field.IsSys() {
 				continue
 			}
-			body.WriteString(fmt.Sprintf(`,"%s"`, field.Name()))
+			fmt.Fprintf(body, `,"%s"`, field.Name())
 			fields = append(fields, field.Name())
 		}
 	}

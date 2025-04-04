@@ -19,6 +19,7 @@ func TestRetry(t *testing.T) {
 	t.Run("should succeed on the first attempt", func(t *testing.T) {
 		ctx := context.Background()
 		iTime := MockTime
+		// nolint
 		iTime.Add(-iTime.Now().Sub(time.Now())) // reset to Now
 		retryDelay := time.Millisecond
 		retryCount := 3

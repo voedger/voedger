@@ -95,7 +95,7 @@ func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces m
 			return
 		}
 		busRequest.IsAPIV2 = true
-		busRequest.ApiPath = int(query2.ApiPaths_Schema)
+		busRequest.APIPath = int(query2.ApiPaths_Schema)
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	}
 }
@@ -108,7 +108,7 @@ func requestHandlerV2_schemas_wsRoles(reqSender bus.IRequestSender, numsAppsWork
 		}
 		vars := mux.Vars(req)
 		busRequest.IsAPIV2 = true
-		busRequest.ApiPath = int(query2.ApiPath_Schemas_WorkspaceRoles)
+		busRequest.APIPath = int(query2.ApiPath_Schemas_WorkspaceRoles)
 		busRequest.WorkspaceQName = appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_workspace])
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	}
@@ -122,7 +122,7 @@ func requestHandlerV2_schemas_wsRole(reqSender bus.IRequestSender, numsAppsWorks
 		}
 		vars := mux.Vars(req)
 		busRequest.IsAPIV2 = true
-		busRequest.ApiPath = int(query2.ApiPath_Schemas_WorkspaceRole)
+		busRequest.APIPath = int(query2.ApiPath_Schemas_WorkspaceRole)
 		busRequest.WorkspaceQName = appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_workspace])
 		busRequest.QName = appdef.NewQName(vars[URLPlaceholder_rolePkg], vars[URLPlaceholder_role])
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
@@ -138,13 +138,13 @@ func requestHandlerV2_view(reqSender bus.IRequestSender, numsAppsWorkspaces map[
 		}
 
 		busRequest.IsAPIV2 = true
-		busRequest.ApiPath = int(query2.ApiPath_Views)
+		busRequest.APIPath = int(query2.ApiPath_Views)
 		busRequest.QName = appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_view])
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	}
 }
 
-func requestHandlerV2_extension(reqSender bus.IRequestSender, apiPath query2.ApiPath, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+func requestHandlerV2_extension(reqSender bus.IRequestSender, apiPath query2.APIPath, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 		entity := ""
@@ -160,7 +160,7 @@ func requestHandlerV2_extension(reqSender bus.IRequestSender, apiPath query2.Api
 		}
 
 		busRequest.IsAPIV2 = true
-		busRequest.ApiPath = int(apiPath)
+		busRequest.APIPath = int(apiPath)
 		busRequest.QName = appdef.NewQName(vars[URLPlaceholder_pkg], entity)
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	}
@@ -185,7 +185,7 @@ func requestHandlerV2_blobs() http.HandlerFunc {
 	}
 }
 
-func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath query2.ApiPath, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath query2.APIPath, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 		switch req.Method {
@@ -204,7 +204,7 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath query2.ApiPath
 			return
 		}
 		busRequest.IsAPIV2 = true
-		busRequest.ApiPath = int(apiPath)
+		busRequest.APIPath = int(apiPath)
 		busRequest.QName = appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_table])
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	}

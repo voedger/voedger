@@ -181,7 +181,7 @@ func TestNullObject(t *testing.T) {
 	require.Equal(float64(0), null.AsFloat64(appdef.NullName))
 	require.Equal(int32(0), null.AsInt32(appdef.NullName))
 	require.Equal(int64(0), null.AsInt64(appdef.NullName))
-	require.Equal("", null.AsString(appdef.NullName))
+	require.Empty(null.AsString(appdef.NullName))
 
 	require.Equal(appdef.NullQName, null.AsQName(appdef.NullName))
 	require.False(null.AsBool(appdef.NullName))
@@ -210,7 +210,7 @@ func TestNullObject(t *testing.T) {
 		r := null.AsRecord()
 		require.Equal(appdef.NullQName, r.QName())
 		require.Equal(appdef.NullQName, r.QName())
-		require.Equal("", r.Container())
+		require.Empty(r.Container())
 		require.Equal(NullRecordID, r.ID())
 		require.Equal(NullRecordID, r.Parent())
 	})

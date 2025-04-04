@@ -322,7 +322,7 @@ func checkWSInitialized(_ context.Context, work pipeline.IWorkpiece) (err error)
 	cmd := work.(*cmdWorkpiece)
 	wsDesc := work.(*cmdWorkpiece).wsDesc
 	cmdQName := cmd.cmdMes.QName()
-	if cmdQName == workspacemgmt.QNameCommandCreateWorkspace || cmdQName == builtin.QNameCommandInit {
+	if cmdQName == workspacemgmt.QNameCommandCreateWorkspace || cmdQName == builtin.QNameCommandInit { // nolint: SA1019
 		return nil
 	}
 	if wsDesc.QName() != appdef.NullQName {
@@ -444,7 +444,7 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work pipeline.IWor
 	}
 
 	switch cmd.cmdMes.QName() {
-	case builtin.QNameCommandInit: // nolint, kept to not to break existing events only
+	case builtin.QNameCommandInit: // nolint: SA1019. kept to not to break existing events only
 		cmd.reb = cmd.appStructs.Events().GetSyncRawEventBuilder(
 			istructs.SyncRawEventBuilderParams{
 				SyncedAt:                     istructs.UnixMilli(cmdProc.time.Now().UnixMilli()),
@@ -667,7 +667,7 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 
 func checkCUDsAllowedInCUDCmdOnly(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if len(cmd.parsedCUDs) > 0 && cmd.cmdMes.QName() != istructs.QNameCommandCUD && cmd.cmdMes.QName() != builtin.QNameCommandInit {
+	if len(cmd.parsedCUDs) > 0 && cmd.cmdMes.QName() != istructs.QNameCommandCUD && cmd.cmdMes.QName() != builtin.QNameCommandInit { // nolint: SA1019
 		return errors.New("CUDs allowed for c.sys.CUD command only")
 	}
 	return nil
@@ -785,7 +785,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 	if len(cmd.idGenerator.generatedIDs) > 0 {
 		body.WriteString(`,"NewIDs":{`)
 		for rawID, generatedID := range cmd.idGenerator.generatedIDs {
-			body.WriteString(fmt.Sprintf(`"%d":%d,`, rawID, generatedID))
+			fmt.Fprintf(body, `"%d":%d,`, rawID, generatedID)
 		}
 		body.Truncate(body.Len() - 1)
 		body.WriteString("}")

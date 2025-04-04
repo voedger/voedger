@@ -30,7 +30,7 @@ func TestBasicUsage_FederationCommand(t *testing.T) {
 			return err
 		}
 		kb.PutQName(sys.Storage_FederationCommand_Field_Command, appdef.NewQName("app1pkg", "TestCmd"))
-		kb.PutString(sys.Storage_Http_Field_Body, `{
+		kb.PutString(sys.Storage_HTTP_Field_Body, `{
 			"args": {
 				"Arg1": 2
 			}

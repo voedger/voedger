@@ -23,13 +23,13 @@ import (
 // where is VVM RequestHandler? bus.RequestHandler
 func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, autocertCache autocert.Cache,
 	requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
-	httpServ := getHttpService("HTTP server", coreutils.ServerAddress(rp.Port), rp, broker, blobRequestHandler,
+	httpServ := getHTTPService("HTTP server", coreutils.ServerAddress(rp.Port), rp, broker, blobRequestHandler,
 		requestSender, numsAppsWorkspaces)
 
 	if coreutils.IsTest() {
 		adminEndpoint = "127.0.0.1:0"
 	}
-	adminSrv = getHttpService("Admin HTTP server", adminEndpoint, RouterParams{
+	adminSrv = getHTTPService("Admin HTTP server", adminEndpoint, RouterParams{
 		WriteTimeout:     rp.WriteTimeout,
 		ReadTimeout:      rp.ReadTimeout,
 		ConnectionsLimit: rp.ConnectionsLimit,
@@ -75,7 +75,7 @@ func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobp
 	return httpsService, acmeService, adminSrv
 }
 
-func getHttpService(name string, listenAddress string, rp RouterParams, broker in10n.IN10nBroker,
+func getHTTPService(name string, listenAddress string, rp RouterParams, broker in10n.IN10nBroker,
 	blobRequestHandler blobprocessor.IRequestHandler, requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) *httpService {
 	httpServ := &httpService{
 		RouterParams:       rp,

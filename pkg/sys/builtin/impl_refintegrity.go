@@ -38,7 +38,7 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 		allowedTargetQNames := appdef.QNamesFrom(refField.Refs()...)
 		kb := appStructs.ViewRecords().KeyBuilder(QNameViewRecordsRegistry)
 		idHi := CrackID(targetID)
-		kb.PutInt64(Field_IDHi, int64(idHi))
+		kb.PutInt64(Field_IDHi, int64(idHi)) // nolint G115
 		kb.PutRecordID(Field_ID, targetID)
 		registryRecord, err := appStructs.ViewRecords().Get(wsid, kb)
 		if err == nil {
@@ -111,14 +111,14 @@ func writeRegistry(st istructs.IState, intents istructs.IIntents, idToStore istr
 		return err
 	}
 	idHi := CrackID(idToStore)
-	kb.PutInt64(Field_IDHi, int64(idHi))
+	kb.PutInt64(Field_IDHi, int64(idHi)) //nolint G115
 	kb.PutRecordID(Field_ID, idToStore)
 	recordsRegistryRecBuilder, err := intents.NewValue(kb)
 	if err != nil {
 		// notest
 		return err
 	}
-	recordsRegistryRecBuilder.PutInt64(Field_WLogOffset, int64(wLogOffsetToStore))
+	recordsRegistryRecBuilder.PutInt64(Field_WLogOffset, int64(wLogOffsetToStore)) // nolint G115
 	recordsRegistryRecBuilder.PutQName(field_QName, qNameToStore)
 	return nil
 }

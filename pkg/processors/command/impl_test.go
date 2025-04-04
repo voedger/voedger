@@ -137,7 +137,7 @@ func TestBasicUsage(t *testing.T) {
 		require.NoError(*respErr)
 		log.Println(respData)
 		require.Equal(http.StatusOK, respMeta.StatusCode)
-		require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
+		require.Equal(coreutils.ContentType_ApplicationJSON, respMeta.ContentType)
 		// check that command is handled and notifications were sent
 		<-check
 		<-check
@@ -157,7 +157,7 @@ func TestBasicUsage(t *testing.T) {
 		for elem := range respCh {
 			require.Zero(counter)
 			require.Equal(http.StatusInternalServerError, respMeta.StatusCode)
-			require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
+			require.Equal(coreutils.ContentType_ApplicationJSON, respMeta.ContentType)
 			require.Equal(coreutils.SysError{HTTPStatus: http.StatusInternalServerError, Message: "fire error"}, elem) // nolint:errorlint
 			counter++
 		}
@@ -352,7 +352,7 @@ func TestCUDUpdate(t *testing.T) {
 	cmdRespMeta, cmdResp, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 	require.NoError(err)
 	require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
-	require.Equal(coreutils.ApplicationJSON, cmdRespMeta.ContentType)
+	require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
 	require.Empty(cmdResp.CmdResult)
 	require.Zero(cmdResp.SysError)
 	newID := cmdResp.NewIDs["1"]
@@ -363,7 +363,7 @@ func TestCUDUpdate(t *testing.T) {
 		cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 		require.NoError(err)
 		require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
-		require.Equal(coreutils.ApplicationJSON, cmdRespMeta.ContentType)
+		require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
 	})
 
 	t.Run("404 not found on update not existing", func(t *testing.T) {
@@ -371,7 +371,7 @@ func TestCUDUpdate(t *testing.T) {
 		cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 		require.NoError(err)
 		require.Equal(http.StatusNotFound, cmdRespMeta.StatusCode)
-		require.Equal(coreutils.ApplicationJSON, cmdRespMeta.ContentType)
+		require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
 	})
 }
 
@@ -421,7 +421,7 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 			cmdRespMeta, cmdResp, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 			require.NoError(err)
 			require.Equal(http.StatusBadRequest, cmdRespMeta.StatusCode, c.desc)
-			require.Equal(coreutils.ApplicationJSON, cmdRespMeta.ContentType, c.desc)
+			require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType, c.desc)
 			require.Contains(cmdResp.SysError.Message, c.expectedMessageLike, c.desc)
 			require.Equal(http.StatusBadRequest, cmdResp.SysError.HTTPStatus, c.desc)
 		})
@@ -496,7 +496,7 @@ func TestErrors(t *testing.T) {
 			cmdRespMeta, cmdResp, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 			require.NoError(err, c.desc)
 			require.Equal(c.expectedStatusCode, cmdRespMeta.StatusCode, c.desc)
-			require.Equal(coreutils.ApplicationJSON, cmdRespMeta.ContentType, c.desc)
+			require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType, c.desc)
 			require.Contains(cmdResp.SysError.Message, c.expectedMessageLike, c.desc)
 			require.Equal(c.expectedStatusCode, cmdResp.SysError.HTTPStatus, c.desc)
 		})
@@ -617,7 +617,7 @@ func TestBasicUsage_FuncWithRawArg(t *testing.T) {
 	cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, request)
 	require.NoError(err)
 	require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
-	require.Equal(coreutils.ApplicationJSON, cmdRespMeta.ContentType)
+	require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
 	<-ch
 }
 

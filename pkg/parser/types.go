@@ -581,7 +581,7 @@ type RateObjectScope struct {
 
 type RateSubjectScope struct {
 	PerSubject bool `parser:"@('PER' 'SUBJECT')"`
-	PerIp      bool `parser:" | @('PER' 'IP')"`
+	PerIP      bool `parser:" | @('PER' 'IP')"`
 }
 
 type RateStmt struct {

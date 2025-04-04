@@ -209,7 +209,7 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		require.Equal(float32(0), row.AsFloat32("float32"))
 		require.Equal(float64(0), row.AsFloat64("float64"))
 		require.Equal([]byte(nil), row.AsBytes("bytes"))
-		require.Equal("", row.AsString("string"))
+		require.Empty(row.AsString("string"))
 
 		require.EqualValues([]byte(nil), row.AsBytes("raw"))
 

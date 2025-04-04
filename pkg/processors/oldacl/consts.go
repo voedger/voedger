@@ -41,7 +41,7 @@ var (
 	qNameQryGetUPStatus                         = appdef.NewQName(airPackage, "GetUPStatus")
 	qNameQryQueryResellerInfo                   = appdef.NewQName(airPackage, "QueryResellerInfo")
 	qNameCmdCreateUntillPayment                 = appdef.NewQName(airPackage, "CreateUntillPayment")
-	qNameCmdRegenerateUPProfileApiToken         = appdef.NewQName(airPackage, "RegenerateUPProfileApiToken")
+	qNameCmdRegenerateUPProfileAPIToken         = appdef.NewQName(airPackage, "RegenerateUPProfileApiToken")
 	qNameCmdEnsureUPPredefinedPaymentModesExist = appdef.NewQName(airPackage, "EnsureUPPredefinedPaymentModesExist")
 	qNameQryGetUPTerminals                      = appdef.NewQName(airPackage, "GetUPTerminals")
 	qNameQryActivateUPTerminal                  = appdef.NewQName(airPackage, "ActivateUPTerminal")

@@ -41,14 +41,15 @@ func (lim *Limiter) reserveN(now time.Time, n int, maxFutureReserve time.Duratio
 	lim.mu.Lock()
 	defer lim.mu.Unlock()
 
-	if lim.limit == Inf {
+	switch lim.limit {
+	case Inf:
 		return Reservation{
 			ok:        true,
 			lim:       lim,
 			tokens:    n,
 			timeToAct: now,
 		}
-	} else if lim.limit == 0 {
+	case 0:
 		var ok bool
 		if lim.burst >= n {
 			ok = true

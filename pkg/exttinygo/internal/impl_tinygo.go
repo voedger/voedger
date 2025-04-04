@@ -46,13 +46,13 @@ func hostRowWriterPutFloat64(id uint64, typ uint32, namePtr, nameSize uint32, va
 func hostGetKey(storagePtr, storageSize, entityPtr, entitySize uint32) uint64
 
 //export hostQueryValue
-func hostQueryValue(keyId uint64) (result uint64)
+func hostQueryValue(keyID uint64) (result uint64)
 
 //export hostNewValue
-func hostNewValue(keyId uint64) uint64
+func hostNewValue(keyID uint64) uint64
 
 //export hostUpdateValue
-func hostUpdateValue(keyId uint64, existingValueId uint64) uint64
+func hostUpdateValue(keyID uint64, existingValueID uint64) uint64
 
 //export hostValueLength
 func hostValueLength(id uint64) uint32
@@ -145,10 +145,10 @@ func hostKeyAsFloat32(id uint64, namePtr, nameSize uint32) float32
 func hostKeyAsFloat64(id uint64, namePtr, nameSize uint32) float64
 
 //export hostReadValues
-func hostReadValues(keyId uint64)
+func hostReadValues(keyID uint64)
 
 //export hostGetValue
-func hostGetValue(keyId uint64) (result uint64)
+func hostGetValue(keyID uint64) (result uint64)
 
 //lint:ignore U1000 this is an exported func
 //export WasmOnReadValue

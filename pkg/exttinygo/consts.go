@@ -11,7 +11,7 @@ const (
 	StorageRecord            = "sys.Record"
 	StorageView              = "sys.View"
 	StorageWLog              = "sys.WLog"
-	StorageHttp              = "sys.Http"
+	StorageHTTP              = "sys.Http"
 	StorageAppSecret         = "sys.AppSecret"
 	StorageRequestSubject    = "sys.RequestSubject"
 	StorageResult            = "sys.Result"

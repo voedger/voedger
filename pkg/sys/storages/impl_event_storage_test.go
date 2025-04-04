@@ -121,8 +121,8 @@ type (
 //go:embed sql_example_syspkg/*.vsql
 var sfs embed.FS
 
-func appStructs(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
-	fs, err := parser.ParseFile("file1.vsql", appdefSql)
+func appStructs(appdefSQL string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
+	fs, err := parser.ParseFile("file1.vsql", appdefSQL)
 	if err != nil {
 		panic(err)
 	}

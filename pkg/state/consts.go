@@ -18,8 +18,8 @@ var (
 	// Deprecated: use sys.Storage_WLog instead
 	WLog = sys.Storage_WLog
 
-	// Deprecated: use sys.Storage_Http instead
-	Http = sys.Storage_Http
+	// Deprecated: use sys.Storage_HTTP instead
+	HTTP = sys.Storage_HTTP
 
 	// Deprecated: use sys.Storage_SendMail instead
 	SendMail = sys.Storage_SendMail
@@ -56,9 +56,9 @@ var (
 )
 
 const (
-	Field_Url                           = sys.Storage_Http_Field_Url                              // Deprecated: use sys.Storage_Http_Field_Url instead
-	Field_Method                        = sys.Storage_Http_Field_Method                           // Deprecated: use sys.Storage_Http_Field_Method instead
-	Field_Header                        = sys.Storage_Http_Field_Header                           // Deprecated: use sys.Storage_Http_Field_Header instead
+	Field_URL                           = sys.Storage_HTTP_Field_URL                              // Deprecated: use sys.Storage_HTTP_Field_URL instead
+	Field_Method                        = sys.Storage_HTTP_Field_Method                           // Deprecated: use sys.Storage_HTTP_Field_Method instead
+	Field_Header                        = sys.Storage_HTTP_Field_Header                           // Deprecated: use sys.Storage_HTTP_Field_Header instead
 	Field_Offset                        = "Offset"                                                // Deprecated: use sys.Storage_WLog_Field_Offset or sys.Storage_Event_Field_Offset instead
 	Field_Error                         = sys.Storage_Event_Field_Error                           // Deprecated: use sys.Storage_Event_Field_Error instead
 	Field_ErrStr                        = sys.Storage_Event_Field_ErrStr                          // Deprecated: use sys.Storage_Event_Field_ErrStr instead
@@ -80,9 +80,9 @@ const (
 	Field_Username                      = sys.Storage_SendMail_Field_Username                     // Deprecated: use sys.Storage_SendMail_Field_Username instead
 	Field_Password                      = sys.Storage_SendMail_Field_Password                     // Deprecated: use sys.Storage_SendMail_Field_Password instead
 	Field_Command                       = sys.Storage_FederationCommand_Field_Command             // Deprecated: use sys.Storage_FederationCommand_Field_Command instead
-	Field_Body                          = "Body"                                                  // Deprecated: use sys.Storage_FederationCommand_Field_Body, sys.Storage_FederationBlob_Field_Body instead, sys.Storage_Http_Field_Body instead
+	Field_Body                          = "Body"                                                  // Deprecated: use sys.Storage_FederationCommand_Field_Body, sys.Storage_FederationBlob_Field_Body instead, sys.Storage_HTTP_Field_Body instead
 	Field_WSID                          = "WSID"                                                  // Deprecated: use sys.Storage_Record_Field_WSID, sys.Storage_WLog_Field_WSID, sys.Storage_FederationCommand_Field_WSID, sys.Storage_FederationBlob_Field_WSID, sys.Storage_View_Field_WSID instead
-	Field_HTTPClientTimeoutMilliseconds = sys.Storage_Http_Field_HTTPClientTimeoutMilliseconds    // Deprecated: use sys.Storage_Http_Field_HTTPClientTimeoutMilliseconds instead
+	Field_HTTPClientTimeoutMilliseconds = sys.Storage_HTTP_Field_HTTPClientTimeoutMilliseconds    // Deprecated: use sys.Storage_HTTP_Field_HTTPClientTimeoutMilliseconds instead
 	Field_Singleton                     = sys.Storage_Record_Field_Singleton                      // Deprecated: use sys.Storage_Record_Field_Singleton instead
 	Field_IsSingleton                   = sys.Storage_Record_Field_IsSingleton                    // Deprecated: use sys.Storage_Record_Field_IsSingleton instead
 	Field_Secret                        = sys.Storage_AppSecretField_Secret                       // Deprecated: use sys.Storage_AppSecretField_Secret instead
@@ -91,7 +91,7 @@ const (
 	Field_SyncedAt                      = "SyncedAt"                                              // Deprecated: use sys.Storage_WLog_Field_SyncedAt, sys.Storage_Event_Field_SyncedAt instead
 	Field_WLogOffset                    = "WLogOffset"                                            // Deprecated: use sys.Storage_Event_Field_WLogOffset, sys.Storage_CommandContext_Field_WLogOffset instead
 	Field_Workspace                     = "Workspace"                                             // Deprecated: use sys.Storage_Event_Field_Workspace, sys.Storage_CommandContext_Field_Workspace, sys.Storage_QueryContext_Field_Workspace instead
-	Field_StatusCode                    = "StatusCode"                                            // Deprecated: use sys.Storage_Http_Field_StatusCode, Storage_FederationCommand_Field_StatusCode, Storage_Response_Field_StatusCode instead
+	Field_StatusCode                    = "StatusCode"                                            // Deprecated: use sys.Storage_HTTP_Field_StatusCode, Storage_FederationCommand_Field_StatusCode, Storage_Response_Field_StatusCode instead
 	Field_Kind                          = sys.Storage_RequestSubject_Field_Kind                   // Deprecated: use sys.Storage_RequestSubject_Field_Kind instead
 	Field_ProfileWSID                   = sys.Storage_RequestSubject_Field_ProfileWSID            // Deprecated: use sys.Storage_RequestSubject_Field_ProfileWSID instead
 	Field_Name                          = sys.Storage_RequestSubject_Field_Name                   // Deprecated: use sys.Storage_RequestSubject_Field_Name instead

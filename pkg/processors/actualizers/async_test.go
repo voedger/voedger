@@ -342,7 +342,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 			prj.Events().Add(
 				[]appdef.OperationKind{appdef.OperationKind_Execute},
 				filter.QNames(testQName))
-			prj.States().Add(sys.Storage_Http)
+			prj.States().Add(sys.Storage_HTTP)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -672,7 +672,7 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 			prj.Events().Add(
 				[]appdef.OperationKind{appdef.OperationKind_Execute},
 				filter.QNames(testQName))
-			prj.Intents().Add(sys.Storage_Http)
+			prj.Intents().Add(sys.Storage_HTTP)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))

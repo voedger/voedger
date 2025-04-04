@@ -271,7 +271,7 @@ func TestWrongTypes(t *testing.T) {
 			})
 			respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 			require.NoError(err)
-			require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
+			require.Equal(coreutils.ContentType_ApplicationJSON, respMeta.ContentType)
 			require.Equal(http.StatusBadRequest, respMeta.StatusCode)
 			for range respCh {
 			}

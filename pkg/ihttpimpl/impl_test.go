@@ -146,7 +146,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		resource := "q.EchoQuery"
 		path := fmt.Sprintf("%s/%s/%d/%s", appOwner, appName, wsid, resource)
 
-		body := testApp.post("/api/"+path, coreutils.ApplicationJSON, testText, nil)
+		body := testApp.post("/api/"+path, coreutils.ContentType_ApplicationJSON, testText, nil)
 		require.Equal(fmt.Sprintf(`{"sections":[{"type":"","elements":["Hello, %s, {}"]}]}`, testText), string(body))
 	})
 

@@ -47,7 +47,7 @@ func implProvideMockedActualizerState(intentsLimit int, appStructsFunc state.App
 	ms.addStorage(sys.Storage_Event, storages.NewMockedStorage(sys.Storage_Event), S_GET)
 	ms.addStorage(sys.Storage_WLog, storages.NewMockedStorage(sys.Storage_WLog), S_GET|S_READ)
 	ms.addStorage(sys.Storage_SendMail, storages.NewMockedStorage(sys.Storage_SendMail), S_INSERT)
-	ms.addStorage(sys.Storage_Http, storages.NewMockedStorage(sys.Storage_Http), S_READ)
+	ms.addStorage(sys.Storage_HTTP, storages.NewMockedStorage(sys.Storage_HTTP), S_READ)
 	ms.addStorage(sys.Storage_FederationCommand, storages.NewMockedStorage(sys.Storage_FederationCommand), S_GET)
 	ms.addStorage(sys.Storage_FederationBlob, storages.NewMockedStorage(sys.Storage_FederationBlob), S_READ)
 	ms.addStorage(sys.Storage_AppSecret, storages.NewMockedStorage(sys.Storage_AppSecret), S_GET)

@@ -20,8 +20,8 @@ const ExportedPkgFolder = "pkg"
 
 const maxNestedTableContainerOccurrences = 100 // FIXME: 100 container occurrences
 const parserLookahead = 10
-const VSqlExt = ".vsql"
-const SqlExt = ".sql"
+const VSQLExt = ".vsql"
+const SQLExt = ".sql"
 
 const OP_SELECT = "SELECT"
 const OP_INSERT = "INSERT"

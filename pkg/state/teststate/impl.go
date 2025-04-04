@@ -46,7 +46,7 @@ type testState struct {
 	wsOffsets             map[istructs.WSID]istructs.Offset
 	plogOffset            istructs.Offset
 	secretReader          isecrets.ISecretReader
-	httpHandler           HttpHandlerFunc
+	httpHandler           HTTPHandlerFunc
 	federationCmdHandler  state.FederationCommandHandler
 	federationBlobHandler state.FederationBlobHandler
 	uniquesHandler        state.UniquesHandler
@@ -156,7 +156,7 @@ func (ts *testState) Request(timeout time.Duration, method, url string, body io.
 	if ts.httpHandler == nil {
 		panic("http handler not set")
 	}
-	req := HttpRequest{
+	req := HTTPRequest{
 		Timeout: timeout,
 		Method:  method,
 		URL:     url,
@@ -221,11 +221,11 @@ func (ts *testState) emulateFederationCmd(owner, appname string, wsid istructs.W
 	return ts.federationCmdHandler(owner, appname, wsid, command, body)
 }
 
-func (ts *testState) emulateFederationBlob(owner, appname string, wsid istructs.WSID, blobId istructs.RecordID) ([]byte, error) {
+func (ts *testState) emulateFederationBlob(owner, appname string, wsid istructs.WSID, blobID istructs.RecordID) ([]byte, error) {
 	if ts.federationBlobHandler == nil {
 		panic("federation blob handler not set")
 	}
-	return ts.federationBlobHandler(owner, appname, wsid, blobId)
+	return ts.federationBlobHandler(owner, appname, wsid, blobID)
 }
 
 func (ts *testState) buildState(processorKind int) {
@@ -292,14 +292,14 @@ func (ts *testState) buildState(processorKind int) {
 	switch processorKind {
 	case ProcKind_Actualizer:
 		ts.IState = stateprovide.ProvideAsyncActualizerStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ts.secretReader, eventFunc, nil, nil,
-			IntentsLimit, BundlesLimit, state.WithCustomHttpClient(ts), state.WithFedearationCommandHandler(ts.emulateFederationCmd), state.WithUniquesHandler(ts.emulateUniquesHandler), state.WithFederationBlobHandler(ts.emulateFederationBlob))
+			IntentsLimit, BundlesLimit, state.WithCustomHTTPClient(ts), state.WithFedearationCommandHandler(ts.emulateFederationCmd), state.WithUniquesHandler(ts.emulateUniquesHandler), state.WithFederationBlobHandler(ts.emulateFederationBlob))
 	case ProcKind_CommandProcessor:
 		ts.IState = stateprovide.ProvideCommandProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, cudFunc, principalsFunc, tokenFunc,
 			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc, state.WithUniquesHandler(ts.emulateUniquesHandler))
 	case ProcKind_QueryProcessor:
 		ts.IState = stateprovide.ProvideQueryProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, principalsFunc, tokenFunc, nil,
 			execQueryArgsFunc, argFunc, qryResultBuilderFunc, nil, execQueryCallback,
-			state.WithCustomHttpClient(ts), state.WithFedearationCommandHandler(ts.emulateFederationCmd), state.WithUniquesHandler(ts.emulateUniquesHandler), state.WithFederationBlobHandler(ts.emulateFederationBlob))
+			state.WithCustomHTTPClient(ts), state.WithFedearationCommandHandler(ts.emulateFederationCmd), state.WithUniquesHandler(ts.emulateUniquesHandler), state.WithFederationBlobHandler(ts.emulateFederationBlob))
 	}
 }
 
@@ -430,9 +430,8 @@ func (ts *testState) nextWSOffs(ws istructs.WSID) istructs.Offset {
 	return offs
 }
 
-func (ts *testState) PutHttpHandler(handler HttpHandlerFunc) {
+func (ts *testState) PutHTTPHandler(handler HTTPHandlerFunc) {
 	ts.httpHandler = handler
-
 }
 
 func (ts *testState) PutRecords(wsid istructs.WSID, cb NewRecordsCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID) {
@@ -560,7 +559,7 @@ func (ia *intentAssertions) Equal(vbc ValueBuilderCallback) {
 		panic("intent not found")
 	}
 
-	vb, err := ia.ctx.IState.NewValue(ia.kb)
+	vb, err := ia.ctx.NewValue(ia.kb)
 	if err != nil {
 		panic(err)
 	}
@@ -572,7 +571,7 @@ func (ia *intentAssertions) Equal(vbc ValueBuilderCallback) {
 }
 
 func (ts *testState) RequireNoIntents(t *testing.T) {
-	if ts.IState.IntentsCount() > 0 {
+	if ts.IntentsCount() > 0 {
 		require.Fail(t, "expected no intents")
 	}
 }
@@ -580,7 +579,7 @@ func (ts *testState) RequireNoIntents(t *testing.T) {
 func (ts *testState) RequireIntent(t *testing.T, storage appdef.QName, entity appdef.FullQName, kbc KeyBuilderCallback) IIntentAssertions {
 	localPkgName := ts.appDef.PackageLocalName(entity.PkgPath())
 	localEntity := appdef.NewQName(localPkgName, entity.Entity())
-	kb, err := ts.IState.KeyBuilder(storage, localEntity)
+	kb, err := ts.KeyBuilder(storage, localEntity)
 	if err != nil {
 		panic(err)
 	}

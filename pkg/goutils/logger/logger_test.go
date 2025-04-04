@@ -124,7 +124,7 @@ func Test_BasicUsage_CustomPrintLine(t *testing.T) {
 			return nil
 		})
 		require.NoError(err)
-		require.Equal("", strStderr)
+		require.Empty(strStderr)
 		require.Contains(strStdout, "myPrintLine")
 	}
 
@@ -143,7 +143,7 @@ func Test_SkipStackFrames(t *testing.T) {
 			return loggerHelperWithSkipStackFrames(0, "hello")
 		})
 		require.NoError(err)
-		require.Equal("", strStderr)
+		require.Empty(strStderr)
 		require.Contains(strStdout, funcNamePattern)
 	}
 
@@ -153,7 +153,7 @@ func Test_SkipStackFrames(t *testing.T) {
 			return loggerHelperWithSkipStackFrames(1, "hello")
 		})
 		require.NoError(err)
-		require.Equal("", strStderr)
+		require.Empty(strStderr)
 		require.NotContains(strStdout, funcNamePattern)
 	}
 
@@ -173,7 +173,7 @@ func Test_StdoutStderr_LogLevel(t *testing.T) {
 		})
 		require.NoError(err)
 		require.Contains(strStderr, "Error arg1 arg2")
-		require.Equal("", strStdout)
+		require.Empty(strStdout)
 	}
 
 	// LogLevelWarning

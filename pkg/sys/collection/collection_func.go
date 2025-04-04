@@ -52,9 +52,9 @@ func collectionFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callba
 
 	err = args.State.Read(kb, func(key istructs.IKey, value istructs.IStateValue) (err error) {
 		rec := value.(istructs.IStateViewValue).AsRecord(Field_Record)
-		docId := key.AsRecordID(Field_DocID)
+		docID := key.AsRecordID(Field_DocID)
 
-		if lastDoc != nil && lastDoc.ID() == docId {
+		if lastDoc != nil && lastDoc.ID() == docID {
 			lastDoc.addRawRecord(rec)
 		} else {
 			if lastDoc != nil {

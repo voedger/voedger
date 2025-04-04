@@ -209,11 +209,11 @@ func storeRowSysFields(row *rowType, buf *bytes.Buffer) {
 func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 	row.clear()
 
-	var qnameId uint16
-	if qnameId, err = utils.ReadUInt16(buf); err != nil {
+	var qnameID uint16
+	if qnameID, err = utils.ReadUInt16(buf); err != nil {
 		return fmt.Errorf("error read row QNameID: %w", err)
 	}
-	if err = row.setQNameID(qnameId); err != nil {
+	if err = row.setQNameID(qnameID); err != nil {
 		return err
 	}
 	if row.QName() == appdef.NullQName {
