@@ -148,6 +148,9 @@ func (o *TestObject) AsQName(name string) appdef.QName {
 	return qNameIntf.(appdef.QName)
 }
 func (o *TestObject) AsRecordID(name string) istructs.RecordID {
+	if name == appdef.SystemField_ID {
+		return o.ID()
+	}
 	if resIntf, ok := o.Data[name]; ok {
 		return resIntf.(istructs.RecordID)
 	}

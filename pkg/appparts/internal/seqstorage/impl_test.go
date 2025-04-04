@@ -138,6 +138,7 @@ type expectedSeqValue struct {
 type cud struct {
 	qName appdef.QName
 	id    uint64 // >0 -> will be passed to NewRecordID, <0 -> abs(id) will be used. Need to test "old" ids according to issue 688
+	isOld bool   // !IsNew
 }
 
 type obj struct {
@@ -228,6 +229,35 @@ func TestActualizeFromPLog(t *testing.T) {
 				}},
 			},
 		},
+		{
+			name: "arg: odoc with 2 orecords + 2 new cuds + 1 update cud (should be skipped)",
+			plog: []testPLogEvent{
+				{qName: testODocQName, wsid: 1, offset: 1, arg: obj{
+					cud: cud{qName: testODocQName, id: 1},
+					containers: []obj{
+						{cud: cud{qName: testORecordQName, id: 2}},
+						{cud: cud{qName: testORecordQName, id: 3}},
+					},
+				}, cuds: []cud{
+					{qName: testCDocQName, id: 4},
+					{qName: testCDocQName, id: 123456789, isOld: true},
+				}, expectedBatch: []expectedSeqValue{
+					{wsid: 1, seqID: istructs.QNameIDOWRecordIDSequence, number: 1},
+					{wsid: 1, seqID: istructs.QNameIDOWRecordIDSequence, number: 2},
+					{wsid: 1, seqID: istructs.QNameIDOWRecordIDSequence, number: 3},
+					{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 4},
+				}},
+			},
+		},
+		{
+			name: "issue 688: skip ids from old registers",
+			plog: []testPLogEvent{
+				{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{{qName: testCDocQName, id: 1}}, expectedBatch: []expectedSeqValue{
+					{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 1},
+				}},
+				{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{{qName: testCDocQName, id: 9999999999}}, expectedBatch: nil},
+			},
+		},
 	}
 
 	for _, c := range cases {
@@ -274,18 +304,20 @@ func testPLogEventToIPlogEvent(pLogEvent testPLogEvent, appDef appdef.IAppDef) i
 	mockEvent.On("CUDs", mock.Anything).Run(func(args gomock.Arguments) {
 		cudCallback := args[0].(func(istructs.ICUDRow) bool)
 		for _, cudTemplate := range pLogEvent.cuds {
-			var id istructs.RecordID
-			cudKind := appDef.Type(cudTemplate.qName).Kind()
-			if cudKind == appdef.TypeKind_CDoc || cudKind == appdef.TypeKind_CRecord {
-				id = istructs.NewCDocCRecordID(istructs.RecordID(cudTemplate.id))
-			} else {
-				id = istructs.NewRecordID(istructs.RecordID(cudTemplate.id))
+			id := istructs.RecordID(cudTemplate.id)
+			if cudTemplate.id < uint64(istructs.MaxRawRecordID) {
+				cudKind := appDef.Type(cudTemplate.qName).Kind()
+				if cudKind == appdef.TypeKind_CDoc || cudKind == appdef.TypeKind_CRecord {
+					id = istructs.NewCDocCRecordID(istructs.RecordID(cudTemplate.id))
+				} else {
+					id = istructs.NewRecordID(istructs.RecordID(cudTemplate.id))
+				}
 			}
 
 			cud := coreutils.TestObject{
 				Name:   cudTemplate.qName,
-				Id:     id,
-				IsNew_: true,
+				ID_:    id,
+				IsNew_: !cudTemplate.isOld,
 			}
 			if !cudCallback(&cud) {
 				panic("")
@@ -293,7 +325,20 @@ func testPLogEventToIPlogEvent(pLogEvent testPLogEvent, appDef appdef.IAppDef) i
 		}
 	})
 	argObj := coreutils.TestObject{
-		Name: pLogEvent.qName,
+		Name:        pLogEvent.qName,
+		Containers_: map[string][]*coreutils.TestObject{},
+	}
+	argKind := appDef.Type(pLogEvent.qName).Kind()
+	if argKind == appdef.TypeKind_ODoc {
+		// handle case when odoc is the arg
+		argObj.ID_ = istructs.NewRecordID(istructs.RecordID(pLogEvent.arg.id))
+		for _, oDocContainer := range pLogEvent.arg.containers {
+			argObj.Containers_[oDocContainer.qName.Entity()] = append(argObj.Containers_[oDocContainer.qName.Entity()], &coreutils.TestObject{
+				Name:   oDocContainer.qName,
+				ID_:    istructs.NewRecordID(istructs.RecordID(oDocContainer.id)),
+				IsNew_: !oDocContainer.isOld,
+			})
+		}
 	}
 	mockEvent.On("Workspace").Return(istructs.WSID(pLogEvent.wsid))
 	mockEvent.On("ArgumentObject").Return(&argObj)
