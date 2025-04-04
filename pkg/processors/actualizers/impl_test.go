@@ -258,7 +258,7 @@ func deployTestAppEx(
 		panic(err)
 	}
 
-	var vvmName string = "testVVM"
+	vvmName := "testVVM"
 
 	if actualizerCfg.VvmName == "" {
 		actualizerCfg.VvmName = vvmName

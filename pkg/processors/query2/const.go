@@ -7,10 +7,10 @@ package query2
 import _ "embed"
 
 //go:embed swagger-ui.html
-var swaggerUi string
+var swaggerUI_HTML string
 
 const (
-	ApiPath_Docs ApiPath = iota
+	ApiPath_Docs APIPath = iota
 	ApiPath_CDocs
 	ApiPath_Queries
 	ApiPath_Views
@@ -18,10 +18,6 @@ const (
 	ApiPaths_Schema
 	ApiPath_Schemas_WorkspaceRoles
 	ApiPath_Schemas_WorkspaceRole
-)
-
-const (
-	contentTypeHtml = "text/html"
 )
 
 const (

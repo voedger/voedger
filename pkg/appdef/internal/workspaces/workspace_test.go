@@ -336,7 +336,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 			ws := adb.AddWorkspace(wsName(idx))
 			anc := testAncestors[idx].anc
 			if len(anc) > 0 {
-				ancNames := make([]appdef.QName, len(anc), len(anc))
+				ancNames := make([]appdef.QName, len(anc))
 				for i, a := range anc {
 					ancNames[i] = wsName(a)
 				}
@@ -360,7 +360,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 		for wsIdx, test := range testAncestors {
 			ws := app.Workspace(wsName(wsIdx))
 
-			want := make([]appdef.QName, len(test.anc), len(test.anc))
+			want := make([]appdef.QName, len(test.anc))
 			for i, a := range test.anc {
 				want[i] = wsName(a)
 			}
@@ -558,7 +558,7 @@ func Test_WorkspaceUsage(t *testing.T) {
 		for idx, test := range testUses {
 			ws := adb.AlterWorkspace(wsName(idx))
 			if len(test.use) > 0 {
-				useNames := make([]appdef.QName, len(test.use), len(test.use))
+				useNames := make([]appdef.QName, len(test.use))
 				for i, a := range test.use {
 					useNames[i] = wsName(a)
 				}
@@ -580,7 +580,7 @@ func Test_WorkspaceUsage(t *testing.T) {
 	t.Run("should be ok to to read workspace usage", func(t *testing.T) {
 		for idx, test := range testUses {
 			ws := app.Workspace(wsName(idx))
-			want := make([]appdef.QName, len(test.use), len(test.use))
+			want := make([]appdef.QName, len(test.use))
 			for i, u := range test.use {
 				want[i] = wsName(u)
 			}

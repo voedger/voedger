@@ -34,13 +34,13 @@ func MakeStructure(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind
 		WithContainers: containers.MakeWithContainers(ws, kind),
 		WithAbstract:   abstracts.MakeWithAbstract(),
 	}
-	s.WithFields.MakeSysFields()
+	s.MakeSysFields()
 	s.WithUniques = uniques.MakeWithUniques(ws.App().Type, &s.WithFields)
 	return s
 }
 
 func (s Structure) SystemField_QName() appdef.IField {
-	return s.WithFields.Field(appdef.SystemField_QName)
+	return s.Field(appdef.SystemField_QName)
 }
 
 func (s *Structure) Validate() error {
@@ -79,7 +79,7 @@ type Record struct {
 }
 
 func (r Record) SystemField_ID() appdef.IField {
-	return r.WithFields.Field(appdef.SystemField_ID)
+	return r.Field(appdef.SystemField_ID)
 }
 
 // Makes new record

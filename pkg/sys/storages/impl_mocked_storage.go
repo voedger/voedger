@@ -44,7 +44,7 @@ func (s *MockedStorage) NewKeyBuilder(
 	kb.IsNew_ = true
 
 	if existingBuilder != nil {
-		kb.Id = existingBuilder.(*mockedKeyBuilder).Id
+		kb.ID_ = existingBuilder.(*mockedKeyBuilder).ID_
 		kb.IsNew_ = false
 	}
 
@@ -224,7 +224,7 @@ func newMockedKeyBuilder(mockedStorage *MockedStorage, entity appdef.QName) *moc
 // HashCode returns a hash code for the key builder.
 // It is used to identify a value associated to key builder in the storage.
 func (mkb *mockedKeyBuilder) HashCode() (uint64, error) {
-	if mkb.Id == 0 && len(mkb.Data) > 0 {
+	if mkb.ID_ == 0 && len(mkb.Data) > 0 {
 		// Convert map to a sorted slice of key-value pairs to ensure consistent ordering
 		var pairs []struct {
 			Key   string
@@ -256,7 +256,7 @@ func (mkb *mockedKeyBuilder) HashCode() (uint64, error) {
 		return hasher.Sum64(), nil
 	}
 
-	return uint64(mkb.Id), nil
+	return uint64(mkb.ID_), nil
 }
 
 func (mkb *mockedKeyBuilder) Key() istructs.IKey {
@@ -335,14 +335,14 @@ func (mkb *mockedKeyBuilder) Equals(kb istructs.IKeyBuilder) bool {
 		}
 	}
 
-	return mkb.Name == m.Name && mkb.Id == m.Id
+	return mkb.Name == m.Name && mkb.ID_ == m.ID_
 }
 
 func (mkb *mockedKeyBuilder) String() string {
 	return mkb.baseKeyBuilder.String() + fmt.Sprintf(
 		", mockedKeyBuilder - qname: %s, id: %d",
 		mkb.TestObject.Name.String(),
-		mkb.TestObject.Id,
+		mkb.TestObject.ID_,
 	)
 }
 
@@ -381,14 +381,14 @@ func (mkb *mockedKeyBuilder) PutBool(field appdef.FieldName, value bool) {
 	// if IsSingleton is true, then ID must be set to MinReservedBaseRecordID
 	// it is workaround for singleton entities
 	if field == sys.Storage_Record_Field_IsSingleton && value {
-		mkb.TestObject.Id = mkb.mockedStorage.GetSingletonID(mkb.Name)
+		mkb.TestObject.ID_ = mkb.mockedStorage.GetSingletonID(mkb.Name)
 	}
 }
 
 func (mkb *mockedKeyBuilder) PutRecordID(field appdef.FieldName, value istructs.RecordID) {
 	if field == sys.Storage_Record_Field_ID {
 		//nolint:gosec
-		mkb.TestObject.Id = value
+		mkb.TestObject.ID_ = value
 
 		return
 	}
@@ -421,7 +421,7 @@ func (mvb *mockedValueBuilder) PutInt32(name appdef.FieldName, i int32) {
 func (mvb *mockedValueBuilder) PutInt64(name appdef.FieldName, i int64) {
 	if name == appdef.SystemField_ID {
 		//nolint:gosec
-		mvb.value.TestObjects[0].Id = istructs.RecordID(i)
+		mvb.value.TestObjects[0].ID_ = istructs.RecordID(i)
 
 		return
 	}
@@ -455,7 +455,7 @@ func (mvb *mockedValueBuilder) PutBool(name appdef.FieldName, b bool) {
 
 func (mvb *mockedValueBuilder) PutRecordID(name appdef.FieldName, id istructs.RecordID) {
 	if name == appdef.SystemField_ID {
-		mvb.value.TestObjects[0].Id = id
+		mvb.value.TestObjects[0].ID_ = id
 	} else {
 		mvb.value.TestObjects[0].Data[name] = id
 	}
@@ -521,7 +521,7 @@ func newMockedStateValue(value []*coreutils.TestObject) *mockedStateValue {
 
 		if value[i] != nil {
 			newValue.TestObjects[i].Name = value[i].Name
-			newValue.TestObjects[i].Id = value[i].Id
+			newValue.TestObjects[i].ID_ = value[i].ID_
 			newValue.TestObjects[i].Parent_ = value[i].Parent_
 			newValue.TestObjects[i].IsNew_ = value[i].IsNew_
 
@@ -534,9 +534,7 @@ func newMockedStateValue(value []*coreutils.TestObject) *mockedStateValue {
 			if value[i].Containers_ != nil {
 				for k, v := range value[i].Containers_ {
 					newValue.TestObjects[i].Containers_[k] = make([]*coreutils.TestObject, len(v))
-					for kk, vv := range v {
-						newValue.TestObjects[i].Containers_[k][kk] = vv
-					}
+					copy(newValue.TestObjects[i].Containers_[k], v)
 				}
 			}
 		}
@@ -644,7 +642,7 @@ func (m *mockedStateValue) AsBool(name appdef.FieldName) bool {
 
 func (m *mockedStateValue) AsRecordID(name appdef.FieldName) istructs.RecordID {
 	if name == appdef.SystemField_ID {
-		return m.TestObjects[0].Id
+		return m.TestObjects[0].ID_
 	}
 
 	switch t := m.TestObjects[0].Data[name].(type) {
@@ -683,9 +681,7 @@ func (m *mockedStateValue) AsValue(name string) istructs.IStateValue {
 			TestObjects: make([]*coreutils.TestObject, len(v)),
 		}
 
-		for i := 0; i < len(v); i++ {
-			msv.TestObjects[i] = v[i]
-		}
+		copy(msv.TestObjects, v)
 
 		return msv
 	}

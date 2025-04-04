@@ -655,7 +655,7 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iTime c
 		value := []byte("Tea")
 
 		ok, err := storage.InsertIfNotExists(pKey, ccols, value, 3)
-		
+
 		require.NoError(err)
 		require.True(ok)
 
@@ -877,6 +877,7 @@ func testAppStorage_TTLGet(t *testing.T, storage IAppStorage, iTime coreutils.IT
 
 		data := make([]byte, 0)
 		ok, err = storage.TTLGet(pKey, ccols, &data)
+		require.NoError(err)
 		require.Equal(value, data)
 		require.True(ok)
 	})

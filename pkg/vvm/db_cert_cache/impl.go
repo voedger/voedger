@@ -17,7 +17,7 @@ import (
 
 // Get return certificate for the specified key(domain).
 // If there's no such key, Get returns ErrCacheMiss.
-func (ac *autoCertDbCache) Get(ctx context.Context, key string) (data []byte, err error) {
+func (ac *autoCertDBCache) Get(ctx context.Context, key string) (data []byte, err error) {
 	domainKey, err := createKey(CertPrefixInRouterStorage, key)
 	if err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func (ac *autoCertDbCache) Get(ctx context.Context, key string) (data []byte, er
 }
 
 // Put stores the data in the cache under the specified key.
-func (ac *autoCertDbCache) Put(ctx context.Context, key string, data []byte) (err error) {
+func (ac *autoCertDBCache) Put(ctx context.Context, key string, data []byte) (err error) {
 	domainKey, err := createKey(CertPrefixInRouterStorage, key)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func (ac *autoCertDbCache) Put(ctx context.Context, key string, data []byte) (er
 }
 
 // Delete IAppStorage does not have Delete method, therefore set value to nil and in Get method check value for length
-func (ac *autoCertDbCache) Delete(ctx context.Context, key string) (err error) {
+func (ac *autoCertDBCache) Delete(ctx context.Context, key string) (err error) {
 	domainKey, err := createKey(CertPrefixInRouterStorage, key)
 	if err != nil {
 		return err

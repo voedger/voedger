@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -95,7 +96,10 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 						}
 						respWriter.Close(err)
 					} else if err != nil {
-						err = qwork.msg.Responder().Respond(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: statusCode}, err)
+						respondErr := qwork.msg.Responder().Respond(bus.ResponseMeta{ContentType: coreutils.ContentType_ApplicationJSON, StatusCode: statusCode}, err)
+						if respondErr != nil {
+							logger.Error(fmt.Sprintf("failed to send the error %s: %s", err.Error(), respondErr.Error()))
+						}
 					}
 				}()
 				metrics.IncreaseApp(queryprocessor.Metric_QueriesSeconds, vvm, msg.AppQName(), time.Since(now).Seconds())
@@ -113,7 +117,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 	itokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources) pipeline.ISyncPipeline {
 	ops := []*pipeline.WiredOperator{
 		operator("get api path handler", func(ctx context.Context, qw *queryWork) (err error) {
-			switch qw.msg.ApiPath() {
+			switch qw.msg.APIPath() {
 			case ApiPath_Queries:
 				qw.apiPathHandler = &queryHandler{}
 			case ApiPath_Views:
@@ -129,7 +133,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				// [~server.apiv2.role/cmp.provideSchemasRoleHandler~impl]
 				qw.apiPathHandler = &schemasRoleHandler{}
 			default:
-				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("unsupported api path %v", qw.msg.ApiPath()))
+				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("unsupported api path %v", qw.msg.APIPath()))
 			}
 			return nil
 		}),
@@ -193,7 +197,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return qw.apiPathHandler.SetRequestType(ctx, qw)
 		}),
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
-			switch qw.msg.ApiPath() {
+			switch qw.msg.APIPath() {
 			case ApiPaths_Schema, ApiPath_Schemas_WorkspaceRole, ApiPath_Schemas_WorkspaceRoles:
 				return nil
 			}
@@ -207,7 +211,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
-			if qw.msg.ApiPath() == ApiPath_Queries {
+			if qw.msg.APIPath() == ApiPath_Queries {
 				qw.execQueryArgs, err = newExecQueryArgs(qw.msg.WSID(), qw)
 			}
 			return coreutils.WrapSysError(err, http.StatusBadRequest)

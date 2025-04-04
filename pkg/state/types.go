@@ -46,7 +46,7 @@ type AsyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStr
 type SchedulerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, tokensFunc itokens.ITokens, federationFunc federation.IFederation, unixTimeFunc UnixTimeFunc, intentsLimit int, optFuncs ...StateOptFunc) IHostState
 
 type FederationCommandHandler = func(owner, appname string, wsid istructs.WSID, command appdef.QName, body string) (statusCode int, newIDs map[string]istructs.RecordID, result string, err error)
-type FederationBlobHandler = func(owner, appname string, wsid istructs.WSID, blobId istructs.RecordID) (result []byte, err error)
+type FederationBlobHandler = func(owner, appname string, wsid istructs.WSID, blobID istructs.RecordID) (result []byte, err error)
 type UniquesHandler = func(entity appdef.QName, wsid istructs.WSID, data map[string]interface{}) (istructs.RecordID, error)
 
 type EventsFunc func() istructs.IEvents
@@ -54,7 +54,7 @@ type RecordsFunc func() istructs.IRecords
 
 type StateOptFunc func(opts *StateOpts)
 
-type IHttpClient interface {
+type IHTTPClient interface {
 	Request(timeout time.Duration, method, url string, body io.Reader, headers map[string]string) (statusCode int, resBody []byte, resHeaders map[string][]string, err error)
 }
 
@@ -62,7 +62,7 @@ type StateOpts struct {
 	Messages                 chan smtptest.Message
 	FederationCommandHandler FederationCommandHandler
 	FederationBlobHandler    FederationBlobHandler
-	CustomHttpClient         IHttpClient
+	CustomHTTPClient         IHTTPClient
 	UniquesHandler           UniquesHandler
 }
 
@@ -72,9 +72,9 @@ func WithEmailMessagesChan(messages chan smtptest.Message) StateOptFunc {
 	}
 }
 
-func WithCustomHttpClient(client IHttpClient) StateOptFunc {
+func WithCustomHTTPClient(client IHTTPClient) StateOptFunc {
 	return func(opts *StateOpts) {
-		opts.CustomHttpClient = client
+		opts.CustomHTTPClient = client
 	}
 }
 

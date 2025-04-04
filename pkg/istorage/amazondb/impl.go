@@ -67,7 +67,7 @@ func (d implIAppStorageFactory) Time() coreutils.ITime {
 	return d.iTime
 }
 
-func (d implIAppStorageFactory) StopGoroutines() { return }
+func (d implIAppStorageFactory) StopGoroutines() {}
 
 func (s *implIAppStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
 	found := false
@@ -306,8 +306,8 @@ func (s *implIAppStorage) Read(ctx context.Context, pKey []byte, startCCols, fin
 	return s.read(ctx, pKey, startCCols, finishCCols, cb, false)
 }
 
-func (s *implIAppStorage) get(pKey []byte, cCols []byte, data *[]byte, checkTtl bool) (ok bool, err error) {
-	response, err := s.getItem(pKey, cCols, checkTtl)
+func (s *implIAppStorage) get(pKey []byte, cCols []byte, data *[]byte, checkTTL bool) (ok bool, err error) {
+	response, err := s.getItem(pKey, cCols, checkTTL)
 	if err != nil {
 		return false, err
 	}
@@ -317,7 +317,7 @@ func (s *implIAppStorage) get(pKey []byte, cCols []byte, data *[]byte, checkTtl 
 	}
 
 	*data = (*data)[:0] // Reset the data slice
-	if checkTtl && isExpired(response.Item[expireAtAttributeName], s.iTime.Now()) {
+	if checkTTL && isExpired(response.Item[expireAtAttributeName], s.iTime.Now()) {
 		return false, nil
 	}
 
@@ -328,7 +328,7 @@ func (s *implIAppStorage) get(pKey []byte, cCols []byte, data *[]byte, checkTtl 
 	return true, nil
 }
 
-func (s *implIAppStorage) getItem(pKey []byte, cCols []byte, getTtl bool) (*dynamodb.GetItemOutput, error) {
+func (s *implIAppStorage) getItem(pKey []byte, cCols []byte, getTTL bool) (*dynamodb.GetItemOutput, error) {
 	// arranging request payload
 	params := dynamodb.GetItemInput{
 		TableName: aws.String(s.keySpace),
@@ -344,7 +344,7 @@ func (s *implIAppStorage) getItem(pKey []byte, cCols []byte, getTtl bool) (*dyna
 		ExpressionAttributeNames: map[string]string{"#v": valueAttributeName},
 	}
 
-	if getTtl {
+	if getTTL {
 		params.ProjectionExpression = aws.String(sortKeyAttributeName + ", #v, #e")
 		params.ExpressionAttributeNames["#e"] = expireAtAttributeName
 	}
@@ -380,7 +380,7 @@ func (s *implIAppStorage) put(pKey []byte, cCols []byte, value []byte, ttlSecond
 	return err
 }
 
-func (s *implIAppStorage) read(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback, checkTtl bool) (err error) {
+func (s *implIAppStorage) read(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback, checkTTL bool) (err error) {
 	if (len(startCCols) > 0) && (len(finishCCols) > 0) && (bytes.Compare(startCCols, finishCCols) >= 0) {
 		return nil // absurd range
 	}
@@ -432,7 +432,7 @@ func (s *implIAppStorage) read(ctx context.Context, pKey []byte, startCCols, fin
 		KeyConditions:            keyConditions,
 	}
 
-	if checkTtl {
+	if checkTTL {
 		params.ProjectionExpression = aws.String(sortKeyAttributeName + ", #v, #e")
 		params.ExpressionAttributeNames["#e"] = expireAtAttributeName
 	}
@@ -449,7 +449,7 @@ func (s *implIAppStorage) read(ctx context.Context, pKey []byte, startCCols, fin
 				return nil // TCK contract
 			}
 
-			if checkTtl && isExpired(item[expireAtAttributeName], now) {
+			if checkTTL && isExpired(item[expireAtAttributeName], now) {
 				continue
 			}
 

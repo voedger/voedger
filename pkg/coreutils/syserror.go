@@ -51,12 +51,12 @@ func (he SysError) Error() string {
 
 func (he SysError) ToJSON_APIV1() string {
 	b := bytes.NewBuffer(nil)
-	b.WriteString(fmt.Sprintf(`{"sys.Error":{"HTTPStatus":%d,"Message":%q`, he.HTTPStatus, he.Message))
+	fmt.Fprintf(b, `{"sys.Error":{"HTTPStatus":%d,"Message":%q`, he.HTTPStatus, he.Message)
 	if he.QName != appdef.NullQName {
-		b.WriteString(fmt.Sprintf(`,"QName":"%s"`, he.QName.String()))
+		fmt.Fprintf(b, `,"QName":"%s"`, he.QName.String())
 	}
 	if len(he.Data) > 0 {
-		b.WriteString(fmt.Sprintf(`,"Data":%q`, he.Data))
+		fmt.Fprintf(b, `,"Data":%q`, he.Data)
 	}
 	b.WriteString("}}")
 	return b.String()
@@ -65,10 +65,10 @@ func (he SysError) ToJSON_APIV1() string {
 func (he SysError) ToJSON_APIV2() string {
 	b := bytes.NewBufferString(fmt.Sprintf(`{"status":%d,"message":%q`, he.HTTPStatus, he.Message))
 	if he.QName != appdef.NullQName {
-		b.WriteString(fmt.Sprintf(`,"qname":"%s"`, he.QName.String()))
+		fmt.Fprintf(b, `,"qname":"%s"`, he.QName.String())
 	}
 	if len(he.Data) > 0 {
-		b.WriteString(fmt.Sprintf(`,"data":%q`, he.Data))
+		fmt.Fprintf(b, `,"data":%q`, he.Data)
 	}
 	b.WriteString("}")
 	return b.String()

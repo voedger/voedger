@@ -44,10 +44,10 @@ type testDataType struct {
 
 	tableArticlePrices        appdef.QName
 	articlePricesPriceIdent   string
-	articlePricesPriceIdIdent string
+	articlePricesPriceIDIdent string
 
 	tableArticlePriceExceptions         appdef.QName
-	articlePriceExceptionsPeriodIdIdent string
+	articlePriceExceptionsPeriodIDIdent string
 	articlePriceExceptionsPriceIdent    string
 
 	tableDepartments appdef.QName
@@ -92,11 +92,11 @@ var test = testDataType{
 	articleDeptIdent:   "id_department",
 
 	tableArticlePrices:        appdef.NewQName("test", "article_prices"),
-	articlePricesPriceIdIdent: "id_prices",
+	articlePricesPriceIDIdent: "id_prices",
 	articlePricesPriceIdent:   "price",
 
 	tableArticlePriceExceptions:         appdef.NewQName("test", "article_price_exceptions"),
-	articlePriceExceptionsPeriodIdIdent: "id_periods",
+	articlePriceExceptionsPeriodIDIdent: "id_periods",
 	articlePriceExceptionsPriceIdent:    "price",
 
 	tableDepartments: appdef.NewQName("test", "departments"),
@@ -213,11 +213,11 @@ func newIdsGenerator() idsGeneratorType {
 	}
 }
 
-func requireArticle(require *require.Assertions, name string, number int32, as istructs.IAppStructs, articleId istructs.RecordID) {
+func requireArticle(require *require.Assertions, name string, number int32, as istructs.IAppStructs, articleID istructs.RecordID) {
 	kb := as.ViewRecords().KeyBuilder(QNameCollectionView)
 	kb.PutInt32(Field_PartKey, PartitionKeyCollection)
 	kb.PutQName(Field_DocQName, test.tableArticles)
-	kb.PutRecordID(Field_DocID, articleId)
+	kb.PutRecordID(Field_DocID, articleID)
 	kb.PutRecordID(field_ElementID, istructs.NullRecordID)
 	value, err := as.ViewRecords().Get(test.workspace, kb)
 	require.NoError(err)
@@ -226,29 +226,29 @@ func requireArticle(require *require.Assertions, name string, number int32, as i
 	require.Equal(number, recArticle.AsInt32(test.articleNumberIdent))
 }
 
-func requireArPrice(require *require.Assertions, priceId istructs.RecordID, price float32, as istructs.IAppStructs, articleId, articlePriceId istructs.RecordID) {
+func requireArPrice(require *require.Assertions, priceID istructs.RecordID, price float32, as istructs.IAppStructs, articleID, articlePriceID istructs.RecordID) {
 	kb := as.ViewRecords().KeyBuilder(QNameCollectionView)
 	kb.PutInt32(Field_PartKey, PartitionKeyCollection)
 	kb.PutQName(Field_DocQName, test.tableArticles)
-	kb.PutRecordID(Field_DocID, articleId)
-	kb.PutRecordID(field_ElementID, articlePriceId)
+	kb.PutRecordID(Field_DocID, articleID)
+	kb.PutRecordID(field_ElementID, articlePriceID)
 	value, err := as.ViewRecords().Get(test.workspace, kb)
 	require.NoError(err)
 	recArticlePrice := value.AsRecord(Field_Record)
-	require.Equal(priceId, recArticlePrice.AsRecordID(test.articlePricesPriceIdIdent))
+	require.Equal(priceID, recArticlePrice.AsRecordID(test.articlePricesPriceIDIdent))
 	require.Equal(price, recArticlePrice.AsFloat32(test.articlePricesPriceIdent))
 }
 
-func requireArPriceException(require *require.Assertions, periodId istructs.RecordID, price float32, as istructs.IAppStructs, articleId, articlePriceExceptionId istructs.RecordID) {
+func requireArPriceException(require *require.Assertions, periodID istructs.RecordID, price float32, as istructs.IAppStructs, articleID, articlePriceExceptionID istructs.RecordID) {
 	kb := as.ViewRecords().KeyBuilder(QNameCollectionView)
 	kb.PutInt32(Field_PartKey, PartitionKeyCollection)
 	kb.PutQName(Field_DocQName, test.tableArticles)
-	kb.PutRecordID(Field_DocID, articleId)
-	kb.PutRecordID(field_ElementID, articlePriceExceptionId)
+	kb.PutRecordID(Field_DocID, articleID)
+	kb.PutRecordID(field_ElementID, articlePriceExceptionID)
 	value, err := as.ViewRecords().Get(test.workspace, kb)
 	require.NoError(err)
 	recArticlePriceException := value.AsRecord(Field_Record)
-	require.Equal(periodId, recArticlePriceException.AsRecordID(test.articlePriceExceptionsPeriodIdIdent))
+	require.Equal(periodID, recArticlePriceException.AsRecordID(test.articlePriceExceptionsPeriodIDIdent))
 	require.Equal(price, recArticlePriceException.AsFloat32(test.articlePriceExceptionsPriceIdent))
 }
 

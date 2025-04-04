@@ -121,7 +121,7 @@ func TestBaselineBasicUsage(t *testing.T) {
 			})
 			require.NoError(err)
 
-			require.Equal(len(tc.expectedBaselineFiles), len(actualFilePaths))
+			require.Len(actualFilePaths, len(tc.expectedBaselineFiles))
 			for _, actualFilePath := range actualFilePaths {
 				require.Contains(tc.expectedBaselineFiles, actualFilePath)
 			}
@@ -166,8 +166,7 @@ func TestCompatErrors(t *testing.T) {
 		"OrderChanged: AppDef/Types/mypkg2.MyTable2/Fields/myfield3",
 		"OrderChanged: AppDef/Types/mypkg2.MyTable2/Fields/myfield2",
 	}
-	require.Equal(len(expectedErrs), len(errs))
-
+	require.Len(errs, len(expectedErrs))
 	for _, err := range errs {
 		require.Contains(expectedErrs, err.Error())
 	}
@@ -505,7 +504,7 @@ func TestBuildBasicUsage(t *testing.T) {
 				err = coreutils.Unzip(filepath.Join(dir, "qwerty.var"), filepath.Join(dir, "unzipped"))
 				require.NoError(err)
 				wasmFiles := findWasmFiles(filepath.Join(dir, "unzipped", buildDirName))
-				require.Equal(len(tc.expectedWasmFiles), len(wasmFiles))
+				require.Len(wasmFiles, len(tc.expectedWasmFiles))
 				for _, expectedWasmFile := range tc.expectedWasmFiles {
 					require.Contains(wasmFiles, filepath.Join(dir, "unzipped", expectedWasmFile))
 				}

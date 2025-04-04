@@ -120,7 +120,7 @@ func TestContainers(t *testing.T) {
 
 	t.Run("should be error if unknown id", func(t *testing.T) {
 		n, err := containers.Container(ContainerID(MaxAvailableContainerID))
-		require.Equal("", n)
+		require.Empty(n)
 		require.ErrorIs(err, ErrContainerIDNotFound)
 	})
 }

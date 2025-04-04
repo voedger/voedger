@@ -44,14 +44,14 @@ func (app *AppDef) AppendType(t appdef.IType) {
 }
 
 func (app *AppDef) build() (err error) {
-	err = app.WithWorkspaces.Build()
+	err = app.Build()
 	if err == nil {
-		app.WithWorkspaces.Builded()
+		app.Builded()
 	}
 	return err
 }
 
-func (app *AppDef) changed() { app.WithWorkspaces.Changed() }
+func (app *AppDef) changed() { app.Changed() }
 
 // Makes system package.
 //

@@ -60,7 +60,7 @@ ABSTRACT WORKSPACE Workspace (
 		OwnerQName2 text
 	) WITH Tags=(WorkspaceOwnerTableTag);
 
-	TABLE BLOB INHERITS WDoc (status int32 NOT NULL);
+	TABLE BLOB INHERITS WDoc (status int32 NOT NULL) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE Subject INHERITS sys.CDoc (
 		Login varchar NOT NULL,
@@ -135,7 +135,8 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE StateResult (
-		State varchar(32768) NOT NULL
+		State varchar(32768) NOT NULL,
+		MaxRelevantOffset int64 -- is max view.sys.CollectionView.offs among taken in account records of the collection
 	);
 
 	TYPE InitiateInvitationByEMailParams (
@@ -451,10 +452,11 @@ ABSTRACT WORKSPACE Workspace (
 	ROLE RoleWorkspaceOwner; -- Deprecated: use WorkspaceOwner. Kept for backward compatibility only
 	ROLE WorkspaceOwner; -- assigned if user works in a workspace that is owned by his profile
 	ROLE ClusterAdmin; -- TODO: not used for now. Going to allow exec c.cluster.DeployApp to this role
+	ROLE WorkspaceAdmin;
 
 	GRANT WorkspaceOwner TO ProfileOwner;
 	GRANT WorkspaceOwner TO WorkspaceDevice;
-	GRANT WorkspaceOwner TO RoleWorkspaceOwner;
+	GRANT WorkspaceOwner TO RoleWorkspaceOwner; --backward compatibility
 	GRANT Everyone TO Anonymous;
 	GRANT Everyone TO AuthenticatedUser;
 
@@ -466,6 +468,7 @@ ABSTRACT WORKSPACE Workspace (
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG WorkspaceOwnerFuncTag TO WorkspaceOwner;
 
 	GRANT EXECUTE ON ALL QUERIES WITH TAG AllowedToEveryoneTag TO Everyone;
+
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG AllowedToAuthenticatedTag TO AuthenticatedUser;
 );
 
@@ -482,7 +485,7 @@ ABSTRACT WORKSPACE ProfileWS (
 		QUERY RefreshPrincipalToken RETURNS RefreshPrincipalTokenResult;
 	);
 
-	GRANT EXECUTE ON QUERY RefreshPrincipalToken TO WorkspaceOwner;
+	GRANT EXECUTE ON QUERY RefreshPrincipalToken TO ProfileOwner;
 );
 
 ALTERABLE WORKSPACE DeviceProfileWS INHERITS sys.ProfileWS (
@@ -572,11 +575,12 @@ EXTENSION ENGINE BUILTIN (
 			Body []byte
 			HTTPClientTimeoutMilliseconds int64
 			Header text (can be called multiple times)
+			HandleErrors bool (do not panic, return error in response)
 		Value:
 			StatusCode int32
 			Body []byte
 			Header text (headers combined)
-
+			Error text (if HandleErrors is true)
 		*/
 		READ SCOPE(QUERIES, PROJECTORS, JOBS)
 	);

@@ -24,10 +24,10 @@ import (
 var requestNumber int64
 
 type httpStorage struct {
-	customClient state.IHttpClient
+	customClient state.IHTTPClient
 }
 
-func NewHttpStorage(customClient state.IHttpClient) state.IStateStorage {
+func NewHTTPStorage(customClient state.IHTTPClient) state.IStateStorage {
 	return &httpStorage{
 		customClient: customClient,
 	}
@@ -77,13 +77,13 @@ func (b *httpStorageKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 
 func (b *httpStorageKeyBuilder) PutString(name, value string) {
 	switch name {
-	case sys.Storage_Http_Field_Header:
+	case sys.Storage_HTTP_Field_Header:
 		trim := func(v string) string { return strings.Trim(v, " \n\r\t") }
 		ss := strings.SplitN(value, ":", 2)
 		b.headers[trim(ss[0])] = trim(ss[1])
-	case sys.Storage_Http_Field_Method:
+	case sys.Storage_HTTP_Field_Method:
 		b.method = value
-	case sys.Storage_Http_Field_Url:
+	case sys.Storage_HTTP_Field_URL:
 		b.url = value
 	default:
 		b.baseKeyBuilder.PutString(name, value)
@@ -100,7 +100,7 @@ func (b *httpStorageKeyBuilder) String() string {
 
 func (b *httpStorageKeyBuilder) PutBool(name string, value bool) {
 	switch name {
-	case sys.Storage_Http_Field_HandleErrors:
+	case sys.Storage_HTTP_Field_HandleErrors:
 		b.handleErrors = value
 	default:
 		b.baseKeyBuilder.PutBool(name, value)
@@ -109,7 +109,7 @@ func (b *httpStorageKeyBuilder) PutBool(name string, value bool) {
 
 func (b *httpStorageKeyBuilder) PutInt64(name string, value int64) {
 	switch name {
-	case sys.Storage_Http_Field_HTTPClientTimeoutMilliseconds:
+	case sys.Storage_HTTP_Field_HTTPClientTimeoutMilliseconds:
 		b.timeout = time.Duration(value) * time.Millisecond
 	default:
 		b.baseKeyBuilder.PutInt64(name, value)
@@ -118,7 +118,7 @@ func (b *httpStorageKeyBuilder) PutInt64(name string, value int64) {
 
 func (b *httpStorageKeyBuilder) PutBytes(name string, value []byte) {
 	switch name {
-	case sys.Storage_Http_Field_Body:
+	case sys.Storage_HTTP_Field_Body:
 		b.body = value
 	default:
 		b.baseKeyBuilder.PutBytes(name, value)
@@ -127,7 +127,7 @@ func (b *httpStorageKeyBuilder) PutBytes(name string, value []byte) {
 
 func (s *httpStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &httpStorageKeyBuilder{
-		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_Http},
+		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_HTTP},
 		headers:        make(map[string]string),
 	}
 }
@@ -221,7 +221,7 @@ type httpValue struct {
 func (v *httpValue) AsBytes(string) []byte { return v.body }
 func (v *httpValue) AsInt32(string) int32  { return int32(v.statusCode) } // nolint G115
 func (v *httpValue) AsString(name string) string {
-	if name == sys.Storage_Http_Field_Header {
+	if name == sys.Storage_HTTP_Field_Header {
 		var res strings.Builder
 		for k, v := range v.header {
 			if len(v) > 0 {
@@ -233,7 +233,7 @@ func (v *httpValue) AsString(name string) string {
 		}
 		return res.String()
 	}
-	if name == sys.Storage_Http_Field_Error {
+	if name == sys.Storage_HTTP_Field_Error {
 		return v.error
 	}
 	return string(v.body)

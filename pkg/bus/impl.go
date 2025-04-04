@@ -94,7 +94,7 @@ func handlePanic(r interface{}) error {
 func (r *implIResponder) InitResponse(statusCode int) IResponseWriter {
 	r.checkStarted()
 	select {
-	case r.responseMetaCh <- ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: statusCode}:
+	case r.responseMetaCh <- ResponseMeta{ContentType: coreutils.ContentType_ApplicationJSON, StatusCode: statusCode}:
 	default:
 		// do nothing if no consumer already.
 		// will get ErrNoConsumer on the next Write()

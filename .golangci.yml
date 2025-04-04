@@ -1,97 +1,111 @@
-# options for analysis running
-# https://golangci-lint.run/usage/linters/
-
+version: "2"
 linters:
-  disable-all: true
+  default: none
   enable:
-    - govet
-    - revive
-    - gosec
-    - stylecheck
-    - misspell
-    - errcheck
-    - bidichk
     - asciicheck
+    - bidichk
     - durationcheck
-    - gochecknoinits
-    - unconvert
-    - predeclared
-    - mirror
-    - testifylint
-    - prealloc
-    - nilnil
-    - gocritic
+    - errcheck
     - errorlint
+    - gochecknoinits
     - goconst
-    - unused
+    - gocritic
+    - gosec
+    - govet
+    - mirror
+    - misspell
+    - nilnil
     - nosprintfhostport
-#    - gosimple
-#    - ineffassign
-  fast: true
-linters-settings:
-  gosec:
-    excludes:
-      - G101
-      - G601
-      - G602
-  staticcheck:
-    checks: ["all", "-SA1019"]
-  stylecheck:
-    checks: ["all", "-ST1003", "-ST1023"]
-  unparam:
-    check-exported: true
-  misspell:
-    ignore-words:
-      - untill
-  revive:
-    # see https://github.com/mgechev/revive#available-rules for details.
-    ignore-generated-header: true
-    severity: warning
+    - prealloc
+    - predeclared
+    - revive
+    - staticcheck
+    - testifylint
+    - unconvert
+    - unused
+  settings:
+    gocritic:
+      disabled-checks:
+        - appendAssign
+        - dupArg
+        - ifElseChain
+        - singleCaseSwitch
+        - exitAfterDefer
+        - commentFormatting
+    gosec:
+      excludes:
+        - G101
+        - G601
+        - G602
+    misspell:
+      ignore-rules:
+        - untill
+    nilnil:
+      checked-types:
+        - func
+    revive:
+      severity: warning
+      rules:
+        - name: indent-error-flow
+          severity: warning
+        - name: add-constant
+          arguments:
+            - allowFloats: 0.0,0.,1.0,1.,2.0,2.
+              allowInts: 0,1,2
+              allowStrs: '""'
+              maxLitCount: "3"
+          severity: warning
+    staticcheck:
+      checks:
+        - all
+        - '-SA1019'
+        - '-ST1003'
+        - '-QF1008' # possibly dangerous: could remove embedded field ... from selector
+    testifylint:
+      disable-all: true
+      enable:
+        - bool-compare
+        - compares
+        - empty
+        - error-is-as
+        - error-nil
+        - expected-actual
+        - len
+        - require-error
+        - suite-dont-use-pkg
+        - suite-extra-assert-call
+        - suite-thelper
+    unparam:
+      check-exported: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
     rules:
-      - name: indent-error-flow
-        severity: warning
-      - name: add-constant
-        severity: warning
-        arguments:
-          - maxLitCount: "3"
-            allowStrs: '""'
-            allowInts: "0,1,2"
-            allowFloats: "0.0,0.,1.0,1.,2.0,2."
-  testifylint:
-    disable-all: true
-    enable:
-      - bool-compare
-      - compares
-      - empty
-      - error-is-as
-      - error-nil
-      - expected-actual
-      - len
-      - require-error
-      - suite-dont-use-pkg
-      - suite-extra-assert-call
-      - suite-thelper
-  gocritic:
-    disabled-checks:
-      - appendAssign
-      - dupArg
-      - ifElseChain
-      - singleCaseSwitch
-      - exitAfterDefer
-      - commentFormatting
-  nilnil:
-    checked-types:
-      - func
-  goconst:
-    ignore-tests: true
-issues:
-  exclude:
-    - underscore
-    - underscores
-  exclude-rules:
-    - path: _test.go
-      linters:
-        - revive
-        - gosec
-        - errcheck
-        - forcetypeassert
+      - linters:
+          - errcheck
+          - forcetypeassert
+          - gosec
+          - revive
+        path: _test.go
+      - path: (.+)\.go$
+        text: underscore
+      - path: (.+)\.go$
+        text: underscores
+      - linters:
+          - goconst
+        path: (.+)_test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

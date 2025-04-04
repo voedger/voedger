@@ -133,8 +133,8 @@ func (f extensionEngineFactory) New(ctx context.Context, app appdef.AppQName, pa
 	}
 
 	for _, pkg := range packages {
-		if pkg.ModuleUrl.Scheme == "file" && (pkg.ModuleUrl.Host == "" || strings.EqualFold("localhost", pkg.ModuleUrl.Scheme)) {
-			path := pkg.ModuleUrl.Path
+		if pkg.ModuleURL.Scheme == "file" && (pkg.ModuleURL.Host == "" || strings.EqualFold("localhost", pkg.ModuleURL.Scheme)) {
+			path := pkg.ModuleURL.Path
 			if runtime.GOOS == "windows" {
 				path = strings.TrimPrefix(path, "/")
 			}
@@ -152,7 +152,7 @@ func (f extensionEngineFactory) New(ctx context.Context, app appdef.AppQName, pa
 				}
 			}
 		} else {
-			return nil, errors.New("unsupported URL: " + pkg.ModuleUrl.String())
+			return nil, errors.New("unsupported URL: " + pkg.ModuleURL.String())
 		}
 	}
 	return engines, nil
@@ -478,8 +478,8 @@ func (f *wazeroExtEngine) hostGetKey(storagePtr, storageSize, entityPtr, entityS
 	return uint64(f.safeApi.KeyBuilder(storageFull, entitystr))
 }
 
-func (f *wazeroExtEngine) hostReadValues(keyId uint64) {
-	f.safeApi.ReadValues(safe.TKeyBuilder(keyId), func(key safe.TKey, value safe.TValue) {
+func (f *wazeroExtEngine) hostReadValues(keyID uint64) {
+	f.safeApi.ReadValues(safe.TKeyBuilder(keyID), func(key safe.TKey, value safe.TValue) {
 		_, err := f.pkg.funcOnReadValue.Call(f.ctx, uint64(key), uint64(value))
 		if err != nil {
 			panic(err.Error())
@@ -487,14 +487,14 @@ func (f *wazeroExtEngine) hostReadValues(keyId uint64) {
 	})
 }
 
-func (f *wazeroExtEngine) hostMustExist(keyId uint64) (result uint64) {
-	return uint64(f.safeApi.MustGetValue(safe.TKeyBuilder(keyId)))
+func (f *wazeroExtEngine) hostMustExist(keyID uint64) (result uint64) {
+	return uint64(f.safeApi.MustGetValue(safe.TKeyBuilder(keyID)))
 }
 
 const maxUint64 = ^uint64(0)
 
-func (f *wazeroExtEngine) hostCanExist(keyId uint64) (result uint64) {
-	v, ok := f.safeApi.QueryValue(safe.TKeyBuilder(keyId))
+func (f *wazeroExtEngine) hostCanExist(keyID uint64) (result uint64) {
+	v, ok := f.safeApi.QueryValue(safe.TKeyBuilder(keyID))
 	if !ok {
 		return maxUint64
 	}
@@ -744,12 +744,12 @@ func (f *wazeroExtEngine) getMallocs(packagePath string, ctx context.Context) (u
 	return res[0], nil
 }
 
-func (f *wazeroExtEngine) hostNewValue(keyId uint64) uint64 {
-	return uint64(f.safeApi.NewValue(safe.TKeyBuilder(keyId)))
+func (f *wazeroExtEngine) hostNewValue(keyID uint64) uint64 {
+	return uint64(f.safeApi.NewValue(safe.TKeyBuilder(keyID)))
 }
 
-func (f *wazeroExtEngine) hostUpdateValue(keyId, existingValueId uint64) (result uint64) {
-	return uint64(f.safeApi.UpdateValue(safe.TKeyBuilder(keyId), safe.TValue(existingValueId)))
+func (f *wazeroExtEngine) hostUpdateValue(keyID, existingValueID uint64) (result uint64) {
+	return uint64(f.safeApi.UpdateValue(safe.TKeyBuilder(keyID), safe.TValue(existingValueID)))
 }
 
 func (f *wazeroExtEngine) hostRowWriterPutString(id uint64, typ uint32, namePtr uint32, nameSize, valuePtr, valueSize uint32) {

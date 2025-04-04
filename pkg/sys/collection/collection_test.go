@@ -158,7 +158,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	{ // CDoc: article prices
 		articlesPrices := wsb.AddCRecord(test.tableArticlePrices)
 		articlesPrices.
-			AddField(test.articlePricesPriceIdIdent, appdef.DataKind_RecordID, true).
+			AddField(test.articlePricesPriceIDIdent, appdef.DataKind_RecordID, true).
 			AddField(test.articlePricesPriceIdent, appdef.DataKind_float32, true)
 		articlesPrices.
 			AddContainer(test.tableArticlePriceExceptions.Entity(), test.tableArticlePriceExceptions, appdef.Occurs(0), appdef.Occurs(100))
@@ -167,7 +167,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	{ // CDoc: article price exceptions
 		articlesPricesExceptions := wsb.AddCRecord(test.tableArticlePriceExceptions)
 		articlesPricesExceptions.
-			AddField(test.articlePriceExceptionsPeriodIdIdent, appdef.DataKind_RecordID, true).
+			AddField(test.articlePriceExceptionsPeriodIDIdent, appdef.DataKind_RecordID, true).
 			AddField(test.articlePriceExceptionsPriceIdent, appdef.DataKind_float32, true)
 	}
 
@@ -261,13 +261,13 @@ func TestBasicUsage_Collection(t *testing.T) {
 	}
 
 	cocaColaDocID = idGen.idmap[1]
-	cocaColaNormalPriceElementId := idGen.idmap[2]
-	cocaColaHappyHourPriceElementId := idGen.idmap[3]
+	cocaColaNormalPriceElementID := idGen.idmap[2]
+	cocaColaHappyHourPriceElementID := idGen.idmap[3]
 
 	{ // CUDs: modify coca-cola number and normal price
 		event := saveEvent(require, appStructs, &idGen, newModify(appStructs, &idGen, func(event istructs.IRawEventBuilder) {
 			updateArticleCUD(event, appStructs, cocaColaDocID, test.cocaColaNumber2, "Coca-cola")
-			updateArPriceCUD(event, appStructs, cocaColaNormalPriceElementId, normalPriceID, 2.2)
+			updateArPriceCUD(event, appStructs, cocaColaNormalPriceElementID, normalPriceID, 2.2)
 		}))
 		require.NoError(processor.SendSync(event))
 	}
@@ -281,19 +281,19 @@ func TestBasicUsage_Collection(t *testing.T) {
 		require.NoError(processor.SendSync(event))
 	}
 	fantaDocID := idGen.idmap[7]
-	fantaNormalPriceElementId := idGen.idmap[8]
-	fantaHappyHourPriceElementId := idGen.idmap[9]
+	fantaNormalPriceElementID := idGen.idmap[8]
+	fantaHappyHourPriceElementID := idGen.idmap[9]
 
 	// Check expected projection values
 	{ // coca-cola
 		requireArticle(require, "Coca-cola", test.cocaColaNumber2, appStructs, cocaColaDocID)
-		requireArPrice(require, normalPriceID, 2.2, appStructs, cocaColaDocID, cocaColaNormalPriceElementId)
-		requireArPrice(require, happyHourPriceID, 1.8, appStructs, cocaColaDocID, cocaColaHappyHourPriceElementId)
+		requireArPrice(require, normalPriceID, 2.2, appStructs, cocaColaDocID, cocaColaNormalPriceElementID)
+		requireArPrice(require, happyHourPriceID, 1.8, appStructs, cocaColaDocID, cocaColaHappyHourPriceElementID)
 	}
 	{ // fanta
 		requireArticle(require, "Fanta", test.fantaNumber, appStructs, fantaDocID)
-		requireArPrice(require, normalPriceID, 2.1, appStructs, fantaDocID, fantaNormalPriceElementId)
-		requireArPrice(require, happyHourPriceID, 1.7, appStructs, fantaDocID, fantaHappyHourPriceElementId)
+		requireArPrice(require, normalPriceID, 2.1, appStructs, fantaDocID, fantaNormalPriceElementID)
+		requireArPrice(require, happyHourPriceID, 1.7, appStructs, fantaDocID, fantaHappyHourPriceElementID)
 	}
 
 }
@@ -317,15 +317,15 @@ func Test_updateChildRecord(t *testing.T) {
 		}))
 	}
 
-	cocaColaNormalPriceElementId := idGen.idmap[2]
+	cocaColaNormalPriceElementID := idGen.idmap[2]
 
 	{ // CUDs: modify normal price
 		saveEvent(require, appStructs, &idGen, newModify(appStructs, &idGen, func(event istructs.IRawEventBuilder) {
-			updateArPriceCUD(event, appStructs, cocaColaNormalPriceElementId, normalPriceID, 2.2)
+			updateArPriceCUD(event, appStructs, cocaColaNormalPriceElementID, normalPriceID, 2.2)
 		}))
 	}
 
-	rec, err := appStructs.Records().Get(test.workspace, true, cocaColaNormalPriceElementId)
+	rec, err := appStructs.Records().Get(test.workspace, true, cocaColaNormalPriceElementID)
 	require.NoError(err)
 	require.NotNil(rec)
 	require.Equal(float32(2.2), rec.AsFloat32(test.articlePricesPriceIdent))
@@ -387,10 +387,10 @@ func cp_Collection_3levels(t *testing.T, appParts appparts.IAppPartitions, appSt
 	}
 
 	cocaColaDocID = idGen.idmap[1]
-	cocaColaNormalPriceElementId := idGen.idmap[2]
-	cocaColaHappyHourPriceElementId := idGen.idmap[3]
-	cocaColaHappyHourExceptionHolidayElementId := idGen.idmap[4]
-	cocaColaHappyHourExceptionNewYearElementId := idGen.idmap[5]
+	cocaColaNormalPriceElementID := idGen.idmap[2]
+	cocaColaHappyHourPriceElementID := idGen.idmap[3]
+	cocaColaHappyHourExceptionHolidayElementID := idGen.idmap[4]
+	cocaColaHappyHourExceptionNewYearElementID := idGen.idmap[5]
 
 	// insert fanta
 	{
@@ -410,48 +410,48 @@ func cp_Collection_3levels(t *testing.T, appParts appparts.IAppPartitions, appSt
 	}
 
 	fantaDocID := idGen.idmap[6]
-	fantaNormalPriceElementId := idGen.idmap[7]
-	fantaNormalExceptionHolidayElementId := idGen.idmap[9]
-	fantaNormalExceptionNewYearElementId := idGen.idmap[10]
-	fantaHappyHourPriceElementId := idGen.idmap[8]
-	fantaHappyHourExceptionHolidayElementId := idGen.idmap[11]
+	fantaNormalPriceElementID := idGen.idmap[7]
+	fantaNormalExceptionHolidayElementID := idGen.idmap[9]
+	fantaNormalExceptionNewYearElementID := idGen.idmap[10]
+	fantaHappyHourPriceElementID := idGen.idmap[8]
+	fantaHappyHourExceptionHolidayElementID := idGen.idmap[11]
 
 	// modify coca-cola
 	{
 		event := saveEvent(require, appStructs, &idGen, newModify(appStructs, &idGen, func(event istructs.IRawEventBuilder) {
-			newArPriceExceptionCUD(event, cocaColaNormalPriceElementId, 15, holiday, 1.8)
-			updateArPriceExceptionCUD(event, appStructs, cocaColaHappyHourExceptionHolidayElementId, holiday, 0.9)
+			newArPriceExceptionCUD(event, cocaColaNormalPriceElementID, 15, holiday, 1.8)
+			updateArPriceExceptionCUD(event, appStructs, cocaColaHappyHourExceptionHolidayElementID, holiday, 0.9)
 		}))
 		require.NoError(processor.SendSync(event))
 	}
-	cocaColaNormalExceptionHolidayElementId := idGen.idmap[15]
-	require.NotEqual(istructs.NullRecordID, cocaColaNormalExceptionHolidayElementId)
+	cocaColaNormalExceptionHolidayElementID := idGen.idmap[15]
+	require.NotEqual(istructs.NullRecordID, cocaColaNormalExceptionHolidayElementID)
 
 	// Check expected projection values
 	{ // coca-cola
-		docId := cocaColaDocID
-		requireArticle(require, "Coca-cola", test.cocaColaNumber, appStructs, docId)
-		requireArPrice(require, normalPriceID, 2.0, appStructs, docId, cocaColaNormalPriceElementId)
+		docID := cocaColaDocID
+		requireArticle(require, "Coca-cola", test.cocaColaNumber, appStructs, docID)
+		requireArPrice(require, normalPriceID, 2.0, appStructs, docID, cocaColaNormalPriceElementID)
 		{
-			requireArPriceException(require, holiday, 1.8, appStructs, docId, cocaColaNormalExceptionHolidayElementId)
+			requireArPriceException(require, holiday, 1.8, appStructs, docID, cocaColaNormalExceptionHolidayElementID)
 		}
-		requireArPrice(require, happyHourPriceID, 1.5, appStructs, docId, cocaColaHappyHourPriceElementId)
+		requireArPrice(require, happyHourPriceID, 1.5, appStructs, docID, cocaColaHappyHourPriceElementID)
 		{
-			requireArPriceException(require, holiday, 0.9, appStructs, docId, cocaColaHappyHourExceptionHolidayElementId)
-			requireArPriceException(require, newyear, 0.8, appStructs, docId, cocaColaHappyHourExceptionNewYearElementId)
+			requireArPriceException(require, holiday, 0.9, appStructs, docID, cocaColaHappyHourExceptionHolidayElementID)
+			requireArPriceException(require, newyear, 0.8, appStructs, docID, cocaColaHappyHourExceptionNewYearElementID)
 		}
 	}
 	{ // fanta
-		docId := fantaDocID
-		requireArticle(require, "Fanta", test.fantaNumber, appStructs, docId)
-		requireArPrice(require, normalPriceID, 2.1, appStructs, docId, fantaNormalPriceElementId)
+		docID := fantaDocID
+		requireArticle(require, "Fanta", test.fantaNumber, appStructs, docID)
+		requireArPrice(require, normalPriceID, 2.1, appStructs, docID, fantaNormalPriceElementID)
 		{
-			requireArPriceException(require, holiday, 1.6, appStructs, docId, fantaNormalExceptionHolidayElementId)
-			requireArPriceException(require, newyear, 1.2, appStructs, docId, fantaNormalExceptionNewYearElementId)
+			requireArPriceException(require, holiday, 1.6, appStructs, docID, fantaNormalExceptionHolidayElementID)
+			requireArPriceException(require, newyear, 1.2, appStructs, docID, fantaNormalExceptionNewYearElementID)
 		}
-		requireArPrice(require, happyHourPriceID, 1.6, appStructs, docId, fantaHappyHourPriceElementId)
+		requireArPrice(require, happyHourPriceID, 1.6, appStructs, docID, fantaHappyHourPriceElementID)
 		{
-			requireArPriceException(require, holiday, 1.1, appStructs, docId, fantaHappyHourExceptionHolidayElementId)
+			requireArPriceException(require, holiday, 1.1, appStructs, docID, fantaHappyHourExceptionHolidayElementID)
 		}
 	}
 }
@@ -966,100 +966,100 @@ func saveEvent(require *require.Assertions, app istructs.IAppStructs, generator 
 	pLogEvent = createEvent(require, app, generator, bld)
 	err := app.Records().Apply(pLogEvent)
 	require.NoError(err)
-	require.Equal("", pLogEvent.Error().ErrStr())
+	require.Empty(pLogEvent.Error().ErrStr())
 	return
 }
 
-func newPriceCUD(bld istructs.IRawEventBuilder, recordId istructs.RecordID, number int32, name string) {
+func newPriceCUD(bld istructs.IRawEventBuilder, recordID istructs.RecordID, number int32, name string) {
 	rec := bld.CUDBuilder().Create(appdef.NewQName("test", "prices"))
-	rec.PutRecordID(appdef.SystemField_ID, recordId)
+	rec.PutRecordID(appdef.SystemField_ID, recordID)
 	rec.PutString(test.priceNameIdent, name)
 	rec.PutInt32(test.priceNumberIdent, number)
 	rec.PutBool(appdef.SystemField_IsActive, true)
 }
 
-func newPeriodCUD(bld istructs.IRawEventBuilder, recordId istructs.RecordID, number int32, name string) {
+func newPeriodCUD(bld istructs.IRawEventBuilder, recordID istructs.RecordID, number int32, name string) {
 	rec := bld.CUDBuilder().Create(appdef.NewQName("test", "periods"))
-	rec.PutRecordID(appdef.SystemField_ID, recordId)
+	rec.PutRecordID(appdef.SystemField_ID, recordID)
 	rec.PutString(test.periodNameIdent, name)
 	rec.PutInt32(test.periodNumberIdent, number)
 	rec.PutBool(appdef.SystemField_IsActive, true)
 }
 
-func newDepartmentCUD(bld istructs.IRawEventBuilder, recordId istructs.RecordID, number int32, name string) {
+func newDepartmentCUD(bld istructs.IRawEventBuilder, recordID istructs.RecordID, number int32, name string) {
 	rec := bld.CUDBuilder().Create(appdef.NewQName("test", "departments"))
-	rec.PutRecordID(appdef.SystemField_ID, recordId)
+	rec.PutRecordID(appdef.SystemField_ID, recordID)
 	rec.PutString(test.depNameIdent, name)
 	rec.PutInt32(test.depNumberIdent, number)
 	rec.PutBool(appdef.SystemField_IsActive, true)
 }
 
-func newArticleCUD(bld istructs.IRawEventBuilder, articleRecordId, department istructs.RecordID, number int32, name string) {
+func newArticleCUD(bld istructs.IRawEventBuilder, articleRecordID, department istructs.RecordID, number int32, name string) {
 	rec := bld.CUDBuilder().Create(appdef.NewQName("test", "articles"))
-	rec.PutRecordID(appdef.SystemField_ID, articleRecordId)
+	rec.PutRecordID(appdef.SystemField_ID, articleRecordID)
 	rec.PutString(test.articleNameIdent, name)
 	rec.PutInt32(test.articleNumberIdent, number)
 	rec.PutRecordID(test.articleDeptIdent, department)
 	rec.PutBool(appdef.SystemField_IsActive, true)
 }
 
-func updateArticleCUD(bld istructs.IRawEventBuilder, app istructs.IAppStructs, articleRecordId istructs.RecordID, number int32, name string) {
-	rec, err := app.Records().Get(test.workspace, false, articleRecordId)
+func updateArticleCUD(bld istructs.IRawEventBuilder, app istructs.IAppStructs, articleRecordID istructs.RecordID, number int32, name string) {
+	rec, err := app.Records().Get(test.workspace, false, articleRecordID)
 	if err != nil {
 		panic(err)
 	}
 	if rec.QName() == appdef.NullQName {
-		panic(fmt.Sprintf("Article %d not found", articleRecordId))
+		panic(fmt.Sprintf("Article %d not found", articleRecordID))
 	}
 	writer := bld.CUDBuilder().Update(rec)
 	writer.PutString(test.articleNameIdent, name)
 	writer.PutInt32(test.articleNumberIdent, number)
 }
 
-func newArPriceCUD(bld istructs.IRawEventBuilder, articleRecordId, articlePriceRecordId istructs.RecordID, idPrice istructs.RecordID, price float32) {
+func newArPriceCUD(bld istructs.IRawEventBuilder, articleRecordID, articlePriceRecordID istructs.RecordID, idPrice istructs.RecordID, price float32) {
 	rec := bld.CUDBuilder().Create(appdef.NewQName("test", "article_prices"))
-	rec.PutRecordID(appdef.SystemField_ID, articlePriceRecordId)
-	rec.PutRecordID(appdef.SystemField_ParentID, articleRecordId)
+	rec.PutRecordID(appdef.SystemField_ID, articlePriceRecordID)
+	rec.PutRecordID(appdef.SystemField_ParentID, articleRecordID)
 	rec.PutString(appdef.SystemField_Container, "article_prices")
-	rec.PutRecordID(test.articlePricesPriceIdIdent, idPrice)
+	rec.PutRecordID(test.articlePricesPriceIDIdent, idPrice)
 	rec.PutFloat32(test.articlePricesPriceIdent, price)
 	rec.PutBool(appdef.SystemField_IsActive, true)
 }
 
-func updateArPriceCUD(bld istructs.IRawEventBuilder, app istructs.IAppStructs, articlePriceRecordId istructs.RecordID, idPrice istructs.RecordID, price float32) {
-	rec, err := app.Records().Get(test.workspace, true, articlePriceRecordId)
+func updateArPriceCUD(bld istructs.IRawEventBuilder, app istructs.IAppStructs, articlePriceRecordID istructs.RecordID, idPrice istructs.RecordID, price float32) {
+	rec, err := app.Records().Get(test.workspace, true, articlePriceRecordID)
 	if err != nil {
 		panic(err)
 	}
 	if rec.QName() == appdef.NullQName {
-		panic(fmt.Sprintf("Article price %d not found", articlePriceRecordId))
+		panic(fmt.Sprintf("Article price %d not found", articlePriceRecordID))
 	}
 	writer := bld.CUDBuilder().Update(rec)
-	writer.PutRecordID(test.articlePricesPriceIdIdent, idPrice)
+	writer.PutRecordID(test.articlePricesPriceIDIdent, idPrice)
 	writer.PutFloat32(test.articlePricesPriceIdent, price)
 }
 
-func newArPriceExceptionCUD(bld istructs.IRawEventBuilder, articlePriceRecordId, articlePriceExceptionRecordId, period istructs.RecordID, price float32) {
+func newArPriceExceptionCUD(bld istructs.IRawEventBuilder, articlePriceRecordID, articlePriceExceptionRecordID, period istructs.RecordID, price float32) {
 	rec := bld.CUDBuilder().Create(appdef.NewQName("test", "article_price_exceptions"))
-	rec.PutRecordID(appdef.SystemField_ID, articlePriceExceptionRecordId)
-	rec.PutRecordID(appdef.SystemField_ParentID, articlePriceRecordId)
+	rec.PutRecordID(appdef.SystemField_ID, articlePriceExceptionRecordID)
+	rec.PutRecordID(appdef.SystemField_ParentID, articlePriceRecordID)
 	rec.PutString(appdef.SystemField_Container, "article_price_exceptions")
-	rec.PutRecordID(test.articlePriceExceptionsPeriodIdIdent, period)
+	rec.PutRecordID(test.articlePriceExceptionsPeriodIDIdent, period)
 	rec.PutFloat32(test.articlePriceExceptionsPriceIdent, price)
 	rec.PutBool(appdef.SystemField_IsActive, true)
 }
 
-func updateArPriceExceptionCUD(bld istructs.IRawEventBuilder, app istructs.IAppStructs, articlePriceExceptionRecordId, idPeriod istructs.RecordID, price float32) {
-	rec, err := app.Records().Get(test.workspace, true, articlePriceExceptionRecordId)
+func updateArPriceExceptionCUD(bld istructs.IRawEventBuilder, app istructs.IAppStructs, articlePriceExceptionRecordID, idPeriod istructs.RecordID, price float32) {
+	rec, err := app.Records().Get(test.workspace, true, articlePriceExceptionRecordID)
 	if err != nil {
 		panic(err)
 	}
 	if rec.QName() == appdef.NullQName {
-		panic(fmt.Sprintf("Article price exception %d not found", articlePriceExceptionRecordId))
+		panic(fmt.Sprintf("Article price exception %d not found", articlePriceExceptionRecordID))
 	}
 
 	writer := bld.CUDBuilder().Update(rec)
-	writer.PutRecordID(test.articlePriceExceptionsPeriodIdIdent, idPeriod)
+	writer.PutRecordID(test.articlePriceExceptionsPeriodIDIdent, idPeriod)
 	writer.PutFloat32(test.articlePriceExceptionsPriceIdent, price)
 }
 func insertPrices(require *require.Assertions, app istructs.IAppStructs, idGen *idsGeneratorType) (normalPrice, happyHourPrice istructs.RecordID, event istructs.IPLogEvent) {

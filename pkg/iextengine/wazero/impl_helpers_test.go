@@ -96,7 +96,7 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 		if projectorMode {
 			mv.Data["offs"] = int32(12345)
 			mv.Data["qname"] = "air.UpdateSubscription"
-			mv.Data["arg"] = newJsonValue(`
+			mv.Data["arg"] = newJSONValue(`
 				{
 					"subscription": {
 						"status": "active"
@@ -280,7 +280,7 @@ func (kb *mockKeyBuilder) PutChars(name string, value string) {}
 
 func (kb *mockKeyBuilder) PutFromJSON(map[string]any) {}
 
-func newJsonValue(jsonString string) istructs.IStateValue {
+func newJSONValue(jsonString string) istructs.IStateValue {
 	v := mockValue{TestObject: coreutils.TestObject{Data: map[string]interface{}{}}}
 	err := json.Unmarshal([]byte(jsonString), &v.Data)
 	if err != nil {

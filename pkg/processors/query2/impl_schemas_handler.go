@@ -11,6 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
@@ -48,8 +49,8 @@ func (h *schemasHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err 
 }
 
 func (h *schemasHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
-	generatedHtml := fmt.Sprintf("<html><head><title>App %s schema</title></head><body>", qw.msg.AppQName().String())
-	generatedHtml += fmt.Sprintf("<h1>App %s schema</h1>", qw.msg.AppQName().String())
+	generatedHTML := fmt.Sprintf("<html><head><title>App %s schema</title></head><body>", qw.msg.AppQName().String())
+	generatedHTML += fmt.Sprintf("<h1>App %s schema</h1>", qw.msg.AppQName().String())
 
 	workspaces := make([]appdef.IWorkspace, 0)
 
@@ -70,16 +71,16 @@ func (h *schemasHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
 	}
 
 	if len(workspaces) == 0 {
-		generatedHtml += "<p>No workspaces with published roles found</p>"
+		generatedHTML += "<p>No workspaces with published roles found</p>"
 	} else {
-		generatedHtml += "<ul>"
+		generatedHTML += "<ul>"
 		for _, ws := range workspaces {
 			ref := fmt.Sprintf("/api/v2/users/%s/apps/%s/schemas/%s/roles", qw.msg.AppQName().Owner(), qw.msg.AppQName().Name(), ws.QName().String())
-			generatedHtml += fmt.Sprintf(`<li><a href="%s">%s</a></li>`, ref, ws.QName().String())
+			generatedHTML += fmt.Sprintf(`<li><a href="%s">%s</a></li>`, ref, ws.QName().String())
 		}
-		generatedHtml += "</ul>"
+		generatedHTML += "</ul>"
 	}
-	generatedHtml += "</body></html>"
+	generatedHTML += "</body></html>"
 
-	return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: contentTypeHtml, StatusCode: http.StatusOK}, generatedHtml)
+	return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: coreutils.ContentType_TextHTML, StatusCode: http.StatusOK}, generatedHTML)
 }

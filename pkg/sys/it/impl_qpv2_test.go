@@ -1475,7 +1475,7 @@ func TestOpenAPI(t *testing.T) {
 		AppName:       appdef.NewAppQName("voedger", "testapp"),
 	}
 
-	err = query2.CreateOpenApiSchema(writer, ws, appdef.NewQName("app1pkg", "ApiRole"), acl.PublishedTypes, schemaMeta)
+	err = query2.CreateOpenAPISchema(writer, ws, appdef.NewQName("app1pkg", "ApiRole"), acl.PublishedTypes, schemaMeta)
 
 	require.NoError(err)
 

@@ -71,7 +71,7 @@ func TestBasicUsage(t *testing.T) {
 
 		// blob disappeared
 		_, err = blobStorage.QueryBLOBState(context.Background(), &key)
-		require.Error(t, iblobstorage.ErrBLOBNotFound)
+		require.ErrorIs(t, err, iblobstorage.ErrBLOBNotFound)
 	})
 }
 

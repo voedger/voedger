@@ -19,11 +19,11 @@ func TestFederationBlobStorage_BasicUsage(t *testing.T) {
 	buffer[0] = 1
 	buffer[4999] = 2
 	require := require.New(t)
-	federatioBlobHandler := func(owner, appname string, wsid istructs.WSID, blobId istructs.RecordID) (result []byte, err error) {
+	federatioBlobHandler := func(owner, appname string, wsid istructs.WSID, blobID istructs.RecordID) (result []byte, err error) {
 		require.Equal("owner", owner)
 		require.Equal("appname", appname)
 		require.Equal(istructs.WSID(123), wsid)
-		require.Equal(istructs.RecordID(1), blobId)
+		require.Equal(istructs.RecordID(1), blobID)
 		return buffer, nil
 	}
 	mockedStructs, _ := mockedStructs(t)

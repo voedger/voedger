@@ -99,7 +99,7 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 			// copy vsql files
 			base := filepath.Base(file)
 			fileNameExtensionless := base[:len(base)-len(filepath.Ext(base))]
-			if err := coreutils.CopyFile(file, pkgBuildDir, coreutils.WithNewName(fileNameExtensionless+parser.VSqlExt)); err != nil {
+			if err := coreutils.CopyFile(file, pkgBuildDir, coreutils.WithNewName(fileNameExtensionless+parser.VSQLExt)); err != nil {
 				return fmt.Errorf(errFmtCopyFile, file, err)
 			}
 
@@ -157,6 +157,7 @@ func execTinyGoBuild(dir, appName string) (wasmFilePath string, err error) {
 		"-opt=2",
 		"-gc=leaking",
 		"-target=wasi",
+		"-buildmode=wasi-legacy", // see https://github.com/tinygo-org/tinygo/pull/4734
 		".",
 	).WorkingDir(dir).Run(stdout, os.Stderr); err != nil {
 		// checking compatibility of the tinygo with go version

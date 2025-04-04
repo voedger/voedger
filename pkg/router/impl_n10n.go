@@ -129,7 +129,7 @@ curl -G --data-urlencode "payload={\"Channel\": \"a23b2050-b90c-4ed1-adb7-1ecc4f
 func (s *httpService) subscribeHandler() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		var parameters subscriberParamsType
-		err := getJsonPayload(req, &parameters)
+		err := getJSONPayload(req, &parameters)
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 		}
@@ -151,7 +151,7 @@ curl -G --data-urlencode "payload={\"Channel\": \"a23b2050-b90c-4ed1-adb7-1ecc4f
 func (s *httpService) unSubscribeHandler() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		var parameters subscriberParamsType
-		err := getJsonPayload(req, &parameters)
+		err := getJSONPayload(req, &parameters)
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 		}
@@ -193,7 +193,7 @@ func (s *httpService) updateHandler() http.HandlerFunc {
 	}
 }
 
-func getJsonPayload(req *http.Request, payload *subscriberParamsType) (err error) {
+func getJSONPayload(req *http.Request, payload *subscriberParamsType) (err error) {
 	jsonParam, ok := req.URL.Query()["payload"]
 	if !ok || len(jsonParam[0]) < 1 {
 		err = errors.New("url parameter with payload (channel id and projection key) is missing")
