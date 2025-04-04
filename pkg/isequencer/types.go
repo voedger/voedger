@@ -66,7 +66,8 @@ type sequencer struct {
 	// - 4 is the last processed event
 	// - nextOffset keeps 5
 	// - Start() returns 5 and increments nextOffset to 6
-	nextOffset PLogOffset
+	nextOffset   PLogOffset
+	nextOffsetMu sync.RWMutex
 
 	// If Sequencing Transaction is in progress then currentWSID has non-zero value.
 	currentWSID   WSID

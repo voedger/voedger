@@ -68,7 +68,11 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 	s.currentWSID = wsID
 	s.currentWSKind = wsKind
 
-	return s.nextOffset, true
+	s.nextOffsetMu.RLock()
+	nextOffset := s.nextOffset
+	s.nextOffsetMu.RUnlock()
+
+	return nextOffset, true
 }
 
 func (s *sequencer) startFlusher() {
@@ -308,7 +312,10 @@ func (s *sequencer) Flush() {
 	s.inprocMu.RUnlock()
 
 	// Copy s.nextOffset to s.toBeFlushedOffset
+	s.nextOffsetMu.RLock()
 	s.toBeFlushedOffset = s.nextOffset
+	s.nextOffsetMu.RUnlock()
+
 	s.toBeFlushedMu.Unlock()
 
 	// Clear s.inproc
@@ -317,7 +324,9 @@ func (s *sequencer) Flush() {
 	s.inprocMu.Unlock()
 
 	// Increase s.nextOffset
+	s.nextOffsetMu.Lock()
 	s.nextOffset++
+	s.nextOffsetMu.Unlock()
 	//  Non-blocking write to s.flusherSig
 	s.signalToFlushing()
 
@@ -360,8 +369,14 @@ func (s *sequencer) batcher(ctx context.Context, values []SeqValue, offset PLogO
 	}
 	s.toBeFlushedMu.RUnlock()
 
+	s.nextOffsetMu.Lock()
 	s.nextOffset = offset + 1
+
+	s.toBeFlushedMu.Lock()
 	s.toBeFlushedOffset = s.nextOffset
+
+	s.toBeFlushedMu.Unlock()
+	s.nextOffsetMu.Unlock()
 
 	// Store maxValues in s.toBeFlushed: max Number for each SeqValue.Key
 	maxValues := make(map[NumberKey]Number)
@@ -424,7 +439,11 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	var err error
 	// Read nextPLogOffset from s.params.SeqStorage.ReadNextPLogOffset()
 	err = coreutils.Retry(actualizerCtx, s.iTime, RetryDelay, getRetryCount(), func() error {
-		s.nextOffset, err = s.params.SeqStorage.ReadNextPLogOffset()
+		nextOffset, err := s.params.SeqStorage.ReadNextPLogOffset()
+
+		s.nextOffsetMu.Lock()
+		s.nextOffset = nextOffset
+		s.nextOffsetMu.Unlock()
 
 		return err
 	})
@@ -435,7 +454,11 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 
 	// Use s.params.SeqStorage.ActualizeSequencesFromPLog() and s.batcher()
 	err = coreutils.Retry(actualizerCtx, s.iTime, RetryDelay, getRetryCount(), func() error {
-		return s.params.SeqStorage.ActualizeSequencesFromPLog(s.cleanupCtx, s.nextOffset, s.batcher)
+		s.nextOffsetMu.RLock()
+		nextOffset := s.nextOffset
+		s.nextOffsetMu.RUnlock()
+
+		return s.params.SeqStorage.ActualizeSequencesFromPLog(s.cleanupCtx, nextOffset, s.batcher)
 	})
 	if err != nil {
 		// notest
@@ -526,10 +549,10 @@ func (s *sequencer) Actualize() {
 	if len(s.toBeFlushed) > 0 {
 		s.toBeFlushed = make(map[NumberKey]Number)
 	}
-	s.toBeFlushedMu.Unlock()
-
 	// Cleans s.toBeFlushedOffset
 	s.toBeFlushedOffset = 0
+	s.toBeFlushedMu.Unlock()
+
 	// Cleans s.lru
 	s.lru.Purge()
 

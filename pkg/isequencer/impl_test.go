@@ -339,7 +339,9 @@ func TestBatcher(t *testing.T) {
 		require.Equal(PLogOffset(7), s.toBeFlushedOffset, "Should update toBeFlushedOffset to offset + 1")
 
 		// Verify nextOffset was updated
+		s.nextOffsetMu.RLock()
 		require.Equal(PLogOffset(7), s.nextOffset, "Should update nextOffset to offset + 1")
+		s.nextOffsetMu.RUnlock()
 	})
 
 	t.Run("should handle context cancellation", func(t *testing.T) {
@@ -716,7 +718,9 @@ func TestNextNumberSourceOrder(t *testing.T) {
 		require.True(removed)
 
 		// tamper toBeFlushed to ensure we'll read exactly from toBeFlushed in this case
+		seq.(*sequencer).toBeFlushedMu.Lock()
 		seq.(*sequencer).toBeFlushed[numberKey] = 30001
+		seq.(*sequencer).toBeFlushedMu.Unlock()
 
 		offset = WaitForStart(t, seq, 1, 1, true)
 		require.Equal(PLogOffset(7), offset)
