@@ -289,10 +289,10 @@ func (m *MockStorage) AddPLogEntry(offset, wsid int, seqID SeqID, number int) {
 	defer m.mu.Unlock()
 
 	// Add the new entry to the PLog
-	m.pLog[PLogOffset(offset)] = append(
-		m.pLog[PLogOffset(offset)],
+	m.pLog[PLogOffset(offset)] = append( //nolint:gosec
+		m.pLog[PLogOffset(offset)], //nolint:gosec
 		SeqValue{
-			Key:   NumberKey{WSID: WSID(wsid), SeqID: seqID},
+			Key:   NumberKey{WSID: WSID(wsid), SeqID: seqID}, //nolint:gosec
 			Value: Number(number),
 		},
 	)

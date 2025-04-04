@@ -226,6 +226,7 @@ func TestISequencer_Flush(t *testing.T) {
 		defer cancel()
 
 		firstOffset, err := storage.ReadNextPLogOffset()
+		require.NoError(err)
 		// Start transaction and generate a value
 		offset, ok := sequencer.Start(1, 1)
 		require.True(ok)
@@ -412,6 +413,7 @@ func TestISequencer_Next(t *testing.T) {
 
 		// Transaction 1
 		offset, ok := seq.Start(1, 1)
+		require.NotZero(offset)
 		require.True(ok)
 
 		num, err := seq.Next(1)
@@ -765,7 +767,6 @@ func TestISequencer_LongRecovery(t *testing.T) {
 	seqID_1 := isequencer.SeqID(1)
 	seqID_2 := isequencer.SeqID(2)
 	// Simulate a long recovery process gradually from 0 to 50 numEvents
-	const wsidCount = 10
 	for numEvents := 1; numEvents <= 50; numEvents++ {
 		// Fulfill pLog with data
 		storage := isequencer.NewMockStorage(0, 0)
