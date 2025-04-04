@@ -20,6 +20,7 @@ func New(appID istructs.ClusterAppID, partitionID istructs.PartitionID, events i
 		appDef:      appDef,
 		storage:     seqStorage,
 		seqIDs: map[appdef.QName]uint16{
+			istructs.QNamePLogOffsetSequence: istructs.QNameIDPLogOffsetSequence,
 			istructs.QNameWLogOffsetSequence: istructs.QNameIDWLogOffsetSequence,
 			istructs.QNameCRecordIDSequence:  istructs.QNameIDCRecordIDSequence,
 			istructs.QNameOWRecordIDSequence: istructs.QNameIDOWRecordIDSequence,

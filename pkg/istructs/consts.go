@@ -44,6 +44,7 @@ var (
 	QNameORecord = appdef.NewQName(appdef.SysPackage, "ORecord")
 
 	// sequences QNames has hardcoded QNameIDs: [QNameIDWLogOffsetSequence] etc
+	QNamePLogOffsetSequence = appdef.NewQName(appdef.SysPackage, "PLogOffsetSequence")
 	QNameWLogOffsetSequence = appdef.NewQName(appdef.SysPackage, "WLogOffsetSequence")
 	QNameCRecordIDSequence  = appdef.NewQName(appdef.SysPackage, "CRecordIDSequence")
 	QNameOWRecordIDSequence = appdef.NewQName(appdef.SysPackage, "OWRecordIDSequence")
