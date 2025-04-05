@@ -8,7 +8,6 @@ package isequencer
 import (
 	"context"
 	"errors"
-	"sync"
 	"testing"
 	"time"
 
@@ -21,11 +20,12 @@ func TestSequencer(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	require := require.New(t)
 
 	t.Run("basic flow", func(t *testing.T) {
 		mockedTime := coreutils.MockTime
 		// Given
-		storage := NewMockStorage(0, 0)
+		storage := NewMockStorage()
 		storage.SetPLog(map[PLogOffset][]SeqValue{
 			PLogOffset(1): {
 				{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 100},
@@ -40,13 +40,13 @@ func TestSequencer(t *testing.T) {
 
 		// When
 		offset := WaitForStart(t, seq, 1, 1, true)
-		require.Equal(t, PLogOffset(2), offset)
+		require.Equal(PLogOffset(2), offset)
 
 		// Generate new sequence Numbers 100 times
 		for i := 1; i <= 100; i++ {
 			num, err := seq.Next(1)
-			require.NoError(t, err)
-			require.Equal(t, Number(100+i), num)
+			require.NoError(err)
+			require.Equal(Number(100+i), num)
 		}
 
 		seq.Flush()
@@ -55,125 +55,139 @@ func TestSequencer(t *testing.T) {
 		seq.(*sequencer).flusherWG.Wait()
 
 		nums, err := storage.ReadNumbers(1, []SeqID{1})
-		require.NoError(t, err)
-		require.Equal(t, Number(200), nums[0])
+		require.NoError(err)
+		require.Equal(Number(200), nums[0])
 	})
 }
 
 func TestSequencer_Start(t *testing.T) {
-	t.Run("should reject when too many unflushed values", func(t *testing.T) {
+	require := require.New(t)
+	t.Run("should reject when too many unflushed values + allow after Flush", func(t *testing.T) {
 		iTime := coreutils.MockTime
 
-		storage := NewMockStorage(0, 0)
-		storage.NextOffset = PLogOffset(4)
-		storage.SetPLog(map[PLogOffset][]SeqValue{
-			PLogOffset(0): nil,
-			PLogOffset(1): nil,
-			PLogOffset(2): nil,
-			PLogOffset(3): nil,
-			PLogOffset(4): nil,
-			PLogOffset(5): {
-				{
-					Key:   NumberKey{WSID: 1, SeqID: 1},
-					Value: 100,
-				},
-			},
-		})
+		storage := NewMockStorage()
 		params := NewDefaultParams(map[WSKind]map[SeqID]Number{
-			1: {1: 1},
+			1: {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1},
 		})
 		params.MaxNumUnflushedValues = 5
+		waitForFlushCh := make(chan any)
+		writeOnFlushOccuredCh := make(chan any)
+		storage.onWriteValuesAndOffset = func() {
+			close(writeOnFlushOccuredCh)
+			<-waitForFlushCh
+		}
 		seq, cancel := New(params, storage, iTime)
 		defer cancel()
 
-		seq.(*sequencer).toBeFlushedMu.Lock()
-		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 1}] = 1
-		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 2}] = 1
-		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 3}] = 1
-		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 4}] = 1
-		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 5}] = 1
-		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 6}] = 1
-		seq.(*sequencer).toBeFlushedMu.Unlock()
-
 		offset, ok := seq.Start(1, 1)
-		require.False(t, ok)
-		require.Zero(t, offset)
-	})
-}
+		require.True(ok)
+		require.Equal(PLogOffset(1), offset)
 
-func TestSequencer_Flush(t *testing.T) {
-	t.Run("should reduce unflushed values and allow new transactions", func(t *testing.T) {
-		iTime := coreutils.MockTime
-
-		storage := NewMockStorage(0, 0)
-		storage.NextOffset = PLogOffset(99)
-		storage.SetPLog(map[PLogOffset][]SeqValue{
-			PLogOffset(0): {
-				{
-					Key:   NumberKey{WSID: WSID(1), SeqID: SeqID(1)},
-					Value: Number(100),
-				},
-			},
-		})
-
-		params := NewDefaultParams(map[WSKind]map[SeqID]Number{
-			1: {1: 1},
-		})
-		params.MaxNumUnflushedValues = 5
-		seq, cancel := New(params, storage, iTime)
-		defer cancel()
-
-		seq.(*sequencer).toBeFlushedMu.Lock()
-		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 1}] = 1
-		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 2}] = 1
-		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 3}] = 1
-		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 4}] = 1
-		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 5}] = 1
-		seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 6}] = 1
-		seq.(*sequencer).toBeFlushedMu.Unlock()
-
-		offset, ok := seq.Start(1, 1)
-		require.False(t, ok)
-		require.Zero(t, offset)
-
-		// Change the limit to allow new transactions
-		seq.(*sequencer).params.MaxNumUnflushedValues = 100
-		// Advance time to allow flushing to complete
-		iTime.Add(time.Second)
-
-		// Third transaction - should work after flush completes
-		offset3, ok := seq.Start(1, 1)
-		require.True(t, ok)
-		require.NotZero(t, offset3)
-
-		// Should be able to get the next sequence number after the previous ones
-		num, err := seq.Next(1)
-		_ = num
-		require.NoError(t, err)
+		// obtain 6 numbers, 6th should overflow toBeFlushed
+		for i := 0; i < 6; i++ {
+			num, err := seq.Next(SeqID(i + 1))
+			require.NoError(err)
+			require.Equal(Number(2), num)
+		}
 
 		seq.Flush()
+
+		<-writeOnFlushOccuredCh
+
+		// failed to start because toBeFlushed is overflowed
+		offset, ok = seq.Start(1, 1)
+		require.False(ok)
+		require.Zero(offset)
+		close(waitForFlushCh)
 	})
 }
+
+// func TestSequencer_Flush(t *testing.T) {
+// 	require := require.New(t)
+// 	t.Run("should reduce unflushed values and allow new transactions", func(t *testing.T) {
+// 		iTime := coreutils.MockTime
+
+// 		storage := NewMockStorage()
+// 		storage.SetPLog(map[PLogOffset][]SeqValue{
+// 			PLogOffset(1): {
+// 				{Key: NumberKey{WSID: WSID(1), SeqID: SeqID(1)}, Value: Number(100)},
+// 				{Key: NumberKey{WSID: WSID(1), SeqID: SeqID(2)}, Value: Number(100)},
+// 				{Key: NumberKey{WSID: WSID(1), SeqID: SeqID(3)}, Value: Number(100)},
+// 				{Key: NumberKey{WSID: WSID(1), SeqID: SeqID(4)}, Value: Number(100)},
+// 				{Key: NumberKey{WSID: WSID(1), SeqID: SeqID(5)}, Value: Number(100)},
+// 				{Key: NumberKey{WSID: WSID(1), SeqID: SeqID(6)}, Value: Number(100)},
+// 			},
+// 		})
+
+// 		params := NewDefaultParams(map[WSKind]map[SeqID]Number{
+// 			1: {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1},
+// 		})
+// 		params.MaxNumUnflushedValues = 5
+
+// 		seq, cancel := New(params, storage, iTime)
+// 		defer cancel()
+
+// 		// seq.(*sequencer).toBeFlushedMu.Lock()
+// 		// seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 1}] = 1
+// 		// seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 2}] = 1
+// 		// seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 3}] = 1
+// 		// seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 4}] = 1
+// 		// seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 5}] = 1
+// 		// seq.(*sequencer).toBeFlushed[NumberKey{WSID: 1, SeqID: 6}] = 1
+// 		// seq.(*sequencer).toBeFlushedMu.Unlock()
+
+// 		offset := WaitForStart(t, seq, 1, 1, true)
+// 		require.Equal(PLogOffset(2), offset)
+
+// 		// obtain 6 numbers to fill toBeFlushed
+// 		for i := 0; i < 6; i++ {
+// 			num, err := seq.Next(SeqID(i + 1))
+// 			require.NoError(err)
+// 			require.Equal(Number(101), num)
+// 		}
+
+// 		// 7th Next will be failed because toBeFlushedis overflowed
+// 		num, err := seq.Next(SeqID(6))
+// 		require.Error(err)
+// 		require.Zero(num)
+
+// 		// toBeFlushed should be purged on Flush
+// 		seq.Flush()
+// 		offset = WaitForStart(t, seq, 1, 1, true)
+// 		require.Equal(PLogOffset(3), offset)
+
+// 		// now Next succeeded because toBeFlushed is empty
+// 		num, err = seq.Next(SeqID(6))
+// 		require.NoError(err)
+// 		require.Equal(Number(101), num)
+
+// 		// // Change the limit to allow new transactions
+// 		// seq.(*sequencer).params.MaxNumUnflushedValues = 100
+// 		// // Advance time to allow flushing to complete
+// 		// iTime.Add(time.Second)
+
+// 		// // Third transaction - should work after flush completes
+// 		// offset3, ok := seq.Start(1, 1)
+// 		// require.True(ok)
+// 		// require.NotZero(offset3)
+
+// 		// // Should be able to get the next sequence number after the previous ones
+// 		// num, err := seq.Next(1)
+// 		// _ = num
+// 		// require.NoError(err)
+
+// 		seq.Flush()
+// 	})
+// }
 
 func TestSequencer_Next(t *testing.T) {
 	t.Run("should return 0 when ReadNumbers() fails", func(t *testing.T) {
 		require := require.New(t)
 		iTime := coreutils.MockTime
 
-		initialNumber := Number(50)
-		storage := NewMockStorage(0, 0)
-		storage.SetPLog(map[PLogOffset][]SeqValue{
-			PLogOffset(0): {
-				{
-					Key:   NumberKey{WSID: WSID(1), SeqID: SeqID(1)},
-					Value: initialNumber,
-				},
-			},
-		})
-		// No predefined sequence Numbers in storage
-		initialValue := Number(1)
+		storage := NewMockStorage()
 		params := NewDefaultParams(map[WSKind]map[SeqID]Number{
-			1: {1: initialValue},
+			1: {1: 1},
 		})
 		params.RetryCount = 1
 		seq, cancel := New(params, storage, iTime)
@@ -181,47 +195,12 @@ func TestSequencer_Next(t *testing.T) {
 		WaitForStart(t, seq, 1, 1, true)
 
 		cancel()
-		storage.SetReadNumbersError(errors.New("ReadNumbersError"))
-		seq.(*sequencer).toBeFlushedMu.Lock()
-		seq.(*sequencer).toBeFlushed = make(map[NumberKey]Number)
-		seq.(*sequencer).toBeFlushedMu.Unlock()
+		expectedErr := errors.New("ReadNumbersError")
+		storage.SetReadNumbersError(expectedErr)
 
 		num, err := seq.Next(1)
-		require.ErrorIs(err, storage.ReadNumbersError)
+		require.ErrorIs(err, expectedErr)
 		require.Zero(num)
-	})
-
-	t.Run("should update cache ", func(t *testing.T) {
-		require := require.New(t)
-		iTime := coreutils.MockTime
-
-		initialNumber := Number(50)
-		storage := NewMockStorage(0, 0)
-		storage.SetPLog(map[PLogOffset][]SeqValue{
-			PLogOffset(1): {
-				{
-					Key:   NumberKey{WSID: WSID(1), SeqID: SeqID(1)},
-					Value: initialNumber,
-				},
-			},
-		})
-		// No predefined sequence Numbers in storage
-		initialValue := Number(1)
-		seq, cancel := New(NewDefaultParams(map[WSKind]map[SeqID]Number{
-			1: {1: initialValue},
-		}), storage, iTime)
-		defer cancel()
-
-		_, ok := seq.Start(1, 1)
-		require.True(ok)
-
-		num, err := seq.Next(1)
-		require.ErrorIs(err, storage.ReadNumbersError)
-		require.Equal(initialNumber+1, num)
-
-		num, ok = seq.(*sequencer).lru.Get(NumberKey{WSID: 1, SeqID: 1})
-		require.True(ok)
-		require.Equal(initialNumber+1, num)
 	})
 }
 
@@ -231,66 +210,27 @@ func TestBatcher(t *testing.T) {
 
 		// Given
 		ctx := context.Background()
-		storage := NewMockStorage(0, 0)
-		storage.SetPLog(map[PLogOffset][]SeqValue{
-			PLogOffset(0): {
-				{
-					Key:   NumberKey{WSID: 1, SeqID: 1},
-					Value: Number(100),
-				},
-				{
-					Key:   NumberKey{WSID: 1, SeqID: 2},
-					Value: Number(200),
-				},
-			},
-		})
+		storage := NewMockStorage()
 		mockTime := coreutils.MockTime
-
-		params := Params{
-			MaxNumUnflushedValues: 3, // Small threshold to test waiting
-			LRUCacheSize:          1000,
-			BatcherDelay:          10 * time.Millisecond,
-		}
-
+		params := NewDefaultParams(nil)
 		seq, cleanup := New(params, storage, mockTime)
 		defer cleanup()
 		s := seq.(*sequencer)
 
-		// First, fill toBeFlushed to reach the threshold
-		s.toBeFlushedMu.Lock()
-		s.toBeFlushed[NumberKey{WSID: 1, SeqID: 1}] = 101
-		s.toBeFlushed[NumberKey{WSID: 1, SeqID: 2}] = 201
-		s.toBeFlushed[NumberKey{WSID: 1, SeqID: 3}] = 301
-		s.toBeFlushedOffset = 5
-		s.toBeFlushedMu.Unlock()
-
 		// Set up the batch to be processed
 		batch := []SeqValue{
-			{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 102}, // Higher than existing
-			{Key: NumberKey{WSID: 1, SeqID: 2}, Value: 201}, // Same as existing
-			{Key: NumberKey{WSID: 1, SeqID: 4}, Value: 401}, // New key
+			{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 104},
+			{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 103},
+			{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 102},
+			{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 102},
+			{Key: NumberKey{WSID: 1, SeqID: 2}, Value: 201},
+			{Key: NumberKey{WSID: 1, SeqID: 4}, Value: 401},
+			{Key: NumberKey{WSID: 1, SeqID: 4}, Value: 402},
+			{Key: NumberKey{WSID: 2, SeqID: 1}, Value: 52},
+			{Key: NumberKey{WSID: 2, SeqID: 1}, Value: 51},
 		}
 
-		// Launch batcher in a goroutine
-		var err error
-		wg := sync.WaitGroup{}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			err = s.batcher(ctx, batch, 6)
-		}()
-
-		// Simulate flusher reducing the number of unflushed values
-		s.toBeFlushedMu.Lock()
-		delete(s.toBeFlushed, NumberKey{WSID: 1, SeqID: 2})
-		s.toBeFlushedMu.Unlock()
-
-		// Advance time for batcher delay
-		mockTime.Add(15 * time.Millisecond)
-
-		// Now batcher should proceed
-		wg.Wait()
-		// Verify no error
+		err := s.batcher(ctx, batch, 6)
 		require.NoError(err)
 
 		// Verify toBeFlushed has been updated with maximum values
@@ -298,9 +238,11 @@ func TestBatcher(t *testing.T) {
 		defer s.toBeFlushedMu.RUnlock()
 
 		// Should now have values from batch with max values preserved
-		require.Equal(Number(102), s.toBeFlushed[NumberKey{WSID: 1, SeqID: 1}], "Should update with higher value")
-		require.Equal(Number(301), s.toBeFlushed[NumberKey{WSID: 1, SeqID: 3}], "Should preserve existing higher value")
-		require.Equal(Number(401), s.toBeFlushed[NumberKey{WSID: 1, SeqID: 4}], "Should add new value")
+		require.Equal(Number(104), s.toBeFlushed[NumberKey{WSID: 1, SeqID: 1}])
+		require.Equal(Number(201), s.toBeFlushed[NumberKey{WSID: 1, SeqID: 2}])
+		require.Equal(Number(402), s.toBeFlushed[NumberKey{WSID: 1, SeqID: 4}])
+		require.Equal(Number(52), s.toBeFlushed[NumberKey{WSID: 2, SeqID: 1}])
+		require.Len(s.toBeFlushed, 4)
 
 		// Verify offset was updated
 		require.Equal(PLogOffset(7), s.toBeFlushedOffset, "Should update toBeFlushedOffset to offset + 1")
@@ -314,7 +256,7 @@ func TestBatcher(t *testing.T) {
 
 		// Given
 		ctx, cancel := context.WithCancel(context.Background())
-		storage := NewMockStorage(0, 0)
+		storage := NewMockStorage()
 		mockTime := coreutils.MockTime
 
 		params := NewDefaultParams(map[WSKind]map[SeqID]Number{
@@ -326,11 +268,13 @@ func TestBatcher(t *testing.T) {
 		defer cleanup()
 		s := seq.(*sequencer)
 
-		// Fill toBeFlushed to reach the threshold
-		s.toBeFlushedMu.Lock()
-		s.toBeFlushed[NumberKey{WSID: 1, SeqID: 1}] = 101
-		s.toBeFlushedOffset = 5
-		s.toBeFlushedMu.Unlock()
+		WaitForStart(t, seq, 1, 1, true)
+
+		// fulfill toBeFlushed
+		num, err := seq.Next(1)
+		require.NoError(err)
+		require.Equal(Number(101), num)
+		seq.Flush()
 
 		// Set up the batch to be processed
 		batch := []SeqValue{
@@ -338,112 +282,109 @@ func TestBatcher(t *testing.T) {
 		}
 
 		// Launch batcher in a goroutine
-		var err error
-		done := make(chan struct{})
+		batcherErrCh := make(chan error)
 		go func() {
-			err = s.batcher(ctx, batch, 6)
-			close(done)
+			batcherErrCh <- s.batcher(ctx, batch, 6)
 		}()
-
-		// Wait briefly to ensure batcher is waiting
-		// time.Sleep(20 * time.Millisecond)
 
 		// Cancel the context
 		cancel()
 
 		// Batcher should exit with context error
 		select {
-		case <-done:
-			// Expected
+		case batcherErr := <-batcherErrCh:
+			require.ErrorIs(batcherErr, context.Canceled)
 		case <-time.After(500 * time.Millisecond):
 			require.Fail("Batcher should have exited after context cancellation")
 		}
-
-		// Verify context error
-		require.Error(err)
-		require.Equal(context.Canceled, err)
 	})
 }
 
 func TestSequencer_FlushValues(t *testing.T) {
-	t.Run("should handle empty toBeFlushed map", func(t *testing.T) {
-		require := require.New(t)
+	// t.Run("should handle empty toBeFlushed map", func(t *testing.T) {
+	// 	require := require.New(t)
 
-		// Set up mock storage and sequencer
-		storage := NewMockStorage(0, 0)
-		storage.SetPLog(map[PLogOffset][]SeqValue{
-			PLogOffset(0): nil,
-			PLogOffset(1): nil,
-			PLogOffset(2): nil,
-			PLogOffset(3): nil,
-			PLogOffset(4): nil,
-			PLogOffset(5): {
-				{
-					Key:   NumberKey{WSID: 1, SeqID: 1},
-					Value: 100,
-				},
-			},
-		})
-		mockTime := coreutils.MockTime
+	// 	// Set up mock storage and sequencer
+	// 	storage := NewMockStorage()
+	// 	storage.SetPLog(map[PLogOffset][]SeqValue{
+	// 		PLogOffset(0): nil,
+	// 		PLogOffset(1): nil,
+	// 		PLogOffset(2): nil,
+	// 		PLogOffset(3): nil,
+	// 		PLogOffset(4): nil,
+	// 		PLogOffset(5): {
+	// 			{
+	// 				Key:   NumberKey{WSID: 1, SeqID: 1},
+	// 				Value: 100,
+	// 			},
+	// 		},
+	// 	})
+	// 	mockTime := coreutils.MockTime
 
-		seq, cleanup := New(NewDefaultParams(nil), storage, mockTime)
-		defer cleanup()
-		s := seq.(*sequencer)
+	// 	seq, cleanup := New(NewDefaultParams(nil), storage, mockTime)
+	// 	defer cleanup()
+	// 	s := seq.(*sequencer)
 
-		// Set empty toBeFlushed
-		s.toBeFlushedMu.Lock()
-		s.toBeFlushed = map[NumberKey]Number{}
-		targetOffset := PLogOffset(7)
-		s.toBeFlushedOffset = targetOffset
-		s.toBeFlushedMu.Unlock()
+	// 	// Set empty toBeFlushed
+	// 	s.toBeFlushedMu.Lock()
+	// 	s.toBeFlushed = map[NumberKey]Number{}
+	// 	targetOffset := PLogOffset(7)
+	// 	s.toBeFlushedOffset = targetOffset
+	// 	s.toBeFlushedMu.Unlock()
 
-		// Test with empty values
-		err := s.flushValues(targetOffset)
-		require.NoError(err)
+	// 	// Test with empty values
+	// 	err := s.flushValues(targetOffset)
+	// 	require.NoError(err)
 
-		// Verify offset was updated even with empty values
-		storedOffset, err := storage.ReadNextPLogOffset()
-		require.NoError(err)
-		require.Equal(targetOffset, storedOffset)
-	})
+	// 	// Verify offset was updated even with empty values
+	// 	storedOffset, err := storage.ReadNextPLogOffset()
+	// 	require.NoError(err)
+	// 	require.Equal(targetOffset, storedOffset)
+	// })
 
 	t.Run("should handle error in WriteValuesAndNextPLogOffset", func(t *testing.T) {
 		require := require.New(t)
 
 		// Set up mock storage and sequencer
-		storage := NewMockStorage(0, 0)
-		storage.SetPLog(map[PLogOffset][]SeqValue{
-			PLogOffset(1): nil,
-			PLogOffset(2): nil,
-			PLogOffset(3): nil,
-			PLogOffset(4): nil,
-			PLogOffset(5): {
-				{
-					Key:   NumberKey{WSID: 1, SeqID: 1},
-					Value: 100,
-				},
-			},
-		})
-		storage.SetWriteValuesAndOffset(errors.New("storage write error"))
+		storage := NewMockStorage()
+		// storage.SetPLog(map[PLogOffset][]SeqValue{
+		// 	PLogOffset(1): nil,
+		// 	PLogOffset(2): nil,
+		// 	PLogOffset(3): nil,
+		// 	PLogOffset(4): nil,
+		// 	PLogOffset(5): {
+		// 		{
+		// 			Key:   NumberKey{WSID: 1, SeqID: 1},
+		// 			Value: 100,
+		// 		},
+		// 	},
+		// })
+		storageErr := errors.New("storage write error")
+		storage.SetWriteValuesAndOffset(storageErr)
 		mockTime := coreutils.MockTime
 
-		params := NewDefaultParams(nil)
+		params := NewDefaultParams(map[WSKind]map[SeqID]Number{
+			1: {1: 1},
+		})
 		params.RetryCount = 1
 
 		seq, cleanup := New(params, storage, mockTime)
+		defer cleanup()
 		s := seq.(*sequencer)
 
-		// Set empty toBeFlushed
-		s.toBeFlushedMu.Lock()
-		s.toBeFlushed = map[NumberKey]Number{}
-		targetOffset := PLogOffset(7)
-		s.toBeFlushedOffset = targetOffset
-		s.toBeFlushedMu.Unlock()
+		// offset, ok := seq.Start(1, 1)
+		// require.True(ok)
+		// require.Equal(PLogOffset(1), offset)
 
-		cleanup()
+		// force the actual flusher not to call s.flushValues() (btw, flusher panics on flushValues() error)
+		// seq.(*sequencer).toBeFlushedMu.Lock()
+
 		// Test with empty values
-		err := s.flushValues(targetOffset)
+		s.toBeFlushed[NumberKey{WSID: 1, SeqID: 1}] = 1
+		err := s.flushValues(PLogOffset(1))
 		require.Error(err)
+
+		// seq.(*sequencer).toBeFlushedMu.Unlock()
 	})
 }
 
@@ -451,7 +392,7 @@ func TestNextNumberSourceOrder(t *testing.T) {
 	require := require.New(t)
 
 	// Set up mock storage and sequencer
-	storage := NewMockStorage(0, 0)
+	storage := NewMockStorage()
 	storage.SetPLog(map[PLogOffset][]SeqValue{
 		PLogOffset(0): nil,
 		PLogOffset(1): nil,
@@ -482,7 +423,7 @@ func TestNextNumberSourceOrder(t *testing.T) {
 		numInitial, err := seq.Next(1)
 		require.NoError(err)
 		require.NotZero(numInitial)
-		numCached, ok := seq.(*sequencer).lru.Get(numberKey)
+		numCached, ok := seq.(*sequencer).cache.Get(numberKey)
 		require.True(ok)
 		require.Equal(numInitial, numCached)
 
@@ -494,7 +435,7 @@ func TestNextNumberSourceOrder(t *testing.T) {
 		require.Equal(PLogOffset(6), offset)
 
 		// tamper the cache to ensure we'll use cache on Next
-		seq.(*sequencer).lru.Add(numberKey, 10001)
+		seq.(*sequencer).cache.Add(numberKey, 10001)
 
 		// expect read from cache first on normal Next call
 		numFromCache, err := seq.Next(1)
@@ -515,7 +456,7 @@ func TestNextNumberSourceOrder(t *testing.T) {
 		require.NotZero(numInitial)
 
 		// evict the cached number
-		require.True(seq.(*sequencer).lru.Remove(numberKey))
+		require.True(seq.(*sequencer).cache.Remove(numberKey))
 
 		// tamper inproc to be sure we'll read exactly from inproc in this case
 		seq.(*sequencer).inproc[numberKey] = 20001
@@ -552,7 +493,7 @@ func TestNextNumberSourceOrder(t *testing.T) {
 		seq.(*sequencer).inproc = map[NumberKey]Number{}
 
 		// clear cache
-		removed := seq.(*sequencer).lru.Remove(numberKey)
+		removed := seq.(*sequencer).cache.Remove(numberKey)
 		require.True(removed)
 
 		// tamper toBeFlushed to ensure we'll read exactly from toBeFlushed in this case

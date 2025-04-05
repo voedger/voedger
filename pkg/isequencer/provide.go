@@ -20,6 +20,7 @@ func NewDefaultParams(seqTypes map[WSKind]map[SeqID]Number) Params {
 		MaxNumUnflushedValues: DefaultMaxNumUnflushedValues,
 		LRUCacheSize:          DefaultLRUCacheSize,
 		RetryDelay:            defaultRetryDelay,
+		RetryCount:            defaultRetryCount,
 	}
 }
 
@@ -34,7 +35,7 @@ func New(params Params, seqStorage ISeqStorage, iTime coreutils.ITime) (ISequenc
 	cleanupCtx, cleanupCtxCancel := context.WithCancel(context.Background())
 	s := &sequencer{
 		params:           params,
-		lru:              lru,
+		cache:            lru,
 		toBeFlushed:      make(map[NumberKey]Number),
 		inproc:           make(map[NumberKey]Number),
 		cleanupCtx:       cleanupCtx,

@@ -132,3 +132,121 @@ func TestRetry(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestRetry_(t *testing.T) {
+	t.Run("succeed on first attempt", func(t *testing.T) {
+		// Setup test
+		ctx := context.Background()
+		var attempts int = 0
+		f := func() error {
+			attempts++
+			return nil
+		}
+
+		// Call the function under test
+		err := Retry_(ctx, MockTime, 0, f)
+
+		// Verify results
+		require.NoError(t, err)
+		require.Equal(t, 1, attempts)
+	})
+
+	t.Run("retry and succeed after failures", func(t *testing.T) {
+		// Setup test
+		ctx := context.Background()
+		var attempts int = 0
+		f := func() error {
+			attempts++
+			if attempts < 3 {
+				return errors.New("temporary error")
+			}
+			return nil
+		}
+
+		// Run test with goroutine for advancing mock time
+		go func() {
+			for attempts < 3 {
+				MockTime.Add(10 * time.Millisecond)
+				time.Sleep(time.Millisecond) // Give main goroutine time to process
+			}
+		}()
+
+		// Call the function under test
+		err := Retry_(ctx, MockTime, 5*time.Millisecond, f)
+
+		// Verify results
+		require.NoError(t, err)
+		require.Equal(t, 3, attempts)
+	})
+
+	t.Run("context canceled during retry", func(t *testing.T) {
+		// Setup test
+		ctx, cancel := context.WithCancel(context.Background())
+		var attempts int = 0
+		f := func() error {
+			attempts++
+			if attempts == 2 {
+				cancel()
+			}
+			return errors.New("persistent error")
+		}
+
+		// Run test with goroutine for advancing mock time
+		go func() {
+			for attempts < 2 {
+				MockTime.Add(15 * time.Millisecond)
+				time.Sleep(time.Millisecond) // Give main goroutine time to process
+			}
+		}()
+
+		// Call the function under test
+		err := Retry_(ctx, MockTime, 10*time.Millisecond, f)
+
+		// Verify results
+		require.Error(t, err)
+		require.Equal(t, 2, attempts)
+	})
+
+	t.Run("context timeout", func(t *testing.T) {
+		// Setup test
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancel()
+		var attempts int = 0
+		f := func() error {
+			attempts++
+			return errors.New("persistent error")
+		}
+
+		// Run test with goroutine for advancing mock time
+		go func() {
+			for attempts < 5 {
+				MockTime.Add(15 * time.Millisecond)
+				time.Sleep(time.Millisecond) // Give main goroutine time to process
+			}
+		}()
+
+		// Call the function under test
+		err := Retry_(ctx, MockTime, 10*time.Millisecond, f)
+
+		// Verify results
+		require.Error(t, err)
+		require.Equal(t, 5, attempts)
+	})
+
+	t.Run("no delay stops after first failure", func(t *testing.T) {
+		// Setup test
+		ctx := context.Background()
+		var attempts int = 0
+		f := func() error {
+			attempts++
+			return errors.New("error on first attempt")
+		}
+
+		// Call the function under test
+		err := Retry_(ctx, MockTime, 0, f)
+
+		// Verify results
+		require.Error(t, err)
+		require.Equal(t, 1, attempts)
+	})
+}

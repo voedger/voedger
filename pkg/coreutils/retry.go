@@ -22,23 +22,48 @@ import (
 // f - function to execute
 // Returns:
 // error - error returned by the function f
+
+// Retry attempts to execute f() until it acomplised without error
+// f() returns error -> error is logged, try again after retryDelay
+// retryDelay == 0 -> no delay
+func Retry_(ctx context.Context, iTime ITime, retryDelay time.Duration, f func() error) error {
+	var lastErr error
+	for ctx.Err() == nil {
+		if lastErr = f(); lastErr == nil {
+			return nil
+		}
+		if retryDelay > 0 {
+			logger.Error(lastErr)
+			timerCh := iTime.NewTimerChan(retryDelay)
+			select {
+			case <-ctx.Done():
+				return lastErr
+			case <-timerCh:
+			}
+		} else {
+			break
+		}
+	}
+	return lastErr
+}
+
 func Retry(ctx context.Context, iTime ITime, retryDelay time.Duration, retryCount int, f func() error) error {
-	var err error
+	var lastErr error
 
 	for i := 1; retryCount == 0 || i <= retryCount; i++ {
 		timerCh := iTime.NewTimerChan(retryDelay)
-		if err = f(); err == nil {
+		if lastErr = f(); lastErr == nil {
 			return nil
 		}
 
-		logger.Verbose(err)
+		logger.Verbose(lastErr)
 
 		select {
 		case <-ctx.Done():
-			return err
+			return lastErr
 		case <-timerCh:
 		}
 	}
 
-	return ErrRetryAttemptsExceeded
+	return lastErr
 }

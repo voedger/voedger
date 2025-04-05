@@ -116,6 +116,32 @@ func TestISequencer_Start(t *testing.T) {
 		require.NoError(err)
 		require.Equal(isequencer.Number(100+count+1), num, "Sequence should continue from last value")
 	})
+
+	t.Run("correct offset after Flush without Next", func(t *testing.T) {
+		iTime := coreutils.MockTime
+		storage := createDefaultStorage()
+		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
+			isequencer.PLogOffset(1): {
+				{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 100},
+			},
+		})
+
+		params := createDefaultParams()
+		seq, cancel := isequencer.New(params, storage, iTime)
+		defer cancel()
+
+		// First transaction
+		offset, ok := seq.Start(1, 1)
+		require.True(ok)
+		require.Equal(isequencer.PLogOffset(2), offset)
+
+		seq.Flush()
+
+		offset, ok = seq.Start(1, 1)
+		require.True(ok)
+		require.Equal(isequencer.PLogOffset(3), offset)
+
+	})
 }
 
 func TestISequencer_Flush(t *testing.T) {
@@ -608,7 +634,7 @@ func TestISequencer_MultipleActualizes(t *testing.T) {
 	initialNumber := isequencer.Number(100)
 	initialOffset := isequencer.PLogOffset(1)
 	// Set up storage with initial values
-	storage := isequencer.NewMockStorage(0, 0)
+	storage := isequencer.NewMockStorage()
 	storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
 		initialOffset: {
 			{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: initialNumber},
@@ -682,7 +708,7 @@ func TestISequencer_FlushPermanentlyFails(t *testing.T) {
 
 	initialNumber := isequencer.Number(100)
 	// Set up storage with initial values
-	storage := isequencer.NewMockStorage(0, 0)
+	storage := isequencer.NewMockStorage()
 	storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
 		isequencer.PLogOffset(1): {
 			{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: initialNumber},
@@ -760,7 +786,7 @@ func TestISequencer_LongRecovery(t *testing.T) {
 	// Simulate a long recovery process gradually from 0 to 50 numEvents
 	for numEvents := 1; numEvents <= 50; numEvents++ {
 		// Fulfill pLog with data
-		storage := isequencer.NewMockStorage(0, 0)
+		storage := isequencer.NewMockStorage()
 
 		pLogOffset := isequencer.PLogOffset(1)
 		number := isequencer.Number(1)
@@ -832,7 +858,7 @@ func TestISequencer_LongRecovery(t *testing.T) {
 
 // createDefaultStorage creates a storage with default configuration and common test data
 func createDefaultStorage() *isequencer.MockStorage {
-	storage := isequencer.NewMockStorage(0, 0)
+	storage := isequencer.NewMockStorage()
 
 	return storage
 }
