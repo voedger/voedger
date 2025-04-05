@@ -225,7 +225,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 
 	// Try s.params.SeqStorage.ReadNumber()
 	var knownNumbers []Number
-	err = coreutils.Retry(s.cleanupCtx, s.iTime, s.params.RetryDelay, s.params.RetryCount, func() error {
+	err = coreutils.Retry(s.cleanupCtx, s.iTime, func() error {
 		var err error
 		// Read all known Numbers for wsKind, wsID
 		knownNumbers, err = s.seqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
@@ -408,7 +408,7 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 
 	var err error
 	// Read nextPLogOffset from s.params.SeqStorage.ReadNextPLogOffset()
-	err = coreutils.Retry(actualizerCtx, s.iTime, s.params.RetryDelay, s.params.RetryCount, func() error {
+	err = coreutils.Retry(actualizerCtx, s.iTime, func() error {
 		s.nextOffset, err = s.seqStorage.ReadNextPLogOffset()
 
 		return err
@@ -419,7 +419,7 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	}
 
 	// Use s.params.SeqStorage.ActualizeSequencesFromPLog() and s.batcher()
-	err = coreutils.Retry(actualizerCtx, s.iTime, s.params.RetryDelay, s.params.RetryCount, func() error {
+	err = coreutils.Retry(actualizerCtx, s.iTime, func() error {
 		return s.seqStorage.ActualizeSequencesFromPLog(s.cleanupCtx, s.nextOffset, s.batcher)
 	})
 	if err != nil {
@@ -461,7 +461,7 @@ func (s *sequencer) flushValues(offset PLogOffset) error {
 	s.toBeFlushedMu.RUnlock()
 	// s.params.SeqStorage.WriteValuesAndNextPLogOffset(flushValues, offset)
 	// Error handling: Handle errors with retry mechanism (500ms wait)
-	err := coreutils.Retry(s.cleanupCtx, s.iTime, s.params.RetryDelay, s.params.RetryCount, func() error {
+	err := coreutils.Retry(s.cleanupCtx, s.iTime, func() error {
 		return s.seqStorage.WriteValuesAndNextPLogOffset(flushValues, offset)
 	})
 	if err != nil {

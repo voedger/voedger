@@ -44,9 +44,6 @@ type Params struct {
 	// Size of the LRU cache, NumberKey -> Number.
 	LRUCacheSize int           // 100_000
 	BatcherDelay time.Duration // 5 * time.Millisecond
-
-	RetryCount int
-	RetryDelay time.Duration
 }
 
 // sequencer implements ISequencer

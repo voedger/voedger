@@ -18,7 +18,7 @@ type ITime interface {
 
 // MockTime must be a global var to avoid case when different times could be used in tests.
 // jwt.TimeFunc is a global var: once set it must not be changed during tests
-var MockTime IMockTime = NewMockTime()
+var MockTime = NewMockTime()
 
 type IMockTime interface {
 	ITime

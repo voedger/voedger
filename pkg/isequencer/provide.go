@@ -19,8 +19,6 @@ func NewDefaultParams(seqTypes map[WSKind]map[SeqID]Number) Params {
 		SeqTypes:              seqTypes,
 		MaxNumUnflushedValues: DefaultMaxNumUnflushedValues,
 		LRUCacheSize:          DefaultLRUCacheSize,
-		RetryDelay:            defaultRetryDelay,
-		RetryCount:            defaultRetryCount,
 	}
 }
 
