@@ -164,15 +164,15 @@ func (s *sequencer) flusher(ctx context.Context) {
 // - Validate equencing Transaction status
 // - Get initialValue from s.params.SeqTypes and ensure that SeqID is known
 // - Try to obtain the next value using:
-//   - Try s.lru (can be evicted)
+//   - Try s.cache (can be evicted)
 //   - Try s.inproc
 //   - Try s.toBeFlushed (use s.toBeFlushedMu to synchronize)
 //   - Try s.params.SeqStorage.ReadNumber()
 //   - Read all known Numbers for wsKind, wsID
 //   - If number is 0 then initial value is used
-//   - Write all Numbers to s.lru
+//   - Write all Numbers to s.cache
 //
-// - Write value+1 to s.lru
+// - Write value+1 to s.cache
 // - Write value+1 to s.inproc
 // - Return value
 // [~server.design.sequences/cmp.sequencer.Next~impl]
@@ -194,7 +194,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 		SeqID: seqID,
 	}
 	// Try to obtain the next value using:
-	// Try s.lru (can be evicted)
+	// Try s.cache (can be evicted)
 	if nextNumber, ok := s.cache.Get(key); ok {
 		return s.incrementNumber(key, nextNumber), nil
 	}
@@ -221,7 +221,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 		var err error
 		// Read all known Numbers for wsKind, wsID
 		knownNumbers, err = s.seqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
-		// Write all Numbers to s.lru
+		// Write all Numbers to s.cache
 		for _, number := range knownNumbers {
 			if number == 0 {
 				continue
@@ -242,7 +242,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 		nextNumber = initialValue - 1 // initial value 1 and there are no such records in plog at all -> should issue 1, not 2
 	}
 
-	// Write value+1 to s.lru
+	// Write value+1 to s.cache
 	// Write value+1 to s.inproc
 	return s.incrementNumber(key, nextNumber), nil
 }
@@ -253,7 +253,7 @@ func (s *sequencer) incrementNumber(key NumberKey, number Number) Number {
 	defer s.inprocMu.Unlock()
 
 	nextNumber := number + 1
-	// Write value+1 to s.lru
+	// Write value+1 to s.cache
 	s.cache.Add(key, nextNumber)
 	// Write value+1 to s.inproc
 	s.inproc[key] = nextNumber
@@ -495,7 +495,7 @@ func (s *sequencer) checkSequencingTransactionInProgress() {
 // - Validate Actualization status
 // - Validate Sequencing Transaction status
 // - Set s.actualizerInProgress to true
-// - Clean s.lru, s.nextOffset, s.currentWSID, s.currentWSKind, s.toBeFlushed, s.inproc, s.toBeFlushedOffset
+// - Clean s.cache, s.nextOffset, s.currentWSID, s.currentWSKind, s.toBeFlushed, s.inproc, s.toBeFlushedOffset
 // - Start the actualizer() goroutine
 // [~server.design.sequences/cmp.sequencer.Actualize~impl]
 func (s *sequencer) Actualize() {
@@ -524,7 +524,7 @@ func (s *sequencer) Actualize() {
 	s.toBeFlushedMu.Lock()
 	s.toBeFlushedOffset = 0
 	s.toBeFlushedMu.Unlock()
-	// Cleans s.lru
+	// Cleans s.cache
 	s.cache.Purge()
 
 	// Cleans s.currentWSID, s.currentWSKind

@@ -9,7 +9,7 @@ import (
 	"context"
 	"sync"
 
-	lruPkg "github.com/hashicorp/golang-lru/v2"
+	lru "github.com/hashicorp/golang-lru/v2"
 
 	"github.com/voedger/voedger/pkg/coreutils"
 )
@@ -24,7 +24,7 @@ func NewDefaultParams(seqTypes map[WSKind]map[SeqID]Number) Params {
 
 // New creates a new sequencer
 func New(params Params, seqStorage ISeqStorage, iTime coreutils.ITime) (ISequencer, context.CancelFunc) {
-	lru, err := lruPkg.New[NumberKey, Number](params.LRUCacheSize)
+	cache, err := lru.New[NumberKey, Number](params.LRUCacheSize)
 	if err != nil {
 		// notest
 		panic("failed to create LRU cache: " + err.Error())
@@ -33,7 +33,7 @@ func New(params Params, seqStorage ISeqStorage, iTime coreutils.ITime) (ISequenc
 	cleanupCtx, cleanupCtxCancel := context.WithCancel(context.Background())
 	s := &sequencer{
 		params:           params,
-		cache:            lru,
+		cache:            cache,
 		toBeFlushed:      make(map[NumberKey]Number),
 		inproc:           make(map[NumberKey]Number),
 		cleanupCtx:       cleanupCtx,

@@ -33,7 +33,7 @@ type ISeqStorage interface {
 // - Sequencing Transaction: Start -> Next -> (Flush | Actualize)
 // - Actualization: Making the persistent state of the sequences consistent with the PLog.
 // - Flushing: Writing the accumulated sequence values to the storage.
-// - LRU: Least Recently Used cache that keep the most recent next sequence values in memory.
+// - LRU Cache: Least Recently Used cache that keep the most recent next sequence values in memory.
 // [~server.design.sequences/cmp.ISequencer~impl]
 type ISequencer interface {
 
@@ -64,7 +64,7 @@ type ISequencer interface {
 	// Flow:
 	// - Mark Sequencing Transaction as not in progress
 	// - Cancel and wait Flushing
-	// - Empty LRU
+	// - Empty LRU Cache
 	// - Do Actualization process
 	// - Write next PLogOffset
 	Actualize()
