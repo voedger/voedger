@@ -40,23 +40,24 @@ type Params struct {
 	// Only these sequences are managed by the sequencer (ref. ErrUnknownSeqID).
 	SeqTypes map[WSKind]map[SeqID]Number
 
-	SeqStorage ISeqStorage
-
-	MaxNumUnflushedValues int           // 500
-	MaxFlushingInterval   time.Duration // 500 * time.Millisecond
+	MaxNumUnflushedValues int // 500
 	// Size of the LRU cache, NumberKey -> Number.
-	LRUCacheSize int // 100_000
+	LRUCacheSize int           // 100_000
+	BatcherDelay time.Duration // 5 * time.Millisecond
 }
 
+// sequencer implements ISequencer
+// [~server.design.sequences/cmp.sequencer~impl]
 type sequencer struct {
-	params *Params
+	params     Params
+	seqStorage ISeqStorage
 
 	actualizerInProgress atomic.Bool
 	// actualizerCtxCancel is used by cleanup() function
 	actualizerCtxCancel context.CancelFunc
 	actualizerWG        *sync.WaitGroup
 
-	lru *lruPkg.Cache[NumberKey, Number]
+	cache *lruPkg.Cache[NumberKey, Number]
 
 	// Initialized by Start()
 	// Example:
@@ -99,6 +100,22 @@ type sequencer struct {
 	// Written by Next()
 	inproc   map[NumberKey]Number
 	inprocMu sync.RWMutex
+	// need to check if Flush or Actualize was called after previous Start
+	transactionIsInProgress atomic.Bool
 
 	iTime coreutils.ITime
+}
+
+// [~server.design.sequences/test.isequencer.mockISeqStorage~impl]
+// MockStorage implements ISeqStorage for testing purposes
+type MockStorage struct {
+	Numbers                   map[WSID]map[SeqID]Number
+	NextOffset                PLogOffset
+	ReadNumbersError          error
+	writeValuesAndOffsetError error
+	mu                        sync.RWMutex
+	numbersMu                 sync.RWMutex
+	pLog                      map[PLogOffset][]SeqValue // Simulated PLog entries
+	readNextOffsetError       error
+	onWriteValuesAndOffset    func()
 }
