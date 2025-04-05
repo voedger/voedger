@@ -246,7 +246,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	// If number is 0 then initial value is used
 	nextNumber = knownNumbers[0]
 	if nextNumber == 0 {
-		nextNumber = initialValue
+		nextNumber = initialValue - 1 // initial value 1 and there are no such records in plog at all -> should issue 1, not 2
 	}
 
 	// Write value+1 to s.lru

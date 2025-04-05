@@ -17,27 +17,128 @@ import (
 	"github.com/voedger/voedger/pkg/isequencer"
 )
 
-func TestBasicFlow(t *testing.T) {
+type expectedNumbers map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number
 
-	type expectedNumbers  map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number
-	type plog map[isequencer.PLogOffset]map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number
-
+func TestBasicFlow_(t *testing.T) {
+	require := require.New(t)
 	sharedExpectedNumbers := expectedNumbers{}
-	for wsid := WSID(1); wsid < 5; wsid++ {
+	for wsid := isequencer.WSID(1); wsid < 5; wsid++ {
 		for seqID := isequencer.SeqID(1); seqID < 9; seqID++ {
-			sharedExpectedNumbers[wsid]
+			wsidSeqs, ok := sharedExpectedNumbers[wsid]
+			if !ok {
+				wsidSeqs = map[isequencer.SeqID]isequencer.Number{}
+				sharedExpectedNumbers[wsid] = wsidSeqs
+			}
+			wsidSeqs[seqID] = 1
 		}
 	}
-		isequencer.WSID(1):map[isequencer.SeqID]isequencer.Number{
-			isequencer.SeqID(1):1,
-			isequencer.SeqID(1):1,
-			isequencer.SeqID(1):1,
-			isequencer.SeqID(1):1,
-			isequencer.SeqID(1):1,
-			isequencer.SeqID(1):1,
-			isequencer.SeqID(1):1,
-			isequencer.SeqID(1):1,
 
+	cases := []struct {
+		name                        string
+		plog                        map[isequencer.PLogOffset][]isequencer.SeqValue
+		expectedNextNumbersOverride expectedNumbers
+		initialExpectedOffset       isequencer.PLogOffset
+	}{
+		// {
+		// 	name:           "empty plog",
+		// 	expectedOffset: 1,
+		// },
+		{
+			name: "1 simple event",
+			plog: map[isequencer.PLogOffset][]isequencer.SeqValue{
+				1: {{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 1}},
+			},
+			expectedNextNumbersOverride: expectedNumbers{1: {1: 2}},
+			initialExpectedOffset:       2,
+		},
+		// {
+		// 	name: " few events",
+		// 	plog: map[isequencer.PLogOffset][]isequencer.SeqValue{
+		// 		1: {
+		// 			{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 10},
+		// 			{Key: isequencer.NumberKey{WSID: 1, SeqID: 2}, Value: 11},
+		// 			{Key: isequencer.NumberKey{WSID: 2, SeqID: 3}, Value: 12},
+		// 			{Key: isequencer.NumberKey{WSID: 2, SeqID: 4}, Value: 13},
+		// 		},
+		// 		2: {
+		// 			{Key: isequencer.NumberKey{WSID: 3, SeqID: 5}, Value: 14},
+		// 			{Key: isequencer.NumberKey{WSID: 3, SeqID: 6}, Value: 15},
+		// 			{Key: isequencer.NumberKey{WSID: 4, SeqID: 7}, Value: 16},
+		// 			{Key: isequencer.NumberKey{WSID: 4, SeqID: 8}, Value: 17},
+		// 		},
+		// 	},
+		// 	expectedOffset: 3,
+		// },
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			storage := createDefaultStorage()
+			storage.SetPLog(c.plog)
+			params := createDefaultParams()
+			params.SeqTypes = map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
+				1: {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1},
+			}
+			seq, cleanup := isequencer.New(params, storage, coreutils.MockTime)
+			expectedNumbers := getExpectedNumbers()
+			for wsid, seqIDs := range expectedNumbers {
+				for seqID := range seqIDs {
+					if overrideNumber, ok := c.expectedNextNumbersOverride[wsid][seqID]; ok {
+						seqIDs[seqID] = overrideNumber
+					}
+				}
+			}
+
+			expectedOffset := c.initialExpectedOffset
+			for wsid := isequencer.WSID(1); wsid < 5; wsid++ {
+				plogOffset, ok := seq.Start(1, wsid)
+				require.True(ok)
+				require.Equal(expectedOffset, plogOffset)
+
+				for seqID := isequencer.SeqID(1); seqID < 9; seqID++ {
+					num, err := seq.Next(seqID)
+					require.NoError(err)
+					require.Equal(expectedNumbers[wsid][seqID], num)
+				}
+
+				seq.Flush()
+				expectedOffset++
+			}
+			cleanup()
+		})
+	}
+}
+
+func getExpectedNumbers() expectedNumbers {
+	res := expectedNumbers{}
+	for wsid := isequencer.WSID(1); wsid < 5; wsid++ {
+		for seqID := isequencer.SeqID(1); seqID < 9; seqID++ {
+			wsidSeqs, ok := res[wsid]
+			if !ok {
+				wsidSeqs = map[isequencer.SeqID]isequencer.Number{}
+				res[wsid] = wsidSeqs
+			}
+			wsidSeqs[seqID] = 1
+		}
+	}
+	return res
+}
+
+func TestBasicFlow(t *testing.T) {
+
+	type expectedNumbers map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number
+	type plog map[isequencer.PLogOffset]map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number
+
+	// fill initial expected seqNumbers
+	sharedExpectedNumbers := expectedNumbers{}
+	for wsid := isequencer.WSID(1); wsid < 5; wsid++ {
+		for seqID := isequencer.SeqID(1); seqID < 9; seqID++ {
+			wsidSeqs, ok := sharedExpectedNumbers[wsid]
+			if !ok {
+				wsidSeqs = map[isequencer.SeqID]isequencer.Number{}
+				sharedExpectedNumbers[wsid] = wsidSeqs
+			}
+			wsidSeqs[seqID] = 1
 		}
 	}
 
@@ -79,6 +180,10 @@ func TestBasicFlow(t *testing.T) {
 				},
 			},
 		},
+	}
+
+	for _, c := range cases {
+		_ = c
 	}
 }
 
@@ -630,7 +735,7 @@ func TestISequencer_Actualize(t *testing.T) {
 
 		num, err := seq.Next(1)
 		require.NoError(err)
-		require.Equal(isequencer.Number(2), num)
+		require.Equal(isequencer.Number(1), num)
 
 		// Actualize with empty PLog
 		seq.Actualize()
