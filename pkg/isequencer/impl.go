@@ -33,9 +33,8 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 		return 0, false
 	}
 
-	// Panics if Sequencing Transaction is already started.
-	if s.currentWSID != 0 || s.currentWSKind != 0 {
-		panic("event processing is already started")
+	if s.transactionIsInProgress {
+		panic("Sequencing Transaction is already started")
 	}
 
 	// Verify wsKind exists in supported types
@@ -54,13 +53,9 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 	}
 	s.toBeFlushedMu.RUnlock()
 
-	// Marks Sequencing Transaction as in progress.
-	if !s.transactionIsInProgress.CompareAndSwap(false, true) {
-		// notest
-		panic("unexpected transaction in progress")
-	}
 	s.currentWSID = wsID
 	s.currentWSKind = wsKind
+	s.transactionIsInProgress = true
 
 	return s.nextOffset, true
 }
@@ -79,12 +74,6 @@ func (s *sequencer) startFlusher() {
 }
 
 func (s *sequencer) startActualizer() {
-	// Check if actualization is in progress
-	if !s.actualizerInProgress.CompareAndSwap(false, true) {
-		// notest
-		panic("unexpected actualization in progress")
-	}
-
 	actualizerCtx, actualizerCtxCancel := context.WithCancel(context.Background())
 	s.actualizerCtxCancel = actualizerCtxCancel
 
@@ -188,7 +177,7 @@ func (s *sequencer) flusher(ctx context.Context) {
 // [~server.design.sequences/cmp.sequencer.Next~impl]
 func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	// Validate sequencing Transaction status
-	s.checkEventState()
+	s.checkSequencingTransactionInProgress()
 
 	// Get initialValue from s.params.SeqTypes and ensure that SeqID is known
 	seqTypes, exists := s.params.SeqTypes[s.currentWSKind]
@@ -284,7 +273,7 @@ func (s *sequencer) incrementNumber(key NumberKey, number Number) Number {
 // [~server.design.sequences/cmp.sequencer.Flush~impl]
 func (s *sequencer) Flush() {
 	// Verify processing is started
-	s.checkEventState()
+	s.checkSequencingTransactionInProgress()
 
 	// wrong to skip if inproc is empty because need to flush new PLogOffset, see "flush offset without Next" test
 
@@ -316,9 +305,9 @@ func (s *sequencer) Flush() {
 }
 
 func (s *sequencer) finishSequencingTransaction() {
-	s.transactionIsInProgress.Store(false)
 	s.currentWSID = 0
 	s.currentWSKind = 0
+	s.transactionIsInProgress = false
 }
 
 // batcher processes a batch of sequence values and writes maximum values to storage.
@@ -351,7 +340,9 @@ func (s *sequencer) batcher(ctx context.Context, values []SeqValue, offset PLogO
 	s.toBeFlushedMu.RUnlock()
 
 	s.nextOffset = offset + 1
+	s.toBeFlushedMu.Lock()
 	s.toBeFlushedOffset = s.nextOffset
+	s.toBeFlushedMu.Unlock()
 
 	// Store maxValues in s.toBeFlushed: max Number for each SeqValue.Key
 	maxValues := make(map[NumberKey]Number)
@@ -493,24 +484,28 @@ func (s *sequencer) flushValues(offset PLogOffset) error {
 	return nil
 }
 
-// checkEventState validates sequencing Transaction status
-func (s *sequencer) checkEventState() {
-	if s.currentWSID == 0 || s.currentWSKind == 0 {
-		panic("event processing is not started")
+// checkSequencingTransactionInProgress validates sequencing Transaction status
+func (s *sequencer) checkSequencingTransactionInProgress() {
+	if !s.transactionIsInProgress {
+		panic("Sequencing Transaction is not in progress")
 	}
 }
 
 // Actualize implements isequencer.ISequencer.Actualize.
 // Flow:
-// - Validate Sequencing Transaction status (s.currentWSID != 0)
-// - Validate Actualization status (s.actualizerInProgress is false)
+// - Validate Actualization status
+// - Validate Sequencing Transaction status
 // - Set s.actualizerInProgress to true
 // - Clean s.lru, s.nextOffset, s.currentWSID, s.currentWSKind, s.toBeFlushed, s.inproc, s.toBeFlushedOffset
 // - Start the actualizer() goroutine
 // [~server.design.sequences/cmp.sequencer.Actualize~impl]
 func (s *sequencer) Actualize() {
-	// Validate Sequencing Transaction status (s.currentWSID != 0)
-	s.checkEventState()
+	if !s.actualizerInProgress.CompareAndSwap(false, true) {
+		panic("actualization is already in progress")
+	}
+
+	// Validate Sequencing Transaction status
+	s.checkSequencingTransactionInProgress()
 
 	// Clean s.inproc
 	s.inprocMu.Lock()

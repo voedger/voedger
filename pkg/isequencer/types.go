@@ -100,10 +100,10 @@ type sequencer struct {
 	// Written by Next()
 	inproc   map[NumberKey]Number
 	inprocMu sync.RWMutex
-	// need to check if Flush or Actualize was called after previous Start
-	transactionIsInProgress atomic.Bool
 
 	iTime coreutils.ITime
+
+	transactionIsInProgress bool
 }
 
 // [~server.design.sequences/test.isequencer.mockISeqStorage~impl]
