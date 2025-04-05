@@ -118,4 +118,6 @@ type MockStorage struct {
 	pLog                      map[PLogOffset][]SeqValue // Simulated PLog entries
 	readNextOffsetError       error
 	onWriteValuesAndOffset    func()
+	onReadNextPLogOffset      func()
+	onActualizeFromPLog       func()
 }

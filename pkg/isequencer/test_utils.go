@@ -61,6 +61,14 @@ func (m *MockStorage) SetReadNumbersError(err error) {
 	m.ReadNumbersError = err
 }
 
+func (m *MockStorage) SetReadNextPLogOffsetError(err error) {
+	// notest
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.readNextOffsetError = err
+}
+
 // ReadNumbers implements isequencer.ISeqStorage.ReadNumbers
 func (m *MockStorage) ReadNumbers(wsid WSID, seqIDs []SeqID) ([]Number, error) {
 	// notest
@@ -98,12 +106,12 @@ func (m *MockStorage) WriteValuesAndNextPLogOffset(batch []SeqValue, offset PLog
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	if m.writeValuesAndOffsetError != nil {
-		return m.writeValuesAndOffsetError
-	}
-
 	if m.onWriteValuesAndOffset != nil {
 		m.onWriteValuesAndOffset()
+	}
+
+	if m.writeValuesAndOffsetError != nil {
+		return m.writeValuesAndOffsetError
 	}
 
 	m.numbersMu.Lock()
@@ -127,6 +135,10 @@ func (m *MockStorage) ReadNextPLogOffset() (PLogOffset, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	if m.onReadNextPLogOffset != nil {
+		m.onReadNextPLogOffset()
+	}
+
 	if m.readNextOffsetError != nil {
 		return 0, m.readNextOffsetError
 	}
@@ -139,6 +151,10 @@ func (m *MockStorage) ActualizeSequencesFromPLog(ctx context.Context, offset PLo
 	// notest
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+
+	if m.onActualizeFromPLog != nil {
+		m.onActualizeFromPLog()
+	}
 
 	for offsetProbe := offset; offsetProbe < math.MaxInt; offsetProbe++ {
 		batch, ok := m.pLog[offsetProbe]

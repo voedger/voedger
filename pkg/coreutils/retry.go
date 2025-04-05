@@ -24,9 +24,9 @@ func Retry(ctx context.Context, iTime ITime, f func() error) error {
 		timerCh := iTime.NewTimerChan(defaultRetryDelay)
 		select {
 		case <-ctx.Done():
-			return lastErr
+			break
 		case <-timerCh:
 		}
 	}
-	return lastErr
+	return ctx.Err()
 }

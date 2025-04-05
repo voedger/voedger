@@ -7,6 +7,7 @@ package isequencer
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -156,6 +157,10 @@ func (s *sequencer) flusher(ctx context.Context) {
 		s.toBeFlushedMu.RUnlock()
 
 		if err := s.flushValues(flushOffset); err != nil {
+			if errors.Is(err, context.Canceled) {
+				// happens when ctx is closed during storage error
+				return
+			}
 			// notest
 			panic("failed to flush values: " + err.Error())
 		}
@@ -410,10 +415,13 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	// Read nextPLogOffset from s.params.SeqStorage.ReadNextPLogOffset()
 	err = coreutils.Retry(actualizerCtx, s.iTime, func() error {
 		s.nextOffset, err = s.seqStorage.ReadNextPLogOffset()
-
 		return err
 	})
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			// happens when ctx is closed during storage error
+			return
+		}
 		// notest
 		panic("failed to read last PLog offset: " + err.Error())
 	}
@@ -423,6 +431,10 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 		return s.seqStorage.ActualizeSequencesFromPLog(s.cleanupCtx, s.nextOffset, s.batcher)
 	})
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			// happens when ctx is closed during storage error
+			return
+		}
 		// notest
 		panic("failed to actualize PLog: " + err.Error())
 	}
@@ -459,12 +471,13 @@ func (s *sequencer) flushValues(offset PLogOffset) error {
 		})
 	}
 	s.toBeFlushedMu.RUnlock()
-	// s.params.SeqStorage.WriteValuesAndNextPLogOffset(flushValues, offset)
+
 	// Error handling: Handle errors with retry mechanism (500ms wait)
 	err := coreutils.Retry(s.cleanupCtx, s.iTime, func() error {
 		return s.seqStorage.WriteValuesAndNextPLogOffset(flushValues, offset)
 	})
 	if err != nil {
+		// the only case here - ctx is closed during stroage error
 		return err
 	}
 

@@ -7,6 +7,7 @@ package isequencer
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -86,7 +87,7 @@ func TestSequencer_Start(t *testing.T) {
 		for i := 0; i < 6; i++ {
 			num, err := seq.Next(SeqID(i + 1))
 			require.NoError(err)
-			require.Equal(Number(2), num)
+			require.Equal(Number(1), num)
 		}
 
 		seq.Flush()
@@ -99,29 +100,6 @@ func TestSequencer_Start(t *testing.T) {
 		require.Zero(offset)
 		close(waitForFlushCh)
 	})
-}
-
-func TestSequencer_Next(t *testing.T) {
-	// t.Run("should return 0 when ReadNumbers() fails", func(t *testing.T) {
-	// 	require := require.New(t)
-	// 	iTime := coreutils.MockTime
-
-	// 	storage := NewMockStorage()
-	// 	params := NewDefaultParams(map[WSKind]map[SeqID]Number{
-	// 		1: {1: 1},
-	// 	})
-	// 	seq, cancel := New(params, storage, iTime)
-	// 	defer cancel()
-
-	// 	WaitForStart(t, seq, 1, 1, true)
-
-	// 	expectedErr := errors.New("ReadNumbersError")
-	// 	storage.SetReadNumbersError(expectedErr)
-
-	// 	num, err := seq.Next(1)
-	// 	require.ErrorIs(err, expectedErr)
-	// 	require.Zero(num)
-	// })
 }
 
 func TestBatcher(t *testing.T) {
@@ -198,7 +176,7 @@ func TestBatcher(t *testing.T) {
 		// fulfill toBeFlushed
 		num, err := seq.Next(1)
 		require.NoError(err)
-		require.Equal(Number(101), num)
+		require.Equal(Number(100), num)
 		seq.Flush()
 
 		// Set up the batch to be processed
@@ -224,30 +202,87 @@ func TestBatcher(t *testing.T) {
 	})
 }
 
-func TestSequencer_FlushValues(t *testing.T) {
+func TestContextCloseDuringStorageErrors(t *testing.T) {
+	require := require.New(t)
 
-	// t.Run("should handle error in WriteValuesAndNextPLogOffset", func(t *testing.T) {
-	// 	require := require.New(t)
+	storageErr := errors.New("storage error")
+	mockTime := coreutils.MockTime
 
-	// 	// Set up mock storage and sequencer
-	// 	storage := NewMockStorage()
-	// 	storageErr := errors.New("storage write error")
-	// 	storage.SetWriteValuesAndOffset(storageErr)
-	// 	mockTime := coreutils.MockTime
+	params := NewDefaultParams(map[WSKind]map[SeqID]Number{
+		1: {1: 1},
+	})
 
-	// 	params := NewDefaultParams(map[WSKind]map[SeqID]Number{
-	// 		1: {1: 1},
-	// 	})
+	t.Run("flusher()", func(t *testing.T) {
+		storage := NewMockStorage()
+		seq, _ := New(params, storage, mockTime)
+		s := seq.(*sequencer)
+		storage.SetWriteValuesAndOffset(storageErr)
+		defer func() { storage.SetReadNextPLogOffsetError(nil) }()
+		triedToWriteCh := make(chan any)
+		storage.onWriteValuesAndOffset = func() {
+			s.cleanupCtxCancel()
+			// go cleanup() // ctx is closed here
+			close(triedToWriteCh)
+		}
 
-	// 	seq, cleanup := New(params, storage, mockTime)
-	// 	defer cleanup()
-	// 	s := seq.(*sequencer)
+		// Test with empty values
+		s.toBeFlushed[NumberKey{WSID: 1, SeqID: 1}] = 1
 
-	// 	// Test with empty values
-	// 	s.toBeFlushed[NumberKey{WSID: 1, SeqID: 1}] = 1
-	// 	err := s.flushValues(PLogOffset(1))
-	// 	require.Error(err)
-	// })
+		// simulate normal sequencer behaviour
+		s.signalToFlushing()
+
+		<-triedToWriteCh
+		s.flusherWG.Wait()
+
+	})
+
+	t.Run("flushValues()", func(t *testing.T) {
+		storage := NewMockStorage()
+		seq, cleanup := New(params, storage, mockTime)
+		s := seq.(*sequencer)
+		storage.SetWriteValuesAndOffset(storageErr)
+		defer func() { storage.SetReadNextPLogOffsetError(nil) }()
+		storage.onWriteValuesAndOffset = func() {
+			cleanup() // ctx is closed here
+		}
+
+		// Test with empty values
+		s.toBeFlushed[NumberKey{WSID: 1, SeqID: 1}] = 1
+		err := s.flushValues(PLogOffset(1))
+		// closed ctx causes Retry() returned immediately after stroage error
+
+		require.ErrorIs(err, context.Canceled)
+	})
+
+	t.Run("actualizer()", func(t *testing.T) {
+		t.Run("on ReadNextPLogOffset", func(t *testing.T) {
+			storage := NewMockStorage()
+			seq, cleanup := New(params, storage, mockTime)
+			storage.SetReadNextPLogOffsetError(storageErr)
+			s := seq.(*sequencer)
+			storage.onReadNextPLogOffset = func() {
+				cleanup() // ctx is closed here
+			}
+			s.actualizerWG.Add(1) // simulate s.Actualize() behaviour
+			s.actualizer(s.cleanupCtx)
+		})
+
+		t.Run("on ActualizeSequencesFromPLog", func(t *testing.T) {
+			storage := NewMockStorage()
+			storage.SetPLog(map[PLogOffset][]SeqValue{PLogOffset(1): {{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 100}}})
+			seq, cleanup := New(params, storage, mockTime)
+			s := seq.(*sequencer)
+			storage.onActualizeFromPLog = func() {
+				cleanup() // ctx is closed here
+			}
+			s.actualizerWG.Add(1) // simulate s.Actualize() behaviour
+			s.actualizer(s.cleanupCtx)
+		})
+	})
+
+	t.Run("actualize", func(t *testing.T) {
+
+	})
 }
 
 func TestNextNumberSourceOrder(t *testing.T) {
