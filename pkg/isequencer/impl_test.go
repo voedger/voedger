@@ -17,9 +17,6 @@ import (
 )
 
 func TestSequencer(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode.")
-	}
 	require := require.New(t)
 
 	t.Run("basic flow", func(t *testing.T) {
@@ -280,9 +277,21 @@ func TestContextCloseDuringStorageErrors(t *testing.T) {
 		})
 	})
 
-	t.Run("actualize", func(t *testing.T) {
-
+	t.Run("Next()", func(t *testing.T) {
+		storage := NewMockStorage()
+		seq, cleanup := New(params, storage, mockTime)
+		s := seq.(*sequencer)
+		storage.SetReadNumbersError(storageErr)
+		storage.onReadNumbers = func() {
+			cleanup() // ctx is closed here
+		}
+		_, ok := s.Start(1, 1)
+		require.True(ok)
+		num, err := s.Next(1)
+		require.ErrorIs(err, context.Canceled)
+		require.Zero(num)
 	})
+
 }
 
 func TestNextNumberSourceOrder(t *testing.T) {
@@ -408,4 +417,8 @@ func TestNextNumberSourceOrder(t *testing.T) {
 
 		seq.Actualize()
 	})
+}
+
+func TestWrongCacheSize(t *testing.T) {
+	require.Panics(t, func() { New(Params{LRUCacheSize: -1}, nil, nil) })
 }

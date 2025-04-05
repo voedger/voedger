@@ -76,6 +76,10 @@ func (m *MockStorage) ReadNumbers(wsid WSID, seqIDs []SeqID) ([]Number, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	if m.onReadNumbers != nil {
+		m.onReadNumbers()
+	}
+
 	if m.ReadNumbersError != nil {
 		return nil, m.ReadNumbersError
 	}
@@ -199,12 +203,4 @@ func (m *MockStorage) AddPLogEntry(offset PLogOffset, wsid WSID, seqID SeqID, nu
 			Value: number,
 		},
 	)
-}
-
-// ClearPLog removes all entries from the mock PLog
-func (m *MockStorage) ClearPLog() {
-	// notest
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.pLog = make(map[PLogOffset][]SeqValue)
 }

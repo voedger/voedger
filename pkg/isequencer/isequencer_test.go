@@ -419,8 +419,8 @@ func TestISequencer_Flush(t *testing.T) {
 }
 
 func TestISequencer_Next(t *testing.T) {
+	require := require.New(t)
 	t.Run("should return incremented sequence number", func(t *testing.T) {
-		require := require.New(t)
 		iTime := coreutils.MockTime
 
 		storage := createDefaultStorage()
@@ -452,7 +452,6 @@ func TestISequencer_Next(t *testing.T) {
 	})
 
 	t.Run("should use initial value when sequence number not in storage", func(t *testing.T) {
-		require := require.New(t)
 		iTime := coreutils.MockTime
 
 		initialValue := isequencer.Number(50)
@@ -484,7 +483,6 @@ func TestISequencer_Next(t *testing.T) {
 	})
 
 	t.Run("should panic when called without starting transaction", func(t *testing.T) {
-		require := require.New(t)
 		iTime := coreutils.MockTime
 
 		storage := createDefaultStorage()
@@ -497,7 +495,6 @@ func TestISequencer_Next(t *testing.T) {
 	})
 
 	t.Run("should panic for unknown sequence ID", func(t *testing.T) {
-		require := require.New(t)
 		iTime := coreutils.MockTime
 
 		storage := createDefaultStorage()
@@ -515,7 +512,6 @@ func TestISequencer_Next(t *testing.T) {
 	})
 
 	t.Run("should handle multiple sequence types correctly", func(t *testing.T) {
-		require := require.New(t)
 		iTime := coreutils.MockTime
 
 		storage := createDefaultStorage()
@@ -564,7 +560,6 @@ func TestISequencer_Next(t *testing.T) {
 	})
 
 	t.Run("should maintain proper sequence across multiple transactions", func(t *testing.T) {
-		require := require.New(t)
 		iTime := coreutils.MockTime
 
 		storage := createDefaultStorage()
@@ -601,7 +596,6 @@ func TestISequencer_Next(t *testing.T) {
 	})
 
 	t.Run("should handle cache eviction correctly", func(t *testing.T) {
-		require := require.New(t)
 		iTime := coreutils.MockTime
 
 		storage := createDefaultStorage()
@@ -634,6 +628,28 @@ func TestISequencer_Next(t *testing.T) {
 		require.Equal(isequencer.Number(402), num, "Next should handle cache eviction correctly")
 
 		seq.Flush()
+	})
+
+	t.Run("unknown SeqID -> error", func(t *testing.T) {
+		iTime := coreutils.MockTime
+		storage := createDefaultStorage()
+		params := createDefaultParams()
+		seq, cancel := isequencer.New(params, storage, iTime)
+		defer cancel()
+		seq.Start(1, 1)
+		num, err := seq.Next(10)
+		require.ErrorIs(err, isequencer.ErrUnknownSeqID)
+		require.Zero(num)
+	})
+
+	t.Run("unknown wsKind -> panic", func(t *testing.T) {
+		iTime := coreutils.MockTime
+		storage := createDefaultStorage()
+		params := createDefaultParams()
+		seq, cancel := isequencer.New(params, storage, iTime)
+		defer cancel()
+		seq.Start(10, 1)
+		require.Panics(func() { seq.Next(1) })
 	})
 }
 

@@ -120,4 +120,5 @@ type MockStorage struct {
 	onWriteValuesAndOffset    func()
 	onReadNextPLogOffset      func()
 	onActualizeFromPLog       func()
+	onReadNumbers             func()
 }

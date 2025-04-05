@@ -8,6 +8,7 @@ package isequencer
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -180,15 +181,12 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	s.checkSequencingTransactionInProgress()
 
 	// Get initialValue from s.params.SeqTypes and ensure that SeqID is known
-	seqTypes, exists := s.params.SeqTypes[s.currentWSKind]
-	if !exists {
-		// notest
-		panic("unknown wsKind")
-	}
+	// existense is checked already on Start()
+	seqTypes := s.params.SeqTypes[s.currentWSKind]
 
 	initialValue, ok := seqTypes[seqID]
 	if !ok {
-		panic("unknown seqID")
+		return 0, fmt.Errorf("%w: %d", ErrUnknownSeqID, seqID)
 	}
 
 	key := NumberKey{
@@ -234,6 +232,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 		return err
 	})
 	if err != nil {
+		// happens when ctx is closed during storage error
 		return 0, err
 	}
 
