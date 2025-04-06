@@ -49,7 +49,12 @@ func (o *TestObject) PutNumber(name string, value json.Number)         { o.Data[
 func (o *TestObject) PutChars(name string, value string)               { o.Data[name] = value }
 func (o *TestObject) PutFromJSON(value map[string]any)                 { maps.Copy(o.Data, value) }
 
-func (o *TestObject) ID() istructs.RecordID     { return o.ID_ }
+func (o *TestObject) ID() istructs.RecordID {
+	if o.ID_ == istructs.NullRecordID {
+		return o.Data[appdef.SystemField_ID].(istructs.RecordID)
+	}
+	return o.ID_
+}
 func (o *TestObject) QName() appdef.QName       { return o.Name }
 func (o *TestObject) Parent() istructs.RecordID { return o.Parent_ }
 
