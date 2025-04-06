@@ -70,6 +70,7 @@ func TestReadWrite(t *testing.T) {
 			{Key: isequencer.NumberKey{WSID: 2, SeqID: 1}, Value: 3 + numberBump},
 			{Key: isequencer.NumberKey{WSID: 2, SeqID: 2}, Value: 1 + numberBump},
 		}, expectedPLogOffset)
+		require.NoError(err)
 		cases := []struct {
 			wsid            isequencer.WSID
 			seqIDs          [][]isequencer.SeqID

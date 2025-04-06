@@ -16,7 +16,7 @@ type implStorageBase struct {
 }
 
 func (s *implStorageBase) getPKey() (pKey []byte) {
-	pKey = make([]byte, utils.Uint32Size, utils.Uint32Size)
+	pKey = make([]byte, utils.Uint32Size)
 	binary.BigEndian.PutUint32(pKey, s.prefix)
 	return pKey
 }
