@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -148,54 +147,29 @@ func TestBatcher(t *testing.T) {
 
 	t.Run("should handle context cancellation", func(t *testing.T) {
 		require := require.New(t)
-
-		// Given
 		ctx, cancel := context.WithCancel(context.Background())
 		storage := NewMockStorage()
-		unblockWriteValuesAndOffset := make(chan any)
-		storage.onWriteValuesAndOffset = func() {
-			// force Flush() to stuck and keep toBeFlushed overflowed
-			<-unblockWriteValuesAndOffset
-		}
-		mockTime := coreutils.MockTime
-
 		params := NewDefaultParams(map[WSKind]map[SeqID]Number{
 			1: {1: 100},
 		})
-		params.MaxNumUnflushedValues = 1 // Small threshold to force waiting
 
-		seq, cleanup := New(params, storage, mockTime)
+		// Small threshold to force waiting
+		params.MaxNumUnflushedValues = 1
+
+		seq, cleanup := New(params, storage, coreutils.MockTime)
 		defer cleanup()
 		s := seq.(*sequencer)
 
-		WaitForStart(t, seq, 1, 1, true)
-
-		// fulfill toBeFlushed
-		num, err := seq.Next(1)
-		require.NoError(err)
-		require.Equal(Number(100), num)
-		seq.Flush()
-
 		// Set up the batch to be processed
-		batch := []SeqValue{
-			{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 102},
-		}
+		batch := []SeqValue{{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 102}}
 
-		// Launch batcher in a goroutine
-		batcherErrCh := make(chan error)
-		go func() {
-			cancel()
-			batcherErrCh <- s.batcher(ctx, batch, 6)
-		}()
+		// simulate toBeFlushed is fulfilled
+		s.toBeFlushed[NumberKey{WSID: 1, SeqID: 1}] = 1
 
-		// Batcher should exit with context error
-		select {
-		case batcherErr := <-batcherErrCh:
-			require.ErrorIs(batcherErr, context.Canceled)
-		case <-time.After(500 * time.Millisecond):
-			require.Fail("Batcher should have exited after context cancellation")
-		}
-		close(unblockWriteValuesAndOffset)
+		// make the context be canceled
+		cancel()
+		err := s.batcher(ctx, batch, 6)
+		require.ErrorIs(err, context.Canceled)
 	})
 }
 
@@ -218,7 +192,6 @@ func TestContextCloseDuringStorageErrors(t *testing.T) {
 		triedToWriteCh := make(chan any)
 		storage.onWriteValuesAndOffset = func() {
 			s.cleanupCtxCancel()
-			// go cleanup() // ctx is closed here
 			close(triedToWriteCh)
 		}
 
@@ -246,7 +219,7 @@ func TestContextCloseDuringStorageErrors(t *testing.T) {
 		// Test with empty values
 		s.toBeFlushed[NumberKey{WSID: 1, SeqID: 1}] = 1
 		err := s.flushValues(PLogOffset(1))
-		// closed ctx causes Retry() returned immediately after stroage error
+		// closed ctx causes Retry() returned immediately after storage error
 
 		require.ErrorIs(err, context.Canceled)
 	})
