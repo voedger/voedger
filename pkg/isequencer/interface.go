@@ -18,16 +18,16 @@ type ISeqStorage interface {
 	ReadNumbers(WSID, []SeqID) ([]Number, error)
 
 	// IDs in batch.Values are unique
-	// Values must be written first, then Offset
-	WriteValues(batch []SeqValue) error
+	// len(batch) may be 0
+	// offset: Next offset to be used
+	// batch MUST be written first, then offset
+	WriteValuesAndNextPLogOffset(batch []SeqValue, offset PLogOffset) error
 
-	// Next offset to be used
-	WriteNextPLogOffset(offset PLogOffset) error
 	ReadNextPLogOffset() (PLogOffset, error)
 
 	// ActualizeSequencesFromPLog scans PLog from the given offset and send values to the batcher.
 	// Values are sent per event, unordered, ISeqValue.Keys are not unique.
-	ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func(batch []SeqValue, offset PLogOffset) error) error
+	ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func(ctx context.Context, batch []SeqValue, offset PLogOffset) error) error
 }
 
 
@@ -62,7 +62,8 @@ type IVVMSeqStorageAdapter interface {
 // - Sequencing Transaction: Start -> Next -> (Flush | Actualize)
 // - Actualization: Making the persistent state of the sequences consistent with the PLog.
 // - Flushing: Writing the accumulated sequence values to the storage.
-// - LRU: Least Recently Used cache that keep the most recent next sequence values in memory.
+// - LRU Cache: Least Recently Used cache that keep the most recent next sequence values in memory.
+// [~server.design.sequences/cmp.ISequencer~impl]
 type ISequencer interface {
 
 	// Start starts Sequencing Transaction for the given WSID.
@@ -73,6 +74,7 @@ type ISequencer interface {
 	// - Actualization is in progress
 	// - The number of unflushed values exceeds the maximum threshold
 	// If ok is true, the caller must call Flush() or Actualize() to complete the Sequencing Transaction.
+	// [~server.design.sequences/cmp.ISequencer.Start~impl]
 	Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok bool)
 
 	// Next returns the next sequence number for the given SeqID.
@@ -91,7 +93,7 @@ type ISequencer interface {
 	// Flow:
 	// - Mark Sequencing Transaction as not in progress
 	// - Cancel and wait Flushing
-	// - Empty LRU
+	// - Empty LRU Cache
 	// - Do Actualization process
 	// - Write next PLogOffset
 	Actualize()

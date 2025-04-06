@@ -5,7 +5,6 @@
 
 package isequencer
 
-const (
-	DefaultLRUCacheSize          = 100_000
-	DefaultMaxNumUnflushedValues = 500
-)
+import "errors"
+
+var ErrUnknownSeqID = errors.New("unknown SeqID")

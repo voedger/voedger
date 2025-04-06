@@ -1,94 +1,58 @@
-# Overview
+# Package isequencer
 
-## Workflow
+## Overview
+The project implements a scalable, monotonic sequence generator for various sequence IDs in a distributed environment. It ensures ordered number generation, efficient caching, and reliability through background flushing and actualization.
 
-- Partition is deployed -> `ISequences.New()` is called
-  - `go actualizer()` is called
-- `actualizer()`
-  - is a goroutine
-  - works for small amount of time, quickly launches flusher, then actualizer goroutine stops.
-  - shutdowns `flusher` if it is running by closing `flusherCtx`, waits for `flusher` to stop
-  - calls `ISeqStorage.ActualizeSequencesFromPLog(..., batcher func(batch []SeqValue, offset PLogOffset))`
-    - Scan PLog from the given offset and send values to the batcher
-    - batcher is callback, func of the sequencer
-      - Build maxValues: max Number for each `SeqValue.Key`
-  - write maxValues using `ISeqStorage.WriteValues()`
-    - ??? should it `ISeqStorage.WriteNextPLogOffset`?
-  - determined maxValues goes to LRU cache
-  - `inprocOffset` := `ISeqStorage.ReadLastWrittenPLogOffset()`
-  - `cleanpCtx` closed -> exit immediately
-  - create and store new `flusherCtx`
-  - `go flusher()`
-- `inprocOffset`
-  - stored in Sequencer, determined on `New()`->`actualizer()`
-  - +1 and return on each Start()
-- `flusher()`
-  - is a goroutine
-  - select
-    - case `cleanupCtx`, `flusherCtx` close -> return
-    - case `flushTimeout` or `toBeFlushed` queue overflow -> flush:
-      - `toBeFlushed` not empty -> `ISeqStorage.WriteValues(toBeFlushed)`
-      - `toBeFlushedOffset` != 0 -> `ISeqStorage.WritePlog...(toBeFlushedOffset)`
-      - clear `toBeFlushed`
-      - `toBeFlushedOffset` := 0
-- `ISequencer.Start(wsKind, wsid)`: Handle a request, start to work with sequences
-  - `cleanupCtx` closed -> panic
-  - previous `Start()` call was not finished by calling `Flush()` or `Actualize()` -> panic
-  - unknown `wsKind` -> panic
-  - actualization is in progress -> return false
-  - `toBeFlushed` is overflowed -> return false
-  - `inprocOffset` += 1
-    - later it will go to `toBeFlushedOffset`, zeroed on `Actualize()` only
-  - return `inprocOffset` and true
-- New number obtain
-  - `ISequencer.Next(SeqID)` is called
-    - unknown `SeqID` -> panic
-    - try to get the next number (`value`) preserving order:
-      - LRU cache
-      - `inproc`
-      - `toBeFlushed`
-      - `ISeqStorage.ReadNumber`
-        - read all numbers, put all number to LRU cache
-    - write `value+1` to LRU cache
-    - write `value+1` to `inproc`
-- Event handling is finished, close sequencer session (started by `Start()`)
-  - no errors -> `ISequencer.Flush()`
-    - copy `inproc` -> `toBeFlushed`
-    - `inprocOffset` -> `toBeFlushedOffset`
-    - clear `inproc`
-  - has errors -> `ISequencer.Actualize()`
-    - clear `inproc`
-    - `inprocOffset` = 0
-    - `go actualizer()`, it reads actual data from PLog, restarts `flusher()` etc
+## Key Components
 
-## Test plan
+- **server/design/sequences.md**<br/> 
+Describes high-level design goals, motivation, and use cases for sequence management in the platform.
+Outlines initial sequence values and the role of caching and projections.
 
-- Basic usage
-  - storage contains an event with PLogOffset=42
-    - i.e. ActualizeSequencesFromPLog should call batcher() []SeqValue{ Key: wsid, seqID; Value: 13}, offset = 42
-  - sequencer contains nothing
-  - New()
-  - assert Start(wsid, wsKind) return 43
-  - assert Next(seqID) return 14
-  - Flush()
-  - wait for 500ms
-  - assert ISeqStorage.ReadNumbers returns new data: offset 43 and 14 for seqID
-- Actualization on error
-  - New, Start, Next
-  - now act like when something gone wrong on the caller side: all numbers got on Start and Next should be dropped:
-  - wait for 500ms to check then that new issued number will not go to the storage
-  - Actualize()
-  - assert Start return the same value as on previous Start
-  - assert Next return the same value as on prevois Next
-- Batcher
-  - few storages:
-    - empty
-    - 2-3 different wsids, wsKinds, values etc
-  - New
-  - assert Start returns the correct value for each storeg
-  - asser Next returns the correct value for each storage
-- Behaviour on incorrect methods calls
-  - expect panics on:
-    - 2nd Start()
-    - Start() after cleanup
-    - Next(), Flush() without Start()
+
+- **pkg/isequencer/design.md**<br/>
+Explains the workflow, including how the sequencer is started, how actualizer and flusher goroutines work, and how sequences are persisted into storage.
+
+
+- **pkg/isequencer/impl.go**<br/>
+Contains the core sequencer methods:
+  - `Start(wsKind, wsID)` begins a sequencing transaction and returns the next offset.
+  - `Next(seqID)` obtains new sequence values.
+  - `Flush()` commits in-memory values to be flushed.
+  - `Actualize()` cancels the current transaction and synchronizes sequences with the persisted state.
+
+- **pkg/isequencer/types.go**<br/>
+  Defines common data types (`SeqID`, `WSID`, `PLogOffset`, etc.) and includes the parameter configuration struct for the sequencer’s caching, batching, and storage limits.
+
+
+## Features
+1. **Monotonic Number Generation**<br/>
+Ensures strictly increasing sequence values for operations like record IDs and log offsets.
+
+2. **Caching & LRU**<br/>
+Frequently accessed sequences are stored in an LRU cache, reducing persistent lookups.
+
+
+3. **Background Flush & Actualization**<br/>
+
+- `Flush` writes cached numbers to durable storage.
+- `Actualize` reconciles in-memory states with storage, enabling error recovery.
+
+4. **Batch Processing**<br/>
+Accumulated sequence updates are written in batches to minimize performance overhead.
+
+
+5. **Retry Mechanisms**<br/>
+Robust retries handle transient storage issues during flush and actualization phases.
+
+
+## Usage
+1. **Initialization**: Each partition instantiates an `isequencer.ISequencer` with configured `SeqTypes`.
+2. **Start Event**: Call `Start(wsKind, wsID)` to begin a transaction and obtain the current offset.
+3. **Next Value**: Use `Next(seqID)` to retrieve or allocate new sequence numbers.
+4. **Flush or Actualize**:
+- Use `Flush()` after successful operations to finalize in-memory increments.
+- Use `Actualize()` on errors to discard unflushed transitions and realign with persisted data.
+
+## Testing
+The tests cover scenarios like handling invalid calls, recovery, high concurrency, permanent storage failures, and ensuring monotonic growth under different sequences.
