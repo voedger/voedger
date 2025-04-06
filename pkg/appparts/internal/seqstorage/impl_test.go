@@ -22,6 +22,17 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/storage"
 )
 
+var (
+	testWSQName      = appdef.NewQName("test", "ws")
+	testCDocQName    = appdef.NewQName("test", "cdoc")
+	testCRecordQName = appdef.NewQName("test", "crecord")
+	testORecordQName = appdef.NewQName("test", "orecord")
+	testWRecordQName = appdef.NewQName("test", "wrecord")
+	testWDocQName    = appdef.NewQName("test", "wdoc")
+	testODocQName    = appdef.NewQName("test", "odoc")
+	testCmdQName     = appdef.NewQName("test", "cmd")
+)
+
 func TestReadWrite(t *testing.T) {
 	require := require.New(t)
 	testWSQName := appdef.NewQName("test", "ws")
@@ -32,11 +43,7 @@ func TestReadWrite(t *testing.T) {
 	ws.AddCDoc(testCDocQName).AddField("IntFld", appdef.DataKind_int32, false)
 	appDef, err := appDefBuilder.Build()
 	require.NoError(err)
-	appStorageProvider := provider.Provide(mem.Provide(coreutils.MockTime))
-	appStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
-	require.NoError(err)
-	seqSysVVMStorage := storage.NewVVMSeqStorageAdapter(appStorage)
-	seqStorage := New(istructs.ClusterApps[istructs.AppQName_test1_app1], istructs.PartitionID(1), mockEvents, appDef, seqSysVVMStorage)
+	seqStorage := setupSeqStorage(t, mockEvents, appDef)
 
 	// read from empty storage
 	actualOffset, err := seqStorage.ReadNextPLogOffset()
@@ -56,7 +63,7 @@ func TestReadWrite(t *testing.T) {
 	for counter := 0; counter < 5; counter++ {
 		numberBump := isequencer.Number(counter)
 		expectedPLogOffset := isequencer.PLogOffset(42 + counter)
-		err = seqStorage.WriteValuesAndOffset([]isequencer.SeqValue{
+		err = seqStorage.WriteValuesAndNextPLogOffset([]isequencer.SeqValue{
 			{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 1 + numberBump},
 			{Key: isequencer.NumberKey{WSID: 1, SeqID: 2}, Value: 6 + numberBump},
 			{Key: isequencer.NumberKey{WSID: 1, SeqID: 3}, Value: 8 + numberBump},
@@ -129,73 +136,11 @@ func TestReadWrite(t *testing.T) {
 	}
 }
 
-type expectedSeqValue struct {
-	wsid   uint64
-	seqID  uint16
-	number uint64
-}
-
-type cud struct {
-	qName   appdef.QName
-	id      uint64
-	exactID istructs.RecordID
-	isOld   bool // !IsNew
-}
-
-func (c cud) ID(appDef appdef.IAppDef) istructs.RecordID {
-	if c.exactID != istructs.NullRecordID {
-		return c.exactID
-	}
-	cudKind := appDef.Type(c.qName).Kind()
-	if cudKind == appdef.TypeKind_CDoc || cudKind == appdef.TypeKind_CRecord {
-		return istructs.NewCDocCRecordID(istructs.RecordID(c.id))
-	}
-	return istructs.NewRecordID(istructs.RecordID(c.id))
-}
-
-type obj struct {
-	cud
-	containers []obj
-}
-
-type testPLogEvent struct {
-	qName         appdef.QName
-	offset        istructs.Offset
-	wsid          uint64
-	cuds          []cud
-	arg           obj
-	expectedBatch []expectedSeqValue
-}
-
-func TestActualizeFromPLog(t *testing.T) {
+func TestSequenceActualization(t *testing.T) {
 	require := require.New(t)
-	testWSQName := appdef.NewQName("test", "ws")
-	testCDocQName := appdef.NewQName("test", "cdoc")
-	testCRecordQName := appdef.NewQName("test", "crecord")
-	testORecordQName := appdef.NewQName("test", "orecord")
-	testWRecordQName := appdef.NewQName("test", "wrecord")
-	testWDocQName := appdef.NewQName("test", "wdoc")
-	testODocQName := appdef.NewQName("test", "odoc")
-	testCmdQName := appdef.NewQName("test", "cmd")
+	appDef := setupTestAppDef(t)
 
-	// build test schema
-	appDefBuilder := builder.New()
-	ws := appDefBuilder.AddWorkspace(testWSQName)
-	ws.AddCRecord(testCRecordQName)
-	ws.AddORecord(testORecordQName)
-	ws.AddWRecord(testWRecordQName)
-	ws.AddCDoc(testCDocQName).AddContainer("crecord", testCRecordQName, appdef.Occurs_Unbounded, appdef.Occurs_Unbounded)
-	ws.AddODoc(testODocQName).AddContainer("orecord", testORecordQName, appdef.Occurs_Unbounded, appdef.Occurs_Unbounded)
-	ws.AddWDoc(testWDocQName).AddContainer("wrecord", testWRecordQName, appdef.Occurs_Unbounded, appdef.Occurs_Unbounded)
-	ws.AddCommand(testCmdQName)
-	appDef, err := appDefBuilder.Build()
-	require.NoError(err)
-
-	appStorageProvider := provider.Provide(mem.Provide(coreutils.MockTime))
-	appStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
-	require.NoError(err)
-	seqSysVVMStorage := storage.NewVVMSeqStorageAdapter(appStorage)
-
+	// Test case definitions
 	cases := []struct {
 		name string
 		plog []testPLogEvent
@@ -271,21 +216,21 @@ func TestActualizeFromPLog(t *testing.T) {
 		{
 			name: "issue 688: skip ids from old registers",
 			plog: []testPLogEvent{
-				// normal - no skip
+				// 1st event: normal - no skip
 				{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{{qName: testCDocQName, id: 1}}, expectedBatch: []expectedSeqValue{
 					{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 1},
 				}},
 
-				// cdoc
+				// 2nd event: cdoc
 				{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{{qName: testCDocQName, exactID: 9999999999}}, expectedBatch: nil},
 
-				// odoc
+				// 3rd event: odoc
 				{qName: testODocQName, wsid: 1, offset: 1, arg: obj{
 					cud: cud{qName: testODocQName, exactID: 9999999999}},
 					expectedBatch: nil,
 				},
 
-				// orecord
+				// 4th event: orecord
 				{qName: testODocQName, wsid: 1, offset: 1, arg: obj{
 					cud: cud{qName: testODocQName, id: 1}, containers: []obj{
 						{cud: cud{qName: testORecordQName, exactID: 9999999999}},
@@ -297,43 +242,71 @@ func TestActualizeFromPLog(t *testing.T) {
 		},
 	}
 
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
 			mockEvents := &coreutils.MockEvents{}
 			mockEvents.On("ReadPLog", gomock.Anything, gomock.Anything, gomock.Anything, gomock.Anything, gomock.Anything).
 				Return(nil).
 				Run(func(args gomock.Arguments) {
 					cb := args.Get(4).(istructs.PLogEventsReaderCallback)
-					for _, pLogEvent := range c.plog {
+					for _, pLogEvent := range tc.plog {
 						iPLogEvent := testPLogEventToIPlogEvent(pLogEvent, appDef)
 						require.NoError(cb(pLogEvent.offset, iPLogEvent))
 					}
 				})
-			seqStorage := New(istructs.ClusterApps[istructs.AppQName_test1_app1], istructs.PartitionID(1), mockEvents, appDef, seqSysVVMStorage)
-			numEvent := 0
-			seqStorage.ActualizeSequencesFromPLog(context.Background(), 1, func(ctx context.Context, batch []isequencer.SeqValue, offset isequencer.PLogOffset) error {
-				require.Equal(isequencer.PLogOffset(c.plog[numEvent].offset), offset)
-				expectedBatch := []isequencer.SeqValue{}
-				for _, eb := range c.plog[numEvent].expectedBatch {
-					var id istructs.RecordID
-					if eb.seqID == istructs.QNameIDCRecordIDSequence {
-						id = istructs.NewCDocCRecordID(istructs.RecordID(eb.number))
-					} else {
-						id = istructs.NewRecordID(istructs.RecordID(eb.number))
-					}
-					expectedBatch = append(expectedBatch, isequencer.SeqValue{
-						Key:   isequencer.NumberKey{WSID: isequencer.WSID(eb.wsid), SeqID: isequencer.SeqID(eb.seqID)},
-						Value: isequencer.Number(id),
-					})
-				}
-				require.Equal(expectedBatch, batch, c.plog[numEvent])
-				numEvent++
+
+			seqStorage := setupSeqStorage(t, mockEvents, appDef)
+
+			processingCount := 0
+			err := seqStorage.ActualizeSequencesFromPLog(context.Background(), 1, func(ctx context.Context, batch []isequencer.SeqValue, offset isequencer.PLogOffset) error {
+				require.Equal(isequencer.PLogOffset(tc.plog[processingCount].offset), offset, "Offset mismatch in event %d", processingCount)
+
+				expectedBatch := buildExpectedBatch(tc.plog[processingCount].expectedBatch)
+				require.Equal(expectedBatch, batch, "Batch mismatch in event %d", processingCount)
+
+				processingCount++
 				return nil
 			})
-			require.Len(c.plog, numEvent)
+
+			require.NoError(err)
+			require.Equal(len(tc.plog), processingCount, "Not all events were processed")
 		})
 	}
+}
 
+func TestSeqIDMapping(t *testing.T) {
+	require := require.New(t)
+	mockEvents := &coreutils.MockEvents{}
+	appDefBuilder := builder.New()
+	appDef, err := appDefBuilder.Build()
+	require.NoError(err)
+	appStorageProvider := provider.Provide(mem.Provide(coreutils.MockTime))
+	appStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
+	require.NoError(err)
+	seqSysVVMStorage := storage.NewVVMSeqStorageAdapter(appStorage)
+	seqStorage := New(istructs.ClusterApps[istructs.AppQName_test1_app1], istructs.PartitionID(1), mockEvents, appDef, seqSysVVMStorage)
+	require.Equal(istructs.QNameIDPLogOffsetSequence, seqStorage.(*implISeqStorage).seqIDs[istructs.QNamePLogOffsetSequence])
+	require.Equal(istructs.QNameIDWLogOffsetSequence, seqStorage.(*implISeqStorage).seqIDs[istructs.QNameWLogOffsetSequence])
+	require.Equal(istructs.QNameIDCRecordIDSequence, seqStorage.(*implISeqStorage).seqIDs[istructs.QNameCRecordIDSequence])
+	require.Equal(istructs.QNameIDCRecordIDSequence, seqStorage.(*implISeqStorage).seqIDs[istructs.QNameCRecordIDSequence])
+}
+
+// buildExpectedBatch converts expectedSeqValue entries to isequencer.SeqValue batch
+func buildExpectedBatch(expectedValues []expectedSeqValue) []isequencer.SeqValue {
+	expectedBatch := []isequencer.SeqValue{}
+	for _, ev := range expectedValues {
+		var id istructs.RecordID
+		if ev.seqID == istructs.QNameIDCRecordIDSequence {
+			id = istructs.NewCDocCRecordID(istructs.RecordID(ev.number))
+		} else {
+			id = istructs.NewRecordID(istructs.RecordID(ev.number))
+		}
+		expectedBatch = append(expectedBatch, isequencer.SeqValue{
+			Key:   isequencer.NumberKey{WSID: isequencer.WSID(ev.wsid), SeqID: isequencer.SeqID(ev.seqID)},
+			Value: isequencer.Number(id),
+		})
+	}
+	return expectedBatch
 }
 
 func testPLogEventToIPlogEvent(pLogEvent testPLogEvent, appDef appdef.IAppDef) istructs.IPLogEvent {
@@ -372,19 +345,67 @@ func testPLogEventToIPlogEvent(pLogEvent testPLogEvent, appDef appdef.IAppDef) i
 	return &mockEvent
 }
 
-func TestSeqIDMapping(t *testing.T) {
+// setupTestAppDef creates a standard app definition for testing
+func setupTestAppDef(t *testing.T) appdef.IAppDef {
 	require := require.New(t)
-	mockEvents := &coreutils.MockEvents{}
 	appDefBuilder := builder.New()
+	ws := appDefBuilder.AddWorkspace(testWSQName)
+	ws.AddCRecord(testCRecordQName)
+	ws.AddORecord(testORecordQName)
+	ws.AddWRecord(testWRecordQName)
+	ws.AddCDoc(testCDocQName).AddContainer("crecord", testCRecordQName, appdef.Occurs_Unbounded, appdef.Occurs_Unbounded)
+	ws.AddODoc(testODocQName).AddContainer("orecord", testORecordQName, appdef.Occurs_Unbounded, appdef.Occurs_Unbounded)
+	ws.AddWDoc(testWDocQName).AddContainer("wrecord", testWRecordQName, appdef.Occurs_Unbounded, appdef.Occurs_Unbounded)
+	ws.AddCommand(testCmdQName)
 	appDef, err := appDefBuilder.Build()
 	require.NoError(err)
+	return appDef
+}
+
+// setupSeqStorage creates and returns a sequence storage instance for testing
+func setupSeqStorage(t *testing.T, mockEvents *coreutils.MockEvents, appDef appdef.IAppDef) isequencer.ISeqStorage {
+	require := require.New(t)
 	appStorageProvider := provider.Provide(mem.Provide(coreutils.MockTime))
 	appStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
 	require.NoError(err)
 	seqSysVVMStorage := storage.NewVVMSeqStorageAdapter(appStorage)
-	seqStorage := New(istructs.ClusterApps[istructs.AppQName_test1_app1], istructs.PartitionID(1), mockEvents, appDef, seqSysVVMStorage)
-	require.Equal(istructs.QNameIDPLogOffsetSequence, seqStorage.(*implISeqStorage).seqIDs[istructs.QNamePLogOffsetSequence])
-	require.Equal(istructs.QNameIDWLogOffsetSequence, seqStorage.(*implISeqStorage).seqIDs[istructs.QNameWLogOffsetSequence])
-	require.Equal(istructs.QNameIDCRecordIDSequence, seqStorage.(*implISeqStorage).seqIDs[istructs.QNameCRecordIDSequence])
-	require.Equal(istructs.QNameIDCRecordIDSequence, seqStorage.(*implISeqStorage).seqIDs[istructs.QNameCRecordIDSequence])
+	return New(istructs.ClusterApps[istructs.AppQName_test1_app1], istructs.PartitionID(1), mockEvents, appDef, seqSysVVMStorage)
+}
+
+type expectedSeqValue struct {
+	wsid   uint64
+	seqID  uint16
+	number uint64
+}
+
+type cud struct {
+	qName   appdef.QName
+	id      uint64
+	exactID istructs.RecordID
+	isOld   bool // !IsNew
+}
+
+func (c cud) ID(appDef appdef.IAppDef) istructs.RecordID {
+	if c.exactID != istructs.NullRecordID {
+		return c.exactID
+	}
+	cudKind := appDef.Type(c.qName).Kind()
+	if cudKind == appdef.TypeKind_CDoc || cudKind == appdef.TypeKind_CRecord {
+		return istructs.NewCDocCRecordID(istructs.RecordID(c.id))
+	}
+	return istructs.NewRecordID(istructs.RecordID(c.id))
+}
+
+type obj struct {
+	cud
+	containers []obj
+}
+
+type testPLogEvent struct {
+	qName         appdef.QName
+	offset        istructs.Offset
+	wsid          uint64
+	cuds          []cud
+	arg           obj
+	expectedBatch []expectedSeqValue
 }

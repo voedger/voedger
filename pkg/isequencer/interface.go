@@ -30,25 +30,6 @@ type ISeqStorage interface {
 	ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func(ctx context.Context, batch []SeqValue, offset PLogOffset) error) error
 }
 
-
-type ISeqStorage_new interface {
-
-	// If number is not found, returns 0
-	ReadNumbers(WSID, []SeqID) ([]Number, error)
-
-	// IDs in batch.Values are unique
-	// len(batch) may be 0
-	// offset: Next offset to be used
-	// batch MUST be written first, then offset
-	WriteValuesAndOffset(batch []SeqValue, offset PLogOffset) error
-
-	ReadNextPLogOffset() (PLogOffset, error)
-
-	// ActualizeSequencesFromPLog scans PLog from the given offset and send values to the batcher.
-	// Values are sent per event, unordered, ISeqValue.Keys are not unique.
-	ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func(ctx context.Context, batch []SeqValue, offset PLogOffset) error) error
-}
-
 type IVVMSeqStorageAdapter interface {
 	Get(appID istructs.ClusterAppID, wsid WSID, seqID SeqID, data *[]byte) (ok bool, err error)
 	Put(appID istructs.ClusterAppID, wsid WSID, seqID SeqID, data []byte) (err error)

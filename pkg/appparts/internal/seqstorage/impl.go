@@ -41,7 +41,7 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 		})
 }
 
-func (ss *implISeqStorage) WriteValuesAndOffset(batch []isequencer.SeqValue, pLogOffset isequencer.PLogOffset) error {
+func (ss *implISeqStorage) WriteValuesAndNextPLogOffset(batch []isequencer.SeqValue, pLogOffset isequencer.PLogOffset) error {
 	for _, b := range batch {
 		if b.Key.SeqID == isequencer.SeqID(istructs.QNameIDPLogOffsetSequence) {
 			panic("can not write QNameIDPLogOffsetSequence as value")
