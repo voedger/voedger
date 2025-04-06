@@ -32,17 +32,17 @@ Codec version *codecVer* stored as an unsigned single byte number.
 
 ### Row Data
 
-Row data *rowData* contains the type name identifier *qNameID*, the values of the system fields *sysFields* and field values with user data *userFields*.
+Row data *rowData* contains the type name identifier *QNameID*, the values of the system fields *sysFields* and field values with user data *userFields*.
 
-`rowData = qNameID [sysFields] [userFields] .`
+`rowData = QNameID [sysFields] [userFields] .`
 
 If type name `QName` is not specified (i.e. equal to `appdef.NullQName`), then other members (*sysFields* и *userFields*) are omitted.
 
 #### QName ID (record)
 
-Type name identifier *qNameID* is stored as unsigned two-bytes number. Here and in the following, unless specifically stated, numerical values are recorded using a byte order from most significant to least significant. (`BigEndian`).
+Type name identifier *QNameID* is stored as unsigned two-bytes number. Here and in the following, unless specifically stated, numerical values are recorded using a byte order from most significant to least significant. (`BigEndian`).
 
-`qNameID = uint16 . // BigEndian`
+`QNameID = uint16 . // BigEndian`
 
 #### System fields
 
@@ -123,17 +123,17 @@ The codec version *codecVersion* is recorded as an unsigned one-byte integer.
 
 ### Event Data
 
-The event data *eventData* contains the definition name identifier *qNameID*, event construction data *createParameters*, event build error information *buildError*, command arguments *commandArguments*, and the plan of modified records *commandCUDs*.
+The event data *eventData* contains the definition name identifier *QNameID*, event construction data *createParameters*, event build error information *buildError*, command arguments *commandArguments*, and the plan of modified records *commandCUDs*.
 
-`eventData = qNameID [ createParameters buildError [ commandArguments commandCUDs ] ].`
+`eventData = QNameID [ createParameters buildError [ commandArguments commandCUDs ] ].`
 
 If the definition name (QName) is not specified for the event (i.e., it is equal to `appdef.NullQName`), then nothing else is specified for the event.
 
 #### QName ID (event)
 
-The name identifier *qNameID* is recorded as an unsigned two-byte number.
+The name identifier *QNameID* is recorded as an unsigned two-byte number.
 
-`qNameID = uint16 .`
+`QNameID = uint16 .`
 
 #### Create Parameters
 

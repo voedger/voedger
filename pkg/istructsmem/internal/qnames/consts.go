@@ -7,16 +7,6 @@ package qnames
 
 import "github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 
-// IDs for wellknown QNames
-const (
-	NullQNameID QNameID = 0 + iota
-	QNameIDForError
-	QNameIDCommandCUD
-	QNameIDForCorruptedData
-
-	QNameIDSysLast QNameID = 0xFF
-)
-
 // maximum QName ID value
 const MaxAvailableQNameID = 0xFFFF
 

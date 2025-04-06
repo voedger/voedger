@@ -10,39 +10,36 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
-type implElectionsITTLStorage struct {
-	prefix        pKeyPrefix
-	vvmttlstorage ISysVvmStorage
+type implIElectionsTTLStorage struct {
+	implStorageBase
 }
 
-func (s *implElectionsITTLStorage) buildKeys(key TTLStorageImplKey) (pKey, cCols []byte) {
-	pKey = make([]byte, utils.Uint32Size)
+func (s *implIElectionsTTLStorage) buildKeys(key TTLStorageImplKey) (pKey, cCols []byte) {
+	pKey = s.getPKey()
 	cCols = make([]byte, utils.Uint32Size)
-
-	binary.BigEndian.PutUint32(pKey, s.prefix)
 	binary.BigEndian.PutUint32(cCols, key)
 	return
 }
 
-func (s *implElectionsITTLStorage) InsertIfNotExist(key TTLStorageImplKey, val string, ttlSeconds int) (bool, error) {
+func (s *implIElectionsTTLStorage) InsertIfNotExist(key TTLStorageImplKey, val string, ttlSeconds int) (bool, error) {
 	pKey, cCols := s.buildKeys(key)
-	return s.vvmttlstorage.InsertIfNotExists(pKey, cCols, []byte(val), ttlSeconds)
+	return s.sysVVMStorage.InsertIfNotExists(pKey, cCols, []byte(val), ttlSeconds)
 }
 
-func (s *implElectionsITTLStorage) CompareAndSwap(key TTLStorageImplKey, oldVal, newVal string, ttlSeconds int) (bool, error) {
+func (s *implIElectionsTTLStorage) CompareAndSwap(key TTLStorageImplKey, oldVal, newVal string, ttlSeconds int) (bool, error) {
 	pKey, cCols := s.buildKeys(key)
-	return s.vvmttlstorage.CompareAndSwap(pKey, cCols, []byte(oldVal), []byte(newVal), ttlSeconds)
+	return s.sysVVMStorage.CompareAndSwap(pKey, cCols, []byte(oldVal), []byte(newVal), ttlSeconds)
 }
 
-func (s *implElectionsITTLStorage) CompareAndDelete(key TTLStorageImplKey, val string) (bool, error) {
+func (s *implIElectionsTTLStorage) CompareAndDelete(key TTLStorageImplKey, val string) (bool, error) {
 	pKey, cCols := s.buildKeys(key)
-	return s.vvmttlstorage.CompareAndDelete(pKey, cCols, []byte(val))
+	return s.sysVVMStorage.CompareAndDelete(pKey, cCols, []byte(val))
 }
 
-func (s *implElectionsITTLStorage) Get(key TTLStorageImplKey) (bool, string, error) {
+func (s *implIElectionsTTLStorage) Get(key TTLStorageImplKey) (bool, string, error) {
 	pKey, cCols := s.buildKeys(key)
 	data := []byte{}
-	ok, err := s.vvmttlstorage.Get(pKey, cCols, &data)
+	ok, err := s.sysVVMStorage.Get(pKey, cCols, &data)
 	if err != nil {
 		return false, "", err
 	}

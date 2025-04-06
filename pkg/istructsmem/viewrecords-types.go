@@ -14,7 +14,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	istorage "github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
@@ -243,7 +242,7 @@ func (vr *appViewRecords) Read(ctx context.Context, workspace istructs.WSID, key
 type keyType struct {
 	appCfg   *AppConfigType
 	viewName appdef.QName
-	viewID   qnames.QNameID
+	viewID   istructs.QNameID
 	view     appdef.IView
 	partRow  rowType
 	ccolsRow rowType

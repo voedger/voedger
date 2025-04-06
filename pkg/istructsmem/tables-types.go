@@ -148,8 +148,8 @@ func (row *rowType) SpecifiedValues(cb func(appdef.IField, any) bool) {
 		case appdef.DataKind_RecordID:
 			value = istructs.RecordID(value.(int64)) //nolint:gosec
 		case appdef.DataKind_QName:
-			qNameID := binary.BigEndian.Uint16(value.([]byte))
-			qName, err := row.appCfg.qNames.QName(qNameID)
+			QNameID := binary.BigEndian.Uint16(value.([]byte))
+			qName, err := row.appCfg.qNames.QName(QNameID)
 			if err != nil {
 				// notest
 				panic(err)

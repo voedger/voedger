@@ -49,7 +49,12 @@ func (o *TestObject) PutNumber(name string, value json.Number)         { o.Data[
 func (o *TestObject) PutChars(name string, value string)               { o.Data[name] = value }
 func (o *TestObject) PutFromJSON(value map[string]any)                 { maps.Copy(o.Data, value) }
 
-func (o *TestObject) ID() istructs.RecordID     { return o.ID_ }
+func (o *TestObject) ID() istructs.RecordID {
+	if o.ID_ == istructs.NullRecordID {
+		return o.Data[appdef.SystemField_ID].(istructs.RecordID)
+	}
+	return o.ID_
+}
 func (o *TestObject) QName() appdef.QName       { return o.Name }
 func (o *TestObject) Parent() istructs.RecordID { return o.Parent_ }
 
@@ -148,6 +153,9 @@ func (o *TestObject) AsQName(name string) appdef.QName {
 	return qNameIntf.(appdef.QName)
 }
 func (o *TestObject) AsRecordID(name string) istructs.RecordID {
+	if name == appdef.SystemField_ID {
+		return o.ID()
+	}
 	if resIntf, ok := o.Data[name]; ok {
 		return resIntf.(istructs.RecordID)
 	}

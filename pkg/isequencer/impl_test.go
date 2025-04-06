@@ -190,12 +190,16 @@ func TestBatcher(t *testing.T) {
 		batch := []SeqValue{{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 102}}
 
 		// simulate toBeFlushed is fulfilled
+		s.toBeFlushedMu.Lock()
 		s.toBeFlushed[NumberKey{WSID: 1, SeqID: 1}] = 1
+		s.toBeFlushedMu.Unlock()
 
 		mockTime.FireNextTimerImmediately()
 		mockTime.SetOnNextNewTimerChan(func() {
 			// simulate toBeFlushed is drained by flusher
+			s.toBeFlushedMu.Lock()
 			s.toBeFlushed = map[NumberKey]Number{}
+			s.toBeFlushedMu.Unlock()
 		})
 		err := s.batcher(context.Background(), batch, 6)
 		require.NoError(err)

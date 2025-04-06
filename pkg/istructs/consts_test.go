@@ -14,10 +14,31 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
+//nolint:unconvert
+const (
+	_ = uint16(QNameIDForError - 1)
+	_ = uint16(1 - QNameIDForError)
+	_ = uint16(QNameIDCommandCUD - 2)
+	_ = uint16(2 - QNameIDCommandCUD)
+	_ = uint16(QNameIDForCorruptedData - 3)
+	_ = uint16(3 - QNameIDForCorruptedData)
+	_ = uint16(QNameIDPLogOffsetSequence - 4)
+	_ = uint16(4 - QNameIDPLogOffsetSequence)
+	_ = uint16(QNameIDWLogOffsetSequence-5)
+	_ = uint16(5 - QNameIDWLogOffsetSequence)
+	_ = uint16(QNameIDCRecordIDSequence - 6)
+	_ = uint16(6 - QNameIDCRecordIDSequence)
+	_ = uint16(QNameIDOWRecordIDSequence - 7)
+	_ = uint16(7 - QNameIDOWRecordIDSequence)
+
+	_ = uint16(QNameIDSysLast - 0xFF)
+	_ = uint16(0xFF - QNameIDSysLast)
+)
+
 func TestConst(t *testing.T) {
 	exp := NewWSID(math.MaxUint16, WSID(MaxBaseWSID))
 	act := MaxAllowedWSID
-	p := uint64(math.Pow(2, 63))-1
+	p := uint64(math.Pow(2, 63)) - 1
 	log.Printf("%64b\n", exp)
 	log.Printf("%64b\n", act)
 	log.Printf("%64b\n", p)

@@ -19,7 +19,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/dynobuf"
-	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 )
@@ -318,11 +317,11 @@ func (row *rowType) putValue(name appdef.FieldName, kind appdef.DataKind, value 
 	row.dyB.Set(name, fieldValue)
 }
 
-// qNameID returns storage ID of row QName
-func (row *rowType) qNameID() (qnames.QNameID, error) {
+// QNameID returns storage ID of row QName
+func (row *rowType) QNameID() (istructs.QNameID, error) {
 	name := row.QName()
 	if name == appdef.NullQName {
-		return qnames.NullQNameID, nil
+		return istructs.NullQNameID, nil
 	}
 	return row.appCfg.qNames.ID(name)
 }
@@ -394,8 +393,8 @@ func (row *rowType) setQName(value appdef.QName) {
 }
 
 // Same as setQName, useful from loadFromBytes()
-func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
-	if id, err := row.qNameID(); (err == nil) && (id == value) {
+func (row *rowType) setQNameID(value istructs.QNameID) (err error) {
+	if id, err := row.QNameID(); (err == nil) && (id == value) {
 		return nil
 	}
 

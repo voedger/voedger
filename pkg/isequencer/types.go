@@ -17,8 +17,8 @@ import (
 )
 
 type PartitionID uint16
-type SeqID uint16  // QNameID
-type WSKind uint16 // QNameID
+type SeqID uint16  // istructs.QNameID
+type WSKind uint16 // istructs.QNameID
 type WSID uint64
 type Number uint64
 type PLogOffset uint64

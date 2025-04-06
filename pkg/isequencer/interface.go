@@ -5,11 +5,16 @@
 
 package isequencer
 
-import "context"
+import (
+	"context"
+
+	"github.com/voedger/voedger/pkg/istructs"
+)
 
 type ISeqStorage interface {
 
 	// If number is not found, returns 0
+	// Each Number matches its SeqID by array index
 	ReadNumbers(WSID, []SeqID) ([]Number, error)
 
 	// IDs in batch.Values are unique
@@ -23,6 +28,11 @@ type ISeqStorage interface {
 	// ActualizeSequencesFromPLog scans PLog from the given offset and send values to the batcher.
 	// Values are sent per event, unordered, ISeqValue.Keys are not unique.
 	ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func(ctx context.Context, batch []SeqValue, offset PLogOffset) error) error
+}
+
+type IVVMSeqStorageAdapter interface {
+	Get(appID istructs.ClusterAppID, wsid WSID, seqID SeqID, data *[]byte) (ok bool, err error)
+	Put(appID istructs.ClusterAppID, wsid WSID, seqID SeqID, data []byte) (err error)
 }
 
 // ISequencer defines the interface for working with sequences.
