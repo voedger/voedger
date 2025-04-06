@@ -171,6 +171,35 @@ func TestBatcher(t *testing.T) {
 		err := s.batcher(ctx, batch, 6)
 		require.ErrorIs(err, context.Canceled)
 	})
+
+	t.Run("continue after toBeFlushed drain", func(t *testing.T) {
+		require := require.New(t)
+		storage := NewMockStorage()
+		params := NewDefaultParams(map[WSKind]map[SeqID]Number{
+			1: {1: 100},
+		})
+
+		// Small threshold to force waiting
+		params.MaxNumUnflushedValues = 1
+		mockTime := coreutils.NewMockTime()
+		seq, cleanup := New(params, storage, mockTime)
+		defer cleanup()
+		s := seq.(*sequencer)
+
+		// Set up the batch to be processed
+		batch := []SeqValue{{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 102}}
+
+		// simulate toBeFlushed is fulfilled
+		s.toBeFlushed[NumberKey{WSID: 1, SeqID: 1}] = 1
+
+		mockTime.FireNextTimerImmediately()
+		mockTime.SetOnNextNewTimerChan(func() {
+			// simulate toBeFlushed is drained by flusher
+			s.toBeFlushed = map[NumberKey]Number{}
+		})
+		err := s.batcher(context.Background(), batch, 6)
+		require.NoError(err)
+	})
 }
 
 func TestContextCloseDuringStorageErrors(t *testing.T) {

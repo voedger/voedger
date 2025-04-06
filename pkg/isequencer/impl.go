@@ -322,10 +322,7 @@ func (s *sequencer) finishSequencingTransaction() {
 // - s.toBeFlushedOffset = offset + 1
 func (s *sequencer) batcher(ctx context.Context, values []SeqValue, offset PLogOffset) error {
 	// Wait until len(s.toBeFlushed) < s.params.MaxNumUnflushedValues
-	s.toBeFlushedMu.RLock()
-	for len(s.toBeFlushed) >= s.params.MaxNumUnflushedValues {
-		s.toBeFlushedMu.RUnlock()
-
+	for s.safeReadNumToBeFlushed() >= s.params.MaxNumUnflushedValues {
 		s.signalToFlushing()
 		delayCh := s.iTime.NewTimerChan(s.params.BatcherDelay)
 		select {
@@ -333,11 +330,7 @@ func (s *sequencer) batcher(ctx context.Context, values []SeqValue, offset PLogO
 			return ctx.Err()
 		case <-delayCh:
 		}
-
-		// notest
-		s.toBeFlushedMu.RLock()
 	}
-	s.toBeFlushedMu.RUnlock()
 
 	s.nextOffset = offset + 1
 	s.toBeFlushedMu.Lock()
@@ -547,4 +540,11 @@ func (s *sequencer) cleanup() {
 	}
 
 	s.cleanupCtxCancel()
+}
+
+func (s *sequencer) safeReadNumToBeFlushed() int {
+	s.toBeFlushedMu.RLock()
+	numToBeFlushed := len(s.toBeFlushed)
+	s.toBeFlushedMu.RUnlock()
+	return numToBeFlushed
 }
