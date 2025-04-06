@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -75,7 +76,7 @@ func (s *sequencer) startFlusher() {
 }
 
 func (s *sequencer) startActualizer() {
-	actualizerCtx, actualizerCtxCancel := context.WithCancel(context.Background())
+	actualizerCtx, actualizerCtxCancel := context.WithCancel(s.cleanupCtx)
 	s.actualizerCtxCancel = actualizerCtxCancel
 
 	s.actualizerWG.Add(1)
@@ -352,9 +353,7 @@ func (s *sequencer) batcher(ctx context.Context, values []SeqValue, offset PLogO
 	}
 
 	s.toBeFlushedMu.Lock()
-	for key, maxValue := range maxValues {
-		s.toBeFlushed[key] = maxValue
-	}
+	maps.Copy(s.toBeFlushed, maxValues)
 	s.toBeFlushedMu.Unlock()
 
 	return nil

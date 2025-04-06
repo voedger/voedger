@@ -494,23 +494,6 @@ func TestISequencer_Next(t *testing.T) {
 		}, "Next should panic when called without starting a transaction")
 	})
 
-	t.Run("should panic for unknown sequence ID", func(t *testing.T) {
-		iTime := coreutils.MockTime
-
-		storage := createDefaultStorage()
-		sequencer, cancel := isequencer.New(createDefaultParams(), storage, iTime)
-		defer cancel()
-
-		_, ok := sequencer.Start(1, 1)
-		require.True(ok)
-
-		require.Panics(func() {
-			sequencer.Next(2) // Sequence ID 2 is not defined
-		}, "Next should panic for unknown sequence ID")
-
-		sequencer.Flush()
-	})
-
 	t.Run("should handle multiple sequence types correctly", func(t *testing.T) {
 		iTime := coreutils.MockTime
 
@@ -640,16 +623,6 @@ func TestISequencer_Next(t *testing.T) {
 		num, err := seq.Next(10)
 		require.ErrorIs(err, isequencer.ErrUnknownSeqID)
 		require.Zero(num)
-	})
-
-	t.Run("unknown wsKind -> panic", func(t *testing.T) {
-		iTime := coreutils.MockTime
-		storage := createDefaultStorage()
-		params := createDefaultParams()
-		seq, cancel := isequencer.New(params, storage, iTime)
-		defer cancel()
-		seq.Start(10, 1)
-		require.Panics(func() { seq.Next(1) })
 	})
 }
 
