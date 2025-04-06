@@ -16,12 +16,12 @@ import (
 func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offset isequencer.PLogOffset, batcher func(ctx context.Context, batch []isequencer.SeqValue, offset isequencer.PLogOffset) error) error {
 	return ss.events.ReadPLog(ctx, ss.partitionID, istructs.Offset(offset), istructs.ReadToTheEnd,
 		func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
-			batchProbe := []isequencer.SeqValue{}
+			batch := []isequencer.SeqValue{}
 			argType := ss.appDef.Type(event.ArgumentObject().QName())
 
 			// odocs
 			if argType.Kind() == appdef.TypeKind_ODoc {
-				ss.getNumbersFromObject(event.ArgumentObject(), event.Workspace(), &batchProbe)
+				ss.getNumbersFromObject(event.ArgumentObject(), event.Workspace(), &batch)
 			}
 
 			// cuds
@@ -34,25 +34,7 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 				if cudType.Kind() == appdef.TypeKind_WDoc || cudType.Kind() == appdef.TypeKind_WRecord {
 					seqQName = istructs.QNameOWRecordIDSequence
 				}
-				batchProbe = append(batchProbe, isequencer.SeqValue{
-					Key: isequencer.NumberKey{
-						WSID:  isequencer.WSID(event.Workspace()),
-						SeqID: isequencer.SeqID(ss.seqIDs[seqQName]),
-					},
-					Value: isequencer.Number(cud.ID()),
-				})
-			}
-
-			batch := make([]isequencer.SeqValue, 0, len(batchProbe))
-			for _, b := range batchProbe {
-				if b.Value < isequencer.Number(istructs.MinClusterRecordID) {
-					// syncID<322680000000000 -> consider the syncID is from an old template.
-					// ignore IDs from external registers
-					// see https://github.com/voedger/voedger/issues/688
-					// [~server.design.sequences/cmp.appparts.internal.seqStorage.i688~impl]
-					continue
-				}
-				batch = append(batch, b)
+				addToBatch(event.Workspace(), ss.seqIDs[seqQName], cud.ID(), &batch)
 			}
 
 			return batcher(ctx, batch, isequencer.PLogOffset(plogOffset))
@@ -112,4 +94,21 @@ func (ss *implISeqStorage) getNumbersFromObject(root istructs.IObject, wsid istr
 			ss.getNumbersFromObject(c, wsid, batch)
 		}
 	}
+}
+
+func addToBatch(wsid istructs.WSID, seqQNameID istructs.QNameID, recID istructs.RecordID, batch *[]isequencer.SeqValue) {
+	if recID < istructs.MinClusterRecordID {
+		// syncID<322680000000000 -> consider the syncID is from an old template.
+		// ignore IDs from external registers
+		// see https://github.com/voedger/voedger/issues/688
+		// [~server.design.sequences/cmp.appparts.internal.seqStorage.i688~impl]
+		return
+	}
+	*batch = append(*batch, isequencer.SeqValue{
+		Key: isequencer.NumberKey{
+			WSID:  isequencer.WSID(wsid),
+			SeqID: isequencer.SeqID(seqQNameID),
+		},
+		Value: isequencer.Number(recID),
+	})
 }
