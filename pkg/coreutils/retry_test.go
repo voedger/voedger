@@ -16,7 +16,7 @@ import (
 func TestRetry(t *testing.T) {
 	t.Run("succeed on first attempt", func(t *testing.T) {
 		ctx := context.Background()
-		var attempts int = 0
+		attempts := 0
 		f := func() error {
 			attempts++
 			return nil
@@ -29,7 +29,7 @@ func TestRetry(t *testing.T) {
 	t.Run("retry and succeed after failures", func(t *testing.T) {
 		ctx := context.Background()
 		tm := NewMockTime()
-		var attempts int = 0
+		attempts := 0
 		f := func() error {
 			attempts++
 			if attempts < 3 {
@@ -46,7 +46,7 @@ func TestRetry(t *testing.T) {
 	t.Run("context canceled during retry", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		tm := NewMockTime()
-		var attempts int = 0
+		attempts := 0
 		testErr := errors.New("persistent error")
 		f := func() error {
 			attempts++
