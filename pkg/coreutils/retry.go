@@ -7,34 +7,26 @@ package coreutils
 
 import (
 	"context"
-	"time"
+
+	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
-// FIXME: Cover with tests
-// Retry attempts to execute the function f until it returns nil or the context is done.
-// Parameters:
-// ctx - context
-// iTime - time interface
-// retryDelay - delay between retries
-// retryCount - number of retries (0 for infinite retries)
-// f - function to execute
-// Returns:
-// error - error returned by the function f
-func Retry(ctx context.Context, iTime ITime, retryDelay time.Duration, retryCount int, f func() error) error {
-	var err error
-
-	for i := 1; retryCount == 0 || i <= retryCount; i++ {
-		timerCh := iTime.NewTimerChan(retryDelay)
-		if err = f(); err == nil {
+// Retry attempts to execute f() until it accomplished without error
+// f() returns error -> error is logged, try again after 500ms
+// ctx is cancelled during retires -> context.Canceled is returned
+func Retry(ctx context.Context, iTime ITime, f func() error) error {
+	var lastErr error
+	for ctx.Err() == nil {
+		if lastErr = f(); lastErr == nil {
 			return nil
 		}
-
+		logger.Error(lastErr)
+		timerCh := iTime.NewTimerChan(defaultRetryDelay)
 		select {
 		case <-ctx.Done():
-			return err
+			break
 		case <-timerCh:
 		}
 	}
-
-	return ErrRetryAttemptsExceeded
+	return ctx.Err()
 }

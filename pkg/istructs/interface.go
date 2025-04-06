@@ -66,7 +66,6 @@ type IAppStructs interface {
 	AppQName() appdef.AppQName
 
 	IsFunctionRateLimitsExceeded(funcQName appdef.QName, wsid WSID) bool
-
 	// Describe package names
 	DescribePackageNames() []string
 
