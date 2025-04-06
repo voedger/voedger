@@ -30,6 +30,14 @@ func New(params Params, seqStorage ISeqStorage, iTime coreutils.ITime) (ISequenc
 		panic("failed to create LRU cache: " + err.Error())
 	}
 
+	for _, seqIDsNumbers := range params.SeqTypes {
+		for _, number := range seqIDsNumbers {
+			if number < 1 {
+				panic("initial numbers can not be <1")
+			}
+		}
+	}
+
 	cleanupCtx, cleanupCtxCancel := context.WithCancel(context.Background())
 	s := &sequencer{
 		params:           params,

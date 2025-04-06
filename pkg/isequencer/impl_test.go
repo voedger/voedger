@@ -424,3 +424,9 @@ func TestNextNumberSourceOrder(t *testing.T) {
 func TestWrongCacheSize(t *testing.T) {
 	require.Panics(t, func() { New(Params{LRUCacheSize: -1}, nil, nil) })
 }
+
+func TestPanicOnWrongInitialNumber(t *testing.T) {
+	require.Panics(t, func() {
+		New(Params{LRUCacheSize: DefaultLRUCacheSize, SeqTypes: map[WSKind]map[SeqID]Number{1: {1: 0}}}, nil, nil)
+	})
+}
