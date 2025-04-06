@@ -13,7 +13,7 @@ import (
 
 // Retry attempts to execute f() until it accomplished without error
 // f() returns error -> error is logged, try again after 500ms
-// ctx is cancelled during retires -> last error is returned
+// ctx is cancelled during retires -> context.Canceled is returned
 func Retry(ctx context.Context, iTime ITime, f func() error) error {
 	var lastErr error
 	for ctx.Err() == nil {

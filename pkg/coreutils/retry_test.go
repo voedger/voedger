@@ -13,26 +13,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRetry_(t *testing.T) {
+func TestRetry(t *testing.T) {
 	t.Run("succeed on first attempt", func(t *testing.T) {
-		// Setup test
 		ctx := context.Background()
 		var attempts int = 0
 		f := func() error {
 			attempts++
 			return nil
 		}
-
-		// Call the function under test
 		err := Retry(ctx, MockTime, f)
-
-		// Verify results
 		require.NoError(t, err)
 		require.Equal(t, 1, attempts)
 	})
 
 	t.Run("retry and succeed after failures", func(t *testing.T) {
-		// Setup test
 		ctx := context.Background()
 		tm := NewMockTime()
 		var attempts int = 0
@@ -44,17 +38,12 @@ func TestRetry_(t *testing.T) {
 			}
 			return nil
 		}
-
-		// Call the function under test
 		err := Retry(ctx, tm, f)
-
-		// Verify results
 		require.NoError(t, err)
 		require.Equal(t, 3, attempts)
 	})
 
 	t.Run("context canceled during retry", func(t *testing.T) {
-		// Setup test
 		ctx, cancel := context.WithCancel(context.Background())
 		tm := NewMockTime()
 		var attempts int = 0
@@ -67,12 +56,8 @@ func TestRetry_(t *testing.T) {
 			tm.FireNextTimerImmediately()
 			return testErr
 		}
-
-		// Call the function under test
 		err := Retry(ctx, tm, f)
-
-		// Verify results
-		require.ErrorIs(t, err, testErr)
+		require.ErrorIs(t, err, context.Canceled)
 		require.Equal(t, 2, attempts)
 	})
 }
