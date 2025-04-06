@@ -49,6 +49,7 @@ func (ss *implISeqStorage) WriteValuesAndOffset(batch []isequencer.SeqValue, pLo
 		numberBytes := make([]byte, sizeInt64)
 		binary.BigEndian.PutUint64(numberBytes, uint64(b.Value))
 		if err := ss.storage.Put(ss.appID, b.Key.WSID, b.Key.SeqID, numberBytes); err != nil {
+			// notest
 			return err
 		}
 	}
@@ -64,6 +65,7 @@ func (ss *implISeqStorage) ReadNumbers(wsid isequencer.WSID, seqIDs []isequencer
 		data := make([]byte, sizeInt64)
 		ok, err := ss.storage.Get(ss.appID, wsid, seqID, &data)
 		if err != nil {
+			// notest
 			return nil, err
 		}
 		if ok {
@@ -76,19 +78,14 @@ func (ss *implISeqStorage) ReadNumbers(wsid isequencer.WSID, seqIDs []isequencer
 func (ss *implISeqStorage) ReadNextPLogOffset() (isequencer.PLogOffset, error) {
 	numbers, err := ss.ReadNumbers(isequencer.WSID(istructs.NullWSID), []isequencer.SeqID{isequencer.SeqID(istructs.QNameIDPLogOffsetSequence)})
 	if err != nil {
+		// notest
 		return 0, err
 	}
 	return isequencer.PLogOffset(numbers[0]), nil
 }
 
 func (ss *implISeqStorage) getNumbersFromObject(root istructs.IObject, wsid istructs.WSID, batch *[]isequencer.SeqValue) {
-	*batch = append(*batch, isequencer.SeqValue{
-		Key: isequencer.NumberKey{
-			WSID:  isequencer.WSID(wsid),
-			SeqID: isequencer.SeqID(ss.seqIDs[istructs.QNameOWRecordIDSequence]),
-		},
-		Value: isequencer.Number(root.AsRecordID(appdef.SystemField_ID)),
-	})
+	addToBatch(wsid, ss.seqIDs[istructs.QNameOWRecordIDSequence], root.AsRecordID(appdef.SystemField_ID), batch)
 	for container := range root.Containers {
 		for c := range root.Children(container) {
 			ss.getNumbersFromObject(c, wsid, batch)
@@ -98,10 +95,10 @@ func (ss *implISeqStorage) getNumbersFromObject(root istructs.IObject, wsid istr
 
 func addToBatch(wsid istructs.WSID, seqQNameID istructs.QNameID, recID istructs.RecordID, batch *[]isequencer.SeqValue) {
 	if recID < istructs.MinClusterRecordID {
-		// syncID<322680000000000 -> consider the syncID is from an old template.
+		// syncID<322680000000000 -> consider the syncID is from an old template
 		// ignore IDs from external registers
 		// see https://github.com/voedger/voedger/issues/688
-		// [~server.design.sequences/cmp.appparts.internal.seqStorage.i688~impl]
+		// [~server.design.sequences/cmp.ISeqStorageImplementation.i688~impl]
 		return
 	}
 	*batch = append(*batch, isequencer.SeqValue{

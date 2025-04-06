@@ -136,9 +136,21 @@ type expectedSeqValue struct {
 }
 
 type cud struct {
-	qName appdef.QName
-	id    uint64 // >0 -> will be passed to NewRecordID, <0 -> abs(id) will be used. Need to test "old" ids according to issue 688
-	isOld bool   // !IsNew
+	qName   appdef.QName
+	id      uint64
+	exactID istructs.RecordID
+	isOld   bool // !IsNew
+}
+
+func (c cud) ID(appDef appdef.IAppDef) istructs.RecordID {
+	if c.exactID != istructs.NullRecordID {
+		return c.exactID
+	}
+	cudKind := appDef.Type(c.qName).Kind()
+	if cudKind == appdef.TypeKind_CDoc || cudKind == appdef.TypeKind_CRecord {
+		return istructs.NewCDocCRecordID(istructs.RecordID(c.id))
+	}
+	return istructs.NewRecordID(istructs.RecordID(c.id))
 }
 
 type obj struct {
@@ -166,6 +178,7 @@ func TestActualizeFromPLog(t *testing.T) {
 	testODocQName := appdef.NewQName("test", "odoc")
 	testCmdQName := appdef.NewQName("test", "cmd")
 
+	// build test schema
 	appDefBuilder := builder.New()
 	ws := appDefBuilder.AddWorkspace(testWSQName)
 	ws.AddCRecord(testCRecordQName)
@@ -177,6 +190,7 @@ func TestActualizeFromPLog(t *testing.T) {
 	ws.AddCommand(testCmdQName)
 	appDef, err := appDefBuilder.Build()
 	require.NoError(err)
+
 	appStorageProvider := provider.Provide(mem.Provide(coreutils.MockTime))
 	appStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
 	require.NoError(err)
@@ -187,10 +201,15 @@ func TestActualizeFromPLog(t *testing.T) {
 		plog []testPLogEvent
 	}{
 		{
+			name: "one event with no cuds",
+			plog: []testPLogEvent{{qName: testCmdQName, wsid: 1, offset: 1, expectedBatch: nil}},
+		},
+		{
 			name: "one event with one cud",
-			plog: []testPLogEvent{{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{{qName: testCDocQName, id: 1}}, expectedBatch: []expectedSeqValue{
-				{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 1},
-			}}},
+			plog: []testPLogEvent{{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{{qName: testCDocQName, id: 1}},
+				expectedBatch: []expectedSeqValue{
+					{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 1},
+				}}},
 		},
 		{
 			name: "3 events, 2nd has 2 cuds, other - 1 cud",
@@ -252,10 +271,28 @@ func TestActualizeFromPLog(t *testing.T) {
 		{
 			name: "issue 688: skip ids from old registers",
 			plog: []testPLogEvent{
+				// normal - no skip
 				{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{{qName: testCDocQName, id: 1}}, expectedBatch: []expectedSeqValue{
 					{wsid: 1, seqID: istructs.QNameIDCRecordIDSequence, number: 1},
 				}},
-				{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{{qName: testCDocQName, id: 9999999999}}, expectedBatch: nil},
+
+				// cdoc
+				{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{{qName: testCDocQName, exactID: 9999999999}}, expectedBatch: nil},
+
+				// odoc
+				{qName: testODocQName, wsid: 1, offset: 1, arg: obj{
+					cud: cud{qName: testODocQName, exactID: 9999999999}},
+					expectedBatch: nil,
+				},
+
+				// orecord
+				{qName: testODocQName, wsid: 1, offset: 1, arg: obj{
+					cud: cud{qName: testODocQName, id: 1}, containers: []obj{
+						{cud: cud{qName: testORecordQName, exactID: 9999999999}},
+					},
+				}, expectedBatch: []expectedSeqValue{
+					{wsid: 1, seqID: istructs.QNameIDOWRecordIDSequence, number: 1}},
+				},
 			},
 		},
 	}
@@ -289,7 +326,7 @@ func TestActualizeFromPLog(t *testing.T) {
 						Value: isequencer.Number(id),
 					})
 				}
-				require.Equal(expectedBatch, batch)
+				require.Equal(expectedBatch, batch, c.plog[numEvent])
 				numEvent++
 				return nil
 			})
@@ -304,19 +341,9 @@ func testPLogEventToIPlogEvent(pLogEvent testPLogEvent, appDef appdef.IAppDef) i
 	mockEvent.On("CUDs", mock.Anything).Run(func(args gomock.Arguments) {
 		cudCallback := args[0].(func(istructs.ICUDRow) bool)
 		for _, cudTemplate := range pLogEvent.cuds {
-			id := istructs.RecordID(cudTemplate.id)
-			if cudTemplate.id < uint64(istructs.MaxRawRecordID) {
-				cudKind := appDef.Type(cudTemplate.qName).Kind()
-				if cudKind == appdef.TypeKind_CDoc || cudKind == appdef.TypeKind_CRecord {
-					id = istructs.NewCDocCRecordID(istructs.RecordID(cudTemplate.id))
-				} else {
-					id = istructs.NewRecordID(istructs.RecordID(cudTemplate.id))
-				}
-			}
-
 			cud := coreutils.TestObject{
 				Name:   cudTemplate.qName,
-				ID_:    id,
+				ID_:    cudTemplate.ID(appDef),
 				IsNew_: !cudTemplate.isOld,
 			}
 			if !cudCallback(&cud) {
@@ -327,15 +354,15 @@ func testPLogEventToIPlogEvent(pLogEvent testPLogEvent, appDef appdef.IAppDef) i
 	argObj := coreutils.TestObject{
 		Name:        pLogEvent.qName,
 		Containers_: map[string][]*coreutils.TestObject{},
+		ID_:         pLogEvent.arg.ID(appDef),
 	}
 	argKind := appDef.Type(pLogEvent.qName).Kind()
 	if argKind == appdef.TypeKind_ODoc {
 		// handle case when odoc is the arg
-		argObj.ID_ = istructs.NewRecordID(istructs.RecordID(pLogEvent.arg.id))
 		for _, oDocContainer := range pLogEvent.arg.containers {
 			argObj.Containers_[oDocContainer.qName.Entity()] = append(argObj.Containers_[oDocContainer.qName.Entity()], &coreutils.TestObject{
 				Name:   oDocContainer.qName,
-				ID_:    istructs.NewRecordID(istructs.RecordID(oDocContainer.id)),
+				ID_:    oDocContainer.ID(appDef),
 				IsNew_: !oDocContainer.isOld,
 			})
 		}
