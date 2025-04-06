@@ -317,7 +317,7 @@ func (row *rowType) putValue(name appdef.FieldName, kind appdef.DataKind, value 
 	row.dyB.Set(name, fieldValue)
 }
 
-// istructs.QNameID returns storage ID of row QName
+// QNameID returns storage ID of row QName
 func (row *rowType) QNameID() (istructs.QNameID, error) {
 	name := row.QName()
 	if name == appdef.NullQName {

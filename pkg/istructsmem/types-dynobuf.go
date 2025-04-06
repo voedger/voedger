@@ -211,7 +211,7 @@ func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 
 	var QNameID uint16
 	if QNameID, err = utils.ReadUInt16(buf); err != nil {
-		return fmt.Errorf("error read row istructs.QNameID: %w", err)
+		return fmt.Errorf("error read row QNameID: %w", err)
 	}
 	if err = row.setQNameID(QNameID); err != nil {
 		return err

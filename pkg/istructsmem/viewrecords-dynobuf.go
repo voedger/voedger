@@ -47,7 +47,7 @@ func (vr *appViewRecords) storeViewRecord(workspace istructs.WSID, key istructs.
 func (key *keyType) storeViewPartKey(ws istructs.WSID) []byte {
 	/*
 		bytes   len    type     desc
-		0…1      2     uint16   view istructs.QNameID
+		0…1      2     uint16   view QNameID
 		2…9      8     uint64   WSID
 		10…      ~     []~      User fields
 	*/
@@ -90,7 +90,7 @@ func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) error {
 // This method uses the name of the type set by the caller (val.QName), ignoring that is read from the buffer.
 func loadViewValue(val *valueType, codecVer byte, buf *bytes.Buffer) (err error) {
 	if _, err = utils.ReadUInt16(buf); err != nil {
-		return fmt.Errorf("%v: error read value istructs.QNameID: %w", val.viewName, err)
+		return fmt.Errorf("%v: error read value QNameID: %w", val.viewName, err)
 	}
 	if err = loadRowSysFields(&val.rowType, codecVer, buf); err != nil {
 		return err
