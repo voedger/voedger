@@ -39,11 +39,12 @@ type ICommandMessage interface {
 	Responder() bus.IResponder
 	PartitionID() istructs.PartitionID
 	RequestCtx() context.Context
-	QName() appdef.QName
+	QName() appdef.QName // APIv1 -> cmd QName, APIv2 -> cmdQName or DocQName
 	Token() string
 	Host() string
-	ApiPath() processors.APIPath
+	APIPath() processors.APIPath
 	DocID() istructs.RecordID
+	Method() string
 }
 
 type xPath string
@@ -87,6 +88,7 @@ type cmdWorkpiece struct {
 	iCommand                     appdef.ICommand
 	iWorkspace                   appdef.IWorkspace
 	appPartitionRestartScheduled bool
+	cmdQName                     appdef.QName
 }
 
 type implIDGenerator struct {
@@ -97,7 +99,7 @@ type implIDGenerator struct {
 type parsedCUD struct {
 	opKind         appdef.OperationKind // update can not be activate\deactivate because IsActive modified -> other fields update is not allowed, see
 	existingRecord istructs.IRecord     // create -> nil
-	id             int64
+	id             uint64
 	qName          appdef.QName
 	fields         coreutils.MapObject
 	xPath          xPath
@@ -110,11 +112,12 @@ type implICommandMessage struct {
 	responder   bus.IResponder
 	partitionID istructs.PartitionID
 	requestCtx  context.Context
-	qName       appdef.QName
+	qName       appdef.QName // APIv1 -> cmd QName, APIv2 -> cmdQName or DocQName
 	token       string
 	host        string
 	apiPath     processors.APIPath
 	docID       istructs.RecordID
+	method      string
 }
 
 type wrongArgsCatcher struct {

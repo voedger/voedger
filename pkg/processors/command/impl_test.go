@@ -773,7 +773,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 		if authHeader, ok := request.Header[coreutils.Authorization]; ok {
 			token = strings.TrimPrefix(authHeader, "Bearer ")
 		}
-		icm := NewCommandMessage(ctx, request.Body, request.AppQName, request.WSID, responder, testAppPartID, cmdQName, token, "")
+		icm := NewCommandMessage(ctx, request.Body, request.AppQName, request.WSID, responder, testAppPartID, cmdQName, token, "", 0, 0)
 		serviceChannel <- icm
 	})
 

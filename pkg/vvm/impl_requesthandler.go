@@ -30,19 +30,6 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 	qpcgIdx_v2 QueryProcessorsChannelGroupIdxType_V2,
 	cpAmount istructs.NumCommandProcessors, vvmApps VVMApps) bus.RequestHandler {
 	return func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
-		funcQName := request.QName
-		if !request.IsAPIV2 {
-			if len(request.Resource) <= ShortestPossibleFunctionNameLen {
-				bus.ReplyBadRequest(responder, "wrong function name: "+request.Resource)
-				return
-			}
-			var err error
-			funcQName, err = appdef.ParseQName(request.Resource[2:])
-			if err != nil {
-				bus.ReplyBadRequest(responder, "wrong function name: "+request.Resource)
-				return
-			}
-		}
 		if logger.IsVerbose() {
 			// FIXME: eliminate this. Unlogged params are logged
 			logger.Verbose("request body:\n", string(request.Body))
@@ -72,18 +59,41 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 
 		// deliver to processors
 		if request.IsAPIV2 {
-			queryParams, err := query2.ParseQueryParams(request.Query)
+			if request.APIPath == int(processors.APIPath_Docs) || request.APIPath == int(processors.APIPath_Commands) {
+				// CP
+
+				// TODO: use appQName to calculate cmdProcessorIdx in solid range [0..cpCount)
+				cmdProcessorIdx := uint(partitionID) % uint(cpAmount)
+				icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, request.AppQName, request.WSID, responder, partitionID, request.QName, token,
+					request.Host, processors.APIPath(request.APIPath), istructs.RecordID(request.DocID), request.Method)
+				if !procbus.Submit(uint(cpchIdx), cmdProcessorIdx, icm) {
+					bus.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
+				}
+			} else {
+				// QP
+				queryParams, err := query2.ParseQueryParams(request.Query)
+				if err != nil {
+					bus.ReplyBadRequest(responder, "parse query params failed: "+err.Error())
+					return
+				}
+
+				iqm := query2.NewIQueryMessage(requestCtx, request.AppQName, request.WSID, responder, *queryParams, request.DocID, processors.APIPath(request.APIPath), request.QName,
+					partitionID, request.Host, token, request.WorkspaceQName, request.Header[coreutils.Accept])
+				if !procbus.Submit(uint(qpcgIdx_v2), 0, iqm) {
+					bus.ReplyErrf(responder, http.StatusServiceUnavailable, "no query_v2 processors available")
+				}
+			}
+		} else {
+			if len(request.Resource) <= ShortestPossibleFunctionNameLen {
+				bus.ReplyBadRequest(responder, "wrong function name: "+request.Resource)
+				return
+			}
+			funcQName, err := appdef.ParseQName(request.Resource[2:])
 			if err != nil {
-				bus.ReplyBadRequest(responder, "parse query params failed: "+err.Error())
+				bus.ReplyBadRequest(responder, "wrong function name: "+request.Resource)
 				return
 			}
 
-			iqm := query2.NewIQueryMessage(requestCtx, request.AppQName, request.WSID, responder, *queryParams, request.DocID, processors.APIPath(request.APIPath), request.QName,
-				partitionID, request.Host, token, request.WorkspaceQName, request.Header[coreutils.Accept])
-			if !procbus.Submit(uint(qpcgIdx_v2), 0, iqm) {
-				bus.ReplyErrf(responder, http.StatusServiceUnavailable, "no query_v2 processors available")
-			}
-		} else {
 			switch request.Resource[:1] {
 			case "q":
 				iqm := queryprocessor.NewQueryMessage(requestCtx, request.AppQName, partitionID, request.WSID, responder, request.Body, funcQName, request.Host, token)
@@ -93,7 +103,8 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 			case "c":
 				// TODO: use appQName to calculate cmdProcessorIdx in solid range [0..cpCount)
 				cmdProcessorIdx := uint(partitionID) % uint(cpAmount)
-				icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, request.AppQName, request.WSID, responder, partitionID, funcQName, token, request.Host)
+				icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, request.AppQName, request.WSID, responder, partitionID, funcQName, token,
+					request.Host, processors.APIPath(request.APIPath), istructs.RecordID(request.DocID), request.Method)
 				if !procbus.Submit(uint(cpchIdx), cmdProcessorIdx, icm) {
 					bus.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
 				}

@@ -191,11 +191,7 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.API
 	return func(rw http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 		recordIDStr, _ := vars[URLPlaceholder_id]
-		docID, err := strconv.ParseUint(recordIDStr, utils.DecimalBase, utils.BitSize64)
-		if err != nil {
-			// notest
-			panic(err)
-		}
+
 
 		// switch req.Method {
 		// case http.MethodGet:
@@ -212,9 +208,16 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.API
 		if !ok {
 			return
 		}
+		if len(recordIDStr) > 0 {
+			docID, err := strconv.ParseUint(recordIDStr, utils.DecimalBase, utils.BitSize64)
+			if err != nil {
+				// notest
+				panic(err)
+			}
+			busRequest.DocID  = istructs.IDType(docID)
+		}
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(apiPath)
-		busRequest.DocID = istructs.IDType(docID)
 		busRequest.QName = appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_table])
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	}
