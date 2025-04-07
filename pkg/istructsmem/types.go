@@ -522,6 +522,28 @@ func (row *rowType) verifyToken(fld appdef.IField, token string) (value interfac
 	return value, nil
 }
 
+// #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+//
+// istructs.IRowReader.AsInt8
+func (row *rowType) AsInt8(name appdef.FieldName) int8 {
+	_ = row.fieldMustExists(name, appdef.DataKind_int8)
+	if value, ok := row.dyB.GetByte(name); ok {
+		return int8(value)
+	}
+	return 0
+}
+
+// #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+//
+// istructs.IRowReader.AsInt16
+func (row *rowType) AsInt16(name appdef.FieldName) int16 {
+	_ = row.fieldMustExists(name, appdef.DataKind_int16)
+	if value, ok := row.dyB.GetInt16(name); ok {
+		return value
+	}
+	return 0
+}
+
 // istructs.IRowReader.AsInt32
 func (row *rowType) AsInt32(name appdef.FieldName) (value int32) {
 	_ = row.fieldMustExists(name, appdef.DataKind_int32)
@@ -564,6 +586,14 @@ func (row *rowType) AsFloat64(name appdef.FieldName) (value float64) {
 	fld := row.fieldMustExists(name, appdef.DataKind_float64,
 		appdef.DataKind_int32, appdef.DataKind_int64, appdef.DataKind_float32, appdef.DataKind_RecordID)
 	switch fld.DataKind() {
+	case appdef.DataKind_int8: // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+		if value, ok := row.dyB.GetByte(name); ok {
+			return float64(value)
+		}
+	case appdef.DataKind_int16: // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+		if value, ok := row.dyB.GetInt16(name); ok {
+			return float64(value)
+		}
 	case appdef.DataKind_int32:
 		if value, ok := row.dyB.GetInt32(name); ok {
 			return float64(value)
@@ -784,6 +814,20 @@ func (row *rowType) Parent() istructs.RecordID {
 	return row.parentID
 }
 
+// #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+//
+// istructs.IRowWriter.PutInt8
+func (row *rowType) PutInt8(name appdef.FieldName, value int8) {
+	row.putValue(name, appdef.DataKind_int8, value)
+}
+
+// #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+//
+// istructs.IRowWriter.PutInt16
+func (row *rowType) PutInt16(name appdef.FieldName, value int16) {
+	row.putValue(name, appdef.DataKind_int16, value)
+}
+
 // istructs.IRowWriter.PutInt32
 func (row *rowType) PutInt32(name appdef.FieldName, value int32) {
 	row.putValue(name, appdef.DataKind_int32, value)
@@ -832,6 +876,10 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 		switch fv := v.(type) {
 		case float64:
 			row.PutFloat64(n, fv)
+		case int8: // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+			row.PutInt8(n, fv)
+		case int16: // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+			row.PutInt16(n, fv)
 		case int32:
 			row.PutInt32(n, fv)
 		case int64:
@@ -873,6 +921,10 @@ func (row *rowType) PutNumber(name appdef.FieldName, value json.Number) {
 		return
 	}
 	switch fld.DataKind() {
+	case appdef.DataKind_int8: // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+		row.PutInt8(name, clarifiedVal.(int8))
+	case appdef.DataKind_int16: // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+		row.PutInt16(name, clarifiedVal.(int16))
 	case appdef.DataKind_int32:
 		row.PutInt32(name, clarifiedVal.(int32))
 	case appdef.DataKind_int64:
