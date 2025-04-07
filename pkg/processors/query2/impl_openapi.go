@@ -15,8 +15,9 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 )
 
-// CreateOpenApiSchema generates an OpenAPI schema document for the given workspace and role
-func CreateOpenApiSchema(writer io.Writer, ws appdef.IWorkspace, role appdef.QName,
+// [~server.apiv2.role/cmp.CreateOpenApiSchema~impl]
+// CreateOpenAPISchema generates an OpenAPI schema document for the given workspace and role
+func CreateOpenAPISchema(writer io.Writer, ws appdef.IWorkspace, role appdef.QName,
 	pubTypesFunc PublishedTypesFunc, meta SchemaMeta) error {
 
 	generator := &schemaGenerator{
@@ -200,7 +201,7 @@ func (g *schemaGenerator) generatePaths() {
 		for op := range ops {
 			paths := g.getPaths(t, op)
 			for _, path := range paths {
-				g.addPathItem(path.Path, path.Method, t, op, path.ApiPath)
+				g.addPathItem(path.Path, path.Method, t, op, path.APIPath)
 			}
 		}
 	}
@@ -225,7 +226,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 				{
 					Method:  methodPost,
 					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/docs/%s", owner, app, typeName),
-					ApiPath: processors.ApiPath_Docs,
+					APIPath: processors.APIPath_Docs,
 				},
 			}
 		case appdef.OperationKind_Update:
@@ -233,7 +234,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 				{
 					Method:  methodPatch,
 					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
-					ApiPath: processors.ApiPath_Docs,
+					APIPath: processors.APIPath_Docs,
 				},
 			}
 		case appdef.OperationKind_Deactivate:
@@ -241,7 +242,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 				{
 					Method:  methodDelete,
 					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
-					ApiPath: processors.ApiPath_Docs,
+					APIPath: processors.APIPath_Docs,
 				},
 			}
 		case appdef.OperationKind_Select:
@@ -249,12 +250,12 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 				{
 					Method:  methodGet,
 					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
-					ApiPath: processors.ApiPath_Docs,
+					APIPath: processors.APIPath_Docs,
 				},
 				{
 					Method:  methodGet,
 					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/cdocs/%s", owner, app, typeName),
-					ApiPath: processors.ApiPath_CDocs,
+					APIPath: processors.APIPath_CDocs,
 				},
 			}
 
@@ -266,7 +267,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 			{
 				Method:  methodPost,
 				Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/commands/%s", owner, app, typeName),
-				ApiPath: processors.ApiPath_Commands,
+				APIPath: processors.APIPath_Commands,
 			},
 		}
 	}
@@ -276,7 +277,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 			{
 				Method:  methodGet,
 				Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/queries/%s", owner, app, typeName),
-				ApiPath: processors.ApiPath_Queries,
+				APIPath: processors.APIPath_Queries,
 			},
 		}
 	}
@@ -286,7 +287,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 			{
 				Method:  methodGet,
 				Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/views/%s", owner, app, typeName),
-				ApiPath: processors.ApiPath_Views,
+				APIPath: processors.APIPath_Views,
 			},
 		}
 	}
@@ -295,7 +296,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 }
 
 // addPathItem adds a path item to the OpenAPI schema
-func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op appdef.OperationKind, apiPath processors.ApiPath) {
+func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op appdef.OperationKind, apiPath processors.APIPath) {
 
 	// Create path if it doesn't exist
 	if _, exists := g.paths[path]; !exists {
@@ -360,7 +361,7 @@ func (g *schemaGenerator) generateTags(typ appdef.IType) []string {
 }
 
 // generateDescription creates description for an operation on a type
-func (g *schemaGenerator) generateDescription(typ appdef.IType, op appdef.OperationKind, apiPath processors.ApiPath) string {
+func (g *schemaGenerator) generateDescription(typ appdef.IType, op appdef.OperationKind, apiPath processors.APIPath) string {
 	// Use type's comment if available
 	if typ.Comment() != "" {
 		return typ.Comment()
@@ -383,7 +384,7 @@ func (g *schemaGenerator) generateDescription(typ appdef.IType, op appdef.Operat
 
 	case typ.Kind() == appdef.TypeKind_CDoc:
 		if op == appdef.OperationKind_Select {
-			if apiPath == processors.ApiPath_CDocs {
+			if apiPath == processors.APIPath_CDocs {
 				return fmt.Sprintf("Reads the collection of %s", typeName)
 			}
 			return fmt.Sprintf("Reads %s", typeName)

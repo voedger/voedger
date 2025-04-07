@@ -468,7 +468,7 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID
 			if err != nil {
 				return nil, fmt.Errorf("wrong recordID in blob %s: %w", ent.Name(), err)
 			}
-			fieldName := strings.Replace(ent.Name()[underscorePos+1:], filepath.Ext(ent.Name()), "", -1)
+			fieldName := strings.ReplaceAll(ent.Name()[underscorePos+1:], filepath.Ext(ent.Name()), "")
 			if len(fieldName) == 0 {
 				return nil, fmt.Errorf("no fieldName in blob %s", ent.Name())
 			}

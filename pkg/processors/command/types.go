@@ -42,7 +42,7 @@ type ICommandMessage interface {
 	QName() appdef.QName
 	Token() string
 	Host() string
-	ApiPath() processors.ApiPath
+	ApiPath() processors.APIPath
 	DocID() istructs.RecordID
 }
 
@@ -113,7 +113,7 @@ type implICommandMessage struct {
 	qName       appdef.QName
 	token       string
 	host        string
-	apiPath     processors.ApiPath
+	apiPath     processors.APIPath
 	docID       istructs.RecordID
 }
 

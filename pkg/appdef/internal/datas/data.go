@@ -103,6 +103,10 @@ func (d *Data) addConstraints(cc ...appdef.IConstraint) {
 		case appdef.ConstraintKind_Enum:
 			ok := false
 			switch dk {
+			case appdef.DataKind_int8: // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
+				_, ok = c.Value().([]int8)
+			case appdef.DataKind_int16: // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
+				_, ok = c.Value().([]int16)
 			case appdef.DataKind_int32:
 				_, ok = c.Value().([]int32)
 			case appdef.DataKind_int64:
@@ -137,7 +141,7 @@ func NewDataBuilder(data *Data) *DataBuilder {
 }
 
 func (db *DataBuilder) AddConstraints(cc ...appdef.IConstraint) appdef.IDataBuilder {
-	db.Data.addConstraints(cc...)
+	db.addConstraints(cc...)
 	return db
 }
 

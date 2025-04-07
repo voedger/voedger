@@ -109,7 +109,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 			}
 			extModule = &iextengine.ExtensionModule{
 				Path:      path,
-				ModuleUrl: moduleURL,
+				ModuleURL: moduleURL,
 			}
 			pathsModules[path] = extModule
 		}

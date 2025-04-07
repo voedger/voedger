@@ -345,7 +345,7 @@ func (gts *generalTestState) putRecords() {
 		kvMap[sys.Storage_Record_Field_WSID] = gts.commandWSID
 
 		mockedObject := &coreutils.TestObject{
-			Id:          item.id,
+			ID_:         item.id,
 			Name:        item.qName,
 			IsNew_:      item.isNew,
 			Data:        kvMap,
@@ -372,7 +372,7 @@ func (gts *generalTestState) putViewRecords() {
 		kvMap[sys.Storage_Record_Field_WSID] = gts.commandWSID
 
 		mockedObject := &coreutils.TestObject{
-			Id:          item.id,
+			ID_:         item.id,
 			Name:        item.qName,
 			IsNew_:      item.isNew,
 			Data:        kvMap,
@@ -731,7 +731,7 @@ func (pts *ProjectorTestState) EventCUD(fQName IFullQName, id istructs.RecordID,
 	}
 
 	pts.rawEvent.cuds = append(pts.rawEvent.cuds, &coreutils.TestObject{
-		Id:   id,
+		ID_:  id,
 		Name: appdef.NewQName(getPackageLocalName(pts.appDef, fQName), fQName.Entity()),
 		Data: keyValueMap,
 	})
@@ -842,13 +842,13 @@ func (pts *ProjectorTestState) putEvent() {
 	mockedEventObject.Data[sys.Storage_CommandContext_Field_WLogOffset] = pts.rawEvent.wLogOffset
 
 	for _, cud := range pts.rawEvent.cuds {
-		cud.Data[appdef.SystemField_ID] = cud.Id
+		cud.Data[appdef.SystemField_ID] = cud.ID_
 		mockedEventObject.Containers_[sys.Storage_Event_Field_CUDs] = append(
 			mockedEventObject.Containers_[sys.Storage_Event_Field_CUDs],
 			&coreutils.TestObject{
 				Name:        cud.Name,
 				Data:        cud.Data,
-				Id:          cud.Id,
+				ID_:         cud.ID_,
 				Parent_:     cud.Parent_,
 				Containers_: cud.Containers_,
 				IsNew_:      cud.IsNew_,
@@ -994,7 +994,7 @@ func splitKeysFromValues(entity IFullQName, m map[string]any) (mapOfKeys map[str
 }
 
 func setArgumentObject(argumentObject *coreutils.TestObject, fQName IFullQName, id istructs.RecordID, keyValueList ...any) {
-	argumentObject.Id = id
+	argumentObject.ID_ = id
 	argumentObject.Name = appdef.NewQName(fQName.PkgPath(), fQName.Entity())
 
 	keyValueMap, err := parseKeyValues(keyValueList)

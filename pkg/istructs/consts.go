@@ -42,6 +42,12 @@ var (
 	QNameCRecord = appdef.NewQName(appdef.SysPackage, "CRecord")
 	QNameWRecord = appdef.NewQName(appdef.SysPackage, "WRecord")
 	QNameORecord = appdef.NewQName(appdef.SysPackage, "ORecord")
+
+	// sequences QNames has hardcoded QNameIDs: [QNameIDWLogOffsetSequence] etc
+	QNamePLogOffsetSequence = appdef.NewQName(appdef.SysPackage, "PLogOffsetSequence")
+	QNameWLogOffsetSequence = appdef.NewQName(appdef.SysPackage, "WLogOffsetSequence")
+	QNameCRecordIDSequence  = appdef.NewQName(appdef.SysPackage, "CRecordIDSequence")
+	QNameOWRecordIDSequence = appdef.NewQName(appdef.SysPackage, "OWRecordIDSequence")
 )
 
 // *********************************************************************************************************
@@ -85,6 +91,29 @@ const ReadToTheEnd = int(^uint(0) >> 1)
 //
 //				Workspace-related constants
 //
+
+// RecordIDs range layout
+//
+// ────────────────────┼──────────────────────────┐
+// 0                   | NullRecordID             |
+// ────────────────────┼──────────────────────────┤
+// 1                   | MinRawRecordID           |
+//                     |                          |
+// 65535               | MaxRawRecordID           |
+// ────────────────────┼──────────────────────────┤
+// 65536               | MinReservedBaseRecordID  |
+//                     |                          |
+//                     |  ┌───────────────────────┤
+// 65537               |  | FirstSingletonID      |
+//                     |  |                       |
+// 66047               |  | MaxSingletonID        |
+//                     |  └───────────────────────┤
+//                     |                          |
+// 66048               |  NonExistingRecordID     |
+//                     |                          |
+// 131071              | MaxReservedBaseRecordID  |
+// ────────────────────┼──────────────────────────┤
+// 131072              | FirstBaseRecordID        |
 
 const NullWSID = WSID(0)
 
@@ -211,3 +240,17 @@ const SysGuestLogin = appdef.SysPackage + ".Guest"
 func CurrentClusterID() ClusterID {
 	return MainClusterID_useWithCare
 }
+
+// IDs for wellknown QNames
+const (
+	NullQNameID QNameID = 0 + iota
+	QNameIDForError
+	QNameIDCommandCUD
+	QNameIDForCorruptedData
+	QNameIDPLogOffsetSequence
+	QNameIDWLogOffsetSequence
+	QNameIDCRecordIDSequence
+	QNameIDOWRecordIDSequence
+
+	QNameIDSysLast QNameID = 0xFF
+)

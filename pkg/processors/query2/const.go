@@ -7,11 +7,7 @@ package query2
 import _ "embed"
 
 //go:embed swagger-ui.html
-var swaggerUi string
-
-const (
-	contentTypeHtml = "text/html"
-)
+var swaggerUI_HTML string
 
 const (
 	errorSchemaName = "Error"

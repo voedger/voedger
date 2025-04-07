@@ -94,7 +94,7 @@ func TestReplyError(t *testing.T) {
 				})
 				cmdRespMeta, cmdResp, err := GetCommandResponse(context.Background(), requestSender, Request{})
 				require.NoError(err)
-				require.Equal(coreutils.ApplicationJSON, cmdRespMeta.ContentType)
+				require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
 				require.Equal(c.expected.code, cmdRespMeta.StatusCode)
 				require.Equal(c.expected.error, cmdResp.SysError)
 			})
@@ -127,7 +127,7 @@ func TestReplyError(t *testing.T) {
 				}
 				meta, resp, err := GetCommandResponse(context.Background(), requestSender, Request{})
 				require.NoError(err)
-				require.Equal(coreutils.ApplicationJSON, meta.ContentType)
+				require.Equal(coreutils.ContentType_ApplicationJSON, meta.ContentType)
 				require.Equal(c.statusCode, resp.SysError.HTTPStatus)
 				require.Equal(expectedMessage, resp.SysError.Message)
 			})
@@ -148,7 +148,7 @@ func TestReplyError(t *testing.T) {
 		for elem := range responseCh {
 			require.Zero(counter)
 			require.Equal(http.StatusOK, responseMeta.StatusCode)
-			require.Equal(coreutils.ApplicationJSON, responseMeta.ContentType)
+			require.Equal(coreutils.ContentType_ApplicationJSON, responseMeta.ContentType)
 			require.Equal(testObj, elem)
 			counter++
 		}

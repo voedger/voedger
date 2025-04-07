@@ -29,7 +29,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	// write
-	blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, expBLOB,
+	blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, expBLOB,
 		coreutils.WithAuthorizeBy(ws.Owner.Token),
 		coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"), // has name+mimeType query params -> any Content-Type except "multipart/form-data" is allowed
 	)
@@ -42,7 +42,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 
 	actualBLOBContent, err := io.ReadAll(blobReader)
 	require.NoError(err)
-	require.Equal(coreutils.ApplicationXBinary, blobReader.MimeType)
+	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.MimeType)
 	require.Equal("test", blobReader.Name)
 	require.Equal(expBLOB, actualBLOBContent)
 
@@ -52,7 +52,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	)
 	actualBLOBContent, err = io.ReadAll(blobReader)
 	require.NoError(err)
-	require.Equal(coreutils.ApplicationXBinary, blobReader.MimeType)
+	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.MimeType)
 	require.Equal("test", blobReader.Name)
 	require.Equal(expBLOB, actualBLOBContent)
 
@@ -62,7 +62,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	)
 	actualBLOBContent, err = io.ReadAll(blobReader)
 	require.NoError(err)
-	require.Equal(coreutils.ApplicationXBinary, blobReader.MimeType)
+	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.MimeType)
 	require.Equal("test", blobReader.Name)
 	require.Equal(expBLOB, actualBLOBContent)
 }
@@ -74,14 +74,14 @@ func TestBlobberErrors(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	t.Run("403 forbidden on write without token", func(t *testing.T) {
-		vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, []byte{},
+		vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, []byte{},
 			coreutils.Expect403(),
 		)
 	})
 
 	t.Run("403 forbidden on read without token", func(t *testing.T) {
 		expBLOB := []byte{1, 2, 3, 4, 5}
-		blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, expBLOB,
+		blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, expBLOB,
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"), // has name+mimeType query params -> any Content-Type except "multipart/form-data" is allowed
 		)
@@ -90,7 +90,7 @@ func TestBlobberErrors(t *testing.T) {
 
 	t.Run("403 forbidden on blob size quota exceeded", func(t *testing.T) {
 		bigBLOB := make([]byte, 150)
-		vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, bigBLOB,
+		vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, bigBLOB,
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.Expect403(),
 		)
@@ -144,7 +144,7 @@ func TestBasicUsage_Temporary(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	// write
-	blobSUUID := vit.UploadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, expBLOB, iblobstorage.DurationType_1Day,
+	blobSUUID := vit.UploadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, expBLOB, iblobstorage.DurationType_1Day,
 		coreutils.WithAuthorizeBy(ws.Owner.Token),
 		coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"), // has name+mimeType query params -> any Content-Type except "multipart/form-data" is allowed
 	)
@@ -154,7 +154,7 @@ func TestBasicUsage_Temporary(t *testing.T) {
 	blobReader := vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, blobSUUID, coreutils.WithAuthorizeBy(ws.Owner.Token))
 	actualBLOBContent, err := io.ReadAll(blobReader)
 	require.NoError(err)
-	require.Equal(coreutils.ApplicationXBinary, blobReader.MimeType)
+	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.MimeType)
 	require.Equal("test", blobReader.Name)
 	require.Equal(expBLOB, actualBLOBContent)
 
@@ -194,7 +194,7 @@ func TestTemporaryBLOBErrors(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	// write
-	vit.UploadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, expBLOB, iblobstorage.DurationType_1Day,
+	vit.UploadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, expBLOB, iblobstorage.DurationType_1Day,
 		coreutils.WithAuthorizeBy(ws.Owner.Token),
 		coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"), // has name+mimeType query params -> any Content-Type except "multipart/form-data" is allowed
 	)

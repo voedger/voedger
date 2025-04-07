@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/processors/oldacl"
 )
 
+// [~server.apiv2.docs/cmp.docsHandler~impl]
 type docsHandler struct {
 }
 
@@ -124,7 +125,7 @@ func (h *docsHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err err
 	sender := &sender{
 		responder:          qw.msg.Responder(),
 		isArrayResponse:    false,
-		contentType:        coreutils.ApplicationJSON,
+		contentType:        coreutils.ContentType_ApplicationJSON,
 		rowsProcessorErrCh: qw.rowsProcessorErrCh,
 	}
 	oo = append(oo, pipeline.WireAsyncOperator("Sender", sender))

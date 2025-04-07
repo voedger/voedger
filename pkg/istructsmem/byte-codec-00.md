@@ -75,16 +75,16 @@
 `codecVer = byte . // (0x00)`
 
 ### Row Data
-Строка данных *rowData* содержит идентификатор имени определения *qNameID*, значения системных полей *sysFields* и значения полей с пользовательскими данными *userFields*.
+Строка данных *rowData* содержит идентификатор имени определения *QNameID*, значения системных полей *sysFields* и значения полей с пользовательскими данными *userFields*.
 
-`rowData = qNameID [sysFields] [userFields] .`
+`rowData = QNameID [sysFields] [userFields] .`
 
 Если имя определения `QName` у строки данных не указано (т.е. равно `appdef.NullQName`), то остальные сущности (*sysFields* и *userFields*) отсутствуют.
 
 #### QName ID
-Идентификатор имени *qNameID* записывается как беззнаковое двух-байтовое число. Здесь и далее, если не оговорено специально, для записи числовых значений используется запись с порядком байтов от старшего к младшему (`BigEndian`).
+Идентификатор имени *QNameID* записывается как беззнаковое двух-байтовое число. Здесь и далее, если не оговорено специально, для записи числовых значений используется запись с порядком байтов от старшего к младшему (`BigEndian`).
 
-`qNameID = uint16 . // BigEndian`
+`QNameID = uint16 . // BigEndian`
 
 #### System fields
 Системные поля включают идентификатор записи *sys.ID*, идентификатор владеющей записи *sys.ParentID*, контейнер *sys.Container* и признак активности *sys.IsActive*.
@@ -152,16 +152,16 @@
 `codecVersion = byte . // (0x00)`
 
 ### Event Data
-Данные события *eventData* содержат идентификатор имени определения *qNameID*, конструкционные данные события *createParameters*, сведения об ошибке сборки события *buildError*, аргументы команды *commandArguments* и план изменяемых записей *commandCUDs*.
+Данные события *eventData* содержат идентификатор имени определения *QNameID*, конструкционные данные события *createParameters*, сведения об ошибке сборки события *buildError*, аргументы команды *commandArguments* и план изменяемых записей *commandCUDs*.
 
-`eventData = qNameID [createParameters buildError commandArguments commandCUDs] .`
+`eventData = QNameID [createParameters buildError commandArguments commandCUDs] .`
 
 Если имя определения (QName) у события не указано (т.е. равно `appdef.NullQName`), то больше ничего для события не указывается.
 
 #### QName ID
-Идентификатор имени *qNameID* записывается как беззнаковое двух-байтовое число.
+Идентификатор имени *QNameID* записывается как беззнаковое двух-байтовое число.
 
-`qNameID = uint16 .`
+`QNameID = uint16 .`
 
 #### Create Parameters
 Конструкционные данные события *createParameters* содержат информацию о статических полях события, заданных при его конструировании.

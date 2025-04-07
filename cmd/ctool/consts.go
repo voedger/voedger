@@ -89,7 +89,7 @@ const (
 	envVoedgerAcmeDomains = "VOEDGER_ACME_DOMAINS"
 	envVoedgerSshKey      = "VOEDGER_SSH_KEY"
 	envVoedgerCeNode      = "VOEDGER_CE_NODE"
-	envVoedgerHttpPort    = "VOEDGER_HTTP_PORT"
+	envVoedgerHTTPPort    = "VOEDGER_HTTP_PORT"
 	envVoedgerEdition     = "VOEDGER_EDITION"
 
 	minMonPasswordLength = 5
@@ -117,6 +117,6 @@ const (
 	alertLabelSeverity = "severity"
 )
 
-const emptyDiscordWebhookUrl = "http://discord_webhook_url"
+const emptyDiscordWebhookURL = "http://discord_webhook_url"
 
 const n1NodeName = "n1-node"

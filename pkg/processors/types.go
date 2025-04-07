@@ -7,4 +7,4 @@ package processors
 
 type VVMName string
 
-type ApiPath int
+type APIPath int

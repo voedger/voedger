@@ -107,7 +107,7 @@ func (s *appStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValu
 	}
 
 	ttlExpired := viewRecord.IsExpired(now)
-	if !ttlExpired && bytes.Compare(viewRecord.Data, oldValue) == 0 {
+	if !ttlExpired && bytes.Equal(viewRecord.Data, oldValue) {
 		ok = true
 
 		var expireAt int64
@@ -145,7 +145,7 @@ func (s *appStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue [
 
 	now := s.iTime.Now()
 	ttlExpired := viewRecord.IsExpired(now)
-	if !ttlExpired && bytes.Compare(viewRecord.Data, expectedValue) == 0 {
+	if !ttlExpired && bytes.Equal(viewRecord.Data, expectedValue) {
 		ok = true
 
 		delete(s.storage[string(pKey)], string(cCols))

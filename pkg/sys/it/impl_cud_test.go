@@ -443,7 +443,7 @@ func TestEraseString(t *testing.T) {
 	body = fmt.Sprintf(`{"args":{"Schema":"app1pkg.air_table_plan"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, idAnyAirTablePlan)
 	resp := vit.PostWS(ws, "q.sys.Collection", body)
 
-	require.Equal(t, "", resp.SectionRow()[0].(string))
+	require.Empty(t, resp.SectionRow()[0].(string))
 }
 
 func TestEraseString1(t *testing.T) {
@@ -460,7 +460,7 @@ func TestEraseString1(t *testing.T) {
 	body = fmt.Sprintf(`{"args":{"Schema":"app1pkg.articles"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, id)
 	resp := vit.PostWS(ws, "q.sys.Collection", body)
 
-	require.Equal(t, "", resp.SectionRow()[0].(string))
+	require.Empty(t, resp.SectionRow()[0].(string))
 }
 
 func TestDenyCreateNonRawIDs(t *testing.T) {

@@ -19,9 +19,10 @@ import (
 )
 
 func swaggerUI(url string) string {
-	return fmt.Sprintf(swaggerUi, url)
+	return fmt.Sprintf(swaggerUI_HTML, url)
 }
 
+// [~server.apiv2.role/cmp.schemasRoleHandler~impl]
 type schemasRoleHandler struct {
 }
 
@@ -80,15 +81,15 @@ func (h *schemasRoleHandler) Exec(ctx context.Context, qw *queryWork) (err error
 
 	writer := new(bytes.Buffer)
 
-	err = CreateOpenApiSchema(writer, workspace, qw.msg.QName(), acl.PublishedTypes, schemaMeta)
+	err = CreateOpenAPISchema(writer, workspace, qw.msg.QName(), acl.PublishedTypes, schemaMeta)
 	if err != nil {
 		return coreutils.NewHTTPErrorf(http.StatusInternalServerError, err)
 	}
 
-	if strings.Contains(qw.msg.Accept(), contentTypeHtml) {
+	if strings.Contains(qw.msg.Accept(), coreutils.ContentType_TextHTML) {
 		url := fmt.Sprintf(`/api/v2/users/%s/apps/%s/schemas/%s/roles/%s`,
 			qw.msg.AppQName().Owner(), qw.msg.AppQName().Name(), wsQname.String(), qw.msg.QName().String())
-		return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: contentTypeHtml, StatusCode: http.StatusOK}, swaggerUI(url))
+		return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: coreutils.ContentType_TextHTML, StatusCode: http.StatusOK}, swaggerUI(url))
 	}
-	return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: coreutils.ApplicationJSON, StatusCode: http.StatusOK}, writer.Bytes())
+	return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: coreutils.ContentType_ApplicationJSON, StatusCode: http.StatusOK}, writer.Bytes())
 }

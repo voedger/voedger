@@ -29,7 +29,7 @@ type Request struct {
 	WorkspaceQName appdef.QName // actually wsKind
 	IsAPIV2        bool
 	DocID          istructs.IDType
-	ApiPath        int
+	APIPath        int
 }
 
 type ResponseMeta struct {

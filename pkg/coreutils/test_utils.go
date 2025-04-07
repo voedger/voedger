@@ -18,7 +18,7 @@ const TooBigNumberStr = "1111111111111111111111111111111111999999999999999999999
 type TestObject struct {
 	istructs.NullObject
 	Name        appdef.QName
-	Id          istructs.RecordID
+	ID_         istructs.RecordID
 	Parent_     istructs.RecordID
 	Data        map[string]interface{}
 	Containers_ map[string][]*TestObject
@@ -49,7 +49,12 @@ func (o *TestObject) PutNumber(name string, value json.Number)         { o.Data[
 func (o *TestObject) PutChars(name string, value string)               { o.Data[name] = value }
 func (o *TestObject) PutFromJSON(value map[string]any)                 { maps.Copy(o.Data, value) }
 
-func (o *TestObject) ID() istructs.RecordID     { return o.Id }
+func (o *TestObject) ID() istructs.RecordID {
+	if o.ID_ == istructs.NullRecordID {
+		return o.Data[appdef.SystemField_ID].(istructs.RecordID)
+	}
+	return o.ID_
+}
 func (o *TestObject) QName() appdef.QName       { return o.Name }
 func (o *TestObject) Parent() istructs.RecordID { return o.Parent_ }
 
@@ -78,7 +83,7 @@ func (o *TestObject) IsDeactivated() bool {
 func (o *TestObject) IsNew() bool { return o.IsNew_ }
 
 func (o *TestObject) SpecifiedValues(cb func(appdef.IField, any) bool) {
-	if !cb(&MockIField{FieldName: appdef.SystemField_ID, FieldDataKind: appdef.DataKind_RecordID}, o.Id) {
+	if !cb(&MockIField{FieldName: appdef.SystemField_ID, FieldDataKind: appdef.DataKind_RecordID}, o.ID_) {
 		return
 	}
 	if !cb(&MockIField{FieldName: appdef.SystemField_IsActive, FieldDataKind: appdef.DataKind_bool}, true) {
@@ -96,7 +101,7 @@ func (o *TestObject) SpecifiedValues(cb func(appdef.IField, any) bool) {
 		}
 	}
 }
-func (o *TestObject) AsRecord() istructs.IRecord { return o }
+func (o *TestObject) AsRecord() istructs.IRecord                 { return o }
 func (o *TestObject) AsEvent(appdef.FieldName) istructs.IDbEvent { panic("not implemented") }
 func (o *TestObject) AsInt32(name string) int32 {
 	if resIntf, ok := o.Data[name]; ok {
@@ -148,6 +153,9 @@ func (o *TestObject) AsQName(name string) appdef.QName {
 	return qNameIntf.(appdef.QName)
 }
 func (o *TestObject) AsRecordID(name string) istructs.RecordID {
+	if name == appdef.SystemField_ID {
+		return o.ID()
+	}
 	if resIntf, ok := o.Data[name]; ok {
 		return resIntf.(istructs.RecordID)
 	}
@@ -175,6 +183,10 @@ func intfToDataKind(value interface{}) appdef.DataKind {
 	switch value.(type) {
 	case string:
 		return appdef.DataKind_string
+	case int8: // #3434 : small integers
+		return appdef.DataKind_int8
+	case int16: // #3434 : small integers
+		return appdef.DataKind_int16
 	case int32:
 		return appdef.DataKind_int32
 	case int64:

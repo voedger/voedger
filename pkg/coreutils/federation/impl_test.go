@@ -178,8 +178,8 @@ func TestFederationFunc(t *testing.T) {
 				_, err := io.ReadAll(r.Body)
 				require.NoError(err)
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(fmt.Sprintf(`{"sys.Error":{"HTTPStatus":500,"Message":"%s","QName":"sys.SomeErrorQName","Data":"additional data"}}`,
-					errorMessage)))
+				fmt.Fprintf(w, `{"sys.Error":{"HTTPStatus":500,"Message":"%s","QName":"sys.SomeErrorQName","Data":"additional data"}}`,
+					errorMessage)
 			}
 			resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, coreutils.WithExpectedCode(http.StatusInternalServerError,
 				"expected error message"))

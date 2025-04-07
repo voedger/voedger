@@ -33,6 +33,8 @@ func TestClarifyJSONNumber(t *testing.T) {
 		kind        appdef.DataKind
 		expectedVal interface{}
 	}{
+		{json.Number("1"), appdef.DataKind_int8, int8(1)},   // #3434 [small integers]
+		{json.Number("1"), appdef.DataKind_int16, int16(1)}, // #3434 [small integers]
 		{json.Number("1"), appdef.DataKind_int32, int32(1)},
 		{json.Number("1"), appdef.DataKind_int64, int64(1)},
 		{json.Number("1"), appdef.DataKind_float32, float32(1)},
@@ -53,9 +55,15 @@ func TestClarifyJSONNumberErrors(t *testing.T) {
 		val  json.Number
 		kind appdef.DataKind
 	}{
+		{val: json.Number("1.1"), kind: appdef.DataKind_int8},  // #3434 [small integers]
+		{val: json.Number("1.1"), kind: appdef.DataKind_int16}, // #3434 [small integers]
 		{val: json.Number("1.1"), kind: appdef.DataKind_int32},
 		{val: json.Number("1.1"), kind: appdef.DataKind_int64},
 		{val: json.Number("1.1"), kind: appdef.DataKind_RecordID},
+		{val: json.Number(strconv.Itoa(math.MaxInt8 + 1)), kind: appdef.DataKind_int8},   // #3434 [small integers]
+		{val: json.Number(strconv.Itoa(math.MinInt8 - 1)), kind: appdef.DataKind_int8},   // #3434 [small integers]
+		{val: json.Number(strconv.Itoa(math.MaxInt16 + 1)), kind: appdef.DataKind_int16}, // #3434 [small integers]
+		{val: json.Number(strconv.Itoa(math.MinInt16 - 1)), kind: appdef.DataKind_int16}, // #3434 [small integers]
 		{val: json.Number(strconv.Itoa(math.MaxInt32 + 1)), kind: appdef.DataKind_int32},
 		{val: json.Number(strconv.Itoa(math.MinInt32 - 1)), kind: appdef.DataKind_int32},
 		{val: json.Number(fmt.Sprint(math.MaxInt64 + (float64(1)))), kind: appdef.DataKind_int64},

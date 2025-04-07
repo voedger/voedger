@@ -39,7 +39,7 @@ func TestSendToBusOperator_DoAsync(t *testing.T) {
 
 	respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 	require.NoError(err)
-	require.Equal(coreutils.ApplicationJSON, respMeta.ContentType)
+	require.Equal(coreutils.ContentType_ApplicationJSON, respMeta.ContentType)
 	require.Equal(http.StatusOK, respMeta.StatusCode)
 	result := []string{}
 	for elem := range respCh {

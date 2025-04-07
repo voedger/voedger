@@ -31,17 +31,17 @@ Codec version *codecVer* stored as an unsigned single byte number.
 
 ### Row Data
 
-Row data *rowData* contains the type name identifier *qNameID*, the values of the system fields *sysFields* and field values with user data *userFields*.
+Row data *rowData* contains the type name identifier *QNameID*, the values of the system fields *sysFields* and field values with user data *userFields*.
 
-`rowData = qNameID [sysFields] [userFields] .`
+`rowData = QNameID [sysFields] [userFields] .`
 
 If type name `QName` is not specified (i.e. equal to `appdef.NullQName`), then other members (*sysFields* и *userFields*) are omitted.
 
 #### QName ID
 
-Type name identifier *qNameID* is stored as unsigned two-bytes number. Here and in the following, unless specifically stated, numerical values are recorded using a byte order from most significant to least significant. (`BigEndian`).
+Type name identifier *QNameID* is stored as unsigned two-bytes number. Here and in the following, unless specifically stated, numerical values are recorded using a byte order from most significant to least significant. (`BigEndian`).
 
-`qNameID = uint16 . // BigEndian`
+`QNameID = uint16 . // BigEndian`
 
 #### System fields
 
@@ -124,17 +124,17 @@ The internal structure of the buffer is determined by the [dynoBuffer](https://g
 
 ### Event Data
 
-Данные события *eventData* содержат идентификатор имени определения *qNameID*, конструкционные данные события *createParameters*, сведения об ошибке сборки события *buildError*, аргументы команды *commandArguments* и план изменяемых записей *commandCUDs*.
+Данные события *eventData* содержат идентификатор имени определения *QNameID*, конструкционные данные события *createParameters*, сведения об ошибке сборки события *buildError*, аргументы команды *commandArguments* и план изменяемых записей *commandCUDs*.
 
-`eventData = qNameID [ createParameters buildError [ commandArguments commandCUDs ] ].`
+`eventData = QNameID [ createParameters buildError [ commandArguments commandCUDs ] ].`
 
 Если имя определения (QName) у события не указано (т.е. равно `appdef.NullQName`), то больше ничего для события не указывается.
 
 #### QName ID
 
-Идентификатор имени *qNameID* записывается как беззнаковое двух-байтовое число.
+Идентификатор имени *QNameID* записывается как беззнаковое двух-байтовое число.
 
-`qNameID = uint16 .`
+`QNameID = uint16 .`
 
 #### Create Parameters
 

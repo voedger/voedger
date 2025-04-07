@@ -361,26 +361,26 @@ func NewViewValueBuilder(viewValue *ViewValue) *ViewValueBuilder {
 }
 
 func (vb *ViewValueBuilder) AddDataField(name appdef.FieldName, dataType appdef.QName, required bool, constraints ...appdef.IConstraint) appdef.IFieldsBuilder {
-	vb.ViewValue.addDataField(name, dataType, required, constraints...)
+	vb.addDataField(name, dataType, required, constraints...)
 	return vb
 }
 
 func (vb *ViewValueBuilder) AddField(name appdef.FieldName, kind appdef.DataKind, required bool, constraints ...appdef.IConstraint) appdef.IFieldsBuilder {
-	vb.ViewValue.addField(name, kind, required, constraints...)
+	vb.addField(name, kind, required, constraints...)
 	return vb
 }
 
 func (vb *ViewValueBuilder) AddRefField(name appdef.FieldName, required bool, ref ...appdef.QName) appdef.IFieldsBuilder {
-	vb.ViewValue.addRefField(name, required, ref...)
+	vb.addRefField(name, required, ref...)
 	return vb
 }
 
 func (vb *ViewValueBuilder) SetFieldComment(name appdef.FieldName, comment ...string) appdef.IFieldsBuilder {
-	vb.ViewValue.setFieldComment(name, comment...)
+	vb.setFieldComment(name, comment...)
 	return vb
 }
 
 func (vb *ViewValueBuilder) SetFieldVerify(name appdef.FieldName, vk ...appdef.VerificationKind) appdef.IFieldsBuilder {
-	vb.ViewValue.setFieldVerify(name, vk...)
+	vb.setFieldVerify(name, vk...)
 	return vb
 }

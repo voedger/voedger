@@ -12,6 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
@@ -64,13 +65,13 @@ func TestRenameQName(t *testing.T) {
 		t.Run("check old is deleted", func(t *testing.T) {
 			id, err := names.ID(oldQName)
 			require.ErrorIs(err, qnames.ErrNameNotFound)
-			require.Equal(qnames.NullQNameID, id)
+			require.Equal(istructs.NullQNameID, id)
 		})
 
 		t.Run("check new is not null", func(t *testing.T) {
 			id, err := names.ID(newQName)
 			require.NoError(err)
-			require.Greater(id, qnames.QNameIDSysLast)
+			require.Greater(id, istructs.QNameIDSysLast)
 		})
 	})
 }

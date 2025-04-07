@@ -198,12 +198,10 @@ func (s *cachedAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok b
 		s.mTTLGetSeconds.Increase(time.Since(start).Seconds())
 	}()
 
-	var found bool
 	var key = makeKey(pKey, cCols)
 
 	*data = (*data)[0:0]
-	cachedData := make([]byte, 0)
-	cachedData, found = s.cache.HasGet(*data, key)
+	cachedData, found := s.cache.HasGet(*data, key)
 
 	if found {
 		d := coreutils.ReadWithExpiration(cachedData)

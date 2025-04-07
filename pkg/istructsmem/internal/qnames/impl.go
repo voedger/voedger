@@ -21,14 +21,14 @@ import (
 
 func newQNames() *QNames {
 	return &QNames{
-		qNames: make(map[appdef.QName]QNameID),
-		ids:    make(map[QNameID]appdef.QName),
-		lastID: QNameIDSysLast,
+		qNames: make(map[appdef.QName]istructs.QNameID),
+		ids:    make(map[istructs.QNameID]appdef.QName),
+		lastID: istructs.QNameIDSysLast,
 	}
 }
 
 // Returns ID for specified QName
-func (names *QNames) ID(qName appdef.QName) (QNameID, error) {
+func (names *QNames) ID(qName appdef.QName) (istructs.QNameID, error) {
 	if id, ok := names.qNames[qName]; ok {
 		return id, nil
 	}
@@ -36,7 +36,7 @@ func (names *QNames) ID(qName appdef.QName) (QNameID, error) {
 }
 
 // Retrieve QName for specified ID
-func (names *QNames) QName(id QNameID) (qName appdef.QName, err error) {
+func (names *QNames) QName(id istructs.QNameID) (qName appdef.QName, err error) {
 	qName, ok := names.ids[id]
 	if ok {
 		return qName, nil
@@ -69,10 +69,10 @@ func (names *QNames) collectAll(appDef appdef.IAppDef) error {
 
 	// system QNames
 	names.
-		collectSys(appdef.NullQName, NullQNameID).
-		collectSys(istructs.QNameForError, QNameIDForError).
-		collectSys(istructs.QNameCommandCUD, QNameIDCommandCUD).
-		collectSys(istructs.QNameForCorruptedData, QNameIDForCorruptedData)
+		collectSys(appdef.NullQName, istructs.NullQNameID).
+		collectSys(istructs.QNameForError, istructs.QNameIDForError).
+		collectSys(istructs.QNameCommandCUD, istructs.QNameIDCommandCUD).
+		collectSys(istructs.QNameForCorruptedData, istructs.QNameIDForCorruptedData)
 
 	var err error
 
@@ -112,7 +112,7 @@ func (names *QNames) collect(qName appdef.QName) error {
 }
 
 // Adds system QName to cache
-func (names *QNames) collectSys(qName appdef.QName, id QNameID) *QNames {
+func (names *QNames) collectSys(qName appdef.QName, id istructs.QNameID) *QNames {
 	names.qNames[qName] = id
 	names.ids[id] = qName
 	return names
@@ -141,11 +141,11 @@ func (names *QNames) load01(storage istorage.IAppStorage) error {
 			return err
 		}
 		id := binary.BigEndian.Uint16(value)
-		if id == NullQNameID {
+		if id == istructs.NullQNameID {
 			return nil // deleted QName
 		}
 
-		if id <= QNameIDSysLast {
+		if id <= istructs.QNameIDSysLast {
 			return fmt.Errorf("unexpected ID (%v) is loaded from QNames system view: %w", id, ErrWrongQNameID)
 		}
 
@@ -168,8 +168,8 @@ func (names *QNames) store(storage istorage.IAppStorage, versions *vers.Versions
 
 	batch := make([]istorage.BatchItem, 0)
 	for qName, id := range names.qNames {
-		if (id > QNameIDSysLast) ||
-			(qName != appdef.NullQName) && (id == NullQNameID) { // deleted QName
+		if (id > istructs.QNameIDSysLast) ||
+			(qName != appdef.NullQName) && (id == istructs.NullQNameID) { // deleted QName
 			item := istorage.BatchItem{
 				PKey:  pKey,
 				CCols: []byte(qName.String()),

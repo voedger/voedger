@@ -63,7 +63,7 @@ func ExampleProjectors() {
 		fmt.Println(prj)
 		fmt.Println(" - events:")
 		for _, e := range prj.Events() {
-			fmt.Println("   - ops:", e.Ops())
+			fmt.Println("   - ops:", e.Ops()) // nolint
 			fmt.Println("   - filter:", e.Filter())
 		}
 		if prj.WantErrors() {

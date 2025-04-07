@@ -24,7 +24,7 @@ type TestViewValue struct {
 	Val  istructs.IValueBuilder
 }
 
-type HttpRequest struct {
+type HTTPRequest struct {
 	Timeout time.Duration
 	Method  string
 	URL     string
@@ -32,7 +32,7 @@ type HttpRequest struct {
 	Headers map[string]string
 }
 
-type HttpResponse struct {
+type HTTPResponse struct {
 	Status  int
 	Body    []byte
 	Headers map[string][]string

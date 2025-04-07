@@ -44,7 +44,7 @@ type IQueryMessage interface {
 	Responder() bus.IResponder
 	QueryParams() QueryParams
 	DocID() istructs.IDType
-	ApiPath() processors.ApiPath
+	APIPath() processors.APIPath
 	RequestCtx() context.Context
 	QName() appdef.QName // e.g. Doc, View, Role
 	PartitionID() istructs.PartitionID
@@ -83,7 +83,7 @@ type ischema interface {
 type pathItem struct {
 	Method  string
 	Path    string
-	ApiPath processors.ApiPath
+	APIPath processors.APIPath
 }
 
 type implIQueryMessage struct {
@@ -92,7 +92,7 @@ type implIQueryMessage struct {
 	responder      bus.IResponder
 	queryParams    QueryParams
 	docID          istructs.IDType
-	apiPath        processors.ApiPath
+	apiPath        processors.APIPath
 	requestCtx     context.Context
 	qName          appdef.QName
 	partition      istructs.PartitionID
@@ -127,7 +127,7 @@ func (qm *implIQueryMessage) DocID() istructs.IDType {
 	return qm.docID
 }
 
-func (qm *implIQueryMessage) ApiPath() processors.ApiPath {
+func (qm *implIQueryMessage) APIPath() processors.APIPath {
 	return qm.apiPath
 }
 

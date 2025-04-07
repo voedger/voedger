@@ -18,10 +18,11 @@ const (
 	ContentType                                                = "Content-Type"
 	ContentDisposition                                         = "Content-Disposition"
 	Accept                                                     = "Accept"
-	ApplicationJSON                                            = "application/json"
-	ApplicationXBinary                                         = "application/x-binary"
-	TextPlain                                                  = "text/plain"
-	MultipartFormData                                          = "multipart/form-data"
+	ContentType_ApplicationJSON                                = "application/json"
+	ContentType_ApplicationXBinary                             = "application/x-binary"
+	ContentType_TextPlain                                      = "text/plain"
+	ContentType_TextHTML                                       = "text/html"
+	ContentType_MultipartFormData                              = "multipart/form-data"
 	BearerPrefix                                               = "Bearer "
 	Localhost                                                  = "127.0.0.1"
 	shortRetryOn503Delay                                       = 100 * time.Millisecond
@@ -41,6 +42,7 @@ const (
 	FileMode_rwxrwxrwx                           fs.FileMode   = 0777 // default for directory
 	FileMode_rw_rw_rw_                           fs.FileMode   = 0666 // default for file
 	maxHTTPRequestTimeout                                      = time.Hour
+	defaultRetryDelay                                          = 500 * time.Millisecond
 )
 
 var (

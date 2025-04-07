@@ -291,7 +291,7 @@ func TestAcmeDomains(t *testing.T) {
 	require := require.New(t)
 
 	cluster := newCluster()
-	require.Equal("", cluster.Acme.domains())
+	require.Empty(cluster.Acme.domains())
 
 	cluster.Acme.Domains = []string{"domain1.io", "domain2.io"}
 	require.Equal("domain1.io,domain2.io", cluster.Acme.domains())

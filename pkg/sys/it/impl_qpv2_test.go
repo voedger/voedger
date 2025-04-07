@@ -1394,6 +1394,7 @@ func TestQueryProcessor2_SchemasRoles(t *testing.T) {
 	})
 }
 
+// [~server.apiv2.role/it.TestQueryProcessor2_SchemasRole~impl]
 func TestQueryProcessor2_SchemasWorkspaceRole(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
@@ -1423,6 +1424,7 @@ func TestQueryProcessor2_SchemasWorkspaceRole(t *testing.T) {
 	})
 }
 
+// [~server.apiv2.docs/it.TestQueryProcessor2_Docs~impl]
 func TestQueryProcessor2_Docs(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
@@ -1473,7 +1475,7 @@ func TestOpenAPI(t *testing.T) {
 		AppName:       appdef.NewAppQName("voedger", "testapp"),
 	}
 
-	err = query2.CreateOpenApiSchema(writer, ws, appdef.NewQName("app1pkg", "ApiRole"), acl.PublishedTypes, schemaMeta)
+	err = query2.CreateOpenAPISchema(writer, ws, appdef.NewQName("app1pkg", "ApiRole"), acl.PublishedTypes, schemaMeta)
 
 	require.NoError(err)
 

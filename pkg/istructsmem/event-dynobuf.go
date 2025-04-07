@@ -16,7 +16,7 @@ import (
 )
 
 func storeEvent(ev *eventType, buf *bytes.Buffer) {
-	utils.WriteUint16(buf, ev.qNameID())
+	utils.WriteUint16(buf, ev.QNameID())
 
 	storeEventCreateParams(ev, buf)
 	storeEventBuildError(ev, buf)
