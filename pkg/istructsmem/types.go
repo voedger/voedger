@@ -314,7 +314,12 @@ func (row *rowType) putValue(name appdef.FieldName, kind appdef.DataKind, value 
 
 	row.checkPutNil(fld, fieldValue) // #2785
 
-	row.dyB.Set(name, fieldValue)
+	switch fld.DataKind() {
+	case appdef.DataKind_int8: // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+		row.dyB.Set(name, byte(fieldValue.(int8))) // nolint G115 : dynobuffers uses byte to store int8
+	default:
+		row.dyB.Set(name, fieldValue)
+	}
 }
 
 // QNameID returns storage ID of row QName
@@ -528,7 +533,7 @@ func (row *rowType) verifyToken(fld appdef.IField, token string) (value interfac
 func (row *rowType) AsInt8(name appdef.FieldName) int8 {
 	_ = row.fieldMustExists(name, appdef.DataKind_int8)
 	if value, ok := row.dyB.GetByte(name); ok {
-		return int8(value)
+		return int8(value) // nolint G115 : dynobuffers uses byte to store int8
 	}
 	return 0
 }
@@ -584,6 +589,7 @@ func (row *rowType) AsFloat32(name appdef.FieldName) (value float32) {
 // istructs.IRowReader.AsFloat64
 func (row *rowType) AsFloat64(name appdef.FieldName) (value float64) {
 	fld := row.fieldMustExists(name, appdef.DataKind_float64,
+		appdef.DataKind_int8, appdef.DataKind_int16, // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
 		appdef.DataKind_int32, appdef.DataKind_int64, appdef.DataKind_float32, appdef.DataKind_RecordID)
 	switch fld.DataKind() {
 	case appdef.DataKind_int8: // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
