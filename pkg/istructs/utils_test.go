@@ -155,6 +155,8 @@ func TestNullObject(t *testing.T) {
 	require.NotNil(builder)
 
 	require.NotPanics(func() {
+		builder.PutInt8("int8", 1)   // #3435 [~server.vsql.smallints/cmp.istructs~impl]
+		builder.PutInt16("int16", 1) // #3435 [~server.vsql.smallints/cmp.istructs~impl]
 		builder.PutInt32("int32", 1)
 		builder.PutInt64("int64", 1)
 		builder.PutFloat32("float32", 1)
@@ -180,6 +182,8 @@ func TestNullObject(t *testing.T) {
 	require.Nil(null.AsBytes(appdef.NullName))
 	require.Equal(float32(0), null.AsFloat32(appdef.NullName))
 	require.Equal(float64(0), null.AsFloat64(appdef.NullName))
+	require.Zero(null.AsInt8(appdef.NullName))  // #3435 [~server.vsql.smallints/cmp.istructs~impl]
+	require.Zero(null.AsInt16(appdef.NullName)) // #3435 [~server.vsql.smallints/cmp.istructs~impl]
 	require.Equal(int32(0), null.AsInt32(appdef.NullName))
 	require.Equal(int64(0), null.AsInt64(appdef.NullName))
 	require.Empty(null.AsString(appdef.NullName))
@@ -192,6 +196,9 @@ func TestNullObject(t *testing.T) {
 
 	// Should not be called
 	{
+		for range null.SpecifiedValues {
+			require.Fail("null.SpecifiedValues should be empty")
+		}
 		for range null.Containers {
 			require.Fail("null.Containers should be empty")
 		}
