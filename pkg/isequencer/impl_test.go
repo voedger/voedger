@@ -48,7 +48,6 @@ func TestSequencer(t *testing.T) {
 		seq.Flush()
 
 		cleanup()
-		seq.(*sequencer).flusherWG.Wait()
 
 		nums, err := storage.ReadNumbers(1, []SeqID{1})
 		require.NoError(err)
