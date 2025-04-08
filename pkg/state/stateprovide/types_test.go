@@ -27,6 +27,8 @@ type mapKeyBuilder struct {
 	entity  appdef.QName
 }
 
+var _ istructs.IKeyBuilder = (*mapKeyBuilder)(nil)
+
 func newMapKeyBuilder(storage, entity appdef.QName) *mapKeyBuilder {
 	return &mapKeyBuilder{
 		data:    make(map[string]interface{}),
@@ -48,6 +50,8 @@ func (b *mapKeyBuilder) String() string {
 }
 func (b *mapKeyBuilder) Storage() appdef.QName                            { return b.storage }
 func (b *mapKeyBuilder) Entity() appdef.QName                             { return b.entity }
+func (b *mapKeyBuilder) PutInt8(name string, value int8)                  { b.data[name] = value }
+func (b *mapKeyBuilder) PutInt16(name string, value int16)                { b.data[name] = value }
 func (b *mapKeyBuilder) PutInt32(name string, value int32)                { b.data[name] = value }
 func (b *mapKeyBuilder) PutInt64(name string, value int64)                { b.data[name] = value }
 func (b *mapKeyBuilder) PutFloat32(name string, value float32)            { b.data[name] = value }

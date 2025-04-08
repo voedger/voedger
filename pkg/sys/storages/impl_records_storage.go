@@ -279,6 +279,8 @@ func (b *recordsValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
 	}
 	return reflect.DeepEqual(b.rw, vb.rw) // TODO: does that work?
 }
+func (b *recordsValueBuilder) PutInt8(name string, value int8)   { b.rw.PutInt8(name, value) }
+func (b *recordsValueBuilder) PutInt16(name string, value int16) { b.rw.PutInt16(name, value) }
 func (b *recordsValueBuilder) PutInt32(name string, value int32) { b.rw.PutInt32(name, value) }
 func (b *recordsValueBuilder) PutInt64(name string, value int64) {
 	if b.fc.isStructureInt64FieldRecordID(b.entity, name) {
@@ -309,6 +311,8 @@ type recordsValue struct {
 	record istructs.IRecord
 }
 
+func (v *recordsValue) AsInt8(name string) int8          { return v.record.AsInt8(name) }
+func (v *recordsValue) AsInt16(name string) int16        { return v.record.AsInt16(name) }
 func (v *recordsValue) AsInt32(name string) int32        { return v.record.AsInt32(name) }
 func (v *recordsValue) AsInt64(name string) int64        { return v.record.AsInt64(name) }
 func (v *recordsValue) AsFloat32(name string) float32    { return v.record.AsFloat32(name) }
