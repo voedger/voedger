@@ -182,7 +182,7 @@ func getIWorkspace(_ context.Context, work pipeline.IWorkpiece) (err error) {
 }
 func getCmdQName(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmdWorkpiece := work.(*cmdWorkpiece)
-	if work.(ICommandMessage).APIPath() == processors.APIPath_Docs {
+	if cmdWorkpiece.cmdMes.APIPath() == processors.APIPath_Docs {
 		cmdWorkpiece.cmdQName = istructs.QNameCommandCUD
 	} else {
 		cmdWorkpiece.cmdQName = cmdWorkpiece.cmdMes.QName()
@@ -337,19 +337,18 @@ func getWSDesc(_ context.Context, work pipeline.IWorkpiece) (err error) {
 func checkWSInitialized(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	wsDesc := work.(*cmdWorkpiece).wsDesc
-	cmdQName := cmd.cmdQName
-	if cmdQName == workspacemgmt.QNameCommandCreateWorkspace || cmdQName == builtin.QNameCommandInit { // nolint: SA1019
+	if cmd.cmdQName == workspacemgmt.QNameCommandCreateWorkspace || cmd.cmdQName == builtin.QNameCommandInit { // nolint: SA1019
 		return nil
 	}
 	if wsDesc.QName() != appdef.NullQName {
-		if cmdQName == blobber.QNameCommandUploadBLOBHelper {
+		if cmd.cmdQName == blobber.QNameCommandUploadBLOBHelper {
 			return nil
 		}
 		if wsDesc.AsInt64(workspacemgmt.Field_InitCompletedAtMs) > 0 && len(wsDesc.AsString(workspacemgmt.Field_InitError)) == 0 {
 			cmd.wsInitialized = true
 			return nil
 		}
-		if cmdQName == istructs.QNameCommandCUD {
+		if cmd.cmdQName == istructs.QNameCommandCUD {
 			if iauthnz.IsSystemPrincipal(cmd.principals, cmd.cmdMes.WSID()) {
 				// system -> allow any CUD to upload template, see https://github.com/voedger/voedger/issues/648
 				return nil
@@ -600,10 +599,14 @@ func (cmdProc *cmdProc) validateCUDsQNames(ctx context.Context, work pipeline.IW
 	return nil
 }
 
-func requestDataToCUDs(requestData coreutils.MapObject, opKind appdef.OperationKind, parentSysID uint64, nextRawID *uint64, cudNumber int) ([]parsedCUD, error) {
+func requestDataToCUDs(requestData coreutils.MapObject, opKind appdef.OperationKind, parentSysID uint64, nextRawID *uint64, cudNumber int, qName appdef.QName) ([]parsedCUD, error) {
 	res := []parsedCUD{}
 	cudXPath := xPath("cuds[" + strconv.Itoa(cudNumber) + "]")
-	parsedCUD := parsedCUD{}
+	parsedCUD := parsedCUD{
+		qName:  qName,
+		fields: coreutils.MapObject{},
+		opKind: opKind,
+	}
 	res = append(res, parsedCUD)
 	rootCUDIdx := len(res) - 1
 	sysID, hasExplicitRawID, err := requestData.AsInt64(appdef.SystemField_ID)
@@ -617,32 +620,25 @@ func requestDataToCUDs(requestData coreutils.MapObject, opKind appdef.OperationK
 		*nextRawID++
 	}
 
-	qNameStr, _, err := parsedCUD.fields.AsString(appdef.SystemField_QName)
-	if err != nil {
-		return nil, cudXPath.Error(err)
+	if parentSysID > 0 {
+		parsedCUD.fields[appdef.SystemField_ParentID] = parentSysID
+		parsedCUD.fields[appdef.SystemField_Container] = qName.Entity()
 	}
-
-	if parsedCUD.qName, err = appdef.ParseQName(qNameStr); err != nil {
-		return nil, cudXPath.Error(fmt.Errorf("failed to parse sys.QName: %w", err))
-	}
-
-	parsedCUD.fields[appdef.SystemField_ParentID] = parentSysID
 
 	// if the root cdoc has no sys.ID field then any child must not have one
 	// any next explicit rawID must not be <nextRawID
-	for k, v := range requestData {
-		if requestCUDChildsIntfs, ok := v.([]interface{}); ok {
+	for rootFieldName, rootFieldValue := range requestData {
+		if requestCUDChildsIntfs, ok := rootFieldValue.([]interface{}); ok {
 			for _, requestCUDChildsIntf := range requestCUDChildsIntfs {
 				requestCUDChildsMap := requestCUDChildsIntf.(map[string]interface{})
-				parsedCUDsChilds, err := requestDataToCUDs(requestCUDChildsMap, opKind, parsedCUD.id, nextRawID, cudNumber+1)
+				parsedCUDsChilds, err := requestDataToCUDs(requestCUDChildsMap, opKind, parsedCUD.id, nextRawID, cudNumber+1, appdef.NewQName(qName.Pkg(), rootFieldName))
 				if err != nil {
 					return nil, err
 				}
 				res = append(res, parsedCUDsChilds...)
 			}
 		} else {
-
-			parsedCUD.fields[k] = v
+			parsedCUD.fields[rootFieldName] = rootFieldValue
 		}
 	}
 	parsedCUD.xPath = xPath(fmt.Sprintf("%s %s %s", cudXPath, opKindDesc[parsedCUD.opKind], parsedCUD.qName))
@@ -656,7 +652,7 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		switch cmd.cmdMes.Method() {
 		case http.MethodPost:
 			firstRawID := uint64(istructs.MinRawRecordID)
-			cmd.parsedCUDs, err = requestDataToCUDs(cmd.requestData, appdef.OperationKind_Insert, 0, &firstRawID, 1)
+			cmd.parsedCUDs, err = requestDataToCUDs(cmd.requestData, appdef.OperationKind_Insert, 0, &firstRawID, 1, cmd.cmdMes.QName())
 		case http.MethodPatch:
 			cudXPath := xPath("")
 			parsedCUD := parsedCUD{

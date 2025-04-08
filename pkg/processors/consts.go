@@ -8,7 +8,8 @@ package processors
 const Field_RawObject_Body = "Body"
 
 const (
-	APIPath_Docs APIPath = iota
+	APIPath_null APIPath = iota
+	APIPath_Docs
 	APIPath_CDocs
 	APIPath_Queries
 	APIPath_Views

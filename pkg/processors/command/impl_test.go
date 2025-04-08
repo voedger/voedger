@@ -664,32 +664,6 @@ func TestRateLimit(t *testing.T) {
 	require.Equal(http.StatusTooManyRequests, cmdRespMeta.StatusCode)
 }
 
-func TestAPIv2(t *testing.T) {
-	require := require.New(t)
-
-	app := setUp(t,
-		func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
-			cdoc := wsb.AddCDoc(testCDoc)
-			cdoc.AddField("IntFld", appdef.DataKind_int32, false)
-			cdoc.AddContainer("Record", istructs.QNameCRecord, appdef.Occurs_Unbounded, appdef.Occurs_Unbounded)
-			wdoc := wsb.AddWDoc(testWDoc)
-			wdoc.AddField("StrFld", appdef.DataKind_string, false)
-		})
-	defer tearDown(app)
-
-	request := bus.Request{
-		Body:     []byte(`{"args":{}}`),
-		AppQName: istructs.AppQName_untill_airs_bp,
-		WSID:     1,
-		Resource: "c.sys.MyCmd",
-		Header:   app.sysAuthHeader,
-	}
-
-	// first 2 calls are ok
-	for i := 0; i < 2; i++ {
-		cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, request)
-}
-
 type testApp struct {
 	ctx               context.Context
 	cfg               *istructsmem.AppConfigType
