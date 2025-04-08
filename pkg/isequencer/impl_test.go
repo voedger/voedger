@@ -33,26 +33,38 @@ func TestSequencer(t *testing.T) {
 		})
 
 		seq, cleanup := New(params, storage, mockedTime)
+		expectedNumber := Number(101)
 
-		// When
-		offset := WaitForStart(t, seq, 1, 1, true)
-		require.Equal(PLogOffset(2), offset)
+		t.Run("100 numbers in one transaction", func(t *testing.T) {
+			offset := WaitForStart(t, seq, 1, 1, true)
+			require.Equal(PLogOffset(2), offset)
+			for i := 1; i <= 100; i++ {
+				num, err := seq.Next(1)
+				require.NoError(err)
+				require.Equal(expectedNumber, num)
+				expectedNumber++
+			}
+			seq.Flush()
+		})
 
-		// Generate new sequence Numbers 100 times
-		for i := 1; i <= 100; i++ {
-			num, err := seq.Next(1)
-			require.NoError(err)
-			require.Equal(Number(100+i), num)
-		}
+		t.Run("100 transaction, 1 number in each", func(t *testing.T) {
+			for i := 1; i <= 100; i++ {
+				offset := WaitForStart(t, seq, 1, 1, true)
+				require.Equal(PLogOffset(2+i), offset)
+				num, err := seq.Next(1)
+				require.NoError(err)
+				require.Equal(expectedNumber, num)
+				expectedNumber++
+				seq.Flush()
+			}
 
-		seq.Flush()
-
-		cleanup()
-		seq.(*sequencer).flusherWG.Wait()
+			cleanup()
+			seq.(*sequencer).flusherWG.Wait()
+		})
 
 		nums, err := storage.ReadNumbers(1, []SeqID{1})
 		require.NoError(err)
-		require.Equal(Number(200), nums[0])
+		require.Equal(int(Number(300)), int(nums[0]))
 	})
 }
 
