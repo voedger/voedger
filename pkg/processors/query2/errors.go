@@ -16,4 +16,5 @@ var (
 	errUnexpectedParams                          = errors.New("unexpected params")
 	errUnsupportedType                           = errors.New("unsupported type")
 	errUnexpectedField                           = errors.New("unexpected field")
+	errWorkspaceIsNil                            = errors.New("workspace is nil")
 )

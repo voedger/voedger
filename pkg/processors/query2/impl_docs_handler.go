@@ -83,7 +83,7 @@ func (h *docsHandler) RequestOpKind() appdef.OperationKind {
 func (h *docsHandler) AuthorizeResult(ctx context.Context, qw *queryWork) (err error) {
 	ws := qw.iWorkspace
 	if ws == nil {
-		return fmt.Errorf("workspace is nil")
+		return errWorkspaceIsNil
 	}
 	var requestedFields []string
 	if qw.queryParams.Constraints != nil && len(qw.queryParams.Constraints.Keys) != 0 {
