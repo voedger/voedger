@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -21,10 +22,11 @@ func TestSequencer(t *testing.T) {
 	t.Run("basic flow", func(t *testing.T) {
 		mockedTime := coreutils.MockTime
 		// Given
+		initialNumber := Number(100)
 		storage := NewMockStorage()
 		storage.SetPLog(map[PLogOffset][]SeqValue{
 			PLogOffset(1): {
-				{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 100},
+				{Key: NumberKey{WSID: 1, SeqID: 1}, Value: initialNumber},
 			},
 		})
 
@@ -33,13 +35,15 @@ func TestSequencer(t *testing.T) {
 		})
 
 		seq, cleanup := New(params, storage, mockedTime)
-
+		defer cleanup()
 		// When
 		offset := WaitForStart(t, seq, 1, 1, true)
 		require.Equal(PLogOffset(2), offset)
 
 		// Generate new sequence Numbers 100 times
-		for i := 1; i <= 100; i++ {
+		const countOfNumbers = 100
+
+		for i := 1; i <= countOfNumbers; i++ {
 			num, err := seq.Next(1)
 			require.NoError(err)
 			require.Equal(Number(100+i), num)
@@ -47,11 +51,20 @@ func TestSequencer(t *testing.T) {
 
 		seq.Flush()
 
-		cleanup()
+		ctx, cancelCtx := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancelCtx()
 
-		nums, err := storage.ReadNumbers(1, []SeqID{1})
-		require.NoError(err)
-		require.Equal(Number(200), nums[0])
+		for ctx.Err() == nil {
+			nums, err := storage.ReadNumbers(1, []SeqID{1})
+			require.NoError(err)
+			// check if number in storage is equal to the expected number
+			if initialNumber+countOfNumbers == nums[0] {
+				return
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+
+		require.Fail("failed to get expected number from storage")
 	})
 }
 
