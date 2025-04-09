@@ -108,49 +108,39 @@ var _ IQueryMessage = (*implIQueryMessage)(nil)
 func (qm *implIQueryMessage) Accept() string {
 	return qm.headerAccept
 }
-
 func (qm *implIQueryMessage) AppQName() appdef.AppQName {
 	return qm.appQName
 }
-
 func (qm *implIQueryMessage) WSID() istructs.WSID {
 	return qm.wsid
 }
-
 func (qm *implIQueryMessage) Responder() bus.IResponder {
 	return qm.responder
 }
-
 func (qm *implIQueryMessage) QueryParams() QueryParams {
 	return qm.queryParams
 }
 func (qm *implIQueryMessage) DocID() istructs.IDType {
 	return qm.docID
 }
-
 func (qm *implIQueryMessage) APIPath() APIPath {
 	return qm.apiPath
 }
-
 func (qm *implIQueryMessage) RequestCtx() context.Context {
 	return qm.requestCtx
 }
 func (qm *implIQueryMessage) QName() appdef.QName {
 	return qm.qName
 }
-
 func (qm *implIQueryMessage) PartitionID() istructs.PartitionID {
 	return qm.partition
 }
-
 func (qm *implIQueryMessage) Host() string {
 	return qm.host
 }
-
 func (qm *implIQueryMessage) Token() string {
 	return qm.token
 }
-
 func (qm *implIQueryMessage) WorkspaceQName() appdef.QName {
 	return qm.workspaceQName
 }
@@ -290,7 +280,7 @@ func (a *aggregator) subList() {
 		a.ww = a.ww[a.params.Constraints.Skip:]
 		return
 	}
-	a.ww = a.ww[a.params.Constraints.Skip:a.params.Constraints.Limit]
+	a.ww = a.ww[a.params.Constraints.Skip : a.params.Constraints.Skip+a.params.Constraints.Limit]
 }
 func (a *aggregator) compareInt32(v1, v2 int32, asc bool) bool {
 	if asc {
