@@ -105,6 +105,7 @@ var (
 					WithSubject(TestEmail, istructs.SubjectKind_User, []appdef.QName{iauthnz.QNameRoleWorkspaceOwner}))),
 			WithChildWorkspace(QNameApp1_TestWSKind_another, "test_ws_another", "", "", "login", map[string]interface{}{}),
 			WithChildWorkspace(QNameApp1_TestWSKind, "test_ws_qp2", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
+			WithChildWorkspace(QNameApp1_TestWSKind, "test_ws3", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
 		),
 		WithApp(istructs.AppQName_test1_app2, ProvideApp2, WithUserLogin("login", "1")),
 		WithVVMConfig(func(cfg *vvm.VVMConfig) {
