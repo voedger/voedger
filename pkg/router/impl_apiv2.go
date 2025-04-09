@@ -28,12 +28,12 @@ func (s *httpService) registerHandlersV2() {
 		corsHandler(requestHandlerV2_table(s.requestSender, processors.APIPath_Docs, s.numsAppsWorkspaces))).
 		Methods(http.MethodPost).Name("create")
 
-	// update, deactivate single doc: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/{pkg}.{table}/{id}
+	// update, deactivate, read single doc: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/{pkg}.{table}/{id}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/docs/{%s}.{%s}/{%s:[0-9]+}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table,
 		URLPlaceholder_id),
 		corsHandler(requestHandlerV2_table(s.requestSender, processors.APIPath_Docs, s.numsAppsWorkspaces))).
-		Methods(http.MethodPatch, http.MethodDelete).Name("update")
+		Methods(http.MethodPatch, http.MethodDelete, http.MethodGet).Name("update or read single")
 
 	// read collection: /api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/cdocs/{pkg}.{table}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/workspaces/{%s:[0-9]+}/cdocs/{%s}.{%s}",
@@ -192,7 +192,6 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.API
 		vars := mux.Vars(req)
 		recordIDStr, _ := vars[URLPlaceholder_id]
 
-
 		// switch req.Method {
 		// case http.MethodGet:
 		// 	recordIDStr, isSingleDoc := vars[URLPlaceholder_id]
@@ -214,7 +213,7 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.API
 				// notest
 				panic(err)
 			}
-			busRequest.DocID  = istructs.IDType(docID)
+			busRequest.DocID = istructs.IDType(docID)
 		}
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(apiPath)
