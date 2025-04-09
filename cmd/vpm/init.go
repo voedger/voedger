@@ -15,16 +15,20 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/voedger/voedger/pkg/goutils/exec"
-	"github.com/voedger/voedger/pkg/goutils/logger"
-	"github.com/voedger/voedger/pkg/sys"
 	"golang.org/x/mod/semver"
 
 	"github.com/voedger/voedger/pkg/compile"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/exec"
+	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
-var minimalRequiredGoVersionValue = minimalRequiredGoVersion
+var (
+	// global variables used to make version checking testable
+	minimalRequiredGoVersionValue     = minimalRequiredGoVersion
+	minimalRequiredTinyGoVersionValue = minimalRequiredTinyGoVersion
+)
 
 func newInitCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{

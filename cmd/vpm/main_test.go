@@ -6,6 +6,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/goutils/logger"
@@ -361,7 +363,7 @@ func TestInitBasicUsage(t *testing.T) {
 
 	// test minimal required go version in normal case
 	dir := t.TempDir()
-	minimalRequiredGoVersionValue = "1.12"
+	minimalRequiredGoVersionValue = "1.24"
 	err := execRootCmd([]string{"vpm", "init", "-C", dir, packagePath}, "1.0.0")
 	require.NoError(err)
 	require.FileExists(filepath.Join(dir, goModFileName))
@@ -618,4 +620,107 @@ func TestCommandMessaging(t *testing.T) {
 	}
 
 	testingu.RunCmdTestCases(t, execRootCmd, testCases, version)
+}
+
+func TestCheckTinyGoVersion(t *testing.T) {
+	// Save and restore the original function
+	originalGetTinyGoVersionFunc := getTinyGoVersionFuncVariable
+	defer func() {
+		getTinyGoVersionFuncVariable = originalGetTinyGoVersionFunc
+	}()
+
+	tests := []struct {
+		name                     string
+		mockGetTinyGoVersionFunc func() (string, error)
+		requiredTinyGoVersion    string
+		expectedResult           bool
+		expectedErr              string
+	}{
+		{
+			name: "version higher than required",
+			mockGetTinyGoVersionFunc: func() (string, error) {
+				return "tinygo version 0.38 darwin/arm64 (using go version go1.24.2 and LLVM version 18.1.2)", nil
+			},
+			requiredTinyGoVersion: "0.37.0",
+			expectedResult:        true,
+			expectedErr:           "",
+		},
+		{
+			name: "version slightly higher than required",
+			mockGetTinyGoVersionFunc: func() (string, error) {
+				return "tinygo version 0.37.1 darwin/arm64 (using go version go1.24.2 and LLVM version 18.1.2)", nil
+			},
+			requiredTinyGoVersion: "0.37.0",
+			expectedResult:        true,
+			expectedErr:           "",
+		},
+		{
+			name: "version equal to required",
+			mockGetTinyGoVersionFunc: func() (string, error) {
+				return "tinygo version 0.37.0 darwin/arm64 (using go version go1.24.2 and LLVM version 18.1.2)", nil
+			},
+			requiredTinyGoVersion: "0.37.0",
+			expectedResult:        true,
+			expectedErr:           "",
+		},
+		{
+			name: "version lower than required",
+			mockGetTinyGoVersionFunc: func() (string, error) {
+				return "tinygo version 0.10.0 darwin/arm64 (using go version go1.20.0 and LLVM version 14.0.0)", nil
+			},
+			requiredTinyGoVersion: "0.37.0",
+			expectedResult:        false,
+			expectedErr:           "",
+		},
+		{
+			name: "version slightly lower than required",
+			mockGetTinyGoVersionFunc: func() (string, error) {
+				return "tinygo version 0.37.1 darwin/arm64 (using go version go1.20.0 and LLVM version 14.0.0)", nil
+			},
+			requiredTinyGoVersion: "0.37.2",
+			expectedResult:        false,
+			expectedErr:           "",
+		},
+		{
+			name: "getTinyGoVersion error",
+			mockGetTinyGoVersionFunc: func() (string, error) {
+				return "", errors.New("command failed")
+			},
+			requiredTinyGoVersion: "0.37.0",
+			expectedResult:        false,
+			expectedErr:           "command failed",
+		},
+		{
+			name: "invalid version format",
+			mockGetTinyGoVersionFunc: func() (string, error) {
+				return "tinygo bad-version-format", nil
+			},
+			requiredTinyGoVersion: "0.37.0",
+			expectedResult:        false,
+			expectedErr:           "could not parse tinygo version from: tinygo bad-version-format",
+		},
+		{
+			name:           "nil getTinyGoVersionFuncVariable",
+			expectedResult: false,
+			expectedErr:    "getTinyGoVersionFuncVariable is not set",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			minimalRequiredTinyGoVersionValue = tt.requiredTinyGoVersion
+			getTinyGoVersionFuncVariable = tt.mockGetTinyGoVersionFunc
+
+			result, err := checkTinyGoVersion()
+
+			if tt.expectedErr != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.expectedErr)
+			} else {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, tt.expectedResult, result)
+		})
+	}
 }

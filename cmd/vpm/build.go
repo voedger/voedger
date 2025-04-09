@@ -11,19 +11,23 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
-	"github.com/voedger/voedger/pkg/parser"
-
 	"github.com/google/uuid"
-
 	"github.com/spf13/cobra"
+	"golang.org/x/mod/semver"
+
 	"github.com/voedger/voedger/pkg/compile"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/parser"
 )
+
+// global variables used to make version checking testable
+var getTinyGoVersionFuncVariable = getTinyGoVersion
 
 func newBuildCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
@@ -141,6 +145,15 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 
 // execTinyGoBuild builds the project using tinygo and returns the path to the resulting wasm file
 func execTinyGoBuild(dir, appName string) (wasmFilePath string, err error) {
+	ok, err := checkTinyGoVersion()
+	if err != nil {
+		return "", fmt.Errorf("failed to get tinygo version: %w", err)
+	}
+
+	if !ok {
+		return "", fmt.Errorf("tinygo version is lower than %s", minimalRequiredTinyGoVersionValue)
+	}
+
 	var stdout io.Writer
 	if logger.IsVerbose() {
 		stdout = os.Stdout
@@ -171,4 +184,41 @@ func execTinyGoBuild(dir, appName string) (wasmFilePath string, err error) {
 		return "", err
 	}
 	return filepath.Join(dir, wasmFileName), nil
+}
+
+// getTinyGoVersion returns the version of the installed tinygo
+func getTinyGoVersion() (string, error) {
+	// notest
+	var stdout strings.Builder
+
+	if err := new(exec.PipedExec).Command("tinygo", "version").Run(&stdout, os.Stderr); err != nil {
+		// notest
+		return "", fmt.Errorf("failed to get tinygo version: %w", err)
+	}
+
+	return stdout.String(), nil
+}
+
+// checkTinyGoVersion checks if the installed tinygo version is greater than or equal to the minimal required version
+func checkTinyGoVersion() (bool, error) {
+	if getTinyGoVersionFuncVariable == nil {
+		return false, errors.New("getTinyGoVersionFuncVariable is not set")
+	}
+	// Get the version of the installed tinygo
+	versionOutput, err := getTinyGoVersionFuncVariable()
+	if err != nil {
+		return false, err
+	}
+
+	// Regex to extract version from: "tinygo version 0.33.0 darwin/arm64..."
+	re := regexp.MustCompile(`tinygo version (\d+\.\d+\.?\d?)`)
+	matches := re.FindStringSubmatch(versionOutput)
+
+	if len(matches) < 2 {
+		return false, fmt.Errorf("could not parse tinygo version from: %s", versionOutput)
+	}
+
+	tinyGoVersion := matches[1]
+
+	return semver.Compare("v"+tinyGoVersion, "v"+minimalRequiredTinyGoVersionValue) >= 0, nil
 }
