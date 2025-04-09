@@ -599,13 +599,13 @@ func (cmdProc *cmdProc) validateCUDsQNames(ctx context.Context, work pipeline.IW
 	return nil
 }
 
-func requestDataToCUDs(requestData coreutils.MapObject, opKind appdef.OperationKind, parentSysID uint64, nextRawID *uint64, cudNumber int, qName appdef.QName) ([]parsedCUD, error) {
+func apiV2InsertToCUDs(requestData coreutils.MapObject, parentSysID uint64, nextRawID *uint64, cudNumber int, qName appdef.QName) ([]parsedCUD, error) {
 	res := []parsedCUD{}
 	cudXPath := xPath("cuds[" + strconv.Itoa(cudNumber) + "]")
 	parsedCUD := parsedCUD{
 		qName:  qName,
 		fields: coreutils.MapObject{},
-		opKind: opKind,
+		opKind: appdef.OperationKind_Insert,
 	}
 	res = append(res, parsedCUD)
 	rootCUDIdx := len(res) - 1
@@ -631,7 +631,7 @@ func requestDataToCUDs(requestData coreutils.MapObject, opKind appdef.OperationK
 		if requestCUDChildsIntfs, ok := rootFieldValue.([]interface{}); ok {
 			for _, requestCUDChildsIntf := range requestCUDChildsIntfs {
 				requestCUDChildsMap := requestCUDChildsIntf.(map[string]interface{})
-				parsedCUDsChilds, err := requestDataToCUDs(requestCUDChildsMap, opKind, parsedCUD.id, nextRawID, cudNumber+1, appdef.NewQName(qName.Pkg(), rootFieldName))
+				parsedCUDsChilds, err := apiV2InsertToCUDs(requestCUDChildsMap, parsedCUD.id, nextRawID, cudNumber+1, appdef.NewQName(qName.Pkg(), rootFieldName))
 				if err != nil {
 					return nil, err
 				}
@@ -652,15 +652,28 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		switch cmd.cmdMes.Method() {
 		case http.MethodPost:
 			firstRawID := uint64(istructs.MinRawRecordID)
-			cmd.parsedCUDs, err = requestDataToCUDs(cmd.requestData, appdef.OperationKind_Insert, 0, &firstRawID, 1, cmd.cmdMes.QName())
-		case http.MethodPatch:
+			cmd.parsedCUDs, err = apiV2InsertToCUDs(cmd.requestData, 0, &firstRawID, 1, cmd.cmdMes.QName())
+		case http.MethodPatch, http.MethodDelete:
+			if _, ok := cmd.requestData[appdef.SystemField_ID]; ok {
+				return errors.New("sys.ID field is not allowed among fields to update")
+			}
 			cudXPath := xPath("")
 			parsedCUD := parsedCUD{
 				id:     uint64(cmd.cmdMes.DocID()),
 				opKind: appdef.OperationKind_Update,
 				fields: cmd.requestData,
 			}
+			if cmd.cmdMes.Method() == http.MethodDelete {
+				if len(cmd.requestData) > 0 {
+					return errors.New("unexpected body is provided on delete")
+				}
+				parsedCUD.opKind = appdef.OperationKind_Deactivate
+				parsedCUD.fields = coreutils.MapObject{
+					appdef.SystemField_IsActive: false,
+				}
+			}
 			if parsedCUD.existingRecord, err = cmd.appStructs.Records().Get(cmd.cmdMes.WSID(), true, istructs.RecordID(parsedCUD.id)); err != nil { // nolint G115
+				// notest
 				return
 			}
 			if parsedCUD.qName = parsedCUD.existingRecord.QName(); parsedCUD.qName == appdef.NullQName {

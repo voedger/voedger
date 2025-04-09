@@ -136,6 +136,14 @@ func WithRelativeURL(relativeURL string) ReqOptFunc {
 	}
 }
 
+func WithMethodIfNotSpecified(m string) ReqOptFunc {
+	return func(opts *reqOpts) {
+		if len(opts.method) == 0 {
+			opts.method = m
+		}
+	}
+}
+
 func WithMethod(m string) ReqOptFunc {
 	return func(po *reqOpts) {
 		po.method = m
@@ -249,7 +257,6 @@ func (c *implIHTTPClient) req(urlStr string, body string, optFuncs ...ReqOptFunc
 	opts := &reqOpts{
 		headers: map[string]string{},
 		cookies: map[string]string{},
-		method:  http.MethodGet,
 	}
 	optFuncs = append(optFuncs, WithRetryOnCertainError(func(err error) bool {
 		// https://github.com/voedger/voedger/issues/1694
@@ -257,6 +264,9 @@ func (c *implIHTTPClient) req(urlStr string, body string, optFuncs ...ReqOptFunc
 	}, retryOn_WSAECONNREFUSED_Timeout, retryOn_WSAECONNREFUSED_Delay))
 	for _, optFunc := range optFuncs {
 		optFunc(opts)
+	}
+	if len(opts.method) == 0 {
+		opts.method = http.MethodGet
 	}
 
 	mutualExclusiveOpts := 0
@@ -353,11 +363,16 @@ reqLoop:
 		statusErr = fmt.Errorf("%w: %d, %s", ErrUnexpectedStatusCode, resp.StatusCode, respBody)
 	}
 	if resp.StatusCode != http.StatusOK && len(opts.expectedErrorContains) > 0 {
-		sysError := map[string]interface{}{}
-		if err := json.Unmarshal([]byte(respBody), &sysError); err != nil {
+		respMap := map[string]interface{}{}
+		if err := json.Unmarshal([]byte(respBody), &respMap); err != nil {
 			return nil, err
 		}
-		actualError := sysError["sys.Error"].(map[string]interface{})["Message"].(string)
+		actualError := ""
+		if strings.Contains(urlStr, "api/v2") {
+			actualError = respMap["message"].(string)
+		} else {
+			actualError = respMap["sys.Error"].(map[string]interface{})["Message"].(string)
+		}
 		if !containsAllMessages(opts.expectedErrorContains, actualError) {
 			return nil, fmt.Errorf(`actual error message "%s" does not contain the expected messages %v`, actualError, opts.expectedErrorContains)
 		}

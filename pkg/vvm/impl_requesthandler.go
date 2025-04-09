@@ -59,17 +59,7 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 
 		// deliver to processors
 		if request.IsAPIV2 {
-			if request.APIPath == int(processors.APIPath_Docs) || request.APIPath == int(processors.APIPath_Commands) {
-				// CP
-
-				// TODO: use appQName to calculate cmdProcessorIdx in solid range [0..cpCount)
-				cmdProcessorIdx := uint(partitionID) % uint(cpAmount)
-				icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, request.AppQName, request.WSID, responder, partitionID, request.QName, token,
-					request.Host, processors.APIPath(request.APIPath), istructs.RecordID(request.DocID), request.Method)
-				if !procbus.Submit(uint(cpchIdx), cmdProcessorIdx, icm) {
-					bus.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
-				}
-			} else {
+			if request.Method == http.MethodGet {
 				// QP
 				queryParams, err := query2.ParseQueryParams(request.Query)
 				if err != nil {
@@ -81,6 +71,16 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 					partitionID, request.Host, token, request.WorkspaceQName, request.Header[coreutils.Accept])
 				if !procbus.Submit(uint(qpcgIdx_v2), 0, iqm) {
 					bus.ReplyErrf(responder, http.StatusServiceUnavailable, "no query_v2 processors available")
+				}
+			} else {
+				// CP
+
+				// TODO: use appQName to calculate cmdProcessorIdx in solid range [0..cpCount)
+				cmdProcessorIdx := uint(partitionID) % uint(cpAmount)
+				icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, request.AppQName, request.WSID, responder, partitionID, request.QName, token,
+					request.Host, processors.APIPath(request.APIPath), istructs.RecordID(request.DocID), request.Method)
+				if !procbus.Submit(uint(cpchIdx), cmdProcessorIdx, icm) {
+					bus.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
 				}
 			}
 		} else {
