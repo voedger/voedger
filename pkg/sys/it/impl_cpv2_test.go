@@ -48,4 +48,21 @@ func TestBasicUsage_CommandProcessorV2(t *testing.T) {
 	)
 	require.NoError(err)
 	resp.Println()
+
+	path := fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.Root/%d`, ws.WSID, resp.NewIDs["1"])
+	resp, err = vit.IFederation.Query(path, coreutils.WithAuthorizeBy(ws.Owner.Token))
+	require.NoError(err)
+	resp.PrintJSON()
+
+	// body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
+	// 		{"fields": ["FldRoot"]},
+	// 		{"path": "Nested","fields": ["FldNested"]},
+	// 		{"path": "Nested/Third","fields": ["Fld1"]}
+	// 	]}`
+	// resp = vit.PostWS(ws, "q.sys.Collection", body)
+	// resp.Println()
+
+	// require.EqualValues(42, resp.Sections[0].Elements[0][0][0][0])
+	// require.EqualValues(3, resp.Sections[0].Elements[0][1][0][0])
+	// require.EqualValues(42, resp.Sections[0].Elements[0][2][0][0])
 }

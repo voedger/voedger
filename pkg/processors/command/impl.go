@@ -621,7 +621,7 @@ func requestDataToCUDs(requestData coreutils.MapObject, opKind appdef.OperationK
 	}
 
 	if parentSysID > 0 {
-		parsedCUD.fields[appdef.SystemField_ParentID] = parentSysID
+		parsedCUD.fields[appdef.SystemField_ParentID] = istructs.RecordID(parentSysID)
 		parsedCUD.fields[appdef.SystemField_Container] = qName.Entity()
 	}
 
