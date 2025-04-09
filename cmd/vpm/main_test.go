@@ -630,16 +630,25 @@ func TestCheckTinyGoVersion(t *testing.T) {
 	}()
 
 	tests := []struct {
-		name                  string
-		getTinyGoVersionFunc  func() (string, error)
-		requiredTinyGoVersion string
-		expectedResult        bool
-		expectedErr           string
+		name                     string
+		mockGetTinyGoVersionFunc func() (string, error)
+		requiredTinyGoVersion    string
+		expectedResult           bool
+		expectedErr              string
 	}{
 		{
 			name: "version higher than required",
-			getTinyGoVersionFunc: func() (string, error) {
-				return "tinygo version 0.38.0 darwin/arm64 (using go version go1.24.2 and LLVM version 18.1.2)", nil
+			mockGetTinyGoVersionFunc: func() (string, error) {
+				return "tinygo version 0.38 darwin/arm64 (using go version go1.24.2 and LLVM version 18.1.2)", nil
+			},
+			requiredTinyGoVersion: "0.37.0",
+			expectedResult:        true,
+			expectedErr:           "",
+		},
+		{
+			name: "version slightly higher than required",
+			mockGetTinyGoVersionFunc: func() (string, error) {
+				return "tinygo version 0.37.1 darwin/arm64 (using go version go1.24.2 and LLVM version 18.1.2)", nil
 			},
 			requiredTinyGoVersion: "0.37.0",
 			expectedResult:        true,
@@ -647,7 +656,7 @@ func TestCheckTinyGoVersion(t *testing.T) {
 		},
 		{
 			name: "version equal to required",
-			getTinyGoVersionFunc: func() (string, error) {
+			mockGetTinyGoVersionFunc: func() (string, error) {
 				return "tinygo version 0.37.0 darwin/arm64 (using go version go1.24.2 and LLVM version 18.1.2)", nil
 			},
 			requiredTinyGoVersion: "0.37.0",
@@ -656,7 +665,7 @@ func TestCheckTinyGoVersion(t *testing.T) {
 		},
 		{
 			name: "version lower than required",
-			getTinyGoVersionFunc: func() (string, error) {
+			mockGetTinyGoVersionFunc: func() (string, error) {
 				return "tinygo version 0.10.0 darwin/arm64 (using go version go1.20.0 and LLVM version 14.0.0)", nil
 			},
 			requiredTinyGoVersion: "0.37.0",
@@ -664,8 +673,17 @@ func TestCheckTinyGoVersion(t *testing.T) {
 			expectedErr:           "",
 		},
 		{
+			name: "version slightly lower than required",
+			mockGetTinyGoVersionFunc: func() (string, error) {
+				return "tinygo version 0.37.1 darwin/arm64 (using go version go1.20.0 and LLVM version 14.0.0)", nil
+			},
+			requiredTinyGoVersion: "0.37.2",
+			expectedResult:        false,
+			expectedErr:           "",
+		},
+		{
 			name: "getTinyGoVersion error",
-			getTinyGoVersionFunc: func() (string, error) {
+			mockGetTinyGoVersionFunc: func() (string, error) {
 				return "", errors.New("command failed")
 			},
 			requiredTinyGoVersion: "0.37.0",
@@ -674,7 +692,7 @@ func TestCheckTinyGoVersion(t *testing.T) {
 		},
 		{
 			name: "invalid version format",
-			getTinyGoVersionFunc: func() (string, error) {
+			mockGetTinyGoVersionFunc: func() (string, error) {
 				return "tinygo bad-version-format", nil
 			},
 			requiredTinyGoVersion: "0.37.0",
@@ -691,7 +709,7 @@ func TestCheckTinyGoVersion(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			minimalRequiredTinyGoVersionValue = tt.requiredTinyGoVersion
-			getTinyGoVersionFuncVariable = tt.getTinyGoVersionFunc
+			getTinyGoVersionFuncVariable = tt.mockGetTinyGoVersionFunc
 
 			result, err := checkTinyGoVersion()
 
