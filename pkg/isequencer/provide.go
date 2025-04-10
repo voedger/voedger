@@ -47,7 +47,7 @@ func New(params Params, seqStorage ISeqStorage, iTime coreutils.ITime) (ISequenc
 		cleanupCtx:       cleanupCtx,
 		cleanupCtxCancel: cleanupCtxCancel,
 		iTime:            iTime,
-		flusherStartedCh: make(chan struct{}, 1),
+		flusherCtxCancel: func() {}, // flusher is not started -> prevent nil
 		flusherSig:       make(chan struct{}, 1),
 		actualizerWG:     &sync.WaitGroup{},
 		seqStorage:       seqStorage,

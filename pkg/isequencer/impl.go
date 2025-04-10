@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"sync"
 
 	"github.com/voedger/voedger/pkg/coreutils"
 )
@@ -70,7 +69,6 @@ func (s *sequencer) startFlusher() {
 
 	flusherCtx, flusherCtxCancel := context.WithCancel(context.Background())
 	s.flusherCtxCancel = flusherCtxCancel
-	s.flusherWG = &sync.WaitGroup{}
 	s.flusherWG.Add(1)
 	go s.flusher(flusherCtx)
 }
@@ -84,11 +82,8 @@ func (s *sequencer) startActualizer() {
 }
 
 func (s *sequencer) stopFlusher() {
-	if s.flusherWG != nil {
-		s.flusherCtxCancel()
-		s.flusherWG.Wait()
-		s.flusherWG = nil
-	}
+	s.flusherCtxCancel()
+	s.flusherWG.Wait()
 }
 
 // signalToFlushing is used to signal the flusher to start flushing.
@@ -129,11 +124,6 @@ func (s *sequencer) flusher(ctx context.Context) {
 		s.flusherWG.Done()
 	}()
 
-	// Non-blocking write to flusherStartedCh for tests
-	select {
-	case s.flusherStartedCh <- struct{}{}:
-	default:
-	}
 	// Wait for ctx.Done()
 	for ctx.Err() == nil {
 		select {
@@ -379,10 +369,7 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 		s.actualizerInProgress.Store(false)
 	}()
 
-	// if s.flusherWG is not nil
-	if s.flusherWG != nil {
-		s.stopFlusher()
-	}
+	s.stopFlusher()
 
 	// Clean s.toBeFlushed, toBeFlushedOffset
 	s.toBeFlushedMu.Lock()
@@ -534,10 +521,7 @@ func (s *sequencer) cleanup() {
 		s.actualizerInProgress.Store(false)
 	}
 
-	if s.flusherWG != nil {
-		s.flusherCtxCancel()
-		s.flusherWG.Wait()
-	}
+	s.stopFlusher()
 
 	s.cleanupCtxCancel()
 }

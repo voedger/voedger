@@ -77,13 +77,10 @@ type sequencer struct {
 	// Closes when flusher needs to be stopped
 	flusherCtxCancel context.CancelFunc
 	// Used to wait for flusher goroutine to exit
-	// Set to nil when flusher is not running
 	// Is not accessed concurrently since
 	// - Is accessed by actualizer() and cleanup()
 	// - cleanup() first shutdowns the actualizer() then flusher()	flusherWg sync.WaitGroup
-	flusherWG *sync.WaitGroup
-	// Used in tests to signal that flusher is started
-	flusherStartedCh chan struct{}
+	flusherWG sync.WaitGroup
 	// Buffered channel [1] to signal flusher to flush
 	// Written (non-blocking) by Flush()
 	flusherSig chan struct{}
