@@ -99,7 +99,7 @@ type implIDGenerator struct {
 type parsedCUD struct {
 	opKind         appdef.OperationKind // update can not be activate\deactivate because IsActive modified -> other fields update is not allowed, see
 	existingRecord istructs.IRecord     // create -> nil
-	id             uint64
+	id             istructs.RecordID
 	qName          appdef.QName
 	fields         coreutils.MapObject
 	xPath          xPath

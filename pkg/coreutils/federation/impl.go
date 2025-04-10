@@ -218,12 +218,11 @@ func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, h
 	if strings.HasPrefix(httpResp.HTTPResp.Request.URL.Path, "/api/v2/") {
 		// TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
 		if httpResp.HTTPResp.Header.Get(coreutils.ContentType) == coreutils.ContentType_ApplicationJSON {
-			err = json.Unmarshal([]byte(httpResp.Body), &res.APIV2Response)
+			if err = json.Unmarshal([]byte(httpResp.Body), &res.APIV2Response); err == nil {
+				err = json.Unmarshal([]byte(httpResp.Body), &res.CommandResponse)
+			}
 		} else {
 			res.APIV2Response = httpResp.Body
-		}
-		if err == nil {
-			err = json.Unmarshal([]byte(httpResp.Body), &res.CommandResponse)
 		}
 	} else {
 		err = json.Unmarshal([]byte(httpResp.Body), &res)
