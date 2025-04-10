@@ -118,21 +118,21 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 	ops := []*pipeline.WiredOperator{
 		operator("get api path handler", func(ctx context.Context, qw *queryWork) (err error) {
 			switch qw.msg.APIPath() {
-			case ApiPath_Queries:
+			case processors.APIPath_Queries:
 				qw.apiPathHandler = &queryHandler{}
-			case ApiPath_Views:
+			case processors.APIPath_Views:
 				qw.apiPathHandler = &viewHandler{}
-			case ApiPath_Docs:
+			case processors.APIPath_Docs:
 				// [~server.apiv2.docs/cmp.provideDocsHandler~impl]
 				qw.apiPathHandler = &docsHandler{}
-			case ApiPaths_Schema:
+			case processors.APIPaths_Schema:
 				qw.apiPathHandler = &schemasHandler{}
-			case ApiPath_Schemas_WorkspaceRoles:
+			case processors.APIPath_Schemas_WorkspaceRoles:
 				qw.apiPathHandler = &schemasRolesHandler{}
-			case ApiPath_Schemas_WorkspaceRole:
+			case processors.APIPath_Schemas_WorkspaceRole:
 				// [~server.apiv2.role/cmp.provideSchemasRoleHandler~impl]
 				qw.apiPathHandler = &schemasRoleHandler{}
-			case ApiPath_CDocs:
+			case processors.APIPath_CDocs:
 				// [~server.apiv2.docs/cmp.provideCDocsHandler~impl]
 				qw.apiPathHandler = &cdocsHandler{}
 			default:
@@ -201,7 +201,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
 			switch qw.msg.APIPath() {
-			case ApiPaths_Schema, ApiPath_Schemas_WorkspaceRole, ApiPath_Schemas_WorkspaceRoles:
+			case processors.APIPaths_Schema, processors.APIPath_Schemas_WorkspaceRole, processors.APIPath_Schemas_WorkspaceRoles:
 				return nil
 			}
 			ok, err := qw.appPart.IsOperationAllowed(qw.iWorkspace, qw.apiPathHandler.RequestOpKind(), qw.msg.QName(), nil, qw.roles)
@@ -214,7 +214,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
-			if qw.msg.APIPath() == ApiPath_Queries {
+			if qw.msg.APIPath() == processors.APIPath_Queries {
 				qw.execQueryArgs, err = newExecQueryArgs(qw.msg.WSID(), qw)
 			}
 			return coreutils.WrapSysError(err, http.StatusBadRequest)

@@ -456,6 +456,14 @@ var defaultACL = ACL{
 		},
 		policy: appdef.PolicyKind_Deny,
 	},
+	{
+		desc: "revoke deactivate on app1pkg.DocDeactivateDenied",
+		pattern: PatternType{
+			opKindsPattern: []appdef.OperationKind{appdef.OperationKind_Deactivate},
+			qNamesPattern:  []appdef.QName{qNameCDocDocDeactivateDenied},
+		},
+		policy: appdef.PolicyKind_Deny,
+	},
 
 	// SubscriptionProfile
 }

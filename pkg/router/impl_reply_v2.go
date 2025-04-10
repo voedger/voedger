@@ -57,7 +57,7 @@ func createBusRequest(reqMethod string, req *http.Request, rw http.ResponseWrite
 	if docIDStr, hasDocID := vars[URLPlaceholder_id]; hasDocID {
 		docIDUint64, err := strconv.ParseUint(docIDStr, utils.DecimalBase, utils.BitSize64)
 		if err != nil {
-			// notest: prased already by route regexp
+			// notest: parsed already by route regexp
 			panic(err)
 		}
 		res.DocID = istructs.IDType(docIDUint64)

@@ -30,7 +30,7 @@ import (
 // wrapped ErrUnexpectedStatusCode is returned -> *HTTPResponse contains a valid response body
 // otherwise if err != nil (e.g. socket error)-> *HTTPResponse is nil
 func (f *implIFederation) post(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
-	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodPost))
+	optFuncs = append(optFuncs, coreutils.WithDefaultMethod(http.MethodPost))
 	return f.req(relativeURL, body, optFuncs...)
 }
 
@@ -218,7 +218,9 @@ func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, h
 	if strings.HasPrefix(httpResp.HTTPResp.Request.URL.Path, "/api/v2/") {
 		// TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
 		if httpResp.HTTPResp.Header.Get(coreutils.ContentType) == coreutils.ContentType_ApplicationJSON {
-			err = json.Unmarshal([]byte(httpResp.Body), &res.APIV2Response)
+			if err = json.Unmarshal([]byte(httpResp.Body), &res.APIV2Response); err == nil {
+				err = json.Unmarshal([]byte(httpResp.Body), &res.CommandResponse)
+			}
 		} else {
 			res.APIV2Response = httpResp.Body
 		}

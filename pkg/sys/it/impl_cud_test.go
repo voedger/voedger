@@ -483,7 +483,7 @@ func TestSelectFromNestedTables(t *testing.T) {
 		{"fields":{"sys.ID": 2,"sys.QName": "app1pkg.Nested", "sys.ParentID":1,"sys.Container": "Nested","FldNested":3}},
 		{"fields":{"sys.ID": 3,"sys.QName": "app1pkg.Third", "Fld1": 42,"sys.ParentID":2,"sys.Container": "Third"}}
 	]}`
-	vit.PostWS(ws, "c.sys.CUD", body).NewID()
+	vit.PostWS(ws, "c.sys.CUD", body)
 
 	t.Run("normal select", func(t *testing.T) {
 		body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
@@ -493,9 +493,10 @@ func TestSelectFromNestedTables(t *testing.T) {
 		]}`
 		resp := vit.PostWS(ws, "q.sys.Collection", body)
 
-		require.EqualValues(2, resp.Sections[0].Elements[0][0][0][0])
-		require.EqualValues(3, resp.Sections[0].Elements[0][1][0][0])
-		require.EqualValues(42, resp.Sections[0].Elements[0][2][0][0])
+		actualRow := resp.Sections[0].Elements[len(resp.Sections[0].Elements)-1]
+		require.EqualValues(2, actualRow[0][0][0])
+		require.EqualValues(3, actualRow[1][0][0])
+		require.EqualValues(42, actualRow[2][0][0])
 	})
 
 	t.Run("unknown nested table", func(t *testing.T) {

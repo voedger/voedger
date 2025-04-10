@@ -35,21 +35,35 @@ func TestSequencer(t *testing.T) {
 		})
 
 		seq, cleanup := New(params, storage, mockedTime)
+		expectedNumber := Number(101)
+
 		defer cleanup()
-		// When
-		offset := WaitForStart(t, seq, 1, 1, true)
-		require.Equal(PLogOffset(2), offset)
+		t.Run("100 numbers in one transaction", func(t *testing.T) {
+			offset := WaitForStart(t, seq, 1, 1, true)
+			require.Equal(PLogOffset(2), offset)
+			for i := 1; i <= 100; i++ {
+				num, err := seq.Next(1)
+				require.NoError(err)
+				require.Equal(expectedNumber, num)
+				expectedNumber++
+			}
+			seq.Flush()
+		})
 
-		// Generate new sequence Numbers 100 times
-		const countOfNumbers = 100
+		t.Run("100 transaction, 1 number in each", func(t *testing.T) {
+			for i := 1; i <= 100; i++ {
+				offset := WaitForStart(t, seq, 1, 1, true)
+				require.Equal(PLogOffset(2+i), offset)
+				num, err := seq.Next(1)
+				require.NoError(err)
+				require.Equal(expectedNumber, num)
+				expectedNumber++
+				seq.Flush()
+			}
 
-		for i := 1; i <= countOfNumbers; i++ {
-			num, err := seq.Next(1)
-			require.NoError(err)
-			require.Equal(Number(100+i), num)
-		}
-
-		seq.Flush()
+			cleanup()
+			seq.(*sequencer).flusherWG.Wait()
+		})
 
 		ctx, cancelCtx := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancelCtx()
@@ -58,7 +72,7 @@ func TestSequencer(t *testing.T) {
 			nums, err := storage.ReadNumbers(1, []SeqID{1})
 			require.NoError(err)
 			// check if number in storage is equal to the expected number
-			if initialNumber+countOfNumbers == nums[0] {
+			if expectedNumber-1 == nums[0] {
 				return
 			}
 			time.Sleep(10 * time.Millisecond)

@@ -10,17 +10,6 @@ import _ "embed"
 var swaggerUI_HTML string
 
 const (
-	ApiPath_Docs APIPath = iota
-	ApiPath_CDocs
-	ApiPath_Queries
-	ApiPath_Views
-	ApiPath_Commands
-	ApiPaths_Schema
-	ApiPath_Schemas_WorkspaceRoles
-	ApiPath_Schemas_WorkspaceRole
-)
-
-const (
 	errorSchemaName = "Error"
 	errorSchemaRef  = "#/components/schemas/" + errorSchemaName
 	bearerAuth      = "BearerAuth"

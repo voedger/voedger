@@ -108,6 +108,7 @@ var (
 	qNameQryShowStandbyOnDisplay                = appdef.NewQName(airPackage, "ShowStandbyOnDisplay")
 	qNameCmdRegisterTempBLOB1d                  = appdef.NewQName(appdef.SysPackage, "RegisterTempBLOB1d")
 	qNameQryDownloadBLOBAuthnz                  = appdef.NewQName(appdef.SysPackage, "DownloadBLOBAuthnz")
+	qNameCDocDocDeactivateDenied                = appdef.NewQName("app1pkg", "DocDeactivateDenied") // used in tests only
 
 	// Air roles
 	qNameRoleResellersAdmin            = appdef.NewQName(airPackage, "ResellersAdmin")
