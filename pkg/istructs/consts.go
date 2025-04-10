@@ -70,9 +70,17 @@ const (
 	// RecordID = RegisterID * RegisterFactor + BaseRecordID
 	RegisterFactor = 5000000000
 
+	// see https://github.com/voedger/voedger/issues/3528
+	doNotUse_ClusterAsRegisterID = 0xFFFF - 1000 + iota
+	doNotUse_ClusterAsCRecordRegisterID
+
+	// do not place here no more consts
+)
+
+const (
 	// ClusterDBSer is used to generate cluster-side IDs
 	// ID = PrimaryDCBaseID + some sequenced number
-	ClusterAsRegisterID = 0xFFFF - 1000 + iota
+	ClusterAsRegisterID = 0xFFFF - 1000 + 1 + iota
 	ClusterAsCRecordRegisterID
 )
 
