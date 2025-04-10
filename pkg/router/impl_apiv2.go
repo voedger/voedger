@@ -190,7 +190,7 @@ func requestHandlerV2_blobs() http.HandlerFunc {
 func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.APIPath, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
-		recordIDStr, _ := vars[URLPlaceholder_id]
+		recordIDStr := vars[URLPlaceholder_id]
 
 		// switch req.Method {
 		// case http.MethodGet:

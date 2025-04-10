@@ -640,7 +640,7 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 
 		// update should have priority to e.g. return error if we trying to modify sys.ID
 		if idToUpdate > 0 {
-			parsedCUD.id = istructs.RecordID(idToUpdate)
+			parsedCUD.id = idToUpdate
 			if parsedCUD.existingRecord, err = cmd.appStructs.Records().Get(cmd.cmdMes.WSID(), true, istructs.RecordID(parsedCUD.id)); err != nil { // nolint G115
 				return
 			}
@@ -663,7 +663,7 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 			}
 		} else if rawID > 0 {
 			// create
-			parsedCUD.id = istructs.RecordID(rawID)
+			parsedCUD.id = rawID
 			parsedCUD.opKind = appdef.OperationKind_Insert
 			qNameStr, _, err := parsedCUD.fields.AsString(appdef.SystemField_QName)
 			if err != nil {

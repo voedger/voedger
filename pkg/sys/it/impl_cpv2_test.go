@@ -58,7 +58,7 @@ func TestBasicUsage_CommandProcessorV2_Insert(t *testing.T) {
 
 	// update
 	body = `{"Fld1": 100}`
-	resp = vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.Third/%d", ws.WSID, newIDsAfterInsert["7"]), body,
+	vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.Third/%d", ws.WSID, newIDsAfterInsert["7"]), body,
 		coreutils.WithMethod(http.MethodPatch),
 		coreutils.WithAuthorizeBy(ws.Owner.Token),
 	)
@@ -74,7 +74,7 @@ func TestBasicUsage_CommandProcessorV2_Insert(t *testing.T) {
 	requireEqual(t, expected, resp.Body)
 
 	// delete
-	resp = vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.Third/%d", ws.WSID, newIDsAfterInsert["6"]), "{}",
+	vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.Third/%d", ws.WSID, newIDsAfterInsert["6"]), "{}",
 		coreutils.WithMethod(http.MethodDelete),
 		coreutils.WithAuthorizeBy(ws.Owner.Token),
 	)

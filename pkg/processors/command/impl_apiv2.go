@@ -19,9 +19,9 @@ import (
 func parseCUDs_v2(cmd *cmdWorkpiece) (err error) {
 	switch cmd.cmdMes.Method() {
 	case http.MethodPost:
-		firstRawID := istructs.MinRawRecordID
+		firstRawID := int64(istructs.MinRawRecordID)
 		cudNumber := 1
-		cmd.parsedCUDs, err = apiV2InsertToCUDs(cmd.requestData, istructs.NullRecordID, &firstRawID, &cudNumber, cmd.cmdMes.QName())
+		cmd.parsedCUDs, err = apiV2InsertToCUDs(cmd.requestData, 0, &firstRawID, &cudNumber, cmd.cmdMes.QName())
 	case http.MethodPatch, http.MethodDelete:
 		cmd.parsedCUDs, err = apiV2UpdateToCUDs(cmd)
 	default:
@@ -37,7 +37,7 @@ func apiV2UpdateToCUDs(cmd *cmdWorkpiece) (res []parsedCUD, err error) {
 	}
 	cudXPath := xPath("")
 	updateCUD := parsedCUD{
-		id:     cmd.cmdMes.DocID(),
+		id:     int64(cmd.cmdMes.DocID()), // nolint G115
 		opKind: appdef.OperationKind_Update,
 		fields: cmd.requestData,
 	}
@@ -65,7 +65,7 @@ func apiV2UpdateToCUDs(cmd *cmdWorkpiece) (res []parsedCUD, err error) {
 	return res, nil
 }
 
-func apiV2InsertToCUDs(requestData coreutils.MapObject, parentSysID istructs.RecordID, nextRawID *istructs.RecordID, cudNumber *int, qName appdef.QName) ([]parsedCUD, error) {
+func apiV2InsertToCUDs(requestData coreutils.MapObject, parentSysID int64, nextRawID *int64, cudNumber *int, qName appdef.QName) ([]parsedCUD, error) {
 	res := []parsedCUD{}
 	cudXPath := xPath("cuds[" + strconv.Itoa(*cudNumber) + "]")
 	parsedCUD := parsedCUD{
@@ -80,14 +80,14 @@ func apiV2InsertToCUDs(requestData coreutils.MapObject, parentSysID istructs.Rec
 		return nil, cudXPath.Error(err)
 	}
 	if hasExplicitRawID {
-		parsedCUD.id = istructs.RecordID(sysID)
+		parsedCUD.id = sysID
 	} else {
 		parsedCUD.id = *nextRawID
 		*nextRawID++
 	}
 
 	if parentSysID > 0 {
-		parsedCUD.fields[appdef.SystemField_ParentID] = istructs.RecordID(parentSysID)
+		parsedCUD.fields[appdef.SystemField_ParentID] = parentSysID
 		parsedCUD.fields[appdef.SystemField_Container] = qName.Entity()
 	}
 
