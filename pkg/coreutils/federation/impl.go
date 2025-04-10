@@ -30,7 +30,7 @@ import (
 // wrapped ErrUnexpectedStatusCode is returned -> *HTTPResponse contains a valid response body
 // otherwise if err != nil (e.g. socket error)-> *HTTPResponse is nil
 func (f *implIFederation) post(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
-	optFuncs = append(optFuncs, coreutils.WithMethodIfNotSpecified(http.MethodPost))
+	optFuncs = append(optFuncs, coreutils.WithDefaultMethod(http.MethodPost))
 	return f.req(relativeURL, body, optFuncs...)
 }
 

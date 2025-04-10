@@ -122,7 +122,7 @@ func WithRetryOnAnyError(timeout time.Duration, retryDelay time.Duration) ReqOpt
 	return WithRetryOnCertainError(func(error) bool { return true }, timeout, retryDelay)
 }
 
-func WithAuthorizeByIfNot(principalToken string) ReqOptFunc {
+func WithDefaultAuthorize(principalToken string) ReqOptFunc {
 	return func(po *reqOpts) {
 		if _, ok := po.headers[Authorization]; !ok {
 			po.headers[Authorization] = BearerPrefix + principalToken
@@ -136,7 +136,7 @@ func WithRelativeURL(relativeURL string) ReqOptFunc {
 	}
 }
 
-func WithMethodIfNotSpecified(m string) ReqOptFunc {
+func WithDefaultMethod(m string) ReqOptFunc {
 	return func(opts *reqOpts) {
 		if len(opts.method) == 0 {
 			opts.method = m

@@ -362,13 +362,13 @@ func (vit *VIT) GetPrincipal(appQName appdef.AppQName, login string) *Principal 
 
 func (vit *VIT) PostProfile(prn *Principal, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
-	opts = append(opts, coreutils.WithAuthorizeByIfNot(prn.Token))
+	opts = append(opts, coreutils.WithDefaultAuthorize(prn.Token))
 	return vit.PostApp(prn.AppQName, prn.ProfileWSID, funcName, body, opts...)
 }
 
 func (vit *VIT) PostWS(ws *AppWorkspace, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
-	opts = append(opts, coreutils.WithAuthorizeByIfNot(ws.Owner.Token))
+	opts = append(opts, coreutils.WithDefaultAuthorize(ws.Owner.Token))
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
@@ -376,7 +376,7 @@ func (vit *VIT) PostWS(ws *AppWorkspace, funcName string, body string, opts ...c
 func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
 	sysPrn := vit.GetSystemPrincipal(ws.Owner.AppQName)
-	opts = append(opts, coreutils.WithAuthorizeByIfNot(sysPrn.Token))
+	opts = append(opts, coreutils.WithDefaultAuthorize(sysPrn.Token))
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
@@ -453,7 +453,7 @@ func (vit *VIT) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobS
 
 func (vit *VIT) POST(relativeURL string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
-	opts = append(opts, coreutils.WithMethodIfNotSpecified(http.MethodPost))
+	opts = append(opts, coreutils.WithDefaultMethod(http.MethodPost))
 	url := vit.URLStr() + "/" + relativeURL
 	res, err := vit.httpClient.Req(url, body, opts...)
 	require.NoError(vit.T, err)
