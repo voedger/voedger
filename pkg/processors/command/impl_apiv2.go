@@ -57,6 +57,9 @@ func apiV2UpdateToCUDs(cmd *cmdWorkpiece) (res []parsedCUD, err error) {
 	if updateCUD.qName = updateCUD.existingRecord.QName(); updateCUD.qName == appdef.NullQName {
 		return nil, coreutils.NewHTTPError(http.StatusNotFound, cudXPath.Errorf("record with queried id %d does not exist", updateCUD.id))
 	}
+	if updateCUD.qName != cmd.cmdMes.QName() {
+		return nil, fmt.Errorf("record id %d leads to %s QName whereas %s QName is mentioned in the request", updateCUD.id, updateCUD.qName, cmd.cmdMes.QName())
+	}
 	updateCUD.xPath = xPath(fmt.Sprintf("%s %s %s", cudXPath, opKindDesc[updateCUD.opKind], updateCUD.qName))
 	res = append(res, updateCUD)
 	return res, nil
