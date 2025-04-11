@@ -79,6 +79,14 @@ func (c *resultValueBuilder) BuildValue() istructs.IStateValue {
 	return &ObjectStateValue{object: o}
 }
 
+func (c *resultValueBuilder) PutInt8(name string, value int8) {
+	c.resultBuilder.PutInt8(name, value)
+}
+
+func (c *resultValueBuilder) PutInt16(name string, value int16) {
+	c.resultBuilder.PutInt16(name, value)
+}
+
 func (c *resultValueBuilder) PutInt32(name string, value int32) {
 	c.resultBuilder.PutInt32(name, value)
 }

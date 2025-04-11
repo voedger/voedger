@@ -35,6 +35,20 @@ import (
 func (row *rowType) clarifyJSONValue(value interface{}, kind appdef.DataKind) (res interface{}, err error) {
 outer:
 	switch kind {
+	case appdef.DataKind_int8: // #3435 [~server.vsql.smallints/cmp.istructs~impl]
+		switch v := value.(type) {
+		case int8:
+			return v, nil
+		case json.Number:
+			return coreutils.ClarifyJSONNumber(v, kind)
+		}
+	case appdef.DataKind_int16: // #3435 [~server.vsql.smallints/cmp.istructs~impl]
+		switch v := value.(type) {
+		case int16:
+			return v, nil
+		case json.Number:
+			return coreutils.ClarifyJSONNumber(v, kind)
+		}
 	case appdef.DataKind_int32:
 		switch v := value.(type) {
 		case int32:

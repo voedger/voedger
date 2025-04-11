@@ -291,6 +291,8 @@ type viewValue struct {
 	value istructs.IValue
 }
 
+func (v *viewValue) AsInt8(name string) int8          { return v.value.AsInt8(name) }
+func (v *viewValue) AsInt16(name string) int16        { return v.value.AsInt16(name) }
 func (v *viewValue) AsInt32(name string) int32        { return v.value.AsInt32(name) }
 func (v *viewValue) AsInt64(name string) int64        { return v.value.AsInt64(name) }
 func (v *viewValue) AsFloat32(name string) float32    { return v.value.AsFloat32(name) }

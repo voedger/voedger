@@ -58,6 +58,10 @@ func Test_clarifyJSONValue(t *testing.T) {
 		expectedTypeKind reflect.Kind
 		expectedVal      interface{}
 	}{
+		{val: int8(7), kind: appdef.DataKind_int8, expectedTypeKind: reflect.Int8},
+		{val: int8(-7), kind: appdef.DataKind_int8, expectedTypeKind: reflect.Int8},
+		{val: int16(7), kind: appdef.DataKind_int16, expectedTypeKind: reflect.Int16},
+		{val: int16(-7), kind: appdef.DataKind_int16, expectedTypeKind: reflect.Int16},
 		{val: int32(7), kind: appdef.DataKind_int32, expectedTypeKind: reflect.Int32},
 		{val: int64(7), kind: appdef.DataKind_int64, expectedTypeKind: reflect.Int64},
 		{val: float32(7.7), kind: appdef.DataKind_float32, expectedTypeKind: reflect.Float32},
@@ -94,24 +98,34 @@ func Test_clarifyJSONValue(t *testing.T) {
 		kind          appdef.DataKind
 		expectedError error
 	}{
+		{val: float64(7), kind: appdef.DataKind_int8, expectedError: ErrWrongFieldTypeError},
+		{val: float64(7), kind: appdef.DataKind_int16, expectedError: ErrWrongFieldTypeError},
 		{val: float64(7), kind: appdef.DataKind_int32, expectedError: ErrWrongFieldTypeError},
 		{val: float64(7), kind: appdef.DataKind_int64, expectedError: ErrWrongFieldTypeError},
 		{val: float64(7), kind: appdef.DataKind_float32, expectedError: ErrWrongFieldTypeError},
 		{val: float32(7), kind: appdef.DataKind_float64, expectedError: ErrWrongFieldTypeError},
 		{val: float64(7), kind: appdef.DataKind_RecordID, expectedError: ErrWrongFieldTypeError},
+		{val: json.Number("1.1"), kind: appdef.DataKind_int8},
+		{val: json.Number("1.1"), kind: appdef.DataKind_int16},
 		{val: json.Number("1.1"), kind: appdef.DataKind_int32},
 		{val: json.Number("1.1"), kind: appdef.DataKind_int64},
 		{val: json.Number("1.1"), kind: appdef.DataKind_RecordID},
+		{val: json.Number(strconv.Itoa(math.MaxInt8 + 1)), kind: appdef.DataKind_int8},
+		{val: json.Number(strconv.Itoa(math.MinInt8 - 1)), kind: appdef.DataKind_int8},
+		{val: json.Number(strconv.Itoa(math.MaxInt16 + 1)), kind: appdef.DataKind_int16},
+		{val: json.Number(strconv.Itoa(math.MinInt16 - 1)), kind: appdef.DataKind_int16},
 		{val: json.Number(strconv.Itoa(math.MaxInt32 + 1)), kind: appdef.DataKind_int32},
 		{val: json.Number(strconv.Itoa(math.MinInt32 - 1)), kind: appdef.DataKind_int32},
 		{val: json.Number(fmt.Sprint(math.MaxInt64 + (float64(1)))), kind: appdef.DataKind_int64},
 		{val: json.Number(fmt.Sprint(math.MinInt64 - (float64(1)))), kind: appdef.DataKind_int64},
 		{val: json.Number(fmt.Sprint(math.MaxFloat64)), kind: appdef.DataKind_float32},
 		{val: json.Number(fmt.Sprint(-math.MaxFloat64)), kind: appdef.DataKind_float32},
-		{val: json.Number("a"), kind: appdef.DataKind_float32},
-		{val: json.Number("a"), kind: appdef.DataKind_float64},
+		{val: json.Number("a"), kind: appdef.DataKind_int8},
+		{val: json.Number("a"), kind: appdef.DataKind_int16},
 		{val: json.Number("a"), kind: appdef.DataKind_int32},
 		{val: json.Number("a"), kind: appdef.DataKind_int64},
+		{val: json.Number("a"), kind: appdef.DataKind_float32},
+		{val: json.Number("a"), kind: appdef.DataKind_float64},
 		{val: json.Number("a"), kind: appdef.DataKind_RecordID},
 		{val: json.Number(coreutils.TooBigNumberStr), kind: appdef.DataKind_float64},
 		{val: json.Number("-" + coreutils.TooBigNumberStr), kind: appdef.DataKind_float64},
@@ -204,10 +218,13 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 	t.Run("As××× row methods must return default values if not calls Put×××", func(t *testing.T) {
 		row := newEmptyTestRow()
 
-		require.Equal(int32(0), row.AsInt32("int32"))
-		require.Equal(int64(0), row.AsInt64("int64"))
-		require.Equal(float32(0), row.AsFloat32("float32"))
-		require.Equal(float64(0), row.AsFloat64("float64"))
+		require.Zero(row.AsInt8("int8"))
+		require.Zero(row.AsInt16("int16"))
+		require.Zero(row.AsInt32("int32"))
+		require.Zero(row.AsInt64("int64"))
+		require.Zero(row.AsFloat32("float32"))
+		require.Zero(row.AsFloat64("float64"))
+
 		require.Equal([]byte(nil), row.AsBytes("bytes"))
 		require.Empty(row.AsString("string"))
 
@@ -227,6 +244,8 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
+		row.PutNumber("int8", json.Number("120"))
+		row.PutNumber("int16", json.Number("25000"))
 		row.PutNumber("int32", json.Number("1"))
 		row.PutNumber("int64", json.Number("2"))
 		row.PutNumber("float32", json.Number("3"))
@@ -235,6 +254,9 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 
 		require.NoError(row.build())
 
+		require.EqualValues(120, row.AsInt8("int8"))
+		require.EqualValues(25000, row.AsInt16("int16"))
+		require.Equal(int64(2), row.AsInt64("int64"))
 		require.Equal(int32(1), row.AsInt32("int32"))
 		require.Equal(int64(2), row.AsInt64("int64"))
 		require.Equal(float32(3), row.AsFloat32("float32"))
@@ -242,6 +264,8 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		require.Equal(istructs.RecordID(5), row.AsRecordID("RecordID"))
 
 		t.Run("should be OK to As××× with type casts", func(t *testing.T) {
+			require.EqualValues(120, row.AsFloat64("int8"))
+			require.EqualValues(25000, row.AsFloat64("int16"))
 			require.EqualValues(1, row.AsFloat64("int32"))
 			require.EqualValues(2, row.AsFloat64("int64"))
 			require.EqualValues(3, row.AsFloat64("float32"))
@@ -282,35 +306,67 @@ func Test_rowType_PutFromJSON(t *testing.T) {
 
 	t.Run("basic", func(t *testing.T) {
 
-		bld := test.AppStructs.ObjectBuilder(test.testRow)
-
-		data := map[appdef.FieldName]any{
-			"int32":    json.Number("1"),
-			"int64":    json.Number("2"),
-			"float32":  json.Number("3"),
-			"float64":  json.Number("4"),
-			"bytes":    "BQY=", // []byte{5,6}
-			"string":   "str",
-			"QName":    test.testCDoc.String(),
-			"bool":     true,
-			"RecordID": json.Number("7"),
+		tests := []struct {
+			name string
+			data map[appdef.FieldName]any
+		}{
+			{
+				name: "native types in json values",
+				data: map[appdef.FieldName]any{
+					appdef.SystemField_QName: test.testRow,
+					"int8":                   int8(-2),
+					"int16":                  int16(-1),
+					"int32":                  int32(1),
+					"int64":                  int64(2),
+					"float32":                float32(3),
+					"float64":                float64(4),
+					"bytes":                  []byte{5, 6},
+					"string":                 "str",
+					"QName":                  test.testCDoc,
+					"bool":                   true,
+					"RecordID":               istructs.RecordID(7),
+				},
+			},
+			{
+				name: "json types in json values",
+				data: map[appdef.FieldName]any{
+					"int8":     json.Number("-2"),
+					"int16":    json.Number("-1"),
+					"int32":    json.Number("1"),
+					"int64":    json.Number("2"),
+					"float32":  json.Number("3"),
+					"float64":  json.Number("4"),
+					"bytes":    "BQY=", // []byte{5,6}
+					"string":   "str",
+					"QName":    test.testCDoc.String(),
+					"bool":     true,
+					"RecordID": json.Number("7"),
+				},
+			},
 		}
 
-		bld.PutFromJSON(data)
+		for _, tst := range tests {
+			t.Run(tst.name, func(t *testing.T) {
+				bld := test.AppStructs.ObjectBuilder(test.testRow)
+				bld.PutFromJSON(tst.data)
 
-		row, err := bld.Build()
-		require.NoError(err)
+				row, err := bld.Build()
+				require.NoError(err)
 
-		require.EqualValues(test.testRow, row.QName())
-		require.EqualValues(1, row.AsInt32("int32"))
-		require.EqualValues(2, row.AsInt64("int64"))
-		require.EqualValues(3, row.AsFloat32("float32"))
-		require.EqualValues(4, row.AsFloat64("float64"))
-		require.Equal([]byte{5, 6}, row.AsBytes("bytes"))
-		require.Equal("str", row.AsString("string"))
-		require.Equal(test.testCDoc, row.AsQName("QName"))
-		require.True(row.AsBool("bool"))
-		require.EqualValues(7, row.AsRecordID("RecordID"))
+				require.EqualValues(test.testRow, row.QName())
+				require.EqualValues(-2, row.AsInt8("int8"))
+				require.EqualValues(-1, row.AsInt16("int16"))
+				require.EqualValues(1, row.AsInt32("int32"))
+				require.EqualValues(2, row.AsInt64("int64"))
+				require.EqualValues(3, row.AsFloat32("float32"))
+				require.EqualValues(4, row.AsFloat64("float64"))
+				require.Equal([]byte{5, 6}, row.AsBytes("bytes"))
+				require.Equal("str", row.AsString("string"))
+				require.Equal(test.testCDoc, row.AsQName("QName"))
+				require.True(row.AsBool("bool"))
+				require.EqualValues(7, row.AsRecordID("RecordID"))
+			})
+		}
 	})
 
 	t.Run("[]byte as bytes value instead of base64 string", func(t *testing.T) {
@@ -328,6 +384,8 @@ func Test_rowType_PutFromJSON(t *testing.T) {
 		bld := test.AppStructs.ObjectBuilder(test.testRow)
 
 		data := map[appdef.FieldName]any{
+			"int8":  byte(42),
+			"int16": uint16(42),
 			"int32": uint8(42),
 		}
 		bld.PutFromJSON(data)
@@ -341,6 +399,18 @@ func Test_rowType_PutFromJSON(t *testing.T) {
 			val interface{}
 			err error
 		}{
+			"int8": {
+				{val: json.Number("1.1"), err: strconv.ErrSyntax},
+				{val: json.Number("d"), err: strconv.ErrSyntax},
+				{val: json.Number(strconv.Itoa(math.MaxInt8 + 1)), err: coreutils.ErrNumberOverflow},
+				{val: json.Number(strconv.Itoa(math.MinInt8 - 1)), err: coreutils.ErrNumberOverflow},
+			},
+			"int16": {
+				{val: json.Number("1.1"), err: strconv.ErrSyntax},
+				{val: json.Number("d"), err: strconv.ErrSyntax},
+				{val: json.Number(strconv.Itoa(math.MaxInt16 + 1)), err: coreutils.ErrNumberOverflow},
+				{val: json.Number(strconv.Itoa(math.MinInt16 - 1)), err: coreutils.ErrNumberOverflow},
+			},
 			"int32": {
 				{val: json.Number("1.1"), err: strconv.ErrSyntax},
 				{val: json.Number("d"), err: strconv.ErrSyntax},
@@ -366,7 +436,7 @@ func Test_rowType_PutFromJSON(t *testing.T) {
 		}
 
 		for fieldName, fieldTest := range fieldTests {
-			data := map[string]interface{}{}
+			data := map[string]any{}
 			for _, tst := range fieldTest {
 				bld := test.AppStructs.ObjectBuilder(test.testRow)
 				data[fieldName] = tst.val
@@ -425,6 +495,8 @@ func Test_rowType_PutErrors(t *testing.T) {
 				require.Error(row.build(), require.Is(ErrNameNotFoundError), require.Has(unknown))
 			}
 
+			testPut(func(row istructs.IRowWriter) { row.PutInt8(unknown, 1) })
+			testPut(func(row istructs.IRowWriter) { row.PutInt16(unknown, 1) })
 			testPut(func(row istructs.IRowWriter) { row.PutInt32(unknown, 1) })
 			testPut(func(row istructs.IRowWriter) { row.PutInt32(unknown, 1) })
 			testPut(func(row istructs.IRowWriter) { row.PutInt64(unknown, 2) })
@@ -446,9 +518,11 @@ func Test_rowType_PutErrors(t *testing.T) {
 				put       func(row istructs.IRowWriter)
 				name, typ string
 			}{
+				{func(row istructs.IRowWriter) { row.PutInt8("int16", 1) }, "int16", "int8"},
+				{func(row istructs.IRowWriter) { row.PutInt16("int32", 1) }, "int32", "int16"},
 				{func(row istructs.IRowWriter) { row.PutInt32("int64", 1) }, "int64", "int32"},
 				{func(row istructs.IRowWriter) { row.PutInt64("float32", 2) }, "float32", "int64"},
-				{func(row istructs.IRowWriter) { row.PutFloat32("int32", 3) }, "int32", "float32"},
+				{func(row istructs.IRowWriter) { row.PutFloat32("int8", 3) }, "int8", "float32"},
 				{func(row istructs.IRowWriter) { row.PutFloat64("string", 4) }, "string", "float64"},
 				{func(row istructs.IRowWriter) { row.PutRecordID("raw", 4) }, "raw", "RecordID"},
 				{func(row istructs.IRowWriter) { row.PutBytes("float64", []byte{1, 2, 3}) }, "float64", "bytes"},
@@ -545,6 +619,8 @@ func Test_rowType_AsPanics(t *testing.T) {
 			row := newTestRow()
 
 			tests := []func(){
+				func() { row.AsInt8(unknown) },
+				func() { row.AsInt16(unknown) },
 				func() { row.AsInt32(unknown) },
 				func() { row.AsInt64(unknown) },
 				func() { row.AsFloat32(unknown) },
@@ -570,6 +646,8 @@ func Test_rowType_AsPanics(t *testing.T) {
 				panics func()
 				field  string
 			}{
+				{func() { row.AsInt8("raw") }, "raw"},
+				{func() { row.AsInt16("raw") }, "raw"},
 				{func() { row.AsInt32("raw") }, "raw"},
 				{func() { row.AsInt64("string") }, "string"},
 				{func() { row.AsFloat32("bytes") }, "bytes"},
@@ -652,10 +730,12 @@ func Test_rowType_maskValues(t *testing.T) {
 
 		row.maskValues()
 
-		require.Equal(int32(0), row.AsInt32("int32"))
-		require.Equal(int64(0), row.AsInt64("int64"))
-		require.Equal(float32(0), row.AsFloat32("float32"))
-		require.Equal(float64(0), row.AsFloat64("float64"))
+		require.Zero(row.AsInt8("int8"))
+		require.Zero(row.AsInt16("int16"))
+		require.Zero(row.AsInt32("int32"))
+		require.Zero(row.AsInt64("int64"))
+		require.Zero(row.AsFloat32("float32"))
+		require.Zero(row.AsFloat64("float64"))
 		require.Nil(row.AsBytes("bytes"))
 		require.Equal("*", row.AsString("string"))
 		require.Nil(row.AsBytes("raw"))
@@ -701,7 +781,7 @@ func Test_rowType_FieldNames(t *testing.T) {
 			cnt++
 			return true
 		})
-		require.Equal(12, cnt) // sys.QName + ten user fields for simple types
+		require.Equal(1+test.testRowUserFieldCount, cnt) // sys.QName + user fields for simple types
 	})
 
 	t.Run("should be ok iterate with filled system fields", func(t *testing.T) {
@@ -857,6 +937,8 @@ func Test_rowType_Nils(t *testing.T) {
 	t.Run("check put zero values", func(t *testing.T) {
 		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
+		row.PutInt8("int8", 0)
+		row.PutInt16("int16", 0)
 		row.PutInt32("int32", 0)
 		row.PutInt64("int64", 0)
 		row.PutFloat32("float32", 0)
@@ -870,6 +952,8 @@ func Test_rowType_Nils(t *testing.T) {
 
 		require.NoError(row.build())
 
+		require.True(row.HasValue("int8"))
+		require.True(row.HasValue("int16"))
 		require.True(row.HasValue("int32"))
 		require.True(row.HasValue("int64"))
 		require.True(row.HasValue("float32"))
@@ -884,7 +968,7 @@ func Test_rowType_Nils(t *testing.T) {
 		cnt := 0
 		row.dyB.IterateFields(nil, func(name string, newData interface{}) bool {
 			switch name {
-			case "int32", "int64", "float32", "float64":
+			case "int8", "int16", "int32", "int64", "float32", "float64":
 				require.Zero(newData)
 			case "QName":
 				var nullQNameBytes = []byte{0x0, 0x0}
@@ -900,7 +984,7 @@ func Test_rowType_Nils(t *testing.T) {
 			return true
 		})
 
-		require.Equal(7, cnt)
+		require.Equal(9, cnt)
 
 		checkNils(row, "bytes", "string", "raw")
 	})

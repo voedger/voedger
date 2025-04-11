@@ -36,6 +36,12 @@ func (b *baseKeyBuilder) String() string {
 func (b *baseKeyBuilder) PartitionKey() istructs.IRowWriter                { panic(ErrNotSupported) } // TODO: must be eliminated, IStateKeyBuilder must be inherited from IRowWriter
 func (b *baseKeyBuilder) ClusteringColumns() istructs.IRowWriter           { panic(ErrNotSupported) } // TODO: must be eliminated, IStateKeyBuilder must be inherited from IRowWriter
 func (b *baseKeyBuilder) ToBytes(istructs.WSID) (pk, cc []byte, err error) { panic(ErrNotSupported) } // TODO: must be eliminated, IStateKeyBuilder must be inherited from IRowWriter
+func (b *baseKeyBuilder) PutInt8(name appdef.FieldName, value int8) {
+	panic(errInt8FieldUndefined(name))
+}
+func (b *baseKeyBuilder) PutInt16(name appdef.FieldName, value int16) {
+	panic(errInt16FieldUndefined(name))
+}
 func (b *baseKeyBuilder) PutInt32(name appdef.FieldName, value int32) {
 	panic(errInt32FieldUndefined(name))
 }
@@ -88,6 +94,12 @@ type baseValueBuilder struct {
 func (b *baseValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
 	return false
 }
+func (b *baseValueBuilder) PutInt8(name string, value int8) {
+	panic(errInt8FieldUndefined(name))
+}
+func (b *baseValueBuilder) PutInt16(name string, value int16) {
+	panic(errInt16FieldUndefined(name))
+}
 func (b *baseValueBuilder) PutInt32(name string, value int32) {
 	panic(errInt32FieldUndefined(name))
 }
@@ -121,7 +133,9 @@ func (b *baseValueBuilder) BuildValue() istructs.IStateValue {
 
 type baseStateValue struct{}
 
-func (v *baseStateValue) AsInt32(name string) int32        { panic(errStringFieldUndefined(name)) }
+func (v *baseStateValue) AsInt8(name string) int8          { panic(errInt8FieldUndefined(name)) }
+func (v *baseStateValue) AsInt16(name string) int16        { panic(errInt16FieldUndefined(name)) }
+func (v *baseStateValue) AsInt32(name string) int32        { panic(errInt32FieldUndefined(name)) }
 func (v *baseStateValue) AsInt64(name string) int64        { panic(errInt64FieldUndefined(name)) }
 func (v *baseStateValue) AsFloat32(name string) float32    { panic(errFloat32FieldUndefined(name)) }
 func (v *baseStateValue) AsFloat64(name string) float64    { panic(errFloat64FieldUndefined(name)) }
@@ -168,6 +182,8 @@ type cudRowValue struct {
 	value istructs.ICUDRow
 }
 
+func (v *cudRowValue) AsInt8(name string) int8          { return v.value.AsInt8(name) }
+func (v *cudRowValue) AsInt16(name string) int16        { return v.value.AsInt16(name) }
 func (v *cudRowValue) AsInt32(name string) int32        { return v.value.AsInt32(name) }
 func (v *cudRowValue) AsInt64(name string) int64        { return v.value.AsInt64(name) }
 func (v *cudRowValue) AsFloat32(name string) float32    { return v.value.AsFloat32(name) }
@@ -191,6 +207,8 @@ type ObjectStateValue struct {
 }
 
 func (v *ObjectStateValue) AsObject() istructs.IObject       { return v.object }
+func (v *ObjectStateValue) AsInt8(name string) int8          { return v.object.AsInt8(name) }
+func (v *ObjectStateValue) AsInt16(name string) int16        { return v.object.AsInt16(name) }
 func (v *ObjectStateValue) AsInt32(name string) int32        { return v.object.AsInt32(name) }
 func (v *ObjectStateValue) AsInt64(name string) int64        { return v.object.AsInt64(name) }
 func (v *ObjectStateValue) AsFloat32(name string) float32    { return v.object.AsFloat32(name) }
@@ -289,6 +307,18 @@ type jsonValue struct {
 	json map[string]interface{}
 }
 
+func (v *jsonValue) AsInt8(name string) int8 {
+	if v, ok := v.json[name]; ok {
+		return int8(v.(float64))
+	}
+	panic(errInt8FieldUndefined(name))
+}
+func (v *jsonValue) AsInt16(name string) int16 {
+	if v, ok := v.json[name]; ok {
+		return int16(v.(float64))
+	}
+	panic(errInt16FieldUndefined(name))
+}
 func (v *jsonValue) AsInt32(name string) int32 {
 	if v, ok := v.json[name]; ok {
 		return int32(v.(float64))

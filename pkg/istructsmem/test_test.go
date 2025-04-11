@@ -59,7 +59,7 @@ type (
 		buyerIdent     appdef.FieldName
 		buyerValue     string
 		ageIdent       appdef.FieldName
-		ageValue       int32
+		ageValue       int8
 		heightIdent    appdef.FieldName
 		heightValue    float32
 		humanIdent     appdef.FieldName
@@ -106,9 +106,10 @@ type (
 		photoRawValue                []byte
 
 		// tested rows
-		abstractCDoc appdef.QName
-		testRow      appdef.QName
-		testObj      appdef.QName
+		abstractCDoc          appdef.QName
+		testRow               appdef.QName
+		testRowUserFieldCount int
+		testObj               appdef.QName
 
 		// tested records
 		testCDoc appdef.QName
@@ -213,11 +214,12 @@ var testData = testDataType{
 	photoRawIdent:                "rawPhoto",
 	photoRawValue:                bytes.Repeat([]byte{1, 2, 3, 4}, 1024), // 4Kb
 
-	abstractCDoc: appdef.NewQName("test", "abstract"),
-	testRow:      appdef.NewQName("test", "Row"),
-	testObj:      appdef.NewQName("test", "Obj"),
-	testCDoc:     appdef.NewQName("test", "CDoc"),
-	testCRec:     appdef.NewQName("test", "Record"),
+	abstractCDoc:          appdef.NewQName("test", "abstract"),
+	testRow:               appdef.NewQName("test", "Row"),
+	testRowUserFieldCount: 13,
+	testObj:               appdef.NewQName("test", "Obj"),
+	testCDoc:              appdef.NewQName("test", "CDoc"),
+	testCRec:              appdef.NewQName("test", "Record"),
 
 	testViewRecord: testViewRecordType{
 		name: appdef.NewQName("test", "ViewPhotos"),
@@ -261,7 +263,7 @@ func test() *testDataType {
 			saleParams := wsb.AddODoc(testData.saleCmdDocName)
 			saleParams.
 				AddDataField(testData.buyerIdent, testData.dataIdent, true).
-				AddField(testData.ageIdent, appdef.DataKind_int32, false).
+				AddField(testData.ageIdent, appdef.DataKind_int8, false).
 				AddField(testData.heightIdent, appdef.DataKind_float32, false).
 				AddField(testData.humanIdent, appdef.DataKind_bool, false).
 				AddDataField(testData.photoIdent, testData.dataPhoto, false)
@@ -293,7 +295,7 @@ func test() *testDataType {
 			rec := wsb.AddCDoc(testData.tablePhotos)
 			rec.
 				AddDataField(testData.buyerIdent, testData.dataIdent, true).
-				AddField(testData.ageIdent, appdef.DataKind_int32, false).
+				AddField(testData.ageIdent, appdef.DataKind_int8, false).
 				AddField(testData.heightIdent, appdef.DataKind_float32, false).
 				AddField(testData.humanIdent, appdef.DataKind_bool, false).
 				AddDataField(testData.photoIdent, testData.dataPhoto, false)
@@ -320,6 +322,8 @@ func test() *testDataType {
 		{
 			row := wsb.AddObject(testData.testRow)
 			row.
+				AddField("int8", appdef.DataKind_int8, false).
+				AddField("int16", appdef.DataKind_int16, false).
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).
 				AddField("float32", appdef.DataKind_float32, false).
@@ -336,6 +340,8 @@ func test() *testDataType {
 		{
 			obj := wsb.AddObject(testData.testObj)
 			obj.
+				AddField("int8", appdef.DataKind_int8, false).
+				AddField("int16", appdef.DataKind_int16, false).
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).
 				AddField("float32", appdef.DataKind_float32, false).
@@ -353,6 +359,8 @@ func test() *testDataType {
 		{
 			cDoc := wsb.AddCDoc(testData.testCDoc)
 			cDoc.
+				AddField("int8", appdef.DataKind_int8, false).
+				AddField("int16", appdef.DataKind_int16, false).
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).
 				AddField("float32", appdef.DataKind_float32, false).
@@ -369,6 +377,8 @@ func test() *testDataType {
 
 			cRec := wsb.AddCRecord(testData.testCRec)
 			cRec.
+				AddField("int8", appdef.DataKind_int8, false).
+				AddField("int16", appdef.DataKind_int16, false).
 				AddField("int32", appdef.DataKind_int32, false).
 				AddField("int64", appdef.DataKind_int64, false).
 				AddField("float32", appdef.DataKind_float32, false).
@@ -392,7 +402,7 @@ func test() *testDataType {
 				AddField(testData.testViewRecord.ccolsFields.sorter, appdef.DataKind_string, constraints.MaxLen(100))
 			view.Value().
 				AddField(testData.testViewRecord.valueFields.buyer, appdef.DataKind_string, true).
-				AddField(testData.testViewRecord.valueFields.age, appdef.DataKind_int32, false).
+				AddField(testData.testViewRecord.valueFields.age, appdef.DataKind_int8, false).
 				AddField(testData.testViewRecord.valueFields.heights, appdef.DataKind_float32, false).
 				AddField(testData.testViewRecord.valueFields.human, appdef.DataKind_bool, false).
 				AddDataField(testData.testViewRecord.valueFields.photo, testData.dataPhoto, false).
@@ -454,6 +464,8 @@ func newTestRow() (row *rowType) {
 func fillTestRow(row *rowType) {
 	test := test()
 
+	row.PutInt8("int8", -2)
+	row.PutInt16("int16", -1)
 	row.PutInt32("int32", 1)
 	row.PutInt64("int64", 2)
 	row.PutFloat32("float32", 3)
@@ -538,6 +550,8 @@ func testTestRow(t *testing.T, row istructs.IRowReader) {
 	require := require.New(t)
 	test := test()
 
+	require.EqualValues(-2, row.AsInt8("int8"))
+	require.EqualValues(-1, row.AsInt16("int16"))
 	require.Equal(int32(1), row.AsInt32("int32"))
 	require.Equal(int64(2), row.AsInt64("int64"))
 	require.Equal(float32(3), row.AsFloat32("float32"))
@@ -635,7 +649,7 @@ func fillTestObject(obj *objectType) {
 	test := test()
 	obj.PutRecordID(appdef.SystemField_ID, test.tempSaleID)
 	obj.PutString(test.buyerIdent, test.buyerValue)
-	obj.PutInt32(test.ageIdent, test.ageValue)
+	obj.PutInt8(test.ageIdent, test.ageValue)
 	obj.PutFloat32(test.heightIdent, test.heightValue)
 	obj.PutBool(test.humanIdent, test.humanValue)
 	obj.PutBytes(test.photoIdent, test.photoValue)
@@ -663,7 +677,7 @@ func testTestObject(t *testing.T, value istructs.IObject) {
 	test := test()
 
 	require.Equal(test.buyerValue, value.AsString(test.buyerIdent))
-	require.Equal(test.ageValue, value.AsInt32(test.ageIdent))
+	require.Equal(test.ageValue, value.AsInt8(test.ageIdent))
 	require.Equal(test.heightValue, value.AsFloat32(test.heightIdent))
 	require.Equal(test.humanValue, value.AsBool(test.humanIdent))
 	require.Equal(test.photoValue, value.AsBytes(test.photoIdent))
@@ -710,7 +724,7 @@ func fillTestCUD(cud *cudType) {
 	rec := cud.Create(test.tablePhotos)
 	rec.PutRecordID(appdef.SystemField_ID, test.tempPhotoID)
 	rec.PutString(test.buyerIdent, test.buyerValue)
-	rec.PutInt32(test.ageIdent, test.ageValue)
+	rec.PutInt8(test.ageIdent, test.ageValue)
 	rec.PutFloat32(test.heightIdent, test.heightValue)
 	rec.PutBool(test.humanIdent, true)
 	rec.PutBytes(test.photoIdent, test.photoValue)
@@ -810,7 +824,7 @@ func fillTestViewValue(value *valueType) {
 	test := test()
 
 	value.PutString(test.testViewRecord.valueFields.buyer, test.buyerValue)
-	value.PutInt32(test.testViewRecord.valueFields.age, test.ageValue)
+	value.PutInt8(test.testViewRecord.valueFields.age, test.ageValue)
 	value.PutFloat32(test.testViewRecord.valueFields.heights, test.heightValue)
 	value.PutBool(test.testViewRecord.valueFields.human, true)
 	value.PutBytes(test.testViewRecord.valueFields.photo, test.photoValue)
@@ -832,7 +846,7 @@ func testTestViewValue(t *testing.T, value istructs.IValue) {
 	test := test()
 
 	require.Equal(test.buyerValue, value.AsString(test.testViewRecord.valueFields.buyer))
-	require.Equal(test.ageValue, value.AsInt32(test.testViewRecord.valueFields.age))
+	require.Equal(test.ageValue, value.AsInt8(test.testViewRecord.valueFields.age))
 	require.Equal(test.heightValue, value.AsFloat32(test.testViewRecord.valueFields.heights))
 	require.True(value.AsBool(test.testViewRecord.valueFields.human))
 	require.Equal(test.photoValue, value.AsBytes(test.testViewRecord.valueFields.photo))

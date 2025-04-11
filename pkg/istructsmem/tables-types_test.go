@@ -127,7 +127,7 @@ func Test_newRecord(t *testing.T) {
 			}
 
 			require.Equal(3, sysCnt) // sys.QName, sys.ID and sys.IsActive
-			require.Equal(sysCnt+11, cnt)
+			require.Equal(sysCnt+test.testRowUserFieldCount, cnt)
 			require.Equal(doc.fields.FieldCount(), cnt)
 		})
 
@@ -192,7 +192,7 @@ func Test_newRecord(t *testing.T) {
 				}
 
 				require.Equal(5, sysCnt) // sys.QName, sys.ID sys.ParentID, sys.Container and sys.IsActive
-				require.Equal(sysCnt+11, cnt)
+				require.Equal(sysCnt+test.testRowUserFieldCount, cnt)
 				require.Equal(rec.fields.FieldCount(), cnt)
 			})
 		})
@@ -438,11 +438,13 @@ func Test_fieldValue(t *testing.T) {
 			rec := newTestCDoc(100500)
 			tests := []struct {
 				f appdef.FieldName
-				v interface{}
+				v any
 			}{
 				{appdef.SystemField_QName, test.testCDoc},
 				{appdef.SystemField_ID, istructs.RecordID(100500)},
 				{appdef.SystemField_IsActive, true},
+				{"int8", int8(-2)},
+				{"int16", int16(-1)},
 				{"int32", int32(1)},
 				{"int64", int64(2)},
 				{"float32", float32(3)},
@@ -466,7 +468,7 @@ func Test_fieldValue(t *testing.T) {
 			vv := newTestViewValue()
 			tests := []struct {
 				f appdef.FieldName
-				v interface{}
+				v any
 			}{
 				{appdef.SystemField_QName, test.testViewRecord.name},
 				{test.testViewRecord.valueFields.buyer, test.buyerValue},

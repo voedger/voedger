@@ -90,6 +90,8 @@ func (b *uniqKeyBuilder) String() string {
 }
 func (b *uniqKeyBuilder) Storage() appdef.QName                            { return b.storage }
 func (b *uniqKeyBuilder) Entity() appdef.QName                             { return b.entity }
+func (b *uniqKeyBuilder) PutInt8(name string, value int8)                  { b.data[name] = value }
+func (b *uniqKeyBuilder) PutInt16(name string, value int16)                { b.data[name] = value }
 func (b *uniqKeyBuilder) PutInt32(name string, value int32)                { b.data[name] = value }
 func (b *uniqKeyBuilder) PutInt64(name string, value int64)                { b.data[name] = value }
 func (b *uniqKeyBuilder) PutFloat32(name string, value float32)            { b.data[name] = value }

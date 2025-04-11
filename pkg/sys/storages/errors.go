@@ -21,6 +21,14 @@ var (
 	errMockedKeyBuilderExpected         = errors.New("IStataKeyBuilder must be mockedKeyBuilder")
 )
 
+func errInt8FieldUndefined(name string) error {
+	return errors.New("undefined int8 field: " + name)
+}
+
+func errInt16FieldUndefined(name string) error {
+	return errors.New("undefined int16 field: " + name)
+}
+
 func errInt32FieldUndefined(name string) error {
 	return errors.New("undefined int32 field: " + name)
 }

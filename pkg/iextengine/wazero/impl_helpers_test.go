@@ -255,12 +255,16 @@ type mockKeyBuilder struct {
 	data    map[string]interface{}
 }
 
+var _ istructs.IStateKeyBuilder = (*mockKeyBuilder)(nil)
+
 func (kb *mockKeyBuilder) String() string                                   { return "" }
 func (kb *mockKeyBuilder) Storage() appdef.QName                            { return kb.storage }
 func (kb *mockKeyBuilder) Entity() appdef.QName                             { return kb.entity }
 func (kb *mockKeyBuilder) PartitionKey() istructs.IRowWriter                { return nil }
 func (kb *mockKeyBuilder) ClusteringColumns() istructs.IRowWriter           { return nil }
 func (kb *mockKeyBuilder) Equals(src istructs.IKeyBuilder) bool             { return false }
+func (kb *mockKeyBuilder) PutInt8(name string, value int8)                  { kb.data[name] = value }
+func (kb *mockKeyBuilder) PutInt16(name string, value int16)                { kb.data[name] = value }
 func (kb *mockKeyBuilder) PutInt32(name string, value int32)                {}
 func (kb *mockKeyBuilder) PutInt64(name string, value int64)                {}
 func (kb *mockKeyBuilder) PutFloat32(name string, value float32)            {}
@@ -383,11 +387,15 @@ type mockValueBuilder struct {
 	items map[string]interface{}
 }
 
+var _ istructs.IStateValueBuilder = (*mockValueBuilder)(nil)
+
 func (vb *mockValueBuilder) Equal(src istructs.IStateValueBuilder) bool       { return false }
 func (vb *mockValueBuilder) BuildValue() istructs.IStateValue                 { return nil }
 func (vb *mockValueBuilder) PutRecord(name string, record istructs.IRecord)   {}
 func (vb *mockValueBuilder) PutEvent(name string, event istructs.IDbEvent)    {}
 func (vb *mockValueBuilder) Build() istructs.IValue                           { return nil }
+func (vb *mockValueBuilder) PutInt8(name string, value int8)                  { vb.items[name] = value }
+func (vb *mockValueBuilder) PutInt16(name string, value int16)                { vb.items[name] = value }
 func (vb *mockValueBuilder) PutInt32(name string, value int32)                { vb.items[name] = value }
 func (vb *mockValueBuilder) PutInt64(name string, value int64)                {}
 func (vb *mockValueBuilder) PutFloat32(name string, value float32)            {}

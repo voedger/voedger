@@ -48,7 +48,7 @@ func TestBasicUsage(t *testing.T) {
 		saleParamsDoc := wsb.AddODoc(saleParamsName)
 		saleParamsDoc.
 			AddField("Buyer", appdef.DataKind_string, true).
-			AddField("Age", appdef.DataKind_int32, false).
+			AddField("Age", appdef.DataKind_int8, false).
 			AddField("Height", appdef.DataKind_float32, false).
 			AddField("isHuman", appdef.DataKind_bool, false).
 			AddField("Photo", appdef.DataKind_bytes, false)
@@ -71,7 +71,7 @@ func TestBasicUsage(t *testing.T) {
 		photosDoc := wsb.AddCDoc(appdef.NewQName("test", "photos"))
 		photosDoc.
 			AddField("Buyer", appdef.DataKind_string, true).
-			AddField("Age", appdef.DataKind_int32, false).
+			AddField("Age", appdef.DataKind_int8, false).
 			AddField("Height", appdef.DataKind_float32, false).
 			AddField("isHuman", appdef.DataKind_bool, false).
 			AddField("Photo", appdef.DataKind_bytes, false)
@@ -116,7 +116,7 @@ func TestBasicUsage(t *testing.T) {
 
 	cmd.PutRecordID(appdef.SystemField_ID, 1)
 	cmd.PutString("Buyer", "Carlson 哇\"呀呀") // to test unicode issues
-	cmd.PutInt32("Age", 33)
+	cmd.PutInt8("Age", 33)
 	cmd.PutFloat32("Height", 1.75)
 	cmd.PutBytes("Photo", []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 4, 4, 3, 2, 1, 0})
 
@@ -143,7 +143,7 @@ func TestBasicUsage(t *testing.T) {
 	rec := cud.Create(appdef.NewQName("test", "photos"))
 	rec.PutRecordID(appdef.SystemField_ID, 11)
 	rec.PutString("Buyer", "Carlson 哇\"呀呀")
-	rec.PutInt32("Age", 33)
+	rec.PutInt8("Age", 33)
 	rec.PutFloat32("Height", 1.75)
 	rec.PutBytes("Photo", []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 4, 4, 3, 2, 1, 0})
 
@@ -432,7 +432,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 		}
 		require.Len(fields, 7) // 2 system {sys.QName, sys.ID} + 5 user
 		require.Equal(appdef.DataKind_string, fields[test.buyerIdent])
-		require.Equal(appdef.DataKind_int32, fields[test.ageIdent])
+		require.Equal(appdef.DataKind_int8, fields[test.ageIdent])
 		require.Equal(appdef.DataKind_float32, fields[test.heightIdent])
 		require.Equal(appdef.DataKind_bool, fields[test.humanIdent])
 		require.Equal(appdef.DataKind_bytes, fields[test.photoIdent])

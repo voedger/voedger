@@ -132,6 +132,10 @@ func (r *mockRecord) FieldNames(cb func(string) bool) {
 
 func put(fieldName string, kind appdef.DataKind, rr istructs.IRowReader, rw istructs.IRowWriter) {
 	switch kind {
+	case appdef.DataKind_int8:
+		rw.PutInt8(fieldName, rr.AsInt8(fieldName))
+	case appdef.DataKind_int16:
+		rw.PutInt16(fieldName, rr.AsInt16(fieldName))
 	case appdef.DataKind_int32:
 		rw.PutInt32(fieldName, rr.AsInt32(fieldName))
 	case appdef.DataKind_int64:
@@ -159,6 +163,8 @@ func Test_put(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
 		mrw := &mockRowWriter{}
 		mrw.
+			On("PutInt8", "int8Fld", int8(-2)).
+			On("PutInt16", "int16Fld", int16(-1)).
 			On("PutInt32", "int32Fld", int32(1)).
 			On("PutInt64", "int64Fld", int64(2)).
 			On("PutFloat32", "float32Fld", float32(3.1)).
@@ -170,6 +176,8 @@ func Test_put(t *testing.T) {
 			On("PutRecordID", "recordIDFld", istructs.RecordID(6))
 		mrr := &mockRowReader{}
 		mrr.
+			On("AsInt8", "int8Fld").Return(int8(-2)).
+			On("AsInt16", "int16Fld").Return(int16(-1)).
 			On("AsInt32", "int32Fld").Return(int32(1)).
 			On("AsInt64", "int64Fld").Return(int64(2)).
 			On("AsFloat32", "float32Fld").Return(float32(3.1)).
@@ -180,6 +188,8 @@ func Test_put(t *testing.T) {
 			On("AsBool", "boolFld").Return(true).
 			On("AsRecordID", "recordIDFld").Return(istructs.RecordID(6))
 
+		put("int8Fld", appdef.DataKind_int8, mrr, mrw)
+		put("int16Fld", appdef.DataKind_int16, mrr, mrw)
 		put("int32Fld", appdef.DataKind_int32, mrr, mrw)
 		put("int64Fld", appdef.DataKind_int64, mrr, mrw)
 		put("float32Fld", appdef.DataKind_float32, mrr, mrw)
@@ -205,6 +215,8 @@ type mockRowReader struct {
 	mock.Mock
 }
 
+func (r *mockRowReader) AsInt8(name string) int8       { return r.Called(name).Get(0).(int8) }
+func (r *mockRowReader) AsInt16(name string) int16     { return r.Called(name).Get(0).(int16) }
 func (r *mockRowReader) AsInt32(name string) int32     { return r.Called(name).Get(0).(int32) }
 func (r *mockRowReader) AsInt64(name string) int64     { return r.Called(name).Get(0).(int64) }
 func (r *mockRowReader) AsFloat32(name string) float32 { return r.Called(name).Get(0).(float32) }
@@ -224,6 +236,8 @@ type mockRowWriter struct {
 	mock.Mock
 }
 
+func (w *mockRowWriter) PutInt8(name string, value int8)                  { w.Called(name, value) }
+func (w *mockRowWriter) PutInt16(name string, value int16)                { w.Called(name, value) }
 func (w *mockRowWriter) PutInt32(name string, value int32)                { w.Called(name, value) }
 func (w *mockRowWriter) PutInt64(name string, value int64)                { w.Called(name, value) }
 func (w *mockRowWriter) PutFloat32(name string, value float32)            { w.Called(name, value) }
@@ -303,6 +317,8 @@ type mockValue struct {
 	mock.Mock
 }
 
+func (v *mockValue) AsInt8(name string) int8       { return v.Called(name).Get(0).(int8) }
+func (v *mockValue) AsInt16(name string) int16     { return v.Called(name).Get(0).(int16) }
 func (v *mockValue) AsInt32(name string) int32     { return v.Called(name).Get(0).(int32) }
 func (v *mockValue) AsInt64(name string) int64     { return v.Called(name).Get(0).(int64) }
 func (v *mockValue) AsFloat32(name string) float32 { return v.Called(name).Get(0).(float32) }
@@ -329,6 +345,8 @@ type mockValueBuilder struct {
 	mock.Mock
 }
 
+func (b *mockValueBuilder) PutInt8(name string, value int8)                  { b.Called(name, value) }
+func (b *mockValueBuilder) PutInt16(name string, value int16)                { b.Called(name, value) }
 func (b *mockValueBuilder) PutInt32(name string, value int32)                { b.Called(name, value) }
 func (b *mockValueBuilder) PutInt64(name string, value int64)                { b.Called(name, value) }
 func (b *mockValueBuilder) PutFloat32(name string, value float32)            { b.Called(name, value) }
