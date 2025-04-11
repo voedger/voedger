@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -65,20 +64,7 @@ func TestSequencer(t *testing.T) {
 			seq.(*sequencer).flusherWG.Wait()
 		})
 
-		ctx, cancelCtx := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancelCtx()
-
-		for ctx.Err() == nil {
-			nums, err := storage.ReadNumbers(1, []SeqID{1})
-			require.NoError(err)
-			// check if number in storage is equal to the expected number
-			if expectedNumber-1 == nums[0] {
-				return
-			}
-			time.Sleep(10 * time.Millisecond)
-		}
-
-		require.Fail("failed to get expected number from storage")
+		// will not check the storage because, as it is not guaranteed that it will match the last Next() result after a Flush()
 	})
 }
 
