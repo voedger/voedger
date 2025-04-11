@@ -85,6 +85,6 @@ func TestWSID(t *testing.T) {
 }
 
 func TestClusterConsts(t *testing.T) {
-	require.Equal(t, doNotUse_ClusterAsRegisterID, ClusterAsRegisterID)
-	require.Equal(t, doNotUse_ClusterAsCRecordRegisterID, ClusterAsCRecordRegisterID)
+	require.Equal(t, 64536, ClusterAsRegisterID)
+	require.Equal(t, 64537, ClusterAsCRecordRegisterID)
 }
