@@ -70,10 +70,9 @@ const (
 	// RecordID = RegisterID * RegisterFactor + BaseRecordID
 	RegisterFactor = 5000000000
 
-	// ClusterDBSer is used to generate cluster-side IDs
-	// ID = PrimaryDCBaseID + some sequenced number
-	ClusterAsRegisterID = 0xFFFF - 1000 + iota
-	ClusterAsCRecordRegisterID
+	// +1 caused by wrong iota usage here before. See https://github.com/voedger/voedger/issues/3528
+	ClusterAsRegisterID        = 0xFFFF - 1000 + 1
+	ClusterAsCRecordRegisterID = 0xFFFF - 1000 + 2
 )
 
 var MinClusterRecordID = NewRecordID(NullRecordID)
