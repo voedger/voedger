@@ -87,7 +87,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					if err != nil {
 						statusCode = err.(coreutils.SysError).HTTPStatus // nolint:errorlint
 					}
-					if qwork.apiPathHandler != nil && qwork.apiPathHandler.IsArrayResult() {
+					if qwork.apiPathHandler != nil && qwork.apiPathHandler.Options().IsArrayResult {
 						if qwork.responseWriterGetter == nil || qwork.responseWriterGetter() == nil {
 							// have an error before 200ok is sent -> send the status from the actual error
 							respWriter = msg.Responder().InitResponse(statusCode)
@@ -135,6 +135,9 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			case processors.APIPath_CDocs:
 				// [~server.apiv2.docs/cmp.provideCDocsHandler~impl]
 				qw.apiPathHandler = &cdocsHandler{}
+			case processors.APIPath_Auth_Login:
+				// [~server.apiv2.auth/cmp.provideAuthLoginHandler~impl]
+				qw.apiPathHandler = &authLoginHandler{}
 			default:
 				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("unsupported api path %v", qw.msg.APIPath()))
 			}
@@ -155,10 +158,16 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return coreutils.WrapSysError(err, http.StatusUnauthorized)
 		}),
 		operator("get workspace descriptor", func(ctx context.Context, qw *queryWork) (err error) {
+			if qw.apiPathHandler.Options().PseudoWSID {
+				return nil
+			}
 			qw.wsDesc, err = qw.appStructs.Records().GetSingleton(qw.msg.WSID(), authnz.QNameCDocWorkspaceDescriptor)
 			return err
 		}),
 		operator("check cdoc.sys.WorkspaceDescriptor existence", func(ctx context.Context, qw *queryWork) (err error) {
+			if qw.apiPathHandler.Options().PseudoWSID {
+				return nil
+			}
 			if qw.wsDesc.QName() == appdef.NullQName {
 				return processors.ErrWSNotInited
 			}
@@ -174,6 +183,9 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("check workspace active", func(ctx context.Context, qw *queryWork) (err error) {
+			if qw.apiPathHandler.Options().PseudoWSID {
+				return nil
+			}
 			for _, prn := range qw.principals {
 				if prn.Kind == iauthnz.PrincipalKind_Role && prn.QName == iauthnz.QNameRoleSystem && prn.WSID == qw.msg.WSID() {
 					// system -> allow to work in any case
@@ -186,6 +198,13 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("get IWorkspace", func(ctx context.Context, qw *queryWork) (err error) {
+			if qw.apiPathHandler.Options().PseudoWSID {
+				if qw.iWorkspace = qw.appStructs.AppDef().Workspace(qw.msg.WorkspaceQName()); qw.iWorkspace == nil {
+					return coreutils.NewHTTPErrorf(http.StatusInternalServerError, fmt.Sprintf("workspace %s not found in app %s",
+						qw.msg.WorkspaceQName(), qw.msg.AppQName()))
+				}
+				return nil
+			}
 			if qw.wsDesc.QName() == appdef.NullQName {
 				// workspace is dummy
 				return nil
@@ -214,7 +233,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
-			if qw.msg.APIPath() == processors.APIPath_Queries {
+			if qw.apiPathHandler.Options().HandlesQueryArgs {
 				qw.execQueryArgs, err = newExecQueryArgs(qw.msg.WSID(), qw)
 			}
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
@@ -279,7 +298,7 @@ func newExecQueryArgs(wsid istructs.WSID, qw *queryWork) (execQueryArgs istructs
 	requestArgs := istructs.NewNullObject()
 	if argsType != nil {
 		requestArgsBuilder := qw.appStructs.ObjectBuilder(argsType.QName())
-		requestArgsBuilder.FillFromJSON(qw.msg.QueryParams().Argument["args"].(map[string]interface{})) // TODO: test that we could cast that
+		requestArgsBuilder.FillFromJSON(qw.msg.QueryParams().Argument)
 		requestArgs, err = requestArgsBuilder.Build()
 		if err != nil {
 			return execQueryArgs, err

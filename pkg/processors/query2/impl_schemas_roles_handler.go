@@ -20,8 +20,8 @@ type schemasRolesHandler struct {
 
 var _ IApiPathHandler = (*schemasRolesHandler)(nil) // ensure that queryHandler implements IApiPathHandler
 
-func (h *schemasRolesHandler) IsArrayResult() bool {
-	return false
+func (h *schemasRolesHandler) Options() ApiHandlerOptions {
+	return defaultApiOptions
 }
 
 func (h *schemasRolesHandler) CheckRateLimit(ctx context.Context, qw *queryWork) error {

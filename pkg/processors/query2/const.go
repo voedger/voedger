@@ -4,7 +4,9 @@
  */
 package query2
 
-import _ "embed"
+import (
+	_ "embed"
+)
 
 //go:embed swagger-ui.html
 var swaggerUI_HTML string
@@ -14,6 +16,11 @@ const (
 	errorSchemaRef  = "#/components/schemas/" + errorSchemaName
 	bearerAuth      = "BearerAuth"
 )
+
+var defaultApiOptions = ApiHandlerOptions{
+	HandlesQueryArgs: false,
+	IsArrayResult:    false,
+}
 
 const (
 	methodGet    = "get"

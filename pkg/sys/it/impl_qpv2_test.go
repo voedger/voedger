@@ -7,6 +7,7 @@ package sys_it
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -248,14 +249,14 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 	prepareDailyIdx(require, vit, ws)
 
 	t.Run("Echo function", func(t *testing.T) {
-		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/queries/sys.Echo?arg=%s`, ws.WSID, url.QueryEscape(`{"args":{"Text":"Hello world"}}`)))
+		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/queries/sys.Echo?arg=%s`, ws.WSID, url.QueryEscape(`{"Text":"Hello world"}`)))
 		require.NoError(err)
 		require.JSONEq(`{"results":[
 				{"Res":"Hello world","sys.Container":"Hello world","sys.QName":"sys.EchoResult"}
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with arg", func(t *testing.T) {
-		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?arg={"args":{"Year":2023,"Month":3}}`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?arg={"Year":2023,"Month":3}`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
 		require.JSONEq(`{"results":[
 				{"Day":2,"Month":3,"StringValue":"2023-03-02","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
@@ -265,7 +266,7 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with arg and filter", func(t *testing.T) {
-		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?arg={"args":{"Year":2023}}&where={"Month":{"$in":[2,4]},"Day":{"$in":[3,5]}}`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?arg={"Year":2023}&where={"Month":{"$in":[2,4]},"Day":{"$in":[3,5]}}`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
 		require.JSONEq(`{"results":[
 				{"Day":3,"Month":2,"StringValue":"2023-02-03","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
@@ -275,7 +276,7 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with order desc", func(t *testing.T) {
-		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?arg={"args":{"Year":2023}}&order=-Month`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?arg={"Year":2023}&order=-Month`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
 		require.JSONEq(`{"results":[
 				{"Day":2,"Month":4,"StringValue":"2023-04-02","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
@@ -297,7 +298,7 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with order asc", func(t *testing.T) {
-		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?arg={"args":{"Year":2023}}&order=Month`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?arg={"Year":2023}&order=Month`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
 		require.JSONEq(`{"results":[
 				{"Day":2,"Month":1,"StringValue":"2023-01-02","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
@@ -319,7 +320,7 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with keys", func(t *testing.T) {
-		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?arg={"args":{"Year":2023}}&keys=Year,Month,Day`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?arg={"Year":2023}&keys=Year,Month,Day`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
 		require.JSONEq(`{"results":[
 				{"Day":2,"Month":1,"Year":2023},
@@ -2153,4 +2154,42 @@ func TestQueryProcessor2_CDocs(t *testing.T) {
 				{"Day":3,"Month":3,"Year":2022,"sys.ID":%[10]d}
 		]}`, ids["35"], ids["34"], ids["33"], ids["20"], ids["19"], ids["18"], ids["38"], ids["39"], ids["16"], ids["14"]), resp.Body)
 	})
+}
+
+// [~server.apiv2.auth/it.TestLogin~impl]
+func TestQueryProcessor2_AuthLogin(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	require := require.New(t)
+	//appDef, err := vit.AppDef(istructs.AppQName_test1_app1)
+
+	loginName1 := vit.NextName()
+	login1 := vit.SignUp(loginName1, "pwd1", istructs.AppQName_test1_app1)
+
+	vit.SignIn(login1)
+
+	t.Run("Login", func(t *testing.T) {
+		body := fmt.Sprintf(`{"Login": "%s","Password": "%s"}`, login1.Name, login1.Pwd)
+		resp := vit.POST("api/v2/users/test1/apps/app1/auth/login", body)
+		require.Equal(200, resp.HTTPResp.StatusCode)
+		result := make(map[string]interface{})
+		err := json.Unmarshal([]byte(resp.Body), &result)
+		require.NoError(err)
+		require.Equal(3600.0, result["ExpiresIn"])
+		require.Greater(result["WSID"].(float64), 0.0)
+		require.NotEmpty(result["PrincipalToken"].(string))
+	})
+
+	t.Run("Bad request", func(t *testing.T) {
+		body := fmt.Sprintf(`{"UnknownField": "%s","Password": "%s"}`, login1.Name, "badpwd")
+		resp := vit.POST("api/v2/users/test1/apps/app1/auth/login", body, coreutils.Expect400())
+		require.JSONEq(`{"message":"login is not specified"}`, resp.Body)
+	})
+
+	t.Run("Login with incorrect password", func(t *testing.T) {
+		body := fmt.Sprintf(`{"Login": "%s","Password": "%s"}`, login1.Name, "badpwd")
+		resp := vit.POST("api/v2/users/test1/apps/app1/auth/login", body, coreutils.Expect401())
+		require.JSONEq(`{"status":401,"message":"login or password is incorrect"}`, resp.Body)
+	})
+
 }

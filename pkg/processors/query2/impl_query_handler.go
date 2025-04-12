@@ -23,8 +23,11 @@ type queryHandler struct {
 
 var _ IApiPathHandler = (*queryHandler)(nil) // ensure that queryHandler implements IApiPathHandler
 
-func (h *queryHandler) IsArrayResult() bool {
-	return true
+func (h *queryHandler) Options() ApiHandlerOptions {
+	return ApiHandlerOptions{
+		HandlesQueryArgs: true,
+		IsArrayResult:    true,
+	}
 }
 
 func (h *queryHandler) CheckRateLimit(ctx context.Context, qw *queryWork) error {

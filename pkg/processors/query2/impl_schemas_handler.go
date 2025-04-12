@@ -20,8 +20,8 @@ type schemasHandler struct {
 
 var _ IApiPathHandler = (*schemasHandler)(nil) // ensure that queryHandler implements IApiPathHandler
 
-func (h *schemasHandler) IsArrayResult() bool {
-	return false
+func (h *schemasHandler) Options() ApiHandlerOptions {
+	return defaultApiOptions
 }
 
 func (h *schemasHandler) CheckRateLimit(ctx context.Context, qw *queryWork) error {
