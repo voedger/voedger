@@ -6,8 +6,6 @@ package query2
 
 import (
 	_ "embed"
-
-	"github.com/voedger/voedger/pkg/appdef"
 )
 
 //go:embed swagger-ui.html
@@ -72,8 +70,4 @@ const (
 	schemaKeyItems       = "items"
 	schemaKeyOneOf       = "oneOf"
 	schemaKeyRef         = "$ref"
-)
-
-var (
-	qNameAppWorkspaceWS = appdef.NewQName(appdef.SysPackage, "AppWorkspaceWS")
 )

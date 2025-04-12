@@ -158,7 +158,7 @@ func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspace
 }
 
 func getPseudoWSIDFromAuthRequest(req bus.Request, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (istructs.WSID, string, string, error) {
-	jsonBody := []byte(req.Body)
+	jsonBody := req.Body
 	var loginReq struct {
 		Login    string `json:"Login"`
 		Password string `json:"Password"`

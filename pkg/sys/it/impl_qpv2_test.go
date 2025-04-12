@@ -2176,8 +2176,8 @@ func TestQueryProcessor2_AuthLogin(t *testing.T) {
 		err := json.Unmarshal([]byte(resp.Body), &result)
 		require.NoError(err)
 		require.Equal(3600.0, result["ExpiresIn"])
-		require.True(result["WSID"].(float64) > 0)
-		require.True(len(result["PrincipalToken"].(string)) > 0)
+		require.Greater(result["WSID"].(float64), 0.0)
+		require.Greater(len(result["PrincipalToken"].(string)), 0)
 	})
 
 	t.Run("Bad request", func(t *testing.T) {
