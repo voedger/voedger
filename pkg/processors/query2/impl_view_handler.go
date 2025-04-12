@@ -23,8 +23,8 @@ type viewHandler struct {
 
 var _ IApiPathHandler = (*viewHandler)(nil) // ensure that viewHandler implements IApiPathHandler
 
-func (h *viewHandler) IsArrayResult() bool {
-	return true
+func (h *viewHandler) Options() ApiHandlerOptions {
+	return ApiHandlerOptions{IsArrayResult: true}
 }
 
 func (h *viewHandler) CheckRateLimit(ctx context.Context, qw *queryWork) error {

@@ -4,7 +4,11 @@
  */
 package query2
 
-import _ "embed"
+import (
+	_ "embed"
+
+	"github.com/voedger/voedger/pkg/appdef"
+)
 
 //go:embed swagger-ui.html
 var swaggerUI_HTML string
@@ -14,6 +18,11 @@ const (
 	errorSchemaRef  = "#/components/schemas/" + errorSchemaName
 	bearerAuth      = "BearerAuth"
 )
+
+var defaultApiOptions = ApiHandlerOptions{
+	HandlesQueryArgs: false,
+	IsArrayResult:    false,
+}
 
 const (
 	methodGet    = "get"
@@ -63,4 +72,8 @@ const (
 	schemaKeyItems       = "items"
 	schemaKeyOneOf       = "oneOf"
 	schemaKeyRef         = "$ref"
+)
+
+var (
+	qNameAppWorkspaceWS = appdef.NewQName(appdef.SysPackage, "AppWorkspaceWS")
 )

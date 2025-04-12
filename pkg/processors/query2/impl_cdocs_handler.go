@@ -26,6 +26,9 @@ type cdocsHandler struct{}
 
 var _ IApiPathHandler = (*cdocsHandler)(nil) // ensure that cdocsHandler implements IApiPathHandler
 
+func (h *cdocsHandler) Options() ApiHandlerOptions {
+	return ApiHandlerOptions{IsArrayResult: true}
+}
 func (h *cdocsHandler) CheckRateLimit(_ context.Context, _ *queryWork) (err error) { return }
 func (h *cdocsHandler) IsArrayResult() bool                                        { return true }
 func (h *cdocsHandler) RequestOpKind() appdef.OperationKind                        { return appdef.OperationKind_Select }

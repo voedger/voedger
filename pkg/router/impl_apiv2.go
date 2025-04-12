@@ -7,6 +7,7 @@ package router
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -88,6 +90,14 @@ func (s *httpService) registerHandlersV2() {
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_pkg, URLPlaceholder_workspace, URLPlaceholder_rolePkg, URLPlaceholder_role),
 		corsHandler(requestHandlerV2_schemas_wsRole(s.requestSender, s.numsAppsWorkspaces))).
 		Methods(http.MethodGet).Name("schemas, workspace role")
+
+	// auth/login: /api/v2/apps/{owner}/{app}/auth/login
+	// [~server.apiv2.auth/cmp.routerLoginPathHandler~impl]
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/auth/login",
+		URLPlaceholder_appOwner, URLPlaceholder_appName),
+		corsHandler(requestHandlerV2_auth_login(s.requestSender, s.numsAppsWorkspaces))).
+		Methods(http.MethodPost).Name("auth login")
+
 }
 
 func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
@@ -114,6 +124,63 @@ func requestHandlerV2_schemas_wsRoles(reqSender bus.IRequestSender, numsAppsWork
 		busRequest.WorkspaceQName = appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_workspace])
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	}
+}
+
+func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
+		if !ok {
+			return
+		}
+
+		var login, password string
+		var err error
+
+		originalAppName := busRequest.AppQName
+
+		// [~server.apiv2.auth/cmp.routerLoginPathHandler.pseudoWSID~impl]
+		if busRequest.WSID, login, password, err = getPseudoWSIDFromAuthRequest(busRequest, numsAppsWorkspaces); err != nil {
+			WriteJSONResponse(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		busRequest.IsAPIV2 = true
+		busRequest.APIPath = int(processors.APIPath_Auth_Login)
+		busRequest.AppQName = istructs.AppQName_sys_registry
+		busRequest.WorkspaceQName = qNameAppWorkspaceWS
+		busRequest.Method = http.MethodGet
+		busRequest.QName = qNameIssuePrincipalToken
+		queryParams := map[string]string{}
+		queryParams["arg"] = fmt.Sprintf(`{"Login": "%s","Password": "%s","AppName": "%s"}`, login, password, originalAppName)
+		busRequest.Query = queryParams
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+	}
+}
+
+func getPseudoWSIDFromAuthRequest(req bus.Request, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (istructs.WSID, string, string, error) {
+	jsonBody := []byte(req.Body)
+	var loginReq struct {
+		Login    string `json:"Login"`
+		Password string `json:"Password"`
+	}
+	if err := json.Unmarshal(jsonBody, &loginReq); err != nil {
+		logger.Error("failed to unmarshal login request:", err, ". Body:\n", string(jsonBody))
+		return 0, "", "", err
+	}
+	if loginReq.Login == "" {
+		return 0, "", "", errors.New("login is not specified")
+	}
+
+	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, loginReq.Login, istructs.CurrentClusterID())
+
+	if numAppWorkspaces, ok := numsAppsWorkspaces[req.AppQName]; ok {
+		baseWSID := pseudoWSID.BaseWSID()
+		if baseWSID <= istructs.MaxPseudoBaseWSID {
+			pseudoWSID = coreutils.GetAppWSID(pseudoWSID, numAppWorkspaces)
+		}
+	}
+
+	return pseudoWSID, loginReq.Login, loginReq.Password, nil
 }
 
 func requestHandlerV2_schemas_wsRole(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {

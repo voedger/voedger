@@ -6,6 +6,7 @@
 package router
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -21,6 +22,12 @@ func WriteTextResponse(w http.ResponseWriter, msg string, code int) {
 	w.Header().Set(coreutils.ContentType, "text/plain")
 	w.WriteHeader(code)
 	writeResponse(w, msg)
+}
+
+func WriteJSONResponse(w http.ResponseWriter, msg string, code int) {
+	w.Header().Set(coreutils.ContentType, coreutils.ContentType_ApplicationJSON)
+	w.WriteHeader(code)
+	writeResponse(w, fmt.Sprintf("{\"message\": \"%s\"}", msg))
 }
 
 func writeResponse(w http.ResponseWriter, data string) bool {

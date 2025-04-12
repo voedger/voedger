@@ -17,4 +17,5 @@ const (
 	APIPaths_Schema
 	APIPath_Schemas_WorkspaceRoles
 	APIPath_Schemas_WorkspaceRole
+	APIPath_Auth_Login
 )

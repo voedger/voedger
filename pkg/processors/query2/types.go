@@ -29,6 +29,12 @@ type QueryParams struct {
 	Argument    map[string]interface{}
 }
 
+type ApiHandlerOptions struct {
+	HandlesQueryArgs bool
+	IsArrayResult    bool
+	PseudoWSID       bool
+}
+
 type Constraints struct {
 	Order   []string
 	Limit   int
@@ -62,7 +68,7 @@ type IApiPathHandler interface {
 	RowsProcessor(ctx context.Context, qw *queryWork) error
 	Exec(ctx context.Context, qw *queryWork) error
 	RequestOpKind() appdef.OperationKind
-	IsArrayResult() bool
+	Options() ApiHandlerOptions
 }
 
 type SchemaMeta struct {
