@@ -2177,7 +2177,7 @@ func TestQueryProcessor2_AuthLogin(t *testing.T) {
 		require.NoError(err)
 		require.Equal(3600.0, result["ExpiresIn"])
 		require.Greater(result["WSID"].(float64), 0.0)
-		require.Greater(len(result["PrincipalToken"].(string)), 0)
+		require.NotEmpty(result["PrincipalToken"].(string))
 	})
 
 	t.Run("Bad request", func(t *testing.T) {
