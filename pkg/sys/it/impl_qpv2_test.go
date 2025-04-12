@@ -2181,7 +2181,7 @@ func TestQueryProcessor2_AuthLogin(t *testing.T) {
 	})
 
 	t.Run("Bad request", func(t *testing.T) {
-		body := fmt.Sprintf(`{"Blah": "%s","Blah": "%s"}`, login1.Name, "badpwd")
+		body := fmt.Sprintf(`{"UnknownField": "%s","Password": "%s"}`, login1.Name, "badpwd")
 		resp := vit.POST("api/v2/users/test1/apps/app1/auth/login", body, coreutils.Expect400())
 		require.JSONEq(`{"message":"login is not specified"}`, resp.Body)
 	})

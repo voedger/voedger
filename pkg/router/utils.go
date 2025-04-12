@@ -6,7 +6,7 @@
 package router
 
 import (
-	"fmt"
+	"encoding/json"
 	"io"
 	"log"
 	"net/http"
@@ -27,7 +27,16 @@ func WriteTextResponse(w http.ResponseWriter, msg string, code int) {
 func WriteJSONResponse(w http.ResponseWriter, msg string, code int) {
 	w.Header().Set(coreutils.ContentType, coreutils.ContentType_ApplicationJSON)
 	w.WriteHeader(code)
-	writeResponse(w, fmt.Sprintf("{\"message\": \"%s\"}", msg))
+
+	response := map[string]string{"message": msg}
+	jsonData, err := json.Marshal(response)
+	if err != nil {
+		log.Println("failed to marshal JSON response:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeResponse(w, `{"message": "Internal Server Error"}`)
+		return
+	}
+	writeResponse(w, string(jsonData))
 }
 
 func writeResponse(w http.ResponseWriter, data string) bool {
