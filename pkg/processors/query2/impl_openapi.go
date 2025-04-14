@@ -125,6 +125,25 @@ func (g *schemaGenerator) generateComponents() {
 		},
 		schemaKeyRequired: []string{"message"},
 	}
+
+	// [~server.apiv2.auth/cmp.principalTokenSchema~impl]
+	schemas[principalTokenSchemaName] = map[string]interface{}{
+		schemaKeyType: schemaTypeObject,
+		schemaKeyProperties: map[string]interface{}{
+			"PrincipalToken": map[string]interface{}{
+				schemaKeyType: schemaTypeString,
+			},
+			"ExpiresIn": map[string]interface{}{
+				schemaKeyType:   schemaTypeInteger,
+				schemaKeyFormat: schemaFormatInt64,
+			},
+			"WSID": map[string]interface{}{
+				schemaKeyType:   schemaTypeInteger,
+				schemaKeyFormat: schemaFormatInt64,
+			},
+		},
+	}
+
 }
 
 func (g *schemaGenerator) collectDocSchemaTypes() {
@@ -197,6 +216,7 @@ func (g *schemaGenerator) generateSchemaComponent(typ appdef.IType, op appdef.Op
 
 // generatePaths creates path items for all published types and their operations
 func (g *schemaGenerator) generatePaths() {
+	g.addAuthPaths()
 	for t, ops := range g.types {
 		for op := range ops {
 			paths := g.getPaths(t, op)
@@ -204,6 +224,82 @@ func (g *schemaGenerator) generatePaths() {
 				g.addPathItem(path.Path, path.Method, t, op, path.APIPath)
 			}
 		}
+	}
+}
+
+func (g *schemaGenerator) addAuthPaths() {
+	// [~server.apiv2.auth/cmp.provideAuthLoginPath~impl]
+	path := "/api/v2/apps/{owner}/{app}/auth/login"
+	parameters := g.generateParameters(path, nil)
+
+	g.paths[path] = map[string]interface{}{
+		schemaMethodPost: map[string]interface{}{
+			schemaKeyDescription: "Issue (create) a new principal token in exchange for valid credentials",
+			schemaKeyTags:        []string{authenticationTag},
+			schemaKeyParameters:  parameters,
+			schemaKeyRequestBody: map[string]interface{}{
+				schemaKeyRequired: true,
+				schemaKeyContent: map[string]interface{}{
+					applicationJSON: map[string]interface{}{
+						schemaKeySchema: map[string]interface{}{
+							schemaKeyType: schemaTypeObject,
+							schemaKeyProperties: map[string]interface{}{
+								// Login is a mandatory field
+								"Login": map[string]interface{}{
+									schemaKeyType: schemaTypeString,
+								},
+								"Password": map[string]interface{}{
+									schemaKeyType: schemaTypeString,
+								},
+							},
+							schemaKeyRequired: []string{"Login", "Password"},
+						},
+					},
+				},
+			},
+			schemaKeyResponses: map[string]interface{}{
+				statusCode200: map[string]interface{}{
+					schemaKeyDescription: descrOK,
+					schemaKeyContent: map[string]interface{}{
+						applicationJSON: map[string]interface{}{
+							schemaKeySchema: map[string]interface{}{
+								schemaKeyRef: principalTokenSchemaRef,
+							},
+						},
+					},
+				},
+				"400": map[string]interface{}{
+					schemaKeyDescription: "Bad Request",
+					schemaKeyContent: map[string]interface{}{
+						applicationJSON: map[string]interface{}{
+							schemaKeySchema: map[string]interface{}{
+								schemaKeyRef: errorSchemaRef,
+							},
+						},
+					},
+				},
+				"401": map[string]interface{}{
+					schemaKeyDescription: "Unauthorized",
+					schemaKeyContent: map[string]interface{}{
+						applicationJSON: map[string]interface{}{
+							schemaKeySchema: map[string]interface{}{
+								schemaKeyRef: errorSchemaRef,
+							},
+						},
+					},
+				},
+				"429": map[string]interface{}{
+					schemaKeyDescription: "Too many requests, rate limiting",
+					schemaKeyContent: map[string]interface{}{
+						applicationJSON: map[string]interface{}{
+							schemaKeySchema: map[string]interface{}{
+								schemaKeyRef: errorSchemaRef,
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -309,12 +405,12 @@ func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op 
 	// Add tags based on type's tags
 	tags := g.generateTags(typ)
 	if len(tags) > 0 {
-		operation["tags"] = tags
+		operation[schemaKeyTags] = tags
 	}
 
 	// Add operation description
 	operation[schemaKeyDescription] = g.generateDescription(typ, op, apiPath)
-	operation["security"] = []map[string]interface{}{
+	operation[schemaKeySecurity] = []map[string]interface{}{
 		{
 			bearerAuth: []string{},
 		},
@@ -323,19 +419,19 @@ func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op 
 	// Add operation parameters
 	parameters := g.generateParameters(path, typ)
 	if len(parameters) > 0 {
-		operation["parameters"] = parameters
+		operation[schemaKeyParameters] = parameters
 	}
 
 	// Add request body for appropriate methods
 	if method == "post" || method == "patch" || method == "put" {
 		requestBody := g.generateRequestBody(typ, op)
 		if requestBody != nil {
-			operation["requestBody"] = requestBody
+			operation[schemaKeyRequestBody] = requestBody
 		}
 	}
 
 	// Add responses
-	operation["responses"] = g.generateResponses(typ, op)
+	operation[schemaKeyResponses] = g.generateResponses(typ, op)
 
 	// Add the operation to the path
 	g.paths[path][method] = operation
@@ -826,12 +922,12 @@ func (g *schemaGenerator) write(writer io.Writer) error {
 	schema := map[string]interface{}{
 		"openapi": "3.0.0",
 		"info": map[string]interface{}{
-			"title":              g.meta.SchemaTitle,
-			"version":            g.meta.SchemaVersion,
+			"title":   g.meta.SchemaTitle,
+			"version": g.meta.SchemaVersion,
+			"contact": map[string]interface{}{
+				"name": g.meta.AppName.Owner(),
+			},
 			schemaKeyDescription: g.meta.Description,
-		},
-		"contact": map[string]interface{}{
-			"name": g.meta.AppName.Owner(),
 		},
 		"externalDocs": map[string]interface{}{
 			schemaKeyDescription: "Powered by Voedger: distributed cloud application platform",

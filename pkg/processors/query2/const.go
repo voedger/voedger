@@ -12,9 +12,12 @@ import (
 var swaggerUI_HTML string
 
 const (
-	errorSchemaName = "Error"
-	errorSchemaRef  = "#/components/schemas/" + errorSchemaName
-	bearerAuth      = "BearerAuth"
+	errorSchemaName          = "Error"
+	errorSchemaRef           = "#/components/schemas/" + errorSchemaName
+	principalTokenSchemaName = "PrincipalToken"
+	principalTokenSchemaRef  = "#/components/schemas/" + principalTokenSchemaName
+	bearerAuth               = "BearerAuth"
+	authenticationTag        = "Authentication"
 )
 
 var defaultApiOptions = ApiHandlerOptions{
@@ -54,6 +57,9 @@ const (
 	schemaTypeBoolean = "boolean"
 	schemaTypeArray   = "array"
 
+	schemaMethodPost = "post"
+	schemaMethodGet  = "get"
+
 	schemaFormatInt32  = "int32"
 	schemaFormatInt64  = "int64"
 	schemaFormatFloat  = "float"
@@ -70,4 +76,9 @@ const (
 	schemaKeyItems       = "items"
 	schemaKeyOneOf       = "oneOf"
 	schemaKeyRef         = "$ref"
+	schemaKeyRequestBody = "requestBody"
+	schemaKeyResponses   = "responses"
+	schemaKeyParameters  = "parameters"
+	schemaKeySecurity    = "security"
+	schemaKeyTags        = "tags"
 )
