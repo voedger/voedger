@@ -126,7 +126,6 @@ func (g *schemaGenerator) generateComponents() {
 		schemaKeyRequired: []string{"message"},
 	}
 
-	// generate principal toke schema
 	// [~server.apiv2.auth/cmp.principalTokenSchema~impl]
 	schemas[principalTokenSchemaName] = map[string]interface{}{
 		schemaKeyType: schemaTypeObject,
@@ -290,7 +289,7 @@ func (g *schemaGenerator) addAuthPaths() {
 					},
 				},
 				"429": map[string]interface{}{
-					schemaKeyDescription: "Too may requests, rate limiting",
+					schemaKeyDescription: "Too many requests, rate limiting",
 					schemaKeyContent: map[string]interface{}{
 						applicationJSON: map[string]interface{}{
 							schemaKeySchema: map[string]interface{}{
