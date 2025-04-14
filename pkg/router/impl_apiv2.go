@@ -139,8 +139,8 @@ func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspace
 		originalAppName := busRequest.AppQName
 
 		// [~server.apiv2.auth/cmp.routerLoginPathHandler.pseudoWSID~impl]
-		if busRequest.WSID, login, password, err = getPseudoWSIDFromAuthRequest(busRequest, numsAppsWorkspaces); err != nil {
-			WriteJSONResponse(rw, err.Error(), http.StatusBadRequest)
+		if busRequest.WSID, login, password, err = parseLoginRequest(busRequest, numsAppsWorkspaces); err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -157,30 +157,26 @@ func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspace
 	}
 }
 
-func getPseudoWSIDFromAuthRequest(req bus.Request, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (istructs.WSID, string, string, error) {
+func parseLoginRequest(req bus.Request, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (appWSID istructs.WSID, login string, password string, err error) {
 	jsonBody := req.Body
 	var loginReq struct {
-		Login    string `json:"Login"`
-		Password string `json:"Password"`
+		Login    string
+		Password string
 	}
 	if err := json.Unmarshal(jsonBody, &loginReq); err != nil {
 		logger.Error("failed to unmarshal login request:", err, ". Body:\n", string(jsonBody))
 		return 0, "", "", err
 	}
-	if loginReq.Login == "" {
-		return 0, "", "", errors.New("login is not specified")
-	}
 
 	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, loginReq.Login, istructs.CurrentClusterID())
-
-	if numAppWorkspaces, ok := numsAppsWorkspaces[req.AppQName]; ok {
-		baseWSID := pseudoWSID.BaseWSID()
-		if baseWSID <= istructs.MaxPseudoBaseWSID {
-			pseudoWSID = coreutils.GetAppWSID(pseudoWSID, numAppWorkspaces)
-		}
+	numAppWorkspaces, ok := numsAppsWorkspaces[req.AppQName]
+	if !ok {
+		// notest
+		return 0, "", "", fmt.Errorf("unable to get num app workspaces for app %s", req.AppQName)
 	}
+	appWSID = coreutils.GetAppWSID(pseudoWSID, numAppWorkspaces)
 
-	return pseudoWSID, loginReq.Login, loginReq.Password, nil
+	return appWSID, loginReq.Login, loginReq.Password, nil
 }
 
 func requestHandlerV2_schemas_wsRole(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {

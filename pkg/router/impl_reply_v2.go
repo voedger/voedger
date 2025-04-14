@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -165,7 +164,7 @@ func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 			jsonErr := sysError.ToJSON_APIV2()
 			sendSuccess = writeResponse(w, `"error":`+jsonErr)
 		} else {
-			sendSuccess = writeResponse(w, fmt.Sprintf(`"error":{"status":%d,"message":"%s"}`, http.StatusInternalServerError, *responseErr))
+			sendSuccess = writeCommonError(w, (*responseErr).Error(), http.StatusInternalServerError)
 		}
 	}
 
