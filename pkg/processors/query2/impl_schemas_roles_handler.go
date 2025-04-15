@@ -12,43 +12,16 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-type schemasRolesHandler struct {
+func schemasRolesHandler() apiPathHandler {
+	return apiPathHandler{
+		requestOpKind: appdef.OperationKind_Select,
+		exec:          schemasRolesExec,
+	}
 }
 
-var _ IApiPathHandler = (*schemasRolesHandler)(nil) // ensure that queryHandler implements IApiPathHandler
-
-func (h *schemasRolesHandler) Options() ApiHandlerOptions {
-	return defaultApiOptions
-}
-
-func (h *schemasRolesHandler) CheckRateLimit(ctx context.Context, qw *queryWork) error {
-	return nil
-}
-
-func (h *schemasRolesHandler) SetRequestType(ctx context.Context, qw *queryWork) error {
-	return nil
-}
-
-func (h *schemasRolesHandler) SetResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error {
-	return nil
-}
-
-func (h *schemasRolesHandler) RequestOpKind() appdef.OperationKind {
-	return appdef.OperationKind_Select
-}
-
-func (h *schemasRolesHandler) AuthorizeResult(ctx context.Context, qw *queryWork) (err error) {
-	return nil
-}
-
-func (h *schemasRolesHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err error) {
-	return nil
-}
-
-func (h *schemasRolesHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
+func schemasRolesExec(ctx context.Context, qw *queryWork) (err error) {
 	wsQname := qw.msg.WorkspaceQName()
 	if wsQname == appdef.NullQName {
 		return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Errorf("workspace is not specified"))

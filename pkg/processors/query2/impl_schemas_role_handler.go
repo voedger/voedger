@@ -15,7 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/acl"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
 func swaggerUI(url string) string {
@@ -23,40 +22,14 @@ func swaggerUI(url string) string {
 }
 
 // [~server.apiv2.role/cmp.schemasRoleHandler~impl]
-type schemasRoleHandler struct {
+func schemasRoleHandler() apiPathHandler {
+	return apiPathHandler{
+		requestOpKind: appdef.OperationKind_Select,
+		exec:          schemasRoleExec,
+	}
 }
 
-var _ IApiPathHandler = (*schemasRoleHandler)(nil) // ensure that queryHandler implements IApiPathHandler
-
-func (h *schemasRoleHandler) Options() ApiHandlerOptions {
-	return defaultApiOptions
-}
-
-func (h *schemasRoleHandler) CheckRateLimit(ctx context.Context, qw *queryWork) error {
-	return nil
-}
-
-func (h *schemasRoleHandler) SetRequestType(ctx context.Context, qw *queryWork) error {
-	return nil
-}
-
-func (h *schemasRoleHandler) SetResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error {
-	return nil
-}
-
-func (h *schemasRoleHandler) RequestOpKind() appdef.OperationKind {
-	return appdef.OperationKind_Select
-}
-
-func (h *schemasRoleHandler) AuthorizeResult(ctx context.Context, qw *queryWork) (err error) {
-	return nil
-}
-
-func (h *schemasRoleHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err error) {
-	return nil
-}
-
-func (h *schemasRoleHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
+func schemasRoleExec(ctx context.Context, qw *queryWork) (err error) {
 
 	wsQname := qw.msg.WorkspaceQName()
 	if wsQname == appdef.NullQName {

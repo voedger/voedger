@@ -12,43 +12,16 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-type schemasHandler struct {
+func schemasHandler() apiPathHandler {
+	return apiPathHandler{
+		requestOpKind: appdef.OperationKind_Select,
+		exec:          schemasExec,
+	}
 }
 
-var _ IApiPathHandler = (*schemasHandler)(nil) // ensure that queryHandler implements IApiPathHandler
-
-func (h *schemasHandler) Options() ApiHandlerOptions {
-	return defaultApiOptions
-}
-
-func (h *schemasHandler) CheckRateLimit(ctx context.Context, qw *queryWork) error {
-	return nil
-}
-
-func (h *schemasHandler) SetRequestType(ctx context.Context, qw *queryWork) error {
-	return nil
-}
-
-func (h *schemasHandler) SetResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error {
-	return nil
-}
-
-func (h *schemasHandler) RequestOpKind() appdef.OperationKind {
-	return appdef.OperationKind_Select
-}
-
-func (h *schemasHandler) AuthorizeResult(ctx context.Context, qw *queryWork) (err error) {
-	return nil
-}
-
-func (h *schemasHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err error) {
-	return nil
-}
-
-func (h *schemasHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
+func schemasExec(ctx context.Context, qw *queryWork) (err error) {
 	generatedHTML := fmt.Sprintf("<html><head><title>App %s schema</title></head><body>", qw.msg.AppQName().String())
 	generatedHTML += fmt.Sprintf("<h1>App %s schema</h1>", qw.msg.AppQName().String())
 

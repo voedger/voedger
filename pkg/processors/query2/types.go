@@ -29,12 +29,6 @@ type QueryParams struct {
 	Argument    map[string]interface{}
 }
 
-type ApiHandlerOptions struct {
-	HandlesQueryArgs bool
-	IsArrayResult    bool
-	PseudoWSID       bool
-}
-
 type Constraints struct {
 	Order   []string
 	Limit   int
@@ -60,15 +54,16 @@ type IQueryMessage interface {
 	Accept() string
 }
 
-type IApiPathHandler interface {
-	CheckRateLimit(ctx context.Context, qw *queryWork) error
-	SetRequestType(ctx context.Context, qw *queryWork) error
-	SetResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error
-	AuthorizeResult(ctx context.Context, qw *queryWork) error
-	RowsProcessor(ctx context.Context, qw *queryWork) error
-	Exec(ctx context.Context, qw *queryWork) error
-	RequestOpKind() appdef.OperationKind
-	Options() ApiHandlerOptions
+type apiPathHandler struct {
+	handlesQueryArgs bool
+	isArrayResult    bool
+	requestOpKind    appdef.OperationKind
+	checkRateLimit   func(ctx context.Context, qw *queryWork) error
+	setRequestType   func(ctx context.Context, qw *queryWork) error
+	setResultType    func(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error
+	authorizeResult  func(ctx context.Context, qw *queryWork) error
+	rowsProcessor    func(ctx context.Context, qw *queryWork) error
+	exec             func(ctx context.Context, qw *queryWork) error
 }
 
 type SchemaMeta struct {
