@@ -40,9 +40,8 @@ const (
 )
 
 var (
-	onRequestCtxClosed         func() = nil // used in tests
-	adminEndpoint                     = "127.0.0.1:55555"
-	qNameAppWorkspaceWS               = appdef.NewQName(appdef.SysPackage, "AppWorkspaceWS")
-	qNameIssuePrincipalToken          = appdef.NewQName("registry", "IssuePrincipalToken")
-	qNameRefreshPrincipalToken        = appdef.NewQName("registry", "RefreshPrincipalToken")
+	onRequestCtxClosed       func() = nil // used in tests
+	adminEndpoint                   = "127.0.0.1:55555"
+	qNameAppWorkspaceWS             = appdef.NewQName(appdef.SysPackage, "AppWorkspaceWS")
+	qNameIssuePrincipalToken        = appdef.NewQName("registry", "IssuePrincipalToken")
 )

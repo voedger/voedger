@@ -335,19 +335,6 @@ func (g *schemaGenerator) genErrorResponse(code int) map[string]interface{} {
 	}
 }
 
-func (g *schemaGenerator) genResponse401() map[string]interface{} {
-	return map[string]interface{}{
-		schemaKeyDescription: "Unauthorized",
-		schemaKeyContent: map[string]interface{}{
-			applicationJSON: map[string]interface{}{
-				schemaKeySchema: map[string]interface{}{
-					schemaKeyRef: errorSchemaRef,
-				},
-			},
-		},
-	}
-}
-
 // getPathAndMethod returns the API path and HTTP method for a given type and operation
 func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []pathItem {
 	typeName := typ.QName().String()
