@@ -40,6 +40,8 @@ func Test_KeyType(t *testing.T) {
 		t.Run("should be ok to build view", func(t *testing.T) {
 			view := wsb.AddView(viewName)
 			view.Key().PartKey().
+				AddField("pk_int8", appdef.DataKind_int8).
+				AddField("pk_int16", appdef.DataKind_int16).
 				AddField("pk_int32", appdef.DataKind_int32).
 				AddField("pk_int64", appdef.DataKind_int64).
 				AddField("pk_float32", appdef.DataKind_float32).
@@ -49,6 +51,8 @@ func Test_KeyType(t *testing.T) {
 				AddRefField("pk_recID").
 				AddField("pk_number", appdef.DataKind_float64)
 			view.Key().ClustCols().
+				AddField("cc_int8", appdef.DataKind_int8).
+				AddField("cc_int16", appdef.DataKind_int16).
 				AddField("cc_int32", appdef.DataKind_int32).
 				AddField("cc_int64", appdef.DataKind_int64).
 				AddField("cc_float32", appdef.DataKind_float32).
@@ -59,6 +63,8 @@ func Test_KeyType(t *testing.T) {
 				AddField("cc_number", appdef.DataKind_float64).
 				AddField("cc_bytes", appdef.DataKind_bytes, constraints.MaxLen(64))
 			view.Value().
+				AddField("val_int8", appdef.DataKind_int8, false).
+				AddField("val_int16", appdef.DataKind_int16, false).
 				AddField("val_string", appdef.DataKind_string, false, constraints.MaxLen(1024))
 		})
 
@@ -83,6 +89,8 @@ func Test_KeyType(t *testing.T) {
 
 		require.NotNil(kb)
 
+		kb.PutInt8("pk_int8", 123)
+		kb.PutInt16("pk_int16", 12345)
 		kb.PutInt32("pk_int32", 1111111)
 		kb.PutInt64("pk_int64", 222222222222)
 		kb.PutFloat32("pk_float32", 3.333e3)
@@ -92,6 +100,8 @@ func Test_KeyType(t *testing.T) {
 		kb.PutRecordID("pk_recID", istructs.RecordID(5555555))
 		kb.PutNumber("pk_number", gojson.Number("1.23456789"))
 
+		kb.PutInt8("cc_int8", 123)
+		kb.PutInt16("cc_int16", 12345)
 		kb.PutInt32("cc_int32", 6666666)
 		kb.PutInt64("cc_int64", 777777777777)
 		kb.PutFloat32("cc_float32", 8.888e8)
@@ -117,6 +127,8 @@ func Test_KeyType(t *testing.T) {
 
 		require.NotNil(k)
 
+		require.EqualValues(123, k.AsInt8("pk_int8"))
+		require.EqualValues(12345, k.AsInt16("pk_int16"))
 		require.EqualValues(1111111, k.AsInt32("pk_int32"))
 		require.EqualValues(222222222222, k.AsInt64("pk_int64"))
 		require.EqualValues(3.333e3, k.AsFloat32("pk_float32"))
@@ -126,6 +138,8 @@ func Test_KeyType(t *testing.T) {
 		require.EqualValues(5555555, k.AsRecordID("pk_recID"))
 		require.EqualValues(1.23456789, k.AsFloat64("pk_number"))
 
+		require.EqualValues(123, k.AsInt8("cc_int8"))
+		require.EqualValues(12345, k.AsInt16("cc_int16"))
 		require.EqualValues(6666666, k.AsInt32("cc_int32"))
 		require.EqualValues(777777777777, k.AsInt64("cc_int64"))
 		require.EqualValues(8.888e8, k.AsFloat32("cc_float32"))
@@ -183,11 +197,21 @@ func Test_KeyType(t *testing.T) {
 
 	t.Run("should be ok IValueBuilder.ToBytes()", func(t *testing.T) {
 		vb := newValue(appCfg, viewName)
+		vb.PutInt8("val_int8", 123)
+		vb.PutInt16("val_int16", 12345)
 		vb.PutString("val_string", "test string")
 
 		b, err := vb.ToBytes()
 		require.NoError(err)
 		require.NotEmpty(b)
+
+		dupe := newValue(appCfg, viewName)
+		err = dupe.loadFromBytes(b)
+		require.NoError(err)
+		require.EqualValues(123, dupe.AsInt8("val_int8"))
+		require.EqualValues(12345, dupe.AsInt16("val_int16"))
+		require.EqualValues(12345, dupe.AsInt16("val_int16"))
+		require.EqualValues("test string", dupe.AsString("val_string"))
 	})
 }
 

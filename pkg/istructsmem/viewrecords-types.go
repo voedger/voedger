@@ -331,6 +331,26 @@ func (key *keyType) AsFloat64(name appdef.FieldName) float64 {
 	return key.ccolsRow.AsFloat64(name)
 }
 
+// #3435 [~server.vsql.smallints/cmp.istructs~impl]
+//
+// istructs.IRowReader.AsInt8
+func (key *keyType) AsInt8(name appdef.FieldName) int8 {
+	if key.partRow.fieldDef(name) != nil {
+		return key.partRow.AsInt8(name)
+	}
+	return key.ccolsRow.AsInt8(name)
+}
+
+// #3435 [~server.vsql.smallints/cmp.istructs~impl]
+//
+// istructs.IRowReader.AsInt16
+func (key *keyType) AsInt16(name appdef.FieldName) int16 {
+	if key.partRow.fieldDef(name) != nil {
+		return key.partRow.AsInt16(name)
+	}
+	return key.ccolsRow.AsInt16(name)
+}
+
 // istructs.IRowReader.AsInt32
 func (key *keyType) AsInt32(name appdef.FieldName) int32 {
 	if key.partRow.fieldDef(name) != nil {
@@ -489,6 +509,28 @@ func (key *keyType) PutFromJSON(j map[appdef.FieldName]any) {
 
 	key.partRow.PutFromJSON(pkJ)
 	key.ccolsRow.PutFromJSON(ccJ)
+}
+
+// #3435 [~server.vsql.smallints/cmp.istructs~impl]
+//
+// istructs.IRowWriter.PutInt8
+func (key *keyType) PutInt8(name appdef.FieldName, value int8) {
+	if key.partRow.fieldDef(name) != nil {
+		key.partRow.PutInt8(name, value)
+	} else {
+		key.ccolsRow.PutInt8(name, value)
+	}
+}
+
+// #3435 [~server.vsql.smallints/cmp.istructs~impl]
+//
+// istructs.IRowWriter.PutInt16
+func (key *keyType) PutInt16(name appdef.FieldName, value int16) {
+	if key.partRow.fieldDef(name) != nil {
+		key.partRow.PutInt16(name, value)
+	} else {
+		key.ccolsRow.PutInt16(name, value)
+	}
 }
 
 // istructs.IRowWriter.PutInt32

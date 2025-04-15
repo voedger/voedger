@@ -111,6 +111,16 @@ func loadViewValue(val *valueType, codecVer byte, buf *bytes.Buffer) (err error)
 // Loads from buffer row cell
 func loadClustFieldFromBuffer_00(key *keyType, field appdef.IField, buf *bytes.Buffer) (err error) {
 	switch field.DataKind() {
+	case appdef.DataKind_int8: // #3435 [~server.vsql.smallints/cmp.istructs~impl]
+		v := int8(0)
+		if v, err = utils.ReadInt8(buf); err == nil {
+			key.ccolsRow.PutInt8(field.Name(), v)
+		}
+	case appdef.DataKind_int16: // #3435 [~server.vsql.smallints/cmp.istructs~impl]
+		v := int16(0)
+		if v, err = utils.ReadInt16(buf); err == nil {
+			key.ccolsRow.PutInt16(field.Name(), v)
+		}
 	case appdef.DataKind_int32:
 		v := int32(0)
 		if v, err = utils.ReadInt32(buf); err == nil {

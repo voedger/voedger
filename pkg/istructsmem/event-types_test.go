@@ -73,7 +73,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 
 			cmd.PutRecordID(appdef.SystemField_ID, test.tempSaleID)
 			cmd.PutString(test.buyerIdent, test.buyerValue)
-			cmd.PutInt32(test.ageIdent, test.ageValue)
+			cmd.PutInt8(test.ageIdent, test.ageValue)
 			cmd.PutFloat32(test.heightIdent, test.heightValue)
 			cmd.PutBool(test.humanIdent, test.humanValue)
 			cmd.PutBytes(test.photoIdent, test.photoValue)
@@ -105,7 +105,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			rec := cuds.Create(test.tablePhotos)
 			rec.PutRecordID(appdef.SystemField_ID, test.tempPhotoID)
 			rec.PutString(test.buyerIdent, test.buyerValue)
-			rec.PutInt32(test.ageIdent, test.ageValue)
+			rec.PutInt8(test.ageIdent, test.ageValue)
 			rec.PutFloat32(test.heightIdent, test.heightValue)
 			rec.PutBool(test.humanIdent, true)
 			rec.PutBytes(test.photoIdent, test.photoValue)
@@ -513,7 +513,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			require.Equal(test.tablePhotos, rec.QName())
 
 			require.Equal(test.buyerValue, rec.AsString(test.buyerIdent))
-			require.Equal(test.ageValue, rec.AsInt32(test.ageIdent))
+			require.Equal(test.ageValue, rec.AsInt8(test.ageIdent))
 
 			require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
 			require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
@@ -610,7 +610,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			require.Equal(test.tablePhotos, rec.QName())
 
 			require.Equal(test.buyerValue, rec.AsString(test.buyerIdent))
-			require.Equal(test.ageValue, rec.AsInt32(test.ageIdent))
+			require.Equal(test.ageValue, rec.AsInt8(test.ageIdent))
 			require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
 			require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
 
@@ -627,7 +627,7 @@ func testCommandsTree(t *testing.T, cmd istructs.IObject) {
 		require.NotNil(cmd)
 
 		require.Equal(test.buyerValue, cmd.AsString(test.buyerIdent))
-		require.Equal(test.ageValue, cmd.AsInt32(test.ageIdent))
+		require.Equal(test.ageValue, cmd.AsInt8(test.ageIdent))
 		require.Equal(test.heightValue, cmd.AsFloat32(test.heightIdent))
 		require.Equal(test.photoValue, cmd.AsBytes(test.photoIdent))
 
@@ -698,7 +698,7 @@ func testPhotoRow(t *testing.T, photo istructs.IRowReader) {
 	require := require.New(t)
 	test := test()
 	require.Equal(test.buyerValue, photo.AsString(test.buyerIdent))
-	require.Equal(test.ageValue, photo.AsInt32(test.ageIdent))
+	require.Equal(test.ageValue, photo.AsInt8(test.ageIdent))
 	require.Equal(test.heightValue, photo.AsFloat32(test.heightIdent))
 	require.Equal(test.photoValue, photo.AsBytes(test.photoIdent))
 }
@@ -1832,7 +1832,7 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 			cud.PutRecordID(appdef.SystemField_ID, emptiedPhotoID)
 			cud.PutString(test.buyerIdent, "") // empty here, but next filled
 			cud.PutString(test.buyerIdent, test.buyerValue)
-			cud.PutInt32(test.ageIdent, test.ageValue)
+			cud.PutInt8(test.ageIdent, test.ageValue)
 			cud.PutBytes(test.photoIdent, nil) // empty bytes-field
 		})
 
@@ -1855,12 +1855,12 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 			for cud := range ev2.CUDs {
 				switch cud.AsRecordID(appdef.SystemField_ID) {
 				case emptiedPhotoID:
-					fields := make(map[appdef.FieldName]interface{})
+					fields := make(map[appdef.FieldName]any)
 					for fld, val := range cud.SpecifiedValues {
 						fields[fld.Name()] = val
 					}
 					require.Equal(
-						map[appdef.FieldName]interface{}{
+						map[appdef.FieldName]any{
 							test.buyerIdent:             test.buyerValue,
 							test.ageIdent:               test.ageValue,
 							test.photoIdent:             []byte{}, // emptied bytes-field
@@ -1870,12 +1870,12 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 						},
 						fields)
 				case emptiedRemarkID:
-					fields := make(map[appdef.FieldName]interface{})
+					fields := make(map[appdef.FieldName]any)
 					for fld, val := range cud.SpecifiedValues {
 						fields[fld.Name()] = val
 					}
 					require.Equal(
-						map[appdef.FieldName]interface{}{
+						map[appdef.FieldName]any{
 							test.photoIdent:              test.tempPhotoID,
 							test.remarkIdent:             "", // emptied string-field
 							appdef.SystemField_ID:        emptiedRemarkID,
@@ -2087,8 +2087,8 @@ func Test_ObjectMask(t *testing.T) {
 	value.maskValues()
 
 	require.Equal(maskString, value.AsString(test.buyerIdent))
-	require.Equal(int32(0), value.AsInt32(test.ageIdent))
-	require.Equal(float32(0), value.AsFloat32(test.heightIdent))
+	require.Zero(value.AsInt8(test.ageIdent))
+	require.Zero(value.AsFloat32(test.heightIdent))
 	require.False(value.AsBool(test.humanIdent))
 	require.Equal([]byte(nil), value.AsBytes(test.photoIdent))
 

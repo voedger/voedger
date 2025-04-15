@@ -36,6 +36,8 @@ func (v *TestValue) AsEvent(name string) (event istructs.IDbEvent) {
 	return v.Data[name].(istructs.IDbEvent)
 }
 
+func (o *TestObject) PutInt8(name string, value int8)                  { o.Data[name] = value }
+func (o *TestObject) PutInt16(name string, value int16)                { o.Data[name] = value }
 func (o *TestObject) PutInt32(name string, value int32)                { o.Data[name] = value }
 func (o *TestObject) PutInt64(name string, value int64)                { o.Data[name] = value }
 func (o *TestObject) PutFloat32(name string, value float32)            { o.Data[name] = value }
@@ -103,6 +105,21 @@ func (o *TestObject) SpecifiedValues(cb func(appdef.IField, any) bool) {
 }
 func (o *TestObject) AsRecord() istructs.IRecord                 { return o }
 func (o *TestObject) AsEvent(appdef.FieldName) istructs.IDbEvent { panic("not implemented") }
+
+func (o *TestObject) AsInt8(name string) int8 {
+	if resIntf, ok := o.Data[name]; ok {
+		return resIntf.(int8)
+	}
+	return 0
+}
+
+func (o *TestObject) AsInt16(name string) int16 {
+	if resIntf, ok := o.Data[name]; ok {
+		return resIntf.(int16)
+	}
+	return 0
+}
+
 func (o *TestObject) AsInt32(name string) int32 {
 	if resIntf, ok := o.Data[name]; ok {
 		return resIntf.(int32)

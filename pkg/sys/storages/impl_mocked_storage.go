@@ -348,6 +348,14 @@ func (mkb *mockedKeyBuilder) String() string {
 
 func (mkb *mockedKeyBuilder) ToBytes(istructs.WSID) ([]byte, []byte, error) { return nil, nil, nil }
 
+func (mkb *mockedKeyBuilder) PutInt8(field appdef.FieldName, value int8) {
+	mkb.TestObject.Data[field] = value
+}
+
+func (mkb *mockedKeyBuilder) PutInt16(field appdef.FieldName, value int16) {
+	mkb.TestObject.Data[field] = value
+}
+
 func (mkb *mockedKeyBuilder) PutInt32(field appdef.FieldName, value int32) {
 	mkb.TestObject.Data[field] = value
 }
@@ -412,6 +420,14 @@ func (mkb *mockedKeyBuilder) PutFromJSON(value map[appdef.FieldName]any) {
 
 type mockedValueBuilder struct {
 	value *mockedStateValue
+}
+
+func (mvb *mockedValueBuilder) PutInt8(name appdef.FieldName, i int8) {
+	mvb.value.TestObjects[0].Data[name] = i
+}
+
+func (mvb *mockedValueBuilder) PutInt16(name appdef.FieldName, i int16) {
+	mvb.value.TestObjects[0].Data[name] = i
 }
 
 func (mvb *mockedValueBuilder) PutInt32(name appdef.FieldName, i int32) {
@@ -550,6 +566,38 @@ func (mvb *mockedValueBuilder) BuildValue() istructs.IStateValue {
 
 type mockedStateValue struct {
 	TestObjects []*coreutils.TestObject
+}
+
+func (m *mockedStateValue) AsInt8(name appdef.FieldName) int8 {
+	switch t := m.TestObjects[0].Data[name].(type) {
+	case int8:
+		return t
+	case json.Number:
+		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_int8)
+		if err != nil {
+			panic(err)
+		}
+
+		return t2.(int8)
+	default:
+		panic(fmt.Sprintf("mockedStateValue.AsInt8(%s): unexpected type", name))
+	}
+}
+
+func (m *mockedStateValue) AsInt16(name appdef.FieldName) int16 {
+	switch t := m.TestObjects[0].Data[name].(type) {
+	case int16:
+		return t
+	case json.Number:
+		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_int16)
+		if err != nil {
+			panic(err)
+		}
+
+		return t2.(int16)
+	default:
+		panic(fmt.Sprintf("mockedStateValue.AsInt16(%s): unexpected type", name))
+	}
 }
 
 func (m *mockedStateValue) AsInt32(name appdef.FieldName) int32 {

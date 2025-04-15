@@ -24,9 +24,9 @@ func NewFieldsScheme(name string, fields appdef.IWithFields) *dynobuffers.Scheme
 			ft := DataKindToFieldType(f.DataKind())
 			if ft == dynobuffers.FieldTypeByte {
 				switch f.DataKind() {
-				case appdef.DataKind_int8: // #3434 [small integers : int8]
+				case appdef.DataKind_int8: // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
 					db.AddField(f.Name(), ft, false)
-				case appdef.DataKind_int16: // #3434 [small integers : int16]
+				case appdef.DataKind_int16: // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
 					db.AddArray(f.Name(), ft, false) // two fixed bytes LittleEndian
 				case appdef.DataKind_QName:
 					db.AddArray(f.Name(), ft, false) // two fixed bytes LittleEndian

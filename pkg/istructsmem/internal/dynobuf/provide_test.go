@@ -61,15 +61,14 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 
 			// #3434 [small integers: int16]
 			require.Equal("f_int16", scheme.Fields[1].Name)
-			require.Equal(dynobuffers.FieldTypeByte, scheme.Fields[1].Ft)
-			require.True(scheme.Fields[1].IsArray)
+			require.Equal(dynobuffers.FieldTypeInt16, scheme.Fields[1].Ft)
 
 			require.Equal("f_int32", scheme.Fields[2].Name)
 			require.Equal(dynobuffers.FieldTypeInt32, scheme.Fields[2].Ft)
 
 			require.Equal("f_QName", scheme.Fields[3].Name)
 			require.Equal(dynobuffers.FieldTypeByte, scheme.Fields[3].Ft)
-			require.True(scheme.Fields[1].IsArray)
+			require.True(scheme.Fields[3].IsArray)
 
 			require.Equal("f_String", scheme.Fields[4].Name)
 			require.Equal(dynobuffers.FieldTypeString, scheme.Fields[4].Ft)
@@ -106,8 +105,7 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 
 					// #3434 [small integers: int16]
 					require.Equal("ccInt16", ccols.Fields[1].Name)
-					require.Equal(dynobuffers.FieldTypeByte, ccols.Fields[1].Ft)
-					require.True(ccols.Fields[1].IsArray)
+					require.Equal(dynobuffers.FieldTypeInt16, ccols.Fields[1].Ft)
 
 					require.Equal("ccString", ccols.Fields[2].Name)
 					require.Equal(dynobuffers.FieldTypeString, ccols.Fields[2].Ft)
