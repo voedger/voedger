@@ -28,7 +28,7 @@ func cdocsHandler() apiPathHandler {
 		isArrayResult:   true,
 		checkRateLimit:  nil, // TODO: implement rate limit for CDocs
 		setRequestType:  cdocsSetRequestType,
-		setResultType:   cdocaSetResultType,
+		setResultType:   cdocsSetResultType,
 		authorizeResult: cdocsAuthorizeResult,
 		rowsProcessor:   cdocsRowsProcessor,
 		exec:            cdocsExec,
@@ -47,7 +47,7 @@ func cdocsSetRequestType(_ context.Context, qw *queryWork) (err error) {
 	}
 	return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("document or record %s is not defined in %v", qw.msg.QName(), qw.iWorkspace))
 }
-func cdocaSetResultType(_ context.Context, qw *queryWork, _ istructsmem.IStatelessResources) (err error) {
+func cdocsSetResultType(_ context.Context, qw *queryWork, _ istructsmem.IStatelessResources) (err error) {
 	qw.resultType = qw.iDoc
 	return
 }
