@@ -41,6 +41,11 @@ const (
 // Status codes
 const (
 	statusCode200 = "200"
+	statusCode400 = "400"
+	statusCode401 = "401"
+	statusCode403 = "403"
+	statusCode429 = "429"
+	statusCode500 = "500"
 )
 
 // OpenAPI schema constants

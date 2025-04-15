@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"iter"
+	"net/http"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -228,13 +229,17 @@ func (g *schemaGenerator) generatePaths() {
 }
 
 func (g *schemaGenerator) addAuthPaths() {
+	g.genAuthLoginPath()
+	g.genAuthRefreshPath()
+}
+
+func (g *schemaGenerator) genAuthLoginPath() {
 	// [~server.apiv2.auth/cmp.provideAuthLoginPath~impl]
 	path := "/api/v2/apps/{owner}/{app}/auth/login"
 	parameters := g.generateParameters(path, nil)
-
 	g.paths[path] = map[string]interface{}{
 		schemaMethodPost: map[string]interface{}{
-			schemaKeyDescription: "Issue (create) a new principal token in exchange for valid credentials",
+			schemaKeyDescription: "Issues (creates) a new principal token in exchange for valid credentials",
 			schemaKeyTags:        []string{authenticationTag},
 			schemaKeyParameters:  parameters,
 			schemaKeyRequestBody: map[string]interface{}{
@@ -258,45 +263,72 @@ func (g *schemaGenerator) addAuthPaths() {
 				},
 			},
 			schemaKeyResponses: map[string]interface{}{
-				statusCode200: map[string]interface{}{
-					schemaKeyDescription: descrOK,
-					schemaKeyContent: map[string]interface{}{
-						applicationJSON: map[string]interface{}{
-							schemaKeySchema: map[string]interface{}{
-								schemaKeyRef: principalTokenSchemaRef,
-							},
-						},
-					},
+				statusCode200: g.genOKResponse(principalTokenSchemaRef),
+				statusCode400: g.genErrorResponse(http.StatusBadRequest),
+				statusCode401: g.genErrorResponse(http.StatusUnauthorized),
+				statusCode429: g.genErrorResponse(http.StatusTooManyRequests),
+			},
+		},
+	}
+}
+
+func (g *schemaGenerator) genAuthRefreshPath() {
+	// [~server.apiv2.auth/cmp.provideAuthRefreshPath~impl]
+	path := "/api/v2/apps/{owner}/{app}/auth/refresh"
+	parameters := g.generateParameters(path, nil)
+	g.paths[path] = map[string]interface{}{
+		schemaMethodPost: map[string]interface{}{
+			schemaKeyDescription: "Returns a refreshed principal token",
+			schemaKeyTags:        []string{authenticationTag},
+			schemaKeyParameters:  parameters,
+			schemaKeyResponses: map[string]interface{}{
+				statusCode200: g.genOKResponse(principalTokenSchemaRef),
+				statusCode400: g.genErrorResponse(http.StatusBadRequest),
+				statusCode401: g.genErrorResponse(http.StatusUnauthorized),
+				statusCode403: g.genErrorResponse(http.StatusForbidden),
+				statusCode429: g.genErrorResponse(http.StatusTooManyRequests),
+			},
+		},
+	}
+}
+
+func (g *schemaGenerator) genOKResponse(schemaRef string) map[string]interface{} {
+	return map[string]interface{}{
+		schemaKeyDescription: descrOK,
+		schemaKeyContent: map[string]interface{}{
+			applicationJSON: map[string]interface{}{
+				schemaKeySchema: map[string]interface{}{
+					schemaKeyRef: schemaRef,
 				},
-				"400": map[string]interface{}{
-					schemaKeyDescription: "Bad Request",
-					schemaKeyContent: map[string]interface{}{
-						applicationJSON: map[string]interface{}{
-							schemaKeySchema: map[string]interface{}{
-								schemaKeyRef: errorSchemaRef,
-							},
-						},
-					},
-				},
-				"401": map[string]interface{}{
-					schemaKeyDescription: "Unauthorized",
-					schemaKeyContent: map[string]interface{}{
-						applicationJSON: map[string]interface{}{
-							schemaKeySchema: map[string]interface{}{
-								schemaKeyRef: errorSchemaRef,
-							},
-						},
-					},
-				},
-				"429": map[string]interface{}{
-					schemaKeyDescription: "Too many requests, rate limiting",
-					schemaKeyContent: map[string]interface{}{
-						applicationJSON: map[string]interface{}{
-							schemaKeySchema: map[string]interface{}{
-								schemaKeyRef: errorSchemaRef,
-							},
-						},
-					},
+			},
+		},
+	}
+}
+
+func (g *schemaGenerator) genErrorResponse(code int) map[string]interface{} {
+	var description string
+	switch code {
+	case http.StatusBadRequest:
+		description = "Bad request"
+	case http.StatusUnauthorized:
+		description = "Unauthorized"
+	case http.StatusForbidden:
+		description = "Forbidden"
+	case http.StatusNotFound:
+		description = "Not found"
+	case http.StatusInternalServerError:
+		description = "Internal server error"
+	case http.StatusTooManyRequests:
+		description = "Too many requests"
+	default:
+		description = "Unknown error"
+	}
+	return map[string]interface{}{
+		schemaKeyDescription: description,
+		schemaKeyContent: map[string]interface{}{
+			applicationJSON: map[string]interface{}{
+				schemaKeySchema: map[string]interface{}{
+					schemaKeyRef: errorSchemaRef,
 				},
 			},
 		},

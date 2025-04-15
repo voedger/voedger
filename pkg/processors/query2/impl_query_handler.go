@@ -23,34 +23,13 @@ func queryHandler() apiPathHandler {
 		handlesQueryArgs: true,
 		isArrayResult:    true,
 		requestOpKind:    appdef.OperationKind_Execute,
-		checkRateLimit:   queryCheckRateLimit,
+		checkRateLimit:   queryRateLimitExceeded,
 		setRequestType:   querySetRequestType,
 		setResultType:    querySetResultType,
 		authorizeResult:  queryAuthorizeResult,
 		rowsProcessor:    queryRowsProcessor,
 		exec:             queryExec,
 	}
-}
-
-func queryCheckRateLimit(ctx context.Context, qw *queryWork) error {
-	if qw.appStructs.IsFunctionRateLimitsExceeded(qw.msg.QName(), qw.msg.WSID()) {
-		return coreutils.NewSysError(http.StatusTooManyRequests)
-	}
-	return nil
-}
-func querySetRequestType(ctx context.Context, qw *queryWork) error {
-	switch qw.iWorkspace {
-	case nil:
-		// workspace is dummy
-		if qw.iQuery = appdef.Query(qw.appStructs.AppDef().Type, qw.msg.QName()); qw.iQuery == nil {
-			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist", qw.msg.QName()))
-		}
-	default:
-		if qw.iQuery = appdef.Query(qw.iWorkspace.Type, qw.msg.QName()); qw.iQuery == nil {
-			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist in %v", qw.msg.QName(), qw.iWorkspace))
-		}
-	}
-	return nil
 }
 func querySetResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error {
 	qw.resultType = qw.iQuery.Result()

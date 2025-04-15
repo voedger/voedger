@@ -2117,6 +2117,8 @@ func TestOpenAPI(t *testing.T) {
 	require.Contains(json, "\"app1pkg.Currency\": {")
 	require.Contains(json, "\"paths\": {")
 	require.Contains(json, "/users/voedger/apps/testapp/workspaces/{wsid}/docs/app1pkg.Currency")
+
+	// fmt.Println(json)
 }
 
 // [~server.apiv2.docs/it.TestQueryProcessor2_CDocs~impl]
@@ -2190,6 +2192,44 @@ func TestQueryProcessor2_AuthLogin(t *testing.T) {
 		body := fmt.Sprintf(`{"Login": "%s","Password": "%s"}`, login1.Name, "badpwd")
 		resp := vit.POST("api/v2/users/test1/apps/app1/auth/login", body, coreutils.Expect401())
 		require.JSONEq(`{"status":401,"message":"login or password is incorrect"}`, resp.Body)
+	})
+
+}
+
+// [~server.apiv2.auth/it.TestRefresh~impl]
+func TestQueryProcessor2_AuthRefresh(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	require := require.New(t)
+
+	loginName1 := vit.NextName()
+	login1 := vit.SignUp(loginName1, "pwd1", istructs.AppQName_test1_app1)
+	prn1 := vit.SignIn(login1)
+
+	t.Run("Refresh", func(t *testing.T) {
+		// simulate delay to make the new token be different after referesh
+		vit.TimeAdd(time.Minute)
+		resp := vit.POST("api/v2/users/test1/apps/app1/auth/refresh", "", coreutils.WithAuthorizeBy(prn1.Token))
+		require.Equal(200, resp.HTTPResp.StatusCode)
+		result := make(map[string]interface{})
+		err := json.Unmarshal([]byte(resp.Body), &result)
+		require.NoError(err)
+		require.Equal(3600.0, result["ExpiresIn"])
+		require.Equal(istructs.WSID(result["WSID"].(float64)), prn1.ProfileWSID)
+		newToken := result["PrincipalToken"].(string)
+		require.NotEmpty(newToken)
+		require.NotEqual(newToken, prn1.Token)
+	})
+
+	t.Run("Empty token", func(t *testing.T) {
+		resp := vit.POST("api/v2/users/test1/apps/app1/auth/refresh", "", coreutils.Expect401())
+		require.JSONEq(`{"status":401,"message":"authorization header is empty"}`, resp.Body)
+	})
+
+	t.Run("Old token", func(t *testing.T) {
+		vit.TimeAdd(time.Hour * 2)
+		resp := vit.POST("api/v2/users/test1/apps/app1/auth/refresh", "", coreutils.WithAuthorizeBy(prn1.Token), coreutils.Expect401())
+		require.JSONEq(`{"status":401,"message":"token expired"}`, resp.Body)
 	})
 
 }

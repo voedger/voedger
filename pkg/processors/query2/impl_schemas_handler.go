@@ -16,8 +16,7 @@ import (
 
 func schemasHandler() apiPathHandler {
 	return apiPathHandler{
-		requestOpKind: appdef.OperationKind_Select,
-		exec:          schemasExec,
+		exec: schemasExec,
 	}
 }
 

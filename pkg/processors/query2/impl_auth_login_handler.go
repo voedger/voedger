@@ -22,34 +22,11 @@ func authLoginHandler() apiPathHandler {
 	return apiPathHandler{
 		requestOpKind:    appdef.OperationKind_Execute,
 		handlesQueryArgs: true,
-		checkRateLimit:   authLoginCheckRateLimit,
-		setRequestType:   authLoginSetRequestType,
+		checkRateLimit:   queryRateLimitExceeded,
+		setRequestType:   querySetRequestType,
 		exec:             authLoginExec,
 	}
 }
-
-func authLoginCheckRateLimit(ctx context.Context, qw *queryWork) error {
-	if qw.appStructs.IsFunctionRateLimitsExceeded(qw.msg.QName(), qw.msg.WSID()) {
-		return coreutils.NewSysError(http.StatusTooManyRequests)
-	}
-	return nil
-}
-
-func authLoginSetRequestType(ctx context.Context, qw *queryWork) error {
-	switch qw.iWorkspace {
-	case nil:
-		// workspace is dummy
-		if qw.iQuery = appdef.Query(qw.appStructs.AppDef().Type, qw.msg.QName()); qw.iQuery == nil {
-			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist", qw.msg.QName()))
-		}
-	default:
-		if qw.iQuery = appdef.Query(qw.iWorkspace.Type, qw.msg.QName()); qw.iQuery == nil {
-			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist in %v", qw.msg.QName(), qw.iWorkspace))
-		}
-	}
-	return nil
-}
-
 func authLoginExec(ctx context.Context, qw *queryWork) (err error) {
 	var principalTokenObj istructs.IObject
 	qw.callbackFunc = func(o istructs.IObject) (err error) {
