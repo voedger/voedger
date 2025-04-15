@@ -141,7 +141,6 @@ func requestHandlerV2_auth_refresh(reqSender bus.IRequestSender, numsAppsWorkspa
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPath_Auth_Refresh)
 		busRequest.Method = http.MethodGet
-		busRequest.QName = qNameRefreshPrincipalToken
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	}
 }

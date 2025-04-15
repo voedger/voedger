@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -87,6 +88,7 @@ type queryWork struct {
 	callbackFunc         istructs.ExecQueryCallback
 	responseWriterGetter func() bus.IResponseWriter
 	apiPathHandler       apiPathHandler
+	federation           federation.IFederation
 }
 
 var _ pipeline.IWorkpiece = (*queryWork)(nil) // ensure that queryWork implements pipeline.IWorkpiece
@@ -109,7 +111,7 @@ func (qw *queryWork) borrow() (err error) {
 }
 
 func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
-	maxPrepareQueries int, metrics *queryProcessorMetrics, secretReader isecrets.ISecretReader) *queryWork {
+	maxPrepareQueries int, metrics *queryProcessorMetrics, secretReader isecrets.ISecretReader, federation federation.IFederation) *queryWork {
 	return &queryWork{
 		msg:                msg,
 		appParts:           appParts,
@@ -119,6 +121,7 @@ func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
 		secretReader:       secretReader,
 		rowsProcessorErrCh: make(chan error, 1),
 		queryParams:        msg.QueryParams(),
+		federation:         federation,
 	}
 }
 

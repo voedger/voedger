@@ -24,8 +24,7 @@ func swaggerUI(url string) string {
 // [~server.apiv2.role/cmp.schemasRoleHandler~impl]
 func schemasRoleHandler() apiPathHandler {
 	return apiPathHandler{
-		requestOpKind: appdef.OperationKind_Select,
-		exec:          schemasRoleExec,
+		exec: schemasRoleExec,
 	}
 }
 

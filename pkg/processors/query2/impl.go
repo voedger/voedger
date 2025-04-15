@@ -49,7 +49,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					metrics: metrics,
 				}
 				qpm.Increase(queryprocessor.Metric_QueriesTotal, 1.0)
-				qwork := newQueryWork(msg, appParts, maxPrepareQueries, qpm, secretReader)
+				qwork := newQueryWork(msg, appParts, maxPrepareQueries, qpm, secretReader, federation)
 				func() { // borrowed application partition should be guaranteed to be freed
 					defer qwork.Release()
 					if p == nil {
@@ -213,8 +213,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return qw.apiPathHandler.setRequestType(ctx, qw)
 		}),
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
-			switch qw.msg.APIPath() {
-			case processors.APIPaths_Schema, processors.APIPath_Schemas_WorkspaceRole, processors.APIPath_Schemas_WorkspaceRoles:
+			if qw.apiPathHandler.requestOpKind == appdef.OperationKind_null {
 				return nil
 			}
 			ok, err := qw.appPart.IsOperationAllowed(qw.iWorkspace, qw.apiPathHandler.requestOpKind, qw.msg.QName(), nil, qw.roles)
