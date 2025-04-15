@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 var actualizationTimeoutLimit = 1 * time.Second
@@ -98,15 +97,11 @@ func (m *MockStorage) ReadNumbers(wsid WSID, seqIDs []SeqID) ([]Number, error) {
 
 	wsNumbers, exists := m.Numbers[wsid]
 	if !exists {
-		logger.Info(101)
 		return result, nil // Return zeros if workspace not found
 	}
 
 	for i, seqID := range seqIDs {
 		if num, ok := wsNumbers[seqID]; ok {
-			if num == 0 {
-				logger.Info(103)
-			}
 			result[i] = num
 		}
 	}

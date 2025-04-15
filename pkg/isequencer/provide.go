@@ -49,18 +49,12 @@ func New(params Params, seqStorage ISeqStorage, iTime coreutils.ITime) (ISequenc
 		iTime:                   iTime,
 		flusherCtxCancel:        func() {}, // flusher is not started -> prevent nil
 		flusherSig:              make(chan struct{}, 1),
-		actualizerDoneWG:        &sync.WaitGroup{},
+		actualizerWG:            &sync.WaitGroup{},
 		seqStorage:              seqStorage,
-		transactionIsInProgress: true, // to allow Actualize() to exec
+		transactionIsInProgress: true, // to allow Actualize() to exec right below
 	}
 	s.Actualize()
-	// call Actualize here!
-	// сделать тест, на то, что у нас тут актуализатор запущен (или был запущен)
-	// s.actualizerInProgress.Store(false)
-
-	// // Instance has actualizer() goroutine started.
-	// s.startActualizer()
-	s.actualizerDoneWG.Wait()
+	s.actualizerWG.Wait()
 
 	return s, s.cleanup
 }

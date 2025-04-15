@@ -69,7 +69,7 @@ func (s *sequencer) startFlusher() {
 
 	flusherCtx, flusherCtxCancel := context.WithCancel(context.Background())
 	s.flusherCtxCancel = flusherCtxCancel
-	s.flusherDoneWG.Add(1)
+	s.flusherWG.Add(1)
 	go s.flusher(flusherCtx)
 }
 
@@ -77,13 +77,13 @@ func (s *sequencer) startActualizer() {
 	actualizerCtx, actualizerCtxCancel := context.WithCancel(s.cleanupCtx)
 	s.actualizerCtxCancel = actualizerCtxCancel
 
-	s.actualizerDoneWG.Add(1)
+	s.actualizerWG.Add(1)
 	go s.actualizer(actualizerCtx)
 }
 
 func (s *sequencer) stopFlusher() {
 	s.flusherCtxCancel()
-	s.flusherDoneWG.Wait()
+	s.flusherWG.Wait()
 }
 
 // signalToFlushing is used to signal the flusher to start flushing.
@@ -121,7 +121,7 @@ Error handling:
 func (s *sequencer) flusher(ctx context.Context) {
 	defer func() {
 		s.flusherInProgress.Store(false)
-		s.flusherDoneWG.Done()
+		s.flusherWG.Done()
 	}()
 
 	// Wait for ctx.Done()
@@ -365,7 +365,7 @@ Error handling:
 */
 func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	defer func() {
-		s.actualizerDoneWG.Done()
+		s.actualizerWG.Done()
 		s.actualizerInProgress.Store(false)
 	}()
 
@@ -515,7 +515,7 @@ func (s *sequencer) Actualize() {
 func (s *sequencer) cleanup() {
 	if s.actualizerInProgress.Load() {
 		s.actualizerCtxCancel()
-		s.actualizerDoneWG.Wait()
+		s.actualizerWG.Wait()
 		s.actualizerInProgress.Store(false)
 	}
 

@@ -55,7 +55,7 @@ type sequencer struct {
 	actualizerInProgress atomic.Bool
 	// actualizerCtxCancel is used by cleanup() function
 	actualizerCtxCancel context.CancelFunc
-	actualizerDoneWG    *sync.WaitGroup
+	actualizerWG        *sync.WaitGroup
 
 	cache *lruPkg.Cache[NumberKey, Number]
 
@@ -80,7 +80,7 @@ type sequencer struct {
 	// Is not accessed concurrently since
 	// - Is accessed by actualizer() and cleanup()
 	// - cleanup() first shutdowns the actualizer() then flusher()	flusherWg sync.WaitGroup
-	flusherDoneWG sync.WaitGroup
+	flusherWG sync.WaitGroup
 	// Buffered channel [1] to signal flusher to flush
 	// Written (non-blocking) by Flush()
 	flusherSig chan struct{}
