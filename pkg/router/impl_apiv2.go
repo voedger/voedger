@@ -16,7 +16,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -155,28 +154,22 @@ func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspace
 		var login, password string
 		var err error
 
-		originalAppName := busRequest.AppQName
-
-		// [~server.apiv2.auth/cmp.routerLoginPathHandler.pseudoWSID~impl]
-		if busRequest.WSID, login, password, err = parseLoginRequest(busRequest, numsAppsWorkspaces); err != nil {
+		if login, password, err = parseLoginRequest(busRequest); err != nil {
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPath_Auth_Login)
-		busRequest.AppQName = istructs.AppQName_sys_registry
-		busRequest.WorkspaceQName = qNameAppWorkspaceWS
 		busRequest.Method = http.MethodGet
-		busRequest.QName = qNameIssuePrincipalToken
 		queryParams := map[string]string{}
-		queryParams["arg"] = fmt.Sprintf(`{"Login": "%s","Password": "%s","AppName": "%s"}`, login, password, originalAppName)
+		queryParams["arg"] = fmt.Sprintf(`{"Login": "%s","Password": "%s"}`, login, password)
 		busRequest.Query = queryParams
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	}
 }
 
-func parseLoginRequest(req bus.Request, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (appWSID istructs.WSID, login string, password string, err error) {
+func parseLoginRequest(req bus.Request) (login string, password string, err error) {
 	jsonBody := req.Body
 	var loginReq struct {
 		Login    string
@@ -184,18 +177,9 @@ func parseLoginRequest(req bus.Request, numsAppsWorkspaces map[appdef.AppQName]i
 	}
 	if err := json.Unmarshal(jsonBody, &loginReq); err != nil {
 		logger.Error("failed to unmarshal login request:", err, ". Body:\n", string(jsonBody))
-		return 0, "", "", err
+		return "", "", err
 	}
-
-	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, loginReq.Login, istructs.CurrentClusterID())
-	numAppWorkspaces, ok := numsAppsWorkspaces[req.AppQName]
-	if !ok {
-		// notest
-		return 0, "", "", fmt.Errorf("unable to get num app workspaces for app %s", req.AppQName)
-	}
-	appWSID = coreutils.GetAppWSID(pseudoWSID, numAppWorkspaces)
-
-	return appWSID, loginReq.Login, loginReq.Password, nil
+	return loginReq.Login, loginReq.Password, nil
 }
 
 func requestHandlerV2_schemas_wsRole(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
