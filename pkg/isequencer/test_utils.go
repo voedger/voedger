@@ -70,6 +70,12 @@ func (m *MockStorage) SetReadNextPLogOffsetError(err error) {
 	m.readNextOffsetError = err
 }
 
+func (m *MockStorage) SetOnActualizeFromPLog(f func()) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.onActualizeFromPLog = f
+}
+
 // ReadNumbers implements isequencer.ISeqStorage.ReadNumbers
 func (m *MockStorage) ReadNumbers(wsid WSID, seqIDs []SeqID) ([]Number, error) {
 	// notest

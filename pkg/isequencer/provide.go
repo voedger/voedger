@@ -40,23 +40,27 @@ func New(params Params, seqStorage ISeqStorage, iTime coreutils.ITime) (ISequenc
 
 	cleanupCtx, cleanupCtxCancel := context.WithCancel(context.Background())
 	s := &sequencer{
-		params:           params,
-		cache:            cache,
-		toBeFlushed:      make(map[NumberKey]Number),
-		inproc:           make(map[NumberKey]Number),
-		cleanupCtx:       cleanupCtx,
-		cleanupCtxCancel: cleanupCtxCancel,
-		iTime:            iTime,
-		flusherCtxCancel: func() {}, // flusher is not started -> prevent nil
-		flusherSig:       make(chan struct{}, 1),
-		actualizerWG:     &sync.WaitGroup{},
-		seqStorage:       seqStorage,
+		params:                  params,
+		cache:                   cache,
+		toBeFlushed:             make(map[NumberKey]Number),
+		inproc:                  make(map[NumberKey]Number),
+		cleanupCtx:              cleanupCtx,
+		cleanupCtxCancel:        cleanupCtxCancel,
+		iTime:                   iTime,
+		flusherCtxCancel:        func() {}, // flusher is not started -> prevent nil
+		flusherSig:              make(chan struct{}, 1),
+		actualizerDoneWG:        &sync.WaitGroup{},
+		seqStorage:              seqStorage,
+		transactionIsInProgress: true, // to allow Actualize() to exec
 	}
-	s.actualizerInProgress.Store(false)
+	s.Actualize()
+	// call Actualize here!
+	// сделать тест, на то, что у нас тут актуализатор запущен (или был запущен)
+	// s.actualizerInProgress.Store(false)
 
-	// Instance has actualizer() goroutine started.
-	s.startActualizer()
-	s.actualizerWG.Wait()
+	// // Instance has actualizer() goroutine started.
+	// s.startActualizer()
+	s.actualizerDoneWG.Wait()
 
 	return s, s.cleanup
 }

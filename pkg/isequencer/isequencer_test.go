@@ -874,12 +874,6 @@ func TestISequencer_FlushPermanentlyFails(t *testing.T) {
 	}
 }
 
-func TestLong(t *testing.T) {
-	for i := 0; i < 1000; i++ {
-		TestISequencer_LongRecovery(t)
-	}
-}
-
 // [~server.design.sequences/test.isequencer.LongRecovery~impl]
 func TestISequencer_LongRecovery(t *testing.T) {
 	require := require.New(t)
@@ -958,6 +952,27 @@ func TestISequencer_LongRecovery(t *testing.T) {
 
 		cleanup()
 	}
+}
+
+func TestNewExecutesActualize(t *testing.T) {
+	iTime := coreutils.NewITime()
+	storage := isequencer.NewMockStorage()
+	actualizationStartedCh := make(chan any)
+	storage.SetOnActualizeFromPLog(func() {
+		close(actualizationStartedCh)
+	})
+
+	pLogOffset := isequencer.PLogOffset(1)
+	number := isequencer.Number(1)
+	wsid := isequencer.WSID(1)
+	storage.AddPLogEntry(pLogOffset, wsid, 1, number)
+
+	params := createDefaultParams()
+	go func() {
+		_, cleanup := isequencer.New(params, storage, iTime)
+		defer cleanup()
+	}()
+	<-actualizationStartedCh
 }
 
 // createDefaultStorage creates a storage with default configuration and common test data

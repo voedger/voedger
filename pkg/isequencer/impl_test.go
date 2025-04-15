@@ -61,7 +61,7 @@ func TestSequencer(t *testing.T) {
 			}
 
 			cleanup()
-			seq.(*sequencer).flusherWG.Wait()
+			seq.(*sequencer).flusherDoneWG.Wait()
 		})
 
 		// will not check the storage because, as it is not guaranteed that it will match the last Next() result after a Flush()
@@ -247,7 +247,7 @@ func TestContextCloseDuringStorageErrors(t *testing.T) {
 		s.signalToFlushing()
 
 		<-triedToWriteCh
-		s.flusherWG.Wait()
+		s.flusherDoneWG.Wait()
 
 	})
 
@@ -278,7 +278,7 @@ func TestContextCloseDuringStorageErrors(t *testing.T) {
 			storage.onReadNextPLogOffset = func() {
 				cleanup() // ctx is closed here
 			}
-			s.actualizerWG.Add(1) // simulate s.Actualize() behaviour
+			s.actualizerDoneWG.Add(1) // simulate s.Actualize() behaviour
 			s.actualizer(s.cleanupCtx)
 		})
 
@@ -290,7 +290,7 @@ func TestContextCloseDuringStorageErrors(t *testing.T) {
 			storage.onActualizeFromPLog = func() {
 				cleanup() // ctx is closed here
 			}
-			s.actualizerWG.Add(1) // simulate s.Actualize() behaviour
+			s.actualizerDoneWG.Add(1) // simulate s.Actualize() behaviour
 			s.actualizer(s.cleanupCtx)
 		})
 	})

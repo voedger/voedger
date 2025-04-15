@@ -12,7 +12,6 @@ import (
 	"maps"
 
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 // Start starts Sequencing Transaction for the given WSID.
@@ -70,7 +69,7 @@ func (s *sequencer) startFlusher() {
 
 	flusherCtx, flusherCtxCancel := context.WithCancel(context.Background())
 	s.flusherCtxCancel = flusherCtxCancel
-	s.flusherWG.Add(1)
+	s.flusherDoneWG.Add(1)
 	go s.flusher(flusherCtx)
 }
 
@@ -78,13 +77,13 @@ func (s *sequencer) startActualizer() {
 	actualizerCtx, actualizerCtxCancel := context.WithCancel(s.cleanupCtx)
 	s.actualizerCtxCancel = actualizerCtxCancel
 
-	s.actualizerWG.Add(1)
+	s.actualizerDoneWG.Add(1)
 	go s.actualizer(actualizerCtx)
 }
 
 func (s *sequencer) stopFlusher() {
 	s.flusherCtxCancel()
-	s.flusherWG.Wait()
+	s.flusherDoneWG.Wait()
 }
 
 // signalToFlushing is used to signal the flusher to start flushing.
@@ -122,7 +121,7 @@ Error handling:
 func (s *sequencer) flusher(ctx context.Context) {
 	defer func() {
 		s.flusherInProgress.Store(false)
-		s.flusherWG.Done()
+		s.flusherDoneWG.Done()
 	}()
 
 	// Wait for ctx.Done()
@@ -221,10 +220,6 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 			}
 			s.cache.Add(key, number)
 		}
-		if storedNumbers[0] == 0 {
-			logger.Info(102)
-		}
-
 		return err
 	})
 	if err != nil {
@@ -235,13 +230,9 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	// If number is 0 then initial value is used
 	nextNumber = storedNumbers[0]
 	if nextNumber == 0 {
-		logger.Info(6)
-		logger.Info(storedNumbers)
-		logger.Info(s.toBeFlushed)
 		nextNumber = initialValue - 1 // initial value 1 and there are no such records in plog at all -> should issue 1, not 2
 	}
 
-	logger.Info(7)
 	// Write value+1 to s.cache
 	// Write value+1 to s.inproc
 	return s.incrementNumber(key, nextNumber), nil
@@ -322,12 +313,10 @@ func (s *sequencer) finishSequencingTransaction() {
 func (s *sequencer) batcher(ctx context.Context, values []SeqValue, offset PLogOffset) error {
 	// Wait until len(s.toBeFlushed) < s.params.MaxNumUnflushedValues
 	for s.safeReadNumToBeFlushed() >= s.params.MaxNumUnflushedValues {
-		logger.Info(100)
 		s.signalToFlushing()
 		delayCh := s.iTime.NewTimerChan(s.params.BatcherDelay)
 		select {
 		case <-ctx.Done():
-			logger.Info(3)
 			return ctx.Err()
 		case <-delayCh:
 		}
@@ -347,9 +336,6 @@ func (s *sequencer) batcher(ctx context.Context, values []SeqValue, offset PLogO
 	}
 
 	s.toBeFlushedMu.Lock()
-	if len(maxValues) == 0 {
-		logger.Info(4)
-	}
 	maps.Copy(s.toBeFlushed, maxValues)
 	s.toBeFlushedMu.Unlock()
 
@@ -379,7 +365,7 @@ Error handling:
 */
 func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	defer func() {
-		s.actualizerWG.Done()
+		s.actualizerDoneWG.Done()
 		s.actualizerInProgress.Store(false)
 	}()
 
@@ -403,7 +389,6 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			// happens when ctx is closed during storage error
-			logger.Info(1)
 			return
 		}
 		// notest
@@ -417,7 +402,6 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			// happens when ctx is closed during storage error
-			logger.Info(2)
 			return
 		}
 		// notest
@@ -531,7 +515,7 @@ func (s *sequencer) Actualize() {
 func (s *sequencer) cleanup() {
 	if s.actualizerInProgress.Load() {
 		s.actualizerCtxCancel()
-		s.actualizerWG.Wait()
+		s.actualizerDoneWG.Wait()
 		s.actualizerInProgress.Store(false)
 	}
 
