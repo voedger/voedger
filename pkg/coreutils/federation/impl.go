@@ -180,6 +180,9 @@ func getFuncError(httpResp *coreutils.HTTPResponse) (funcError coreutils.FuncErr
 		funcError.Message = sysErrorMap["Message"].(string)
 		funcError.Data, _ = sysErrorMap["Data"].(string)
 	} else {
+		if apiV2QueryError, ok := m["error"]; ok {
+			m = apiV2QueryError.(map[string]interface{})
+		}
 		if commonErrorStatusIntf, ok := m["status"]; ok {
 			funcError.SysError.HTTPStatus = int(commonErrorStatusIntf.(float64))
 		}
