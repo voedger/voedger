@@ -40,22 +40,20 @@ func New(params Params, seqStorage ISeqStorage, iTime coreutils.ITime) (ISequenc
 
 	cleanupCtx, cleanupCtxCancel := context.WithCancel(context.Background())
 	s := &sequencer{
-		params:           params,
-		cache:            cache,
-		toBeFlushed:      make(map[NumberKey]Number),
-		inproc:           make(map[NumberKey]Number),
-		cleanupCtx:       cleanupCtx,
-		cleanupCtxCancel: cleanupCtxCancel,
-		iTime:            iTime,
-		flusherCtxCancel: func() {}, // flusher is not started -> prevent nil
-		flusherSig:       make(chan struct{}, 1),
-		actualizerWG:     &sync.WaitGroup{},
-		seqStorage:       seqStorage,
+		params:                  params,
+		cache:                   cache,
+		toBeFlushed:             make(map[NumberKey]Number),
+		inproc:                  make(map[NumberKey]Number),
+		cleanupCtx:              cleanupCtx,
+		cleanupCtxCancel:        cleanupCtxCancel,
+		iTime:                   iTime,
+		flusherCtxCancel:        func() {}, // flusher is not started -> prevent nil
+		flusherSig:              make(chan struct{}, 1),
+		actualizerWG:            &sync.WaitGroup{},
+		seqStorage:              seqStorage,
+		transactionIsInProgress: true, // to allow Actualize() to exec right below
 	}
-	s.actualizerInProgress.Store(false)
-
-	// Instance has actualizer() goroutine started.
-	s.startActualizer()
+	s.Actualize()
 	s.actualizerWG.Wait()
 
 	return s, s.cleanup

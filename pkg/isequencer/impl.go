@@ -184,6 +184,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 		WSID:  s.currentWSID,
 		SeqID: seqID,
 	}
+
 	// Try to obtain the next value using:
 	// Try s.cache (can be evicted)
 	if nextNumber, ok := s.cache.Get(key); ok {
@@ -207,19 +208,18 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	}
 
 	// Try s.params.SeqStorage.ReadNumber()
-	var knownNumbers []Number
+	var storedNumbers []Number
 	err = coreutils.Retry(s.cleanupCtx, s.iTime, func() error {
 		var err error
 		// Read all known Numbers for wsKind, wsID
-		knownNumbers, err = s.seqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
+		storedNumbers, err = s.seqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
 		// Write all Numbers to s.cache
-		for _, number := range knownNumbers {
+		for _, number := range storedNumbers {
 			if number == 0 {
 				continue
 			}
 			s.cache.Add(key, number)
 		}
-
 		return err
 	})
 	if err != nil {
@@ -228,7 +228,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	}
 
 	// If number is 0 then initial value is used
-	nextNumber = knownNumbers[0]
+	nextNumber = storedNumbers[0]
 	if nextNumber == 0 {
 		nextNumber = initialValue - 1 // initial value 1 and there are no such records in plog at all -> should issue 1, not 2
 	}
@@ -365,8 +365,10 @@ Error handling:
 */
 func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	defer func() {
-		s.actualizerWG.Done()
+		// should be exactly that order, otherwise Start() could return false after New()
+		// due of actualizerInProgress
 		s.actualizerInProgress.Store(false)
+		s.actualizerWG.Done()
 	}()
 
 	s.stopFlusher()
@@ -428,10 +430,8 @@ func (s *sequencer) flushValues(offset PLogOffset) error {
 		s.toBeFlushedMu.RUnlock()
 		return nil
 	}
-	s.toBeFlushedMu.RUnlock()
 
 	// Copy s.toBeFlushed to flushValues []SeqValue (local variable)
-	s.toBeFlushedMu.RLock()
 	flushValues := make([]SeqValue, 0, len(s.toBeFlushed))
 	for key, value := range s.toBeFlushed {
 		flushValues = append(flushValues, SeqValue{
