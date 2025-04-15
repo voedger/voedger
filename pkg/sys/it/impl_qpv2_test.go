@@ -2193,3 +2193,32 @@ func TestQueryProcessor2_AuthLogin(t *testing.T) {
 	})
 
 }
+
+// [~server.apiv2.auth/it.TestRefresh~impl]
+func TestQueryProcessor2_AuthRefresh(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	require := require.New(t)
+	//appDef, err := vit.AppDef(istructs.AppQName_test1_app1)
+
+	loginName1 := vit.NextName()
+	login1 := vit.SignUp(loginName1, "pwd1", istructs.AppQName_test1_app1)
+	prn1 := vit.SignIn(login1)
+
+	// simulate delay to make the new token be different after referesh
+	vit.TimeAdd(time.Minute)
+
+	t.Run("Refresh", func(t *testing.T) {
+		resp := vit.POST("api/v2/users/test1/apps/app1/auth/refresh", "", coreutils.WithAuthorizeBy(prn1.Token))
+		require.Equal(200, resp.HTTPResp.StatusCode)
+		result := make(map[string]interface{})
+		err := json.Unmarshal([]byte(resp.Body), &result)
+		require.NoError(err)
+		require.Equal(3600.0, result["ExpiresIn"])
+		require.Equal(result["WSID"].(float64), prn1.ProfileWSID)
+		newToken := result["PrincipalToken"].(string)
+		require.NotEmpty(newToken)
+		require.NotEqual(newToken, prn1.Token)
+	})
+
+}

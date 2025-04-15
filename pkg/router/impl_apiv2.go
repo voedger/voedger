@@ -98,6 +98,12 @@ func (s *httpService) registerHandlersV2() {
 		corsHandler(requestHandlerV2_auth_login(s.requestSender, s.numsAppsWorkspaces))).
 		Methods(http.MethodPost).Name("auth login")
 
+	// auth/login: /api/v2/apps/{owner}/{app}/auth/login
+	// [~server.apiv2.auth/cmp.routerRefreshHandler~impl]
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/users/{%s}/apps/{%s}/auth/refresh",
+		URLPlaceholder_appOwner, URLPlaceholder_appName),
+		corsHandler(requestHandlerV2_auth_refresh(s.requestSender, s.numsAppsWorkspaces))).
+		Methods(http.MethodPost).Name("auth refresh")
 }
 
 func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
@@ -122,6 +128,20 @@ func requestHandlerV2_schemas_wsRoles(reqSender bus.IRequestSender, numsAppsWork
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPath_Schemas_WorkspaceRoles)
 		busRequest.WorkspaceQName = appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_workspace])
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+	}
+}
+
+func requestHandlerV2_auth_refresh(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
+		if !ok {
+			return
+		}
+		busRequest.IsAPIV2 = true
+		busRequest.APIPath = int(processors.APIPath_Auth_Refresh)
+		busRequest.Method = http.MethodGet
+		busRequest.QName = qNameRefreshPrincipalToken
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	}
 }

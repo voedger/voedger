@@ -7,6 +7,7 @@ package query2
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -23,6 +24,27 @@ import (
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 	"github.com/voedger/voedger/pkg/state"
 )
+
+func queryRateLimitExceeded(ctx context.Context, qw *queryWork) error {
+	if qw.appStructs.IsFunctionRateLimitsExceeded(qw.msg.QName(), qw.msg.WSID()) {
+		return coreutils.NewSysError(http.StatusTooManyRequests)
+	}
+	return nil
+}
+func querySetRequestType(ctx context.Context, qw *queryWork) error {
+	switch qw.iWorkspace {
+	case nil:
+		// workspace is dummy
+		if qw.iQuery = appdef.Query(qw.appStructs.AppDef().Type, qw.msg.QName()); qw.iQuery == nil {
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist", qw.msg.QName()))
+		}
+	default:
+		if qw.iQuery = appdef.Query(qw.iWorkspace.Type, qw.msg.QName()); qw.iQuery == nil {
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist in %v", qw.msg.QName(), qw.iWorkspace))
+		}
+	}
+	return nil
+}
 
 type queryProcessorMetrics struct {
 	vvm     string
