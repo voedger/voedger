@@ -8,12 +8,14 @@ package isequencer_test
 import (
 	"errors"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/isequencer"
 )
 
@@ -876,13 +878,16 @@ func TestISequencer_FlushPermanentlyFails(t *testing.T) {
 
 // [~server.design.sequences/test.isequencer.LongRecovery~impl]
 func TestISequencer_LongRecovery(t *testing.T) {
+	const (
+		maxNumEvents = 50
+		seqID_1      = isequencer.SeqID(1)
+		seqID_2      = isequencer.SeqID(2)
+	)
 	require := require.New(t)
 	iTime := coreutils.NewITime()
 
-	seqID_1 := isequencer.SeqID(1)
-	seqID_2 := isequencer.SeqID(2)
 	// Simulate a long recovery process gradually from 0 to 50 numEvents
-	for numEvents := 1; numEvents <= 50; numEvents++ {
+	for numEvents := 1; numEvents <= maxNumEvents; numEvents++ {
 		// Fulfill pLog with data
 		storage := isequencer.NewMockStorage()
 
@@ -973,6 +978,17 @@ func TestNewExecutesActualize(t *testing.T) {
 		defer cleanup()
 	}()
 	<-actualizationStartedCh
+}
+
+func TestLongRecovery_ForceRace(t *testing.T) {
+	err := new(exec.PipedExec).Command(
+		"go",
+		"test",
+		"-run=^TestISequencer_LongRecovery$",
+		"-count=1",
+		"-race",
+	).Run(os.Stdout, os.Stderr)
+	require.NoError(t, err)
 }
 
 // createDefaultStorage creates a storage with default configuration and common test data

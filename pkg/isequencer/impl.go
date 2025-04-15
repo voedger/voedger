@@ -365,8 +365,10 @@ Error handling:
 */
 func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	defer func() {
-		s.actualizerWG.Done()
+		// should be exactly that order, otherwise Start() could return false after New()
+		// due of actualizerInProgress
 		s.actualizerInProgress.Store(false)
+		s.actualizerWG.Done()
 	}()
 
 	s.stopFlusher()
