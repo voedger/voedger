@@ -12,6 +12,7 @@ import (
 	"maps"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 // Start starts Sequencing Transaction for the given WSID.
@@ -184,6 +185,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 		WSID:  s.currentWSID,
 		SeqID: seqID,
 	}
+
 	// Try to obtain the next value using:
 	// Try s.cache (can be evicted)
 	if nextNumber, ok := s.cache.Get(key); ok {
@@ -207,17 +209,20 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	}
 
 	// Try s.params.SeqStorage.ReadNumber()
-	var knownNumbers []Number
+	var storedNumbers []Number
 	err = coreutils.Retry(s.cleanupCtx, s.iTime, func() error {
 		var err error
 		// Read all known Numbers for wsKind, wsID
-		knownNumbers, err = s.seqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
+		storedNumbers, err = s.seqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
 		// Write all Numbers to s.cache
-		for _, number := range knownNumbers {
+		for _, number := range storedNumbers {
 			if number == 0 {
 				continue
 			}
 			s.cache.Add(key, number)
+		}
+		if storedNumbers[0] == 0 {
+			logger.Info(102)
 		}
 
 		return err
@@ -228,11 +233,15 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	}
 
 	// If number is 0 then initial value is used
-	nextNumber = knownNumbers[0]
+	nextNumber = storedNumbers[0]
 	if nextNumber == 0 {
+		logger.Info(6)
+		logger.Info(storedNumbers)
+		logger.Info(s.toBeFlushed)
 		nextNumber = initialValue - 1 // initial value 1 and there are no such records in plog at all -> should issue 1, not 2
 	}
 
+	logger.Info(7)
 	// Write value+1 to s.cache
 	// Write value+1 to s.inproc
 	return s.incrementNumber(key, nextNumber), nil
@@ -313,10 +322,12 @@ func (s *sequencer) finishSequencingTransaction() {
 func (s *sequencer) batcher(ctx context.Context, values []SeqValue, offset PLogOffset) error {
 	// Wait until len(s.toBeFlushed) < s.params.MaxNumUnflushedValues
 	for s.safeReadNumToBeFlushed() >= s.params.MaxNumUnflushedValues {
+		logger.Info(100)
 		s.signalToFlushing()
 		delayCh := s.iTime.NewTimerChan(s.params.BatcherDelay)
 		select {
 		case <-ctx.Done():
+			logger.Info(3)
 			return ctx.Err()
 		case <-delayCh:
 		}
@@ -336,6 +347,9 @@ func (s *sequencer) batcher(ctx context.Context, values []SeqValue, offset PLogO
 	}
 
 	s.toBeFlushedMu.Lock()
+	if len(maxValues) == 0 {
+		logger.Info(4)
+	}
 	maps.Copy(s.toBeFlushed, maxValues)
 	s.toBeFlushedMu.Unlock()
 
@@ -389,6 +403,7 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			// happens when ctx is closed during storage error
+			logger.Info(1)
 			return
 		}
 		// notest
@@ -402,6 +417,7 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			// happens when ctx is closed during storage error
+			logger.Info(2)
 			return
 		}
 		// notest
@@ -428,10 +444,8 @@ func (s *sequencer) flushValues(offset PLogOffset) error {
 		s.toBeFlushedMu.RUnlock()
 		return nil
 	}
-	s.toBeFlushedMu.RUnlock()
 
 	// Copy s.toBeFlushed to flushValues []SeqValue (local variable)
-	s.toBeFlushedMu.RLock()
 	flushValues := make([]SeqValue, 0, len(s.toBeFlushed))
 	for key, value := range s.toBeFlushed {
 		flushValues = append(flushValues, SeqValue{

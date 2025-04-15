@@ -874,6 +874,12 @@ func TestISequencer_FlushPermanentlyFails(t *testing.T) {
 	}
 }
 
+func TestLong(t *testing.T) {
+	for i := 0; i < 1000; i++ {
+		TestISequencer_LongRecovery(t)
+	}
+}
+
 // [~server.design.sequences/test.isequencer.LongRecovery~impl]
 func TestISequencer_LongRecovery(t *testing.T) {
 	require := require.New(t)
