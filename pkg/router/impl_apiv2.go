@@ -7,7 +7,6 @@ package router
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -151,35 +150,14 @@ func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspace
 			return
 		}
 
-		var login, password string
-		var err error
-
-		if login, password, err = parseLoginRequest(busRequest); err != nil {
-			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
-			return
-		}
-
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPath_Auth_Login)
 		busRequest.Method = http.MethodGet
 		queryParams := map[string]string{}
-		queryParams["arg"] = fmt.Sprintf(`{"Login": "%s","Password": "%s"}`, login, password)
+		queryParams["arg"] = string(busRequest.Body)
 		busRequest.Query = queryParams
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	}
-}
-
-func parseLoginRequest(req bus.Request) (login string, password string, err error) {
-	jsonBody := req.Body
-	var loginReq struct {
-		Login    string
-		Password string
-	}
-	if err := json.Unmarshal(jsonBody, &loginReq); err != nil {
-		logger.Error("failed to unmarshal login request:", err, ". Body:\n", string(jsonBody))
-		return "", "", err
-	}
-	return loginReq.Login, loginReq.Password, nil
 }
 
 func requestHandlerV2_schemas_wsRole(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {

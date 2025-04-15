@@ -6,8 +6,6 @@ package query2
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -20,37 +18,23 @@ import (
 func authRefreshHandler() apiPathHandler {
 	return apiPathHandler{
 		exec: func(ctx context.Context, qw *queryWork) (err error) {
-			// Retrieve profile WSID
 			if qw.msg.Token() == "" {
 				return coreutils.NewHTTPErrorf(http.StatusUnauthorized, fmt.Errorf("authorization header is empty"))
 			}
-			var principalPayload payloads.PrincipalPayload
-			if _, err = qw.appStructs.AppTokens().ValidateToken(qw.msg.Token(), &principalPayload); err != nil {
-				return err
-			}
 
-			url := fmt.Sprintf("api/v2/users/%s/apps/%s/workspaces/%d/queries/sys.RefreshPrincipalToken", qw.msg.AppQName().Owner(), qw.msg.AppQName().Name(), principalPayload.ProfileWSID)
+			url := fmt.Sprintf("api/v2/users/%s/apps/%s/workspaces/%d/queries/sys.RefreshPrincipalToken", qw.msg.AppQName().Owner(), qw.msg.AppQName().Name(),
+				qw.principalPayload.ProfileWSID)
 			resp, err := qw.federation.Query(url, coreutils.WithAuthorizeBy(qw.msg.Token()))
 			if err != nil {
 				return err
 			}
 
-			if resp == nil {
+			if resp.IsEmpty() {
 				return coreutils.NewHTTPErrorf(http.StatusInternalServerError, "sys.RefreshPrincipalToken response is empty")
 			}
 
-			var jsonData map[string]interface{}
-			if err = json.Unmarshal([]byte(resp.Body), &jsonData); err != nil {
-				return fmt.Errorf("sys.RefreshPrincipalToken response is not JSON: %s", err.Error())
-			}
-			if len(jsonData) == 0 || len(jsonData["results"].([]interface{})) == 0 {
-				return errors.New("sys.RefreshPrincipalToken response is empty")
-			}
-			if len(jsonData["results"].([]interface{})) > 1 {
-				return errors.New("sys.RefreshPrincipalToken response contains more than one result")
-			}
-			newToken := jsonData["results"].([]interface{})[0].(map[string]interface{})["NewPrincipalToken"].(string)
-			if newToken == "" {
+			newToken := resp.QPv2Response.Result()["NewPrincipalToken"].(string)
+			if len(newToken) == 0 {
 				return coreutils.NewHTTPErrorf(http.StatusInternalServerError, "sys.RefreshPrincipalToken response contains empty token")
 			}
 

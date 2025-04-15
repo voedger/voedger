@@ -2183,6 +2183,49 @@ func TestQueryProcessor2_AuthLogin(t *testing.T) {
 	})
 
 	t.Run("Bad request", func(t *testing.T) {
+		cases := []struct {
+			bodies   []string
+			expected string
+		}{
+			{
+				bodies:   []string{"", "{}"},
+				expected: `field is empty: Object «registry.IssuePrincipalTokenParams» string-field «Login»; validate error code: 4\nfield is empty: Object «registry.IssuePrincipalTokenParams» string-field «Password»; validate error code: 4`,
+			},
+			{
+				bodies: []string{
+					`{"Password": "pwd"}`,
+					fmt.Sprintf(`{"UnknownField": "%s","Password": "pwd"}`, login1.Name),
+				},
+				expected: `field is empty: Object «registry.IssuePrincipalTokenParams» string-field «Login»; validate error code: 4`,
+			},
+			{
+				bodies: []string{
+					`{"Login": "pwd"}`,
+					fmt.Sprintf(`{"Login": "%s","UnknownField": "pwd"}`, login1.Name),
+				},
+				expected: `field is empty: Object «registry.IssuePrincipalTokenParams» string-field «Password»; validate error code: 4`,
+			},
+			{
+				bodies: []string{
+					`{"Login": 42}`,
+				},
+				expected: `field \"Login\" must be a string: field type mismatch`,
+			},
+			{
+				bodies: []string{
+					`{"Password": 42}`,
+				},
+				expected: `field \"Password\" must be a string: field type mismatch`,
+			},
+		}
+		for _, c := range cases {
+			for _, body := range c.bodies {
+				t.Run(body, func(t *testing.T) {
+					resp := vit.POST("api/v2/users/test1/apps/app1/auth/login", body, coreutils.Expect400())
+					require.JSONEq(fmt.Sprintf(`{"message":"%s","status":400}`, c.expected), resp.Body)
+				})
+			}
+		}
 		body := fmt.Sprintf(`{"UnknownField": "%s","Password": "%s"}`, login1.Name, "badpwd")
 		resp := vit.POST("api/v2/users/test1/apps/app1/auth/login", body, coreutils.Expect400())
 		require.JSONEq(`{"message":"field is empty: Object «registry.IssuePrincipalTokenParams» string-field «Login»; validate error code: 4","status":400}`, resp.Body)
