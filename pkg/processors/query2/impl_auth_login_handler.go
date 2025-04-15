@@ -24,16 +24,13 @@ func authLoginHandler() apiPathHandler {
 		exec: func(ctx context.Context, qw *queryWork) (err error) {
 
 			login := qw.msg.QueryParams().Argument["Login"].(string)
-			if login == "" {
-				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Errorf("login is empty"))
-			}
 			password := qw.msg.QueryParams().Argument["Password"].(string)
 
 			pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
 
 			url := fmt.Sprintf(`api/v2/users/%s/apps/%s/workspaces/%d/queries/registry.IssuePrincipalToken?arg=%s`,
 				istructs.SysOwner, istructs.AppQName_sys_registry.Name(), pseudoWSID,
-				url.QueryEscape(fmt.Sprintf(`{"Login":"%s", "Password":"%s", "AppName": "%s"}`, login, password, qw.msg.AppQName().Name())))
+				url.QueryEscape(fmt.Sprintf(`{"Login":"%s", "Password":"%s", "AppName": "%s"}`, login, password, qw.msg.AppQName().String())))
 			resp, err := qw.federation.Query(url)
 			if err != nil {
 				return err
@@ -51,7 +48,7 @@ func authLoginHandler() apiPathHandler {
 			}
 			token := jsonData["results"].([]interface{})[0].(map[string]interface{})["PrincipalToken"].(string)
 			wsError := jsonData["results"].([]interface{})[0].(map[string]interface{})["WSError"].(string)
-			wsid := jsonData["WSID"].([]interface{})[0].(map[string]interface{})["WSID"].(float64)
+			wsid := jsonData["results"].([]interface{})[0].(map[string]interface{})["WSID"].(float64)
 
 			if wsError != "" {
 				return coreutils.NewHTTPErrorf(http.StatusUnauthorized, fmt.Errorf("login error: %s", wsError))
