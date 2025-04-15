@@ -54,7 +54,6 @@ func New(params Params, seqStorage ISeqStorage, iTime coreutils.ITime) (ISequenc
 		transactionIsInProgress: true, // to allow Actualize() to exec right below
 	}
 	s.Actualize()
-	s.actualizerWG.Wait()
 
 	return s, s.cleanup
 }

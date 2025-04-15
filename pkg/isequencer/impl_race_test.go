@@ -12,13 +12,13 @@ import (
 	"testing"
 )
 
-// lasts for ~140 seconds with -race,
+// lasts for ~140 seconds with -race
 func TestLongRace(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
 	for range 1000 {
-		TestComplexEvents(t)
+		TestISequencer_ComplexEvents(t)
 		TestISequencer_Start(t)
 		TestISequencer_Flush(t)
 		TestISequencer_Next(t)

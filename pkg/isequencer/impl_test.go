@@ -87,8 +87,7 @@ func TestSequencer_Start(t *testing.T) {
 		seq, cancel := New(params, storage, iTime)
 		defer cancel()
 
-		offset, ok := seq.Start(1, 1)
-		require.True(ok)
+		offset := WaitForStart(t, seq, 1, 1, true)
 		require.Equal(PLogOffset(1), offset)
 
 		// obtain 6 numbers, 6th should overflow toBeFlushed
@@ -103,7 +102,7 @@ func TestSequencer_Start(t *testing.T) {
 		<-writeOnFlushOccuredCh
 
 		// failed to start because toBeFlushed is overflowed
-		offset, ok = seq.Start(1, 1)
+		offset, ok := seq.Start(1, 1)
 		require.False(ok)
 		require.Zero(offset)
 		close(waitForFlushCh)
@@ -122,6 +121,7 @@ func TestBatcher(t *testing.T) {
 		seq, cleanup := New(params, storage, mockTime)
 		defer cleanup()
 		s := seq.(*sequencer)
+		s.actualizerWG.Wait()
 
 		// Set up the batch to be processed
 		batch := []SeqValue{
@@ -232,6 +232,7 @@ func TestContextCloseDuringStorageErrors(t *testing.T) {
 		storage := NewMockStorage()
 		seq, _ := New(params, storage, mockTime)
 		s := seq.(*sequencer)
+		s.actualizerWG.Wait()
 		storage.SetWriteValuesAndOffset(storageErr)
 		defer func() { storage.SetReadNextPLogOffsetError(nil) }()
 		triedToWriteCh := make(chan any)
@@ -273,8 +274,9 @@ func TestContextCloseDuringStorageErrors(t *testing.T) {
 		t.Run("on ReadNextPLogOffset", func(t *testing.T) {
 			storage := NewMockStorage()
 			seq, cleanup := New(params, storage, mockTime)
-			storage.SetReadNextPLogOffsetError(storageErr)
 			s := seq.(*sequencer)
+			s.actualizerWG.Wait()
+			storage.SetReadNextPLogOffsetError(storageErr)
 			storage.onReadNextPLogOffset = func() {
 				cleanup() // ctx is closed here
 			}
@@ -287,6 +289,7 @@ func TestContextCloseDuringStorageErrors(t *testing.T) {
 			storage.SetPLog(map[PLogOffset][]SeqValue{PLogOffset(1): {{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 100}}})
 			seq, cleanup := New(params, storage, mockTime)
 			s := seq.(*sequencer)
+			s.actualizerWG.Wait()
 			storage.onActualizeFromPLog = func() {
 				cleanup() // ctx is closed here
 			}
@@ -299,6 +302,7 @@ func TestContextCloseDuringStorageErrors(t *testing.T) {
 		storage := NewMockStorage()
 		seq, cleanup := New(params, storage, mockTime)
 		s := seq.(*sequencer)
+		s.actualizerWG.Wait()
 		storage.SetReadNumbersError(storageErr)
 		storage.onReadNumbers = func() {
 			cleanup() // ctx is closed here
