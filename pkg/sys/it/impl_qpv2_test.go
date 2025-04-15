@@ -2117,6 +2117,8 @@ func TestOpenAPI(t *testing.T) {
 	require.Contains(json, "\"app1pkg.Currency\": {")
 	require.Contains(json, "\"paths\": {")
 	require.Contains(json, "/users/voedger/apps/testapp/workspaces/{wsid}/docs/app1pkg.Currency")
+
+	// fmt.Println(json)
 }
 
 // [~server.apiv2.docs/it.TestQueryProcessor2_CDocs~impl]
