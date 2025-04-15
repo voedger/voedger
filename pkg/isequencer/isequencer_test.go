@@ -19,7 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/isequencer"
 )
 
-func TestComplexEvents(t *testing.T) {
+func TestISequencer_ComplexEvents(t *testing.T) {
 	require := require.New(t)
 
 	const (
@@ -185,8 +185,7 @@ func TestISequencer_Start(t *testing.T) {
 		sequencer, cleanup := isequencer.New(params, storage, iTime)
 		defer cleanup()
 
-		offset, ok := sequencer.Start(1, 1)
-		require.True(ok)
+		offset := isequencer.WaitForStart(t, sequencer, 1, 1, true)
 		require.NotZero(t, offset)
 
 		require.Panics(func() {
@@ -214,7 +213,7 @@ func TestISequencer_Start(t *testing.T) {
 		defer cleanup()
 
 		require.Panics(func() {
-			sequencer.Start(2, 1) // WSKind 2 is not defined
+			isequencer.WaitForStart(t, sequencer, 2, 1, true) // WSKind 2 is not defined
 		})
 	})
 
@@ -234,8 +233,7 @@ func TestISequencer_Start(t *testing.T) {
 		defer cancel()
 
 		// First transaction
-		offset, ok := seq.Start(1, 1)
-		require.True(ok)
+		offset := isequencer.WaitForStart(t, seq, 1, 1, true)
 		require.Equal(isequencer.PLogOffset(2), offset)
 
 		count := 3
@@ -249,8 +247,7 @@ func TestISequencer_Start(t *testing.T) {
 		seq.Flush()
 
 		// Start a new transaction
-		offset, ok = seq.Start(1, 1)
-		require.True(ok)
+		offset = isequencer.WaitForStart(t, seq, 1, 1, true)
 		require.Equal(isequencer.PLogOffset(3), offset)
 
 		// Verify we can get the next number in sequence
@@ -273,14 +270,12 @@ func TestISequencer_Start(t *testing.T) {
 		defer cancel()
 
 		// First transaction
-		offset, ok := seq.Start(1, 1)
-		require.True(ok)
+		offset := isequencer.WaitForStart(t, seq, 1, 1, true)
 		require.Equal(isequencer.PLogOffset(2), offset)
 
 		seq.Flush()
 
-		offset, ok = seq.Start(1, 1)
-		require.True(ok)
+		offset = isequencer.WaitForStart(t, seq, 1, 1, true)
 		require.Equal(isequencer.PLogOffset(3), offset)
 
 	})
@@ -313,8 +308,7 @@ func TestISequencer_Flush(t *testing.T) {
 		defer cancel()
 
 		// Start transaction and get some values
-		offset, ok := seq.Start(1, 1)
-		require.True(ok)
+		offset := isequencer.WaitForStart(t, seq, 1, 1, true)
 		require.NotZero(offset)
 
 		// Get values for both sequence types
@@ -333,8 +327,7 @@ func TestISequencer_Flush(t *testing.T) {
 		iTime.Add(time.Second)
 
 		// Start a new transaction
-		offset, ok = seq.Start(1, 1)
-		require.True(ok)
+		offset = isequencer.WaitForStart(t, seq, 1, 1, true)
 		require.NotZero(offset)
 
 		// Get next values - should be incremented from previous values
@@ -396,8 +389,7 @@ func TestISequencer_Flush(t *testing.T) {
 		firstOffset, err := storage.ReadNextPLogOffset()
 		require.NoError(err)
 		// Start transaction and generate a value
-		offset, ok := sequencer.Start(1, 1)
-		require.True(ok)
+		offset := isequencer.WaitForStart(t, sequencer, 1, 1, true)
 		require.NotZero(offset)
 
 		num, err := sequencer.Next(1)
@@ -438,8 +430,7 @@ func TestISequencer_Next(t *testing.T) {
 		sequencer, cancel := isequencer.New(createDefaultParams(), storage, iTime)
 		defer cancel()
 
-		_, ok := sequencer.Start(1, 1)
-		require.True(ok)
+		isequencer.WaitForStart(t, sequencer, 1, 1, true)
 
 		num, err := sequencer.Next(1)
 		require.NoError(err)
@@ -474,8 +465,7 @@ func TestISequencer_Next(t *testing.T) {
 		sequencer, cancel := isequencer.New(params, storage, iTime)
 		defer cancel()
 
-		_, ok := sequencer.Start(1, 1)
-		require.True(ok)
+		isequencer.WaitForStart(t, sequencer, 1, 1, true)
 
 		num, err := sequencer.Next(1)
 		require.NoError(err)
@@ -523,8 +513,7 @@ func TestISequencer_Next(t *testing.T) {
 		sequencer, cancel := isequencer.New(params, storage, iTime)
 		defer cancel()
 
-		_, ok := sequencer.Start(1, 1)
-		require.True(ok)
+		isequencer.WaitForStart(t, sequencer, 1, 1, true)
 
 		// Get next value for sequence 1
 		num1, err := sequencer.Next(1)
@@ -558,9 +547,8 @@ func TestISequencer_Next(t *testing.T) {
 		defer cancel()
 
 		// Transaction 1
-		offset, ok := seq.Start(1, 1)
+		offset := isequencer.WaitForStart(t, seq, 1, 1, true)
 		require.NotZero(offset)
-		require.True(ok)
 
 		num, err := seq.Next(1)
 		require.NoError(err)
@@ -569,8 +557,7 @@ func TestISequencer_Next(t *testing.T) {
 		seq.Flush()
 
 		// Transaction 2
-		offset, ok = seq.Start(1, 1)
-		require.True(ok)
+		offset = isequencer.WaitForStart(t, seq, 1, 1, true)
 		require.NotZero(offset)
 
 		num, err = seq.Next(1)
@@ -621,7 +608,7 @@ func TestISequencer_Next(t *testing.T) {
 		params := createDefaultParams()
 		seq, cancel := isequencer.New(params, storage, iTime)
 		defer cancel()
-		seq.Start(1, 1)
+		isequencer.WaitForStart(t, seq, 1, 1, true)
 		num, err := seq.Next(10)
 		require.ErrorIs(err, isequencer.ErrUnknownSeqID)
 		require.Zero(num)
@@ -661,8 +648,7 @@ func TestISequencer_Actualize(t *testing.T) {
 		params := createDefaultParams()
 		seq, cleanup := isequencer.New(params, storage, mockedTime)
 		defer cleanup()
-		offset, ok := seq.Start(1, 1)
-		require.True(ok)
+		offset := isequencer.WaitForStart(t, seq, 1, 1, true)
 		require.Equal(isequencer.PLogOffset(2), offset)
 
 		seq.Actualize()
@@ -973,10 +959,8 @@ func TestNewExecutesActualize(t *testing.T) {
 	storage.AddPLogEntry(pLogOffset, wsid, 1, number)
 
 	params := createDefaultParams()
-	go func() {
-		_, cleanup := isequencer.New(params, storage, iTime)
-		defer cleanup()
-	}()
+	_, cleanup := isequencer.New(params, storage, iTime)
+	defer cleanup()
 	<-actualizationStartedCh
 }
 
