@@ -32,7 +32,6 @@ type QueryParams struct {
 type ApiHandlerOptions struct {
 	HandlesQueryArgs bool
 	IsArrayResult    bool
-	PseudoWSID       bool
 }
 
 type Constraints struct {
@@ -58,6 +57,9 @@ type IQueryMessage interface {
 	Token() string
 	WorkspaceQName() appdef.QName // actually wsKind
 	Accept() string
+}
+
+type apiPathHandler struct {
 }
 
 type IApiPathHandler interface {

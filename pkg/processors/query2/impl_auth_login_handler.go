@@ -25,7 +25,7 @@ type authLoginHandler struct {
 var _ IApiPathHandler = (*authLoginHandler)(nil) // ensure that queryHandler implements IApiPathHandler
 
 func (h *authLoginHandler) Options() ApiHandlerOptions {
-	return ApiHandlerOptions{HandlesQueryArgs: true, PseudoWSID: true}
+	return ApiHandlerOptions{HandlesQueryArgs: true}
 }
 
 func (h *authLoginHandler) CheckRateLimit(ctx context.Context, qw *queryWork) error {
