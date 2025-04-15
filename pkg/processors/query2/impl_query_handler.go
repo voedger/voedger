@@ -20,15 +20,14 @@ import (
 
 func queryHandler() apiPathHandler {
 	return apiPathHandler{
-		handlesQueryArgs: true,
-		isArrayResult:    true,
-		requestOpKind:    appdef.OperationKind_Execute,
-		checkRateLimit:   queryRateLimitExceeded,
-		setRequestType:   querySetRequestType,
-		setResultType:    querySetResultType,
-		authorizeResult:  queryAuthorizeResult,
-		rowsProcessor:    queryRowsProcessor,
-		exec:             queryExec,
+		isArrayResult:   true,
+		requestOpKind:   appdef.OperationKind_Execute,
+		checkRateLimit:  queryRateLimitExceeded,
+		setRequestType:  querySetRequestType,
+		setResultType:   querySetResultType,
+		authorizeResult: queryAuthorizeResult,
+		rowsProcessor:   queryRowsProcessor,
+		exec:            queryExec,
 	}
 }
 func querySetResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error {

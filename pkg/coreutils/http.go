@@ -485,7 +485,7 @@ func (resp *FuncResponse) NewID() istructs.RecordID {
 }
 
 func (resp *FuncResponse) IsEmpty() bool {
-	return len(resp.Sections) == 0
+	return len(resp.Sections) == 0 && len(resp.QPv2Response) == 0
 }
 
 func (fe FuncError) Error() string {

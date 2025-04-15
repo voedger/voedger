@@ -39,13 +39,23 @@ type CommandResponse struct {
 	CmdResult         map[string]interface{} `json:"Result"`
 }
 
+type QPv2Response map[string]interface{}
+
+func (r QPv2Response) Result() map[string]interface{} {
+	return r.ResultRow(0)
+}
+
+func (r QPv2Response) ResultRow(rowNum int) map[string]interface{} {
+	return r["results"].([]interface{})[rowNum].(map[string]interface{})
+}
+
 type FuncResponse struct {
 	*HTTPResponse
 	CommandResponse
 	Sections []struct {
 		Elements [][][][]interface{} `json:"elements"`
 	} `json:"sections"`
-	APIV2Response interface{} // TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
+	QPv2Response QPv2Response // TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
 }
 
 type FuncError struct {
