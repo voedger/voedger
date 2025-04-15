@@ -20,11 +20,6 @@ const (
 	authenticationTag        = "Authentication"
 )
 
-var defaultApiOptions = ApiHandlerOptions{
-	HandlesQueryArgs: false,
-	IsArrayResult:    false,
-}
-
 const (
 	methodGet    = "get"
 	methodPost   = "post"

@@ -19,19 +19,18 @@ import (
 )
 
 // [~server.apiv2.docs/cmp.docsHandler~impl]
-type docsHandler struct {
+func docsHandler() apiPathHandler {
+	return apiPathHandler{
+		requestOpKind:   appdef.OperationKind_Select,
+		checkRateLimit:  nil, // TODO: implement rate limit for CDocs
+		setRequestType:  docsSetRequestType,
+		setResultType:   docsSetResultType,
+		authorizeResult: docsAuthorizeResult,
+		rowsProcessor:   docsRowsProcessor,
+		exec:            docsExec,
+	}
 }
-
-var _ IApiPathHandler = (*docsHandler)(nil) // ensure that queryHandler implements IApiPathHandler
-
-func (h *docsHandler) Options() ApiHandlerOptions {
-	return defaultApiOptions
-}
-func (h *docsHandler) CheckRateLimit(ctx context.Context, qw *queryWork) error {
-	// TODO: implement rate limits check
-	return nil
-}
-func (h *docsHandler) SetRequestType(ctx context.Context, qw *queryWork) error {
+func docsSetRequestType(ctx context.Context, qw *queryWork) error {
 	switch qw.iWorkspace {
 	case nil:
 		// workspace is dummy
@@ -65,20 +64,14 @@ func (h *docsHandler) SetRequestType(ctx context.Context, qw *queryWork) error {
 	}
 	return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("document or record %s is not defined in %v", qw.msg.QName(), qw.iWorkspace))
 }
-
-func (h *docsHandler) SetResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error {
+func docsSetResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error {
 	qw.resultType = qw.iDoc
 	if qw.resultType == nil {
 		qw.resultType = qw.iRecord
 	}
 	return nil
 }
-
-func (h *docsHandler) RequestOpKind() appdef.OperationKind {
-	return appdef.OperationKind_Select
-}
-
-func (h *docsHandler) AuthorizeResult(ctx context.Context, qw *queryWork) (err error) {
+func docsAuthorizeResult(ctx context.Context, qw *queryWork) (err error) {
 	ws := qw.iWorkspace
 	if ws == nil {
 		return errWorkspaceIsNil
@@ -108,11 +101,9 @@ func (h *docsHandler) AuthorizeResult(ctx context.Context, qw *queryWork) (err e
 	if !ok {
 		return coreutils.NewSysError(http.StatusForbidden)
 	}
-
 	return nil
 }
-
-func (h *docsHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err error) {
+func docsRowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 	oo := make([]*pipeline.WiredOperator, 0)
 	if qw.queryParams.Constraints != nil && len(qw.queryParams.Constraints.Include) != 0 {
 		oo = append(oo, pipeline.WireAsyncOperator("Include", newInclude(qw, true)))
@@ -134,7 +125,7 @@ func (h *docsHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err err
 	return
 }
 
-func (h *docsHandler) Exec(_ context.Context, qw *queryWork) (err error) {
+func docsExec(_ context.Context, qw *queryWork) (err error) {
 	var rec istructs.IRecord
 
 	if qw.iDoc != nil && qw.iDoc.Singleton() {

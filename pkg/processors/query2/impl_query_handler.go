@@ -18,26 +18,27 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
-type queryHandler struct {
-}
-
-var _ IApiPathHandler = (*queryHandler)(nil) // ensure that queryHandler implements IApiPathHandler
-
-func (h *queryHandler) Options() ApiHandlerOptions {
-	return ApiHandlerOptions{
-		HandlesQueryArgs: true,
-		IsArrayResult:    true,
+func queryHandler() apiPathHandler {
+	return apiPathHandler{
+		handlesQueryArgs: true,
+		isArrayResult:    true,
+		requestOpKind:    appdef.OperationKind_Execute,
+		checkRateLimit:   queryCheckRateLimit,
+		setRequestType:   querySetRequestType,
+		setResultType:    querySetResultType,
+		authorizeResult:  queryAuthorizeResult,
+		rowsProcessor:    queryRowsProcessor,
+		exec:             queryExec,
 	}
 }
 
-func (h *queryHandler) CheckRateLimit(ctx context.Context, qw *queryWork) error {
+func queryCheckRateLimit(ctx context.Context, qw *queryWork) error {
 	if qw.appStructs.IsFunctionRateLimitsExceeded(qw.msg.QName(), qw.msg.WSID()) {
 		return coreutils.NewSysError(http.StatusTooManyRequests)
 	}
 	return nil
 }
-
-func (h *queryHandler) SetRequestType(ctx context.Context, qw *queryWork) error {
+func querySetRequestType(ctx context.Context, qw *queryWork) error {
 	switch qw.iWorkspace {
 	case nil:
 		// workspace is dummy
@@ -51,8 +52,7 @@ func (h *queryHandler) SetRequestType(ctx context.Context, qw *queryWork) error 
 	}
 	return nil
 }
-
-func (h *queryHandler) SetResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error {
+func querySetResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error {
 	qw.resultType = qw.iQuery.Result()
 	if qw.resultType == nil || qw.resultType.QName() != appdef.QNameANY {
 		return nil
@@ -83,17 +83,11 @@ func (h *queryHandler) SetResultType(ctx context.Context, qw *queryWork, statele
 	}
 	return nil
 }
-
-func (h *queryHandler) RequestOpKind() appdef.OperationKind {
-	return appdef.OperationKind_Execute
-}
-
-func (h *queryHandler) AuthorizeResult(ctx context.Context, qw *queryWork) error {
+func queryAuthorizeResult(ctx context.Context, qw *queryWork) error {
 	// the entire result is allowed if execute on query is granted
 	return nil
 }
-
-func (h *queryHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err error) {
+func queryRowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 	oo := make([]*pipeline.WiredOperator, 0)
 	if qw.queryParams.Constraints != nil && len(qw.queryParams.Constraints.Include) != 0 {
 		oo = append(oo, pipeline.WireAsyncOperator("Include", newInclude(qw, false)))
@@ -119,8 +113,7 @@ func (h *queryHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err er
 	}
 	return
 }
-
-func (h *queryHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
+func queryExec(ctx context.Context, qw *queryWork) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			stack := string(debug.Stack())

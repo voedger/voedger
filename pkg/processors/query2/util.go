@@ -64,7 +64,7 @@ type queryWork struct {
 	wsDesc               istructs.IRecord
 	callbackFunc         istructs.ExecQueryCallback
 	responseWriterGetter func() bus.IResponseWriter
-	apiPathHandler       IApiPathHandler
+	apiPathHandler       apiPathHandler
 }
 
 var _ pipeline.IWorkpiece = (*queryWork)(nil) // ensure that queryWork implements pipeline.IWorkpiece

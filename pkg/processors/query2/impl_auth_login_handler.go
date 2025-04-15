@@ -14,28 +14,28 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
 // [~server.apiv2.auth/cmp.authLoginHandler~impl]
-type authLoginHandler struct {
+func authLoginHandler() apiPathHandler {
+	return apiPathHandler{
+		requestOpKind:    appdef.OperationKind_Execute,
+		handlesQueryArgs: true,
+		checkRateLimit:   authLoginCheckRateLimit,
+		setRequestType:   authLoginSetRequestType,
+		exec:             authLoginExec,
+	}
 }
 
-var _ IApiPathHandler = (*authLoginHandler)(nil) // ensure that queryHandler implements IApiPathHandler
-
-func (h *authLoginHandler) Options() ApiHandlerOptions {
-	return ApiHandlerOptions{HandlesQueryArgs: true}
-}
-
-func (h *authLoginHandler) CheckRateLimit(ctx context.Context, qw *queryWork) error {
+func authLoginCheckRateLimit(ctx context.Context, qw *queryWork) error {
 	if qw.appStructs.IsFunctionRateLimitsExceeded(qw.msg.QName(), qw.msg.WSID()) {
 		return coreutils.NewSysError(http.StatusTooManyRequests)
 	}
 	return nil
 }
 
-func (h *authLoginHandler) SetRequestType(ctx context.Context, qw *queryWork) error {
+func authLoginSetRequestType(ctx context.Context, qw *queryWork) error {
 	switch qw.iWorkspace {
 	case nil:
 		// workspace is dummy
@@ -50,23 +50,7 @@ func (h *authLoginHandler) SetRequestType(ctx context.Context, qw *queryWork) er
 	return nil
 }
 
-func (h *authLoginHandler) SetResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error {
-	return nil
-}
-
-func (h *authLoginHandler) RequestOpKind() appdef.OperationKind {
-	return appdef.OperationKind_Execute
-}
-
-func (h *authLoginHandler) AuthorizeResult(ctx context.Context, qw *queryWork) error {
-	return nil
-}
-
-func (h *authLoginHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err error) {
-	return nil
-}
-
-func (h *authLoginHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
+func authLoginExec(ctx context.Context, qw *queryWork) (err error) {
 	var principalTokenObj istructs.IObject
 	qw.callbackFunc = func(o istructs.IObject) (err error) {
 		principalTokenObj = o

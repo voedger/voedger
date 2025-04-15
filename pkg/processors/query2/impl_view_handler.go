@@ -18,21 +18,20 @@ import (
 	"github.com/voedger/voedger/pkg/processors/oldacl"
 )
 
-type viewHandler struct {
+func viewHandler() apiPathHandler {
+	return apiPathHandler{
+		requestOpKind:   appdef.OperationKind_Select,
+		isArrayResult:   true,
+		checkRateLimit:  nil, // TODO: implement rate limit for CDocs
+		setRequestType:  viewSetRequestType,
+		setResultType:   viewSetResultType,
+		authorizeResult: viewAuthorizeResult,
+		rowsProcessor:   viewRowsProcessor,
+		exec:            viewExec,
+	}
 }
 
-var _ IApiPathHandler = (*viewHandler)(nil) // ensure that viewHandler implements IApiPathHandler
-
-func (h *viewHandler) Options() ApiHandlerOptions {
-	return ApiHandlerOptions{IsArrayResult: true}
-}
-
-func (h *viewHandler) CheckRateLimit(ctx context.Context, qw *queryWork) error {
-	// TODO: implement rate limits check
-	return nil
-}
-
-func (h *viewHandler) SetRequestType(ctx context.Context, qw *queryWork) error {
+func viewSetRequestType(ctx context.Context, qw *queryWork) error {
 	switch qw.iWorkspace {
 	case nil:
 		// workspace is dummy
@@ -46,17 +45,11 @@ func (h *viewHandler) SetRequestType(ctx context.Context, qw *queryWork) error {
 	}
 	return nil
 }
-
-func (h *viewHandler) SetResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error {
+func viewSetResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error {
 	qw.resultType = qw.iView
 	return nil
 }
-
-func (h *viewHandler) RequestOpKind() appdef.OperationKind {
-	return appdef.OperationKind_Select
-}
-
-func (h *viewHandler) AuthorizeResult(ctx context.Context, qw *queryWork) (err error) {
+func viewAuthorizeResult(ctx context.Context, qw *queryWork) (err error) {
 	if qw.resultType != appdef.AnyType {
 		// will authorize result only if result is sys.Any
 		// otherwise each field is considered as allowed if EXECUTE ON QUERY is allowed
@@ -87,8 +80,8 @@ func (h *viewHandler) AuthorizeResult(ctx context.Context, qw *queryWork) (err e
 	}
 	return nil
 }
-func (h *viewHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err error) {
-	err = h.validateFields(qw)
+func viewRowsProcessor(ctx context.Context, qw *queryWork) (err error) {
+	err = validateFields(qw)
 	if err != nil {
 		return
 	}
@@ -120,8 +113,8 @@ func (h *viewHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err err
 	}
 	return
 }
-func (h *viewHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
-	kk, err := h.getKeys(qw)
+func viewExec(ctx context.Context, qw *queryWork) (err error) {
+	kk, err := getKeys(qw)
 	if err != nil {
 		return
 	}
@@ -140,7 +133,7 @@ func (h *viewHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
 	}
 	return
 }
-func (h *viewHandler) getKeys(qw *queryWork) (keys []istructs.IKeyBuilder, err error) {
+func getKeys(qw *queryWork) (keys []istructs.IKeyBuilder, err error) {
 	fields := qw.appStructs.AppDef().Type(qw.iView.QName()).(appdef.IView).Key().Fields()
 	values := make([][]interface{}, 0, len(fields))
 	for i, field := range fields {
@@ -188,7 +181,7 @@ func (h *viewHandler) getKeys(qw *queryWork) (keys []istructs.IKeyBuilder, err e
 	}
 	return
 }
-func (h *viewHandler) validateFields(qw *queryWork) (err error) {
+func validateFields(qw *queryWork) (err error) {
 	view := qw.appStructs.AppDef().Type(qw.iView.QName()).(appdef.IView)
 
 	if qw.queryParams.Constraints == nil {

@@ -22,17 +22,20 @@ import (
 )
 
 // [~server.apiv2.docs/cmp.cdocsHandler~impl]
-type cdocsHandler struct{}
-
-var _ IApiPathHandler = (*cdocsHandler)(nil) // ensure that cdocsHandler implements IApiPathHandler
-
-func (h *cdocsHandler) Options() ApiHandlerOptions {
-	return ApiHandlerOptions{IsArrayResult: true}
+func cdocsHandler() apiPathHandler {
+	return apiPathHandler{
+		requestOpKind:   appdef.OperationKind_Select,
+		isArrayResult:   true,
+		checkRateLimit:  nil, // TODO: implement rate limit for CDocs
+		setRequestType:  cdocsSetRequestType,
+		setResultType:   cdocaSetResultType,
+		authorizeResult: cdocsAuthorizeResult,
+		rowsProcessor:   cdocsRowsProcessor,
+		exec:            cdocsExec,
+	}
 }
-func (h *cdocsHandler) CheckRateLimit(_ context.Context, _ *queryWork) (err error) { return }
-func (h *cdocsHandler) IsArrayResult() bool                                        { return true }
-func (h *cdocsHandler) RequestOpKind() appdef.OperationKind                        { return appdef.OperationKind_Select }
-func (h *cdocsHandler) SetRequestType(_ context.Context, qw *queryWork) (err error) {
+
+func cdocsSetRequestType(_ context.Context, qw *queryWork) (err error) {
 	var f appdef.FindType
 	if qw.iWorkspace == nil {
 		f = qw.appStructs.AppDef().Type
@@ -44,11 +47,11 @@ func (h *cdocsHandler) SetRequestType(_ context.Context, qw *queryWork) (err err
 	}
 	return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("document or record %s is not defined in %v", qw.msg.QName(), qw.iWorkspace))
 }
-func (h *cdocsHandler) SetResultType(_ context.Context, qw *queryWork, _ istructsmem.IStatelessResources) (err error) {
+func cdocaSetResultType(_ context.Context, qw *queryWork, _ istructsmem.IStatelessResources) (err error) {
 	qw.resultType = qw.iDoc
 	return
 }
-func (h *cdocsHandler) AuthorizeResult(_ context.Context, qw *queryWork) (err error) {
+func cdocsAuthorizeResult(_ context.Context, qw *queryWork) (err error) {
 	ws := qw.iWorkspace
 	if ws == nil {
 		return errWorkspaceIsNil
@@ -74,7 +77,7 @@ func (h *cdocsHandler) AuthorizeResult(_ context.Context, qw *queryWork) (err er
 	}
 	return
 }
-func (h *cdocsHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err error) {
+func cdocsRowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 	oo := make([]*pipeline.WiredOperator, 0)
 	if qw.queryParams.Constraints != nil && len(qw.queryParams.Constraints.Include) != 0 {
 		oo = append(oo, pipeline.WireAsyncOperator("Include", newInclude(qw, true)))
@@ -93,7 +96,7 @@ func (h *cdocsHandler) RowsProcessor(ctx context.Context, qw *queryWork) (err er
 	}
 	return
 }
-func (h *cdocsHandler) Exec(ctx context.Context, qw *queryWork) (err error) {
+func cdocsExec(ctx context.Context, qw *queryWork) (err error) {
 	kb := qw.appStructs.ViewRecords().KeyBuilder(collection.QNameCollectionView)
 	kb.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
 	kb.PutQName(collection.Field_DocQName, qw.msg.QName())

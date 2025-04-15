@@ -62,7 +62,9 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 						p = nil
 					} else {
 						now := time.Now()
-						err = qwork.apiPathHandler.Exec(ctx, qwork)
+						if qwork.apiPathHandler.exec != nil {
+							err = qwork.apiPathHandler.exec(ctx, qwork)
+						}
 						qwork.metrics.Increase(queryprocessor.Metric_ExecSeconds, time.Since(now).Seconds())
 						if err == nil {
 							if err = processors.CheckResponseIntent(qwork.state); err == nil {
@@ -87,7 +89,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					if err != nil {
 						statusCode = err.(coreutils.SysError).HTTPStatus // nolint:errorlint
 					}
-					if qwork.apiPathHandler != nil && qwork.apiPathHandler.Options().IsArrayResult {
+					if qwork.apiPathHandler.isArrayResult {
 						if qwork.responseWriterGetter == nil || qwork.responseWriterGetter() == nil {
 							// have an error before 200ok is sent -> send the status from the actual error
 							respWriter = msg.Responder().InitResponse(statusCode)
@@ -119,25 +121,25 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		operator("get api path handler", func(ctx context.Context, qw *queryWork) (err error) {
 			switch qw.msg.APIPath() {
 			case processors.APIPath_Queries:
-				qw.apiPathHandler = &queryHandler{}
+				qw.apiPathHandler = queryHandler()
 			case processors.APIPath_Views:
-				qw.apiPathHandler = &viewHandler{}
+				qw.apiPathHandler = viewHandler()
 			case processors.APIPath_Docs:
 				// [~server.apiv2.docs/cmp.provideDocsHandler~impl]
-				qw.apiPathHandler = &docsHandler{}
+				qw.apiPathHandler = docsHandler()
 			case processors.APIPaths_Schema:
-				qw.apiPathHandler = &schemasHandler{}
+				qw.apiPathHandler = schemasHandler()
 			case processors.APIPath_Schemas_WorkspaceRoles:
-				qw.apiPathHandler = &schemasRolesHandler{}
+				qw.apiPathHandler = schemasRolesHandler()
 			case processors.APIPath_Schemas_WorkspaceRole:
 				// [~server.apiv2.role/cmp.provideSchemasRoleHandler~impl]
-				qw.apiPathHandler = &schemasRoleHandler{}
+				qw.apiPathHandler = schemasRoleHandler()
 			case processors.APIPath_CDocs:
 				// [~server.apiv2.docs/cmp.provideCDocsHandler~impl]
-				qw.apiPathHandler = &cdocsHandler{}
+				qw.apiPathHandler = cdocsHandler()
 			case processors.APIPath_Auth_Login:
 				// [~server.apiv2.auth/cmp.provideAuthLoginHandler~impl]
-				qw.apiPathHandler = &authLoginHandler{}
+				qw.apiPathHandler = authLoginHandler()
 			default:
 				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("unsupported api path %v", qw.msg.APIPath()))
 			}
@@ -146,7 +148,10 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 
 		operator("borrowAppPart", borrowAppPart),
 		operator("check rate limit", func(ctx context.Context, qw *queryWork) (err error) {
-			return qw.apiPathHandler.CheckRateLimit(ctx, qw)
+			if qw.apiPathHandler.checkRateLimit == nil {
+				return nil
+			}
+			return qw.apiPathHandler.checkRateLimit(ctx, qw)
 		}),
 		operator("authenticate query request", func(ctx context.Context, qw *queryWork) (err error) {
 			req := iauthnz.AuthnRequest{
@@ -200,14 +205,17 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("set request type (view, query etc)", func(ctx context.Context, qw *queryWork) (err error) {
-			return qw.apiPathHandler.SetRequestType(ctx, qw)
+			if qw.apiPathHandler.setRequestType == nil {
+				return nil
+			}
+			return qw.apiPathHandler.setRequestType(ctx, qw)
 		}),
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
 			switch qw.msg.APIPath() {
 			case processors.APIPaths_Schema, processors.APIPath_Schemas_WorkspaceRole, processors.APIPath_Schemas_WorkspaceRoles:
 				return nil
 			}
-			ok, err := qw.appPart.IsOperationAllowed(qw.iWorkspace, qw.apiPathHandler.RequestOpKind(), qw.msg.QName(), nil, qw.roles)
+			ok, err := qw.appPart.IsOperationAllowed(qw.iWorkspace, qw.apiPathHandler.requestOpKind, qw.msg.QName(), nil, qw.roles)
 			if err != nil {
 				return err
 			}
@@ -217,7 +225,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
-			if qw.apiPathHandler.Options().HandlesQueryArgs {
+			if qw.apiPathHandler.handlesQueryArgs {
 				qw.execQueryArgs, err = newExecQueryArgs(qw.msg.WSID(), qw)
 			}
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
@@ -261,17 +269,26 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return
 		}),
 		operator("validate: get result type", func(ctx context.Context, qw *queryWork) (err error) {
-			return qw.apiPathHandler.SetResultType(ctx, qw, statelessResources)
+			if qw.apiPathHandler.setResultType == nil {
+				return nil
+			}
+			return qw.apiPathHandler.setResultType(ctx, qw, statelessResources)
 		}),
 		operator("authorize actual sys.Any result", func(ctx context.Context, qw *queryWork) (err error) {
-			return qw.apiPathHandler.AuthorizeResult(ctx, qw)
+			if qw.apiPathHandler.authorizeResult == nil {
+				return nil
+			}
+			return qw.apiPathHandler.authorizeResult(ctx, qw)
 		}),
 		operator("build rows processor", func(ctx context.Context, qw *queryWork) error {
 			now := time.Now()
 			defer func() {
 				qw.metrics.Increase(queryprocessor.Metric_BuildSeconds, time.Since(now).Seconds())
 			}()
-			return qw.apiPathHandler.RowsProcessor(ctx, qw)
+			if qw.apiPathHandler.rowsProcessor == nil {
+				return nil
+			}
+			return qw.apiPathHandler.rowsProcessor(ctx, qw)
 		}),
 	}
 	return pipeline.NewSyncPipeline(requestCtx, "Query Processor", ops[0], ops[1:]...)
