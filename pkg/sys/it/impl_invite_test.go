@@ -362,3 +362,21 @@ func TestRejectInvitationOnDifferentLogin(t *testing.T) {
 	InitiateJoinWorkspace(vit, ws, inviteID, differentLogin, verificationCode,
 		coreutils.Expect400(fmt.Sprintf("invitation was sent to %s but current login is login", email)))
 }
+
+func TestWrongEmail(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	wrongEmails := []string{
+		"a",
+		"dwdw@",
+		"@sdsd",
+	}
+	for _, wrongEmail := range wrongEmails {
+		body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
+			wrongEmail, initialRoles, vit.Now().UnixMilli(), inviteEmailTemplate, inviteEmailSubject)
+		vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body, coreutils.Expect400()).Println()
+	}
+}

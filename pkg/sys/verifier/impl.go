@@ -183,8 +183,13 @@ func provideIVVTExec(itokens itokens.ITokens, asp istructs.IAppStructsProvider) 
 func provideCmdSendEmailVerificationCode(sr istructsmem.IStatelessResources) {
 	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(
 		QNameCommandSendEmailVerificationCode,
-		istructsmem.NullCommandExec,
+		execCmdSendEmailVerificationCode,
 	))
+}
+
+func execCmdSendEmailVerificationCode(args istructs.ExecCommandArgs) (err error) {
+	email := args.ArgumentObject.AsString(Field_Email)
+	return coreutils.ValidateEMail(email)
 }
 
 func getVerificationEmailBody(federation federation.IFederation, verificationCode string, reason string, lng language.Tag, ctlg catalog.Catalog) string {
