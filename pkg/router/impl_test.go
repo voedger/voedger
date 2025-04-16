@@ -90,7 +90,7 @@ func TestBasicUsage_ApiArray(t *testing.T) {
 			}, bus.DefaultSendTimeout)
 			defer tearDown(router)
 
-			resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/users/test1/apps/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
+			resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/apps/test1/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
 			require.NoError(err)
 			defer resp.Body.Close()
 
@@ -145,7 +145,7 @@ func TestBasicUsage_Respond(t *testing.T) {
 			}, bus.DefaultSendTimeout)
 			defer tearDown(router)
 
-			resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/users/test1/apps/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
+			resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/apps/test1/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
 			require.NoError(err)
 			defer resp.Body.Close()
 
@@ -226,7 +226,7 @@ func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
 	}, bus.SendTimeout(5*time.Second))
 	defer tearDown(router)
 
-	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/users/test1/apps/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/apps/test1/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
 	require.NoError(err)
 
 	// ensure the first element is sent successfully
@@ -317,7 +317,7 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 	defer tearDown(router)
 
 	// client side
-	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/users/test1/apps/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/apps/test1/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
 	require.NoError(err)
 
 	// ensure the first element is sent successfully
