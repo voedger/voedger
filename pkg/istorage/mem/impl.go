@@ -15,25 +15,36 @@ import (
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
+// need to share the lock between different appStorage instances for the case when the mem storage is shared between few VVMs
+// otherwise few VVMs will use the same map from appStorageFactory, but RWMutex'es are different per each appStorage instance!
+// see https://github.com/voedger/voedger/issues/3447
+type storageWithLock struct {
+	data map[string]map[string]coreutils.DataWithExpiration
+	lock sync.RWMutex
+}
+
 type appStorageFactory struct {
-	storages map[string]map[string]map[string]coreutils.DataWithExpiration
+	storages map[string]*storageWithLock
 	iTime    coreutils.ITime
 }
 
 func (s *appStorageFactory) AppStorage(appName istorage.SafeAppName) (istorage.IAppStorage, error) {
-	storage, ok := s.storages[appName.String()]
+	storageWithLock, ok := s.storages[appName.String()]
 	if !ok {
 		return nil, istorage.ErrStorageDoesNotExist
 	}
 
-	return &appStorage{storage: storage, iTime: s.iTime}, nil
+	return &appStorage{storage: storageWithLock.data, iTime: s.iTime, lock: &storageWithLock.lock}, nil
 }
 
 func (s *appStorageFactory) Init(appName istorage.SafeAppName) error {
 	if _, ok := s.storages[appName.String()]; ok {
 		return istorage.ErrStorageAlreadyExists
 	}
-	s.storages[appName.String()] = map[string]map[string]coreutils.DataWithExpiration{}
+	s.storages[appName.String()] = &storageWithLock{
+		data: map[string]map[string]coreutils.DataWithExpiration{},
+		lock: sync.RWMutex{},
+	}
 
 	return nil
 }
@@ -46,7 +57,7 @@ func (s *appStorageFactory) StopGoroutines() {}
 
 type appStorage struct {
 	storage      map[string]map[string]coreutils.DataWithExpiration
-	lock         sync.RWMutex
+	lock         *sync.RWMutex
 	testDelayGet time.Duration // used in tests only
 	testDelayPut time.Duration // used in tests only
 	iTime        coreutils.ITime

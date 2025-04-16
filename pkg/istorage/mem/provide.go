@@ -11,7 +11,7 @@ import (
 
 func Provide(iTime coreutils.ITime) istorage.IAppStorageFactory {
 	return &appStorageFactory{
-		storages: map[string]map[string]map[string]coreutils.DataWithExpiration{},
+		storages: map[string]*storageWithLock{},
 		iTime:    iTime,
 	}
 }
