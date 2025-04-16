@@ -59,7 +59,7 @@ func schemasRoleExec(ctx context.Context, qw *queryWork) (err error) {
 	}
 
 	if strings.Contains(qw.msg.Accept(), coreutils.ContentType_TextHTML) {
-		url := fmt.Sprintf(`/api/v2/users/%s/apps/%s/schemas/%s/roles/%s`,
+		url := fmt.Sprintf(`/api/v2/apps/%s/%s/schemas/%s/roles/%s`,
 			qw.msg.AppQName().Owner(), qw.msg.AppQName().Name(), wsQname.String(), qw.msg.QName().String())
 		return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: coreutils.ContentType_TextHTML, StatusCode: http.StatusOK}, swaggerUI(url))
 	}

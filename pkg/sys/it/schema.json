@@ -193,7 +193,7 @@
   },
   "openapi": "3.0.0",
   "paths": {
-    "/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/cdocs/app1pkg.Currency": {
+    "/api/v2/apps/{owner}/{app}/workspaces/{wsid}/cdocs/app1pkg.Currency": {
       "get": {
         "description": "Reads the collection of app1pkg.Currency",
         "parameters": [
@@ -327,7 +327,7 @@
         ]
       }
     },
-    "/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/cdocs/app1pkg.category": {
+    "/api/v2/apps/{owner}/{app}/workspaces/{wsid}/cdocs/app1pkg.category": {
       "get": {
         "description": "Reads the collection of app1pkg.category",
         "parameters": [
@@ -461,7 +461,7 @@
         ]
       }
     },
-    "/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/commands/app1pkg.CmdODocOne": {
+    "/api/v2/apps/{owner}/{app}/workspaces/{wsid}/commands/app1pkg.CmdODocOne": {
       "post": {
         "description": "Executes app1pkg.CmdODocOne",
         "parameters": [
@@ -566,7 +566,7 @@
         ]
       }
     },
-    "/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/app1pkg.Currency": {
+    "/api/v2/apps/{owner}/{app}/workspaces/{wsid}/docs/app1pkg.Currency": {
       "post": {
         "description": "Creates document app1pkg.Currency",
         "parameters": [
@@ -678,7 +678,7 @@
         ]
       }
     },
-    "/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/app1pkg.Currency/{id}": {
+    "/api/v2/apps/{owner}/{app}/workspaces/{wsid}/docs/app1pkg.Currency/{id}": {
       "delete": {
         "description": "Deactivates document app1pkg.Currency",
         "parameters": [
@@ -964,7 +964,7 @@
         ]
       }
     },
-    "/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/docs/app1pkg.category/{id}": {
+    "/api/v2/apps/{owner}/{app}/workspaces/{wsid}/docs/app1pkg.category/{id}": {
       "get": {
         "description": "Reads app1pkg.category",
         "parameters": [
@@ -1054,7 +1054,7 @@
         ]
       }
     },
-    "/api/v2/users/{owner}/apps/{app}/workspaces/{wsid}/queries/app1pkg.QryReturnsCategory": {
+    "/api/v2/apps/{owner}/{app}/workspaces/{wsid}/queries/app1pkg.QryReturnsCategory": {
       "get": {
         "description": "Selects from query app1pkg.QryReturnsCategory",
         "parameters": [

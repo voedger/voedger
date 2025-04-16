@@ -353,7 +353,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 			return []pathItem{
 				{
 					Method:  methodPost,
-					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/docs/%s", owner, app, typeName),
+					Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/docs/%s", owner, app, typeName),
 					APIPath: processors.APIPath_Docs,
 				},
 			}
@@ -361,7 +361,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 			return []pathItem{
 				{
 					Method:  methodPatch,
-					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
+					Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
 					APIPath: processors.APIPath_Docs,
 				},
 			}
@@ -369,7 +369,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 			return []pathItem{
 				{
 					Method:  methodDelete,
-					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
+					Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
 					APIPath: processors.APIPath_Docs,
 				},
 			}
@@ -377,12 +377,12 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 			return []pathItem{
 				{
 					Method:  methodGet,
-					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
+					Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
 					APIPath: processors.APIPath_Docs,
 				},
 				{
 					Method:  methodGet,
-					Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/cdocs/%s", owner, app, typeName),
+					Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/cdocs/%s", owner, app, typeName),
 					APIPath: processors.APIPath_CDocs,
 				},
 			}
@@ -394,7 +394,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 		return []pathItem{
 			{
 				Method:  methodPost,
-				Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/commands/%s", owner, app, typeName),
+				Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/commands/%s", owner, app, typeName),
 				APIPath: processors.APIPath_Commands,
 			},
 		}
@@ -404,7 +404,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 		return []pathItem{
 			{
 				Method:  methodGet,
-				Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/queries/%s", owner, app, typeName),
+				Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/queries/%s", owner, app, typeName),
 				APIPath: processors.APIPath_Queries,
 			},
 		}
@@ -414,7 +414,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 		return []pathItem{
 			{
 				Method:  methodGet,
-				Path:    fmt.Sprintf("/users/%s/apps/%s/workspaces/{wsid}/views/%s", owner, app, typeName),
+				Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/views/%s", owner, app, typeName),
 				APIPath: processors.APIPath_Views,
 			},
 		}

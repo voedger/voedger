@@ -44,26 +44,26 @@ func TestBasicUsage_CommandProcessorV2_Insert(t *testing.T) {
 		]
 	}`
 
-	resp := vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.Root", ws.WSID), body,
+	resp := vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Root", ws.WSID), body,
 		coreutils.WithMethod(http.MethodPost),
 		coreutils.WithAuthorizeBy(ws.Owner.Token),
 	)
 	resp.Println()
 	newIDsAfterInsert := newIDs(t, resp)
 
-	path := fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.Root/%d?include=Nested,Nested.Third`, ws.WSID, newIDsAfterInsert["1"])
+	path := fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Root/%d?include=Nested,Nested.Third`, ws.WSID, newIDsAfterInsert["1"])
 	resp = vit.POST(path, "", coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.WithMethod(http.MethodGet))
 	expectedCDoc := rootCDoc(t, newIDsAfterInsert)
 	requireEqual(t, expectedCDoc, resp.Body)
 
 	// update
 	body = `{"Fld1": 100}`
-	vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.Third/%d", ws.WSID, newIDsAfterInsert["7"]), body,
+	vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Third/%d", ws.WSID, newIDsAfterInsert["7"]), body,
 		coreutils.WithMethod(http.MethodPatch),
 		coreutils.WithAuthorizeBy(ws.Owner.Token),
 	)
 
-	path = fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.Root/%d?include=Nested,Nested.Third`, ws.WSID, newIDsAfterInsert["1"])
+	path = fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Root/%d?include=Nested,Nested.Third`, ws.WSID, newIDsAfterInsert["1"])
 	resp = vit.POST(path, "", coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.WithMethod(http.MethodGet))
 	resp.PrintJSON()
 
@@ -74,12 +74,12 @@ func TestBasicUsage_CommandProcessorV2_Insert(t *testing.T) {
 	requireEqual(t, expected, resp.Body)
 
 	// delete
-	vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.Third/%d", ws.WSID, newIDsAfterInsert["6"]), "{}",
+	vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Third/%d", ws.WSID, newIDsAfterInsert["6"]), "{}",
 		coreutils.WithMethod(http.MethodDelete),
 		coreutils.WithAuthorizeBy(ws.Owner.Token),
 	)
 
-	path = fmt.Sprintf(`api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.Root/%d?include=Nested,Nested.Third`, ws.WSID, newIDsAfterInsert["1"])
+	path = fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Root/%d?include=Nested,Nested.Third`, ws.WSID, newIDsAfterInsert["1"])
 	resp = vit.POST(path, "", coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.WithMethod(http.MethodGet))
 	resp.PrintJSON()
 
@@ -108,7 +108,7 @@ func TestBasicUsage_CommandProcessorV2_Insert(t *testing.T) {
 				}
 			]
 		}`
-		resp := vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.Root", ws.WSID), body,
+		resp := vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Root", ws.WSID), body,
 			coreutils.WithMethod(http.MethodPost),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 		)
@@ -134,7 +134,7 @@ func TestAuth(t *testing.T) {
 
 	t.Run("insert", func(t *testing.T) {
 		body := `{"Fld1":42}`
-		vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.TestDeniedCDoc", ws.WSID), body,
+		vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.TestDeniedCDoc", ws.WSID), body,
 			coreutils.WithMethod(http.MethodPost),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.Expect403("INSERT app1pkg.TestDeniedCDoc: operation forbidden"),
@@ -144,14 +144,14 @@ func TestAuth(t *testing.T) {
 	t.Run("update", func(t *testing.T) {
 		body := `{"Fld1":42}`
 		sysPrn := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
-		resp := vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.TestDeniedCDoc", ws.WSID), body,
+		resp := vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.TestDeniedCDoc", ws.WSID), body,
 			coreutils.WithMethod(http.MethodPost),
 			coreutils.WithAuthorizeBy(sysPrn.Token),
 		)
 		newIDs := newIDs(t, resp)
 
 		body = `{"Fld1":43}`
-		vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.TestDeniedCDoc/%d", ws.WSID, newIDs["1"]), body,
+		vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.TestDeniedCDoc/%d", ws.WSID, newIDs["1"]), body,
 			coreutils.WithMethod(http.MethodPatch),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.Expect403("UPDATE app1pkg.TestDeniedCDoc: operation forbidden"),
@@ -160,13 +160,13 @@ func TestAuth(t *testing.T) {
 
 	t.Run("delete", func(t *testing.T) {
 		body := `{"Fld1":42}`
-		resp := vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.DocDeactivateDenied", ws.WSID), body,
+		resp := vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.DocDeactivateDenied", ws.WSID), body,
 			coreutils.WithMethod(http.MethodPost),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 		)
 		newIDs := newIDs(t, resp)
 
-		vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.DocDeactivateDenied/%d", ws.WSID, newIDs["1"]), "{}",
+		vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.DocDeactivateDenied/%d", ws.WSID, newIDs["1"]), "{}",
 			coreutils.WithMethod(http.MethodDelete),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.Expect403("DEACTIVATE app1pkg.DocDeactivateDenied: operation forbidden"),
@@ -200,7 +200,7 @@ func TestErrorsCPv2(t *testing.T) {
 		]
 	}`
 
-	resp := vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.Root", ws.WSID), body,
+	resp := vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Root", ws.WSID), body,
 		coreutils.WithMethod(http.MethodPost),
 		coreutils.WithAuthorizeBy(ws.Owner.Token),
 	)
@@ -209,7 +209,7 @@ func TestErrorsCPv2(t *testing.T) {
 
 	t.Run("sys.ID among fields is not allowed on update", func(t *testing.T) {
 		body = fmt.Sprintf(`{"Fld1": 100, "sys.ID": %d}`, newIDs["7"])
-		vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.Root/%d", ws.WSID, newIDs["7"]), body,
+		vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Root/%d", ws.WSID, newIDs["7"]), body,
 			coreutils.WithMethod(http.MethodPatch),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.Expect400("sys.ID field is not allowed among fields to update"),
@@ -219,14 +219,14 @@ func TestErrorsCPv2(t *testing.T) {
 	t.Run("record does not exist on update", func(t *testing.T) {
 		body = `{"Fld1": 100}`
 		t.Run("zero", func(t *testing.T) {
-			vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.Root/0", ws.WSID), body,
+			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Root/0", ws.WSID), body,
 				coreutils.WithMethod(http.MethodPatch),
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
 				coreutils.Expect404(),
 			).Println()
 		})
 		t.Run("non-zero", func(t *testing.T) {
-			vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.Root/%d", ws.WSID, istructs.NonExistingRecordID), body,
+			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Root/%d", ws.WSID, istructs.NonExistingRecordID), body,
 				coreutils.WithMethod(http.MethodPatch),
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
 				coreutils.Expect404(),
@@ -236,7 +236,7 @@ func TestErrorsCPv2(t *testing.T) {
 
 	t.Run("wrong explicit sys.ID type", func(t *testing.T) {
 		body := `{"FldRoot": 42,"sys.ID": "wrong"}`
-		vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.Root", ws.WSID), body,
+		vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Root", ws.WSID), body,
 			coreutils.WithMethod(http.MethodPost),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.Expect400(`field "sys.ID" must be json.Number`),
@@ -245,7 +245,7 @@ func TestErrorsCPv2(t *testing.T) {
 
 	t.Run("body not allowed on delete", func(t *testing.T) {
 		body := `{"FldRoot": 42}`
-		vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.Root/%d", ws.WSID, newIDs["1"]), body,
+		vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Root/%d", ws.WSID, newIDs["1"]), body,
 			coreutils.WithMethod(http.MethodDelete),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.Expect400("unexpected body is provided on delete"),
@@ -255,7 +255,7 @@ func TestErrorsCPv2(t *testing.T) {
 	t.Run("RecordID and DocQName mismatch", func(t *testing.T) {
 		t.Run("update", func(t *testing.T) {
 			body := `{"FldRoot": 100000}`
-			vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.category/%d", ws.WSID, newIDs["1"]), body,
+			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.category/%d", ws.WSID, newIDs["1"]), body,
 				coreutils.WithMethod(http.MethodPatch),
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
 				coreutils.Expect400(fmt.Sprintf("record id %d leads to app1pkg.Root QName whereas app1pkg.category QName is mentioned in the request", newIDs["1"])),
@@ -264,7 +264,7 @@ func TestErrorsCPv2(t *testing.T) {
 		})
 
 		t.Run("delete", func(t *testing.T) {
-			vit.POST(fmt.Sprintf("api/v2/users/test1/apps/app1/workspaces/%d/docs/app1pkg.category/%d", ws.WSID, newIDs["1"]), "{}",
+			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.category/%d", ws.WSID, newIDs["1"]), "{}",
 				coreutils.WithMethod(http.MethodDelete),
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
 				coreutils.Expect400(fmt.Sprintf("record id %d leads to app1pkg.Root QName whereas app1pkg.category QName is mentioned in the request", newIDs["1"])),
