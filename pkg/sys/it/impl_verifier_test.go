@@ -158,6 +158,20 @@ func TestVerifierErrors(t *testing.T) {
 		userPrincipal2 := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
 		vit.PostProfile(userPrincipal2, "c.sys.CUD", body, coreutils.Expect500()).Println()
 	})
+
+	t.Run("wrong email", func(t *testing.T) {
+		wrongEmails := []string{
+			"a",
+			"sdsd@",
+			"@sdsd",
+		}
+		for _, wrongEmail := range wrongEmails {
+			vit.TimeAdd(time.Hour)
+			body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"EmailField","Email":"%s","TargetWSID": %d,"Language":"fr"},"elements":[{"fields":["VerificationToken"]}]}`,
+				it.QNameApp1_TestEmailVerificationDoc, wrongEmail, userPrincipal.ProfileWSID) // targetWSID - is the workspace we're going to use the verified value at
+			vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body, coreutils.Expect400()).Println()
+		}
+	})
 }
 
 func TestVerificationLimits(t *testing.T) {

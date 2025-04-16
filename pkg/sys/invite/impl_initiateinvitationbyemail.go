@@ -35,6 +35,10 @@ func execCmdInitiateInvitationByEMail(tm coreutils.ITime) func(args istructs.Exe
 			return
 		}
 
+		if err := coreutils.ValidateEMail(login); err != nil {
+			return err
+		}
+
 		skbViewInviteIndex, err := args.State.KeyBuilder(sys.Storage_View, qNameViewInviteIndex)
 		if err != nil {
 			return

@@ -77,7 +77,6 @@ func applyUpdateInviteRolesProjector(time coreutils.ITime, federation federation
 		emailTemplate := coreutils.TruncateEmailTemplate(event.ArgumentObject().AsString(field_EmailTemplate))
 
 		replacer := strings.NewReplacer(EmailTemplatePlaceholder_Roles, event.ArgumentObject().AsString(Field_Roles))
-
 		//Send roles update email
 		skbSendMail, err := s.KeyBuilder(sys.Storage_SendMail, appdef.NullQName)
 		if err != nil {
