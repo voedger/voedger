@@ -194,11 +194,19 @@ func TestISequencer_Start(t *testing.T) {
 	})
 
 	t.Run("should reject when actualization in progress", func(t *testing.T) {
+		storage := createDefaultStorage()
+		stuckActualizationCh := make(chan any)
 		seq, cleanup := isequencer.New(params, storage, iTime)
 		defer cleanup()
 
 		offset := isequencer.WaitForStart(t, seq, 1, 1, true)
-		require.Equal(isequencer.PLogOffset(2), offset)
+		require.Equal(isequencer.PLogOffset(1), offset)
+
+		// force actualization to stuck to gaurantee that Start will be rejected
+		storage.SetOnActualizeFromPLog(func() {
+			<-stuckActualizationCh
+		})
+		defer close(stuckActualizationCh)
 
 		seq.Actualize()
 
