@@ -202,7 +202,7 @@ func TestISequencer_Start(t *testing.T) {
 		offset := isequencer.WaitForStart(t, seq, 1, 1, true)
 		require.Equal(isequencer.PLogOffset(1), offset)
 
-		// force actualization to stuck to gaurantee that Start will be rejected
+		// force actualization to stuck to guarantee that Start will be rejected
 		storage.SetOnActualizeFromPLog(func() {
 			<-stuckActualizationCh
 		})
