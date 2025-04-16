@@ -55,15 +55,14 @@ type IQueryMessage interface {
 }
 
 type apiPathHandler struct {
-	handlesQueryArgs bool
-	isArrayResult    bool
-	requestOpKind    appdef.OperationKind
-	checkRateLimit   func(ctx context.Context, qw *queryWork) error
-	setRequestType   func(ctx context.Context, qw *queryWork) error
-	setResultType    func(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error
-	authorizeResult  func(ctx context.Context, qw *queryWork) error
-	rowsProcessor    func(ctx context.Context, qw *queryWork) error
-	exec             func(ctx context.Context, qw *queryWork) error
+	isArrayResult   bool
+	requestOpKind   appdef.OperationKind
+	checkRateLimit  func(ctx context.Context, qw *queryWork) error
+	setRequestType  func(ctx context.Context, qw *queryWork) error
+	setResultType   func(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error
+	authorizeResult func(ctx context.Context, qw *queryWork) error
+	rowsProcessor   func(ctx context.Context, qw *queryWork) error
+	exec            func(ctx context.Context, qw *queryWork) error
 }
 
 type SchemaMeta struct {

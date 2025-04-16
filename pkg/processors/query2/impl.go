@@ -226,7 +226,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
-			if qw.apiPathHandler.handlesQueryArgs {
+			if qw.msg.APIPath() == processors.APIPath_Queries {
 				qw.execQueryArgs, err = newExecQueryArgs(qw.msg.WSID(), qw)
 			}
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
