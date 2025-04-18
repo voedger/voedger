@@ -9,10 +9,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"maps"
+	"sync"
 
 	"github.com/voedger/voedger/pkg/coreutils"
 )
+
+type TExpectedNumbers map[WSID]map[SeqID]Number
+
+var ExpectedNumbers TExpectedNumbers
+
+var StacksMU sync.Mutex
+var Stacks []string
 
 // Start starts Sequencing Transaction for the given WSID.
 // Marks Sequencing Transaction as in progress.
@@ -58,6 +67,10 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 	s.currentWSKind = wsKind
 	s.transactionIsInProgress = true
 
+	// if s.nextOffset <= 0 {
+	// 	// happens when context is closed during storage error
+	// 	return 0, false
+	// }
 	return s.nextOffset, true
 }
 
@@ -133,18 +146,59 @@ func (s *sequencer) flusher(ctx context.Context) {
 		case <-s.flusherSig:
 		}
 
+		var flushOffset PLogOffset
+		flushValues := make([]SeqValue, 0, len(s.toBeFlushed))
 		s.toBeFlushedMu.RLock()
-		flushOffset := s.toBeFlushedOffset
+		{
+			flushOffset = s.toBeFlushedOffset
+			if flushOffset == 0 {
+				s.toBeFlushedMu.RUnlock()
+				continue
+			}
+
+			// Copy s.toBeFlushed to flushValues []SeqValue (local variable)
+			for key, value := range s.toBeFlushed {
+				if value == 0 {
+					panic(fmt.Sprintf("num is 0 for key %v", key))
+				}
+				flushValues = append(flushValues, SeqValue{
+					Key:   key,
+					Value: value,
+				})
+			}
+		}
 		s.toBeFlushedMu.RUnlock()
 
-		if err := s.flushValues(flushOffset); err != nil {
+		// Error handling: Handle errors with retry mechanism (500ms wait)
+		err := coreutils.Retry(s.cleanupCtx, s.iTime, func() error {
+			return s.seqStorage.WriteValuesAndNextPLogOffset(flushValues, flushOffset)
+		})
+		if err != nil {
 			if errors.Is(err, context.Canceled) {
-				// happens when ctx is closed during storage error
+				// the only case here - ctx is closed during storage error
 				return
 			}
 			// notest
 			panic("failed to flush values: " + err.Error())
 		}
+
+		// for each key in flushValues remove key from s.toBeFlushed if values are the same
+		s.toBeFlushedMu.Lock()
+		for _, fv := range flushValues {
+			if v, exist := s.toBeFlushed[fv.Key]; exist && v == fv.Value {
+				delete(s.toBeFlushed, fv.Key)
+			}
+		}
+		s.toBeFlushedMu.Unlock()
+
+		// if err := s.flushValues(flushOffset); err != nil {
+		// 	if errors.Is(err, context.Canceled) {
+		// 		// happens when ctx is closed during storage error
+		// 		return
+		// 	}
+		// 	// notest
+		// 	panic("failed to flush values: " + err.Error())
+		// }
 	}
 }
 
@@ -168,6 +222,14 @@ func (s *sequencer) flusher(ctx context.Context) {
 // - Return value
 // [~server.design.sequences/cmp.sequencer.Next~impl]
 func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
+	// StacksMU.Lock()
+	// Stacks = []string{}
+	// StacksMU.Unlock()
+	// defer func() {
+	// 	StacksMU.Lock()
+	// 	Stacks = append(Stacks, string(debug.Stack()))
+	// 	StacksMU.Unlock()
+	// }()
 	// Validate sequencing Transaction status
 	s.checkSequencingTransactionInProgress()
 
@@ -188,14 +250,18 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	// Try to obtain the next value using:
 	// Try s.cache (can be evicted)
 	if nextNumber, ok := s.cache.Get(key); ok {
+		if nextNumber == 0 {
+			// logger.Info("cache", nextNumber)
+		}
 		return s.incrementNumber(key, nextNumber), nil
 	}
 
 	// Try s.inproc
-	s.inprocMu.RLock()
 	lastNumber, ok := s.inproc[key]
-	s.inprocMu.RUnlock()
 	if ok {
+		if lastNumber == 0 {
+			// logger.Info("inproc", lastNumber)
+		}
 		return s.incrementNumber(key, lastNumber), nil
 	}
 
@@ -204,6 +270,9 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	nextNumber, ok := s.toBeFlushed[key]
 	s.toBeFlushedMu.RUnlock()
 	if ok {
+		if nextNumber == 0 {
+			// logger.Info("toBeFlushed", nextNumber)
+		}
 		return s.incrementNumber(key, nextNumber), nil
 	}
 
@@ -230,6 +299,10 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	// If number is 0 then initial value is used
 	nextNumber = storedNumbers[0]
 	if nextNumber == 0 {
+		// logger.Info("storedNumber", nextNumber)
+		s.toBeFlushedMu.RLock()
+		// logger.Info(s.toBeFlushed)
+		s.toBeFlushedMu.RUnlock()
 		nextNumber = initialValue - 1 // initial value 1 and there are no such records in plog at all -> should issue 1, not 2
 	}
 
@@ -240,15 +313,15 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 
 // incrementNumber increments the number for the given key and returns the next number
 func (s *sequencer) incrementNumber(key NumberKey, number Number) Number {
-	s.inprocMu.Lock()
-	defer s.inprocMu.Unlock()
-
 	nextNumber := number + 1
 	// Write value+1 to s.cache
 	s.cache.Add(key, nextNumber)
 	// Write value+1 to s.inproc
 	s.inproc[key] = nextNumber
 	// Return value
+	if ExpectedNumbers[key.WSID][key.SeqID] != nextNumber && ExpectedNumbers[key.WSID][key.SeqID]+1 != nextNumber {
+		log.Println()
+	}
 	return nextNumber
 }
 
@@ -270,20 +343,16 @@ func (s *sequencer) Flush() {
 	// Lock toBeFlushed while copying values
 	s.toBeFlushedMu.Lock()
 	// Copy s.inproc to s.toBeFlushed
-	s.inprocMu.RLock()
 	for key, value := range s.inproc {
 		s.toBeFlushed[key] = value
 	}
-	s.inprocMu.RUnlock()
 
 	// Copy s.nextOffset to s.toBeFlushedOffset
 	s.toBeFlushedOffset = s.nextOffset
 	s.toBeFlushedMu.Unlock()
 
 	// Clear s.inproc
-	s.inprocMu.Lock()
 	s.inproc = make(map[NumberKey]Number)
-	s.inprocMu.Unlock()
 
 	// Increase s.nextOffset
 	s.nextOffset++
@@ -379,6 +448,11 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	s.toBeFlushedOffset = 0
 	s.toBeFlushedMu.Unlock()
 
+	// select {
+	// case <-s.flusherSig:
+	// default:
+	// }
+
 	// s.flusherWG, s.flusherCtxCancel + start flusher() goroutine
 	s.startFlusher()
 
@@ -411,57 +485,6 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	}
 }
 
-// flushValues writes the accumulated sequence values to the storage.
-// Flow:
-// - Lock s.toBeFlushedMu
-// - Copy s.toBeFlushedOffset to flushOffset (local variable)
-// - Copy s.toBeFlushed to flushValues []SeqValue (local variable)
-// - Unlock s.toBeFlushedMu
-// - s.params.SeqStorage.WriteValuesAndNextPLogOffset(flushValues, flushOffset)
-// - Lock s.toBeFlushedMu
-// - Clean s.toBeFlushed
-// - Unlock s.toBeFlushedMu
-// Parameters:
-// - offset - PLogOffset to be written
-func (s *sequencer) flushValues(offset PLogOffset) error {
-	// Skip if no values to flush to zero offset
-	s.toBeFlushedMu.RLock()
-	if len(s.toBeFlushed) == 0 && s.toBeFlushedOffset == 0 {
-		s.toBeFlushedMu.RUnlock()
-		return nil
-	}
-
-	// Copy s.toBeFlushed to flushValues []SeqValue (local variable)
-	flushValues := make([]SeqValue, 0, len(s.toBeFlushed))
-	for key, value := range s.toBeFlushed {
-		flushValues = append(flushValues, SeqValue{
-			Key:   key,
-			Value: value,
-		})
-	}
-	s.toBeFlushedMu.RUnlock()
-
-	// Error handling: Handle errors with retry mechanism (500ms wait)
-	err := coreutils.Retry(s.cleanupCtx, s.iTime, func() error {
-		return s.seqStorage.WriteValuesAndNextPLogOffset(flushValues, offset)
-	})
-	if err != nil {
-		// the only case here - ctx is closed during stroage error
-		return err
-	}
-
-	// for each key in flushValues remove key from s.toBeFlushed if values are the same
-	s.toBeFlushedMu.Lock()
-	for _, fv := range flushValues {
-		if v, exist := s.toBeFlushed[fv.Key]; exist && v == fv.Value {
-			delete(s.toBeFlushed, fv.Key)
-		}
-	}
-	s.toBeFlushedMu.Unlock()
-
-	return nil
-}
-
 // checkSequencingTransactionInProgress validates sequencing Transaction status
 func (s *sequencer) checkSequencingTransactionInProgress() {
 	if !s.transactionIsInProgress {
@@ -486,23 +509,18 @@ func (s *sequencer) Actualize() {
 	s.checkSequencingTransactionInProgress()
 
 	// Clean s.inproc
-	s.inprocMu.Lock()
-	if len(s.inproc) > 0 {
-		s.inproc = make(map[NumberKey]Number)
-	}
-	s.inprocMu.Unlock()
+	s.inproc = make(map[NumberKey]Number)
 
-	// Cleans s.toBeFlushed
+	// Cleans s.tobeflushed
 	s.toBeFlushedMu.Lock()
-	if len(s.toBeFlushed) > 0 {
-		s.toBeFlushed = make(map[NumberKey]Number)
-	}
-	s.toBeFlushedMu.Unlock()
+	// s.toBeFlushed = make(map[NumberKey]Number)
+	// s.toBeFlushedMu.Unlock()
 
 	// Cleans s.toBeFlushedOffset
-	s.toBeFlushedMu.Lock()
-	s.toBeFlushedOffset = 0
+	// s.toBeFlushedMu.Lock()
+	// s.toBeFlushedOffset = 0
 	s.toBeFlushedMu.Unlock()
+
 	// Cleans s.cache
 	s.cache.Purge()
 

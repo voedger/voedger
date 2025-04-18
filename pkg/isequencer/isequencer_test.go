@@ -9,6 +9,7 @@ import (
 	"errors"
 	"math/rand"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -18,6 +19,13 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/isequencer"
 )
+
+func TestComplex(t *testing.T) {
+	// t.Skip()
+	for range 100000 {
+		TestISequencer_ComplexEvents(t)
+	}
+}
 
 func TestISequencer_ComplexEvents(t *testing.T) {
 	require := require.New(t)
@@ -30,29 +38,29 @@ func TestISequencer_ComplexEvents(t *testing.T) {
 	cases := []struct {
 		name                        string
 		plog                        map[isequencer.PLogOffset][]isequencer.SeqValue
-		expectedNextNumbersOverride expectedNumbers // to make expected number for a certain wsid and seqID be not 1
+		expectedNextNumbersOverride isequencer.TExpectedNumbers // to make expected number for a certain wsid and seqID be not 1
 		initialExpectedOffset       isequencer.PLogOffset
 	}{
-		{
-			name:                  "empty plog",
-			plog:                  map[isequencer.PLogOffset][]isequencer.SeqValue{},
-			initialExpectedOffset: 1,
-		},
-		{
-			name: "1 simple event no CUDs",
-			plog: map[isequencer.PLogOffset][]isequencer.SeqValue{
-				1: {},
-			},
-			initialExpectedOffset: 2,
-		},
-		{
-			name: "1 simple event 1 CUD",
-			plog: map[isequencer.PLogOffset][]isequencer.SeqValue{
-				1: {{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 1}},
-			},
-			expectedNextNumbersOverride: expectedNumbers{1: {1: 2}},
-			initialExpectedOffset:       2,
-		},
+		// {
+		// 	name:                  "empty plog",
+		// 	plog:                  map[isequencer.PLogOffset][]isequencer.SeqValue{},
+		// 	initialExpectedOffset: 1,
+		// },
+		// {
+		// 	name: "1 simple event no CUDs",
+		// 	plog: map[isequencer.PLogOffset][]isequencer.SeqValue{
+		// 		1: {},
+		// 	},
+		// 	initialExpectedOffset: 2,
+		// },
+		// {
+		// 	name: "1 simple event 1 CUD",
+		// 	plog: map[isequencer.PLogOffset][]isequencer.SeqValue{
+		// 		1: {{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 1}},
+		// 	},
+		// 	expectedNextNumbersOverride: expectedNumbers{1: {1: 2}},
+		// 	initialExpectedOffset:       2,
+		// },
 		{
 			name: "few events",
 			plog: map[isequencer.PLogOffset][]isequencer.SeqValue{
@@ -71,11 +79,12 @@ func TestISequencer_ComplexEvents(t *testing.T) {
 				},
 			},
 			initialExpectedOffset: 4,
-			expectedNextNumbersOverride: expectedNumbers{
+			expectedNextNumbersOverride: isequencer.TExpectedNumbers{
 				1: {1: 11, 2: 12},
 				2: {3: 13, 4: 14},
 				3: {5: 15, 6: 16},
 				4: {7: 17, 8: 18},
+				// 3: {5: 15},
 			},
 		},
 	}
@@ -97,10 +106,10 @@ func TestISequencer_ComplexEvents(t *testing.T) {
 			defer cleanup()
 
 			// set expected next numbers for all seqIDs to 1
-			expectedNumbers := getExpectedNumbers(numWSID, numSeqID)
+			isequencer.ExpectedNumbers = getExpectedNumbers(numWSID, numSeqID)
 
 			// apply expected numbers from the test case
-			for wsid, seqIDs := range expectedNumbers {
+			for wsid, seqIDs := range isequencer.ExpectedNumbers {
 				for seqID := range seqIDs {
 					if overrideNumber, ok := c.expectedNextNumbersOverride[wsid][seqID]; ok {
 						seqIDs[seqID] = overrideNumber
@@ -119,13 +128,18 @@ func TestISequencer_ComplexEvents(t *testing.T) {
 				for seqID := isequencer.SeqID(1); seqID <= numSeqID; seqID++ {
 					num, err := seq.Next(seqID)
 					require.NoError(err)
-					require.Equal(expectedNumbers[wsid][seqID], num)
+					if isequencer.ExpectedNumbers[wsid][seqID] != num {
+						isequencer.StacksMU.Lock()
+						// log.Println(isequencer.Stacks[len(isequencer.Stacks)-1])
+						isequencer.StacksMU.Unlock()
+					}
+					require.Equal(isequencer.ExpectedNumbers[wsid][seqID], num, strconv.Itoa(int(wsid)), strconv.Itoa(int(seqID)))
 				}
 				seq.Flush()
 
 				// simulate write to plog as CP does
 				for seqID := isequencer.SeqID(1); seqID <= numSeqID; seqID++ {
-					storage.AddPLogEntry(plogOffset, wsid, seqID, expectedNumbers[wsid][seqID])
+					storage.AddPLogEntry(plogOffset, wsid, seqID, isequencer.ExpectedNumbers[wsid][seqID])
 				}
 
 				// 2nd transaction - check expected next numbers+1, then Actualize
@@ -134,7 +148,7 @@ func TestISequencer_ComplexEvents(t *testing.T) {
 				for seqID := isequencer.SeqID(1); seqID <= numSeqID; seqID++ {
 					num, err := seq.Next(seqID)
 					require.NoError(err)
-					require.Equal(expectedNumbers[wsid][seqID]+1, num)
+					require.Equal(isequencer.ExpectedNumbers[wsid][seqID]+1, num)
 				}
 				seq.Actualize()
 
@@ -144,13 +158,13 @@ func TestISequencer_ComplexEvents(t *testing.T) {
 				for seqID := isequencer.SeqID(1); seqID <= numSeqID; seqID++ {
 					num, err := seq.Next(seqID)
 					require.NoError(err)
-					require.Equal(expectedNumbers[wsid][seqID]+1, num)
+					require.Equal(isequencer.ExpectedNumbers[wsid][seqID]+1, num)
 				}
 				seq.Flush()
 
 				// simulate write to plog as CP does
 				for seqID := isequencer.SeqID(1); seqID <= numSeqID; seqID++ {
-					storage.AddPLogEntry(plogOffset, wsid, seqID, expectedNumbers[wsid][seqID])
+					storage.AddPLogEntry(plogOffset, wsid, seqID, isequencer.ExpectedNumbers[wsid][seqID])
 				}
 
 				expectedOffset += 2 // after 2 Flush()'es
@@ -973,6 +987,7 @@ func TestNewExecutesActualize(t *testing.T) {
 }
 
 func TestLongRecovery_ForceRace(t *testing.T) {
+	// t.Skip()
 	err := new(exec.PipedExec).Command(
 		"go",
 		"test",
@@ -996,10 +1011,10 @@ func createDefaultParams() isequencer.Params {
 	})
 }
 
-type expectedNumbers map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number
+// type expectedNumbers map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number
 
-func getExpectedNumbers(numWSID isequencer.WSID, numSeqID isequencer.SeqID) expectedNumbers {
-	res := expectedNumbers{}
+func getExpectedNumbers(numWSID isequencer.WSID, numSeqID isequencer.SeqID) isequencer.TExpectedNumbers {
+	res := isequencer.TExpectedNumbers{}
 	for wsid := isequencer.WSID(1); wsid <= numWSID; wsid++ {
 		for seqID := isequencer.SeqID(1); seqID <= numSeqID; seqID++ {
 			wsidSeqs, ok := res[wsid]

@@ -96,7 +96,7 @@ type sequencer struct {
 
 	// Written by Next()
 	inproc   map[NumberKey]Number
-	inprocMu sync.RWMutex
+	// inprocMu sync.RWMutex
 
 	iTime coreutils.ITime
 

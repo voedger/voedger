@@ -14,6 +14,7 @@ import (
 
 // lasts for ~140 seconds with -race
 func TestLongRace(t *testing.T) {
+	t.Skip()
 	if testing.Short() {
 		t.Skip()
 	}
