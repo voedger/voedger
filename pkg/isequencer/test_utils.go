@@ -131,7 +131,7 @@ func (m *MockStorage) WriteValuesAndNextPLogOffset(batch []SeqValue, offset PLog
 	m.numbersMu.Lock()
 	defer m.numbersMu.Unlock()
 	if len(batch) == 0 {
-		// panic("")
+		panic("")
 	}
 
 	for _, entry := range batch {
