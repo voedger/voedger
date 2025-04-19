@@ -131,7 +131,11 @@ func (m *MockStorage) WriteValuesAndNextPLogOffset(batch []SeqValue, offset PLog
 	m.numbersMu.Lock()
 	defer m.numbersMu.Unlock()
 	if len(batch) == 0 {
-		panic("")
+		// case: Start Next 1stFlush Start Next 2ndFlush ->
+		// flusher got 1st signal and write merged from both stransactions ->
+		// flusher got 2nd signal and has nothing to write because everything is written already on 1st fire
+		// wrong to skip this case because it is possibe to not to have CUDs in a command
+		// panic("")
 	}
 
 	for _, entry := range batch {

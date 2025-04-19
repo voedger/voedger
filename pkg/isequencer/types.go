@@ -83,11 +83,12 @@ type sequencer struct {
 	flusherWG sync.WaitGroup
 	// Buffered channel [1] to signal flusher to flush
 	// Written (non-blocking) by Flush()
-	flusherSig chan struct{}
+	flusherSig chan string
 	// sync mechanism to prevent multiple flusher goroutines
 	flusherInProgress atomic.Bool
 
 	// To be flushed
+	// cleared by actualizer()
 	toBeFlushed map[NumberKey]Number
 	// Will be 6 if the offset of the last processed event is 4
 	toBeFlushedOffset PLogOffset

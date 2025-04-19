@@ -130,7 +130,7 @@ func TestISequencer_ComplexEvents(t *testing.T) {
 				// 1st transaction - check expected next numbers + flush
 				for seqID := isequencer.SeqID(1); seqID <= numSeqID; seqID++ {
 					num, err := seq.Next(seqID)
-					logger.Info("next")
+					logger.Info("next", num)
 					require.NoError(err)
 					if isequencer.ExpectedNumbers[wsid][seqID] != num {
 						isequencer.StacksMU.Lock()
@@ -147,42 +147,13 @@ func TestISequencer_ComplexEvents(t *testing.T) {
 					storage.AddPLogEntry(plogOffset, wsid, seqID, isequencer.ExpectedNumbers[wsid][seqID])
 				}
 
-				last next cached
-				Flush
-				  fill toBeFushed
-				  clear inproc
-				  signal
-				WaitForStart
-				  toBeFlushed maybe
-				  inproc empty
-				Next
-				  fill inproc
-				actualize
-				  clean toBeFlushed. что если тут tobeflushed еще не успело?
-					не возможно, т.к. actualizer сначала делает stopFlusher, отом очищает toBeFlushed
-					flusher просыпается и пишет пустой батч и NextOffset !=0, т.к. в actualize попали между tobeFlushed = nil и offset = 0
-				waitforstart
-				next
-				flush
-				  write to storage
-				  delete from toBeFLushed
-				addplogentry
-				waitforstart
-				   actualizer is done
-				   no actualization
-				toBeFlushed maybe filled, may be not
-				- wsid 2, seqid 3, nextnumber 1
-				tobeflushed empty
-				storednumbers 0
-
-
 				// 2nd transaction - check expected next numbers+1, then Actualize
 				plogOffset = isequencer.WaitForStart(t, seq, 1, wsid, true)
 				logger.Info("waitforstart")
 				require.Equal(expectedOffset+1, plogOffset, "wsid", wsid)
 				for seqID := isequencer.SeqID(1); seqID <= numSeqID; seqID++ {
 					num, err := seq.Next(seqID)
-					logger.Info("next")
+					logger.Info("next", num)
 					require.NoError(err)
 					require.Equal(isequencer.ExpectedNumbers[wsid][seqID]+1, num)
 				}
@@ -195,7 +166,7 @@ func TestISequencer_ComplexEvents(t *testing.T) {
 				require.Equal(expectedOffset+1, plogOffset)
 				for seqID := isequencer.SeqID(1); seqID <= numSeqID; seqID++ {
 					num, err := seq.Next(seqID)
-					logger.Info("next")
+					logger.Info("next", num)
 					require.NoError(err)
 					require.Equal(isequencer.ExpectedNumbers[wsid][seqID]+1, num)
 				}
