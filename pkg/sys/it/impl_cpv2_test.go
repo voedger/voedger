@@ -50,6 +50,7 @@ func TestBasicUsage_CommandProcessorV2_Insert(t *testing.T) {
 	)
 	resp.Println()
 	newIDsAfterInsert := newIDs(t, resp)
+	require.Equal(t, http.StatusCreated, resp.HTTPResp.StatusCode)
 
 	path := fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Root/%d?include=Nested,Nested.Third`, ws.WSID, newIDsAfterInsert["1"])
 	resp = vit.POST(path, "", coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.WithMethod(http.MethodGet))
@@ -269,6 +270,27 @@ func TestErrorsCPv2(t *testing.T) {
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
 				coreutils.Expect400(fmt.Sprintf("record id %d leads to app1pkg.Root QName whereas app1pkg.category QName is mentioned in the request", newIDs["1"])),
 			).Println()
+		})
+	})
+
+	t.Run("405 method not allowed on ODoc/ORecord in url on insert/update", func(t *testing.T) {
+		t.Run("insert ODoc", func(t *testing.T) {
+			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.odoc1", ws.WSID), "{}",
+				coreutils.WithMethod(http.MethodPost),
+				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				coreutils.Expect405("ODoc\\ORecord could be inserted and in the command arguments only"),
+			).Println()
+		})
+		t.Run("insert ORecord", func(t *testing.T) {
+			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.orecord1", ws.WSID), "{}",
+				coreutils.WithMethod(http.MethodPost),
+				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				coreutils.Expect405("ODoc\\ORecord could be inserted and in the command arguments only"),
+			).Println()
+		})
+		t.Run("update ODoc", func(t *testing.T) {
+
+			
 		})
 	})
 }

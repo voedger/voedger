@@ -89,6 +89,7 @@ type cmdWorkpiece struct {
 	iWorkspace                   appdef.IWorkspace
 	appPartitionRestartScheduled bool
 	cmdQName                     appdef.QName
+	statusCodeOfSuccess          int
 }
 
 type implIDGenerator struct {
