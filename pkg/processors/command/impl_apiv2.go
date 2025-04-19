@@ -126,7 +126,7 @@ func apiv2_denyODocCUD(_ context.Context, work pipeline.IWorkpiece) (err error) 
 	case appdef.TypeKind_null:
 		return fmt.Errorf("table %s not found in workspace %d:%s", cmd.cmdMes.QName(), cmd.eca.WSID, cmd.iWorkspace.Descriptor())
 	case appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
-		return coreutils.NewHTTPErrorf(http.StatusMethodNotAllowed, "ODoc\\ORecord could be inserted and in the command arguments only")
+		return coreutils.NewHTTPErrorf(http.StatusMethodNotAllowed, "cannot to operate on the ODoc\\Record in any way other than through command arguments")
 	}
 	return nil
 }

@@ -95,7 +95,7 @@ func TestFederationFunc(t *testing.T) {
 						Message:    "something gone wrong",
 						Data:       "additional data",
 					},
-					ExpectedHTTPCodes: []int{http.StatusOK},
+					ExpectedHTTPCodes: []int{http.StatusOK, http.StatusCreated},
 				},
 			},
 			{
@@ -111,7 +111,7 @@ func TestFederationFunc(t *testing.T) {
 						Message:    "something gone wrong",
 						Data:       "additional data",
 					},
-					ExpectedHTTPCodes: []int{http.StatusOK},
+					ExpectedHTTPCodes: []int{http.StatusOK, http.StatusCreated},
 				},
 			},
 			{
