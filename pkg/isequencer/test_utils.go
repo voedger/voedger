@@ -132,7 +132,7 @@ func (m *MockStorage) WriteValuesAndNextPLogOffset(batch []SeqValue, offset PLog
 	// Start, Next, 1stFlush, flusher got the signal and gone to sleep before reading toBeFlushed,
 	// Start, Next, 2ndFlush, flusher awake and write merged from both stransactions
 	// on the next iteration flusher got 2nd signal and has nothing to write because everything is written already on 1st fire
-	// wrong to skip this case because it is possibe to not to have CUDs in a command
+	// wrong to skip this case because it is possible to not to have CUDs in a command
 
 	for _, entry := range batch {
 		if _, ok := m.Numbers[entry.Key.WSID]; !ok {
