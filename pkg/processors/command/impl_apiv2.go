@@ -6,6 +6,7 @@
 package commandprocessor
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/pipeline"
 )
 
 func parseCUDs_v2(cmd *cmdWorkpiece) (err error) {
@@ -112,4 +114,19 @@ func apiV2InsertToCUDs(requestData coreutils.MapObject, parentSysID int64, nextR
 	res[rootCUDIdx] = parsedCUD
 	*cudNumber++
 	return res, nil
+}
+
+func apiv2_denyODocCUD(_ context.Context, work pipeline.IWorkpiece) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	if cmd.iWorkspace == nil {
+		return nil
+	}
+	tableType := cmd.iWorkspace.Type(cmd.cmdMes.QName())
+	switch tableType.Kind() {
+	case appdef.TypeKind_null:
+		return fmt.Errorf("table %s not found in workspace %d:%s", cmd.cmdMes.QName(), cmd.eca.WSID, cmd.iWorkspace.Descriptor())
+	case appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
+		return coreutils.NewHTTPErrorf(http.StatusMethodNotAllowed, "cannot operate on the ODoc\\Record in any way other than through command arguments")
+	}
+	return nil
 }

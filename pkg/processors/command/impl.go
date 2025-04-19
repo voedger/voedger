@@ -704,6 +704,18 @@ func checkArgsRefIntegrity(_ context.Context, work pipeline.IWorkpiece) (err err
 	return nil
 }
 
+func getStatusCodeOfSuccess(_ context.Context, work pipeline.IWorkpiece) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	cmd.statusCodeOfSuccess = http.StatusOK
+	if cmd.cmdMes.APIPath() == processors.APIPath_Docs {
+		switch cmd.cmdMes.Method() {
+		case http.MethodPost:
+			cmd.statusCodeOfSuccess = http.StatusCreated
+		}
+	}
+	return nil
+}
+
 // not a validator due of https://github.com/voedger/voedger/issues/1125
 func checkIsActiveInCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
@@ -823,7 +835,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		body.Write(cmdResultBytes)
 	}
 	body.WriteString("}")
-	bus.ReplyJSON(cmd.cmdMes.Responder(), http.StatusOK, body.String())
+	bus.ReplyJSON(cmd.cmdMes.Responder(), cmd.statusCodeOfSuccess, body.String())
 }
 
 func (idGen *implIDGenerator) NextID(rawID istructs.RecordID, t appdef.IType) (storageID istructs.RecordID, err error) {

@@ -79,7 +79,7 @@ func provideCmdDeployApp(asp istructs.IAppStructsProvider, time coreutils.ITime,
 					appQName, numAppPartitionsToDeploy, numPartitionsDeployed))
 			}
 			if numAppWorkspacesDeployed != numAppWorkspacesToDeploy {
-				return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("%s: app %s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorksaces=%d", ErrNumAppWorkspacesChanged.Error(),
+				return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("%s: app %s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorkspaces=%d", ErrNumAppWorkspacesChanged.Error(),
 					appQName, numAppWorkspacesToDeploy, numAppWorkspacesDeployed))
 			}
 

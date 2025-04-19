@@ -50,6 +50,7 @@ func TestBasicUsage_CommandProcessorV2_Insert(t *testing.T) {
 	)
 	resp.Println()
 	newIDsAfterInsert := newIDs(t, resp)
+	require.Equal(t, http.StatusCreated, resp.HTTPResp.StatusCode)
 
 	path := fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Root/%d?include=Nested,Nested.Third`, ws.WSID, newIDsAfterInsert["1"])
 	resp = vit.POST(path, "", coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.WithMethod(http.MethodGet))
@@ -58,10 +59,11 @@ func TestBasicUsage_CommandProcessorV2_Insert(t *testing.T) {
 
 	// update
 	body = `{"Fld1": 100}`
-	vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Third/%d", ws.WSID, newIDsAfterInsert["7"]), body,
+	resp = vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Third/%d", ws.WSID, newIDsAfterInsert["7"]), body,
 		coreutils.WithMethod(http.MethodPatch),
 		coreutils.WithAuthorizeBy(ws.Owner.Token),
 	)
+	require.Equal(t, http.StatusOK, resp.HTTPResp.StatusCode)
 
 	path = fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Root/%d?include=Nested,Nested.Third`, ws.WSID, newIDsAfterInsert["1"])
 	resp = vit.POST(path, "", coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.WithMethod(http.MethodGet))
@@ -269,6 +271,63 @@ func TestErrorsCPv2(t *testing.T) {
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
 				coreutils.Expect400(fmt.Sprintf("record id %d leads to app1pkg.Root QName whereas app1pkg.category QName is mentioned in the request", newIDs["1"])),
 			).Println()
+		})
+	})
+
+	t.Run("405 method not allowed on ODoc/ORecord in url on insert/update", func(t *testing.T) {
+		t.Run("insert ODoc", func(t *testing.T) {
+			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.odoc1", ws.WSID), "{}",
+				coreutils.WithMethod(http.MethodPost),
+				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				coreutils.Expect405("cannot operate on the ODoc\\Record in any way other than through command arguments"),
+			).Println()
+		})
+		t.Run("insert ORecord", func(t *testing.T) {
+			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.orecord1", ws.WSID), "{}",
+				coreutils.WithMethod(http.MethodPost),
+				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				coreutils.Expect405("cannot operate on the ODoc\\Record in any way other than through command arguments"),
+			).Println()
+		})
+
+		t.Run("ODoc", func(t *testing.T) {
+			body := `{"args":{"sys.ID": 1}}`
+			resp := vit.PostWS(ws, "c.app1pkg.CmdODocOne", body)
+			odocID := resp.NewID()
+			t.Run("update", func(t *testing.T) {
+				vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.odoc1/%d", ws.WSID, odocID), "{}",
+					coreutils.WithMethod(http.MethodPatch),
+					coreutils.WithAuthorizeBy(ws.Owner.Token),
+					coreutils.Expect405("cannot operate on the ODoc\\Record in any way other than through command arguments"),
+				).Println()
+			})
+			t.Run("delete", func(t *testing.T) {
+				vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.odoc1/%d", ws.WSID, odocID), "{}",
+					coreutils.WithMethod(http.MethodDelete),
+					coreutils.WithAuthorizeBy(ws.Owner.Token),
+					coreutils.Expect405("cannot operate on the ODoc\\Record in any way other than through command arguments"),
+				).Println()
+			})
+		})
+
+		t.Run("ORecord", func(t *testing.T) {
+			body := `{"args":{"sys.ID": 1,"orecord1":[{"sys.ID":2,"sys.ParentID":1}]}}`
+			resp := vit.PostWS(ws, "c.app1pkg.CmdODocOne", body)
+			orecordID := resp.NewIDs["2"]
+			t.Run("update", func(t *testing.T) {
+				vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.orecord1/%d", ws.WSID, orecordID), "{}",
+					coreutils.WithMethod(http.MethodPatch),
+					coreutils.WithAuthorizeBy(ws.Owner.Token),
+					coreutils.Expect405("cannot operate on the ODoc\\Record in any way other than through command arguments"),
+				).Println()
+			})
+			t.Run("delete", func(t *testing.T) {
+				vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.orecord1/%d", ws.WSID, orecordID), "{}",
+					coreutils.WithMethod(http.MethodDelete),
+					coreutils.WithAuthorizeBy(ws.Owner.Token),
+					coreutils.Expect405("cannot operate on the ODoc\\Record in any way other than through command arguments"),
+				).Println()
+			})
 		})
 	})
 }

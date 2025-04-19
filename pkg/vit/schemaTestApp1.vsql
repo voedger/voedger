@@ -586,7 +586,6 @@ ALTERABLE WORKSPACE test_wsWS (
 	TABLE DocActivateDenied INHERITS sys.CDoc (
 		Fld1 int32
 	);
-
 	TABLE DocDeactivateDenied INHERITS sys.CDoc (
 		Fld1 int32
 	);

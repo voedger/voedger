@@ -170,6 +170,10 @@ func Expect400(expectErrorContains ...string) ReqOptFunc {
 	return WithExpectedCode(http.StatusBadRequest, expectErrorContains...)
 }
 
+func Expect405(expectErrorContains ...string) ReqOptFunc {
+	return WithExpectedCode(http.StatusMethodNotAllowed, expectErrorContains...)
+}
+
 func Expect423(expectErrorContains ...string) ReqOptFunc {
 	return WithExpectedCode(http.StatusLocked, expectErrorContains...)
 }
@@ -284,7 +288,7 @@ func (c *implIHTTPClient) req(urlStr string, body string, optFuncs ...ReqOptFunc
 	}
 
 	if len(opts.expectedHTTPCodes) == 0 {
-		opts.expectedHTTPCodes = append(opts.expectedHTTPCodes, http.StatusOK)
+		opts.expectedHTTPCodes = append(opts.expectedHTTPCodes, http.StatusOK, http.StatusCreated)
 	}
 	if len(opts.relativeURL) > 0 {
 		netURL, err := url.Parse(urlStr)
