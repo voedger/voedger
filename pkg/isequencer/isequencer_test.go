@@ -9,6 +9,7 @@ import (
 	"errors"
 	"math/rand"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -119,7 +120,7 @@ func TestISequencer_ComplexEvents(t *testing.T) {
 				for seqID := isequencer.SeqID(1); seqID <= numSeqID; seqID++ {
 					num, err := seq.Next(seqID)
 					require.NoError(err)
-					require.Equal(expectedNumbers[wsid][seqID], num)
+					require.Equal(expectedNumbers[wsid][seqID], num, strconv.Itoa(int(wsid)), strconv.Itoa(int(seqID)))
 				}
 				seq.Flush()
 

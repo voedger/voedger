@@ -88,6 +88,7 @@ type sequencer struct {
 	flusherInProgress atomic.Bool
 
 	// To be flushed
+	// cleared by actualizer()
 	toBeFlushed map[NumberKey]Number
 	// Will be 6 if the offset of the last processed event is 4
 	toBeFlushedOffset PLogOffset
@@ -96,7 +97,6 @@ type sequencer struct {
 
 	// Written by Next()
 	inproc   map[NumberKey]Number
-	inprocMu sync.RWMutex
 
 	iTime coreutils.ITime
 
