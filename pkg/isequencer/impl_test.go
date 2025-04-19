@@ -171,6 +171,7 @@ func TestBatcher(t *testing.T) {
 		seq, cleanup := New(params, storage, coreutils.MockTime)
 		defer cleanup()
 		s := seq.(*sequencer)
+		s.actualizerWG.Wait()
 
 		// Set up the batch to be processed
 		batch := []SeqValue{{Key: NumberKey{WSID: 1, SeqID: 1}, Value: 102}}

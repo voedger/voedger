@@ -10,12 +10,10 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"log"
 	"maps"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 type TExpectedNumbers map[WSID]map[SeqID]Number
@@ -59,7 +57,6 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 	// The number of unflushed values exceeds the maximum threshold
 	if len(s.toBeFlushed) > s.params.MaxNumUnflushedValues {
 		s.toBeFlushedMu.RUnlock()
-		logger.Info("Start: too many toBeFlushed, sending signal")
 		s.signalToFlushing()
 
 		return 0, false
@@ -116,7 +113,6 @@ func (s *sequencer) signalToFlushing() {
 	str := rand.Text()
 	select {
 	case s.flusherSig <- str:
-		logger.Info("sent", str)
 		// notest
 	default:
 		// notest
@@ -156,13 +152,12 @@ func (s *sequencer) flusher(flusherCtx context.Context) {
 		case <-flusherCtx.Done():
 			return
 		// Wait for s.flusherSig
-		case str := <-s.flusherSig:
-			logger.Info("flusher: signal ", str)
+		case <-s.flusherSig:
 		}
 
 		var flushOffset PLogOffset
-		flushValues := make([]SeqValue, 0, len(s.toBeFlushed))
 		s.toBeFlushedMu.RLock()
+		flushValues := make([]SeqValue, 0, len(s.toBeFlushed))
 		{
 			flushOffset = s.toBeFlushedOffset
 			if flushOffset == 0 {
@@ -182,7 +177,6 @@ func (s *sequencer) flusher(flusherCtx context.Context) {
 			}
 		}
 		s.toBeFlushedMu.RUnlock()
-		logger.Info(fmt.Sprintf("flusher: going to write %v, offset %d", flushValues, flushOffset))
 
 		// Error handling: Handle errors with retry mechanism (500ms wait)
 		err := coreutils.Retry(s.cleanupCtx, s.iTime, func() error {
@@ -196,7 +190,6 @@ func (s *sequencer) flusher(flusherCtx context.Context) {
 			// notest
 			panic("failed to flush values: " + err.Error())
 		}
-		logger.Info(fmt.Sprintf("flusher: written %v, offset %d", flushValues, flushOffset))
 
 		// for each key in flushValues remove key from s.toBeFlushed if values are the same
 		s.toBeFlushedMu.Lock()
@@ -335,9 +328,6 @@ func (s *sequencer) incrementNumber(key NumberKey, number Number) Number {
 	// Write value+1 to s.inproc
 	s.inproc[key] = nextNumber
 	// Return value
-	if ExpectedNumbers[key.WSID][key.SeqID] != nextNumber && ExpectedNumbers[key.WSID][key.SeqID]+1 != nextNumber {
-		log.Println()
-	}
 	return nextNumber
 }
 
@@ -373,7 +363,6 @@ func (s *sequencer) Flush() {
 	// Increase s.nextOffset
 	s.nextOffset++
 	//  Non-blocking write to s.flusherSig
-	logger.Info("Flush: sending signal")
 	s.signalToFlushing()
 
 	// Finish Sequencing Transaction
@@ -399,7 +388,6 @@ func (s *sequencer) finishSequencingTransaction() {
 func (s *sequencer) batcher(ctx context.Context, values []SeqValue, offset PLogOffset) error {
 	// Wait until len(s.toBeFlushed) < s.params.MaxNumUnflushedValues
 	for s.safeReadNumToBeFlushed() >= s.params.MaxNumUnflushedValues {
-		logger.Info("batcher: too many toBeFlushed, signal")
 		s.signalToFlushing()
 		delayCh := s.iTime.NewTimerChan(s.params.BatcherDelay)
 		select {
@@ -466,7 +454,6 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	// not need to lock because neither Start nor flusher does not work?
 	s.toBeFlushed = make(map[NumberKey]Number)
 	s.toBeFlushedOffset = 0
-	logger.Info("toBeFlushed cleared")
 	// s.toBeFlushedMu.Unlock()
 
 	// select {
@@ -530,7 +517,6 @@ func (s *sequencer) Actualize() {
 	s.checkSequencingTransactionInProgress()
 	// Clean s.inproc
 	s.inproc = make(map[NumberKey]Number)
-	logger.Info("inproc cleared")
 
 	// Cleans s.tobeflushed
 	// s.toBeFlushedMu.Lock()
