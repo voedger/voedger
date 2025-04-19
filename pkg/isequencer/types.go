@@ -83,7 +83,7 @@ type sequencer struct {
 	flusherWG sync.WaitGroup
 	// Buffered channel [1] to signal flusher to flush
 	// Written (non-blocking) by Flush()
-	flusherSig chan string
+	flusherSig chan struct{}
 	// sync mechanism to prevent multiple flusher goroutines
 	flusherInProgress atomic.Bool
 

@@ -7,21 +7,12 @@ package isequencer
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"maps"
-	"sync"
 
 	"github.com/voedger/voedger/pkg/coreutils"
 )
-
-type TExpectedNumbers map[WSID]map[SeqID]Number
-
-var ExpectedNumbers TExpectedNumbers
-
-var StacksMU sync.Mutex
-var Stacks []string
 
 // Start starts Sequencing Transaction for the given WSID.
 // Marks Sequencing Transaction as in progress.
@@ -67,10 +58,6 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 	s.currentWSKind = wsKind
 	s.transactionIsInProgress = true
 
-	// if s.nextOffset <= 0 {
-	// 	// happens when context is closed during storage error
-	// 	return 0, false
-	// }
 	return s.nextOffset, true
 }
 
@@ -79,14 +66,6 @@ func (s *sequencer) startFlusher() {
 		// notest
 		panic("flusher already started")
 	}
-
-	// purge the signal chan otherview it is possible
-	// case: actuaize -> clear inproc -> strat flusher -> fire -> write
-	// empty batch + non-zero offset (that was already written on previous flusher fire)
-	// select {
-	// case <-s.flusherSig:
-	// default:
-	// }
 
 	flusherCtx, flusherCtxCancel := context.WithCancel(context.Background())
 	s.flusherCtxCancel = flusherCtxCancel
@@ -110,9 +89,8 @@ func (s *sequencer) stopFlusher() {
 // signalToFlushing is used to signal the flusher to start flushing.
 func (s *sequencer) signalToFlushing() {
 	//  Non-blocking write to s.flusherSig
-	str := rand.Text()
 	select {
-	case s.flusherSig <- str:
+	case s.flusherSig <- struct{}{}:
 		// notest
 	default:
 		// notest
@@ -199,15 +177,6 @@ func (s *sequencer) flusher(flusherCtx context.Context) {
 			}
 		}
 		s.toBeFlushedMu.Unlock()
-
-		// if err := s.flushValues(flushOffset); err != nil {
-		// 	if errors.Is(err, context.Canceled) {
-		// 		// happens when ctx is closed during storage error
-		// 		return
-		// 	}
-		// 	// notest
-		// 	panic("failed to flush values: " + err.Error())
-		// }
 	}
 }
 
@@ -231,14 +200,6 @@ func (s *sequencer) flusher(flusherCtx context.Context) {
 // - Return value
 // [~server.design.sequences/cmp.sequencer.Next~impl]
 func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
-	// StacksMU.Lock()
-	// Stacks = []string{}
-	// StacksMU.Unlock()
-	// defer func() {
-	// 	StacksMU.Lock()
-	// 	Stacks = append(Stacks, string(debug.Stack()))
-	// 	StacksMU.Unlock()
-	// }()
 	// Validate sequencing Transaction status
 	s.checkSequencingTransactionInProgress()
 
@@ -259,18 +220,12 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	// Try to obtain the next value using:
 	// Try s.cache (can be evicted)
 	if nextNumber, ok := s.cache.Get(key); ok {
-		if nextNumber == 0 {
-			// logger.Info("cache", nextNumber)
-		}
 		return s.incrementNumber(key, nextNumber), nil
 	}
 
 	// Try s.inproc
 	lastNumber, ok := s.inproc[key]
 	if ok {
-		if lastNumber == 0 {
-			// logger.Info("inproc", lastNumber)
-		}
 		return s.incrementNumber(key, lastNumber), nil
 	}
 
@@ -279,9 +234,6 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	nextNumber, ok := s.toBeFlushed[key]
 	s.toBeFlushedMu.RUnlock()
 	if ok {
-		if nextNumber == 0 {
-			// logger.Info("toBeFlushed", nextNumber)
-		}
 		return s.incrementNumber(key, nextNumber), nil
 	}
 
@@ -308,10 +260,6 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	// If number is 0 then initial value is used
 	nextNumber = storedNumbers[0]
 	if nextNumber == 0 {
-		// logger.Info("storedNumber", nextNumber)
-		s.toBeFlushedMu.RLock()
-		// logger.Info(s.toBeFlushed)
-		s.toBeFlushedMu.RUnlock()
 		nextNumber = initialValue - 1 // initial value 1 and there are no such records in plog at all -> should issue 1, not 2
 	}
 
@@ -449,17 +397,9 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	s.stopFlusher()
 
 	// Clean s.toBeFlushed, toBeFlushedOffset
-	// s.toBeFlushedMu.Lock()
-
-	// not need to lock because neither Start nor flusher does not work?
+	// not need to lock because neither Start nor flusher does not work
 	s.toBeFlushed = make(map[NumberKey]Number)
 	s.toBeFlushedOffset = 0
-	// s.toBeFlushedMu.Unlock()
-
-	// select {
-	// case <-s.flusherSig:
-	// default:
-	// }
 
 	// s.flusherWG, s.flusherCtxCancel + start flusher() goroutine
 	s.startFlusher()
@@ -518,20 +458,10 @@ func (s *sequencer) Actualize() {
 	// Clean s.inproc
 	s.inproc = make(map[NumberKey]Number)
 
-	// Cleans s.tobeflushed
-	// s.toBeFlushedMu.Lock()
 	// do not clean toBeFlushed to avoid case:
 	// Start Next Flush Start Next Actualize
 	// Actualize() cleared toBeFlushed when previous flusher did not write it to storage yet
 	// possible case in flusher: toBeFlushed is empty but plogoffset is not 0 -> Number does not match the PLogOffset
-
-	// s.toBeFlushed = make(map[NumberKey]Number)
-	// s.toBeFlushedMu.Unlock()
-
-	// Cleans s.toBeFlushedOffset
-	// s.toBeFlushedMu.Lock()
-	// s.toBeFlushedOffset = 0
-	// s.toBeFlushedMu.Unlock()
 
 	// Cleans s.cache
 	s.cache.Purge()
@@ -550,9 +480,7 @@ func (s *sequencer) cleanup() {
 		s.actualizerWG.Wait()
 		s.actualizerInProgress.Store(false)
 	}
-
 	s.stopFlusher()
-
 	s.cleanupCtxCancel()
 }
 

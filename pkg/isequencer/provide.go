@@ -48,7 +48,7 @@ func New(params Params, seqStorage ISeqStorage, iTime coreutils.ITime) (ISequenc
 		cleanupCtxCancel:        cleanupCtxCancel,
 		iTime:                   iTime,
 		flusherCtxCancel:        func() {}, // flusher is not started -> prevent nil
-		flusherSig:              make(chan string, 1),
+		flusherSig:              make(chan struct{}, 1),
 		actualizerWG:            &sync.WaitGroup{},
 		seqStorage:              seqStorage,
 		transactionIsInProgress: true, // to allow Actualize() to exec right below

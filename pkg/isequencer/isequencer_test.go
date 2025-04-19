@@ -31,7 +31,7 @@ func TestISequencer_ComplexEvents(t *testing.T) {
 	cases := []struct {
 		name                        string
 		plog                        map[isequencer.PLogOffset][]isequencer.SeqValue
-		expectedNextNumbersOverride isequencer.TExpectedNumbers // to make expected number for a certain wsid and seqID be not 1
+		expectedNextNumbersOverride expectedNumbers // to make expected number for a certain wsid and seqID be not 1
 		initialExpectedOffset       isequencer.PLogOffset
 	}{
 		{
@@ -51,7 +51,7 @@ func TestISequencer_ComplexEvents(t *testing.T) {
 			plog: map[isequencer.PLogOffset][]isequencer.SeqValue{
 				1: {{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 1}},
 			},
-			expectedNextNumbersOverride: isequencer.TExpectedNumbers{1: {1: 2}},
+			expectedNextNumbersOverride: expectedNumbers{1: {1: 2}},
 			initialExpectedOffset:       2,
 		},
 		{
@@ -72,7 +72,7 @@ func TestISequencer_ComplexEvents(t *testing.T) {
 				},
 			},
 			initialExpectedOffset: 4,
-			expectedNextNumbersOverride: isequencer.TExpectedNumbers{
+			expectedNextNumbersOverride: expectedNumbers{
 				1: {1: 11, 2: 12},
 				2: {3: 13, 4: 14},
 				3: {5: 15, 6: 16},
@@ -98,10 +98,10 @@ func TestISequencer_ComplexEvents(t *testing.T) {
 			defer cleanup()
 
 			// set expected next numbers for all seqIDs to 1
-			isequencer.ExpectedNumbers = getExpectedNumbers(numWSID, numSeqID)
+			expectedNumbers := getExpectedNumbers(numWSID, numSeqID)
 
 			// apply expected numbers from the test case
-			for wsid, seqIDs := range isequencer.ExpectedNumbers {
+			for wsid, seqIDs := range expectedNumbers {
 				for seqID := range seqIDs {
 					if overrideNumber, ok := c.expectedNextNumbersOverride[wsid][seqID]; ok {
 						seqIDs[seqID] = overrideNumber
@@ -120,13 +120,13 @@ func TestISequencer_ComplexEvents(t *testing.T) {
 				for seqID := isequencer.SeqID(1); seqID <= numSeqID; seqID++ {
 					num, err := seq.Next(seqID)
 					require.NoError(err)
-					require.Equal(isequencer.ExpectedNumbers[wsid][seqID], num, strconv.Itoa(int(wsid)), strconv.Itoa(int(seqID)))
+					require.Equal(expectedNumbers[wsid][seqID], num, strconv.Itoa(int(wsid)), strconv.Itoa(int(seqID)))
 				}
 				seq.Flush()
 
 				// simulate write to plog as CP does
 				for seqID := isequencer.SeqID(1); seqID <= numSeqID; seqID++ {
-					storage.AddPLogEntry(plogOffset, wsid, seqID, isequencer.ExpectedNumbers[wsid][seqID])
+					storage.AddPLogEntry(plogOffset, wsid, seqID, expectedNumbers[wsid][seqID])
 				}
 
 				// 2nd transaction - check expected next numbers+1, then Actualize
@@ -135,7 +135,7 @@ func TestISequencer_ComplexEvents(t *testing.T) {
 				for seqID := isequencer.SeqID(1); seqID <= numSeqID; seqID++ {
 					num, err := seq.Next(seqID)
 					require.NoError(err)
-					require.Equal(isequencer.ExpectedNumbers[wsid][seqID]+1, num)
+					require.Equal(expectedNumbers[wsid][seqID]+1, num)
 				}
 				seq.Actualize()
 
@@ -145,13 +145,13 @@ func TestISequencer_ComplexEvents(t *testing.T) {
 				for seqID := isequencer.SeqID(1); seqID <= numSeqID; seqID++ {
 					num, err := seq.Next(seqID)
 					require.NoError(err)
-					require.Equal(isequencer.ExpectedNumbers[wsid][seqID]+1, num)
+					require.Equal(expectedNumbers[wsid][seqID]+1, num)
 				}
 				seq.Flush()
 
 				// simulate write to plog as CP does
 				for seqID := isequencer.SeqID(1); seqID <= numSeqID; seqID++ {
-					storage.AddPLogEntry(plogOffset, wsid, seqID, isequencer.ExpectedNumbers[wsid][seqID])
+					storage.AddPLogEntry(plogOffset, wsid, seqID, expectedNumbers[wsid][seqID])
 				}
 
 				expectedOffset += 2 // after 2 Flush()'es
@@ -997,10 +997,10 @@ func createDefaultParams() isequencer.Params {
 	})
 }
 
-// type expectedNumbers map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number
+type expectedNumbers map[isequencer.WSID]map[isequencer.SeqID]isequencer.Number
 
-func getExpectedNumbers(numWSID isequencer.WSID, numSeqID isequencer.SeqID) isequencer.TExpectedNumbers {
-	res := isequencer.TExpectedNumbers{}
+func getExpectedNumbers(numWSID isequencer.WSID, numSeqID isequencer.SeqID) expectedNumbers {
+	res := expectedNumbers{}
 	for wsid := isequencer.WSID(1); wsid <= numWSID; wsid++ {
 		for seqID := isequencer.SeqID(1); seqID <= numSeqID; seqID++ {
 			wsidSeqs, ok := res[wsid]

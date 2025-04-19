@@ -7,7 +7,6 @@ package isequencer
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"testing"
 	"time"
@@ -103,9 +102,6 @@ func (m *MockStorage) ReadNumbers(wsid WSID, seqIDs []SeqID) ([]Number, error) {
 
 	for i, seqID := range seqIDs {
 		if num, ok := wsNumbers[seqID]; ok {
-			if num == 0 {
-				panic("")
-			}
 			result[i] = num
 		}
 	}
@@ -139,9 +135,6 @@ func (m *MockStorage) WriteValuesAndNextPLogOffset(batch []SeqValue, offset PLog
 	}
 
 	for _, entry := range batch {
-		if entry.Value == 0 {
-			panic(fmt.Sprintf("%v", entry))
-		}
 		if _, ok := m.Numbers[entry.Key.WSID]; !ok {
 			m.Numbers[entry.Key.WSID] = make(map[SeqID]Number)
 		}

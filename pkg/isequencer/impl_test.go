@@ -255,24 +255,6 @@ func TestContextCloseDuringStorageErrors(t *testing.T) {
 
 	})
 
-	// t.Run("flushValues()", func(t *testing.T) {
-	// 	storage := NewMockStorage()
-	// 	seq, cleanup := New(params, storage, mockTime)
-	// 	s := seq.(*sequencer)
-	// 	storage.SetWriteValuesAndOffset(storageErr)
-	// 	defer func() { storage.SetReadNextPLogOffsetError(nil) }()
-	// 	storage.onWriteValuesAndOffset = func() {
-	// 		cleanup() // ctx is closed here
-	// 	}
-
-	// 	// Test with empty values
-	// 	s.toBeFlushed[NumberKey{WSID: 1, SeqID: 1}] = 1
-	// 	err := s.flushValues(PLogOffset(1))
-	// 	// closed ctx causes Retry() returned immediately after storage error
-
-	// 	require.ErrorIs(err, context.Canceled)
-	// })
-
 	t.Run("actualizer()", func(t *testing.T) {
 		t.Run("on ReadNextPLogOffset", func(t *testing.T) {
 			storage := NewMockStorage()
