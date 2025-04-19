@@ -134,12 +134,24 @@ func TestBasicUsage_CommandProcessorV2_ExecCmd(t *testing.T) {
 	defer vit.TearDown()
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
-	body := `{"args":{"Arg1": 1}}`
-	resp := vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/commands/app1pkg.TestCmd", ws.WSID), body,
-		coreutils.WithMethod(http.MethodPost),
-		coreutils.WithAuthorizeBy(ws.Owner.Token),
-	)
-	resp.Println()
+	t.Run("basic usage", func(t *testing.T) {
+		body := `{"args":{"Arg1": 1}}`
+		resp := vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/commands/app1pkg.TestCmd", ws.WSID), body,
+			coreutils.WithMethod(http.MethodPost),
+			coreutils.WithAuthorizeBy(ws.Owner.Token),
+		)
+		resp.Println()
+		require.JSONEq(t, `{"CurrentWLogOffset":15,"Result":{"Int":42,"Str":"Str","sys.QName":"app1pkg.TestCmdResult"}}`, resp.Body)
+	})
+
+	t.Run("404 not found on an unknown cmd", func(t *testing.T) {
+		body := `{"args":{"Arg1": 1}}`
+		vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/commands/app1pkg.Unknown", ws.WSID), body,
+			coreutils.WithMethod(http.MethodPost),
+			coreutils.WithAuthorizeBy(ws.Owner.Token),
+			coreutils.Expect404(),
+		).Println()
+	})
 }
 
 func TestAuth(t *testing.T) {

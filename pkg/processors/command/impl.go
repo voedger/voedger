@@ -198,7 +198,7 @@ func getICommand(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		cmdType = cmd.appStructs.AppDef().Type(cmd.cmdQName)
 	} else {
 		if cmdType = cmd.iWorkspace.Type(cmd.cmdQName); cmdType.Kind() == appdef.TypeKind_null {
-			return fmt.Errorf("command %s does not exist in workspace %s", cmd.cmdQName, cmd.iWorkspace.QName())
+			return coreutils.NewHTTPErrorf(http.StatusNotFound, fmt.Errorf("command %s does not exist in workspace %s", cmd.cmdQName, cmd.iWorkspace.QName()))
 		}
 	}
 	ok := false
