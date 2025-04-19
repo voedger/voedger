@@ -435,3 +435,23 @@ func TestPanicOnWrongInitialNumber(t *testing.T) {
 		New(Params{LRUCacheSize: DefaultLRUCacheSize, SeqTypes: map[WSKind]map[SeqID]Number{1: {1: 0}}}, nil, nil)
 	})
 }
+
+func TestActualize(t *testing.T) {
+	require := require.New(t)
+	storage := NewMockStorage()
+	mockTime := coreutils.MockTime
+	params := NewDefaultParams(map[WSKind]map[SeqID]Number{1: {1: 1}})
+	seq, cleanup := New(params, storage, mockTime)
+	defer cleanup()
+
+	t.Run("toBeFlushed cleared and toBeFlushedOffset zeroed", func(t *testing.T) {
+		offset := WaitForStart(t, seq, 1, 1, true)
+		require.Equal(PLogOffset(1), offset)
+		s := seq.(*sequencer)
+		s.toBeFlushed[NumberKey{WSID: 1, SeqID: 1}] = 42
+		seq.Actualize()
+		s.actualizerWG.Wait()
+		require.Empty(s.toBeFlushed)
+		require.Zero(s.toBeFlushedOffset)
+	})
+}
