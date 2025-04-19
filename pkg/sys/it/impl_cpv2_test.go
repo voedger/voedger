@@ -18,7 +18,7 @@ import (
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
-func TestBasicUsage_CommandProcessorV2_Insert(t *testing.T) {
+func TestBasicUsage_CommandProcessorV2_Doc(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -127,6 +127,19 @@ func newIDs(t *testing.T, resp *coreutils.HTTPResponse) map[string]istructs.Reco
 		res[rawIDStr] = istructs.RecordID(storageIDfloat64.(float64))
 	}
 	return res
+}
+
+func TestBasicUsage_CommandProcessorV2_ExecCmd(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	body := `{"args":{"Arg1": 1}}`
+	resp := vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/commands/app1pkg.TestCmd", ws.WSID), body,
+		coreutils.WithMethod(http.MethodPost),
+		coreutils.WithAuthorizeBy(ws.Owner.Token),
+	)
+	resp.Println()
 }
 
 func TestAuth(t *testing.T) {
