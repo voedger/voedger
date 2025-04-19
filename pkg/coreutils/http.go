@@ -154,8 +154,8 @@ func Expect409(expected ...string) ReqOptFunc {
 	return WithExpectedCode(http.StatusConflict, expected...)
 }
 
-func Expect404() ReqOptFunc {
-	return WithExpectedCode(http.StatusNotFound)
+func Expect404(expected ...string) ReqOptFunc {
+	return WithExpectedCode(http.StatusNotFound, expected...)
 }
 
 func Expect401() ReqOptFunc {

@@ -237,12 +237,12 @@ func TestTakeQNamesFromWorkspace(t *testing.T) {
 			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
 			body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 1)
 			// c.app1pkg.TestCmd is not defined in test_ws_anotherWS workspace -> 400 bad request
-			vit.PostWS(anotherWS, "c.app1pkg.TestCmd", body, coreutils.Expect400("command app1pkg.TestCmd does not exist in workspace app1pkg.test_wsWS_another"))
+			vit.PostWS(anotherWS, "c.app1pkg.TestCmd", body, coreutils.Expect404("command app1pkg.TestCmd does not exist in workspace app1pkg.test_wsWS_another"))
 
 			ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 			body = "{}"
 			// c.app1pkg.testCmd is defined in test_wsWS workspace -> 400 bad request
-			vit.PostWS(ws, "c.app1pkg.testCmd", body, coreutils.Expect400("command app1pkg.testCmd does not exist in workspace app1pkg.test_wsWS"))
+			vit.PostWS(ws, "c.app1pkg.testCmd", body, coreutils.Expect404("command app1pkg.testCmd does not exist in workspace app1pkg.test_wsWS"))
 		})
 
 		t.Run("type", func(t *testing.T) {
