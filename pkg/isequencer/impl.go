@@ -397,8 +397,7 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	s.stopFlusher()
 
 	// Clean s.toBeFlushed, toBeFlushedOffset
-	// not need to lock because neither Start nor flusher does not work
-	s.toBeFlushed = make(map[NumberKey]Number)
+	// Locking is not necessary here as neither Start nor flusher is active
 	s.toBeFlushedOffset = 0
 
 	// s.flusherWG, s.flusherCtxCancel + start flusher() goroutine
