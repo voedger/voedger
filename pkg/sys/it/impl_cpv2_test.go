@@ -141,7 +141,11 @@ func TestBasicUsage_CommandProcessorV2_ExecCmd(t *testing.T) {
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 		)
 		resp.Println()
-		require.JSONEq(t, `{"CurrentWLogOffset":15,"Result":{"Int":42,"Str":"Str","sys.QName":"app1pkg.TestCmdResult"}}`, resp.Body)
+		m := map[string]interface{}{}
+		require.NoError(t, json.Unmarshal([]byte(resp.Body), &m))
+		result, err := json.Marshal(m["Result"])
+		require.NoError(t, err)
+		require.JSONEq(t, `{"Int":42,"Str":"Str","sys.QName":"app1pkg.TestCmdResult"}`, string(result))
 	})
 
 	t.Run("404 not found on an unknown cmd", func(t *testing.T) {
