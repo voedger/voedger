@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/processors"
 )
@@ -110,7 +111,7 @@ func (s *httpService) registerHandlersV2() {
 	// create user /api/v2/apps/{owner}/{app}/users
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/users",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
-		corsHandler(requestHandlerV2_auth_refresh(s.requestSender, s.numsAppsWorkspaces))).
+		corsHandler(requestHandlerV2_create_user(s.numsAppsWorkspaces, s.iTokens, s.federation))).
 		Methods(http.MethodPost).Name("create user")
 }
 
@@ -170,28 +171,53 @@ func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspace
 	}
 }
 
-func requestHandlerV2_create_user(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
-	iTokens istructs.IAppTokens, federation federation.IFederation) http.HandlerFunc {
+func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
+	iTokens itokens.ITokens, federation federation.IFederation) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
 		if !ok {
 			return
 		}
-		verifiedEmailToken, displayName, pwd,, err := parseCreateLoginArgs(busrebusRequest.)
+		verifiedEmailToken, displayName, pwd, err := parseCreateLoginArgs(string(busRequest.Body))
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
 		payload := payloads.VerifiedValuePayload{}
-		gp, err := iTokens.ValidateToken(verifiedEmailToken, &payload)
+		_, err = iTokens.ValidateToken(verifiedEmailToken, &payload)
 		if err != nil {
 			ReplyCommonError(rw, fmt.Sprintf("VerifiedEmailToken validation failed: %s", err.Error()), http.StatusBadRequest)
 			return
 		}
 		email := payload.Value.(string)
 		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, email, istructs.CurrentClusterID())
-		url := fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s:[0-9]+}/commands/registry.CreateLogin",
+		url := fmt.Sprintf("/api/v2/apps/%s/%s/workspaces/%d/commands/registry.CreateLogin",
 			busRequest.AppQName.Owner(), busRequest.AppQName.Name(), pseudoWSID)
 		wsKindInitData := fmt.Sprintf(`{"DisplayName":%q}`, displayName)
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":%q,"ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
-			email, busRequest.AppQName, istructs.SubjectKind_User, wsKindInitData, istructs.CurrentClusterID(), login.Pwd)
-		federation.Func(url)
+			email, busRequest.AppQName, istructs.SubjectKind_User, wsKindInitData, istructs.CurrentClusterID(), pwd)
+		sysToken, err := payloads.GetSystemPrincipalToken(iTokens, busRequest.AppQName)
+		if err != nil {
+			ReplyCommonError(rw, "failed to issue sys token: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		resp, err := federation.Func(url, body,
+			coreutils.WithAuthorizeBy(sysToken),
+			coreutils.WithMethod(http.MethodPost),
+		)
+		rw.Header().Set(coreutils.ContentType, coreutils.ContentType_ApplicationJSON)
+		rw.WriteHeader(resp.HTTPResp.StatusCode)
+		if err != nil {
+			sysError := resp.SysError.ToJSON_APIV2()
+			logger.Error("registry.Createlogin failed:" + sysError)
+			if !writeResponse(rw, sysError) {
+				logger.Error("failed to send registry.CreateLogin error")
+			}
+			return
+		}
+		if !writeResponse(rw, resp.Body) {
+			logger.Error("failed to forward registry.CreateLogin response: " + resp.Body)
+		}
 	}
 }
 

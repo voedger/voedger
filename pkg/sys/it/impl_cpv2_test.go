@@ -10,11 +10,13 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -359,6 +361,27 @@ func TestErrorsCPv2(t *testing.T) {
 			})
 		})
 	})
+}
+
+func TestCreateUser(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	// ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	email := vit.NextName() + "123.com"
+	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, email, istructs.CurrentClusterID())
+	appWSID := coreutils.GetAppWSID(pseudoWSID, istructs.DefaultNumAppWorkspaces)
+	p := payloads.VerifiedValuePayload{
+		VerificationKind: appdef.VerificationKind_EMail,
+		WSID:             appWSID,
+		Field:            "Email", // CreateEmailLoginParams.Email
+		Value:            email,
+	}
+	verifiedEmailToken, err := vit.ITokens.IssueToken(istructs.AppQName_test1_app1, 10*time.Minute, &p)
+	require.NoError(err)
+	body := fmt.Sprintf(`{"VerifiedEmailToken": "%s","Password": "123","DisplayName": "%s"}`, verifiedEmailToken, email)
+	resp := vit.POST("api/v2/apps/test1/app1/users", body)
+	resp.Println()
 }
 
 func rootCDoc(t *testing.T, newIDs map[string]istructs.RecordID) map[string]interface{} {
