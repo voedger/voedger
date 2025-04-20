@@ -42,6 +42,7 @@ var (
 	qNameCmdChangePassword                            = appdef.NewQName(RegistryPackage, "ChangePassword")
 	QNameProjectorLoginIdx                            = appdef.NewQName(RegistryPackage, "ProjectorLoginIdx")
 	QNameCommandCreateLogin                           = appdef.NewQName(RegistryPackage, "CreateLogin")
+	QNameCommandCreateEmailLogin                      = appdef.NewQName(RegistryPackage, "CreateEmailLogin")
 	QNameCommandResetPasswordByEmail                  = appdef.NewQName(RegistryPackage, "ResetPasswordByEmail")
 	QNameCommandResetPasswordByEmailUnloggedParams    = appdef.NewQName(RegistryPackage, "ResetPasswordByEmailUnloggedParams")
 	QNameQueryInitiateResetPasswordByEmail            = appdef.NewQName(RegistryPackage, "InitiateResetPasswordByEmail")

@@ -174,7 +174,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 		// create logins and workspaces
 		for _, login := range app.logins {
 			vit.SignUp(login.Name, login.Pwd, login.AppQName,
-				WithReqOpt(coreutils.WithExpectedCode(http.StatusOK)),
+				WithReqOpt(coreutils.WithExpectedCode(http.StatusCreated)),
 				WithReqOpt(coreutils.WithExpectedCode(http.StatusConflict)),
 			)
 			prn := vit.SignIn(login)

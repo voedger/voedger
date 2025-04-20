@@ -191,12 +191,11 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 		}
 		email := payload.Value.(string)
 		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, email, istructs.CurrentClusterID())
-		url := fmt.Sprintf("/api/v2/apps/%s/%s/workspaces/%d/commands/registry.CreateLogin",
-			busRequest.AppQName.Owner(), busRequest.AppQName.Name(), pseudoWSID)
+		url := fmt.Sprintf("api/v2/apps/sys/registry/workspaces/%d/commands/registry.CreateEmailLogin", pseudoWSID)
 		wsKindInitData := fmt.Sprintf(`{"DisplayName":%q}`, displayName)
-		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":%q,"ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
-			email, busRequest.AppQName, istructs.SubjectKind_User, wsKindInitData, istructs.CurrentClusterID(), pwd)
-		sysToken, err := payloads.GetSystemPrincipalToken(iTokens, busRequest.AppQName)
+		body := fmt.Sprintf(`{"args":{"Email":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":%q,"ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
+			verifiedEmailToken, busRequest.AppQName, istructs.SubjectKind_User, wsKindInitData, istructs.CurrentClusterID(), pwd)
+		sysToken, err := payloads.GetSystemPrincipalToken(iTokens, istructs.AppQName_sys_registry)
 		if err != nil {
 			ReplyCommonError(rw, "failed to issue sys token: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -206,15 +205,17 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 			coreutils.WithMethod(http.MethodPost),
 		)
 		rw.Header().Set(coreutils.ContentType, coreutils.ContentType_ApplicationJSON)
-		rw.WriteHeader(resp.HTTPResp.StatusCode)
 		if err != nil {
-			sysError := resp.SysError.ToJSON_APIV2()
+			funcErr := err.(coreutils.FuncError)
+			rw.WriteHeader(funcErr.HTTPStatus)
+			sysError := funcErr.ToJSON_APIV2()
 			logger.Error("registry.Createlogin failed:" + sysError)
 			if !writeResponse(rw, sysError) {
 				logger.Error("failed to send registry.CreateLogin error")
 			}
 			return
 		}
+		rw.WriteHeader(http.StatusCreated)
 		if !writeResponse(rw, resp.Body) {
 			logger.Error("failed to forward registry.CreateLogin response: " + resp.Body)
 		}

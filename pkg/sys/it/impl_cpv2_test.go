@@ -8,6 +8,7 @@ package sys_it
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"testing"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/registry"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -368,20 +370,24 @@ func TestCreateUser(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	// ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	email := vit.NextName() + "123.com"
-	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, email, istructs.CurrentClusterID())
+	login := vit.NextName() + "@123.com"
+	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
 	appWSID := coreutils.GetAppWSID(pseudoWSID, istructs.DefaultNumAppWorkspaces)
 	p := payloads.VerifiedValuePayload{
 		VerificationKind: appdef.VerificationKind_EMail,
 		WSID:             appWSID,
 		Field:            "Email", // CreateEmailLoginParams.Email
-		Value:            email,
+		Value:            login,
+		Entity:           appdef.NewQName(registry.RegistryPackage, "CreateEmailLoginParams"),
 	}
-	verifiedEmailToken, err := vit.ITokens.IssueToken(istructs.AppQName_test1_app1, 10*time.Minute, &p)
+	verifiedEmailToken, err := vit.ITokens.IssueToken(istructs.AppQName_sys_registry, 10*time.Minute, &p)
 	require.NoError(err)
-	body := fmt.Sprintf(`{"VerifiedEmailToken": "%s","Password": "123","DisplayName": "%s"}`, verifiedEmailToken, email)
-	resp := vit.POST("api/v2/apps/test1/app1/users", body)
-	resp.Println()
+	body := fmt.Sprintf(`{"VerifiedEmailToken": "%s","Password": "123","DisplayName": "%s"}`, verifiedEmailToken, login)
+	vit.POST("api/v2/apps/test1/app1/users", body)
+
+	// try to sign in
+	prn := vit.SignIn(it.Login{Name: login, Pwd: "123", AppQName: istructs.AppQName_test1_app1})
+	log.Println(prn)
 }
 
 func rootCDoc(t *testing.T, newIDs map[string]istructs.RecordID) map[string]interface{} {
