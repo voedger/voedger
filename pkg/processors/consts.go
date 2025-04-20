@@ -19,4 +19,5 @@ const (
 	APIPath_Schemas_WorkspaceRole
 	APIPath_Auth_Login
 	APIPath_Auth_Refresh
+	APIPath_Users
 )

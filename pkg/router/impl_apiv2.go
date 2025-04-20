@@ -7,6 +7,7 @@ package router
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -15,9 +16,12 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/processors"
 )
 
@@ -102,6 +106,12 @@ func (s *httpService) registerHandlersV2() {
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
 		corsHandler(requestHandlerV2_auth_refresh(s.requestSender, s.numsAppsWorkspaces))).
 		Methods(http.MethodPost).Name("auth refresh")
+
+	// create user /api/v2/apps/{owner}/{app}/users
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/users",
+		URLPlaceholder_appOwner, URLPlaceholder_appName),
+		corsHandler(requestHandlerV2_auth_refresh(s.requestSender, s.numsAppsWorkspaces))).
+		Methods(http.MethodPost).Name("create user")
 }
 
 func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
@@ -158,6 +168,61 @@ func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspace
 		busRequest.Query = queryParams
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	}
+}
+
+func requestHandlerV2_create_user(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
+	iTokens istructs.IAppTokens, federation federation.IFederation) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
+		if !ok {
+			return
+		}
+		verifiedEmailToken, displayName, pwd,, err := parseCreateLoginArgs(busrebusRequest.)
+		payload := payloads.VerifiedValuePayload{}
+		gp, err := iTokens.ValidateToken(verifiedEmailToken, &payload)
+		if err != nil {
+			ReplyCommonError(rw, fmt.Sprintf("VerifiedEmailToken validation failed: %s", err.Error()), http.StatusBadRequest)
+			return
+		}
+		email := payload.Value.(string)
+		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, email, istructs.CurrentClusterID())
+		url := fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s:[0-9]+}/commands/registry.CreateLogin",
+			busRequest.AppQName.Owner(), busRequest.AppQName.Name(), pseudoWSID)
+		wsKindInitData := fmt.Sprintf(`{"DisplayName":%q}`, displayName)
+		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":%q,"ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
+			email, busRequest.AppQName, istructs.SubjectKind_User, wsKindInitData, istructs.CurrentClusterID(), login.Pwd)
+		federation.Func(url)
+	}
+}
+
+func parseCreateLoginArgs(body string) (verifiedlEmailToken, displayName, pwd string, err error) {
+	args := coreutils.MapObject{}
+	if err = json.Unmarshal([]byte(body), &args); err != nil {
+		return "", "", "", fmt.Errorf("failed to unmarshal body: %w:\n%s", err, body)
+	}
+	ok := false
+	verifiedlEmailToken, ok, err = args.AsString("VerifiedEmailToken")
+	if err != nil {
+		return "", "", "", err
+	}
+	if !ok {
+		return "", "", "", errors.New("VerifiedEmailToken field missing")
+	}
+	displayName, ok, err = args.AsString("DisplayName")
+	if err != nil {
+		return "", "", "", err
+	}
+	if !ok {
+		return "", "", "", errors.New("DisplayName field missing")
+	}
+	pwd, ok, err = args.AsString("Password")
+	if err != nil {
+		return "", "", "", err
+	}
+	if !ok {
+		return "", "", "", errors.New("Password field missing")
+	}
+	return
 }
 
 func requestHandlerV2_schemas_wsRole(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
