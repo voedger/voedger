@@ -769,13 +769,13 @@ func TestISequencer_MultipleActualizes(t *testing.T) {
 		// Check out offset and number in dependence of Flush or Actualize was called
 		if i == 0 || flushCalled {
 			// If Flush was called, check if offset and number are incremented
-			require.Equal(nextOffset, prevOffset+1, "PLog offset should be incremented by 1 after Flush")
-			require.Equal(nextNumber, prevNumber+1, "Sequence number should be incremented by 1 after Flush")
+			require.Equal(prevOffset+1, nextOffset, "PLog offset should be incremented by 1 after Flush")
+			require.Equal(prevNumber+1, nextNumber, "Sequence number should be incremented by 1 after Flush")
 
 		} else if !flushCalled {
 			// If Actualize was called, check if number and offset remain the same
-			require.Equal(nextOffset, prevOffset, "PLog offset should not be incremented after Actualize")
-			require.Equal(nextNumber, prevNumber, "Sequence number should not be incremented after Actualize")
+			require.Equal(prevOffset, nextOffset, "PLog offset should not be incremented after Actualize")
+			require.Equal(prevNumber, nextNumber, "Sequence number should not be incremented after Actualize")
 		}
 
 		// Finish transaction via Flush or Actualize
