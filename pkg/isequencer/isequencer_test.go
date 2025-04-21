@@ -692,6 +692,41 @@ func TestISequencer_Actualize(t *testing.T) {
 		})
 	})
 
+	t.Run("basic usage", func(t *testing.T) {
+		storage := createDefaultStorage()
+		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{})
+		params := createDefaultParams()
+		seq, cleanup := isequencer.New(params, storage, mockedTime)
+		defer cleanup()
+		initialOffset := isequencer.WaitForStart(t, seq, 1, 1, true)
+
+		num, err := seq.Next(1)
+		require.NoError(err)
+		require.Equal(isequencer.Number(1), num)
+
+		seq.Flush()
+
+		storage.AddPLogEntry(initialOffset, 1, 1, num)
+
+		offset := isequencer.WaitForStart(t, seq, 1, 1, true)
+		require.Equal(isequencer.PLogOffset(2), offset)
+
+		num, err = seq.Next(1)
+		require.NoError(err)
+		require.Equal(isequencer.Number(2), num)
+
+		// Actualize with empty PLog
+		seq.Actualize()
+
+		// Should be able to start a new transaction
+		nextOffset := isequencer.WaitForStart(t, seq, 1, 1, true)
+		require.Equal(initialOffset+1, nextOffset)
+
+		num, err = seq.Next(1)
+		require.NoError(err)
+		require.Equal(isequencer.Number(2), num)
+	})
+
 	t.Run("empty plog", func(t *testing.T) {
 		storage := createDefaultStorage()
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{})
