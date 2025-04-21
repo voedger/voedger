@@ -23,7 +23,6 @@ const (
 
 // Test_Race_SUsignUpIn: sign up,sign in with existing logins & sign in with un-existing logins
 func Test_Race_SUsignUpIn(t *testing.T) {
-	// t.Skip()
 	if testing.Short() {
 		t.Skip()
 	}

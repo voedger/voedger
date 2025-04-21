@@ -54,7 +54,7 @@ func TestBasicUsage_SignUpIn(t *testing.T) {
 	t.Run("check CDoc<sys.UserProfile> at profileWSID at target app at target cluster", func(t *testing.T) {
 		body := `{"args":{"Schema":"sys.UserProfile"},"elements":[{"fields":["sys.ID", "DisplayName"]}]}`
 		resp := vit.PostProfile(prn1, "q.sys.Collection", body)
-		require.Equal("User Name", resp.SectionRow()[1])
+		require.Equal(login1.Name, resp.SectionRow()[1])
 		idOfCDocUserProfile = int64(resp.SectionRow()[0].(float64))
 	})
 

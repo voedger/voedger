@@ -47,16 +47,9 @@ func (vit *VIT) GetBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID ist
 func (vit *VIT) signUp(login Login, opts ...coreutils.ReqOptFunc) {
 	vit.T.Helper()
 	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login.Name, istructs.CurrentClusterID())
-	numAppWorkspaces := istructs.NumAppWorkspaces(0)
-	for _, appPkg := range vit.BuiltInAppsPackages { тут нет для sidecar
-		if appPkg.Name != login.AppQName {
-			continue
-		}
-		numAppWorkspaces = appPkg.AppDeploymentDescriptor.NumAppWorkspaces
-		break
-	}
-	require.NotZero(vit.T, numAppWorkspaces)
-	appWSID := coreutils.GetAppWSID(pseudoWSID, numAppWorkspaces)
+	as, err := vit.IAppStructsProvider.BuiltIn(login.AppQName)
+	require.NoError(vit.T, err)
+	appWSID := coreutils.GetAppWSID(pseudoWSID, as.NumAppWorkspaces())
 	p := payloads.VerifiedValuePayload{
 		VerificationKind: appdef.VerificationKind_EMail,
 		WSID:             appWSID,
