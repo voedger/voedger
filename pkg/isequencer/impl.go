@@ -79,6 +79,10 @@ func (s *sequencer) startActualizer() {
 func (s *sequencer) stopFlusher() {
 	s.flusherCtxCancel()
 	s.flusherWG.Wait()
+	select {
+	case <-s.flusherSig:
+	default:
+	}
 }
 
 // signalToFlushing is used to signal the flusher to start flushing.
@@ -440,7 +444,7 @@ func (s *sequencer) checkSequencingTransactionInProgress() {
 func (s *sequencer) Actualize() {
 	// Validate Sequencing Transaction status
 	s.checkSequencingTransactionInProgress()
-	
+
 	// - Validate Actualization status
 	// Set s.actualizerInProgress to true
 	if !s.actualizerInProgress.CompareAndSwap(false, true) {
