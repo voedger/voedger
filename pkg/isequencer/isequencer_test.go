@@ -286,7 +286,18 @@ func TestISequencer_Start(t *testing.T) {
 
 		offset = isequencer.WaitForStart(t, seq, 1, 1, true)
 		require.Equal(isequencer.PLogOffset(3), offset)
+	})
 
+	t.Run("multiple cleanup()", func(t *testing.T) {
+		iTime := coreutils.MockTime
+		storage := createDefaultStorage()
+		params := createDefaultParams()
+		seq, cleanup := isequencer.New(params, storage, iTime)
+		offset := isequencer.WaitForStart(t, seq, 1, 1, true)
+		require.Equal(isequencer.PLogOffset(1), offset)
+		seq.Flush()
+		cleanup()
+		cleanup()
 	})
 }
 
@@ -351,30 +362,37 @@ func TestISequencer_Flush(t *testing.T) {
 		seq.Flush()
 	})
 
-	t.Run("should panic when called without starting a transaction", func(t *testing.T) {
+	t.Run("panic on wrong usage", func(t *testing.T) {
 		iTime := coreutils.MockTime
 		require := require.New(t)
-
 		storage := createDefaultStorage()
-		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(1): {
-				{
-					Key:   isequencer.NumberKey{WSID: isequencer.WSID(1), SeqID: isequencer.SeqID(1)},
-					Value: isequencer.Number(100),
-				},
-			},
-		})
 		params := createDefaultParams()
-		params.SeqTypes = map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
-			1: {1: 100},
-		}
-		sequencer, cancel := isequencer.New(params, storage, iTime)
-		defer cancel()
+		params.SeqTypes = map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{1: {1: 100}}
+		sequencer, cleanup := isequencer.New(params, storage, iTime)
+		defer cleanup()
 
-		// Should panic when flush is called without an active transaction
-		require.Panics(func() {
+		t.Run("without Start", func(t *testing.T) {
+			require.Panics(func() { sequencer.Flush() })
+		})
+
+		t.Run("after Flush", func(t *testing.T) {
+			isequencer.WaitForStart(t, sequencer, 1, 1, true)
 			sequencer.Flush()
-		}, "Flush should panic when called without starting a transaction")
+			require.Panics(func() { sequencer.Flush() })
+		})
+
+		t.Run("after Actualize", func(t *testing.T) {
+			isequencer.WaitForStart(t, sequencer, 1, 1, true)
+			sequencer.Actualize()
+			require.Panics(func() { sequencer.Flush() })
+		})
+
+		t.Run("after cleanup", func(t *testing.T) {
+			sequencer, cleanup := isequencer.New(params, storage, iTime)
+			isequencer.WaitForStart(t, sequencer, 1, 1, true)
+			cleanup()
+			require.Panics(func() { sequencer.Flush() })
+		})
 	})
 
 	t.Run("should persist values to storage after flush completes", func(t *testing.T) {
@@ -483,16 +501,32 @@ func TestISequencer_Next(t *testing.T) {
 		sequencer.Flush()
 	})
 
-	t.Run("should panic when called without starting transaction", func(t *testing.T) {
+	t.Run("panic on wrong usage", func(t *testing.T) {
 		iTime := coreutils.MockTime
 
 		storage := createDefaultStorage()
 		sequencer, cancel := isequencer.New(createDefaultParams(), storage, iTime)
 		defer cancel()
 
-		require.Panics(func() {
-			sequencer.Next(1)
-		}, "Next should panic when called without starting a transaction")
+		t.Run("Next without Start", func(t *testing.T) {
+			require.Panics(func() { sequencer.Next(1) })
+		})
+		t.Run("Next after Flush", func(t *testing.T) {
+			isequencer.WaitForStart(t, sequencer, 1, 1, true)
+			sequencer.Flush()
+			require.Panics(func() { sequencer.Next(1) })
+		})
+		t.Run("Next after Actualize", func(t *testing.T) {
+			isequencer.WaitForStart(t, sequencer, 1, 1, true)
+			sequencer.Actualize()
+			require.Panics(func() { sequencer.Next(1) })
+		})
+		t.Run("after cleanup", func(t *testing.T) {
+			seq, cleanup := isequencer.New(createDefaultParams(), storage, iTime)
+			isequencer.WaitForStart(t, sequencer, 1, 1, true)
+			cleanup()
+			require.Panics(func() { seq.Next(1) })
+		})
 	})
 
 	t.Run("should handle multiple sequence types correctly", func(t *testing.T) {
@@ -628,40 +662,69 @@ func TestISequencer_Actualize(t *testing.T) {
 	require := require.New(t)
 	mockedTime := coreutils.MockTime
 
-	t.Run("not started -> panic", func(t *testing.T) {
+	t.Run("panic on wrong usage", func(t *testing.T) {
 		storage := createDefaultStorage()
 		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(1): {
-				{
-					Key:   isequencer.NumberKey{WSID: 1, SeqID: 1},
-					Value: 100,
-				},
-			},
+			isequencer.PLogOffset(1): {{Key: isequencer.NumberKey{WSID: 1, SeqID: 1}, Value: 100}},
 		})
 		params := createDefaultParams()
 		seq, cleanup := isequencer.New(params, storage, mockedTime)
 		defer cleanup()
-		require.Panics(func() { seq.Actualize() })
+		t.Run("not started", func(t *testing.T) {
+			require.Panics(func() { seq.Actualize() })
+		})
+		t.Run("after Actualize", func(t *testing.T) {
+			isequencer.WaitForStart(t, seq, 1, 1, true)
+			seq.Actualize()
+			require.Panics(func() { seq.Actualize() })
+		})
+		t.Run("after Flush", func(t *testing.T) {
+			isequencer.WaitForStart(t, seq, 1, 1, true)
+			seq.Flush()
+			require.Panics(func() { seq.Actualize() })
+		})
+		t.Run("after cleanup", func(t *testing.T) {
+			storage := createDefaultStorage()
+			seq, cleanup := isequencer.New(params, storage, mockedTime)
+			isequencer.WaitForStart(t, seq, 1, 1, true)
+			cleanup()
+			require.Panics(func() { seq.Actualize() })
+		})
 	})
 
-	t.Run("Actualize() during actualize -> panic", func(t *testing.T) {
+	t.Run("basic usage", func(t *testing.T) {
 		storage := createDefaultStorage()
-		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{
-			isequencer.PLogOffset(1): {
-				{
-					Key:   isequencer.NumberKey{WSID: 1, SeqID: 1},
-					Value: 100,
-				},
-			},
-		})
+		storage.SetPLog(map[isequencer.PLogOffset][]isequencer.SeqValue{})
 		params := createDefaultParams()
 		seq, cleanup := isequencer.New(params, storage, mockedTime)
 		defer cleanup()
+		initialOffset := isequencer.WaitForStart(t, seq, 1, 1, true)
+
+		num, err := seq.Next(1)
+		require.NoError(err)
+		require.Equal(isequencer.Number(1), num)
+
+		seq.Flush()
+
+		storage.AddPLogEntry(initialOffset, 1, 1, num)
+
 		offset := isequencer.WaitForStart(t, seq, 1, 1, true)
 		require.Equal(isequencer.PLogOffset(2), offset)
 
+		num, err = seq.Next(1)
+		require.NoError(err)
+		require.Equal(isequencer.Number(2), num)
+
+		// Actualize with empty PLog
 		seq.Actualize()
-		require.Panics(func() { seq.Actualize() })
+
+		// Should be able to start a new transaction
+		nextOffset := isequencer.WaitForStart(t, seq, 1, 1, true)
+		require.Equal(initialOffset+1, nextOffset)
+
+		num, err = seq.Next(1)
+		require.NoError(err)
+		require.Equal(isequencer.Number(2), num)
 	})
 
 	t.Run("empty plog", func(t *testing.T) {
@@ -769,13 +832,13 @@ func TestISequencer_MultipleActualizes(t *testing.T) {
 		// Check out offset and number in dependence of Flush or Actualize was called
 		if i == 0 || flushCalled {
 			// If Flush was called, check if offset and number are incremented
-			require.Equal(nextOffset, prevOffset+1, "PLog offset should be incremented by 1 after Flush")
-			require.Equal(nextNumber, prevNumber+1, "Sequence number should be incremented by 1 after Flush")
+			require.Equal(prevOffset+1, nextOffset, "PLog offset should be incremented by 1 after Flush")
+			require.Equal(prevNumber+1, nextNumber, "Sequence number should be incremented by 1 after Flush")
 
 		} else if !flushCalled {
 			// If Actualize was called, check if number and offset remain the same
-			require.Equal(nextOffset, prevOffset, "PLog offset should not be incremented after Actualize")
-			require.Equal(nextNumber, prevNumber, "Sequence number should not be incremented after Actualize")
+			require.Equal(prevOffset, nextOffset, "PLog offset should not be incremented after Actualize")
+			require.Equal(prevNumber, nextNumber, "Sequence number should not be incremented after Actualize")
 		}
 
 		// Finish transaction via Flush or Actualize

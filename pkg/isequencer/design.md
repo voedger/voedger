@@ -46,7 +46,7 @@ type ISeqStorage interface {
   // ActualizeSequencesFromPLog scans PLog from the given offset and send values to the batcher.
 	// Values are sent per event, unordered, ISeqValue.Keys are not unique.
   // err: ctx.Err() if ctx is closed
-	ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func(batch []SeqValue, offset PLogOffset) error) (err error)
+	ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func(ctx context.Context, batch []SeqValue, offset PLogOffset) error) (err error)
 }
 
 // ISequencer defines the interface for working with sequences.
@@ -98,13 +98,11 @@ type Params struct {
 	// Only these sequences are managed by the sequencer (ref. ErrUnknownSeqID).
 	SeqTypes map[WSKind]map[SeqID]Number
 
-	SeqStorage ISeqStorage
-
 	MaxNumUnflushedValues int           // 500
 	// Size of the LRU cache, NumberKey -> Number.
 	LRUCacheSize int // 100_000
 
-  BatcherDelay time.Duration // 5 * time.Millisecond
+  BatcherDelayOnToBeFlushedOverflow time.Duration // 5 * time.Millisecond
 }
 ```
 
@@ -176,7 +174,7 @@ type sequencer struct {
 // New creates a new instance of the Sequencer type.
 // Instance has actualizer() goroutine started.
 // cleanup: function to stop the actualizer.
-func New(*isequencer.Params) (isequencer.ISequencer, cleanup func(), error) {
+func New(isequencer.Params, ISeqStorage, coreutils.ITime) (isequencer.ISequencer, cleanup func()) {
   // ...
 }
 
@@ -216,7 +214,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 // Flow:
 // - Wait until len(s.toBeFlushed) < s.params.MaxNumUnflushedValues
 //   - Lock/Unlock
-//   - Wait s.params.BatcherDelay
+//   - Sleep for s.params.BatcherDelayOnToBeFlushedOverflow
 //   - check ctx (return ctx.Err())
 // - s.nextOffset = offset + 1
 // - Store maxValues in s.toBeFlushed: max Number for each SeqValue.Key
