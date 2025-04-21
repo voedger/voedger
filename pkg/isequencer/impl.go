@@ -62,11 +62,6 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 }
 
 func (s *sequencer) startFlusher() {
-	if !s.flusherInProgress.CompareAndSwap(false, true) {
-		// notest
-		panic("flusher already started")
-	}
-
 	flusherCtx, flusherCtxCancel := context.WithCancel(context.Background())
 	s.flusherCtxCancel = flusherCtxCancel
 	s.flusherWG.Add(1)
@@ -119,10 +114,7 @@ Error handling:
 - Retry mechanism must check `ctx` parameter, if exists
 */
 func (s *sequencer) flusher(flusherCtx context.Context) {
-	defer func() {
-		s.flusherInProgress.Store(false)
-		s.flusherWG.Done()
-	}()
+	defer s.flusherWG.Done()
 
 	// Wait for ctx.Done()
 	for flusherCtx.Err() == nil {
@@ -145,9 +137,6 @@ func (s *sequencer) flusher(flusherCtx context.Context) {
 
 			// Copy s.toBeFlushed to flushValues []SeqValue (local variable)
 			for key, value := range s.toBeFlushed {
-				if value == 0 {
-					panic(fmt.Sprintf("num is 0 for key %v", key))
-				}
 				flushValues = append(flushValues, SeqValue{
 					Key:   key,
 					Value: value,
@@ -327,7 +316,7 @@ func (s *sequencer) finishSequencingTransaction() {
 // Flow:
 // - Wait until len(s.toBeFlushed) < s.params.MaxNumUnflushedValues
 //   - Lock/Unlock
-//   - Wait s.params.BatcherDelay
+//   - Sleep for s.params.BatcherDelayOnToBeFlushedOverflow
 //   - check ctx (return ctx.Err())
 //
 // - s.nextOffset = offset + 1
@@ -335,9 +324,9 @@ func (s *sequencer) finishSequencingTransaction() {
 // - s.toBeFlushedOffset = offset + 1
 func (s *sequencer) batcher(ctx context.Context, values []SeqValue, offset PLogOffset) error {
 	// Wait until len(s.toBeFlushed) < s.params.MaxNumUnflushedValues
-	for s.safeReadNumToBeFlushed() >= s.params.MaxNumUnflushedValues {
+	for s.loadNumToBeFlushed() >= s.params.MaxNumUnflushedValues {
 		s.signalToFlushing()
-		delayCh := s.iTime.NewTimerChan(s.params.BatcherDelay)
+		delayCh := s.iTime.NewTimerChan(s.params.BatcherDelayOnToBeFlushedOverflow)
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -421,7 +410,7 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 
 	// Use s.params.SeqStorage.ActualizeSequencesFromPLog() and s.batcher()
 	err = coreutils.Retry(actualizerCtx, s.iTime, func() error {
-		return s.seqStorage.ActualizeSequencesFromPLog(s.cleanupCtx, s.nextOffset, s.batcher)
+		return s.seqStorage.ActualizeSequencesFromPLog(actualizerCtx, s.nextOffset, s.batcher)
 	})
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
@@ -449,12 +438,15 @@ func (s *sequencer) checkSequencingTransactionInProgress() {
 // - Start the actualizer() goroutine
 // [~server.design.sequences/cmp.sequencer.Actualize~impl]
 func (s *sequencer) Actualize() {
+	// Validate Sequencing Transaction status
+	s.checkSequencingTransactionInProgress()
+	
+	// - Validate Actualization status
+	// Set s.actualizerInProgress to true
 	if !s.actualizerInProgress.CompareAndSwap(false, true) {
 		panic("actualization is already in progress")
 	}
 
-	// Validate Sequencing Transaction status
-	s.checkSequencingTransactionInProgress()
 	// Clean s.inproc
 	s.inproc = make(map[NumberKey]Number)
 
@@ -482,9 +474,10 @@ func (s *sequencer) cleanup() {
 	}
 	s.stopFlusher()
 	s.cleanupCtxCancel()
+	s.finishSequencingTransaction()
 }
 
-func (s *sequencer) safeReadNumToBeFlushed() int {
+func (s *sequencer) loadNumToBeFlushed() int {
 	s.toBeFlushedMu.RLock()
 	numToBeFlushed := len(s.toBeFlushed)
 	s.toBeFlushedMu.RUnlock()
