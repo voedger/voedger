@@ -316,7 +316,7 @@ func (s *sequencer) finishSequencingTransaction() {
 // Flow:
 // - Wait until len(s.toBeFlushed) < s.params.MaxNumUnflushedValues
 //   - Lock/Unlock
-//   - Sleep for s.params.BatcherDelayOnOverflow
+//   - Sleep for s.params.BatcherDelayOnToBeFlushedOverflow
 //   - check ctx (return ctx.Err())
 //
 // - s.nextOffset = offset + 1
@@ -326,7 +326,7 @@ func (s *sequencer) batcher(ctx context.Context, values []SeqValue, offset PLogO
 	// Wait until len(s.toBeFlushed) < s.params.MaxNumUnflushedValues
 	for s.loadNumToBeFlushed() >= s.params.MaxNumUnflushedValues {
 		s.signalToFlushing()
-		delayCh := s.iTime.NewTimerChan(s.params.BatcherDelayOnOverflow)
+		delayCh := s.iTime.NewTimerChan(s.params.BatcherDelayOnToBeFlushedOverflow)
 		select {
 		case <-ctx.Done():
 			return ctx.Err()

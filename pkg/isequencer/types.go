@@ -42,8 +42,8 @@ type Params struct {
 
 	MaxNumUnflushedValues int // 500
 	// Size of the LRU cache, NumberKey -> Number.
-	LRUCacheSize           int           // 100_000
-	BatcherDelayOnOverflow time.Duration // 5 * time.Millisecond
+	LRUCacheSize                      int           // 100_000
+	BatcherDelayOnToBeFlushedOverflow time.Duration // 5 * time.Millisecond
 }
 
 // sequencer implements ISequencer

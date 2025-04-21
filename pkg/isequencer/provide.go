@@ -16,10 +16,10 @@ import (
 
 func NewDefaultParams(seqTypes map[WSKind]map[SeqID]Number) Params {
 	return Params{
-		SeqTypes:               seqTypes,
-		MaxNumUnflushedValues:  DefaultMaxNumUnflushedValues,
-		LRUCacheSize:           DefaultLRUCacheSize,
-		BatcherDelayOnOverflow: defaultBatcherDelay,
+		SeqTypes:                          seqTypes,
+		MaxNumUnflushedValues:             DefaultMaxNumUnflushedValues,
+		LRUCacheSize:                      DefaultLRUCacheSize,
+		BatcherDelayOnToBeFlushedOverflow: defaultBatcherDelayOnToBeFlushedOverflow,
 	}
 }
 

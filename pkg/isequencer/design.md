@@ -102,7 +102,7 @@ type Params struct {
 	// Size of the LRU cache, NumberKey -> Number.
 	LRUCacheSize int // 100_000
 
-  BatcherDelayOnOverflow time.Duration // 5 * time.Millisecond
+  BatcherDelayOnToBeFlushedOverflow time.Duration // 5 * time.Millisecond
 }
 ```
 
@@ -214,7 +214,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 // Flow:
 // - Wait until len(s.toBeFlushed) < s.params.MaxNumUnflushedValues
 //   - Lock/Unlock
-//   - Sleep for s.params.BatcherDelayOnOverflow
+//   - Sleep for s.params.BatcherDelayOnToBeFlushedOverflow
 //   - check ctx (return ctx.Err())
 // - s.nextOffset = offset + 1
 // - Store maxValues in s.toBeFlushed: max Number for each SeqValue.Key

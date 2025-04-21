@@ -8,7 +8,7 @@ package isequencer
 import "time"
 
 const (
-	DefaultLRUCacheSize          = 100_000
-	DefaultMaxNumUnflushedValues = 500
-	defaultBatcherDelay          = 5 * time.Millisecond
+	DefaultLRUCacheSize                      = 100_000
+	DefaultMaxNumUnflushedValues             = 500
+	defaultBatcherDelayOnToBeFlushedOverflow = 5 * time.Millisecond
 )
