@@ -684,6 +684,7 @@ func TestISequencer_Actualize(t *testing.T) {
 			require.Panics(func() { seq.Actualize() })
 		})
 		t.Run("after cleanup", func(t *testing.T) {
+			storage := createDefaultStorage()
 			seq, cleanup := isequencer.New(params, storage, mockedTime)
 			isequencer.WaitForStart(t, seq, 1, 1, true)
 			cleanup()
