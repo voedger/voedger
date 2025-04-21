@@ -438,14 +438,14 @@ func (s *sequencer) checkSequencingTransactionInProgress() {
 // - Start the actualizer() goroutine
 // [~server.design.sequences/cmp.sequencer.Actualize~impl]
 func (s *sequencer) Actualize() {
-	if s.actualizerInProgress.Load() {
-		panic("actualization is already in progress")
-	}
 	// Validate Sequencing Transaction status
 	s.checkSequencingTransactionInProgress()
-
+	
+	// - Validate Actualization status
 	// Set s.actualizerInProgress to true
-	s.actualizerInProgress.Store(true)
+	if !s.actualizerInProgress.CompareAndSwap(false, true) {
+		panic("actualization is already in progress")
+	}
 
 	// Clean s.inproc
 	s.inproc = make(map[NumberKey]Number)
