@@ -145,9 +145,6 @@ func (s *sequencer) flusher(flusherCtx context.Context) {
 
 			// Copy s.toBeFlushed to flushValues []SeqValue (local variable)
 			for key, value := range s.toBeFlushed {
-				if value == 0 {
-					panic(fmt.Sprintf("num is 0 for key %v", key))
-				}
 				flushValues = append(flushValues, SeqValue{
 					Key:   key,
 					Value: value,
@@ -327,7 +324,7 @@ func (s *sequencer) finishSequencingTransaction() {
 // Flow:
 // - Wait until len(s.toBeFlushed) < s.params.MaxNumUnflushedValues
 //   - Lock/Unlock
-//   - Wait s.params.BatcherDelay
+//   - Sleep for s.params.BatcherDelayOnOverflow
 //   - check ctx (return ctx.Err())
 //
 // - s.nextOffset = offset + 1
@@ -335,9 +332,12 @@ func (s *sequencer) finishSequencingTransaction() {
 // - s.toBeFlushedOffset = offset + 1
 func (s *sequencer) batcher(ctx context.Context, values []SeqValue, offset PLogOffset) error {
 	// Wait until len(s.toBeFlushed) < s.params.MaxNumUnflushedValues
-	for s.safeReadNumToBeFlushed() >= s.params.MaxNumUnflushedValues {
+	s.toBeFlushedMu.RLock()
+	numToBeFlushed := len(s.toBeFlushed)
+	s.toBeFlushedMu.RUnlock()
+	for numToBeFlushed >= s.params.MaxNumUnflushedValues {
 		s.signalToFlushing()
-		delayCh := s.iTime.NewTimerChan(s.params.BatcherDelay)
+		delayCh := s.iTime.NewTimerChan(s.params.BatcherDelayOnOverflow)
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -449,12 +449,15 @@ func (s *sequencer) checkSequencingTransactionInProgress() {
 // - Start the actualizer() goroutine
 // [~server.design.sequences/cmp.sequencer.Actualize~impl]
 func (s *sequencer) Actualize() {
-	if !s.actualizerInProgress.CompareAndSwap(false, true) {
+	if s.actualizerInProgress.Load() {
 		panic("actualization is already in progress")
 	}
-
 	// Validate Sequencing Transaction status
 	s.checkSequencingTransactionInProgress()
+
+	// Set s.actualizerInProgress to true
+	s.actualizerInProgress.Store(true)
+
 	// Clean s.inproc
 	s.inproc = make(map[NumberKey]Number)
 
@@ -482,11 +485,5 @@ func (s *sequencer) cleanup() {
 	}
 	s.stopFlusher()
 	s.cleanupCtxCancel()
-}
-
-func (s *sequencer) safeReadNumToBeFlushed() int {
-	s.toBeFlushedMu.RLock()
-	numToBeFlushed := len(s.toBeFlushed)
-	s.toBeFlushedMu.RUnlock()
-	return numToBeFlushed
+	s.finishSequencingTransaction()
 }

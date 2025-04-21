@@ -42,8 +42,8 @@ type Params struct {
 
 	MaxNumUnflushedValues int // 500
 	// Size of the LRU cache, NumberKey -> Number.
-	LRUCacheSize int           // 100_000
-	BatcherDelay time.Duration // 5 * time.Millisecond
+	LRUCacheSize           int           // 100_000
+	BatcherDelayOnOverflow time.Duration // 5 * time.Millisecond
 }
 
 // sequencer implements ISequencer
@@ -96,7 +96,7 @@ type sequencer struct {
 	toBeFlushedMu sync.RWMutex
 
 	// Written by Next()
-	inproc   map[NumberKey]Number
+	inproc map[NumberKey]Number
 
 	iTime coreutils.ITime
 

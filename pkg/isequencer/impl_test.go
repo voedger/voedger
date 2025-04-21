@@ -454,4 +454,12 @@ func TestActualize(t *testing.T) {
 		require.Empty(s.toBeFlushed)
 		require.Zero(s.toBeFlushedOffset)
 	})
+
+	t.Run("panic on Actualize after transaction", func(t *testing.T) {
+		WaitForStart(t, seq, 1, 1, true)
+		seq.Actualize()
+		s := seq.(*sequencer)
+		s.actualizerWG.Wait()
+		require.Panics(func() { seq.Actualize() })
+	})
 }
