@@ -62,11 +62,6 @@ func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok b
 }
 
 func (s *sequencer) startFlusher() {
-	if !s.flusherInProgress.CompareAndSwap(false, true) {
-		// notest
-		panic("flusher already started")
-	}
-
 	flusherCtx, flusherCtxCancel := context.WithCancel(context.Background())
 	s.flusherCtxCancel = flusherCtxCancel
 	s.flusherWG.Add(1)
@@ -119,10 +114,7 @@ Error handling:
 - Retry mechanism must check `ctx` parameter, if exists
 */
 func (s *sequencer) flusher(flusherCtx context.Context) {
-	defer func() {
-		s.flusherInProgress.Store(false)
-		s.flusherWG.Done()
-	}()
+	defer s.flusherWG.Done()
 
 	// Wait for ctx.Done()
 	for flusherCtx.Err() == nil {
@@ -332,10 +324,7 @@ func (s *sequencer) finishSequencingTransaction() {
 // - s.toBeFlushedOffset = offset + 1
 func (s *sequencer) batcher(ctx context.Context, values []SeqValue, offset PLogOffset) error {
 	// Wait until len(s.toBeFlushed) < s.params.MaxNumUnflushedValues
-	s.toBeFlushedMu.RLock()
-	numToBeFlushed := len(s.toBeFlushed)
-	s.toBeFlushedMu.RUnlock()
-	for numToBeFlushed >= s.params.MaxNumUnflushedValues {
+	for s.loadNumToBeFlushed() >= s.params.MaxNumUnflushedValues {
 		s.signalToFlushing()
 		delayCh := s.iTime.NewTimerChan(s.params.BatcherDelayOnOverflow)
 		select {
@@ -421,7 +410,7 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 
 	// Use s.params.SeqStorage.ActualizeSequencesFromPLog() and s.batcher()
 	err = coreutils.Retry(actualizerCtx, s.iTime, func() error {
-		return s.seqStorage.ActualizeSequencesFromPLog(s.cleanupCtx, s.nextOffset, s.batcher)
+		return s.seqStorage.ActualizeSequencesFromPLog(actualizerCtx, s.nextOffset, s.batcher)
 	})
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
@@ -486,4 +475,11 @@ func (s *sequencer) cleanup() {
 	s.stopFlusher()
 	s.cleanupCtxCancel()
 	s.finishSequencingTransaction()
+}
+
+func (s *sequencer) loadNumToBeFlushed() int {
+	s.toBeFlushedMu.RLock()
+	numToBeFlushed := len(s.toBeFlushed)
+	s.toBeFlushedMu.RUnlock()
+	return numToBeFlushed
 }

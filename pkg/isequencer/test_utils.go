@@ -163,7 +163,7 @@ func (m *MockStorage) ReadNextPLogOffset() (PLogOffset, error) {
 }
 
 // ActualizeSequencesFromPLog implements isequencer.ISeqStorage.ActualizeSequencesFromPLog
-func (m *MockStorage) ActualizeSequencesFromPLog(ctx context.Context, offset PLogOffset, batcher func(ctx context.Context, batch []SeqValue, offset PLogOffset) error) error {
+func (m *MockStorage) ActualizeSequencesFromPLog(actualizerCtx context.Context, offset PLogOffset, batcher func(ctx context.Context, batch []SeqValue, offset PLogOffset) error) error {
 	// notest
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -180,18 +180,18 @@ func (m *MockStorage) ActualizeSequencesFromPLog(ctx context.Context, offset PLo
 		}
 		// Process entries in the mocked PLog from the provided offset
 		select {
-		case <-ctx.Done():
-			return ctx.Err()
+		case <-actualizerCtx.Done():
+			return actualizerCtx.Err()
 		default:
 			// Continue processing
 		}
 
-		if err := batcher(ctx, batch, offsetProbe); err != nil {
+		if err := batcher(actualizerCtx, batch, offsetProbe); err != nil {
 			return err
 		}
 	}
 
-	return nil
+	panic("impossible case")
 }
 
 // SetPLog sets the entire PLog contents for testing
