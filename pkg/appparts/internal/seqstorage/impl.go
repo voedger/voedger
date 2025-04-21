@@ -53,7 +53,6 @@ func (ss *implISeqStorage) WriteValuesAndNextPLogOffset(batch []isequencer.SeqVa
 			return err
 		}
 	}
-
 	pLogOffsetBytes := make([]byte, sizeInt64)
 	binary.BigEndian.PutUint64(pLogOffsetBytes, uint64(pLogOffset))
 	return ss.storage.Put(ss.appID, isequencer.WSID(istructs.NullWSID), isequencer.SeqID(istructs.QNameIDPLogOffsetSequence), pLogOffsetBytes)
