@@ -422,6 +422,8 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 		})
 	}))
 
+	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryVoid"), istructsmem.NullQueryExec))
+
 	app1PackageFS := parser.PackageFS{
 		Path: App1PkgPath,
 		FS:   SchemaTestApp1FS,

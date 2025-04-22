@@ -66,6 +66,10 @@ func queryAuthorizeResult(ctx context.Context, qw *queryWork) error {
 	return nil
 }
 func queryRowsProcessor(ctx context.Context, qw *queryWork) (err error) {
+	result := qw.appStructs.AppDef().Type(qw.iQuery.QName()).(appdef.IQuery).Result()
+	if result == nil {
+		return
+	}
 	oo := make([]*pipeline.WiredOperator, 0)
 	if qw.queryParams.Constraints != nil && len(qw.queryParams.Constraints.Include) != 0 {
 		oo = append(oo, pipeline.WireAsyncOperator("Include", newInclude(qw, false)))
@@ -73,9 +77,10 @@ func queryRowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 	if qw.queryParams.Constraints != nil && (len(qw.queryParams.Constraints.Order) != 0 || qw.queryParams.Constraints.Skip > 0 || qw.queryParams.Constraints.Limit > 0) {
 		oo = append(oo, pipeline.WireAsyncOperator("Aggregator", newAggregator(qw.queryParams)))
 	}
-	o, err := newFilter(qw, qw.appStructs.AppDef().Type(qw.appStructs.AppDef().Type(qw.iQuery.QName()).(appdef.IQuery).Result().QName()).(appdef.IWithFields).Fields())
+	resultType := qw.appStructs.AppDef().Type(result.QName())
+	o, err := newFilter(qw, resultType.(appdef.IWithFields).Fields())
 	if err != nil {
-		return
+		return err
 	}
 	if o != nil {
 		oo = append(oo, pipeline.WireAsyncOperator("Filter", o))
