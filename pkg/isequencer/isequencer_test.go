@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -173,6 +174,49 @@ func TestISequencer_Start(t *testing.T) {
 		},
 	})
 	params := createDefaultParams()
+	t.Run("reject on too many unflushed values + allow after Flush", func(t *testing.T) {
+		storage := isequencer.NewMockStorage()
+		params := isequencer.NewDefaultParams(map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{
+			1: {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1},
+		})
+		params.MaxNumUnflushedValues = 5
+		waitForFlushCh := make(chan any)
+		writeOnFlushOccurredCh := make(chan any, 1)
+		once := sync.Once{}
+		storage.SetOnWriteValuesAndOffset(func() {
+			once.Do(func() {
+				close(writeOnFlushOccurredCh)
+				<-waitForFlushCh
+			})
+		})
+		seq, cancel := isequencer.New(params, storage, iTime)
+		defer cancel()
+
+		offset := isequencer.WaitForStart(t, seq, 1, 1, true)
+		require.Equal(isequencer.PLogOffset(1), offset)
+
+		// obtain 6 numbers, 6th should overflow toBeFlushed
+		for i := 0; i < 6; i++ {
+			num, err := seq.Next(isequencer.SeqID(i + 1))
+			require.NoError(err)
+			require.Equal(isequencer.Number(1), num)
+		}
+
+		seq.Flush()
+
+		<-writeOnFlushOccurredCh
+
+		// failed to start because toBeFlushed is overflowed
+		offset, ok := seq.Start(1, 1)
+		require.False(ok)
+		require.Zero(offset)
+		close(waitForFlushCh)
+
+		// now ok to start because the queue is flushed
+		// will wait for start because the queue will be flushed not immediately
+		offset = isequencer.WaitForStart(t, seq, 1, 1, true)
+		require.Equal(isequencer.PLogOffset(2), offset)
+	})
 
 	t.Run("should panic when cleanup process is initiated", func(t *testing.T) {
 		sequencer, cleanup := isequencer.New(params, storage, iTime)
