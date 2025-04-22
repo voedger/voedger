@@ -6,7 +6,6 @@ package seqstorage
 
 import (
 	"context"
-	"encoding/binary"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/isequencer"
@@ -42,34 +41,23 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 }
 
 func (ss *implISeqStorage) WriteValuesAndNextPLogOffset(batch []isequencer.SeqValue, pLogOffset isequencer.PLogOffset) error {
-	for _, b := range batch {
-		if b.Key.SeqID == isequencer.SeqID(istructs.QNameIDPLogOffsetSequence) {
-			panic("can not write QNameIDPLogOffsetSequence as value. Provide it as pLogOffset arg only")
-		}
-		numberBytes := make([]byte, sizeInt64)
-		binary.BigEndian.PutUint64(numberBytes, uint64(b.Value))
-		if err := ss.storage.Put(ss.appID, b.Key.WSID, b.Key.SeqID, numberBytes); err != nil {
-			// notest
-			return err
-		}
+	if err := ss.storage.PutBatch(ss.appID, batch); err != nil {
+		// notest
+		return err
 	}
-
-	pLogOffsetBytes := make([]byte, sizeInt64)
-	binary.BigEndian.PutUint64(pLogOffsetBytes, uint64(pLogOffset))
-	return ss.storage.Put(ss.appID, isequencer.WSID(istructs.NullWSID), isequencer.SeqID(istructs.QNameIDPLogOffsetSequence), pLogOffsetBytes)
+	return ss.storage.PutPLogOffset(ss.appID, pLogOffset)
 }
 
 func (ss *implISeqStorage) ReadNumbers(wsid isequencer.WSID, seqIDs []isequencer.SeqID) ([]isequencer.Number, error) {
 	res := make([]isequencer.Number, len(seqIDs))
 	for i, seqID := range seqIDs {
-		data := make([]byte, sizeInt64)
-		ok, err := ss.storage.Get(ss.appID, wsid, seqID, &data)
+		ok, number, err := ss.storage.Get(ss.appID, wsid, seqID)
 		if err != nil {
 			// notest
 			return nil, err
 		}
 		if ok {
-			res[i] = isequencer.Number(binary.BigEndian.Uint64(data))
+			res[i] = number
 		}
 	}
 	return res, nil
