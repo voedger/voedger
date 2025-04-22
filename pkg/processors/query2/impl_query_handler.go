@@ -68,7 +68,7 @@ func queryAuthorizeResult(ctx context.Context, qw *queryWork) error {
 func queryRowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 	result := qw.appStructs.AppDef().Type(qw.iQuery.QName()).(appdef.IQuery).Result()
 	if result == nil {
-		return
+		return nil
 	}
 	oo := make([]*pipeline.WiredOperator, 0)
 	if qw.queryParams.Constraints != nil && len(qw.queryParams.Constraints.Include) != 0 {
