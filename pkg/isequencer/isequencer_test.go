@@ -181,11 +181,11 @@ func TestISequencer_Start(t *testing.T) {
 		})
 		params.MaxNumUnflushedValues = 5
 		waitForFlushCh := make(chan any)
-		writeOnFlushOccuredCh := make(chan any, 1)
+		writeOnFlushOccurredCh := make(chan any, 1)
 		once := sync.Once{}
 		storage.SetOnWriteValuesAndOffset(func() {
 			once.Do(func() {
-				close(writeOnFlushOccuredCh)
+				close(writeOnFlushOccurredCh)
 				<-waitForFlushCh
 			})
 		})
