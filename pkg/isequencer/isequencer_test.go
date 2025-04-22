@@ -204,7 +204,7 @@ func TestISequencer_Start(t *testing.T) {
 
 		seq.Flush()
 
-		<-writeOnFlushOccuredCh
+		<-writeOnFlushOccurredCh
 
 		// failed to start because toBeFlushed is overflowed
 		offset, ok := seq.Start(1, 1)
