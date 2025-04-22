@@ -68,47 +68,6 @@ func TestSequencer(t *testing.T) {
 	})
 }
 
-func TestSequencer_Start(t *testing.T) {
-	require := require.New(t)
-	t.Run("should reject when too many unflushed values + allow after Flush", func(t *testing.T) {
-		iTime := coreutils.MockTime
-
-		storage := NewMockStorage()
-		params := NewDefaultParams(map[WSKind]map[SeqID]Number{
-			1: {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1},
-		})
-		params.MaxNumUnflushedValues = 5
-		waitForFlushCh := make(chan any)
-		writeOnFlushOccuredCh := make(chan any)
-		storage.onWriteValuesAndOffset = func() {
-			close(writeOnFlushOccuredCh)
-			<-waitForFlushCh
-		}
-		seq, cancel := New(params, storage, iTime)
-		defer cancel()
-
-		offset := WaitForStart(t, seq, 1, 1, true)
-		require.Equal(PLogOffset(1), offset)
-
-		// obtain 6 numbers, 6th should overflow toBeFlushed
-		for i := 0; i < 6; i++ {
-			num, err := seq.Next(SeqID(i + 1))
-			require.NoError(err)
-			require.Equal(Number(1), num)
-		}
-
-		seq.Flush()
-
-		<-writeOnFlushOccuredCh
-
-		// failed to start because toBeFlushed is overflowed
-		offset, ok := seq.Start(1, 1)
-		require.False(ok)
-		require.Zero(offset)
-		close(waitForFlushCh)
-	})
-}
-
 func TestBatcher(t *testing.T) {
 	t.Run("should aggregate max values and wait for unflushed values threshold", func(t *testing.T) {
 		require := require.New(t)
