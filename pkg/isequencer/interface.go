@@ -31,8 +31,9 @@ type ISeqStorage interface {
 }
 
 type IVVMSeqStorageAdapter interface {
-	Get(appID istructs.ClusterAppID, wsid WSID, seqID SeqID, data *[]byte) (ok bool, err error)
-	Put(appID istructs.ClusterAppID, wsid WSID, seqID SeqID, data []byte) (err error)
+	Get(appID istructs.ClusterAppID, wsid WSID, seqID SeqID) (ok bool, number Number, err error)
+	PutPLogOffset(appID istructs.ClusterAppID, plogOffset PLogOffset) error
+	PutBatch(appID istructs.ClusterAppID, batch []SeqValue) error
 }
 
 // ISequencer defines the interface for working with sequences.

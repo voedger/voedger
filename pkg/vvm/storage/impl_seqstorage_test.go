@@ -30,102 +30,66 @@ func TestSeqStorage(t *testing.T) {
 	baseSeqID := isequencer.SeqID(istructs.QNameIDCRecordIDSequence)
 
 	tests := []struct {
-		name     string
-		appID    istructs.ClusterAppID
-		wsid     isequencer.WSID
-		seqID    isequencer.SeqID
-		value    []byte
-		expected []byte
+		name  string
+		appID istructs.ClusterAppID
+		wsid  isequencer.WSID
+		seqID isequencer.SeqID
+		num   isequencer.Number
 	}{
 		{
-			name:     "basic operations",
-			appID:    baseAppID,
-			wsid:     baseWsid,
-			seqID:    baseSeqID,
-			value:    []byte{1, 2, 3},
-			expected: []byte{1, 2, 3},
-		},
-		{
-			name:     "empty value",
-			appID:    baseAppID,
-			wsid:     baseWsid,
-			seqID:    baseSeqID,
-			value:    []byte{},
-			expected: []byte{},
-		},
-		{
-			name:     "nil value",
-			appID:    baseAppID,
-			wsid:     baseWsid,
-			seqID:    baseSeqID,
-			value:    nil,
-			expected: []byte{},
-		},
-		{
-			name:  "large value",
+			name:  "basic operations",
 			appID: baseAppID,
 			wsid:  baseWsid,
 			seqID: baseSeqID,
-			value: func() []byte {
-				v := make([]byte, 1024*1024) // 1MB
-				for i := range v {
-					v[i] = byte(i % 256)
-				}
-				return v
-			}(),
-			expected: func() []byte {
-				v := make([]byte, 1024*1024) // 1MB
-				for i := range v {
-					v[i] = byte(i % 256)
-				}
-				return v
-			}(),
+			num:   42,
 		},
 		{
-			name:     "different appID",
-			appID:    istructs.ClusterApps[istructs.AppQName_test1_app2],
-			wsid:     baseWsid,
-			seqID:    baseSeqID,
-			value:    []byte{4, 5, 6},
-			expected: []byte{4, 5, 6},
+			name:  "different appID",
+			appID: istructs.ClusterApps[istructs.AppQName_test1_app2],
+			wsid:  baseWsid,
+			seqID: baseSeqID,
+			num:   43,
 		},
 		{
-			name:     "different wsid",
-			appID:    baseAppID,
-			wsid:     isequencer.WSID(2),
-			seqID:    baseSeqID,
-			value:    []byte{7, 8, 9},
-			expected: []byte{7, 8, 9},
+			name:  "different wsid",
+			appID: baseAppID,
+			wsid:  isequencer.WSID(2),
+			seqID: baseSeqID,
+			num:   44,
 		},
 		{
-			name:     "different seqID",
-			appID:    baseAppID,
-			wsid:     baseWsid,
-			seqID:    isequencer.SeqID(istructs.QNameIDCRecordIDSequence + 1),
-			value:    []byte{10, 11, 12},
-			expected: []byte{10, 11, 12},
+			name:  "different seqID",
+			appID: baseAppID,
+			wsid:  baseWsid,
+			seqID: isequencer.SeqID(istructs.QNameIDCRecordIDSequence + 1),
+			num:   45,
 		},
 	}
 
 	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Verify value doesn't exist before Put
-			data := []byte{}
-			ok, err := seqStorage.Get(tt.appID+istructs.ClusterAppID(i), tt.wsid+isequencer.WSID(i), tt.seqID+isequencer.SeqID(i), &data)
+			ok, num, err := seqStorage.Get(tt.appID+istructs.ClusterAppID(i), tt.wsid+isequencer.WSID(i), tt.seqID+isequencer.SeqID(i))
 			require.NoError(err)
 			require.False(ok)
-			require.Empty(data)
+			require.Zero(num)
 
 			// Put value
-			err = seqStorage.Put(tt.appID+istructs.ClusterAppID(i), tt.wsid+isequencer.WSID(i), tt.seqID+isequencer.SeqID(i), tt.value)
+			batch := []isequencer.SeqValue{{
+				Key: isequencer.NumberKey{
+					WSID:  tt.wsid + isequencer.WSID(i),
+					SeqID: tt.seqID + isequencer.SeqID(i),
+				},
+				Value: tt.num,
+			}}
+			err = seqStorage.PutBatch(tt.appID+istructs.ClusterAppID(i), batch)
 			require.NoError(err)
 
 			// Verify value after Put
-			data = []byte{}
-			ok, err = seqStorage.Get(tt.appID+istructs.ClusterAppID(i), tt.wsid+isequencer.WSID(i), tt.seqID+isequencer.SeqID(i), &data)
+			ok, num, err = seqStorage.Get(tt.appID+istructs.ClusterAppID(i), tt.wsid+isequencer.WSID(i), tt.seqID+isequencer.SeqID(i))
 			require.NoError(err)
 			require.True(ok)
-			require.Equal(tt.expected, data)
+			require.Equal(tt.num, num)
 
 			// check the key structure using the underlying storage
 			pKey := []byte{}
@@ -134,11 +98,13 @@ func TestSeqStorage(t *testing.T) {
 			cCols := []byte{}
 			cCols = binary.BigEndian.AppendUint64(cCols, uint64(tt.wsid+isequencer.WSID(i)))
 			cCols = binary.BigEndian.AppendUint16(cCols, uint16(tt.seqID+isequencer.SeqID(i)))
-			data = []byte{}
+			data := []byte{}
 			ok, err = sysVvmAppStorage.Get(pKey, cCols, &data)
 			require.NoError(err)
 			require.True(ok)
-			require.Equal(tt.expected, data)
+			expectedBytes := []byte{}
+			expectedBytes = binary.BigEndian.AppendUint64(expectedBytes, uint64(tt.num))
+			require.Equal(expectedBytes, data)
 		})
 	}
 
@@ -147,29 +113,67 @@ func TestSeqStorage(t *testing.T) {
 		baseAppID := istructs.ClusterApps[istructs.AppQName_test1_app2]
 		baseWsid := isequencer.WSID(10)
 		baseSeqID := isequencer.SeqID(istructs.QNameIDCRecordIDSequence)
-		value1 := []byte{1, 2, 3}
-		value2 := []byte{4, 5, 6}
+		num1 := isequencer.Number(42)
+		num2 := isequencer.Number(43)
 
 		// Verify value doesn't exist before Put
-		data := []byte{}
-		ok, err := seqStorage.Get(baseAppID, baseWsid, baseSeqID, &data)
+		ok, num, err := seqStorage.Get(baseAppID, baseWsid, baseSeqID)
 		require.NoError(err)
 		require.False(ok)
-		require.Empty(data)
+		require.Zero(num)
 
 		// Put initial value
-		err = seqStorage.Put(baseAppID, baseWsid, baseSeqID, value1)
+		batch := []isequencer.SeqValue{{Key: isequencer.NumberKey{WSID: baseWsid, SeqID: baseSeqID}, Value: num1}}
+		err = seqStorage.PutBatch(baseAppID, batch)
 		require.NoError(err)
 
 		// Overwrite with new value
-		err = seqStorage.Put(baseAppID, baseWsid, baseSeqID, value2)
+		batch = []isequencer.SeqValue{{Key: isequencer.NumberKey{WSID: baseWsid, SeqID: baseSeqID}, Value: num2}}
+		err = seqStorage.PutBatch(baseAppID, batch)
 		require.NoError(err)
 
 		// Verify new value
-		data = []byte{}
-		ok, err = seqStorage.Get(baseAppID, baseWsid, baseSeqID, &data)
+		ok, actualNum, err := seqStorage.Get(baseAppID, baseWsid, baseSeqID)
 		require.NoError(err)
 		require.True(ok)
-		require.Equal(value2, data)
+		require.Equal(num2, actualNum)
 	})
+
+	t.Run("panic on try to write PLogOffsetSequence", func(t *testing.T) {
+		batch := []isequencer.SeqValue{{
+			Key: isequencer.NumberKey{
+				WSID:  1,
+				SeqID: isequencer.SeqID(istructs.QNameIDPLogOffsetSequence),
+			},
+			Value: 42,
+		}}
+		require.Panics(func() { seqStorage.PutBatch(istructs.ClusterAppID(1), batch) })
+	})
+}
+
+func TestPutPLogOffset(t *testing.T) {
+	require := require.New(t)
+	appStorageProvider := provider.Provide(mem.Provide(coreutils.MockTime))
+	sysVvmAppStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
+	require.NoError(err)
+	seqStorage := NewVVMSeqStorageAdapter(sysVvmAppStorage)
+
+	// Base test data
+	baseAppID := istructs.ClusterApps[istructs.AppQName_test1_app1]
+	pLogOffset := isequencer.PLogOffset(42)
+
+	// initially missing
+	ok, num, err := seqStorage.Get(baseAppID, isequencer.WSID(istructs.NullWSID), isequencer.SeqID(istructs.QNameIDPLogOffsetSequence))
+	require.NoError(err)
+	require.False(ok)
+	require.Zero(num)
+
+	// write
+	require.NoError(seqStorage.PutPLogOffset(baseAppID, pLogOffset))
+
+	// read
+	ok, num, err = seqStorage.Get(baseAppID, isequencer.WSID(istructs.NullWSID), isequencer.SeqID(istructs.QNameIDPLogOffsetSequence))
+	require.NoError(err)
+	require.True(ok)
+	require.Equal(pLogOffset, isequencer.PLogOffset(num))
 }
