@@ -69,6 +69,12 @@ func (m *MockStorage) SetReadNextPLogOffsetError(err error) {
 	m.readNextOffsetError = err
 }
 
+func (m *MockStorage) SetOnWriteValuesAndOffset(f func()) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.onWriteValuesAndOffset = f
+}
+
 func (m *MockStorage) SetOnActualizeFromPLog(f func()) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
