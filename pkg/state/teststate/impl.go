@@ -20,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
+	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
@@ -398,7 +399,9 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 		cfgs,
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
-		storageProvider)
+		storageProvider,
+		isequencer.SequencesTrustLevel_0,
+	)
 	structs, err := prov.BuiltIn(appName)
 	if err != nil {
 		panic(err)

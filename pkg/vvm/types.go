@@ -23,6 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iprocbusmem"
 	"github.com/voedger/voedger/pkg/isecrets"
+	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -174,8 +175,9 @@ type VVMConfig struct {
 	KeyspaceNameSuffix string
 
 	// [~server.design.orch/VVMConfig.Orch~impl]
-	NumVVM NumVVM // amount of VVMs in the cluster. Default 1
-	IP     net.IP // current IP of the VVM. Used as the value for leaderhsip elections
+	NumVVM              NumVVM // amount of VVMs in the cluster. Default 1
+	IP                  net.IP // current IP of the VVM. Used as the value for leaderhsip elections
+	SequencesTrustLevel isequencer.SequencesTrustLevel
 }
 
 type VoedgerVM struct {

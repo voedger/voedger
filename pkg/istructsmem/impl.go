@@ -15,6 +15,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
+	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/descr"
@@ -37,6 +38,7 @@ type appStructsProviderType struct {
 	bucketsFactory   irates.BucketsFactoryType
 	appTokensFactory payloads.IAppTokensFactory
 	storageProvider  istorage.IAppStorageProvider
+	seqTrustLevel    isequencer.SequencesTrustLevel
 }
 
 // istructs.IAppStructsProvider.BuiltIn
@@ -61,7 +63,7 @@ func (provider *appStructsProviderType) BuiltIn(appName appdef.AppQName) (struct
 		if err = appCfg.prepare(buckets, appStorage); err != nil {
 			return nil, err
 		}
-		app = newAppStructs(appCfg, buckets, appTokens)
+		app = newAppStructs(appCfg, buckets, appTokens, provider.seqTrustLevel)
 		provider.structures[appName] = app
 	}
 	return app, nil
@@ -82,7 +84,7 @@ func (provider *appStructsProviderType) New(name appdef.AppQName, def appdef.IAp
 	if err = cfg.prepare(buckets, appStorage); err != nil {
 		return nil, err
 	}
-	app := newAppStructs(cfg, buckets, appTokens)
+	app := newAppStructs(cfg, buckets, appTokens, provider.seqTrustLevel)
 	//provider.structures[name] = app
 	return app, nil
 }
@@ -91,20 +93,22 @@ func (provider *appStructsProviderType) New(name appdef.AppQName, def appdef.IAp
 //   - interfaces:
 //     — istructs.IAppStructs
 type appStructsType struct {
-	config      *AppConfigType
-	events      appEventsType
-	records     appRecordsType
-	viewRecords appViewRecords
-	buckets     irates.IBuckets
-	descr       *descr.Application
-	appTokens   istructs.IAppTokens
+	config        *AppConfigType
+	events        appEventsType
+	records       appRecordsType
+	viewRecords   appViewRecords
+	buckets       irates.IBuckets
+	descr         *descr.Application
+	appTokens     istructs.IAppTokens
+	seqTrustLevel isequencer.SequencesTrustLevel
 }
 
-func newAppStructs(appCfg *AppConfigType, buckets irates.IBuckets, appTokens istructs.IAppTokens) *appStructsType {
+func newAppStructs(appCfg *AppConfigType, buckets irates.IBuckets, appTokens istructs.IAppTokens, seqTrustLevel isequencer.SequencesTrustLevel) *appStructsType {
 	app := appStructsType{
-		config:    appCfg,
-		buckets:   buckets,
-		appTokens: appTokens,
+		config:        appCfg,
+		buckets:       buckets,
+		appTokens:     appTokens,
+		seqTrustLevel: seqTrustLevel,
 	}
 	app.events = newEvents(&app)
 	app.records = newRecords(&app)

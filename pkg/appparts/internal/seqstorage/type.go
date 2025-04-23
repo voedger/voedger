@@ -13,7 +13,7 @@ import (
 
 // [~server.design.sequences/cmp.ISeqStorageImplementation~impl]
 type implISeqStorage struct {
-	appID       istructs.ClusterAppID
+	appID       isequencer.ClusterAppID
 	partitionID istructs.PartitionID
 	events      istructs.IEvents
 	seqIDs      map[appdef.QName]istructs.QNameID

@@ -19,6 +19,7 @@ import (
 	"github.com/tetratelabs/wazero/sys"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
+	"github.com/voedger/voedger/pkg/isequencer"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -259,7 +260,8 @@ func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istr
 		cfgs,
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
-		storageProvider)
+		storageProvider,
+		isequencer.SequencesTrustLevel_0)
 	structs, err := prov.BuiltIn(istructs.AppQName_test1_app1)
 	if err != nil {
 		panic(err)

@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/constraints"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iratesce"
+	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -435,7 +436,7 @@ func test() *testDataType {
 
 		testData.StorageProvider = istorageimpl.Provide(mem.Provide(coreutils.MockTime))
 
-		testData.AppStructsProvider = Provide(testData.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), testData.StorageProvider)
+		testData.AppStructsProvider = Provide(testData.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), testData.StorageProvider, isequencer.SequencesTrustLevel_0)
 		testData.AppStructs, err = testData.AppStructsProvider.BuiltIn(testData.appName)
 		if err != nil {
 			panic(err)

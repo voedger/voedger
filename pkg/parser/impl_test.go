@@ -19,6 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/irates"
+	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -2996,7 +2997,7 @@ func TestIsOperationAllowedOnNestedTable(t *testing.T) {
 	cfgs.AddAppConfig(appQName, 1, appDef, 1)
 	appStructsProvider := istructsmem.Provide(cfgs, irates.NullBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.MockTime)),
-		provider.Provide(mem.Provide(coreutils.MockTime)))
+		provider.Provide(mem.Provide(coreutils.MockTime)), isequencer.SequencesTrustLevel_0)
 	statelessResources := istructsmem.NewStatelessResources()
 	appParts, cleanup, err := appparts.New2(context.Background(), appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
 		engines.ProvideExtEngineFactories(
@@ -3050,7 +3051,7 @@ func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
 	cfgs.AddAppConfig(appQName, 1, appDef, 1)
 	appStructsProvider := istructsmem.Provide(cfgs, irates.NullBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.MockTime)),
-		provider.Provide(mem.Provide(coreutils.MockTime)))
+		provider.Provide(mem.Provide(coreutils.MockTime)), isequencer.SequencesTrustLevel_0)
 	statelessResources := istructsmem.NewStatelessResources()
 	appParts, cleanup, err := appparts.New2(context.Background(), appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
 		engines.ProvideExtEngineFactories(
