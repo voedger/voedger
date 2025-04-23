@@ -342,6 +342,14 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 			]}`, resp.Body)
 	})
 
+	t.Run("void", func(t *testing.T) {
+		// just expecting no errors
+		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryVoid`, ws.WSID),
+			coreutils.WithAuthorizeBy(ws.Owner.Token))
+		require.NoError(err)
+		resp.Println()
+	})
+
 }
 func TestQueryProcessor2_Include(t *testing.T) {
 	require := require.New(t)

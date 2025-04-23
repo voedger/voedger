@@ -36,7 +36,7 @@ func (s *implVVMSeqStorageAdapter) PutPLogOffset(appID istructs.ClusterAppID, pL
 	pKey := s.getPKey()
 	pKey = binary.BigEndian.AppendUint32(pKey, appID)
 	cCols := make([]byte, cColsSize) // first 8 bytes are 0 for NullWSID
-	binary.BigEndian.PutUint16(cCols[8:], uint16(istructs.QNameIDPLogOffsetSequence))
+	binary.BigEndian.PutUint16(cCols[8:], istructs.QNameIDPLogOffsetSequence)
 	pLogOffsetBytes := make([]byte, utils.Uint64Size)
 	binary.BigEndian.PutUint64(pLogOffsetBytes, uint64(pLogOffset))
 	return s.sysVVMStorage.Put(pKey, cCols, pLogOffsetBytes)
