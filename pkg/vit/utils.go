@@ -287,6 +287,34 @@ func (vit *VIT) SignIn(login Login, optFuncs ...signInOptFunc) (prn *Principal) 
 	}
 	deadline := time.Now().Add(getWorkspaceInitAwaitTimeout())
 	for time.Now().Before(deadline) {
+		// body := fmt.Sprintf(`
+		// 	{
+		// 		"args": {
+		// 			"Login": "%s",
+		// 			"Password": "%s",
+		// 			"AppName": "%s"
+		// 		},
+		// 		"elements":[
+		// 			{
+		// 				"fields":["PrincipalToken", "WSID", "WSError"]
+		// 			}
+		// 		]
+		// 	}`, login.Name, login.Pwd, login.AppQName.String())
+		// resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.registry.IssuePrincipalToken", body)
+		// profileWSID := istructs.WSID(resp.SectionRow()[1].(float64))
+		// wsError := resp.SectionRow()[2].(string)
+		// token := resp.SectionRow()[0].(string)
+		// if profileWSID == 0 && len(wsError) == 0 {
+		// 	time.Sleep(workspaceQueryDelay)
+		// 	continue
+		// }
+		// require.Empty(vit.T, wsError)
+		// require.NotEmpty(vit.T, token)
+		// return &Principal{
+		// 	Login:       login,
+		// 	Token:       token,
+		// 	ProfileWSID: profileWSID,
+		// }
 		body := fmt.Sprintf(`{"Login": "%s","Password": "%s"}`, login.Name, login.Pwd)
 		resp := vit.POST(fmt.Sprintf("api/v2/apps/%s/%s/auth/login", login.AppQName.Owner(), login.AppQName.Name()), body)
 		require.Equal(vit.T, http.StatusOK, resp.HTTPResp.StatusCode)
