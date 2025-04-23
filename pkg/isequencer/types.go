@@ -109,7 +109,6 @@ type MockStorage struct {
 	ReadNumbersError          error
 	writeValuesAndOffsetError error
 	mu                        sync.RWMutex
-	numbersMu                 sync.RWMutex
 	pLog                      map[PLogOffset][]SeqValue // Simulated PLog entries
 	readNextOffsetError       error
 	onWriteValuesAndOffset    func()
