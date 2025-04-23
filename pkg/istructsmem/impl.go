@@ -301,7 +301,19 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 
 	evData := dbEvent.storeToBytes()
 
-	if err = e.app.config.storage.Put(pKey, cCols, evData); err == nil {
+	switch e.app.seqTrustLevel {
+	case isequencer.SequencesTrustLevel_2:
+		err = e.app.config.storage.Put(pKey, cCols, evData)
+	case isequencer.SequencesTrustLevel_0, isequencer.SequencesTrustLevel_1:
+		ok := false
+		// [~tuc.SequencesTrustLevelForPLog~]
+		if ok, err = e.app.config.storage.InsertIfNotExists(pKey, cCols, evData, 0); err == nil {
+			if !ok {
+				panic("sequences violation")
+			}
+		}
+	}
+	if err == nil {
 		event = dbEvent
 		e.plogCache.Put(p, o, event)
 	}
@@ -313,8 +325,19 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (err error) {
 	pKey, cCols := wlogKey(ev.Workspace(), ev.WLogOffset())
 	evData := ev.(*eventType).storeToBytes()
-
-	return e.app.config.storage.Put(pKey, cCols, evData)
+	switch e.app.seqTrustLevel {
+	case isequencer.SequencesTrustLevel_2:
+		err = e.app.config.storage.Put(pKey, cCols, evData)
+	case isequencer.SequencesTrustLevel_0, isequencer.SequencesTrustLevel_1:
+		ok := false
+		// [~tuc.SequencesTrustLevelForWLog~]
+		if ok, err = e.app.config.storage.InsertIfNotExists(pKey, cCols, evData, 0); err == nil {
+			if !ok {
+				panic("sequences violation")
+			}
+		}
+	}
+	return err
 }
 
 // istructs.IEvents.ReadPLog
