@@ -47,7 +47,7 @@ func Test_RecordsRead(t *testing.T) {
 		for id := minTestRecordID; id <= maxTestRecordID; id++ {
 			rec := newTestCRecord(id)
 			data := rec.storeToBytes()
-			batch = append(batch, recordBatchItemType{id, data})
+			batch = append(batch, recordBatchItemType{id, data, true})
 		}
 		err := app.Records().(*appRecordsType).putRecordsBatch(test.workspace, batch)
 		require.NoError(err)

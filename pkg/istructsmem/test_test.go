@@ -422,7 +422,7 @@ func test() *testDataType {
 		return adb
 	}
 
-	if testData.AppConfigs == nil {
+	// if testData.AppConfigs == nil {
 		testData.AppConfigs = make(AppConfigsType, 1)
 		testData.AppCfg = testData.AppConfigs.AddBuiltInAppConfig(testData.appName, prepareAppDef())
 		testData.AppCfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
@@ -441,7 +441,7 @@ func test() *testDataType {
 		if err != nil {
 			panic(err)
 		}
-	}
+	// }
 
 	return &testData
 }

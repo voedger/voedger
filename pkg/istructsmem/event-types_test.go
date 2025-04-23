@@ -1759,6 +1759,7 @@ func TestEventBuild_Error(t *testing.T) {
 			require.Contains(pLogEvent.Error().ErrStr(), ErrWrongRecordIDError.Error())
 			require.NoError(saveErr)
 			require.NotNil(pLogEvent)
+			test.plogOfs++
 		})
 
 		t.Run("Error in Generate CUD ID", func(t *testing.T) {
@@ -1790,6 +1791,7 @@ func TestEventBuild_Error(t *testing.T) {
 			require.Contains(pLogEvent.Error().ErrStr(), ErrWrongRecordIDError.Error())
 			require.NoError(saveErr)
 			require.NotNil(pLogEvent)
+			test.plogOfs++
 
 			require.Panics(
 				func() {

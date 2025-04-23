@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"strconv"
 	"sync"
 
 	bytespool "github.com/valyala/bytebufferpool"
@@ -301,10 +302,10 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 
 	evData := dbEvent.storeToBytes()
 
-	switch e.app.seqTrustLevel {
-	case isequencer.SequencesTrustLevel_2:
+	switch {
+	case dbEvent.name == istructs.QNameForCorruptedData, e.app.seqTrustLevel == isequencer.SequencesTrustLevel_2:
 		err = e.app.config.storage.Put(pKey, cCols, evData)
-	case isequencer.SequencesTrustLevel_0, isequencer.SequencesTrustLevel_1:
+	case e.app.seqTrustLevel == isequencer.SequencesTrustLevel_0, e.app.seqTrustLevel == isequencer.SequencesTrustLevel_1:
 		ok := false
 		// [~tuc.SequencesTrustLevelForPLog~]
 		if ok, err = e.app.config.storage.InsertIfNotExists(pKey, cCols, evData, 0); err == nil {
@@ -312,6 +313,9 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 				panic("sequences violation")
 			}
 		}
+	default:
+		// notest
+		panic("unexpected SequencesTrustLevel " + strconv.Itoa(int(e.app.seqTrustLevel)))
 	}
 	if err == nil {
 		event = dbEvent
@@ -336,6 +340,9 @@ func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (err error) {
 				panic("sequences violation")
 			}
 		}
+	default:
+		// notest
+		panic("unexpected SequencesTrustLevel " + strconv.Itoa(int(e.app.seqTrustLevel)))
 	}
 	return err
 }
@@ -489,17 +496,44 @@ func (recs *appRecordsType) putRecord(workspace istructs.WSID, id istructs.Recor
 
 // putRecordsBatch puts record array to application storage through view-records batch methods
 type recordBatchItemType struct {
-	id   istructs.RecordID
-	data []byte
+	id    istructs.RecordID
+	data  []byte
+	isNew bool
 }
 
 func (recs *appRecordsType) putRecordsBatch(workspace istructs.WSID, records []recordBatchItemType) (err error) {
 	batch := make([]istorage.BatchItem, len(records))
-	for i, r := range records {
-		batch[i].PKey, batch[i].CCols = recordKey(workspace, r.id)
-		batch[i].Value = r.data
+	switch recs.app.seqTrustLevel {
+	case isequencer.SequencesTrustLevel_1, isequencer.SequencesTrustLevel_2:
+		for i, r := range records {
+			batch[i].PKey, batch[i].CCols = recordKey(workspace, r.id)
+			batch[i].Value = r.data
+		}
+		return recs.app.config.storage.PutBatch(batch)
+	case isequencer.SequencesTrustLevel_0:
+		for _, r := range records {
+			pKey, cCols := recordKey(workspace, r.id)
+			if r.isNew {
+				ok, err := recs.app.config.storage.InsertIfNotExists(pKey, cCols, r.data, 0)
+				if err != nil {
+					// notest
+					return err
+				}
+				if !ok {
+					panic("sequences violation")
+				}
+			} else {
+				if err := recs.app.config.storage.Put(pKey, cCols, r.data); err != nil {
+					// notest
+					return err
+				}
+			}
+		}
+	default:
+		// notest
+		panic("unexpected SequencesTrustLevel " + strconv.Itoa(int(recs.app.seqTrustLevel)))
 	}
-	return recs.app.config.storage.PutBatch(batch)
+	return nil
 }
 
 // validEvent returns error if event has non-committable data, such as singleton unique violations or non exists updated record id
@@ -570,7 +604,7 @@ func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istruc
 	store := func(rec *recordType) error {
 		data := rec.storeToBytes()
 		records = append(records, rec)
-		batch = append(batch, recordBatchItemType{rec.ID(), data})
+		batch = append(batch, recordBatchItemType{rec.ID(), data, rec.isNew})
 
 		return nil
 	}
