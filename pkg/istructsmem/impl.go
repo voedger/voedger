@@ -513,6 +513,7 @@ func (recs *appRecordsType) putRecordsBatch(workspace istructs.WSID, records []r
 	case isequencer.SequencesTrustLevel_0:
 		for _, r := range records {
 			pKey, cCols := recordKey(workspace, r.id)
+			// [~tuc.SequencesTrustLevelForRecords~]
 			if r.isNew {
 				ok, err := recs.app.config.storage.InsertIfNotExists(pKey, cCols, r.data, 0)
 				if err != nil {
