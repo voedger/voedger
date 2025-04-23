@@ -98,9 +98,6 @@ func (m *MockStorage) ReadNumbers(wsid WSID, seqIDs []SeqID) ([]Number, error) {
 
 	result := make([]Number, len(seqIDs))
 
-	m.numbersMu.RLock()
-	defer m.numbersMu.RUnlock()
-
 	wsNumbers, exists := m.Numbers[wsid]
 	if !exists {
 		return result, nil // Return zeros if workspace not found
@@ -119,8 +116,8 @@ func (m *MockStorage) ReadNumbers(wsid WSID, seqIDs []SeqID) ([]Number, error) {
 func (m *MockStorage) WriteValuesAndNextPLogOffset(batch []SeqValue, offset PLogOffset) error {
 	// notest
 
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	if m.onWriteValuesAndOffset != nil {
 		m.onWriteValuesAndOffset()
@@ -129,9 +126,6 @@ func (m *MockStorage) WriteValuesAndNextPLogOffset(batch []SeqValue, offset PLog
 	if m.writeValuesAndOffsetError != nil {
 		return m.writeValuesAndOffsetError
 	}
-
-	m.numbersMu.Lock()
-	defer m.numbersMu.Unlock()
 
 	// batch could be empty here for the offset that is just written
 	// case:
