@@ -49,7 +49,7 @@ func Test_RecordsRead(t *testing.T) {
 			data := rec.storeToBytes()
 			batch = append(batch, recordBatchItemType{id, data, true})
 		}
-		err := app.Records().(*appRecordsType).putRecordsBatch(test.workspace, batch)
+		err := app.Records().(*appRecordsType).putRecordsBatch(test.workspace, batch, false)
 		require.NoError(err)
 	})
 

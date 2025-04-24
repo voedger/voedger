@@ -228,3 +228,5 @@ type ValidateError interface {
 	error
 	Code() int
 }
+
+var ErrSequencesViolation = errors.New("sequences violation")

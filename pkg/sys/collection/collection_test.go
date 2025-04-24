@@ -50,7 +50,7 @@ var qNameTestWSKind = appdef.NewQName(appdef.SysPackage, "test_ws")
 const maxPrepareQueries = 10
 
 func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs istructs.IAppStructs, cleanup func(),
-	statelessResources istructsmem.IStatelessResources) {
+	statelessResources istructsmem.IStatelessResources, idGen *TSidsGeneratorType) {
 	require := require.New(t)
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
@@ -219,7 +219,9 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	// create stub for cdoc.sys.WorkspaceDescriptor to make query processor work
 	as, err := appStructsProvider.BuiltIn(test.appQName)
 	require.NoError(err)
-	err = wsdescutil.CreateCDocWorkspaceDescriptorStub(as, test.partition, test.workspace, wsdescutil.TestWsDescName, 1, 1)
+	idGen = newTSIdsGenerator()
+	nextOffset := idGen.nextOffset()
+	err = wsdescutil.CreateCDocWorkspaceDescriptorStub(as, test.partition, test.workspace, wsdescutil.TestWsDescName, nextOffset, nextOffset)
 	require.NoError(err)
 
 	cleanup = func() {
@@ -227,7 +229,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		n10nBrokerCleanup()
 	}
 
-	return appParts, as, cleanup, statelessResources
+	return appParts, as, cleanup, statelessResources, idGen
 }
 
 // Test executes 3 operations with CUDs:
@@ -239,20 +241,17 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 func TestBasicUsage_Collection(t *testing.T) {
 	require := require.New(t)
 
-	appParts, appStructs, cleanup, _ := deployTestApp(t)
+	appParts, appStructs, cleanup, _, idGen := deployTestApp(t)
 	defer cleanup()
 
 	// Command processor
 	processor := testProcessor(appParts)
 
-	// ID and Offset generators
-	idGen := newIdsGenerator()
-
-	normalPriceID, happyHourPriceID, _ := insertPrices(require, appStructs, &idGen)
-	coldDrinks, _ := insertDepartments(require, appStructs, &idGen)
+	normalPriceID, happyHourPriceID, _ := insertPrices(require, appStructs, idGen)
+	coldDrinks, _ := insertDepartments(require, appStructs, idGen)
 
 	{ // CUDs: Insert coca-cola
-		event := saveEvent(require, appStructs, &idGen, newModify(appStructs, &idGen, func(event istructs.IRawEventBuilder) {
+		event := saveEvent(require, appStructs, idGen, newModify(appStructs, idGen, func(event istructs.IRawEventBuilder) {
 			newArticleCUD(event, 1, coldDrinks, test.cocaColaNumber, "Coca-cola")
 			newArPriceCUD(event, 1, 2, normalPriceID, 2.4)
 			newArPriceCUD(event, 1, 3, happyHourPriceID, 1.8)
@@ -266,7 +265,7 @@ func TestBasicUsage_Collection(t *testing.T) {
 	cocaColaHappyHourPriceElementID := idGen.idmap[3]
 
 	{ // CUDs: modify coca-cola number and normal price
-		event := saveEvent(require, appStructs, &idGen, newModify(appStructs, &idGen, func(event istructs.IRawEventBuilder) {
+		event := saveEvent(require, appStructs, idGen, newModify(appStructs, idGen, func(event istructs.IRawEventBuilder) {
 			updateArticleCUD(event, appStructs, cocaColaDocID, test.cocaColaNumber2, "Coca-cola")
 			updateArPriceCUD(event, appStructs, cocaColaNormalPriceElementID, normalPriceID, 2.2)
 		}))
@@ -274,7 +273,7 @@ func TestBasicUsage_Collection(t *testing.T) {
 	}
 
 	{ // CUDs: insert fanta
-		event := saveEvent(require, appStructs, &idGen, newModify(appStructs, &idGen, func(event istructs.IRawEventBuilder) {
+		event := saveEvent(require, appStructs, idGen, newModify(appStructs, idGen, func(event istructs.IRawEventBuilder) {
 			newArticleCUD(event, 7, coldDrinks, test.fantaNumber, "Fanta")
 			newArPriceCUD(event, 7, 8, normalPriceID, 2.1)
 			newArPriceCUD(event, 7, 9, happyHourPriceID, 1.7)
@@ -302,17 +301,14 @@ func TestBasicUsage_Collection(t *testing.T) {
 func Test_updateChildRecord(t *testing.T) {
 	require := require.New(t)
 
-	_, appStructs, cleanup, _ := deployTestApp(t)
+	_, appStructs, cleanup, _, idGen := deployTestApp(t)
 	defer cleanup()
 
-	// ID and Offset generators
-	idGen := newIdsGenerator()
-
-	normalPriceID, _, _ := insertPrices(require, appStructs, &idGen)
-	coldDrinks, _ := insertDepartments(require, appStructs, &idGen)
+	normalPriceID, _, _ := insertPrices(require, appStructs, idGen)
+	coldDrinks, _ := insertDepartments(require, appStructs, idGen)
 
 	{ // CUDs: Insert coca-cola
-		saveEvent(require, appStructs, &idGen, newModify(appStructs, &idGen, func(event istructs.IRawEventBuilder) {
+		saveEvent(require, appStructs, idGen, newModify(appStructs, idGen, func(event istructs.IRawEventBuilder) {
 			newArticleCUD(event, 1, coldDrinks, test.cocaColaNumber, "Coca-cola")
 			newArPriceCUD(event, 1, 2, normalPriceID, 2.4)
 		}))
@@ -321,7 +317,7 @@ func Test_updateChildRecord(t *testing.T) {
 	cocaColaNormalPriceElementID := idGen.idmap[2]
 
 	{ // CUDs: modify normal price
-		saveEvent(require, appStructs, &idGen, newModify(appStructs, &idGen, func(event istructs.IRawEventBuilder) {
+		saveEvent(require, appStructs, idGen, newModify(appStructs, idGen, func(event istructs.IRawEventBuilder) {
 			updateArPriceCUD(event, appStructs, cocaColaNormalPriceElementID, normalPriceID, 2.2)
 		}))
 	}
@@ -356,18 +352,15 @@ update coca-cola:
 		- holiday: 0.9
 */
 
-func cp_Collection_3levels(t *testing.T, appParts appparts.IAppPartitions, appStructs istructs.IAppStructs) {
+func cp_Collection_3levels(t *testing.T, appParts appparts.IAppPartitions, appStructs istructs.IAppStructs, idGen *TSidsGeneratorType) {
 	require := require.New(t)
 
 	// Command processor
 	processor := testProcessor(appParts)
 
-	// ID and Offset generators
-	idGen := newIdsGenerator()
-
-	normalPriceID, happyHourPriceID, eventPrices := insertPrices(require, appStructs, &idGen)
-	coldDrinks, eventDepartments := insertDepartments(require, appStructs, &idGen)
-	holiday, newyear, eventPeriods := insertPeriods(require, appStructs, &idGen)
+	normalPriceID, happyHourPriceID, eventPrices := insertPrices(require, appStructs, idGen)
+	coldDrinks, eventDepartments := insertDepartments(require, appStructs, idGen)
+	holiday, newyear, eventPeriods := insertPeriods(require, appStructs, idGen)
 
 	for _, event := range []istructs.IPLogEvent{eventPrices, eventDepartments, eventPeriods} {
 		require.NoError(processor.SendSync(event))
@@ -375,7 +368,7 @@ func cp_Collection_3levels(t *testing.T, appParts appparts.IAppPartitions, appSt
 
 	// insert coca-cola
 	{
-		event := saveEvent(require, appStructs, &idGen, newModify(appStructs, &idGen, func(event istructs.IRawEventBuilder) {
+		event := saveEvent(require, appStructs, idGen, newModify(appStructs, idGen, func(event istructs.IRawEventBuilder) {
 			newArticleCUD(event, 1, coldDrinks, test.cocaColaNumber, "Coca-cola")
 			newArPriceCUD(event, 1, 2, normalPriceID, 2.0)
 			newArPriceCUD(event, 1, 3, happyHourPriceID, 1.5)
@@ -395,7 +388,7 @@ func cp_Collection_3levels(t *testing.T, appParts appparts.IAppPartitions, appSt
 
 	// insert fanta
 	{
-		event := saveEvent(require, appStructs, &idGen, newModify(appStructs, &idGen, func(event istructs.IRawEventBuilder) {
+		event := saveEvent(require, appStructs, idGen, newModify(appStructs, idGen, func(event istructs.IRawEventBuilder) {
 			newArticleCUD(event, 6, coldDrinks, test.fantaNumber, "Fanta")
 			newArPriceCUD(event, 6, 7, normalPriceID, 2.1)
 			{
@@ -419,7 +412,7 @@ func cp_Collection_3levels(t *testing.T, appParts appparts.IAppPartitions, appSt
 
 	// modify coca-cola
 	{
-		event := saveEvent(require, appStructs, &idGen, newModify(appStructs, &idGen, func(event istructs.IRawEventBuilder) {
+		event := saveEvent(require, appStructs, idGen, newModify(appStructs, idGen, func(event istructs.IRawEventBuilder) {
 			newArPriceExceptionCUD(event, cocaColaNormalPriceElementID, 15, holiday, 1.8)
 			updateArPriceExceptionCUD(event, appStructs, cocaColaHappyHourExceptionHolidayElementID, holiday, 0.9)
 		}))
@@ -458,20 +451,20 @@ func cp_Collection_3levels(t *testing.T, appParts appparts.IAppPartitions, appSt
 }
 
 func Test_Collection_3levels(t *testing.T) {
-	appParts, appStructs, cleanup, _ := deployTestApp(t)
+	appParts, appStructs, cleanup, _, idGen := deployTestApp(t)
 	defer cleanup()
 
-	cp_Collection_3levels(t, appParts, appStructs)
+	cp_Collection_3levels(t, appParts, appStructs, idGen)
 }
 
 func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 	require := require.New(t)
 
-	appParts, appStructs, cleanup, statelessResources := deployTestApp(t)
+	appParts, appStructs, cleanup, statelessResources, idGen := deployTestApp(t)
 	defer cleanup()
 
 	// Fill the collection projection
-	cp_Collection_3levels(t, appParts, appStructs)
+	cp_Collection_3levels(t, appParts, appStructs, idGen)
 
 	requestBody := []byte(`{
 						"args":{
@@ -590,11 +583,11 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 	require := require.New(t)
 
-	appParts, appStructs, cleanup, statelessResources := deployTestApp(t)
+	appParts, appStructs, cleanup, statelessResources, idGen := deployTestApp(t)
 	defer cleanup()
 
 	// Fill the collection projection
-	cp_Collection_3levels(t, appParts, appStructs)
+	cp_Collection_3levels(t, appParts, appStructs, idGen)
 
 	requestBody := fmt.Sprintf(`{
 		"args":{
@@ -719,11 +712,11 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 func TestBasicUsage_State(t *testing.T) {
 	require := require.New(t)
 
-	appParts, appStructs, cleanup, statelessResources := deployTestApp(t)
+	appParts, appStructs, cleanup, statelessResources, idGen := deployTestApp(t)
 	defer cleanup()
 
 	// Fill the collection projection
-	cp_Collection_3levels(t, appParts, appStructs)
+	cp_Collection_3levels(t, appParts, appStructs, idGen)
 
 	serviceChannel := make(iprocbus.ServiceChannel)
 
@@ -887,11 +880,11 @@ func TestBasicUsage_State(t *testing.T) {
 func TestState_withAfterArgument(t *testing.T) {
 	require := require.New(t)
 
-	appParts, appStructs, cleanup, statelessResources := deployTestApp(t)
+	appParts, appStructs, cleanup, statelessResources, idGen := deployTestApp(t)
 	defer cleanup()
 
 	// Fill the collection projection
-	cp_Collection_3levels(t, appParts, appStructs)
+	cp_Collection_3levels(t, appParts, appStructs, idGen)
 
 	serviceChannel := make(iprocbus.ServiceChannel)
 
@@ -905,7 +898,7 @@ func TestState_withAfterArgument(t *testing.T) {
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
 	sender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
-		serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, responder, []byte(`{"args":{"After":5},"elements":[{"fields":["State"]}]}`),
+		serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, responder, []byte(`{"args":{"After":6},"elements":[{"fields":["State"]}]}`),
 			qNameQueryState, "", sysToken)
 	})
 
@@ -1063,7 +1056,7 @@ func updateArPriceExceptionCUD(bld istructs.IRawEventBuilder, app istructs.IAppS
 	writer.PutRecordID(test.articlePriceExceptionsPeriodIDIdent, idPeriod)
 	writer.PutFloat32(test.articlePriceExceptionsPriceIdent, price)
 }
-func insertPrices(require *require.Assertions, app istructs.IAppStructs, idGen *idsGeneratorType) (normalPrice, happyHourPrice istructs.RecordID, event istructs.IPLogEvent) {
+func insertPrices(require *require.Assertions, app istructs.IAppStructs, idGen *TSidsGeneratorType) (normalPrice, happyHourPrice istructs.RecordID, event istructs.IPLogEvent) {
 	event = saveEvent(require, app, idGen, newModify(app, idGen, func(event istructs.IRawEventBuilder) {
 		newPriceCUD(event, 51, 1, "Normal Price")
 		newPriceCUD(event, 52, 2, "Happy Hour Price")
@@ -1071,7 +1064,7 @@ func insertPrices(require *require.Assertions, app istructs.IAppStructs, idGen *
 	return idGen.idmap[51], idGen.idmap[52], event
 }
 
-func insertPeriods(require *require.Assertions, app istructs.IAppStructs, idGen *idsGeneratorType) (holiday, newYear istructs.RecordID, event istructs.IPLogEvent) {
+func insertPeriods(require *require.Assertions, app istructs.IAppStructs, idGen *TSidsGeneratorType) (holiday, newYear istructs.RecordID, event istructs.IPLogEvent) {
 	event = saveEvent(require, app, idGen, newModify(app, idGen, func(event istructs.IRawEventBuilder) {
 		newPeriodCUD(event, 71, 1, "Holiday")
 		newPeriodCUD(event, 72, 2, "New Year")
@@ -1079,7 +1072,7 @@ func insertPeriods(require *require.Assertions, app istructs.IAppStructs, idGen 
 	return idGen.idmap[71], idGen.idmap[72], event
 }
 
-func insertDepartments(require *require.Assertions, app istructs.IAppStructs, idGen *idsGeneratorType) (coldDrinks istructs.RecordID, event istructs.IPLogEvent) {
+func insertDepartments(require *require.Assertions, app istructs.IAppStructs, idGen *TSidsGeneratorType) (coldDrinks istructs.RecordID, event istructs.IPLogEvent) {
 	event = saveEvent(require, app, idGen, newModify(app, idGen, func(event istructs.IRawEventBuilder) {
 		newDepartmentCUD(event, 61, 1, "Cold Drinks")
 		newDepartmentCUD(event, 62, 2, "Hot Drinks")
@@ -1090,7 +1083,7 @@ func insertDepartments(require *require.Assertions, app istructs.IAppStructs, id
 
 type eventCallback func(event istructs.IRawEventBuilder)
 
-func newModify(app istructs.IAppStructs, gen *idsGeneratorType, cb eventCallback) istructs.IRawEventBuilder {
+func newModify(app istructs.IAppStructs, gen *TSidsGeneratorType, cb eventCallback) istructs.IRawEventBuilder {
 	newOffset := gen.nextOffset()
 	builder := app.Events().GetSyncRawEventBuilder(
 		istructs.SyncRawEventBuilderParams{
@@ -1104,48 +1097,4 @@ func newModify(app istructs.IAppStructs, gen *idsGeneratorType, cb eventCallback
 		})
 	cb(builder)
 	return builder
-}
-
-func Test_Idempotency(t *testing.T) {
-	require := require.New(t)
-
-	appParts, appStructs, cleanup, _ := deployTestApp(t)
-	defer cleanup()
-
-	// create command processor
-	processor := testProcessor(appParts)
-
-	// ID and Offset generators
-	idGen := newIdsGenerator()
-
-	coldDrinks, _ := insertDepartments(require, appStructs, &idGen)
-
-	// CUDs: Insert coca-cola
-	event1 := createEvent(require, appStructs, &idGen, newModify(appStructs, &idGen, func(event istructs.IRawEventBuilder) {
-		newArticleCUD(event, 1, coldDrinks, test.cocaColaNumber, "Coca-cola")
-	}))
-	require.NoError(appStructs.Records().Apply(event1))
-	cocaColaDocID = idGen.idmap[1]
-	require.NoError(processor.SendSync(event1))
-
-	// CUDs: modify coca-cola number and normal price
-	event2 := createEvent(require, appStructs, &idGen, newModify(appStructs, &idGen, func(event istructs.IRawEventBuilder) {
-		updateArticleCUD(event, appStructs, cocaColaDocID, test.cocaColaNumber2, "Coca-cola")
-	}))
-	require.NoError(appStructs.Records().Apply(event2))
-	require.NoError(processor.SendSync(event2))
-
-	// simulate sending event with the same offset
-	idGen.decOffset()
-	event2copy := createEvent(require, appStructs, &idGen, newModify(appStructs, &idGen, func(event istructs.IRawEventBuilder) {
-		updateArticleCUD(event, appStructs, cocaColaDocID, test.cocaColaNumber, "Coca-cola")
-	}))
-	require.NoError(appStructs.Records().Apply(event2copy))
-	require.NoError(processor.SendSync(event2copy))
-
-	// Check expected projection values
-	{ // coca-cola
-		requireArticle(require, "Coca-cola", test.cocaColaNumber2, appStructs, cocaColaDocID)
-	}
-
 }

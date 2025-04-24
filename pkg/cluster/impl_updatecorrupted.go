@@ -83,8 +83,8 @@ func updateCorrupted(update update, currentMillis istructs.UnixMilli) (err error
 		}))
 		return err
 	}
-	nonStoredPLogEvent := update.appStructs.Events().BuildPLogEvent(syncRawEvent)
-	return update.appStructs.Events().PutWlog(nonStoredPLogEvent)
+	pLogEventToOverwriteBy := update.appStructs.Events().BuildPLogEvent(syncRawEvent)
+	return update.appStructs.Events().PutWlog(pLogEventToOverwriteBy)
 }
 
 func validateQuery_Corrupted(update update) error {

@@ -6,6 +6,7 @@
 package istructsmem
 
 import (
+	"context"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -99,13 +100,17 @@ func TestSequencesTrustLevel(t *testing.T) {
 		t.Run("trust level 0", func(t *testing.T) {
 			app.(*appStructsType).seqTrustLevel = isequencer.SequencesTrustLevel_0
 			t.Run("panic on write the same PLogOffset", func(t *testing.T) {
-				require.Panics(func() { app.Events().PutPlog(rawEvent, buildErr, NewIDGenerator()) })
+				ev, err := app.Events().PutPlog(rawEvent, buildErr, NewIDGenerator())
+				require.ErrorIs(err, ErrSequencesViolation)
+				require.Nil(ev)
 			})
 		})
 		t.Run("trust level 1", func(t *testing.T) {
 			app.(*appStructsType).seqTrustLevel = isequencer.SequencesTrustLevel_1
 			t.Run("panic on write the same PLogOffset", func(t *testing.T) {
-				require.Panics(func() { app.Events().PutPlog(rawEvent, buildErr, NewIDGenerator()) })
+				ev, err := app.Events().PutPlog(rawEvent, buildErr, NewIDGenerator())
+				require.ErrorIs(err, ErrSequencesViolation)
+				require.Nil(ev)
 			})
 		})
 
@@ -125,7 +130,8 @@ func TestSequencesTrustLevel(t *testing.T) {
 		t.Run("trust level 0", func(t *testing.T) {
 			app.(*appStructsType).seqTrustLevel = isequencer.SequencesTrustLevel_0
 			t.Run("panic on write the same RecordIDs", func(t *testing.T) {
-				require.Panics(func() { app.Records().Apply(pLogEvent) })
+				err := app.Records().Apply(pLogEvent)
+				require.ErrorIs(err, ErrSequencesViolation)
 			})
 		})
 		t.Run("trust level 1", func(t *testing.T) {
@@ -152,13 +158,15 @@ func TestSequencesTrustLevel(t *testing.T) {
 		t.Run("trust level 0", func(t *testing.T) {
 			app.(*appStructsType).seqTrustLevel = isequencer.SequencesTrustLevel_0
 			t.Run("panic on overwrite the same WLogOffset", func(t *testing.T) {
-				require.Panics(func() { app.Events().PutWlog(pLogEvent) })
+				err := app.Events().PutWlog(pLogEvent)
+				require.ErrorIs(err, ErrSequencesViolation)
 			})
 		})
 		t.Run("trust level 1", func(t *testing.T) {
 			app.(*appStructsType).seqTrustLevel = isequencer.SequencesTrustLevel_1
 			t.Run("panic on write the same WLogOffset", func(t *testing.T) {
-				require.Panics(func() { app.Events().PutWlog(pLogEvent) })
+				err := app.Events().PutWlog(pLogEvent)
+				require.ErrorIs(err, ErrSequencesViolation)
 			})
 		})
 
@@ -168,6 +176,91 @@ func TestSequencesTrustLevel(t *testing.T) {
 				err := app.Events().PutWlog(pLogEvent)
 				require.NoError(err)
 			})
+		})
+	})
+}
+
+func TestEventReapplier(t *testing.T) {
+	require := require.New(t)
+
+	appName := istructs.AppQName_test1_app1
+
+	// create app configuration
+	appConfigs := func() AppConfigsType {
+		adb := builder.New()
+		adb.AddPackage("test", "test.com/test")
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		saleParamsName := appdef.NewQName("test", "SaleParams")
+		wsb.AddODoc(saleParamsName)
+		qNameCmdTestSale := appdef.NewQName("test", "Sale")
+		wsb.AddCommand(qNameCmdTestSale).
+			SetParam(saleParamsName)
+		cfgs := make(AppConfigsType, 1)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+		cfg.Resources.Add(NewCommandFunction(qNameCmdTestSale, NullCommandExec))
+
+		return cfgs
+	}()
+
+	storageProvider := simpleStorageProvider()
+	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
+
+	app, err := provider.BuiltIn(appName)
+	require.NoError(err)
+
+	bld := app.Events().GetSyncRawEventBuilder(
+		istructs.SyncRawEventBuilderParams{
+			GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+				HandlingPartition: 55,
+				PLogOffset:        10000,
+				Workspace:         1234,
+				WLogOffset:        1000,
+				QName:             appdef.NewQName("test", "Sale"),
+				RegisteredAt:      100500,
+			},
+			Device:   762,
+			SyncedAt: 1005001,
+		})
+	cmd := bld.ArgumentObjectBuilder()
+	cmd.PutRecordID(appdef.SystemField_ID, 1)
+	rawEvent, buildErr := bld.BuildRawEvent()
+	require.NoError(buildErr)
+
+	pLogEvent, err := app.Events().PutPlog(rawEvent, buildErr, NewIDGenerator())
+	require.NoError(err)
+
+	err = app.Records().Apply(pLogEvent)
+	require.NoError(err)
+
+	app.Events().PutWlog(pLogEvent)
+	require.NoError(err)
+
+	t.Run("ok to re-apply the event loaded from the db", func(t *testing.T) {
+		t.Run("plog cache", func(t *testing.T) {
+			var dbPLogEvent istructs.IPLogEvent
+			app.Events().ReadPLog(context.Background(), 55, 10000, 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+				require.Nil(dbPLogEvent)
+				dbPLogEvent = event
+				return nil
+			})
+			reapplier := app.GetEventReapplier(dbPLogEvent)
+			require.NoError(reapplier.ApplyRecords())
+			require.NoError(reapplier.PutWLog())
+		})
+		t.Run("initialy read from storage", func(t *testing.T) {
+			provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
+			app, err := provider.BuiltIn(appName)
+			require.NoError(err)
+			var dbPLogEvent istructs.IPLogEvent
+			app.Events().ReadPLog(context.Background(), 55, 10000, 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+				require.Nil(dbPLogEvent)
+				dbPLogEvent = event
+				return nil
+			})
+			reapplier := app.GetEventReapplier(dbPLogEvent)
+			require.NoError(reapplier.ApplyRecords())
+			require.NoError(reapplier.PutWLog())
 		})
 	})
 }
