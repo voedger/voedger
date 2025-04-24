@@ -411,7 +411,7 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkp
 
 	ws := cmd.iWorkspace
 	if ws == nil {
-		// dummy or c.sys.CreateWorkspace
+		// c.sys.CreateWorkspace
 		ws = cmd.iCommand.Workspace()
 	}
 
@@ -587,7 +587,7 @@ func (cmdProc *cmdProc) cudsValidators(ctx context.Context, work pipeline.IWorkp
 func (cmdProc *cmdProc) validateCUDsQNames(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	if cmd.iWorkspace == nil {
-		// dummy or c.sys.CreateWorkspace
+		// c.sys.CreateWorkspace
 		return nil
 	}
 	for cud := range cmd.rawEvent.CUDs {
@@ -676,7 +676,7 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 			return cudXPath.Error(fmt.Errorf(`"sys.ID" field missing`))
 		}
 
-		parsedCUD.xPath = xPath(fmt.Sprintf("%s %s %s", cudXPath, opKindDesc[parsedCUD.opKind], parsedCUD.qName))
+		parsedCUD.xPath = xPath(fmt.Sprintf("%s %s %s", cudXPath, parsedCUD.opKind, parsedCUD.qName))
 
 		cmd.parsedCUDs = append(cmd.parsedCUDs, parsedCUD)
 	}
@@ -748,7 +748,7 @@ func (cmdProc *cmdProc) authorizeRequestCUDs(_ context.Context, work pipeline.IW
 
 	ws := cmd.iWorkspace
 	if ws == nil {
-		// dummy or c.sys.CreateWorkspace
+		// c.sys.CreateWorkspace
 		ws = cmd.iCommand.Workspace()
 	}
 	for _, parsedCUD := range cmd.parsedCUDs {

@@ -168,7 +168,7 @@ func TestAuth(t *testing.T) {
 		vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.TestDeniedCDoc", ws.WSID), body,
 			coreutils.WithMethod(http.MethodPost),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
-			coreutils.Expect403("INSERT app1pkg.TestDeniedCDoc: operation forbidden"),
+			coreutils.Expect403("OperationKind_Insert app1pkg.TestDeniedCDoc: operation forbidden"),
 		).Println()
 	})
 
@@ -185,7 +185,7 @@ func TestAuth(t *testing.T) {
 		vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.TestDeniedCDoc/%d", ws.WSID, newIDs["1"]), body,
 			coreutils.WithMethod(http.MethodPatch),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
-			coreutils.Expect403("UPDATE app1pkg.TestDeniedCDoc: operation forbidden"),
+			coreutils.Expect403("OperationKind_Update app1pkg.TestDeniedCDoc: operation forbidden"),
 		).Println()
 	})
 
@@ -200,7 +200,7 @@ func TestAuth(t *testing.T) {
 		vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.DocDeactivateDenied/%d", ws.WSID, newIDs["1"]), "{}",
 			coreutils.WithMethod(http.MethodDelete),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
-			coreutils.Expect403("DEACTIVATE app1pkg.DocDeactivateDenied: operation forbidden"),
+			coreutils.Expect403("OperationKind_Deactivate app1pkg.DocDeactivateDenied: operation forbidden"),
 		).Println()
 	})
 
