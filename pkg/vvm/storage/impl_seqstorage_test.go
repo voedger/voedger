@@ -25,7 +25,7 @@ func TestSeqStorage(t *testing.T) {
 	seqStorage := NewVVMSeqStorageAdapter(sysVvmAppStorage)
 
 	// Base test data
-	baseAppID := isequencer.ClusterAppID(istructs.ClusterApps[istructs.AppQName_test1_app1])
+	baseAppID := istructs.ClusterApps[istructs.AppQName_test1_app1]
 	baseWsid := isequencer.WSID(1)
 	baseSeqID := isequencer.SeqID(istructs.QNameIDCRecordIDSequence)
 

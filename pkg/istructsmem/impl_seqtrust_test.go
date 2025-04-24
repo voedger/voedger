@@ -248,7 +248,7 @@ func TestEventReapplier(t *testing.T) {
 			require.NoError(reapplier.ApplyRecords())
 			require.NoError(reapplier.PutWLog())
 		})
-		t.Run("initialy read from storage", func(t *testing.T) {
+		t.Run("initially read from storage", func(t *testing.T) {
 			provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
 			app, err := provider.BuiltIn(appName)
 			require.NoError(err)

@@ -285,7 +285,7 @@ func TestSeqIDMapping(t *testing.T) {
 	appStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
 	require.NoError(err)
 	seqSysVVMStorage := storage.NewVVMSeqStorageAdapter(appStorage)
-	seqStorage := New(isequencer.ClusterAppID(istructs.ClusterApps[istructs.AppQName_test1_app1]), istructs.PartitionID(1), mockEvents, appDef, seqSysVVMStorage)
+	seqStorage := New(istructs.ClusterApps[istructs.AppQName_test1_app1], istructs.PartitionID(1), mockEvents, appDef, seqSysVVMStorage)
 	require.Equal(istructs.QNameIDPLogOffsetSequence, seqStorage.(*implISeqStorage).seqIDs[istructs.QNamePLogOffsetSequence])
 	require.Equal(istructs.QNameIDWLogOffsetSequence, seqStorage.(*implISeqStorage).seqIDs[istructs.QNameWLogOffsetSequence])
 	require.Equal(istructs.QNameIDCRecordIDSequence, seqStorage.(*implISeqStorage).seqIDs[istructs.QNameCRecordIDSequence])
@@ -370,7 +370,7 @@ func setupSeqStorage(t *testing.T, mockEvents *coreutils.MockEvents, appDef appd
 	appStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
 	require.NoError(err)
 	seqSysVVMStorage := storage.NewVVMSeqStorageAdapter(appStorage)
-	return New(isequencer.ClusterAppID(istructs.ClusterApps[istructs.AppQName_test1_app1]), istructs.PartitionID(1), mockEvents, appDef, seqSysVVMStorage)
+	return New(istructs.ClusterApps[istructs.AppQName_test1_app1], istructs.PartitionID(1), mockEvents, appDef, seqSysVVMStorage)
 }
 
 type expectedSeqValue struct {
