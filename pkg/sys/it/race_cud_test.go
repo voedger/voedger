@@ -27,6 +27,7 @@ const (
 
 var cfg it.VITConfig
 
+// nolint
 func init() {
 	appOpts := []it.AppOptFunc{
 		it.WithWorkspaceTemplate(it.QNameApp1_TestWSKind, "test_template", sys_test_template.TestTemplateFS),
@@ -285,14 +286,12 @@ func Test_Race_CUDManyReadCheckResult(t *testing.T) {
 	defer vit.TearDown()
 
 	cntWS := readCnt
-	// sysPrn := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
 
 	wg := sync.WaitGroup{}
 	for prtIdx := istructs.WSID(1); int(prtIdx) < cntWS; prtIdx++ {
 		wg.Add(1)
 		go func(wsidNum istructs.WSID) {
 			defer wg.Done()
-			// wsid := wsidNum + istructs.MaxPseudoBaseWSID
 			ws := vit.WS(istructs.AppQName_test1_app1, "test_ws_"+strconv.Itoa(int(wsidNum)))
 			readArt(vit, ws)
 		}(prtIdx)
