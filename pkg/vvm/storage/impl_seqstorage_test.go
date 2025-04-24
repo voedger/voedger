@@ -45,7 +45,7 @@ func TestSeqStorage(t *testing.T) {
 		},
 		{
 			name:  "different appID",
-			appID: isequencer.ClusterAppID(istructs.ClusterApps[istructs.AppQName_test1_app2]),
+			appID: istructs.ClusterApps[istructs.AppQName_test1_app2],
 			wsid:  baseWsid,
 			seqID: baseSeqID,
 			num:   43,
