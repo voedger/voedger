@@ -27,6 +27,7 @@ const (
 
 var cfg it.VITConfig
 
+// nolint
 func init() {
 	appOpts := []it.AppOptFunc{
 		it.WithWorkspaceTemplate(it.QNameApp1_TestWSKind, "test_template", sys_test_template.TestTemplateFS),
