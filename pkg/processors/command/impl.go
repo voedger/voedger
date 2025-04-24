@@ -243,7 +243,7 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work pipeline.IWorkp
 
 func updateIDGeneratorFromO(root istructs.IObject, findType appdef.FindType, idGen istructs.IIDGenerator) {
 	// new IDs only here because update is not allowed for ODocs in Args
-	idGen.UpdateOnSync(root.AsRecordID(appdef.SystemField_ID), findType(root.QName()))
+	idGen.UpdateOnSync(root.AsRecordID(appdef.SystemField_ID))
 	for container := range root.Containers {
 		// order of containers here is the order in the schema
 		// but order in the request could be different
@@ -265,8 +265,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 
 		for rec := range event.CUDs {
 			if rec.IsNew() {
-				t := cmd.appStructs.AppDef().Type(rec.QName())
-				ws.idGenerator.UpdateOnSync(rec.ID(), t)
+				ws.idGenerator.UpdateOnSync(rec.ID())
 			}
 		}
 		ao := event.ArgumentObject()
@@ -840,8 +839,8 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 	bus.ReplyJSON(cmd.cmdMes.Responder(), cmd.statusCodeOfSuccess, body.String())
 }
 
-func (idGen *implIDGenerator) NextID(rawID istructs.RecordID, t appdef.IType) (storageID istructs.RecordID, err error) {
-	storageID, err = idGen.IIDGenerator.NextID(rawID, t)
+func (idGen *implIDGenerator) NextID(rawID istructs.RecordID) (storageID istructs.RecordID, err error) {
+	storageID, err = idGen.IIDGenerator.NextID(rawID)
 	idGen.generatedIDs[rawID] = storageID
 	return
 }

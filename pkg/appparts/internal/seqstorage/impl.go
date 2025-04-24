@@ -29,7 +29,7 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 					continue
 				}
 				cudType := ss.appDef.Type(cud.QName())
-				seqQName := istructs.QNameCRecordIDSequence
+				seqQName := istructs.QNameDocIDSequence
 				if cudType.Kind() == appdef.TypeKind_WDoc || cudType.Kind() == appdef.TypeKind_WRecord {
 					seqQName = istructs.QNameOWRecordIDSequence
 				}

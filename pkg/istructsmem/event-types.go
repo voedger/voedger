@@ -473,7 +473,7 @@ func (cud *cudType) regenerateIDsPlan(generator istructs.IIDGenerator) (newIDs n
 		id := rec.ID()
 		if !id.IsRaw() {
 			// storage IDs are allowed for sync events
-			generator.UpdateOnSync(id, rec.typ)
+			generator.UpdateOnSync(id)
 			continue
 		}
 
@@ -484,7 +484,7 @@ func (cud *cudType) regenerateIDsPlan(generator istructs.IIDGenerator) (newIDs n
 				return nil, err
 			}
 		} else {
-			if storeID, err = generator.NextID(id, rec.typ); err != nil {
+			if storeID, err = generator.NextID(id); err != nil {
 				return nil, err
 			}
 		}
@@ -771,7 +771,7 @@ func (o *objectType) regenerateIDs(generator istructs.IIDGenerator) (err error) 
 	err = o.forEach(
 		func(c *objectType) error {
 			if id := c.ID(); id.IsRaw() {
-				storeID, err := generator.NextID(id, c.typ)
+				storeID, err := generator.NextID(id)
 				if err != nil {
 					return err
 				}

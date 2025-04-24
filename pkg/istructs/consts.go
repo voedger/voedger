@@ -46,8 +46,7 @@ var (
 	// sequences QNames has hardcoded QNameIDs: [QNameIDWLogOffsetSequence] etc
 	QNamePLogOffsetSequence = appdef.NewQName(appdef.SysPackage, "PLogOffsetSequence")
 	QNameWLogOffsetSequence = appdef.NewQName(appdef.SysPackage, "WLogOffsetSequence")
-	QNameCRecordIDSequence  = appdef.NewQName(appdef.SysPackage, "CRecordIDSequence")
-	QNameOWRecordIDSequence = appdef.NewQName(appdef.SysPackage, "OWRecordIDSequence")
+	QNameDocIDSequence      = appdef.NewQName(appdef.SysPackage, "DocIDSequence")
 )
 
 // *********************************************************************************************************
@@ -71,8 +70,7 @@ const (
 	RegisterFactor = 5000000000
 
 	// +1 caused by wrong iota usage here before. See https://github.com/voedger/voedger/issues/3528
-	ClusterAsRegisterID        = 0xFFFF - 1000 + 1
-	ClusterAsCRecordRegisterID = 0xFFFF - 1000 + 2
+	ClusterAsRegisterID = 0xFFFF - 1000 + 1
 )
 
 var MinClusterRecordID = NewRecordID(NullRecordID)
@@ -248,8 +246,7 @@ const (
 	QNameIDForCorruptedData
 	QNameIDPLogOffsetSequence
 	QNameIDWLogOffsetSequence
-	QNameIDCRecordIDSequence
-	QNameIDOWRecordIDSequence
+	QNameIDDocIDSequence
 
 	QNameIDSysLast QNameID = 0xFF
 )

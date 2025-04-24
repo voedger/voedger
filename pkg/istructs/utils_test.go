@@ -86,21 +86,6 @@ func TestBasicUsage_NewRecordID(t *testing.T) {
 	}
 }
 
-func TestBasicUsage_NewCDocCRecordID(t *testing.T) {
-	require := require.New(t)
-
-	// First cluster-generated C*- ID
-	{
-		recordID := istructs.NewCDocCRecordID(1)
-		require.Equal(istructs.RecordID(istructs.ClusterAsCRecordRegisterID)*istructs.RegisterFactor+1, recordID)
-	}
-	// Second cluster-generated ID
-	{
-		recordID := istructs.NewCDocCRecordID(2)
-		require.Equal(istructs.RecordID(istructs.ClusterAsCRecordRegisterID)*istructs.RegisterFactor+2, recordID)
-	}
-}
-
 func TestBasicUsage_BaseRecordID(t *testing.T) {
 	require := require.New(t)
 
