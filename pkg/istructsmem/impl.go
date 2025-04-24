@@ -9,12 +9,14 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"strconv"
 	"sync"
 
 	bytespool "github.com/valyala/bytebufferpool"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
+	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/descr"
@@ -37,6 +39,7 @@ type appStructsProviderType struct {
 	bucketsFactory   irates.BucketsFactoryType
 	appTokensFactory payloads.IAppTokensFactory
 	storageProvider  istorage.IAppStorageProvider
+	seqTrustLevel    isequencer.SequencesTrustLevel
 }
 
 // istructs.IAppStructsProvider.BuiltIn
@@ -61,7 +64,7 @@ func (provider *appStructsProviderType) BuiltIn(appName appdef.AppQName) (struct
 		if err = appCfg.prepare(buckets, appStorage); err != nil {
 			return nil, err
 		}
-		app = newAppStructs(appCfg, buckets, appTokens)
+		app = newAppStructs(appCfg, buckets, appTokens, provider.seqTrustLevel)
 		provider.structures[appName] = app
 	}
 	return app, nil
@@ -82,7 +85,7 @@ func (provider *appStructsProviderType) New(name appdef.AppQName, def appdef.IAp
 	if err = cfg.prepare(buckets, appStorage); err != nil {
 		return nil, err
 	}
-	app := newAppStructs(cfg, buckets, appTokens)
+	app := newAppStructs(cfg, buckets, appTokens, provider.seqTrustLevel)
 	//provider.structures[name] = app
 	return app, nil
 }
@@ -91,20 +94,22 @@ func (provider *appStructsProviderType) New(name appdef.AppQName, def appdef.IAp
 //   - interfaces:
 //     — istructs.IAppStructs
 type appStructsType struct {
-	config      *AppConfigType
-	events      appEventsType
-	records     appRecordsType
-	viewRecords appViewRecords
-	buckets     irates.IBuckets
-	descr       *descr.Application
-	appTokens   istructs.IAppTokens
+	config        *AppConfigType
+	events        appEventsType
+	records       appRecordsType
+	viewRecords   appViewRecords
+	buckets       irates.IBuckets
+	descr         *descr.Application
+	appTokens     istructs.IAppTokens
+	seqTrustLevel isequencer.SequencesTrustLevel
 }
 
-func newAppStructs(appCfg *AppConfigType, buckets irates.IBuckets, appTokens istructs.IAppTokens) *appStructsType {
+func newAppStructs(appCfg *AppConfigType, buckets irates.IBuckets, appTokens istructs.IAppTokens, seqTrustLevel isequencer.SequencesTrustLevel) *appStructsType {
 	app := appStructsType{
-		config:    appCfg,
-		buckets:   buckets,
-		appTokens: appTokens,
+		config:        appCfg,
+		buckets:       buckets,
+		appTokens:     appTokens,
+		seqTrustLevel: seqTrustLevel,
 	}
 	app.events = newEvents(&app)
 	app.records = newRecords(&app)
@@ -234,6 +239,31 @@ func (app *appStructsType) DescribePackage(name string) interface{} {
 	return app.describe().Packages[name]
 }
 
+// istructs.IAppStructs.GetEventReapplier
+func (app *appStructsType) GetEventReapplier(plogEvent istructs.IPLogEvent) istructs.IEventReapplier {
+	if !plogEvent.(*eventType).isStored {
+		panic("only events read from the stroage can be re-applied")
+	}
+	return &implIEventReapplier{
+		plogEvent: plogEvent,
+		app:       app,
+	}
+}
+
+type implIEventReapplier struct {
+	plogEvent istructs.IPLogEvent
+	app       *appStructsType
+}
+
+func (er *implIEventReapplier) PutWLog() error {
+	pKey, cCols, data := getEventBytes(er.plogEvent)
+	return er.app.config.storage.Put(pKey, cCols, data)
+}
+
+func (er *implIEventReapplier) ApplyRecords() error {
+	return er.app.records.apply2(er.plogEvent, nil, true)
+}
+
 // appEventsType implements IEvents
 //   - interfaces:
 //     — istructs.IEvents
@@ -297,7 +327,23 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 
 	evData := dbEvent.storeToBytes()
 
-	if err = e.app.config.storage.Put(pKey, cCols, evData); err == nil {
+	switch {
+	case dbEvent.name == istructs.QNameForCorruptedData, e.app.seqTrustLevel == isequencer.SequencesTrustLevel_2:
+		err = e.app.config.storage.Put(pKey, cCols, evData)
+	case e.app.seqTrustLevel == isequencer.SequencesTrustLevel_0, e.app.seqTrustLevel == isequencer.SequencesTrustLevel_1:
+		ok := false
+		// [~tuc.SequencesTrustLevelForPLog~]
+		if ok, err = e.app.config.storage.InsertIfNotExists(pKey, cCols, evData, 0); err == nil {
+			if !ok {
+				return nil, ErrSequencesViolation
+			}
+		}
+	default:
+		// notest
+		panic("unexpected SequencesTrustLevel " + strconv.Itoa(int(e.app.seqTrustLevel)))
+	}
+	dbEvent.isStored = true
+	if err == nil {
 		event = dbEvent
 		e.plogCache.Put(p, o, event)
 	}
@@ -305,12 +351,31 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 	return event, err
 }
 
+func getEventBytes(ev istructs.IPLogEvent) (pKey, cCols, data []byte) {
+	pKey, cCols = wlogKey(ev.Workspace(), ev.WLogOffset())
+	data = ev.(*eventType).storeToBytes()
+	return pKey, cCols, data
+}
+
 // istructs.IEvents.PutWlog
 func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (err error) {
-	pKey, cCols := wlogKey(ev.Workspace(), ev.WLogOffset())
-	evData := ev.(*eventType).storeToBytes()
-
-	return e.app.config.storage.Put(pKey, cCols, evData)
+	pKey, cCols, evData := getEventBytes(ev)
+	switch {
+	case ev.QName() == istructs.QNameForCorruptedData, e.app.seqTrustLevel == isequencer.SequencesTrustLevel_2:
+		err = e.app.config.storage.Put(pKey, cCols, evData)
+	case e.app.seqTrustLevel == isequencer.SequencesTrustLevel_0, e.app.seqTrustLevel == isequencer.SequencesTrustLevel_1:
+		ok := false
+		// [~tuc.SequencesTrustLevelForWLog~]
+		if ok, err = e.app.config.storage.InsertIfNotExists(pKey, cCols, evData, 0); err == nil {
+			if !ok {
+				return ErrSequencesViolation
+			}
+		}
+	default:
+		// notest
+		panic("unexpected SequencesTrustLevel " + strconv.Itoa(int(e.app.seqTrustLevel)))
+	}
+	return err
 }
 
 // istructs.IEvents.ReadPLog
@@ -462,17 +527,45 @@ func (recs *appRecordsType) putRecord(workspace istructs.WSID, id istructs.Recor
 
 // putRecordsBatch puts record array to application storage through view-records batch methods
 type recordBatchItemType struct {
-	id   istructs.RecordID
-	data []byte
+	id    istructs.RecordID
+	data  []byte
+	isNew bool
 }
 
-func (recs *appRecordsType) putRecordsBatch(workspace istructs.WSID, records []recordBatchItemType) (err error) {
+func (recs *appRecordsType) putRecordsBatch(workspace istructs.WSID, records []recordBatchItemType, isReapply bool) (err error) {
 	batch := make([]istorage.BatchItem, len(records))
-	for i, r := range records {
-		batch[i].PKey, batch[i].CCols = recordKey(workspace, r.id)
-		batch[i].Value = r.data
+	switch {
+	case isReapply, recs.app.seqTrustLevel == isequencer.SequencesTrustLevel_1, recs.app.seqTrustLevel == isequencer.SequencesTrustLevel_2:
+		for i, r := range records {
+			batch[i].PKey, batch[i].CCols = recordKey(workspace, r.id)
+			batch[i].Value = r.data
+		}
+		return recs.app.config.storage.PutBatch(batch)
+	case recs.app.seqTrustLevel == isequencer.SequencesTrustLevel_0:
+		for _, r := range records {
+			pKey, cCols := recordKey(workspace, r.id)
+			// [~tuc.SequencesTrustLevelForRecords~]
+			if r.isNew {
+				ok, err := recs.app.config.storage.InsertIfNotExists(pKey, cCols, r.data, 0)
+				if err != nil {
+					// notest
+					return err
+				}
+				if !ok {
+					return ErrSequencesViolation
+				}
+			} else {
+				if err := recs.app.config.storage.Put(pKey, cCols, r.data); err != nil {
+					// notest
+					return err
+				}
+			}
+		}
+	default:
+		// notest
+		panic("unexpected SequencesTrustLevel " + strconv.Itoa(int(recs.app.seqTrustLevel)))
 	}
-	return recs.app.config.storage.PutBatch(batch)
+	return nil
 }
 
 // validEvent returns error if event has non-committable data, such as singleton unique violations or non exists updated record id
@@ -531,6 +624,10 @@ func (recs *appRecordsType) Apply(event istructs.IPLogEvent) (err error) {
 
 // istructs.IRecords.Apply2
 func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istructs.IRecord)) (err error) {
+	return recs.apply2(event, cb, false)
+}
+
+func (recs *appRecordsType) apply2(event istructs.IPLogEvent, cb func(rec istructs.IRecord), isReapply bool) (err error) {
 	ev := event.(*eventType)
 
 	if !ev.Error().ValidEvent() {
@@ -543,7 +640,7 @@ func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istruc
 	store := func(rec *recordType) error {
 		data := rec.storeToBytes()
 		records = append(records, rec)
-		batch = append(batch, recordBatchItemType{rec.ID(), data})
+		batch = append(batch, recordBatchItemType{rec.ID(), data, rec.isNew})
 
 		return nil
 	}
@@ -562,7 +659,7 @@ func (recs *appRecordsType) Apply2(event istructs.IPLogEvent, cb func(rec istruc
 
 	if err = ev.cud.applyRecs(load, store); err == nil {
 		if len(records) > 0 {
-			if err = recs.putRecordsBatch(ev.ws, batch); err == nil {
+			if err = recs.putRecordsBatch(ev.ws, batch, isReapply); err == nil {
 				if cb != nil {
 					for _, rec := range records {
 						cb(rec)

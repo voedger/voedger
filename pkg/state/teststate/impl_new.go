@@ -22,6 +22,7 @@ import (
 	"github.com/voedger/voedger/pkg/compile"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iratesce"
+	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -557,6 +558,7 @@ func (gts *generalTestState) buildAppDef() {
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider,
+		isequencer.SequencesTrustLevel_0,
 	)
 
 	structs, err := prov.BuiltIn(istructs.AppQName_test1_app1)

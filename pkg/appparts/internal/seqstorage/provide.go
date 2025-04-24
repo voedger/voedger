@@ -12,7 +12,7 @@ import (
 )
 
 // [~server.design.sequences/cmp.ISeqStorageImplementation.New~impl]
-func New(appID istructs.ClusterAppID, partitionID istructs.PartitionID, events istructs.IEvents, appDef appdef.IAppDef,
+func New(appID isequencer.ClusterAppID, partitionID istructs.PartitionID, events istructs.IEvents, appDef appdef.IAppDef,
 	seqStorage isequencer.IVVMSeqStorageAdapter) isequencer.ISeqStorage {
 	return &implISeqStorage{
 		events:      events,

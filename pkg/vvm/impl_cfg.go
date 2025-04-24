@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/processors"
 
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -54,6 +55,9 @@ func NewVVMDefaultConfig() VVMConfig {
 		SecretsReader: isecretsimpl.ProvideSecretReader(),
 		IP:            coreutils.LocalhostIP,
 		NumVVM:        1,
+
+		// [~tuc.VVMConfig.ConfigureSequencesTrustLevel~]
+		SequencesTrustLevel: isequencer.SequencesTrustLevel_0,
 	}
 	if coreutils.IsTest() {
 		res.SecretsReader = itokensjwt.ProvideTestSecretsReader(res.SecretsReader)

@@ -7,8 +7,6 @@ package isequencer
 
 import (
 	"context"
-
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type ISeqStorage interface {
@@ -31,9 +29,9 @@ type ISeqStorage interface {
 }
 
 type IVVMSeqStorageAdapter interface {
-	Get(appID istructs.ClusterAppID, wsid WSID, seqID SeqID) (ok bool, number Number, err error)
-	PutPLogOffset(appID istructs.ClusterAppID, plogOffset PLogOffset) error
-	PutBatch(appID istructs.ClusterAppID, batch []SeqValue) error
+	Get(appID ClusterAppID, wsid WSID, seqID SeqID) (ok bool, number Number, err error)
+	PutPLogOffset(appID ClusterAppID, plogOffset PLogOffset) error
+	PutBatch(appID ClusterAppID, batch []SeqValue) error
 }
 
 // ISequencer defines the interface for working with sequences.

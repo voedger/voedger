@@ -81,6 +81,18 @@ type IAppStructs interface {
 	NumAppWorkspaces() NumAppWorkspaces
 
 	AppTokens() IAppTokens // FIXME: check what is for?
+
+	// to execute PutWLog and ApplyRecords skipping SequencesTrustLevel on partition recoevery
+	// panics if IPLogEvent was not loaded from the database
+	GetEventReapplier(IPLogEvent) IEventReapplier
+}
+
+// need to re-apply an already stored PLog
+// does not consider SequencesTrustLevel
+
+type IEventReapplier interface {
+	PutWLog() error
+	ApplyRecords() error
 }
 
 type IEvents interface {
