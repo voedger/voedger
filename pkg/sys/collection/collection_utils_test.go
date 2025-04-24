@@ -14,7 +14,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
@@ -179,38 +178,6 @@ func testProcessor(appParts appparts.IAppPartitions) *testCmdProc {
 				return nil
 			})))
 	return proc
-}
-
-type idsGeneratorType struct {
-	istructs.IIDGenerator
-	idmap          map[istructs.RecordID]istructs.RecordID
-	nextPlogOffset istructs.Offset
-}
-
-func (me *idsGeneratorType) NextID(rawID istructs.RecordID, t appdef.IType) (storageID istructs.RecordID, err error) {
-	if storageID, err = me.IIDGenerator.NextID(rawID, t); err != nil {
-		return istructs.NullRecordID, err
-	}
-	me.idmap[rawID] = storageID
-	return
-}
-
-func (me *idsGeneratorType) nextOffset() (offset istructs.Offset) {
-	offset = me.nextPlogOffset
-	me.nextPlogOffset++
-	return
-}
-
-func (me *idsGeneratorType) decOffset() {
-	me.nextPlogOffset--
-}
-
-func newIdsGenerator() idsGeneratorType {
-	return idsGeneratorType{
-		idmap:          make(map[istructs.RecordID]istructs.RecordID),
-		nextPlogOffset: test.plogStartOfs,
-		IIDGenerator:   istructsmem.NewIDGenerator(),
-	}
 }
 
 func requireArticle(require *require.Assertions, name string, number int32, as istructs.IAppStructs, articleID istructs.RecordID) {
