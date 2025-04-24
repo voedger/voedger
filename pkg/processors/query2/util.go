@@ -33,8 +33,16 @@ func queryRateLimitExceeded(ctx context.Context, qw *queryWork) error {
 	return nil
 }
 func querySetRequestType(ctx context.Context, qw *queryWork) error {
-	if qw.iQuery = appdef.Query(qw.iWorkspace.Type, qw.msg.QName()); qw.iQuery == nil {
-		return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist in %v", qw.msg.QName(), qw.iWorkspace))
+	switch qw.iWorkspace {
+	case nil:
+		// workspace is dummy
+		if qw.iQuery = appdef.Query(qw.appStructs.AppDef().Type, qw.msg.QName()); qw.iQuery == nil {
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist", qw.msg.QName()))
+		}
+	default:
+		if qw.iQuery = appdef.Query(qw.iWorkspace.Type, qw.msg.QName()); qw.iQuery == nil {
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist in %v", qw.msg.QName(), qw.iWorkspace))
+		}
 	}
 	return nil
 }

@@ -576,7 +576,7 @@ func TestFieldsAuthorization_OpForbidden(t *testing.T) {
 		id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 		body = fmt.Sprintf(`{"cuds": [{"sys.ID":%d,"fields": {"sys.IsActive":true}}]}`, id)
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] OperationKind_Activate", "operation forbidden"))
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] ACTIVATE", "operation forbidden"))
 	})
 
 	t.Run("deactivate", func(t *testing.T) {
@@ -584,7 +584,7 @@ func TestFieldsAuthorization_OpForbidden(t *testing.T) {
 		id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 		body = fmt.Sprintf(`{"cuds": [{"sys.ID":%d,"fields": {"sys.IsActive":false}}]}`, id)
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] OperationKind_Deactivate", "operation forbidden"))
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] DEACTIVATE", "operation forbidden"))
 	})
 
 	t.Run("field insert", func(t *testing.T) {
@@ -594,7 +594,7 @@ func TestFieldsAuthorization_OpForbidden(t *testing.T) {
 
 		// denied
 		body = `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.DocFieldInsertDenied","FldDenied":42}}]}`
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] OperationKind_Insert", "operation forbidden"))
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] INSERT", "operation forbidden"))
 	})
 
 	t.Run("field update", func(t *testing.T) {
@@ -607,7 +607,7 @@ func TestFieldsAuthorization_OpForbidden(t *testing.T) {
 
 		// denied
 		body = fmt.Sprintf(`{"cuds": [{"sys.ID":%d,"fields": {"FldDenied":46}}]}`, id)
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] OperationKind_Update", "operation forbidden"))
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] UPDATE", "operation forbidden"))
 	})
 
 	// note: select authorization is tested in [TestDeniedResourcesAuthorization]

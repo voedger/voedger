@@ -62,7 +62,7 @@ func apiV2UpdateToCUDs(cmd *cmdWorkpiece) (res []parsedCUD, err error) {
 	if updateCUD.qName != cmd.cmdMes.QName() {
 		return nil, fmt.Errorf("record id %d leads to %s QName whereas %s QName is mentioned in the request", updateCUD.id, updateCUD.qName, cmd.cmdMes.QName())
 	}
-	updateCUD.xPath = xPath(fmt.Sprintf("%s %s %s", cudXPath, updateCUD.opKind, updateCUD.qName))
+	updateCUD.xPath = xPath(fmt.Sprintf("%s %s %s", cudXPath, opKindDesc[updateCUD.opKind], updateCUD.qName))
 	res = append(res, updateCUD)
 	return res, nil
 }
@@ -110,7 +110,7 @@ func apiV2InsertToCUDs(requestData coreutils.MapObject, parentSysID int64, nextR
 			parsedCUD.fields[rootFieldName] = rootFieldValue
 		}
 	}
-	parsedCUD.xPath = xPath(fmt.Sprintf("%s %s %s", cudXPath, parsedCUD.opKind, parsedCUD.qName))
+	parsedCUD.xPath = xPath(fmt.Sprintf("%s %s %s", cudXPath, opKindDesc[parsedCUD.opKind], parsedCUD.qName))
 	res[rootCUDIdx] = parsedCUD
 	*cudNumber++
 	return res, nil

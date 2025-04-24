@@ -51,6 +51,10 @@ func querySetResultType(ctx context.Context, qw *queryWork, statelessResources i
 	qNameResultType := iQueryFunc.ResultType(qw.execQueryArgs.PrepareArgs)
 
 	ws := qw.iWorkspace
+	if ws == nil {
+		// workspace is dummy
+		ws = qw.iQuery.Workspace()
+	}
 	qw.resultType = ws.Type(qNameResultType)
 	if qw.resultType.Kind() == appdef.TypeKind_null {
 		return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%s query result type %s does not exist in %v", qw.iQuery.QName(), qNameResultType, ws))

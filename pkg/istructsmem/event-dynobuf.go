@@ -154,8 +154,6 @@ func loadEvent(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) {
 		return enrichError(err, "%v CUDs", ev.name)
 	}
 
-	ev.isStored = true
-
 	return nil
 }
 

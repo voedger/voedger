@@ -55,9 +55,6 @@ type eventType struct {
 
 	// cache supports
 	objcache.RefCounter
-
-	// read from db -> true, event is created by Builder -> false
-	isStored bool
 }
 
 // Returns new empty event

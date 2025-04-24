@@ -31,17 +31,36 @@ func docsHandler() apiPathHandler {
 	}
 }
 func docsSetRequestType(ctx context.Context, qw *queryWork) error {
-	if qw.iDoc = appdef.CDoc(qw.iWorkspace.Type, qw.msg.QName()); qw.iDoc != nil {
-		return nil
-	}
-	if qw.iDoc = appdef.WDoc(qw.iWorkspace.Type, qw.msg.QName()); qw.iDoc != nil {
-		return nil
-	}
-	if qw.iRecord = appdef.CRecord(qw.iWorkspace.Type, qw.msg.QName()); qw.iRecord != nil {
-		return nil
-	}
-	if qw.iRecord = appdef.WRecord(qw.iWorkspace.Type, qw.msg.QName()); qw.iRecord != nil {
-		return nil
+	switch qw.iWorkspace {
+	case nil:
+		// workspace is dummy
+		if qw.iQuery = appdef.Query(qw.appStructs.AppDef().Type, qw.msg.QName()); qw.iQuery == nil {
+			if qw.iDoc = appdef.CDoc(qw.appStructs.AppDef().Type, qw.msg.QName()); qw.iDoc != nil {
+				return nil
+			}
+			if qw.iDoc = appdef.WDoc(qw.appStructs.AppDef().Type, qw.msg.QName()); qw.iDoc != nil {
+				return nil
+			}
+			if qw.iRecord = appdef.CRecord(qw.appStructs.AppDef().Type, qw.msg.QName()); qw.iRecord != nil {
+				return nil
+			}
+			if qw.iRecord = appdef.WRecord(qw.appStructs.AppDef().Type, qw.msg.QName()); qw.iRecord != nil {
+				return nil
+			}
+		}
+	default:
+		if qw.iDoc = appdef.CDoc(qw.iWorkspace.Type, qw.msg.QName()); qw.iDoc != nil {
+			return nil
+		}
+		if qw.iDoc = appdef.WDoc(qw.iWorkspace.Type, qw.msg.QName()); qw.iDoc != nil {
+			return nil
+		}
+		if qw.iRecord = appdef.CRecord(qw.iWorkspace.Type, qw.msg.QName()); qw.iRecord != nil {
+			return nil
+		}
+		if qw.iRecord = appdef.WRecord(qw.iWorkspace.Type, qw.msg.QName()); qw.iRecord != nil {
+			return nil
+		}
 	}
 	return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("document or record %s is not defined in %v", qw.msg.QName(), qw.iWorkspace))
 }

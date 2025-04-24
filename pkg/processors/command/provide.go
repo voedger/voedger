@@ -59,12 +59,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm coreutils.ITime,
 				pipeline.WireFunc("applyRecords", func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 					// sync apply records
 					cmd := work.(*cmdWorkpiece)
-					if cmd.reapplier != nil {
-						err = cmd.reapplier.ApplyRecords()
-					} else {
-						err = cmd.appStructs.Records().Apply(cmd.pLogEvent)
-					}
-					if err != nil {
+					if err = cmd.appStructs.Records().Apply(cmd.pLogEvent); err != nil {
 						cmd.appPartitionRestartScheduled = true
 					}
 					return err
@@ -89,17 +84,12 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm coreutils.ITime,
 					pipeline.ForkBranch(pipeline.NewSyncOp(func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 						// put WLog
 						cmd := work.(*cmdWorkpiece)
-						if cmd.reapplier != nil {
-							err = cmd.reapplier.PutWLog()
-						} else {
-							err = cmd.appStructs.Events().PutWlog(cmd.pLogEvent)
-						}
-						if err != nil {
+						if err = cmd.appStructs.Events().PutWlog(cmd.pLogEvent); err != nil {
 							cmd.appPartitionRestartScheduled = true
 						} else {
 							cmd.workspace.NextWLogOffset++
 						}
-						return err
+						return
 					})),
 				)))
 			cmdPipeline := pipeline.NewSyncPipeline(vvmCtx, "Command Processor",

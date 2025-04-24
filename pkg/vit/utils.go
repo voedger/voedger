@@ -423,6 +423,19 @@ func getWorkspaceInitAwaitTimeout() time.Duration {
 	return defaultWorkspaceAwaitTimeout
 }
 
+func DummyWS(wsKind appdef.QName, wsid istructs.WSID, ownerPrn *Principal) *AppWorkspace {
+	return &AppWorkspace{
+		WorkspaceDescriptor: WorkspaceDescriptor{
+			WSParams: WSParams{
+				Kind:      wsKind,
+				ClusterID: istructs.CurrentClusterID(),
+			},
+			WSID: wsid,
+		},
+		Owner: ownerPrn,
+	}
+}
+
 // calls testBeforeRestart() then stops then VIT, then launches new VIT on the same config but with storage from previous VIT
 // then calls testAfterRestart() with the new VIT
 // cfg must be owned
