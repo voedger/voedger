@@ -31,7 +31,7 @@ func TestSeqStorage(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		appID istructs.ClusterAppID
+		appID isequencer.ClusterAppID
 		wsid  isequencer.WSID
 		seqID isequencer.SeqID
 		num   isequencer.Number
@@ -69,7 +69,7 @@ func TestSeqStorage(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Verify value doesn't exist before Put
-			ok, num, err := seqStorage.Get(tt.appID+istructs.ClusterAppID(i), tt.wsid+isequencer.WSID(i), tt.seqID+isequencer.SeqID(i))
+			ok, num, err := seqStorage.Get(tt.appID+isequencer.ClusterAppID(i), tt.wsid+isequencer.WSID(i), tt.seqID+isequencer.SeqID(i))
 			require.NoError(err)
 			require.False(ok)
 			require.Zero(num)
@@ -82,11 +82,11 @@ func TestSeqStorage(t *testing.T) {
 				},
 				Value: tt.num,
 			}}
-			err = seqStorage.PutBatch(tt.appID+istructs.ClusterAppID(i), batch)
+			err = seqStorage.PutBatch(tt.appID+isequencer.ClusterAppID(i), batch)
 			require.NoError(err)
 
 			// Verify value after Put
-			ok, num, err = seqStorage.Get(tt.appID+istructs.ClusterAppID(i), tt.wsid+isequencer.WSID(i), tt.seqID+isequencer.SeqID(i))
+			ok, num, err = seqStorage.Get(tt.appID+isequencer.ClusterAppID(i), tt.wsid+isequencer.WSID(i), tt.seqID+isequencer.SeqID(i))
 			require.NoError(err)
 			require.True(ok)
 			require.Equal(tt.num, num)
@@ -94,7 +94,7 @@ func TestSeqStorage(t *testing.T) {
 			// check the key structure using the underlying storage
 			pKey := []byte{}
 			pKey = binary.BigEndian.AppendUint32(pKey, pKeyPrefix_SeqStorage)
-			pKey = binary.BigEndian.AppendUint32(pKey, tt.appID+istructs.ClusterAppID(i))
+			pKey = binary.BigEndian.AppendUint32(pKey, tt.appID+isequencer.ClusterAppID(i))
 			cCols := []byte{}
 			cCols = binary.BigEndian.AppendUint64(cCols, uint64(tt.wsid+isequencer.WSID(i)))
 			cCols = binary.BigEndian.AppendUint16(cCols, uint16(tt.seqID+isequencer.SeqID(i)))

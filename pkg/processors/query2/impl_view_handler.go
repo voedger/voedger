@@ -32,16 +32,8 @@ func viewHandler() apiPathHandler {
 }
 
 func viewSetRequestType(ctx context.Context, qw *queryWork) error {
-	switch qw.iWorkspace {
-	case nil:
-		// workspace is dummy
-		if qw.iView = appdef.View(qw.appStructs.AppDef().Type, qw.msg.QName()); qw.iView == nil {
-			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("view %s does not exist", qw.msg.QName()))
-		}
-	default:
-		if qw.iView = appdef.View(qw.iWorkspace.Type, qw.msg.QName()); qw.iView == nil {
-			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("view %s does not exist in %v", qw.msg.QName(), qw.iWorkspace))
-		}
+	if qw.iView = appdef.View(qw.iWorkspace.Type, qw.msg.QName()); qw.iView == nil {
+		return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("view %s does not exist in %v", qw.msg.QName(), qw.iWorkspace))
 	}
 	return nil
 }
@@ -56,10 +48,6 @@ func viewAuthorizeResult(ctx context.Context, qw *queryWork) (err error) {
 		return nil
 	}
 	ws := qw.iWorkspace
-	if ws == nil {
-		// workspace is dummy
-		panic("")
-	}
 	var requestedFields []string
 	if len(qw.queryParams.Constraints.Keys) != 0 {
 		requestedFields = qw.queryParams.Constraints.Keys

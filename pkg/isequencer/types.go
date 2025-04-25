@@ -22,6 +22,7 @@ type WSKind uint16 // istructs.QNameID
 type WSID uint64
 type Number uint64
 type PLogOffset uint64
+type ClusterAppID = uint32
 
 type NumberKey struct {
 	WSID  WSID
@@ -116,3 +117,5 @@ type MockStorage struct {
 	onActualizeFromPLog       func()
 	onReadNumbers             func()
 }
+
+type SequencesTrustLevel byte

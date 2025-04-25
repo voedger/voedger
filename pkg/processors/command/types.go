@@ -90,6 +90,7 @@ type cmdWorkpiece struct {
 	appPartitionRestartScheduled bool
 	cmdQName                     appdef.QName
 	statusCodeOfSuccess          int
+	reapplier                    istructs.IEventReapplier
 }
 
 type implIDGenerator struct {

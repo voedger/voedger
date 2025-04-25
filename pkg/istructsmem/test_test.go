@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/constraints"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iratesce"
+	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -421,25 +422,23 @@ func test() *testDataType {
 		return adb
 	}
 
-	if testData.AppConfigs == nil {
-		testData.AppConfigs = make(AppConfigsType, 1)
-		testData.AppCfg = testData.AppConfigs.AddBuiltInAppConfig(testData.appName, prepareAppDef())
-		testData.AppCfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-		testData.AppDef = testData.AppCfg.AppDef
+	testData.AppConfigs = make(AppConfigsType, 1)
+	testData.AppCfg = testData.AppConfigs.AddBuiltInAppConfig(testData.appName, prepareAppDef())
+	testData.AppCfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+	testData.AppDef = testData.AppCfg.AppDef
 
-		testData.AppCfg.Resources.Add(NewCommandFunction(testData.saleCmdName, NullCommandExec))
-		testData.AppCfg.Resources.Add(NewCommandFunction(testData.changeCmdName, NullCommandExec))
-		testData.AppCfg.Resources.Add(NewQueryFunction(testData.queryPhotoFunctionName, NullQueryExec))
+	testData.AppCfg.Resources.Add(NewCommandFunction(testData.saleCmdName, NullCommandExec))
+	testData.AppCfg.Resources.Add(NewCommandFunction(testData.changeCmdName, NullCommandExec))
+	testData.AppCfg.Resources.Add(NewQueryFunction(testData.queryPhotoFunctionName, NullQueryExec))
 
-		var err error
+	var err error
 
-		testData.StorageProvider = istorageimpl.Provide(mem.Provide(coreutils.MockTime))
+	testData.StorageProvider = istorageimpl.Provide(mem.Provide(coreutils.MockTime))
 
-		testData.AppStructsProvider = Provide(testData.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), testData.StorageProvider)
-		testData.AppStructs, err = testData.AppStructsProvider.BuiltIn(testData.appName)
-		if err != nil {
-			panic(err)
-		}
+	testData.AppStructsProvider = Provide(testData.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), testData.StorageProvider, isequencer.SequencesTrustLevel_0)
+	testData.AppStructs, err = testData.AppStructsProvider.BuiltIn(testData.appName)
+	if err != nil {
+		panic(err)
 	}
 
 	return &testData

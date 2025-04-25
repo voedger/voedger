@@ -14,6 +14,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
+	"github.com/voedger/voedger/pkg/isequencer"
 
 	gojson "encoding/json"
 
@@ -30,7 +31,7 @@ func Test_RecordsRead(t *testing.T) {
 	storage := teststore.NewStorage(test.appName)
 	storageProvider := teststore.NewStorageProvider(storage)
 
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
 
 	app, err := provider.BuiltIn(test.appName)
 	require.NoError(err)
@@ -46,9 +47,9 @@ func Test_RecordsRead(t *testing.T) {
 		for id := minTestRecordID; id <= maxTestRecordID; id++ {
 			rec := newTestCRecord(id)
 			data := rec.storeToBytes()
-			batch = append(batch, recordBatchItemType{id, data})
+			batch = append(batch, recordBatchItemType{id, data, true})
 		}
-		err := app.Records().(*appRecordsType).putRecordsBatch(test.workspace, batch)
+		err := app.Records().(*appRecordsType).putRecordsBatch(test.workspace, batch, false)
 		require.NoError(err)
 	})
 
@@ -150,7 +151,7 @@ func Test_RecordsRead(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 		cfg := cfgs.AddBuiltInAppConfig(test.appName, builder.New())
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
 
 		app, err = provider.BuiltIn(test.appName)
 		require.NoError(err)
@@ -176,7 +177,7 @@ func Test_RecordsRead(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 		cfg := cfgs.AddBuiltInAppConfig(test.appName, builder.New())
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
 
 		app, err = provider.BuiltIn(test.appName)
 		require.NoError(err)
@@ -202,7 +203,7 @@ func Test_RecordsPutJSON(t *testing.T) {
 	storage := teststore.NewStorage(test.appName)
 	storageProvider := teststore.NewStorageProvider(storage)
 
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
 
 	app, err := provider.BuiltIn(test.appName)
 	require.NoError(err)

@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 )
 
 const (
@@ -20,17 +21,24 @@ const (
 )
 
 type TSidsGeneratorType struct {
+	istructs.IIDGenerator
 	lock           sync.Mutex
 	idmap          map[istructs.RecordID]istructs.RecordID
 	nextID         istructs.RecordID
 	nextPlogOffset istructs.Offset
 }
 
-func (me *TSidsGeneratorType) NextID(tempID istructs.RecordID, _ appdef.IType) (storageID istructs.RecordID, err error) {
+func (me *TSidsGeneratorType) NextID(tempID istructs.RecordID, t appdef.IType) (storageID istructs.RecordID, err error) {
 	me.lock.Lock()
 	defer me.lock.Unlock()
-	storageID = me.nextID
-	me.nextID++
+	if t == nil {
+		storageID = me.nextID
+		me.nextID++
+	} else {
+		if storageID, err = me.IIDGenerator.NextID(tempID, t); err != nil {
+			return istructs.NullRecordID, err
+		}
+	}
 	me.idmap[tempID] = storageID
 	return storageID, nil
 }
@@ -52,25 +60,25 @@ func newTSIdsGenerator() *TSidsGeneratorType {
 		idmap:          make(map[istructs.RecordID]istructs.RecordID),
 		nextID:         istructs.FirstBaseRecordID,
 		nextPlogOffset: test.plogStartOfs,
+		IIDGenerator:   istructsmem.NewIDGenerator(),
 	}
 }
 
 func Test_Race_SimpleInsertOne(t *testing.T) {
 	req := require.New(t)
 
-	_, appStructs, cleanup, _ := deployTestApp(t)
+	_, appStructs, cleanup, _, idGen := deployTestApp(t)
 	defer cleanup()
 
-	idGen := newTSIdsGenerator()
 	wg := sync.WaitGroup{}
 	for i := 0; i < cntItems; i++ {
 		wg.Add(1)
-		go func(areq *require.Assertions, _ istructs.IAppStructs, aidGen *TSidsGeneratorType) {
+		go func(areq *require.Assertions, _ istructs.IAppStructs, aidGen *TSidsGeneratorType, i int) {
 			defer wg.Done()
 			saveEvent(areq, appStructs, idGen, newTSModify(appStructs, aidGen, func(event istructs.IRawEventBuilder) {
-				newDepartmentCUD(event, 1, 1, "Cold Drinks")
+				newDepartmentCUD(event, istructs.RecordID(i+30), 1, "Cold Drinks")
 			}))
-		}(req, appStructs, idGen)
+		}(req, appStructs, idGen, i)
 	}
 	wg.Wait()
 }
@@ -78,10 +86,9 @@ func Test_Race_SimpleInsertOne(t *testing.T) {
 func Test_Race_SimpleInsertMany(t *testing.T) {
 	req := require.New(t)
 
-	_, appStructs, cleanup, _ := deployTestApp(t)
+	_, appStructs, cleanup, _, idGen := deployTestApp(t)
 	defer cleanup()
 
-	idGen := newTSIdsGenerator()
 	wg := sync.WaitGroup{}
 	for i := 0; i < cntItems; i++ {
 		wg.Add(1)
