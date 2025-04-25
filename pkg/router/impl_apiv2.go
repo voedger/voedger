@@ -312,13 +312,13 @@ func replyErr(rw http.ResponseWriter, err error) {
 	}
 }
 
-func parseCreateLoginArgs(body string) (verifiedlEmailToken, displayName, pwd string, err error) {
+func parseCreateLoginArgs(body string) (verifiedEmailToken, displayName, pwd string, err error) {
 	args := coreutils.MapObject{}
 	if err = json.Unmarshal([]byte(body), &args); err != nil {
 		return "", "", "", fmt.Errorf("failed to unmarshal body: %w:\n%s", err, body)
 	}
 	ok := false
-	verifiedlEmailToken, ok, err = args.AsString("VerifiedEmailToken")
+	verifiedEmailToken, ok, err = args.AsString("VerifiedEmailToken")
 	if err != nil {
 		return "", "", "", err
 	}
