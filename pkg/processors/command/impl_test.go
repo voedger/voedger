@@ -257,9 +257,9 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 	// 3rd c.sys.CUD - > recovery procedure must re-apply 2nd event (PLog, records and WLog), then 3rd event is processed ok (sync projectors are ok)
 	respData = sendCUD(t, 1, app)
 	require.Equal(4, int(respData["CurrentWLogOffset"].(float64)))
-	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+3, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
-	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+4, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
-	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+5, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
+	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+6, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
+	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+7, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
+	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+8, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 }
 
 func TestRecovery(t *testing.T) {
@@ -304,9 +304,9 @@ func TestRecovery(t *testing.T) {
 	restartCmdProc(&app)
 	respData = sendCUD(t, 1, app)
 	require.Equal(4, int(respData["CurrentWLogOffset"].(float64)))
-	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+3, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
-	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+4, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
-	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+5, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
+	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+6, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
+	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+7, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
+	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+8, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 
 	app.cancel()
 	<-app.done

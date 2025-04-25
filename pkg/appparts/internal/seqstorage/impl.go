@@ -28,11 +28,7 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 				if !cud.IsNew() {
 					continue
 				}
-				cudType := ss.appDef.Type(cud.QName())
 				seqQName := istructs.QNameDocIDSequence
-				if cudType.Kind() == appdef.TypeKind_WDoc || cudType.Kind() == appdef.TypeKind_WRecord {
-					seqQName = istructs.QNameOWRecordIDSequence
-				}
 				addToBatch(event.Workspace(), ss.seqIDs[seqQName], cud.ID(), &batch)
 			}
 
@@ -73,7 +69,7 @@ func (ss *implISeqStorage) ReadNextPLogOffset() (isequencer.PLogOffset, error) {
 }
 
 func (ss *implISeqStorage) getNumbersFromObject(root istructs.IObject, wsid istructs.WSID, batch *[]isequencer.SeqValue) {
-	addToBatch(wsid, ss.seqIDs[istructs.QNameOWRecordIDSequence], root.AsRecordID(appdef.SystemField_ID), batch)
+	addToBatch(wsid, ss.seqIDs[istructs.QNameDocIDSequence], root.AsRecordID(appdef.SystemField_ID), batch)
 	for container := range root.Containers {
 		for c := range root.Children(container) {
 			ss.getNumbersFromObject(c, wsid, batch)
