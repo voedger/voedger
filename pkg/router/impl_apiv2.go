@@ -152,9 +152,11 @@ func requestHandlerV2_auth_refresh(iTokens itokens.ITokens, federation federatio
 			return
 		}
 		body := map[string]interface{}{}
-		if err := json.Unmarshal(busRequest.Body, &body); err != nil {
-			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
-			return
+		if len(busRequest.Body) > 0 {
+			if err := json.Unmarshal(busRequest.Body, &body); err != nil {
+				ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+				return
+			}
 		}
 		token, err := bus.GetPrincipalToken(busRequest)
 		if err != nil {
@@ -219,9 +221,11 @@ func requestHandlerV2_auth_login(federation federation.IFederation, numsAppsWork
 		}
 
 		body := map[string]interface{}{}
-		if err := json.Unmarshal(busRequest.Body, &body); err != nil {
-			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
-			return
+		if len(busRequest.Body) > 0 {
+			if err := json.Unmarshal(busRequest.Body, &body); err != nil {
+				ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+				return
+			}
 		}
 
 		args := coreutils.MapObject(body)
@@ -244,7 +248,7 @@ func requestHandlerV2_auth_login(federation federation.IFederation, numsAppsWork
 		resp, err := federation.Query(url)
 		if err != nil {
 			if funcError, ok := err.(coreutils.FuncError); ok {
-				ReplyCommonError(rw, funcError.ToJSON_APIV2(), funcError.HTTPStatus)
+				ReplyJSON(rw, funcError.ToJSON_APIV2(), funcError.HTTPStatus)
 			} else {
 				ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
 			}
@@ -264,9 +268,7 @@ func requestHandlerV2_auth_login(federation federation.IFederation, numsAppsWork
 
 		expiresIn := authnz.DefaultPrincipalTokenExpiration.Seconds()
 		json := fmt.Sprintf(`{"PrincipalToken": "%s","ExpiresIn": %d,"WSID": %d}`, token, int(expiresIn), int(wsid))
-		rw.Header().Set(coreutils.ContentType, coreutils.ContentType_ApplicationJSON)
-		rw.WriteHeader(http.StatusOK)
-		writeResponse(rw, json)
+		ReplyJSON(rw, json, http.StatusOK)
 	}
 }
 
