@@ -72,7 +72,7 @@ type cmdWorkpiece struct {
 	pLogEvent                    istructs.IPLogEvent
 	appPartition                 *appPartition
 	workspace                    *workspace
-	idGenerator                  *implIDGenerator
+	idGeneratorReporter          *implIDGeneratorReporter
 	eca                          istructs.ExecCommandArgs
 	metrics                      commandProcessorMetrics
 	syncProjectorsStart          time.Time
@@ -91,9 +91,10 @@ type cmdWorkpiece struct {
 	cmdQName                     appdef.QName
 	statusCodeOfSuccess          int
 	reapplier                    istructs.IEventReapplier
+	idGeneratorFactory           IDGeneratorFactory
 }
 
-type implIDGenerator struct {
+type implIDGeneratorReporter struct {
 	istructs.IIDGenerator
 	generatedIDs map[istructs.RecordID]istructs.RecordID
 }
@@ -178,3 +179,5 @@ func (p *hostStateProvider) get(appStructs istructs.IAppStructs, wsid istructs.W
 	p.partitionID = partitionID
 	return p.state
 }
+
+type IDGeneratorFactory func() istructs.IIDGenerator

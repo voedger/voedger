@@ -12,6 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/isequencer"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/processors"
 
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -58,6 +59,7 @@ func NewVVMDefaultConfig() VVMConfig {
 
 		// [~tuc.VVMConfig.ConfigureSequencesTrustLevel~]
 		SequencesTrustLevel: isequencer.SequencesTrustLevel_0,
+		IDGeneratorFactory:  istructsmem.NewIDGenerator,
 	}
 	if coreutils.IsTest() {
 		res.SecretsReader = itokensjwt.ProvideTestSecretsReader(res.SecretsReader)

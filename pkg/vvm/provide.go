@@ -240,6 +240,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 			"ActualizerStateOpts",
 			"SecretsReader",
 			"SequencesTrustLevel",
+			"IDGeneratorFactory",
 		),
 	))
 }

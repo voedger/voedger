@@ -140,7 +140,7 @@ func (ap *appPartition) getWorkspace(wsid istructs.WSID) *workspace {
 	if !ok {
 		ws = &workspace{
 			NextWLogOffset: istructs.FirstOffset,
-			idGenerator:    istructsmem.NewIDGenerator(),
+			idGenerator:    ap.idGeneratorFactory(),
 		}
 		ap.workspaces[wsid] = ws
 	}
@@ -256,8 +256,9 @@ func updateIDGeneratorFromO(root istructs.IObject, findType appdef.FindType, idG
 
 func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPartition, error) {
 	ap := &appPartition{
-		workspaces:     map[istructs.WSID]*workspace{},
-		nextPLogOffset: istructs.FirstOffset,
+		workspaces:         map[istructs.WSID]*workspace{},
+		nextPLogOffset:     istructs.FirstOffset,
+		idGeneratorFactory: cmd.idGeneratorFactory,
 	}
 	var lastPLogEvent istructs.IPLogEvent
 	cb := func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
@@ -312,7 +313,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 
 func getIDGenerator(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	cmd.idGenerator = &implIDGenerator{
+	cmd.idGeneratorReporter = &implIDGeneratorReporter{
 		IIDGenerator: cmd.workspace.idGenerator,
 		generatedIDs: map[istructs.RecordID]istructs.RecordID{},
 	}
@@ -321,7 +322,7 @@ func getIDGenerator(_ context.Context, work pipeline.IWorkpiece) (err error) {
 
 func (cmdProc *cmdProc) putPLog(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.pLogEvent, err = cmd.appStructs.Events().PutPlog(cmd.rawEvent, nil, cmd.idGenerator); err != nil {
+	if cmd.pLogEvent, err = cmd.appStructs.Events().PutPlog(cmd.rawEvent, nil, cmd.idGeneratorReporter); err != nil {
 		cmd.appPartitionRestartScheduled = true
 	} else {
 		cmd.appPartition.nextPLogOffset++
@@ -813,15 +814,15 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		return
 	}
 	body := bytes.NewBufferString(fmt.Sprintf(`{"CurrentWLogOffset":%d`, cmd.pLogEvent.WLogOffset()))
-	if len(cmd.idGenerator.generatedIDs) > 0 {
+	if len(cmd.idGeneratorReporter.generatedIDs) > 0 {
 		body.WriteString(`,"NewIDs":{`)
-		for rawID, generatedID := range cmd.idGenerator.generatedIDs {
+		for rawID, generatedID := range cmd.idGeneratorReporter.generatedIDs {
 			fmt.Fprintf(body, `"%d":%d,`, rawID, generatedID)
 		}
 		body.Truncate(body.Len() - 1)
 		body.WriteString("}")
 		if logger.IsVerbose() {
-			logger.Verbose("generated IDs:", cmd.idGenerator.generatedIDs)
+			logger.Verbose("generated IDs:", cmd.idGeneratorReporter.generatedIDs)
 		}
 	}
 	if cmd.cmdResult != nil {
@@ -839,7 +840,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 	bus.ReplyJSON(cmd.cmdMes.Responder(), cmd.statusCodeOfSuccess, body.String())
 }
 
-func (idGen *implIDGenerator) NextID(rawID istructs.RecordID) (storageID istructs.RecordID, err error) {
+func (idGen *implIDGeneratorReporter) NextID(rawID istructs.RecordID) (storageID istructs.RecordID, err error) {
 	storageID, err = idGen.IIDGenerator.NextID(rawID)
 	idGen.generatedIDs[rawID] = storageID
 	return

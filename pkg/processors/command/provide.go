@@ -37,14 +37,15 @@ type cmdProc struct {
 }
 
 type appPartition struct {
-	workspaces     map[istructs.WSID]*workspace
-	nextPLogOffset istructs.Offset
+	workspaces         map[istructs.WSID]*workspace
+	nextPLogOffset     istructs.Offset
+	idGeneratorFactory IDGeneratorFactory
 }
 
 // syncActualizerFactory is a factory(partitionID) that returns a fork operator with a sync actualizer per each application. Inside of an each actualizer - projectors for each application
 func ProvideServiceFactory(appParts appparts.IAppPartitions, tm coreutils.ITime,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm processors.VVMName, authenticator iauthnz.IAuthenticator,
-	secretReader isecrets.ISecretReader) ServiceFactory {
+	secretReader isecrets.ISecretReader, idGeneratorFactory IDGeneratorFactory) ServiceFactory {
 	return func(commandsChannel CommandChannel) pipeline.IService {
 		cmdProc := &cmdProc{
 			appsPartitions: map[appdef.AppQName]map[istructs.PartitionID]*appPartition{},
@@ -160,6 +161,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm coreutils.ITime,
 							app:     cmdMes.AppQName(),
 							metrics: metrics,
 						},
+						idGeneratorFactory: idGeneratorFactory,
 					}
 					func() { // borrowed application partition should be guaranteed to be freed
 						defer cmd.Release()
