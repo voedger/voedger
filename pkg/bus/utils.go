@@ -7,9 +7,12 @@ package bus
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -107,4 +110,31 @@ func GetTestSendTimeout() SendTimeout {
 		return SendTimeout(time.Hour)
 	}
 	return DefaultSendTimeout
+}
+
+func GetPrincipalToken(request Request) (token string, err error) {
+	authHeader := request.Header[coreutils.Authorization]
+	if len(authHeader) == 0 {
+		return "", nil
+	}
+	if strings.HasPrefix(authHeader, coreutils.BearerPrefix) {
+		return strings.ReplaceAll(authHeader, coreutils.BearerPrefix, ""), nil
+	}
+	if strings.HasPrefix(authHeader, "Basic ") {
+		return getBasicAuthToken(authHeader)
+	}
+	return "", errors.New("unsupported Authorization header: " + authHeader)
+}
+
+func getBasicAuthToken(authHeader string) (token string, err error) {
+	headerValue := strings.ReplaceAll(authHeader, "Basic ", "")
+	headerValueBytes, err := base64.StdEncoding.DecodeString(headerValue)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode base64 Basic Authorization header value: %w", err)
+	}
+	headerValue = string(headerValueBytes)
+	if strings.Count(headerValue, ":") != 1 {
+		return "", errors.New("unexpected Basic Authorization header format")
+	}
+	return strings.ReplaceAll(headerValue, ":", ""), nil
 }

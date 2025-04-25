@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -24,6 +25,7 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/processors"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
 func (s *httpService) registerHandlersV2() {
@@ -98,14 +100,14 @@ func (s *httpService) registerHandlersV2() {
 	// [~server.apiv2.auth/cmp.routerLoginPathHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/auth/login",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
-		corsHandler(requestHandlerV2_auth_login(s.requestSender, s.numsAppsWorkspaces))).
+		corsHandler(requestHandlerV2_auth_login(s.federation, s.numsAppsWorkspaces))).
 		Methods(http.MethodPost).Name("auth login")
 
 	// auth/login: /api/v2/apps/{owner}/{app}/auth/login
 	// [~server.apiv2.auth/cmp.routerRefreshHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/auth/refresh",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
-		corsHandler(requestHandlerV2_auth_refresh(s.requestSender, s.numsAppsWorkspaces))).
+		corsHandler(requestHandlerV2_auth_refresh(s.iTokens, s.federation, s.numsAppsWorkspaces))).
 		Methods(http.MethodPost).Name("auth refresh")
 
 	// create user /api/v2/apps/{owner}/{app}/users
@@ -141,33 +143,130 @@ func requestHandlerV2_schemas_wsRoles(reqSender bus.IRequestSender, numsAppsWork
 	}
 }
 
-func requestHandlerV2_auth_refresh(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+// [~server.apiv2.auth/cmp.provideAuthRefreshHandler~impl]
+func requestHandlerV2_auth_refresh(iTokens itokens.ITokens, federation federation.IFederation,
+	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
 		if !ok {
 			return
 		}
-		busRequest.IsAPIV2 = true
-		busRequest.APIPath = int(processors.APIPath_Auth_Refresh)
-		busRequest.Method = http.MethodGet
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		body := map[string]interface{}{}
+		if err := json.Unmarshal(busRequest.Body, &body); err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+		token, err := bus.GetPrincipalToken(busRequest)
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if len(token) == 0 {
+			ReplyCommonError(rw, "authorization header is empty", http.StatusUnauthorized)
+			return
+		}
+
+		var principalPayload payloads.PrincipalPayload
+		if _, err = iTokens.ValidateToken(token, &principalPayload); err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		url := fmt.Sprintf("api/v2/apps/%s/%s/workspaces/%d/queries/sys.RefreshPrincipalToken", busRequest.AppQName.Owner(), busRequest.AppQName.Name(),
+			principalPayload.ProfileWSID)
+		resp, err := federation.Query(url, coreutils.WithAuthorizeBy(token))
+		if err != nil {
+			if funcError, ok := err.(coreutils.FuncError); ok {
+				ReplyCommonError(rw, funcError.ToJSON_APIV2(), funcError.HTTPStatus)
+			} else {
+				ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
+			}
+			return
+		}
+
+		if resp.IsEmpty() {
+			ReplyCommonError(rw, "sys.RefreshPrincipalToken response is empty", http.StatusInternalServerError)
+			return
+		}
+
+		newToken := resp.QPv2Response.Result()["NewPrincipalToken"].(string)
+		if len(newToken) == 0 {
+			ReplyCommonError(rw, "sys.RefreshPrincipalToken response contains empty token", http.StatusInternalServerError)
+			return
+		}
+
+		payload := payloads.PrincipalPayload{}
+		gp, err := iTokens.ValidateToken(newToken, &payload)
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		expiresIn := gp.Duration.Seconds()
+		json := fmt.Sprintf(`{"PrincipalToken": "%s", "ExpiresIn": %d, "WSID": %d}`, newToken, int(expiresIn), principalPayload.ProfileWSID)
+		rw.Header().Set(coreutils.ContentType, coreutils.ContentType_ApplicationJSON)
+		rw.WriteHeader(http.StatusOK)
+		writeResponse(rw, json)
 	}
 }
 
-func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+// [~server.apiv2.auth/cmp.provideAuthLoginHandler~impl]
+// wrong to handle it by QPv2 because 10 simultaneous calls of aut/login -> each would be fail to call registry.IssuePrincipalToken
+func requestHandlerV2_auth_login(federation federation.IFederation, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
 		if !ok {
 			return
 		}
 
-		busRequest.IsAPIV2 = true
-		busRequest.APIPath = int(processors.APIPath_Auth_Login)
-		busRequest.Method = http.MethodGet
-		queryParams := map[string]string{}
-		queryParams["arg"] = string(busRequest.Body)
-		busRequest.Query = queryParams
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		body := map[string]interface{}{}
+		if err := json.Unmarshal(busRequest.Body, &body); err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		args := coreutils.MapObject(body)
+		login, _, err := args.AsString("Login")
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+		password, _, err := args.AsString("Password")
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
+
+		url := fmt.Sprintf(`api/v2/apps/%s/%s/workspaces/%d/queries/registry.IssuePrincipalToken?arg=%s`,
+			istructs.SysOwner, istructs.AppQName_sys_registry.Name(), pseudoWSID,
+			url.QueryEscape(fmt.Sprintf(`{"Login":"%s", "Password":"%s", "AppName": "%s"}`, login, password, busRequest.AppQName)))
+		resp, err := federation.Query(url)
+		if err != nil {
+			if funcError, ok := err.(coreutils.FuncError); ok {
+				ReplyCommonError(rw, funcError.ToJSON_APIV2(), funcError.HTTPStatus)
+			} else {
+				ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
+			}
+			return
+		}
+		if resp.IsEmpty() {
+			ReplyCommonError(rw, "registry.IssuePrincipalToken response is empty", http.StatusInternalServerError)
+			return
+		}
+		token := resp.QPv2Response.Result()["PrincipalToken"].(string)
+		wsError := resp.QPv2Response.Result()["WSError"].(string)
+		wsid := resp.QPv2Response.Result()["WSID"].(float64)
+
+		if len(wsError) > 0 {
+			ReplyCommonError(rw, "the login profile is created with an error: "+wsError, http.StatusInternalServerError)
+		}
+
+		expiresIn := authnz.DefaultPrincipalTokenExpiration.Seconds()
+		json := fmt.Sprintf(`{"PrincipalToken": "%s","ExpiresIn": %d,"WSID": %d}`, token, int(expiresIn), int(wsid))
+		rw.Header().Set(coreutils.ContentType, coreutils.ContentType_ApplicationJSON)
+		rw.WriteHeader(http.StatusOK)
+		writeResponse(rw, json)
 	}
 }
 
