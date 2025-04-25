@@ -6,6 +6,7 @@
 package sys_it
 
 import (
+	"log"
 	"testing"
 
 	"github.com/google/uuid"
