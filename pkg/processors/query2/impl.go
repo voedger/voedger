@@ -137,12 +137,6 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			case processors.APIPath_CDocs:
 				// [~server.apiv2.docs/cmp.provideCDocsHandler~impl]
 				qw.apiPathHandler = cdocsHandler()
-			case processors.APIPath_Auth_Login:
-				// [~server.apiv2.auth/cmp.provideAuthLoginHandler~impl]
-				qw.apiPathHandler = authLoginHandler()
-			case processors.APIPath_Auth_Refresh:
-				// [~server.apiv2.auth/cmp.provideAuthRefreshHandler~impl]
-				qw.apiPathHandler = authRefreshHandler()
 			default:
 				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("unsupported api path %v", qw.msg.APIPath()))
 			}

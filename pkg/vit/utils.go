@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -43,11 +44,23 @@ func (vit *VIT) GetBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID ist
 	}
 }
 
-func (vit *VIT) signUp(login Login, wsKindInitData string, opts ...coreutils.ReqOptFunc) {
+func (vit *VIT) signUp(login Login, opts ...coreutils.ReqOptFunc) {
 	vit.T.Helper()
-	body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":%q,"ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
-		login.Name, login.AppQName.String(), login.subjectKind, wsKindInitData, login.clusterID, login.Pwd)
-	vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "c.registry.CreateLogin", body, opts...)
+	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login.Name, istructs.CurrentClusterID())
+	as, err := vit.IAppStructsProvider.BuiltIn(login.AppQName)
+	require.NoError(vit.T, err)
+	appWSID := coreutils.GetAppWSID(pseudoWSID, as.NumAppWorkspaces())
+	p := payloads.VerifiedValuePayload{
+		VerificationKind: appdef.VerificationKind_EMail,
+		WSID:             appWSID,
+		Field:            "Email", // CreateEmailLoginParams.Email
+		Value:            login.Name,
+		Entity:           appdef.NewQName(registry.RegistryPackage, "CreateEmailLoginParams"),
+	}
+	verifiedEmailToken, err := vit.ITokens.IssueToken(istructs.AppQName_sys_registry, 10*time.Minute, &p)
+	require.NoError(vit.T, err)
+	body := fmt.Sprintf(`{"VerifiedEmailToken": "%s","Password": "%s","DisplayName": "%s"}`, verifiedEmailToken, login.Pwd, login.Name)
+	vit.Func(fmt.Sprintf("api/v2/apps/%s/%s/users", login.AppQName.Owner(), login.AppQName.Name()), body, opts...)
 }
 
 func WithClusterID(clusterID istructs.ClusterID) signUpOptFunc {
@@ -66,7 +79,7 @@ func (vit *VIT) SignUp(loginName, pwd string, appQName appdef.AppQName, opts ...
 	vit.T.Helper()
 	signUpOpts := getSignUpOpts(opts)
 	login := NewLogin(loginName, pwd, appQName, istructs.SubjectKind_User, signUpOpts.profileClusterID)
-	vit.signUp(login, `{"DisplayName":"User Name"}`, signUpOpts.reqOpts...)
+	vit.signUp(login, signUpOpts.reqOpts...)
 	return login
 }
 
@@ -84,7 +97,9 @@ func (vit *VIT) SignUpDevice(loginName, pwd string, appQName appdef.AppQName, op
 	vit.T.Helper()
 	signUpOpts := getSignUpOpts(opts)
 	login := NewLogin(loginName, pwd, appQName, istructs.SubjectKind_Device, signUpOpts.profileClusterID)
-	vit.signUp(login, "{}", signUpOpts.reqOpts...)
+	body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
+		login.Name, login.AppQName.String(), login.subjectKind, login.clusterID, login.Pwd)
+	vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "c.registry.CreateLogin", body, signUpOpts.reqOpts...)
 	return login
 }
 
@@ -272,28 +287,46 @@ func (vit *VIT) SignIn(login Login, optFuncs ...signInOptFunc) (prn *Principal) 
 	}
 	deadline := time.Now().Add(getWorkspaceInitAwaitTimeout())
 	for time.Now().Before(deadline) {
-		body := fmt.Sprintf(`
-			{
-				"args": {
-					"Login": "%s",
-					"Password": "%s",
-					"AppName": "%s"
-				},
-				"elements":[
-					{
-						"fields":["PrincipalToken", "WSID", "WSError"]
-					}
-				]
-			}`, login.Name, login.Pwd, login.AppQName.String())
-		resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.registry.IssuePrincipalToken", body)
-		profileWSID := istructs.WSID(resp.SectionRow()[1].(float64))
-		wsError := resp.SectionRow()[2].(string)
-		token := resp.SectionRow()[0].(string)
-		if profileWSID == 0 && len(wsError) == 0 {
+		// body := fmt.Sprintf(`
+		// 	{
+		// 		"args": {
+		// 			"Login": "%s",
+		// 			"Password": "%s",
+		// 			"AppName": "%s"
+		// 		},
+		// 		"elements":[
+		// 			{
+		// 				"fields":["PrincipalToken", "WSID", "WSError"]
+		// 			}
+		// 		]
+		// 	}`, login.Name, login.Pwd, login.AppQName.String())
+		// resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.registry.IssuePrincipalToken", body)
+		// profileWSID := istructs.WSID(resp.SectionRow()[1].(float64))
+		// wsError := resp.SectionRow()[2].(string)
+		// token := resp.SectionRow()[0].(string)
+		// if profileWSID == 0 && len(wsError) == 0 {
+		// 	time.Sleep(workspaceQueryDelay)
+		// 	continue
+		// }
+		// require.Empty(vit.T, wsError)
+		// require.NotEmpty(vit.T, token)
+		// return &Principal{
+		// 	Login:       login,
+		// 	Token:       token,
+		// 	ProfileWSID: profileWSID,
+		// }
+		body := fmt.Sprintf(`{"Login": "%s","Password": "%s"}`, login.Name, login.Pwd)
+		resp := vit.POST(fmt.Sprintf("api/v2/apps/%s/%s/auth/login", login.AppQName.Owner(), login.AppQName.Name()), body)
+		require.Equal(vit.T, http.StatusOK, resp.HTTPResp.StatusCode)
+		result := make(map[string]interface{})
+		err := json.Unmarshal([]byte(resp.Body), &result)
+		require.NoError(vit.T, err)
+		profileWSID := istructs.WSID(result["WSID"].(float64))
+		if profileWSID == 0 {
 			time.Sleep(workspaceQueryDelay)
 			continue
 		}
-		require.Empty(vit.T, wsError)
+		token := result["PrincipalToken"].(string)
 		require.NotEmpty(vit.T, token)
 		return &Principal{
 			Login:       login,
