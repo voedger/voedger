@@ -178,11 +178,7 @@ func requestHandlerV2_auth_refresh(iTokens itokens.ITokens, federation federatio
 			principalPayload.ProfileWSID)
 		resp, err := federation.Query(url, coreutils.WithAuthorizeBy(token))
 		if err != nil {
-			if funcError, ok := err.(coreutils.FuncError); ok {
-				ReplyCommonError(rw, funcError.ToJSON_APIV2(), funcError.HTTPStatus)
-			} else {
-				ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
-			}
+			replyErr(rw, err)
 			return
 		}
 
@@ -205,9 +201,7 @@ func requestHandlerV2_auth_refresh(iTokens itokens.ITokens, federation federatio
 		}
 		expiresIn := gp.Duration.Seconds()
 		json := fmt.Sprintf(`{"PrincipalToken": "%s", "ExpiresIn": %d, "WSID": %d}`, newToken, int(expiresIn), principalPayload.ProfileWSID)
-		rw.Header().Set(coreutils.ContentType, coreutils.ContentType_ApplicationJSON)
-		rw.WriteHeader(http.StatusOK)
-		writeResponse(rw, json)
+		ReplyJSON(rw, json, http.StatusOK)
 	}
 }
 
@@ -247,11 +241,7 @@ func requestHandlerV2_auth_login(federation federation.IFederation, numsAppsWork
 			url.QueryEscape(fmt.Sprintf(`{"Login":"%s", "Password":"%s", "AppName": "%s"}`, login, password, busRequest.AppQName)))
 		resp, err := federation.Query(url)
 		if err != nil {
-			if funcError, ok := err.(coreutils.FuncError); ok {
-				ReplyJSON(rw, funcError.ToJSON_APIV2(), funcError.HTTPStatus)
-			} else {
-				ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
-			}
+			replyErr(rw, err)
 			return
 		}
 		if resp.IsEmpty() {
@@ -305,21 +295,20 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 			coreutils.WithAuthorizeBy(sysToken),
 			coreutils.WithMethod(http.MethodPost),
 		)
-		rw.Header().Set(coreutils.ContentType, coreutils.ContentType_ApplicationJSON)
 		if err != nil {
-			funcErr := err.(coreutils.FuncError)
-			rw.WriteHeader(funcErr.HTTPStatus)
-			sysError := funcErr.ToJSON_APIV2()
-			logger.Error("registry.Createlogin failed:" + sysError)
-			if !writeResponse(rw, sysError) {
-				logger.Error("failed to send registry.CreateLogin error")
-			}
+			replyErr(rw, err)
 			return
 		}
-		rw.WriteHeader(http.StatusCreated)
-		if !writeResponse(rw, resp.Body) {
-			logger.Error("failed to forward registry.CreateLogin response: " + resp.Body)
-		}
+		ReplyJSON(rw, resp.Body, http.StatusCreated)
+	}
+}
+
+func replyErr(rw http.ResponseWriter, err error) {
+	var funcErr coreutils.FuncError
+	if errors.As(err, &funcErr) {
+		ReplyJSON(rw, funcErr.ToJSON_APIV2(), funcErr.HTTPStatus)
+	} else {
+		ReplyCommonError(rw, err.Error(), funcErr.HTTPStatus)
 	}
 }
 
@@ -341,14 +330,14 @@ func parseCreateLoginArgs(body string) (verifiedlEmailToken, displayName, pwd st
 		return "", "", "", err
 	}
 	if !ok {
-		return "", "", "", errors.New("DisplayName field missing")
+		return "", "", "", errors.New("displayName field missing")
 	}
 	pwd, ok, err = args.AsString("Password")
 	if err != nil {
 		return "", "", "", err
 	}
 	if !ok {
-		return "", "", "", errors.New("Password field missing")
+		return "", "", "", errors.New("password field missing")
 	}
 	return
 }
