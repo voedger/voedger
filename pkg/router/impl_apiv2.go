@@ -121,6 +121,16 @@ func (s *httpService) registerHandlersV2() {
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
 		corsHandler(requestHandlerV2_create_device(s.numsAppsWorkspaces, s.federation))).
 		Methods(http.MethodPost).Name("create device")
+
+	// /api/v2/apps/{owner}/{app}/workspaces/{wsid}/blobs
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/blobs",
+		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid),
+		corsHandler(requestHandlerV2_blobs_create(s.numsAppsWorkspaces, s.federation))).
+		Methods(http.MethodPost).Name("blobs create")
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/blobs/{%s}",
+		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_id),
+		corsHandler(requestHandlerV2_blobs_modify(s.numsAppsWorkspaces, s.federation))).
+		Methods(http.MethodPost).Name("blobs create")
 }
 
 func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
@@ -333,6 +343,17 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 			return
 		}
 		ReplyJSON(rw, resp.Body, http.StatusCreated)
+	}
+}
+
+func requestHandlerV2_blobs_create(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
+	iTokens itokens.ITokens, federation federation.IFederation) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		appQName, wsid, headers, ok := parseURLParams(req, rw)
+		if !ok {
+			return
+		}
+		token 
 	}
 }
 
