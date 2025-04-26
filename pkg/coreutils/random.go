@@ -7,9 +7,17 @@ package coreutils
 
 import "crypto/rand"
 
-const base32alphabet = "abcdefghijklmnopqrstuvwxyz234567"
+func DeviceRandomLoginPwd() (login, pwd string) {
+	login = "device" + randomString(lowercaseDigitsAlphabet, deviceLoginAndPwdLen)
+	pwd = randomString(lowercaseDigitsAlphabet, deviceLoginAndPwdLen)
+	return login, pwd
+}
 
-func RandomLowercaseDigits(l int) string {
+func EmailVerificationCode() (verificationCode string) {
+	return randomString(emailVerificationCodeAlphabet, emailVerificationCodeLength)
+}
+
+func randomString(alphabet string, l int) string {
 	src := make([]byte, l)
 	_, err := rand.Read(src)
 	if err != nil {
@@ -17,7 +25,7 @@ func RandomLowercaseDigits(l int) string {
 		panic(err)
 	}
 	for i := range src {
-		src[i] = base32alphabet[int(src[i])%len(base32alphabet)]
+		src[i] = alphabet[int(src[i])%len(alphabet)]
 	}
 	return string(src)
 }

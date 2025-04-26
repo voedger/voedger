@@ -7,14 +7,24 @@ package coreutils
 
 import (
 	"log"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestRandomLowercaseDigits_BasicUsage(t *testing.T) {
-	log.Println(RandomLowercaseDigits(26))
-	require.Len(t, RandomLowercaseDigits(26), 26)
-	require.Empty(t, RandomLowercaseDigits(0))
-	require.NotEqual(t, RandomLowercaseDigits(26), RandomLowercaseDigits((26)))
+func TestRandom(t *testing.T) {
+	dl, dp := DeviceRandomLoginPwd()
+	log.Println(dl, dp)
+	require.True(t, strings.HasPrefix(dl, "device"))
+	require.Len(t, dp, deviceLoginAndPwdLen)
+	require.Len(t, dl, deviceLoginAndPwdLen+6)
+	dl1, dp1 := DeviceRandomLoginPwd()
+	require.NotEqual(t, dl, dl1)
+	require.NotEqual(t, dp, dp1)
+
+	evc := EmailVerificationCode()
+	log.Println(evc)
+	evc1 := EmailVerificationCode()
+	require.NotEqual(t, evc, evc1)
 }

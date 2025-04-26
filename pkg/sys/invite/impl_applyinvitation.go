@@ -41,11 +41,7 @@ func applyInvitationProjector(time coreutils.ITime, federation federation.IFeder
 			return
 		}
 
-		verificationCode, err := coreutils.EmailVerificationCode()
-		if err != nil {
-			// notest
-			return err
-		}
+		verificationCode := coreutils.EmailVerificationCode()
 		emailTemplate := coreutils.TruncateEmailTemplate(event.ArgumentObject().AsString(field_EmailTemplate))
 
 		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(sys.Storage_Record, authnz.QNameCDocWorkspaceDescriptor)
