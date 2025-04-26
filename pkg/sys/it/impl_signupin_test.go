@@ -228,7 +228,7 @@ func TestCreateDevice(t *testing.T) {
 		require.NotEqual(devicePrn.Token, resp.SectionRow()[0].(string))
 	})
 
-	t.Run("400 bad request on an enexpected body", func(t *testing.T) {
+	t.Run("400 bad request on an unexpected body", func(t *testing.T) {
 		vit.Func(fmt.Sprintf("api/v2/apps/%s/%s/devices", deviceLogin.AppQName.Owner(), deviceLogin.AppQName.Name()), "body",
 			coreutils.Expect400()).Println()
 	})
