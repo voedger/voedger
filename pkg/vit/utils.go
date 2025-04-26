@@ -93,12 +93,13 @@ func getSignUpOpts(opts []signUpOptFunc) *signUpOpts {
 	return res
 }
 
-func (vit *VIT) SignUpDevice(loginName, pwd string, appQName appdef.AppQName, opts ...signUpOptFunc) Login {
+func (vit *VIT) SignUpDevice(appQName appdef.AppQName, opts ...signUpOptFunc) Login {
 	vit.T.Helper()
 	signUpOpts := getSignUpOpts(opts)
-	deviceLogin := NewLogin(loginName, pwd, appQName, istructs.SubjectKind_Device, signUpOpts.profileClusterID)
-	body := fmt.Sprintf(`{"Login": "%s","Password": "%s"}`, loginName, pwd)
-	vit.Func(fmt.Sprintf("api/v2/apps/%s/%s/devices", deviceLogin.AppQName.Owner(), deviceLogin.AppQName.Name()), body, signUpOpts.reqOpts...)
+	resp := vit.Func(fmt.Sprintf("api/v2/apps/%s/%s/devices", appQName.Owner(), appQName.Name()), "", signUpOpts.reqOpts...)
+	m := map[string]interface{}{}
+	require.NoError(vit.T, json.Unmarshal([]byte(resp.Body), &m))
+	deviceLogin := NewLogin(m["Login"].(string), m["Password"].(string), appQName, istructs.SubjectKind_Device, signUpOpts.profileClusterID)
 	return deviceLogin
 }
 
