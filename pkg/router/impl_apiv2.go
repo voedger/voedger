@@ -115,6 +115,12 @@ func (s *httpService) registerHandlersV2() {
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
 		corsHandler(requestHandlerV2_create_user(s.numsAppsWorkspaces, s.iTokens, s.federation))).
 		Methods(http.MethodPost).Name("create user")
+
+	// create device /api/v2/apps/{owner}/{app}/devices
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/devices",
+		URLPlaceholder_appOwner, URLPlaceholder_appName),
+		corsHandler(requestHandlerV2_create_device(s.numsAppsWorkspaces, s.federation))).
+		Methods(http.MethodPost).Name("create device")
 }
 
 func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
@@ -262,6 +268,31 @@ func requestHandlerV2_auth_login(federation federation.IFederation, numsAppsWork
 	}
 }
 
+// [~cmp.routerDevicesCreatePathHandler~]
+func requestHandlerV2_create_device(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, federation federation.IFederation) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
+		if !ok {
+			return
+		}
+		login, pwd, err := parseCreateDeviceArgs(string(busRequest.Body))
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
+		url := fmt.Sprintf("api/v2/apps/sys/registry/workspaces/%d/commands/registry.CreateLogin", pseudoWSID)
+		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
+			login, busRequest.AppQName, istructs.SubjectKind_Device, istructs.CurrentClusterID(), pwd)
+		resp, err := federation.Func(url, body, coreutils.WithMethod(http.MethodPost))
+		if err != nil {
+			replyErr(rw, err)
+			return
+		}
+		ReplyJSON(rw, resp.Body, http.StatusCreated)
+	}
+}
+
 // [~cmp.router.UsersCreatePathHandler~]
 func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
 	iTokens itokens.ITokens, federation federation.IFederation) http.HandlerFunc {
@@ -313,6 +344,29 @@ func replyErr(rw http.ResponseWriter, err error) {
 	}
 }
 
+func parseCreateDeviceArgs(body string) (login, pwd string, err error) {
+	args := coreutils.MapObject{}
+	if err = json.Unmarshal([]byte(body), &args); err != nil {
+		return "", "", fmt.Errorf("failed to unmarshal body: %w:\n%s", err, body)
+	}
+	ok := false
+	login, ok, err = args.AsString("Login")
+	if err != nil {
+		return "", "", err
+	}
+	if !ok {
+		return "", "", errors.New("Login field missing") // nolint ST1005
+	}
+	pwd, ok, err = args.AsString("Password")
+	if err != nil {
+		return "", "", err
+	}
+	if !ok {
+		return "", "", errors.New("Password field missing") // nolint ST1005
+	}
+	return login, pwd, nil
+}
+
 func parseCreateLoginArgs(body string) (verifiedEmailToken, displayName, pwd string, err error) {
 	args := coreutils.MapObject{}
 	if err = json.Unmarshal([]byte(body), &args); err != nil {
@@ -324,21 +378,21 @@ func parseCreateLoginArgs(body string) (verifiedEmailToken, displayName, pwd str
 		return "", "", "", err
 	}
 	if !ok {
-		return "", "", "", errors.New("VerifiedEmailToken field missing")
+		return "", "", "", errors.New("VerifiedEmailToken field missing") // nolint ST1005
 	}
 	displayName, ok, err = args.AsString("DisplayName")
 	if err != nil {
 		return "", "", "", err
 	}
 	if !ok {
-		return "", "", "", errors.New("displayName field missing")
+		return "", "", "", errors.New("DisplayName field missing") // nolint ST1005
 	}
 	pwd, ok, err = args.AsString("Password")
 	if err != nil {
 		return "", "", "", err
 	}
 	if !ok {
-		return "", "", "", errors.New("password field missing")
+		return "", "", "", errors.New("Password field missing") // nolint ST1005
 	}
 	return
 }
