@@ -6,6 +6,7 @@ package sys_it
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -132,7 +133,15 @@ func TestWSNameCausesMaxPseudoWSID(t *testing.T) {
 
 	// BaseWSID for entity "2062880497" is 65535 so due of comparing <istructs.MaxPseudoBaseWSID in router the WSID
 	// considered as not pseudo -> panic on try to call AsQName() on a missing workspace descriptor on a non-inited ws
-	deviceLogin := vit.SignUpDevice("2062880497", "1", istructs.AppQName_test1_app1)
+	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, "2062880497", istructs.CurrentClusterID())
+	url := fmt.Sprintf("api/v2/apps/sys/registry/workspaces/%d/commands/registry.CreateLogin", pseudoWSID)
+	body := fmt.Sprintf(`{"args":{"Login":"2062880497","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"1"}}`,
+		istructs.AppQName_test1_app1, istructs.SubjectKind_Device, istructs.CurrentClusterID())
+	resp := vit.Func(url, body, coreutils.WithMethod(http.MethodPost))
+	m := map[string]interface{}{}
+	require.NoError(vit.T, json.Unmarshal([]byte(resp.Body), &m))
+	deviceLogin := it.NewLogin("2062880497", "1", istructs.AppQName_test1_app1, istructs.SubjectKind_Device,
+		istructs.CurrentClusterID())
 
 	// need to wait for init anyway, otherwise vit.Time.Add(1 day) on next test -> token expired during the device ws init
 	vit.SignIn(deviceLogin)

@@ -6,6 +6,7 @@ package sys_it
 
 import (
 	"fmt"
+	"log"
 	"testing"
 	"time"
 
@@ -200,8 +201,12 @@ func TestCreateDevice(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
-	loginName := vit.NextName()
-	deviceLogin := vit.SignUpDevice(loginName, "123", istructs.AppQName_test1_app2)
+	deviceLogin := vit.SignUpDevice(istructs.AppQName_test1_app2)
+
+	// APIv2 create device returns generated device login and password
+	log.Println(deviceLogin.Name)
+	log.Println(deviceLogin.Pwd)
+
 	devicePrn := vit.SignIn(deviceLogin)
 	as, err := vit.BuiltIn(istructs.AppQName_test1_app2)
 	require.NoError(err)
@@ -223,30 +228,9 @@ func TestCreateDevice(t *testing.T) {
 		require.NotEqual(devicePrn.Token, resp.SectionRow()[0].(string))
 	})
 
-	t.Run("errors", func(t *testing.T) {
-		t.Run("409 on device login already exists", func(t *testing.T) {
-			body := fmt.Sprintf(`{"Login": "%s","Password": "%s"}`, loginName, deviceLogin.Pwd)
-			vit.Func(fmt.Sprintf("api/v2/apps/%s/%s/devices", deviceLogin.AppQName.Owner(), deviceLogin.AppQName.Name()), body,
-				coreutils.Expect409("login already exists"))
-		})
-
-		t.Run("wrong args", func(t *testing.T) {
-			cases := []string{
-				"",
-				"wrong json",
-				`{"Login":"123"}`,
-				`{"Password":"123}`,
-				`{"Login":"123", "Password": 42}`,
-				`{"Login":42, "Password": "123"}`,
-			}
-
-			for _, c := range cases {
-				t.Run(c, func(t *testing.T) {
-					vit.Func(fmt.Sprintf("api/v2/apps/%s/%s/devices", deviceLogin.AppQName.Owner(), deviceLogin.AppQName.Name()), c,
-						coreutils.Expect400()).Println()
-				})
-			}
-		})
+	t.Run("400 bad request on an unepected body", func(t *testing.T) {
+		vit.Func(fmt.Sprintf("api/v2/apps/%s/%s/devices", deviceLogin.AppQName.Owner(), deviceLogin.AppQName.Name()), "body",
+			coreutils.Expect400()).Println()
 	})
 }
 

@@ -275,21 +275,23 @@ func requestHandlerV2_create_device(numsAppsWorkspaces map[appdef.AppQName]istru
 		if !ok {
 			return
 		}
-		login, pwd, err := parseCreateDeviceArgs(string(busRequest.Body))
-		if err != nil {
-			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+		if len(busRequest.Body) > 0 {
+			ReplyCommonError(rw, "unexpected body", http.StatusBadRequest)
 			return
 		}
+		login := "device" + coreutils.RandomLowercaseDigits(26)
+		pwd := coreutils.RandomLowercaseDigits(26)
 		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
 		url := fmt.Sprintf("api/v2/apps/sys/registry/workspaces/%d/commands/registry.CreateLogin", pseudoWSID)
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
 			login, busRequest.AppQName, istructs.SubjectKind_Device, istructs.CurrentClusterID(), pwd)
-		resp, err := federation.Func(url, body, coreutils.WithMethod(http.MethodPost))
+		_, err := federation.Func(url, body, coreutils.WithMethod(http.MethodPost))
 		if err != nil {
 			replyErr(rw, err)
 			return
 		}
-		ReplyJSON(rw, resp.Body, http.StatusCreated)
+		result := fmt.Sprintf(`{"Login":"%s","Password":"%s"}`, login, pwd)
+		ReplyJSON(rw, result, http.StatusCreated)
 	}
 }
 
@@ -342,29 +344,6 @@ func replyErr(rw http.ResponseWriter, err error) {
 	} else {
 		ReplyCommonError(rw, err.Error(), funcErr.HTTPStatus)
 	}
-}
-
-func parseCreateDeviceArgs(body string) (login, pwd string, err error) {
-	args := coreutils.MapObject{}
-	if err = json.Unmarshal([]byte(body), &args); err != nil {
-		return "", "", fmt.Errorf("failed to unmarshal body: %w:\n%s", err, body)
-	}
-	ok := false
-	login, ok, err = args.AsString("Login")
-	if err != nil {
-		return "", "", err
-	}
-	if !ok {
-		return "", "", errors.New("Login field missing") // nolint ST1005
-	}
-	pwd, ok, err = args.AsString("Password")
-	if err != nil {
-		return "", "", err
-	}
-	if !ok {
-		return "", "", errors.New("Password field missing") // nolint ST1005
-	}
-	return login, pwd, nil
 }
 
 func parseCreateLoginArgs(body string) (verifiedEmailToken, displayName, pwd string, err error) {
