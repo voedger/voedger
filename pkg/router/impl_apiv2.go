@@ -262,6 +262,7 @@ func requestHandlerV2_auth_login(federation federation.IFederation, numsAppsWork
 	}
 }
 
+// [~cmp.router.UsersCreatePathHandler~]
 func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
 	iTokens itokens.ITokens, federation federation.IFederation) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {

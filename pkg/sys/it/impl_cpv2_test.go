@@ -365,11 +365,11 @@ func TestErrorsCPv2(t *testing.T) {
 	})
 }
 
-func TestCreateUser(t *testing.T) {
+// [~it.TestUsersCreate~]
+func TestUsersCreate(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
-	// ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	login := vit.NextName() + "@123.com"
 	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
 	appWSID := coreutils.GetAppWSID(pseudoWSID, istructs.DefaultNumAppWorkspaces)
@@ -383,7 +383,7 @@ func TestCreateUser(t *testing.T) {
 	verifiedEmailToken, err := vit.ITokens.IssueToken(istructs.AppQName_sys_registry, 10*time.Minute, &p)
 	require.NoError(err)
 	body := fmt.Sprintf(`{"VerifiedEmailToken": "%s","Password": "123","DisplayName": "%s"}`, verifiedEmailToken, login)
-	vit.POST("api/v2/apps/test1/app1/users", body)
+	vit.POST("api/v2/apps/test1/app1/users", body).Println()
 
 	// try to sign in
 	prn := vit.SignIn(it.Login{Name: login, Pwd: "123", AppQName: istructs.AppQName_test1_app1})
