@@ -463,7 +463,7 @@ func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op 
 	}
 
 	// Add responses
-	operation[schemaKeyResponses] = g.generateResponses(typ, op)
+	operation[schemaKeyResponses] = g.generateResponses(typ, op, apiPath)
 
 	// Add the operation to the path
 	g.paths[path][method] = operation
@@ -763,7 +763,7 @@ func (g *schemaGenerator) generateRequestBody(typ appdef.IType, op appdef.Operat
 }
 
 // generateResponses creates response objects for a type and operation
-func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.OperationKind) map[string]interface{} {
+func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.OperationKind, apiPath processors.APIPath) map[string]interface{} {
 	responses := make(map[string]interface{})
 	// Add standard error responses
 	responses["401"] = map[string]interface{}{
@@ -883,7 +883,9 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 			},
 		}
 
-	case op == appdef.OperationKind_Select && appdef.TypeKind_Records.Contains(typ.Kind()):
+	case apiPath == processors.APIPath_Docs &&
+		op == appdef.OperationKind_Select &&
+		appdef.TypeKind_Records.Contains(typ.Kind()):
 		responses[statusCode200] = map[string]interface{}{
 			schemaKeyDescription: descrOK,
 			schemaKeyContent: map[string]interface{}{
@@ -895,8 +897,8 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 			},
 		}
 
-	case (op == appdef.OperationKind_Select && typ.Kind() == appdef.TypeKind_CDoc) ||
-		(op == appdef.OperationKind_Select && typ.Kind() == appdef.TypeKind_ViewRecord):
+	case apiPath == processors.APIPath_CDocs && op == appdef.OperationKind_Select &&
+		(typ.Kind() == appdef.TypeKind_CDoc || typ.Kind() == appdef.TypeKind_ViewRecord):
 		// Collection response with results array
 
 		responses[statusCode200] = map[string]interface{}{

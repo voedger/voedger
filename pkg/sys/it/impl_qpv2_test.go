@@ -2126,7 +2126,9 @@ func TestOpenAPI(t *testing.T) {
 	require.Contains(json, "\"paths\": {")
 	require.Contains(json, "/apps/voedger/testapp/workspaces/{wsid}/docs/app1pkg.Currency")
 
-	// fmt.Println(json)
+	//save to file
+	// err = os.WriteFile("openapi.json", []byte(json), 0644)
+	// require.NoError(err)
 }
 
 // [~server.apiv2.docs/it.TestQueryProcessor2_CDocs~impl]
