@@ -279,8 +279,7 @@ func requestHandlerV2_create_device(numsAppsWorkspaces map[appdef.AppQName]istru
 			ReplyCommonError(rw, "unexpected body", http.StatusBadRequest)
 			return
 		}
-		login := "device" + coreutils.RandomLowercaseDigits(deviceLoginAndPasswordLen)
-		pwd := coreutils.RandomLowercaseDigits(deviceLoginAndPasswordLen)
+		login, pwd := coreutils.DeviceRandomLoginPwd()
 		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
 		url := fmt.Sprintf("api/v2/apps/sys/registry/workspaces/%d/commands/registry.CreateLogin", pseudoWSID)
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
