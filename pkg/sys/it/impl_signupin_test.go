@@ -195,7 +195,8 @@ func TestSignInErrors(t *testing.T) {
 	})
 }
 
-func TestDeviceProfile(t *testing.T) {
+// [~it.TestDevicesCreate~]
+func TestCreateDevice(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
@@ -220,6 +221,32 @@ func TestDeviceProfile(t *testing.T) {
 		body := `{"args":{},"elements":[{"fields":["NewPrincipalToken"]}]}`
 		resp := vit.PostProfile(devicePrn, "q.sys.RefreshPrincipalToken", body)
 		require.NotEqual(devicePrn.Token, resp.SectionRow()[0].(string))
+	})
+
+	t.Run("errors", func(t *testing.T) {
+		t.Run("409 on device login already exists", func(t *testing.T) {
+			body := fmt.Sprintf(`{"Login": "%s","Password": "%s"}`, loginName, deviceLogin.Pwd)
+			vit.Func(fmt.Sprintf("api/v2/apps/%s/%s/devices", deviceLogin.AppQName.Owner(), deviceLogin.AppQName.Name()), body,
+				coreutils.Expect409("login already exists"))
+		})
+
+		t.Run("wrong args", func(t *testing.T) {
+			cases := []string{
+				"",
+				"wrong json",
+				`{"Login":"123"}`,
+				`{"Password":"123}`,
+				`{"Login":"123", "Password": 42}`,
+				`{"Login":42, "Password": "123"}`,
+			}
+
+			for _, c := range cases {
+				t.Run(c, func(t *testing.T) {
+					vit.Func(fmt.Sprintf("api/v2/apps/%s/%s/devices", deviceLogin.AppQName.Owner(), deviceLogin.AppQName.Name()), c,
+						coreutils.Expect400()).Println()
+				})
+			}
+		})
 	})
 }
 

@@ -96,11 +96,10 @@ func getSignUpOpts(opts []signUpOptFunc) *signUpOpts {
 func (vit *VIT) SignUpDevice(loginName, pwd string, appQName appdef.AppQName, opts ...signUpOptFunc) Login {
 	vit.T.Helper()
 	signUpOpts := getSignUpOpts(opts)
-	login := NewLogin(loginName, pwd, appQName, istructs.SubjectKind_Device, signUpOpts.profileClusterID)
-	body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
-		login.Name, login.AppQName.String(), login.subjectKind, login.clusterID, login.Pwd)
-	vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "c.registry.CreateLogin", body, signUpOpts.reqOpts...)
-	return login
+	deviceLogin := NewLogin(loginName, pwd, appQName, istructs.SubjectKind_Device, signUpOpts.profileClusterID)
+	body := fmt.Sprintf(`{"Login": "%s","Password": "%s"}`, loginName, pwd)
+	vit.Func(fmt.Sprintf("api/v2/apps/%s/%s/devices", deviceLogin.AppQName.Owner(), deviceLogin.AppQName.Name()), body, signUpOpts.reqOpts...)
+	return deviceLogin
 }
 
 func (vit *VIT) GetCDocLoginID(login Login) int64 {
@@ -287,34 +286,6 @@ func (vit *VIT) SignIn(login Login, optFuncs ...signInOptFunc) (prn *Principal) 
 	}
 	deadline := time.Now().Add(getWorkspaceInitAwaitTimeout())
 	for time.Now().Before(deadline) {
-		// body := fmt.Sprintf(`
-		// 	{
-		// 		"args": {
-		// 			"Login": "%s",
-		// 			"Password": "%s",
-		// 			"AppName": "%s"
-		// 		},
-		// 		"elements":[
-		// 			{
-		// 				"fields":["PrincipalToken", "WSID", "WSError"]
-		// 			}
-		// 		]
-		// 	}`, login.Name, login.Pwd, login.AppQName.String())
-		// resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.registry.IssuePrincipalToken", body)
-		// profileWSID := istructs.WSID(resp.SectionRow()[1].(float64))
-		// wsError := resp.SectionRow()[2].(string)
-		// token := resp.SectionRow()[0].(string)
-		// if profileWSID == 0 && len(wsError) == 0 {
-		// 	time.Sleep(workspaceQueryDelay)
-		// 	continue
-		// }
-		// require.Empty(vit.T, wsError)
-		// require.NotEmpty(vit.T, token)
-		// return &Principal{
-		// 	Login:       login,
-		// 	Token:       token,
-		// 	ProfileWSID: profileWSID,
-		// }
 		body := fmt.Sprintf(`{"Login": "%s","Password": "%s"}`, login.Name, login.Pwd)
 		resp := vit.POST(fmt.Sprintf("api/v2/apps/%s/%s/auth/login", login.AppQName.Owner(), login.AppQName.Name()), body)
 		require.Equal(vit.T, http.StatusOK, resp.HTTPResp.StatusCode)
