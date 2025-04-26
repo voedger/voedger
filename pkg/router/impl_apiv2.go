@@ -355,14 +355,14 @@ func parseCreateDeviceArgs(body string) (login, pwd string, err error) {
 		return "", "", err
 	}
 	if !ok {
-		return "", "", errors.New("Login field missing")
+		return "", "", errors.New("Login field missing") // nolint ST1005
 	}
 	pwd, ok, err = args.AsString("Password")
 	if err != nil {
 		return "", "", err
 	}
 	if !ok {
-		return "", "", errors.New("Password field missing")
+		return "", "", errors.New("Password field missing") // nolint ST1005
 	}
 	return login, pwd, nil
 }
@@ -378,21 +378,21 @@ func parseCreateLoginArgs(body string) (verifiedEmailToken, displayName, pwd str
 		return "", "", "", err
 	}
 	if !ok {
-		return "", "", "", errors.New("VerifiedEmailToken field missing")
+		return "", "", "", errors.New("VerifiedEmailToken field missing") // nolint ST1005
 	}
 	displayName, ok, err = args.AsString("DisplayName")
 	if err != nil {
 		return "", "", "", err
 	}
 	if !ok {
-		return "", "", "", errors.New("displayName field missing")
+		return "", "", "", errors.New("DisplayName field missing") // nolint ST1005
 	}
 	pwd, ok, err = args.AsString("Password")
 	if err != nil {
 		return "", "", "", err
 	}
 	if !ok {
-		return "", "", "", errors.New("password field missing")
+		return "", "", "", errors.New("Password field missing") // nolint ST1005
 	}
 	return
 }
