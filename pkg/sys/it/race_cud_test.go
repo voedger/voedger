@@ -39,29 +39,6 @@ func init() {
 	cfg = it.NewSharedVITConfig(it.WithApp(istructs.AppQName_test1_app1, it.ProvideApp1, appOpts...))
 }
 
-// var cfg = it.NewSharedVITConfig(
-// 	it.WithApp(istructs.AppQName_test1_app1, it.ProvideApp1,
-// 		it.WithWorkspaceTemplate(it.QNameApp1_TestWSKind, "test_template", sys_test_template.TestTemplateFS),
-// 		it.WithUserLogin("login", "pwd"),
-// 		it.WithChildWorkspace(it.QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
-// 		it.WithChildWorkspace(it.QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
-// 	),
-// 	it.WithPostInit(func(vit *it.VIT) {
-// 		as, err := vit.BuiltIn(istructs.AppQName_test1_app1)
-// 		require.NoError(vit.T, err)
-// 		plogOffsets := map[istructs.PartitionID]istructs.Offset{}
-// 		for wsNum := 0; wsNum < writeCnt; wsNum++ {
-// 			wsid := istructs.WSID(wsNum + int(istructs.MaxPseudoBaseWSID))
-// 			partNum, err := vit.IAppPartitions.AppWorkspacePartitionID(istructs.AppQName_test1_app1, wsid)
-// 			require.NoError(vit.T, err)
-// 			plogOffsets[partNum]++
-// 			pLogOffset := plogOffsets[partNum]
-// 			err = wsdescutil.CreateCDocWorkspaceDescriptorStub(as, partNum, istructs.WSID(wsNum+int(istructs.MaxPseudoBaseWSID)), it.QNameApp1_TestWSKind, pLogOffset, 1)
-// 			require.NoError(vit.T, err)
-// 		}
-// 	}),
-// )
-
 // One WSID
 //*****************************************
 
