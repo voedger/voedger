@@ -629,49 +629,49 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 			{
 				"article_price_exceptions":[
 					{
-						"id_periods":3.22680000131076e+14,
+						"id_periods":200005,
 						"price":1.8,
-						"sys.ID":3.22680000131089e+14,
+						"sys.ID":200018,
 						"sys.IsActive":true
 					}
 				],
-				"id_prices":3.22680000131072e+14,
+				"id_prices":200001,
 				"price":2,
-				"sys.ID":3.22680000131079e+14,
+				"sys.ID":200008,
 				"sys.IsActive":true
 			},
 			{
 				"article_price_exceptions":[
 					{
-						"id_periods":3.22680000131076e+14,
+						"id_periods":200005,
 						"price":0.9,
-						"sys.ID":3.22680000131081e+14,
+						"sys.ID":200010,
 						"sys.IsActive":true
 					},
 					{
-						"id_periods":3.22680000131077e+14,
+						"id_periods":200006,
 						"price":0.8,
-						"sys.ID":3.22680000131082e+14,
+						"sys.ID":200011,
 						"sys.IsActive":true
 					}
 				],
-				"id_prices":3.22680000131073e+14,
+				"id_prices":200002,
 				"price":1.5,
-				"sys.ID":3.2268000013108e+14,
+				"sys.ID":200009,
 				"sys.IsActive":true
 			}
 		],
-		"id_department":3.22680000131074e+14,
+		"id_department":200003,
 		"name":"Coca-cola",
 		"number":10,
-		"sys.ID":3.22680000131078e+14,
+		"sys.ID":200007,
 		"sys.IsActive":true,
 		"xrefs":{
 			"test.departments":{
 				"200003":{
 					"name":"Cold Drinks",
 					"number":1,
-					"sys.ID":3.22680000131074e+14,
+					"sys.ID":200003,
 					"sys.IsActive":true
 				}
 			},
@@ -743,88 +743,88 @@ func TestBasicUsage_State(t *testing.T) {
 	expected := `{
 		"test.article_price_exceptions":{
 			"200010":{
-				"id_periods":3.22680000131076e+14,
+				"id_periods":200005,
 				"price":0.9,
 				"sys.ID":200010,
 				"sys.IsActive":true,
-				"sys.ParentID":3.2268000013108e+14
+				"sys.ParentID":200009
 			},
 			"200011":{
-				"id_periods": 3.22680000131077e+14,
+				"id_periods": 200006,
 				"price":0.8,
 				"sys.ID":200011,
 				"sys.IsActive":true,
-				"sys.ParentID":3.2268000013108e+14
+				"sys.ParentID":200009
 			},
 			"200014":{
-				"id_periods":3.22680000131076e+14,
+				"id_periods":200005,
 				"price":1.6,
 				"sys.ID":200014,
 				"sys.IsActive":true,
-				"sys.ParentID":3.22680000131084e+14
+				"sys.ParentID":200013
 			},
 			"200015":{
-				"id_periods":3.22680000131077e+14,
+				"id_periods":200006,
 				"price":1.2,
 				"sys.ID":200015,
 				"sys.IsActive":true,
-				"sys.ParentID":3.22680000131084e+14
+				"sys.ParentID":200013
 			},
 			"200017":{
-				"id_periods":3.22680000131076e+14,
+				"id_periods":200005,
 				"price":1.1,
 				"sys.ID":200017,
 				"sys.IsActive":true,
-				"sys.ParentID":3.22680000131087e+14
+				"sys.ParentID":200016
 			},
 			"200018":{
-				"id_periods":3.22680000131076e+14,
+				"id_periods":200005,
 				"price":1.8,
 				"sys.ID":200018,
 				"sys.IsActive":true,
-				"sys.ParentID":3.22680000131079e+14
+				"sys.ParentID":200008
 			}
 		},
 		"test.article_prices":{
 			"200008":{
-				"id_prices":3.22680000131072e+14,
+				"id_prices":200001,
 				"price":2,
 				"sys.ID":200008,
 				"sys.IsActive":true,
-				"sys.ParentID":3.22680000131078e+14
+				"sys.ParentID":200007
 			},
 			"200009":{
-				"id_prices":3.22680000131073e+14,
+				"id_prices":200002,
 				"price":1.5,
 				"sys.ID":200009,
 				"sys.IsActive":true,
-				"sys.ParentID":3.22680000131078e+14
+				"sys.ParentID":200007
 			},
 			"200013":{
-				"id_prices":3.22680000131072e+14,
+				"id_prices":200001,
 				"price":2.1,
 				"sys.ID":200013,
 				"sys.IsActive":true,
-				"sys.ParentID":3.22680000131083e+14
+				"sys.ParentID":200012
 			},
 			"200016":{
-				"id_prices":3.22680000131073e+14,
+				"id_prices":200002,
 				"price":1.6,
 				"sys.ID":200016,
 				"sys.IsActive":true,
-				"sys.ParentID":3.22680000131083e+14
+				"sys.ParentID":200012
 			}
 		},
 		"test.articles":{
 			"200007":{
-				"id_department":3.22680000131074e+14,
+				"id_department":200003,
 				"name":"Coca-cola",
 				"number":10,
 				"sys.ID":200007,
 				"sys.IsActive":true
 			},
 			"200012":{
-				"id_department":3.22680000131074e+14,
+				"id_department":200003,
 				"name":"Fanta",
 				"number":12,
 				"sys.ID":200012,
@@ -913,18 +913,18 @@ func TestState_withAfterArgument(t *testing.T) {
 	{
 		"test.article_price_exceptions":{
 			"200010":{
-				"id_periods":3.22680000131076e+14,
+				"id_periods":200005,
 				"price":0.9,
 				"sys.ID":200010,
 				"sys.IsActive":true,
-				"sys.ParentID":3.2268000013108e+14
+				"sys.ParentID":200009
 			},
 			"200018":{
-				"id_periods":3.22680000131076e+14,
+				"id_periods":200005,
 				"price":1.8,
 				"sys.ID":200018,
 				"sys.IsActive":true,
-				"sys.ParentID": 3.22680000131079e+14
+				"sys.ParentID": 200008
 			}
 		}
 	}`
