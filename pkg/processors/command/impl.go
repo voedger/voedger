@@ -140,7 +140,7 @@ func (ap *appPartition) getWorkspace(wsid istructs.WSID) *workspace {
 	if !ok {
 		ws = &workspace{
 			NextWLogOffset: istructs.FirstOffset,
-			idGenerator:    ap.idGeneratorFactory(),
+			idGenerator:    istructsmem.NewIDGenerator(),
 		}
 		ap.workspaces[wsid] = ws
 	}
@@ -256,9 +256,8 @@ func updateIDGeneratorFromO(root istructs.IObject, findType appdef.FindType, idG
 
 func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPartition, error) {
 	ap := &appPartition{
-		workspaces:         map[istructs.WSID]*workspace{},
-		nextPLogOffset:     istructs.FirstOffset,
-		idGeneratorFactory: cmd.idGeneratorFactory,
+		workspaces:     map[istructs.WSID]*workspace{},
+		nextPLogOffset: istructs.FirstOffset,
 	}
 	var lastPLogEvent istructs.IPLogEvent
 	cb := func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {

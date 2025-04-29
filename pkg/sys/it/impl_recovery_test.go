@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	it "github.com/voedger/voedger/pkg/vit"
 	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
 	"github.com/voedger/voedger/pkg/vvm"
@@ -41,9 +40,7 @@ func TestCorrectIDsIssueAfterRecovery(t *testing.T) {
 					return sharedStorageFactory, nil
 				}
 			case 2:
-				// 2nd VVM launch -> use the normal IDGenerator with RegisterFactor 1
-				// to check if new IDs would start from RegisterFactor 2 after recovery
-				cfg.IDGeneratorFactory = istructsmem.NewIDGenerator
+				// 2nd VVM launch - the IDGenerator must be updated on recovery
 				cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
 					return sharedStorageFactory, nil
 				}

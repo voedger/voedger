@@ -91,7 +91,6 @@ type cmdWorkpiece struct {
 	cmdQName                     appdef.QName
 	statusCodeOfSuccess          int
 	reapplier                    istructs.IEventReapplier
-	idGeneratorFactory           IDGeneratorFactory
 }
 
 type implIDGeneratorReporter struct {
@@ -179,5 +178,3 @@ func (p *hostStateProvider) get(appStructs istructs.IAppStructs, wsid istructs.W
 	p.partitionID = partitionID
 	return p.state
 }
-
-type IDGeneratorFactory func() istructs.IIDGenerator
