@@ -10,9 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -20,10 +18,9 @@ import (
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
-func TestRecovery(t *testing.T) {
+func TestCorrectIDsIssueAfterRecovery(t *testing.T) {
 	require := require.New(t)
 	keyspaceSuffix := uuid.NewString()
-	storageFactory := mem.Provide(coreutils.MockTime)
 	var sharedStorageFactory istorage.IAppStorageFactory
 	counter := 1
 	cfg := it.NewOwnVITConfig(
@@ -35,18 +32,13 @@ func TestRecovery(t *testing.T) {
 		it.WithVVMConfig(func(cfg *vvm.VVMConfig) {
 			switch counter {
 			case 1:
-				// 1st VVM launch - use RegisterFactor 2 (5_000_000_000) to issue big IDs
+				// 1st VVM launch
 				var err error
 				sharedStorageFactory, err = cfg.StorageFactory()
 				require.NoError(err)
 				cfg.KeyspaceNameSuffix = keyspaceSuffix
 				cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
 					return sharedStorageFactory, nil
-				}
-				cfg.IDGeneratorFactory = func() istructs.IIDGenerator {
-					return &idGenRegister2{
-						IIDGenerator: istructsmem.NewIDGenerator(),
-					}
 				}
 			case 2:
 				// 2nd VVM launch -> use the normal IDGenerator with RegisterFactor 1
@@ -87,15 +79,4 @@ func TestRecovery(t *testing.T) {
 	]}`
 	resp = vit.PostWS(ws, "c.sys.CUD", body)
 	resp.Println()
-
-	_ = storageFactory
-}
-
-type idGenRegister2 struct {
-	istructs.IIDGenerator
-}
-
-func (idGen *idGenRegister2) NextID(rawID istructs.RecordID) (storageID istructs.RecordID, err error) {
-	storageID, err = idGen.IIDGenerator.NextID(rawID)
-	return storageID + 5_000_000_000, err
 }

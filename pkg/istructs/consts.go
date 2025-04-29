@@ -109,7 +109,7 @@ const WSIDClusterLShift = 64 - 16 - 1
 const MaxBaseWSID = 1<<WSIDClusterLShift - 1
 
 const MinReservedRecordID = MaxRawRecordID + 1
-const MaxReservedRecordID = 200000
+const MaxReservedRecordID = RecordID(200000)
 const MaxAllowedWSID = math.MaxUint64 >> 1
 
 // Singleton - CDoc which has at most one record

@@ -46,7 +46,7 @@ func (g *implIIDGenerator) UpdateOnSync(syncID istructs.RecordID) {
 	// 	// see https://github.com/voedger/voedger/issues/688
 	// 	return
 	// }
-	if syncID > g.nextRecordID {
+	if syncID >= g.nextRecordID {
 		// we do not know the order the IDs were issued for ODoc with ORecords
 		// so let's bump if syncID is actually next
 		g.nextRecordID = syncID + 1

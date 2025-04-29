@@ -854,7 +854,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 					"Client":{
 						"Country":{
 							"Name":"Spain",
-							"sys.ID":322680000131086,
+							"sys.ID":200015,
 							"sys.IsActive":true,
 							"sys.QName":"app1pkg.Country"
 						},
@@ -866,22 +866,22 @@ func TestQueryProcessor2_Include(t *testing.T) {
 							"Capabilities":{
 								"Deposit":true,
 								"Withdraw":true,
-								"sys.ID":322680000131090,
+								"sys.ID":200019,
 								"sys.IsActive":true,
 								"sys.QName":"app1pkg.Capabilities"
 							},
 							"Currency":{
 								"CharCode":"EUR",
 								"Code":978,
-								"sys.ID":322680000131084,
+								"sys.ID":200013,
 								"sys.IsActive":true,
 								"sys.QName":"app1pkg.Currency"
 							},
-							"sys.ID":322680000131089,
+							"sys.ID":200018,
 							"sys.IsActive":true,
 							"sys.QName":"app1pkg.Wallet"
 						},
-						"sys.ID":322680000131088,
+						"sys.ID":200017,
 						"sys.IsActive":true,
 						"sys.QName":"app1pkg.Client"
 					},
@@ -911,7 +911,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 			require.JSONEq(`{
 										"Cfg": {
 											"Name": "CfgBatch",
-											"sys.ID": 322680000131095,
+											"sys.ID": 200024,
 											"sys.IsActive": true,
 											"sys.QName": "app1pkg.Cfg"
 										},
@@ -919,7 +919,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 											{
 												"Cfg": {
 													"Name": "CfgA",
-													"sys.ID": 322680000131093,
+													"sys.ID": 200022,
 													"sys.IsActive": true,
 													"sys.QName": "app1pkg.Cfg"
 												},
@@ -927,29 +927,29 @@ func TestQueryProcessor2_Include(t *testing.T) {
 													{
 														"Cfg": {
 															"Name": "CfgA",
-															"sys.ID": 322680000131093,
+															"sys.ID": 200022,
 															"sys.IsActive": true,
 															"sys.QName": "app1pkg.Cfg"
 														},
 														"Name": "SubTaskA1_TaskA1",
 														"sys.Container": "GroupA",
-														"sys.ID": 322680000131105,
+														"sys.ID": 200034,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131099,
+														"sys.ParentID": 200028,
 														"sys.QName": "app1pkg.Task"
 													},
 													{
 														"Cfg": {
 															"Name": "CfgA",
-															"sys.ID": 322680000131093,
+															"sys.ID": 200022,
 															"sys.IsActive": true,
 															"sys.QName": "app1pkg.Cfg"
 														},
 														"Name": "SubTaskA2_TaskA1",
 														"sys.Container": "GroupA",
-														"sys.ID": 322680000131106,
+														"sys.ID": 200035,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131099,
+														"sys.ParentID": 200028,
 														"sys.QName": "app1pkg.Task"
 													}
 												],
@@ -957,43 +957,43 @@ func TestQueryProcessor2_Include(t *testing.T) {
 													{
 														"Cfg": {
 															"Name": "CfgB",
-															"sys.ID": 322680000131094,
+															"sys.ID": 200023,
 															"sys.IsActive": true,
 															"sys.QName": "app1pkg.Cfg"
 														},
 														"Name": "SubTaskB1_TaskA1",
 														"sys.Container": "GroupB",
-														"sys.ID": 322680000131107,
+														"sys.ID": 200036,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131099,
+														"sys.ParentID": 200028,
 														"sys.QName": "app1pkg.Task"
 													},
 													{
 														"Cfg": {
 															"Name": "CfgB",
-															"sys.ID": 322680000131094,
+															"sys.ID": 200023,
 															"sys.IsActive": true,
 															"sys.QName": "app1pkg.Cfg"
 														},
 														"Name": "SubTaskB2_TaskA1",
 														"sys.Container": "GroupB",
-														"sys.ID": 322680000131108,
+														"sys.ID": 200037,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131099,
+														"sys.ParentID": 200028,
 														"sys.QName": "app1pkg.Task"
 													}
 												],
 												"Name": "TaskA1",
 												"sys.Container": "GroupA",
-												"sys.ID": 322680000131099,
+												"sys.ID": 200028,
 												"sys.IsActive": true,
-												"sys.ParentID": 322680000131096,
+												"sys.ParentID": 200025,
 												"sys.QName": "app1pkg.Task"
 											},
 											{
 												"Cfg": {
 													"Name": "CfgA",
-													"sys.ID": 322680000131093,
+													"sys.ID": 200022,
 													"sys.IsActive": true,
 													"sys.QName": "app1pkg.Cfg"
 												},
@@ -1001,23 +1001,23 @@ func TestQueryProcessor2_Include(t *testing.T) {
 													{
 														"Cfg": {
 															"Name": "CfgA",
-															"sys.ID": 322680000131093,
+															"sys.ID": 200022,
 															"sys.IsActive": true,
 															"sys.QName": "app1pkg.Cfg"
 														},
 														"Name": "SubTaskA1_TaskA2",
 														"sys.Container": "GroupA",
-														"sys.ID": 322680000131109,
+														"sys.ID": 200038,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131100,
+														"sys.ParentID": 200029,
 														"sys.QName": "app1pkg.Task"
 													}
 												],
 												"Name": "TaskA2",
 												"sys.Container": "GroupA",
-												"sys.ID": 322680000131100,
+												"sys.ID": 200029,
 												"sys.IsActive": true,
-												"sys.ParentID": 322680000131096,
+												"sys.ParentID": 200025,
 												"sys.QName": "app1pkg.Task"
 											}
 										],
@@ -1025,7 +1025,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 											{
 												"Cfg": {
 													"Name": "CfgB",
-													"sys.ID": 322680000131094,
+													"sys.ID": 200023,
 													"sys.IsActive": true,
 													"sys.QName": "app1pkg.Cfg"
 												},
@@ -1033,7 +1033,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 													{
 														"Cfg": {
 															"Name": "CfgB",
-															"sys.ID": 322680000131094,
+															"sys.ID": 200023,
 															"sys.IsActive": true,
 															"sys.QName": "app1pkg.Cfg"
 														},
@@ -1041,29 +1041,29 @@ func TestQueryProcessor2_Include(t *testing.T) {
 															{
 																"Cfg": {
 																	"Name": "CfgA",
-																	"sys.ID": 322680000131093,
+																	"sys.ID": 200022,
 																	"sys.IsActive": true,
 																	"sys.QName": "app1pkg.Cfg"
 																},
 																"Name": "SubSubTaskA1_SubTaskB1_TaskB1",
 																"sys.Container": "GroupA",
-																"sys.ID": 322680000131117,
+																"sys.ID": 200046,
 																"sys.IsActive": true,
-																"sys.ParentID": 322680000131110,
+																"sys.ParentID": 200039,
 																"sys.QName": "app1pkg.Task"
 															},
 															{
 																"Cfg": {
 																	"Name": "CfgA",
-																	"sys.ID": 322680000131093,
+																	"sys.ID": 200022,
 																	"sys.IsActive": true,
 																	"sys.QName": "app1pkg.Cfg"
 																},
 																"Name": "SubSubTaskA2_SubTaskB1_TaskB1",
 																"sys.Container": "GroupA",
-																"sys.ID": 322680000131118,
+																"sys.ID": 200047,
 																"sys.IsActive": true,
-																"sys.ParentID": 322680000131110,
+																"sys.ParentID": 200039,
 																"sys.QName": "app1pkg.Task"
 															}
 														],
@@ -1071,7 +1071,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 															{
 																"Cfg": {
 																	"Name": "CfgB",
-																	"sys.ID": 322680000131094,
+																	"sys.ID": 200023,
 																	"sys.IsActive": true,
 																	"sys.QName": "app1pkg.Cfg"
 																},
@@ -1079,44 +1079,44 @@ func TestQueryProcessor2_Include(t *testing.T) {
 																	{
 																		"Cfg": {
 																			"Name": "CfgB",
-																			"sys.ID": 322680000131094,
+																			"sys.ID": 200023,
 																			"sys.IsActive": true,
 																			"sys.QName": "app1pkg.Cfg"
 																		},
 																		"Name": "SubSubSubTaskB1_SubSubTaskB1_SubTaskB1_TaskB1",
 																		"sys.Container": "GroupB",
-																		"sys.ID": 322680000131125,
+																		"sys.ID": 200054,
 																		"sys.IsActive": true,
-																		"sys.ParentID": 322680000131119,
+																		"sys.ParentID": 200048,
 																		"sys.QName": "app1pkg.Task"
 																	}
 																],
 																"Name": "SubSubTaskB1_SubTaskB1_TaskB1",
 																"sys.Container": "GroupB",
-																"sys.ID": 322680000131119,
+																"sys.ID": 200048,
 																"sys.IsActive": true,
-																"sys.ParentID": 322680000131110,
+																"sys.ParentID": 200039,
 																"sys.QName": "app1pkg.Task"
 															}
 														],
 														"Name": "SubTaskB1_TaskB1",
 														"sys.Container": "GroupB",
-														"sys.ID": 322680000131110,
+														"sys.ID": 200039,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131101,
+														"sys.ParentID": 200030,
 														"sys.QName": "app1pkg.Task"
 													}
 												],
 												"Name": "TaskB1",
 												"sys.Container": "GroupB",
-												"sys.ID": 322680000131101,
+												"sys.ID": 200030,
 												"sys.IsActive": true,
-												"sys.ParentID": 322680000131096,
+												"sys.ParentID": 200025,
 												"sys.QName": "app1pkg.Task"
 											}
 										],
 										"Number": 101,
-										"sys.ID": 322680000131096,
+										"sys.ID": 200025,
 										"sys.IsActive": true,
 										"sys.QName": "app1pkg.Batch"
 									}`, resp.Body)
@@ -1130,12 +1130,12 @@ func TestQueryProcessor2_Include(t *testing.T) {
 			require.JSONEq(`{
 										"Cfg": {
 											"Name": "CfgBatch",
-											"sys.ID": 322680000131095,
+											"sys.ID": 200024,
 											"sys.IsActive": true,
 											"sys.QName": "app1pkg.Cfg"
 										},
 										"Number": 101,
-										"sys.ID": 322680000131096,
+										"sys.ID": 200025,
 										"sys.IsActive": true,
 										"sys.QName": "app1pkg.Batch"
 									}`, resp.Body)
@@ -1147,29 +1147,29 @@ func TestQueryProcessor2_Include(t *testing.T) {
 			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
 			require.NoError(err)
 			require.JSONEq(`{
-										"Cfg": 322680000131095,
+										"Cfg": 200024,
 										"GroupA": [
 											{
-												"Cfg": 322680000131093,
+												"Cfg": 200022,
 												"Name": "TaskA1",
 												"sys.Container": "GroupA",
-												"sys.ID": 322680000131099,
+												"sys.ID": 200028,
 												"sys.IsActive": true,
-												"sys.ParentID": 322680000131096,
+												"sys.ParentID": 200025,
 												"sys.QName": "app1pkg.Task"
 											},
 											{
-												"Cfg": 322680000131093,
+												"Cfg": 200022,
 												"Name": "TaskA2",
 												"sys.Container": "GroupA",
-												"sys.ID": 322680000131100,
+												"sys.ID": 200029,
 												"sys.IsActive": true,
-												"sys.ParentID": 322680000131096,
+												"sys.ParentID": 200025,
 												"sys.QName": "app1pkg.Task"
 											}
 										],
 										"Number": 101,
-										"sys.ID": 322680000131096,
+										"sys.ID": 200025,
 										"sys.IsActive": true,
 										"sys.QName": "app1pkg.Batch"
 									}`, resp.Body)
@@ -1184,32 +1184,32 @@ func TestQueryProcessor2_Include(t *testing.T) {
 			require.JSONEq(`{
 										"Cfg": {
 											"Name": "CfgBatch",
-											"sys.ID": 322680000131095,
+											"sys.ID": 200024,
 											"sys.IsActive": true,
 											"sys.QName": "app1pkg.Cfg"
 										},
 										"GroupA": [
 											{
-												"Cfg": 322680000131093,
+												"Cfg": 200022,
 												"Name": "TaskA1",
 												"sys.Container": "GroupA",
-												"sys.ID": 322680000131099,
+												"sys.ID": 200028,
 												"sys.IsActive": true,
-												"sys.ParentID": 322680000131096,
+												"sys.ParentID": 200025,
 												"sys.QName": "app1pkg.Task"
 											},
 											{
-												"Cfg": 322680000131093,
+												"Cfg": 200022,
 												"Name": "TaskA2",
 												"sys.Container": "GroupA",
-												"sys.ID": 322680000131100,
+												"sys.ID": 200029,
 												"sys.IsActive": true,
-												"sys.ParentID": 322680000131096,
+												"sys.ParentID": 200025,
 												"sys.QName": "app1pkg.Task"
 											}
 										],
 										"Number": 101,
-										"sys.ID": 322680000131096,
+										"sys.ID": 200025,
 										"sys.IsActive": true,
 										"sys.QName": "app1pkg.Batch"
 									}`, resp.Body)
@@ -1221,39 +1221,39 @@ func TestQueryProcessor2_Include(t *testing.T) {
 			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
 			require.NoError(err)
 			require.JSONEq(`{
-										"Cfg": 322680000131095,
+										"Cfg": 200024,
 										"GroupA": [
 											{
 												"Cfg": {
 													"Name": "CfgA",
-													"sys.ID": 322680000131093,
+													"sys.ID": 200022,
 													"sys.IsActive": true,
 													"sys.QName": "app1pkg.Cfg"
 												},
 												"Name": "TaskA1",
 												"sys.Container": "GroupA",
-												"sys.ID": 322680000131099,
+												"sys.ID": 200028,
 												"sys.IsActive": true,
-												"sys.ParentID": 322680000131096,
+												"sys.ParentID": 200025,
 												"sys.QName": "app1pkg.Task"
 											},
 											{
 												"Cfg": {
 													"Name": "CfgA",
-													"sys.ID": 322680000131093,
+													"sys.ID": 200022,
 													"sys.IsActive": true,
 													"sys.QName": "app1pkg.Cfg"
 												},
 												"Name": "TaskA2",
 												"sys.Container": "GroupA",
-												"sys.ID": 322680000131100,
+												"sys.ID": 200029,
 												"sys.IsActive": true,
-												"sys.ParentID": 322680000131096,
+												"sys.ParentID": 200025,
 												"sys.QName": "app1pkg.Task"
 											}
 										],
 										"Number": 101,
-										"sys.ID": 322680000131096,
+										"sys.ID": 200025,
 										"sys.IsActive": true,
 										"sys.QName": "app1pkg.Batch"
 									}`, resp.Body)
@@ -1265,60 +1265,60 @@ func TestQueryProcessor2_Include(t *testing.T) {
 			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
 			require.NoError(err)
 			require.JSONEq(`{
-										"Cfg": 322680000131095,
+										"Cfg": 200024,
 										"GroupA": [
 											{
-												"Cfg": 322680000131093,
+												"Cfg": 200022,
 												"GroupA": [
 													{
-														"Cfg": 322680000131093,
+														"Cfg": 200022,
 														"Name": "SubTaskA1_TaskA1",
 														"sys.Container": "GroupA",
-														"sys.ID": 322680000131105,
+														"sys.ID": 200034,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131099,
+														"sys.ParentID": 200028,
 														"sys.QName": "app1pkg.Task"
 													},
 													{
-														"Cfg": 322680000131093,
+														"Cfg": 200022,
 														"Name": "SubTaskA2_TaskA1",
 														"sys.Container": "GroupA",
-														"sys.ID": 322680000131106,
+														"sys.ID": 200035,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131099,
+														"sys.ParentID": 200028,
 														"sys.QName": "app1pkg.Task"
 													}
 												],
 												"Name": "TaskA1",
 												"sys.Container": "GroupA",
-												"sys.ID": 322680000131099,
+												"sys.ID": 200028,
 												"sys.IsActive": true,
-												"sys.ParentID": 322680000131096,
+												"sys.ParentID": 200025,
 												"sys.QName": "app1pkg.Task"
 											},
 											{
-												"Cfg": 322680000131093,
+												"Cfg": 200022,
 												"GroupA": [
 													{
-														"Cfg": 322680000131093,
+														"Cfg": 200022,
 														"Name": "SubTaskA1_TaskA2",
 														"sys.Container": "GroupA",
-														"sys.ID": 322680000131109,
+														"sys.ID": 200038,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131100,
+														"sys.ParentID": 200029,
 														"sys.QName": "app1pkg.Task"
 													}
 												],
 												"Name": "TaskA2",
 												"sys.Container": "GroupA",
-												"sys.ID": 322680000131100,
+												"sys.ID": 200029,
 												"sys.IsActive": true,
-												"sys.ParentID": 322680000131096,
+												"sys.ParentID": 200025,
 												"sys.QName": "app1pkg.Task"
 											}
 										],
 										"Number": 101,
-										"sys.ID": 322680000131096,
+										"sys.ID": 200025,
 										"sys.IsActive": true,
 										"sys.QName": "app1pkg.Batch"
 									}`, resp.Body)
@@ -1331,70 +1331,70 @@ func TestQueryProcessor2_Include(t *testing.T) {
 			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
 			require.NoError(err)
 			require.JSONEq(`{
-										"Cfg": 322680000131095,
+										"Cfg": 200024,
 										"GroupA": [
 											{
 												"Cfg": {
 													"Name": "CfgA",
-													"sys.ID": 322680000131093,
+													"sys.ID": 200022,
 													"sys.IsActive": true,
 													"sys.QName": "app1pkg.Cfg"
 												},
 												"GroupA": [
 													{
-														"Cfg": 322680000131093,
+														"Cfg": 200022,
 														"Name": "SubTaskA1_TaskA1",
 														"sys.Container": "GroupA",
-														"sys.ID": 322680000131105,
+														"sys.ID": 200034,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131099,
+														"sys.ParentID": 200028,
 														"sys.QName": "app1pkg.Task"
 													},
 													{
-														"Cfg": 322680000131093,
+														"Cfg": 200022,
 														"Name": "SubTaskA2_TaskA1",
 														"sys.Container": "GroupA",
-														"sys.ID": 322680000131106,
+														"sys.ID": 200035,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131099,
+														"sys.ParentID": 200028,
 														"sys.QName": "app1pkg.Task"
 													}
 												],
 												"Name": "TaskA1",
 												"sys.Container": "GroupA",
-												"sys.ID": 322680000131099,
+												"sys.ID": 200028,
 												"sys.IsActive": true,
-												"sys.ParentID": 322680000131096,
+												"sys.ParentID": 200025,
 												"sys.QName": "app1pkg.Task"
 											},
 											{
 												"Cfg": {
 													"Name": "CfgA",
-													"sys.ID": 322680000131093,
+													"sys.ID": 200022,
 													"sys.IsActive": true,
 													"sys.QName": "app1pkg.Cfg"
 												},
 												"GroupA": [
 													{
-														"Cfg": 322680000131093,
+														"Cfg": 200022,
 														"Name": "SubTaskA1_TaskA2",
 														"sys.Container": "GroupA",
-														"sys.ID": 322680000131109,
+														"sys.ID": 200038,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131100,
+														"sys.ParentID": 200029,
 														"sys.QName": "app1pkg.Task"
 													}
 												],
 												"Name": "TaskA2",
 												"sys.Container": "GroupA",
-												"sys.ID": 322680000131100,
+												"sys.ID": 200029,
 												"sys.IsActive": true,
-												"sys.ParentID": 322680000131096,
+												"sys.ParentID": 200025,
 												"sys.QName": "app1pkg.Task"
 											}
 										],
 										"Number": 101,
-										"sys.ID": 322680000131096,
+										"sys.ID": 200025,
 										"sys.IsActive": true,
 										"sys.QName": "app1pkg.Batch"
 									}`, resp.Body)
@@ -1406,53 +1406,53 @@ func TestQueryProcessor2_Include(t *testing.T) {
 			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
 			require.NoError(err)
 			require.JSONEq(`{
-										"Cfg": 322680000131095,
+										"Cfg": 200024,
 										"GroupB": [
 											{
-												"Cfg": 322680000131094,
+												"Cfg": 200023,
 												"GroupB": [
 													{
-														"Cfg": 322680000131094,
+														"Cfg": 200023,
 														"GroupB": [
 															{
-																"Cfg": 322680000131094,
+																"Cfg": 200023,
 																"GroupB": [
 																	{
-																		"Cfg": 322680000131094,
+																		"Cfg": 200023,
 																		"Name": "SubSubSubTaskB1_SubSubTaskB1_SubTaskB1_TaskB1",
 																		"sys.Container": "GroupB",
-																		"sys.ID": 322680000131125,
+																		"sys.ID": 200054,
 																		"sys.IsActive": true,
-																		"sys.ParentID": 322680000131119,
+																		"sys.ParentID": 200048,
 																		"sys.QName": "app1pkg.Task"
 																	}
 																],
 																"Name": "SubSubTaskB1_SubTaskB1_TaskB1",
 																"sys.Container": "GroupB",
-																"sys.ID": 322680000131119,
+																"sys.ID": 200048,
 																"sys.IsActive": true,
-																"sys.ParentID": 322680000131110,
+																"sys.ParentID": 200039,
 																"sys.QName": "app1pkg.Task"
 															}
 														],
 														"Name": "SubTaskB1_TaskB1",
 														"sys.Container": "GroupB",
-														"sys.ID": 322680000131110,
+														"sys.ID": 200039,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131101,
+														"sys.ParentID": 200030,
 														"sys.QName": "app1pkg.Task"
 													}
 												],
 												"Name": "TaskB1",
 												"sys.Container": "GroupB",
-												"sys.ID": 322680000131101,
+												"sys.ID": 200030,
 												"sys.IsActive": true,
-												"sys.ParentID": 322680000131096,
+												"sys.ParentID": 200025,
 												"sys.QName": "app1pkg.Task"
 											}
 										],
 										"Number": 101,
-										"sys.ID": 322680000131096,
+										"sys.ID": 200025,
 										"sys.IsActive": true,
 										"sys.QName": "app1pkg.Batch"
 									}`, resp.Body)
@@ -1564,7 +1564,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 											{
 												"Cfg": {
 													"Name": "CfgBatch",
-													"sys.ID": 322680000131095,
+													"sys.ID": 200024,
 													"sys.IsActive": true,
 													"sys.QName": "app1pkg.Cfg"
 												},
@@ -1572,7 +1572,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 													{
 														"Cfg": {
 															"Name": "CfgA",
-															"sys.ID": 322680000131093,
+															"sys.ID": 200022,
 															"sys.IsActive": true,
 															"sys.QName": "app1pkg.Cfg"
 														},
@@ -1580,29 +1580,29 @@ func TestQueryProcessor2_Include(t *testing.T) {
 															{
 																"Cfg": {
 																	"Name": "CfgA",
-																	"sys.ID": 322680000131093,
+																	"sys.ID": 200022,
 																	"sys.IsActive": true,
 																	"sys.QName": "app1pkg.Cfg"
 																},
 																"Name": "SubTaskA1_TaskA1",
 																"sys.Container": "GroupA",
-																"sys.ID": 322680000131105,
+																"sys.ID": 200034,
 																"sys.IsActive": true,
-																"sys.ParentID": 322680000131099,
+																"sys.ParentID": 200028,
 																"sys.QName": "app1pkg.Task"
 															},
 															{
 																"Cfg": {
 																	"Name": "CfgA",
-																	"sys.ID": 322680000131093,
+																	"sys.ID": 200022,
 																	"sys.IsActive": true,
 																	"sys.QName": "app1pkg.Cfg"
 																},
 																"Name": "SubTaskA2_TaskA1",
 																"sys.Container": "GroupA",
-																"sys.ID": 322680000131106,
+																"sys.ID": 200035,
 																"sys.IsActive": true,
-																"sys.ParentID": 322680000131099,
+																"sys.ParentID": 200028,
 																"sys.QName": "app1pkg.Task"
 															}
 														],
@@ -1610,43 +1610,43 @@ func TestQueryProcessor2_Include(t *testing.T) {
 															{
 																"Cfg": {
 																	"Name": "CfgB",
-																	"sys.ID": 322680000131094,
+																	"sys.ID": 200023,
 																	"sys.IsActive": true,
 																	"sys.QName": "app1pkg.Cfg"
 																},
 																"Name": "SubTaskB1_TaskA1",
 																"sys.Container": "GroupB",
-																"sys.ID": 322680000131107,
+																"sys.ID": 200036,
 																"sys.IsActive": true,
-																"sys.ParentID": 322680000131099,
+																"sys.ParentID": 200028,
 																"sys.QName": "app1pkg.Task"
 															},
 															{
 																"Cfg": {
 																	"Name": "CfgB",
-																	"sys.ID": 322680000131094,
+																	"sys.ID": 200023,
 																	"sys.IsActive": true,
 																	"sys.QName": "app1pkg.Cfg"
 																},
 																"Name": "SubTaskB2_TaskA1",
 																"sys.Container": "GroupB",
-																"sys.ID": 322680000131108,
+																"sys.ID": 200037,
 																"sys.IsActive": true,
-																"sys.ParentID": 322680000131099,
+																"sys.ParentID": 200028,
 																"sys.QName": "app1pkg.Task"
 															}
 														],
 														"Name": "TaskA1",
 														"sys.Container": "GroupA",
-														"sys.ID": 322680000131099,
+														"sys.ID": 200028,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131096,
+														"sys.ParentID": 200025,
 														"sys.QName": "app1pkg.Task"
 													},
 													{
 														"Cfg": {
 															"Name": "CfgA",
-															"sys.ID": 322680000131093,
+															"sys.ID": 200022,
 															"sys.IsActive": true,
 															"sys.QName": "app1pkg.Cfg"
 														},
@@ -1654,23 +1654,23 @@ func TestQueryProcessor2_Include(t *testing.T) {
 															{
 																"Cfg": {
 																	"Name": "CfgA",
-																	"sys.ID": 322680000131093,
+																	"sys.ID": 200022,
 																	"sys.IsActive": true,
 																	"sys.QName": "app1pkg.Cfg"
 																},
 																"Name": "SubTaskA1_TaskA2",
 																"sys.Container": "GroupA",
-																"sys.ID": 322680000131109,
+																"sys.ID": 200038,
 																"sys.IsActive": true,
-																"sys.ParentID": 322680000131100,
+																"sys.ParentID": 200029,
 																"sys.QName": "app1pkg.Task"
 															}
 														],
 														"Name": "TaskA2",
 														"sys.Container": "GroupA",
-														"sys.ID": 322680000131100,
+														"sys.ID": 200029,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131096,
+														"sys.ParentID": 200025,
 														"sys.QName": "app1pkg.Task"
 													}
 												],
@@ -1678,7 +1678,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 													{
 														"Cfg": {
 															"Name": "CfgB",
-															"sys.ID": 322680000131094,
+															"sys.ID": 200023,
 															"sys.IsActive": true,
 															"sys.QName": "app1pkg.Cfg"
 														},
@@ -1686,7 +1686,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 															{
 																"Cfg": {
 																	"Name": "CfgB",
-																	"sys.ID": 322680000131094,
+																	"sys.ID": 200023,
 																	"sys.IsActive": true,
 																	"sys.QName": "app1pkg.Cfg"
 																},
@@ -1694,29 +1694,29 @@ func TestQueryProcessor2_Include(t *testing.T) {
 																	{
 																		"Cfg": {
 																			"Name": "CfgA",
-																			"sys.ID": 322680000131093,
+																			"sys.ID": 200022,
 																			"sys.IsActive": true,
 																			"sys.QName": "app1pkg.Cfg"
 																		},
 																		"Name": "SubSubTaskA1_SubTaskB1_TaskB1",
 																		"sys.Container": "GroupA",
-																		"sys.ID": 322680000131117,
+																		"sys.ID": 200046,
 																		"sys.IsActive": true,
-																		"sys.ParentID": 322680000131110,
+																		"sys.ParentID": 200039,
 																		"sys.QName": "app1pkg.Task"
 																	},
 																	{
 																		"Cfg": {
 																			"Name": "CfgA",
-																			"sys.ID": 322680000131093,
+																			"sys.ID": 200022,
 																			"sys.IsActive": true,
 																			"sys.QName": "app1pkg.Cfg"
 																		},
 																		"Name": "SubSubTaskA2_SubTaskB1_TaskB1",
 																		"sys.Container": "GroupA",
-																		"sys.ID": 322680000131118,
+																		"sys.ID": 200047,
 																		"sys.IsActive": true,
-																		"sys.ParentID": 322680000131110,
+																		"sys.ParentID": 200039,
 																		"sys.QName": "app1pkg.Task"
 																	}
 																],
@@ -1724,7 +1724,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 																	{
 																		"Cfg": {
 																			"Name": "CfgB",
-																			"sys.ID": 322680000131094,
+																			"sys.ID": 200023,
 																			"sys.IsActive": true,
 																			"sys.QName": "app1pkg.Cfg"
 																		},
@@ -1732,51 +1732,51 @@ func TestQueryProcessor2_Include(t *testing.T) {
 																			{
 																				"Cfg": {
 																					"Name": "CfgB",
-																					"sys.ID": 322680000131094,
+																					"sys.ID": 200023,
 																					"sys.IsActive": true,
 																					"sys.QName": "app1pkg.Cfg"
 																				},
 																				"Name": "SubSubSubTaskB1_SubSubTaskB1_SubTaskB1_TaskB1",
 																				"sys.Container": "GroupB",
-																				"sys.ID": 322680000131125,
+																				"sys.ID": 200054,
 																				"sys.IsActive": true,
-																				"sys.ParentID": 322680000131119,
+																				"sys.ParentID": 200048,
 																				"sys.QName": "app1pkg.Task"
 																			}
 																		],
 																		"Name": "SubSubTaskB1_SubTaskB1_TaskB1",
 																		"sys.Container": "GroupB",
-																		"sys.ID": 322680000131119,
+																		"sys.ID": 200048,
 																		"sys.IsActive": true,
-																		"sys.ParentID": 322680000131110,
+																		"sys.ParentID": 200039,
 																		"sys.QName": "app1pkg.Task"
 																	}
 																],
 																"Name": "SubTaskB1_TaskB1",
 																"sys.Container": "GroupB",
-																"sys.ID": 322680000131110,
+																"sys.ID": 200039,
 																"sys.IsActive": true,
-																"sys.ParentID": 322680000131101,
+																"sys.ParentID": 200030,
 																"sys.QName": "app1pkg.Task"
 															}
 														],
 														"Name": "TaskB1",
 														"sys.Container": "GroupB",
-														"sys.ID": 322680000131101,
+														"sys.ID": 200030,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131096,
+														"sys.ParentID": 200025,
 														"sys.QName": "app1pkg.Task"
 													}
 												],
 												"Number": 101,
-												"sys.ID": 322680000131096,
+												"sys.ID": 200025,
 												"sys.IsActive": true,
 												"sys.QName": "app1pkg.Batch"
 											},
 											{
 												"Cfg": {
 													"Name": "CfgBatch",
-													"sys.ID": 322680000131095,
+													"sys.ID": 200024,
 													"sys.IsActive": true,
 													"sys.QName": "app1pkg.Cfg"
 												},
@@ -1784,7 +1784,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 													{
 														"Cfg": {
 															"Name": "CfgA",
-															"sys.ID": 322680000131093,
+															"sys.ID": 200022,
 															"sys.IsActive": true,
 															"sys.QName": "app1pkg.Cfg"
 														},
@@ -1792,29 +1792,29 @@ func TestQueryProcessor2_Include(t *testing.T) {
 															{
 																"Cfg": {
 																	"Name": "CfgA",
-																	"sys.ID": 322680000131093,
+																	"sys.ID": 200022,
 																	"sys.IsActive": true,
 																	"sys.QName": "app1pkg.Cfg"
 																},
 																"Name": "SubTaskA1_TaskA1",
 																"sys.Container": "GroupA",
-																"sys.ID": 322680000131111,
+																"sys.ID": 200040,
 																"sys.IsActive": true,
-																"sys.ParentID": 322680000131102,
+																"sys.ParentID": 200031,
 																"sys.QName": "app1pkg.Task"
 															},
 															{
 																"Cfg": {
 																	"Name": "CfgA",
-																	"sys.ID": 322680000131093,
+																	"sys.ID": 200022,
 																	"sys.IsActive": true,
 																	"sys.QName": "app1pkg.Cfg"
 																},
 																"Name": "SubTaskA2_TaskA1",
 																"sys.Container": "GroupA",
-																"sys.ID": 322680000131112,
+																"sys.ID": 200041,
 																"sys.IsActive": true,
-																"sys.ParentID": 322680000131102,
+																"sys.ParentID": 200031,
 																"sys.QName": "app1pkg.Task"
 															}
 														],
@@ -1822,43 +1822,43 @@ func TestQueryProcessor2_Include(t *testing.T) {
 															{
 																"Cfg": {
 																	"Name": "CfgB",
-																	"sys.ID": 322680000131094,
+																	"sys.ID": 200023,
 																	"sys.IsActive": true,
 																	"sys.QName": "app1pkg.Cfg"
 																},
 																"Name": "SubTaskB1_TaskA1",
 																"sys.Container": "GroupB",
-																"sys.ID": 322680000131113,
+																"sys.ID": 200042,
 																"sys.IsActive": true,
-																"sys.ParentID": 322680000131102,
+																"sys.ParentID": 200031,
 																"sys.QName": "app1pkg.Task"
 															},
 															{
 																"Cfg": {
 																	"Name": "CfgB",
-																	"sys.ID": 322680000131094,
+																	"sys.ID": 200023,
 																	"sys.IsActive": true,
 																	"sys.QName": "app1pkg.Cfg"
 																},
 																"Name": "SubTaskB2_TaskA1",
 																"sys.Container": "GroupB",
-																"sys.ID": 322680000131114,
+																"sys.ID": 200043,
 																"sys.IsActive": true,
-																"sys.ParentID": 322680000131102,
+																"sys.ParentID": 200031,
 																"sys.QName": "app1pkg.Task"
 															}
 														],
 														"Name": "TaskA1",
 														"sys.Container": "GroupA",
-														"sys.ID": 322680000131102,
+														"sys.ID": 200031,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131097,
+														"sys.ParentID": 200026,
 														"sys.QName": "app1pkg.Task"
 													},
 													{
 														"Cfg": {
 															"Name": "CfgA",
-															"sys.ID": 322680000131093,
+															"sys.ID": 200022,
 															"sys.IsActive": true,
 															"sys.QName": "app1pkg.Cfg"
 														},
@@ -1866,23 +1866,23 @@ func TestQueryProcessor2_Include(t *testing.T) {
 															{
 																"Cfg": {
 																	"Name": "CfgA",
-																	"sys.ID": 322680000131093,
+																	"sys.ID": 200022,
 																	"sys.IsActive": true,
 																	"sys.QName": "app1pkg.Cfg"
 																},
 																"Name": "SubTaskA1_TaskA2",
 																"sys.Container": "GroupA",
-																"sys.ID": 322680000131115,
+																"sys.ID": 200044,
 																"sys.IsActive": true,
-																"sys.ParentID": 322680000131103,
+																"sys.ParentID": 200032,
 																"sys.QName": "app1pkg.Task"
 															}
 														],
 														"Name": "TaskA2",
 														"sys.Container": "GroupA",
-														"sys.ID": 322680000131103,
+														"sys.ID": 200032,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131097,
+														"sys.ParentID": 200026,
 														"sys.QName": "app1pkg.Task"
 													}
 												],
@@ -1890,7 +1890,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 													{
 														"Cfg": {
 															"Name": "CfgB",
-															"sys.ID": 322680000131094,
+															"sys.ID": 200023,
 															"sys.IsActive": true,
 															"sys.QName": "app1pkg.Cfg"
 														},
@@ -1898,7 +1898,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 															{
 																"Cfg": {
 																	"Name": "CfgB",
-																	"sys.ID": 322680000131094,
+																	"sys.ID": 200023,
 																	"sys.IsActive": true,
 																	"sys.QName": "app1pkg.Cfg"
 																},
@@ -1906,29 +1906,29 @@ func TestQueryProcessor2_Include(t *testing.T) {
 																	{
 																		"Cfg": {
 																			"Name": "CfgA",
-																			"sys.ID": 322680000131093,
+																			"sys.ID": 200022,
 																			"sys.IsActive": true,
 																			"sys.QName": "app1pkg.Cfg"
 																		},
 																		"Name": "SubSubTaskA1_SubTaskB1_TaskB1",
 																		"sys.Container": "GroupA",
-																		"sys.ID": 322680000131120,
+																		"sys.ID": 200049,
 																		"sys.IsActive": true,
-																		"sys.ParentID": 322680000131116,
+																		"sys.ParentID": 200045,
 																		"sys.QName": "app1pkg.Task"
 																	},
 																	{
 																		"Cfg": {
 																			"Name": "CfgA",
-																			"sys.ID": 322680000131093,
+																			"sys.ID": 200022,
 																			"sys.IsActive": true,
 																			"sys.QName": "app1pkg.Cfg"
 																		},
 																		"Name": "SubSubTaskA2_SubTaskB1_TaskB1",
 																		"sys.Container": "GroupA",
-																		"sys.ID": 322680000131121,
+																		"sys.ID": 200050,
 																		"sys.IsActive": true,
-																		"sys.ParentID": 322680000131116,
+																		"sys.ParentID": 200045,
 																		"sys.QName": "app1pkg.Task"
 																	}
 																],
@@ -1936,7 +1936,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 																	{
 																		"Cfg": {
 																			"Name": "CfgB",
-																			"sys.ID": 322680000131094,
+																			"sys.ID": 200023,
 																			"sys.IsActive": true,
 																			"sys.QName": "app1pkg.Cfg"
 																		},
@@ -1944,56 +1944,56 @@ func TestQueryProcessor2_Include(t *testing.T) {
 																			{
 																				"Cfg": {
 																					"Name": "CfgB",
-																					"sys.ID": 322680000131094,
+																					"sys.ID": 200023,
 																					"sys.IsActive": true,
 																					"sys.QName": "app1pkg.Cfg"
 																				},
 																				"Name": "SubSubSubTaskB1_SubSubTaskB1_SubTaskB1_TaskB1",
 																				"sys.Container": "GroupB",
-																				"sys.ID": 322680000131128,
+																				"sys.ID": 200057,
 																				"sys.IsActive": true,
-																				"sys.ParentID": 322680000131122,
+																				"sys.ParentID": 200051,
 																				"sys.QName": "app1pkg.Task"
 																			}
 																		],
 																		"Name": "SubSubTaskB1_SubTaskB1_TaskB1",
 																		"sys.Container": "GroupB",
-																		"sys.ID": 322680000131122,
+																		"sys.ID": 200051,
 																		"sys.IsActive": true,
-																		"sys.ParentID": 322680000131116,
+																		"sys.ParentID": 200045,
 																		"sys.QName": "app1pkg.Task"
 																	}
 																],
 																"Name": "SubTaskB1_TaskB1",
 																"sys.Container": "GroupB",
-																"sys.ID": 322680000131116,
+																"sys.ID": 200045,
 																"sys.IsActive": true,
-																"sys.ParentID": 322680000131104,
+																"sys.ParentID": 200033,
 																"sys.QName": "app1pkg.Task"
 															}
 														],
 														"Name": "TaskB1",
 														"sys.Container": "GroupB",
-														"sys.ID": 322680000131104,
+														"sys.ID": 200033,
 														"sys.IsActive": true,
-														"sys.ParentID": 322680000131097,
+														"sys.ParentID": 200026,
 														"sys.QName": "app1pkg.Task"
 													}
 												],
 												"Number": 102,
-												"sys.ID": 322680000131097,
+												"sys.ID": 200026,
 												"sys.IsActive": true,
 												"sys.QName": "app1pkg.Batch"
 											},
 											{
 												"Cfg": {
 													"Name": "CfgBatch",
-													"sys.ID": 322680000131095,
+													"sys.ID": 200024,
 													"sys.IsActive": true,
 													"sys.QName": "app1pkg.Cfg"
 												},
 												"Number": 103,
-												"sys.ID": 322680000131098,
+												"sys.ID": 200027,
 												"sys.IsActive": true,
 												"sys.QName": "app1pkg.Batch"
 											}
