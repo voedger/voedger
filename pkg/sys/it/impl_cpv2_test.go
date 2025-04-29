@@ -8,13 +8,17 @@ package sys_it
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/registry"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -359,6 +363,31 @@ func TestErrorsCPv2(t *testing.T) {
 			})
 		})
 	})
+}
+
+// [~it.TestUsersCreate~]
+func TestUsersCreate(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	login := vit.NextName() + "@123.com"
+	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
+	appWSID := coreutils.GetAppWSID(pseudoWSID, istructs.DefaultNumAppWorkspaces)
+	p := payloads.VerifiedValuePayload{
+		VerificationKind: appdef.VerificationKind_EMail,
+		WSID:             appWSID,
+		Field:            "Email", // CreateEmailLoginParams.Email
+		Value:            login,
+		Entity:           appdef.NewQName(registry.RegistryPackage, "CreateEmailLoginParams"),
+	}
+	verifiedEmailToken, err := vit.ITokens.IssueToken(istructs.AppQName_sys_registry, 10*time.Minute, &p)
+	require.NoError(err)
+	body := fmt.Sprintf(`{"VerifiedEmailToken": "%s","Password": "123","DisplayName": "%s"}`, verifiedEmailToken, login)
+	vit.POST("api/v2/apps/test1/app1/users", body).Println()
+
+	// try to sign in
+	prn := vit.SignIn(it.Login{Name: login, Pwd: "123", AppQName: istructs.AppQName_test1_app1})
+	log.Println(prn)
 }
 
 func rootCDoc(t *testing.T, newIDs map[string]istructs.RecordID) map[string]interface{} {

@@ -87,10 +87,23 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		PRIMARY KEY((AppWSID), AppIDLoginHash)
 	) AS RESULT OF ProjectorLoginIdx;
 
+	TYPE CreateEmailLoginParams (
+		Email varchar VERIFIABLE,
+		AppName text NOT NULL,
+		SubjectKind int32 NOT NULL,
+		WSKindInitializationData text(1024) NOT NULL,
+		ProfileCluster int32 NOT NULL
+	);
+
+	TYPE CreateEmailLoginUnloggedParams (
+		Password text NOT NULL
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		COMMAND ChangePassword (ChangePasswordParams, UNLOGGED ChangePasswordUnloggedParams);
 		COMMAND ResetPasswordByEmail (ResetPasswordByEmailParams, UNLOGGED ResetPasswordByEmailUnloggedParams);
 		COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
+		COMMAND CreateEmailLogin (CreateEmailLoginParams, UNLOGGED CreateEmailLoginUnloggedParams); -- [~cmp.registry.CreateEmailLogin.vsql~]
 		QUERY IssuePrincipalToken (IssuePrincipalTokenParams) RETURNS IssuePrincipalTokenResult;
 		QUERY InitiateResetPasswordByEmail (InitiateResetPasswordByEmailParams) RETURNS InitiateResetPasswordByEmailResult;
 		QUERY IssueVerifiedValueTokenForResetPassword (IssueVerifiedValueTokenForResetPasswordParams) RETURNS IssueVerifiedValueTokenForResetPasswordResult;

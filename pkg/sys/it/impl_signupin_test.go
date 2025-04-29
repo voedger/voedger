@@ -6,6 +6,7 @@ package sys_it
 
 import (
 	"fmt"
+	"log"
 	"testing"
 	"time"
 
@@ -54,7 +55,7 @@ func TestBasicUsage_SignUpIn(t *testing.T) {
 	t.Run("check CDoc<sys.UserProfile> at profileWSID at target app at target cluster", func(t *testing.T) {
 		body := `{"args":{"Schema":"sys.UserProfile"},"elements":[{"fields":["sys.ID", "DisplayName"]}]}`
 		resp := vit.PostProfile(prn1, "q.sys.Collection", body)
-		require.Equal("User Name", resp.SectionRow()[1])
+		require.Equal(login1.Name, resp.SectionRow()[1])
 		idOfCDocUserProfile = int64(resp.SectionRow()[0].(float64))
 	})
 
@@ -195,12 +196,17 @@ func TestSignInErrors(t *testing.T) {
 	})
 }
 
-func TestDeviceProfile(t *testing.T) {
+// [~it.TestDevicesCreate~]
+func TestCreateDevice(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
-	loginName := vit.NextName()
-	deviceLogin := vit.SignUpDevice(loginName, "123", istructs.AppQName_test1_app2)
+	deviceLogin := vit.SignUpDevice(istructs.AppQName_test1_app2)
+
+	// APIv2 create device returns generated device login and password
+	log.Println(deviceLogin.Name)
+	log.Println(deviceLogin.Pwd)
+
 	devicePrn := vit.SignIn(deviceLogin)
 	as, err := vit.BuiltIn(istructs.AppQName_test1_app2)
 	require.NoError(err)
@@ -220,6 +226,11 @@ func TestDeviceProfile(t *testing.T) {
 		body := `{"args":{},"elements":[{"fields":["NewPrincipalToken"]}]}`
 		resp := vit.PostProfile(devicePrn, "q.sys.RefreshPrincipalToken", body)
 		require.NotEqual(devicePrn.Token, resp.SectionRow()[0].(string))
+	})
+
+	t.Run("400 bad request on an unexpected body", func(t *testing.T) {
+		vit.Func(fmt.Sprintf("api/v2/apps/%s/%s/devices", deviceLogin.AppQName.Owner(), deviceLogin.AppQName.Name()), "body",
+			coreutils.Expect400()).Println()
 	})
 }
 

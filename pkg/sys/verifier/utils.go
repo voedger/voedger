@@ -15,11 +15,7 @@ import (
 )
 
 func NewVerificationToken(entity string, field, value string, kind appdef.VerificationKind, targetWSID istructs.WSID, itokens itokens.ITokens, appTokens istructs.IAppTokens) (token, code string, err error) {
-	verificationCode, err := coreutils.EmailVerificationCode()
-	if err != nil {
-		// notest
-		return "", "", err
-	}
+	verificationCode := coreutils.EmailVerificationCode()
 	verificationCodeHash := itokens.CryptoHash256([]byte(verificationCode))
 
 	entityQName, err := appdef.ParseQName(entity)

@@ -235,7 +235,7 @@ func (g *schemaGenerator) addAuthPaths() {
 
 func (g *schemaGenerator) genAuthLoginPath() {
 	// [~server.apiv2.auth/cmp.provideAuthLoginPath~impl]
-	path := "/api/v2/apps/{owner}/{app}/auth/login"
+	path := fmt.Sprintf("/api/v2/apps/%s/%s/auth/login", g.getOwner(), g.getApp())
 	parameters := g.generateParameters(path, nil)
 	g.paths[path] = map[string]interface{}{
 		schemaMethodPost: map[string]interface{}{
@@ -274,13 +274,18 @@ func (g *schemaGenerator) genAuthLoginPath() {
 
 func (g *schemaGenerator) genAuthRefreshPath() {
 	// [~server.apiv2.auth/cmp.provideAuthRefreshPath~impl]
-	path := "/api/v2/apps/{owner}/{app}/auth/refresh"
+	path := fmt.Sprintf("/api/v2/apps/%s/%s/auth/refresh", g.getOwner(), g.getApp())
 	parameters := g.generateParameters(path, nil)
 	g.paths[path] = map[string]interface{}{
 		schemaMethodPost: map[string]interface{}{
 			schemaKeyDescription: "Returns a refreshed principal token",
-			schemaKeyTags:        []string{authenticationTag},
-			schemaKeyParameters:  parameters,
+			schemaKeySecurity: []map[string]interface{}{
+				{
+					bearerAuth: []string{},
+				},
+			},
+			schemaKeyTags:       []string{authenticationTag},
+			schemaKeyParameters: parameters,
 			schemaKeyResponses: map[string]interface{}{
 				statusCode200: g.genOKResponse(principalTokenSchemaRef),
 				statusCode400: g.genErrorResponse(http.StatusBadRequest),
@@ -335,16 +340,23 @@ func (g *schemaGenerator) genErrorResponse(code int) map[string]interface{} {
 	}
 }
 
+func (g *schemaGenerator) getOwner() string {
+	if g.meta.AppName != appdef.NullAppQName {
+		return g.meta.AppName.Owner()
+	}
+	return "{owner}"
+}
+
+func (g *schemaGenerator) getApp() string {
+	if g.meta.AppName != appdef.NullAppQName {
+		return g.meta.AppName.Name()
+	}
+	return "{app}"
+}
+
 // getPathAndMethod returns the API path and HTTP method for a given type and operation
 func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []pathItem {
 	typeName := typ.QName().String()
-
-	owner := "{owner}"
-	app := "{app}"
-	if g.meta.AppName != appdef.NullAppQName {
-		owner = g.meta.AppName.Owner()
-		app = g.meta.AppName.Name()
-	}
 
 	switch typ.Kind() {
 	case appdef.TypeKind_CDoc, appdef.TypeKind_WDoc, appdef.TypeKind_CRecord, appdef.TypeKind_WRecord:
@@ -353,7 +365,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 			return []pathItem{
 				{
 					Method:  methodPost,
-					Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/docs/%s", owner, app, typeName),
+					Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/docs/%s", g.getOwner(), g.getApp(), typeName),
 					APIPath: processors.APIPath_Docs,
 				},
 			}
@@ -361,7 +373,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 			return []pathItem{
 				{
 					Method:  methodPatch,
-					Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
+					Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/docs/%s/{id}", g.getOwner(), g.getApp(), typeName),
 					APIPath: processors.APIPath_Docs,
 				},
 			}
@@ -369,7 +381,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 			return []pathItem{
 				{
 					Method:  methodDelete,
-					Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
+					Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/docs/%s/{id}", g.getOwner(), g.getApp(), typeName),
 					APIPath: processors.APIPath_Docs,
 				},
 			}
@@ -377,12 +389,12 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 			return []pathItem{
 				{
 					Method:  methodGet,
-					Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/docs/%s/{id}", owner, app, typeName),
+					Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/docs/%s/{id}", g.getOwner(), g.getApp(), typeName),
 					APIPath: processors.APIPath_Docs,
 				},
 				{
 					Method:  methodGet,
-					Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/cdocs/%s", owner, app, typeName),
+					Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/cdocs/%s", g.getOwner(), g.getApp(), typeName),
 					APIPath: processors.APIPath_CDocs,
 				},
 			}
@@ -394,7 +406,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 		return []pathItem{
 			{
 				Method:  methodPost,
-				Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/commands/%s", owner, app, typeName),
+				Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/commands/%s", g.getOwner(), g.getApp(), typeName),
 				APIPath: processors.APIPath_Commands,
 			},
 		}
@@ -404,7 +416,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 		return []pathItem{
 			{
 				Method:  methodGet,
-				Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/queries/%s", owner, app, typeName),
+				Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/queries/%s", g.getOwner(), g.getApp(), typeName),
 				APIPath: processors.APIPath_Queries,
 			},
 		}
@@ -414,7 +426,7 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 		return []pathItem{
 			{
 				Method:  methodGet,
-				Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/views/%s", owner, app, typeName),
+				Path:    fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/views/%s", g.getOwner(), g.getApp(), typeName),
 				APIPath: processors.APIPath_Views,
 			},
 		}
@@ -463,7 +475,7 @@ func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op 
 	}
 
 	// Add responses
-	operation[schemaKeyResponses] = g.generateResponses(typ, op)
+	operation[schemaKeyResponses] = g.generateResponses(typ, op, apiPath)
 
 	// Add the operation to the path
 	g.paths[path][method] = operation
@@ -763,7 +775,7 @@ func (g *schemaGenerator) generateRequestBody(typ appdef.IType, op appdef.Operat
 }
 
 // generateResponses creates response objects for a type and operation
-func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.OperationKind) map[string]interface{} {
+func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.OperationKind, apiPath processors.APIPath) map[string]interface{} {
 	responses := make(map[string]interface{})
 	// Add standard error responses
 	responses["401"] = map[string]interface{}{
@@ -883,7 +895,9 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 			},
 		}
 
-	case op == appdef.OperationKind_Select && appdef.TypeKind_Records.Contains(typ.Kind()):
+	case apiPath == processors.APIPath_Docs &&
+		op == appdef.OperationKind_Select &&
+		appdef.TypeKind_Records.Contains(typ.Kind()):
 		responses[statusCode200] = map[string]interface{}{
 			schemaKeyDescription: descrOK,
 			schemaKeyContent: map[string]interface{}{
@@ -895,8 +909,8 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 			},
 		}
 
-	case (op == appdef.OperationKind_Select && typ.Kind() == appdef.TypeKind_CDoc) ||
-		(op == appdef.OperationKind_Select && typ.Kind() == appdef.TypeKind_ViewRecord):
+	case apiPath == processors.APIPath_CDocs && op == appdef.OperationKind_Select &&
+		(typ.Kind() == appdef.TypeKind_CDoc || typ.Kind() == appdef.TypeKind_ViewRecord):
 		// Collection response with results array
 
 		responses[statusCode200] = map[string]interface{}{

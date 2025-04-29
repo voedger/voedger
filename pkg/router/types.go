@@ -17,8 +17,10 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/itokens"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 )
 
@@ -48,6 +50,8 @@ type httpService struct {
 	name               string
 	listeningPort      atomic.Uint32
 	blobRequestHandler blobprocessor.IRequestHandler
+	iTokens            itokens.ITokens
+	federation         federation.IFederation
 }
 
 type httpsService struct {
