@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/url"
 	"strings"
 	"testing"
@@ -26,11 +25,6 @@ import (
 	"github.com/voedger/voedger/pkg/processors/query2"
 	it "github.com/voedger/voedger/pkg/vit"
 )
-
-func TestPrintBase(t *testing.T) {
-	id := istructs.RecordID(322685000131082)
-	log.Println(id.BaseRecordID())
-}
 
 func prepareDailyIdx(require *require.Assertions, vit *it.VIT, ws *it.AppWorkspace) (resultOffset istructs.Offset, newIDs map[string]istructs.RecordID) {
 	testProjectionKey := in10n.ProjectionKey{

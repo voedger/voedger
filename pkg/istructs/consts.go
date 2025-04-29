@@ -64,17 +64,6 @@ const FirstOffset = Offset(1)
 const MinRawRecordID = RecordID(1)
 const MaxRawRecordID = RecordID(0xffff)
 
-// RecordID generation
-const (
-	// RecordID = RegisterID * RegisterFactor + BaseRecordID
-	RegisterFactor = 5000000000
-
-	// +1 caused by wrong iota usage here before. See https://github.com/voedger/voedger/issues/3528
-	ClusterAsRegisterID = 0xFFFF - 1000 + 1
-)
-
-var MinClusterRecordID = NewRecordID(NullRecordID)
-
 // *********************************************************************************************************
 //
 //				Events-related constants
@@ -119,19 +108,19 @@ const WSIDClusterLShift = 64 - 16 - 1
 
 const MaxBaseWSID = 1<<WSIDClusterLShift - 1
 
-const MinReservedBaseRecordID = MaxRawRecordID + 1
-const MaxReservedBaseRecordID = MinReservedBaseRecordID + 0xffff
+const MinReservedRecordID = MaxRawRecordID + 1
+const MaxReservedRecordID = 200000
 const MaxAllowedWSID = math.MaxUint64 >> 1
 
 // Singleton - CDoc which has at most one record
-const FirstSingletonID = MinReservedBaseRecordID
+const FirstSingletonID = MinReservedRecordID
 const MaxSingletonID = FirstSingletonID + 0x1ff
 
 // Used to test behaviour on providing the unexisting record ID
 const NonExistingRecordID = MaxSingletonID + 1
 
 // This is the first value which must be returned by the IDGenerator (in the Command Processor) for the given workspace
-const FirstBaseRecordID = MaxReservedBaseRecordID + 1
+const FirstUserRecordID = MaxReservedRecordID + 1
 
 // Pseudo Workspaces
 

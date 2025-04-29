@@ -10,15 +10,15 @@ import (
 )
 
 type implIIDGenerator struct {
-	nextBaseID istructs.RecordID
-	onNewID    func(rawID, storageID istructs.RecordID) error
+	nextRecordID istructs.RecordID
+	onNewID      func(rawID, storageID istructs.RecordID) error
 }
 
 // used in tests
 func NewIDGeneratorWithHook(onNewID func(rawID, storageID istructs.RecordID) error) istructs.IIDGenerator {
 	return &implIIDGenerator{
-		nextBaseID: istructs.FirstBaseRecordID,
-		onNewID:    onNewID,
+		nextRecordID: istructs.FirstUserRecordID,
+		onNewID:      onNewID,
 	}
 }
 
@@ -27,8 +27,8 @@ func NewIDGenerator() istructs.IIDGenerator {
 }
 
 func (g *implIIDGenerator) NextID(rawID istructs.RecordID) (storageID istructs.RecordID, err error) {
-	storageID = istructs.NewRecordID(g.nextBaseID)
-	g.nextBaseID++
+	storageID = g.nextRecordID
+	g.nextRecordID++
 	if g.onNewID != nil {
 		if err := g.onNewID(rawID, storageID); err != nil {
 			return istructs.NullRecordID, err
@@ -37,16 +37,18 @@ func (g *implIIDGenerator) NextID(rawID istructs.RecordID) (storageID istructs.R
 	return storageID, nil
 }
 
+// const minClusterRecordID = (0xFFFF - 1000 + 1) * 5_000_000_000
+
 func (g *implIIDGenerator) UpdateOnSync(syncID istructs.RecordID) {
-	if syncID < istructs.MinClusterRecordID {
-		// syncID<322680000000000 -> consider the syncID is from an old template.
-		// ignore IDs from external registers
-		// see https://github.com/voedger/voedger/issues/688
-		return
-	}
-	if syncID.BaseRecordID() >= g.nextBaseID {
+	// if syncID < minClusterRecordID {
+	// 	// syncID<322680000000000 -> consider the syncID is from an old template.
+	// 	// ignore IDs from external registers
+	// 	// see https://github.com/voedger/voedger/issues/688
+	// 	return
+	// }
+	if syncID > g.nextRecordID {
 		// we do not know the order the IDs were issued for ODoc with ORecords
 		// so let's bump if syncID is actually next
-		g.nextBaseID = syncID.BaseRecordID() + 1
+		g.nextRecordID = syncID + 1
 	}
 }

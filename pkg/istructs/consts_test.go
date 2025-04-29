@@ -81,7 +81,3 @@ func TestWSID(t *testing.T) {
 	require.Equal(FirstBaseAppWSID+MaxNumAppWorkspaces, FirtReservedWSID)
 	require.Equal(FirtReservedWSID+NumReservedWSID, FirstBaseUserWSID)
 }
-
-func TestClusterConsts(t *testing.T) {
-	require.Equal(t, 64536, ClusterAsRegisterID)
-}

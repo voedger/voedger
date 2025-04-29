@@ -78,13 +78,13 @@ func (ss *implISeqStorage) getNumbersFromObject(root istructs.IObject, wsid istr
 }
 
 func addToBatch(wsid istructs.WSID, seqQNameID istructs.QNameID, recID istructs.RecordID, batch *[]isequencer.SeqValue) {
-	if recID < istructs.MinClusterRecordID {
-		// syncID<322680000000000 -> consider the syncID is from an old template
-		// ignore IDs from external registers
-		// see https://github.com/voedger/voedger/issues/688
-		// [~server.design.sequences/cmp.ISeqStorageImplementation.i688~impl]
-		return
-	}
+	// if recID < istructs.MinClusterRecordID {
+	// syncID<322680000000000 -> consider the syncID is from an old template
+	// ignore IDs from external registers
+	// see https://github.com/voedger/voedger/issues/688
+	// [~server.design.sequences/cmp.ISeqStorageImplementation.i688~impl]
+	// return
+	// }
 	*batch = append(*batch, isequencer.SeqValue{
 		Key: isequencer.NumberKey{
 			WSID:  isequencer.WSID(wsid),

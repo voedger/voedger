@@ -6,7 +6,6 @@
 package sys_it
 
 import (
-	"log"
 	"testing"
 
 	"github.com/google/uuid"
@@ -92,16 +91,11 @@ func TestRecovery(t *testing.T) {
 	_ = storageFactory
 }
 
-func TestPrintID(t *testing.T) {
-	id := istructs.RecordID(322685000131089)
-	log.Println(id.BaseRecordID())
-}
-
 type idGenRegister2 struct {
 	istructs.IIDGenerator
 }
 
 func (idGen *idGenRegister2) NextID(rawID istructs.RecordID) (storageID istructs.RecordID, err error) {
 	storageID, err = idGen.IIDGenerator.NextID(rawID)
-	return storageID + istructs.RegisterFactor, err
+	return storageID + 5_000_000_000, err
 }

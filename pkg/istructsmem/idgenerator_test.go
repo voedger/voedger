@@ -28,7 +28,7 @@ func TestIDGenerator(t *testing.T) {
 	idGen := NewIDGenerator()
 	t.Run("basic usage", func(t *testing.T) {
 
-		expectedCRecordID := istructs.NewRecordID(istructs.FirstBaseRecordID)
+		expectedCRecordID := istructs.FirstUserRecordID
 
 		storageID, err := idGen.NextID(1)
 		require.NoError(err)
@@ -89,7 +89,7 @@ func TestIDGenCollision(t *testing.T) {
 	idGen.UpdateOnSync(storedRecID)
 	// then record 322690000000000 is met
 	storedRecID = istructs.RecordID(322690000000000)
-	log.Println("322690000000000.BaseID = ", storedRecID.BaseRecordID())
+	log.Println("322690000000000.BaseID = ", storedRecID%5_000_000_000)
 	idGen.UpdateOnSync(storedRecID) // its BaseRecordID is 0 which is <idGen.nextCDocCRecordBaseID(5000000000) so idGen.nextCDocCRecordBaseID is still 5000000000
 	require.NoError(err)
 

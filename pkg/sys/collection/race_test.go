@@ -35,9 +35,9 @@ func (me *TSidsGeneratorType) NextID(tempID istructs.RecordID) (storageID istruc
 	// 	storageID = me.nextID
 	// 	me.nextID++
 	// } else {
-		if storageID, err = me.IIDGenerator.NextID(tempID); err != nil {
-			return istructs.NullRecordID, err
-		}
+	if storageID, err = me.IIDGenerator.NextID(tempID); err != nil {
+		return istructs.NullRecordID, err
+	}
 	// }
 	me.idmap[tempID] = storageID
 	return storageID, nil
@@ -58,7 +58,7 @@ func (me *TSidsGeneratorType) nextOffset() (offset istructs.Offset) {
 func newTSIdsGenerator() *TSidsGeneratorType {
 	return &TSidsGeneratorType{
 		idmap:          make(map[istructs.RecordID]istructs.RecordID),
-		nextID:         istructs.FirstBaseRecordID,
+		nextID:         istructs.FirstUserRecordID,
 		nextPlogOffset: test.plogStartOfs,
 		IIDGenerator:   istructsmem.NewIDGenerator(),
 	}

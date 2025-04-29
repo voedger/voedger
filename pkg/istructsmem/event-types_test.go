@@ -784,7 +784,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 		app, err := provider.BuiltIn(appName)
 		require.NoError(err)
 
-		docID := istructs.NewRecordID(istructs.FirstBaseRecordID + istructs.RecordID(test))
+		docID := istructs.FirstUserRecordID + istructs.RecordID(test)
 
 		t.Run("should be ok to create CDoc", func(t *testing.T) {
 			bld := app.Events().GetNewRawEventBuilder(

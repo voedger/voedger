@@ -214,33 +214,33 @@ func TestSequenceActualization(t *testing.T) {
 				}},
 			},
 		},
-		{
-			name: "issue 688: skip ids from old registers",
-			plog: []testPLogEvent{
-				// 1st event: normal - no skip
-				{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{{qName: testCDocQName, id: 1}}, expectedBatch: []expectedSeqValue{
-					{wsid: 1, seqID: istructs.QNameIDDocIDSequence, number: 1},
-				}},
+		// {
+		// 	name: "issue 688: skip ids from old registers",
+		// 	plog: []testPLogEvent{
+		// 		// 1st event: normal - no skip
+		// 		{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{{qName: testCDocQName, id: 1}}, expectedBatch: []expectedSeqValue{
+		// 			{wsid: 1, seqID: istructs.QNameIDDocIDSequence, number: 1},
+		// 		}},
 
-				// 2nd event: cdoc
-				{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{{qName: testCDocQName, exactID: 9999999999}}, expectedBatch: nil},
+		// 		// 2nd event: cdoc
+		// 		{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{{qName: testCDocQName, exactID: 9999999999}}, expectedBatch: nil},
 
-				// 3rd event: odoc
-				{qName: testODocQName, wsid: 1, offset: 1, arg: obj{
-					cud: cud{qName: testODocQName, exactID: 9999999999}},
-					expectedBatch: nil,
-				},
+		// 		// 3rd event: odoc
+		// 		{qName: testODocQName, wsid: 1, offset: 1, arg: obj{
+		// 			cud: cud{qName: testODocQName, exactID: 9999999999}},
+		// 			expectedBatch: nil,
+		// 		},
 
-				// 4th event: orecord
-				{qName: testODocQName, wsid: 1, offset: 1, arg: obj{
-					cud: cud{qName: testODocQName, id: 1}, containers: []obj{
-						{cud: cud{qName: testORecordQName, exactID: 9999999999}},
-					},
-				}, expectedBatch: []expectedSeqValue{
-					{wsid: 1, seqID: istructs.QNameIDDocIDSequence, number: 1}},
-				},
-			},
-		},
+		// 		// 4th event: orecord
+		// 		{qName: testODocQName, wsid: 1, offset: 1, arg: obj{
+		// 			cud: cud{qName: testODocQName, id: 1}, containers: []obj{
+		// 				{cud: cud{qName: testORecordQName, exactID: 9999999999}},
+		// 			},
+		// 		}, expectedBatch: []expectedSeqValue{
+		// 			{wsid: 1, seqID: istructs.QNameIDDocIDSequence, number: 1}},
+		// 		},
+		// 	},
+		// },
 	}
 
 	for _, tc := range cases {
@@ -296,7 +296,7 @@ func TestSeqIDMapping(t *testing.T) {
 func buildExpectedBatch(expectedValues []expectedSeqValue) []isequencer.SeqValue {
 	expectedBatch := []isequencer.SeqValue{}
 	for _, ev := range expectedValues {
-		id := istructs.NewRecordID(istructs.RecordID(ev.number))
+		id := istructs.RecordID(ev.number)
 		expectedBatch = append(expectedBatch, isequencer.SeqValue{
 			Key:   isequencer.NumberKey{WSID: isequencer.WSID(ev.wsid), SeqID: isequencer.SeqID(ev.seqID)},
 			Value: isequencer.Number(id),
@@ -385,7 +385,7 @@ func (c cud) ID(appDef appdef.IAppDef) istructs.RecordID {
 	if c.exactID != istructs.NullRecordID {
 		return c.exactID
 	}
-	return istructs.NewRecordID(istructs.RecordID(c.id))
+	return istructs.RecordID(c.id)
 }
 
 type obj struct {
