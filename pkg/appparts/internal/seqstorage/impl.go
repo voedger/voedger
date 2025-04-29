@@ -28,7 +28,7 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 				if !cud.IsNew() {
 					continue
 				}
-				seqQName := istructs.QNameDocIDSequence
+				seqQName := istructs.QNameRecordIDSequence
 				addToBatch(event.Workspace(), ss.seqIDs[seqQName], cud.ID(), &batch)
 			}
 
@@ -69,7 +69,7 @@ func (ss *implISeqStorage) ReadNextPLogOffset() (isequencer.PLogOffset, error) {
 }
 
 func (ss *implISeqStorage) getNumbersFromObject(root istructs.IObject, wsid istructs.WSID, batch *[]isequencer.SeqValue) {
-	addToBatch(wsid, ss.seqIDs[istructs.QNameDocIDSequence], root.AsRecordID(appdef.SystemField_ID), batch)
+	addToBatch(wsid, ss.seqIDs[istructs.QNameRecordIDSequence], root.AsRecordID(appdef.SystemField_ID), batch)
 	for container := range root.Containers {
 		for c := range root.Children(container) {
 			ss.getNumbersFromObject(c, wsid, batch)
@@ -78,13 +78,6 @@ func (ss *implISeqStorage) getNumbersFromObject(root istructs.IObject, wsid istr
 }
 
 func addToBatch(wsid istructs.WSID, seqQNameID istructs.QNameID, recID istructs.RecordID, batch *[]isequencer.SeqValue) {
-	// if recID < istructs.MinClusterRecordID {
-	// syncID<322680000000000 -> consider the syncID is from an old template
-	// ignore IDs from external registers
-	// see https://github.com/voedger/voedger/issues/688
-	// [~server.design.sequences/cmp.ISeqStorageImplementation.i688~impl]
-	// return
-	// }
 	*batch = append(*batch, isequencer.SeqValue{
 		Key: isequencer.NumberKey{
 			WSID:  isequencer.WSID(wsid),

@@ -31,14 +31,9 @@ type TSidsGeneratorType struct {
 func (me *TSidsGeneratorType) NextID(tempID istructs.RecordID) (storageID istructs.RecordID, err error) {
 	me.lock.Lock()
 	defer me.lock.Unlock()
-	// if t == nil {
-	// 	storageID = me.nextID
-	// 	me.nextID++
-	// } else {
 	if storageID, err = me.IIDGenerator.NextID(tempID); err != nil {
 		return istructs.NullRecordID, err
 	}
-	// }
 	me.idmap[tempID] = storageID
 	return storageID, nil
 }

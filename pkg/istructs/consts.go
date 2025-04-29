@@ -46,7 +46,7 @@ var (
 	// sequences QNames has hardcoded QNameIDs: [QNameIDWLogOffsetSequence] etc
 	QNamePLogOffsetSequence = appdef.NewQName(appdef.SysPackage, "PLogOffsetSequence")
 	QNameWLogOffsetSequence = appdef.NewQName(appdef.SysPackage, "WLogOffsetSequence")
-	QNameDocIDSequence      = appdef.NewQName(appdef.SysPackage, "DocIDSequence")
+	QNameRecordIDSequence   = appdef.NewQName(appdef.SysPackage, "RecordIDSequence")
 )
 
 // *********************************************************************************************************
@@ -235,7 +235,7 @@ const (
 	QNameIDForCorruptedData
 	QNameIDPLogOffsetSequence
 	QNameIDWLogOffsetSequence
-	QNameIDDocIDSequence
+	QNameIDRecordIDSequence
 
 	QNameIDSysLast QNameID = 0xFF
 )

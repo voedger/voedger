@@ -26,8 +26,8 @@ const (
 	_ = uint16(4 - QNameIDPLogOffsetSequence)
 	_ = uint16(QNameIDWLogOffsetSequence - 5)
 	_ = uint16(5 - QNameIDWLogOffsetSequence)
-	_ = uint16(QNameIDDocIDSequence - 6)
-	_ = uint16(6 - QNameIDDocIDSequence)
+	_ = uint16(QNameIDRecordIDSequence - 6)
+	_ = uint16(6 - QNameIDRecordIDSequence)
 
 	_ = uint16(QNameIDSysLast - 0xFF)
 	_ = uint16(0xFF - QNameIDSysLast)
