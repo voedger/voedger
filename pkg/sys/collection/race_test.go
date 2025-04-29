@@ -28,22 +28,17 @@ type TSidsGeneratorType struct {
 	nextPlogOffset istructs.Offset
 }
 
-func (me *TSidsGeneratorType) NextID(tempID istructs.RecordID, t appdef.IType) (storageID istructs.RecordID, err error) {
+func (me *TSidsGeneratorType) NextID(tempID istructs.RecordID) (storageID istructs.RecordID, err error) {
 	me.lock.Lock()
 	defer me.lock.Unlock()
-	if t == nil {
-		storageID = me.nextID
-		me.nextID++
-	} else {
-		if storageID, err = me.IIDGenerator.NextID(tempID, t); err != nil {
-			return istructs.NullRecordID, err
-		}
+	if storageID, err = me.IIDGenerator.NextID(tempID); err != nil {
+		return istructs.NullRecordID, err
 	}
 	me.idmap[tempID] = storageID
 	return storageID, nil
 }
 
-func (me *TSidsGeneratorType) UpdateOnSync(_ istructs.RecordID, _ appdef.IType) {
+func (me *TSidsGeneratorType) UpdateOnSync(_ istructs.RecordID) {
 	panic("must not be called")
 }
 
@@ -58,7 +53,7 @@ func (me *TSidsGeneratorType) nextOffset() (offset istructs.Offset) {
 func newTSIdsGenerator() *TSidsGeneratorType {
 	return &TSidsGeneratorType{
 		idmap:          make(map[istructs.RecordID]istructs.RecordID),
-		nextID:         istructs.FirstBaseRecordID,
+		nextID:         istructs.FirstUserRecordID,
 		nextPlogOffset: test.plogStartOfs,
 		IIDGenerator:   istructsmem.NewIDGenerator(),
 	}

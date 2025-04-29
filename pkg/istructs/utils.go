@@ -31,15 +31,6 @@ func NewWSID(cluster ClusterID, baseWSID WSID) WSID {
 	return WSID(cluster)<<WSIDClusterLShift + baseWSID
 }
 
-func NewRecordID(baseID RecordID) RecordID {
-	return RecordID(ClusterAsRegisterID)*RegisterFactor + baseID
-}
-
-// Used to generate IDs for CDoc/CRecord
-func NewCDocCRecordID(baseID RecordID) RecordID {
-	return RecordID(ClusterAsCRecordRegisterID)*RegisterFactor + baseID
-}
-
 //	63      62 61 60 59 58 57 ......47 ... 15 14 13 12 11 ..................... 1 0
 //
 // always 0 └─── ClusterID before ───┘     └──── ClusterID is here after >> ──────┘
@@ -56,10 +47,6 @@ func (wsid WSID) BaseWSID() WSID {
 // RecordID.IsRaw: returns true if ID is temporary
 func (id RecordID) IsRaw() bool {
 	return (id >= MinRawRecordID) && (id <= MaxRawRecordID)
-}
-
-func (id RecordID) BaseRecordID() RecordID {
-	return id % RegisterFactor
 }
 
 // Implements IRowReader

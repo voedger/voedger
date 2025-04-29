@@ -71,53 +71,6 @@ func TestBaseWSIDOverflow(t *testing.T) {
 	require.Panics(t, func() { istructs.NewWSID(istructs.CurrentClusterID(), istructs.MaxBaseWSID+1) })
 }
 
-func TestBasicUsage_NewRecordID(t *testing.T) {
-	require := require.New(t)
-
-	// First cluster-generated ID
-	{
-		recordID := istructs.NewRecordID(1)
-		require.Equal(istructs.RecordID(istructs.ClusterAsRegisterID)*istructs.RegisterFactor+1, recordID)
-	}
-	// Second cluster-generated ID
-	{
-		recordID := istructs.NewRecordID(2)
-		require.Equal(istructs.RecordID(istructs.ClusterAsRegisterID)*istructs.RegisterFactor+2, recordID)
-	}
-}
-
-func TestBasicUsage_NewCDocCRecordID(t *testing.T) {
-	require := require.New(t)
-
-	// First cluster-generated C*- ID
-	{
-		recordID := istructs.NewCDocCRecordID(1)
-		require.Equal(istructs.RecordID(istructs.ClusterAsCRecordRegisterID)*istructs.RegisterFactor+1, recordID)
-	}
-	// Second cluster-generated ID
-	{
-		recordID := istructs.NewCDocCRecordID(2)
-		require.Equal(istructs.RecordID(istructs.ClusterAsCRecordRegisterID)*istructs.RegisterFactor+2, recordID)
-	}
-}
-
-func TestBasicUsage_BaseRecordID(t *testing.T) {
-	require := require.New(t)
-
-	// First cluster-generated ID
-	{
-		recordID := istructs.NewRecordID(1)
-		require.Equal(istructs.RecordID(istructs.ClusterAsRegisterID)*istructs.RegisterFactor+1, recordID)
-		require.Equal(istructs.RecordID(1), recordID.BaseRecordID())
-	}
-	// Second cluster-generated ID
-	{
-		recordID := istructs.NewRecordID(2)
-		require.Equal(istructs.RecordID(istructs.ClusterAsRegisterID)*istructs.RegisterFactor+2, recordID)
-		require.Equal(istructs.RecordID(2), recordID.BaseRecordID())
-	}
-}
-
 // regenerateID: just example for test usage
 func regenerateID(id istructs.RecordID) istructs.RecordID {
 	const increment = istructs.MaxRawRecordID + 1
