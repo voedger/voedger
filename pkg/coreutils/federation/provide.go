@@ -20,3 +20,9 @@ func New(federationURL func() *url.URL, adminPortGetter func() int) (federation 
 	}
 	return fed, cln
 }
+
+func NewForQP(federation IFederation) IFederationForQP {
+	return &implIFederationForQP{
+		fed: federation,
+	}
+}

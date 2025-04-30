@@ -122,6 +122,12 @@ func WithRetryOnAnyError(timeout time.Duration, retryDelay time.Duration) ReqOpt
 	return WithRetryOnCertainError(func(error) bool { return true }, timeout, retryDelay)
 }
 
+func WithSkipRetryOn503() ReqOptFunc {
+	return func(opts *reqOpts) {
+		opts.skipRetryOn503 = true
+	}
+}
+
 func WithDefaultAuthorize(principalToken string) ReqOptFunc {
 	return func(po *reqOpts) {
 		if _, ok := po.headers[Authorization]; !ok {
@@ -221,6 +227,7 @@ type reqOpts struct {
 	retriersOnErrors      []retrier
 	bodyReader            io.Reader
 	withoutAuth           bool
+	skipRetryOn503        bool
 }
 
 // body and bodyReader are mutual exclusive
@@ -328,7 +335,8 @@ reqLoop:
 		if opts.responseHandler == nil {
 			defer resp.Body.Close()
 		}
-		if resp.StatusCode == http.StatusServiceUnavailable && !slices.Contains(opts.expectedHTTPCodes, http.StatusServiceUnavailable) {
+		if resp.StatusCode == http.StatusServiceUnavailable && !slices.Contains(opts.expectedHTTPCodes, http.StatusServiceUnavailable) &&
+			!opts.skipRetryOn503 {
 			if err := discardRespBody(resp); err != nil {
 				return nil, err
 			}

@@ -28,3 +28,11 @@ type IFederation interface {
 	N10NSubscribe(projectionKey in10n.ProjectionKey) (offsetsChan OffsetsChan, unsubscribe func(), err error)
 	AdminFunc(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error)
 }
+
+// IFederationForQP is a specialized interface for query processing (QP) scenarios.
+// Unlike IFederation, it provides a QueryNoRetry method that does not retry on HTTP 503 errors.
+// This behavior is designed to prevent the depletion of query processing resources.
+type IFederationForQP interface {
+	// unlike IFederation.Query does not retry on 503 to avoid QPs depleetion
+	QueryNoRetry(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error)
+}

@@ -333,3 +333,8 @@ func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey) (offs
 	}
 	return
 }
+
+func (f *implIFederationForQP) QueryNoRetry(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
+	optFuncs = append(optFuncs, coreutils.WithSkipRetryOn503())
+	return f.fed.Query(relativeURL, optFuncs...)
+}

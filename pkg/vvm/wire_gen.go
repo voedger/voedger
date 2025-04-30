@@ -166,7 +166,8 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	operatorQueryProcessors_V1 := provideQueryProcessors_V1(numQueryProcessors, queryChannel_V1, iAppPartitions, queryprocessorServiceFactory, iMetrics, vvmName, maxPrepareQueriesType, iAuthenticator, iTokens, iFederation, iStatelessResources, iSecretReader)
 	queryChannel_V2 := provideQueryChannel_V2(serviceChannelFactory)
 	query2ServiceFactory := query2.ProvideServiceFactory()
-	operatorQueryProcessors_V2 := provideQueryProcessors_V2(numQueryProcessors, queryChannel_V2, iAppPartitions, query2ServiceFactory, iMetrics, vvmName, maxPrepareQueriesType, iAuthenticator, iTokens, iFederation, iStatelessResources, iSecretReader)
+	iFederationForQP := federation.NewForQP(iFederation)
+	operatorQueryProcessors_V2 := provideQueryProcessors_V2(numQueryProcessors, queryChannel_V2, iAppPartitions, query2ServiceFactory, iMetrics, vvmName, maxPrepareQueriesType, iAuthenticator, iTokens, iFederationForQP, iFederation, iStatelessResources, iSecretReader)
 	numBLOBProcessors := vvmConfig.NumBLOBProcessors
 	blobServiceChannel := provideBLOBChannel(serviceChannelFactory)
 	blobAppStoragePtr := provideBlobAppStoragePtr(iAppStorageProvider)
@@ -866,10 +867,10 @@ func provideQueryProcessors_V1(qpCount istructs.NumQueryProcessors, qc QueryChan
 
 func provideQueryProcessors_V2(qpCount istructs.NumQueryProcessors, qc QueryChannel_V2, appParts appparts.IAppPartitions, qpFactory query2.ServiceFactory, imetrics2 imetrics.IMetrics,
 	vvm processors.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator,
-	tokens itokens.ITokens, federation2 federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) OperatorQueryProcessors_V2 {
+	tokens itokens.ITokens, federation2 federation.IFederationForQP, federationForState federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) OperatorQueryProcessors_V2 {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
 	for i := 0; i < int(qpCount); i++ {
-		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), appParts, int(mpq), imetrics2, string(vvm), authn, tokens, federation2, statelessResources, secretReader)))
+		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), appParts, int(mpq), imetrics2, string(vvm), authn, tokens, federation2, federationForState, statelessResources, secretReader)))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }
