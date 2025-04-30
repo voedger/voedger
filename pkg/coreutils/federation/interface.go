@@ -28,3 +28,8 @@ type IFederation interface {
 	N10NSubscribe(projectionKey in10n.ProjectionKey) (offsetsChan OffsetsChan, unsubscribe func(), err error)
 	AdminFunc(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error)
 }
+
+type IFederationForQP interface {
+	// unlike IFederation.Query does not retry on 503 to avoid QPs depleetion
+	QueryNoRetry(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error)
+}

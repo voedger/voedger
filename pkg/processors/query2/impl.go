@@ -34,7 +34,8 @@ import (
 
 func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 	appParts appparts.IAppPartitions, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
-	authn iauthnz.IAuthenticator, itokens itokens.ITokens, federation federation.IFederation,
+	authn iauthnz.IAuthenticator, itokens itokens.ITokens, federationForQP federation.IFederationForQP,
+	federationForState federation.IFederation,
 	statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) pipeline.IService {
 	return pipeline.NewService(func(ctx context.Context) {
 		var p pipeline.ISyncPipeline
@@ -49,11 +50,11 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					metrics: metrics,
 				}
 				qpm.Increase(queryprocessor.Metric_QueriesTotal, 1.0)
-				qwork := newQueryWork(msg, appParts, maxPrepareQueries, qpm, secretReader, federation)
+				qwork := newQueryWork(msg, appParts, maxPrepareQueries, qpm, secretReader, federationForQP)
 				func() { // borrowed application partition should be guaranteed to be freed
 					defer qwork.Release()
 					if p == nil {
-						p = newQueryProcessorPipeline(ctx, authn, itokens, federation, statelessResources)
+						p = newQueryProcessorPipeline(ctx, authn, itokens, federationForState, statelessResources)
 					}
 					err := p.SendSync(qwork)
 					if err != nil {
@@ -116,7 +117,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 
 // IStatelessResources need only for determine the exact result type of ANY
 func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator,
-	itokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources) pipeline.ISyncPipeline {
+	itokens itokens.ITokens, federationForState federation.IFederation, statelessResources istructsmem.IStatelessResources) pipeline.ISyncPipeline {
 	ops := []*pipeline.WiredOperator{
 		operator("get api path handler", func(ctx context.Context, qw *queryWork) (err error) {
 			switch qw.msg.APIPath() {
@@ -137,6 +138,12 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			case processors.APIPath_CDocs:
 				// [~server.apiv2.docs/cmp.provideCDocsHandler~impl]
 				qw.apiPathHandler = cdocsHandler()
+			case processors.APIPath_Auth_Login:
+				// [~server.apiv2.auth/cmp.provideAuthLoginHandler~impl]
+				qw.apiPathHandler = authLoginHandler()
+			case processors.APIPath_Auth_Refresh:
+				// [~server.apiv2.auth/cmp.provideAuthRefreshHandler~impl]
+				qw.apiPathHandler = authRefreshHandler()
 			default:
 				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("unsupported api path %v", qw.msg.APIPath()))
 			}
@@ -250,7 +257,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				func() istructs.IObjectBuilder {
 					return qw.appStructs.ObjectBuilder(qw.resultType.QName())
 				},
-				federation,
+				federationForState,
 				func() istructs.ExecQueryCallback {
 					return qw.callbackFunc
 				},
