@@ -629,77 +629,77 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 			{
 				"article_price_exceptions":[
 					{
-						"id_periods":3.22685000131076e+14,
+						"id_periods":200005,
 						"price":1.8,
-						"sys.ID":3.22685000131089e+14,
+						"sys.ID":200018,
 						"sys.IsActive":true
 					}
 				],
-				"id_prices":3.22685000131072e+14,
+				"id_prices":200001,
 				"price":2,
-				"sys.ID":3.22685000131079e+14,
+				"sys.ID":200008,
 				"sys.IsActive":true
 			},
 			{
 				"article_price_exceptions":[
 					{
-						"id_periods":3.22685000131076e+14,
+						"id_periods":200005,
 						"price":0.9,
-						"sys.ID":3.22685000131081e+14,
+						"sys.ID":200010,
 						"sys.IsActive":true
 					},
 					{
-						"id_periods":3.22685000131077e+14,
+						"id_periods":200006,
 						"price":0.8,
-						"sys.ID":3.22685000131082e+14,
+						"sys.ID":200011,
 						"sys.IsActive":true
 					}
 				],
-				"id_prices":3.22685000131073e+14,
+				"id_prices":200002,
 				"price":1.5,
-				"sys.ID":3.2268500013108e+14,
+				"sys.ID":200009,
 				"sys.IsActive":true
 			}
 		],
-		"id_department":3.22685000131074e+14,
+		"id_department":200003,
 		"name":"Coca-cola",
 		"number":10,
-		"sys.ID":3.22685000131078e+14,
+		"sys.ID":200007,
 		"sys.IsActive":true,
 		"xrefs":{
 			"test.departments":{
-				"322685000131074":{
+				"200003":{
 					"name":"Cold Drinks",
 					"number":1,
-					"sys.ID":3.22685000131074e+14,
+					"sys.ID":200003,
 					"sys.IsActive":true
 				}
 			},
 			"test.periods":{
-				"322685000131076":{
+				"200005":{
 					"name":"Holiday",
 					"number":1,
-					"sys.ID":322685000131076,
+					"sys.ID":200005,
 					"sys.IsActive":true
 				},
-				"322685000131077":{
+				"200006":{
 					"name":"New Year",
 					"number":2,
-					"sys.ID":322685000131077,
+					"sys.ID":200006,
 					"sys.IsActive":true
 				}
 			},
 			"test.prices":{
-				"322685000131072":{
+				"200001":{
 					"name":"Normal Price",
 					"number":1,
-					"sys.ID":322685000131072,
+					"sys.ID":200001,
 					"sys.IsActive":true
 				},
-				"322685000131073":{
+				"200002":{
 					"name":"Happy Hour Price",
 					"number":2,
-					"sys.ID":322685000131073,
+					"sys.ID":200002,
 					"sys.IsActive":true
 				}
 			}
@@ -742,134 +742,134 @@ func TestBasicUsage_State(t *testing.T) {
 	require.Len(resultRows[0][0][0], 1) // 1 cell in a row element
 	expected := `{
 		"test.article_price_exceptions":{
-			"322685000131081":{
-				"id_periods":3.22685000131076e+14,
+			"200010":{
+				"id_periods":200005,
 				"price":0.9,
-				"sys.ID":322685000131081,
+				"sys.ID":200010,
 				"sys.IsActive":true,
-				"sys.ParentID":3.2268500013108e+14
+				"sys.ParentID":200009
 			},
-			"322685000131082":{
-				"id_periods": 3.22685000131077e+14,
+			"200011":{
+				"id_periods": 200006,
 				"price":0.8,
-				"sys.ID":322685000131082,
+				"sys.ID":200011,
 				"sys.IsActive":true,
-				"sys.ParentID":3.2268500013108e+14
+				"sys.ParentID":200009
 			},
-			"322685000131085":{
-				"id_periods":3.22685000131076e+14,
+			"200014":{
+				"id_periods":200005,
 				"price":1.6,
-				"sys.ID":322685000131085,
+				"sys.ID":200014,
 				"sys.IsActive":true,
-				"sys.ParentID":3.22685000131084e+14
+				"sys.ParentID":200013
 			},
-			"322685000131086":{
-				"id_periods":3.22685000131077e+14,
+			"200015":{
+				"id_periods":200006,
 				"price":1.2,
-				"sys.ID":322685000131086,
+				"sys.ID":200015,
 				"sys.IsActive":true,
-				"sys.ParentID":3.22685000131084e+14
+				"sys.ParentID":200013
 			},
-			"322685000131088":{
-				"id_periods":3.22685000131076e+14,
+			"200017":{
+				"id_periods":200005,
 				"price":1.1,
-				"sys.ID":322685000131088,
+				"sys.ID":200017,
 				"sys.IsActive":true,
-				"sys.ParentID":3.22685000131087e+14
+				"sys.ParentID":200016
 			},
-			"322685000131089":{
-				"id_periods":3.22685000131076e+14,
+			"200018":{
+				"id_periods":200005,
 				"price":1.8,
-				"sys.ID":322685000131089,
+				"sys.ID":200018,
 				"sys.IsActive":true,
-				"sys.ParentID":3.22685000131079e+14
+				"sys.ParentID":200008
 			}
 		},
 		"test.article_prices":{
-			"322685000131079":{
-				"id_prices":3.22685000131072e+14,
+			"200008":{
+				"id_prices":200001,
 				"price":2,
-				"sys.ID":322685000131079,
+				"sys.ID":200008,
 				"sys.IsActive":true,
-				"sys.ParentID":3.22685000131078e+14
+				"sys.ParentID":200007
 			},
-			"322685000131080":{
-				"id_prices":3.22685000131073e+14,
+			"200009":{
+				"id_prices":200002,
 				"price":1.5,
-				"sys.ID":322685000131080,
+				"sys.ID":200009,
 				"sys.IsActive":true,
-				"sys.ParentID":3.22685000131078e+14
+				"sys.ParentID":200007
 			},
-			"322685000131084":{
-				"id_prices":3.22685000131072e+14,
+			"200013":{
+				"id_prices":200001,
 				"price":2.1,
-				"sys.ID":322685000131084,
+				"sys.ID":200013,
 				"sys.IsActive":true,
-				"sys.ParentID":3.22685000131083e+14
+				"sys.ParentID":200012
 			},
-			"322685000131087":{
-				"id_prices":3.22685000131073e+14,
+			"200016":{
+				"id_prices":200002,
 				"price":1.6,
-				"sys.ID":322685000131087,
+				"sys.ID":200016,
 				"sys.IsActive":true,
-				"sys.ParentID":3.22685000131083e+14
+				"sys.ParentID":200012
 			}
 		},
 		"test.articles":{
-			"322685000131078":{
-				"id_department":3.22685000131074e+14,
+			"200007":{
+				"id_department":200003,
 				"name":"Coca-cola",
 				"number":10,
-				"sys.ID":322685000131078,
+				"sys.ID":200007,
 				"sys.IsActive":true
 			},
-			"322685000131083":{
-				"id_department":3.22685000131074e+14,
+			"200012":{
+				"id_department":200003,
 				"name":"Fanta",
 				"number":12,
-				"sys.ID":322685000131083,
+				"sys.ID":200012,
 				"sys.IsActive":true
 			}
 		},
 		"test.departments":{
-			"322685000131074":{
+			"200003":{
 				"name":"Cold Drinks",
 				"number":1,
-				"sys.ID":322685000131074,
+				"sys.ID":200003,
 				"sys.IsActive":true
 			},
-			"322685000131075":{
+			"200004":{
 				"name":"Hot Drinks",
 				"number":2,
-				"sys.ID":322685000131075,
+				"sys.ID":200004,
 				"sys.IsActive":true
 			}
 		},
 		"test.periods":{
-			"322685000131076":{
+			"200005":{
 				"name":"Holiday",
 				"number":1,
-				"sys.ID":322685000131076,
+				"sys.ID":200005,
 				"sys.IsActive":true
 			},
-			"322685000131077":{
+			"200006":{
 				"name":"New Year",
 				"number":2,
-				"sys.ID":322685000131077,
+				"sys.ID":200006,
 				"sys.IsActive":true
 			}
 		},
 		"test.prices":{
-			"322685000131072":{
+			"200001":{
 				"name":"Normal Price",
 				"number":1,
-				"sys.ID":322685000131072,
+				"sys.ID":200001,
 				"sys.IsActive":true
 			},
-			"322685000131073":{
+			"200002":{
 				"name":"Happy Hour Price",
 				"number":2,
-				"sys.ID":322685000131073,
+				"sys.ID":200002,
 				"sys.IsActive":true
 			}
 		}
@@ -912,19 +912,19 @@ func TestState_withAfterArgument(t *testing.T) {
 	expected := `
 	{
 		"test.article_price_exceptions":{
-			"322685000131081":{
-				"id_periods":3.22685000131076e+14,
+			"200010":{
+				"id_periods":200005,
 				"price":0.9,
-				"sys.ID":322685000131081,
+				"sys.ID":200010,
 				"sys.IsActive":true,
-				"sys.ParentID":3.2268500013108e+14
+				"sys.ParentID":200009
 			},
-			"322685000131089":{
-				"id_periods":3.22685000131076e+14,
+			"200018":{
+				"id_periods":200005,
 				"price":1.8,
-				"sys.ID":322685000131089,
+				"sys.ID":200018,
 				"sys.IsActive":true,
-				"sys.ParentID": 3.22685000131079e+14
+				"sys.ParentID": 200008
 			}
 		}
 	}`

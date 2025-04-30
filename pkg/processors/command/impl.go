@@ -243,7 +243,7 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work pipeline.IWorkp
 
 func updateIDGeneratorFromO(root istructs.IObject, findType appdef.FindType, idGen istructs.IIDGenerator) {
 	// new IDs only here because update is not allowed for ODocs in Args
-	idGen.UpdateOnSync(root.AsRecordID(appdef.SystemField_ID), findType(root.QName()))
+	idGen.UpdateOnSync(root.AsRecordID(appdef.SystemField_ID))
 	for container := range root.Containers {
 		// order of containers here is the order in the schema
 		// but order in the request could be different
@@ -265,8 +265,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 
 		for rec := range event.CUDs {
 			if rec.IsNew() {
-				t := cmd.appStructs.AppDef().Type(rec.QName())
-				ws.idGenerator.UpdateOnSync(rec.ID(), t)
+				ws.idGenerator.UpdateOnSync(rec.ID())
 			}
 		}
 		ao := event.ArgumentObject()
@@ -313,7 +312,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 
 func getIDGenerator(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	cmd.idGenerator = &implIDGenerator{
+	cmd.idGeneratorReporter = &implIDGeneratorReporter{
 		IIDGenerator: cmd.workspace.idGenerator,
 		generatedIDs: map[istructs.RecordID]istructs.RecordID{},
 	}
@@ -322,7 +321,7 @@ func getIDGenerator(_ context.Context, work pipeline.IWorkpiece) (err error) {
 
 func (cmdProc *cmdProc) putPLog(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.pLogEvent, err = cmd.appStructs.Events().PutPlog(cmd.rawEvent, nil, cmd.idGenerator); err != nil {
+	if cmd.pLogEvent, err = cmd.appStructs.Events().PutPlog(cmd.rawEvent, nil, cmd.idGeneratorReporter); err != nil {
 		cmd.appPartitionRestartScheduled = true
 	} else {
 		cmd.appPartition.nextPLogOffset++
@@ -814,15 +813,15 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		return
 	}
 	body := bytes.NewBufferString(fmt.Sprintf(`{"CurrentWLogOffset":%d`, cmd.pLogEvent.WLogOffset()))
-	if len(cmd.idGenerator.generatedIDs) > 0 {
+	if len(cmd.idGeneratorReporter.generatedIDs) > 0 {
 		body.WriteString(`,"NewIDs":{`)
-		for rawID, generatedID := range cmd.idGenerator.generatedIDs {
+		for rawID, generatedID := range cmd.idGeneratorReporter.generatedIDs {
 			fmt.Fprintf(body, `"%d":%d,`, rawID, generatedID)
 		}
 		body.Truncate(body.Len() - 1)
 		body.WriteString("}")
 		if logger.IsVerbose() {
-			logger.Verbose("generated IDs:", cmd.idGenerator.generatedIDs)
+			logger.Verbose("generated IDs:", cmd.idGeneratorReporter.generatedIDs)
 		}
 	}
 	if cmd.cmdResult != nil {
@@ -840,8 +839,8 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 	bus.ReplyJSON(cmd.cmdMes.Responder(), cmd.statusCodeOfSuccess, body.String())
 }
 
-func (idGen *implIDGenerator) NextID(rawID istructs.RecordID, t appdef.IType) (storageID istructs.RecordID, err error) {
-	storageID, err = idGen.IIDGenerator.NextID(rawID, t)
+func (idGen *implIDGeneratorReporter) NextID(rawID istructs.RecordID) (storageID istructs.RecordID, err error) {
+	storageID, err = idGen.IIDGenerator.NextID(rawID)
 	idGen.generatedIDs[rawID] = storageID
 	return
 }

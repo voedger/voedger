@@ -27,7 +27,7 @@ func TestSeqStorage(t *testing.T) {
 	// Base test data
 	baseAppID := istructs.ClusterApps[istructs.AppQName_test1_app1]
 	baseWsid := isequencer.WSID(1)
-	baseSeqID := isequencer.SeqID(istructs.QNameIDCRecordIDSequence)
+	baseSeqID := isequencer.SeqID(istructs.QNameIDRecordIDSequence)
 
 	tests := []struct {
 		name  string
@@ -61,7 +61,7 @@ func TestSeqStorage(t *testing.T) {
 			name:  "different seqID",
 			appID: baseAppID,
 			wsid:  baseWsid,
-			seqID: isequencer.SeqID(istructs.QNameIDCRecordIDSequence + 1),
+			seqID: isequencer.SeqID(istructs.QNameIDRecordIDSequence + 1),
 			num:   45,
 		},
 	}
@@ -112,7 +112,7 @@ func TestSeqStorage(t *testing.T) {
 	t.Run("overwrite value", func(t *testing.T) {
 		baseAppID := istructs.ClusterApps[istructs.AppQName_test1_app2]
 		baseWsid := isequencer.WSID(10)
-		baseSeqID := isequencer.SeqID(istructs.QNameIDCRecordIDSequence)
+		baseSeqID := isequencer.SeqID(istructs.QNameIDRecordIDSequence)
 		num1 := isequencer.Number(42)
 		num2 := isequencer.Number(43)
 

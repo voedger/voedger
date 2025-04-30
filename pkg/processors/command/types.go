@@ -72,7 +72,7 @@ type cmdWorkpiece struct {
 	pLogEvent                    istructs.IPLogEvent
 	appPartition                 *appPartition
 	workspace                    *workspace
-	idGenerator                  *implIDGenerator
+	idGeneratorReporter          *implIDGeneratorReporter
 	eca                          istructs.ExecCommandArgs
 	metrics                      commandProcessorMetrics
 	syncProjectorsStart          time.Time
@@ -93,7 +93,7 @@ type cmdWorkpiece struct {
 	reapplier                    istructs.IEventReapplier
 }
 
-type implIDGenerator struct {
+type implIDGeneratorReporter struct {
 	istructs.IIDGenerator
 	generatedIDs map[istructs.RecordID]istructs.RecordID
 }

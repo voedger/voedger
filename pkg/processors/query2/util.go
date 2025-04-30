@@ -80,7 +80,7 @@ type queryWork struct {
 	callbackFunc         istructs.ExecQueryCallback
 	responseWriterGetter func() bus.IResponseWriter
 	apiPathHandler       apiPathHandler
-	federation           federation.IFederation
+	federation           federation.IFederationForQP
 }
 
 var _ pipeline.IWorkpiece = (*queryWork)(nil) // ensure that queryWork implements pipeline.IWorkpiece
@@ -103,7 +103,7 @@ func (qw *queryWork) borrow() (err error) {
 }
 
 func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
-	maxPrepareQueries int, metrics *queryProcessorMetrics, secretReader isecrets.ISecretReader, federation federation.IFederation) *queryWork {
+	maxPrepareQueries int, metrics *queryProcessorMetrics, secretReader isecrets.ISecretReader, federation federation.IFederationForQP) *queryWork {
 	return &queryWork{
 		msg:                msg,
 		appParts:           appParts,

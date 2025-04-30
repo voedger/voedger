@@ -105,7 +105,7 @@ func (gts *generalTestState) stateSingletonRecord(fQName IFullQName, keyValueLis
 		panic("use Record method for non-singleton entities")
 	}
 
-	gts.record(fQName, istructs.MinReservedBaseRecordID, isSingleton, keyValueList...)
+	gts.record(fQName, istructs.MinReservedRecordID, isSingleton, keyValueList...)
 }
 
 func (gts *generalTestState) getQNameFromFQName(fQName IFullQName) appdef.QName {

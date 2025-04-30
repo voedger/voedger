@@ -52,7 +52,7 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 
 	s.registerRouterCheckerHandler()
 
-	s.registerHandlers_V1()
+	s.registerHandlersV1()
 
 	s.registerHandlersV2()
 
@@ -155,7 +155,7 @@ func (s *httpService) registerRouterCheckerHandler() {
 	s.router.HandleFunc("/api/check", corsHandler(checkHandler())).Methods("POST", "GET", "OPTIONS").Name("router check")
 }
 
-func (s *httpService) registerHandlers_V1() {
+func (s *httpService) registerHandlersV1() {
 	/*
 		launching app from localhost from browser. Trying to execute POST from web app within browser.
 		Browser sees that hosts differs: from localhost to alpha -> need CORS -> denies POST and executes the same request with OPTIONS header

@@ -129,26 +129,20 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 
 	t.Run("II. Save raw event to PLog & WLog and save Docs and CUDs demo", func(t *testing.T) {
 		// 1. save to PLog
-		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
+		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID) error {
 			require.True(rawID.IsRaw())
 			switch rawID {
 			case test.tempPhotoID:
-				require.Equal(test.tablePhotos, t.QName())
 				photoID = storageID
 			case test.tempRemarkID:
-				require.Equal(test.tablePhotoRems, t.QName())
 				remarkID = storageID
 			case test.tempSaleID:
-				require.Equal(test.saleCmdDocName, t.QName())
 				saleID = storageID
 			case test.tempBasketID:
-				require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), t.QName())
 				basketID = storageID
 			case test.tempGoodsID[0]:
-				require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), t.QName())
 				goodsID[0] = storageID
 			case test.tempGoodsID[1]:
-				require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), t.QName())
 				goodsID[1] = storageID
 			}
 			return nil
@@ -780,10 +774,8 @@ func Test_EventUpdateRawCud(t *testing.T) {
 
 	ws := istructs.WSID(1)
 
-	expectedQName := docName
-	idGenerator := NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
+	idGenerator := NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID) error {
 		require.EqualValues(1, rawID)
-		require.EqualValues(expectedQName, t.QName())
 		return nil
 	})
 
@@ -792,7 +784,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 		app, err := provider.BuiltIn(appName)
 		require.NoError(err)
 
-		docID := istructs.NewCDocCRecordID(istructs.FirstBaseRecordID + istructs.RecordID(test))
+		docID := istructs.FirstUserRecordID + istructs.RecordID(test)
 
 		t.Run("should be ok to create CDoc", func(t *testing.T) {
 			bld := app.Events().GetNewRawEventBuilder(
@@ -816,7 +808,6 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			require.NoError(err)
 			require.NotNil(rawEvent)
 
-			expectedQName = docName
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, idGenerator)
 			require.NotNil(pLogEvent)
 			require.NoError(saveErr)
@@ -869,7 +860,6 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			require.NoError(err)
 			require.NotNil(rawEvent)
 
-			expectedQName = recName
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, idGenerator)
 			require.NotNil(pLogEvent)
 			require.NoError(saveErr)
@@ -977,7 +967,7 @@ func Test_UpdateCorrupted(t *testing.T) {
 		require.NoError(err)
 		require.NotNil(rawEvent)
 
-		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
+		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID) error {
 			return errors.New("unexpected call ID generator from singleton CDoc creation")
 		}))
 		require.NotNil(pLogEvent)
@@ -1028,7 +1018,7 @@ func Test_UpdateCorrupted(t *testing.T) {
 		require.NoError(err)
 		require.NotNil(rawEvent)
 
-		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
+		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID) error {
 			return errors.New("unexpected call ID generator from update corrupted event")
 		}))
 		require.NotNil(pLogEvent)
@@ -1111,7 +1101,7 @@ func Test_BuildPLogEvent(t *testing.T) {
 		require.NoError(err)
 		require.NotNil(rawEvent)
 
-		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
+		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID) error {
 			return errors.New("unexpected call ID generator from singleton CDoc creation")
 		}))
 		require.NotNil(pLogEvent)
@@ -1323,7 +1313,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 		require.NoError(err)
 		require.NotNil(rawEvent)
 
-		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
+		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID) error {
 			return errors.New("unexpected call ID generator from singleton CDoc creation")
 		}))
 		require.NotNil(pLogEvent)
@@ -1390,7 +1380,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 		require.NotNil(rawEvent)
 		require.Error(buildErr, require.Is(ErrRecordIDUniqueViolationError), require.Has(cud))
 
-		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
+		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID) error {
 			return errors.New("unexpected call ID generator from singleton CDoc creation")
 		}))
 		require.NotNil(pLogEvent)
@@ -1454,7 +1444,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 		require.NoError(err)
 		require.NotNil(rawEvent)
 
-		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
+		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID) error {
 			return errors.New("unexpected call ID generator while singleton CDoc update")
 		}))
 		require.NotNil(pLogEvent)
@@ -1748,9 +1738,8 @@ func TestEventBuild_Error(t *testing.T) {
 			require.NoError(buildErr)
 			require.NotNil(rawEvent)
 
-			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
+			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID) error {
 				if rawID == test.tempBasketID {
-					require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), t.QName())
 					return ErrWrongRecordID("test error")
 				}
 				return nil
@@ -1780,9 +1769,8 @@ func TestEventBuild_Error(t *testing.T) {
 			require.NoError(buildErr)
 			require.NotNil(rawEvent)
 
-			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
+			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID) error {
 				if rawID == 7 {
-					require.Equal(test.tablePhotoRems, t.QName())
 					return ErrWrongRecordID("test error")
 				}
 				return nil
