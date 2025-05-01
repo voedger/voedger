@@ -2104,6 +2104,8 @@ func TestOpenAPI(t *testing.T) {
 	defer vit.TearDown()
 	require := require.New(t)
 	appDef, err := vit.AppDef(istructs.AppQName_test1_app1)
+	require.NoError(err)
+
 	ws := appDef.Workspace(appdef.NewQName("app1pkg", "test_wsWS"))
 	require.NotNil(ws)
 	require.NoError(err)

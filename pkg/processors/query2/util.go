@@ -102,6 +102,15 @@ func (qw *queryWork) borrow() (err error) {
 	return nil
 }
 
+func (qw *queryWork) isDeveloper() bool {
+	for _, principal := range qw.principals {
+		if principal.Kind == iauthnz.PrincipalKind_Role && principal.QName == appdef.QNameRoleDeveloper {
+			return true
+		}
+	}
+	return false
+}
+
 func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
 	maxPrepareQueries int, metrics *queryProcessorMetrics, secretReader isecrets.ISecretReader, federation federation.IFederationForQP) *queryWork {
 	return &queryWork{

@@ -39,6 +39,8 @@ var QNameANY = NewQName(SysPackage, AnyName)
 // QNameRoleSystem is role for system.
 var QNameRoleSystem = NewQName(SysPackage, "System")
 
+var QNameRoleDeveloper = NewQName(SysPackage, "Developer")
+
 const (
 	// System application owner name
 	SysOwner = "sys"
