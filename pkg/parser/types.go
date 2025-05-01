@@ -331,6 +331,8 @@ type VoidOrDef struct {
 type DataType struct {
 	Varchar   *TypeVarchar `parser:"( @@"`
 	Bytes     *TypeBytes   `parser:"| @@"`
+	Int8      bool         `parser:"| @('tinyint' | 'int8')"`
+	Int16     bool         `parser:"| @('smallint' | 'int16')"`
 	Int32     bool         `parser:"| @('integer' | 'int' | 'int32')"`
 	Int64     bool         `parser:"| @('bigint' | 'int64')"`
 	Float32   bool         `parser:"| @('real' | 'float' | 'float32')"`
@@ -348,6 +350,10 @@ func (q DataType) String() (s string) {
 			return fmt.Sprintf("varchar[%d]", *q.Varchar.MaxLen)
 		}
 		return fmt.Sprintf("varchar[%d]", appdef.DefaultFieldMaxLength)
+	} else if q.Int8 {
+		return "int8"
+	} else if q.Int16 {
+		return "int16"
 	} else if q.Int32 {
 		return "int32"
 	} else if q.Int64 {
