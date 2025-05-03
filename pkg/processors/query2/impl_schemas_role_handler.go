@@ -39,15 +39,20 @@ func schemasRoleExec(ctx context.Context, qw *queryWork) (err error) {
 		return coreutils.NewHTTPErrorf(http.StatusNotFound, fmt.Errorf("workspace %s not found", wsQname.String()))
 	}
 
-	role := workspace.Type(qw.msg.QName())
-	if role == nil || role.Kind() != appdef.TypeKind_Role {
+	typ := workspace.Type(qw.msg.QName())
+	if typ == nil || typ.Kind() != appdef.TypeKind_Role {
 		return coreutils.NewHTTPErrorf(http.StatusNotFound, fmt.Errorf("role %s not found in workspace %s", qw.msg.QName().String(), wsQname.String()))
+	}
+	role := typ.(appdef.IRole)
+
+	if !qw.isDeveloper() && !role.Published() {
+		return coreutils.NewHTTPErrorf(http.StatusForbidden, fmt.Errorf("role %s is not published", role.QName().String()))
 	}
 
 	schemaMeta := SchemaMeta{
-		SchemaTitle:   fmt.Sprintf("%s: %s OpenAPI 3.0", qw.msg.AppQName().Name(), role.QName().Entity()),
+		SchemaTitle:   fmt.Sprintf("%s: %s OpenAPI 3.0", qw.msg.AppQName().Name(), typ.QName().Entity()),
 		SchemaVersion: "1.0.0", // TODO: get app name and version from appdef
-		Description:   role.Comment(),
+		Description:   typ.Comment(),
 		AppName:       qw.msg.AppQName(),
 	}
 

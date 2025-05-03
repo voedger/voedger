@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sort"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
@@ -30,28 +31,55 @@ func schemasRolesExec(ctx context.Context, qw *queryWork) (err error) {
 		return coreutils.NewHTTPErrorf(http.StatusNotFound, fmt.Errorf("workspace %s not found", wsQname.String()))
 	}
 
-	generatedHTML := fmt.Sprintf("<html><head><title>App %s: workspace %s published roles</title></head><body>", qw.msg.AppQName().String(), wsQname.String())
-	generatedHTML += fmt.Sprintf("<h1>App %s</h1><h2>Workspace %s published roles</h2>", qw.msg.AppQName().String(), wsQname.String())
-	roles := make([]appdef.IRole, 0)
+	developer := qw.isDeveloper()
+	rolesTitle := "roles"
+	if !developer {
+		rolesTitle = "published roles"
+	}
+
+	generatedHTML := fmt.Sprintf("<html><head><title>App %s: workspace %s %s</title></head><body>", qw.msg.AppQName().String(), wsQname.String(), rolesTitle)
+	generatedHTML += fmt.Sprintf("<h1>App %s</h1><h2>Workspace %s %s</h2>", qw.msg.AppQName().String(), wsQname.String(), rolesTitle)
+	packages := make(map[string][]appdef.IRole)
 	for _, typ := range workspace.Types() {
 		if typ.Kind() == appdef.TypeKind_Role {
 			role := typ.(appdef.IRole)
-			if role.Published() {
+			if role.Published() || developer {
+				pkgName := role.QName().Pkg()
+				roles := packages[pkgName]
+				if roles == nil {
+					roles = make([]appdef.IRole, 0)
+				}
 				roles = append(roles, role)
-				break
+				packages[pkgName] = roles
 			}
 		}
 	}
 
-	if len(roles) == 0 {
-		generatedHTML += "<p>No published roles</p>"
+	if len(packages) == 0 {
+		generatedHTML += fmt.Sprintf("<p>No %s</p>", rolesTitle)
 	} else {
-		generatedHTML += "<ul>"
-		for _, role := range roles {
-			ref := fmt.Sprintf("/api/v2/apps/%s/%s/schemas/%s/roles/%s", qw.msg.AppQName().Owner(), qw.msg.AppQName().Name(), workspace.QName().String(), role.QName().String())
-			generatedHTML += fmt.Sprintf(`<li><a href="%s">%s</a></li>`, ref, role.QName().String())
+		// Sort packages alphabetically
+		pkgNames := make([]string, 0, len(packages))
+		for pkg := range packages {
+			pkgNames = append(pkgNames, pkg)
 		}
-		generatedHTML += "</ul>"
+		sort.Strings(pkgNames)
+
+		for _, pkg := range pkgNames {
+			roles := packages[pkg]
+			// Sort roles alphabetically
+			sort.Slice(roles, func(i, j int) bool {
+				return roles[i].QName().String() < roles[j].QName().String()
+			})
+
+			generatedHTML += fmt.Sprintf("<h2>Package %s</h2>", pkg)
+			generatedHTML += "<ul>"
+			for _, role := range roles {
+				ref := fmt.Sprintf("/api/v2/apps/%s/%s/schemas/%s/roles/%s", qw.msg.AppQName().Owner(), qw.msg.AppQName().Name(), workspace.QName().String(), role.QName().String())
+				generatedHTML += fmt.Sprintf(`<li><a href="%s">%s</a></li>`, ref, role.QName().String())
+			}
+			generatedHTML += "</ul>"
+		}
 	}
 	generatedHTML += "</body></html>"
 

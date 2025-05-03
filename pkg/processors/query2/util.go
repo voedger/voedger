@@ -102,6 +102,15 @@ func (qw *queryWork) borrow() (err error) {
 	return nil
 }
 
+func (qw *queryWork) isDeveloper() bool {
+	for _, role := range qw.principalPayload.Roles {
+		if role.QName == appdef.QNameRoleDeveloper {
+			return true
+		}
+	}
+	return false
+}
+
 func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
 	maxPrepareQueries int, metrics *queryProcessorMetrics, secretReader isecrets.ISecretReader, federation federation.IFederationForQP) *queryWork {
 	return &queryWork{
