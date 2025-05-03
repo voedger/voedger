@@ -103,8 +103,8 @@ func (qw *queryWork) borrow() (err error) {
 }
 
 func (qw *queryWork) isDeveloper() bool {
-	for _, principal := range qw.principals {
-		if principal.Kind == iauthnz.PrincipalKind_Role && principal.QName == appdef.QNameRoleDeveloper {
+	for _, role := range qw.principalPayload.Roles {
+		if role.QName == appdef.QNameRoleDeveloper {
 			return true
 		}
 	}

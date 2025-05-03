@@ -51,7 +51,6 @@ func schemasRolesExec(ctx context.Context, qw *queryWork) (err error) {
 				}
 				roles = append(roles, role)
 				packages[pkgName] = roles
-				break
 			}
 		}
 	}

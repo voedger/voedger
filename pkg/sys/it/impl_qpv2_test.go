@@ -2008,10 +2008,28 @@ func TestQueryProcessor2_Schemas(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	//	fmt.Printf("Port: %d\n", vit.Port())
+
 	t.Run("read app schema", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(`api/v2/apps/test1/app1/schemas`)
 		require.NoError(err)
-		require.Equal(`<html><head><title>App test1/app1 schema</title></head><body><h1>App test1/app1 schema</h1><ul><li><a href="/api/v2/apps/test1/app1/schemas/app1pkg.test_wsWS/roles">app1pkg.test_wsWS</a></li></ul></body></html>`, resp.Body)
+		require.Equal(`<html><head><title>App test1/app1 schema</title></head><body><h1>App test1/app1 schema</h1><h2>Package app1pkg</h2><ul><li><a href="/api/v2/apps/test1/app1/schemas/app1pkg.test_wsWS/roles">app1pkg.test_wsWS</a></li></ul></body></html>`, resp.Body)
+	})
+
+	t.Run("read app schema as a sys.Developer", func(t *testing.T) {
+		// Generate sys.Developer token
+		pp := payloads.PrincipalPayload{
+			Login:       "Login",
+			SubjectKind: istructs.SubjectKind_User,
+			ProfileWSID: 1,
+			Roles:       []payloads.RoleType{{WSID: 1, QName: appdef.QNameRoleDeveloper}},
+		}
+		tokenDeveloper, err := vit.IssueToken(istructs.AppQName_test1_app1, 100*time.Minute, &pp)
+		require.NoError(err)
+		// fmt.Printf("Developer token: %s\n", tokenDeveloper)
+
+		resp, err := vit.IFederation.Query(`api/v2/apps/test1/app1/schemas`, coreutils.WithAuthorizeBy(tokenDeveloper))
+		require.NoError(err)
+		require.Contains(resp.Body, `<h2>Package sys</h2>`)
 	})
 }
 
@@ -2025,7 +2043,31 @@ func TestQueryProcessor2_SchemasRoles(t *testing.T) {
 	t.Run("read app workspace roles", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(`api/v2/apps/test1/app1/schemas/app1pkg.test_wsWS/roles`)
 		require.NoError(err)
-		require.Equal(`<html><head><title>App test1/app1: workspace app1pkg.test_wsWS published roles</title></head><body><h1>App test1/app1</h1><h2>Workspace app1pkg.test_wsWS published roles</h2><ul><li><a href="/api/v2/apps/test1/app1/schemas/app1pkg.test_wsWS/roles/app1pkg.ApiRole">app1pkg.ApiRole</a></li></ul></body></html>`, resp.Body)
+		require.Equal(`<html><head><title>App test1/app1: workspace app1pkg.test_wsWS published roles</title></head><body><h1>App test1/app1</h1><h2>Workspace app1pkg.test_wsWS published roles</h2><h2>Package app1pkg</h2><ul><li><a href="/api/v2/apps/test1/app1/schemas/app1pkg.test_wsWS/roles/app1pkg.ApiRole">app1pkg.ApiRole</a></li></ul></body></html>`, resp.Body)
+	})
+
+	t.Run("read app workspace roles as a sys.Developer", func(t *testing.T) {
+		// Generate sys.Developer token
+		pp := payloads.PrincipalPayload{
+			Login:       "Login",
+			SubjectKind: istructs.SubjectKind_User,
+			ProfileWSID: 1,
+			Roles:       []payloads.RoleType{{WSID: 1, QName: appdef.QNameRoleDeveloper}},
+		}
+		tokenDeveloper, err := vit.IssueToken(istructs.AppQName_test1_app1, 100*time.Minute, &pp)
+		require.NoError(err)
+		// fmt.Printf("Developer token: %s\n", tokenDeveloper)
+
+		resp, err := vit.IFederation.Query(`api/v2/apps/test1/app1/schemas/app1pkg.test_wsWS/roles`, coreutils.WithAuthorizeBy(tokenDeveloper))
+		require.NoError(err)
+		require.Contains(resp.Body, `<h2>Package sys</h2>`)
+		require.Contains(resp.Body, `sys.WorkspaceOwner`)
+	})
+
+	t.Run("read workspace with no published roles", func(t *testing.T) {
+		resp, err := vit.IFederation.Query(`api/v2/apps/test1/app1/schemas/sys.Workspace/roles`)
+		require.NoError(err)
+		require.Contains(resp.Body, `No published roles`)
 	})
 
 	t.Run("unknown ws", func(t *testing.T) {
@@ -2040,11 +2082,38 @@ func TestQueryProcessor2_SchemasWorkspaceRole(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
+
+	currencyPath := "/apps/test1/app1/workspaces/{wsid}/docs/app1pkg.Currency"
+	initiateJoinWorkspacePath := "/apps/test1/app1/workspaces/{wsid}/commands/sys.InitiateJoinWorkspace"
+
 	t.Run("read app workspace role in JSON", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(`api/v2/apps/test1/app1/schemas/app1pkg.test_wsWS/roles/app1pkg.ApiRole`,
 			coreutils.WithHeaders("Accept", "application/json"))
 		require.NoError(err)
 		require.True(strings.HasPrefix(resp.Body, `{`))
+		require.Contains(resp.Body, currencyPath)
+		require.NotContains(resp.Body, initiateJoinWorkspacePath)
+	})
+	t.Run("read app workspace role as sys.Developer", func(t *testing.T) {
+		// Generate sys.Developer token
+		pp := payloads.PrincipalPayload{
+			Login:       "Login",
+			SubjectKind: istructs.SubjectKind_User,
+			ProfileWSID: 1,
+			Roles:       []payloads.RoleType{{WSID: 1, QName: appdef.QNameRoleDeveloper}},
+		}
+		tokenDeveloper, err := vit.IssueToken(istructs.AppQName_test1_app1, 100*time.Minute, &pp)
+		require.NoError(err)
+		resp, err := vit.IFederation.Query(`api/v2/apps/test1/app1/schemas/sys.Workspace/roles/sys.AuthenticatedUser`,
+			coreutils.WithHeaders("Accept", "application/json"), coreutils.WithAuthorizeBy(tokenDeveloper))
+		require.NoError(err)
+		require.True(strings.HasPrefix(resp.Body, `{`))
+		require.NotContains(resp.Body, currencyPath)
+		require.Contains(resp.Body, initiateJoinWorkspacePath)
+	})
+	t.Run("not allowed to read system role with no Developer token", func(t *testing.T) {
+		vit.IFederation.Query(`api/v2/apps/test1/app1/schemas/sys.Workspace/roles/sys.AuthenticatedUser`,
+			coreutils.WithHeaders("Accept", "application/json"), coreutils.Expect403())
 	})
 	t.Run("read app workspace role in HTML", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(`api/v2/apps/test1/app1/schemas/app1pkg.test_wsWS/roles/app1pkg.ApiRole`,
@@ -2106,31 +2175,39 @@ func TestOpenAPI(t *testing.T) {
 	appDef, err := vit.AppDef(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
-	ws := appDef.Workspace(appdef.NewQName("app1pkg", "test_wsWS"))
-	require.NotNil(ws)
-	require.NoError(err)
-
-	writer := new(bytes.Buffer)
-
 	schemaMeta := query2.SchemaMeta{
 		SchemaTitle:   "Test Schema",
 		SchemaVersion: "1.0.0",
 		AppName:       appdef.NewAppQName("voedger", "testapp"),
 	}
 
-	err = query2.CreateOpenAPISchema(writer, ws, appdef.NewQName("app1pkg", "ApiRole"), acl.PublishedTypes, schemaMeta)
+	createOpenApi := func(wsName, role appdef.QName) string {
+		writer := new(bytes.Buffer)
+		ws := appDef.Workspace(wsName)
+		require.NotNil(ws)
+		err = query2.CreateOpenAPISchema(writer, ws, role, acl.PublishedTypes, schemaMeta)
+		require.NoError(err)
+		json := writer.String()
+		//save to file
+		// err = os.WriteFile(fmt.Sprintf("%s.json", role.String()), []byte(json), 0644)
+		// require.NoError(err)
+		return json
+	}
 
-	require.NoError(err)
-
-	json := writer.String()
+	currencyPath := "/apps/voedger/testapp/workspaces/{wsid}/docs/app1pkg.Currency"
+	initiateJoinWorkspacePath := "/apps/voedger/testapp/workspaces/{wsid}/commands/sys.InitiateJoinWorkspace"
+	json := createOpenApi(appdef.NewQName("app1pkg", "test_wsWS"), appdef.NewQName("app1pkg", "ApiRole"))
 	require.Contains(json, "\"components\": {")
 	require.Contains(json, "\"app1pkg.Currency\": {")
 	require.Contains(json, "\"paths\": {")
-	require.Contains(json, "/apps/voedger/testapp/workspaces/{wsid}/docs/app1pkg.Currency")
+	require.Contains(json, currencyPath)
+	require.NotContains(json, initiateJoinWorkspacePath)
 
-	//save to file
-	// err = os.WriteFile("openapi.json", []byte(json), 0644)
-	// require.NoError(err)
+	json = createOpenApi(appdef.NewQName("sys", "Workspace"), appdef.NewQName("sys", "AuthenticatedUser"))
+	require.Contains(json, "\"components\": {")
+	require.Contains(json, initiateJoinWorkspacePath)
+	require.NotContains(json, currencyPath)
+
 }
 
 // [~server.apiv2.docs/it.TestQueryProcessor2_CDocs~impl]
