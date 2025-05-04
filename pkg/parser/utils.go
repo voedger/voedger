@@ -376,6 +376,13 @@ func dataTypeToDataKind(t DataType) appdef.DataKind {
 	if t.Float64 {
 		return appdef.DataKind_float64
 	}
+	// [~server.vsql.smallints/cmp.Parser~impl]
+	if t.Int8 {
+		return appdef.DataKind_int8
+	}
+	if t.Int16 {
+		return appdef.DataKind_int16
+	}
 	if t.Int32 {
 		return appdef.DataKind_int32
 	}

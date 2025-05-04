@@ -737,7 +737,7 @@ func (g *schemaGenerator) generateRequestBody(typ appdef.IType, op appdef.Operat
 		unloggedParam := cmd.UnloggedParam()
 		properties := make(map[string]interface{})
 
-		if _, ok := param.(appdef.IODoc); !ok {
+		if _, ok := param.(appdef.IODoc); !ok && param != nil {
 			properties["args"] = map[string]interface{}{
 				schemaKeyRef: g.schemaRef(param, op),
 			}
