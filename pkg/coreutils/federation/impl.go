@@ -60,8 +60,11 @@ func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs
 	if ok {
 		ttl = "&ttl=" + ttl
 	}
-	uploadBLOBURL := fmt.Sprintf("blob/%s/%d?name=%s&mimeType=%s%s", appQName.String(), wsid,
-		url.QueryEscape(blobReader.Name), url.QueryEscape(blobReader.MimeType), ttl)
+	uploadBLOBURL := fmt.Sprintf("api/v2/apps/%s/%s/workspaces/%d/blobs", appQName.Owner(), appQName.Name(), wsid)
+	optFuncs = append(optFuncs, coreutils.WithHeaders(
+		"Blob-Name", blobReader.Name,
+		coreutils.ContentType, blobReader.MimeType,
+	))
 	resp, err := f.postReader(uploadBLOBURL, blobReader, optFuncs...)
 	if err != nil {
 		return "", err

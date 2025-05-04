@@ -8,14 +8,16 @@ package blobprocessor
 import (
 	"context"
 
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
-func ProvideService(serviceChannel BLOBServiceChannel, blobStorage iblobstorage.IBLOBStorage, wLimiterFactory WLimiterFactory) pipeline.IService {
+func ProvideService(serviceChannel BLOBServiceChannel, blobStorage iblobstorage.IBLOBStorage, wLimiterFactory WLimiterFactory,
+	federation federation.IFederation) pipeline.IService {
 	return pipeline.NewService(func(vvmCtx context.Context) {
-		pipeline := providePipeline(vvmCtx, blobStorage, wLimiterFactory)
+		pipeline := providePipeline(vvmCtx, blobStorage, wLimiterFactory, federation)
 		for vvmCtx.Err() == nil {
 			select {
 			case workIntf := <-serviceChannel:

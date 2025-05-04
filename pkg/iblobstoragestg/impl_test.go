@@ -39,7 +39,7 @@ func TestBasicUsage(t *testing.T) {
 		}
 		testBasicUsage(t, func() iblobstorage.IBLOBKey {
 			return &key
-		}, func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, _ iblobstorage.DurationType) error {
+		}, func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, _ iblobstorage.DurationType) (uploadedSize uint64, err error) {
 			ctx := context.Background()
 			return blobber.WriteBLOB(ctx, key, desc, reader, NewWLimiter_Size(maxSize))
 		}, 0)
@@ -54,7 +54,7 @@ func TestBasicUsage(t *testing.T) {
 		}
 		blobStorage := testBasicUsage(t, func() iblobstorage.IBLOBKey {
 			return &key
-		}, func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, duration iblobstorage.DurationType) error {
+		}, func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, duration iblobstorage.DurationType) (uploadedSize uint64, err error) {
 			ctx := context.Background()
 			return blobber.WriteTempBLOB(ctx, key, desc, reader, NewWLimiter_Size(maxSize), duration)
 		}, iblobstorage.DurationType_1Day)
@@ -76,7 +76,7 @@ func TestBasicUsage(t *testing.T) {
 }
 
 func testBasicUsage(t *testing.T, keyGetter func() iblobstorage.IBLOBKey,
-	blobWriter func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, duration iblobstorage.DurationType) error,
+	blobWriter func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, duration iblobstorage.DurationType) (uploadedSize uint64, err error),
 	duration iblobstorage.DurationType) iblobstorage.IBLOBStorage {
 	desc := iblobstorage.DescrType{
 		Name:     "logo.png",
@@ -110,8 +110,9 @@ func testBasicUsage(t *testing.T, keyGetter func() iblobstorage.IBLOBKey,
 	})
 
 	t.Run("Write blob to storage, return must be without errors", func(t *testing.T) {
-		err := blobWriter(blobber, desc, reader, duration)
+		size, err := blobWriter(blobber, desc, reader, duration)
 		require.NoError(err)
+		require.Equal(len(blob), size)
 	})
 
 	t.Run("Read blob status, return must be without errors", func(t *testing.T) {
@@ -187,8 +188,9 @@ func TestFewBucketsBLOB(t *testing.T) {
 
 	// write the blob
 	reader := bytes.NewReader(bigBLOB)
-	err = blobber.WriteBLOB(ctx, key, desc, reader, NewWLimiter_Size(iblobstorage.BLOBMaxSizeType(len(bigBLOB))))
+	size, err := blobber.WriteBLOB(ctx, key, desc, reader, NewWLimiter_Size(iblobstorage.BLOBMaxSizeType(len(bigBLOB))))
 	require.NoError(err)
+	require.Equal(len(bigBLOB), size)
 
 	var buf bytes.Buffer
 	writer := bufio.NewWriter(&buf)
@@ -228,7 +230,7 @@ func TestQuotaExceed(t *testing.T) {
 	ctx := context.Background()
 	// Quota (maxSize -1 = 19265) assigned to reader less then filesize logo.png (maxSize)
 	// So, it must be error
-	err = blobber.WriteBLOB(ctx, key, desc, reader, NewWLimiter_Size(maxSize-1))
+	_, err = blobber.WriteBLOB(ctx, key, desc, reader, NewWLimiter_Size(maxSize-1))
 	require.Error(err, "Reading a file larger than the quota assigned to the reader. It must be a error.")
 }
 

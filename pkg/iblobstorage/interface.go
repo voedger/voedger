@@ -20,11 +20,11 @@ type IBLOBKey interface {
 
 type IBLOBStorage interface {
 	// Errors: ErrBLOBSizeQuotaExceeded
-	WriteBLOB(ctx context.Context, key PersistentBLOBKeyType, descr DescrType, reader io.Reader, limiter WLimiterType) (err error)
+	WriteBLOB(ctx context.Context, key PersistentBLOBKeyType, descr DescrType, reader io.Reader, limiter WLimiterType) (uploadedSize uint64, err error)
 
 	// blob TTL is 2^duration hours
 	// Errors: ErrBLOBSizeQuotaExceeded
-	WriteTempBLOB(ctx context.Context, key TempBLOBKeyType, descr DescrType, reader io.Reader, limiter WLimiterType, duration DurationType) (err error)
+	WriteTempBLOB(ctx context.Context, key TempBLOBKeyType, descr DescrType, reader io.Reader, limiter WLimiterType, duration DurationType) (uploadedSize uint64, err error)
 
 	// Function calls stateCallback then writer
 	// stateCallback can be nil

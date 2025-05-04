@@ -62,10 +62,10 @@ func provideWriteBLOB(blobStorage iblobstorage.IBLOBStorage, wLimiterFactory WLi
 		wLimiter := wLimiterFactory()
 		if bw.isPersistent() {
 			key := (bw.blobKey).(*iblobstorage.PersistentBLOBKeyType)
-			err = blobStorage.WriteBLOB(bw.blobMessageWrite.requestCtx, *key, bw.descr, bw.blobMessageWrite.reader, wLimiter)
+			bw.uploadedSize, err = blobStorage.WriteBLOB(bw.blobMessageWrite.requestCtx, *key, bw.descr, bw.blobMessageWrite.reader, wLimiter)
 		} else {
 			key := (bw.blobKey).(*iblobstorage.TempBLOBKeyType)
-			err = blobStorage.WriteTempBLOB(ctx, *key, bw.descr, bw.blobMessageWrite.reader, wLimiter, bw.duration)
+			bw.uploadedSize, err = blobStorage.WriteTempBLOB(ctx, *key, bw.descr, bw.blobMessageWrite.reader, wLimiter, bw.duration)
 		}
 		if errors.Is(err, iblobstorage.ErrBLOBSizeQuotaExceeded) {
 			return coreutils.NewHTTPError(http.StatusForbidden, err)
@@ -206,6 +206,28 @@ func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 	return nil
 }
 
+func replySuccess_V1(bw *blobWorkpiece) {
+	writer := bw.blobMessageWrite.okResponseIniter(coreutils.ContentType, "text/plain")
+	if bw.isPersistent() {
+		_, _ = writer.Write([]byte(utils.UintToString(bw.newBLOBID)))
+	} else {
+		_, _ = writer.Write([]byte(bw.newSUUID))
+	}
+}
+
+func replySuccess_V2(bw *blobWorkpiece, federation federation.IFederation) {
+	writer := bw.blobMessageWrite.okResponseIniter(coreutils.ContentType, coreutils.ContentType_ApplicationJSON)
+	blobID := ""
+	if len(bw.newSUUID) > 0 {
+		blobID = string(bw.newSUUID)
+	} else {
+		blobID = utils.UintToString(bw.newBLOBID)
+	}
+	fmt.Fprintf(writer, `{"BlobID": "%s","ContentType": "%s","Size": %d,"URL": "%s/api/v2/apps/%s/%s/workspaces/%d/blobs/%s"}`,
+		blobID, bw.descr.MimeType, bw.uploadedSize, federation.URLStr(), bw.blobMessageWrite.appQName.Owner(),
+		bw.blobMessageWrite.appQName.Name(), bw.blobMessageWrite.wsid, bw.newSUUID)
+}
+
 func (b *sendWriteResult) DoSync(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
 	if bw.resultErr == nil {
@@ -216,11 +238,10 @@ func (b *sendWriteResult) DoSync(_ context.Context, work pipeline.IWorkpiece) (e
 			}
 			logger.Verbose("blob write success:", bw.nameQuery, ":", blobIDStr)
 		}
-		writer := bw.blobMessageWrite.okResponseIniter(coreutils.ContentType, "text/plain")
-		if bw.isPersistent() {
-			_, _ = writer.Write([]byte(utils.UintToString(bw.newBLOBID)))
+		if bw.blobMessageWrite.isAPIv2 {
+			replySuccess_V2(bw, b.federation)
 		} else {
-			_, _ = writer.Write([]byte(bw.newSUUID))
+			replySuccess_V1(bw)
 		}
 		return nil
 	}

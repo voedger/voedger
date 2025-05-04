@@ -66,10 +66,10 @@ func (s *httpService) registerHandlersV2() {
 		Methods(http.MethodGet).Name("view")
 
 	// blobs: create /api/v2/apps/{owner}/{app}/workspaces/{wsid}/blobs
-	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s:[0-9]+}/blobs",
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/blobs",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid),
-		corsHandler(requestHandlerV2_blobs())).
-		Methods(http.MethodPost).Name("blobs read")
+		corsHandler(requestHandlerV2_blobs_create(s.blobRequestHandler, s.requestSender))).
+		Methods(http.MethodPost).Name("blobs create")
 
 	// blobs: replace, upload, download, update meta: /api/v2/apps/{owner}/{app}/workspaces/{wsid}/blobs/{blobId}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s:[0-9]+}/blobs/{%s:[a-zA-Z0-9-_]+}",

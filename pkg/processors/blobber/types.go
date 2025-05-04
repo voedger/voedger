@@ -12,6 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -38,6 +39,7 @@ type blobWorkpiece struct {
 	writer           io.Writer
 	registerFuncName string
 	resultErr        error
+	uploadedSize     uint64
 }
 
 type implIBLOBMessage_base struct {
@@ -75,6 +77,7 @@ type badRequestWrapper struct {
 
 type sendWriteResult struct {
 	pipeline.NOOP
+	federation federation.IFederation
 }
 
 type catchReadError struct {
