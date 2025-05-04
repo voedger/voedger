@@ -187,7 +187,7 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 	}
 }
 
-// [~cmp.routerDevicesCreatePathHandler~]
+// [~server.apiv2.devices/cmp.routerDevicesCreatePathHandler~impl]
 func requestHandlerV2_create_device(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, federation federation.IFederation) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
