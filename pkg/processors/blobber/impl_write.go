@@ -134,10 +134,18 @@ func getBLOBMessageWrite(_ context.Context, work pipeline.IWorkpiece) error {
 
 func parseQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
-	bw.nameQuery = bw.blobMessageWrite.urlQueryValues["name"]
-	bw.mimeTypeQuery = bw.blobMessageWrite.urlQueryValues["mimeType"]
-	if len(bw.blobMessageWrite.urlQueryValues["ttl"]) > 0 {
-		bw.ttl = bw.blobMessageWrite.urlQueryValues["ttl"][0]
+	if bw.blobMessageWrite.isAPIv2 {
+		bw.nameQuery = append(bw.nameQuery, bw.blobMessageWrite.header["Blob-Name"])
+		bw.mimeTypeQuery = append(bw.mimeTypeQuery, bw.blobMessageWrite.header[coreutils.ContentType])
+		if ttlHeader, ok := bw.blobMessageWrite.header["TTL"]; ok {
+			bw.ttl = ttlHeader
+		}
+	} else {
+		bw.nameQuery = bw.blobMessageWrite.urlQueryValues["name"]
+		bw.mimeTypeQuery = bw.blobMessageWrite.urlQueryValues["mimeType"]
+		if len(bw.blobMessageWrite.urlQueryValues["ttl"]) > 0 {
+			bw.ttl = bw.blobMessageWrite.urlQueryValues["ttl"][0]
+		}
 	}
 	return nil
 }

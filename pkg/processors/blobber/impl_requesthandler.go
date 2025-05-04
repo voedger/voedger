@@ -34,9 +34,9 @@ func (r *implIRequestHandler) HandleRead(appQName appdef.AppQName, wsid istructs
 	}, doneCh)
 }
 
-func (r *implIRequestHandler) HandleWrite(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
+func (r *implIRequestHandler) handleWrite(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
 	urlQueryValues url.Values, okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
-	errorResponder ErrorResponder, requestSender bus.IRequestSender) bool {
+	errorResponder ErrorResponder, requestSender bus.IRequestSender, isAPIv2 bool) bool {
 	doneCh := make(chan interface{})
 	return r.handle(&implIBLOBMessage_Write{
 		implIBLOBMessage_base: implIBLOBMessage_base{
@@ -48,10 +48,23 @@ func (r *implIRequestHandler) HandleWrite(appQName appdef.AppQName, wsid istruct
 			errorResponder:   errorResponder,
 			done:             doneCh,
 			requestSender:    requestSender,
+			isAPIv2:          isAPIv2,
 		},
 		urlQueryValues: urlQueryValues,
 		reader:         reader,
 	}, doneCh)
+}
+
+func (r *implIRequestHandler) HandleWrite(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
+	urlQueryValues url.Values, okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
+	errorResponder ErrorResponder, requestSender bus.IRequestSender) bool {
+	return r.handleWrite(appQName, wsid, header, requestCtx, urlQueryValues, okResponseIniter, reader, errorResponder, requestSender, false)
+}
+
+func (r *implIRequestHandler) HandleWrite_V2(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
+	okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
+	errorResponder ErrorResponder, requestSender bus.IRequestSender) bool {
+		return r.handleWrite(appQName, wsid, header, requestCtx, nil, okResponseIniter, reader, errorResponder, requestSender, true)
 }
 
 func (r *implIRequestHandler) handle(msg any, doneCh <-chan interface{}) bool {

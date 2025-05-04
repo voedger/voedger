@@ -49,6 +49,7 @@ type implIBLOBMessage_base struct {
 	errorResponder   ErrorResponder
 	done             chan interface{}
 	requestSender    bus.IRequestSender
+	isAPIv2          bool
 }
 
 type implIBLOBMessage_Read struct {
@@ -80,7 +81,7 @@ type catchReadError struct {
 	pipeline.NOOP
 }
 
-type blobOpSwitch struct {
+type blobReadOrWriteSwitch struct {
 }
 
 func (b *blobWorkpiece) Release() {
