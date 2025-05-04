@@ -86,10 +86,8 @@ func (g *schemaGenerator) generateComponents() {
 		for op, fields := range ops {
 			g.generateSchemaComponent(t, op, fields, schemas)
 			if t.Kind() == appdef.TypeKind_Command && op == appdef.OperationKind_Execute {
-				// If command param is an ODoc, generate a schema for it
 				cmd := t.(appdef.ICommand)
-				param := cmd.Param()
-				if _, ok := param.(appdef.IODoc); ok {
+				if param := cmd.Param(); param != nil {
 					g.generateSchemaComponent(param.(ischema), op, nil, schemas)
 				}
 				if result := cmd.Result(); result != nil {
@@ -98,6 +96,9 @@ func (g *schemaGenerator) generateComponents() {
 			}
 			if t.Kind() == appdef.TypeKind_Query && op == appdef.OperationKind_Execute {
 				qry := t.(appdef.IQuery)
+				if param := qry.Param(); param != nil {
+					g.generateSchemaComponent(param.(ischema), op, nil, schemas)
+				}
 				if result := qry.Result(); result != nil {
 					g.generateSchemaComponent(result.(ischema), op, nil, schemas)
 				}
@@ -632,7 +633,7 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 			"name":     "where",
 			"in":       "query",
 			"required": len(pkFields) > 0,
-			"schema": map[string]interface{}{
+			schemaKeySchema: map[string]interface{}{
 				"type": "string",
 			},
 			schemaKeyDescription: descr,
@@ -643,7 +644,7 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 			"name":     "order",
 			"in":       "query",
 			"required": false,
-			"schema": map[string]interface{}{
+			schemaKeySchema: map[string]interface{}{
 				"type": "string",
 			},
 			schemaKeyDescription: "Field to order results by",
@@ -653,7 +654,7 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 			"name":     "limit",
 			"in":       "query",
 			"required": false,
-			"schema": map[string]interface{}{
+			schemaKeySchema: map[string]interface{}{
 				"type": "integer",
 			},
 			schemaKeyDescription: "Maximum number of results to return",
@@ -663,7 +664,7 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 			"name":     "skip",
 			"in":       "query",
 			"required": false,
-			"schema": map[string]interface{}{
+			schemaKeySchema: map[string]interface{}{
 				"type": "integer",
 			},
 			schemaKeyDescription: "Number of results to skip",
@@ -673,7 +674,7 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 			"name":     "include",
 			"in":       "query",
 			"required": false,
-			"schema": map[string]interface{}{
+			schemaKeySchema: map[string]interface{}{
 				"type": "string",
 			},
 			schemaKeyDescription: "Referenced objects to include in response",
@@ -683,7 +684,7 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 			"name":     "keys",
 			"in":       "query",
 			"required": false,
-			"schema": map[string]interface{}{
+			schemaKeySchema: map[string]interface{}{
 				"type": "string",
 			},
 			schemaKeyDescription: "Specific fields to include in response",
@@ -692,15 +693,18 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 
 	// Add arg parameter for queries
 	if strings.Contains(path, "/queries/") {
-		parameters = append(parameters, map[string]interface{}{
-			"name":     "arg",
-			"in":       "query",
-			"required": false,
-			"schema": map[string]interface{}{
-				"type": "string",
-			},
-			schemaKeyDescription: "Query argument in JSON format",
-		})
+		query := typ.(appdef.IQuery)
+		if query.Param() != nil {
+			parameters = append(parameters, map[string]interface{}{
+				"name":     "arg",
+				"in":       "query",
+				"required": true,
+				schemaKeySchema: map[string]interface{}{
+					schemaKeyRef: g.schemaRef(query.Param(), appdef.OperationKind_Execute),
+				},
+				schemaKeyDescription: "Query argument in JSON format",
+			})
+		}
 	}
 
 	return parameters
