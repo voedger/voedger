@@ -19,7 +19,6 @@ erDiagram
 
 ## Technical Design
 
-
 ```mermaid
 erDiagram
 
