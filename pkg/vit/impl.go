@@ -23,6 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
+	"github.com/voedger/voedger/pkg/isequencer"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -79,6 +80,9 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	// only dynamic ports are used in tests
 	cfg.VVMPort = 0
 	cfg.MetricsServicePort = 0
+
+	// [~server.design.sequences/tuc.VVMConfig.ConfigureSequencesTrustLevel~impl]
+	cfg.SequencesTrustLevel = isequencer.SequencesTrustLevel_0
 
 	cfg.Time = coreutils.MockTime
 	if !coreutils.IsTest() {

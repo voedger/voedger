@@ -56,7 +56,7 @@ func NewVVMDefaultConfig() VVMConfig {
 		IP:            coreutils.LocalhostIP,
 		NumVVM:        1,
 
-		// [~tuc.VVMConfig.ConfigureSequencesTrustLevel~]
+		// [~server.design.sequences/tuc.VVMConfig.ConfigureSequencesTrustLevel~impl]
 		SequencesTrustLevel: isequencer.SequencesTrustLevel_2,
 	}
 	if coreutils.IsTest() {
