@@ -11,37 +11,50 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// [~server.design.sequences/cmp.VVMStorageAdapter~impl]
+// [~server.design.sequences/cmp.VVMSeqStorageAdapter~impl]
 type implVVMSeqStorageAdapter struct {
-	implStorageBase
+	sysVVMStorage ISysVvmStorage
+	partitionID   isequencer.PartitionID
 }
 
-const cColsSize = 8 + 2
+const (
+	numberPKeySize      = 4 + 4 + 8
+	numberCColsSize     = 2
+	pLogOffsetPKeySize  = 4 + 2
+	pLogOffsetCColsSize = 4
+)
 
 func (s *implVVMSeqStorageAdapter) GetNumber(appID isequencer.ClusterAppID, wsid isequencer.WSID, seqID isequencer.SeqID) (ok bool, number isequencer.Number, err error) {
-	pKey := s.getPKey()
-	pKey = binary.BigEndian.AppendUint32(pKey, appID)
-	cCols := make([]byte, cColsSize)
-	binary.BigEndian.PutUint64(cCols, uint64(wsid))
-	binary.BigEndian.PutUint16(cCols[8:], uint16(seqID))
+	pKey := make([]byte, 0, numberPKeySize)
+	pKey = binary.BigEndian.AppendUint32(pKey, pKeyPrefix_SeqStorage_WS)
+	pKey = binary.BigEndian.AppendUint32(pKey, uint32(appID))
+	pKey = binary.BigEndian.AppendUint64(pKey, uint64(wsid))
+
+	cCols := make([]byte, numberCColsSize)
+	binary.BigEndian.PutUint16(cCols, uint16(seqID))
 	data := make([]byte, utils.Uint64Size)
 	ok, err = s.sysVVMStorage.Get(pKey, cCols, &data)
 	return ok, isequencer.Number(binary.BigEndian.Uint64(data)), err
 }
 
-func (s *implVVMSeqStorageAdapter) GetPLogOffset(appID isequencer.ClusterAppID) (ok bool, pLogOffset isequencer.PLogOffset, err error) {
-	ok, num, err := s.GetNumber(appID, isequencer.WSID(istructs.NullWSID), isequencer.SeqID(istructs.QNameIDPLogOffsetSequence))
-	return ok, isequencer.PLogOffset(num), err
+func (s *implVVMSeqStorageAdapter) GetPLogOffset() (ok bool, pLogOffset isequencer.PLogOffset, err error) {
+	pKey := make([]byte, 0, pLogOffsetPKeySize)
+	cCols := make([]byte, pLogOffsetCColsSize)
+	pKey = binary.BigEndian.AppendUint32(pKey, pKeyPrefix_SeqStorage_Part)
+	pKey = binary.BigEndian.AppendUint16(pKey, uint16(s.partitionID))
+
+	data := make([]byte, utils.Uint64Size)
+	ok, err = s.sysVVMStorage.Get(pKey, cCols, &data)
+	return ok, isequencer.PLogOffset(binary.BigEndian.Uint64(data)), err
 }
 
-func (s *implVVMSeqStorageAdapter) PutPLogOffset(appID isequencer.ClusterAppID, pLogOffset isequencer.PLogOffset) error {
-	pKey := s.getPKey()
-	pKey = binary.BigEndian.AppendUint32(pKey, appID)
-	cCols := make([]byte, cColsSize) // first 8 bytes are 0 for NullWSID
-	binary.BigEndian.PutUint16(cCols[8:], istructs.QNameIDPLogOffsetSequence)
+func (s *implVVMSeqStorageAdapter) PutPLogOffset(pLogOffset isequencer.PLogOffset) error {
+	pKey := make([]byte, 0, pLogOffsetPKeySize)
+	cCols := make([]byte, pLogOffsetCColsSize)
+	pKey = binary.BigEndian.AppendUint32(pKey, pKeyPrefix_SeqStorage_Part)
+	pKey = binary.BigEndian.AppendUint16(pKey, uint16(s.partitionID))
 	pLogOffsetBytes := make([]byte, utils.Uint64Size)
 	binary.BigEndian.PutUint64(pLogOffsetBytes, uint64(pLogOffset))
 	return s.sysVVMStorage.Put(pKey, cCols, pLogOffsetBytes)
@@ -50,14 +63,13 @@ func (s *implVVMSeqStorageAdapter) PutPLogOffset(appID isequencer.ClusterAppID, 
 func (s *implVVMSeqStorageAdapter) PutNumbers(appID isequencer.ClusterAppID, batch []isequencer.SeqValue) error {
 	vvmStrorageBatch := make([]istorage.BatchItem, len(batch))
 	for i, b := range batch {
-		if b.Key.SeqID == isequencer.SeqID(istructs.QNameIDPLogOffsetSequence) {
-			panic("cannot write value of PLogOffsetSequence")
-		}
-		pKey := s.getPKey()
-		pKey = binary.BigEndian.AppendUint32(pKey, appID)
-		cCols := make([]byte, cColsSize)
-		binary.BigEndian.PutUint64(cCols, uint64(b.Key.WSID))
-		binary.BigEndian.PutUint16(cCols[8:], uint16(b.Key.SeqID))
+		pKey := make([]byte, 0, numberPKeySize)
+		pKey = binary.BigEndian.AppendUint32(pKey, pKeyPrefix_SeqStorage_WS)
+		pKey = binary.BigEndian.AppendUint32(pKey, uint32(appID))
+		pKey = binary.BigEndian.AppendUint64(pKey, uint64(b.Key.WSID))
+
+		cCols := make([]byte, numberCColsSize)
+		binary.BigEndian.PutUint16(cCols, uint16(b.Key.SeqID))
 		numberBytes := make([]byte, utils.Uint64Size)
 		binary.BigEndian.PutUint64(numberBytes, uint64(b.Value))
 		vvmStrorageBatch[i].PKey = pKey

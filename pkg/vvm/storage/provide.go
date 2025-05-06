@@ -10,20 +10,15 @@ import (
 )
 
 // [~server.design.orch/NewElectionsTTLStorage~impl]
-func NewElectionsTTLStorage(vs ISysVvmStorage) ielections.ITTLStorage[TTLStorageImplKey, string] {
+func NewElectionsTTLStorage(sysVVMStorage ISysVvmStorage) ielections.ITTLStorage[TTLStorageImplKey, string] {
 	return &implIElectionsTTLStorage{
-		implStorageBase: implStorageBase{
-			prefix:        pKeyPrefix_VVMLeader,
-			sysVVMStorage: vs,
-		},
+		sysVVMStorage: sysVVMStorage,
 	}
 }
 
-func NewVVMSeqStorageAdapter(vs ISysVvmStorage) isequencer.IVVMSeqStorageAdapter {
+func NewVVMSeqStorageAdapter(sysVVMStorage ISysVvmStorage, partitionID isequencer.PartitionID) isequencer.IVVMSeqStorageAdapter {
 	return &implVVMSeqStorageAdapter{
-		implStorageBase: implStorageBase{
-			prefix:        pKeyPrefix_SeqStorage,
-			sysVVMStorage: vs,
-		},
+		partitionID:   partitionID,
+		sysVVMStorage: sysVVMStorage,
 	}
 }

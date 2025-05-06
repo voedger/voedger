@@ -11,11 +11,12 @@ import (
 )
 
 type implIElectionsTTLStorage struct {
-	implStorageBase
+	sysVVMStorage ISysVvmStorage
 }
 
 func (s *implIElectionsTTLStorage) buildKeys(key TTLStorageImplKey) (pKey, cCols []byte) {
-	pKey = s.getPKey()
+	pKey = make([]byte, utils.Uint32Size)
+	binary.BigEndian.PutUint32(pKey, pKeyPrefix_VVMLeader)
 	cCols = make([]byte, utils.Uint32Size)
 	binary.BigEndian.PutUint32(cCols, key)
 	return

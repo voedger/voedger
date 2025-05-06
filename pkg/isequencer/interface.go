@@ -30,8 +30,8 @@ type ISeqStorage interface {
 
 type IVVMSeqStorageAdapter interface {
 	GetNumber(appID ClusterAppID, wsid WSID, seqID SeqID) (ok bool, number Number, err error)
-	GetPLogOffset(appID ClusterAppID) (ok bool, pLogOffset PLogOffset, err error)
-	PutPLogOffset(appID ClusterAppID, plogOffset PLogOffset) error
+	GetPLogOffset() (ok bool, pLogOffset PLogOffset, err error)
+	PutPLogOffset(plogOffset PLogOffset) error
 	PutNumbers(appID ClusterAppID, batch []SeqValue) error
 }
 

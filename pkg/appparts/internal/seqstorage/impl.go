@@ -41,7 +41,7 @@ func (ss *implISeqStorage) WriteValuesAndNextPLogOffset(batch []isequencer.SeqVa
 		// notest
 		return err
 	}
-	return ss.storage.PutPLogOffset(ss.appID, pLogOffset)
+	return ss.storage.PutPLogOffset(pLogOffset)
 }
 
 func (ss *implISeqStorage) ReadNumbers(wsid isequencer.WSID, seqIDs []isequencer.SeqID) ([]isequencer.Number, error) {
@@ -60,7 +60,7 @@ func (ss *implISeqStorage) ReadNumbers(wsid isequencer.WSID, seqIDs []isequencer
 }
 
 func (ss *implISeqStorage) ReadNextPLogOffset() (isequencer.PLogOffset, error) {
-	_, pLogOffset, err := ss.storage.GetPLogOffset(ss.appID)
+	_, pLogOffset, err := ss.storage.GetPLogOffset()
 	if err != nil {
 		// notest
 		return 0, err
