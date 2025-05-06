@@ -16,14 +16,18 @@ import (
 
 // [~server.design.sequences/cmp.VVMStorageAdapter~impl]
 type implVVMSeqStorageAdapter struct {
-	implStorageBase
+	sysVVMStorage ISysVvmStorage
+	partitionID   istructs.PartitionID
 }
 
-const cColsSize = 8 + 2
+const cColsSize = 4
+const pKeySize = 4 + 2
 
 func (s *implVVMSeqStorageAdapter) Get(appID istructs.ClusterAppID, wsid isequencer.WSID, seqID isequencer.SeqID) (ok bool, number isequencer.Number, err error) {
-	pKey := s.getPKey()
-	pKey = binary.BigEndian.AppendUint32(pKey, appID)
+	pKey := make([]byte, 0, pKeySize)
+	pKey = binary.BigEndian.AppendUint32(pKey, pKeyPrefix_SeqStorage_Part)
+	pKey = binary.BigEndian.AppendUint16(pKey, uint16(s.partitionID))
+
 	cCols := make([]byte, cColsSize)
 	binary.BigEndian.PutUint64(cCols, uint64(wsid))
 	binary.BigEndian.PutUint16(cCols[8:], uint16(seqID))
