@@ -34,7 +34,7 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 
 			// wlog offset
 			batch = append(batch, isequencer.SeqValue{
-				Key: isequencer.NumberKey{WSID: isequencer.WSID(event.Workspace()), SeqID: isequencer.SeqID(istructs.QNameIDWLogOffsetSequence)},
+				Key:   isequencer.NumberKey{WSID: isequencer.WSID(event.Workspace()), SeqID: isequencer.SeqID(istructs.QNameIDWLogOffsetSequence)},
 				Value: isequencer.Number(event.WLogOffset()),
 			})
 
@@ -47,7 +47,7 @@ func (ss *implISeqStorage) WriteValuesAndNextPLogOffset(batch []isequencer.SeqVa
 		// notest
 		return err
 	}
-	return ss.storage.PutPLogOffset(pLogOffset)
+	return ss.storage.PutPLogOffset(isequencer.PartitionID(ss.partitionID), pLogOffset)
 }
 
 func (ss *implISeqStorage) ReadNumbers(wsid isequencer.WSID, seqIDs []isequencer.SeqID) ([]isequencer.Number, error) {
@@ -66,7 +66,7 @@ func (ss *implISeqStorage) ReadNumbers(wsid isequencer.WSID, seqIDs []isequencer
 }
 
 func (ss *implISeqStorage) ReadNextPLogOffset() (isequencer.PLogOffset, error) {
-	_, pLogOffset, err := ss.storage.GetPLogOffset()
+	_, pLogOffset, err := ss.storage.GetPLogOffset(isequencer.PartitionID(ss.partitionID))
 	if err != nil {
 		// notest
 		return 0, err
