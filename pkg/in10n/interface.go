@@ -12,14 +12,11 @@ import (
 	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
-// Design: N10n https://dev.heeus.io/launchpad/#!13813
 // This interface is provided only once per process
 // Provide() must have a parameter of Quotas type
-// Workflow (ref. https://golang.org/ref/spec for syntax):
-//
-//	???/n10n/channel: NewChannel() {Subscribe()} WatchChannel()
-//	???/n10n/subscribe: Subscribe()
-//	???/n10n/unsubscribe: Unsubscribe()
+// Implementation must generate one event per second for the ProjectionKey
+// - ProjectionKey{ AppName:"", Projection: QNameHeartbeat30, WS: 0}
+}
 type IN10nBroker interface {
 
 	// Errors: ErrQuotaExceeded_Channels*
@@ -28,7 +25,9 @@ type IN10nBroker interface {
 
 	// ChannelID must be taken from NewChannel()
 	// Errors: ErrChannelDoesNotExist, ErrQuotaExceeded_Subsciptions*
-	// @ConcurrentAccess
+	// [~server.n10n.heartbeats/tuc.SimulateHeartbeat30Updates~]
+	// If Subscribe is called for Heartbeat30 projection
+	// - Change ProjectionKey.WSID to 0
 	Subscribe(channelID ChannelID, projection ProjectionKey) (err error)
 
 	// Channel with ChannelID must exist (panic)

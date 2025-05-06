@@ -42,3 +42,6 @@ erDiagram
     "notifier goroutine" ||..|| "cchan chan struct{}" : "writes to"
     "notifier goroutine" ||..|| "events chan event{}" : "reads from"	
 ```
+
+## Simulation of Heartbeat30 updates
+
