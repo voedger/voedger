@@ -60,7 +60,7 @@ func TestReadWrite(t *testing.T) {
 	require.NoError(err)
 
 	// will overwrite sequences and offset 5 times with new value
-	for counter := 0; counter < 5; counter++ {
+	for counter := range 5 {
 		numberBump := isequencer.Number(counter)
 		expectedPLogOffset := isequencer.PLogOffset(42 + counter)
 		err = seqStorage.WriteValuesAndNextPLogOffset([]isequencer.SeqValue{
@@ -148,38 +148,49 @@ func TestSequenceActualization(t *testing.T) {
 	}{
 		{
 			name: "one event with no cuds",
-			plog: []testPLogEvent{{qName: testCmdQName, wsid: 1, offset: 1, expectedBatch: nil}},
+			plog: []testPLogEvent{{qName: testCmdQName, wsid: 1, pLogOffset: 1, wLogOffset: 2,
+				expectedBatch: []expectedSeqValue{
+					{wsid: 1, seqID: istructs.QNameIDWLogOffsetSequence, number: 2},
+				}}},
 		},
 		{
 			name: "one event with one cud",
-			plog: []testPLogEvent{{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{{qName: testCDocQName, id: 1}},
+			plog: []testPLogEvent{{qName: testCmdQName, wsid: 1, pLogOffset: 1, wLogOffset: 2, cuds: []cud{{qName: testCDocQName, id: 1}},
 				expectedBatch: []expectedSeqValue{
 					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 1},
+					{wsid: 1, seqID: istructs.QNameIDWLogOffsetSequence, number: 2},
 				}}},
 		},
 		{
 			name: "3 events, 2nd has 2 cuds, other - 1 cud",
 			plog: []testPLogEvent{
 				// 1st event
-				{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{{qName: testCDocQName, id: 1}},
-					expectedBatch: []expectedSeqValue{{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 1}}},
+				{qName: testCmdQName, wsid: 1, pLogOffset: 1, wLogOffset: 2, cuds: []cud{{qName: testCDocQName, id: 1}},
+					expectedBatch: []expectedSeqValue{
+						{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 1},
+						{wsid: 1, seqID: istructs.QNameIDWLogOffsetSequence, number: 2},
+					}},
 				// 2nd event
-				{qName: testCmdQName, wsid: 2, offset: 2, cuds: []cud{
+				{qName: testCmdQName, wsid: 2, pLogOffset: 2, wLogOffset: 3, cuds: []cud{
 					{qName: testCDocQName, id: 2},
 					{qName: testWDocQName, id: 3},
 				}, expectedBatch: []expectedSeqValue{
 					{wsid: 2, seqID: istructs.QNameIDRecordIDSequence, number: 2},
 					{wsid: 2, seqID: istructs.QNameIDRecordIDSequence, number: 3},
+					{wsid: 2, seqID: istructs.QNameIDWLogOffsetSequence, number: 3},
 				}},
 				// 3rd event
-				{qName: testCmdQName, wsid: 3, offset: 3, cuds: []cud{{qName: testCDocQName, id: 3}},
-					expectedBatch: []expectedSeqValue{{wsid: 3, seqID: istructs.QNameIDRecordIDSequence, number: 3}}},
+				{qName: testCmdQName, wsid: 3, pLogOffset: 3, wLogOffset: 4, cuds: []cud{{qName: testCDocQName, id: 3}},
+					expectedBatch: []expectedSeqValue{
+						{wsid: 3, seqID: istructs.QNameIDRecordIDSequence, number: 3},
+						{wsid: 3, seqID: istructs.QNameIDWLogOffsetSequence, number: 4},
+					}},
 			},
 		},
 		{
 			name: "1 event with few cdocs, wdocs and records",
 			plog: []testPLogEvent{
-				{qName: testCmdQName, wsid: 1, offset: 1, cuds: []cud{
+				{qName: testCmdQName, wsid: 1, pLogOffset: 1, wLogOffset: 2, cuds: []cud{
 					{qName: testCDocQName, id: 1},
 					{qName: testCRecordQName, id: 2},
 					{qName: testCRecordQName, id: 3},
@@ -191,13 +202,14 @@ func TestSequenceActualization(t *testing.T) {
 					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 3},
 					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 4},
 					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 5},
+					{wsid: 1, seqID: istructs.QNameIDWLogOffsetSequence, number: 2},
 				}},
 			},
 		},
 		{
 			name: "arg: odoc with 2 orecords + 2 new cuds + 1 update cud (should be skipped)",
 			plog: []testPLogEvent{
-				{qName: testODocQName, wsid: 1, offset: 1, arg: obj{
+				{qName: testODocQName, wsid: 1, pLogOffset: 1, wLogOffset: 2, arg: obj{
 					cud: cud{qName: testODocQName, id: 1},
 					containers: []obj{
 						{cud: cud{qName: testORecordQName, id: 2}},
@@ -211,6 +223,7 @@ func TestSequenceActualization(t *testing.T) {
 					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 2},
 					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 3},
 					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 4},
+					{wsid: 1, seqID: istructs.QNameIDWLogOffsetSequence, number: 2},
 				}},
 			},
 		},
@@ -225,7 +238,7 @@ func TestSequenceActualization(t *testing.T) {
 					cb := args.Get(4).(istructs.PLogEventsReaderCallback)
 					for _, pLogEvent := range tc.plog {
 						iPLogEvent := testPLogEventToIPlogEvent(pLogEvent, appDef)
-						require.NoError(cb(pLogEvent.offset, iPLogEvent))
+						require.NoError(cb(pLogEvent.pLogOffset, iPLogEvent))
 					}
 				})
 
@@ -233,7 +246,7 @@ func TestSequenceActualization(t *testing.T) {
 
 			processingCount := 0
 			err := seqStorage.ActualizeSequencesFromPLog(context.Background(), 1, func(ctx context.Context, batch []isequencer.SeqValue, offset isequencer.PLogOffset) error {
-				require.Equal(isequencer.PLogOffset(tc.plog[processingCount].offset), offset, "Offset mismatch in event %d", processingCount)
+				require.Equal(isequencer.PLogOffset(tc.plog[processingCount].pLogOffset), offset, "Offset mismatch in event %d", processingCount)
 
 				expectedBatch := buildExpectedBatch(tc.plog[processingCount].expectedBatch)
 				require.Equal(expectedBatch, batch, "Batch mismatch in event %d", processingCount)
@@ -311,6 +324,7 @@ func testPLogEventToIPlogEvent(pLogEvent testPLogEvent, appDef appdef.IAppDef) i
 	}
 	mockEvent.On("Workspace").Return(istructs.WSID(pLogEvent.wsid))
 	mockEvent.On("ArgumentObject").Return(&argObj)
+	mockEvent.On("WLogOffset").Return(pLogEvent.wLogOffset)
 	return &mockEvent
 }
 
@@ -369,7 +383,8 @@ type obj struct {
 
 type testPLogEvent struct {
 	qName         appdef.QName
-	offset        istructs.Offset
+	pLogOffset    istructs.Offset
+	wLogOffset    istructs.Offset
 	wsid          uint64
 	cuds          []cud
 	arg           obj
