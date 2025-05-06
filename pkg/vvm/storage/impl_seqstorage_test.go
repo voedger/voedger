@@ -167,7 +167,7 @@ func TestPutPLogOffset(t *testing.T) {
 	ok, num, err = seqStorage.GetPLogOffset()
 	require.NoError(err)
 	require.True(ok)
-	require.Equal(pLogOffset, isequencer.PLogOffset(num))
+	require.Equal(pLogOffset, num)
 
 	// storage for an another partition must be different
 	testPartitionID2 := isequencer.PartitionID(123)
@@ -177,10 +177,10 @@ func TestPutPLogOffset(t *testing.T) {
 	ok, num, err = seqStorage2.GetPLogOffset()
 	require.NoError(err)
 	require.True(ok)
-	require.Equal(pLogOffset2, isequencer.PLogOffset(num))
+	require.Equal(pLogOffset2, num)
 	ok, num, err = seqStorage.GetPLogOffset()
 	require.NoError(err)
 	require.True(ok)
-	require.Equal(pLogOffset, isequencer.PLogOffset(num))
+	require.Equal(pLogOffset, num)
 
 }
