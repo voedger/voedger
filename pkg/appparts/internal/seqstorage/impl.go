@@ -32,6 +32,12 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 				addToBatch(event.Workspace(), ss.seqIDs[seqQName], cud.ID(), &batch)
 			}
 
+			// wlog offset
+			batch = append(batch, isequencer.SeqValue{
+				Key: isequencer.NumberKey{WSID: isequencer.WSID(event.Workspace()), SeqID: isequencer.SeqID(istructs.QNameIDWLogOffsetSequence)},
+				Value: isequencer.Number(event.WLogOffset()),
+			})
+
 			return batcher(ctx, batch, isequencer.PLogOffset(plogOffset))
 		})
 }
