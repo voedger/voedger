@@ -92,7 +92,7 @@ ABSTRACT WORKSPACE Workspace (
 		WSName varchar NOT NULL
 	) WITH Tags=(WorkspaceOwnerTableTag);
 
-	-- [~server.n10n.heartbeats/cmp.sys.Workspace.table.Heartbeat30~impl]
+	-- [~server.n10n.heartbeats/cmp.wsingleton.sys.Workspace.Heartbeat30~impl]
 	TABLE Heartbeat30 INHERITS sys.WSingleton (
 		Dummy int64
 	);

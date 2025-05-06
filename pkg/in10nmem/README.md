@@ -14,10 +14,9 @@ erDiagram
     Projection ||--|| "offset" : has
 
     "Watching routine" ||..|| "offset" : "is notified about changes of"
-
 ```
 
-## Technical Design
+## Technical design
 
 ```mermaid
 erDiagram
@@ -42,5 +41,4 @@ erDiagram
 
     "notifier goroutine" ||..|| "cchan chan struct{}" : "writes to"
     "notifier goroutine" ||..|| "events chan event{}" : "reads from"	
-
 ```
