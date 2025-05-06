@@ -6,4 +6,5 @@ package storage
 
 type TTLStorageImplKey = uint32
 
+// nolint unused
 type pKeyPrefix = uint32

@@ -28,7 +28,7 @@ const (
 func (s *implVVMSeqStorageAdapter) GetNumber(appID isequencer.ClusterAppID, wsid isequencer.WSID, seqID isequencer.SeqID) (ok bool, number isequencer.Number, err error) {
 	pKey := make([]byte, 0, numberPKeySize)
 	pKey = binary.BigEndian.AppendUint32(pKey, pKeyPrefix_SeqStorage_WS)
-	pKey = binary.BigEndian.AppendUint32(pKey, uint32(appID))
+	pKey = binary.BigEndian.AppendUint32(pKey, appID)
 	pKey = binary.BigEndian.AppendUint64(pKey, uint64(wsid))
 
 	cCols := make([]byte, numberCColsSize)
@@ -64,7 +64,7 @@ func (s *implVVMSeqStorageAdapter) PutNumbers(appID isequencer.ClusterAppID, bat
 	for i, b := range batch {
 		pKey := make([]byte, 0, numberPKeySize)
 		pKey = binary.BigEndian.AppendUint32(pKey, pKeyPrefix_SeqStorage_WS)
-		pKey = binary.BigEndian.AppendUint32(pKey, uint32(appID))
+		pKey = binary.BigEndian.AppendUint32(pKey, appID)
 		pKey = binary.BigEndian.AppendUint64(pKey, uint64(b.Key.WSID))
 
 		cCols := make([]byte, numberCColsSize)
