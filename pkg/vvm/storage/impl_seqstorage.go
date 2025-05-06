@@ -21,7 +21,7 @@ type implVVMSeqStorageAdapter struct {
 
 const cColsSize = 8 + 2
 
-func (s *implVVMSeqStorageAdapter) Get(appID istructs.ClusterAppID, wsid isequencer.WSID, seqID isequencer.SeqID) (ok bool, number isequencer.Number, err error) {
+func (s *implVVMSeqStorageAdapter) GetNumber(appID isequencer.ClusterAppID, wsid isequencer.WSID, seqID isequencer.SeqID) (ok bool, number isequencer.Number, err error) {
 	pKey := s.getPKey()
 	pKey = binary.BigEndian.AppendUint32(pKey, appID)
 	cCols := make([]byte, cColsSize)
@@ -32,7 +32,12 @@ func (s *implVVMSeqStorageAdapter) Get(appID istructs.ClusterAppID, wsid isequen
 	return ok, isequencer.Number(binary.BigEndian.Uint64(data)), err
 }
 
-func (s *implVVMSeqStorageAdapter) PutPLogOffset(appID istructs.ClusterAppID, pLogOffset isequencer.PLogOffset) (err error) {
+func (s *implVVMSeqStorageAdapter) GetPLogOffset(appID isequencer.ClusterAppID) (ok bool, pLogOffset isequencer.PLogOffset, err error) {
+	ok, num, err := s.GetNumber(appID, isequencer.WSID(istructs.NullWSID), isequencer.SeqID(istructs.QNameIDPLogOffsetSequence))
+	return ok, isequencer.PLogOffset(num), err
+}
+
+func (s *implVVMSeqStorageAdapter) PutPLogOffset(appID isequencer.ClusterAppID, pLogOffset isequencer.PLogOffset) error {
 	pKey := s.getPKey()
 	pKey = binary.BigEndian.AppendUint32(pKey, appID)
 	cCols := make([]byte, cColsSize) // first 8 bytes are 0 for NullWSID
@@ -42,7 +47,7 @@ func (s *implVVMSeqStorageAdapter) PutPLogOffset(appID istructs.ClusterAppID, pL
 	return s.sysVVMStorage.Put(pKey, cCols, pLogOffsetBytes)
 }
 
-func (s *implVVMSeqStorageAdapter) PutBatch(appID istructs.ClusterAppID, batch []isequencer.SeqValue) error {
+func (s *implVVMSeqStorageAdapter) PutNumbers(appID isequencer.ClusterAppID, batch []isequencer.SeqValue) error {
 	vvmStrorageBatch := make([]istorage.BatchItem, len(batch))
 	for i, b := range batch {
 		if b.Key.SeqID == isequencer.SeqID(istructs.QNameIDPLogOffsetSequence) {

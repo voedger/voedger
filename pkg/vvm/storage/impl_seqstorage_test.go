@@ -69,7 +69,7 @@ func TestSeqStorage(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Verify value doesn't exist before Put
-			ok, num, err := seqStorage.Get(tt.appID+isequencer.ClusterAppID(i), tt.wsid+isequencer.WSID(i), tt.seqID+isequencer.SeqID(i))
+			ok, num, err := seqStorage.GetNumber(tt.appID+isequencer.ClusterAppID(i), tt.wsid+isequencer.WSID(i), tt.seqID+isequencer.SeqID(i))
 			require.NoError(err)
 			require.False(ok)
 			require.Zero(num)
@@ -82,11 +82,11 @@ func TestSeqStorage(t *testing.T) {
 				},
 				Value: tt.num,
 			}}
-			err = seqStorage.PutBatch(tt.appID+isequencer.ClusterAppID(i), batch)
+			err = seqStorage.PutNumbers(tt.appID+isequencer.ClusterAppID(i), batch)
 			require.NoError(err)
 
 			// Verify value after Put
-			ok, num, err = seqStorage.Get(tt.appID+isequencer.ClusterAppID(i), tt.wsid+isequencer.WSID(i), tt.seqID+isequencer.SeqID(i))
+			ok, num, err = seqStorage.GetNumber(tt.appID+isequencer.ClusterAppID(i), tt.wsid+isequencer.WSID(i), tt.seqID+isequencer.SeqID(i))
 			require.NoError(err)
 			require.True(ok)
 			require.Equal(tt.num, num)
@@ -117,23 +117,23 @@ func TestSeqStorage(t *testing.T) {
 		num2 := isequencer.Number(43)
 
 		// Verify value doesn't exist before Put
-		ok, num, err := seqStorage.Get(baseAppID, baseWsid, baseSeqID)
+		ok, num, err := seqStorage.GetNumber(baseAppID, baseWsid, baseSeqID)
 		require.NoError(err)
 		require.False(ok)
 		require.Zero(num)
 
 		// Put initial value
 		batch := []isequencer.SeqValue{{Key: isequencer.NumberKey{WSID: baseWsid, SeqID: baseSeqID}, Value: num1}}
-		err = seqStorage.PutBatch(baseAppID, batch)
+		err = seqStorage.PutNumbers(baseAppID, batch)
 		require.NoError(err)
 
 		// Overwrite with new value
 		batch = []isequencer.SeqValue{{Key: isequencer.NumberKey{WSID: baseWsid, SeqID: baseSeqID}, Value: num2}}
-		err = seqStorage.PutBatch(baseAppID, batch)
+		err = seqStorage.PutNumbers(baseAppID, batch)
 		require.NoError(err)
 
 		// Verify new value
-		ok, actualNum, err := seqStorage.Get(baseAppID, baseWsid, baseSeqID)
+		ok, actualNum, err := seqStorage.GetNumber(baseAppID, baseWsid, baseSeqID)
 		require.NoError(err)
 		require.True(ok)
 		require.Equal(num2, actualNum)
@@ -147,7 +147,7 @@ func TestSeqStorage(t *testing.T) {
 			},
 			Value: 42,
 		}}
-		require.Panics(func() { seqStorage.PutBatch(istructs.ClusterAppID(1), batch) })
+		require.Panics(func() { seqStorage.PutNumbers(istructs.ClusterAppID(1), batch) })
 	})
 }
 
@@ -163,7 +163,7 @@ func TestPutPLogOffset(t *testing.T) {
 	pLogOffset := isequencer.PLogOffset(42)
 
 	// initially missing
-	ok, num, err := seqStorage.Get(baseAppID, isequencer.WSID(istructs.NullWSID), isequencer.SeqID(istructs.QNameIDPLogOffsetSequence))
+	ok, num, err := seqStorage.GetPLogOffset(baseAppID)
 	require.NoError(err)
 	require.False(ok)
 	require.Zero(num)
@@ -172,7 +172,7 @@ func TestPutPLogOffset(t *testing.T) {
 	require.NoError(seqStorage.PutPLogOffset(baseAppID, pLogOffset))
 
 	// read
-	ok, num, err = seqStorage.Get(baseAppID, isequencer.WSID(istructs.NullWSID), isequencer.SeqID(istructs.QNameIDPLogOffsetSequence))
+	ok, num, err = seqStorage.GetPLogOffset(baseAppID)
 	require.NoError(err)
 	require.True(ok)
 	require.Equal(pLogOffset, isequencer.PLogOffset(num))
