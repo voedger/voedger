@@ -7,21 +7,18 @@ package storage
 import (
 	"github.com/voedger/voedger/pkg/ielections"
 	"github.com/voedger/voedger/pkg/isequencer"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // [~server.design.orch/NewElectionsTTLStorage~impl]
-func NewElectionsTTLStorage(vs ISysVvmStorage) ielections.ITTLStorage[TTLStorageImplKey, string] {
+func NewElectionsTTLStorage(sysVVMStorage ISysVvmStorage) ielections.ITTLStorage[TTLStorageImplKey, string] {
 	return &implIElectionsTTLStorage{
-		implStorageBase: implStorageBase{
-			prefix:        pKeyPrefix_VVMLeader,
-			sysVVMStorage: vs,
-		},
+		sysVVMStorage: sysVVMStorage,
 	}
 }
 
-func NewVVMSeqStorageAdapter(vs ISysVvmStorage, partitionID istructs.PartitionID) isequencer.IVVMSeqStorageAdapter {
+func NewVVMSeqStorageAdapter(sysVVMStorage ISysVvmStorage, partitionID isequencer.PartitionID) isequencer.IVVMSeqStorageAdapter {
 	return &implVVMSeqStorageAdapter{
-		
+		partitionID:   partitionID,
+		sysVVMStorage: sysVVMStorage,
 	}
 }

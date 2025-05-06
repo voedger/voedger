@@ -21,7 +21,6 @@ func New(appID isequencer.ClusterAppID, partitionID istructs.PartitionID, events
 		appDef:      appDef,
 		storage:     seqStorage,
 		seqIDs: map[appdef.QName]uint16{
-			istructs.QNamePLogOffsetSequence: istructs.QNameIDPLogOffsetSequence,
 			istructs.QNameWLogOffsetSequence: istructs.QNameIDWLogOffsetSequence,
 			istructs.QNameRecordIDSequence:   istructs.QNameIDRecordIDSequence,
 		},
