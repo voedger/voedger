@@ -16,9 +16,8 @@ func NewElectionsTTLStorage(sysVVMStorage ISysVvmStorage) ielections.ITTLStorage
 	}
 }
 
-func NewVVMSeqStorageAdapter(sysVVMStorage ISysVvmStorage, partitionID isequencer.PartitionID) isequencer.IVVMSeqStorageAdapter {
+func NewVVMSeqStorageAdapter(sysVVMStorage ISysVvmStorage) isequencer.IVVMSeqStorageAdapter {
 	return &implVVMSeqStorageAdapter{
-		partitionID:   partitionID,
 		sysVVMStorage: sysVVMStorage,
 	}
 }

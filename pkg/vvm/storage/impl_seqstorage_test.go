@@ -22,8 +22,7 @@ func TestSeqStorage(t *testing.T) {
 	appStorageProvider := provider.Provide(mem.Provide(coreutils.MockTime))
 	sysVvmAppStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
 	require.NoError(err)
-	testPartitionID := isequencer.PartitionID(42)
-	seqStorage := NewVVMSeqStorageAdapter(sysVvmAppStorage, testPartitionID)
+	seqStorage := NewVVMSeqStorageAdapter(sysVvmAppStorage)
 
 	// Base test data
 	baseAppID := istructs.ClusterApps[istructs.AppQName_test1_app1]
@@ -149,36 +148,36 @@ func TestPutPLogOffset(t *testing.T) {
 	sysVvmAppStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
 	require.NoError(err)
 	testPartitionID := isequencer.PartitionID(42)
-	seqStorage := NewVVMSeqStorageAdapter(sysVvmAppStorage, testPartitionID)
+	seqStorage := NewVVMSeqStorageAdapter(sysVvmAppStorage)
 
 	// Base test data
 	pLogOffset := isequencer.PLogOffset(42)
 
 	// initially missing
-	ok, num, err := seqStorage.GetPLogOffset()
+	ok, num, err := seqStorage.GetPLogOffset(testPartitionID)
 	require.NoError(err)
 	require.False(ok)
 	require.Zero(num)
 
 	// write
-	require.NoError(seqStorage.PutPLogOffset(pLogOffset))
+	require.NoError(seqStorage.PutPLogOffset(testPartitionID, pLogOffset))
 
 	// read
-	ok, num, err = seqStorage.GetPLogOffset()
+	ok, num, err = seqStorage.GetPLogOffset(testPartitionID)
 	require.NoError(err)
 	require.True(ok)
 	require.Equal(pLogOffset, num)
 
 	// storage for an another partition must be different
 	testPartitionID2 := isequencer.PartitionID(123)
-	seqStorage2 := NewVVMSeqStorageAdapter(sysVvmAppStorage, testPartitionID2)
+	seqStorage2 := NewVVMSeqStorageAdapter(sysVvmAppStorage)
 	pLogOffset2 := isequencer.PLogOffset(100)
-	require.NoError(seqStorage2.PutPLogOffset(pLogOffset2))
-	ok, num, err = seqStorage2.GetPLogOffset()
+	require.NoError(seqStorage2.PutPLogOffset(testPartitionID2, pLogOffset2))
+	ok, num, err = seqStorage2.GetPLogOffset(testPartitionID2)
 	require.NoError(err)
 	require.True(ok)
 	require.Equal(pLogOffset2, num)
-	ok, num, err = seqStorage.GetPLogOffset()
+	ok, num, err = seqStorage.GetPLogOffset(testPartitionID)
 	require.NoError(err)
 	require.True(ok)
 	require.Equal(pLogOffset, num)

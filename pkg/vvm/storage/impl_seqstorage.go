@@ -16,7 +16,6 @@ import (
 // [~server.design.sequences/cmp.VVMSeqStorageAdapter~impl]
 type implVVMSeqStorageAdapter struct {
 	sysVVMStorage ISysVvmStorage
-	partitionID   isequencer.PartitionID
 }
 
 const (
@@ -39,22 +38,22 @@ func (s *implVVMSeqStorageAdapter) GetNumber(appID isequencer.ClusterAppID, wsid
 	return ok, isequencer.Number(binary.BigEndian.Uint64(data)), err
 }
 
-func (s *implVVMSeqStorageAdapter) GetPLogOffset() (ok bool, pLogOffset isequencer.PLogOffset, err error) {
+func (s *implVVMSeqStorageAdapter) GetPLogOffset(partitionID isequencer.PartitionID) (ok bool, pLogOffset isequencer.PLogOffset, err error) {
 	pKey := make([]byte, 0, pLogOffsetPKeySize)
 	cCols := make([]byte, pLogOffsetCColsSize)
 	pKey = binary.BigEndian.AppendUint32(pKey, pKeyPrefix_SeqStorage_Part)
-	pKey = binary.BigEndian.AppendUint16(pKey, uint16(s.partitionID))
+	pKey = binary.BigEndian.AppendUint16(pKey, uint16(partitionID))
 
 	data := make([]byte, utils.Uint64Size)
 	ok, err = s.sysVVMStorage.Get(pKey, cCols, &data)
 	return ok, isequencer.PLogOffset(binary.BigEndian.Uint64(data)), err
 }
 
-func (s *implVVMSeqStorageAdapter) PutPLogOffset(pLogOffset isequencer.PLogOffset) error {
+func (s *implVVMSeqStorageAdapter) PutPLogOffset(partitionID isequencer.PartitionID, pLogOffset isequencer.PLogOffset) error {
 	pKey := make([]byte, 0, pLogOffsetPKeySize)
 	cCols := make([]byte, pLogOffsetCColsSize)
 	pKey = binary.BigEndian.AppendUint32(pKey, pKeyPrefix_SeqStorage_Part)
-	pKey = binary.BigEndian.AppendUint16(pKey, uint16(s.partitionID))
+	pKey = binary.BigEndian.AppendUint16(pKey, uint16(partitionID))
 	pLogOffsetBytes := make([]byte, utils.Uint64Size)
 	binary.BigEndian.PutUint64(pLogOffsetBytes, uint64(pLogOffset))
 	return s.sysVVMStorage.Put(pKey, cCols, pLogOffsetBytes)
