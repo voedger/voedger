@@ -3048,6 +3048,7 @@ func TestIsOperationAllowedOnNestedTable(t *testing.T) {
 	require := assertions(t)
 	schema, err := require.AppSchema(`APPLICATION test();
 		WORKSPACE MyWS (
+			DESCRIPTOR ();
 			TABLE Table2 INHERITS sys.CDoc(
 				Fld1 int32,
 				Nested TABLE Nested (

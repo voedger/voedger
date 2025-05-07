@@ -255,6 +255,10 @@ func test() *testDataType {
 		wsb := adb.AddWorkspace(testData.wsName)
 
 		{
+			wsDescQName := appdef.NewQName("test", "WSDesc")
+			wsb.AddCDoc(wsDescQName)
+			wsb.SetDescriptor(wsDescQName)
+
 			identData := wsb.AddData(testData.dataIdent, appdef.DataKind_string, appdef.NullQName)
 			identData.AddConstraints(constraints.MinLen(1), constraints.MaxLen(50)).SetComment("string from 1 to 50 runes")
 

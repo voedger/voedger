@@ -111,6 +111,8 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 		wsName := appdef.NewQName("test", "workspace")
 
 		wsb := adb.AddWorkspace(wsName)
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 		_ = wsb.AddCommand(appdef.NewQName("test", "command"))
 
@@ -203,6 +205,8 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 			wsName := appdef.NewQName("test", "workspace")
 
 			wsb := adb.AddWorkspace(wsName)
+			wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+			wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 			_ = wsb.AddCommand(appdef.NewQName("test", "command"))
 

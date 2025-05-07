@@ -181,7 +181,20 @@ func (app *appStructsType) EventValidators() []istructs.EventValidator {
 	return app.config.eventValidators
 }
 
-// func (app appStructsType) GetAppStorage
+func (app *appStructsType) SeqTypes() map[istructs.QNameID]map[istructs.QNameID]uint64 {
+	res := map[istructs.QNameID]map[istructs.QNameID]uint64{}
+	for wsKind, seqTypes := range app.config.seqTypes {
+		wsKindSeqTypes, ok := res[istructs.QNameID(wsKind)]
+		if !ok {
+			wsKindSeqTypes = map[istructs.QNameID]uint64{}
+			res[istructs.QNameID(wsKind)] = wsKindSeqTypes
+		}
+		for seqID, number := range seqTypes {
+			wsKindSeqTypes[istructs.QNameID(seqID)] = uint64(number)
+		}
+	}
+	return res
+}
 
 func (app *appStructsType) QNameID(qName appdef.QName) (istructs.QNameID, error) {
 	return app.config.QNameID(qName)
