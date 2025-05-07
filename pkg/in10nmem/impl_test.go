@@ -262,10 +262,8 @@ func TestQuotas(t *testing.T) {
 // - Make sure that notifySubscriber is called
 func TestHeartbeats(t *testing.T) {
 
-	defer logger.SetLogLevelWithRestore(logger.LogLevelTrace)()
-
 	req := require.New(t)
-	mockTime := coreutils.NewMockTime()
+	mockTime := coreutils.MockTime
 	mockTime.FireNextTimerImmediately()
 
 	quotasExample := in10n.Quotas{

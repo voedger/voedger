@@ -403,10 +403,9 @@ func (nb *N10nBroker) heartbeat30(ctx context.Context, wg *sync.WaitGroup) {
 		logger.Info("heartbeat30 goroutine stopped")
 	}()
 
-	logger.Info("heartbeat30 goroutine started")
-
 	// [~server.n10n.heartbeats/freq.Interval30Seconds~impl]
 	ticker := nb.time.NewTimerChan(in10n.Heartbeat30Duration)
+	logger.Info("heartbeat30 goroutine started, Heartbeat30Duration:", in10n.Heartbeat30Duration)
 
 	offset := istructs.Offset(1)
 
