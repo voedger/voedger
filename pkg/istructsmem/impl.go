@@ -183,6 +183,10 @@ func (app *appStructsType) EventValidators() []istructs.EventValidator {
 
 // func (app appStructsType) GetAppStorage
 
+func (app *appStructsType) QNameID(qName appdef.QName) (istructs.QNameID, error) {
+	return app.config.QNameID(qName)
+}
+
 func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName appdef.QName, wsid istructs.WSID) bool {
 	rateLimits, ok := app.config.FunctionRateLimits.limits[funcQName]
 	if !ok {
@@ -332,7 +336,7 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 		err = e.app.config.storage.Put(pKey, cCols, evData)
 	case e.app.seqTrustLevel == isequencer.SequencesTrustLevel_0, e.app.seqTrustLevel == isequencer.SequencesTrustLevel_1:
 		ok := false
-		// [~tuc.SequencesTrustLevelForPLog~]
+		// [~server.design.sequences/tuc.SequencesTrustLevelForPLog~impl]
 		if ok, err = e.app.config.storage.InsertIfNotExists(pKey, cCols, evData, 0); err == nil {
 			if !ok {
 				return nil, ErrSequencesViolation
@@ -365,7 +369,7 @@ func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (err error) {
 		err = e.app.config.storage.Put(pKey, cCols, evData)
 	case e.app.seqTrustLevel == isequencer.SequencesTrustLevel_0, e.app.seqTrustLevel == isequencer.SequencesTrustLevel_1:
 		ok := false
-		// [~tuc.SequencesTrustLevelForWLog~]
+		// [~server.design.sequences/tuc.SequencesTrustLevelForWLog~impl]
 		if ok, err = e.app.config.storage.InsertIfNotExists(pKey, cCols, evData, 0); err == nil {
 			if !ok {
 				return ErrSequencesViolation

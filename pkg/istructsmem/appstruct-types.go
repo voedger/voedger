@@ -131,11 +131,11 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 
 	if cfg.appDefBuilder != nil {
 		// BuiltIn application, appDefBuilder can be changed after add config
-		app, err := cfg.appDefBuilder.Build()
+		appDef, err := cfg.appDefBuilder.Build()
 		if err != nil {
 			return fmt.Errorf("%v: unable rebuild changed application: %w", cfg.Name, err)
 		}
-		cfg.AppDef = app
+		cfg.AppDef = appDef
 	}
 
 	cfg.dynoSchemes.Prepare(cfg.AppDef)
@@ -275,6 +275,10 @@ func (cfg *AppConfigType) SetNumAppWorkspaces(naw istructs.NumAppWorkspaces) {
 		panic("must not set NumAppWorkspaces after first IAppStructsProvider.AppStructs() call because the app is considered working")
 	}
 	cfg.numAppWorkspaces = naw
+}
+
+func (cfg *AppConfigType) QNameID(qName appdef.QName) (istructs.QNameID, error) {
+	return cfg.qNames.ID(qName)
 }
 
 // Application configuration parameters
