@@ -85,6 +85,8 @@ type IAppStructs interface {
 	// to execute PutWLog and ApplyRecords skipping SequencesTrustLevel on partition recoevery
 	// panics if IPLogEvent was not loaded from the database
 	GetEventReapplier(IPLogEvent) IEventReapplier
+
+	QNameID(qName appdef.QName) (QNameID, error)
 }
 
 // need to re-apply an already stored PLog
