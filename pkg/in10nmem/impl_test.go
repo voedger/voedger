@@ -247,7 +247,7 @@ func TestQuotas(t *testing.T) {
 					req.Equal(1000, numSubscriptions)
 					projectionKeyExample.WS = istructs.WSID(i + 100000)
 					err = broker.Subscribe(channel, projectionKeyExample)
-					req.ErrorIs(err, in10n.ErrQuotaExceeded_Subsciptions)
+					req.ErrorIs(err, in10n.ErrQuotaExceeded_Subscriptions)
 				}
 			}
 		}

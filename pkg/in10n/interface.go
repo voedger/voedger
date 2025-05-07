@@ -21,7 +21,7 @@ type IN10nBroker interface {
 	NewChannel(subject istructs.SubjectLogin, channelDuration time.Duration) (channelID ChannelID, err error)
 
 	// ChannelID must be taken from NewChannel()
-	// Errors: ErrChannelDoesNotExist, ErrQuotaExceeded_Subsciptions*
+	// Errors: ErrChannelDoesNotExist, ErrQuotaExceeded_Subscriptions*
 	//
 	// [~server.n10n.heartbeats/freq.ZeroKey~doc]:
 	// - If Subscribe is called for QNameHeartbeat30:

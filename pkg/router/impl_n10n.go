@@ -115,7 +115,7 @@ func n10nErrorToStatusCode(err error) int {
 	switch {
 	case errors.Is(err, in10n.ErrChannelDoesNotExist), errors.Is(err, in10nmem.ErrMetricDoesNotExists):
 		return http.StatusBadRequest
-	case errors.Is(err, in10n.ErrQuotaExceeded_Subsciptions), errors.Is(err, in10n.ErrQuotaExceeded_SubsciptionsPerSubject),
+	case errors.Is(err, in10n.ErrQuotaExceeded_Subscriptions), errors.Is(err, in10n.ErrQuotaExceeded_SubscriptionsPerSubject),
 		errors.Is(err, in10n.ErrQuotaExceeded_Channels), errors.Is(err, in10n.ErrQuotaExceeded_ChannelsPerSubject):
 		return http.StatusTooManyRequests
 	}

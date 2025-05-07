@@ -104,7 +104,7 @@ func (nb *N10nBroker) NewChannel(subject istructs.SubjectLogin, channelDuration 
 }
 
 // Implementation of in10n.IN10nBroker
-// Errors: ErrChannelDoesNotExist, ErrQuotaExceeded_Subsciptions*
+// Errors: ErrChannelDoesNotExist, ErrQuotaExceeded_Subscriptions*
 //
 // [~server.n10n.heartbeats/freq.ZeroKey~doc]:
 // - If Subscribe is called for QNameHeartbeat30:
@@ -128,10 +128,10 @@ func (nb *N10nBroker) Subscribe(channelID in10n.ChannelID, projectionKey in10n.P
 	}
 
 	if nb.numSubscriptions >= nb.quotas.Subscriptions {
-		return in10n.ErrQuotaExceeded_Subsciptions
+		return in10n.ErrQuotaExceeded_Subscriptions
 	}
 	if metric.numSubscriptions >= nb.quotas.SubscriptionsPerSubject {
-		return in10n.ErrQuotaExceeded_SubsciptionsPerSubject
+		return in10n.ErrQuotaExceeded_SubscriptionsPerSubject
 	}
 
 	// [~server.n10n.heartbeats/freq.ZeroKey~impl]
