@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
 	istructs "github.com/voedger/voedger/pkg/istructs"
@@ -263,7 +264,7 @@ func TestQuotas(t *testing.T) {
 func TestHeartbeats(t *testing.T) {
 
 	req := require.New(t)
-	mockTime := coreutils.MockTime
+	mockTime := testingu.MockTime
 	mockTime.FireNextTimerImmediately()
 
 	quotasExample := in10n.Quotas{

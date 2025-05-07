@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -74,7 +74,7 @@ func TestBasicUsage_Heartbeat30(t *testing.T) {
 					return
 				case <-time.After(100 * time.Millisecond):
 					logger.Info("TestBasicUsage_Heartbeat30: MockTime.Add()")
-					coreutils.MockTime.Add(in10n.Heartbeat30Duration)
+					testingu.MockTime.Add(in10n.Heartbeat30Duration)
 				}
 			}
 
