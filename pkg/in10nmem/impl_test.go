@@ -189,8 +189,6 @@ func TestWatchNotExistsChannel(t *testing.T) {
 
 func TestQuotas(t *testing.T) {
 
-	t.Parallel()
-
 	req := require.New(t)
 	quotasExample := in10n.Quotas{
 		Channels:                100,
