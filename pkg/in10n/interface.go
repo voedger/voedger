@@ -33,12 +33,13 @@ type IN10nBroker interface {
 	// - ProjectionKey.AppQName is set no {"", ""}
 	Subscribe(channelID ChannelID, projection ProjectionKey) (err error)
 
-	// Channel with ChannelID must exist (panic)
-	// If channelDuration expired WatchChannel terminates
-	// When WatchChannel enters/exits Metrics must be updated
-	// It is not guaranteed that all offsets from Update() comes to `notifySubscriber` callback, some can be missed
-	// If ctx is Done function must exit
-	// @ConcurrentAccess
+	// Panics if a Channel with ChannelID does not exist
+	// Terminates if channelDuration expired
+	// Metrics are updated when WatchChannel enters/exits
+	// It is not guaranteed that all offsets from Update() comes to `notifySubscriber` callback
+	// - It is guaranteed that the last one is delivered
+	// Exits if ctx is Done
+	// Only one client must call WatchChannel, concurrent use is not allowed
 	WatchChannel(ctx context.Context, channelID ChannelID, notifySubscriber func(projection ProjectionKey, offset istructs.Offset))
 
 	// This method MUST NOT BLOCK longer than 500 ns

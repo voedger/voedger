@@ -29,7 +29,7 @@ import (
 type N10nBroker struct {
 	sync.RWMutex
 	projections      map[in10n.ProjectionKey]*projection
-	channels         map[in10n.ChannelID]*channelType
+	channels         map[in10n.ChannelID]*channel
 	quotas           in10n.Quotas
 	metricBySubject  map[istructs.SubjectLogin]*metricType
 	numSubscriptions int
@@ -46,10 +46,10 @@ type projection struct {
 
 	offsetPointer *istructs.Offset
 
-	toSubscribe map[in10n.ChannelID]*channelType
+	toSubscribe map[in10n.ChannelID]*channel
 
 	// merged by pnotifier using toSubscribe, toUnsubscribe
-	subscribedChannels map[in10n.ChannelID]*channelType
+	subscribedChannels map[in10n.ChannelID]*channel
 }
 
 type subscription struct {
@@ -57,7 +57,7 @@ type subscription struct {
 	currentOffset   *istructs.Offset
 }
 
-type channelType struct {
+type channel struct {
 	subject         istructs.SubjectLogin
 	subscriptions   map[in10n.ProjectionKey]*subscription
 	channelDuration time.Duration
@@ -91,7 +91,7 @@ func (nb *N10nBroker) NewChannel(subject istructs.SubjectLogin, channelDuration 
 	}
 	metric.numChannels++
 	channelID = in10n.ChannelID(uuid.New().String())
-	channel := channelType{
+	channel := channel{
 		subject:         subject,
 		subscriptions:   make(map[in10n.ProjectionKey]*subscription),
 		channelDuration: channelDuration,
@@ -174,7 +174,7 @@ func (nb *N10nBroker) Unsubscribe(channelID in10n.ChannelID, projectionKey in10n
 // channel already watched - exit.
 func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelID, notifySubscriber func(projection in10n.ProjectionKey, offset istructs.Offset)) {
 	// check that the channelID with the given ChannelID exists
-	channel, metric := func() (*channelType, *metricType) {
+	channel, metric := func() (*channel, *metricType) {
 		nb.RLock()
 		defer nb.RUnlock()
 		channel, channelOK := nb.channels[channelID]
@@ -284,9 +284,9 @@ func guaranteeProjection(projections map[in10n.ProjectionKey]*projection, projec
 	prj := projections[projectionKey]
 	if prj == nil {
 		prj = &projection{
-			subscribedChannels: make(map[in10n.ChannelID]*channelType),
+			subscribedChannels: make(map[in10n.ChannelID]*channel),
 			offsetPointer:      new(istructs.Offset),
-			toSubscribe:        make(map[in10n.ChannelID]*channelType),
+			toSubscribe:        make(map[in10n.ChannelID]*channel),
 		}
 		projections[projectionKey] = prj
 
@@ -344,7 +344,7 @@ func (nb *N10nBroker) MetricSubject(ctx context.Context, cb func(subject istruct
 func NewN10nBroker(quotas in10n.Quotas, time coreutils.ITime) (nb *N10nBroker, cleanup func()) {
 	broker := N10nBroker{
 		projections:     make(map[in10n.ProjectionKey]*projection),
-		channels:        make(map[in10n.ChannelID]*channelType),
+		channels:        make(map[in10n.ChannelID]*channel),
 		metricBySubject: make(map[istructs.SubjectLogin]*metricType),
 		quotas:          quotas,
 		time:            time,
@@ -363,7 +363,7 @@ func NewN10nBroker(quotas in10n.Quotas, time coreutils.ITime) (nb *N10nBroker, c
 	return &broker, cleanup
 }
 
-func (nb *N10nBroker) validateChannel(channel *channelType) error {
+func (nb *N10nBroker) validateChannel(channel *channel) error {
 	nb.RLock()
 	defer nb.RUnlock()
 	// if channel lifetime > channelDuration defined in NewChannel when create channel - must exit
