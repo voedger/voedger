@@ -14,6 +14,7 @@ package in10nmem
 
 import (
 	"context"
+	"log"
 	"strconv"
 	"sync"
 	"testing"
@@ -307,7 +308,7 @@ func TestHeartbeats(t *testing.T) {
 		case update := <-cb.data:
 			// Verify we got an update for the heartbeat projection
 			req.Equal(in10n.Heartbeat30ProjectionKey, update.Projection)
-			logger.Verbose("Received heartbeat update:", update)
+			log.Println("Received heartbeat update:", update)
 			mockTime.Add(30 * time.Second) // Simulate passage of time
 		case <-time.After(5 * time.Second):
 			t.Fatal("Timeout waiting for heartbeat notification")

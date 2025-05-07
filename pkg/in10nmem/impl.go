@@ -211,8 +211,8 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 		nb.Unlock()
 	}()
 
-	if logger.IsVerbose() {
-		logger.Verbose("notified", channelID, channel.subject)
+	if logger.IsTrace() {
+		logger.Trace("notified", channelID, channel.subject)
 	}
 
 	updateUnits := make([]UpdateUnit, 0)
@@ -251,8 +251,8 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 			}
 			nb.Unlock()
 			for _, unit := range updateUnits {
-				if logger.IsVerbose() {
-					logVerbose("before notifySubscriber", unit.Projection, unit.Offset)
+				if logger.IsTrace() {
+					logTrace("before notifySubscriber", unit.Projection, unit.Offset)
 				}
 				notifySubscriber(unit.Projection, unit.Offset)
 			}
@@ -291,18 +291,18 @@ func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
 			}
 
 			// Notify subscribers
-			if logger.IsVerbose() {
-				logger.Verbose("notifier goroutine: len(prj.subscribedChannels):", strconv.Itoa(len(prj.subscribedChannels)))
+			if logger.IsTrace() {
+				logger.Trace("notifier goroutine: len(prj.subscribedChannels):", strconv.Itoa(len(prj.subscribedChannels)))
 			}
 			for _, ch := range prj.subscribedChannels {
 				select {
 				case ch.cchan <- struct{}{}:
-					if logger.IsVerbose() {
-						logger.Verbose("notifier goroutine: ch.cchan <- struct{}{}")
+					if logger.IsTrace() {
+						logger.Trace("notifier goroutine: ch.cchan <- struct{}{}")
 					}
 				default:
-					if logger.IsVerbose() {
-						logger.Verbose("notifier goroutine: channel full, skipping send")
+					if logger.IsTrace() {
+						logger.Trace("notifier goroutine: channel full, skipping send")
 					}
 				}
 			}
@@ -335,8 +335,8 @@ func (nb *N10nBroker) Update(projection in10n.ProjectionKey, offset istructs.Off
 
 	e := event{prj: prj}
 	nb.events <- e
-	if logger.IsVerbose() {
-		logVerbose("Update() completed", projection, offset)
+	if logger.IsTrace() {
+		logTrace("Update() completed", projection, offset)
 	}
 }
 
