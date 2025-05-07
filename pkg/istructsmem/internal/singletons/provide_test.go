@@ -14,7 +14,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -26,7 +26,7 @@ import (
 )
 
 func Test_BasicUsage(t *testing.T) {
-	sp := istorageimpl.Provide(mem.Provide(coreutils.MockTime))
+	sp := istorageimpl.Provide(mem.Provide(testingu.MockTime))
 	storage, err := sp.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(t, err)
 
@@ -104,7 +104,7 @@ func Test_SingletonsGetID(t *testing.T) {
 
 	t.Run("must be ok to construct Singletons", func(t *testing.T) {
 		storage, versions, appDef := func() (istorage.IAppStorage, *vers.Versions, appdef.IAppDef) {
-			storage, err := istorageimpl.Provide(mem.Provide(coreutils.MockTime)).AppStorage(istructs.AppQName_test1_app1)
+			storage, err := istorageimpl.Provide(mem.Provide(testingu.MockTime)).AppStorage(istructs.AppQName_test1_app1)
 			require.NoError(err)
 
 			versions := vers.New()
@@ -194,7 +194,7 @@ func Test_Singletons_Errors(t *testing.T) {
 	testError := errors.New("test error")
 
 	t.Run("must error if unknown version of Singletons system view", func(t *testing.T) {
-		storage, err := istorageimpl.Provide(mem.Provide(coreutils.MockTime)).AppStorage(istructs.AppQName_test1_app1)
+		storage, err := istorageimpl.Provide(mem.Provide(testingu.MockTime)).AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
 		versions := vers.New()

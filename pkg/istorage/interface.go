@@ -7,10 +7,11 @@ package istorage
 
 import (
 	"context"
+
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/pipeline"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 // used by cached app storage and in bootstrap to create storages for sys/router and sys/bobber applications
@@ -34,7 +35,7 @@ type IAppStorageFactory interface {
 	Init(appName SafeAppName) error
 
 	// used by TCK in tests
-	Time() coreutils.ITime
+	Time() timeu.ITime
 
 	// stops all goroutines started by the factory
 	StopGoroutines()

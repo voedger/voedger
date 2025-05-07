@@ -19,7 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/appparts/internal/schedulers"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isequencer"
@@ -135,7 +135,7 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 		appConfigs,
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
-		provider.Provide(mem.Provide(coreutils.MockTime), ""), isequencer.SequencesTrustLevel_0)
+		provider.Provide(mem.Provide(testingu.MockTime), ""), isequencer.SequencesTrustLevel_0)
 
 	mockActualizers := &mockActualizerRunner{}
 	mockActualizers.On("SetAppPartitions", mock.Anything).Once()

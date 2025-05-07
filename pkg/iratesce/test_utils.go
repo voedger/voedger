@@ -5,10 +5,10 @@
 package iratesce
 
 import (
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	irates "github.com/voedger/voedger/pkg/irates"
 )
 
 var TestBucketsFactory = func() irates.IBuckets {
-	return Provide(coreutils.MockTime)
+	return Provide(testingu.MockTime)
 }

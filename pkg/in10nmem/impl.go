@@ -20,8 +20,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 )
@@ -33,7 +33,7 @@ type N10nBroker struct {
 	quotas           in10n.Quotas
 	metricBySubject  map[istructs.SubjectLogin]*metricType
 	numSubscriptions int
-	time             coreutils.ITime
+	time             timeu.ITime
 	events           chan event
 }
 
@@ -341,7 +341,7 @@ func (nb *N10nBroker) MetricSubject(ctx context.Context, cb func(subject istruct
 	}
 }
 
-func NewN10nBroker(quotas in10n.Quotas, time coreutils.ITime) (nb *N10nBroker, cleanup func()) {
+func NewN10nBroker(quotas in10n.Quotas, time timeu.ITime) (nb *N10nBroker, cleanup func()) {
 	broker := N10nBroker{
 		projections:     make(map[in10n.ProjectionKey]*projection),
 		channels:        make(map[in10n.ChannelID]*channelType),

@@ -9,8 +9,8 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -33,7 +33,7 @@ type BasicSchedulerConfig struct {
 	Metrics      imetrics.IMetrics
 	Broker       in10n.IN10nBroker
 	Federation   federation.IFederation
-	Time         coreutils.ITime
+	Time         timeu.ITime
 
 	Opts []state.StateOptFunc
 

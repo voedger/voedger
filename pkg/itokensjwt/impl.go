@@ -18,6 +18,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -208,7 +209,7 @@ func getTokenPayload(token []string) string {
 	return token[1]
 }
 
-func NewJWTSigner(secretKey SecretKeyType, iTime coreutils.ITime) *JWTSigner {
+func NewJWTSigner(secretKey SecretKeyType, iTime timeu.ITime) *JWTSigner {
 	var byteSecretKey []byte = secretKey
 	if len(byteSecretKey) < SecretKeyLength {
 		panic(fmt.Errorf("invalid key length: must be %d chars", SecretKeyLength))

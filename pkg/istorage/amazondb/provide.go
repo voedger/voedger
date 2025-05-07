@@ -6,11 +6,11 @@
 package amazondb
 
 import (
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
-func Provide(params DynamoDBParams, iTime coreutils.ITime) istorage.IAppStorageFactory {
+func Provide(params DynamoDBParams, iTime timeu.ITime) istorage.IAppStorageFactory {
 	return &implIAppStorageFactory{
 		params: params,
 		iTime:  iTime,

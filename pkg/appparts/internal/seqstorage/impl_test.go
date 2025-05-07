@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
@@ -267,7 +268,7 @@ func TestSeqIDMapping(t *testing.T) {
 	appDefBuilder := builder.New()
 	appDef, err := appDefBuilder.Build()
 	require.NoError(err)
-	appStorageProvider := provider.Provide(mem.Provide(coreutils.MockTime))
+	appStorageProvider := provider.Provide(mem.Provide(testingu.MockTime))
 	appStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
 	require.NoError(err)
 	seqSysVVMStorage := storage.NewVVMSeqStorageAdapter(appStorage)
@@ -347,7 +348,7 @@ func setupTestAppDef(t *testing.T) appdef.IAppDef {
 // setupSeqStorage creates and returns a sequence storage instance for testing
 func setupSeqStorage(t *testing.T, mockEvents *coreutils.MockEvents, appDef appdef.IAppDef) isequencer.ISeqStorage {
 	require := require.New(t)
-	appStorageProvider := provider.Provide(mem.Provide(coreutils.MockTime))
+	appStorageProvider := provider.Provide(mem.Provide(testingu.MockTime))
 	appStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
 	require.NoError(err)
 	seqSysVVMStorage := storage.NewVVMSeqStorageAdapter(appStorage)

@@ -13,11 +13,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 )
 
 func TestDataWithExpiration_BasicUsage(t *testing.T) {
 	require := require.New(t)
-	expireAt_expected := MockTime.Now().Add(time.Minute).UnixMilli()
+	expireAt_expected := testingu.MockTime.Now().Add(time.Minute).UnixMilli()
 	data_expected := []byte("Hello, World!")
 
 	dwe := &DataWithExpiration{
@@ -35,12 +36,12 @@ func TestDataWithExpiration_BasicUsage(t *testing.T) {
 	})
 
 	t.Run("expiration", func(t *testing.T) {
-		require.False(dwe.IsExpired(MockTime.Now()))
-		MockTime.Add(time.Minute)
-		MockTime.Add(-time.Millisecond)
-		require.False(dwe.IsExpired(MockTime.Now()))
-		MockTime.Add(time.Millisecond)
-		require.True(dwe.IsExpired(MockTime.Now()))
+		require.False(dwe.IsExpired(testingu.MockTime.Now()))
+		testingu.MockTime.Add(time.Minute)
+		testingu.MockTime.Add(-time.Millisecond)
+		require.False(dwe.IsExpired(testingu.MockTime.Now()))
+		testingu.MockTime.Add(time.Millisecond)
+		require.True(dwe.IsExpired(testingu.MockTime.Now()))
 	})
 
 	t.Run("no expiration", func(t *testing.T) {
@@ -51,9 +52,9 @@ func TestDataWithExpiration_BasicUsage(t *testing.T) {
 					Data:     data_expected,
 					ExpireAt: exp,
 				}
-				require.False(dwe.IsExpired(MockTime.Now()))
-				MockTime.Add(time.Minute)
-				require.False(dwe.IsExpired(MockTime.Now()))
+				require.False(dwe.IsExpired(testingu.MockTime.Now()))
+				testingu.MockTime.Add(time.Minute)
+				require.False(dwe.IsExpired(testingu.MockTime.Now()))
 			})
 		}
 	})

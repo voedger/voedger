@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 )
 
 const seconds10 = 10
@@ -32,7 +32,7 @@ func ElectionsTestSuite[K any, V any](t *testing.T, ttlStorage ITTLStorage[K, V]
 	// note: testing the case when ttl record is expired is nonsense because it is renewing, can not be expired. Key deletion case is covered
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			elections, cleanup := Provide(ttlStorage, coreutils.MockTime)
+			elections, cleanup := Provide(ttlStorage, testingu.MockTime)
 			defer cleanup()
 			require := require.New(t)
 			test(require, elections, ttlStorage, cleanup, testData)
@@ -85,7 +85,7 @@ func closeContextOnCompareAndSwapFailure_KeyChanged[K any, V any](require *requi
 	require.True(ok)
 
 	// trigger the renewal
-	coreutils.MockTime.Sleep((seconds10) * time.Second)
+	testingu.MockTime.Sleep((seconds10) * time.Second)
 
 	// The leadership is forcibly released in the background.
 	<-ctx.Done()
@@ -97,7 +97,7 @@ func closeContextOnCompareAndSwapFailure_KeyChanged[K any, V any](require *requi
 	require.Equal(val2, keptValue)
 
 	// make the sabotaged key be expired
-	coreutils.MockTime.Sleep((seconds10 + 1) * time.Second)
+	testingu.MockTime.Sleep((seconds10 + 1) * time.Second)
 }
 
 func closeContextOnCompareAndSwapFailure_KeyDeleted[K any, V any](require *require.Assertions, elections IElections[K, V], iTTLStorage ITTLStorage[K, V], _ func(), dataGen TestDataGen[K, V]) {
@@ -112,7 +112,7 @@ func closeContextOnCompareAndSwapFailure_KeyDeleted[K any, V any](require *requi
 	require.True(ok)
 
 	// trigger the renewal
-	coreutils.MockTime.Sleep((seconds10 + 1) * time.Second)
+	testingu.MockTime.Sleep((seconds10 + 1) * time.Second)
 
 	// The leadership is forcibly released in the background.
 	<-ctx.Done()
@@ -149,7 +149,7 @@ func cleanupDuringRenewal[K any, V any](_ *require.Assertions, elections IElecti
 	ctx := elections.AcquireLeadership(key, val, seconds10)
 
 	{
-		coreutils.MockTime.Sleep(time.Duration(seconds10/2) * time.Second)
+		testingu.MockTime.Sleep(time.Duration(seconds10/2) * time.Second)
 
 		// now force cancel everything.
 		// successful finalizing after that shows that there are no deadlocks caused by simultaneous locks in
