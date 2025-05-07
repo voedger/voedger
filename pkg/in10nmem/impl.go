@@ -301,8 +301,8 @@ func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
 						logger.Trace("notifier goroutine: ch.cchan <- struct{}{}")
 					}
 				default:
-					if logger.IsTrace() {
-						logger.Trace("notifier goroutine: channel full, skipping send")
+					if logger.IsVerbose() {
+						logger.Verbose("notifier goroutine: channel full, skipping send")
 					}
 				}
 			}
