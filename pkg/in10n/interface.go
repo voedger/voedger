@@ -14,9 +14,10 @@ import (
 
 // This interface is provided only once per process
 // Provide() must have a parameter of Quotas type
-// Implementation must generate one event per second for the ProjectionKey
-// - ProjectionKey{ AppName:"", Projection: QNameHeartbeat30, WS: 0}
-}
+//
+// [~server.n10n.heartbeats/cmp.IN10nBroker.Heartbeat30~]
+// - Implementation generates one event per 30 seconds for the ProjectionKey
+//   - ProjectionKey{ AppName:"", Projection: QNameHeartbeat30, WS: 0}
 type IN10nBroker interface {
 
 	// Errors: ErrQuotaExceeded_Channels*
@@ -25,9 +26,11 @@ type IN10nBroker interface {
 
 	// ChannelID must be taken from NewChannel()
 	// Errors: ErrChannelDoesNotExist, ErrQuotaExceeded_Subsciptions*
-	// [~server.n10n.heartbeats/tuc.SimulateHeartbeat30Updates~]
-	// If Subscribe is called for Heartbeat30 projection
-	// - Change ProjectionKey.WSID to 0
+	//
+	// [~server.n10n.heartbeats/cmp.IN10nBroker.Heartbeat30~]
+	// If Subscribe is called for QNameHeartbeat30:
+	// - ProjectionKey.WSID is set 0
+	// - ProjectionKey.AppQName is set no {"", ""}
 	Subscribe(channelID ChannelID, projection ProjectionKey) (err error)
 
 	// Channel with ChannelID must exist (panic)

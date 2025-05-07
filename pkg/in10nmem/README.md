@@ -43,5 +43,6 @@ erDiagram
     "notifier goroutine" ||..|| "events chan event{}" : "reads from"	
 ```
 
-## Simulation of Heartbeat30 updates
+## History
 
+- [Before removing the inv, v1 folders](https://github.com/voedger/voedger/blob/e79b37d3644a626f9cef03e17a5904c638e293b5/pkg/in10nmem/README.md)
