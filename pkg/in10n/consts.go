@@ -15,7 +15,7 @@ import (
 // QNameHeartbeat30 is the name of the singleton that is used to simulate updates
 var QNameHeartbeat30 = appdef.NewQName(appdef.SysPackage, "Heartbeat30")
 
-const Heartbeat30Duration = time.Duration(30 * time.Second)
+const Heartbeat30Duration = 30 * time.Second
 
 // [~server.n10n.heartbeats/freq.ZeroKey~impl]
 var Heartbeat30ProjectionKey = ProjectionKey{
