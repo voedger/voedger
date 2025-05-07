@@ -264,8 +264,8 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 
 func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
 	defer func() {
-		wg.Done()
 		logger.Info("notifier goroutine stopped")
+		wg.Done()
 	}()
 
 	logger.Info("notifier goroutine started")
@@ -399,8 +399,8 @@ func NewN10nBroker(quotas in10n.Quotas, time timeu.ITime) (nb *N10nBroker, clean
 // Call Update() every 30 seconds for i10n.Heartbeat30ProjectionKey
 func (nb *N10nBroker) heartbeat30(ctx context.Context, wg *sync.WaitGroup) {
 	defer func() {
-		wg.Done()
 		logger.Info("heartbeat30 goroutine stopped")
+		wg.Done()
 	}()
 
 	// [~server.n10n.heartbeats/freq.Interval30Seconds~impl]
