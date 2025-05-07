@@ -12,7 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/istorage"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -24,7 +24,7 @@ func Benchmark_Put_One_SameBucket_ST(b *testing.B) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
 
-	factory := Provide(params, coreutils.MockTime)
+	factory := Provide(params, testingu.MockTime)
 	storageProvider := istorageimpl.Provide(factory)
 
 	appStorage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)
@@ -50,7 +50,7 @@ func Benchmark_Put_50_DifferentBuckets_ST(b *testing.B) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
 
-	factory := Provide(params, coreutils.MockTime)
+	factory := Provide(params, testingu.MockTime)
 	storageProvider := istorageimpl.Provide(factory)
 
 	appStorage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)
@@ -80,7 +80,7 @@ func Benchmark_Put_One_DifferentBuckets_ST(b *testing.B) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
 
-	factory := Provide(params, coreutils.MockTime)
+	factory := Provide(params, testingu.MockTime)
 	storageProvider := istorageimpl.Provide(factory)
 
 	appStorage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)
@@ -106,7 +106,7 @@ func Benchmark_Put_One_SameBucket_Parallel(b *testing.B) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
 
-	factory := Provide(params, coreutils.MockTime)
+	factory := Provide(params, testingu.MockTime)
 	storageProvider := istorageimpl.Provide(factory)
 
 	appStorage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)

@@ -174,7 +174,7 @@ type sequencer struct {
 // New creates a new instance of the Sequencer type.
 // Instance has actualizer() goroutine started.
 // cleanup: function to stop the actualizer.
-func New(isequencer.Params, ISeqStorage, coreutils.ITime) (isequencer.ISequencer, cleanup func()) {
+func New(isequencer.Params, ISeqStorage, timeu.ITime) (isequencer.ISequencer, cleanup func()) {
   // ...
 }
 

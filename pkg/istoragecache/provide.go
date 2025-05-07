@@ -5,7 +5,7 @@
 package istoragecache
 
 import (
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	istorage "github.com/voedger/voedger/pkg/istorage"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
@@ -16,7 +16,7 @@ func Provide(
 	storageProvider istorage.IAppStorageProvider,
 	metrics imetrics.IMetrics,
 	vvmName string,
-	iTime coreutils.ITime,
+	iTime timeu.ITime,
 ) istorage.IAppStorageProvider {
 	return &implCachingAppStorageProvider{
 		maxBytes:        maxBytes,

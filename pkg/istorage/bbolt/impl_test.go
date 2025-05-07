@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/istorage"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -26,7 +26,7 @@ func TestBasicUsage(t *testing.T) {
 	defer cleanupTestData(params)
 
 	// creating a StorageProvider
-	factory := Provide(params, coreutils.MockTime)
+	factory := Provide(params, testingu.MockTime)
 	storageProvider := istorageimpl.Provide(factory)
 
 	// get the required AppStorage for the app
@@ -49,7 +49,7 @@ func TestTCK(t *testing.T) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
 
-	factory := Provide(params, coreutils.MockTime)
+	factory := Provide(params, testingu.MockTime)
 	istorage.TechnologyCompatibilityKit(t, factory)
 }
 
@@ -59,7 +59,7 @@ func Test_PutGet(t *testing.T) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
 
-	factory := Provide(params, coreutils.MockTime)
+	factory := Provide(params, testingu.MockTime)
 	storageProvider := istorageimpl.Provide(factory)
 
 	appStorage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)
@@ -89,7 +89,7 @@ func TestBackgroundCleaner(t *testing.T) {
 	defer cleanupTestData(params)
 
 	r := require.New(t)
-	iTime := coreutils.MockTime
+	iTime := testingu.MockTime
 	factory := Provide(params, iTime)
 	storageProvider := istorageimpl.Provide(factory)
 
@@ -141,7 +141,7 @@ func TestAppStorageFactory_StopGoroutines(t *testing.T) {
 	params := prepareTestData()
 	defer cleanupTestData(params)
 
-	factory := Provide(params, coreutils.MockTime)
+	factory := Provide(params, testingu.MockTime)
 	storageProvider := istorageimpl.Provide(factory)
 
 	_, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)

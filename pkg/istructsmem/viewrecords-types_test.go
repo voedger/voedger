@@ -37,6 +37,8 @@ func Test_KeyType(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 		t.Run("should be ok to build view", func(t *testing.T) {
 			view := wsb.AddView(viewName)
@@ -231,6 +233,8 @@ func TestCore_ViewRecords(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 		t.Run("should be ok to build application", func(t *testing.T) {
 			view := wsb.AddView(appdef.NewQName("test", "viewDrinks"))
 			view.Key().PartKey().
@@ -895,6 +899,8 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 		t.Run("should be ok to build application", func(t *testing.T) {
 			view := wsb.AddView(appdef.MustParseQName(viewName))
 			view.Key().PartKey().
@@ -1016,6 +1022,8 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+	wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 	t.Run("should be ok to build application", func(t *testing.T) {
 		v := wsb.AddView(viewName)
 		v.Key().PartKey().
@@ -1157,6 +1165,8 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 		t.Run("should be ok to build application", func(t *testing.T) {
 			v := wsb.AddView(appdef.NewQName("test", "viewDrinks"))
 			v.Key().PartKey().
@@ -1236,6 +1246,8 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+	wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 	t.Run("should be ok to build application", func(t *testing.T) {
 		v := wsb.AddView(championshipsView)
 		v.Key().PartKey().
@@ -1520,6 +1532,8 @@ func Test_ViewRecordStructure(t *testing.T) {
 	adb.AddPackage("test", "test.com/test")
 	t.Run("should be ok to build application", func(t *testing.T) {
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 		v := wsb.AddView(viewName)
 		v.Key().PartKey().
 			AddField("ValueDateYear", appdef.DataKind_int32)

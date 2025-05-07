@@ -16,7 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/isequencer"
@@ -3048,6 +3048,7 @@ func TestIsOperationAllowedOnNestedTable(t *testing.T) {
 	require := assertions(t)
 	schema, err := require.AppSchema(`APPLICATION test();
 		WORKSPACE MyWS (
+			DESCRIPTOR ();
 			TABLE Table2 INHERITS sys.CDoc(
 				Fld1 int32,
 				Nested TABLE Nested (
@@ -3070,8 +3071,8 @@ func TestIsOperationAllowedOnNestedTable(t *testing.T) {
 	cfgs := istructsmem.AppConfigsType{}
 	cfgs.AddAppConfig(appQName, 1, appDef, 1)
 	appStructsProvider := istructsmem.Provide(cfgs, irates.NullBucketsFactory,
-		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.MockTime)),
-		provider.Provide(mem.Provide(coreutils.MockTime)), isequencer.SequencesTrustLevel_0)
+		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testingu.MockTime)),
+		provider.Provide(mem.Provide(testingu.MockTime)), isequencer.SequencesTrustLevel_0)
 	statelessResources := istructsmem.NewStatelessResources()
 	appParts, cleanup, err := appparts.New2(context.Background(), appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
 		engines.ProvideExtEngineFactories(
@@ -3124,8 +3125,8 @@ func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
 	cfgs := istructsmem.AppConfigsType{}
 	cfgs.AddAppConfig(appQName, 1, appDef, 1)
 	appStructsProvider := istructsmem.Provide(cfgs, irates.NullBucketsFactory,
-		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.MockTime)),
-		provider.Provide(mem.Provide(coreutils.MockTime)), isequencer.SequencesTrustLevel_0)
+		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testingu.MockTime)),
+		provider.Provide(mem.Provide(testingu.MockTime)), isequencer.SequencesTrustLevel_0)
 	statelessResources := istructsmem.NewStatelessResources()
 	appParts, cleanup, err := appparts.New2(context.Background(), appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
 		engines.ProvideExtEngineFactories(

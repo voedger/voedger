@@ -12,7 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -33,6 +33,7 @@ func TestEventStorage_Get(t *testing.T) {
 	app := appStructs(
 		`APPLICATION test();
 		WORKSPACE ws1 (
+			DESCRIPTOR ();
 			TABLE t1 INHERITS sys.CDoc (
 				x int32
 			);
@@ -166,7 +167,7 @@ func appStructs(appdefSQL string, prepareAppCfg appCfgCallback) istructs.IAppStr
 		prepareAppCfg(cfg)
 	}
 
-	asf := mem.Provide(coreutils.MockTime)
+	asf := mem.Provide(testingu.MockTime)
 	storageProvider := istorageimpl.Provide(asf)
 	prov := istructsmem.Provide(
 		cfgs,

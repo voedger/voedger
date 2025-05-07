@@ -24,6 +24,7 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iextengine"
@@ -146,7 +147,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	result := ""
 
 	rowsProcessorErrCh := make(chan error, 1)
-	requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+	requestSender := bus.NewIRequestSender(testingu.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go func() {
 			// SendToBus op will send to the respCh chan so let's handle in a separate goroutine
 			processor, respWriterGetter := ProvideRowsProcessorFactory()(context.Background(), appDef, s, params,
@@ -185,7 +186,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	cfgFunc ...func(*istructsmem.AppConfigType)) (appParts appparts.IAppPartitions, cleanup func(),
 	appTokens istructs.IAppTokens, statelessResources istructsmem.IStatelessResources) {
 	cfgs := make(istructsmem.AppConfigsType)
-	asf := mem.Provide(coreutils.MockTime)
+	asf := mem.Provide(testingu.MockTime)
 	storageProvider := istorageimpl.Provide(asf)
 
 	qNameFindArticlesByModificationTimeStampRangeParams := appdef.NewQName("bo", "FindArticlesByModificationTimeStampRangeParamsDef")
@@ -279,14 +280,14 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 		HandlingPartition: partID,
 		Workspace:         wsID,
 		QName:             istructs.QNameCommandCUD,
-		RegisteredAt:      istructs.UnixMilli(coreutils.MockTime.Now().UnixMilli()),
+		RegisteredAt:      istructs.UnixMilli(testingu.MockTime.Now().UnixMilli()),
 		PLogOffset:        plogOffset,
 		WLogOffset:        wlogOffset,
 	}
 	reb := as.Events().GetSyncRawEventBuilder(
 		istructs.SyncRawEventBuilderParams{
 			GenericRawEventBuilderParams: grebp,
-			SyncedAt:                     istructs.UnixMilli(coreutils.MockTime.Now().UnixMilli()),
+			SyncedAt:                     istructs.UnixMilli(testingu.MockTime.Now().UnixMilli()),
 		},
 	)
 
@@ -311,7 +312,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 
 	// create stub for cdoc.sys.WorkspaceDescriptor to make query processor work
 	require.NoError(err)
-	now := coreutils.MockTime.Now()
+	now := testingu.MockTime.Now()
 	grebp = istructs.GenericRawEventBuilderParams{
 		HandlingPartition: partID,
 		Workspace:         wsID,
@@ -396,7 +397,7 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 		wg.Done()
 	}()
 	systemToken := getSystemToken(appTokens)
-	requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+	requestSender := bus.NewIRequestSender(testingu.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, responder, body, qNameFunction, "127.0.0.1", systemToken)
 	})
 	respCh, respMeta, respErr, err := requestSender.SendRequest(processorCtx, bus.Request{})
@@ -451,7 +452,7 @@ func TestRawMode(t *testing.T) {
 
 	result := ""
 	rowsProcessorErrCh := make(chan error, 1)
-	requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+	requestSender := bus.NewIRequestSender(testingu.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go func() {
 			// SendToBus op will send to the respCh chan so let's handle in a separate goroutine
 			processor, respWriterGetter := ProvideRowsProcessorFactory()(context.Background(), appDef, &mockState{},
@@ -1172,7 +1173,7 @@ func TestRateLimiter(t *testing.T) {
 		"args":{},
 		"elements":[{"path":"","fields":["fld"]}]
 	}`)
-	requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+	requestSender := bus.NewIRequestSender(testingu.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, responder, body, qName, "127.0.0.1", systemToken)
 	})
 
@@ -1215,7 +1216,7 @@ func TestAuthnz(t *testing.T) {
 	go queryProcessor.Run(context.Background())
 
 	t.Run("no token for a query that requires authorization -> 403 unauthorized", func(t *testing.T) {
-		requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+		requestSender := bus.NewIRequestSender(testingu.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 			serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, responder, body, qNameFunction, "127.0.0.1", "")
 		})
 		respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
@@ -1233,8 +1234,8 @@ func TestAuthnz(t *testing.T) {
 	t.Run("expired token -> 401 unauthorized", func(t *testing.T) {
 		systemToken := getSystemToken(appTokens)
 		// make the token be expired
-		coreutils.MockTime.Add(2 * time.Minute)
-		requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+		testingu.MockTime.Add(2 * time.Minute)
+		requestSender := bus.NewIRequestSender(testingu.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 			serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, responder, body, qNameFunction, "127.0.0.1", systemToken)
 		})
 		respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
@@ -1250,7 +1251,7 @@ func TestAuthnz(t *testing.T) {
 
 	t.Run("token provided, query a denied func -> 403 forbidden", func(t *testing.T) {
 		token := getTestToken(appTokens, wsID)
-		requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+		requestSender := bus.NewIRequestSender(testingu.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 			serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, responder, body, qNameQryDenied, "127.0.0.1", token)
 		})
 		respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})

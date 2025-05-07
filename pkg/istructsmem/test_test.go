@@ -16,7 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/constraints"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -255,6 +255,10 @@ func test() *testDataType {
 		wsb := adb.AddWorkspace(testData.wsName)
 
 		{
+			wsDescQName := appdef.NewQName("test", "WSDesc")
+			wsb.AddCDoc(wsDescQName)
+			wsb.SetDescriptor(wsDescQName)
+
 			identData := wsb.AddData(testData.dataIdent, appdef.DataKind_string, appdef.NullQName)
 			identData.AddConstraints(constraints.MinLen(1), constraints.MaxLen(50)).SetComment("string from 1 to 50 runes")
 
@@ -433,7 +437,7 @@ func test() *testDataType {
 
 	var err error
 
-	testData.StorageProvider = istorageimpl.Provide(mem.Provide(coreutils.MockTime))
+	testData.StorageProvider = istorageimpl.Provide(mem.Provide(testingu.MockTime))
 
 	testData.AppStructsProvider = Provide(testData.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), testData.StorageProvider, isequencer.SequencesTrustLevel_0)
 	testData.AppStructs, err = testData.AppStructsProvider.BuiltIn(testData.appName)

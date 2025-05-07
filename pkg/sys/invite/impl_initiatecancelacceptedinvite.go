@@ -9,19 +9,20 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
-func provideCmdInitiateCancelAcceptedInvite(sr istructsmem.IStatelessResources, time coreutils.ITime) {
+func provideCmdInitiateCancelAcceptedInvite(sr istructsmem.IStatelessResources, time timeu.ITime) {
 	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(
 		qNameCmdInitiateCancelAcceptedInvite,
 		execCmdInitiateCancelAcceptedInvite(time),
 	))
 }
 
-func execCmdInitiateCancelAcceptedInvite(time coreutils.ITime) func(args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateCancelAcceptedInvite(time timeu.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
 		if err != nil {

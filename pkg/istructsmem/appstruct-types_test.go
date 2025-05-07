@@ -11,7 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isequencer"
@@ -46,6 +46,9 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 		t.Run("should be ok to change appDef after add config", func(t *testing.T) {
 			wsName := appdef.NewQName("test", "workspace")
 			ws := adb.AddWorkspace(wsName)
+			wsDescQName := appdef.NewQName("test", "WSDesc")
+			ws.AddCDoc(wsDescQName)
+			ws.SetDescriptor(wsDescQName)
 			docName := appdef.NewQName("test", "doc")
 			doc := ws.AddCDoc(docName)
 			doc.AddField("field", appdef.DataKind_int64, true)
@@ -125,7 +128,7 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 func TestAppConfigsType_GetConfig(t *testing.T) {
 	require := require.New(t)
 
-	asf := mem.Provide(coreutils.MockTime)
+	asf := mem.Provide(testingu.MockTime)
 	storages := istorageimpl.Provide(asf)
 
 	cfgs := make(AppConfigsType)
@@ -189,6 +192,9 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		ws := adb.AddWorkspace(wsName)
+		wsDescQName := appdef.NewQName("test", "WSDesc")
+		ws.AddCDoc(wsDescQName)
+		ws.SetDescriptor(wsDescQName)
 		doc := ws.AddCDoc(docName)
 		doc.SetSingleton()
 		doc.AddField("f1", appdef.DataKind_string, true)

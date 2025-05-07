@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istorage"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
@@ -22,7 +23,7 @@ type cachedAppStorage struct {
 	storage  istorage.IAppStorage
 	vvm      string
 	appQName appdef.AppQName
-	iTime    coreutils.ITime
+	iTime    timeu.ITime
 
 	/* metrics */
 	mGetSeconds                 *imetrics.MetricValue
@@ -52,7 +53,7 @@ type implCachingAppStorageProvider struct {
 	maxBytes        int
 	metrics         imetrics.IMetrics
 	vvmName         string
-	iTime           coreutils.ITime
+	iTime           timeu.ITime
 }
 
 func (asp *implCachingAppStorageProvider) Prepare(work any) error {
@@ -91,7 +92,7 @@ func newCachingAppStorage(
 	metrics imetrics.IMetrics,
 	vvm string,
 	appQName appdef.AppQName,
-	iTime coreutils.ITime,
+	iTime timeu.ITime,
 ) istorage.IAppStorage {
 	return &cachedAppStorage{
 		cache:                       fastcache.New(maxBytes),

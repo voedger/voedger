@@ -30,6 +30,8 @@ func Test_ValidEventArgs(t *testing.T) {
 	adb.AddPackage("test", "test.com/test")
 
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+	wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 	docName := appdef.NewQName("test", "document")
 	rec1Name := appdef.NewQName("test", "record1")
@@ -327,6 +329,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 	adb.AddPackage("test", "test.com/test")
 
 	wsName := appdef.NewQName("test", "workspace")
+	wsDescName := appdef.NewQName("test", "WSDesc")
 
 	docName := appdef.NewQName("test", "document")
 	rec1Name := appdef.NewQName("test", "record1")
@@ -336,6 +339,8 @@ func Test_ValidSysCudEvent(t *testing.T) {
 
 	t.Run("should be ok to build test application", func(t *testing.T) {
 		wsb := adb.AddWorkspace(wsName)
+		wsb.AddCDoc(wsDescName)
+		wsb.SetDescriptor(wsDescName)
 		doc := wsb.AddCDoc(docName)
 		doc.
 			AddField("RequiredField", appdef.DataKind_int32, true).
@@ -562,6 +567,8 @@ func Test_ValidCommandEvent(t *testing.T) {
 	adb.AddPackage("test", "test.com/test")
 
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+	wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 	cmdName := appdef.NewQName("test", "command")
 	oDocName := appdef.NewQName("test", "ODocument")
@@ -688,6 +695,8 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 	adb.AddPackage("test", "test.com/test")
 
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+	wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 	docName := appdef.NewQName("test", "document")
 	recName := appdef.NewQName("test", "record")
@@ -771,6 +780,8 @@ func Test_VerifiedFields(t *testing.T) {
 	adb.AddPackage("test", "test.com/test")
 
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+	wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 	t.Run("should be ok to build application", func(t *testing.T) {
 		wsb.AddObject(objName).
@@ -947,6 +958,8 @@ func Test_CharsFieldRestricts(t *testing.T) {
 	t.Run("should be ok to build application", func(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 		s100Data := appdef.NewQName("test", "s100")
 		emailData := appdef.NewQName("test", "email")
