@@ -745,6 +745,9 @@ func Test_EventUpdateRawCud(t *testing.T) {
 
 	t.Run("should be ok to construct application", func(t *testing.T) {
 		ws := adb.AddWorkspace(wsName)
+		wsDescQName := appdef.NewQName("test", "WSDesc")
+		ws.AddCDoc(wsDescQName)
+		ws.SetDescriptor(wsDescQName)
 
 		doc := ws.AddCDoc(docName)
 		doc.AddField("new", appdef.DataKind_bool, true)
@@ -927,6 +930,9 @@ func Test_UpdateCorrupted(t *testing.T) {
 
 	t.Run("should be ok to build AppDef", func(t *testing.T) {
 		ws := adb.AddWorkspace(wsName)
+		wsDescQName := appdef.NewQName("test", "WSDesc")
+		ws.AddCDoc(wsDescQName)
+		ws.SetDescriptor(wsDescQName)
 		doc := ws.AddCDoc(docName)
 		doc.SetSingleton()
 		doc.AddField("option", appdef.DataKind_int64, true)
@@ -1061,6 +1067,9 @@ func Test_BuildPLogEvent(t *testing.T) {
 
 	t.Run("should be ok to build AppDef", func(t *testing.T) {
 		ws := adb.AddWorkspace(wsName)
+		wsDescQName := appdef.NewQName("test", "WSDesc")
+		ws.AddCDoc(wsDescQName)
+		ws.SetDescriptor(wsDescQName)
 		doc := ws.AddCDoc(docName)
 		doc.SetSingleton()
 		doc.AddField("option", appdef.DataKind_int64, true)
@@ -1260,6 +1269,9 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 	t.Run("should be ok to construct singleton CDoc", func(t *testing.T) {
 		ws := adb.AddWorkspace(wsName)
+		wsDescQName := appdef.NewQName("test", "WSDesc")
+		ws.AddCDoc(wsDescQName)
+		ws.SetDescriptor(wsDescQName)
 
 		doc := ws.AddCDoc(docName)
 		doc.SetSingleton()

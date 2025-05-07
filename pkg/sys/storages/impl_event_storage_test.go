@@ -33,6 +33,7 @@ func TestEventStorage_Get(t *testing.T) {
 	app := appStructs(
 		`APPLICATION test();
 		WORKSPACE ws1 (
+			DESCRIPTOR ();
 			TABLE t1 INHERITS sys.CDoc (
 				x int32
 			);

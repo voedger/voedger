@@ -45,10 +45,12 @@ ABSTRACT WORKSPACE Workspace (
     )
 );
 
-ALTERABLE WORKSPACE AppWorkspaceWS();
+ALTERABLE WORKSPACE AppWorkspaceWS(
+    DESCRIPTOR();
+);
 
 ALTERABLE WORKSPACE Profile(
-
+    DESCRIPTOR();
 );
 
 

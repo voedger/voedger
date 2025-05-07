@@ -34,6 +34,8 @@ func ExampleIAppPartition_IsLimitExceeded() {
 
 		wsName := appdef.NewQName("test", "workspace")
 		wsb := adb.AddWorkspace(wsName)
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 		_ = wsb.AddCommand(cmd1Name)
 		_ = wsb.AddCommand(cmd2Name)
 

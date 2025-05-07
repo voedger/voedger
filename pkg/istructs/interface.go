@@ -86,6 +86,8 @@ type IAppStructs interface {
 	// panics if IPLogEvent was not loaded from the database
 	GetEventReapplier(IPLogEvent) IEventReapplier
 
+	SeqTypes() map[QNameID]map[QNameID]uint64
+
 	QNameID(qName appdef.QName) (QNameID, error)
 }
 
