@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/compile"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -551,7 +552,7 @@ func (gts *generalTestState) buildAppDef() {
 		}
 	}
 
-	asf := mem.Provide(coreutils.MockTime)
+	asf := mem.Provide(testingu.MockTime)
 	storageProvider := istorageimpl.Provide(asf)
 	prov := istructsmem.Provide(
 		cfgs,

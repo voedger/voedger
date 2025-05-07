@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
@@ -19,7 +19,7 @@ import (
 
 func TestSeqStorage(t *testing.T) {
 	require := require.New(t)
-	appStorageProvider := provider.Provide(mem.Provide(coreutils.MockTime))
+	appStorageProvider := provider.Provide(mem.Provide(testingu.MockTime))
 	sysVvmAppStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
 	require.NoError(err)
 	seqStorage := NewVVMSeqStorageAdapter(sysVvmAppStorage)
@@ -144,7 +144,7 @@ func TestSeqStorage(t *testing.T) {
 
 func TestPutPLogOffset(t *testing.T) {
 	require := require.New(t)
-	appStorageProvider := provider.Provide(mem.Provide(coreutils.MockTime))
+	appStorageProvider := provider.Provide(mem.Provide(testingu.MockTime))
 	sysVvmAppStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
 	require.NoError(err)
 	testPartitionID := isequencer.PartitionID(42)

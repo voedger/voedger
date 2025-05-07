@@ -22,6 +22,7 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/isequencer"
 
@@ -84,7 +85,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	// [~server.design.sequences/tuc.VVMConfig.ConfigureSequencesTrustLevel~impl]
 	cfg.SequencesTrustLevel = isequencer.SequencesTrustLevel_0
 
-	cfg.Time = coreutils.MockTime
+	cfg.Time = testingu.MockTime
 	if !coreutils.IsTest() {
 		cfg.SecretsReader = itokensjwt.ProvideTestSecretsReader(cfg.SecretsReader)
 	}
@@ -141,7 +142,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 		isOnSharedConfig:     vitCfg.isShared,
 		configCleanupsAmount: len(vitPreConfig.cleanups),
 		emailCaptor:          emailMessagesChan,
-		mockTime:             coreutils.MockTime,
+		mockTime:             testingu.MockTime,
 	}
 	httpClient, httpClientCleanup := coreutils.NewIHTTPClient()
 	vit.httpClient = httpClient

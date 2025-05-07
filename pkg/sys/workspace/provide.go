@@ -6,16 +6,16 @@ package workspace
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
-func Provide(sr istructsmem.IStatelessResources, time coreutils.ITime, tokensAPI itokens.ITokens,
+func Provide(sr istructsmem.IStatelessResources, time timeu.ITime, tokensAPI itokens.ITokens,
 	federation federation.IFederation, itokens itokens.ITokens, wsPostInitFunc WSPostInitFunc,
 	eps map[appdef.AppQName]extensionpoints.IExtensionPoint) {
 
@@ -71,7 +71,7 @@ func syncProjectorChildWorkspaceIdx() istructs.Projector {
 }
 
 // Projector<A, InitializeWorkspace>
-func asyncProjectorInitializeWorkspace(federation federation.IFederation, time coreutils.ITime,
+func asyncProjectorInitializeWorkspace(federation federation.IFederation, time timeu.ITime,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc, eps map[appdef.AppQName]extensionpoints.IExtensionPoint) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPInitializeWorkspace,

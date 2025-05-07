@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/ielections"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/amazondb"
@@ -26,7 +27,7 @@ import (
 
 // [~server.design.orch/VVM.test.TTLStorageMem~impl]
 func TestTTLStorageMem(t *testing.T) {
-	storageFactory := mem.Provide(coreutils.MockTime)
+	storageFactory := mem.Provide(testingu.MockTime)
 	testElectionsByDriver(t, storageFactory)
 }
 
@@ -44,7 +45,7 @@ func TestTTStorageCas(t *testing.T) {
 func TestTTLStorageBbolt(t *testing.T) {
 	storagePactory := bbolt.Provide(bbolt.ParamsType{
 		DBDir: os.TempDir(),
-	}, coreutils.MockTime)
+	}, testingu.MockTime)
 	testElectionsByDriver(t, storagePactory)
 }
 
@@ -53,7 +54,7 @@ func TestTTLStorageDynamoDB(t *testing.T) {
 	if !coreutils.IsDynamoDBStorage() {
 		t.Skip()
 	}
-	storagePactory := amazondb.Provide(amazondb.DefaultDynamoDBParams, coreutils.MockTime)
+	storagePactory := amazondb.Provide(amazondb.DefaultDynamoDBParams, testingu.MockTime)
 	testElectionsByDriver(t, storagePactory)
 }
 

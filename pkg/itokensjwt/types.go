@@ -4,11 +4,11 @@
 
 package itokensjwt
 
-import "github.com/voedger/voedger/pkg/coreutils"
+import "github.com/voedger/voedger/pkg/goutils/timeu"
 
 type SecretKeyType []byte
 
 type JWTSigner struct {
 	secretKey []byte
-	iTime coreutils.ITime
+	iTime     timeu.ITime
 }

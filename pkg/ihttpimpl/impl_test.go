@@ -30,6 +30,7 @@ import (
 	voedger "github.com/voedger/voedger/cmd/voedger/voedgerimpl"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -379,7 +380,7 @@ func setUp(t *testing.T) *testApp {
 	params := ihttp.CLIParams{
 		Port: 0, // listen using some free port, port value will be taken using API
 	}
-	appStorageProvider := istorageimpl.Provide(mem.Provide(coreutils.MockTime))
+	appStorageProvider := istorageimpl.Provide(mem.Provide(testingu.MockTime))
 	routerStorage, err := ihttp.NewIRouterStorage(appStorageProvider)
 	require.NoError(err)
 	processor, pCleanup := NewProcessor(params, routerStorage)

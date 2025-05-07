@@ -17,6 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -393,7 +394,7 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 		}
 	}
 
-	asf := mem.Provide(coreutils.MockTime)
+	asf := mem.Provide(testingu.MockTime)
 	storageProvider := istorageimpl.Provide(asf)
 	prov := istructsmem.Provide(
 		cfgs,

@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -31,7 +32,7 @@ func TestBasicUsage(t *testing.T) {
 	logger.SetLogLevel(logger.LogLevelVerbose)
 	defer logger.SetLogLevel(logger.LogLevelInfo)
 
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.NewITime())
+	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, timeu.NewITime())
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
 	pp := payloads.PrincipalPayload{
 		Login:       "testlogin",
@@ -164,7 +165,7 @@ func TestBasicUsage(t *testing.T) {
 func TestAuthenticate(t *testing.T) {
 	require := require.New(t)
 
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.NewITime())
+	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, timeu.NewITime())
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
 	login := "testlogin"
 	pp := payloads.PrincipalPayload{
@@ -403,7 +404,7 @@ func TestAuthenticate(t *testing.T) {
 func TestErrors(t *testing.T) {
 	require := require.New(t)
 
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.NewITime())
+	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, timeu.NewITime())
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
 
 	appStructs := &implIAppStructs{}

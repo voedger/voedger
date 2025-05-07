@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iblobstoragestg"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -34,7 +35,7 @@ import (
 
 func TestBoostrap_BasicUsage(t *testing.T) {
 	require := require.New(t)
-	memStorage := mem.Provide(coreutils.MockTime)
+	memStorage := mem.Provide(testingu.MockTime)
 
 	// launch the VVM with an app with a certain NumParts and NumAppWorkspaces
 	numParts := istructs.NumAppPartitions(42)

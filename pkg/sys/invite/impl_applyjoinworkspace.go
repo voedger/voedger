@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -19,14 +20,14 @@ import (
 	"github.com/voedger/voedger/pkg/sys/collection"
 )
 
-func asyncProjectorApplyJoinWorkspace(time coreutils.ITime, federation federation.IFederation, tokens itokens.ITokens) istructs.Projector {
+func asyncProjectorApplyJoinWorkspace(time timeu.ITime, federation federation.IFederation, tokens itokens.ITokens) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPApplyJoinWorkspace,
 		Func: applyJoinWorkspace(time, federation, tokens),
 	}
 }
 
-func applyJoinWorkspace(time coreutils.ITime, federation federation.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyJoinWorkspace(time timeu.ITime, federation federation.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		// it is AFTER EXECUTE ON (InitiateJoinWorkspace) so no doc checking here
 		skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, qNameCDocInvite)

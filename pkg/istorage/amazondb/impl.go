@@ -18,8 +18,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
@@ -63,7 +63,7 @@ func (d implIAppStorageFactory) Init(appName istorage.SafeAppName) error {
 	return nil
 }
 
-func (d implIAppStorageFactory) Time() coreutils.ITime {
+func (d implIAppStorageFactory) Time() timeu.ITime {
 	return d.iTime
 }
 

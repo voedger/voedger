@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -45,7 +45,7 @@ func TestBasicUsage(t *testing.T) {
 	}
 
 	// creating buckets
-	buckets := Provide(coreutils.MockTime)
+	buckets := Provide(testingu.MockTime)
 
 	// passing named constraints to bucket's
 	buckets.SetDefaultBucketState(totalRegLimitName, totalRegistrationQuota)
@@ -95,7 +95,7 @@ func TestBasicUsage(t *testing.T) {
 func TestBucketsNew(t *testing.T) {
 	require := require.New(t)
 
-	buckets := Provide(coreutils.MockTime)
+	buckets := Provide(testingu.MockTime)
 
 	// description of the application and workspace
 	app := istructs.AppQName_test1_app1
@@ -150,19 +150,19 @@ func TestBucketsNew(t *testing.T) {
 	require.False(buckets.TakeTokens(keys, 100))
 	require.NoError(err)
 
-	coreutils.MockTime.Add(time.Hour)
+	testingu.MockTime.Add(time.Hour)
 
 	bs, err = buckets.GetBucketState(totalRegKey)
 	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(0))
 
-	coreutils.MockTime.Add(-time.Hour)
+	testingu.MockTime.Add(-time.Hour)
 
 	bs, err = buckets.GetBucketState(totalRegKey)
 	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(100))
 
-	coreutils.MockTime.Add(time.Hour)
+	testingu.MockTime.Add(time.Hour)
 
 	keys = []irates.BucketKey{totalRegKey, addrRegKey}
 	require.True(buckets.TakeTokens(keys, 5))
@@ -181,7 +181,7 @@ func TestBucketsNew(t *testing.T) {
 	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(5))
 
-	coreutils.MockTime.Add(5 * time.Hour)
+	testingu.MockTime.Add(5 * time.Hour)
 
 	bs, err = buckets.GetBucketState(totalRegKey)
 	require.NoError(err)
