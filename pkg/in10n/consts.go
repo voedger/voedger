@@ -6,17 +6,19 @@
 package in10n
 
 import (
+	"time"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// qNameHeartbeat30 is the name of the singleton that is used to simulate updates
-var qNameHeartbeat30 = appdef.NewQName(appdef.SysPackage, "Heartbeat30")
+// QNameHeartbeat30 is the name of the singleton that is used to simulate updates
+var QNameHeartbeat30 = appdef.NewQName(appdef.SysPackage, "Heartbeat30")
+var Heartbeat30Duration = time.Duration(30 * time.Second)
 
-const in10nNullWSID = istructs.NullWSID
-
-var heartbeat30ProjectionKey = ProjectionKey{
+// [~server.n10n.heartbeats/freq.ZeroKey~impl]
+var Heartbeat30ProjectionKey = ProjectionKey{
 	App:        appdef.AppQName{},
-	Projection: qNameHeartbeat30,
-	WS:         in10nNullWSID,
+	Projection: QNameHeartbeat30,
+	WS:         istructs.NullWSID,
 }

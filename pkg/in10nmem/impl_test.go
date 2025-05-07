@@ -253,3 +253,69 @@ func TestQuotas(t *testing.T) {
 	})
 
 }
+
+// Flow:
+// - Create mockTimer
+// - Subscribe to QNameHeartbeat30
+// - Start goroutine that will call WatchChannel(..notifySubscriber..)
+// - mockTimer.FireNextTimerImmediately()
+// - Make sure that notifySubscriber is called
+func TestHeartbeats(t *testing.T) {
+
+	defer logger.SetLogLevelWithRestore(logger.LogLevelTrace)()
+
+	req := require.New(t)
+	mockTime := coreutils.NewMockTime()
+	mockTime.FireNextTimerImmediately()
+
+	quotasExample := in10n.Quotas{
+		Channels:                1,
+		ChannelsPerSubject:      1,
+		Subscriptions:           1,
+		SubscriptionsPerSubject: 1,
+	}
+
+	broker, cleanup := ProvideEx2(quotasExample, mockTime)
+	defer cleanup()
+
+	// Create channel and subscribe to Heartbeat30
+	subject := istructs.SubjectLogin("testuser")
+	channelID, err := broker.NewChannel(subject, 24*time.Hour)
+	req.NoError(err)
+
+	err = broker.Subscribe(channelID, in10n.Heartbeat30ProjectionKey)
+	req.NoError(err)
+
+	// Setup callback to receive updates
+	cb := new(callbackMock)
+	cb.data = make(chan UpdateUnit, 1)
+
+	// Create context with cancel for cleanup
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start watching the channel in a separate goroutine
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		broker.WatchChannel(ctx, channelID, cb.updatesMock)
+	}()
+
+	for range 10 {
+		// Wait for update with timeout
+		select {
+		case update := <-cb.data:
+			// Verify we got an update for the heartbeat projection
+			req.Equal(in10n.Heartbeat30ProjectionKey, update.Projection)
+			logger.Verbose("Received heartbeat update:", update)
+			mockTime.Add(30 * time.Second) // Simulate passage of time
+		case <-time.After(5 * time.Second):
+			t.Fatal("Timeout waiting for heartbeat notification")
+		}
+	}
+
+	// Clean up
+	cancel()
+	wg.Wait()
+}

@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2021-present Sigma-Soft, Ltd.
- * Aleksei Ponomarev
- *
  * Copyright (c) 2023-present unTill Pro, Ltd.
  * @author Maxim Geraskin
  * Deep refactoring, no timers
+ *
+ * Copyright (c) 2021-present Sigma-Soft, Ltd.
+ * Aleksei Ponomarev
+ * Initial implementation
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -102,12 +103,21 @@ func (nb *N10nBroker) NewChannel(subject istructs.SubjectLogin, channelDuration 
 	return channelID, err
 }
 
-// Subscribe @ConcurrentAccess
-// Subscribe to the channel for the projection. If channel does not exist: will return error ErrChannelNotExists
+// Implementation of in10n.IN10nBroker
+// Errors: ErrChannelDoesNotExist, ErrQuotaExceeded_Subsciptions*
+//
+// [~server.n10n.heartbeats/freq.ZeroKey~doc]:
+// - If Subscribe is called for QNameHeartbeat30:
+//   - ProjectionKey.WSID is set 0
+//   - ProjectionKey.AppQName is set to {"", ""}
+//
+// [~server.n10n.heartbeats/freq.Interval30Seconds~doc]
+// - Implementation generates a heartbeat every 30 seconds for all channels that are subscribed on QNameHeartbeat30
 func (nb *N10nBroker) Subscribe(channelID in10n.ChannelID, projectionKey in10n.ProjectionKey) (err error) {
 	nb.Lock()
 	defer nb.Unlock()
 	channel, channelOK := nb.channels[channelID]
+
 	if !channelOK {
 		return in10n.ErrChannelDoesNotExist
 	}
@@ -122,6 +132,12 @@ func (nb *N10nBroker) Subscribe(channelID in10n.ChannelID, projectionKey in10n.P
 	}
 	if metric.numSubscriptions >= nb.quotas.SubscriptionsPerSubject {
 		return in10n.ErrQuotaExceeded_SubsciptionsPerSubject
+	}
+
+	// [~server.n10n.heartbeats/freq.ZeroKey~impl]
+	// [~server.n10n.heartbeats/freq.SingleNotification~impl]
+	if projectionKey.Projection == in10n.QNameHeartbeat30 {
+		projectionKey = in10n.Heartbeat30ProjectionKey
 	}
 
 	subscription := subscription{
@@ -195,6 +211,10 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 		nb.Unlock()
 	}()
 
+	if logger.IsVerbose() {
+		logger.Verbose("notified", channelID, channel.subject)
+	}
+
 	updateUnits := make([]UpdateUnit, 0)
 
 	// cycle for channel.cchan and ctx
@@ -204,7 +224,7 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 			break
 		case <-channel.cchan:
 			if logger.IsTrace() {
-				logger.Trace(channelID)
+				logger.Trace("notified: ", channelID)
 			}
 
 			if ctx.Err() != nil {
@@ -243,7 +263,13 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 }
 
 func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
-	defer wg.Done()
+	defer func() {
+		wg.Done()
+		logger.Info("notifier goroutine stopped")
+	}()
+
+	logger.Info("notifier goroutine started")
+
 	for ctx.Err() == nil {
 		select {
 		case <-ctx.Done():
@@ -271,11 +297,18 @@ func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
 			for _, ch := range prj.subscribedChannels {
 				select {
 				case ch.cchan <- struct{}{}:
+					if logger.IsVerbose() {
+						logger.Verbose("notifier goroutine: ch.cchan <- struct{}{}")
+					}
 				default:
+					if logger.IsVerbose() {
+						logger.Verbose("notifier goroutine: channel full, skipping send")
+					}
 				}
 			}
 		}
 	}
+
 }
 
 func guaranteeProjection(projections map[in10n.ProjectionKey]*projection, projectionKey in10n.ProjectionKey) (offsetPointer *istructs.Offset) {
@@ -357,8 +390,39 @@ func NewN10nBroker(quotas in10n.Quotas, time coreutils.ITime) (nb *N10nBroker, c
 
 	wg.Add(1)
 	go notifier(ctx, &wg, broker.events)
+	wg.Add(1)
+	go broker.heartbeat30(ctx, &wg)
 
 	return &broker, cleanup
+}
+
+// Call Update() every 30 seconds for i10n.Heartbeat30ProjectionKey
+func (nb *N10nBroker) heartbeat30(ctx context.Context, wg *sync.WaitGroup) {
+	defer func() {
+		wg.Done()
+		logger.Info("heartbeat30 goroutine stopped")
+	}()
+
+	logger.Info("heartbeat30 goroutine started")
+
+	// [~server.n10n.heartbeats/freq.Interval30Seconds~impl]
+	ticker := nb.time.NewTimerChan(in10n.Heartbeat30Duration)
+
+	offset := istructs.Offset(1)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker:
+			if logger.IsTrace() {
+				logger.Trace("ticker")
+			}
+			nb.Update(in10n.Heartbeat30ProjectionKey, offset)
+			offset++
+			ticker = nb.time.NewTimerChan(in10n.Heartbeat30Duration)
+		}
+	}
 }
 
 func (nb *N10nBroker) validateChannel(channel *channel) error {

@@ -23,12 +23,12 @@ type IN10nBroker interface {
 	// ChannelID must be taken from NewChannel()
 	// Errors: ErrChannelDoesNotExist, ErrQuotaExceeded_Subsciptions*
 	//
-	// [~server.n10n.heartbeats/freq.ZeroKey~impl]:
+	// [~server.n10n.heartbeats/freq.ZeroKey~doc]:
 	// - If Subscribe is called for QNameHeartbeat30:
 	//   - ProjectionKey.WSID is set 0
 	//   - ProjectionKey.AppQName is set to {"", ""}
 	//
-	// [~server.n10n.heartbeats/freq.Interval30Seconds~impl]
+	// [~server.n10n.heartbeats/freq.Interval30Seconds~doc]
 	// - Implementation generates a heartbeat every 30 seconds for all channels that are subscribed on QNameHeartbeat30
 	Subscribe(channelID ChannelID, projection ProjectionKey) (err error)
 
