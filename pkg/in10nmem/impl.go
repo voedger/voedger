@@ -169,9 +169,7 @@ func (nb *N10nBroker) Unsubscribe(channelID in10n.ChannelID, projectionKey in10n
 	return err
 }
 
-// WatchChannel @ConcurrentAccess
-// Create WatchChannel for notify clients about changed projections. If channel for this demand does not exist or
-// channel already watched - exit.
+// Implementation of the in10n.IN10nBroker
 func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelID, notifySubscriber func(projection in10n.ProjectionKey, offset istructs.Offset)) {
 	// check that the channelID with the given ChannelID exists
 	channel, metric := func() (*channel, *metricType) {

@@ -14,10 +14,6 @@ import (
 
 // This interface is provided only once per process
 // Provide() must have a parameter of Quotas type
-//
-// [~server.n10n.heartbeats/cmp.IN10nBroker.Heartbeat30~]
-// - Implementation generates one event per 30 seconds for the ProjectionKey
-//   - ProjectionKey{ AppName:"", Projection: QNameHeartbeat30, WS: 0}
 type IN10nBroker interface {
 
 	// Errors: ErrQuotaExceeded_Channels*
@@ -27,10 +23,13 @@ type IN10nBroker interface {
 	// ChannelID must be taken from NewChannel()
 	// Errors: ErrChannelDoesNotExist, ErrQuotaExceeded_Subsciptions*
 	//
-	// [~server.n10n.heartbeats/cmp.IN10nBroker.Heartbeat30~]
-	// If Subscribe is called for QNameHeartbeat30:
-	// - ProjectionKey.WSID is set 0
-	// - ProjectionKey.AppQName is set no {"", ""}
+	// [~server.n10n.heartbeats/freq.ZeroKey~impl]:
+	// - If Subscribe is called for QNameHeartbeat30:
+	//   - ProjectionKey.WSID is set 0
+	//   - ProjectionKey.AppQName is set to {"", ""}
+	//
+	// [~server.n10n.heartbeats/freq.Interval30Seconds~impl]
+	// - Implementation generates a heartbeat every 30 seconds for all channels that are subscribed on QNameHeartbeat30
 	Subscribe(channelID ChannelID, projection ProjectionKey) (err error)
 
 	// Panics if a Channel with ChannelID does not exist
@@ -40,6 +39,7 @@ type IN10nBroker interface {
 	// - It is guaranteed that the last one is delivered
 	// Exits if ctx is Done
 	// Only one client must call WatchChannel, concurrent use is not allowed
+	//
 	WatchChannel(ctx context.Context, channelID ChannelID, notifySubscriber func(projection ProjectionKey, offset istructs.Offset))
 
 	// This method MUST NOT BLOCK longer than 500 ns

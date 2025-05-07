@@ -16,7 +16,7 @@ erDiagram
     "Watching routine" ||..|| "offset" : "is notified about changes of"
 ```
 
-## Technical design
+## Architecture
 
 ```mermaid
 graph TD

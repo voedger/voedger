@@ -41,9 +41,6 @@ var QNameRoleSystem = NewQName(SysPackage, "System")
 
 var QNameRoleDeveloper = NewQName(SysPackage, "Developer")
 
-// [~server.n10n.heartbeats/tuc.SimulateHeartbeat30Updates~]
-var QNameHeartbeat30 = NewQName(SysPackage, "Heartbeat30")
-
 const (
 	// System application owner name
 	SysOwner = "sys"
