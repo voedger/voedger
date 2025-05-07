@@ -92,6 +92,11 @@ ABSTRACT WORKSPACE Workspace (
 		WSName varchar NOT NULL
 	) WITH Tags=(WorkspaceOwnerTableTag);
 
+	-- [~server.n10n.heartbeats/cmp.wsingleton.Heartbeat30~impl]
+	TABLE Heartbeat30 INHERITS sys.WSingleton (
+		Dummy int64
+	);
+
 	TYPE EchoParams (Text text NOT NULL);
 
 	TYPE EchoResult (Res text NOT NULL);
@@ -346,6 +351,7 @@ ABSTRACT WORKSPACE Workspace (
 		ChildWorkspaceID int64 NOT NULL,
 		PRIMARY KEY ((dummy), WSName)
 	) AS RESULT OF ProjectorChildWorkspaceIdx WITH Tags=(WorkspaceOwnerTableTag);
+
 
 	EXTENSION ENGINE BUILTIN (
 
