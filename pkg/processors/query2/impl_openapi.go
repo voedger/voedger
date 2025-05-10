@@ -260,7 +260,7 @@ func (g *schemaGenerator) genCreateNewUserPath() {
 	path := fmt.Sprintf("/api/v2/apps/%s/%s/users", g.getOwner(), g.getApp())
 	g.paths[path] = map[string]interface{}{
 		schemaMethodPost: map[string]interface{}{
-			schemaKeyDescription: "Create(register) new user",
+			schemaKeyDescription: "Register a new user with the provided details",
 			schemaKeyTags:        []string{usersTag},
 			schemaKeyParameters:  g.generateParameters(path, nil),
 			schemaKeyRequestBody: map[string]interface{}{
