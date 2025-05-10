@@ -145,7 +145,7 @@ func requestHandlerV2_schemas_wsRoles(reqSender bus.IRequestSender, numsAppsWork
 	}
 }
 
-// [~server.apiv2.users/cmp.router.UsersCreatePathHandler~impl]
+// [~server.users/cmp.router.UsersCreatePathHandler~impl]
 func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
 	iTokens itokens.ITokens, federation federation.IFederation) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
@@ -187,7 +187,7 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 	}
 }
 
-// [~server.apiv2.devices/cmp.routerDevicesCreatePathHandler~impl]
+// [~server.devices/cmp.routerDevicesCreatePathHandler~impl]
 func requestHandlerV2_create_device(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, federation federation.IFederation) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
