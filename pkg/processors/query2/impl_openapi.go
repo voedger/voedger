@@ -133,10 +133,10 @@ func (g *schemaGenerator) generateComponents() {
 	schemas[registeredDeviceSchemaName] = map[string]interface{}{
 		schemaKeyType: schemaTypeObject,
 		schemaKeyProperties: map[string]interface{}{
-			"Login": map[string]interface{}{
+			fieldLogin: map[string]interface{}{
 				schemaKeyType: schemaTypeString,
 			},
-			"Password": map[string]interface{}{
+			fieldPassword: map[string]interface{}{
 				schemaKeyType: schemaTypeString,
 			},
 			"ProfileWSID": map[string]interface{}{
@@ -270,17 +270,17 @@ func (g *schemaGenerator) genCreateNewUserPath() {
 						schemaKeySchema: map[string]interface{}{
 							schemaKeyType: schemaTypeObject,
 							schemaKeyProperties: map[string]interface{}{
-								"VerifiedEmailToken": map[string]interface{}{
+								fieldVerifiedEmailToken: map[string]interface{}{
 									schemaKeyType: schemaTypeString,
 								},
-								"Password": map[string]interface{}{
+								fieldPassword: map[string]interface{}{
 									schemaKeyType: schemaTypeString,
 								},
-								"DisplayName": map[string]interface{}{
+								fieldDisplayName: map[string]interface{}{
 									schemaKeyType: schemaTypeString,
 								},
 							},
-							schemaKeyRequired: []string{"VerifiedEmailToken", "Password", "DisplayName"},
+							schemaKeyRequired: []string{fieldVerifiedEmailToken, fieldPassword, fieldDisplayName},
 						},
 					},
 				},
@@ -314,11 +314,11 @@ func (g *schemaGenerator) genCreateNewDevicePath() {
 						schemaKeySchema: map[string]interface{}{
 							schemaKeyType: schemaTypeObject,
 							schemaKeyProperties: map[string]interface{}{
-								"DisplayName": map[string]interface{}{
+								fieldDisplayName: map[string]interface{}{
 									schemaKeyType: schemaTypeString,
 								},
 							},
-							schemaKeyRequired: []string{"DisplayName"},
+							schemaKeyRequired: []string{fieldDisplayName},
 						},
 					},
 				},
@@ -351,14 +351,14 @@ func (g *schemaGenerator) genAuthLoginPath() {
 							schemaKeyType: schemaTypeObject,
 							schemaKeyProperties: map[string]interface{}{
 								// Login is a mandatory field
-								"Login": map[string]interface{}{
+								fieldLogin: map[string]interface{}{
 									schemaKeyType: schemaTypeString,
 								},
-								"Password": map[string]interface{}{
+								fieldPassword: map[string]interface{}{
 									schemaKeyType: schemaTypeString,
 								},
 							},
-							schemaKeyRequired: []string{"Login", "Password"},
+							schemaKeyRequired: []string{fieldLogin, fieldPassword},
 						},
 					},
 				},

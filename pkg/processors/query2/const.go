@@ -25,6 +25,13 @@ const (
 )
 
 const (
+	fieldLogin              = "Login"
+	fieldPassword           = "Password"
+	fieldDisplayName        = "DisplayName"
+	fieldVerifiedEmailToken = "VerifiedEmailToken"
+)
+
+const (
 	methodGet    = "get"
 	methodPost   = "post"
 	methodPut    = "put"
