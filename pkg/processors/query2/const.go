@@ -12,12 +12,23 @@ import (
 var swaggerUI_HTML string
 
 const (
-	errorSchemaName          = "Error"
-	errorSchemaRef           = "#/components/schemas/" + errorSchemaName
-	principalTokenSchemaName = "PrincipalToken"
-	principalTokenSchemaRef  = "#/components/schemas/" + principalTokenSchemaName
-	bearerAuth               = "BearerAuth"
-	authenticationTag        = "Authentication"
+	errorSchemaName            = "Error"
+	errorSchemaRef             = "#/components/schemas/" + errorSchemaName
+	principalTokenSchemaName   = "PrincipalToken"
+	principalTokenSchemaRef    = "#/components/schemas/" + principalTokenSchemaName
+	registeredDeviceSchemaName = "CreateDeviceResult"
+	registeredDeviceSchemaRef  = "#/components/schemas/" + registeredDeviceSchemaName
+	bearerAuth                 = "BearerAuth"
+	authenticationTag          = "Authentication"
+	usersTag                   = "Users"
+	devicesTag                 = "Devices"
+)
+
+const (
+	fieldLogin              = "Login"
+	fieldPassword           = "Password"
+	fieldDisplayName        = "DisplayName"
+	fieldVerifiedEmailToken = "VerifiedEmailToken"
 )
 
 const (
@@ -41,6 +52,7 @@ const (
 // Status codes
 const (
 	statusCode200 = "200"
+	statusCode201 = "201"
 	statusCode400 = "400"
 	statusCode401 = "401"
 	statusCode403 = "403"

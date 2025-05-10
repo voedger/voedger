@@ -2185,7 +2185,7 @@ func TestOpenAPI(t *testing.T) {
 		writer := new(bytes.Buffer)
 		ws := appDef.Workspace(wsName)
 		require.NotNil(ws)
-		err = query2.CreateOpenAPISchema(writer, ws, role, acl.PublishedTypes, schemaMeta)
+		err = query2.CreateOpenAPISchema(writer, ws, role, acl.PublishedTypes, schemaMeta, false)
 		require.NoError(err)
 		json := writer.String()
 		//save to file
