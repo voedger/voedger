@@ -239,7 +239,7 @@ func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspace
 		busRequest.APIPath = int(processors.APIPath_Auth_Login)
 		busRequest.Method = http.MethodGet
 		queryParams := map[string]string{}
-		queryParams["arg"] = string(busRequest.Body)
+		queryParams["args"] = string(busRequest.Body)
 		busRequest.Query = queryParams
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	}

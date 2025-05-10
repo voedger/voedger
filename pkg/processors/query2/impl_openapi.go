@@ -696,7 +696,7 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 		query := typ.(appdef.IQuery)
 		if query.Param() != nil {
 			parameters = append(parameters, map[string]interface{}{
-				"name":     "arg",
+				"name":     "args",
 				"in":       "query",
 				"required": true,
 				schemaKeySchema: map[string]interface{}{

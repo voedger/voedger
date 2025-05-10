@@ -1143,7 +1143,7 @@
           {
             "description": "Query argument in JSON format",
             "in": "query",
-            "name": "arg",
+            "name": "args",
             "required": false,
             "schema": {
               "type": "string"

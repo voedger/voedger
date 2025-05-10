@@ -22,7 +22,7 @@ func Test_BasicUsage(t *testing.T) {
 			"include": "name,email",
 			"keys":    "id,name",
 			"where":   `{"id_department":123456,"number":{"$gte":100,"$lte":200}}`,
-			"arg":     `{"key":"value"}`,
+			"args":    `{"key":"value"}`,
 		}
 		parsedParams, err := ParseQueryParams(params)
 		require.NoError(err)
