@@ -365,7 +365,7 @@ func TestErrorsCPv2(t *testing.T) {
 	})
 }
 
-// [~it.TestUsersCreate~]
+// [~server.users/it.TestUsersCreate~impl]
 func TestUsersCreate(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)

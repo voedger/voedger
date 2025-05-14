@@ -12,14 +12,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 )
 
 func TestSequencer(t *testing.T) {
 	require := require.New(t)
 
 	t.Run("basic flow", func(t *testing.T) {
-		mockedTime := coreutils.MockTime
+		mockedTime := testingu.MockTime
 		// Given
 		initialNumber := Number(100)
 		storage := NewMockStorage()
@@ -75,7 +75,7 @@ func TestBatcher(t *testing.T) {
 		// Given
 		ctx := context.Background()
 		storage := NewMockStorage()
-		mockTime := coreutils.MockTime
+		mockTime := testingu.MockTime
 		params := NewDefaultParams(nil)
 		seq, cleanup := New(params, storage, mockTime)
 		defer cleanup()
@@ -127,7 +127,7 @@ func TestBatcher(t *testing.T) {
 		// Small threshold to force waiting
 		params.MaxNumUnflushedValues = 1
 
-		seq, cleanup := New(params, storage, coreutils.MockTime)
+		seq, cleanup := New(params, storage, testingu.MockTime)
 		defer cleanup()
 		s := seq.(*sequencer)
 		s.actualizerWG.Wait()
@@ -153,7 +153,7 @@ func TestBatcher(t *testing.T) {
 
 		// Small threshold to force waiting
 		params.MaxNumUnflushedValues = 1
-		mockTime := coreutils.NewMockTime()
+		mockTime := testingu.NewMockTime()
 		seq, cleanup := New(params, storage, mockTime)
 		defer cleanup()
 		s := seq.(*sequencer)
@@ -183,7 +183,7 @@ func TestContextCloseDuringStorageErrors(t *testing.T) {
 	require := require.New(t)
 
 	storageErr := errors.New("storage error")
-	mockTime := coreutils.MockTime
+	mockTime := testingu.MockTime
 
 	params := NewDefaultParams(map[WSKind]map[SeqID]Number{
 		1: {1: 1},
@@ -278,7 +278,7 @@ func TestNextNumberSourceOrder(t *testing.T) {
 			},
 		},
 	})
-	mockTime := coreutils.MockTime
+	mockTime := testingu.MockTime
 
 	params := NewDefaultParams(map[WSKind]map[SeqID]Number{
 		1: {1: 1},
@@ -398,7 +398,7 @@ func TestPanicOnWrongInitialNumber(t *testing.T) {
 func TestActualize(t *testing.T) {
 	require := require.New(t)
 	storage := NewMockStorage()
-	mockTime := coreutils.MockTime
+	mockTime := testingu.MockTime
 	params := NewDefaultParams(map[WSKind]map[SeqID]Number{1: {1: 1}})
 	seq, cleanup := New(params, storage, mockTime)
 	defer cleanup()

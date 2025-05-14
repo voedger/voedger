@@ -249,14 +249,14 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 	prepareDailyIdx(require, vit, ws)
 
 	t.Run("Echo function", func(t *testing.T) {
-		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/sys.Echo?arg=%s`, ws.WSID, url.QueryEscape(`{"Text":"Hello world"}`)))
+		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/sys.Echo?args=%s`, ws.WSID, url.QueryEscape(`{"Text":"Hello world"}`)))
 		require.NoError(err)
 		require.JSONEq(`{"results":[
 				{"Res":"Hello world","sys.Container":"Hello world","sys.QName":"sys.EchoResult"}
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with arg", func(t *testing.T) {
-		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?arg={"Year":2023,"Month":3}`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023,"Month":3}`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
 		require.JSONEq(`{"results":[
 				{"Day":2,"Month":3,"StringValue":"2023-03-02","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
@@ -266,7 +266,7 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with arg and filter", func(t *testing.T) {
-		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?arg={"Year":2023}&where={"Month":{"$in":[2,4]},"Day":{"$in":[3,5]}}`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023}&where={"Month":{"$in":[2,4]},"Day":{"$in":[3,5]}}`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
 		require.JSONEq(`{"results":[
 				{"Day":3,"Month":2,"StringValue":"2023-02-03","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
@@ -276,7 +276,7 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with order desc", func(t *testing.T) {
-		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?arg={"Year":2023}&order=-Month`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023}&order=-Month`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
 		require.JSONEq(`{"results":[
 				{"Day":2,"Month":4,"StringValue":"2023-04-02","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
@@ -298,7 +298,7 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with order asc", func(t *testing.T) {
-		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?arg={"Year":2023}&order=Month`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023}&order=Month`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
 		require.JSONEq(`{"results":[
 				{"Day":2,"Month":1,"StringValue":"2023-01-02","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
@@ -320,7 +320,7 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with keys", func(t *testing.T) {
-		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?arg={"Year":2023}&keys=Year,Month,Day`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023}&keys=Year,Month,Day`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
 		require.JSONEq(`{"results":[
 				{"Day":2,"Month":1,"Year":2023},
@@ -2185,7 +2185,7 @@ func TestOpenAPI(t *testing.T) {
 		writer := new(bytes.Buffer)
 		ws := appDef.Workspace(wsName)
 		require.NotNil(ws)
-		err = query2.CreateOpenAPISchema(writer, ws, role, acl.PublishedTypes, schemaMeta)
+		err = query2.CreateOpenAPISchema(writer, ws, role, acl.PublishedTypes, schemaMeta, false)
 		require.NoError(err)
 		json := writer.String()
 		//save to file

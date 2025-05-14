@@ -25,6 +25,8 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iextengine"
@@ -704,7 +706,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	ctx, cancel := context.WithCancel(context.Background())
 
 	cfgs := istructsmem.AppConfigsType{}
-	asf := mem.Provide(coreutils.MockTime)
+	asf := mem.Provide(testingu.MockTime)
 	appStorageProvider := istorageimpl.Provide(asf)
 
 	// build application
@@ -739,7 +741,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 		ChannelsPerSubject:      10,
 		Subscriptions:           1000,
 		SubscriptionsPerSubject: 10,
-	}, coreutils.NewITime())
+	}, timeu.NewITime())
 
 	// prepare the AppParts to borrow AppStructs
 	appParts, appPartsClean, err := appparts.New2(ctx, appStructsProvider,
@@ -761,7 +763,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 
 	// command processor works through ibus.SendResponse -> we need ibus implementation
 
-	requestSender := bus.NewIRequestSender(coreutils.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+	requestSender := bus.NewIRequestSender(testingu.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		// simulate handling the command request be a real application
 		cmdQName, err := appdef.ParseQName(request.Resource[2:])
 		require.NoError(err)
@@ -782,7 +784,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(testAppName)
 	systemToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	cmdProcessorFactory := ProvideServiceFactory(appParts, coreutils.NewITime(), n10nBroker, imetrics.Provide(), "vvm",
+	cmdProcessorFactory := ProvideServiceFactory(appParts, timeu.NewITime(), n10nBroker, imetrics.Provide(), "vvm",
 		iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs), secretReader)
 	cmdProcService := cmdProcessorFactory(serviceChannel)
 

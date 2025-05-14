@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iblobstoragestg"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -22,7 +23,7 @@ import (
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 )
 
-func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvider, time coreutils.ITime, appparts appparts.IAppPartitions,
+func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvider, time timeu.ITime, appparts appparts.IAppPartitions,
 	clusterApp ClusterBuiltInApp, otherApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider,
 	blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr, routerAppStoragePtr dbcertcache.RouterAppStoragePtr) (err error) {
 
@@ -91,7 +92,7 @@ func callDeployApp(federation federation.IFederation, sysToken string, app apppa
 	}
 }
 
-func initClusterAppWS(asp istructs.IAppStructsProvider, time coreutils.ITime) error {
+func initClusterAppWS(asp istructs.IAppStructsProvider, time timeu.ITime) error {
 	as, err := asp.BuiltIn(istructs.AppQName_sys_cluster)
 	if err == nil {
 		_, err = cluster.InitAppWS(as, clusterapp.ClusterAppWSIDPartitionID, clusterapp.ClusterAppWSID, istructs.FirstOffset, istructs.FirstOffset,

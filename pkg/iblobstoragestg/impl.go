@@ -12,16 +12,16 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type bStorageType struct {
 	blobStorage BlobAppStoragePtr
-	time        coreutils.ITime
+	time        timeu.ITime
 }
 
 type storageWriter func(pKey, cCols, val []byte, duration iblobstorage.DurationType, oldValue []byte) error

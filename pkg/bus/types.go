@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -47,7 +47,7 @@ const (
 
 type implIRequestSender struct {
 	timeout        SendTimeout
-	tm             coreutils.ITime
+	tm             timeu.ITime
 	requestHandler RequestHandler
 }
 
@@ -57,7 +57,7 @@ type implResponseWriter struct {
 	ch          chan any
 	clientCtx   context.Context
 	sendTimeout SendTimeout
-	tm          coreutils.ITime
+	tm          timeu.ITime
 	resultErr   *error
 }
 

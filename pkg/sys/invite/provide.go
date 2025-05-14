@@ -6,14 +6,14 @@ package invite
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 )
 
-func Provide(sr istructsmem.IStatelessResources, time coreutils.ITime,
+func Provide(sr istructsmem.IStatelessResources, time timeu.ITime,
 	federation federation.IFederation, itokens itokens.ITokens, smtpCfg smtp.Cfg) {
 	provideCmdInitiateInvitationByEMail(sr, time)
 	provideCmdInitiateJoinWorkspace(sr, time)

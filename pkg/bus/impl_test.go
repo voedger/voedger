@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -67,7 +68,7 @@ func TestRequestSender_ApiArray_BasicUsage(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
+			requestSender := NewIRequestSender(testingu.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 				require.Equal(http.MethodPost, request.Method)
 				require.Equal(istructs.WSID(1), request.WSID)
 				require.Equal(map[string]string{coreutils.ContentType: coreutils.ContentType_ApplicationJSON}, request.Header)
@@ -123,11 +124,11 @@ func TestRequestSender_ApiArray_BasicUsage(t *testing.T) {
 func TestErrors(t *testing.T) {
 	require := require.New(t)
 	t.Run("response timeout ", func(t *testing.T) {
-		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
+		requestSender := NewIRequestSender(testingu.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 			// wait to start response awaiting in request sender
 			time.Sleep(100 * time.Millisecond)
 			// force response timeout
-			coreutils.MockTime.Add(time.Duration(DefaultSendTimeout))
+			testingu.MockTime.Add(time.Duration(DefaultSendTimeout))
 			respWriter := responder.InitResponse(http.StatusOK)
 			respWriter.Close(nil)
 		})
@@ -140,7 +141,7 @@ func TestErrors(t *testing.T) {
 		maySendAfterDisconnect := make(chan interface{})
 		writeErrCh := make(chan error)
 		clientCtx, disconnectClient := context.WithCancel(context.Background())
-		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
+		requestSender := NewIRequestSender(testingu.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 			go func() {
 				respWriter := responder.InitResponse(http.StatusOK)
 				<-maySendAfterDisconnect
@@ -164,7 +165,7 @@ func TestErrors(t *testing.T) {
 		requestHandlerStarted := make(chan interface{})
 		writeErrCh := make(chan error)
 		clientCtx, disconnectClient := context.WithCancel(context.Background())
-		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
+		requestSender := NewIRequestSender(testingu.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 			close(requestHandlerStarted)
 			go func() {
 				<-clientCtx.Done()
@@ -191,7 +192,7 @@ func TestErrors(t *testing.T) {
 	t.Run("no consumer", func(t *testing.T) {
 		writeErrCh := make(chan error)
 		maySend := make(chan interface{})
-		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
+		requestSender := NewIRequestSender(testingu.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 			go func() {
 				respWriter := responder.InitResponse(http.StatusOK)
 				<-maySend
@@ -209,7 +210,7 @@ func TestErrors(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 
 		// force send timeout
-		coreutils.MockTime.Add(time.Duration(DefaultSendTimeout + SendTimeout(time.Second)))
+		testingu.MockTime.Add(time.Duration(DefaultSendTimeout + SendTimeout(time.Second)))
 
 		err = <-writeErrCh
 		require.ErrorIs(err, ErrNoConsumer)
@@ -222,7 +223,7 @@ func TestErrors(t *testing.T) {
 func TestPanicOnBeginResponseAgain(t *testing.T) {
 	require := require.New(t)
 	t.Run("api array response", func(t *testing.T) {
-		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
+		requestSender := NewIRequestSender(testingu.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 			respWriter := responder.InitResponse(http.StatusOK)
 			require.Panics(func() {
 				responder.InitResponse(http.StatusOK)
@@ -236,7 +237,7 @@ func TestPanicOnBeginResponseAgain(t *testing.T) {
 	})
 
 	t.Run("respond", func(t *testing.T) {
-		requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
+		requestSender := NewIRequestSender(testingu.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 			responder.Respond(ResponseMeta{ContentType: coreutils.ContentType_ApplicationJSON, StatusCode: http.StatusOK}, nil)
 			require.Panics(func() {
 				responder.InitResponse(http.StatusOK)
@@ -250,7 +251,7 @@ func TestPanicOnBeginResponseAgain(t *testing.T) {
 }
 
 func TestHandlerPanic(t *testing.T) {
-	requestSender := NewIRequestSender(coreutils.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
+	requestSender := NewIRequestSender(testingu.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 		panic("test panic")
 	})
 

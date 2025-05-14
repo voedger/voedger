@@ -10,8 +10,7 @@ import (
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru/v2"
-
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 )
 
 func NewDefaultParams(seqTypes map[WSKind]map[SeqID]Number) Params {
@@ -24,7 +23,7 @@ func NewDefaultParams(seqTypes map[WSKind]map[SeqID]Number) Params {
 }
 
 // New creates a new sequencer
-func New(params Params, seqStorage ISeqStorage, iTime coreutils.ITime) (ISequencer, context.CancelFunc) {
+func New(params Params, seqStorage ISeqStorage, iTime timeu.ITime) (ISequencer, context.CancelFunc) {
 	cache, err := lru.New[NumberKey, Number](params.LRUCacheSize)
 	if err != nil {
 		// notest

@@ -12,8 +12,7 @@ import (
 	"time"
 
 	lruPkg "github.com/hashicorp/golang-lru/v2"
-
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 )
 
 type PartitionID uint16
@@ -97,7 +96,7 @@ type sequencer struct {
 	// Written by Next()
 	inproc map[NumberKey]Number
 
-	iTime coreutils.ITime
+	iTime timeu.ITime
 
 	transactionIsInProgress bool
 }

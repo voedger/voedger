@@ -10,7 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 )
 
 // ttlStorageMock is a thread-safe in-memory mock of ITTLStorage that supports key expiration.
@@ -20,7 +21,7 @@ type ttlStorageMock[K comparable, V comparable] struct {
 	data                   map[K]valueWithTTL[V]
 	expirations            map[K]time.Time // expiration time for each key
 	errorTrigger           map[K]bool
-	tm                     coreutils.ITime
+	tm                     timeu.ITime
 	onBeforeCompareAndSwap func() // != nil -> called right before CompareAndSwap. Need to implement hook in tests
 }
 
@@ -29,7 +30,7 @@ func newTTLStorageMock[K comparable, V comparable]() *ttlStorageMock[K, V] {
 		data:         make(map[K]valueWithTTL[V]),
 		expirations:  make(map[K]time.Time),
 		errorTrigger: make(map[K]bool),
-		tm:           coreutils.MockTime,
+		tm:           testingu.MockTime,
 	}
 }
 

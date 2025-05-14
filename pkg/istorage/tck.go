@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 )
 
 // TechnologyCompatibilityKit test suit
@@ -27,7 +27,7 @@ func TechnologyCompatibilityKit(t *testing.T, storageFactory IAppStorageFactory)
 }
 
 // need to test e.g. istoragecache
-func TechnologyCompatibilityKit_Storage(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
+func TechnologyCompatibilityKit_Storage(t *testing.T, storage IAppStorage, iTime timeu.ITime) {
 	t.Run("TestAppStorage_GetPutRead", func(t *testing.T) { testAppStorage_GetPutRead(t, storage) })
 	t.Run("TestAppStorage_PutBatch", func(t *testing.T) { testAppStorage_PutBatch(t, storage) })
 	t.Run("TestAppStorage_GetBatch", func(t *testing.T) { testAppStorage_GetBatch(t, storage) })
@@ -624,7 +624,7 @@ func testAppStorage_GetBatch(t *testing.T, storage IAppStorage) {
 }
 
 //nolint:revive,goconst
-func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
+func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iTime timeu.ITime) {
 	t.Run("Should insert if not exists", func(t *testing.T) {
 		require := require.New(t)
 		pKey := []byte("Vehicles")
@@ -700,7 +700,7 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iTime c
 }
 
 //nolint:revive,goconst
-func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
+func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage, iTime timeu.ITime) {
 	t.Run("Should swap if exists", func(t *testing.T) {
 		require := require.New(t)
 		pKey := []byte("Games")
@@ -797,7 +797,7 @@ func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage, iTime core
 }
 
 //nolint:revive,goconst
-func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
+func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage, iTime timeu.ITime) {
 	t.Run("Should delete if exists", func(t *testing.T) {
 		require := require.New(t)
 		pKey := []byte("Comics")
@@ -864,7 +864,7 @@ func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage, iTime co
 }
 
 //nolint:revive,goconst
-func testAppStorage_TTLGet(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
+func testAppStorage_TTLGet(t *testing.T, storage IAppStorage, iTime timeu.ITime) {
 	t.Run("Should get ttl record if exists", func(t *testing.T) {
 		require := require.New(t)
 		pKey := []byte("Books")
@@ -918,7 +918,7 @@ func testAppStorage_TTLGet(t *testing.T, storage IAppStorage, iTime coreutils.IT
 }
 
 //nolint:revive,goconst
-func testAppStorage_TTLRead(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
+func testAppStorage_TTLRead(t *testing.T, storage IAppStorage, iTime timeu.ITime) {
 	t.Run("Should read ttl records", func(t *testing.T) {
 		require := require.New(t)
 		pKey := []byte("Key1")
@@ -985,7 +985,7 @@ func testAppStorage_TTLRead(t *testing.T, storage IAppStorage, iTime coreutils.I
 }
 
 //nolint:revive,goconst
-func testAppStorage_QueryTTL(t *testing.T, storage IAppStorage, iTime coreutils.ITime) {
+func testAppStorage_QueryTTL(t *testing.T, storage IAppStorage, iTime timeu.ITime) {
 	t.Run("Should return TTL for TTL records", func(t *testing.T) {
 		require := require.New(t)
 		pKey := []byte("TTLKey1")

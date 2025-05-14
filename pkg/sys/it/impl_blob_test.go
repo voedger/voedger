@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -162,7 +163,7 @@ func TestBasicUsage_Temporary(t *testing.T) {
 
 		// make the temp blob almost expired
 		vit.TimeAdd(time.Duration(iblobstorage.DurationType_1Day.Seconds()-1) * time.Second)
-		// coreutils.MockTime.Add(time.Duration(iblobstorage.DurationType_1Day.Seconds()-1) * time.Second)
+		// testingu.MockTime.Add(time.Duration(iblobstorage.DurationType_1Day.Seconds()-1) * time.Second)
 
 		// re-take the token because it is expired
 		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -175,7 +176,7 @@ func TestBasicUsage_Temporary(t *testing.T) {
 		require.Equal(expBLOB, actualBLOBContent)
 
 		// cross the temp blob expiration instant
-		coreutils.MockTime.Add(time.Second)
+		testingu.MockTime.Add(time.Second)
 
 		// check the temp blob is disappeared
 		vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, blobSUUID,

@@ -42,6 +42,8 @@ func TestBasicUsage(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 		saleParamsName := appdef.NewQName("test", "SaleParams")
 		saleSecureParamsName := appdef.NewQName("test", "saleSecureArgs")
@@ -199,6 +201,8 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 		view := wsb.AddView(appdef.NewQName("test", "viewDrinks"))
 		view.Key().PartKey().AddField("partitionKey1", appdef.DataKind_int64)
 		view.Key().ClustCols().
@@ -301,6 +305,8 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 		obj := wsb.AddObject(objName)
 		obj.AddField("int", appdef.DataKind_int64, true)
 		obj.AddContainer("child", objName, 0, appdef.Occurs_Unbounded)
@@ -492,6 +498,8 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		argQName := appdef.NewQName("structs", "Arg")
 
 		wsb := adb.AddWorkspace(wsQName)
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 		rec := wsb.AddCRecord(recQName)
 		rec.AddField("int", appdef.DataKind_int64, false)

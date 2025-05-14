@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2021-present Sigma-Soft, Ltd.
- * Aleksei Ponomarev
- *
  * Copyright (c) 2023-present unTill Pro, Ltd.
  * @author Maxim Geraskin
  * Deep refactoring, no timers
+ *
+ * Copyright (c) 2021-present Sigma-Soft, Ltd.
+ * Aleksei Ponomarev
+ * Initial implementation
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -20,8 +21,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 )
@@ -29,11 +30,11 @@ import (
 type N10nBroker struct {
 	sync.RWMutex
 	projections      map[in10n.ProjectionKey]*projection
-	channels         map[in10n.ChannelID]*channelType
+	channels         map[in10n.ChannelID]*channel
 	quotas           in10n.Quotas
 	metricBySubject  map[istructs.SubjectLogin]*metricType
 	numSubscriptions int
-	time             coreutils.ITime
+	time             timeu.ITime
 	events           chan event
 }
 
@@ -46,10 +47,10 @@ type projection struct {
 
 	offsetPointer *istructs.Offset
 
-	toSubscribe map[in10n.ChannelID]*channelType
+	toSubscribe map[in10n.ChannelID]*channel
 
 	// merged by pnotifier using toSubscribe, toUnsubscribe
-	subscribedChannels map[in10n.ChannelID]*channelType
+	subscribedChannels map[in10n.ChannelID]*channel
 }
 
 type subscription struct {
@@ -57,7 +58,7 @@ type subscription struct {
 	currentOffset   *istructs.Offset
 }
 
-type channelType struct {
+type channel struct {
 	subject         istructs.SubjectLogin
 	subscriptions   map[in10n.ProjectionKey]*subscription
 	channelDuration time.Duration
@@ -91,7 +92,7 @@ func (nb *N10nBroker) NewChannel(subject istructs.SubjectLogin, channelDuration 
 	}
 	metric.numChannels++
 	channelID = in10n.ChannelID(uuid.New().String())
-	channel := channelType{
+	channel := channel{
 		subject:         subject,
 		subscriptions:   make(map[in10n.ProjectionKey]*subscription),
 		channelDuration: channelDuration,
@@ -102,12 +103,21 @@ func (nb *N10nBroker) NewChannel(subject istructs.SubjectLogin, channelDuration 
 	return channelID, err
 }
 
-// Subscribe @ConcurrentAccess
-// Subscribe to the channel for the projection. If channel does not exist: will return error ErrChannelNotExists
+// Implementation of in10n.IN10nBroker
+// Errors: ErrChannelDoesNotExist, ErrQuotaExceeded_Subscriptions*
+//
+// [~server.n10n.heartbeats/freq.ZeroKey~doc]:
+// - If Subscribe is called for QNameHeartbeat30:
+//   - ProjectionKey.WSID is set 0
+//   - ProjectionKey.AppQName is set to {"", ""}
+//
+// [~server.n10n.heartbeats/freq.Interval30Seconds~doc]
+// - Implementation generates a heartbeat every 30 seconds for all channels that are subscribed on QNameHeartbeat30
 func (nb *N10nBroker) Subscribe(channelID in10n.ChannelID, projectionKey in10n.ProjectionKey) (err error) {
 	nb.Lock()
 	defer nb.Unlock()
 	channel, channelOK := nb.channels[channelID]
+
 	if !channelOK {
 		return in10n.ErrChannelDoesNotExist
 	}
@@ -118,10 +128,16 @@ func (nb *N10nBroker) Subscribe(channelID in10n.ChannelID, projectionKey in10n.P
 	}
 
 	if nb.numSubscriptions >= nb.quotas.Subscriptions {
-		return in10n.ErrQuotaExceeded_Subsciptions
+		return in10n.ErrQuotaExceeded_Subscriptions
 	}
 	if metric.numSubscriptions >= nb.quotas.SubscriptionsPerSubject {
-		return in10n.ErrQuotaExceeded_SubsciptionsPerSubject
+		return in10n.ErrQuotaExceeded_SubscriptionsPerSubject
+	}
+
+	// [~server.n10n.heartbeats/freq.ZeroKey~impl]
+	// [~server.n10n.heartbeats/freq.SingleNotification~impl]
+	if projectionKey.Projection == in10n.QNameHeartbeat30 {
+		projectionKey = in10n.Heartbeat30ProjectionKey
 	}
 
 	subscription := subscription{
@@ -169,12 +185,10 @@ func (nb *N10nBroker) Unsubscribe(channelID in10n.ChannelID, projectionKey in10n
 	return err
 }
 
-// WatchChannel @ConcurrentAccess
-// Create WatchChannel for notify clients about changed projections. If channel for this demand does not exist or
-// channel already watched - exit.
+// Implementation of the in10n.IN10nBroker
 func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelID, notifySubscriber func(projection in10n.ProjectionKey, offset istructs.Offset)) {
 	// check that the channelID with the given ChannelID exists
-	channel, metric := func() (*channelType, *metricType) {
+	channel, metric := func() (*channel, *metricType) {
 		nb.RLock()
 		defer nb.RUnlock()
 		channel, channelOK := nb.channels[channelID]
@@ -197,6 +211,10 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 		nb.Unlock()
 	}()
 
+	if logger.IsTrace() {
+		logger.Trace("notified", channelID, channel.subject)
+	}
+
 	updateUnits := make([]UpdateUnit, 0)
 
 	// cycle for channel.cchan and ctx
@@ -206,7 +224,7 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 			break
 		case <-channel.cchan:
 			if logger.IsTrace() {
-				logger.Trace(channelID)
+				logger.Trace("notified: ", channelID)
 			}
 
 			if ctx.Err() != nil {
@@ -233,8 +251,8 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 			}
 			nb.Unlock()
 			for _, unit := range updateUnits {
-				if logger.IsVerbose() {
-					logVerbose("before notifySubscriber", unit.Projection, unit.Offset)
+				if logger.IsTrace() {
+					logTrace("before notifySubscriber", unit.Projection, unit.Offset)
 				}
 				notifySubscriber(unit.Projection, unit.Offset)
 			}
@@ -245,7 +263,13 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 }
 
 func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
-	defer wg.Done()
+	defer func() {
+		logger.Info("notifier goroutine stopped")
+		wg.Done()
+	}()
+
+	logger.Info("notifier goroutine started")
+
 	for ctx.Err() == nil {
 		select {
 		case <-ctx.Done():
@@ -267,26 +291,33 @@ func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
 			}
 
 			// Notify subscribers
-			if logger.IsVerbose() {
-				logger.Verbose("notifier goroutine: len(prj.subscribedChannels):", strconv.Itoa(len(prj.subscribedChannels)))
+			if logger.IsTrace() {
+				logger.Trace("notifier goroutine: len(prj.subscribedChannels):", strconv.Itoa(len(prj.subscribedChannels)))
 			}
 			for _, ch := range prj.subscribedChannels {
 				select {
 				case ch.cchan <- struct{}{}:
+					if logger.IsTrace() {
+						logger.Trace("notifier goroutine: ch.cchan <- struct{}{}")
+					}
 				default:
+					if logger.IsVerbose() {
+						logger.Verbose("notifier goroutine: channel full, skipping send")
+					}
 				}
 			}
 		}
 	}
+
 }
 
 func guaranteeProjection(projections map[in10n.ProjectionKey]*projection, projectionKey in10n.ProjectionKey) (offsetPointer *istructs.Offset) {
 	prj := projections[projectionKey]
 	if prj == nil {
 		prj = &projection{
-			subscribedChannels: make(map[in10n.ChannelID]*channelType),
+			subscribedChannels: make(map[in10n.ChannelID]*channel),
 			offsetPointer:      new(istructs.Offset),
-			toSubscribe:        make(map[in10n.ChannelID]*channelType),
+			toSubscribe:        make(map[in10n.ChannelID]*channel),
 		}
 		projections[projectionKey] = prj
 
@@ -304,8 +335,8 @@ func (nb *N10nBroker) Update(projection in10n.ProjectionKey, offset istructs.Off
 
 	e := event{prj: prj}
 	nb.events <- e
-	if logger.IsVerbose() {
-		logVerbose("Update() completed", projection, offset)
+	if logger.IsTrace() {
+		logTrace("Update() completed", projection, offset)
 	}
 }
 
@@ -341,10 +372,10 @@ func (nb *N10nBroker) MetricSubject(ctx context.Context, cb func(subject istruct
 	}
 }
 
-func NewN10nBroker(quotas in10n.Quotas, time coreutils.ITime) (nb *N10nBroker, cleanup func()) {
+func NewN10nBroker(quotas in10n.Quotas, time timeu.ITime) (nb *N10nBroker, cleanup func()) {
 	broker := N10nBroker{
 		projections:     make(map[in10n.ProjectionKey]*projection),
-		channels:        make(map[in10n.ChannelID]*channelType),
+		channels:        make(map[in10n.ChannelID]*channel),
 		metricBySubject: make(map[istructs.SubjectLogin]*metricType),
 		quotas:          quotas,
 		time:            time,
@@ -359,11 +390,41 @@ func NewN10nBroker(quotas in10n.Quotas, time coreutils.ITime) (nb *N10nBroker, c
 
 	wg.Add(1)
 	go notifier(ctx, &wg, broker.events)
+	wg.Add(1)
+	go broker.heartbeat30(ctx, &wg)
 
 	return &broker, cleanup
 }
 
-func (nb *N10nBroker) validateChannel(channel *channelType) error {
+// Call Update() every 30 seconds for i10n.Heartbeat30ProjectionKey
+func (nb *N10nBroker) heartbeat30(ctx context.Context, wg *sync.WaitGroup) {
+	defer func() {
+		logger.Info("heartbeat30 goroutine stopped")
+		wg.Done()
+	}()
+
+	// [~server.n10n.heartbeats/freq.Interval30Seconds~impl]
+	ticker := nb.time.NewTimerChan(in10n.Heartbeat30Duration)
+	logger.Info("heartbeat30 goroutine started, Heartbeat30Duration:", in10n.Heartbeat30Duration)
+
+	offset := istructs.Offset(1)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker:
+			if logger.IsTrace() {
+				logger.Trace("ticker")
+			}
+			nb.Update(in10n.Heartbeat30ProjectionKey, offset)
+			offset++
+			ticker = nb.time.NewTimerChan(in10n.Heartbeat30Duration)
+		}
+	}
+}
+
+func (nb *N10nBroker) validateChannel(channel *channel) error {
 	nb.RLock()
 	defer nb.RUnlock()
 	// if channel lifetime > channelDuration defined in NewChannel when create channel - must exit

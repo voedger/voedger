@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/itokensjwt"
@@ -153,8 +153,8 @@ func TestBasicUsage_IAppTokens(t *testing.T) {
 	})
 
 	t.Run("Basic validation error", func(t *testing.T) {
-		coreutils.MockTime.Add(testDuration * 2)
-		defer func() { coreutils.MockTime.Add(-testDuration * 2) }()
+		testingu.MockTime.Add(testDuration * 2)
+		defer func() { testingu.MockTime.Add(-testDuration * 2) }()
 		payload := PrincipalPayload{}
 		_, err := at.ValidateToken(token, &payload)
 		require.ErrorIs(err, itokens.ErrTokenExpired)

@@ -15,8 +15,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -40,7 +40,7 @@ func TestBasic(t *testing.T) {
 	t.Run("LeadershipCollision", func(t *testing.T) {
 		r := require.New(t)
 
-		iTime := coreutils.MockTime
+		iTime := testingu.MockTime
 		vvmCfg1 := GetTestVVMCfg(net.IPv4(192, 168, 0, 1))
 
 		// make so that VVM launch on vvmCfg1 will store the resulting storage in sharedStorageFactory

@@ -9,7 +9,7 @@ import (
 	"encoding/binary"
 
 	"github.com/voedger/voedger/pkg/appdef/builder"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 
 	"github.com/untillpro/dynobuffers"
 
@@ -32,7 +32,7 @@ var (
 		return payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT())
 	}
 	simpleStorageProvider = func() istorage.IAppStorageProvider {
-		asf := mem.Provide(coreutils.MockTime)
+		asf := mem.Provide(testingu.MockTime)
 		return provider.Provide(asf)
 	}
 )

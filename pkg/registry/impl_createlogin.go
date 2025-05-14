@@ -26,7 +26,7 @@ func execCmdCreateLogin(args istructs.ExecCommandArgs) error {
 	return createLogin(args, args.ArgumentObject.AsString(authnz.Field_Login))
 }
 
-// [~cmp.registry.CreateEmailLogin.go~]
+// [~server.users/cmp.registry.CreateEmailLogin.go~impl]
 func execCmdCreateEmailLogin(args istructs.ExecCommandArgs) error {
 	return createLogin(args, args.ArgumentObject.AsString(authnz.Field_Email))
 }

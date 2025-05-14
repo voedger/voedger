@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
@@ -25,7 +26,7 @@ type storageWithLock struct {
 
 type appStorageFactory struct {
 	storages map[string]*storageWithLock
-	iTime    coreutils.ITime
+	iTime    timeu.ITime
 }
 
 func (s *appStorageFactory) AppStorage(appName istorage.SafeAppName) (istorage.IAppStorage, error) {
@@ -49,7 +50,7 @@ func (s *appStorageFactory) Init(appName istorage.SafeAppName) error {
 	return nil
 }
 
-func (s *appStorageFactory) Time() coreutils.ITime {
+func (s *appStorageFactory) Time() timeu.ITime {
 	return s.iTime
 }
 
@@ -60,7 +61,7 @@ type appStorage struct {
 	lock         *sync.RWMutex
 	testDelayGet time.Duration // used in tests only
 	testDelayPut time.Duration // used in tests only
-	iTime        coreutils.ITime
+	iTime        timeu.ITime
 }
 
 func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, newValue []byte, ttlSeconds int) (ok bool, err error) {

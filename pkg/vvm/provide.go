@@ -30,6 +30,7 @@ import (
 	"github.com/voedger/voedger/pkg/btstrp"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/isequencer"
@@ -268,7 +269,7 @@ func provideSchedulerRunner(cfg schedulers.BasicSchedulerConfig) appparts.ISched
 	return schedulers.ProvideSchedulers(cfg)
 }
 
-func provideBootstrapOperator(federation federation.IFederation, asp istructs.IAppStructsProvider, time coreutils.ITime, apppar appparts.IAppPartitions,
+func provideBootstrapOperator(federation federation.IFederation, asp istructs.IAppStructsProvider, time timeu.ITime, apppar appparts.IAppPartitions,
 	builtinApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider, blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr,
 	routerAppStoragePtr dbcertcache.RouterAppStoragePtr) (BootstrapOperator, error) {
 	var clusterBuiltinApp btstrp.ClusterBuiltInApp
@@ -466,7 +467,7 @@ func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
 	}
 }
 
-func provideBucketsFactory(time coreutils.ITime) irates.BucketsFactoryType {
+func provideBucketsFactory(time timeu.ITime) irates.BucketsFactoryType {
 	return func() irates.IBuckets {
 		return iratesce.Provide(time)
 	}
@@ -719,7 +720,7 @@ func provideChannelGroups(cfg *VVMConfig) (res []iprocbusmem.ChannelGroup) {
 }
 
 func provideCachingAppStorageProvider(storageCacheSize StorageCacheSizeType, metrics imetrics.IMetrics,
-	vvmName processors.VVMName, uncachingProvider IAppStorageUncachingProviderFactory, iTime coreutils.ITime) istorage.IAppStorageProvider {
+	vvmName processors.VVMName, uncachingProvider IAppStorageUncachingProviderFactory, iTime timeu.ITime) istorage.IAppStorageProvider {
 	aspNonCaching := uncachingProvider()
 	return istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics, string(vvmName), iTime)
 }
@@ -728,7 +729,7 @@ func provideBlobAppStoragePtr(astp istorage.IAppStorageProvider) iblobstoragestg
 	return new(istorage.IAppStorage)
 }
 
-func provideBlobStorage(bas iblobstoragestg.BlobAppStoragePtr, time coreutils.ITime) BlobStorage {
+func provideBlobStorage(bas iblobstoragestg.BlobAppStoragePtr, time timeu.ITime) BlobStorage {
 	return iblobstoragestg.Provide(bas, time)
 }
 

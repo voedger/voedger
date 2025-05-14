@@ -10,13 +10,13 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 )
 
 type elections[K any, V any] struct {
 	storage     ITTLStorage[K, V]
 	leadership  sync.Map
-	clock       coreutils.ITime
+	clock       timeu.ITime
 	isFinalized atomic.Bool
 }
 

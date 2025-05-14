@@ -48,6 +48,8 @@ func TestResourceEnumerator(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 		t.Run("must be ok to build application", func(t *testing.T) {
 			doc := wsb.AddODoc(oDocName)

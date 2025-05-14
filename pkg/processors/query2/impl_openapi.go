@@ -19,9 +19,10 @@ import (
 // [~server.apiv2.role/cmp.CreateOpenApiSchema~impl]
 // CreateOpenAPISchema generates an OpenAPI schema document for the given workspace and role
 func CreateOpenAPISchema(writer io.Writer, ws appdef.IWorkspace, role appdef.QName,
-	pubTypesFunc PublishedTypesFunc, meta SchemaMeta) error {
+	pubTypesFunc PublishedTypesFunc, meta SchemaMeta, developer bool) error {
 
 	generator := &schemaGenerator{
+		developer:      developer,
 		ws:             ws,
 		role:           role,
 		pubTypesFunc:   pubTypesFunc,
@@ -38,6 +39,7 @@ func CreateOpenAPISchema(writer io.Writer, ws appdef.IWorkspace, role appdef.QNa
 }
 
 type schemaGenerator struct {
+	developer    bool
 	ws           appdef.IWorkspace
 	role         appdef.QName
 	pubTypesFunc PublishedTypesFunc
@@ -86,10 +88,8 @@ func (g *schemaGenerator) generateComponents() {
 		for op, fields := range ops {
 			g.generateSchemaComponent(t, op, fields, schemas)
 			if t.Kind() == appdef.TypeKind_Command && op == appdef.OperationKind_Execute {
-				// If command param is an ODoc, generate a schema for it
 				cmd := t.(appdef.ICommand)
-				param := cmd.Param()
-				if _, ok := param.(appdef.IODoc); ok {
+				if param := cmd.Param(); param != nil {
 					g.generateSchemaComponent(param.(ischema), op, nil, schemas)
 				}
 				if result := cmd.Result(); result != nil {
@@ -98,6 +98,9 @@ func (g *schemaGenerator) generateComponents() {
 			}
 			if t.Kind() == appdef.TypeKind_Query && op == appdef.OperationKind_Execute {
 				qry := t.(appdef.IQuery)
+				if param := qry.Param(); param != nil {
+					g.generateSchemaComponent(param.(ischema), op, nil, schemas)
+				}
 				if result := qry.Result(); result != nil {
 					g.generateSchemaComponent(result.(ischema), op, nil, schemas)
 				}
@@ -125,6 +128,22 @@ func (g *schemaGenerator) generateComponents() {
 			},
 		},
 		schemaKeyRequired: []string{"message"},
+	}
+
+	schemas[registeredDeviceSchemaName] = map[string]interface{}{
+		schemaKeyType: schemaTypeObject,
+		schemaKeyProperties: map[string]interface{}{
+			fieldLogin: map[string]interface{}{
+				schemaKeyType: schemaTypeString,
+			},
+			fieldPassword: map[string]interface{}{
+				schemaKeyType: schemaTypeString,
+			},
+			"ProfileWSID": map[string]interface{}{
+				schemaKeyType:   schemaTypeInteger,
+				schemaKeyFormat: schemaFormatInt64,
+			},
+		},
 	}
 
 	// [~server.apiv2.auth/cmp.principalTokenSchema~impl]
@@ -218,6 +237,10 @@ func (g *schemaGenerator) generateSchemaComponent(typ appdef.IType, op appdef.Op
 // generatePaths creates path items for all published types and their operations
 func (g *schemaGenerator) generatePaths() {
 	g.addAuthPaths()
+	if g.developer {
+		g.genCreateNewUserPath()
+		g.genCreateNewDevicePath()
+	}
 	for t, ops := range g.types {
 		for op := range ops {
 			paths := g.getPaths(t, op)
@@ -231,6 +254,84 @@ func (g *schemaGenerator) generatePaths() {
 func (g *schemaGenerator) addAuthPaths() {
 	g.genAuthLoginPath()
 	g.genAuthRefreshPath()
+}
+
+func (g *schemaGenerator) genCreateNewUserPath() {
+	path := fmt.Sprintf("/api/v2/apps/%s/%s/users", g.getOwner(), g.getApp())
+	g.paths[path] = map[string]interface{}{
+		schemaMethodPost: map[string]interface{}{
+			schemaKeyDescription: "Register a new user with the provided details",
+			schemaKeyTags:        []string{usersTag},
+			schemaKeyParameters:  g.generateParameters(path, nil),
+			schemaKeyRequestBody: map[string]interface{}{
+				schemaKeyRequired: true,
+				schemaKeyContent: map[string]interface{}{
+					applicationJSON: map[string]interface{}{
+						schemaKeySchema: map[string]interface{}{
+							schemaKeyType: schemaTypeObject,
+							schemaKeyProperties: map[string]interface{}{
+								fieldVerifiedEmailToken: map[string]interface{}{
+									schemaKeyType: schemaTypeString,
+								},
+								fieldPassword: map[string]interface{}{
+									schemaKeyType: schemaTypeString,
+								},
+								fieldDisplayName: map[string]interface{}{
+									schemaKeyType: schemaTypeString,
+								},
+							},
+							schemaKeyRequired: []string{fieldVerifiedEmailToken, fieldPassword, fieldDisplayName},
+						},
+					},
+				},
+			},
+			schemaKeyResponses: map[string]interface{}{
+				statusCode201: g.genOKResponse(""),
+				statusCode400: g.genErrorResponse(http.StatusBadRequest),
+				statusCode401: g.genErrorResponse(http.StatusUnauthorized),
+				statusCode429: g.genErrorResponse(http.StatusTooManyRequests),
+			},
+		},
+	}
+}
+
+func (g *schemaGenerator) genCreateNewDevicePath() {
+	path := fmt.Sprintf("/api/v2/apps/%s/%s/devices", g.getOwner(), g.getApp())
+	g.paths[path] = map[string]interface{}{
+		schemaMethodPost: map[string]interface{}{
+			schemaKeyDescription: "Create(register) new device",
+			schemaKeySecurity: []map[string]interface{}{
+				{
+					bearerAuth: []string{},
+				},
+			},
+			schemaKeyTags:       []string{devicesTag},
+			schemaKeyParameters: g.generateParameters(path, nil),
+			schemaKeyRequestBody: map[string]interface{}{
+				schemaKeyRequired: true,
+				schemaKeyContent: map[string]interface{}{
+					applicationJSON: map[string]interface{}{
+						schemaKeySchema: map[string]interface{}{
+							schemaKeyType: schemaTypeObject,
+							schemaKeyProperties: map[string]interface{}{
+								fieldDisplayName: map[string]interface{}{
+									schemaKeyType: schemaTypeString,
+								},
+							},
+							schemaKeyRequired: []string{fieldDisplayName},
+						},
+					},
+				},
+			},
+			schemaKeyResponses: map[string]interface{}{
+				statusCode201: g.genOKResponse(registeredDeviceSchemaRef),
+				statusCode400: g.genErrorResponse(http.StatusBadRequest),
+				statusCode401: g.genErrorResponse(http.StatusUnauthorized),
+				statusCode403: g.genErrorResponse(http.StatusForbidden),
+				statusCode429: g.genErrorResponse(http.StatusTooManyRequests),
+			},
+		},
+	}
 }
 
 func (g *schemaGenerator) genAuthLoginPath() {
@@ -250,14 +351,14 @@ func (g *schemaGenerator) genAuthLoginPath() {
 							schemaKeyType: schemaTypeObject,
 							schemaKeyProperties: map[string]interface{}{
 								// Login is a mandatory field
-								"Login": map[string]interface{}{
+								fieldLogin: map[string]interface{}{
 									schemaKeyType: schemaTypeString,
 								},
-								"Password": map[string]interface{}{
+								fieldPassword: map[string]interface{}{
 									schemaKeyType: schemaTypeString,
 								},
 							},
-							schemaKeyRequired: []string{"Login", "Password"},
+							schemaKeyRequired: []string{fieldLogin, fieldPassword},
 						},
 					},
 				},
@@ -298,6 +399,12 @@ func (g *schemaGenerator) genAuthRefreshPath() {
 }
 
 func (g *schemaGenerator) genOKResponse(schemaRef string) map[string]interface{} {
+	if schemaRef == "" {
+		return map[string]interface{}{
+			schemaKeyDescription: descrOK,
+		}
+	}
+
 	return map[string]interface{}{
 		schemaKeyDescription: descrOK,
 		schemaKeyContent: map[string]interface{}{
@@ -632,7 +739,7 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 			"name":     "where",
 			"in":       "query",
 			"required": len(pkFields) > 0,
-			"schema": map[string]interface{}{
+			schemaKeySchema: map[string]interface{}{
 				"type": "string",
 			},
 			schemaKeyDescription: descr,
@@ -643,7 +750,7 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 			"name":     "order",
 			"in":       "query",
 			"required": false,
-			"schema": map[string]interface{}{
+			schemaKeySchema: map[string]interface{}{
 				"type": "string",
 			},
 			schemaKeyDescription: "Field to order results by",
@@ -653,7 +760,7 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 			"name":     "limit",
 			"in":       "query",
 			"required": false,
-			"schema": map[string]interface{}{
+			schemaKeySchema: map[string]interface{}{
 				"type": "integer",
 			},
 			schemaKeyDescription: "Maximum number of results to return",
@@ -663,7 +770,7 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 			"name":     "skip",
 			"in":       "query",
 			"required": false,
-			"schema": map[string]interface{}{
+			schemaKeySchema: map[string]interface{}{
 				"type": "integer",
 			},
 			schemaKeyDescription: "Number of results to skip",
@@ -673,7 +780,7 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 			"name":     "include",
 			"in":       "query",
 			"required": false,
-			"schema": map[string]interface{}{
+			schemaKeySchema: map[string]interface{}{
 				"type": "string",
 			},
 			schemaKeyDescription: "Referenced objects to include in response",
@@ -683,7 +790,7 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 			"name":     "keys",
 			"in":       "query",
 			"required": false,
-			"schema": map[string]interface{}{
+			schemaKeySchema: map[string]interface{}{
 				"type": "string",
 			},
 			schemaKeyDescription: "Specific fields to include in response",
@@ -692,15 +799,18 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 
 	// Add arg parameter for queries
 	if strings.Contains(path, "/queries/") {
-		parameters = append(parameters, map[string]interface{}{
-			"name":     "arg",
-			"in":       "query",
-			"required": false,
-			"schema": map[string]interface{}{
-				"type": "string",
-			},
-			schemaKeyDescription: "Query argument in JSON format",
-		})
+		query := typ.(appdef.IQuery)
+		if query.Param() != nil {
+			parameters = append(parameters, map[string]interface{}{
+				"name":     "args",
+				"in":       "query",
+				"required": true,
+				schemaKeySchema: map[string]interface{}{
+					schemaKeyRef: g.schemaRef(query.Param(), appdef.OperationKind_Execute),
+				},
+				schemaKeyDescription: "Query argument in JSON format",
+			})
+		}
 	}
 
 	return parameters

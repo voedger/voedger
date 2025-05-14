@@ -15,7 +15,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 )
@@ -47,7 +47,7 @@ func TestBasicUsage_ITokens(t *testing.T) {
 
 	require := require.New(t)
 
-	signer := ProvideITokens(SecretKeyExample, coreutils.MockTime)
+	signer := ProvideITokens(SecretKeyExample, testingu.MockTime)
 
 	// Prepare payloads
 
@@ -124,7 +124,7 @@ func TestBasicUsage_ITokens(t *testing.T) {
 
 		// simulate token validity time is passed
 		// must get error, because token already expired
-		coreutils.MockTime.Add(2 * time.Minute)
+		testingu.MockTime.Add(2 * time.Minute)
 		var payload = TestPayload_Principal{}
 		gp, err = signer.ValidateToken(expiredToken, &payload)
 		require.Greater(gp.IssuedAt.Unix(), new(time.Time).Unix())
@@ -137,7 +137,7 @@ func TestBasicUsage_ITokens(t *testing.T) {
 		require.NoError(err)
 
 		// make current time later the expiration moment
-		coreutils.MockTime.Add(testDuration * 2)
+		testingu.MockTime.Add(testDuration * 2)
 		payload := TestPayload_Principal{}
 		gp, err = signer.ValidateToken(expiredToken, &payload)
 		require.Greater(gp.IssuedAt.Unix(), new(time.Time).Unix())
@@ -291,7 +291,7 @@ func TestErrorProcessing(t *testing.T) {
 // Try to create signer with TOO SHORT Secret Key. We must panic.
 func TestSecretKeyTooShort(t *testing.T) {
 	require.Panics(t, func() {
-		_ = ProvideITokens(SecretKeyTooShortExample, coreutils.MockTime)
+		_ = ProvideITokens(SecretKeyTooShortExample, testingu.MockTime)
 	})
 }
 

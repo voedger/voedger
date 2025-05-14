@@ -24,6 +24,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
@@ -157,7 +158,7 @@ func TestBasicUsage_Respond(t *testing.T) {
 func TestBeginResponseTimeout(t *testing.T) {
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		// bump the mock time to make timeout timer fire
-		coreutils.MockTime.Add(2 * time.Millisecond)
+		testingu.MockTime.Add(2 * time.Millisecond)
 		// just do not use the responder
 	}, bus.SendTimeout(time.Millisecond))
 	defer tearDown(router)
@@ -396,7 +397,8 @@ func TestAdminService(t *testing.T) {
 		if len(nonLocalhostIP) == 0 {
 			t.Skip("unable to find local non-loopback ip address")
 		}
-		_, err = net.DialTimeout("tcp", fmt.Sprintf("%s:%d", nonLocalhostIP, router.adminPort()), 1*time.Second)
+		// hostport
+		_, err = net.DialTimeout("tcp", fmt.Sprintf("%v:%d", nonLocalhostIP, router.adminPort()), 1*time.Second)
 		if !errors.Is(err, context.DeadlineExceeded) && !strings.Contains(err.Error(), "connection refused") &&
 			!strings.Contains(err.Error(), "i/o timeout") {
 			t.Fatal(err)
@@ -416,7 +418,7 @@ type testRouter struct {
 
 func startRouter(t *testing.T, router *testRouter, rp RouterParams, sendTimeout bus.SendTimeout, requestHandler bus.RequestHandler) {
 	ctx, cancel := context.WithCancel(context.Background())
-	requestSender := bus.NewIRequestSender(coreutils.MockTime, sendTimeout, requestHandler)
+	requestSender := bus.NewIRequestSender(testingu.MockTime, sendTimeout, requestHandler)
 	httpSrv, acmeSrv, adminService := Provide(rp, nil, nil, nil, requestSender,
 		map[appdef.AppQName]istructs.NumAppWorkspaces{istructs.AppQName_test1_app1: 10}, nil, nil)
 	require.Nil(t, acmeSrv)

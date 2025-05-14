@@ -13,7 +13,7 @@ import (
 	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
-func logVerbose(subject string, pkey in10n.ProjectionKey, offset istructs.Offset) {
+func logTrace(subject string, pkey in10n.ProjectionKey, offset istructs.Offset) {
 	msg := fmt.Sprintf("%s, %s, %s, %d, %d", subject, pkey.App, pkey.Projection, pkey.WS, offset)
-	logger.Verbose(msg)
+	logger.Trace(msg)
 }

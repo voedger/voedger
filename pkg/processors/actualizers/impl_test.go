@@ -18,8 +18,9 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/coreutils"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
@@ -284,13 +285,13 @@ func deployTestAppEx(
 	if cachedStorage {
 		storageProvider = istoragecache.Provide(
 			1000000,
-			istorageimpl.Provide(mem.Provide(coreutils.MockTime)),
+			istorageimpl.Provide(mem.Provide(testingu.MockTime)),
 			metrics,
 			vvmName,
-			coreutils.MockTime,
+			testingu.MockTime,
 		)
 	} else {
-		storageProvider = istorageimpl.Provide(mem.Provide(coreutils.MockTime))
+		storageProvider = istorageimpl.Provide(mem.Provide(testingu.MockTime))
 	}
 
 	var (
@@ -304,7 +305,7 @@ func deployTestAppEx(
 			ChannelsPerSubject:      10,
 			Subscriptions:           1000,
 			SubscriptionsPerSubject: 10,
-		}, coreutils.NewITime())
+		}, timeu.NewITime())
 		actualizerCfg.Broker = n10nBroker
 	} else {
 		n10nBroker = actualizerCfg.Broker

@@ -10,13 +10,14 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
-func provideCmdInitiateJoinWorkspace(sr istructsmem.IStatelessResources, time coreutils.ITime) {
+func provideCmdInitiateJoinWorkspace(sr istructsmem.IStatelessResources, time timeu.ITime) {
 	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(
 		qNameCmdInitiateJoinWorkspace,
 		execCmdInitiateJoinWorkspace(time),
@@ -24,7 +25,7 @@ func provideCmdInitiateJoinWorkspace(sr istructsmem.IStatelessResources, time co
 }
 
 // [~server.invites/Join.InitiateJoinWorkspace~impl]
-func execCmdInitiateJoinWorkspace(tm coreutils.ITime) func(args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateJoinWorkspace(tm timeu.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
 		if err != nil {

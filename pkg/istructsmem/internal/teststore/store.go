@@ -11,7 +11,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
@@ -100,7 +100,7 @@ func NewStorageProvider(ts *TestMemStorage) istorage.IAppStorageProvider {
 // Returns new test storage
 func NewStorage(appName appdef.AppQName) *TestMemStorage {
 	s := &TestMemStorage{name: appName, get: scheduleStorageError{}, put: scheduleStorageError{}}
-	asf := mem.Provide(coreutils.MockTime)
+	asf := mem.Provide(testingu.MockTime)
 	sp := provider.Provide(asf)
 	var err error
 	if s.storage, err = sp.AppStorage(appName); err != nil {

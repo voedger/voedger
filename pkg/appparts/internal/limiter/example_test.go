@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts/internal/limiter"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iratesce"
 )
 
@@ -69,7 +69,7 @@ func Example() {
 
 	fmt.Println(Limiter.Exceeded(cmd2Name, appdef.OperationKind_Execute, 1, `addr1`)) // Exceeded WS
 
-	coreutils.MockTime.Add(time.Minute) // Wait for the next minute
+	testingu.MockTime.Add(time.Minute) // Wait for the next minute
 
 	// check limits is respawned
 	fmt.Println(Limiter.Exceeded(cmd1Name, appdef.OperationKind_Execute, 1, `addr1`))

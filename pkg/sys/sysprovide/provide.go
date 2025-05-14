@@ -8,9 +8,9 @@ import (
 	"runtime/debug"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -33,7 +33,7 @@ import (
 )
 
 func ProvideStateless(sr istructsmem.IStatelessResources, smtpCfg smtp.Cfg, eps map[appdef.AppQName]extensionpoints.IExtensionPoint, buildInfo *debug.BuildInfo,
-	storageProvider istorage.IAppStorageProvider, wsPostInitFunc workspace.WSPostInitFunc, time coreutils.ITime,
+	storageProvider istorage.IAppStorageProvider, wsPostInitFunc workspace.WSPostInitFunc, time timeu.ITime,
 	itokens itokens.ITokens, federation federation.IFederation, asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory) {
 	blobber.ProvideBlobberCmds(sr)
 	collection.Provide(sr)

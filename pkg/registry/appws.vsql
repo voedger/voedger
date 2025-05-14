@@ -103,7 +103,7 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		COMMAND ChangePassword (ChangePasswordParams, UNLOGGED ChangePasswordUnloggedParams);
 		COMMAND ResetPasswordByEmail (ResetPasswordByEmailParams, UNLOGGED ResetPasswordByEmailUnloggedParams);
 		COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
-		COMMAND CreateEmailLogin (CreateEmailLoginParams, UNLOGGED CreateEmailLoginUnloggedParams); -- [~cmp.registry.CreateEmailLogin.vsql~]
+		COMMAND CreateEmailLogin (CreateEmailLoginParams, UNLOGGED CreateEmailLoginUnloggedParams); -- [~server.users/cmp.registry.CreateEmailLogin.vsql~impl]
 		QUERY IssuePrincipalToken (IssuePrincipalTokenParams) RETURNS IssuePrincipalTokenResult;
 		QUERY InitiateResetPasswordByEmail (InitiateResetPasswordByEmailParams) RETURNS InitiateResetPasswordByEmailResult;
 		QUERY IssueVerifiedValueTokenForResetPassword (IssueVerifiedValueTokenForResetPasswordParams) RETURNS IssueVerifiedValueTokenForResetPasswordResult;

@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/sys"
 
@@ -223,8 +224,8 @@ func invokeCreateWorkspaceProjector(federation federation.IFederation, tokensAPI
 }
 
 // c.sys.CreateWorkspace
-// must be called in the target application because the user profile is located in the target application according to schema
-func execCmdCreateWorkspace(time coreutils.ITime) istructsmem.ExecCommandClosure {
+// targetApp/newWSID
+func execCmdCreateWorkspace(time timeu.ITime) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) error {
 		// TODO: AuthZ: System, SystemToken in header
 		// Check that CDoc<sys.WorkspaceDescriptor> does not exist yet (IRecords.GetSingleton())
@@ -297,7 +298,7 @@ func execCmdCreateWorkspace(time coreutils.ITime) istructsmem.ExecCommandClosure
 
 // Projector<A, InitializeWorkspace>
 // triggered by CDoc<WorkspaceDescriptor>
-func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IFederation, eps map[appdef.AppQName]extensionpoints.IExtensionPoint,
+func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFederation, eps map[appdef.AppQName]extensionpoints.IExtensionPoint,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
 		for rec := range event.CUDs {

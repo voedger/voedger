@@ -11,6 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/processors"
 
 	"github.com/voedger/voedger/pkg/appparts"
@@ -31,7 +32,7 @@ type workspace struct {
 type cmdProc struct {
 	appsPartitions map[appdef.AppQName]map[istructs.PartitionID]*appPartition
 	n10nBroker     in10n.IN10nBroker
-	time           coreutils.ITime
+	time           timeu.ITime
 	authenticator  iauthnz.IAuthenticator
 	storeOp        pipeline.ISyncOperator
 }
@@ -42,7 +43,7 @@ type appPartition struct {
 }
 
 // syncActualizerFactory is a factory(partitionID) that returns a fork operator with a sync actualizer per each application. Inside of an each actualizer - projectors for each application
-func ProvideServiceFactory(appParts appparts.IAppPartitions, tm coreutils.ITime,
+func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm processors.VVMName, authenticator iauthnz.IAuthenticator,
 	secretReader isecrets.ISecretReader) ServiceFactory {
 	return func(commandsChannel CommandChannel) pipeline.IService {

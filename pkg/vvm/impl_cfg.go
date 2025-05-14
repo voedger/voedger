@@ -11,6 +11,8 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/processors"
 
@@ -37,7 +39,7 @@ func NewVVMDefaultConfig() VVMConfig {
 		RouterReadTimeout:      router.DefaultRouterWriteTimeout, // same
 		RouterConnectionsLimit: router.DefaultConnectionsLimit,
 		BLOBMaxSize:            DefaultBLOBMaxSize,
-		Time:                   coreutils.NewITime(),
+		Time:                   timeu.NewITime(),
 		Name:                   processors.VVMName(hostname),
 		VVMAppsBuilder:         VVMAppsBuilder{},
 		SendTimeout:            bus.DefaultSendTimeout,
@@ -50,13 +52,13 @@ func NewVVMDefaultConfig() VVMConfig {
 		MetricsServicePort:     DefaultMetricsServicePort,
 		StorageFactory: func() (provider istorage.IAppStorageFactory, err error) {
 			logger.Info("using istoragemem")
-			return mem.Provide(coreutils.MockTime), nil
+			return mem.Provide(testingu.MockTime), nil
 		},
 		SecretsReader: isecretsimpl.ProvideSecretReader(),
 		IP:            coreutils.LocalhostIP,
 		NumVVM:        1,
 
-		// [~tuc.VVMConfig.ConfigureSequencesTrustLevel~]
+		// [~server.design.sequences/tuc.VVMConfig.ConfigureSequencesTrustLevel~impl]
 		SequencesTrustLevel: isequencer.SequencesTrustLevel_0,
 	}
 	if coreutils.IsTest() {

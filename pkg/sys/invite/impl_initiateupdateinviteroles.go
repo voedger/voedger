@@ -9,19 +9,20 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
-func provideCmdInitiateUpdateInviteRoles(sr istructsmem.IStatelessResources, time coreutils.ITime) {
+func provideCmdInitiateUpdateInviteRoles(sr istructsmem.IStatelessResources, time timeu.ITime) {
 	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(
 		qNameCmdInitiateUpdateInviteRoles,
 		execCmdInitiateUpdateInviteRoles(time),
 	))
 }
 
-func execCmdInitiateUpdateInviteRoles(time coreutils.ITime) func(args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateUpdateInviteRoles(time timeu.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		if !coreutils.IsValidEmailTemplate(args.ArgumentObject.AsString(field_EmailTemplate)) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)

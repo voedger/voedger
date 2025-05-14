@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/vvm"
 )
@@ -51,7 +51,7 @@ func TestAutomaticShutdownOnLeadershipLoss(t *testing.T) {
 	r.True(ok)
 
 	// Bump mock time
-	coreutils.MockTime.Sleep(time.Duration(vvm.DefaultLeadershipDurationSeconds) * time.Second)
+	testingu.MockTime.Sleep(time.Duration(vvm.DefaultLeadershipDurationSeconds) * time.Second)
 
 	// Check problem context
 	<-problemCtx.Done()

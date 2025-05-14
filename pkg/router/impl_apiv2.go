@@ -96,14 +96,12 @@ func (s *httpService) registerHandlersV2() {
 		Methods(http.MethodGet).Name("schemas, workspace role")
 
 	// auth/login: /api/v2/apps/{owner}/{app}/auth/login
-	// [~server.apiv2.auth/cmp.routerLoginPathHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/auth/login",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
 		corsHandler(requestHandlerV2_auth_login(s.requestSender, s.numsAppsWorkspaces))).
 		Methods(http.MethodPost).Name("auth login")
 
 	// auth/login: /api/v2/apps/{owner}/{app}/auth/login
-	// [~server.apiv2.auth/cmp.routerRefreshHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/auth/refresh",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
 		corsHandler(requestHandlerV2_auth_refresh(s.requestSender, s.numsAppsWorkspaces))).
@@ -158,6 +156,7 @@ func requestHandlerV2_schemas_wsRoles(reqSender bus.IRequestSender, numsAppsWork
 	}
 }
 
+// [~server.users/cmp.router.UsersCreatePathHandler~impl]
 func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
 	iTokens itokens.ITokens, federation federation.IFederation) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
@@ -199,7 +198,7 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 	}
 }
 
-// [~cmp.routerDevicesCreatePathHandler~]
+// [~server.devices/cmp.routerDevicesCreatePathHandler~impl]
 func requestHandlerV2_create_device(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, federation federation.IFederation) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
@@ -225,6 +224,7 @@ func requestHandlerV2_create_device(numsAppsWorkspaces map[appdef.AppQName]istru
 	}
 }
 
+// [~server.apiv2.auth/cmp.routerRefreshHandler~impl]
 func requestHandlerV2_auth_refresh(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
@@ -238,6 +238,7 @@ func requestHandlerV2_auth_refresh(reqSender bus.IRequestSender, numsAppsWorkspa
 	}
 }
 
+// [~server.apiv2.auth/cmp.routerLoginPathHandler~impl]
 func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
@@ -249,7 +250,7 @@ func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspace
 		busRequest.APIPath = int(processors.APIPath_Auth_Login)
 		busRequest.Method = http.MethodGet
 		queryParams := map[string]string{}
-		queryParams["arg"] = string(busRequest.Body)
+		queryParams["args"] = string(busRequest.Body)
 		busRequest.Query = queryParams
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	}

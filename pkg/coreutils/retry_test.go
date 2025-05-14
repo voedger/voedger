@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 )
 
 func TestRetry(t *testing.T) {
@@ -21,14 +22,14 @@ func TestRetry(t *testing.T) {
 			attempts++
 			return nil
 		}
-		err := Retry(ctx, MockTime, f)
+		err := Retry(ctx, testingu.MockTime, f)
 		require.NoError(t, err)
 		require.Equal(t, 1, attempts)
 	})
 
 	t.Run("retry and succeed after failures", func(t *testing.T) {
 		ctx := context.Background()
-		tm := NewMockTime()
+		tm := testingu.NewMockTime()
 		attempts := 0
 		f := func() error {
 			attempts++
@@ -45,7 +46,7 @@ func TestRetry(t *testing.T) {
 
 	t.Run("context canceled during retry", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
-		tm := NewMockTime()
+		tm := testingu.NewMockTime()
 		attempts := 0
 		testErr := errors.New("persistent error")
 		f := func() error {

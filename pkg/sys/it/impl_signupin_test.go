@@ -196,7 +196,7 @@ func TestSignInErrors(t *testing.T) {
 	})
 }
 
-// [~it.TestDevicesCreate~]
+// [~server.devices/it.TestDevicesCreate~impl]
 func TestCreateDevice(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)

@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 )
 
 func TestReplyError(t *testing.T) {
@@ -89,7 +90,7 @@ func TestReplyError(t *testing.T) {
 
 		for _, c := range cases {
 			t.Run(c.desc, func(t *testing.T) {
-				requestSender := NewIRequestSender(coreutils.MockTime, GetTestSendTimeout(), func(requestCtx context.Context, request Request, responder IResponder) {
+				requestSender := NewIRequestSender(testingu.MockTime, GetTestSendTimeout(), func(requestCtx context.Context, request Request, responder IResponder) {
 					c.f(responder)
 				})
 				cmdRespMeta, cmdResp, err := GetCommandResponse(context.Background(), requestSender, Request{})
@@ -118,7 +119,7 @@ func TestReplyError(t *testing.T) {
 			name := runtime.FuncForPC(reflect.ValueOf(c.f).Pointer()).Name()
 			name = name[strings.LastIndex(name, ".")+1:]
 			t.Run(name, func(t *testing.T) {
-				requestSender := NewIRequestSender(coreutils.MockTime, GetTestSendTimeout(), func(requestCtx context.Context, request Request, responder IResponder) {
+				requestSender := NewIRequestSender(testingu.MockTime, GetTestSendTimeout(), func(requestCtx context.Context, request Request, responder IResponder) {
 					go c.f(responder, "test message")
 				})
 				expectedMessage := "test message"
@@ -139,7 +140,7 @@ func TestReplyError(t *testing.T) {
 			Fld1 int
 			Fld2 string
 		}{Fld1: 42, Fld2: "str"}
-		requestSender := NewIRequestSender(coreutils.MockTime, GetTestSendTimeout(), func(requestCtx context.Context, request Request, responder IResponder) {
+		requestSender := NewIRequestSender(testingu.MockTime, GetTestSendTimeout(), func(requestCtx context.Context, request Request, responder IResponder) {
 			ReplyJSON(responder, http.StatusOK, testObj)
 		})
 		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(context.Background(), Request{})

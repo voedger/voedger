@@ -14,8 +14,8 @@ import (
 
 	sysmonitor "github.com/voedger/voedger/cmd/voedger/sys.monitor"
 	"github.com/voedger/voedger/pkg/bus"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/cas"
@@ -53,7 +53,7 @@ func NewAppStorageFactory(params CLIParams) (istorage.IAppStorageFactory, error)
 		casParams.Hosts = "db-node-1,db-node-2,db-node-3"
 		casParams.KeyspaceWithReplication = cas3ReplicationStrategy
 	case storageTypeMem:
-		return mem.Provide(coreutils.MockTime), nil
+		return mem.Provide(testingu.MockTime), nil
 	default:
 		return nil, errors.New("unable to define replication strategy")
 	}

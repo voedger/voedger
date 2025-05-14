@@ -384,6 +384,8 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 		t.Run("should be ok to build new ver of application", func(t *testing.T) {
 			wsb := adb.AddWorkspace(testData.wsName)
+			wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+			wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 			newCDoc := wsb.AddCDoc(test.testCDoc)
 
 			oldCDoc := appdef.CDoc(rec1.appCfg.AppDef.Type, test.testCDoc)

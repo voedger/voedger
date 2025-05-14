@@ -28,6 +28,8 @@ func TestSequencesTrustLevel(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 		saleParamsName := appdef.NewQName("test", "SaleParams")
 
@@ -190,6 +192,8 @@ func TestEventReapplier(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 		saleParamsName := appdef.NewQName("test", "SaleParams")
 		wsb.AddODoc(saleParamsName)
 		qNameCmdTestSale := appdef.NewQName("test", "Sale")

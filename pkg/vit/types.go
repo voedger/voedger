@@ -12,6 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state/smtptest"
@@ -34,7 +35,7 @@ type VIT struct {
 	configCleanupsAmount int
 	emailCaptor          emailCaptor
 	httpClient           coreutils.IHTTPClient
-	mockTime             coreutils.IMockTime
+	mockTime             testingu.IMockTime
 	vvmProblemCtx        context.Context
 }
 

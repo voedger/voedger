@@ -13,13 +13,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestRace_Buckets(t *testing.T) {
-	buckets := Provide(coreutils.NewITime())
+	buckets := Provide(timeu.NewITime())
 
 	totalRegLimitName := appdef.NewQName("test", "TotalRegLimitName")
 	addrRegLimitName := appdef.NewQName("test", "TotalRegLimitName")

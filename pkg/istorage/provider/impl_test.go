@@ -10,14 +10,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 )
 
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
-	asf := mem.Provide(coreutils.MockTime)
+	asf := mem.Provide(testingu.MockTime)
 	asp := Provide(asf)
 
 	app1 := appdef.NewAppQName("sys", "_") // SafeAppName is "sys"
@@ -62,7 +62,7 @@ func TestBasicUsage(t *testing.T) {
 
 func TestInitErrorPersistence(t *testing.T) {
 	require := require.New(t)
-	asf := mem.Provide(coreutils.MockTime)
+	asf := mem.Provide(testingu.MockTime)
 	asp := Provide(asf)
 
 	app1 := appdef.NewAppQName("sys", "_")

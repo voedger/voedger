@@ -45,7 +45,9 @@ func schemasRoleExec(ctx context.Context, qw *queryWork) (err error) {
 	}
 	role := typ.(appdef.IRole)
 
-	if !qw.isDeveloper() && !role.Published() {
+	developer := qw.isDeveloper()
+
+	if !developer && !role.Published() {
 		return coreutils.NewHTTPErrorf(http.StatusForbidden, fmt.Errorf("role %s is not published", role.QName().String()))
 	}
 
@@ -58,7 +60,7 @@ func schemasRoleExec(ctx context.Context, qw *queryWork) (err error) {
 
 	writer := new(bytes.Buffer)
 
-	err = CreateOpenAPISchema(writer, workspace, qw.msg.QName(), acl.PublishedTypes, schemaMeta)
+	err = CreateOpenAPISchema(writer, workspace, qw.msg.QName(), acl.PublishedTypes, schemaMeta, developer)
 	if err != nil {
 		return coreutils.NewHTTPErrorf(http.StatusInternalServerError, err)
 	}

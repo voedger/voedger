@@ -14,6 +14,7 @@ package in10nmem
 
 import (
 	"context"
+	"log"
 	"strconv"
 	"sync"
 	"testing"
@@ -21,8 +22,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 )
@@ -40,8 +41,6 @@ func (c *callbackMock) updatesMock(projection in10n.ProjectionKey, offset istruc
 }
 
 func Test_SubscribeUnsubscribe(t *testing.T) {
-	defer logger.SetLogLevelWithRestore(logger.LogLevelTrace)()
-
 	var wg sync.WaitGroup
 
 	cb1 := new(callbackMock)
@@ -71,7 +70,7 @@ func Test_SubscribeUnsubscribe(t *testing.T) {
 	}
 	req := require.New(t)
 
-	nb, cleanup := ProvideEx2(quotasExample, coreutils.NewITime())
+	nb, cleanup := ProvideEx2(quotasExample, timeu.NewITime())
 	defer cleanup()
 
 	var channel1ID in10n.ChannelID
@@ -166,7 +165,7 @@ func TestWatchNotExistsChannel(t *testing.T) {
 		SubscriptionsPerSubject: 1,
 	}
 
-	broker, cleanup := ProvideEx2(quotasExample, coreutils.NewITime())
+	broker, cleanup := ProvideEx2(quotasExample, timeu.NewITime())
 	defer cleanup()
 	ctx := context.TODO()
 
@@ -187,8 +186,6 @@ func TestWatchNotExistsChannel(t *testing.T) {
 
 func TestQuotas(t *testing.T) {
 
-	t.Parallel()
-
 	req := require.New(t)
 	quotasExample := in10n.Quotas{
 		Channels:                100,
@@ -198,7 +195,7 @@ func TestQuotas(t *testing.T) {
 	}
 
 	t.Run("Test channel quotas per subject. We create more channels than allowed for subject.", func(t *testing.T) {
-		broker, cleanup := ProvideEx2(quotasExample, coreutils.NewITime())
+		broker, cleanup := ProvideEx2(quotasExample, timeu.NewITime())
 		defer cleanup()
 		for i := 0; i <= 10; i++ {
 			_, err := broker.NewChannel("paa", 24*time.Hour)
@@ -209,7 +206,7 @@ func TestQuotas(t *testing.T) {
 	})
 
 	t.Run("Test channel quotas for the whole service. We create more channels than allowed for service.", func(t *testing.T) {
-		broker, cleanup := ProvideEx2(quotasExample, coreutils.NewITime())
+		broker, cleanup := ProvideEx2(quotasExample, timeu.NewITime())
 		defer cleanup()
 		var subject istructs.SubjectLogin
 		for i := 0; i < 10; i++ {
@@ -229,7 +226,7 @@ func TestQuotas(t *testing.T) {
 			Projection: appdef.NewQName("test", "restaurant"),
 			WS:         istructs.WSID(1),
 		}
-		broker, cleanup := ProvideEx2(quotasExample, coreutils.NewITime())
+		broker, cleanup := ProvideEx2(quotasExample, timeu.NewITime())
 		defer cleanup()
 		var subject istructs.SubjectLogin
 		for i := 0; i < 100; i++ {
@@ -245,11 +242,75 @@ func TestQuotas(t *testing.T) {
 					req.Equal(1000, numSubscriptions)
 					projectionKeyExample.WS = istructs.WSID(i + 100000)
 					err = broker.Subscribe(channel, projectionKeyExample)
-					req.ErrorIs(err, in10n.ErrQuotaExceeded_Subsciptions)
+					req.ErrorIs(err, in10n.ErrQuotaExceeded_Subscriptions)
 				}
 			}
 		}
 
 	})
 
+}
+
+// Flow:
+// - Create mockTimer
+// - Subscribe to QNameHeartbeat30
+// - Start goroutine that will call WatchChannel(..notifySubscriber..)
+// - mockTimer.FireNextTimerImmediately()
+// - Make sure that notifySubscriber is called
+func TestHeartbeats(t *testing.T) {
+
+	req := require.New(t)
+	mockTime := testingu.MockTime
+	mockTime.FireNextTimerImmediately()
+
+	quotasExample := in10n.Quotas{
+		Channels:                1,
+		ChannelsPerSubject:      1,
+		Subscriptions:           1,
+		SubscriptionsPerSubject: 1,
+	}
+
+	broker, cleanup := ProvideEx2(quotasExample, mockTime)
+	defer cleanup()
+
+	// Create channel and subscribe to Heartbeat30
+	subject := istructs.SubjectLogin("testuser")
+	channelID, err := broker.NewChannel(subject, 24*time.Hour)
+	req.NoError(err)
+
+	err = broker.Subscribe(channelID, in10n.Heartbeat30ProjectionKey)
+	req.NoError(err)
+
+	// Setup callback to receive updates
+	cb := new(callbackMock)
+	cb.data = make(chan UpdateUnit, 1)
+
+	// Create context with cancel for cleanup
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start watching the channel in a separate goroutine
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		broker.WatchChannel(ctx, channelID, cb.updatesMock)
+	}()
+
+	for range 10 {
+		// Wait for update with timeout
+		select {
+		case update := <-cb.data:
+			// Verify we got an update for the heartbeat projection
+			req.Equal(in10n.Heartbeat30ProjectionKey, update.Projection)
+			log.Println("Received heartbeat update:", update)
+			mockTime.Add(30 * time.Second) // Simulate passage of time
+		case <-time.After(5 * time.Second):
+			t.Fatal("Timeout waiting for heartbeat notification")
+		}
+	}
+
+	// Clean up
+	cancel()
+	wg.Wait()
 }

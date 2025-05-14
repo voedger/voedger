@@ -17,7 +17,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -60,14 +61,14 @@ func TestBasicUsage(t *testing.T) {
 		}, iblobstorage.DurationType_1Day)
 
 		// make the temp blob almost expired
-		coreutils.MockTime.Add(time.Duration(iblobstorage.DurationType_1Day.Seconds()-1) * time.Second)
+		testingu.MockTime.Add(time.Duration(iblobstorage.DurationType_1Day.Seconds()-1) * time.Second)
 
 		// blob still exists for now
 		_, err := blobStorage.QueryBLOBState(context.Background(), &key)
 		require.NoError(t, err)
 
 		// cross the temp blob expiration instant
-		coreutils.MockTime.Add(time.Second)
+		testingu.MockTime.Add(time.Second)
 
 		// blob disappeared
 		_, err = blobStorage.QueryBLOBState(context.Background(), &key)
@@ -86,11 +87,11 @@ func testBasicUsage(t *testing.T, keyGetter func() iblobstorage.IBLOBKey,
 	key := keyGetter()
 	require := require.New(t)
 
-	asf := mem.Provide(coreutils.MockTime)
+	asf := mem.Provide(testingu.MockTime)
 	asp := istorageimpl.Provide(asf)
 	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
-	time := coreutils.MockTime
+	time := testingu.MockTime
 	blobber := Provide(&storage, time)
 	ctx := context.TODO()
 	reader := provideTestData()
@@ -172,11 +173,11 @@ func TestFewBucketsBLOB(t *testing.T) {
 	)
 	require := require.New(t)
 
-	asf := mem.Provide(coreutils.MockTime)
+	asf := mem.Provide(testingu.MockTime)
 	asp := istorageimpl.Provide(asf)
 	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
-	blobber := Provide(&storage, coreutils.NewITime())
+	blobber := Provide(&storage, timeu.NewITime())
 	ctx := context.TODO()
 
 	// size is more than chunkSize*bucketSize -> bucket++. Will check the case when the bucket number is increased
@@ -221,11 +222,11 @@ func TestQuotaExceed(t *testing.T) {
 		}
 	)
 	require := require.New(t)
-	asf := mem.Provide(coreutils.MockTime)
+	asf := mem.Provide(testingu.MockTime)
 	asp := istorageimpl.Provide(asf)
 	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
-	blobber := Provide(&storage, coreutils.NewITime())
+	blobber := Provide(&storage, timeu.NewITime())
 	reader := provideTestData()
 	ctx := context.Background()
 	// Quota (maxSize -1 = 19265) assigned to reader less then filesize logo.png (maxSize)

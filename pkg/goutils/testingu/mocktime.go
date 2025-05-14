@@ -1,31 +1,28 @@
 /*
- * Copyright (c) 2024-present unTill Software Development Group B.V.
+ * Copyright (c) 2025-present unTill Software Development Group B.V.
  * @author Denis Gribanov
  */
 
-package coreutils
+package testingu
 
 import (
 	"sync"
 	"time"
-)
 
-type ITime interface {
-	Now() time.Time
-	NewTimerChan(d time.Duration) <-chan time.Time
-	Sleep(d time.Duration)
-}
+	"github.com/voedger/voedger/pkg/goutils/timeu"
+)
 
 // MockTime must be a global var to avoid case when different times could be used in tests.
 var MockTime = NewMockTime()
 
 type IMockTime interface {
-	ITime
+	timeu.ITime
 
 	// implementation must trigger each timer created by IMockTime.NewTimer() if the time has come after adding
 	Add(d time.Duration)
 
 	// next timer got by NewTimerChan already will contain firing
+	// useful when we do not know the instant when NewTimer() will be called but we advancing the time to make it fire
 	FireNextTimerImmediately()
 
 	SetOnNextNewTimerChan(f func())
@@ -33,17 +30,11 @@ type IMockTime interface {
 
 func NewMockTime() IMockTime {
 	return &mockedTime{
-		now:     time.Now().Add(-5 * time.Minute), // decrease current time to avoid "token used before issued" error in bp3 utils_test.go
+		now:     time.Now(),
 		RWMutex: sync.RWMutex{},
 		timers:  map[mockTimer]struct{}{},
 	}
 }
-
-func NewITime() ITime {
-	return &realTime{}
-}
-
-type realTime struct{}
 
 type mockedTime struct {
 	sync.RWMutex
@@ -51,19 +42,6 @@ type mockedTime struct {
 	timers                   map[mockTimer]struct{}
 	fireNextTimerImmediately bool
 	onNextNewTimerChan       func()
-}
-
-func (t *realTime) Now() time.Time {
-	return time.Now()
-}
-
-func (t *realTime) NewTimerChan(d time.Duration) <-chan time.Time {
-	res := time.NewTimer(d)
-	return res.C
-}
-
-func (t *realTime) Sleep(d time.Duration) {
-	time.Sleep(d)
 }
 
 func (t *mockedTime) Now() time.Time {

@@ -21,12 +21,13 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
 type appStorageFactory struct {
 	bboltParams ParamsType
-	iTime       coreutils.ITime
+	iTime       timeu.ITime
 	ctx         context.Context
 	cancel      context.CancelFunc
 	wg          *sync.WaitGroup
@@ -87,7 +88,7 @@ func (p *appStorageFactory) Init(appName istorage.SafeAppName) error {
 	return db.Close()
 }
 
-func (p *appStorageFactory) Time() coreutils.ITime {
+func (p *appStorageFactory) Time() timeu.ITime {
 	return p.iTime
 }
 
@@ -115,7 +116,7 @@ func unSafeKey(value []byte) []byte {
 // implemetation for istorage.IAppStorage.
 type appStorageType struct {
 	db    *bolt.DB
-	iTime coreutils.ITime
+	iTime timeu.ITime
 }
 
 //nolint:revive
