@@ -7,6 +7,9 @@ package sys
 
 import "github.com/voedger/voedger/pkg/appdef"
 
+// sys workspace descriptor
+var SysWSKind = appdef.NewQName(appdef.SysPackage, "sysWS")
+
 // Projection offsets view
 type ProjectionOffsetViewFields struct {
 	Partition string

@@ -18,12 +18,16 @@ func MakeSysPackage(adb appdef.IAppDefBuilder) {
 
 func makeSysWorkspace(adb appdef.IAppDefBuilder) {
 	wsb := adb.AddWorkspace(appdef.SysWorkspaceQName)
-	ws := wsb.Workspace()
 
 	// make sys data types
+	ws := wsb.Workspace()
 	for k := appdef.DataKind_null + 1; k < appdef.DataKind_FakeLast; k++ {
 		_ = datas.NewSysData(ws, k)
 	}
+
+	// workspace descriptor
+	_ = wsb.AddCDoc(SysWSKind)
+	wsb.SetDescriptor(SysWSKind)
 
 	// for projectors: sys.projectionOffsets
 	viewProjectionOffsets := wsb.AddView(ProjectionOffsetsView.Name)
