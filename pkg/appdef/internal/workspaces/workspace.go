@@ -139,7 +139,7 @@ func (ws *Workspace) Validate() (err error) {
 
 	if ws.desc == nil {
 		// #3656 WS desc must exists
-		err = errors.Join(err, appdef.ErrMissed("%v descriptor", ws))
+		//err = errors.Join(err, appdef.ErrMissed("%v descriptor", ws))
 	} else if ws.desc.Abstract() && !ws.Abstract() {
 		err = errors.Join(err, appdef.ErrIncompatible("%v should be abstract because descriptor %v is abstract", ws, ws.desc))
 	}
