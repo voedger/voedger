@@ -8,7 +8,16 @@ import (
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/sys"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+)
+
+// sys.NextBaseWSIDView view
+var (
+	QNameViewNextBaseWSID = sys.NextBaseWSIDView.Name
+	fldDummy1             = sys.NextBaseWSIDView.Fields.PartKeyDummy
+	fldDummy2             = sys.NextBaseWSIDView.Fields.ClustColDummy
+	fldNextBaseWSID       = sys.NextBaseWSIDView.Fields.NextBaseWSID
 )
 
 const (
@@ -22,9 +31,6 @@ const (
 	Field_InitStartedAtMs                           = "InitStartedAtMs"
 	Field_ChildWorkspaceID                          = "ChildWorkspaceID"
 	workspace                                       = "Workspace"
-	fldDummy1                                       = "dummy1"
-	fldDummy2                                       = "dummy2"
-	fldNextBaseWSID                                 = "NextBaseWSID"
 	field_InvitedToWSID                             = "InvitedToWSID"
 	field_IDOfCDocWorkspaceID                       = "IDOfCDocWorkspaceID"
 	Field_InitError                                 = "InitError"
@@ -46,7 +52,6 @@ var (
 	qNameAPInitializeWorkspace             = appdef.NewQName(appdef.SysPackage, "InitializeWorkspace")
 	qNameAPInvokeCreateWorkspaceID         = appdef.NewQName(appdef.SysPackage, "InvokeCreateWorkspaceID")
 	qNameAPInvokeCreateWorkspace           = appdef.NewQName(appdef.SysPackage, "InvokeCreateWorkspace")
-	QNameViewNextBaseWSID                  = appdef.NewQName(appdef.SysPackage, "NextBaseWSID")
 	qNameCmdInitiateDeactivateWorkspace    = appdef.NewQName(appdef.SysPackage, "InitiateDeactivateWorkspace")
 	qNameProjectorApplyDeactivateWorkspace = appdef.NewQName(appdef.SysPackage, "ApplyDeactivateWorkspace")
 	QNameCommandCreateWorkspaceID          = appdef.NewQName(appdef.SysPackage, "CreateWorkspaceID")
