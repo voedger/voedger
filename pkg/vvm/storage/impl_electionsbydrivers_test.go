@@ -28,7 +28,7 @@ import (
 // [~server.design.orch/VVM.test.TTLStorageMem~impl]
 func TestTTLStorageMem(t *testing.T) {
 	storageFactory := mem.Provide(testingu.MockTime)
-	testElectionsByDriver(t, storageFactory)
+	testElectionsByDriver(t, storageFactory, testingu.MockTime)
 }
 
 // [~server.design.orch/VVM.test.TTLStorageCas~impl]
@@ -38,7 +38,8 @@ func TestTTStorageCas(t *testing.T) {
 	}
 	storagePactory, err := cas.Provide(cas.DefaultCasParams)
 	require.NoError(t, err)
-	testElectionsByDriver(t, storagePactory)
+	mockTime := testingu.NewMockTime()
+	testElectionsByDriver(t, storagePactory, mockTime)
 }
 
 // [~server.design.orch/VVM.test.TTLStorageBbolt~impl]
@@ -46,7 +47,8 @@ func TestTTLStorageBbolt(t *testing.T) {
 	storagePactory := bbolt.Provide(bbolt.ParamsType{
 		DBDir: os.TempDir(),
 	}, testingu.MockTime)
-	testElectionsByDriver(t, storagePactory)
+	mockTime := testingu.NewMockTime()
+	testElectionsByDriver(t, storagePactory, mockTime)
 }
 
 // [~server.design.orch/VVM.test.TTLStorageDyn~impl]
@@ -54,11 +56,12 @@ func TestTTLStorageDynamoDB(t *testing.T) {
 	if !coreutils.IsDynamoDBStorage() {
 		t.Skip()
 	}
-	storagePactory := amazondb.Provide(amazondb.DefaultDynamoDBParams, testingu.MockTime)
-	testElectionsByDriver(t, storagePactory)
+	mockTime := testingu.NewMockTime()
+	storagePactory := amazondb.Provide(amazondb.DefaultDynamoDBParams, mockTime)
+	testElectionsByDriver(t, storagePactory, mockTime)
 }
 
-func testElectionsByDriver(t *testing.T, appStorageFactory istorage.IAppStorageFactory) {
+func testElectionsByDriver(t *testing.T, appStorageFactory istorage.IAppStorageFactory, tm testingu.IMockTime) {
 	appStroageProvider := provider.Provide(appStorageFactory)
 	sysVVMAppStorage, err := appStroageProvider.AppStorage(istructs.AppQName_sys_vvm)
 	require.NoError(t, err)
