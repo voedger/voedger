@@ -25,7 +25,7 @@ type IRequestHandler interface {
 		errorResponder ErrorResponder, requestSender bus.IRequestSender) bool
 	HandleWrite_V2(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
 		okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
-		errorResponder ErrorResponder, requestSender bus.IRequestSender) bool
+		errorResponder ErrorResponder, requestSender bus.IRequestSender, ownerRecord appdef.QName, ownerRecordField string) bool
 }
 
 // implemented in e.g. router package

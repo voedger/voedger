@@ -36,7 +36,7 @@ func (r *implIRequestHandler) HandleRead(appQName appdef.AppQName, wsid istructs
 
 func (r *implIRequestHandler) handleWrite(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
 	urlQueryValues url.Values, okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
-	errorResponder ErrorResponder, requestSender bus.IRequestSender, isAPIv2 bool) bool {
+	errorResponder ErrorResponder, requestSender bus.IRequestSender, isAPIv2 bool, ownerRecord appdef.QName, ownerRecordField string) bool {
 	doneCh := make(chan interface{})
 	return r.handle(&implIBLOBMessage_Write{
 		implIBLOBMessage_base: implIBLOBMessage_base{
@@ -50,21 +50,23 @@ func (r *implIRequestHandler) handleWrite(appQName appdef.AppQName, wsid istruct
 			requestSender:    requestSender,
 			isAPIv2:          isAPIv2,
 		},
-		urlQueryValues: urlQueryValues,
-		reader:         reader,
+		urlQueryValues:   urlQueryValues,
+		reader:           reader,
+		ownerRecord:      ownerRecord,
+		ownerRecordField: ownerRecordField,
 	}, doneCh)
 }
 
 func (r *implIRequestHandler) HandleWrite(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
 	urlQueryValues url.Values, okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
 	errorResponder ErrorResponder, requestSender bus.IRequestSender) bool {
-	return r.handleWrite(appQName, wsid, header, requestCtx, urlQueryValues, okResponseIniter, reader, errorResponder, requestSender, false)
+	return r.handleWrite(appQName, wsid, header, requestCtx, urlQueryValues, okResponseIniter, reader, errorResponder, requestSender, false, appdef.NullQName, "")
 }
 
 func (r *implIRequestHandler) HandleWrite_V2(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
 	okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
-	errorResponder ErrorResponder, requestSender bus.IRequestSender) bool {
-		return r.handleWrite(appQName, wsid, header, requestCtx, nil, okResponseIniter, reader, errorResponder, requestSender, true)
+	errorResponder ErrorResponder, requestSender bus.IRequestSender, ownerRecord appdef.QName, ownerRecordField string) bool {
+	return r.handleWrite(appQName, wsid, header, requestCtx, nil, okResponseIniter, reader, errorResponder, requestSender, true, ownerRecord, ownerRecordField)
 }
 
 func (r *implIRequestHandler) handle(msg any, doneCh <-chan interface{}) bool {

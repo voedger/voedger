@@ -61,8 +61,10 @@ type implIBLOBMessage_Read struct {
 
 type implIBLOBMessage_Write struct {
 	implIBLOBMessage_base
-	reader         io.ReadCloser
-	urlQueryValues url.Values
+	reader           io.ReadCloser
+	urlQueryValues   url.Values
+	ownerRecord      appdef.QName
+	ownerRecordField string
 }
 
 type WLimiterFactory func() iblobstorage.WLimiterType

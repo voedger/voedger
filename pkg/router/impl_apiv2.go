@@ -120,8 +120,8 @@ func (s *httpService) registerHandlersV2() {
 		Methods(http.MethodPost).Name("create device")
 
 	// /api/v2/apps/{owner}/{app}/workspaces/{wsid}/blobs
-	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/blobs",
-		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid),
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/docs/{%s}.{%s}/blobs/{%s}",
+		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table, URLPlaceholder_field),
 		corsHandler(requestHandlerV2_blobs_create(s.blobRequestHandler, s.requestSender))).
 		Methods(http.MethodPost).Name("blobs create")
 	// s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/blobs/{%s}",
@@ -263,10 +263,16 @@ func requestHandlerV2_blobs_create(blobRequestHandler blobprocessor.IRequestHand
 		if !ok {
 			return
 		}
+
+		vars := mux.Vars(req)
+
+		ownerRecord := appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_table])
+		ownerRecordField := vars[URLPlaceholder_field]
+
 		if !blobRequestHandler.HandleWrite_V2(appQName, wsid, headers, req.Context(),
 			newBLOBOKResponseIniter(rw), req.Body, func(statusCode int, args ...interface{}) {
 				ReplyJSON(rw, fmt.Sprint(args...), statusCode)
-			}, requestSender) {
+			}, requestSender, ownerRecord, ownerRecordField) {
 			rw.WriteHeader(http.StatusServiceUnavailable)
 			rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
 		}

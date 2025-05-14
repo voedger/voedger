@@ -108,15 +108,15 @@ func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		AppQName: bw.blobMessageWrite.appQName,
 		Resource: bw.registerFuncName,
 		Header:   bw.blobMessageWrite.header,
-		Body:     []byte(`{}`),
+		Body:     []byte(fmt.Sprintf(`{"args":{"OwnerRecord":"%s","OwnerRecordField":"%s"}}`, bw.blobMessageWrite.ownerRecord, bw.blobMessageWrite.ownerRecordField)),
 		Host:     coreutils.Localhost,
 	}
 	blobHelperMeta, blobHelperResp, err := bus.GetCommandResponse(bw.blobMessageWrite.requestCtx, bw.blobMessageWrite.requestSender, req)
 	if err != nil {
-		return fmt.Errorf("failed to exec q.sys.DownloadBLOBAuthnz: %w", err)
+		return fmt.Errorf("failed to exec %s: %w", bw.registerFuncName, err)
 	}
 	if blobHelperMeta.StatusCode != http.StatusOK {
-		return coreutils.NewHTTPErrorf(blobHelperMeta.StatusCode, "q.sys.DownloadBLOBAuthnz returned error: "+blobHelperResp.SysError.Data)
+		return coreutils.NewHTTPErrorf(blobHelperMeta.StatusCode, bw.registerFuncName+" returned error: "+blobHelperResp.SysError.Data)
 	}
 	if bw.isPersistent() {
 		bw.newBLOBID = blobHelperResp.NewIDs["1"]
@@ -203,6 +203,11 @@ func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 	if len(bw.boundary) == 0 {
 		return fmt.Errorf("boundary of %s is not specified", coreutils.ContentType_MultipartFormData)
 	}
+
+	if bw.blobMessageWrite.isAPIv2 {
+		bw.
+	}
+
 	return nil
 }
 
