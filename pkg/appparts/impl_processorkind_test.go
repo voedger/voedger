@@ -30,6 +30,7 @@ func TestProcessorKind_CompatibleWithExtension(t *testing.T) {
 
 		wsName := appdef.NewQName("test", "workspace")
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		_ = wsb.AddCommand(cmd)
 
