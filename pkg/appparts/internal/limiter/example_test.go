@@ -26,6 +26,7 @@ func Example() {
 
 		wsName := appdef.NewQName("test", "workspace")
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 		_ = wsb.AddCommand(cmd1Name)
 		_ = wsb.AddCommand(cmd2Name)
 

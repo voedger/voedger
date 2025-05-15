@@ -29,6 +29,7 @@ func Example() {
 		adb.AddPackage("test", "test.com/test")
 		wsName := appdef.NewQName("test", "workspace")
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 		_ = wsb.AddCommand(appdef.NewQName("test", "command"))
 		for _, name := range prjNames {
 			prj := wsb.AddProjector(name)
