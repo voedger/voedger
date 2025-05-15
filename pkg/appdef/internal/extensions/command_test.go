@@ -25,6 +25,7 @@ func Test_Commands(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		_ = wsb.AddObject(parName)
 		_ = wsb.AddObject(unlName)
@@ -105,6 +106,7 @@ func Test_CommandValidate(t *testing.T) {
 	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	appdef.SetEmptyWSDesc(wsb)
 	obj := appdef.NewQName("test", "obj")
 	_ = wsb.AddObject(obj)
 	bad := appdef.NewQName("test", "job")

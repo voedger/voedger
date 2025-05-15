@@ -26,6 +26,7 @@ func Test_Containers(t *testing.T) {
 	t.Run("Should be ok to create doc with containers", func(t *testing.T) {
 		adb := builder.New()
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 		doc := wsb.AddWDoc(docName)
 		_ = wsb.AddWRecord(recName)
 		doc.AddContainer("rec", recName, 0, appdef.Occurs_Unbounded, "comment")
