@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"maps"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -236,6 +238,7 @@ func testAppDef(t *testing.T) appdef.IAppDef {
 	adb := builder.New()
 
 	wsb := adb.AddWorkspace(testWS)
+	appdef.SetEmptyWSDesc(wsb)
 
 	obj := wsb.AddObject(testQName)
 	addFieldDefs(obj, testFieldDefs)
@@ -247,9 +250,7 @@ func testAppDef(t *testing.T) appdef.IAppDef {
 	view.Key().PartKey().AddField("pk", appdef.DataKind_int64)
 	view.Key().ClustCols().AddField("cc", appdef.DataKind_string)
 	iValueFields := map[string]appdef.DataKind{}
-	for n, k := range testFieldDefs {
-		iValueFields[n] = k
-	}
+	maps.Copy(iValueFields, testFieldDefs)
 	iValueFields["record"] = appdef.DataKind_Record
 	for n, k := range iValueFields {
 		view.Value().AddField(n, k, false)
