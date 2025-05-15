@@ -67,6 +67,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 
 		adb := builder.New()
 		wsb := adb.AddWorkspace(testWSQName)
+		appdef.SetEmptyWSDesc(wsb)
 		wsb.AddObject(testRecordQName1).
 			AddField("number", appdef.DataKind_int64, false)
 		wsb.AddObject(testRecordQName2).
