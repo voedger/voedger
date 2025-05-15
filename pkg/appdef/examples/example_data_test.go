@@ -31,19 +31,20 @@ func ExampleDataTypes() {
 	{
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
-		ws.AddData(numName, appdef.DataKind_int64, appdef.NullQName, constraints.MinExcl(0)).SetComment("Natural number")
+		wsb.AddData(numName, appdef.DataKind_int64, appdef.NullQName, constraints.MinExcl(0)).SetComment("Natural number")
 
-		_ = ws.AddData(floatName, appdef.DataKind_float64, appdef.NullQName)
+		_ = wsb.AddData(floatName, appdef.DataKind_float64, appdef.NullQName)
 
-		_ = ws.AddData(strName, appdef.DataKind_string, appdef.NullQName, constraints.MinLen(1), constraints.MaxLen(4))
+		_ = wsb.AddData(strName, appdef.DataKind_string, appdef.NullQName, constraints.MinLen(1), constraints.MaxLen(4))
 
-		_ = ws.AddData(tokenName, appdef.DataKind_string, strName, constraints.Pattern("^[a-z]+$"))
+		_ = wsb.AddData(tokenName, appdef.DataKind_string, strName, constraints.Pattern("^[a-z]+$"))
 
-		_ = ws.AddData(weekDayName, appdef.DataKind_string, strName, constraints.Enum("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+		_ = wsb.AddData(weekDayName, appdef.DataKind_string, strName, constraints.Enum("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
 
-		ws.AddData(jsonName, appdef.DataKind_string, appdef.NullQName,
+		wsb.AddData(jsonName, appdef.DataKind_string, appdef.NullQName,
 			constraints.MaxLen(appdef.MaxFieldLength)).SetComment("JSON string up to 64K")
 
 		app = adb.MustBuild()

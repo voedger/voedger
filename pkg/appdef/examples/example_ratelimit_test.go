@@ -31,6 +31,7 @@ func ExampleRates() {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		_ = wsb.AddCommand(cmdName)
 		_ = wsb.AddQuery(queryName)

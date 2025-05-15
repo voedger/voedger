@@ -28,6 +28,7 @@ func ExampleQueries() {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		qry := wsb.AddQuery(qryName)
 		qry.SetEngine(appdef.ExtensionEngineKind_WASM)
