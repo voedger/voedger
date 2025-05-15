@@ -26,6 +26,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 		appDef := func() appdef.IAppDef {
 			adb := builder.New()
 			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+			appdef.SetEmptyWSDesc(wsb)
 
 			addObject := func(n appdef.QName) {
 				wsb.AddObject(n).

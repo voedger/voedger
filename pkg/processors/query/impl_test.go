@@ -89,6 +89,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	t.Run("should be ok to build appDef and resultMeta", func(t *testing.T) {
 		adb := builder.New()
 		wsb := adb.AddWorkspace(qNameTestWS)
+		appdef.SetEmptyWSDesc(wsb)
 		wsb.AddObject(qNamePosDepartment).
 			AddField("name", appdef.DataKind_string, false)
 		resBld := wsb.AddObject(qNamePosDepartmentResult)
@@ -442,6 +443,7 @@ func TestRawMode(t *testing.T) {
 	t.Run("should be ok to build appDef and resultMeta", func(t *testing.T) {
 		adb := builder.New()
 		wsb := adb.AddWorkspace(qNameTestWS)
+		appdef.SetEmptyWSDesc(wsb)
 		wsb.AddObject(istructs.QNameRaw)
 		app, err := adb.Build()
 		require.NoError(err)

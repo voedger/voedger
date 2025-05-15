@@ -42,6 +42,7 @@ func Test_ProjectorEvent(t *testing.T) {
 		_ = sysWsb.AddCommand(istructs.QNameCommandCUD) // should be in ancestor
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 		wsb.AddTag(tagName)
 		//_ = wsb.AddCommand(istructs.QNameCommandCUD) // should be in ancestor
 		_ = wsb.AddCommand(cmdName)
