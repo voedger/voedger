@@ -263,12 +263,9 @@ func requestHandlerV2_blobs_create(blobRequestHandler blobprocessor.IRequestHand
 		if !ok {
 			return
 		}
-
 		vars := mux.Vars(req)
-
 		ownerRecord := appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_table])
 		ownerRecordField := vars[URLPlaceholder_field]
-
 		if !blobRequestHandler.HandleWrite_V2(appQName, wsid, headers, req.Context(),
 			newBLOBOKResponseIniter(rw), req.Body, func(statusCode int, args ...interface{}) {
 				ReplyJSON(rw, fmt.Sprint(args...), statusCode)

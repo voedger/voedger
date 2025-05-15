@@ -55,12 +55,13 @@ func (f *implIFederation) req(relativeURL string, body string, optFuncs ...coreu
 }
 
 func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader, duration iblobstorage.DurationType,
-	optFuncs ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID, err error) {
+	ownerQName appdef.QName, ownerField appdef.FieldName, optFuncs ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID, err error) {
 	ttl, ok := TemporaryBLOBDurationToURLTTL[duration]
 	if ok {
 		ttl = "&ttl=" + ttl
 	}
-	uploadBLOBURL := fmt.Sprintf("api/v2/apps/%s/%s/workspaces/%d/blobs", appQName.Owner(), appQName.Name(), wsid)
+	uploadBLOBURL := fmt.Sprintf("api/v2/apps/%s/%s/workspaces/%d/docs/%s/blobs/%s",
+		appQName.Owner(), appQName.Name(), wsid, ownerQName, ownerField)
 	optFuncs = append(optFuncs, coreutils.WithHeaders(
 		"Blob-Name", blobReader.Name,
 		coreutils.ContentType, blobReader.MimeType,
@@ -83,8 +84,8 @@ func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs
 }
 
 func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blob iblobstorage.BLOBReader,
-	optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error) {
-	newBLOBIDStr, err := f.UploadTempBLOB(appQName, wsid, blob, 0, optFuncs...)
+	ownerQName appdef.QName, ownerField appdef.FieldName, optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error) {
+	newBLOBIDStr, err := f.UploadTempBLOB(appQName, wsid, blob, 0, ownerQName, ownerField, optFuncs...)
 	if err != nil {
 		return istructs.NullRecordID, err
 	}

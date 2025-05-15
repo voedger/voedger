@@ -12,6 +12,7 @@ import (
 	"mime"
 	"net/http"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
@@ -108,7 +109,7 @@ func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		AppQName: bw.blobMessageWrite.appQName,
 		Resource: bw.registerFuncName,
 		Header:   bw.blobMessageWrite.header,
-		Body:     []byte(fmt.Sprintf(`{"args":{"OwnerRecord":"%s","OwnerRecordField":"%s"}}`, bw.blobMessageWrite.ownerRecord, bw.blobMessageWrite.ownerRecordField)),
+		Body:     []byte(fmt.Sprintf(`{"args":{"OwnerRecord":"%s","OwnerRecordField":"%s"}}`, bw.blobMessageWrite.ownerRecordQName, bw.blobMessageWrite.ownerRecordField)),
 		Host:     coreutils.Localhost,
 	}
 	blobHelperMeta, blobHelperResp, err := bus.GetCommandResponse(bw.blobMessageWrite.requestCtx, bw.blobMessageWrite.requestSender, req)
@@ -205,7 +206,22 @@ func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 	}
 
 	if bw.blobMessageWrite.isAPIv2 {
-		bw.
+		appDef, err := bw.blobMessageWrite.appParts.AppDef(bw.blobMessageWrite.appQName)
+		if err != nil {
+			return err
+		}
+		ownerType := appDef.Type(bw.blobMessageWrite.ownerRecordQName)
+		if ownerType == appdef.NullType {
+			return fmt.Errorf("blob owner QName %s is unknown", bw.blobMessageWrite.ownerRecordQName)
+		}
+		if ownerType.Kind() == appdef.TypeKind_ODoc || ownerType.Kind() == appdef.TypeKind_ORecord {
+			return fmt.Errorf("blob owner cannot be ODoc\\ORecord")
+		}
+		iFields := ownerType.(appdef.IWithFields)
+		if iFields.Field(bw.blobMessageWrite.ownerRecordField) == nil {
+			return fmt.Errorf("blob owner field %s does not exist in blob owner %s", bw.blobMessageWrite.ownerRecordField,
+				bw.blobMessageWrite.ownerRecordQName)
+		}
 	}
 
 	return nil

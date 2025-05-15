@@ -52,7 +52,7 @@ func (r *implIRequestHandler) handleWrite(appQName appdef.AppQName, wsid istruct
 		},
 		urlQueryValues:   urlQueryValues,
 		reader:           reader,
-		ownerRecord:      ownerRecord,
+		ownerRecordQName: ownerRecord,
 		ownerRecordField: ownerRecordField,
 	}, doneCh)
 }

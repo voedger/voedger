@@ -11,6 +11,7 @@ import (
 	"net/url"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -63,8 +64,9 @@ type implIBLOBMessage_Write struct {
 	implIBLOBMessage_base
 	reader           io.ReadCloser
 	urlQueryValues   url.Values
-	ownerRecord      appdef.QName
+	ownerRecordQName appdef.QName
 	ownerRecordField string
+	appParts         appparts.IAppPartitions
 }
 
 type WLimiterFactory func() iblobstorage.WLimiterType
