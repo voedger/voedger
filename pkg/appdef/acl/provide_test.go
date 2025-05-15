@@ -37,6 +37,7 @@ func TestRecursiveRoleAncestors(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		_ = wsb.AddRole(reader)
 		_ = wsb.AddRole(writer)
@@ -113,19 +114,23 @@ func TestRecursiveRoleAncestorsWSInheritance(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		aws := adb.AddWorkspace(awsName)
+		appdef.SetEmptyWSDesc(aws)
 		_ = aws.AddRole(awsRole)
 
 		ws1 := adb.AddWorkspace(wsName[0])
+		appdef.SetEmptyWSDesc(ws1)
 		ws1.SetAncestors(awsName)
 		_ = ws1.AddRole(wsRole[0])
 		ws1.GrantAll(filter.QNames(wsRole[0]), awsRole, "grant r1 to awsRole")
 
 		ws2 := adb.AddWorkspace(wsName[1])
+		appdef.SetEmptyWSDesc(ws2)
 		ws2.SetAncestors(awsName)
 		_ = ws2.AddRole(wsRole[1])
 		ws2.GrantAll(filter.QNames(wsRole[1]), awsRole, "grant r2 to awsRole")
 
 		ws3 := adb.AddWorkspace(wsName[2])
+		appdef.SetEmptyWSDesc(ws3)
 		ws3.SetAncestors(wsName[0], wsName[1])
 		_ = ws3.AddRole(wsRole[2])
 		ws3.GrantAll(filter.QNames(wsRole[2]), awsRole, "grant r3 to awsRole")
@@ -190,6 +195,8 @@ func TestIsOperationAllowed(t *testing.T) {
 			AddField("hiddenField", appdef.DataKind_int32, false).
 			AddField("field3", appdef.DataKind_int32, false)
 		cDoc.SetTag(tagName)
+
+		wsb.SetDescriptor(cDocName)
 
 		oDoc := wsb.AddODoc(oDocName)
 		oDoc.AddField("field1", appdef.DataKind_int32, true)
@@ -773,22 +780,26 @@ func TestIsOperationAllowedWSInheritances(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		aws := adb.AddWorkspace(awsName)
+		appdef.SetEmptyWSDesc(aws)
 		_ = aws.AddCDoc(doc1Name)
 		_ = aws.AddCDoc(doc2Name)
 		_ = aws.AddRole(roleName)
 		aws.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, filter.AllWSTables(awsName), nil, roleName, "grant select all tables to role")
 
 		ws1 := adb.AddWorkspace(ws1Name)
+		appdef.SetEmptyWSDesc(ws1)
 		ws1.SetAncestors(awsName)
 		ws1.GrantAll(filter.QNames(doc1Name), roleName, "grant all on doc1 to role")
 
 		ws2 := adb.AddWorkspace(ws2Name)
+		appdef.SetEmptyWSDesc(ws2)
 		ws2.SetAncestors(awsName)
 		_ = ws2.AddRole(r2Name)
 		ws2.GrantAll(filter.QNames(doc2Name), r2Name, "grant all on doc2 to r2")
 		ws2.GrantAll(filter.WSTypes(ws2Name, appdef.TypeKind_Role), roleName, "grant {ALL WS ROLES} to role") // #3127
 
 		ws3 := adb.AddWorkspace(ws3Name)
+		appdef.SetEmptyWSDesc(ws3)
 		ws3.SetAncestors(awsName)
 		ws3.RevokeAll(filter.QNames(doc1Name, doc2Name), roleName, "revoke all on doc1, doc2 from role")
 
@@ -882,6 +893,8 @@ func TestPublishedTypes(t *testing.T) {
 			AddField("hiddenField", appdef.DataKind_int32, false).
 			AddField("field3", appdef.DataKind_int32, false)
 		cDoc.SetTag(tagName)
+
+		wsb.SetDescriptor(cDocName)
 
 		oDoc := wsb.AddODoc(oDocName)
 		oDoc.AddField("field1", appdef.DataKind_int32, true)
@@ -1192,22 +1205,26 @@ func TestPublishedTypesWSInheritances(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		aws := adb.AddWorkspace(awsName)
+		appdef.SetEmptyWSDesc(aws)
 		_ = aws.AddCDoc(doc1Name)
 		_ = aws.AddCDoc(doc2Name)
 		_ = aws.AddRole(roleName)
 		aws.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, filter.AllWSTables(awsName), nil, roleName, "grant select all tables to role")
 
 		ws1 := adb.AddWorkspace(ws1Name)
+		appdef.SetEmptyWSDesc(ws1)
 		ws1.SetAncestors(awsName)
 		ws1.GrantAll(filter.QNames(doc1Name), roleName, "grant all on doc1 to role")
 
 		ws2 := adb.AddWorkspace(ws2Name)
+		appdef.SetEmptyWSDesc(ws2)
 		ws2.SetAncestors(awsName)
 		_ = ws2.AddRole(r2Name)
 		ws2.GrantAll(filter.QNames(doc2Name), r2Name, "grant all on doc2 to r2")
 		ws2.GrantAll(filter.WSTypes(ws2Name, appdef.TypeKind_Role), roleName, "grant {ALL WS ROLES} to role") // #3127
 
 		ws3 := adb.AddWorkspace(ws3Name)
+		appdef.SetEmptyWSDesc(ws3)
 		ws3.SetAncestors(awsName)
 		ws3.RevokeAll(filter.QNames(doc1Name, doc2Name), roleName, "revoke all on doc1, doc2 from role")
 
@@ -1272,13 +1289,13 @@ func TestPublishedTypesWSInheritances(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.ws.Entity(), func(t *testing.T) {
+				testedDocs := appdef.QNamesFrom(doc1Name, doc2Name)
 				ws := app.Workspace(tt.ws)
 				got := map[appdef.QName]map[appdef.OperationKind]*[]appdef.FieldName{}
 				for typ, ops := range acl.PublishedTypes(ws, roleName) {
-					if typ.QName().Pkg() == appdef.SysPackage {
-						continue // skip system types
+					if testedDocs.Contains(typ.QName()) {
+						got[typ.QName()] = maps.Collect(ops)
 					}
-					got[typ.QName()] = maps.Collect(ops)
 				}
 				require.Equal(tt.want, got)
 			})

@@ -43,6 +43,8 @@ func Test_GrantAndRevoke(t *testing.T) {
 		doc := wsb.AddCDoc(docName)
 		doc.AddField("field1", appdef.DataKind_int32, true)
 
+		wsb.SetDescriptor(docName)
+
 		view := wsb.AddView(viewName)
 		view.Key().PartKey().AddField("pk_1", appdef.DataKind_int32)
 		view.Key().ClustCols().AddField("cc_1", appdef.DataKind_string)
@@ -389,6 +391,8 @@ func Test_ACLWithFields(t *testing.T) {
 			AddField("field_i", appdef.DataKind_int32, true).
 			AddField("field_u", appdef.DataKind_int32, false).
 			AddField("field_s", appdef.DataKind_int32, false)
+
+		wsb.SetDescriptor(docName)
 
 		_ = wsb.AddRole(creatorName)
 		// #2747{Test plan}
