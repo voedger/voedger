@@ -28,9 +28,11 @@ func ExampleNot() {
 		wsb := adb.AddWorkspace(wsName)
 
 		wsb.AddTag(tag)
-		_ = wsb.AddODoc(doc)
+		_ = wsb.AddCDoc(doc)
 		wsb.AddObject(obj).SetTag(tag)
 		_ = wsb.AddCommand(cmd)
+
+		wsb.SetDescriptor(doc)
 
 		return adb.MustBuild()
 	}()
@@ -59,7 +61,7 @@ func ExampleNot() {
 	// - not: TYPES(Command) FROM test.workspace
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
-	//   * ODoc «test.doc» is matched: true
+	//   * CDoc «test.doc» is matched: true
 	//   * Object «test.object» is matched: true
 	//   * Tag «test.tag» is matched: true
 	//
@@ -68,7 +70,7 @@ func ExampleNot() {
 	// - not: QNAMES(test.doc) OR QNAMES(test.object)
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: true
-	//   * ODoc «test.doc» is matched: false
+	//   * CDoc «test.doc» is matched: false
 	//   * Object «test.object» is matched: false
 	//   * Tag «test.tag» is matched: true
 }

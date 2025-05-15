@@ -26,9 +26,11 @@ func ExampleQNames() {
 
 		wsb := adb.AddWorkspace(wsName)
 
-		_ = wsb.AddODoc(doc)
+		_ = wsb.AddCDoc(doc)
 		_ = wsb.AddObject(obj)
 		_ = wsb.AddCommand(cmd)
+
+		wsb.SetDescriptor(doc)
 
 		return adb.MustBuild()
 	}()
@@ -62,7 +64,7 @@ func ExampleQNames() {
 	//   * test.object
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
-	//   * ODoc «test.doc» is matched: true
+	//   * CDoc «test.doc» is matched: true
 	//   * Object «test.object» is matched: true
 	//
 	// QNAMES(test.unknown)
@@ -71,6 +73,6 @@ func ExampleQNames() {
 	//   * test.unknown
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
-	//   * ODoc «test.doc» is matched: false
+	//   * CDoc «test.doc» is matched: false
 	//   * Object «test.object» is matched: false
 }

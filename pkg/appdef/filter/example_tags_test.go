@@ -27,6 +27,7 @@ func ExampleTags() {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		wsb.AddTag(tagOdd)
 		wsb.AddTag(tagEven)
