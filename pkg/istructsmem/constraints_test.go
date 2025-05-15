@@ -26,6 +26,7 @@ func Test_checkConstraints(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		appdef.SetEmptyWSDesc(wsb)
 
 		obj := wsb.AddObject(name)
 		obj.
