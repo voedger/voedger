@@ -292,6 +292,18 @@ func Test_WorkspaceAbstract(t *testing.T) {
 		_, err := adb.Build()
 		require.ErrorIs(err, appdef.ErrIncompatibleError)
 	})
+
+	t.Run("should be ok to add abstract workspace without descriptor", func(t *testing.T) {
+		adb := builder.New()
+		adb.AddPackage("test", "test.com/test")
+
+		wsb := adb.AddWorkspace(wsName)
+		wsb.SetAbstract()
+
+		_, err := adb.Build()
+		require.NoError(err)
+	})
+
 }
 
 func Test_WorkspaceInheritance(t *testing.T) {
