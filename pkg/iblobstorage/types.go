@@ -7,6 +7,7 @@ package iblobstorage
 import (
 	"io"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -68,4 +69,6 @@ type blobPrefix uint64
 type BLOBReader struct {
 	io.ReadCloser
 	DescrType
+	OwnerQName appdef.QName
+	OwnerField appdef.FieldName
 }

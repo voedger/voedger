@@ -455,7 +455,8 @@ func updateOwner(ownerWSID istructs.WSID, ownerID istructs.RecordID, ownerApp st
 	return updateOwnerErr == nil
 }
 
-func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID]map[string]struct{}, wsTemplateFS coreutils.EmbedFS) (blobs []BLOBWorkspaceTemplateField, err error) {
+func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID]map[string]struct{}, wsTemplateFS coreutils.EmbedFS,
+	wsTemplateData []map[string]interface{}) (blobs []BLOBWorkspaceTemplateField, err error) {
 	for _, ent := range fsEntries {
 		switch ent.Name() {
 		case "data.json", "provide.go":
@@ -486,14 +487,21 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID
 			if err != nil {
 				return nil, fmt.Errorf("failed to read blob %s content: %w", ent.Name(), err)
 			}
+			ownerQName := appdef.NullQName
+			for _, wsTemplateRecord := range wsTemplateData {
+				if wsTemplateRecord[appdef.SystemField_ID] == recordID {
+					ownerQName = wsTemplateRecord[appdef.SystemField_QName].(appdef.QName)
+				}
+			}
 			blobs = append(blobs, BLOBWorkspaceTemplateField{
 				DescrType: iblobstorage.DescrType{
 					Name:     ent.Name(),
 					MimeType: filepath.Ext(ent.Name())[1:], // excluding dot
 				},
-				FieldName: fieldName,
-				Content:   blobContent,
-				RecordID:  istructs.RecordID(recordID),
+				OwnerQName: ownerQName,
+				OwnerField: fieldName,
+				Content:    blobContent,
+				RecordID:   istructs.RecordID(recordID),
 			})
 		}
 	}
@@ -566,7 +574,7 @@ func ValidateTemplate(wsTemplateName string, ep extensionpoints.IExtensionPoint,
 	// check blob entries
 	//          newBLOBID   fieldName
 	blobIDs := map[istructs.RecordID]map[string]struct{}{}
-	wsBLOBs, err = parseWSTemplateBLOBs(fsEntries, blobIDs, wsTemplateFS)
+	wsBLOBs, err = parseWSTemplateBLOBs(fsEntries, blobIDs, wsTemplateFS, wsData)
 	if err != nil {
 		return nil, nil, err
 	}

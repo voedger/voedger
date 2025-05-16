@@ -76,6 +76,8 @@ func uploadBLOBs(blobs []BLOBWorkspaceTemplateField, fed federation.IFederation,
 				MimeType: blob.MimeType,
 			},
 			ReadCloser: io.NopCloser(bytes.NewReader(blob.Content)),
+			OwnerQName: blob.OwnerQName,
+			OwnerField: blob.OwnerField,
 		}
 		newBLOBID, err := fed.UploadBLOB(appQName, wsid, blobReader, coreutils.WithAuthorizeBy(principalToken))
 		if err != nil {
@@ -87,8 +89,8 @@ func uploadBLOBs(blobs []BLOBWorkspaceTemplateField, fed federation.IFederation,
 			fieldBlobID = map[string]istructs.RecordID{}
 			res[blob.RecordID] = fieldBlobID
 		}
-		fieldBlobID[blob.FieldName] = newBLOBID
-		logger.Info(fmt.Sprintf("workspace build: blob %s uploaded and set: [%d][%s]=%d", blob.Name, blob.RecordID, blob.FieldName, newBLOBID))
+		fieldBlobID[blob.OwnerField] = newBLOBID
+		logger.Info(fmt.Sprintf("workspace build: blob %s uploaded and set: [%d][%s]=%d", blob.Name, blob.RecordID, blob.OwnerField, newBLOBID))
 	}
 	return res, nil
 }

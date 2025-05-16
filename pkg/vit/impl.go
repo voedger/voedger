@@ -20,7 +20,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/bus"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -386,15 +385,21 @@ func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts .
 }
 
 func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobName string, blobMimeType string, blobContent []byte,
-	opts ...coreutils.ReqOptFunc) (blobID istructs.RecordID) {
+	ownerRecord appdef.QName, ownerRecordField appdef.FieldName, opts ...coreutils.ReqOptFunc) (blobID istructs.RecordID) {
 	vit.T.Helper()
-	blobSUUID := vit.UploadTempBLOB(appQName, wsid, blobName, blobMimeType, blobContent, 0, opts...)
-	if len(blobSUUID) == 0 {
-		return istructs.NullRecordID
+	blobReader := iblobstorage.BLOBReader{
+		DescrType: iblobstorage.DescrType{
+			Name:     blobName,
+			MimeType: blobMimeType,
+		},
+		ReadCloser: io.NopCloser(bytes.NewReader(blobContent)),
+		OwnerQName: ownerRecord,
+		OwnerField: ownerRecordField,
 	}
-	blobIDUint64, err := strconv.ParseUint(string(blobSUUID), utils.DecimalBase, utils.BitSize64)
+
+	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobReader)
 	require.NoError(vit.T, err)
-	return istructs.RecordID(blobIDUint64)
+	return blobID
 }
 
 func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobName string, blobMimeType string, blobContent []byte, duration iblobstorage.DurationType,

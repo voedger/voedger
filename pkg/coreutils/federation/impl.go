@@ -14,6 +14,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -55,13 +56,13 @@ func (f *implIFederation) req(relativeURL string, body string, optFuncs ...coreu
 }
 
 func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader, duration iblobstorage.DurationType,
-	ownerQName appdef.QName, ownerField appdef.FieldName, optFuncs ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID, err error) {
+	optFuncs ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID, err error) {
 	ttl, ok := TemporaryBLOBDurationToURLTTL[duration]
 	if ok {
 		ttl = "&ttl=" + ttl
 	}
 	uploadBLOBURL := fmt.Sprintf("api/v2/apps/%s/%s/workspaces/%d/docs/%s/blobs/%s",
-		appQName.Owner(), appQName.Name(), wsid, ownerQName, ownerField)
+		appQName.Owner(), appQName.Name(), wsid)
 	optFuncs = append(optFuncs, coreutils.WithHeaders(
 		"Blob-Name", blobReader.Name,
 		coreutils.ContentType, blobReader.MimeType,
@@ -83,17 +84,48 @@ func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs
 	return iblobstorage.SUUID(resp.Body), nil
 }
 
-func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blob iblobstorage.BLOBReader,
+func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader,
 	ownerQName appdef.QName, ownerField appdef.FieldName, optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error) {
-	newBLOBIDStr, err := f.UploadTempBLOB(appQName, wsid, blob, 0, ownerQName, ownerField, optFuncs...)
+	uploadBLOBURL := fmt.Sprintf("api/v2/apps/%s/%s/workspaces/%d/docs/%s/blobs/%s",
+		appQName.Owner(), appQName.Name(), wsid, ownerQName, ownerField)
+	optFuncs = append(optFuncs, coreutils.WithHeaders(
+		"Blob-Name", blobReader.Name,
+		coreutils.ContentType, blobReader.MimeType,
+	))
+	resp, err := f.postReader(uploadBLOBURL, blobReader, optFuncs...)
 	if err != nil {
 		return istructs.NullRecordID, err
 	}
-	newBLOBID, err := strconv.ParseUint(string(newBLOBIDStr), utils.DecimalBase, utils.BitSize64)
+	if !slices.Contains(resp.ExpectedHTTPCodes(), resp.HTTPResp.StatusCode) {
+		funcErr, err := getFuncError(resp)
+		if err != nil {
+			return istructs.NullRecordID, err
+		}
+		return istructs.NullRecordID, funcErr
+	}
+	if resp.HTTPResp.StatusCode != http.StatusOK {
+		return istructs.NullRecordID, nil
+	}
+	matches := blobCreateRespRE.FindStringSubmatch(resp.Body)
+	if len(matches) < 2 {
+		return istructs.NullRecordID, fmt.Errorf("wrong blob create response: "+ resp.Body)
+	}
+	newBLOBID, err := strconv.ParseUint(matches[1], utils.DecimalBase, utils.BitSize64)
 	if err != nil {
 		return istructs.NullRecordID, fmt.Errorf("failed to parse the received blobID string: %w", err)
 	}
 	return istructs.RecordID(newBLOBID), nil
+}
+
+var blobCreateRespRE = regexp.MustCompile(`"BlobID":\s*(\d+)`)
+
+func extractBlobID(jsonStr string) (string, error) {
+	re := regexp.MustCompile(`"BlobID":\s*(\d+)`)
+	matches := re.FindStringSubmatch(jsonStr)
+	if len(matches) < 2 {
+		return "", fmt.Errorf("no BlobID found in JSON")
+	}
+	return matches[1], nil
 }
 
 func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) (res iblobstorage.BLOBReader, err error) {

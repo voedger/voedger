@@ -16,10 +16,9 @@ import (
 type IFederation interface {
 	Func(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error)
 	Query(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error)
-	UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader,
-		ownerQName appdef.QName, ownerField appdef.FieldName, optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error)
+	UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader, optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error)
 	UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader, duration iblobstorage.DurationType,
-		ownerQName appdef.QName, ownerField appdef.FieldName, optFuncs ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID, err error)
+		optFuncs ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID, err error)
 	ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) (iblobstorage.BLOBReader, error)
 	ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...coreutils.ReqOptFunc) (iblobstorage.BLOBReader, error)
 	URLStr() string
@@ -31,7 +30,7 @@ type IFederation interface {
 
 // IFederationForQP is a specialized interface for query processing (QP) scenarios.
 // Unlike IFederation, it provides a QueryNoRetry method that does not retry on HTTP 503 errors.
-// This behavior is designed to prevent the depletion of query processing resources.
+// This behavior is designed to prevent the depleetion of query processing resources.
 type IFederationForQP interface {
 	// unlike IFederation.Query does not retry on 503 to avoid QPs depleetion
 	QueryNoRetry(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error)

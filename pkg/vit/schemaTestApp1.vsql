@@ -686,6 +686,10 @@ ALTERABLE WORKSPACE test_wsWS (
         GroupB Task
     );
 
+	TABLE DocWithBLOB INHERITS sys.CDoc (
+		Blob blob
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY MockQry(MockQryParams) RETURNS MockQryResult WITH Tags=(WorkspaceOwnerFuncTag);
