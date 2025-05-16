@@ -22,7 +22,6 @@ type AppDef struct {
 	workspaces.WithWorkspaces
 	acl.WithACL
 	types.WithTypes
-	sysWS *workspaces.Workspace
 }
 
 func NewAppDef() *AppDef {
