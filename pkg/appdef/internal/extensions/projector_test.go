@@ -43,6 +43,7 @@ func Test_Projectors(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		wsb.AddCRecord(recName).SetComment("record 1 is trigger for projector")
 		_ = wsb.AddCRecord(rec2Name)

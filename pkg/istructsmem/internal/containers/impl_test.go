@@ -47,6 +47,7 @@ func TestContainers(t *testing.T) {
 			adb := builder.New()
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+			appdef.SetEmptyWSDesc(wsb)
 			wsb.AddObject(objName).
 				AddContainer(containerName, objName, 0, 1)
 			result, err := adb.Build()
@@ -99,6 +100,7 @@ func TestContainers(t *testing.T) {
 					adb := builder.New()
 					adb.AddPackage("test", "test.com/test")
 					wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+					appdef.SetEmptyWSDesc(wsb)
 					wsb.AddObject(objName).
 						AddContainer(containerName, objName, 0, 1)
 					result, err := adb.Build()
@@ -213,6 +215,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 				adb := builder.New()
 				adb.AddPackage("test", "test.com/test")
 				wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+				appdef.SetEmptyWSDesc(wsb)
 				qName := appdef.NewQName("test", "test")
 				obj := wsb.AddObject(qName)
 				for i := 0; i <= MaxAvailableContainerID; i++ {
@@ -246,6 +249,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 					adb := builder.New()
 					adb.AddPackage("test", "test.com/test")
 					wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+					appdef.SetEmptyWSDesc(wsb)
 					wsb.AddObject(objName).
 						AddContainer(containerName, objName, 0, 1)
 					result, err := adb.Build()
@@ -272,6 +276,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 					adb := builder.New()
 					adb.AddPackage("test", "test.com/test")
 					wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+					appdef.SetEmptyWSDesc(wsb)
 					wsb.AddObject(objName).
 						AddContainer(containerName, objName, 0, 1)
 					result, err := adb.Build()

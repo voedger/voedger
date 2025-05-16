@@ -2,6 +2,7 @@
 -- @author Alisher Nurmanov
 
 ALTERABLE WORKSPACE MyWorkspace3(
+    DESCRIPTOR MyWorkspace3Descriptor();
     TYPE MyType3(
         A varchar
     );

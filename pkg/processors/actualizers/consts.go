@@ -8,17 +8,15 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/sys"
 	"github.com/voedger/voedger/pkg/sys/builtin"
 )
 
 var (
-	qnameProjectionOffsets = appdef.NewQName(appdef.SysPackage, "projectionOffsets")
-)
-
-const (
-	partitionFld     = "partition"
-	projectorNameFld = "projector"
-	offsetFld        = "offset"
+	qnameProjectionOffsets = sys.ProjectionOffsetsView.Name
+	partitionFld           = sys.ProjectionOffsetsView.Fields.Partition
+	projectorNameFld       = sys.ProjectionOffsetsView.Fields.Projector
+	offsetFld              = sys.ProjectionOffsetsView.Fields.Offset
 )
 
 const (

@@ -26,9 +26,10 @@ func Test_Objects(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
-		doc := ws.AddObject(objName)
+		doc := wsb.AddObject(objName)
 		doc.AddField("f1", appdef.DataKind_int64, true)
 		doc.AddContainer("child", objName, 0, appdef.Occurs_Unbounded)
 

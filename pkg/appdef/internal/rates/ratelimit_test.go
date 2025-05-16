@@ -34,6 +34,7 @@ func TestRateLimits(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		wsb.AddTag(tagName)
 		wsb.AddCommand(cmdName).SetTag(tagName)
@@ -140,6 +141,7 @@ func TestRateLimits(t *testing.T) {
 			adb.AddPackage("test", "test.com/test")
 
 			wsb := adb.AddWorkspace(wsName)
+			appdef.SetEmptyWSDesc(wsb)
 
 			wsb.AddRate(rateName, 10, time.Hour, nil, "10 times per hour")
 
@@ -281,6 +283,7 @@ func TestLimitActivateDeactivate(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		wsb.AddCDoc(docName)
 

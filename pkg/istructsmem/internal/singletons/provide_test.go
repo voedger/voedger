@@ -40,9 +40,10 @@ func Test_BasicUsage(t *testing.T) {
 	testAppDef := func() appdef.IAppDef {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
-		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
-		doc := ws.AddCDoc(testName)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		doc := wsb.AddCDoc(testName)
 		doc.SetSingleton()
+		wsb.SetDescriptor(testName)
 		appDef, err := adb.Build()
 		if err != nil {
 			panic(err)
@@ -119,6 +120,8 @@ func Test_SingletonsGetID(t *testing.T) {
 				doc := wsb.AddCDoc(cDocName)
 				doc.SetSingleton()
 				doc.AddField("f1", appdef.DataKind_QName, true)
+
+				wsb.SetDescriptor(cDocName)
 			}
 
 			{
@@ -220,11 +223,14 @@ func Test_Singletons_Errors(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 
-		doc := ws.AddCDoc(cDocName)
+		doc := wsb.AddCDoc(cDocName)
 		doc.SetSingleton()
 		doc.AddField("f1", appdef.DataKind_QName, true)
+
+		wsb.SetDescriptor(cDocName)
+
 		appDef, err := adb.Build()
 		require.NoError(err)
 
@@ -243,10 +249,11 @@ func Test_Singletons_Errors(t *testing.T) {
 
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
-		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		appdef.SetEmptyWSDesc(wsb)
 
 		for id := istructs.FirstSingletonID; id <= istructs.MaxSingletonID; id++ {
-			doc := ws.AddCDoc(appdef.NewQName("test", fmt.Sprintf("doc_%v", id)))
+			doc := wsb.AddCDoc(appdef.NewQName("test", fmt.Sprintf("doc_%v", id)))
 			doc.SetSingleton()
 		}
 		appDef, err := adb.Build()
@@ -269,9 +276,10 @@ func Test_Singletons_Errors(t *testing.T) {
 		require.NoError(err)
 
 		adb := builder.New()
-		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
-		doc := ws.AddCDoc(defName)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		doc := wsb.AddCDoc(defName)
 		doc.SetSingleton()
+		wsb.SetDescriptor(defName)
 		appDef, err := adb.Build()
 		require.NoError(err)
 
@@ -290,9 +298,10 @@ func Test_Singletons_Errors(t *testing.T) {
 		require.NoError(err)
 
 		adb := builder.New()
-		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
-		doc := ws.AddCDoc(defName)
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		doc := wsb.AddCDoc(defName)
 		doc.SetSingleton()
+		wsb.SetDescriptor(defName)
 		appDef, err := adb.Build()
 		require.NoError(err)
 

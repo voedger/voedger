@@ -10,6 +10,7 @@ APPLICATION APP(
 );
 
 WORKSPACE MyAppWorkspace INHERITS mypkg1.MyWorkspace1(
+    DESCRIPTOR MyAppWorkspaceDescriptor();
     TABLE MyAppTable INHERITS sys.CDoc(
         FieldA varchar,
         FieldB int32

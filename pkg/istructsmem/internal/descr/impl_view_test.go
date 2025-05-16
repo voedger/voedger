@@ -27,6 +27,7 @@ func Test_View(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		appdef.SetEmptyWSDesc(wsb)
 
 		docName := appdef.NewQName("test", "doc")
 		_ = wsb.AddCDoc(docName)

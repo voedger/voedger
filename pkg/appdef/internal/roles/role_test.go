@@ -39,6 +39,7 @@ func TestRoles(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		doc := wsb.AddCDoc(docName)
 		doc.AddField("field1", appdef.DataKind_int32, true)
@@ -178,6 +179,7 @@ func Test_RoleInheritanceWithComplexFilter(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		wsb.AddTag(ancTag)
 
@@ -209,6 +211,7 @@ func Test_RolePublished(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		wsb.AddRole(roleName).SetPublished(true)
 

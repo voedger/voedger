@@ -23,6 +23,7 @@ func Example() {
 		adb.AddPackage("test", "test.com/test")
 
 		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		appdef.SetEmptyWSDesc(ws)
 
 		doc := ws.AddCDoc(docName)
 		doc.SetComment("This is example doc")

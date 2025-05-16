@@ -27,6 +27,7 @@ func Test_Uniques(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		appdef.SetEmptyWSDesc(wsb)
 
 		doc := wsb.AddCDoc(docName)
 		doc.
@@ -200,6 +201,7 @@ func Test_UniqueField(t *testing.T) {
 	adb.AddPackage("test", "test.com/test")
 
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	appdef.SetEmptyWSDesc(wsb)
 
 	doc := wsb.AddCDoc(qName)
 	require.NotNil(doc)

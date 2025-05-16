@@ -24,9 +24,11 @@ ABSTRACT WORKSPACE Workspace (
 );
 
 WORKSPACE AbsWorkspace( -- ValueChanged: Abstract flag must not be changed
+    DESCRIPTOR AbsWorkspaceDescriptor();
 );
 
 WORKSPACE SomeWorkspace INHERITS pkg1.TestWorkspace, pkg2.TestWorkspace (
+    DESCRIPTOR SomeWorkspaceDescriptor();
     TYPE CreateLoginUnloggedParams(
         Password varchar, -- OrderChanged
         Email varchar --OrderChanged
@@ -106,7 +108,7 @@ WORKSPACE SomeWorkspace INHERITS pkg1.TestWorkspace, pkg2.TestWorkspace (
 );
 
 ALTERABLE WORKSPACE Profile(
-
+    DESCRIPTOR ProfileDescriptor();
 );
 
 EXTENSION ENGINE BUILTIN (

@@ -26,6 +26,7 @@ func TestDynoBufSchemes(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		appdef.SetEmptyWSDesc(wsb)
 
 		root := wsb.AddObject(appdef.NewQName("test", "root"))
 		root.

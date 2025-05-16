@@ -28,9 +28,11 @@ func ExampleOr() {
 		wsb := adb.AddWorkspace(wsName)
 
 		wsb.AddTag(tag)
-		_ = wsb.AddODoc(doc)
+		_ = wsb.AddCDoc(doc)
 		wsb.AddObject(obj).SetTag(tag)
 		_ = wsb.AddCommand(cmd)
+
+		wsb.SetDescriptor(doc)
 
 		return adb.MustBuild()
 	}()
@@ -53,7 +55,7 @@ func ExampleOr() {
 
 	example(
 		filter.Or(
-			filter.WSTypes(wsName, appdef.TypeKind_ODoc),
+			filter.WSTypes(wsName, appdef.TypeKind_CDoc),
 			filter.Tags(tag)))
 
 	example(
@@ -66,14 +68,14 @@ func ExampleOr() {
 	// Output:
 	// This example demonstrates how to work with the Or filter
 	//
-	// TYPES(ODoc) FROM test.workspace OR TAGS(test.tag)
+	// TYPES(CDoc) FROM test.workspace OR TAGS(test.tag)
 	// - kind: FilterKind_Or
 	// - children:
-	//   * TYPES(ODoc) FROM test.workspace
+	//   * TYPES(CDoc) FROM test.workspace
 	//   * TAGS(test.tag)
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
-	//   * ODoc «test.doc» is matched: true
+	//   * CDoc «test.doc» is matched: true
 	//   * Object «test.object» is matched: true
 	//   * Tag «test.tag» is matched: false
 	//
@@ -84,7 +86,7 @@ func ExampleOr() {
 	//   * TYPES(Object) FROM test.workspace AND TAGS(test.tag)
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
-	//   * ODoc «test.doc» is matched: true
+	//   * CDoc «test.doc» is matched: true
 	//   * Object «test.object» is matched: true
 	//   * Tag «test.tag» is matched: false
 }

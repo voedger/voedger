@@ -45,8 +45,9 @@ func TestQNames(t *testing.T) {
 		func() appdef.IAppDef {
 			adb := builder.New()
 			adb.AddPackage("test", "test.com/test")
-			ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
-			ws.AddCDoc(defName)
+			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+			wsb.AddCDoc(defName)
+			wsb.SetDescriptor(defName)
 			appDef, err := adb.Build()
 			require.NoError(err)
 			return appDef
@@ -95,8 +96,9 @@ func TestQNames(t *testing.T) {
 				func() appdef.IAppDef {
 					adb := builder.New()
 					adb.AddPackage("test", "test.com/test")
-					ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
-					ws.AddCDoc(defName)
+					wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+					wsb.AddCDoc(defName)
+					wsb.SetDescriptor(defName)
 					appDef, err := adb.Build()
 					require.NoError(err)
 					return appDef
@@ -214,6 +216,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 				for i := 0; i <= MaxAvailableQNameID; i++ {
 					wsb.AddObject(appdef.NewQName("test", fmt.Sprintf("name_%d", i)))
 				}
+				appdef.SetEmptyWSDesc(wsb)
 				appDef, err := adb.Build()
 				require.NoError(err)
 				return appDef
@@ -244,6 +247,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 					adb := builder.New()
 					adb.AddPackage("test", "test.com/test")
 					wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+					appdef.SetEmptyWSDesc(wsb)
 					wsb.AddObject(qName)
 					appDef, err := adb.Build()
 					require.NoError(err)
@@ -268,6 +272,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 					adb := builder.New()
 					adb.AddPackage("test", "test.com/test")
 					wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+					appdef.SetEmptyWSDesc(wsb)
 					wsb.AddObject(qName)
 					appDef, err := adb.Build()
 					require.NoError(err)

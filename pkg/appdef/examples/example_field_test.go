@@ -26,6 +26,7 @@ func ExampleIWithFields() {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		appdef.SetEmptyWSDesc(wsb)
 
 		doc := wsb.AddODoc(docName)
 		doc.
@@ -88,6 +89,7 @@ func ExampleIFieldsBuilder_AddDataField() {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		appdef.SetEmptyWSDesc(wsb)
 
 		str10name := appdef.NewQName("test", "str10")
 		str10 := wsb.AddData(str10name, appdef.DataKind_string, appdef.NullQName, constraints.MinLen(10), constraints.MaxLen(10))
@@ -160,9 +162,10 @@ func ExampleIFieldsBuilder_SetFieldVerify() {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		appdef.SetEmptyWSDesc(wsb)
 
-		doc := ws.AddCDoc(docName)
+		doc := wsb.AddCDoc(docName)
 		doc.
 			AddField("pin", appdef.DataKind_string, true, constraints.MinLen(4), constraints.MaxLen(4), constraints.Pattern(`^\d+$`)).
 			SetFieldComment("pin", "Secret four digits pin code").

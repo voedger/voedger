@@ -34,6 +34,7 @@ func Test_Datas(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		_ = wsb.AddData(intName, appdef.DataKind_int64, appdef.NullQName)
 		_ = wsb.AddData(strName, appdef.DataKind_string, appdef.NullQName, constraints.MaxLen(255))
@@ -245,6 +246,7 @@ func Test_NewAnonymousData(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		doc := wsb.AddODoc(docName)
 		doc.AddField("str", appdef.DataKind_string, false, constraints.MinLen(1), constraints.MaxLen(100))

@@ -93,6 +93,8 @@ func Test_TypeIterators(t *testing.T) {
 	wsb.AddCRecord(cRecName[0])
 	wsb.AddCRecord(cRecName[1])
 
+	wsb.SetDescriptor(cDocName[0])
+
 	wDocName := qns("WDoc")
 	wsb.AddWDoc(wDocName[0]).SetSingleton()
 	wsb.AddWDoc(wDocName[1]).SetTag(tagName[1])

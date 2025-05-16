@@ -29,6 +29,7 @@ func TestActualizersWaitTimeout(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 		_ = wsb.AddCommand(appdef.NewQName("test", "command"))
 		for _, name := range prjNames {
 			prj := wsb.AddProjector(name)
