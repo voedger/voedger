@@ -30,7 +30,7 @@ type IMockTime interface {
 
 func NewMockTime() IMockTime {
 	return &mockedTime{
-		now:     time.Now().Add(-5 * time.Minute), // decrease current time to avoid "token used before issued" error in bp3 utils_test.go
+		now:     time.Now(),
 		RWMutex: sync.RWMutex{},
 		timers:  map[mockTimer]struct{}{},
 	}
