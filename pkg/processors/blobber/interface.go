@@ -26,6 +26,9 @@ type IRequestHandler interface {
 	HandleWrite_V2(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
 		okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
 		errorResponder ErrorResponder, requestSender bus.IRequestSender, ownerRecord appdef.QName, ownerRecordField string) bool
+	HandleRead_V2(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
+		okResponseIniter func(headersKeyValue ...string) io.Writer,
+		errorResponder ErrorResponder, existingBLOBIDOrSUUID string, requestSender bus.IRequestSender) bool
 }
 
 // implemented in e.g. router package
