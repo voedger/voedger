@@ -17,7 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
-// [~server.apiv2.auth/cmp.authLoginHandler~impl]
+// [~server.authnz/cmp.authLoginHandler~impl]
 func authLoginHandler() apiPathHandler {
 	return apiPathHandler{
 		exec: func(ctx context.Context, qw *queryWork) (err error) {
