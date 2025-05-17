@@ -2373,6 +2373,67 @@ func Test_Grants(t *testing.T) {
 		require.Equal(1, numACLs)
 	})
 
+	t.Run("Grant ops with different fields", func(t *testing.T) {
+		schema, err := require.AppSchema(`APPLICATION test();
+			WORKSPACE W (
+				ROLE role;
+				TABLE t INHERITS sys.CDoc(
+					number int32,
+					name varchar
+				);
+				GRANT 
+					SELECT(sys.ID, number, name),
+					UPDATE(number, name)
+				ON TABLE t TO role;
+			);
+		`)
+		require.NoError(err)
+		builder := builder.New()
+		require.NoError(BuildAppDefs(schema, builder))
+		app, err := builder.Build()
+		require.NoError(err)
+
+		t.Log(app.ACL())
+		require.Len(app.ACL(), 2)
+		for _, acl := range app.ACL() {
+			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
+			require.Equal("pkg.role", acl.Principal().QName().String())
+			if acl.Ops()[0] == appdef.OperationKind_Select {
+				require.EqualValues([]appdef.OperationKind{appdef.OperationKind_Select}, acl.Ops())
+				require.EqualValues([]string{"sys.ID", "number", "name"}, acl.Filter().Fields())
+			} else {
+				require.EqualValues([]appdef.OperationKind{appdef.OperationKind_Update}, acl.Ops())
+				require.EqualValues([]string{"number", "name"}, acl.Filter().Fields())
+			}
+		}
+	})
+
+	t.Run("Grant all with fields", func(t *testing.T) {
+		schema, err := require.AppSchema(`APPLICATION test();
+			WORKSPACE W (
+				ROLE role;
+				TABLE t INHERITS sys.CDoc(
+					number int32,
+					name varchar
+				);
+				GRANT ALL(number, name) ON TABLE t TO role;
+			);
+		`)
+		require.NoError(err)
+		builder := builder.New()
+		require.NoError(BuildAppDefs(schema, builder))
+		app, err := builder.Build()
+		require.NoError(err)
+
+		t.Log(app.ACL())
+		require.Len(app.ACL(), 1)
+		for _, acl := range app.ACL() {
+			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
+			require.Equal("pkg.role", acl.Principal().QName().String())
+			require.EqualValues([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select}, acl.Ops())
+			require.EqualValues([]string{"number", "name"}, acl.Filter().Fields())
+		}
+	})
 }
 
 func Test_Grants_Inherit(t *testing.T) {

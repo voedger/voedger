@@ -223,11 +223,11 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 			checkColumn := func(column Identifier) error {
 				for _, f := range view.Items {
 					if f.Field != nil && f.Field.Name.Value == column.Value {
-						grant.columns = append(grant.columns, string(column.Value))
+						grant.View.columns = append(grant.View.columns, string(column.Value))
 						return nil
 					}
 					if f.RefField != nil && f.RefField.Name.Value == column.Value {
-						grant.columns = append(grant.columns, string(column.Value))
+						grant.View.columns = append(grant.View.columns, string(column.Value))
 						return nil
 					}
 				}
@@ -373,27 +373,14 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 			items = descriptor.Items
 		}
 		grant.Table.Table.qName = pkg.NewQName(Ident(named.GetName()))
-		for _, item := range grant.Table.Items {
-			if item.Insert {
-				grant.ops = append(grant.ops, appdef.OperationKind_Insert)
-			} else if item.Update {
-				grant.ops = append(grant.ops, appdef.OperationKind_Update)
-			} else if item.Select {
-				grant.ops = append(grant.ops, appdef.OperationKind_Select)
-			} else if item.Activate {
-				grant.ops = append(grant.ops, appdef.OperationKind_Activate)
-			} else if item.Deactivate {
-				grant.ops = append(grant.ops, appdef.OperationKind_Deactivate)
-			}
-		}
+
+		// Helper function to check if a column exists and add it to the appropriate operation
 		checkColumn := func(column Ident) error {
 			for _, f := range items {
 				if f.Field != nil && f.Field.Name == column {
-					grant.columns = append(grant.columns, string(column))
 					return nil
 				}
 				if f.RefField != nil && f.RefField.Name == column {
-					grant.columns = append(grant.columns, string(column))
 					return nil
 				}
 				if f.NestedTable != nil && f.NestedTable.Name == column {
@@ -402,23 +389,58 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 			}
 			return ErrUndefinedField(string(column))
 		}
+
+		// Handle ALL case
 		if grant.Table.All != nil {
+			// For each operation, process the columns
 			for _, column := range grant.Table.All.Columns {
 				if err := checkColumn(column.Value); err != nil {
 					c.stmtErr(&column.Pos, err)
+					return
 				}
+				grant.Table.All.columns = append(grant.Table.All.columns, string(column.Value))
 			}
-		}
-		for _, i := range grant.Table.Items {
-			for _, column := range i.Columns {
-				if column.Name != nil {
-					if err := checkColumn(column.Name.Value); err != nil {
-						c.stmtErr(&column.Pos, err)
-					}
+		} else if len(grant.Table.Items) > 0 {
+			opColumns := make(map[appdef.OperationKind][]string)
+			// Handle operation-specific grants
+			for _, item := range grant.Table.Items {
+				var op appdef.OperationKind
+				if item.Insert {
+					op = appdef.OperationKind_Insert
+				} else if item.Update {
+					op = appdef.OperationKind_Update
+				} else if item.Select {
+					op = appdef.OperationKind_Select
+				} else if item.Activate {
+					op = appdef.OperationKind_Activate
+				} else if item.Deactivate {
+					op = appdef.OperationKind_Deactivate
 				} else {
-					grant.columns = append(grant.columns, column.SysName)
+					continue
+				}
+
+				// Process columns for this specific operation
+				if len(item.Columns) == 0 {
+					opColumns[op] = []appdef.FieldName{}
+				} else {
+					for _, column := range item.Columns {
+						if column.Name != nil {
+							if err := checkColumn(column.Name.Value); err != nil {
+								c.stmtErr(&column.Pos, err)
+								return
+							}
+							opColumns[op] = append(opColumns[op], string(column.Name.Value))
+						} else {
+							// System column - add to operation's list
+							opColumns[op] = append(opColumns[op], column.SysName)
+							// // Also maintain backward compatibility
+							// grant.columns = append(grant.columns, column.SysName)
+						}
+					}
 				}
 			}
+			// Store the operation-to-columns mapping in the grant
+			grant.opColumns = opColumns
 		}
 
 	}
@@ -904,7 +926,7 @@ func checkStorageEntity(key *StateStorage, f *StorageStmt, c *iterateCtx) error 
 		}
 		for _, entity := range key.Entities {
 			if err2 := resolveInCtx(entity, c, func(view *ViewStmt, pkg *PackageSchemaAST) error {
-				key.entityQNames = append(key.entityQNames, pkg.NewQName(entity.Name))
+				key.entityQNames = append(key.entityQNames, pkg.NewQName(view.Name))
 				return nil
 			}); err2 != nil {
 				return err2
