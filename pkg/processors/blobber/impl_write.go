@@ -183,6 +183,29 @@ func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 		bw.duration = duration
 	}
 
+	if bw.blobMessageWrite.isAPIv2 {
+		appDef, err := bw.blobMessageWrite.appParts.AppDef(bw.blobMessageWrite.appQName)
+		if err != nil {
+			return err
+		}
+		ownerType := appDef.Type(bw.blobMessageWrite.ownerRecordQName)
+		if ownerType == appdef.NullType {
+			return fmt.Errorf("blob owner QName %s is unknown", bw.blobMessageWrite.ownerRecordQName)
+		}
+		if ownerType.Kind() == appdef.TypeKind_ODoc || ownerType.Kind() == appdef.TypeKind_ORecord {
+			return fmt.Errorf("blob owner cannot be ODoc\\ORecord")
+		}
+		iFields := ownerType.(appdef.IWithFields)
+		ownerField := iFields.Field(bw.blobMessageWrite.ownerRecordField)
+		if ownerField == nil {
+			return fmt.Errorf("blob owner field %s does not exist in blob owner %s", bw.blobMessageWrite.ownerRecordField,
+				bw.blobMessageWrite.ownerRecordQName)
+		}
+		if ownerField.DataKind() != appdef.DataKind_RecordID {
+			return fmt.Errorf("blob owner %s.%s must be of blob type", bw.blobMessageWrite.ownerRecordQName, bw.blobMessageWrite.ownerRecordField)
+		}
+	}
+
 	if isSingleBLOB {
 		if bw.contentType == coreutils.ContentType_MultipartFormData {
 			return fmt.Errorf(`name+mimeType query params and "%s" Content-Type header are mutual exclusive`, coreutils.ContentType_MultipartFormData)
@@ -203,25 +226,6 @@ func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 
 	if len(bw.boundary) == 0 {
 		return fmt.Errorf("boundary of %s is not specified", coreutils.ContentType_MultipartFormData)
-	}
-
-	if bw.blobMessageWrite.isAPIv2 {
-		appDef, err := bw.blobMessageWrite.appParts.AppDef(bw.blobMessageWrite.appQName)
-		if err != nil {
-			return err
-		}
-		ownerType := appDef.Type(bw.blobMessageWrite.ownerRecordQName)
-		if ownerType == appdef.NullType {
-			return fmt.Errorf("blob owner QName %s is unknown", bw.blobMessageWrite.ownerRecordQName)
-		}
-		if ownerType.Kind() == appdef.TypeKind_ODoc || ownerType.Kind() == appdef.TypeKind_ORecord {
-			return fmt.Errorf("blob owner cannot be ODoc\\ORecord")
-		}
-		iFields := ownerType.(appdef.IWithFields)
-		if iFields.Field(bw.blobMessageWrite.ownerRecordField) == nil {
-			return fmt.Errorf("blob owner field %s does not exist in blob owner %s", bw.blobMessageWrite.ownerRecordField,
-				bw.blobMessageWrite.ownerRecordQName)
-		}
 	}
 
 	return nil
@@ -263,7 +267,11 @@ func (b *sendWriteResult) DoSync(_ context.Context, work pipeline.IWorkpiece) (e
 	if logger.IsVerbose() {
 		logger.Verbose("blob write error:", sysError.HTTPStatus, ":", sysError.Message)
 	}
-	bw.blobMessageWrite.errorResponder(sysError.HTTPStatus, sysError.Message)
+	if bw.blobMessageWrite.isAPIv2 {
+		bw.blobMessageWrite.errorResponder(sysError.HTTPStatus, sysError)
+	} else {
+		bw.blobMessageWrite.errorResponder(sysError.HTTPStatus, sysError.Message)
+	}
 	return nil
 }
 

@@ -67,6 +67,10 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.MimeType)
 	require.Equal("test", blobReader.Name)
 	require.Equal(expBLOB, actualBLOBContent)
+
+	// set to the target field
+	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocWithBLOB","Blob":%d}}]}`, blobID)
+	vit.PostWS(ws, "c.sys.CUD", body)
 }
 
 func TestBlobberErrors(t *testing.T) {
@@ -133,6 +137,43 @@ func TestBlobberErrors(t *testing.T) {
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
 				coreutils.WithHeaders("Content-Type", "multipart/form-data"),
 				coreutils.Expect400(),
+			).Println()
+		})
+	})
+
+	t.Run("wrong target", func(t *testing.T) {
+		t.Run("doc", func(t *testing.T) {
+			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/unknown.doc/blobs/someField", ws.WSID),
+				"blobContent",
+				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				coreutils.WithHeaders(
+					"Blob-Name", "newBlob",
+					coreutils.ContentType, coreutils.ContentType_ApplicationXBinary,
+				),
+				coreutils.Expect400("blob owner QName unknown.doc is unknown"),
+			).Println()
+		})
+		t.Run("field", func(t *testing.T) {
+			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.DocWithBLOB/blobs/someField", ws.WSID),
+				"blobContent",
+				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				coreutils.WithHeaders(
+					"Blob-Name", "newBlob",
+					coreutils.ContentType, coreutils.ContentType_ApplicationXBinary,
+				),
+				coreutils.Expect400("blob owner field someField does not exist in blob owner app1pkg.DocWithBLOB"),
+			).Println()
+		})
+
+		t.Run("field type", func(t *testing.T) {
+			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.DocWithBLOB/blobs/IntFld", ws.WSID),
+				"blob",
+				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				coreutils.WithHeaders(
+					"Blob-Name", "newBlob",
+					coreutils.ContentType, coreutils.ContentType_ApplicationXBinary,
+				),
+				coreutils.Expect400("blob owner app1pkg.DocWithBLOB.IntFld must be of blob type"),
 			).Println()
 		})
 	})

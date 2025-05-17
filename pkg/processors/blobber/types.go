@@ -98,6 +98,7 @@ func (b *blobWorkpiece) Release() {
 type implIRequestHandler struct {
 	procbus      iprocbus.IProcBus
 	chanGroupIdx BLOBServiceChannelGroupIdx
+	appParts     appparts.IAppPartitions
 }
 
 func (m *implIBLOBMessage_base) Release() {

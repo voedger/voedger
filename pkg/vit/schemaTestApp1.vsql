@@ -64,9 +64,9 @@ ALTERABLE WORKSPACE test_wsWS (
 		num int32,
 		width int32,
 		height int32,
-		image int64,
+		image blob,
 		is_hidden int32,
-		preview int64,
+		preview blob,
 		bg_color int32,
 		air_table_plan_item TABLE air_table_plan_item (
 			id_air_table_plan ref, --deprecated link to air_table_plan
@@ -687,7 +687,8 @@ ALTERABLE WORKSPACE test_wsWS (
     );
 
 	TABLE DocWithBLOB INHERITS sys.CDoc (
-		Blob blob
+		Blob blob,
+		IntFld int32
 	);
 
 	EXTENSION ENGINE BUILTIN (

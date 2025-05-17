@@ -397,7 +397,7 @@ func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobNam
 		ReadCloser: io.NopCloser(bytes.NewReader(blobContent)),
 	}
 
-	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobReader)
+	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobReader, opts...)
 	require.NoError(vit.T, err)
 	return blobID
 }

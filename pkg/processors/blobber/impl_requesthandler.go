@@ -54,6 +54,7 @@ func (r *implIRequestHandler) handleWrite(appQName appdef.AppQName, wsid istruct
 		reader:           reader,
 		ownerRecordQName: ownerRecord,
 		ownerRecordField: ownerRecordField,
+		appParts:         r.appParts,
 	}, doneCh)
 }
 

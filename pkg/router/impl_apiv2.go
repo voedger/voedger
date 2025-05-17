@@ -268,7 +268,7 @@ func requestHandlerV2_blobs_create(blobRequestHandler blobprocessor.IRequestHand
 		ownerRecordField := vars[URLPlaceholder_field]
 		if !blobRequestHandler.HandleWrite_V2(appQName, wsid, headers, req.Context(),
 			newBLOBOKResponseIniter(rw), req.Body, func(statusCode int, args ...interface{}) {
-				ReplyJSON(rw, fmt.Sprint(args...), statusCode)
+				replyErr(rw, args[0].(error))
 			}, requestSender, ownerRecord, ownerRecordField) {
 			rw.WriteHeader(http.StatusServiceUnavailable)
 			rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
@@ -435,10 +435,10 @@ func parseCreateLoginArgs(body string) (verifiedEmailToken, displayName, pwd str
 }
 
 func replyErr(rw http.ResponseWriter, err error) {
-	var funcErr coreutils.FuncError
-	if errors.As(err, &funcErr) {
-		ReplyJSON(rw, funcErr.ToJSON_APIV2(), funcErr.HTTPStatus)
+	var sysError coreutils.SysError
+	if errors.As(err, &sysError) {
+		ReplyJSON(rw, sysError.ToJSON_APIV2(), sysError.HTTPStatus)
 	} else {
-		ReplyCommonError(rw, err.Error(), funcErr.HTTPStatus)
+		ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
 	}
 }
