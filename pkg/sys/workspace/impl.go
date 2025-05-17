@@ -489,8 +489,19 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID
 			}
 			ownerQName := appdef.NullQName
 			for _, wsTemplateRecord := range wsTemplateData {
-				if wsTemplateRecord[appdef.SystemField_ID] == recordID {
-					ownerQName = wsTemplateRecord[appdef.SystemField_QName].(appdef.QName)
+				recordNumberFromTemplate := wsTemplateRecord[appdef.SystemField_ID].(json.Number)
+				recordIDFromTemplate, err := recordNumberFromTemplate.Int64()
+				if err != nil {
+					return nil, err
+				}
+				if recordIDFromTemplate == int64(recordID) {
+					ownerQNameStr := wsTemplateRecord[appdef.SystemField_QName].(string)
+					ownerQName, err = appdef.ParseQName(ownerQNameStr)
+					if err != nil {
+						// notest: do not test here. Will fail on further doc write
+						return nil, err
+					}
+					break
 				}
 			}
 			blobs = append(blobs, BLOBWorkspaceTemplateField{

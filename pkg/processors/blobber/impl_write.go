@@ -109,7 +109,7 @@ func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		AppQName: bw.blobMessageWrite.appQName,
 		Resource: bw.registerFuncName,
 		Header:   bw.blobMessageWrite.header,
-		Body:     []byte(fmt.Sprintf(`{"args":{"OwnerRecord":"%s","OwnerRecordField":"%s"}}`, bw.blobMessageWrite.ownerRecordQName, bw.blobMessageWrite.ownerRecordField)),
+		Body:     fmt.Appendf([]byte{}, `{"args":{"OwnerRecord":"%s","OwnerRecordField":"%s"}}`, bw.blobMessageWrite.ownerRecordQName, bw.blobMessageWrite.ownerRecordField),
 		Host:     coreutils.Localhost,
 	}
 	blobHelperMeta, blobHelperResp, err := bus.GetCommandResponse(bw.blobMessageWrite.requestCtx, bw.blobMessageWrite.requestSender, req)
@@ -236,17 +236,9 @@ func replySuccess_V1(bw *blobWorkpiece) {
 	}
 }
 
-func replySuccess_V2(bw *blobWorkpiece, federation federation.IFederation) {
+func replySuccess_V2_persistent(bw *blobWorkpiece) {
 	writer := bw.blobMessageWrite.okResponseIniter(coreutils.ContentType, coreutils.ContentType_ApplicationJSON)
-	blobID := ""
-	if len(bw.newSUUID) > 0 {
-		blobID = string(bw.newSUUID)
-	} else {
-		blobID = utils.UintToString(bw.newBLOBID)
-	}
-	fmt.Fprintf(writer, `{"BlobID": "%s","ContentType": "%s","Size": %d,"URL": "%s/api/v2/apps/%s/%s/workspaces/%d/blobs/%s"}`,
-		blobID, bw.descr.MimeType, bw.uploadedSize, federation.URLStr(), bw.blobMessageWrite.appQName.Owner(),
-		bw.blobMessageWrite.appQName.Name(), bw.blobMessageWrite.wsid, bw.newSUUID)
+	fmt.Fprintf(writer, `{"BlobID":%d}`, bw.newBLOBID)
 }
 
 func (b *sendWriteResult) DoSync(_ context.Context, work pipeline.IWorkpiece) (err error) {
@@ -260,7 +252,7 @@ func (b *sendWriteResult) DoSync(_ context.Context, work pipeline.IWorkpiece) (e
 			logger.Verbose("blob write success:", bw.nameQuery, ":", blobIDStr)
 		}
 		if bw.blobMessageWrite.isAPIv2 {
-			replySuccess_V2(bw, b.federation)
+			replySuccess_V2_persistent(bw)
 		} else {
 			replySuccess_V1(bw)
 		}

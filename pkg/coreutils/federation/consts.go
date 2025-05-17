@@ -5,7 +5,11 @@
 
 package federation
 
-import "github.com/voedger/voedger/pkg/iblobstorage"
+import (
+	"regexp"
+
+	"github.com/voedger/voedger/pkg/iblobstorage"
+)
 
 var (
 	TemporaryBLOB_URLTTLToDurationLs = map[string]iblobstorage.DurationType{
@@ -14,4 +18,5 @@ var (
 	TemporaryBLOBDurationToURLTTL = map[iblobstorage.DurationType]string{
 		iblobstorage.DurationType_1Day: "1d",
 	}
+	blobCreateRespRE = regexp.MustCompile(`"BlobID":\s*(\d+)`)
 )

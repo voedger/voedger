@@ -14,7 +14,6 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -115,17 +114,6 @@ func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSI
 		return istructs.NullRecordID, fmt.Errorf("failed to parse the received blobID string: %w", err)
 	}
 	return istructs.RecordID(newBLOBID), nil
-}
-
-var blobCreateRespRE = regexp.MustCompile(`"BlobID":\s*(\d+)`)
-
-func extractBlobID(jsonStr string) (string, error) {
-	re := regexp.MustCompile(`"BlobID":\s*(\d+)`)
-	matches := re.FindStringSubmatch(jsonStr)
-	if len(matches) < 2 {
-		return "", fmt.Errorf("no BlobID found in JSON")
-	}
-	return matches[1], nil
 }
 
 func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) (res iblobstorage.BLOBReader, err error) {
