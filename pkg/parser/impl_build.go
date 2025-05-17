@@ -304,11 +304,7 @@ func (c *buildContext) grantsAndRevokes() error {
 
 				if s.Grant.Table != nil && s.Grant.Table.Items != nil {
 					for op, columns := range s.Grant.opColumns {
-						fieldNames := make([]appdef.FieldName, len(columns))
-						for i, col := range columns {
-							fieldNames[i] = col
-						}
-						wsb.Grant([]appdef.OperationKind{op}, s.Grant.filter(), fieldNames, s.Grant.toRole, comments...)
+						wsb.Grant([]appdef.OperationKind{op}, s.Grant.filter(), columns, s.Grant.toRole, comments...)
 					}
 					continue
 				}
@@ -343,11 +339,7 @@ func (c *buildContext) grantsAndRevokes() error {
 
 				if s.Revoke.Table != nil && s.Revoke.Table.Items != nil {
 					for op, columns := range s.Revoke.opColumns {
-						fieldNames := make([]appdef.FieldName, len(columns))
-						for i, col := range columns {
-							fieldNames[i] = col
-						}
-						wsb.Revoke([]appdef.OperationKind{op}, s.Revoke.filter(), fieldNames, s.Revoke.toRole, comments...)
+						wsb.Revoke([]appdef.OperationKind{op}, s.Revoke.filter(), columns, s.Revoke.toRole, comments...)
 					}
 					continue
 				}
