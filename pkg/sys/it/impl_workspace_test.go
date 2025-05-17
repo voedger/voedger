@@ -295,7 +295,7 @@ func checkDemoAndDemoMinBLOBs(vit *it.VIT, templateName string, ep extensionpoin
 			vit.T.Fatal(temp.RecordID)
 		}
 		var fieldIdx int
-		if temp.FieldName == "image" {
+		if temp.OwnerField == "image" {
 			fieldIdx = 1
 		} else {
 			fieldIdx = 2

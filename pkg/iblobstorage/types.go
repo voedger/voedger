@@ -40,8 +40,10 @@ type TempBLOBKeyType struct {
 type SUUID string
 
 type DescrType struct {
-	Name     string
-	MimeType string
+	Name       string
+	MimeType   string
+	OwnerQName appdef.QName
+	OwnerField appdef.FieldName
 }
 
 type BLOBStatus uint8
@@ -69,6 +71,4 @@ type blobPrefix uint64
 type BLOBReader struct {
 	io.ReadCloser
 	DescrType
-	OwnerQName appdef.QName
-	OwnerField appdef.FieldName
 }

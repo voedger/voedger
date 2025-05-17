@@ -72,12 +72,12 @@ func uploadBLOBs(blobs []BLOBWorkspaceTemplateField, fed federation.IFederation,
 		logger.Info("workspace build: uploading blob", blob.Name)
 		blobReader := iblobstorage.BLOBReader{
 			DescrType: iblobstorage.DescrType{
-				Name:     blob.Name,
-				MimeType: blob.MimeType,
+				Name:       blob.Name,
+				MimeType:   blob.MimeType,
+				OwnerQName: blob.OwnerQName,
+				OwnerField: blob.OwnerField,
 			},
 			ReadCloser: io.NopCloser(bytes.NewReader(blob.Content)),
-			OwnerQName: blob.OwnerQName,
-			OwnerField: blob.OwnerField,
 		}
 		newBLOBID, err := fed.UploadBLOB(appQName, wsid, blobReader, coreutils.WithAuthorizeBy(principalToken))
 		if err != nil {

@@ -389,12 +389,12 @@ func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobNam
 	vit.T.Helper()
 	blobReader := iblobstorage.BLOBReader{
 		DescrType: iblobstorage.DescrType{
-			Name:     blobName,
-			MimeType: blobMimeType,
+			Name:       blobName,
+			MimeType:   blobMimeType,
+			OwnerQName: ownerRecord,
+			OwnerField: ownerRecordField,
 		},
 		ReadCloser: io.NopCloser(bytes.NewReader(blobContent)),
-		OwnerQName: ownerRecord,
-		OwnerField: ownerRecordField,
 	}
 
 	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobReader)

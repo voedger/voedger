@@ -65,7 +65,7 @@ ABSTRACT WORKSPACE Workspace (
 
 		-- [~server.apiv2.blobs/cmp.sysBlobOwnerRecord~impl]
 		OwnerRecord qname,
-		OwnerRecordField string,
+		OwnerRecordField text,
 		OwnerRecordID ref
 	) WITH Tags=(WorkspaceOwnerTableTag);
 

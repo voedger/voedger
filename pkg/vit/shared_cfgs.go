@@ -59,6 +59,7 @@ const (
 	Field_Cfg          = "Cfg"
 	Field_GroupA       = "GroupA"
 	Field_GroupB       = "GroupB"
+	Field_Blob         = "Blob"
 )
 
 var (
@@ -92,6 +93,7 @@ var (
 		Port:     1,
 		Username: "username@gmail.com",
 	}
+	QNameDocWithBLOB = appdef.NewQName(app1PkgName, "DocWithBLOB")
 
 	// BLOBMaxSize 5
 	SharedConfig_App1 = NewSharedVITConfig(

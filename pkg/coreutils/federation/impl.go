@@ -85,9 +85,9 @@ func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs
 }
 
 func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader,
-	ownerQName appdef.QName, ownerField appdef.FieldName, optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error) {
+	optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error) {
 	uploadBLOBURL := fmt.Sprintf("api/v2/apps/%s/%s/workspaces/%d/docs/%s/blobs/%s",
-		appQName.Owner(), appQName.Name(), wsid, ownerQName, ownerField)
+		appQName.Owner(), appQName.Name(), wsid, blobReader.OwnerQName, blobReader.OwnerField)
 	optFuncs = append(optFuncs, coreutils.WithHeaders(
 		"Blob-Name", blobReader.Name,
 		coreutils.ContentType, blobReader.MimeType,
@@ -108,7 +108,7 @@ func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSI
 	}
 	matches := blobCreateRespRE.FindStringSubmatch(resp.Body)
 	if len(matches) < 2 {
-		return istructs.NullRecordID, fmt.Errorf("wrong blob create response: "+ resp.Body)
+		return istructs.NullRecordID, errors.New("wrong blob create response: " + resp.Body)
 	}
 	newBLOBID, err := strconv.ParseUint(matches[1], utils.DecimalBase, utils.BitSize64)
 	if err != nil {
