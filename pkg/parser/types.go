@@ -730,7 +730,7 @@ type GrantOrRevoke struct {
 	/* filled on the analysis stage */
 	toRole    appdef.QName
 	ops       []appdef.OperationKind
-	opColumns map[appdef.OperationKind][]string
+	opColumns map[appdef.OperationKind][]appdef.FieldName
 
 	workspace workspaceAddr
 }
