@@ -353,7 +353,7 @@ func (c *buildContext) grantsAndRevokes() error {
 				}
 
 				if s.Revoke.View != nil {
-					wsb.Grant(s.Revoke.ops, s.Revoke.filter(), s.Revoke.View.columns, s.Revoke.toRole, comments...)
+					wsb.Revoke(s.Revoke.ops, s.Revoke.filter(), s.Revoke.View.columns, s.Revoke.toRole, comments...)
 					continue
 				}
 
