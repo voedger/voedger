@@ -306,7 +306,7 @@ func (c *buildContext) grantsAndRevokes() error {
 					for op, columns := range s.Grant.opColumns {
 						fieldNames := make([]appdef.FieldName, len(columns))
 						for i, col := range columns {
-							fieldNames[i] = appdef.FieldName(col)
+							fieldNames[i] = col
 						}
 						wsb.Grant([]appdef.OperationKind{op}, s.Grant.filter(), fieldNames, s.Grant.toRole, comments...)
 					}
@@ -345,7 +345,7 @@ func (c *buildContext) grantsAndRevokes() error {
 					for op, columns := range s.Revoke.opColumns {
 						fieldNames := make([]appdef.FieldName, len(columns))
 						for i, col := range columns {
-							fieldNames[i] = appdef.FieldName(col)
+							fieldNames[i] = col
 						}
 						wsb.Revoke([]appdef.OperationKind{op}, s.Revoke.filter(), fieldNames, s.Revoke.toRole, comments...)
 					}
