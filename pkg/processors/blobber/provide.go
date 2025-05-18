@@ -24,7 +24,7 @@ func ProvideService(serviceChannel BLOBServiceChannel, blobStorage iblobstorage.
 			case workIntf := <-serviceChannel:
 				blobWorkpiece := &blobWorkpiece{}
 				switch typed := workIntf.(type) {
-				case *implIBLOBMessage_Read:
+				case *implIBLOBMessage_Read_V1:
 					blobWorkpiece.blobMessage = typed
 				case *implIBLOBMessage_Write:
 					blobWorkpiece.blobMessage = typed

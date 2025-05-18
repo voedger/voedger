@@ -268,10 +268,10 @@ func requestHandlerV2_blobs_read(blobRequestHandler blobprocessor.IRequestHandle
 			// notest: checked by router url rule
 			panic(err)
 		}
-		if !blobRequestHandler.HandleWrite_V2(appQName, wsid, headers, req.Context(),
-			newBLOBOKResponseIniter(rw), req.Body, func(statusCode int, args ...interface{}) {
+		if !blobRequestHandler.HandleRead_V2(appQName, wsid, headers, req.Context(),
+			newBLOBOKResponseIniter(rw), func(statusCode int, args ...interface{}) {
 				replyErr(rw, args[0].(error))
-			}, requestSender, ownerRecord, ownerRecordField) {
+			}, ownerRecord, ownerRecordField, istructs.RecordID(ownerID), requestSender) {
 			rw.WriteHeader(http.StatusServiceUnavailable)
 			rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
 		}

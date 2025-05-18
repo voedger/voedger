@@ -114,7 +114,7 @@ func provideReadBLOB(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Con
 
 func getBLOBMessageRead(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
-	bw.blobMessageRead = bw.blobMessage.(*implIBLOBMessage_Read)
+	bw.blobMessageRead = bw.blobMessage.(*implIBLOBMessage_Read_V1)
 	return nil
 }
 

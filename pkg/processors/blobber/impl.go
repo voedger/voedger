@@ -45,15 +45,17 @@ func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStora
 
 func (b *blobReadOrWriteSwitch) Switch(work interface{}) (branchName string, err error) {
 	blobWorkpiece := work.(*blobWorkpiece)
-	if _, ok := blobWorkpiece.blobMessage.(*implIBLOBMessage_Read); ok {
+	switch blobWorkpiece.blobMessage.(type) {
+	case *implIBLOBMessage_Read_V1, *implIBLOBMessage_Read_V2:
 		return branchReadBLOB, nil
+	default:
+		return branchWriteBLOB, nil
 	}
-	return branchWriteBLOB, nil
 }
 
 func (b *blobWorkpiece) isPersistent() bool {
 	if _, ok := b.blobMessage.(*implIBLOBMessage_Write); ok {
 		return len(b.ttl) == 0
 	}
-	return len(b.blobMessage.(*implIBLOBMessage_Read).existingBLOBIDOrSUUID) <= temporaryBLOBIDLenTreshold
+	return len(b.blobMessage.(*implIBLOBMessage_Read_V1).existingBLOBIDOrSUUID) <= temporaryBLOBIDLenTreshold
 }

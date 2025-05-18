@@ -24,7 +24,7 @@ type blobWorkpiece struct {
 	pipeline.IWorkpiece
 	blobMessage      any
 	blobMessageWrite *implIBLOBMessage_Write
-	blobMessageRead  *implIBLOBMessage_Read
+	blobMessageRead  *implIBLOBMessage_Read_V1
 	duration         iblobstorage.DurationType
 	nameQuery        []string
 	mimeTypeQuery    []string
@@ -55,9 +55,16 @@ type implIBLOBMessage_base struct {
 	isAPIv2          bool
 }
 
-type implIBLOBMessage_Read struct {
+type implIBLOBMessage_Read_V1 struct {
 	implIBLOBMessage_base
 	existingBLOBIDOrSUUID string
+}
+
+type implIBLOBMessage_Read_V2 struct {
+	implIBLOBMessage_base
+	ownerQName appdef.QName
+	ownerField appdef.FieldName
+	ownerID    istructs.RecordID
 }
 
 type implIBLOBMessage_Write struct {
