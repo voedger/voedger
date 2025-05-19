@@ -24,7 +24,7 @@ func TestNewConstraint(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want any
+		want any // should be equal type of args.value
 	}{
 		{"Min length",
 			args{appdef.ConstraintKind_MinLen, uint16(1), []string{"test min length"}},
