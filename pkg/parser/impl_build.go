@@ -757,6 +757,8 @@ func (c *buildContext) addDataTypeField(field *FieldExpr) {
 			cc = append(cc, constraints.Pattern(field.CheckRegexp.Regexp))
 		}
 		bld.AddField(fieldName, appdef.DataKind_string, field.NotNull, cc...)
+	} else if field.Type.DataType.Blob {
+		c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddRefField(fieldName, field.NotNull, QNameWDocBLOB)
 	} else {
 		bld.AddField(fieldName, sysDataKind, field.NotNull)
 	}
