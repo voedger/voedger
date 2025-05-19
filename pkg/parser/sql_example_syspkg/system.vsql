@@ -25,7 +25,6 @@ ABSTRACT WORKSPACE Workspace (
     ABSTRACT TABLE WSingleton INHERITS WDoc();
 
 	TABLE BLOB INHERITS WDoc (status int32 NOT NULL);
-
     TAG WithoutAuthTag;
     ROLE Anyone;
     TYPE CreateLoginParams(
