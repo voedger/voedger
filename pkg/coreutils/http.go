@@ -361,7 +361,7 @@ reqLoop:
 		expectedSysErrorCode: opts.expectedSysErrorCode,
 		expectedHTTPCodes:    opts.expectedHTTPCodes,
 	}
-	if isCodeExpected && opts.responseHandler != nil {
+	if resp.StatusCode == http.StatusOK && isCodeExpected && opts.responseHandler != nil {
 		opts.responseHandler(resp)
 		return httpResponse, nil
 	}

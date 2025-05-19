@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -79,6 +80,7 @@ func TestBlobberErrors(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	expBLOB := []byte{1, 2, 3, 4, 5}
 
 	t.Run("403 forbidden on write without token", func(t *testing.T) {
 		vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, []byte{},
@@ -87,7 +89,6 @@ func TestBlobberErrors(t *testing.T) {
 	})
 
 	t.Run("403 forbidden on read without token", func(t *testing.T) {
-		expBLOB := []byte{1, 2, 3, 4, 5}
 		blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, expBLOB,
 			it.QNameDocWithBLOB, it.Field_Blob,
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
@@ -142,7 +143,7 @@ func TestBlobberErrors(t *testing.T) {
 		})
 	})
 
-	t.Run("wrong target", func(t *testing.T) {
+	t.Run("write: wrong target", func(t *testing.T) {
 		t.Run("doc", func(t *testing.T) {
 			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/unknown.doc/blobs/someField", ws.WSID),
 				"blobContent",
@@ -176,6 +177,40 @@ func TestBlobberErrors(t *testing.T) {
 				),
 				coreutils.Expect400("blob owner app1pkg.DocWithBLOB.IntFld must be of blob type"),
 			).Println()
+		})
+	})
+
+	t.Run("read: wrong owner", func(t *testing.T) {
+		t.Run("doc", func(t *testing.T) {
+			vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, appdef.NewQName("unknown", "doc"), "Name", 1,
+				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				coreutils.Expect400("document or record unknown.doc is not defined in Workspace «app1pkg.test_wsWS»"),
+			)
+		})
+
+		t.Run("id", func(t *testing.T) {
+			vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameApp1_CDocCountry, "Name", 1,
+				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				coreutils.Expect404("document app1pkg.Country with ID 1 not found"),
+			)
+		})
+
+		// insert owner record but do not specify owner field
+		body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocWithBLOB", "IntFld": 42}}]}`
+		docWithBLOBID_noBLOB := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+		t.Run("target field is not set", func(t *testing.T) {
+			vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", docWithBLOBID_noBLOB,
+				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				coreutils.Expect400("no value for owner field Blob in blob owner doc app1pkg.DocWithBLOB"),
+			)
+		})
+
+		t.Run("non-blob field", func(t *testing.T) {
+			vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "IntFld", docWithBLOBID_noBLOB,
+				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				coreutils.Expect400("owner field app1pkg.DocWithBLOB.IntFld is not of blob type"),
+			)
 		})
 	})
 }

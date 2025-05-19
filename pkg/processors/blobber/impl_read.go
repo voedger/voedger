@@ -114,7 +114,7 @@ func provideReadBLOB(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Con
 	}
 }
 
-func getBLOBIDFromOwner(_ context.Context, work pipeline.IWorkpiece) error {
+func getBLOBIDFromOwner(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
 	if !bw.blobMessageRead.isAPIv2 {
 		return nil
@@ -133,19 +133,41 @@ func getBLOBIDFromOwner(_ context.Context, work pipeline.IWorkpiece) error {
 	}
 	respCh, _, respErr, err := bw.blobMessageRead.requestSender.SendRequest(bw.blobMessageRead.requestCtx, req)
 	if err != nil {
+		// notest
 		return fmt.Errorf("failed to read BLOBID from owner: %w", err)
 	}
 	blobID := istructs.NullRecordID
+	count := 0
 	for elem := range respCh {
-		if blobID > 0 {
+		count++
+		if count > 1 {
 			// notest
 			panic("unexpected result reading BLOBID from owner")
 		}
-		blobID = elem.(map[string]interface{})[bw.blobMessageRead.ownerRecordField].(istructs.RecordID)
+		switch typed := elem.(type) {
+		case map[string]interface{}:
+			ownerFieldValue, ok := elem.(map[string]interface{})[bw.blobMessageRead.ownerRecordField]
+			if !ok {
+				err = coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Errorf("no value for owner field %s in blob owner doc %s", bw.blobMessageRead.ownerRecordField, bw.blobMessageRead.ownerRecord))
+				continue
+			}
+			blobID, ok = ownerFieldValue.(istructs.RecordID)
+			if !ok {
+				err = coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Errorf("owner field %s.%s is not of blob type", bw.blobMessageRead.ownerRecord, bw.blobMessageRead.ownerRecordField))
+			}
+		case error:
+			err = typed
+		default:
+			// notest
+			panic(fmt.Sprintf("unexpected result reading BLOBID from owner: %T", elem))
+		}
+	}
+	if err != nil {
+		return err
 	}
 	if *respErr != nil {
 		// notest
-		panic(*respErr)
+		return *respErr
 	}
 	bw.blobMessageRead.existingBLOBIDOrSUUID = utils.UintToString(blobID)
 	return nil
