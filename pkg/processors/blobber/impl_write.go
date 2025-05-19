@@ -109,7 +109,7 @@ func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		AppQName: bw.blobMessageWrite.appQName,
 		Resource: bw.registerFuncName,
 		Header:   bw.blobMessageWrite.header,
-		Body:     fmt.Appendf([]byte{}, `{"args":{"OwnerRecord":"%s","OwnerRecordField":"%s"}}`, bw.blobMessageWrite.ownerRecordQName, bw.blobMessageWrite.ownerRecordField),
+		Body:     fmt.Appendf([]byte{}, `{"args":{"OwnerRecord":"%s","OwnerRecordField":"%s"}}`, bw.blobMessageWrite.ownerRecord, bw.blobMessageWrite.ownerRecordField),
 		Host:     coreutils.Localhost,
 	}
 	blobHelperMeta, blobHelperResp, err := bus.GetCommandResponse(bw.blobMessageWrite.requestCtx, bw.blobMessageWrite.requestSender, req)
@@ -188,9 +188,9 @@ func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 		if err != nil {
 			return err
 		}
-		ownerType := appDef.Type(bw.blobMessageWrite.ownerRecordQName)
+		ownerType := appDef.Type(bw.blobMessageWrite.ownerRecord)
 		if ownerType == appdef.NullType {
-			return fmt.Errorf("blob owner QName %s is unknown", bw.blobMessageWrite.ownerRecordQName)
+			return fmt.Errorf("blob owner QName %s is unknown", bw.blobMessageWrite.ownerRecord)
 		}
 		if ownerType.Kind() == appdef.TypeKind_ODoc || ownerType.Kind() == appdef.TypeKind_ORecord {
 			return fmt.Errorf("blob owner cannot be ODoc\\ORecord")
@@ -199,10 +199,10 @@ func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 		ownerField := iFields.Field(bw.blobMessageWrite.ownerRecordField)
 		if ownerField == nil {
 			return fmt.Errorf("blob owner field %s does not exist in blob owner %s", bw.blobMessageWrite.ownerRecordField,
-				bw.blobMessageWrite.ownerRecordQName)
+				bw.blobMessageWrite.ownerRecord)
 		}
 		if ownerField.DataKind() != appdef.DataKind_RecordID {
-			return fmt.Errorf("blob owner %s.%s must be of blob type", bw.blobMessageWrite.ownerRecordQName, bw.blobMessageWrite.ownerRecordField)
+			return fmt.Errorf("blob owner %s.%s must be of blob type", bw.blobMessageWrite.ownerRecord, bw.blobMessageWrite.ownerRecordField)
 		}
 	}
 

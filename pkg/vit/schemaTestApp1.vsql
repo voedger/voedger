@@ -759,6 +759,8 @@ ALTERABLE WORKSPACE test_wsWS (
 
 	GRANT EXECUTE ON QUERY QryVoid TO sys.WorkspaceOwner;
 
+	GRANT SELECT ON TABLE DocWithBLOB TO sys.WorkspaceOwner;
+
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocActivateDenied TO sys.WorkspaceOwner;
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocDeactivateDenied TO sys.WorkspaceOwner;
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocFieldInsertDenied TO sys.WorkspaceOwner;

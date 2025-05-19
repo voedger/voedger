@@ -185,7 +185,8 @@ func (s *federationBlobStorage) getReadCloser(key istructs.IStateKeyBuilder) (io
 			}
 			opts = append(opts, coreutils.WithAuthorizeBy(systemPrincipalToken))
 		}
-		blobReader, err := s.federation.ReadBLOB(appdef.NewAppQName(owner, appname), wsid, kb.blobID, opts...)
+		// FIXME
+		blobReader, err := s.federation.ReadBLOB(appdef.NewAppQName(owner, appname), wsid, appdef.NullQName, "", istructs.NullRecordID, opts...)
 		if err != nil {
 			return nil, err
 		}

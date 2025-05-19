@@ -19,7 +19,7 @@ func (r *implIRequestHandler) HandleRead(appQName appdef.AppQName, wsid istructs
 	okResponseIniter func(headersKeyValue ...string) io.Writer,
 	errorResponder ErrorResponder, existingBLOBIDOrSUUID string, requestSender bus.IRequestSender) bool {
 	doneCh := make(chan interface{})
-	return r.handle(&implIBLOBMessage_Read_V1{
+	return r.handle(&implIBLOBMessage_Read{
 		implIBLOBMessage_base: implIBLOBMessage_base{
 			appQName:         appQName,
 			wsid:             wsid,
@@ -39,7 +39,7 @@ func (r *implIRequestHandler) HandleRead_V2(appQName appdef.AppQName, wsid istru
 	errorResponder ErrorResponder, ownerRecord appdef.QName, ownerRecordField string, ownerID istructs.RecordID,
 	requestSender bus.IRequestSender) bool {
 	doneCh := make(chan interface{})
-	return r.handle(&implIBLOBMessage_Read_V2{
+	return r.handle(&implIBLOBMessage_Read{
 		implIBLOBMessage_base: implIBLOBMessage_base{
 			appQName:         appQName,
 			wsid:             wsid,
@@ -49,10 +49,11 @@ func (r *implIRequestHandler) HandleRead_V2(appQName appdef.AppQName, wsid istru
 			errorResponder:   errorResponder,
 			done:             doneCh,
 			requestSender:    requestSender,
+			isAPIv2:          true,
 		},
-		ownerQName: ownerRecord,
-		ownerField: ownerRecordField,
-		ownerID:    ownerID,
+		ownerRecord:      ownerRecord,
+		ownerRecordField: ownerRecordField,
+		ownerID:          ownerID,
 	}, doneCh)
 
 }
@@ -75,7 +76,7 @@ func (r *implIRequestHandler) handleWrite(appQName appdef.AppQName, wsid istruct
 		},
 		urlQueryValues:   urlQueryValues,
 		reader:           reader,
-		ownerRecordQName: ownerRecord,
+		ownerRecord:      ownerRecord,
 		ownerRecordField: ownerRecordField,
 		appParts:         r.appParts,
 	}, doneCh)

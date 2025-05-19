@@ -20,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/iblobstoragestg"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/processors"
 )
 
 func getBLOBKeyRead(ctx context.Context, work pipeline.IWorkpiece) (err error) {
@@ -53,7 +54,8 @@ func initResponse(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
 	bw.writer = bw.blobMessageRead.okResponseIniter(
 		coreutils.ContentType, bw.blobState.Descr.MimeType,
-		"Content-Disposition", fmt.Sprintf(`attachment;filename="%s"`, bw.blobState.Descr.Name),
+		"Blob-Name", bw.blobState.Descr.Name,
+		// "Content-Disposition", fmt.Sprintf(`attachment;filename="%s"`, bw.blobState.Descr.Name),
 	)
 	return nil
 }
@@ -112,9 +114,46 @@ func provideReadBLOB(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Con
 	}
 }
 
+func getBLOBIDFromOwner(_ context.Context, work pipeline.IWorkpiece) error {
+	bw := work.(*blobWorkpiece)
+	if !bw.blobMessageRead.isAPIv2 {
+		return nil
+	}
+	req := bus.Request{
+		Method:   http.MethodGet,
+		WSID:     bw.blobMessageRead.wsid,
+		AppQName: bw.blobMessageRead.appQName,
+		Header:   bw.blobMessageRead.header,
+		APIPath:  int(processors.APIPath_Docs),
+		DocID:    istructs.IDType(bw.blobMessageRead.ownerID),
+		QName:    bw.blobMessageRead.ownerRecord,
+		Host:     coreutils.Localhost,
+		IsAPIV2:  true,
+		Body:     []byte(`{}`),
+	}
+	respCh, _, respErr, err := bw.blobMessageRead.requestSender.SendRequest(bw.blobMessageRead.requestCtx, req)
+	if err != nil {
+		return fmt.Errorf("failed to read BLOBID from owner: %w", err)
+	}
+	blobID := istructs.NullRecordID
+	for elem := range respCh {
+		if blobID > 0 {
+			// notest
+			panic("unexpected result reading BLOBID from owner")
+		}
+		blobID = elem.(map[string]interface{})[bw.blobMessageRead.ownerRecordField].(istructs.RecordID)
+	}
+	if *respErr != nil {
+		// notest
+		panic(*respErr)
+	}
+	bw.blobMessageRead.existingBLOBIDOrSUUID = utils.UintToString(blobID)
+	return nil
+}
+
 func getBLOBMessageRead(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
-	bw.blobMessageRead = bw.blobMessage.(*implIBLOBMessage_Read_V1)
+	bw.blobMessageRead = bw.blobMessage.(*implIBLOBMessage_Read)
 	return nil
 }
 
@@ -131,7 +170,7 @@ func (b *catchReadError) DoSync(_ context.Context, work pipeline.IWorkpiece) (er
 		if logger.IsVerbose() {
 			logger.Verbose("blob read error:", sysError.HTTPStatus, ":", sysError.Message)
 		}
-		bw.blobMessageRead.errorResponder(sysError.HTTPStatus, sysError.Message)
+		bw.blobMessageRead.errorResponder(sysError.HTTPStatus, sysError)
 		return nil
 	}
 	return bw.resultErr

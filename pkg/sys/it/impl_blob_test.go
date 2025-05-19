@@ -37,8 +37,12 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	)
 	log.Println(blobID)
 
+	// put the blob into the owner field
+	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocWithBLOB","Blob":%d}}]}`, blobID)
+	ownerID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
 	// read, authorize over headers
-	blobReader := vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID,
+	blobReader := vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", ownerID,
 		coreutils.WithAuthorizeBy(ws.Owner.Token),
 	)
 
@@ -49,7 +53,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	require.Equal(expBLOB, actualBLOBContent)
 
 	// read, authorize over unescaped cookies
-	blobReader = vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID,
+	blobReader = vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", ownerID,
 		coreutils.WithCookies(coreutils.Authorization, "Bearer "+ws.Owner.Token),
 	)
 	actualBLOBContent, err = io.ReadAll(blobReader)
@@ -59,7 +63,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	require.Equal(expBLOB, actualBLOBContent)
 
 	// read, authorize over escaped cookies
-	blobReader = vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID,
+	blobReader = vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", ownerID,
 		coreutils.WithCookies(coreutils.Authorization, "Bearer%20"+ws.Owner.Token),
 	)
 	actualBLOBContent, err = io.ReadAll(blobReader)
@@ -68,9 +72,6 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	require.Equal("test", blobReader.Name)
 	require.Equal(expBLOB, actualBLOBContent)
 
-	// set to the target field
-	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocWithBLOB","Blob":%d}}]}`, blobID)
-	vit.PostWS(ws, "c.sys.CUD", body)
 }
 
 func TestBlobberErrors(t *testing.T) {
@@ -92,7 +93,7 @@ func TestBlobberErrors(t *testing.T) {
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"), // has name+mimeType query params -> any Content-Type except "multipart/form-data" is allowed
 		)
-		vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID, coreutils.Expect403())
+		vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", blobID, coreutils.Expect403())
 	})
 
 	t.Run("403 forbidden on blob size quota exceeded", func(t *testing.T) {
@@ -105,7 +106,7 @@ func TestBlobberErrors(t *testing.T) {
 	})
 
 	t.Run("404 not found on querying an unexsting blob", func(t *testing.T) {
-		vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, 1,
+		vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", 1,
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.Expect404(),
 		)

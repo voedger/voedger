@@ -116,8 +116,25 @@ func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSI
 	return istructs.RecordID(newBLOBID), nil
 }
 
-func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) (res iblobstorage.BLOBReader, err error) {
-	return f.ReadTempBLOB(appQName, wsid, iblobstorage.SUUID(utils.UintToString(blobID)), optFuncs...)
+func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, ownerRecord appdef.QName, ownerRecordField appdef.FieldName, ownerID istructs.RecordID,
+	optFuncs ...coreutils.ReqOptFunc) (res iblobstorage.BLOBReader, err error) {
+	url := fmt.Sprintf(`api/v2/apps/%s/%s/workspaces/%d/docs/%s/%d/blobs/%s`, appQName.Owner(), appQName.Name(), wsid, ownerRecord, ownerID, ownerRecordField)
+	optFuncs = append(optFuncs, coreutils.WithResponseHandler(func(httpResp *http.Response) {}))
+	resp, err := f.get(url, optFuncs...)
+	if err != nil {
+		return res, err
+	}
+	if resp.HTTPResp.StatusCode != http.StatusOK {
+		return iblobstorage.BLOBReader{}, nil
+	}
+	res = iblobstorage.BLOBReader{
+		DescrType: iblobstorage.DescrType{
+			Name:     resp.HTTPResp.Header.Get("Blob-Name"),
+			MimeType: resp.HTTPResp.Header.Get(coreutils.ContentType),
+		},
+		ReadCloser: resp.HTTPResp.Body,
+	}
+	return res, nil
 }
 
 func (f *implIFederation) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...coreutils.ReqOptFunc) (res iblobstorage.BLOBReader, err error) {

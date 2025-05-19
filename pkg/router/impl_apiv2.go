@@ -355,16 +355,6 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.API
 		vars := mux.Vars(req)
 		recordIDStr := vars[URLPlaceholder_id]
 
-		// switch req.Method {
-		// case http.MethodGet:
-		// 	recordIDStr, isSingleDoc := vars[URLPlaceholder_id]
-		// 	isReadCollection := !isSingleDoc
-		// 	_ = isReadCollection
-		// 	_ = recordIDStr
-		// case http.MethodPost:
-		// case http.MethodPatch:
-		// case http.MethodDelete:
-		// }
 		// note: request lead to create -> 201 Created
 		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
 		if !ok {

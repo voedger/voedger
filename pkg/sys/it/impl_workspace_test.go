@@ -285,14 +285,14 @@ func checkDemoAndDemoMinBLOBs(vit *it.VIT, templateName string, ep extensionpoin
 	}
 	rowIdx := 0
 	for _, temp := range blobs {
-		switch temp.RecordID {
+		switch temp.OwnerRawID {
 		// IDs are taken from the actual templates
 		case 1:
 			rowIdx = 0
 		case 2:
 			rowIdx = 1
 		default:
-			vit.T.Fatal(temp.RecordID)
+			vit.T.Fatal(temp.OwnerRawID)
 		}
 		var fieldIdx int
 		if temp.OwnerField == "image" {
@@ -301,7 +301,7 @@ func checkDemoAndDemoMinBLOBs(vit *it.VIT, templateName string, ep extensionpoin
 			fieldIdx = 2
 		}
 		blobID := istructs.RecordID(resp.SectionRow(rowIdx)[fieldIdx].(float64))
-		uploadedBLOB := vit.GetBLOB(istructs.AppQName_test1_app1, wsid, blobID, token)
+		uploadedBLOB := vit.GetBLOB(istructs.AppQName_test1_app1, wsid, temp.OwnerQName, temp.OwnerField, blobID, token)
 		templateBLOB := blobsMap[string(uploadedBLOB.Content)]
 		require.Equal(templateBLOB.Name, uploadedBLOB.Name)
 		require.Equal(templateBLOB.MimeType, uploadedBLOB.MimeType)

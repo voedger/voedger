@@ -426,9 +426,10 @@ func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *cor
 
 // blob ReadCloser must be read out by the test
 // will be closed by the VIT
-func (vit *VIT) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) iblobstorage.BLOBReader {
+func (vit *VIT) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, ownerRecord appdef.QName, ownerRecordField appdef.FieldName, ownerID istructs.RecordID,
+	optFuncs ...coreutils.ReqOptFunc) iblobstorage.BLOBReader {
 	vit.T.Helper()
-	reader, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID, optFuncs...)
+	reader, err := vit.IFederation.ReadBLOB(appQName, wsid, ownerRecord, ownerRecordField, ownerID, optFuncs...)
 	require.NoError(vit.T, err)
 	vit.registerBLOBReaderCleanup(reader)
 	return reader
