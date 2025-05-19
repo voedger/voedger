@@ -31,7 +31,7 @@ func (s *httpService) blobHTTPRequestHandler_Write() http.HandlerFunc {
 			return
 		}
 		if !s.blobRequestHandler.HandleWrite(appQName, wsid, headers, req.Context(), req.URL.Query(),
-			newBLOBOKResponseIniter(resp), req.Body, func(statusCode int, args ...interface{}) {
+			newBLOBOKResponseIniter(resp, http.StatusOK), req.Body, func(statusCode int, args ...interface{}) {
 				WriteTextResponse(resp, fmt.Sprint(args...), statusCode)
 			}, s.requestSender) {
 			resp.WriteHeader(http.StatusServiceUnavailable)
@@ -52,7 +52,7 @@ func (s *httpService) blobHTTPRequestHandler_Read() http.HandlerFunc {
 		vars := mux.Vars(req)
 		existingBLOBIDOrSUID := vars[URLPlaceholder_blobIDOrSUUID]
 		if !s.blobRequestHandler.HandleRead(appQName, wsid, headers, req.Context(),
-			newBLOBOKResponseIniter(resp), func(statusCode int, args ...interface{}) {
+			newBLOBOKResponseIniter(resp, http.StatusOK), func(statusCode int, args ...interface{}) {
 				WriteTextResponse(resp, fmt.Sprint(args...), statusCode)
 			}, existingBLOBIDOrSUID, s.requestSender) {
 			resp.WriteHeader(http.StatusServiceUnavailable)
@@ -94,12 +94,12 @@ func parseURLParams(req *http.Request, resp http.ResponseWriter) (appQName appde
 	return appQName, istructs.WSID(wsidUint), headers, true
 }
 
-func newBLOBOKResponseIniter(r http.ResponseWriter) func(headersKV ...string) io.Writer {
+func newBLOBOKResponseIniter(r http.ResponseWriter, okStatusCode int) func(headersKV ...string) io.Writer {
 	return func(headersKV ...string) io.Writer {
 		for i := 0; i < len(headersKV); i += 2 {
 			r.Header().Set(headersKV[i], headersKV[i+1])
 		}
-		r.WriteHeader(http.StatusOK)
+		r.WriteHeader(okStatusCode)
 		return r
 	}
 }

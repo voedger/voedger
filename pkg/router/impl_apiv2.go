@@ -269,7 +269,7 @@ func requestHandlerV2_blobs_read(blobRequestHandler blobprocessor.IRequestHandle
 			panic(err)
 		}
 		if !blobRequestHandler.HandleRead_V2(appQName, wsid, headers, req.Context(),
-			newBLOBOKResponseIniter(rw), func(statusCode int, args ...interface{}) {
+			newBLOBOKResponseIniter(rw, http.StatusOK), func(statusCode int, args ...interface{}) {
 				replyErr(rw, args[0].(error))
 			}, ownerRecord, ownerRecordField, istructs.RecordID(ownerID), requestSender) {
 			rw.WriteHeader(http.StatusServiceUnavailable)
@@ -289,7 +289,7 @@ func requestHandlerV2_blobs_create(blobRequestHandler blobprocessor.IRequestHand
 		ownerRecord := appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_table])
 		ownerRecordField := vars[URLPlaceholder_field]
 		if !blobRequestHandler.HandleWrite_V2(appQName, wsid, headers, req.Context(),
-			newBLOBOKResponseIniter(rw), req.Body, func(statusCode int, args ...interface{}) {
+			newBLOBOKResponseIniter(rw, http.StatusCreated), req.Body, func(statusCode int, args ...interface{}) {
 				replyErr(rw, args[0].(error))
 			}, requestSender, ownerRecord, ownerRecordField) {
 			rw.WriteHeader(http.StatusServiceUnavailable)

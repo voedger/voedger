@@ -102,7 +102,7 @@ func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSI
 		}
 		return istructs.NullRecordID, funcErr
 	}
-	if resp.HTTPResp.StatusCode != http.StatusOK {
+	if resp.HTTPResp.StatusCode != http.StatusCreated {
 		return istructs.NullRecordID, nil
 	}
 	matches := blobCreateRespRE.FindStringSubmatch(resp.Body)

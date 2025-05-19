@@ -143,7 +143,7 @@ func TestBlobberErrors(t *testing.T) {
 		})
 	})
 
-	t.Run("write: wrong target", func(t *testing.T) {
+	t.Run("write: wrong owner", func(t *testing.T) {
 		t.Run("doc", func(t *testing.T) {
 			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/unknown.doc/blobs/someField", ws.WSID),
 				"blobContent",
