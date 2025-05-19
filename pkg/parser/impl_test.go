@@ -2974,6 +2974,7 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 	// blob
 	b1field := tbl.Field("s9_1")
 	require.Equal(appdef.DataKind_RecordID, b1field.DataKind())
+	require.Implements(t, (*appdef.IRefField)(nil), b1field)
 	b1RefField := b1field.(appdef.IRefField)
 	require.True(b1RefField.Ref(QNameWDocBLOB))
 
