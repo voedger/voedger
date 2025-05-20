@@ -146,7 +146,7 @@ func (g *schemaGenerator) generateComponents() {
 		},
 	}
 
-	// [~server.apiv2.auth/cmp.principalTokenSchema~impl]
+	// [~server.authnz/cmp.principalTokenSchema~impl]
 	schemas[principalTokenSchemaName] = map[string]interface{}{
 		schemaKeyType: schemaTypeObject,
 		schemaKeyProperties: map[string]interface{}{
@@ -335,7 +335,7 @@ func (g *schemaGenerator) genCreateNewDevicePath() {
 }
 
 func (g *schemaGenerator) genAuthLoginPath() {
-	// [~server.apiv2.auth/cmp.provideAuthLoginPath~impl]
+	// [~server.authnz/cmp.provideAuthLoginPath~impl]
 	path := fmt.Sprintf("/api/v2/apps/%s/%s/auth/login", g.getOwner(), g.getApp())
 	parameters := g.generateParameters(path, nil)
 	g.paths[path] = map[string]interface{}{
@@ -374,7 +374,7 @@ func (g *schemaGenerator) genAuthLoginPath() {
 }
 
 func (g *schemaGenerator) genAuthRefreshPath() {
-	// [~server.apiv2.auth/cmp.provideAuthRefreshPath~impl]
+	// [~server.authnz/cmp.provideAuthRefreshPath~impl]
 	path := fmt.Sprintf("/api/v2/apps/%s/%s/auth/refresh", g.getOwner(), g.getApp())
 	parameters := g.generateParameters(path, nil)
 	g.paths[path] = map[string]interface{}{
