@@ -113,18 +113,24 @@ func (s *httpService) registerHandlersV2() {
 		corsHandler(requestHandlerV2_create_device(s.numsAppsWorkspaces, s.federation))).
 		Methods(http.MethodPost).Name("create device")
 
-	// /api/v2/apps/{owner}/{app}/workspaces/{wsid}/docs/{doc}/blobs/{field}
+	// blob create /api/v2/apps/{owner}/{app}/workspaces/{wsid}/docs/{doc}/blobs/{field}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/docs/{%s}.{%s}/blobs/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table, URLPlaceholder_field),
 		corsHandler(requestHandlerV2_blobs_create(s.blobRequestHandler, s.requestSender))).
 		Methods(http.MethodPost).Name("blobs create")
 
-	// GET /api/v2/apps/{owner}/{app}/workspaces/{wsid}/docs/{pkg}.{table}/{id}/blobs/{fieldName}
+	// blob read GET /api/v2/apps/{owner}/{app}/workspaces/{wsid}/docs/{pkg}.{table}/{id}/blobs/{fieldName}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/docs/{%s}.{%s}/{%s}/blobs/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg,
 		URLPlaceholder_table, URLPlaceholder_id, URLPlaceholder_field),
 		corsHandler(requestHandlerV2_blobs_read(s.blobRequestHandler, s.requestSender))).
 		Methods(http.MethodGet).Name("blobs read")
+
+	// temp blob create /api/v2/apps/{owner}/{app}/workspaces/{wsid}/tblobs
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/tblobs",
+		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid),
+		corsHandler(requestHandlerV2_tempblobs_create(s.blobRequestHandler, s.requestSender))).
+		Methods(http.MethodPost).Name("temp blobs create")
 }
 
 func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
@@ -272,6 +278,23 @@ func requestHandlerV2_blobs_read(blobRequestHandler blobprocessor.IRequestHandle
 			newBLOBOKResponseIniter(rw, http.StatusOK), func(statusCode int, args ...interface{}) {
 				replyErr(rw, args[0].(error))
 			}, ownerRecord, ownerRecordField, istructs.RecordID(ownerID), requestSender) {
+			rw.WriteHeader(http.StatusServiceUnavailable)
+			rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
+		}
+	}
+}
+
+func requestHandlerV2_tempblobs_create(blobRequestHandler blobprocessor.IRequestHandler,
+	requestSender bus.IRequestSender) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		appQName, wsid, headers, ok := parseURLParams(req, rw)
+		if !ok {
+			return
+		}
+		if !blobRequestHandler.HandleWriteTemp_V2(appQName, wsid, headers, req.Context(),
+			newBLOBOKResponseIniter(rw, http.StatusCreated), req.Body, func(statusCode int, args ...interface{}) {
+				replyErr(rw, args[0].(error))
+			}, requestSender) {
 			rw.WriteHeader(http.StatusServiceUnavailable)
 			rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
 		}

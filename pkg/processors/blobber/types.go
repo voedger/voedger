@@ -41,6 +41,7 @@ type blobWorkpiece struct {
 	registerFuncName string
 	resultErr        error
 	uploadedSize     uint64
+	registerFuncBody string
 }
 
 type implIBLOBMessage_base struct {

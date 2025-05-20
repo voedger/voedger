@@ -26,6 +26,9 @@ type IRequestHandler interface {
 	HandleWrite_V2(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
 		okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
 		errorResponder ErrorResponder, requestSender bus.IRequestSender, ownerRecord appdef.QName, ownerRecordField string) bool
+	HandleWriteTemp_V2(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
+		okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
+		errorResponder ErrorResponder, requestSender bus.IRequestSender) bool
 	HandleRead_V2(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
 		okResponseIniter func(headersKeyValue ...string) io.Writer,
 		errorResponder ErrorResponder, ownerRecord appdef.QName, ownerRecordField string, ownerID istructs.RecordID,

@@ -23,10 +23,11 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
-func getRegisterFuncName(ctx context.Context, work pipeline.IWorkpiece) (err error) {
+func getRegisterFunc(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
 	if bw.isPersistent() {
 		bw.registerFuncName = "c.sys.UploadBLOBHelper"
+		bw.registerFuncBody = fmt.Sprintf(`{"args":{"OwnerRecord":"%s","OwnerRecordField":"%s"}}`, bw.blobMessageWrite.ownerRecord, bw.blobMessageWrite.ownerRecordField)
 	} else {
 		registerFuncName, ok := durationToRegisterFuncs[bw.duration]
 		if !ok {
@@ -34,6 +35,7 @@ func getRegisterFuncName(ctx context.Context, work pipeline.IWorkpiece) (err err
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "unsupported blob duration value: ", bw.duration)
 		}
 		bw.registerFuncName = registerFuncName
+		bw.registerFuncBody = "{}"
 	}
 	return nil
 }
@@ -109,7 +111,7 @@ func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		AppQName: bw.blobMessageWrite.appQName,
 		Resource: bw.registerFuncName,
 		Header:   bw.blobMessageWrite.header,
-		Body:     fmt.Appendf([]byte{}, `{"args":{"OwnerRecord":"%s","OwnerRecordField":"%s"}}`, bw.blobMessageWrite.ownerRecord, bw.blobMessageWrite.ownerRecordField),
+		Body:     []byte(bw.registerFuncBody),
 		Host:     coreutils.Localhost,
 	}
 	blobHelperMeta, blobHelperResp, err := bus.GetCommandResponse(bw.blobMessageWrite.requestCtx, bw.blobMessageWrite.requestSender, req)
@@ -138,7 +140,8 @@ func parseQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 	if bw.blobMessageWrite.isAPIv2 {
 		bw.nameQuery = append(bw.nameQuery, bw.blobMessageWrite.header["Blob-Name"])
 		bw.mimeTypeQuery = append(bw.mimeTypeQuery, bw.blobMessageWrite.header[coreutils.ContentType])
-		if ttlHeader, ok := bw.blobMessageWrite.header["TTL"]; ok {
+		// camelcased here because textproto.CanonicalMIMEHeaderKey() canonizes TTL to Ttl
+		if ttlHeader, ok := bw.blobMessageWrite.header["Ttl"]; ok {
 			bw.ttl = ttlHeader
 		}
 	} else {
@@ -183,7 +186,7 @@ func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 		bw.duration = duration
 	}
 
-	if bw.blobMessageWrite.isAPIv2 {
+	if bw.blobMessageWrite.isAPIv2 && bw.isPersistent() {
 		appDef, err := bw.blobMessageWrite.appParts.AppDef(bw.blobMessageWrite.appQName)
 		if err != nil {
 			return err

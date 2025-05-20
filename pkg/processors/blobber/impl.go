@@ -32,7 +32,7 @@ func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStora
 				pipeline.WireFunc("parseQueryParams", parseQueryParams),
 				pipeline.WireFunc("parseMediaType", parseMediaType),
 				pipeline.WireFunc("validateQueryParams", validateQueryParams),
-				pipeline.WireFunc("getRegisterFuncName", getRegisterFuncName),
+				pipeline.WireFunc("getRegisterFunc", getRegisterFunc),
 				pipeline.WireSyncOperator("wrapBadRequest", &badRequestWrapper{}),
 				pipeline.WireFunc("registerBLOB", registerBLOB),
 				pipeline.WireFunc("getBLOBKeyWrite", getBLOBKeyWrite),

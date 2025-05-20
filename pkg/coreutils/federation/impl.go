@@ -57,14 +57,14 @@ func (f *implIFederation) req(relativeURL string, body string, optFuncs ...coreu
 func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader, duration iblobstorage.DurationType,
 	optFuncs ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID, err error) {
 	ttl, ok := TemporaryBLOBDurationToURLTTL[duration]
-	if ok {
-		ttl = "&ttl=" + ttl
+	if !ok {
+		return "", fmt.Errorf("unsupported duration: %d", duration)
 	}
-	uploadBLOBURL := fmt.Sprintf("api/v2/apps/%s/%s/workspaces/%d/docs/%s/blobs/%s",
-		appQName.Owner(), appQName.Name(), wsid)
+	uploadBLOBURL := fmt.Sprintf("api/v2/apps/%s/%s/workspaces/%d/tblobs", appQName.Owner(), appQName.Name(), wsid)
 	optFuncs = append(optFuncs, coreutils.WithHeaders(
 		"Blob-Name", blobReader.Name,
 		coreutils.ContentType, blobReader.MimeType,
+		"TTL", ttl,
 	))
 	resp, err := f.postReader(uploadBLOBURL, blobReader, optFuncs...)
 	if err != nil {

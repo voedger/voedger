@@ -94,6 +94,13 @@ func (r *implIRequestHandler) HandleWrite_V2(appQName appdef.AppQName, wsid istr
 	return r.handleWrite(appQName, wsid, header, requestCtx, nil, okResponseIniter, reader, errorResponder, requestSender, true, ownerRecord, ownerRecordField)
 }
 
+func (r *implIRequestHandler) HandleWriteTemp_V2(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
+	okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
+	errorResponder ErrorResponder, requestSender bus.IRequestSender) bool {
+	return r.handleWrite(appQName, wsid, header, requestCtx, nil, okResponseIniter, reader, errorResponder, requestSender, true,
+		appdef.NullQName, appdef.NullName)
+}
+
 func (r *implIRequestHandler) handle(msg any, doneCh <-chan interface{}) bool {
 	if success := r.procbus.Submit(uint(r.chanGroupIdx), 0, msg); !success {
 		return false
