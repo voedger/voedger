@@ -15,6 +15,8 @@ const (
 
 const rootWorkspaceName = appdef.SysWorkspaceName // "Workspace"
 
+var QNameWDocBLOB = appdef.NewQName(appdef.SysPackage, "BLOB")
+
 const ExportedAppsFile = "apps.yaml"
 const ExportedPkgFolder = "pkg"
 

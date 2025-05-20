@@ -14,7 +14,7 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 )
 
-// [~server.apiv2.auth/cmp.authRefreshHandler~impl]
+// [~server.authnz/cmp.authRefreshHandler~impl]
 func authRefreshHandler() apiPathHandler {
 	return apiPathHandler{
 		exec: func(ctx context.Context, qw *queryWork) (err error) {

@@ -289,31 +289,71 @@ func (c *buildContext) grantsAndRevokes() error {
 			if s.Grant != nil {
 				wsb := s.Grant.workspace.mustBuilder(c)
 				comments := s.Grant.GetComments()
+
+				// Handle ALL cases
 				if (s.Grant.AllTablesWithTag != nil && s.Grant.AllTablesWithTag.All) ||
-					(s.Grant.Table != nil && s.Grant.Table.All != nil) ||
 					(s.Grant.AllTables != nil && s.Grant.AllTables.All) {
 					wsb.Grant(grantAllToTableOps, s.Grant.filter(), []appdef.FieldName{}, s.Grant.toRole, comments...)
 					continue
 				}
-				wsb.Grant(s.Grant.ops, s.Grant.filter(), s.Grant.columns, s.Grant.toRole, comments...)
+
+				if s.Grant.Table != nil && s.Grant.Table.All != nil {
+					wsb.Grant(grantAllToTableOps, s.Grant.filter(), s.Grant.Table.All.columns, s.Grant.toRole, comments...)
+					continue
+				}
+
+				if s.Grant.Table != nil && s.Grant.Table.Items != nil {
+					for op, columns := range s.Grant.opColumns {
+						wsb.Grant([]appdef.OperationKind{op}, s.Grant.filter(), columns, s.Grant.toRole, comments...)
+					}
+					continue
+				}
+
+				if s.Grant.View != nil {
+					wsb.Grant(s.Grant.ops, s.Grant.filter(), s.Grant.View.columns, s.Grant.toRole, comments...)
+					continue
+				}
+
+				wsb.Grant(s.Grant.ops, s.Grant.filter(), []appdef.FieldName{}, s.Grant.toRole, comments...)
 			}
 		}
 	}
+
 	revokes := func(stmts []WorkspaceStatement) {
 		for _, s := range stmts {
 			if s.Revoke != nil {
 				wsb := s.Revoke.workspace.mustBuilder(c)
 				comments := s.Revoke.GetComments()
+
+				// Handle ALL cases
 				if (s.Revoke.AllTablesWithTag != nil && s.Revoke.AllTablesWithTag.All) ||
-					(s.Revoke.Table != nil && s.Revoke.Table.All != nil) ||
 					(s.Revoke.AllTables != nil && s.Revoke.AllTables.All) {
 					wsb.Revoke(grantAllToTableOps, s.Revoke.filter(), []appdef.FieldName{}, s.Revoke.toRole, comments...)
 					continue
 				}
-				wsb.Revoke(s.Revoke.ops, s.Revoke.filter(), s.Revoke.columns, s.Revoke.toRole, comments...)
+
+				if s.Revoke.Table != nil && s.Revoke.Table.All != nil {
+					wsb.Revoke(grantAllToTableOps, s.Revoke.filter(), s.Revoke.Table.All.columns, s.Revoke.toRole, comments...)
+					continue
+				}
+
+				if s.Revoke.Table != nil && s.Revoke.Table.Items != nil {
+					for op, columns := range s.Revoke.opColumns {
+						wsb.Revoke([]appdef.OperationKind{op}, s.Revoke.filter(), columns, s.Revoke.toRole, comments...)
+					}
+					continue
+				}
+
+				if s.Revoke.View != nil {
+					wsb.Revoke(s.Revoke.ops, s.Revoke.filter(), s.Revoke.View.columns, s.Revoke.toRole, comments...)
+					continue
+				}
+
+				wsb.Revoke(s.Revoke.ops, s.Revoke.filter(), []appdef.FieldName{}, s.Revoke.toRole, comments...)
 			}
 		}
 	}
+
 	handleWorkspace := func(stmts []WorkspaceStatement) {
 		grants(stmts)
 		revokes(stmts)
@@ -717,6 +757,8 @@ func (c *buildContext) addDataTypeField(field *FieldExpr) {
 			cc = append(cc, constraints.Pattern(field.CheckRegexp.Regexp))
 		}
 		bld.AddField(fieldName, appdef.DataKind_string, field.NotNull, cc...)
+	} else if field.Type.DataType.Blob {
+		bld.AddRefField(fieldName, field.NotNull, QNameWDocBLOB)
 	} else {
 		bld.AddField(fieldName, sysDataKind, field.NotNull)
 	}

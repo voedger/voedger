@@ -2247,7 +2247,7 @@ func TestQueryProcessor2_CDocs(t *testing.T) {
 	})
 }
 
-// [~server.apiv2.auth/it.TestLogin~impl]
+// [~server.authnz/it.TestLogin~impl]
 func TestQueryProcessor2_AuthLogin(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
@@ -2328,7 +2328,7 @@ func TestQueryProcessor2_AuthLogin(t *testing.T) {
 
 }
 
-// [~server.apiv2.auth/it.TestRefresh~impl]
+// [~server.authnz/it.TestRefresh~impl]
 func TestQueryProcessor2_AuthRefresh(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()

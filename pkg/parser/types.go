@@ -676,8 +676,9 @@ type GrantAllTablesAction struct {
 
 type GrantTableAll struct {
 	Pos      lexer.Position
-	GrantAll bool         `parser:"@'ALL'"`
-	Columns  []Identifier `parser:"( '(' @@ (',' @@)* ')' )?"`
+	GrantAll bool               `parser:"@'ALL'"`
+	Columns  []Identifier       `parser:"( '(' @@ (',' @@)* ')' )?"`
+	columns  []appdef.FieldName // filled on the analysis stage
 }
 
 type GrantTableActions struct {
@@ -703,9 +704,10 @@ type GrantAllTables struct {
 
 type GrantView struct {
 	Pos        lexer.Position
-	AllColumns bool         `parser:"(@(SELECT ONVIEW) | "`
-	Columns    []Identifier `parser:"( SELECT '(' @@ (',' @@)* ')' ONVIEW))"`
-	View       DefQName     `parser:"@@"`
+	AllColumns bool               `parser:"(@(SELECT ONVIEW) | "`
+	Columns    []Identifier       `parser:"( SELECT '(' @@ (',' @@)* ')' ONVIEW))"`
+	View       DefQName           `parser:"@@"`
+	columns    []appdef.FieldName // filled on the analysis stage
 }
 
 type GrantOrRevoke struct {
@@ -728,7 +730,8 @@ type GrantOrRevoke struct {
 	/* filled on the analysis stage */
 	toRole    appdef.QName
 	ops       []appdef.OperationKind
-	columns   []appdef.FieldName
+	opColumns map[appdef.OperationKind][]appdef.FieldName
+
 	workspace workspaceAddr
 }
 
