@@ -285,8 +285,7 @@ func requestHandlerV2_blobs_read(blobRequestHandler blobprocessor.IRequestHandle
 			newBLOBOKResponseIniter(rw, http.StatusOK), func(statusCode int, args ...interface{}) {
 				replyErr(rw, args[0].(error))
 			}, ownerRecord, ownerRecordField, istructs.RecordID(ownerID), requestSender) {
-			rw.WriteHeader(http.StatusServiceUnavailable)
-			rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
+			replyServiceUnavailable(rw)
 		}
 	}
 }
@@ -304,8 +303,7 @@ func requestHandlerV2_tempblobs_read(blobRequestHandler blobprocessor.IRequestHa
 			newBLOBOKResponseIniter(rw, http.StatusOK), func(statusCode int, args ...interface{}) {
 				replyErr(rw, args[0].(error))
 			}, requestSender, suuid) {
-			rw.WriteHeader(http.StatusServiceUnavailable)
-			rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
+			replyServiceUnavailable(rw)
 		}
 	}
 }
@@ -321,10 +319,14 @@ func requestHandlerV2_tempblobs_create(blobRequestHandler blobprocessor.IRequest
 			newBLOBOKResponseIniter(rw, http.StatusCreated), req.Body, func(statusCode int, args ...interface{}) {
 				replyErr(rw, args[0].(error))
 			}, requestSender) {
-			rw.WriteHeader(http.StatusServiceUnavailable)
-			rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
+			replyServiceUnavailable(rw)
 		}
 	}
+}
+
+func replyServiceUnavailable(rw http.ResponseWriter,) {
+	rw.WriteHeader(http.StatusServiceUnavailable)
+	rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
 }
 
 func requestHandlerV2_blobs_create(blobRequestHandler blobprocessor.IRequestHandler,
@@ -341,8 +343,7 @@ func requestHandlerV2_blobs_create(blobRequestHandler blobprocessor.IRequestHand
 			newBLOBOKResponseIniter(rw, http.StatusCreated), req.Body, func(statusCode int, args ...interface{}) {
 				replyErr(rw, args[0].(error))
 			}, requestSender, ownerRecord, ownerRecordField) {
-			rw.WriteHeader(http.StatusServiceUnavailable)
-			rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
+			replyServiceUnavailable(rw)
 		}
 	}
 }

@@ -55,7 +55,6 @@ func initResponse(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bw.writer = bw.blobMessageRead.okResponseIniter(
 		coreutils.ContentType, bw.blobState.Descr.MimeType,
 		"Blob-Name", bw.blobState.Descr.Name,
-		// "Content-Disposition", fmt.Sprintf(`attachment;filename="%s"`, bw.blobState.Descr.Name),
 	)
 	return nil
 }

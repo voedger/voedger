@@ -19,7 +19,7 @@ func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStora
 		pipeline.WireSyncOperator("switch", pipeline.SwitchOperator(&blobReadOrWriteSwitch{},
 			pipeline.SwitchBranch(branchReadBLOB, pipeline.NewSyncPipeline(vvmCtx, branchReadBLOB,
 				pipeline.WireFunc("getBLOBMessageRead", getBLOBMessageRead),
-				pipeline.WireFunc("checkAPIv2Owner", getBLOBIDFromOwner),
+				pipeline.WireFunc("getBLOBIDFromOwner", getBLOBIDFromOwner),
 				pipeline.WireFunc("getBLOBKeyRead", getBLOBKeyRead),
 				pipeline.WireFunc("queryBLOBState", provideQueryAndCheckBLOBState(blobStorage)),
 				pipeline.WireFunc("downloadBLOBHelper", downloadBLOBHelper),

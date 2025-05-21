@@ -28,7 +28,8 @@ func getRegisterFunc(ctx context.Context, work pipeline.IWorkpiece) (err error) 
 	bw := work.(*blobWorkpiece)
 	if bw.isPersistent() {
 		bw.registerFuncName = registerPersistentBLOBFuncQName
-		bw.registerFuncBody = fmt.Sprintf(`{"args":{"OwnerRecord":"%s","OwnerRecordField":"%s"}}`, bw.blobMessageWrite.ownerRecord, bw.blobMessageWrite.ownerRecordField)
+		bw.registerFuncBody = fmt.Sprintf(`{"args":{"OwnerRecord":"%s","OwnerRecordField":"%s"}}`, 
+			bw.blobMessageWrite.ownerRecord, bw.blobMessageWrite.ownerRecordField)
 	} else {
 		registerFuncName, ok := durationToRegisterFuncs[bw.duration]
 		if !ok {
@@ -237,27 +238,24 @@ func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 	return nil
 }
 
-func replySuccess_V1(bw *blobWorkpiece) {
+func replySuccess_V1(bw *blobWorkpiece) (err error) {
 	writer := bw.blobMessageWrite.okResponseIniter(coreutils.ContentType, "text/plain")
 	if bw.isPersistent() {
-		_, _ = writer.Write([]byte(utils.UintToString(bw.newBLOBID)))
+		_, err = writer.Write([]byte(utils.UintToString(bw.newBLOBID)))
 	} else {
-		_, _ = writer.Write([]byte(bw.newSUUID))
+		_, err = writer.Write([]byte(bw.newSUUID))
 	}
+	return err
 }
 
-func replySuccess_V2(bw *blobWorkpiece) {
+func replySuccess_V2(bw *blobWorkpiece) (err error) {
 	writer := bw.blobMessageWrite.okResponseIniter(coreutils.ContentType, coreutils.ContentType_ApplicationJSON)
-	var err error
 	if bw.isPersistent() {
 		_, err = fmt.Fprintf(writer, `{"BlobID":%d}`, bw.newBLOBID)
 	} else {
 		_, err = fmt.Fprintf(writer, `{"BlobSUUID":"%s"}`, bw.newSUUID)
 	}
-	if err != nil {
-		// notest
-		logger.Error("failed to send successfult BLOB write repply:", err)
-	}
+	return err
 }
 
 func (b *sendWriteResult) DoSync(_ context.Context, work pipeline.IWorkpiece) (err error) {
@@ -271,11 +269,15 @@ func (b *sendWriteResult) DoSync(_ context.Context, work pipeline.IWorkpiece) (e
 			logger.Verbose("blob write success:", bw.nameQuery, ":", blobIDStr)
 		}
 		if bw.blobMessageWrite.isAPIv2 {
-			replySuccess_V2(bw)
+			err = replySuccess_V2(bw)
 		} else {
-			replySuccess_V1(bw)
+			err = replySuccess_V1(bw)
 		}
-		return nil
+		if err != nil {
+			// notest
+			logger.Error("failed to send successfult BLOB write repply:", err)
+		}
+		return err
 	}
 	var sysError coreutils.SysError
 	errors.As(bw.resultErr, &sysError)
