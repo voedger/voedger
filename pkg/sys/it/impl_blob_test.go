@@ -5,9 +5,13 @@
 package sys_it
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
+	"net/url"
+	"strconv"
 	"testing"
 	"time"
 
@@ -15,6 +19,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -317,6 +322,7 @@ func TestTemporaryBLOBErrors(t *testing.T) {
 }
 
 func TestAPIv1v2BackwardCompatibility(t *testing.T) {
+	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -325,5 +331,29 @@ func TestAPIv1v2BackwardCompatibility(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	// write BLOB using APIv1
-	
+	httpClient, cleanup := coreutils.NewIHTTPClient()
+	defer cleanup()
+	uploadBLOBURL := fmt.Sprintf("%s/blob/test1/app1/%d?name=%s&mimeType=%s", vit.IFederation.URLStr(), ws.WSID,
+		url.QueryEscape("blob-name"), url.QueryEscape(coreutils.ContentType_ApplicationXBinary))
+	resp, err := httpClient.ReqReader(uploadBLOBURL, io.NopCloser(bytes.NewReader(expBLOB)),
+		coreutils.WithMethod(http.MethodPost),
+		coreutils.WithAuthorizeBy(ws.Owner.Token),
+	)
+	require.NoError(err)
+	blobID, err := strconv.ParseUint(resp.Body, utils.DecimalBase, utils.BitSize64)
+	require.NoError(err)
+
+	// put the blob into the owner field
+	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocWithBLOB","Blob":%d}}]}`, blobID)
+	ownerID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+	// the BLOB written via APIv1, should be ok to read via APIv2
+	blobReader := vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", ownerID,
+		coreutils.WithAuthorizeBy(ws.Owner.Token),
+	)
+	actualBLOBContent, err := io.ReadAll(blobReader)
+	require.NoError(err)
+	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.MimeType)
+	require.Equal("blob-name", blobReader.Name)
+	require.Equal(expBLOB, actualBLOBContent)
 }

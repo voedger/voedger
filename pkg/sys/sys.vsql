@@ -360,8 +360,9 @@ ABSTRACT WORKSPACE Workspace (
 	) AS RESULT OF ProjectorChildWorkspaceIdx WITH Tags=(WorkspaceOwnerTableTag);
 
 	TYPE UploadBLOBHelperParams (
-		OwnerRecord qname NOT NULL,
-		OwnerRecordField text NOT NULL
+		-- to be made as NOT NULL after switching to APIv2, see https://github.com/voedger/voedger/issues/3693
+		OwnerRecord qname,
+		OwnerRecordField text
 	);
 
 	EXTENSION ENGINE BUILTIN (
