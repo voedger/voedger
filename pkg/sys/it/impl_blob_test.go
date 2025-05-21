@@ -315,3 +315,15 @@ func TestTemporaryBLOBErrors(t *testing.T) {
 		vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, "unknownSUUIDaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect404())
 	})
 }
+
+func TestAPIv1v2BackwardCompatibility(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	expBLOB := []byte{1, 2, 3, 4, 5}
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	// write BLOB using APIv1
+	
+}
