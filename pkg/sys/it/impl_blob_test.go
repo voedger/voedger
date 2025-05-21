@@ -178,6 +178,7 @@ func TestBlobberErrors(t *testing.T) {
 				coreutils.Expect400("blob owner app1pkg.DocWithBLOB.IntFld must be of blob type"),
 			).Println()
 		})
+
 	})
 
 	t.Run("read: wrong owner", func(t *testing.T) {
@@ -212,6 +213,36 @@ func TestBlobberErrors(t *testing.T) {
 				coreutils.Expect400("owner field app1pkg.DocWithBLOB.IntFld is not of blob type"),
 			)
 		})
+	})
+
+	t.Run("ownerRecordField and actual field differs", func(t *testing.T) {
+		t.Skip("will be implemented later")
+		blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, expBLOB,
+			it.QNameDocWithBLOB, it.Field_Blob,
+			coreutils.WithAuthorizeBy(ws.Owner.Token),
+			coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"), // has name+mimeType query params -> any Content-Type except "multipart/form-data" is allowed
+		)
+		// put the blob into the another field
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocWithBLOB","BlobReadDenied":%d}}]}`, blobID)
+		vit.PostWS(ws, "c.sys.CUD", body)
+	})
+
+	t.Run("read from denied field", func(t *testing.T) {
+		blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, expBLOB,
+			it.QNameDocWithBLOB, it.Field_BlobReadDenied,
+			coreutils.WithAuthorizeBy(ws.Owner.Token),
+			coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"), // has name+mimeType query params -> any Content-Type except "multipart/form-data" is allowed
+		)
+
+		// ok put the blob into the read-denied field
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocWithBLOB","BlobReadDenied":%d}}]}`, blobID)
+		ownerID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+		// 403 on read the BLOB from read-denied field
+		vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "BlobReadDenied", ownerID,
+			coreutils.WithAuthorizeBy(ws.Owner.Token),
+			coreutils.Expect403(),
+		)
 	})
 }
 

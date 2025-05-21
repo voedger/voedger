@@ -464,6 +464,15 @@ var defaultACL = ACL{
 		},
 		policy: appdef.PolicyKind_Deny,
 	},
+	{
+		desc: "revoke select(BlobReadDenied) on app1pkg.DocWithBLOB",
+		pattern: PatternType{
+			opKindsPattern: []appdef.OperationKind{appdef.OperationKind_Select},
+			fieldsPattern:  [][]string{{"BlobReadDenied"}},
+			qNamesPattern:  []appdef.QName{qNameCDocDocWithBLOB},
+		},
+		policy: appdef.PolicyKind_Deny,
+	},
 
 	// SubscriptionProfile
 }

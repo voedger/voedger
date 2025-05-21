@@ -688,7 +688,8 @@ ALTERABLE WORKSPACE test_wsWS (
 
 	TABLE DocWithBLOB INHERITS sys.CDoc (
 		Blob blob,
-		IntFld int32
+		IntFld int32,
+		BlobReadDenied blob
 	);
 
 	EXTENSION ENGINE BUILTIN (
@@ -769,4 +770,5 @@ ALTERABLE WORKSPACE test_wsWS (
 	REVOKE INSERT(FldDenied) ON TABLE DocFieldInsertDenied FROM sys.WorkspaceOwner;
 	REVOKE UPDATE(FldDenied) ON TABLE DocFieldUpdateDenied FROM sys.WorkspaceOwner;
 
+	REVOKE SELECT(BlobReadDenied) ON TABLE DocWithBLOB FROM sys.WorkspaceOwner;
 );

@@ -404,7 +404,6 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.API
 		vars := mux.Vars(req)
 		recordIDStr := vars[URLPlaceholder_id]
 
-		// note: request lead to create -> 201 Created
 		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
 		if !ok {
 			return

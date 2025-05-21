@@ -82,6 +82,9 @@ func provideQueryAndCheckBLOBState(blobStorage iblobstorage.IBLOBStorage) func(c
 
 func downloadBLOBHelper(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
+	if !bw.blobMessageRead.isAPIv2 {
+		return nil
+	}
 	req := bus.Request{
 		Method:   http.MethodGet,
 		WSID:     bw.blobMessageRead.wsid,
@@ -137,7 +140,9 @@ func getBLOBIDFromOwner(_ context.Context, work pipeline.IWorkpiece) (err error)
 		QName:    bw.blobMessageRead.ownerRecord,
 		Host:     coreutils.Localhost,
 		IsAPIV2:  true,
-		Body:     []byte(`{}`),
+		Query: map[string]string{
+			"keys": bw.blobMessageRead.ownerRecordField,
+		},
 	}
 	respCh, _, respErr, err := bw.blobMessageRead.requestSender.SendRequest(bw.blobMessageRead.requestCtx, req)
 	if err != nil {
