@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"mime"
 	"net/http"
 	"net/url"
 	"slices"
@@ -77,10 +76,15 @@ func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs
 		}
 		return "", funcErr
 	}
-	if resp.HTTPResp.StatusCode != http.StatusOK {
+	if resp.HTTPResp.StatusCode != http.StatusOK && resp.HTTPResp.StatusCode != http.StatusCreated {
 		return "", nil
 	}
-	return iblobstorage.SUUID(resp.Body), nil
+	matches := blobCreateTempRespRE.FindStringSubmatch(resp.Body)
+	if len(matches) < 2 {
+		// notest
+		return "", errors.New("wrong blob create response: " + resp.Body)
+	}
+	return iblobstorage.SUUID(matches[1]), nil
 }
 
 func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader,
@@ -105,12 +109,14 @@ func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSI
 	if resp.HTTPResp.StatusCode != http.StatusCreated {
 		return istructs.NullRecordID, nil
 	}
-	matches := blobCreateRespRE.FindStringSubmatch(resp.Body)
+	matches := blobCreatePersistentRespRE.FindStringSubmatch(resp.Body)
 	if len(matches) < 2 {
+		// notest
 		return istructs.NullRecordID, errors.New("wrong blob create response: " + resp.Body)
 	}
 	newBLOBID, err := strconv.ParseUint(matches[1], utils.DecimalBase, utils.BitSize64)
 	if err != nil {
+		// notest
 		return istructs.NullRecordID, fmt.Errorf("failed to parse the received blobID string: %w", err)
 	}
 	return istructs.RecordID(newBLOBID), nil
@@ -138,23 +144,18 @@ func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID,
 }
 
 func (f *implIFederation) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...coreutils.ReqOptFunc) (res iblobstorage.BLOBReader, err error) {
-	url := fmt.Sprintf(`blob/%s/%d/%s`, appQName, wsid, blobSUUID)
+	url := fmt.Sprintf(`api/v2/apps/%s/%s/workspaces/%d/tblobs/%s`, appQName.Owner(), appQName.Name(), wsid, blobSUUID)
 	optFuncs = append(optFuncs, coreutils.WithResponseHandler(func(httpResp *http.Response) {}))
-	resp, err := f.post(url, "", optFuncs...)
+	resp, err := f.get(url, optFuncs...)
 	if err != nil {
 		return res, err
 	}
 	if resp.HTTPResp.StatusCode != http.StatusOK {
 		return iblobstorage.BLOBReader{}, nil
 	}
-	contentDisposition := resp.HTTPResp.Header.Get(coreutils.ContentDisposition)
-	_, params, err := mime.ParseMediaType(contentDisposition)
-	if err != nil {
-		return res, err
-	}
 	res = iblobstorage.BLOBReader{
 		DescrType: iblobstorage.DescrType{
-			Name:     params["filename"],
+			Name:     resp.HTTPResp.Header.Get("Blob-Name"),
 			MimeType: resp.HTTPResp.Header.Get(coreutils.ContentType),
 		},
 		ReadCloser: resp.HTTPResp.Body,

@@ -12,6 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -33,6 +34,9 @@ type IRequestHandler interface {
 		okResponseIniter func(headersKeyValue ...string) io.Writer,
 		errorResponder ErrorResponder, ownerRecord appdef.QName, ownerRecordField string, ownerID istructs.RecordID,
 		requestSender bus.IRequestSender) bool
+	HandleReadTemp_V2(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
+		okResponseIniter func(headersKeyValue ...string) io.Writer,
+		errorResponder ErrorResponder, requestSender bus.IRequestSender, suuid iblobstorage.SUUID) bool
 }
 
 // implemented in e.g. router package

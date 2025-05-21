@@ -21,12 +21,13 @@ import (
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/processors"
 )
 
 func getRegisterFunc(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
 	if bw.isPersistent() {
-		bw.registerFuncName = "c.sys.UploadBLOBHelper"
+		bw.registerFuncName = registerPersistentBLOBFuncQName
 		bw.registerFuncBody = fmt.Sprintf(`{"args":{"OwnerRecord":"%s","OwnerRecordField":"%s"}}`, bw.blobMessageWrite.ownerRecord, bw.blobMessageWrite.ownerRecordField)
 	} else {
 		registerFuncName, ok := durationToRegisterFuncs[bw.duration]
@@ -109,17 +110,19 @@ func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		Method:   http.MethodPost,
 		WSID:     bw.blobMessageWrite.wsid,
 		AppQName: bw.blobMessageWrite.appQName,
-		Resource: bw.registerFuncName,
 		Header:   bw.blobMessageWrite.header,
 		Body:     []byte(bw.registerFuncBody),
 		Host:     coreutils.Localhost,
+		APIPath:  int(processors.APIPath_Commands),
+		QName:    bw.registerFuncName,
+		IsAPIV2:  true,
 	}
 	blobHelperMeta, blobHelperResp, err := bus.GetCommandResponse(bw.blobMessageWrite.requestCtx, bw.blobMessageWrite.requestSender, req)
 	if err != nil {
 		return fmt.Errorf("failed to exec %s: %w", bw.registerFuncName, err)
 	}
 	if blobHelperMeta.StatusCode != http.StatusOK {
-		return coreutils.NewHTTPErrorf(blobHelperMeta.StatusCode, bw.registerFuncName+" returned error: "+blobHelperResp.SysError.Data)
+		return coreutils.NewHTTPErrorf(blobHelperMeta.StatusCode, bw.registerFuncName.String()+" returned error: "+blobHelperResp.SysError.Data)
 	}
 	if bw.isPersistent() {
 		bw.newBLOBID = blobHelperResp.NewIDs["1"]
@@ -243,9 +246,18 @@ func replySuccess_V1(bw *blobWorkpiece) {
 	}
 }
 
-func replySuccess_V2_persistent(bw *blobWorkpiece) {
+func replySuccess_V2(bw *blobWorkpiece) {
 	writer := bw.blobMessageWrite.okResponseIniter(coreutils.ContentType, coreutils.ContentType_ApplicationJSON)
-	fmt.Fprintf(writer, `{"BlobID":%d}`, bw.newBLOBID)
+	var err error
+	if bw.isPersistent() {
+		_, err = fmt.Fprintf(writer, `{"BlobID":%d}`, bw.newBLOBID)
+	} else {
+		_, err = fmt.Fprintf(writer, `{"BlobSUUID":"%s"}`, bw.newSUUID)
+	}
+	if err != nil {
+		// notest
+		logger.Error("failed to send successfult BLOB write repply:", err)
+	}
 }
 
 func (b *sendWriteResult) DoSync(_ context.Context, work pipeline.IWorkpiece) (err error) {
@@ -259,7 +271,7 @@ func (b *sendWriteResult) DoSync(_ context.Context, work pipeline.IWorkpiece) (e
 			logger.Verbose("blob write success:", bw.nameQuery, ":", blobIDStr)
 		}
 		if bw.blobMessageWrite.isAPIv2 {
-			replySuccess_V2_persistent(bw)
+			replySuccess_V2(bw)
 		} else {
 			replySuccess_V1(bw)
 		}

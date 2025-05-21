@@ -83,21 +83,28 @@ func provideQueryAndCheckBLOBState(blobStorage iblobstorage.IBLOBStorage) func(c
 func downloadBLOBHelper(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
 	req := bus.Request{
-		Method:   http.MethodPost,
+		Method:   http.MethodGet,
 		WSID:     bw.blobMessageRead.wsid,
 		AppQName: bw.blobMessageRead.appQName,
-		Resource: "q.sys.DownloadBLOBAuthnz",
 		Header:   bw.blobMessageRead.header,
 		Body:     []byte(`{}`),
 		Host:     coreutils.Localhost,
+		APIPath:  int(processors.APIPath_Queries),
+		IsAPIV2:  true,
+		QName:    downloadPersistentBLOBFuncQName,
 	}
 	respCh, _, respErr, err := bw.blobMessageRead.requestSender.SendRequest(bw.blobMessageRead.requestCtx, req)
 	if err != nil {
 		return fmt.Errorf("failed to exec q.sys.DownloadBLOBAuthnz: %w", err)
 	}
-	for range respCh {
-		// notest
-		panic("unexpeced result of q.sys.DownloadBLOBAuthnz")
+	for elem := range respCh {
+		switch typed := elem.(type) {
+		case error:
+			return typed
+		default:
+			// notest
+			panic(fmt.Sprintf("unexpected result of q.sys.DownloadBLOBAuthnz: %v", elem))
+		}
 	}
 	return *respErr
 }
@@ -116,7 +123,8 @@ func provideReadBLOB(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Con
 
 func getBLOBIDFromOwner(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
-	if !bw.blobMessageRead.isAPIv2 {
+	if !bw.blobMessageRead.isAPIv2 || !bw.isPersistent() {
+		// temp blob in APIv2 -> skip, suuid is already known
 		return nil
 	}
 	req := bus.Request{

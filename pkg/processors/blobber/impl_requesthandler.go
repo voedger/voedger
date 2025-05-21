@@ -12,6 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -54,6 +55,27 @@ func (r *implIRequestHandler) HandleRead_V2(appQName appdef.AppQName, wsid istru
 		ownerRecord:      ownerRecord,
 		ownerRecordField: ownerRecordField,
 		ownerID:          ownerID,
+	}, doneCh)
+
+}
+
+func (r *implIRequestHandler) HandleReadTemp_V2(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
+	okResponseIniter func(headersKeyValue ...string) io.Writer,
+	errorResponder ErrorResponder, requestSender bus.IRequestSender, suuid iblobstorage.SUUID) bool {
+	doneCh := make(chan interface{})
+	return r.handle(&implIBLOBMessage_Read{
+		implIBLOBMessage_base: implIBLOBMessage_base{
+			appQName:         appQName,
+			wsid:             wsid,
+			header:           header,
+			requestCtx:       requestCtx,
+			okResponseIniter: okResponseIniter,
+			errorResponder:   errorResponder,
+			done:             doneCh,
+			requestSender:    requestSender,
+			isAPIv2:          true,
+		},
+		existingBLOBIDOrSUUID: string(suuid),
 	}, doneCh)
 
 }

@@ -38,7 +38,7 @@ type blobWorkpiece struct {
 	blobState        iblobstorage.BLOBState
 	blobKey          iblobstorage.IBLOBKey
 	writer           io.Writer
-	registerFuncName string
+	registerFuncName appdef.QName
 	resultErr        error
 	uploadedSize     uint64
 	registerFuncBody string

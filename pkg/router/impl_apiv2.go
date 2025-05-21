@@ -20,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -131,6 +132,12 @@ func (s *httpService) registerHandlersV2() {
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid),
 		corsHandler(requestHandlerV2_tempblobs_create(s.blobRequestHandler, s.requestSender))).
 		Methods(http.MethodPost).Name("temp blobs create")
+
+	// temp blob read GET /api/v2/apps/{owner}/{app}/workspaces/{wsid}/tblobs/{suuid}
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/tblobs/{%s}",
+		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobIDOrSUUID),
+		corsHandler(requestHandlerV2_tempblobs_read(s.blobRequestHandler, s.requestSender))).
+		Methods(http.MethodGet).Name("temp blobs read")
 }
 
 func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
@@ -278,6 +285,25 @@ func requestHandlerV2_blobs_read(blobRequestHandler blobprocessor.IRequestHandle
 			newBLOBOKResponseIniter(rw, http.StatusOK), func(statusCode int, args ...interface{}) {
 				replyErr(rw, args[0].(error))
 			}, ownerRecord, ownerRecordField, istructs.RecordID(ownerID), requestSender) {
+			rw.WriteHeader(http.StatusServiceUnavailable)
+			rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
+		}
+	}
+}
+
+func requestHandlerV2_tempblobs_read(blobRequestHandler blobprocessor.IRequestHandler,
+	requestSender bus.IRequestSender) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		appQName, wsid, headers, ok := parseURLParams(req, rw)
+		if !ok {
+			return
+		}
+		vars := mux.Vars(req)
+		suuid := iblobstorage.SUUID(vars[URLPlaceholder_blobIDOrSUUID])
+		if !blobRequestHandler.HandleReadTemp_V2(appQName, wsid, headers, req.Context(),
+			newBLOBOKResponseIniter(rw, http.StatusOK), func(statusCode int, args ...interface{}) {
+				replyErr(rw, args[0].(error))
+			}, requestSender, suuid) {
 			rw.WriteHeader(http.StatusServiceUnavailable)
 			rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
 		}
