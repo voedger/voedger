@@ -101,7 +101,6 @@ const (
 	Field_Owner                         = "Owner"                                                 // Deprecated: use sys.Storage_FederationBlob_Field_Owner, sys.Storage_FederationCommand_Field_Owner instead
 	Field_AppName                       = "AppName"                                               // Deprecated: use sys.Storage_FederationBlob_Field_AppName, sys.Storage_FederationCommand_Field_AppName instead
 	Field_ExpectedCodes                 = "ExpectedCodes"                                         // Deprecated: use sys.Storage_FederationBlob_Field_ExpectedCodes, sys.Storage_FederationCommand_Field_ExpectedCodes instead
-	Field_BlobID                        = sys.Storage_FederationBlob_Field_BlobID                 // Deprecated: use sys.Storage_FederationBlob_Field_BlobID instead
 	Field_NewIDs                        = sys.Storage_FederationCommand_Field_NewIDs              // Deprecated: use sys.Storage_FederationCommand_Field_NewIDs instead
 	Field_Result                        = sys.Storage_FederationCommand_Field_Result              // Deprecated: use sys.Storage_FederationCommand_Field_Result instead
 	Field_ErrorMessage                  = sys.Storage_Response_Field_ErrorMessage                 // Deprecated: use sys.Storage_Response_Field_ErrorMessage instead

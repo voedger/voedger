@@ -96,4 +96,6 @@ var errEntityRequiredForValueBuilder = errors.New("entity required for ValueBuil
 var errWorkspaceDescriptorNotFound = errors.New("WorkspaceDescriptor not found in workspace")
 var errDescriptorForUndefinedWorkspace = errors.New("workspace descriptor for undefined workspace")
 var errCommandNotSpecified = errors.New("command not specified")
-var errBlobIDNotSpecified = errors.New("blob ID not specified")
+var errOwnerRecordNotSpecified = errors.New("owner record not specified")
+var errOwnerRecordFieldNotSpecified = errors.New("owner record field not specified")
+var errOwnerIDNotSpecified = errors.New("owner ID not specified")
