@@ -2009,6 +2009,13 @@ func TestQueryProcessor2_Include(t *testing.T) {
 									}`, resp.Body)
 		})
 	})
+
+	t.Run("Expected error https://github.com/voedger/voedger/issues/3696", func(t *testing.T) {
+		vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=Client.Country.Name`, ws.WSID, it.QNameApp1_ViewClients),
+			coreutils.WithAuthorizeBy(ws.Owner.Token),
+			coreutils.Expect400(),
+		)
+	})
 }
 
 func TestQueryProcessor2_Schemas(t *testing.T) {

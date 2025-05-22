@@ -93,7 +93,7 @@ func viewRowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 	if len(qw.queryParams.Constraints.Keys) != 0 {
 		oo = append(oo, pipeline.WireAsyncOperator("Keys", newKeys(qw.queryParams.Constraints.Keys)))
 	}
-	sender := &sender{responder: qw.msg.Responder(), isArrayResponse: true}
+	sender := &sender{responder: qw.msg.Responder(), isArrayResponse: true, rowsProcessorErrCh: qw.rowsProcessorErrCh}
 	oo = append(oo, pipeline.WireAsyncOperator("Sender", sender))
 	qw.rowsProcessor = pipeline.NewAsyncPipeline(ctx, "View rows processor", oo[0], oo[1:]...)
 	qw.responseWriterGetter = func() bus.IResponseWriter {
