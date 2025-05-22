@@ -40,8 +40,8 @@ type TempBLOBKeyType struct {
 type SUUID string
 
 type DescrType struct {
-	Name     string
-	MimeType string
+	Name        string
+	ContentType string
 
 	// empty for temp blobs
 	OwnerQName appdef.QName

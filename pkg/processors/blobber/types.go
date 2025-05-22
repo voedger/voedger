@@ -26,8 +26,8 @@ type blobWorkpiece struct {
 	blobMessageWrite *implIBLOBMessage_Write
 	blobMessageRead  *implIBLOBMessage_Read
 	duration         iblobstorage.DurationType
-	nameQuery        []string
-	mimeTypeQuery    []string
+	blobName         []string
+	blobContentType  []string
 	ttl              string
 	descr            iblobstorage.DescrType
 	mediaType        string

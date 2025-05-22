@@ -384,17 +384,17 @@ func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts .
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
-func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobName string, blobMimeType string, blobContent []byte,
+func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, name string, contentType string, content []byte,
 	ownerRecord appdef.QName, ownerRecordField appdef.FieldName, opts ...coreutils.ReqOptFunc) (blobID istructs.RecordID) {
 	vit.T.Helper()
 	blobReader := iblobstorage.BLOBReader{
 		DescrType: iblobstorage.DescrType{
-			Name:       blobName,
-			MimeType:   blobMimeType,
-			OwnerQName: ownerRecord,
-			OwnerField: ownerRecordField,
+			Name:        name,
+			ContentType: contentType,
+			OwnerQName:  ownerRecord,
+			OwnerField:  ownerRecordField,
 		},
-		ReadCloser: io.NopCloser(bytes.NewReader(blobContent)),
+		ReadCloser: io.NopCloser(bytes.NewReader(content)),
 	}
 
 	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobReader, opts...)
@@ -402,15 +402,15 @@ func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobNam
 	return blobID
 }
 
-func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobName string, blobMimeType string, blobContent []byte, duration iblobstorage.DurationType,
+func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, name string, contentType string, content []byte, duration iblobstorage.DurationType,
 	opts ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID) {
 	vit.T.Helper()
 	blobReader := iblobstorage.BLOBReader{
 		DescrType: iblobstorage.DescrType{
-			Name:     blobName,
-			MimeType: blobMimeType,
+			Name:        name,
+			ContentType: contentType,
 		},
-		ReadCloser: io.NopCloser(bytes.NewReader(blobContent)),
+		ReadCloser: io.NopCloser(bytes.NewReader(content)),
 	}
 	blobSUUID, err := vit.IFederation.UploadTempBLOB(appQName, wsid, blobReader, duration, opts...)
 	require.NoError(vit.T, err)

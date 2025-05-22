@@ -506,8 +506,8 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID
 			}
 			blobs = append(blobs, BLOBWorkspaceTemplateField{
 				DescrType: iblobstorage.DescrType{
-					Name:     ent.Name(),
-					MimeType: filepath.Ext(ent.Name())[1:], // excluding dot
+					Name:        ent.Name(),
+					ContentType: filepath.Ext(ent.Name())[1:], // excluding dot
 				},
 				OwnerQName: ownerQName,
 				OwnerField: fieldName,

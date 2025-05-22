@@ -53,8 +53,8 @@ func getBLOBKeyRead(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 func initResponse(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
 	bw.writer = bw.blobMessageRead.okResponseIniter(
-		coreutils.ContentType, bw.blobState.Descr.MimeType,
-		"Blob-Name", bw.blobState.Descr.Name,
+		coreutils.ContentType, bw.blobState.Descr.ContentType,
+		coreutils.BlobName, bw.blobState.Descr.Name,
 	)
 	return nil
 }

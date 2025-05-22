@@ -54,7 +54,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 
 	actualBLOBContent, err := io.ReadAll(blobReader)
 	require.NoError(err)
-	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.MimeType)
+	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.ContentType)
 	require.Equal("test", blobReader.Name)
 	require.Equal(expBLOB, actualBLOBContent)
 
@@ -64,7 +64,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	)
 	actualBLOBContent, err = io.ReadAll(blobReader)
 	require.NoError(err)
-	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.MimeType)
+	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.ContentType)
 	require.Equal("test", blobReader.Name)
 	require.Equal(expBLOB, actualBLOBContent)
 
@@ -74,7 +74,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	)
 	actualBLOBContent, err = io.ReadAll(blobReader)
 	require.NoError(err)
-	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.MimeType)
+	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.ContentType)
 	require.Equal("test", blobReader.Name)
 	require.Equal(expBLOB, actualBLOBContent)
 
@@ -154,7 +154,7 @@ func TestBlobberErrors(t *testing.T) {
 				"blobContent",
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
 				coreutils.WithHeaders(
-					"Blob-Name", "newBlob",
+					coreutils.BlobName, "newBlob",
 					coreutils.ContentType, coreutils.ContentType_ApplicationXBinary,
 				),
 				coreutils.Expect400("blob owner QName unknown.doc is unknown"),
@@ -165,7 +165,7 @@ func TestBlobberErrors(t *testing.T) {
 				"blobContent",
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
 				coreutils.WithHeaders(
-					"Blob-Name", "newBlob",
+					coreutils.BlobName, "newBlob",
 					coreutils.ContentType, coreutils.ContentType_ApplicationXBinary,
 				),
 				coreutils.Expect400("blob owner field someField does not exist in blob owner app1pkg.DocWithBLOB"),
@@ -177,7 +177,7 @@ func TestBlobberErrors(t *testing.T) {
 				"blob",
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
 				coreutils.WithHeaders(
-					"Blob-Name", "newBlob",
+					coreutils.BlobName, "newBlob",
 					coreutils.ContentType, coreutils.ContentType_ApplicationXBinary,
 				),
 				coreutils.Expect400("blob owner app1pkg.DocWithBLOB.IntFld must be of blob type"),
@@ -271,7 +271,7 @@ func TestBasicUsage_Temporary(t *testing.T) {
 	blobReader := vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, blobSUUID, coreutils.WithAuthorizeBy(ws.Owner.Token))
 	actualBLOBContent, err := io.ReadAll(blobReader)
 	require.NoError(err)
-	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.MimeType)
+	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.ContentType)
 	require.Equal("test", blobReader.Name)
 	require.Equal(expBLOB, actualBLOBContent)
 
@@ -334,7 +334,7 @@ func TestAPIv1v2BackwardCompatibility(t *testing.T) {
 	httpClient, cleanup := coreutils.NewIHTTPClient()
 	defer cleanup()
 	uploadBLOBURL := fmt.Sprintf("%s/blob/test1/app1/%d?name=%s&mimeType=%s", vit.IFederation.URLStr(), ws.WSID,
-		url.QueryEscape("blob-name"), url.QueryEscape(coreutils.ContentType_ApplicationXBinary))
+		url.QueryEscape(coreutils.BlobName), url.QueryEscape(coreutils.ContentType_ApplicationXBinary))
 	resp, err := httpClient.ReqReader(uploadBLOBURL, io.NopCloser(bytes.NewReader(expBLOB)),
 		coreutils.WithMethod(http.MethodPost),
 		coreutils.WithAuthorizeBy(ws.Owner.Token),
@@ -353,7 +353,7 @@ func TestAPIv1v2BackwardCompatibility(t *testing.T) {
 	)
 	actualBLOBContent, err := io.ReadAll(blobReader)
 	require.NoError(err)
-	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.MimeType)
-	require.Equal("blob-name", blobReader.Name)
+	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.ContentType)
+	require.Equal(coreutils.BlobName, blobReader.Name)
 	require.Equal(expBLOB, actualBLOBContent)
 }

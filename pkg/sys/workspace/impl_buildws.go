@@ -72,10 +72,10 @@ func uploadBLOBs(blobs []BLOBWorkspaceTemplateField, fed federation.IFederation,
 		logger.Info("workspace build: uploading blob", blob.Name)
 		blobReader := iblobstorage.BLOBReader{
 			DescrType: iblobstorage.DescrType{
-				Name:       blob.Name,
-				MimeType:   blob.MimeType,
-				OwnerQName: blob.OwnerQName,
-				OwnerField: blob.OwnerField,
+				Name:        blob.Name,
+				ContentType: blob.ContentType,
+				OwnerQName:  blob.OwnerQName,
+				OwnerField:  blob.OwnerField,
 			},
 			ReadCloser: io.NopCloser(bytes.NewReader(blob.Content)),
 		}

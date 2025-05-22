@@ -294,11 +294,11 @@ func checkDemoAndDemoMinBLOBs(vit *it.VIT, templateName string, ep extensionpoin
 		default:
 			vit.T.Fatal(blob.OwnerRawID)
 		}
-		ownerID :=  istructs.RecordID(resp.SectionRow(rowIdx)[0].(float64))
+		ownerID := istructs.RecordID(resp.SectionRow(rowIdx)[0].(float64))
 		uploadedBLOB := vit.GetBLOB(istructs.AppQName_test1_app1, wsid, blob.OwnerQName, blob.OwnerField, ownerID, token)
 		templateBLOB := blobsMap[string(uploadedBLOB.Content)]
 		require.Equal(templateBLOB.Name, uploadedBLOB.Name)
-		require.Equal(templateBLOB.MimeType, uploadedBLOB.MimeType)
+		require.Equal(templateBLOB.ContentType, uploadedBLOB.ContentType)
 		delete(blobsMap, string(uploadedBLOB.Content))
 		rowIdx++
 	}

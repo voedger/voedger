@@ -28,7 +28,7 @@ func getRegisterFunc(ctx context.Context, work pipeline.IWorkpiece) (err error) 
 	bw := work.(*blobWorkpiece)
 	if bw.isPersistent() {
 		bw.registerFuncName = registerPersistentBLOBFuncQName
-		bw.registerFuncBody = fmt.Sprintf(`{"args":{"OwnerRecord":"%s","OwnerRecordField":"%s"}}`, 
+		bw.registerFuncBody = fmt.Sprintf(`{"args":{"OwnerRecord":"%s","OwnerRecordField":"%s"}}`,
 			bw.blobMessageWrite.ownerRecord, bw.blobMessageWrite.ownerRecordField)
 	} else {
 		registerFuncName, ok := durationToRegisterFuncs[bw.duration]
@@ -142,15 +142,15 @@ func getBLOBMessageWrite(_ context.Context, work pipeline.IWorkpiece) error {
 func parseQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
 	if bw.blobMessageWrite.isAPIv2 {
-		bw.nameQuery = append(bw.nameQuery, bw.blobMessageWrite.header["Blob-Name"])
-		bw.mimeTypeQuery = append(bw.mimeTypeQuery, bw.blobMessageWrite.header[coreutils.ContentType])
+		bw.blobName = append(bw.blobName, bw.blobMessageWrite.header[coreutils.BlobName])
+		bw.blobContentType = append(bw.blobContentType, bw.blobMessageWrite.header[coreutils.ContentType])
 		// camelcased here because textproto.CanonicalMIMEHeaderKey() canonizes TTL to Ttl
 		if ttlHeader, ok := bw.blobMessageWrite.header["Ttl"]; ok {
 			bw.ttl = ttlHeader
 		}
 	} else {
-		bw.nameQuery = bw.blobMessageWrite.urlQueryValues["name"]
-		bw.mimeTypeQuery = bw.blobMessageWrite.urlQueryValues["mimeType"]
+		bw.blobName = bw.blobMessageWrite.urlQueryValues["name"]
+		bw.blobContentType = bw.blobMessageWrite.urlQueryValues["mimeType"]
 		if len(bw.blobMessageWrite.urlQueryValues["ttl"]) > 0 {
 			bw.ttl = bw.blobMessageWrite.urlQueryValues["ttl"][0]
 		}
@@ -176,11 +176,11 @@ func parseMediaType(_ context.Context, work pipeline.IWorkpiece) error {
 func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
 
-	if (len(bw.nameQuery) > 0 && len(bw.mimeTypeQuery) == 0) || (len(bw.nameQuery) == 0 && len(bw.mimeTypeQuery) > 0) {
+	if (len(bw.blobName) > 0 && len(bw.blobContentType) == 0) || (len(bw.blobName) == 0 && len(bw.blobContentType) > 0) {
 		return errors.New("both name and mimeType query params must be specified")
 	}
 
-	isSingleBLOB := len(bw.nameQuery) > 0 && len(bw.mimeTypeQuery) > 0
+	isSingleBLOB := len(bw.blobName) > 0 && len(bw.blobContentType) > 0
 
 	if len(bw.ttl) > 0 {
 		duration, ttlSupported := federation.TemporaryBLOB_URLTTLToDurationLs[bw.ttl]
@@ -217,8 +217,8 @@ func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 		if bw.contentType == coreutils.ContentType_MultipartFormData {
 			return fmt.Errorf(`name+mimeType query params and "%s" Content-Type header are mutual exclusive`, coreutils.ContentType_MultipartFormData)
 		}
-		bw.descr.Name = bw.nameQuery[0]
-		bw.descr.MimeType = bw.mimeTypeQuery[0]
+		bw.descr.Name = bw.blobName[0]
+		bw.descr.ContentType = bw.blobContentType[0]
 		return nil
 	}
 
@@ -266,7 +266,7 @@ func (b *sendWriteResult) DoSync(_ context.Context, work pipeline.IWorkpiece) (e
 			if len(blobIDStr) == 0 {
 				blobIDStr = string(bw.newSUUID)
 			}
-			logger.Verbose("blob write success:", bw.nameQuery, ":", blobIDStr)
+			logger.Verbose("blob write success:", bw.blobName, ":", blobIDStr)
 		}
 		if bw.blobMessageWrite.isAPIv2 {
 			err = replySuccess_V2(bw)

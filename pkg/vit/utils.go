@@ -38,9 +38,9 @@ func (vit *VIT) GetBLOB(appQName appdef.AppQName, wsid istructs.WSID, ownerRecor
 	blobContent, err := io.ReadAll(blobReader)
 	require.NoError(vit.T, err)
 	return &BLOB{
-		Content:  blobContent,
-		Name:     blobReader.Name,
-		MimeType: blobReader.MimeType,
+		Content:     blobContent,
+		Name:        blobReader.Name,
+		ContentType: blobReader.ContentType,
 	}
 }
 

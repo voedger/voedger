@@ -80,8 +80,8 @@ func testBasicUsage(t *testing.T, keyGetter func() iblobstorage.IBLOBKey,
 	blobWriter func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, duration iblobstorage.DurationType) (uploadedSize uint64, err error),
 	duration iblobstorage.DurationType) iblobstorage.IBLOBStorage {
 	desc := iblobstorage.DescrType{
-		Name:     "logo.png",
-		MimeType: "image/png",
+		Name:        "logo.png",
+		ContentType: "image/png",
 	}
 
 	key := keyGetter()
@@ -120,7 +120,7 @@ func testBasicUsage(t *testing.T, keyGetter func() iblobstorage.IBLOBKey,
 		bs, err := blobber.QueryBLOBState(ctx, key)
 		require.NoError(err)
 		require.Equal(desc.Name, bs.Descr.Name)
-		require.Equal(desc.MimeType, bs.Descr.MimeType)
+		require.Equal(desc.ContentType, bs.Descr.ContentType)
 		require.Equal(time.Now().UnixMilli(), int64(bs.StartedAt))
 		require.Equal(time.Now().UnixMilli(), int64(bs.FinishedAt))
 		require.EqualValues(len(blob), bs.Size)
@@ -167,8 +167,8 @@ func TestFewBucketsBLOB(t *testing.T) {
 			BlobID:       2,
 		}
 		desc = iblobstorage.DescrType{
-			Name:     "test",
-			MimeType: "image/png",
+			Name:        "test",
+			ContentType: "image/png",
 		}
 	)
 	require := require.New(t)
@@ -217,8 +217,8 @@ func TestQuotaExceed(t *testing.T) {
 			BlobID:       2,
 		}
 		desc = iblobstorage.DescrType{
-			Name:     "logo.png",
-			MimeType: "image/png",
+			Name:        "logo.png",
+			ContentType: "image/png",
 		}
 	)
 	require := require.New(t)
