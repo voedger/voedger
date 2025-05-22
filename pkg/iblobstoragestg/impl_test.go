@@ -113,7 +113,7 @@ func testBasicUsage(t *testing.T, keyGetter func() iblobstorage.IBLOBKey,
 	t.Run("Write blob to storage, return must be without errors", func(t *testing.T) {
 		size, err := blobWriter(blobber, desc, reader, duration)
 		require.NoError(err)
-		require.Equal(len(blob), size)
+		require.EqualValues(len(blob), size)
 	})
 
 	t.Run("Read blob status, return must be without errors", func(t *testing.T) {
@@ -191,7 +191,7 @@ func TestFewBucketsBLOB(t *testing.T) {
 	reader := bytes.NewReader(bigBLOB)
 	size, err := blobber.WriteBLOB(ctx, key, desc, reader, NewWLimiter_Size(iblobstorage.BLOBMaxSizeType(len(bigBLOB))))
 	require.NoError(err)
-	require.Equal(len(bigBLOB), size)
+	require.EqualValues(len(bigBLOB), size)
 
 	var buf bytes.Buffer
 	writer := bufio.NewWriter(&buf)

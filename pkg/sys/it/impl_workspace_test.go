@@ -73,7 +73,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 		require.Equal(istructs.ClusterID(1), ws.WSID.ClusterID())
 
 		t.Run("check the initialized workspace using collection", func(t *testing.T) {
-			body = `{"args":{"Schema":"app1pkg.air_table_plan"},"elements":[{"fields":["sys.ID","image","preview"]}]}`
+			body = `{"args":{"Schema":"app1pkg.air_table_plan"},"elements":[{"fields":["sys.ID"]}]}`
 			resp := vit.PostWS(ws, "q.sys.Collection", body)
 			require.Len(resp.Sections[0].Elements, 2) // from testTemplate
 			appEPs := vit.VVM.AppsExtensionPoints[istructs.AppQName_test1_app1]
@@ -284,24 +284,18 @@ func checkDemoAndDemoMinBLOBs(vit *it.VIT, templateName string, ep extensionpoin
 		blobsMap[string(templateBLOB.Content)] = templateBLOB
 	}
 	rowIdx := 0
-	for _, temp := range blobs {
-		switch temp.OwnerRawID {
+	for _, blob := range blobs {
+		switch blob.OwnerRawID {
 		// IDs are taken from the actual templates
 		case 1:
 			rowIdx = 0
 		case 2:
 			rowIdx = 1
 		default:
-			vit.T.Fatal(temp.OwnerRawID)
+			vit.T.Fatal(blob.OwnerRawID)
 		}
-		var fieldIdx int
-		if temp.OwnerField == "image" {
-			fieldIdx = 1
-		} else {
-			fieldIdx = 2
-		}
-		blobID := istructs.RecordID(resp.SectionRow(rowIdx)[fieldIdx].(float64))
-		uploadedBLOB := vit.GetBLOB(istructs.AppQName_test1_app1, wsid, temp.OwnerQName, temp.OwnerField, blobID, token)
+		ownerID :=  istructs.RecordID(resp.SectionRow(rowIdx)[0].(float64))
+		uploadedBLOB := vit.GetBLOB(istructs.AppQName_test1_app1, wsid, blob.OwnerQName, blob.OwnerField, ownerID, token)
 		templateBLOB := blobsMap[string(uploadedBLOB.Content)]
 		require.Equal(templateBLOB.Name, uploadedBLOB.Name)
 		require.Equal(templateBLOB.MimeType, uploadedBLOB.MimeType)
