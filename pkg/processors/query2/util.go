@@ -162,3 +162,25 @@ func NewIQueryMessage(requestCtx context.Context, appQName appdef.AppQName, wsid
 		headerAccept:   headerAccept,
 	}
 }
+
+func (qw *queryWork) getArraySender() (pipeline.IAsyncOperator, func() bus.IResponseWriter) {
+	res := &arraySender{
+		sender: sender{
+			responder:          qw.msg.Responder(),
+			rowsProcessorErrCh: qw.rowsProcessorErrCh,
+		},
+	}
+	return res, func() bus.IResponseWriter {
+		return res.respWriter
+	}
+}
+
+func (qw *queryWork) getObjectSender() pipeline.IAsyncOperator {
+	return &objectSender{
+		sender: sender{
+			responder:          qw.msg.Responder(),
+			rowsProcessorErrCh: qw.rowsProcessorErrCh,
+		},
+		contentType: coreutils.ContentType_ApplicationJSON,
+	}
+}
