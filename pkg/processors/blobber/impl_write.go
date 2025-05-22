@@ -199,10 +199,6 @@ func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 		if ownerType == appdef.NullType {
 			return fmt.Errorf("blob owner QName %s is unknown", bw.blobMessageWrite.ownerRecord)
 		}
-		if ownerType.Kind() == appdef.TypeKind_ODoc || ownerType.Kind() == appdef.TypeKind_ORecord {
-			может
-			return fmt.Errorf("blob owner cannot be ODoc\\ORecord")
-		}
 		iFields := ownerType.(appdef.IWithFields)
 		ownerField := iFields.Field(bw.blobMessageWrite.ownerRecordField)
 		if ownerField == nil {
