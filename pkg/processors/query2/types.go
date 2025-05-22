@@ -321,20 +321,28 @@ func (a *aggregator) compareUint64(v1, v2 uint64, asc bool) bool {
 type sender struct {
 	pipeline.AsyncNOOP
 	responder          bus.IResponder
-	respWriter         bus.IResponseWriter
-	isArrayResponse    bool
-	contentType        string
 	rowsProcessorErrCh chan error
 }
 
-func (s *sender) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
-	if !s.isArrayResponse {
-		return work, s.responder.Respond(bus.ResponseMeta{ContentType: s.contentType, StatusCode: http.StatusOK}, work.(objectBackedByMap).data)
-	}
+type arraySender struct {
+	sender
+	respWriter bus.IResponseWriter
+}
+
+type objectSender struct {
+	sender
+	contentType string
+}
+
+func (s *arraySender) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
 	if s.respWriter == nil {
 		s.respWriter = s.responder.InitResponse(http.StatusOK)
 	}
 	return work, s.respWriter.Write(work.(objectBackedByMap).data)
+}
+
+func (s *objectSender) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
+	return work, s.responder.Respond(bus.ResponseMeta{ContentType: s.contentType, StatusCode: http.StatusOK}, work.(objectBackedByMap).data)
 }
 func (s *sender) OnError(_ context.Context, err error) {
 	s.rowsProcessorErrCh <- coreutils.WrapSysError(err, http.StatusBadRequest)

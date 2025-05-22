@@ -11,7 +11,6 @@ import (
 	"runtime/debug"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -84,12 +83,10 @@ func queryRowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 	if qw.queryParams.Constraints != nil && len(qw.queryParams.Constraints.Keys) != 0 {
 		oo = append(oo, pipeline.WireAsyncOperator("Keys", newKeys(qw.queryParams.Constraints.Keys)))
 	}
-	sender := &sender{responder: qw.msg.Responder(), isArrayResponse: true}
+	sender, respWriterGetter := qw.getArraySender()
 	oo = append(oo, pipeline.WireAsyncOperator("Sender", sender))
 	qw.rowsProcessor = pipeline.NewAsyncPipeline(ctx, "View rows processor", oo[0], oo[1:]...)
-	qw.responseWriterGetter = func() bus.IResponseWriter {
-		return sender.respWriter
-	}
+	qw.responseWriterGetter = respWriterGetter
 	return
 }
 func queryExec(ctx context.Context, qw *queryWork) (err error) {
