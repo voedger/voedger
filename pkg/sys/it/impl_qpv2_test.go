@@ -156,6 +156,14 @@ func TestQueryProcessor2_Views(t *testing.T) {
 			{"Day":1,"Month":2,"StringValue":"2025-02-01","Year":2025,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"}
 		]}`, expectedOffset), resp.Body)
 	})
+	t.Run("Read by PK and CC with eq", func(t *testing.T) {
+		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025,"Day":1}`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		require.NoError(err)
+		require.JSONEq(fmt.Sprintf(`{"results": [
+			{"Day":1,"Month":1,"StringValue":"2025-01-01","Year":2025,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
+			{"Day":1,"Month":2,"StringValue":"2025-02-01","Year":2025,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"}
+		]}`, expectedOffset), resp.Body)
+	})
 	t.Run("Read by PK and CC with in", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2022,2023]},"Month":{"$in":[2,4]},"Day":{"$in":[3,5]}}`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
