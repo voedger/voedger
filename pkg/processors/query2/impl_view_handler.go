@@ -124,7 +124,11 @@ func viewExec(ctx context.Context, qw *queryWork) (err error) {
 func getKeys(qw *queryWork) (keys []istructs.IKeyBuilder, err error) {
 	fields := qw.appStructs.AppDef().Type(qw.iView.QName()).(appdef.IView).Key().Fields()
 	values := make([][]interface{}, 0, len(fields))
+	partialKey := false
 	for i, field := range fields {
+		if partialKey {
+			continue
+		}
 		switch field.DataKind() {
 		case appdef.DataKind_int32:
 			vv, err := qw.queryParams.Constraints.Where.getAsInt32(field.Name())
@@ -132,6 +136,7 @@ func getKeys(qw *queryWork) (keys []istructs.IKeyBuilder, err error) {
 				return nil, err
 			}
 			if vv == nil {
+				partialKey = true
 				continue
 			}
 			values = append(values, make([]interface{}, 0))
