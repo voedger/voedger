@@ -24,6 +24,7 @@ func provideCmdInitiateInvitationByEMail(sr istructsmem.IStatelessResources, tim
 }
 
 // called in the workspace that we're inviting to.
+// [~server.invites.invite/c.sys.Workspace.InitiateInvitationByEMail~impl]
 func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		if !coreutils.IsValidEmailTemplate(args.ArgumentObject.AsString(field_EmailTemplate)) {
@@ -31,10 +32,12 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 		}
 
 		login := args.ArgumentObject.AsString(field_Email)
-		subjectExists, actualLogin, existingSubjectID, err := SubjectExistByBothLogins(login, args.State) // for backward compatibility
-		if err != nil {
-			return
-		}
+		// do not check the login from token for existense in subjects, see https://github.com/voedger/voedger/issues/3698
+		loginFromToken, existingSubjectID, err := SubjectExistsByLoginFromToken(args.State)
+		loginFromSubject, existingSubjectID, loginFromToken, err := SubjectExistByBothLogins(login, args.State) // for backward compatibility
+		// if err != nil {
+		// 	return
+		// }
 
 		if err := coreutils.ValidateEMail(login); err != nil {
 			return err
@@ -62,9 +65,9 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 				return err
 			}
 
-			if subjectExists && !reInviteAllowedForState[svCDocInvite.AsInt32(field_State)] {
+			if existingSubjectID > 0 && !reInviteAllowedForState[svCDocInvite.AsInt32(field_State)] {
 				// If Subject exists by token.Login and state is not ToBeInvited and not Invited -> subject already exists error
-				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf(`%w cdoc.sys.Subject.%d by login "%s"`, ErrSubjectAlreadyExists, existingSubjectID, actualLogin))
+				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf(`%w cdoc.sys.Subject.%d by login "%s"`, ErrSubjectAlreadyExists, existingSubjectID, loginFromSubject))
 			}
 
 			if !isValidInviteState(svCDocInvite.AsInt32(field_State), qNameCmdInitiateInvitationByEMail) {
@@ -79,7 +82,7 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 			svbCDocInvite.PutInt64(field_ExpireDatetime, args.ArgumentObject.AsInt64(field_ExpireDatetime))
 			svbCDocInvite.PutInt32(field_State, State_ToBeInvited)
 			svbCDocInvite.PutInt64(field_Updated, tm.Now().UnixMilli())
-			svbCDocInvite.PutString(field_ActualLogin, actualLogin)
+			svbCDocInvite.PutString(field_ActualLogin, loginFromToken)
 
 			return nil
 		}
@@ -101,7 +104,7 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 		svbCDocInvite.PutInt64(field_Created, now)
 		svbCDocInvite.PutInt64(field_Updated, now)
 		svbCDocInvite.PutInt32(field_State, State_ToBeInvited)
-		svbCDocInvite.PutString(field_ActualLogin, actualLogin)
+		svbCDocInvite.PutString(field_ActualLogin, loginFromToken)
 
 		return
 	}

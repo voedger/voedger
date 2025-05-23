@@ -380,3 +380,38 @@ func TestWrongEmail(t *testing.T) {
 		vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body, coreutils.Expect400()).Println()
 	}
 }
+
+func TestResendInvitation(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	wsName := "TestResendInvitation" + vit.NextName()
+	wsParams := it.SimpleWSParams(wsName)
+	expireDatetime := vit.Now().UnixMilli()
+
+	email := fmt.Sprintf("testinvite_basicusage_%d@123.com", vit.NextNumber())
+	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
+	ws := vit.CreateWorkspace(wsParams, prn)
+
+	// send invitation
+	inviteID := InitiateInvitationByEMail(vit, ws, expireDatetime, email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+	sendEmail1 := vit.CaptureEmail()
+	sentEmail1Data := strings.Split(sendEmail1.Body, ";")
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+	// resend invitation
+	// InitiateInvitationByEMail will return 0 because no new docs created
+	InitiateInvitationByEMail(vit, ws, expireDatetime, email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+	sendEmail2 := vit.CaptureEmail()
+	sentEmail2Data := strings.Split(sendEmail2.Body, ";")
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+	require.Len(sentEmail1Data, len(sentEmail2Data))
+	verificationCode1 := sentEmail1Data[0]
+	verificationCode2 := sentEmail2Data[0]
+	require.NotEqual(verificationCode1, verificationCode2)
+	require.Equal(sentEmail1Data[1], sentEmail2Data[1])
+	require.Equal(sentEmail1Data[2], sentEmail2Data[2])
+	require.Equal(sentEmail1Data[3], sentEmail2Data[3])
+	require.Equal(sentEmail1Data[4], sentEmail2Data[4])
+}

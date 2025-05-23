@@ -80,33 +80,52 @@ func GetSubjectIdxViewKeyBuilder(login string, s istructs.IState) (istructs.ISta
 		// notest
 		return nil, err
 	}
-	skbViewSubjectsIdx.PutInt64(Field_LoginHash, coreutils.HashBytes([]byte(login)))
+	skbViewSubjectsIdx.PutInt64(Field_LoginHash, coreutils.LoginHash(login))
 	skbViewSubjectsIdx.PutString(Field_Login, login)
 	return skbViewSubjectsIdx, nil
 }
 
-// checks cdoc.sys.SubjectIdx existence by login as cdoc.sys.Invite.EMail and as token.Login
-func SubjectExistByBothLogins(login string, st istructs.IState) (ok bool, actualLogin string, existingSubjectID istructs.RecordID, _ error) {
-	subjectExists, exisingSubjectID, err := SubjectExistsByLogin(login, st) // for backward compatibility
-	if err != nil {
-		return false, "", 0, err
-	}
+func SubjectExistsByLoginFromToken(st istructs.IState) (loginFromToken string, existingSubjectID istructs.RecordID, err error) {
 	skbPrincipal, err := st.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
 	if err != nil {
-		return false, "", 0, err
+		return "", 0, err
 	}
 	svPrincipal, err := st.MustExist(skbPrincipal)
 	if err != nil {
 		return
 	}
-	actualLogin = svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name)
-	if !subjectExists {
-		subjectExists, exisingSubjectID, err = SubjectExistsByLogin(actualLogin, st)
-		if err != nil {
-			return false, "", 0, err
-		}
+	loginFromToken = svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name)
+	_, existingSubjectID, err = SubjectExistsByLogin(loginFromToken, st)
+	return loginFromToken, existingSubjectID, err
+}
+
+// checks cdoc.sys.SubjectIdx existence by login as cdoc.sys.Invite.EMail and as token.Login
+func SubjectExistByBothLogins(login string, st istructs.IState) (loginFromSubject string, existingSubjectID istructs.RecordID, loginFromToken string, err error) {
+	subjectExists, exisingSubjectID, err := SubjectExistsByLogin(login, st) // for backward compatibility
+	if err != nil {
+		return "", 0, "", err
 	}
-	return subjectExists, actualLogin, exisingSubjectID, nil
+	skbPrincipal, err := st.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
+	if err != nil {
+		return "", 0, "", err
+	}
+	svPrincipal, err := st.MustExist(skbPrincipal)
+	if err != nil {
+		return
+	}
+	loginFromToken = svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name)
+	if !subjectExists {
+		subjectExists, exisingSubjectID, err = SubjectExistsByLogin(loginFromToken, st)
+		if err != nil {
+			return "", 0, "", err
+		}
+		if subjectExists {
+			loginFromSubject = loginFromToken
+		}
+	} else {
+		loginFromSubject = login
+	}
+	return loginFromSubject, exisingSubjectID, loginFromToken, nil
 
 }
 
