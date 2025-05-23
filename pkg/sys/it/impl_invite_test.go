@@ -34,6 +34,7 @@ var (
 )
 
 // impossible to use the test workspace again with the same login due of invite error `subject already exists`
+// [~server.invites.invite/it~impl]
 func TestInvite_BasicUsage(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)

@@ -85,63 +85,27 @@ func GetSubjectIdxViewKeyBuilder(login string, s istructs.IState) (istructs.ISta
 	return skbViewSubjectsIdx, nil
 }
 
-func SubjectExistsByLoginFromToken(st istructs.IState) (loginFromToken string, existingSubjectID istructs.RecordID, err error) {
+func LoginFromToken(st istructs.IState) (loginFromToken string, err error) {
 	skbPrincipal, err := st.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
 	if err != nil {
-		return "", 0, err
+		return "", err
 	}
 	svPrincipal, err := st.MustExist(skbPrincipal)
 	if err != nil {
-		return
+		return "", err
 	}
-	loginFromToken = svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name)
-	_, existingSubjectID, err = SubjectExistsByLogin(loginFromToken, st)
-	return loginFromToken, existingSubjectID, err
+	return svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name), nil
 }
 
-// checks cdoc.sys.SubjectIdx existence by login as cdoc.sys.Invite.EMail and as token.Login
-func SubjectExistByBothLogins(login string, st istructs.IState) (loginFromSubject string, existingSubjectID istructs.RecordID, loginFromToken string, err error) {
-	subjectExists, exisingSubjectID, err := SubjectExistsByLogin(login, st) // for backward compatibility
-	if err != nil {
-		return "", 0, "", err
-	}
-	skbPrincipal, err := st.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
-	if err != nil {
-		return "", 0, "", err
-	}
-	svPrincipal, err := st.MustExist(skbPrincipal)
-	if err != nil {
-		return
-	}
-	loginFromToken = svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name)
-	if !subjectExists {
-		subjectExists, exisingSubjectID, err = SubjectExistsByLogin(loginFromToken, st)
-		if err != nil {
-			return "", 0, "", err
-		}
-		if subjectExists {
-			loginFromSubject = loginFromToken
-		}
-	} else {
-		loginFromSubject = login
-	}
-	return loginFromSubject, exisingSubjectID, loginFromToken, nil
-
-}
-
-func SubjectExistsByLogin(login string, state istructs.IState) (ok bool, existingSubjectID istructs.RecordID, _ error) {
+func SubjectExistsByLogin(login string, state istructs.IState) (existingSubjectID istructs.RecordID, err error) {
 	skbViewSubjectsIdx, err := GetSubjectIdxViewKeyBuilder(login, state)
 	if err != nil {
 		// notest
-		return false, 0, err
+		return 0, err
 	}
 	val, ok, err := state.CanExist(skbViewSubjectsIdx)
-	if err != nil {
-		// notest
-		return false, 0, err
-	}
 	if ok {
 		existingSubjectID = val.AsRecordID("SubjectID")
 	}
-	return ok, existingSubjectID, nil
+	return existingSubjectID, err
 }

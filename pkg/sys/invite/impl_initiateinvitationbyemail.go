@@ -31,15 +31,16 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)
 		}
 
-		login := args.ArgumentObject.AsString(field_Email)
-		// do not check the login from token for existense in subjects, see https://github.com/voedger/voedger/issues/3698
-		loginFromToken, existingSubjectID, err := SubjectExistsByLoginFromToken(args.State)
-		loginFromSubject, existingSubjectID, loginFromToken, err := SubjectExistByBothLogins(login, args.State) // for backward compatibility
-		// if err != nil {
-		// 	return
-		// }
+		cmdInitiate_ArgEmail := args.ArgumentObject.AsString(field_Email)
+		// do not check if the login from token exists in subjects, see https://github.com/voedger/voedger/issues/3698
+		existingSubjectID, err := SubjectExistsByLogin(cmdInitiate_ArgEmail, args.State)
+		// loginFromToken, existingSubjectID, err := SubjectExistsByLoginFromToken(args.State)
+		// loginFromSubject, existingSubjectID, loginFromToken, err := SubjectExistByBothLogins(login, args.State) // for backward compatibility
+		if err != nil {
+			return
+		}
 
-		if err := coreutils.ValidateEMail(login); err != nil {
+		if err := coreutils.ValidateEMail(cmdInitiate_ArgEmail); err != nil {
 			return err
 		}
 
@@ -54,6 +55,12 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 			return
 		}
 
+		loginFromToken, err := LoginFromToken(args.State)
+		if err != nil {
+			// notest
+			return err
+		}
+
 		if ok {
 			skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
 			if err != nil {
@@ -65,9 +72,11 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 				return err
 			}
 
-			if existingSubjectID > 0 && !reInviteAllowedForState[svCDocInvite.AsInt32(field_State)] {
-				// If Subject exists by token.Login and state is not ToBeInvited and not Invited -> subject already exists error
-				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf(`%w cdoc.sys.Subject.%d by login "%s"`, ErrSubjectAlreadyExists, existingSubjectID, loginFromSubject))
+			inviteState := State(svCDocInvite.AsInt32(field_State))
+			if existingSubjectID > 0 && !reInviteAllowedForState[inviteState] {
+				// If Subject exists by c.sys.InitiateInvitationByEmail.Email and it is denied to re-invite from the current state -> subject already exists error
+				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf(`re-invite is not allowed for state %s`, inviteState))
+				// return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf(`%w cdoc.sys.Subject.%d by login "%s"`, ErrSubjectAlreadyExists, existingSubjectID, cmdInitiate_ArgEmail))
 			}
 
 			if !isValidInviteState(svCDocInvite.AsInt32(field_State), qNameCmdInitiateInvitationByEMail) {
@@ -80,9 +89,13 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 			}
 			svbCDocInvite.PutString(Field_Roles, args.ArgumentObject.AsString(Field_Roles))
 			svbCDocInvite.PutInt64(field_ExpireDatetime, args.ArgumentObject.AsInt64(field_ExpireDatetime))
-			svbCDocInvite.PutInt32(field_State, State_ToBeInvited)
+			svbCDocInvite.PutInt32(field_State, int32(State_ToBeInvited))
 			svbCDocInvite.PutInt64(field_Updated, tm.Now().UnixMilli())
-			svbCDocInvite.PutString(field_ActualLogin, loginFromToken)
+
+			{
+				// TODO: for what we're storing the inviter's login?
+				svbCDocInvite.PutString(field_ActualLogin, loginFromToken)
+			}
 
 			return nil
 		}
@@ -103,8 +116,12 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 		svbCDocInvite.PutInt64(field_ExpireDatetime, args.ArgumentObject.AsInt64(field_ExpireDatetime))
 		svbCDocInvite.PutInt64(field_Created, now)
 		svbCDocInvite.PutInt64(field_Updated, now)
-		svbCDocInvite.PutInt32(field_State, State_ToBeInvited)
-		svbCDocInvite.PutString(field_ActualLogin, loginFromToken)
+		svbCDocInvite.PutInt32(field_State, int32(State_ToBeInvited))
+
+		{
+			// TODO: for what we're storing the inviter's login?
+			svbCDocInvite.PutString(field_ActualLogin, loginFromToken)
+		}
 
 		return
 	}
