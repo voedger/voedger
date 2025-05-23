@@ -8,13 +8,12 @@ package blobprocessor
 import (
 	"context"
 
-	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
 func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStorage,
-	wLimiterFactory WLimiterFactory, federation federation.IFederation) pipeline.ISyncPipeline {
+	wLimiterFactory WLimiterFactory) pipeline.ISyncPipeline {
 	return pipeline.NewSyncPipeline(vvmCtx, "blob processor",
 		pipeline.WireSyncOperator("switch", pipeline.SwitchOperator(&blobReadOrWriteSwitch{},
 			pipeline.SwitchBranch(branchReadBLOB, pipeline.NewSyncPipeline(vvmCtx, branchReadBLOB,
@@ -38,7 +37,7 @@ func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStora
 				pipeline.WireFunc("getBLOBKeyWrite", getBLOBKeyWrite),
 				pipeline.WireFunc("writeBLOB", provideWriteBLOB(blobStorage, wLimiterFactory)),
 				pipeline.WireFunc("setBLOBStatusCompleted", setBLOBStatusCompleted),
-				pipeline.WireSyncOperator("sendResult", &sendWriteResult{federation: federation}),
+				pipeline.WireSyncOperator("sendResult", &sendWriteResult{}),
 			)),
 		)),
 	)

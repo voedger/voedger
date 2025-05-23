@@ -8,7 +8,11 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-const fldStatus = "status"
+const (
+	fldStatus           = "status"
+	fldOwnerRecord      = "OwnerRecord"
+	fldOwnerRecordField = "OwnerRecordField"
+)
 
 var (
 	QNameCommandUploadBLOBHelper = appdef.NewQName(appdef.SysPackage, "UploadBLOBHelper")

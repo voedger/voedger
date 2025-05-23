@@ -12,11 +12,20 @@ import (
 	"github.com/voedger/voedger/pkg/sys"
 )
 
-func ProvideBlobberCmds(sr istructsmem.IStatelessResources) {
+func ProvideBlobberCmds(sr istructsmem.IStatelessResources, cfg *istructsmem.AppConfigType) {
 	provideUploadBLOBHelperCmd(sr)
 	provideDownloadBLOBHelperCmd(sr)
 	provideDownloadBLOBAuthnzQry(sr)
 	provideRegisterTempBLOB(sr)
+	cfg.AddCUDValidators(istructs.CUDValidator{
+		Match: func(cud istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) bool {
+			cud.SpecifiedValues(func(i appdef.IField, a any) bool {
+				t := i.Data().App().Type(i.Data().QName())
+				c := t.(appdef.IWithContainers)
+				c.Container("").QName() == 
+			})
+		},
+	})
 }
 
 func provideDownloadBLOBAuthnzQry(sr istructsmem.IStatelessResources) {
@@ -52,6 +61,8 @@ func ubhExec(args istructs.ExecCommandArgs) (err error) {
 	}
 	vb.PutRecordID(appdef.SystemField_ID, 1)
 	vb.PutInt32(fldStatus, int32(iblobstorage.BLOBStatus_Unknown))
+	vb.PutQName(fldOwnerRecord, args.ArgumentObject.AsQName(fldOwnerRecord))
+	vb.PutString(fldOwnerRecordField, args.ArgumentObject.AsString(fldOwnerRecordField))
 	return nil
 }
 

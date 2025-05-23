@@ -13,7 +13,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/bus"
-	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -89,7 +88,6 @@ type badRequestWrapper struct {
 
 type sendWriteResult struct {
 	pipeline.NOOP
-	federation federation.IFederation
 }
 
 type catchReadError struct {

@@ -47,6 +47,11 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocWithBLOB","Blob":%d}}]}`, blobID)
 	ownerID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
+	// check wdoc.sys.BLOB
+	res := vit.SqlQuery(ws, "select * from sys.BLOB.%d", blobID)
+	require.Equal(it.QNameDocWithBLOB.String(), res["OwnerRecord"].(string))
+	require.Equal("Blob", res["OwnerRecordField"].(string))
+
 	// read, authorize over headers
 	blobReader := vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", ownerID,
 		coreutils.WithAuthorizeBy(ws.Owner.Token),
