@@ -123,6 +123,11 @@ func (ws Workspace) UsedWorkspaces() []appdef.IWorkspace {
 	return ws.usedWS.AsArray()
 }
 
+// Validates workspace, include all workspace types and ACL rules.
+//
+// # Error if:
+//   - workspace is not abstract and descriptor is missing. Abstract workspaces can be without descriptors
+//   - workspace descriptor is abstract and workspace is not
 func (ws *Workspace) Validate() (err error) {
 	for _, t := range ws.LocalTypes() {
 		if t, ok := t.(interface{ Validate() error }); ok {
@@ -132,8 +137,13 @@ func (ws *Workspace) Validate() (err error) {
 
 	err = errors.Join(err, ws.ValidateACL())
 
-	if (ws.desc != nil) && ws.desc.Abstract() && !ws.Abstract() {
-		err = errors.Join(err, appdef.ErrIncompatible("%v should be abstract because descriptor %v is abstract", ws, ws.desc))
+	if !ws.Abstract() {
+		if ws.desc == nil {
+			// #3656 WS desc must exists
+			err = errors.Join(err, appdef.ErrMissed("%v descriptor", ws))
+		} else if ws.desc.Abstract() {
+			err = errors.Join(err, appdef.ErrIncompatible("%v should be abstract because descriptor %v is abstract", ws, ws.desc))
+		}
 	}
 	return err
 }

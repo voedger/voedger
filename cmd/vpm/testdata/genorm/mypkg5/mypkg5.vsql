@@ -4,6 +4,7 @@
 IMPORT SCHEMA 'mypkg1';
 
 WORKSPACE MyWorkspace2 INHERITS mypkg1.MyWorkspace1(
+    DESCRIPTOR MyWorkspace2Descriptor();
     TABLE MyTable2 INHERITS sys.CDoc(
         Field3 varchar,
         Field4 int32

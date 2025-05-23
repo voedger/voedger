@@ -31,6 +31,7 @@ func ExampleProjectors() {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		appdef.SetEmptyWSDesc(wsb)
 
 		wsb.AddCRecord(recName).SetComment("record is trigger for projector")
 		wsb.AddCDoc(docName).SetComment("doc is state for projector")

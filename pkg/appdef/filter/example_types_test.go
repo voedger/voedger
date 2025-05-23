@@ -28,9 +28,11 @@ func ExampleTypes() {
 		wsb := adb.AddWorkspace(wsName)
 
 		wsb.AddTag(tag)
-		_ = wsb.AddODoc(doc)
+		_ = wsb.AddCDoc(doc)
 		wsb.AddObject(obj).SetTag(tag)
 		_ = wsb.AddCommand(cmd)
+
+		wsb.SetDescriptor(doc)
 
 		return adb.MustBuild()
 	}()
@@ -51,20 +53,20 @@ func ExampleTypes() {
 		fmt.Println()
 	}
 
-	example(filter.Types(appdef.TypeKind_ODoc, appdef.TypeKind_Object))
+	example(filter.Types(appdef.TypeKind_CDoc, appdef.TypeKind_Object))
 	example(filter.Types(appdef.TypeKind_Query))
 
 	// Output:
 	// This example demonstrates how to work with the Types filter
 	//
-	// TYPES(ODoc, Object)
+	// TYPES(CDoc, Object)
 	// - kind: FilterKind_Types
 	// - type kinds:
-	//   * TypeKind_ODoc
+	//   * TypeKind_CDoc
 	//   * TypeKind_Object
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
-	//   * ODoc «test.doc» is matched: true
+	//   * CDoc «test.doc» is matched: true
 	//   * Object «test.object» is matched: true
 	//   * Tag «test.tag» is matched: false
 	//
@@ -74,7 +76,7 @@ func ExampleTypes() {
 	//   * TypeKind_Query
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
-	//   * ODoc «test.doc» is matched: false
+	//   * CDoc «test.doc» is matched: false
 	//   * Object «test.object» is matched: false
 	//   * Tag «test.tag» is matched: false
 }
@@ -94,9 +96,11 @@ func ExampleWSTypes() {
 		wsb := adb.AddWorkspace(wsName)
 
 		wsb.AddTag(tag)
-		_ = wsb.AddODoc(doc)
+		_ = wsb.AddCDoc(doc)
 		wsb.AddObject(obj).SetTag(tag)
 		_ = wsb.AddCommand(cmd)
+
+		wsb.SetDescriptor(doc)
 
 		return adb.MustBuild()
 	}()
@@ -117,20 +121,20 @@ func ExampleWSTypes() {
 		fmt.Println()
 	}
 
-	example(filter.WSTypes(wsName, appdef.TypeKind_ODoc, appdef.TypeKind_Object))
+	example(filter.WSTypes(wsName, appdef.TypeKind_CDoc, appdef.TypeKind_Object))
 	example(filter.WSTypes(wsName, appdef.TypeKind_Query))
 
 	// Output:
 	// This example demonstrates how to work with the WSTypes filter
 	//
-	// TYPES(ODoc, Object) FROM test.workspace
+	// TYPES(CDoc, Object) FROM test.workspace
 	// - kind: FilterKind_Types
 	// - type kinds:
-	//   * TypeKind_ODoc
+	//   * TypeKind_CDoc
 	//   * TypeKind_Object
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
-	//   * ODoc «test.doc» is matched: true
+	//   * CDoc «test.doc» is matched: true
 	//   * Object «test.object» is matched: true
 	//   * Tag «test.tag» is matched: false
 	//
@@ -140,7 +144,7 @@ func ExampleWSTypes() {
 	//   * TypeKind_Query
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
-	//   * ODoc «test.doc» is matched: false
+	//   * CDoc «test.doc» is matched: false
 	//   * Object «test.object» is matched: false
 	//   * Tag «test.tag» is matched: false
 }
@@ -160,15 +164,17 @@ func ExampleAllTables() {
 
 		wsb1 := adb.AddWorkspace(ws1)
 		wsb1.SetAbstract()
-		_ = wsb1.AddODoc(doc1)
+		_ = wsb1.AddCDoc(doc1)
 		_ = wsb1.AddObject(obj1)
 		_ = wsb1.AddCommand(cmd1)
+		wsb1.SetDescriptor(doc1)
 
 		wsb2 := adb.AddWorkspace(ws2)
 		wsb2.SetAncestors(ws1)
-		_ = wsb2.AddODoc(doc2)
+		_ = wsb2.AddCDoc(doc2)
 		_ = wsb2.AddObject(obj2)
 		_ = wsb2.AddCommand(cmd2)
+		wsb2.SetDescriptor(doc2)
 
 		return adb.MustBuild()
 	}()
@@ -191,8 +197,8 @@ func ExampleAllTables() {
 	// - testing:
 	//   * BuiltIn-Command «test.command1» is matched: false
 	//   * BuiltIn-Command «test.command2» is matched: false
-	//   * ODoc «test.doc1» is matched: true
-	//   * ODoc «test.doc2» is matched: true
+	//   * CDoc «test.doc1» is matched: true
+	//   * CDoc «test.doc2» is matched: true
 	//   * Object «test.object1» is matched: true
 	//   * Object «test.object2» is matched: true
 	//   * Workspace «test.workspace1» is matched: false
@@ -212,9 +218,11 @@ func ExampleAllWSTables() {
 
 		wsb := adb.AddWorkspace(wsName)
 
-		_ = wsb.AddODoc(doc)
+		_ = wsb.AddCDoc(doc)
 		_ = wsb.AddObject(obj)
 		_ = wsb.AddCommand(cmd)
+
+		wsb.SetDescriptor(doc)
 
 		return adb.MustBuild()
 	}()
@@ -235,7 +243,7 @@ func ExampleAllWSTables() {
 	// - kind: FilterKind_Types
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
-	//   * ODoc «test.doc» is matched: true
+	//   * CDoc «test.doc» is matched: true
 	//   * Object «test.object» is matched: true
 }
 
@@ -254,15 +262,17 @@ func ExampleAllFunctions() {
 
 		wsb1 := adb.AddWorkspace(ws1)
 		wsb1.SetAbstract()
-		_ = wsb1.AddODoc(doc1)
+		_ = wsb1.AddCDoc(doc1)
 		_ = wsb1.AddCommand(cmd1)
 		_ = wsb1.AddQuery(qry1)
+		wsb1.SetDescriptor(doc1)
 
 		wsb2 := adb.AddWorkspace(ws2)
 		wsb2.SetAncestors(ws1)
-		_ = wsb2.AddODoc(doc2)
+		_ = wsb2.AddCDoc(doc2)
 		_ = wsb2.AddCommand(cmd2)
 		_ = wsb2.AddQuery(qry2)
+		wsb2.SetDescriptor(doc2)
 
 		return adb.MustBuild()
 	}()
@@ -285,8 +295,8 @@ func ExampleAllFunctions() {
 	// - testing:
 	//   * BuiltIn-Command «test.command1» is matched: true
 	//   * BuiltIn-Command «test.command2» is matched: true
-	//   * ODoc «test.doc1» is matched: false
-	//   * ODoc «test.doc2» is matched: false
+	//   * CDoc «test.doc1» is matched: false
+	//   * CDoc «test.doc2» is matched: false
 	//   * BuiltIn-Query «test.query1» is matched: true
 	//   * BuiltIn-Query «test.query2» is matched: true
 	//   * Workspace «test.workspace1» is matched: false
@@ -306,9 +316,11 @@ func ExampleAllWSFunctions() {
 
 		wsb := adb.AddWorkspace(wsName)
 
-		_ = wsb.AddODoc(doc)
+		_ = wsb.AddCDoc(doc)
 		_ = wsb.AddCommand(cmd)
 		_ = wsb.AddQuery(qry)
+
+		wsb.SetDescriptor(doc)
 
 		return adb.MustBuild()
 	}()
@@ -329,6 +341,6 @@ func ExampleAllWSFunctions() {
 	// - kind: FilterKind_Types
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: true
-	//   * ODoc «test.doc» is matched: false
+	//   * CDoc «test.doc» is matched: false
 	//   * BuiltIn-Query «test.query» is matched: true
 }

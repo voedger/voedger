@@ -4,6 +4,7 @@
 APPLICATION nopackagesgen();
 
 WORKSPACE MyWS1 (
+    DESCRIPTOR MyWS1Descriptor();
 
     TABLE MyTable1 INHERITS sys.ODoc (
         myfield1 int32 NOT NULL

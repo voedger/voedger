@@ -29,6 +29,7 @@ func TestSchedulersWaitTimeout(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		appdef.SetEmptyWSDesc(wsb)
 		for _, name := range jobNames {
 			wsb.AddJob(name).SetCronSchedule("@every 5s")
 		}
@@ -144,8 +145,9 @@ func TestSchedulersDeploy(t *testing.T) {
 	app := func() appdef.IAppDef {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
-		adb.AddWorkspace(appdef.NewQName("test", "workspace")).
-			AddJob(jobName).SetCronSchedule("@every 5s")
+		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		appdef.SetEmptyWSDesc(wsb)
+		wsb.AddJob(jobName).SetCronSchedule("@every 5s")
 		return adb.MustBuild()
 	}()
 

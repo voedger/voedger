@@ -28,6 +28,7 @@ func Test_Tags(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		wsb.AddTag(tagNames[0], "first feature", "first tag comment")
 		wsb.AddTag(tagNames[1], "second feature", "second tag comment")

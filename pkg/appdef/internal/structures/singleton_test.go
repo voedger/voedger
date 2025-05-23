@@ -38,6 +38,8 @@ func Test_Singletons(t *testing.T) {
 		_ = wsb.AddCDoc(docName).
 			AddField("f1", appdef.DataKind_int64, true)
 
+		wsb.SetDescriptor(stName)
+
 		a, err := adb.Build()
 		require.NoError(err)
 

@@ -15,7 +15,9 @@ ABSTRACT WORKSPACE Workspace (
        COMMAND NewWorkspace();
     );
 
-    ALTERABLE WORKSPACE Profile();
+    ALTERABLE WORKSPACE Profile(
+        DESCRIPTOR ProfileDescriptor();
+    );
 
     TABLE WorkspaceDescriptor INHERITS sys.CSingleton (
         WSKind qname NOT NULL

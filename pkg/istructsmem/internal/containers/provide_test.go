@@ -32,6 +32,7 @@ func Test_BasicUsage(t *testing.T) {
 	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	appdef.SetEmptyWSDesc(wsb)
 
 	wsb.AddObject(appdef.NewQName("test", "obj")).
 		AddContainer(testName, appdef.NewQName("test", "obj"), 0, appdef.Occurs_Unbounded)

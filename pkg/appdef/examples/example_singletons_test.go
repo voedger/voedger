@@ -32,6 +32,8 @@ func ExampleSingletons() {
 			AddField("f2", appdef.DataKind_string, false)
 		cDoc.SetSingleton()
 
+		wsb.SetDescriptor(cDocName)
+
 		wDoc := wsb.AddWDoc(wDocName)
 		wDoc.
 			AddField("f1", appdef.DataKind_int64, true).

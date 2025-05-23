@@ -29,12 +29,12 @@ func Test_StructuresAndRecords(t *testing.T) {
 
 		wsb := adb.AddWorkspace(wsName)
 
-		doc := wsb.AddODoc(docName)
+		doc := wsb.AddCDoc(docName)
 		doc.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 		doc.AddContainer("rec", recName, 0, appdef.Occurs_Unbounded)
-		rec := wsb.AddORecord(recName)
+		rec := wsb.AddCRecord(recName)
 		rec.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
@@ -43,6 +43,8 @@ func Test_StructuresAndRecords(t *testing.T) {
 		obj.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
+
+		wsb.SetDescriptor(docName)
 
 		a, err := adb.Build()
 		require.NoError(err)
@@ -67,8 +69,8 @@ func Test_StructuresAndRecords(t *testing.T) {
 				require.Equal(appdef.DataKind_int64, str.Field("f1").DataKind())
 				require.Equal(appdef.DataKind_string, str.Field("f2").DataKind())
 			}
-			findStruct(docName, appdef.TypeKind_ODoc)
-			findStruct(recName, appdef.TypeKind_ORecord)
+			findStruct(docName, appdef.TypeKind_CDoc)
+			findStruct(recName, appdef.TypeKind_CRecord)
 			findStruct(objName, appdef.TypeKind_Object)
 		})
 
@@ -77,7 +79,9 @@ func Test_StructuresAndRecords(t *testing.T) {
 		t.Run("should be ok to enumerate structures", func(t *testing.T) {
 			var str []appdef.QName
 			for s := range appdef.Structures(tested.Types()) {
-				str = append(str, s.QName())
+				if !s.IsSystem() {
+					str = append(str, s.QName())
+				}
 			}
 			require.Equal(str, []appdef.QName{docName, objName, recName})
 		})
@@ -92,8 +96,8 @@ func Test_StructuresAndRecords(t *testing.T) {
 
 				require.Equal(appdef.DataKind_RecordID, rec.SystemField_ID().DataKind())
 			}
-			findRecord(docName, appdef.TypeKind_ODoc)
-			findRecord(recName, appdef.TypeKind_ORecord)
+			findRecord(docName, appdef.TypeKind_CDoc)
+			findRecord(recName, appdef.TypeKind_CRecord)
 		})
 
 		require.Nil(appdef.Record(tested.Type, appdef.NewQName("test", "unknown")), "should nil if not found")
@@ -101,8 +105,10 @@ func Test_StructuresAndRecords(t *testing.T) {
 
 		t.Run("should be ok to enumerate records", func(t *testing.T) {
 			var recs []appdef.QName
-			for s := range appdef.Records(tested.Types()) {
-				recs = append(recs, s.QName())
+			for r := range appdef.Records(tested.Types()) {
+				if !r.IsSystem() {
+					recs = append(recs, r.QName())
+				}
 			}
 			require.Equal(recs, []appdef.QName{docName, recName})
 		})
@@ -121,7 +127,7 @@ func Test_StructuresAndRecords(t *testing.T) {
 				require.Equal(appdef.DataKind_RecordID, rec.SystemField_ParentID().DataKind())
 				require.Equal(appdef.DataKind_string, rec.SystemField_Container().DataKind())
 			}
-			findRecord(recName, appdef.TypeKind_ORecord)
+			findRecord(recName, appdef.TypeKind_CRecord)
 		})
 	}
 

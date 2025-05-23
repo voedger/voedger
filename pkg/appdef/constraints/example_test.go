@@ -26,9 +26,10 @@ func ExampleMinLen() {
 	{
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
-		_ = ws.AddData(strName, appdef.DataKind_string, appdef.NullQName, constraints.MinLen(1))
+		_ = wsb.AddData(strName, appdef.DataKind_string, appdef.NullQName, constraints.MinLen(1))
 
 		app = adb.MustBuild()
 	}
@@ -73,9 +74,10 @@ func ExampleMaxLen() {
 	{
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
-		_ = ws.AddData(strName, appdef.DataKind_string, appdef.NullQName, constraints.MaxLen(4))
+		_ = wsb.AddData(strName, appdef.DataKind_string, appdef.NullQName, constraints.MaxLen(4))
 
 		app = adb.MustBuild()
 	}
@@ -120,9 +122,10 @@ func ExamplePattern() {
 	{
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
-		_ = ws.AddData(strName, appdef.DataKind_string, appdef.NullQName, constraints.Pattern("^[a-z]+$"))
+		_ = wsb.AddData(strName, appdef.DataKind_string, appdef.NullQName, constraints.Pattern("^[a-z]+$"))
 
 		app = adb.MustBuild()
 	}
@@ -167,9 +170,10 @@ func ExampleMinIncl() {
 	{
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
-		ws.AddData(floatName, appdef.DataKind_float64, appdef.NullQName, constraints.MinIncl(0)).SetComment("Nonnegative float")
+		wsb.AddData(floatName, appdef.DataKind_float64, appdef.NullQName, constraints.MinIncl(0)).SetComment("Nonnegative float")
 
 		app = adb.MustBuild()
 	}
@@ -215,9 +219,10 @@ func ExampleMinExcl() {
 	{
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
-		ws.AddData(naturalName, appdef.DataKind_int64, appdef.NullQName, constraints.MinExcl(0)).SetComment("Natural number")
+		wsb.AddData(naturalName, appdef.DataKind_int64, appdef.NullQName, constraints.MinExcl(0)).SetComment("Natural number")
 
 		app = adb.MustBuild()
 	}
@@ -263,9 +268,10 @@ func ExampleMaxIncl() {
 	{
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
-		_ = ws.AddData(floatName, appdef.DataKind_float64, appdef.NullQName, constraints.MaxIncl(100))
+		_ = wsb.AddData(floatName, appdef.DataKind_float64, appdef.NullQName, constraints.MaxIncl(100))
 
 		app = adb.MustBuild()
 	}
@@ -310,9 +316,10 @@ func ExampleMaxExcl() {
 	{
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
-		_ = ws.AddData(intName, appdef.DataKind_int64, appdef.NullQName, constraints.MaxExcl(100))
+		_ = wsb.AddData(intName, appdef.DataKind_int64, appdef.NullQName, constraints.MaxExcl(100))
 
 		app = adb.MustBuild()
 	}
@@ -357,9 +364,10 @@ func ExampleEnum() {
 	{
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
-		ws.AddData(weekdayName, appdef.DataKind_string, appdef.NullQName, constraints.Enum("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")).SetComment("Week day")
+		wsb.AddData(weekdayName, appdef.DataKind_string, appdef.NullQName, constraints.Enum("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")).SetComment("Week day")
 
 		app = adb.MustBuild()
 	}

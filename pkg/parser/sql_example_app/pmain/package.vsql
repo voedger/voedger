@@ -402,7 +402,10 @@ ABSTRACT WORKSPACE AWorkspace ();
     Possible to inherit from multiple workspaces
 */
 WORKSPACE MyWorkspace1 INHERITS AWorkspace, untill.UntillAWorkspace (
-    POOL OF WORKSPACE MyPool ();
+    DESCRIPTOR();
+    POOL OF WORKSPACE MyPool (
+        DESCRIPTOR();
+    );
 );
 
 /*

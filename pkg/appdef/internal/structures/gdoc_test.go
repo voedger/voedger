@@ -26,12 +26,13 @@ func Test_GDocs(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
-		doc := ws.AddGDoc(docName)
+		doc := wsb.AddGDoc(docName)
 		doc.AddField("f1", appdef.DataKind_int64, true)
 		doc.AddContainer("rec", recName, 0, appdef.Occurs_Unbounded)
-		rec := ws.AddGRecord(recName)
+		rec := wsb.AddGRecord(recName)
 		rec.AddField("f1", appdef.DataKind_int64, true)
 
 		a, err := adb.Build()

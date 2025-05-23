@@ -32,6 +32,8 @@ func Test_Types(t *testing.T) {
 
 		wsb.AddCDoc(docName)
 
+		wsb.SetDescriptor(docName)
+
 		a, err := adb.Build()
 		require.NoError(err)
 
@@ -101,6 +103,8 @@ func Test_TypeRef(t *testing.T) {
 		wsb := adb.AddWorkspace(wsName)
 
 		wsb.AddCDoc(docName)
+
+		wsb.SetDescriptor(docName)
 
 		a, err := adb.Build()
 		require.NoError(err)

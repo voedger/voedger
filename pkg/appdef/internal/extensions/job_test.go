@@ -31,6 +31,7 @@ func Test_Jobs(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		result := wsb.AddView(resultName)
 		result.Key().PartKey().AddDataField("id", appdef.SysData_RecordID)

@@ -26,12 +26,13 @@ func Test_WDocs(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
-		doc := ws.AddWDoc(docName)
+		doc := wsb.AddWDoc(docName)
 		doc.AddField("f1", appdef.DataKind_int64, true)
 		doc.AddContainer("rec", recName, 0, appdef.Occurs_Unbounded)
-		rec := ws.AddWRecord(recName)
+		rec := wsb.AddWRecord(recName)
 		rec.AddField("f1", appdef.DataKind_int64, true)
 
 		a, err := adb.Build()

@@ -26,13 +26,15 @@ func Test_CDocs(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
 
-		doc := ws.AddCDoc(docName)
+		doc := wsb.AddCDoc(docName)
 		doc.AddField("f1", appdef.DataKind_int64, true)
 		doc.AddContainer("rec", recName, 0, appdef.Occurs_Unbounded)
-		rec := ws.AddCRecord(recName)
+		rec := wsb.AddCRecord(recName)
 		rec.AddField("f1", appdef.DataKind_int64, true)
+
+		wsb.SetDescriptor(docName)
 
 		a, err := adb.Build()
 		require.NoError(err)
@@ -64,7 +66,9 @@ func Test_CDocs(t *testing.T) {
 		t.Run("should be ok to enumerate docs", func(t *testing.T) {
 			var docs []appdef.QName
 			for doc := range appdef.CDocs(tested.Types()) {
-				docs = append(docs, doc.QName())
+				if !doc.IsSystem() {
+					docs = append(docs, doc.QName())
+				}
 			}
 			require.Equal([]appdef.QName{docName}, docs)
 			t.Run("should be ok to enumerate recs", func(t *testing.T) {
