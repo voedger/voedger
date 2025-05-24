@@ -324,7 +324,7 @@ func (g *schemaGenerator) isFieldAllowed(fieldName string, fieldNames *[]appdef.
 
 	// Check if the field is in the allowed list
 	for _, allowedField := range *fieldNames {
-		if string(allowedField) == fieldName {
+		if allowedField == fieldName {
 			return true
 		}
 	}
