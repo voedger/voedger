@@ -10,9 +10,9 @@ import (
 
 const (
 	field_status           = "status"
-	field_OwnerRecord      = "OwnerRecord"
-	field_OwnerRecordField = "OwnerRecordField"
-	field_OwnerRecordID    = "OwnerRecordID"
+	Field_OwnerRecord      = "OwnerRecord"
+	Field_OwnerRecordField = "OwnerRecordField"
+	Field_OwnerRecordID    = "OwnerRecordID"
 )
 
 var (

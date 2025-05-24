@@ -688,6 +688,7 @@ ALTERABLE WORKSPACE test_wsWS (
 
 	TABLE DocWithBLOB INHERITS sys.CDoc (
 		Blob blob,
+		AnotherBlob blob,
 		IntFld int32,
 		BlobReadDenied blob
 	);

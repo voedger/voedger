@@ -533,38 +533,43 @@ func execCommand(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	return err
 }
 
+// [~server.blobs/cmp.UpdateBLOBOwnership~impl]
+// [~server.blobs/tuc.HandleBLOBReferences~impl]
 func appendBLOBOwnershipUpdaters(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	for _, cmdParsedCUD := range cmd.parsedCUDs {
-		t := cmd.appStructs.AppDef().Type(cmdParsedCUD.qName)
-		typeFields := t.(appdef.IWithFields)
+		cudSchemaType := cmd.appStructs.AppDef().Type(cmdParsedCUD.qName)
+		cudSchema := cudSchemaType.(appdef.IWithFields)
 		for cudFieldName, cudFieldValue := range cmdParsedCUD.fields {
-			field :=typeFields.Field(cudFieldName)
-			if field.DataKind() != appdef.DataKind_RecordID {
+			cudSchemaField := cudSchema.Field(cudFieldName)
+			refSchemaField, ok := cudSchemaField.(appdef.IRefField)
+			if !ok || len(refSchemaField.Refs()) == 0 || !refSchemaField.Ref(blobber.QNameWDocBLOB) {
 				continue
 			}
-			refField := field.(appdef.IRefField)
-			if !refField.Ref(blobber.QNameWDocBLOB) {
-				continue
-			}
-			blobID := cudFieldValue.(istructs.RecordID)
-			blobRecord, err := cmd.appStructs.Records().Get(cmd.cmdMes.WSID(), true, blobID)
+			blobIDJSONNumber := cudFieldValue.(json.Number)
+			blobIDIntf, err := coreutils.ClarifyJSONNumber(blobIDJSONNumber, appdef.DataKind_RecordID)
 			if err != nil {
+				// notest
 				return err
 			}
-			cmd.parsedCUDs = append(cmd.parsedCUDs, parsedCUD {
-				opKind: appdef.OperationKind_Update,
+			blobID := blobIDIntf.(istructs.RecordID)
+			blobRecord, err := cmd.appStructs.Records().Get(cmd.cmdMes.WSID(), true, blobID)
+			if err != nil {
+				// notest
+				return err
+			}
+			cmd.parsedCUDs = append(cmd.parsedCUDs, parsedCUD{
+				opKind:         appdef.OperationKind_Update,
 				existingRecord: blobRecord,
-				id: int64(blobID),
-				qName: blobber.QNameWDocBLOB,
+				id:             int64(blobID),
+				qName:          blobber.QNameWDocBLOB,
 				fields: coreutils.MapObject{
-					blobber.field_
+					blobber.Field_OwnerRecordID: cmdParsedCUD.id,
 				},
-
 			})
 		}
-		t.(appdef.IWithFields).Field(p)
 	}
+	return nil
 }
 
 func checkResponseIntent(_ context.Context, work pipeline.IWorkpiece) (err error) {

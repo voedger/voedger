@@ -51,6 +51,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	res := vit.SqlQuery(ws, "select * from sys.BLOB.%d", blobID)
 	require.Equal(it.QNameDocWithBLOB.String(), res["OwnerRecord"].(string))
 	require.Equal("Blob", res["OwnerRecordField"].(string))
+	require.EqualValues(ownerID, res["OwnerRecordID"].(float64))
 
 	// read, authorize over headers
 	blobReader := vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", ownerID,
@@ -188,7 +189,6 @@ func TestBlobberErrors(t *testing.T) {
 				coreutils.Expect400("blob owner app1pkg.DocWithBLOB.IntFld must be of blob type"),
 			).Println()
 		})
-
 	})
 
 	t.Run("read: wrong owner", func(t *testing.T) {
@@ -225,16 +225,37 @@ func TestBlobberErrors(t *testing.T) {
 		})
 	})
 
-	t.Run("ownerRecordField and actual field differs", func(t *testing.T) {
-		t.Skip("will be implemented later")
+	t.Run("update owner", func(t *testing.T) {
 		blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, expBLOB,
 			it.QNameDocWithBLOB, it.Field_Blob,
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"), // has name+mimeType query params -> any Content-Type except "multipart/form-data" is allowed
 		)
-		// put the blob into the another field
-		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocWithBLOB","BlobReadDenied":%d}}]}`, blobID)
-		vit.PostWS(ws, "c.sys.CUD", body)
+		t.Run("403 forbidden on set blob to another owner record", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.air_table_plan","image":%d}}]}`, blobID)
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("intended for app1pkg.DocWithBLOB.Blob whereas it is being used in app1pkg.air_table_plan.image"))
+		})
+		t.Run("403 forbidden on set blob to another owner record field", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocWithBLOB","AnotherBlob":%d}}]}`, blobID)
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("intended for app1pkg.DocWithBLOB.Blob whereas it is being used in app1pkg.DocWithBLOB.AnotherBlob"))
+		})
+
+		t.Run("403 forbidden on use the same BLOB twice in CUDs", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds":[
+				{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocWithBLOB","Blob":%[1]d}},
+				{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.DocWithBLOB","Blob":%[1]d}}
+			]}`, blobID)
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("mentioned in CUD app1pkg.DocWithBLOB.Blob is used already in CUD app1pkg.DocWithBLOB.1"))
+		})
+
+		// assign the blob to the owner
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocWithBLOB","Blob":%d}}]}`, blobID)
+		assignedBLOBOwnerID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+		t.Run("403 forbidden on re-use the blob", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocWithBLOB","Blob":%d}}]}`, blobID)
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403(fmt.Sprintf(" mentioned in CUD app1pkg.DocWithBLOB.Blob is used already in app1pkg.DocWithBLOB.%d.Blob", assignedBLOBOwnerID)))
+		})
 	})
 
 	t.Run("read from denied field", func(t *testing.T) {

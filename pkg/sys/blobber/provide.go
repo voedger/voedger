@@ -23,34 +23,20 @@ func ProvideBlobberCmds(sr istructsmem.IStatelessResources) {
 }
 
 func ProvideBlobberCUDValidators(cfg *istructsmem.AppConfigType) {
-	// [~server.blobs/tuc.HandleBLOBReferences~impl]
-	cfg.AddCUDValidators(istructs.CUDValidator{
-		Match: func(cud istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) bool {
-			match := false
-			cud.SpecifiedValues(func(f appdef.IField, _ any) bool {
-				if f.Data().DataKind() != appdef.DataKind_RecordID {
-					return true
-				}
-				refField := f.(appdef.IRefField)
-				match = refField.Ref(QNameWDocBLOB)
-				return !match
-			})
-			return match
-		},
-		Validate: func(ctx context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) (validateErr error) {
-			usedBLOBIDs := map[istructs.RecordID]istructs.ICUDRow{}
+	cfg.AddEventValidators(func(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) (validateErr error) {
+		// [~server.blobs/tuc.HandleBLOBReferences~impl]
+		usedBLOBIDs := map[istructs.RecordID]istructs.ICUDRow{}
+		rawEvent.CUDs(func(cudRow istructs.ICUDRow) bool {
 			cudRow.SpecifiedValues(func(f appdef.IField, val any) bool {
-				if f.Data().DataKind() != appdef.DataKind_RecordID {
-					return true
-				}
-				refField := f.(appdef.IRefField)
-				if !refField.Ref(QNameWDocBLOB) {
+				refField, ok := f.(appdef.IRefField)
+				if !ok || len(refField.Refs()) == 0 || !refField.Ref(QNameWDocBLOB) {
 					return true
 				}
 				cudBLOBID := val.(istructs.RecordID)
 				// read wdoc.BLOB.OwnerRecord and OwnerRecordField by cudOwnerID
 				blobRecord, err := appStructs.Records().Get(wsid, true, cudBLOBID)
 				if err != nil {
+					// notest
 					validateErr = err
 					return false
 				}
@@ -58,9 +44,9 @@ func ProvideBlobberCUDValidators(cfg *istructsmem.AppConfigType) {
 					// notest: will be validated already by ref integrity validator
 					panic(fmt.Sprintf("wdoc.sys.BLOB is not found by ID from %s.%s", cudRow.QName(), f.Name()))
 				}
-				ownerRecordID := blobRecord.AsRecordID(field_OwnerRecordID)
-				ownerRecord := blobRecord.AsQName(field_OwnerRecord)
-				ownerRecordField := blobRecord.AsString(field_OwnerRecordField)
+				ownerRecordID := blobRecord.AsRecordID(Field_OwnerRecordID)
+				ownerRecord := blobRecord.AsQName(Field_OwnerRecord)
+				ownerRecordField := blobRecord.AsString(Field_OwnerRecordField)
 				if ownerRecordID != istructs.NullRecordID {
 					// [~server.blobs/err.BLOBOwnerRecordIDMustBeEmpty~impl]
 					validateErr = fmt.Errorf("BLOB ID %d mentioned in CUD %s.%s is used already in %s.%d.%s", cudBLOBID,
@@ -75,6 +61,7 @@ func ProvideBlobberCUDValidators(cfg *istructsmem.AppConfigType) {
 				}
 				usedBLOBIDs[cudBLOBID] = cudRow
 				if ownerRecord != cudRow.QName() || appdef.FieldName(ownerRecordField) != f.Name() {
+					// [~server.blobs/err.BLOBOwnerRecordMismatch~impl]
 					// [~server.blobs/err.BLOBOwnerRecordFieldMismatch~impl]
 					validateErr = fmt.Errorf("BLOB ID %d is intended for %s.%s whereas it is being used in %s.%s",
 						cudBLOBID, ownerRecord, ownerRecordField, cudRow.QName(), f.Name())
@@ -82,8 +69,9 @@ func ProvideBlobberCUDValidators(cfg *istructsmem.AppConfigType) {
 				}
 				return validateErr == nil
 			})
-			return validateErr
-		},
+			return true
+		})
+		return validateErr
 	})
 }
 
@@ -120,8 +108,8 @@ func ubhExec(args istructs.ExecCommandArgs) (err error) {
 	}
 	vb.PutRecordID(appdef.SystemField_ID, 1)
 	vb.PutInt32(field_status, int32(iblobstorage.BLOBStatus_Unknown))
-	vb.PutQName(field_OwnerRecord, args.ArgumentObject.AsQName(field_OwnerRecord))
-	vb.PutString(field_OwnerRecordField, args.ArgumentObject.AsString(field_OwnerRecordField))
+	vb.PutQName(Field_OwnerRecord, args.ArgumentObject.AsQName(Field_OwnerRecord))
+	vb.PutString(Field_OwnerRecordField, args.ArgumentObject.AsString(Field_OwnerRecordField))
 	return nil
 }
 
