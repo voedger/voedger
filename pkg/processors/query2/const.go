@@ -21,6 +21,7 @@ const (
 	registeredDeviceSchemaName = "CreateDeviceResult"
 	registeredDeviceSchemaRef  = "#/components/schemas/" + registeredDeviceSchemaName
 	bearerAuth                 = "BearerAuth"
+	cookieAuth                 = "CookieAuth"
 	authenticationTag          = "Authentication"
 	usersTag                   = "Users"
 	devicesTag                 = "Devices"
@@ -62,8 +63,12 @@ const (
 	statusCode400 = "400"
 	statusCode401 = "401"
 	statusCode403 = "403"
+	statusCode404 = "404"
+	statusCode413 = "413"
+	statusCode415 = "415"
 	statusCode429 = "429"
 	statusCode500 = "500"
+	statusCode503 = "503"
 )
 
 // OpenAPI schema constants
@@ -83,6 +88,7 @@ const (
 	schemaFormatFloat  = "float"
 	schemaFormatDouble = "double"
 	schemaFormatByte   = "byte"
+	schemaFormatBinary = "binary"
 
 	schemaKeyType        = "type"
 	schemaKeyFormat      = "format"
@@ -99,4 +105,127 @@ const (
 	schemaKeyParameters  = "parameters"
 	schemaKeySecurity    = "security"
 	schemaKeyTags        = "tags"
+)
+
+// HTTP Headers
+const (
+	headerContentType = "Content-Type"
+	headerBlobName    = "Blob-Name"
+)
+
+// Content type values
+const (
+	applicationOctetStream = "application/octet-stream"
+)
+
+// Common field names and properties
+const (
+	fieldMessage           = "message"
+	fieldStatus            = "status"
+	fieldQName             = "qname"
+	fieldData              = "data"
+	fieldBlobID            = "BlobID"
+	fieldPrincipalToken    = "PrincipalToken"
+	fieldExpiresIn         = "ExpiresIn"
+	fieldWSID              = "WSID"
+	fieldProfileWSID       = "ProfileWSID"
+	fieldCurrentWLogOffset = "CurrentWLogOffset"
+	fieldNewIDs            = "NewIDs"
+	fieldResults           = "results"
+	fieldError             = "error"
+	fieldArgs              = "args"
+	fieldUnloggedArgs      = "unloggedArgs"
+)
+
+// Parameter names
+const (
+	paramOwner   = "owner"
+	paramApp     = "app"
+	paramWSID    = "wsid"
+	paramID      = "id"
+	paramWhere   = "where"
+	paramOrder   = "order"
+	paramLimit   = "limit"
+	paramSkip    = "skip"
+	paramInclude = "include"
+	paramKeys    = "keys"
+	paramArgs    = "args"
+)
+
+// Parameter locations
+const (
+	paramInPath   = "path"
+	paramInQuery  = "query"
+	paramInHeader = "header"
+)
+
+// OpenAPI schema properties
+const (
+	propertyMinItems             = "minItems"
+	propertyMaxItems             = "maxItems"
+	propertyMaxLength            = "maxLength"
+	propertyPattern              = "pattern"
+	propertyExample              = "example"
+	propertyHeaders              = "headers"
+	propertyAdditionalProperties = "additionalProperties"
+)
+
+// Default values and examples
+const (
+	qNamePatternRegex = "^[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+$"
+	qNameExample      = "app1pkg.MyType"
+	whereExample      = `{"Country": "Spain", "Age": {"$gt": 30}}`
+)
+
+// OpenAPI specification constants
+const (
+	openAPIVersion = "3.0.0"
+	bearerScheme   = "bearer"
+	httpType       = "http"
+	jwtFormat      = "JWT"
+)
+
+// Error descriptions
+const (
+	descrBadRequest           = "Bad request"
+	descrUnauthorized         = "Unauthorized"
+	descrForbidden            = "Forbidden"
+	descrNotFound             = "Not found"
+	descrInternalServerError  = "Internal server error"
+	descrTooManyRequests      = "Too many requests"
+	descrPayloadTooLarge      = "Payload Too Large"
+	descrUnsupportedMediaType = "Unsupported Media Type"
+	descrServiceUnavailable   = "Service Unavailable"
+	descrUnknownError         = "Unknown error"
+)
+
+// API path templates
+const (
+	pathTemplateOwner = "{owner}"
+	pathTemplateApp   = "{app}"
+	pathTemplateWSID  = "{wsid}"
+	pathTemplateID    = "{id}"
+)
+
+// Description templates
+const (
+	descrOwnerParam = "Name of a user who owns the application"
+	descrAppParam   = "Name of an application"
+	descrWSIDParam  = "The ID of workspace"
+
+	descrWhereParam       = "A JSON-encoded string used to filter query results. The value must be URL-encoded"
+	descrOrderParam       = "Field to order results by"
+	descrLimitParam       = "Maximum number of results to return"
+	descrSkipParam        = "Number of results to skip"
+	descrIncludeParam     = "Referenced objects to include in response"
+	descrKeysParam        = "Specific fields to include in response"
+	descrArgsParam        = "Query argument in JSON format"
+	descrBlobData         = "BLOB binary data"
+	descrBlobContentType  = "BLOB content type"
+	descrBlobName         = "BLOB name"
+	descrBlobNameOptional = "BLOB name, optional"
+	descrCreateBlob       = "Creates a new BLOB for field '%s' of %s"
+	descrDownloadBlob     = "Downloads BLOB from field '%s' of %s"
+	descrRefToDocRecord   = "Reference to a document or record"
+	descrIDOf             = "ID of: %s"
 )

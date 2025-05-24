@@ -70,9 +70,14 @@ func (g *schemaGenerator) generateComponents() {
 	schemas := make(map[string]interface{})
 	g.components["securitySchemes"] = map[string]interface{}{
 		bearerAuth: map[string]interface{}{
-			"type":         "http",
-			"scheme":       "bearer",
-			"bearerFormat": "JWT",
+			schemaKeyType:  httpType,
+			"scheme":       bearerScheme,
+			"bearerFormat": jwtFormat,
+		},
+		cookieAuth: map[string]interface{}{
+			schemaKeyType: "apiKey",
+			"in":          "cookie",
+			"name":        "Authorization",
 		},
 	}
 	g.components["schemas"] = schemas
@@ -114,20 +119,20 @@ func (g *schemaGenerator) generateComponents() {
 	schemas[errorSchemaName] = map[string]interface{}{
 		schemaKeyType: schemaTypeObject,
 		schemaKeyProperties: map[string]interface{}{
-			"message": map[string]interface{}{
+			fieldMessage: map[string]interface{}{
 				schemaKeyType: schemaTypeString,
 			},
-			"status": map[string]interface{}{
+			fieldStatus: map[string]interface{}{
 				schemaKeyType: schemaTypeInteger,
 			},
-			"qname": map[string]interface{}{
+			fieldQName: map[string]interface{}{
 				schemaKeyType: schemaTypeString,
 			},
-			"data": map[string]interface{}{
+			fieldData: map[string]interface{}{
 				schemaKeyType: schemaTypeString,
 			},
 		},
-		schemaKeyRequired: []string{"message"},
+		schemaKeyRequired: []string{fieldMessage},
 	}
 
 	schemas[registeredDeviceSchemaName] = map[string]interface{}{
@@ -139,7 +144,7 @@ func (g *schemaGenerator) generateComponents() {
 			fieldPassword: map[string]interface{}{
 				schemaKeyType: schemaTypeString,
 			},
-			"ProfileWSID": map[string]interface{}{
+			fieldProfileWSID: map[string]interface{}{
 				schemaKeyType:   schemaTypeInteger,
 				schemaKeyFormat: schemaFormatInt64,
 			},
@@ -150,14 +155,14 @@ func (g *schemaGenerator) generateComponents() {
 	schemas[principalTokenSchemaName] = map[string]interface{}{
 		schemaKeyType: schemaTypeObject,
 		schemaKeyProperties: map[string]interface{}{
-			"PrincipalToken": map[string]interface{}{
+			fieldPrincipalToken: map[string]interface{}{
 				schemaKeyType: schemaTypeString,
 			},
-			"ExpiresIn": map[string]interface{}{
+			fieldExpiresIn: map[string]interface{}{
 				schemaKeyType:   schemaTypeInteger,
 				schemaKeyFormat: schemaFormatInt64,
 			},
-			"WSID": map[string]interface{}{
+			fieldWSID: map[string]interface{}{
 				schemaKeyType:   schemaTypeInteger,
 				schemaKeyFormat: schemaFormatInt64,
 			},
@@ -168,12 +173,12 @@ func (g *schemaGenerator) generateComponents() {
 	schemas[BlobCreateResultSchemaName] = map[string]interface{}{
 		schemaKeyType: schemaTypeObject,
 		schemaKeyProperties: map[string]interface{}{
-			"BlobID": map[string]interface{}{
+			fieldBlobID: map[string]interface{}{
 				schemaKeyType:   schemaTypeInteger,
 				schemaKeyFormat: schemaFormatInt64,
 			},
 		},
-		schemaKeyRequired: []string{"BlobID"},
+		schemaKeyRequired: []string{fieldBlobID},
 	}
 }
 
@@ -253,25 +258,78 @@ func (g *schemaGenerator) generatePaths() {
 		g.genCreateNewDevicePath()
 	}
 	for t, ops := range g.types {
-		var write bool
-		var read bool
-		for op := range ops {
+		var writeFields *[]appdef.FieldName
+		var readFields *[]appdef.FieldName
+		var hasWrite bool
+		var hasRead bool
+
+		for op, fields := range ops {
 			paths := g.getPaths(t, op)
 			for _, path := range paths {
 				g.addPathItem(path.Path, path.Method, t, op, path.APIPath)
 			}
 			if op == appdef.OperationKind_Insert || op == appdef.OperationKind_Update {
-				write = true
+				hasWrite = true
+				if writeFields == nil || (fields != nil && len(*fields) > 0) {
+					writeFields = fields
+				}
 			}
 			if op == appdef.OperationKind_Select {
-				read = true
+				hasRead = true
+				if readFields == nil || (fields != nil && len(*fields) > 0) {
+					readFields = fields
+				}
 			}
 		}
 		// Add BLOB endpoints for documents and records
 		if appdef.TypeKind_Records.Contains(t.Kind()) || appdef.TypeKind_Docs.Contains(t.Kind()) {
-			g.addBlobEndpoints(t, read, write)
+			g.addBlobEndpoints(t, hasRead, hasWrite, readFields, writeFields)
 		}
 	}
+}
+
+// addBlobEndpoints adds BLOB create and read endpoints for documents/records with BLOB fields
+func (g *schemaGenerator) addBlobEndpoints(typ appdef.IType, hasRead, hasWrite bool, readFields, writeFields *[]appdef.FieldName) {
+	withFields, ok := typ.(ischema)
+	if !ok {
+		return
+	}
+
+	// Find BLOB fields in the type
+	blobFields := g.getBlobFields(withFields)
+	if len(blobFields) == 0 {
+		return
+	}
+
+	for _, fieldName := range blobFields {
+		// Check if field is allowed for read operations
+		if hasRead && g.isFieldAllowed(fieldName, readFields) {
+			g.addBlobReadEndpoint(typ, fieldName)
+		}
+		// Check if field is allowed for write operations
+		if hasWrite && g.isFieldAllowed(fieldName, writeFields) {
+			g.addBlobCreateEndpoint(typ, fieldName)
+		}
+	}
+}
+
+// isFieldAllowed checks if a field is allowed based on field restrictions
+// If fieldNames is nil or empty, all fields are allowed
+// If fieldNames contains specific fields, only those fields are allowed
+func (g *schemaGenerator) isFieldAllowed(fieldName string, fieldNames *[]appdef.FieldName) bool {
+	// If no field restrictions, all fields are allowed
+	if fieldNames == nil || len(*fieldNames) == 0 {
+		return true
+	}
+
+	// Check if the field is in the allowed list
+	for _, allowedField := range *fieldNames {
+		if string(allowedField) == fieldName {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (g *schemaGenerator) addAuthPaths() {
@@ -444,19 +502,19 @@ func (g *schemaGenerator) genErrorResponse(code int) map[string]interface{} {
 	var description string
 	switch code {
 	case http.StatusBadRequest:
-		description = "Bad request"
+		description = descrBadRequest
 	case http.StatusUnauthorized:
-		description = "Unauthorized"
+		description = descrUnauthorized
 	case http.StatusForbidden:
-		description = "Forbidden"
+		description = descrForbidden
 	case http.StatusNotFound:
-		description = "Not found"
+		description = descrNotFound
 	case http.StatusInternalServerError:
-		description = "Internal server error"
+		description = descrInternalServerError
 	case http.StatusTooManyRequests:
-		description = "Too many requests"
+		description = descrTooManyRequests
 	default:
-		description = "Unknown error"
+		description = descrUnknownError
 	}
 	return map[string]interface{}{
 		schemaKeyDescription: description,
@@ -695,53 +753,53 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 	parameters := make([]map[string]interface{}, 0)
 
 	// Common parameters for all paths
-	if strings.Contains(path, "{owner}") {
+	if strings.Contains(path, pathTemplateOwner) {
 		parameters = append(parameters, map[string]interface{}{
-			"name":     "owner",
-			"in":       "path",
+			"name":     paramOwner,
+			"in":       paramInPath,
 			"required": true,
 			"schema": map[string]interface{}{
-				"type": "string",
+				schemaKeyType: schemaTypeString,
 			},
-			schemaKeyDescription: "Name of a user who owns the application",
+			schemaKeyDescription: descrOwnerParam,
 		})
 	}
 
-	if strings.Contains(path, "{app}") {
+	if strings.Contains(path, pathTemplateApp) {
 		parameters = append(parameters, map[string]interface{}{
-			"name":     "app",
-			"in":       "path",
+			"name":     paramApp,
+			"in":       paramInPath,
 			"required": true,
 			"schema": map[string]interface{}{
-				"type": "string",
+				schemaKeyType: schemaTypeString,
 			},
-			schemaKeyDescription: "Name of an application",
+			schemaKeyDescription: descrAppParam,
 		})
 	}
 
-	if strings.Contains(path, "{wsid}") {
+	if strings.Contains(path, pathTemplateWSID) {
 		parameters = append(parameters, map[string]interface{}{
-			"name":     "wsid",
-			"in":       "path",
+			"name":     paramWSID,
+			"in":       paramInPath,
 			"required": true,
 			"schema": map[string]interface{}{
-				"type":   "integer",
-				"format": "int64",
+				schemaKeyType:   schemaTypeInteger,
+				schemaKeyFormat: schemaFormatInt64,
 			},
-			schemaKeyDescription: "The ID of workspace",
+			schemaKeyDescription: descrWSIDParam,
 		})
 	}
 
-	if strings.Contains(path, "{id}") {
+	if strings.Contains(path, pathTemplateID) {
 		parameters = append(parameters, map[string]interface{}{
-			"name":     "id",
-			"in":       "path",
+			"name":     paramID,
+			"in":       paramInPath,
 			"required": true,
 			"schema": map[string]interface{}{
-				"type":   "integer",
-				"format": "int64",
+				schemaKeyType:   schemaTypeInteger,
+				schemaKeyFormat: schemaFormatInt64,
 			},
-			schemaKeyDescription: "ID of a document or record",
+			schemaKeyDescription: fmt.Sprintf("ID of the %s", typ.QName().String()),
 		})
 	}
 
@@ -754,69 +812,69 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 				pkFields = append(pkFields, pk.Name())
 			}
 		}
-		descr := "A JSON-encoded string used to filter query results. The value must be URL-encoded"
+		descr := descrWhereParam
 		if len(pkFields) > 0 {
 			descr += fmt.Sprintf(". Required fields: %s", strings.Join(pkFields, ", "))
 		}
 		parameters = append(parameters, map[string]interface{}{
-			"name":     "where",
-			"in":       "query",
+			"name":     paramWhere,
+			"in":       paramInQuery,
 			"required": len(pkFields) > 0,
 			schemaKeySchema: map[string]interface{}{
-				"type": "string",
+				schemaKeyType: schemaTypeString,
 			},
 			schemaKeyDescription: descr,
-			"example":            `{"Country": "Spain", "Age": {"$gt": 30}}`,
+			propertyExample:      whereExample,
 		})
 
 		parameters = append(parameters, map[string]interface{}{
-			"name":     "order",
-			"in":       "query",
+			"name":     paramOrder,
+			"in":       paramInQuery,
 			"required": false,
 			schemaKeySchema: map[string]interface{}{
-				"type": "string",
+				schemaKeyType: schemaTypeString,
 			},
-			schemaKeyDescription: "Field to order results by",
+			schemaKeyDescription: descrOrderParam,
 		})
 
 		parameters = append(parameters, map[string]interface{}{
-			"name":     "limit",
-			"in":       "query",
+			"name":     paramLimit,
+			"in":       paramInQuery,
 			"required": false,
 			schemaKeySchema: map[string]interface{}{
-				"type": "integer",
+				schemaKeyType: schemaTypeInteger,
 			},
-			schemaKeyDescription: "Maximum number of results to return",
+			schemaKeyDescription: descrLimitParam,
 		})
 
 		parameters = append(parameters, map[string]interface{}{
-			"name":     "skip",
-			"in":       "query",
+			"name":     paramSkip,
+			"in":       paramInQuery,
 			"required": false,
 			schemaKeySchema: map[string]interface{}{
-				"type": "integer",
+				schemaKeyType: schemaTypeInteger,
 			},
-			schemaKeyDescription: "Number of results to skip",
+			schemaKeyDescription: descrSkipParam,
 		})
 
 		parameters = append(parameters, map[string]interface{}{
-			"name":     "include",
-			"in":       "query",
+			"name":     paramInclude,
+			"in":       paramInQuery,
 			"required": false,
 			schemaKeySchema: map[string]interface{}{
-				"type": "string",
+				schemaKeyType: schemaTypeString,
 			},
-			schemaKeyDescription: "Referenced objects to include in response",
+			schemaKeyDescription: descrIncludeParam,
 		})
 
 		parameters = append(parameters, map[string]interface{}{
-			"name":     "keys",
-			"in":       "query",
+			"name":     paramKeys,
+			"in":       paramInQuery,
 			"required": false,
 			schemaKeySchema: map[string]interface{}{
-				"type": "string",
+				schemaKeyType: schemaTypeString,
 			},
-			schemaKeyDescription: "Specific fields to include in response",
+			schemaKeyDescription: descrKeysParam,
 		})
 	}
 
@@ -825,13 +883,13 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 		query := typ.(appdef.IQuery)
 		if query.Param() != nil {
 			parameters = append(parameters, map[string]interface{}{
-				"name":     "args",
-				"in":       "query",
+				"name":     paramArgs,
+				"in":       paramInQuery,
 				"required": true,
 				schemaKeySchema: map[string]interface{}{
 					schemaKeyRef: g.schemaRef(query.Param(), appdef.OperationKind_Execute),
 				},
-				schemaKeyDescription: "Query argument in JSON format",
+				schemaKeyDescription: descrArgsParam,
 			})
 		}
 	}
@@ -871,19 +929,19 @@ func (g *schemaGenerator) generateRequestBody(typ appdef.IType, op appdef.Operat
 		properties := make(map[string]interface{})
 
 		if _, ok := param.(appdef.IODoc); !ok && param != nil {
-			properties["args"] = map[string]interface{}{
+			properties[fieldArgs] = map[string]interface{}{
 				schemaKeyRef: g.schemaRef(param, op),
 			}
 		} else if param != nil {
-			properties["args"] = g.generateSchema(param.(ischema), op, nil)
+			properties[fieldArgs] = g.generateSchema(param.(ischema), op, nil)
 		}
 
 		if unloggedParam != nil {
-			properties["unloggedArgs"] = g.generateSchema(unloggedParam.(ischema), op, nil)
+			properties[fieldUnloggedArgs] = g.generateSchema(unloggedParam.(ischema), op, nil)
 		}
 
 		return map[string]interface{}{
-			"required": true,
+			schemaKeyRequired: true,
 			schemaKeyContent: map[string]interface{}{
 				applicationJSON: map[string]interface{}{
 					schemaKeySchema: map[string]interface{}{
@@ -896,7 +954,7 @@ func (g *schemaGenerator) generateRequestBody(typ appdef.IType, op appdef.Operat
 	}
 
 	return map[string]interface{}{
-		"required": true,
+		schemaKeyRequired: true,
 		schemaKeyContent: map[string]interface{}{
 			applicationJSON: map[string]interface{}{
 				schemaKeySchema: map[string]interface{}{
@@ -911,55 +969,26 @@ func (g *schemaGenerator) generateRequestBody(typ appdef.IType, op appdef.Operat
 func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.OperationKind, apiPath processors.APIPath) map[string]interface{} {
 	responses := make(map[string]interface{})
 	// Add standard error responses
-	responses["401"] = map[string]interface{}{
-		schemaKeyDescription: "Unauthorized",
-		schemaKeyContent: map[string]interface{}{
-			applicationJSON: map[string]interface{}{
-				schemaKeySchema: map[string]interface{}{
-					schemaKeyRef: errorSchemaRef,
-				},
-			},
-		},
-	}
-
-	responses["403"] = map[string]interface{}{
-		schemaKeyDescription: "Forbidden",
-		schemaKeyContent: map[string]interface{}{
-			applicationJSON: map[string]interface{}{
-				schemaKeySchema: map[string]interface{}{
-					schemaKeyRef: errorSchemaRef,
-				},
-			},
-		},
-	}
-
-	responses["404"] = map[string]interface{}{
-		schemaKeyDescription: "Not Found",
-		schemaKeyContent: map[string]interface{}{
-			applicationJSON: map[string]interface{}{
-				schemaKeySchema: map[string]interface{}{
-					schemaKeyRef: errorSchemaRef,
-				},
-			},
-		},
-	}
+	responses[statusCode401] = g.genErrorResponse(http.StatusUnauthorized)
+	responses[statusCode403] = g.genErrorResponse(http.StatusForbidden)
+	responses[statusCode404] = g.genErrorResponse(http.StatusNotFound)
 
 	// Add specific successful response based on type and operation
 	switch {
 	case op == appdef.OperationKind_Insert:
-		responses["201"] = map[string]interface{}{
+		responses[statusCode201] = map[string]interface{}{
 			schemaKeyDescription: "Created",
 			schemaKeyContent: map[string]interface{}{
 				applicationJSON: map[string]interface{}{
 					schemaKeySchema: map[string]interface{}{
 						schemaKeyType: schemaTypeObject,
 						schemaKeyProperties: map[string]interface{}{
-							"CurrentWLogOffset": map[string]interface{}{
+							fieldCurrentWLogOffset: map[string]interface{}{
 								schemaKeyType: schemaTypeInteger,
 							},
-							"NewIDs": map[string]interface{}{
+							fieldNewIDs: map[string]interface{}{
 								schemaKeyType: schemaTypeObject,
-								"additionalProperties": map[string]interface{}{
+								propertyAdditionalProperties: map[string]interface{}{
 									schemaKeyType:   schemaTypeInteger,
 									schemaKeyFormat: schemaFormatInt64,
 								},
@@ -971,16 +1000,7 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 		}
 
 		// Add bad request response for create operations
-		responses["400"] = map[string]interface{}{
-			schemaKeyDescription: "Bad Request",
-			schemaKeyContent: map[string]interface{}{
-				applicationJSON: map[string]interface{}{
-					schemaKeySchema: map[string]interface{}{
-						schemaKeyRef: errorSchemaRef,
-					},
-				},
-			},
-		}
+		responses[statusCode400] = g.genErrorResponse(http.StatusBadRequest)
 
 	case op == appdef.OperationKind_Update || op == appdef.OperationKind_Deactivate:
 		responses[statusCode200] = map[string]interface{}{
@@ -990,7 +1010,7 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 					schemaKeySchema: map[string]interface{}{
 						schemaKeyType: schemaTypeObject,
 						schemaKeyProperties: map[string]interface{}{
-							"CurrentWLogOffset": map[string]interface{}{
+							fieldCurrentWLogOffset: map[string]interface{}{
 								schemaKeyType: schemaTypeInteger,
 							},
 						},
@@ -1007,7 +1027,7 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 					schemaKeySchema: map[string]interface{}{
 						schemaKeyType: schemaTypeObject,
 						schemaKeyProperties: map[string]interface{}{
-							"CurrentWLogOffset": map[string]interface{}{
+							fieldCurrentWLogOffset: map[string]interface{}{
 								schemaKeyType: schemaTypeInteger,
 							},
 						},
@@ -1017,16 +1037,7 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 		}
 
 		// Add bad request response for command execution
-		responses["400"] = map[string]interface{}{
-			schemaKeyDescription: "Bad Request",
-			schemaKeyContent: map[string]interface{}{
-				applicationJSON: map[string]interface{}{
-					schemaKeySchema: map[string]interface{}{
-						schemaKeyRef: errorSchemaRef,
-					},
-				},
-			},
-		}
+		responses[statusCode400] = g.genErrorResponse(http.StatusBadRequest)
 
 	case apiPath == processors.APIPath_Docs &&
 		op == appdef.OperationKind_Select &&
@@ -1053,13 +1064,13 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 					schemaKeySchema: map[string]interface{}{
 						schemaKeyType: schemaTypeObject,
 						schemaKeyProperties: map[string]interface{}{
-							"results": map[string]interface{}{
+							fieldResults: map[string]interface{}{
 								schemaKeyType: schemaTypeArray,
 								schemaKeyItems: map[string]interface{}{
 									schemaKeyRef: g.schemaRef(typ, op),
 								},
 							},
-							"error": map[string]interface{}{
+							fieldError: map[string]interface{}{
 								schemaKeyRef: errorSchemaRef,
 							},
 						},
@@ -1077,13 +1088,13 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 					schemaKeySchema: map[string]interface{}{
 						schemaKeyType: schemaTypeObject,
 						schemaKeyProperties: map[string]interface{}{
-							"results": map[string]interface{}{
+							fieldResults: map[string]interface{}{
 								schemaKeyType: schemaTypeArray,
 								schemaKeyItems: map[string]interface{}{
 									schemaKeyRef: g.schemaRef(typ.(appdef.IQuery).Result(), op),
 								},
 							},
-							"error": map[string]interface{}{
+							fieldError: map[string]interface{}{
 								schemaKeyRef: errorSchemaRef,
 							},
 						},
@@ -1099,7 +1110,7 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 func (g *schemaGenerator) write(writer io.Writer) error {
 	// Create the OpenAPI schema
 	schema := map[string]interface{}{
-		"openapi": "3.0.0",
+		"openapi": openAPIVersion,
 		"info": map[string]interface{}{
 			"title":   g.meta.SchemaTitle,
 			"version": g.meta.SchemaVersion,
@@ -1127,31 +1138,6 @@ func (g *schemaGenerator) write(writer io.Writer) error {
 	return encoder.Encode(schema)
 }
 
-// Add this new method after the existing methods
-
-// addBlobEndpoints adds BLOB create and read endpoints for documents/records with BLOB fields
-func (g *schemaGenerator) addBlobEndpoints(typ appdef.IType, read, write bool) {
-	withFields, ok := typ.(ischema)
-	if !ok {
-		return
-	}
-
-	// Find BLOB fields in the type
-	blobFields := g.getBlobFields(withFields)
-	if len(blobFields) == 0 {
-		return
-	}
-
-	for _, fieldName := range blobFields {
-		if read {
-			g.addBlobCreateEndpoint(typ, fieldName)
-		}
-		if write {
-			g.addBlobReadEndpoint(typ, fieldName)
-		}
-	}
-}
-
 // getBlobFields returns a list of field names that are BLOB fields (reference sys.BLOB)
 func (g *schemaGenerator) getBlobFields(withFields ischema) []string {
 	blobFields := make([]string, 0)
@@ -1176,7 +1162,7 @@ func (g *schemaGenerator) addBlobCreateEndpoint(typ appdef.IType, fieldName stri
 	}
 
 	g.paths[path][methodPost] = map[string]interface{}{
-		schemaKeyDescription: fmt.Sprintf("Creates a new BLOB for field '%s' of %s", fieldName, typeName),
+		schemaKeyDescription: fmt.Sprintf(descrCreateBlob, fieldName, typeName),
 		schemaKeyTags:        g.generateTags(typ),
 		schemaKeySecurity: []map[string]interface{}{
 			{
@@ -1186,36 +1172,12 @@ func (g *schemaGenerator) addBlobCreateEndpoint(typ appdef.IType, fieldName stri
 		schemaKeyParameters: g.generateBlobCreateParameters(path, typ),
 		schemaKeyRequestBody: map[string]interface{}{
 			schemaKeyRequired:    true,
-			schemaKeyDescription: "BLOB binary data",
+			schemaKeyDescription: descrBlobData,
 			schemaKeyContent: map[string]interface{}{
-				"application/octet-stream": map[string]interface{}{
+				applicationOctetStream: map[string]interface{}{
 					schemaKeySchema: map[string]interface{}{
 						schemaKeyType:   schemaTypeString,
-						schemaKeyFormat: "binary",
-					},
-				},
-				"image/*": map[string]interface{}{
-					schemaKeySchema: map[string]interface{}{
-						schemaKeyType:   schemaTypeString,
-						schemaKeyFormat: "binary",
-					},
-				},
-				"video/*": map[string]interface{}{
-					schemaKeySchema: map[string]interface{}{
-						schemaKeyType:   schemaTypeString,
-						schemaKeyFormat: "binary",
-					},
-				},
-				"audio/*": map[string]interface{}{
-					schemaKeySchema: map[string]interface{}{
-						schemaKeyType:   schemaTypeString,
-						schemaKeyFormat: "binary",
-					},
-				},
-				"application/pdf": map[string]interface{}{
-					schemaKeySchema: map[string]interface{}{
-						schemaKeyType:   schemaTypeString,
-						schemaKeyFormat: "binary",
+						schemaKeyFormat: schemaFormatBinary,
 					},
 				},
 			},
@@ -1231,11 +1193,11 @@ func (g *schemaGenerator) addBlobCreateEndpoint(typ appdef.IType, fieldName stri
 					},
 				},
 			},
-			"400": g.genErrorResponse(http.StatusBadRequest),
-			"401": g.genErrorResponse(http.StatusUnauthorized),
-			"403": g.genErrorResponse(http.StatusForbidden),
-			"413": map[string]interface{}{
-				schemaKeyDescription: "Payload Too Large",
+			statusCode400: g.genErrorResponse(http.StatusBadRequest),
+			statusCode401: g.genErrorResponse(http.StatusUnauthorized),
+			statusCode403: g.genErrorResponse(http.StatusForbidden),
+			statusCode413: map[string]interface{}{
+				schemaKeyDescription: descrPayloadTooLarge,
 				schemaKeyContent: map[string]interface{}{
 					applicationJSON: map[string]interface{}{
 						schemaKeySchema: map[string]interface{}{
@@ -1244,8 +1206,8 @@ func (g *schemaGenerator) addBlobCreateEndpoint(typ appdef.IType, fieldName stri
 					},
 				},
 			},
-			"415": map[string]interface{}{
-				schemaKeyDescription: "Unsupported Media Type",
+			statusCode415: map[string]interface{}{
+				schemaKeyDescription: descrUnsupportedMediaType,
 				schemaKeyContent: map[string]interface{}{
 					applicationJSON: map[string]interface{}{
 						schemaKeySchema: map[string]interface{}{
@@ -1254,10 +1216,10 @@ func (g *schemaGenerator) addBlobCreateEndpoint(typ appdef.IType, fieldName stri
 					},
 				},
 			},
-			"429": g.genErrorResponse(http.StatusTooManyRequests),
-			"500": g.genErrorResponse(http.StatusInternalServerError),
-			"503": map[string]interface{}{
-				schemaKeyDescription: "Service Unavailable",
+			statusCode429: g.genErrorResponse(http.StatusTooManyRequests),
+			statusCode500: g.genErrorResponse(http.StatusInternalServerError),
+			statusCode503: map[string]interface{}{
+				schemaKeyDescription: descrServiceUnavailable,
 				schemaKeyContent: map[string]interface{}{
 					applicationJSON: map[string]interface{}{
 						schemaKeySchema: map[string]interface{}{
@@ -1281,48 +1243,51 @@ func (g *schemaGenerator) addBlobReadEndpoint(typ appdef.IType, fieldName string
 	}
 
 	g.paths[path][methodGet] = map[string]interface{}{
-		schemaKeyDescription: fmt.Sprintf("Downloads BLOB from field '%s' of %s", fieldName, typeName),
+		schemaKeyDescription: fmt.Sprintf(descrDownloadBlob, fieldName, typeName),
 		schemaKeyTags:        g.generateTags(typ),
 		schemaKeySecurity: []map[string]interface{}{
 			{
 				bearerAuth: []string{},
 			},
+			{
+				cookieAuth: []string{},
+			},
 		},
 		schemaKeyParameters: g.generateParameters(path, typ),
 		schemaKeyResponses: map[string]interface{}{
 			statusCode200: map[string]interface{}{
-				schemaKeyDescription: "BLOB binary data",
-				"headers": map[string]interface{}{
-					"Content-Type": map[string]interface{}{
-						schemaKeyDescription: "BLOB content type",
+				schemaKeyDescription: descrBlobData,
+				propertyHeaders: map[string]interface{}{
+					headerContentType: map[string]interface{}{
+						schemaKeyDescription: descrBlobContentType,
 						schemaKeySchema: map[string]interface{}{
 							schemaKeyType: schemaTypeString,
 						},
 					},
-					"Blob-Name": map[string]interface{}{
-						schemaKeyDescription: "BLOB name",
+					headerBlobName: map[string]interface{}{
+						schemaKeyDescription: descrBlobName,
 						schemaKeySchema: map[string]interface{}{
 							schemaKeyType: schemaTypeString,
 						},
 					},
 				},
 				schemaKeyContent: map[string]interface{}{
-					"application/octet-stream": map[string]interface{}{
+					applicationOctetStream: map[string]interface{}{
 						schemaKeySchema: map[string]interface{}{
 							schemaKeyType:   schemaTypeString,
-							schemaKeyFormat: "binary",
+							schemaKeyFormat: schemaFormatBinary,
 						},
 					},
 				},
 			},
-			"400": g.genErrorResponse(http.StatusBadRequest),
-			"401": g.genErrorResponse(http.StatusUnauthorized),
-			"403": g.genErrorResponse(http.StatusForbidden),
-			"404": g.genErrorResponse(http.StatusNotFound),
-			"429": g.genErrorResponse(http.StatusTooManyRequests),
-			"500": g.genErrorResponse(http.StatusInternalServerError),
-			"503": map[string]interface{}{
-				schemaKeyDescription: "Service Unavailable",
+			statusCode400: g.genErrorResponse(http.StatusBadRequest),
+			statusCode401: g.genErrorResponse(http.StatusUnauthorized),
+			statusCode403: g.genErrorResponse(http.StatusForbidden),
+			statusCode404: g.genErrorResponse(http.StatusNotFound),
+			statusCode429: g.genErrorResponse(http.StatusTooManyRequests),
+			statusCode500: g.genErrorResponse(http.StatusInternalServerError),
+			statusCode503: map[string]interface{}{
+				schemaKeyDescription: descrServiceUnavailable,
 				schemaKeyContent: map[string]interface{}{
 					applicationJSON: map[string]interface{}{
 						schemaKeySchema: map[string]interface{}{
@@ -1341,23 +1306,23 @@ func (g *schemaGenerator) generateBlobCreateParameters(path string, typ appdef.I
 
 	// Add header parameters
 	parameters = append(parameters, map[string]interface{}{
-		"name":     "Content-Type",
-		"in":       "header",
+		"name":     headerContentType,
+		"in":       paramInHeader,
 		"required": true,
 		"schema": map[string]interface{}{
-			"type": "string",
+			schemaKeyType: schemaTypeString,
 		},
-		schemaKeyDescription: "BLOB content type",
+		schemaKeyDescription: descrBlobContentType,
 	})
 
 	parameters = append(parameters, map[string]interface{}{
-		"name":     "Blob-Name",
-		"in":       "header",
+		"name":     headerBlobName,
+		"in":       paramInHeader,
 		"required": false,
 		"schema": map[string]interface{}{
-			"type": "string",
+			schemaKeyType: schemaTypeString,
 		},
-		schemaKeyDescription: "BLOB name, optional",
+		schemaKeyDescription: descrBlobNameOptional,
 	})
 
 	return parameters
