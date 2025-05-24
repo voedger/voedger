@@ -44,8 +44,8 @@ type DescrType struct {
 	ContentType string
 
 	// empty for temp blobs
-	OwnerQName appdef.QName
-	OwnerField appdef.FieldName
+	OwnerRecord      appdef.QName
+	OwnerRecordField appdef.FieldName
 }
 
 type BLOBStatus uint8

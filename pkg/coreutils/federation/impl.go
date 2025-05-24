@@ -90,7 +90,7 @@ func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs
 func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader,
 	optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error) {
 	uploadBLOBURL := fmt.Sprintf("api/v2/apps/%s/%s/workspaces/%d/docs/%s/blobs/%s",
-		appQName.Owner(), appQName.Name(), wsid, blobReader.OwnerQName, blobReader.OwnerField)
+		appQName.Owner(), appQName.Name(), wsid, blobReader.OwnerRecord, blobReader.OwnerRecordField)
 	optFuncs = append(optFuncs, coreutils.WithHeaders(
 		coreutils.BlobName, blobReader.Name,
 		coreutils.ContentType, blobReader.ContentType,

@@ -18,8 +18,8 @@ type WSPostInitFunc func(targetAppQName appdef.AppQName, wsKind appdef.QName, ne
 
 type BLOBWorkspaceTemplateField struct {
 	iblobstorage.DescrType
-	OwnerQName appdef.QName
-	OwnerField appdef.FieldName
-	Content    []byte
-	OwnerRawID istructs.RecordID
+	OwnerRecord      appdef.QName
+	OwnerRecordField appdef.FieldName
+	OwnerRecordRawID istructs.RecordID
+	Content          []byte
 }

@@ -389,10 +389,10 @@ func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, name st
 	vit.T.Helper()
 	blobReader := iblobstorage.BLOBReader{
 		DescrType: iblobstorage.DescrType{
-			Name:        name,
-			ContentType: contentType,
-			OwnerQName:  ownerRecord,
-			OwnerField:  ownerRecordField,
+			Name:             name,
+			ContentType:      contentType,
+			OwnerRecord:      ownerRecord,
+			OwnerRecordField: ownerRecordField,
 		},
 		ReadCloser: io.NopCloser(bytes.NewReader(content)),
 	}

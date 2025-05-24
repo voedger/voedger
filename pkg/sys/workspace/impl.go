@@ -509,10 +509,10 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID
 					Name:        ent.Name(),
 					ContentType: filepath.Ext(ent.Name())[1:], // excluding dot
 				},
-				OwnerQName: ownerQName,
-				OwnerField: fieldName,
-				Content:    blobContent,
-				OwnerRawID: istructs.RecordID(recordID),
+				OwnerRecord:      ownerQName,
+				OwnerRecordField: fieldName,
+				Content:          blobContent,
+				OwnerRecordRawID: istructs.RecordID(recordID),
 			})
 		}
 	}
