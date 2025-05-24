@@ -672,10 +672,30 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 	limit.workspace = c.mustCurrentWorkspace()
 }
 
+func analyzeDatatype(dt *DataType, c *iterateCtx, isTable bool) {
+	if dt.Blob && !isTable {
+		c.stmtErr(&dt.Pos, ErrBlobFieldOnlyInTable)
+	}
+	vc := dt.Varchar
+	if vc != nil && vc.MaxLen != nil {
+		if *vc.MaxLen > uint64(appdef.MaxFieldLength) {
+			c.stmtErr(&vc.Pos, ErrMaxFieldLengthTooLarge)
+		}
+	}
+	bb := dt.Bytes
+	if bb != nil && bb.MaxLen != nil {
+		if *bb.MaxLen > uint64(appdef.MaxFieldLength) {
+			c.stmtErr(&bb.Pos, ErrMaxFieldLengthTooLarge)
+		}
+	}
+
+}
+
 func analyzeView(view *ViewStmt, c *iterateCtx) {
 	view.pkRef = nil
 	fields := make(map[string]int)
 	for i := range view.Items {
+
 		fe := &view.Items[i]
 		if fe.PrimaryKey != nil {
 			if view.pkRef != nil {
@@ -691,6 +711,7 @@ func analyzeView(view *ViewStmt, c *iterateCtx) {
 			} else {
 				fields[string(f.Name.Value)] = i
 			}
+			analyzeDatatype(&fe.Field.Type, c, false)
 		} else if fe.RefField != nil {
 			rf := fe.RefField
 			if _, ok := fields[string(rf.Name.Value)]; ok {
@@ -1418,18 +1439,7 @@ func analyseFields(items []TableItemExpr, c *iterateCtx, isTable bool) {
 				}
 			}
 			if field.Type.DataType != nil {
-				vc := field.Type.DataType.Varchar
-				if vc != nil && vc.MaxLen != nil {
-					if *vc.MaxLen > uint64(appdef.MaxFieldLength) {
-						c.stmtErr(&vc.Pos, ErrMaxFieldLengthTooLarge)
-					}
-				}
-				bb := field.Type.DataType.Bytes
-				if bb != nil && bb.MaxLen != nil {
-					if *bb.MaxLen > uint64(appdef.MaxFieldLength) {
-						c.stmtErr(&bb.Pos, ErrMaxFieldLengthTooLarge)
-					}
-				}
+				analyzeDatatype(field.Type.DataType, c, isTable)
 			} else {
 				if !isTable { // analysing a TYPE
 					err := resolveInCtx(*field.Type.Def, c, func(f *TypeStmt, pkg *PackageSchemaAST) error {
