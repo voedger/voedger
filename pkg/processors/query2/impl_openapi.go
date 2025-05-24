@@ -164,6 +164,17 @@ func (g *schemaGenerator) generateComponents() {
 		},
 	}
 
+	// Add BLOB creation response schema
+	schemas[BlobCreateResultSchemaName] = map[string]interface{}{
+		schemaKeyType: schemaTypeObject,
+		schemaKeyProperties: map[string]interface{}{
+			"BlobID": map[string]interface{}{
+				schemaKeyType:   schemaTypeInteger,
+				schemaKeyFormat: schemaFormatInt64,
+			},
+		},
+		schemaKeyRequired: []string{"BlobID"},
+	}
 }
 
 func (g *schemaGenerator) collectDocSchemaTypes() {
@@ -242,11 +253,23 @@ func (g *schemaGenerator) generatePaths() {
 		g.genCreateNewDevicePath()
 	}
 	for t, ops := range g.types {
+		var write bool
+		var read bool
 		for op := range ops {
 			paths := g.getPaths(t, op)
 			for _, path := range paths {
 				g.addPathItem(path.Path, path.Method, t, op, path.APIPath)
 			}
+			if op == appdef.OperationKind_Insert || op == appdef.OperationKind_Update {
+				write = true
+			}
+			if op == appdef.OperationKind_Select {
+				read = true
+			}
+		}
+		// Add BLOB endpoints for documents and records
+		if appdef.TypeKind_Records.Contains(t.Kind()) || appdef.TypeKind_Docs.Contains(t.Kind()) {
+			g.addBlobEndpoints(t, read, write)
 		}
 	}
 }
@@ -1102,4 +1125,240 @@ func (g *schemaGenerator) write(writer io.Writer) error {
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(schema)
+}
+
+// Add this new method after the existing methods
+
+// addBlobEndpoints adds BLOB create and read endpoints for documents/records with BLOB fields
+func (g *schemaGenerator) addBlobEndpoints(typ appdef.IType, read, write bool) {
+	withFields, ok := typ.(ischema)
+	if !ok {
+		return
+	}
+
+	// Find BLOB fields in the type
+	blobFields := g.getBlobFields(withFields)
+	if len(blobFields) == 0 {
+		return
+	}
+
+	for _, fieldName := range blobFields {
+		if read {
+			g.addBlobCreateEndpoint(typ, fieldName)
+		}
+		if write {
+			g.addBlobReadEndpoint(typ, fieldName)
+		}
+	}
+}
+
+// getBlobFields returns a list of field names that are BLOB fields (reference sys.BLOB)
+func (g *schemaGenerator) getBlobFields(withFields ischema) []string {
+	blobFields := make([]string, 0)
+	for _, field := range withFields.Fields() {
+		if refField, isRef := field.(appdef.IRefField); isRef {
+			if refField.Ref(qNameWDocBLOB) {
+				blobFields = append(blobFields, field.Name())
+			}
+		}
+	}
+	return blobFields
+}
+
+// addBlobCreateEndpoint adds the BLOB creation endpoint for a specific field
+func (g *schemaGenerator) addBlobCreateEndpoint(typ appdef.IType, fieldName string) {
+	typeName := typ.QName().String()
+	path := fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/docs/%s/blobs/%s",
+		g.getOwner(), g.getApp(), typeName, fieldName)
+
+	if g.paths[path] == nil {
+		g.paths[path] = make(map[string]interface{})
+	}
+
+	g.paths[path][methodPost] = map[string]interface{}{
+		schemaKeyDescription: fmt.Sprintf("Creates a new BLOB for field '%s' of %s", fieldName, typeName),
+		schemaKeyTags:        g.generateTags(typ),
+		schemaKeySecurity: []map[string]interface{}{
+			{
+				bearerAuth: []string{},
+			},
+		},
+		schemaKeyParameters: g.generateBlobCreateParameters(path, typ),
+		schemaKeyRequestBody: map[string]interface{}{
+			schemaKeyRequired:    true,
+			schemaKeyDescription: "BLOB binary data",
+			schemaKeyContent: map[string]interface{}{
+				"application/octet-stream": map[string]interface{}{
+					schemaKeySchema: map[string]interface{}{
+						schemaKeyType:   schemaTypeString,
+						schemaKeyFormat: "binary",
+					},
+				},
+				"image/*": map[string]interface{}{
+					schemaKeySchema: map[string]interface{}{
+						schemaKeyType:   schemaTypeString,
+						schemaKeyFormat: "binary",
+					},
+				},
+				"video/*": map[string]interface{}{
+					schemaKeySchema: map[string]interface{}{
+						schemaKeyType:   schemaTypeString,
+						schemaKeyFormat: "binary",
+					},
+				},
+				"audio/*": map[string]interface{}{
+					schemaKeySchema: map[string]interface{}{
+						schemaKeyType:   schemaTypeString,
+						schemaKeyFormat: "binary",
+					},
+				},
+				"application/pdf": map[string]interface{}{
+					schemaKeySchema: map[string]interface{}{
+						schemaKeyType:   schemaTypeString,
+						schemaKeyFormat: "binary",
+					},
+				},
+			},
+		},
+		schemaKeyResponses: map[string]interface{}{
+			statusCode201: map[string]interface{}{
+				schemaKeyDescription: "BLOB created successfully",
+				schemaKeyContent: map[string]interface{}{
+					applicationJSON: map[string]interface{}{
+						schemaKeySchema: map[string]interface{}{
+							schemaKeyRef: BlobCreateResultSchemaRef,
+						},
+					},
+				},
+			},
+			"400": g.genErrorResponse(http.StatusBadRequest),
+			"401": g.genErrorResponse(http.StatusUnauthorized),
+			"403": g.genErrorResponse(http.StatusForbidden),
+			"413": map[string]interface{}{
+				schemaKeyDescription: "Payload Too Large",
+				schemaKeyContent: map[string]interface{}{
+					applicationJSON: map[string]interface{}{
+						schemaKeySchema: map[string]interface{}{
+							schemaKeyRef: errorSchemaRef,
+						},
+					},
+				},
+			},
+			"415": map[string]interface{}{
+				schemaKeyDescription: "Unsupported Media Type",
+				schemaKeyContent: map[string]interface{}{
+					applicationJSON: map[string]interface{}{
+						schemaKeySchema: map[string]interface{}{
+							schemaKeyRef: errorSchemaRef,
+						},
+					},
+				},
+			},
+			"429": g.genErrorResponse(http.StatusTooManyRequests),
+			"500": g.genErrorResponse(http.StatusInternalServerError),
+			"503": map[string]interface{}{
+				schemaKeyDescription: "Service Unavailable",
+				schemaKeyContent: map[string]interface{}{
+					applicationJSON: map[string]interface{}{
+						schemaKeySchema: map[string]interface{}{
+							schemaKeyRef: errorSchemaRef,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// addBlobReadEndpoint adds the BLOB read endpoint for a specific field
+func (g *schemaGenerator) addBlobReadEndpoint(typ appdef.IType, fieldName string) {
+	typeName := typ.QName().String()
+	path := fmt.Sprintf("/apps/%s/%s/workspaces/{wsid}/docs/%s/{id}/blobs/%s",
+		g.getOwner(), g.getApp(), typeName, fieldName)
+
+	if g.paths[path] == nil {
+		g.paths[path] = make(map[string]interface{})
+	}
+
+	g.paths[path][methodGet] = map[string]interface{}{
+		schemaKeyDescription: fmt.Sprintf("Downloads BLOB from field '%s' of %s", fieldName, typeName),
+		schemaKeyTags:        g.generateTags(typ),
+		schemaKeySecurity: []map[string]interface{}{
+			{
+				bearerAuth: []string{},
+			},
+		},
+		schemaKeyParameters: g.generateParameters(path, typ),
+		schemaKeyResponses: map[string]interface{}{
+			statusCode200: map[string]interface{}{
+				schemaKeyDescription: "BLOB binary data",
+				"headers": map[string]interface{}{
+					"Content-Type": map[string]interface{}{
+						schemaKeyDescription: "BLOB content type",
+						schemaKeySchema: map[string]interface{}{
+							schemaKeyType: schemaTypeString,
+						},
+					},
+					"Blob-Name": map[string]interface{}{
+						schemaKeyDescription: "BLOB name",
+						schemaKeySchema: map[string]interface{}{
+							schemaKeyType: schemaTypeString,
+						},
+					},
+				},
+				schemaKeyContent: map[string]interface{}{
+					"application/octet-stream": map[string]interface{}{
+						schemaKeySchema: map[string]interface{}{
+							schemaKeyType:   schemaTypeString,
+							schemaKeyFormat: "binary",
+						},
+					},
+				},
+			},
+			"400": g.genErrorResponse(http.StatusBadRequest),
+			"401": g.genErrorResponse(http.StatusUnauthorized),
+			"403": g.genErrorResponse(http.StatusForbidden),
+			"404": g.genErrorResponse(http.StatusNotFound),
+			"429": g.genErrorResponse(http.StatusTooManyRequests),
+			"500": g.genErrorResponse(http.StatusInternalServerError),
+			"503": map[string]interface{}{
+				schemaKeyDescription: "Service Unavailable",
+				schemaKeyContent: map[string]interface{}{
+					applicationJSON: map[string]interface{}{
+						schemaKeySchema: map[string]interface{}{
+							schemaKeyRef: errorSchemaRef,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// generateBlobCreateParameters creates parameters for BLOB create endpoint
+func (g *schemaGenerator) generateBlobCreateParameters(path string, typ appdef.IType) []map[string]interface{} {
+	parameters := g.generateParameters(path, typ)
+
+	// Add header parameters
+	parameters = append(parameters, map[string]interface{}{
+		"name":     "Content-Type",
+		"in":       "header",
+		"required": true,
+		"schema": map[string]interface{}{
+			"type": "string",
+		},
+		schemaKeyDescription: "BLOB content type",
+	})
+
+	parameters = append(parameters, map[string]interface{}{
+		"name":     "Blob-Name",
+		"in":       "header",
+		"required": false,
+		"schema": map[string]interface{}{
+			"type": "string",
+		},
+		schemaKeyDescription: "BLOB name, optional",
+	})
+
+	return parameters
 }

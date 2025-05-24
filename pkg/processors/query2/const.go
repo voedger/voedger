@@ -6,6 +6,8 @@ package query2
 
 import (
 	_ "embed"
+
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 //go:embed swagger-ui.html
@@ -22,7 +24,11 @@ const (
 	authenticationTag          = "Authentication"
 	usersTag                   = "Users"
 	devicesTag                 = "Devices"
+	BlobCreateResultSchemaName = "BlobCreateResult"
+	BlobCreateResultSchemaRef  = "#/components/schemas/" + BlobCreateResultSchemaName
 )
+
+var qNameWDocBLOB = appdef.NewQName(appdef.SysPackage, "BLOB")
 
 const (
 	fieldLogin              = "Login"
