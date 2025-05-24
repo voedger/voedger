@@ -60,6 +60,7 @@ ABSTRACT WORKSPACE Workspace (
 		OwnerQName2 text
 	) WITH Tags=(WorkspaceOwnerTableTag);
 
+	-- [~server.blobs/wdoc.sys.Workspace.BLOB~impl]
 	TABLE BLOB INHERITS WDoc (
 		status int32 NOT NULL,
 

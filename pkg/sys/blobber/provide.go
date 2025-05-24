@@ -5,6 +5,9 @@
 package blobber
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -12,18 +15,74 @@ import (
 	"github.com/voedger/voedger/pkg/sys"
 )
 
-func ProvideBlobberCmds(sr istructsmem.IStatelessResources, cfg *istructsmem.AppConfigType) {
+func ProvideBlobberCmds(sr istructsmem.IStatelessResources) {
 	provideUploadBLOBHelperCmd(sr)
 	provideDownloadBLOBHelperCmd(sr)
 	provideDownloadBLOBAuthnzQry(sr)
 	provideRegisterTempBLOB(sr)
+}
+
+func ProvideBlobberCUDValidators(cfg *istructsmem.AppConfigType) {
+	// [~server.blobs/tuc.HandleBLOBReferences~impl]
 	cfg.AddCUDValidators(istructs.CUDValidator{
 		Match: func(cud istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) bool {
-			cud.SpecifiedValues(func(i appdef.IField, a any) bool {
-				t := i.Data().App().Type(i.Data().QName())
-				c := t.(appdef.IWithContainers)
-				c.Container("").QName() == 
+			match := false
+			cud.SpecifiedValues(func(f appdef.IField, _ any) bool {
+				if f.Data().DataKind() != appdef.DataKind_RecordID {
+					return true
+				}
+				refField := f.(appdef.IRefField)
+				match = refField.Ref(QNameWDocBLOB)
+				return !match
 			})
+			return match
+		},
+		Validate: func(ctx context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) (validateErr error) {
+			usedBLOBIDs := map[istructs.RecordID]istructs.ICUDRow{}
+			cudRow.SpecifiedValues(func(f appdef.IField, val any) bool {
+				if f.Data().DataKind() != appdef.DataKind_RecordID {
+					return true
+				}
+				refField := f.(appdef.IRefField)
+				if !refField.Ref(QNameWDocBLOB) {
+					return true
+				}
+				cudBLOBID := val.(istructs.RecordID)
+				// read wdoc.BLOB.OwnerRecord and OwnerRecordField by cudOwnerID
+				blobRecord, err := appStructs.Records().Get(wsid, true, cudBLOBID)
+				if err != nil {
+					validateErr = err
+					return false
+				}
+				if blobRecord.QName() == appdef.NullQName {
+					// notest: will be validated already by ref integrity validator
+					panic(fmt.Sprintf("wdoc.sys.BLOB is not found by ID from %s.%s", cudRow.QName(), f.Name()))
+				}
+				ownerRecordID := blobRecord.AsRecordID(field_OwnerRecordID)
+				ownerRecord := blobRecord.AsQName(field_OwnerRecord)
+				ownerRecordField := blobRecord.AsString(field_OwnerRecordField)
+				if ownerRecordID != istructs.NullRecordID {
+					// [~server.blobs/err.BLOBOwnerRecordIDMustBeEmpty~impl]
+					validateErr = fmt.Errorf("BLOB ID %d mentioned in CUD %s.%s is used already in %s.%d.%s", cudBLOBID,
+						cudRow.QName(), f.Name(), ownerRecord, ownerRecordID, ownerRecordField)
+					return false
+				}
+				if usedICUDRow, ok := usedBLOBIDs[cudBLOBID]; ok {
+					// [~server.blobs/err.DuplicateBLOBReference~impl]
+					validateErr = fmt.Errorf("BLOB ID %d mentioned in CUD %s.%s is used already in CUD %s.%d", cudBLOBID,
+						cudRow.QName(), f.Name(), usedICUDRow.QName(), usedICUDRow.ID())
+					return false
+				}
+				usedBLOBIDs[cudBLOBID] = cudRow
+				if ownerRecord != cudRow.QName() || appdef.FieldName(ownerRecordField) != f.Name() {
+					// [~server.blobs/err.BLOBOwnerRecordFieldMismatch~impl]
+					validateErr = fmt.Errorf("BLOB ID %d is intended for %s.%s whereas it is being used in %s.%s",
+						cudBLOBID, ownerRecord, ownerRecordField, cudRow.QName(), f.Name())
+					return false
+				}
+				return validateErr == nil
+			})
+			return validateErr
 		},
 	})
 }
@@ -60,9 +119,9 @@ func ubhExec(args istructs.ExecCommandArgs) (err error) {
 		return
 	}
 	vb.PutRecordID(appdef.SystemField_ID, 1)
-	vb.PutInt32(fldStatus, int32(iblobstorage.BLOBStatus_Unknown))
-	vb.PutQName(fldOwnerRecord, args.ArgumentObject.AsQName(fldOwnerRecord))
-	vb.PutString(fldOwnerRecordField, args.ArgumentObject.AsString(fldOwnerRecordField))
+	vb.PutInt32(field_status, int32(iblobstorage.BLOBStatus_Unknown))
+	vb.PutQName(field_OwnerRecord, args.ArgumentObject.AsQName(field_OwnerRecord))
+	vb.PutString(field_OwnerRecordField, args.ArgumentObject.AsString(field_OwnerRecordField))
 	return nil
 }
 

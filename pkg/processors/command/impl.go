@@ -533,6 +533,40 @@ func execCommand(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	return err
 }
 
+func appendBLOBOwnershipUpdaters(ctx context.Context, work pipeline.IWorkpiece) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	for _, cmdParsedCUD := range cmd.parsedCUDs {
+		t := cmd.appStructs.AppDef().Type(cmdParsedCUD.qName)
+		typeFields := t.(appdef.IWithFields)
+		for cudFieldName, cudFieldValue := range cmdParsedCUD.fields {
+			field :=typeFields.Field(cudFieldName)
+			if field.DataKind() != appdef.DataKind_RecordID {
+				continue
+			}
+			refField := field.(appdef.IRefField)
+			if !refField.Ref(blobber.QNameWDocBLOB) {
+				continue
+			}
+			blobID := cudFieldValue.(istructs.RecordID)
+			blobRecord, err := cmd.appStructs.Records().Get(cmd.cmdMes.WSID(), true, blobID)
+			if err != nil {
+				return err
+			}
+			cmd.parsedCUDs = append(cmd.parsedCUDs, parsedCUD {
+				opKind: appdef.OperationKind_Update,
+				existingRecord: blobRecord,
+				id: int64(blobID),
+				qName: blobber.QNameWDocBLOB,
+				fields: coreutils.MapObject{
+					blobber.field_
+				},
+
+			})
+		}
+		t.(appdef.IWithFields).Field(p)
+	}
+}
+
 func checkResponseIntent(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	return processors.CheckResponseIntent(cmd.hostStateProvider.state)
