@@ -72,7 +72,7 @@ func execCmdInitiateJoinWorkspace(tm timeu.ITime) func(args istructs.ExecCommand
 		svbCDocInvite.PutInt64(field_InviteeProfileWSID, svPrincipal.AsInt64(sys.Storage_RequestSubject_Field_ProfileWSID))
 		svbCDocInvite.PutInt32(authnz.Field_SubjectKind, svPrincipal.AsInt32(sys.Storage_RequestSubject_Field_Kind))
 		svbCDocInvite.PutInt64(field_Updated, tm.Now().UnixMilli())
-		svbCDocInvite.PutInt32(field_State, State_ToBeJoined)
+		svbCDocInvite.PutInt32(field_State, int32(State_ToBeJoined))
 		svbCDocInvite.PutChars(field_ActualLogin, svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name))
 
 		return

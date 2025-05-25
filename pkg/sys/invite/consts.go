@@ -62,10 +62,11 @@ const (
 	field_ActualLogin           = "ActualLogin"
 )
 
+//go:generate stringer -type=State -output=stringer_state.go
 type State int32
 
 const (
-	State_Null int32 = iota
+	State_Null State = iota
 	State_ToBeInvited
 	State_Invited
 	State_ToBeJoined
@@ -93,7 +94,7 @@ const (
 )
 
 var (
-	inviteValidStates = map[appdef.QName]map[int32]bool{
+	inviteValidStates = map[appdef.QName]map[State]bool{
 		qNameCmdInitiateInvitationByEMail: {
 			State_Cancelled: true,
 			State_Left:      true,
@@ -115,8 +116,9 @@ var (
 			State_Invited: true,
 		},
 	}
-	reInviteAllowedForState = map[int32]bool{
+	reInviteAllowedForState = map[State]bool{
 		State_Cancelled: true,
 		State_Left:      true,
+		State_Invited:   true, // https://github.com/voedger/voedger/issues/3698
 	}
 )

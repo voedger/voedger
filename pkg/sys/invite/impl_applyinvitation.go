@@ -29,6 +29,7 @@ func asyncProjectorApplyInvitation(time timeu.ITime, federation federation.IFede
 }
 
 // AFTER EXECUTE ON (InitiateInvitationByEMail)
+// [~server.invites.invite/ap.sys.Workspace.ApplyInvitation~impl]
 func applyInvitationProjector(time timeu.ITime, federation federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		skbViewInviteIndex, err := s.KeyBuilder(sys.Storage_View, qNameViewInviteIndex)
