@@ -46,8 +46,8 @@ func (g *schemaGenerator) generateSchema(ischema ischema, op appdef.OperationKin
 				schemaKeyItems: map[string]interface{}{
 					schemaKeyRef: schemaName,
 				},
-				"minItems": container.MinOccurs(),
-				"maxItems": container.MaxOccurs(),
+				propertyMinItems: container.MinOccurs(),
+				propertyMaxItems: container.MaxOccurs(),
 			}
 		}
 	}
@@ -98,11 +98,11 @@ func (g *schemaGenerator) generateFieldSchema(field appdef.IField, op appdef.Ope
 
 		if len(oneOf) > 1 {
 			schema[schemaKeyOneOf] = oneOf
-			schema[schemaKeyDescription] = fmt.Sprintf("ID of: %s", strings.Join(refNames, ", "))
+			schema[schemaKeyDescription] = fmt.Sprintf(descrIDOf, strings.Join(refNames, ", "))
 		} else {
 			schema[schemaKeyType] = schemaTypeInteger
 			schema[schemaKeyFormat] = schemaFormatInt64
-			schema[schemaKeyDescription] = "Reference to a document or record"
+			schema[schemaKeyDescription] = descrRefToDocRecord
 		}
 
 		return schema
@@ -129,7 +129,7 @@ func (g *schemaGenerator) generateFieldSchema(field appdef.IField, op appdef.Ope
 		// Add max length constraint if exists
 		if constraint, ok := field.Constraints()[appdef.ConstraintKind_MaxLen]; ok {
 			maxLen, _ := constraint.Value().(uint16)
-			schema["maxLength"] = maxLen
+			schema[propertyMaxLength] = maxLen
 		}
 	case appdef.DataKind_bytes:
 		schema[schemaKeyType] = schemaTypeString
@@ -137,12 +137,12 @@ func (g *schemaGenerator) generateFieldSchema(field appdef.IField, op appdef.Ope
 		// Add max length constraint if exists
 		if constraint, ok := field.Constraints()[appdef.ConstraintKind_MaxLen]; ok {
 			maxLen, _ := constraint.Value().(uint16)
-			schema["maxLength"] = maxLen
+			schema[propertyMaxLength] = maxLen
 		}
 	case appdef.DataKind_QName:
 		schema[schemaKeyType] = schemaTypeString
-		schema["pattern"] = "^[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+$"
-		schema["example"] = "app1pkg.MyType"
+		schema[propertyPattern] = qNamePatternRegex
+		schema[propertyExample] = qNameExample
 	case appdef.DataKind_RecordID:
 		schema[schemaKeyType] = schemaTypeInteger
 		schema[schemaKeyFormat] = schemaFormatInt64
