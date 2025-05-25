@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys/invite"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -83,15 +84,15 @@ func InitiateJoinWorkspace(vit *it.VIT, ws *it.AppWorkspace, inviteID istructs.R
 	vit.PostWS(ws, "c.sys.InitiateJoinWorkspace", fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"%s"}}`, inviteID, verificationCode), opts...)
 }
 
-func WaitForInviteState(vit *it.VIT, ws *it.AppWorkspace, inviteID istructs.RecordID, inviteStatesSeq ...int32) {
+func WaitForInviteState(vit *it.VIT, ws *it.AppWorkspace, inviteID istructs.RecordID, inviteStatesSeq ...invite.State) {
 	deadline := it.TestDeadline()
-	var actualInviteState int32
+	var actualInviteState invite.State
 	for time.Now().Before(deadline) {
 		entity := vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
 		{"args":{"Schema":"sys.Invite"},
 		"elements":[{"fields":["State","sys.ID"]}],
 		"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, inviteID)).SectionRow(0)
-		actualInviteState = int32(entity[0].(float64))
+		actualInviteState = invite.State(entity[0].(float64))
 		if inviteStatesSeq[len(inviteStatesSeq)-1] == actualInviteState {
 			return
 		}

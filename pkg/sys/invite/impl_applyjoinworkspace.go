@@ -42,10 +42,12 @@ func applyJoinWorkspace(time timeu.ITime, federation federation.IFederation, tok
 
 		login := svCDocInvite.AsString(Field_Login)
 		subjectExistsByActualLogin := false
-		subjectExistsByLogin, existingSubjectID, err := SubjectExistsByLogin(login, s) // for backward compatibility
+		existingSubjectID, err := SubjectExistsByLogin(login, s) // for backward compatibility
+		subjectExistsByLogin := existingSubjectID > 0
 		if err == nil && !subjectExistsByLogin {
 			login = svCDocInvite.AsString(field_ActualLogin)
-			subjectExistsByActualLogin, existingSubjectID, err = SubjectExistsByLogin(login, s)
+			existingSubjectID, err = SubjectExistsByLogin(login, s)
+			subjectExistsByActualLogin = existingSubjectID > 0
 		}
 		if err != nil {
 			// notest
