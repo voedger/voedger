@@ -67,7 +67,7 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 
 			inviteState := State(svCDocInvite.AsInt32(field_State))
 			if existingSubjectID > 0 && !reInviteAllowedForState[inviteState] {
-				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf(`re-invite is not allowed for state %s`, inviteState))
+				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf(`%w %s`, ErrReInviteNotAllowedForState, inviteState))
 			}
 
 			if !isValidInviteState(svCDocInvite.AsInt32(field_State), qNameCmdInitiateInvitationByEMail) {

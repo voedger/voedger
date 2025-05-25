@@ -198,7 +198,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
 			email1, initialRoles, vit.Now().UnixMilli(), inviteEmailTemplate, inviteEmailSubject)
 		vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body,
-			coreutils.Expect400("re-invite is not allowed for state State_Joined"))
+			coreutils.Expect400("re-invite not allowed for state State_Joined"))
 	})
 
 	//Update roles
