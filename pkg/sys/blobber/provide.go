@@ -44,8 +44,12 @@ func ProvideBlobberCUDValidators(cfg *istructsmem.AppConfigType) {
 					// notest: will be validated already by ref integrity validator
 					panic(fmt.Sprintf("wdoc.sys.BLOB is not found by ID from %s.%s", cudRow.QName(), f.Name()))
 				}
-				ownerRecordID := blobRecord.AsRecordID(Field_OwnerRecordID)
 				ownerRecord := blobRecord.AsQName(Field_OwnerRecord)
+				if ownerRecord == appdef.NullQName {
+					// blob created via APIv1 -> skip
+					return false
+				}
+				ownerRecordID := blobRecord.AsRecordID(Field_OwnerRecordID)
 				ownerRecordField := blobRecord.AsString(Field_OwnerRecordField)
 				if ownerRecordID != istructs.NullRecordID {
 					// [~server.blobs/err.BLOBOwnerRecordIDMustBeEmpty~impl]
