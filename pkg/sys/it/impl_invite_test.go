@@ -33,7 +33,6 @@ var (
 	inviteEmailSubject = "you are invited"
 )
 
-// impossible to use the test workspace again with the same login due of invite error `subject already exists`
 // [~server.invites.invite/it~impl]
 func TestInvite_BasicUsage(t *testing.T) {
 	require := require.New(t)
@@ -195,10 +194,11 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.Equal(float64(istructs.SubjectKind_User), cDocSubject[1])
 	require.Equal(newRoles, cDocSubject[2]) // overwritten
 
-	t.Run("reinivite the joined already -> error", func(t *testing.T) {
+	t.Run("re-inivite the joined already -> error", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
 			email1, initialRoles, vit.Now().UnixMilli(), inviteEmailTemplate, inviteEmailSubject)
-		vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body, coreutils.Expect400(invite.ErrSubjectAlreadyExists.Error()))
+		vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body,
+			coreutils.Expect400("re-invite is not allowed for state State_Joined"))
 	})
 
 	//Update roles
