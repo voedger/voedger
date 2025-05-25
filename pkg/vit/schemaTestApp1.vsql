@@ -38,8 +38,9 @@ ALTERABLE WORKSPACE test_wsWS (
 		article_hash int32 NOT NULL,
 		hideonhold int32 NOT NULL,
 		time_active int32 NOT NULL,
-		control_active int32 NOT NULL
-	) WITH Tags=(WorkspaceOwnerTableTag);
+		control_active int32 NOT NULL,
+		picture blob
+	) WITH Tags=(WorkspaceOwnerTableTag, ApiArticlesFeatureTag);
 
 	TABLE options INHERITS sys.CDoc () WITH Tags=(WorkspaceOwnerTableTag);
 
@@ -638,7 +639,7 @@ ALTERABLE WORKSPACE test_wsWS (
     TABLE Currency INHERITS sys.CDoc (
         CharCode text,
         Code int32
-    ) WITH Tags=(ApiFeatureTag);
+    ) WITH Tags=(ApiCirrencyFeatureTag);
 
     TABLE Wallet INHERITS sys.WDoc (
         Balance int64,
@@ -728,11 +729,14 @@ ALTERABLE WORKSPACE test_wsWS (
 	TAG WorkspaceOwnerTableTag;
 	TAG WorkspaceOwnerFuncTag;
 	TAG ApiFeatureTag FEATURE 'Backoffice API';
+	TAG ApiCirrencyFeatureTag FEATURE 'Backoffice: Currency';
+	TAG ApiArticlesFeatureTag FEATURE 'Backoffice: Articles';
 
 	/* ApiRole is used for testing API access */
 	PUBLISHED ROLE ApiRole;
 	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON TABLE Currency TO ApiRole;
 	GRANT SELECT ON TABLE category TO ApiRole;
+	GRANT SELECT, INSERT ON TABLE articles TO ApiRole;
 	GRANT INSERT ON TABLE orecord1 TO ApiRole;
 	GRANT EXECUTE ON COMMAND CmdODocOne TO ApiRole;
 	GRANT EXECUTE ON QUERY QryReturnsCategory TO ApiRole;
