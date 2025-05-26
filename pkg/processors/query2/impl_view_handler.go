@@ -10,7 +10,6 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -93,12 +92,10 @@ func viewRowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 	if len(qw.queryParams.Constraints.Keys) != 0 {
 		oo = append(oo, pipeline.WireAsyncOperator("Keys", newKeys(qw.queryParams.Constraints.Keys)))
 	}
-	sender := &sender{responder: qw.msg.Responder(), isArrayResponse: true}
+	sender, respWriterGetter := qw.getArraySender()
 	oo = append(oo, pipeline.WireAsyncOperator("Sender", sender))
 	qw.rowsProcessor = pipeline.NewAsyncPipeline(ctx, "View rows processor", oo[0], oo[1:]...)
-	qw.responseWriterGetter = func() bus.IResponseWriter {
-		return sender.respWriter
-	}
+	qw.responseWriterGetter = respWriterGetter
 	return
 }
 func viewExec(ctx context.Context, qw *queryWork) (err error) {
@@ -124,7 +121,11 @@ func viewExec(ctx context.Context, qw *queryWork) (err error) {
 func getKeys(qw *queryWork) (keys []istructs.IKeyBuilder, err error) {
 	fields := qw.appStructs.AppDef().Type(qw.iView.QName()).(appdef.IView).Key().Fields()
 	values := make([][]interface{}, 0, len(fields))
+	partialKey := false
 	for i, field := range fields {
+		if partialKey {
+			continue
+		}
 		switch field.DataKind() {
 		case appdef.DataKind_int32:
 			vv, err := qw.queryParams.Constraints.Where.getAsInt32(field.Name())
@@ -132,6 +133,7 @@ func getKeys(qw *queryWork) (keys []istructs.IKeyBuilder, err error) {
 				return nil, err
 			}
 			if vv == nil {
+				partialKey = true
 				continue
 			}
 			values = append(values, make([]interface{}, 0))

@@ -16,3 +16,7 @@ func HashBytes(b []byte) int64 {
 	}
 	return int64(fnvHash.Sum64()) // nolint G115 (possible data loss is not a problem since is used as bucket key)
 }
+
+func LoginHash(login string) int64 {
+	return HashBytes([]byte(login))
+}

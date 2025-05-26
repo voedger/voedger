@@ -17,3 +17,9 @@ func TestHash(t *testing.T) {
 	require.Equal(t, HashBytes([]byte("str1")), HashBytes([]byte("str1")))
 	require.NotEqual(t, HashBytes([]byte("str1")), HashBytes([]byte("str2")))
 }
+
+func TestLoginHash(t *testing.T) {
+	fmt.Println(LoginHash("hello world"))
+	require.Equal(t, LoginHash("str1"), LoginHash("str1"))
+	require.NotEqual(t, LoginHash("str1"), LoginHash("str2"))
+}

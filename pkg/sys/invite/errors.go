@@ -14,5 +14,7 @@ var (
 	errInviteTemplateInvalid         = errors.New("invite template invalid, it must be prefixed with 'text:' or 'resource:'")
 	errInviteVerificationCodeInvalid = errors.New("invite verification code invalid")
 	ErrInviteStateInvalid            = errors.New("invite state invalid")
-	ErrSubjectAlreadyExists          = errors.New("subject already exists")
+
+	// [~server.invites.invite/err.State~impl]
+	ErrReInviteNotAllowedForState = errors.New("re-invite not allowed for state")
 )

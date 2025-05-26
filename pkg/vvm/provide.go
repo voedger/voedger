@@ -433,7 +433,7 @@ func provideStorageFactory(vvmConfig *VVMConfig) (provider istorage.IAppStorageF
 func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
 	return func(requestContext context.Context, name string, as istructs.IAppStructs, wsid istructs.WSID) ([]appdef.QName, error) {
 		kb := as.ViewRecords().KeyBuilder(invite.QNameViewSubjectsIdx)
-		kb.PutInt64(invite.Field_LoginHash, coreutils.HashBytes([]byte(name)))
+		kb.PutInt64(invite.Field_LoginHash, coreutils.LoginHash(name))
 		kb.PutString(invite.Field_Login, name)
 		subjectsIdx, err := as.ViewRecords().Get(wsid, kb)
 		if err == istructsmem.ErrRecordNotFound {

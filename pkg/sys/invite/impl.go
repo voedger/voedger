@@ -7,5 +7,5 @@ package invite
 import "github.com/voedger/voedger/pkg/appdef"
 
 func isValidInviteState(state int32, cmd appdef.QName) bool {
-	return inviteValidStates[cmd][state]
+	return inviteValidStates[cmd][State(state)]
 }
