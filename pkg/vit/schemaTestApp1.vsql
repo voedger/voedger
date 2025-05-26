@@ -694,6 +694,11 @@ ALTERABLE WORKSPACE test_wsWS (
 		BlobReadDenied blob
 	);
 
+	TABLE ODocWithBLOB INHERITS sys.ODoc (
+		Blob blob,
+		IntFld int32
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY MockQry(MockQryParams) RETURNS MockQryResult WITH Tags=(WorkspaceOwnerFuncTag);
@@ -720,6 +725,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		QUERY QryDailyIdx(QryDailyIdxParams) RETURNS QryDailyIdxResult WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY QryReturnsCategory(QryReturnsCategoryParams) RETURNS QryReturnsCategoryResult WITH Tags=(WorkspaceOwnerFuncTag, ApiFeatureTag);
 		QUERY QryVoid RETURNS void;
+		COMMAND CmdODocWithBLOB(ODocWithBLOB) WITH Tags=(WorkspaceOwnerFuncTag);
 	);
 
 	ROLE Updated; -- need for invite tests

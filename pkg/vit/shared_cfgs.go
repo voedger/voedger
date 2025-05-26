@@ -94,7 +94,8 @@ var (
 		Port:     1,
 		Username: "username@gmail.com",
 	}
-	QNameDocWithBLOB = appdef.NewQName(app1PkgName, "DocWithBLOB")
+	QNameDocWithBLOB  = appdef.NewQName(app1PkgName, "DocWithBLOB")
+	QNameODocWithBLOB = appdef.NewQName(app1PkgName, "ODocWithBLOB")
 
 	// BLOBMaxSize 5
 	SharedConfig_App1 = NewSharedVITConfig(
@@ -426,6 +427,8 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 	}))
 
 	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryVoid"), istructsmem.NullQueryExec))
+
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "CmdODocWithBLOB"), istructsmem.NullCommandExec))
 
 	app1PackageFS := parser.PackageFS{
 		Path: App1PkgPath,
