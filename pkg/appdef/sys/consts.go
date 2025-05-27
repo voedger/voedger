@@ -49,3 +49,26 @@ var NextBaseWSIDView = struct {
 		NextBaseWSID:  "NextBaseWSID",
 	},
 }
+
+// Records registry view
+type RecordsRegistryViewFields struct {
+	IDHi       string
+	ID         string
+	WLogOffset string
+	QName      string
+	IsActive   string
+}
+
+var RecordsRegistryView = struct {
+	Name   appdef.QName
+	Fields RecordsRegistryViewFields
+}{
+	Name: appdef.NewQName(appdef.SysPackage, "RecordsRegistry"),
+	Fields: RecordsRegistryViewFields{
+		IDHi:       "IDHi",
+		ID:         "ID",
+		WLogOffset: "WLogOffset",
+		QName:      "QName",
+		IsActive:   "IsActive",
+	},
+}
