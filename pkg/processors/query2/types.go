@@ -632,14 +632,19 @@ func (i include) getRelations(ctx context.Context, work pipeline.IWorkpiece) (re
 	return
 }
 func (i include) checkField(parent map[string]interface{}, refFieldOrContainer string, refFieldOrContainerExpression []string) (err error) {
-	for _, field := range i.ad.Type(parent[appdef.SystemField_QName].(appdef.QName)).(appdef.IWithFields).RefFields() {
-		if field.Name() == refFieldOrContainer {
-			return nil
+	iType := i.ad.Type(parent[appdef.SystemField_QName].(appdef.QName))
+	if withFields, ok := iType.(appdef.IWithFields); ok {
+		for _, field := range withFields.RefFields() {
+			if field.Name() == refFieldOrContainer {
+				return nil
+			}
 		}
 	}
-	for _, container := range i.ad.Type(parent[appdef.SystemField_QName].(appdef.QName)).(appdef.IWithContainers).Containers() {
-		if container.Name() == refFieldOrContainer {
-			return nil
+	if withContainers, ok := iType.(appdef.IWithContainers); ok {
+		for _, field := range withContainers.Containers() {
+			if field.Name() == refFieldOrContainer {
+				return nil
+			}
 		}
 	}
 	return fmt.Errorf("field expression - '%s', '%s' - %w", strings.Join(refFieldOrContainerExpression, "."), refFieldOrContainer, errUnexpectedField)
