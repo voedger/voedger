@@ -13,8 +13,8 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 	TYPE AppDeploymentDescriptor (
 		AppQName varchar NOT NULL,
 		NumPartitions int32 NOT NULL,
-		NumAppWorkspaces int32 NOT NULL,
-		AppImage blob
+		NumAppWorkspaces int32 NOT NULL
+		-- AppImage blob
 	);
 
 	TYPE VSqlUpdateParams (
