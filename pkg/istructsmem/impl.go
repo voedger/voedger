@@ -690,7 +690,7 @@ func (recs *appRecordsType) apply2(event istructs.IPLogEvent, cb func(rec istruc
 }
 
 // istructs.IRecords.Get
-func (recs *appRecordsType) Get(workspace istructs.WSID, highConsistency bool, id istructs.RecordID) (record istructs.IRecord, err error) {
+func (recs *appRecordsType) Get(workspace istructs.WSID, _ bool, id istructs.RecordID) (record istructs.IRecord, err error) {
 	data := make([]byte, 0)
 	var ok bool
 	if ok, err = recs.getRecord(workspace, id, &data); ok {
