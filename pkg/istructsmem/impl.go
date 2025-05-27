@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/descr"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/plogcache"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/recreg"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 )
 
@@ -112,8 +113,8 @@ func newAppStructs(appCfg *AppConfigType, buckets irates.IBuckets, appTokens ist
 		seqTrustLevel: seqTrustLevel,
 	}
 	app.events = newEvents(&app)
-	app.records = newRecords(&app)
 	app.viewRecords = newAppViewRecords(&app)
+	app.records = newRecords(&app) // view records should be initialized before records, because records use view records to inspect records registry view
 	appCfg.app = &app
 	return &app
 }
@@ -486,11 +487,13 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 //     — istructs.IRecords
 type appRecordsType struct {
 	app *appStructsType
+	reg *recreg.Registry
 }
 
 func newRecords(app *appStructsType) appRecordsType {
 	return appRecordsType{
 		app: app,
+		reg: recreg.New(&app.viewRecords),
 	}
 }
 

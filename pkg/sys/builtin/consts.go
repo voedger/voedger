@@ -31,5 +31,3 @@ var (
 	field_QName                   = sys.RecordsRegistryView.Fields.QName
 	field_IsActive                = sys.RecordsRegistryView.Fields.IsActive
 )
-
-const registryViewBits = 18

@@ -15,7 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/sys"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/recreg"
-	"github.com/voedger/voedger/pkg/sys/builtin"
 )
 
 type mockViewRecords struct {
@@ -62,12 +61,12 @@ func Test_BasicUsage(t *testing.T) {
 	expectedQName := appdef.NewQName("test", "TestRecord")
 	expectedOffset := istructs.Offset(67890)
 
-	mockView.On("KeyBuilder", sys.RecordsRegistryView.Name).Return(mockKeyBuilder)
-	mockKeyBuilder.On("PutInt64", sys.RecordsRegistryView.Fields.IDHi, int64(builtin.CrackID(id))).Once()
+	mockView.On("KeyBuilder", sys.RecordsRegistryView.Name).Return(mockKeyBuilder).Once()
+	mockKeyBuilder.On("PutInt64", sys.RecordsRegistryView.Fields.IDHi, sys.RecordsRegistryView.Fields.CrackID(id)).Once()
 	mockKeyBuilder.On("PutRecordID", sys.RecordsRegistryView.Fields.ID, id).Once()
-	mockView.On("Get", wsid, mockKeyBuilder).Return(mockValue, nil)
-	mockValue.On("AsQName", sys.RecordsRegistryView.Fields.QName).Return(expectedQName)
-	mockValue.On("AsInt64", sys.RecordsRegistryView.Fields.WLogOffset).Return(int64(expectedOffset))
+	mockView.On("Get", wsid, mockKeyBuilder).Return(mockValue, nil).Once()
+	mockValue.On("AsQName", sys.RecordsRegistryView.Fields.QName).Return(expectedQName).Once()
+	mockValue.On("AsInt64", sys.RecordsRegistryView.Fields.WLogOffset).Return(int64(expectedOffset)).Once()
 
 	qName, offset, err := registry.Get(wsid, id)
 
@@ -94,10 +93,10 @@ func Test_Errors(t *testing.T) {
 	wsid := istructs.WSID(100)
 	id := istructs.RecordID(12345)
 
-	mockView.On("KeyBuilder", sys.RecordsRegistryView.Name).Return(mockKeyBuilder)
-	mockKeyBuilder.On("PutInt64", sys.RecordsRegistryView.Fields.IDHi, int64(builtin.CrackID(id))).Once()
+	mockView.On("KeyBuilder", sys.RecordsRegistryView.Name).Return(mockKeyBuilder).Once()
+	mockKeyBuilder.On("PutInt64", sys.RecordsRegistryView.Fields.IDHi, sys.RecordsRegistryView.Fields.CrackID(id)).Once()
 	mockKeyBuilder.On("PutRecordID", sys.RecordsRegistryView.Fields.ID, id).Once()
-	mockView.On("Get", wsid, mockKeyBuilder).Return(mockValue, errNotFound)
+	mockView.On("Get", wsid, mockKeyBuilder).Return(mockValue, errNotFound).Once()
 
 	_, _, err := registry.Get(wsid, id)
 

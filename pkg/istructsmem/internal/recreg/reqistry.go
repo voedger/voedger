@@ -11,7 +11,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/sys"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/sys/builtin"
 )
 
 type Registry struct {
@@ -46,7 +45,7 @@ func (reg *Registry) Get(ws istructs.WSID, id istructs.RecordID) (appdef.QName, 
 
 func (reg *Registry) key(id istructs.RecordID) istructs.IKeyBuilder {
 	key := reg.keys.Get().(istructs.IKeyBuilder)
-	key.PutInt64(sys.RecordsRegistryView.Fields.IDHi, int64(builtin.CrackID(id))) // nolint G115
+	key.PutInt64(sys.RecordsRegistryView.Fields.IDHi, sys.RecordsRegistryView.Fields.CrackID(id))
 	key.PutRecordID(sys.RecordsRegistryView.Fields.ID, id)
 	return key
 }

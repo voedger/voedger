@@ -5,7 +5,10 @@
 
 package sys
 
-import "github.com/voedger/voedger/pkg/appdef"
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/istructs"
+)
 
 // sys workspace descriptor
 var SysWSKind = appdef.NewQName(appdef.SysPackage, "sysWS")
@@ -59,9 +62,14 @@ type RecordsRegistryViewFields struct {
 	IsActive   string
 }
 
+func (RecordsRegistryViewFields) CrackID(id istructs.RecordID) int64 {
+	return int64(id >> RecordsRegistryView.partBits) // nolint G115
+}
+
 var RecordsRegistryView = struct {
-	Name   appdef.QName
-	Fields RecordsRegistryViewFields
+	Name     appdef.QName
+	Fields   RecordsRegistryViewFields
+	partBits int
 }{
 	Name: appdef.NewQName(appdef.SysPackage, "RecordsRegistry"),
 	Fields: RecordsRegistryViewFields{
@@ -71,4 +79,5 @@ var RecordsRegistryView = struct {
 		QName:      "QName",
 		IsActive:   "IsActive",
 	},
+	partBits: 18, // 18 high bits for IDHi
 }

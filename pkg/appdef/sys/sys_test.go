@@ -77,3 +77,8 @@ func Test_SysPackage(t *testing.T) {
 		})
 	})
 }
+
+func Test_RecordsRegistryViewFields_CrackID(t *testing.T) {
+	require := require.New(t)
+	require.EqualValues(123, sys.RecordsRegistryView.Fields.CrackID((123<<18)+456)) // 123 is the high part, 456 is the low part
+}
