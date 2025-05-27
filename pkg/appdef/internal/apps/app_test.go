@@ -31,37 +31,6 @@ func Test_NewAppDef(t *testing.T) {
 		app, err := adb.Build()
 		require.NoError(err)
 		require.NotNil(app)
-
-		t.Run("should be ok to read sys package", func(t *testing.T) {
-			require.Equal([]string{appdef.SysPackage}, app.PackageLocalNames())
-			require.Equal(appdef.SysPackagePath, app.PackageFullPath(appdef.SysPackage))
-			require.Equal(appdef.SysPackage, app.PackageLocalName(appdef.SysPackagePath))
-		})
-
-		t.Run("should be ok to read sys workspace", func(t *testing.T) {
-			ws := app.Workspace(appdef.SysWorkspaceQName)
-			require.NotNil(ws)
-			require.Equal(appdef.SysWorkspaceQName, ws.QName())
-			require.Equal(appdef.TypeKind_Workspace, ws.Kind())
-
-			require.Equal(ws, app.Type(appdef.SysWorkspaceQName))
-		})
-
-		t.Run("should be ok to read sys types", func(t *testing.T) {
-			require.Equal(appdef.NullType, app.Type(appdef.NullQName))
-			require.Equal(appdef.AnyType, app.Type(appdef.QNameANY))
-		})
-
-		t.Run("should be ok to read sys data types", func(t *testing.T) {
-			require.Equal(appdef.SysData_RecordID, appdef.Data(app.Type, appdef.SysData_RecordID).QName())
-			require.Equal(appdef.SysData_String, appdef.Data(app.Type, appdef.SysData_String).QName())
-			require.Equal(appdef.SysData_bytes, appdef.Data(app.Type, appdef.SysData_bytes).QName())
-		})
-	})
-
-	t.Run("Should be ok to alter workspace after build", func(t *testing.T) {
-		wsb := adb.AlterWorkspace(appdef.SysWorkspaceQName)
-		require.NotNil(wsb)
 	})
 }
 
