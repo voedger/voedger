@@ -329,6 +329,7 @@ type VoidOrDef struct {
 }
 
 type DataType struct {
+	Pos       lexer.Position
 	Varchar   *TypeVarchar `parser:"( @@"`
 	Bytes     *TypeBytes   `parser:"| @@"`
 	Int8      bool         `parser:"| @('tinyint' | 'int8')"`
