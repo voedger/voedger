@@ -3246,4 +3246,17 @@ func Test_NotAllowedTypes(t *testing.T) {
 				);
 			);`, "file.vsql:5:9: BLOB field only allowed in table")
 	})
+
+	t.Run("Reference from CDoc to WDoc not allowed", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test();
+			WORKSPACE MyWS (
+				TABLE t01 INHERITS sys.WDoc();
+				TABLE t02 INHERITS sys.WRecord();
+				TABLE t1 INHERITS sys.CDoc(
+					f1 ref(t01),
+					f2 ref(t02)
+				);
+			);`, "file.vsql:6:13: t01: reference to WDoc/WRecord",
+			"file.vsql:7:13: t02: reference to WDoc/WRecord")
+	})
 }
