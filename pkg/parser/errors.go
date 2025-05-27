@@ -143,6 +143,10 @@ func ErrReferenceToAbstractTable(tblName string) error {
 	return fmt.Errorf("reference to abstract table %s", tblName)
 }
 
+func ErrReferenceToWDocOrWRecord(fieldName string) error {
+	return fmt.Errorf("%s: reference to WDoc/WRecord", fieldName)
+}
+
 func ErrReferenceToTableNotInWorkspace(tblName string) error {
 	return fmt.Errorf("table %s not included into workspace", tblName)
 }
