@@ -900,6 +900,12 @@ func TestQueryProcessor2_Include(t *testing.T) {
 					"sys.QName":"app1pkg.Clients"
 			}]}`, resp.Body)
 		})
+		t.Run("Expected error https://github.com/voedger/voedger/issues/3714", func(t *testing.T) {
+			_, _ = vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=EpicFail`, ws.WSID, it.QNameApp1_ViewClients),
+				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				coreutils.Expect400(),
+			)
+		})
 	})
 	t.Run("Document", func(t *testing.T) {
 		t.Run("Read by ID and include all", func(t *testing.T) {
@@ -2009,9 +2015,8 @@ func TestQueryProcessor2_Include(t *testing.T) {
 									}`, resp.Body)
 		})
 	})
-
 	t.Run("Expected error https://github.com/voedger/voedger/issues/3696", func(t *testing.T) {
-		vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=Client.Country.Name`, ws.WSID, it.QNameApp1_ViewClients),
+		_, _ = vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=Client.Country.Name`, ws.WSID, it.QNameApp1_ViewClients),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.Expect400(),
 		)
