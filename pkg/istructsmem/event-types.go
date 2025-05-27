@@ -733,6 +733,21 @@ func (o *objectType) clear() {
 	o.child = make([]*objectType, 0)
 }
 
+// Finds object within object hierarchy by visit function.
+// visit function should return true if object is found
+// If object is found then returns it, otherwise returns nil.
+func (o *objectType) find(visit func(*objectType) bool) *objectType {
+	if visit(o) {
+		return o
+	}
+	for _, c := range o.child {
+		if found := c.find(visit); found != nil {
+			return found
+		}
+	}
+	return nil
+}
+
 // forEach applies cb function to element and all it children recursive
 func (o *objectType) forEach(cb func(c *objectType) error) (err error) {
 	if err = cb(o); err == nil {

@@ -15,6 +15,7 @@ import (
 	bytespool "github.com/valyala/bytebufferpool"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/set"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -486,14 +487,14 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 //   - interfaces:
 //     — istructs.IRecords
 type appRecordsType struct {
-	app *appStructsType
-	reg *recreg.Registry
+	app      *appStructsType
+	registry *recreg.Registry
 }
 
 func newRecords(app *appStructsType) appRecordsType {
 	return appRecordsType{
-		app: app,
-		reg: recreg.New(&app.viewRecords),
+		app:      app,
+		registry: recreg.New(&app.viewRecords),
 	}
 }
 
@@ -692,8 +693,38 @@ func (recs *appRecordsType) apply2(event istructs.IPLogEvent, cb func(rec istruc
 	return err
 }
 
+var recordsInWLog = set.FromRO(appdef.TypeKind_ODoc, appdef.TypeKind_ORecord)
+
 // istructs.IRecords.Get
 func (recs *appRecordsType) Get(workspace istructs.WSID, _ bool, id istructs.RecordID) (record istructs.IRecord, err error) {
+	qn, ofs, err := recs.registry.Get(workspace, id)
+	if (qn != appdef.NullQName) && (ofs != istructs.NullOffset) && (err == nil) {
+		if kind := recs.app.AppDef().Type(qn).Kind(); recordsInWLog.Contains(kind) {
+			record, found := NewNullRecord(id), false
+			err := recs.app.events.ReadWLog(context.Background(), workspace, ofs, 1, func(_ istructs.Offset, event istructs.IWLogEvent) error {
+				if o, ok := event.ArgumentObject().(*objectType); ok {
+					if o := o.find(func(o *objectType) bool { return o.ID() == id }); o != nil {
+						// found record with id within event argument structure
+						dupe := newRecord(recs.app.config)
+						dupe.copyFrom(&o.recordType)
+						record = dupe
+						found = true
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				// test error: ODoc «test.oDoc» with id «12345» in wlog at offset 12345
+				return record, fmt.Errorf("%w: %s «%s» with id %d in wlog at offset %d", err, kind, qn, id, ofs)
+			}
+			if !found {
+				// ID not found: ODoc «test.oDoc» with id «12345» in wlog at offset 12345
+				return record, ErrIDNotFound("%s «%s» with id %d not found in wlog at offset %d", kind, qn, id, ofs)
+			}
+			return record, nil
+		}
+	}
+
 	data := make([]byte, 0)
 	var ok bool
 	if ok, err = recs.getRecord(workspace, id, &data); ok {
