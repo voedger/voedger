@@ -119,6 +119,9 @@ var (
 	reInviteAllowedForState = map[State]bool{
 		State_Cancelled: true,
 		State_Left:      true,
-		State_Invited:   true, // https://github.com/voedger/voedger/issues/3698
+
+		// https://github.com/voedger/voedger/issues/3698
+		State_ToBeInvited: true,
+		State_Invited:     true,
 	}
 )
