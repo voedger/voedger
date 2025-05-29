@@ -510,7 +510,7 @@
               "application/json": {
                 "schema": {
                   "properties": {
-                    "CurrentWLogOffset": {
+                    "currentWLogOffset": {
                       "type": "integer"
                     }
                   },
@@ -615,10 +615,10 @@
               "application/json": {
                 "schema": {
                   "properties": {
-                    "CurrentWLogOffset": {
+                    "currentWLogOffset": {
                       "type": "integer"
                     },
-                    "NewIDs": {
+                    "newIDs": {
                       "additionalProperties": {
                         "format": "int64",
                         "type": "integer"
@@ -727,7 +727,7 @@
               "application/json": {
                 "schema": {
                   "properties": {
-                    "CurrentWLogOffset": {
+                    "currentWLogOffset": {
                       "type": "integer"
                     }
                   },
@@ -918,7 +918,7 @@
               "application/json": {
                 "schema": {
                   "properties": {
-                    "CurrentWLogOffset": {
+                    "currentWLogOffset": {
                       "type": "integer"
                     }
                   },
