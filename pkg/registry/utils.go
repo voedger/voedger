@@ -49,20 +49,20 @@ func GetCDocLoginID(st istructs.IState, appWSID istructs.WSID, appName string, l
 
 }
 
-func GetCDocLogin(login string, st istructs.IState, appWSID istructs.WSID, appName string) (cdocLogin istructs.IStateValue, doesLoginExist bool, err error) {
+func GetCDocLogin(login string, st istructs.IState, appWSID istructs.WSID, appName string) (cdocLogin istructs.IStateValue, loginExists bool, err error) {
 	cdocLoginID, err := GetCDocLoginID(st, appWSID, appName, login)
-	doesLoginExist = true
+	loginExists = true
 	if err != nil {
-		return nil, doesLoginExist, err
+		return nil, loginExists, err
 	}
 	if cdocLoginID == istructs.NullRecordID {
-		doesLoginExist = false
-		return nil, doesLoginExist, err
+		loginExists = false
+		return nil, loginExists, err
 	}
 
 	kb, err := st.KeyBuilder(sys.Storage_Record, QNameCDocLogin)
 	if err != nil {
-		return nil, doesLoginExist, err
+		return nil, loginExists, err
 	}
 	kb.PutRecordID(sys.Storage_Record_Field_ID, cdocLoginID)
 	cdocLogin, err = st.MustExist(kb)
@@ -115,13 +115,11 @@ func GetPasswordSaltedHash(pwd string) (pwdSaltedHash []byte, err error) {
 }
 
 func CheckPassword(cdocLogin istructs.IStateValue, pwd string) (isPasswordOK bool, err error) {
-	isPasswordOK = true
 	if err := bcrypt.CompareHashAndPassword(cdocLogin.AsBytes(field_PwdHash), []byte(pwd)); err != nil {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
-			isPasswordOK = false
-			return isPasswordOK, nil
+			return false, nil
 		}
-		return isPasswordOK, fmt.Errorf("failed to authenticate: %w", err)
+		return false, fmt.Errorf("failed to authenticate: %w", err)
 	}
-	return isPasswordOK, err
+	return true, nil
 }
