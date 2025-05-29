@@ -68,12 +68,12 @@ func GetLoginHash(login string) string {
 }
 
 func ChangePassword(login string, st istructs.IState, intents istructs.IIntents, wsid istructs.WSID, appName string, newPwd string) error {
-	cdocLogin, doesLoginExist, err := GetCDocLogin(login, st, wsid, appName)
+	cdocLogin, loginExists, err := GetCDocLogin(login, st, wsid, appName)
 	if err != nil {
 		return err
 	}
 
-	if !doesLoginExist {
+	if !loginExists {
 		return errLoginDoesNotExist(login)
 	}
 
