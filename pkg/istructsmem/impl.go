@@ -697,48 +697,64 @@ var recordsInWLog = set.FromRO(appdef.TypeKind_ODoc, appdef.TypeKind_ORecord)
 
 // istructs.IRecords.Get
 func (recs *appRecordsType) Get(workspace istructs.WSID, _ bool, id istructs.RecordID) (record istructs.IRecord, err error) {
-	qn, ofs, err := recs.registry.Get(workspace, id)
-	if (qn != appdef.NullQName) && (ofs != istructs.NullOffset) && (err == nil) {
-		if kind := recs.app.AppDef().Type(qn).Kind(); recordsInWLog.Contains(kind) {
-			record, found := NewNullRecord(id), false
-			err := recs.app.events.ReadWLog(context.Background(), workspace, ofs, 1, func(_ istructs.Offset, event istructs.IWLogEvent) error {
-				if o, ok := event.ArgumentObject().(*objectType); ok {
-					if o := o.find(func(o *objectType) bool { return o.ID() == id }); o != nil {
-						// found record with id within event argument structure
-						dupe := newRecord(recs.app.config)
-						dupe.copyFrom(&o.recordType)
-						record = dupe
-						found = true
-					}
-				}
-				return nil
-			})
-			if err != nil {
-				// test error: ODoc «test.oDoc» with id «12345» in wlog at offset 12345
-				return record, fmt.Errorf("%w: %s «%s» with id %d in wlog at offset %d", err, kind, qn, id, ofs)
-			}
-			if !found {
-				// ID not found: ODoc «test.oDoc» with id «12345» in wlog at offset 12345
-				return record, ErrIDNotFound("%s «%s» with id %d not found in wlog at offset %d", kind, qn, id, ofs)
-			}
-			return record, nil
-		}
-	}
-
 	data := make([]byte, 0)
-	var ok bool
-	if ok, err = recs.getRecord(workspace, id, &data); ok {
-		rec := newRecord(recs.app.config)
-		if err = rec.loadFromBytes(data); err == nil {
-			return rec, nil
+	if ok, err := recs.getRecord(workspace, id, &data); !ok {
+		if err != nil {
+			// storage error while getRecord
+			return NewNullRecord(id), enrichError(err, "ws: %d, id: %d", workspace, id)
 		}
+		return NewNullRecord(id), nil // just not found, no error
 	}
-	return NewNullRecord(id), err
+	rec := newRecord(recs.app.config)
+	if err := rec.loadFromBytes(data); err != nil {
+		return NewNullRecord(id), enrichError(err, "ws: %d, id: %d", workspace, id)
+	}
+	return rec, nil
 }
 
 // istructs.IRecords.GetBatch
 func (recs *appRecordsType) GetBatch(workspace istructs.WSID, highConsistency bool, ids []istructs.RecordGetBatchItem) (err error) {
 	return recs.getRecordBatch(workspace, ids)
+}
+
+// istructs.IRecords.GetORec
+func (recs *appRecordsType) GetORec(workspace istructs.WSID, id istructs.RecordID, wlog istructs.Offset) (istructs.IRecord, error) {
+	if wlog == istructs.NullOffset {
+		qn, ofs, err := recs.registry.Get(workspace, id)
+		if (qn != appdef.NullQName) && (ofs != istructs.NullOffset) && (err == nil) {
+			if kind := recs.app.AppDef().Type(qn).Kind(); recordsInWLog.Contains(kind) {
+				wlog = ofs
+			}
+		}
+		if wlog == istructs.NullOffset {
+			// ORecord is not founded in records registry
+			return NewNullRecord(id), nil
+		}
+	}
+
+	record, found := NewNullRecord(id), false
+	err := recs.app.events.ReadWLog(context.Background(), workspace, wlog, 1, func(_ istructs.Offset, event istructs.IWLogEvent) error {
+		if o, ok := event.ArgumentObject().(*objectType); ok {
+			if o := o.find(func(o *objectType) bool { return o.ID() == id }); o != nil {
+				// found record with id within event argument structure
+				dupe := newRecord(recs.app.config)
+				dupe.copyFrom(&o.recordType)
+				record = dupe
+				found = true
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		// error while read wlog: ORecord with id «12345» in wlog at offset 12345
+		return NewNullRecord(id), fmt.Errorf("%w: ORecord with id %d in wlog at offset %d", err, id, wlog)
+	}
+	if !found {
+		// Offset founded, but event argument has no record with requested id
+		return NewNullRecord(id), nil
+	}
+
+	return record, nil
 }
 
 // istructs.IRecords.GetSingleton

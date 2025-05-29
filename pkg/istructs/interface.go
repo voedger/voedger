@@ -149,11 +149,16 @@ type IRecords interface {
 	PutJSON(WSID, map[appdef.FieldName]any) error
 
 	// @ConcurrentAccess R
-	// Can read GDoc, CDoc, ODoc, WDoc records
-	// If record not found NullRecord with QName() == NullQName is returned
-	// NullRecord.WSID & ID will be taken from arguments
+	// Can read GDoc, CDoc, WDoc records only.
+	// If record of these types is not found then NullRecord with QName() == NullQName is returned.
 	Get(workspace WSID, highConsistency bool, id RecordID) (record IRecord, err error)
 
+	// Can read ODoc records only.
+	// If record of these types is not found then NullRecord with QName() == NullQName is returned.
+	// Offset can be NullOffset. In this case method gets wlog offset from records registry
+	GetORec(WSID, RecordID, Offset) (IRecord, error)
+
+	// Can read GDoc, CDoc, WDoc records only.
 	GetBatch(workspace WSID, highConsistency bool, ids []RecordGetBatchItem) (err error)
 
 	// @ConcurrentAccess R
