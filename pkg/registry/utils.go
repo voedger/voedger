@@ -51,22 +51,20 @@ func GetCDocLoginID(st istructs.IState, appWSID istructs.WSID, appName string, l
 
 func GetCDocLogin(login string, st istructs.IState, appWSID istructs.WSID, appName string) (cdocLogin istructs.IStateValue, loginExists bool, err error) {
 	cdocLoginID, err := GetCDocLoginID(st, appWSID, appName, login)
-	loginExists = true
 	if err != nil {
-		return nil, loginExists, err
+		return nil, false, err
 	}
 	if cdocLoginID == istructs.NullRecordID {
-		loginExists = false
-		return nil, loginExists, err
+		return nil, false, nil
 	}
 
 	kb, err := st.KeyBuilder(sys.Storage_Record, QNameCDocLogin)
 	if err != nil {
-		return nil, loginExists, err
+		return nil, false, err
 	}
 	kb.PutRecordID(sys.Storage_Record_Field_ID, cdocLoginID)
 	cdocLogin, err = st.MustExist(kb)
-	return
+	return cdocLogin, err == nil, err
 }
 
 func GetLoginHash(login string) string {
