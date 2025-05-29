@@ -81,7 +81,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 
 			basket := cmd.ChildBuilder(test.basketIdent)
 			basket.PutRecordID(appdef.SystemField_ID, test.tempBasketID)
-			for i := 0; i < test.goodCount; i++ {
+			for i := range test.goodCount {
 				good := basket.ChildBuilder(test.goodIdent)
 				good.PutRecordID(appdef.SystemField_ID, test.tempGoodsID[i])
 				good.PutRecordID(test.saleIdent, test.tempSaleID)
@@ -1383,10 +1383,7 @@ func TestEventBuild_Error(t *testing.T) {
 	require := require.New(t)
 	test := newTest()
 
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), test.StorageProvider, isequencer.SequencesTrustLevel_0)
-
-	app, err := provider.BuiltIn(test.appName)
-	require.NoError(err)
+	app := test.AppStructs
 
 	var rawEvent istructs.IRawEvent
 	var buildErr error

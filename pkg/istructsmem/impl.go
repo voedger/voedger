@@ -261,7 +261,7 @@ func (app *appStructsType) DescribePackage(name string) interface{} {
 // istructs.IAppStructs.GetEventReapplier
 func (app *appStructsType) GetEventReapplier(plogEvent istructs.IPLogEvent) istructs.IEventReapplier {
 	if !plogEvent.(*eventType).isStored {
-		panic("only events read from the stroage can be re-applied")
+		panic("only events read from the storage can be re-applied")
 	}
 	return &implIEventReapplier{
 		plogEvent: plogEvent,
@@ -717,7 +717,7 @@ func (recs *appRecordsType) GetBatch(workspace istructs.WSID, highConsistency bo
 	return recs.getRecordBatch(workspace, ids)
 }
 
-// istructs.IRecords.GetORec
+// istructs.IRecords.GetORec #3711 ~impl~
 func (recs *appRecordsType) GetORec(workspace istructs.WSID, id istructs.RecordID, wlog istructs.Offset) (istructs.IRecord, error) {
 	if wlog == istructs.NullOffset {
 		qn, ofs, err := recs.registry.Get(workspace, id)

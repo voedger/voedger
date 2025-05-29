@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/constraints"
+	"github.com/voedger/voedger/pkg/appdef/sys"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -251,6 +252,19 @@ func newTest() *testEnvironment {
 	prepareAppDef := func() appdef.IAppDefBuilder {
 		adb := builder.New()
 		adb.AddPackage(test.pkgName, test.pkgPath)
+
+		{
+			sysWS := adb.AlterWorkspace(appdef.SysWorkspaceQName)
+
+			// for records registry: sys.RecordsRegistry
+			v := sysWS.AddView(sys.RecordsRegistryView.Name)
+			v.Key().PartKey().AddField(sys.RecordsRegistryView.Fields.IDHi, appdef.DataKind_int64)
+			v.Key().ClustCols().AddField(sys.RecordsRegistryView.Fields.ID, appdef.DataKind_int64)
+			v.Value().
+				AddField(sys.RecordsRegistryView.Fields.WLogOffset, appdef.DataKind_int64, true).
+				AddField(sys.RecordsRegistryView.Fields.QName, appdef.DataKind_QName, true).
+				AddField(sys.RecordsRegistryView.Fields.IsActive, appdef.DataKind_bool, false)
+		}
 
 		wsb := adb.AddWorkspace(test.wsName)
 
@@ -640,7 +654,7 @@ func recsIsEqual(record1, record2 istructs.IRecord) (ok bool, err error) {
 	return rowsIsEqual(&rec1.rowType, &rec2.rowType)
 }
 
-func (test *testEnvironment) fillTestObject(obj *objectType) {
+func (test *testEnvironment) fillTestObject(obj istructs.IObjectBuilder) {
 	obj.PutRecordID(appdef.SystemField_ID, test.tempSaleID)
 	obj.PutString(test.buyerIdent, test.buyerValue)
 	obj.PutInt8(test.ageIdent, test.ageValue)
@@ -660,7 +674,7 @@ func (test *testEnvironment) fillTestObject(obj *objectType) {
 		good.PutFloat64(test.weightIdent, test.goodWeights[i])
 	}
 
-	err := obj.build()
+	_, err := obj.Build()
 	if err != nil {
 		panic(err)
 	}
@@ -694,19 +708,17 @@ func (test *testEnvironment) testTestObject(t *testing.T, value istructs.IObject
 	require.Equal(test.goodCount, cnt)
 }
 
-func (test *testEnvironment) fillTestSecureObject(obj *objectType) {
+func (test *testEnvironment) fillTestSecureObject(obj istructs.IObjectBuilder) {
 	obj.PutString(test.passwordIdent, "12345")
 
-	err := obj.build()
+	_, err := obj.Build()
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (test *testEnvironment) testTestSecureObject(t *testing.T, obj *objectType) {
-	require := require.New(t)
-
-	require.Equal(maskString, obj.AsString(test.passwordIdent))
+func (test *testEnvironment) testTestSecureObject(t *testing.T, obj istructs.IRowReader) {
+	require.New(t).Equal(maskString, obj.AsString(test.passwordIdent))
 }
 
 func fillTestCUD(test *testEnvironment, cud *cudType) {
