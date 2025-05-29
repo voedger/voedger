@@ -127,7 +127,7 @@ func newIDs(t *testing.T, resp *coreutils.HTTPResponse) map[string]istructs.Reco
 	respMap := map[string]interface{}{}
 	require.NoError(t, json.Unmarshal([]byte(resp.Body), &respMap))
 	res := map[string]istructs.RecordID{}
-	for rawIDStr, storageIDfloat64 := range respMap["NewIDs"].(map[string]interface{}) {
+	for rawIDStr, storageIDfloat64 := range respMap["newIDs"].(map[string]interface{}) {
 		res[rawIDStr] = istructs.RecordID(storageIDfloat64.(float64))
 	}
 	return res
@@ -147,7 +147,7 @@ func TestBasicUsage_CommandProcessorV2_ExecCmd(t *testing.T) {
 		resp.Println()
 		m := map[string]interface{}{}
 		require.NoError(t, json.Unmarshal([]byte(resp.Body), &m))
-		result, err := json.Marshal(m["Result"])
+		result, err := json.Marshal(m["result"])
 		require.NoError(t, err)
 		require.JSONEq(t, `{"Int":42,"Str":"Str","sys.QName":"app1pkg.TestCmdResult"}`, string(result))
 	})
