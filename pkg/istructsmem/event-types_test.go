@@ -35,7 +35,7 @@ func TestEventBuilderNoCache(t *testing.T) {
 
 func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	if !cachedPLog {
 		// switch off plog cache
@@ -97,7 +97,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 				cmd, err := bld.ArgumentObjectBuilder().Build()
 				require.NoError(err)
 				require.NotNil(cmd)
-				testCommandsTree(t, cmd)
+				test.testCommandsTree(t, cmd)
 			})
 		})
 
@@ -157,7 +157,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 		require.False(goodsID[1].IsRaw())
 		defer pLogEvent.Release()
 
-		testDBEvent(t, pLogEvent)
+		test.testDBEvent(t, pLogEvent)
 		require.Equal(test.workspace, pLogEvent.Workspace())
 		require.Equal(test.wlogOfs, pLogEvent.WLogOffset())
 
@@ -172,7 +172,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			if r.QName() == test.tablePhotos {
 				idP = r.ID()
 				require.Equal(idP, photoID)
-				testPhotoRow(t, r)
+				test.testPhotoRow(t, r)
 			}
 			if r.QName() == test.tablePhotoRems {
 				idR = r.ID()
@@ -194,7 +194,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 				require.NoError(err)
 				require.NotNil(event)
 
-				testDBEvent(t, event)
+				test.testDBEvent(t, event)
 				require.Equal(test.workspace, event.Workspace())
 				require.Equal(test.wlogOfs, event.WLogOffset())
 
@@ -278,7 +278,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 				require.NoError(err)
 				require.NotNil(event)
 				defer event.Release()
-				testDBEvent(t, event)
+				test.testDBEvent(t, event)
 			})
 
 			t.Run("test sequential reading", func(t *testing.T) {
@@ -293,7 +293,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 				require.NoError(err)
 				require.NotNil(event)
 				defer event.Release()
-				testDBEvent(t, event)
+				test.testDBEvent(t, event)
 			})
 		})
 
@@ -335,7 +335,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			require.NotNil(rec)
 
 			require.Equal(test.tablePhotos, rec.QName())
-			testPhotoRow(t, rec)
+			test.testPhotoRow(t, rec)
 
 			recRem, err := app.Records().Get(test.workspace, true, remarkID)
 			require.NoError(err)
@@ -611,123 +611,6 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 
 			require.Equal(test.humanValue, rec.AsBool(test.humanIdent))
 		})
-	})
-}
-
-func testCommandsTree(t *testing.T, cmd istructs.IObject) {
-	require := require.New(t)
-	test := test()
-
-	t.Run("test command", func(t *testing.T) {
-		require.NotNil(cmd)
-
-		require.Equal(test.buyerValue, cmd.AsString(test.buyerIdent))
-		require.Equal(test.ageValue, cmd.AsInt8(test.ageIdent))
-		require.Equal(test.heightValue, cmd.AsFloat32(test.heightIdent))
-		require.Equal(test.photoValue, cmd.AsBytes(test.photoIdent))
-
-		require.Equal(test.humanValue, cmd.AsBool(test.humanIdent))
-	})
-
-	var basket istructs.IObject
-
-	t.Run("test basket", func(t *testing.T) {
-		var names []string
-		for name := range cmd.Containers {
-			names = append(names, name)
-		}
-		require.Len(names, 1)
-		require.Equal(test.basketIdent, names[0])
-
-		for c := range cmd.Children(test.basketIdent) {
-			basket = c
-			break
-		}
-		require.NotNil(basket)
-
-		require.Equal(cmd.AsRecord().ID(), basket.AsRecord().Parent())
-	})
-
-	t.Run("test goods", func(t *testing.T) {
-		var names []string
-		for name := range basket.Containers {
-			names = append(names, name)
-		}
-		require.Len(names, 1)
-		require.Equal(test.goodIdent, names[0])
-
-		var goods []istructs.IObject
-		for g := range basket.Children(test.goodIdent) {
-			goods = append(goods, g)
-		}
-		require.Len(goods, test.goodCount)
-
-		for i := 0; i < test.goodCount; i++ {
-			good := goods[i]
-			require.Equal(basket.AsRecord().ID(), good.AsRecord().Parent())
-			require.Equal(cmd.AsRecord().ID(), good.AsRecordID(test.saleIdent))
-			require.Equal(test.goodNames[i], good.AsString(test.nameIdent))
-			require.Equal(test.goodCodes[i], good.AsInt64(test.codeIdent))
-			require.Equal(test.goodWeights[i], good.AsFloat64(test.weightIdent))
-		}
-	})
-}
-
-func testUnloggedObject(t *testing.T, cmd istructs.IObject) {
-	require := require.New(t)
-	test := test()
-
-	hasPassword := false
-	cmd.Fields(func(iField appdef.IField) bool {
-		if hasPassword = iField.Name() == test.passwordIdent; hasPassword {
-			return false
-		}
-		return true
-	})
-	require.True(hasPassword)
-
-	require.Equal(maskString, cmd.AsString(test.passwordIdent))
-}
-
-func testPhotoRow(t *testing.T, photo istructs.IRowReader) {
-	require := require.New(t)
-	test := test()
-	require.Equal(test.buyerValue, photo.AsString(test.buyerIdent))
-	require.Equal(test.ageValue, photo.AsInt8(test.ageIdent))
-	require.Equal(test.heightValue, photo.AsFloat32(test.heightIdent))
-	require.Equal(test.photoValue, photo.AsBytes(test.photoIdent))
-}
-
-func testDBEvent(t *testing.T, event istructs.IDbEvent) {
-	require := require.New(t)
-	test := test()
-
-	// test DBEvent event general entities
-	require.Equal(test.saleCmdName, event.QName())
-	require.Equal(test.registeredTime, event.RegisteredAt())
-	require.True(event.Synced())
-	require.Equal(test.device, event.DeviceID())
-	require.Equal(test.syncTime, event.SyncedAt())
-
-	// test DBEvent commands tree
-	testCommandsTree(t, event.ArgumentObject())
-
-	t.Run("test DBEvent CUDs", func(t *testing.T) {
-		var cuds []istructs.IRowReader
-		cnt := 0
-		for row := range event.CUDs {
-			cuds = append(cuds, row)
-			if cnt == 0 {
-				require.True(row.IsNew())
-				require.Equal(test.tablePhotos, row.QName())
-			}
-			cnt++
-		}
-		require.Equal(2, cnt)
-		require.Len(cuds, 2)
-		testPhotoRow(t, cuds[0])
-		require.Equal(cuds[0].AsRecordID(appdef.SystemField_ID), cuds[1].AsRecordID(test.photoIdent))
-		require.Equal(test.remarkValue, cuds[1].AsString(test.remarkIdent))
 	})
 }
 
@@ -1498,9 +1381,9 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 func TestEventBuild_Error(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), test.StorageProvider, isequencer.SequencesTrustLevel_0)
 
 	app, err := provider.BuiltIn(test.appName)
 	require.NoError(err)
@@ -1805,30 +1688,30 @@ func TestEventBuild_Error(t *testing.T) {
 func Test_LoadStoreEvent_Bytes(t *testing.T) {
 	require := require.New(t)
 
-	ev1 := newTestEvent(100500, 500)
-	testDBEvent(t, ev1)
+	test := newTest()
+
+	ev1 := test.newTestEvent(100500, 500)
+	test.testDBEvent(t, ev1)
 
 	ev1.argUnlObj.maskValues()
 
 	b := ev1.storeToBytes()
 
-	ev2 := newEmptyTestEvent()
+	ev2 := test.newEmptyTestEvent()
 	err := ev2.loadFromBytes(b)
 	require.NoError(err)
 
 	require.Equal(istructs.Offset(100500), ev2.pLogOffs)
 	require.Equal(istructs.Offset(500), ev2.wLogOffs)
 
-	testDBEvent(t, ev2)
-	testUnloggedObject(t, ev2.ArgumentUnloggedObject())
+	test.testDBEvent(t, ev2)
+	test.testUnloggedObject(t, ev2.ArgumentUnloggedObject())
 
 	// #2785
 	t.Run("should be supports emptied fields in CUDs", func(t *testing.T) {
-		test := test()
-
 		emptiedPhotoID := test.tempPhotoID + 1
 		emptiedRemarkID := test.tempRemarkID + 1
-		ev1 := newTestEvent(100500, 500)
+		ev1 := test.newTestEvent(100500, 500)
 
 		t.Run("put CUD with emptied photo", func(t *testing.T) {
 			cud := ev1.CUDBuilder().Create(test.tablePhotos)
@@ -1850,7 +1733,7 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 
 		b := ev1.storeToBytes()
 
-		ev2 := newEmptyTestEvent()
+		ev2 := test.newEmptyTestEvent()
 		err := ev2.loadFromBytes(b)
 		require.NoError(err)
 
@@ -1897,11 +1780,12 @@ func Test_LoadStoreEvent_Bytes(t *testing.T) {
 func Test_LoadEvent_DamagedBytes(t *testing.T) {
 	require := require.New(t)
 
-	ev1 := newTestEvent(100500, 500)
+	test := newTest()
+
+	ev1 := test.newTestEvent(100500, 500)
 
 	// #2785
 	t.Run("put CUD with emptied photo", func(t *testing.T) {
-		test := test()
 		cud := ev1.CUDBuilder().Create(test.tablePhotos)
 		cud.PutRecordID(appdef.SystemField_ID, test.tempPhotoID+1)
 		cud.PutString(test.buyerIdent, test.buyerValue)
@@ -1915,7 +1799,7 @@ func Test_LoadEvent_DamagedBytes(t *testing.T) {
 		for i := 0; i < length; i++ {
 			damaged := b[0:i]
 
-			ev2 := newEmptyTestEvent()
+			ev2 := test.newEmptyTestEvent()
 			err := ev2.loadFromBytes(damaged)
 			require.Error(err, fmt.Sprintf("unexpected success load event from bytes truncated at %d", i))
 		}
@@ -1928,7 +1812,7 @@ func Test_LoadEvent_DamagedBytes(t *testing.T) {
 			stat := make(map[string]int)
 			for i := 0; i < length; i++ {
 				b[i] ^= 255
-				ev2 := newEmptyTestEvent()
+				ev2 := test.newEmptyTestEvent()
 
 				func() {
 					defer func() {
@@ -1954,7 +1838,7 @@ func Test_LoadEvent_DamagedBytes(t *testing.T) {
 
 func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
 
@@ -1967,7 +1851,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 		appdef.NewQName("invalid q name", ""),
 	}
 	eventBytes := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}
-	for i := 0; i < len(eventName); i++ {
+	for i := range len(eventName) {
 		t.Run("load/store bad command name error event", func(t *testing.T) {
 			bld := app.Events().GetSyncRawEventBuilder(
 				istructs.SyncRawEventBuilderParams{
@@ -1993,7 +1877,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 
 			b := ev1.storeToBytes()
 
-			ev2 := newEmptyTestEvent()
+			ev2 := test.newEmptyTestEvent()
 			err = ev2.loadFromBytes(b)
 			require.NoError(err)
 
@@ -2024,13 +1908,13 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 				}
 			}
 			t.Run("load/store custom build error event", func(t *testing.T) {
-				ev1 := newTestEvent(100500, 500)
+				ev1 := test.newTestEvent(100500, 500)
 				ev1.argUnlObj.clear() // to prevent EventBytes obfuscate
 				ev1.setBuildError(errors.New(msg))
 
 				b := ev1.storeToBytes()
 
-				ev2 := newEmptyTestEvent()
+				ev2 := test.newEmptyTestEvent()
 				err = ev2.loadFromBytes(b)
 				require.NoError(err)
 
@@ -2047,11 +1931,13 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 }
 
 func Test_LoadErrorEvent_DamagedBytes(t *testing.T) {
+	test := newTest()
+
 	const errMsg = "test build error message; エラーメッセージテスト"
 
 	require := require.New(t)
 
-	ev1 := newTestEvent(100500, 500)
+	ev1 := test.newTestEvent(100500, 500)
 	ev1.argUnlObj.clear() // to prevent EventBytes obfuscate
 	ev1.setBuildError(errors.New(errMsg))
 
@@ -2061,7 +1947,7 @@ func Test_LoadErrorEvent_DamagedBytes(t *testing.T) {
 	for i := 0; i < length; i++ {
 		damaged := b[0:i]
 
-		ev2 := newEmptyTestEvent()
+		ev2 := test.newEmptyTestEvent()
 		err := ev2.loadFromBytes(damaged)
 		require.Error(err, fmt.Sprintf("unexpected success load event from bytes truncated at %d", i))
 	}
@@ -2070,10 +1956,12 @@ func Test_LoadErrorEvent_DamagedBytes(t *testing.T) {
 func Test_LoadStoreNullEvent_Bytes(t *testing.T) {
 	require := require.New(t)
 
-	ev1 := newEmptyTestEvent()
+	test := newTest()
+
+	ev1 := test.newEmptyTestEvent()
 	b := ev1.storeToBytes()
 
-	ev2 := newEmptyTestEvent()
+	ev2 := test.newEmptyTestEvent()
 	err := ev2.loadFromBytes(b)
 	require.NoError(err)
 
@@ -2082,10 +1970,10 @@ func Test_LoadStoreNullEvent_Bytes(t *testing.T) {
 
 func Test_ObjectMask(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	value := newObject(test.AppCfg, test.saleCmdDocName, nil)
-	fillTestObject(value)
+	test.fillTestObject(value)
 
 	value.maskValues()
 
@@ -2115,7 +2003,7 @@ func Test_ObjectMask(t *testing.T) {
 
 func Test_objectType_FillFromJSON(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	tests := []struct {
 		name  string

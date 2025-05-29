@@ -109,7 +109,7 @@ func Test_recordKey(t *testing.T) {
 
 func TestObjectFillAndGet(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	as := test.AppStructs
 
