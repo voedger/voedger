@@ -39,11 +39,10 @@ func GetCDocLoginID(st istructs.IState, appWSID istructs.WSID, appName string, l
 	kb.PutInt64(field_AppWSID, int64(appWSID)) // nolint G115
 	kb.PutString(field_AppIDLoginHash, appName+"/"+loginHash)
 	loginIdx, ok, err := st.CanExist(kb)
-	if ok && err == nil {
-		return loginIdx.AsRecordID(field_CDocLoginID), nil
+	if err != nil || !ok {
+		return istructs.NullRecordID, err
 	}
-	return istructs.NullRecordID, err
-
+	return loginIdx.AsRecordID(field_CDocLoginID), nil
 }
 
 func GetCDocLogin(login string, st istructs.IState, appWSID istructs.WSID, appName string) (cdocLogin istructs.IStateValue, loginExists bool, err error) {
