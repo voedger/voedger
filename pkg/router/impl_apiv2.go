@@ -161,7 +161,7 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 		payload := payloads.VerifiedValuePayload{}
 		_, err = iTokens.ValidateToken(verifiedEmailToken, &payload)
 		if err != nil {
-			ReplyCommonError(rw, fmt.Sprintf("VerifiedEmailToken validation failed: %s", err.Error()), http.StatusBadRequest)
+			ReplyCommonError(rw, fmt.Sprintf("verifiedEmailToken validation failed: %s", err.Error()), http.StatusBadRequest)
 			return
 		}
 		email := payload.Value.(string)
@@ -208,7 +208,7 @@ func requestHandlerV2_create_device(numsAppsWorkspaces map[appdef.AppQName]istru
 			replyErr(rw, err)
 			return
 		}
-		result := fmt.Sprintf(`{"Login":"%s","Password":"%s"}`, login, pwd)
+		result := fmt.Sprintf(`{"%s":"%s","%s":"%s"}`, fieldLogin, login, fieldPassword, pwd)
 		ReplyJSON(rw, result, http.StatusCreated)
 	}
 }
@@ -379,21 +379,21 @@ func parseCreateLoginArgs(body string) (verifiedEmailToken, displayName, pwd str
 		return "", "", "", fmt.Errorf("failed to unmarshal body: %w:\n%s", err, body)
 	}
 	ok := false
-	verifiedEmailToken, ok, err = args.AsString("VerifiedEmailToken")
+	verifiedEmailToken, ok, err = args.AsString("verifiedEmailToken")
 	if err != nil {
 		return "", "", "", err
 	}
 	if !ok {
-		return "", "", "", errors.New("VerifiedEmailToken field missing")
+		return "", "", "", errors.New("verifiedEmailToken field missing")
 	}
-	displayName, ok, err = args.AsString("DisplayName")
+	displayName, ok, err = args.AsString("displayName")
 	if err != nil {
 		return "", "", "", err
 	}
 	if !ok {
 		return "", "", "", errors.New("displayName field missing")
 	}
-	pwd, ok, err = args.AsString("Password")
+	pwd, ok, err = args.AsString("password")
 	if err != nil {
 		return "", "", "", err
 	}
