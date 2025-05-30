@@ -746,8 +746,7 @@ func (recs *appRecordsType) GetORec(workspace istructs.WSID, id istructs.RecordI
 		return nil
 	})
 	if err != nil {
-		// error while read wlog: ORecord with id «12345» in wlog at offset 12345
-		return NewNullRecord(id), fmt.Errorf("%w: ORecord with id %d in wlog at offset %d", err, id, wlog)
+		return NewNullRecord(id), fmt.Errorf("%w: ws %d, record id %d, wlog offset %d", err, workspace, id, wlog)
 	}
 	if !found {
 		// Offset founded, but event argument has no record with requested id

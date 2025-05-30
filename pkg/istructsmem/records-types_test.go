@@ -200,7 +200,7 @@ func Test_RecordsRead(t *testing.T) {
 	})
 }
 
-// #3711 ~tests~
+// #3711 istructs.IRecords.GetORec ~tests~
 func Test_RecordsGetORec(t *testing.T) {
 	require := require.New(t)
 	test := newTest()
@@ -340,6 +340,18 @@ func Test_RecordsGetORec(t *testing.T) {
 		doTest(badID, istructs.NullOffset)
 
 		doTest(saleID, test.wlogOfs+1) // client mistake: right ID but wrong offset
+	})
+
+	t.Run("Should be error if WLog read failed", func(t *testing.T) {
+		testError := errors.New("test error")
+		pk, cc := wlogKey(test.workspace, test.wlogOfs)
+		test.Storage.ScheduleGetError(testError, pk, cc)
+		defer test.Storage.Reset()
+
+		rec, err := app.Records().GetORec(test.workspace, saleID, test.wlogOfs)
+		require.Error(err, require.Is(testError), require.HasAll(test.workspace, saleID, test.wlogOfs))
+		require.Equal(saleID, rec.ID())
+		require.Equal(appdef.NullQName, rec.QName())
 	})
 }
 
