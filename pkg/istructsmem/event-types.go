@@ -164,7 +164,7 @@ func (ev *eventType) loadFromBytes(in []byte) (err error) {
 	buf := bytes.NewBuffer(in)
 	var codec byte
 	if codec, err = utils.ReadByte(buf); err != nil {
-		return fmt.Errorf("error read codec version: %w", err)
+		return enrichError(err, "error read codec version")
 	}
 	switch codec {
 	case codec_RawDynoBuffer, codec_RDB_1, codec_RDB_2:

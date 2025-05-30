@@ -96,10 +96,10 @@ func (vr *appViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.ViewRe
 		kv[i].Value = newNullValue()
 		k := kv[i].Key.(*keyType)
 		if err = k.build(); err != nil {
-			return fmt.Errorf("error building key at batch item %d: %w", i, err)
+			return enrichError(err, "error building key at batch item %d", i)
 		}
 		if err = validateViewKey(k, false); err != nil {
-			return fmt.Errorf("not valid key at batch item %d: %w", i, err)
+			return enrichError(err, "not valid key at batch item %d", i)
 		}
 		pKey, cKey := k.storeToBytes(workspace)
 		batch, ok := plan[string(pKey)]
@@ -655,7 +655,7 @@ func (val *valueType) loadFromBytes(in []byte) (err error) {
 
 	var codec byte
 	if codec, err = utils.ReadByte(buf); err != nil {
-		return fmt.Errorf("error read codec version: %w", err)
+		return enrichError(err, "error read codec version")
 	}
 	switch codec {
 	case codec_RawDynoBuffer, codec_RDB_1, codec_RDB_2:

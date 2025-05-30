@@ -46,7 +46,7 @@ func (e validateErrorType) Unwrap() error {
 
 func validateError(code int, err error) ValidateError {
 	e := validateErrorType{
-		error: fmt.Errorf("%w; validate error code: %d", err, code),
+		error: enrichError(err, "validate error code %d", code),
 		code:  code,
 	}
 	return e
@@ -60,7 +60,5 @@ const (
 	// These errors are possible while checking type and content of the event arguments and CUDs
 	errEventArgUseWrongType         = "%v argument uses wrong type «%v», expected «%v»: %w"
 	errEventUnloggedArgUseWrongType = "%v unlogged argument uses wrong type «%v», expected «%v»: %w"
-	errUnknownContainerName         = "%v child[%d] has unknown container name «%s»: %w"
 	errWrongContainerType           = "%v child[%d] %v has wrong type name, expected «%v»: %w"
-	errWrongParentID                = "%v child[%d] %v has wrong parent id «%d», expected «%d»: %w"
 )

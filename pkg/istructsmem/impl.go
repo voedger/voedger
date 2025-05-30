@@ -8,7 +8,6 @@ package istructsmem
 import (
 	"context"
 	"encoding/binary"
-	"fmt"
 	"strconv"
 	"sync"
 
@@ -49,7 +48,7 @@ func (provider *appStructsProviderType) BuiltIn(appName appdef.AppQName) (struct
 
 	appCfg, ok := provider.configs[appName]
 	if !ok {
-		return nil, fmt.Errorf("%w: %v", istructs.ErrAppNotFound, appName)
+		return nil, enrichError(istructs.ErrAppNotFound, appName)
 	}
 
 	provider.locker.Lock()
@@ -611,7 +610,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 			}
 			exists, err := load(id, nil)
 			if err != nil {
-				return fmt.Errorf("error checking singleton «%v» record «%d» existence: %w", rec.QName(), id, err)
+				return enrichError(err, "error checking singleton «%v» record «%d» existence", rec.QName(), id)
 			}
 			if exists {
 				return ErrSingletonViolation(rec)
@@ -623,7 +622,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 		old := newRecord(recs.app.config)
 		exists, err := load(rec.originRec.ID(), old)
 		if err != nil {
-			return fmt.Errorf("error load updated «%v» record «%d»: %w", rec.originRec.QName(), rec.originRec.ID(), err)
+			return enrichError(err, "error load updated «%v» record «%d»", rec.originRec.QName(), rec.originRec.ID())
 		}
 		if !exists {
 			return ErrIDNotFound("updated «%v» record «%d»", rec.originRec.QName(), rec.originRec.ID())
@@ -723,7 +722,7 @@ func (recs *appRecordsType) GetORec(workspace istructs.WSID, id istructs.RecordI
 		qn, ofs, err := recs.registry.Get(workspace, id)
 		if err != nil {
 			// Failed get from record registry, enriched error should be returned
-			return NewNullRecord(id), fmt.Errorf("%w: ws %d, wlog offset %d, record id %d", err, workspace, wlog, id)
+			return NewNullRecord(id), enrichError(err, "ws %d, wlog offset %d, record id %d", workspace, wlog, id)
 		}
 		if (qn != appdef.NullQName) && (ofs != istructs.NullOffset) {
 			if kind := recs.app.AppDef().Type(qn).Kind(); recordsInWLog.Contains(kind) {
@@ -751,7 +750,7 @@ func (recs *appRecordsType) GetORec(workspace istructs.WSID, id istructs.RecordI
 	})
 	if err != nil {
 		// Failed wlog reading, enriched error should be returned
-		return NewNullRecord(id), fmt.Errorf("%w: ws %d, wlog offset %d, record id %d", err, workspace, wlog, id)
+		return NewNullRecord(id), enrichError(err, "ws %d, wlog offset %d, record id %d", err, workspace, wlog, id)
 	}
 	if !found {
 		// Offset founded, but event argument has no record with requested id
