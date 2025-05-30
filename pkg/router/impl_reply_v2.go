@@ -29,6 +29,8 @@ func createBusRequest(reqMethod string, req *http.Request, rw http.ResponseWrite
 	var wsidUint uint64
 	var err error
 	if len(wsidStr) > 0 {
+		coreutils.ClarifyJSONNumber(json.Number(wsidStr), appdef.DataKind_int64)
+		тут продолжить
 		if wsidUint, err = strconv.ParseUint(wsidStr, utils.DecimalBase, utils.BitSize64); err != nil {
 			// notest: impossible because of regexp in a handler
 			panic(err)

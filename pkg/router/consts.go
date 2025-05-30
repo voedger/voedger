@@ -35,6 +35,7 @@ const (
 	URLPlaceholder_role             = "role"
 	hours24                         = 24 * time.Hour
 	DefaultRetryAfterSecondsOn503   = 1
+	defaultN10NExpiresInSeconds     = 3600
 )
 
 var (

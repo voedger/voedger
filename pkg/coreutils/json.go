@@ -84,3 +84,14 @@ func ClarifyJSONNumber(value json.Number, kind appdef.DataKind) (val interface{}
 	}
 	panic(fmt.Sprintf("unsupported data kind %s for json.Number", kind.TrimString()))
 }
+
+func ClarifyJSONWSID(wsidNumber json.Number) (wsid istructs.WSID, err error) {
+	int64Val, err := wsidNumber.Int64()
+	if err != nil {
+		return 0, errFailedToCast(wsidNumber, "WSID", err)
+	}
+	if int64Val < 0 || int64Val > istructs.MaxAllowedWSID {
+		return 0, errNumberOverflow(wsidNumber, "WSID")
+	}
+	return istructs.WSID(int64Val), nil
+}

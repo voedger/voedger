@@ -117,6 +117,13 @@ func (s *httpService) registerHandlersV2() {
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
 		corsHandler(requestHandlerV2_create_device(s.numsAppsWorkspaces, s.federation))).
 		Methods(http.MethodPost).Name("create device")
+
+	// notifications /api/v2/apps/{owner}/{app}/notifications
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications",
+		URLPlaceholder_appOwner, URLPlaceholder_appName),
+		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.federation))).
+		Methods(http.MethodPost).Name("notifications")
+
 }
 
 func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
@@ -184,6 +191,75 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 			return
 		}
 		ReplyJSON(rw, resp.Body, http.StatusCreated)
+	}
+}
+
+func requestHandlerV2_notifications(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, federation federation.IFederation) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
+		if !ok {
+			return
+		}
+
+	}
+}
+
+type SubscriptionJSON struct {
+	Entity     string      `json:"entity"`
+	WSIDNumber json.Number `json:"wsid"`
+}
+
+type subscription struct {
+	entity string
+	wsid   istructs.WSID
+}
+
+type n10nArgs struct {
+	Subscriptions []SubscriptionJSON `json:"subscriptions"`
+	ExpiresIn     int64              `json:"expiresIn"`
+}
+
+func parseN10nArgs(body string) (subscriptions []subscription, expiresIn int64, err error) {
+	n10nArgs := n10nArgs{}
+	coreutils.JSONUnmarshal([]byte(body), &n10nArgs)
+	if n10nArgs.ExpiresIn == 0 {
+		n10nArgs.ExpiresIn = defaultN10NExpiresInSeconds
+	}
+	if len(n10nArgs.Subscriptions) == 0 {
+		return nil, 0, errors.New("no subscriptions provided")
+	}
+	for _, subscr := range n10nArgs.Subscriptions {
+		wsidIntf, err := coreutils.ClarifyJSONNumber(subscr.WSIDNumber, appdef.DataKind_int64)
+		if err != nil {
+			return nil, 0, err
+		}
+		subscriptions = append(subscriptions, subscription{
+			entity: subscr.Entity,
+			wsid: istructs.WSID(wsidIntf.(uint64)),
+		})
+
+	}
+
+	args := coreutils.MapObject{}
+	if err := coreutils.JSONUnmarshal([]byte(body), &args); err != nil {
+		return nil, 0, fmt.Errorf("failed to unmarshal request body: %w", err)
+	}
+	expiresIn, ok, err := args.AsInt64("expiresIn")
+	if err != nil {
+		return nil, 0, err
+	}
+	if !ok {
+		expiresIn = defaultN10NExpiresInSeconds
+	}
+	subscriptionsIntfs, ok, err := args.AsObjects("subscriptions")
+	if err != nil {
+		return nil, 0, err
+	}
+	if !ok {
+		return nil, 0, errors.New("subscriptions field missing")
+	}
+	for _, subscriptionIntf := range subscriptionsIntfs {
+		subscription := subscriptionIntf.(map[string]interface{})
 	}
 }
 
