@@ -139,37 +139,37 @@ func (cr *CommandResponse) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if raw, ok := m["NewIDs"]; ok || len(raw) > 0 {
+	if raw, ok := m["NewIDs"]; ok {
 		if err := json.Unmarshal(raw, &cr.NewIDs); err != nil {
 			return err
 		}
-	} else if raw, ok = m["newIDs"]; ok || len(raw) > 0 {
+	} else if raw, ok = m["newIDs"]; ok {
 		if err := json.Unmarshal(raw, &cr.NewIDs); err != nil {
 			return err
 		}
 	}
 
-	if raw, ok := m["CurrentWLogOffset"]; ok || len(raw) > 0 {
+	if raw, ok := m["CurrentWLogOffset"]; ok {
 		if err := json.Unmarshal(raw, &cr.CurrentWLogOffset); err != nil {
 			return err
 		}
-	} else if raw, ok = m["currentWLogOffset"]; ok || len(raw) > 0 {
+	} else if raw, ok = m["currentWLogOffset"]; ok {
 		if err := json.Unmarshal(raw, &cr.CurrentWLogOffset); err != nil {
 			return err
 		}
 	}
 
-	if raw, ok := m["sys.Error"]; ok || len(raw) > 0 {
+	if raw, ok := m["sys.Error"]; ok {
 		if err := json.Unmarshal(raw, &cr.SysError); err != nil {
 			return err
 		}
 	}
 
-	if raw, ok := m["Result"]; ok || len(raw) > 0 {
+	if raw, ok := m["Result"]; ok {
 		if err := json.Unmarshal(raw, &cr.CmdResult); err != nil {
 			return err
 		}
-	} else if raw, ok = m["result"]; ok || len(raw) > 0 {
+	} else if raw, ok = m["result"]; ok {
 		if err := json.Unmarshal(raw, &cr.CmdResult); err != nil {
 			return err
 		}
