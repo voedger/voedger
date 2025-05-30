@@ -32,11 +32,12 @@ type HTTPResponse struct {
 
 type ReqOptFunc func(opts *reqOpts)
 
+// implements json.Unmarshaler
 type CommandResponse struct {
-	NewIDs            map[string]istructs.RecordID `json:"newIDs"`
-	CurrentWLogOffset istructs.Offset              `json:"currentWLogOffset"`
-	SysError          SysError                     `json:"sys.Error"`
-	CmdResult         map[string]interface{}       `json:"result"`
+	NewIDs            map[string]istructs.RecordID
+	CurrentWLogOffset istructs.Offset
+	SysError          SysError
+	CmdResult         map[string]interface{}
 }
 
 type QPv2Response map[string]interface{}
@@ -49,6 +50,7 @@ func (r QPv2Response) ResultRow(rowNum int) map[string]interface{} {
 	return r["results"].([]interface{})[rowNum].(map[string]interface{})
 }
 
+// implements json.Unmarshaler
 type FuncResponse struct {
 	*HTTPResponse
 	CommandResponse
@@ -128,4 +130,83 @@ type CUD struct {
 type IReadFS interface {
 	fs.ReadDirFS
 	fs.ReadFileFS
+}
+
+// TODO: temporary solution. Eliminate after switching to APIv2
+func (cr *CommandResponse) UnmarshalJSON(data []byte) error {
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(data, &m); err != nil {
+		return err
+	}
+
+	if raw, ok := m["NewIDs"]; ok || len(raw) > 0 {
+		if err := json.Unmarshal(raw, &cr.NewIDs); err != nil {
+			return err
+		}
+	} else if raw, ok = m["newIDs"]; ok || len(raw) > 0 {
+		if err := json.Unmarshal(raw, &cr.NewIDs); err != nil {
+			return err
+		}
+	}
+
+	if raw, ok := m["CurrentWLogOffset"]; ok || len(raw) > 0 {
+		if err := json.Unmarshal(raw, &cr.CurrentWLogOffset); err != nil {
+			return err
+		}
+	} else if raw, ok = m["currentWLogOffset"]; ok || len(raw) > 0 {
+		if err := json.Unmarshal(raw, &cr.CurrentWLogOffset); err != nil {
+			return err
+		}
+	}
+
+	if raw, ok := m["sys.Error"]; ok || len(raw) > 0 {
+		if err := json.Unmarshal(raw, &cr.SysError); err != nil {
+			return err
+		}
+	}
+
+	if raw, ok := m["Result"]; ok || len(raw) > 0 {
+		if err := json.Unmarshal(raw, &cr.CmdResult); err != nil {
+			return err
+		}
+	} else if raw, ok = m["result"]; ok || len(raw) > 0 {
+		if err := json.Unmarshal(raw, &cr.CmdResult); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// TODO: temporary solution. Eliminate after switching to APIv2
+func (fr *FuncResponse) UnmarshalJSON(data []byte) error {
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(data, &m); err != nil {
+		return err
+	}
+
+	if raw, ok := m["HTTPResponse"]; ok && len(raw) > 0 {
+		if err := json.Unmarshal(raw, &fr.HTTPResponse); err != nil {
+			return err
+		}
+	}
+
+	var commandResp CommandResponse
+	if err := commandResp.UnmarshalJSON(data); err != nil {
+		return err
+	}
+	fr.CommandResponse = commandResp
+
+	if raw, ok := m["sections"]; ok && len(raw) > 0 {
+		if err := json.Unmarshal(raw, &fr.Sections); err != nil {
+			return err
+		}
+	}
+
+	if raw, ok := m["QPv2Response"]; ok && len(raw) > 0 {
+		if err := json.Unmarshal(raw, &fr.QPv2Response); err != nil {
+			return err
+		}
+	}
+	return nil
 }

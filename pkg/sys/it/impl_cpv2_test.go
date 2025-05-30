@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/registry"
@@ -52,7 +53,8 @@ func TestBasicUsage_CommandProcessorV2_Doc(t *testing.T) {
 		coreutils.WithMethod(http.MethodPost),
 		coreutils.WithAuthorizeBy(ws.Owner.Token),
 	)
-	resp.Println()
+	logger.Error("insert done")
+	// resp.Println()
 	newIDsAfterInsert := newIDs(t, resp)
 	require.Equal(t, http.StatusCreated, resp.HTTPResp.StatusCode)
 
