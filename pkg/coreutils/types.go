@@ -179,7 +179,7 @@ func (cr *CommandResponse) UnmarshalJSON(data []byte) error {
 }
 
 // TODO: temporary solution. Eliminate after switching to APIv2
-func (fr *FuncResponse) UnmarshalJSON(data []byte) error {
+func (resp *FuncResponse) UnmarshalJSON(data []byte) error {
 	var m map[string]json.RawMessage
 	if err := json.Unmarshal(data, &m); err != nil {
 		return err
