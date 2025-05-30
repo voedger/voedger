@@ -6,6 +6,8 @@
 package recreg
 
 import (
+	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -29,13 +31,21 @@ func New(v istructs.IViewRecords) *Registry {
 	}
 }
 
+// Returns QName and WLog offset of record by record id.
+//
+// If id not found then returns NullQName and NullOffset.
 func (reg *Registry) Get(ws istructs.WSID, id istructs.RecordID) (appdef.QName, istructs.Offset, error) {
 	key := reg.key(id)
 	defer reg.keys.Put(key)
 
 	val, err := reg.v.Get(ws, key)
 	if err != nil {
-		return appdef.NullQName, istructs.NullOffset, err
+		if errors.Is(err, istructs.ErrRecordNotFound) {
+			// id not found, returns nulls
+			return appdef.NullQName, istructs.NullOffset, nil
+		}
+		// get from view failed, return enriched error
+		return appdef.NullQName, istructs.NullOffset, fmt.Errorf("%w: ws id %d, record id %d", err, ws, id)
 	}
 
 	return val.AsQName(sys.RecordsRegistryView.Fields.QName),

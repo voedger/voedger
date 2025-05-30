@@ -66,7 +66,7 @@ func (vr *appViewRecords) Get(workspace istructs.WSID, key istructs.IKeyBuilder)
 	data := make([]byte, 0)
 	if ok, err := vr.app.config.storage.Get(pKey, cKey, &data); !ok {
 		if err == nil {
-			err = ErrRecordNotFound
+			err = istructs.ErrRecordNotFound
 		}
 		return value, err
 	}

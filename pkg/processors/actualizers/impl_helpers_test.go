@@ -15,7 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
 const (
@@ -88,7 +87,7 @@ func getProjectionValue(require *require.Assertions, appStructs istructs.IAppStr
 	key.PutInt32("pk", 0)
 	key.PutInt32("cc", 0)
 	value, err := appStructs.ViewRecords().Get(wsid, key)
-	if errors.Is(err, istructsmem.ErrRecordNotFound) {
+	if errors.Is(err, istructs.ErrRecordNotFound) {
 		return 0
 	}
 	require.NoError(err)

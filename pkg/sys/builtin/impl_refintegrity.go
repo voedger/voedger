@@ -47,7 +47,7 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 			}
 			continue
 		}
-		if !errors.Is(err, istructsmem.ErrRecordNotFound) {
+		if !errors.Is(err, istructs.ErrRecordNotFound) {
 			// notest
 			return err
 		}

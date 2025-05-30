@@ -100,8 +100,6 @@ func ErrRefIDNotFound(t any, f string, id istructs.RecordID) error {
 	return ErrIDNotFound("%v field «%s» refers to unknown ID «%d»", t, f, id)
 }
 
-var ErrRecordNotFound = errors.New("record cannot be found")
-
 var ErrMinOccursViolationError = errors.New("minimum occurs violated")
 
 func ErrMinOccursViolated(t any, n string, o, minO appdef.Occurs) error {

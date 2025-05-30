@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
 func Test_RecordsRead(t *testing.T) {
@@ -342,16 +343,30 @@ func Test_RecordsGetORec(t *testing.T) {
 		doTest(saleID, test.wlogOfs+1) // client mistake: right ID but wrong offset
 	})
 
-	t.Run("Should be error if WLog read failed", func(t *testing.T) {
-		testError := errors.New("test error")
-		pk, cc := wlogKey(test.workspace, test.wlogOfs)
-		test.Storage.ScheduleGetError(testError, pk, cc)
-		defer test.Storage.Reset()
+	t.Run("Should be error", func(t *testing.T) {
+		t.Run("if record registry read failed", func(t *testing.T) {
+			testError := errors.New("test record registry read error")
+			cc := utils.ToBytes(uint64(saleID))
+			test.Storage.ScheduleGetError(testError, nil, cc)
+			defer test.Storage.Reset()
 
-		rec, err := app.Records().GetORec(test.workspace, saleID, test.wlogOfs)
-		require.Error(err, require.Is(testError), require.HasAll(test.workspace, saleID, test.wlogOfs))
-		require.Equal(saleID, rec.ID())
-		require.Equal(appdef.NullQName, rec.QName())
+			rec, err := app.Records().GetORec(test.workspace, saleID, istructs.NullOffset)
+			require.Error(err, require.Is(testError), require.HasAll(test.workspace, saleID))
+			require.Equal(saleID, rec.ID())
+			require.Equal(appdef.NullQName, rec.QName())
+		})
+
+		t.Run("if WLog read failed", func(t *testing.T) {
+			testError := errors.New("test wlog read error")
+			pk, cc := wlogKey(test.workspace, test.wlogOfs)
+			test.Storage.ScheduleGetError(testError, pk, cc)
+			defer test.Storage.Reset()
+
+			rec, err := app.Records().GetORec(test.workspace, saleID, test.wlogOfs)
+			require.Error(err, require.Is(testError), require.HasAll(test.workspace, saleID, test.wlogOfs))
+			require.Equal(saleID, rec.ID())
+			require.Equal(appdef.NullQName, rec.QName())
+		})
 	})
 }
 

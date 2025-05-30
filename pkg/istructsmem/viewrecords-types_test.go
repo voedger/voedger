@@ -447,7 +447,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		kb.PutString("clusteringColumn3", "tofu")
 
 		value, err := viewRecords.Get(2, kb)
-		require.ErrorIs(err, ErrRecordNotFound)
+		require.ErrorIs(err, istructs.ErrRecordNotFound)
 		require.NotNil(value)
 	})
 

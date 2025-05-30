@@ -721,7 +721,11 @@ func (recs *appRecordsType) GetBatch(workspace istructs.WSID, highConsistency bo
 func (recs *appRecordsType) GetORec(workspace istructs.WSID, id istructs.RecordID, wlog istructs.Offset) (istructs.IRecord, error) {
 	if wlog == istructs.NullOffset {
 		qn, ofs, err := recs.registry.Get(workspace, id)
-		if (qn != appdef.NullQName) && (ofs != istructs.NullOffset) && (err == nil) {
+		if err != nil {
+			// Failed get from record registry, enriched error should be returned
+			return NewNullRecord(id), fmt.Errorf("%w: ws %d, wlog offset %d, record id %d", err, workspace, wlog, id)
+		}
+		if (qn != appdef.NullQName) && (ofs != istructs.NullOffset) {
 			if kind := recs.app.AppDef().Type(qn).Kind(); recordsInWLog.Contains(kind) {
 				wlog = ofs
 			}
@@ -746,7 +750,8 @@ func (recs *appRecordsType) GetORec(workspace istructs.WSID, id istructs.RecordI
 		return nil
 	})
 	if err != nil {
-		return NewNullRecord(id), fmt.Errorf("%w: ws %d, record id %d, wlog offset %d", err, workspace, id, wlog)
+		// Failed wlog reading, enriched error should be returned
+		return NewNullRecord(id), fmt.Errorf("%w: ws %d, wlog offset %d, record id %d", err, workspace, wlog, id)
 	}
 	if !found {
 		// Offset founded, but event argument has no record with requested id

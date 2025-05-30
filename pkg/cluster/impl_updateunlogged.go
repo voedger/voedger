@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/dml"
-	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func updateUnlogged(update update) error {
@@ -36,7 +36,7 @@ func updateUnlogged_View(update update) (err error) {
 		if err == nil {
 			return coreutils.NewHTTPErrorf(http.StatusConflict, "view record already exists")
 		}
-		if !errors.Is(err, istructsmem.ErrRecordNotFound) {
+		if !errors.Is(err, istructs.ErrRecordNotFound) {
 			// notest
 			return err
 		}
