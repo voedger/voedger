@@ -53,8 +53,7 @@ func TestBasicUsage_CommandProcessorV2_Doc(t *testing.T) {
 		coreutils.WithMethod(http.MethodPost),
 		coreutils.WithAuthorizeBy(ws.Owner.Token),
 	)
-	logger.Error("insert done")
-	// resp.Println()
+	resp.Println()
 	newIDsAfterInsert := newIDs(t, resp)
 	require.Equal(t, http.StatusCreated, resp.HTTPResp.StatusCode)
 
