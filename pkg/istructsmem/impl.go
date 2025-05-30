@@ -253,8 +253,8 @@ func (app *appStructsType) DescribePackageNames() (names []string) {
 	return names
 }
 
-// istructs.IAppStructs.DescribePoackage: Describe package content
-func (app *appStructsType) DescribePackage(name string) interface{} {
+// istructs.IAppStructs.DescribePackage: Describe package content
+func (app *appStructsType) DescribePackage(name string) any {
 	return app.describe().Packages[name]
 }
 
@@ -511,7 +511,7 @@ func (recs *appRecordsType) getRecordBatch(workspace istructs.WSID, ids []istruc
 	}
 	batches := make([]*istorage.GetBatchItem, len(ids))
 	plan := make(map[string][]istorage.GetBatchItem)
-	for i := 0; i < len(ids); i++ {
+	for i := range ids {
 		ids[i].Record = NewNullRecord(ids[i].ID)
 		pk, cc := recordKey(workspace, ids[i].ID)
 		batch, ok := plan[string(pk)]
@@ -527,7 +527,7 @@ func (recs *appRecordsType) getRecordBatch(workspace istructs.WSID, ids []istruc
 			return err
 		}
 	}
-	for i := 0; i < len(batches); i++ {
+	for i := range batches {
 		b := batches[i]
 		if b.Ok {
 			rec := newRecord(recs.app.config)

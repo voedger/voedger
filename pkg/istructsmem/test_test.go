@@ -510,13 +510,13 @@ func testRowsIsEqual(t *testing.T, r1, r2 istructs.IRowReader) {
 	require.Equal(row1.Container(), row2.Container())
 	require.Equal(row1.IsActive(), row2.IsActive())
 
-	row1.dyB.IterateFields(nil, func(name string, val1 interface{}) bool {
+	row1.dyB.IterateFields(nil, func(name string, val1 any) bool {
 		require.True(row2.HasValue(name), name)
 		val2 := row2.dyB.Get(name)
 		require.Equal(val1, val2, name)
 		return true
 	})
-	row2.dyB.IterateFields(nil, func(name string, _ interface{}) bool {
+	row2.dyB.IterateFields(nil, func(name string, _ any) bool {
 		require.True(row1.HasValue(name), name)
 		return true
 	})
@@ -530,7 +530,7 @@ func rowsIsEqual(r1, r2 istructs.IRowReader) (ok bool, err error) {
 		return false, fmt.Errorf("row1.QName(): «%v» != row2.QName(): «%v»", row1.QName(), row2.QName())
 	}
 
-	row1.dyB.IterateFields(nil, func(name string, val1 interface{}) bool {
+	row1.dyB.IterateFields(nil, func(name string, val1 any) bool {
 		if !row2.HasValue(name) {
 			err = fmt.Errorf("row1 has cell «%s», but row2 has't", name)
 			return false
@@ -546,7 +546,7 @@ func rowsIsEqual(r1, r2 istructs.IRowReader) (ok bool, err error) {
 		return false, err
 	}
 
-	row2.dyB.IterateFields(nil, func(name string, val2 interface{}) bool {
+	row2.dyB.IterateFields(nil, func(name string, val2 any) bool {
 		if !row1.HasValue(name) {
 			err = fmt.Errorf("row2 has cell «%s», but row1 has't", name)
 			return false

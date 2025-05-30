@@ -158,7 +158,7 @@ func (s *TestMemStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) (e
 	err = s.storage.GetBatch(pKey, items)
 
 	if s.damage.dam != nil {
-		for i := 0; i < len(items); i++ {
+		for i := range items {
 			if s.damage.match(pKey, items[i].CCols) {
 				if items[i].Ok {
 					s.damage.dam(items[i].Data)

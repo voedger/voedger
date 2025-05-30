@@ -52,7 +52,7 @@ func validateError(code int, err error) ValidateError {
 	return e
 }
 
-func validateErrorf(code int, format string, a ...interface{}) ValidateError {
+func validateErrorf(code int, format string, a ...any) ValidateError {
 	return validateError(code, fmt.Errorf(format, a...))
 }
 

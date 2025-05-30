@@ -652,7 +652,7 @@ func (upd *updateRecType) build() (err error) {
 	}
 
 	userChanges := false
-	upd.changes.dyB.IterateFields(nil, func(name string, newData interface{}) bool {
+	upd.changes.dyB.IterateFields(nil, func(name string, newData any) bool {
 		upd.result.dyB.Set(name, newData)
 		userChanges = true
 		return true
@@ -930,7 +930,7 @@ func (o *objectType) FillFromJSON(data map[string]any) {
 			o.PutChars(n, fv)
 		case bool:
 			o.PutBool(n, fv)
-		case []interface{}:
+		case []any:
 			// e.g. "order_item": [<2 children>]
 			cont := o.typ.(appdef.IWithContainers).Container(n)
 			if cont == nil {

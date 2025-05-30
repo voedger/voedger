@@ -91,7 +91,7 @@ func (vr *appViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.ViewRe
 	}
 	batches := make([]batchPtrType, len(kv))
 	plan := make(map[string][]istorage.GetBatchItem)
-	for i := 0; i < len(kv); i++ {
+	for i := range kv {
 		kv[i].Ok = false
 		kv[i].Value = newNullValue()
 		k := kv[i].Key.(*keyType)
@@ -115,7 +115,7 @@ func (vr *appViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.ViewRe
 			return err
 		}
 	}
-	for i := 0; i < len(batches); i++ {
+	for i := range batches {
 		b := batches[i]
 		kv[i].Ok = b.batch.Ok
 		if kv[i].Ok {
@@ -415,7 +415,7 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 						return false
 					}
 
-					equalVal := func(d1, d2 interface{}) bool {
+					equalVal := func(d1, d2 any) bool {
 						switch v := d1.(type) {
 						case []byte: // non comparable type
 							return bytes.Equal(d2.([]byte), v)

@@ -321,7 +321,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		b := rec1.storeToBytes()
 
 		length := len(b)
-		for i := 0; i < length; i++ {
+		for i := range length {
 			corrupted := b[0:i]
 			rec2 := newRecord(test.AppCfg)
 			err := rec2.loadFromBytes(corrupted)
@@ -343,7 +343,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 			length := len(b)
 			stat := make(map[string]int)
-			for i := 0; i < length; i++ {
+			for i := range length {
 				b[i] ^= 255
 				rec2 := newRecord(test.AppCfg)
 				func() {
@@ -408,7 +408,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		require.NoError(err)
 
 		require.Equal(rec1.QName(), rec2.QName())
-		rec1.dyB.IterateFields(nil, func(name string, val1 interface{}) bool {
+		rec1.dyB.IterateFields(nil, func(name string, val1 any) bool {
 			newName := name
 			if !appdef.IsSysField(name) {
 				newName = newFieldName(name)
@@ -418,7 +418,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			require.Equal(val1, val2)
 			return true
 		})
-		rec2.dyB.IterateFields(nil, func(name string, val2 interface{}) bool {
+		rec2.dyB.IterateFields(nil, func(name string, val2 any) bool {
 			oldName := name
 			if !appdef.IsSysField(name) {
 				oldName = oldFieldName(name)
@@ -519,9 +519,9 @@ func TestSpecifiedValues(t *testing.T) {
 		}
 	})
 
-	testEnum := func(rec istructs.ICUDRow, want map[appdef.FieldName]interface{}) {
+	testEnum := func(rec istructs.ICUDRow, want map[appdef.FieldName]any) {
 		t.Run("enum", func(t *testing.T) {
-			got := make(map[appdef.FieldName]interface{})
+			got := make(map[appdef.FieldName]any)
 			for n, v := range rec.SpecifiedValues {
 				got[n.Name()] = v
 			}
@@ -555,7 +555,7 @@ func TestSpecifiedValues(t *testing.T) {
 		require.NoError(rec.build())
 
 		testEnum(rec,
-			map[appdef.FieldName]interface{}{
+			map[appdef.FieldName]any{
 				"int32":                     int32(1),
 				"string":                    "test",
 				"int64":                     int64(0),
@@ -575,7 +575,7 @@ func TestSpecifiedValues(t *testing.T) {
 		require.NoError(rec.build())
 
 		testEnum(rec,
-			map[appdef.FieldName]interface{}{
+			map[appdef.FieldName]any{
 				appdef.SystemField_IsActive: false,
 				appdef.SystemField_QName:    test.testCDoc,
 			})
@@ -591,7 +591,7 @@ func TestSpecifiedValues(t *testing.T) {
 		require.NoError(rec.build())
 
 		testEnum(rec,
-			map[appdef.FieldName]interface{}{
+			map[appdef.FieldName]any{
 				"bytes":                     []byte{},
 				"string":                    "",
 				"raw":                       []byte{},

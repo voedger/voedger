@@ -54,10 +54,10 @@ func Test_clarifyJSONValue(t *testing.T) {
 	binary.BigEndian.PutUint16(expectedQNameIDBytes, id)
 
 	cases := []struct {
-		val              interface{}
+		val              any
 		kind             appdef.DataKind
 		expectedTypeKind reflect.Kind
-		expectedVal      interface{}
+		expectedVal      any
 	}{
 		{val: int8(7), kind: appdef.DataKind_int8, expectedTypeKind: reflect.Int8},
 		{val: int8(-7), kind: appdef.DataKind_int8, expectedTypeKind: reflect.Int8},
@@ -96,7 +96,7 @@ func Test_clarifyJSONValue(t *testing.T) {
 	}
 
 	errorCases := []struct {
-		val           interface{}
+		val           any
 		kind          appdef.DataKind
 		expectedError error
 	}{
@@ -158,7 +158,7 @@ func Test_clarifyJSONValue(t *testing.T) {
 	t.Run("test Record", func(t *testing.T) {
 		var testRec istructs.IRecord = test.newTestCRecord(100500700)
 
-		checkRecord := func(data interface{}) {
+		checkRecord := func(data any) {
 			b, ok := data.([]byte)
 			require.True(ok)
 			require.NotNil(b)
@@ -398,7 +398,7 @@ func Test_rowType_PutFromJSON(t *testing.T) {
 
 	t.Run("json.Number errors", func(t *testing.T) {
 		fieldTests := map[string][]struct {
-			val interface{}
+			val any
 			err error
 		}{
 			"int8": {
@@ -972,7 +972,7 @@ func Test_rowType_Nils(t *testing.T) {
 		require.True(row.HasValue("RecordID"))
 
 		cnt := 0
-		row.dyB.IterateFields(nil, func(name string, newData interface{}) bool {
+		row.dyB.IterateFields(nil, func(name string, newData any) bool {
 			switch name {
 			case "int8", "int16", "int32", "int64", "float32", "float64":
 				require.Zero(newData)

@@ -339,10 +339,10 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 		b := appStructs.ObjectBuilder(objName)
 		require.NotNil(b)
 
-		b.FillFromJSON(map[string]interface{}{
+		b.FillFromJSON(map[string]any{
 			"int": int64(1),
-			"child": []interface{}{
-				map[string]interface{}{
+			"child": []any{
+				map[string]any{
 					"int": int64(2),
 				},
 			},

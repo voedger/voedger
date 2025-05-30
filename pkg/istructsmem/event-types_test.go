@@ -1793,7 +1793,7 @@ func Test_LoadEvent_DamagedBytes(t *testing.T) {
 	length := len(b)
 
 	t.Run("load/store from truncated bytes", func(t *testing.T) {
-		for i := 0; i < length; i++ {
+		for i := range length {
 			damaged := b[0:i]
 
 			ev2 := test.newEmptyTestEvent()
@@ -1807,7 +1807,7 @@ func Test_LoadEvent_DamagedBytes(t *testing.T) {
 		// - success read wrong data
 		func(t *testing.T) {
 			stat := make(map[string]int)
-			for i := 0; i < length; i++ {
+			for i := range length {
 				b[i] ^= 255
 				ev2 := test.newEmptyTestEvent()
 
@@ -1941,7 +1941,7 @@ func Test_LoadErrorEvent_DamagedBytes(t *testing.T) {
 	b := ev1.storeToBytes()
 
 	length := len(b)
-	for i := 0; i < length; i++ {
+	for i := range length {
 		damaged := b[0:i]
 
 		ev2 := test.newEmptyTestEvent()
