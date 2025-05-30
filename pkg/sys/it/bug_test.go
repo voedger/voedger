@@ -52,7 +52,7 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	// sned POST request
+	// send POST request
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	vit.PostWS(ws, "q.app1pkg.MockQry", body, coreutils.WithResponseHandler(func(httpResp *http.Response) {
