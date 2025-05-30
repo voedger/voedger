@@ -23,8 +23,8 @@ const (
 
 // Records registry view
 var (
-	QNameViewRecordsRegistry      = appdef.NewQName(appdef.SysPackage, "RecordsRegistry")
-	qNameRecordsRegistryProjector = sys.RecordsRegistryView.Name
+	QNameViewRecordsRegistry      = sys.RecordsRegistryView.Name
+	qNameRecordsRegistryProjector = appdef.NewQName(appdef.SysPackage, "RecordsRegistryProjector")
 	Field_IDHi                    = sys.RecordsRegistryView.Fields.IDHi
 	Field_ID                      = sys.RecordsRegistryView.Fields.ID
 	Field_WLogOffset              = sys.RecordsRegistryView.Fields.WLogOffset
