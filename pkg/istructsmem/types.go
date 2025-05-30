@@ -565,9 +565,9 @@ func (row *rowType) AsInt64(name appdef.FieldName) (value int64) {
 	if fld.DataKind() == appdef.DataKind_RecordID {
 		switch name {
 		case appdef.SystemField_ID:
-			return int64(row.id) // nolint G115 TODO: data loss on sending RecordID to the client as a func rersponse
+			return int64(row.id) // nolint G115 TODO: data loss on sending RecordID to the client as a func response
 		case appdef.SystemField_ParentID:
-			return int64(row.parentID) // nolint G115 TODO: data loss on sending RecordID to the client as a func rersponse
+			return int64(row.parentID) // nolint G115 TODO: data loss on sending RecordID to the client as a func response
 		}
 	}
 
