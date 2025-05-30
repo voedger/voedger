@@ -812,9 +812,9 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		bus.ReplyErr(cmd.cmdMes.Responder(), handlingError)
 		return
 	}
-	body := bytes.NewBufferString(fmt.Sprintf(`{"CurrentWLogOffset":%d`, cmd.pLogEvent.WLogOffset()))
+	body := bytes.NewBufferString(fmt.Sprintf(`{"currentWLogOffset":%d`, cmd.pLogEvent.WLogOffset()))
 	if len(cmd.idGeneratorReporter.generatedIDs) > 0 {
-		body.WriteString(`,"NewIDs":{`)
+		body.WriteString(`,"newIDs":{`)
 		for rawID, generatedID := range cmd.idGeneratorReporter.generatedIDs {
 			fmt.Fprintf(body, `"%d":%d,`, rawID, generatedID)
 		}
@@ -832,7 +832,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 			logger.Error("failed to marshal response: " + err.Error())
 			return
 		}
-		body.WriteString(`,"Result":`)
+		body.WriteString(`,"result":`)
 		body.Write(cmdResultBytes)
 	}
 	body.WriteString("}")

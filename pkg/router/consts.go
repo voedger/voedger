@@ -41,3 +41,9 @@ var (
 	onRequestCtxClosed func() = nil // used in tests
 	adminEndpoint             = "127.0.0.1:55555"
 )
+
+const (
+	fieldLogin       = "login"
+	fieldPassword    = "password"
+	fieldDisplayName = "displayName"
+)

@@ -55,10 +55,10 @@ func TestFederationFunc(t *testing.T) {
 			require.NoError(err)
 			require.Equal(`{"fld":"val"}`, string(body))
 			w.Write([]byte(`{
-				"NewIDs":{"1":2},
+				"newIDs":{"1":2},
 				"sections":[{"type":"","elements":[[[["hello, world"]]]]}],
-				"CurrentWLogOffset":13,
-				"Result":{"Int":42,"Str":"Str","sys.Container":"","sys.QName":"app1pkg.TestCmdResult"}
+				"currentWLogOffset":13,
+				"result":{"Int":42,"Str":"Str","sys.Container":"","sys.QName":"app1pkg.TestCmdResult"}
 			}`))
 		}
 		resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`)
