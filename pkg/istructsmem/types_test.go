@@ -68,6 +68,7 @@ func Test_clarifyJSONValue(t *testing.T) {
 		{val: float32(7.7), kind: appdef.DataKind_float32, expectedTypeKind: reflect.Float32},
 		{val: float64(7.7), kind: appdef.DataKind_float64, expectedTypeKind: reflect.Float64},
 		{val: istructs.RecordID(7), kind: appdef.DataKind_RecordID, expectedTypeKind: reflect.Uint64},
+		{val: int64(7), kind: appdef.DataKind_RecordID, expectedTypeKind: reflect.Uint64},
 		{val: json.Number("7"), kind: appdef.DataKind_int32, expectedTypeKind: reflect.Int32, expectedVal: int32(7)},
 		{val: json.Number("7"), kind: appdef.DataKind_int64, expectedTypeKind: reflect.Int64, expectedVal: int64(7)},
 		{val: json.Number("7.7"), kind: appdef.DataKind_float32, expectedTypeKind: reflect.Float32, expectedVal: float32(7.7)},

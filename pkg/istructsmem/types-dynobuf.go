@@ -32,8 +32,7 @@ import (
 //	— string value can be converted to QName and []byte kinds
 //
 // QName values, record- and event- values returned as []byte
-func (row *rowType) clarifyJSONValue(value interface{}, kind appdef.DataKind) (res interface{}, err error) {
-outer:
+func (row *rowType) clarifyJSONValue(value any, kind appdef.DataKind) (res any, err error) {
 	switch kind {
 	case appdef.DataKind_int8: // #3435 [~server.vsql.smallints/cmp.istructs~impl]
 		switch v := value.(type) {
@@ -78,21 +77,17 @@ outer:
 			return coreutils.ClarifyJSONNumber(v, kind)
 		}
 	case appdef.DataKind_RecordID:
-		var int64Val int64
 		switch v := value.(type) {
 		case int64:
-			int64Val = v
+			if v < 0 {
+				return nil, ErrWrongRecordID("negative value %d", v)
+			}
+			return istructs.RecordID(v), nil
 		case istructs.RecordID:
 			return v, nil
 		case json.Number:
 			return coreutils.ClarifyJSONNumber(v, kind)
-		default:
-			break outer
 		}
-		if int64Val < 0 {
-			return nil, ErrWrongRecordID("negative value %d", int64Val)
-		}
-		return istructs.RecordID(int64Val), nil
 	case appdef.DataKind_bytes:
 		switch v := value.(type) {
 		case string:
