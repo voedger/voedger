@@ -186,7 +186,7 @@ func (resp *FuncResponse) UnmarshalJSON(data []byte) error {
 	}
 
 	if raw, ok := m["HTTPResponse"]; ok && len(raw) > 0 {
-		if err := json.Unmarshal(raw, &fr.HTTPResponse); err != nil {
+		if err := json.Unmarshal(raw, &resp.HTTPResponse); err != nil {
 			return err
 		}
 	}
@@ -195,16 +195,16 @@ func (resp *FuncResponse) UnmarshalJSON(data []byte) error {
 	if err := commandResp.UnmarshalJSON(data); err != nil {
 		return err
 	}
-	fr.CommandResponse = commandResp
+	resp.CommandResponse = commandResp
 
 	if raw, ok := m["sections"]; ok && len(raw) > 0 {
-		if err := json.Unmarshal(raw, &fr.Sections); err != nil {
+		if err := json.Unmarshal(raw, &resp.Sections); err != nil {
 			return err
 		}
 	}
 
 	if raw, ok := m["QPv2Response"]; ok && len(raw) > 0 {
-		if err := json.Unmarshal(raw, &fr.QPv2Response); err != nil {
+		if err := json.Unmarshal(raw, &resp.QPv2Response); err != nil {
 			return err
 		}
 	}
