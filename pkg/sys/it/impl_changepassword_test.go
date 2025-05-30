@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -33,6 +34,55 @@ func TestBasicUsage_ChangePassword(t *testing.T) {
 	// expect no errors on login with new password
 	login.Pwd = newPwd
 	vit.SignIn(login)
+}
+
+// [~server.users/it.TestQueryProcessor2_UsersChangePassword~impl]
+func TestBasicUsage_ChangePassword_APIv2(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	// sign up a user with password "1"
+	loginName := vit.NextName()
+	login := vit.SignUp(loginName, "1", istructs.AppQName_test1_app1)
+
+	// change password to "2"
+	body := fmt.Sprintf(`{
+		"login":"%s",
+		"oldPassword": "1",
+		"newPassword": "2"
+	}`, login.Name)
+	resp := vit.POST("api/v2/apps/test1/app1/users/change-password", body)
+	require.Empty(t, resp.Body)
+
+	// expect no errors on login with new password
+	login.Pwd = "2"
+	vit.SignIn(login)
+}
+
+func TestChangePasswordErrors_APIv2(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	t.Run("400 bad request", func(t *testing.T) {
+		badRequests := []string{
+			`{}`,
+			`{"login":"abc"}`,
+			`{"login":"abc","oldPassword": "1"}`,
+			`{"login":"abc","newPassword": "2"}`,
+			`{"login":1,"oldPassword": "1","newPassword": "2"}`,
+			`{"login":"abc","oldPassword": 1,"newPassword": "2"}`,
+			`{"login":"abc","oldPassword": "1","newPassword": 2}`,
+		}
+		for _, body := range badRequests {
+			vit.POST("api/v2/apps/test1/app1/users/change-password", body, coreutils.Expect400()).Println()
+		}
+	})
+
+	t.Run("forward error from c.registry.ChangePassword, e.g. on an unknown login", func(t *testing.T) {
+		unknownLogin := vit.NextName()
+		body := fmt.Sprintf(`{"login":"%s","oldPassword": "1","newPassword": "2"}`, unknownLogin)
+		vit.POST("api/v2/apps/test1/app1/users/change-password", body, coreutils.Expect401()).Println()
+	})
 }
 
 func TestChangePasswordErrors(t *testing.T) {
@@ -72,4 +122,3 @@ func TestChangePasswordErrors(t *testing.T) {
 		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.ChangePassword", body, coreutils.Expect401()) // again not 429, wrong password
 	})
 }
-
