@@ -41,6 +41,7 @@ func FanInOut[IN any, OUT any](ctx context.Context, source []IN, numberOfThreads
 		close(out)
 	}()
 
+	// gatherer
 	g.Go(func() error {
 		for workerCtx.Err() == nil {
 			select {
