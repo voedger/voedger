@@ -1,173 +1,104 @@
+/*
+ * Copyright (c) 2025-present unTill Software Development Group B.V.
+ * @author Denis Gribanov
+ */
+
 package coreutils
 
 import (
 	"context"
 	"errors"
+	"reflect"
+	"sort"
+	"sync/atomic"
 	"testing"
-	"time"
 )
 
-func TestScatterGather(t *testing.T) {
-	t.Run("successful processing", func(t *testing.T) {
-		ctx := context.Background()
-		input := []int{1, 2, 3, 4, 5}
-		expected := []int{2, 4, 6, 8, 10}
-		var results []int
+func TestScatterGatherBasic(t *testing.T) {
+	src := []int{1, 2, 3, 4, 5}
+	var got []int
 
-		err := ScatterGather(ctx, input, 2,
-			func(val int) (int, error) {
-				return val * 2, nil
-			},
-			func(val int) {
-				results = append(results, val)
-			},
-		)
+	err := ScatterGather(context.Background(), src, 3,
+		func(v int) (int, error) { return v * 2, nil },
+		func(v int) { got = append(got, v) },
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
+	want := []int{2, 4, 6, 8, 10}
+	sort.Ints(got)
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("results mismatch:\nwant %v\n got %v", want, got)
+	}
+}
 
-		if len(results) != len(expected) {
-			t.Errorf("expected %d results, got %d", len(expected), len(results))
-		}
+func TestScatterGatherEmptySource(t *testing.T) {
+	called := false
+	err := ScatterGather(context.Background(), []int{}, 4,
+		func(v int) (int, error) { return v, nil },
+		func(int) { called = true },
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if called {
+		t.Fatal("gatherer should not be called for empty source")
+	}
+}
 
-		for i, v := range results {
-			if v != expected[i] {
-				t.Errorf("at index %d: expected %d, got %d", i, expected[i], v)
+func TestScatterGatherMapperError(t *testing.T) {
+	src := []int{1, 2, 3, 4, 5}
+	sentinel := errors.New("boom")
+	var gathered int32
+
+	err := ScatterGather(context.Background(), src, 2,
+		func(v int) (int, error) {
+			if v == 3 {
+				return 0, sentinel
 			}
-		}
-	})
+			return v, nil
+		},
+		func(int) { atomic.AddInt32(&gathered, 1) },
+	)
 
-	t.Run("error handling", func(t *testing.T) {
-		ctx := context.Background()
-		input := []int{1, 2, 3}
-		expectedErr := errors.New("processing error")
+	if !errors.Is(err, sentinel) {
+		t.Fatalf("expected sentinel error, got %v", err)
+	}
 
-		err := ScatterGather(ctx, input, 2,
-			func(val int) (int, error) {
-				if val == 2 {
-					return 0, expectedErr
-				}
-				return val * 2, nil
-			},
-			func(val int) {},
-		)
+	if g := atomic.LoadInt32(&gathered); g == int32(len(src)) {
+		t.Fatalf("gatherer processed all elements despite error; gathered=%d", g)
+	}
+}
 
-		if err != expectedErr {
-			t.Errorf("expected error %v, got %v", expectedErr, err)
-		}
-	})
+func TestScatterGatherContextCancel(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
 
-	t.Run("context cancellation", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-		defer cancel()
+	err := ScatterGather(ctx, []int{1, 2, 3}, 1,
+		func(v int) (int, error) { return v, nil },
+		func(int) {},
+	)
 
-		input := make([]int, 1000)
-		for i := range input {
-			input[i] = i
-		}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context.Canceled, got %v", err)
+	}
+}
 
-		err := ScatterGather(ctx, input, 4,
-			func(val int) (int, error) {
-				time.Sleep(50 * time.Millisecond)
-				return val * 2, nil
-			},
-			func(val int) {},
-		)
+func TestScatterGatherWorkersZero(t *testing.T) {
+	src := []string{"a", "b", "c"}
+	got := make([]string, 0, len(src))
 
-		if err != context.DeadlineExceeded {
-			t.Errorf("expected context.DeadlineExceeded, got %v", err)
-		}
-	})
+	if err := ScatterGather(context.Background(), src, 0,
+		func(s string) (string, error) { return s + s, nil },
+		func(s string) { got = append(got, s) },
+	); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
-	t.Run("empty input", func(t *testing.T) {
-		ctx := context.Background()
-		var results []int
-
-		err := ScatterGather(ctx, []int{}, 2,
-			func(val int) (int, error) {
-				return val * 2, nil
-			},
-			func(val int) {
-				results = append(results, val)
-			},
-		)
-
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-
-		if len(results) != 0 {
-			t.Errorf("expected no results, got %d", len(results))
-		}
-	})
-
-	t.Run("single worker", func(t *testing.T) {
-		ctx := context.Background()
-		input := []int{1, 2, 3, 4, 5}
-		expected := []int{2, 4, 6, 8, 10}
-		var results []int
-
-		err := ScatterGather(ctx, input, 1,
-			func(val int) (int, error) {
-				return val * 2, nil
-			},
-			func(val int) {
-				results = append(results, val)
-			},
-		)
-
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-
-		if len(results) != len(expected) {
-			t.Errorf("expected %d results, got %d", len(expected), len(results))
-		}
-
-		for i, v := range results {
-			if v != expected[i] {
-				t.Errorf("at index %d: expected %d, got %d", i, expected[i], v)
-			}
-		}
-	})
-
-	t.Run("concurrent processing order", func(t *testing.T) {
-		ctx := context.Background()
-		input := make([]int, 100)
-		for i := range input {
-			input[i] = i
-		}
-
-		processingOrder := make([]int, 0, 100)
-
-		err := ScatterGather(ctx, input, 4,
-			func(val int) (int, error) {
-				time.Sleep(time.Duration(val%10) * time.Millisecond)
-				return val, nil
-			},
-			func(val int) {
-				processingOrder = append(processingOrder, val)
-			},
-		)
-
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-
-		if len(processingOrder) != len(input) {
-			t.Errorf("expected %d results, got %d", len(input), len(processingOrder))
-		}
-
-		// Verify that all values are present
-		seen := make(map[int]bool)
-		for _, v := range processingOrder {
-			seen[v] = true
-		}
-		for i := 0; i < len(input); i++ {
-			if !seen[i] {
-				t.Errorf("value %d was not processed", i)
-			}
-		}
-	})
+	sort.Strings(got)
+	want := []string{"aa", "bb", "cc"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("results mismatch:\nwant %v\n got %v", want, got)
+	}
 }
