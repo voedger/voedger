@@ -29,6 +29,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 			adb := builder.New()
 
 			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+			appdef.SetEmptyWSDesc(wsb)
 
 			addObject := func(n appdef.QName) {
 				o := wsb.AddObject(n)

@@ -27,6 +27,7 @@ ABSTRACT WORKSPACE AbsWorkspace(
 );
 
 WORKSPACE SomeWorkspace INHERITS pkg1.TestWorkspace, pkg2.TestWorkspace (
+    DESCRIPTOR SomeWorkspaceDescriptor();
     TYPE CreateLoginParams(
         Login                       varchar,
         AppName                     varchar,
@@ -88,6 +89,7 @@ WORKSPACE SomeWorkspace INHERITS pkg1.TestWorkspace, pkg2.TestWorkspace (
 );
 
 ALTERABLE WORKSPACE Profile(
+    DESCRIPTOR ProfileDescriptor();
     TABLE ProfileTable INHERITS CDoc(-- NodeRemoved: removed in new.vsql
         A varchar
     );

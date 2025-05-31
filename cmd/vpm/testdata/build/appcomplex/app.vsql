@@ -10,6 +10,7 @@ APPLICATION appcomplex(
 );
 
 WORKSPACE AppWS INHERITS pkg1.MyWS1 (
+	DESCRIPTOR AppWSDescriptor();
 	TABLE MyTable2 INHERITS sys.ODoc (
   	    myfield1 ref(pkg1.MyTable1) NOT NULL,
     	myfield2 int32 NOT NULL

@@ -38,6 +38,7 @@ func TestRenameQName(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		appdef.SetEmptyWSDesc(wsb)
 
 		_ = wsb.AddObject(oldQName)
 		appDef, err := adb.Build()

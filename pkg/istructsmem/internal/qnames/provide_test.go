@@ -30,10 +30,11 @@ func TestQNamesBasicUsage(t *testing.T) {
 
 	testName := appdef.NewQName("test", "doc")
 	adb := builder.New()
-	ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
-	doc := ws.AddCDoc(testName)
+	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	doc := wsb.AddCDoc(testName)
 	doc.AddField("f1", appdef.DataKind_int64, false)
 	doc.AddUnique(appdef.UniqueQName(testName, "f1"), []appdef.FieldName{"f1"})
+	wsb.SetDescriptor(testName)
 	appDef := adb.MustBuild()
 
 	names := New()

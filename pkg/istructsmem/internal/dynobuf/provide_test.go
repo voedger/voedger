@@ -26,6 +26,7 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 		func() appdef.IAppDef {
 			adb := builder.New()
 			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+			appdef.SetEmptyWSDesc(wsb)
 
 			wsb.AddODoc(docName).
 				AddField("f_int8", appdef.DataKind_int8, true).    // #3434 [small integers: int8]

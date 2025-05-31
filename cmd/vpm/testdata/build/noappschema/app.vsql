@@ -2,6 +2,8 @@
 -- @author Maxim Geraskin
 
 WORKSPACE WorkspaceWS (
+    DESCRIPTOR WorkspaceWSDescriptor();
+
     TABLE MyTable1 INHERITS sys.ODoc (
         myfield1 int32 NOT NULL
     );

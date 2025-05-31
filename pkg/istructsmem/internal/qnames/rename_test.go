@@ -40,6 +40,7 @@ func TestRenameQName(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		appdef.SetEmptyWSDesc(wsb)
 
 		_ = wsb.AddObject(oldQName)
 		appDef, err := adb.Build()
@@ -98,6 +99,7 @@ func TestRenameQName_Errors(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		appdef.SetEmptyWSDesc(wsb)
 
 		_ = wsb.AddObject(oldQName)
 		_ = wsb.AddObject(other)
@@ -184,6 +186,7 @@ func TestRenameQName_Fails(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		appdef.SetEmptyWSDesc(wsb)
 
 		_ = wsb.AddObject(oldQName)
 		appDef, err := adb.Build()

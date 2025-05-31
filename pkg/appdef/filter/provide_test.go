@@ -26,8 +26,8 @@ func Test_QNames(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
-
 		_ = wsb.AddCDoc(docName)
+		wsb.SetDescriptor(docName)
 
 		app, err := adb.Build()
 
@@ -67,6 +67,8 @@ func Test_Tags(t *testing.T) {
 		wsb.AddCDoc(doc1Name).SetTag(tagName)
 		_ = wsb.AddCDoc(doc2Name)
 
+		wsb.SetDescriptor(doc1Name)
+
 		app, err := adb.Build()
 
 		require.NoError(err)
@@ -96,6 +98,7 @@ func Test_Types(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		_ = wsb.AddData(dataName, appdef.DataKind_int32, appdef.NullQName, constraints.MinIncl(0))
 
@@ -137,6 +140,7 @@ func Test_WSTypes(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		_ = wsb.AddData(dataName, appdef.DataKind_int32, appdef.NullQName, constraints.MinIncl(0))
 
@@ -187,6 +191,8 @@ func Test_And(t *testing.T) {
 		wsb.AddCommand(cmdName).SetTag(tagName)
 		wsb.AddCDoc(docName).SetTag(tagName)
 
+		wsb.SetDescriptor(docName)
+
 		app, err := adb.Build()
 
 		require.NoError(err)
@@ -228,6 +234,8 @@ func Test_Or(t *testing.T) {
 		wsb.AddCommand(cmdName).SetTag(tagName)
 		_ = wsb.AddCDoc(docName)
 		_ = wsb.AddObject(objName)
+
+		wsb.SetDescriptor(docName)
 
 		app, err := adb.Build()
 

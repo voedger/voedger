@@ -29,6 +29,7 @@ func Example() {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		appdef.SetEmptyWSDesc(wsb)
 		for _, name := range jobNames {
 			wsb.AddJob(name).SetCronSchedule("@every 5s")
 		}

@@ -85,6 +85,7 @@ func Test_Fields(t *testing.T) {
 	adb.AddPackage("test", "test.com/test")
 
 	wsb := adb.AddWorkspace(wsName)
+	appdef.SetEmptyWSDesc(wsb)
 
 	var app appdef.IAppDef
 
@@ -228,6 +229,7 @@ func Test_SetFieldComment(t *testing.T) {
 
 	wsName := appdef.NewQName("test", "workspace")
 	wsb := adb.AddWorkspace(wsName)
+	appdef.SetEmptyWSDesc(wsb)
 
 	objName := appdef.NewQName("test", "object")
 	wsb.AddObject(objName).
@@ -264,6 +266,7 @@ func Test_SetFieldVerify(t *testing.T) {
 
 	wsName := appdef.NewQName("test", "workspace")
 	wsb := adb.AddWorkspace(wsName)
+	appdef.SetEmptyWSDesc(wsb)
 
 	objName := appdef.NewQName("test", "object")
 	wsb.AddObject(objName).
@@ -317,6 +320,7 @@ func Test_AddRefField(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		appdef.SetEmptyWSDesc(wsb)
 
 		doc := wsb.AddWDoc(docName)
 		require.NotNil(doc)
@@ -407,6 +411,7 @@ func TestValidateRefFields(t *testing.T) {
 	adb.AddPackage("test", "test.com/test")
 
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	appdef.SetEmptyWSDesc(wsb)
 
 	doc := wsb.AddCDoc(appdef.NewQName("test", "doc"))
 	doc.AddRefField("f1", true, appdef.NewQName("test", "rec"))

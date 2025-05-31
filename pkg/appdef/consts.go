@@ -29,6 +29,10 @@ const SysWorkspaceName = "Workspace"
 
 var SysWorkspaceQName = NewQName(SysPackage, SysWorkspaceName)
 
+// Default name for automatically generated workspace descriptor CDoc.
+// Starts from workspace entity name, then Buck rune, then `Kind` word
+const DefaultWSDescriptorEntityFmt = "%s$Kind"
+
 const AnyName = "ANY"
 
 // QNameANY is substitution denotes that a Function param or result can be any type

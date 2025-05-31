@@ -39,6 +39,7 @@ func Test_Extensions(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		_ = wsb.AddObject(parName)
 		_ = wsb.AddObject(resName)

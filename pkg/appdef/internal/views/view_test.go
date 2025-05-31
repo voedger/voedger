@@ -26,6 +26,7 @@ func Test_Views(t *testing.T) {
 
 	wsName := appdef.NewQName("test", "workspace")
 	wsb := adb.AddWorkspace(wsName)
+	appdef.SetEmptyWSDesc(wsb)
 
 	numName := appdef.NewQName("test", "natural")
 	_ = wsb.AddData(numName, appdef.DataKind_int64, appdef.NullQName, constraints.MinExcl(0))

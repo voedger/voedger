@@ -387,6 +387,7 @@ func Test_Refs_NestedTables(t *testing.T) {
 
 	fs, err := ParseFile("file1.vsql", `APPLICATION test();
 	WORKSPACE MyWorkspace(
+		DESCRIPTOR();
 		TABLE table1 INHERITS sys.CDoc (
 			items TABLE inner1 (
 				table1 ref,
@@ -504,12 +505,19 @@ func Test_Workspace_Defs(t *testing.T) {
 				)
 			);
 		);
-		WORKSPACE MyWorkspace INHERITS AWorkspace();
-		WORKSPACE MyWorkspace2 INHERITS AWorkspace();
+		WORKSPACE MyWorkspace INHERITS AWorkspace(
+			DESCRIPTOR();
+		);
+		WORKSPACE MyWorkspace2 INHERITS AWorkspace(
+			DESCRIPTOR();
+		);
 		ALTER WORKSPACE sys.Profile(
 			USE WORKSPACE MyWorkspace;
 			WORKSPACE ProfileChildWS(
-				WORKSPACE ProfileGrandChildWS();
+				DESCRIPTOR();
+				WORKSPACE ProfileGrandChildWS(
+					DESCRIPTOR();
+				);
 			);
 		);
 	`)
@@ -554,6 +562,7 @@ func Test_Workspace_Defs3(t *testing.T) {
 			USE pkg1;
 		);
 		WORKSPACE Workspace2 INHERITS pkg1.Workspace1 (
+			DESCRIPTOR();
 			TABLE Table2 INHERITS sys.CDoc (
 				pkg1.Type1
 			);
@@ -594,7 +603,9 @@ func Test_Workspaces(t *testing.T) {
 		def := require.Build(`APPLICATION test();
 		ABSTRACT WORKSPACE AW1();
 		ABSTRACT WORKSPACE AW2();
-		WORKSPACE W INHERITS AW1, AW2();
+		WORKSPACE W INHERITS AW1, AW2(
+			DESCRIPTOR();
+		);
 		`)
 		w := def.Workspace(appdef.NewQName("pkg", "W"))
 		require.NotNil(w)
@@ -1209,6 +1220,7 @@ func Test_Views2(t *testing.T) {
 
 	{
 		ast, err := ParseFile("file2.vsql", `APPLICATION test(); WORKSPACE Workspace (
+			DESCRIPTOR();
 			VIEW test(
 				-- comment1
 				field1 int,
@@ -1248,6 +1260,7 @@ func Test_Views2(t *testing.T) {
 	}
 	{
 		ast, err := ParseFile("file2.vsql", `APPLICATION test(); WORKSPACE Workspace (
+			DESCRIPTOR();
 			VIEW test(
 				-- comment1
 				field1 int,
@@ -1285,6 +1298,7 @@ func Test_Views2(t *testing.T) {
 	}
 	{
 		ast, err := ParseFile("file2.vsql", `APPLICATION test(); WORKSPACE Workspace (
+			DESCRIPTOR();
 			VIEW test(
 				-- comment1
 				field1 int,
@@ -1386,6 +1400,7 @@ func Test_Projectors(t *testing.T) {
 		require := require.New(t)
 		fs, err := ParseFile("example.vsql", `APPLICATION test();
 	WORKSPACE test (
+		DESCRIPTOR();
 		TABLE Order INHERITS sys.ODoc();
 		EXTENSION ENGINE WASM (
 			COMMAND Orders();
@@ -1409,13 +1424,13 @@ func Test_Projectors(t *testing.T) {
 		_, err = BuildAppSchema([]*PackageSchemaAST{pkg, getSysPackageAST()})
 
 		require.EqualError(err, strings.Join([]string{
-			"example.vsql:6:44: undefined command: test.CreateUPProfile",
-			"example.vsql:7:44: undefined command: Order",
-			"example.vsql:8:43: only INSERT allowed for ODoc or ORecord",
-			"example.vsql:9:45: only INSERT allowed for ODoc or ORecord",
-			"example.vsql:10:47: only INSERT allowed for ODoc or ORecord",
-			"example.vsql:12:55: undefined type or ODoc: Bill",
-			"example.vsql:14:55: undefined type or ODoc: sys.ORecord",
+			"example.vsql:7:44: undefined command: test.CreateUPProfile",
+			"example.vsql:8:44: undefined command: Order",
+			"example.vsql:9:43: only INSERT allowed for ODoc or ORecord",
+			"example.vsql:10:45: only INSERT allowed for ODoc or ORecord",
+			"example.vsql:11:47: only INSERT allowed for ODoc or ORecord",
+			"example.vsql:13:55: undefined type or ODoc: Bill",
+			"example.vsql:15:55: undefined type or ODoc: sys.ORecord",
 		}, "\n"))
 	})
 
@@ -1426,6 +1441,7 @@ func Test_Projectors(t *testing.T) {
 			TABLE BaseWSTable INHERITS sys.CDoc();
 		);
 		WORKSPACE InheritedWS INHERITS BaseWS(
+			DESCRIPTOR();
 			EXTENSION ENGINE WASM (
 				PROJECTOR ImProjector AFTER INSERT ON BaseWSTable;
 			);
@@ -1452,6 +1468,7 @@ func Test_Projectors(t *testing.T) {
 		require := assertions(t)
 		schema, err := require.AppSchema(`APPLICATION test();
 		WORKSPACE Ws (
+			DESCRIPTOR();
 			TABLE Tbl1 INHERITS sys.CDoc();
 			TABLE Tbl2 INHERITS sys.CDoc();
 			TABLE Tbl3 INHERITS sys.CDoc();
@@ -1497,25 +1514,27 @@ func Test_Projectors(t *testing.T) {
 		require := assertions(t)
 		require.AppSchemaError(`APPLICATION test();
 		WORKSPACE Ws (
+			DESCRIPTOR();
 			TABLE Tbl INHERITS sys.CDoc();
 			EXTENSION ENGINE WASM (
 				PROJECTOR p AFTER INSERT ON Tbl INTENTS(sys.Record, sys.View, sys.View(fake), sys.Record(Tbl));
 			);
-		);`, "file.vsql:5:45: storage sys.Record requires entity",
-			"file.vsql:5:57: storage sys.View requires entity",
-			"file.vsql:5:67: undefined view: fake",
-			"file.vsql:5:83: this kind of extension cannot use storage sys.Record in the intents")
+		);`, "file.vsql:6:45: storage sys.Record requires entity",
+			"file.vsql:6:57: storage sys.View requires entity",
+			"file.vsql:6:67: undefined view: fake",
+			"file.vsql:6:83: this kind of extension cannot use storage sys.Record in the intents")
 	})
 
 	t.Run("State errors", func(t *testing.T) {
 		require := assertions(t)
 		require.AppSchemaError(`APPLICATION test();
 		WORKSPACE Ws (
+			DESCRIPTOR();
 			TABLE Tbl INHERITS sys.CDoc();
 			EXTENSION ENGINE WASM (
 				PROJECTOR p AFTER INSERT ON Tbl  STATE(sys.Subject);
 			);
-		);`, "file.vsql:5:44: this kind of extension cannot use storage sys.Subject in the state")
+		);`, "file.vsql:6:44: this kind of extension cannot use storage sys.Subject in the state")
 	})
 }
 
@@ -1615,6 +1634,7 @@ func Test_UniqueFields(t *testing.T) {
 	require := require.New(t)
 
 	fs, err := ParseFile("example.vsql", `APPLICATION test(); WORKSPACE MyWorkspace(
+	DESCRIPTOR();
 	TABLE MyTable INHERITS sys.CDoc (
 		Int1 int32,
 		Int2 int32 NOT NULL,
@@ -1652,6 +1672,7 @@ func Test_NestedTables(t *testing.T) {
 	require := require.New(t)
 
 	fs, err := ParseFile("example.vsql", `APPLICATION test(); WORKSPACE MyWorkspace(
+	DESCRIPTOR();
 	TABLE NestedTable INHERITS sys.CRecord (
 		ItemName varchar,
 		DeepNested TABLE DeepNestedTable (
@@ -1713,6 +1734,7 @@ func Test_1KStringField(t *testing.T) {
 	require := require.New(t)
 
 	fs, err := ParseFile("example.vsql", `APPLICATION test(); WORKSPACE MyWorkspace(
+	DESCRIPTOR();
 	TABLE MyTable INHERITS sys.CDoc (
 		KB varchar(1024)
 ))
@@ -2033,6 +2055,7 @@ func Test_OdocCmdArgs(t *testing.T) {
 
 	APPLICATION registry();
 	WORKSPACE Workspace1 (
+		DESCRIPTOR();
 		TABLE TableODoc INHERITS sys.ODoc (
 			orecord1 TABLE orecord1(
 				orecord2 TABLE orecord2()
@@ -2081,6 +2104,7 @@ func Test_TypeContainers(t *testing.T) {
 APPLICATION registry();
 
 WORKSPACE Workspace1 (
+	DESCRIPTOR();
 	TYPE Person (
 		Name 	varchar,
 		Age 	int32
@@ -2140,6 +2164,7 @@ func Test_EmptyType(t *testing.T) {
 	pkgApp1 := buildPackage(`
 
 APPLICATION registry(); WORKSPACE Workspace1 (
+	DESCRIPTOR();
 	TYPE EmptyType ();
 )
 	`)
@@ -2163,7 +2188,7 @@ func Test_EmptyType1(t *testing.T) {
 	pkgApp1 := buildPackage(`
 
 APPLICATION registry(); WORKSPACE Workspace1 (
-
+DESCRIPTOR();
 
 TYPE SomeType (
 	t int321
@@ -2184,7 +2209,7 @@ TABLE SomeTable INHERITS sys.CDoc (
 
 func Test_ODocUnknown(t *testing.T) {
 	require := require.New(t)
-	pkgApp1 := buildPackage(`APPLICATION registry(); WORKSPACE Workspace1 (
+	pkgApp1 := buildPackage(`APPLICATION registry(); WORKSPACE Workspace1 ( DESCRIPTOR();
 TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL ));
 `)
 
@@ -2210,27 +2235,30 @@ func Test_Constraints(t *testing.T) {
 
 	require.AppSchemaError(`
 	APPLICATION app1(); WORKSPACE ws1 (
+	DESCRIPTOR();
 	TABLE SomeTable INHERITS sys.CDoc (
 		t1 int32,
 		t2 int32,
 		CONSTRAINT c1 UNIQUE(t1),
 		CONSTRAINT c1 UNIQUE(t2)
-	))`, "file.vsql:7:3: redefinition of c1")
+	))`, "file.vsql:8:3: redefinition of c1")
 
 	require.AppSchemaError(`
 	APPLICATION app1(); WORKSPACE ws1 (
+	DESCRIPTOR();
 	TABLE SomeTable INHERITS sys.CDoc (
 		UNIQUEFIELD UnknownField
-	))`, "file.vsql:4:3: undefined field UnknownField")
+	))`, "file.vsql:5:3: undefined field UnknownField")
 
 	require.AppSchemaError(`
 	APPLICATION app1(); WORKSPACE ws1 (
+	DESCRIPTOR();
 	TABLE SomeTable INHERITS sys.CDoc (
 		t1 int32,
 		t2 int32,
 		CONSTRAINT c1 UNIQUE(t1),
 		CONSTRAINT c2 UNIQUE(t2, t1)
-	))`, "file.vsql:7:3: field t1 already in unique constraint")
+	))`, "file.vsql:8:3: field t1 already in unique constraint")
 
 }
 
@@ -2241,6 +2269,7 @@ func Test_Grants(t *testing.T) {
 		require.AppSchemaError(`
 	APPLICATION app1();
 	WORKSPACE ws1 (
+		DESCRIPTOR();
 		ROLE role1;
 		GRANT ALL ON TABLE Fake TO app1;
 		GRANT EXECUTE ON COMMAND Fake TO role1;
@@ -2273,25 +2302,26 @@ func Test_Grants(t *testing.T) {
 			COMMAND c();
 		);
 	);
-	`, "file.vsql:5:30: undefined role: app1",
-			"file.vsql:5:22: undefined table: Fake",
-			"file.vsql:6:28: undefined command: Fake",
-			"file.vsql:7:26: undefined query: Fake",
-			"file.vsql:9:13: undefined field FakeCol",
-			"file.vsql:10:23: undefined field FakeCol",
-			"file.vsql:11:42: undefined tag: x",
-			"file.vsql:21:24: undefined view: Fake",
-			"file.vsql:22:38: undefined tag: x",
-			"file.vsql:23:9: undefined role: fakeRole",
-			"file.vsql:24:16: undefined field fake",
-			"file.vsql:25:41: undefined tag: fake",
-			"file.vsql:26:39: undefined tag: fake",
+	`, "file.vsql:6:30: undefined role: app1",
+			"file.vsql:6:22: undefined table: Fake",
+			"file.vsql:7:28: undefined command: Fake",
+			"file.vsql:8:26: undefined query: Fake",
+			"file.vsql:10:13: undefined field FakeCol",
+			"file.vsql:11:23: undefined field FakeCol",
+			"file.vsql:12:42: undefined tag: x",
+			"file.vsql:22:24: undefined view: Fake",
+			"file.vsql:23:38: undefined tag: x",
+			"file.vsql:24:9: undefined role: fakeRole",
+			"file.vsql:25:16: undefined field fake",
+			"file.vsql:26:41: undefined tag: fake",
+			"file.vsql:27:39: undefined tag: fake",
 		)
 	})
 
 	t.Run("GRANT follows REVOKE in WORKSPACE", func(t *testing.T) {
 		require.AppSchemaError(`APPLICATION test();
 			WORKSPACE AppWorkspaceWS (
+				DESCRIPTOR();
 				ROLE role1;
 
 				TABLE Table1 INHERITS sys.CDoc(
@@ -2300,7 +2330,7 @@ func Test_Grants(t *testing.T) {
 				REVOKE ALL ON TABLE Table1 FROM role1;
 				GRANT ALL ON TABLE Table1 TO role1;
 
-			);`, "file.vsql:9:5: GRANT follows REVOKE in the same container")
+			);`, "file.vsql:10:5: GRANT follows REVOKE in the same container")
 	})
 
 	t.Run("GRANT Role", func(t *testing.T) {
@@ -2309,6 +2339,7 @@ func Test_Grants(t *testing.T) {
 				ROLE admin;
 			);
 			WORKSPACE Workspace1 INHERITS BaseWs (
+				DESCRIPTOR();
 				ROLE mgr;
 				GRANT admin TO mgr;
 			);
@@ -2482,10 +2513,11 @@ func Test_UndefinedType(t *testing.T) {
 	require := assertions(t)
 
 	require.AppSchemaError(`APPLICATION app1(); WORKSPACE w (
+DESCRIPTOR();
 TABLE MyTable2 INHERITS sys.ODoc (
 MyField int23 NOT NULL
 ))
-	`, "file.vsql:3:9: undefined data type or table: int23",
+	`, "file.vsql:4:9: undefined data type or table: int23",
 	)
 }
 
@@ -2494,12 +2526,13 @@ func Test_DescriptorInProjector(t *testing.T) {
 
 	require.AppSchemaError(`APPLICATION app1();
 	WORKSPACE w (
+		DESCRIPTOR();
 		EXTENSION ENGINE BUILTIN (
 		  PROJECTOR x AFTER INSERT ON (unknown.z) STATE(sys.Http);
 		);
 	  );
 	`,
-		"file.vsql:4:34: unknown undefined")
+		"file.vsql:5:34: unknown undefined")
 
 	require.NoAppSchemaError(`APPLICATION app1();
 	WORKSPACE RestaurantWS (
@@ -2526,12 +2559,14 @@ func Test_Variables(t *testing.T) {
 	require := assertions(t)
 	resolver := testVarResolver{init: map[appdef.QName]int32{appdef.NewQName("pkg", "var1"): 1}}
 
-	require.AppSchemaError(`APPLICATION app1(); WORKSPACE W( RATE AppDefaultRate variable PER HOUR; )`, "file.vsql:1:54: variable undefined")
+	require.AppSchemaError(`APPLICATION app1(); WORKSPACE W( DESCRIPTOR();
+	  RATE AppDefaultRate variable PER HOUR; )`, "file.vsql:2:24: variable undefined")
 
 	schema, err := require.AppSchema(`APPLICATION app1();
 	DECLARE var1 int32 DEFAULT 100;
 	DECLARE var2 int32 DEFAULT 100;
 	WORKSPACE W(
+		DESCRIPTOR();
 		RATE Rate1 var1 PER HOUR;
 		RATE Rate2 var2 PER HOUR;
 	);
@@ -2564,6 +2599,7 @@ func Test_RatesAndLimits(t *testing.T) {
 	t.Run("syntax check", func(t *testing.T) {
 		require.NoBuildError(`APPLICATION app1();
 		WORKSPACE w (
+			DESCRIPTOR();
 			TABLE t INHERITS sys.CDoc();
 			TAG tag;
 			VIEW v(
@@ -2622,6 +2658,7 @@ func Test_RatesAndLimits(t *testing.T) {
 	t.Run("not allowed operations", func(t *testing.T) {
 		require.AppSchemaError(`APPLICATION app1();
 		WORKSPACE w (
+			DESCRIPTOR();
 			TABLE t INHERITS sys.CDoc();
 			TAG tag;
 			VIEW v(
@@ -2651,26 +2688,28 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l39 SELECT ON EACH QUERY WITH RATE r;
 			LIMIT l40 ACTIVATE ON EACH COMMAND WITH RATE r;
 			LIMIT l41 DEACTIVATE ON EACH QUERY WITH RATE r;
-		);`, "file.vsql:15:13: operation INSERT not allowed",
-			"file.vsql:16:13: operation UPDATE not allowed",
-			"file.vsql:17:13: operation EXECUTE not allowed",
+		);`,
+			"file.vsql:16:13: operation INSERT not allowed",
+			"file.vsql:17:13: operation UPDATE not allowed",
 			"file.vsql:18:13: operation EXECUTE not allowed",
-			"file.vsql:20:14: operation INSERT not allowed",
-			"file.vsql:21:14: operation UPDATE not allowed",
-			"file.vsql:22:14: operation EXECUTE not allowed",
+			"file.vsql:19:13: operation EXECUTE not allowed",
+			"file.vsql:21:14: operation INSERT not allowed",
+			"file.vsql:22:14: operation UPDATE not allowed",
 			"file.vsql:23:14: operation EXECUTE not allowed",
-			"file.vsql:25:14: operation INSERT not allowed",
-			"file.vsql:26:14: operation UPDATE not allowed",
-			"file.vsql:27:14: operation EXECUTE not allowed",
+			"file.vsql:24:14: operation EXECUTE not allowed",
+			"file.vsql:26:14: operation INSERT not allowed",
+			"file.vsql:27:14: operation UPDATE not allowed",
 			"file.vsql:28:14: operation EXECUTE not allowed",
-			"file.vsql:29:14: operation SELECT not allowed",
-			"file.vsql:30:14: operation ACTIVATE not allowed",
-			"file.vsql:31:14: operation DEACTIVATE not allowed")
+			"file.vsql:29:14: operation EXECUTE not allowed",
+			"file.vsql:30:14: operation SELECT not allowed",
+			"file.vsql:31:14: operation ACTIVATE not allowed",
+			"file.vsql:32:14: operation DEACTIVATE not allowed")
 	})
 
 	t.Run("undefined statements", func(t *testing.T) {
 		require.AppSchemaError(`APPLICATION app1();
 		WORKSPACE w (
+			DESCRIPTOR();
 			RATE r 1 PER HOUR;
 			LIMIT l2 ON COMMAND x WITH RATE r;
 			LIMIT l3 ON QUERY y WITH RATE r;
@@ -2680,19 +2719,20 @@ func Test_RatesAndLimits(t *testing.T) {
 			LIMIT l30 ON EACH COMMAND WITH TAG tag WITH RATE r;
 			LIMIT l40 ON ALL COMMANDS WITH RATE fake;
 			);`,
-			"file.vsql:4:24: undefined command: x",
-			"file.vsql:5:22: undefined query: y",
-			"file.vsql:6:21: undefined view: v",
-			"file.vsql:7:22: undefined table: t",
-			"file.vsql:8:39: undefined tag: tag",
+			"file.vsql:5:24: undefined command: x",
+			"file.vsql:6:22: undefined query: y",
+			"file.vsql:7:21: undefined view: v",
+			"file.vsql:8:22: undefined table: t",
 			"file.vsql:9:39: undefined tag: tag",
-			"file.vsql:10:40: undefined rate: fake",
+			"file.vsql:10:39: undefined tag: tag",
+			"file.vsql:11:40: undefined rate: fake",
 		)
 	})
 
 	t.Run("default scopes", func(t *testing.T) {
 		a := require.Build(`APPLICATION app1();
 		WORKSPACE w (
+			DESCRIPTOR();
 			TABLE t INHERITS sys.CDoc();
 			RATE r 1 PER HOUR;
 		)`)
@@ -2711,9 +2751,10 @@ func Test_RatesAndLimits(t *testing.T) {
 		require.AppSchemaError(`APPLICATION app1();
 		DECLARE var1 int32 DEFAULT -1;
 		WORKSPACE w (
+			DESCRIPTOR();
 			RATE r var1 PER HOUR;
 			);`,
-			"file.vsql:4:11: positive value only allowed",
+			"file.vsql:5:11: positive value only allowed",
 		)
 	})
 
@@ -2729,6 +2770,7 @@ func Test_RefsFromInheritedWs(t *testing.T) {
 		);
 	);
 	WORKSPACE work INHERITS base (
+		DESCRIPTOR();
 		TABLE tab2 INHERITS sys.WDoc (
 			Fld2 ref(tab1)
 		);
@@ -2749,21 +2791,24 @@ func Test_Identifiers(t *testing.T) {
 
 	_, err := ParseFile("file1.vsql", `APPLICATION app1();
 	WORKSPACE w (
+		DESCRIPTOR();
 		ROLE _role;
 	);`)
-	require.ErrorContains(err, "file1.vsql:3:8: lexer: invalid input text")
+	require.ErrorContains(err, "file1.vsql:4:8: lexer: invalid input text")
 
 	_, err = ParseFile("file1.vsql", `APPLICATION app1();
 	WORKSPACE w (
+		DESCRIPTOR();
 		ROLE r234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890r23456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456;
 	);`)
-	require.ErrorContains(err, "file1.vsql:3:263: unexpected token")
+	require.ErrorContains(err, "file1.vsql:4:263: unexpected token")
 
 	_, err = ParseFile("file1.vsql", `APPLICATION app1();
 	WORKSPACE w (
+		DESCRIPTOR();
 		ROLE r世界;
 	);`)
-	require.ErrorContains(err, "file1.vsql:3:9: lexer: invalid input text")
+	require.ErrorContains(err, "file1.vsql:4:9: lexer: invalid input text")
 }
 
 func Test_RefsWorkspaces(t *testing.T) {
@@ -2771,6 +2816,7 @@ func Test_RefsWorkspaces(t *testing.T) {
 
 	require.NoAppSchemaError(`APPLICATION test();
 	WORKSPACE w2 (
+		DESCRIPTOR();
 		TABLE t1 INHERITS sys.WDoc(
 			items TABLE t2(
 				items TABLE t3()
@@ -2817,10 +2863,11 @@ func Test_ScheduledProjectors(t *testing.T) {
 		require := assertions(t)
 		require.AppSchemaError(`APPLICATION test();
 			WORKSPACE w2 (
+				DESCRIPTOR();
 				EXTENSION ENGINE BUILTIN (
 					PROJECTOR Proj1 CRON '1 0 * * *';
 				);
-			);`, "file.vsql:4:6: scheduled projector must be in app workspace")
+			);`, "file.vsql:5:6: scheduled projector must be in app workspace")
 	})
 
 	t.Run("bad cron and intents", func(t *testing.T) {
@@ -2868,10 +2915,11 @@ func Test_Jobs(t *testing.T) {
 		require := assertions(t)
 		require.AppSchemaError(`APPLICATION test();
 			WORKSPACE w2 (
+				DESCRIPTOR();
 				EXTENSION ENGINE BUILTIN (
 					JOB Job1 '1 0 * * *';
 				);
-			);`, "file.vsql:4:6: job must be in app workspace")
+			);`, "file.vsql:5:6: job must be in app workspace")
 	})
 
 	t.Run("bad cron", func(t *testing.T) {
@@ -3027,7 +3075,7 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 
 func Test_UniquesFromFieldsets(t *testing.T) {
 	require := assertions(t)
-	schema, err := require.AppSchema(`APPLICATION test(); WORKSPACE w (
+	schema, err := require.AppSchema(`APPLICATION test(); WORKSPACE w ( DESCRIPTOR();
 	TYPE fieldset (
 		f1 int32
 	);
@@ -3062,6 +3110,7 @@ func Test_RefInheritedFromSys(t *testing.T) {
 
 	_, err := require.AppSchema(`APPLICATION SomeApp();
 	WORKSPACE SomeWS (
+		DESCRIPTOR();
 		TABLE SomeTable INHERITS sys.CDoc(
 			ChildWorkspaceID ref(sys.ChildWorkspace)
 		);
@@ -3172,6 +3221,7 @@ func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
 	require := assertions(t)
 	schema, err := require.AppSchema(`APPLICATION test();
 		WORKSPACE MyWS (
+			DESCRIPTOR();
 			EXTENSION ENGINE BUILTIN (
 				COMMAND Cmd1;
 			);

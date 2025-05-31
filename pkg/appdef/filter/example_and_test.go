@@ -28,9 +28,11 @@ func ExampleAnd() {
 		wsb := adb.AddWorkspace(wsName)
 
 		wsb.AddTag(tag)
-		_ = wsb.AddODoc(doc)
+		_ = wsb.AddCDoc(doc)
 		wsb.AddObject(obj).SetTag(tag)
 		_ = wsb.AddCommand(cmd)
+
+		wsb.SetDescriptor(doc)
 
 		return adb.MustBuild()
 	}()
@@ -53,7 +55,7 @@ func ExampleAnd() {
 
 	example(
 		filter.And(
-			filter.WSTypes(wsName, appdef.TypeKind_ODoc, appdef.TypeKind_Object),
+			filter.WSTypes(wsName, appdef.TypeKind_CDoc, appdef.TypeKind_Object),
 			filter.Tags(tag)))
 
 	example(
@@ -66,14 +68,14 @@ func ExampleAnd() {
 	// Output:
 	// This example demonstrates how to work with the And filter
 	//
-	// TYPES(ODoc, Object) FROM test.workspace AND TAGS(test.tag)
+	// TYPES(CDoc, Object) FROM test.workspace AND TAGS(test.tag)
 	// - kind: FilterKind_And
 	// - children:
-	//   * TYPES(ODoc, Object) FROM test.workspace
+	//   * TYPES(CDoc, Object) FROM test.workspace
 	//   * TAGS(test.tag)
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
-	//   * ODoc «test.doc» is matched: false
+	//   * CDoc «test.doc» is matched: false
 	//   * Object «test.object» is matched: true
 	//   * Tag «test.tag» is matched: false
 	//
@@ -84,7 +86,7 @@ func ExampleAnd() {
 	//   * TYPES(Command) FROM test.workspace OR TAGS(test.tag)
 	// - testing:
 	//   * BuiltIn-Command «test.command» is matched: false
-	//   * ODoc «test.doc» is matched: false
+	//   * CDoc «test.doc» is matched: false
 	//   * Object «test.object» is matched: true
 	//   * Tag «test.tag» is matched: false
 }

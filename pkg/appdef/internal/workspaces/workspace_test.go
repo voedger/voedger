@@ -157,7 +157,7 @@ func Test_AlterWorkspace(t *testing.T) {
 		adb = builder.New()
 		adb.AddPackage("test", "test.com/test")
 
-		_ = adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(adb.AddWorkspace(wsName))
 	})
 
 	t.Run("should be ok to alter workspace", func(t *testing.T) {
@@ -190,9 +190,9 @@ func Test_WorkspaceDescriptor(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(wsName)
-		_ = ws.AddCDoc(descName)
-		ws.SetDescriptor(descName)
+		wsb := adb.AddWorkspace(wsName)
+		_ = wsb.AddCDoc(descName)
+		wsb.SetDescriptor(descName)
 
 		app, err := adb.Build()
 		require.NoError(err)
@@ -215,16 +215,16 @@ func Test_WorkspaceDescriptor(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(wsName)
-		_ = ws.AddCDoc(descName)
-		ws.SetDescriptor(descName)
+		wsb := adb.AddWorkspace(wsName)
+		_ = wsb.AddCDoc(descName)
+		wsb.SetDescriptor(descName)
 
 		require.NotPanics(
-			func() { ws.SetDescriptor(descName) },
+			func() { wsb.SetDescriptor(descName) },
 			"should be ok to assign descriptor twice")
 
-		_ = ws.AddCDoc(desc1Name)
-		ws.SetDescriptor(desc1Name)
+		_ = wsb.AddCDoc(desc1Name)
+		wsb.SetDescriptor(desc1Name)
 
 		app, err := adb.Build()
 		require.NoError(err)
@@ -238,18 +238,11 @@ func Test_WorkspaceDescriptor(t *testing.T) {
 			require.Nil(app.WorkspaceByDescriptor(descName))
 		})
 
-		t.Run("should be ok to clear descriptor", func(t *testing.T) {
-			ws.SetDescriptor(appdef.NullQName)
+		t.Run("should be fail if cleared descriptor", func(t *testing.T) {
+			wsb.SetDescriptor(appdef.NullQName)
 
-			app, err = adb.Build()
-			require.NoError(err)
-
-			require.Nil(app.WorkspaceByDescriptor(descName))
-			require.Nil(app.WorkspaceByDescriptor(desc1Name))
-
-			ws := app.Workspace(wsName)
-			require.NotNil(ws)
-			require.Equal(appdef.NullQName, ws.Descriptor())
+			_, err := adb.Build()
+			require.Error(err, require.Is(appdef.ErrMissedError), require.HasAll("descriptor", wsName))
 		})
 	})
 }
@@ -265,11 +258,11 @@ func Test_WorkspaceAbstract(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
 
-		desc := ws.AddCDoc(descName)
+		desc := wsb.AddCDoc(descName)
 		desc.SetAbstract()
-		ws.SetDescriptor(descName)
+		wsb.SetDescriptor(descName)
 
 		a, err := adb.Build()
 		require.NoError(err)
@@ -289,16 +282,28 @@ func Test_WorkspaceAbstract(t *testing.T) {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
-		ws := adb.AddWorkspace(wsName)
+		wsb := adb.AddWorkspace(wsName)
 
-		desc := ws.AddCDoc(descName)
-		ws.SetDescriptor(descName)
+		desc := wsb.AddCDoc(descName)
+		wsb.SetDescriptor(descName)
 
 		desc.SetAbstract()
 
 		_, err := adb.Build()
 		require.ErrorIs(err, appdef.ErrIncompatibleError)
 	})
+
+	t.Run("should be ok to add abstract workspace without descriptor", func(t *testing.T) {
+		adb := builder.New()
+		adb.AddPackage("test", "test.com/test")
+
+		wsb := adb.AddWorkspace(wsName)
+		wsb.SetAbstract()
+
+		_, err := adb.Build()
+		require.NoError(err)
+	})
+
 }
 
 func Test_WorkspaceInheritance(t *testing.T) {
@@ -332,17 +337,18 @@ func Test_WorkspaceInheritance(t *testing.T) {
 	testADB := func() appdef.IAppDefBuilder {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
-		for idx := 0; idx < wsCount; idx++ {
-			ws := adb.AddWorkspace(wsName(idx))
+		for idx := range wsCount {
+			wsb := adb.AddWorkspace(wsName(idx))
+			appdef.SetEmptyWSDesc(wsb)
 			anc := testAncestors[idx].anc
 			if len(anc) > 0 {
 				ancNames := make([]appdef.QName, len(anc))
 				for i, a := range anc {
 					ancNames[i] = wsName(a)
 				}
-				ws.SetAncestors(ancNames[0], ancNames[1:]...)
+				wsb.SetAncestors(ancNames[0], ancNames[1:]...)
 			}
-			_ = ws.AddObject(objName(idx))
+			_ = wsb.AddObject(objName(idx))
 		}
 		return adb
 	}
@@ -392,7 +398,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 		}
 		for wsIdx, test := range tests {
 			ws := app.Workspace(wsName(wsIdx))
-			for a := 0; a < wsCount; a++ {
+			for a := range wsCount {
 				want := slices.Contains(test.inherits, a)
 				got := ws.Inherits(wsName(a))
 				require.Equal(want, got, "unexpected inheritance for «%v» from «%v»: want %v, got: %v", ws, wsName(a), want, got)
@@ -403,7 +409,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 	})
 
 	t.Run("should be correspondence between Ancestors() and Inherits()", func(t *testing.T) {
-		for idx := 0; idx < wsCount; idx++ {
+		for idx := range wsCount {
 			ws := app.Workspace(wsName(idx))
 			for _, a := range ws.Ancestors() {
 				require.True(ws.Inherits(a.QName()), "%v.Inherits(%v) returns false for ancestor workspace", ws, a.QName())
@@ -426,7 +432,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 		}
 		for wsIdx, test := range tests {
 			ws := app.Workspace(wsName(wsIdx))
-			for o := 0; o < wsCount; o++ {
+			for o := range wsCount {
 				want := slices.Contains(test.objects, o)
 				obj := appdef.Object(ws.Type, objName(o))
 				got := obj != nil
@@ -441,7 +447,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 	})
 
 	t.Run("should be ok to iterate types", func(t *testing.T) {
-		for wsIdx := 0; wsIdx < wsCount; wsIdx++ {
+		for wsIdx := range wsCount {
 			ws := app.Workspace(wsName(wsIdx))
 			types := ws.Types()
 			for _, a := range ws.Ancestors() {
@@ -481,11 +487,11 @@ func Test_WorkspaceInheritance(t *testing.T) {
 			adb := builder.New()
 			adb.AddPackage("test", "test.com/test")
 
-			ws := adb.AddWorkspace(wsName(0))
+			wsb := adb.AddWorkspace(wsName(0))
 			unknown := appdef.NewQName("test", "unknown")
-			require.Panics(func() { ws.SetAncestors(unknown) },
+			require.Panics(func() { wsb.SetAncestors(unknown) },
 				require.Is(appdef.ErrNotFoundError), require.Has(unknown))
-			require.Panics(func() { ws.SetAncestors(appdef.SysData_QName) },
+			require.Panics(func() { wsb.SetAncestors(appdef.SysData_QName) },
 				require.Is(appdef.ErrNotFoundError), require.Has(appdef.SysData_QName))
 		})
 
@@ -504,17 +510,17 @@ func Test_WorkspaceInheritance(t *testing.T) {
 			}
 
 			for wsIdx, test := range tests {
-				for a := 0; a < wsCount; a++ {
+				for a := range wsCount {
 					anc := wsName(a)
 
 					adb := testADB()
-					ws := adb.AlterWorkspace(wsName(wsIdx))
+					wsb := adb.AlterWorkspace(wsName(wsIdx))
 
 					if slices.Contains(test.circulars, a) {
-						require.Panics(func() { ws.SetAncestors(anc) },
+						require.Panics(func() { wsb.SetAncestors(anc) },
 							require.Is(appdef.ErrUnsupportedError), require.Has("Circular inheritance"), require.Has(anc), require.Has(wsName(wsIdx)))
 					} else {
-						require.NotPanics(func() { ws.SetAncestors(anc) },
+						require.NotPanics(func() { wsb.SetAncestors(anc) },
 							"unexpected panics while set ancestors for «%v» from «%v»", wsName(wsIdx), anc)
 					}
 				}
@@ -551,9 +557,10 @@ func Test_WorkspaceUsage(t *testing.T) {
 	testADB := func() appdef.IAppDefBuilder {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
-		for i := 0; i < wsCount; i++ {
-			ws := adb.AddWorkspace(wsName(i))
-			_ = ws.AddObject(objName(i))
+		for i := range wsCount {
+			wsb := adb.AddWorkspace(wsName(i))
+			appdef.SetEmptyWSDesc(wsb)
+			_ = wsb.AddObject(objName(i))
 		}
 		for idx, test := range testUses {
 			ws := adb.AlterWorkspace(wsName(idx))
@@ -597,7 +604,7 @@ func Test_WorkspaceUsage(t *testing.T) {
 		for idx, test := range testUses {
 			ws := app.Workspace(wsName(idx))
 			t.Run("should be ok to find used workspaces by Type()", func(t *testing.T) {
-				for u := 0; u < wsCount; u++ {
+				for u := range wsCount {
 					used := wsName(u)
 					got := ws.Type(used)
 					if slices.Contains(test.use, u) {
@@ -610,7 +617,7 @@ func Test_WorkspaceUsage(t *testing.T) {
 			})
 			t.Run("should be ok to range used workspaces by Types()", func(t *testing.T) {
 				wsTypes := ws.Types()
-				for u := 0; u < wsCount; u++ {
+				for u := range wsCount {
 					usedWs := app.Type(wsName(u))
 					if slices.Contains(test.use, u) {
 						require.Contains(wsTypes, usedWs, "(%v).Types() should contain %v", ws, usedWs)
@@ -633,11 +640,11 @@ func Test_WorkspaceUsage(t *testing.T) {
 			adb := builder.New()
 			adb.AddPackage("test", "test.com/test")
 
-			ws := adb.AddWorkspace(wsName(0))
+			wsb := adb.AddWorkspace(wsName(0))
 			unknown := appdef.NewQName("test", "unknown")
-			require.Panics(func() { ws.UseWorkspace(unknown) },
+			require.Panics(func() { wsb.UseWorkspace(unknown) },
 				require.Is(appdef.ErrNotFoundError), require.Has(unknown))
-			require.Panics(func() { ws.UseWorkspace(appdef.SysData_QName) },
+			require.Panics(func() { wsb.UseWorkspace(appdef.SysData_QName) },
 				require.Is(appdef.ErrNotFoundError), require.Has(appdef.SysData_QName))
 		})
 	})
@@ -665,6 +672,7 @@ func Test_WorkspaceAddTypes(t *testing.T) {
 
 	cDocName := appdef.NewQName("test", "CDoc")
 	wsb.AddCDoc(cDocName).SetSingleton()
+	wsb.SetDescriptor(cDocName)
 	cRecName := appdef.NewQName("test", "CRecord")
 	wsb.AddCRecord(cRecName)
 

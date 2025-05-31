@@ -25,6 +25,7 @@ func Test_Queries(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		_ = wsb.AddObject(parName)
 		_ = wsb.AddObject(resName)
@@ -99,6 +100,7 @@ func Test_QueryValidate(t *testing.T) {
 	adb.AddPackage("test", "test.com/test")
 
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	appdef.SetEmptyWSDesc(wsb)
 
 	query := wsb.AddQuery(appdef.NewQName("test", "query"))
 
@@ -136,6 +138,7 @@ func Test_QueryWithAnyResult(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
+		appdef.SetEmptyWSDesc(wsb)
 
 		query := wsb.AddQuery(queryName)
 		query.
