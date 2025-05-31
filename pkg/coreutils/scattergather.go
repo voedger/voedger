@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2025-present unTill Software Development Group B.V.
  * @author Denis Gribanov
@@ -85,11 +84,10 @@ func ScatterGather[IN any, OUT any](
 	}
 
 	// Close results only after every worker finished.
-	g.Go(func() error {
+	go func() {
 		wg.Wait()
 		close(results)
-		return nil
-	})
+	}()
 
 	// Gather stage – single goroutine, so caller does not need extra locks
 	g.Go(func() error {
