@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2025-present unTill Software Development Group B.V.
  * @author Denis Gribanov
@@ -12,7 +13,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// ScatterGather concurrently maps every element from the input slice using the provided
+// ScatterGather implements concurrent mapping the source values and single-goroutine gathering
+// it concurrently maps every element from the input slice using the provided
 // mapper function and then feeds the produced values to the gatherer.
 //
 //   - source          – slice with the values to process.
@@ -21,8 +23,7 @@ import (
 //     return an error. On the first error every goroutine is
 //     cancelled and the error is propagated to the caller.
 //   - gatherer(OUT)   – accumulation step that receives the mapped values. Run in **single
-//     goroutine**, so it does not have to implement its own
-//     synchronisation.
+//     goroutine**, so it does not have to implement its own synchronisation.
 //
 // The function returns when every value has been gathered or when any mapper
 // returns an error or ctx is cancelled. In that case the first error is returned.
