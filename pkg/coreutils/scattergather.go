@@ -12,20 +12,12 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// MapReduce implements a parallel map operation with result collection.
-// It processes each input value concurrently using multiple workers and collects the results.
-// The implementation follows a Map-Reduce like pattern where:
-//   - Map: Each input is processed independently (mapper function)
-//   - Reduce: Results are collected and combined (reducer function)
-//
-// Parameters:
-//   - ctx: Context for cancellation and timeout control
-//   - source: Input data to be processed
-//   - numberOfThreads: Number of worker goroutines to process the data
-//   - mapper: Function that maps each input value to a new value (map operation)
-//   - reducer: Function that handles each processed result (reduce operation)
-//   - note: not necessary to lock the outer resource to gather into
-func MapReduce[IN any, OUT any](ctx context.Context, source []IN, numberOfThreads int, mapper func(val IN) (OUT, error), reducer func(val OUT)) error {
+// ScetterGather implements parallel source processing using the mappper func and aggregate the result using gatherer func
+// mapper produces the OUT instance that then goes to gatherer func
+// each element in source is processed by workers pool of size numberOfThreads
+// note: not necessary to lock the outer resource to gather into
+func ScatterGather[IN any, OUT any](ctx context.Context, source []IN, numberOfThreads int, mapper func(val IN) (OUT, error),
+	gatherer func(val OUT)) error {
 	g, reducersCtx := errgroup.WithContext(ctx)
 	sourceCh := make(chan IN)
 	go func() {
@@ -64,7 +56,7 @@ func MapReduce[IN any, OUT any](ctx context.Context, source []IN, numberOfThread
 				if !ok {
 					return nil
 				}
-				reducer(d)
+				gatherer(d)
 			}
 		}
 		return reducersCtx.Err()

@@ -7,14 +7,14 @@ import (
 	"time"
 )
 
-func TestMapReduce(t *testing.T) {
+func TestScatterGather(t *testing.T) {
 	t.Run("successful processing", func(t *testing.T) {
 		ctx := context.Background()
 		input := []int{1, 2, 3, 4, 5}
 		expected := []int{2, 4, 6, 8, 10}
 		var results []int
 
-		err := MapReduce(ctx, input, 2,
+		err := ScatterGather(ctx, input, 2,
 			func(val int) (int, error) {
 				return val * 2, nil
 			},
@@ -43,7 +43,7 @@ func TestMapReduce(t *testing.T) {
 		input := []int{1, 2, 3}
 		expectedErr := errors.New("processing error")
 
-		err := MapReduce(ctx, input, 2,
+		err := ScatterGather(ctx, input, 2,
 			func(val int) (int, error) {
 				if val == 2 {
 					return 0, expectedErr
@@ -67,7 +67,7 @@ func TestMapReduce(t *testing.T) {
 			input[i] = i
 		}
 
-		err := MapReduce(ctx, input, 4,
+		err := ScatterGather(ctx, input, 4,
 			func(val int) (int, error) {
 				time.Sleep(50 * time.Millisecond)
 				return val * 2, nil
@@ -84,7 +84,7 @@ func TestMapReduce(t *testing.T) {
 		ctx := context.Background()
 		var results []int
 
-		err := MapReduce(ctx, []int{}, 2,
+		err := ScatterGather(ctx, []int{}, 2,
 			func(val int) (int, error) {
 				return val * 2, nil
 			},
@@ -108,7 +108,7 @@ func TestMapReduce(t *testing.T) {
 		expected := []int{2, 4, 6, 8, 10}
 		var results []int
 
-		err := MapReduce(ctx, input, 1,
+		err := ScatterGather(ctx, input, 1,
 			func(val int) (int, error) {
 				return val * 2, nil
 			},
@@ -141,7 +141,7 @@ func TestMapReduce(t *testing.T) {
 
 		processingOrder := make([]int, 0, 100)
 
-		err := MapReduce(ctx, input, 4,
+		err := ScatterGather(ctx, input, 4,
 			func(val int) (int, error) {
 				time.Sleep(time.Duration(val%10) * time.Millisecond)
 				return val, nil
