@@ -8,13 +8,14 @@ package coreutils
 import (
 	"context"
 	"errors"
-	"reflect"
 	"sort"
-	"sync/atomic"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestScatterGatherBasic(t *testing.T) {
+	require := require.New(t)
 	src := []int{1, 2, 3, 4, 5}
 	var got []int
 
@@ -22,18 +23,15 @@ func TestScatterGatherBasic(t *testing.T) {
 		func(v int) (int, error) { return v * 2, nil },
 		func(v int) { got = append(got, v) },
 	)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(err)
 
 	want := []int{2, 4, 6, 8, 10}
 	sort.Ints(got)
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("results mismatch:\nwant %v\n got %v", want, got)
-	}
+	require.Equal(want, got)
 }
 
 func TestScatterGatherEmptySource(t *testing.T) {
+	require := require.New(t)
 	called := false
 	err := ScatterGather(context.Background(), []int{}, 4,
 		func(v int) (int, error) { return v, nil },
@@ -42,12 +40,11 @@ func TestScatterGatherEmptySource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if called {
-		t.Fatal("gatherer should not be called for empty source")
-	}
+	require.False(called)
 }
 
 func TestScatterGatherMapperError(t *testing.T) {
+	require := require.New(t)
 	src := []int{1, 2, 3, 4, 5}
 	sentinel := errors.New("boom")
 	var gathered int32
@@ -59,33 +56,69 @@ func TestScatterGatherMapperError(t *testing.T) {
 			}
 			return v, nil
 		},
-		func(int) { atomic.AddInt32(&gathered, 1) },
+		func(int) { gathered++ },
 	)
+
+	require.ErrorIs(err, sentinel)
 
 	if !errors.Is(err, sentinel) {
 		t.Fatalf("expected sentinel error, got %v", err)
 	}
-
-	if g := atomic.LoadInt32(&gathered); g == int32(len(src)) {
-		t.Fatalf("gatherer processed all elements despite error; gathered=%d", g)
-	}
+	require.NotEqual(len(src), gathered)
 }
 
 func TestScatterGatherContextCancel(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // cancel immediately
+	require := require.New(t)
 
-	err := ScatterGather(ctx, []int{1, 2, 3}, 1,
-		func(v int) (int, error) { return v, nil },
-		func(int) {},
-	)
+	t.Run("initially cancled", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // cancel immediately
 
-	if !errors.Is(err, context.Canceled) {
-		t.Fatalf("expected context.Canceled, got %v", err)
-	}
+		err := ScatterGather(ctx, []int{1, 2, 3}, 1,
+			func(v int) (int, error) { return v, nil },
+			func(int) {},
+		)
+
+		require.ErrorIs(err, context.Canceled)
+	})
+
+	t.Run("cancel on mapping", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		err := ScatterGather(ctx, []int{1, 2, 3}, 1,
+			func(v int) (int, error) {
+				cancel()
+				return v, nil
+			},
+			func(int) {},
+		)
+		require.ErrorIs(err, context.Canceled)
+	})
+
+	t.Run("cancel on gathering", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		err := ScatterGather(ctx, []int{1, 2, 3}, 1,
+			func(v int) (int, error) { return v, nil },
+			func(int) { cancel() },
+		)
+		require.ErrorIs(err, context.Canceled)
+	})
+
+	t.Run("mapper error priority over context cancel", func(t *testing.T) {
+		mapperError := errors.New("boom")
+		ctx, cancel := context.WithCancel(context.Background())
+		err := ScatterGather(ctx, []int{1, 2, 3}, 1,
+			func(v int) (int, error) {
+				cancel()
+				return v, mapperError
+			},
+			func(int) {},
+		)
+		require.ErrorIs(err, mapperError)
+	})
 }
 
 func TestScatterGatherWorkersZero(t *testing.T) {
+	require := require.New(t)
 	src := []string{"a", "b", "c"}
 	got := make([]string, 0, len(src))
 
@@ -98,7 +131,5 @@ func TestScatterGatherWorkersZero(t *testing.T) {
 
 	sort.Strings(got)
 	want := []string{"aa", "bb", "cc"}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("results mismatch:\nwant %v\n got %v", want, got)
-	}
+	require.Equal(want, got)
 }
