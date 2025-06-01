@@ -27,18 +27,18 @@ import (
 // The function returns when every value has been gathered or when any mapper
 // returns an error or ctx is cancelled. In that case the first error is returned.
 func ScatterGather[IN any, OUT any](
-	ctx context.Context,
+	outerCtx context.Context,
 	source []IN,
 	workers int,
 	mapper func(IN) (OUT, error),
 	gatherer func(OUT),
-) error {
+) (err error) {
 	if workers <= 0 {
 		workers = 1
 	}
 
 	// errgroup propagates the first non‑nil error and automatically cancels ctx.
-	g, ctx := errgroup.WithContext(ctx)
+	g, workersCtx := errgroup.WithContext(outerCtx)
 
 	// Fan‑out stage – feed the tasks channel
 	tasks := make(chan IN)
@@ -46,8 +46,8 @@ func ScatterGather[IN any, OUT any](
 		defer close(tasks)
 		for _, v := range source {
 			select {
-			case <-ctx.Done():
-				return ctx.Err()
+			case <-workersCtx.Done():
+				return nil
 			case tasks <- v:
 			}
 		}
@@ -61,13 +61,13 @@ func ScatterGather[IN any, OUT any](
 	for i := 0; i < workers; i++ {
 		g.Go(func() error {
 			defer wg.Done()
-			for {
+			for workersCtx.Err() == nil {
 				select {
-				case <-ctx.Done():
-					return ctx.Err()
+				case <-workersCtx.Done():
+					return nil
 				case in, ok := <-tasks:
 					if !ok {
-						return nil // channel closed, nothing left to do
+						return nil
 					}
 					out, err := mapper(in)
 					if err != nil {
@@ -75,11 +75,12 @@ func ScatterGather[IN any, OUT any](
 					}
 					select {
 					case results <- out:
-					case <-ctx.Done():
-						return ctx.Err()
+					case <-workersCtx.Done():
+						return nil
 					}
 				}
 			}
+			return nil
 		})
 	}
 
@@ -93,8 +94,8 @@ func ScatterGather[IN any, OUT any](
 	g.Go(func() error {
 		for {
 			select {
-			case <-ctx.Done():
-				return ctx.Err()
+			case <-workersCtx.Done():
+				return nil
 			case r, ok := <-results:
 				if !ok { // closed by the closer goroutine above
 					return nil
@@ -103,6 +104,8 @@ func ScatterGather[IN any, OUT any](
 			}
 		}
 	})
-
-	return g.Wait()
+	if err = g.Wait(); err == nil {
+		err = outerCtx.Err()
+	}
+	return err
 }
