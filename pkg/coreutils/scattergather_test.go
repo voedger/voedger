@@ -70,7 +70,7 @@ func TestScatterGatherMapperError(t *testing.T) {
 func TestScatterGatherContextCancel(t *testing.T) {
 	require := require.New(t)
 
-	t.Run("initially cancled", func(t *testing.T) {
+	t.Run("initially canceled", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // cancel immediately
 
