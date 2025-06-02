@@ -8,7 +8,9 @@ package sys_it
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"testing"
@@ -901,10 +903,13 @@ func TestQueryProcessor2_Include(t *testing.T) {
 			}]}`, resp.Body)
 		})
 		t.Run("Expected error https://github.com/voedger/voedger/issues/3714", func(t *testing.T) {
-			_, _ = vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=EpicFail`, ws.WSID, it.QNameApp1_ViewClients),
+			_, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=EpicFail`, ws.WSID, it.QNameApp1_ViewClients),
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.Expect400(),
 			)
+			var e coreutils.SysError
+			_ = errors.As(err, &e)
+			require.Equal(http.StatusBadRequest, e.HTTPStatus)
+			require.Equal("field expression - 'EpicFail', 'EpicFail' - unexpected field", e.Message)
 		})
 	})
 	t.Run("Document", func(t *testing.T) {
