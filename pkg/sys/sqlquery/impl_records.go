@@ -152,6 +152,7 @@ func readSingleRecord(id istructs.RecordID, wsid istructs.WSID, appStructs istru
 		rec, err = appStructs.Records().Get(wsid, true, id)
 	}
 	if err != nil {
+		// notest
 		return err
 	}
 
