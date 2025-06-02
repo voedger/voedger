@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/sys"
 	log "github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/isequencer"
@@ -1678,6 +1679,175 @@ func TestEventBuild_Error(t *testing.T) {
 					_ = app.Records().Apply2(pLogEvent, func(r istructs.IRecord) {})
 				},
 				require.Is(ErrorEventNotValidError), require.Has(ErrWrongRecordIDError))
+		})
+	})
+}
+
+// #3711 istructs.IEvents.GetORec ~tests~
+func Test_IEventsGetORec(t *testing.T) {
+	require := require.New(t)
+	test := newTest()
+	app := test.AppStructs
+
+	var (
+		saleID, basketID istructs.RecordID
+		goodsID          [2]istructs.RecordID
+	)
+
+	t.Run("Should be ok to emulate command line processor workflow", func(t *testing.T) {
+		var rawEvent istructs.IRawEvent
+
+		t.Run("Should be ok to build raw event", func(t *testing.T) {
+			bld := app.Events().GetSyncRawEventBuilder(
+				istructs.SyncRawEventBuilderParams{
+					GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+						HandlingPartition: test.partition,
+						PLogOffset:        test.plogOfs,
+						Workspace:         test.workspace,
+						WLogOffset:        test.wlogOfs,
+						QName:             test.saleCmdName,
+						RegisteredAt:      test.registeredTime,
+					},
+					Device:   test.device,
+					SyncedAt: test.syncTime,
+				})
+
+			test.fillTestObject(bld.ArgumentObjectBuilder())
+			test.fillTestSecureObject(bld.ArgumentUnloggedObjectBuilder())
+
+			ev, err := bld.BuildRawEvent()
+			require.NoError(err)
+			require.NotNil(ev)
+
+			rawEvent = ev
+		})
+
+		t.Run("Should be ok to save raw event to PLog & WLog", func(t *testing.T) {
+			pLogEvent, err := app.Events().PutPlog(rawEvent, nil, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID) error {
+				require.True(rawID.IsRaw())
+				switch rawID {
+				case test.tempSaleID:
+					saleID = storageID
+				case test.tempBasketID:
+					basketID = storageID
+				case test.tempGoodsID[0]:
+					goodsID[0] = storageID
+				case test.tempGoodsID[1]:
+					goodsID[1] = storageID
+				}
+				return nil
+			},
+			))
+			require.NoError(err)
+			require.False(saleID.IsRaw())
+			require.False(basketID.IsRaw())
+			require.False(goodsID[0].IsRaw())
+			require.False(goodsID[1].IsRaw())
+			defer pLogEvent.Release()
+
+			require.NoError(app.Events().PutWlog(pLogEvent))
+		})
+
+		t.Run("Should be ok to emulate records registry projector", func(t *testing.T) {
+
+			putRecRegistry := func(id istructs.RecordID, name appdef.QName) {
+				k := app.ViewRecords().KeyBuilder(sys.RecordsRegistryView.Name)
+				k.PutInt64(sys.RecordsRegistryView.Fields.IDHi, sys.RecordsRegistryView.Fields.CrackID(id))
+				k.PutInt64(sys.RecordsRegistryView.Fields.ID, int64(id)) // nolint G115
+				v := app.ViewRecords().NewValueBuilder(sys.RecordsRegistryView.Name)
+				v.PutInt64(sys.RecordsRegistryView.Fields.WLogOffset, int64(test.wlogOfs)) // nolint G115
+				v.PutQName(sys.RecordsRegistryView.Fields.QName, name)
+				err := app.ViewRecords().Put(test.workspace, k, v)
+				require.NoError(err)
+			}
+
+			putRecRegistry(saleID, test.saleCmdDocName)
+			putRecRegistry(basketID, appdef.NewQName(test.pkgName, test.basketIdent))
+			putRecRegistry(goodsID[0], appdef.NewQName(test.pkgName, test.goodIdent))
+			putRecRegistry(goodsID[1], appdef.NewQName(test.pkgName, test.goodIdent))
+		})
+	})
+
+	t.Run("Should be ok to get ODoc by ID", func(t *testing.T) {
+
+		doTest := func(ofs istructs.Offset) {
+			t.Run(fmt.Sprintf("with WLog offset %d", ofs), func(t *testing.T) {
+				sale, err := app.Events().GetORec(test.workspace, saleID, ofs)
+				require.NoError(err)
+				require.Equal(saleID, sale.ID())
+				require.Equal(test.saleCmdDocName, sale.QName())
+				require.Equal(test.buyerValue, sale.AsString(test.buyerIdent))
+				require.Equal(test.ageValue, sale.AsInt8(test.ageIdent))
+				require.Equal(test.heightValue, sale.AsFloat32(test.heightIdent))
+				require.Equal(test.humanValue, sale.AsBool(test.humanIdent))
+				require.Equal(test.photoValue, sale.AsBytes(test.photoIdent))
+
+				basket, err := app.Events().GetORec(test.workspace, basketID, ofs)
+				require.NoError(err)
+				require.Equal(basketID, basket.ID())
+				require.Equal(test.basketIdent, basket.Container())
+				require.Equal(test.basketIdent, basket.QName().Entity())
+
+				for i := range test.goodCount {
+					good, err := app.Events().GetORec(test.workspace, goodsID[i], ofs)
+					require.NoError(err)
+					require.Equal(goodsID[i], good.ID())
+					require.Equal(test.goodIdent, good.Container())
+					require.Equal(test.goodIdent, good.QName().Entity())
+					require.Equal(saleID, good.AsRecordID(test.saleIdent))
+					require.Equal(test.goodNames[i], good.AsString(test.nameIdent))
+					require.Equal(test.goodCodes[i], good.AsInt64(test.codeIdent))
+					require.Equal(test.goodWeights[i], good.AsFloat64(test.weightIdent))
+				}
+			})
+		}
+
+		doTest(test.wlogOfs)
+		doTest(istructs.NullOffset)
+	})
+
+	t.Run("Should be ok to get NullRecord if ID not found", func(t *testing.T) {
+
+		doTest := func(id istructs.RecordID, ofs istructs.Offset) {
+			t.Run(fmt.Sprintf("with ID %d and offset %d", id, ofs), func(t *testing.T) {
+				rec, err := app.Events().GetORec(test.workspace, id, ofs)
+				require.NoError(err)
+				require.Equal(id, rec.ID())
+				require.Equal(appdef.NullQName, rec.QName())
+			})
+		}
+
+		badID := saleID + 100500
+
+		doTest(badID, test.wlogOfs)
+		doTest(badID, istructs.NullOffset)
+
+		doTest(saleID, test.wlogOfs+1) // client mistake: right ID but wrong offset
+	})
+
+	t.Run("Should be error", func(t *testing.T) {
+		t.Run("if record registry read failed", func(t *testing.T) {
+			testError := errors.New("test record registry read error")
+			cc := utils.ToBytes(uint64(saleID))
+			test.Storage.ScheduleGetError(testError, nil, cc)
+			defer test.Storage.Reset()
+
+			rec, err := app.Events().GetORec(test.workspace, saleID, istructs.NullOffset)
+			require.Error(err, require.Is(testError), require.HasAll(test.workspace, saleID))
+			require.Equal(saleID, rec.ID())
+			require.Equal(appdef.NullQName, rec.QName())
+		})
+
+		t.Run("if WLog read failed", func(t *testing.T) {
+			testError := errors.New("test wlog read error")
+			pk, cc := wlogKey(test.workspace, test.wlogOfs)
+			test.Storage.ScheduleGetError(testError, pk, cc)
+			defer test.Storage.Reset()
+
+			rec, err := app.Events().GetORec(test.workspace, saleID, test.wlogOfs)
+			require.Error(err, require.Is(testError), require.HasAll(test.workspace, saleID, test.wlogOfs))
+			require.Equal(saleID, rec.ID())
+			require.Equal(appdef.NullQName, rec.QName())
 		})
 	})
 }

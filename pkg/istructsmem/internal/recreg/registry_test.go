@@ -54,7 +54,7 @@ func Test_BasicUsage(t *testing.T) {
 	mockKeyBuilder := &mockKey{}
 	mockValue := &mockValue{}
 
-	registry := recreg.New(mockView)
+	registry := recreg.New(func() istructs.IViewRecords { return mockView })
 
 	wsid := istructs.WSID(100)
 	id := istructs.RecordID(12345)
@@ -95,7 +95,7 @@ func Test_Errors(t *testing.T) {
 		mockKeyBuilder.On("PutRecordID", sys.RecordsRegistryView.Fields.ID, id)
 		mockView.On("Get", wsid, mockKeyBuilder).Return(mockValue, istructs.ErrRecordNotFound).Once()
 
-		registry := recreg.New(mockView)
+		registry := recreg.New(func() istructs.IViewRecords { return mockView })
 		n, o, err := registry.Get(wsid, id)
 
 		require := require.New(t)
@@ -120,7 +120,7 @@ func Test_Errors(t *testing.T) {
 		mockKeyBuilder.On("PutRecordID", sys.RecordsRegistryView.Fields.ID, id)
 		mockView.On("Get", wsid, mockKeyBuilder).Return(mockValue, testError).Once()
 
-		registry := recreg.New(mockView)
+		registry := recreg.New(func() istructs.IViewRecords { return mockView })
 		n, o, err := registry.Get(wsid, id)
 
 		require := require.New(t)

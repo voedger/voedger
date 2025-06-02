@@ -125,6 +125,11 @@ type IEvents interface {
 	// consts.ReadToTheEnd can be used for the toReadCount parameter
 	ReadPLog(ctx context.Context, partition PartitionID, offset Offset, toReadCount int, cb PLogEventsReaderCallback) (err error)
 	ReadWLog(ctx context.Context, workspace WSID, offset Offset, toReadCount int, cb WLogEventsReaderCallback) (err error)
+
+	// Can read ODoc records only.
+	// If record of these types is not found then NullRecord with QName() == NullQName is returned.
+	// Offset can be NullOffset. In this case method gets wlog offset from records registry
+	GetORec(WSID, RecordID, Offset) (IRecord, error)
 }
 
 type IRecords interface {
@@ -152,11 +157,6 @@ type IRecords interface {
 	// Can read GDoc, CDoc, WDoc records only.
 	// If record of these types is not found then NullRecord with QName() == NullQName is returned.
 	Get(workspace WSID, highConsistency bool, id RecordID) (record IRecord, err error)
-
-	// Can read ODoc records only.
-	// If record of these types is not found then NullRecord with QName() == NullQName is returned.
-	// Offset can be NullOffset. In this case method gets wlog offset from records registry
-	GetORec(WSID, RecordID, Offset) (IRecord, error)
 
 	// Can read GDoc, CDoc, WDoc records only.
 	GetBatch(workspace WSID, highConsistency bool, ids []RecordGetBatchItem) (err error)

@@ -16,16 +16,16 @@ import (
 )
 
 type Registry struct {
-	v    istructs.IViewRecords
+	v    func() istructs.IViewRecords
 	keys sync.Pool
 }
 
-func New(v istructs.IViewRecords) *Registry {
+func New(v func() istructs.IViewRecords) *Registry {
 	return &Registry{
 		v: v,
 		keys: sync.Pool{
 			New: func() any {
-				return v.KeyBuilder(sys.RecordsRegistryView.Name)
+				return v().KeyBuilder(sys.RecordsRegistryView.Name)
 			},
 		},
 	}
@@ -38,7 +38,7 @@ func (reg *Registry) Get(ws istructs.WSID, id istructs.RecordID) (appdef.QName, 
 	key := reg.key(id)
 	defer reg.keys.Put(key)
 
-	val, err := reg.v.Get(ws, key)
+	val, err := reg.v().Get(ws, key)
 	if err != nil {
 		if errors.Is(err, istructs.ErrRecordNotFound) {
 			// id not found, returns nulls

@@ -113,8 +113,8 @@ func newAppStructs(appCfg *AppConfigType, buckets irates.IBuckets, appTokens ist
 		seqTrustLevel: seqTrustLevel,
 	}
 	app.events = newEvents(&app)
+	app.records = newRecords(&app)
 	app.viewRecords = newAppViewRecords(&app)
-	app.records = newRecords(&app) // view records should be initialized before records, because records use view records to inspect records registry view
 	appCfg.app = &app
 	return &app
 }
@@ -288,12 +288,14 @@ func (er *implIEventReapplier) ApplyRecords() error {
 type appEventsType struct {
 	app       *appStructsType
 	plogCache *plogcache.Cache
+	recsReg   *recreg.Registry
 }
 
 func newEvents(app *appStructsType) appEventsType {
 	return appEventsType{
 		app:       app,
 		plogCache: plogcache.New(app.config.Params.PLogEventCacheSize),
+		recsReg:   recreg.New(func() istructs.IViewRecords { return &app.viewRecords }),
 	}
 }
 
@@ -312,14 +314,58 @@ func (e *appEventsType) BuildPLogEvent(ev istructs.IRawEvent) istructs.IPLogEven
 	return dbEvent
 }
 
-// istructs.IEvents.GetSyncRawEventBuilder
-func (e *appEventsType) GetSyncRawEventBuilder(params istructs.SyncRawEventBuilderParams) istructs.IRawEventBuilder {
-	return newSyncEventBuilder(e.app.config, params)
-}
-
 // istructs.IEvents.GetNewRawEventBuilder
 func (e *appEventsType) GetNewRawEventBuilder(params istructs.NewRawEventBuilderParams) istructs.IRawEventBuilder {
 	return newEventBuilder(e.app.config, params)
+}
+
+// istructs.IEvents.GetORec #3711 istructs.IEvents.GetORec ~impl~
+func (e *appEventsType) GetORec(workspace istructs.WSID, id istructs.RecordID, wlog istructs.Offset) (istructs.IRecord, error) {
+	if wlog == istructs.NullOffset {
+		qn, ofs, err := e.recsReg.Get(workspace, id)
+		if err != nil {
+			// Failed get from record registry, enriched error should be returned
+			return NewNullRecord(id), enrichError(err, "ws %d, wlog offset %d, record id %d", workspace, wlog, id)
+		}
+		if (qn != appdef.NullQName) && (ofs != istructs.NullOffset) {
+			if kind := e.app.AppDef().Type(qn).Kind(); recordsInWLog.Contains(kind) {
+				wlog = ofs
+			}
+		}
+		if wlog == istructs.NullOffset {
+			// ORecord is not founded in records registry
+			return NewNullRecord(id), nil
+		}
+	}
+
+	record, found := NewNullRecord(id), false
+	err := e.app.events.ReadWLog(context.Background(), workspace, wlog, 1, func(_ istructs.Offset, event istructs.IWLogEvent) error {
+		if o, ok := event.ArgumentObject().(*objectType); ok {
+			if o := o.find(func(o *objectType) bool { return o.ID() == id }); o != nil {
+				// found record with id within event argument structure
+				dupe := newRecord(e.app.config)
+				dupe.copyFrom(&o.recordType)
+				record = dupe
+				found = true
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		// Failed wlog reading, enriched error should be returned
+		return NewNullRecord(id), enrichError(err, "ws %d, wlog offset %d, record id %d", err, workspace, wlog, id)
+	}
+	if !found {
+		// Offset founded, but event argument has no record with requested id
+		return NewNullRecord(id), nil
+	}
+
+	return record, nil
+}
+
+// istructs.IEvents.GetSyncRawEventBuilder
+func (e *appEventsType) GetSyncRawEventBuilder(params istructs.SyncRawEventBuilderParams) istructs.IRawEventBuilder {
+	return newSyncEventBuilder(e.app.config, params)
 }
 
 // istructs.IEvents.PutPlog
@@ -486,14 +532,12 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 //   - interfaces:
 //     — istructs.IRecords
 type appRecordsType struct {
-	app      *appStructsType
-	registry *recreg.Registry
+	app *appStructsType
 }
 
 func newRecords(app *appStructsType) appRecordsType {
 	return appRecordsType{
-		app:      app,
-		registry: recreg.New(&app.viewRecords),
+		app: app,
 	}
 }
 
@@ -714,50 +758,6 @@ func (recs *appRecordsType) Get(workspace istructs.WSID, _ bool, id istructs.Rec
 // istructs.IRecords.GetBatch
 func (recs *appRecordsType) GetBatch(workspace istructs.WSID, highConsistency bool, ids []istructs.RecordGetBatchItem) (err error) {
 	return recs.getRecordBatch(workspace, ids)
-}
-
-// istructs.IRecords.GetORec #3711 ~impl~
-func (recs *appRecordsType) GetORec(workspace istructs.WSID, id istructs.RecordID, wlog istructs.Offset) (istructs.IRecord, error) {
-	if wlog == istructs.NullOffset {
-		qn, ofs, err := recs.registry.Get(workspace, id)
-		if err != nil {
-			// Failed get from record registry, enriched error should be returned
-			return NewNullRecord(id), enrichError(err, "ws %d, wlog offset %d, record id %d", workspace, wlog, id)
-		}
-		if (qn != appdef.NullQName) && (ofs != istructs.NullOffset) {
-			if kind := recs.app.AppDef().Type(qn).Kind(); recordsInWLog.Contains(kind) {
-				wlog = ofs
-			}
-		}
-		if wlog == istructs.NullOffset {
-			// ORecord is not founded in records registry
-			return NewNullRecord(id), nil
-		}
-	}
-
-	record, found := NewNullRecord(id), false
-	err := recs.app.events.ReadWLog(context.Background(), workspace, wlog, 1, func(_ istructs.Offset, event istructs.IWLogEvent) error {
-		if o, ok := event.ArgumentObject().(*objectType); ok {
-			if o := o.find(func(o *objectType) bool { return o.ID() == id }); o != nil {
-				// found record with id within event argument structure
-				dupe := newRecord(recs.app.config)
-				dupe.copyFrom(&o.recordType)
-				record = dupe
-				found = true
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		// Failed wlog reading, enriched error should be returned
-		return NewNullRecord(id), enrichError(err, "ws %d, wlog offset %d, record id %d", err, workspace, wlog, id)
-	}
-	if !found {
-		// Offset founded, but event argument has no record with requested id
-		return NewNullRecord(id), nil
-	}
-
-	return record, nil
 }
 
 // istructs.IRecords.GetSingleton
