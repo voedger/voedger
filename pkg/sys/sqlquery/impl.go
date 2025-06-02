@@ -162,11 +162,7 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 				return errors.New("ID must not be specified on select from view")
 			}
 			return readViewRecords(ctx, wsID, appdef.NewQName(table.Qualifier.String(), table.Name.String()), whereExpr, appStructs, f, callback)
-		case appdef.TypeKind_CDoc:
-			fallthrough
-		case appdef.TypeKind_CRecord:
-			fallthrough
-		case appdef.TypeKind_WDoc:
+		case appdef.TypeKind_CDoc, appdef.TypeKind_CRecord, appdef.TypeKind_WDoc, appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
 			return coreutils.WrapSysError(readRecords(wsID, source, whereExpr, appStructs, f, callback, istructs.RecordID(op.EntityID)),
 				http.StatusBadRequest)
 		default:
