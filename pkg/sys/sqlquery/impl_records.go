@@ -151,6 +151,9 @@ func readSingleRecord(id istructs.RecordID, wsid istructs.WSID, appStructs istru
 	} else {
 		rec, err = appStructs.Records().Get(wsid, true, id)
 	}
+	if err != nil {
+		return err
+	}
 
 	return callbackRec(rec, appStructs, qNameType.QName(), f, callback)
 }
