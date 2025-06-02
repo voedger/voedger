@@ -8,7 +8,6 @@ package istructsmem
 import (
 	"context"
 	"encoding/binary"
-	"fmt"
 	"strconv"
 	"sync"
 
@@ -21,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/descr"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/plogcache"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/recreg"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 )
 
@@ -47,7 +47,7 @@ func (provider *appStructsProviderType) BuiltIn(appName appdef.AppQName) (struct
 
 	appCfg, ok := provider.configs[appName]
 	if !ok {
-		return nil, fmt.Errorf("%w: %v", istructs.ErrAppNotFound, appName)
+		return nil, enrichError(istructs.ErrAppNotFound, appName)
 	}
 
 	provider.locker.Lock()
@@ -251,15 +251,15 @@ func (app *appStructsType) DescribePackageNames() (names []string) {
 	return names
 }
 
-// istructs.IAppStructs.DescribePoackage: Describe package content
-func (app *appStructsType) DescribePackage(name string) interface{} {
+// istructs.IAppStructs.DescribePackage: Describe package content
+func (app *appStructsType) DescribePackage(name string) any {
 	return app.describe().Packages[name]
 }
 
 // istructs.IAppStructs.GetEventReapplier
 func (app *appStructsType) GetEventReapplier(plogEvent istructs.IPLogEvent) istructs.IEventReapplier {
 	if !plogEvent.(*eventType).isStored {
-		panic("only events read from the stroage can be re-applied")
+		panic("only events read from the storage can be re-applied")
 	}
 	return &implIEventReapplier{
 		plogEvent: plogEvent,
@@ -287,12 +287,14 @@ func (er *implIEventReapplier) ApplyRecords() error {
 type appEventsType struct {
 	app       *appStructsType
 	plogCache *plogcache.Cache
+	recsReg   *recreg.Registry
 }
 
 func newEvents(app *appStructsType) appEventsType {
 	return appEventsType{
 		app:       app,
 		plogCache: plogcache.New(app.config.Params.PLogEventCacheSize),
+		recsReg:   recreg.New(func() istructs.IViewRecords { return &app.viewRecords }),
 	}
 }
 
@@ -311,14 +313,71 @@ func (e *appEventsType) BuildPLogEvent(ev istructs.IRawEvent) istructs.IPLogEven
 	return dbEvent
 }
 
-// istructs.IEvents.GetSyncRawEventBuilder
-func (e *appEventsType) GetSyncRawEventBuilder(params istructs.SyncRawEventBuilderParams) istructs.IRawEventBuilder {
-	return newSyncEventBuilder(e.app.config, params)
+// istructs.IEvents.FindORec #3711 ~impl~
+func (e *appEventsType) FindORec(workspace istructs.WSID, id istructs.RecordID) (istructs.Offset, error) {
+	qn, ofs, err := e.recsReg.Get(workspace, id)
+	if err != nil {
+		// Failed get from record registry, enriched error should be returned
+		return istructs.NullOffset, enrichError(err, "ws %d, record id %d", workspace, id)
+	}
+	if (qn != appdef.NullQName) && (ofs != istructs.NullOffset) {
+		if kind := e.app.AppDef().Type(qn).Kind(); recordsInWLog.Contains(kind) {
+			// Successfully founded
+			return ofs, nil
+		}
+	}
+	// ORecord is not founded in records registry
+	return istructs.NullOffset, nil
 }
 
 // istructs.IEvents.GetNewRawEventBuilder
 func (e *appEventsType) GetNewRawEventBuilder(params istructs.NewRawEventBuilderParams) istructs.IRawEventBuilder {
 	return newEventBuilder(e.app.config, params)
+}
+
+// istructs.IEvents.GetORec #3711 ~impl~
+func (e *appEventsType) GetORec(workspace istructs.WSID, id istructs.RecordID, wlog istructs.Offset) (istructs.IRecord, error) {
+	if wlog == istructs.NullOffset {
+		ofs, err := e.FindORec(workspace, id)
+		if err != nil {
+			// Failed find in record registry
+			return NewNullRecord(id), err
+		}
+		if ofs == istructs.NullOffset {
+			// ORecord is not founded in records registry
+			return NewNullRecord(id), nil
+		}
+		wlog = ofs
+	}
+
+	record, found := NewNullRecord(id), false
+	err := e.app.events.ReadWLog(context.Background(), workspace, wlog, 1, func(_ istructs.Offset, event istructs.IWLogEvent) error {
+		if o, ok := event.ArgumentObject().(*objectType); ok {
+			if o := o.find(func(o *objectType) bool { return o.ID() == id }); o != nil {
+				// found record with id within event argument structure
+				dupe := newRecord(e.app.config)
+				dupe.copyFrom(&o.recordType)
+				record = dupe
+				found = true
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		// Failed wlog reading, enriched error should be returned
+		return NewNullRecord(id), enrichError(err, "ws %d, wlog offset %d, record id %d", err, workspace, wlog, id)
+	}
+	if !found {
+		// Offset founded, but event argument has no record with requested id
+		return NewNullRecord(id), nil
+	}
+
+	return record, nil
+}
+
+// istructs.IEvents.GetSyncRawEventBuilder
+func (e *appEventsType) GetSyncRawEventBuilder(params istructs.SyncRawEventBuilderParams) istructs.IRawEventBuilder {
+	return newSyncEventBuilder(e.app.config, params)
 }
 
 // istructs.IEvents.PutPlog
@@ -507,7 +566,7 @@ func (recs *appRecordsType) getRecordBatch(workspace istructs.WSID, ids []istruc
 	}
 	batches := make([]*istorage.GetBatchItem, len(ids))
 	plan := make(map[string][]istorage.GetBatchItem)
-	for i := 0; i < len(ids); i++ {
+	for i := range ids {
 		ids[i].Record = NewNullRecord(ids[i].ID)
 		pk, cc := recordKey(workspace, ids[i].ID)
 		batch, ok := plan[string(pk)]
@@ -523,7 +582,7 @@ func (recs *appRecordsType) getRecordBatch(workspace istructs.WSID, ids []istruc
 			return err
 		}
 	}
-	for i := 0; i < len(batches); i++ {
+	for i := range batches {
 		b := batches[i]
 		if b.Ok {
 			rec := newRecord(recs.app.config)
@@ -607,7 +666,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 			}
 			exists, err := load(id, nil)
 			if err != nil {
-				return fmt.Errorf("error checking singleton «%v» record «%d» existence: %w", rec.QName(), id, err)
+				return enrichError(err, "error checking singleton «%v» record «%d» existence", rec.QName(), id)
 			}
 			if exists {
 				return ErrSingletonViolation(rec)
@@ -619,7 +678,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 		old := newRecord(recs.app.config)
 		exists, err := load(rec.originRec.ID(), old)
 		if err != nil {
-			return fmt.Errorf("error load updated «%v» record «%d»: %w", rec.originRec.QName(), rec.originRec.ID(), err)
+			return enrichError(err, "error load updated «%v» record «%d»", rec.originRec.QName(), rec.originRec.ID())
 		}
 		if !exists {
 			return ErrIDNotFound("updated «%v» record «%d»", rec.originRec.QName(), rec.originRec.ID())
@@ -690,16 +749,20 @@ func (recs *appRecordsType) apply2(event istructs.IPLogEvent, cb func(rec istruc
 }
 
 // istructs.IRecords.Get
-func (recs *appRecordsType) Get(workspace istructs.WSID, highConsistency bool, id istructs.RecordID) (record istructs.IRecord, err error) {
+func (recs *appRecordsType) Get(workspace istructs.WSID, _ bool, id istructs.RecordID) (record istructs.IRecord, err error) {
 	data := make([]byte, 0)
-	var ok bool
-	if ok, err = recs.getRecord(workspace, id, &data); ok {
-		rec := newRecord(recs.app.config)
-		if err = rec.loadFromBytes(data); err == nil {
-			return rec, nil
+	if ok, err := recs.getRecord(workspace, id, &data); !ok {
+		if err != nil {
+			// storage error while getRecord
+			return NewNullRecord(id), enrichError(err, "ws: %d, id: %d", workspace, id)
 		}
+		return NewNullRecord(id), nil // just not found, no error
 	}
-	return NewNullRecord(id), err
+	rec := newRecord(recs.app.config)
+	if err := rec.loadFromBytes(data); err != nil {
+		return NewNullRecord(id), enrichError(err, "ws: %d, id: %d", workspace, id)
+	}
+	return rec, nil
 }
 
 // istructs.IRecords.GetBatch

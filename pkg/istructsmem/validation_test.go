@@ -772,7 +772,7 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 
 func Test_VerifiedFields(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	objName := appdef.NewQName("test", "obj")
 
@@ -949,7 +949,7 @@ func Test_VerifiedFields(t *testing.T) {
 
 func Test_CharsFieldRestricts(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	objName := appdef.NewQName("test", "obj")
 

@@ -26,8 +26,9 @@ import (
 
 func Test_rowNullType(t *testing.T) {
 	require := require.New(t)
+	test := newTest()
 
-	row := newTestRow()
+	row := test.newTestRow()
 
 	row.setQName(appdef.NullQName)
 	require.Equal(appdef.NullQName, row.QName())
@@ -44,19 +45,19 @@ func Test_rowNullType(t *testing.T) {
 
 func Test_clarifyJSONValue(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
-	row := newTestRow()
+	row := test.newTestRow()
 
 	id, _ := test.AppCfg.qNames.ID(test.saleCmdName)
 	expectedQNameIDBytes := make([]byte, 2)
 	binary.BigEndian.PutUint16(expectedQNameIDBytes, id)
 
 	cases := []struct {
-		val              interface{}
+		val              any
 		kind             appdef.DataKind
 		expectedTypeKind reflect.Kind
-		expectedVal      interface{}
+		expectedVal      any
 	}{
 		{val: int8(7), kind: appdef.DataKind_int8, expectedTypeKind: reflect.Int8},
 		{val: int8(-7), kind: appdef.DataKind_int8, expectedTypeKind: reflect.Int8},
@@ -67,6 +68,7 @@ func Test_clarifyJSONValue(t *testing.T) {
 		{val: float32(7.7), kind: appdef.DataKind_float32, expectedTypeKind: reflect.Float32},
 		{val: float64(7.7), kind: appdef.DataKind_float64, expectedTypeKind: reflect.Float64},
 		{val: istructs.RecordID(7), kind: appdef.DataKind_RecordID, expectedTypeKind: reflect.Uint64},
+		{val: int64(7), kind: appdef.DataKind_RecordID, expectedTypeKind: reflect.Uint64},
 		{val: json.Number("7"), kind: appdef.DataKind_int32, expectedTypeKind: reflect.Int32, expectedVal: int32(7)},
 		{val: json.Number("7"), kind: appdef.DataKind_int64, expectedTypeKind: reflect.Int64, expectedVal: int64(7)},
 		{val: json.Number("7.7"), kind: appdef.DataKind_float32, expectedTypeKind: reflect.Float32, expectedVal: float32(7.7)},
@@ -94,7 +96,7 @@ func Test_clarifyJSONValue(t *testing.T) {
 	}
 
 	errorCases := []struct {
-		val           interface{}
+		val           any
 		kind          appdef.DataKind
 		expectedError error
 	}{
@@ -154,13 +156,13 @@ func Test_clarifyJSONValue(t *testing.T) {
 	}
 
 	t.Run("test Record", func(t *testing.T) {
-		var testRec istructs.IRecord = newTestCRecord(100500700)
+		var testRec istructs.IRecord = test.newTestCRecord(100500700)
 
-		checkRecord := func(data interface{}) {
+		checkRecord := func(data any) {
 			b, ok := data.([]byte)
 			require.True(ok)
 			require.NotNil(b)
-			r := newTestCRecord(istructs.NullRecordID)
+			r := test.newTestCRecord(istructs.NullRecordID)
 			err := r.loadFromBytes(b)
 			require.NoError(err)
 			testRecsIsEqual(t, testRec, r)
@@ -176,16 +178,16 @@ func Test_clarifyJSONValue(t *testing.T) {
 	})
 
 	t.Run("test Event", func(t *testing.T) {
-		var testEvent istructs.IDbEvent = newTestEvent(100501, 100500700)
+		var testEvent istructs.IDbEvent = test.newTestEvent(100501, 100500700)
 
-		checkEvent := func(data interface{}) {
+		checkEvent := func(data any) {
 			b, ok := data.([]byte)
 			require.True(ok)
 			require.NotNil(b)
-			e := newEmptyTestEvent()
+			e := test.newEmptyTestEvent()
 			err := e.loadFromBytes(b)
 			require.NoError(err)
-			testTestEvent(t, testEvent, 100501, 100500700, false)
+			test.testTestEvent(t, testEvent, 100501, 100500700, false)
 		}
 
 		v, err := row.clarifyJSONValue(testEvent, appdef.DataKind_Event)
@@ -200,23 +202,23 @@ func Test_clarifyJSONValue(t *testing.T) {
 
 func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	t.Run("Put××× and As××× row methods for simple types", func(t *testing.T) {
-		row1 := newTestRow()
+		row1 := test.newTestRow()
 
-		testTestRow(t, row1)
+		test.testTestRow(t, row1)
 
 		row2 := newRow(nil)
 		row2.copyFrom(row1)
 
 		testRowsIsEqual(t, row1, row2)
 
-		testTestRow(t, row2)
+		test.testTestRow(t, row2)
 	})
 
 	t.Run("As××× row methods must return default values if not calls Put×××", func(t *testing.T) {
-		row := newEmptyTestRow()
+		row := test.newEmptyTestRow()
 
 		require.Zero(row.AsInt8("int8"))
 		require.Zero(row.AsInt16("int16"))
@@ -234,7 +236,7 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		require.False(row.AsBool("bool"))
 		require.Equal(istructs.NullRecordID, row.AsRecordID("RecordID"))
 
-		val := newEmptyTestViewValue()
+		val := test.newEmptyTestViewValue()
 		require.Equal(istructs.IDbEvent(nil), val.AsEvent(test.testViewRecord.valueFields.event))
 		rec := val.AsRecord(test.testViewRecord.valueFields.record)
 		require.Equal(appdef.NullQName, rec.QName())
@@ -302,7 +304,7 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 
 func Test_rowType_PutFromJSON(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	t.Run("basic", func(t *testing.T) {
 
@@ -396,7 +398,7 @@ func Test_rowType_PutFromJSON(t *testing.T) {
 
 	t.Run("json.Number errors", func(t *testing.T) {
 		fieldTests := map[string][]struct {
-			val interface{}
+			val any
 			err error
 		}{
 			"int8": {
@@ -451,24 +453,24 @@ func Test_rowType_PutFromJSON(t *testing.T) {
 
 func Test_rowType_PutAs_ComplexTypes(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	t.Run("should be success PutRecord and PutEvent", func(t *testing.T) {
 
-		v1 := newTestViewValue() // PutRecord and PutEvent are called inside
-		testTestViewValue(t, v1) // AsRecord and AsEvent are called inside
+		v1 := test.newTestViewValue() // PutRecord and PutEvent are called inside
+		test.testTestViewValue(t, v1) // AsRecord and AsEvent are called inside
 
 		t.Run("should be equal rows after copyFrom", func(t *testing.T) {
-			v2 := newTestViewValue()
+			v2 := test.newTestViewValue()
 			v2.copyFrom(&v1.rowType)
-			testTestViewValue(t, v2)
+			test.testTestViewValue(t, v2)
 
 			testRowsIsEqual(t, &v1.rowType, &v2.rowType)
 		})
 	})
 
 	t.Run("should be success to PutRecord with NullRecord", func(t *testing.T) {
-		row := newEmptyTestViewValue()
+		row := test.newEmptyTestViewValue()
 		row.PutString(test.testViewRecord.valueFields.buyer, "buyer")
 		row.PutRecord(test.testViewRecord.valueFields.record, NewNullRecord(istructs.NullRecordID))
 		require.NoError(row.build())
@@ -482,7 +484,7 @@ func Test_rowType_PutAs_ComplexTypes(t *testing.T) {
 
 func Test_rowType_PutErrors(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	t.Run("should be build error with Put×××", func(t *testing.T) {
 
@@ -612,11 +614,13 @@ func Test_rowType_PutErrors(t *testing.T) {
 
 func Test_rowType_AsPanics(t *testing.T) {
 	require := require.New(t)
+	test := newTest()
+
 	t.Run("Should be panics then calls calls As×××", func(t *testing.T) {
 
 		t.Run("if unknown field", func(t *testing.T) {
 			unknown := "unknownField"
-			row := newTestRow()
+			row := test.newTestRow()
 
 			tests := []func(){
 				func() { row.AsInt8(unknown) },
@@ -640,7 +644,7 @@ func Test_rowType_AsPanics(t *testing.T) {
 		})
 
 		t.Run("if incompatible type", func(t *testing.T) {
-			row := newTestRow()
+			row := test.newTestRow()
 
 			tests := []struct {
 				panics func()
@@ -670,7 +674,7 @@ func Test_rowType_AsPanics(t *testing.T) {
 
 func Test_rowType_RecordIDs(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	t.Run("should be ok to enum all IDs with RecordIDs(true)", func(t *testing.T) {
 
@@ -724,9 +728,10 @@ func Test_rowType_RecordIDs(t *testing.T) {
 
 func Test_rowType_maskValues(t *testing.T) {
 	require := require.New(t)
+	test := newTest()
 
 	t.Run("maskValues must hide all rows data", func(t *testing.T) {
-		row := newTestRow()
+		row := test.newTestRow()
 
 		row.maskValues()
 
@@ -747,7 +752,7 @@ func Test_rowType_maskValues(t *testing.T) {
 
 func Test_rowType_FieldNames(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	t.Run("new [or null] row must have hot fields", func(t *testing.T) {
 		row := makeRow(test.AppCfg)
@@ -771,7 +776,7 @@ func Test_rowType_FieldNames(t *testing.T) {
 	})
 
 	t.Run("filled test row must iterate all fields without duplicates", func(t *testing.T) {
-		row := newTestRow()
+		row := test.newTestRow()
 
 		cnt := 0
 		names := make(map[appdef.FieldName]bool)
@@ -785,11 +790,12 @@ func Test_rowType_FieldNames(t *testing.T) {
 	})
 
 	t.Run("should be ok iterate with filled system fields", func(t *testing.T) {
-		rec := newTestCRecord(7)
-		rec.PutRecordID(appdef.SystemField_ParentID, 5)
+		const recID, parID = 7, 5
+		rec := test.newTestCRecord(recID)
+		rec.PutRecordID(appdef.SystemField_ParentID, parID)
 		rec.PutString(appdef.SystemField_Container, "rec")
 
-		sys := make(map[appdef.FieldName]interface{})
+		sys := make(map[appdef.FieldName]any)
 		rec.Fields(func(iField appdef.IField) bool {
 			if iField.IsSys() {
 				switch rec.fieldDef(iField.Name()).DataKind() {
@@ -809,8 +815,8 @@ func Test_rowType_FieldNames(t *testing.T) {
 		})
 		require.Len(sys, 5)
 		require.EqualValues(test.testCRec, sys[appdef.SystemField_QName])
-		require.EqualValues(7, sys[appdef.SystemField_ID])
-		require.EqualValues(5, sys[appdef.SystemField_ParentID])
+		require.EqualValues(recID, sys[appdef.SystemField_ID])
+		require.EqualValues(parID, sys[appdef.SystemField_ParentID])
 		require.EqualValues("rec", sys[appdef.SystemField_Container])
 		require.True(sys[appdef.SystemField_IsActive].(bool))
 	})
@@ -818,7 +824,7 @@ func Test_rowType_FieldNames(t *testing.T) {
 
 func Test_rowType_BuildErrors(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	t.Run("should be build error", func(t *testing.T) {
 
@@ -860,7 +866,7 @@ func Test_rowType_BuildErrors(t *testing.T) {
 
 func Test_rowType_Nils(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	checkNils := func(row rowType, nils ...string) {
 		require.Len(row.nils, len(nils))
@@ -966,7 +972,7 @@ func Test_rowType_Nils(t *testing.T) {
 		require.True(row.HasValue("RecordID"))
 
 		cnt := 0
-		row.dyB.IterateFields(nil, func(name string, newData interface{}) bool {
+		row.dyB.IterateFields(nil, func(name string, newData any) bool {
 			switch name {
 			case "int8", "int16", "int32", "int64", "float32", "float64":
 				require.Zero(newData)
@@ -993,7 +999,7 @@ func Test_rowType_Nils(t *testing.T) {
 func Test_rowType_String(t *testing.T) {
 	require := require.New(t)
 
-	test := test()
+	test := newTest()
 
 	t.Run("Should be null row", func(t *testing.T) {
 		r := newRow(test.AppCfg)
@@ -1018,9 +1024,9 @@ func Test_rowType_String(t *testing.T) {
 	})
 }
 
-func TestWrong(t *testing.T) {
+func TestWrongRecordIDs(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	bld := test.AppStructs.ObjectBuilder(test.testRow)
 

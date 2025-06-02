@@ -22,7 +22,6 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
@@ -590,7 +589,7 @@ func ActualizerOffset(appStructs istructs.IAppStructs, partition istructs.Partit
 	key.PutInt32(partitionFld, int32(partition))
 	key.PutQName(projectorNameFld, projectorName)
 	value, err := appStructs.ViewRecords().Get(istructs.NullWSID, key)
-	if errors.Is(err, istructsmem.ErrRecordNotFound) {
+	if errors.Is(err, istructs.ErrRecordNotFound) {
 		return istructs.NullOffset, nil
 	}
 	if err != nil {

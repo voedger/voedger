@@ -10,9 +10,7 @@ import (
 	"fmt"
 	"math/rand"
 	"testing"
-	"time"
 
-	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/isequencer"
 
@@ -26,15 +24,9 @@ import (
 
 func Test_RecordsRead(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
-	storage := teststore.NewStorage(test.appName)
-	storageProvider := teststore.NewStorageProvider(storage)
-
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
-
-	app, err := provider.BuiltIn(test.appName)
-	require.NoError(err)
+	app := test.AppStructs
 
 	const (
 		minTestRecordID  istructs.RecordID = 100500
@@ -45,7 +37,7 @@ func Test_RecordsRead(t *testing.T) {
 	t.Run("prepare records to read", func(t *testing.T) {
 		batch := make([]recordBatchItemType, 0)
 		for id := minTestRecordID; id <= maxTestRecordID; id++ {
-			rec := newTestCRecord(id)
+			rec := test.newTestCRecord(id)
 			data := rec.storeToBytes()
 			batch = append(batch, recordBatchItemType{id, data, true})
 		}
@@ -58,7 +50,7 @@ func Test_RecordsRead(t *testing.T) {
 			t.Run(fmt.Sprintf("must ok read exists record %v", id), func(t *testing.T) {
 				rec, err := app.Records().Get(test.workspace, true, id)
 				require.NoError(err)
-				testTestCRec(t, rec, id)
+				test.testTestCRec(t, rec, id)
 			})
 		}
 
@@ -78,6 +70,34 @@ func Test_RecordsRead(t *testing.T) {
 		mustAbsent(istructs.NullRecordID)
 		mustAbsent(minTestRecordID - 1)
 		mustAbsent(maxTestRecordID + 1)
+
+		t.Run("should be error", func(t *testing.T) {
+			t.Run("if storage get failed", func(t *testing.T) {
+				id := maxTestRecordID + 1
+				_, cc := recordKey(0, id)
+				testError := errors.New("test storage Get failed")
+				test.Storage.ScheduleGetError(testError, nil, cc)
+				defer test.Storage.Reset()
+
+				rec, err := app.Records().Get(test.workspace, true, id)
+				require.Error(err, require.Is(testError), require.HasAll(test.workspace, id))
+				require.Equal(appdef.NullQName, rec.QName())
+				require.Equal(id, rec.ID())
+			})
+
+			t.Run("if storage returns damaged data", func(t *testing.T) {
+				const badCodec byte = 255
+				_, cc := recordKey(0, minTestRecordID)
+
+				test.Storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = badCodec /* error here */ }, nil, cc)
+				defer test.Storage.Reset()
+
+				rec, err := app.Records().Get(test.workspace, true, minTestRecordID)
+				require.Error(err, require.Is(ErrUnknownCodecError), require.HasAll(badCodec, test.workspace, minTestRecordID))
+				require.Equal(appdef.NullQName, rec.QName())
+				require.Equal(minTestRecordID, rec.ID())
+			})
+		})
 	})
 
 	t.Run("test batch read records", func(t *testing.T) {
@@ -95,7 +115,7 @@ func Test_RecordsRead(t *testing.T) {
 					require.Equal(minID+istructs.RecordID(i), rec.ID)
 					require.Equal(rec.ID, rec.Record.ID())
 					if (rec.ID >= minTestRecordID) && (rec.ID <= maxTestRecordID) {
-						testTestCRec(t, rec.Record, rec.ID)
+						test.testTestCRec(t, rec.Record, rec.ID)
 					} else {
 						require.Equal(appdef.NullQName, rec.Record.QName())
 					}
@@ -106,7 +126,6 @@ func Test_RecordsRead(t *testing.T) {
 		// nolint: staticcheck
 		t.Run("test batch read records from random intervals", func(t *testing.T) {
 			const maxIntervalLength = 16
-			rand.Seed(time.Now().UnixNano())
 			recs := make([]istructs.RecordGetBatchItem, maxGetBatchRecordCount)
 			for i := 0; i < maxGetBatchRecordCount; {
 				l := rand.Intn(maxIntervalLength) + 1
@@ -114,7 +133,7 @@ func Test_RecordsRead(t *testing.T) {
 					l = maxGetBatchRecordCount - i
 				}
 				id := minTestRecordID + istructs.RecordID(rand.Intn(testRecordsCount-l))
-				for j := 0; j < l; j++ {
+				for j := range l {
 					recs[i].ID = id + istructs.RecordID(j)
 					i++
 				}
@@ -125,7 +144,7 @@ func Test_RecordsRead(t *testing.T) {
 
 			for _, rec := range recs {
 				require.Equal(rec.ID, rec.Record.ID())
-				testTestCRec(t, rec.Record, rec.ID)
+				test.testTestCRec(t, rec.Record, rec.ID)
 			}
 		})
 	})
@@ -145,23 +164,15 @@ func Test_RecordsRead(t *testing.T) {
 		testID := istructs.RecordID(100500)
 		_, cc := recordKey(0, testID)
 
-		storage.ScheduleGetError(testError, nil, cc)
-		defer storage.Reset()
-
-		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddBuiltInAppConfig(test.appName, builder.New())
-		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
-
-		app, err = provider.BuiltIn(test.appName)
-		require.NoError(err)
+		test.Storage.ScheduleGetError(testError, nil, cc)
+		defer test.Storage.Reset()
 
 		recs := make([]istructs.RecordGetBatchItem, 3)
 		recs[0].ID = testID - 1
 		recs[1].ID = testID
 		recs[2].ID = testID + 1
 
-		err = app.Records().GetBatch(test.workspace, true, recs)
+		err := app.Records().GetBatch(test.workspace, true, recs)
 		require.ErrorIs(err, testError)
 	})
 
@@ -171,18 +182,10 @@ func Test_RecordsRead(t *testing.T) {
 
 		const badCodec byte = 255
 
-		storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = badCodec /* error here */ }, nil, cc)
-		defer storage.Reset()
+		test.Storage.ScheduleGetDamage(func(b *[]byte) { (*b)[0] = badCodec /* error here */ }, nil, cc)
+		defer test.Storage.Reset()
 
-		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddBuiltInAppConfig(test.appName, builder.New())
-		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
-
-		app, err = provider.BuiltIn(test.appName)
-		require.NoError(err)
-
-		rec := newTestCRecord(testID)
+		rec := test.newTestCRecord(testID)
 		data := rec.storeToBytes()
 		app.Records().(*appRecordsType).putRecord(test.workspace, testID, data)
 
@@ -191,14 +194,14 @@ func Test_RecordsRead(t *testing.T) {
 		recs[1].ID = testID
 		recs[2].ID = testID + 1
 
-		err = app.Records().GetBatch(test.workspace, true, recs)
+		err := app.Records().GetBatch(test.workspace, true, recs)
 		require.Error(err, require.Is(ErrUnknownCodecError), require.Has(badCodec))
 	})
 }
 
 func Test_RecordsPutJSON(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	storage := teststore.NewStorage(test.appName)
 	storageProvider := teststore.NewStorageProvider(storage)

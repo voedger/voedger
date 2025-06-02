@@ -95,7 +95,7 @@ func Test_checkConstraints(t *testing.T) {
 
 	type args struct {
 		fld   string
-		value interface{}
+		value any
 	}
 	tests := []struct {
 		name string

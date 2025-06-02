@@ -64,7 +64,9 @@ func Test_CDocs(t *testing.T) {
 		t.Run("should be ok to enumerate docs", func(t *testing.T) {
 			var docs []appdef.QName
 			for doc := range appdef.CDocs(tested.Types()) {
-				docs = append(docs, doc.QName())
+				if !doc.IsSystem() { // skip system docs
+					docs = append(docs, doc.QName())
+				}
 			}
 			require.Equal([]appdef.QName{docName}, docs)
 			t.Run("should be ok to enumerate recs", func(t *testing.T) {
