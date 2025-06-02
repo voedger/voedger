@@ -505,9 +505,6 @@ func (r *implIRecords) Get(wsid istructs.WSID, _ bool, id istructs.RecordID) (is
 	return istructsmem.NewNullRecord(id), nil
 }
 func (implIRecords) GetBatch(istructs.WSID, bool, []istructs.RecordGetBatchItem) error { panic("") }
-func (r *implIRecords) GetORec(istructs.WSID, istructs.RecordID, istructs.Offset) (istructs.IRecord, error) {
-	panic("")
-}
 func (r *implIRecords) GetSingleton(wsid istructs.WSID, qName appdef.QName) (record istructs.IRecord, err error) {
 	if wsData, ok := r.data[wsid]; ok {
 		if qNameRecs, ok := wsData[qName]; ok {
