@@ -29,5 +29,5 @@ var (
 	Field_ID                      = sys.RecordsRegistryView.Fields.ID
 	Field_WLogOffset              = sys.RecordsRegistryView.Fields.WLogOffset
 	field_QName                   = sys.RecordsRegistryView.Fields.QName
-	field_IsActive                = sys.RecordsRegistryView.Fields.IsActive
+	// not yet used: field_IsActive                = sys.RecordsRegistryView.Fields.IsActive
 )
