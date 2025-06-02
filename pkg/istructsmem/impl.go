@@ -14,7 +14,6 @@ import (
 	bytespool "github.com/valyala/bytebufferpool"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/goutils/set"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -314,28 +313,41 @@ func (e *appEventsType) BuildPLogEvent(ev istructs.IRawEvent) istructs.IPLogEven
 	return dbEvent
 }
 
+// istructs.IEvents.FindORec #3711 ~impl~
+func (e *appEventsType) FindORec(workspace istructs.WSID, id istructs.RecordID) (istructs.Offset, error) {
+	qn, ofs, err := e.recsReg.Get(workspace, id)
+	if err != nil {
+		// Failed get from record registry, enriched error should be returned
+		return istructs.NullOffset, enrichError(err, "ws %d, record id %d", workspace, id)
+	}
+	if (qn != appdef.NullQName) && (ofs != istructs.NullOffset) {
+		if kind := e.app.AppDef().Type(qn).Kind(); recordsInWLog.Contains(kind) {
+			// Successfully founded
+			return ofs, nil
+		}
+	}
+	// ORecord is not founded in records registry
+	return istructs.NullOffset, nil
+}
+
 // istructs.IEvents.GetNewRawEventBuilder
 func (e *appEventsType) GetNewRawEventBuilder(params istructs.NewRawEventBuilderParams) istructs.IRawEventBuilder {
 	return newEventBuilder(e.app.config, params)
 }
 
-// istructs.IEvents.GetORec #3711 istructs.IEvents.GetORec ~impl~
+// istructs.IEvents.GetORec #3711 ~impl~
 func (e *appEventsType) GetORec(workspace istructs.WSID, id istructs.RecordID, wlog istructs.Offset) (istructs.IRecord, error) {
 	if wlog == istructs.NullOffset {
-		qn, ofs, err := e.recsReg.Get(workspace, id)
+		ofs, err := e.FindORec(workspace, id)
 		if err != nil {
-			// Failed get from record registry, enriched error should be returned
-			return NewNullRecord(id), enrichError(err, "ws %d, wlog offset %d, record id %d", workspace, wlog, id)
+			// Failed find in record registry
+			return NewNullRecord(id), err
 		}
-		if (qn != appdef.NullQName) && (ofs != istructs.NullOffset) {
-			if kind := e.app.AppDef().Type(qn).Kind(); recordsInWLog.Contains(kind) {
-				wlog = ofs
-			}
-		}
-		if wlog == istructs.NullOffset {
+		if ofs == istructs.NullOffset {
 			// ORecord is not founded in records registry
 			return NewNullRecord(id), nil
 		}
+		wlog = ofs
 	}
 
 	record, found := NewNullRecord(id), false
@@ -735,8 +747,6 @@ func (recs *appRecordsType) apply2(event istructs.IPLogEvent, cb func(rec istruc
 
 	return err
 }
-
-var recordsInWLog = set.FromRO(appdef.TypeKind_ODoc, appdef.TypeKind_ORecord)
 
 // istructs.IRecords.Get
 func (recs *appRecordsType) Get(workspace istructs.WSID, _ bool, id istructs.RecordID) (record istructs.IRecord, err error) {

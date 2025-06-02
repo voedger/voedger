@@ -6,6 +6,7 @@ package istructsmem
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/set"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -58,6 +59,5 @@ var funcRateLimitNameFmt = [istructs.RateLimitKind_FakeLast]string{
 	"func_%s_byID",
 }
 
-var MatchAll = func(_ appdef.QName, _ istructs.WSID, _ appdef.QName) bool {
-	return true
-}
+// Set of type kinds that stored directly in wlog
+var recordsInWLog = set.FromRO(appdef.TypeKind_ODoc, appdef.TypeKind_ORecord)
