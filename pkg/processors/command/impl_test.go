@@ -244,10 +244,10 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 
 	// ok to c.sys.CUD
 	respData := sendCUD(t, 1, app)
-	require.Equal(2, int(respData["currentWLogOffset"].(float64))) // 1st is WorkspaceDescriptor stub insert
-	require.Equal(istructs.FirstUserRecordID, istructs.RecordID(respData["newIDs"].(map[string]interface{})["1"].(float64)))
-	require.Equal(istructs.FirstUserRecordID+1, istructs.RecordID(respData["newIDs"].(map[string]interface{})["2"].(float64)))
-	require.Equal(istructs.FirstUserRecordID+2, istructs.RecordID(respData["newIDs"].(map[string]interface{})["3"].(float64)))
+	require.Equal(2, int(respData["CurrentWLogOffset"].(float64))) // 1st is WorkspaceDescriptor stub insert
+	require.Equal(istructs.FirstUserRecordID, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+1, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+2, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 
 	// 2nd c.sys.CUD -> sync projector failure, expect 500 internal server error
 	respData = sendCUD(t, 1, app, http.StatusInternalServerError)
@@ -258,10 +258,10 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 
 	// 3rd c.sys.CUD - > recovery procedure must re-apply 2nd event (PLog, records and WLog), then 3rd event is processed ok (sync projectors are ok)
 	respData = sendCUD(t, 1, app)
-	require.Equal(4, int(respData["currentWLogOffset"].(float64)))
-	require.Equal(istructs.FirstUserRecordID+6, istructs.RecordID(respData["newIDs"].(map[string]interface{})["1"].(float64)))
-	require.Equal(istructs.FirstUserRecordID+7, istructs.RecordID(respData["newIDs"].(map[string]interface{})["2"].(float64)))
-	require.Equal(istructs.FirstUserRecordID+8, istructs.RecordID(respData["newIDs"].(map[string]interface{})["3"].(float64)))
+	require.Equal(4, int(respData["CurrentWLogOffset"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+6, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+7, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+8, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 }
 
 func TestRecovery(t *testing.T) {
@@ -284,31 +284,31 @@ func TestRecovery(t *testing.T) {
 	app.cfg.Resources.Add(cmdCUD)
 
 	respData := sendCUD(t, 1, app)
-	require.Equal(2, int(respData["currentWLogOffset"].(float64)))
-	require.Equal(istructs.FirstUserRecordID, istructs.RecordID(respData["newIDs"].(map[string]interface{})["1"].(float64)))
-	require.Equal(istructs.FirstUserRecordID+1, istructs.RecordID(respData["newIDs"].(map[string]interface{})["2"].(float64)))
-	require.Equal(istructs.FirstUserRecordID+2, istructs.RecordID(respData["newIDs"].(map[string]interface{})["3"].(float64)))
+	require.Equal(2, int(respData["CurrentWLogOffset"].(float64)))
+	require.Equal(istructs.FirstUserRecordID, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+1, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+2, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 
 	restartCmdProc(&app)
 	respData = sendCUD(t, 1, app)
-	require.Equal(3, int(respData["currentWLogOffset"].(float64)))
-	require.Equal(istructs.FirstUserRecordID+3, istructs.RecordID(respData["newIDs"].(map[string]interface{})["1"].(float64)))
-	require.Equal(istructs.FirstUserRecordID+4, istructs.RecordID(respData["newIDs"].(map[string]interface{})["2"].(float64)))
-	require.Equal(istructs.FirstUserRecordID+5, istructs.RecordID(respData["newIDs"].(map[string]interface{})["3"].(float64)))
+	require.Equal(3, int(respData["CurrentWLogOffset"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+3, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+4, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+5, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 
 	restartCmdProc(&app)
 	respData = sendCUD(t, 2, app)
-	require.Equal(2, int(respData["currentWLogOffset"].(float64)))
-	require.Equal(istructs.FirstUserRecordID, istructs.RecordID(respData["newIDs"].(map[string]interface{})["1"].(float64)))
-	require.Equal(istructs.FirstUserRecordID+1, istructs.RecordID(respData["newIDs"].(map[string]interface{})["2"].(float64)))
-	require.Equal(istructs.FirstUserRecordID+2, istructs.RecordID(respData["newIDs"].(map[string]interface{})["3"].(float64)))
+	require.Equal(2, int(respData["CurrentWLogOffset"].(float64)))
+	require.Equal(istructs.FirstUserRecordID, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+1, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+2, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 
 	restartCmdProc(&app)
 	respData = sendCUD(t, 1, app)
-	require.Equal(4, int(respData["currentWLogOffset"].(float64)))
-	require.Equal(istructs.FirstUserRecordID+6, istructs.RecordID(respData["newIDs"].(map[string]interface{})["1"].(float64)))
-	require.Equal(istructs.FirstUserRecordID+7, istructs.RecordID(respData["newIDs"].(map[string]interface{})["2"].(float64)))
-	require.Equal(istructs.FirstUserRecordID+8, istructs.RecordID(respData["newIDs"].(map[string]interface{})["3"].(float64)))
+	require.Equal(4, int(respData["CurrentWLogOffset"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+6, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+7, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+8, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 
 	app.cancel()
 	<-app.done
