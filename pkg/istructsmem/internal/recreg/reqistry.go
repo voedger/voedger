@@ -15,11 +15,14 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+// Records registry. Provide access to sys.RecordsRegistry view
 type Registry struct {
 	v    func() istructs.IViewRecords
 	keys sync.Pool
 }
 
+// Constructs new records registry.
+// The v closure will be called from the Get method to access IAppStructs.ViewRecords()
 func New(v func() istructs.IViewRecords) *Registry {
 	return &Registry{
 		v: v,
