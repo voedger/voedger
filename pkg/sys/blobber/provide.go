@@ -64,7 +64,7 @@ func ProvideBlobberCUDValidators(cfg *istructsmem.AppConfigType) {
 					return false
 				}
 				usedBLOBIDs[cudBLOBID] = cudRow
-				if ownerRecord != cudRow.QName() || appdef.FieldName(ownerRecordField) != f.Name() {
+				if ownerRecord != cudRow.QName() || ownerRecordField != f.Name() {
 					// [~server.blobs/err.BLOBOwnerRecordMismatch~impl]
 					// [~server.blobs/err.BLOBOwnerRecordFieldMismatch~impl]
 					validateErr = fmt.Errorf("BLOB ID %d is intended for %s.%s whereas it is being used in %s.%s",

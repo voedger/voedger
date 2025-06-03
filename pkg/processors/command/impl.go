@@ -562,7 +562,7 @@ func appendBLOBOwnershipUpdaters(ctx context.Context, work pipeline.IWorkpiece) 
 			cmd.parsedCUDs = append(cmd.parsedCUDs, parsedCUD{
 				opKind:         appdef.OperationKind_Update,
 				existingRecord: blobRecord,
-				id:             int64(blobID),
+				id:             int64(blobID), // nolint G115
 				qName:          blobber.QNameWDocBLOB,
 				fields: coreutils.MapObject{
 					blobber.Field_OwnerRecordID: cmdParsedCUD.id,
@@ -877,7 +877,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 	}
 	body.WriteString("}")
 	res := body.String()
-	if cmd.cmdMes.APIPath() !=0 {
+	if cmd.cmdMes.APIPath() != 0 {
 		// TODO: temporary solution. Eliminate after switching to APIv2
 		pascalCasedResMap := map[string]interface{}{}
 		if err := json.Unmarshal([]byte(res), &pascalCasedResMap); err != nil {

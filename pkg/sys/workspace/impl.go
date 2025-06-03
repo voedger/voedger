@@ -12,11 +12,9 @@ import (
 	"io/fs"
 	"net/http"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -465,22 +463,23 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID
 			if underscorePos < 0 {
 				return nil, fmt.Errorf("wrong blob file name format: %s", ent.Name())
 			}
-			recordIDStr := ent.Name()[:underscorePos]
-			recordID, err := strconv.ParseUint(recordIDStr, utils.DecimalBase, utils.BitSize64)
+			blobOwnerRawRecordIDStr := ent.Name()[:underscorePos]
+			blobOwnerRawRecordIDIntf, err := coreutils.ClarifyJSONNumber(json.Number(blobOwnerRawRecordIDStr), appdef.DataKind_RecordID)
 			if err != nil {
 				return nil, fmt.Errorf("wrong recordID in blob %s: %w", ent.Name(), err)
 			}
+			blobOwnerRawRecordID := blobOwnerRawRecordIDIntf.(istructs.RecordID)
 			fieldName := strings.ReplaceAll(ent.Name()[underscorePos+1:], filepath.Ext(ent.Name()), "")
 			if len(fieldName) == 0 {
 				return nil, fmt.Errorf("no fieldName in blob %s", ent.Name())
 			}
-			fieldNames, ok := blobIDs[istructs.RecordID(recordID)]
+			fieldNames, ok := blobIDs[blobOwnerRawRecordID]
 			if !ok {
 				fieldNames = map[string]struct{}{}
-				blobIDs[istructs.RecordID(recordID)] = fieldNames
+				blobIDs[blobOwnerRawRecordID] = fieldNames
 			}
 			if _, exists := fieldNames[fieldName]; exists {
-				return nil, fmt.Errorf("recordID %d: blob for field %s is met again: %s", recordID, fieldName, ent.Name())
+				return nil, fmt.Errorf("recordID %d: blob for field %s is met again: %s", blobOwnerRawRecordID, fieldName, ent.Name())
 			}
 			fieldNames[fieldName] = struct{}{}
 			blobContent, err := wsTemplateFS.ReadFile(ent.Name())
@@ -490,11 +489,12 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID
 			ownerQName := appdef.NullQName
 			for _, wsTemplateRecord := range wsTemplateData {
 				recordNumberFromTemplate := wsTemplateRecord[appdef.SystemField_ID].(json.Number)
-				recordIDFromTemplate, err := recordNumberFromTemplate.Int64()
+				recordIDFromTemplateIntf, err := coreutils.ClarifyJSONNumber(recordNumberFromTemplate, appdef.DataKind_RecordID)
 				if err != nil {
 					return nil, err
 				}
-				if recordIDFromTemplate == int64(recordID) {
+				recordIDFromTemplate := recordIDFromTemplateIntf.(istructs.RecordID)
+				if recordIDFromTemplate == blobOwnerRawRecordID {
 					ownerQNameStr := wsTemplateRecord[appdef.SystemField_QName].(string)
 					ownerQName, err = appdef.ParseQName(ownerQNameStr)
 					if err != nil {
@@ -512,7 +512,7 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID
 				OwnerRecord:      ownerQName,
 				OwnerRecordField: fieldName,
 				Content:          blobContent,
-				OwnerRecordRawID: istructs.RecordID(recordID),
+				OwnerRecordRawID: istructs.RecordID(blobOwnerRawRecordID),
 			})
 		}
 	}
