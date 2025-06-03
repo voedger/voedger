@@ -141,7 +141,7 @@ func getBLOBIDFromOwner(_ context.Context, work pipeline.IWorkpiece) (err error)
 	}
 	if len(resp) > 1 {
 		// notest
-		panic("unexpected result reading BLOBID from owner")
+		return coreutils.NewHTTPErrorf(http.StatusInternalServerError, fmt.Errorf("unexpected result reading BLOBID from owner: multiple responses received"))
 	}
 	ownerFieldValue, ok := resp[0][bw.blobMessageRead.ownerRecordField]
 	if !ok {
