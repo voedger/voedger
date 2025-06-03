@@ -110,16 +110,16 @@ func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSI
 		return istructs.NullRecordID, nil
 	}
 	matches := blobCreatePersistentRespRE.FindStringSubmatch(resp.Body)
-	if len(matches) < 2 {
+	if len(matches) != 2 {
 		// notest
 		return istructs.NullRecordID, errors.New("wrong blob create response: " + resp.Body)
 	}
-	newBLOBID, err := strconv.ParseUint(matches[1], utils.DecimalBase, utils.BitSize64)
+	newBLOBIDIntf, err := coreutils.ClarifyJSONNumber(json.Number(matches[1]), appdef.DataKind_RecordID)
 	if err != nil {
 		// notest
 		return istructs.NullRecordID, fmt.Errorf("failed to parse the received blobID string: %w", err)
 	}
-	return istructs.RecordID(newBLOBID), nil
+	return newBLOBIDIntf.(istructs.RecordID), nil
 }
 
 func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, ownerRecord appdef.QName, ownerRecordField appdef.FieldName, ownerID istructs.RecordID,
