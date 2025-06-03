@@ -74,7 +74,7 @@ type queryWork struct {
 	iWorkspace           appdef.IWorkspace
 	iQuery               appdef.IQuery
 	iView                appdef.IView
-	iDoc                 appdef.ISingleton
+	iDoc                 appdef.IDoc
 	iRecord              appdef.IContainedRecord
 	wsDesc               istructs.IRecord
 	callbackFunc         istructs.ExecQueryCallback
@@ -109,6 +109,17 @@ func (qw *queryWork) isDeveloper() bool {
 		}
 	}
 	return false
+}
+
+func (qw *queryWork) isDocSingleton() bool {
+	if qw.iDoc == nil {
+		return false
+	}
+	iSignelton, ok := qw.iDoc.(appdef.ISingleton)
+	if !ok {
+		return false
+	}
+	return iSignelton.Singleton()
 }
 
 func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
