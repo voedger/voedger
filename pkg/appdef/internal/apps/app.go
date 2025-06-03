@@ -9,7 +9,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/acl"
 	"github.com/voedger/voedger/pkg/appdef/internal/comments"
-	"github.com/voedger/voedger/pkg/appdef/internal/datas"
 	"github.com/voedger/voedger/pkg/appdef/internal/packages"
 	"github.com/voedger/voedger/pkg/appdef/internal/types"
 	"github.com/voedger/voedger/pkg/appdef/internal/workspaces"
@@ -23,7 +22,6 @@ type AppDef struct {
 	workspaces.WithWorkspaces
 	acl.WithACL
 	types.WithTypes
-	sysWS *workspaces.Workspace
 }
 
 func NewAppDef() *AppDef {
@@ -34,7 +32,6 @@ func NewAppDef() *AppDef {
 		WithACL:        acl.MakeWithACL(),
 		WithTypes:      types.MakeWithTypes(),
 	}
-	app.makeSysPackage()
 	return &app
 }
 
@@ -52,46 +49,6 @@ func (app *AppDef) build() (err error) {
 }
 
 func (app *AppDef) changed() { app.Changed() }
-
-// Makes system package.
-//
-// Should be called after appDef is created.
-func (app *AppDef) makeSysPackage() {
-	packages.AddPackage(&app.WithPackages, appdef.SysPackage, appdef.SysPackagePath)
-	app.makeSysWorkspace()
-}
-
-// Makes system workspace.
-func (app *AppDef) makeSysWorkspace() {
-	app.sysWS = workspaces.NewWorkspace(app, appdef.SysWorkspaceQName)
-	app.WithWorkspaces.AppendWorkspace(app.sysWS)
-
-	app.makeSysDataTypes()
-	app.makeSysStructures()
-}
-
-// Makes system data types.
-func (app *AppDef) makeSysDataTypes() {
-	for k := appdef.DataKind_null + 1; k < appdef.DataKind_FakeLast; k++ {
-		_ = datas.NewSysData(app.sysWS, k)
-	}
-}
-
-func (app *AppDef) makeSysStructures() {
-	wsb := workspaces.NewWorkspaceBuilder(app.sysWS)
-
-	// TODO: move this code to sys.vsql (for projectors)
-	viewProjectionOffsets := wsb.AddView(appdef.NewQName(appdef.SysPackage, "projectionOffsets"))
-	viewProjectionOffsets.Key().PartKey().AddField("partition", appdef.DataKind_int32)
-	viewProjectionOffsets.Key().ClustCols().AddField("projector", appdef.DataKind_QName)
-	viewProjectionOffsets.Value().AddField("offset", appdef.DataKind_int64, true)
-
-	// TODO: move this code to sys.vsql (for child workspaces)
-	viewNextBaseWSID := wsb.AddView(appdef.NewQName(appdef.SysPackage, "NextBaseWSID"))
-	viewNextBaseWSID.Key().PartKey().AddField("dummy1", appdef.DataKind_int32)
-	viewNextBaseWSID.Key().ClustCols().AddField("dummy2", appdef.DataKind_int32)
-	viewNextBaseWSID.Value().AddField("NextBaseWSID", appdef.DataKind_int64, true)
-}
 
 // # Supports:
 //   - appdef.IAppDefBuilder

@@ -18,7 +18,6 @@ import (
 
 func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter,
 	callback istructs.ExecQueryCallback, recordID istructs.RecordID) error {
-	rr := make([]istructs.RecordGetBatchItem, 0)
 
 	qNameType := appStructs.AppDef().Type(qName)
 	isSingleton := false
@@ -56,6 +55,7 @@ func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, ap
 	}
 
 	whereIDProvided := len(whereIDs) > 0
+
 	switch {
 	case isSingleton && (recordID > 0 || whereIDProvided):
 		return errors.New("conditions are not allowed to query a singleton")
@@ -63,33 +63,6 @@ func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, ap
 		return errors.New("record ID and 'where id ...' clause can not be used in one query")
 	case !isSingleton && recordID == 0 && !whereIDProvided:
 		return fmt.Errorf("'%s' is not a singleton. At least one record ID must be provided", qName)
-	}
-
-	if isSingleton {
-		singletonRec, err := appStructs.Records().GetSingleton(wsid, qName)
-		if err != nil {
-			// notest
-			return err
-		}
-		if singletonRec.QName() == appdef.NullQName {
-			// singleton queried and it does not exists yet -> return immediately
-			return nil
-		}
-		rr = append(rr, istructs.RecordGetBatchItem{ID: singletonRec.ID()})
-	}
-
-	if recordID > 0 {
-		rr = append(rr, istructs.RecordGetBatchItem{ID: recordID})
-	}
-
-	for _, whereID := range whereIDs {
-		rr = append(rr, istructs.RecordGetBatchItem{ID: whereID})
-	}
-
-	err := appStructs.Records().GetBatch(wsid, true, rr)
-	if err != nil {
-		// notest
-		return err
 	}
 
 	if !f.acceptAll {
@@ -100,26 +73,98 @@ func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, ap
 		}
 	}
 
-	for _, r := range rr {
-		if r.Record.QName() == appdef.NullQName {
-			return fmt.Errorf("record with ID '%d' not found", r.Record.ID())
-		}
-		if r.Record.QName() != qName {
-			return fmt.Errorf("record with ID '%d' has mismatching QName '%s'", r.Record.ID(), r.Record.QName())
-		}
-
-		data := coreutils.FieldsToMap(r.Record, appStructs.AppDef(), getFilter(f.filter), coreutils.WithAllFields())
-		bb, e := json.Marshal(data)
-		if e != nil {
-			// notest
-			return e
-		}
-
-		e = callback(&result{value: string(bb)})
-		if e != nil {
-			return e
-		}
+	if len(whereIDs) > 1 {
+		// where is not allowed with exact recordID
+		return readManyRecords(whereIDs, wsid, qNameType, appStructs, f, callback)
+	}
+	if len(whereIDs) == 1 {
+		return readSingleRecord(whereIDs[0], wsid, appStructs, qNameType, f, callback, isSingleton)
 	}
 
+	return readSingleRecord(recordID, wsid, appStructs, qNameType, f, callback, isSingleton)
+
+}
+
+func readManyODocs(ids []istructs.RecordID, wsid istructs.WSID, qName appdef.QName, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback) error {
+	for _, id := range ids {
+		rec, err := appStructs.Events().GetORec(wsid, id, istructs.NullOffset)
+		if err != nil {
+			return err
+		}
+		if err := callbackRec(rec, appStructs, qName, f, callback); err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+func readManyRecords(ids []istructs.RecordID, wsid istructs.WSID, qNameType appdef.IType, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback) error {
+	if qNameType.Kind() == appdef.TypeKind_ODoc || qNameType.Kind() == appdef.TypeKind_ORecord {
+		return readManyODocs(ids, wsid, qNameType.QName(), appStructs, f, callback)
+	}
+	rr := make([]istructs.RecordGetBatchItem, 0)
+	for _, whereID := range ids {
+		rr = append(rr, istructs.RecordGetBatchItem{ID: whereID})
+	}
+
+	err := appStructs.Records().GetBatch(wsid, true, rr)
+	if err != nil {
+		// notest
+		return err
+	}
+
+	for _, r := range rr {
+		if err := callbackRec(r.Record, appStructs, r.Record.QName(), f, callback); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func callbackRec(rec istructs.IRecord, appStructs istructs.IAppStructs, qName appdef.QName, f *filter, callback istructs.ExecQueryCallback) error {
+	if rec.QName() == appdef.NullQName {
+		return fmt.Errorf("record with ID '%d' not found", rec.ID())
+	}
+	if rec.QName() != qName {
+		return fmt.Errorf("record with ID '%d' has mismatching QName '%s'", rec.ID(), rec.QName())
+	}
+
+	data := coreutils.FieldsToMap(rec, appStructs.AppDef(), getFilter(f.filter), coreutils.WithAllFields())
+	bb, err := json.Marshal(data)
+	if err != nil {
+		// notest
+		return err
+	}
+
+	return callback(&result{value: string(bb)})
+}
+
+func readSingleRecord(id istructs.RecordID, wsid istructs.WSID, appStructs istructs.IAppStructs,
+	qNameType appdef.IType, f *filter, callback istructs.ExecQueryCallback, isSingleton bool) (err error) {
+	if isSingleton {
+		return readSingleton(wsid, appStructs, qNameType.QName(), f, callback)
+	}
+
+	var rec istructs.IRecord
+	if qNameType.Kind() == appdef.TypeKind_ODoc || qNameType.Kind() == appdef.TypeKind_ORecord {
+		rec, err = appStructs.Events().GetORec(wsid, id, istructs.NullOffset)
+	} else {
+		rec, err = appStructs.Records().Get(wsid, true, id)
+	}
+	if err != nil {
+		// notest
+		return err
+	}
+
+	return callbackRec(rec, appStructs, qNameType.QName(), f, callback)
+}
+
+func readSingleton(wsid istructs.WSID, appStructs istructs.IAppStructs,
+	qName appdef.QName, f *filter, callback istructs.ExecQueryCallback) error {
+	singletonRec, err := appStructs.Records().GetSingleton(wsid, qName)
+	if err != nil {
+		// notest
+		return err
+	}
+	return callbackRec(singletonRec, appStructs, qName, f, callback)
 }

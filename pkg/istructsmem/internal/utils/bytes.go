@@ -279,7 +279,7 @@ func ReadShortString(buf *bytes.Buffer) (string, error) {
 }
 
 // Returns a slice of bytes built from the specified values, written from left to right
-func ToBytes(value ...interface{}) []byte {
+func ToBytes(value ...any) []byte {
 	buf := new(bytes.Buffer)
 	for _, p := range value {
 		SafeWriteBuf(buf, p)

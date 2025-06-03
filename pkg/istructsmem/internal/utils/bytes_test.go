@@ -363,7 +363,7 @@ type testInt uint16
 
 func TestToBytes(t *testing.T) {
 	type args struct {
-		value []interface{}
+		value []any
 	}
 	tests := []struct {
 		name string
@@ -372,22 +372,22 @@ func TestToBytes(t *testing.T) {
 	}{
 		{
 			name: "fixed width",
-			args: args{value: []interface{}{uint16(20)}},
+			args: args{value: []any{uint16(20)}},
 			want: []byte{0, 20},
 		},
 		{
 			name: "fixed width custom type",
-			args: args{value: []interface{}{testInt(1973)}},
+			args: args{value: []any{testInt(1973)}},
 			want: []byte{0x07, 0xb5},
 		},
 		{
 			name: "[]byte",
-			args: args{value: []interface{}{[]byte{1, 2, 3}}},
+			args: args{value: []any{[]byte{1, 2, 3}}},
 			want: []byte{1, 2, 3},
 		},
 		{
 			name: "string",
-			args: args{value: []interface{}{"AAA"}},
+			args: args{value: []any{"AAA"}},
 			want: []byte{65, 65, 65},
 		},
 	}

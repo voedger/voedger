@@ -11,7 +11,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
 // returns ID of the record identified by the the provided unique combination
@@ -73,7 +72,7 @@ func GetRecordIDByUniqueCombination(wsid istructs.WSID, tableQName appdef.QName,
 	buildUniqueViewKeyByValues(uniqueViewRecordBuilder, matchedUniqueQName, uniqueKeyValues)
 	uniqueViewRecord, err := as.ViewRecords().Get(wsid, uniqueViewRecordBuilder)
 	if err != nil {
-		if errors.Is(err, istructsmem.ErrRecordNotFound) {
+		if errors.Is(err, istructs.ErrRecordNotFound) {
 			return 0, nil
 		}
 		// notest

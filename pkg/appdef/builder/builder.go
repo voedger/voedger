@@ -8,9 +8,12 @@ package builder
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/internal/apps"
+	"github.com/voedger/voedger/pkg/appdef/sys"
 )
 
 func New() appdef.IAppDefBuilder {
-	a := apps.NewAppDef()
-	return apps.NewAppDefBuilder(a)
+	app := apps.NewAppDef()
+	adb := apps.NewAppDefBuilder(app)
+	sys.MakeSysPackage(adb) // Initialize the system package
+	return adb
 }

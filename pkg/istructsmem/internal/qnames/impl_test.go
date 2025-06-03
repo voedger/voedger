@@ -211,7 +211,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 				adb := builder.New()
 				adb.AddPackage("test", "test.com/test")
 				wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
-				for i := 0; i <= MaxAvailableQNameID; i++ {
+				for i := range MaxAvailableQNameID + 1 {
 					wsb.AddObject(appdef.NewQName("test", fmt.Sprintf("name_%d", i)))
 				}
 				appDef, err := adb.Build()

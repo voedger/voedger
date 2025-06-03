@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/voedger/voedger/pkg/bus"
@@ -812,9 +813,9 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		bus.ReplyErr(cmd.cmdMes.Responder(), handlingError)
 		return
 	}
-	body := bytes.NewBufferString(fmt.Sprintf(`{"currentWLogOffset":%d`, cmd.pLogEvent.WLogOffset()))
+	body := bytes.NewBufferString(fmt.Sprintf(`{"CurrentWLogOffset":%d`, cmd.pLogEvent.WLogOffset()))
 	if len(cmd.idGeneratorReporter.generatedIDs) > 0 {
-		body.WriteString(`,"newIDs":{`)
+		body.WriteString(`,"NewIDs":{`)
 		for rawID, generatedID := range cmd.idGeneratorReporter.generatedIDs {
 			fmt.Fprintf(body, `"%d":%d,`, rawID, generatedID)
 		}
@@ -832,11 +833,31 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 			logger.Error("failed to marshal response: " + err.Error())
 			return
 		}
-		body.WriteString(`,"result":`)
+		body.WriteString(`,"Result":`)
 		body.Write(cmdResultBytes)
 	}
 	body.WriteString("}")
-	bus.ReplyJSON(cmd.cmdMes.Responder(), cmd.statusCodeOfSuccess, body.String())
+	res := body.String()
+	if cmd.cmdMes.APIPath() !=0 {
+		// TODO: temporary solution. Eliminate after switching to APIv2
+		pascalCasedResMap := map[string]interface{}{}
+		if err := json.Unmarshal([]byte(res), &pascalCasedResMap); err != nil {
+			// notest
+			panic(err)
+		}
+		camelCasedResMap := map[string]interface{}{}
+		for pascalCasedKey, val := range pascalCasedResMap {
+			camelCasedKey := strings.ToLower(pascalCasedKey[:1]) + pascalCasedKey[1:]
+			camelCasedResMap[camelCasedKey] = val
+		}
+		camelCasedResBytes, err := json.Marshal(&camelCasedResMap)
+		if err != nil {
+			// notest
+			panic(err)
+		}
+		res = string(camelCasedResBytes)
+	}
+	bus.ReplyJSON(cmd.cmdMes.Responder(), cmd.statusCodeOfSuccess, res)
 }
 
 func (idGen *implIDGeneratorReporter) NextID(rawID istructs.RecordID) (storageID istructs.RecordID, err error) {

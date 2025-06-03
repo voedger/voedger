@@ -109,7 +109,7 @@ func Test_recordKey(t *testing.T) {
 
 func TestObjectFillAndGet(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	as := test.AppStructs
 
@@ -117,7 +117,7 @@ func TestObjectFillAndGet(t *testing.T) {
 
 	t.Run("basic", func(t *testing.T) {
 
-		data := map[string]interface{}{
+		data := map[string]any{
 			"sys.ID":  json.Number("7"),
 			"int32":   json.Number("1"),
 			"int64":   json.Number("2"),
@@ -127,8 +127,8 @@ func TestObjectFillAndGet(t *testing.T) {
 			"string":  "str",
 			"QName":   "test.CDoc",
 			"bool":    true,
-			"record": []interface{}{
-				map[string]interface{}{
+			"record": []any{
+				map[string]any{
 					"sys.ID": json.Number("8"),
 					"int32":  json.Number("6"),
 				},
@@ -157,7 +157,7 @@ func TestObjectFillAndGet(t *testing.T) {
 	})
 
 	t.Run("type errors", func(t *testing.T) {
-		cases := map[string]interface{}{
+		cases := map[string]any{
 			"int32":   "str",
 			"int64":   "str",
 			"float32": "str",
@@ -166,14 +166,14 @@ func TestObjectFillAndGet(t *testing.T) {
 			"string":  float64(3),
 			"QName":   float64(4),
 			"bool":    "str",
-			"record": []interface{}{
-				map[string]interface{}{"int32": "str"},
+			"record": []any{
+				map[string]any{"int32": "str"},
 			},
 		}
 
 		for name, val := range cases {
 			builder := as.ObjectBuilder(test.testCDoc)
-			data := map[string]interface{}{
+			data := map[string]any{
 				appdef.SystemField_ID: json.Number("1"),
 				name:                  val,
 			}
@@ -188,14 +188,14 @@ func TestObjectFillAndGet(t *testing.T) {
 		builder := as.ObjectBuilder(test.testCDoc)
 		cases := []struct {
 			f string
-			v interface{}
+			v any
 		}{
-			{"unknownContainer", []interface{}{}},
-			{"record", []interface{}{"str"}},
-			{"record", []interface{}{map[string]interface{}{"unknownContainer": []interface{}{}}}},
+			{"unknownContainer", []any{}},
+			{"record", []any{"str"}},
+			{"record", []any{map[string]any{"unknownContainer": []any{}}}},
 		}
 		for _, c := range cases {
-			data := map[string]interface{}{
+			data := map[string]any{
 				c.f: c.v,
 			}
 			builder.FillFromJSON(data)

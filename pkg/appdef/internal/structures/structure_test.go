@@ -77,7 +77,9 @@ func Test_StructuresAndRecords(t *testing.T) {
 		t.Run("should be ok to enumerate structures", func(t *testing.T) {
 			var str []appdef.QName
 			for s := range appdef.Structures(tested.Types()) {
-				str = append(str, s.QName())
+				if !s.IsSystem() { // skip system structures
+					str = append(str, s.QName())
+				}
 			}
 			require.Equal(str, []appdef.QName{docName, objName, recName})
 		})
@@ -101,8 +103,10 @@ func Test_StructuresAndRecords(t *testing.T) {
 
 		t.Run("should be ok to enumerate records", func(t *testing.T) {
 			var recs []appdef.QName
-			for s := range appdef.Records(tested.Types()) {
-				recs = append(recs, s.QName())
+			for r := range appdef.Records(tested.Types()) {
+				if !r.IsSystem() { // skip system records
+					recs = append(recs, r.QName())
+				}
 			}
 			require.Equal(recs, []appdef.QName{docName, recName})
 		})

@@ -36,9 +36,6 @@ func TestBasicUsage_HTTPConventions(t *testing.T) {
 		require.Equal("world", resp.SectionRow()[0])
 		require.Equal(coreutils.ContentType_ApplicationJSON, resp.HTTPResp.Header["Content-Type"][0])
 		require.Equal(http.StatusOK, resp.HTTPResp.StatusCode)
-		require.Equal(http.StatusInternalServerError, resp.SysError.HTTPStatus)
-		require.Empty(resp.SysError.Data)
-		require.Empty(resp.SysError.QName)
 		resp.Println()
 	})
 

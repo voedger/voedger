@@ -22,7 +22,10 @@ func ReadByKind(name appdef.FieldName, kind appdef.DataKind, rr istructs.IRowRea
 		}
 	}()
 	switch kind {
-	// TODO: #3435 [small integers]
+	case appdef.DataKind_int8: //#3435 small integer types
+		return rr.AsInt8(name)
+	case appdef.DataKind_int16: //#3435 small integer types
+		return rr.AsInt16(name)
 	case appdef.DataKind_int32:
 		return rr.AsInt32(name)
 	case appdef.DataKind_int64:
