@@ -55,6 +55,29 @@ func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req R
 	return responseMeta, cmdResp, nil
 }
 
+func ReadQueryResponse(ctx context.Context, sender IRequestSender, req Request) (resp []map[string]interface{}, err error) {
+	respCh, _, respErr, err := sender.SendRequest(ctx, req)
+	if err != nil {
+		// notest
+		return nil, err
+	}
+	defer func() {
+		for range respCh {
+		}
+	}()
+	for elem := range respCh {
+		switch typed := elem.(type) {
+		case map[string]interface{}:
+			resp = append(resp, typed)
+		case error:
+			return nil, typed
+		default:
+			return nil, fmt.Errorf("unexpected query result element: %#v", elem)
+		}
+	}
+	return resp, *respErr
+}
+
 func ReplyErrf(responder IResponder, status int, args ...interface{}) {
 	ReplyErrDef(responder, coreutils.NewHTTPErrorf(status, args...), http.StatusInternalServerError)
 }
