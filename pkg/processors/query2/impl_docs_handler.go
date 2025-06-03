@@ -36,10 +36,16 @@ func docsSetRequestType(ctx context.Context, qw *queryWork) error {
 	if qw.iDoc = appdef.WDoc(qw.iWorkspace.Type, qw.msg.QName()); qw.iDoc != nil {
 		return nil
 	}
+	if qw.iDoc = appdef.ODoc(qw.iWorkspace.Type, qw.msg.QName()); qw.iDoc != nil {
+		return nil
+	}
 	if qw.iRecord = appdef.CRecord(qw.iWorkspace.Type, qw.msg.QName()); qw.iRecord != nil {
 		return nil
 	}
 	if qw.iRecord = appdef.WRecord(qw.iWorkspace.Type, qw.msg.QName()); qw.iRecord != nil {
+		return nil
+	}
+	if qw.iRecord = appdef.ORecord(qw.iWorkspace.Type, qw.msg.QName()); qw.iRecord != nil {
 		return nil
 	}
 	return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("document or record %s is not defined in %v", qw.msg.QName(), qw.iWorkspace))
@@ -100,7 +106,7 @@ func docsRowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 func docsExec(_ context.Context, qw *queryWork) (err error) {
 	var rec istructs.IRecord
 
-	if qw.iDoc != nil && qw.iDoc.Singleton() {
+	if qw.iDoc != nil && qw.isDocSingleton() {
 		if qw.msg.DocID() != 0 {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Errorf("document %s is singleton. DocID must be 0", qw.msg.QName()))
 		}
@@ -112,7 +118,12 @@ func docsExec(_ context.Context, qw *queryWork) (err error) {
 			return coreutils.NewHTTPErrorf(http.StatusNotFound, fmt.Errorf("singleton %s not found", qw.msg.QName()))
 		}
 	} else {
-		rec, err = qw.appStructs.Records().Get(qw.msg.WSID(), true, istructs.RecordID(qw.msg.DocID()))
+		if (qw.iDoc != nil && qw.iDoc.Kind() == appdef.TypeKind_ODoc) ||
+			(qw.iRecord != nil && qw.iRecord.Kind() == appdef.TypeKind_ORecord) {
+			rec, err = qw.appStructs.Events().GetORec(qw.msg.WSID(), istructs.RecordID(qw.msg.DocID()), istructs.NullOffset)
+		} else {
+			rec, err = qw.appStructs.Records().Get(qw.msg.WSID(), true, istructs.RecordID(qw.msg.DocID()))
+		}
 		if err != nil {
 			return err
 		}
