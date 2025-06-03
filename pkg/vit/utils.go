@@ -400,15 +400,6 @@ func (vit *VIT) GetAny(entity string, ws *AppWorkspace) istructs.RecordID {
 	return istructs.RecordID(data["DocID"].(float64))
 }
 
-func (vit *VIT) SqlQuery(ws *AppWorkspace, sqlQuery string, fmtArgs ...any) map[string]interface{} {
-	vit.T.Helper()
-	body := fmt.Sprintf(`{"args":{"Query":"%s"},"elements":[{"fields":["Result"]}]}`, fmt.Sprintf(sqlQuery, fmtArgs...))
-	resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(ws.Owner.Token))
-	res := map[string]interface{}{}
-	require.NoError(vit.T, json.Unmarshal([]byte(resp.Sections[0].Elements[0][0][0][0].(string)), &res))
-	return res
-}
-
 func NewLogin(name, pwd string, appQName appdef.AppQName, subjectKind istructs.SubjectKindType, clusterID istructs.ClusterID) Login {
 	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, name, istructs.CurrentClusterID())
 	return Login{name, pwd, pseudoWSID, appQName, subjectKind, clusterID, map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}{}, []subject{}}

@@ -40,15 +40,23 @@ func TestBasicUsage_Persistent(t *testing.T) {
 		it.QNameDocWithBLOB, it.Field_Blob, coreutils.WithAuthorizeBy(ws.Owner.Token))
 	log.Println(blobID)
 
+	// check wdoc.sys.BLOB - OwnerRecordID is not filled yet
+	res := vit.SqlQuery(ws, "select * from sys.BLOB.%d", blobID)
+	require.EqualValues(iblobstorage.BLOBStatus_Completed, res["status"])
+	require.EqualValues(it.QNameDocWithBLOB.String(), res["OwnerRecord"])
+	require.EqualValues("Blob", res["OwnerRecordField"])
+	require.Zero(res["OwnerRecordID"])
+
 	// put the blob into the owner field
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocWithBLOB","Blob":%d}}]}`, blobID)
 	ownerID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
-	// check wdoc.sys.BLOB
-	res := vit.SqlQuery(ws, "select * from sys.BLOB.%d", blobID)
-	require.Equal(it.QNameDocWithBLOB.String(), res["OwnerRecord"].(string))
-	require.Equal("Blob", res["OwnerRecordField"].(string))
-	require.EqualValues(ownerID, res["OwnerRecordID"].(float64))
+	// check wdoc.sys.BLOB - OwnerRecordID must be automatically filled
+	res = vit.SqlQuery(ws, "select * from sys.BLOB.%d", blobID)
+	require.EqualValues(iblobstorage.BLOBStatus_Completed, res["status"])
+	require.EqualValues(it.QNameDocWithBLOB.String(), res["OwnerRecord"])
+	require.EqualValues("Blob", res["OwnerRecordField"])
+	require.EqualValues(ownerID, istructs.RecordID(res["OwnerRecordID"].(float64)))
 
 	// read, authorize over headers
 	blobReader := vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", ownerID,
@@ -80,7 +88,6 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.ContentType)
 	require.Equal("test", blobReader.Name)
 	require.Equal(expBLOB, actualBLOBContent)
-
 }
 
 func TestBlobberErrors(t *testing.T) {
