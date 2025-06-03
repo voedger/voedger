@@ -201,6 +201,15 @@ func requestHandlerV2_notifications(numsAppsWorkspaces map[appdef.AppQName]istru
 			return
 		}
 
+		subscriptions, expiresIn, err := parseN10nArgs(string(busRequest.Body))
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		_ = subscriptions
+		_ = expiresIn
+
 	}
 }
 
@@ -221,46 +230,27 @@ type n10nArgs struct {
 
 func parseN10nArgs(body string) (subscriptions []subscription, expiresIn int64, err error) {
 	n10nArgs := n10nArgs{}
-	coreutils.JSONUnmarshal([]byte(body), &n10nArgs)
+	coreutils.JSONUnmarshalDisallowUnknownFields([]byte(body), &n10nArgs)
 	if n10nArgs.ExpiresIn == 0 {
 		n10nArgs.ExpiresIn = defaultN10NExpiresInSeconds
 	}
 	if len(n10nArgs.Subscriptions) == 0 {
 		return nil, 0, errors.New("no subscriptions provided")
 	}
-	for _, subscr := range n10nArgs.Subscriptions {
-		wsidIntf, err := coreutils.ClarifyJSONNumber(subscr.WSIDNumber, appdef.DataKind_int64)
+	for i, subscr := range n10nArgs.Subscriptions {
+		if len(subscr.Entity) == 0 || len(subscr.WSIDNumber.String()) == 0 {
+			return nil, 0, fmt.Errorf("subscriptions[%d]: entty and\\or wsid is not provided", i)
+		}
+		wsid, err := coreutils.ClarifyJSONWSID(subscr.WSIDNumber)
 		if err != nil {
 			return nil, 0, err
 		}
 		subscriptions = append(subscriptions, subscription{
 			entity: subscr.Entity,
-			wsid: istructs.WSID(wsidIntf.(uint64)),
+			wsid:   wsid,
 		})
-
 	}
-
-	args := coreutils.MapObject{}
-	if err := coreutils.JSONUnmarshal([]byte(body), &args); err != nil {
-		return nil, 0, fmt.Errorf("failed to unmarshal request body: %w", err)
-	}
-	expiresIn, ok, err := args.AsInt64("expiresIn")
-	if err != nil {
-		return nil, 0, err
-	}
-	if !ok {
-		expiresIn = defaultN10NExpiresInSeconds
-	}
-	subscriptionsIntfs, ok, err := args.AsObjects("subscriptions")
-	if err != nil {
-		return nil, 0, err
-	}
-	if !ok {
-		return nil, 0, errors.New("subscriptions field missing")
-	}
-	for _, subscriptionIntf := range subscriptionsIntfs {
-		subscription := subscriptionIntf.(map[string]interface{})
-	}
+	return subscriptions, expiresIn, err
 }
 
 // [~server.devices/cmp.routerDevicesCreatePathHandler~impl]

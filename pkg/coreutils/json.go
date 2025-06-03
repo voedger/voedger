@@ -22,6 +22,14 @@ func JSONUnmarshal(b []byte, ptrToPayload interface{}) error {
 	return decoder.Decode(ptrToPayload)
 }
 
+func JSONUnmarshalDisallowUnknownFields(b []byte, ptrToPayload interface{}) error {
+	reader := bytes.NewReader(b)
+	decoder := json.NewDecoder(reader)
+	decoder.UseNumber()
+	decoder.DisallowUnknownFields()
+	return decoder.Decode(ptrToPayload)
+}
+
 func ClarifyJSONNumber(value json.Number, kind appdef.DataKind) (val interface{}, err error) {
 	switch kind {
 	case appdef.DataKind_int8: // #3434 [small integers]
