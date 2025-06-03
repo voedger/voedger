@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"testing"
 	"time"
 
@@ -581,5 +582,68 @@ func TestAuthnz(t *testing.T) {
 		// allowed, just expect 400 not found
 		body = `{"args":{"Query":"select Fld1 from app1pkg.TestCDocWithDeniedFields.123"},"elements":[{"fields":["Result"]}]}`
 		vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect400("record with ID '123' not found"))
+	})
+}
+
+func TestReadODocs(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	body := `{"args":
+		{"sys.ID": 1,"odocIntFld": 42,"orecord1":[
+			{"sys.ID":2,"sys.ParentID":1, "orecord1IntFld": 43, "orecord2": [
+				{"sys.ID":3, "sys.ParentID":2, "orecord2IntFld": 44}
+			]},
+			{"sys.ID":4,"sys.ParentID":1, "orecord1IntFld": 45, "orecord2": [
+				{"sys.ID":5, "sys.ParentID":4, "orecord2IntFld": 46}
+			]}
+		]}
+	}`
+	resp := vit.Func(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/commands/app1pkg.CmdODocOne", ws.WSID), body,
+		coreutils.WithMethod(http.MethodPost),
+		coreutils.WithAuthorizeBy(ws.Owner.Token),
+	)
+	odoc1ID := resp.NewIDs["1"]
+	odoc1ORec11ID := resp.NewIDs["2"]
+	odoc1ORec12ID := resp.NewIDs["4"]
+
+	body = `{"args":{"sys.ID": 1,"odocIntFld": 47}}`
+	resp = vit.Func(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/commands/app1pkg.CmdODocOne", ws.WSID), body,
+		coreutils.WithMethod(http.MethodPost),
+		coreutils.WithAuthorizeBy(ws.Owner.Token),
+	)
+	odoc2ID := resp.NewID()
+
+	t.Run("odoc", func(t *testing.T) {
+		res := vit.SqlQuery(ws, "select * from app1pkg.odoc1.%d", odoc1ID)
+		require.EqualValues(odoc1ID, res["sys.ID"])
+		require.EqualValues(42, res["odocIntFld"])
+	})
+
+	t.Run("orecord", func(t *testing.T) {
+		res := vit.SqlQuery(ws, "select * from app1pkg.orecord1.%d", odoc1ORec11ID)
+		require.EqualValues(odoc1ORec11ID, res["sys.ID"])
+		require.EqualValues(43, res["orecord1IntFld"])
+	})
+
+	t.Run("odocs", func(t *testing.T) {
+		res := vit.SqlQueryRows(ws, "select * from app1pkg.odoc1 where id in(%d, %d)", odoc1ID, odoc2ID)
+		require.Len(res, 2)
+		require.EqualValues(odoc1ID, res[0]["sys.ID"])
+		require.EqualValues(42, res[0]["odocIntFld"])
+		require.EqualValues(odoc2ID, res[1]["sys.ID"])
+		require.EqualValues(47, res[1]["odocIntFld"])
+	})
+
+	t.Run("orecords", func(t *testing.T) {
+		res := vit.SqlQueryRows(ws, "select * from app1pkg.orecord1 where id in(%d, %d)", odoc1ORec11ID, odoc1ORec12ID)
+		require.Len(res, 2)
+		require.EqualValues(odoc1ORec11ID, res[0]["sys.ID"])
+		require.EqualValues(43, res[0]["orecord1IntFld"])
+		require.EqualValues(odoc1ORec12ID, res[1]["sys.ID"])
+		require.EqualValues(45, res[1]["orecord1IntFld"])
 	})
 }
