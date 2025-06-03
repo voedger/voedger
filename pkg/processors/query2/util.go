@@ -115,11 +115,11 @@ func (qw *queryWork) isDocSingleton() bool {
 	if qw.iDoc == nil {
 		return false
 	}
-	iSignelton, ok := qw.iDoc.(appdef.ISingleton)
+	iSingleton, ok := qw.iDoc.(appdef.ISingleton)
 	if !ok {
 		return false
 	}
-	return iSignelton.Singleton()
+	return iSingleton.Singleton()
 }
 
 func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
