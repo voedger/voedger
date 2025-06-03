@@ -2175,10 +2175,26 @@ func TestQueryProcessor2_Docs(t *testing.T) {
 		require.JSONEq(fmt.Sprintf(`{"name":"Awesome food", "sys.ID":%d, "sys.IsActive":true, "sys.QName":"app1pkg.category"}`, ids["1"]), resp.Body)
 	})
 
-	t.Run("400 document type not defined", func(t *testing.T) {
-		path := fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/docs/%s/%d`, ws.WSID, it.QNameODoc1, 123)
-		resp, _ := vit.IFederation.Query(path, coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect400())
-		require.JSONEq(`{"status":400,"message":"document or record app1pkg.odoc1 is not defined in Workspace «app1pkg.test_wsWS»"}`, resp.Body)
+	t.Run("odocs", func(t *testing.T) {
+		body := `{"args":{"sys.ID": 1,"odocIntFld":42, "orecord1":[{"sys.ID":2,"sys.ParentID":1,"orecord1IntFld":43}]}}`
+		resp := vit.PostWS(ws, "c.app1pkg.CmdODocOne", body)
+		odocID := resp.NewIDs["1"]
+		orecordID := resp.NewIDs["2"]
+
+		t.Run("odoc", func(t *testing.T) {
+			path := fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/docs/%s/%d`, ws.WSID, it.QNameODoc1, odocID)
+			resp, err := vit.IFederation.Query(path, coreutils.WithAuthorizeBy(ws.Owner.Token))
+			require.NoError(err)
+			require.JSONEq(fmt.Sprintf(`{"odocIntFld":42, "sys.ID":%d, "sys.QName":"app1pkg.odoc1"}`, odocID), resp.Body)
+		})
+
+		t.Run("orecord", func(t *testing.T) {
+			path := fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/docs/%s/%d`, ws.WSID, appdef.NewQName("app1pkg", "orecord1"), orecordID)
+			resp, err := vit.IFederation.Query(path, coreutils.WithAuthorizeBy(ws.Owner.Token))
+			require.NoError(err)
+			require.JSONEq(fmt.Sprintf(`{"orecord1IntFld":43, "sys.Container":"orecord1", "sys.ID":%d, "sys.ParentID":%d, "sys.QName":"app1pkg.orecord1"}`, orecordID, odocID),
+				resp.Body)
+		})
 	})
 
 	t.Run("403 not authorized", func(t *testing.T) {
