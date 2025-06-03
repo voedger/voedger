@@ -7,6 +7,7 @@
 package query2
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -167,4 +168,21 @@ func Test_getCombinations(t *testing.T) {
 			{2023, time.April, 23},
 		}, combinations)
 	})
+}
+func Test_splitPath(t *testing.T) {
+	tests := []struct {
+		path string
+		want []string
+	}{
+		{path: `name`, want: []string{"name"}},
+		{path: `obj.name`, want: []string{"obj", "name"}},
+		{path: `"foo.bar".baz`, want: []string{"foo.bar", "baz"}},
+		{path: `part1."inner.part".part2`, want: []string{"part1", "inner.part", "part2"}},
+		{path: `a."b.c.d".e.f`, want: []string{"a", "b.c.d", "e", "f"}},
+	}
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%s to %s", tt.path, tt.want), func(t *testing.T) {
+			require.Equal(t, tt.want, splitPath(tt.path))
+		})
+	}
 }

@@ -183,20 +183,6 @@ func newKeys(paths []string) (o pipeline.IAsyncOperator) {
 	f = func(keysMap map[string]interface{}, keys []string) {
 		key := keys[0]
 		if len(keys) == 1 {
-			switch key {
-			case "SystemField_ID":
-				key = appdef.SystemField_ID
-			case "SystemField_ParentID":
-				key = appdef.SystemField_ParentID
-			case "SystemField_IsActive":
-				key = appdef.SystemField_IsActive
-			case "SystemField_Container":
-				key = appdef.SystemField_Container
-			case "SystemField_QName":
-				key = appdef.SystemField_QName
-			default:
-				// Do nothing
-			}
 			keysMap[key] = true
 		} else {
 			intf, ok := keysMap[key]
@@ -207,17 +193,9 @@ func newKeys(paths []string) (o pipeline.IAsyncOperator) {
 			keysMap[key] = intf
 		}
 	}
-
 	for _, path := range paths {
-		f(k.keys, strings.Split(strings.NewReplacer(
-			appdef.SystemField_ID, "SystemField_ID",
-			appdef.SystemField_ParentID, "SystemField_ParentID",
-			appdef.SystemField_IsActive, "SystemField_IsActive",
-			appdef.SystemField_Container, "SystemField_Container",
-			appdef.SystemField_QName, "SystemField_QName",
-		).Replace(path), "."))
+		f(k.keys, splitPath(path))
 	}
-
 	return k
 }
 

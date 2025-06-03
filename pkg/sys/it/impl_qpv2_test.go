@@ -912,7 +912,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 			require.Equal("field expression - 'EpicFail', 'EpicFail' - unexpected field", e.Message)
 		})
 		t.Run("Read by PK, include all and select some fields", func(t *testing.T) {
-			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=Client.Wallet.Currency,Client.Country,Client.Wallet.Capabilities&keys=Day,Month,sys.QName,Client.DOB,Client.sys.ID,Client.FirstName,Client.Country.Name,Client.Wallet.Balance,Client.Wallet.Capabilities.Deposit,Client.Wallet.Currency.Code`, ws.WSID, it.QNameApp1_ViewClients), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=Client.Wallet.Currency,Client.Country,Client.Wallet.Capabilities&keys=Day,Month,"sys.QName"",Client.DOB,Client."sys.ID",Client.FirstName,Client.Country.Name,Client.Wallet.Balance,Client.Wallet.Capabilities.Deposit,Client.Wallet.Currency.Code`, ws.WSID, it.QNameApp1_ViewClients), coreutils.WithAuthorizeBy(ws.Owner.Token))
 			require.NoError(err)
 			require.JSONEq(`{"results":[{
 					"Client":{
@@ -2048,41 +2048,41 @@ func TestQueryProcessor2_Include(t *testing.T) {
 		})
 		t.Run("Read all, include all and select some fields", func(t *testing.T) {
 			include := []string{
-				"Cfg",
-				"GroupA.Cfg",
-				"GroupB.Cfg",
-				"GroupA.GroupA.Cfg",
-				"GroupA.GroupB.Cfg",
-				"GroupB.GroupB.Cfg",
-				"GroupB.GroupB.GroupA.Cfg",
-				"GroupB.GroupB.GroupB.Cfg",
-				"GroupB.GroupB.GroupB.GroupB.Cfg",
+				`Cfg`,
+				`GroupA.Cfg`,
+				`GroupB.Cfg`,
+				`GroupA.GroupA.Cfg`,
+				`GroupA.GroupB.Cfg`,
+				`GroupB.GroupB.Cfg`,
+				`GroupB.GroupB.GroupA.Cfg`,
+				`GroupB.GroupB.GroupB.Cfg`,
+				`GroupB.GroupB.GroupB.GroupB.Cfg`,
 			}
 			keys := []string{
-				"Cfg.Name",
-				"Cfg.sys.ID",
-				"GroupA.Name",
-				"GroupA.sys.Container",
-				"GroupA.sys.IsActive",
-				"GroupB.Cfg.Name",
-				"GroupB.Cfg.sys.ID",
-				"GroupA.GroupA.Name",
-				"GroupA.GroupA.sys.ParentID",
-				"GroupA.GroupA.sys.QName",
-				"GroupA.GroupB.sys.ParentID",
-				"GroupA.GroupB.sys.QName",
-				"GroupB.GroupB.GroupA.sys.ParentID",
-				"GroupB.GroupB.GroupA.sys.QName",
-				"GroupB.GroupB.GroupB.sys.ParentID",
-				"GroupB.GroupB.GroupB.sys.QName",
-				"GroupB.GroupB.GroupB.GroupA.sys.ParentID",
-				"GroupB.GroupB.GroupB.GroupA.sys.QName",
-				"GroupB.GroupB.GroupB.GroupB.sys.ParentID",
-				"GroupB.GroupB.GroupB.GroupB.sys.QName",
-				"GroupB.GroupB.GroupB.GroupA.Cfg.Name",
-				"GroupB.GroupB.GroupB.GroupA.Cfg.Name",
-				"GroupB.GroupB.GroupB.GroupB.Cfg.Name",
-				"GroupB.GroupB.GroupB.GroupB.Cfg.Name",
+				`Cfg.Name`,
+				`Cfg."sys.ID"`,
+				`GroupA.Name`,
+				`GroupA."sys.Container"`,
+				`GroupA."sys.IsActive"`,
+				`GroupB.Cfg.Name`,
+				`GroupB.Cfg."sys.ID"`,
+				`GroupA.GroupA.Name`,
+				`GroupA.GroupA."sys.ParentID"`,
+				`GroupA.GroupA."sys.QName"`,
+				`GroupA.GroupB."sys.ParentID"`,
+				`GroupA.GroupB."sys.QName"`,
+				`GroupB.GroupB.GroupA."sys.ParentID"`,
+				`GroupB.GroupB.GroupA."sys.QName"`,
+				`GroupB.GroupB.GroupB."sys.ParentID"`,
+				`GroupB.GroupB.GroupB."sys.QName"`,
+				`GroupB.GroupB.GroupB.GroupA."sys.ParentID"`,
+				`GroupB.GroupB.GroupB.GroupA."sys.QName"`,
+				`GroupB.GroupB.GroupB.GroupB."sys.ParentID"`,
+				`GroupB.GroupB.GroupB.GroupB."sys.QName"`,
+				`GroupB.GroupB.GroupB.GroupA.Cfg.Name`,
+				`GroupB.GroupB.GroupB.GroupA.Cfg.Name`,
+				`GroupB.GroupB.GroupB.GroupB.Cfg.Name`,
+				`GroupB.GroupB.GroupB.GroupB.Cfg.Name`,
 			}
 			path := fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/cdocs/%s?include=%s&keys=%s`, ws.WSID, it.QNameApp1_CDocBatch, strings.Join(include, ","), strings.Join(keys, ","))
 			resp, err := vit.IFederation.Query(path, coreutils.WithAuthorizeBy(ws.Owner.Token))
@@ -2497,12 +2497,12 @@ func TestQueryProcessor2_CDocs(t *testing.T) {
 		require.JSONEq(fmt.Sprintf(`{"results":[{"name":"Awesome food","sys.ID":%d,"sys.IsActive":true,"sys.QName":"app1pkg.category"}]}`, ids["1"]), resp.Body)
 	})
 	t.Run("Read documents and use keys constraint", func(t *testing.T) {
-		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/cdocs/%s?keys=name,sys.ID`, ws.WSID, it.QNameApp1_CDocCategory), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/cdocs/%s?keys=name,"sys.ID"`, ws.WSID, it.QNameApp1_CDocCategory), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
 		require.JSONEq(fmt.Sprintf(`{"results":[{"name":"Awesome food","sys.ID":%d}]}`, ids["1"]), resp.Body)
 	})
 	t.Run("Read documents and use keys, order, skip and limit constraints", func(t *testing.T) {
-		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/cdocs/%s?keys=sys.ID,Year,Month,Day&order=-Month&skip=6&limit=10`, ws.WSID, it.QNameApp1_CDocDaily), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/cdocs/%s?keys="sys.ID",Year,Month,Day&order=-Month&skip=6&limit=10`, ws.WSID, it.QNameApp1_CDocDaily), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
 		require.JSONEq(fmt.Sprintf(`{"results":[
 				{"Day":4,"Month":4,"Year":2023,"sys.ID":%[1]d},
