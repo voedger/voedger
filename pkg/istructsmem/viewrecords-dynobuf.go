@@ -6,7 +6,6 @@ package istructsmem
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -79,7 +78,7 @@ func (key *keyType) storeViewClustKey() []byte {
 func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) error {
 	for _, f := range key.ccolsRow.fields.Fields() {
 		if err := loadClustFieldFromBuffer_00(key, f, buf); err != nil {
-			return fmt.Errorf("%v: unable to load clustering columns field «%s»: %w", key.viewName, f.Name(), err)
+			return enrichError(err, key.viewName, "unable to load clustering columns field «%s»", f.Name())
 		}
 	}
 	return key.ccolsRow.build()
@@ -90,7 +89,7 @@ func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) error {
 // This method uses the name of the type set by the caller (val.QName), ignoring that is read from the buffer.
 func loadViewValue(val *valueType, codecVer byte, buf *bytes.Buffer) (err error) {
 	if _, err = utils.ReadUInt16(buf); err != nil {
-		return fmt.Errorf("%v: error read value QNameID: %w", val.viewName, err)
+		return enrichError(err, val.viewName, "error read value QNameID")
 	}
 	if err = loadRowSysFields(&val.rowType, codecVer, buf); err != nil {
 		return err
@@ -98,10 +97,10 @@ func loadViewValue(val *valueType, codecVer byte, buf *bytes.Buffer) (err error)
 
 	length := uint32(0)
 	if length, err = utils.ReadUInt32(buf); err != nil {
-		return fmt.Errorf("%v: error read value dynobuffer length: %w", val.viewName, err)
+		return enrichError(err, val.viewName, "error read value dynobuffer length")
 	}
 	if buf.Len() < int(length) {
-		return fmt.Errorf("%v: error read value dynobuffer, expected %d bytes, but only %d bytes is available: %w", val.viewName, length, buf.Len(), io.ErrUnexpectedEOF)
+		return enrichError(io.ErrUnexpectedEOF, val.viewName, "error read value dynobuffer, expected %d bytes, but only %d bytes is available", length, buf.Len())
 	}
 	val.dyB.Reset(buf.Next(int(length)))
 

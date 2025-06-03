@@ -44,7 +44,7 @@ func (cfgs *AppConfigsType) AddBuiltInAppConfig(appName appdef.AppQName, appDef 
 func (cfgs *AppConfigsType) GetConfig(appName appdef.AppQName) *AppConfigType {
 	c, ok := (*cfgs)[appName]
 	if !ok {
-		panic(fmt.Errorf("unable return configuration for unknown application «%v»: %w", appName, istructs.ErrAppNotFound))
+		panic(enrichError(istructs.ErrAppNotFound, "unable return configuration for unknown application «%v»", appName))
 	}
 	return c
 }
@@ -110,12 +110,12 @@ func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAp
 func newBuiltInAppConfig(appName appdef.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
 	id, ok := istructs.ClusterApps[appName]
 	if !ok {
-		panic(fmt.Errorf("unable construct configuration for unknown application «%v»: %w", appName, istructs.ErrAppNotFound))
+		panic(enrichError(istructs.ErrAppNotFound, "unable construct configuration for unknown application «%v»", appName))
 	}
 
 	def, err := appDef.Build()
 	if err != nil {
-		panic(fmt.Errorf("%v: unable build application: %w", appName, err))
+		panic(enrichError(err, "unable build application «%v»", appName))
 	}
 
 	cfg := newAppConfig(appName, id, def, 0)
@@ -136,7 +136,7 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 		// BuiltIn application, appDefBuilder can be changed after add config
 		appDef, err := cfg.appDefBuilder.Build()
 		if err != nil {
-			return fmt.Errorf("%v: unable rebuild changed application: %w", cfg.Name, err)
+			return enrichError(err, "unable rebuild changed application «%v»", cfg.Name)
 		}
 		cfg.AppDef = appDef
 	}

@@ -44,6 +44,7 @@ var ErrPkgFolderNotFound = errors.New("pkg folder not found")
 var ErrGrantFollowsRevoke = errors.New("GRANT follows REVOKE in the same container")
 var ErrJobMustBeInAppWorkspace = errors.New("JOB is only allowed in AppWorkspaceWS")
 var ErrPositiveValueOnly = errors.New("positive value only allowed")
+var ErrBlobFieldOnlyInTable = errors.New("BLOB field only allowed in table")
 
 func ErrInvalidLocalPackageName(name string) error {
 	return fmt.Errorf("invalid local package name %s", name)
@@ -140,6 +141,10 @@ func ErrUnexpectedRootTableKind(kind int) error {
 
 func ErrReferenceToAbstractTable(tblName string) error {
 	return fmt.Errorf("reference to abstract table %s", tblName)
+}
+
+func ErrReferenceToWDocOrWRecord(fieldName string) error {
+	return fmt.Errorf("%s: reference to WDoc/WRecord", fieldName)
 }
 
 func ErrReferenceToTableNotInWorkspace(tblName string) error {

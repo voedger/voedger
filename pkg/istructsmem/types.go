@@ -91,7 +91,7 @@ func (row *rowType) build() error {
 // Checks is specified field is nullable (string- or []byte- type) and put value is nil or zero length.
 // In this case adds field to nils map, otherwise removes field from nils map.
 // #2785
-func (row *rowType) checkPutNil(field appdef.IField, value interface{}) {
+func (row *rowType) checkPutNil(field appdef.IField, value any) {
 	isNil := false
 
 	switch field.DataKind() {
@@ -136,7 +136,7 @@ func (row *rowType) collectError(err error) {
 	row.err = errors.Join(row.err, err)
 }
 
-func (row *rowType) collectErrorf(format string, a ...interface{}) {
+func (row *rowType) collectErrorf(format string, a ...any) {
 	row.collectError(fmt.Errorf(format, a...))
 }
 
@@ -161,7 +161,7 @@ func (row *rowType) copyFrom(src *rowType) {
 	if src.dyB != nil {
 		row.dyB = dynobuffers.NewBuffer(src.dyB.Scheme)
 		src.dyB.IterateFields(nil,
-			func(name string, data interface{}) bool {
+			func(name string, data any) bool {
 				row.dyB.Set(name, data)
 				return true
 			})
@@ -174,7 +174,7 @@ func (row *rowType) copyFrom(src *rowType) {
 func (row *rowType) empty() bool {
 	userFields := false
 	row.dyB.IterateFields(nil,
-		func(name string, _ interface{}) bool {
+		func(name string, _ any) bool {
 			userFields = true
 			return false
 		})
@@ -213,7 +213,7 @@ func (row *rowType) loadFromBytes(in []byte) (err error) {
 
 	var codec byte
 	if codec, err = utils.ReadByte(buf); err != nil {
-		return fmt.Errorf("error read codec version: %w", err)
+		return enrichError(err, "error read codec version")
 	}
 	switch codec {
 	case codec_RawDynoBuffer, codec_RDB_1, codec_RDB_2:
@@ -230,7 +230,7 @@ func (row *rowType) loadFromBytes(in []byte) (err error) {
 // Masks values in row. Digital values are masked by zeros, strings — by star «*». System fields are not masked
 func (row *rowType) maskValues() {
 	row.dyB.IterateFields(nil,
-		func(name string, data interface{}) bool {
+		func(name string, data any) bool {
 			if _, ok := data.(string); ok {
 				row.dyB.Set(name, maskString)
 			} else {
@@ -499,7 +499,7 @@ func (row *rowType) typeDef() appdef.IType {
 }
 
 // verifyToken verifies specified token for specified field and returns successfully verified token payload value or error
-func (row *rowType) verifyToken(fld appdef.IField, token string) (value interface{}, err error) {
+func (row *rowType) verifyToken(fld appdef.IField, token string) (value any, err error) {
 	payload := payloads.VerifiedValuePayload{}
 	tokens := row.appCfg.app.AppTokens()
 	if _, err = tokens.ValidateToken(token, &payload); err != nil {
@@ -565,9 +565,9 @@ func (row *rowType) AsInt64(name appdef.FieldName) (value int64) {
 	if fld.DataKind() == appdef.DataKind_RecordID {
 		switch name {
 		case appdef.SystemField_ID:
-			return int64(row.id) // nolint G115 TODO: data loss on sending RecordID to the client as a func rersponse
+			return int64(row.id) // nolint G115 TODO: data loss on sending RecordID to the client as a func response
 		case appdef.SystemField_ParentID:
-			return int64(row.parentID) // nolint G115 TODO: data loss on sending RecordID to the client as a func rersponse
+			return int64(row.parentID) // nolint G115 TODO: data loss on sending RecordID to the client as a func response
 		}
 	}
 
@@ -775,7 +775,7 @@ func (row *rowType) Fields(cb func(appdef.IField) bool) {
 
 	// user fields
 	row.dyB.IterateFields(nil,
-		func(name string, _ interface{}) bool {
+		func(name string, _ any) bool {
 			return cb(row.fieldDef(name))
 		})
 }

@@ -54,7 +54,7 @@ func TestRateLimits_BasicUsage(t *testing.T) {
 	as, err := provider.BuiltIn(appName)
 	require.NoError(err)
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		// no limits exceeded
 		require.False(as.IsFunctionRateLimitsExceeded(qName1, 42))
 

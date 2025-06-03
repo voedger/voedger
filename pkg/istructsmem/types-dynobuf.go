@@ -10,7 +10,6 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"io"
 
 	"github.com/untillpro/dynobuffers"
@@ -32,8 +31,7 @@ import (
 //	— string value can be converted to QName and []byte kinds
 //
 // QName values, record- and event- values returned as []byte
-func (row *rowType) clarifyJSONValue(value interface{}, kind appdef.DataKind) (res interface{}, err error) {
-outer:
+func (row *rowType) clarifyJSONValue(value any, kind appdef.DataKind) (res any, err error) {
 	switch kind {
 	case appdef.DataKind_int8: // #3435 [~server.vsql.smallints/cmp.istructs~impl]
 		switch v := value.(type) {
@@ -78,21 +76,17 @@ outer:
 			return coreutils.ClarifyJSONNumber(v, kind)
 		}
 	case appdef.DataKind_RecordID:
-		var int64Val int64
 		switch v := value.(type) {
 		case int64:
-			int64Val = v
+			if v < 0 {
+				return nil, ErrWrongRecordID("negative value %d", v)
+			}
+			return istructs.RecordID(v), nil
 		case istructs.RecordID:
 			return v, nil
 		case json.Number:
 			return coreutils.ClarifyJSONNumber(v, kind)
-		default:
-			break outer
 		}
-		if int64Val < 0 {
-			return nil, ErrWrongRecordID("negative value %d", int64Val)
-		}
-		return istructs.RecordID(int64Val), nil
 	case appdef.DataKind_bytes:
 		switch v := value.(type) {
 		case string:
@@ -225,7 +219,7 @@ func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 
 	var QNameID uint16
 	if QNameID, err = utils.ReadUInt16(buf); err != nil {
-		return fmt.Errorf("error read row QNameID: %w", err)
+		return enrichError(err, "error read row QNameID")
 	}
 	if err = row.setQNameID(QNameID); err != nil {
 		return err
@@ -240,10 +234,10 @@ func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 
 	length := uint32(0)
 	if length, err = utils.ReadUInt32(buf); err != nil {
-		return fmt.Errorf("error read dynobuffer length: %w", err)
+		return enrichError(err, "error read dynobuffer length")
 	}
 	if buf.Len() < int(length) {
-		return fmt.Errorf("error read dynobuffer, expected %d bytes, but only %d bytes is available: %w", length, buf.Len(), io.ErrUnexpectedEOF)
+		return enrichError(io.ErrUnexpectedEOF, "error read dynobuffer, expected %d bytes, but only %d bytes is available", length, buf.Len())
 	}
 	row.dyB.Reset(buf.Next(int(length)))
 
@@ -275,37 +269,37 @@ func loadRowSysFields(row *rowType, codecVer byte, buf *bytes.Buffer) (err error
 		sysFieldMask = typeKindSysFieldsMask(row.typ.Kind())
 	} else {
 		if sysFieldMask, err = utils.ReadUInt16(buf); err != nil {
-			return fmt.Errorf("error read system fields mask: %w", err)
+			return enrichError(err, "error read system fields mask")
 		}
 	}
 
 	if (sysFieldMask & sfm_ID) == sfm_ID {
 		var id uint64
 		if id, err = utils.ReadUInt64(buf); err != nil {
-			return fmt.Errorf("error read record ID: %w", err)
+			return enrichError(err, "error read record ID")
 		}
 		row.setID(istructs.RecordID(id))
 	}
 	if (sysFieldMask & sfm_ParentID) == sfm_ParentID {
 		var id uint64
 		if id, err = utils.ReadUInt64(buf); err != nil {
-			return fmt.Errorf("error read parent record ID: %w", err)
+			return enrichError(err, "error read parent record ID")
 		}
 		row.setParent(istructs.RecordID(id))
 	}
 	if (sysFieldMask & sfm_Container) == sfm_Container {
 		var id uint16
 		if id, err = utils.ReadUInt16(buf); err != nil {
-			return fmt.Errorf("error read record container ID: %w", err)
+			return enrichError(err, "error read record container ID")
 		}
 		if err = row.setContainerID(containers.ContainerID(id)); err != nil {
-			return fmt.Errorf("error read record container: %w", err)
+			return enrichError(err, "error read record container")
 		}
 	}
 	if (sysFieldMask & sfm_IsActive) == sfm_IsActive {
 		var a bool
 		if a, err = utils.ReadBool(buf); err != nil {
-			return fmt.Errorf("error read record is active: %w", err)
+			return enrichError(err, "error read record is active")
 		}
 		row.setActive(a)
 	}

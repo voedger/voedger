@@ -3216,3 +3216,47 @@ func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
 	require.NoError(err)
 	require.True(ok)
 }
+
+func Test_NotAllowedTypes(t *testing.T) {
+
+	require := assertions(t)
+
+	t.Run("BLOB in VIEWs not allowed", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test();
+			WORKSPACE MyWS (
+				VIEW v1(
+					f1 int32,
+					f2 binary large object,
+					PRIMARY KEY(f1)
+				) AS RESULT OF p;
+
+				EXTENSION ENGINE BUILTIN (
+					PROJECTOR p AFTER EXECUTE ON c INTENTS (sys.View(v1));
+					COMMAND c();
+				);
+			);`, "file.vsql:5:9: BLOB field only allowed in table")
+	})
+
+	t.Run("BLOB in TYPEs not allowed", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test();
+			WORKSPACE MyWS (
+				TYPE t1(
+					f1 int32,
+					f2 binary large object
+				);
+			);`, "file.vsql:5:9: BLOB field only allowed in table")
+	})
+
+	t.Run("Reference from CDoc to WDoc not allowed", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test();
+			WORKSPACE MyWS (
+				TABLE t01 INHERITS sys.WDoc();
+				TABLE t02 INHERITS sys.WRecord();
+				TABLE t1 INHERITS sys.CDoc(
+					f1 ref(t01),
+					f2 ref(t02)
+				);
+			);`, "file.vsql:6:13: t01: reference to WDoc/WRecord",
+			"file.vsql:7:13: t02: reference to WDoc/WRecord")
+	})
+}

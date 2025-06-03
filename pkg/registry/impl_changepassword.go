@@ -32,12 +32,12 @@ func cmdChangePasswordExec(args istructs.ExecCommandArgs) (err error) {
 	oldPwd := args.ArgumentUnloggedObject.AsString(field_OldPassword)
 	newPwd := args.ArgumentUnloggedObject.AsString(field_NewPassword)
 
-	cdocLogin, doesLoginExist, err := GetCDocLogin(login, args.State, args.WSID, appName)
+	cdocLogin, loginExists, err := GetCDocLogin(login, args.State, args.WSID, appName)
 	if err != nil {
 		return err
 	}
 
-	if !doesLoginExist {
+	if !loginExists {
 		return errLoginDoesNotExist(login)
 	}
 

@@ -195,7 +195,7 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 					}
 					chain = append(chain, iws)
 					for _, dq := range iws.Inherits {
-						err := resolveInCtx[*WorkspaceStmt](dq, ictx, func(f *WorkspaceStmt, wSchema *PackageSchemaAST) error {
+						err := resolveInCtx(dq, ictx, func(f *WorkspaceStmt, wSchema *PackageSchemaAST) error {
 							if !lookInOtherPackages && wSchema != ictx.pkg {
 								return nil // do not look tags in other packages
 							}

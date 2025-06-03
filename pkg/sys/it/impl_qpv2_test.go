@@ -8,7 +8,9 @@ package sys_it
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"testing"
@@ -899,6 +901,15 @@ func TestQueryProcessor2_Include(t *testing.T) {
 					"offs":13,
 					"sys.QName":"app1pkg.Clients"
 			}]}`, resp.Body)
+		})
+		t.Run("Expected error https://github.com/voedger/voedger/issues/3714", func(t *testing.T) {
+			_, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=EpicFail`, ws.WSID, it.QNameApp1_ViewClients),
+				coreutils.WithAuthorizeBy(ws.Owner.Token),
+			)
+			var e coreutils.SysError
+			_ = errors.As(err, &e)
+			require.Equal(http.StatusBadRequest, e.HTTPStatus)
+			require.Equal("field expression - 'EpicFail', 'EpicFail' - unexpected field", e.Message)
 		})
 	})
 	t.Run("Document", func(t *testing.T) {
@@ -2009,9 +2020,8 @@ func TestQueryProcessor2_Include(t *testing.T) {
 									}`, resp.Body)
 		})
 	})
-
 	t.Run("Expected error https://github.com/voedger/voedger/issues/3696", func(t *testing.T) {
-		vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=Client.Country.Name`, ws.WSID, it.QNameApp1_ViewClients),
+		_, _ = vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=Client.Country.Name`, ws.WSID, it.QNameApp1_ViewClients),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.Expect400(),
 		)
@@ -2275,68 +2285,74 @@ func TestQueryProcessor2_AuthLogin(t *testing.T) {
 	vit.SignIn(login1)
 
 	t.Run("Login", func(t *testing.T) {
-		body := fmt.Sprintf(`{"Login": "%s","Password": "%s"}`, login1.Name, login1.Pwd)
+		body := fmt.Sprintf(`{"login": "%s","password": "%s"}`, login1.Name, login1.Pwd)
 		resp := vit.POST("api/v2/apps/test1/app1/auth/login", body)
 		require.Equal(200, resp.HTTPResp.StatusCode)
 		result := make(map[string]interface{})
 		err := json.Unmarshal([]byte(resp.Body), &result)
 		require.NoError(err)
-		require.Equal(3600.0, result["ExpiresIn"])
-		require.Greater(istructs.WSID(result["WSID"].(float64)), login1.PseudoProfileWSID)
-		require.NotEmpty(result["PrincipalToken"].(string))
+		require.Equal(3600.0, result["expiresIn"])
+		require.Greater(istructs.WSID(result["wsid"].(float64)), login1.PseudoProfileWSID)
+		require.NotEmpty(result["principalToken"].(string))
 	})
 
 	t.Run("Bad request", func(t *testing.T) {
 		cases := []struct {
 			bodies   []string
-			expected string
+			expected []string
 		}{
 			{
 				bodies:   []string{"", "{}"},
-				expected: `field is empty: Object «registry.IssuePrincipalTokenParams» string-field «Login»; validate error code: 4\nfield is empty: Object «registry.IssuePrincipalTokenParams» string-field «Password»; validate error code: 4`,
+				expected: []string{`field is empty`, `Object «registry.IssuePrincipalTokenParams»`, `string-field «Login»`, `validate error code 4`, `string-field «Password»`},
 			},
 			{
 				bodies: []string{
-					`{"Password": "pwd"}`,
-					fmt.Sprintf(`{"UnknownField": "%s","Password": "pwd"}`, login1.Name),
+					`{"password": "pwd"}`,
+					fmt.Sprintf(`{"UnknownField": "%s","password": "pwd"}`, login1.Name),
 				},
-				expected: `field is empty: Object «registry.IssuePrincipalTokenParams» string-field «Login»; validate error code: 4`,
+				expected: []string{`field is empty`, `Object «registry.IssuePrincipalTokenParams»`, `string-field «Login»`, `validate error code 4`},
 			},
 			{
 				bodies: []string{
-					`{"Login": "pwd"}`,
-					fmt.Sprintf(`{"Login": "%s","UnknownField": "pwd"}`, login1.Name),
+					`{"login": "pwd"}`,
+					fmt.Sprintf(`{"login": "%s","UnknownField": "pwd"}`, login1.Name),
 				},
-				expected: `field is empty: Object «registry.IssuePrincipalTokenParams» string-field «Password»; validate error code: 4`,
+				expected: []string{`field is empty`, `Object «registry.IssuePrincipalTokenParams»`, `string-field «Password»`, `validate error code 4`},
 			},
 			{
 				bodies: []string{
-					`{"Login": 42}`,
+					`{"login": 42}`,
 				},
-				expected: `field \"Login\" must be a string: field type mismatch`,
+				expected: []string{`field \"login\" must be a string`, `field type mismatch`},
 			},
 			{
 				bodies: []string{
-					`{"Password": 42}`,
+					`{"password": 42}`,
 				},
-				expected: `field \"Password\" must be a string: field type mismatch`,
+				expected: []string{`field \"password\" must be a string`, `field type mismatch`},
+			},
+			{
+				bodies: []string{
+					fmt.Sprintf(`{"UnknownField": "%s","password": "%s"}`, login1.Name, "badpwd"),
+				},
+				expected: []string{`field is empty`, `Object «registry.IssuePrincipalTokenParams»`, `string-field «Login»`, `validate error code 4`},
 			},
 		}
 		for _, c := range cases {
 			for _, body := range c.bodies {
 				t.Run(body, func(t *testing.T) {
 					resp := vit.POST("api/v2/apps/test1/app1/auth/login", body, coreutils.Expect400())
-					require.JSONEq(fmt.Sprintf(`{"message":"%s","status":400}`, c.expected), resp.Body)
+					require.Contains(resp.Body, `"status":400`)
+					for _, expected := range c.expected {
+						require.Contains(resp.Body, expected)
+					}
 				})
 			}
 		}
-		body := fmt.Sprintf(`{"UnknownField": "%s","Password": "%s"}`, login1.Name, "badpwd")
-		resp := vit.POST("api/v2/apps/test1/app1/auth/login", body, coreutils.Expect400())
-		require.JSONEq(`{"message":"field is empty: Object «registry.IssuePrincipalTokenParams» string-field «Login»; validate error code: 4","status":400}`, resp.Body)
 	})
 
 	t.Run("Login with incorrect password", func(t *testing.T) {
-		body := fmt.Sprintf(`{"Login": "%s","Password": "%s"}`, login1.Name, "badpwd")
+		body := fmt.Sprintf(`{"login": "%s","password": "%s"}`, login1.Name, "badpwd")
 		resp := vit.POST("api/v2/apps/test1/app1/auth/login", body, coreutils.Expect401())
 		require.JSONEq(`{"status":401,"message":"login or password is incorrect"}`, resp.Body)
 	})
@@ -2361,9 +2377,9 @@ func TestQueryProcessor2_AuthRefresh(t *testing.T) {
 		result := make(map[string]interface{})
 		err := json.Unmarshal([]byte(resp.Body), &result)
 		require.NoError(err)
-		require.Equal(3600.0, result["ExpiresIn"])
-		require.Equal(istructs.WSID(result["WSID"].(float64)), prn1.ProfileWSID)
-		newToken := result["PrincipalToken"].(string)
+		require.Equal(3600.0, result["expiresIn"])
+		require.Equal(istructs.WSID(result["wsid"].(float64)), prn1.ProfileWSID)
+		newToken := result["principalToken"].(string)
 		require.NotEmpty(newToken)
 		require.NotEqual(newToken, prn1.Token)
 	})

@@ -160,9 +160,9 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 			case *RevokeStmt:
 				analyseRevoke(v, ictx)
 			case *TableStmt:
-				analyseRefFields(v.Items, ictx)
+				analyseRefFields(v.Items, ictx, v.tableTypeKind)
 			case *TypeStmt:
-				analyseRefFields(v.Items, ictx)
+				analyseRefFields(v.Items, ictx, appdef.TypeKind_Object)
 			case *ViewStmt:
 				analyseViewRefFields(v.Items, ictx)
 			}
@@ -672,10 +672,30 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 	limit.workspace = c.mustCurrentWorkspace()
 }
 
+func analyzeDatatype(dt *DataType, c *iterateCtx, isTable bool) {
+	if dt.Blob && !isTable {
+		c.stmtErr(&dt.Pos, ErrBlobFieldOnlyInTable)
+	}
+	vc := dt.Varchar
+	if vc != nil && vc.MaxLen != nil {
+		if *vc.MaxLen > uint64(appdef.MaxFieldLength) {
+			c.stmtErr(&vc.Pos, ErrMaxFieldLengthTooLarge)
+		}
+	}
+	bb := dt.Bytes
+	if bb != nil && bb.MaxLen != nil {
+		if *bb.MaxLen > uint64(appdef.MaxFieldLength) {
+			c.stmtErr(&bb.Pos, ErrMaxFieldLengthTooLarge)
+		}
+	}
+
+}
+
 func analyzeView(view *ViewStmt, c *iterateCtx) {
 	view.pkRef = nil
 	fields := make(map[string]int)
 	for i := range view.Items {
+
 		fe := &view.Items[i]
 		if fe.PrimaryKey != nil {
 			if view.pkRef != nil {
@@ -691,6 +711,7 @@ func analyzeView(view *ViewStmt, c *iterateCtx) {
 			} else {
 				fields[string(f.Name.Value)] = i
 			}
+			analyzeDatatype(&fe.Field.Type, c, false)
 		} else if fe.RefField != nil {
 			rf := fe.RefField
 			if _, ok := fields[string(rf.Name.Value)]; ok {
@@ -1418,18 +1439,7 @@ func analyseFields(items []TableItemExpr, c *iterateCtx, isTable bool) {
 				}
 			}
 			if field.Type.DataType != nil {
-				vc := field.Type.DataType.Varchar
-				if vc != nil && vc.MaxLen != nil {
-					if *vc.MaxLen > uint64(appdef.MaxFieldLength) {
-						c.stmtErr(&vc.Pos, ErrMaxFieldLengthTooLarge)
-					}
-				}
-				bb := field.Type.DataType.Bytes
-				if bb != nil && bb.MaxLen != nil {
-					if *bb.MaxLen > uint64(appdef.MaxFieldLength) {
-						c.stmtErr(&bb.Pos, ErrMaxFieldLengthTooLarge)
-					}
-				}
+				analyzeDatatype(field.Type.DataType, c, isTable)
 			} else {
 				if !isTable { // analysing a TYPE
 					err := resolveInCtx(*field.Type.Def, c, func(f *TypeStmt, pkg *PackageSchemaAST) error {
@@ -1501,7 +1511,7 @@ func analyseFields(items []TableItemExpr, c *iterateCtx, isTable bool) {
 	}
 }
 
-func analyseRefFields(items []TableItemExpr, c *iterateCtx) {
+func analyseRefFields(items []TableItemExpr, c *iterateCtx, tableTypeKind appdef.TypeKind) {
 	for i := range items {
 		item := items[i]
 		if item.RefField != nil {
@@ -1510,6 +1520,10 @@ func analyseRefFields(items []TableItemExpr, c *iterateCtx) {
 				if err := resolveInCtx(rf.RefDocs[i], c, func(f *TableStmt, tblPkg *PackageSchemaAST) error {
 					if f.Abstract {
 						return ErrReferenceToAbstractTable(rf.RefDocs[i].String())
+					}
+					if (tableTypeKind == appdef.TypeKind_CRecord || tableTypeKind == appdef.TypeKind_CDoc) &&
+						(f.tableTypeKind == appdef.TypeKind_WRecord || f.tableTypeKind == appdef.TypeKind_WDoc) {
+						return ErrReferenceToWDocOrWRecord(rf.RefDocs[i].String())
 					}
 					rf.refQNames = append(rf.refQNames, tblPkg.NewQName(f.Name))
 					rf.refTables = append(rf.refTables, tableAddr{f, tblPkg})
@@ -1522,7 +1536,7 @@ func analyseRefFields(items []TableItemExpr, c *iterateCtx) {
 		}
 		if item.NestedTable != nil {
 			nestedTable := &item.NestedTable.Table
-			analyseRefFields(nestedTable.Items, c)
+			analyseRefFields(nestedTable.Items, c, nestedTable.tableTypeKind)
 		}
 	}
 }
