@@ -53,10 +53,6 @@ func writeResponse(w http.ResponseWriter, data string) bool {
 	return true
 }
 
-func writeNotImplemented(rw http.ResponseWriter) {
-	WriteTextResponse(rw, "not implemented", http.StatusNotImplemented)
-}
-
 type filteringWriter struct {
 	w io.Writer
 }

@@ -463,23 +463,23 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID
 			if underscorePos < 0 {
 				return nil, fmt.Errorf("wrong blob file name format: %s", ent.Name())
 			}
-			blobOwnerRawRecordIDStr := ent.Name()[:underscorePos]
-			blobOwnerRawRecordIDIntf, err := coreutils.ClarifyJSONNumber(json.Number(blobOwnerRawRecordIDStr), appdef.DataKind_RecordID)
+			blobOwnerRawIDStr := ent.Name()[:underscorePos]
+			blobOwnerRawIDIntf, err := coreutils.ClarifyJSONNumber(json.Number(blobOwnerRawIDStr), appdef.DataKind_RecordID)
 			if err != nil {
 				return nil, fmt.Errorf("wrong recordID in blob %s: %w", ent.Name(), err)
 			}
-			blobOwnerRawRecordID := blobOwnerRawRecordIDIntf.(istructs.RecordID)
+			blobOwnerRawID := blobOwnerRawIDIntf.(istructs.RecordID)
 			fieldName := strings.ReplaceAll(ent.Name()[underscorePos+1:], filepath.Ext(ent.Name()), "")
 			if len(fieldName) == 0 {
 				return nil, fmt.Errorf("no fieldName in blob %s", ent.Name())
 			}
-			fieldNames, ok := blobIDs[blobOwnerRawRecordID]
+			fieldNames, ok := blobIDs[blobOwnerRawID]
 			if !ok {
 				fieldNames = map[string]struct{}{}
-				blobIDs[blobOwnerRawRecordID] = fieldNames
+				blobIDs[blobOwnerRawID] = fieldNames
 			}
 			if _, exists := fieldNames[fieldName]; exists {
-				return nil, fmt.Errorf("recordID %d: blob for field %s is met again: %s", blobOwnerRawRecordID, fieldName, ent.Name())
+				return nil, fmt.Errorf("recordID %d: blob for field %s is met again: %s", blobOwnerRawID, fieldName, ent.Name())
 			}
 			fieldNames[fieldName] = struct{}{}
 			blobContent, err := wsTemplateFS.ReadFile(ent.Name())
@@ -494,7 +494,7 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID
 					return nil, err
 				}
 				recordIDFromTemplate := recordIDFromTemplateIntf.(istructs.RecordID)
-				if recordIDFromTemplate == blobOwnerRawRecordID {
+				if recordIDFromTemplate == blobOwnerRawID {
 					ownerQNameStr := wsTemplateRecord[appdef.SystemField_QName].(string)
 					ownerQName, err = appdef.ParseQName(ownerQNameStr)
 					if err != nil {
@@ -512,7 +512,7 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID
 				OwnerRecord:      ownerQName,
 				OwnerRecordField: fieldName,
 				Content:          blobContent,
-				OwnerRecordRawID: istructs.RecordID(blobOwnerRawRecordID),
+				OwnerRecordRawID: blobOwnerRawID,
 			})
 		}
 	}
