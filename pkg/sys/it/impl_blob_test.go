@@ -35,6 +35,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
+	// [~server.apiv2.blobs/it.TestBlobsCreate~impl]
 	// write
 	blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, expBLOB,
 		it.QNameDocWithBLOB, it.Field_Blob, coreutils.WithAuthorizeBy(ws.Owner.Token))
@@ -69,6 +70,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	require.Equal("test", blobReader.Name)
 	require.Equal(expBLOB, actualBLOBContent)
 
+	// [~server.apiv2.blobs/it.TestBlobsRead~impl]
 	// read, authorize over unescaped cookies
 	blobReader = vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", ownerID,
 		coreutils.WithCookies(coreutils.Authorization, "Bearer "+ws.Owner.Token),
@@ -282,11 +284,13 @@ func TestBasicUsage_Temporary(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	// write
+	// [~server.apiv2.tblobs/it.TestTBlobsCreate~impl]
 	blobSUUID := vit.UploadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, expBLOB, iblobstorage.DurationType_1Day,
 		coreutils.WithAuthorizeBy(ws.Owner.Token))
 	log.Println(blobSUUID)
 
 	// read
+	// [~server.apiv2.blobs/it.TestTBlobsRead~impl]
 	blobReader := vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, blobSUUID, coreutils.WithAuthorizeBy(ws.Owner.Token))
 	actualBLOBContent, err := io.ReadAll(blobReader)
 	require.NoError(err)
@@ -298,11 +302,9 @@ func TestBasicUsage_Temporary(t *testing.T) {
 
 		// make the temp blob almost expired
 		vit.TimeAdd(time.Duration(iblobstorage.DurationType_1Day.Seconds()-1) * time.Second)
-		// testingu.MockTime.Add(time.Duration(iblobstorage.DurationType_1Day.Seconds()-1) * time.Second)
 
 		// re-take the token because it is expired
 		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-		// token := vit.GetPrincipal(istructs.AppQName_test1_app1, ws.Owner.Name).Token
 
 		// check the temp blob still exists
 		blobReader := vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, blobSUUID, coreutils.WithAuthorizeBy(ws.Owner.Token))

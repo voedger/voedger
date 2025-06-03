@@ -18,6 +18,6 @@ var (
 	TemporaryBLOBDurationToURLTTL = map[iblobstorage.DurationType]string{
 		iblobstorage.DurationType_1Day: "1d",
 	}
-	blobCreatePersistentRespRE = regexp.MustCompile(`"BlobID":\s*(\d+)`)
-	blobCreateTempRespRE       = regexp.MustCompile(`"BlobSUUID":\s*"(.+)"`)
+	blobCreatePersistentRespRE = regexp.MustCompile(`"blobID":\s*(\d+)`)
+	blobCreateTempRespRE       = regexp.MustCompile(`"blobSUUID":\s*"(.+)"`)
 )

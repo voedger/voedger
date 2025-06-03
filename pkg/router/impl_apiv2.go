@@ -115,25 +115,30 @@ func (s *httpService) registerHandlersV2() {
 		Methods(http.MethodPost).Name("create device")
 
 	// blob create /api/v2/apps/{owner}/{app}/workspaces/{wsid}/docs/{doc}/blobs/{field}
+	// [~server.apiv2.blobs/cmp.routerBlobsCreatePathHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/docs/{%s}.{%s}/blobs/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table, URLPlaceholder_field),
 		corsHandler(requestHandlerV2_blobs_create(s.blobRequestHandler, s.requestSender))).
 		Methods(http.MethodPost).Name("blobs create")
 
 	// blob read GET /api/v2/apps/{owner}/{app}/workspaces/{wsid}/docs/{pkg}.{table}/{id}/blobs/{fieldName}
+	// [~server.apiv2.blobs/cmp.routerBlobsReadPathHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/docs/{%s}.{%s}/{%s}/blobs/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg,
 		URLPlaceholder_table, URLPlaceholder_id, URLPlaceholder_field),
 		corsHandler(requestHandlerV2_blobs_read(s.blobRequestHandler, s.requestSender))).
 		Methods(http.MethodGet).Name("blobs read")
 
+
 	// temp blob create /api/v2/apps/{owner}/{app}/workspaces/{wsid}/tblobs
+	// [~server.apiv2.tblobs/cmp.routerTBlobsCreatePathHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/tblobs",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid),
 		corsHandler(requestHandlerV2_tempblobs_create(s.blobRequestHandler, s.requestSender))).
 		Methods(http.MethodPost).Name("temp blobs create")
 
 	// temp blob read GET /api/v2/apps/{owner}/{app}/workspaces/{wsid}/tblobs/{suuid}
+	// [~server.apiv2.blobs/cmp.routerTBlobsReadPathHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/tblobs/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobIDOrSUUID),
 		corsHandler(requestHandlerV2_tempblobs_read(s.blobRequestHandler, s.requestSender))).

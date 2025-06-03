@@ -403,6 +403,7 @@ func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, name st
 }
 
 func (vit *VIT) SqlQueryRows(ws *AppWorkspace, sqlQuery string, fmtArgs ...any) []map[string]interface{} {
+
 	vit.T.Helper()
 	body := fmt.Sprintf(`{"args":{"Query":"%s"},"elements":[{"fields":["Result"]}]}`, fmt.Sprintf(sqlQuery, fmtArgs...))
 	resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(ws.Owner.Token))
@@ -417,14 +418,7 @@ func (vit *VIT) SqlQueryRows(ws *AppWorkspace, sqlQuery string, fmtArgs ...any) 
 
 func (vit *VIT) SqlQuery(ws *AppWorkspace, sqlQuery string, fmtArgs ...any) map[string]interface{} {
 	vit.T.Helper()
-	body := fmt.Sprintf(`{"args":{"Query":"%s"},"elements":[{"fields":["Result"]}]}`, fmt.Sprintf(sqlQuery, fmtArgs...))
-	resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(ws.Owner.Token))
-	if len(resp.Sections[0].Elements) > 1 {
-		vit.T.Fatal("sql query returned few rows. Use SqlQueryRows")
-	}
-	res := map[string]interface{}{}
-	require.NoError(vit.T, json.Unmarshal([]byte(resp.Sections[0].Elements[0][0][0][0].(string)), &res))
-	return res
+	return vit.SqlQueryRows(ws, sqlQuery, fmtArgs...)[0]
 }
 
 

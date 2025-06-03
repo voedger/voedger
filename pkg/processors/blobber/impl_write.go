@@ -248,9 +248,9 @@ func replySuccess_V1(bw *blobWorkpiece) (err error) {
 func replySuccess_V2(bw *blobWorkpiece) (err error) {
 	writer := bw.blobMessageWrite.okResponseIniter(coreutils.ContentType, coreutils.ContentType_ApplicationJSON)
 	if bw.isPersistent() {
-		_, err = fmt.Fprintf(writer, `{"BlobID":%d}`, bw.newBLOBID)
+		_, err = fmt.Fprintf(writer, `{"blobID":%d}`, bw.newBLOBID)
 	} else {
-		_, err = fmt.Fprintf(writer, `{"BlobSUUID":"%s"}`, bw.newSUUID)
+		_, err = fmt.Fprintf(writer, `{"blobSUUID":"%s"}`, bw.newSUUID)
 	}
 	return err
 }
