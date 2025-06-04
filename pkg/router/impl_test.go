@@ -420,7 +420,7 @@ func startRouter(t *testing.T, router *testRouter, rp RouterParams, sendTimeout 
 	ctx, cancel := context.WithCancel(context.Background())
 	requestSender := bus.NewIRequestSender(testingu.MockTime, sendTimeout, requestHandler)
 	httpSrv, acmeSrv, adminService := Provide(rp, nil, nil, nil, requestSender,
-		map[appdef.AppQName]istructs.NumAppWorkspaces{istructs.AppQName_test1_app1: 10}, nil, nil)
+		map[appdef.AppQName]istructs.NumAppWorkspaces{istructs.AppQName_test1_app1: 10}, nil, nil, nil)
 	require.Nil(t, acmeSrv)
 	require.NoError(t, httpSrv.Prepare(nil))
 	require.NoError(t, adminService.Prepare(nil))

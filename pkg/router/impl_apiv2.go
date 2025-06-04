@@ -20,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -118,12 +119,17 @@ func (s *httpService) registerHandlersV2() {
 		corsHandler(requestHandlerV2_create_device(s.numsAppsWorkspaces, s.federation))).
 		Methods(http.MethodPost).Name("create device")
 
-	// notifications /api/v2/apps/{owner}/{app}/notifications
+	// notifications subscribe+watch /api/v2/apps/{owner}/{app}/notifications
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
-		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.federation))).
-		Methods(http.MethodPost).Name("notifications")
+		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory))).
+		Methods(http.MethodPost).Name("notifications subscribe + watch")
 
+	// notifications unsubscribe /api/v2/apps/{owner}/{app}/notifications/{channelId}/workspaces/{wsid}/subscriptions/{entity}
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications",
+		URLPlaceholder_appOwner, URLPlaceholder_appName),
+		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory))).
+		Methods(http.MethodDelete).Name("notifications unsubscribe")
 }
 
 func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
@@ -194,10 +200,31 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 	}
 }
 
-func requestHandlerV2_notifications(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, federation federation.IFederation) http.HandlerFunc {
+func requestHandlerV2_notifications(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
+	n10n in10n.IN10nBroker, appTokensFactory payloads.IAppTokensFactory) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
+		flusher, ok := rw.(http.Flusher)
+		if !ok {
+			// notest
+			WriteTextResponse(rw, "streaming unsupported!", http.StatusInternalServerError)
+			return
+		}
 		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
 		if !ok {
+			return
+		}
+
+		principalToken, err := bus.GetPrincipalToken(busRequest)
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		principalPayload := payloads.PrincipalPayload{}
+		appTokens := appTokensFactory.New(busRequest.AppQName)
+		_, err = appTokens.ValidateToken(principalToken, &principalPayload)
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
 			return
 		}
 
@@ -207,9 +234,43 @@ func requestHandlerV2_notifications(numsAppsWorkspaces map[appdef.AppQName]istru
 			return
 		}
 
-		_ = subscriptions
-		_ = expiresIn
+		subjectLogin := istructs.SubjectLogin(principalPayload.Login)
+		channel, err := n10n.NewChannel(istructs.SubjectLogin(subjectLogin), hours24)
+		if err != nil {
+			ReplyCommonError(rw, "create new channel failed: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 
+		if _, err = fmt.Fprintf(rw, "event: channelId\ndata: %s\n\n", channel); err != nil {
+			logger.Error("failed to write created channel id to client:", err)
+			return
+		}
+		flusher.Flush()
+
+		subscribedProjectionKeys := []in10n.ProjectionKey{}
+		defer func() {
+			for _, subscribedKey := range subscribedProjectionKeys {
+				if err = n10n.Unsubscribe(channel, subscribedKey); err != nil {
+					logger.Error(fmt.Sprintf("failed to unsubscribe key %#v: %s", subscribedKey, err))
+				}
+			}
+		}()
+
+		for i, sub := range subscriptions {
+			projectionKey := in10n.ProjectionKey{
+				App:        busRequest.AppQName,
+				Projection: sub.entity,
+			}
+			err := n10n.Subscribe(channel, projectionKey)
+			if err != nil {
+				ReplyCommonError(rw, fmt.Sprintf("subscriptions[%d]: subscribe failed: %s", i, err), http.StatusInternalServerError)
+				return
+			}
+			subscribedProjectionKeys = append(subscribedProjectionKeys, projectionKey)
+		}
+
+		serverSubscriptions(req.Context(), rw, flusher, channel, n10n, subjectLogin)
+		_ = expiresIn
 	}
 }
 
@@ -219,18 +280,20 @@ type SubscriptionJSON struct {
 }
 
 type subscription struct {
-	entity string
+	entity appdef.QName
 	wsid   istructs.WSID
 }
 
-type n10nArgs struct {
+type N10nArgs struct {
 	Subscriptions []SubscriptionJSON `json:"subscriptions"`
 	ExpiresIn     int64              `json:"expiresIn"`
 }
 
 func parseN10nArgs(body string) (subscriptions []subscription, expiresIn int64, err error) {
-	n10nArgs := n10nArgs{}
-	coreutils.JSONUnmarshalDisallowUnknownFields([]byte(body), &n10nArgs)
+	n10nArgs := N10nArgs{}
+	if err := coreutils.JSONUnmarshalDisallowUnknownFields([]byte(body), &n10nArgs); err != nil {
+		return nil, 0, fmt.Errorf("failed to unmarshal request body: %w", err)
+	}
 	if n10nArgs.ExpiresIn == 0 {
 		n10nArgs.ExpiresIn = defaultN10NExpiresInSeconds
 	}
@@ -239,14 +302,18 @@ func parseN10nArgs(body string) (subscriptions []subscription, expiresIn int64, 
 	}
 	for i, subscr := range n10nArgs.Subscriptions {
 		if len(subscr.Entity) == 0 || len(subscr.WSIDNumber.String()) == 0 {
-			return nil, 0, fmt.Errorf("subscriptions[%d]: entty and\\or wsid is not provided", i)
+			return nil, 0, fmt.Errorf("subscriptions[%d]: entity and\\or wsid is not provided", i)
 		}
 		wsid, err := coreutils.ClarifyJSONWSID(subscr.WSIDNumber)
 		if err != nil {
 			return nil, 0, err
 		}
+		entity, err := appdef.ParseQName(subscr.Entity)
+		if err != nil {
+			return nil, 0, fmt.Errorf("subscriptions[%d]: failed to parse entity %s as a QName: %w", i, subscr.Entity, err)
+		}
 		subscriptions = append(subscriptions, subscription{
-			entity: subscr.Entity,
+			entity: entity,
 			wsid:   wsid,
 		})
 	}

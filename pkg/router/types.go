@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 )
 
@@ -52,6 +53,7 @@ type httpService struct {
 	blobRequestHandler blobprocessor.IRequestHandler
 	iTokens            itokens.ITokens
 	federation         federation.IFederation
+	appTokensFactory   payloads.IAppTokensFactory
 }
 
 type httpsService struct {
