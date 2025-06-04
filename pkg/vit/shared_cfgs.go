@@ -37,28 +37,30 @@ const (
 )
 
 const (
-	Field_Year         = "Year"
-	Field_Month        = "Month"
-	Field_Day          = "Day"
-	Field_StringValue  = "StringValue"
-	Field_Number       = "Number"
-	Field_CharCode     = "CharCode"
-	Field_Code         = "Code"
-	Field_FirstName    = "FirstName"
-	Field_LastName     = "LastName"
-	Field_DOB          = "DOB"
-	Field_Wallet       = "Wallet"
-	Field_Balance      = "Balance"
-	Field_Currency     = "Currency"
-	Field_Name         = "Name"
-	Field_Country      = "Country"
-	Field_Client       = "Client"
-	Field_Withdraw     = "Withdraw"
-	Field_Deposit      = "Deposit"
-	Field_Capabilities = "Capabilities"
-	Field_Cfg          = "Cfg"
-	Field_GroupA       = "GroupA"
-	Field_GroupB       = "GroupB"
+	Field_Year           = "Year"
+	Field_Month          = "Month"
+	Field_Day            = "Day"
+	Field_StringValue    = "StringValue"
+	Field_Number         = "Number"
+	Field_CharCode       = "CharCode"
+	Field_Code           = "Code"
+	Field_FirstName      = "FirstName"
+	Field_LastName       = "LastName"
+	Field_DOB            = "DOB"
+	Field_Wallet         = "Wallet"
+	Field_Balance        = "Balance"
+	Field_Currency       = "Currency"
+	Field_Name           = "Name"
+	Field_Country        = "Country"
+	Field_Client         = "Client"
+	Field_Withdraw       = "Withdraw"
+	Field_Deposit        = "Deposit"
+	Field_Capabilities   = "Capabilities"
+	Field_Cfg            = "Cfg"
+	Field_GroupA         = "GroupA"
+	Field_GroupB         = "GroupB"
+	Field_Blob           = "Blob"
+	Field_BlobReadDenied = "BlobReadDenied"
 )
 
 var (
@@ -92,6 +94,8 @@ var (
 		Port:     1,
 		Username: "username@gmail.com",
 	}
+	QNameDocWithBLOB  = appdef.NewQName(app1PkgName, "DocWithBLOB")
+	QNameODocWithBLOB = appdef.NewQName(app1PkgName, "ODocWithBLOB")
 
 	// BLOBMaxSize 5
 	SharedConfig_App1 = NewSharedVITConfig(
@@ -423,6 +427,8 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 	}))
 
 	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryVoid"), istructsmem.NullQueryExec))
+
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "CmdODocWithBLOB"), istructsmem.NullCommandExec))
 
 	app1PackageFS := parser.PackageFS{
 		Path: App1PkgPath,

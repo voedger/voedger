@@ -16,11 +16,11 @@ import (
 type IFederation interface {
 	Func(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error)
 	Query(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error)
-	UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader,
-		optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error)
+	UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader, optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error)
 	UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader, duration iblobstorage.DurationType,
 		optFuncs ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID, err error)
-	ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) (iblobstorage.BLOBReader, error)
+	ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, ownerRecord appdef.QName, ownerRecordField appdef.FieldName, ownerID istructs.RecordID,
+		optFuncs ...coreutils.ReqOptFunc) (iblobstorage.BLOBReader, error)
 	ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...coreutils.ReqOptFunc) (iblobstorage.BLOBReader, error)
 	URLStr() string
 	Port() int

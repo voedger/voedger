@@ -5,7 +5,10 @@
 
 package blobprocessor
 
-import "github.com/voedger/voedger/pkg/iblobstorage"
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/iblobstorage"
+)
 
 const (
 	temporaryBLOBIDLenTreshold = 40 // greater -> temporary, persistent oherwise
@@ -14,7 +17,9 @@ const (
 )
 
 var (
-	durationToRegisterFuncs = map[iblobstorage.DurationType]string{
-		iblobstorage.DurationType_1Day: "c.sys.RegisterTempBLOB1d",
+	durationToRegisterFuncs = map[iblobstorage.DurationType]appdef.QName{
+		iblobstorage.DurationType_1Day: appdef.NewQName(appdef.SysPackage, "RegisterTempBLOB1d"),
 	}
+	registerPersistentBLOBFuncQName = appdef.NewQName(appdef.SysPackage, "UploadBLOBHelper")
+	downloadPersistentBLOBFuncQName = appdef.NewQName(appdef.SysPackage, "DownloadBLOBAuthnz")
 )

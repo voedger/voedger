@@ -20,10 +20,12 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/processors"
+	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 )
 
 func (s *httpService) registerHandlersV2() {
@@ -65,16 +67,10 @@ func (s *httpService) registerHandlersV2() {
 		Methods(http.MethodGet).Name("view")
 
 	// blobs: create /api/v2/apps/{owner}/{app}/workspaces/{wsid}/blobs
-	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s:[0-9]+}/blobs",
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/blobs",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid),
-		corsHandler(requestHandlerV2_blobs())).
-		Methods(http.MethodPost).Name("blobs read")
-
-	// blobs: replace, upload, download, update meta: /api/v2/apps/{owner}/{app}/workspaces/{wsid}/blobs/{blobId}
-	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s:[0-9]+}/blobs/{%s:[a-zA-Z0-9-_]+}",
-		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobIDOrSUUID),
-		corsHandler(requestHandlerV2_blobs())).
-		Methods(http.MethodGet, http.MethodPatch, http.MethodPut, http.MethodDelete).Name("blobs anything but read")
+		corsHandler(requestHandlerV2_blobs_create(s.blobRequestHandler, s.requestSender))).
+		Methods(http.MethodPost).Name("blobs create")
 
 	// schemas: get workspace schema: /api/v2/apps/{owner}/{app}/schemas
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/schemas",
@@ -117,6 +113,36 @@ func (s *httpService) registerHandlersV2() {
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
 		corsHandler(requestHandlerV2_create_device(s.numsAppsWorkspaces, s.federation))).
 		Methods(http.MethodPost).Name("create device")
+
+	// blob create /api/v2/apps/{owner}/{app}/workspaces/{wsid}/docs/{doc}/blobs/{field}
+	// [~server.apiv2.blobs/cmp.routerBlobsCreatePathHandler~impl]
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/docs/{%s}.{%s}/blobs/{%s}",
+		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table, URLPlaceholder_field),
+		corsHandler(requestHandlerV2_blobs_create(s.blobRequestHandler, s.requestSender))).
+		Methods(http.MethodPost).Name("blobs create")
+
+	// blob read GET /api/v2/apps/{owner}/{app}/workspaces/{wsid}/docs/{pkg}.{table}/{id}/blobs/{fieldName}
+	// [~server.apiv2.blobs/cmp.routerBlobsReadPathHandler~impl]
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/docs/{%s}.{%s}/{%s}/blobs/{%s}",
+		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg,
+		URLPlaceholder_table, URLPlaceholder_id, URLPlaceholder_field),
+		corsHandler(requestHandlerV2_blobs_read(s.blobRequestHandler, s.requestSender))).
+		Methods(http.MethodGet).Name("blobs read")
+
+
+	// temp blob create /api/v2/apps/{owner}/{app}/workspaces/{wsid}/tblobs
+	// [~server.apiv2.tblobs/cmp.routerTBlobsCreatePathHandler~impl]
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/tblobs",
+		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid),
+		corsHandler(requestHandlerV2_tempblobs_create(s.blobRequestHandler, s.requestSender))).
+		Methods(http.MethodPost).Name("temp blobs create")
+
+	// temp blob read GET /api/v2/apps/{owner}/{app}/workspaces/{wsid}/tblobs/{suuid}
+	// [~server.apiv2.blobs/cmp.routerTBlobsReadPathHandler~impl]
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/tblobs/{%s}",
+		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobIDOrSUUID),
+		corsHandler(requestHandlerV2_tempblobs_read(s.blobRequestHandler, s.requestSender))).
+		Methods(http.MethodGet).Name("temp blobs read")
 }
 
 func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
@@ -245,6 +271,88 @@ func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspace
 	}
 }
 
+func requestHandlerV2_blobs_read(blobRequestHandler blobprocessor.IRequestHandler,
+	requestSender bus.IRequestSender) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		appQName, wsid, headers, ok := parseURLParams(req, rw)
+		if !ok {
+			return
+		}
+		vars := mux.Vars(req)
+		ownerRecord := appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_table])
+		ownerRecordField := vars[URLPlaceholder_field]
+		ownerID, err := strconv.ParseUint(vars[URLPlaceholder_id], utils.DecimalBase, utils.BitSize64)
+		if err != nil {
+			// notest: checked by router url rule
+			panic(err)
+		}
+		if !blobRequestHandler.HandleRead_V2(appQName, wsid, headers, req.Context(),
+			newBLOBOKResponseIniter(rw, http.StatusOK), func(statusCode int, args ...interface{}) {
+				replyErr(rw, args[0].(error))
+			}, ownerRecord, ownerRecordField, istructs.RecordID(ownerID), requestSender) {
+			replyServiceUnavailable(rw)
+		}
+	}
+}
+
+func requestHandlerV2_tempblobs_read(blobRequestHandler blobprocessor.IRequestHandler,
+	requestSender bus.IRequestSender) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		appQName, wsid, headers, ok := parseURLParams(req, rw)
+		if !ok {
+			return
+		}
+		vars := mux.Vars(req)
+		suuid := iblobstorage.SUUID(vars[URLPlaceholder_blobIDOrSUUID])
+		if !blobRequestHandler.HandleReadTemp_V2(appQName, wsid, headers, req.Context(),
+			newBLOBOKResponseIniter(rw, http.StatusOK), func(statusCode int, args ...interface{}) {
+				replyErr(rw, args[0].(error))
+			}, requestSender, suuid) {
+			replyServiceUnavailable(rw)
+		}
+	}
+}
+
+func requestHandlerV2_tempblobs_create(blobRequestHandler blobprocessor.IRequestHandler,
+	requestSender bus.IRequestSender) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		appQName, wsid, headers, ok := parseURLParams(req, rw)
+		if !ok {
+			return
+		}
+		if !blobRequestHandler.HandleWriteTemp_V2(appQName, wsid, headers, req.Context(),
+			newBLOBOKResponseIniter(rw, http.StatusCreated), req.Body, func(statusCode int, args ...interface{}) {
+				replyErr(rw, args[0].(error))
+			}, requestSender) {
+			replyServiceUnavailable(rw)
+		}
+	}
+}
+
+func replyServiceUnavailable(rw http.ResponseWriter,) {
+	rw.WriteHeader(http.StatusServiceUnavailable)
+	rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
+}
+
+func requestHandlerV2_blobs_create(blobRequestHandler blobprocessor.IRequestHandler,
+	requestSender bus.IRequestSender) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		appQName, wsid, headers, ok := parseURLParams(req, rw)
+		if !ok {
+			return
+		}
+		vars := mux.Vars(req)
+		ownerRecord := appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_table])
+		ownerRecordField := vars[URLPlaceholder_field]
+		if !blobRequestHandler.HandleWrite_V2(appQName, wsid, headers, req.Context(),
+			newBLOBOKResponseIniter(rw, http.StatusCreated), req.Body, func(statusCode int, args ...interface{}) {
+				replyErr(rw, args[0].(error))
+			}, requestSender, ownerRecord, ownerRecordField) {
+			replyServiceUnavailable(rw)
+		}
+	}
+}
+
 func requestHandlerV2_schemas_wsRole(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
@@ -297,41 +405,11 @@ func requestHandlerV2_extension(reqSender bus.IRequestSender, apiPath processors
 	}
 }
 
-func requestHandlerV2_blobs() http.HandlerFunc {
-	return func(resp http.ResponseWriter, req *http.Request) {
-		vars := mux.Vars(req)
-		blobID, notBLOBCreate := vars[URLPlaceholder_blobIDOrSUUID]
-		isBLOBCreate := !notBLOBCreate
-		_ = blobID
-		_ = isBLOBCreate
-		// note: request lead to create -> 201 Created
-		switch req.Method {
-		case http.MethodGet:
-		case http.MethodPost:
-		case http.MethodPatch:
-		case http.MethodDelete:
-		case http.MethodPut:
-		}
-		writeNotImplemented(resp)
-	}
-}
-
 func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.APIPath, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 		recordIDStr := vars[URLPlaceholder_id]
 
-		// switch req.Method {
-		// case http.MethodGet:
-		// 	recordIDStr, isSingleDoc := vars[URLPlaceholder_id]
-		// 	isReadCollection := !isSingleDoc
-		// 	_ = isReadCollection
-		// 	_ = recordIDStr
-		// case http.MethodPost:
-		// case http.MethodPatch:
-		// case http.MethodDelete:
-		// }
-		// note: request lead to create -> 201 Created
 		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
 		if !ok {
 			return
@@ -404,10 +482,10 @@ func parseCreateLoginArgs(body string) (verifiedEmailToken, displayName, pwd str
 }
 
 func replyErr(rw http.ResponseWriter, err error) {
-	var funcErr coreutils.FuncError
-	if errors.As(err, &funcErr) {
-		ReplyJSON(rw, funcErr.ToJSON_APIV2(), funcErr.HTTPStatus)
+	var sysError coreutils.SysError
+	if errors.As(err, &sysError) {
+		ReplyJSON(rw, sysError.ToJSON_APIV2(), sysError.HTTPStatus)
 	} else {
-		ReplyCommonError(rw, err.Error(), funcErr.HTTPStatus)
+		ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
 	}
 }

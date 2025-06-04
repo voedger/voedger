@@ -31,16 +31,16 @@ import (
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
-func (vit *VIT) GetBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, token string) *BLOB {
+func (vit *VIT) GetBLOB(appQName appdef.AppQName, wsid istructs.WSID, ownerRecord appdef.QName, ownerRecordField appdef.FieldName, ownerID istructs.RecordID, token string) *BLOB {
 	vit.T.Helper()
-	blobReader, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID, coreutils.WithAuthorizeBy(token))
+	blobReader, err := vit.IFederation.ReadBLOB(appQName, wsid, ownerRecord, ownerRecordField, ownerID, coreutils.WithAuthorizeBy(token))
 	require.NoError(vit.T, err)
 	blobContent, err := io.ReadAll(blobReader)
 	require.NoError(vit.T, err)
 	return &BLOB{
-		Content:  blobContent,
-		Name:     blobReader.Name,
-		MimeType: blobReader.MimeType,
+		Content:     blobContent,
+		Name:        blobReader.Name,
+		ContentType: blobReader.ContentType,
 	}
 }
 

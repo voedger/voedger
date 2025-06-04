@@ -11,6 +11,7 @@ import (
 	"net/url"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -24,8 +25,8 @@ type blobWorkpiece struct {
 	blobMessageWrite *implIBLOBMessage_Write
 	blobMessageRead  *implIBLOBMessage_Read
 	duration         iblobstorage.DurationType
-	nameQuery        []string
-	mimeTypeQuery    []string
+	blobName         []string
+	blobContentType  []string
 	ttl              string
 	descr            iblobstorage.DescrType
 	mediaType        string
@@ -36,8 +37,10 @@ type blobWorkpiece struct {
 	blobState        iblobstorage.BLOBState
 	blobKey          iblobstorage.IBLOBKey
 	writer           io.Writer
-	registerFuncName string
+	registerFuncName appdef.QName
 	resultErr        error
+	uploadedSize     uint64
+	registerFuncBody string
 }
 
 type implIBLOBMessage_base struct {
@@ -49,17 +52,28 @@ type implIBLOBMessage_base struct {
 	errorResponder   ErrorResponder
 	done             chan interface{}
 	requestSender    bus.IRequestSender
+	isAPIv2          bool
 }
 
 type implIBLOBMessage_Read struct {
 	implIBLOBMessage_base
+
+	// APIv1
 	existingBLOBIDOrSUUID string
+
+	// APIv2
+	ownerRecord      appdef.QName
+	ownerRecordField appdef.FieldName
+	ownerID          istructs.RecordID
 }
 
 type implIBLOBMessage_Write struct {
 	implIBLOBMessage_base
-	reader         io.ReadCloser
-	urlQueryValues url.Values
+	reader           io.ReadCloser
+	urlQueryValues   url.Values
+	ownerRecord      appdef.QName
+	ownerRecordField string
+	appParts         appparts.IAppPartitions
 }
 
 type WLimiterFactory func() iblobstorage.WLimiterType
@@ -80,7 +94,7 @@ type catchReadError struct {
 	pipeline.NOOP
 }
 
-type blobOpSwitch struct {
+type blobReadOrWriteSwitch struct {
 }
 
 func (b *blobWorkpiece) Release() {
@@ -90,6 +104,7 @@ func (b *blobWorkpiece) Release() {
 type implIRequestHandler struct {
 	procbus      iprocbus.IProcBus
 	chanGroupIdx BLOBServiceChannelGroupIdx
+	appParts     appparts.IAppPartitions
 }
 
 func (m *implIBLOBMessage_base) Release() {

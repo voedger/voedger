@@ -534,6 +534,45 @@ func execCommand(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	return err
 }
 
+// [~server.blobs/cmp.UpdateBLOBOwnership~impl]
+// [~server.blobs/tuc.HandleBLOBReferences~impl]
+func appendBLOBOwnershipUpdaters(ctx context.Context, work pipeline.IWorkpiece) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	for _, cmdParsedCUD := range cmd.parsedCUDs {
+		cudSchemaType := cmd.appStructs.AppDef().Type(cmdParsedCUD.qName)
+		cudSchema := cudSchemaType.(appdef.IWithFields)
+		for cudFieldName, cudFieldValue := range cmdParsedCUD.fields {
+			cudSchemaField := cudSchema.Field(cudFieldName)
+			refSchemaField, ok := cudSchemaField.(appdef.IRefField)
+			if !ok || len(refSchemaField.Refs()) == 0 || !refSchemaField.Ref(blobber.QNameWDocBLOB) {
+				continue
+			}
+			blobIDJSONNumber := cudFieldValue.(json.Number)
+			blobIDIntf, err := coreutils.ClarifyJSONNumber(blobIDJSONNumber, appdef.DataKind_RecordID)
+			if err != nil {
+				// notest
+				return err
+			}
+			blobID := blobIDIntf.(istructs.RecordID)
+			blobRecord, err := cmd.appStructs.Records().Get(cmd.cmdMes.WSID(), true, blobID)
+			if err != nil {
+				// notest
+				return err
+			}
+			cmd.parsedCUDs = append(cmd.parsedCUDs, parsedCUD{
+				opKind:         appdef.OperationKind_Update,
+				existingRecord: blobRecord,
+				id:             int64(blobID), // nolint G115
+				qName:          blobber.QNameWDocBLOB,
+				fields: coreutils.MapObject{
+					blobber.Field_OwnerRecordID: cmdParsedCUD.id,
+				},
+			})
+		}
+	}
+	return nil
+}
+
 func checkResponseIntent(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	return processors.CheckResponseIntent(cmd.hostStateProvider.state)
@@ -838,7 +877,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 	}
 	body.WriteString("}")
 	res := body.String()
-	if cmd.cmdMes.APIPath() !=0 {
+	if cmd.cmdMes.APIPath() != 0 {
 		// TODO: temporary solution. Eliminate after switching to APIv2
 		pascalCasedResMap := map[string]interface{}{}
 		if err := json.Unmarshal([]byte(res), &pascalCasedResMap); err != nil {

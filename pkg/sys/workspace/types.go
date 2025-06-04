@@ -11,14 +11,15 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// template recordID -> template fieldName -> uploaded blobID to set to fieldName
+// template ownerID(raw) -> template ownerRecordField -> uploaded blobID to set to ownerRecordField
 type blobsMap map[istructs.RecordID]map[string]istructs.RecordID
 
 type WSPostInitFunc func(targetAppQName appdef.AppQName, wsKind appdef.QName, newWSID istructs.WSID, federation federation.IFederation, authToken string) (err error)
 
 type BLOBWorkspaceTemplateField struct {
 	iblobstorage.DescrType
-	FieldName string
-	Content   []byte
-	RecordID  istructs.RecordID
+	OwnerRecord      appdef.QName
+	OwnerRecordField appdef.FieldName
+	OwnerRecordRawID istructs.RecordID
+	Content          []byte
 }

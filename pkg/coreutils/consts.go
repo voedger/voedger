@@ -24,6 +24,7 @@ const (
 	ContentType_TextHTML                          = "text/html"
 	ContentType_MultipartFormData                 = "multipart/form-data"
 	BearerPrefix                                  = "Bearer "
+	BlobName                                      = "Blob-Name"
 	Localhost                                     = "127.0.0.1"
 	shortRetryOn503Delay                          = 100 * time.Millisecond
 	longRetryOn503Delay                           = time.Second

@@ -28,7 +28,7 @@ type storageWriter func(pKey, cCols, val []byte, duration iblobstorage.DurationT
 
 // key does not cotain the bucket number
 func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblobstorage.DescrType, reader io.Reader,
-	limiter iblobstorage.WLimiterType, duration iblobstorage.DurationType, inserter, updater storageWriter) (err error) {
+	limiter iblobstorage.WLimiterType, duration iblobstorage.DurationType, inserter, updater storageWriter) (uploadedSize uint64, err error) {
 	var (
 		bytesRead    uint64
 		chunkNumber  uint64
@@ -46,7 +46,7 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 	initialStateBytes, err := b.writeState(state, pKeyState, cColState, inserter, duration, nil)
 	if err != nil {
 		// notest
-		return err
+		return 0, err
 	}
 
 	chunkBuf := make([]byte, 0, chunkSize)
@@ -99,11 +99,11 @@ func (b *bStorageType) writeBLOB(ctx context.Context, blobKey []byte, descr iblo
 		// notest
 		if err == nil {
 			// err as priority over errStatus
-			return errState
+			return 0, errState
 		}
 		logger.Error("failed to write blob state: " + errState.Error())
 	}
-	return err
+	return state.Size, err
 }
 
 func mutateChunkNumber(key []byte, chunkNumber uint64) (mutadedKey []byte) {
@@ -121,14 +121,14 @@ func getStateKeys(blobKey []byte) (pKeyState, cColSt []byte) {
 	return pKeyState, cColState
 }
 
-func (b *bStorageType) WriteBLOB(ctx context.Context, key iblobstorage.PersistentBLOBKeyType, descr iblobstorage.DescrType, reader io.Reader, limiter iblobstorage.WLimiterType) (err error) {
+func (b *bStorageType) WriteBLOB(ctx context.Context, key iblobstorage.PersistentBLOBKeyType, descr iblobstorage.DescrType, reader io.Reader, limiter iblobstorage.WLimiterType) (uploadedSize uint64, err error) {
 	inserterAndUpdater := func(pKey, cCols, val []byte, _ iblobstorage.DurationType, _ []byte) error {
 		return (*(b.blobStorage)).Put(pKey, cCols, val)
 	}
 	return b.writeBLOB(ctx, key.Bytes(), descr, reader, limiter, 0, inserterAndUpdater, inserterAndUpdater)
 }
 
-func (b *bStorageType) WriteTempBLOB(ctx context.Context, key iblobstorage.TempBLOBKeyType, descr iblobstorage.DescrType, reader io.Reader, limiter iblobstorage.WLimiterType, duration iblobstorage.DurationType) (err error) {
+func (b *bStorageType) WriteTempBLOB(ctx context.Context, key iblobstorage.TempBLOBKeyType, descr iblobstorage.DescrType, reader io.Reader, limiter iblobstorage.WLimiterType, duration iblobstorage.DurationType) (uploadedSize uint64, err error) {
 	inserter := func(pKey, cCols, val []byte, duration iblobstorage.DurationType, _ []byte) error {
 		ok, err := (*(b.blobStorage)).InsertIfNotExists(pKey, cCols, val, duration.Seconds())
 		if err != nil {

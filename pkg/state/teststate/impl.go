@@ -223,11 +223,12 @@ func (ts *testState) emulateFederationCmd(owner, appname string, wsid istructs.W
 	return ts.federationCmdHandler(owner, appname, wsid, command, body)
 }
 
-func (ts *testState) emulateFederationBlob(owner, appname string, wsid istructs.WSID, blobID istructs.RecordID) ([]byte, error) {
+func (ts *testState) emulateFederationBlob(owner, appname string, wsid istructs.WSID, ownerRecord appdef.QName, ownerRecordField appdef.FieldName,
+	ownerID istructs.RecordID) ([]byte, error) {
 	if ts.federationBlobHandler == nil {
 		panic("federation blob handler not set")
 	}
-	return ts.federationBlobHandler(owner, appname, wsid, blobID)
+	return ts.federationBlobHandler(owner, appname, wsid, ownerRecord, ownerRecordField, ownerID)
 }
 
 func (ts *testState) buildState(processorKind int) {

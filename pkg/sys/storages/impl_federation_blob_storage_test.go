@@ -19,11 +19,15 @@ func TestFederationBlobStorage_BasicUsage(t *testing.T) {
 	buffer[0] = 1
 	buffer[4999] = 2
 	require := require.New(t)
-	federatioBlobHandler := func(owner, appname string, wsid istructs.WSID, blobID istructs.RecordID) (result []byte, err error) {
+	ownerRecordExpected := appdef.NewQName("test", "blobOwner")
+	federatioBlobHandler := func(owner, appname string, wsid istructs.WSID, ownerRecord appdef.QName, ownerRecordField appdef.FieldName,
+		ownerID istructs.RecordID) (result []byte, err error) {
 		require.Equal("owner", owner)
 		require.Equal("appname", appname)
 		require.Equal(istructs.WSID(123), wsid)
-		require.Equal(istructs.RecordID(1), blobID)
+		require.Equal(istructs.RecordID(1), ownerID)
+		require.Equal("recordField", ownerRecordField)
+		require.Equal(ownerRecordExpected, ownerRecord)
 		return buffer, nil
 	}
 	mockedStructs, _ := mockedStructs(t)
@@ -34,7 +38,9 @@ func TestFederationBlobStorage_BasicUsage(t *testing.T) {
 	k := storage.NewKeyBuilder(appdef.NullQName, nil)
 	k.PutString(sys.Storage_FederationBlob_Field_Owner, "owner")
 	k.PutString(sys.Storage_FederationBlob_Field_AppName, "appname")
-	k.PutInt64(sys.Storage_FederationBlob_Field_BlobID, 1)
+	k.PutRecordID(sys.Storage_FederationBlob_Field_OwnerID, 1)
+	k.PutString(sys.Storage_FederationBlob_Field_OwnerRecordField, "recordField")
+	k.PutQName(sys.Storage_FederationBlob_Field_OwnerRecord, ownerRecordExpected)
 	k.PutString(sys.Storage_FederationBlob_Field_ExpectedCodes, "200,201")
 	k.PutInt64(sys.Storage_FederationBlob_Field_WSID, 123)
 

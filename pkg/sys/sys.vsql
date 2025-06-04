@@ -60,7 +60,15 @@ ABSTRACT WORKSPACE Workspace (
 		OwnerQName2 text
 	) WITH Tags=(WorkspaceOwnerTableTag);
 
-	TABLE BLOB INHERITS WDoc (status int32 NOT NULL) WITH Tags=(WorkspaceOwnerTableTag);
+	-- [~server.blobs/wdoc.sys.Workspace.BLOB~impl]
+	TABLE BLOB INHERITS WDoc (
+		status int32 NOT NULL,
+
+		-- [~server.apiv2.blobs/cmp.sysBlobOwnerRecord~impl]
+		OwnerRecord qname,
+		OwnerRecordField text,
+		OwnerRecordID ref
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE Subject INHERITS sys.CDoc (
 		Login varchar NOT NULL,
@@ -352,12 +360,17 @@ ABSTRACT WORKSPACE Workspace (
 		PRIMARY KEY ((dummy), WSName)
 	) AS RESULT OF ProjectorChildWorkspaceIdx WITH Tags=(WorkspaceOwnerTableTag);
 
+	TYPE UploadBLOBHelperParams (
+		-- to be made as NOT NULL after switching to APIv2, see https://github.com/voedger/voedger/issues/3693
+		OwnerRecord qname,
+		OwnerRecordField text
+	);
 
 	EXTENSION ENGINE BUILTIN (
 
 		-- blobber
 
-		COMMAND UploadBLOBHelper WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND UploadBLOBHelper(UploadBLOBHelperParams);
 		COMMAND DownloadBLOBHelper; -- Deprecated: use q.sys.DownloadBLOBAuthnz
 		COMMAND RegisterTempBLOB1d WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY DownloadBLOBAuthnz RETURNS void WITH Tags=(WorkspaceOwnerFuncTag);
@@ -459,12 +472,14 @@ ABSTRACT WORKSPACE Workspace (
 	ROLE WorkspaceOwner; -- assigned if user works in a workspace that is owned by his profile
 	ROLE ClusterAdmin; -- TODO: not used for now. Going to allow exec c.cluster.DeployApp to this role
 	ROLE WorkspaceAdmin;
+	ROLE BLOBUploader;
 
 	GRANT WorkspaceOwner TO ProfileOwner;
 	GRANT WorkspaceOwner TO WorkspaceDevice;
 	GRANT WorkspaceOwner TO RoleWorkspaceOwner; --backward compatibility
 	GRANT Everyone TO Anonymous;
 	GRANT Everyone TO AuthenticatedUser;
+	GRANT WorkspaceOwner TO BLOBUploader;
 
 	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO WorkspaceOwner;
 
@@ -476,6 +491,8 @@ ABSTRACT WORKSPACE Workspace (
 	GRANT EXECUTE ON ALL QUERIES WITH TAG AllowedToEveryoneTag TO Everyone;
 
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG AllowedToAuthenticatedTag TO AuthenticatedUser;
+
+	GRANT EXECUTE ON COMMAND UploadBLOBHelper TO BLOBUploader;
 );
 
 ALTERABLE WORKSPACE AppWorkspaceWS (

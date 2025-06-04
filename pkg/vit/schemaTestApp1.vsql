@@ -65,9 +65,9 @@ ALTERABLE WORKSPACE test_wsWS (
 		num int32,
 		width int32,
 		height int32,
-		image int64,
+		image blob,
 		is_hidden int32,
-		preview int64,
+		preview blob,
 		bg_color int32,
 		air_table_plan_item TABLE air_table_plan_item (
 			id_air_table_plan ref, --deprecated link to air_table_plan
@@ -691,6 +691,18 @@ ALTERABLE WORKSPACE test_wsWS (
         GroupB Task
     );
 
+	TABLE DocWithBLOB INHERITS sys.CDoc (
+		Blob blob,
+		AnotherBlob blob,
+		IntFld int32,
+		BlobReadDenied blob
+	);
+
+	TABLE ODocWithBLOB INHERITS sys.ODoc (
+		Blob blob,
+		IntFld int32
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY MockQry(MockQryParams) RETURNS MockQryResult WITH Tags=(WorkspaceOwnerFuncTag);
@@ -717,6 +729,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		QUERY QryDailyIdx(QryDailyIdxParams) RETURNS QryDailyIdxResult WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY QryReturnsCategory(QryReturnsCategoryParams) RETURNS QryReturnsCategoryResult WITH Tags=(WorkspaceOwnerFuncTag, ApiFeatureTag);
 		QUERY QryVoid RETURNS void;
+		COMMAND CmdODocWithBLOB(ODocWithBLOB) WITH Tags=(WorkspaceOwnerFuncTag);
 	);
 
 	ROLE Updated; -- need for invite tests
@@ -762,6 +775,10 @@ ALTERABLE WORKSPACE test_wsWS (
 
 	GRANT EXECUTE ON QUERY QryVoid TO sys.WorkspaceOwner;
 
+	GRANT SELECT ON TABLE DocWithBLOB TO sys.WorkspaceOwner;
+	GRANT SELECT ON TABLE Country TO sys.WorkspaceOwner;
+	GRANT SELECT ON TABLE ODocWithBLOB TO sys.WorkspaceOwner;
+
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocActivateDenied TO sys.WorkspaceOwner;
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocDeactivateDenied TO sys.WorkspaceOwner;
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocFieldInsertDenied TO sys.WorkspaceOwner;
@@ -769,4 +786,5 @@ ALTERABLE WORKSPACE test_wsWS (
 	REVOKE INSERT(FldDenied) ON TABLE DocFieldInsertDenied FROM sys.WorkspaceOwner;
 	REVOKE UPDATE(FldDenied) ON TABLE DocFieldUpdateDenied FROM sys.WorkspaceOwner;
 
+	REVOKE SELECT(BlobReadDenied) ON TABLE DocWithBLOB FROM sys.WorkspaceOwner;
 );

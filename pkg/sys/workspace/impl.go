@@ -12,11 +12,9 @@ import (
 	"io/fs"
 	"net/http"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -455,7 +453,8 @@ func updateOwner(ownerWSID istructs.WSID, ownerID istructs.RecordID, ownerApp st
 	return updateOwnerErr == nil
 }
 
-func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID]map[string]struct{}, wsTemplateFS coreutils.EmbedFS) (blobs []BLOBWorkspaceTemplateField, err error) {
+func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID]map[string]struct{}, wsTemplateFS coreutils.EmbedFS,
+	wsTemplateData []map[string]interface{}) (blobs []BLOBWorkspaceTemplateField, err error) {
 	for _, ent := range fsEntries {
 		switch ent.Name() {
 		case "data.json", "provide.go":
@@ -464,36 +463,56 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID
 			if underscorePos < 0 {
 				return nil, fmt.Errorf("wrong blob file name format: %s", ent.Name())
 			}
-			recordIDStr := ent.Name()[:underscorePos]
-			recordID, err := strconv.ParseUint(recordIDStr, utils.DecimalBase, utils.BitSize64)
+			blobOwnerRawIDStr := ent.Name()[:underscorePos]
+			blobOwnerRawIDIntf, err := coreutils.ClarifyJSONNumber(json.Number(blobOwnerRawIDStr), appdef.DataKind_RecordID)
 			if err != nil {
 				return nil, fmt.Errorf("wrong recordID in blob %s: %w", ent.Name(), err)
 			}
+			blobOwnerRawID := blobOwnerRawIDIntf.(istructs.RecordID)
 			fieldName := strings.ReplaceAll(ent.Name()[underscorePos+1:], filepath.Ext(ent.Name()), "")
 			if len(fieldName) == 0 {
 				return nil, fmt.Errorf("no fieldName in blob %s", ent.Name())
 			}
-			fieldNames, ok := blobIDs[istructs.RecordID(recordID)]
+			fieldNames, ok := blobIDs[blobOwnerRawID]
 			if !ok {
 				fieldNames = map[string]struct{}{}
-				blobIDs[istructs.RecordID(recordID)] = fieldNames
+				blobIDs[blobOwnerRawID] = fieldNames
 			}
 			if _, exists := fieldNames[fieldName]; exists {
-				return nil, fmt.Errorf("recordID %d: blob for field %s is met again: %s", recordID, fieldName, ent.Name())
+				return nil, fmt.Errorf("recordID %d: blob for field %s is met again: %s", blobOwnerRawID, fieldName, ent.Name())
 			}
 			fieldNames[fieldName] = struct{}{}
 			blobContent, err := wsTemplateFS.ReadFile(ent.Name())
 			if err != nil {
 				return nil, fmt.Errorf("failed to read blob %s content: %w", ent.Name(), err)
 			}
+			ownerQName := appdef.NullQName
+			for _, wsTemplateRecord := range wsTemplateData {
+				recordNumberFromTemplate := wsTemplateRecord[appdef.SystemField_ID].(json.Number)
+				recordIDFromTemplateIntf, err := coreutils.ClarifyJSONNumber(recordNumberFromTemplate, appdef.DataKind_RecordID)
+				if err != nil {
+					return nil, err
+				}
+				recordIDFromTemplate := recordIDFromTemplateIntf.(istructs.RecordID)
+				if recordIDFromTemplate == blobOwnerRawID {
+					ownerQNameStr := wsTemplateRecord[appdef.SystemField_QName].(string)
+					ownerQName, err = appdef.ParseQName(ownerQNameStr)
+					if err != nil {
+						// notest: do not test here. Will fail on further doc write
+						return nil, err
+					}
+					break
+				}
+			}
 			blobs = append(blobs, BLOBWorkspaceTemplateField{
 				DescrType: iblobstorage.DescrType{
-					Name:     ent.Name(),
-					MimeType: filepath.Ext(ent.Name())[1:], // excluding dot
+					Name:        ent.Name(),
+					ContentType: filepath.Ext(ent.Name())[1:], // excluding dot
 				},
-				FieldName: fieldName,
-				Content:   blobContent,
-				RecordID:  istructs.RecordID(recordID),
+				OwnerRecord:      ownerQName,
+				OwnerRecordField: fieldName,
+				Content:          blobContent,
+				OwnerRecordRawID: blobOwnerRawID,
 			})
 		}
 	}
@@ -566,7 +585,7 @@ func ValidateTemplate(wsTemplateName string, ep extensionpoints.IExtensionPoint,
 	// check blob entries
 	//          newBLOBID   fieldName
 	blobIDs := map[istructs.RecordID]map[string]struct{}{}
-	wsBLOBs, err = parseWSTemplateBLOBs(fsEntries, blobIDs, wsTemplateFS)
+	wsBLOBs, err = parseWSTemplateBLOBs(fsEntries, blobIDs, wsTemplateFS, wsData)
 	if err != nil {
 		return nil, nil, err
 	}

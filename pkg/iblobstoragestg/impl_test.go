@@ -40,7 +40,7 @@ func TestBasicUsage(t *testing.T) {
 		}
 		testBasicUsage(t, func() iblobstorage.IBLOBKey {
 			return &key
-		}, func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, _ iblobstorage.DurationType) error {
+		}, func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, _ iblobstorage.DurationType) (uploadedSize uint64, err error) {
 			ctx := context.Background()
 			return blobber.WriteBLOB(ctx, key, desc, reader, NewWLimiter_Size(maxSize))
 		}, 0)
@@ -55,7 +55,7 @@ func TestBasicUsage(t *testing.T) {
 		}
 		blobStorage := testBasicUsage(t, func() iblobstorage.IBLOBKey {
 			return &key
-		}, func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, duration iblobstorage.DurationType) error {
+		}, func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, duration iblobstorage.DurationType) (uploadedSize uint64, err error) {
 			ctx := context.Background()
 			return blobber.WriteTempBLOB(ctx, key, desc, reader, NewWLimiter_Size(maxSize), duration)
 		}, iblobstorage.DurationType_1Day)
@@ -77,11 +77,11 @@ func TestBasicUsage(t *testing.T) {
 }
 
 func testBasicUsage(t *testing.T, keyGetter func() iblobstorage.IBLOBKey,
-	blobWriter func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, duration iblobstorage.DurationType) error,
+	blobWriter func(blobber iblobstorage.IBLOBStorage, desc iblobstorage.DescrType, reader *bytes.Reader, duration iblobstorage.DurationType) (uploadedSize uint64, err error),
 	duration iblobstorage.DurationType) iblobstorage.IBLOBStorage {
 	desc := iblobstorage.DescrType{
-		Name:     "logo.png",
-		MimeType: "image/png",
+		Name:        "logo.png",
+		ContentType: "image/png",
 	}
 
 	key := keyGetter()
@@ -111,15 +111,16 @@ func testBasicUsage(t *testing.T, keyGetter func() iblobstorage.IBLOBKey,
 	})
 
 	t.Run("Write blob to storage, return must be without errors", func(t *testing.T) {
-		err := blobWriter(blobber, desc, reader, duration)
+		size, err := blobWriter(blobber, desc, reader, duration)
 		require.NoError(err)
+		require.EqualValues(len(blob), size)
 	})
 
 	t.Run("Read blob status, return must be without errors", func(t *testing.T) {
 		bs, err := blobber.QueryBLOBState(ctx, key)
 		require.NoError(err)
 		require.Equal(desc.Name, bs.Descr.Name)
-		require.Equal(desc.MimeType, bs.Descr.MimeType)
+		require.Equal(desc.ContentType, bs.Descr.ContentType)
 		require.Equal(time.Now().UnixMilli(), int64(bs.StartedAt))
 		require.Equal(time.Now().UnixMilli(), int64(bs.FinishedAt))
 		require.EqualValues(len(blob), bs.Size)
@@ -166,8 +167,8 @@ func TestFewBucketsBLOB(t *testing.T) {
 			BlobID:       2,
 		}
 		desc = iblobstorage.DescrType{
-			Name:     "test",
-			MimeType: "image/png",
+			Name:        "test",
+			ContentType: "image/png",
 		}
 	)
 	require := require.New(t)
@@ -188,8 +189,9 @@ func TestFewBucketsBLOB(t *testing.T) {
 
 	// write the blob
 	reader := bytes.NewReader(bigBLOB)
-	err = blobber.WriteBLOB(ctx, key, desc, reader, NewWLimiter_Size(iblobstorage.BLOBMaxSizeType(len(bigBLOB))))
+	size, err := blobber.WriteBLOB(ctx, key, desc, reader, NewWLimiter_Size(iblobstorage.BLOBMaxSizeType(len(bigBLOB))))
 	require.NoError(err)
+	require.EqualValues(len(bigBLOB), size)
 
 	var buf bytes.Buffer
 	writer := bufio.NewWriter(&buf)
@@ -215,8 +217,8 @@ func TestQuotaExceed(t *testing.T) {
 			BlobID:       2,
 		}
 		desc = iblobstorage.DescrType{
-			Name:     "logo.png",
-			MimeType: "image/png",
+			Name:        "logo.png",
+			ContentType: "image/png",
 		}
 	)
 	require := require.New(t)
@@ -229,7 +231,7 @@ func TestQuotaExceed(t *testing.T) {
 	ctx := context.Background()
 	// Quota (maxSize -1 = 19265) assigned to reader less then filesize logo.png (maxSize)
 	// So, it must be error
-	err = blobber.WriteBLOB(ctx, key, desc, reader, NewWLimiter_Size(maxSize-1))
+	_, err = blobber.WriteBLOB(ctx, key, desc, reader, NewWLimiter_Size(maxSize-1))
 	require.Error(err, "Reading a file larger than the quota assigned to the reader. It must be a error.")
 }
 

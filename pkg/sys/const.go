@@ -118,13 +118,15 @@ const (
 	Storage_FederationCommand_Field_NewIDs        = "NewIDs"
 	Storage_FederationCommand_Field_Result        = "Result"
 
-	Storage_FederationBlob_Field_Body          = "Body"
-	Storage_FederationBlob_Field_WSID          = "WSID"
-	Storage_FederationBlob_Field_Token         = "Token"
-	Storage_FederationBlob_Field_Owner         = "Owner"
-	Storage_FederationBlob_Field_AppName       = "AppName"
-	Storage_FederationBlob_Field_ExpectedCodes = "ExpectedCodes"
-	Storage_FederationBlob_Field_BlobID        = "BlobID"
+	Storage_FederationBlob_Field_Body             = "Body"
+	Storage_FederationBlob_Field_WSID             = "WSID"
+	Storage_FederationBlob_Field_Token            = "Token"
+	Storage_FederationBlob_Field_Owner            = "Owner"
+	Storage_FederationBlob_Field_AppName          = "AppName"
+	Storage_FederationBlob_Field_ExpectedCodes    = "ExpectedCodes"
+	Storage_FederationBlob_Field_OwnerRecord      = "OwnerRecord"
+	Storage_FederationBlob_Field_OwnerRecordField = "OwnerRecordField"
+	Storage_FederationBlob_Field_OwnerID          = "OwnerID"
 
 	Storage_AppSecretField_Secret = "Secret"
 

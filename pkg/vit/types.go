@@ -128,9 +128,9 @@ type app struct {
 }
 
 type BLOB struct {
-	Content  []byte
-	Name     string
-	MimeType string
+	Content     []byte
+	Name        string
+	ContentType string
 }
 
 type signInOpts struct {

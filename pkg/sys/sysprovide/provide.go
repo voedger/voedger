@@ -53,6 +53,7 @@ func Provide(cfg *istructsmem.AppConfigType) parser.PackageFS {
 	builtin.ProvideCUDValidators(cfg)
 	builtin.ProvideSysIsActiveValidation(cfg)
 	uniques.ProvideEventValidator(cfg)
+	blobber.ProvideBlobberCUDValidators(cfg)
 	return parser.PackageFS{
 		Path: appdef.SysPackage,
 		FS:   sys.SysFS,

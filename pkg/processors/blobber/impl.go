@@ -15,12 +15,13 @@ import (
 func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStorage,
 	wLimiterFactory WLimiterFactory) pipeline.ISyncPipeline {
 	return pipeline.NewSyncPipeline(vvmCtx, "blob processor",
-		pipeline.WireSyncOperator("switch", pipeline.SwitchOperator(&blobOpSwitch{},
+		pipeline.WireSyncOperator("switch", pipeline.SwitchOperator(&blobReadOrWriteSwitch{},
 			pipeline.SwitchBranch(branchReadBLOB, pipeline.NewSyncPipeline(vvmCtx, branchReadBLOB,
 				pipeline.WireFunc("getBLOBMessageRead", getBLOBMessageRead),
-				pipeline.WireFunc("downloadBLOBHelper", downloadBLOBHelper),
+				pipeline.WireFunc("getBLOBIDFromOwner", getBLOBIDFromOwner),
 				pipeline.WireFunc("getBLOBKeyRead", getBLOBKeyRead),
 				pipeline.WireFunc("queryBLOBState", provideQueryAndCheckBLOBState(blobStorage)),
+				pipeline.WireFunc("downloadBLOBHelper", downloadBLOBHelper),
 				pipeline.WireFunc("initResponse", initResponse),
 				pipeline.WireFunc("readBLOB", provideReadBLOB(blobStorage)),
 				pipeline.WireSyncOperator("catchReadError", &catchReadError{}),
@@ -30,7 +31,7 @@ func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStora
 				pipeline.WireFunc("parseQueryParams", parseQueryParams),
 				pipeline.WireFunc("parseMediaType", parseMediaType),
 				pipeline.WireFunc("validateQueryParams", validateQueryParams),
-				pipeline.WireFunc("getRegisterFuncName", getRegisterFuncName),
+				pipeline.WireFunc("getRegisterFunc", getRegisterFunc),
 				pipeline.WireSyncOperator("wrapBadRequest", &badRequestWrapper{}),
 				pipeline.WireFunc("registerBLOB", registerBLOB),
 				pipeline.WireFunc("getBLOBKeyWrite", getBLOBKeyWrite),
@@ -42,7 +43,7 @@ func providePipeline(vvmCtx context.Context, blobStorage iblobstorage.IBLOBStora
 	)
 }
 
-func (b *blobOpSwitch) Switch(work interface{}) (branchName string, err error) {
+func (b *blobReadOrWriteSwitch) Switch(work interface{}) (branchName string, err error) {
 	blobWorkpiece := work.(*blobWorkpiece)
 	if _, ok := blobWorkpiece.blobMessage.(*implIBLOBMessage_Read); ok {
 		return branchReadBLOB, nil

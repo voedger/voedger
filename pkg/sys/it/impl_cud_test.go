@@ -435,12 +435,12 @@ func TestEraseString(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	idAnyAirTablePlan := vit.GetAny("app1pkg.air_table_plan", ws)
+	anyAirTablePlanID := vit.GetAny("app1pkg.air_table_plan", ws)
 
-	body := fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"name":""}}]}`, idAnyAirTablePlan)
+	body := fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"name":""}}]}`, anyAirTablePlanID)
 	vit.PostWS(ws, "c.sys.CUD", body)
 
-	body = fmt.Sprintf(`{"args":{"Schema":"app1pkg.air_table_plan"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, idAnyAirTablePlan)
+	body = fmt.Sprintf(`{"args":{"Schema":"app1pkg.air_table_plan"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, anyAirTablePlanID)
 	resp := vit.PostWS(ws, "q.sys.Collection", body)
 
 	require.Empty(t, resp.SectionRow()[0].(string))
