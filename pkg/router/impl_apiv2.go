@@ -108,6 +108,13 @@ func (s *httpService) registerHandlersV2() {
 		corsHandler(requestHandlerV2_create_user(s.numsAppsWorkspaces, s.iTokens, s.federation))).
 		Methods(http.MethodPost).Name("create user")
 
+	// change password user /api/v2/apps/{owner}/{app}/users/change-password
+	// [~server.users/cmp.routerUsersChangePasswordPathHandler~impl]
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/users/change-password",
+		URLPlaceholder_appOwner, URLPlaceholder_appName),
+		corsHandler(requestHandlerV2_changePassword(s.numsAppsWorkspaces, s.federation))).
+		Methods(http.MethodPost).Name("change password")
+
 	// create device /api/v2/apps/{owner}/{app}/devices
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/devices",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
@@ -168,6 +175,30 @@ func requestHandlerV2_schemas_wsRoles(reqSender bus.IRequestSender, numsAppsWork
 		busRequest.APIPath = int(processors.APIPath_Schemas_WorkspaceRoles)
 		busRequest.WorkspaceQName = appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_workspace])
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+	}
+}
+
+// [~server.users/cmp.routerUsersChangePasswordPathHandler~impl]
+func requestHandlerV2_changePassword(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, federation federation.IFederation) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
+		if !ok {
+			return
+		}
+		login, oldPassword, newPassword, err := parseChangePasswordArgs(string(busRequest.Body))
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
+		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"%s","NewPassword":"%s"}}`,
+			login, busRequest.AppQName, oldPassword, newPassword)
+		url := fmt.Sprintf("api/v2/apps/sys/registry/workspaces/%d/commands/registry.ChangePassword", pseudoWSID)
+		if _, err = federation.Func(url, body, coreutils.WithMethod(http.MethodPost), coreutils.WithDiscardResponse()); err != nil { // null auth
+			replyErr(rw, err)
+			return
+		}
+		ReplyJSON(rw, "", http.StatusOK)
 	}
 }
 
@@ -451,10 +482,40 @@ func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSe
 	reply_v2(requestCtx, rw, respCh, respErr, cancel, respMeta.Mode())
 }
 
+func parseChangePasswordArgs(body string) (login, oldPassword, newPassword string, err error) {
+	args := coreutils.MapObject{}
+	if err = json.Unmarshal([]byte(body), &args); err != nil {
+		return "", "", "", fmt.Errorf("failed to unmarshal body: %w", err)
+	}
+	ok := false
+	login, ok, err = args.AsString("login")
+	if err != nil {
+		return "", "", "", err
+	}
+	if !ok {
+		return "", "", "", errors.New("login field missing")
+	}
+	oldPassword, ok, err = args.AsString("oldPassword")
+	if err != nil {
+		return "", "", "", err
+	}
+	if !ok {
+		return "", "", "", errors.New("oldPassword field missing")
+	}
+	newPassword, ok, err = args.AsString("newPassword")
+	if err != nil {
+		return "", "", "", err
+	}
+	if !ok {
+		return "", "", "", errors.New("newPassword field missing")
+	}
+	return login, oldPassword, newPassword, nil
+}
+
 func parseCreateLoginArgs(body string) (verifiedEmailToken, displayName, pwd string, err error) {
 	args := coreutils.MapObject{}
 	if err = json.Unmarshal([]byte(body), &args); err != nil {
-		return "", "", "", fmt.Errorf("failed to unmarshal body: %w:\n%s", err, body)
+		return "", "", "", fmt.Errorf("failed to unmarshal body: %w", err)
 	}
 	ok := false
 	verifiedEmailToken, ok, err = args.AsString("verifiedEmailToken")
