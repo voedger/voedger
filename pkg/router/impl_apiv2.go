@@ -113,6 +113,7 @@ func (s *httpService) registerHandlersV2() {
 		Methods(http.MethodPost).Name("create user")
 
 	// change password user /api/v2/apps/{owner}/{app}/users/change-password
+	// [~server.users/cmp.routerUsersChangePasswordPathHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/users/change-password",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
 		corsHandler(requestHandlerV2_changePassword(s.numsAppsWorkspaces, s.federation))).
