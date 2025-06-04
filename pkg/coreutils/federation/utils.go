@@ -59,6 +59,7 @@ func ListenSSEEvents(ctx context.Context, body io.Reader) (offsetsChan OffsetsCh
 			} else {
 				offset, err := strconv.ParseUint(data, utils.DecimalBase, utils.BitSize64)
 				if err != nil {
+					// notest
 					panic(fmt.Sprint("failed to parse offset", data, err))
 				}
 				offsetsChan <- istructs.Offset(offset)

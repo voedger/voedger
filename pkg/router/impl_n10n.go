@@ -75,11 +75,11 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 			}
 		}
 		flusher.Flush()
-		serverSubscriptions(req.Context(), rw, flusher, channel, s.n10n, urlParams.SubjectLogin)
+		serveSubscriptions(req.Context(), rw, flusher, channel, s.n10n, urlParams.SubjectLogin)
 	}
 }
 
-func serverSubscriptions(ctx context.Context, rw http.ResponseWriter, flusher http.Flusher, channel in10n.ChannelID, n10n in10n.IN10nBroker,
+func serveSubscriptions(ctx context.Context, rw http.ResponseWriter, flusher http.Flusher, channel in10n.ChannelID, n10n in10n.IN10nBroker,
 	subjectLogin istructs.SubjectLogin) {
 	ch := make(chan in10nmem.UpdateUnit)
 	watchChannelContext, cancel := context.WithCancel(ctx)
