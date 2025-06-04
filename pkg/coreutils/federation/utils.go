@@ -22,7 +22,7 @@ import (
 )
 
 // launches listening for sse events from body reader in a separate goroutine
-// returns when the first sse packet with channelID is came from the server, i.e. when the subscribing is actualy done
+// returns when the first sse packet with channelID is came from the server, i.e. when the subscribing is actually done
 // if caller side unsubscribes from events, then it must:
 // - read out offsetsChan
 // - call waitForDone() to ensure the goroutine finished
