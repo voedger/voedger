@@ -132,6 +132,7 @@ func TestN10NErrors(t *testing.T) {
 			{`{"subscriptions":[{"entity":"test.test","wsid":42}],"expiresIn":"str"}`, `cannot unmarshal string into Go struct`},
 			{`{"subscriptions":[{"entity":"wrong","wsid":42}]}`, `failed to parse entity wrong as a QName`},
 			{`{"subscriptions":[{"entity":"test.test","wsid":-1}]}`, `number overflow: -1 to WSID`},
+			{`{"subscriptions":[{"entity":"test.test","wsid":42}],"expiresIn":-1}`, `invalid expiresIn value -1`},
 		}
 		for _, c := range cases {
 			t.Run(c.body, func(t *testing.T) {

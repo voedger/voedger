@@ -294,6 +294,10 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 			return
 		}
 
+		rw.Header().Set("Content-Type", "text/event-stream")
+		rw.Header().Set("Cache-Control", "no-cache")
+		rw.Header().Set("Connection", "keep-alive")
+
 		if _, err = fmt.Fprintf(rw, "event: channelId\ndata: %s\n\n", channel); err != nil {
 			// notest
 			logger.Error("failed to write created channel id to client:", err)
@@ -349,6 +353,8 @@ func parseN10nArgs(body string) (subscriptions []subscription, expiresIn int64, 
 	}
 	if n10nArgs.ExpiresIn == 0 {
 		n10nArgs.ExpiresIn = defaultN10NExpiresInSeconds
+	} else if n10nArgs.ExpiresIn < 0 {
+		return nil, 0, fmt.Errorf("invalid expiresIn value %d", n10nArgs.ExpiresIn)
 	}
 	if len(n10nArgs.Subscriptions) == 0 {
 		return nil, 0, errors.New("no subscriptions provided")
@@ -370,7 +376,7 @@ func parseN10nArgs(body string) (subscriptions []subscription, expiresIn int64, 
 			wsid:   wsid,
 		})
 	}
-	return subscriptions, expiresIn, err
+	return subscriptions, n10nArgs.ExpiresIn, err
 }
 
 // [~server.devices/cmp.routerDevicesCreatePathHandler~impl]
