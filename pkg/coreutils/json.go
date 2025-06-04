@@ -22,6 +22,14 @@ func JSONUnmarshal(b []byte, ptrToPayload interface{}) error {
 	return decoder.Decode(ptrToPayload)
 }
 
+func JSONUnmarshalDisallowUnknownFields(b []byte, ptrToPayload interface{}) error {
+	reader := bytes.NewReader(b)
+	decoder := json.NewDecoder(reader)
+	decoder.UseNumber()
+	decoder.DisallowUnknownFields()
+	return decoder.Decode(ptrToPayload)
+}
+
 func ClarifyJSONNumber(value json.Number, kind appdef.DataKind) (val interface{}, err error) {
 	switch kind {
 	case appdef.DataKind_int8: // #3434 [small integers]
@@ -83,4 +91,15 @@ func ClarifyJSONNumber(value json.Number, kind appdef.DataKind) (val interface{}
 		return istructs.RecordID(int64Val), nil
 	}
 	panic(fmt.Sprintf("unsupported data kind %s for json.Number", kind.TrimString()))
+}
+
+func ClarifyJSONWSID(wsidNumber json.Number) (wsid istructs.WSID, err error) {
+	int64Val, err := wsidNumber.Int64()
+	if err != nil {
+		return 0, errFailedToCast(wsidNumber, "WSID", err)
+	}
+	if int64Val < 0 || int64Val > istructs.MaxAllowedWSID {
+		return 0, errNumberOverflow(wsidNumber, "WSID")
+	}
+	return istructs.WSID(int64Val), nil
 }

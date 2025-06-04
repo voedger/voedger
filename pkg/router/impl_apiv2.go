@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
+	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -136,7 +137,6 @@ func (s *httpService) registerHandlersV2() {
 		corsHandler(requestHandlerV2_blobs_read(s.blobRequestHandler, s.requestSender))).
 		Methods(http.MethodGet).Name("blobs read")
 
-
 	// temp blob create /api/v2/apps/{owner}/{app}/workspaces/{wsid}/tblobs
 	// [~server.apiv2.tblobs/cmp.routerTBlobsCreatePathHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/tblobs",
@@ -150,6 +150,13 @@ func (s *httpService) registerHandlersV2() {
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobIDOrSUUID),
 		corsHandler(requestHandlerV2_tempblobs_read(s.blobRequestHandler, s.requestSender))).
 		Methods(http.MethodGet).Name("temp blobs read")
+
+	// notifications subscribe+watch /api/v2/apps/{owner}/{app}/notifications
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications",
+		URLPlaceholder_appOwner, URLPlaceholder_appName),
+		corsHandler(requestHandlerV2_notifications_subscribeAndWatch(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory))).
+		Methods(http.MethodPost).Name("notifications subscribe + watch")
+
 }
 
 func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
@@ -242,6 +249,127 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 		}
 		ReplyJSON(rw, resp.Body, http.StatusCreated)
 	}
+}
+
+func authorize(appTokensFactory payloads.IAppTokensFactory, busRequest bus.Request) (principalPayload payloads.PrincipalPayload, err error) {
+	principalToken, err := bus.GetPrincipalToken(busRequest)
+	if err != nil {
+		return principalPayload, err
+	}
+	appTokens := appTokensFactory.New(busRequest.AppQName)
+	_, err = appTokens.ValidateToken(principalToken, &principalPayload)
+	return principalPayload, err
+}
+
+func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
+	n10n in10n.IN10nBroker, appTokensFactory payloads.IAppTokensFactory) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		flusher, ok := rw.(http.Flusher)
+		if !ok {
+			// notest
+			WriteTextResponse(rw, "streaming unsupported!", http.StatusInternalServerError)
+			return
+		}
+		busRequest, ok := createBusRequest(req.Method, req, rw, numsAppsWorkspaces)
+		if !ok {
+			return
+		}
+
+		principalPayload, err := authorize(appTokensFactory, busRequest)
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		subscriptions, expiresIn, err := parseN10nArgs(string(busRequest.Body))
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		subjectLogin := istructs.SubjectLogin(principalPayload.Login)
+		channel, err := n10n.NewChannel(istructs.SubjectLogin(subjectLogin), hours24)
+		if err != nil {
+			ReplyCommonError(rw, "create new channel failed: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if _, err = fmt.Fprintf(rw, "event: channelId\ndata: %s\n\n", channel); err != nil {
+			logger.Error("failed to write created channel id to client:", err)
+			return
+		}
+		flusher.Flush()
+
+		subscribedProjectionKeys := []in10n.ProjectionKey{}
+
+		for i, sub := range subscriptions {
+			projectionKey := in10n.ProjectionKey{
+				App:        busRequest.AppQName,
+				Projection: sub.entity,
+				WS:         sub.wsid,
+			}
+			err := n10n.Subscribe(channel, projectionKey)
+			if err != nil {
+				for _, subscribedKey := range subscribedProjectionKeys {
+					if err = n10n.Unsubscribe(channel, subscribedKey); err != nil {
+						logger.Error(fmt.Sprintf("failed to unsubscribe key %#v: %s", subscribedKey, err))
+					}
+				}
+				ReplyCommonError(rw, fmt.Sprintf("subscriptions[%d]: subscribe failed: %s", i, err), http.StatusInternalServerError)
+				return
+			}
+			subscribedProjectionKeys = append(subscribedProjectionKeys, projectionKey)
+		}
+
+		serveN10NChannel(req.Context(), rw, flusher, channel, n10n, subjectLogin)
+		_ = expiresIn
+	}
+}
+
+type SubscriptionJSON struct {
+	Entity     string      `json:"entity"`
+	WSIDNumber json.Number `json:"wsid"`
+}
+
+type subscription struct {
+	entity appdef.QName
+	wsid   istructs.WSID
+}
+
+type N10nArgs struct {
+	Subscriptions []SubscriptionJSON `json:"subscriptions"`
+	ExpiresIn     int64              `json:"expiresIn"`
+}
+
+func parseN10nArgs(body string) (subscriptions []subscription, expiresIn int64, err error) {
+	n10nArgs := N10nArgs{}
+	if err := coreutils.JSONUnmarshalDisallowUnknownFields([]byte(body), &n10nArgs); err != nil {
+		return nil, 0, fmt.Errorf("failed to unmarshal request body: %w", err)
+	}
+	if n10nArgs.ExpiresIn == 0 {
+		n10nArgs.ExpiresIn = defaultN10NExpiresInSeconds
+	}
+	if len(n10nArgs.Subscriptions) == 0 {
+		return nil, 0, errors.New("no subscriptions provided")
+	}
+	for i, subscr := range n10nArgs.Subscriptions {
+		if len(subscr.Entity) == 0 || len(subscr.WSIDNumber.String()) == 0 {
+			return nil, 0, fmt.Errorf("subscriptions[%d]: entity and\\or wsid is not provided", i)
+		}
+		wsid, err := coreutils.ClarifyJSONWSID(subscr.WSIDNumber)
+		if err != nil {
+			return nil, 0, err
+		}
+		entity, err := appdef.ParseQName(subscr.Entity)
+		if err != nil {
+			return nil, 0, fmt.Errorf("subscriptions[%d]: failed to parse entity %s as a QName: %w", i, subscr.Entity, err)
+		}
+		subscriptions = append(subscriptions, subscription{
+			entity: entity,
+			wsid:   wsid,
+		})
+	}
+	return subscriptions, expiresIn, err
 }
 
 // [~server.devices/cmp.routerDevicesCreatePathHandler~impl]
@@ -360,7 +488,7 @@ func requestHandlerV2_tempblobs_create(blobRequestHandler blobprocessor.IRequest
 	}
 }
 
-func replyServiceUnavailable(rw http.ResponseWriter,) {
+func replyServiceUnavailable(rw http.ResponseWriter) {
 	rw.WriteHeader(http.StatusServiceUnavailable)
 	rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
 }

@@ -20,22 +20,23 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func createBusRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (res bus.Request, ok bool) {
 	vars := mux.Vars(req)
 	wsidStr := vars[URLPlaceholder_wsid]
-	var wsidUint uint64
+	var wsid istructs.WSID
 	var err error
 	if len(wsidStr) > 0 {
-		if wsidUint, err = strconv.ParseUint(wsidStr, utils.DecimalBase, utils.BitSize64); err != nil {
-			// notest: impossible because of regexp in a handler
-			panic(err)
+		wsid, err = coreutils.ClarifyJSONWSID(json.Number(wsidStr))
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return res, false
 		}
 	}
 	appQNameStr := vars[URLPlaceholder_appOwner] + appdef.AppQNameQualifierChar + vars[URLPlaceholder_appName]
-	wsid := istructs.WSID(wsidUint)
 	if appQName, err := appdef.ParseAppQName(appQNameStr); err == nil {
 		if numAppWorkspaces, ok := numsAppsWorkspaces[appQName]; ok {
 			baseWSID := wsid.BaseWSID()
@@ -69,7 +70,7 @@ func createBusRequest(reqMethod string, req *http.Request, rw http.ResponseWrite
 	}
 	if req.Body != nil && req.Body != http.NoBody {
 		if res.Body, err = io.ReadAll(req.Body); err != nil {
-			http.Error(rw, "failed to read body", http.StatusInternalServerError)
+			logger.Error("failed to read body", err.Error())
 		}
 	}
 	return res, err == nil
