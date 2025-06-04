@@ -125,6 +125,15 @@ type IEvents interface {
 	// consts.ReadToTheEnd can be used for the toReadCount parameter
 	ReadPLog(ctx context.Context, partition PartitionID, offset Offset, toReadCount int, cb PLogEventsReaderCallback) (err error)
 	ReadWLog(ctx context.Context, workspace WSID, offset Offset, toReadCount int, cb WLogEventsReaderCallback) (err error)
+
+	// Find wlog offset by ORecord id in records registry.
+	// If ORecord is not found then NullOffset is returned.
+	FindORec(WSID, RecordID) (Offset, error)
+
+	// Can read ODoc records only.
+	// If record of these types is not found then NullRecord with QName() == NullQName is returned.
+	// Offset can be NullOffset. In this case method gets wlog offset from records registry
+	GetORec(WSID, RecordID, Offset) (IRecord, error)
 }
 
 type IRecords interface {
@@ -149,11 +158,11 @@ type IRecords interface {
 	PutJSON(WSID, map[appdef.FieldName]any) error
 
 	// @ConcurrentAccess R
-	// Can read GDoc, CDoc, ODoc, WDoc records
-	// If record not found NullRecord with QName() == NullQName is returned
-	// NullRecord.WSID & ID will be taken from arguments
+	// Can read GDoc, CDoc, WDoc records only.
+	// If record of these types is not found then NullRecord with QName() == NullQName is returned.
 	Get(workspace WSID, highConsistency bool, id RecordID) (record IRecord, err error)
 
+	// Can read GDoc, CDoc, WDoc records only.
 	GetBatch(workspace WSID, highConsistency bool, ids []RecordGetBatchItem) (err error)
 
 	// @ConcurrentAccess R
@@ -193,8 +202,9 @@ type IViewRecords interface {
 	// - The fullness of the required view value fields is not checked
 	PutJSON(WSID, map[appdef.FieldName]any) error
 
-	// All fields must be filled in in the key (panic otherwise)
-	Get(workspace WSID, key IKeyBuilder) (value IValue, err error)
+	// All fields must be filled in in the key (panic otherwise).
+	// If key is not found then null value (with NullQName) and ErrRecordNotFound returned
+	Get(WSID, IKeyBuilder) (IValue, error)
 
 	GetBatch(workspace WSID, kv []ViewRecordGetBatchItem) (err error)
 

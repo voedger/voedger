@@ -447,7 +447,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		kb.PutString("clusteringColumn3", "tofu")
 
 		value, err := viewRecords.Get(2, kb)
-		require.ErrorIs(err, ErrRecordNotFound)
+		require.ErrorIs(err, istructs.ErrRecordNotFound)
 		require.NotNil(value)
 	})
 
@@ -1114,7 +1114,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 
 	t.Run("should be load error if truncated clustering columns bytes", func(t *testing.T) {
 		k2 := newKey(cfg, viewName)
-		for i := 0; i < len(c)-4; i++ { // 4 - is length of variable bytes "test" that can be truncated with impunity
+		for i := range len(c) - 4 { // 4 - is length of variable bytes "test" that can be truncated with impunity
 			err := k2.loadFromBytes(c[:i])
 			require.Error(err, i)
 		}
@@ -1142,7 +1142,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	testRowsIsEqual(t, &v1.rowType, &v2.rowType)
 
 	t.Run("should be load error if truncated value bytes", func(t *testing.T) {
-		for i := 0; i < len(v); i++ {
+		for i := range v {
 			v2 := newValue(cfg, viewName)
 			err := v2.loadFromBytes(v[:i])
 			require.Error(err, i)
@@ -1429,7 +1429,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		t.Run("if maximum batch size exceeds", func(t *testing.T) {
 			const tooGig = maxGetBatchRecordCount + 1
 			batch := make([]istructs.ViewRecordGetBatchItem, tooGig)
-			for i := 0; i < len(batch); i++ {
+			for i := range batch {
 				batch[i].Key = app.ViewRecords().KeyBuilder(championsView)
 				batch[i].Key.PutInt32("Year", int32(i))
 				batch[i].Key.PutString("Sport", "Шашки")

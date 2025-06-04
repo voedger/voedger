@@ -385,6 +385,31 @@ func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts .
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
+func (vit *VIT) SqlQueryRows(ws *AppWorkspace, sqlQuery string, fmtArgs ...any) []map[string]interface{} {
+	vit.T.Helper()
+	body := fmt.Sprintf(`{"args":{"Query":"%s"},"elements":[{"fields":["Result"]}]}`, fmt.Sprintf(sqlQuery, fmtArgs...))
+	resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(ws.Owner.Token))
+	res := []map[string]interface{}{}
+	for _, elem := range resp.Sections[0].Elements {
+		m := map[string]interface{}{}
+		require.NoError(vit.T, json.Unmarshal([]byte(elem[0][0][0].(string)), &m))
+		res = append(res, m)
+	}
+	return res
+}
+
+func (vit *VIT) SqlQuery(ws *AppWorkspace, sqlQuery string, fmtArgs ...any) map[string]interface{} {
+	vit.T.Helper()
+	body := fmt.Sprintf(`{"args":{"Query":"%s"},"elements":[{"fields":["Result"]}]}`, fmt.Sprintf(sqlQuery, fmtArgs...))
+	resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(ws.Owner.Token))
+	if len(resp.Sections[0].Elements) > 1 {
+		vit.T.Fatal("sql query returned few rows. Use SqlQueryRows")
+	}
+	res := map[string]interface{}{}
+	require.NoError(vit.T, json.Unmarshal([]byte(resp.Sections[0].Elements[0][0][0][0].(string)), &res))
+	return res
+}
+
 func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobName string, blobMimeType string, blobContent []byte,
 	opts ...coreutils.ReqOptFunc) (blobID istructs.RecordID) {
 	vit.T.Helper()

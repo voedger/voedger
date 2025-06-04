@@ -215,7 +215,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 				wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 				qName := appdef.NewQName("test", "test")
 				obj := wsb.AddObject(qName)
-				for i := 0; i <= MaxAvailableContainerID; i++ {
+				for i := range MaxAvailableContainerID + 1 {
 					obj.AddContainer(fmt.Sprintf("cont_%d", i), qName, 0, 1)
 				}
 				result, err := adb.Build()

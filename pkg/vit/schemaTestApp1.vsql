@@ -479,8 +479,12 @@ ALTERABLE WORKSPACE test_wsWS (
 	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE odoc1 INHERITS sys.ODoc (
+		odocIntFld int32,
 		orecord1 TABLE orecord1(
-			orecord2 TABLE orecord2()
+			orecord1IntFld int32,
+			orecord2 TABLE orecord2(
+				orecord2IntFld int32
+			)
 		) WITH Tags=(WorkspaceOwnerTableTag)
 	) WITH Tags=(WorkspaceOwnerTableTag);
 

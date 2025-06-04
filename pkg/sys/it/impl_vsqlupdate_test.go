@@ -239,7 +239,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_View(t *testing.T) {
 		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.CategoryIdx set Name = 'any' where IntFld = 1 and Dummy = 1"}}`, ws.WSID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
-			coreutils.Expect400("record cannot be found"),
+			coreutils.Expect400(fmt.Sprint(istructs.ErrRecordNotFound)), // `record not found`
 		)
 	})
 

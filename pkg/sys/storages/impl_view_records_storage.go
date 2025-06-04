@@ -15,7 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
@@ -57,7 +56,7 @@ func (s *viewRecordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.
 	}
 	v, err := s.appStructsFunc().ViewRecords().Get(k.wsid, k.IKeyBuilder)
 	if err != nil {
-		if errors.Is(err, istructsmem.ErrRecordNotFound) {
+		if errors.Is(err, istructs.ErrRecordNotFound) {
 			return nil, nil
 		}
 		return nil, err

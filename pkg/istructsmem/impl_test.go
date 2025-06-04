@@ -339,10 +339,10 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 		b := appStructs.ObjectBuilder(objName)
 		require.NotNil(b)
 
-		b.FillFromJSON(map[string]interface{}{
+		b.FillFromJSON(map[string]any{
 			"int": int64(1),
-			"child": []interface{}{
-				map[string]interface{}{
+			"child": []any{
+				map[string]any{
 					"int": int64(2),
 				},
 			},
@@ -422,7 +422,7 @@ func TestBasicUsage_Resources(t *testing.T) {
 // Demonstrates basic usage application
 func TestBasicUsage_AppDef(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	app := test.AppStructs
 
@@ -568,7 +568,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 
 func Test_Provide(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	t.Run("AppStructs() must error if unknown app name", func(t *testing.T) {
 		cfgs := make(AppConfigsType)

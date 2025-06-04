@@ -55,6 +55,9 @@ func ExampleStructures() {
 		// how to enum structures
 		cnt := 0
 		for s := range appdef.Structures(app.Types()) {
+			if s.IsSystem() {
+				continue // skip system structures
+			}
 			cnt++
 			fmt.Printf("%d. %v\n", cnt, s)
 			fmt.Printf("- user/overall field count: %d/%d\n", s.UserFieldCount(), s.FieldCount())
@@ -71,6 +74,9 @@ func ExampleStructures() {
 	{
 		cnt := 0
 		for r := range appdef.Records(app.Types()) {
+			if r.IsSystem() {
+				continue // skip system structures
+			}
 			cnt++
 			fmt.Printf("%d. %v\n", cnt, r)
 			fmt.Printf("- user/overall field count: %d/%d\n", r.UserFieldCount(), r.FieldCount())
