@@ -407,7 +407,7 @@ func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSe
 func parseChangePasswordArgs(body string) (login, oldPassword, newPassword string, err error) {
 	args := coreutils.MapObject{}
 	if err = json.Unmarshal([]byte(body), &args); err != nil {
-		return "", "", "", fmt.Errorf("failed to unmarshal body: %w:\n%s", err, body)
+		return "", "", "", fmt.Errorf("failed to unmarshal body: %w", err)
 	}
 	ok := false
 	login, ok, err = args.AsString("login")
@@ -437,7 +437,7 @@ func parseChangePasswordArgs(body string) (login, oldPassword, newPassword strin
 func parseCreateLoginArgs(body string) (verifiedEmailToken, displayName, pwd string, err error) {
 	args := coreutils.MapObject{}
 	if err = json.Unmarshal([]byte(body), &args); err != nil {
-		return "", "", "", fmt.Errorf("failed to unmarshal body: %w:\n%s", err, body)
+		return "", "", "", fmt.Errorf("failed to unmarshal body: %w", err)
 	}
 	ok := false
 	verifiedEmailToken, ok, err = args.AsString("verifiedEmailToken")
