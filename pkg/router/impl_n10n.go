@@ -26,7 +26,7 @@ import (
 /*
 curl -G --data-urlencode "payload={\"SubjectLogin\": \"paa\", \"ProjectionKey\":[{\"App\":\"Application\",\"Projection\":\"paa.price\",\"WS\":1}, {\"App\":\"Application\",\"Projection\":\"paa.wine_price\",\"WS\":1}]}" https://alpha2.dev.untill.ru/n10n/channel -H "Content-Type: application/json"
 */
-func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
+func (s *httpService) subscribeAndWatchHandler_V1() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		var (
 			urlParams in10nmem.CreateChannelParamsType
@@ -75,39 +75,44 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 			}
 		}
 		flusher.Flush()
-		ch := make(chan in10nmem.UpdateUnit)
-		watchChannelContext, cancel := context.WithCancel(req.Context())
-		go func() {
-			defer close(ch)
-			s.n10n.WatchChannel(watchChannelContext, channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {
-				var unit = in10nmem.UpdateUnit{
-					Projection: projection,
-					Offset:     offset,
-				}
-				ch <- unit
-			})
-		}()
-		defer logger.Info("watch done")
-		for req.Context().Err() == nil {
-			result, ok := <-ch
-			if !ok {
-				break
+		serverSubscriptions(req.Context(), rw, flusher, channel, s.n10n, urlParams.SubjectLogin)
+	}
+}
+
+func serverSubscriptions(ctx context.Context, rw http.ResponseWriter, flusher http.Flusher, channel in10n.ChannelID, n10n in10n.IN10nBroker,
+	subjectLogin istructs.SubjectLogin) {
+	ch := make(chan in10nmem.UpdateUnit)
+	watchChannelContext, cancel := context.WithCancel(ctx)
+	go func() {
+		defer close(ch)
+		n10n.WatchChannel(watchChannelContext, channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {
+			var unit = in10nmem.UpdateUnit{
+				Projection: projection,
+				Offset:     offset,
 			}
-			sseMessage := fmt.Sprintf("event: %s\ndata: %s\n\n", result.Projection.ToJSON(), utils.UintToString(result.Offset))
-			if _, err = fmt.Fprint(rw, sseMessage); err != nil {
-				logger.Error("failed to write sse message for subjectLogin", urlParams.SubjectLogin, "to client:", sseMessage, ":", err.Error())
-				break // WatchChannel will be finished on cancel()
-			}
-			if logger.IsVerbose() {
-				logger.Verbose(fmt.Sprintf("sse message sent for subjectLogin %s:", urlParams.SubjectLogin), strings.ReplaceAll(sseMessage, "\n", " "))
-			}
-			flusher.Flush()
+			ch <- unit
+		})
+	}()
+	defer logger.Info("watch done")
+	for ctx.Err() == nil {
+		result, ok := <-ch
+		if !ok {
+			break
 		}
-		// graceful client disconnect -> req.Context() closed
-		// failed to write sse message -> need to close watchChannelContext
-		cancel()
-		for range ch {
+		sseMessage := fmt.Sprintf("event: %s\ndata: %s\n\n", result.Projection.ToJSON(), utils.UintToString(result.Offset))
+		if _, err := fmt.Fprint(rw, sseMessage); err != nil {
+			logger.Error("failed to write sse message for subjectLogin", subjectLogin, "to client:", sseMessage, ":", err.Error())
+			break // WatchChannel will be finished on cancel()
 		}
+		if logger.IsVerbose() {
+			logger.Verbose(fmt.Sprintf("sse message sent for subjectLogin %s:", subjectLogin), strings.ReplaceAll(sseMessage, "\n", " "))
+		}
+		flusher.Flush()
+	}
+	// graceful client disconnect -> req.Context() closed
+	// failed to write sse message -> need to close watchChannelContext
+	cancel()
+	for range ch {
 	}
 }
 

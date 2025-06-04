@@ -6,7 +6,6 @@
 package federation
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -293,7 +292,6 @@ func (f *implIFederation) Port() int {
 }
 
 func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey) (offsetsChan OffsetsChan, unsubscribe func(), err error) {
-	channelID := ""
 	query := fmt.Sprintf(`
 		{
 			"SubjectLogin": "test_%d",
@@ -312,43 +310,7 @@ func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey) (offs
 		return nil, nil, err
 	}
 
-	subscribed := make(chan interface{})
-	offsetsChan = make(OffsetsChan)
-	go func() {
-		defer close(offsetsChan)
-		scanner := bufio.NewScanner(resp.HTTPResp.Body)
-		scanner.Split(coreutils.ScanSSE) // split by sse frames, separator is "\n\n"
-		for scanner.Scan() {
-			if resp.HTTPResp.Request.Context().Err() != nil {
-				return
-			}
-			messages := strings.Split(scanner.Text(), "\n") // split the frame by ecent and data
-			var event, data string
-			for _, str := range messages { // read out
-				if strings.HasPrefix(str, "event: ") {
-					event = strings.TrimPrefix(str, "event: ")
-				}
-				if strings.HasPrefix(str, "data: ") {
-					data = strings.TrimPrefix(str, "data: ")
-				}
-			}
-			if logger.IsVerbose() {
-				logger.Verbose(fmt.Sprintf("received event from server: %s, data: %s", event, data))
-			}
-			if event == "channelId" {
-				channelID = data
-				close(subscribed)
-			} else {
-				offset, err := strconv.ParseUint(data, utils.DecimalBase, utils.BitSize64)
-				if err != nil {
-					panic(fmt.Sprint("failed to parse offset", data, err))
-				}
-				offsetsChan <- istructs.Offset(offset)
-			}
-		}
-	}()
-
-	<-subscribed
+	offsetsChan, channelID, waitForDone := ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
 
 	unsubscribe = func() {
 		body := fmt.Sprintf(`
@@ -372,6 +334,7 @@ func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey) (offs
 		resp.HTTPResp.Body.Close()
 		for range offsetsChan {
 		}
+		waitForDone()
 	}
 	return
 }
