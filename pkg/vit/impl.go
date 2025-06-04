@@ -514,7 +514,7 @@ func (vit *VIT) WaitFor(consumer func() *coreutils.FuncResponse) *coreutils.Func
 	return nil
 }
 
-func (vit *VIT) refreshTokens() {
+func (vit *VIT) RefreshTokens() {
 	vit.T.Helper()
 	for _, appPrns := range vit.principals {
 		for _, prn := range appPrns {
@@ -547,7 +547,7 @@ func (vit *VIT) Now() time.Time {
 
 func (vit *VIT) TimeAdd(dur time.Duration) {
 	vit.mockTime.Add(dur)
-	vit.refreshTokens()
+	vit.RefreshTokens()
 }
 
 func (vit *VIT) NextName() string {

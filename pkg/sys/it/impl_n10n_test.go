@@ -93,6 +93,57 @@ func TestBasicUsage_n10n_APIv2(t *testing.T) {
 	waitForDone()
 }
 
+func TestN10NErrors(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	t.Run("401 unauthorized", func(t *testing.T) {
+		t.Run("no token", func(t *testing.T) {
+			vit.POST("api/v2/apps/test1/app1/notifications", "{}", coreutils.Expect401()).Println()
+		})
+
+		t.Run("expired token", func(t *testing.T) {
+			testingu.MockTime.Add(24 * time.Hour)
+			vit.POST("api/v2/apps/test1/app1/notifications", "{}",
+				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				coreutils.Expect401(),
+			).Println()
+			vit.RefreshTokens()
+		})
+	})
+
+	t.Run("bad requests", func(t *testing.T) {
+		cases := []struct {
+			body     string
+			expected string
+		}{
+			{"", "failed to unmarshal request body"},
+			{"{}", "no subscriptions provided"},
+			{`{"subscriptions":[]}`, "no subscriptions provided"},
+			{`{"subscriptions":42}`, "cannot unmarshal number into Go struct field"},
+			{`{"wrong":42}`, `unknown field "wrong"`},
+			{`{"subscriptions":[{"wrong":42}]}`, `unknown field "wrong"`},
+			{`{"subscriptions":[{"entity":"test.test"}]}`, `entity and\or wsid is not provided`},
+			{`{"subscriptions":[{"wsid":42}]}`, `entity and\or wsid is not provided`},
+			{`{"subscriptions":[{"entity":42,"wsid":42}]}`, `cannot unmarshal number into Go struct`},
+			{`{"subscriptions":[{"entity":42,"wsid":"str"}]}`, `trying to unmarshal "\"str\"" into Number`},
+			{`{"subscriptions":[{"entity":"test.test","wsid":42}],"expiresIn":"str"}`, `cannot unmarshal string into Go struct`},
+			{`{"subscriptions":[{"entity":"wrong","wsid":42}]}`, `failed to parse entity wrong as a QName`},
+			{`{"subscriptions":[{"entity":"test.test","wsid":-1}]}`, `number overflow: -1 to WSID`},
+		}
+		for _, c := range cases {
+			t.Run(c.body, func(t *testing.T) {
+				vit.POST("api/v2/apps/test1/app1/notifications", c.body,
+					coreutils.WithAuthorizeBy(ws.Owner.Token),
+					coreutils.Expect400(c.expected),
+				).Println()
+			})
+		}
+	})
+}
+
 // [~server.n10n.heartbeats/it.Heartbeat30~impl]
 func TestBasicUsage_Heartbeat30(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)

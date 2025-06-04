@@ -295,6 +295,7 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 		}
 
 		if _, err = fmt.Fprintf(rw, "event: channelId\ndata: %s\n\n", channel); err != nil {
+			// notest
 			logger.Error("failed to write created channel id to client:", err)
 			return
 		}
