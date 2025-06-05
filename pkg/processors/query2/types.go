@@ -173,24 +173,54 @@ func (o objectBackedByMap) SpecifiedValues(cb func(appdef.IField, interface{}) b
 
 type keys struct {
 	pipeline.AsyncNOOP
-	keys map[string]bool
+	keys map[string]interface{}
 }
 
-func newKeys(ss []string) (o pipeline.IAsyncOperator) {
-	k := &keys{keys: make(map[string]bool)}
-	for _, s := range ss {
-		k.keys[s] = true
+func newKeys(paths []string) (o pipeline.IAsyncOperator) {
+	k := &keys{keys: make(map[string]interface{})}
+
+	var f func(keysMap map[string]interface{}, keys []string)
+	f = func(keysMap map[string]interface{}, keys []string) {
+		key := keys[0]
+		if len(keys) == 1 {
+			keysMap[key] = true
+		} else {
+			intf, ok := keysMap[key]
+			if !ok {
+				intf = make(map[string]interface{})
+			}
+			f(intf.(map[string]interface{}), keys[1:])
+			keysMap[key] = intf
+		}
+	}
+	for _, path := range paths {
+		f(k.keys, splitPath(path))
 	}
 	return k
 }
 
-func (f *keys) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
-	for k := range work.(objectBackedByMap).data {
-		if f.keys[k] {
-			continue
+func (k *keys) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
+	var f func(keysMap map[string]interface{}, data map[string]interface{})
+	f = func(keysMap map[string]interface{}, data map[string]interface{}) {
+		for key := range data {
+			switch v1 := keysMap[key].(type) {
+			case bool:
+				// Do nothing
+			case map[string]interface{}:
+				switch v2 := data[key].(type) {
+				case map[string]interface{}:
+					f(v1, v2)
+				case []map[string]interface{}:
+					for i := range v2 {
+						f(v1, v2[i])
+					}
+				}
+			case nil:
+				delete(data, key)
+			}
 		}
-		delete(work.(objectBackedByMap).data, k)
 	}
+	f(k.keys, work.(objectBackedByMap).data)
 	return work, nil
 }
 

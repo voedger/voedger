@@ -268,3 +268,40 @@ func TestSynthetic(t *testing.T) {
 
 	<-done // wait for event read and offsestChan close
 }
+
+func TestChannelExpiration(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	testProjectionKey := in10n.ProjectionKey{
+		App:        istructs.AppQName_test1_app1,
+		Projection: appdef.NewQName("paa", "price"),
+		WS:         ws.WSID,
+	}
+
+	offsetsChan, unsubscribe, err := vit.N10NSubscribe(testProjectionKey)
+	require.NoError(err)
+
+	// expire the channel
+	testingu.MockTime.Add(25 * time.Hour)
+
+	// channel is not closed, sse connection is still opened
+	select {
+	case <-offsetsChan:
+		t.Fail()
+	default:
+	}
+
+	// produce SSE event
+	vit.N10NUpdate(testProjectionKey, 13)
+
+	// the channel is closed on SSE event because it is expired
+	_, ok := <-offsetsChan
+	require.False(ok)
+
+	// calling unsubscribe has no sense here, it just causes "channel does not exist" error
+	// but let's call for demonstration
+	unsubscribe()
+}

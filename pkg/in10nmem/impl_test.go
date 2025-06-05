@@ -314,3 +314,50 @@ func TestHeartbeats(t *testing.T) {
 	cancel()
 	wg.Wait()
 }
+
+func TestChannelExpiration(t *testing.T) {
+	quotasExample := in10n.Quotas{
+		Channels:                1,
+		ChannelsPerSubject:      1,
+		Subscriptions:           1,
+		SubscriptionsPerSubject: 1,
+	}
+
+	broker, cleanup := ProvideEx2(quotasExample, testingu.MockTime)
+	defer cleanup()
+
+	subject := istructs.SubjectLogin("test")
+	channelID, err := broker.NewChannel(subject, time.Second)
+	require.NoError(t, err)
+	projectionKeyExample := in10n.ProjectionKey{
+		App:        istructs.AppQName_test1_app1,
+		Projection: appdef.NewQName("test", "restaurant"),
+		WS:         istructs.WSID(1),
+	}
+	err = broker.Subscribe(channelID, projectionKeyExample)
+	require.NoError(t, err)
+	ctx := context.Background()
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	eventHandled := make(chan any)
+	go func() {
+		broker.WatchChannel(ctx, channelID, func(projection in10n.ProjectionKey, offset istructs.Offset) {
+			eventHandled <- nil
+		})
+		wg.Done()
+	}()
+
+	// check the notifications work
+	broker.Update(projectionKeyExample, 42)
+	<-eventHandled
+
+	// expire the channel
+	testingu.MockTime.Sleep(2 * time.Second)
+
+	// try to send an event -> validation should fail because the channel is expired
+	broker.Update(projectionKeyExample, 43)
+
+	// expect WatchChannel() is done
+	// observe "channel time to live expired: subjectlogin test" message in the log
+	wg.Wait()
+}
