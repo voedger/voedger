@@ -2232,6 +2232,25 @@ func Test_Constraints(t *testing.T) {
 		CONSTRAINT c2 UNIQUE(t2, t1)
 	))`, "file.vsql:7:3: field t1 already in unique constraint")
 
+	t.Run("Unique ref fields", func(t *testing.T) {
+		schema, err := require.AppSchema(`
+	 	APPLICATION app1(); WORKSPACE ws1 (
+			TABLE t1 INHERITS sys.CDoc ();
+	    TABLE t2 INHERITS sys.WDoc (
+        f1 ref(t1) NOT NULL,
+        UNIQUE(f1)
+    ))`)
+		require.NoError(err)
+		builder := builder.New()
+		err = BuildAppDefs(schema, builder)
+		require.NoError(err)
+
+		app, err := builder.Build()
+		require.NoError(err)
+		wdoc := appdef.WDoc(app.Type, appdef.NewQName("pkg", "t2"))
+		require.NotNil(wdoc)
+		require.Equal(1, wdoc.UniqueCount())
+	})
 }
 
 func Test_Grants(t *testing.T) {
