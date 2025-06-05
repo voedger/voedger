@@ -160,7 +160,7 @@ func TestChannelExpiration(t *testing.T) {
 	_, ok := <-offsetsChan
 	require.False(ok)
 
-	// calling unsubscribe has no sence here, it just causes "channel does not exist" error
+	// calling unsubscribe has no sense here, it just causes "channel does not exist" error
 	// but let's call for demostration
 	unsubscribe()
 }
