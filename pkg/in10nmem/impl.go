@@ -428,7 +428,7 @@ func (nb *N10nBroker) validateChannel(channel *channel) error {
 	nb.RLock()
 	defer nb.RUnlock()
 	// if channel lifetime > channelDuration defined in NewChannel when create channel - must exit
-	if time.Since(channel.createTime) > channel.channelDuration {
+	if nb.time.Now().Sub(channel.createTime) > channel.channelDuration {
 		return ErrChannelExpired
 	}
 	return nil
