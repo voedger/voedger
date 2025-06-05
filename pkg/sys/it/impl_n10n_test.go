@@ -152,8 +152,15 @@ func TestChannelExpiration(t *testing.T) {
 		t.Fail()
 	default:
 	}
-	require.
-		//
-		vit.N10NUpdate(testProjectionKey, 13)
+
+	// produce SSE event
+	vit.N10NUpdate(testProjectionKey, 13)
+
+	// the channel is closed on SSE event because it is expired
+	_, ok := <-offsetsChan
+	require.False(ok)
+
+	// calling unsubscribe has no sence here, it just causes "channel does not exist" error
+	// but let's call for demostration
 	unsubscribe()
 }
