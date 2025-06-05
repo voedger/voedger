@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
@@ -288,7 +289,7 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 		}
 
 		subjectLogin := istructs.SubjectLogin(principalPayload.Login)
-		channel, err := n10n.NewChannel(istructs.SubjectLogin(subjectLogin), hours24)
+		channel, err := n10n.NewChannel(istructs.SubjectLogin(subjectLogin), expiresIn)
 		if err != nil {
 			ReplyCommonError(rw, "create new channel failed: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -342,19 +343,22 @@ type subscription struct {
 }
 
 type N10nArgs struct {
-	Subscriptions []SubscriptionJSON `json:"subscriptions"`
-	ExpiresIn     int64              `json:"expiresIn"`
+	Subscriptions     []SubscriptionJSON `json:"subscriptions"`
+	ExpiresInSeconds  int64              `json:"expiresIn"`
+	expiresInDuration time.Duration
 }
 
-func parseN10nArgs(body string) (subscriptions []subscription, expiresIn int64, err error) {
+func parseN10nArgs(body string) (subscriptions []subscription, expiresIn time.Duration, err error) {
 	n10nArgs := N10nArgs{}
 	if err := coreutils.JSONUnmarshalDisallowUnknownFields([]byte(body), &n10nArgs); err != nil {
 		return nil, 0, fmt.Errorf("failed to unmarshal request body: %w", err)
 	}
-	if n10nArgs.ExpiresIn == 0 {
-		n10nArgs.ExpiresIn = defaultN10NExpiresInSeconds
-	} else if n10nArgs.ExpiresIn < 0 {
-		return nil, 0, fmt.Errorf("invalid expiresIn value %d", n10nArgs.ExpiresIn)
+	if n10nArgs.ExpiresInSeconds == 0 {
+		n10nArgs.ExpiresInSeconds = defaultN10NExpiresInSeconds
+	} else if n10nArgs.ExpiresInSeconds < 0 {
+		return nil, 0, fmt.Errorf("invalid expiresIn value %d", n10nArgs.ExpiresInSeconds)
+	} else {
+		n10nArgs.expiresInDuration = time.Duration(n10nArgs.ExpiresInSeconds) * time.Second
 	}
 	if len(n10nArgs.Subscriptions) == 0 {
 		return nil, 0, errors.New("no subscriptions provided")
@@ -376,7 +380,7 @@ func parseN10nArgs(body string) (subscriptions []subscription, expiresIn int64, 
 			wsid:   wsid,
 		})
 	}
-	return subscriptions, n10nArgs.ExpiresIn, err
+	return subscriptions, n10nArgs.expiresInDuration, err
 }
 
 // [~server.devices/cmp.routerDevicesCreatePathHandler~impl]
