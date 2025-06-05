@@ -161,6 +161,6 @@ func TestChannelExpiration(t *testing.T) {
 	require.False(ok)
 
 	// calling unsubscribe has no sense here, it just causes "channel does not exist" error
-	// but let's call for demostration
+	// but let's call for demonstration
 	unsubscribe()
 }

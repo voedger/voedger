@@ -335,6 +335,7 @@ func TestChannelExpiration(t *testing.T) {
 		WS:         istructs.WSID(1),
 	}
 	err = broker.Subscribe(channelID, projectionKeyExample)
+	require.NoError(t, err)
 	ctx := context.Background()
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -355,7 +356,7 @@ func TestChannelExpiration(t *testing.T) {
 
 	// try to send an event -> validation should fail because the channel is expired
 	broker.Update(projectionKeyExample, 43)
-	
+
 	// expect WatchChannel() is done
 	// observe "channel time to live expired: subjectlogin test" message in the log
 	wg.Wait()
