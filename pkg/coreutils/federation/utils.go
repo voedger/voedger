@@ -33,7 +33,9 @@ func ListenSSEEvents(ctx context.Context, body io.Reader) (offsetsChan OffsetsCh
 	wg.Add(1)
 	go func() {
 		defer close(offsetsChan)
-		defer wg.Done()
+		defer func() {
+			wg.Done()
+		}()
 		scanner := bufio.NewScanner(body)
 		scanner.Split(coreutils.ScanSSE) // split by sse frames, separator is "\n\n"
 		for scanner.Scan() {

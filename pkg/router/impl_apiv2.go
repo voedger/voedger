@@ -328,7 +328,6 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 		}
 
 		serveN10NChannel(req.Context(), rw, flusher, channel, n10n, subjectLogin)
-		_ = expiresIn
 	}
 }
 

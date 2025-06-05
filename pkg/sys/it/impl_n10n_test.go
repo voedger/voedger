@@ -93,7 +93,7 @@ func TestBasicUsage_n10n_APIv2(t *testing.T) {
 	waitForDone()
 }
 
-func TestExpiresIn(t *testing.T) {
+func TestChannelExpiration_V2(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -117,17 +117,18 @@ func TestExpiresIn(t *testing.T) {
 		coreutils.WithLongPolling(),
 	)
 
-	_, _, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
-	go func() {
-		<-resp.HTTPResp.Request.Context().Done()
-		logger.Info("preved")
-	}()
+	offsetsChan, _, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
 
+	// make the channel expire
+	testingu.MockTime.Add(4 * time.Second)
 
-	time.Sleep(4*time.Second)
-		body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
+	// force update the expired channel
+	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
 	vit.PostWS(ws, "c.sys.CUD", body)
 
+	// expect SSE listener is finished
+	_, ok := <-offsetsChan
+	require.False(t, ok)
 	waitForDone()
 }
 
@@ -269,7 +270,7 @@ func TestSynthetic(t *testing.T) {
 	<-done // wait for event read and offsestChan close
 }
 
-func TestChannelExpiration(t *testing.T) {
+func TestChannelExpiration_V1(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
