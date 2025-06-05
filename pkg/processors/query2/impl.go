@@ -333,3 +333,25 @@ func combine(arrays [][]interface{}, index int) [][]interface{} {
 	}
 	return result
 }
+
+func splitPath(path string) (parts []string) {
+	var current []rune
+	inQuotes := false
+	for _, r := range path {
+		switch r {
+		case '"':
+			inQuotes = !inQuotes
+		case '.':
+			if inQuotes {
+				current = append(current, r)
+			} else {
+				parts = append(parts, string(current))
+				current = current[:0]
+			}
+		default:
+			current = append(current, r)
+		}
+	}
+	parts = append(parts, string(current))
+	return parts
+}
