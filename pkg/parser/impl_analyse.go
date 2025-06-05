@@ -1408,6 +1408,11 @@ func lookupField(items []TableItemExpr, name Ident, c *iterateCtx) (found bool) 
 				return true
 			}
 		}
+		if item.RefField != nil {
+			if item.RefField.Name == name {
+				return true
+			}
+		}
 		if item.FieldSet != nil {
 			if err := resolveInCtx(item.FieldSet.Type, c, func(t *TypeStmt, schema *PackageSchemaAST) error {
 				found = lookupField(t.Items, name, c)
