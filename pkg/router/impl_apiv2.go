@@ -289,7 +289,7 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 		}
 
 		subjectLogin := istructs.SubjectLogin(principalPayload.Login)
-		channel, err := n10n.NewChannel(istructs.SubjectLogin(subjectLogin), expiresIn)
+		channel, err := n10n.NewChannel(subjectLogin, expiresIn)
 		if err != nil {
 			ReplyCommonError(rw, "create new channel failed: "+err.Error(), http.StatusInternalServerError)
 			return
