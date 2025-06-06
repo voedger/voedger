@@ -30,9 +30,10 @@ const (
 	URLPlaceholder_command          = "command"
 	URLPlaceholder_query            = "query"
 	URLPlaceholder_view             = "view"
-	URLPlaceholder_workspace        = "workspace"
+	URLPlaceholder_workspaceName    = "workspace"
 	URLPlaceholder_rolePkg          = "rolePkg"
 	URLPlaceholder_role             = "role"
+	URLPlaceholder_channelID        = "channelID"
 	URLPlaceholder_field            = "field"
 	hours24                         = 24 * time.Hour
 	DefaultRetryAfterSecondsOn503   = 1
