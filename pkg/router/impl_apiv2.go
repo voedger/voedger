@@ -224,6 +224,7 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 			verifiedEmailToken, busRequest.AppQName, istructs.SubjectKind_User, wsKindInitData, istructs.CurrentClusterID(), pwd)
 		sysToken, err := payloads.GetSystemPrincipalToken(iTokens, istructs.AppQName_sys_registry)
 		if err != nil {
+			// notest
 			ReplyCommonError(rw, "failed to issue sys token: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
