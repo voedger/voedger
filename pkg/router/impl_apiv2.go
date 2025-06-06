@@ -333,11 +333,6 @@ func requestHandlerV2_notifications_unsubscribe(numsAppsWorkspaces map[appdef.Ap
 
 		vars := mux.Vars(req)
 		channelID := vars[URLPlaceholder_channelID]
-		wsid, err := coreutils.ClarifyJSONWSID(json.Number(vars[URLPlaceholder_workspace]))
-		if err != nil {
-			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
-			return
-		}
 
 		entity, err := appdef.ParseQName(vars[URLPlaceholder_view])
 		if err != nil {
@@ -348,7 +343,7 @@ func requestHandlerV2_notifications_unsubscribe(numsAppsWorkspaces map[appdef.Ap
 		projectionKey := in10n.ProjectionKey{
 			App:        busRequest.AppQName,
 			Projection: entity,
-			WS:         wsid,
+			WS:         data.wsid,
 		}
 
 		if err := n10n.Unsubscribe(in10n.ChannelID(channelID), projectionKey); err != nil {
