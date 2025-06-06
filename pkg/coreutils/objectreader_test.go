@@ -5,6 +5,7 @@
 package coreutils
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -214,6 +215,41 @@ func TestJSONMapToCUDBody(t *testing.T) {
 			},
 		}
 		require.Panics(t, func() { JSONMapToCUDBody(data) })
+	})
+}
+
+func TestCheckValueByKind(t *testing.T) {
+	okCases := []struct {
+		val  any
+		kind appdef.DataKind
+	}{
+		{int8(1), appdef.DataKind_int8},
+		{int16(2), appdef.DataKind_int16},
+		{int32(3), appdef.DataKind_int32},
+		{int64(4), appdef.DataKind_int64},
+		{int64(5), appdef.DataKind_RecordID},
+		{float32(6), appdef.DataKind_float32},
+		{float64(7), appdef.DataKind_float64},
+		{true, appdef.DataKind_bool},
+		{"str", appdef.DataKind_string},
+		{"str", appdef.DataKind_QName},
+		{[]byte{9}, appdef.DataKind_bytes},
+		{istructs.RecordID(10), appdef.DataKind_RecordID},
+		{int64(11), appdef.DataKind_RecordID},
+		{appdef.NewQName("1", "1"), appdef.DataKind_QName},
+	}
+	for _, c := range okCases {
+		t.Run(fmt.Sprintf("%v", c.val), func(t *testing.T) {
+			require.NoError(t, CheckValueByKind(c.val, c.kind))
+		})
+	}
+
+	t.Run("not ok", func(t *testing.T) {
+		for kind := appdef.DataKind(1); kind < appdef.DataKind_FakeLast; kind++ {
+			t.Run(kind.String(), func(t *testing.T) {
+				require.Error(t, CheckValueByKind(func() {}, kind))
+			})
+		}
 	})
 }
 
