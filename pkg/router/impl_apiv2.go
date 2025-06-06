@@ -21,7 +21,6 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -163,7 +162,8 @@ func (s *httpService) registerHandlersV2() {
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications/{%s}/workspaces/{%s}/subscriptions/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_channelID, URLPlaceholder_workspace, URLPlaceholder_view),
 		corsHandler(requestHandlerV2_notifications_unsubscribe(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory))).
-		Methods(http.MethodDelete).Name("notifications unsubscribe")}
+		Methods(http.MethodDelete).Name("notifications unsubscribe")
+}
 
 func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return withRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
@@ -318,6 +318,46 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 		}
 
 		serveN10NChannel(req.Context(), rw, flusher, channel, n10n, subjectLogin)
+	})
+}
+
+func requestHandlerV2_notifications_unsubscribe(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
+	n10n in10n.IN10nBroker, appTokensFactory payloads.IAppTokensFactory) http.HandlerFunc {
+	return withRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
+		busRequest := createBusRequest(req.Method, data, req)
+
+		if _, err := authorize(appTokensFactory, busRequest); err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		vars := mux.Vars(req)
+		channelID := vars[URLPlaceholder_channelID]
+		wsid, err := coreutils.ClarifyJSONWSID(json.Number(vars[URLPlaceholder_workspace]))
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		entity, err := appdef.ParseQName(vars[URLPlaceholder_view])
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		projectionKey := in10n.ProjectionKey{
+			App:        busRequest.AppQName,
+			Projection: entity,
+			WS:         wsid,
+		}
+
+		if err := n10n.Unsubscribe(in10n.ChannelID(channelID), projectionKey); err != nil {
+			code := http.StatusInternalServerError
+			if errors.Is(err, in10n.ErrChannelDoesNotExist) {
+				code = http.StatusNotFound
+			}
+			ReplyCommonError(rw, "failed to unsubscribe: "+err.Error(), code)
+		}
 	})
 }
 

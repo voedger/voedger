@@ -97,6 +97,12 @@ func TestBasicUsage_n10n_APIv2(t *testing.T) {
 		coreutils.WithAuthorizeBy(token),
 	)
 
+	// force updates again to check that no new notifications arrived after unsubscribe
+	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
+	vit.PostWS(ws, "c.sys.CUD", body)
+	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.Daily","Year":42}}]}`
+	vit.PostWS(ws, "c.sys.CUD", body)
+
 	// close the initial connection
 	// SSE listener channel should be closed after that
 	resp.HTTPResp.Body.Close()
