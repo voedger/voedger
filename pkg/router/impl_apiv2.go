@@ -331,6 +331,11 @@ func requestHandlerV2_notifications_unsubscribe(numsAppsWorkspaces map[appdef.Ap
 			return
 		}
 
+		if len(busRequest.Body) > 0 {
+			ReplyCommonError(rw, "unexpected body on n10n unsubscribe", http.StatusBadRequest)
+			return
+		}
+
 		vars := mux.Vars(req)
 		channelID := vars[URLPlaceholder_channelID]
 

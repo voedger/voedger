@@ -151,7 +151,7 @@ func TestChannelExpiration_V2(t *testing.T) {
 	waitForDone()
 }
 
-func TestN10NErrors(t *testing.T) {
+func TestN10NSubscribeErrors(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -201,6 +201,73 @@ func TestN10NErrors(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestN10NUnsubscribeErrors(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	// owning does not matter for notifications, need just a valid token
+	token := ws.Owner.Token
+
+	// subscribe
+	body := fmt.Sprintf(`{"subscriptions": [{"entity":"app1pkg.CategoryIdx","wsid": %d}],"expiresIn": 42}`, ws.WSID)
+	resp := vit.POST("api/v2/apps/test1/app1/notifications", body,
+		coreutils.WithAuthorizeBy(token),
+		coreutils.WithLongPolling(),
+	)
+	offsetsChan, channelID, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
+	url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.CategoryIdx", channelID, ws.WSID)
+
+	t.Run("401", func(t *testing.T) {
+		t.Run("no token", func(t *testing.T) {
+			vit.POST(url, "", coreutils.WithMethod(http.MethodDelete), coreutils.Expect401())
+		})
+
+		t.Run("expired token", func(t *testing.T) {
+			testingu.MockTime.Add(24 * time.Hour)
+			vit.POST(url, "",
+				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				coreutils.WithMethod(http.MethodDelete),
+				coreutils.Expect401(),
+			).Println()
+			vit.RefreshTokens()
+		})
+	})
+
+	t.Run("404 on an unknown channel", func(t *testing.T) {
+		url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/unknwonChannelID/workspaces/%d/subscriptions/app1pkg.CategoryIdx", ws.WSID)
+		vit.POST(url, "",
+			coreutils.WithMethod(http.MethodDelete),
+			coreutils.WithAuthorizeBy(ws.Owner.Token),
+			coreutils.Expect404(),
+		).Println()
+	})
+
+	t.Run("400 on non-empty body", func(t *testing.T) {
+		vit.POST(url, "some body",
+			coreutils.WithMethod(http.MethodDelete),
+			coreutils.WithAuthorizeBy(ws.Owner.Token),
+			coreutils.Expect400(),
+		).Println()
+	})
+
+	t.Run("400 on malformed view", func(t *testing.T) {
+		url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/malformedViewQName", channelID, ws.WSID)
+		vit.POST(url, "",
+			coreutils.WithMethod(http.MethodDelete),
+			coreutils.WithAuthorizeBy(ws.Owner.Token),
+			coreutils.Expect400(),
+		).Println()
+	})
+
+	resp.HTTPResp.Body.Close()
+
+	_, ok := <-offsetsChan
+	require.False(t, ok)
+	waitForDone()
 }
 
 // [~server.n10n.heartbeats/it.Heartbeat30~impl]
