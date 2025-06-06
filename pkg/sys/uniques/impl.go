@@ -177,6 +177,15 @@ func writeUniqueKeyValue(uniqueField appdef.IField, value interface{}, buf *byte
 			buf.WriteByte(zeroByte)
 		}
 		buf.Write(value.([]byte))
+	case appdef.DataKind_QName:
+		buf.WriteByte(zeroByte)
+		qNameStr := ""
+		if qName, ok := value.(appdef.QName); ok {
+			qNameStr = qName.String()
+		} else {
+			qNameStr = value.(string)
+		}
+		buf.WriteString(qNameStr)
 	default:
 		binary.Write(buf, binary.BigEndian, value) // nolint
 	}
