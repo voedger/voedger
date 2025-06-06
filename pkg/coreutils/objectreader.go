@@ -205,7 +205,7 @@ func JSONMapToCUDBody(data []map[string]interface{}) string {
 
 func CheckValueByKind(val interface{}, kind appdef.DataKind) error {
 	ok := false
-	switch val.(type) {
+	switch typed := val.(type) {
 	case int8: // #3434 [small integers]
 		ok = kind == appdef.DataKind_int8
 	case int16: // #3434 [small integers]
@@ -222,7 +222,7 @@ func CheckValueByKind(val interface{}, kind appdef.DataKind) error {
 		ok = kind == appdef.DataKind_bool
 	case string:
 		if kind == appdef.DataKind_QName {
-			_, err := appdef.ParseQName(val.(string))
+			_, err := appdef.ParseQName(typed)
 			ok = err == nil
 		} else {
 			ok = kind == appdef.DataKind_string

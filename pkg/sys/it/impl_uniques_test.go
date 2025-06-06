@@ -485,7 +485,7 @@ func TestGetRecordIDByUniqueCombination_AllKinds(t *testing.T) {
 		"Int64Fld":   int64(4),
 		"Float32Fld": float32(5),
 		"Float64Fld": float64(6),
-		"RefFld":     istructs.RecordID(catID),
+		"RefFld":     catID,
 		"StrFld":     "str",
 		"QNameFld":   appdef.NewQName("app1pkg", "DocConstraints"),
 		"BoolFld":    true,
