@@ -6,6 +6,7 @@ package sys_it
 
 import (
 	"fmt"
+	"net/http"
 	"sync"
 	"testing"
 	"time"
@@ -72,7 +73,7 @@ func TestBasicUsage_n10n_APIv2(t *testing.T) {
 		coreutils.WithAuthorizeBy(token),
 		coreutils.WithLongPolling(),
 	)
-	offsetsChan, _, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
+	offsetsChan, channelID, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
 
 	// force projections update
 	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
@@ -83,6 +84,18 @@ func TestBasicUsage_n10n_APIv2(t *testing.T) {
 	// read events
 	require.EqualValues(t, resultOffsetOfCategoryCUD, <-offsetsChan)
 	require.EqualValues(t, resultOffsetOfDailyCUD, <-offsetsChan)
+
+	// unsubscribe
+	url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.CategoryIdx", channelID, ws.WSID)
+	vit.POST(url, body,
+		coreutils.WithMethod(http.MethodDelete),
+		coreutils.WithAuthorizeBy(token),
+	)
+	url = fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.DailyIdx", channelID, ws.WSID)
+	vit.POST(url, body,
+		coreutils.WithMethod(http.MethodDelete),
+		coreutils.WithAuthorizeBy(token),
+	)
 
 	// close the initial connection
 	// SSE listener channel should be closed after that
