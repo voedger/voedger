@@ -703,6 +703,21 @@ ALTERABLE WORKSPACE test_wsWS (
 		IntFld int32
 	);
 
+	TABLE AllDataKindsUnique INHERITS sys.CDoc (
+		Int8Fld int8,
+		Int16Fld int16,
+		Int32Fld int32,
+		Int64Fld int64,
+		Float32Fld float32,
+		Float64Fld float64,
+		RefFld ref,
+		StrFld text,
+		QNameFld qname,
+		BoolFld bool,
+		BytesFld bytes,
+		UNIQUE (Int8Fld, Int16Fld, Int32Fld, Int64Fld, Float32Fld, Float64Fld, RefFld, StrFld, QNameFld, BoolFld, BytesFld)
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY MockQry(MockQryParams) RETURNS MockQryResult WITH Tags=(WorkspaceOwnerFuncTag);

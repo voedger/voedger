@@ -436,7 +436,6 @@ func TestRecordByUniqueValuesErrors(t *testing.T) {
 			require.ErrorIs(err, appdef.ErrInvalidError)
 		})
 	})
-
 }
 
 func TestNullFields(t *testing.T) {
@@ -457,4 +456,57 @@ func TestNullFields(t *testing.T) {
 	// null for Int field -> conflict
 	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","Int":null,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, bts)
 	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409(fmt.Sprintf("unique constraint violation with ID %d", expectedRecID)))
+}
+
+func TestGetRecordIDByUniqueCombination_AllKinds(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
+	catID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+	num, bts := getUniqueNumber(vit)
+
+	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.AllDataKindsUnique",
+		"Int8Fld": 1, "Int16Fld": 2, "Int32Fld": 3, "Int64Fld": 4, "Float32Fld": 5, "Float64Fld": 6, "RefFld": %d,
+		"StrFld": "str", "QNameFld": "app1pkg.DocConstraints", "BoolFld": true, "BytesFld": "%s"}}]}`, catID, bts)
+	expectedID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+	as, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_test1_app1)
+	require.NoError(err)
+	buf := bytes.NewBuffer(nil)
+	binary.Write(buf, binary.BigEndian, uint32(num))
+	uniqueCombination := map[string]interface{}{
+		"Int8Fld":    int8(1),
+		"Int16Fld":   int16(2),
+		"Int32Fld":   int32(3),
+		"Int64Fld":   int64(4),
+		"Float32Fld": float32(5),
+		"Float64Fld": float64(6),
+		"RefFld":     catID,
+		"StrFld":     "str",
+		"QNameFld":   appdef.NewQName("app1pkg", "DocConstraints"),
+		"BoolFld":    true,
+		"BytesFld":   buf.Bytes(),
+	}
+	actualID, err := uniques.GetRecordIDByUniqueCombination(ws.WSID, appdef.NewQName("app1pkg", "AllDataKindsUnique"), as, uniqueCombination)
+	require.NoError(err)
+	require.Equal(expectedID, actualID)
+
+	uniqueCombination["Int64Fld"] = istructs.RecordID(4)
+	actualID, err = uniques.GetRecordIDByUniqueCombination(ws.WSID, appdef.NewQName("app1pkg", "AllDataKindsUnique"), as, uniqueCombination)
+	require.NoError(err)
+	require.Equal(expectedID, actualID)
+
+	uniqueCombination["QNameFld"] = "app1pkg.DocConstraints"
+	actualID, err = uniques.GetRecordIDByUniqueCombination(ws.WSID, appdef.NewQName("app1pkg", "AllDataKindsUnique"), as, uniqueCombination)
+	require.NoError(err)
+	require.Equal(expectedID, actualID)
+
+	uniqueCombination["RefFld"] = int64(catID)
+	actualID, err = uniques.GetRecordIDByUniqueCombination(ws.WSID, appdef.NewQName("app1pkg", "AllDataKindsUnique"), as, uniqueCombination)
+	require.NoError(err)
+	require.Equal(expectedID, actualID)
 }
