@@ -325,9 +325,8 @@ func parseN10nArgs(body string) (subscriptions []subscription, expiresIn time.Du
 		n10nArgs.ExpiresInSeconds = defaultN10NExpiresInSeconds
 	} else if n10nArgs.ExpiresInSeconds < 0 {
 		return nil, 0, fmt.Errorf("invalid expiresIn value %d", n10nArgs.ExpiresInSeconds)
-	} else {
-		n10nArgs.expiresInDuration = time.Duration(n10nArgs.ExpiresInSeconds) * time.Second
 	}
+	expiresIn = time.Duration(n10nArgs.ExpiresInSeconds) * time.Second
 	if len(n10nArgs.Subscriptions) == 0 {
 		return nil, 0, errors.New("no subscriptions provided")
 	}
@@ -348,7 +347,7 @@ func parseN10nArgs(body string) (subscriptions []subscription, expiresIn time.Du
 			wsid:   wsid,
 		})
 	}
-	return subscriptions, n10nArgs.expiresInDuration, err
+	return subscriptions, expiresIn, err
 }
 
 // [~server.devices/cmp.routerDevicesCreatePathHandler~impl]

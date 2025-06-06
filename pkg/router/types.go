@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/acme/autocert"
@@ -89,7 +88,6 @@ type subscription struct {
 }
 
 type N10nArgs struct {
-	Subscriptions     []SubscriptionJSON `json:"subscriptions"`
-	ExpiresInSeconds  int64              `json:"expiresIn"`
-	expiresInDuration time.Duration
+	Subscriptions    []SubscriptionJSON `json:"subscriptions"`
+	ExpiresInSeconds int64              `json:"expiresIn"`
 }
