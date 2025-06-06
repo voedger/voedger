@@ -132,6 +132,8 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 		source := appdef.NewQName(table.Qualifier.String(), table.Name.String())
 		if source.Entity() == "blob" {
 			// FIXME: eliminate this hack
+			// sys.BLOB translates to sys.blob by vitess-sqlparser
+			// https://github.com/voedger/voedger/issues/3708
 			source = appdef.NewQName(appdef.SysPackage, "BLOB")
 		}
 

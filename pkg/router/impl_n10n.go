@@ -75,11 +75,12 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 			}
 		}
 		flusher.Flush()
-		serveSubscriptions(req.Context(), rw, flusher, channel, s.n10n, urlParams.SubjectLogin)
+		serveN10NChannel(req.Context(), rw, flusher, channel, s.n10n, urlParams.SubjectLogin)
 	}
 }
 
-func serveSubscriptions(ctx context.Context, rw http.ResponseWriter, flusher http.Flusher, channel in10n.ChannelID, n10n in10n.IN10nBroker,
+// finishes when ctx is closed or on SSE message sending failure
+func serveN10NChannel(ctx context.Context, rw http.ResponseWriter, flusher http.Flusher, channel in10n.ChannelID, n10n in10n.IN10nBroker,
 	subjectLogin istructs.SubjectLogin) {
 	ch := make(chan in10nmem.UpdateUnit)
 	watchChannelContext, cancel := context.WithCancel(ctx)

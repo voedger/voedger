@@ -6,6 +6,7 @@
 package router
 
 import (
+	"encoding/json"
 	"net"
 	"net/http"
 	"net/url"
@@ -21,6 +22,7 @@ import (
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 )
 
@@ -52,6 +54,7 @@ type httpService struct {
 	blobRequestHandler blobprocessor.IRequestHandler
 	iTokens            itokens.ITokens
 	federation         federation.IFederation
+	appTokensFactory   payloads.IAppTokensFactory
 }
 
 type httpsService struct {
@@ -72,4 +75,19 @@ type route struct {
 type subscriberParamsType struct {
 	Channel       in10n.ChannelID
 	ProjectionKey []in10n.ProjectionKey
+}
+
+type SubscriptionJSON struct {
+	Entity     string      `json:"entity"`
+	WSIDNumber json.Number `json:"wsid"`
+}
+
+type subscription struct {
+	entity appdef.QName
+	wsid   istructs.WSID
+}
+
+type N10nArgs struct {
+	Subscriptions    []SubscriptionJSON `json:"subscriptions"`
+	ExpiresInSeconds int64              `json:"expiresIn"`
 }
