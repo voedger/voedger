@@ -6,11 +6,13 @@
 package router
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"runtime/debug"
+	"strconv"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -62,4 +64,18 @@ func (fw *filteringWriter) Write(p []byte) (n int, err error) {
 		return len(p), nil
 	}
 	return fw.w.Write(p)
+}
+
+func replyServiceUnavailable(rw http.ResponseWriter) {
+	rw.WriteHeader(http.StatusServiceUnavailable)
+	rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
+}
+
+func replyErr(rw http.ResponseWriter, err error) {
+	var sysError coreutils.SysError
+	if errors.As(err, &sysError) {
+		ReplyJSON(rw, sysError.ToJSON_APIV2(), sysError.HTTPStatus)
+	} else {
+		ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
+	}
 }

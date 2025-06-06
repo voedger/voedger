@@ -24,7 +24,16 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func createBusRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (res bus.Request, ok bool) {
+// validatedData contains validated data from HTTP request
+type validatedData struct {
+	vars     map[string]string
+	wsid     istructs.WSID
+	appQName appdef.AppQName
+	body     []byte
+}
+
+// validateRequest validates the HTTP request and returns validated data or error
+func validateRequest(req *http.Request, rw http.ResponseWriter, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (validatedData, bool) {
 	vars := mux.Vars(req)
 	wsidStr := vars[URLPlaceholder_wsid]
 	var wsid istructs.WSID
@@ -33,28 +42,53 @@ func createBusRequest(reqMethod string, req *http.Request, rw http.ResponseWrite
 		wsid, err = coreutils.ClarifyJSONWSID(json.Number(wsidStr))
 		if err != nil {
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
-			return res, false
+			return validatedData{}, false
 		}
-	}
-	appQNameStr := vars[URLPlaceholder_appOwner] + appdef.AppQNameQualifierChar + vars[URLPlaceholder_appName]
-	if appQName, err := appdef.ParseAppQName(appQNameStr); err == nil {
-		if numAppWorkspaces, ok := numsAppsWorkspaces[appQName]; ok {
-			baseWSID := wsid.BaseWSID()
-			if baseWSID <= istructs.MaxPseudoBaseWSID {
-				wsid = coreutils.GetAppWSID(wsid, numAppWorkspaces)
-			}
-		}
-	}
-	res = bus.Request{
-		Method:   reqMethod,
-		WSID:     wsid,
-		Query:    map[string]string{},
-		Header:   map[string]string{},
-		AppQName: appdef.NewAppQName(vars[URLPlaceholder_appOwner], vars[URLPlaceholder_appName]),
-		Resource: vars[URLPlaceholder_resourceName],
 	}
 
-	if docIDStr, hasDocID := vars[URLPlaceholder_id]; hasDocID {
+	appQNameStr := vars[URLPlaceholder_appOwner] + appdef.AppQNameQualifierChar + vars[URLPlaceholder_appName]
+	appQName, err := appdef.ParseAppQName(appQNameStr)
+	if err != nil {
+		ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+		return validatedData{}, false
+	}
+
+	if numAppWorkspaces, ok := numsAppsWorkspaces[appQName]; ok {
+		baseWSID := wsid.BaseWSID()
+		if baseWSID <= istructs.MaxPseudoBaseWSID {
+			wsid = coreutils.GetAppWSID(wsid, numAppWorkspaces)
+		}
+	}
+	body := []byte{}
+	if req.Body != nil && req.Body != http.NoBody {
+		body, err = io.ReadAll(req.Body)
+		if err != nil {
+			logger.Error("failed to read body", err.Error())
+			return validatedData{}, false
+		}
+	}
+
+	return validatedData{
+		vars:     vars,
+		wsid:     wsid,
+		appQName: appQName,
+		body:     body,
+	}, true
+}
+
+// createBusRequest creates a bus.Request from validated data
+func createBusRequest(reqMethod string, data validatedData, req *http.Request) bus.Request {
+	res := bus.Request{
+		Method:   reqMethod,
+		WSID:     data.wsid,
+		Query:    map[string]string{},
+		Header:   map[string]string{},
+		AppQName: data.appQName,
+		Resource: data.vars[URLPlaceholder_resourceName],
+		Body:     data.body,
+	}
+
+	if docIDStr, hasDocID := data.vars[URLPlaceholder_id]; hasDocID {
 		docIDUint64, err := strconv.ParseUint(docIDStr, utils.DecimalBase, utils.BitSize64)
 		if err != nil {
 			// notest: parsed already by route regexp
@@ -62,18 +96,26 @@ func createBusRequest(reqMethod string, req *http.Request, rw http.ResponseWrite
 		}
 		res.DocID = istructs.IDType(docIDUint64)
 	}
+
 	for k, v := range req.URL.Query() {
 		res.Query[k] = v[0]
 	}
 	for k, v := range req.Header {
 		res.Header[k] = v[0]
 	}
-	if req.Body != nil && req.Body != http.NoBody {
-		if res.Body, err = io.ReadAll(req.Body); err != nil {
-			logger.Error("failed to read body", err.Error())
+
+	return res
+}
+
+// withRequestValidation is a middleware that validates the request before passing it to the handler
+func withRequestValidation(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, handler func(*http.Request, http.ResponseWriter, validatedData)) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		data, ok := validateRequest(req, rw, numsAppsWorkspaces)
+		if !ok {
+			return
 		}
+		handler(req, rw, data)
 	}
-	return res, err == nil
 }
 
 func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error, onSendFailed func(), respMode bus.RespondMode) {

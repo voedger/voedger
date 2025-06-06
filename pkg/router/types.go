@@ -6,11 +6,13 @@
 package router
 
 import (
+	"encoding/json"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/acme/autocert"
@@ -74,4 +76,20 @@ type route struct {
 type subscriberParamsType struct {
 	Channel       in10n.ChannelID
 	ProjectionKey []in10n.ProjectionKey
+}
+
+type SubscriptionJSON struct {
+	Entity     string      `json:"entity"`
+	WSIDNumber json.Number `json:"wsid"`
+}
+
+type subscription struct {
+	entity appdef.QName
+	wsid   istructs.WSID
+}
+
+type N10nArgs struct {
+	Subscriptions     []SubscriptionJSON `json:"subscriptions"`
+	ExpiresInSeconds  int64              `json:"expiresIn"`
+	expiresInDuration time.Duration
 }

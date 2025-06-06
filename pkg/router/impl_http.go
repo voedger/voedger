@@ -184,11 +184,8 @@ func (s *httpService) registerHandlersV1() {
 }
 
 func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
-	return func(resp http.ResponseWriter, req *http.Request) {
-		request, ok := createBusRequest(req.Method, req, resp, numsAppsWorkspaces)
-		if !ok {
-			return
-		}
+	return withRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
+		request := createBusRequest(req.Method, data, req)
 
 		// req's BaseContext is router service's context. See service.Start()
 		// router app closing or client disconnected -> req.Context() is done
@@ -203,13 +200,13 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 			if errors.Is(err, bus.ErrSendTimeoutExpired) {
 				status = http.StatusServiceUnavailable
 			}
-			WriteTextResponse(resp, err.Error(), status)
+			WriteTextResponse(rw, err.Error(), status)
 			return
 		}
 
-		initResponse(resp, responseMeta.ContentType, responseMeta.StatusCode)
-		reply_v1(requestCtx, resp, responseCh, responseErr, responseMeta.ContentType, cancel, request, responseMeta.Mode())
-	}
+		initResponse(rw, responseMeta.ContentType, responseMeta.StatusCode)
+		reply_v1(requestCtx, rw, responseCh, responseErr, responseMeta.ContentType, cancel, request, responseMeta.Mode())
+	})
 }
 
 func corsHandler(h http.Handler) http.HandlerFunc {
