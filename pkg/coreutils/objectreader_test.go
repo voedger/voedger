@@ -232,7 +232,7 @@ func TestCheckValueByKind(t *testing.T) {
 		{float64(7), appdef.DataKind_float64},
 		{true, appdef.DataKind_bool},
 		{"str", appdef.DataKind_string},
-		{"str", appdef.DataKind_QName},
+		{"str.str", appdef.DataKind_QName},
 		{[]byte{9}, appdef.DataKind_bytes},
 		{istructs.RecordID(10), appdef.DataKind_RecordID},
 		{int64(11), appdef.DataKind_RecordID},
