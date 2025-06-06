@@ -87,12 +87,12 @@ func TestBasicUsage_n10n_APIv2(t *testing.T) {
 
 	// unsubscribe
 	url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.CategoryIdx", channelID, ws.WSID)
-	vit.POST(url, body,
+	vit.POST(url, "",
 		coreutils.WithMethod(http.MethodDelete),
 		coreutils.WithAuthorizeBy(token),
 	)
 	url = fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.DailyIdx", channelID, ws.WSID)
-	vit.POST(url, body,
+	vit.POST(url, "",
 		coreutils.WithMethod(http.MethodDelete),
 		coreutils.WithAuthorizeBy(token),
 	)
@@ -107,8 +107,8 @@ func TestBasicUsage_n10n_APIv2(t *testing.T) {
 	// SSE listener channel should be closed after that
 	resp.HTTPResp.Body.Close()
 
-	_, ok := <-offsetsChan
-	require.False(t, ok)
+	x, ok := <-offsetsChan
+	require.False(t, ok, x)
 	waitForDone()
 }
 
@@ -238,7 +238,7 @@ func TestN10NUnsubscribeErrors(t *testing.T) {
 	})
 
 	t.Run("404 on an unknown channel", func(t *testing.T) {
-		url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/unknwonChannelID/workspaces/%d/subscriptions/app1pkg.CategoryIdx", ws.WSID)
+		url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/unknownChannelID/workspaces/%d/subscriptions/app1pkg.CategoryIdx", ws.WSID)
 		vit.POST(url, "",
 			coreutils.WithMethod(http.MethodDelete),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
