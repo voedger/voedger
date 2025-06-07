@@ -908,7 +908,10 @@ func analyzeQuery(query *QueryStmt, c *iterateCtx) {
 		}
 
 	}
-	if query.Returns.Def != nil {
+
+	if query.Returns == nil {
+		c.stmtErr(&query.Pos, ErrQueryMustHaveReturn)
+	} else if query.Returns.Def != nil {
 		if err := resolveInCtx(*query.Returns.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
 			c.stmtErr(&query.Returns.Def.Pos, err)
 		}

@@ -46,6 +46,7 @@ var ErrJobMustBeInAppWorkspace = errors.New("JOB is only allowed in AppWorkspace
 var ErrPositiveValueOnly = errors.New("positive value only allowed")
 var ErrBlobFieldOnlyInTable = errors.New("BLOB field only allowed in table")
 var ErrJobWithoutCronSchedule = errors.New("job without cron schedule is not allowed")
+var ErrQueryMustHaveReturn = errors.New("query must have a return type")
 
 func ErrInvalidLocalPackageName(name string) error {
 	return fmt.Errorf("invalid local package name %s", name)
