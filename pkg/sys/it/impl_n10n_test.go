@@ -73,6 +73,7 @@ func TestBasicUsage_n10n_APIv2(t *testing.T) {
 		coreutils.WithAuthorizeBy(token),
 		coreutils.WithLongPolling(),
 	)
+
 	offsetsChan, channelID, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
 
 	// force projections update
@@ -90,11 +91,13 @@ func TestBasicUsage_n10n_APIv2(t *testing.T) {
 	vit.POST(url, "",
 		coreutils.WithMethod(http.MethodDelete),
 		coreutils.WithAuthorizeBy(token),
+		coreutils.Expect204(),
 	)
 	url = fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.DailyIdx", channelID, ws.WSID)
 	vit.POST(url, "",
 		coreutils.WithMethod(http.MethodDelete),
 		coreutils.WithAuthorizeBy(token),
+		coreutils.Expect204(),
 	)
 
 	// force updates again to check that no new notifications arrived after unsubscribe
@@ -203,7 +206,15 @@ func TestN10NSubscribeErrors(t *testing.T) {
 	})
 }
 
+func TestN10NSubscribeToExtraErrors(t *testing.T) {
+	testSubscriptionErrors(t, http.MethodPut)
+}
+
 func TestN10NUnsubscribeErrors(t *testing.T) {
+	testSubscriptionErrors(t, http.MethodDelete)
+}
+
+func testSubscriptionErrors(t *testing.T, method string) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -223,14 +234,14 @@ func TestN10NUnsubscribeErrors(t *testing.T) {
 
 	t.Run("401", func(t *testing.T) {
 		t.Run("no token", func(t *testing.T) {
-			vit.POST(url, "", coreutils.WithMethod(http.MethodDelete), coreutils.Expect401())
+			vit.POST(url, "", coreutils.WithMethod(method), coreutils.Expect401())
 		})
 
 		t.Run("expired token", func(t *testing.T) {
 			testingu.MockTime.Add(24 * time.Hour)
 			vit.POST(url, "",
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.WithMethod(http.MethodDelete),
+				coreutils.WithMethod(method),
 				coreutils.Expect401(),
 			).Println()
 			vit.RefreshTokens()
@@ -240,7 +251,7 @@ func TestN10NUnsubscribeErrors(t *testing.T) {
 	t.Run("404 on an unknown channel", func(t *testing.T) {
 		url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/unknownChannelID/workspaces/%d/subscriptions/app1pkg.CategoryIdx", ws.WSID)
 		vit.POST(url, "",
-			coreutils.WithMethod(http.MethodDelete),
+			coreutils.WithMethod(method),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.Expect404(),
 		).Println()
@@ -248,7 +259,7 @@ func TestN10NUnsubscribeErrors(t *testing.T) {
 
 	t.Run("400 on non-empty body", func(t *testing.T) {
 		vit.POST(url, "some body",
-			coreutils.WithMethod(http.MethodDelete),
+			coreutils.WithMethod(method),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.Expect400(),
 		).Println()
@@ -257,7 +268,7 @@ func TestN10NUnsubscribeErrors(t *testing.T) {
 	t.Run("400 on malformed view", func(t *testing.T) {
 		url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/malformedViewQName", channelID, ws.WSID)
 		vit.POST(url, "",
-			coreutils.WithMethod(http.MethodDelete),
+			coreutils.WithMethod(method),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.Expect400(),
 		).Println()
@@ -393,7 +404,7 @@ func TestChannelExpiration_V1(t *testing.T) {
 	unsubscribe()
 }
 
-func TestSubscribeToExtraView(t *testing.T) {
+func TestN10NSubscribeToExtraView(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -422,7 +433,7 @@ func TestSubscribeToExtraView(t *testing.T) {
 	// subscribe to an extra view
 	body = ""
 	url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.DailyIdx", channelID, ws.WSID)
-	resp = vit.POST(url, body,
+	vit.POST(url, body,
 		coreutils.WithAuthorizeBy(token),
 		coreutils.WithMethod(http.MethodPut),
 	)

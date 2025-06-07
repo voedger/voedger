@@ -162,6 +162,10 @@ func WithMethod(m string) ReqOptFunc {
 	}
 }
 
+func Expect204(expectErrorContains ...string) ReqOptFunc {
+	return WithExpectedCode(http.StatusNoContent, expectErrorContains...)
+}
+
 func Expect409(expected ...string) ReqOptFunc {
 	return WithExpectedCode(http.StatusConflict, expected...)
 }
