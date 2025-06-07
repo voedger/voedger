@@ -45,6 +45,7 @@ var ErrGrantFollowsRevoke = errors.New("GRANT follows REVOKE in the same contain
 var ErrJobMustBeInAppWorkspace = errors.New("JOB is only allowed in AppWorkspaceWS")
 var ErrPositiveValueOnly = errors.New("positive value only allowed")
 var ErrBlobFieldOnlyInTable = errors.New("BLOB field only allowed in table")
+var ErrJobWithoutCronSchedule = errors.New("job without cron schedule is not allowed")
 
 func ErrInvalidLocalPackageName(name string) error {
 	return fmt.Errorf("invalid local package name %s", name)

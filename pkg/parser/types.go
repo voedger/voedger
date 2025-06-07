@@ -511,7 +511,7 @@ func (t *ProjectorTrigger) deactivate() bool {
 type JobStmt struct {
 	Statement
 	Name         Ident          `parser:"'JOB' @Ident"`
-	CronSchedule *string        `parser:"@String"`
+	CronSchedule *string        `parser:"@String?"`
 	State        []StateStorage `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
 	Intents      []StateStorage `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
 	Engine       EngineType     // Initialized with 1st pass

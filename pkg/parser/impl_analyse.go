@@ -1126,6 +1126,10 @@ func analyzeJob(j *JobStmt, c *iterateCtx) {
 	if ws.workspace.GetName() != nameAppWorkspaceWS || ws.pkg.Name != appdef.SysPackage {
 		c.stmtErr(&j.Pos, ErrJobMustBeInAppWorkspace)
 	}
+	if j.CronSchedule == nil || *j.CronSchedule == "" {
+		c.stmtErr(&j.Pos, ErrJobWithoutCronSchedule)
+		return
+	}
 
 	parser := cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
 	if _, e := parser.Parse(*j.CronSchedule); e != nil {

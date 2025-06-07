@@ -2914,26 +2914,26 @@ func Test_Jobs(t *testing.T) {
 	})
 
 	t.Run("missing cron", func(t *testing.T) {
-		_, err := ParseFile("source.vsql", `APPLICATION test();
+		require := assertions(t)
+		require.AppSchemaError(`APPLICATION test();
 			ALTER WORKSPACE sys.AppWorkspaceWS (
 				EXTENSION ENGINE BUILTIN (
 					JOB GoodJob '1 0 * * *';
 					JOB JobWithNoCron;
 				);
-			);`)
-		require.ErrorContains(t, err, "source.vsql:5:23: unexpected token \";\" (expected <string> (\"STATE\" \"(\" StateStorage (\",\" StateStorage)* \")\")? (\"INTENTS\" \"(\" StateStorage (\",\" StateStorage)* \")\")?)")
+			);`, "file.vsql:5:6: job without cron schedule is not allowed")
 	})
 
 	t.Run("missing cron version 2", func(t *testing.T) {
-		_, err := ParseFile("source.vsql", `APPLICATION test();
+		require := assertions(t)
+		require.AppSchemaError(`APPLICATION test();
 			ALTER WORKSPACE sys.AppWorkspaceWS (
 				EXTENSION ENGINE BUILTIN (
 					JOB GoodJob1 '1 0 * * *';
 					JOB GoodJob2 '1 0 * * *';
 					JOB JobWithNoCron;
 				);
-			);`)
-		require.ErrorContains(t, err, "source.vsql:6:23: unexpected token \";\" (expected <string> (\"STATE\" \"(\" StateStorage (\",\" StateStorage)* \")\")? (\"INTENTS\" \"(\" StateStorage (\",\" StateStorage)* \")\")?)")
+			);`, "file.vsql:6:6: job without cron schedule is not allowed")
 	})
 
 }
