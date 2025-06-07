@@ -297,7 +297,7 @@ func (vit *VIT) SignIn(login Login, optFuncs ...signInOptFunc) (prn *Principal) 
 		result := make(map[string]interface{})
 		err := json.Unmarshal([]byte(resp.Body), &result)
 		require.NoError(vit.T, err)
-		profileWSID := istructs.WSID(result["wsid"].(float64))
+		profileWSID := istructs.WSID(result["profileWSID"].(float64))
 		token := result["principalToken"].(string)
 		require.NotEmpty(vit.T, token)
 		return &Principal{

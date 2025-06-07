@@ -158,11 +158,11 @@ func (g *schemaGenerator) generateComponents() {
 			fieldPrincipalToken: map[string]interface{}{
 				schemaKeyType: schemaTypeString,
 			},
-			fieldExpiresIn: map[string]interface{}{
+			fieldExpiresInSeconds: map[string]interface{}{
 				schemaKeyType:   schemaTypeInteger,
 				schemaKeyFormat: schemaFormatInt64,
 			},
-			fieldWSID: map[string]interface{}{
+			fieldProfileWSID: map[string]interface{}{
 				schemaKeyType:   schemaTypeInteger,
 				schemaKeyFormat: schemaFormatInt64,
 			},

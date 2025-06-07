@@ -56,12 +56,12 @@ func authLoginHandler() apiPathHandler {
 				return coreutils.NewHTTPError(http.StatusConflict, fmt.Errorf("profile workspace is not yet ready, try again later"))
 			}
 
-			expiresIn := authnz.DefaultPrincipalTokenExpiration.Seconds()
+			expiresInSeconds := authnz.DefaultPrincipalTokenExpiration.Seconds()
 			json := fmt.Sprintf(`{
 				"%s": "%s",
 				"%s": %d,
 				"%s": %d
-			}`, fieldPrincipalToken, token, fieldExpiresIn, int(expiresIn), fieldWSID, int(wsid))
+			}`, fieldPrincipalToken, token, fieldExpiresInSeconds, int(expiresInSeconds), fieldProfileWSID, int(wsid))
 			return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: coreutils.ContentType_ApplicationJSON, StatusCode: http.StatusOK}, json)
 		},
 	}
