@@ -52,6 +52,10 @@ func authLoginHandler() apiPathHandler {
 				return errors.New("the login profile is created with an error: " + wsError)
 			}
 
+			if wsid == 0 {
+				return coreutils.NewHTTPError(http.StatusConflict, fmt.Errorf("profile workspace is not yet ready, try again later"))
+			}
+
 			expiresIn := authnz.DefaultPrincipalTokenExpiration.Seconds()
 			json := fmt.Sprintf(`{
 				"%s": "%s",
