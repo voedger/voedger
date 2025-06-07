@@ -1036,15 +1036,15 @@ func Test_Queries(t *testing.T) {
 		)
 
 	})
-
 	t.Run("Query with no return", func(t *testing.T) {
-		_, err := ParseFile("file.vsql", `APPLICATION test();
+
+		require := assertions(t)
+		require.AppSchemaError(`APPLICATION test();
 	WORKSPACE Workspace (		
 		EXTENSION ENGINE BUILTIN (
-			QUERY QryWithResponseIntent(WithResponseIntentParams);
+			QUERY Qry();
 		);
-	)`)
-		require.ErrorContains(err, `file.vsql:4:57: unexpected token ";" (expected "RETURNS" AnyOrVoidOrDef ("WITH" WithItem ("," WithItem)*)?)`)
+	)`, "file.vsql:4:4: query must have a return type")
 	})
 }
 

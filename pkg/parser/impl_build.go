@@ -649,10 +649,10 @@ func (c *buildContext) queries() error {
 				setParam(ictx, q.Param, func(qn appdef.QName) { b.SetParam(qn) })
 			}
 
-			setParam(ictx, &q.Returns, func(qn appdef.QName) { b.SetResult(qn) })
+			setParam(ictx, q.Returns, func(qn appdef.QName) { b.SetResult(qn) })
 
 			b.SetName(q.GetName())
-			if q.Engine.WASM {
+			if q.engine.WASM {
 				b.SetEngine(appdef.ExtensionEngineKind_WASM)
 			} else {
 				b.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
