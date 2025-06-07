@@ -357,6 +357,7 @@ func requestHandlerV2_notifications_unsubscribe(numsAppsWorkspaces map[appdef.Ap
 				code = http.StatusNotFound
 			}
 			ReplyCommonError(rw, "failed to unsubscribe: "+err.Error(), code)
+			return
 		}
 		rw.WriteHeader(http.StatusNoContent)
 	})
