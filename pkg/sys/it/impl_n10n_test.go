@@ -413,16 +413,8 @@ func TestN10NSubscribeToExtraView(t *testing.T) {
 	// owning does not matter for notifications, need just a valid token
 	token := ws.Owner.Token
 
-	// subscribe on one view
-	body := fmt.Sprintf(`{
-		"subscriptions": [
-			{
-				"entity":"app1pkg.CategoryIdx",
-				"wsid": %d
-			}
-		],
-		"expiresIn": 42
-	}`, ws.WSID)
+	// subscribe to one view
+	body := fmt.Sprintf(`{"subscriptions": [{"entity":"app1pkg.CategoryIdx","wsid": %d}],"expiresIn": 42}`, ws.WSID)
 	resp := vit.POST("api/v2/apps/test1/app1/notifications", body,
 		coreutils.WithAuthorizeBy(token),
 		coreutils.WithLongPolling(),
@@ -444,7 +436,7 @@ func TestN10NSubscribeToExtraView(t *testing.T) {
 	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.Daily","Year":42}}]}`
 	resultOffsetOfDailyCUD := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
 
-	// read events
+	// read events, ensure we're receiving events for the view we're additionaly subscribed to
 	require.EqualValues(t, resultOffsetOfCategoryCUD, <-offsetsChan)
 	require.EqualValues(t, resultOffsetOfDailyCUD, <-offsetsChan)
 
