@@ -1024,15 +1024,28 @@ func Test_Commands(t *testing.T) {
 
 func Test_Queries(t *testing.T) {
 	require := assertions(t)
-	require.AppSchemaError(`APPLICATION test();
+	t.Run("Query with fake return type", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test();
 	WORKSPACE Workspace (
 		EXTENSION ENGINE BUILTIN (
 			QUERY q(fake.Fake) RETURNS fake.Fake
 		);
 	)
 	`, "file.vsql:4:12: fake undefined",
-		"file.vsql:4:31: fake undefined",
-	)
+			"file.vsql:4:31: fake undefined",
+		)
+
+	})
+
+	t.Run("Query with no return", func(t *testing.T) {
+		_, err := ParseFile("file.vsql", `APPLICATION test();
+	WORKSPACE Workspace (		
+		EXTENSION ENGINE BUILTIN (
+			QUERY QryWithResponseIntent(WithResponseIntentParams);
+		);
+	)`)
+		require.ErrorContains(err, `file.vsql:4:57: unexpected token ";" (expected "RETURNS" AnyOrVoidOrDef ("WITH" WithItem ("," WithItem)*)?)`)
+	})
 }
 
 func Test_DuplicatesInViews(t *testing.T) {
@@ -2912,6 +2925,30 @@ func Test_Jobs(t *testing.T) {
 				);
 			);`)
 	})
+
+	t.Run("missing cron", func(t *testing.T) {
+		require := assertions(t)
+		require.AppSchemaError(`APPLICATION test();
+			ALTER WORKSPACE sys.AppWorkspaceWS (
+				EXTENSION ENGINE BUILTIN (
+					JOB GoodJob '1 0 * * *';
+					JOB JobWithNoCron;
+				);
+			);`, "file.vsql:5:6: job without cron schedule is not allowed")
+	})
+
+	t.Run("missing cron version 2", func(t *testing.T) {
+		require := assertions(t)
+		require.AppSchemaError(`APPLICATION test();
+			ALTER WORKSPACE sys.AppWorkspaceWS (
+				EXTENSION ENGINE BUILTIN (
+					JOB GoodJob1 '1 0 * * *';
+					JOB GoodJob2 '1 0 * * *';
+					JOB JobWithNoCron;
+				);
+			);`, "file.vsql:6:6: job without cron schedule is not allowed")
+	})
+
 }
 
 func Test_DataTypes(t *testing.T) {
