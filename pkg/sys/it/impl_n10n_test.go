@@ -73,6 +73,7 @@ func TestBasicUsage_n10n_APIv2(t *testing.T) {
 		coreutils.WithAuthorizeBy(token),
 		coreutils.WithLongPolling(),
 	)
+
 	offsetsChan, channelID, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
 
 	// force projections update
@@ -90,11 +91,13 @@ func TestBasicUsage_n10n_APIv2(t *testing.T) {
 	vit.POST(url, "",
 		coreutils.WithMethod(http.MethodDelete),
 		coreutils.WithAuthorizeBy(token),
+		coreutils.Expect204(),
 	)
 	url = fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.DailyIdx", channelID, ws.WSID)
 	vit.POST(url, "",
 		coreutils.WithMethod(http.MethodDelete),
 		coreutils.WithAuthorizeBy(token),
+		coreutils.Expect204(),
 	)
 
 	// force updates again to check that no new notifications arrived after unsubscribe
