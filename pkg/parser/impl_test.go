@@ -1024,15 +1024,28 @@ func Test_Commands(t *testing.T) {
 
 func Test_Queries(t *testing.T) {
 	require := assertions(t)
-	require.AppSchemaError(`APPLICATION test();
+	t.Run("Query with fake return type", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test();
 	WORKSPACE Workspace (
 		EXTENSION ENGINE BUILTIN (
 			QUERY q(fake.Fake) RETURNS fake.Fake
 		);
 	)
 	`, "file.vsql:4:12: fake undefined",
-		"file.vsql:4:31: fake undefined",
-	)
+			"file.vsql:4:31: fake undefined",
+		)
+
+	})
+
+	t.Run("Query with no return", func(t *testing.T) {
+		_, err := ParseFile("file.vsql", `APPLICATION test();
+	WORKSPACE Workspace (		
+		EXTENSION ENGINE BUILTIN (
+			QUERY QryWithResponseIntent(WithResponseIntentParams);
+		);
+	)`)
+		require.ErrorContains(err, `file.vsql:4:57: unexpected token ";" (expected "RETURNS" AnyOrVoidOrDef ("WITH" WithItem ("," WithItem)*)?)`)
+	})
 }
 
 func Test_DuplicatesInViews(t *testing.T) {
